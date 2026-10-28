@@ -1,18 +1,17 @@
-import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
-import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
-import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
-import { NationWarshipBehavior } from "../src/core/execution/nation/NationWarshipBehavior";
-import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
-import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
 import {
   Difficulty,
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { PseudoRandom } from "../src/core/PseudoRandom";
+} from "@openfront/engine-api/game/GameTypes";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
+import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
+import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
+import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
+import { TransportShipExecution } from "@openfront/engine/execution/TransportShipExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { createGame, L, W } from "./core/pathfinding/_fixtures";
 import { setup } from "./util/Setup";
 
@@ -38,7 +37,7 @@ describe("Nation boats and hostile warships", () => {
     const emoji = new NationEmojiBehavior(random, game, nation);
     const alliance = new NationAllianceBehavior(random, game, nation, emoji);
     const warships = new NationWarshipBehavior(random, game, nation, emoji);
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       random,
       game,
       nation,
@@ -312,7 +311,7 @@ describe("Nation boat routes on open water", () => {
     enemy.setTroops(10_000);
     const random = new PseudoRandom(42);
     const emoji = new NationEmojiBehavior(random, game, nation);
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       random,
       game,
       nation,

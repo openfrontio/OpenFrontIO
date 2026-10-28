@@ -5,6 +5,10 @@
  * the encoder consumes, so a normalization bug can't hide itself.
  */
 
+import { GameUpdateViewData } from "@openfront/engine-api/game/GameUpdates";
+import { Executor } from "@openfront/engine/execution/ExecutionManager";
+import { Game } from "@openfront/engine/game/Game";
+import { GameRunner } from "@openfront/engine/GameRunner";
 import { gunzipSync, gzipSync } from "zlib";
 import { ReplayReader } from "../../../../src/client/replay/codec/decode/ReplayReader";
 import { StreamingEncoder } from "../../../../src/client/replay/codec/encode/StreamingEncoder";
@@ -15,10 +19,6 @@ import {
   type ReplayData,
 } from "../../../../src/client/replay/codec/ReplayTypes";
 import { terrainOf } from "../../../../src/client/replay/codec/Terrain";
-import { Executor } from "../../../../src/core/execution/ExecutionManager";
-import { Game } from "../../../../src/core/game/Game";
-import { GameUpdateViewData } from "../../../../src/core/game/GameUpdates";
-import { GameRunner } from "../../../../src/core/GameRunner";
 
 export const gzip = (d: Uint8Array) => new Uint8Array(gzipSync(d));
 /** Synchronous, so a reader decodes without load() (see ReplayReader). */

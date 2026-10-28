@@ -14,18 +14,18 @@
  * out: frames keep theirs.
  */
 
-import type { PlayerID } from "../../../core/game/Game";
-import { applyStateUpdate } from "../../../core/game/GameUpdateUtils";
+import type { PlayerID } from "@openfront/engine-api/game/GameTypes";
 import {
   GameUpdateType,
   type GameUpdateViewData,
   type PlayerUpdate,
   type UnitUpdate,
-} from "../../../core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
 import {
   unpackMotionPlans,
   type MotionPlanRecord,
-} from "../../../core/game/MotionPlans";
+} from "@openfront/engine-lib/game/MotionPlans";
+import { unpackUnitUpdates } from "@openfront/engine-lib/game/PackedUnitUpdates";
 import type {
   NameEntry,
   PlayerState,
@@ -41,6 +41,7 @@ import {
   unitStateFromUpdate,
 } from "../../view/EntityState";
 import { MotionPlanResolver } from "../../view/MotionPlanResolver";
+import { applyStateUpdate } from "../../view/PlayerStateUpdate";
 import type { MiscUpdates } from "./ReplayTypes";
 
 /**
@@ -53,7 +54,7 @@ import type { MiscUpdates } from "./ReplayTypes";
  * Keyed by enum name, so a new GameUpdateType won't compile until someone
  * decides how replays handle it.
  */
-export const UPDATE_TYPE_ROUTING: Record<
+const UPDATE_TYPE_ROUTING: Record<
   keyof typeof GameUpdateType,
   "entity" | "events" | "misc" | "dropped"
 > = {
@@ -105,6 +106,8 @@ export const VIEW_DATA_ROUTING: Record<
   packedAttackUpdates: "normalizer",
   playerNameViewData: "normalizer",
   packedNukeImpacts: "events",
+  packedUnitUpdates: "normalizer",
+  packedMissileTimers: "normalizer",
   tickExecutionDuration: "dropped",
   pendingTurns: "dropped",
 };
@@ -236,7 +239,11 @@ export class FrameNormalizer {
       }
       changed.set(id, state);
     };
-    for (const u of gu.updates[GameUpdateType.Unit] as UnitUpdate[]) {
+    const rawUnits = (gu.updates[GameUpdateType.Unit] as UnitUpdate[]) ?? [];
+    const units = gu.packedUnitUpdates
+      ? unpackUnitUpdates(gu.packedUnitUpdates, gu.packedMissileTimers)
+      : rawUnits;
+    for (const u of units) {
       const next = unitStateFromUpdate(u);
       // UnitImpl.toUpdate hands out its live missileTimerQueue array. The
       // client gets a structured clone, but in the processor the array

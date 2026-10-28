@@ -1,3 +1,5 @@
+import { UsernameSchema } from "@openfront/engine-api/Schemas";
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { describe, expect, it } from "vitest";
 import {
   accountNameHeld,
@@ -15,13 +17,11 @@ import {
   verifiedNameOptIn,
   type PlayerNameInputs,
 } from "../../src/client/PlayerName";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import { UsernameSchema } from "../../src/core/Schemas";
 import {
   MAX_USERNAME_LENGTH,
   validateAccountUsername,
   validateUsername,
-} from "../../src/core/validations/username";
+} from "../../src/client/validations/username";
 
 // The resolver takes plain values, so every case below is expressed as a full
 // set of inputs rather than by mounting the component.

@@ -1,10 +1,10 @@
-import { Worker } from "cluster";
-import winston from "winston";
 import {
   MAX_HOSTED_LOBBIES,
   PublicGameType,
   SCHEDULED_PUBLIC_GAME_TYPES,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
+import { Worker } from "cluster";
+import winston from "winston";
 import {
   InternalGameInfo,
   InternalGameInfoSchema,
@@ -35,7 +35,7 @@ export interface MasterLobbyServiceOptions {
  * plus the queue behind it. The whole queue is advertised, so the Detailed
  * View can show what's coming, not just the lobby about to start.
  */
-export const QUEUED_LOBBIES_PER_TYPE = 6;
+const QUEUED_LOBBIES_PER_TYPE = 6;
 
 export class MasterLobbyService {
   private readonly workers = new Map<number, Worker>();

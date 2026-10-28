@@ -1,20 +1,12 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { sanitizeClanTag } from "@openfront/shared/SharedUtil";
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { sanitizeClanTag } from "../core/Util";
-import {
-  MAX_CLAN_TAG_LENGTH,
-  MAX_USERNAME_LENGTH,
-  MIN_CLAN_TAG_LENGTH,
-  MIN_USERNAME_LENGTH,
-  validateClanTag,
-  validateUsername,
-} from "../core/validations/username";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { checkClanTagOwnership } from "./ClanApi";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { gamePortal } from "./GamePortal";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import {
   accountNameHeld,
@@ -37,6 +29,14 @@ import {
   steamGrantEndedShown,
 } from "./SteamGrantNotices";
 import { steamSDK } from "./SteamSDK";
+import {
+  MAX_CLAN_TAG_LENGTH,
+  MAX_USERNAME_LENGTH,
+  MIN_CLAN_TAG_LENGTH,
+  MIN_USERNAME_LENGTH,
+  validateClanTag,
+  validateUsername,
+} from "./validations/username";
 
 interface LangSelectorLike {
   currentLang?: string;
@@ -87,10 +87,10 @@ const CLAN_MEMBERSHIP_EVENTS = ["clan-joined", ...CLAN_REMOVED_EVENTS];
 // It has to be recorded rather than recomputed: one boot later the new profile
 // has a stored username too and would be indistinguishable from an old one, so
 // a re-mount or a reload would revoke the default it had just granted.
-function resolveVerifiedDefaultCohort(onCrazyGames: boolean): void {
-  // CrazyGames never persists a username (see validateAndStore), so there is
+function resolveVerifiedDefaultCohort(onGamePortal: boolean): void {
+  // A portal never persists a username (see validateAndStore), so there is
   // no history to read, and verifiedActive is gated off there regardless.
-  if (onCrazyGames) return;
+  if (onGamePortal) return;
   if (localStorage.getItem(verifiedDefaultAllowedKey) !== null) return;
   // An answered preference makes the default moot either way; record the
   // decision anyway so this never re-runs against a profile that has since
@@ -123,7 +123,7 @@ const NAME_BOX =
 // box; the span only lands on the same pixel when it sizes from font metrics
 // too. Any fixed leading drifts a pixel under some fonts.
 const NAME_TEXT =
-  "text-xl/[normal] sm:text-2xl/[normal] font-medium tracking-wider " +
+  "text-xl/[normal] sm:text-2xl/[normal] sm:compact:text-xl/[normal] font-medium tracking-wider " +
   "[text-shadow:0_1px_2px_rgba(0,0,0,0.9)]";
 
 @customElement("username-input")
@@ -153,10 +153,10 @@ export class UsernameInput extends LitElement {
   // never receives.
   private claimGraceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  // Clans aren't supported on CrazyGames — hide the tag input and never submit one.
-  private readonly onCrazyGames = crazyGamesSDK.isOnCrazyGames();
+  // Clans aren't supported on portals — hide the tag input and never submit one.
+  private readonly onGamePortal = gamePortal.isOnGamePortal();
   // Steam identity is fixed for the session (no login/logout events like
-  // CrazyGames), so it's only used to seed the name once in connectedCallback.
+  // the portals), so it's only used to seed the name once in connectedCallback.
   private readonly onSteam = steamSDK.isOnSteam();
 
   @property({ type: String }) validationError: string = "";
@@ -199,10 +199,10 @@ export class UsernameInput extends LitElement {
     super();
     // Before anything can write a username: this reads the absence of one as
     // "this profile is new", and loadStoredUsername destroys that evidence.
-    resolveVerifiedDefaultCohort(this.onCrazyGames);
+    resolveVerifiedDefaultCohort(this.onGamePortal);
     // Account state for the verified-name toggle. Same document-level pattern
     // as AccountModal; Main dispatches this after auth resolves and on
-    // CrazyGames sign-in.
+    // portal sign-in.
     document.addEventListener("userMeResponse", (event: Event) => {
       this.userMe = (event as CustomEvent).detail as UserMeResponse | false;
       this.applyVerifiedPreference();
@@ -307,9 +307,9 @@ export class UsernameInput extends LitElement {
     window.showPage?.("page-clan");
     void customElements.whenDefined("clan-modal").then(() => {
       document
-        .querySelector<
-          HTMLElement & { open: (args: { tab: string }) => void }
-        >("clan-modal")
+        .querySelector<HTMLElement & { open: (args: { tab: string }) => void }>(
+          "clan-modal",
+        )
         ?.open({ tab: "browse" });
     });
   };
@@ -335,7 +335,7 @@ export class UsernameInput extends LitElement {
   // value account-level settings sync would later propagate.
   private applyVerifiedPreference() {
     this.verifiedActive =
-      !this.onCrazyGames &&
+      !this.onGamePortal &&
       verifiedNameOptIn(
         localStorage.getItem(useVerifiedNameKey),
         localStorage.getItem(verifiedDefaultAllowedKey) === "true",
@@ -400,7 +400,7 @@ export class UsernameInput extends LitElement {
   // has a deadline attached and neither costs the player a name, so neither
   // interrupts them.
   private announceLapse() {
-    if (this.onCrazyGames) return;
+    if (this.onGamePortal) return;
     if (this.verifiedName() !== null) {
       localStorage.removeItem(lapseNoticeKey);
       return;
@@ -417,20 +417,26 @@ export class UsernameInput extends LitElement {
     // ended... resubscribe" is the sentence that convinces them the game hid
     // one. This notice is the first thing they see after the month ends, so
     // it carries the sign-off and marks it shown below, or the boot sequencer
-    // would say it all again next launch.
-    const afterGrant =
-      steamGrantEnded(
-        parseSteamGrantStore(localStorage.getItem(STEAM_GRANT_NOTICE_KEY)),
-        this.userMe,
-        Date.now(),
-      ) !== null;
-    const key = afterGrant
+    // would say it all again next launch. An admin comp or Discord-role grant
+    // with an end date never subscribed either: it gets the same shape
+    // without naming Steam or who granted it.
+    const endedGrant = steamGrantEnded(
+      parseSteamGrantStore(localStorage.getItem(STEAM_GRANT_NOTICE_KEY)),
+      this.userMe,
+      Date.now(),
+    );
+    const afterGrant = endedGrant !== null;
+    const key = !afterGrant
       ? grace.atRisk
-        ? "username.lapse_notice_after_grant_at_risk"
-        : "username.lapse_notice_after_grant"
-      : grace.atRisk
         ? "username.lapse_notice_at_risk"
-        : "username.lapse_notice";
+        : "username.lapse_notice"
+      : endedGrant.steam
+        ? grace.atRisk
+          ? "username.lapse_notice_after_grant_at_risk"
+          : "username.lapse_notice_after_grant"
+        : grace.atRisk
+          ? "username.lapse_notice_after_free_access_at_risk"
+          : "username.lapse_notice_after_free_access";
     const message = translateText(key, {
       name: grace.name,
       date: formatClaimDate(grace.expiresAt),
@@ -519,7 +525,7 @@ export class UsernameInput extends LitElement {
    * seam join paths read — they take the whole result rather than asking the
    * component two separate questions and risking them disagreeing.
    *
-   * `verifiedActive` already folds in eligibility and the CrazyGames exclusion
+   * `verifiedActive` already folds in eligibility and the portal exclusion
    * (see applyVerifiedPreference), so it is the opt-in the resolver wants.
    */
   public resolvedName(): ResolvedPlayerName {
@@ -649,19 +655,19 @@ export class UsernameInput extends LitElement {
     // ours to overwrite; a name the player typed never is.
     const reseedable = this.onSteam && this.storedNameIsGenerated();
     this.loadStoredUsername();
-    // On CrazyGames the account username is applied here but never persisted
+    // On a portal the account username is applied here but never persisted
     // (see loadStoredUsername / validateAndStore), so logging out — which
     // reloads the whole page — falls back to a fresh guest username instead of
-    // keeping the account name. addAuthListener only fires on login; CrazyGames
-    // refreshes the page on logout, so there is no logout event to handle.
-    crazyGamesSDK.getUsername().then((username) => {
+    // keeping the account name. addAuthListener only fires on login; portals
+    // refresh the page on logout, so there is no logout event to handle.
+    void gamePortal.getUsername().then((username) => {
       if (username) {
         this.baseUsername = clampUsername(username);
         this.usernameIsGenerated = false;
         this.validateAndStore();
       }
     });
-    crazyGamesSDK.addAuthListener((user) => {
+    void gamePortal.addAuthListener((user) => {
       if (user) {
         this.baseUsername = clampUsername(user.username);
         this.usernameIsGenerated = false;
@@ -669,8 +675,8 @@ export class UsernameInput extends LitElement {
       }
     });
     // Seed the in-game name from the Steam persona whenever the name in hand
-    // is one we generated. Unlike CrazyGames, Steam persists normally (see
-    // validateAndStore's onCrazyGames guard), and there's no logout event to
+    // is one we generated. Unlike the portals, Steam persists normally (see
+    // validateAndStore's onGamePortal guard), and there's no logout event to
     // handle since the Steam identity is fixed for the session.
     if (reseedable) {
       // The anon name loadStoredUsername() just generated. Only overwrite it if
@@ -750,10 +756,10 @@ export class UsernameInput extends LitElement {
   }
 
   private loadStoredUsername() {
-    // On CrazyGames the username is never persisted, so ignore any stored value
+    // On a portal the username is never persisted, so ignore any stored value
     // and start from a fresh guest name; the account name (if signed in) is
     // applied afterwards in connectedCallback.
-    const storedUsername = this.onCrazyGames
+    const storedUsername = this.onGamePortal
       ? null
       : localStorage.getItem(usernameKey);
     if (storedUsername) {
@@ -802,23 +808,27 @@ export class UsernameInput extends LitElement {
            (mid-edit on a free-form name), while the reminder is a 30-day
            countdown the player cannot recover once it lapses. Hiding the
            second behind the first put the time-critical one last. -->
-      ${this.validationError || this.clanTagOwnershipError || this.claimGrace
-        ? html`<div
-            class="absolute top-full left-0 z-50 w-full mt-1 flex flex-col gap-1"
-          >
-            ${this.validationError
-              ? html`<div
-                  id="username-validation-error"
-                  class="w-full px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg"
-                >
-                  ${this.validationError}
-                </div>`
-              : this.clanTagOwnershipError
-                ? this.renderClanTagOwnershipError()
-                : null}
-            ${this.renderClaimGrace()}
-          </div>`
-        : null}
+      ${
+        this.validationError || this.clanTagOwnershipError || this.claimGrace
+          ? html`<div
+              class="absolute top-full left-0 z-50 w-full mt-1 flex flex-col gap-1"
+            >
+              ${
+                this.validationError
+                  ? html`<div
+                      id="username-validation-error"
+                      class="w-full px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg"
+                    >
+                      ${this.validationError}
+                    </div>`
+                  : this.clanTagOwnershipError
+                    ? this.renderClanTagOwnershipError()
+                    : null
+              }
+              ${this.renderClaimGrace()}
+            </div>`
+          : null
+      }
     `;
   }
 
@@ -854,17 +864,19 @@ export class UsernameInput extends LitElement {
       <!-- Escape is bound here, not on the menu: the trigger keeps focus and
            is the menu's sibling, so a menu-level handler never sees it. -->
       <div
-        class="no-crazygames relative shrink-0 h-full max-h-[44px]"
+        class="no-game-portal relative shrink-0 h-full max-h-[44px]"
         @keydown=${this.handleClanMenuKeydown}
       >
         <button
           type="button"
           id="clan-tag-button"
-          class="flex h-full w-[7.25rem] items-center justify-between gap-0.5 rounded-lg bg-transparent px-1.5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-malibu-blue/60 ${invalid
-            ? "ring-2 ring-red-400/70"
-            : this.clanMenuOpen
-              ? "bg-white/10"
-              : "hover:bg-white/5"}"
+          class="flex h-full w-[7.25rem] items-center justify-between gap-0.5 rounded-lg bg-transparent px-1.5 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-malibu-blue/60 ${
+            invalid
+              ? "ring-2 ring-red-400/70"
+              : this.clanMenuOpen
+                ? "bg-white/10"
+                : "hover:bg-white/5"
+          }"
           aria-haspopup="dialog"
           aria-expanded=${this.clanMenuOpen ? "true" : "false"}
           aria-busy=${this.clanCheckPending ? "true" : "false"}
@@ -874,31 +886,33 @@ export class UsernameInput extends LitElement {
           @click=${this.toggleClanMenu}
         >
           <span
-            class="min-w-0 flex-1 truncate text-base font-semibold uppercase text-left ${tag
-              ? "text-white"
-              : "text-white/45"}"
+            class="min-w-0 flex-1 truncate text-base font-semibold uppercase text-left ${
+              tag ? "text-white" : "text-white/45"
+            }"
             >${tag || translateText("username.tag")}</span
           >
-          ${this.clanCheckPending
-            ? html`<span
-                class="w-3 h-3 shrink-0 border-2 border-white/30 border-t-white/80 rounded-full animate-spin"
-                aria-hidden="true"
-              ></span>`
-            : html`<svg
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                class="w-3 h-3 shrink-0 text-white/45"
-                aria-hidden="true"
-              >
-                <path
-                  d="M5.5 7.5 10 12l4.5-4.5"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  fill="none"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                ></path>
-              </svg>`}
+          ${
+            this.clanCheckPending
+              ? html`<span
+                  class="w-3 h-3 shrink-0 border-2 border-white/30 border-t-white/80 rounded-full animate-spin"
+                  aria-hidden="true"
+                ></span>`
+              : html`<svg
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  class="w-3 h-3 shrink-0 text-white/45"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M5.5 7.5 10 12l4.5-4.5"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    fill="none"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  ></path>
+                </svg>`
+          }
         </button>
         ${this.clanMenuOpen ? this.renderClanMenu() : null}
       </div>
@@ -915,56 +929,61 @@ export class UsernameInput extends LitElement {
         aria-labelledby="clan-tag-button"
         class="absolute left-0 top-full z-50 mt-1.5 w-[17rem] max-w-[80vw] rounded-xl border border-white/15 bg-surface/95 p-1.5 shadow-xl backdrop-blur-md"
       >
-        ${clans.length > 0
-          ? html`
-              <div
-                class="px-2 pt-1 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-white/40"
-              >
-                ${translateText("username.clan_your_clans")}
-              </div>
-              <div class="max-h-56 overflow-y-auto">
-                ${clans.map(
-                  (clan) => html`
-                    <button
-                      type="button"
-                      class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors cursor-pointer ${clan.tag.toUpperCase() ===
-                      active
-                        ? "bg-malibu-blue/25"
-                        : "hover:bg-white/10"}"
-                      @click=${() => this.selectClan(clan.tag)}
-                    >
-                      <span
-                        class="shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-sm font-bold uppercase tracking-wider text-white"
-                        >${clan.tag}</span
+        ${
+          clans.length > 0
+            ? html`
+                <div
+                  class="px-2 pt-1 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-white/40"
+                >
+                  ${translateText("username.clan_your_clans")}
+                </div>
+                <div class="max-h-56 overflow-y-auto">
+                  ${clans.map(
+                    (clan) => html`
+                      <button
+                        type="button"
+                        class="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors cursor-pointer ${
+                          clan.tag.toUpperCase() === active
+                            ? "bg-malibu-blue/25"
+                            : "hover:bg-white/10"
+                        }"
+                        @click=${() => this.selectClan(clan.tag)}
                       >
-                      <span
-                        class="min-w-0 flex-1 truncate text-sm text-white/80"
-                        >${clan.name}</span
-                      >
-                      ${clan.tag.toUpperCase() === active
-                        ? html`<svg
-                            viewBox="0 0 24 24"
-                            class="w-4 h-4 shrink-0 text-malibu-blue"
-                            aria-hidden="true"
-                          >
-                            <path
-                              d="M5 12.5l4.5 4.5L19 7"
-                              stroke="currentColor"
-                              stroke-width="2.5"
-                              fill="none"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                            ></path>
-                          </svg>`
-                        : null}
-                    </button>
-                  `,
-                )}
-              </div>
-            `
-          : html`<div class="px-2 pt-1.5 pb-1 text-sm text-white/50">
-              ${translateText("username.clan_none_joined")}
-            </div>`}
+                        <span
+                          class="shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-sm font-bold uppercase tracking-wider text-white"
+                          >${clan.tag}</span
+                        >
+                        <span
+                          class="min-w-0 flex-1 truncate text-sm text-white/80"
+                          >${clan.name}</span
+                        >
+                        ${
+                          clan.tag.toUpperCase() === active
+                            ? html`<svg
+                                viewBox="0 0 24 24"
+                                class="w-4 h-4 shrink-0 text-malibu-blue"
+                                aria-hidden="true"
+                              >
+                                <path
+                                  d="M5 12.5l4.5 4.5L19 7"
+                                  stroke="currentColor"
+                                  stroke-width="2.5"
+                                  fill="none"
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                ></path>
+                              </svg>`
+                            : null
+                        }
+                      </button>
+                    `,
+                  )}
+                </div>
+              `
+            : html`<div class="px-2 pt-1.5 pb-1 text-sm text-white/50">
+                ${translateText("username.clan_none_joined")}
+              </div>`
+        }
         <div class="mt-1.5 border-t border-white/10 pt-1.5">
           <label
             class="block px-2 pb-1 text-[11px] font-bold uppercase tracking-wider text-white/40"
@@ -985,15 +1004,17 @@ export class UsernameInput extends LitElement {
         <div
           class="mt-1.5 flex items-center gap-2 border-t border-white/10 pt-1.5"
         >
-          ${this.clanTag
-            ? html`<button
-                type="button"
-                class="rounded-lg px-2 py-1 text-sm text-white/60 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
-                @click=${() => this.selectClan(null)}
-              >
-                ${translateText("username.clan_clear")}
-              </button>`
-            : null}
+          ${
+            this.clanTag
+              ? html`<button
+                  type="button"
+                  class="rounded-lg px-2 py-1 text-sm text-white/60 hover:bg-white/10 hover:text-white transition-colors cursor-pointer"
+                  @click=${() => this.selectClan(null)}
+                >
+                  ${translateText("username.clan_clear")}
+                </button>`
+              : null
+          }
           <button
             type="button"
             class="ml-auto rounded-lg px-2 py-1 text-sm text-malibu-blue hover:bg-malibu-blue/15 transition-colors cursor-pointer"
@@ -1010,16 +1031,18 @@ export class UsernameInput extends LitElement {
   // the state reads as "this is my account name", not "the input broke".
   private renderNameControl() {
     return html`
-      ${this.verifiedActive
-        ? this.renderVerifiedChip()
-        : this.renderNameInput()}
+      ${
+        this.verifiedActive ? this.renderVerifiedChip() : this.renderNameInput()
+      }
       <!-- The buttons differ in width, so this resizes the name field — which
            is transparent and left-aligned, so only its invisible right edge
            moves. -->
-      <div class="no-crazygames shrink-0 h-full max-h-[44px]">
-        ${this.verifiedActive
-          ? this.renderUseCustomButton()
-          : this.renderUseVerifiedButton()}
+      <div class="no-game-portal shrink-0 h-full max-h-[44px]">
+        ${
+          this.verifiedActive
+            ? this.renderUseCustomButton()
+            : this.renderUseVerifiedButton()
+        }
       </div>
     `;
   }
@@ -1096,9 +1119,11 @@ export class UsernameInput extends LitElement {
     return html`
       <button
         type="button"
-        class="group flex h-full w-full items-center justify-center gap-1.5 rounded-lg border px-2 transition-colors cursor-pointer select-none ${eligible
-          ? "border-malibu-blue/50 bg-malibu-blue/10 hover:border-malibu-blue/80 hover:bg-malibu-blue/20"
-          : "border-white/10 bg-black/20 hover:border-white/25 hover:bg-black/35"}"
+        class="group flex h-full w-full items-center justify-center gap-1.5 rounded-lg border px-2 transition-colors cursor-pointer select-none ${
+          eligible
+            ? "border-malibu-blue/50 bg-malibu-blue/10 hover:border-malibu-blue/80 hover:bg-malibu-blue/20"
+            : "border-white/10 bg-black/20 hover:border-white/25 hover:bg-black/35"
+        }"
         title=${hint}
         aria-pressed="false"
         @click=${this.handleVerifiedToggle}
@@ -1111,9 +1136,9 @@ export class UsernameInput extends LitElement {
           null,
         )}
         <span
-          class="hidden sm:inline text-sm font-medium whitespace-nowrap transition-colors ${eligible
-            ? "text-white"
-            : "text-white/60 group-hover:text-white/90"}"
+          class="hidden sm:inline text-sm font-medium whitespace-nowrap transition-colors ${
+            eligible ? "text-white" : "text-white/60 group-hover:text-white/90"
+          }"
           >${translateText("username.verified_use")}</span
         >
       </button>
@@ -1148,9 +1173,9 @@ export class UsernameInput extends LitElement {
     window.showPage?.("page-clan");
     void customElements.whenDefined("clan-modal").then(() => {
       document
-        .querySelector<
-          HTMLElement & { open: (args: { tag: string }) => void }
-        >("clan-modal")
+        .querySelector<HTMLElement & { open: (args: { tag: string }) => void }>(
+          "clan-modal",
+        )
         ?.open({ tag });
     });
   }
@@ -1225,7 +1250,7 @@ export class UsernameInput extends LitElement {
     if (this.verifiedActive) {
       this._isValid = true;
       this.validationError = "";
-      if (!this.onCrazyGames) {
+      if (!this.onGamePortal) {
         localStorage.setItem(clanTagKey, this.getClanTag() ?? "");
       }
       this.emitValidity();
@@ -1235,9 +1260,9 @@ export class UsernameInput extends LitElement {
     const result = validateUsername(trimmedBase);
     this._isValid = result.isValid;
     if (result.isValid) {
-      // Never persist on CrazyGames: keeping localStorage empty means a logout
+      // Never persist on a portal: keeping localStorage empty means a logout
       // (page reload) restores a guest username instead of the account name.
-      if (!this.onCrazyGames) {
+      if (!this.onGamePortal) {
         localStorage.setItem(usernameKey, trimmedBase);
         // Written with the name, never separately: a stale flag would either
         // strand a player on a generated name or overwrite one they chose.

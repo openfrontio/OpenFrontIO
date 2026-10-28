@@ -1,6 +1,6 @@
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
+import { createGameWireContext } from "@openfront/shared/ZbinWire";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CloseCode, CloseReason } from "../../src/core/CloseCodes";
-import { createGameWireContext } from "../../src/core/ZbinWire";
 import { GameManager } from "../../src/server/GameManager";
 import { GamePhase } from "../../src/server/GameServer";
 import {

@@ -1,6 +1,6 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { assetUrl } from "../../core/AssetUrls";
 
 const STYLE_ID = "plutonium-icon-styles";
 if (!document.getElementById(STYLE_ID)) {
@@ -44,8 +44,9 @@ export class PlutoniumIcon extends LitElement {
         <img
           src=${assetUrl("images/PlutoniumIcon.svg")}
           alt="Plutonium"
-          style="position:relative; width:${this.size}px; height:${this
-            .size}px; filter: drop-shadow(0 0 4px rgba(34,197,94,0.6)); animation: plutonium-rotate 7s linear infinite; will-change: transform;"
+          style="position:relative; width:${this.size}px; height:${
+            this.size
+          }px; filter: drop-shadow(0 0 4px rgba(34,197,94,0.6)); animation: plutonium-rotate 7s linear infinite; will-change: transform;"
           draggable="false"
         />
       </div>

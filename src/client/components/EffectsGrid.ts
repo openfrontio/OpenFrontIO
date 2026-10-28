@@ -1,6 +1,4 @@
-import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { UserMeResponse } from "../../core/ApiSchemas";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import {
   Cosmetics,
   Effect,
@@ -9,17 +7,19 @@ import {
   isNukeExplosionEffect,
   NUKE_EXPLOSION_TYPES,
   NukeExplosionType,
-} from "../../core/CosmeticSchemas";
-import {
-  EFFECTS_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../../core/game/UserSettings";
+} from "@openfront/shared/CosmeticSchemas";
+import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import {
   resolveCosmetics,
   ResolvedCosmetic,
   translateCosmetic,
 } from "../Cosmetics";
+import {
+  EFFECTS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../UserSettings";
 import { translateText } from "../Utils";
 import "./CosmeticCard";
 import { cosmeticSelectionLabel } from "./CosmeticPresentation";
@@ -299,9 +299,11 @@ export class EffectsGrid extends LitElement {
         ${NUKE_EXPLOSION_TYPES.map((nt) => {
           const active = this.activeNukeType === nt;
           return html`<button
-            class="px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-colors ${active
-              ? "bg-blue-600 text-white"
-              : "bg-white/5 text-white/50 hover:text-white/80 hover:bg-white/10"}"
+            class="px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-colors ${
+              active
+                ? "bg-blue-600 text-white"
+                : "bg-white/5 text-white/50 hover:text-white/80 hover:bg-white/10"
+            }"
             @click=${() => this.selectNukeType(nt)}
           >
             ${translateText(`effects.nukeType.${nt}`)}
@@ -321,9 +323,11 @@ export class EffectsGrid extends LitElement {
         ${EFFECT_TYPES.map((type) => {
           const active = this.activeType === type;
           return html`<button
-            class="-mb-px max-w-full shrink-0 whitespace-normal border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${active
-              ? "border-malibu-blue text-aquarius"
-              : "border-transparent text-white/40 hover:text-white/70"}"
+            class="-mb-px max-w-full shrink-0 whitespace-normal border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${
+              active
+                ? "border-malibu-blue text-aquarius"
+                : "border-transparent text-white/40 hover:text-white/70"
+            }"
             @click=${() => this.selectEffectType(type)}
           >
             ${translateText(`effects.type.${type}`)}
@@ -409,16 +413,20 @@ export class EffectsGrid extends LitElement {
             );
             return html`
               <div class="flex flex-col">
-                ${activeType
-                  ? nothing
-                  : html`<h3
-                      class="text-white/70 text-sm font-black uppercase tracking-wider px-2 pb-2 mb-2 border-b border-white/10"
-                    >
-                      ${translateText(`effects.type.${s.type}`)}
-                    </h3>`}
-                ${!activeType && s.type === "nukeExplosion"
-                  ? this.renderNukeTypeTabBar()
-                  : nothing}
+                ${
+                  activeType
+                    ? nothing
+                    : html`<h3
+                        class="text-white/70 text-sm font-black uppercase tracking-wider px-2 pb-2 mb-2 border-b border-white/10"
+                      >
+                        ${translateText(`effects.type.${s.type}`)}
+                      </h3>`
+                }
+                ${
+                  !activeType && s.type === "nukeExplosion"
+                    ? this.renderNukeTypeTabBar()
+                    : nothing
+                }
                 <div
                   data-effects-items
                   class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"

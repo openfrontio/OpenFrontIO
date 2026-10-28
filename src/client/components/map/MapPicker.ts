@@ -1,7 +1,3 @@
-import { html, LitElement } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
-import { assetUrl } from "../../../core/AssetUrls";
 import {
   Difficulty,
   GameMapType,
@@ -9,7 +5,11 @@ import {
   mapCategoryOrder,
   MapInfo,
   maps,
-} from "../../../core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { html, LitElement } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
 import { translateText } from "../../Utils";
 import "./MapDisplay";
 import { getFavoriteMaps, starIcon, toggleFavoriteMap } from "./MapFavorites";
@@ -149,17 +149,19 @@ export class MapPicker extends LitElement {
         type="button"
         aria-expanded=${expanded}
         @click=${() => this.toggleCategory(categoryKey)}
-        class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-all duration-200 active:scale-[0.99] ${expanded
-          ? "bg-malibu-blue/20 border-malibu-blue/50"
-          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
+        class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-all duration-200 active:scale-[0.99] ${
+          expanded
+            ? "bg-malibu-blue/20 border-malibu-blue/50"
+            : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+        }"
       >
         <span
           class="flex items-center gap-3 text-sm font-bold text-white uppercase tracking-wider"
         >
           <svg
-            class="w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${expanded
-              ? "rotate-90"
-              : ""}"
+            class="w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
+              expanded ? "rotate-90" : ""
+            }"
             viewBox="0 0 12 12"
             fill="currentColor"
             aria-hidden="true"
@@ -170,9 +172,11 @@ export class MapPicker extends LitElement {
         </span>
         <span class="text-xs font-bold text-white/40">${mapList.length}</span>
       </button>
-      ${expanded
-        ? html`<div class="mt-4">${this.renderMapGrid(mapList)}</div>`
-        : null}
+      ${
+        expanded
+          ? html`<div class="mt-4">${this.renderMapGrid(mapList)}</div>`
+          : null
+      }
     </div>`;
   }
 
@@ -208,16 +212,18 @@ export class MapPicker extends LitElement {
       <button
         type="button"
         aria-expanded=${anyExpanded}
-        title=${anyExpanded
-          ? translateText("common.collapse_all")
-          : translateText("common.expand_all")}
+        title=${
+          anyExpanded
+            ? translateText("common.collapse_all")
+            : translateText("common.expand_all")
+        }
         @click=${() => this.toggleExpandAll()}
         class="h-full flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-white/60 hover:text-white transition-all active:scale-95"
       >
         <svg
-          class="w-3 h-3 shrink-0 transition-transform duration-200 ${anyExpanded
-            ? "rotate-180"
-            : ""}"
+          class="w-3 h-3 shrink-0 transition-transform duration-200 ${
+            anyExpanded ? "rotate-180" : ""
+          }"
           viewBox="0 0 12 12"
           fill="currentColor"
           aria-hidden="true"
@@ -225,9 +231,11 @@ export class MapPicker extends LitElement {
           <path d="M2 4l4 5 4-5z" />
         </svg>
         <span class="hidden sm:inline">
-          ${anyExpanded
-            ? translateText("common.collapse_all")
-            : translateText("common.expand_all")}
+          ${
+            anyExpanded
+              ? translateText("common.collapse_all")
+              : translateText("common.expand_all")
+          }
         </span>
       </button>
     </div>`;
@@ -300,9 +308,11 @@ export class MapPicker extends LitElement {
       type="button"
       role="tab"
       aria-selected=${isActive}
-      class="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${isActive
-        ? "bg-malibu-blue/20 text-white shadow-[var(--shadow-malibu-blue-soft)]"
-        : "text-white/60 hover:text-white"}"
+      class="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${
+        isActive
+          ? "bg-malibu-blue/20 text-white shadow-[var(--shadow-malibu-blue-soft)]"
+          : "text-white/60 hover:text-white"
+      }"
       @click=${() => (this.activeTab = tab)}
     >
       ${label}
@@ -314,39 +324,42 @@ export class MapPicker extends LitElement {
     return html`
       <div class="space-y-8">
         <div class="w-full flex items-center gap-2">
-          ${isSearching
-            ? null
-            : html`<div
-                  role="tablist"
-                  aria-label="${translateText("map.map")}"
-                  class="flex-1 grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-black/20 p-1"
-                >
-                  ${this.renderTabButton(
-                    "featured",
-                    translateText("map.featured"),
-                  )}
-                  ${this.renderTabButton("all", translateText("map.all"))}
-                  ${this.renderTabButton(
-                    "favorites",
-                    translateText("map.favorites"),
-                  )}
-                </div>
-                ${this.activeTab === "all" ? this.renderExpandToggle() : null}`}
+          ${
+            isSearching
+              ? null
+              : html`<div
+                    role="tablist"
+                    aria-label="${translateText("map.map")}"
+                    class="flex-1 grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-black/20 p-1"
+                  >
+                    ${this.renderTabButton(
+                      "featured",
+                      translateText("map.featured"),
+                    )}
+                    ${this.renderTabButton("all", translateText("map.all"))}
+                    ${this.renderTabButton(
+                      "favorites",
+                      translateText("map.favorites"),
+                    )}
+                  </div>
+                  ${this.activeTab === "all" ? this.renderExpandToggle() : null}`
+          }
         </div>
         ${isSearching ? this.renderSearchResults() : this.renderActiveTab()}
         <div
-          class="w-full ${this.randomMapDivider
-            ? "pt-4 border-t border-white/5"
-            : ""}"
+          class="w-full ${
+            this.randomMapDivider ? "pt-4 border-t border-white/5" : ""
+          }"
         >
           ${this.renderSectionHeading(translateText("map_categories.special"))}
           <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <button
               type="button"
-              class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 active:scale-95 gap-3 group ${this
-                .useRandomMap
-                ? "bg-malibu-blue/20 border-malibu-blue/50 shadow-[var(--shadow-malibu-blue-strong)]"
-                : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1"}"
+              class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 active:scale-95 gap-3 group ${
+                this.useRandomMap
+                  ? "bg-malibu-blue/20 border-malibu-blue/50 shadow-[var(--shadow-malibu-blue-strong)]"
+                  : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1"
+              }"
               @click=${this.handleSelectRandomMap}
             >
               <div
@@ -357,9 +370,9 @@ export class MapPicker extends LitElement {
                   alt=${translateText("map.random")}
                   draggable="false"
                   @dragstart=${this.preventImageDrag}
-                  class="w-full h-full object-cover ${this.useRandomMap
-                    ? "opacity-100"
-                    : "opacity-80"} group-hover:opacity-100 transition-opacity duration-200"
+                  class="w-full h-full object-cover ${
+                    this.useRandomMap ? "opacity-100" : "opacity-80"
+                  } group-hover:opacity-100 transition-opacity duration-200"
                 />
               </div>
               <div

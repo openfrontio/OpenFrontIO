@@ -1,18 +1,18 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
-  GRAPHICS_KEY,
-  GRAPHICS_PRESETS_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../../core/game/UserSettings";
-import {
   BUILTIN_PRESETS,
   migrateLegacyGraphicsSettings,
   stableStringify,
 } from "../GraphicsPresets";
 import { showInGameConfirm } from "../InGameModal";
 import { type GraphicsOverrides } from "../render/gl";
+import {
+  GRAPHICS_KEY,
+  GRAPHICS_PRESETS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../UserSettings";
 import { translateText } from "../Utils";
 
 const CUSTOM_VALUE = "custom";
@@ -131,11 +131,13 @@ export class GraphicsPresetSelector extends LitElement {
           @change=${this.onSelect}
           class="flex-1 min-w-0 px-2 py-1.5 bg-slate-900 border border-slate-500 rounded-sm text-sm text-white cursor-pointer"
         >
-          ${selected === CUSTOM_VALUE
-            ? html`<option value=${CUSTOM_VALUE} .selected=${true} disabled>
-                ${translateText("graphics_setting.preset_custom")}
-              </option>`
-            : null}
+          ${
+            selected === CUSTOM_VALUE
+              ? html`<option value=${CUSTOM_VALUE} .selected=${true} disabled>
+                  ${translateText("graphics_setting.preset_custom")}
+                </option>`
+              : null
+          }
           ${BUILTIN_PRESETS.map(
             (preset) =>
               html`<option
@@ -155,16 +157,18 @@ export class GraphicsPresetSelector extends LitElement {
               </option>`,
           )}
         </select>
-        ${selected.startsWith("user:")
-          ? html`
-              <button
-                class="px-2 py-1 text-slate-400 hover:text-white"
-                @click=${this.onDelete}
-              >
-                ✕
-              </button>
-            `
-          : null}
+        ${
+          selected.startsWith("user:")
+            ? html`
+                <button
+                  class="px-2 py-1 text-slate-400 hover:text-white"
+                  @click=${this.onDelete}
+                >
+                  ✕
+                </button>
+              `
+            : null
+        }
       </div>
     `;
   }

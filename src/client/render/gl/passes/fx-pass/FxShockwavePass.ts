@@ -47,7 +47,16 @@ interface ActiveShockwave {
 //   palette color so the shader can take a max over all four.
 // ---------------------------------------------------------------------------
 
-const QUAD_VERTS = new Float32Array([0, 0, 1, 0, 0, 1, 1, 0, 1, 1, 0, 1]);
+// Octagon inscribed in [0, 1] x [0, 1] cutting corners at C=0.2929, 1-C=0.7071
+// 6 triangles (18 2D vertices): center rectangle + 2 side trapezoids
+const OCTAGON_VERTS = new Float32Array([
+  // Center rectangle (2 triangles)
+  0.2929, 0, 0.7071, 0, 0.2929, 1, 0.7071, 0, 0.7071, 1, 0.2929, 1,
+  // Left trapezoid (2 triangles)
+  0, 0.2929, 0.2929, 0, 0.2929, 1, 0, 0.2929, 0.2929, 1, 0, 0.7071,
+  // Right trapezoid (2 triangles)
+  0.7071, 0, 1, 0.2929, 0.7071, 1, 1, 0.2929, 1, 0.7071, 0.7071, 1,
+]);
 const SHOCKWAVE_FLOATS = 22;
 const SHOCKWAVE_STRIDE = SHOCKWAVE_FLOATS * 4; // bytes
 
@@ -88,7 +97,12 @@ export class FxShockwavePass {
     private gl: WebGL2RenderingContext,
     private settings: RenderSettings,
   ) {
-    this.program = createProgram(gl, shockwaveVertSrc, shockwaveFragSrc);
+    this.program = createProgram(
+      gl,
+      shockwaveVertSrc,
+      shockwaveFragSrc,
+      "FxShockwavePass",
+    );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uRingWidth = gl.getUniformLocation(this.program, "uRingWidth")!;
     this.uTime = gl.getUniformLocation(this.program, "uTime")!;
@@ -97,10 +111,10 @@ export class FxShockwavePass {
     this.vao = gl.createVertexArray()!;
     gl.bindVertexArray(this.vao);
 
-    // Unit quad at location 0 (stride 8, non-instanced)
+    // Unit octagon at location 0 (stride 8, non-instanced)
     this.quadVbo = gl.createBuffer()!;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.quadVbo);
-    gl.bufferData(gl.ARRAY_BUFFER, QUAD_VERTS, gl.STATIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, OCTAGON_VERTS, gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0);
 
@@ -306,7 +320,7 @@ export class FxShockwavePass {
       this.shockwaveCount * SHOCKWAVE_FLOATS,
     );
     gl.bindVertexArray(this.vao);
-    gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.shockwaveCount);
+    gl.drawArraysInstanced(gl.TRIANGLES, 0, 18, this.shockwaveCount);
   }
 
   // -------------------------------------------------------------------------

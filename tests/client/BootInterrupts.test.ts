@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   BOOT_INTERRUPT_KEYS,
   bootInterruptsAllowed,
@@ -12,6 +12,9 @@ import {
   joinOwnsInFlightFlag,
   nextBootInterrupt,
   parseClaimPromptStore,
+  reportThanksDueThisLaunch,
+  reportThanksStringsReady,
+  resetReportThanksForTest,
   runBootInterrupt,
   steamGrantStringsReady,
   USERNAME_FORM_HASH,
@@ -20,6 +23,10 @@ import {
   type BootInterruptPorts,
   type ClaimPromptStore,
 } from "../../src/client/BootInterrupts";
+import type {
+  DesktopUpdateState,
+  DesktopUpdateStatus,
+} from "../../src/client/DesktopShell";
 import type { SteamGrantStore } from "../../src/client/SteamGrantNotices";
 
 const ME = "player-public-id";
@@ -38,9 +45,13 @@ function boot(
     grantWelcomeDue: false,
     grantEndedDue: false,
     grantStringsReady: true,
+    steamNotice: null,
+    steamNoticeStringsReady: true,
     rewardCount: 0,
     claimPromptDue: true,
     claimStringsReady: true,
+    reportThanksDue: false,
+    reportThanksStringsReady: true,
     ...overrides,
   };
 }
@@ -427,14 +438,22 @@ describe("runBootInterrupt", () => {
       navigate: (hash) => calls.navigated.push(hash),
       openRewards: () => calls.rewardsOpened++,
       storeClaimPrompt: (store) => calls.stored.push(store),
-      storeSteamGrant: (store) => calls.grantStored.push(store),
+      updateSteamGrant: (update) =>
+        calls.grantStored.push(update(context.grantStore)),
+      markNoticeSeen: () => {},
+      markMessageSeen: () => {},
       now: () => now,
       ...overrides,
     };
     return { base, calls };
   }
 
-  const context = { claimStore: {}, grantStore: {}, publicId: ME };
+  const context = {
+    claimStore: {},
+    grantStore: {},
+    publicId: ME,
+    steamNotice: null,
+  };
 
   async function run(
     interrupt: BootInterrupt | null,
@@ -528,9 +547,14 @@ describe("bootInterruptsAllowed", () => {
   const idle = { joinInFlight: false, lobbyHandle: null };
 
   it("allows an idle clean homepage", () => {
-    expect(bootInterruptsAllowed(home, false, idle)).toBe(true);
+    expect(bootInterruptsAllowed(home, false, idle, null)).toBe(true);
     expect(
-      bootInterruptsAllowed({ pathname: "/index.html", hash: "" }, true, idle),
+      bootInterruptsAllowed(
+        { pathname: "/index.html", hash: "" },
+        true,
+        idle,
+        null,
+      ),
     ).toBe(true);
   });
 
@@ -541,20 +565,50 @@ describe("bootInterruptsAllowed", () => {
   // and the confirm opens over a game the player has already committed to.
   it("refuses a join that has not reached a handle yet", () => {
     expect(
-      bootInterruptsAllowed(home, false, {
-        joinInFlight: true,
-        lobbyHandle: null,
-      }),
+      bootInterruptsAllowed(
+        home,
+        false,
+        { joinInFlight: true, lobbyHandle: null },
+        null,
+      ),
     ).toBe(false);
   });
 
   it("refuses once a lobby handle exists", () => {
     expect(
-      bootInterruptsAllowed(home, false, {
-        joinInFlight: false,
-        lobbyHandle: {},
-      }),
+      bootInterruptsAllowed(
+        home,
+        false,
+        { joinInFlight: false, lobbyHandle: {} },
+        null,
+      ),
     ).toBe(false);
+  });
+
+  it("holds while a desktop update is downloading or staged", () => {
+    const update = (status: DesktopUpdateStatus): DesktopUpdateState => ({
+      status,
+      bytes: 0,
+      total: 0,
+    });
+    for (const status of ["downloading", "staged"] as const) {
+      expect(
+        bootInterruptsAllowed(home, true, idle, update(status)),
+        status,
+      ).toBe(false);
+    }
+    // `blocked` waits on a Steam depot update and can last for days.
+    for (const status of [
+      "checking",
+      "current",
+      "blocked",
+      "failed",
+    ] as const) {
+      expect(
+        bootInterruptsAllowed(home, true, idle, update(status)),
+        status,
+      ).toBe(true);
+    }
   });
 
   // Each part is necessary on its own: no single one of the three can carry
@@ -566,7 +620,7 @@ describe("bootInterruptsAllowed", () => {
       ["joining", home, false, { joinInFlight: true, lobbyHandle: null }],
       ["in lobby", home, false, { joinInFlight: false, lobbyHandle: {} }],
     ] as const) {
-      expect(bootInterruptsAllowed(location, desktop, lobby), label).toBe(
+      expect(bootInterruptsAllowed(location, desktop, lobby, null), label).toBe(
         false,
       );
     }
@@ -584,7 +638,12 @@ describe("a join that fails before reaching a handle", () => {
     // The join commits and sets the flag.
     let joinInFlight = true;
     expect(
-      bootInterruptsAllowed(home, false, { joinInFlight, lobbyHandle: null }),
+      bootInterruptsAllowed(
+        home,
+        false,
+        { joinInFlight, lobbyHandle: null },
+        null,
+      ),
     ).toBe(false);
 
     // It rejects. Same event, so it still owns the flag.
@@ -592,7 +651,12 @@ describe("a join that fails before reaching a handle", () => {
     if (joinOwnsInFlightFlag(joinEvent, joinEvent)) joinInFlight = false;
 
     expect(
-      bootInterruptsAllowed(home, false, { joinInFlight, lobbyHandle: null }),
+      bootInterruptsAllowed(
+        home,
+        false,
+        { joinInFlight, lobbyHandle: null },
+        null,
+      ),
     ).toBe(true);
   });
 
@@ -608,7 +672,12 @@ describe("a join that fails before reaching a handle", () => {
 
     expect(joinInFlight).toBe(true);
     expect(
-      bootInterruptsAllowed(home, false, { joinInFlight, lobbyHandle: null }),
+      bootInterruptsAllowed(
+        home,
+        false,
+        { joinInFlight, lobbyHandle: null },
+        null,
+      ),
     ).toBe(false);
   });
 
@@ -625,7 +694,12 @@ describe("a join that fails before reaching a handle", () => {
     let joinInFlight = true;
     let mostRecentJoinEvent = joinA;
     expect(
-      bootInterruptsAllowed(home, false, { joinInFlight, lobbyHandle: null }),
+      bootInterruptsAllowed(
+        home,
+        false,
+        { joinInFlight, lobbyHandle: null },
+        null,
+      ),
     ).toBe(false);
 
     // While A is still the current join, A does own the flag.
@@ -641,7 +715,12 @@ describe("a join that fails before reaching a handle", () => {
     if (joinOwnsInFlightFlag(mostRecentJoinEvent, joinA)) joinInFlight = false;
     expect(joinInFlight).toBe(true);
     expect(
-      bootInterruptsAllowed(home, false, { joinInFlight, lobbyHandle: null }),
+      bootInterruptsAllowed(
+        home,
+        false,
+        { joinInFlight, lobbyHandle: null },
+        null,
+      ),
     ).toBe(false);
 
     // B then reaches its own handle and clears it.
@@ -707,9 +786,13 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
     grantWelcomeDue: false,
     grantEndedDue: false,
     grantStringsReady: false,
+    steamNotice: null,
+    steamNoticeStringsReady: false,
     rewardCount: 2,
     claimPromptDue: true,
     claimStringsReady: claimPromptStringsReady(unready),
+    reportThanksDue: false,
+    reportThanksStringsReady: false,
   };
 
   it("does not choose the claim prompt", () => {
@@ -726,7 +809,7 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
     };
     await runBootInterrupt(
       nextBootInterrupt(inputs),
-      { claimStore: {}, grantStore: {}, publicId: ME },
+      { claimStore: {}, grantStore: {}, publicId: ME, steamNotice: null },
       {
         translate: unready,
         confirm: async (body) => {
@@ -738,7 +821,9 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
         navigate: (hash) => calls.navigated.push(hash),
         openRewards: () => calls.rewardsOpened++,
         storeClaimPrompt: (store) => calls.stored.push(store),
-        storeSteamGrant: () => {},
+        updateSteamGrant: () => {},
+        markNoticeSeen: () => {},
+        markMessageSeen: () => {},
         now: () => 1_757_000_000_000,
       },
     );
@@ -828,6 +913,7 @@ describe("running the Steam grant notices", () => {
   const record = {
     periodEnd: "2026-10-15T00:00:00.000Z",
     tier: "warlord",
+    steam: true,
     welcomed: false,
     endedShown: false,
     seenAt: now,
@@ -854,7 +940,9 @@ describe("running the Steam grant notices", () => {
       navigate: () => {},
       openRewards: () => calls.rewardsOpened++,
       storeClaimPrompt: () => {},
-      storeSteamGrant: (store) => calls.grantStored.push(store),
+      updateSteamGrant: (update) => calls.grantStored.push(update(grantStore)),
+      markNoticeSeen: () => {},
+      markMessageSeen: () => {},
       now: () => now,
     };
     return { base, calls };
@@ -864,7 +952,7 @@ describe("running the Steam grant notices", () => {
     const { base, calls } = ports();
     await runBootInterrupt(
       "grant-welcome",
-      { claimStore: {}, grantStore, publicId: ME },
+      { claimStore: {}, grantStore, publicId: ME, steamNotice: null },
       base,
     );
     expect(calls.alerted).toEqual([
@@ -884,19 +972,13 @@ describe("running the Steam grant notices", () => {
     );
   });
 
-  // Recorded before the dialog opens: the alert settles only on dismissal.
-  it("records the welcome as shown before opening it", async () => {
+  it("records the welcome once dismissed", async () => {
     const { base, calls } = ports();
-    let storedBeforeAlert = false;
-    base.alert = async () => {
-      storedBeforeAlert = calls.grantStored.length === 1;
-    };
     await runBootInterrupt(
       "grant-welcome",
-      { claimStore: {}, grantStore, publicId: ME },
+      { claimStore: {}, grantStore, publicId: ME, steamNotice: null },
       base,
     );
-    expect(storedBeforeAlert).toBe(true);
     expect(calls.grantStored).toEqual([
       { [ME]: { ...record, welcomed: true } },
     ]);
@@ -906,7 +988,7 @@ describe("running the Steam grant notices", () => {
     const { base, calls } = ports();
     await runBootInterrupt(
       "grant-ended",
-      { claimStore: {}, grantStore, publicId: ME },
+      { claimStore: {}, grantStore, publicId: ME, steamNotice: null },
       base,
     );
     expect(calls.alerted).toEqual([
@@ -926,7 +1008,7 @@ describe("running the Steam grant notices", () => {
     for (const interrupt of ["grant-welcome", "grant-ended"] as const) {
       await runBootInterrupt(
         interrupt,
-        { claimStore: {}, grantStore: {}, publicId: ME },
+        { claimStore: {}, grantStore: {}, publicId: ME, steamNotice: null },
         base,
       );
     }
@@ -941,7 +1023,7 @@ describe("running the Steam grant notices", () => {
     for (const interrupt of ["grant-welcome", "grant-ended"] as const) {
       await runBootInterrupt(
         interrupt,
-        { claimStore: {}, grantStore, publicId: ME },
+        { claimStore: {}, grantStore, publicId: ME, steamNotice: null },
         base,
       );
     }
@@ -967,5 +1049,255 @@ describe("steamGrantStringsReady", () => {
 
   it("is not ready while a key echoes back", () => {
     expect(steamGrantStringsReady((key) => key)).toBe(false);
+  });
+});
+
+// An update Reload, a crash or a quit can tear the page down under an open
+// dialog. The grant notices are owed once, so recording one on opening would
+// lose it for good.
+describe("an interrupt the player never answered", () => {
+  const now = 1_757_000_000_000;
+  const grantRecord = {
+    periodEnd: "2026-10-15T00:00:00.000Z",
+    tier: "warlord",
+    steam: true,
+    welcomed: false,
+    endedShown: false,
+    seenAt: now,
+  };
+  const context = {
+    claimStore: {},
+    grantStore: { [ME]: grantRecord },
+    publicId: ME,
+    steamNotice: null,
+  };
+
+  function deferred() {
+    let settle!: () => void;
+    const promise = new Promise<void>((resolve) => (settle = resolve));
+    return { promise, settle };
+  }
+
+  function ports() {
+    const open = deferred();
+    const calls = {
+      opened: 0,
+      claimStored: [] as ClaimPromptStore[],
+      grantStored: [] as SteamGrantStore[],
+      navigated: [] as string[],
+    };
+    const base: BootInterruptPorts = {
+      translate: (key) => `t(${key})`,
+      confirm: async () => {
+        calls.opened++;
+        await open.promise;
+        return true;
+      },
+      alert: async () => {
+        calls.opened++;
+        await open.promise;
+      },
+      tierName: (tier) => tier,
+      navigate: (hash) => calls.navigated.push(hash),
+      openRewards: () => {},
+      storeClaimPrompt: (store) => calls.claimStored.push(store),
+      updateSteamGrant: (update) =>
+        calls.grantStored.push(update(context.grantStore)),
+      markNoticeSeen: () => {},
+      markMessageSeen: () => {},
+      now: () => now,
+    };
+    return { base, calls, settle: open.settle };
+  }
+
+  it("records nothing while the dialog is still open", async () => {
+    for (const interrupt of [
+      "username-claim",
+      "grant-welcome",
+      "grant-ended",
+    ] as const) {
+      const { base, calls, settle } = ports();
+      const running = runBootInterrupt(interrupt, context, base);
+      await Promise.resolve();
+      expect(calls.opened, interrupt).toBe(1);
+      expect(calls.claimStored, interrupt).toEqual([]);
+      expect(calls.grantStored, interrupt).toEqual([]);
+      settle();
+      await running;
+      expect(
+        calls.claimStored.length + calls.grantStored.length,
+        interrupt,
+      ).toBe(1);
+    }
+  });
+
+  // The lapse notice marks the sign-off shown from inside a re-run's dispatch,
+  // and a new grant period resets the record. Neither may be undone by a
+  // write that lands after the dialog.
+  it("applies its record to the store as it is when the dialog closes", async () => {
+    const { base, settle } = ports();
+    let stored: SteamGrantStore = { [ME]: grantRecord };
+    base.updateSteamGrant = (update) => {
+      stored = update(stored);
+    };
+    const running = runBootInterrupt("grant-welcome", context, base);
+    stored = { [ME]: { ...grantRecord, endedShown: true } };
+    settle();
+    await running;
+    expect(stored).toEqual({
+      [ME]: { ...grantRecord, welcomed: true, endedShown: true },
+    });
+  });
+
+  it("leaves a grant that replaced the one shown still unanswered", async () => {
+    for (const interrupt of ["grant-welcome", "grant-ended"] as const) {
+      const { base, settle } = ports();
+      const replacement = {
+        ...grantRecord,
+        periodEnd: "2026-11-15T00:00:00.000Z",
+      };
+      let stored: SteamGrantStore = { [ME]: grantRecord };
+      base.updateSteamGrant = (update) => {
+        stored = update(stored);
+      };
+      const running = runBootInterrupt(interrupt, context, base);
+      stored = { [ME]: replacement };
+      settle();
+      await running;
+      expect(stored, interrupt).toEqual({ [ME]: replacement });
+    }
+  });
+
+  it("does not stack a second copy when onUserMe re-runs", async () => {
+    const { base, calls, settle } = ports();
+    const first = runBootInterrupt("username-claim", context, base);
+    await runBootInterrupt("username-claim", context, base);
+    expect(calls.opened).toBe(1);
+    settle();
+    await first;
+    expect(calls.claimStored).toHaveLength(1);
+    expect(calls.navigated).toEqual([USERNAME_FORM_HASH]);
+  });
+
+  it("blocks nothing for an interrupt that opens no dialog", async () => {
+    const { base, calls, settle } = ports();
+    const nothing = runBootInterrupt(null, context, base);
+    const claim = runBootInterrupt("username-claim", context, base);
+    expect(calls.opened).toBe(1);
+    settle();
+    await Promise.all([nothing, claim]);
+  });
+
+  it("runs again once the open dialog has settled", async () => {
+    const { base, calls, settle } = ports();
+    settle();
+    await runBootInterrupt("username-claim", context, base);
+    await runBootInterrupt("username-claim", context, base);
+    expect(calls.opened).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The report thank-you
+// ---------------------------------------------------------------------------
+
+describe("the report thank-you in the ordering", () => {
+  it("shows when one is pending and nothing else is", () => {
+    expect(nextBootInterrupt(boot({ reportThanksDue: true }))).toBe(
+      "report-thanks",
+    );
+  });
+
+  // Lowest priority: it is a thank-you, and it keeps until the next login.
+  it("yields to every other interrupt", () => {
+    expect(
+      nextBootInterrupt(boot({ reportThanksDue: true, rewardCount: 1 })),
+    ).toBe("rewards");
+    expect(
+      nextBootInterrupt(boot({ reportThanksDue: true, lapseNoticeDue: true })),
+    ).toBe("lapse-notice");
+  });
+
+  it("never interrupts a deep link", () => {
+    expect(
+      nextBootInterrupt(boot({ reportThanksDue: true, cleanHomepage: false })),
+    ).toBeNull();
+  });
+
+  // It is shown once and then marked seen on the server, so an echoed key
+  // would spend it on a string nobody can read.
+  it("waits for its strings", () => {
+    expect(
+      nextBootInterrupt(
+        boot({ reportThanksDue: true, reportThanksStringsReady: false }),
+      ),
+    ).toBeNull();
+    expect(reportThanksStringsReady((key) => key)).toBe(false);
+    expect(reportThanksStringsReady((key) => `t(${key})`)).toBe(true);
+  });
+});
+
+describe("running the report thank-you", () => {
+  beforeEach(() => resetReportThanksForTest());
+
+  // /users/@me is re-read within a launch (session recovery, a portal sign-in)
+  // and the seen POST is fire and forget, so a re-read can still carry the
+  // message the player just closed. One showing per launch.
+  it("is due once per launch, however often /users/@me is re-read", async () => {
+    expect(reportThanksDueThisLaunch(["report_thanks"], ME)).toBe(true);
+    await runBootInterrupt(
+      "report-thanks",
+      { claimStore: {}, grantStore: {}, publicId: ME, steamNotice: null },
+      {
+        translate: (key) => `t(${key})`,
+        confirm: async () => true,
+        alert: async () => {},
+        tierName: (tier) => tier,
+        navigate: () => {},
+        openRewards: () => {},
+        storeClaimPrompt: () => {},
+        updateSteamGrant: () => {},
+        markNoticeSeen: () => {},
+        markMessageSeen: () => {},
+        now: () => 1_757_000_000_000,
+      },
+    );
+    expect(reportThanksDueThisLaunch(["report_thanks"], ME)).toBe(false);
+    // A portal sign-in to another account, without a reload, still owes it.
+    expect(reportThanksDueThisLaunch(["report_thanks"], "other-account")).toBe(
+      true,
+    );
+  });
+
+  it("is not due without a pending report_thanks", () => {
+    expect(reportThanksDueThisLaunch([], ME)).toBe(false);
+    expect(reportThanksDueThisLaunch(["something_else"], ME)).toBe(false);
+  });
+
+  it("shows the thank-you, then marks it seen", async () => {
+    const events: string[] = [];
+    await runBootInterrupt(
+      "report-thanks",
+      { claimStore: {}, grantStore: {}, publicId: ME, steamNotice: null },
+      {
+        translate: (key) => `t(${key})`,
+        confirm: async () => true,
+        alert: async (body, heading) => {
+          events.push(`alert ${heading}: ${body}`);
+        },
+        tierName: (tier) => tier,
+        navigate: () => {},
+        openRewards: () => {},
+        storeClaimPrompt: () => {},
+        updateSteamGrant: () => {},
+        markNoticeSeen: () => {},
+        markMessageSeen: (kind) => events.push(`seen ${kind}`),
+        now: () => 1_757_000_000_000,
+      },
+    );
+    expect(events).toEqual([
+      `alert t(${BOOT_INTERRUPT_KEYS.reportThanksHeading}): t(${BOOT_INTERRUPT_KEYS.reportThanksBody})`,
+      "seen report_thanks",
+    ]);
   });
 });

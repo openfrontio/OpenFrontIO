@@ -1,7 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  Difficulty,
+  GameMapType,
+  GameMode,
+  GameType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/shared/EventBus";
 import en from "../../resources/lang/en.json";
-import { crazyGamesSDK } from "../../src/client/CrazyGamesSDK";
+import { gamePortal } from "../../src/client/GamePortal";
 import {
   SettingsModal,
   ShowSettingsModalEvent,
@@ -9,7 +18,6 @@ import {
 import { PauseGameIntentEvent } from "../../src/client/Transport";
 import "../../src/client/UserSettingModal";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
-import { EventBus } from "../../src/core/EventBus";
 
 type TestMenu = SettingsModal & { updateComplete: Promise<unknown> };
 type TestSettings = UserSettingModal & {
@@ -36,10 +44,10 @@ describe("in-game menu opens the shared settings modal", () => {
     document.body.innerHTML = "";
     localStorage.clear();
     gameplayStop = vi
-      .spyOn(crazyGamesSDK, "gameplayStop")
+      .spyOn(gamePortal, "gameplayStop")
       .mockImplementation(async () => {});
     gameplayStart = vi
-      .spyOn(crazyGamesSDK, "gameplayStart")
+      .spyOn(gamePortal, "gameplayStart")
       .mockImplementation(async () => {});
 
     menu = document.createElement("settings-modal") as TestMenu;
@@ -200,5 +208,69 @@ describe("in-game menu opens the shared settings modal", () => {
     expect(openSettingsRow()).not.toBeNull();
     expect(warn).toHaveBeenCalled();
     expect(pauses).toEqual([true]);
+  });
+
+  const publicFfa = {
+    gameMap: GameMapType.World,
+    gameType: GameType.Public,
+    gameMode: GameMode.FFA,
+    difficulty: Difficulty.Medium,
+    nations: "default",
+    bots: 400,
+    donateGold: false,
+    donateTroops: false,
+  } as GameConfig;
+  const modifierTags = () =>
+    [...menu.querySelectorAll("[data-modifier-tags] span")].map(
+      (tag) => tag.textContent,
+    );
+
+  it("shows the game's modifiers", async () => {
+    menu.gameConfig = {
+      ...publicFfa,
+      randomSpawn: true,
+      nations: 5,
+      publicGameModifiers: { isCrowded: true, isRandomSpawn: true },
+    };
+    menu.mapNationCount = 10;
+    await openMenu();
+
+    expect(modifierTags()).toEqual([
+      "host_modal.crowded",
+      "game_settings.random_spawn",
+      "game_settings.nations: 5",
+    ]);
+  });
+
+  it("shows the disabled units and host cheats with the modifiers", async () => {
+    menu.gameConfig = {
+      ...publicFfa,
+      gameType: GameType.Private,
+      difficulty: Difficulty.Easy,
+      disabledUnits: [UnitType.City, UnitType.MIRV],
+      hostCheats: { infiniteTroops: true, goldMultiplier: 3 },
+    };
+    await openMenu();
+
+    const texts = (selector: string) =>
+      [...menu.querySelectorAll(`[data-game-modifiers] ${selector} span`)].map(
+        (tag) => tag.textContent,
+      );
+    expect(menu.querySelector("[data-modifier-tags]")).toBeNull();
+    expect(texts("[data-disabled-units]")).toEqual([
+      "unit_type.city",
+      "unit_type.mirv",
+    ]);
+    expect(texts("[data-host-cheats]")).toEqual([
+      "game_settings.infinite_troops",
+      "game_settings.gold_multiplier: x3",
+    ]);
+  });
+
+  it("leaves the modifiers out of a game without any", async () => {
+    menu.gameConfig = publicFfa;
+    await openMenu();
+
+    expect(menu.querySelector("[data-game-modifiers]")).toBeNull();
   });
 });

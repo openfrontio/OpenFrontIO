@@ -16,11 +16,14 @@ import {
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
 import "../CopyButton";
+import "./ClanBoostDialog";
 import "./ClanDonateDialog";
 import {
   type ClanRole,
   defaultOrderForSort,
   filterMembersBySearch,
+  formatBoostRemaining,
+  membersHaveLevels,
   renderLoadingSpinner,
   renderMemberPagination,
   renderMemberRow,
@@ -38,6 +41,7 @@ export class ClanDetailView extends LitElement {
   }
 
   @property() clanTag = "";
+  @property() joinSource: "boosted" | undefined = undefined;
   @property() myPublicId: string | null = null;
   @property({ type: Object }) myClanRoles: Map<string, ClanRole> = new Map();
   @property({ type: Array }) myPendingRequests: {
@@ -70,16 +74,23 @@ export class ClanDetailView extends LitElement {
   @state() private membersLoadInFlight = false;
   @state() private memberSearch = "";
   @state() private donateOpen = false;
+  @state() private boostOpen = false;
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
   private memberLoadSeq = 0;
   private asyncGeneration = 0;
 
+  // Re-renders once a minute so the boost's "time left" counts down.
+  private boostTicker: ReturnType<typeof setInterval> | null = null;
+
   connectedCallback() {
     super.connectedCallback();
+    this.boostTicker = setInterval(() => {
+      if (this.selectedClan?.boostEndsAt) this.requestUpdate();
+    }, 60_000);
     if (this.cachedDetail && this.cachedDetail.tag === this.clanTag) {
       this.restoreFromCache(this.cachedDetail);
     } else if (this.clanTag) {
-      this.loadDetail();
+      void this.loadDetail();
     }
   }
 
@@ -111,6 +122,8 @@ export class ClanDetailView extends LitElement {
   }
 
   disconnectedCallback() {
+    if (this.boostTicker) clearInterval(this.boostTicker);
+    this.boostTicker = null;
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
     this.memberLoadSeq++;
     super.disconnectedCallback();
@@ -238,7 +251,7 @@ export class ClanDetailView extends LitElement {
       this.members.length === 0 &&
       this.myClanRoles.has(this.clanTag)
     ) {
-      this.loadInitialMembers();
+      void this.loadInitialMembers();
     }
   }
 
@@ -280,19 +293,19 @@ export class ClanDetailView extends LitElement {
     if (sort === this.memberSort) return;
     this.memberSort = sort;
     this.memberOrder = defaultOrderForSort(sort);
-    this.loadMemberPage(1);
+    void this.loadMemberPage(1);
   }
 
   private onOrderToggle() {
     this.memberOrder = this.memberOrder === "asc" ? "desc" : "asc";
-    this.loadMemberPage(1);
+    void this.loadMemberPage(1);
   }
 
   private async handleJoin() {
     if (!this.selectedClan || this.actionPending) return;
     this.actionPending = true;
     try {
-      const result = await joinClan(this.selectedClan.tag);
+      const result = await joinClan(this.selectedClan.tag, this.joinSource);
       if ("error" in result) {
         if (result.error === "clan_modal.sign_in_for_clans") {
           window.showPage?.("page-account");
@@ -386,9 +399,36 @@ export class ClanDetailView extends LitElement {
     if (!detail || gen !== this.asyncGeneration || this.clanTag !== clan.tag) {
       return;
     }
+    this.applyRefreshedClan(detail);
+  }
+
+  // The purchase is done; refresh the clan so the time left and the clan's
+  // balance show what was bought.
+  private async handleBoosted(e: CustomEvent<{ endsAt: string }>) {
+    this.boostOpen = false;
+    const clan = this.selectedClan;
+    if (!clan) return;
+    showToast(
+      translateText("clan_modal.boost_success", {
+        tag: clan.tag,
+        remaining: formatBoostRemaining(e.detail.endsAt) ?? "",
+      }),
+      "green",
+    );
+    const gen = this.asyncGeneration;
+    const detail = await fetchClanDetail(clan.tag);
+    if (!detail || gen !== this.asyncGeneration || this.clanTag !== clan.tag) {
+      return;
+    }
+    this.applyRefreshedClan(detail);
+  }
+
+  // Shows the refetched clan and hands it up to ClanModal, which keeps its
+  // own copy (and the My Clans card balances) for when the view is re-entered.
+  private applyRefreshedClan(detail: ClanInfo) {
     this.selectedClan = detail;
     this.dispatchEvent(
-      new CustomEvent("clan-donated", {
+      new CustomEvent("clan-refreshed", {
         detail: { clan: detail },
         bubbles: true,
         composed: true,
@@ -442,16 +482,34 @@ export class ClanDetailView extends LitElement {
       }
       return html`
         <div class="space-y-6">
-          ${canManageRequests && this.pendingRequestCount > 0
-            ? this.renderRequestsButton()
-            : ""}
+          ${
+            canManageRequests && this.pendingRequestCount > 0
+              ? this.renderRequestsButton()
+              : ""
+          }
           ${this.renderMembersList()}
         </div>
       `;
     }
 
+    const boostLeft = formatBoostRemaining(clan.boostEndsAt);
     const actions = html`
-      <div class="flex flex-wrap gap-3">
+      ${
+        boostLeft
+          ? html`<div
+              data-boost-left
+              class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-malibu-blue/15 text-aquarius border border-malibu-blue/40 shadow-malibu-blue-pill"
+            >
+              ${translateText("clan_modal.boost_time_left", {
+                remaining: boostLeft,
+              })}
+            </div>`
+          : ""
+      }
+      <div
+        data-clan-actions
+        class="grid grid-cols-2 gap-3 [&>:last-child:nth-child(odd)]:col-span-2"
+      >
         ${this.renderActionButtons(
           isMember,
           isLeader,
@@ -460,15 +518,30 @@ export class ClanDetailView extends LitElement {
           clan,
         )}
       </div>
-      ${this.donateOpen && isMember
-        ? html`<clan-donate-dialog
-            .clanTag=${clan.tag}
-            @donated=${(
-              e: CustomEvent<{ currencyType: "soft" | "hard"; amount: string }>,
-            ) => void this.handleDonated(e)}
-            @cancel=${() => (this.donateOpen = false)}
-          ></clan-donate-dialog>`
-        : ""}
+      ${
+        this.donateOpen && isMember
+          ? html`<clan-donate-dialog
+              .clanTag=${clan.tag}
+              @donated=${(
+                e: CustomEvent<{
+                  currencyType: "soft" | "hard";
+                  amount: string;
+                }>,
+              ) => void this.handleDonated(e)}
+              @cancel=${() => (this.donateOpen = false)}
+            ></clan-donate-dialog>`
+          : ""
+      }
+      ${
+        this.boostOpen && (isLeader || isOfficer)
+          ? html`<clan-boost-dialog
+              .clanTag=${clan.tag}
+              @boosted=${(e: CustomEvent<{ endsAt: string }>) =>
+                void this.handleBoosted(e)}
+              @cancel=${() => (this.boostOpen = false)}
+            ></clan-boost-dialog>`
+          : ""
+      }
     `;
 
     if (clan.discordUrl) {
@@ -580,6 +653,7 @@ export class ClanDetailView extends LitElement {
 
   private renderMembersList() {
     const filtered = filterMembersBySearch(this.members, this.memberSearch);
+    const levelSlot = membersHaveLevels(filtered);
     const toggleLabel = translateText(
       this.allStatsExpanded ? "common.collapse_all" : "common.expand_all",
     );
@@ -611,7 +685,9 @@ export class ClanDetailView extends LitElement {
           ),
         )}
         <div class="space-y-2">
-          ${filtered.map((m) => renderMemberRow(m, this.myPublicId, this))}
+          ${filtered.map((m) =>
+            renderMemberRow(m, this.myPublicId, this, levelSlot),
+          )}
         </div>
         ${renderMemberPagination(
           this.memberPage,
@@ -620,7 +696,7 @@ export class ClanDetailView extends LitElement {
           (p) => this.loadMemberPage(p),
           (pp) => {
             this.membersPerPage = pp;
-            this.loadMemberPage(1);
+            void this.loadMemberPage(1);
           },
         )}
       </div>
@@ -671,103 +747,119 @@ export class ClanDetailView extends LitElement {
       <div
         class="h-full flex flex-col rounded-xl border border-[#5865F2]/25 bg-[#5865F2]/10 overflow-hidden"
       >
-        ${bannerUrl
-          ? html`<div
-              class="relative w-full aspect-video max-h-56 overflow-hidden"
-            >
-              <img src=${bannerUrl} alt="" class="w-full h-full object-cover" />
-              <div
-                class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"
-              ></div>
-            </div>`
-          : ""}
-        <div class="p-5 flex flex-col flex-1">
-          ${bannerUrl
-            ? ""
-            : html`<div class="flex items-center gap-2 mb-4">
-                <svg
-                  class="w-5 h-5 text-[#5865F2]"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"
-                  />
-                </svg>
-                <h3
-                  class="text-sm font-bold text-white/60 uppercase tracking-wider"
-                >
-                  ${translateText("clan_modal.discord_section_title")}
-                </h3>
-              </div>`}
-          <div class="flex items-center gap-3.5">
-            ${meta?.iconUrl
-              ? html`<img
-                  src=${meta.iconUrl}
+        ${
+          bannerUrl
+            ? html`<div
+                class="relative w-full aspect-video max-h-56 overflow-hidden"
+              >
+                <img
+                  src=${bannerUrl}
                   alt=""
-                  class="w-12 h-12 rounded-2xl shrink-0 object-cover ring-1 ring-white/10"
-                />`
-              : html`<div
-                  class="w-12 h-12 rounded-2xl bg-[#5865F2] flex items-center justify-center shrink-0 text-white text-lg font-bold"
-                >
-                  ${serverName.charAt(0).toUpperCase()}
-                </div>`}
+                  class="w-full h-full object-cover"
+                />
+                <div
+                  class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"
+                ></div>
+              </div>`
+            : ""
+        }
+        <div class="p-5 flex flex-col flex-1">
+          ${
+            bannerUrl
+              ? ""
+              : html`<div class="flex items-center gap-2 mb-4">
+                  <svg
+                    class="w-5 h-5 text-[#5865F2]"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"
+                    />
+                  </svg>
+                  <h3
+                    class="text-sm font-bold text-white/60 uppercase tracking-wider"
+                  >
+                    ${translateText("clan_modal.discord_section_title")}
+                  </h3>
+                </div>`
+          }
+          <div class="flex items-center gap-3.5">
+            ${
+              meta?.iconUrl
+                ? html`<img
+                    src=${meta.iconUrl}
+                    alt=""
+                    class="w-12 h-12 rounded-2xl shrink-0 object-cover ring-1 ring-white/10"
+                  />`
+                : html`<div
+                    class="w-12 h-12 rounded-2xl bg-[#5865F2] flex items-center justify-center shrink-0 text-white text-lg font-bold"
+                  >
+                    ${serverName.charAt(0).toUpperCase()}
+                  </div>`
+            }
             <div class="min-w-0 flex-1">
               <div class="text-white text-sm font-bold truncate">
                 ${serverName}
               </div>
-              ${showCounts
-                ? html`<div
-                    class="flex items-center gap-1.5 mt-1 text-white/50 text-xs"
-                  >
-                    <span
-                      class="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0"
-                    ></span>
-                    ${translateText("clan_modal.discord_online_members", {
-                      online: meta?.onlineCount ?? 0,
-                      members: meta?.memberCount ?? 0,
-                    })}
-                  </div>`
-                : ""}
+              ${
+                showCounts
+                  ? html`<div
+                      class="flex items-center gap-1.5 mt-1 text-white/50 text-xs"
+                    >
+                      <span
+                        class="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0"
+                      ></span>
+                      ${translateText("clan_modal.discord_online_members", {
+                        online: meta?.onlineCount ?? 0,
+                        members: meta?.memberCount ?? 0,
+                      })}
+                    </div>`
+                  : ""
+              }
             </div>
           </div>
-          ${description
-            ? html`<p
-                class="mt-3 text-white/50 text-xs leading-relaxed line-clamp-2"
-              >
-                ${description}
-              </p>`
-            : ""}
+          ${
+            description
+              ? html`<p
+                  class="mt-3 text-white/50 text-xs leading-relaxed line-clamp-2"
+                >
+                  ${description}
+                </p>`
+              : ""
+          }
           <!-- Grows when the card is stretched taller than its content,
                pinning the button to the bottom (aligned with Manage). -->
           <div class="flex-1"></div>
-          ${invalid
-            ? html`<p class="text-amber-400/80 text-xs mt-4">
-                ${translateText("clan_modal.discord_invite_unavailable")}
-              </p>`
-            : html`<a
-                href=${url}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="mt-4 flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-bold text-white uppercase tracking-wider bg-[#5865F2] hover:bg-[#4752c4] active:bg-[#3c45a5] rounded-xl transition-all shadow-lg shadow-[#5865F2]/20"
-              >
-                ${translateText("clan_modal.open_discord")}
-                <svg
-                  class="w-4 h-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  aria-hidden="true"
+          ${
+            invalid
+              ? html`<p class="text-amber-400/80 text-xs mt-4">
+                  ${translateText("clan_modal.discord_invite_unavailable")}
+                </p>`
+              : html`<a
+                  href=${url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="mt-4 flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-bold text-white uppercase tracking-wider bg-[#5865F2] hover:bg-[#4752c4] active:bg-[#3c45a5] rounded-xl transition-all shadow-lg shadow-[#5865F2]/20"
                 >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25"
-                  />
-                </svg>
-              </a>`}
+                  ${translateText("clan_modal.open_discord")}
+                  <svg
+                    class="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    aria-hidden="true"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25"
+                    />
+                  </svg>
+                </a>`
+          }
         </div>
       </div>
     `;
@@ -787,7 +879,7 @@ export class ClanDetailView extends LitElement {
       buttons.push(html`
         <button
           @click=${() => window.showPage?.("page-account")}
-          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all"
         >
           ${translateText("clan_modal.sign_in_to_join")}
         </button>
@@ -796,7 +888,7 @@ export class ClanDetailView extends LitElement {
       buttons.push(html`
         <button
           disabled
-          class="flex-1 px-6 py-3 text-sm font-bold text-white/40 uppercase tracking-wider bg-white/5 rounded-xl border border-white/10 cursor-not-allowed"
+          class="w-full px-4 py-3 text-sm font-bold text-white/40 uppercase tracking-wider bg-white/5 rounded-xl border border-white/10 cursor-not-allowed"
         >
           ${translateText("clan_modal.request_pending")}
         </button>
@@ -806,7 +898,7 @@ export class ClanDetailView extends LitElement {
         <button
           @click=${() => this.handleJoin()}
           ?disabled=${this.actionPending}
-          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none"
         >
           ${translateText("clan_modal.join_clan")}
         </button>
@@ -816,7 +908,7 @@ export class ClanDetailView extends LitElement {
         <button
           @click=${() => this.handleJoin()}
           ?disabled=${this.actionPending}
-          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5 disabled:opacity-50 disabled:pointer-events-none"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r bg-origin-border from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5 disabled:opacity-50 disabled:pointer-events-none"
         >
           ${translateText("clan_modal.request_invite")}
         </button>
@@ -826,24 +918,22 @@ export class ClanDetailView extends LitElement {
       buttons.push(html`
         <button
           @click=${() => (this.donateOpen = true)}
-          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r bg-origin-border from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5"
         >
           ${translateText("clan_modal.donate")}
         </button>
       `);
     }
-    if (isMember && !isLeader) {
+    if (isLeader || isOfficer) {
       buttons.push(html`
         <button
-          @click=${() => this.handleLeave()}
-          ?disabled=${this.actionPending}
-          class="flex-1 px-6 py-3 text-sm font-bold text-white/70 uppercase tracking-wider bg-red-600/30 hover:bg-red-600/50 rounded-xl transition-all border border-red-500/30 disabled:opacity-50 disabled:pointer-events-none"
+          data-action="boost"
+          @click=${() => (this.boostOpen = true)}
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all"
         >
-          ${translateText("clan_modal.leave_clan")}
+          ${translateText("clan_modal.boost")}
         </button>
       `);
-    }
-    if (isLeader || isOfficer) {
       buttons.push(html`
         <button
           @click=${() =>
@@ -853,9 +943,20 @@ export class ClanDetailView extends LitElement {
                 composed: true,
               }),
             )}
-          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-white/10 hover:bg-white/15 rounded-xl transition-all border border-white/10"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-white/10 hover:bg-white/15 rounded-xl transition-all border border-white/10"
         >
           ${translateText("clan_modal.manage_clan")}
+        </button>
+      `);
+    }
+    if (isMember && !isLeader) {
+      buttons.push(html`
+        <button
+          @click=${() => this.handleLeave()}
+          ?disabled=${this.actionPending}
+          class="w-full px-4 py-3 text-sm font-bold text-white/70 uppercase tracking-wider bg-red-600/30 hover:bg-red-600/50 rounded-xl transition-all border border-red-500/30 disabled:opacity-50 disabled:pointer-events-none"
+        >
+          ${translateText("clan_modal.leave_clan")}
         </button>
       `);
     }

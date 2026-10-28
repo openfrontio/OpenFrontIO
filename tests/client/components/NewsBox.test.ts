@@ -2,8 +2,21 @@ import newsItems from "../../../resources/news.json";
 import {
   filterNewsByPlatform,
   getVisibleNewsItems,
+  NewsBox,
   NewsItem,
 } from "../../../src/client/components/NewsBox";
+
+vi.mock("../../../src/client/Api", () => ({
+  getNews: vi.fn(async () => [
+    {
+      id: "md",
+      title: "Markdown",
+      type: "announcement",
+      description: "Read the **rules** first",
+    },
+    { id: "md2", title: "Two", type: "announcement", description: "B" },
+  ]),
+}));
 
 const DISMISSED_NEWS_KEY = "dismissedNewsItems";
 const allItems = newsItems as NewsItem[];
@@ -89,6 +102,30 @@ describe("NewsBox", () => {
         "b",
         "c",
       ]);
+    });
+  });
+
+  describe("the element", () => {
+    afterEach(() => {
+      document.body.innerHTML = "";
+    });
+
+    // The markdown renderer is its own chunk, loaded with the news.
+    it("renders a description's markdown", async () => {
+      const box = document.createElement("news-box");
+      document.body.appendChild(box);
+
+      await vi.waitFor(() =>
+        expect(box.querySelector("strong")?.textContent).toBe("rules"),
+      );
+    });
+
+    it("does not start cycle timer if disconnected before loadNews resolves", async () => {
+      const el = new NewsBox() as any;
+      document.body.appendChild(el);
+      el.remove();
+      await new Promise((r) => setTimeout(r, 10));
+      expect(el.cycleTimer).toBeNull();
     });
   });
 

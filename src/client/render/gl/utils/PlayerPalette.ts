@@ -5,16 +5,16 @@
  * textures, so both write them here.
  */
 
-import type { Colord } from "colord";
-import { base64url } from "jose";
 import {
   findEffect,
   isTrailEffect,
   TRAIL_EFFECT_TYPES,
   type Cosmetics,
-} from "../../../../core/CosmeticSchemas";
-import { decodePatternData } from "../../../../core/PatternDecoder";
-import type { PlayerCosmetics } from "../../../../core/Schemas";
+} from "@openfront/shared/CosmeticSchemas";
+import { decodePatternData } from "@openfront/shared/PatternDecoder";
+import type { PlayerCosmetics } from "@openfront/shared/WireSchemas";
+import type { Colord } from "colord";
+import { base64url } from "jose";
 import type { SpiralParams } from "../../frame/SpiralTrails";
 import {
   getPaletteSize,
@@ -45,7 +45,7 @@ const FILL_ALPHA = 150 / 255;
  * 4 (train), railroad.frag.glsl block 5. nukeExplosion is not palette-styled;
  * it renders through the FX pass.
  */
-export const PALETTE_EFFECT_TYPES = [
+const PALETTE_EFFECT_TYPES = [
   ...TRAIL_EFFECT_TYPES,
   "structures",
   "warship",
@@ -146,7 +146,7 @@ export function catalogEffectAttributes(
  * block `block` of the effect palette. Returns whether anything changed, so
  * a caller can re-upload only when needed.
  */
-export function writeEffectEntry(
+function writeEffectEntry(
   effectPalette: Float32Array,
   smallID: number,
   block: number,

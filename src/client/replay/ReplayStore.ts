@@ -35,7 +35,7 @@ import {
 } from "./codec/ReplayTypes";
 
 /** Total size of the replays kept. */
-export const MAX_STORED_BYTES = 256 * 1024 * 1024;
+const MAX_STORED_BYTES = 256 * 1024 * 1024;
 
 export interface StoredMeta {
   key: string;

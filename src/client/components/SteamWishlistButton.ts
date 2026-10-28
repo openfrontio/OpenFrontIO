@@ -1,6 +1,7 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { assetUrl } from "../../core/AssetUrls";
+import { gamePortal } from "../GamePortal";
 import { steamSDK } from "../SteamSDK";
 import { translateText } from "../Utils";
 import { steamStoreUrl } from "./SteamWishlist";
@@ -15,7 +16,7 @@ import { steamStoreUrl } from "./SteamWishlist";
  *
  * Carries the same UTM campaign tagging as the widget, so footer clicks land in
  * the Steamworks dashboard alongside it. Self-hides inside the Steam desktop
- * build, matching `<steam-wishlist>`.
+ * build and on Poki, matching `<steam-wishlist>`.
  */
 @customElement("steam-wishlist-button")
 export class SteamWishlistButton extends LitElement {
@@ -27,7 +28,7 @@ export class SteamWishlistButton extends LitElement {
   }
 
   render() {
-    if (steamSDK.isOnSteam()) return nothing;
+    if (steamSDK.isOnSteam() || gamePortal.name() === "poki") return nothing;
 
     return html`
       <a

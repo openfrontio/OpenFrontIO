@@ -38,7 +38,12 @@ export class DebugProgram {
     this.playerDataTex = playerDataTex;
     this.maxPlayers = maxPlayers;
 
-    this.program = createProgram(gl, debugBoxVertSrc, debugBoxFragSrc);
+    this.program = createProgram(
+      gl,
+      debugBoxVertSrc,
+      debugBoxFragSrc,
+      "DebugProgram",
+    );
     gl.useProgram(this.program);
     gl.uniform1i(gl.getUniformLocation(this.program, "uPlayerData"), 0);
     gl.uniform1f(

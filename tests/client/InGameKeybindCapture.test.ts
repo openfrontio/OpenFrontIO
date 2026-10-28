@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { EventBus } from "@openfront/shared/EventBus";
 import "../../src/client/components/baseComponents/setting/SettingKeybind";
 import {
   AlternateViewEvent,
   InputHandler,
 } from "../../src/client/InputHandler";
+import { KEYBINDS_KEY, UserSettings } from "../../src/client/UserSettings";
 import type { GameView } from "../../src/client/view";
-import { EventBus } from "../../src/core/EventBus";
-import { KEYBINDS_KEY, UserSettings } from "../../src/core/game/UserSettings";
 
 // The settings modal is reachable in-game now, so the keybind editor captures
 // key presses over a live game. SettingKeybind calls preventDefault() but not
@@ -136,5 +136,28 @@ describe("keybind capture over a live game", () => {
 
     expect(escaped).toBe(false);
     expect(button.textContent?.trim()).not.toBe("...");
+  });
+
+  it("captures lone modifier keys only when allowModifiers is set", async () => {
+    const keybind = document.createElement("setting-keybind") as any;
+    keybind.allowModifiers = true;
+    document.body.appendChild(keybind);
+    await keybind.updateComplete;
+    const button = keybind.querySelector('[role="button"]') as HTMLElement;
+    button.click();
+    let val = "";
+    keybind.addEventListener("change", (e: any) => (val = e.detail.value));
+    button.dispatchEvent(
+      new KeyboardEvent("keydown", { code: "AltLeft", bubbles: true }),
+    );
+    expect(val).toBe("AltLeft");
+    keybind.allowModifiers = false;
+    button.click();
+    val = "";
+    button.dispatchEvent(
+      new KeyboardEvent("keydown", { code: "ShiftLeft", bubbles: true }),
+    );
+    expect(val).toBe("");
+    expect(keybind.listening).toBe(true);
   });
 });

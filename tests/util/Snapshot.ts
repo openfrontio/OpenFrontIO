@@ -1,39 +1,36 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { Config } from "../../src/core/configuration/Config";
-import { FlatBinaryHeap } from "../../src/core/execution/utils/FlatBinaryHeap";
-import { Game } from "../../src/core/game/Game";
-import { GameMap } from "../../src/core/game/GameMap";
-import {
-  genTerrainFromBin,
-  MapManifest,
-} from "../../src/core/game/TerrainMapLoader";
-import { TileSet } from "../../src/core/game/TileSet";
-import { UserSettings } from "../../src/core/game/UserSettings";
-import { AStar } from "../../src/core/pathfinding/algorithms/AStar";
-import { AbstractGraphAStar } from "../../src/core/pathfinding/algorithms/AStar.AbstractGraph";
-import { AStarRail } from "../../src/core/pathfinding/algorithms/AStar.Rail";
-import { AStarWater } from "../../src/core/pathfinding/algorithms/AStar.Water";
-import { AStarWaterBounded } from "../../src/core/pathfinding/algorithms/AStar.WaterBounded";
-import { AStarWaterHierarchical } from "../../src/core/pathfinding/algorithms/AStar.WaterHierarchical";
-import { BFSGrid } from "../../src/core/pathfinding/algorithms/BFS.Grid";
+import { GameMap } from "@openfront/engine-api/game/GameMap";
+import { MapManifest } from "@openfront/engine-api/game/MapFiles";
+import { genTerrainFromBin } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { TileSet } from "@openfront/engine-lib/game/TileSet";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
+import { FlatBinaryHeap } from "@openfront/engine/execution/utils/FlatBinaryHeap";
+import { Game } from "@openfront/engine/game/Game";
+import { AStar } from "@openfront/engine/pathfinding/algorithms/AStar";
+import { AbstractGraphAStar } from "@openfront/engine/pathfinding/algorithms/AStar.AbstractGraph";
+import { AStarRail } from "@openfront/engine/pathfinding/algorithms/AStar.Rail";
+import { AStarWater } from "@openfront/engine/pathfinding/algorithms/AStar.Water";
+import { AStarWaterBounded } from "@openfront/engine/pathfinding/algorithms/AStar.WaterBounded";
+import { AStarWaterHierarchical } from "@openfront/engine/pathfinding/algorithms/AStar.WaterHierarchical";
+import { BFSGrid } from "@openfront/engine/pathfinding/algorithms/BFS.Grid";
 import {
   BucketQueue,
   MinHeap,
-} from "../../src/core/pathfinding/algorithms/PriorityQueue";
-import { WaterPathMemo } from "../../src/core/pathfinding/PathFinder";
+} from "@openfront/engine/pathfinding/algorithms/PriorityQueue";
+import { WaterPathMemo } from "@openfront/engine/pathfinding/PathFinder";
 import {
   restoreGame,
   snapshotGame,
-} from "../../src/core/snapshot/GameSnapshot";
-import { decodeSnapshotValue } from "../../src/core/snapshot/SnapshotCodec";
+} from "@openfront/engine/snapshot/GameSnapshot";
+import { decodeSnapshotValue } from "@openfront/engine/snapshot/SnapshotCodec";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { TestConfig } from "./TestConfig";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** Loads a test map fresh (unshared), as setup() does. */
-export async function loadTestMaps(
+async function loadTestMaps(
   mapName: string,
 ): Promise<{ gameMap: GameMap; miniGameMap: GameMap }> {
   const dir = path.join(__dirname, `../testdata/maps/${mapName}`);
@@ -54,22 +51,22 @@ export async function loadTestMaps(
 
 /**
  * Restores a snapshot of a game built by tests/util/Setup on `mapName`, with
- * the given Config class (TestConfig and its variants override behavior).
+ * the given EngineConfig class (TestConfig and its variants override behavior).
  */
 export async function restoreTestGame(
   bytes: Uint8Array,
   mapName: string,
-  ConfigClass: typeof Config = TestConfig,
+  ConfigClass: typeof EngineConfig = TestConfig,
 ): Promise<Game> {
   const maps = await loadTestMaps(mapName);
   return restoreGame(bytes, {
-    config: (gc) => new ConfigClass(gc, new UserSettings(), false),
+    config: (gc) => new ConfigClass(gc, false),
     ...maps,
   });
 }
 
 /**
- * Snapshot, restore into a fresh game (with the same Config class as the
+ * Snapshot, restore into a fresh game (with the same EngineConfig class as the
  * original), and return both with the bytes.
  */
 export async function roundTrip(game: Game, mapName: string) {
@@ -77,7 +74,7 @@ export async function roundTrip(game: Game, mapName: string) {
   const restored = await restoreTestGame(
     bytes,
     mapName,
-    game.config().constructor as typeof Config,
+    game.config().constructor as typeof EngineConfig,
   );
   return { bytes, restored, again: snapshotGame(restored) };
 }
@@ -124,7 +121,7 @@ export function diffSnapshots(a: Uint8Array, b: Uint8Array): string[] {
   return diffs;
 }
 
-export function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
+function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
   return true;
@@ -133,7 +130,7 @@ export function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
 // Fields that are caches rebuilt on demand, per-tick output buffers, or
 // render-side bookkeeping. A restored game starts with them empty; anything
 // else that differs is a snapshot bug.
-export const DERIVED_FIELDS = new Set<string>([
+const DERIVED_FIELDS = new Set<string>([
   // GameImpl
   "updates",
   "tileUpdatePairs",
@@ -150,10 +147,16 @@ export const DERIVED_FIELDS = new Set<string>([
   "myUnitCountMemo",
   "myUnitsOwnedMemo",
   "nearbyMemo",
+  // GameMapImpl BFS scratch buffers
+  "bfsVisited",
+  "bfsQueue",
+  "bfsGen",
+  "inBfs",
   // SharedWaterCache
   "playerWater",
-  // Config
+  // Config / EngineConfig
   "unitInfoCache",
+  "engineUnitInfoCache",
   // executions: basic
   "nbuf", // PlayerExecution scratch neighbor buffers
   "nbuf8",
@@ -162,10 +165,12 @@ export const DERIVED_FIELDS = new Set<string>([
   // executions: attacks, ships and trains
   "nbuf2", // AttackExecution scratch neighbor buffer (nbuf is above)
   // executions: nations and tribes
-  // NationStructureBehavior: both reset at the start of doHandleStructures
+  // NationStructurePlacement: both reset at the start of doHandleStructures
   // and only read inside it. (AiAttackBehavior.nbuf is covered above.)
   "_sharedWaterComponents",
   "reachableStationsCache",
+  // NationStructureBehavior: only read in the tick it was computed in
+  "mirvWorthSavingMemo",
 ]);
 
 // Search engines whose fields are per-query scratch (stamps, scores, open

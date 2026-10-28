@@ -33,6 +33,18 @@ vi.mock("../../src/client/SubscriptionPolicy", () => ({
   },
 }));
 
+vi.stubGlobal(
+  "fetch",
+  vi.fn(async () => {
+    throw new TypeError("fetch failed");
+  }),
+);
+
+import type {
+  Cosmetics,
+  Pack,
+  Pattern,
+} from "@openfront/shared/CosmeticSchemas";
 import {
   changeSubscriptionTier,
   getUserMe,
@@ -45,7 +57,6 @@ import {
   showInGameConfirm,
 } from "../../src/client/InGameModal";
 import { startPurchase } from "../../src/client/Payments";
-import type { Cosmetics, Pack, Pattern } from "../../src/core/CosmeticSchemas";
 
 const startPurchaseMock = startPurchase as unknown as ReturnType<typeof vi.fn>;
 const alertMock = showInGameAlert as unknown as ReturnType<typeof vi.fn>;

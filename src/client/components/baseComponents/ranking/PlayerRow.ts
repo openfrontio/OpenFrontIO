@@ -1,3 +1,5 @@
+import { renderNumber } from "@openfront/engine-lib/Format";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import {
   LitElement,
   html,
@@ -5,8 +7,7 @@ import {
   type TemplateResult,
 } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { assetUrl } from "../../../../core/AssetUrls";
-import { renderNumber, translateText } from "../../../Utils";
+import { translateText } from "../../../Utils";
 import { PlayerInfo, RANK_TYPE_LABEL_KEYS, RankType } from "./GameInfoRanking";
 
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
@@ -32,17 +33,21 @@ export class PlayerRow extends LitElement {
     return html`
       <li
         data-player-row
-        class="group relative grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-3 py-3 transition-colors duration-150 hover:bg-white/[0.055] sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(13rem,0.9fr)] sm:px-5 sm:py-2.5 ${player.winner
-          ? "bg-gradient-to-r from-yellow-400/[0.08] via-yellow-400/[0.025] to-transparent"
-          : this.currentPlayer
-            ? "bg-malibu-blue/10"
-            : "bg-transparent"}"
+        class="group relative grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-3 py-3 transition-colors duration-150 hover:bg-white/[0.055] sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(13rem,0.9fr)] sm:px-5 sm:py-2.5 ${
+          player.winner
+            ? "bg-gradient-to-r from-yellow-400/[0.08] via-yellow-400/[0.025] to-transparent"
+            : this.currentPlayer
+              ? "bg-malibu-blue/10"
+              : "bg-transparent"
+        }"
       >
-        ${player.winner
-          ? html`<div
-              class="absolute inset-y-0 left-0 w-0.5 bg-yellow-400/70"
-            ></div>`
-          : ""}
+        ${
+          player.winner
+            ? html`<div
+                class="absolute inset-y-0 left-0 w-0.5 bg-yellow-400/70"
+              ></div>`
+            : ""
+        }
         ${this.renderRank()} ${this.renderIdentity()}
         <div class="col-start-2 min-w-0 sm:col-start-auto">
           ${this.renderPlayerInfo()}
@@ -79,11 +84,13 @@ export class PlayerRow extends LitElement {
     return html`
       <div class="relative shrink-0">
         ${this.renderIcon()}
-        ${this.player.winner
-          ? this.renderCrownIcon()
-          : this.player.killedAt !== undefined
-            ? this.renderEliminatedIcon()
-            : ""}
+        ${
+          this.player.winner
+            ? this.renderCrownIcon()
+            : this.player.killedAt !== undefined
+              ? this.renderEliminatedIcon()
+              : ""
+        }
       </div>
     `;
   }
@@ -131,14 +138,16 @@ export class PlayerRow extends LitElement {
           data-player-identity
           class="flex min-w-0 flex-1 items-center gap-2 text-left"
         >
-          ${this.player.clanTag
-            ? html`<div
-                data-player-clan-tag
-                class="inline-flex min-w-0 max-w-[40%] shrink-0 rounded-md border border-malibu-blue/20 bg-malibu-blue/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-aquarius/85"
-              >
-                <span class="truncate">${this.player.clanTag}</span>
-              </div>`
-            : ""}
+          ${
+            this.player.clanTag
+              ? html`<div
+                  data-player-clan-tag
+                  class="inline-flex min-w-0 max-w-[40%] shrink-0 rounded-md border border-malibu-blue/20 bg-malibu-blue/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-aquarius/85"
+                >
+                  <span class="truncate">${this.player.clanTag}</span>
+                </div>`
+              : ""
+          }
           <div
             data-player-name
             class="min-w-0 flex-1 truncate text-sm font-semibold tracking-wide text-white/85 sm:text-[15px]"

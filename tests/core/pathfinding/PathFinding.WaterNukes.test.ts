@@ -1,9 +1,9 @@
+import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
+import { Game } from "@openfront/engine/game/Game";
+import { AbstractGraphBuilder } from "@openfront/engine/pathfinding/algorithms/AbstractGraph";
+import { ConnectedComponents } from "@openfront/engine/pathfinding/algorithms/ConnectedComponents";
+import { PathFinding } from "@openfront/engine/pathfinding/PathFinder";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { Game } from "../../../src/core/game/Game";
-import { GameMap, TileRef } from "../../../src/core/game/GameMap";
-import { AbstractGraphBuilder } from "../../../src/core/pathfinding/algorithms/AbstractGraph";
-import { ConnectedComponents } from "../../../src/core/pathfinding/algorithms/ConnectedComponents";
-import { PathFinding } from "../../../src/core/pathfinding/PathFinder";
 import { setup } from "../../util/Setup";
 
 /**

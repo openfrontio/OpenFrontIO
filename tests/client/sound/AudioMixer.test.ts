@@ -63,11 +63,13 @@ vi.mock("howler", () => {
 });
 
 import { Howler } from "howler";
+import { Platform } from "../../../src/client/Platform";
 import {
   AudioMixer,
   initAudioMixer,
   perceptualGain,
   resetAudioMixerForTest,
+  streamsMusic,
 } from "../../../src/client/sound/AudioMixer";
 import {
   AmbienceTrack,
@@ -76,10 +78,7 @@ import {
   SoundEffect,
   soundEffectUrls,
 } from "../../../src/client/sound/Sounds";
-import {
-  AudioCategory,
-  UserSettings,
-} from "../../../src/core/game/UserSettings";
+import { AudioCategory, UserSettings } from "../../../src/client/UserSettings";
 
 function resetSettings() {
   localStorage.clear();
@@ -148,6 +147,72 @@ describe("cue routing", () => {
   });
 });
 
+describe("streamsMusic", () => {
+  const originalMatches = Element.prototype.matches;
+
+  /** Stands in for a browser that does (or does not) support the selector. */
+  function setVolumeLocked(result: boolean | "unsupported") {
+    return vi.spyOn(Element.prototype, "matches").mockImplementation(function (
+      this: Element,
+      selector: string,
+    ) {
+      if (selector !== ":volume-locked") {
+        return originalMatches.call(this, selector);
+      }
+      if (result === "unsupported") {
+        throw new DOMException("Unknown pseudo-class", "SyntaxError");
+      }
+      return result;
+    });
+  }
+
+  function withIOS<T>(isIOS: boolean, body: () => T): T {
+    const previous = Platform.isIOS;
+    Platform.isIOS = isIOS;
+    try {
+      return body();
+    } finally {
+      Platform.isIOS = previous;
+    }
+  }
+
+  it("uses Web Audio whenever :volume-locked reports locked volume", () => {
+    setVolumeLocked(true);
+    // The signal wins over the UA: a locked browser is not necessarily iOS.
+    expect(withIOS(false, streamsMusic)).toBe(false);
+  });
+
+  it("streams on iOS when :volume-locked reports unlocked volume", () => {
+    setVolumeLocked(false);
+    // The signal also lets a newer iOS take the cheap streaming path.
+    expect(withIOS(true, streamsMusic)).toBe(true);
+  });
+
+  it("falls back to iOS when the selector is unsupported", () => {
+    setVolumeLocked("unsupported");
+    // Safari before 15.4 and browsers that never shipped the selector.
+    expect(withIOS(true, streamsMusic)).toBe(false);
+    expect(withIOS(false, streamsMusic)).toBe(true);
+  });
+
+  it("probes a detached audio element with no source", () => {
+    const probes: Element[] = [];
+    vi.spyOn(Element.prototype, "matches").mockImplementation(function (
+      this: Element,
+      selector: string,
+    ) {
+      probes.push(this);
+      return selector === ":volume-locked";
+    });
+
+    expect(streamsMusic()).toBe(false);
+    expect(probes).toHaveLength(1);
+    expect(probes[0]).toBeInstanceOf(HTMLAudioElement);
+    expect(probes[0].isConnected).toBe(false);
+    expect(probes[0].getAttribute("src")).toBeNull();
+  });
+});
+
 describe("channel volumes", () => {
   it("squares the slider into an audio taper", () => {
     build({ effects: 0.5 });
@@ -203,6 +268,30 @@ describe("channel volumes", () => {
   });
 });
 
+describe.each(["master", "channel"] as const)("muted %s", (muted) => {
+  it.each([...soundEffectUrls.keys()])("skips %s until unmuted", (name) => {
+    const category = categoryOf(name);
+    const mutedCategory = muted === "master" ? "master" : category;
+    build({ master: 1, [category]: 1, [mutedCategory]: 0 });
+    mixer.play(name);
+    expect(howlInstances).toHaveLength(0);
+
+    settings.setAudioVolume(mutedCategory, 1);
+    mixer.play(name);
+    const howl = howlInstances[0];
+    expect(howl.play).toHaveBeenCalledTimes(1);
+
+    settings.setAudioVolume(mutedCategory, 0);
+    mixer.play(name);
+    expect(howl.play).toHaveBeenCalledTimes(1);
+    settings.setAudioVolume(mutedCategory, 1);
+    expect(howl.play).toHaveBeenCalledTimes(1);
+    mixer.play(name);
+    expect(howl.play).toHaveBeenCalledTimes(2);
+    expect(howlInstances).toHaveLength(1);
+  });
+});
+
 describe("per-channel budgets", () => {
   it("steals the oldest effect rather than an alert", () => {
     build({ effects: 1, alerts: 1 });
@@ -230,7 +319,9 @@ describe("per-channel budgets", () => {
     // fade(0, 0, ...) never completes in Howler, so fading here would leave
     // the cue playing outside its budget with the interval and listener
     // leaked for the rest of the session.
-    build({ effects: 0 });
+    build({ effects: 1, muteOnBlur: true });
+    vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    globalThis.dispatchEvent(new Event("blur"));
     for (let i = 0; i < 7; i++) mixer.play("build-city");
     const howl = howlInstances.find((h) => h.src.includes("build-city"));
     expect(howl.fade).not.toHaveBeenCalled();

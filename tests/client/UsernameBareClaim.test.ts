@@ -1,5 +1,5 @@
+import { PutUsernameResponseSchema } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PutUsernameResponseSchema } from "../../src/core/ApiSchemas";
 
 // The panel reaches the API and the in-game dialog; stub both boundaries so
 // these exercise the branch on the response body rather than the network.
@@ -35,10 +35,10 @@ vi.mock("../../src/client/Utils", async (importOriginal) => ({
     vars ? `${key}:${JSON.stringify(vars)}` : key,
 }));
 
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import "../../src/client/components/UsernamePanel";
 import type { UsernamePanel } from "../../src/client/components/UsernamePanel";
 import { flushReloadToast } from "../../src/client/Utils";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 function okBody(overrides: Record<string, unknown> = {}) {
   return {

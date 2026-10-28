@@ -5,6 +5,8 @@
  * from the file, and the trail effects resolved against the catalog.
  */
 
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import type { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { colord } from "colord";
 import { createThemeSettings } from "../../../src/client/render/gl/RenderSettings";
 import {
@@ -24,8 +26,6 @@ import {
 import { SettingsTheme } from "../../../src/client/theme/ThemeProvider";
 import type { PlayerView } from "../../../src/client/view";
 import { playerTypeFromEnum } from "../../../src/client/view/EntityState";
-import type { Cosmetics } from "../../../src/core/CosmeticSchemas";
-import type { PlayerCosmetics } from "../../../src/core/Schemas";
 
 const player = (
   smallID: number,
@@ -175,7 +175,7 @@ describe("the viewer's cosmetics visibility settings", () => {
     expect(built.skins.has(1)).toBe(true);
   });
 
-  test.each(["teammates", "self"] as const)(
+  test.each(["teammates", "self", "none"] as const)(
     "a replay is nobody's: showing only %s hides every player's",
     (showFrom) => {
       const built = shown({ showFrom });

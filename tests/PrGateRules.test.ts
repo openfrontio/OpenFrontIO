@@ -40,6 +40,11 @@ describe("parseLinkedIssues", () => {
     });
   });
 
+  it("matches references and refs", () => {
+    expect(parseLinkedIssues("references #5")).toEqual([5]);
+    expect(parseLinkedIssues("Refs (#6)")).toEqual([6]);
+  });
+
   it("is case-insensitive", () => {
     expect(parseLinkedIssues("CLOSES #5")).toEqual([5]);
     expect(parseLinkedIssues("Fixes #6")).toEqual([6]);
@@ -122,6 +127,13 @@ describe("checkBypass", () => {
 describe("checkTrustedBot", () => {
   it("passes for dependabot[bot]", () => {
     const r = checkTrustedBot(makePR({ user: { login: "dependabot[bot]" } }));
+    expect(r.action).toBe("pass");
+  });
+
+  it("passes for openfront-backport[bot]", () => {
+    const r = checkTrustedBot(
+      makePR({ user: { login: "openfront-backport[bot]" } }),
+    );
     expect(r.action).toBe("pass");
   });
 

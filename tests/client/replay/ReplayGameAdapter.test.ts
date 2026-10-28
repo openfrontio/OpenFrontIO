@@ -5,6 +5,10 @@
  * how a change to the HUD is meant to be caught.
  */
 
+import { Cell, GameType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { EventBus } from "@openfront/shared/EventBus";
 import "../../../src/client/hud/layers/EventsDisplay";
 import type { EventsDisplay } from "../../../src/client/hud/layers/EventsDisplay";
 import "../../../src/client/hud/layers/PlayerInfoOverlay";
@@ -15,11 +19,6 @@ import type { UnitState } from "../../../src/client/render/types";
 import type { ReplayReader } from "../../../src/client/replay/codec/decode/ReplayReader";
 import type { ReplayFrame } from "../../../src/client/replay/codec/ReplayTypes";
 import { ReplayGameView } from "../../../src/client/replay/ReplayGameAdapter";
-import { Config } from "../../../src/core/configuration/Config";
-import { EventBus } from "../../../src/core/EventBus";
-import { Cell, GameType, UnitType } from "../../../src/core/game/Game";
-import { GameUpdateType } from "../../../src/core/game/GameUpdates";
-import { UserSettings } from "../../../src/core/game/UserSettings";
 import { setup } from "../../util/Setup";
 import { config as gameConfig } from "./util/ArchiveGame";
 import { openReader, recordGame, type RecordedGame } from "./util/RecordGame";
@@ -80,7 +79,7 @@ describe("ReplayGameAdapter", () => {
     // same fixture the processor tests use.
     adapter = new ReplayGameView(
       reader.header.players,
-      new Config(gameConfig(), new UserSettings(), true, false, true),
+      new Config(gameConfig(), true, false, true),
       reader.header.mapWidth,
       reader.header.mapHeight,
       reader.header.numLandTiles,
@@ -438,6 +437,98 @@ describe("ReplayGameAdapter", () => {
     expect(afterSeek[GameUpdateType.DonateEvent]).toEqual([]);
     expect(afterSeek[GameUpdateType.Emoji]).toEqual([{ e: 1 }]);
   });
+
+  test("events the HUD didn't read are dropped when its tick ends", async () => {
+    const frame = reader.seek(119);
+    adapter.update(frame, EMPTY, 0, false, true);
+    const alive = adapter.playerViews().find((p) => p.isAlive())!;
+    const dead = adapter.playerViews().find((p) => !p.isAlive())!;
+    const message = (n: number, playerID: number) =>
+      ({
+        ...frame,
+        miscUpdates: {
+          DisplayEvent: [
+            {
+              messageType: 0,
+              message: `message ${n}`,
+              playerID,
+              gold: undefined,
+              params: {},
+            },
+          ],
+        },
+      }) as never;
+
+    const feed = document.createElement("events-display") as EventsDisplay;
+    feed.game = adapter.asGameView();
+    feed.eventBus = new EventBus();
+    document.body.appendChild(feed);
+    try {
+      feed.init();
+      // Following a dead player, the feed reads nothing for a while.
+      adapter.focus = dead;
+      for (let n = 0; n < 3; n++) {
+        adapter.update(message(n, alive.smallID()), EMPTY, 0, false);
+        feed.tick();
+        adapter.endHudTick();
+      }
+      // Then a living one: only what's new shows, not the backlog.
+      adapter.focus = alive;
+      adapter.update(message(3, alive.smallID()), EMPTY, 0, false);
+      feed.tick();
+      await feed.updateComplete;
+      const text = feed.textContent ?? "";
+      expect(text).toContain("message 3");
+      expect(text).not.toContain("message 0");
+      expect(text).not.toContain("message 2");
+    } finally {
+      feed.remove();
+    }
+  }, 30_000);
+
+  test("a backward seek clears later events from the feed", async () => {
+    const late = reader.seek(119);
+    adapter.update(late, EMPTY, 0, false, true);
+    const alive = adapter.playerViews().find((p) => p.isAlive())!;
+    adapter.focus = alive;
+    const feed = document.createElement("events-display") as EventsDisplay;
+    feed.game = adapter.asGameView();
+    feed.eventBus = new EventBus();
+    document.body.appendChild(feed);
+    try {
+      feed.init();
+      adapter.update(
+        {
+          ...late,
+          miscUpdates: {
+            DisplayEvent: [
+              {
+                messageType: 0,
+                message: "from later on",
+                playerID: alive.smallID(),
+                gold: undefined,
+                params: {},
+              },
+            ],
+          },
+        } as never,
+        EMPTY,
+        0,
+        false,
+      );
+      feed.tick();
+      await feed.updateComplete;
+      expect(feed.textContent ?? "").toContain("from later on");
+
+      // Back to a point before that message was sent.
+      adapter.update(reader.seek(100), EMPTY, 0, false, true);
+      feed.tick();
+      await feed.updateComplete;
+      expect(feed.textContent ?? "").not.toContain("from later on");
+    } finally {
+      feed.remove();
+    }
+  }, 30_000);
 
   test("the game's own event feed renders for the followed player", async () => {
     const frame = reader.seek(119);

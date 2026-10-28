@@ -1,20 +1,23 @@
-import EventEmitter from "events";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { WebSocket } from "ws";
 import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../../src/core/game/Game";
+  Trios,
+} from "@openfront/engine-api/game/GameTypes";
+import { LOBBY_LABEL_MAX } from "@openfront/engine-lib/Util";
+import { GameEnv } from "@openfront/shared/configuration/Env";
+import { sanitizeLobbyLabel } from "@openfront/shared/SharedUtil";
 import {
   FEATURED_LOBBY_AUTO_START_MS,
   HOSTED_LOBBY_AUTO_START_MS,
   LobbyLabelSchema,
   MAX_HOSTED_LOBBIES,
-} from "../../src/core/Schemas";
-import { LOBBY_LABEL_MAX, sanitizeLobbyLabel } from "../../src/core/Util";
+} from "@openfront/shared/WireSchemas";
+import EventEmitter from "events";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { WebSocket } from "ws";
 import { GameManager } from "../../src/server/GameManager";
 import {
   GamePhase,
@@ -25,8 +28,13 @@ import {
   InternalGameInfo,
   InternalPublicGames,
 } from "../../src/server/IPCBridgeSchema";
+import * as jwtModule from "../../src/server/jwt";
 import { MasterLobbyService } from "../../src/server/MasterLobbyService";
 import { ServerEnv } from "../../src/server/ServerEnv";
+import {
+  getListingEligibilityError,
+  registerListingRoute,
+} from "../../src/server/Worker";
 import { WorkerLobbyService } from "../../src/server/WorkerLobbyService";
 import {
   makeClient as harnessClient,
@@ -144,6 +152,172 @@ describe("GameServer listing", () => {
     });
     expect(pub.gameInfo().listed).toBeUndefined();
   });
+
+  describe("getListingEligibilityError", () => {
+    it("returns null for a valid, private lobby with no cheats or whitelist", () => {
+      const game = makeGame();
+      expect(getListingEligibilityError(game, 10)).toBeNull();
+    });
+
+    it("rejects public games or already started games", () => {
+      const pub = new GameServer({
+        id: "pub",
+        log: mockLogger,
+        createdAt: Date.now(),
+        gameConfig: testGameConfig({ gameType: GameType.Public }),
+      });
+      expect(getListingEligibilityError(pub)).toBe("Game cannot be listed");
+
+      const started = makeGame();
+      started.prestart();
+      expect(getListingEligibilityError(started)).toBe("Game cannot be listed");
+    });
+
+    it("rejects lobbies with an active join whitelist", () => {
+      const game = makeGame("g", CREATOR, { allowedPublicIds: ["p1"] });
+      expect(getListingEligibilityError(game)).toBe(
+        "listing_whitelist_enabled",
+      );
+    });
+
+    it("rejects lobbies with host cheats enabled", () => {
+      const game = makeGame("g", CREATOR, {
+        hostCheats: { infiniteGold: true },
+      });
+      expect(getListingEligibilityError(game)).toBe(
+        "listing_host_cheats_enabled",
+      );
+    });
+
+    it("rejects when player count meets or exceeds maxPlayers cap", () => {
+      const game = makeGame();
+      expect(getListingEligibilityError(game, 0)).toBe(
+        "listing_max_players_too_low",
+      );
+    });
+
+    it("checks the effective team cap against player count", () => {
+      const game = makeGame("team-eligibility", CREATOR, {
+        gameMode: GameMode.Team,
+        playerTeams: Trios,
+      });
+      game.joinClient(makeClient("p1", "c1", fakeWs()));
+      game.joinClient(makeClient("p2", "c2", fakeWs()));
+      game.joinClient(makeClient("p3", "c3", fakeWs()));
+      expect(getListingEligibilityError(game, 5)).toBe(
+        "listing_max_players_too_low",
+      );
+      expect(getListingEligibilityError(game, 6)).toBeNull();
+
+      game.gameConfig.maxPlayers = 3;
+      expect(getListingEligibilityError(game)).toBe(
+        "listing_max_players_too_low",
+      );
+    });
+
+    it("skips stored maxPlayers cap check when lobby is already listed and request omits maxPlayers", () => {
+      const game = makeGame("listed-game", CREATOR);
+      game.joinClient(makeClient("p1", "c1", fakeWs()));
+      game.joinClient(makeClient("p2", "c2", fakeWs()));
+      game.setListed(true, { maxPlayers: 2 });
+      expect(game.isListed()).toBe(true);
+      expect(game.numPlayers()).toBe(2);
+
+      // Omitting maxPlayers on relist skips the stored cap check even when full.
+      expect(getListingEligibilityError(game)).toBeNull();
+
+      // Passing explicit maxPlayers <= numPlayers still rejects.
+      expect(getListingEligibilityError(game, 2)).toBe(
+        "listing_max_players_too_low",
+      );
+    });
+  });
+
+  describe("app.post('/api/game/:id/listing') interleaving", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("rejects listing when lobby settings change to enable host cheats while getUserMe is pending", async () => {
+      let routeHandler!: (req: any, res: any) => Promise<any>;
+      const mockApp = {
+        post(path: string, handler: any) {
+          if (path === "/api/game/:id/listing") {
+            routeHandler = handler;
+          }
+        },
+      };
+
+      const game = makeGame("test-interleaving", CREATOR);
+      const mockGm: any = {
+        game: vi.fn((id: string) => (id === "test-interleaving" ? game : null)),
+      };
+      const mockLobbyService: any = {
+        creatorHasListedLobby: vi.fn().mockReturnValue(false),
+        hostedLobbyCount: vi.fn().mockReturnValue(0),
+      };
+
+      registerListingRoute({
+        app: mockApp as any,
+        gm: mockGm,
+        lobbyService: mockLobbyService,
+        log: mockLogger as any,
+      });
+
+      vi.spyOn(jwtModule, "verifyClientToken").mockResolvedValue({
+        type: "success",
+        persistentId: CREATOR,
+        claims: null,
+      });
+
+      vi.spyOn(ServerEnv, "env").mockReturnValue(GameEnv.Prod);
+
+      let resolveUserMe!: (val: any) => void;
+      const userMePromise = new Promise((resolve) => {
+        resolveUserMe = resolve;
+      });
+      const getUserMeSpy = vi
+        .spyOn(jwtModule, "getUserMe")
+        .mockImplementation(() => userMePromise as any);
+
+      const req: any = {
+        headers: { authorization: "Bearer test-token" },
+        params: { id: "test-interleaving" },
+        body: { listed: true },
+      };
+      const res: any = {
+        statusCode: 200,
+        body: undefined,
+        status(code: number) {
+          this.statusCode = code;
+          return this;
+        },
+        json(data: unknown) {
+          this.body = data;
+          return this;
+        },
+      };
+
+      const listingPromise = routeHandler(req, res);
+
+      // Wait until the handler passes preError validation and is suspended on getUserMe
+      await vi.waitFor(() => expect(getUserMeSpy).toHaveBeenCalled());
+
+      // Mutate the lobby config while getUserMe is pending
+      game.updateGameConfig({ hostCheats: { infiniteGold: true } });
+
+      resolveUserMe({
+        type: "success",
+        response: { player: { canCreatePublicLobbies: true } },
+      });
+
+      await listingPromise;
+
+      expect(res.statusCode).toBe(409);
+      expect(res.body).toEqual({ error: "listing_host_cheats_enabled" });
+      expect(game.isListed()).toBe(false);
+    });
+  });
 });
 
 describe("GameManager.listedLobbies", () => {
@@ -258,6 +432,44 @@ describe("listed lobby auto-start", () => {
     // Filling to the cap starts the game before the deadline.
     game.joinClient(makeClient("guest", OTHER_CREATOR, fakeWs()));
     expect(game.phase()).toBe(GamePhase.Active);
+  });
+
+  it("adjusts the listing player cap for team games", () => {
+    const game = makeGame("team-game", CREATOR, {
+      gameMode: GameMode.Team,
+      playerTeams: Trios,
+    });
+    game.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game.setListed(true, { maxPlayers: 100 });
+    expect(game.gameInfo().gameConfig?.maxPlayers).toBe(99);
+
+    // Adjusts unaligned stored maxPlayers when options omit maxPlayers.
+    const game2 = makeGame("team-game-no-opts", CREATOR, {
+      gameMode: GameMode.Team,
+      playerTeams: Trios,
+      maxPlayers: 100,
+    });
+    game2.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game2.setListed(true);
+    expect(game2.gameInfo().gameConfig?.maxPlayers).toBe(99);
+
+    // Enforces at least a full team size when cap is smaller than team size.
+    const game3 = makeGame("team-game-small", CREATOR, {
+      gameMode: GameMode.Team,
+      playerTeams: Trios,
+    });
+    game3.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game3.setListed(true, { maxPlayers: 2 });
+    expect(game3.gameInfo().gameConfig?.maxPlayers).toBe(3);
+
+    // Leaves configured cap unchanged for numeric team counts.
+    const game4 = makeGame("team-game-numeric", CREATOR, {
+      gameMode: GameMode.Team,
+      playerTeams: 3,
+    });
+    game4.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game4.setListed(true, { maxPlayers: 5 });
+    expect(game4.gameInfo().gameConfig?.maxPlayers).toBe(5);
   });
 
   it("never auto-starts an unlisted lobby", () => {
@@ -853,6 +1065,29 @@ describe("WorkerLobbyService hosted lobbies", () => {
       .map((c: any[]) => c[0])
       .find((m: any) => m.type === "lobbyList");
     expect(lobbyList.lobbies.map((l: any) => l.gameID)).toEqual(["ffa-g1"]);
+  });
+
+  it("does not count spectators in reported lobby numClients", () => {
+    const game = makeGame("hosted-spec", CREATOR);
+    game.setListed(true);
+    game.joinClient(
+      harnessClient({ clientID: "p1" as any, persistentID: "p1" }),
+    );
+    game.joinClient(
+      harnessClient({
+        clientID: "s1" as any,
+        persistentID: "s1",
+        spectator: true,
+      }),
+    );
+    gm.listedLobbies.mockReturnValue([game]);
+    emitBroadcast({ ffa: [], team: [], special: [], hosted: [] });
+    const list = sendToMaster.mock.calls.find(
+      (c: any) => c[0].type === "lobbyList",
+    )![0];
+    expect(
+      list.lobbies.find((l: any) => l.gameID === "hosted-spec").numClients,
+    ).toBe(1);
   });
 
   it("reports the game manager's live game count to the master", () => {

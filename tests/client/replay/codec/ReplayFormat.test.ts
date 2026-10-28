@@ -4,6 +4,12 @@
  * processed. Mostly hand-built frames, no simulation needed.
  */
 
+import {
+  GameType,
+  PlayerType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { gunzip as gunzipCb } from "zlib";
 import { FALLOUT_BIT } from "../../../../src/client/render/gl/utils/TileCodec";
 import { PlayerTypeEnum } from "../../../../src/client/render/types";
@@ -13,8 +19,6 @@ import type {
   ReplayAppend,
   ReplayFrame,
 } from "../../../../src/client/replay/codec/ReplayTypes";
-import { GameType, PlayerType, UnitType } from "../../../../src/core/game/Game";
-import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
 import { setup } from "../../../util/Setup";
 import {
   finish,

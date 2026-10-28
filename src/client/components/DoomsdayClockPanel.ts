@@ -1,16 +1,21 @@
-import { html, LitElement } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import { assetUrl } from "../../core/AssetUrls";
+import {
+  GameMode,
+  PlayerType,
+  Team,
+} from "@openfront/engine-api/game/GameTypes";
+import { renderTroops } from "@openfront/engine-lib/Format";
 import {
   doomsdayClockDrain,
   doomsdayClockRequiredTiles,
   doomsdayClockRotQuota,
   doomsdayClockTroopFloor,
   doomsdayClockWaveState,
-} from "../../core/game/DoomsdayClock";
-import { GameMode, PlayerType, Team } from "../../core/game/Game";
+} from "@openfront/engine-lib/game/DoomsdayClock";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { html, LitElement } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { themeProvider } from "../theme/ThemeProvider";
-import { renderTroops, translateText } from "../Utils";
+import { translateText } from "../Utils";
 import { GameView } from "../view";
 
 const doomsdayClockIcon = assetUrl("images/DoomsdayClockSkull.svg");
@@ -19,8 +24,8 @@ const doomsdayClockIcon = assetUrl("images/DoomsdayClockSkull.svg");
  * The Doomsday Clock readout: a self-contained panel showing the rising bar, the
  * side's share vs the threshold, the stage (Stable/Unstable/Collapsing/Decaying)
  * and the
- * wave countdown. Embedded by game-right-sidebar so it stacks (centered) under
- * the game timer; it hides only when the mode is off or after a winner. A
+ * wave countdown. Embedded by game-right-sidebar so it stacks under the game
+ * timer; it hides only when the mode is off or after a winner. A
  * spectator, replay viewer, or eliminated / not-spawned player still sees the
  * zone-only readout (rising bar + wave countdown, no personal status line).
  */
@@ -183,7 +188,7 @@ export class DoomsdayClockPanel extends LitElement {
         ? "sd-pulse-orange"
         : "";
     const panel =
-      "w-fit flex flex-col gap-1.5 py-2 px-4 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-bl-lg text-white text-sm";
+      "w-fit flex flex-col gap-1.5 py-2 px-4 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-l-lg text-white text-sm";
 
     return html`
       <style>
@@ -240,26 +245,28 @@ export class DoomsdayClockPanel extends LitElement {
               pct: requiredPct.toFixed(1),
             })}
           </span>
-          ${live
-            ? myTeam !== null
-              ? html`<span style=${`color:${this.teamColor(myTeam)}`}>
-                  ${translateText("doomsday_clock.your_team", {
-                    team: this.teamDisplayName(myTeam),
-                    pct: yourPct.toFixed(1),
-                  })}
-                </span>`
-              : html`<span
-                  class=${redAlert ? "text-red-300" : "text-green-300"}
-                >
-                  ${translateText("doomsday_clock.you", {
-                    pct: yourPct.toFixed(1),
-                  })}
-                </span>`
-            : ""}
+          ${
+            live
+              ? myTeam !== null
+                ? html`<span style=${`color:${this.teamColor(myTeam)}`}>
+                    ${translateText("doomsday_clock.your_team", {
+                      team: this.teamDisplayName(myTeam),
+                      pct: yourPct.toFixed(1),
+                    })}
+                  </span>`
+                : html`<span
+                    class=${redAlert ? "text-red-300" : "text-green-300"}
+                  >
+                    ${translateText("doomsday_clock.you", {
+                      pct: yourPct.toFixed(1),
+                    })}
+                  </span>`
+              : ""
+          }
         </div>
-        ${detail
-          ? html`<div class="text-xs text-gray-400">${detail}</div>`
-          : ""}
+        ${
+          detail ? html`<div class="text-xs text-gray-400">${detail}</div>` : ""
+        }
       </div>
     `;
   }

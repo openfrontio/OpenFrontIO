@@ -8,7 +8,7 @@
  * processor, so this build never tries to simulate them.
  */
 
-import { GameRecord, GameRecordSchema } from "../../core/Schemas";
+import { GameRecord, GameRecordSchema } from "@openfront/shared/WireSchemas";
 import { getApiBase } from "../ApiBase";
 import { ClientEnv } from "../ClientEnv";
 
@@ -73,4 +73,12 @@ export async function fetchReplayRecord(
     return { kind: "other_build" };
   }
   return { kind: "record", record };
+}
+
+/**
+ * Whether the record has any of the hashes the processor checks the game
+ * against. Without them it can be replayed, but not verified.
+ */
+export function hasRecordedHashes(record: GameRecord): boolean {
+  return record.turns.some((t) => t.hash !== null && t.hash !== undefined);
 }

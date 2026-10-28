@@ -1,13 +1,12 @@
-import fs from "fs";
-import path from "path";
 import {
   type CustomTribe,
   GameMapName,
   GameMapType,
   MapInfo,
   maps,
-} from "../src/core/game/Game";
-import { validateLayer } from "./util/layerValidation";
+} from "@openfront/engine-api/game/GameTypes";
+import fs from "fs";
+import path from "path";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -23,19 +22,13 @@ const EN_JSON = path.join(ROOT, "resources", "lang", "en.json");
 
 const allMapKeys = Object.keys(GameMapType) as GameMapName[];
 
-// Maps excluded from the frequency requirement (not part of regular playlists).
-const FREQUENCY_EXEMPTIONS: Set<GameMapName> = new Set([
-  "GiantWorldMap",
-  "Oceania",
-  "BaikalNukeWars",
+// Maps whose folder isn't their name without spaces and punctuation; the
+// site Worker's link previews list them in infra `src/site/lib/GameMeta.ts`.
+const PREVIEW_FOLDER_EXCEPTIONS: Set<GameMapName> = new Set([
   "Tourney1",
   "Tourney2",
   "Tourney3",
   "Tourney4",
-  "EuropeClassic",
-  "BritanniaClassic",
-  "ChoppingBlock",
-  "Luna",
 ]);
 
 // Keys in the en.json "map" section that are UI strings, not map names.
@@ -157,6 +150,31 @@ describe("Map consistency", () => {
     }
   });
 
+  test("Map folders follow from map names (link-preview thumbnails)", () => {
+    const errors: string[] = [];
+    for (const key of allMapKeys) {
+      const name = GameMapType[key];
+      const fromName = name.toLowerCase().replace(/[\s.()-]+/g, "");
+      const matches = fromName === toFolderName(key);
+      if (PREVIEW_FOLDER_EXCEPTIONS.has(key)) {
+        if (matches) {
+          errors.push(
+            `${key}: folder now follows from "${name}"; drop it from PREVIEW_FOLDER_EXCEPTIONS and infra's MAP_DIRS`,
+          );
+        }
+      } else if (!matches) {
+        errors.push(
+          `${key}: folder "${toFolderName(key)}" but "${name}" gives "${fromName}"; rename the map id to match, or add it to infra's MAP_DIRS (src/site/lib/GameMeta.ts) and PREVIEW_FOLDER_EXCEPTIONS`,
+        );
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error(
+        "Shared game links would show no map thumbnail:\n" + errors.join("\n"),
+      );
+    }
+  });
+
   test("The maps list and GameMapType match one-to-one", () => {
     const errors: string[] = [];
     for (const key of allMapKeys) {
@@ -199,18 +217,6 @@ describe("Map consistency", () => {
       const fields: [string, unknown, unknown][] = [
         ["categories", info.categories, map.categories],
         ["translation_key", info.translation_key, map.translationKey],
-        [
-          "multiplayer_frequency",
-          info.multiplayer_frequency ?? 0,
-          map.multiplayerFrequency,
-        ],
-        ["ffa_frequency", info.ffa_frequency ?? -1, map.ffaFrequency],
-        ["team_frequency", info.team_frequency ?? -1, map.teamFrequency],
-        [
-          "special_frequency",
-          info.special_frequency ?? -1,
-          map.specialFrequency,
-        ],
         ["featured_rank", orOmitted(info.featured_rank), map.featuredRank],
         [
           "special_team_count",
@@ -255,119 +261,25 @@ describe("Map consistency", () => {
     }
   });
 
-  test("Every GameMapType (except exemptions) has a frequency set", () => {
-    const errors: string[] = [];
-    for (const key of allMapKeys) {
-      if (FREQUENCY_EXEMPTIONS.has(key)) continue;
-      const info = readInfoJson(key);
-      if (info === null) continue; // Other tests catch missing files.
-      const freq = info.multiplayer_frequency;
-      const hasFallback = typeof freq === "number" && freq > 0;
-      const hasPerMode =
-        (typeof info.ffa_frequency === "number" && info.ffa_frequency > 0) ||
-        (typeof info.team_frequency === "number" && info.team_frequency > 0) ||
-        (typeof info.special_frequency === "number" &&
-          info.special_frequency > 0);
-      if (!hasFallback && !hasPerMode) {
-        errors.push(
-          `${key} has no frequency in info.json (set multiplayer_frequency > 0, or at least one per-mode frequency, or add the map to FREQUENCY_EXEMPTIONS)`,
-        );
-      }
-    }
-    if (errors.length > 0) {
-      throw new Error(
-        "Maps missing a frequency (not exempted):\n" + errors.join("\n"),
-      );
-    }
-  });
-
-  test("Per-mode frequencies are valid numbers when set", () => {
-    const VALID_MODIFIER_KEYS = new Set([
-      "isRandomSpawn",
-      "isCompact",
-      "isCrowded",
-      "isHardNations",
-      "startingGold1M",
-      "startingGold5M",
-      "startingGold25M",
-      "goldMultiplier",
-      "isAlliancesDisabled",
-      "isNukesDisabled",
-      "isSAMsDisabled",
-      "isPeaceTime",
-      "isWaterNukes",
-      "isDoomsdayClock",
-    ]);
+  test("info.json sets no rotation weights", () => {
+    // Public-lobby rotation weights live in the API (GET /map_weights); the
+    // generator ignores these keys, so one here would silently do nothing.
     const errors: string[] = [];
     for (const key of allMapKeys) {
       const info = readInfoJson(key);
       if (info === null) continue;
       for (const field of [
+        "multiplayer_frequency",
         "ffa_frequency",
         "team_frequency",
         "special_frequency",
       ]) {
-        const val = info[field];
-        if (val !== undefined && (typeof val !== "number" || val < 0)) {
-          errors.push(
-            `${key}: ${field} is ${JSON.stringify(val)} (must be a non-negative number or omitted)`,
-          );
-        }
-      }
-      // Validate disabled_modifiers values.
-      const disabled = info.disabled_modifiers;
-      if (Array.isArray(disabled)) {
-        for (const mod of disabled) {
-          if (typeof mod !== "string" || !VALID_MODIFIER_KEYS.has(mod)) {
-            errors.push(
-              `${key}: disabled_modifiers contains invalid modifier "${mod}"`,
-            );
-          }
-        }
-      }
-      // Validate forced_modifiers format: plain key or "key:percentage".
-      const forced = info.forced_modifiers;
-      if (Array.isArray(forced)) {
-        for (const entry of forced) {
-          if (typeof entry !== "string") {
-            errors.push(
-              `${key}: forced_modifiers contains non-string entry ${JSON.stringify(entry)}`,
-            );
-            continue;
-          }
-          const parts = entry.split(":");
-          if (parts.length > 2) {
-            errors.push(
-              `${key}: forced_modifiers "${entry}" has too many colon-separated segments (expected "modifier" or "modifier:percentage")`,
-            );
-            continue;
-          }
-          const [mod, pctStr] = parts;
-          if (!VALID_MODIFIER_KEYS.has(mod)) {
-            errors.push(
-              `${key}: forced_modifiers contains invalid modifier "${mod}"`,
-            );
-          }
-          if (pctStr !== undefined) {
-            if (!/^\d+$/.test(pctStr)) {
-              errors.push(
-                `${key}: forced_modifiers "${entry}" has non-integer percentage`,
-              );
-            } else {
-              const pct = parseInt(pctStr, 10);
-              if (pct < 1 || pct > 100) {
-                errors.push(
-                  `${key}: forced_modifiers "${entry}" has invalid percentage (must be 1-100)`,
-                );
-              }
-            }
-          }
-        }
+        if (field in info) errors.push(`${key}: info.json sets ${field}`);
       }
     }
     if (errors.length > 0) {
       throw new Error(
-        "Invalid per-mode frequency or modifier fields in info.json:\n" +
+        "Rotation weights are set in the API admin panel, not info.json:\n" +
           errors.join("\n"),
       );
     }
@@ -567,7 +479,6 @@ describe("Map consistency", () => {
       "display_name",
       "translation_key",
       "categories",
-      "multiplayer_frequency",
       "featured_rank",
       "special_team_count",
     ];
@@ -603,30 +514,7 @@ describe("Map consistency", () => {
 
   // ── Layer validation ────────────────────────────────────────────────────
 
-  test("Layer definitions in info.json are valid", () => {
-    const errors: string[] = [];
-
-    for (const key of allMapKeys) {
-      const info = readInfoJson(key);
-      if (info === null) continue;
-      const layers = info.layers as
-        | Array<{ id: string; placement: string; nukeable?: boolean }>
-        | undefined;
-      if (!layers || !Array.isArray(layers)) continue;
-
-      const ids = new Set<string>();
-      for (let i = 0; i < layers.length; i++) {
-        errors.push(...validateLayer(layers[i], i, key, ids));
-      }
-    }
-    if (errors.length > 0) {
-      throw new Error(
-        "Layer definition violations in info.json:\n" + errors.join("\n"),
-      );
-    }
-  });
-
-  test("Layer PNGs exist in map-generator and resources for every defined layer", () => {
+  test("Every defined layer has its source PNG and both generated WebP variants", () => {
     const errors: string[] = [];
 
     for (const key of allMapKeys) {
@@ -648,16 +536,22 @@ describe("Map consistency", () => {
             `${key}: layer PNG "${layer.id}.png" missing in map-generator/assets/maps/${folder}/`,
           );
         }
-        const resPng = path.join(resDir, `${layer.id}.png`);
-        if (!fs.existsSync(resPng)) {
+        for (const file of [`${layer.id}.webp`, `${layer.id}.4x.webp`]) {
+          if (!fs.existsSync(path.join(resDir, file))) {
+            errors.push(
+              `${key}: layer image "${file}" missing in resources/maps/${folder}/ (run the map generator)`,
+            );
+          }
+        }
+        if (fs.existsSync(path.join(resDir, `${layer.id}.png`))) {
           errors.push(
-            `${key}: layer PNG "${layer.id}.png" missing in resources/maps/${folder}/`,
+            `${key}: stale layer PNG "${layer.id}.png" in resources/maps/${folder}/ (layers ship as WebP)`,
           );
         }
       }
     }
     if (errors.length > 0) {
-      throw new Error("Missing layer PNGs:\n" + errors.join("\n"));
+      throw new Error("Layer image violations:\n" + errors.join("\n"));
     }
   });
 

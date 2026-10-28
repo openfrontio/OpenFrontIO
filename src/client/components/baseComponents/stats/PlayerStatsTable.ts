@@ -1,12 +1,13 @@
-import { LitElement, html, nothing, type TemplateResult } from "lit";
-import { customElement, property } from "lit/decorators.js";
 import {
   PlayerStats,
   boatUnits,
   bombUnits,
   otherUnits,
-} from "../../../../core/StatsSchemas";
-import { renderNumber, translateText } from "../../../Utils";
+} from "@openfront/engine-api/StatsSchemas";
+import { renderNumber } from "@openfront/engine-lib/Format";
+import { LitElement, html, nothing, type TemplateResult } from "lit";
+import { customElement, property } from "lit/decorators.js";
+import { translateText } from "../../../Utils";
 
 // Display order for the buildings table. Declared as a Record rather than a
 // bare array so `satisfies` fails compilation when a structure is added to
@@ -87,13 +88,15 @@ function statsSection(
         <table class="w-full table-fixed text-sm text-gray-300">
           <thead>
             <tr class="bg-white/5">
-              ${rowHeader === undefined
-                ? nothing
-                : html`<th
-                    class="px-4 py-2 text-left font-semibold text-gray-400"
-                  >
-                    ${translateText(rowHeader)}
-                  </th>`}
+              ${
+                rowHeader === undefined
+                  ? nothing
+                  : html`<th
+                      class="px-4 py-2 text-left font-semibold text-gray-400"
+                    >
+                      ${translateText(rowHeader)}
+                    </th>`
+              }
               ${columns.map(
                 (column) => html`
                   <th class="px-3 py-2 text-center font-semibold text-gray-400">
@@ -107,13 +110,15 @@ function statsSection(
             ${rows.map(
               (row) => html`
                 <tr class="hover:bg-white/5 transition-colors">
-                  ${row.label === undefined
-                    ? nothing
-                    : html`<td
-                        class="px-4 py-2 text-left font-medium text-white/80"
-                      >
-                        ${translateText(row.label)}
-                      </td>`}
+                  ${
+                    row.label === undefined
+                      ? nothing
+                      : html`<td
+                          class="px-4 py-2 text-left font-medium text-white/80"
+                        >
+                          ${translateText(row.label)}
+                        </td>`
+                  }
                   ${row.values.map(
                     (value) => html`
                       <td class="px-3 py-2 text-center text-white/60">

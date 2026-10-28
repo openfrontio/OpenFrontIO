@@ -1,16 +1,16 @@
-import { AttackExecution } from "../src/core/execution/AttackExecution";
-import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
-import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
-import { NationWarshipBehavior } from "../src/core/execution/nation/NationWarshipBehavior";
-import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
-import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
 import {
   Difficulty,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { PseudoRandom } from "../src/core/PseudoRandom";
+} from "@openfront/engine-api/game/GameTypes";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
+import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
+import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
+import { TransportShipExecution } from "@openfront/engine/execution/TransportShipExecution";
 import { createGame, L, W } from "./core/pathfinding/_fixtures";
 import { setup } from "./util/Setup";
 
@@ -36,7 +36,7 @@ describe("Nation beachhead boats", () => {
     island.setTroops(10_000);
     const random = new PseudoRandom(42);
     const emoji = new NationEmojiBehavior(random, game, nation);
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       random,
       game,
       nation,
@@ -191,7 +191,7 @@ describe("Nation beachheads on unowned land", () => {
     nation.setTroops(100_000);
     const random = new PseudoRandom(42);
     const emoji = new NationEmojiBehavior(random, game, nation);
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       random,
       game,
       nation,

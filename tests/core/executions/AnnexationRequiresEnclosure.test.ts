@@ -1,16 +1,12 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { calculateBoundingBox, inscribed } from "@openfront/engine-lib/Util";
+import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { beforeEach, describe, expect, test } from "vitest";
-import { PlayerExecution } from "../../../src/core/execution/PlayerExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-} from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
-import { calculateBoundingBox, inscribed } from "../../../src/core/Util";
 import { setup } from "../../util/Setup";
 
-// The annexation checks (surroundedBySamePlayer / isSurrounded) run on a
+// The annexation checks (surroundedBySamePlayer / classifyCluster) run on a
 // cluster of *border* tiles, but removeCluster hands over the whole
 // contiguous territory that cluster sits on. One territory owns a separate
 // border cluster for every hole punched in it — a nuke crater, an enemy
@@ -137,8 +133,8 @@ describe("annexation only takes territory that is actually enclosed", () => {
     }
 
     // Place attacker tiles at the corners of the outer border so that if the
-    // outer border were mistakenly treated as a secondary cluster, isSurrounded()
-    // would evaluate to true.
+    // outer border were mistakenly treated as a secondary cluster,
+    // classifyCluster() would report it surrounded.
     attacker.conquer(game.ref(29, 29));
     attacker.conquer(game.ref(71, 29));
     attacker.conquer(game.ref(29, 71));

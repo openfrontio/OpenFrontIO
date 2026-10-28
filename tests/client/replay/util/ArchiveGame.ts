@@ -11,35 +11,39 @@
  * with GameRecordSchema, as the archive API serves it.
  */
 
-import path from "path";
-import { fileURLToPath } from "url";
 import {
   Difficulty,
-  Game,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../../../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   GameUpdateType,
   HashUpdate,
-} from "../../../../src/core/game/GameUpdates";
-import { createGameRunner } from "../../../../src/core/GameRunner";
+} from "@openfront/engine-api/game/GameUpdates";
 import {
   GameConfig,
-  GameRecord,
-  GameRecordSchema,
   GameStartInfo,
-  Player,
-  PlayerRecord,
   StampedIntent,
   Turn,
-} from "../../../../src/core/Schemas";
+} from "@openfront/engine-api/Schemas";
+import { Game } from "@openfront/engine/game/Game";
+import { createGameRunner } from "@openfront/engine/GameRunner";
+import { loadMapFiles } from "@openfront/shared/GameMapLoader";
 import {
   createPartialGameRecord,
   toWireGameStartInfo,
-} from "../../../../src/core/Util";
+} from "@openfront/shared/SharedUtil";
+import {
+  GameRecord,
+  GameRecordSchema,
+  PlayerRecord,
+  WireGameStartInfo,
+  WirePlayer,
+} from "@openfront/shared/WireSchemas";
+import path from "path";
+import { fileURLToPath } from "url";
 import { NodeGameMapLoader } from "../../../perf/fullgame/NodeGameMapLoader";
 
 const PROJECT_ROOT = path.resolve(
@@ -54,7 +58,7 @@ export const mapLoader = new NodeGameMapLoader(
 export interface ArchiveOptions {
   gameID: string;
   config: GameConfig;
-  players: Player[];
+  players: WirePlayer[];
   ticks: number;
   tribes?: GameStartInfo["tribes"];
   /** Intents the clients send for turn `tick`, given the live game. */
@@ -64,13 +68,13 @@ export interface ArchiveOptions {
 export interface ArchivedGame {
   record: GameRecord;
   /** What the live clients received. */
-  wireStart: GameStartInfo;
+  wireStart: WireGameStartInfo;
 }
 
 export async function playAndArchive(
   opts: ArchiveOptions,
 ): Promise<ArchivedGame> {
-  const start: GameStartInfo = {
+  const start: WireGameStartInfo = {
     gameID: opts.gameID,
     lobbyCreatedAt: 1_700_000_000_000,
     config: opts.config,
@@ -84,7 +88,11 @@ export async function playAndArchive(
   const runner = await createGameRunner(
     wireStart,
     opts.players[0]?.clientID,
-    mapLoader,
+    await loadMapFiles(
+      mapLoader,
+      wireStart.config.gameMap,
+      wireStart.config.gameMapSize,
+    ),
     (gu) => {
       if ("errMsg" in gu) {
         error = `${gu.errMsg}\n${gu.stack ?? ""}`;
@@ -169,7 +177,10 @@ export function config(overrides: Partial<GameConfig> = {}): GameConfig {
   };
 }
 
-export function human(n: number, overrides: Partial<Player> = {}): Player {
+export function human(
+  n: number,
+  overrides: Partial<WirePlayer> = {},
+): WirePlayer {
   return {
     clientID: `client00${n}`,
     username: `Human ${n}`,

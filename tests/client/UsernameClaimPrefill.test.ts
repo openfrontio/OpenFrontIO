@@ -4,9 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // API, the in-game dialog and the Steam bridge, and none of the three is what
 // these exercise.
 const { getUser, updateUsername } = vi.hoisted(() => ({
-  getUser: vi.fn(
-    async (): Promise<{ steamId: string; name: string } | null> =>
-      Promise.resolve(null),
+  getUser: vi.fn(async (): Promise<{ steamId: string; name: string } | null> =>
+    Promise.resolve(null),
   ),
   updateUsername: vi.fn(),
 }));
@@ -21,9 +20,9 @@ vi.mock("../../src/client/SteamSDK", () => ({
   steamSDK: { isOnSteam: () => true, getUser: () => getUser() },
 }));
 
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import "../../src/client/components/UsernamePanel";
 import type { UsernamePanel } from "../../src/client/components/UsernamePanel";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 function player(
   overrides: Record<string, unknown> = {},

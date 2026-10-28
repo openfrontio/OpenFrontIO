@@ -1,6 +1,6 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { UserMeResponse } from "../../core/ApiSchemas";
 import {
   clearCreatorCode,
   getUserMe,
@@ -232,13 +232,15 @@ export class CreatorCodePanel extends LitElement {
             date: this.formatDate(new Date(creator.sinceAt)),
           })}
         </div>
-        ${locked
-          ? html`<div class="text-xs text-amber-300">
-              ${translateText("creator_code.cooldown_days", {
-                days: this.daysUntil(this.cooldownEnd()!),
-              })}
-            </div>`
-          : nothing}
+        ${
+          locked
+            ? html`<div class="text-xs text-amber-300">
+                ${translateText("creator_code.cooldown_days", {
+                  days: this.daysUntil(this.cooldownEnd()!),
+                })}
+              </div>`
+            : nothing
+        }
       </div>
     `;
   }
@@ -266,9 +268,9 @@ export class CreatorCodePanel extends LitElement {
         </div>
 
         <div
-          class="${this.creator
-            ? "border-t border-white/10 pt-4"
-            : ""} flex flex-col gap-2"
+          class="${
+            this.creator ? "border-t border-white/10 pt-4" : ""
+          } flex flex-col gap-2"
         >
           <label
             for="creator-code-panel-input"
@@ -286,38 +288,45 @@ export class CreatorCodePanel extends LitElement {
             }}
             placeholder=${translateText("creator_code.input_placeholder")}
             ?disabled=${locked || this.busy}
-            class="w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 transition-all font-medium hover:bg-white/10 disabled:opacity-50 disabled:hover:bg-white/5 ${this
-              .error
-              ? "border-red-500/50 focus:ring-red-500/40 focus:border-red-500/50"
-              : "border-white/10 focus:ring-malibu-blue/50 focus:border-malibu-blue/50"}"
+            class="w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 transition-all font-medium hover:bg-white/10 disabled:opacity-50 disabled:hover:bg-white/5 ${
+              this.error
+                ? "border-red-500/50 focus:ring-red-500/40 focus:border-red-500/50"
+                : "border-white/10 focus:ring-malibu-blue/50 focus:border-malibu-blue/50"
+            }"
           />
           <div class="text-sm text-red-400 min-h-[1.25rem]">${this.error}</div>
           <o-button
             variant=${setArmed ? "warning" : "primary"}
             width="block"
             size="md"
-            translationKey=${setArmed
-              ? "creator_code.confirm_lock"
-              : this.creator
-                ? "creator_code.change"
-                : "creator_code.support"}
+            translationKey=${
+              setArmed
+                ? "creator_code.confirm_lock"
+                : this.creator
+                  ? "creator_code.change"
+                  : "creator_code.support"
+            }
             .disable=${!canSubmit}
             @click=${this.handleSet}
           ></o-button>
         </div>
 
-        ${this.creator
-          ? html`<o-button
-              variant=${unsupportArmed ? "warning" : "danger"}
-              width="block"
-              size="md"
-              translationKey=${unsupportArmed
-                ? "creator_code.confirm_unsupport"
-                : "creator_code.unsupport"}
-              .disable=${this.busy}
-              @click=${this.handleUnsupport}
-            ></o-button>`
-          : nothing}
+        ${
+          this.creator
+            ? html`<o-button
+                variant=${unsupportArmed ? "warning" : "danger"}
+                width="block"
+                size="md"
+                translationKey=${
+                  unsupportArmed
+                    ? "creator_code.confirm_unsupport"
+                    : "creator_code.unsupport"
+                }
+                .disable=${this.busy}
+                @click=${this.handleUnsupport}
+              ></o-button>`
+            : nothing
+        }
       </div>
     `;
   }

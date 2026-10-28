@@ -35,6 +35,7 @@ vi.mock("../../src/client/Payments", async (importOriginal) => ({
   startPurchase: vi.fn(),
 }));
 
+import type { Subscription } from "@openfront/shared/CosmeticSchemas";
 import { openSubscriptionPortal } from "../../src/client/Api";
 import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 import { purchaseCosmetic } from "../../src/client/Cosmetics";
@@ -44,7 +45,6 @@ import {
   showInGameConfirm,
 } from "../../src/client/InGameModal";
 import { startPurchase } from "../../src/client/Payments";
-import type { Subscription } from "../../src/core/CosmeticSchemas";
 
 const startPurchaseMock = startPurchase as unknown as ReturnType<typeof vi.fn>;
 const alertMock = showInGameAlert as unknown as ReturnType<typeof vi.fn>;

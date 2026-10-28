@@ -8,7 +8,7 @@
  * to store real per-tick positions.
  */
 
-import type { MotionPlanRecord } from "../../core/game/MotionPlans";
+import type { MotionPlanRecord } from "@openfront/engine-lib/game/MotionPlans";
 
 export interface GridMotionPlan {
   planId: number;

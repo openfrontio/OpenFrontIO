@@ -5,6 +5,7 @@
  * viewer sent the game back.
  */
 
+import type { GameRecord } from "@openfront/shared/WireSchemas";
 import { ClientEnv } from "../../../src/client/ClientEnv";
 import {
   classicReplayHref,
@@ -13,8 +14,7 @@ import {
   versionedViewerUrl,
 } from "../../../src/client/replay/ReplayEntry";
 import { fetchReplayRecord } from "../../../src/client/replay/ReplayRecord";
-import { UserSettings } from "../../../src/core/game/UserSettings";
-import type { GameRecord } from "../../../src/core/Schemas";
+import { UserSettings } from "../../../src/client/UserSettings";
 
 // jsdom can't change location.hostname, so a test says whether this page
 // is a replay shell.
@@ -49,7 +49,7 @@ beforeEach(() => {
   new UserSettings().setReplayViewer(true);
   shell.host = false;
   sessionStorage.clear();
-  window.location.hash = "";
+  history.replaceState(null, "", "/");
   config("dev", "localhost");
 });
 
@@ -84,18 +84,29 @@ describe("openReplayViewer", () => {
   });
 
   test("a game the viewer sent back stays on the client-side replay", () => {
-    classicReplayHref("abcd1234");
+    // Marked in the page's URL, not in storage a tab may not have.
+    history.replaceState(null, "", classicReplayHref("abcd1234"));
     expect(openReplayViewer("abcd1234", record("test"))).toBe(false);
     expect(window.location.hash).toBe("");
-    // Only that game.
+    expect(sessionStorage.length).toBe(0);
+
+    // Only that game: another one opened from this page gets the viewer.
     expect(openReplayViewer("efgh5678", record("test"))).toBe(true);
+
+    // Opened from anywhere else, the viewer is tried again.
+    history.replaceState(null, "", "/");
+    expect(openReplayViewer("abcd1234", record("test"))).toBe(true);
   });
 
   test("on a replay shell the client-side replay is the shell's own page", () => {
     // /game/<id> only exists on the game-server origin.
-    expect(classicReplayHref("abcd1234")).toMatch(/\/game\/abcd1234$/);
+    expect(classicReplayHref("abcd1234")).toMatch(
+      /\/game\/abcd1234\?classic-replay=abcd1234$/,
+    );
     shell.host = true;
-    expect(classicReplayHref("abcd1234")).toBe("/abcd1234");
+    expect(classicReplayHref("abcd1234")).toBe(
+      "/abcd1234?classic-replay=abcd1234",
+    );
   });
 });
 

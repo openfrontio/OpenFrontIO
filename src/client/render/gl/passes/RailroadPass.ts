@@ -126,13 +126,14 @@ export class RailroadPass {
 
   /**
    * Current ghost overlay content, sparse: tile ref → texel value (1-6 =
-   * orientation, 7 = overlap highlight). Ghost paths cover at most a few
-   * thousand tiles, so tracking them beats a full-map array + full-map
-   * texture upload per preview change.
+   * orientation, 7 = overlap highlight).
    */
   private ghostTiles = new Map<number, number>();
-  /** Pending ghost texel writes, interleaved [ref, value, …]. */
-  private ghostOps: number[] = [];
+  private ghostRailData: Uint8Array;
+  private dirtyMinX = Infinity;
+  private dirtyMinY = Infinity;
+  private dirtyMaxX = -Infinity;
+  private dirtyMaxY = -Infinity;
   private ghostOwnerID = 0;
 
   private localPlayerID = 0;
@@ -160,6 +161,7 @@ export class RailroadPass {
     this.paletteTex = paletteTex;
     this.effectTex = effectTex;
     this.settings = settings;
+    this.ghostRailData = new Uint8Array(mapW * mapH);
 
     this.program = createProgram(
       gl,
@@ -169,6 +171,7 @@ export class RailroadPass {
         RAILROAD_EFFECT_ROW_BASE: RAILROAD_EFFECT_BLOCK * MAX_TRAIL_COLORS,
         ...TILE_DEFINES,
       }),
+      "RailroadPass",
     );
 
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
@@ -320,13 +323,29 @@ export class RailroadPass {
       this.ghostOwnerID = 0;
     }
 
-    // Queue texel writes for the diff: clear tiles that left the ghost,
+    // Write dirty tiles: clear tiles that left the ghost,
     // (re)write tiles whose value is new or changed.
     for (const ref of this.ghostTiles.keys()) {
-      if (!next.has(ref)) this.ghostOps.push(ref, 0);
+      if (!next.has(ref)) {
+        this.ghostRailData[ref] = 0;
+        const x = ref % this.mapW;
+        const y = (ref - x) / this.mapW;
+        this.dirtyMinX = Math.min(this.dirtyMinX, x);
+        this.dirtyMaxX = Math.max(this.dirtyMaxX, x);
+        this.dirtyMinY = Math.min(this.dirtyMinY, y);
+        this.dirtyMaxY = Math.max(this.dirtyMaxY, y);
+      }
     }
     for (const [ref, value] of next) {
-      if (this.ghostTiles.get(ref) !== value) this.ghostOps.push(ref, value);
+      if (this.ghostTiles.get(ref) !== value) {
+        this.ghostRailData[ref] = value;
+        const x = ref % this.mapW;
+        const y = (ref - x) / this.mapW;
+        this.dirtyMinX = Math.min(this.dirtyMinX, x);
+        this.dirtyMaxX = Math.max(this.dirtyMaxX, x);
+        this.dirtyMinY = Math.min(this.dirtyMinY, y);
+        this.dirtyMaxY = Math.max(this.dirtyMaxY, y);
+      }
     }
     this.ghostTiles = next;
   }
@@ -336,8 +355,8 @@ export class RailroadPass {
     const gl = this.gl;
     const rs = this.settings.railroad;
 
-    // Flush queued ghost texel writes even when faded out, so the op queue
-    // can't grow unboundedly while the player previews at low zoom.
+    // Flush dirty ghost texels even when faded out, so dirty rects don't linger
+    // while the player previews at low zoom.
     this.flushGhostOps();
 
     // Fade out as zoom drops below railMinZoom; fully invisible at railMinZoom - railFadeRange
@@ -410,39 +429,41 @@ export class RailroadPass {
 
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.activeTexture(gl.TEXTURE0);
   }
 
   /**
-   * Apply queued ghost texel writes to the ghost texture, one texel per
-   * texSubImage2D. Ghost diffs are path-sized (at most a few thousand
-   * texels), far cheaper than the full-map upload a dense mirror needs.
+   * Apply dirty ghost texels to the ghost texture in a single texSubImage2D upload.
    */
   private flushGhostOps(): void {
-    const ops = this.ghostOps;
-    if (ops.length === 0) return;
-    const gl = this.gl;
-    gl.activeTexture(gl.TEXTURE4);
-    gl.bindTexture(gl.TEXTURE_2D, this.ghostRailTex);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    const scratch = new Uint8Array(1);
-    for (let i = 0; i < ops.length; i += 2) {
-      const ref = ops[i];
-      const x = ref % this.mapW;
-      const y = (ref - x) / this.mapW;
-      scratch[0] = ops[i + 1];
+    if (this.dirtyMinX <= this.dirtyMaxX) {
+      const w = this.dirtyMaxX - this.dirtyMinX + 1;
+      const h = this.dirtyMaxY - this.dirtyMinY + 1;
+      const offset = this.dirtyMinY * this.mapW + this.dirtyMinX;
+      const gl = this.gl;
+      gl.activeTexture(gl.TEXTURE4);
+      gl.bindTexture(gl.TEXTURE_2D, this.ghostRailTex);
+      gl.pixelStorei(gl.UNPACK_ROW_LENGTH, this.mapW);
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
       gl.texSubImage2D(
         gl.TEXTURE_2D,
         0,
-        x,
-        y,
-        1,
-        1,
+        this.dirtyMinX,
+        this.dirtyMinY,
+        w,
+        h,
         gl.RED_INTEGER,
         gl.UNSIGNED_BYTE,
-        scratch,
+        this.ghostRailData,
+        offset,
       );
+      gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+      gl.activeTexture(gl.TEXTURE0);
+      this.dirtyMinX = Infinity;
+      this.dirtyMaxX = -Infinity;
+      this.dirtyMinY = Infinity;
+      this.dirtyMaxY = -Infinity;
     }
-    ops.length = 0;
   }
 
   // ---- Rail orientation computation ----

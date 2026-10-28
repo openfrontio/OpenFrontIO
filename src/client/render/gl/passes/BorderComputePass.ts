@@ -75,6 +75,7 @@ export class BorderComputePass {
       gl,
       fullscreenNoUvVertSrc,
       shaderSrc(borderComputeFragSrc, { ...TILE_DEFINES }),
+      "BorderComputePass",
     );
 
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;
@@ -245,6 +246,7 @@ export class BorderComputePass {
 
       gl.bindVertexArray(this.vao);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     } else if (this.scatter.count > 0) {
       this.scatter.flush();
     }

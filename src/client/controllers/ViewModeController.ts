@@ -2,12 +2,12 @@
  * ViewModeController — forwards map view-mode toggles to the WebGL view.
  *
  * - AlternateViewEvent: space-hold (and the settings-modal toggle) drives the
- *   affiliation recolor + grid overlay + hides names.
+ *   affiliation recolor + grid overlay + hides names and land map layers.
  * - ToggleCoordinateGridEvent: persistent coordinate-grid toggle (M keybind);
  *   grid shows but names stay visible.
  */
 
-import { EventBus } from "../../core/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
 import { AlternateViewEvent, ToggleCoordinateGridEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";

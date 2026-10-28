@@ -3,9 +3,9 @@
 // dictionary-mapped sender id, wrapped in a turn message — the shape zbin is
 // designed for. Verifies cross-peer context sync, JSON-path equivalence,
 // escape-path ids, and byte budgets.
+import { zb, ZbDecodeError } from "@openfront/zbin";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { zb, ZbDecodeError } from "../../zbin";
 
 const PlayerID = zb.mapped("playerId", { regex: /^[A-Za-z0-9]{8}$/ });
 

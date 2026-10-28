@@ -1,12 +1,11 @@
-import { describe, expect, test } from "vitest";
+import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
+import type { MapFiles, MapLayer } from "@openfront/engine-api/game/MapFiles";
+import { MapInfoSchema } from "@openfront/engine-api/game/MapManifest";
+import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
+import type { GameMapLoader, MapData } from "@openfront/shared/GameMapLoader";
+import { describe, expect, test, vi } from "vitest";
+import { loadLayerImages } from "../src/client/controllers/MapLayerController";
 import { GraphicsOverridesSchema } from "../src/client/render/gl/GraphicsOverrides";
-import { GameMapSize, GameMapType } from "../src/core/game/Game";
-import type { GameMapLoader, MapData } from "../src/core/game/GameMapLoader";
-import {
-  loadTerrainMap,
-  type MapLayer,
-} from "../src/core/game/TerrainMapLoader";
-import { validateLayer } from "./util/layerValidation";
 
 describe("Map layer feature", () => {
   describe("GraphicsOverridesSchema", () => {
@@ -120,224 +119,128 @@ describe("Map layer feature", () => {
   });
 
   describe("Layer validation rules", () => {
-    test("valid id is accepted", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "forests", placement: "land" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors).toHaveLength(0);
+    const layers = (...entries: unknown[]) =>
+      MapInfoSchema.safeParse({
+        id: "Test",
+        name: "Test",
+        translation_key: "map.test",
+        categories: ["arcade"],
+        nations: [],
+        layers: entries,
+      });
+    const errorsOf = (...entries: unknown[]) =>
+      layers(...entries).error?.issues.map((i) => i.message) ?? [];
+
+    test.each([
+      { id: "forests", placement: "land" },
+      { id: "dense-forests", placement: "land" },
+      { id: "123", placement: "water" },
+      { id: "a", placement: "land", alpha: 0.5 },
+      { id: "a", placement: "land", alpha: 0 },
+      { id: "a", placement: "land", alpha: 1 },
+    ])("accepts %j", (layer) => {
+      expect(errorsOf(layer)).toEqual([]);
     });
 
-    test("hyphenated id is accepted", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "dense-forests", placement: "land" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors).toHaveLength(0);
+    test.each([
+      [{ id: "my layer", placement: "land" }, "Invalid string"],
+      [{ id: "layer_id", placement: "land" }, "Invalid string"],
+      [{ id: "layer.id", placement: "land" }, "Invalid string"],
+      [{ id: "", placement: "land" }, "Invalid string"],
+      [{ id: "image", placement: "land" }, "reserved"],
+      [{ id: "clouds", placement: "air" }, "Invalid option"],
+      [{ id: "a", placement: "land", alpha: -0.1 }, "Too small"],
+      [{ id: "a", placement: "land", alpha: 1.5 }, "Too big"],
+      [{ id: "a", placement: "land", alpha: "0.5" }, "Invalid input"],
+      [{ id: "a", placement: "land", alpha: NaN }, "Invalid input"],
+      [{ id: "a", placement: "land", nukeable: "yes" }, "Invalid input"],
+      [{ id: "a", placement: "land", opacity: 1 }, "Unrecognized key"],
+    ])("rejects %j", (layer, message) => {
+      expect(errorsOf(layer).join("\n")).toContain(message);
     });
 
-    test("numeric id is accepted", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "123", placement: "water" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors).toHaveLength(0);
-    });
-
-    test("id with spaces is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "my layer", placement: "land" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0]).toContain("alphanumeric");
-    });
-
-    test("id with underscores is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "layer_id", placement: "land" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.length).toBeGreaterThan(0);
-    });
-
-    test("id with dots is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "layer.id", placement: "land" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.length).toBeGreaterThan(0);
-    });
-
-    test("empty id is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "", placement: "land" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.some((e) => e.includes("must not be empty"))).toBe(true);
-    });
-
-    test("reserved id 'image' is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "image", placement: "land" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.some((e) => e.includes("reserved"))).toBe(true);
-    });
-
-    test("duplicate id is rejected", () => {
-      const seen = new Set<string>();
-      seen.add("forests");
-      const errors = validateLayer(
-        { id: "forests", placement: "land" },
-        1,
-        "test",
-        seen,
-      );
-      expect(errors.some((e) => e.includes("duplicate"))).toBe(true);
-    });
-
-    test("invalid placement 'air' is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "clouds", placement: "air" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.some((e) => e.includes("must be"))).toBe(true);
-    });
-
-    test("valid placements 'land' and 'water' are accepted", () => {
-      const seen1 = new Set<string>();
+    test("rejects duplicate ids", () => {
       expect(
-        validateLayer({ id: "a", placement: "land" }, 0, "test", seen1),
-      ).toHaveLength(0);
-      const seen2 = new Set<string>();
-      expect(
-        validateLayer({ id: "b", placement: "water" }, 0, "test", seen2),
-      ).toHaveLength(0);
-    });
-
-    test("valid alpha value is accepted", () => {
-      const seen = new Set<string>();
-      expect(
-        validateLayer(
-          { id: "a", placement: "land", alpha: 0.5 },
-          0,
-          "test",
-          seen,
+        errorsOf(
+          { id: "forests", placement: "land" },
+          { id: "forests", placement: "water" },
         ),
-      ).toHaveLength(0);
+      ).toContain("layer ids must be unique");
+    });
+  });
+
+  describe("loadLayerImages", () => {
+    const layers: MapLayer[] = [
+      { id: "forests", placement: "land" },
+      { id: "rivers", placement: "water" },
+    ];
+
+    function stubLoader(
+      layerImage: MapData["layerImage"],
+    ): GameMapLoader & { layerImage: typeof layerImage } {
+      return {
+        layerImage,
+        getMapData: () => ({ layerImage }) as unknown as MapData,
+      };
+    }
+
+    test("Normal games load the full-size variant", async () => {
+      const loader = stubLoader(
+        vi.fn(async (id: string) => ({ id }) as unknown as ImageBitmap),
+      );
+      const images = await loadLayerImages(
+        GameMapType.China,
+        GameMapSize.Normal,
+        loader,
+        layers,
+      );
+      expect(loader.layerImage).toHaveBeenCalledWith("forests", false);
+      expect(loader.layerImage).toHaveBeenCalledWith("rivers", false);
+      expect([...images.keys()]).toEqual(["forests", "rivers"]);
     });
 
-    test("alpha boundary values are accepted", () => {
-      const seen1 = new Set<string>();
-      expect(
-        validateLayer(
-          { id: "a", placement: "land", alpha: 0 },
-          0,
-          "test",
-          seen1,
-        ),
-      ).toHaveLength(0);
-      const seen2 = new Set<string>();
-      expect(
-        validateLayer(
-          { id: "b", placement: "land", alpha: 1 },
-          0,
-          "test",
-          seen2,
-        ),
-      ).toHaveLength(0);
+    test("Compact games load the map4x variant instead of resizing", async () => {
+      const loader = stubLoader(
+        vi.fn(async (id: string) => ({ id }) as unknown as ImageBitmap),
+      );
+      const images = await loadLayerImages(
+        GameMapType.China,
+        GameMapSize.Compact,
+        loader,
+        layers,
+      );
+      expect(loader.layerImage).toHaveBeenCalledWith("forests", true);
+      expect(loader.layerImage).toHaveBeenCalledWith("rivers", true);
+      expect(images.size).toBe(2);
     });
 
-    test("negative alpha is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "a", placement: "land", alpha: -0.1 },
-        0,
-        "test",
-        seen,
+    test("a layer that fails to load is skipped, the rest still load", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const loader = stubLoader(async (id: string) => {
+        if (id === "forests") throw new Error("404");
+        return { id } as unknown as ImageBitmap;
+      });
+      const images = await loadLayerImages(
+        GameMapType.China,
+        GameMapSize.Normal,
+        loader,
+        layers,
       );
-      expect(errors.some((e) => e.includes("between 0 and 1"))).toBe(true);
-    });
-
-    test("alpha greater than 1 is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "a", placement: "land", alpha: 1.5 },
-        0,
-        "test",
-        seen,
+      expect([...images.keys()]).toEqual(["rivers"]);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to load layer "forests"'),
       );
-      expect(errors.some((e) => e.includes("between 0 and 1"))).toBe(true);
-    });
-
-    test("non-numeric alpha is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "a", placement: "land", alpha: "0.5" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.some((e) => e.includes("must be a finite number"))).toBe(
-        true,
-      );
-    });
-
-    test("NaN alpha is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "a", placement: "land", alpha: NaN },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.some((e) => e.includes("must be a finite number"))).toBe(
-        true,
-      );
-    });
-
-    test("undefined alpha is accepted", () => {
-      const seen = new Set<string>();
-      expect(
-        validateLayer({ id: "a", placement: "land" }, 0, "test", seen),
-      ).toHaveLength(0);
+      warn.mockRestore();
     });
   });
 
   describe("loadTerrainMap alpha validation", () => {
-    function makeLoader(
+    function makeFiles(
       layers: MapLayer[],
+      map = GameMapType.World,
       width = 2,
       height = 2,
-    ): GameMapLoader {
+    ): MapFiles {
       const bin = new Uint8Array(width * height);
       // Set one tile as land (bit 7 = 1).
       bin[0] = 0x80;
@@ -349,66 +252,46 @@ describe("Map layer feature", () => {
         nations: [],
         layers,
       };
-      const mapData: MapData = {
-        mapBin: () => Promise.resolve(bin),
-        map4xBin: () => Promise.resolve(bin),
-        map16xBin: () => Promise.resolve(bin),
-        manifest: () => Promise.resolve(manifest as never),
-        webpPath: "",
-        layerPng: () =>
-          Promise.resolve(new ImageData(1, 1) as unknown as ImageBitmap),
-      };
       return {
-        getMapData: () => mapData,
+        map,
+        mapSize: GameMapSize.Normal,
+        manifest: manifest as never,
+        mapBin: bin,
+        map4xBin: bin.slice(),
       };
     }
 
     test("throws on alpha below 0", async () => {
-      const loader = makeLoader([
-        { id: "bad", placement: "land", alpha: -0.5 },
-      ]);
-      await expect(
-        loadTerrainMap(GameMapType.World, GameMapSize.Normal, loader, false),
-      ).rejects.toThrow("invalid alpha");
+      const files = makeFiles([{ id: "bad", placement: "land", alpha: -0.5 }]);
+      await expect(loadTerrainMap(files)).rejects.toThrow("invalid alpha");
     });
 
     test("throws on alpha above 1", async () => {
-      const loader = makeLoader([{ id: "bad", placement: "land", alpha: 1.5 }]);
-      await expect(
-        loadTerrainMap(GameMapType.World, GameMapSize.Normal, loader, false),
-      ).rejects.toThrow("invalid alpha");
+      const files = makeFiles([{ id: "bad", placement: "land", alpha: 1.5 }]);
+      await expect(loadTerrainMap(files)).rejects.toThrow("invalid alpha");
     });
 
     test("throws on NaN alpha", async () => {
-      const loader = makeLoader([{ id: "bad", placement: "land", alpha: NaN }]);
-      await expect(
-        loadTerrainMap(GameMapType.World, GameMapSize.Normal, loader, false),
-      ).rejects.toThrow("invalid alpha");
+      const files = makeFiles([{ id: "bad", placement: "land", alpha: NaN }]);
+      await expect(loadTerrainMap(files)).rejects.toThrow("invalid alpha");
     });
 
     test("accepts valid alpha values", async () => {
-      const loader = makeLoader([
+      const files = makeFiles([
         { id: "good", placement: "land", alpha: 0 },
         { id: "good2", placement: "water", alpha: 0.7 },
         { id: "good3", placement: "land", alpha: 1 },
       ]);
-      const data = await loadTerrainMap(
-        GameMapType.World,
-        GameMapSize.Normal,
-        loader,
-        false,
-      );
+      const data = await loadTerrainMap(files);
       expect(data.layers).toHaveLength(3);
     });
 
     test("accepts layers without alpha (undefined)", async () => {
-      const loader = makeLoader([{ id: "noalpha", placement: "land" }]);
-      const data = await loadTerrainMap(
+      const files = makeFiles(
+        [{ id: "noalpha", placement: "land" }],
         GameMapType.Europe,
-        GameMapSize.Normal,
-        loader,
-        false,
       );
+      const data = await loadTerrainMap(files);
       expect(data.layers).toHaveLength(1);
     });
   });

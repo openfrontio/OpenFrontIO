@@ -1,5 +1,13 @@
+// @vitest-environment jsdom
+import { GameMapType, GameMode } from "@openfront/engine-api/game/GameTypes";
+import type { GameConfig } from "@openfront/engine-api/Schemas";
+import type {
+  PublicGameInfo,
+  PublicGames,
+} from "@openfront/shared/WireSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../src/client/ClientEnv";
+// This named import also registers <game-mode-selector> as a side effect.
 import { shouldBlockMultiplayerAction } from "../src/client/GameModeSelector";
 import {
   attemptInFlight,
@@ -9,12 +17,6 @@ import {
   resetServerList,
   retryServerList,
 } from "../src/client/ServerList";
-import { GameMapType, GameMode } from "../src/core/game/Game";
-import type {
-  GameConfig,
-  PublicGameInfo,
-  PublicGames,
-} from "../src/core/Schemas";
 
 // The component opens a public-lobby WebSocket the moment it connects. jsdom
 // has no WebSocket worth talking to and this file is about the gate, not the
@@ -35,8 +37,11 @@ vi.mock("../src/client/LobbySocket", () => ({
   },
 }));
 
-// Registers <game-mode-selector> as a side effect.
-import "../src/client/GameModeSelector";
+// The lobby modals load on demand; the stubs below stand in for loaded ones.
+vi.mock("../src/client/LazyModals", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/client/LazyModals")>()),
+  whenModalLoaded: (_tag: string, open: () => void) => open(),
+}));
 
 /**
  * OPE-439. The server-list heartbeat already knows whether the API answers;

@@ -1,3 +1,5 @@
+import { loadModal } from "./LazyModals";
+
 export function closeMobileSidebar() {
   const sidebar = document.getElementById("sidebar-menu");
   const backdrop = document.getElementById("mobile-menu-backdrop");
@@ -59,11 +61,25 @@ export function initNavigation() {
         }
 
         // If the target itself is a modal component with inline attribute, open it
-        if (
-          target.hasAttribute("inline") &&
-          typeof (target as any).open === "function"
-        ) {
-          (target as any).open();
+        if (target.hasAttribute("inline")) {
+          if (typeof (target as any).open === "function") {
+            (target as any).open();
+          } else {
+            // Its module hasn't loaded yet (see LazyModals): open it once it
+            // has, unless the player has moved on by then. Leaving hides it.
+            // (Not currentPageId: closing the previous page re-enters
+            // showPage("page-play") after it was set.)
+            const stillShown = () => !target.classList.contains("hidden");
+            loadModal(target.localName).then(
+              () => {
+                if (stillShown()) (target as any).open?.();
+              },
+              (err) => {
+                console.error(`${target.localName} failed to load:`, err);
+                if (stillShown()) showPage("page-play");
+              },
+            );
+          }
         }
       }
     }
@@ -112,7 +128,7 @@ export function initNavigation() {
   });
 
   // Wait for main-layout component to render before setting up click handler
-  customElements.whenDefined("main-layout").then(() => {
+  void customElements.whenDefined("main-layout").then(() => {
     // Handle clicks on main container to close open modals (navigate back)
     const mainEl = document.querySelector("main");
 

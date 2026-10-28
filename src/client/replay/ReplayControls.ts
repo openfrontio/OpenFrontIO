@@ -6,11 +6,11 @@
  *   replay-speed (detail: speed), replay-menu
  */
 
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { assetUrl } from "../../core/AssetUrls";
-import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { isDesktopShell } from "../DesktopShell";
+import { gamePortal } from "../GamePortal";
 import { homeHref, translateText } from "../Utils";
 import { TICKS_PER_SECOND } from "./ReplayPlayback";
 
@@ -47,7 +47,7 @@ export function timelineFrames(
 }
 
 /** An icon button in the in-game style (GameRightSidebar). */
-export function iconButton(src: string, label: string, onClick: () => void) {
+function iconButton(src: string, label: string, onClick: () => void) {
   return html`<button
     class="p-1 rounded-md cursor-pointer hover:bg-white/10"
     title=${label}
@@ -83,12 +83,12 @@ export class ReplayControls extends LitElement {
   @state() private speedMenuOpen = false;
   @state() private isFullscreen = document.fullscreenElement !== null;
   /**
-   * CrazyGames has its own fullscreen button and the desktop shell manages
+   * Portals have their own fullscreen button and the desktop shell manages
    * its own window, so we hide ours there (same as in game).
    */
   private readonly showFullscreen =
     document.fullscreenEnabled &&
-    !crazyGamesSDK.isOnCrazyGames() &&
+    !gamePortal.isOnGamePortal() &&
     !isDesktopShell();
   private readonly abort = new AbortController();
 
@@ -199,15 +199,17 @@ export class ReplayControls extends LitElement {
             translateText("user_setting.game_menu_title"),
             () => this.openMenu(),
           )}
-          ${this.showFullscreen
-            ? iconButton(
-                this.isFullscreen ? exitFullscreenIcon : fullscreenIcon,
-                translateText(
-                  this.isFullscreen ? "fullscreen.exit" : "fullscreen.enter",
-                ),
-                () => this.toggleFullscreen(),
-              )
-            : nothing}
+          ${
+            this.showFullscreen
+              ? iconButton(
+                  this.isFullscreen ? exitFullscreenIcon : fullscreenIcon,
+                  translateText(
+                    this.isFullscreen ? "fullscreen.exit" : "fullscreen.enter",
+                  ),
+                  () => this.toggleFullscreen(),
+                )
+              : nothing
+          }
           ${exitButton()}
           ${this.speedMenuOpen ? this.renderSpeedMenu() : nothing}
         </div>
@@ -228,10 +230,9 @@ export class ReplayControls extends LitElement {
           ${SPEEDS.map(
             (sp) =>
               html`<button
-                class="py-0.5 px-1 text-sm text-white rounded-sm border transition border-gray-500 hover:border-gray-200 ${sp ===
-                this.speed
-                  ? "bg-malibu-blue"
-                  : ""}"
+                class="py-0.5 px-1 text-sm text-white rounded-sm border transition border-gray-500 hover:border-gray-200 ${
+                  sp === this.speed ? "bg-malibu-blue" : ""
+                }"
                 @click=${() => this.setSpeed(sp)}
               >
                 ×${sp}

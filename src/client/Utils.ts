@@ -1,8 +1,7 @@
-import IntlMessageFormat from "intl-messageformat";
-import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Duos,
   GameMode,
+  GameType,
   HumansVsNations,
   maps,
   MessageType,
@@ -10,13 +9,15 @@ import {
   Quads,
   Team,
   Trios,
-} from "../core/game/Game";
-import { GameConfig } from "../core/Schemas";
-import { stripVersionPrefix } from "../core/ServerList";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
+import { stripVersionPrefix } from "@openfront/shared/ServerList";
+import IntlMessageFormat from "intl-messageformat";
 import { ClientEnv } from "./ClientEnv";
+import type { KeyboardLayoutMap } from "./KeyboardLayout";
 import type { LangSelector } from "./LangSelector";
 import { pagePin } from "./PagePin";
-import { Platform } from "./Platform";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/7J5zwb_s_Cg";
 
@@ -60,89 +61,72 @@ export function getMapName(mapName: string | undefined): string | null {
   return translateText(translationKey);
 }
 
+const TEAM_PRESET_SIZES = { [Duos]: 2, [Trios]: 3, [Quads]: 4 } as const;
+const TEAM_PRESET_BY_SIZE: Record<number, string> = {
+  2: Duos,
+  3: Trios,
+  4: Quads,
+};
+
+function presetTeamsLabel(
+  preset: string,
+  teamCount: number,
+  playersPerTeam: number,
+): string {
+  return translateText("mode_selector.teams_preset", {
+    teams: translateText("mode_selector.teams_of", {
+      teamCount,
+      playersPerTeam,
+    }),
+    preset: translateText(`detailed_view.layout_${preset.toLowerCase()}`),
+  });
+}
+
 /**
- * Returns a display label for the game mode (e.g. "FFA", "4 Teams", "Duos").
+ * Display label for a lobby's game mode, e.g. "Free for All",
+ * "Trios (10 teams of 3)" or "5 teams of 20". A team count that splits the
+ * lobby evenly into teams of 2-4 is named like the matching preset; an uneven
+ * split shows only the team count.
  */
 export function getGameModeLabel(gameConfig: GameConfig): string {
-  const { gameMode, playerTeams, maxPlayers } = gameConfig;
+  const { gameMode, gameType, nations, playerTeams, maxPlayers } = gameConfig;
 
   if (gameMode !== GameMode.Team) {
     return translateText("game_mode.ffa");
   }
 
-  // Humans vs Nations
   if (playerTeams === HumansVsNations) {
-    if (maxPlayers) {
-      return translateText("public_lobby.teams_hvn_detailed", {
-        num: maxPlayers,
+    // Only public HvN on default nations matches the nation count to the humans.
+    return maxPlayers && gameType === GameType.Public && nations === "default"
+      ? translateText("public_lobby.teams_hvn_detailed", { num: maxPlayers })
+      : translateText("public_lobby.teams_hvn");
+  }
+
+  if (playerTeams === Duos || playerTeams === Trios || playerTeams === Quads) {
+    const playersPerTeam = TEAM_PRESET_SIZES[playerTeams];
+    const teamCount = Math.floor((maxPlayers ?? 0) / playersPerTeam);
+    return teamCount > 0
+      ? presetTeamsLabel(playerTeams, teamCount, playersPerTeam)
+      : translateText(`host_modal.teams_${playerTeams}`);
+  }
+
+  if (playerTeams === undefined || playerTeams <= 0) {
+    return translateText("mode_selector.teams_title");
+  }
+  const players = maxPlayers ?? 0;
+  if (players <= 0 || players % playerTeams !== 0) {
+    return translateText("mode_selector.teams_count", {
+      teamCount: playerTeams,
+    });
+  }
+  const playersPerTeam = players / playerTeams;
+  const preset = TEAM_PRESET_BY_SIZE[playersPerTeam];
+  return preset !== undefined
+    ? presetTeamsLabel(preset, playerTeams, playersPerTeam)
+    : translateText("mode_selector.teams_of", {
+        teamCount: playerTeams,
+        playersPerTeam,
       });
-    }
-    return translateText("public_lobby.teams_hvn");
-  }
-
-  // Named team types (Duos, Trios, Quads)
-  if (typeof playerTeams === "string") {
-    const teamKey = `public_lobby.teams_${playerTeams}`;
-    const teamCount = getTeamCount(playerTeams, maxPlayers ?? 0);
-    const translated = translateText(teamKey, { team_count: teamCount });
-    if (translated !== teamKey) {
-      return translated;
-    }
-  }
-
-  // Numeric team count (e.g. "5 teams of 20")
-  const teamCount =
-    typeof playerTeams === "number"
-      ? playerTeams
-      : getTeamCount(playerTeams, maxPlayers ?? 0);
-  const teamSize =
-    teamCount > 0 ? Math.floor((maxPlayers ?? 0) / teamCount) : 0;
-
-  // If the computed team size matches a named format, use that label instead
-  const namedTeamType =
-    teamSize === 2
-      ? Duos
-      : teamSize === 3
-        ? Trios
-        : teamSize === 4
-          ? Quads
-          : null;
-  if (namedTeamType) {
-    const teamKey = `public_lobby.teams_${namedTeamType}`;
-    const translated = translateText(teamKey, { team_count: teamCount });
-    if (translated !== teamKey) {
-      return translated;
-    }
-  }
-
-  const teamsLabel = translateText("public_lobby.teams", { num: teamCount });
-  if (teamSize > 0) {
-    return `${teamsLabel} ${translateText("public_lobby.players_per_team", { num: teamSize })}`;
-  }
-  return teamsLabel;
-}
-
-function getTeamCount(
-  playerTeams: string | number | undefined,
-  maxPlayers: number,
-): number {
-  if (typeof playerTeams === "number") return playerTeams;
-  const teamSize = getTeamSize(playerTeams, maxPlayers);
-  return teamSize > 0 ? Math.floor(maxPlayers / teamSize) : 0;
-}
-
-function getTeamSize(
-  playerTeams: string | number | undefined,
-  maxPlayers: number,
-): number {
-  if (playerTeams === Duos) return 2;
-  if (playerTeams === Trios) return 3;
-  if (playerTeams === Quads) return 4;
-  if (playerTeams === HumansVsNations) return maxPlayers;
-  if (typeof playerTeams === "number" && playerTeams > 0) {
-    return Math.floor(maxPlayers / playerTeams);
-  }
-  return 0;
 }
 
 export interface ModifierInfo {
@@ -304,10 +288,6 @@ export function renderDuration(totalSeconds: number): string {
   return parts.join(" ");
 }
 
-export function renderTroops(troops: number): string {
-  return renderNumber(troops / 10);
-}
-
 export async function copyToClipboard(
   text: string,
   onSuccess?: () => void,
@@ -325,38 +305,6 @@ export async function copyToClipboard(
   } catch (err) {
     console.warn("Failed to copy to clipboard", err);
     throw err;
-  }
-}
-
-export function renderNumber(
-  num: number | bigint,
-  fixedPoints?: number,
-): string {
-  num = Number(num);
-  num = Math.max(num, 0);
-
-  if (num >= 10_000_000_000) {
-    const value = Math.floor(num / 100000000) / 10;
-    return value.toFixed(fixedPoints ?? 1) + "B";
-  } else if (num >= 1_000_000_000) {
-    const value = Math.floor(num / 10000000) / 100;
-    return value.toFixed(fixedPoints ?? 2) + "B";
-  } else if (num >= 10_000_000) {
-    const value = Math.floor(num / 100000) / 10;
-    return value.toFixed(fixedPoints ?? 1) + "M";
-  } else if (num >= 1_000_000) {
-    const value = Math.floor(num / 10000) / 100;
-    return value.toFixed(fixedPoints ?? 2) + "M";
-  } else if (num >= 100000) {
-    return Math.floor(num / 1000) + "K";
-  } else if (num >= 10000) {
-    const value = Math.floor(num / 100) / 10;
-    return value.toFixed(fixedPoints ?? 1) + "K";
-  } else if (num >= 1000) {
-    const value = Math.floor(num / 10) / 100;
-    return value.toFixed(fixedPoints ?? 2) + "K";
-  } else {
-    return Math.floor(num).toString();
   }
 }
 
@@ -381,13 +329,84 @@ export function formatPercentage(value: number): string {
  * formatKeyForDisplay("ArrowUp") // returns "Arrowup"
  * formatKeyForDisplay("") // returns ""
  */
+export type KeybindEntry =
+  | {
+      key?: string;
+      value?: string | string[];
+    }
+  | string;
+
+function getKeybindShiftPrefix(): string {
+  const shiftPrefix = translateText("user_setting.keybind_shift_prefix");
+  return shiftPrefix === "user_setting.keybind_shift_prefix"
+    ? "Shift+"
+    : shiftPrefix;
+}
+
+/**
+ * Resolve a saved physical key code into the character shown for the user's
+ * active keyboard layout. Number-row actions intentionally keep numeric labels:
+ * layout maps contain unshifted symbols for those physical keys on AZERTY.
+ */
+export function resolveKeybindLabel(
+  entry: KeybindEntry | undefined,
+  defaultCode: string,
+  layoutMap: KeyboardLayoutMap | null,
+): string {
+  const savedValue = typeof entry === "string" ? entry : entry?.value;
+  if (savedValue === "Null") return "";
+
+  const hasValidSavedValue =
+    typeof savedValue === "string" ||
+    (Array.isArray(savedValue) && typeof savedValue[0] === "string");
+  const valueCode =
+    typeof savedValue === "string"
+      ? savedValue
+      : Array.isArray(savedValue) && typeof savedValue[0] === "string"
+        ? savedValue[0]
+        : defaultCode;
+  const savedKey =
+    typeof entry === "object" && typeof entry?.key === "string"
+      ? entry.key
+      : "";
+
+  let isShift = false;
+  let codeToResolve = valueCode;
+  if (valueCode.startsWith("Shift+")) {
+    isShift = true;
+    codeToResolve = valueCode.slice(6);
+  }
+
+  if (
+    layoutMap &&
+    layoutMap.has(codeToResolve) &&
+    !codeToResolve.startsWith("Digit") &&
+    !codeToResolve.startsWith("Numpad")
+  ) {
+    const char = layoutMap.get(codeToResolve)!.toUpperCase();
+    return isShift ? `${getKeybindShiftPrefix()}${char}` : char;
+  }
+
+  // Resolve number-row codes before the saved-key fallback: on AZERTY, the
+  // stored character for Digit2 can be "é", but the bound action is Digit2.
+  if (/^Digit\d$/.test(codeToResolve)) {
+    return formatKeyForDisplay(valueCode);
+  }
+
+  if (savedKey && hasValidSavedValue) {
+    return savedKey;
+  }
+
+  return formatKeyForDisplay(valueCode);
+}
+
 export function formatKeyForDisplay(value: string): string {
   // Handle empty string
   if (!value) return "";
 
   // Handle Shift+ prefix: format as "Shift+X"
   if (value.startsWith("Shift+")) {
-    return "Shift+" + formatKeyForDisplay(value.slice(6));
+    return getKeybindShiftPrefix() + formatKeyForDisplay(value.slice(6));
   }
 
   // Handle space character or "Space" key
@@ -572,6 +591,13 @@ export const translateText = (
   }
 };
 
+/**
+ * Whether `key` is translated in the player's own language, rather than only
+ * in the English that translateText falls back to.
+ */
+export const hasOwnTranslation = (key: string): boolean =>
+  getCachedLangSelector()?.translations?.[key] !== undefined;
+
 export interface HasClanTag {
   clanTag?: string | null | (() => string | null);
 }
@@ -699,14 +725,6 @@ export function getMessageTypeClasses(type: MessageType): string {
       console.warn(`Message type ${type} has no explicit color`);
       return severityColors["white"];
   }
-}
-
-export function getModifierKey(): string {
-  return Platform.isMac ? "⌘" : "Ctrl";
-}
-
-export function getAltKey(): string {
-  return Platform.isMac ? "⌥" : "Alt";
 }
 
 export function getGamesPlayed(): number {

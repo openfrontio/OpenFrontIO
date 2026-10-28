@@ -1,4 +1,8 @@
-import { ClientPlatform, ClientPlatformSchema, GameID } from "../core/Schemas";
+import { GameID } from "@openfront/engine-api/Schemas";
+import {
+  ClientPlatform,
+  ClientPlatformSchema,
+} from "@openfront/shared/WireSchemas";
 
 // A singleplayer game runs entirely in the browser: this worker never hosts
 // it, so the only way to know one is in progress is the client saying so.
@@ -12,7 +16,7 @@ export const SINGLEPLAYER_PRESENCE_TTL_MS =
 // The route is unauthenticated and any well-formed id is accepted, so cap
 // how many distinct games a worker will track: well above what one worker
 // legitimately sees, small enough that a flood cannot grow the map.
-export const SINGLEPLAYER_PRESENCE_MAX_GAMES = 50_000;
+const SINGLEPLAYER_PRESENCE_MAX_GAMES = 50_000;
 
 type Platform = ClientPlatform | "unknown";
 

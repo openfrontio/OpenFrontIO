@@ -1,5 +1,5 @@
+import { GameMapType } from "@openfront/engine-api/game/GameTypes";
 import { TemplateResult, html } from "lit";
-import { GameMapType } from "../../../core/game/Game";
 
 const FAVORITES_KEY = "map-favorites";
 
@@ -18,10 +18,6 @@ export function getFavoriteMaps(): GameMapType[] {
     console.warn("Failed to read favorite maps from localStorage:", error);
     return [];
   }
-}
-
-export function isFavoriteMap(map: GameMapType): boolean {
-  return getFavoriteMaps().includes(map);
 }
 
 export function toggleFavoriteMap(map: GameMapType): GameMapType[] {

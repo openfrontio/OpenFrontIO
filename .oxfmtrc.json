@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "printWidth": 80,
+  "sortImports": {
+    // Sort-order equivalent of what prettier-plugin-organize-imports
+    // (TypeScript's organizeImports) used to produce:
+    //   * every non-relative specifier in one bucket, sorted together
+    //     (this also covers type-only imports, since a plain "external"
+    //     group matches them too),
+    //   * then every relative specifier in one bucket, sorted together,
+    //   * case-insensitive, ascending.
+    // Keeping internal/builtin/external in one group deliberately means
+    // workspace imports like "@openfront/*" sort alongside third-party ones,
+    // exactly as TypeScript did.
+    "groups": [
+      ["builtin", "external", "internal", "subpath"],
+      ["parent", "sibling", "index"]
+    ],
+    // Blank lines and comments split imports into independently sorted blocks,
+    // matching TypeScript's newline-contiguous grouping.
+    "newlinesBetween": false,
+    "partitionByNewline": true,
+    "partitionByComment": true,
+    // TypeScript leaves side-effect imports (e.g. custom-element registration
+    // and CSS) at their original position, so oxfmt must too.
+    "sortSideEffects": false,
+    "ignoreCase": true,
+    "order": "asc"
+  },
+  "sortPackageJson": false
+}

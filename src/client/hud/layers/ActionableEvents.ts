@@ -1,14 +1,14 @@
-import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { MessageType, Tick } from "../../../core/game/Game";
+import { MessageType, Tick } from "@openfront/engine-api/game/GameTypes";
 import {
   AllianceExtensionUpdate,
   AllianceRequestReplyUpdate,
   AllianceRequestUpdate,
   BrokeAllianceUpdate,
   GameUpdateType,
-} from "../../../core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/shared/EventBus";
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { GoToPlayerEvent } from "../../TransformHandler";
@@ -338,11 +338,13 @@ export class ActionableEvents extends LitElement implements Controller {
                   (btn) => html`
                     <button
                       class="inline-block px-3 py-1 text-white rounded-sm text-xs lg:text-sm cursor-pointer transition-colors duration-300
-                        ${btn.className.includes("btn-info")
-                        ? "bg-blue-500 hover:bg-blue-600"
-                        : btn.className.includes("btn-gray")
-                          ? "bg-gray-500 hover:bg-gray-600"
-                          : "bg-green-600 hover:bg-green-700"}"
+                        ${
+                        btn.className.includes("btn-info")
+                          ? "bg-blue-500 hover:bg-blue-600"
+                          : btn.className.includes("btn-gray")
+                            ? "bg-gray-500 hover:bg-gray-600"
+                            : "bg-green-600 hover:bg-green-700"
+                      }"
                       @click=${() => {
                         btn.action();
                         if (!btn.preventClose) {

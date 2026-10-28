@@ -1,5 +1,5 @@
+import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
 import { describe, expect, it } from "vitest";
-import { GameMapImpl } from "../../../src/core/game/GameMap";
 
 describe("GameMap.neighbors8", () => {
   // A 3x3 map:

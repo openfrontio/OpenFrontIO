@@ -1,6 +1,7 @@
-import { Config } from "../../core/configuration/Config";
+import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   Cell,
+  formatPlayerDisplayName,
   GameUpdates,
   PlayerID,
   PlayerType,
@@ -8,24 +9,32 @@ import {
   TerrainType,
   TerraNullius,
   Tick,
-  Unit,
   UnitInfo,
   UnitType,
-} from "../../core/game/Game";
-import { GameMap, TileRef } from "../../core/game/GameMap";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   GameUpdateType,
   GameUpdateViewData,
   SpawnPhaseEndUpdate,
-} from "../../core/game/GameUpdates";
-import { unpackMotionPlans } from "../../core/game/MotionPlans";
-import { TerrainMapData } from "../../core/game/TerrainMapLoader";
-import { TerraNulliusImpl } from "../../core/game/TerraNulliusImpl";
-import { UnitGrid, UnitPredicate } from "../../core/game/UnitGrid";
-import { UserSettings } from "../../core/game/UserSettings";
-import { ClientID, GameID, Player, PlayerCosmetics } from "../../core/Schemas";
-import { formatPlayerDisplayName } from "../../core/Util";
-import { WorkerClient } from "../../core/worker/WorkerClient";
+  UnitUpdate,
+} from "@openfront/engine-api/game/GameUpdates";
+import {
+  GameLike,
+  ReadonlyTileSet,
+  UnitPredicate,
+} from "@openfront/engine-api/game/ReadViews";
+import { ClientID, GameID } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { unpackMotionPlans } from "@openfront/engine-lib/game/MotionPlans";
+import {
+  PackedUnitUpdateDecoder,
+  UNIT_UPDATE_STRIDE,
+  unpackUnitUpdates,
+} from "@openfront/engine-lib/game/PackedUnitUpdates";
+import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { TerraNulliusImpl } from "@openfront/engine-lib/game/TerraNulliusImpl";
+import { UnitGrid } from "@openfront/engine-lib/game/UnitGrid";
+import { PlayerCosmetics, WirePlayer } from "@openfront/shared/WireSchemas";
 import { computeAllianceClusters } from "../render/frame/derive/AllianceClusters";
 import { extractAttackRings } from "../render/frame/derive/AttackRings";
 import { extractNukeTelegraphs } from "../render/frame/derive/NukeTelegraphs";
@@ -36,9 +45,10 @@ import type { SpiralParams } from "../render/frame/SpiralTrails";
 import { SpiralTrails } from "../render/frame/SpiralTrails";
 import { TrailManager } from "../render/frame/TrailManager";
 import type { FrameData, NameEntry } from "../render/types";
-import { STRUCTURE_TYPES } from "../render/types";
-import { TRAIL_TYPES } from "../render/types/UnitType";
+import { STRUCTURE_TYPES, TRAIL_TYPES } from "../render/types";
+import { UserSettings } from "../UserSettings";
 import { resolveTeamClanTag } from "../Utils";
+import { WorkerClient } from "../WorkerClient";
 import type { CosmeticVisibility } from "./CosmeticVisibility";
 import {
   applyPackedAttackTroops,
@@ -57,7 +67,7 @@ function readCosmeticVisibility(): CosmeticVisibility {
   return new UserSettings().graphicsOverrides().cosmetics ?? {};
 }
 
-export class GameView implements GameMap {
+export class GameView implements GameLike {
   private lastUpdate: GameUpdateViewData | null;
   private startTick: Tick | null = null;
   private smallIDToID = new Map<number, PlayerID>();
@@ -106,6 +116,7 @@ export class GameView implements GameMap {
   private _firstPopulate = true;
 
   private _myPlayer: PlayerView | null = null;
+  private _wasInSpawnPhase = true;
 
   // ── populateFrame dirty flags ──────────────────────────────────────────
   // The derived structures below only depend on rarely-changing player
@@ -118,7 +129,7 @@ export class GameView implements GameMap {
   /** Alliance clusters: allies changed, or a player was added. */
   private _clustersDirty = true;
 
-  private unitGrid: UnitGrid;
+  private unitGrid: UnitGrid<UnitView>;
   private readonly motion = new MotionPlanResolver();
   /** How the resolver moves this view's units. */
   private readonly plannedUnits: PlannedUnits = {
@@ -149,11 +160,12 @@ export class GameView implements GameMap {
     private _myUsername: string,
     private _myClanTag: string | null,
     private _gameID: GameID,
-    humans: Player[],
+    humans: WirePlayer[],
+    private _resumedFromSave = false,
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
-    this.unitGrid = new UnitGrid(this._map);
+    this.unitGrid = new UnitGrid<UnitView>(this._map);
     this._cosmetics = new Map(
       humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
@@ -178,6 +190,7 @@ export class GameView implements GameMap {
     this._frame = {
       tick: 0,
       inSpawnPhase: true,
+      namesSnap: false,
       tileState: this._map.tileStateBuffer(),
       trailState: this.trailManager.getTrailState(),
       spiralRibbons: this.spiralTrails.getRibbons(),
@@ -397,7 +410,14 @@ export class GameView implements GameMap {
         unit.lastPos = unit.lastPos.slice(-1);
       }
     }
-    gu.updates[GameUpdateType.Unit].forEach((update) => {
+    const unitUpdates = gu.packedUnitUpdates
+      ? unpackUnitUpdates(gu.packedUnitUpdates, gu.packedMissileTimers)
+      : (gu.updates[GameUpdateType.Unit] ?? []);
+    if (gu.packedUnitUpdates) {
+      gu.updates[GameUpdateType.Unit] = unitUpdates;
+    }
+
+    unitUpdates.forEach((update) => {
       let unit = this._units.get(update.id);
       const isStructure = STRUCTURE_TYPES.has(update.unitType);
       if (unit !== undefined) {
@@ -507,8 +527,11 @@ export class GameView implements GameMap {
     const f = this._frame as {
       -readonly [K in keyof FrameData]: FrameData[K];
     };
+    const inSpawnPhase = this.startTick === null;
+    f.namesSnap = this._wasInSpawnPhase && !inSpawnPhase;
+    this._wasInSpawnPhase = inSpawnPhase;
     f.tick = gu.tick;
-    f.inSpawnPhase = this.startTick === null;
+    f.inSpawnPhase = inSpawnPhase;
     f.railroadDirty = this.railroadCache.railroadDirty;
     f.trailDirtyRowMin = this.trailManager.dirtyRowMin;
     f.trailDirtyRowMax = this.trailManager.dirtyRowMax;
@@ -590,14 +613,39 @@ export class GameView implements GameMap {
     ev.conquestEvents.length = 0;
     ev.bonusEvents.length = 0;
 
-    for (const u of gu.updates[GameUpdateType.Unit] ?? []) {
-      if (u.isActive) continue;
-      ev.deadUnits.push({
-        unitType: u.unitType,
-        pos: u.pos,
-        reachedTarget: u.reachedTarget,
-        ownerSmallID: u.ownerID,
-      });
+    if (gu.packedUnitUpdates) {
+      // Re-unpacking is fine, it's just object creation for dead units, which is fast,
+      // or we just decode the fields we need directly without creating objects!
+      for (
+        let offset = 0;
+        offset < gu.packedUnitUpdates.length;
+        offset += UNIT_UPDATE_STRIDE
+      ) {
+        const decoder = new PackedUnitUpdateDecoder(
+          gu.packedUnitUpdates,
+          offset,
+        );
+        if (!decoder.isActive) {
+          ev.deadUnits.push({
+            unitType: decoder.unitType,
+            pos: decoder.pos,
+            reachedTarget: decoder.reachedTarget,
+            ownerSmallID: decoder.ownerID,
+          });
+        }
+      }
+    } else {
+      const unitUpdates =
+        (gu.updates[GameUpdateType.Unit] as UnitUpdate[]) ?? [];
+      for (const u of unitUpdates) {
+        if (u.isActive) continue;
+        ev.deadUnits.push({
+          unitType: u.unitType,
+          pos: u.pos,
+          reachedTarget: u.reachedTarget,
+          ownerSmallID: u.ownerID,
+        });
+      }
     }
     const myID = this._myPlayer?.id();
     for (const c of gu.updates[GameUpdateType.ConquestEvent] ?? []) {
@@ -700,7 +748,7 @@ export class GameView implements GameMap {
       tile,
       searchRange,
       types,
-      predicate as (unit: Unit | UnitView) => boolean,
+      predicate,
       playerId,
       includeUnderConstruction,
     );
@@ -946,8 +994,12 @@ export class GameView implements GameMap {
     return this._map.waterVersion();
   }
   /** Map layers defined in the map's info.json, if any. */
-  layers(): import("../../core/game/TerrainMapLoader").MapLayer[] {
+  layers(): import("@openfront/engine-api/game/MapFiles").MapLayer[] {
     return this._mapData.layers ?? [];
+  }
+  /** Nations the map's manifest defines, whether or not they spawned. */
+  mapNationCount(): number {
+    return this._mapData.nations.length;
   }
   isValidCoord(x: number, y: number): boolean {
     return this._map.isValidCoord(x, y);
@@ -1052,10 +1104,17 @@ export class GameView implements GameMap {
   ): Set<TileRef> {
     return this._map.circleSearch(tile, radius, filter);
   }
+  bfsSearch(
+    tile: TileRef,
+    filter: (gm: GameMap, tile: TileRef) => boolean,
+    onVisit?: (tile: TileRef) => boolean | void,
+  ): boolean {
+    return this._map.bfsSearch(tile, filter, onVisit);
+  }
   bfs(
     tile: TileRef,
     filter: (gm: GameMap, tile: TileRef) => boolean,
-  ): Set<TileRef> {
+  ): ReadonlyTileSet {
     return this._map.bfs(tile, filter);
   }
   tileState(tile: TileRef): number {
@@ -1072,6 +1131,12 @@ export class GameView implements GameMap {
   }
   gameID(): GameID {
     return this._gameID;
+  }
+
+  // Started from a saved game rather than from the beginning. Such a game is
+  // never archived, so it earns no XP or achievements.
+  resumedFromSave(): boolean {
+    return this._resumedFromSave;
   }
 
   private _markedPlayers: ReadonlySet<number> | null = null;

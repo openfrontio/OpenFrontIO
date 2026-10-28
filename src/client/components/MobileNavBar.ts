@@ -1,6 +1,6 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement } from "lit/decorators.js";
-import { assetUrl } from "../../core/AssetUrls";
 import { NavNotificationsController } from "./NavNotificationsController";
 
 const MOBILE_ITEM =
@@ -26,7 +26,7 @@ export class MobileNavBar extends LitElement {
 
     const current = window.currentPageId;
     if (current) {
-      this.updateComplete.then(() => {
+      void this.updateComplete.then(() => {
         this._updateActiveState(current);
       });
     }
@@ -103,19 +103,21 @@ export class MobileNavBar extends LitElement {
           data-i18n="main.play"
         ></button>
         <div
-          class="no-crazygames nav-menu-item flex items-center w-full cursor-pointer"
+          class="no-game-portal nav-menu-item flex items-center w-full cursor-pointer"
           data-page="page-item-store"
           @click=${this._notifications.onStoreClick}
         >
           <button class="${MOBILE_ITEM}" data-i18n="main.store"></button>
-          ${this._notifications.showStoreDot()
-            ? this._renderDot("bg-red-500")
-            : ""}
+          ${
+            this._notifications.showStoreDot()
+              ? this._renderDot("bg-red-500")
+              : ""
+          }
         </div>
         <button
-          class="${MOBILE_ITEM} ${currentPage === "page-inventory"
-            ? "active"
-            : ""}"
+          class="${MOBILE_ITEM} ${
+            currentPage === "page-inventory" ? "active" : ""
+          }"
           data-page="page-inventory"
           data-i18n="main.inventory"
         ></button>
@@ -125,7 +127,7 @@ export class MobileNavBar extends LitElement {
           data-i18n="main.leaderboard"
         ></button>
         <button
-          class="no-crazygames ${MOBILE_ITEM}"
+          class="no-game-portal ${MOBILE_ITEM}"
           data-page="page-clan"
           data-i18n="main.clans"
         ></button>

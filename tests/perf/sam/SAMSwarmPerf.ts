@@ -10,16 +10,16 @@
  * Usage:
  *   npx tsx tests/perf/sam/SAMSwarmPerf.ts [--ticks 1000] [--sams 100] [--missiles 25]
  */
-import path from "path";
-import { performance } from "perf_hooks";
-import { fileURLToPath } from "url";
-import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
 import {
   PlayerInfo,
   PlayerType,
-  Unit,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { SAMLauncherExecution } from "@openfront/engine/execution/SAMLauncherExecution";
+import { Unit } from "@openfront/engine/game/Game";
+import path from "path";
+import { performance } from "perf_hooks";
+import { fileURLToPath } from "url";
 import { setup } from "../../util/Setup";
 import { GcTracker, summarizeGcEvents } from "../fullgame/GcProfiler";
 import {
@@ -152,9 +152,9 @@ async function runBenchmark(): Promise<void> {
             ? UnitType.MIRVWarhead
             : UnitType.AtomBomb;
 
-      const trajectory: { tile: number; targetable: boolean }[] = [];
+      const trajectory: number[] = [];
       for (let step = fromX; step <= toX; step += 6) {
-        trajectory.push({ tile: game.ref(step, fromY), targetable: true });
+        trajectory.push(game.ref(step, fromY));
       }
 
       attacker.buildUnit(nukeType, game.ref(fromX, fromY), {

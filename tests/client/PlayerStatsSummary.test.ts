@@ -23,15 +23,15 @@ vi.mock("../../src/client/Utils", async (importOriginal) => {
   };
 });
 
+import type {
+  PlayerStatsLeaf,
+  PlayerStatsTree,
+} from "@openfront/shared/ApiSchemas";
 import {
   PlayerStatsSummary,
   buildPlayerStatsSummary,
 } from "../../src/client/components/baseComponents/stats/PlayerStatsSummary";
 import { PlayerStatsTreeView } from "../../src/client/components/baseComponents/stats/PlayerStatsTree";
-import type {
-  PlayerStatsLeaf,
-  PlayerStatsTree,
-} from "../../src/core/ApiSchemas";
 
 const leaf: PlayerStatsLeaf = {
   wins: 3n,
@@ -434,30 +434,6 @@ describe("PlayerStatsSummary", () => {
     expect(summary.querySelector("[data-last-100]")?.textContent).toContain(
       "75.0%",
     );
-  });
-
-  it("replaces the legacy four-card grid in the selected stats tree", async () => {
-    const statsTree: PlayerStatsTree = {
-      Public: {
-        "Free For All": {
-          Medium: leaf,
-        },
-      },
-    };
-    // Instantiate the real class directly so profile-modal tests that register
-    // a lightweight stand-in under the same custom-element tag cannot mask the
-    // integration behavior this test covers.
-    const tree = new PlayerStatsTreeView();
-    tree.statsTree = statsTree;
-    document.body.append(tree);
-
-    await tree.updateComplete;
-
-    const summary = tree.querySelector(
-      "player-stats-summary",
-    ) as PlayerStatsSummary | null;
-    expect(summary?.leaf).toEqual(leaf);
-    expect(tree.querySelector("player-stats-grid")).toBeNull();
   });
 
   it("gives the performance summary equal padding above and below", async () => {

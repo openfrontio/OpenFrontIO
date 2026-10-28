@@ -1,7 +1,7 @@
+import type { AssetManifest } from "@openfront/shared/AssetPaths";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import type { AssetManifest } from "../core/AssetUrls";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,8 +27,4 @@ export async function getRuntimeAssetManifest(): Promise<AssetManifest> {
     cachedManifest = {};
   }
   return cachedManifest;
-}
-
-export function clearRuntimeAssetManifestCache(): void {
-  cachedManifest = null;
 }

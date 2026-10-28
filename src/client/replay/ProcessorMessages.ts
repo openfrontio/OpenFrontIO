@@ -1,11 +1,13 @@
 /** Messages between the viewer and the processing worker. */
 
-import type { GameRecord } from "../../core/Schemas";
+import type { GameRecord } from "@openfront/shared/WireSchemas";
 import type { ReplayAppend, ReplayBase } from "./codec/ReplayTypes";
 
 export interface ProcessorRequest {
   record: GameRecord;
   cdnBase: string;
+  /** A port to the engine's worker, which the page started. */
+  engine: MessagePort;
 }
 
 export type ProcessorResponse =

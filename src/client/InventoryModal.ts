@@ -1,26 +1,17 @@
-import type { TemplateResult } from "lit";
-import { html, nothing } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import Countries from "resources/countries.json" with { type: "json" };
-import { UserMeResponse } from "../core/ApiSchemas";
-import { assetUrl } from "../core/AssetUrls";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import {
   Cosmetics,
   Effect,
   Flag,
   isNukeExplosionEffect,
   Skin,
-} from "../core/CosmeticSchemas";
-import {
-  CROWN_KEY,
-  EFFECTS_KEY,
-  FLAG_KEY,
-  MAX_LOADOUTS,
-  PATTERN_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../core/game/UserSettings";
-import { PlayerPattern } from "../core/Schemas";
+} from "@openfront/shared/CosmeticSchemas";
+import { PlayerPattern } from "@openfront/shared/WireSchemas";
+import type { TemplateResult } from "lit";
+import { html, nothing } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import Countries from "resources/countries.json" with { type: "json" };
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
 import "./components/baseComponents/Button";
@@ -48,6 +39,15 @@ import {
   ResolvedCosmetic,
   resolvedToPlayerPattern,
 } from "./Cosmetics";
+import {
+  CROWN_KEY,
+  EFFECTS_KEY,
+  FLAG_KEY,
+  MAX_LOADOUTS,
+  PATTERN_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "./UserSettings";
 import { translateText } from "./Utils";
 
 type OwnershipState = "loading" | "guest" | "loaded" | "error";
@@ -99,6 +99,7 @@ export class InventoryModal extends BaseModal {
   }));
   protected modalConfig() {
     return {
+      showScrollToTop: true,
       hideTabs: true,
       tabs: [
         { key: "skins", label: translateText("store.patterns") },
@@ -484,9 +485,11 @@ export class InventoryModal extends BaseModal {
     );
     const equippedKey = this.equippedSkin()?.key;
     return html`
-      ${this.hasOwnedCatalogItem(["pattern", "skin"])
-        ? null
-        : this.renderEmptyState("skins")}
+      ${
+        this.hasOwnedCatalogItem(["pattern", "skin"])
+          ? null
+          : this.renderEmptyState("skins")
+      }
       <div
         data-inventory-grid="skins"
         class="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
@@ -525,9 +528,11 @@ export class InventoryModal extends BaseModal {
     const page = this.pages.page("inventory-crowns", this.search, items);
     const equippedKey = this.equippedCrown()?.key;
     return html`
-      ${this.hasOwnedCatalogItem(["crown"])
-        ? null
-        : this.renderEmptyState("crowns")}
+      ${
+        this.hasOwnedCatalogItem(["crown"])
+          ? null
+          : this.renderEmptyState("crowns")
+      }
       <div
         data-inventory-grid="crowns"
         class="grid grid-cols-2 gap-3 p-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
@@ -627,12 +632,12 @@ export class InventoryModal extends BaseModal {
           ariaLabel: translateText("common.back"),
           rightContent: html`<o-button
             data-inventory-header-action
-            class="no-crazygames"
+            class="no-game-portal"
             variant=${isLoggedIn ? "primary" : "danger"}
             size="sm"
-            .translationKey=${isLoggedIn
-              ? "main.store"
-              : "common.not_logged_in"}
+            .translationKey=${
+              isLoggedIn ? "main.store" : "common.not_logged_in"
+            }
             @click=${() => {
               if (isLoggedIn) {
                 this.close();
@@ -657,14 +662,16 @@ export class InventoryModal extends BaseModal {
           />
         </div>
       </div>
-      ${this.previewingCosmetic
-        ? html`<cosmetic-preview-modal
-            .resolved=${this.previewingCosmetic}
-            @close-preview=${() => {
-              this.previewingCosmetic = null;
-            }}
-          ></cosmetic-preview-modal>`
-        : nothing}
+      ${
+        this.previewingCosmetic
+          ? html`<cosmetic-preview-modal
+              .resolved=${this.previewingCosmetic}
+              @close-preview=${() => {
+                this.previewingCosmetic = null;
+              }}
+            ></cosmetic-preview-modal>`
+          : nothing
+      }
     `;
   }
 
@@ -736,14 +743,16 @@ export class InventoryModal extends BaseModal {
     }
     const category = tab as InventoryCategory;
     return html`
-      ${this.ownershipState === "guest"
-        ? html`<div data-inventory-sign-in>
-            ${signedOutNotice(
-              () => window.showPage?.("page-account"),
-              translateText("inventory.sign_in_for_cosmetics"),
-            )}
-          </div>`
-        : nothing}
+      ${
+        this.ownershipState === "guest"
+          ? html`<div data-inventory-sign-in>
+              ${signedOutNotice(
+                () => window.showPage?.("page-account"),
+                translateText("inventory.sign_in_for_cosmetics"),
+              )}
+            </div>`
+          : nothing
+      }
       ${this.renderLoadoutMenu()}
       <inventory-loadout-bar
         .entries=${this.loadoutEntries()}

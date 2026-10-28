@@ -1,20 +1,20 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getUserMe } from "../../src/client/Api";
 import { userAuth } from "../../src/client/Auth";
-import { fetchCosmetics } from "../../src/client/Cosmetics";
-import "../../src/client/InventoryModal";
-import type { InventoryModal } from "../../src/client/InventoryModal";
-import { modalRouter } from "../../src/client/ModalRouter";
-import "../../src/client/Store";
-import type { StoreModal } from "../../src/client/Store";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import type { Cosmetics } from "../../src/core/CosmeticSchemas";
+import "../../src/client/InventoryModal";
+import { fetchCosmetics } from "../../src/client/Cosmetics";
+import type { InventoryModal } from "../../src/client/InventoryModal";
+import "../../src/client/Store";
+import { modalRouter } from "../../src/client/ModalRouter";
+import type { StoreModal } from "../../src/client/Store";
 import {
   PATTERN_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
-} from "../../src/core/game/UserSettings";
+} from "../../src/client/UserSettings";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),

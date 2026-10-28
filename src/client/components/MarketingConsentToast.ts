@@ -1,6 +1,6 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { UserMeResponse } from "../../core/ApiSchemas";
 import { setMarketingConsent } from "../Api";
 import { translateText } from "../Utils";
 
@@ -146,11 +146,13 @@ export class MarketingConsentToast extends LitElement {
             ${translateText("marketing_consent.yes")}
           </button>
         </div>
-        ${this.errored
-          ? html`<div class="mt-2 text-[10px] text-red-400">
-              ${translateText("marketing_consent.error")}
-            </div>`
-          : nothing}
+        ${
+          this.errored
+            ? html`<div class="mt-2 text-[10px] text-red-400">
+                ${translateText("marketing_consent.error")}
+              </div>`
+            : nothing
+        }
       </div>
     `;
   }

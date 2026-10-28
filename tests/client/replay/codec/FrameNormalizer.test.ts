@@ -4,8 +4,8 @@
  * placements, and routing of misc updates.
  */
 
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { FrameNormalizer } from "../../../../src/client/replay/codec/FrameNormalizer";
-import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
 import {
   frame,
   fullPlayer,

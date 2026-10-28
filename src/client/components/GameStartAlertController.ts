@@ -1,3 +1,4 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { Howl } from "howler";
 import {
   html,
@@ -5,8 +6,7 @@ import {
   ReactiveControllerHost,
   TemplateResult,
 } from "lit";
-import { assetUrl } from "../../core/AssetUrls";
-import { UserSettings } from "../../core/game/UserSettings";
+import { UserSettings } from "../UserSettings";
 import { translateText } from "../Utils";
 
 /**
@@ -44,9 +44,11 @@ export class GameStartAlertController implements ReactiveController {
     );
     return html`<button
       type="button"
-      class="inline-flex ml-auto p-1 rounded-lg transition-colors ${this.armed
-        ? "text-amber-300 hover:text-amber-200"
-        : "text-white/40 hover:text-white"}"
+      class="inline-flex ml-auto p-1 rounded-lg transition-colors ${
+        this.armed
+          ? "text-amber-300 hover:text-amber-200"
+          : "text-white/40 hover:text-white"
+      }"
       title=${label}
       aria-label=${label}
       aria-pressed=${this.armed}

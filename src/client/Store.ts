@@ -1,8 +1,16 @@
+import {
+  isGrantedSubscription,
+  UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
+import {
+  CosmeticPack,
+  Cosmetics,
+  Product,
+  Subscription,
+} from "@openfront/shared/CosmeticSchemas";
 import type { PropertyValues, TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { isGrantedSubscription, UserMeResponse } from "../core/ApiSchemas";
-import { CosmeticPack, Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
@@ -15,7 +23,6 @@ import type { InlineCheckout } from "./components/InlineCheckout";
 import "./components/NotLoggedInWarning";
 import "./components/PackContentsDialog";
 import { ProgressiveList } from "./components/ProgressiveList";
-import "./components/PurchaseButton";
 import { alignPurchaseRows } from "./components/PurchaseButton";
 import "./components/TribesPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -28,11 +35,24 @@ import {
   resolveCosmetics,
   ResolvedCosmetic,
 } from "./Cosmetics";
+import { matchesStoreItem } from "./EquippedCosmetics";
 import {
   priceStringToCents,
   reportPendingSteamAuthorizations,
 } from "./Payments";
+import { lastUserMeResponse } from "./UserMeBroadcast";
 import { translateText } from "./Utils";
+
+// Matches the API's formatting of `product.price`, so a tier priced from its
+// own cents reads the same as one priced from its Stripe listing.
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+
+function formatUsdCents(cents: number): string {
+  return usdFormatter.format(cents / 100);
+}
 
 type StoreTab =
   | "cosmetics"
@@ -45,12 +65,20 @@ type StoreTab =
 const COSMETICS_SUB_TABS = ["patterns", "flags", "crowns"] as const;
 type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
 
+/** Sub-tab holding the catalog item a store deep link points at. */
+export function subTabForItem(itemKey: string): CosmeticsSubTab {
+  if (itemKey.startsWith("crown:")) return "crowns";
+  if (itemKey.startsWith("flag:")) return "flags";
+  return "patterns";
+}
+
 interface StoreBrowserOptions {
   emptyTranslationKey: string;
   userHasSubscription?: boolean;
   trailingContent?: TemplateResult;
   gridClass?: string;
   cardClass?: string;
+  previewSize?: "card" | "detail";
   emptyClass?: string;
 }
 
@@ -70,6 +98,9 @@ export class StoreModal extends BaseModal {
   // not wait on a slow catalog before it may say so.
   @state() private authSettled = false;
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
+  // Item the URL asked for (`#modal=store&item=<key>`). Held until its group
+  // is visible, then inspected so the store opens on that item.
+  private requestedItem: string | null = null;
   private inspected: ResolvedCosmetic | null = null;
   private previewingCosmetic: ResolvedCosmetic | null = null;
   private visibleGroups: readonly (readonly ResolvedCosmetic[])[] = [];
@@ -80,9 +111,10 @@ export class StoreModal extends BaseModal {
   protected modalConfig() {
     if (this.affiliateCode) {
       // Affiliate mode: hide tabs, show only items associated with the code.
-      return {};
+      return { showScrollToTop: true };
     }
     return {
+      showScrollToTop: true,
       tabs: [
         { key: "packs", label: translateText("store.packs") },
         { key: "subscriptions", label: translateText("store.subscriptions") },
@@ -97,6 +129,9 @@ export class StoreModal extends BaseModal {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this.onUserMeEvent);
+    // The store loads on demand, usually after Main's broadcast went out.
+    const last = lastUserMeResponse();
+    if (last !== null) void this.onUserMe(last.response);
     this.addEventListener("open-cosmetic-preview", this.onOpenCosmeticPreview);
     // Rows re-wrap on resize, so which currencies share a row changes with it.
     if (typeof ResizeObserver !== "undefined") {
@@ -131,7 +166,7 @@ export class StoreModal extends BaseModal {
 
   private onUserMeEvent = (event: Event) => {
     const customEvent = event as CustomEvent<UserMeResponse | false>;
-    this.onUserMe(customEvent.detail);
+    void this.onUserMe(customEvent.detail);
   };
 
   private onOpenCosmeticPreview = (event: Event) => {
@@ -161,12 +196,14 @@ export class StoreModal extends BaseModal {
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
       rightContent: html`<div class="flex items-center gap-4">
-        ${currency
-          ? html`<currency-display
-              .hard=${currency.hard}
-              .soft=${currency.soft}
-            ></currency-display>`
-          : ""}
+        ${
+          currency
+            ? html`<currency-display
+                .hard=${currency.hard}
+                .soft=${currency.soft}
+              ></currency-display>`
+            : ""
+        }
         <not-logged-in-warning></not-logged-in-warning>
       </div>`,
     });
@@ -282,6 +319,16 @@ export class StoreModal extends BaseModal {
     groups: readonly (readonly ResolvedCosmetic[])[],
   ): void {
     const visible = groups.flat();
+    const wanted = this.requestedItem;
+    if (wanted !== null) {
+      const match = visible.find((item) => matchesStoreItem(item.key, wanted));
+      // The catalog loads after open, so keep the request until its item shows.
+      if (match !== undefined) {
+        this.requestedItem = null;
+        this.inspected = match;
+        return;
+      }
+    }
     const current = visible.find((item) => item.key === this.inspected?.key);
     this.inspected = current ?? groups[0]?.[0] ?? null;
   }
@@ -321,9 +368,11 @@ export class StoreModal extends BaseModal {
   private renderStatus(text: string, muted = false): TemplateResult {
     return html`<span
       data-store-status
-      class="mt-2 flex min-h-11 w-full items-center justify-center rounded-lg border px-2 py-1.5 text-center font-bold ${muted
-        ? "border-white/15 bg-white/5 text-xs text-white/60"
-        : "border-emerald-500/40 bg-emerald-500/15 text-base text-emerald-300"}"
+      class="mt-2 flex min-h-11 w-full items-center justify-center rounded-lg border px-2 py-1.5 text-center font-bold ${
+        muted
+          ? "border-white/15 bg-white/5 text-xs text-white/60"
+          : "border-emerald-500/40 bg-emerald-500/15 text-base text-emerald-300"
+      }"
       >${text}</span
     >`;
   }
@@ -355,6 +404,7 @@ export class StoreModal extends BaseModal {
     groups: readonly (readonly ResolvedCosmetic[])[] = this.visibleGroups,
     userHasSubscription = false,
     cardClass = "block h-full min-w-0",
+    previewSize: "card" | "detail" = "card",
   ): TemplateResult {
     return html`${groups.map((group) => {
       const focused = group.find((item) => item.key === this.inspected?.key);
@@ -364,12 +414,15 @@ export class StoreModal extends BaseModal {
         data-store-product
         data-cosmetic-key=${group[0].key}
         class=${cardClass}
+        previewSize=${previewSize}
         .resolved=${group[0]}
-        .variants=${group.length > 1 ||
-        group[0].type === "pattern" ||
-        group[0].type === "skin"
-          ? group
-          : []}
+        .variants=${
+          group.length > 1 ||
+          group[0].type === "pattern" ||
+          group[0].type === "skin"
+            ? group
+            : []
+        }
         .activeVariantKey=${active.key}
         .actionContent=${action}
         state=${focused ? "focused" : "idle"}
@@ -400,6 +453,12 @@ export class StoreModal extends BaseModal {
       (resolved.type === "pack" || resolved.type === "subscription")
         ? (priced?.product ?? null)
         : null;
+    // A tier with no Stripe listing (sold only on Steam) has no `product`;
+    // its price is the tier's own, in cents.
+    const subscriptionDollarPrice =
+      isPurchasable && resolved.type === "subscription" && product === null
+        ? formatUsdCents((resolved.cosmetic as Subscription).priceMonthly)
+        : "";
     const priceHard = isPurchasable ? priced?.priceHard : undefined;
     const priceSoft = isPurchasable ? priced?.priceSoft : undefined;
     const purchase = (method: "dollar" | "hard" | "soft") =>
@@ -427,24 +486,33 @@ export class StoreModal extends BaseModal {
     // alignPurchaseRows() once the grid has laid out.
     return html`<purchase-button
       .product=${product}
+      .dollarPrice=${subscriptionDollarPrice}
       .inlineCheckout=${inlineCheckout}
       .priceHard=${priceHard ?? null}
       .priceSoft=${priceSoft ?? null}
       .rarity=${priced?.rarity ?? "common"}
       .itemName=${cosmeticSelectionLabel(resolved)}
-      .dollarLabelKey=${resolved.type === "subscription" && userHasSubscription
-        ? "store.switch_button"
-        : ""}
-      .priceSuffix=${resolved.type === "subscription"
-        ? translateText("store.price_per_month")
-        : ""}
-      .onPurchaseDollar=${product ? () => purchase("dollar") : undefined}
-      .onPurchaseHard=${priceHard !== undefined
-        ? () => purchase("hard")
-        : undefined}
-      .onPurchaseSoft=${priceSoft !== undefined
-        ? () => purchase("soft")
-        : undefined}
+      .dollarLabelKey=${
+        resolved.type === "subscription" && userHasSubscription
+          ? "store.switch_button"
+          : ""
+      }
+      .priceSuffix=${
+        resolved.type === "subscription"
+          ? translateText("store.price_per_month")
+          : ""
+      }
+      .onPurchaseDollar=${
+        product || subscriptionDollarPrice
+          ? () => purchase("dollar")
+          : undefined
+      }
+      .onPurchaseHard=${
+        priceHard !== undefined ? () => purchase("hard") : undefined
+      }
+      .onPurchaseSoft=${
+        priceSoft !== undefined ? () => purchase("soft") : undefined
+      }
     ></purchase-button>`;
   }
 
@@ -479,6 +547,7 @@ export class StoreModal extends BaseModal {
             page.items,
             options.userHasSubscription,
             options.cardClass,
+            options.previewSize,
           );
     return this.renderBrowserLayout(
       html`${cards}${page.more}${options.trailingContent ?? ""}`,
@@ -502,9 +571,11 @@ export class StoreModal extends BaseModal {
         ${COSMETICS_SUB_TABS.map((tab) => {
           const active = this.cosmeticsSubTab === tab;
           return html`<button
-            class="-mb-px whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${active
-              ? "border-malibu-blue text-aquarius"
-              : "border-transparent text-white/40 hover:text-white/70"}"
+            class="-mb-px whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${
+              active
+                ? "border-malibu-blue text-aquarius"
+                : "border-transparent text-white/40 hover:text-white/70"
+            }"
             @click=${() => this.setCosmeticsSubTab(tab)}
           >
             ${translateText(`store.${tab}`)}
@@ -558,16 +629,18 @@ export class StoreModal extends BaseModal {
   private renderBundleGrid(): TemplateResult {
     return html`${this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_bundles",
-    })}${this.openedPack && !this.previewingCosmetic
-      ? // The dialog is portaled above the modal's stacking context, so a
-        // preview opened from one of its items would render underneath it.
-        // Yield to the preview; the dialog comes back when it closes.
-        html`<pack-contents-dialog
-          .pack=${this.openedPack}
-          .actionContent=${this.renderCardAction(this.openedPack, false)}
-          @close=${() => this.closePack()}
-        ></pack-contents-dialog>`
-      : ""}`;
+    })}${
+      this.openedPack && !this.previewingCosmetic
+        ? // The dialog is portaled above the modal's stacking context, so a
+          // preview opened from one of its items would render underneath it.
+          // Yield to the preview; the dialog comes back when it closes.
+          html`<pack-contents-dialog
+            .pack=${this.openedPack}
+            .actionContent=${this.renderCardAction(this.openedPack, false)}
+            @close=${() => this.closePack()}
+          ></pack-contents-dialog>`
+        : ""
+    }`;
   }
 
   private renderSubscriptionGrid(): TemplateResult {
@@ -580,12 +653,18 @@ export class StoreModal extends BaseModal {
         ? null
         : this.userMeResponse.player.subscription;
     const userHasSubscription = sub !== null && !isGrantedSubscription(sub);
+    // The Steam store lists one tier; a lone card in the narrow tile column
+    // reads as a cramped list, so it gets a wider card and a larger preview.
+    const lone = this.visibleGroups.length === 1;
     return this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_subscriptions",
       userHasSubscription,
       gridClass:
         "flex flex-wrap items-stretch justify-center content-start gap-4 p-4 sm:p-8",
-      cardClass: "block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48",
+      cardClass: lone
+        ? "block w-full max-w-xs shrink-0"
+        : "block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48",
+      previewSize: lone ? "detail" : "card",
       emptyClass:
         "w-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40",
     });
@@ -593,15 +672,17 @@ export class StoreModal extends BaseModal {
 
   protected renderHeaderSlot() {
     return html`${this.renderHeader()}
-    ${this.previewingCosmetic
-      ? html`<cosmetic-preview-modal
-          .resolved=${this.previewingCosmetic}
-          @close-preview=${() => {
-            this.previewingCosmetic = null;
-            this.requestUpdate();
-          }}
-        ></cosmetic-preview-modal>`
-      : ""}`;
+    ${
+      this.previewingCosmetic
+        ? html`<cosmetic-preview-modal
+            .resolved=${this.previewingCosmetic}
+            @close-preview=${() => {
+              this.previewingCosmetic = null;
+              this.requestUpdate();
+            }}
+          ></cosmetic-preview-modal>`
+        : ""
+    }`;
   }
 
   protected renderBody(key: string): TemplateResult {
@@ -650,6 +731,10 @@ export class StoreModal extends BaseModal {
     const affiliate =
       typeof args?.affiliateCode === "string" ? args.affiliateCode : null;
     this.affiliateCode = affiliate;
+    this.requestedItem = typeof args?.item === "string" ? args.item : null;
+    if (this.requestedItem !== null) {
+      this.cosmeticsSubTab = subTabForItem(this.requestedItem);
+    }
     this.cosmetics ??= await fetchCosmetics();
     this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();
@@ -668,6 +753,7 @@ export class StoreModal extends BaseModal {
     this.openedPack = null;
     this.previewingCosmetic = null;
     this.pages.reset();
+    this.requestedItem = null;
     this.selectVisible(this.groupsForTab(this.activeTab));
   }
 

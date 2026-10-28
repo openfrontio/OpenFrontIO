@@ -1,28 +1,20 @@
+import { GameMapType, GameType } from "@openfront/engine-api/game/GameTypes";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { PublicGameInfo, PublicGames } from "@openfront/shared/WireSchemas";
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { UserMeResponse } from "../core/ApiSchemas";
-import {
-  Duos,
-  GameMapType,
-  GameMode,
-  GameType,
-  HumansVsNations,
-  Quads,
-  Trios,
-} from "../core/game/Game";
-import { PublicGameInfo, PublicGames } from "../core/Schemas";
 import { getDesktopSessionState } from "./Auth";
 import "./components/IOSAddToHomeScreenBanner";
 import {
   canJoinTrustedLobby,
   lobbyCard,
   mapAspectRatios,
+  trustLockIcon,
   trustRequiredDialog,
   viewerIsSignedIn,
   viewerIsTrusted,
 } from "./components/LobbyCard";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
 import {
   getDesktopUpdateState,
   isDesktopShell,
@@ -31,9 +23,11 @@ import {
   type DesktopSessionState,
   type DesktopUpdateState,
 } from "./DesktopShell";
-import { HostLobbyModal } from "./HostLobbyModal";
+import { gamePortal } from "./GamePortal";
+import type { HostLobbyModal } from "./HostLobbyModal";
 import { showInGameAlert } from "./InGameModal";
-import { JoinLobbyModal } from "./JoinLobbyModal";
+import type { JoinLobbyModal } from "./JoinLobbyModal";
+import { whenModalLoaded } from "./LazyModals";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import {
@@ -45,10 +39,12 @@ import {
   retryServerList,
   type BackendReachabilityDetail,
 } from "./ServerList";
-import { SinglePlayerModal } from "./SinglePlayerModal";
+import type { SinglePlayerModal } from "./SinglePlayerModal";
+import { lastUserMeResponse } from "./UserMeBroadcast";
 import { UsernameInput } from "./UsernameInput";
 import {
   calculateServerTimeOffset,
+  getGameModeLabel,
   getGamesPlayed,
   getSecondsUntilServerTimestamp,
   reloadForUpdate,
@@ -166,9 +162,7 @@ export function shouldBlockMultiplayerAction(
  * about the game server behind it. The update state is not either -- a
  * pending update is not "offline".
  */
-export function lobbyFeedSuspended(
-  session: DesktopSessionState | null,
-): boolean {
+function lobbyFeedSuspended(session: DesktopSessionState | null): boolean {
   return session !== null && !multiplayerAllowedForSession(session);
 }
 
@@ -379,7 +373,7 @@ export class GameModeSelector extends LitElement {
       this.updateDeferred = true;
       return;
     }
-    showInGameAlert(translateText("update_available.message")).then(() => {
+    void showInGameAlert(translateText("update_available.message")).then(() => {
       reloadForUpdate();
     });
   }
@@ -408,6 +402,9 @@ export class GameModeSelector extends LitElement {
       this.onDesktopUpdateState,
     );
     document.addEventListener("userMeResponse", this.onUserMe);
+    // play-page renders this after Main may already have broadcast.
+    const last = lastUserMeResponse();
+    if (last !== null) this.applyUserMe(last.response);
     if (isDesktopShell()) {
       // Seed BOTH from their current values. This element is rendered by
       // <play-page> on a Lit microtask, so it cannot exist yet when the status
@@ -491,17 +488,20 @@ export class GameModeSelector extends LitElement {
   };
 
   private onUserMe = (e: Event) => {
-    const me = (e as CustomEvent<UserMeResponse | false>).detail;
+    this.applyUserMe((e as CustomEvent<UserMeResponse | false>).detail);
+  };
+
+  private applyUserMe(me: UserMeResponse | false): void {
     this.viewerSignedIn = viewerIsSignedIn(me);
     this.viewerTrusted = viewerIsTrusted(me);
-    // A CrazyGames sign-in surfaces as a userMeResponse without a linked
+    // A portal sign-in surfaces as a userMeResponse without a linked
     // identity, so re-read the SDK profile alongside it.
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      void crazyGamesSDK.getUserProfile().then((user) => {
+    if (gamePortal.isOnGamePortal()) {
+      void gamePortal.getUserProfile().then((user) => {
         if (user !== null) this.viewerSignedIn = true;
       });
     }
-  };
+  }
 
   private onDesktopSessionState = (e: Event) => {
     const next = (e as CustomEvent<DesktopSessionState>).detail;
@@ -513,7 +513,7 @@ export class GameModeSelector extends LitElement {
       this.closeLobbyFeed();
     } else {
       this.feedGaveUp = false;
-      this.lobbySocket.start();
+      void this.lobbySocket.start();
     }
   };
 
@@ -563,7 +563,7 @@ export class GameModeSelector extends LitElement {
       this.lobbies = null;
       return;
     }
-    this.lobbySocket.start({ refreshList });
+    void this.lobbySocket.start({ refreshList });
   }
 
   /**
@@ -596,15 +596,17 @@ export class GameModeSelector extends LitElement {
       class="flex flex-col items-center justify-center gap-3 h-44 sm:h-full rounded-xl bg-surface/60 px-6 text-center text-sm font-medium text-white/60"
     >
       ${translateText(message)}
-      ${canRetry
-        ? html`<button
-            class="px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius text-white text-sm font-medium uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-malibu-blue"
-            ?disabled=${this.retryCoolingDown}
-            @click=${this.retryLobbies}
-          >
-            ${translateText("mode_selector.retry_lobbies")}
-          </button>`
-        : nothing}
+      ${
+        canRetry
+          ? html`<button
+              class="px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius text-white text-sm font-medium uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-malibu-blue"
+              ?disabled=${this.retryCoolingDown}
+              @click=${this.retryLobbies}
+            >
+              ${translateText("mode_selector.retry_lobbies")}
+            </button>`
+          : nothing
+      }
     </div>`;
   }
 
@@ -663,15 +665,22 @@ export class GameModeSelector extends LitElement {
 
     // DOM is in phone order; sm+ places the same elements onto a grid and
     // reading-flow keeps focus order following the rows (Chromium only).
+    // On compact screens (styles.css) Solo/Tutorial sit under the hero card only,
+    // and the lobby column runs down beside them, so its two cards get that height.
+    // There the grid also pulls up over the gap after the banner's row when it's empty.
     return html`
       <div
-        class="flex flex-col gap-4 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_min(24rem,40vh)_auto_auto] desktop:sm:grid-rows-[auto_40vh_auto_auto] sm:[reading-flow:grid-rows]"
+        class="flex flex-col gap-4 sm:compact:gap-3 sm:compact:has-[>ios-add-to-home-screen-banner:empty]:-mt-3 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_min(24rem,40vh)_auto_auto] sm:compact:grid-rows-[auto_minmax(min(24rem,40vh),auto)_3.5rem_auto] desktop:sm:grid-rows-[auto_40vh_auto_auto] sm:[reading-flow:grid-rows]"
       >
         <ios-add-to-home-screen-banner
-          class="no-crazygames [&:empty]:hidden sm:col-span-2 sm:row-start-1"
+          class="no-game-portal [&:empty]:hidden sm:col-span-2 sm:row-start-1"
         ></ios-add-to-home-screen-banner>
 
-        <div class="flex gap-4 h-14 sm:col-span-2 sm:row-start-3">
+        <div
+          class="flex gap-4 sm:compact:gap-3 h-14 sm:col-span-2 sm:row-start-3 ${
+            heroSlot ? "sm:compact:col-span-1!" : ""
+          }"
+        >
           <div class="flex-[2]">
             ${this.renderSmallActionCard(
               translateText("main.solo"),
@@ -679,17 +688,21 @@ export class GameModeSelector extends LitElement {
               PRIMARY_ACTION,
             )}
           </div>
-          ${getGamesPlayed() < TUTORIAL_CARD_MAX_GAMES
-            ? html`<div class="flex-1">
-                ${this.renderSmallActionCard(
-                  translateText("main.tutorial"),
-                  this.startTutorial,
-                  TUTORIAL_ACTION,
-                )}
-              </div>`
-            : nothing}
+          ${
+            getGamesPlayed() < TUTORIAL_CARD_MAX_GAMES
+              ? html`<div class="flex-1">
+                  ${this.renderSmallActionCard(
+                    translateText("main.tutorial"),
+                    this.startTutorial,
+                    TUTORIAL_ACTION,
+                  )}
+                </div>`
+              : nothing
+          }
         </div>
-        <div class="grid grid-cols-3 gap-4 h-14 sm:col-span-2 sm:row-start-4">
+        <div
+          class="grid grid-cols-3 gap-4 sm:compact:gap-3 h-14 sm:col-span-2 sm:row-start-4"
+        >
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
@@ -703,6 +716,19 @@ export class GameModeSelector extends LitElement {
             SECONDARY_ACTION,
             undefined,
             true,
+            // Ranked admits trusted accounts only. A trusted viewer gets the
+            // green open lock; anyone else meets the red locks and the trust
+            // popup inside the ranked modal. Small, so it clears the label on
+            // narrow (mobile) buttons.
+            this.viewerTrusted
+              ? trustLockIcon(true, {
+                  tooltipTitle: translateText(
+                    "mode_selector.ranked_trust_tooltip_title",
+                  ),
+                  position: "top-1 right-1",
+                  small: true,
+                })
+              : nothing,
           )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
@@ -713,47 +739,68 @@ export class GameModeSelector extends LitElement {
           )}
         </div>
 
-        ${heroSlot
-          ? html`<div class="min-w-0 sm:col-start-1 sm:row-start-2">
-              ${ffa
-                ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
-                : this.offlineForLobbies()
-                  ? this.renderLobbiesUnavailable()
-                  : html`<div
-                      class="flex items-center justify-center h-44 sm:h-full"
-                    >
-                      <span
-                        class="size-24 rounded-full border-[6px] border-blue-500/30 border-t-blue-500 animate-spin"
-                      ></span>
-                    </div>`}
-            </div>`
-          : nothing}
+        ${
+          heroSlot
+            ? html`<div class="min-w-0 sm:col-start-1 sm:row-start-2">
+                ${
+                  ffa
+                    ? this.renderLobbyCard(
+                        ffa,
+                        getGameModeLabel(ffa.gameConfig!),
+                      )
+                    : this.offlineForLobbies()
+                      ? this.renderLobbiesUnavailable()
+                      : html`<div
+                          class="flex items-center justify-center h-44 sm:h-full"
+                        >
+                          <span
+                            class="size-24 rounded-full border-[6px] border-blue-500/30 border-t-blue-500 animate-spin"
+                          ></span>
+                        </div>`
+                }
+              </div>`
+            : nothing
+        }
 
         <!-- Always rendered: the heading is the only way into the lobby browser. -->
         <section
-          class="flex flex-col gap-4 min-w-0 sm:grid sm:grid-rows-[auto_1fr_1fr] sm:row-start-2 sm:min-h-0 sm:[reading-flow:grid-rows] ${heroSlot
-            ? "sm:col-start-2"
-            : "sm:col-start-1 sm:col-span-2"}"
+          class="flex flex-col gap-4 sm:compact:gap-3 min-w-0 sm:grid sm:grid-rows-[auto_1fr_1fr] sm:row-start-2 sm:min-h-0 sm:[reading-flow:grid-rows] ${
+            heroSlot
+              ? "sm:col-start-2 sm:compact:row-end-4 sm:compact:grid-rows-[auto_minmax(7.5rem,1fr)_minmax(7.5rem,1fr)]"
+              : "sm:col-start-1 sm:col-span-2"
+          }"
         >
-          ${teams
-            ? html`<div class="min-w-0 sm:min-h-0 ${cardRows.teams}">
-                ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
-              </div>`
-            : nothing}
-          ${special
-            ? html`<div class="min-w-0 sm:min-h-0 ${cardRows.special}">
-                ${this.renderLobbyCard(special, this.getLobbyTitle(special))}
-              </div>`
-            : nothing}
+          ${
+            teams
+              ? html`<div class="min-w-0 sm:min-h-0 ${cardRows.teams}">
+                  ${this.renderLobbyCard(
+                    teams,
+                    getGameModeLabel(teams.gameConfig!),
+                  )}
+                </div>`
+              : nothing
+          }
+          ${
+            special
+              ? html`<div class="min-w-0 sm:min-h-0 ${cardRows.special}">
+                  ${this.renderLobbyCard(
+                    special,
+                    getGameModeLabel(special.gameConfig!),
+                  )}
+                </div>`
+              : nothing
+          }
           ${this.renderUpcomingHeading()}
         </section>
 
-        ${this.showTrustRequired
-          ? trustRequiredDialog(
-              this.viewerSignedIn,
-              () => (this.showTrustRequired = false),
-            )
-          : nothing}
+        ${
+          this.showTrustRequired
+            ? trustRequiredDialog(
+                this.viewerSignedIn,
+                () => (this.showTrustRequired = false),
+              )
+            : nothing
+        }
       </div>
     `;
   }
@@ -818,9 +865,11 @@ export class GameModeSelector extends LitElement {
 
   private openSinglePlayerModal = () => {
     if (!this.validateUsername()) return;
-    (
-      document.querySelector("single-player-modal") as SinglePlayerModal
-    )?.open();
+    whenModalLoaded("single-player-modal", () =>
+      (
+        document.querySelector("single-player-modal") as SinglePlayerModal
+      )?.open(),
+    );
   };
 
   // Handled in Main, which also serves the help page's tutorial button.
@@ -832,13 +881,17 @@ export class GameModeSelector extends LitElement {
   private openHostLobby = () => {
     if (this.blockedFromApiAction()) return;
     if (!this.validateUsername()) return;
-    (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open();
+    whenModalLoaded("host-lobby-modal", () =>
+      (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open(),
+    );
   };
 
   private openJoinLobby = () => {
     if (this.blockedFromApiAction()) return;
     if (!this.validateUsername()) return;
-    (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open();
+    whenModalLoaded("join-lobby-modal", () =>
+      (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open(),
+    );
   };
 
   // Number of open hosted lobbies waiting in the browser; shown as a chip
@@ -861,10 +914,9 @@ export class GameModeSelector extends LitElement {
         <button
           @click=${this.openDetailedView}
           ?disabled=${!this.inputValid}
-          class="group/upcoming flex w-full items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.04] py-1.5 pl-2.5 pr-1.5 transition-colors hover:border-malibu-blue/50 hover:bg-malibu-blue/15 ${this
-            .inputValid
-            ? ""
-            : DISABLED}"
+          class="group/upcoming flex w-full items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.04] py-1.5 pl-2.5 pr-1.5 transition-colors hover:border-malibu-blue/50 hover:bg-malibu-blue/15 ${
+            this.inputValid ? "" : DISABLED
+          }"
         >
           <span
             class="truncate text-sm font-bold uppercase tracking-widest text-white/70 group-hover/upcoming:text-white"
@@ -873,9 +925,11 @@ export class GameModeSelector extends LitElement {
           <span
             class="flex shrink-0 items-center gap-0.5 rounded bg-malibu-blue py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wider text-white group-hover/upcoming:bg-aquarius"
           >
-            ${count > 0
-              ? translateText("public_lobby.see_all", { count })
-              : nothing}
+            ${
+              count > 0
+                ? translateText("public_lobby.see_all", { count })
+                : nothing
+            }
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -913,6 +967,7 @@ export class GameModeSelector extends LitElement {
     // the solo card is never gated (see openSinglePlayerModal) and must never
     // show as disabled here.
     gated: boolean = false,
+    adornment: TemplateResult | typeof nothing = nothing,
   ) {
     const blocked =
       gated &&
@@ -926,20 +981,24 @@ export class GameModeSelector extends LitElement {
         @click=${onClick}
         ?disabled=${!this.inputValid}
         aria-disabled=${blocked}
-        class="relative flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center ${!this
-          .inputValid
-          ? DISABLED
-          : blocked
-            ? "opacity-50 cursor-not-allowed"
-            : ""}"
+        class="relative flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center ${
+          !this.inputValid
+            ? DISABLED
+            : blocked
+              ? "opacity-50 cursor-not-allowed"
+              : ""
+        }"
       >
         ${title}
-        ${badge
-          ? html`<span
-              class="absolute -top-2 -right-2 min-w-[1.375rem] h-[1.375rem] px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold tracking-normal"
-              >${badge}</span
-            >`
-          : nothing}
+        ${
+          badge
+            ? html`<span
+                class="absolute -top-2 -right-2 min-w-[1.375rem] h-[1.375rem] px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold tracking-normal"
+                >${badge}</span
+              >`
+            : nothing
+        }
+        ${adornment}
       </button>
     `;
   }
@@ -1005,73 +1064,5 @@ export class GameModeSelector extends LitElement {
         composed: true,
       }),
     );
-  }
-
-  private getLobbyTitle(lobby: PublicGameInfo): string {
-    const config = lobby.gameConfig!;
-    if (config.gameMode === GameMode.FFA) {
-      return translateText("game_mode.ffa");
-    }
-
-    if (config?.gameMode === GameMode.Team) {
-      const totalPlayers = config.maxPlayers ?? lobby.numClients ?? undefined;
-      const formatTeamsOf = (
-        teamCount: number | undefined,
-        playersPerTeam: number | undefined,
-        label?: string,
-      ) => {
-        if (!teamCount)
-          return label ?? translateText("mode_selector.teams_title");
-        const baseTitle = playersPerTeam
-          ? translateText("mode_selector.teams_of", {
-              teamCount: String(teamCount),
-              playersPerTeam: String(playersPerTeam),
-            })
-          : translateText("mode_selector.teams_count", {
-              teamCount: String(teamCount),
-            });
-        return `${baseTitle}${label ? ` (${label})` : ""}`;
-      };
-
-      switch (config.playerTeams) {
-        case Duos: {
-          const teamCount = totalPlayers
-            ? Math.floor(totalPlayers / 2)
-            : undefined;
-          return formatTeamsOf(teamCount, 2);
-        }
-        case Trios: {
-          const teamCount = totalPlayers
-            ? Math.floor(totalPlayers / 3)
-            : undefined;
-          return formatTeamsOf(teamCount, 3);
-        }
-        case Quads: {
-          const teamCount = totalPlayers
-            ? Math.floor(totalPlayers / 4)
-            : undefined;
-          return formatTeamsOf(teamCount, 4);
-        }
-        case HumansVsNations: {
-          const humanSlots = config.maxPlayers ?? lobby.numClients;
-          return humanSlots
-            ? translateText("public_lobby.teams_hvn_detailed", {
-                num: String(humanSlots),
-              })
-            : translateText("public_lobby.teams_hvn");
-        }
-        default:
-          if (typeof config.playerTeams === "number") {
-            const teamCount = config.playerTeams;
-            const playersPerTeam =
-              totalPlayers && teamCount > 0
-                ? Math.floor(totalPlayers / teamCount)
-                : undefined;
-            return formatTeamsOf(teamCount, playersPerTeam);
-          }
-      }
-    }
-
-    return "";
   }
 }

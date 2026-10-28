@@ -9,14 +9,18 @@ vi.mock("../../../src/client/hud/layers/BuildMenu", () => ({
 // Mock Utils to avoid touching DOM (document) during tests
 vi.mock("../../../src/client/Utils", () => ({
   translateText: (key: string) => key,
+}));
+vi.mock("@openfront/engine-lib/Format", () => ({
   renderNumber: (num: number) => num.toString(),
 }));
 
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { EventBus } from "@openfront/shared/EventBus";
+import { RadialMenu } from "../../../src/client/hud/layers/RadialMenu";
 import {
   centerButtonElement,
   MenuElementParams,
 } from "../../../src/client/hud/layers/RadialMenuElements";
-import { TileRef } from "../../../src/core/game/GameMap";
 
 describe("RadialMenu center button - spawn phase", () => {
   it("clicking the center button during the spawn phase spawns on the tile", () => {
@@ -37,5 +41,25 @@ describe("RadialMenu center button - spawn phase", () => {
     expect(handleSpawn).toHaveBeenCalledExactlyOnceWith(tile);
     expect(handleAttack).not.toHaveBeenCalled();
     expect(closeMenu).toHaveBeenCalled();
+  });
+});
+
+describe("RadialMenu teardown", () => {
+  it("cleans up DOM elements and window resize listener on leave-lobby", () => {
+    const bus = new EventBus();
+    const offSpy = vi.spyOn(bus, "off");
+    const menu = new RadialMenu(bus, { subMenu: () => [] } as any, {} as any);
+    menu.init();
+    (menu as any).isVisible = true;
+
+    const removeSpy = vi.spyOn(window, "removeEventListener");
+    document.dispatchEvent(new CustomEvent("leave-lobby"));
+
+    expect(removeSpy).toHaveBeenCalledWith("resize", expect.any(Function));
+    expect(offSpy).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.any(Function),
+    );
+    expect(document.querySelector(".radial-menu-container")).toBeNull();
   });
 });

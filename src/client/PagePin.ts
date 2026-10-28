@@ -1,4 +1,4 @@
-import { stripVersionPrefix } from "../core/ServerList";
+import { stripVersionPrefix } from "@openfront/shared/ServerList";
 
 // The `/v/<commit>/` prefix this document was LOADED under, captured once at
 // boot (docs/MultiServer.md, "Server list v2").

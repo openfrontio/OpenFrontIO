@@ -32,8 +32,8 @@
  *   Shells emit 2 instances (pos + lastPos) to match live game's 2-pixel trail.
  */
 
-import { assetUrl } from "src/core/AssetUrls";
-import type { Config } from "src/core/configuration/Config";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import type { RendererConfig, UnitState } from "../../types";
 import {
   SMOOTHED_NUKE_TYPES,
@@ -299,6 +299,7 @@ export class UnitPass {
         TRAIN_FIRST_COL,
         TRAIN_EFFECT_ROW_BASE: TRAIN_EFFECT_BLOCK * MAX_TRAIL_COLORS,
       }),
+      "UnitPass",
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uTick = gl.getUniformLocation(this.program, "uTick")!;
@@ -359,7 +360,7 @@ export class UnitPass {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
     // Start async atlas build
-    this.loadAtlas();
+    void this.loadAtlas();
 
     // --- Shared quad buffer ---
     this.quadBuf = gl.createBuffer()!;

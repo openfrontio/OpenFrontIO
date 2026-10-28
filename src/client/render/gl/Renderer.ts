@@ -9,8 +9,8 @@
  *     structure levels → bars → bloom → trails → missiles → fx → conquest → names
  */
 
-import type { Config } from "../../../core/configuration/Config";
-import type { MapLayer } from "../../../core/game/TerrainMapLoader";
+import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import { translateText } from "../../Utils";
 import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
@@ -1346,8 +1346,10 @@ export class GPURenderer {
     if (pe.terrain) this.terrainPass.draw(cam);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    // Map layers sit between terrain and territory.
+    // Map layers sit between terrain and territory. Alt view hides the land
+    // ones so the terrain underneath shows.
     for (const layerPass of this.mapLayerPasses.values()) {
+      if (this.altView && layerPass.placement === 0) continue;
       layerPass.draw(cam);
     }
     if (pe.territory) this.territoryPass.draw(cam);
@@ -1472,7 +1474,12 @@ export class GPURenderer {
   // Lifecycle
   // ---------------------------------------------------------------------------
 
-  dispose(): void {
+  /**
+   * @param releaseContext Also drop the WebGL context itself. Must be false
+   *   when disposing *because* the context was lost — see the call in
+   *   MapRenderer.handleContextLost.
+   */
+  dispose({ releaseContext = true }: { releaseContext?: boolean } = {}): void {
     this.stopLoop();
     for (const p of this.mapLayerPasses.values()) p.dispose();
     this.mapLayerPasses.clear();
@@ -1527,6 +1534,8 @@ export class GPURenderer {
     // Deleting GL resources isn't enough — the context itself counts against
     // the browser's WebGL context limit until it's GC'd, which is unreliable
     // on mobile. Explicitly drop it so repeated game starts don't overflow.
-    this.gl.getExtension("WEBGL_lose_context")?.loseContext();
+    if (releaseContext) {
+      this.gl.getExtension("WEBGL_lose_context")?.loseContext();
+    }
   }
 }

@@ -36,7 +36,7 @@ Maps are discovered automatically from the `assets/maps/` folders — `info.json
 
 5. Find the output folder at `../resources/maps/<map_name>`
 
-`go run .` formats every file it writes with Prettier as its last step (shelling out to `npx prettier --write`), so the output already matches `npm run format` — no separate formatting step needed. If `npx prettier` isn't available (e.g. `npm ci` hasn't been run), generation still succeeds but prints a warning; run `npm run format` from the root directory to format manually in that case.
+`go run .` formats every file it writes with Oxfmt as its last step (shelling out to `npx oxfmt --write`), so the output already matches `npm run format` — no separate formatting step needed. If `npx oxfmt` isn't available (e.g. `npm ci` hasn't been run), generation still succeeds but prints a warning; run `npm run format` from the root directory to format manually in that case.
 
 `npm run gen-maps` (from the root directory) is equivalent to `go run .` for all maps.
 
@@ -47,7 +47,7 @@ Maps are discovered automatically from the `assets/maps/` folders — `info.json
 - `../resources/maps/<map_name>/map4x.bin` - 1/4 scale (half dimensions) binary map data used for mini-maps.
 - `../resources/maps/<map_name>/map16x.bin` - 1/16 scale (quarter dimensions) binary map data used for mini-maps.
 - `../resources/maps/<map_name>/thumbnail.webp` - WebP image thumbnail of the map.
-- `../src/core/game/Maps.gen.ts` - Generated TypeScript (the `GameMapType` enum and the `maps` list of `MapInfo` objects) built from every map's info.json. Regenerated on every run, even with `--maps`.
+- `../packages/engine-api/src/game/Maps.gen.ts` - Generated TypeScript (the `GameMapType` enum and the `maps` list of `MapInfo` objects) built from every map's info.json. Regenerated on every run, even with `--maps`.
 - `../resources/lang/en.json` - The `map` section is rewritten with each map's display name. Regenerated on every run, even with `--maps`.
 
 ## Command Line Flags
@@ -103,15 +103,17 @@ In-Game, the color of a tile is determined dynamically based on its **Terrain Ty
 
 The map-generator reads `assets/maps/<map_name>/info.json` to determine nation positions, starting coordinates, flags, and other map metadata.
 
+`info.schema.json` in this folder is the JSON Schema for the file. Keep the `"$schema"` line from the example so your editor validates and autocompletes as you type. Unknown keys are errors. The schema is generated from `MapInfoSchema` in `../packages/engine-api/src/game/MapManifest.ts` (`npm run gen-map-schema`, also part of `npm run gen-maps`); change the Zod schema, not the JSON file.
+
 ### Example
 
 ```json
 {
+  "$schema": "../../../info.schema.json",
   "id": "MySampleMap",
   "name": "My Sample Map",
   "translation_key": "map.mysamplemap",
   "categories": ["europe", "featured"],
-  "multiplayer_frequency": 4,
   "featured_rank": 5,
   "layers": [
     {
@@ -137,25 +139,25 @@ The map-generator reads `assets/maps/<map_name>/info.json` to determine nation p
 
 ### Fields
 
-| Field                   | Required | Description                                                                                                                                                                                                                      |
-| ----------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                    | ✅       | `CamelCaseName` of the map. Must match the `assets/maps/<map_name>` folder name (case-insensitive). Becomes the `GameMapType` enum key.                                                                                          |
-| `name`                  | ✅       | Canonical name — the `GameMapType` enum value. **Must never change** once the map ships (it is part of the wire format and stored in game records).                                                                              |
-| `translation_key`       | ✅       | Key in `../resources/lang/en.json`. Must be `map.<foldername>`.                                                                                                                                                                  |
-| `categories`            | ✅       | One or more category strings (see below). No duplicates. Must have at least one entry. Groups the map in the map picker.                                                                                                         |
-| `multiplayer_frequency` |          | How often the map appears in the public multiplayer playlist. Use `0` (or omit) to exclude from rotation. Used as fallback when per-mode frequencies are not set.                                                                |
-| `ffa_frequency`         |          | FFA lobby rotation weight. Overrides `multiplayer_frequency` for FFA lobbies. Use `0` to exclude from FFA. Omit to use `multiplayer_frequency`.                                                                                  |
-| `team_frequency`        |          | Team lobby rotation weight. Overrides `multiplayer_frequency` for Team lobbies. Use `0` to exclude from Team. Omit to use `multiplayer_frequency`.                                                                               |
-| `special_frequency`     |          | Special lobby rotation weight. Overrides `multiplayer_frequency` for Special lobbies. Use `0` to exclude from Special. Omit to use `multiplayer_frequency`.                                                                      |
-| `disabled_modifiers`    |          | Array of modifier keys that should never be rolled for this map in special games (e.g. `["isRandomSpawn"]`).                                                                                                                     |
-| `forced_modifiers`      |          | Array of modifiers always forced on in special games. Plain key (e.g. `"startingGold5M"`) or `"key:percentage"` (e.g. `"goldMultiplier:75"` = 75% chance). Counts toward the 3-modifier cap.                                     |
-| `display_name`          |          | English display name written to `../resources/lang/en.json`. Defaults to `name`. Set only when the display name differs from the canonical name (e.g. `"MENA"`, `"Europe (Classic)"`).                                           |
-| `featured_rank`         |          | Position in the featured grid (`1` = first). Requires `"featured"` in `categories`. Unranked featured maps sort after ranked ones, alphabetically.                                                                               |
-| `special_team_count`    |          | Preferred team count for team/special games — see `SPECIAL_TEAM_MAPS` in `../src/server/MapPlaylist.ts`. Must be `0` or `≥ 2` (1 is not allowed).                                                                                |
-| `custom_tribes`         |          | Array of tribe names or `{ "name": "...", "coordinates": [x, y] }` objects. Coordinates are optional (omit for random spawn). Tribe names must be unique and must not collide with `nations[].name`. Empty strings are rejected. |
-| `themes`                |          | Array of theme strings for tribe name generation.                                                                                                                                                                                |
-| `layers`                |          | Array of map layer definitions rendered between terrain and territory (see below).                                                                                                                                               |
-| `nations`               |          | Array of nation objects (see below).                                                                                                                                                                                             |
+Public-lobby rotation weights are not set here: the API computes them from how fast each map's lobbies fill, and admins override them in the admin panel. A new map rotates at the default weight (`DEFAULT_MAP_WEIGHT` in `../src/server/MapPlaylist.ts`) until the API has a weight for it.
+
+| Field                | Required | Description                                                                                                                                                                                                                      |
+| -------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                 | ✅       | `CamelCaseName` of the map. Must match the `assets/maps/<map_name>` folder name (case-insensitive). Becomes the `GameMapType` enum key.                                                                                          |
+| `name`               | ✅       | Canonical name — the `GameMapType` enum value. **Must never change** once the map ships (it is part of the wire format and stored in game records).                                                                              |
+| `translation_key`    | ✅       | Key in `../resources/lang/en.json`. Must be `map.<foldername>`.                                                                                                                                                                  |
+| `categories`         | ✅       | One or more category strings (see below). No duplicates. Must have at least one entry. Groups the map in the map picker.                                                                                                         |
+| `disabled_modifiers` |          | Array of modifier keys that should never be rolled for this map in special games (e.g. `["isRandomSpawn"]`).                                                                                                                     |
+| `forced_modifiers`   |          | Array of modifiers always forced on in special games. Plain key (e.g. `"startingGold5M"`) or `"key:percentage"` (e.g. `"goldMultiplier:75"` = 75% chance). Counts toward the 3-modifier cap.                                     |
+| `display_name`       |          | English display name written to `../resources/lang/en.json`. Defaults to `name`. Set only when the display name differs from the canonical name (e.g. `"MENA"`, `"Europe (Classic)"`).                                           |
+| `featured_rank`      |          | Position in the featured grid (`1` = first). Requires `"featured"` in `categories`. Unranked featured maps sort after ranked ones, alphabetically.                                                                               |
+| `special_team_count` |          | Preferred team count for team/special games — see `SPECIAL_TEAM_MAPS` in `../src/server/MapPlaylist.ts`. Must be `0` or `≥ 2` (1 is not allowed).                                                                                |
+| `custom_tribes`      |          | Array of tribe names or `{ "name": "...", "coordinates": [x, y] }` objects. Coordinates are optional (omit for random spawn). Tribe names must be unique and must not collide with `nations[].name`. Empty strings are rejected. |
+| `themes`             |          | Array of theme strings for tribe name generation.                                                                                                                                                                                |
+| `layers`             |          | Array of map layer definitions rendered between terrain and territory (see below).                                                                                                                                               |
+| `nations`            | ✅       | Array of nation objects (see below). May be empty.                                                                                                                                                                               |
+| `additionalNations`  |          | Nation objects drawn at random when a game asks for more nations than `nations` lists.                                                                                                                                           |
+| `teamGameSpawnAreas` |          | Spawn rectangles per team count: `{ "2": [{ "x", "y", "width", "height" }, ...] }`. Must lie inside the map.                                                                                                                     |
 
 ### Categories
 
@@ -177,13 +179,16 @@ Each nation object has:
 
 ### Layers
 
-Layers are PNG overlays rendered between terrain and territory, useful for decorations. Each layer is a separate PNG file in `assets/maps/<map_name>/` named `<id>.png`.
+Layers are image overlays rendered between terrain and territory, useful for decorations. Each layer is authored as a separate PNG file in `assets/maps/<map_name>/` named `<id>.png`, with the same dimensions as `image.png` (the generator crops it to a multiple of 4 along with the map).
+
+The generator does not ship the PNG. It writes two lossy WebP files (quality 90) to `../resources/maps/<map_name>/`: `<id>.webp` at full map size and `<id>.4x.webp` at `map4x` size (half width and height, box-filtered), which Compact games load instead of downscaling the full image on the device. Lossy WebP is roughly 9x smaller than PNG on photographic layers and indistinguishable at the game's nearest-neighbour rendering, but it is lossy: don't rely on exact colour values surviving the encode. Which tiles a layer covers is decided by the terrain type and the `placement` field, not by the image, so that is unaffected. The encoder is the wasm libwebp embedded in the generator so that output is byte-identical on every machine; `npm run gen-maps` passes `-tags nodynamic` to force it, and `go run .` warns if it picked up a system libwebp instead.
 
 | Field       | Required | Description                                                                                                                                           |
 | ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `id`        | ✅       | Unique identifier for the layer. Also the PNG filename (without extension). Must be alphanumeric (hyphens allowed). Must not be `"image"` (reserved). |
 | `placement` | ✅       | `"land"` or `"water"` — whether the layer sits on land (and impassable terrain) or water tiles.                                                       |
 | `nukeable`  |          | If `true`, the layer is permanently destroyed in nuke impact radii. Defaults to `false`.                                                              |
+| `alpha`     |          | Initial opacity (`0`–`1`) for the player's layer-alpha slider. Defaults to `1`.                                                                       |
 
 Layer display names are stored in the `map_layers` section of `../resources/lang/en.json` (keyed by layer id). Players can disable layers in the graphics settings.
 
@@ -204,7 +209,7 @@ Everything is generated from the info.json files when the map-generator runs —
 there are no manual steps:
 
 - The `GameMapType` enum and the `maps` list (one `MapInfo` per map) are
-  written to `../src/core/game/Maps.gen.ts`. Do not edit that file by hand.
+  written to `../packages/engine-api/src/game/Maps.gen.ts`. Do not edit that file by hand.
 - The `map` section of `../resources/lang/en.json` is rewritten with each
   map's `display_name` (or `name`). Translations to other languages are
   managed via Crowdin.

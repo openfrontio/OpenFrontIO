@@ -1,15 +1,14 @@
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   BOAT_INDEX_CAPTURE,
   BOAT_INDEX_DESTROY,
   BOAT_INDEX_LOST,
-} from "../src/core/StatsSchemas";
+} from "@openfront/engine-api/StatsSchemas";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
 let game: Game;

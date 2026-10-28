@@ -1,5 +1,4 @@
-import { EventBus } from "../../core/EventBus";
-import { UserSettings } from "../../core/game/UserSettings";
+import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
 import { AmbienceController } from "../controllers/AmbienceController";
 import { AttackingTroopsController } from "../controllers/AttackingTroopsController";
@@ -16,7 +15,11 @@ import { migrateLegacyGraphicsSettings } from "../GraphicsPresets";
 import { MapRenderer } from "../render/gl";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
+// The homepage loads it on demand, but the in-game instance (#game-settings)
+// is set up below, so it has to be defined by the time a game renders.
+import "../UserSettingModal";
 import type { UserSettingModal } from "../UserSettingModal";
+import { UserSettings } from "../UserSettings";
 import { GameView } from "../view";
 import { FrameProfiler } from "./FrameProfiler";
 import { ActionableEvents } from "./layers/ActionableEvents";
@@ -192,6 +195,9 @@ export function createRenderer(
     console.error("settings modal not found");
   }
   settingsModal.eventBus = eventBus;
+  settingsModal.gameConfig = game.config().gameConfig();
+  settingsModal.mapNationCount = game.mapNationCount();
+  settingsModal.game = game;
 
   // The in-game settings instance needs the bus so the Audio sliders reach
   // SoundManager, which caches its volumes at construction, and UIState so the
@@ -246,6 +252,7 @@ export function createRenderer(
     console.error("chat modal not found");
   }
   chatModal.g = game;
+  chatModal.transformHandler = transformHandler;
   chatModal.initEventBus(eventBus);
 
   const multiTabModal = document.querySelector(
@@ -383,6 +390,10 @@ export class GameRenderer {
     private performanceOverlay: PerformanceOverlay,
   ) {}
 
+  private onResize = () => {
+    this.transformHandler.updateCanvasBoundingRect();
+  };
+
   initialize() {
     loadAllSprites().catch((err) =>
       console.warn("Failed to preload sprites:", err),
@@ -390,12 +401,14 @@ export class GameRenderer {
 
     this.layers.forEach((l) => l.init?.());
 
-    window.addEventListener("resize", () =>
-      this.transformHandler.updateCanvasBoundingRect(),
-    );
+    window.addEventListener("resize", this.onResize);
 
     //show whole map on startup
     this.transformHandler.centerAll(0.9);
+  }
+
+  dispose() {
+    window.removeEventListener("resize", this.onResize);
   }
 
   tick() {

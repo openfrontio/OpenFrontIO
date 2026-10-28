@@ -1,12 +1,12 @@
+import { Tick, UnitType } from "@openfront/engine-api/game/GameTypes";
+import { NukeMagnitude } from "@openfront/engine-lib/configuration/Config";
 import {
   AttackLogicInput,
   AttackLogicResult,
-  Config,
-  NukeMagnitude,
-} from "../../src/core/configuration/Config";
-import { Tick, UnitType } from "../../src/core/game/Game";
+  EngineConfig,
+} from "@openfront/engine/configuration/EngineConfig";
 
-export class TestConfig extends Config {
+export class TestConfig extends EngineConfig {
   private _proximityBonusPortsNb: number = 0;
   private _defaultNukeSpeed: number = 4;
   private _spawnImmunityDuration: number = 0;
@@ -14,10 +14,6 @@ export class TestConfig extends Config {
 
   disableNavMesh(): boolean {
     return this.gameConfig().disableNavMesh ?? true;
-  }
-
-  radiusPortSpawn(): number {
-    return 1;
   }
 
   proximityBonusPortsNb(totalPorts: number): number {
@@ -80,6 +76,6 @@ export class TestConfig extends Config {
 }
 export class UseRealAttackLogic extends TestConfig {
   attackLogic(input: AttackLogicInput): AttackLogicResult {
-    return Config.prototype.attackLogic.call(this, input);
+    return EngineConfig.prototype.attackLogic.call(this, input);
   }
 }
