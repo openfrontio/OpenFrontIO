@@ -16,7 +16,6 @@
     "num_land_tiles": 93711,
     "width": 500
   },
-  "multiplayer_frequency": 3,
   "name": "Bosphorus Straits",
   "nations": [
     {
@@ -147,7 +146,6 @@
       }
     ]
   },
-  "team_frequency": 10,
   "themes": ["europe", "asia"],
   "translation_key": "map.bosphorusstraits"
 }

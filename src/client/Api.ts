@@ -1558,40 +1558,6 @@ export async function claimAllRewards(): Promise<
   }
 }
 
-export async function createCustomCurrencyCheckout(
-  hardAmount: number,
-): Promise<string | false> {
-  try {
-    const response = await fetch(
-      `${getApiBase()}/stripe/create-custom-currency-checkout`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: await getAuthHeader(),
-        },
-        body: JSON.stringify({
-          hardAmount: hardAmount,
-          hostname: window.location.origin,
-        }),
-      },
-    );
-    if (!response.ok) {
-      console.error(
-        "createCustomCurrencyCheckout: request failed",
-        response.status,
-        response.statusText,
-      );
-      return false;
-    }
-    const json = await response.json();
-    return json.url;
-  } catch (e) {
-    console.error("createCustomCurrencyCheckout: request failed", e);
-    return false;
-  }
-}
-
 // What the caller wants to buy. `provider` is chosen explicitly by the client
 // (see paymentsProvider() in Payments.ts) — the server never infers the rail.
 // Exactly one identifier travels with each kind, and it is always a NAME: the
@@ -1994,6 +1960,31 @@ export async function markNoticeSeen(notice: string): Promise<boolean> {
     return true;
   } catch (e) {
     console.error("markNoticeSeen: request failed", e);
+    return false;
+  }
+}
+
+export async function markMessageSeen(kind: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/messages/seen`, {
+      method: "POST",
+      headers: {
+        Authorization: await getAuthHeader(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ kind }),
+    });
+    if (!response.ok) {
+      console.error(
+        "markMessageSeen: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("markMessageSeen: request failed", e);
     return false;
   }
 }

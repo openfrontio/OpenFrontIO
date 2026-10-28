@@ -30,7 +30,6 @@
     "num_land_tiles": 164340,
     "width": 1096
   },
-  "multiplayer_frequency": 10,
   "name": "Ommatrypta",
   "nations": [
     {
@@ -136,6 +135,7 @@
       "name": "Balling"
     }
   ],
+  "special_team_count": 13,
   "themes": ["scary", "fantasy"],
   "translation_key": "map.ommatrypta"
 }

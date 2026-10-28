@@ -106,6 +106,59 @@ describe("Water Nukes", () => {
       expect(game.isWater(target)).toBe(false);
     });
 
+    test("single water tile converts minimap and provides water component to shoreline", async () => {
+      const navGame = await setup(
+        "plains",
+        {
+          infiniteGold: true,
+          instantBuild: true,
+          waterNukes: true,
+          disableNavMesh: false,
+        },
+        [info],
+      );
+      const target = navGame.ref(10, 10);
+      const shoreSameMini = navGame.ref(10, 11); // shares minimap tile (5, 5) with target
+      const shoreAdjacentMini = navGame.ref(10, 9); // in adjacent minimap tile (5, 4)
+
+      // Baseline: verify plains map has no initial shoreline or water component here
+      expect(navGame.isLand(target)).toBe(true);
+      expect(navGame.isShoreline(shoreSameMini)).toBe(false);
+      expect(navGame.getWaterComponent(shoreSameMini)).toBeNull();
+      expect(navGame.isShoreline(shoreAdjacentMini)).toBe(false);
+      expect(navGame.getWaterComponent(shoreAdjacentMini)).toBeNull();
+
+      navGame.queueWaterConversion(target);
+      navGame.executeNextTick();
+
+      expect(navGame.isWater(target)).toBe(true);
+
+      const miniX = Math.floor(navGame.x(target) / 2);
+      const miniY = Math.floor(navGame.y(target) / 2);
+      const miniTile = navGame.miniMap().ref(miniX, miniY);
+      expect(navGame.miniMap().isWater(miniTile)).toBe(true);
+
+      // Target water tile has a valid positive water component
+      const component = navGame.getWaterComponent(target);
+      expect(component).not.toBeNull();
+      expect(component).toBeGreaterThan(0);
+
+      // Branch 1: shoreline tile sharing the same 2x2 minimap tile (5, 5)
+      expect(navGame.isShoreline(shoreSameMini)).toBe(true);
+      expect(navGame.getWaterComponent(shoreSameMini)).toBe(component);
+
+      // Branch 2: shoreline tile in an adjacent 2x2 minimap tile (5, 4), exercising neighbor search
+      expect(navGame.miniMap().isLand(navGame.miniMap().ref(5, 4))).toBe(true);
+      expect(navGame.isShoreline(shoreAdjacentMini)).toBe(true);
+      expect(navGame.getWaterComponent(shoreAdjacentMini)).toBe(component);
+
+      // Verify a port constructed on the shoreline correctly resolves the component
+      const navPlayer = navGame.player(info.id);
+      navPlayer.conquer(shoreSameMini);
+      constructionExecution(navGame, navPlayer, 10, 11, UnitType.Port);
+      expect(navGame.getWaterComponent(shoreSameMini)).toBe(component);
+    });
+
     test("waterGraphVersion increments after water conversion", async () => {
       // Need a game with nav mesh enabled for graph rebuilds
       const navGame = await setup(
@@ -124,8 +177,7 @@ describe("Water Nukes", () => {
 
       const versionBefore = navGame.waterGraphVersion();
 
-      // Launch multiple nukes in a cluster to ensure enough tiles convert
-      // for at least one minimap tile to flip (need >= 3 of 4 source tiles)
+      // Launch a nuke to convert tiles to water
       const target = navGame.ref(50, 50);
       navGame.addExecution(
         new NukeExecution(UnitType.AtomBomb, player2, target, null),

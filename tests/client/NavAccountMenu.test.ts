@@ -33,6 +33,7 @@ vi.mock("../../src/client/Utils", () => ({
 
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { NavAccountMenu } from "../../src/client/components/NavAccountMenu";
+import { gamePortal } from "../../src/client/GamePortal";
 import { updateAccountNavButton } from "../../src/client/NavAccountButton";
 
 function userMe(subscribed = false, publicId = "p"): UserMeResponse {
@@ -169,7 +170,20 @@ describe("nav-account-menu", () => {
     expect(itemKeys()).not.toContain("copy-profile-url");
   });
 
-  it("keeps the menu on CrazyGames, minus the log-out they own", async () => {
+  it("drops the profile link on Poki, which it would lead players off", async () => {
+    vi.spyOn(gamePortal, "name").mockReturnValue("poki");
+    try {
+      fireUserMe(userMe());
+      await el.updateComplete;
+      await click(trigger());
+      expect(itemKeys()).toContain("view-account");
+      expect(itemKeys()).not.toContain("copy-profile-url");
+    } finally {
+      vi.mocked(gamePortal.name).mockRestore();
+    }
+  });
+
+  it("keeps the menu on CrazyGames, minus log-out and account settings", async () => {
     isOnCrazyGames.mockReturnValue(true);
     getUserProfile.mockResolvedValue({ username: "cg-player" });
     fireUserMe(userMe());
@@ -182,6 +196,8 @@ describe("nav-account-menu", () => {
     expect(itemKeys()).toContain("change-username");
     // …but signing out happens on CrazyGames, not through /auth/logout.
     expect(itemKeys()).not.toContain("log-out");
+    // Nor are their players asked for an email in account settings.
+    expect(itemKeys()).not.toContain("account-settings");
   });
 
   it("drops log-out on Steam, where the ticket signs the player back in", async () => {

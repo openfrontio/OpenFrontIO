@@ -128,6 +128,8 @@ export class AccountModal extends BaseModal {
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
+  // The card's clan tag, from the player's own profile (displayClanTag).
+  private displayClanTag: string | null = null;
   // Preserves the Games tab's accumulated list + cursor across tab switches.
   private gameHistoryCache: PlayerGameHistoryCache | null = null;
   private gamesScrollTop = 0;
@@ -195,8 +197,12 @@ export class AccountModal extends BaseModal {
       title: translateText("account_modal.title"),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
+      // Not on Poki: the profile link leads players off Poki.
       rightContent:
-        isLoggedIn && !this.isLoadingUser && publicId
+        isLoggedIn &&
+        !this.isLoadingUser &&
+        publicId &&
+        gamePortal.name() !== "poki"
           ? html`
               <copy-button
                 class="shrink-0"
@@ -257,9 +263,11 @@ export class AccountModal extends BaseModal {
     }
     if (!this.isLinkedAccount()) {
       return html`<div class="custom-scrollbar mr-1">
-        ${gamePortal.isOnGamePortal()
-          ? this.renderPortalSignIn()
-          : this.renderLoginOptions()}
+        ${
+          gamePortal.isOnGamePortal()
+            ? this.renderPortalSignIn()
+            : this.renderLoginOptions()
+        }
       </div>`;
     }
     return html`
@@ -347,11 +355,13 @@ export class AccountModal extends BaseModal {
               <discord-user-header
                 .data=${this.userMeResponse?.user?.discord ?? null}
               ></discord-user-header>
-              ${this.userMeResponse?.user?.steam
-                ? html`<steam-user-header
-                    .data=${this.userMeResponse.user.steam}
-                  ></steam-user-header>`
-                : null}
+              ${
+                this.userMeResponse?.user?.steam
+                  ? html`<steam-user-header
+                      .data=${this.userMeResponse.user.steam}
+                    ></steam-user-header>`
+                  : null
+              }
               ${this.renderLoggedInAs()}
             </div>
           </div>
@@ -452,11 +462,13 @@ export class AccountModal extends BaseModal {
   private renderStatsTab(): TemplateResult {
     return html`
       ${this.renderProfileCard("full")}
-      ${this.hasAnyStats()
-        ? html`<player-stats-tree-view
-            .statsTree=${this.statsTree}
-          ></player-stats-tree-view>`
-        : this.renderEmptyState("📊", translateText("account_modal.no_stats"))}
+      ${
+        this.hasAnyStats()
+          ? html`<player-stats-tree-view
+              .statsTree=${this.statsTree}
+            ></player-stats-tree-view>`
+          : this.renderEmptyState("📊", translateText("account_modal.no_stats"))
+      }
     `;
   }
 
@@ -471,9 +483,11 @@ export class AccountModal extends BaseModal {
     return html`
       <player-game-history-view
         .publicId=${publicId}
-        .cachedState=${this.gameHistoryCache?.publicId === publicId
-          ? this.gameHistoryCache
-          : null}
+        .cachedState=${
+          this.gameHistoryCache?.publicId === publicId
+            ? this.gameHistoryCache
+            : null
+        }
         @history-updated=${(e: CustomEvent<PlayerGameHistoryCache>) => {
           this.gameHistoryCache = e.detail;
         }}
@@ -584,8 +598,10 @@ export class AccountModal extends BaseModal {
     if (rewards.length === 0) return "";
     return html`<rewards-panel
       .rewards=${rewards}
-      .signedIn=${responseHasLinkedIdentity(this.userMeResponse ?? false) ||
-      this.portalUser !== null}
+      .signedIn=${
+        responseHasLinkedIdentity(this.userMeResponse ?? false) ||
+        this.portalUser !== null
+      }
       @rewards-changed=${this.handleRewardsChanged}
     ></rewards-panel>`;
   }
@@ -644,7 +660,7 @@ export class AccountModal extends BaseModal {
       class=${variant === "full" ? "mb-4 block" : "block"}
       .variant=${variant}
       .username=${player.username ?? player.publicId}
-      .clanTag=${player.clans?.[0]?.tag ?? null}
+      .clanTag=${this.displayClanTag}
       .progress=${view.progress}
       .provisional=${view.provisional}
       .openKey=${`account-${this.openCount}`}
@@ -942,6 +958,7 @@ export class AccountModal extends BaseModal {
 
   private resetPlayerData(): void {
     this.statsTree = null;
+    this.displayClanTag = null;
     this.dropProgression();
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
@@ -1010,11 +1027,13 @@ export class AccountModal extends BaseModal {
             <p class="text-white/50 text-sm font-medium">
               ${translateText("account_modal.sign_in_desc")}
             </p>
-            ${viaBrowser
-              ? html`<p class="text-white/40 text-xs">
-                  ${translateText("account_modal.desktop_sign_in_desc")}
-                </p>`
-              : nothing}
+            ${
+              viaBrowser
+                ? html`<p class="text-white/40 text-xs">
+                    ${translateText("account_modal.desktop_sign_in_desc")}
+                  </p>`
+                : nothing
+            }
             ${this.renderCurrency()}
           </div>
 
@@ -1032,10 +1051,12 @@ export class AccountModal extends BaseModal {
                 class="w-6 h-6 relative z-10"
               />
               <span class="font-bold relative z-10 tracking-wide"
-                >${viaBrowser
-                  ? translateText("account_modal.desktop_login_discord")
-                  : translateText("main.login_discord") ||
-                    translateText("account_modal.link_discord")}</span
+                >${
+                  viaBrowser
+                    ? translateText("account_modal.desktop_login_discord")
+                    : translateText("main.login_discord") ||
+                      translateText("account_modal.link_discord")
+                }</span
               >
             </button>
 
@@ -1051,9 +1072,11 @@ export class AccountModal extends BaseModal {
                 class="w-6 h-6 relative z-10"
               />
               <span class="font-bold relative z-10 tracking-wide"
-                >${viaBrowser
-                  ? translateText("account_modal.desktop_login_google")
-                  : translateText("main.login_google")}</span
+                >${
+                  viaBrowser
+                    ? translateText("account_modal.desktop_login_google")
+                    : translateText("main.login_google")
+                }</span
               >
             </button>
 
@@ -1061,17 +1084,19 @@ export class AccountModal extends BaseModal {
                  player is already signed in there through the native Steam
                  ticket, so the button would be a no-op that looks like an
                  option. -->
-            ${viaBrowser
-              ? nothing
-              : html`<button
-                  @click="${this.handleSteamLogin}"
-                  class="w-full px-6 py-4 text-white bg-[#1b2838] hover:bg-[#2a475e] border border-[#66c0f4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#66c0f4] transition-colors duration-200 flex items-center justify-center gap-3 shadow-lg"
-                >
-                  ${steamGlyph("w-6 h-6 shrink-0")}
-                  <span class="font-bold tracking-wide"
-                    >${translateText("main.login_steam")}</span
+            ${
+              viaBrowser
+                ? nothing
+                : html`<button
+                    @click="${this.handleSteamLogin}"
+                    class="w-full px-6 py-4 text-white bg-[#1b2838] hover:bg-[#2a475e] border border-[#66c0f4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#66c0f4] transition-colors duration-200 flex items-center justify-center gap-3 shadow-lg"
                   >
-                </button>`}
+                    ${steamGlyph("w-6 h-6 shrink-0")}
+                    <span class="font-bold tracking-wide"
+                      >${translateText("main.login_steam")}</span
+                    >
+                  </button>`
+            }
 
             <!-- Divider -->
             <div class="flex items-center gap-4 py-2">
@@ -1089,16 +1114,20 @@ export class AccountModal extends BaseModal {
           </div>
 
           <!-- Not on Steam: the Steam ticket re-creates the session on reload. -->
-          ${steamSDK.isOnSteam()
-            ? nothing
-            : html`<div class="mt-8 text-center border-t border-white/10 pt-6">
-                <button
-                  @click="${this.handleLogout}"
-                  class="text-[10px] font-bold text-white/20 hover:text-red-400 transition-colors uppercase tracking-widest pb-0.5"
+          ${
+            steamSDK.isOnSteam()
+              ? nothing
+              : html`<div
+                  class="mt-8 text-center border-t border-white/10 pt-6"
                 >
-                  ${translateText("account_modal.clear_session")}
-                </button>
-              </div>`}
+                  <button
+                    @click="${this.handleLogout}"
+                    class="text-[10px] font-bold text-white/20 hover:text-red-400 transition-colors uppercase tracking-widest pb-0.5"
+                  >
+                    ${translateText("account_modal.clear_session")}
+                  </button>
+                </div>`
+          }
         </div>
       </div>
     `;
@@ -1212,7 +1241,7 @@ export class AccountModal extends BaseModal {
           this.userMeResponse = userMe;
           this.prefetchPrestigeFlow();
           if (this.userMeResponse?.player?.publicId) {
-            this.loadPlayerProfile(this.userMeResponse.player.publicId);
+            void this.loadPlayerProfile(this.userMeResponse.player.publicId);
           }
         }
         this.finishLoadingUser(opening);
@@ -1246,6 +1275,7 @@ export class AccountModal extends BaseModal {
       }
 
       this.statsTree = data.stats;
+      this.displayClanTag = data.displayClanTag ?? null;
 
       this.requestUpdate();
     } catch (err) {

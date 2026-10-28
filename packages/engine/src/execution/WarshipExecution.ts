@@ -231,7 +231,7 @@ export class WarshipExecution implements Execution {
     const warshipTile = this.warship.tile();
     const warshipComponent = this.mg.getWaterComponent(warshipTile);
     if (warshipComponent === null) {
-      throw new Error(`Warship at tile ${warshipTile} has no water component`);
+      return undefined;
     }
 
     const nearest = findMinimumBy(
@@ -239,10 +239,7 @@ export class WarshipExecution implements Execution {
       (port) => this.mg.euclideanDistSquared(warshipTile, port.tile()),
       (port) => {
         const portComponent = this.mg.getWaterComponent(port.tile());
-        if (portComponent === null) {
-          throw new Error(`Port at tile ${port.tile()} has no water component`);
-        }
-        return portComponent === warshipComponent;
+        return portComponent !== null && portComponent === warshipComponent;
       },
     );
 
@@ -593,7 +590,7 @@ export class WarshipExecution implements Execution {
     const warshipTile = this.warship.tile();
     const warshipComponent = this.mg.getWaterComponent(warshipTile);
     if (warshipComponent === null) {
-      throw new Error(`Warship at tile ${warshipTile} has no water component`);
+      return undefined;
     }
 
     let bestTile: TileRef | undefined = undefined;

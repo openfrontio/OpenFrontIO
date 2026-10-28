@@ -101,6 +101,7 @@ describe("boot sequencing against a real <username-input>", () => {
       storeClaimPrompt: () => {},
       updateSteamGrant: () => {},
       markNoticeSeen: () => {},
+      markMessageSeen: () => {},
       now: () => Date.now(),
     };
     const player = userMe.player;
@@ -118,6 +119,8 @@ describe("boot sequencing against a real <username-input>", () => {
       rewardCount: (player.rewards ?? []).length,
       claimPromptDue: true,
       claimStringsReady: true,
+      reportThanksDue: false,
+      reportThanksStringsReady: true,
     });
     await runBootInterrupt(
       interrupt,

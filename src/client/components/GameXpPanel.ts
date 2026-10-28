@@ -1,4 +1,4 @@
-import type { GameType } from "@openfront/engine-api/game/GameTypes";
+import { GameMode, type GameType } from "@openfront/engine-api/game/GameTypes";
 import type {
   GameXpEligible,
   GameXpResponse,
@@ -64,8 +64,10 @@ export type GameXpPanelState =
   // The player died while the game carries on: the figure worked out in the
   // browser (ProvisionalXpAtDeath.ts), marked as provisional. It gets the
   // full reveal, level-ups, milestones and the Legend moment included: most
-  // players die before the end and would otherwise miss them. `confirming`
-  // once the game has ended and the server is being asked.
+  // players die before the end and would otherwise miss them. A player still
+  // in the game when it ends gets one too, from the finished game, so the
+  // server's scoring is never a wait. `confirming` once the game has ended
+  // and the server is being asked.
   | { kind: "provisional"; provisional: ProvisionalXp; confirming: boolean }
   // Waiting for the server to process the game. Never shows a number.
   | { kind: "calculating" }
@@ -80,15 +82,20 @@ export type GameXpPanelState =
 // How the server's figure came to differ from the provisional one. Spelled
 // out in full so the translation checks can see the keys. An unverified game
 // has no line of its own: the server's figure is then ineligible, and its
-// note says so.
+// note says so. Nor does the game counted for longer on the server
+// (game_length): a little more time, under the provisional figure's line
+// (and on its own, confirmed quietly). A win added says "your team won" in a
+// team game (TEAM_WIN_KEY).
 const DIFFERENCE_KEYS: Partial<Record<XpDifference, string>> = {
-  team_win: "progression.reconcile_team_win",
+  win_added: "progression.reconcile_win",
+  win_removed: "progression.reconcile_win_removed",
   feats: "progression.reconcile_feats",
   daily_cap: "progression.reconcile_daily_cap",
   multiplier: "progression.reconcile_multiplier",
   reconnect: "progression.reconcile_reconnect",
   other: "progression.reconcile_other",
 };
+const TEAM_WIN_KEY = "progression.reconcile_team_win";
 
 // How a reveal runs: in full (a provisional figure too); or as the
 // celebration once the server has answered with more than a provisional
@@ -834,29 +841,31 @@ export class GameXpPanel extends LitElement {
       data-xp-state=${stateName}
       data-xp-revealing=${revealing ? "true" : nothing}
       style=${style ?? nothing}
-      class="relative mb-4 rounded-lg bg-black/30 p-3 text-left text-white ${revealing
-        ? "cursor-pointer"
-        : ""}"
+      class="relative mb-4 rounded-lg bg-black/30 p-3 text-left text-white ${
+        revealing ? "cursor-pointer" : ""
+      }"
       aria-live="polite"
       aria-busy=${revealing ? "true" : "false"}
       title=${revealing ? translateText("progression.tap_to_skip") : nothing}
       @click=${() => this.skipReveal()}
     >
-      ${revealing
-        ? // Tapping anywhere skips; this is the same for the keyboard. Out of
-          // sight until focused, so the panel looks the same for a pointer.
-          html`<button
-            type="button"
-            data-xp-skip
-            class="sr-only focus:not-sr-only focus:absolute focus:right-2 focus:top-2 focus:z-10 focus:rounded-sm focus:bg-black/80 focus:px-2 focus:py-1 focus:text-xs focus:font-bold focus:text-white"
-            @click=${(e: Event) => {
-              e.stopPropagation();
-              this.skipReveal();
-            }}
-          >
-            ${translateText("progression.skip_reveal")}
-          </button>`
-        : nothing}
+      ${
+        revealing
+          ? // Tapping anywhere skips; this is the same for the keyboard. Out of
+            // sight until focused, so the panel looks the same for a pointer.
+            html`<button
+              type="button"
+              data-xp-skip
+              class="sr-only focus:not-sr-only focus:absolute focus:right-2 focus:top-2 focus:z-10 focus:rounded-sm focus:bg-black/80 focus:px-2 focus:py-1 focus:text-xs focus:font-bold focus:text-white"
+              @click=${(e: Event) => {
+                e.stopPropagation();
+                this.skipReveal();
+              }}
+            >
+              ${translateText("progression.skip_reveal")}
+            </button>`
+          : nothing
+      }
       ${content}
     </section>`;
   }
@@ -960,9 +969,9 @@ export class GameXpPanel extends LitElement {
         // bonus, blue for a cut.
         const boost = caption.permille > 1000;
         content = html`<div
-          class="xp-levelup-in xp-bonus-text ${boost
-            ? ""
-            : "xp-bonus-text-cut"} text-center text-xl font-black uppercase italic tracking-wide sm:text-2xl"
+          class="xp-levelup-in xp-bonus-text ${
+            boost ? "" : "xp-bonus-text-cut"
+          } text-center text-xl font-black uppercase italic tracking-wide sm:text-2xl"
           data-xp-caption-step=${r?.step ?? REST_STEP}
         >
           ${this.captionContent(caption)}
@@ -993,9 +1002,9 @@ export class GameXpPanel extends LitElement {
   ): TemplateResult {
     return html`<div
       data-xp-bar
-      class="relative h-3 w-full overflow-hidden rounded-sm bg-white/15 ${flashing
-        ? "xp-bar-flash"
-        : ""}"
+      class="relative h-3 w-full overflow-hidden rounded-sm bg-white/15 ${
+        flashing ? "xp-bar-flash" : ""
+      }"
       role="progressbar"
       aria-label=${translateText("progression.xp_bar_label")}
       aria-valuemin="0"
@@ -1005,12 +1014,12 @@ export class GameXpPanel extends LitElement {
     >
       <div
         data-xp-bar-fill
-        class="h-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.7)] ${this
-          .barAnimate
-          ? "xp-bar-filling transition-[width] ease-linear"
-          : ""}"
-        style="width: ${fillPercent}%; transition-duration: ${this
-          .barDurationMs}ms"
+        class="h-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.7)] ${
+          this.barAnimate ? "xp-bar-filling transition-[width] ease-linear" : ""
+        }"
+        style="width: ${fillPercent}%; transition-duration: ${
+          this.barDurationMs
+        }ms"
       ></div>
       ${Array.from(
         { length: BAR_SEGMENTS - 1 },
@@ -1096,12 +1105,13 @@ export class GameXpPanel extends LitElement {
               <span class="hidden @min-[16rem]:block"></span>
               <span
                 data-xp-total
-                class="text-sm font-bold tabular-nums transition-colors ${applying ===
-                "boost"
-                  ? "xp-accent-text"
-                  : applying === "cut"
-                    ? "text-sky-300"
-                    : "text-white/90"}"
+                class="text-sm font-bold tabular-nums transition-colors ${
+                  applying === "boost"
+                    ? "xp-accent-text"
+                    : applying === "cut"
+                      ? "text-sky-300"
+                      : "text-white/90"
+                }"
               >
                 ${translateText("progression.xp_total", {
                   xp: formatXp(counted),
@@ -1116,37 +1126,43 @@ export class GameXpPanel extends LitElement {
             </div>
           </div>
           <div class="relative grid h-10 w-10 shrink-0 place-items-center">
-            ${levelUp !== null
-              ? keyed(
-                  `${levelUp}-${legend}`,
-                  html`<span
-                      aria-hidden="true"
-                      class="xp-burst pointer-events-none absolute inset-0 rounded-full border-2 border-yellow-200 shadow-[0_0_12px_rgba(250,204,21,0.9)]"
-                    ></span
-                    ><span
-                      aria-hidden="true"
-                      class="xp-burst-late pointer-events-none absolute inset-0 rounded-full border border-white/80"
-                    ></span>`,
-                )
-              : nothing}
-            ${next !== null
-              ? keyed(
-                  `${next}-${levelUp !== null}-${legend}`,
-                  html`<span
-                    data-xp-next-badge
-                    data-level=${next}
-                    class="relative inline-block ${levelUp !== null
-                      ? legend
-                        ? "xp-legend-pop"
-                        : "xp-badge-pop"
-                      : `opacity-60 ${settle}`}"
-                    >${levelBadge(
-                      next,
-                      levelUp !== null && legend && next >= MAX_LEVEL,
-                    )}</span
-                  >`,
-                )
-              : nothing}
+            ${
+              levelUp !== null
+                ? keyed(
+                    `${levelUp}-${legend}`,
+                    html`<span
+                        aria-hidden="true"
+                        class="xp-burst pointer-events-none absolute inset-0 rounded-full border-2 border-yellow-200 shadow-[0_0_12px_rgba(250,204,21,0.9)]"
+                      ></span
+                      ><span
+                        aria-hidden="true"
+                        class="xp-burst-late pointer-events-none absolute inset-0 rounded-full border border-white/80"
+                      ></span>`,
+                  )
+                : nothing
+            }
+            ${
+              next !== null
+                ? keyed(
+                    `${next}-${levelUp !== null}-${legend}`,
+                    html`<span
+                      data-xp-next-badge
+                      data-level=${next}
+                      class="relative inline-block ${
+                        levelUp !== null
+                          ? legend
+                            ? "xp-legend-pop"
+                            : "xp-badge-pop"
+                          : `opacity-60 ${settle}`
+                      }"
+                      >${levelBadge(
+                        next,
+                        levelUp !== null && legend && next >= MAX_LEVEL,
+                      )}</span
+                    >`,
+                  )
+                : nothing
+            }
           </div>
         </div>
         ${this.renderBonuses(data)}
@@ -1168,13 +1184,15 @@ export class GameXpPanel extends LitElement {
         data-xp-provisional
         class="mb-1 flex items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-wider text-amber-300"
       >
-        ${s.confirming
-          ? html`<span
-              data-xp-confirming
-              class="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-amber-300/30 border-t-amber-300 motion-reduce:animate-none"
-              aria-hidden="true"
-            ></span>`
-          : nothing}
+        ${
+          s.confirming
+            ? html`<span
+                data-xp-confirming
+                class="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-amber-300/30 border-t-amber-300 motion-reduce:animate-none"
+                aria-hidden="true"
+              ></span>`
+            : nothing
+        }
         <span
           >${translateText(
             s.confirming
@@ -1235,8 +1253,13 @@ export class GameXpPanel extends LitElement {
           params: { xp: formatXp(outcome.provisionalTotal) },
         });
       }
+      const teamGame =
+        s.reconciled.provisional.inputs.gameMode === GameMode.Team;
       for (const difference of outcome.differences) {
-        const key = DIFFERENCE_KEYS[difference];
+        const key =
+          difference === "win_added" && teamGame
+            ? TEAM_WIN_KEY
+            : DIFFERENCE_KEYS[difference];
         // The ineligibility note already says it.
         if (
           key === undefined ||
@@ -1707,14 +1730,19 @@ export class GameXpPanel extends LitElement {
     return html`
       ${this.renderLevelUp(data)} ${this.renderRewards(data)}
       ${this.renderBreakdown(data)}
-      ${data.breakdown.leftEarly
-        ? this.collapsible(
-            r === null,
-            html`<p data-xp-left-early class="m-0 mt-3 text-xs text-amber-300">
-              ${translateText("progression.left_early")}
-            </p>`,
-          )
-        : nothing}
+      ${
+        data.breakdown.leftEarly
+          ? this.collapsible(
+              r === null,
+              html`<p
+                data-xp-left-early
+                class="m-0 mt-3 text-xs text-amber-300"
+              >
+                ${translateText("progression.left_early")}
+              </p>`,
+            )
+          : nothing
+      }
     `;
   }
 
@@ -1738,9 +1766,9 @@ export class GameXpPanel extends LitElement {
   private collapsible(open: boolean, content: TemplateResult): TemplateResult {
     return html`<div
       data-xp-collapsible=${open ? "open" : "closed"}
-      class="grid transition-[grid-template-rows] duration-300 ease-out ${open
-        ? "grid-rows-[1fr]"
-        : "grid-rows-[0fr]"}"
+      class="grid transition-[grid-template-rows] duration-300 ease-out ${
+        open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+      }"
     >
       <div class="min-h-0 ${open ? "" : "overflow-hidden"}">${content}</div>
     </div>`;
@@ -1758,9 +1786,9 @@ export class GameXpPanel extends LitElement {
       html`<div
         data-xp-legend
         data-xp-slot-hidden=${shown ? nothing : "true"}
-        class="xp-shine mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-yellow-300/50 bg-gradient-to-r from-transparent via-fuchsia-500/15 to-transparent px-3 py-2.5 ${settled
-          ? ""
-          : this.slideSlotClass(shown)}"
+        class="xp-shine mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-yellow-300/50 bg-gradient-to-r from-transparent via-fuchsia-500/15 to-transparent px-3 py-2.5 ${
+          settled ? "" : this.slideSlotClass(shown)
+        }"
       >
         <level-badge
           .level=${100}
@@ -1821,18 +1849,15 @@ export class GameXpPanel extends LitElement {
         data-xp-levelup
         data-xp-milestone=${milestone.level}
         data-xp-slot-hidden=${shown ? nothing : "true"}
-        class="xp-shine mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-yellow-400/30 bg-gradient-to-r from-transparent via-yellow-400/15 to-transparent px-3 py-2 ${settled
-          ? ""
-          : this.slideSlotClass(shown)}"
+        class="xp-shine mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-yellow-400/30 bg-gradient-to-r from-transparent via-yellow-400/15 to-transparent px-3 py-2 ${
+          settled ? "" : this.slideSlotClass(shown)
+        }"
       >
         <span
           data-xp-level-reached=${milestone.level}
-          class="grid h-11 w-11 shrink-0 place-items-center rounded-full shadow-[0_0_16px_rgba(250,204,21,0.55)] ${r !==
-            null &&
-          shown &&
-          !settled
-            ? "xp-badge-pop"
-            : ""}"
+          class="grid h-11 w-11 shrink-0 place-items-center rounded-full shadow-[0_0_16px_rgba(250,204,21,0.55)] ${
+            r !== null && shown && !settled ? "xp-badge-pop" : ""
+          }"
         >
           <level-badge
             .level=${milestone.level}
@@ -1891,35 +1916,41 @@ export class GameXpPanel extends LitElement {
     const hidden = shown ? "" : "invisible";
     return html`${unlocks.map(
       (u) =>
-        html`${divider
-            ? html`<span
-                aria-hidden="true"
-                class="hidden w-px self-stretch bg-yellow-400/30 sm:block ${hidden} ${animate
-                  ? "xp-unlock-sep"
-                  : ""}"
-              ></span>`
-            : nothing}
+        html`${
+            divider
+              ? html`<span
+                  aria-hidden="true"
+                  class="hidden w-px self-stretch bg-yellow-400/30 sm:block ${hidden} ${
+                    animate ? "xp-unlock-sep" : ""
+                  }"
+                ></span>`
+              : nothing
+          }
           <div
             data-xp-unlock=${u.flare.flareName}
             data-xp-slot-hidden=${shown ? nothing : "true"}
-            class="flex min-w-0 basis-full items-center justify-center gap-2.5 sm:basis-auto ${hidden} ${animate
-              ? "xp-unlock-in"
-              : ""}"
+            class="flex min-w-0 basis-full items-center justify-center gap-2.5 sm:basis-auto ${hidden} ${
+              animate ? "xp-unlock-in" : ""
+            }"
           >
             <span
-              class="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-lg border border-purple-400/60 bg-white/5 p-0.5 shadow-[0_0_14px_rgba(192,132,252,0.45)] ${animate
-                ? "xp-unlock-pop"
-                : ""}"
+              class="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-lg border border-purple-400/60 bg-white/5 p-0.5 shadow-[0_0_14px_rgba(192,132,252,0.45)] ${
+                animate ? "xp-unlock-pop" : ""
+              }"
             >
-              ${u.resolved !== null
-                ? html`<cosmetic-preview
-                    class="block h-full w-full"
-                    .resolved=${u.resolved}
-                    size="card"
-                  ></cosmetic-preview>`
-                : html`<span aria-hidden="true" class="text-xl text-purple-200"
-                    >★</span
-                  >`}
+              ${
+                u.resolved !== null
+                  ? html`<cosmetic-preview
+                      class="block h-full w-full"
+                      .resolved=${u.resolved}
+                      size="card"
+                    ></cosmetic-preview>`
+                  : html`<span
+                      aria-hidden="true"
+                      class="text-xl text-purple-200"
+                      >★</span
+                    >`
+              }
             </span>
             <div class="min-w-0 text-left">
               <div
@@ -2023,32 +2054,40 @@ export class GameXpPanel extends LitElement {
       ?data-xp-reward-held-line=${heldKey !== undefined}
       class="flex items-center gap-1.5"
     >
-      ${soft
-        ? html`<cap-icon .size=${24}></cap-icon>`
-        : html`<plutonium-icon .size=${20}></plutonium-icon>`}
+      ${
+        soft
+          ? html`<cap-icon .size=${24}></cap-icon>`
+          : html`<plutonium-icon .size=${20}></plutonium-icon>`
+      }
       <span
         data-xp-reward-amount
-        class="text-xl font-black tabular-nums ${soft
-          ? "text-amber-700"
-          : "text-green-400"}"
+        class="text-xl font-black tabular-nums ${
+          soft ? "text-amber-700" : "text-green-400"
+        }"
         >+${amount}</span
       >
       <span class="text-[13px] font-bold text-white/80"
         >${translateText(soft ? "cosmetics.soft" : "cosmetics.hard")}</span
       >
-      ${line.each !== null
-        ? html`<span data-xp-reward-each class="text-xs text-white/45"
-            >${translateText("progression.rewards_each", {
-              count: line.count,
-              amount: line.each.toLocaleString(),
-            })}</span
-          >`
-        : nothing}
-      ${heldKey !== undefined
-        ? html`<span data-xp-reward-held class="text-xs font-bold text-white/60"
-            >${translateText(heldKey)}</span
-          >`
-        : nothing}
+      ${
+        line.each !== null
+          ? html`<span data-xp-reward-each class="text-xs text-white/45"
+              >${translateText("progression.rewards_each", {
+                count: line.count,
+                amount: line.each.toLocaleString(),
+              })}</span
+            >`
+          : nothing
+      }
+      ${
+        heldKey !== undefined
+          ? html`<span
+              data-xp-reward-held
+              class="text-xs font-bold text-white/60"
+              >${translateText(heldKey)}</span
+            >`
+          : nothing
+      }
     </div>`;
   }
 
@@ -2071,10 +2110,9 @@ export class GameXpPanel extends LitElement {
     return html`<div class="flex flex-col items-end gap-1">
       <span
         data-xp-claim
-        class="inline-flex transition-transform duration-75 ${this
-          .claimPressed && !claiming
-          ? "scale-95"
-          : ""}"
+        class="inline-flex transition-transform duration-75 ${
+          this.claimPressed && !claiming ? "scale-95" : ""
+        }"
         @pointerdown=${(e: PointerEvent) => {
           e.stopPropagation();
           this.claimPressed = true;
@@ -2091,27 +2129,31 @@ export class GameXpPanel extends LitElement {
         <o-button
           variant="primary"
           size="sm"
-          translationKey=${claiming
-            ? "progression.rewards_claiming"
-            : "account_modal.claim"}
+          translationKey=${
+            claiming ? "progression.rewards_claiming" : "account_modal.claim"
+          }
           .disable=${claiming}
-          .icon=${claiming
-            ? html`<span
-                data-xp-claim-spinner
-                aria-hidden="true"
-                class="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-white/35 border-t-white motion-reduce:animate-none"
-              ></span>`
-            : undefined}
+          .icon=${
+            claiming
+              ? html`<span
+                  data-xp-claim-spinner
+                  aria-hidden="true"
+                  class="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-white/35 border-t-white motion-reduce:animate-none"
+                ></span>`
+              : undefined
+          }
         ></o-button>
       </span>
-      ${claim.status === "idle" && claim.failed
-        ? html`<span
-            data-xp-claim-error
-            role="alert"
-            class="text-xs text-red-300"
-            >${translateText("account_modal.claim_failed")}</span
-          >`
-        : nothing}
+      ${
+        claim.status === "idle" && claim.failed
+          ? html`<span
+              data-xp-claim-error
+              role="alert"
+              class="text-xs text-red-300"
+              >${translateText("account_modal.claim_failed")}</span
+            >`
+          : nothing
+      }
     </div>`;
   }
 
@@ -2149,20 +2191,24 @@ export class GameXpPanel extends LitElement {
         </svg>
         ${translateText("progression.rewards_claimed")}
       </span>
-      ${to !== null
-        ? html`<span
-            data-xp-balance
-            class="text-[11px] tabular-nums text-white/50"
-            >${plutonium
-              ? translateText("progression.rewards_balance", {
-                  caps: at("soft"),
-                  plutonium: at("hard"),
-                })
-              : translateText("progression.rewards_balance_caps", {
-                  caps: at("soft"),
-                })}</span
-          >`
-        : nothing}
+      ${
+        to !== null
+          ? html`<span
+              data-xp-balance
+              class="text-[11px] tabular-nums text-white/50"
+              >${
+                plutonium
+                  ? translateText("progression.rewards_balance", {
+                      caps: at("soft"),
+                      plutonium: at("hard"),
+                    })
+                  : translateText("progression.rewards_balance_caps", {
+                      caps: at("soft"),
+                    })
+              }</span
+            >`
+          : nothing
+      }
     </div>`;
   }
 
@@ -2311,17 +2357,20 @@ export class GameXpPanel extends LitElement {
           const accent = this.accentOf(m);
           return html`<span
             data-xp-multiplier=${m.key}
-            data-xp-tier=${m.key === "subscriber"
-              ? (subscriberTierOf(m.permille)?.tier ?? nothing)
-              : nothing}
+            data-xp-tier=${
+              m.key === "subscriber"
+                ? (subscriberTierOf(m.permille)?.tier ?? nothing)
+                : nothing
+            }
             data-xp-slot-hidden=${shown ? nothing : "true"}
-            style=${accent === null
-              ? nothing
-              : `--accent-a: ${accent[0]}; --accent-b: ${accent[1]}`}
-            class="inline-block text-sm font-bold uppercase italic tracking-wide ${m.permille >
-            1000
-              ? "xp-bonus-line"
-              : "text-sky-300"} ${this.slideSlotClass(shown)}"
+            style=${
+              accent === null
+                ? nothing
+                : `--accent-a: ${accent[0]}; --accent-b: ${accent[1]}`
+            }
+            class="inline-block text-sm font-bold uppercase italic tracking-wide ${
+              m.permille > 1000 ? "xp-bonus-line" : "text-sky-300"
+            } ${this.slideSlotClass(shown)}"
             >${xpBonusText(m.key, m.permille)}</span
           >`;
         })}

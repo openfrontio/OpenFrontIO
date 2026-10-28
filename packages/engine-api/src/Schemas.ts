@@ -156,12 +156,24 @@ export const RENDERABLE_NAME_HAS_ALNUM_RE = new RegExp(
   "u",
 );
 
+export const MIN_USERNAME_LENGTH = 3;
+export const MAX_USERNAME_LENGTH = 20;
+export const MAX_STORED_USERNAME_LENGTH = 27;
+
 // Requires at least one non-space so a name is never all padding.
+// Wide enough to read names already written into archived game records (replays).
 export const UsernameSchema = z
   .string()
   .regex(new RegExp(`^(?=.*\\S)[${RENDERABLE_NAME_CHARS}]+$`, "u"))
-  .min(3)
-  .max(27);
+  .min(MIN_USERNAME_LENGTH)
+  .max(MAX_STORED_USERNAME_LENGTH);
+
+// Active username schema enforced on live player joins: prevents bypassing the 20-character cap.
+export const JoinUsernameSchema = z
+  .string()
+  .regex(new RegExp(`^(?=.*\\S)[${RENDERABLE_NAME_CHARS}]+$`, "u"))
+  .min(MIN_USERNAME_LENGTH)
+  .max(MAX_USERNAME_LENGTH);
 
 export const ClanTagSchema = z
   .string()
@@ -306,6 +318,9 @@ export const GameConfigSchema = z.object({
   // create_game / update_game_config.
   trusted: z.boolean().optional(),
   maxTimerValue: zb.uint({ min: 1, max: 120 }).nullable().optional(), // In minutes
+  // Tile share needed to win, in tenths of a percent (755 = 75.5%). Capped at
+  // 99.9%: the win check is a strict ">", so 100% could never be won.
+  winThresholdTenths: zb.uint({ min: 100, max: 999 }).nullable().optional(),
   customAllianceDuration: zb.uint({ max: 15 }).nullable().optional(), // In minutes; 0 disables alliances
   startDelay: zb.uint({ max: 600 }).nullable().optional(), // In seconds
   spawnImmunityDuration: zb.uint().nullable().optional(), // In ticks

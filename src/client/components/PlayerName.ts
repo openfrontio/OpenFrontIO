@@ -51,26 +51,30 @@ export class PlayerName extends LitElement {
     // (dates, role chips) while keeping the badge glued to the name.
     return html`
       <span class="inline-flex items-center gap-1.5 min-w-0 max-w-full">
-        ${this.onNameClick
-          ? html`<button
-              type="button"
-              class=${this.nameClass !== ""
-                ? this.nameClass
-                : "text-xs text-white/60 font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5 hover:bg-white/10 hover:text-white transition-colors"}
-              title=${translateText("player_profile.view")}
-              aria-label=${translateText("player_profile.view")}
-              @click=${() => this.onNameClick?.()}
-            >
-              ${nameContent ?? displayName}
-            </button>`
-          : html`<copy-button
-              compact
-              .copyText=${copyText}
-              .displayText=${displayName}
-              .displayContent=${nameContent}
-              .showVisibilityToggle=${false}
-              .showCopyIcon=${false}
-            ></copy-button>`}
+        ${
+          this.onNameClick
+            ? html`<button
+                type="button"
+                class=${
+                  this.nameClass !== ""
+                    ? this.nameClass
+                    : "text-xs text-white/60 font-mono bg-white/5 px-2 py-0.5 rounded border border-white/5 hover:bg-white/10 hover:text-white transition-colors"
+                }
+                title=${translateText("player_profile.view")}
+                aria-label=${translateText("player_profile.view")}
+                @click=${() => this.onNameClick?.()}
+              >
+                ${nameContent ?? displayName}
+              </button>`
+            : html`<copy-button
+                compact
+                .copyText=${copyText}
+                .displayText=${displayName}
+                .displayContent=${nameContent}
+                .showVisibilityToggle=${false}
+                .showCopyIcon=${false}
+              ></copy-button>`
+        }
         ${isVerifiedUsername(this.username) ? verifiedBadge() : nothing}
       </span>
     `;

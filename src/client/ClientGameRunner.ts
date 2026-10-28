@@ -1,4 +1,3 @@
-import { ClientID, GameID } from "@openfront/engine-api/Schemas";
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
@@ -12,9 +11,10 @@ import {
   GameUpdateViewData,
   HashUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
-import { findClosestBy } from "@openfront/engine-lib/Util";
+import { ClientID, GameID } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { findClosestBy } from "@openfront/engine-lib/Util";
 import { EventBus } from "@openfront/shared/EventBus";
 import { GameMapLoader } from "@openfront/shared/GameMapLoader";
 import { replacer } from "@openfront/shared/SharedUtil";
@@ -28,8 +28,11 @@ import {
 } from "@openfront/shared/WireSchemas";
 import { ClientEnv } from "../client/ClientEnv";
 import { reloadForUpdate, translateText } from "../client/Utils";
+import { MapLayerController } from "./controllers/MapLayerController";
 import { isDesktopShell } from "./DesktopShell";
 import { GameMetrics } from "./GameMetrics";
+import { createRenderer, GameRenderer } from "./hud/GameRenderer";
+import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
 import { showInGameAlert } from "./InGameModal";
 import {
   AutoUpgradeEvent,
@@ -48,12 +51,28 @@ import {
 import { rememberLobbyRoster } from "./LobbyRosterLevels";
 import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
+import {
+  applyGraphicsOverrides,
+  createRenderSettings,
+  deepAssign,
+  GLUnavailableError,
+  MapRenderer,
+  preloadAtlasData,
+  renderDpr,
+  type RenderSettings,
+  showGLGate,
+  trackGLInit,
+} from "./render/gl";
+import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { versionedPathForMismatchedGame } from "./ServerList";
+import { audioMixer, initAudioMixer } from "./sound/AudioMixer";
+import { SoundManager } from "./sound/SoundManager";
 import { reportGameError } from "./Telemetry";
 import {
   loadCachedTerrainMap,
   terrainMapFileLoader,
 } from "./TerrainMapFileLoader";
+import { themeProvider } from "./theme/ThemeProvider";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
   counterAttackTroops,
@@ -76,28 +95,9 @@ import {
   UserSettings,
 } from "./UserSettings";
 import { createCanvas } from "./Utils";
+import { GameView, PlayerView } from "./view";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { WorkerClient } from "./WorkerClient";
-import { MapLayerController } from "./controllers/MapLayerController";
-import { createRenderer, GameRenderer } from "./hud/GameRenderer";
-import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
-import {
-  applyGraphicsOverrides,
-  createRenderSettings,
-  deepAssign,
-  GLUnavailableError,
-  MapRenderer,
-  preloadAtlasData,
-  renderDpr,
-  type RenderSettings,
-  showGLGate,
-  trackGLInit,
-} from "./render/gl";
-import { ALL_UNIT_TYPES, UnitState } from "./render/types";
-import { audioMixer, initAudioMixer } from "./sound/AudioMixer";
-import { SoundManager } from "./sound/SoundManager";
-import { themeProvider } from "./theme/ThemeProvider";
-import { GameView, PlayerView } from "./view";
 
 export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
@@ -113,6 +113,8 @@ export interface LobbyConfig {
   gameStartInfo?: WireGameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+  // Set when resuming a saved singleplayer game: the snapshot to restore.
+  snapshot?: Uint8Array;
   // Watch without playing.
   spectator?: boolean;
   // Host only: the play token the lobby was created under, used for the
@@ -155,7 +157,7 @@ export function joinLobby(
     }
     // Always send join - server will detect reconnection via persistentID
     console.log(`Joining game lobby ${lobbyConfig.gameID}`);
-    transport.joinGame();
+    void transport.joinGame();
   };
   // Only begin a terrain preload once the same map has been stable across
   // this many consecutive lobby_info broadcasts (one per second). A host
@@ -252,7 +254,7 @@ export function joinLobby(
           pendingPreloadStreak = 1;
         }
         if (pendingPreloadStreak >= MAP_PRELOAD_DEBOUNCE_STREAK) {
-          requestTerrainLoad(gameConfig.gameMap, gameConfig.gameMapSize);
+          void requestTerrainLoad(gameConfig.gameMap, gameConfig.gameMapSize);
         }
       }
       return;
@@ -261,7 +263,7 @@ export function joinLobby(
       console.log(
         `lobby: game prestarting: ${JSON.stringify(message, replacer)}`,
       );
-      requestTerrainLoad(message.gameMap, message.gameMapSize);
+      void requestTerrainLoad(message.gameMap, message.gameMapSize);
       resolvePrestart();
     }
     if (message.type === "start") {
@@ -333,15 +335,17 @@ export function joinLobby(
           }),
         );
       } else if (message.error === "kick_reason.host_left") {
-        showInGameAlert(translateText("kick_reason.host_left")).then(() => {
-          document.dispatchEvent(
-            new CustomEvent("leave-lobby", {
-              detail: { lobby: lobbyConfig.gameID, cause: "host-left" },
-              bubbles: true,
-              composed: true,
-            }),
-          );
-        });
+        void showInGameAlert(translateText("kick_reason.host_left")).then(
+          () => {
+            document.dispatchEvent(
+              new CustomEvent("leave-lobby", {
+                detail: { lobby: lobbyConfig.gameID, cause: "host-left" },
+                bubbles: true,
+                composed: true,
+              }),
+            );
+          },
+        );
       } else if (message.error === "kick_reason.match_cancelled") {
         // A matched player never connected and the server cancelled the game
         // pre-start. Tear down the dead lobby, then put the matchmaking
@@ -407,11 +411,11 @@ export function joinLobby(
             // version's page is not being served), so say so and stop.
             void showInGameAlert(translateText("update_available.message"));
           } else {
-            showInGameAlert(translateText("update_available.message")).then(
-              () => {
-                reloadForUpdate();
-              },
-            );
+            void showInGameAlert(
+              translateText("update_available.message"),
+            ).then(() => {
+              reloadForUpdate();
+            });
           }
         }
       } else {
@@ -706,7 +710,11 @@ async function createClientGame(
   // Kick off the font-atlas fetch so it overlaps with worker init; the
   // render passes need it parsed before createWebGLView runs.
   const atlasDataLoad = preloadAtlasData();
-  const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
+  const worker = new WorkerClient(
+    lobbyConfig.gameStartInfo,
+    clientID,
+    lobbyConfig.snapshot,
+  );
   await worker.initialize();
   await atlasDataLoad;
   const gameView = new GameView(
@@ -718,6 +726,7 @@ async function createClientGame(
     lobbyConfig.playerClanTag,
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
+    lobbyConfig.snapshot !== undefined,
   );
 
   // Transparent fullscreen overlay used purely as the pointer-event /
@@ -833,7 +842,7 @@ async function createClientGame(
       if (debugGui === null) {
         if (debugGuiLoading) return;
         debugGuiLoading = true;
-        import("./render/gl/debug/index")
+        void import("./render/gl/debug/index")
           .then(({ createDebugGui }) => {
             debugGui = createDebugGui(
               view.getSettings(),
@@ -1050,7 +1059,7 @@ export class ClientGameRunner {
     const onconnect = () => {
       console.log("Connected to game server!");
       this.awaitingStart = true;
-      this.transport.rejoinGame(this.turnsSeen);
+      void this.transport.rejoinGame(this.turnsSeen);
     };
 
     let hasGoneToPlayer = false;
@@ -1191,7 +1200,7 @@ export class ClientGameRunner {
     this.transport.updateCallback(onconnect, onmessage);
     console.log("sending join game");
     // Rejoin game from the start so we don't miss any turns.
-    this.transport.rejoinGame(0);
+    void this.transport.rejoinGame(0);
   }
 
   public stop() {

@@ -9,7 +9,6 @@
 import {
   NameViewData,
   PlayerType,
-  Team,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import {
@@ -30,7 +29,7 @@ import { PlayerView } from "../../src/client/view/PlayerView";
 import { WorkerClient } from "../../src/client/WorkerClient";
 
 /** Theme stub — returns deterministic colors so PlayerView's color math works. */
-export function stubTheme(): Theme {
+function stubTheme(): Theme {
   const white = colord("#ffffff");
   const grey = colord("#808080");
   const defended = { light: white, dark: grey };
@@ -74,7 +73,7 @@ export function stubWorker(): WorkerClient {
 }
 
 /** Build TerrainMapData wrapping a fresh GameMapImpl of the given size. */
-export function stubTerrainMap(width = 10, height = 10): TerrainMapData {
+function stubTerrainMap(width = 10, height = 10): TerrainMapData {
   const terrain = new Uint8Array(width * height);
   const gameMap = new GameMapImpl(width, height, terrain, 0);
   return {
@@ -224,5 +223,3 @@ export function makeEmptyGu(
     ...overrides,
   };
 }
-
-export { Team };
