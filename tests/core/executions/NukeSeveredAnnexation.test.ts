@@ -235,7 +235,7 @@ describe("land a nuke severs from the main body is annexed", () => {
   // Border clusters join land that touches only at a corner, but territories
   // join only side by side. Piece A borders nothing but fallout; piece B,
   // touching it diagonally, borders the attacker. Run both orientations so
-  // whichever piece the cluster lists first, A is judged on its own.
+  // neither orientation has an accidental advantage.
   test.each([
     {
       name: "A above-left of B",
@@ -422,8 +422,6 @@ describe("land a nuke severs from the main body is annexed", () => {
   });
 
   // The generation counter wraps after 2^32 passes and clears every stamp.
-  // Wrap it at each pass of the defender's check in turn, on the inland case
-  // so the territory race runs too.
   test("a wrap of the generation counter mid-check changes nothing", async () => {
     const { body, arm: longArm, craters, cutX } = longArmCases[1];
     const cutOff = rect(cutX, 0, 199, 199);
@@ -441,24 +439,44 @@ describe("land a nuke severs from the main body is annexed", () => {
       await newGame();
       const scratch = tileTraversalScratch(game);
       const phases: string[] = [];
+      let armed = false;
       for (const [method, phase] of [
         ["calculateClusters", "clusters"],
-        ["splitCluster", "split"],
-        ["largestTerritoryPart", "race"],
-        ["annexSeveredClusters", "annex"],
+        ["removeClusters", "removeClusters"],
+        ["removeCluster", "removeCluster"],
+        ["isEnclosed", "isEnclosed"],
       ]) {
         const original = proto[method];
-        vi.spyOn(proto, method).mockImplementation(function (
-          this: unknown,
-          ...args: unknown[]
-        ) {
-          phases.push(phase);
-          try {
-            return original.apply(this, args);
-          } finally {
-            phases.pop();
-          }
-        });
+        if (method === "removeClusters") {
+          vi.spyOn(proto, "removeClusters").mockImplementation(function (
+            this: unknown,
+            ...args: unknown[]
+          ) {
+            phases.push(phase);
+            if (armed && (this as { player: Player }).player === defender) {
+              armed = false;
+              // The counter wraps on the next bump past 0xfffffffe.
+              scratch.gen = 0xfffffffe - passesBeforeWrap;
+            }
+            try {
+              return original.apply(this, args);
+            } finally {
+              phases.pop();
+            }
+          });
+        } else {
+          vi.spyOn(proto, method).mockImplementation(function (
+            this: unknown,
+            ...args: unknown[]
+          ) {
+            phases.push(phase);
+            try {
+              return original.apply(this, args);
+            } finally {
+              phases.pop();
+            }
+          });
+        }
       }
       const bump = proto.bumpGenerations;
       vi.spyOn(proto, "bumpGenerations").mockImplementation(function (
@@ -472,19 +490,6 @@ describe("land a nuke severs from the main body is annexed", () => {
           wrappedIn.add(phases[phases.length - 1]);
         }
         return first;
-      });
-      let armed = false;
-      const removeClusters = proto.removeClusters;
-      vi.spyOn(proto, "removeClusters").mockImplementation(function (
-        this: unknown,
-        ...args: unknown[]
-      ) {
-        if (armed && (this as { player: Player }).player === defender) {
-          armed = false;
-          // The counter wraps on the next bump past 0xfffffffe.
-          scratch.gen = 0xfffffffe - passesBeforeWrap;
-        }
-        return removeClusters.apply(this, args);
       });
 
       paint(union(body, longArm));
@@ -502,87 +507,12 @@ describe("land a nuke severs from the main body is annexed", () => {
       expect(defenderTilesIn(kept), label).toBe(keptBefore);
     }
     expect(brokenRuns).toBe(0);
-    expect([...wrappedIn].sort()).toEqual([
-      "annex",
-      "clusters",
-      "race",
-      "split",
-    ]);
+    expect([...wrappedIn].sort()).toEqual(
+      wrappedIn.has("removeClusters")
+        ? ["clusters", "removeClusters"]
+        : ["clusters"],
+    );
   }, 60_000);
-
-  test("the territory race adds up parts that share a territory", () => {
-    // A is larger than B, but each half of A is smaller.
-    const a = rect(20, 20, 49, 29);
-    const b = rect(100, 100, 119, 109);
-    paint(union(a, b));
-    const exec = new PlayerExecution(defender);
-    exec.init(game, game.ticks());
-    const parts = [
-      [game.ref(20, 20)],
-      [game.ref(100, 100)],
-      [game.ref(49, 29)],
-    ];
-    const roots = new Int32Array(parts.length);
-
-    const main = (
-      exec as unknown as {
-        largestTerritoryPart(p: number[][], r: Int32Array): number;
-      }
-    ).largestTerritoryPart(parts, roots);
-
-    expect([0, 2]).toContain(main);
-    expect(roots[1]).toBe(1);
-    const rootOf = (i: number) => (roots[i] === i ? i : roots[roots[i]]);
-    expect(rootOf(0)).toBe(main);
-    expect(rootOf(2)).toBe(main);
-  });
-
-  test("the territory race drops a ring round a hole without walking the land round it", () => {
-    // The defender holds the whole map but a hole in the middle and a small
-    // territory in the top-left corner.
-    const hole = rect(98, 98, 102, 102);
-    const ring = rect(97, 97, 103, 103);
-    const small = rect(0, 0, 9, 9);
-    // The attacker holds the hole and a strip round the small territory.
-    paint((x, y) => (!hole(x, y) && !rect(0, 0, 10, 10)(x, y)) || small(x, y));
-    const exec = new PlayerExecution(defender);
-    exec.init(game, game.ticks());
-    const race = (
-      exec as unknown as {
-        largestTerritoryPart(
-          p: number[][],
-          r: Int32Array,
-          b?: readonly number[],
-        ): number;
-      }
-    ).largestTerritoryPart.bind(exec);
-    const ringTiles: number[] = [];
-    game.map().forEachTile((t) => {
-      if (ring(game.x(t), game.y(t)) && !hole(game.x(t), game.y(t))) {
-        ringTiles.push(t);
-      }
-    });
-    const map = game.map();
-    const neighbors4 = map.neighbors4.bind(map);
-    let walked = 0;
-    vi.spyOn(map, "neighbors4").mockImplementation((ref, out) => {
-      walked++;
-      return neighbors4(ref, out);
-    });
-
-    // The ring's flood leaves its box at once and drops out, so the small
-    // territory, which fits its box, wins although the land round the ring
-    // is far larger, and the race never walks that land.
-    const smallTiles = [game.ref(0, 9), game.ref(9, 9), game.ref(9, 0)];
-    expect(
-      race(
-        [ringTiles, smallTiles],
-        new Int32Array(2),
-        [97, 97, 103, 103, 0, 0, 9, 9],
-      ),
-    ).toBe(1);
-    expect(walked).toBeLessThan(400);
-  });
 
   test("a piece cut off a main body whose land outruns its border along the map edge is annexed", () => {
     // A band right across the map: the map edge has no border tiles, so the
@@ -649,60 +579,36 @@ describe("land a nuke severs from the main body is annexed", () => {
     const defenderLand = (x: number, y: number) => !corner(x, y);
     const mainBefore = defenderTilesIn(defenderLand);
 
-    // Count the tiles the severed-land floods, and the race for the main
-    // body, walk.
-    let inFlood = false;
-    let inRace = false;
+    // Count the tiles isEnclosed walks.
+    let inEnclosed = false;
     let walked = 0;
-    let raced = 0;
     const proto = PlayerExecution.prototype as unknown as Record<
       string,
       (...args: unknown[]) => unknown
     >;
-    const original = proto.severedTerritory;
-    const flood = vi
-      .spyOn(proto, "severedTerritory")
+    const originalEnclosed = proto.isEnclosed;
+    const isEnclosedSpy = vi
+      .spyOn(proto, "isEnclosed")
       .mockImplementation(function (this: unknown, ...args: unknown[]) {
-        inFlood = true;
+        inEnclosed = true;
         try {
-          return original.apply(this, args);
+          return originalEnclosed.apply(this, args);
         } finally {
-          inFlood = false;
-        }
-      });
-    const originalRace = proto.largestTerritoryPart;
-    const race = vi
-      .spyOn(proto, "largestTerritoryPart")
-      .mockImplementation(function (this: unknown, ...args: unknown[]) {
-        inRace = true;
-        try {
-          return originalRace.apply(this, args);
-        } finally {
-          inRace = false;
+          inEnclosed = false;
         }
       });
     const map = game.map();
     const neighbors4 = map.neighbors4.bind(map);
     vi.spyOn(map, "neighbors4").mockImplementation((ref, out) => {
-      if (inFlood) walked++;
-      if (inRace) raced++;
+      if (inEnclosed) walked++;
       return neighbors4(ref, out);
     });
 
     runClusterChecks();
 
-    // The race for the main body walks a few hundred tiles: the ring's
-    // flood drops out once it leaves the ring's box, and the main body only
-    // has to outgrow the piece. Unbounded, it walks the whole main body
-    // (~37,000 tiles).
-    expect(race).toHaveBeenCalled();
-    expect(raced).toBeLessThan(1000);
-    expect(flood).toHaveBeenCalled();
+    expect(isEnclosedSpy).toHaveBeenCalled();
     expect(defenderTilesIn(piece)).toBe(0);
     expect(defenderTilesIn(defenderLand)).toBe(mainBefore);
-    // The main body is ~37,000 tiles, and without a bound these passes walk
-    // nearly all of it; a flood from the ring stops once it leaves the
-    // ring's bounding box.
     expect(walked).toBeLessThan(1000);
   });
 
@@ -949,4 +855,123 @@ describe("land a nuke severs from the main body is annexed", () => {
     expect(defenderTilesIn(edgeBody)).toBe(bodyBefore);
     expect(defenderTilesIn(edgeStrip)).toBe(stripBefore);
   });
+
+  test("a pinched enclave with a checkerboard border surrounded by one enemy with no fallout is annexed", () => {
+    // An enclave surrounded by an enemy on all sides, with a 2x2 diagonal checkerboard pattern on its border and zero fallout
+    const enclave = (x: number, y: number) => {
+      if (x < 50 || x > 60 || y < 50 || y > 60) return false;
+      // 2x2 checkerboard notch along the border
+      if ((x === 50 || x === 51) && (y === 50 || y === 51)) {
+        return (x + y) % 2 === 0;
+      }
+      return true;
+    };
+    paint(rect(50, 50, 60, 60));
+    startClusterChecks();
+    // Mid-game attack creates the 2x2 checkerboard notch along the border
+    attacker.conquer(game.ref(50, 51));
+    attacker.conquer(game.ref(51, 50));
+    expect(defenderTilesIn(enclave)).toBeGreaterThan(0);
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(enclave)).toBe(0);
+  });
+
+  test("a pinched enclave with a checkerboard border surrounded by two different enemies with no fallout is annexed", () => {
+    paint(union(mainBody, rect(100, 100, 110, 110)));
+    // Third player surrounds the southern half of the enclave
+    for (let x = 95; x <= 115; x++) {
+      for (let y = 106; y <= 115; y++) {
+        if (game.owner(game.ref(x, y)) === attacker) {
+          third.conquer(game.ref(x, y));
+        }
+      }
+    }
+    const enclave = (x: number, y: number) => {
+      if (x < 100 || x > 110 || y < 100 || y > 110) return false;
+      if ((x === 100 || x === 101) && (y === 100 || y === 101)) {
+        return (x + y) % 2 === 0;
+      }
+      return true;
+    };
+    startClusterChecks();
+    attacker.conquer(game.ref(100, 101));
+    attacker.conquer(game.ref(101, 100));
+    expect(defenderTilesIn(enclave)).toBeGreaterThan(0);
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(enclave)).toBe(0);
+  });
+
+  test("two diagonally joined blobs where one contains an unsealed hole only annexes the sealed blob", () => {
+    // Defender has mainBody, Blob A (sealed), and Blob B (contains an unsealed pocket).
+    // Blob A and Blob B touch only at a diagonal corner, and are smaller than mainBody
+    // so evaluatePinchCandidates does not skip them before isEnclosed runs.
+    const blobA = rect(150, 50, 155, 55);
+    const blobB = rect(156, 56, 162, 62);
+    paint(union(mainBody, blobA, blobB));
+    startClusterChecks();
+
+    // Create an unsealed pocket of clean unclaimed land inside Blob B
+    for (let x = 158; x <= 160; x++) {
+      for (let y = 58; y <= 60; y++) {
+        defender.relinquish(game.ref(x, y));
+      }
+    }
+
+    // A nuke crater at the severance notch between Blob A and Blob B
+    fallout(rect(156, 53, 158, 55));
+
+    expect(defenderTilesIn(blobA)).toBeGreaterThan(0);
+    expect(defenderTilesIn(blobB)).toBeGreaterThan(0);
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(blobA)).toBe(0);
+    expect(defenderTilesIn(blobB)).toBeGreaterThan(0);
+  });
+
+  test.each([
+    { enemies: 1, expectedCoreTiles: 0 },
+    { enemies: 2, expectedCoreTiles: 2500 },
+  ])(
+    "a compact landlocked core surrounded by $enemies enemies follows enclosure rules despite a secondary strip's larger bounding box",
+    ({ enemies, expectedCoreTiles }) => {
+      // 50x50 compact core: 2,500 tiles, bbox 50x50 = 2,500
+      const core = rect(10, 10, 59, 59);
+
+      // Solid 2-tile wide L-shape: 320 tiles, bbox 82x81 = 6,642, ZERO diagonal pinches
+      const lShape = (x: number, y: number) => {
+        const inHoriz = x >= 100 && x <= 180 && (y === 100 || y === 101);
+        const inVert = (x === 180 || x === 181) && y >= 100 && y <= 180;
+        return inHoriz || inVert;
+      };
+      paint(union(core, lShape));
+
+      // A single enemy can annex even the primary territory; two enemies cannot.
+      for (let x = 9; x <= 60; x++) {
+        for (let y = 9; y <= 60; y++) {
+          if (!core(x, y)) {
+            (enemies === 1 || y <= 34 ? attacker : third).conquer(
+              game.ref(x, y),
+            );
+          }
+        }
+      }
+
+      startClusterChecks();
+
+      // Trigger mid-game conquest on the secondary strip to ensure cluster checks execute
+      attacker.conquer(game.ref(100, 100));
+
+      runClusterChecks();
+
+      // Territory area determines the main body, but does not exempt it from enclosure.
+      expect(defenderTilesIn(core)).toBe(expectedCoreTiles);
+      // Secondary L-shape strip is enclosed and annexed
+      expect(defenderTilesIn(lShape)).toBe(0);
+    },
+  );
 });

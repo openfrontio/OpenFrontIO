@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.resolve(__dirname, "../update.sh");
+const isWindows = process.platform === "win32";
 
 const BEGIN = "# --- BEGIN pull image (tested) ---";
 const END = "# --- END pull image (tested) ---";
@@ -98,7 +99,7 @@ exit 0
   };
 }
 
-describe("update.sh pull image", () => {
+describe.skipIf(isWindows)("update.sh pull image", () => {
   it("logs in with the token on stdin, pulls, then logs out", () => {
     const r = runPull({ GHCR_TOKEN: "ghs_token", GHCR_USER: "evan" });
     expect(r.status).toBe(0);

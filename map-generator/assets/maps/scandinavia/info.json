@@ -1,9 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Scandinavia",
   "name": "Scandinavia",
   "translation_key": "map.scandinavia",
   "categories": ["europe"],
-  "multiplayer_frequency": 7,
   "nations": [
     {
       "coordinates": [419, 1426],
@@ -91,7 +91,7 @@
       "flag": "ru"
     },
     {
-      "coordinates": [2007, 1727],
+      "coordinates": [2003, 1727],
       "name": "Tver",
       "flag": "ru"
     },

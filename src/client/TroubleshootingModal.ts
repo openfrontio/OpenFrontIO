@@ -164,7 +164,7 @@ export class TroubleshootingModal extends BaseModal {
   protected onOpen(): void {
     if (!this.initialized) {
       this.initialized = true;
-      this.loadDiagnostics();
+      void this.loadDiagnostics();
     }
   }
 

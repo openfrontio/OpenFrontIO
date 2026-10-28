@@ -18,7 +18,6 @@ import { ClientEnv } from "./ClientEnv";
 import type { KeyboardLayoutMap } from "./KeyboardLayout";
 import type { LangSelector } from "./LangSelector";
 import { pagePin } from "./PagePin";
-import { Platform } from "./Platform";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/7J5zwb_s_Cg";
 
@@ -726,14 +725,6 @@ export function getMessageTypeClasses(type: MessageType): string {
       console.warn(`Message type ${type} has no explicit color`);
       return severityColors["white"];
   }
-}
-
-export function getModifierKey(): string {
-  return Platform.isMac ? "⌘" : "Ctrl";
-}
-
-export function getAltKey(): string {
-  return Platform.isMac ? "⌥" : "Alt";
 }
 
 export function getGamesPlayed(): number {

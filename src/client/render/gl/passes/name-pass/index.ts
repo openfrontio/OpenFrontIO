@@ -56,7 +56,7 @@ import { LINES_PER_PLAYER, MAX_CHARS } from "./Types";
 const FLAG_ASPECT = 128 / 85;
 
 // Crown cosmetics use square cells (must match the crownAtlas cell size below).
-export const CROWN_CELL = 128;
+const CROWN_CELL = 128;
 
 // Initial unique-crown capacity. Crowns are a rare cosmetic, so start small
 // (32 × 128×128 RGBA8 + mips ≈ 2.8 MB vs ~43 MB at the 512 flag default);
@@ -440,8 +440,10 @@ export class NamePass {
       const slot = this.slots.get(playerID);
       if (!slot) continue;
 
+      const shouldSnap = snap || slot.tgtScale === 0;
+
       if (
-        !snap &&
+        !shouldSnap &&
         slot.nameLen !== 0 &&
         slot.index % NamePass.UPDATE_SLICES !== phase
       ) {
@@ -480,7 +482,11 @@ export class NamePass {
       // Write troop count string (refreshed per slot every 500ms, staggered by
       // slot index so updates spread across the window instead of bursting).
       const troopBucket = Math.floor((now + (slot.index % 5) * 0.1) / 0.5);
-      if (snap || slot.troopLen === 0 || troopBucket !== slot.lastTroopBucket) {
+      if (
+        shouldSnap ||
+        slot.troopLen === 0 ||
+        troopBucket !== slot.lastTroopBucket
+      ) {
         slot.lastTroopBucket = troopBucket;
         const troops = ps?.troops ?? 0;
         const troopStr = renderTroops(troops);
@@ -498,7 +504,7 @@ export class NamePass {
         entry.y !== slot.tgtY ||
         entry.size !== slot.tgtScale
       ) {
-        if (!snap) {
+        if (!shouldSnap) {
           const elapsed = now - slot.startTime;
           const t = Math.min(
             1 - Math.exp(-this.settings.name.lerpSpeed * elapsed),
@@ -515,6 +521,17 @@ export class NamePass {
         slot.tgtX = entry.x;
         slot.tgtY = entry.y;
         slot.tgtScale = entry.size;
+        slot.startTime = now;
+        dirty = true;
+      } else if (
+        snap &&
+        (slot.srcX !== slot.tgtX ||
+          slot.srcY !== slot.tgtY ||
+          slot.srcScale !== slot.tgtScale)
+      ) {
+        slot.srcX = slot.tgtX;
+        slot.srcY = slot.tgtY;
+        slot.srcScale = slot.tgtScale;
         slot.startTime = now;
         dirty = true;
       }
@@ -735,9 +752,10 @@ export class NamePass {
   }
 
   /**
-   * Find the player whose name plate (name + troops + flag + emoji/status row)
-   * is under the cursor, so the whole plate can fade as a unit. Mirrors the
-   * lerp + sizing math in name.vert.glsl. Returns the smallID, or 0 for none.
+   * Find the player whose name plate (name + troops + flag + emoji/status row
+   * + verified badge) is under the cursor, so the whole plate can fade as a
+   * unit. Mirrors the lerp + sizing math in name.vert.glsl and
+   * status-icon.vert.glsl. Returns the smallID, or 0 for none.
    */
   private hitTestNamePlate(now: number): number {
     const mx = this.mouseWorldX;
@@ -760,7 +778,7 @@ export class NamePass {
       const halfW =
         slot.nameHalfWidth * ((nameSize * nameScale) / this.fontSize);
       let left = wx - halfW;
-      const right = wx + halfW;
+      let right = wx + halfW;
       if (slot.flagLayerIdx >= 0) left -= lineH * 1.2 * FLAG_ASPECT;
 
       // Name line (flag is slightly taller); emoji/status rows sit above it.
@@ -774,11 +792,17 @@ export class NamePass {
         slot.target ||
         slot.embargo ||
         slot.nukeActive ||
-        slot.inDoomsdayClock;
+        slot.inDoomsdayClock ||
+        slot.doomsdayClockDraining ||
+        slot.doomsdayClockDecaying;
       if (slot.emojiAtlasIdx >= 0) {
         top = wy - lineH * ns.emojiRowOffset;
       } else if (hasStatus) {
         top = wy - lineH * ns.statusRowOffset;
+      }
+      if (slot.static.verified === true) {
+        right += lineH * 0.51;
+        top = Math.min(top, wy - lineH * 0.775);
       }
       const bottom = wy + lineH * (1.1 + 0.5 * ns.troopSizeMultiplier);
 

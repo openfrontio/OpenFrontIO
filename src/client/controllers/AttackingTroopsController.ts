@@ -70,6 +70,7 @@ export class AttackingTroopsController implements Controller {
   private alternateView = false;
   /** Reused buffer pushed to the view each frame. */
   private labelBuf: AttackTroopLabel[] = [];
+  private labelPool: AttackTroopLabel[] = [];
 
   constructor(
     private readonly game: GameView,
@@ -227,14 +228,16 @@ export class AttackingTroopsController implements Controller {
   private pushLabels(): void {
     if (this.alternateView || this.attacks.size === 0) {
       if (this.labelBuf.length > 0) {
-        this.labelBuf = [];
+        while (this.labelBuf.length > 0) {
+          this.labelPool.push(this.labelBuf.pop()!);
+        }
         this.view.setAttackTroopLabels(this.labelBuf);
       }
       return;
     }
 
     const now = performance.now();
-    const out: AttackTroopLabel[] = [];
+    let idx = 0;
 
     for (const entry of this.attacks.values()) {
       const r = entry.isIncoming ? INCOMING_R : OUTGOING_R;
@@ -244,18 +247,31 @@ export class AttackingTroopsController implements Controller {
         const t = Math.min(1, (now - slot.startMs) / ANIM_MS);
         slot.curX = slot.srcX + (slot.dstX - slot.srcX) * t;
         slot.curY = slot.srcY + (slot.dstY - slot.srcY) * t;
-        out.push({
-          x: slot.curX,
-          y: slot.curY,
-          text: entry.text,
-          colorR: r,
-          colorG: g,
-          colorB: b,
-        });
+        let item = this.labelBuf[idx];
+        if (!item) {
+          item = this.labelPool.pop() ?? {
+            x: 0,
+            y: 0,
+            text: "",
+            colorR: 0,
+            colorG: 0,
+            colorB: 0,
+          };
+          this.labelBuf.push(item);
+        }
+        item.x = slot.curX;
+        item.y = slot.curY;
+        item.text = entry.text;
+        item.colorR = r;
+        item.colorG = g;
+        item.colorB = b;
+        idx++;
       }
     }
 
-    this.labelBuf = out;
-    this.view.setAttackTroopLabels(out);
+    while (this.labelBuf.length > idx) {
+      this.labelPool.push(this.labelBuf.pop()!);
+    }
+    this.view.setAttackTroopLabels(this.labelBuf);
   }
 }
