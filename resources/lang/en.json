@@ -1777,6 +1777,8 @@
       "expand": "This is your land. Click the empty land next to it to grow.",
       "expand_touch": "This is your land. Tap the empty land next to it to grow.",
       "nation": "Last one: the Red Empire. Click its coast to send boats until it falls.",
+      "nation_land": "Now click the middle of its land, and keep going until it falls.",
+      "nation_land_touch": "Now tap the middle of its land, and keep going until it falls.",
       "nation_touch": "Last one: the Red Empire. Tap its coast to send boats until it falls.",
       "spawn": "Click inside the glowing circle to choose where you start.",
       "spawn_touch": "Tap inside the glowing circle to choose where you start.",

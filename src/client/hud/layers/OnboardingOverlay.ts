@@ -69,7 +69,7 @@ const EXPAND_TURNS = [0, 30, -30, 60, -60, 90, -90];
  * the edges.
  */
 const VIEW_X = [0.25, 0.75];
-const VIEW_Y = [0.3, 0.75];
+const VIEW_Y = [0.35, 0.75];
 
 /** Steps whose text says "tap" instead of "click" on touch devices. */
 const TOUCH_TEXT = new Set([
@@ -79,6 +79,7 @@ const TOUCH_TEXT = new Set([
   "coast",
   "boat",
   "nation",
+  "nation_land",
   "wrong_target",
 ]);
 
@@ -125,6 +126,13 @@ export class OnboardingOverlay extends LitElement implements Controller {
   private rivalsSeen = false;
   /** Clicked "Got it" on the troops step. */
   private troopsSeen = false;
+  /** Sent a boat to the nation: its middle is the target from then on. */
+  private boatedNation = false;
+  /**
+   * The last scan's instruction: when it changes, the camera makes sure its
+   * target is in view.
+   */
+  private lastKey = "";
   /** Troops of the attacks and boats let through lately, with when. */
   private inFlight: { troops: number; at: number }[] = [];
 
@@ -183,6 +191,12 @@ export class OnboardingOverlay extends LitElement implements Controller {
     if (verdict === "ok") {
       if (intent.type === "attack" || intent.type === "boat") {
         this.inFlight.push({ troops: intent.troops ?? 0, at: now });
+      }
+      if (
+        intent.type === "boat" &&
+        this.targetOfTile(intent.dst) === "nation"
+      ) {
+        this.boatedNation = true;
       }
       return true;
     }
@@ -265,7 +279,8 @@ export class OnboardingOverlay extends LitElement implements Controller {
   /**
    * Reads the step off the map, and where its arrow points: the free land
    * at our edge nearest where we're headed, the tribe's land nearest its
-   * name (its middle), the islet, or the nation's coast nearest the islet.
+   * name (its middle), the islet, or the nation's coast nearest the islet
+   * until a boat goes there, then its middle.
    */
   private scan(me: PlayerView) {
     const g = this.game;
@@ -275,6 +290,7 @@ export class OnboardingOverlay extends LitElement implements Controller {
     const tribeID = tribe?.smallID() ?? -1;
     const nationID = nation?.smallID() ?? -1;
     const tribeLoc = tribe?.nameLocation();
+    const nationLoc = nation?.nameLocation();
     // Grow toward the tribe while it's alive, then toward the islet.
     const goal = tribeLoc ?? ISLET;
     const near = (from: { x: number; y: number }, x: number, y: number) =>
@@ -289,6 +305,8 @@ export class OnboardingOverlay extends LitElement implements Controller {
     let tribeMiddleDist = Infinity;
     let nationCoast: Cell | null = null;
     let nationCoastDist = Infinity;
+    let nationMiddle: Cell | null = null;
+    let nationMiddleDist = Infinity;
 
     const w = g.width();
     const h = g.height();
@@ -302,11 +320,20 @@ export class OnboardingOverlay extends LitElement implements Controller {
       for (let x = 0; x < w; x++) {
         const t = g.ref(x, y);
         const owner = g.ownerID(t);
-        if (owner === nationID && g.isShore(t)) {
-          const d = near(ISLET, x, y);
-          if (d < nationCoastDist) {
-            nationCoastDist = d;
-            nationCoast = new Cell(x, y);
+        if (owner === nationID) {
+          if (g.isShore(t)) {
+            const d = near(ISLET, x, y);
+            if (d < nationCoastDist) {
+              nationCoastDist = d;
+              nationCoast = new Cell(x, y);
+            }
+          }
+          if (nationLoc) {
+            const d = near(nationLoc, x, y);
+            if (d < nationMiddleDist) {
+              nationMiddleDist = d;
+              nationMiddle = new Cell(x, y);
+            }
           }
           continue;
         }
@@ -373,7 +400,7 @@ export class OnboardingOverlay extends LitElement implements Controller {
           : at(this.intoFreeLand(frontier, ISLET));
         break;
       case "nation":
-        this.target = at(nationCoast);
+        this.target = at(this.boatedNation ? nationMiddle : nationCoast);
         break;
       case "won":
         this.target = null;
@@ -386,11 +413,13 @@ export class OnboardingOverlay extends LitElement implements Controller {
         new TutorialHighlightEvent(this.step === "troops" ? "troops" : null),
       );
     }
-    // A new step's target can be across the map, or under the HUD.
+    // A new instruction's target can be across the map, or under the HUD.
     const t = this.target;
-    if (this.step !== previous && t !== null && !this.inView(t)) {
+    const key = this.stepKey();
+    if (key !== this.lastKey && t !== null && !this.inView(t)) {
       this.eventBus.emit(new GoToPositionEvent(t.x, t.y));
     }
+    this.lastKey = key;
   }
 
   private inView(t: Target): boolean {
@@ -518,6 +547,7 @@ export class OnboardingOverlay extends LitElement implements Controller {
 
   private stepKey(): string {
     if (this.step === "boat" && !this.hasCoast) return "coast";
+    if (this.step === "nation" && this.boatedNation) return "nation_land";
     return this.step;
   }
 

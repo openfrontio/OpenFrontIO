@@ -28,7 +28,7 @@ It opens with a welcome card that describes OpenFront in one sentence, with a **
 3. **Troops.** The arrow points at the troop bar: troops grow fastest when it's about half full, so don't wait for it to fill. **Got it** moves on.
 4. **Attack the tribe.** Attack the tribe next to you and take its land.
 5. **Send a boat.** Click the coast across the strait and send a boat.
-6. **Attack the nation.** Conquer it and win.
+6. **Attack the nation.** Send a boat to its coast, then attack the middle of its land until it falls.
 
 The game ends with a victory screen that offers **Play a solo game**, which starts a normal solo game with the guide on.
 
