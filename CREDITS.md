@@ -121,7 +121,7 @@ Licensed under ODbL
 
 ### OFstats
 
-FFA rating model by [OFstats](https://ofstats.io/leaderboard/how-it-works) ([kdembler/ofstats-rating](https://github.com/kdembler/ofstats-rating), MIT, © 2026 Klaudiusz Dembler).  
+FFA rating model by [OFstats](https://ofstats.io/leaderboard/how-it-works) (MIT, © 2026 Klaudiusz Dembler; the model's code runs in the API, not in this repository).  
 Rank emblems in `resources/images/ffa-tiers/` by [OFstats](https://ofstats.io), licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
 
 ## Icons
