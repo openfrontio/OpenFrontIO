@@ -44,6 +44,12 @@ const IN_FLIGHT_MS = 400;
 const TARGET_RADIUS_TILES = 6;
 const MIN_SPOT_PX = 48;
 
+/**
+ * How far past our border, toward where we're headed, the expand step's
+ * spotlight sits, in tiles: on the border it reads as "click your land".
+ */
+const EXPAND_REACH_TILES = 10;
+
 /** Steps whose text says "tap" instead of "click" on touch devices. */
 const TOUCH_TEXT = new Set([
   "spawn",
@@ -313,13 +319,15 @@ export class OnboardingOverlay extends LitElement implements Controller {
         this.target = { ...SPAWN_ZONE };
         break;
       case "expand":
-        this.target = at(frontier);
+        this.target = at(this.intoFreeLand(frontier, goal));
         break;
       case "tribe":
         this.target = at(tribeEdge);
         break;
       case "boat":
-        this.target = hasCoast ? { ...ISLET } : at(frontier);
+        this.target = hasCoast
+          ? { ...ISLET }
+          : at(this.intoFreeLand(frontier, ISLET));
         break;
       case "nation":
         this.target = at(nationCoast);
@@ -338,6 +346,31 @@ export class OnboardingOverlay extends LitElement implements Controller {
     ) {
       this.eventBus.emit(new GoToPositionEvent(t.x, t.y));
     }
+  }
+
+  /**
+   * Walks from a free tile at our border up to EXPAND_REACH_TILES toward
+   * `goal`, staying on free land, and returns the last tile reached.
+   */
+  private intoFreeLand(
+    from: Cell | null,
+    goal: { x: number; y: number },
+  ): Cell | null {
+    if (from === null) return null;
+    const g = this.game;
+    const dx = goal.x - from.x;
+    const dy = goal.y - from.y;
+    const len = Math.hypot(dx, dy);
+    let last = from;
+    for (let i = 1; i <= Math.min(EXPAND_REACH_TILES, len); i++) {
+      const x = Math.round(from.x + (dx / len) * i);
+      const y = Math.round(from.y + (dy / len) * i);
+      if (!g.isValidCoord(x, y)) break;
+      const t = g.ref(x, y);
+      if (!g.isLand(t) || g.hasOwner(t)) break;
+      last = new Cell(x, y);
+    }
+    return last;
   }
 
   /** Keeps the spotlight on the target as the camera moves. */
