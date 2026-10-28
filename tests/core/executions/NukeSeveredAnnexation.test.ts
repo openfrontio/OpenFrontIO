@@ -906,21 +906,23 @@ describe("land a nuke severs from the main body is annexed", () => {
   });
 
   test("two diagonally joined blobs where one contains an unsealed hole only annexes the sealed blob", () => {
-    // Defender has Blob A (sealed) and Blob B (contains an unsealed pocket), touching only at a diagonal corner
-    const blobA = rect(50, 50, 55, 55);
-    const blobB = rect(56, 56, 62, 62);
-    paint(union(blobA, blobB));
+    // Defender has mainBody, Blob A (sealed), and Blob B (contains an unsealed pocket).
+    // Blob A and Blob B touch only at a diagonal corner, and are smaller than mainBody
+    // so evaluatePinchCandidates does not skip them before isEnclosed runs.
+    const blobA = rect(150, 50, 155, 55);
+    const blobB = rect(156, 56, 162, 62);
+    paint(union(mainBody, blobA, blobB));
     startClusterChecks();
 
     // Create an unsealed pocket of clean unclaimed land inside Blob B
-    for (let x = 58; x <= 60; x++) {
+    for (let x = 158; x <= 160; x++) {
       for (let y = 58; y <= 60; y++) {
         defender.relinquish(game.ref(x, y));
       }
     }
 
     // A nuke crater at the severance notch between Blob A and Blob B
-    fallout(rect(56, 53, 58, 55));
+    fallout(rect(156, 53, 158, 55));
 
     expect(defenderTilesIn(blobA)).toBeGreaterThan(0);
     expect(defenderTilesIn(blobB)).toBeGreaterThan(0);
@@ -932,20 +934,26 @@ describe("land a nuke severs from the main body is annexed", () => {
   });
 
   test("a compact landlocked core is not annexed when a secondary strip has a larger bounding box", () => {
+    // 50x50 compact core: 2,500 tiles, bbox 50x50 = 2,500
     const core = rect(10, 10, 59, 59);
-    const strip = (x: number, y: number) => {
-      if (x < 100 || x > 160 || y < 100 || y > 160) return false;
-      const step = Math.floor((x - 100) / 2);
-      return y === 100 + step * 2 || y === 100 + step * 2 + 1;
+
+    // Solid 2-tile wide L-shape: 320 tiles, bbox 82x81 = 6,642, ZERO diagonal pinches
+    const lShape = (x: number, y: number) => {
+      const inHoriz = x >= 100 && x <= 180 && (y === 100 || y === 101);
+      const inVert = (x === 180 || x === 181) && y >= 100 && y <= 180;
+      return inHoriz || inVert;
     };
-    paint(union(core, strip));
+    paint(union(core, lShape));
+
+    // Surround core entirely with attacker
     for (let x = 9; x <= 60; x++) {
       for (let y = 9; y <= 60; y++) {
-        if (core(x, y)) continue;
-        if (y <= 35) attacker.conquer(game.ref(x, y));
-        else third.conquer(game.ref(x, y));
+        if (!core(x, y)) {
+          attacker.conquer(game.ref(x, y));
+        }
       }
     }
+
     startClusterChecks();
     runClusterChecks();
 

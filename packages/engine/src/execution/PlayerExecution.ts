@@ -244,6 +244,12 @@ export class PlayerExecution implements Execution {
     // largest contiguous 4-way territory area reachable from each border cluster,
     // rather than raw border tile count or bounding box (which can be distorted by
     // craters, enclaves, or diagonal staircases).
+    // Note: We cannot early-exit when size > numTilesOwned() / 2 because in doughnut
+    // empires (e.g. interior craters or lakes), both the inner hole rim and the outer
+    // perimeter touch the exact same >50% territory mass. Exiting early if the hole
+    // cluster appears first would falsely crown the hole as largestIndex and annex the
+    // outer continent. All clusters must be evaluated so the bbox tiebreak crowns the
+    // outer perimeter. Memoized traversal makes subsequent clusters O(1).
     const state = this.traversalState();
     const reservedGenerations = clusters.length * 4 + 16;
     const areaGen = this.bumpGenerations(reservedGenerations);
@@ -399,7 +405,12 @@ export class PlayerExecution implements Execution {
       if (!this.player.isAlive()) break;
       if (clusterRemoved[i]) continue;
       if (!isPinched[i]) continue;
-      // Guard interior hole clusters so hole crenellations are not falsely annexed
+      // Guard interior hole clusters so hole crenellations are not falsely annexed.
+      // Note: By design, isHoleCluster skips the entire cluster if it is enclosed
+      // by another cluster of the same contiguous territory (e.g. an interior crater
+      // rim). We do not dissect hole clusters into individual 4-way components here
+      // because treating diagonal notches along crater perimeters as severed enclaves
+      // would re-open crater-rim cannibalization into the main body.
       if (
         this.isHoleCluster(
           i,
