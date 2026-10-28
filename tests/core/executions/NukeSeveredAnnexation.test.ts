@@ -945,18 +945,25 @@ describe("land a nuke severs from the main body is annexed", () => {
     };
     paint(union(core, lShape));
 
-    // Surround core entirely with attacker
+    // Surround core with TWO different enemies so surroundedBySamePlayer protects the main body
     for (let x = 9; x <= 60; x++) {
       for (let y = 9; y <= 60; y++) {
         if (!core(x, y)) {
-          attacker.conquer(game.ref(x, y));
+          (y <= 34 ? attacker : third).conquer(game.ref(x, y));
         }
       }
     }
 
     startClusterChecks();
+
+    // Trigger mid-game conquest on the secondary strip to ensure cluster checks execute
+    attacker.conquer(game.ref(100, 100));
+
     runClusterChecks();
 
-    expect(defenderTilesIn(core)).toBeGreaterThan(0);
+    // Core is crowned as main body by territory area; with 2 enemies, it survives
+    expect(defenderTilesIn(core)).toBe(2500);
+    // Secondary L-shape strip is enclosed and annexed
+    expect(defenderTilesIn(lShape)).toBe(0);
   });
 });

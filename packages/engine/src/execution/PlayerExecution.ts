@@ -25,8 +25,6 @@ import type {
 const TICKS_PER_CLUSTER_CALC = 20;
 
 const CLUSTER_SURROUNDED = 1;
-// Touches coast, map edge or open land: never land cut off with no way out.
-const CLUSTER_OPEN = 4;
 
 export class PlayerExecution implements Execution {
   private ticksPerClusterCalc = TICKS_PER_CLUSTER_CALC;
@@ -764,7 +762,7 @@ export class PlayerExecution implements Execution {
     for (let j = 0; j < cluster.length; j++) {
       const tr = cluster[j];
       if (map.isShore(tr) || map.isOnEdgeOfMap(tr)) {
-        return CLUSTER_OPEN;
+        return 0;
       }
       const numNeighbors = map.neighbors4(tr, this.nbuf);
       for (let i = 0; i < numNeighbors; i++) {
@@ -792,20 +790,18 @@ export class PlayerExecution implements Execution {
         }
       }
     }
-    if (!hasEnemy) {
-      return hasOpenLand ? CLUSTER_OPEN : 0;
+    if (!hasEnemy || hasOpenLand) {
+      return 0;
     }
-    let result = hasOpenLand ? CLUSTER_OPEN : 0;
     if (
-      !hasOpenLand &&
       minX <= clusterBoxMinX &&
       minY <= clusterBoxMinY &&
       maxX >= clusterBoxMaxX &&
       maxY >= clusterBoxMaxY
     ) {
-      result |= CLUSTER_SURROUNDED;
+      return CLUSTER_SURROUNDED;
     }
-    return result;
+    return 0;
   }
 
   private removeCluster(
