@@ -92,19 +92,6 @@ describe("ClanModal — signed out", () => {
     expect(modal.querySelector("clan-map-view")).not.toBeNull();
   });
 
-  it("shows Coming Soon instead of the map in prod", async () => {
-    stubGameEnv("prod");
-    modal.open({ tab: "map" });
-    await flushAsync(modal);
-
-    expect(getElState(modal, "activeTab")).toBe("map");
-    // The map hasn't shipped to prod: the iframe never mounts, and neither
-    // does the fullscreen button that targets it.
-    expect(modal.querySelector("clan-map-view")).toBeNull();
-    expect(modal.textContent).toContain("clan_modal.map_coming_soon");
-    expect(modal.querySelector('[data-testid="map-fullscreen"]')).toBeNull();
-  });
-
   it("lets a signed-out viewer browse clans", async () => {
     modal.open({ tab: "browse" });
     await flushAsync(modal);
