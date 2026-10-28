@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { NamePass } from "../../../../src/client/render/gl/passes/name-pass";
 
 describe("NamePass verified badge hover", () => {
@@ -72,5 +72,71 @@ describe("NamePass targeted nameplate hover", () => {
     // Targeting scales the plate to the cull threshold, expanding the bounds.
     slot.target = true;
     expect(pass.hitTestNamePlate(1, cameraMatrix)).toBe(42);
+
+    // At this scale the target boost is 2, so the cursor stays outside the plate.
+    const zoomedMatrix = new Float32Array([0.002, 0, 0, 0, 0.002, 0, 0, 0, 1]);
+    expect(pass.hitTestNamePlate(1, zoomedMatrix)).toBe(0);
+  });
+});
+
+describe("NamePass draw hover-owner forwarding", () => {
+  it("passes the camera matrix and hit-tested owner to each name program", () => {
+    const nowSpy = vi.spyOn(performance, "now").mockReturnValue(1000);
+    try {
+      const slot: any = {
+        alive: true,
+        startTime: 0,
+        nameHalfWidth: 50,
+        target: true,
+        flagLayerIdx: -1,
+        emojiAtlasIdx: -1,
+      };
+      for (const k of ["srcX", "tgtX"]) slot[k] = 100;
+      for (const k of ["srcY", "tgtY"]) slot[k] = 200;
+      for (const k of ["srcScale", "tgtScale"]) slot[k] = 10;
+      slot.static = { smallID: 42, verified: false };
+
+      const textDraw = vi.fn();
+      const statusDraw = vi.fn();
+      const iconDraw = vi.fn();
+      const pass = Object.create(NamePass.prototype) as any;
+      const name: any = {
+        lerpSpeed: 10,
+        nameScaleCap: 10,
+        nameScaleFactor: 1,
+        cullThreshold: 0.1,
+        troopSizeMultiplier: 0.8,
+        statusRowOffset: 0.6,
+        emojiRowOffset: 0.6,
+      };
+      const cameraMatrix = new Float32Array([0.001, 0, 0, 0, 0.001, 0, 0, 0, 1]);
+      Object.assign(pass, {
+        settings: { name, passEnabled: { nameDebug: false } },
+        slots: new Map([["p1", slot]]),
+        fontBase: 32,
+        fontSize: 32,
+        textProgram: { ready: true, draw: textDraw },
+        statusIconProgram: { draw: statusDraw },
+        iconProgram: { draw: iconDraw },
+        stringDataDirty: false,
+        cursorDataDirty: false,
+        playerDataDirty: false,
+        vao: {},
+        maxPlayers: 1,
+        highlightOwnerID: 0,
+      });
+
+      pass.setMouseWorldPos(160, 160);
+      pass.draw(cameraMatrix, 0.5);
+
+      expect(textDraw.mock.calls[0][0]).toBe(cameraMatrix);
+      expect(statusDraw.mock.calls[0][0]).toBe(cameraMatrix);
+      expect(iconDraw.mock.calls[0][0]).toBe(cameraMatrix);
+      expect(textDraw.mock.calls[0][6]).toBe(42);
+      expect(statusDraw.mock.calls[0][3]).toBe(42);
+      expect(iconDraw.mock.calls[0][3]).toBe(42);
+    } finally {
+      nowSpy.mockRestore();
+    }
   });
 });
