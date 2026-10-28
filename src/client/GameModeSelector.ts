@@ -162,9 +162,7 @@ export function shouldBlockMultiplayerAction(
  * about the game server behind it. The update state is not either -- a
  * pending update is not "offline".
  */
-export function lobbyFeedSuspended(
-  session: DesktopSessionState | null,
-): boolean {
+function lobbyFeedSuspended(session: DesktopSessionState | null): boolean {
   return session !== null && !multiplayerAllowedForSession(session);
 }
 
@@ -375,7 +373,7 @@ export class GameModeSelector extends LitElement {
       this.updateDeferred = true;
       return;
     }
-    showInGameAlert(translateText("update_available.message")).then(() => {
+    void showInGameAlert(translateText("update_available.message")).then(() => {
       reloadForUpdate();
     });
   }
@@ -515,7 +513,7 @@ export class GameModeSelector extends LitElement {
       this.closeLobbyFeed();
     } else {
       this.feedGaveUp = false;
-      this.lobbySocket.start();
+      void this.lobbySocket.start();
     }
   };
 
@@ -565,7 +563,7 @@ export class GameModeSelector extends LitElement {
       this.lobbies = null;
       return;
     }
-    this.lobbySocket.start({ refreshList });
+    void this.lobbySocket.start({ refreshList });
   }
 
   /**
@@ -656,17 +654,10 @@ export class GameModeSelector extends LitElement {
     // The hero slot holds the spinner, then the FFA card; loaded without one
     // it goes and the upcoming column takes the whole row.
     const heroSlot = this.lobbies === null || ffa !== undefined;
-    // A lone secondary card takes both of the column's card rows. In short
-    // windows (Poki's frames are 580px and 470px tall) two would each be too
-    // small, so teams keeps both rows and the special lobby is left to the lobby
-    // browser. 700px still leaves an iPad mini in landscape (744px) both.
+    // A lone secondary card takes both of the column's card rows.
     const cardRows =
       teams && special
-        ? {
-            special: "sm:row-start-2 sm:[@media(max-height:700px)]:hidden",
-            teams:
-              "sm:row-start-3 sm:[@media(max-height:700px)]:row-start-2! sm:[@media(max-height:700px)]:row-span-2!",
-          }
+        ? { special: "sm:row-start-2", teams: "sm:row-start-3" }
         : {
             special: "sm:row-start-2 sm:row-span-2",
             teams: "sm:row-start-2 sm:row-span-2",
@@ -674,15 +665,22 @@ export class GameModeSelector extends LitElement {
 
     // DOM is in phone order; sm+ places the same elements onto a grid and
     // reading-flow keeps focus order following the rows (Chromium only).
+    // On compact screens (styles.css) Solo/Tutorial sit under the hero card only,
+    // and the lobby column runs down beside them, so its two cards get that height.
+    // There the grid also pulls up over the gap after the banner's row when it's empty.
     return html`
       <div
-        class="flex flex-col gap-4 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_min(24rem,40vh)_auto_auto] desktop:sm:grid-rows-[auto_40vh_auto_auto] sm:[reading-flow:grid-rows]"
+        class="flex flex-col gap-4 sm:compact:gap-3 sm:compact:has-[>ios-add-to-home-screen-banner:empty]:-mt-3 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_min(24rem,40vh)_auto_auto] sm:compact:grid-rows-[auto_minmax(min(24rem,40vh),auto)_3.5rem_auto] desktop:sm:grid-rows-[auto_40vh_auto_auto] sm:[reading-flow:grid-rows]"
       >
         <ios-add-to-home-screen-banner
           class="no-game-portal [&:empty]:hidden sm:col-span-2 sm:row-start-1"
         ></ios-add-to-home-screen-banner>
 
-        <div class="flex gap-4 h-14 sm:col-span-2 sm:row-start-3">
+        <div
+          class="flex gap-4 sm:compact:gap-3 h-14 sm:col-span-2 sm:row-start-3 ${
+            heroSlot ? "sm:compact:col-span-1!" : ""
+          }"
+        >
           <div class="flex-[2]">
             ${this.renderSmallActionCard(
               translateText("main.solo"),
@@ -702,7 +700,9 @@ export class GameModeSelector extends LitElement {
               : nothing
           }
         </div>
-        <div class="grid grid-cols-3 gap-4 h-14 sm:col-span-2 sm:row-start-4">
+        <div
+          class="grid grid-cols-3 gap-4 sm:compact:gap-3 h-14 sm:col-span-2 sm:row-start-4"
+        >
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
@@ -764,8 +764,10 @@ export class GameModeSelector extends LitElement {
 
         <!-- Always rendered: the heading is the only way into the lobby browser. -->
         <section
-          class="flex flex-col gap-4 min-w-0 sm:grid sm:grid-rows-[auto_1fr_1fr] sm:row-start-2 sm:min-h-0 sm:[reading-flow:grid-rows] ${
-            heroSlot ? "sm:col-start-2" : "sm:col-start-1 sm:col-span-2"
+          class="flex flex-col gap-4 sm:compact:gap-3 min-w-0 sm:grid sm:grid-rows-[auto_1fr_1fr] sm:row-start-2 sm:min-h-0 sm:[reading-flow:grid-rows] ${
+            heroSlot
+              ? "sm:col-start-2 sm:compact:row-end-4 sm:compact:grid-rows-[auto_minmax(7.5rem,1fr)_minmax(7.5rem,1fr)]"
+              : "sm:col-start-1 sm:col-span-2"
           }"
         >
           ${

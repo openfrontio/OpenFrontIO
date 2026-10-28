@@ -56,7 +56,7 @@ import { LINES_PER_PLAYER, MAX_CHARS } from "./Types";
 const FLAG_ASPECT = 128 / 85;
 
 // Crown cosmetics use square cells (must match the crownAtlas cell size below).
-export const CROWN_CELL = 128;
+const CROWN_CELL = 128;
 
 // Initial unique-crown capacity. Crowns are a rare cosmetic, so start small
 // (32 × 128×128 RGBA8 + mips ≈ 2.8 MB vs ~43 MB at the 512 flag default);
@@ -440,8 +440,10 @@ export class NamePass {
       const slot = this.slots.get(playerID);
       if (!slot) continue;
 
+      const shouldSnap = snap || slot.tgtScale === 0;
+
       if (
-        !snap &&
+        !shouldSnap &&
         slot.nameLen !== 0 &&
         slot.index % NamePass.UPDATE_SLICES !== phase
       ) {
@@ -480,7 +482,11 @@ export class NamePass {
       // Write troop count string (refreshed per slot every 500ms, staggered by
       // slot index so updates spread across the window instead of bursting).
       const troopBucket = Math.floor((now + (slot.index % 5) * 0.1) / 0.5);
-      if (snap || slot.troopLen === 0 || troopBucket !== slot.lastTroopBucket) {
+      if (
+        shouldSnap ||
+        slot.troopLen === 0 ||
+        troopBucket !== slot.lastTroopBucket
+      ) {
         slot.lastTroopBucket = troopBucket;
         const troops = ps?.troops ?? 0;
         const troopStr = renderTroops(troops);
@@ -498,7 +504,7 @@ export class NamePass {
         entry.y !== slot.tgtY ||
         entry.size !== slot.tgtScale
       ) {
-        if (!snap) {
+        if (!shouldSnap) {
           const elapsed = now - slot.startTime;
           const t = Math.min(
             1 - Math.exp(-this.settings.name.lerpSpeed * elapsed),
@@ -515,6 +521,17 @@ export class NamePass {
         slot.tgtX = entry.x;
         slot.tgtY = entry.y;
         slot.tgtScale = entry.size;
+        slot.startTime = now;
+        dirty = true;
+      } else if (
+        snap &&
+        (slot.srcX !== slot.tgtX ||
+          slot.srcY !== slot.tgtY ||
+          slot.srcScale !== slot.tgtScale)
+      ) {
+        slot.srcX = slot.tgtX;
+        slot.srcY = slot.tgtY;
+        slot.srcScale = slot.tgtScale;
         slot.startTime = now;
         dirty = true;
       }
@@ -740,10 +757,12 @@ export class NamePass {
    * unit. Mirrors the lerp + sizing math in name.vert.glsl and
    * status-icon.vert.glsl. Returns the smallID, or 0 for none.
    */
-  private hitTestNamePlate(now: number): number {
+  private hitTestNamePlate(now: number, cameraMatrix: Float32Array): number {
     const mx = this.mouseWorldX;
     const my = this.mouseWorldY;
     const ns = this.settings.name;
+    // Match the camera-scale calculation in the name shaders.
+    const cameraScale = Math.hypot(cameraMatrix[0], cameraMatrix[3]);
     for (const slot of this.slots.values()) {
       if (!slot.alive) continue;
       const t = Math.min(
@@ -756,10 +775,18 @@ export class NamePass {
       const baseSize = Math.max(1, Math.floor(ws));
       const nameSize = Math.max(4, Math.floor(baseSize * ns.nameScaleFactor));
       const nameScale = Math.min(baseSize * 0.25, ns.nameScaleCap);
-      const lineH = this.fontBase * ((nameSize * nameScale) / this.fontSize);
+      let nameWorldScale = (nameSize * nameScale) / this.fontSize;
+      let lineH = this.fontBase * nameWorldScale;
+      const screenSize = lineH * cameraScale;
+      // The shaders enlarge targeted nameplates to the cull threshold so they
+      // stay visible at any zoom. Apply the same boost to the hit-test bounds.
+      if (slot.target && screenSize < ns.cullThreshold) {
+        const boost = ns.cullThreshold / screenSize;
+        nameWorldScale *= boost;
+        lineH = this.fontBase * nameWorldScale;
+      }
 
-      const halfW =
-        slot.nameHalfWidth * ((nameSize * nameScale) / this.fontSize);
+      const halfW = slot.nameHalfWidth * nameWorldScale;
       let left = wx - halfW;
       let right = wx + halfW;
       if (slot.flagLayerIdx >= 0) left -= lineH * 1.2 * FLAG_ASPECT;
@@ -847,7 +874,10 @@ export class NamePass {
       this.playerDataDirty = false;
     }
 
-    const fadeOwnerID = this.hitTestNamePlate(performance.now() / 1000);
+    const fadeOwnerID = this.hitTestNamePlate(
+      performance.now() / 1000,
+      cameraMatrix,
+    );
 
     this.textProgram.draw(
       cameraMatrix,

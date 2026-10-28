@@ -16,7 +16,7 @@ import {
 } from "./CosmeticPresentation";
 import type { CosmeticRenderCanvas } from "./cosmetics/CosmeticRenderCanvas";
 
-export const TEAM_COLORS = [
+const TEAM_COLORS = [
   { name: "Red", hex: "#eb3333" },
   { name: "Blue", hex: "#2962ff" },
   { name: "Teal", hex: "#06b6d4" },

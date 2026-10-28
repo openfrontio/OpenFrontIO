@@ -1,8 +1,10 @@
+import { GameMode } from "@openfront/engine-api/game/GameTypes";
 import {
   ID,
   isValidGameID,
   MAX_USERNAME_LENGTH,
 } from "@openfront/engine-api/Schemas";
+import { adjustForTeams } from "@openfront/engine-lib/game/TeamAssignment";
 import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
 import { GameEnv } from "@openfront/shared/configuration/Env";
 import { generateID, replacer } from "@openfront/shared/SharedUtil";
@@ -1091,8 +1093,16 @@ export function getListingEligibilityError(
   if (game.hasHostCheats()) {
     return "listing_host_cheats_enabled";
   }
-  if (maxPlayers !== undefined && maxPlayers <= game.numPlayers()) {
-    return "listing_max_players_too_low";
+  const cap =
+    maxPlayers ?? (game.isListed() ? undefined : game.gameConfig.maxPlayers);
+  if (cap !== undefined) {
+    const effectiveCap =
+      game.gameConfig.gameMode === GameMode.Team
+        ? adjustForTeams(cap, game.gameConfig.playerTeams)
+        : cap;
+    if (effectiveCap <= game.numPlayers()) {
+      return "listing_max_players_too_low";
+    }
   }
   return null;
 }
