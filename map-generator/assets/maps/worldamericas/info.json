@@ -1,9 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Worldamericas",
   "name": "World Americas",
   "translation_key": "map.worldamericas",
   "categories": ["world"],
-  "multiplayer_frequency": 8,
   "nations": [
     {
       "coordinates": [1134, 284],
