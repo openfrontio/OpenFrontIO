@@ -111,6 +111,7 @@ export class NationExecution implements Execution {
       this.player !== null &&
       this.player.isAlive() &&
       this.mg.config().gameConfig().difficulty !== Difficulty.Easy &&
+      !this.mg.config().gameConfig().tutorial &&
       this.player.unitsConstructed(UnitType.Port) &&
       !this.mg.config().isUnitDisabled(UnitType.Warship)
     ) {
@@ -192,6 +193,15 @@ export class NationExecution implements Execution {
     if (!this.behaviorsInitialized) {
       this.initializeBehaviors();
       this.attackBehavior.forceSendAttack(this.mg.terraNullius());
+      return;
+    }
+
+    // The tutorial's nation only fills its own island: no attacks, boats,
+    // alliances, structures or nukes.
+    if (this.mg.config().gameConfig().tutorial) {
+      if (ticks % this.attackRate === this.attackTick) {
+        this.attackBehavior.expandIntoFreeLand();
+      }
       return;
     }
 
