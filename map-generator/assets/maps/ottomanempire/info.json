@@ -1,10 +1,8 @@
 {
   "id": "OttomanEmpire",
   "name": "Ottoman Empire",
-  "display_name": "Ottoman Empire (1683)",
   "translation_key": "map.ottomanempire",
   "categories": ["europe", "asia", "africa"],
-  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [1722, 701],
