@@ -1,6 +1,5 @@
 {
   "categories": ["europe", "asia", "africa"],
-  "display_name": "Ottoman Empire (1683)",
   "id": "OttomanEmpire",
   "map": {
     "height": 2132,
@@ -17,7 +16,6 @@
     "num_land_tiles": 443115,
     "width": 1408
   },
-  "multiplayer_frequency": 5,
   "name": "Ottoman Empire",
   "nations": [
     {
