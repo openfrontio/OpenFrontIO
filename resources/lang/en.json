@@ -1761,6 +1761,9 @@
     "warning": "WARNING"
   },
   "onboarding": {
+    "intro_body": "OpenFront is a strategy game where you grow your land and conquer your neighbors to take over the map.",
+    "intro_start": "Start",
+    "intro_title": "Welcome to OpenFront",
     "low_troops": "Wait for them to grow back before you attack again.",
     "low_troops_title": "Your troops are low!",
     "main_menu": "Main menu",

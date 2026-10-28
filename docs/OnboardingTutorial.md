@@ -21,6 +21,8 @@ The **Tutorial** buttons (the play page card and the help modal) start the new t
 
 ### Steps
 
+It opens with a welcome card that describes OpenFront in one sentence, with a **Start** button.
+
 1. **Spawn.** A glowing zone marks the spawn area. Only a click inside it counts.
 2. **Expand.** Click the empty land next to your territory.
 3. **Attack the tribe.** Attack the tribe next to you and take its land.

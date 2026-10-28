@@ -99,6 +99,8 @@ export class OnboardingOverlay extends LitElement implements Controller {
   public transformHandler: TransformHandler;
 
   @state() private active = false;
+  /** The welcome card, shown until the player clicks Start. */
+  @state() private intro = true;
   @state() private step: OnboardingStep | "won" = "spawn";
   @state() private hasCoast = true;
   @state() private lowTroops = false;
@@ -467,6 +469,7 @@ export class OnboardingOverlay extends LitElement implements Controller {
 
   render() {
     if (!this.active) return nothing;
+    if (this.intro) return this.renderIntro();
     if (this.step === "won") return this.renderWon();
     const index = ONBOARDING_STEPS.indexOf(this.step);
     const spot = this.spot;
@@ -562,6 +565,31 @@ export class OnboardingOverlay extends LitElement implements Controller {
             </div>`
           : nothing
       }
+    `;
+  }
+
+  private renderIntro() {
+    return html`
+      <div
+        class="fixed inset-0 z-[1001] flex items-center justify-center bg-black/60"
+      >
+        <div
+          dir=${textDirection()}
+          class="w-[min(90vw,480px)] rounded-xl bg-gray-900 px-6 py-6 text-center text-white shadow-2xl"
+        >
+          <h2 class="m-0 text-3xl font-bold text-yellow-300">
+            ${translateText("onboarding.intro_title")}
+          </h2>
+          <p class="mt-3 text-lg">${translateText("onboarding.intro_body")}</p>
+          <button
+            type="button"
+            class="mt-6 w-full rounded-lg bg-yellow-400 px-4 py-3 text-lg font-bold text-gray-900 hover:bg-yellow-300"
+            @click=${() => (this.intro = false)}
+          >
+            ${translateText("onboarding.intro_start")}
+          </button>
+        </div>
+      </div>
     `;
   }
 
