@@ -62,6 +62,7 @@ import {
   getNationsForCompactMap,
   getRandomMapType,
   getUpdatedDisabledUnits,
+  nationsConfigToSlider,
   parseBoundedFloatFromInput,
   parseBoundedIntegerFromInput,
   preventDisallowedKeys,
@@ -1743,7 +1744,7 @@ export class HostLobbyModal extends BaseModal {
       gameMode: this.gameMode,
       teamCount: this.teamCount,
       bots: this.bots,
-      nations: this.nations,
+      nations: sliderToNationsConfig(this.nations, this.defaultNationCount),
       infiniteGold: this.infiniteGold,
       donateGold: this.donateGold,
       infiniteTroops: this.infiniteTroops,
@@ -1861,7 +1862,10 @@ export class HostLobbyModal extends BaseModal {
 
     await this.loadNationCount();
     if (config.nations !== undefined) {
-      this.nations = Math.min(config.nations, this.defaultNationCount);
+      this.nations = nationsConfigToSlider(
+        config.nations,
+        this.defaultNationCount,
+      );
     }
     this.putGameConfig();
   }

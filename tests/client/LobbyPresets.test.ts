@@ -205,7 +205,7 @@ describe("LobbyPresets logic and schema", () => {
       LobbyPresetConfigSchema.safeParse({ ...sampleConfig, bots: 400 }).success,
     ).toBe(true);
 
-    // nations: 0-400 int
+    // nations: 0-400 int or "default" or "disabled"
     expect(
       LobbyPresetConfigSchema.safeParse({ ...sampleConfig, nations: -1 })
         .success,
@@ -216,6 +216,28 @@ describe("LobbyPresets logic and schema", () => {
     ).toBe(false);
     expect(
       LobbyPresetConfigSchema.safeParse({ ...sampleConfig, nations: 5.5 })
+        .success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, nations: 0 })
+        .success,
+    ).toBe(true);
+    expect(
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, nations: 400 })
+        .success,
+    ).toBe(true);
+    expect(
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, nations: "default" })
+        .success,
+    ).toBe(true);
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        nations: "disabled",
+      }).success,
+    ).toBe(true);
+    expect(
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, nations: "invalid" })
         .success,
     ).toBe(false);
 
@@ -366,7 +388,17 @@ describe("LobbyPresets logic and schema", () => {
           const val = mockStorage[LOBBY_PRESETS_KEY];
           return val ? parseLobbyPresetsJson(val) : [];
         },
-        setLobbyPresets: (presets: readonly LobbyPreset[]) => {
+        getRawLobbyPresets: () => {
+          const val = mockStorage[LOBBY_PRESETS_KEY];
+          if (!val) return [];
+          try {
+            const parsed = JSON.parse(val);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        },
+        setLobbyPresets: (presets: readonly unknown[]) => {
           mockStorage[LOBBY_PRESETS_KEY] = JSON.stringify(presets);
           return true;
         },
@@ -458,12 +490,97 @@ describe("LobbyPresets logic and schema", () => {
       expect(res).toBeNull();
     });
 
+    it("preserves invalid or future presets in raw storage when saving", () => {
+      const futurePreset = {
+        name: "Future Preset",
+        createdAt: 999,
+        futureField: "value",
+        config: {
+          gameMap: "NonExistentMap",
+          bots: 10,
+        },
+      };
+      mockStorage[LOBBY_PRESETS_KEY] = JSON.stringify([futurePreset]);
+
+      const validList = saveLobbyPreset("My FFA", sampleConfig, settings);
+      expect(validList).toHaveLength(1);
+      expect(validList![0].name).toBe("My FFA");
+
+      // Verify raw storage retains both the unrecognized preset and the new preset
+      const raw = settings.getRawLobbyPresets();
+      expect(raw).toHaveLength(2);
+      expect(raw[0]).toEqual(futurePreset);
+      expect((raw[1] as any).name).toBe("My FFA");
+    });
+
+    it("preserves invalid or future presets in raw storage when deleting", () => {
+      const futurePreset = {
+        name: "Future Preset",
+        createdAt: 999,
+        futureField: "value",
+        config: {
+          gameMap: "NonExistentMap",
+        },
+      };
+      saveLobbyPreset("Preset 1", sampleConfig, settings);
+      const rawBefore = settings.getRawLobbyPresets();
+      settings.setLobbyPresets([...rawBefore, futurePreset]);
+
+      const afterDelete = deleteLobbyPreset("preset 1", settings);
+      expect(afterDelete).toEqual([]);
+
+      const rawAfter = settings.getRawLobbyPresets();
+      expect(rawAfter).toHaveLength(1);
+      expect(rawAfter[0]).toEqual(futurePreset);
+    });
+
+    it("preserves createdAt of existing raw preset when updated", () => {
+      const existingRaw = {
+        name: "Custom",
+        createdAt: 12345,
+        config: sampleConfig,
+      };
+      mockStorage[LOBBY_PRESETS_KEY] = JSON.stringify([existingRaw]);
+
+      const updated = saveLobbyPreset(
+        "custom",
+        { ...sampleConfig, bots: 55 },
+        settings,
+      );
+      expect(updated).toHaveLength(1);
+      expect(updated![0].createdAt).toBe(12345);
+      expect(updated![0].config.bots).toBe(55);
+    });
+
     it("handles storage read failure in UserSettings.getLobbyPresets", () => {
       const realSettings = new UserSettings();
       vi.spyOn(Storage.prototype, "getItem").mockImplementationOnce(() => {
         throw new Error("Storage access failed");
       });
       expect(realSettings.getLobbyPresets()).toEqual([]);
+    });
+
+    it("handles storage read failure in UserSettings.getRawLobbyPresets", () => {
+      const realSettings = new UserSettings();
+      vi.spyOn(Storage.prototype, "getItem").mockImplementationOnce(() => {
+        throw new Error("Storage access failed");
+      });
+      expect(realSettings.getRawLobbyPresets()).toEqual([]);
+    });
+
+    it("returns empty array in UserSettings.getRawLobbyPresets when storage is empty or invalid JSON", () => {
+      const realSettings = new UserSettings();
+      localStorage.removeItem(LOBBY_PRESETS_KEY);
+      expect(realSettings.getRawLobbyPresets()).toEqual([]);
+
+      localStorage.setItem(LOBBY_PRESETS_KEY, "not-json");
+      expect(realSettings.getRawLobbyPresets()).toEqual([]);
+
+      localStorage.setItem(
+        LOBBY_PRESETS_KEY,
+        JSON.stringify({ not: "an-array" }),
+      );
+      expect(realSettings.getRawLobbyPresets()).toEqual([]);
     });
 
     it("reads latest presets directly from storage even if cache was populated", () => {
@@ -752,12 +869,43 @@ describe("HostLobbyModal preset integration", () => {
     expect(targetModal.selectedDifficulty).toBe(Difficulty.Hard);
     expect(targetModal.teamCount).toBe(4);
     expect(targetModal.bots).toBe(25);
+    expect(targetModal.nations).toBe(8);
     expect(targetModal.infiniteGold).toBe(true);
     expect(targetModal.goldMultiplier).toBe(true);
     expect(targetModal.goldMultiplierValue).toBe(3.5);
     expect(targetModal.disabledUnits).toEqual([UnitType.AtomBomb]);
     expect(targetModal.spawnImmunity).toBe(true);
     expect(targetModal.spawnImmunityDurationMinutes).toBe(5);
+  });
+
+  it("maps nations config between slider and preset accurately on export and import", async () => {
+    modal.defaultNationCount = 10;
+    modal.nations = 10;
+    const defaultExported = modal.exportPresetConfig();
+    expect(defaultExported.nations).toBe("default");
+
+    const target1: any = new HostLobbyModal();
+    target1.putGameConfig = vi.fn();
+    await target1.importPresetConfig(defaultExported);
+    expect(target1.nations).toBe(10);
+
+    modal.nations = 0;
+    const disabledExported = modal.exportPresetConfig();
+    expect(disabledExported.nations).toBe("disabled");
+
+    const target2: any = new HostLobbyModal();
+    target2.putGameConfig = vi.fn();
+    await target2.importPresetConfig(disabledExported);
+    expect(target2.nations).toBe(0);
+
+    modal.nations = 6;
+    const numberExported = modal.exportPresetConfig();
+    expect(numberExported.nations).toBe(6);
+
+    const target3: any = new HostLobbyModal();
+    target3.putGameConfig = vi.fn();
+    await target3.importPresetConfig(numberExported);
+    expect(target3.nations).toBe(6);
   });
 
   it("handles preset save, load, and delete events", async () => {
@@ -930,6 +1078,33 @@ describe("SinglePlayerModal preset integration", () => {
     expect(targetModal.waterNukes).toBe(true);
     expect(targetModal.doomsdayClock).toBe(true);
     expect(targetModal.doomsdayClockSpeed).toBe("veryfast");
+  });
+
+  it("maps nations config between slider and preset accurately on export and import", async () => {
+    modal.defaultNationCount = 10;
+    modal.nations = 10;
+    const defaultExported = modal.exportPresetConfig();
+    expect(defaultExported.nations).toBe("default");
+
+    const target1: any = new SinglePlayerModal();
+    await target1.importPresetConfig(defaultExported);
+    expect(target1.nations).toBe(10);
+
+    modal.nations = 0;
+    const disabledExported = modal.exportPresetConfig();
+    expect(disabledExported.nations).toBe("disabled");
+
+    const target2: any = new SinglePlayerModal();
+    await target2.importPresetConfig(disabledExported);
+    expect(target2.nations).toBe(0);
+
+    modal.nations = 6;
+    const numberExported = modal.exportPresetConfig();
+    expect(numberExported.nations).toBe(6);
+
+    const target3: any = new SinglePlayerModal();
+    await target3.importPresetConfig(numberExported);
+    expect(target3.nations).toBe(6);
   });
 
   it("handles preset save, load, and delete events", async () => {

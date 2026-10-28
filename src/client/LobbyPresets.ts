@@ -20,7 +20,13 @@ export const LobbyPresetConfigSchema = z.object({
   gameMode: z.enum(GameMode),
   teamCount: TeamCountConfigSchema,
   bots: z.number().int().min(0).max(400),
-  nations: z.number().int().min(0).max(400).optional(),
+  nations: z
+    .union([
+      z.number().int().min(0).max(400),
+      z.literal("default"),
+      z.literal("disabled"),
+    ])
+    .optional(),
   infiniteGold: z.boolean().optional(),
   donateGold: z.boolean().optional(),
   infiniteTroops: z.boolean().optional(),
@@ -92,10 +98,20 @@ export function parseLobbyPresetsJson(rawJson: string | null): LobbyPreset[] {
   }
 }
 
+function matchesPresetName(entry: unknown, name: string): boolean {
+  if (!entry || typeof entry !== "object") return false;
+  const entryName = (entry as { name?: unknown }).name;
+  return (
+    typeof entryName === "string" &&
+    entryName.trim().toLowerCase() === name.toLowerCase()
+  );
+}
+
 /**
  * Saves or updates a named lobby preset in user settings.
  * Trims and clamps the preset name, updates an existing preset (case-insensitive) or appends a new one,
- * and persists the updated list. Returns the updated preset list or null if saving fails.
+ * operating on the raw stored array so presets that fail current validation and unknown fields are preserved.
+ * Returns the updated valid preset list or null if saving fails.
  */
 export function saveLobbyPreset(
   name: string,
@@ -105,35 +121,45 @@ export function saveLobbyPreset(
   const trimmed = name.trim().slice(0, MAX_PRESET_NAME_LENGTH);
   if (!trimmed) return null;
 
-  const presets = userSettings.getLobbyPresets();
-  const existingIndex = presets.findIndex(
-    (p) => p.name.toLowerCase() === trimmed.toLowerCase(),
+  const raw =
+    typeof userSettings.getRawLobbyPresets === "function"
+      ? userSettings.getRawLobbyPresets()
+      : userSettings.getLobbyPresets();
+
+  const existingIndex = raw.findIndex((entry) =>
+    matchesPresetName(entry, trimmed),
   );
+
+  const existing = existingIndex >= 0 ? raw[existingIndex] : undefined;
+  const existingCreatedAt =
+    existing &&
+    typeof existing === "object" &&
+    typeof (existing as { createdAt?: unknown }).createdAt === "number"
+      ? (existing as { createdAt: number }).createdAt
+      : undefined;
 
   const updatedPreset: LobbyPreset = {
     name: trimmed,
-    createdAt:
-      existingIndex >= 0 && presets[existingIndex].createdAt
-        ? presets[existingIndex].createdAt
-        : Date.now(),
+    createdAt: existingCreatedAt ?? Date.now(),
     config,
   };
 
-  let newPresets: LobbyPreset[];
+  let newRaw: unknown[];
   if (existingIndex >= 0) {
-    newPresets = [...presets];
-    newPresets[existingIndex] = updatedPreset;
+    newRaw = [...raw];
+    newRaw[existingIndex] = updatedPreset;
   } else {
-    newPresets = [...presets, updatedPreset];
+    newRaw = [...raw, updatedPreset];
   }
 
-  const success = userSettings.setLobbyPresets(newPresets);
-  return success ? newPresets : null;
+  const success = userSettings.setLobbyPresets(newRaw);
+  return success ? userSettings.getLobbyPresets() : null;
 }
 
 /**
  * Deletes a named lobby preset from user settings (case-insensitive).
- * Persists the updated preset list and returns it, or returns null if the deletion could not be saved.
+ * Removes only the entry matching the given name from the raw stored array so unrecognized presets are preserved.
+ * Persists the updated preset list and returns the valid presets, or returns null if the deletion could not be saved.
  */
 export function deleteLobbyPreset(
   name: string,
@@ -142,10 +168,12 @@ export function deleteLobbyPreset(
   const trimmed = name.trim();
   if (!trimmed) return null;
 
-  const presets = userSettings.getLobbyPresets();
-  const newPresets = presets.filter(
-    (p) => p.name.toLowerCase() !== trimmed.toLowerCase(),
-  );
-  const success = userSettings.setLobbyPresets(newPresets);
-  return success ? newPresets : null;
+  const raw =
+    typeof userSettings.getRawLobbyPresets === "function"
+      ? userSettings.getRawLobbyPresets()
+      : userSettings.getLobbyPresets();
+
+  const newRaw = raw.filter((entry) => !matchesPresetName(entry, trimmed));
+  const success = userSettings.setLobbyPresets(newRaw);
+  return success ? userSettings.getLobbyPresets() : null;
 }

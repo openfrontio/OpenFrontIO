@@ -1179,10 +1179,28 @@ export class UserSettings {
   }
 
   /**
+   * Retrieves the raw stored JSON array of lobby presets, without schema validation.
+   * Preserves unknown fields and entries that fail current validation.
+   * Returns an empty array if storage access fails, key is unset, or the stored JSON is not an array.
+   */
+  getRawLobbyPresets(): unknown[] {
+    try {
+      const storageKey = this.storageKey(LOBBY_PRESETS_KEY);
+      const raw = localStorage.getItem(storageKey);
+      UserSettings.cache.set(storageKey, raw);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * Persists the given array of lobby presets to storage. Clears the key if empty.
    * Returns true on successful write, or false if storage access fails.
    */
-  setLobbyPresets(presets: readonly LobbyPreset[]): boolean {
+  setLobbyPresets(presets: readonly unknown[]): boolean {
     try {
       if (presets.length === 0) {
         this.removeCached(LOBBY_PRESETS_KEY);
