@@ -846,25 +846,30 @@ describe("BuildPreviewController idle diffing optimization", () => {
       tile: () => 0,
     });
 
+    // Destination tile is impassable, ensuring T_BLOCKED_DST clamp runs
+    (controller as any).game.isImpassable = () => true;
+
     // Ghost data is null (e.g. over impassable mountain), but trajectory is active
     (controller as any).lastGhostData = null;
     (controller as any).updateNukeTrajectoryPreview(100);
 
-    // Frame 1: renders trajectory only
+    // Frame 1: renders trajectory only with blocked intercept marker
     stepFrame();
     expect(updateGhostPreview).toHaveBeenCalledTimes(0);
     expect(updateNukeTrajectory).toHaveBeenCalledTimes(1);
+    expect(updateNukeTrajectory.mock.calls[0][0].tSamIntercept).toBe(0.9999);
 
     // Frame 2: mouse stationary (idle) -> bypasses WebGL update
     stepFrame();
     expect(updateGhostPreview).toHaveBeenCalledTimes(0);
     expect(updateNukeTrajectory).toHaveBeenCalledTimes(1);
 
-    // Frame 3: mouse moves -> trajectory updates
+    // Frame 3: mouse moves -> trajectory updates with blocked intercept marker
     setCoords(6, 6);
     stepFrame();
     expect(updateGhostPreview).toHaveBeenCalledTimes(0);
     expect(updateNukeTrajectory).toHaveBeenCalledTimes(2);
+    expect(updateNukeTrajectory.mock.calls[1][0].tSamIntercept).toBe(0.9999);
   });
 
   test("createGhostStructure resets diffing caches", () => {
@@ -1259,6 +1264,7 @@ describe("BuildPreviewController Single-Flight Coalescing Guard with Tile-Change
       pendingPromises,
       emitted,
       view,
+      uiState,
       setMousePos: (x: number, y: number) => {
         mouseWorldX = x;
         mouseWorldY = y;
@@ -1297,34 +1303,77 @@ describe("BuildPreviewController Single-Flight Coalescing Guard with Tile-Change
   });
 
   test("single-flight coalesces multiple intermediate tile moves into the latest tile", async () => {
+    let renderCb: FrameRequestCallback | null = null;
+    const origRaf = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (cb: FrameRequestCallback) => {
+      renderCb = cb;
+      return 1;
+    };
+    try {
+      const fixture = createCoalescingFixture();
+      fixture.setMousePos(1, 1);
+      fixture.eventBus.emit(new MouseMoveEvent(10, 10));
+      expect(fixture.buildablesCalls.length).toBe(1);
+      expect(fixture.buildablesCalls[0].tile).toBe(11);
+
+      // While query for tile 11 is in-flight, cursor traverses tiles 22, 33, 44
+      fixture.setMousePos(2, 2);
+      fixture.eventBus.emit(new MouseMoveEvent(20, 20));
+      fixture.setMousePos(3, 3);
+      fixture.eventBus.emit(new MouseMoveEvent(30, 30));
+      fixture.setMousePos(4, 4);
+      fixture.eventBus.emit(new MouseMoveEvent(40, 40));
+
+      // No extra queries dispatched yet
+      expect(fixture.buildablesCalls.length).toBe(1);
+
+      // Resolve first query (tile 11)
+      await fixture.resolveNextQuery(true);
+      await Promise.resolve();
+
+      // Now query for tile 44 should be dispatched, skipping 22 and 33
+      expect(fixture.buildablesCalls.length).toBe(2);
+      expect(fixture.buildablesCalls[1].tile).toBe(44);
+
+      await fixture.resolveNextQuery(true);
+      await Promise.resolve();
+      expect(fixture.buildablesCalls.length).toBe(2);
+
+      // Invoke the render callback registered by init() and assert ghost preview is updated
+      (renderCb as ((time: DOMHighResTimeStamp) => void) | null)?.(
+        performance.now(),
+      );
+      expect(fixture.view.updateGhostPreview.mock.lastCall?.[0]).not.toBeNull();
+    } finally {
+      globalThis.requestAnimationFrame = origRaf;
+    }
+  });
+
+  test("switching ghost structure mid-flight drops stale response and continues tracking new ghost", async () => {
     const fixture = createCoalescingFixture();
     fixture.setMousePos(1, 1);
     fixture.eventBus.emit(new MouseMoveEvent(10, 10));
     expect(fixture.buildablesCalls.length).toBe(1);
-    expect(fixture.buildablesCalls[0].tile).toBe(11);
+    expect(fixture.buildablesCalls[0].types).toEqual([UnitType.City]);
 
-    // While query for tile 11 is in-flight, cursor traverses tiles 22, 33, 44
+    // Switch ghost structure while City query is in flight
+    fixture.uiState.ghostStructure = UnitType.DefensePost;
     fixture.setMousePos(2, 2);
     fixture.eventBus.emit(new MouseMoveEvent(20, 20));
-    fixture.setMousePos(3, 3);
-    fixture.eventBus.emit(new MouseMoveEvent(30, 30));
-    fixture.setMousePos(4, 4);
-    fixture.eventBus.emit(new MouseMoveEvent(40, 40));
 
-    // No extra queries dispatched yet
-    expect(fixture.buildablesCalls.length).toBe(1);
-
-    // Resolve first query (tile 11)
+    // Stale City query resolves
     await fixture.resolveNextQuery(true);
     await Promise.resolve();
 
-    // Now query for tile 44 should be dispatched, skipping 22 and 33
+    // The in-flight gate must not be reopened by the stale query;
+    // DefensePost query should dispatch cleanly for tile 22
     expect(fixture.buildablesCalls.length).toBe(2);
-    expect(fixture.buildablesCalls[1].tile).toBe(44);
+    expect(fixture.buildablesCalls[1].types).toEqual([UnitType.DefensePost]);
+    expect(fixture.buildablesCalls[1].tile).toBe(22);
 
     await fixture.resolveNextQuery(true);
     await Promise.resolve();
-    expect(fixture.buildablesCalls.length).toBe(2);
+    expect((fixture.controller as any).lastGhostData).not.toBeNull();
   });
 
   test("50ms guard is removed: consecutive queries can dispatch without artificial 50ms delay", async () => {

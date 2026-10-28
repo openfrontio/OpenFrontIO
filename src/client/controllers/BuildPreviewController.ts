@@ -435,7 +435,7 @@ export class BuildPreviewController implements Controller {
   }
 
   private checkTargetingAlly(tileRef: TileRef | undefined): boolean {
-    if (!tileRef || !this.ghostUnit) return false;
+    if (tileRef === undefined || !this.ghostUnit) return false;
     const myPlayer = this.game.myPlayer();
     const nukeType = this.ghostUnit.buildableUnit.type;
     if (
@@ -586,11 +586,9 @@ export class BuildPreviewController implements Controller {
     promise
       .then((b) => {
         if (this.ghostUnit !== ghost || seq !== this.querySeq) {
-          this.isQueryInFlight = false;
           return;
         }
         if (this.uiState.ghostStructure !== ghost.buildableUnit.type) {
-          this.isQueryInFlight = false;
           this.syncGhostState();
           return;
         }

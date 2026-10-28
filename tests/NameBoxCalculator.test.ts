@@ -222,6 +222,11 @@ describe("NameBoxCalculator Unit Tests", () => {
       const res = findLargestInscribedRectangle(grid, cols, rows);
       // Top or bottom strip is 5x1 (area 5)
       expect(res.width * res.height).toBe(5);
+      for (let y = res.y; y < res.y + res.height; y++) {
+        for (let x = res.x; x < res.x + res.width; x++) {
+          expect(grid[y * cols + x]).toBe(1);
+        }
+      }
     });
 
     it("Scenario 1 (Mathematical Equivalence): matches legacy implementation bit-for-bit", () => {

@@ -240,6 +240,24 @@ describe("PlayerImpl", () => {
       expect(player.canAttack(adjacentNeutral)).toBe(true);
     });
 
+    test("returns true for unowned land reachable from player border across multiple neutral tiles", () => {
+      // player owns (0, 0). (0, 2) is reachable via neutral land tile (0, 1)
+      const neutralIntermediate = game.ref(0, 1);
+      const twoStepTarget = game.ref(0, 2);
+
+      expect(game.isLand(twoStepTarget)).toBe(true);
+      expect(game.hasOwner(twoStepTarget)).toBe(false);
+      expect(game.isLand(neutralIntermediate)).toBe(true);
+      expect(game.hasOwner(neutralIntermediate)).toBe(false);
+
+      const playerTile = game.ref(0, 0);
+      expect(Array.from(game.neighbors(playerTile))).not.toContain(
+        twoStepTarget,
+      );
+
+      expect(player.canAttack(twoStepTarget)).toBe(true);
+    });
+
     test("returns false for unowned tile unreachable from player border", () => {
       const isolated = game.ref(5, 5);
       expect(game.hasOwner(isolated)).toBe(false);
