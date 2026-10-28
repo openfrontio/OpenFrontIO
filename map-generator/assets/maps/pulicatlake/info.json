@@ -4,7 +4,6 @@
   "name": "Pulicat Lake",
   "translation_key": "map.pulicatlake",
   "categories": ["asia"],
-  "multiplayer_frequency": 3,
   "special_team_count": 2,
   "nations": [
     {

@@ -4,7 +4,6 @@
   "name": "Rio de Janeiro",
   "translation_key": "map.riodejaneiro",
   "categories": ["south_america"],
-  "multiplayer_frequency": 4,
   "nations": [
     {
       "name": "Niterói",
