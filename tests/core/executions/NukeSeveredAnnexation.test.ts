@@ -1,3 +1,4 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   PlayerInfo,
   PlayerType,
@@ -974,4 +975,57 @@ describe("land a nuke severs from the main body is annexed", () => {
       expect(defenderTilesIn(lShape)).toBe(0);
     },
   );
+
+  test("a single contiguous 8-way empire (clusters.length === 1) annexes a diagonally pinched tip severed by fallout", () => {
+    // Main body: 20x20 block (400 tiles)
+    const mainBody = rect(20, 20, 39, 39);
+    // Diagonally pinched tip: 3x3 block (9 tiles) connected only diagonally at (40, 40)
+    const pinchedTip = rect(40, 40, 42, 42);
+
+    paint(union(mainBody, pinchedTip));
+
+    // Nuclear crater adjacent to the diagonal pinch point
+    fallout(rect(39, 40, 39, 40));
+
+    const exec = new PlayerExecution(defender);
+    exec.init(game, 0);
+    const { clusters } = (
+      exec as unknown as { calculateClusters(): { clusters: TileRef[][] } }
+    ).calculateClusters();
+
+    // Invariant check: exactly 1 8-way cluster encompasses both the body and the diagonally pinched tip
+    expect(clusters.length).toBe(1);
+
+    startClusterChecks();
+    // Trigger mid-game conquest on defender to ensure cluster checks execute
+    attacker.conquer(game.ref(20, 20));
+    runClusterChecks();
+
+    // Pinched tip severed by fallout is annexed by attacker
+    expect(defenderTilesIn(pinchedTip)).toBe(0);
+    // Main body survives (minus the 1 conquered tile)
+    expect(defenderTilesIn(mainBody)).toBe(399);
+  });
+
+  test("multiple secondary clusters in the same tick are sequentially classified and removed cleanly", () => {
+    // Main body runs to the map edge so Pass 0 does not annex it
+    const mainBody = rect(0, 10, 39, 39);
+    // Secondary enclave 1: 3x3 block completely enclosed by attacker
+    const enclave1 = rect(60, 60, 62, 62);
+    // Secondary enclave 2: 3x3 block completely enclosed by attacker
+    const enclave2 = rect(80, 80, 82, 82);
+
+    paint(union(mainBody, enclave1, enclave2));
+
+    startClusterChecks();
+    // Trigger mid-game conquest on defender to ensure cluster checks execute
+    attacker.conquer(game.ref(0, 10));
+    runClusterChecks();
+
+    // Both secondary enclaves are annexed in the same tick
+    expect(defenderTilesIn(enclave1)).toBe(0);
+    expect(defenderTilesIn(enclave2)).toBe(0);
+    // Main body remains intact (1200 tiles minus the 1 conquered tile)
+    expect(defenderTilesIn(mainBody)).toBe(1199);
+  });
 });
