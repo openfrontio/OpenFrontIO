@@ -1,0 +1,497 @@
+import { Cell, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { Intent } from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/shared/EventBus";
+import { html, LitElement, nothing } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { Controller } from "../../Controller";
+import { Platform } from "../../Platform";
+import { GoToPositionEvent, TransformHandler } from "../../TransformHandler";
+import { SetIntentGateEvent } from "../../Transport";
+import { homeHref, textDirection, translateText } from "../../Utils";
+import { GameView } from "../../view";
+import { PlayerView } from "../../view/PlayerView";
+import {
+  inCircle,
+  ISLET,
+  judge,
+  LOW_TROOP_SHARE,
+  ONBOARDING_STEPS,
+  OnboardingStep,
+  OnboardingTarget,
+  OnboardingVerdict,
+  SPAWN_ZONE,
+  stepFor,
+} from "../Onboarding";
+
+/** How often (in ticks) to re-read the map for the step and its target. */
+const SCAN_TICKS = 5;
+
+/** How long the low-troops warning and the "not there" nudge stay up. */
+const LOW_TROOPS_MS = 2500;
+const NUDGE_MS = 1500;
+
+/**
+ * How long troops just sent count as gone before the view shows them gone.
+ * Clicks within a tick all read the same troop count, so without this a
+ * burst of them sends the whole army before the low-troops rule sees it.
+ */
+const IN_FLIGHT_MS = 400;
+
+/** Spotlight radius around a single-tile target, in tiles and at least px. */
+const TARGET_RADIUS_TILES = 6;
+const MIN_SPOT_PX = 48;
+
+/** Steps whose text says "tap" instead of "click" on touch devices. */
+const TOUCH_TEXT = new Set([
+  "spawn",
+  "expand",
+  "tribe",
+  "coast",
+  "boat",
+  "nation",
+  "wrong_target",
+]);
+
+interface Target {
+  x: number;
+  y: number;
+  /** Spotlight radius in tiles. */
+  radius: number;
+}
+
+/**
+ * The onboarding tutorial (docs/OnboardingTutorial.md): on a `tutorial`
+ * game it spotlights the step's target with an arrow, shows one sentence,
+ * and drops (through the Transport's intent gate) any spawn, attack or boat
+ * the step doesn't ask for, or any attack while troops are low.
+ */
+@customElement("onboarding-overlay")
+export class OnboardingOverlay extends LitElement implements Controller {
+  public game: GameView;
+  public eventBus: EventBus;
+  public transformHandler: TransformHandler;
+
+  @state() private active = false;
+  @state() private step: OnboardingStep | "won" = "spawn";
+  @state() private hasCoast = true;
+  @state() private lowTroops = false;
+  @state() private nudging = false;
+  /** Screen position and radius of the spotlight, in px. */
+  @state() private spot: { x: number; y: number; r: number } | null = null;
+
+  private target: Target | null = null;
+  private lowTroopsUntil = 0;
+  private nudgeUntil = 0;
+  private frame: number | null = null;
+  /** The tribe and nation spawn a tick or two in; until then none is "gone". */
+  private rivalsSeen = false;
+  /** Troops of the attacks and boats let through lately, with when. */
+  private inFlight: { troops: number; at: number }[] = [];
+
+  createRenderRoot() {
+    return this;
+  }
+
+  init() {
+    if (this.game.config().gameConfig().tutorial !== true) return;
+    this.active = true;
+    this.eventBus.emit(new SetIntentGateEvent(this.gate));
+    this.followTarget();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this.frame !== null) cancelAnimationFrame(this.frame);
+    this.frame = null;
+  }
+
+  tick() {
+    if (!this.active) return;
+    const me = this.game.myPlayer();
+    if (me === null) return;
+    if (this.game.ticks() % SCAN_TICKS === 0 || this.step === "spawn") {
+      this.scan(me);
+    }
+    const now = performance.now();
+    this.lowTroops =
+      me.hasSpawned() &&
+      (this.troopShare(me) < LOW_TROOP_SHARE || now < this.lowTroopsUntil);
+    this.nudging = now < this.nudgeUntil;
+  }
+
+  /** Our troops, less those just sent and `sending`, over our max. */
+  private troopShare(me: PlayerView, sending = 0): number {
+    const now = performance.now();
+    this.inFlight = this.inFlight.filter((s) => now - s.at < IN_FLIGHT_MS);
+    const sent = this.inFlight.reduce((sum, s) => sum + s.troops, 0);
+    return (
+      Math.max(0, me.troops() - sent - sending) /
+      Math.max(this.game.config().maxTroops(me), 1)
+    );
+  }
+
+  /** Transport's intent gate: true lets the intent through. */
+  private gate = (intent: Intent): boolean => {
+    const verdict = this.judgeIntent(intent);
+    const now = performance.now();
+    if (verdict === "ok") {
+      if (intent.type === "attack" || intent.type === "boat") {
+        this.inFlight.push({ troops: intent.troops ?? 0, at: now });
+      }
+      return true;
+    }
+    if (verdict === "low_troops") {
+      this.lowTroopsUntil = now + LOW_TROOPS_MS;
+      this.lowTroops = true;
+    } else {
+      this.nudgeUntil = now + NUDGE_MS;
+      this.nudging = true;
+    }
+    return false;
+  };
+
+  private judgeIntent(intent: Intent): OnboardingVerdict {
+    if (this.step === "won") return "ok";
+    const me = this.game.myPlayer();
+    const sending =
+      intent.type === "attack" || intent.type === "boat"
+        ? (intent.troops ?? 0)
+        : 0;
+    const share = me === null ? 0 : this.troopShare(me, sending);
+    switch (intent.type) {
+      case "spawn":
+        return judge(
+          this.step,
+          {
+            kind: "spawn",
+            inZone: inCircle(
+              SPAWN_ZONE,
+              this.game.x(intent.tile),
+              this.game.y(intent.tile),
+            ),
+          },
+          share,
+        );
+      case "attack":
+        return judge(
+          this.step,
+          {
+            kind: "attack",
+            target:
+              intent.targetID === null
+                ? "free"
+                : this.targetOf(this.game.player(intent.targetID)),
+          },
+          share,
+        );
+      case "boat":
+        return judge(
+          this.step,
+          { kind: "boat", target: this.targetOfTile(intent.dst) },
+          share,
+        );
+      default:
+        return "ok";
+    }
+  }
+
+  private targetOf(p: PlayerView): OnboardingTarget {
+    if (p.type() === PlayerType.Bot) return "tribe";
+    if (p.type() === PlayerType.Nation) return "nation";
+    return "other";
+  }
+
+  private targetOfTile(tile: number): OnboardingTarget {
+    const owner = this.game.playerBySmallID(this.game.ownerID(tile));
+    if (owner.isPlayer()) return this.targetOf(owner as PlayerView);
+    return inCircle(ISLET, this.game.x(tile), this.game.y(tile))
+      ? "islet"
+      : "free";
+  }
+
+  private living(type: PlayerType): PlayerView | null {
+    return (
+      this.game.playerViews().find((p) => p.type() === type && p.isAlive()) ??
+      null
+    );
+  }
+
+  /**
+   * Reads the step off the map, and where its arrow points: the free land
+   * at our edge nearest where we're headed, the tribe's land at our edge,
+   * the islet, or the nation's coast nearest the islet.
+   */
+  private scan(me: PlayerView) {
+    const g = this.game;
+    const tribe = this.living(PlayerType.Bot);
+    const nation = this.living(PlayerType.Nation);
+    const mine = me.smallID();
+    const tribeID = tribe?.smallID() ?? -1;
+    const nationID = nation?.smallID() ?? -1;
+    const tribeLoc = tribe?.nameLocation();
+    const myLoc = me.nameLocation();
+    // Grow toward the tribe while it's alive, then toward the islet.
+    const goal = tribeLoc ?? ISLET;
+    const near = (from: { x: number; y: number }, x: number, y: number) =>
+      (x - from.x) * (x - from.x) + (y - from.y) * (y - from.y);
+
+    let bordersTribe = false;
+    let ownsIslet = false;
+    let hasCoast = false;
+    let frontier: Cell | null = null;
+    let frontierDist = Infinity;
+    let tribeEdge: Cell | null = null;
+    let tribeEdgeDist = Infinity;
+    let nationCoast: Cell | null = null;
+    let nationCoastDist = Infinity;
+
+    const w = g.width();
+    const h = g.height();
+    const offsets = [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ];
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const t = g.ref(x, y);
+        const owner = g.ownerID(t);
+        if (owner === nationID && g.isShore(t)) {
+          const d = near(ISLET, x, y);
+          if (d < nationCoastDist) {
+            nationCoastDist = d;
+            nationCoast = new Cell(x, y);
+          }
+          continue;
+        }
+        if (owner !== mine) continue;
+        if (inCircle(ISLET, x, y)) ownsIslet = true;
+        if (g.isShore(t)) hasCoast = true;
+        for (const [dx, dy] of offsets) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          const n = g.ref(nx, ny);
+          const no = g.ownerID(n);
+          if (no === tribeID) {
+            bordersTribe = true;
+            const d = myLoc ? near(myLoc, nx, ny) : 0;
+            if (d < tribeEdgeDist) {
+              tribeEdgeDist = d;
+              tribeEdge = new Cell(nx, ny);
+            }
+          } else if (no === 0 && g.isLand(n)) {
+            const d = near(goal, nx, ny);
+            if (d < frontierDist) {
+              frontierDist = d;
+              frontier = new Cell(nx, ny);
+            }
+          }
+        }
+      }
+    }
+
+    if (tribe !== null && nation !== null) this.rivalsSeen = true;
+    const previous = this.step;
+    this.step = stepFor({
+      hasSpawned: me.hasSpawned(),
+      bordersTribe,
+      tribeAlive: tribe !== null || !this.rivalsSeen,
+      ownsIslet,
+      nationAlive: nation !== null || !this.rivalsSeen,
+    });
+    this.hasCoast = hasCoast;
+
+    const at = (c: Cell | null, radius = TARGET_RADIUS_TILES): Target | null =>
+      c === null ? null : { x: c.x, y: c.y, radius };
+    switch (this.step) {
+      case "spawn":
+        this.target = { ...SPAWN_ZONE };
+        break;
+      case "expand":
+        this.target = at(frontier);
+        break;
+      case "tribe":
+        this.target = at(tribeEdge);
+        break;
+      case "boat":
+        this.target = hasCoast ? { ...ISLET } : at(frontier);
+        break;
+      case "nation":
+        this.target = at(nationCoast);
+        break;
+      case "won":
+        this.target = null;
+        this.eventBus.emit(new SetIntentGateEvent(null));
+        break;
+    }
+    // A new step's target can be across the map from where the camera is.
+    const t = this.target;
+    if (
+      this.step !== previous &&
+      t !== null &&
+      !this.transformHandler.isOnScreen(new Cell(t.x, t.y))
+    ) {
+      this.eventBus.emit(new GoToPositionEvent(t.x, t.y));
+    }
+  }
+
+  /** Keeps the spotlight on the target as the camera moves. */
+  private followTarget = () => {
+    this.frame = requestAnimationFrame(this.followTarget);
+    const t = this.target;
+    if (t === null) {
+      if (this.spot !== null) this.spot = null;
+      return;
+    }
+    const p = this.transformHandler.worldToScreenCoordinates(
+      new Cell(t.x + 0.5, t.y + 0.5),
+    );
+    const r = Math.max(MIN_SPOT_PX, t.radius * this.transformHandler.scale);
+    const s = this.spot;
+    if (
+      s === null ||
+      Math.abs(s.x - p.x) > 0.5 ||
+      Math.abs(s.y - p.y) > 0.5 ||
+      Math.abs(s.r - r) > 0.5
+    ) {
+      this.spot = { x: p.x, y: p.y, r };
+    }
+  };
+
+  private text(key: string): string {
+    const touch = Platform.isTouch && TOUCH_TEXT.has(key) ? "_touch" : "";
+    return translateText(`onboarding.step.${key}${touch}`);
+  }
+
+  private stepKey(): string {
+    if (this.step === "boat" && !this.hasCoast) return "coast";
+    return this.step;
+  }
+
+  render() {
+    if (!this.active) return nothing;
+    if (this.step === "won") return this.renderWon();
+    const index = ONBOARDING_STEPS.indexOf(this.step);
+    const spot = this.spot;
+    return html`
+      <style>
+        @keyframes onboarding-shake {
+          0%,
+          100% {
+            transform: translateX(-50%);
+          }
+          25% {
+            transform: translateX(calc(-50% - 8px));
+          }
+          75% {
+            transform: translateX(calc(-50% + 8px));
+          }
+        }
+        .onboarding-shake {
+          animation: onboarding-shake 0.25s ease-in-out 2;
+        }
+      </style>
+      <div class="fixed inset-0 pointer-events-none z-[900]">
+        ${
+          spot === null
+            ? nothing
+            : html`
+                <div
+                  class="absolute inset-0"
+                  style="background: radial-gradient(circle at ${spot.x}px ${spot.y}px, transparent ${spot.r}px, rgba(0, 0, 0, 0.55) ${
+                    spot.r + 24
+                  }px)"
+                ></div>
+                <div
+                  class="absolute rounded-full border-4 border-yellow-300 animate-ping"
+                  style="left: ${spot.x - spot.r}px; top: ${
+                    spot.y - spot.r
+                  }px; width: ${spot.r * 2}px; height: ${spot.r * 2}px"
+                ></div>
+                <div
+                  class="absolute -translate-x-1/2 animate-bounce text-yellow-300 drop-shadow-lg"
+                  style="left: ${spot.x}px; top: ${spot.y - spot.r - 56}px"
+                >
+                  <svg width="40" height="48" viewBox="0 0 40 48">
+                    <path
+                      d="M14 0h12v28h12L20 48 2 28h12z"
+                      fill="currentColor"
+                      stroke="#000"
+                      stroke-width="2"
+                    />
+                  </svg>
+                </div>
+              `
+        }
+      </div>
+      <div
+        dir=${textDirection()}
+        class="fixed top-20 left-1/2 -translate-x-1/2 z-[1001] pointer-events-none w-[min(92vw,560px)] rounded-xl bg-gray-900 px-5 py-4 text-center text-white shadow-2xl ${
+          this.nudging ? "onboarding-shake ring-4 ring-yellow-300" : ""
+        }"
+      >
+        <div class="text-xs uppercase tracking-wider text-yellow-300">
+          ${translateText("onboarding.step_counter", {
+            current: index + 1,
+            total: ONBOARDING_STEPS.length,
+          })}
+        </div>
+        <div class="mt-1 text-lg sm:text-2xl font-semibold leading-snug">
+          ${this.nudging ? this.text("wrong_target") : this.text(this.stepKey())}
+        </div>
+      </div>
+      ${
+        this.lowTroops
+          ? html`<div
+              dir=${textDirection()}
+              class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001] pointer-events-none w-[min(88vw,440px)] rounded-xl bg-red-700/95 px-5 py-4 text-center text-white shadow-2xl"
+            >
+              <div class="text-xl sm:text-2xl font-bold">
+                ${translateText("onboarding.low_troops_title")}
+              </div>
+              <div class="mt-1 text-base sm:text-lg">
+                ${translateText("onboarding.low_troops")}
+              </div>
+            </div>`
+          : nothing
+      }
+    `;
+  }
+
+  private renderWon() {
+    return html`
+      <div
+        class="fixed inset-0 z-[1001] flex items-center justify-center bg-black/60"
+      >
+        <div
+          dir=${textDirection()}
+          class="w-[min(90vw,480px)] rounded-xl bg-gray-900 px-6 py-6 text-center text-white shadow-2xl"
+        >
+          <h2 class="m-0 text-3xl font-bold text-yellow-300">
+            ${translateText("onboarding.won_title")}
+          </h2>
+          <p class="mt-3 text-lg">${translateText("onboarding.won_body")}</p>
+          <div class="mt-6 flex flex-col gap-3">
+            <button
+              type="button"
+              class="rounded-lg bg-yellow-400 px-4 py-3 text-lg font-bold text-gray-900 hover:bg-yellow-300"
+              @click=${() =>
+                (window.location.href = `${homeHref()}?solo_guide`)}
+            >
+              ${translateText("onboarding.play_solo")}
+            </button>
+            <button
+              type="button"
+              class="rounded-lg bg-gray-700 px-4 py-2 text-white hover:bg-gray-600"
+              @click=${() => (window.location.href = homeHref())}
+            >
+              ${translateText("onboarding.main_menu")}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+}
