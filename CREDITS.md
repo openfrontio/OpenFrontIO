@@ -117,6 +117,15 @@ Licensed under ODbL
 © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)  
 Licensed under ODbL
 
+### Türkiye Map
+
+NOAA National Centers for Environmental Information. 2022: ETOPO 2022 15 Arc-Second Global Relief Model.
+[https://doi.org/10.25921/fd45-gt74](https://doi.org/10.25921/fd45-gt74)  
+[Public Domain](https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem:etopo_2022)
+
+Borders and lakes: [Natural Earth](https://www.naturalearthdata.com/)  
+Public Domain
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)
