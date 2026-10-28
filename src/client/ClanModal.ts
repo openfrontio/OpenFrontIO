@@ -132,7 +132,7 @@ export class ClanModal extends BaseModal {
     return {
       tabs: this.onListView
         ? [
-            { key: "map", label: translateText("clan_modal.tab_map") },
+            { key: "map", label: translateText("clan_modal.tab_map_alpha") },
             { key: "my-clans", label: translateText("clan_modal.my_clans") },
             { key: "browse", label: translateText("clan_modal.browse") },
           ]
