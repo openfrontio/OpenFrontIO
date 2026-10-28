@@ -73,7 +73,7 @@ describe("NamePass targeted nameplate hover", () => {
     slot.target = true;
     expect(pass.hitTestNamePlate(1, cameraMatrix)).toBe(42);
 
-    // At this scale the target boost is 2, so the cursor stays outside the plate.
+    // Here the boost is 2, so the cursor remains outside the plate.
     const zoomedMatrix = new Float32Array([0.002, 0, 0, 0, 0.002, 0, 0, 0, 1]);
     expect(pass.hitTestNamePlate(1, zoomedMatrix)).toBe(0);
   });
