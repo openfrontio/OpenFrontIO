@@ -1707,10 +1707,6 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Paris,
     translationKey: "map.paris",
     categories: ["europe", "new"],
-    multiplayerFrequency: 3,
-    ffaFrequency: -1,
-    teamFrequency: -1,
-    specialFrequency: -1,
     defaultNationCount: 60,
     themes: ["europe"],
     customTribes: [
