@@ -684,9 +684,6 @@ export class InputHandler {
       (e) => {
         this.lastMouseX = e.clientX;
         this.lastMouseY = e.clientY;
-        if (e.movementX || e.movementY) {
-          this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
-        }
       },
       { signal },
     );
@@ -1221,6 +1218,23 @@ export class InputHandler {
     const wasTouchPlacementDrag = this.touchPlacementDragState === "active";
     this.touchPlacementDragState = "idle";
     if (wasTouchPlacementDrag) {
+      if (event.type === "pointerup") {
+        this.eventBus.emit(
+          new TouchGhostPlacementMoveEvent(event.clientX, event.clientY),
+        );
+      } else {
+        this.suppressNextTap = false;
+      }
+      event.preventDefault();
+      return;
+    }
+    if (event.type === "pointercancel") {
+      this.suppressNextTap = false;
+      this.canvas.style.cursor = "";
+      if (this.selectionBoxActive) {
+        this.selectionBoxActive = false;
+        this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
+      }
       event.preventDefault();
       return;
     }
@@ -1386,6 +1400,14 @@ export class InputHandler {
   }
 
   private onPointerMove(event: PointerEvent) {
+    if (event.pointerType === "mouse") {
+      this.lastMouseX = event.clientX;
+      this.lastMouseY = event.clientY;
+      if (event.movementX || event.movementY) {
+        this.eventBus.emit(new MouseMoveEvent(event.clientX, event.clientY));
+      }
+    }
+
     if (event.button === 1) {
       event.preventDefault();
       return;

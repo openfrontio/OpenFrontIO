@@ -310,6 +310,7 @@ export class BuildPreviewController implements Controller {
         this.touchPreviewTile === null || this.isNearTouchPreview(e.x, e.y);
     });
     this.eventBus.on(ConfirmGhostStructureEvent, () => {
+      this.syncGhostState();
       const target =
         (this.touchPlacementMode ? this.touchPreviewScreenPosition() : null) ??
         this.mousePos;
@@ -458,8 +459,15 @@ export class BuildPreviewController implements Controller {
       if (target === null) {
         this.removeGhostStructure();
       } else if (target !== this.ghostUnit.buildableUnit.type) {
+        const touchPreviewTile = this.touchPlacementMode
+          ? this.touchPreviewTile
+          : null;
         this.clearGhostStructure();
         this.createGhostStructure(target);
+        if (this.ghostUnit && touchPreviewTile !== null) {
+          this.touchPreviewTile = touchPreviewTile;
+          this.renderGhost();
+        }
       }
     } else if (target !== null) {
       this.createGhostStructure(target);
@@ -1222,6 +1230,14 @@ export class BuildPreviewController implements Controller {
       if (!this.isQueryInFlight) {
         this.lastQueriedTileRef = undefined;
       }
+      if (this.lastGhostData !== null) {
+        this.lastGhostData = {
+          ...this.lastGhostData,
+          canBuild: false,
+          canUpgrade: false,
+        };
+        this.resetCursorCaches();
+      }
       if (this.ghostUnit) {
         Object.assign(this.ghostUnit.buildableUnit, {
           canBuild: false,
@@ -1255,12 +1271,17 @@ export class BuildPreviewController implements Controller {
 
   private touchPreviewScreenPosition(): { x: number; y: number } | null {
     if (this.touchPreviewTile === null) return null;
-    return this.transformHandler.worldToScreenCoordinates(
-      new Cell(
-        this.game.x(this.touchPreviewTile) + 0.5,
-        this.game.y(this.touchPreviewTile) + 0.5,
-      ),
-    );
+    const renderTile =
+      this.lastGhostData?.snapToPlacement === true
+        ? new Cell(
+            this.lastGhostData.tileX + 0.5,
+            this.lastGhostData.tileY + 0.5,
+          )
+        : new Cell(
+            this.game.x(this.touchPreviewTile) + 0.5,
+            this.game.y(this.touchPreviewTile) + 0.5,
+          );
+    return this.transformHandler.worldToScreenCoordinates(renderTile);
   }
 
   private createGhostStructure(type: PlayerBuildableUnitType | null) {

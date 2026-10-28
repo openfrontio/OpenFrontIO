@@ -18,6 +18,7 @@ import {
   EmojiTableVisibleEvent,
   InputHandler,
   MouseDownEvent,
+  MouseMoveEvent,
   MouseOverEvent,
   MouseUpEvent,
   RefreshGraphicsEvent,
@@ -1891,12 +1892,14 @@ describe("mobile tap-preview placement", () => {
     ]);
   });
 
-  test("movement starting on the preview drags it without a hold delay", () => {
+  test("movement starting on the preview drags it without a hold delay or map pan", () => {
     const moves: TouchGhostPlacementMoveEvent[] = [];
+    const drags: DragEvent[] = [];
     eventBus.on(TouchGhostPlacementDragStartEvent, (event) => {
       event.handled = true;
     });
     eventBus.on(TouchGhostPlacementMoveEvent, (event) => moves.push(event));
+    eventBus.on(DragEvent, (event) => drags.push(event));
 
     inputHandler["onPointerDown"](
       new PointerEvent("pointerdown", {
@@ -1929,6 +1932,112 @@ describe("mobile tap-preview placement", () => {
     );
 
     expect(moves).toEqual([expect.objectContaining({ x: 125, y: 130 })]);
+
+    inputHandler["onPointerUp"](
+      new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 135,
+        clientY: 142,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+    expect(moves).toEqual([
+      expect.objectContaining({ x: 125, y: 130 }),
+      expect.objectContaining({ x: 135, y: 142 }),
+    ]);
+    expect(drags).toEqual([]);
+  });
+
+  test("pointercancel does not become a placement tap or a final preview move", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    const moves: TouchGhostPlacementMoveEvent[] = [];
+    eventBus.on(TouchGhostPlacementDragStartEvent, (event) => {
+      event.handled = true;
+    });
+    eventBus.on(TouchGhostPlacementEvent, (event) => placements.push(event));
+    eventBus.on(TouchGhostPlacementMoveEvent, (event) => moves.push(event));
+
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    inputHandler["onPointerCancel"](
+      new PointerEvent("pointercancel", {
+        button: 0,
+        clientX: 101,
+        clientY: 101,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    expect(placements).toEqual([]);
+    expect(moves).toEqual([]);
+
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    inputHandler["onPointerMove"](
+      new PointerEvent("pointermove", {
+        button: 0,
+        clientX: 125,
+        clientY: 130,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    expect(moves).toHaveLength(1);
+    inputHandler["onPointerCancel"](
+      new PointerEvent("pointercancel", {
+        button: 0,
+        clientX: 140,
+        clientY: 145,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+
+    expect(placements).toEqual([]);
+    expect(moves).toHaveLength(1);
+  });
+
+  test("only mouse pointer movement emits MouseMoveEvent", () => {
+    const moves: MouseMoveEvent[] = [];
+    eventBus.on(MouseMoveEvent, (event) => moves.push(event));
+    inputHandler.initialize();
+
+    const compatibilityMove = new MouseEvent("mousemove", {
+      clientX: 50,
+      clientY: 60,
+    });
+    Object.defineProperty(compatibilityMove, "movementX", { value: 5 });
+    window.dispatchEvent(compatibilityMove);
+    expect(moves).toEqual([]);
+
+    const mousePointerMove = new PointerEvent("pointermove", {
+      button: -1,
+      clientX: 70,
+      clientY: 80,
+      pointerId: 3,
+      pointerType: "mouse",
+    });
+    Object.defineProperty(mousePointerMove, "movementX", { value: 5 });
+    inputHandler["onPointerMove"](mousePointerMove);
+
+    expect(moves).toHaveLength(1);
+    expect(moves[0]).toEqual(expect.objectContaining({ x: 70, y: 80 }));
   });
 
   test("a touch-generated context menu does not cancel placement", () => {

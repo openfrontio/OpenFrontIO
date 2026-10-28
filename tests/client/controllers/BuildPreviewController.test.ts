@@ -1750,7 +1750,30 @@ describe("BuildPreviewController touch preview", () => {
     expect((controller as any).lastGhostData.tileY).toBe(2);
   });
 
-  test("Enter confirms at the touch preview instead of the stale mouse position", async () => {
+  test("init subscribes to touch placement events", async () => {
+    const { controller, eventBus, player } = makeController(UnitType.City);
+    const requestAnimationFrame = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockImplementation(() => 1);
+
+    try {
+      controller.init();
+      eventBus.emit(new TouchGhostPlacementEvent(200, 200));
+
+      expect((controller as any).touchPreviewTile).toBe(202);
+      expect(player.buildables).toHaveBeenCalledWith(
+        202,
+        [UnitType.City],
+        false,
+      );
+      await flushBuildables();
+      expect((controller as any).lastGhostData.tileX).toBe(2);
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
+
+  test("Enter uses the preserved touch preview after changing build type", async () => {
     const { controller, builds, eventBus, requests } =
       makeDeferredBuildablesController(UnitType.City);
     const requestAnimationFrame = vi
@@ -1761,16 +1784,32 @@ describe("BuildPreviewController touch preview", () => {
     (controller as any).touchPreviewTile = 202;
     (controller as any).mousePos.x = 100;
     (controller as any).mousePos.y = 100;
+    (controller as any).uiState.ghostStructure = UnitType.Port;
 
     try {
       controller.init();
       eventBus.emit(new ConfirmGhostStructureEvent());
 
-      expect(requests).toHaveLength(1);
-      expect(requests[0].tile).toBe(202);
+      expect((controller as any).touchPreviewTile).toBe(202);
+      expect(requests).toHaveLength(2);
+      expect(requests[0]).toEqual(
+        expect.objectContaining({ tile: 202, types: [UnitType.Port] }),
+      );
+      expect(requests[1]).toEqual(
+        expect.objectContaining({ tile: 202, types: [UnitType.Port] }),
+      );
       requests[0].resolve([
         {
-          type: UnitType.City,
+          type: UnitType.Port,
+          canBuild: 202,
+          canUpgrade: false,
+          cost: 1n,
+        },
+      ]);
+      await flushBuildables();
+      requests[1].resolve([
+        {
+          type: UnitType.Port,
           canBuild: 202,
           canUpgrade: false,
           cost: 1n,
@@ -1778,6 +1817,7 @@ describe("BuildPreviewController touch preview", () => {
       ]);
       await flushBuildables();
       expect(builds.map((event) => event.tile)).toEqual([202]);
+      expect(builds[0].unit).toBe(UnitType.Port);
     } finally {
       requestAnimationFrame.mockRestore();
     }
@@ -1881,32 +1921,65 @@ describe("BuildPreviewController touch preview", () => {
 
   test("moving the preview clears cached eligibility without dropping confirmations", async () => {
     const { controller } = makeController(UnitType.City);
-    (controller as any).touchPreviewTile = 101;
-    (controller as any).pendingConfirmations.push({
+    const c = controller as any;
+    c.touchPreviewTile = 101;
+    c.pendingConfirmations.push({
       tile: 101,
       ghostType: UnitType.City,
       preventStacking: false,
-      ghostGeneration: (controller as any).ghostGeneration,
+      ghostGeneration: c.ghostGeneration,
     });
-    (controller as any).ghostUnit.buildableUnit.canUpgrade = 42;
+    Object.assign(c.ghostUnit.buildableUnit, {
+      canBuild: 101,
+      canUpgrade: 42,
+      cost: 1n,
+      overlappingRailroads: [],
+      ghostRailPaths: [],
+    });
+    c.lastGhostData = c.buildGhostPreviewData(101, false);
+    c.prevGhostDataRef = c.lastGhostData;
+    c.renderedGhostBuffer = { ...c.lastGhostData };
 
-    (controller as any).moveTouchPreview(200, 200);
+    c.moveTouchPreview(200, 200);
 
-    expect((controller as any).touchPreviewTile).toBe(202);
-    expect((controller as any).pendingConfirmations).toHaveLength(1);
-    expect((controller as any).pendingConfirmations[0].tile).toBe(101);
-    expect((controller as any).ghostUnit.buildableUnit).toEqual(
+    expect(c.touchPreviewTile).toBe(202);
+    expect(c.pendingConfirmations).toHaveLength(1);
+    expect(c.pendingConfirmations[0].tile).toBe(101);
+    expect(c.ghostUnit.buildableUnit).toEqual(
       expect.objectContaining({ canBuild: false, canUpgrade: false }),
     );
+    expect(c.lastGhostData).toEqual(
+      expect.objectContaining({ canBuild: false, canUpgrade: false }),
+    );
+    expect(c.prevGhostDataRef).toBeNull();
+    expect(c.renderedGhostBuffer).toBeNull();
     await flushBuildables();
   });
 
+  test("hit testing follows the snapped preview position only when snapping is enabled", () => {
+    const { controller } = makeController(UnitType.City);
+    const c = controller as any;
+    c.touchPreviewTile = 101;
+    c.lastGhostData = {
+      snapToPlacement: true,
+      tileX: 5,
+      tileY: 5,
+    };
+
+    expect(c.isNearTouchPreview(200, 200)).toBe(true);
+    expect(c.isNearTouchPreview(100, 100)).toBe(false);
+
+    c.lastGhostData.snapToPlacement = false;
+    expect(c.isNearTouchPreview(100, 100)).toBe(true);
+    expect(c.isNearTouchPreview(200, 200)).toBe(false);
+  });
+
   test("ignores validation returned for an earlier touch preview", async () => {
-    let resolveBuildables!: (value: any[]) => void;
+    const pendingBuildables: Array<(value: any[]) => void> = [];
     const buildables = vi.fn(
       () =>
         new Promise<any[]>((resolve) => {
-          resolveBuildables = resolve;
+          pendingBuildables.push(resolve);
         }),
     );
     const eventBus = new EventBus();
@@ -1947,12 +2020,13 @@ describe("BuildPreviewController touch preview", () => {
     expect(buildables).toHaveBeenCalledWith(101, [UnitType.City], false);
 
     (controller as any).moveTouchPreview(200, 200);
-    resolveBuildables([
+    pendingBuildables[0]([
       { type: UnitType.City, canBuild: false, canUpgrade: 42 },
     ]);
-    await Promise.resolve();
+    await flushBuildables();
 
     expect((controller as any).touchPreviewTile).toBe(202);
+    expect(buildables).toHaveBeenLastCalledWith(202, [UnitType.City], false);
     expect((controller as any).ghostUnit.buildableUnit).toEqual(
       expect.objectContaining({ canBuild: false, canUpgrade: false }),
     );
