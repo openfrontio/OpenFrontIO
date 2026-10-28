@@ -190,8 +190,8 @@ describe("NameBoxCalculator Unit Tests", () => {
       // 1 1 0
       // 1 1 1
       const grid = new Uint8Array(9);
-      grid[0 * 3 + 0] = 1;
-      grid[0 * 3 + 1] = 1;
+      grid[0] = 1;
+      grid[1] = 1;
       grid[1 * 3 + 0] = 1;
       grid[1 * 3 + 1] = 1;
       grid[2 * 3 + 0] = 1;
