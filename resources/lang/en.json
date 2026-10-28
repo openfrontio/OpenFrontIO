@@ -1761,6 +1761,7 @@
     "warning": "WARNING"
   },
   "onboarding": {
+    "got_it": "Got it",
     "intro_body": "OpenFront is a strategy game where you grow your land and conquer your neighbors to take over the map.",
     "intro_start": "Start",
     "intro_title": "Welcome to OpenFront",
@@ -1779,6 +1780,7 @@
       "nation_touch": "Last one: the Red Empire. Tap its coast to send boats until it falls.",
       "spawn": "Click inside the glowing circle to choose where you start.",
       "spawn_touch": "Tap inside the glowing circle to choose where you start.",
+      "troops": "This bar is your army. It grows fastest when it's about half full, so don't wait for it to fill up.",
       "tribe": "That's a tribe. Click its land to attack it, and keep going until it's gone.",
       "tribe_touch": "That's a tribe. Tap its land to attack it, and keep going until it's gone.",
       "wrong_target": "Not there. Click where the arrow points.",

@@ -23,6 +23,7 @@ import {
   SPAWN_ZONE,
   stepFor,
 } from "../Onboarding";
+import { TutorialHighlightEvent } from "../Tutorial";
 
 /** How often (in ticks) to re-read the map for the step and its target. */
 const SCAN_TICKS = 5;
@@ -105,8 +106,16 @@ export class OnboardingOverlay extends LitElement implements Controller {
   @state() private hasCoast = true;
   @state() private lowTroops = false;
   @state() private nudging = false;
-  /** Screen position and radius of the target marker, in px. */
-  @state() private spot: { x: number; y: number; r: number } | null = null;
+  /**
+   * Screen position and radius of the target marker, in px; on the troops
+   * step, the top of the troop bar, with the arrow and no marker.
+   */
+  @state() private spot: {
+    x: number;
+    y: number;
+    r: number;
+    marker: boolean;
+  } | null = null;
 
   private target: Target | null = null;
   private lowTroopsUntil = 0;
@@ -114,6 +123,8 @@ export class OnboardingOverlay extends LitElement implements Controller {
   private frame: number | null = null;
   /** The tribe and nation spawn a tick or two in; until then none is "gone". */
   private rivalsSeen = false;
+  /** Clicked "Got it" on the troops step. */
+  private troopsSeen = false;
   /** Troops of the attacks and boats let through lately, with when. */
   private inFlight: { troops: number; at: number }[] = [];
 
@@ -334,6 +345,7 @@ export class OnboardingOverlay extends LitElement implements Controller {
     this.step = stepFor({
       hasSpawned: me.hasSpawned(),
       bordersTribe,
+      troopsSeen: this.troopsSeen,
       tribeAlive: tribe !== null || !this.rivalsSeen,
       ownsIslet,
       nationAlive: nation !== null || !this.rivalsSeen,
@@ -348,6 +360,9 @@ export class OnboardingOverlay extends LitElement implements Controller {
         break;
       case "expand":
         this.target = at(this.intoFreeLand(frontier, goal));
+        break;
+      case "troops":
+        this.target = null;
         break;
       case "tribe":
         this.target = at(tribeMiddle);
@@ -365,6 +380,11 @@ export class OnboardingOverlay extends LitElement implements Controller {
         this.setLowTroops(false);
         this.eventBus.emit(new SetIntentGateEvent(null));
         break;
+    }
+    if ((this.step === "troops") !== (previous === "troops")) {
+      this.eventBus.emit(
+        new TutorialHighlightEvent(this.step === "troops" ? "troops" : null),
+      );
     }
     // A new step's target can be across the map, or under the HUD.
     const t = this.target;
@@ -428,14 +448,33 @@ export class OnboardingOverlay extends LitElement implements Controller {
     return true;
   }
 
-  /** Keeps the target marker on the target as the camera moves. */
+  /**
+   * Keeps the target marker on the target as the camera moves, or the
+   * arrow on the troop bar.
+   */
   private followTarget = () => {
     this.frame = requestAnimationFrame(this.followTarget);
-    const t = this.target;
-    if (t === null) {
+    const next =
+      this.step === "troops" ? this.troopBarSpot() : this.markerSpot();
+    if (next === null) {
       if (this.spot !== null) this.spot = null;
       return;
     }
+    const s = this.spot;
+    if (
+      s === null ||
+      Math.abs(s.x - next.x) > 0.5 ||
+      Math.abs(s.y - next.y) > 0.5 ||
+      Math.abs(s.r - next.r) > 0.5 ||
+      s.marker !== next.marker
+    ) {
+      this.spot = next;
+    }
+  };
+
+  private markerSpot() {
+    const t = this.target;
+    if (t === null) return null;
     const p = this.transformHandler.worldToScreenCoordinates(
       new Cell(t.x + 0.5, t.y + 0.5),
     );
@@ -446,15 +485,30 @@ export class OnboardingOverlay extends LitElement implements Controller {
         TARGET_RADIUS_TILES * this.transformHandler.scale,
       ),
     );
-    const s = this.spot;
-    if (
-      s === null ||
-      Math.abs(s.x - p.x) > 0.5 ||
-      Math.abs(s.y - p.y) > 0.5 ||
-      Math.abs(s.r - r) > 0.5
-    ) {
-      this.spot = { x: p.x, y: p.y, r };
+    return { x: p.x, y: p.y, r, marker: true };
+  }
+
+  /** The top middle of the troop bar the control panel highlights. */
+  private troopBarSpot() {
+    for (const el of document.querySelectorAll(
+      "control-panel .tutorial-highlight",
+    )) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0) continue;
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top,
+        r: 0,
+        marker: false,
+      };
     }
+    return null;
+  }
+
+  private troopsDone = () => {
+    this.troopsSeen = true;
+    const me = this.game.myPlayer();
+    if (me !== null) this.scan(me);
   };
 
   private text(key: string): string {
@@ -496,28 +550,32 @@ export class OnboardingOverlay extends LitElement implements Controller {
           spot === null
             ? nothing
             : html`
-                <svg
-                  class="absolute drop-shadow-lg"
-                  style="left: ${spot.x - spot.r}px; top: ${
-                    spot.y - spot.r
-                  }px; width: ${spot.r * 2}px; height: ${spot.r * 2}px"
-                  viewBox="-10 -10 20 20"
-                >
-                  <g fill="none" stroke="#000" stroke-width="3">
-                    <circle r="8.5" />
-                    <circle r="4.5" />
-                  </g>
-                  <g fill="none" stroke="#fde047" stroke-width="1.6">
-                    <circle r="8.5" />
-                    <circle r="4.5" />
-                  </g>
-                  <circle
-                    r="1.6"
-                    fill="#fde047"
-                    stroke="#000"
-                    stroke-width="0.8"
-                  />
-                </svg>
+                ${
+                  spot.marker
+                    ? html`<svg
+                        class="absolute drop-shadow-lg"
+                        style="left: ${spot.x - spot.r}px; top: ${
+                          spot.y - spot.r
+                        }px; width: ${spot.r * 2}px; height: ${spot.r * 2}px"
+                        viewBox="-10 -10 20 20"
+                      >
+                        <g fill="none" stroke="#000" stroke-width="3">
+                          <circle r="8.5" />
+                          <circle r="4.5" />
+                        </g>
+                        <g fill="none" stroke="#fde047" stroke-width="1.6">
+                          <circle r="8.5" />
+                          <circle r="4.5" />
+                        </g>
+                        <circle
+                          r="1.6"
+                          fill="#fde047"
+                          stroke="#000"
+                          stroke-width="0.8"
+                        />
+                      </svg>`
+                    : nothing
+                }
                 <div
                   class="absolute -translate-x-1/2 animate-bounce text-yellow-300 drop-shadow-lg"
                   style="left: ${spot.x}px; top: ${spot.y - spot.r - 56}px"
@@ -549,6 +607,17 @@ export class OnboardingOverlay extends LitElement implements Controller {
         <div class="mt-1 text-lg sm:text-2xl font-semibold leading-snug">
           ${this.nudging ? this.text("wrong_target") : this.text(this.stepKey())}
         </div>
+        ${
+          this.step === "troops"
+            ? html`<button
+                type="button"
+                class="pointer-events-auto mt-3 rounded-lg bg-yellow-400 px-6 py-2 text-lg font-bold text-gray-900 hover:bg-yellow-300"
+                @click=${this.troopsDone}
+              >
+                ${translateText("onboarding.got_it")}
+              </button>`
+            : nothing
+        }
       </div>
       ${
         this.lowTroops

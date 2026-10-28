@@ -12,17 +12,21 @@ import {
 const start: OnboardingProgress = {
   hasSpawned: false,
   bordersTribe: false,
+  troopsSeen: false,
   tribeAlive: true,
   ownsIslet: false,
   nationAlive: true,
 };
 
 describe("onboarding steps", () => {
-  it("walks spawn, expand, tribe, boat, nation, then won", () => {
+  it("walks spawn, expand, troops, tribe, boat, nation, then won", () => {
     expect(stepFor(start)).toBe("spawn");
     const spawned = { ...start, hasSpawned: true };
     expect(stepFor(spawned)).toBe("expand");
-    expect(stepFor({ ...spawned, bordersTribe: true })).toBe("tribe");
+    expect(stepFor({ ...spawned, bordersTribe: true })).toBe("troops");
+    expect(stepFor({ ...spawned, bordersTribe: true, troopsSeen: true })).toBe(
+      "tribe",
+    );
     const tribeGone = { ...spawned, tribeAlive: false };
     expect(stepFor(tribeGone)).toBe("boat");
     expect(stepFor({ ...tribeGone, ownsIslet: true })).toBe("nation");
@@ -64,7 +68,13 @@ describe("onboarding rules", () => {
   });
 
   it("always lets the player grow into free land", () => {
-    for (const step of ["expand", "tribe", "boat", "nation"] as const) {
+    for (const step of [
+      "expand",
+      "troops",
+      "tribe",
+      "boat",
+      "nation",
+    ] as const) {
       expect(judge(step, { kind: "attack", target: "free" }, full)).toBe("ok");
     }
   });

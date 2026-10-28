@@ -6,11 +6,18 @@
 
 import type { GameEvent } from "@openfront/shared/EventBus";
 
-export type OnboardingStep = "spawn" | "expand" | "tribe" | "boat" | "nation";
+export type OnboardingStep =
+  | "spawn"
+  | "expand"
+  | "troops"
+  | "tribe"
+  | "boat"
+  | "nation";
 
 export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   "spawn",
   "expand",
+  "troops",
   "tribe",
   "boat",
   "nation",
@@ -54,6 +61,8 @@ export function inCircle(
 export interface OnboardingProgress {
   hasSpawned: boolean;
   bordersTribe: boolean;
+  /** Clicked "Got it" on the troop bar step. */
+  troopsSeen: boolean;
   tribeAlive: boolean;
   ownsIslet: boolean;
   nationAlive: boolean;
@@ -62,7 +71,10 @@ export interface OnboardingProgress {
 /** The step the player is on, or "won" once the tribe and nation are gone. */
 export function stepFor(p: OnboardingProgress): OnboardingStep | "won" {
   if (!p.hasSpawned) return "spawn";
-  if (p.tribeAlive) return p.bordersTribe ? "tribe" : "expand";
+  if (p.tribeAlive) {
+    if (!p.bordersTribe) return "expand";
+    return p.troopsSeen ? "tribe" : "troops";
+  }
   if (!p.nationAlive) return "won";
   return p.ownsIslet ? "nation" : "boat";
 }
@@ -79,6 +91,7 @@ export type OnboardingVerdict = "ok" | "wrong_target" | "low_troops";
 const ATTACK_TARGETS: Record<OnboardingStep, readonly OnboardingTarget[]> = {
   spawn: [],
   expand: ["free", "islet", "tribe"],
+  troops: ["free", "islet", "tribe"],
   tribe: ["free", "islet", "tribe"],
   boat: ["free", "islet"],
   nation: ["free", "islet", "nation"],
@@ -87,6 +100,7 @@ const ATTACK_TARGETS: Record<OnboardingStep, readonly OnboardingTarget[]> = {
 const BOAT_TARGETS: Record<OnboardingStep, readonly OnboardingTarget[]> = {
   spawn: [],
   expand: [],
+  troops: [],
   tribe: [],
   boat: ["free", "islet"],
   nation: ["free", "islet", "nation"],
