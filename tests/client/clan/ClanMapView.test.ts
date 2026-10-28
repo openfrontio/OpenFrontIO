@@ -139,22 +139,6 @@ describe("ClanMapView", () => {
     expect(spinner()).not.toBeNull();
   });
 
-  it("drops the spinner after the fallback when the page never reports loaded", async () => {
-    vi.useFakeTimers();
-    try {
-      frame.dispatchEvent(new Event("load"));
-      vi.advanceTimersByTime(9_999);
-      await view.updateComplete;
-      expect(spinner()).not.toBeNull();
-
-      vi.advanceTimersByTime(1);
-      await view.updateComplete;
-      expect(spinner()).toBeNull();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
   it("fullscreens the frame element on request", () => {
     const request = vi.fn(() => Promise.resolve());
     frame.requestFullscreen = request as never;

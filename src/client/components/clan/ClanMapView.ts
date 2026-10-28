@@ -18,15 +18,10 @@ export function clanMapOrigin(): string {
     : `https://clanmap.${aud}`;
 }
 
-// Pages that predate `clanmap:loaded` never send it: drop the spinner this
-// long after the frame's own load event instead.
-const LOADED_FALLBACK_MS = 10_000;
-
 @customElement("clan-map-view")
 export class ClanMapView extends LitElement {
   @query("iframe") private frame?: HTMLIFrameElement;
   @state() private loading = true;
-  private fallbackTimer: ReturnType<typeof setTimeout> | undefined;
 
   createRenderRoot() {
     return this;
@@ -39,7 +34,6 @@ export class ClanMapView extends LitElement {
 
   disconnectedCallback() {
     window.removeEventListener("message", this.onMessage);
-    clearTimeout(this.fallbackTimer);
     super.disconnectedCallback();
   }
 
@@ -61,13 +55,6 @@ export class ClanMapView extends LitElement {
     target.postMessage({ type: "clanmap:auth", jwt: auth.jwt }, origin);
   };
 
-  private onFrameLoad = () => {
-    clearTimeout(this.fallbackTimer);
-    this.fallbackTimer = setTimeout(() => {
-      this.loading = false;
-    }, LOADED_FALLBACK_MS);
-  };
-
   // Fullscreens the frame element itself, so it works from the parent
   // without any cooperation from the page (which also has its own button).
   public enterFullscreen(): void {
@@ -84,7 +71,6 @@ export class ClanMapView extends LitElement {
         title=${translateText("clan_modal.map_frame_title")}
         allow="fullscreen"
         allowfullscreen
-        @load=${this.onFrameLoad}
         class="block w-full h-full border-0 bg-[#0e1116]"
       ></iframe>
       ${
