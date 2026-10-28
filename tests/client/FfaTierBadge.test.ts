@@ -5,10 +5,13 @@ vi.mock("../../src/client/Utils", () => ({
     p ? `${k}:${JSON.stringify(p)}` : k,
 }));
 
-import { FFA_TIER_BASES } from "../../src/client/components/ffaRating/FfaTier";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { existsSync } from "fs";
+import { resolve } from "path";
+import { parseFfaTier } from "../../src/client/components/ffaRating/FfaTier";
 import {
-  FFA_TIER_COLOR_CLASSES,
   type FfaTierBadge,
+  ffaTierImagePath,
 } from "../../src/client/components/ffaRating/FfaTierBadge";
 import { ALL_FFA_TIERS } from "../util/FfaTiers";
 
@@ -32,12 +35,6 @@ describe("<ffa-tier-badge>", () => {
     expect(el.dataset.ffaTier).toBe(name.toLowerCase());
     expect(el.title).toBe(label);
     expect(badge.textContent).toContain(label);
-  });
-
-  it("gives each base tier its own colour", () => {
-    expect(
-      new Set(FFA_TIER_BASES.map((b) => FFA_TIER_COLOR_CLASSES[b])).size,
-    ).toBe(8);
   });
 
   it("shows the dashed Calibrating N/10 variant", async () => {
@@ -78,11 +75,80 @@ describe("<ffa-tier-badge>", () => {
     expect(badge.textContent!.trim()).toBe("");
   });
 
-  it("defaults to sm and sizes up", async () => {
+  it.each(ALL_FFA_TIERS)(
+    "draws %s with its family's compact emblem",
+    async (tier) => {
+      await render({ tier });
+      const family = tier.split(" ")[0].toLowerCase();
+      expect(img().getAttribute("src")).toBe(
+        assetUrl(`images/ffa-tiers/compact/${family}.svg`),
+      );
+    },
+  );
+
+  it.each(ALL_FFA_TIERS)(
+    "draws %s at lg with its own detailed emblem",
+    async (tier) => {
+      await render({ tier, size: "lg" });
+      const file = tier.toLowerCase().replace(" ", "-");
+      expect(img().getAttribute("src")).toBe(
+        assetUrl(`images/ffa-tiers/detailed/${file}.svg`),
+      );
+    },
+  );
+
+  it("only points at emblems that ship", () => {
+    for (const tier of ALL_FFA_TIERS) {
+      for (const size of ["sm", "md", "lg"] as const) {
+        const asset = ffaTierImagePath(parseFfaTier(tier)!, size);
+        expect(existsSync(resolve("resources", asset)), asset).toBe(true);
+      }
+    }
+  });
+
+  it("writes the tier beside the compact emblem, which is decorative", async () => {
+    await render({ tier: "Diamond II", size: "md" });
+    expect(img().alt).toBe("");
+    expect(
+      badge.querySelector("[data-ffa-tier-label]")!.textContent!.trim(),
+    ).toBe("ffa_rating.tier.diamond II");
+  });
+
+  it("gives the detailed emblem the tier as alt text and no label", async () => {
+    await render({ tier: "Diamond II", size: "lg" });
+    expect(img().alt).toBe("ffa_rating.tier.diamond II");
+    expect(badge.querySelector("[data-ffa-tier-label]")).toBeNull();
+    expect(badge.querySelector<HTMLElement>("[data-ffa-tier]")!.title).toBe(
+      "ffa_rating.tier.diamond II",
+    );
+  });
+
+  it("shares one compact emblem across a family's divisions", async () => {
+    const srcs = new Set<string>();
+    for (const tier of ["Diamond III", "Diamond II", "Diamond I"]) {
+      await render({ tier });
+      srcs.add(img().getAttribute("src")!);
+      badge.remove();
+    }
+    expect(srcs.size).toBe(1);
+  });
+
+  it.each([
+    ["sm", 20],
+    ["md", 24],
+    ["lg", 48],
+  ] as const)("sizes the emblem for %s", async (size, px) => {
+    await render({ tier: "Gold I", size });
+    expect(img().getAttribute("width")).toBe(String(px));
+    expect(img().getAttribute("height")).toBe(String(px));
+  });
+
+  it("defaults to sm", async () => {
     await render({ tier: "Gold I" });
-    expect(badge.innerHTML).toContain("text-[10px]");
-    badge.size = "lg";
-    await badge.updateComplete;
-    expect(badge.innerHTML).toContain("text-sm");
+    expect(img().getAttribute("width")).toBe("20");
   });
 });
+
+function img(): HTMLImageElement {
+  return badge.querySelector<HTMLImageElement>("img[data-ffa-tier-img]")!;
+}

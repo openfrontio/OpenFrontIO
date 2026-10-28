@@ -1,9 +1,9 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { LitElement, TemplateResult, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../../Utils";
 import {
   FFA_CALIBRATION_GAMES,
-  FfaTierBase,
   ParsedFfaTier,
   ffaTierLabel,
   parseFfaTier,
@@ -12,29 +12,43 @@ import {
 export type FfaBadgeSize = "sm" | "md" | "lg";
 
 // Full literal class strings: Tailwind only generates classes it sees in source.
-export const FFA_TIER_COLOR_CLASSES: Record<FfaTierBase, string> = {
-  iron: "bg-stone-600 text-white",
-  bronze: "bg-amber-800 text-white",
-  silver: "bg-slate-400 text-slate-950",
-  gold: "bg-yellow-500 text-yellow-950",
-  platinum: "bg-teal-400 text-teal-950",
-  diamond: "bg-sky-400 text-sky-950",
-  master: "bg-purple-600 text-white",
-  grandmaster: "bg-red-600 text-white",
-};
-
 export const FFA_BADGE_SIZE_CLASSES: Record<FfaBadgeSize, string> = {
   sm: "text-[10px] px-1.5 py-0.5",
   md: "text-xs px-2 py-0.5",
   lg: "text-sm px-3 py-1",
 };
 
+// OFstats's emblem kit: the flat compact emblem (one per family) at 24 px and
+// below, with the tier written beside it; the shaded detailed one (one per
+// tier, division on its plate) at 32 px and up.
+export const FFA_BADGE_IMAGE_PX: Record<FfaBadgeSize, number> = {
+  sm: 20,
+  md: 24,
+  lg: 48,
+};
+
+const LABEL_CLASSES: Record<"sm" | "md", string> = {
+  sm: "text-xs",
+  md: "text-sm",
+};
+
+/** The emblem's path under resources/, e.g. "images/ffa-tiers/compact/gold.svg". */
+export function ffaTierImagePath(
+  tier: ParsedFfaTier,
+  size: FfaBadgeSize,
+): string {
+  if (size !== "lg") return `images/ffa-tiers/compact/${tier.base}.svg`;
+  const file =
+    tier.division === null
+      ? tier.base
+      : `${tier.base}-${tier.division.toLowerCase()}`;
+  return `images/ffa-tiers/detailed/${file}.svg`;
+}
+
 /**
- * A player's FFA rating tier, or a "Calibrating N/10" pill while they have no
- * tier yet. The tier is always the API's string, never computed here.
- *
- * Placeholder look: a flat pill. Only renderTier (and renderCalibrating) draw
- * the badge, so the final art can replace them without touching the rest.
+ * A player's FFA rating tier, drawn with OFstats's emblem, or a
+ * "Calibrating N/10" pill while they have no tier yet. The tier is always the
+ * API's string, never computed here.
  */
 @customElement("ffa-tier-badge")
 export class FfaTierBadge extends LitElement {
@@ -87,11 +101,39 @@ export class FfaTierBadge extends LitElement {
   }
 
   protected renderTier(tier: ParsedFfaTier, label: string): TemplateResult {
-    return html`<span
-      class="rounded-full font-bold uppercase tracking-wide whitespace-nowrap ${
-        FFA_TIER_COLOR_CLASSES[tier.base]
-      } ${FFA_BADGE_SIZE_CLASSES[this.size]}"
-      >${label}</span
+    const size = this.size;
+    const px = FFA_BADGE_IMAGE_PX[size];
+    const src = assetUrl(ffaTierImagePath(tier, size));
+    if (size === "lg") {
+      return html`<img
+        data-ffa-tier-img
+        src=${src}
+        alt=${label}
+        width=${px}
+        height=${px}
+        decoding="async"
+        draggable="false"
+        class="block shrink-0"
+      />`;
+    }
+    // The label beside it says the tier, so the emblem itself is decorative.
+    return html`<span class="inline-flex items-center gap-1.5 whitespace-nowrap"
+      ><img
+        data-ffa-tier-img
+        src=${src}
+        alt=""
+        width=${px}
+        height=${px}
+        decoding="async"
+        draggable="false"
+        class="block shrink-0"
+      /><span
+        data-ffa-tier-label
+        class="font-bold uppercase tracking-wide text-white ${
+          LABEL_CLASSES[size]
+        }"
+        >${label}</span
+      ></span
     >`;
   }
 
