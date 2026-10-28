@@ -25,6 +25,7 @@ import {
   unpackMotionPlans,
   type MotionPlanRecord,
 } from "@openfront/engine-lib/game/MotionPlans";
+import { unpackUnitUpdates } from "@openfront/engine-lib/game/PackedUnitUpdates";
 import type {
   NameEntry,
   PlayerState,
@@ -105,6 +106,8 @@ export const VIEW_DATA_ROUTING: Record<
   packedAttackUpdates: "normalizer",
   playerNameViewData: "normalizer",
   packedNukeImpacts: "events",
+  packedUnitUpdates: "normalizer",
+  packedMissileTimers: "normalizer",
   tickExecutionDuration: "dropped",
   pendingTurns: "dropped",
 };
@@ -236,7 +239,11 @@ export class FrameNormalizer {
       }
       changed.set(id, state);
     };
-    for (const u of gu.updates[GameUpdateType.Unit] as UnitUpdate[]) {
+    const rawUnits = (gu.updates[GameUpdateType.Unit] as UnitUpdate[]) ?? [];
+    const units = gu.packedUnitUpdates
+      ? unpackUnitUpdates(gu.packedUnitUpdates, gu.packedMissileTimers)
+      : rawUnits;
+    for (const u of units) {
       const next = unitStateFromUpdate(u);
       // UnitImpl.toUpdate hands out its live missileTimerQueue array. The
       // client gets a structured clone, but in the processor the array

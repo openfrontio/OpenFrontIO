@@ -810,6 +810,31 @@ describe("GameView.frameData() — renderer contract", () => {
     expect(relationMatrix[1 * relationSize + 3]).toBe(RELATION_NEUTRAL);
     expect(relationMatrix[3 * relationSize + 1]).toBe(RELATION_NEUTRAL);
   });
+
+  it("frame.namesSnap is true on spawn phase end tick, false otherwise", () => {
+    const game = makeGameView();
+    // Tick 1: during spawn phase
+    game.update(makeEmptyGu(1));
+    expect(game.frameData().namesSnap).toBe(false);
+
+    // Tick 2: still during spawn phase
+    game.update(makeEmptyGu(2));
+    expect(game.frameData().namesSnap).toBe(false);
+
+    // Tick 3: spawn phase ends
+    const guSpawnEnd = makeEmptyGu(3);
+    guSpawnEnd.updates[GameUpdateType.SpawnPhaseEnd] = [
+      { type: GameUpdateType.SpawnPhaseEnd, startTick: 3 } as ReturnType<
+        typeof makeEmptyGu
+      >["updates"][typeof GameUpdateType.SpawnPhaseEnd][number],
+    ];
+    game.update(guSpawnEnd);
+    expect(game.frameData().namesSnap).toBe(true);
+
+    // Tick 4: normal gameplay tick after spawn phase
+    game.update(makeEmptyGu(4));
+    expect(game.frameData().namesSnap).toBe(false);
+  });
 });
 
 describe("GameView.unitsOwnedBy — per-tick owner index", () => {
