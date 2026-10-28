@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const howlInstances: any[] = [];
 let nextPlayId = 1;
+const originalMatches = Element.prototype.matches;
 const { howlerVolume } = vi.hoisted(() => ({ howlerVolume: vi.fn() }));
 
 vi.mock("howler", () => {
@@ -93,20 +94,47 @@ function resetSettings() {
 const find = (fragment: string) =>
   howlInstances.find((h) => h.src.includes(fragment));
 
+const musicHowls = () =>
+  howlInstances.filter((h) => h.src.includes("sounds/music/"));
+
+/** The gameplay track the manager currently holds: the last one it built. */
+const currentMusic = () => musicHowls()[musicHowls().length - 1];
+
+/** Stands in for a browser that does (or does not) support the selector. */
+function setVolumeLocked(result: boolean | "unsupported") {
+  vi.spyOn(Element.prototype, "matches").mockImplementation(function (
+    this: Element,
+    selector: string,
+  ) {
+    if (selector !== ":volume-locked") {
+      return originalMatches.call(this, selector);
+    }
+    if (result === "unsupported") {
+      throw new DOMException("Unknown pseudo-class", "SyntaxError");
+    }
+    return result;
+  });
+}
+
 /**
- * Runs `body` against a SoundManager built as though this were iOS.
+ * Runs `body` against a SoundManager built as though this were iOS. By default
+ * the selector is unsupported, exercising the iOS fallback for Safari < 15.4.
  *
- * Rebuilt rather than flipped in place, because the platform is read when the
- * music Howl is constructed.
+ * Rebuilt rather than flipped in place, because the capability is read when
+ * the music Howl is constructed.
  */
-function onIOS(body: () => void, options?: { music?: number }) {
+function onIOS(
+  body: () => void,
+  options?: { music?: number; volumeLocked?: boolean | "unsupported" },
+) {
   soundManager.dispose();
   mixer.dispose();
   howlInstances.length = 0;
   const previousIsIOS = Platform.isIOS;
   Platform.isIOS = true;
+  setVolumeLocked(options?.volumeLocked ?? "unsupported");
   try {
-    build(options);
+    build({ music: options?.music });
     body();
   } finally {
     Platform.isIOS = previousIsIOS;
@@ -145,29 +173,102 @@ afterEach(() => {
 });
 
 describe("background music", () => {
-  it("is a single looping track, not a playlist", () => {
-    const music = find("gameplay.mp3");
-    expect(music).toBeDefined();
-    expect(music.loop).toBe(true);
-    expect(howlInstances.filter((h) => h.src.includes("music/")).length).toBe(
-      1,
-    );
+  it("builds one track at a time, and does not loop it", () => {
+    // On iOS a loaded track is ~75 MB of PCM, so the playlist must not hold
+    // every track at once. Each one ends so the next can take over.
+    expect(musicHowls().length).toBe(1);
+    expect(currentMusic().loop).toBe(false);
+  });
+
+  it("starts on a random track", () => {
+    soundManager.dispose();
+    mixer.dispose();
+    howlInstances.length = 0;
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    build();
+    expect(currentMusic().src).toContain("gameplay-2.mp3");
+  });
+
+  it("plays the next track when one ends, and wraps around", () => {
+    soundManager.dispose();
+    mixer.dispose();
+    howlInstances.length = 0;
+    vi.spyOn(Math, "random").mockReturnValue(0.9);
+    build();
+    soundManager.playBackgroundMusic();
+
+    const last = currentMusic();
+    expect(last.src).toContain("gameplay-3.mp3");
+    last._fire("end", -1);
+
+    // The finished track is released, not kept for the next time round.
+    expect(last.unload).toHaveBeenCalled();
+    const first = currentMusic();
+    expect(first).not.toBe(last);
+    expect(first.src).toContain("gameplay.mp3");
+    expect(first.load).toHaveBeenCalled();
+    expect(first.play).toHaveBeenCalledTimes(1);
+
+    first._fire("end", -1);
+    expect(currentMusic().src).toContain("gameplay-2.mp3");
+    expect(currentMusic().play).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits for music to be audible before fetching the next track", () => {
+    soundManager.playBackgroundMusic();
+    settings.setAudioVolume("music", 0);
+    currentMusic()._fire("end", -1);
+
+    const next = currentMusic();
+    expect(next.load).not.toHaveBeenCalled();
+    expect(next.play).not.toHaveBeenCalled();
+
+    settings.setAudioVolume("music", 1);
+    expect(next.load).toHaveBeenCalled();
+    expect(next.play).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives the next track the music channel's volume", () => {
+    soundManager.playBackgroundMusic();
+    settings.setAudioVolume("music", 0.5);
+    currentMusic()._fire("end", -1);
+    const next = currentMusic();
+    expect(next.volumes[next.volumes.length - 1]).toBeCloseTo(0.25 * 0.89);
   });
 
   it("streams instead of waiting for the whole file to decode", () => {
     // Howler's default Web Audio path downloads and decodes the entire track
-    // before the first note. gameplay.mp3 is 4.6 MB, which was tens of seconds
+    // before the first note. Each track is ~4.5 MB, which was tens of seconds
     // of silence at game start. Ambience and cues stay on Web Audio, so this
     // has to stay specific to the music track.
-    expect(find("gameplay.mp3").html5).toBe(true);
+    expect(currentMusic().html5).toBe(true);
   });
 
-  it("uses Web Audio on iOS, where a streamed track cannot be turned down", () => {
+  it("uses Web Audio on older iOS without :volume-locked", () => {
     onIOS(() => {
-      // iOS ignores volume writes to a media element, so the streamed track
-      // could not be muted at all there (#5457).
-      expect(find("gameplay.mp3").html5).toBe(false);
+      // Before Safari 15.4 the selector throws, so the iOS fallback applies:
+      // a streamed track could not be muted at all there (#5457).
+      expect(currentMusic().html5).toBe(false);
     });
+  });
+
+  it("uses Web Audio when :volume-locked reports locked volume off iOS", () => {
+    setVolumeLocked(true);
+    soundManager.dispose();
+    mixer.dispose();
+    howlInstances.length = 0;
+    build();
+
+    expect(currentMusic().html5).toBe(false);
+  });
+
+  it("streams on iOS when :volume-locked reports unlocked volume", () => {
+    onIOS(
+      () => {
+        expect(currentMusic().html5).toBe(true);
+      },
+      { volumeLocked: false },
+    );
   });
 
   it("never fetches the track from the constructor", () => {
@@ -176,8 +277,8 @@ describe("background music", () => {
     // buffered on a media element, or ~74 MB of PCM on iOS. The web defaults
     // every channel to silence, so most of that is spent on players who hear
     // nothing. startMusicIfAudible does the one fetch instead.
-    expect(find("gameplay.mp3").preload).toBe(false);
-    expect(find("gameplay.mp3").load).not.toHaveBeenCalled();
+    expect(currentMusic().preload).toBe(false);
+    expect(currentMusic().load).not.toHaveBeenCalled();
   });
 
   it("defers the fetch until music is audible on every platform", () => {
@@ -186,7 +287,7 @@ describe("background music", () => {
     howlInstances.length = 0;
     build({ music: 0 });
 
-    const music = find("gameplay.mp3");
+    const music = currentMusic();
     soundManager.playBackgroundMusic();
     expect(music.load).not.toHaveBeenCalled();
 
@@ -201,7 +302,7 @@ describe("background music", () => {
     // player who never turns music on must not pay for it.
     onIOS(
       () => {
-        const music = find("gameplay.mp3");
+        const music = currentMusic();
         soundManager.playBackgroundMusic();
         expect(music.preload).toBe(false);
         expect(music.load).not.toHaveBeenCalled();
@@ -224,7 +325,7 @@ describe("background music", () => {
     // would start the track again and they would all begin together.
     onIOS(
       () => {
-        const music = find("gameplay.mp3");
+        const music = currentMusic();
         soundManager.playBackgroundMusic();
         for (const v of [0.2, 0.4, 0.6, 0.8, 1]) {
           settings.setAudioVolume("music", v);
@@ -238,7 +339,7 @@ describe("background music", () => {
 
   it("loads the track on iOS when music is already on", () => {
     onIOS(() => {
-      const music = find("gameplay.mp3");
+      const music = currentMusic();
       soundManager.playBackgroundMusic();
       expect(music.load).toHaveBeenCalled();
       expect(music.play).toHaveBeenCalled();
@@ -249,7 +350,7 @@ describe("background music", () => {
     // The latch must not make one bad fetch permanent: a blip on the CDN
     // would otherwise mean a silent game, since every later slider change
     // reads the latch and declines.
-    const failed = find("gameplay.mp3");
+    const failed = currentMusic();
     soundManager.playBackgroundMusic();
     expect(failed.play).toHaveBeenCalledTimes(1);
 
@@ -259,9 +360,10 @@ describe("background music", () => {
     // still in Howler's queue, so reusing the Howl would start the track
     // twice once a later load succeeded.
     expect(failed.unload).toHaveBeenCalled();
-    const tracks = howlInstances.filter((h) => h.src.includes("gameplay.mp3"));
-    const replacement = tracks[tracks.length - 1];
+    const replacement = currentMusic();
     expect(replacement).not.toBe(failed);
+    // The same track again, not the next one.
+    expect(replacement.src).toBe(failed.src);
     // Does not fetch on its own, or a permanently failing file would retry in
     // a loop.
     expect(replacement.preload).toBe(false);
@@ -272,7 +374,7 @@ describe("background music", () => {
   });
 
   it("releases the latch when playback itself is rejected", () => {
-    const music = find("gameplay.mp3");
+    const music = currentMusic();
     soundManager.playBackgroundMusic();
     expect(music.play).toHaveBeenCalledTimes(1);
 
@@ -287,13 +389,13 @@ describe("background music", () => {
     settings.setAudioVolume("music", 0.5);
     // 0.5 squared for the audio taper, then the -1 dB music trim.
     expect(
-      find("gameplay.mp3").volumes[find("gameplay.mp3").volumes.length - 1],
+      currentMusic().volumes[currentMusic().volumes.length - 1],
     ).toBeCloseTo(0.25 * 0.89);
   });
 
   it("only starts once", () => {
     soundManager.playBackgroundMusic();
-    const music = find("gameplay.mp3");
+    const music = currentMusic();
     music.playing.mockReturnValue(true);
     soundManager.playBackgroundMusic();
     expect(music.play).toHaveBeenCalledTimes(1);
@@ -471,7 +573,7 @@ describe("ambience", () => {
 describe("teardown", () => {
   it("stops and unloads everything it owns", () => {
     eventBus.emit(new SetAmbienceEvent("city", 0.1));
-    const music = find("gameplay.mp3");
+    const music = currentMusic();
     const city = find("city.mp3");
 
     soundManager.dispose();

@@ -335,7 +335,10 @@ describe("fetchMyGameXp", () => {
 
   it("keeps asking about a game not processed yet (404)", async () => {
     answer(() => new Response("", { status: 404 }));
-    await expect(fetchMyGameXp("g1")).resolves.toEqual({ status: "pending" });
+    await expect(fetchMyGameXp("g1")).resolves.toEqual({
+      status: "pending",
+      notFound: true,
+    });
   });
 
   it("stops asking when the session is refused (401, 403)", async () => {

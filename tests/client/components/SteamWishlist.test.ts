@@ -9,13 +9,20 @@ vi.mock("../../../src/client/Utils", () => ({
 vi.stubGlobal(
   "ResizeObserver",
   class {
-    observe() {}
+    // Throws like the browser's, so observing nothing fails the test.
+    observe(target: unknown) {
+      if (!(target instanceof Element)) {
+        throw new TypeError("parameter 1 is not of type 'Element'.");
+      }
+    }
     disconnect() {}
   },
 );
 
 import "../../../src/client/components/SteamWishlist";
 import type { SteamWishlist } from "../../../src/client/components/SteamWishlist";
+import "../../../src/client/components/SteamWishlistButton";
+import { gamePortal } from "../../../src/client/GamePortal";
 
 describe("steam-wishlist", () => {
   it("gives the widget's iframe Steam's light color scheme on the dark page", async () => {
@@ -32,4 +39,21 @@ describe("steam-wishlist", () => {
       el.remove();
     }
   });
+
+  // Poki doesn't allow promoting other platforms.
+  it.each(["steam-wishlist", "steam-wishlist-button"])(
+    "%s renders nothing on Poki",
+    async (tag) => {
+      const name = vi.spyOn(gamePortal, "name").mockReturnValue("poki");
+      const el = document.createElement(tag) as SteamWishlist;
+      document.body.appendChild(el);
+      try {
+        await el.updateComplete;
+        expect(el.querySelector("iframe, a")).toBeNull();
+      } finally {
+        el.remove();
+        name.mockRestore();
+      }
+    },
+  );
 });

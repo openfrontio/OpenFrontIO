@@ -1,9 +1,10 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Ommatrypta",
   "name": "Ommatrypta",
   "translation_key": "map.ommatrypta",
-  "categories": ["arcade"],
-  "multiplayer_frequency": 10,
+  "categories": ["arcade", "new"],
+  "special_team_count": 13,
   "nations": [
     {
       "name": "I Dont Know"
@@ -122,5 +123,6 @@
       "alpha": 0.7,
       "nukeable": false
     }
-  ]
+  ],
+  "themes": ["scary", "fantasy"]
 }

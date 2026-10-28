@@ -90,7 +90,7 @@ func inputMapDir(isTest bool) (string, error) {
 
 // processMap handles the end-to-end generation for a single map.
 // It reads the source image and JSON, generates the terrain data, and writes the binary outputs and updated manifest.
-// On success it returns the path of the manifest.json it wrote, so callers can format it with Prettier.
+// On success it returns the path of the manifest.json it wrote, so callers can format it with Oxfmt.
 func processMap(ctx context.Context, name string, isTest bool) (string, error) {
 	outputMapBaseDir, err := outputMapDir(isTest)
 	if err != nil {
@@ -220,7 +220,8 @@ func processMap(ctx context.Context, name string, isTest bool) (string, error) {
 		}
 	}
 
-	// Serialize the updated manifest to JSON
+	// The editor hint only applies to the authored info.json.
+	delete(manifest, "$schema")
 	updatedManifest, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to serialize manifest for %s: %w", name, err)
@@ -363,13 +364,13 @@ func main() {
 		log.Fatalf("Error generating en.json map section: %v", err)
 	}
 
-	// Format every file we just wrote with the repo's Prettier config, so
+	// Format every file we just wrote with the repo's Oxfmt config, so
 	// `go run .` alone leaves a clean diff — no separate `npm run format`
 	// step to remember. Regenerated map manifests are the same JSON `go fmt`
-	// produces for Maps.gen.ts and en.json: valid, but not Prettier-shaped.
+	// produces for Maps.gen.ts and en.json: valid, but not Oxfmt-shaped.
 	formatFiles := append(manifestPaths, mapsTSPath, enJSONPath)
-	if err := runPrettier(formatFiles); err != nil {
-		slog.Warn("Failed to auto-format generated files with Prettier; run `npm run format` manually", "error", err)
+	if err := runOxfmt(formatFiles); err != nil {
+		slog.Warn("Failed to auto-format generated files with Oxfmt; run `npm run format` manually", "error", err)
 	}
 
 	fmt.Println("Terrain maps generated successfully")

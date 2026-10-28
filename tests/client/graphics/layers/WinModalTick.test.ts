@@ -34,6 +34,8 @@ vi.mock("../../../../src/client/GamePortal", () => ({
   gamePortal: {
     happytime: vi.fn(),
     gameplayStop: vi.fn(),
+    // Read by the win modal's <steam-wishlist> and <profile-share>.
+    name: () => null,
   },
 }));
 
@@ -64,6 +66,7 @@ function makeGame(opts: {
       clientID: () => opts.myClientID ?? null,
     }),
     inSpawnPhase: () => false,
+    ticks: () => 6000,
     updatesSinceLastTick: () => ({ [GameUpdateType.Win]: [winUpdate] }),
     playerByClientID: () => opts.winnerPlayer,
     config: () => ({ gameConfig: () => ({ rankedType: undefined }) }),
@@ -208,10 +211,12 @@ describe("WinModal tick win handling", () => {
     expect(actions.map((b) => b.getAttribute("data-win-action"))).toEqual([
       "exit",
       "keep",
+      "share",
     ]);
     // Leaving is the quiet button, staying the main one.
     expect(actions[0].classList.contains("win-action-quiet")).toBe(true);
     expect(actions[1].classList.contains("win-action-main")).toBe(true);
+    expect(actions[2].classList.contains("win-action-main")).toBe(true);
 
     actions[1].click();
     await modal!.updateComplete;

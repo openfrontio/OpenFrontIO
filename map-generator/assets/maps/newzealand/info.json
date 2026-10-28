@@ -1,9 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "NewZealand",
   "name": "New Zealand",
   "translation_key": "map.newzealand",
   "categories": ["new", "oceania"],
-  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [1096, 415],
@@ -423,5 +423,21 @@
       "flag": "nz"
     }
   ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 2011,
+        "width": 1159,
+        "x": 670,
+        "y": 1437
+      },
+      {
+        "height": 1621,
+        "width": 960,
+        "x": 928,
+        "y": 0
+      }
+    ]
+  },
   "themes": ["oceania"]
 }

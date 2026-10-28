@@ -17,7 +17,7 @@ import type {
 } from "../snapshot/SnapshotContext";
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
 import { DeleteUnitExecution } from "./DeleteUnitExecution";
-import { AiAttackBehavior } from "./utils/AiAttackBehavior";
+import { TribeAttackBehavior } from "./TribeAttackBehavior";
 
 export class TribeExecution implements Execution {
   private active = true;
@@ -25,7 +25,7 @@ export class TribeExecution implements Execution {
   private mg: Game;
   private neighborsTerraNullius = true;
 
-  private attackBehavior: AiAttackBehavior | null = null;
+  private attackBehavior: TribeAttackBehavior | null = null;
   private attackRate: number;
   private attackTick: number;
   private triggerRatio: number;
@@ -59,7 +59,7 @@ export class TribeExecution implements Execution {
     }
 
     if (this.attackBehavior === null) {
-      this.attackBehavior = new AiAttackBehavior(
+      this.attackBehavior = new TribeAttackBehavior(
         this.random,
         this.mg,
         this.tribe,
@@ -111,7 +111,7 @@ export class TribeExecution implements Execution {
     if (this.attackBehavior === null) {
       throw new Error("not initialized");
     }
-    const toAttack = this.attackBehavior.getNeighborTraitorToAttack();
+    const toAttack = this.attackBehavior.getNeighborTraitorToAttack(true);
     if (toAttack !== null) {
       const odds = this.tribe.isFriendly(toAttack) ? 6 : 3;
       if (this.random.chance(odds)) {
@@ -168,8 +168,8 @@ export class TribeExecution implements Execution {
       this.attackBehavior = null;
     } else {
       const attack = Object.create(
-        AiAttackBehavior.prototype,
-      ) as AiAttackBehavior;
+        TribeAttackBehavior.prototype,
+      ) as TribeAttackBehavior;
       attack.restoreSnapshot(s.attackBehavior, r, this.random, this.tribe);
       this.attackBehavior = attack;
     }

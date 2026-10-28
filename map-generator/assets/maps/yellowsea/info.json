@@ -1,9 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "YellowSea",
   "name": "Yellow Sea",
   "translation_key": "map.yellowsea",
   "categories": ["asia"],
-  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [1350, 575],

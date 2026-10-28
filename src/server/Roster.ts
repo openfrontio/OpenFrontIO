@@ -23,13 +23,50 @@ export class Roster {
   // this game at least once. Survives forgetReconnect, unlike the reconnect
   // mapping, so a returning player can skip the single-use Turnstile re-check.
   private admitted = new Set<string>();
+  private pendingAttempts = new Map<string, Set<string>>();
   private kicked = new Set<string>();
   private disconnected = new Map<ClientID, boolean>();
+
+  markAdmitted(persistentID: string, attemptID?: string): void {
+    this.admitted.add(persistentID);
+    if (attemptID !== undefined) {
+      let attempts = this.pendingAttempts.get(persistentID);
+      if (attempts === undefined) {
+        attempts = new Set<string>();
+        this.pendingAttempts.set(persistentID, attempts);
+      }
+      attempts.add(attemptID);
+    }
+  }
+
+  hasEverBeenSeated(persistentID: string): boolean {
+    for (const client of this.everyone.values()) {
+      if (client.persistentID === persistentID) return true;
+    }
+    return false;
+  }
+
+  unmarkAdmitted(persistentID: string, attemptID?: string): void {
+    if (this.hasEverBeenSeated(persistentID)) return;
+    if (attemptID !== undefined) {
+      const attempts = this.pendingAttempts.get(persistentID);
+      if (attempts !== undefined) {
+        attempts.delete(attemptID);
+        if (attempts.size > 0) return;
+        this.pendingAttempts.delete(persistentID);
+      }
+    } else {
+      if ((this.pendingAttempts.get(persistentID)?.size ?? 0) > 0) return;
+      this.pendingAttempts.delete(persistentID);
+    }
+    this.admitted.delete(persistentID);
+  }
 
   add(client: Client): void {
     this.sockets.add(client.ws);
     this.reconnectable.set(client.persistentID, client.clientID);
     this.admitted.add(client.persistentID);
+    this.pendingAttempts.delete(client.persistentID);
     this.connected.push(client);
     this.everyone.set(client.clientID, client);
   }
@@ -67,17 +104,19 @@ export class Roster {
   }
 
   // Bans the persistentID (no rejoin, no reconnect, no admission) whether or
-  // not the client is still connected, and drops it from the connected list.
-  // Returns whether it was connected.
-  kick(client: Client): boolean {
+  // not the client is still connected, and drops every connected client
+  // holding it — a duplicate session that replaced this record shares the
+  // persistentID. Returns the clients it dropped.
+  kick(client: Client): Client[] {
     this.kicked.add(client.persistentID);
-    const wasConnected = this.connected.some(
-      (c) => c.clientID === client.clientID,
+    this.pendingAttempts.delete(client.persistentID);
+    const dropped = this.connected.filter(
+      (c) => c.persistentID === client.persistentID,
     );
     this.connected = this.connected.filter(
-      (c) => c.clientID !== client.clientID,
+      (c) => c.persistentID !== client.persistentID,
     );
-    return wasConnected;
+    return dropped;
   }
 
   // Removes and returns the connected clients that have not pinged for more

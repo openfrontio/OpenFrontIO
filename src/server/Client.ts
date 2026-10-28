@@ -5,7 +5,11 @@ import {
   type LevelBadge,
   packLevelBadge,
 } from "@openfront/shared/LevelBadgeWire";
-import { ClientPlatform, PlayerCosmetics } from "@openfront/shared/WireSchemas";
+import {
+  ClientDevice,
+  ClientPlatform,
+  PlayerCosmetics,
+} from "@openfront/shared/WireSchemas";
 import WebSocket from "ws";
 
 export class Client {
@@ -41,6 +45,8 @@ export class Client {
     public readonly trusted: boolean = false,
     // Client-reported and unverified; metric dimension only.
     public readonly platform: ClientPlatform | "unknown" = "unknown",
+    // Likewise client-reported and unverified; metric dimension only.
+    public readonly device: ClientDevice | "unknown" = "unknown",
     // From the server's /users/@me lookup at join (levelBadgeForPlayer);
     // undefined for guests, players who hide their level, or when the API sent
     // no progress. Display-only.

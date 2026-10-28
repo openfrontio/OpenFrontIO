@@ -143,6 +143,7 @@ function userMe(
     steamLicence: false,
     steamLicenceSince: null,
     noticesSeen: [],
+    pendingMessages: [],
     player: {
       publicId: "player-id",
       adfree: false,
@@ -984,5 +985,17 @@ describe("MatchmakingModal game-start alert", () => {
       modal.querySelector('[aria-label="public_lobby.notify_off"]'),
     ).not.toBeNull();
     expect(new UserSettings().lobbyStartAlerts()).toBe(true);
+  });
+
+  it("cleans up resources and closes socket on disconnectedCallback", async () => {
+    const joined = await openAndJoin("1v1");
+    modal = joined.modal;
+    document.body.append(modal);
+    await modal.updateComplete;
+
+    const closeSpy = vi.spyOn(joined.socket, "close");
+    modal.remove();
+    expect(closeSpy).toHaveBeenCalled();
+    expect(joined.socket.readyState).toBe(FakeWebSocket.CLOSED);
   });
 });

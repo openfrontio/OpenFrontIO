@@ -1,4 +1,3 @@
-import { ClientID } from "@openfront/engine-api/Schemas";
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
@@ -22,14 +21,15 @@ import {
   PlayerUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { PlayerLike } from "@openfront/engine-api/game/ReadViews";
+import { ClientID } from "@openfront/engine-api/Schemas";
 import { PatternDecoder } from "@openfront/shared/PatternDecoder";
 import { createRandomName } from "@openfront/shared/SharedUtil";
 import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { Colord, colord } from "colord";
 import { base64url } from "jose";
-import { UserSettings } from "../UserSettings";
 import { PlayerState, PlayerStatic, PlayerTypeEnum } from "../render/types";
 import { themeProvider } from "../theme/ThemeProvider";
+import { UserSettings } from "../UserSettings";
 import { type CosmeticOwner, visibleCosmetics } from "./CosmeticVisibility";
 import { playerStateFromUpdate, playerStaticFromUpdate } from "./EntityState";
 import { GameView } from "./GameView";
@@ -331,12 +331,14 @@ export class PlayerView implements PlayerLike {
   async buildables(
     tile?: TileRef,
     units?: readonly PlayerBuildableUnitType[],
+    includeBuildPreview = false,
   ): Promise<BuildableUnit[]> {
     return this.game.worker.playerBuildables(
       this.id(),
       tile && this.game.x(tile),
       tile && this.game.y(tile),
       units,
+      includeBuildPreview,
     );
   }
 

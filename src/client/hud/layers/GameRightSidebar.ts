@@ -72,11 +72,10 @@ export class GameRightSidebar extends LitElement implements Controller {
   private immunityBarVisible = false;
 
   createRenderRoot() {
-    // Stack the timer bar + doomsday-clock readout, centers aligned (the narrower
-    // one sits centered under the wider one).
+    // Stack the timer bar + mode readouts flush against the right screen edge.
     this.style.display = "flex";
     this.style.flexDirection = "column";
-    this.style.alignItems = "center";
+    this.style.alignItems = "flex-end";
     this.style.gap = "6px";
     return this;
   }
@@ -89,6 +88,8 @@ export class GameRightSidebar extends LitElement implements Controller {
       this.game?.config()?.gameConfig()?.gameType === GameType.Private;
     this._isVisible = true;
     this.hasShownOneMinuteWarning = false;
+    // LocalServer opens a resumed game paused.
+    this.isPaused = this.game.resumedFromSave();
 
     this.eventBus.on(SpawnBarVisibleEvent, (e) => {
       this.spawnBarVisible = e.visible;
@@ -232,9 +233,9 @@ export class GameRightSidebar extends LitElement implements Controller {
   private onPauseButtonClick() {
     this.isPaused = !this.isPaused;
     if (this.isPaused) {
-      gamePortal.gameplayStop();
+      void gamePortal.gameplayStop();
     } else {
-      gamePortal.gameplayStart();
+      void gamePortal.gameplayStart();
     }
     this.eventBus.emit(new PauseGameIntentEvent(this.isPaused));
   }
@@ -379,21 +380,25 @@ export class GameRightSidebar extends LitElement implements Controller {
           <img src=${settingsIcon} alt="settings" width="20" height="20" />
         </div>
 
-        ${document.fullscreenEnabled && !this.hideFullscreenButton
-          ? html`<div
-              class="cursor-pointer"
-              @click=${this.onFullscreenButtonClick}
-            >
-              <img
-                src=${this.isFullscreen ? exitFullscreenIcon : fullscreenIcon}
-                alt=${this.isFullscreen
-                  ? translateText("fullscreen.exit")
-                  : translateText("fullscreen.enter")}
-                width="20"
-                height="20"
-              />
-            </div>`
-          : ""}
+        ${
+          document.fullscreenEnabled && !this.hideFullscreenButton
+            ? html`<div
+                class="cursor-pointer"
+                @click=${this.onFullscreenButtonClick}
+              >
+                <img
+                  src=${this.isFullscreen ? exitFullscreenIcon : fullscreenIcon}
+                  alt=${
+                    this.isFullscreen
+                      ? translateText("fullscreen.exit")
+                      : translateText("fullscreen.enter")
+                  }
+                  width="20"
+                  height="20"
+                />
+              </div>`
+            : ""
+        }
 
         <div class="cursor-pointer" @click=${this.onExitButtonClick}>
           <img src=${exitIcon} alt="exit" width="20" height="20" />
@@ -423,48 +428,54 @@ export class GameRightSidebar extends LitElement implements Controller {
     const showNewLobbyButton = this.isLobbyCreator && this.isPrivateLobby;
 
     return html`
-      ${isReplayOrSingleplayer
-        ? html`
-            <div class="cursor-pointer" @click=${this.toggleReplayPanel}>
-              <img
-                src=${FastForwardIconSolid}
-                alt="replay"
-                width="20"
-                height="20"
-              />
-            </div>
-          `
-        : ""}
-      ${showPauseButton
-        ? html`
-            <div class="cursor-pointer" @click=${this.onPauseButtonClick}>
-              <img
-                src=${this.isPaused ? playIcon : pauseIcon}
-                alt="play/pause"
-                width="20"
-                height="20"
-              />
-            </div>
-          `
-        : ""}
-      ${showNewLobbyButton
-        ? html`
-            <div
-              class="cursor-pointer ${this.newLobbyRequested
-                ? "opacity-50 pointer-events-none"
-                : ""}"
-              @click=${this.onNewLobbyButtonClick}
-              title=${translateText("win_modal.new_lobby")}
-            >
-              <img
-                src=${newLobbyIcon}
-                alt=${translateText("win_modal.new_lobby")}
-                width="20"
-                height="20"
-              />
-            </div>
-          `
-        : ""}
+      ${
+        isReplayOrSingleplayer
+          ? html`
+              <div class="cursor-pointer" @click=${this.toggleReplayPanel}>
+                <img
+                  src=${FastForwardIconSolid}
+                  alt="replay"
+                  width="20"
+                  height="20"
+                />
+              </div>
+            `
+          : ""
+      }
+      ${
+        showPauseButton
+          ? html`
+              <div class="cursor-pointer" @click=${this.onPauseButtonClick}>
+                <img
+                  src=${this.isPaused ? playIcon : pauseIcon}
+                  alt="play/pause"
+                  width="20"
+                  height="20"
+                />
+              </div>
+            `
+          : ""
+      }
+      ${
+        showNewLobbyButton
+          ? html`
+              <div
+                class="cursor-pointer ${
+                  this.newLobbyRequested ? "opacity-50 pointer-events-none" : ""
+                }"
+                @click=${this.onNewLobbyButtonClick}
+                title=${translateText("win_modal.new_lobby")}
+              >
+                <img
+                  src=${newLobbyIcon}
+                  alt=${translateText("win_modal.new_lobby")}
+                  width="20"
+                  height="20"
+                />
+              </div>
+            `
+          : ""
+      }
     `;
   }
 }

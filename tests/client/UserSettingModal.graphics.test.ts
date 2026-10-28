@@ -5,6 +5,7 @@ import "../../src/client/UserSettingModal";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
 import {
   GRAPHICS_KEY,
+  MAP_LAYERS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../../src/client/UserSettings";
@@ -93,10 +94,64 @@ function resetGraphicsSettings() {
   const settings = new UserSettings();
   settings.setGraphicsOverrides({});
   settings.setGraphicsPresets({});
+  settings.removeCached(MAP_LAYERS_KEY);
 }
 
 describe("Graphics tab: advanced options folded in from the in-game modal", () => {
   beforeEach(resetGraphicsSettings);
+
+  it("offers everyone, my team, only me and nobody, and persists the selection", async () => {
+    const el = await mountGraphics();
+    const select = control(el, "cosmetics-show-from-select") as HTMLElement & {
+      options: { value: string }[];
+      value: string;
+    };
+    expect(select.options.map(({ value }) => value)).toEqual([
+      "everyone",
+      "teammates",
+      "self",
+      "none",
+    ]);
+    select.dispatchEvent(
+      new CustomEvent("change", { detail: { value: "none" }, bubbles: true }),
+    );
+    expect(overrides().cosmetics?.showFrom).toBe("none");
+    expect(
+      JSON.parse(localStorage.getItem(GRAPHICS_KEY)!).cosmetics.showFrom,
+    ).toBe("none");
+    el.remove();
+    const reopened = await mountGraphics();
+    expect(
+      (control(reopened, "cosmetics-show-from-select") as typeof select).value,
+    ).toBe("none");
+    expect(
+      control(reopened, "cosmetics-territorySkins-toggle").hasAttribute(
+        "disabled",
+      ),
+    ).toBe(true);
+  });
+
+  it("allows switching from nobody back to my team", async () => {
+    new UserSettings().setGraphicsOverrides({
+      cosmetics: { showFrom: "none" },
+    });
+    const el = await mountGraphics();
+    const select = control(el, "cosmetics-show-from-select") as HTMLElement & {
+      options: { value: string }[];
+      value: string;
+    };
+    expect(select.value).toBe("none");
+    expect(select.options.some(({ value }) => value === "teammates")).toBe(
+      true,
+    );
+    select.dispatchEvent(
+      new CustomEvent("change", {
+        detail: { value: "teammates" },
+        bubbles: true,
+      }),
+    );
+    expect(overrides().cosmetics?.showFrom).toBe("teammates");
+  });
 
   it("renders every folded control", async () => {
     const el = await mountGraphics();
@@ -449,6 +504,19 @@ describe("Graphics tab: live apply from the in-game instance", () => {
     expect(overrides().mapLayerAlpha).toEqual({ reef: 0.4 });
   });
 
+  it("greys out each layer's own toggle while the Map Layers switch is off", async () => {
+    const el = await mountGraphics({ mapLayers: LAYERS });
+
+    flip(el, "map-layers-toggle");
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(
+      control(el, "map-layer-forest-toggle").hasAttribute("disabled"),
+    ).toBe(true);
+    expect(el.querySelector("#map-layer-forest-alpha-slider")).toBeNull();
+  });
+
   it("re-pushes every layer to the renderer after a reset, as the old modal did", async () => {
     const visibility: [string, boolean][] = [];
     const alphas: [string, number][] = [];
@@ -548,6 +616,50 @@ describe("Graphics tab: layer state reaches the renderer with Advanced collapsed
     ]);
   });
 
+  it("hides every layer from the Map Layers switch, and restores their own toggles", async () => {
+    const w = wire();
+    new UserSettings().setGraphicsOverrides({
+      mapLayerVisibility: { forest: false },
+    });
+    const el = await mountGraphics({ ...w, advanced: false });
+    w.visibility.length = 0;
+
+    flip(el, "map-layers-toggle");
+    expect(w.visibility).toEqual([
+      ["forest", false],
+      ["reef", false],
+    ]);
+    expect(new UserSettings().mapLayers()).toBe(false);
+
+    w.visibility.length = 0;
+    flip(el, "map-layers-toggle");
+    expect(w.visibility).toEqual([
+      ["forest", false],
+      ["reef", true],
+    ]);
+    expect(overrides().mapLayerVisibility).toEqual({ forest: false });
+  });
+
+  it("keeps every layer hidden when a preset is picked with the switch off", async () => {
+    // The switch is kept out of the preset overrides, so picking a look does
+    // not bring back layers the player turned off on every map.
+    const w = wire();
+    const el = await mountGraphics({ ...w, advanced: false });
+    flip(el, "map-layers-toggle");
+    w.visibility.length = 0;
+
+    const dropdown = el.querySelector<HTMLSelectElement>(
+      "graphics-preset-selector select",
+    )!;
+    dropdown.value = "builtin:graphics_setting.preset_night";
+    dropdown.dispatchEvent(new Event("change", { bubbles: true }));
+
+    expect(w.visibility).toEqual([
+      ["forest", false],
+      ["reef", false],
+    ]);
+  });
+
   it("stops pushing once the modal is torn down", async () => {
     // The in-game instance is destroyed when the match ends. A listener left
     // on globalThis would keep calling back into a dead component, holding the
@@ -590,6 +702,11 @@ describe("Graphics tab: the page instance has no game", () => {
     expect(el.querySelector("#map-layer-forest-toggle")).toBeNull();
     // Everything that is pure preference is still there.
     expect(el.querySelector("#territory-alpha-slider")).not.toBeNull();
+  });
+
+  it("shows the Map Layers switch, which applies to every map", async () => {
+    const el = await mountGraphics({ advanced: false });
+    expect(el.querySelector("#map-layers-toggle")).not.toBeNull();
   });
 
   it("shows the map-layer section once a game hands its layers over", async () => {

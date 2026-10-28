@@ -115,9 +115,9 @@ export class NavUtilityIcons extends LitElement {
       <div class="flex items-center gap-1">
         <div class="relative">
           <button
-            class="${this.buttonClass()} ${currentPage === "page-news"
-              ? "active"
-              : ""}"
+            class="${this.buttonClass()} ${
+              currentPage === "page-news" ? "active" : ""
+            }"
             data-page="page-news"
             data-i18n-aria-label="main.news"
             data-i18n-title="main.news"
@@ -138,15 +138,17 @@ export class NavUtilityIcons extends LitElement {
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
           </button>
-          ${this._notifications.showNewsDot()
-            ? this.renderDot("bg-red-500")
-            : ""}
+          ${
+            this._notifications.showNewsDot()
+              ? this.renderDot("bg-red-500")
+              : ""
+          }
         </div>
         <div class="relative">
           <button
-            class="${this.buttonClass()} ${currentPage === "page-help"
-              ? "active"
-              : ""}"
+            class="${this.buttonClass()} ${
+              currentPage === "page-help" ? "active" : ""
+            }"
             data-page="page-help"
             data-i18n-aria-label="main.help"
             data-i18n-title="main.help"
@@ -168,14 +170,16 @@ export class NavUtilityIcons extends LitElement {
               <line x1="12" y1="17.5" x2="12.01" y2="17.5" />
             </svg>
           </button>
-          ${this._notifications.showHelpDot()
-            ? this.renderDot("bg-yellow-400")
-            : ""}
+          ${
+            this._notifications.showHelpDot()
+              ? this.renderDot("bg-yellow-400")
+              : ""
+          }
         </div>
         <button
-          class="${this.buttonClass()} ${currentPage === "page-settings"
-            ? "active"
-            : ""}"
+          class="${this.buttonClass()} ${
+            currentPage === "page-settings" ? "active" : ""
+          }"
           data-page="page-settings"
           data-i18n-aria-label="main.settings"
           data-i18n-title="main.settings"

@@ -195,6 +195,9 @@ export function createRenderer(
     console.error("settings modal not found");
   }
   settingsModal.eventBus = eventBus;
+  settingsModal.gameConfig = game.config().gameConfig();
+  settingsModal.mapNationCount = game.mapNationCount();
+  settingsModal.game = game;
 
   // The in-game settings instance needs the bus so the Audio sliders reach
   // SoundManager, which caches its volumes at construction, and UIState so the
@@ -387,6 +390,10 @@ export class GameRenderer {
     private performanceOverlay: PerformanceOverlay,
   ) {}
 
+  private onResize = () => {
+    this.transformHandler.updateCanvasBoundingRect();
+  };
+
   initialize() {
     loadAllSprites().catch((err) =>
       console.warn("Failed to preload sprites:", err),
@@ -394,12 +401,14 @@ export class GameRenderer {
 
     this.layers.forEach((l) => l.init?.());
 
-    window.addEventListener("resize", () =>
-      this.transformHandler.updateCanvasBoundingRect(),
-    );
+    window.addEventListener("resize", this.onResize);
 
     //show whole map on startup
     this.transformHandler.centerAll(0.9);
+  }
+
+  dispose() {
+    window.removeEventListener("resize", this.onResize);
   }
 
   tick() {
