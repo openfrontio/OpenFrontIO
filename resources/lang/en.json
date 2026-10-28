@@ -2142,6 +2142,16 @@
     "replay_speed": "Replay speed"
   },
   "replay_viewer": {
+    "export": "Export",
+    "export_csv": "Match Stats (.csv)",
+    "export_failed": "Export failed",
+    "export_gif": "Animated Timelapse (.gif)",
+    "export_incomplete": "Incomplete replays cannot be exported.",
+    "export_json": "Replay Data (.json)",
+    "export_mp4": "Full Match Video (.mp4)",
+    "export_png": "Screenshot (.png)",
+    "export_webm": "Video Timelapse (.webm)",
+    "exporting": "Exporting…",
     "following": "Following {name}",
     "load_failed": "This replay could not be loaded.",
     "loading": "Loading replay…",

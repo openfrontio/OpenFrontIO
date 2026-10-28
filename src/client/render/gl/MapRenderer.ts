@@ -172,6 +172,10 @@ export class MapRenderer {
   ): void {
     this.renderer?.uploadLiveDelta(tileState, changedTiles);
   }
+  /** Drain all territory drip buckets immediately (used for offline exports and snapshot draws). */
+  flushTileDrip(): void {
+    this.renderer?.flushTileDrip();
+  }
   uploadLiveTrailDelta(
     trailState: Uint16Array,
     dirtyRowMin: number,

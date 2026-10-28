@@ -24,6 +24,7 @@ vi.mock("../../src/client/render/gl/Renderer", () => ({
     setLayerVisible() {}
     setLayerAlpha() {}
     setLayerDestroyedMask() {}
+    flushTileDrip() {}
   },
 }));
 
@@ -77,6 +78,14 @@ describe("MapRenderer context loss", () => {
     // No argument — dispose() releases the context by default, so repeated
     // game starts don't overflow the browser's context limit.
     expect(stub.disposeArgs).toEqual([undefined]);
+  });
+
+  it("delegates flushTileDrip to the underlying renderer", () => {
+    const { view } = makeRenderer();
+    const spy = vi.spyOn(view["renderer"]!, "flushTileDrip");
+    view.flushTileDrip();
+    expect(spy).toHaveBeenCalledOnce();
+    view.dispose();
   });
 
   it("rebuilds the renderer and re-uploads state on restore", () => {
