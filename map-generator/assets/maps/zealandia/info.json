@@ -3,7 +3,6 @@
   "name": "Zealandia",
   "translation_key": "map.zealandia",
   "categories": ["oceania"],
-  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [378, 1075],
