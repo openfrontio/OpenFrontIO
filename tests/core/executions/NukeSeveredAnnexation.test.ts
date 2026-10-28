@@ -933,37 +933,45 @@ describe("land a nuke severs from the main body is annexed", () => {
     expect(defenderTilesIn(blobB)).toBeGreaterThan(0);
   });
 
-  test("a compact landlocked core is not annexed when a secondary strip has a larger bounding box", () => {
-    // 50x50 compact core: 2,500 tiles, bbox 50x50 = 2,500
-    const core = rect(10, 10, 59, 59);
+  test.each([
+    { enemies: 1, expectedCoreTiles: 0 },
+    { enemies: 2, expectedCoreTiles: 2500 },
+  ])(
+    "a compact landlocked core surrounded by $enemies enemies follows enclosure rules despite a secondary strip's larger bounding box",
+    ({ enemies, expectedCoreTiles }) => {
+      // 50x50 compact core: 2,500 tiles, bbox 50x50 = 2,500
+      const core = rect(10, 10, 59, 59);
 
-    // Solid 2-tile wide L-shape: 320 tiles, bbox 82x81 = 6,642, ZERO diagonal pinches
-    const lShape = (x: number, y: number) => {
-      const inHoriz = x >= 100 && x <= 180 && (y === 100 || y === 101);
-      const inVert = (x === 180 || x === 181) && y >= 100 && y <= 180;
-      return inHoriz || inVert;
-    };
-    paint(union(core, lShape));
+      // Solid 2-tile wide L-shape: 320 tiles, bbox 82x81 = 6,642, ZERO diagonal pinches
+      const lShape = (x: number, y: number) => {
+        const inHoriz = x >= 100 && x <= 180 && (y === 100 || y === 101);
+        const inVert = (x === 180 || x === 181) && y >= 100 && y <= 180;
+        return inHoriz || inVert;
+      };
+      paint(union(core, lShape));
 
-    // Surround core with TWO different enemies so surroundedBySamePlayer protects the main body
-    for (let x = 9; x <= 60; x++) {
-      for (let y = 9; y <= 60; y++) {
-        if (!core(x, y)) {
-          (y <= 34 ? attacker : third).conquer(game.ref(x, y));
+      // A single enemy can annex even the primary territory; two enemies cannot.
+      for (let x = 9; x <= 60; x++) {
+        for (let y = 9; y <= 60; y++) {
+          if (!core(x, y)) {
+            (enemies === 1 || y <= 34 ? attacker : third).conquer(
+              game.ref(x, y),
+            );
+          }
         }
       }
-    }
 
-    startClusterChecks();
+      startClusterChecks();
 
-    // Trigger mid-game conquest on the secondary strip to ensure cluster checks execute
-    attacker.conquer(game.ref(100, 100));
+      // Trigger mid-game conquest on the secondary strip to ensure cluster checks execute
+      attacker.conquer(game.ref(100, 100));
 
-    runClusterChecks();
+      runClusterChecks();
 
-    // Core is crowned as main body by territory area; with 2 enemies, it survives
-    expect(defenderTilesIn(core)).toBe(2500);
-    // Secondary L-shape strip is enclosed and annexed
-    expect(defenderTilesIn(lShape)).toBe(0);
-  });
+      // Territory area determines the main body, but does not exempt it from enclosure.
+      expect(defenderTilesIn(core)).toBe(expectedCoreTiles);
+      // Secondary L-shape strip is enclosed and annexed
+      expect(defenderTilesIn(lShape)).toBe(0);
+    },
+  );
 });
