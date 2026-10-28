@@ -57,6 +57,10 @@
       "exclusiveMinimum": 0,
       "maximum": 9007199254740991
     },
+    "hidden": {
+      "description": "Kept out of map pickers, random picks and public lobbies (the tutorial map).",
+      "type": "boolean"
+    },
     "special_team_count": {
       "description": "Preferred team count in team and special games.",
       "type": "integer",
