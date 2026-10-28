@@ -45,7 +45,7 @@ const game = (
 
 describe("ffaRatingGameOf", () => {
   it("counts spawned humans in a public unranked FFA game", () => {
-    expect(ffaRatingGameOf(game({}))).toEqual({
+    expect(ffaRatingGameOf(game({}), "ffa")).toEqual({
       gameId: "g1",
       lobbyHumans: 12,
     });
@@ -60,8 +60,18 @@ describe("ffaRatingGameOf", () => {
     ["a spectator", game({}, { me: false })],
     ["a viewer who never spawned", game({}, { spawned: false })],
   ])("has no rating for %s", (_, g) => {
-    expect(ffaRatingGameOf(g)).toBeNull();
+    expect(ffaRatingGameOf(g, "ffa")).toBeNull();
   });
+
+  // Only the plain FFA slot is rated. A tab that never saw the lobby (a
+  // refresh mid-game) can't tell, so it shows nothing rather than poll a game
+  // that may never be rated.
+  it.each(["special", "team", "hosted", undefined] as const)(
+    "has no rating when the lobby slot is %s",
+    (slot) => {
+      expect(ffaRatingGameOf(game({}), slot)).toBeNull();
+    },
+  );
 });
 
 describe("viewerHasFfaRating", () => {
@@ -70,8 +80,10 @@ describe("viewerHasFfaRating", () => {
     ["trusted", { games: 3, wins: 0, calibrationGames: 3 }, true],
     // API not live: frozen Elo only.
     ["trusted", { elo: 1234 }, false],
-    ["untrusted", { tier: "Gold I", elo: 1600 }, false],
-    [null, { calibrationGames: 3 }, false],
+    // Trust gates only the public listing: an untrusted account is rated.
+    ["untrusted", { tier: "Gold I", elo: 1600 }, true],
+    [null, { calibrationGames: 3 }, true],
+    ["untrusted", { elo: 1234 }, false],
   ] as const)("viewer %s with %j → %s", (trustTier, ffa, expected) => {
     expect(
       viewerHasFfaRating({

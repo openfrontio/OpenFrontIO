@@ -17,6 +17,7 @@ import {
 } from "../../../../src/client/Cosmetics";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
+import { rememberLobbyPublicGameType } from "../../../../src/client/LobbyPublicGameType";
 import { resolveXpAccount } from "../../../../src/client/ProgressionAccount";
 
 const copyToClipboardMock = vi.hoisted(() =>
@@ -280,6 +281,9 @@ describe("WinModal pattern promotion", () => {
 describe("WinModal FFA rating panel", () => {
   let modal: WinModal | undefined;
 
+  // The lobby_info that put the viewer in the plain FFA slot.
+  beforeEach(() => rememberLobbyPublicGameType("g1", "ffa"));
+
   afterEach(() => {
     modal?.remove();
     modal = undefined;
@@ -350,6 +354,16 @@ describe("WinModal FFA rating panel", () => {
   it("shows no panel when a nation won", async () => {
     signedIn({ calibrationGames: 3 });
     const m = await mount(undefined, ["nation", "Atlantis"]);
+    await m.updateFfaRating();
+    await m.updateComplete;
+    expect(m.querySelector("ffa-rating-panel")).toBeNull();
+    expect(resolveXpAccount).not.toHaveBeenCalled();
+  });
+
+  it("shows no panel after a special FFA lobby", async () => {
+    rememberLobbyPublicGameType("g1", "special");
+    signedIn({ calibrationGames: 3 });
+    const m = await mount();
     await m.updateFfaRating();
     await m.updateComplete;
     expect(m.querySelector("ffa-rating-panel")).toBeNull();

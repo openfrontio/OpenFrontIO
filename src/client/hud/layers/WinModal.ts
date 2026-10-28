@@ -39,6 +39,7 @@ import {
 } from "../../Cosmetics";
 import { isDesktopShell } from "../../DesktopShell";
 import { gamePortal } from "../../GamePortal";
+import { lobbyPublicGameType } from "../../LobbyPublicGameType";
 import {
   gameShareMoment,
   momentShareLabel,
@@ -1170,7 +1171,10 @@ export class WinModal extends LitElement implements Controller {
   private async updateFfaRating(): Promise<void> {
     if (this.ffaRatingChecked) return;
     try {
-      const ffaGame = ffaRatingGameOf(this.game);
+      const ffaGame = ffaRatingGameOf(
+        this.game,
+        lobbyPublicGameType(this.game.gameID()),
+      );
       if (ffaGame === null) return;
       // Only a human winner ends a rated game: a nation or tribe win, a team
       // win or a cancelled match is never rated.
