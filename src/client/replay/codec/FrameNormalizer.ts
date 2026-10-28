@@ -53,7 +53,7 @@ import type { MiscUpdates } from "./ReplayTypes";
  * Keyed by enum name, so a new GameUpdateType won't compile until someone
  * decides how replays handle it.
  */
-export const UPDATE_TYPE_ROUTING: Record<
+const UPDATE_TYPE_ROUTING: Record<
   keyof typeof GameUpdateType,
   "entity" | "events" | "misc" | "dropped"
 > = {

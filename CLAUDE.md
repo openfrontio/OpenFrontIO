@@ -10,6 +10,7 @@ npm run dev              # Run client + server in dev mode with hot reload
 npm run start:client     # Client only
 npm run start:server-dev # Server only
 npm test                 # Run all tests (Vitest)
+npm run test:changed     # Only tests affected by changes since origin/main
 npm run test:coverage    # Tests with coverage
 npm run lint             # Oxlint
 npm run lint:fix         # Oxlint with auto-fix
@@ -24,6 +25,8 @@ npm run typecheck        # tsc for the root project and each package
 npx vitest tests/YourTest.test.ts --run
 npx vitest NationAllianceBehavior --run # match by name pattern
 ```
+
+While working, run `npm run test:changed` or the files you touched rather than the full suite: a few long simulation tests take most of its time and only matter when the engine changes. CI runs everything. `test:changed` follows imports, so a change to a file that tests read with `fs` (maps in `tests/testdata/`, `resources/`) can be missed; run those tests by name. A change to `package.json` or the Vitest config runs the whole suite.
 
 ## Architecture
 

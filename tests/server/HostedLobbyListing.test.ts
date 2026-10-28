@@ -992,6 +992,29 @@ describe("WorkerLobbyService hosted lobbies", () => {
     expect(lobbyList.lobbies.map((l: any) => l.gameID)).toEqual(["ffa-g1"]);
   });
 
+  it("does not count spectators in reported lobby numClients", () => {
+    const game = makeGame("hosted-spec", CREATOR);
+    game.setListed(true);
+    game.joinClient(
+      harnessClient({ clientID: "p1" as any, persistentID: "p1" }),
+    );
+    game.joinClient(
+      harnessClient({
+        clientID: "s1" as any,
+        persistentID: "s1",
+        spectator: true,
+      }),
+    );
+    gm.listedLobbies.mockReturnValue([game]);
+    emitBroadcast({ ffa: [], team: [], special: [], hosted: [] });
+    const list = sendToMaster.mock.calls.find(
+      (c: any) => c[0].type === "lobbyList",
+    )![0];
+    expect(
+      list.lobbies.find((l: any) => l.gameID === "hosted-spec").numClients,
+    ).toBe(1);
+  });
+
   it("reports the game manager's live game count to the master", () => {
     gm.activeGames.mockReturnValue(7);
     // Drop the stub so the real sendToMaster runs: assert on the message that

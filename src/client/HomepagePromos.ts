@@ -200,10 +200,17 @@ export class HomepagePromos extends LitElement {
         // ids (see destroyBottomRail). The header ad must go too: nothing hides
         // #pw-oop-flex_container in-game and its docked state is fixed at the
         // viewport top, so it would sit over the map.
-        window.ramp.destroyUnits("pw-oop-left_rail");
-        window.ramp.destroyUnits("pw-oop-right_rail");
-        window.ramp.destroyUnits("pw-oop-flex");
-        console.log("successfully destroyed gutter rails and header ad");
+        Promise.all([
+          window.ramp.destroyUnits("pw-oop-left_rail"),
+          window.ramp.destroyUnits("pw-oop-right_rail"),
+          window.ramp.destroyUnits("pw-oop-flex"),
+        ])
+          .then(() =>
+            console.log("successfully destroyed gutter rails and header ad"),
+          )
+          .catch((e: unknown) => {
+            console.warn("error destroying gutter rails and header ad", e);
+          });
       } catch (e) {
         console.warn("error destroying gutter rails and header ad", e);
       }

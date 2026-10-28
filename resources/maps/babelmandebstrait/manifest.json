@@ -93,7 +93,6 @@
     "num_land_tiles": 354769,
     "width": 750
   },
-  "multiplayer_frequency": 5,
   "name": "Bab el-Mandeb Strait",
   "nations": [
     {
@@ -244,7 +243,6 @@
       }
     ]
   },
-  "team_frequency": 10,
   "themes": ["africa", "asia"],
   "translation_key": "map.babelmandebstrait"
 }

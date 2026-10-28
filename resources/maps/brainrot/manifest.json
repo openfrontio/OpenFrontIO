@@ -24,7 +24,6 @@
     "num_land_tiles": 357985,
     "width": 1498
   },
-  "multiplayer_frequency": 19,
   "name": "Brain Rot",
   "nations": [
     {
@@ -201,7 +200,6 @@
     }
   ],
   "special_team_count": 27,
-  "team_frequency": 13,
   "themes": ["space", "war"],
   "translation_key": "map.brainrot"
 }

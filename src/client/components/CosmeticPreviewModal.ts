@@ -9,13 +9,14 @@ import {
 } from "../Cosmetics";
 import { translateText } from "../Utils";
 import {
+  cosmeticAiLabelKey,
   cosmeticDisplayName,
   cosmeticRarityBadgeClass,
   cosmeticRarityLabel,
 } from "./CosmeticPresentation";
 import type { CosmeticRenderCanvas } from "./cosmetics/CosmeticRenderCanvas";
 
-export const TEAM_COLORS = [
+const TEAM_COLORS = [
   { name: "Red", hex: "#eb3333" },
   { name: "Blue", hex: "#2962ff" },
   { name: "Teal", hex: "#06b6d4" },
@@ -280,6 +281,7 @@ export class CosmeticPreviewModal extends LitElement {
       aiDisclosed?: boolean;
     } | null;
     const artist = credits?.artist;
+    const aiLabelKey = cosmeticAiLabelKey(credits?.aiDisclosed, artist);
 
     return html`<div
       data-cosmetic-preview-modal
@@ -313,10 +315,9 @@ export class CosmeticPreviewModal extends LitElement {
               // the line past the panel and the last one is clipped away. Stacked, they take the
               // height they need and the row keeps its one long truncating item (the name).
               //
-              // Same rule as <cosmetic-info> for the AI line itself: only a declaration that was
-              // actually made shows, so a cosmetic can't say it used AI on the card and stay
-              // silent here.
-              artist || credits?.aiDisclosed === true
+              // Same rule as <cosmetic-info> for the AI line itself (cosmeticAiLabelKey), so the
+              // card and this header never disagree about a cosmetic.
+              artist || aiLabelKey
                 ? html`<div class="flex min-w-0 flex-col items-start gap-y-0.5">
                     ${
                       artist
@@ -331,11 +332,11 @@ export class CosmeticPreviewModal extends LitElement {
                         : nothing
                     }
                     ${
-                      credits?.aiDisclosed === true
+                      aiLabelKey
                         ? html`<span
                             class="truncate text-xs text-white/60 max-w-full"
                           >
-                            ${translateText("cosmetics.ai_label")}
+                            ${translateText(aiLabelKey)}
                           </span>`
                         : nothing
                     }
