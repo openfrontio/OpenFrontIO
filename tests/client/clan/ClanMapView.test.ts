@@ -114,6 +114,40 @@ describe("ClanMapView", () => {
     expect(postMessage).not.toHaveBeenCalled();
   });
 
+  const spinner = () => view.querySelector('[role="status"]');
+
+  it("covers the frame with a spinner until the page reports loaded", async () => {
+    expect(spinner()).not.toBeNull();
+
+    ready({ data: { type: "clanmap:loaded" } });
+    await flushAsync(view);
+
+    expect(spinner()).toBeNull();
+  });
+
+  it("keeps the spinner for clanmap:loaded from a foreign origin", async () => {
+    ready({ origin: "https://evil.example", data: { type: "clanmap:loaded" } });
+    await flushAsync(view);
+
+    expect(spinner()).not.toBeNull();
+  });
+
+  it("drops the spinner after the fallback when the page never reports loaded", async () => {
+    vi.useFakeTimers();
+    try {
+      frame.dispatchEvent(new Event("load"));
+      vi.advanceTimersByTime(9_999);
+      await view.updateComplete;
+      expect(spinner()).not.toBeNull();
+
+      vi.advanceTimersByTime(1);
+      await view.updateComplete;
+      expect(spinner()).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("fullscreens the frame element on request", () => {
     const request = vi.fn(() => Promise.resolve());
     frame.requestFullscreen = request as never;

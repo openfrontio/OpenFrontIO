@@ -1,5 +1,5 @@
 import { html, LitElement } from "lit";
-import { customElement, query } from "lit/decorators.js";
+import { customElement, query, state } from "lit/decorators.js";
 import { getAudience } from "../../Api";
 import { userAuth } from "../../Auth";
 import { translateText } from "../../Utils";
@@ -8,7 +8,9 @@ import { translateText } from "../../Utils";
 // framed here. Contract (infra docs/clanmap-client-handoff.md): the page posts
 // `clanmap:ready` on load, ~1 min before its JWT expires and after any API
 // 401; the parent answers with `clanmap:auth` carrying the current JWT. A
-// viewer without an account gets no reply and the map stays read-only.
+// viewer without an account gets no reply and the map stays read-only. It
+// posts `clanmap:loaded` once its first terrain + ownership load settles; a
+// spinner covers the frame until then.
 export function clanMapOrigin(): string {
   const aud = getAudience();
   return aud === "localhost"
@@ -16,9 +18,15 @@ export function clanMapOrigin(): string {
     : `https://clanmap.${aud}`;
 }
 
+// Pages that predate `clanmap:loaded` never send it: drop the spinner this
+// long after the frame's own load event instead.
+const LOADED_FALLBACK_MS = 10_000;
+
 @customElement("clan-map-view")
 export class ClanMapView extends LitElement {
   @query("iframe") private frame?: HTMLIFrameElement;
+  @state() private loading = true;
+  private fallbackTimer: ReturnType<typeof setTimeout> | undefined;
 
   createRenderRoot() {
     return this;
@@ -31,6 +39,7 @@ export class ClanMapView extends LitElement {
 
   disconnectedCallback() {
     window.removeEventListener("message", this.onMessage);
+    clearTimeout(this.fallbackTimer);
     super.disconnectedCallback();
   }
 
@@ -38,6 +47,10 @@ export class ClanMapView extends LitElement {
     const origin = clanMapOrigin();
     if (ev.origin !== origin) return;
     if (!this.frame || ev.source !== this.frame.contentWindow) return;
+    if (ev.data?.type === "clanmap:loaded") {
+      this.loading = false;
+      return;
+    }
     if (ev.data?.type !== "clanmap:ready") return;
     const auth = await userAuth();
     if (!auth) return;
@@ -46,6 +59,13 @@ export class ClanMapView extends LitElement {
     if (!target) return;
     // Explicit target origin — never "*".
     target.postMessage({ type: "clanmap:auth", jwt: auth.jwt }, origin);
+  };
+
+  private onFrameLoad = () => {
+    clearTimeout(this.fallbackTimer);
+    this.fallbackTimer = setTimeout(() => {
+      this.loading = false;
+    }, LOADED_FALLBACK_MS);
   };
 
   // Fullscreens the frame element itself, so it works from the parent
@@ -58,12 +78,28 @@ export class ClanMapView extends LitElement {
     // The page sizes its canvas to the frame and re-fits on resize; the host
     // gives the frame its height. `allow="fullscreen"` is what makes the
     // page's Fullscreen button appear.
-    return html`<iframe
-      src=${clanMapOrigin() + "/"}
-      title=${translateText("clan_modal.map_frame_title")}
-      allow="fullscreen"
-      allowfullscreen
-      class="block w-full h-full border-0 bg-[#0e1116]"
-    ></iframe>`;
+    return html`<div class="relative w-full h-full">
+      <iframe
+        src=${clanMapOrigin() + "/"}
+        title=${translateText("clan_modal.map_frame_title")}
+        allow="fullscreen"
+        allowfullscreen
+        @load=${this.onFrameLoad}
+        class="block w-full h-full border-0 bg-[#0e1116]"
+      ></iframe>
+      ${
+        this.loading
+          ? html`<div
+              role="status"
+              aria-label=${translateText("clan_modal.map_loading")}
+              class="absolute inset-0 flex items-center justify-center bg-[#0e1116]"
+            >
+              <div
+                class="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin"
+              ></div>
+            </div>`
+          : ""
+      }
+    </div>`;
   }
 }
