@@ -32,7 +32,7 @@ describe("NamePass verified badge hover", () => {
 });
 
 describe("NamePass targeted nameplate hover", () => {
-  it("uses the shader target boost for the hover bounds when zoomed out", () => {
+  it("uses the camera-dependent target boost", () => {
     const slot: any = {
       alive: true,
       startTime: 0,
@@ -80,7 +80,7 @@ describe("NamePass targeted nameplate hover", () => {
 });
 
 describe("NamePass draw hover-owner forwarding", () => {
-  it("passes the camera matrix and hit-tested owner to each name program", () => {
+  it("forwards the camera matrix and hover owner", () => {
     const nowSpy = vi.spyOn(performance, "now").mockReturnValue(1000);
     try {
       const slot: any = {
@@ -109,7 +109,11 @@ describe("NamePass draw hover-owner forwarding", () => {
         statusRowOffset: 0.6,
         emojiRowOffset: 0.6,
       };
-      const cameraMatrix = new Float32Array([0.001, 0, 0, 0, 0.001, 0, 0, 0, 1]);
+      const cameraMatrix = new Float32Array([
+        0.001, 0, 0,
+        0, 0.001, 0,
+        0, 0, 1,
+      ]);
       Object.assign(pass, {
         settings: { name, passEnabled: { nameDebug: false } },
         slots: new Map([["p1", slot]]),
