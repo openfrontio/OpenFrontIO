@@ -110,9 +110,7 @@ describe("NamePass draw hover-owner forwarding", () => {
         emojiRowOffset: 0.6,
       };
       const cameraMatrix = new Float32Array([
-        0.001, 0, 0,
-        0, 0.001, 0,
-        0, 0, 1,
+        0.001, 0, 0, 0, 0.001, 0, 0, 0, 1,
       ]);
       Object.assign(pass, {
         settings: { name, passEnabled: { nameDebug: false } },
