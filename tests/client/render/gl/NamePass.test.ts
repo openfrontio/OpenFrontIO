@@ -63,11 +63,7 @@ describe("NamePass targeted nameplate hover", () => {
       fontSize: 32,
     });
 
-    const cameraMatrix = new Float32Array([
-      0.001, 0, 0,
-      0, 0.001, 0,
-      0, 0, 1,
-    ]);
+    const cameraMatrix = new Float32Array([0.001, 0, 0, 0, 0.001, 0, 0, 0, 1]);
     pass.setMouseWorldPos(160, 160);
 
     // This cursor position is outside the unboosted nameplate bounds.
