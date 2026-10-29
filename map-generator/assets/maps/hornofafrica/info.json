@@ -3,7 +3,7 @@
   "id": "HornOfAfrica",
   "name": "Horn Of Africa",
   "translation_key": "map.hornofafrica",
-  "categories": ["africa", "new"],
+  "categories": ["africa"],
   "nations": [
     {
       "coordinates": [1767, 1707],

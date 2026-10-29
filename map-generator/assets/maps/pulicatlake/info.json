@@ -3,7 +3,7 @@
   "id": "PulicatLake",
   "name": "Pulicat Lake",
   "translation_key": "map.pulicatlake",
-  "categories": ["asia", "new"],
+  "categories": ["asia"],
   "special_team_count": 2,
   "nations": [
     {

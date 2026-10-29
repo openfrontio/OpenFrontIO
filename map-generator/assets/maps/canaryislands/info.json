@@ -3,7 +3,7 @@
   "id": "CanaryIslands",
   "name": "Canary Islands",
   "translation_key": "map.canaryislands",
-  "categories": ["new", "africa"],
+  "categories": ["africa"],
   "nations": [
     {
       "coordinates": [229, 1022],

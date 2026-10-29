@@ -3,7 +3,7 @@
   "id": "NewZealand",
   "name": "New Zealand",
   "translation_key": "map.newzealand",
-  "categories": ["new", "oceania"],
+  "categories": ["oceania"],
   "nations": [
     {
       "coordinates": [1096, 415],

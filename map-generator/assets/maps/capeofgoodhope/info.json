@@ -3,7 +3,7 @@
   "id": "CapeOfGoodHope",
   "name": "Cape Of Good Hope",
   "translation_key": "map.capeofgoodhope",
-  "categories": ["new", "africa"],
+  "categories": ["africa"],
   "nations": [
     {
       "coordinates": [467, 395],

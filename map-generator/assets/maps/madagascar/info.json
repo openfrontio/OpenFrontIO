@@ -3,7 +3,7 @@
   "id": "Madagascar",
   "name": "Madagascar",
   "translation_key": "map.madagascar",
-  "categories": ["new", "africa"],
+  "categories": ["africa"],
   "special_team_count": 2,
   "forced_modifiers": ["isWaterNukes:50"],
   "nations": [
