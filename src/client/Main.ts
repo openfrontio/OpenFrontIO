@@ -1904,10 +1904,18 @@ class Client {
       }
       this.loadedJoinModal()?.close();
       this.loadedHostModal()?.close();
+      if (
+        lobby.source === "matchmaking" &&
+        this.loadedMatchmakingModal()?.isOpen()
+      ) {
+        this.matchmakingModal.close();
+      }
       const startingModal = document.querySelector("game-starting-modal");
       if (startingModal instanceof GameStartingModal) {
         startingModal.hide();
       }
+      // handleLeaveLobby only resets the URL once a lobby handle exists.
+      history.replaceState(null, "", "/");
       void this.handleLeaveLobby();
       void showInGameAlert(translateText("error_modal.game_client_failed"));
       return;
