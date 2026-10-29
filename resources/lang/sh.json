@@ -1452,6 +1452,38 @@
     "tutorial": "TUTORIJAL",
     "warning": "UPOZORENJE"
   },
+  "onboarding": {
+    "got_it": "Razumem",
+    "intro_body": "OpenFront je strateška igra u kojoj širite svoju zemlju i osvajate susede dok ne zavladate celom mapom.",
+    "intro_start": "Počni",
+    "intro_title": "Dobrodošli u OpenFront",
+    "low_troops": "Sačekajte da se obnove pre nego što ponovo napadnete.",
+    "low_troops_title": "Imate malo trupa!",
+    "main_menu": "Glavni meni",
+    "play_solo": "Igraj samostalno",
+    "step": {
+      "boat": "Brodovi prevoze trupe preko vode. Kliknite na malo ostrvo da pošaljete brod tamo.",
+      "boat_touch": "Brodovi prevoze trupe preko vode. Dodirnite malo ostrvo da pošaljete brod tamo.",
+      "coast": "Nastavite da klikćete na praznu zemlju dok vaša zemlja ne stigne do vode.",
+      "coast_touch": "Nastavite da dodirujete praznu zemlju dok vaša zemlja ne stigne do vode.",
+      "expand": "Ovo je vaša zemlja. Kliknite na praznu zemlju pored nje da se proširite.",
+      "expand_touch": "Ovo je vaša zemlja. Dodirnite praznu zemlju pored nje da se proširite.",
+      "nation": "Još samo jedan: Red Empire. Klikćite na njegovu obalu i šaljite brodove dok ne padne.",
+      "nation_land": "Sada kliknite na sredinu njegove zemlje i nastavite dok ne padne.",
+      "nation_land_touch": "Sada dodirnite sredinu njegove zemlje i nastavite dok ne padne.",
+      "nation_touch": "Još samo jedan: Red Empire. Dodirujte njegovu obalu i šaljite brodove dok ne padne.",
+      "spawn": "Kliknite unutar svetlećeg kruga da izaberete gde počinjete.",
+      "spawn_touch": "Dodirnite mesto unutar svetlećeg kruga da izaberete gde počinjete.",
+      "tribe": "To je pleme. Kliknite na njegovu zemlju da ga napadnete i nastavite dok ne nestane.",
+      "tribe_touch": "To je pleme. Dodirnite njegovu zemlju da ga napadnete i nastavite dok ne nestane.",
+      "troops": "Ova traka je vaša vojska. Najbrže raste kad je otprilike do pola puna, zato ne čekajte da se napuni.",
+      "wrong_target": "Ne tu. Kliknite tamo gde pokazuje strelica.",
+      "wrong_target_touch": "Ne tu. Dodirnite tamo gde pokazuje strelica."
+    },
+    "step_counter": "Korak {current} od {total}",
+    "won_body": "Znate osnove. Sada probajte pravu igru: vodič će vam pokazati građevine, saveze, nuklearne bombe i još mnogo toga.",
+    "won_title": "Pobeda!"
+  },
   "overtime": {
     "started": "Produžeci! Teritorija potrebna za pobedu se sada smanjuje.",
     "title": "Produžeci",

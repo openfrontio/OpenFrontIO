@@ -1529,6 +1529,38 @@
     "tutorial": "TUTORIÁL",
     "warning": "VAROVÁNÍ"
   },
+  "onboarding": {
+    "got_it": "Rozumím",
+    "intro_body": "OpenFront je strategická hra, ve které rozšiřujete své území a dobýváte sousedy, dokud neovládnete celou mapu.",
+    "intro_start": "Začít",
+    "intro_title": "Vítejte v OpenFront",
+    "low_troops": "Než znovu zaútočíte, počkejte, až se jednotky doplní.",
+    "low_troops_title": "Máte málo jednotek!",
+    "main_menu": "Hlavní nabídka",
+    "play_solo": "Hrát sólo",
+    "step": {
+      "boat": "Lodě převážejí jednotky přes vodu. Klikněte na malý ostrov a pošlete tam loď.",
+      "boat_touch": "Lodě převážejí jednotky přes vodu. Klepněte na malý ostrov a pošlete tam loď.",
+      "coast": "Klikejte na prázdnou zemi, dokud vaše území nedosáhne k vodě.",
+      "coast_touch": "Klepejte na prázdnou zemi, dokud vaše území nedosáhne k vodě.",
+      "expand": "Toto je vaše území. Klikněte na prázdnou zemi vedle něj a rozšiřte se.",
+      "expand_touch": "Toto je vaše území. Klepněte na prázdnou zemi vedle něj a rozšiřte se.",
+      "nation": "Poslední zbývá Red Empire. Klikejte na jeho pobřeží a posílejte lodě, dokud nepadne.",
+      "nation_land": "Teď klikněte doprostřed jeho území a pokračujte, dokud nepadne.",
+      "nation_land_touch": "Teď klepněte doprostřed jeho území a pokračujte, dokud nepadne.",
+      "nation_touch": "Poslední zbývá Red Empire. Klepejte na jeho pobřeží a posílejte lodě, dokud nepadne.",
+      "spawn": "Klikněte dovnitř zářícího kruhu a vyberte, kde začnete.",
+      "spawn_touch": "Klepněte dovnitř zářícího kruhu a vyberte, kde začnete.",
+      "tribe": "To je kmen. Klikněte na jeho území, zaútočte na něj a pokračujte, dokud nezmizí.",
+      "tribe_touch": "To je kmen. Klepněte na jeho území, zaútočte na něj a pokračujte, dokud nezmizí.",
+      "troops": "Tento pruh je vaše armáda. Nejrychleji roste, když je zhruba z poloviny plný, takže nečekejte, až se naplní.",
+      "wrong_target": "Tam ne. Klikněte tam, kam ukazuje šipka.",
+      "wrong_target_touch": "Tam ne. Klepněte tam, kam ukazuje šipka."
+    },
+    "step_counter": "Krok {current} z {total}",
+    "won_body": "Základy znáte. Teď zkuste skutečnou hru: průvodce vám ukáže budovy, spojenectví, atomovky a další.",
+    "won_title": "Vítězství!"
+  },
   "overtime": {
     "first_place": "1. místo: {name} ({pct} %)",
     "started": "Prodloužení! Podíl území potřebný k vítězství se nyní snižuje.",

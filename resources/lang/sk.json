@@ -121,6 +121,38 @@
     "info_enemy_panel": "Tabuľa informácií nepriateľa",
     "exit_confirmation": "Naozaj chceš opustiť hru?"
   },
+  "onboarding": {
+    "got_it": "Rozumiem",
+    "intro_body": "OpenFront je strategická hra, v ktorej rozširuješ svoje územie a dobývaš susedov, až ovládneš celú mapu.",
+    "intro_start": "Začať",
+    "intro_title": "Vitaj v OpenFront",
+    "low_troops": "Pred ďalším útokom počkaj, kým sa tvoje vojská znova doplnia.",
+    "low_troops_title": "Máš málo vojska!",
+    "main_menu": "Hlavné menu",
+    "play_solo": "Hrať sólo",
+    "step": {
+      "boat": "Člny prevážajú vojská cez vodu. Klikni na malý ostrov a pošli tam jeden.",
+      "boat_touch": "Člny prevážajú vojská cez vodu. Ťukni na malý ostrov a pošli tam jeden.",
+      "coast": "Klikaj na prázdnu zem, kým tvoje územie nedosiahne vodu.",
+      "coast_touch": "Ťukaj na prázdnu zem, kým tvoje územie nedosiahne vodu.",
+      "expand": "Toto je tvoje územie. Klikni na prázdnu zem vedľa neho a rozšír ho.",
+      "expand_touch": "Toto je tvoje územie. Ťukni na prázdnu zem vedľa neho a rozšír ho.",
+      "nation": "Posledný súper: Red Empire. Klikaj na jeho pobrežie a posielaj člny, kým nepadne.",
+      "nation_land": "Teraz klikni doprostred jeho územia a pokračuj, kým nepadne.",
+      "nation_land_touch": "Teraz ťukni doprostred jeho územia a pokračuj, kým nepadne.",
+      "nation_touch": "Posledný súper: Red Empire. Ťukaj na jeho pobrežie a posielaj člny, kým nepadne.",
+      "spawn": "Klikni do žiariaceho kruhu a vyber si, kde začneš.",
+      "spawn_touch": "Ťukni do žiariaceho kruhu a vyber si, kde začneš.",
+      "tribe": "To je bot. Klikni na jeho územie, zaútoč naň a pokračuj, kým nezmizne.",
+      "tribe_touch": "To je bot. Ťukni na jeho územie, zaútoč naň a pokračuj, kým nezmizne.",
+      "troops": "Tento pruh je tvoja armáda. Najrýchlejšie rastie, keď je zhruba do polovice plný, tak nečakaj, kým sa naplní.",
+      "wrong_target": "Tam nie. Klikni tam, kam ukazuje šípka.",
+      "wrong_target_touch": "Tam nie. Ťukni tam, kam ukazuje šípka."
+    },
+    "step_counter": "Krok {current} z {total}",
+    "won_body": "Základy už poznáš. Teraz skús skutočnú hru: sprievodca ti ukáže budovy, spojenectvá, atómové bomby a ďalšie.",
+    "won_title": "Vyhral/a si!"
+  },
   "single_modal": {
     "title": "Hra jedného hráča",
     "allow_alliances": "Povoliť spojenectvá",

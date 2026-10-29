@@ -1529,6 +1529,38 @@
     "tutorial": "TUTORIAL",
     "warning": "ADVERTENCIA"
   },
+  "onboarding": {
+    "got_it": "Entendido",
+    "intro_body": "OpenFront es un juego de estrategia en el que haces crecer tu territorio y conquistas a tus vecinos para hacerte con el mapa.",
+    "intro_start": "Empezar",
+    "intro_title": "Bienvenido a OpenFront",
+    "low_troops": "Espera a que se recuperen antes de volver a atacar.",
+    "low_troops_title": "¡Te quedan pocas tropas!",
+    "main_menu": "Menú principal",
+    "play_solo": "Jugar en solitario",
+    "step": {
+      "boat": "Los barcos llevan tropas por el agua. Haz clic en la isla pequeña para enviar uno allí.",
+      "boat_touch": "Los barcos llevan tropas por el agua. Toca la isla pequeña para enviar uno allí.",
+      "coast": "Sigue haciendo clic en la tierra vacía hasta que tu territorio llegue al agua.",
+      "coast_touch": "Sigue tocando la tierra vacía hasta que tu territorio llegue al agua.",
+      "expand": "Este es tu territorio. Haz clic en la tierra vacía de al lado para crecer.",
+      "expand_touch": "Este es tu territorio. Toca la tierra vacía de al lado para crecer.",
+      "nation": "El último: el Red Empire. Haz clic en su costa para enviar barcos hasta que caiga.",
+      "nation_land": "Ahora haz clic en el centro de su territorio y sigue hasta que caiga.",
+      "nation_land_touch": "Ahora toca el centro de su territorio y sigue hasta que caiga.",
+      "nation_touch": "El último: el Red Empire. Toca su costa para enviar barcos hasta que caiga.",
+      "spawn": "Haz clic dentro del círculo brillante para elegir dónde empiezas.",
+      "spawn_touch": "Toca dentro del círculo brillante para elegir dónde empiezas.",
+      "tribe": "Eso es una tribu. Haz clic en su territorio para atacarla y sigue hasta que desaparezca.",
+      "tribe_touch": "Eso es una tribu. Toca su territorio para atacarla y sigue hasta que desaparezca.",
+      "troops": "Esta barra es tu ejército. Crece más rápido cuando está más o menos a la mitad, así que no esperes a que se llene.",
+      "wrong_target": "Ahí no. Haz clic donde señala la flecha.",
+      "wrong_target_touch": "Ahí no. Toca donde señala la flecha."
+    },
+    "step_counter": "Paso {current} de {total}",
+    "won_body": "Ya conoces lo básico. Ahora prueba una partida de verdad: una guía te enseñará los edificios, las alianzas, las bombas nucleares y mucho más.",
+    "won_title": "¡Has ganado!"
+  },
   "overtime": {
     "first_place": "1º: {name} ({pct}%)",
     "started": "¡Tiempo extra! El territorio necesario para ganar ahora está disminuyendo.",

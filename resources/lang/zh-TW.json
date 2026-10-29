@@ -1529,6 +1529,38 @@
     "tutorial": "教學",
     "warning": "警告"
   },
+  "onboarding": {
+    "got_it": "了解",
+    "intro_body": "OpenFront 是一款策略遊戲：擴張你的領土，征服你的鄰居，最後佔領整張地圖。",
+    "intro_start": "開始",
+    "intro_title": "歡迎來到 OpenFront",
+    "low_troops": "等軍隊恢復後再發動攻擊吧。",
+    "low_troops_title": "你的軍隊不多了！",
+    "main_menu": "主選單",
+    "play_solo": "開始單人遊戲",
+    "step": {
+      "boat": "船可以載著軍隊渡海。點擊那座小島，派一艘船過去。",
+      "boat_touch": "船可以載著軍隊渡海。點一下那座小島，派一艘船過去。",
+      "coast": "繼續點擊空地，直到你的領土抵達海邊。",
+      "coast_touch": "繼續點一下空地，直到你的領土抵達海邊。",
+      "expand": "這是你的領土。點擊旁邊的空地來擴張。",
+      "expand_touch": "這是你的領土。點一下旁邊的空地來擴張。",
+      "nation": "最後一個：Red Empire。點擊它的海岸派船進攻，直到它滅亡。",
+      "nation_land": "現在點擊它領土的中間，一直進攻到它滅亡。",
+      "nation_land_touch": "現在點一下它領土的中間，一直進攻到它滅亡。",
+      "nation_touch": "最後一個：Red Empire。點一下它的海岸派船進攻，直到它滅亡。",
+      "spawn": "點擊發光的圓圈內部，選擇你的起點。",
+      "spawn_touch": "點一下發光的圓圈內部，選擇你的起點。",
+      "tribe": "那是一個部族。點擊它的領土發動攻擊，直到把它消滅。",
+      "tribe_touch": "那是一個部族。點一下它的領土發動攻擊，直到把它消滅。",
+      "troops": "這條是你的軍隊。軍隊在半滿左右時增長最快，所以別等它滿了。",
+      "wrong_target": "不是那裡。請點擊箭頭指向的地方。",
+      "wrong_target_touch": "不是那裡。請點一下箭頭指向的地方。"
+    },
+    "step_counter": "第 {current} 步，共 {total} 步",
+    "won_body": "你已經掌握了基礎。現在來玩一場真正的遊戲吧：嚮導會為你介紹建築、同盟、核彈等更多內容。",
+    "won_title": "你獲勝了！"
+  },
   "overtime": {
     "first_place": "第 1 名：{name}（{pct}%）",
     "started": "延長賽！勝利所需的領土比例已減少。",

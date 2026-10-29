@@ -911,6 +911,38 @@
     "tutorial": "LERNILO",
     "warning": "AVERTO"
   },
+  "onboarding": {
+    "got_it": "Komprenite",
+    "intro_body": "OpenFront estas strategia ludo, en kiu vi kreskigas vian teritorion kaj konkeras viajn najbarojn por regi la tutan mapon.",
+    "intro_start": "Komenci",
+    "intro_title": "Bonvenon al OpenFront",
+    "low_troops": "Atendu, ĝis ili rekreskos, antaŭ ol ataki denove.",
+    "low_troops_title": "Viaj trupoj malmultas!",
+    "main_menu": "Ĉefa menuo",
+    "play_solo": "Ludi sole",
+    "step": {
+      "boat": "Boatoj portas trupojn trans akvon. Alklaku la malgrandan insulon por sendi unu tien.",
+      "boat_touch": "Boatoj portas trupojn trans akvon. Tuŝetu la malgrandan insulon por sendi unu tien.",
+      "coast": "Daŭre alklaku la malplenan teron, ĝis via teritorio atingos la akvon.",
+      "coast_touch": "Daŭre tuŝetu la malplenan teron, ĝis via teritorio atingos la akvon.",
+      "expand": "Jen via teritorio. Alklaku la malplenan teron apud ĝi por kreski.",
+      "expand_touch": "Jen via teritorio. Tuŝetu la malplenan teron apud ĝi por kreski.",
+      "nation": "La lasta: Red Empire. Alklaku ĝian marbordon por sendi boatojn, ĝis ĝi falos.",
+      "nation_land": "Nun alklaku la mezon de ĝia teritorio, kaj daŭrigu, ĝis ĝi falos.",
+      "nation_land_touch": "Nun tuŝetu la mezon de ĝia teritorio, kaj daŭrigu, ĝis ĝi falos.",
+      "nation_touch": "La lasta: Red Empire. Tuŝetu ĝian marbordon por sendi boatojn, ĝis ĝi falos.",
+      "spawn": "Alklaku ene de la brilanta cirklo por elekti, kie vi komencos.",
+      "spawn_touch": "Tuŝetu ene de la brilanta cirklo por elekti, kie vi komencos.",
+      "tribe": "Tio estas tribo. Alklaku ĝian teritorion por ataki ĝin, kaj daŭrigu, ĝis ĝi malaperos.",
+      "tribe_touch": "Tio estas tribo. Tuŝetu ĝian teritorion por ataki ĝin, kaj daŭrigu, ĝis ĝi malaperos.",
+      "troops": "Ĉi tiu strio estas via armeo. Ĝi kreskas plej rapide, kiam ĝi estas proksimume duone plena, do ne atendu, ĝis ĝi pleniĝos.",
+      "wrong_target": "Ne tie. Alklaku tien, kien montras la sago.",
+      "wrong_target_touch": "Ne tie. Tuŝetu tien, kien montras la sago."
+    },
+    "step_counter": "Paŝo {current} el {total}",
+    "won_body": "Vi jam konas la bazojn. Nun provu veran ludon: gvidilo montros al vi konstruaĵojn, aliancojn, atombombojn kaj pli.",
+    "won_title": "Vi venkis!"
+  },
   "performance_overlay": {
     "avg_60s": "Averaĝo (60s):",
     "collapse": "Maletendi",

@@ -120,6 +120,38 @@
     "info_enemy_panel": "Fiendeinfopanel",
     "exit_confirmation": "Är du säker på att du vill avsluta spelet?"
   },
+  "onboarding": {
+    "got_it": "Uppfattat",
+    "intro_body": "OpenFront är ett strategispel där du utökar ditt land och erövrar dina grannar för att ta över kartan.",
+    "intro_start": "Starta",
+    "intro_title": "Välkommen till OpenFront",
+    "low_troops": "Vänta tills de har växt tillbaka innan du anfaller igen.",
+    "low_troops_title": "Du har ont om trupper!",
+    "main_menu": "Huvudmeny",
+    "play_solo": "Spela i enspelarläge",
+    "step": {
+      "boat": "Båtar för trupper över vatten. Klicka på den lilla ön för att skicka en dit.",
+      "boat_touch": "Båtar för trupper över vatten. Tryck på den lilla ön för att skicka en dit.",
+      "coast": "Fortsätt klicka på den tomma marken tills ditt land når vattnet.",
+      "coast_touch": "Fortsätt trycka på den tomma marken tills ditt land når vattnet.",
+      "expand": "Det här är ditt land. Klicka på den tomma marken bredvid för att växa.",
+      "expand_touch": "Det här är ditt land. Tryck på den tomma marken bredvid för att växa.",
+      "nation": "Sist ut: Red Empire. Klicka på dess kust för att skicka båtar tills det faller.",
+      "nation_land": "Klicka nu mitt på dess land och fortsätt tills det faller.",
+      "nation_land_touch": "Tryck nu mitt på dess land och fortsätt tills det faller.",
+      "nation_touch": "Sist ut: Red Empire. Tryck på dess kust för att skicka båtar tills det faller.",
+      "spawn": "Klicka inuti den lysande cirkeln för att välja var du startar.",
+      "spawn_touch": "Tryck inuti den lysande cirkeln för att välja var du startar.",
+      "tribe": "Det där är en bot. Klicka på dess land för att anfalla den, och fortsätt tills den är borta.",
+      "tribe_touch": "Det där är en bot. Tryck på dess land för att anfalla den, och fortsätt tills den är borta.",
+      "troops": "Den här stapeln är din armé. Den växer snabbast när stapeln är ungefär halvfull, så vänta inte tills den är full.",
+      "wrong_target": "Inte där. Klicka där pilen pekar.",
+      "wrong_target_touch": "Inte där. Tryck där pilen pekar."
+    },
+    "step_counter": "Steg {current} av {total}",
+    "won_body": "Nu kan du grunderna. Testa ett riktigt spel: en guide visar dig byggnader, allianser, kärnvapen och mycket mer.",
+    "won_title": "Du vann!"
+  },
   "single_modal": {
     "title": "Enspelarläge",
     "allow_alliances": "Tillåt allianser",

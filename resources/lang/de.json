@@ -1714,6 +1714,38 @@
     "tutorial": "TUTORIAL",
     "warning": "WARNUNG"
   },
+  "onboarding": {
+    "got_it": "Verstanden",
+    "intro_body": "OpenFront ist ein Strategiespiel, in dem du dein Land vergrößerst und deine Nachbarn eroberst, um die ganze Karte zu beherrschen.",
+    "intro_start": "Starten",
+    "intro_title": "Willkommen bei OpenFront",
+    "low_troops": "Warte, bis sie wieder nachgewachsen sind, bevor du erneut angreifst.",
+    "low_troops_title": "Deine Truppen sind knapp!",
+    "main_menu": "Hauptmenü",
+    "play_solo": "Solo spielen",
+    "step": {
+      "boat": "Boote bringen Truppen über das Wasser. Klicke auf die kleine Insel, um eines dorthin zu schicken.",
+      "boat_touch": "Boote bringen Truppen über das Wasser. Tippe auf die kleine Insel, um eines dorthin zu schicken.",
+      "coast": "Klicke weiter auf das freie Land, bis dein Land das Wasser erreicht.",
+      "coast_touch": "Tippe weiter auf das freie Land, bis dein Land das Wasser erreicht.",
+      "expand": "Das ist dein Land. Klicke auf das freie Land daneben, um dich auszubreiten.",
+      "expand_touch": "Das ist dein Land. Tippe auf das freie Land daneben, um dich auszubreiten.",
+      "nation": "Zum Schluss: das Red Empire. Klicke auf seine Küste, um Boote zu schicken, bis es fällt.",
+      "nation_land": "Klicke jetzt in die Mitte seines Landes und mach weiter, bis es fällt.",
+      "nation_land_touch": "Tippe jetzt in die Mitte seines Landes und mach weiter, bis es fällt.",
+      "nation_touch": "Zum Schluss: das Red Empire. Tippe auf seine Küste, um Boote zu schicken, bis es fällt.",
+      "spawn": "Klicke in den leuchtenden Kreis, um deinen Startpunkt zu wählen.",
+      "spawn_touch": "Tippe in den leuchtenden Kreis, um deinen Startpunkt zu wählen.",
+      "tribe": "Das ist ein Stamm. Klicke auf sein Land, um ihn anzugreifen, und mach weiter, bis er besiegt ist.",
+      "tribe_touch": "Das ist ein Stamm. Tippe auf sein Land, um ihn anzugreifen, und mach weiter, bis er besiegt ist.",
+      "troops": "Dieser Balken zeigt deine Armee. Sie wächst am schnellsten, wenn der Balken etwa halb voll ist, also warte nicht, bis er ganz voll ist.",
+      "wrong_target": "Nicht hier. Klicke dort, wo der Pfeil hinzeigt.",
+      "wrong_target_touch": "Nicht hier. Tippe dort, wo der Pfeil hinzeigt."
+    },
+    "step_counter": "Schritt {current} von {total}",
+    "won_body": "Jetzt kennst du die Grundlagen. Probier ein echtes Spiel aus: Eine Anleitung zeigt dir Gebäude, Allianzen, Atombomben und mehr.",
+    "won_title": "Du hast gewonnen!"
+  },
   "overtime": {
     "first_place": "1st: {name} ({pct}%)",
     "started": "Verlängerung! Das für den Sieg benötigte Gebiet fällt nun ab.",

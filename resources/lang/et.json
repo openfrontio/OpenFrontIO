@@ -55,6 +55,38 @@
     "github_link": "GitHub'is",
     "title": "Väljalaskemärkmed"
   },
+  "onboarding": {
+    "got_it": "Selge",
+    "intro_body": "OpenFront on strateegiamäng, kus sa laiendad oma maad ja vallutad naabreid, et kogu kaart enda valdusesse võtta.",
+    "intro_start": "Alusta",
+    "intro_title": "Tere tulemast OpenFronti",
+    "low_troops": "Oota, kuni väed taastuvad, enne kui uuesti ründad.",
+    "low_troops_title": "Sul on vähe vägesid!",
+    "main_menu": "Peamenüü",
+    "play_solo": "Mängi üksi",
+    "step": {
+      "boat": "Paadid viivad vägesid üle vee. Klõpsa väikesel saarel, et sinna paat saata.",
+      "boat_touch": "Paadid viivad vägesid üle vee. Puuduta väikest saart, et sinna paat saata.",
+      "coast": "Jätka tühjal maal klõpsamist, kuni su maa ulatub veeni.",
+      "coast_touch": "Jätka tühja maa puudutamist, kuni su maa ulatub veeni.",
+      "expand": "See on sinu maa. Klõpsa selle kõrval oleval tühjal maal, et laieneda.",
+      "expand_touch": "See on sinu maa. Puuduta selle kõrval olevat tühja maad, et laieneda.",
+      "nation": "Viimane: Red Empire. Klõpsa selle rannikul, et saata paate, kuni see langeb.",
+      "nation_land": "Nüüd klõpsa selle maa keskel ja jätka, kuni see langeb.",
+      "nation_land_touch": "Nüüd puuduta selle maa keskosa ja jätka, kuni see langeb.",
+      "nation_touch": "Viimane: Red Empire. Puuduta selle rannikut, et saata paate, kuni see langeb.",
+      "spawn": "Klõpsa helendava ringi sees, et valida oma alguskoht.",
+      "spawn_touch": "Puuduta kohta helendava ringi sees, et valida oma alguskoht.",
+      "tribe": "See on bot. Klõpsa selle maal, et seda rünnata, ja jätka, kuni see on kadunud.",
+      "tribe_touch": "See on bot. Puuduta selle maad, et seda rünnata, ja jätka, kuni see on kadunud.",
+      "troops": "See riba on sinu armee. See kasvab kõige kiiremini, kui riba on umbes poolenisti täis, nii et ära oota, kuni see täis saab.",
+      "wrong_target": "Mitte sinna. Klõpsa sinna, kuhu nool näitab.",
+      "wrong_target_touch": "Mitte sinna. Puuduta kohta, kuhu nool näitab."
+    },
+    "step_counter": "Samm {current}/{total}",
+    "won_body": "Nüüd tead põhitõdesid. Proovi päris mängu: juhend tutvustab sulle ehitisi, liite, tuumapomme ja palju muud.",
+    "won_title": "Sa võitsid!"
+  },
   "troubleshooting": {
     "title": "Tõrkeotsing",
     "environment": "Keskkond",
