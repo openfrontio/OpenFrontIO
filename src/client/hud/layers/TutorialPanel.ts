@@ -136,7 +136,11 @@ export class TutorialPanel extends LitElement implements Controller {
     // subscribed to TutorialStateEvent.
     if (!this.started) {
       this.started = true;
-      this.setActive(!this.userSettings.tutorialDismissed());
+      // The onboarding tutorial has its own guide (OnboardingOverlay).
+      this.setActive(
+        !this.userSettings.tutorialDismissed() &&
+          this.game.config().gameConfig().tutorial !== true,
+      );
     }
     if (!this.active) return;
 

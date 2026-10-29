@@ -582,6 +582,8 @@ export class WinModal extends LitElement implements Controller {
 
   async show() {
     gamePortal.gameplayStop();
+    // The onboarding tutorial ends on its own card (OnboardingOverlay).
+    if (this.game.config().gameConfig().tutorial === true) return;
     this.isRankedGame =
       this.game.config().gameConfig().rankedType !== undefined;
     this.isVisible = true;

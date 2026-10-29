@@ -95,6 +95,19 @@ type StartPreparation = {
   cosmetics: PlayerCosmetics;
 };
 
+const TUTORIAL_DISABLED_UNITS: UnitType[] = [
+  UnitType.City,
+  UnitType.Port,
+  UnitType.DefensePost,
+  UnitType.Factory,
+  UnitType.Warship,
+  UnitType.MissileSilo,
+  UnitType.SAMLauncher,
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+];
+
 const DEFAULT_OPTIONS = {
   selectedMap: GameMapType.World,
   selectedDifficulty: Difficulty.Easy,
@@ -651,11 +664,61 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   /**
-   * Starts a solo game on the default settings without opening the modal,
-   * with the in-game tutorial switched back on (the play page's Tutorial
-   * card for new players).
+   * Starts the onboarding tutorial (docs/OnboardingTutorial.md) without
+   * opening the modal: the Tutorial map, with OnboardingOverlay guiding the
+   * player through spawning, attacking and boats.
    */
   public async startTutorial(): Promise<void> {
+    // The modal never opens on this path, so onOpen's prewarm never runs.
+    void prewarmCosmetics();
+    if (this.starting) return;
+    await this.launch(async ({ resolvedName, cosmetics }, usernameInput) => {
+      const gameID = generateID();
+      return {
+        gameID,
+        gameStartInfo: {
+          gameID,
+          players: [
+            {
+              clientID: generateID(),
+              username: resolvedName.name,
+              clanTag: usernameInput?.getClanTag() ?? null,
+              cosmetics,
+            },
+          ],
+          config: {
+            gameMap: GameMapType.Tutorial,
+            gameMapSize: GameMapSize.Normal,
+            gameType: GameType.Singleplayer,
+            gameMode: GameMode.FFA,
+            difficulty: Difficulty.Easy,
+            // The map's one positioned tribe and one nation.
+            bots: 1,
+            nations: "default",
+            infiniteGold: false,
+            donateGold: false,
+            donateTroops: false,
+            infiniteTroops: false,
+            instantBuild: false,
+            randomSpawn: false,
+            disableAlliances: true,
+            // Nothing to build: the tutorial is land, attacks and boats.
+            disabledUnits: TUTORIAL_DISABLED_UNITS,
+            tutorial: true,
+          },
+          lobbyCreatedAt: Date.now(),
+        },
+        source: "singleplayer",
+      };
+    });
+  }
+
+  /**
+   * Starts a solo game on the default settings without opening the modal,
+   * with the in-game guide switched back on (where the onboarding
+   * tutorial's "Play a solo game" leads).
+   */
+  public async startSoloWithGuide(): Promise<void> {
     // The modal never opens on this path, so onOpen's prewarm never runs.
     // Overlap it with the manifest load below.
     void prewarmCosmetics();
@@ -976,6 +1039,7 @@ export class SinglePlayerModal extends BaseModal {
    * resolution here is a cost with nothing to show for it, so
    * START_PREPARE_DEADLINE_MS cuts it short rather than pinning Start at
    * "Starting…" for the rest of the session, which would take startTutorial()
+   * or startSoloWithGuide()
    * down with it on the re-entrancy guard.
    *
    * The midgame ad is deliberately not part of this — see awaitMidgameAd.
@@ -1069,6 +1133,96 @@ export class SinglePlayerModal extends BaseModal {
       finalMaxTimerValue = Math.max(1, Math.min(120, this.maxTimerValue));
     }
 
+    await this.launch(async ({ resolvedName, cosmetics }, usernameInput) => {
+      console.log(
+        `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      );
+      const clientID = generateID();
+      const gameID = generateID();
+      return {
+        gameID: gameID,
+        gameStartInfo: {
+          gameID: gameID,
+          players: [
+            {
+              clientID,
+              username: resolvedName.name,
+              clanTag: usernameInput?.getClanTag() ?? null,
+              cosmetics,
+            },
+          ],
+          config: {
+            gameMap: this.selectedMap,
+            gameMapSize: this.compactMap
+              ? GameMapSize.Compact
+              : GameMapSize.Normal,
+            gameType: GameType.Singleplayer,
+            gameMode: this.gameMode,
+            playerTeams: this.teamCount,
+            difficulty: this.selectedDifficulty,
+            maxTimerValue: finalMaxTimerValue,
+            bots: this.bots,
+            infiniteGold: this.infiniteGold,
+            donateGold: this.gameMode === GameMode.Team,
+            donateTroops: this.gameMode === GameMode.Team,
+            infiniteTroops: this.infiniteTroops,
+            instantBuild: this.instantBuild,
+            randomSpawn: this.randomSpawn,
+            disabledUnits: this.disabledUnits.filter((unit): unit is UnitType =>
+              Object.values(UnitType).includes(unit),
+            ),
+            nations: sliderToNationsConfig(
+              this.nations,
+              this.defaultNationCount,
+            ),
+            ...(this.goldMultiplier && this.goldMultiplierValue
+              ? { goldMultiplier: this.goldMultiplierValue }
+              : {}),
+            ...(this.startingGold && this.startingGoldValue !== undefined
+              ? {
+                  startingGold: Math.round(this.startingGoldValue * 1_000_000),
+                }
+              : {}),
+            ...(this.customAlliances
+              ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
+              : {}),
+            ...(this.waterNukes ? { waterNukes: true } : {}),
+            ...(this.doomsdayClock
+              ? {
+                  doomsdayClock: {
+                    enabled: true,
+                    speed: this.doomsdayClockSpeed,
+                  },
+                }
+              : {}),
+            ...(this.overtime
+              ? {
+                  overtime: {
+                    enabled: true,
+                    startMinutes: this.overtimeStartMinutes ?? 30,
+                  },
+                }
+              : {}),
+          },
+          lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
+        },
+        source: "singleplayer",
+      };
+    });
+  }
+
+  /**
+   * What every solo start shares: the busy button, the starting overlay, the
+   * player's name and cosmetics, the midgame ad and the join-lobby dispatch.
+   * `build` makes the event once the name and cosmetics are known, before
+   * the ad; throwing from it abandons the start (and reaches the caller).
+   */
+  private async launch(
+    build: (
+      prepared: StartPreparation,
+      usernameInput: UsernameInput | null,
+    ) => Promise<JoinLobbyEvent>,
+  ): Promise<void> {
     // Everything past this point awaits something, some of it network-bound.
     // Hold the button in its busy state until join-lobby is away so the wait
     // reads as loading rather than as a dead click.
@@ -1085,12 +1239,6 @@ export class SinglePlayerModal extends BaseModal {
     this.overlayAttempt = attempt;
     overlay?.show();
     try {
-      console.log(
-        `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
-      );
-      const clientID = generateID();
-      const gameID = generateID();
-
       const usernameInput = document.querySelector(
         "username-input",
       ) as UsernameInput | null;
@@ -1098,8 +1246,7 @@ export class SinglePlayerModal extends BaseModal {
       // Resolved before the dispatch rather than inside it, so every wait is
       // attributable to the busy button above, and bounded so none of them
       // can outlive it.
-      const { resolvedName, cosmetics } =
-        await this.resolveNameAndCosmetics(usernameInput);
+      const prepared = await this.resolveNameAndCosmetics(usernameInput);
 
       // Retired while this was resolving — the modal was closed, and possibly
       // reopened and started again. The live attempt owns the start; this one
@@ -1120,6 +1267,8 @@ export class SinglePlayerModal extends BaseModal {
       // start.
       if (attempt !== this.startAttempt) return;
 
+      const detail = await build(prepared, usernameInput);
+
       await this.awaitMidgameAd();
 
       // The ad is long enough that the modal can be closed while it runs.
@@ -1127,78 +1276,7 @@ export class SinglePlayerModal extends BaseModal {
 
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
-          detail: {
-            gameID: gameID,
-            gameStartInfo: {
-              gameID: gameID,
-              players: [
-                {
-                  clientID,
-                  username: resolvedName.name,
-                  clanTag: usernameInput?.getClanTag() ?? null,
-                  cosmetics,
-                },
-              ],
-              config: {
-                gameMap: this.selectedMap,
-                gameMapSize: this.compactMap
-                  ? GameMapSize.Compact
-                  : GameMapSize.Normal,
-                gameType: GameType.Singleplayer,
-                gameMode: this.gameMode,
-                playerTeams: this.teamCount,
-                difficulty: this.selectedDifficulty,
-                maxTimerValue: finalMaxTimerValue,
-                bots: this.bots,
-                infiniteGold: this.infiniteGold,
-                donateGold: this.gameMode === GameMode.Team,
-                donateTroops: this.gameMode === GameMode.Team,
-                infiniteTroops: this.infiniteTroops,
-                instantBuild: this.instantBuild,
-                randomSpawn: this.randomSpawn,
-                disabledUnits: this.disabledUnits.filter(
-                  (unit): unit is UnitType =>
-                    Object.values(UnitType).includes(unit),
-                ),
-                nations: sliderToNationsConfig(
-                  this.nations,
-                  this.defaultNationCount,
-                ),
-                ...(this.goldMultiplier && this.goldMultiplierValue
-                  ? { goldMultiplier: this.goldMultiplierValue }
-                  : {}),
-                ...(this.startingGold && this.startingGoldValue !== undefined
-                  ? {
-                      startingGold: Math.round(
-                        this.startingGoldValue * 1_000_000,
-                      ),
-                    }
-                  : {}),
-                ...(this.customAlliances
-                  ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
-                  : {}),
-                ...(this.waterNukes ? { waterNukes: true } : {}),
-                ...(this.doomsdayClock
-                  ? {
-                      doomsdayClock: {
-                        enabled: true,
-                        speed: this.doomsdayClockSpeed,
-                      },
-                    }
-                  : {}),
-                ...(this.overtime
-                  ? {
-                      overtime: {
-                        enabled: true,
-                        startMinutes: this.overtimeStartMinutes ?? 30,
-                      },
-                    }
-                  : {}),
-              },
-              lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
-            },
-            source: "singleplayer",
-          } satisfies JoinLobbyEvent,
+          detail,
           bubbles: true,
           composed: true,
         }),
