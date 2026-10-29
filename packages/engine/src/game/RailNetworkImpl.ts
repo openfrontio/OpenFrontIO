@@ -131,9 +131,16 @@ interface PathBudget {
 }
 
 /**
- * Pathfinder calls one ghost preview may spend before it is cut short. Main
- * spent at most five; a factory's cascade over its nearest structures fits in
- * this, while a dense late-game neighbourhood (hundreds of calls) does not.
+ * Structures a factory preview promotes. A first factory in a crowded region
+ * would promote every City, Port and Factory within range, a hundred or more
+ * in a busy FFA, which is too much to plan and draw at interactive rates and
+ * too much to read. Past this many, the preview keeps the nearest ones.
+ */
+const GHOST_CASCADE_LIMIT = 12;
+/**
+ * Pathfinder calls one ghost preview may spend before it is cut short, a
+ * backstop behind the cascade limit for a station that would connect to many
+ * stations at once. Main spent at most five per preview.
  */
 const GHOST_PATHFINDER_BUDGET = 32;
 /** Recent previews remembered per network; a cursor rarely hovers more tiles. */
@@ -290,6 +297,7 @@ export class RailNetworkImpl implements RailNetwork {
   // Preview-only state: a memo over pure functions of the network. Never part
   // of the snapshot and never read by the simulation itself.
   private networkVersion = 0;
+  private ghostCascadeLimit = GHOST_CASCADE_LIMIT;
   private ghostPathfinderBudget = GHOST_PATHFINDER_BUDGET;
   private readonly ghostPathsCache = new Map<string, GhostPathsCacheEntry>();
 
@@ -523,8 +531,11 @@ export class RailNetworkImpl implements RailNetwork {
    * FactoryExecution promotes completed Cities and any remaining structures in
    * the same UnitGrid order returned by nearbyUnits().
    *
-   * The cascade stops once the plan's pathfinder budget is spent: the preview
-   * is then a prefix of the full one rather than a stall of the worker.
+   * Two limits keep this interactive. Past GHOST_CASCADE_LIMIT structures to
+   * promote, only the nearest ones are planned, in their relative order; a
+   * farther structure the game would have processed first can then no longer
+   * influence them, so that preview is local rather than exact. The cascade
+   * also stops once the plan's pathfinder budget is spent, leaving a prefix.
    */
   private planFactoryGhostNetwork(
     state: GhostRailNetworkState,
@@ -537,9 +548,22 @@ export class RailNetworkImpl implements RailNetwork {
       UnitType.Port,
     ]);
 
-    const pendingPorts = structures
+    // The structures the factory would promote, in the order the game
+    // processes them (UnitGrid order).
+    let pending = structures.filter(({ unit }) => !state.isStation(unit));
+    if (pending.length > this.ghostCascadeLimit) {
+      const nearest = new Set(
+        [...pending]
+          .sort((a, b) => a.distSquared - b.distSquared)
+          .slice(0, this.ghostCascadeLimit)
+          .map(({ unit }) => unit),
+      );
+      pending = pending.filter(({ unit }) => nearest.has(unit));
+    }
+
+    const pendingPorts = pending
       .map(({ unit }) => unit)
-      .filter((unit) => unit.type() === UnitType.Port && !state.isStation(unit))
+      .filter((unit) => unit.type() === UnitType.Port)
       // Existing execution order follows construction order, represented by
       // monotonically increasing unit IDs.
       .sort((a, b) => a.id() - b.id());
@@ -554,7 +578,7 @@ export class RailNetworkImpl implements RailNetwork {
     state.proposedFactory = factory;
     this.connectGhostStation(state, factory);
 
-    for (const { unit } of structures) {
+    for (const { unit } of pending) {
       if (state.budget.remaining <= 0) return;
       if (state.isStation(unit)) continue;
       this.addAndConnectGhostStation(state, unit.tile(), unit);

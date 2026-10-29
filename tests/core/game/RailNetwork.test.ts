@@ -758,9 +758,12 @@ describe("ghost rail preview cost controls", () => {
     const tile = game.ref(100, 100);
     const network = game.railNetwork();
     const internals = network as unknown as {
+      ghostCascadeLimit: number;
       ghostPathfinderBudget: number;
       ghostPathsCache: Map<string, unknown>;
     };
+    // Let the budget be the binding limit here.
+    internals.ghostCascadeLimit = Infinity;
     const budget = internals.ghostPathfinderBudget;
     const counter = countPathfinderCalls(game);
 
@@ -775,6 +778,49 @@ describe("ghost rail preview cost controls", () => {
     const full = network.computeGhostRailPaths(UnitType.Factory, tile);
     expect(counter.calls).toBeGreaterThan(budget);
     expect(full.length).toBeGreaterThan(budgeted.length);
+  });
+
+  test("a crowded region previews only the nearest structures", async () => {
+    const game = await setup("big_plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+    for (let y = 5; y < 200; y += 12) {
+      for (let x = 5; x < 200; x += 12) {
+        player.buildUnit(UnitType.City, game.ref(x, y), {});
+      }
+    }
+    const tile = game.ref(100, 100);
+    const network = game.railNetwork();
+    const internals = network as unknown as {
+      ghostCascadeLimit: number;
+      ghostPathfinderBudget: number;
+      ghostPathsCache: Map<string, unknown>;
+    };
+    const counter = countPathfinderCalls(game);
+    const farthest = (paths: TileRef[][]) =>
+      Math.max(
+        ...paths.flatMap((path) =>
+          path.map((t) =>
+            Math.max(Math.abs(game.x(t) - 100), Math.abs(game.y(t) - 100)),
+          ),
+        ),
+      );
+
+    // The 12 nearest cities on this grid all lie within 25 tiles, so every
+    // rail stays local; a few calls per promoted city, not hundreds.
+    const local = network.computeGhostRailPaths(UnitType.Factory, tile);
+    expect(local.length).toBeGreaterThanOrEqual(internals.ghostCascadeLimit);
+    expect(farthest(local)).toBeLessThanOrEqual(30);
+    expect(counter.calls).toBeLessThanOrEqual(2 * internals.ghostCascadeLimit);
+
+    // Unlimited, the same placement cascades across the whole range.
+    internals.ghostCascadeLimit = Infinity;
+    internals.ghostPathfinderBudget = Infinity;
+    internals.ghostPathsCache.clear();
+    const full = network.computeGhostRailPaths(UnitType.Factory, tile);
+    expect(full.length).toBeGreaterThan(local.length);
+    expect(farthest(full)).toBeGreaterThan(60);
   });
 
   test("a preview touches only the stations its plan reaches", async () => {
