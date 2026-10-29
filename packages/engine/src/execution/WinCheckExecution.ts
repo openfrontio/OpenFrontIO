@@ -86,6 +86,16 @@ export class WinCheckExecution implements Execution {
       return;
     }
 
+    // The tutorial is won by conquering the nation and the tribe, and
+    // nothing else ends it: no tile share, no timer.
+    if (this.mg.config().gameConfig().tutorial) {
+      if (sorted.every((p) => p.type() === PlayerType.Human)) {
+        this.mg.setWinner(sorted[0], this.mg.stats().stats());
+        this.active = false;
+      }
+      return;
+    }
+
     // Ranked 1v1 and FFA end when one connected human is left: everyone else
     // is dead or gone.
     const rankedType = this.mg.config().gameConfig().rankedType;

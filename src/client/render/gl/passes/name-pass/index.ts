@@ -757,10 +757,12 @@ export class NamePass {
    * unit. Mirrors the lerp + sizing math in name.vert.glsl and
    * status-icon.vert.glsl. Returns the smallID, or 0 for none.
    */
-  private hitTestNamePlate(now: number): number {
+  private hitTestNamePlate(now: number, cameraMatrix: Float32Array): number {
     const mx = this.mouseWorldX;
     const my = this.mouseWorldY;
     const ns = this.settings.name;
+    // Match the camera-scale calculation in the name shaders.
+    const cameraScale = Math.hypot(cameraMatrix[0], cameraMatrix[3]);
     for (const slot of this.slots.values()) {
       if (!slot.alive) continue;
       const t = Math.min(
@@ -773,10 +775,18 @@ export class NamePass {
       const baseSize = Math.max(1, Math.floor(ws));
       const nameSize = Math.max(4, Math.floor(baseSize * ns.nameScaleFactor));
       const nameScale = Math.min(baseSize * 0.25, ns.nameScaleCap);
-      const lineH = this.fontBase * ((nameSize * nameScale) / this.fontSize);
+      let nameWorldScale = (nameSize * nameScale) / this.fontSize;
+      let lineH = this.fontBase * nameWorldScale;
+      const screenSize = lineH * cameraScale;
+      // The shaders enlarge targeted nameplates to the cull threshold so they
+      // stay visible at any zoom. Apply the same boost to the hit-test bounds.
+      if (slot.target && screenSize < ns.cullThreshold) {
+        const boost = ns.cullThreshold / screenSize;
+        nameWorldScale *= boost;
+        lineH = this.fontBase * nameWorldScale;
+      }
 
-      const halfW =
-        slot.nameHalfWidth * ((nameSize * nameScale) / this.fontSize);
+      const halfW = slot.nameHalfWidth * nameWorldScale;
       let left = wx - halfW;
       let right = wx + halfW;
       if (slot.flagLayerIdx >= 0) left -= lineH * 1.2 * FLAG_ASPECT;
@@ -864,7 +874,10 @@ export class NamePass {
       this.playerDataDirty = false;
     }
 
-    const fadeOwnerID = this.hitTestNamePlate(performance.now() / 1000);
+    const fadeOwnerID = this.hitTestNamePlate(
+      performance.now() / 1000,
+      cameraMatrix,
+    );
 
     this.textProgram.draw(
       cameraMatrix,

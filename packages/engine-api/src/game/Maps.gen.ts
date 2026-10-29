@@ -127,6 +127,7 @@ export enum GameMapType {
   Tourney3 = "Tourney 4 Teams", // map-generator/assets/maps/tourney3/info.json
   Tourney4 = "Tourney 8 Teams", // map-generator/assets/maps/tourney4/info.json
   TradersDream = "Traders Dream", // map-generator/assets/maps/tradersdream/info.json
+  Tutorial = "Tutorial", // map-generator/assets/maps/tutorial/info.json
   TwoLakes = "Two Lakes", // map-generator/assets/maps/twolakes/info.json
   UnitedStates = "United States", // map-generator/assets/maps/unitedstates/info.json
   VancouverIsland = "Vancouver Island", // map-generator/assets/maps/vancouverisland/info.json
@@ -207,6 +208,8 @@ export interface MapInfo {
   categories: MapCategory[];
   /** Position in the featured grid (1 = first); unranked featured maps sort last. */
   featuredRank?: number;
+  /** Kept out of map pickers, random picks and public lobbies. */
+  hidden?: boolean;
   /** Preferred team count in team/special games (see MapPlaylist). */
   specialTeamCount?: number;
   /** Modifiers that should never be rolled for this map in special games. */
@@ -1956,6 +1959,15 @@ export const maps: readonly MapInfo[] = [
     categories: ["fictional"],
     defaultNationCount: 13,
     specialTeamCount: 2,
+  },
+  {
+    id: "Tutorial",
+    type: GameMapType.Tutorial,
+    translationKey: "map.tutorial",
+    categories: ["fictional"],
+    defaultNationCount: 1,
+    hidden: true,
+    customTribes: [{ name: "Hill Tribe", coordinates: [38, 49] }],
   },
   {
     id: "TwoLakes",
