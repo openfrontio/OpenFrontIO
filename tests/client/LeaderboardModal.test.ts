@@ -18,6 +18,7 @@ vi.mock("../../src/client/Utils", () => ({
       "leaderboard_modal.ranked_tab": "Ranked",
       "leaderboard_modal.ranked_2v2_tab": "2v2 Ranked",
       "leaderboard_modal.ffa_rating_tab": "FFA Rating",
+      "leaderboard_modal.ranked_ffa_tab": "FFA Ranked",
       "ffa_rating.rating": "Rating",
       "leaderboard_modal.ranked_no_stats": "No ranked games on this ladder",
       "leaderboard_modal.clans_tab": "Clans",
@@ -708,13 +709,40 @@ describe("LeaderboardModal", () => {
       vi.mocked(getUserMe).mockResolvedValueOnce(me as never);
     };
 
-    it("labels the FFA tab FFA Rating", () => {
-      const tabs = (
+    const ffaTabLabel = () =>
+      (
         modal as unknown as {
           modalConfig(): { tabs: { key: string; label: string }[] };
         }
-      ).modalConfig().tabs;
-      expect(tabs.find((t) => t.key === "playersFfa")!.label).toBe(
+      )
+        .modalConfig()
+        .tabs.find((t) => t.key === "playersFfa")!.label;
+
+    it("keeps the FFA Ranked label while the board is the Elo ladder", async () => {
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({ "1v1": [], "2v2": [], ffa: [entry(1, "p4", 1500)] }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await modal.updateComplete;
+      expect(ffaTabLabel()).toBe("FFA Ranked");
+    });
+
+    it("labels the FFA tab FFA Rating once the board carries ratings", async () => {
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [entry(1, "p1", 1200)],
+          "2v2": [],
+          ffa: [rated(1, "p4", 2012.6, "Diamond II")],
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await modal.updateComplete;
+      expect(ffaTabLabel()).toBe("FFA Rating");
+      // And the rendered modal got the new label, not just modalConfig().
+      const rendered = modal.querySelector("o-modal") as unknown as {
+        tabs: { key: string; label: string }[];
+      };
+      expect(rendered.tabs.find((t) => t.key === "playersFfa")!.label).toBe(
         "FFA Rating",
       );
     });

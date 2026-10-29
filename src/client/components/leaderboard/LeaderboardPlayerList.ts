@@ -108,6 +108,7 @@ export class LeaderboardPlayerList extends LitElement {
 
   // The FFA tab shows ratings (badge, rating ± uncertainty, OFstats credit)
   // only once the API sends them. Until then it is the plain Elo ladder.
+  // The modal relabels its tab on "ffa-rating-live" (see updated()).
   private get ffaRatingLive(): boolean {
     return (
       this.rankedType === RankedType.FreeForAll &&
@@ -133,7 +134,20 @@ export class LeaderboardPlayerList extends LitElement {
     return this;
   }
 
+  private ffaRatingAnnounced = false;
+
   protected updated(changed: PropertyValues) {
+    // Tells the modal once, whichever tab is up: a page carries every ladder.
+    if (
+      changed.has("ladders") &&
+      !this.ffaRatingAnnounced &&
+      this.ladders[RankedType.FreeForAll].entries.some(
+        (row) => row.tier !== undefined,
+      )
+    ) {
+      this.ffaRatingAnnounced = true;
+      this.dispatchEvent(new CustomEvent("ffa-rating-live", { bubbles: true }));
+    }
     if (changed.has("rankedType")) {
       // The ladders are separate lists sharing one scroll container: show the
       // newly selected one from its top rather than the other one's offset.
