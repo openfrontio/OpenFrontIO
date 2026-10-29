@@ -789,3 +789,11 @@ unit-display .tutorial-highlight::after {
 .remove-player-btn:hover {
   background: #ef4444;
 }
+
+.unit-display-scroll {
+  scrollbar-width: none;
+}
+
+.unit-display-scroll::-webkit-scrollbar {
+  display: none;
+}

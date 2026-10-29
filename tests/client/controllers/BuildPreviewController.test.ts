@@ -1971,6 +1971,25 @@ describe("BuildPreviewController touch preview", () => {
     expect((controller as any).pendingConfirmations).toHaveLength(0);
   });
 
+  test("touching a resolved unbuildable structure preview cancels immediately", () => {
+    const { controller, builds, uiState } = makeController(UnitType.City);
+    const c = controller as any;
+    c.touchPlacementMode = true;
+    c.touchPreviewTile = 101;
+    c.ghostResolved = true;
+    c.resolvedGhostTile = 101;
+    Object.assign(c.ghostUnit.buildableUnit, {
+      canBuild: false,
+      canUpgrade: false,
+    });
+
+    c.handleTouchPlacement(new TouchGhostPlacementEvent(100, 100));
+
+    expect(uiState.ghostStructure).toBeNull();
+    expect(builds).toEqual([]);
+    expect(c.pendingConfirmations).toHaveLength(0);
+  });
+
   test.each([UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRV])(
     "touch confirmation never auto-cancels the nuke selection (%s)",
     async (unitType) => {

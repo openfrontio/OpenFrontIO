@@ -31,17 +31,40 @@ describe("mobile UnitDisplay layout", () => {
     try {
       await display.updateComplete;
 
-      const scroller = display.querySelector(".overflow-x-auto");
-      const grid = scroller?.querySelector(".grid");
+      const scroller = display.querySelector(".unit-display-scroll");
+      const grid = scroller?.querySelector(".unit-display-grid");
       expect(scroller).not.toBeNull();
       expect(scroller?.classList.contains("touch-pan-x")).toBe(true);
-      expect(grid?.classList.contains("landscape:grid-flow-col")).toBe(true);
-      expect(grid?.classList.contains("landscape:auto-cols-[48px]")).toBe(true);
+      expect(scroller?.classList.contains("lg:overflow-visible")).toBe(true);
+      expect(grid?.classList.contains("max-lg:landscape:grid-flow-col")).toBe(
+        true,
+      );
+      expect(
+        grid?.classList.contains("max-lg:landscape:auto-cols-[47px]"),
+      ).toBe(true);
       expect(grid?.classList.contains("max-[360px]:grid-flow-col")).toBe(true);
       expect(grid?.classList.contains("max-[360px]:auto-cols-[44px]")).toBe(
         true,
       );
       expect(grid?.children).toHaveLength(10);
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("desktop hover tooltips render outside the horizontal scroller", async () => {
+    const { display } = makeDisplay();
+    try {
+      await display.updateComplete;
+      const scroller = display.querySelector(".unit-display-scroll");
+      const cityItem = display.querySelector(".unit-display-grid")
+        ?.firstElementChild as HTMLElement | null;
+      cityItem?.dispatchEvent(new MouseEvent("mouseenter"));
+      await display.updateComplete;
+
+      const tooltip = display.querySelector(".unit-display-tooltip");
+      expect(tooltip).not.toBeNull();
+      expect(scroller?.contains(tooltip)).toBe(false);
     } finally {
       display.remove();
     }

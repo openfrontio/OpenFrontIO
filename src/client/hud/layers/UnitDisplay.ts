@@ -48,7 +48,13 @@ export class UnitDisplay extends LitElement implements Controller {
   private _defensePost = 0;
   private _samLauncher = 0;
   private allDisabled = false;
-  private _hoveredUnit: PlayerBuildableUnitType | null = null;
+  private _hoveredUnitTooltip: {
+    unitType: PlayerBuildableUnitType;
+    structureKey: string;
+    hotkey: string;
+    left: number;
+    top: number;
+  } | null = null;
   private tutorialHighlight: PlayerBuildableUnitType | null = null;
 
   createRenderRoot() {
@@ -148,12 +154,14 @@ export class UnitDisplay extends LitElement implements Controller {
     }
 
     return html`
-      <div class="border-t border-white/10 p-0.5 w-full">
+      <div
+        class="unit-display-root relative border-t border-white/10 p-0.5 w-full"
+      >
         <div
-          class="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x"
+          class="unit-display-scroll w-full overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x lg:overflow-visible"
         >
           <div
-            class="grid grid-cols-10 gap-0.5 w-full mx-auto lg:grid-rows-1 lg:grid-flow-col lg:w-fit landscape:grid-rows-1 landscape:grid-flow-col landscape:grid-cols-none landscape:auto-cols-[48px] landscape:w-max max-[360px]:grid-cols-none max-[360px]:grid-flow-col max-[360px]:auto-cols-[44px] max-[360px]:w-max"
+            class="unit-display-grid grid grid-cols-10 gap-0.5 w-full mx-auto lg:grid-rows-1 lg:grid-flow-col lg:w-fit max-lg:landscape:grid-rows-1 max-lg:landscape:grid-flow-col max-lg:landscape:grid-cols-none max-lg:landscape:auto-cols-[47px] max-lg:landscape:w-max max-[360px]:grid-cols-none max-[360px]:grid-flow-col max-[360px]:auto-cols-[44px] max-[360px]:w-max"
           >
             ${this.renderUnitItem(
               cityIcon,
@@ -227,6 +235,7 @@ export class UnitDisplay extends LitElement implements Controller {
             )}
           </div>
         </div>
+        ${this.renderUnitTooltip()}
       </div>
     `;
   }
@@ -250,7 +259,6 @@ export class UnitDisplay extends LitElement implements Controller {
       return html``;
     }
     const selected = this.uiState.ghostStructure === unitType;
-    const hovered = this._hoveredUnit === unitType;
     const displayHotkey = hotkey
       .replace("Digit", "")
       .replace("Key", "")
@@ -259,48 +267,26 @@ export class UnitDisplay extends LitElement implements Controller {
     return html`
       <div
         class="flex flex-col items-center relative"
-        @mouseenter=${() => {
-          this._hoveredUnit = unitType;
+        @mouseenter=${(event: MouseEvent) => {
+          const item = event.currentTarget as HTMLElement;
+          const root = item.closest<HTMLElement>(".unit-display-root");
+          if (!root) return;
+          const itemBounds = item.getBoundingClientRect();
+          const rootBounds = root.getBoundingClientRect();
+          this._hoveredUnitTooltip = {
+            unitType,
+            structureKey,
+            hotkey,
+            left: itemBounds.left + itemBounds.width / 2 - rootBounds.left,
+            top: itemBounds.top - rootBounds.top - 4,
+          };
           this.requestUpdate();
         }}
         @mouseleave=${() => {
-          this._hoveredUnit = null;
+          this._hoveredUnitTooltip = null;
           this.requestUpdate();
         }}
       >
-        ${
-          hovered
-            ? html`
-                <div
-                  class="hidden lg:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
-                >
-                  <div class="font-bold text-sm mb-1">
-                    ${translateText("unit_type." + structureKey)}${
-                      hotkey ? ` [${displayHotkey}]` : ""
-                    }
-                  </div>
-                  <div class="p-2">
-                    ${translateText("build_menu.desc." + structureKey)}
-                  </div>
-                  ${
-                    unitType === UnitType.Warship
-                      ? html`<div
-                          class="mt-1 px-2 py-1 text-[10px] text-cyan-300 border-t border-white/10"
-                        >
-                          ⇧ ${translateText("build_menu.warship_shift_hint")}
-                        </div>`
-                      : null
-                  }
-                  <div class="flex items-center justify-center gap-1">
-                    <img src=${goldCoinIcon} width="13" height="13" />
-                    <span class="text-yellow-300"
-                      >${renderNumber(this.cost(unitType))}</span
-                    >
-                  </div>
-                </div>
-              `
-            : null
-        }
         <div
           class="${
             this.canBuild(unitType) ? "" : "opacity-40"
@@ -347,12 +333,12 @@ export class UnitDisplay extends LitElement implements Controller {
               : nothing
           }
           <div
-            class="flex flex-col items-center gap-0 pt-0.5 lg:flex-row lg:gap-0.5 landscape:flex-row landscape:gap-0.5"
+            class="flex flex-col items-center gap-0 pt-0.5 lg:flex-row lg:gap-0.5 max-lg:landscape:flex-row max-lg:landscape:gap-0.5"
           >
             <img
               src=${icon}
               alt=${translateText("unit_type." + structureKey)}
-              class="align-middle size-7 lg:size-5 landscape:size-6"
+              class="align-middle size-7 lg:size-5 max-lg:landscape:size-6"
             />
             ${
               number !== null
@@ -362,6 +348,46 @@ export class UnitDisplay extends LitElement implements Controller {
                 : null
             }
           </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderUnitTooltip() {
+    const tooltip = this._hoveredUnitTooltip;
+    if (!tooltip) return nothing;
+    const displayHotkey = tooltip.hotkey
+      .replace("Digit", "")
+      .replace("Key", "")
+      .toUpperCase();
+
+    return html`
+      <div
+        class="unit-display-tooltip hidden lg:block absolute -translate-x-1/2 -translate-y-full text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
+        style=${`left: ${tooltip.left}px; top: ${tooltip.top}px;`}
+      >
+        <div class="font-bold text-sm mb-1">
+          ${translateText("unit_type." + tooltip.structureKey)}${
+            tooltip.hotkey ? ` [${displayHotkey}]` : ""
+          }
+        </div>
+        <div class="p-2">
+          ${translateText("build_menu.desc." + tooltip.structureKey)}
+        </div>
+        ${
+          tooltip.unitType === UnitType.Warship
+            ? html`<div
+                class="mt-1 px-2 py-1 text-[10px] text-cyan-300 border-t border-white/10"
+              >
+                ⇧ ${translateText("build_menu.warship_shift_hint")}
+              </div>`
+            : null
+        }
+        <div class="flex items-center justify-center gap-1">
+          <img src=${goldCoinIcon} width="13" height="13" />
+          <span class="text-yellow-300"
+            >${renderNumber(this.cost(tooltip.unitType))}</span
+          >
         </div>
       </div>
     `;
