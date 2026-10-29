@@ -7,6 +7,7 @@ import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { fetchPlayerLeaderboard, getUserMe } from "../../Api";
 import { loadModal } from "../../LazyModals";
+import { isRealAccount } from "../../ProgressionAccount";
 import { translateText } from "../../Utils";
 import "../ffaRating/FfaTierBadge";
 import { formatRating } from "../ffaRating/FfaTier";
@@ -107,6 +108,7 @@ export class LeaderboardPlayerList extends LitElement {
 
   // The FFA tab shows ratings (badge, rating ± uncertainty, OFstats credit)
   // only once the API sends them. Until then it is the plain Elo ladder.
+  // The modal relabels its tab on "ffa-rating-live" (see updated()).
   private get ffaRatingLive(): boolean {
     return (
       this.rankedType === RankedType.FreeForAll &&
@@ -132,7 +134,20 @@ export class LeaderboardPlayerList extends LitElement {
     return this;
   }
 
+  private ffaRatingAnnounced = false;
+
   protected updated(changed: PropertyValues) {
+    // Tells the modal once, whichever tab is up: a page carries every ladder.
+    if (
+      changed.has("ladders") &&
+      !this.ffaRatingAnnounced &&
+      this.ladders[RankedType.FreeForAll].entries.some(
+        (row) => row.tier !== undefined,
+      )
+    ) {
+      this.ffaRatingAnnounced = true;
+      this.dispatchEvent(new CustomEvent("ffa-rating-live", { bubbles: true }));
+    }
     if (changed.has("rankedType")) {
       // The ladders are separate lists sharing one scroll container: show the
       // newly selected one from its top rather than the other one's offset.
@@ -189,11 +204,14 @@ export class LeaderboardPlayerList extends LitElement {
         const userMe = await getUserMe();
         this.currentUserId = userMe ? userMe.player.publicId : null;
         // A calibrating player has no tier, so the board does not list them.
+        // Guests are never rated, though the API answers {calibrationGames: 0}
+        // for them too, so only a real account gets the row.
         const ffa = userMe ? userMe.player.leaderboard?.ffa : undefined;
         this.ffaCalibration =
           userMe &&
           ffa?.calibrationGames !== undefined &&
-          ffa.tier === undefined
+          ffa.tier === undefined &&
+          (await isRealAccount(userMe))
             ? {
                 publicId: userMe.player.publicId,
                 username: userMe.player.username ?? null,

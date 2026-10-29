@@ -18,6 +18,7 @@ vi.mock("../../src/client/Utils", () => ({
       "leaderboard_modal.ranked_tab": "Ranked",
       "leaderboard_modal.ranked_2v2_tab": "2v2 Ranked",
       "leaderboard_modal.ffa_rating_tab": "FFA Rating",
+      "leaderboard_modal.ranked_ffa_tab": "FFA Ranked",
       "ffa_rating.rating": "Rating",
       "leaderboard_modal.ranked_no_stats": "No ranked games on this ladder",
       "leaderboard_modal.clans_tab": "Clans",
@@ -701,18 +702,47 @@ describe("LeaderboardModal", () => {
     const ratingHeader = () =>
       modal.querySelectorAll("leaderboard-player-list thead th")[2].textContent;
     const fetchMock = () => global.fetch as ReturnType<typeof vi.fn>;
+    /** A linked login: only these accounts are ever rated. */
+    const linked = { email: "me@example.com" };
     const meOnce = async (me: unknown) => {
       const { getUserMe } = await import("../../src/client/Api");
       vi.mocked(getUserMe).mockResolvedValueOnce(me as never);
     };
 
-    it("labels the FFA tab FFA Rating", () => {
-      const tabs = (
+    const ffaTabLabel = () =>
+      (
         modal as unknown as {
           modalConfig(): { tabs: { key: string; label: string }[] };
         }
-      ).modalConfig().tabs;
-      expect(tabs.find((t) => t.key === "playersFfa")!.label).toBe(
+      )
+        .modalConfig()
+        .tabs.find((t) => t.key === "playersFfa")!.label;
+
+    it("keeps the FFA Ranked label while the board is the Elo ladder", async () => {
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({ "1v1": [], "2v2": [], ffa: [entry(1, "p4", 1500)] }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await modal.updateComplete;
+      expect(ffaTabLabel()).toBe("FFA Ranked");
+    });
+
+    it("labels the FFA tab FFA Rating once the board carries ratings", async () => {
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [entry(1, "p1", 1200)],
+          "2v2": [],
+          ffa: [rated(1, "p4", 2012.6, "Diamond II")],
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await modal.updateComplete;
+      expect(ffaTabLabel()).toBe("FFA Rating");
+      // And the rendered modal got the new label, not just modalConfig().
+      const rendered = modal.querySelector("o-modal") as unknown as {
+        tabs: { key: string; label: string }[];
+      };
+      expect(rendered.tabs.find((t) => t.key === "playersFfa")!.label).toBe(
         "FFA Rating",
       );
     });
@@ -808,6 +838,7 @@ describe("LeaderboardModal", () => {
 
     it("pins the calibrating row even when the FFA board is empty", async () => {
       await meOnce({
+        user: linked,
         player: {
           publicId: "me",
           username: "me.1",
@@ -830,6 +861,7 @@ describe("LeaderboardModal", () => {
 
     it("pins a calibrating row for a signed-in player not on the board", async () => {
       await meOnce({
+        user: linked,
         player: {
           publicId: "me",
           username: "me.1",
@@ -862,6 +894,7 @@ describe("LeaderboardModal", () => {
 
     it("shows a dash win ratio for a calibrating player with no games", async () => {
       await meOnce({
+        user: linked,
         player: {
           publicId: "me",
           leaderboard: { ffa: { calibrationGames: 0 } },
@@ -881,6 +914,62 @@ describe("LeaderboardModal", () => {
       );
       expect(cells[3].textContent).toContain("0");
       expect(cells[4].textContent).toContain("—");
+    });
+
+    it("pins no calibrating row for a guest, who is never rated", async () => {
+      // The API answers {calibrationGames:0} for any account with no rating
+      // row, guests included.
+      await meOnce({
+        user: {},
+        player: {
+          publicId: "guest",
+          leaderboard: { ffa: { calibrationGames: 0 } },
+        },
+      });
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [],
+          "2v2": [],
+          ffa: [rated(1, "p4", 2012.6, "Diamond II")],
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await showLadder("playersFfa");
+      expect(modal.querySelector("[data-ffa-calibrating-row]")).toBeNull();
+    });
+
+    it("pins a calibrating row for a game-portal account", async () => {
+      const { gamePortal } = await import("../../src/client/GamePortal");
+      const onPortal = vi
+        .spyOn(gamePortal, "isOnGamePortal")
+        .mockReturnValue(true);
+      const profile = vi
+        .spyOn(gamePortal, "getUserProfile")
+        .mockResolvedValue({} as never);
+      try {
+        await meOnce({
+          user: {},
+          player: {
+            publicId: "me",
+            leaderboard: { ffa: { calibrationGames: 1 } },
+          },
+        });
+        fetchMock().mockResolvedValueOnce(
+          jsonRes({
+            "1v1": [],
+            "2v2": [],
+            ffa: [rated(1, "p4", 2012.6, "Diamond II")],
+          }),
+        );
+        await getPlayerList()!.loadPlayerLeaderboard(true);
+        await showLadder("playersFfa");
+        expect(
+          modal.querySelector("tfoot [data-ffa-calibrating-row]"),
+        ).not.toBeNull();
+      } finally {
+        onPortal.mockRestore();
+        profile.mockRestore();
+      }
     });
 
     it("pins no calibrating row for a listed player", async () => {

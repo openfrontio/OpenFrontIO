@@ -38,6 +38,11 @@ export class LeaderboardModal extends BaseModal {
   @state()
   private clanDateRange: { start: string; end: string } | null = null;
 
+  // The FFA tab keeps its Elo-era label until the board carries ratings, so
+  // the label never runs ahead of what the tab shows.
+  @state()
+  private ffaRatingLive = false;
+
   @query("leaderboard-player-list")
   private playerList?: LeaderboardPlayerList;
   @query("leaderboard-clan-table")
@@ -61,7 +66,11 @@ export class LeaderboardModal extends BaseModal {
         },
         {
           key: "playersFfa",
-          label: translateText("leaderboard_modal.ffa_rating_tab"),
+          label: translateText(
+            this.ffaRatingLive
+              ? "leaderboard_modal.ffa_rating_tab"
+              : "leaderboard_modal.ranked_ffa_tab",
+          ),
         },
         { key: "clans", label: translateText("leaderboard_modal.clans_tab") },
         { key: "tribes", label: translateText("leaderboard_modal.tribes_tab") },
@@ -176,6 +185,7 @@ export class LeaderboardModal extends BaseModal {
           .rankedType=${
             this.rankedTypeFor(this.activeTab) ?? this.lastRankedType
           }
+          @ffa-rating-live=${() => (this.ffaRatingLive = true)}
         ></leaderboard-player-list>
         <leaderboard-clan-table
           class=${this.activeTab === "clans" ? "h-full" : "hidden"}
