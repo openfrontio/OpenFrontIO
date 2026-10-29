@@ -35,7 +35,9 @@ export interface StationManager {
 export class StationManagerImpl implements StationManager {
   private stations: Set<TrainStation> = new Set();
   private stationsById: (TrainStation | undefined)[] = [];
-  // A unit's station, so findStation needn't scan them all.
+  // First station added for each unit, so findStation needn't scan them all.
+  // A unit can end up with two (a factory in range of another factory gets one
+  // from each FactoryExecution), and findStation always answered the first.
   private stationsByUnit = new Map<Unit, TrainStation>();
   private nextId = 1; // Start from 1; 0 is reserved as invalid/sentinel
 
@@ -43,7 +45,9 @@ export class StationManagerImpl implements StationManager {
     station.id = this.nextId++;
     this.stationsById[station.id] = station;
     this.stations.add(station);
-    this.stationsByUnit.set(station.unit, station);
+    if (!this.stationsByUnit.has(station.unit)) {
+      this.stationsByUnit.set(station.unit, station);
+    }
   }
 
   removeStation(station: TrainStation) {
@@ -58,6 +62,13 @@ export class StationManagerImpl implements StationManager {
     this.stations.delete(station);
     if (this.stationsByUnit.get(station.unit) === station) {
       this.stationsByUnit.delete(station.unit);
+      // Fall back to the unit's next station, as the old scan would have.
+      for (const other of this.stations) {
+        if (other.unit === station.unit) {
+          this.stationsByUnit.set(station.unit, other);
+          break;
+        }
+      }
     }
   }
 
@@ -93,7 +104,9 @@ export class StationManagerImpl implements StationManager {
     this.stationsByUnit = new Map();
     for (const station of this.stations) {
       this.stationsById[station.id] = station;
-      this.stationsByUnit.set(station.unit, station);
+      if (!this.stationsByUnit.has(station.unit)) {
+        this.stationsByUnit.set(station.unit, station);
+      }
     }
     this.nextId = s.nextId;
   }
