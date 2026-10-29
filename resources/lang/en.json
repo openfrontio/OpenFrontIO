@@ -1782,9 +1782,9 @@
       "nation_touch": "Last one: the Red Empire. Tap its coast to send boats until it falls.",
       "spawn": "Click inside the glowing circle to choose where you start.",
       "spawn_touch": "Tap inside the glowing circle to choose where you start.",
-      "troops": "This bar is your army. It grows fastest when it's about half full, so don't wait for it to fill up.",
       "tribe": "That's a tribe. Click its land to attack it, and keep going until it's gone.",
       "tribe_touch": "That's a tribe. Tap its land to attack it, and keep going until it's gone.",
+      "troops": "This bar is your army. It grows fastest when it's about half full, so don't wait for it to fill up.",
       "wrong_target": "Not there. Click where the arrow points.",
       "wrong_target_touch": "Not there. Tap where the arrow points."
     },
