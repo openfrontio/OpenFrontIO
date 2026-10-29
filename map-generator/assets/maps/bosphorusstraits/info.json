@@ -4,6 +4,8 @@
   "name": "Bosphorus Straits",
   "translation_key": "map.bosphorusstraits",
   "categories": ["europe", "asia"],
+  "location": { "lat": 41.1, "lon": 29 },
+  "author": "TsProphet94",
   "special_team_count": 2,
   "nations": [
     {

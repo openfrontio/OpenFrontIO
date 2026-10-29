@@ -4,6 +4,7 @@
   "name": "Tutorial",
   "translation_key": "map.tutorial",
   "categories": ["fictional"],
+  "author": "evanpelle",
   "hidden": true,
   "custom_tribes": [{ "name": "Hill Tribe", "coordinates": [38, 49] }],
   "nations": [

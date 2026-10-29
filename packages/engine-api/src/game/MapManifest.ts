@@ -176,6 +176,25 @@ const mapInfoShape = {
     .optional(),
 };
 
+// Map picker metadata; the generator keeps it out of manifest.json.
+const mapPickerShape = {
+  author: z.string().min(1).optional().describe("Map creator."),
+  description: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      "English description, written to en.json's map_description section.",
+    ),
+  location: z
+    .strictObject({
+      lat: z.number().min(-90).max(90),
+      lon: z.number().min(-180).max(180),
+    })
+    .optional()
+    .describe("Where the map lies on Earth, for the map picker's Earth view."),
+};
+
 const featuredRankRule = [
   (info: { featured_rank?: number; categories: string[] }) =>
     info.featured_rank === undefined || info.categories.includes("featured"),
@@ -187,6 +206,7 @@ export const MapInfoSchema = z
   .strictObject({
     $schema: z.string().optional(),
     ...mapInfoShape,
+    ...mapPickerShape,
   })
   .refine(...featuredRankRule);
 

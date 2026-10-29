@@ -4,6 +4,8 @@
   "name": "Venice",
   "translation_key": "map.venice",
   "categories": ["europe"],
+  "location": { "lat": 45.4, "lon": 12.3 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [760, 593],

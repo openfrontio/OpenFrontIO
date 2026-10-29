@@ -4,6 +4,8 @@
   "name": "Scandinavia",
   "translation_key": "map.scandinavia",
   "categories": ["europe"],
+  "location": { "lat": 63, "lon": 15 },
+  "author": "crunchybbb",
   "nations": [
     {
       "coordinates": [419, 1426],

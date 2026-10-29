@@ -4,6 +4,8 @@
   "name": "Oceania",
   "translation_key": "map.oceania",
   "categories": ["oceania", "continental"],
+  "location": { "lat": -12, "lon": 160 },
+  "author": "evanpelle",
   "nations": [
     {
       "coordinates": [515, 690],

@@ -4,6 +4,8 @@
   "name": "Juan De Fuca Strait",
   "translation_key": "map.juandefucastrait",
   "categories": ["north_america"],
+  "location": { "lat": 48.3, "lon": -124 },
+  "author": "Tristar",
   "special_team_count": 3,
   "nations": [
     {

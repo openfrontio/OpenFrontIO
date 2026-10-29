@@ -4,6 +4,8 @@
   "name": "Danish Straits",
   "translation_key": "map.danishstraits",
   "categories": ["europe"],
+  "location": { "lat": 55.7, "lon": 11.5 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [37, 227],

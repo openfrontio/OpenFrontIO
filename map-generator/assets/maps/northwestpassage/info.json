@@ -4,6 +4,8 @@
   "name": "Northwest Passage",
   "translation_key": "map.northwestpassage",
   "categories": ["north_america"],
+  "location": { "lat": 72, "lon": -100 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [1203, 592],

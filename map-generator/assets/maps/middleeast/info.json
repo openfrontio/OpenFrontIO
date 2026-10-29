@@ -4,6 +4,8 @@
   "name": "Middle East",
   "translation_key": "map.middleeast",
   "categories": ["asia"],
+  "location": { "lat": 24, "lon": 46 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [300, 65],

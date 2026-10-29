@@ -4,6 +4,8 @@
   "name": "Irish Sea",
   "translation_key": "map.irishsea",
   "categories": ["europe"],
+  "location": { "lat": 53.8, "lon": -5 },
+  "author": "Tristar",
   "special_team_count": 3,
   "nations": [
     {

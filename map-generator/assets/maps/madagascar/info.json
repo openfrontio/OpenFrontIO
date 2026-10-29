@@ -4,6 +4,8 @@
   "name": "Madagascar",
   "translation_key": "map.madagascar",
   "categories": ["new", "africa"],
+  "location": { "lat": -19, "lon": 46.7 },
+  "author": "Tristar",
   "special_team_count": 2,
   "forced_modifiers": ["isWaterNukes:50"],
   "nations": [

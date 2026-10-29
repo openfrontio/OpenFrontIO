@@ -4,6 +4,8 @@
   "name": "Taiwan Strait",
   "translation_key": "map.taiwanstrait",
   "categories": ["asia"],
+  "location": { "lat": 24.5, "lon": 119.5 },
+  "author": "Tristar",
   "special_team_count": 2,
   "nations": [
     {
