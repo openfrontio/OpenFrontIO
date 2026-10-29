@@ -77,8 +77,8 @@ type mapInfo struct {
 }
 
 type mapLocation struct {
-	Lat float64 `json:"lat"`
-	Lon float64 `json:"lon"`
+	Lat *float64 `json:"lat"`
+	Lon *float64 `json:"lon"`
 }
 
 // mapLayer represents a single map layer definition from info.json.
@@ -220,7 +220,7 @@ func loadMapInfos() ([]mapInfo, error) {
 				return nil, fmt.Errorf("map %s: info.json disabled_modifiers contains invalid modifier %q", m.Name, mod)
 			}
 		}
-		if info.Location != nil && (info.Location.Lat < -90 || info.Location.Lat > 90 || info.Location.Lon < -180 || info.Location.Lon > 180) {
+		if loc := info.Location; loc != nil && (loc.Lat == nil || loc.Lon == nil || *loc.Lat < -90 || *loc.Lat > 90 || *loc.Lon < -180 || *loc.Lon > 180) {
 			return nil, fmt.Errorf("map %s: info.json \"location\" must have lat in [-90, 90] and lon in [-180, 180]", m.Name)
 		}
 		if len(info.Categories) == 0 {
@@ -494,8 +494,8 @@ func generateMapsTS(infos []mapInfo) (string, error) {
 		}
 		if info.Location != nil {
 			b.WriteString(fmt.Sprintf("    location: {lat: %s, lon: %s},\n",
-				strconv.FormatFloat(info.Location.Lat, 'f', -1, 64),
-				strconv.FormatFloat(info.Location.Lon, 'f', -1, 64)))
+				strconv.FormatFloat(*info.Location.Lat, 'f', -1, 64),
+				strconv.FormatFloat(*info.Location.Lon, 'f', -1, 64)))
 		}
 		b.WriteString("  },\n")
 	}

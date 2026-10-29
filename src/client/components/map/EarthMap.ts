@@ -70,7 +70,11 @@ function loadEarthPaths(): Promise<EarthPaths> {
     .then((svg) => {
       const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
       const d = (id: string) => doc.getElementById(id)?.getAttribute("d") ?? "";
-      return { sphere: d("sphere"), land: d("land") };
+      const paths = { sphere: d("sphere"), land: d("land") };
+      if (!paths.sphere || !paths.land) {
+        throw new Error("EarthMap.svg is missing the sphere or land path");
+      }
+      return paths;
     })
     .catch((error: unknown) => {
       earthPaths = null;
@@ -138,8 +142,9 @@ export class EarthMap extends LitElement {
   }
 
   private handleWheel(event: WheelEvent) {
-    // Fully zoomed out, scrolling down scrolls the page instead.
+    // At a zoom limit, scrolling past it scrolls the page instead.
     if (event.deltaY > 0 && !this.zoomed) return;
+    if (event.deltaY < 0 && this.view.width <= MIN_VIEW_WIDTH) return;
     event.preventDefault();
     const delta = event.deltaY * (event.deltaMode === 1 ? 16 : 1);
     this.zoomTo(

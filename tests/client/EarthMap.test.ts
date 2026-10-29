@@ -49,7 +49,9 @@ describe("<earth-map>", () => {
       "fetch",
       vi.fn(
         async () =>
-          new Response('<svg><path id="land" d="M0 0l10 0 0 10z"/></svg>'),
+          new Response(
+            '<svg><path id="sphere" d="M0 0h10v10H0z"/><path id="land" d="M0 0l10 0 0 10z"/></svg>',
+          ),
       ),
     );
     selected = [];
@@ -131,13 +133,17 @@ describe("<earth-map>", () => {
     expect(selected).toEqual([]);
   });
 
-  // Fully zoomed out, scrolling down must keep scrolling the modal.
+  // At a zoom limit, scrolling past it must keep scrolling the modal.
   it("only takes the wheel while it can zoom", async () => {
     expect(wheel(100).defaultPrevented).toBe(false);
 
     expect(wheel(-100).defaultPrevented).toBe(true);
     await earth.updateComplete;
     expect(wheel(100).defaultPrevented).toBe(true);
+
+    for (let i = 0; i < 10; i++) wheel(-100);
+    await earth.updateComplete;
+    expect(wheel(-100).defaultPrevented).toBe(false);
   });
 
   it("pans a zoomed view and keeps it inside the world", async () => {
