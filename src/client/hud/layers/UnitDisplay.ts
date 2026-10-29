@@ -156,6 +156,7 @@ export class UnitDisplay extends LitElement implements Controller {
     return html`
       <div
         class="unit-display-root relative border-t border-white/10 p-0.5 w-full"
+        data-radial-click-through
       >
         <div
           class="unit-display-scroll w-full overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x lg:overflow-visible"

@@ -1941,7 +1941,7 @@ describe("BuildPreviewController touch preview", () => {
     expect((controller as any).pendingConfirmations).toHaveLength(0);
   });
 
-  test("touch confirmation on an unbuildable structure cancels the selection", async () => {
+  test("touch confirmation on an unbuildable structure cancels the selection (to be able to eg. quickly attack enemy, since touch-only device has no right-click or Esc option)", async () => {
     const { controller, requests, uiState } = makeDeferredBuildablesController(
       UnitType.City,
     );
@@ -1971,7 +1971,7 @@ describe("BuildPreviewController touch preview", () => {
     expect((controller as any).pendingConfirmations).toHaveLength(0);
   });
 
-  test("touching a resolved unbuildable structure preview cancels immediately", () => {
+  test("touching a resolved unbuildable structure preview cancels immediately (to be able to eg. quickly attack enemy, since touch-only device has no right-click or Esc option", () => {
     const { controller, builds, uiState } = makeController(UnitType.City);
     const c = controller as any;
     c.touchPlacementMode = true;

@@ -52,6 +52,18 @@ describe("mobile UnitDisplay layout", () => {
     }
   });
 
+  test("the build bar opts into radial-menu click-through", async () => {
+    const { display } = makeDisplay();
+    try {
+      await display.updateComplete;
+
+      const root = display.querySelector(".unit-display-root");
+      expect(root?.hasAttribute("data-radial-click-through")).toBe(true);
+    } finally {
+      display.remove();
+    }
+  });
+
   test("desktop hover tooltips render outside the horizontal scroller", async () => {
     const { display } = makeDisplay();
     try {

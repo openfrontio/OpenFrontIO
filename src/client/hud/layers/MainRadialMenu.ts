@@ -21,7 +21,7 @@ import {
 const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
 const swordIcon = assetUrl("images/SwordIconWhite.svg");
 
-import { ContextMenuEvent } from "../../InputHandler";
+import { CloseViewEvent, ContextMenuEvent } from "../../InputHandler";
 
 function emptyPlayerActions(): PlayerActions {
   return {
@@ -38,6 +38,7 @@ export class MainRadialMenu implements Controller {
   private chatIntegration: ChatIntegration;
 
   private clickedTile: TileRef | null = null;
+  private menuGeneration = 0;
 
   getTickIntervalMs() {
     return 500;
@@ -82,7 +83,11 @@ export class MainRadialMenu implements Controller {
 
   init() {
     this.radialMenu.init();
+    this.eventBus.on(CloseViewEvent, () => {
+      this.menuGeneration++;
+    });
     this.eventBus.on(ContextMenuEvent, (event) => {
+      const menuGeneration = ++this.menuGeneration;
       const worldCoords = this.transformHandler.screenToWorldCoordinates(
         event.x,
         event.y,
@@ -107,6 +112,9 @@ export class MainRadialMenu implements Controller {
       myPlayer
         .actions(clickedTile)
         .then((actions) => {
+          // A tap or click elsewhere can close the menu while this query is in
+          // flight. Its late result must not reopen the menu over eg. a build preview.
+          if (menuGeneration !== this.menuGeneration) return;
           void this.updatePlayerActions(
             myPlayer,
             actions,
@@ -179,9 +187,11 @@ export class MainRadialMenu implements Controller {
     const myPlayer = this.game.myPlayer();
     if (myPlayer === null) return;
     const tile = this.clickedTile;
+    const menuGeneration = this.menuGeneration;
     myPlayer
       .actions(tile)
       .then((actions) => {
+        if (menuGeneration !== this.menuGeneration) return;
         void this.updatePlayerActions(myPlayer, actions, tile);
       })
       .catch((error) => {
@@ -190,6 +200,7 @@ export class MainRadialMenu implements Controller {
   }
 
   closeMenu() {
+    this.menuGeneration++;
     if (this.radialMenu.isMenuVisible()) {
       this.radialMenu.hideRadialMenu();
     }

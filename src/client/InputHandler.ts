@@ -97,6 +97,19 @@ export class AlternateViewEvent implements GameEvent {
 
 export class CloseViewEvent implements GameEvent {}
 
+/**
+ * Marks a click that the radial menu's overlay forwarded to a layer below it.
+ * The layer uses this to tell a forwarded tap apart from a real press, which
+ * the browser handles itself.
+ */
+export const FORWARDED_CLICK = "forwardedFromRadialOverlay";
+
+export function isForwardedClick(event: Event): boolean {
+  return (
+    (event as unknown as Record<string, unknown>)[FORWARDED_CLICK] === true
+  );
+}
+
 export class RefreshGraphicsEvent implements GameEvent {}
 
 export class ToggleRenderDebugGuiEvent implements GameEvent {}
