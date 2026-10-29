@@ -1164,8 +1164,10 @@ export class WinModal extends LitElement implements Controller {
 
   /**
    * Shows the FFA rating panel when this game can have changed the viewer's
-   * rating: a public unranked FFA game they played, and an account that is
-   * trusted and already carries live rating fields (see viewerHasFfaRating).
+   * rating: a public unranked FFA game they played, and a signed-in account
+   * (a linked login or a portal profile) that already carries live rating
+   * fields (see viewerHasFfaRating). Trust only gates board listing, so it
+   * isn't checked here.
    * Decided once per game; any failure shows nothing.
    */
   private async updateFfaRating(): Promise<void> {

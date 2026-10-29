@@ -23,12 +23,18 @@ export async function resolveXpAccount(): Promise<XpAccount> {
   if (!(await isLoggedIn())) return { kind: "signed_out" };
   const me = await getUserMe();
   if (me === false) return { kind: "unknown" };
-  if (hasLinkedIdentity(me.user)) return { kind: "signed_in", me };
-  if (
-    gamePortal.isOnGamePortal() &&
-    (await gamePortal.getUserProfile()) !== null
-  ) {
-    return { kind: "signed_in", me };
-  }
-  return { kind: "signed_out" };
+  return (await isRealAccount(me))
+    ? { kind: "signed_in", me }
+    : { kind: "signed_out" };
+}
+
+/**
+ * A linked identity, or a portal profile whose token exchange produced a
+ * session: the accounts XP and the FFA rating count. A guest is neither.
+ */
+export async function isRealAccount(me: UserMeResponse): Promise<boolean> {
+  if (hasLinkedIdentity(me.user)) return true;
+  return (
+    gamePortal.isOnGamePortal() && (await gamePortal.getUserProfile()) !== null
+  );
 }

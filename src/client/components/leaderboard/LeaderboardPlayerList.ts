@@ -7,6 +7,7 @@ import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { fetchPlayerLeaderboard, getUserMe } from "../../Api";
 import { loadModal } from "../../LazyModals";
+import { isRealAccount } from "../../ProgressionAccount";
 import { translateText } from "../../Utils";
 import "../ffaRating/FfaTierBadge";
 import { formatRating } from "../ffaRating/FfaTier";
@@ -189,11 +190,14 @@ export class LeaderboardPlayerList extends LitElement {
         const userMe = await getUserMe();
         this.currentUserId = userMe ? userMe.player.publicId : null;
         // A calibrating player has no tier, so the board does not list them.
+        // Guests are never rated, though the API answers {calibrationGames: 0}
+        // for them too, so only a real account gets the row.
         const ffa = userMe ? userMe.player.leaderboard?.ffa : undefined;
         this.ffaCalibration =
           userMe &&
           ffa?.calibrationGames !== undefined &&
-          ffa.tier === undefined
+          ffa.tier === undefined &&
+          (await isRealAccount(userMe))
             ? {
                 publicId: userMe.player.publicId,
                 username: userMe.player.username ?? null,
