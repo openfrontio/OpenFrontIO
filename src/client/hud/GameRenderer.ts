@@ -39,6 +39,7 @@ import { InGamePromo } from "./layers/InGamePromo";
 import { MainRadialMenu } from "./layers/MainRadialMenu";
 import { MultiTabModal } from "./layers/MultiTabModal";
 import { NewLobbyPrompt } from "./layers/NewLobbyPrompt";
+import { OnboardingOverlay } from "./layers/OnboardingOverlay";
 import { PerformanceOverlay } from "./layers/PerformanceOverlay";
 import { PlayerInfoOverlay } from "./layers/PlayerInfoOverlay";
 import { PlayerPanel } from "./layers/PlayerPanel";
@@ -320,6 +321,16 @@ export function createRenderer(
   tutorialPanel.userSettings = userSettings;
   tutorialPanel.uiState = uiState;
 
+  const onboardingOverlay = document.querySelector(
+    "onboarding-overlay",
+  ) as OnboardingOverlay;
+  if (!(onboardingOverlay instanceof OnboardingOverlay)) {
+    console.error("onboarding overlay not found");
+  }
+  onboardingOverlay.game = game;
+  onboardingOverlay.eventBus = eventBus;
+  onboardingOverlay.transformHandler = transformHandler;
+
   const layers: Controller[] = [
     new WarshipSelectionController(game, eventBus, transformHandler, view),
     new BuildPreviewController(
@@ -368,6 +379,7 @@ export function createRenderer(
     multiTabModal,
     inGamePromo,
     tutorialPanel,
+    onboardingOverlay,
     alertFrame,
     performanceOverlay,
   ];

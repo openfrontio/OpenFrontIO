@@ -105,7 +105,8 @@ describe("InputHandler AutoUpgrade", () => {
     mockGameView = {
       inSpawnPhase: () => false,
       myPlayer: () => ({ isAlive: () => true }),
-    } as GameView;
+      config: () => ({ gameConfig: () => ({}) }),
+    } as unknown as GameView;
     mockCanvas = document.createElement("canvas");
     mockCanvas.width = 800;
     mockCanvas.height = 600;
@@ -3503,7 +3504,8 @@ describe("GhostStructure Hotkeys tapping/Scrolling", () => {
     mockGameView = {
       inSpawnPhase: () => false,
       myPlayer: () => ({ isAlive: () => true }),
-    } as GameView;
+      config: () => ({ gameConfig: () => ({}) }),
+    } as unknown as GameView;
     testSettings = new UserSettings();
     testSettings.removeCached(KEYBINDS_KEY, false);
     mockCanvas = document.createElement("canvas");

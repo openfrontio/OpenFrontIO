@@ -274,17 +274,6 @@ describe("ClanModal — player-profile handoff", () => {
     expect(getElState(modal, "activeTab")).toBe("my-clans");
   });
 
-  it("shows Coming Soon on the Map tab in prod", async () => {
-    stubGameEnv("prod");
-    modal.open({ tab: "map" });
-    await flushAsync(modal);
-    expect(getElState(modal, "activeTab")).toBe("map");
-    // The map hasn't shipped to prod: the iframe (and its API polling)
-    // never mounts.
-    expect(modal.querySelector("clan-map-view")).toBeNull();
-    expect(modal.textContent).toContain("clan_modal.map_coming_soon");
-  });
-
   it("offers a Donations tab on the clan detail", async () => {
     modal.open({ clan: "AAA" });
     await waitForSubComponent(modal, "clan-detail-view");

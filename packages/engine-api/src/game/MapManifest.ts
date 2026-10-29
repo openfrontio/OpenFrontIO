@@ -132,6 +132,12 @@ const mapInfoShape = {
     .positive()
     .optional()
     .describe("Position in the featured grid, 1 first."),
+  hidden: z
+    .boolean()
+    .optional()
+    .describe(
+      "Kept out of map pickers, random picks and public lobbies (the tutorial map).",
+    ),
   special_team_count: z
     .int()
     .min(2)
