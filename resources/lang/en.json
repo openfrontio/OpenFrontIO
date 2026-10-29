@@ -478,6 +478,7 @@
     "left_clan": "You left the clan.",
     "manage_clan": "Manage",
     "map_frame_title": "Clan territory map",
+    "map_loading": "Loading clan map…",
     "member_banned": "Player banned.",
     "member_count": "{count, plural, one {# member} other {# members}}",
     "member_demoted": "Member demoted.",
