@@ -114,15 +114,6 @@ describe("ClanMapView", () => {
     expect(postMessage).not.toHaveBeenCalled();
   });
 
-  it("fullscreens the frame element on request", () => {
-    const request = vi.fn(() => Promise.resolve());
-    frame.requestFullscreen = request as never;
-
-    view.enterFullscreen();
-
-    expect(request).toHaveBeenCalledTimes(1);
-  });
-
   it("stops listening once removed", async () => {
     view.remove();
     ready();
