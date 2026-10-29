@@ -1,0 +1,15 @@
+{
+  "id": "Tutorial",
+  "name": "Tutorial",
+  "translation_key": "map.tutorial",
+  "categories": ["fictional"],
+  "hidden": true,
+  "custom_tribes": [{ "name": "Hill Tribe", "coordinates": [55, 70] }],
+  "nations": [
+    {
+      "coordinates": [265, 105],
+      "flag": "",
+      "name": "Red Empire"
+    }
+  ]
+}

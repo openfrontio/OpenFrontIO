@@ -42,6 +42,9 @@ type mapInfo struct {
 	// Position in the featured grid (1 = first). Featured maps without a
 	// rank sort after ranked ones, alphabetically.
 	FeaturedRank int `json:"featured_rank"`
+	// Kept out of map pickers, random picks and public lobbies (e.g. the
+	// tutorial map, which only the tutorial starts).
+	Hidden bool `json:"hidden"`
 	// Preferred team count in team/special games (see MapPlaylist).
 	// 0 (or omitted) means no preference.
 	SpecialTeamCount int `json:"special_team_count"`
@@ -347,6 +350,8 @@ func generateMapsTS(infos []mapInfo) (string, error) {
 	b.WriteString("  categories: MapCategory[];\n")
 	b.WriteString("  /** Position in the featured grid (1 = first); unranked featured maps sort last. */\n")
 	b.WriteString("  featuredRank?: number;\n")
+	b.WriteString("  /** Kept out of map pickers, random picks and public lobbies. */\n")
+	b.WriteString("  hidden?: boolean;\n")
 	b.WriteString("  /** Preferred team count in team/special games (see MapPlaylist). */\n")
 	b.WriteString("  specialTeamCount?: number;\n")
 	b.WriteString("  /** Modifiers that should never be rolled for this map in special games. */\n")
@@ -394,6 +399,9 @@ func generateMapsTS(infos []mapInfo) (string, error) {
 		b.WriteString(fmt.Sprintf("    defaultNationCount: %d,\n", len(info.Nations)))
 		if info.FeaturedRank > 0 {
 			b.WriteString(fmt.Sprintf("    featuredRank: %d,\n", info.FeaturedRank))
+		}
+		if info.Hidden {
+			b.WriteString("    hidden: true,\n")
 		}
 		if info.SpecialTeamCount > 0 {
 			b.WriteString(fmt.Sprintf("    specialTeamCount: %d,\n", info.SpecialTeamCount))
