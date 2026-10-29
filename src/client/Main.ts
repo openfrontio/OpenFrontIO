@@ -717,6 +717,8 @@ class Client {
       }
       if (this.usernameInput && !this.usernameInput.canPlay()) return;
       whenModalLoaded("single-player-modal", () => {
+        // A join started while the chunk loaded: this request is stale.
+        if (this.gameUnderway()) return;
         const modal = document.querySelector(
           "single-player-modal",
         ) as SinglePlayerModal | null;

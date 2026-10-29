@@ -201,7 +201,8 @@ export class OnboardingOverlay extends LitElement implements Controller {
       return true;
     }
     if (verdict === "low_troops") {
-      if (!this.lowTroops) this.lowTroopsUntil = now + LOW_TROOPS_MS;
+      // Each refused click restarts the clock, so it's read after the last.
+      this.lowTroopsUntil = now + LOW_TROOPS_MS;
       this.setLowTroops(true);
     } else {
       this.nudgeUntil = now + NUDGE_MS;
