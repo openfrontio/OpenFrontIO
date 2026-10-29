@@ -5,6 +5,7 @@ import {
   centerButtonElement,
   rootMenuElement,
 } from "../../src/client/hud/layers/RadialMenuElements";
+import { CloseViewEvent, FORWARDED_CLICK } from "../../src/client/InputHandler";
 
 // jsdom has no layout, so there is no element under a point to forward to.
 function stubElementFromPoint(element: Element | null) {
@@ -20,8 +21,9 @@ describe("RadialMenu overlay click-through", () => {
   });
 
   function makeMenu() {
+    const eventBus = new EventBus();
     const radialMenu = new RadialMenu(
-      new EventBus(),
+      eventBus,
       rootMenuElement,
       centerButtonElement,
     );
@@ -29,7 +31,7 @@ describe("RadialMenu overlay click-through", () => {
     const overlay = document.querySelector(
       ".radial-menu-container",
     ) as HTMLElement;
-    return { radialMenu, overlay };
+    return { eventBus, radialMenu, overlay };
   }
 
   function makeBuildBarButton() {
@@ -55,15 +57,44 @@ describe("RadialMenu overlay click-through", () => {
     expect(clicks).toHaveLength(1);
     expect(clicks[0].clientX).toBe(10);
     expect(clicks[0].clientY).toBe(20);
+    // The layer has to be able to tell a forwarded tap from a real press.
+    expect(
+      (clicks[0] as unknown as Record<string, unknown>)[FORWARDED_CLICK],
+    ).toBe(true);
   });
 
-  test("does not forward taps that landed on the menu itself", () => {
+  test("forwards a tap that landed on the menu's background", () => {
+    // The menu's SVG is a large hit-testable box around the tap point, so a
+    // tap on the build bar lands on it whenever the menu is close enough.
     const { overlay } = makeMenu();
     const { button, clicks } = makeBuildBarButton();
     stubElementFromPoint(button);
 
     const svg = overlay.querySelector("svg") as SVGElement;
     svg.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, clientX: 10, clientY: 20 }),
+    );
+
+    expect(clicks).toHaveLength(1);
+    expect(
+      (clicks[0] as unknown as Record<string, unknown>)[FORWARDED_CLICK],
+    ).toBe(true);
+  });
+
+  test("does not forward a tap on a menu item", () => {
+    // Menu items stop the click from bubbling, so the overlay never sees it.
+    const { overlay } = makeMenu();
+    const { button, clicks } = makeBuildBarButton();
+    stubElementFromPoint(button);
+
+    const svg = overlay.querySelector("svg") as SVGElement;
+    const item = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "path",
+    ) as SVGPathElement;
+    item.addEventListener("click", (event) => event.stopPropagation());
+    svg.appendChild(item);
+    item.dispatchEvent(
       new MouseEvent("click", { bubbles: true, clientX: 10, clientY: 20 }),
     );
 
@@ -83,5 +114,18 @@ describe("RadialMenu overlay click-through", () => {
     );
 
     expect(clicks).toHaveLength(0);
+  });
+
+  test("closes when the view is closed", () => {
+    const { eventBus, radialMenu, overlay } = makeMenu();
+    // The menu needs its params to rebuild itself on close; the overlay
+    // hiding is what this test is about.
+    vi.spyOn(radialMenu as any, "resetMenu").mockImplementation(() => {});
+    (radialMenu as any).isVisible = true;
+    overlay.style.display = "block";
+
+    eventBus.emit(new CloseViewEvent());
+
+    expect(overlay.style.display).toBe("none");
   });
 });

@@ -10,6 +10,7 @@ import {
   ConfirmGhostStructureEvent,
   MouseMoveEvent,
   MouseUpEvent,
+  TouchGhostPlacementDragStartEvent,
   TouchGhostPlacementEvent,
 } from "../../../src/client/InputHandler";
 import { BuildUnitIntentEvent } from "../../../src/client/Transport";
@@ -1751,6 +1752,41 @@ describe("BuildPreviewController touch preview", () => {
     expect((controller as any).lastGhostData.tileY).toBe(2);
   });
 
+  test("a touch off the map leaves the preview where it was", () => {
+    const { controller, player } = makeController(UnitType.City);
+    (controller as any).game.isValidCoord = () => false;
+    (controller as any).touchPreviewTile = 101;
+    const queriesBefore = player.buildables.mock.calls.length;
+
+    (controller as any).moveTouchPreview(200, 200);
+
+    expect((controller as any).touchPreviewTile).toBe(101);
+    expect(player.buildables).toHaveBeenCalledTimes(queriesBefore);
+  });
+
+  test("a drag start on the preview is handled, one away from it is not", () => {
+    const { controller, eventBus } = makeController(UnitType.City);
+    const requestAnimationFrame = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockImplementation(() => 1);
+
+    try {
+      controller.init();
+      (controller as any).touchPlacementMode = true;
+      (controller as any).touchPreviewTile = 202;
+
+      const onPreview = new TouchGhostPlacementDragStartEvent(200, 200);
+      eventBus.emit(onPreview);
+      expect(onPreview.handled).toBe(true);
+
+      const awayFromPreview = new TouchGhostPlacementDragStartEvent(100, 100);
+      eventBus.emit(awayFromPreview);
+      expect(awayFromPreview.handled).toBe(false);
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
+
   test("init subscribes to touch placement events", async () => {
     const { controller, eventBus, player } = makeController(UnitType.City);
     const requestAnimationFrame = vi
@@ -1906,6 +1942,44 @@ describe("BuildPreviewController touch preview", () => {
     await flushBuildables();
 
     expect(builds.map((event) => event.tile)).toEqual([101, 202]);
+    expect((controller as any).pendingConfirmations).toHaveLength(0);
+  });
+
+  test("an invalid nuke tile does not block a valid one", async () => {
+    const { controller, builds, requests } = makeDeferredBuildablesController(
+      UnitType.AtomBomb,
+    );
+    (controller as any).ghostResolved = false;
+
+    (controller as any).requestConfirmStructure(new MouseUpEvent(100, 100));
+    (controller as any).requestConfirmStructure(new MouseUpEvent(200, 200));
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].tile).toBe(101);
+    requests[0].resolve([
+      {
+        type: UnitType.AtomBomb,
+        canBuild: false,
+        canUpgrade: false,
+        cost: 1n,
+      },
+    ]);
+    await flushBuildables();
+
+    // The invalid tile is dropped and the queued valid one is queried.
+    expect(requests).toHaveLength(2);
+    expect(requests[1].tile).toBe(202);
+    requests[1].resolve([
+      {
+        type: UnitType.AtomBomb,
+        canBuild: 202,
+        canUpgrade: false,
+        cost: 1n,
+      },
+    ]);
+    await flushBuildables();
+
+    expect(builds.map((event) => event.tile)).toEqual([202]);
     expect((controller as any).pendingConfirmations).toHaveLength(0);
   });
 
@@ -2132,6 +2206,16 @@ describe("BuildPreviewController touch preview", () => {
     expect(buildables).toHaveBeenLastCalledWith(202, [UnitType.City], false);
     expect((controller as any).ghostUnit.buildableUnit).toEqual(
       expect.objectContaining({ canBuild: false, canUpgrade: false }),
+    );
+
+    // The live query for the tile the preview moved to still applies.
+    pendingBuildables[1]([
+      { type: UnitType.City, canBuild: true, canUpgrade: false, cost: 1n },
+    ]);
+    await flushBuildables();
+
+    expect((controller as any).ghostUnit.buildableUnit).toEqual(
+      expect.objectContaining({ canBuild: true, canUpgrade: false }),
     );
   });
 });

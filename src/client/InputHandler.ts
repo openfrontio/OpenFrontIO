@@ -1128,6 +1128,9 @@ export class InputHandler {
         this.canvas.style.cursor = "";
       }
       this.touchPlacementDragState = "idle";
+      // The drag is over, but the finger that started it must not read as a
+      // tap: releasing it would confirm the build preview it was dragging.
+      this.suppressNextTap = true;
       this.lastPinchDistance = this.getPinchDistance();
     }
   }

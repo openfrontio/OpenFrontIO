@@ -52,10 +52,15 @@ export class UnitDisplay extends LitElement implements Controller {
     unitType: PlayerBuildableUnitType;
     structureKey: string;
     hotkey: string;
-    left: number;
-    top: number;
+    element: HTMLElement;
   } | null = null;
   private tutorialHighlight: PlayerBuildableUnitType | null = null;
+  // Whether the build bar has actions hidden off either edge. The fade on that
+  // edge tells the player there is more to swipe to.
+  private moreActionsLeft = false;
+  private moreActionsRight = false;
+  private observedScroller: HTMLElement | null = null;
+  private resizeListenerAttached = false;
 
   createRenderRoot() {
     return this;
@@ -87,7 +92,50 @@ export class UnitDisplay extends LitElement implements Controller {
       this.tutorialHighlight = (e.target && highlightUnits[e.target]) ?? null;
       this.requestUpdate();
     });
+    if (!this.resizeListenerAttached) {
+      window.addEventListener("resize", this.onLayoutChange);
+      this.resizeListenerAttached = true;
+    }
     this.requestUpdate();
+  }
+
+  /** The bar moved or resized: the tooltip and the edge fades have to follow. */
+  private onLayoutChange = () => {
+    this.requestUpdate();
+  };
+
+  private onScroll = () => {
+    this.requestUpdate();
+  };
+
+  /**
+   * Track which edge of the build bar still hides actions, so the fade can
+   * point at it. The bar only scrolls where it does not fit, so on a wide
+   * screen neither side is marked.
+   */
+  private measureScrollState() {
+    const scroller = this.getScroller();
+    if (!scroller) return;
+    this.moreActionsLeft = scroller.scrollLeft > 1;
+    this.moreActionsRight =
+      scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1;
+  }
+
+  private getScroller(): HTMLElement | null {
+    return this.querySelector<HTMLElement>(".unit-display-scroll");
+  }
+
+  willUpdate() {
+    this.measureScrollState();
+  }
+
+  updated() {
+    const scroller = this.getScroller();
+    if (scroller !== this.observedScroller) {
+      this.observedScroller?.removeEventListener("scroll", this.onScroll);
+      this.observedScroller = scroller;
+      scroller?.addEventListener("scroll", this.onScroll);
+    }
   }
 
   private cost(item: UnitType): Gold {
@@ -155,11 +203,14 @@ export class UnitDisplay extends LitElement implements Controller {
 
     return html`
       <div
-        class="unit-display-root relative border-t border-white/10 p-0.5 w-full"
+        class="unit-display-root relative border-t border-white/10 p-0.5 w-full
+          ${this.moreActionsLeft ? "unit-display-more-left" : ""}
+          ${this.moreActionsRight ? "unit-display-more-right" : ""}"
         data-radial-click-through
       >
         <div
           class="unit-display-scroll w-full overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x lg:overflow-visible"
+          @scroll=${this.onScroll}
         >
           <div
             class="unit-display-grid grid grid-cols-10 gap-0.5 w-full mx-auto lg:grid-rows-1 lg:grid-flow-col lg:w-fit max-lg:landscape:grid-rows-1 max-lg:landscape:grid-flow-col max-lg:landscape:grid-cols-none max-lg:landscape:auto-cols-[47px] max-lg:landscape:w-max max-[360px]:grid-cols-none max-[360px]:grid-flow-col max-[360px]:auto-cols-[44px] max-[360px]:w-max"
@@ -270,16 +321,11 @@ export class UnitDisplay extends LitElement implements Controller {
         class="flex flex-col items-center relative"
         @mouseenter=${(event: MouseEvent) => {
           const item = event.currentTarget as HTMLElement;
-          const root = item.closest<HTMLElement>(".unit-display-root");
-          if (!root) return;
-          const itemBounds = item.getBoundingClientRect();
-          const rootBounds = root.getBoundingClientRect();
           this._hoveredUnitTooltip = {
             unitType,
             structureKey,
             hotkey,
-            left: itemBounds.left + itemBounds.width / 2 - rootBounds.left,
-            top: itemBounds.top - rootBounds.top - 4,
+            element: item,
           };
           this.requestUpdate();
         }}
@@ -327,7 +373,7 @@ export class UnitDisplay extends LitElement implements Controller {
           ${
             hotkey
               ? html`<div
-                  class="hidden lg:block ml-0.5 text-[10px] relative -top-1 text-gray-400"
+                  class="hidden pointer-fine:block ml-0.5 text-[10px] relative -top-1 text-gray-400"
                 >
                   ${displayHotkey}
                 </div>`
@@ -357,15 +403,25 @@ export class UnitDisplay extends LitElement implements Controller {
   private renderUnitTooltip() {
     const tooltip = this._hoveredUnitTooltip;
     if (!tooltip) return nothing;
+    // The item can go away (a unit gets disabled) while it is hovered.
+    if (!tooltip.element.isConnected) return nothing;
     const displayHotkey = tooltip.hotkey
       .replace("Digit", "")
       .replace("Key", "")
       .toUpperCase();
+    // Measured at render time so the tooltip follows the item when the bar
+    // scrolls or the layout changes, instead of staying where it was hovered.
+    const root = this.querySelector<HTMLElement>(".unit-display-root");
+    const itemBounds = tooltip.element.getBoundingClientRect();
+    const rootBounds = root?.getBoundingClientRect();
+    const left =
+      itemBounds.left + itemBounds.width / 2 - (rootBounds?.left ?? 0);
+    const top = itemBounds.top - (rootBounds?.top ?? 0) - 4;
 
     return html`
       <div
-        class="unit-display-tooltip hidden lg:block absolute -translate-x-1/2 -translate-y-full text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
-        style=${`left: ${tooltip.left}px; top: ${tooltip.top}px;`}
+        class="unit-display-tooltip hidden pointer-fine:block absolute -translate-x-1/2 -translate-y-full text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
+        style=${`left: ${left}px; top: ${top}px;`}
       >
         <div class="font-bold text-sm mb-1">
           ${translateText("unit_type." + tooltip.structureKey)}${

@@ -77,6 +77,101 @@ describe("mobile UnitDisplay layout", () => {
       const tooltip = display.querySelector(".unit-display-tooltip");
       expect(tooltip).not.toBeNull();
       expect(scroller?.contains(tooltip)).toBe(false);
+      // A mouse shows the tooltip at any width; a touch device does not.
+      expect(tooltip?.classList.contains("pointer-fine:block")).toBe(true);
+      expect(tooltip?.classList.contains("lg:block")).toBe(false);
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("the tooltip is placed from the item's rectangle", async () => {
+    const { display } = makeDisplay();
+    try {
+      await display.updateComplete;
+      const root = display.querySelector(".unit-display-root") as HTMLElement;
+      const cityItem = display.querySelector(".unit-display-grid")
+        ?.firstElementChild as HTMLElement | null;
+      root.getBoundingClientRect = () => ({ left: 10, top: 100 }) as DOMRect;
+      cityItem!.getBoundingClientRect = () =>
+        ({ left: 60, top: 140, width: 40 }) as DOMRect;
+      cityItem!.dispatchEvent(new MouseEvent("mouseenter"));
+      await display.updateComplete;
+
+      const tooltip = display.querySelector(
+        ".unit-display-tooltip",
+      ) as HTMLElement;
+      // Centred on the item, a little above it, relative to the bar.
+      expect(tooltip.style.left).toBe("70px");
+      expect(tooltip.style.top).toBe("36px");
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("fades the edge that still hides actions", async () => {
+    const { display } = makeDisplay();
+    try {
+      await display.updateComplete;
+      const root = display.querySelector(".unit-display-root") as HTMLElement;
+      const scroller = display.querySelector(
+        ".unit-display-scroll",
+      ) as HTMLElement;
+      Object.defineProperty(scroller, "scrollWidth", {
+        value: 500,
+        configurable: true,
+      });
+      Object.defineProperty(scroller, "clientWidth", {
+        value: 200,
+        configurable: true,
+      });
+      Object.defineProperty(scroller, "scrollLeft", {
+        value: 0,
+        configurable: true,
+      });
+
+      scroller.dispatchEvent(new Event("scroll"));
+      await display.updateComplete;
+
+      expect(root.classList.contains("unit-display-more-right")).toBe(true);
+      expect(root.classList.contains("unit-display-more-left")).toBe(false);
+
+      Object.defineProperty(scroller, "scrollLeft", {
+        value: 300,
+        configurable: true,
+      });
+      scroller.dispatchEvent(new Event("scroll"));
+      await display.updateComplete;
+
+      expect(root.classList.contains("unit-display-more-right")).toBe(false);
+      expect(root.classList.contains("unit-display-more-left")).toBe(true);
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("does not fade an edge when every action fits", async () => {
+    const { display } = makeDisplay();
+    try {
+      await display.updateComplete;
+      const root = display.querySelector(".unit-display-root") as HTMLElement;
+      const scroller = display.querySelector(
+        ".unit-display-scroll",
+      ) as HTMLElement;
+      Object.defineProperty(scroller, "scrollWidth", {
+        value: 200,
+        configurable: true,
+      });
+      Object.defineProperty(scroller, "clientWidth", {
+        value: 200,
+        configurable: true,
+      });
+
+      scroller.dispatchEvent(new Event("scroll"));
+      await display.updateComplete;
+
+      expect(root.classList.contains("unit-display-more-right")).toBe(false);
+      expect(root.classList.contains("unit-display-more-left")).toBe(false);
     } finally {
       display.remove();
     }

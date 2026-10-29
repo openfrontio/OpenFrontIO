@@ -59,13 +59,13 @@ const CLICK_THROUGH_SELECTOR = "[data-radial-click-through]";
  * The radial menu overlay covers the whole viewport, so a tap on a HUD layer
  * below it (the build bar or the attack % slider) would only dismiss the menu.
  * Forward the tap to the layer underneath so a single tap still selects the build/attack %.
+ *
+ * The menu's own SVG is a large hit-testable box around the tap point, so the
+ * tap lands on it rather than on the overlay whenever the menu is close to the
+ * HUD. Menu items stop the click from bubbling, so every click that reaches
+ * this handler is a tap on the menu's background.
  */
-export function forwardClickToLayerBelow(
-  event: MouseEvent,
-  overlay: Element,
-): void {
-  // Clicks that landed on the menu itself already ran their own action.
-  if (event.target !== overlay) return;
+export function forwardClickToLayerBelow(event: MouseEvent): void {
   const below = document.elementFromPoint(event.clientX, event.clientY);
   if (!below?.closest(CLICK_THROUGH_SELECTOR)) return;
   const forwarded = new MouseEvent("click", {
@@ -192,8 +192,7 @@ export class RadialMenu implements Controller {
       .on("click", (event: MouseEvent) => {
         this.hideRadialMenu();
         this.eventBus.emit(new CloseRadialMenuEvent());
-        const overlay = this.menuElement.node();
-        if (overlay) forwardClickToLayerBelow(event, overlay);
+        forwardClickToLayerBelow(event);
       })
       .on("contextmenu", (e) => {
         e.preventDefault();
