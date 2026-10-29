@@ -61,14 +61,9 @@ export class StationManagerImpl implements StationManager {
     }
     this.stations.delete(station);
     if (this.stationsByUnit.get(station.unit) === station) {
-      this.stationsByUnit.delete(station.unit);
-      // Fall back to the unit's next station, as the old scan would have.
-      for (const other of this.stations) {
-        if (other.unit === station.unit) {
-          this.stationsByUnit.set(station.unit, other);
-          break;
-        }
-      }
+      // The unit's next station, if any, takes over. Rebuild rather than
+      // re-insert so the Map keeps the order restoreSnapshot produces.
+      this.rebuildStationsByUnit();
     }
   }
 
@@ -101,14 +96,21 @@ export class StationManagerImpl implements StationManager {
   ): void {
     this.stations = new Set(s.stations.map((i) => r.station(i)));
     this.stationsById = [];
-    this.stationsByUnit = new Map();
     for (const station of this.stations) {
       this.stationsById[station.id] = station;
+    }
+    this.rebuildStationsByUnit();
+    this.nextId = s.nextId;
+  }
+
+  /** The first station of each unit, in `stations` order. */
+  private rebuildStationsByUnit(): void {
+    this.stationsByUnit = new Map();
+    for (const station of this.stations) {
       if (!this.stationsByUnit.has(station.unit)) {
         this.stationsByUnit.set(station.unit, station);
       }
     }
-    this.nextId = s.nextId;
   }
 }
 
@@ -217,7 +219,12 @@ class GhostTrainStation implements RailGraphStation {
  * plan reaches them and live rails are read through the rail grid, so a
  * preview costs in proportion to what it touches, not to the whole map.
  */
-class GhostRailNetworkState {
+export class GhostRailNetworkState {
+  /**
+   * Ghosts for the structures the proposed build would create or promote. A
+   * unit with a live station is never here: it resolves through the station
+   * manager, as the live network does, even when it has more than one.
+   */
   private readonly ghostByUnit = new Map<Unit, GhostTrainStation>();
   private readonly ghostByStation = new Map<TrainStation, GhostTrainStation>();
   /** Rails this plan created or split; live rails are found through the grid. */
@@ -252,7 +259,6 @@ class GhostRailNetworkState {
         station,
       );
       this.ghostByStation.set(station, ghost);
-      this.ghostByUnit.set(station.unit, ghost);
     }
     return ghost;
   }
@@ -273,6 +279,8 @@ class RailPathFinderServiceImpl implements RailPathFinderService {
   constructor(private game: Game) {}
 
   findTilePath(from: TileRef, to: TileRef): TileRef[] {
+    // PathFinding.Rail shares one search engine per game; only the small
+    // stepper is built per call.
     return PathFinding.Rail(this.game).findPath(from, to) ?? [];
   }
 

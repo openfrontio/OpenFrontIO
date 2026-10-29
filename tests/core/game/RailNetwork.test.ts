@@ -4,13 +4,19 @@ import { FactoryExecution } from "@openfront/engine/execution/FactoryExecution";
 import { PortExecution } from "@openfront/engine/execution/PortExecution";
 import { Unit } from "@openfront/engine/game/Game";
 import {
+  GhostRailNetworkState,
   RailNetworkImpl,
   type RailPathFinderService,
   StationManagerImpl,
 } from "@openfront/engine/game/RailNetworkImpl";
 import { Railroad } from "@openfront/engine/game/Railroad";
 import { Cluster, TrainStation } from "@openfront/engine/game/TrainStation";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "@openfront/engine/snapshot/SnapshotContext";
 import { playerInfo, setup } from "../../util/Setup";
+import { diffGraphs } from "../../util/Snapshot";
 
 // Mock types
 const createMockStation = (unitId: number): any => {
@@ -50,6 +56,49 @@ describe("StationManagerImpl", () => {
     manager.addStation(station);
     manager.removeStation(station);
     expect(manager.findStation(station.unit)).toBe(null);
+  });
+
+  test("falls back to the unit's next station in the order a restore rebuilds", () => {
+    const first = createMockStation(1);
+    const second = { ...createMockStation(1), unit: first.unit };
+    const other = createMockStation(2);
+    manager.addStation(first);
+    manager.addStation(second);
+    manager.addStation(other);
+
+    manager.removeStation(first);
+    expect(manager.findStation(first.unit)).toBe(second);
+
+    // A restored manager rebuilds its lookups in station order; the live one
+    // must keep the same order or the snapshot round-trip check reports it.
+    const stations = [first, second, other];
+    const writer = {
+      station: (s: TrainStation) => stations.indexOf(s),
+    } as unknown as SnapshotWriter;
+    const reader = {
+      station: (i: number) => stations[i],
+    } as unknown as SnapshotReader;
+    const restored = new StationManagerImpl();
+    restored.restoreSnapshot(manager.snapshot(writer), reader);
+    expect(diffGraphs(manager, restored)).toEqual([]);
+  });
+});
+
+describe("GhostRailNetworkState", () => {
+  test("resolves a unit with two stations to the one findStation answers", () => {
+    const manager = new StationManagerImpl();
+    const first = createMockStation(1);
+    const second = { ...createMockStation(1), unit: first.unit };
+    manager.addStation(first);
+    manager.addStation(second);
+    expect(manager.findStation(first.unit)).toBe(first);
+
+    const state = new GhostRailNetworkState(manager, 32);
+    // Walking a live rail can wrap the second station before the plan ever
+    // looks the unit up; the unit must still resolve as the live network does.
+    const secondGhost = state.ghostForStation(second);
+    expect(state.ghostForUnit(first.unit)).toBe(state.ghostForStation(first));
+    expect(state.ghostForUnit(first.unit)).not.toBe(secondGhost);
   });
 });
 

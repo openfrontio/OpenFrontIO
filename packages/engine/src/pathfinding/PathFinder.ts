@@ -161,6 +161,27 @@ function sharedWaterChain(game: Game, memoized = false): PathFinder<TileRef> {
   return memoized ? cached.memo : cached.chain;
 }
 
+// Shared rail-pathfinder chain cache. AStarRail's scratch is four typed
+// arrays the size of the minimap, and the rail network asks for a path per
+// candidate connection: a factory preview alone may ask 32 times per hovered
+// tile. One engine per game serves them all. It needs no version key: the
+// rail adapter reads the minimap live and caches only its dimensions, and
+// water changes edit the minimap in place. Stamp-based scratch invalidation
+// and the single-threaded worker make sharing safe, as for the water chain.
+const _railChainCache = new WeakMap<Game, PathFinder<TileRef>>();
+
+function sharedRailChain(game: Game): PathFinder<TileRef> {
+  let chain = _railChainCache.get(game);
+  if (chain === undefined) {
+    const miniMap = game.miniMap();
+    chain = PathFinderBuilder.create(new AStarRail(miniMap))
+      .wrap((pf) => new MiniMapTransformer(pf, game.map(), miniMap))
+      .build();
+    _railChainCache.set(game, chain);
+  }
+  return chain;
+}
+
 /**
  * Pathfinders that require Game - simulation layer only
  */
@@ -179,12 +200,10 @@ export class PathFinding {
   }
 
   static Rail(game: Game): SteppingPathFinder<TileRef> {
-    const miniMap = game.miniMap();
-    const pf = new AStarRail(miniMap);
-
-    return PathFinderBuilder.create(pf)
-      .wrap((pf) => new MiniMapTransformer(pf, game.map(), miniMap))
-      .buildWithStepper(tileStepperConfig(game));
+    return new PathFinderStepper(
+      sharedRailChain(game),
+      tileStepperConfig(game),
+    );
   }
 
   static Stations(game: Game): SteppingPathFinder<TrainStation> {
