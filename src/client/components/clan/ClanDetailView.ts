@@ -13,7 +13,11 @@ import {
   joinClan,
   leaveClan,
 } from "../../ClanApi";
-import { broadcastFreshUserMe } from "../../Cosmetics";
+import {
+  broadcastFreshUserMe,
+  fetchCosmetics,
+  refreshStaleCosmetics,
+} from "../../Cosmetics";
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
 import "../CopyButton";
@@ -23,6 +27,7 @@ import {
   type ClanRole,
   defaultOrderForSort,
   filterMembersBySearch,
+  findClanAffiliateCode,
   formatBoostRemaining,
   membersHaveLevels,
   renderLoadingSpinner,
@@ -61,6 +66,7 @@ export class ClanDetailView extends LitElement {
   @property({ type: Object }) cachedClan: ClanInfo | null = null;
   @state() private selectedClan: ClanInfo | null = null;
   @state() private discordMeta: ClanDiscord | null = null;
+  @state() private affiliateCode: string | null = null;
   @state() private myRole: ClanRole | null = null;
   @state() private members: ClanMember[] = [];
   @state() private membersTotal = 0;
@@ -111,6 +117,8 @@ export class ClanDetailView extends LitElement {
         this.asyncGeneration,
       );
     }
+    this.affiliateCode = null;
+    void this.loadAffiliateCode(this.clanTag, this.asyncGeneration);
   }
 
   // Fetches live Discord invite metadata (server name, icon, counts) for the
@@ -120,6 +128,23 @@ export class ClanDetailView extends LitElement {
     const meta = await fetchDiscordInvite(url);
     if (gen !== this.asyncGeneration || this.clanTag !== tag) return;
     this.discordMeta = meta;
+  }
+
+  // Resolves the catalog's affiliateCode matching this clan's tag (if any) so
+  // the Overview actions only offer the Clan Shop button when items exist for
+  // the clan. Floating; guarded by asyncGeneration + tag.
+  private async loadAffiliateCode(tag: string, gen: number) {
+    refreshStaleCosmetics();
+    const cosmetics = await fetchCosmetics();
+    if (gen !== this.asyncGeneration || this.clanTag !== tag) return;
+    this.affiliateCode = findClanAffiliateCode(cosmetics, tag);
+  }
+
+  private openClanShop(affiliateCode: string) {
+    this.dispatchEvent(
+      new CustomEvent("close-clan-modal", { bubbles: true, composed: true }),
+    );
+    window.location.hash = `modal=store&affiliateCode=${encodeURIComponent(affiliateCode)}`;
   }
 
   disconnectedCallback() {
@@ -177,6 +202,8 @@ export class ClanDetailView extends LitElement {
     if (detail.discordUrl) {
       void this.loadDiscordMeta(detail.discordUrl, this.clanTag, gen);
     }
+    this.affiliateCode = null;
+    void this.loadAffiliateCode(this.clanTag, gen);
     this.memberPage = 1;
     if (!goingToMembers) {
       // Members tab will populate these via loadInitialMembers; the
@@ -947,6 +974,18 @@ export class ClanDetailView extends LitElement {
           class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-white/10 hover:bg-white/15 rounded-xl transition-all border border-white/10"
         >
           ${translateText("clan_modal.manage_clan")}
+        </button>
+      `);
+    }
+    if (this.affiliateCode) {
+      const affiliateCode = this.affiliateCode;
+      buttons.push(html`
+        <button
+          data-action="clan-shop"
+          @click=${() => this.openClanShop(affiliateCode)}
+          class="no-game-portal w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-white/10 hover:bg-white/15 rounded-xl transition-all border border-white/10"
+        >
+          ${translateText("clan_modal.clan_shop")}
         </button>
       `);
     }

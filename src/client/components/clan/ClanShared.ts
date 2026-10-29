@@ -1,3 +1,4 @@
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { html, type TemplateResult } from "lit";
 import type {
   ClanJoinRequest,
@@ -552,4 +553,34 @@ export function formatBoostRemaining(
     hours,
     minutes: totalMinutes % 60,
   });
+}
+
+// Resolves the catalog's canonical `affiliateCode` matching `clanTag`
+// case-insensitively, or null when no cosmetic in the catalog uses that code.
+export function findClanAffiliateCode(
+  cosmetics: Cosmetics | null | undefined,
+  clanTag: string,
+): string | null {
+  if (!cosmetics) return null;
+  const trimmed = clanTag.trim();
+  if (!trimmed) return null;
+  const lower = trimmed.toLowerCase();
+  const groups: Record<string, { affiliateCode?: string | null }>[] = [
+    cosmetics.patterns,
+    cosmetics.flags,
+    cosmetics.crowns ?? {},
+    cosmetics.skins ?? {},
+    ...Object.values(cosmetics.effects ?? {}),
+  ];
+  for (const group of groups) {
+    for (const item of Object.values(group)) {
+      if (
+        typeof item.affiliateCode === "string" &&
+        item.affiliateCode.toLowerCase() === lower
+      ) {
+        return item.affiliateCode;
+      }
+    }
+  }
+  return null;
 }
