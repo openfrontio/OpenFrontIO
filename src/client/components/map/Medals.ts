@@ -4,7 +4,7 @@ import medalIconRaw from "../../../../resources/images/MedalIconWhite.svg?raw";
 import { translateText } from "../../Utils";
 
 // CSS mask that renders the medal glyph; tint it via `background-color`.
-export const MEDAL_MASK = `url('data:image/svg+xml;utf8,${encodeURIComponent(medalIconRaw)}') no-repeat center / contain`;
+const MEDAL_MASK = `url('data:image/svg+xml;utf8,${encodeURIComponent(medalIconRaw)}') no-repeat center / contain`;
 
 // Difficulty medals, easiest to hardest — the canonical display order.
 export const MEDAL_ORDER: readonly Difficulty[] = [
@@ -14,7 +14,7 @@ export const MEDAL_ORDER: readonly Difficulty[] = [
   Difficulty.Impossible,
 ];
 
-export const MEDAL_COLORS: Record<Difficulty, string> = {
+const MEDAL_COLORS: Record<Difficulty, string> = {
   [Difficulty.Easy]: "var(--medal-easy)",
   [Difficulty.Medium]: "var(--medal-medium)",
   [Difficulty.Hard]: "var(--medal-hard)",
@@ -32,9 +32,9 @@ export function medalIcon(
 ): TemplateResult {
   return html`<div
     class="${sizeClass} ${earned ? "opacity-100" : "opacity-25"}"
-    style="background-color:${MEDAL_COLORS[
-      difficulty
-    ]}; mask:${MEDAL_MASK}; -webkit-mask:${MEDAL_MASK};"
+    style="background-color:${
+      MEDAL_COLORS[difficulty]
+    }; mask:${MEDAL_MASK}; -webkit-mask:${MEDAL_MASK};"
     title=${translateText(`difficulty.${difficulty.toLowerCase()}`)}
   ></div>`;
 }

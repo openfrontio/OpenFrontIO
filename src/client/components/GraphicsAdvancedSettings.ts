@@ -8,6 +8,7 @@ import { COSMETICS_SHOW_FROM } from "../render/gl/GraphicsOverrides";
 import renderDefaults from "../render/gl/render-settings.json";
 import {
   GRAPHICS_KEY,
+  MAP_LAYERS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../UserSettings";
@@ -28,6 +29,7 @@ const COSMETICS_SHOW_FROM_LABELS: Record<
   everyone: "graphics_setting.cosmetics_show_from_everyone",
   teammates: "graphics_setting.cosmetics_show_from_teammates",
   self: "graphics_setting.cosmetics_show_from_self",
+  none: "graphics_setting.cosmetics_show_from_none",
 };
 
 type CosmeticCategory = Exclude<
@@ -275,11 +277,19 @@ export class GraphicsAdvancedSettings extends LitElement {
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChange,
     );
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${MAP_LAYERS_KEY}`,
+      this.onGraphicsChange,
+    );
   }
 
   disconnectedCallback() {
     globalThis.removeEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
+      this.onGraphicsChange,
+    );
+    globalThis.removeEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${MAP_LAYERS_KEY}`,
       this.onGraphicsChange,
     );
     super.disconnectedCallback();
@@ -922,6 +932,7 @@ export class GraphicsAdvancedSettings extends LitElement {
    */
   private renderMapLayers() {
     if (this.mapLayers.length === 0) return nothing;
+    const layersOn = this.userSettings.mapLayers();
     return html`
       <div data-map-layers>
         ${GraphicsAdvancedSettings.section(
@@ -944,23 +955,26 @@ export class GraphicsAdvancedSettings extends LitElement {
                 }`}
                 id=${`map-layer-${layer.id}-toggle`}
                 .checked=${this.isLayerVisible(layer.id)}
+                ?disabled=${!layersOn}
                 @change=${() => this.onToggleLayer(layer.id)}
               ></setting-toggle>
-              ${this.isLayerVisible(layer.id)
-                ? html`<setting-slider
-                    label=${`${this.layerName(layer.id)} — ${translateText("graphics_setting.layer_alpha_label")}`}
-                    description=""
-                    id=${`map-layer-${layer.id}-alpha-slider`}
-                    min=${LAYER_ALPHA_MIN}
-                    max=${LAYER_ALPHA_MAX}
-                    step=${LAYER_ALPHA_STEP}
-                    unit=""
-                    .formatValue=${(v: number) => v.toFixed(2)}
-                    .value=${alpha}
-                    @change=${(e: Event) =>
-                      this.onLayerAlphaSliderChange(layer.id, e)}
-                  ></setting-slider>`
-                : nothing}
+              ${
+                layersOn && this.isLayerVisible(layer.id)
+                  ? html`<setting-slider
+                      label=${`${this.layerName(layer.id)} — ${translateText("graphics_setting.layer_alpha_label")}`}
+                      description=""
+                      id=${`map-layer-${layer.id}-alpha-slider`}
+                      min=${LAYER_ALPHA_MIN}
+                      max=${LAYER_ALPHA_MAX}
+                      step=${LAYER_ALPHA_STEP}
+                      unit=""
+                      .formatValue=${(v: number) => v.toFixed(2)}
+                      .value=${alpha}
+                      @change=${(e: Event) =>
+                        this.onLayerAlphaSliderChange(layer.id, e)}
+                    ></setting-slider>`
+                  : nothing
+              }
             </div>
           `;
         })}
@@ -995,7 +1009,7 @@ export class GraphicsAdvancedSettings extends LitElement {
             description=${translateText(descKey)}
             id=${`cosmetics-${key}-toggle`}
             .checked=${cosmetics[key] !== false}
-            ?disabled=${showFrom === "self"}
+            ?disabled=${showFrom === "self" || showFrom === "none"}
             @change=${() => this.onToggleCosmeticCategory(key)}
           ></setting-toggle>
         `,

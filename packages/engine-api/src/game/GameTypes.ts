@@ -2,6 +2,7 @@ import { AllPlayersStats, ClientID } from "../Schemas";
 
 import { TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { maps, type MapInfo } from "./Maps.gen";
 
 function isEnumValue<T extends Record<string, string | number>>(
   enumObj: T,
@@ -34,8 +35,8 @@ export type TransportShipState = {
 };
 
 export type NukeState = {
-  trajectory: TrajectoryTile[];
-  trajectoryIndex: number;
+  trajectory?: TileRef[];
+  trajectoryIndex?: number;
   targetedBySam: boolean;
   waitTicks: number;
 };
@@ -118,6 +119,12 @@ export {
   type MapInfo,
   type SpecialModifierKey,
 } from "./Maps.gen";
+
+/**
+ * The maps players can pick or be dealt: everything but `hidden` ones (the
+ * tutorial map), which only code that names them starts.
+ */
+export const listedMaps: readonly MapInfo[] = maps.filter((m) => !m.hidden);
 
 export enum GameType {
   Singleplayer = "Singleplayer",
@@ -249,11 +256,6 @@ export const PlayerBuildable = unitTypeGroup([
 ] as const);
 
 export type PlayerBuildableUnitType = (typeof PlayerBuildable.types)[number];
-
-export type TrajectoryTile = {
-  tile: TileRef;
-  targetable: boolean;
-};
 
 export enum Relation {
   Hostile = 0,
@@ -407,12 +409,20 @@ export interface PlayerBorderTiles {
  * the same per-player stats the end-of-game record carries, and in FFA from
  * who went out before them. Built by the engine's humanStatsSnapshot().
  */
-export interface HumanStatsSnapshot {
-  // The tick the snapshot was taken at.
-  tick: number;
+export interface HumanStatsSnapshot extends HumanDisconnects {
   // Every human's stats, keyed by clientID: the object the archived record
   // carries per player (players who never spawned have none).
   stats: AllPlayersStats;
+}
+
+/**
+ * Just the snapshot's tick and who is disconnected, without the stats: what
+ * the client needs at the end of the game, where it has the stats from the
+ * Win update already. Built by the engine's humanDisconnects().
+ */
+export interface HumanDisconnects {
+  // The tick the snapshot was taken at.
+  tick: number;
   // Humans whose connection is currently marked lost: clientID -> the tick
   // it was. The API reads a player who never came back as having left then.
   disconnectedAt: Record<ClientID, number>;

@@ -48,7 +48,7 @@ import { ZbContext } from "@openfront/zbin";
 import { ClientEnv, NoServerError } from "src/client/ClientEnv";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
-import { clientPlatform } from "./ClientPlatform";
+import { clientDevice, clientPlatform } from "./ClientPlatform";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameConfirm } from "./InGameModal";
 import {
@@ -94,6 +94,15 @@ export class SendAllianceRejectIntentEvent implements GameEvent {
 
 export class SendAllianceExtensionIntentEvent implements GameEvent {
   constructor(public readonly recipient: PlayerView) {}
+}
+
+/**
+ * Puts a gate in front of every intent this client sends, or removes it
+ * (null). An intent the gate returns false for is dropped. The onboarding
+ * tutorial uses it to let through only what its current step asks for.
+ */
+export class SetIntentGateEvent implements GameEvent {
+  constructor(public readonly gate: ((intent: Intent) => boolean) | null) {}
 }
 
 export class SendSpawnIntentEvent implements GameEvent {
@@ -280,6 +289,8 @@ export class Transport {
   // also the last moment a peer can send a dictionary-encoded field.
   private zbinCtx: ZbContext | null = null;
 
+  private intentGate: ((intent: Intent) => boolean) | null = null;
+
   // The bus outlives the transport (one per page, one transport per join),
   // so every subscription must be undone in leaveGame or a superseded
   // transport keeps answering the live game's events.
@@ -307,6 +318,7 @@ export class Transport {
     this.subscribe(SendBreakAllianceIntentEvent, (e) =>
       this.onBreakAllianceRequestUIEvent(e),
     );
+    this.subscribe(SetIntentGateEvent, (e) => (this.intentGate = e.gate));
     this.subscribe(SendSpawnIntentEvent, (e) => this.onSendSpawnIntentEvent(e));
     this.subscribe(SendAttackIntentEvent, (e) => this.onSendAttackIntent(e));
     this.subscribe(SendUpgradeStructureIntentEvent, (e) =>
@@ -724,6 +736,7 @@ export class Transport {
       spectator: this.lobbyConfig.spectator,
       gitCommit: ClientEnv.gitCommit(),
       platform: clientPlatform(),
+      device: clientDevice(),
     } satisfies ClientJoinMessage);
   }
 
@@ -1020,6 +1033,7 @@ export class Transport {
   }
 
   private sendIntent(intent: Intent) {
+    if (this.intentGate !== null && !this.intentGate(intent)) return;
     const msg = {
       type: "intent",
       intent: intent,

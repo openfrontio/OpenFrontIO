@@ -1128,6 +1128,11 @@
     "name": "Dominican Republic"
   },
   {
+    "code": "Drenthe",
+    "continent": "Europe",
+    "name": "Drenthe"
+  },
+  {
     "code": "Duchy of Courland and Semigallia",
     "continent": "Europe",
     "name": "Duchy of Courland and Semigallia"
@@ -1364,6 +1369,11 @@
     "name": "Flanders"
   },
   {
+    "code": "Flevoland",
+    "continent": "Europe",
+    "name": "Flevoland"
+  },
+  {
     "code": "Florida",
     "continent": "North America",
     "name": "Florida"
@@ -1427,6 +1437,11 @@
     "name": "French Southern Territories"
   },
   {
+    "code": "Friesland",
+    "continent": "Europe",
+    "name": "Friesland"
+  },
+  {
     "code": "ga",
     "continent": "Africa",
     "name": "Gabon"
@@ -1475,6 +1490,11 @@
     "code": "Gazankulu",
     "continent": "Africa",
     "name": "Gazankulu"
+  },
+  {
+    "code": "Gelderland",
+    "continent": "Europe",
+    "name": "Gelderland"
   },
   {
     "code": "ge",
@@ -1576,6 +1596,11 @@
     "code": "gd",
     "continent": "North America",
     "name": "Grenada"
+  },
+  {
+    "code": "Groningen",
+    "continent": "Europe",
+    "name": "Groningen"
   },
   {
     "code": "gp",
@@ -2259,6 +2284,11 @@
     "name": "Lihyan"
   },
   {
+    "code": "Limburg",
+    "continent": "Europe",
+    "name": "Limburg"
+  },
+  {
     "code": "Lincoln",
     "continent": "North America",
     "name": "Lincoln"
@@ -2895,6 +2925,16 @@
     "name": "Noarootsi"
   },
   {
+    "code": "North_Brabant",
+    "continent": "Europe",
+    "name": "Noord-Brabant"
+  },
+  {
+    "code": "North_Holland",
+    "continent": "Europe",
+    "name": "Noord-Holland"
+  },
+  {
     "code": "nf",
     "continent": "Oceania",
     "name": "Norfolk Island"
@@ -3073,6 +3113,11 @@
     "code": "Ottoman Empire",
     "continent": "Asia",
     "name": "Ottoman Empire"
+  },
+  {
+    "code": "Overijssel",
+    "continent": "Europe",
+    "name": "Overijssel"
   },
   {
     "code": "Pahang",
@@ -4688,6 +4733,11 @@
     "name": "Utah"
   },
   {
+    "code": "Utrecht",
+    "continent": "Europe",
+    "name": "Utrecht"
+  },
+  {
     "code": "Uzbek SSR",
     "continent": "Asia",
     "name": "Uzbek SSR"
@@ -4936,6 +4986,11 @@
     "name": "Zayyanid Sultanate"
   },
   {
+    "code": "Zeeland",
+    "continent": "Europe",
+    "name": "Zeeland"
+  },
+  {
     "code": "Zheleznogorsk",
     "continent": "Asia",
     "name": "Zheleznogorsk"
@@ -4944,6 +4999,11 @@
     "code": "zw",
     "continent": "Africa",
     "name": "Zimbabwe"
+  },
+  {
+    "code": "South_Holland",
+    "continent": "Europe",
+    "name": "Zuid-Holland"
   },
   {
     "code": "Zulu",

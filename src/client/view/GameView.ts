@@ -16,11 +16,21 @@ import {
   GameUpdateType,
   GameUpdateViewData,
   SpawnPhaseEndUpdate,
+  UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
-import { GameLike, UnitPredicate } from "@openfront/engine-api/game/ReadViews";
+import {
+  GameLike,
+  ReadonlyTileSet,
+  UnitPredicate,
+} from "@openfront/engine-api/game/ReadViews";
 import { ClientID, GameID } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { unpackMotionPlans } from "@openfront/engine-lib/game/MotionPlans";
+import {
+  PackedUnitUpdateDecoder,
+  UNIT_UPDATE_STRIDE,
+  unpackUnitUpdates,
+} from "@openfront/engine-lib/game/PackedUnitUpdates";
 import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { TerraNulliusImpl } from "@openfront/engine-lib/game/TerraNulliusImpl";
 import { UnitGrid } from "@openfront/engine-lib/game/UnitGrid";
@@ -35,8 +45,7 @@ import type { SpiralParams } from "../render/frame/SpiralTrails";
 import { SpiralTrails } from "../render/frame/SpiralTrails";
 import { TrailManager } from "../render/frame/TrailManager";
 import type { FrameData, NameEntry } from "../render/types";
-import { STRUCTURE_TYPES } from "../render/types";
-import { TRAIL_TYPES } from "../render/types/UnitType";
+import { STRUCTURE_TYPES, TRAIL_TYPES } from "../render/types";
 import { UserSettings } from "../UserSettings";
 import { resolveTeamClanTag } from "../Utils";
 import { WorkerClient } from "../WorkerClient";
@@ -107,6 +116,7 @@ export class GameView implements GameLike {
   private _firstPopulate = true;
 
   private _myPlayer: PlayerView | null = null;
+  private _wasInSpawnPhase = true;
 
   // ── populateFrame dirty flags ──────────────────────────────────────────
   // The derived structures below only depend on rarely-changing player
@@ -151,6 +161,7 @@ export class GameView implements GameLike {
     private _myClanTag: string | null,
     private _gameID: GameID,
     humans: WirePlayer[],
+    private _resumedFromSave = false,
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
@@ -179,6 +190,7 @@ export class GameView implements GameLike {
     this._frame = {
       tick: 0,
       inSpawnPhase: true,
+      namesSnap: false,
       tileState: this._map.tileStateBuffer(),
       trailState: this.trailManager.getTrailState(),
       spiralRibbons: this.spiralTrails.getRibbons(),
@@ -398,7 +410,14 @@ export class GameView implements GameLike {
         unit.lastPos = unit.lastPos.slice(-1);
       }
     }
-    gu.updates[GameUpdateType.Unit].forEach((update) => {
+    const unitUpdates = gu.packedUnitUpdates
+      ? unpackUnitUpdates(gu.packedUnitUpdates, gu.packedMissileTimers)
+      : (gu.updates[GameUpdateType.Unit] ?? []);
+    if (gu.packedUnitUpdates) {
+      gu.updates[GameUpdateType.Unit] = unitUpdates;
+    }
+
+    unitUpdates.forEach((update) => {
       let unit = this._units.get(update.id);
       const isStructure = STRUCTURE_TYPES.has(update.unitType);
       if (unit !== undefined) {
@@ -508,8 +527,11 @@ export class GameView implements GameLike {
     const f = this._frame as {
       -readonly [K in keyof FrameData]: FrameData[K];
     };
+    const inSpawnPhase = this.startTick === null;
+    f.namesSnap = this._wasInSpawnPhase && !inSpawnPhase;
+    this._wasInSpawnPhase = inSpawnPhase;
     f.tick = gu.tick;
-    f.inSpawnPhase = this.startTick === null;
+    f.inSpawnPhase = inSpawnPhase;
     f.railroadDirty = this.railroadCache.railroadDirty;
     f.trailDirtyRowMin = this.trailManager.dirtyRowMin;
     f.trailDirtyRowMax = this.trailManager.dirtyRowMax;
@@ -591,14 +613,39 @@ export class GameView implements GameLike {
     ev.conquestEvents.length = 0;
     ev.bonusEvents.length = 0;
 
-    for (const u of gu.updates[GameUpdateType.Unit] ?? []) {
-      if (u.isActive) continue;
-      ev.deadUnits.push({
-        unitType: u.unitType,
-        pos: u.pos,
-        reachedTarget: u.reachedTarget,
-        ownerSmallID: u.ownerID,
-      });
+    if (gu.packedUnitUpdates) {
+      // Re-unpacking is fine, it's just object creation for dead units, which is fast,
+      // or we just decode the fields we need directly without creating objects!
+      for (
+        let offset = 0;
+        offset < gu.packedUnitUpdates.length;
+        offset += UNIT_UPDATE_STRIDE
+      ) {
+        const decoder = new PackedUnitUpdateDecoder(
+          gu.packedUnitUpdates,
+          offset,
+        );
+        if (!decoder.isActive) {
+          ev.deadUnits.push({
+            unitType: decoder.unitType,
+            pos: decoder.pos,
+            reachedTarget: decoder.reachedTarget,
+            ownerSmallID: decoder.ownerID,
+          });
+        }
+      }
+    } else {
+      const unitUpdates =
+        (gu.updates[GameUpdateType.Unit] as UnitUpdate[]) ?? [];
+      for (const u of unitUpdates) {
+        if (u.isActive) continue;
+        ev.deadUnits.push({
+          unitType: u.unitType,
+          pos: u.pos,
+          reachedTarget: u.reachedTarget,
+          ownerSmallID: u.ownerID,
+        });
+      }
     }
     const myID = this._myPlayer?.id();
     for (const c of gu.updates[GameUpdateType.ConquestEvent] ?? []) {
@@ -1057,10 +1104,17 @@ export class GameView implements GameLike {
   ): Set<TileRef> {
     return this._map.circleSearch(tile, radius, filter);
   }
+  bfsSearch(
+    tile: TileRef,
+    filter: (gm: GameMap, tile: TileRef) => boolean,
+    onVisit?: (tile: TileRef) => boolean | void,
+  ): boolean {
+    return this._map.bfsSearch(tile, filter, onVisit);
+  }
   bfs(
     tile: TileRef,
     filter: (gm: GameMap, tile: TileRef) => boolean,
-  ): Set<TileRef> {
+  ): ReadonlyTileSet {
     return this._map.bfs(tile, filter);
   }
   tileState(tile: TileRef): number {
@@ -1077,6 +1131,12 @@ export class GameView implements GameLike {
   }
   gameID(): GameID {
     return this._gameID;
+  }
+
+  // Started from a saved game rather than from the beginning. Such a game is
+  // never archived, so it earns no XP or achievements.
+  resumedFromSave(): boolean {
+    return this._resumedFromSave;
   }
 
   private _markedPlayers: ReadonlySet<number> | null = null;

@@ -33,6 +33,15 @@ export class SettingSlider extends LitElement {
     );
   }
 
+  /**
+   * This component renders into light DOM, so the inner <input>'s native
+   * `change` (fired on release) would bubble to the parent's `@change`
+   * listener alongside the CustomEvent from `handleInput`, with no `detail`.
+   */
+  private stopNativeChange(e: Event) {
+    e.stopPropagation();
+  }
+
   private updateSliderStyle(slider: HTMLInputElement) {
     const percent = ((this.value - this.min) / (this.max - this.min)) * 100;
     const clamped = Math.max(0, Math.min(100, percent));
@@ -85,9 +94,11 @@ export class SettingSlider extends LitElement {
           <div class="flex items-center gap-2 w-full">
             <span
               class="text-white font-bold text-sm shrink-0 text-right min-w-[3ch]"
-              >${this.formatValue
-                ? this.formatValue(this.value)
-                : `${this.value}${this.unit}`}</span
+              >${
+                this.formatValue
+                  ? this.formatValue(this.value)
+                  : `${this.value}${this.unit}`
+              }</span
             >
             <input
               type="range"
@@ -102,6 +113,7 @@ export class SettingSlider extends LitElement {
               step=${this.step}
               .value=${String(this.value)}
               @input=${this.handleInput}
+              @change=${this.stopNativeChange}
             />
           </div>
         </div>

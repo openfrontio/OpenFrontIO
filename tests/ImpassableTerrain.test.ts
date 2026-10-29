@@ -12,13 +12,9 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig } from "@openfront/engine-api/Schemas";
 import { genTerrainFromBin } from "@openfront/engine-lib/game/TerrainMapLoader";
-import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
-import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
-import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
 import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
-import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { createGame } from "@openfront/engine/game/GameImpl";
 import { PathFinding } from "@openfront/engine/pathfinding/PathFinder";
@@ -401,86 +397,25 @@ describe("Impassable Terrain", () => {
     expect(out[2]).toBe(138);
   });
 
-  // ── Nation AI: attack behavior near impassable terrain ───────────────
+  // ── Nation AI: nearby() next to impassable terrain ───────────────────
 
-  describe("Nation AI attack behavior near impassable terrain", () => {
-    let nation: Player;
-    let enemy: Player;
-
-    beforeEach(() => {
-      // Create a nation player that owns tiles adjacent to the impassable
-      // wall AND directly adjacent to the enemy (no TerraNullius gap).
-      nation = game.player("player_id");
-      enemy = game.player("other_id");
-
-      // Nation owns the two columns right next to the wall (full height to
-      // avoid any unowned passable tiles at the top/bottom borders).
+  describe("nearby() next to impassable terrain", () => {
+    test("does not report impassable tiles as TerraNullius", () => {
+      // The nation holds the two columns next to the wall, the enemy the five
+      // west of it (full height, so no unowned passable tile borders the nation).
+      const nation = game.player("player_id");
+      const enemy = game.player("other_id");
       for (let y = 0; y < MAP_H; y++) {
         nation.conquer(game.ref(WALL_X - 1, y));
         nation.conquer(game.ref(WALL_X - 2, y));
-      }
-      // Enemy owns the five columns to the left of the nation (full height).
-      for (let y = 0; y < MAP_H; y++) {
         for (let x = WALL_X - 7; x <= WALL_X - 3; x++) {
           enemy.conquer(game.ref(x, y));
         }
       }
-      // Give both players plenty of troops — nation is stronger so the
-      // "weakest" strategy will actually attack.
-      nation.addTroops(200000);
-      enemy.addTroops(50000);
-    });
 
-    test("hasNonNukedTerraNullius does not falsely detect impassable tiles as TerraNullius", () => {
-      // The nation borders impassable terrain (the wall at WALL_X).
-      // With the fix, nearby() should NOT include TerraNullius from
-      // impassable tiles, and the nation should be able to attack the enemy.
-      //
-      // Verify the core behavior: nearby() returns the enemy but NOT
-      // TerraNullius (impassable tiles are excluded).
       const nearby = nation.nearby();
-      const hasTerraNullius = nearby.some((n) => !n.isPlayer());
-      const hasEnemy = nearby.some((n) => n === enemy);
-      expect(hasTerraNullius).toBe(false);
-      expect(hasEnemy).toBe(true);
-
-      // Also verify that sendAttack on the enemy works (it creates an
-      // AttackExecution targeting the enemy, not TerraNullius).
-      const emojiBehavior = new NationEmojiBehavior(
-        new PseudoRandom(42),
-        game,
-        nation,
-      );
-      const allianceBehavior = new NationAllianceBehavior(
-        new PseudoRandom(42),
-        game,
-        nation,
-        emojiBehavior,
-      );
-      const attackBehavior = new AiAttackBehavior(
-        new PseudoRandom(42),
-        game,
-        nation,
-        0.0, // triggerRatio — always ready to attack
-        0.0, // reserveRatio — no reserve needed
-        0.0, // expandRatio
-        allianceBehavior,
-        emojiBehavior,
-      );
-
-      // Directly send an attack on the enemy — this should succeed.
-      const sent = attackBehavior.sendAttack(enemy, true);
-      expect(sent).toBe(true);
-
-      // Tick the game so the AttackExecution's init() runs and creates
-      // the actual Attack object on the player.
-      executeTicks(game, 1);
-
-      // The nation should have an outgoing attack targeting the enemy.
-      const attacksOnEnemy = nation
-        .outgoingAttacks()
-        .filter((a) => a.target() === enemy);
-      expect(attacksOnEnemy.length).toBeGreaterThan(0);
+      expect(nearby.some((n) => !n.isPlayer())).toBe(false);
+      expect(nearby).toContain(enemy);
     });
   });
 

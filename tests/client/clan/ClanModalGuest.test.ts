@@ -90,19 +90,13 @@ describe("ClanModal — signed out", () => {
     expect(modal.isOpen()).toBe(true);
     expect(getElState(modal, "activeTab")).toBe("map");
     expect(modal.querySelector("clan-map-view")).not.toBeNull();
-  });
-
-  it("shows Coming Soon instead of the map in prod", async () => {
-    stubGameEnv("prod");
-    modal.open({ tab: "map" });
-    await flushAsync(modal);
-
-    expect(getElState(modal, "activeTab")).toBe("map");
-    // The map hasn't shipped to prod: the iframe never mounts, and neither
-    // does the fullscreen button that targets it.
-    expect(modal.querySelector("clan-map-view")).toBeNull();
-    expect(modal.textContent).toContain("clan_modal.map_coming_soon");
-    expect(modal.querySelector('[data-testid="map-fullscreen"]')).toBeNull();
+    // The map is still in alpha, and its tab says so.
+    const shell = modal.querySelector("o-modal") as unknown as {
+      tabs: { key: string; label: string }[];
+    };
+    expect(shell.tabs.find((t) => t.key === "map")?.label).toBe(
+      "clan_modal.tab_map_alpha",
+    );
   });
 
   it("lets a signed-out viewer browse clans", async () => {
@@ -127,44 +121,5 @@ describe("ClanModal — signed out", () => {
 
     expect(joinClan).not.toHaveBeenCalled();
     expect(showPage).toHaveBeenCalledWith("page-account");
-  });
-});
-
-describe("ClanModal — map fullscreen button", () => {
-  let modal: ClanModal;
-
-  beforeEach(async () => {
-    if (!customElements.get("clan-modal")) {
-      customElements.define("clan-modal", ClanModal);
-    }
-    stubGameEnv("dev");
-    modal = document.createElement("clan-modal") as ClanModal;
-    modal.setAttribute("inline", "");
-    document.body.appendChild(modal);
-    await modal.updateComplete;
-  });
-
-  afterEach(() => {
-    modal.remove();
-    vi.clearAllMocks();
-  });
-
-  const fullscreenButton = () =>
-    modal.querySelector<HTMLButtonElement>('[data-testid="map-fullscreen"]');
-
-  it("shows only on the Map tab and fullscreens the map frame", async () => {
-    modal.open();
-    await flushAsync(modal);
-    expect(fullscreenButton()).toBeNull();
-
-    modal.setActiveTab("map");
-    await flushAsync(modal);
-    const mapView = await waitForSubComponent(modal, "clan-map-view");
-    const request = vi.fn(() => Promise.resolve());
-    mapView.querySelector("iframe")!.requestFullscreen = request as never;
-
-    fullscreenButton()!.click();
-
-    expect(request).toHaveBeenCalledTimes(1);
   });
 });

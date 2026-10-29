@@ -46,8 +46,6 @@ import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
 import { UserSettings } from "./UserSettings";
 import { translateText } from "./Utils";
 
-export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
-
 /**
  * Ceiling on the cosmetics catalog request. Matches the bound the auth calls
  * already use (Auth.ts, Api.ts) rather than something tighter: when the
@@ -70,19 +68,6 @@ let __cosmeticsCache: Cosmetics | null = null;
  */
 export function getCachedCosmetics(): Cosmetics | null {
   return __cosmeticsCache;
-}
-
-/**
- * Resolve the local player's selected skin from UserSettings + cached
- * cosmetics. Returns null if no skin is selected, cosmetics aren't loaded,
- * or the saved skin no longer exists.
- */
-export function getLocalSelectedSkin(): { name: string; url: string } | null {
-  const skinName = new UserSettings().getSelectedSkinName();
-  if (!skinName) return null;
-  const skin = __cosmeticsCache?.skins?.[skinName];
-  if (!skin) return null;
-  return { name: skin.name, url: skin.url };
 }
 
 export type PaymentMethod = "dollar" | "hard" | "soft";
@@ -872,7 +857,7 @@ export function tierListingRail(): TierListingRail {
   return paymentsProvider() === "steam" ? "steam" : "web";
 }
 
-export function cosmeticsJsonUrl(): string {
+function cosmeticsJsonUrl(): string {
   return `${getApiBase()}/cosmetics.json?rail=${tierListingRail()}`;
 }
 
@@ -942,9 +927,7 @@ export function prewarmCosmetics(): Promise<void> {
   );
 }
 
-export async function resolveFlagUrl(
-  flagRef: string,
-): Promise<string | undefined> {
+async function resolveFlagUrl(flagRef: string): Promise<string | undefined> {
   if (flagRef.startsWith("flag:")) {
     const key = flagRef.slice("flag:".length);
     const cosmetics = await fetchCosmetics();
@@ -997,7 +980,7 @@ export function cosmeticRelationship(
   return "blocked";
 }
 
-export function patternRelationship(
+function patternRelationship(
   pattern: Pattern,
   colorPalette: { name: string; isArchived?: boolean } | null,
   userMeResponse: UserMeResponse | false,
@@ -1042,7 +1025,7 @@ export function patternRelationship(
   );
 }
 
-export function flagRelationship(
+function flagRelationship(
   flag: Flag,
   userMeResponse: UserMeResponse | false,
   affiliateCode: string | null,
@@ -1078,7 +1061,7 @@ export function crownRelationship(
   );
 }
 
-export function skinRelationship(
+function skinRelationship(
   skin: Skin,
   userMeResponse: UserMeResponse | false,
   affiliateCode: string | null,
@@ -1096,7 +1079,7 @@ export function skinRelationship(
   );
 }
 
-export function effectRelationship(
+function effectRelationship(
   effect: Effect,
   userMeResponse: UserMeResponse | false,
   affiliateCode: string | null,
@@ -1156,7 +1139,7 @@ export function ownedPackItems(
   );
 }
 
-export function cosmeticPackRelationship(
+function cosmeticPackRelationship(
   pack: CosmeticPack,
   userMeResponse: UserMeResponse | false,
   affiliateCode: string | null,

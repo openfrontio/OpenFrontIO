@@ -33,13 +33,13 @@ import type {
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
 import { NationAllianceBehavior } from "./nation/NationAllianceBehavior";
+import { NationAttackBehavior } from "./nation/NationAttackBehavior";
 import { NationEmojiBehavior } from "./nation/NationEmojiBehavior";
 import { NationMIRVBehavior } from "./nation/NationMIRVBehavior";
 import { NationNukeBehavior } from "./nation/NationNukeBehavior";
 import { NationStructureBehavior } from "./nation/NationStructureBehavior";
 import { NationWarshipBehavior } from "./nation/NationWarshipBehavior";
 import { SpawnExecution } from "./SpawnExecution";
-import { AiAttackBehavior } from "./utils/AiAttackBehavior";
 
 export class NationExecution implements Execution {
   private active = true;
@@ -48,7 +48,7 @@ export class NationExecution implements Execution {
   private spawnExecAdded = false;
   private emojiBehavior!: NationEmojiBehavior;
   private mirvBehavior!: NationMIRVBehavior;
-  private attackBehavior!: AiAttackBehavior;
+  private attackBehavior!: NationAttackBehavior;
   private allianceBehavior!: NationAllianceBehavior;
   private warshipBehavior!: NationWarshipBehavior;
   private nukeBehavior!: NationNukeBehavior;
@@ -111,6 +111,7 @@ export class NationExecution implements Execution {
       this.player !== null &&
       this.player.isAlive() &&
       this.mg.config().gameConfig().difficulty !== Difficulty.Easy &&
+      !this.mg.config().gameConfig().tutorial &&
       this.player.unitsConstructed(UnitType.Port) &&
       !this.mg.config().isUnitDisabled(UnitType.Warship)
     ) {
@@ -195,6 +196,15 @@ export class NationExecution implements Execution {
       return;
     }
 
+    // The tutorial's nation only fills its own island: no attacks, boats,
+    // alliances, structures or nukes.
+    if (this.mg.config().gameConfig().tutorial) {
+      if (ticks % this.attackRate === this.attackTick) {
+        this.attackBehavior.expandIntoFreeLand();
+      }
+      return;
+    }
+
     this.attackBehavior.followUpLandings();
     this.nukeBehavior.followUpStrikes();
 
@@ -255,7 +265,7 @@ export class NationExecution implements Execution {
       this.player,
       this.emojiBehavior,
     );
-    this.attackBehavior = new AiAttackBehavior(
+    this.attackBehavior = new NationAttackBehavior(
       this.random,
       this.mg,
       this.player,
@@ -458,7 +468,7 @@ export class NationExecution implements Execution {
     const mirv = shell(NationMIRVBehavior);
     const alliance = shell(NationAllianceBehavior);
     const warship = shell(NationWarshipBehavior);
-    const attack = shell(AiAttackBehavior);
+    const attack = shell(NationAttackBehavior);
     const nuke = shell(NationNukeBehavior);
     const structure = shell(NationStructureBehavior);
     emoji.restoreSnapshot(b.emoji, r, random, player);
