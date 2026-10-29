@@ -461,7 +461,6 @@
     "leave_clan": "Clan verlassen",
     "left_clan": "Du hast den Clan verlassen.",
     "manage_clan": "Bearbeiten",
-    "map_coming_soon": "Bald Verfügbar",
     "map_frame_title": "Clan-Territoriums Karte",
     "member_banned": "Spieler gebannt.",
     "member_count": "{count, plural, one {# Mitglied} other {# Mitglieder}}",
@@ -535,12 +534,13 @@
     "status": "Status",
     "tab_donations": "Spenden",
     "tab_game_history": "Spielverlauf",
-    "tab_map": "Karte",
     "tab_overview": "Übersicht",
     "title": "Clans",
     "transfer_leadership": "Leitung übertragen",
     "transfer_warning": "Dadurch wird das ausgewählte Mitglied zum neuen Anführer. Du wirst ein reguläres Mitglied. Diese Aktion kann nicht rückgängig gemacht werden.",
-    "unban": "Entbannen"
+    "unban": "Entbannen",
+    "map_coming_soon": "Bald Verfügbar",
+    "tab_map": "Karte"
   },
   "close_reason": {
     "account_lookup_failed": "Dein Konto konnte nicht aufgerufen werden. Bitte versuche es erneut.",
