@@ -114,6 +114,16 @@ export abstract class AiAttackBehavior {
     return true;
   }
 
+  /**
+   * Grows into free land we border, never by boat and never into a player.
+   * All the tutorial's nation and tribe do, so they fill their own corner
+   * and leave the new player alone.
+   */
+  expandIntoFreeLand(): boolean {
+    if (!this.hasLandBorderWithTerraNullius()) return false;
+    return this.sendLandAttack(this.game.terraNullius());
+  }
+
   findIncomingAttackPlayer(): Player | null {
     const incomingAttacks = this.player
       .incomingAttacks()
