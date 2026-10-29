@@ -54,26 +54,29 @@ const BUTTON_ZOOM = 1.6;
 // Pointer travel, in pixels, after which a press pans instead of clicking.
 const DRAG_THRESHOLD = 5;
 
-let landPath: Promise<string> | null = null;
+interface EarthPaths {
+  sphere: string;
+  land: string;
+}
 
-function loadLandPath(): Promise<string> {
-  landPath ??= fetch(assetUrl("images/EarthMap.svg"))
+let earthPaths: Promise<EarthPaths> | null = null;
+
+function loadEarthPaths(): Promise<EarthPaths> {
+  earthPaths ??= fetch(assetUrl("images/EarthMap.svg"))
     .then((response) => {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response.text();
     })
-    .then(
-      (svg) =>
-        new DOMParser()
-          .parseFromString(svg, "image/svg+xml")
-          .querySelector("path")
-          ?.getAttribute("d") ?? "",
-    )
+    .then((svg) => {
+      const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+      const d = (id: string) => doc.getElementById(id)?.getAttribute("d") ?? "";
+      return { sphere: d("sphere"), land: d("land") };
+    })
     .catch((error: unknown) => {
-      landPath = null;
+      earthPaths = null;
       throw error;
     });
-  return landPath;
+  return earthPaths;
 }
 
 @customElement("earth-map")
@@ -81,7 +84,7 @@ export class EarthMap extends LitElement {
   @property({ type: String }) selectedMap: GameMapType = GameMapType.World;
   @property({ type: Boolean }) useRandomMap = false;
   @property({ attribute: false }) onSelectMap?: (map: GameMapType) => void;
-  @state() private landPath = "";
+  @state() private paths: EarthPaths = { sphere: "", land: "" };
   @state() private view = { x: 0, y: 0, width: EARTH_MAP_WIDTH };
   @state() private hovered: EarthPin | null = null;
   @state() private stats = new Map<GameMapType, MapStats>();
@@ -95,8 +98,8 @@ export class EarthMap extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    loadLandPath()
-      .then((path) => (this.landPath = path))
+    loadEarthPaths()
+      .then((paths) => (this.paths = paths))
       .catch((error: unknown) =>
         console.warn("Failed to load the Earth map:", error),
       );
@@ -411,14 +414,20 @@ export class EarthMap extends LitElement {
     >
       <svg
         class="absolute inset-0 h-full w-full ${
-          this.landPath ? "" : "animate-pulse"
+          this.paths.land ? "" : "animate-pulse"
         }"
         viewBox="${x} ${y} ${width} ${width * ASPECT}"
         preserveAspectRatio="none"
         aria-hidden="true"
       >
         <path
-          d=${this.landPath}
+          d=${this.paths.sphere}
+          vector-effect="non-scaling-stroke"
+          stroke-width="0.75"
+          class="fill-slate-900/80 stroke-slate-500/30"
+        ></path>
+        <path
+          d=${this.paths.land}
           fill-rule="evenodd"
           vector-effect="non-scaling-stroke"
           stroke-width="0.75"

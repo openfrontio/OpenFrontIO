@@ -47,7 +47,10 @@ describe("<earth-map>", () => {
   beforeEach(async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => new Response('<svg><path d="M0 0l10 0 0 10z"/></svg>')),
+      vi.fn(
+        async () =>
+          new Response('<svg><path id="land" d="M0 0l10 0 0 10z"/></svg>'),
+      ),
     );
     selected = [];
     earth = document.createElement("earth-map") as EarthMap;

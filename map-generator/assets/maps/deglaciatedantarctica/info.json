@@ -4,7 +4,7 @@
   "name": "Deglaciated Antarctica",
   "translation_key": "map.deglaciatedantarctica",
   "categories": ["antarctica", "fictional"],
-  "location": { "lat": -78, "lon": 60 },
+  "location": { "lat": -74, "lon": 60 },
   "author": "Duwibi",
   "nations": [
     {

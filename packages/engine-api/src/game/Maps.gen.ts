@@ -310,7 +310,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 30,
     themes: ["antarctica"],
     author: "Tristar",
-    location: { lat: -80, lon: 0 },
+    location: { lat: -76, lon: 0 },
   },
   {
     id: "ArchipelagoSea",
@@ -784,7 +784,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 9,
     themes: ["antarctica"],
     author: "Duwibi",
-    location: { lat: -78, lon: 60 },
+    location: { lat: -74, lon: 60 },
   },
   {
     id: "Didier",

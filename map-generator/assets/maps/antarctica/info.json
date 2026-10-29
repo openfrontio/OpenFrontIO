@@ -4,7 +4,7 @@
   "name": "Antarctica",
   "translation_key": "map.antarctica",
   "categories": ["antarctica", "continental"],
-  "location": { "lat": -80, "lon": 0 },
+  "location": { "lat": -76, "lon": 0 },
   "author": "Tristar",
   "nations": [
     {
