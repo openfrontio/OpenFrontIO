@@ -1,3 +1,4 @@
+import { GameMapType } from "@openfront/engine-api/game/GameTypes";
 import type { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { render } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -19,6 +20,7 @@ import {
   SinglePlayerModal,
   START_PREPARE_DEADLINE_MS,
 } from "../../src/client/SinglePlayerModal";
+import { UserSettings } from "../../src/client/UserSettings";
 
 type Internals = {
   startGame(): Promise<void>;
@@ -391,5 +393,25 @@ describe("SinglePlayerModal start feedback", () => {
 
     expect(cosmeticsMocks.prewarmCosmetics).toHaveBeenCalled();
     expect(joins).toHaveLength(1);
+  });
+
+  it("starts the tutorial on the Tutorial map with the tutorial flag", async () => {
+    await modal.startTutorial();
+
+    const config = joins[0].detail.gameStartInfo.config;
+    expect(config.gameMap).toBe(GameMapType.Tutorial);
+    expect(config.tutorial).toBe(true);
+    expect(config.bots).toBe(1);
+    expect(config.nations).toBe("default");
+  });
+
+  it("starts a default solo game with the guide back on", async () => {
+    new UserSettings().setTutorialDismissed(true);
+    await modal.startSoloWithGuide();
+
+    expect(cosmeticsMocks.prewarmCosmetics).toHaveBeenCalled();
+    expect(joins).toHaveLength(1);
+    expect(joins[0].detail.gameStartInfo.config.tutorial).toBeUndefined();
+    expect(new UserSettings().tutorialDismissed()).toBe(false);
   });
 });

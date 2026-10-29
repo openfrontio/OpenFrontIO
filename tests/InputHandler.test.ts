@@ -94,7 +94,8 @@ describe("InputHandler AutoUpgrade", () => {
     mockGameView = {
       inSpawnPhase: () => false,
       myPlayer: () => ({ isAlive: () => true }),
-    } as GameView;
+      config: () => ({ gameConfig: () => ({}) }),
+    } as unknown as GameView;
     mockCanvas = document.createElement("canvas");
     mockCanvas.width = 800;
     mockCanvas.height = 600;

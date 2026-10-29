@@ -56,6 +56,7 @@ function makeGame(opts: {
     clientID: () => string | null;
     displayName: () => string;
   };
+  tutorial?: boolean;
 }): GameView {
   const winUpdate = { winner: opts.winner, allPlayersStats: {} };
   return {
@@ -69,7 +70,9 @@ function makeGame(opts: {
     ticks: () => 6000,
     updatesSinceLastTick: () => ({ [GameUpdateType.Win]: [winUpdate] }),
     playerByClientID: () => opts.winnerPlayer,
-    config: () => ({ gameConfig: () => ({ rankedType: undefined }) }),
+    config: () => ({
+      gameConfig: () => ({ rankedType: undefined, tutorial: opts.tutorial }),
+    }),
   } as unknown as GameView;
 }
 
@@ -218,6 +221,16 @@ describe("WinModal tick win handling", () => {
 
     actions[1].click();
     await modal!.updateComplete;
+    expect(modal!.isVisible).toBe(false);
+  });
+
+  // The onboarding tutorial ends on its own card (OnboardingOverlay).
+  it("stays hidden in the onboarding tutorial", async () => {
+    setup(
+      makeGame({ winner: ["team", "Blue"], myTeam: "Blue", tutorial: true }),
+    );
+    await modal!.show();
+
     expect(modal!.isVisible).toBe(false);
   });
 
