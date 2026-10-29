@@ -170,6 +170,21 @@ export class ShowChatMenuEvent implements GameEvent {
   ) {}
 }
 
+/** The donate keybinds: donate to the player at screen position (x, y). */
+export class DoDonateTroopsEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
+export class DoDonateGoldEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
 /** Emitted by the emoji table whenever it opens or closes. */
 export class EmojiTableVisibleEvent implements GameEvent {
   constructor(public readonly visible: boolean) {}
@@ -459,6 +474,16 @@ export class InputHandler {
     });
     this.addKeybindAndEvent(this.keybinds.targetPlayer, () => {
       this.eventBus.emit(new DoTargetPlayerEvent());
+    });
+    this.addKeybindAndEvent(this.keybinds.donateTroops, () => {
+      this.eventBus.emit(
+        new DoDonateTroopsEvent(this.lastMouseX, this.lastMouseY),
+      );
+    });
+    this.addKeybindAndEvent(this.keybinds.donateGold, () => {
+      this.eventBus.emit(
+        new DoDonateGoldEvent(this.lastMouseX, this.lastMouseY),
+      );
     });
     // Shares R with reset graphics, which needs its modifier held, so quick
     // chat only takes the key on its own.

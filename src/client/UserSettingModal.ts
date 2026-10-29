@@ -1652,6 +1652,26 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
+        action="donateTroops"
+        label=${translateText("user_setting.donate_troops")}
+        description=${translateText("user_setting.donate_troops_desc")}
+        defaultKey=${this.defaultKeybinds.donateTroops}
+        .value=${this.getKeyValue("donateTroops")}
+        .display=${this.getKeyChar("donateTroops")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="donateGold"
+        label=${translateText("user_setting.donate_gold")}
+        description=${translateText("user_setting.donate_gold_desc")}
+        defaultKey=${this.defaultKeybinds.donateGold}
+        .value=${this.getKeyValue("donateGold")}
+        .display=${this.getKeyChar("donateGold")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
         action="emojiMenu"
         label=${translateText("user_setting.emoji_menu")}
         description=${translateText("user_setting.emoji_menu_desc")}
