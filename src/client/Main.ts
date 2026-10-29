@@ -59,7 +59,11 @@ import {
   type DesktopUpdateState,
 } from "./DesktopShell";
 import "./FeaturedStream";
-import { loadGameClient, prefetchGameClient } from "./GameClientLoader";
+import {
+  claimGameClientReload,
+  loadGameClient,
+  prefetchGameClient,
+} from "./GameClientLoader";
 import "./GameModeSelector";
 import {
   GameModeSelector,
@@ -1870,7 +1874,26 @@ class Client {
       if (this.mostRecentJoinEvent !== event.timeStamp) return;
       // The URL names the singleplayer game now, which no server has.
       if (isSingleplayer) history.replaceState(null, "", "/");
-      reloadForUpdate();
+      if (claimGameClientReload()) {
+        reloadForUpdate();
+        return;
+      }
+      this.loadedJoinModal()?.close();
+      this.loadedHostModal()?.close();
+      if (
+        lobby.source === "matchmaking" &&
+        this.loadedMatchmakingModal()?.isOpen()
+      ) {
+        this.matchmakingModal.close();
+      }
+      const startingModal = document.querySelector("game-starting-modal");
+      if (startingModal instanceof GameStartingModal) {
+        startingModal.hide();
+      }
+      // handleLeaveLobby only resets the URL once a lobby handle exists.
+      history.replaceState(null, "", "/");
+      void this.handleLeaveLobby();
+      void showInGameAlert(translateText("error_modal.game_client_failed"));
       return;
     }
     const newLobbyHandle = joinLobby(this.eventBus, {
