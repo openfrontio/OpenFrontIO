@@ -162,10 +162,11 @@ export function assignTeams(
     (p) => p.playerType !== PlayerType.Nation,
   );
 
-  // Seat each friend group back to back, largest first, so strangers who
-  // joined between two friends can't fill the first friend's team before
-  // the second is placed.
-  for (const group of friendGroups(otherPlayers, friendGraph)) {
+  // Seat each friend group back to back, so strangers who joined between two
+  // friends can't fill the first friend's team before the second is placed.
+  // Groups with a friend already seated (a clan member or a pinned player) go
+  // first, before other groups can fill that friend's team.
+  for (const group of friendGroups(otherPlayers, friendGraph, teamByClientID)) {
     group.forEach((p, i) => placePlayer(p, group.length - i));
   }
   for (const p of nationPlayers) {
@@ -176,19 +177,33 @@ export function assignTeams(
 }
 
 // Splits players into groups connected by friend edges, each group in the
-// order it was reached, largest groups first (ties keep join order). Players
-// with no friends among `players` are groups of one.
+// order it was reached. Groups with a friend already seated come first,
+// grown from the member who has that friend so they are placed beside them;
+// then largest groups first (ties keep join order). Players with no friends
+// among `players` are groups of one.
 function friendGroups(
   players: PlayerInfo[],
   friendGraph: Map<ClientID, Set<ClientID>>,
+  seated: ReadonlyMap<ClientID, Team>,
 ): PlayerInfo[][] {
   const byClientID = new Map<ClientID, PlayerInfo>();
   for (const p of players) {
     if (p.clientID !== null) byClientID.set(p.clientID, p);
   }
+  const hasSeatedFriend = (p: PlayerInfo): boolean => {
+    if (p.clientID === null) return false;
+    for (const friendID of friendGraph.get(p.clientID) ?? []) {
+      if (seated.has(friendID)) return true;
+    }
+    return false;
+  };
+  // Starting from anchored players first means any group containing one is
+  // reached from it, so its first member's flag marks the whole group.
+  const anchored = players.filter(hasSeatedFriend);
+  const starts = anchored.concat(players.filter((p) => !hasSeatedFriend(p)));
   const grouped = new Set<PlayerInfo>();
   const groups: PlayerInfo[][] = [];
-  for (const start of players) {
+  for (const start of starts) {
     if (grouped.has(start)) continue;
     grouped.add(start);
     const group = [start];
@@ -204,7 +219,9 @@ function friendGroups(
     }
     groups.push(group);
   }
-  return groups.sort((a, b) => b.length - a.length);
+  const anchoredStarts = new Set(anchored);
+  const rank = (g: PlayerInfo[]) => (anchoredStarts.has(g[0]) ? 1 : 0);
+  return groups.sort((a, b) => rank(b) - rank(a) || b.length - a.length);
 }
 
 export function assignTeamsLobbyPreview(

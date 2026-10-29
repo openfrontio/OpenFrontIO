@@ -361,6 +361,25 @@ describe("assignTeams", () => {
     expect(result.get(players[0])).not.toEqual(result.get(players[1]));
   });
 
+  it("should seat a clan member's friend before an unrelated friend group", () => {
+    // Clan member c already holds Red. If the a/b pair were seated first it
+    // would take Red (the fuller team) and leave no seat for c's friend f,
+    // though everyone fits: Red c, f, s1 / Blue a, b, s2.
+    const players = [
+      createPlayerWithFriends("c", [], "CLANA"),
+      createPlayerWithFriends("f", ["c"]),
+      createPlayerWithFriends("a", ["b"]),
+      createPlayerWithFriends("b", ["a"]),
+      createPlayerWithFriends("s1", []),
+      createPlayerWithFriends("s2", []),
+    ];
+
+    const result = assignTeams(players, teams, true, 3);
+
+    expect(result.get(players[1])).toEqual(result.get(players[0]));
+    expect(result.get(players[3])).toEqual(result.get(players[2]));
+  });
+
   // Matchmade games: the server pins each player to a team slot via
   // PlayerInfo.teamIndex and the matcher's split must be honored verbatim.
   const createPinnedPlayer = (
