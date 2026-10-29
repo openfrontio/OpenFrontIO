@@ -345,7 +345,7 @@ export class LocalServer {
       return;
     }
 
-    this.archiveGame(result.data, unloading);
+    void this.archiveGame(result.data, unloading);
   }
 
   private async archiveGame(
@@ -403,8 +403,8 @@ async function compress(data: string): Promise<ArrayBuffer> {
   const reader = stream.readable.getReader();
 
   // Write the data to the compression stream
-  writer.write(new TextEncoder().encode(data));
-  writer.close();
+  void writer.write(new TextEncoder().encode(data));
+  void writer.close();
 
   // Read the compressed data
   const chunks: Uint8Array[] = [];

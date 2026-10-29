@@ -29,7 +29,7 @@ const WIDGET_MIN_WIDTH = 501;
  *
  * See https://partner.steamgames.com/doc/marketing/utm_analytics
  */
-export function steamWidgetUrl(campaign: string): string {
+function steamWidgetUrl(campaign: string): string {
   return steamUrl(`widget/${STEAM_APP_ID}/`, "widget", campaign);
 }
 
@@ -71,7 +71,8 @@ export class SteamWishlist extends LitElement {
 
   @state() private containerWidth = WIDGET_WIDTH;
 
-  @query(".steam-wishlist-frame") private frame?: HTMLElement;
+  // null, not undefined, while nothing is rendered (Lit's @query).
+  @query(".steam-wishlist-frame") private frame!: HTMLElement | null;
 
   private resizeObserver?: ResizeObserver;
 
@@ -86,7 +87,7 @@ export class SteamWishlist extends LitElement {
   }
 
   protected updated() {
-    if (this.frame === undefined) {
+    if (this.frame === null) {
       // Hidden on Steam and Poki — nothing rendered to measure.
       this.resizeObserver?.disconnect();
       this.resizeObserver = undefined;

@@ -7,13 +7,14 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { renderNumber } from "@openfront/engine-lib/Format";
 import { EventBus } from "@openfront/shared/EventBus";
-import { html, LitElement } from "lit";
+import { html, LitElement, nothing } from "lit";
 import { customElement } from "lit/decorators.js";
 import { Controller } from "../../Controller";
-import { ToggleStructureEvent } from "../../InputHandler";
+import { InputHandler, ToggleStructureEvent } from "../../InputHandler";
+import { KeyboardLayoutController } from "../../KeyboardLayout";
 import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
-import { translateText } from "../../Utils";
+import { resolveKeybindLabel, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {
   atomBombIcon,
@@ -35,8 +36,10 @@ export class UnitDisplay extends LitElement implements Controller {
   public game: GameView;
   public eventBus: EventBus;
   public uiState: UIState;
+  public inputHandler: InputHandler;
   private playerBuildables: BuildableUnit[] | null = null;
   private keybinds: Record<string, { value: string; key: string }> = {};
+  private keyboardLayout = new KeyboardLayoutController(this);
   private _cities = 0;
   private _warships = 0;
   private _factories = 0;
@@ -114,9 +117,12 @@ export class UnitDisplay extends LitElement implements Controller {
   tick() {
     const player = this.game?.myPlayer();
     if (!player) return;
-    player.buildables(undefined, BuildMenus.types).then((buildables) => {
-      this.playerBuildables = buildables;
-    });
+    player
+      .buildables(undefined, BuildMenus.types)
+      .then((buildables) => {
+        this.playerBuildables = buildables;
+      })
+      .catch((error) => console.warn("Failed to refresh unit costs", error));
     this._cities = player.totalUnitLevels(UnitType.City);
     this._missileSilo = player.totalUnitLevels(UnitType.MissileSilo);
     this._port = player.totalUnitLevels(UnitType.Port);
@@ -149,74 +155,82 @@ export class UnitDisplay extends LitElement implements Controller {
             this._cities,
             UnitType.City,
             "city",
-            this.keybinds["buildCity"]?.key ?? "1",
+            this.getHotkey("buildCity", "Digit1"),
           )}
           ${this.renderUnitItem(
             factoryIcon,
             this._factories,
             UnitType.Factory,
             "factory",
-            this.keybinds["buildFactory"]?.key ?? "2",
+            this.getHotkey("buildFactory", "Digit2"),
           )}
           ${this.renderUnitItem(
             portIcon,
             this._port,
             UnitType.Port,
             "port",
-            this.keybinds["buildPort"]?.key ?? "3",
+            this.getHotkey("buildPort", "Digit3"),
           )}
           ${this.renderUnitItem(
             defensePostIcon,
             this._defensePost,
             UnitType.DefensePost,
             "defense_post",
-            this.keybinds["buildDefensePost"]?.key ?? "4",
+            this.getHotkey("buildDefensePost", "Digit4"),
           )}
           ${this.renderUnitItem(
             missileSiloIcon,
             this._missileSilo,
             UnitType.MissileSilo,
             "missile_silo",
-            this.keybinds["buildMissileSilo"]?.key ?? "5",
+            this.getHotkey("buildMissileSilo", "Digit5"),
           )}
           ${this.renderUnitItem(
             samLauncherIcon,
             this._samLauncher,
             UnitType.SAMLauncher,
             "sam_launcher",
-            this.keybinds["buildSamLauncher"]?.key ?? "6",
+            this.getHotkey("buildSamLauncher", "Digit6"),
           )}
           ${this.renderUnitItem(
             warshipIcon,
             this._warships,
             UnitType.Warship,
             "warship",
-            this.keybinds["buildWarship"]?.key ?? "7",
+            this.getHotkey("buildWarship", "Digit7"),
           )}
           ${this.renderUnitItem(
             atomBombIcon,
             null,
             UnitType.AtomBomb,
             "atom_bomb",
-            this.keybinds["buildAtomBomb"]?.key ?? "8",
+            this.getHotkey("buildAtomBomb", "Digit8"),
           )}
           ${this.renderUnitItem(
             hydrogenBombIcon,
             null,
             UnitType.HydrogenBomb,
             "hydrogen_bomb",
-            this.keybinds["buildHydrogenBomb"]?.key ?? "9",
+            this.getHotkey("buildHydrogenBomb", "Digit9"),
           )}
           ${this.renderUnitItem(
             mirvIcon,
             null,
             UnitType.MIRV,
             "mirv",
-            this.keybinds["buildMIRV"]?.key ?? "0",
+            this.getHotkey("buildMIRV", "Digit0"),
           )}
         </div>
       </div>
     `;
+  }
+
+  private getHotkey(action: string, defaultCode: string): string {
+    return resolveKeybindLabel(
+      this.keybinds[action],
+      defaultCode,
+      this.keyboardLayout.map,
+    );
   }
 
   private renderUnitItem(
@@ -255,9 +269,9 @@ export class UnitDisplay extends LitElement implements Controller {
                   class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
                 >
                   <div class="font-bold text-sm mb-1">
-                    ${translateText(
-                      "unit_type." + structureKey,
-                    )}${` [${displayHotkey}]`}
+                    ${translateText("unit_type." + structureKey)}${
+                      hotkey ? ` [${displayHotkey}]` : ""
+                    }
                   </div>
                   <div class="p-2">
                     ${translateText("build_menu.desc." + structureKey)}
@@ -290,9 +304,9 @@ export class UnitDisplay extends LitElement implements Controller {
              ${this.tutorialHighlight === unitType ? "tutorial-highlight" : ""}"
           @click=${() => {
             if (selected) {
-              this.uiState.ghostStructure = null;
+              this.inputHandler.setGhostStructure(null);
             } else if (this.canBuild(unitType)) {
-              this.uiState.ghostStructure = unitType;
+              this.inputHandler.setGhostStructure(unitType, "GUIclick");
             }
             this.requestUpdate();
           }}
@@ -317,9 +331,15 @@ export class UnitDisplay extends LitElement implements Controller {
           @mouseleave=${() =>
             this.eventBus?.emit(new ToggleStructureEvent(null))}
         >
-          ${html`<div class="ml-0.5 text-[10px] relative -top-1 text-gray-400">
-            ${displayHotkey}
-          </div>`}
+          ${
+            hotkey
+              ? html`<div
+                  class="ml-0.5 text-[10px] relative -top-1 text-gray-400"
+                >
+                  ${displayHotkey}
+                </div>`
+              : nothing
+          }
           <div class="flex items-center gap-0.5 pt-0.5">
             <img src=${icon} alt=${structureKey} class="align-middle size-5" />
             ${

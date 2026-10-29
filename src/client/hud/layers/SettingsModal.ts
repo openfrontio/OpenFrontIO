@@ -144,9 +144,9 @@ export class SettingsModal extends LitElement implements Controller {
     // Portals: report gameplay as stopped whenever the settings menu is open,
     // and resumed when it closes — unless the game was already paused when opened.
     if (pause) {
-      gamePortal.gameplayStop();
+      void gamePortal.gameplayStop();
     } else if (!this.wasPausedWhenOpened) {
-      gamePortal.gameplayStart();
+      void gamePortal.gameplayStart();
     }
 
     // Only pause the simulation itself when we own the pause (singleplayer or
@@ -193,12 +193,14 @@ export class SettingsModal extends LitElement implements Controller {
 
   // Saves are kept on the player's account: singleplayer games only, and
   // only for a signed-in account, since a guest's saves would be lost with
-  // the browser's session.
+  // the browser's session. Not the onboarding tutorial: its overlay keeps
+  // state a save doesn't carry, so a resumed one could get stuck.
   private canSave(): boolean {
     const game = this.game;
     return (
       game !== null &&
       game.config().gameConfig().gameType === GameType.Singleplayer &&
+      game.config().gameConfig().tutorial !== true &&
       !game.config().isReplay() &&
       responseHasLinkedIdentity(lastUserMeResponse()?.response ?? false)
     );

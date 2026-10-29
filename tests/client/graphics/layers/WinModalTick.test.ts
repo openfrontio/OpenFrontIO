@@ -211,10 +211,12 @@ describe("WinModal tick win handling", () => {
     expect(actions.map((b) => b.getAttribute("data-win-action"))).toEqual([
       "exit",
       "keep",
+      "share",
     ]);
     // Leaving is the quiet button, staying the main one.
     expect(actions[0].classList.contains("win-action-quiet")).toBe(true);
     expect(actions[1].classList.contains("win-action-main")).toBe(true);
+    expect(actions[2].classList.contains("win-action-main")).toBe(true);
 
     actions[1].click();
     await modal!.updateComplete;

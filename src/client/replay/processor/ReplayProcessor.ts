@@ -127,7 +127,7 @@ export class ReplayDesyncError extends Error {
  * this goes into the replay header), then the server's wire blanking is
  * applied.
  */
-export function wireGameStartInfo(record: GameRecord): WireGameStartInfo {
+function wireGameStartInfo(record: GameRecord): WireGameStartInfo {
   return toWireGameStartInfo(WireGameStartInfoSchema.parse(record.info));
 }
 

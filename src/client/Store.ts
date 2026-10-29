@@ -111,9 +111,10 @@ export class StoreModal extends BaseModal {
   protected modalConfig() {
     if (this.affiliateCode) {
       // Affiliate mode: hide tabs, show only items associated with the code.
-      return {};
+      return { showScrollToTop: true };
     }
     return {
+      showScrollToTop: true,
       tabs: [
         { key: "packs", label: translateText("store.packs") },
         { key: "subscriptions", label: translateText("store.subscriptions") },
@@ -165,7 +166,7 @@ export class StoreModal extends BaseModal {
 
   private onUserMeEvent = (event: Event) => {
     const customEvent = event as CustomEvent<UserMeResponse | false>;
-    this.onUserMe(customEvent.detail);
+    void this.onUserMe(customEvent.detail);
   };
 
   private onOpenCosmeticPreview = (event: Event) => {
