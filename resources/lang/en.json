@@ -386,6 +386,7 @@
     "clan_disbanded": "Clan disbanded.",
     "clan_name": "Clan Name",
     "clan_settings": "Clan Settings",
+    "clan_shop": "Clan Shop",
     "confirm_ban": "Are you sure you want to ban this player? They will be removed from the clan and unable to rejoin.",
     "confirm_disband": "Are you sure you want to disband [{tag}] {name}? This cannot be undone.",
     "confirm_kick": "Are you sure you want to kick this member?",

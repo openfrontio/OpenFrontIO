@@ -4,6 +4,7 @@ import {
   apiMockFactory,
   authMockFactory,
   clanApiMockFactory,
+  cosmeticsMockFactory,
   crazyGamesSdkMockFactory,
   getElState,
   makeClan,
@@ -17,6 +18,7 @@ import {
 vi.mock("@lit-labs/virtualizer/virtualize.js", () => virtualizerMockFactory());
 vi.mock("../../../src/client/Api", () => apiMockFactory());
 vi.mock("../../../src/client/ClanApi", () => clanApiMockFactory());
+vi.mock("../../../src/client/Cosmetics", () => cosmeticsMockFactory());
 vi.mock("../../../src/client/Utils", () => utilsMockFactory());
 vi.mock("../../../src/client/Auth", () => authMockFactory());
 vi.mock("../../../src/client/CrazyGamesSDK", () => crazyGamesSdkMockFactory());
@@ -564,6 +566,63 @@ describe("ClanModal — rendering", () => {
       ).size;
 
       expect(cardSize).toBeLessThan(headerSize);
+    });
+  });
+
+  // ── 3c. Clan affiliate shop button ──────────────────────────────────────
+
+  describe("clan affiliate shop button", () => {
+    afterEach(() => {
+      window.location.hash = "";
+    });
+
+    it("hides the Clan Shop button when no catalog item matches the clan tag", async () => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      const { fetchCosmetics } = await import("../../../src/client/Cosmetics");
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeClan({ tag: "TST" }),
+      );
+      (fetchCosmetics as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        patterns: {},
+        flags: {},
+      });
+
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "view" as keyof ClanModal, "detail" as never);
+      await waitForSubComponent(modal, "clan-detail-view");
+
+      expect(modal.querySelector("[data-action='clan-shop']")).toBeNull();
+    });
+
+    it("renders the Clan Shop button when a cosmetic matches the clan tag case-insensitively and opens the affiliate store on click", async () => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      const { fetchCosmetics } = await import("../../../src/client/Cosmetics");
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeClan({ tag: "TST" }),
+      );
+      (fetchCosmetics as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        patterns: {
+          clan_camo: {
+            name: "clan_camo",
+            pattern: "AA==",
+            affiliateCode: "tst",
+          },
+        },
+        flags: {},
+      });
+
+      modal.open({ clan: "TST" });
+      await waitForSubComponent(modal, "clan-detail-view");
+
+      const shopBtn = modal.querySelector<HTMLButtonElement>(
+        "[data-action='clan-shop']",
+      );
+      expect(shopBtn).toBeTruthy();
+      expect(shopBtn?.textContent).toContain("clan_modal.clan_shop");
+
+      shopBtn!.click();
+      expect(modal.isOpen()).toBe(false);
+      expect(window.location.hash).toBe("#modal=store&affiliateCode=tst");
     });
   });
 

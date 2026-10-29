@@ -8,6 +8,7 @@ import type {
 import {
   filterMembersBySearch,
   filterRequestsBySearch,
+  findClanAffiliateCode,
   formatBoostRemaining,
   renderMemberRow,
   renderMemberSortControl,
@@ -337,5 +338,96 @@ describe("renderMemberSortControl clan wars ELO", () => {
     select.value = "eloContributed";
     select.dispatchEvent(new Event("change"));
     expect(picked).toBe("eloContributed");
+  });
+});
+
+describe("findClanAffiliateCode", () => {
+  it("returns null when cosmetics is null or no item matches the clan tag", () => {
+    expect(findClanAffiliateCode(null, "VIK")).toBeNull();
+    expect(
+      findClanAffiliateCode({ patterns: {}, flags: {} }, "VIK"),
+    ).toBeNull();
+    expect(
+      findClanAffiliateCode(
+        {
+          patterns: {
+            stripes: {
+              name: "stripes",
+              pattern: "AA==",
+              product: null,
+              rarity: "common",
+              affiliateCode: "OTH",
+            },
+          },
+          flags: {},
+        },
+        "VIK",
+      ),
+    ).toBeNull();
+  });
+
+  it("matches case-insensitively across patterns, flags, crowns, skins, and effects and returns the catalog's exact spelling", () => {
+    expect(
+      findClanAffiliateCode(
+        {
+          patterns: {
+            stripes: {
+              name: "stripes",
+              pattern: "AA==",
+              product: null,
+              rarity: "common",
+              affiliateCode: "vik",
+            },
+          },
+          flags: {},
+        },
+        "VIK",
+      ),
+    ).toBe("vik");
+
+    expect(
+      findClanAffiliateCode(
+        {
+          patterns: {},
+          flags: {
+            banner: {
+              name: "banner",
+              url: "https://example.com/flag.svg",
+              product: null,
+              rarity: "common",
+              affiliateCode: "ClanTag",
+            },
+          },
+        },
+        "CLANTAG",
+      ),
+    ).toBe("ClanTag");
+
+    expect(
+      findClanAffiliateCode(
+        {
+          patterns: {},
+          flags: {},
+          effects: {
+            transportShipTrail: {
+              wake: {
+                name: "wake",
+                effectType: "transportShipTrail",
+                product: null,
+                rarity: "common",
+                affiliateCode: "wAkE",
+                attributes: {
+                  type: "gradient",
+                  colors: ["#ffffff"],
+                  colorSize: 1,
+                  movementSpeed: 1,
+                },
+              },
+            },
+          },
+        },
+        "WAKE",
+      ),
+    ).toBe("wAkE");
   });
 });
