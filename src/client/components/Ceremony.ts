@@ -22,7 +22,7 @@ export interface Honeycomb {
 
 const honeycombs = new Map<number, Honeycomb>();
 
-export function honeycomb(focusY = 0.5): Honeycomb {
+function honeycomb(focusY = 0.5): Honeycomb {
   const cached = honeycombs.get(focusY);
   if (cached !== undefined) return cached;
   const width = 2500;

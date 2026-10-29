@@ -219,7 +219,7 @@ function getDerivedPublicAssetRenderer(
   );
 }
 
-export function isDerivedPublicAsset(relativePath: string): boolean {
+function isDerivedPublicAsset(relativePath: string): boolean {
   return (
     getDerivedPublicAssetRenderer(normalizeAssetPath(relativePath)) !==
     undefined
@@ -276,7 +276,7 @@ function resolveSourceFile(relativePath: string, sourceDirs: string[]): string {
   return path.join(resolveSourceDir(relativePath, sourceDirs), relativePath);
 }
 
-export function listHashedPublicAssetPaths(sourceDirs: string[]): string[] {
+function listHashedPublicAssetPaths(sourceDirs: string[]): string[] {
   const files = new Set<string>();
   for (const sourceDir of sourceDirs) {
     if (!fs.existsSync(sourceDir)) continue;
@@ -295,7 +295,7 @@ export function listHashedPublicAssetPaths(sourceDirs: string[]): string[] {
 }
 
 // A plain walk rather than a glob: dot-directories (.well-known) are served too.
-export function listRootPublicFiles(publicDir: string): string[] {
+function listRootPublicFiles(publicDir: string): string[] {
   if (!fs.existsSync(publicDir)) return [];
   return fs
     .readdirSync(publicDir, { recursive: true, withFileTypes: true })
@@ -389,7 +389,7 @@ export function copyRootPublicFiles(publicDir: string, outDir: string): void {
 // from sites/<site>/v/<short>/root/<path> (update.sh uploads both).
 export type RootFilesIndex = Record<string, string>;
 
-export const ROOT_FILES_INDEX = "root-files.json";
+const ROOT_FILES_INDEX = "root-files.json";
 
 const ROOT_FILE_TYPES: Record<string, string> = {
   "": "text/plain; charset=utf-8",

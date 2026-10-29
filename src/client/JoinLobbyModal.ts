@@ -541,7 +541,7 @@ export class JoinLobbyModal extends BaseModal {
       this.startTrackingLobby(lobbyId, lobbyInfo);
       // If opened with lobbyId but no lobbyInfo (URL join case), auto-join the lobby
       if (!lobbyInfo) {
-        this.handleUrlJoin(lobbyId, args?.spectate === true);
+        void this.handleUrlJoin(lobbyId, args?.spectate === true);
       }
     }
   }
@@ -777,7 +777,7 @@ export class JoinLobbyModal extends BaseModal {
       const mapChanged = this.gameConfig?.gameMap !== lobby.gameConfig.gameMap;
       this.gameConfig = lobby.gameConfig;
       if (mapChanged) {
-        this.loadNationCount();
+        void this.loadNationCount();
       }
     }
 

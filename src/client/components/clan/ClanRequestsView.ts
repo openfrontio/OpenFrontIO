@@ -36,7 +36,7 @@ export class ClanRequestsView extends LitElement {
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
   connectedCallback() {
     super.connectedCallback();
-    this.loadRequests(1);
+    void this.loadRequests(1);
   }
 
   disconnectedCallback() {

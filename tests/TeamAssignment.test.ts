@@ -8,6 +8,7 @@ import {
   Trios,
 } from "@openfront/engine-api/game/GameTypes";
 import {
+  adjustForTeams,
   assignTeams,
   resolveTeamsList,
 } from "@openfront/engine-lib/game/TeamAssignment";
@@ -512,5 +513,30 @@ describe("resolveTeamsList", () => {
     // Config.playerTeams(); that must stay a loud error.
     expect(() => resolveTeamsList(0, 50)).toThrow("Too few teams: 0");
     expect(() => resolveTeamsList(1, 50)).toThrow("Too few teams: 1");
+  });
+});
+
+describe("adjustForTeams", () => {
+  it("does not change configured cap for numeric team counts", () => {
+    expect(adjustForTeams(5, 3)).toBe(5);
+    expect(adjustForTeams(10, 4)).toBe(10);
+  });
+
+  it("does not change cap for undefined or HumansVsNations or count <= 0", () => {
+    expect(adjustForTeams(5, undefined)).toBe(5);
+    expect(adjustForTeams(5, HumansVsNations)).toBe(5);
+    expect(adjustForTeams(0, Trios)).toBe(0);
+    expect(adjustForTeams(-1, Trios)).toBe(-1);
+  });
+
+  it("adjusts to multiples of team size and enforces at least one full team", () => {
+    expect(adjustForTeams(2, Trios)).toBe(3);
+    expect(adjustForTeams(3, Trios)).toBe(3);
+    expect(adjustForTeams(4, Trios)).toBe(3);
+    expect(adjustForTeams(5, Trios)).toBe(3);
+    expect(adjustForTeams(6, Trios)).toBe(6);
+    expect(adjustForTeams(1, Duos)).toBe(2);
+    expect(adjustForTeams(5, Duos)).toBe(4);
+    expect(adjustForTeams(2, Quads)).toBe(4);
   });
 });

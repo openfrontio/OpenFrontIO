@@ -22,7 +22,6 @@ import {
   TerraNullius,
   Tick,
   TrainType,
-  TrajectoryTile,
   TransportShipState,
   UnitInfo,
   UnitType,
@@ -73,12 +72,12 @@ export interface UnitParamsMap {
 
   [UnitType.AtomBomb]: {
     targetTile?: number;
-    trajectory: TrajectoryTile[];
+    trajectory: TileRef[];
   };
 
   [UnitType.HydrogenBomb]: {
     targetTile?: number;
-    trajectory: TrajectoryTile[];
+    trajectory: TileRef[];
   };
 
   [UnitType.MIRV]: {
@@ -88,7 +87,7 @@ export interface UnitParamsMap {
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
-    trajectory: TrajectoryTile[];
+    trajectory: TileRef[];
   };
 
   [UnitType.TradeShip]: {
@@ -235,7 +234,7 @@ export interface Unit extends UnitLike {
   targetPlayer(): Player | TerraNullius | undefined;
   setTrajectoryIndex(i: number): void;
   trajectoryIndex(): number;
-  trajectory(): TrajectoryTile[];
+  trajectory(): TileRef[];
   setTargetUnit(unit: Unit | undefined): void;
   targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;
@@ -397,6 +396,7 @@ export interface Player extends PlayerLike {
   buildableUnits(
     tile: TileRef | null,
     units?: readonly PlayerBuildableUnitType[],
+    includeBuildPreview?: boolean,
   ): BuildableUnit[];
   canBuild(
     type: UnitType,

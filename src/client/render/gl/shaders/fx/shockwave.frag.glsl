@@ -6,6 +6,7 @@ uniform float uTime;      // seconds — animates procedural styles
 
 in vec2  vLocalPos;
 flat in float vAlpha;   // 1 - lifetime progress (fades out over the effect)
+flat in float vLife;    // lifetime fade with hoisted flicker
 flat in float vStyle;   // 0 = classic ring, 1 = EMP pulse, 2 = sparkles, 3 = embers
 flat in vec3  vColor0;  // cosmetic: palette color 0
 flat in vec3  vColor1;  // cosmetic: palette color 1
@@ -69,12 +70,25 @@ void empPulse(float dist) {
   float w = halfW * (0.7 + 0.6 * vnoise(ang * 9.0 + tt * 20.0));
   float ring = 1.0 - smoothstep(0.0, w, ringDist);
 
-  // A couple of bright rotating arcs of "lightning" chasing around the ring.
-  float arc = pow(0.5 + 0.5 * sin(ang * 5.0 - tt * 8.0), 8.0)
-            + pow(0.5 + 0.5 * sin(ang * 8.0 + tt * 13.0), 12.0);
+  // Distinct rotating wave bases:
+  float b1 = 0.5 + 0.5 * sin(ang * 5.0 - tt * 8.0);
+  float b2 = 0.5 + 0.5 * sin(ang * 8.0 + tt * 13.0);
+
+  // Unroll pow(b1, 8.0):
+  float b1_2 = b1 * b1;
+  float b1_4 = b1_2 * b1_2;
+  float arc1 = b1_4 * b1_4;
+
+  // Unroll pow(b2, 12.0):
+  float b2_2 = b2 * b2;
+  float b2_4 = b2_2 * b2_2;
+  float b2_8 = b2_4 * b2_4;
+  float arc2 = b2_8 * b2_4;
+
+  float arc = arc1 + arc2;
 
   // Faint inner energy fill trailing behind the front.
-  float inner = smoothstep(ringR, 0.0, dist) * 0.12
+  float inner = (1.0 - smoothstep(0.0, ringR, dist)) * 0.12
               * (0.6 + 0.4 * vnoise(ang * 20.0 + tt * 25.0));
 
   float glow = ring * (0.8 + arc) + inner;
@@ -93,8 +107,8 @@ void empPulse(float dist) {
   vec3 hot = mix(bright, vec3(1.0), 0.4);
   vec3 col = mix(base, hot, clamp(arc * 0.8, 0.0, 1.0));
 
-  // Whole-ring flicker on top of the lifetime fade (speed-scaled like the rest).
-  float life = vAlpha * (0.75 + 0.25 * vnoise(tt * 30.0));
+  // Whole-ring flicker on top of the lifetime fade (hoisted to vertex shader).
+  float life = vLife;
   fragColor = vec4(col, clamp(glow, 0.0, 1.0) * life);
 }
 
@@ -149,8 +163,8 @@ void sparkles() {
   // opacity through life and fading only over the last quarter.
   float g = clamp((1.0 - length(gp - center) / max(rs, 1e-4)) * 3.0, 0.0, 1.0);
   float tt = uTime * vSpeed;
-  float tw = 0.35 +
-             0.65 * pow(0.5 + 0.5 * sin(6.2832 * (h3 + tt * (1.5 + h1))), 2.0);
+  float sVal = 0.5 + 0.5 * sin(6.2832 * (h3 + tt * (1.5 + h1)));
+  float tw = 0.35 + 0.65 * (sVal * sVal);
   float endFade = smoothstep(0.0, 0.25, vAlpha);
 
   float glow = g * birth * endFade;

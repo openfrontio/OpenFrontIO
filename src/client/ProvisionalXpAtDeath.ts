@@ -108,7 +108,7 @@ export function provisionalXpRules(config: ProgressionConfig): XpRules | null {
  * so (scoresSingleplayer). A value that doesn't read as true (malformed)
  * shows no figure for a singleplayer game rather than one it may not pay.
  */
-export function apiScoresGame(
+function apiScoresGame(
   progression: ProgressionConfig,
   config: XpGameConfig,
 ): boolean {

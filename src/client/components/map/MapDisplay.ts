@@ -32,7 +32,7 @@ export class MapDisplay extends LitElement {
       (entries) => {
         if (entries.some((e) => e.isIntersecting) && !this.dataLoaded) {
           this.dataLoaded = true;
-          this.loadMapData();
+          void this.loadMapData();
           this.observer?.disconnect();
         }
       },
@@ -57,7 +57,7 @@ export class MapDisplay extends LitElement {
       previousMapKey !== this.mapKey &&
       this.dataLoaded
     ) {
-      this.loadMapData();
+      void this.loadMapData();
     }
   }
 
