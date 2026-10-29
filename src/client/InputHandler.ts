@@ -1531,6 +1531,14 @@ export class InputHandler {
     ghostStructure: PlayerBuildableUnitType | null,
     source: "increase" | "decrease" | "GUIclick" | "hotkey" = "hotkey",
   ) {
+    const previousGhostStructure = this.uiState.ghostStructure;
+    if (source === "GUIclick" && previousGhostStructure !== ghostStructure) {
+      this.eventBus.emit(new CloseViewEvent());
+    }
+    if (previousGhostStructure !== null && ghostStructure === null) {
+      this.eventBus.emit(new ToggleStructureEvent(null));
+    }
+
     if (
       this.uiState.ghostStructure === ghostStructure &&
       ghostStructure !== null

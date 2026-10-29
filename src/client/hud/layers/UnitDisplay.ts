@@ -150,78 +150,82 @@ export class UnitDisplay extends LitElement implements Controller {
     return html`
       <div class="border-t border-white/10 p-0.5 w-full">
         <div
-          class="grid grid-cols-10 gap-0.5 w-full lg:grid-rows-1 lg:grid-flow-col lg:w-fit mx-auto"
+          class="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x"
         >
-          ${this.renderUnitItem(
-            cityIcon,
-            this._cities,
-            UnitType.City,
-            "city",
-            this.getHotkey("buildCity", "Digit1"),
-          )}
-          ${this.renderUnitItem(
-            factoryIcon,
-            this._factories,
-            UnitType.Factory,
-            "factory",
-            this.getHotkey("buildFactory", "Digit2"),
-          )}
-          ${this.renderUnitItem(
-            portIcon,
-            this._port,
-            UnitType.Port,
-            "port",
-            this.getHotkey("buildPort", "Digit3"),
-          )}
-          ${this.renderUnitItem(
-            defensePostIcon,
-            this._defensePost,
-            UnitType.DefensePost,
-            "defense_post",
-            this.getHotkey("buildDefensePost", "Digit4"),
-          )}
-          ${this.renderUnitItem(
-            missileSiloIcon,
-            this._missileSilo,
-            UnitType.MissileSilo,
-            "missile_silo",
-            this.getHotkey("buildMissileSilo", "Digit5"),
-          )}
-          ${this.renderUnitItem(
-            samLauncherIcon,
-            this._samLauncher,
-            UnitType.SAMLauncher,
-            "sam_launcher",
-            this.getHotkey("buildSamLauncher", "Digit6"),
-          )}
-          ${this.renderUnitItem(
-            warshipIcon,
-            this._warships,
-            UnitType.Warship,
-            "warship",
-            this.getHotkey("buildWarship", "Digit7"),
-          )}
-          ${this.renderUnitItem(
-            atomBombIcon,
-            null,
-            UnitType.AtomBomb,
-            "atom_bomb",
-            this.getHotkey("buildAtomBomb", "Digit8"),
-          )}
-          ${this.renderUnitItem(
-            hydrogenBombIcon,
-            null,
-            UnitType.HydrogenBomb,
-            "hydrogen_bomb",
-            this.getHotkey("buildHydrogenBomb", "Digit9"),
-          )}
-          ${this.renderUnitItem(
-            mirvIcon,
-            null,
-            UnitType.MIRV,
-            "mirv",
-            this.getHotkey("buildMIRV", "Digit0"),
-          )}
+          <div
+            class="grid grid-cols-10 gap-0.5 w-full mx-auto lg:grid-rows-1 lg:grid-flow-col lg:w-fit landscape:grid-rows-1 landscape:grid-flow-col landscape:grid-cols-none landscape:auto-cols-[48px] landscape:w-max max-[360px]:grid-cols-none max-[360px]:grid-flow-col max-[360px]:auto-cols-[44px] max-[360px]:w-max"
+          >
+            ${this.renderUnitItem(
+              cityIcon,
+              this._cities,
+              UnitType.City,
+              "city",
+              this.getHotkey("buildCity", "Digit1"),
+            )}
+            ${this.renderUnitItem(
+              factoryIcon,
+              this._factories,
+              UnitType.Factory,
+              "factory",
+              this.getHotkey("buildFactory", "Digit2"),
+            )}
+            ${this.renderUnitItem(
+              portIcon,
+              this._port,
+              UnitType.Port,
+              "port",
+              this.getHotkey("buildPort", "Digit3"),
+            )}
+            ${this.renderUnitItem(
+              defensePostIcon,
+              this._defensePost,
+              UnitType.DefensePost,
+              "defense_post",
+              this.getHotkey("buildDefensePost", "Digit4"),
+            )}
+            ${this.renderUnitItem(
+              missileSiloIcon,
+              this._missileSilo,
+              UnitType.MissileSilo,
+              "missile_silo",
+              this.getHotkey("buildMissileSilo", "Digit5"),
+            )}
+            ${this.renderUnitItem(
+              samLauncherIcon,
+              this._samLauncher,
+              UnitType.SAMLauncher,
+              "sam_launcher",
+              this.getHotkey("buildSamLauncher", "Digit6"),
+            )}
+            ${this.renderUnitItem(
+              warshipIcon,
+              this._warships,
+              UnitType.Warship,
+              "warship",
+              this.getHotkey("buildWarship", "Digit7"),
+            )}
+            ${this.renderUnitItem(
+              atomBombIcon,
+              null,
+              UnitType.AtomBomb,
+              "atom_bomb",
+              this.getHotkey("buildAtomBomb", "Digit8"),
+            )}
+            ${this.renderUnitItem(
+              hydrogenBombIcon,
+              null,
+              UnitType.HydrogenBomb,
+              "hydrogen_bomb",
+              this.getHotkey("buildHydrogenBomb", "Digit9"),
+            )}
+            ${this.renderUnitItem(
+              mirvIcon,
+              null,
+              UnitType.MIRV,
+              "mirv",
+              this.getHotkey("buildMIRV", "Digit0"),
+            )}
+          </div>
         </div>
       </div>
     `;
@@ -300,13 +304,13 @@ export class UnitDisplay extends LitElement implements Controller {
         <div
           class="${
             this.canBuild(unitType) ? "" : "opacity-40"
-          } border border-slate-500 rounded-sm min-h-11 px-1 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:min-h-0 lg:px-0.5 lg:justify-start
+          } border border-slate-500 rounded-sm min-h-11 w-full px-1 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:min-h-0 lg:px-0.5 lg:justify-start landscape:px-0.5
              ${selected ? "hover:bg-gray-400/10" : "hover:bg-gray-800"}
              rounded-sm text-white ${selected ? "bg-slate-400/20" : ""}
              ${this.tutorialHighlight === unitType ? "tutorial-highlight" : ""}"
           @click=${() => {
             if (selected) {
-              this.inputHandler.setGhostStructure(null);
+              this.inputHandler.setGhostStructure(null, "GUIclick");
             } else if (this.canBuild(unitType)) {
               this.inputHandler.setGhostStructure(unitType, "GUIclick");
             }
@@ -343,12 +347,12 @@ export class UnitDisplay extends LitElement implements Controller {
               : nothing
           }
           <div
-            class="flex flex-col items-center gap-0 pt-0.5 lg:flex-row lg:gap-0.5"
+            class="flex flex-col items-center gap-0 pt-0.5 lg:flex-row lg:gap-0.5 landscape:flex-row landscape:gap-0.5"
           >
             <img
               src=${icon}
               alt=${translateText("unit_type." + structureKey)}
-              class="align-middle size-7 lg:size-5"
+              class="align-middle size-7 lg:size-5 landscape:size-6"
             />
             ${
               number !== null

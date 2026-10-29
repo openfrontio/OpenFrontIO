@@ -91,6 +91,7 @@ interface PendingConfirmation {
   ghostType: PlayerBuildableUnitType;
   preventStacking: boolean;
   ghostGeneration: number;
+  cancelOnInvalid: boolean;
 }
 
 const EMPTY_ID_SET: ReadonlySet<number> = new Set();
@@ -936,17 +937,24 @@ export class BuildPreviewController implements Controller {
     return unit !== null && this.isBuildableUnitReady(unit, !!preventStacking);
   }
 
-  private requestConfirmStructure(e: MouseUpEvent): void {
+  private requestConfirmStructure(
+    e: MouseUpEvent,
+    cancelOnInvalid = false,
+  ): void {
     this.syncGhostState();
     if (!this.ghostUnit) return;
+    const ghostType = this.ghostUnit.buildableUnit.type;
+    const shouldCancelOnInvalid = cancelOnInvalid && Structures.has(ghostType);
     this.mousePos.x = e.x;
     this.mousePos.y = e.y;
     const position = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
     // A release just outside the map has no tile to validate or build on.
     if (!this.game.isValidCoord(position.x, position.y)) return;
     const tile = this.game.ref(position.x, position.y);
-    if (this.game.isImpassable && this.game.isImpassable(tile)) return;
-    const ghostType = this.ghostUnit.buildableUnit.type;
+    if (this.game.isImpassable && this.game.isImpassable(tile)) {
+      if (shouldCancelOnInvalid) this.removeGhostStructure();
+      return;
+    }
     const preventStacking = !!this.uiState.preventStacking;
     if (
       this.pendingConfirmations.length === 0 &&
@@ -956,6 +964,8 @@ export class BuildPreviewController implements Controller {
       const unit = this.effectiveBuildableUnit(preventStacking);
       if (unit && this.isGhostReadyForConfirm(preventStacking)) {
         this.createStructure(tile, preventStacking, unit);
+      } else if (shouldCancelOnInvalid) {
+        this.removeGhostStructure();
       }
       return;
     }
@@ -964,6 +974,7 @@ export class BuildPreviewController implements Controller {
       ghostType,
       preventStacking,
       ghostGeneration: this.ghostGeneration,
+      cancelOnInvalid: shouldCancelOnInvalid,
     });
     this.processPendingConfirmations();
   }
@@ -1018,6 +1029,9 @@ export class BuildPreviewController implements Controller {
           !this.isBuildableUnitReady(unit, confirmation.preventStacking)
         ) {
           this.pendingConfirmations.splice(0, batchSize);
+          if (confirmation.cancelOnInvalid) {
+            this.removeGhostStructure();
+          }
           return;
         }
 
@@ -1063,7 +1077,8 @@ export class BuildPreviewController implements Controller {
         pending.tile !== confirmation.tile ||
         pending.ghostType !== confirmation.ghostType ||
         pending.preventStacking !== confirmation.preventStacking ||
-        pending.ghostGeneration !== confirmation.ghostGeneration
+        pending.ghostGeneration !== confirmation.ghostGeneration ||
+        pending.cancelOnInvalid !== confirmation.cancelOnInvalid
       ) {
         break;
       }
@@ -1213,10 +1228,14 @@ export class BuildPreviewController implements Controller {
 
   private handleTouchPlacement(e: TouchGhostPlacementEvent): void {
     this.touchPlacementMode = true;
+    this.syncGhostState();
     if (this.touchPreviewTile !== null && this.isNearTouchPreview(e.x, e.y)) {
       const preview = this.touchPreviewScreenPosition();
       if (preview !== null) {
-        this.requestConfirmStructure(new MouseUpEvent(preview.x, preview.y));
+        this.requestConfirmStructure(
+          new MouseUpEvent(preview.x, preview.y),
+          true,
+        );
       }
       return;
     }
@@ -1226,6 +1245,7 @@ export class BuildPreviewController implements Controller {
 
   private moveTouchPreview(x: number, y: number): void {
     this.touchPlacementMode = true;
+    this.syncGhostState();
     const tile = this.transformHandler.screenToWorldCoordinates(x, y);
     if (!this.game.isValidCoord(tile.x, tile.y)) return;
     const next = this.game.ref(tile.x, tile.y);

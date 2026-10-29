@@ -28,6 +28,8 @@ import {
   TouchGhostPlacementEvent,
   TouchGhostPlacementMoveEvent,
   TouchLongPressStartEvent,
+  TouchEvent,
+  ToggleStructureEvent,
   UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
   WarshipSelectionBoxCompleteEvent,
@@ -1890,6 +1892,99 @@ describe("mobile tap-preview placement", () => {
       expect.objectContaining({ x: 100, y: 110 }),
       expect.objectContaining({ x: 140, y: 150 }),
     ]);
+  });
+
+  test("GUI build selection closes overlays and deselection clears structure highlights", () => {
+    const closeViews: CloseViewEvent[] = [];
+    const highlights: ToggleStructureEvent[] = [];
+    eventBus.on(CloseViewEvent, (event) => closeViews.push(event));
+    eventBus.on(ToggleStructureEvent, (event) => highlights.push(event));
+    uiState.ghostStructure = null;
+
+    inputHandler.setGhostStructure(UnitType.City, "GUIclick");
+    expect(closeViews).toHaveLength(1);
+    expect(highlights).toEqual([]);
+
+    inputHandler.setGhostStructure(null, "GUIclick");
+    expect(closeViews).toHaveLength(2);
+    expect(highlights).toHaveLength(1);
+    expect(highlights[0].structureTypes).toBeNull();
+  });
+
+  test("touches return to the normal map action after the ghost is canceled", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    const touches: TouchEvent[] = [];
+    eventBus.on(TouchGhostPlacementEvent, (event) => {
+      placements.push(event);
+      uiState.ghostStructure = null;
+    });
+    eventBus.on(TouchEvent, (event) => touches.push(event));
+
+    const tap = (x: number, y: number, pointerId: number) => {
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    };
+
+    tap(100, 100, 1);
+    expect(placements).toHaveLength(1);
+    expect(touches).toHaveLength(0);
+
+    tap(100, 100, 2);
+    expect(touches).toHaveLength(1);
+  });
+
+  test("quick-build selection closes the radial before the next map tap", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    const touches: TouchEvent[] = [];
+    const contextMenus: ContextMenuEvent[] = [];
+    const closeViews: CloseViewEvent[] = [];
+    eventBus.on(TouchGhostPlacementEvent, (event) => placements.push(event));
+    eventBus.on(TouchEvent, (event) => touches.push(event));
+    eventBus.on(ContextMenuEvent, (event) => contextMenus.push(event));
+    eventBus.on(CloseViewEvent, (event) => closeViews.push(event));
+
+    uiState.ghostStructure = null;
+    eventBus.emit(new ContextMenuEvent(100, 100));
+    inputHandler.setGhostStructure(UnitType.City, "GUIclick");
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 200,
+        clientY: 200,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    inputHandler["onPointerUp"](
+      new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 200,
+        clientY: 200,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+    expect(closeViews).toHaveLength(1);
+    expect(contextMenus).toHaveLength(1);
+    expect(placements).toEqual([expect.objectContaining({ x: 200, y: 200 })]);
+    expect(touches).toEqual([]);
   });
 
   test("movement starting on the preview drags it without a hold delay or map pan", () => {

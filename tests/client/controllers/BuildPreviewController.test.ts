@@ -270,6 +270,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       ghostType: UnitType.City,
       preventStacking: false,
       ghostGeneration: c.ghostGeneration,
+      cancelOnInvalid: false,
     });
     expect(buildables).toHaveBeenNthCalledWith(1, 43, [UnitType.City], false);
     expect(buildables).toHaveBeenNthCalledWith(2, 45, [UnitType.City], false);
@@ -1940,6 +1941,67 @@ describe("BuildPreviewController touch preview", () => {
     expect((controller as any).pendingConfirmations).toHaveLength(0);
   });
 
+  test("touch confirmation on an unbuildable structure cancels the selection", async () => {
+    const { controller, requests, uiState } = makeDeferredBuildablesController(
+      UnitType.City,
+    );
+    (controller as any).ghostResolved = false;
+    (controller as any).touchPlacementMode = true;
+    (controller as any).touchPreviewTile = 101;
+
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(100, 100),
+    );
+    expect(requests).toHaveLength(1);
+    expect((controller as any).pendingConfirmations[0].cancelOnInvalid).toBe(
+      true,
+    );
+
+    requests[0].resolve([
+      {
+        type: UnitType.City,
+        canBuild: false,
+        canUpgrade: false,
+        cost: 1n,
+      },
+    ]);
+    await flushBuildables();
+
+    expect(uiState.ghostStructure).toBeNull();
+    expect((controller as any).pendingConfirmations).toHaveLength(0);
+  });
+
+  test.each([UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRV])(
+    "touch confirmation never auto-cancels the nuke selection (%s)",
+    async (unitType) => {
+      const { controller, requests, uiState } =
+        makeDeferredBuildablesController(unitType);
+      (controller as any).ghostResolved = false;
+      (controller as any).touchPlacementMode = true;
+      (controller as any).touchPreviewTile = 101;
+
+      (controller as any).handleTouchPlacement(
+        new TouchGhostPlacementEvent(100, 100),
+      );
+      expect(requests).toHaveLength(1);
+      expect((controller as any).pendingConfirmations[0].cancelOnInvalid).toBe(
+        false,
+      );
+      requests[0].resolve([
+        {
+          type: unitType,
+          canBuild: false,
+          canUpgrade: false,
+          cost: 1n,
+        },
+      ]);
+      await flushBuildables();
+
+      expect(uiState.ghostStructure).toBe(unitType);
+      expect((controller as any).pendingConfirmations).toHaveLength(0);
+    },
+  );
+
   test("moving the preview clears cached eligibility without dropping confirmations", async () => {
     const { controller } = makeController(UnitType.City);
     const c = controller as any;
@@ -1949,6 +2011,7 @@ describe("BuildPreviewController touch preview", () => {
       ghostType: UnitType.City,
       preventStacking: false,
       ghostGeneration: c.ghostGeneration,
+      cancelOnInvalid: false,
     });
     Object.assign(c.ghostUnit.buildableUnit, {
       canBuild: 101,
