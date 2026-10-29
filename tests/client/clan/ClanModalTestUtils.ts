@@ -78,6 +78,8 @@ export function clanApiMockFactory() {
     // plain-link result so view tests never reach the real Discord network.
     fetchDiscordInvite: vi.fn(async (url: string) => ({ url, valid: true })),
     donateToClan: vi.fn(async () => true),
+    fetchClanBoostStatus: vi.fn(async () => false),
+    buyClanBoost: vi.fn(),
   };
 }
 
@@ -138,7 +140,7 @@ export async function virtualizerMockFactory() {
 }
 
 /**
- * ClanModal gates the Map tab on ClientEnv.env() (prod = Coming Soon), which
+ * The map tab's iframe takes its origin from ClientEnv.jwtAudience(), which
  * reads the config the server normally injects into index.html. Call before
  * rendering the map tab.
  */

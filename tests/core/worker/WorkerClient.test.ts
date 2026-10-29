@@ -130,3 +130,117 @@ describe("WorkerClient playerInteraction", () => {
     expect(internalClient.messageHandlers.size).toBe(0);
   });
 });
+
+describe("WorkerClient humanStats", () => {
+  it("asks the worker for the humans' stats and resolves with its answer", async () => {
+    const { client, worker, internalClient } = createClient();
+    const promise = client.humanStats();
+    const request = vi.mocked(worker.postMessage).mock.calls[0][0] as {
+      id: string;
+      type: string;
+    };
+    expect(request.type).toBe("human_stats");
+
+    const result = {
+      tick: 50,
+      stats: { client_a: { killedAt: 40n } },
+      disconnectedAt: {},
+    };
+    internalClient.handleWorkerMessage({
+      data: { type: "human_stats_result", id: request.id, result },
+    } as unknown as MessageEvent<WorkerMessage>);
+
+    await expect(promise).resolves.toEqual(result);
+    expect(internalClient.messageHandlers.has(request.id)).toBe(false);
+  });
+
+  it("asks the worker for just the disconnects, and resolves with its answer", async () => {
+    const { client, worker, internalClient } = createClient();
+    const promise = client.humanDisconnects();
+    const request = vi.mocked(worker.postMessage).mock.calls[0][0] as {
+      id: string;
+      type: string;
+    };
+    expect(request.type).toBe("human_disconnects");
+
+    const result = { tick: 50, disconnectedAt: { client_b: 30 } };
+    internalClient.handleWorkerMessage({
+      data: { type: "human_disconnects_result", id: request.id, result },
+    } as unknown as MessageEvent<WorkerMessage>);
+
+    await expect(promise).resolves.toEqual(result);
+    expect(internalClient.messageHandlers.has(request.id)).toBe(false);
+  });
+
+  it("rejects a disconnects request the worker doesn't answer", async () => {
+    vi.useFakeTimers();
+    try {
+      const { client, internalClient } = createClient();
+      const promise = client.humanDisconnects();
+      const rejection = expect(promise).rejects.toThrow(
+        "human_disconnects request timed out",
+      );
+      await vi.advanceTimersByTimeAsync(5000);
+      await rejection;
+      expect(internalClient.messageHandlers.size).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("rejects and removes the handler when the worker does not respond", async () => {
+    vi.useFakeTimers();
+    try {
+      const { client, internalClient } = createClient();
+      const promise = client.humanStats();
+      const rejection = expect(promise).rejects.toThrow(
+        "human_stats request timed out",
+      );
+      expect(internalClient.messageHandlers.size).toBe(1);
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      await rejection;
+      expect(internalClient.messageHandlers.size).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("WorkerClient placement preview request", () => {
+  it("forwards the opt-in rail preview flag with a buildables request", async () => {
+    const { client, worker, internalClient } = createClient();
+    const result = client.playerBuildables("7", 3, 4, undefined, true);
+    const request = vi.mocked(worker.postMessage).mock.calls[0][0] as {
+      id: string;
+    };
+    expect(request).toMatchObject({
+      type: "player_buildables",
+      playerID: "7",
+      x: 3,
+      y: 4,
+      includeBuildPreview: true,
+    });
+    internalClient.handleWorkerMessage({
+      data: { type: "player_buildables_result", id: request.id, result: [] },
+    } as unknown as MessageEvent<WorkerMessage>);
+    await expect(result).resolves.toEqual([]);
+    expect(internalClient.messageHandlers.size).toBe(0);
+  });
+  it("times out a lost request so a slow preview can recover without leaking handlers", async () => {
+    vi.useFakeTimers();
+    try {
+      const { client, internalClient } = createClient();
+      const result = client.playerBuildables("7", 3, 4, undefined, true);
+      const rejection = expect(result).rejects.toThrow(
+        "player_buildables request timed out",
+      );
+      await vi.advanceTimersByTimeAsync(5000);
+      await rejection;
+      expect(internalClient.messageHandlers.size).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

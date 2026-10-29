@@ -39,7 +39,7 @@ vi.mock("../../../../src/client/Utils", () => ({
 }));
 vi.mock("@openfront/engine-lib/Format", () => ({
   renderNumber: vi.fn(),
-  renderTroops: vi.fn(),
+  renderTroops: vi.fn((troops: number) => String(troops)),
 }));
 
 import { MessageType } from "@openfront/engine-api/game/GameTypes";
@@ -89,7 +89,12 @@ describe("EventsDisplay handlers", () => {
     game = {
       myPlayer: () => myPlayer,
       playerBySmallID: (id: number) => byID[id],
-      unit: (id: number) => ({ id, isActive: () => true }),
+      unit: (id: number) => ({
+        id,
+        isActive: () => true,
+        owner: () => stranger,
+        troops: () => 5000,
+      }),
       ticks: () => 0,
       inSpawnPhase: () => false,
       config: () => ({
@@ -289,11 +294,15 @@ describe("EventsDisplay handlers", () => {
   });
 
   describe("onUnitIncomingEvent", () => {
-    const incoming = (playerID: number) => ({
+    const incoming = (
+      playerID: number,
+      message = "nuke inbound",
+      messageType = MessageType.NUKE_INBOUND,
+    ) => ({
       type: GameUpdateType.UnitIncoming,
       unitID: 7,
-      message: "nuke inbound",
-      messageType: MessageType.NUKE_INBOUND,
+      message,
+      messageType,
       playerID,
     });
 
@@ -307,6 +316,40 @@ describe("EventsDisplay handlers", () => {
     it("ignores warnings addressed to other players", () => {
       ed.onUnitIncomingEvent(incoming(2) as never);
       expect(events()).toHaveLength(0);
+    });
+
+    it("translates incoming-unit keys with the owner's display name and troops", () => {
+      ed.onUnitIncomingEvent(
+        incoming(1, "events_display.atom_bomb_inbound") as never,
+      );
+      ed.onUnitIncomingEvent(
+        incoming(
+          1,
+          "events_display.hydrogen_bomb_inbound",
+          MessageType.HYDROGEN_BOMB_INBOUND,
+        ) as never,
+      );
+      ed.onUnitIncomingEvent(
+        incoming(
+          1,
+          "events_display.mirv_inbound",
+          MessageType.MIRV_INBOUND,
+        ) as never,
+      );
+      ed.onUnitIncomingEvent(
+        incoming(
+          1,
+          "events_display.naval_invasion_inbound",
+          MessageType.NAVAL_INVASION_INBOUND,
+        ) as never,
+      );
+
+      expect(events().map((event) => event.description)).toEqual([
+        'events_display.atom_bomb_inbound {"name":"Stranger"}',
+        'events_display.hydrogen_bomb_inbound {"name":"Stranger"}',
+        'events_display.mirv_inbound {"name":"Stranger"}',
+        'events_display.naval_invasion_inbound {"name":"Stranger","troops":"5000"}',
+      ]);
     });
   });
 

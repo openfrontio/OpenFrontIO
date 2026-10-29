@@ -1,6 +1,7 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   Difficulty,
+  GameMode,
   PlayerInfo,
   PlayerType,
   UnitType,
@@ -11,9 +12,10 @@ import {
 } from "@openfront/engine-lib/configuration/Config";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { NationNukeBehavior } from "@openfront/engine/execution/nation/NationNukeBehavior";
-import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { Game, Player, Unit } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
@@ -50,7 +52,8 @@ async function setupDuel(withThirdPlayer = false) {
 
   conquerRect(game, nation, 0, 0, 15, 15);
   nation.buildUnit(UnitType.MissileSilo, game.ref(5, 5), {});
-  nation.addGold(10_000_000n);
+  // More than a MIRV and a hydrogen bomb cost, so it isn't saving up for one
+  nation.addGold(40_000_000n);
   conquerRect(game, human, ISLAND.min, ISLAND.min, ISLAND.max, ISLAND.max);
 
   return { game, nation, human };
@@ -71,7 +74,7 @@ function conquerRect(
   }
 }
 
-function launchNukes(game: Game, nation: Player): Unit[] {
+function nukeBehavior(game: Game, nation: Player): NationNukeBehavior {
   const emojiBehavior = new NationEmojiBehavior(
     new PseudoRandom(1),
     game,
@@ -83,7 +86,7 @@ function launchNukes(game: Game, nation: Player): Unit[] {
     nation,
     emojiBehavior,
   );
-  const attackBehavior = new AiAttackBehavior(
+  const attackBehavior = new NationAttackBehavior(
     new PseudoRandom(1),
     game,
     nation,
@@ -92,15 +95,19 @@ function launchNukes(game: Game, nation: Player): Unit[] {
     0.2,
     allianceBehavior,
     emojiBehavior,
+    new NationWarshipBehavior(new PseudoRandom(1), game, nation, emojiBehavior),
   );
-  new NationNukeBehavior(
-    // Seed 2 doesn't roll a hydro-only nation
+  return new NationNukeBehavior(
     new PseudoRandom(2),
     game,
     nation,
     attackBehavior,
     emojiBehavior,
-  ).maybeSendNuke();
+  );
+}
+
+function launchNukes(game: Game, nation: Player): Unit[] {
+  nukeBehavior(game, nation).maybeSendNuke();
   // First tick initializes the NukeExecution, the second launches the bomb
   game.executeNextTick();
   game.executeNextTick();
@@ -154,6 +161,28 @@ describe("Nation nuke targeting", () => {
     expect(launchNukes(game, nation)).toHaveLength(0);
   });
 
+  it.each([false, true])(
+    "nukes back a player whose bomb is flying at it (bomb in flight: %s)",
+    async (bombInFlight) => {
+      const { game, nation, human } = await setupDuel(true);
+      const other = game.player("other_id");
+      conquerRect(game, other, 20, 150, 60, 190);
+      nation.updateRelation(other, -100);
+      if (bombInFlight) {
+        human.buildUnit(UnitType.HydrogenBomb, game.ref(150, 150), {
+          targetTile: game.ref(5, 5),
+          trajectory: [],
+        });
+      }
+
+      const nukes = launchNukes(game, nation);
+      expect(nukes).toHaveLength(1);
+      expect(game.owner(nukes[0].targetTile()!)).toBe(
+        bombInFlight ? human : other,
+      );
+    },
+  );
+
   it.each([
     [false, 1],
     [true, 0],
@@ -203,4 +232,128 @@ describe("Nation nuke targeting", () => {
     expect(nukes).toHaveLength(1);
     expect(isOnIsland(game, nukes[0].targetTile()!)).toBe(true);
   });
+});
+
+describe("Nation nuke targets in team games", () => {
+  it("Hard: nukes the most built-up player of the biggest other team", async () => {
+    // Columns: our team holds half the map, the "wide"/"built" team 30%, "third" 20%
+    const stripes: [string, number][] = [
+      ["nation", 50],
+      ["mate", 100],
+      ["wide", 150],
+      ["built", 160],
+      ["third", 200],
+    ];
+    const teams: Record<string, number> = {
+      nation: 0,
+      mate: 0,
+      wide: 1,
+      built: 1,
+      third: 2,
+    };
+    const game = await setup(
+      "big_plains",
+      { difficulty: Difficulty.Hard, gameMode: GameMode.Team, playerTeams: 3 },
+      stripes.map(
+        ([id]) =>
+          new PlayerInfo(
+            id,
+            id === "nation" ? PlayerType.Nation : PlayerType.Human,
+            null,
+            id,
+            false,
+            null,
+            [],
+            teams[id],
+          ),
+      ),
+    );
+    game.map().forEachTile((tile) => {
+      const [id] = stripes.find(([, end]) => game.x(tile) < end)!;
+      game.player(id).conquer(tile);
+    });
+    const city = (id: string, x: number, level: number) => {
+      const unit = game
+        .player(id)
+        .buildUnit(UnitType.City, game.ref(x, 10), {});
+      for (let l = 1; l < level; l++) unit.increaseLevel();
+    };
+    city("built", 155, 2);
+    // More structure levels, but on the smaller team
+    city("third", 180, 5);
+    const nation = game.player("nation");
+    nation.setTroops(1_000_000);
+
+    expect(nukeBehavior(game, nation).findBestNukeTarget()).toBe(
+      game.player("built"),
+    );
+  });
+});
+
+describe("Nuke tile scores around SAMs", () => {
+  // The nation's silo sits in the top-left corner, the human holds the bottom-right quarter
+  async function setupScore(difficulty: Difficulty) {
+    const game = await setup(
+      "big_plains",
+      { difficulty },
+      [
+        new PlayerInfo("nation", PlayerType.Nation, null, "nation_id"),
+        new PlayerInfo("human", PlayerType.Human, null, "human_id"),
+      ],
+      undefined,
+      RealNukeRadiusConfig,
+    );
+    const nation = game.player("nation_id");
+    const human = game.player("human_id");
+    conquerRect(game, nation, 0, 0, 15, 15);
+    nation.buildUnit(UnitType.MissileSilo, game.ref(5, 5), {});
+    conquerRect(game, human, 100, 100, 200, 200);
+    const score = (
+      tile: TileRef,
+      nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
+    ): number =>
+      nukeBehavior(game, nation)["nukeTileScore"](
+        tile,
+        nation.units(UnitType.MissileSilo),
+        human.units(),
+        nukeType,
+      );
+    return { game, human, score };
+  }
+
+  it("Medium won't nuke a city within 50 tiles of a SAM", async () => {
+    const { game, human, score } = await setupScore(Difficulty.Medium);
+    const target = game.ref(120, 120);
+    human.buildUnit(UnitType.City, target, {});
+    expect(score(target, UnitType.AtomBomb)).toBeGreaterThan(0);
+
+    human.buildUnit(UnitType.SAMLauncher, game.ref(190, 190), {});
+    expect(score(target, UnitType.AtomBomb)).toBeGreaterThan(0);
+    human.buildUnit(UnitType.SAMLauncher, game.ref(130, 120), {});
+    expect(score(target, UnitType.AtomBomb)).toBe(-1);
+  });
+
+  // The test config gives SAMs a 20-tile range, a hydrogen bomb blasts 100 tiles wide
+  it.each([
+    [1, 50, true],
+    [1, 10, false],
+    [5, 50, false],
+  ])(
+    "Impossible values a hydrogen bomb on a level %i SAM %i tiles away: %s",
+    async (level, distance, valued) => {
+      const { game, human, score } = await setupScore(Difficulty.Impossible);
+      const sam = human.buildUnit(
+        UnitType.SAMLauncher,
+        game.ref(130 + distance, 150),
+        {},
+      );
+      for (let l = 1; l < level; l++) sam.increaseLevel();
+      const value = score(game.ref(130, 150), UnitType.HydrogenBomb);
+      if (valued) {
+        expect(value).toBeGreaterThan(0);
+      } else {
+        expect(value).toBeLessThanOrEqual(0);
+      }
+    },
+  );
 });

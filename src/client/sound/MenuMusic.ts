@@ -69,7 +69,21 @@ function rampGain(target: number, t: number): number {
  * rather than by arriving instantly, which is far less noticeable than the
  * same curve going the other way.
  */
-export function startMenuMusic(mixer: AudioMixer): void {
+export function startMenuMusic(
+  mixer: AudioMixer,
+  options?: {
+    /**
+     * A game is already underway, so there is no menu to play over.
+     *
+     * Everything is still wired up, just not armed: the "menu-restored"
+     * listener below is what arms it, so a player who leaves the lobby in
+     * place gets the theme back. Without this the caller would have to skip
+     * startMenuMusic altogether and that listener would never exist, leaving
+     * the restored home page silent for the rest of the session.
+     */
+    gameInProgress?: boolean;
+  },
+): void {
   let theme: Howl | null = null;
   // Whether the home page is the thing on screen, so the theme may start.
   let armed = false;
@@ -192,6 +206,9 @@ export function startMenuMusic(mixer: AudioMixer): void {
     // here costs nothing.
     if (!mixer.isAudible("music")) return;
     try {
+      // Read once so html5 and preload describe the same path, even if the
+      // browser's volume-lock state changes between two probes.
+      const streaming = streamsMusic();
       theme = new Howl({
         src: [assetUrl("sounds/music/menu-theme.mp3")],
         loop: true,
@@ -199,9 +216,11 @@ export function startMenuMusic(mixer: AudioMixer): void {
         // Stream rather than decode 2.2 MB up front -- see the gameplay track
         // in SoundManager. This one starts on the player's first click, so the
         // wait would land right when they are trying to use the page.
-        html5: streamsMusic(),
-        // Off with streaming, so nothing is fetched until the load() below.
-        preload: streamsMusic(),
+        html5: streaming,
+        // Preload only the streamed path; Web Audio needs the explicit load()
+        // below because Howler's play() queues behind a load but never starts
+        // one.
+        preload: streaming,
       });
       // Armed before play(), so the "play" handler is on the Howl no matter
       // how quickly playback starts. Every start, including the re-arm after
@@ -242,7 +261,7 @@ export function startMenuMusic(mixer: AudioMixer): void {
     document.removeEventListener("keydown", onGesture);
   };
 
-  arm();
+  if (options?.gameInProgress !== true) arm();
 
   /**
    * Picks the theme up when the player turns music on, since start() declines

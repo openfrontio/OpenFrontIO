@@ -5,7 +5,6 @@ import { html, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { getDesktopSessionState } from "../Auth";
-import { crazyGamesSDK } from "../CrazyGamesSDK";
 import {
   getDesktopUpdateState,
   isDesktopShell,
@@ -16,12 +15,14 @@ import {
   reportMultiplayerRefusal,
   shouldBlockSocketSourcedAction,
 } from "../GameModeSelector";
+import { gamePortal } from "../GamePortal";
 import type { JoinLobbyModal } from "../JoinLobbyModal";
 import { whenModalLoaded } from "../LazyModals";
 import { PublicLobbySocket } from "../LobbySocket";
 import { JoinLobbyEvent } from "../Main";
 import { lastUserMeResponse } from "../UserMeBroadcast";
 import { UsernameInput } from "../UsernameInput";
+import { UserSettings } from "../UserSettings";
 import {
   calculateServerTimeOffset,
   getGameModeLabel,
@@ -37,6 +38,7 @@ import {
   filterAndSortLobbies,
   flattenLobbies,
   hasFilterProfile,
+  loadDefaultFilterProfile,
   loadFilterProfiles,
   LOBBY_MODES,
   LOBBY_SOURCES,
@@ -45,6 +47,7 @@ import {
   LobbySourceFilter,
   NAMED_TEAM_CONFIGS,
   NUMERIC_TEAM_CONFIGS,
+  saveDefaultFilterProfile,
   saveFilterProfile,
 } from "./DetailedGameViewFilters";
 import {
@@ -118,6 +121,7 @@ export class DetailedGameViewModal extends BaseModal {
   @state() private showFilters = false;
   @state() private profiles: Record<string, LobbyFilters> = {};
   @state() private selectedProfile = "";
+  @state() private defaultProfile = "";
   @state() private profileName = "";
   @state() private desktopUpdateState: DesktopUpdateState | null = null;
   @state() private viewerTrusted: boolean = false;
@@ -161,8 +165,26 @@ export class DetailedGameViewModal extends BaseModal {
     };
   }
 
-  protected override onOpen(): void {
+  // The account whose default profile is currently applied. Profiles belong to
+  // the logged-in account, so a different account starts from its own default,
+  // while reopening the menu as the same account keeps the filters as they
+  // are. undefined until the first load.
+  private appliedForAccount: string | null | undefined = undefined;
+
+  private loadAccountProfiles(): void {
     this.profiles = loadFilterProfiles();
+    this.defaultProfile = loadDefaultFilterProfile(this.profiles);
+    const account = UserSettings.currentPlayerId();
+    if (this.appliedForAccount === account) return;
+    this.appliedForAccount = account;
+    this.filters = { ...DEFAULT_FILTERS };
+    this.selectedProfile = "";
+    this.profileName = "";
+    this.applyProfile(this.defaultProfile);
+  }
+
+  protected override onOpen(): void {
+    this.loadAccountProfiles();
     void this.lobbySocket.start();
     // Countdowns are derived from server timestamps, so a plain repaint keeps
     // them ticking between socket updates.
@@ -230,10 +252,12 @@ export class DetailedGameViewModal extends BaseModal {
   private applyUserMe(me: UserMeResponse | false): void {
     this.viewerSignedIn = viewerIsSignedIn(me);
     this.viewerTrusted = viewerIsTrusted(me);
-    // A CrazyGames sign-in surfaces as a userMeResponse without a linked
+    // The account may have changed (login, logout, switch).
+    this.loadAccountProfiles();
+    // A portal sign-in surfaces as a userMeResponse without a linked
     // identity, so re-read the SDK profile alongside it.
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      void crazyGamesSDK.getUserProfile().then((user) => {
+    if (gamePortal.isOnGamePortal()) {
+      void gamePortal.getUserProfile().then((user) => {
         if (user !== null) this.viewerSignedIn = true;
       });
     }
@@ -296,9 +320,11 @@ export class DetailedGameViewModal extends BaseModal {
       rightContent: html`<o-button
         variant=${this.showFilters ? "primary" : "secondary"}
         size="sm"
-        title=${count > 0
-          ? translateText("detailed_view.filters_with_count", { count })
-          : translateText("detailed_view.filters")}
+        title=${
+          count > 0
+            ? translateText("detailed_view.filters_with_count", { count })
+            : translateText("detailed_view.filters")
+        }
         @click=${() => (this.showFilters = !this.showFilters)}
       ></o-button>`,
     });
@@ -316,32 +342,38 @@ export class DetailedGameViewModal extends BaseModal {
 
     return html`
       <div class="custom-scrollbar p-4 lg:p-6 flex flex-col gap-4">
-        ${this.showTrustRequired
-          ? trustRequiredDialog(
-              this.viewerSignedIn,
-              () => (this.showTrustRequired = false),
-            )
-          : nothing}
+        ${
+          this.showTrustRequired
+            ? trustRequiredDialog(
+                this.viewerSignedIn,
+                () => (this.showTrustRequired = false),
+              )
+            : nothing
+        }
         ${this.showFilters ? this.renderFilterPanel() : nothing}
-        ${shown.length === 0
-          ? html`<p class="py-12 text-center text-sm text-white/50">
-              ${translateText("detailed_view.no_lobbies")}
-            </p>`
-          : tab === ALL_TAB
-            ? html`
-                <!-- One pane per scheduled bucket, cards stacked within it. -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
-                  ${SCHEDULED_PANES.map((type) =>
-                    this.renderPane(
-                      translateText(`detailed_view.pane_${type}`),
-                      ofType(shown, type),
-                      ofType(all, type).length,
-                    ),
-                  )}
-                </div>
-                ${this.renderHostedPane(ofType(shown, "hosted"))}
-              `
-            : this.renderTypeTab(ofType(shown, tab), ofType(all, tab).length)}
+        ${
+          shown.length === 0
+            ? html`<p class="py-12 text-center text-sm text-white/50">
+                ${translateText("detailed_view.no_lobbies")}
+              </p>`
+            : tab === ALL_TAB
+              ? html`
+                  <!-- One pane per scheduled bucket, cards stacked within it. -->
+                  <div
+                    class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start"
+                  >
+                    ${SCHEDULED_PANES.map((type) =>
+                      this.renderPane(
+                        translateText(`detailed_view.pane_${type}`),
+                        ofType(shown, type),
+                        ofType(all, type).length,
+                      ),
+                    )}
+                  </div>
+                  ${this.renderHostedPane(ofType(shown, "hosted"))}
+                `
+              : this.renderTypeTab(ofType(shown, tab), ofType(all, tab).length)
+        }
       </div>
     `;
   }
@@ -390,13 +422,15 @@ export class DetailedGameViewModal extends BaseModal {
           ${this.paneHeading(name, lobbies.length)}
         </h3>
         <div class="flex flex-col gap-4">
-          ${lobbies.length === 0 && placeholders === 0
-            ? html`<p
-                class="py-6 text-center text-xs text-white/30 rounded-xl border border-dashed border-white/10"
-              >
-                ${translateText("detailed_view.pane_empty")}
-              </p>`
-            : nothing}
+          ${
+            lobbies.length === 0 && placeholders === 0
+              ? html`<p
+                  class="py-6 text-center text-xs text-white/30 rounded-xl border border-dashed border-white/10"
+                >
+                  ${translateText("detailed_view.pane_empty")}
+                </p>`
+              : nothing
+          }
           ${this.renderSlots(lobbies, placeholders)}
         </div>
       </section>
@@ -702,13 +736,29 @@ export class DetailedGameViewModal extends BaseModal {
           <button
             @click=${() => this.deleteProfile()}
             ?disabled=${this.selectedProfile === ""}
-            class="${BUTTON_CLASS} ${this.selectedProfile === ""
-              ? "opacity-40 cursor-not-allowed"
-              : ""}"
+            class="${BUTTON_CLASS} ${
+              this.selectedProfile === "" ? "opacity-40 cursor-not-allowed" : ""
+            }"
           >
             ${translateText("detailed_view.delete_profile")}
           </button>
         </div>
+        <span class="${SECTION_LABEL} mt-3"
+          >${translateText("detailed_view.default_profile")}</span
+        >
+        ${styledSelect({
+          options: [
+            {
+              value: "",
+              label: translateText("detailed_view.no_default_profile"),
+            },
+            ...names.map((name) => ({ value: name, label: name })),
+          ],
+          value: this.defaultProfile,
+          onChange: (value) => this.setDefaultProfile(value),
+          ariaLabel: translateText("detailed_view.default_profile"),
+          className: "w-full sm:w-1/2",
+        })}
       </div>
     `;
   }
@@ -787,6 +837,12 @@ export class DetailedGameViewModal extends BaseModal {
     if (this.selectedProfile === "") return;
     this.profiles = deleteFilterProfile(this.selectedProfile);
     this.selectedProfile = "";
+    this.defaultProfile = loadDefaultFilterProfile(this.profiles);
+  }
+
+  private setDefaultProfile(name: string) {
+    saveDefaultFilterProfile(name);
+    this.defaultProfile = loadDefaultFilterProfile(this.profiles);
   }
 
   // Silent backstop, mirroring the homepage buttons: an invalid username can't

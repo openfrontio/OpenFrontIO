@@ -42,6 +42,7 @@ const HUD_TAGS = [
   "immunity-timer",
   "in-game-promo",
   "tutorial-panel",
+  "onboarding-overlay",
 ] as const;
 
 describe("createRenderer", () => {
@@ -70,6 +71,7 @@ describe("createRenderer", () => {
     const eventBus = new EventBus();
     const game = {
       layers: () => [],
+      mapNationCount: () => 0,
       width: () => 100,
       height: () => 100,
       isValidCoord: () => true,
@@ -100,5 +102,23 @@ describe("createRenderer", () => {
     expect(emojiTable.game).toBe(game);
     eventBus.emit(new ShowEmojiMenuEvent(1, 1));
     expect(emojiTable.isVisible).toBe(true);
+  });
+
+  it("cleans up window resize listener on dispose", () => {
+    const renderer = new GameRenderer(
+      { updateCanvasBoundingRect: vi.fn(), centerAll: vi.fn() } as any,
+      {} as any,
+      [],
+      {} as any,
+    );
+    const addSpy = vi.spyOn(window, "addEventListener");
+    const removeSpy = vi.spyOn(window, "removeEventListener");
+    renderer.initialize();
+    const resizeListener = addSpy.mock.calls.find(
+      ([type]) => type === "resize",
+    )?.[1];
+    expect(resizeListener).toEqual(expect.any(Function));
+    renderer.dispose();
+    expect(removeSpy).toHaveBeenCalledWith("resize", resizeListener);
   });
 });

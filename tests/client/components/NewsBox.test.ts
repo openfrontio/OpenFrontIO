@@ -2,6 +2,7 @@ import newsItems from "../../../resources/news.json";
 import {
   filterNewsByPlatform,
   getVisibleNewsItems,
+  NewsBox,
   NewsItem,
 } from "../../../src/client/components/NewsBox";
 
@@ -13,6 +14,7 @@ vi.mock("../../../src/client/Api", () => ({
       type: "announcement",
       description: "Read the **rules** first",
     },
+    { id: "md2", title: "Two", type: "announcement", description: "B" },
   ]),
 }));
 
@@ -116,6 +118,14 @@ describe("NewsBox", () => {
       await vi.waitFor(() =>
         expect(box.querySelector("strong")?.textContent).toBe("rules"),
       );
+    });
+
+    it("does not start cycle timer if disconnected before loadNews resolves", async () => {
+      const el = new NewsBox() as any;
+      document.body.appendChild(el);
+      el.remove();
+      await new Promise((r) => setTimeout(r, 10));
+      expect(el.cycleTimer).toBeNull();
     });
   });
 

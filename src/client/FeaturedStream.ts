@@ -1,8 +1,9 @@
 import { LiveStream, StreamsFeed } from "@openfront/shared/ApiSchemas";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { isCompactViewport } from "./CompactViewport";
 import { isDesktopShell } from "./DesktopShell";
+import { gamePortal } from "./GamePortal";
 import { broadcastKey, streamsFeed, watchUrl } from "./StreamsFeed";
 import { translateText } from "./Utils";
 
@@ -190,11 +191,11 @@ export class FeaturedStream extends LitElement {
   }
 
   async firstUpdated() {
-    // Never on CrazyGames or the desktop (Steam) shell: a Twitch embed carries Twitch's own
-    // ads and is third-party content, which breaks CrazyGames' "SDK ads only" policy and
+    // Never on a portal or the desktop (Steam) shell: a Twitch embed carries Twitch's own
+    // ads and is third-party content, which breaks the portals' "SDK ads only" policy and
     // Steam's no-in-game-ads rules (and can't satisfy Twitch's parent-domain check in the
     // shell). Matches how the rest of the app suppresses promos off the open web.
-    if (crazyGamesSDK.isOnCrazyGames() || isDesktopShell()) return;
+    if (gamePortal.isOnGamePortal() || isDesktopShell()) return;
     // An ad-free user who chose "hide for today" stays hidden for the rest of that day
     // (only that button writes this key, so an ordinary close never suppresses a later visit).
     // A value from an earlier day is stale: drop it so the next day's stream shows again.
@@ -233,6 +234,13 @@ export class FeaturedStream extends LitElement {
   // Twitch to find out.
   private async onFeed(feed: StreamsFeed) {
     if (this.inGame || this.dismissed) return;
+    // Not on a compact screen. Checked per feed tick, so shrinking the window drops a
+    // playing panel (rather than hiding it, which Twitch's ToS forbids) and growing it
+    // brings the panel back.
+    if (isCompactViewport()) {
+      this.goOffline();
+      return;
+    }
     const next = featuredStream(feed, this.dead);
     if (next === null) {
       this.goOffline();
@@ -279,6 +287,11 @@ export class FeaturedStream extends LitElement {
     }
     // A close (or a game start) during the SDK load must not mount.
     if (this.inGame || this.dismissed) return;
+    // Nor a window that turned compact meanwhile (see onFeed).
+    if (isCompactViewport()) {
+      this.goOffline();
+      return;
+    }
     if (this.stream !== stream) return; // superseded while the SDK loaded
     const channel = stream.channel;
     const host = this.querySelector(
@@ -487,18 +500,16 @@ export class FeaturedStream extends LitElement {
     return html`
       <div
         id="featured-stream-card"
-        class="fixed z-[45000] overflow-hidden rounded-lg bg-black/95 shadow-2xl ring-1 ring-white/10 ${this
-          .dragPos
-          ? ""
-          : "transition-all duration-300 " +
-            CORNER_CLASS[this.corner]} ${this.present()
-          ? "opacity-100"
-          : "pointer-events-none opacity-0"} ${min
-          ? "w-[400px]"
-          : "w-[clamp(400px,40vw,720px)]"} max-w-[92vw]"
-        style=${this.dragPos
-          ? `left:${this.dragPos.x}px;top:${this.dragPos.y}px`
-          : ""}
+        class="fixed z-[45000] overflow-hidden rounded-lg bg-black/95 shadow-2xl ring-1 ring-white/10 ${
+          this.dragPos
+            ? ""
+            : "transition-all duration-300 " + CORNER_CLASS[this.corner]
+        } ${this.present() ? "opacity-100" : "pointer-events-none opacity-0"} ${
+          min ? "w-[400px]" : "w-[clamp(400px,40vw,720px)]"
+        } max-w-[92vw]"
+        style=${
+          this.dragPos ? `left:${this.dragPos.x}px;top:${this.dragPos.y}px` : ""
+        }
         aria-hidden=${this.present() ? "false" : "true"}
       >
         <div
@@ -541,16 +552,18 @@ export class FeaturedStream extends LitElement {
             >
               ✕
             </button>
-            ${this.adFree
-              ? html`<button
-                  class="px-1 text-lg leading-none text-white/70 hover:text-white"
-                  aria-label=${translateText("featured_stream.hide_today")}
-                  title=${translateText("featured_stream.hide_today")}
-                  @click=${this.onHideToday}
-                >
-                  ⊘
-                </button>`
-              : ""}
+            ${
+              this.adFree
+                ? html`<button
+                    class="px-1 text-lg leading-none text-white/70 hover:text-white"
+                    aria-label=${translateText("featured_stream.hide_today")}
+                    title=${translateText("featured_stream.hide_today")}
+                    @click=${this.onHideToday}
+                  >
+                    ⊘
+                  </button>`
+                : ""
+            }
           </div>
         </div>
         <div

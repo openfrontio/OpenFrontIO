@@ -23,6 +23,7 @@ import {
   paymentsProvider,
   purchaseOutcomeMessage,
   reportPendingSteamAuthorizations,
+  setPurchaseAccountRefresh,
   startPurchase,
   STEAM_OVERLAY_TIMEOUT_MS,
   steamMicroTxn,
@@ -46,7 +47,9 @@ async function tick(times = 8) {
 }
 
 /** Installs a fake desktop shell with (optionally) a Steam microtxn bridge. */
-function installShell(options: { steam?: boolean; microTxn?: boolean } = {}) {
+function installShell(
+  options: { steam?: boolean; microTxn?: boolean; overlay?: boolean } = {},
+) {
   const listeners: ((e: Authorization) => void)[] = [];
   let pending: Authorization[] = [];
   const bridge = {
@@ -71,6 +74,9 @@ function installShell(options: { steam?: boolean; microTxn?: boolean } = {}) {
             getAuthTicket: async () => ({ ok: false, reason: "unavailable" }),
             getUser: async () => null,
             ...(options.microTxn === false ? {} : { microTxn: bridge }),
+            ...(options.overlay === undefined
+              ? {}
+              : { isOverlayAttached: async () => options.overlay }),
           },
   };
   return {
@@ -298,6 +304,59 @@ describe("reportPendingSteamAuthorizations", () => {
 
   it("is silent and harmless on the web", async () => {
     expect(await reportPendingSteamAuthorizations()).toBe(false);
+  });
+});
+
+describe("startPurchase — a desktop without the Steam overlay", () => {
+  const STEAM_URL =
+    "https://checkout.steampowered.com/checkout/approvetxn/1/?returnurl=x";
+
+  function okSteamRedirect(): PaymentsCheckoutResult {
+    const result = okRedirect(STEAM_URL);
+    if (result.ok) result.data.provider = "steam";
+    return result;
+  }
+
+  it("asks for Steam's approval page and opens it", async () => {
+    installShell({ overlay: false });
+    checkoutMock.mockResolvedValue(okSteamRedirect());
+
+    const result = await startPurchase(PACK, { navigate });
+
+    expect(result).toEqual({ outcome: "browser_approval" });
+    expect(checkoutMock).toHaveBeenCalledWith({
+      provider: "steam",
+      kind: "currency_pack",
+      packName: "starter_pack",
+      handoffs: ["redirect"],
+    });
+    expect(navigate).toHaveBeenCalledWith(STEAM_URL);
+  });
+
+  it("asks for the overlay when the shell reports one", async () => {
+    const shell = installShell({ overlay: true });
+    checkoutMock.mockResolvedValue(okOverlay());
+    finalizeMock.mockResolvedValue({ ok: true, resolution: "settled" });
+
+    const promise = startPurchase(PACK, { navigate });
+    await shell.whenListening();
+    shell.emit({ appId: 1, orderId: steamOrderIdFor(1234n), authorized: true });
+
+    expect(await promise).toEqual({ outcome: "completed" });
+    expect(checkoutMock.mock.calls[0][0]).not.toHaveProperty("handoffs");
+  });
+
+  it("re-reads the account when the game window regains focus", async () => {
+    const refresh = vi.fn();
+    setPurchaseAccountRefresh(refresh);
+    installShell({ overlay: false });
+    checkoutMock.mockResolvedValue(okSteamRedirect());
+
+    await startPurchase(PACK, { navigate });
+    expect(refresh).not.toHaveBeenCalled();
+    window.dispatchEvent(new Event("focus"));
+
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -794,6 +853,16 @@ describe("startPurchase — error mapping", () => {
     });
   });
 
+  it("says a tier needs the game on Steam", async () => {
+    expect(
+      await failWith({ ok: false, code: "steam_licence_required" }),
+    ).toEqual({
+      outcome: "error",
+      message: "store.steam_licence_required",
+      refetchCatalog: false,
+    });
+  });
+
   it("points a past_due subscriber at the billing portal", async () => {
     expect(
       await failWith({ ok: false, code: "subscription_past_due" }),
@@ -926,6 +995,12 @@ describe("purchaseOutcomeMessage", () => {
     expect(
       purchaseOutcomeMessage({ outcome: "redirecting" }, "store.ok"),
     ).toBeNull();
+  });
+
+  it("tells a player without the overlay to approve in their browser", () => {
+    expect(
+      purchaseOutcomeMessage({ outcome: "browser_approval" }, "store.ok"),
+    ).toBe("store.steam_browser_approval");
   });
 
   it("uses the caller's success message when the purchase completed", () => {

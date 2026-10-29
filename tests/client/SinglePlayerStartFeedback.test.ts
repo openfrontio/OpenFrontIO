@@ -1,3 +1,4 @@
+import { GameMapType } from "@openfront/engine-api/game/GameTypes";
 import type { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { render } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,12 +14,13 @@ vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   prewarmCosmetics: cosmeticsMocks.prewarmCosmetics,
 }));
 
-import { crazyGamesSDK } from "../../src/client/CrazyGamesSDK";
+import { gamePortal } from "../../src/client/GamePortal";
 import {
   MIDGAME_AD_DEADLINE_MS,
   SinglePlayerModal,
   START_PREPARE_DEADLINE_MS,
 } from "../../src/client/SinglePlayerModal";
+import { UserSettings } from "../../src/client/UserSettings";
 
 type Internals = {
   startGame(): Promise<void>;
@@ -298,7 +300,7 @@ describe("SinglePlayerModal start feedback", () => {
   it("does not cut a midgame ad short at the preparation deadline", async () => {
     vi.useFakeTimers();
     let finishAd: () => void = () => {};
-    vi.spyOn(crazyGamesSDK, "requestMidgameAd").mockReturnValue(
+    vi.spyOn(gamePortal, "requestMidgameAd").mockReturnValue(
       new Promise<void>((resolve) => {
         finishAd = resolve;
       }),
@@ -328,7 +330,7 @@ describe("SinglePlayerModal start feedback", () => {
       }),
     );
     const requestAd = vi
-      .spyOn(crazyGamesSDK, "requestMidgameAd")
+      .spyOn(gamePortal, "requestMidgameAd")
       .mockResolvedValue(undefined);
 
     const started = internals(modal).startGame();
@@ -345,7 +347,7 @@ describe("SinglePlayerModal start feedback", () => {
   // can be closed while it plays.
   it("does not start a game abandoned while the ad was playing", async () => {
     let finishAd: () => void = () => {};
-    vi.spyOn(crazyGamesSDK, "requestMidgameAd").mockReturnValue(
+    vi.spyOn(gamePortal, "requestMidgameAd").mockReturnValue(
       new Promise<void>((resolve) => {
         finishAd = resolve;
       }),
@@ -365,7 +367,7 @@ describe("SinglePlayerModal start feedback", () => {
   it("gives up on an ad that never signals completion", async () => {
     vi.useFakeTimers();
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    vi.spyOn(crazyGamesSDK, "requestMidgameAd").mockReturnValue(
+    vi.spyOn(gamePortal, "requestMidgameAd").mockReturnValue(
       new Promise<void>(() => {}),
     );
 
@@ -391,5 +393,25 @@ describe("SinglePlayerModal start feedback", () => {
 
     expect(cosmeticsMocks.prewarmCosmetics).toHaveBeenCalled();
     expect(joins).toHaveLength(1);
+  });
+
+  it("starts the tutorial on the Tutorial map with the tutorial flag", async () => {
+    await modal.startTutorial();
+
+    const config = joins[0].detail.gameStartInfo.config;
+    expect(config.gameMap).toBe(GameMapType.Tutorial);
+    expect(config.tutorial).toBe(true);
+    expect(config.bots).toBe(1);
+    expect(config.nations).toBe("default");
+  });
+
+  it("starts a default solo game with the guide back on", async () => {
+    new UserSettings().setTutorialDismissed(true);
+    await modal.startSoloWithGuide();
+
+    expect(cosmeticsMocks.prewarmCosmetics).toHaveBeenCalled();
+    expect(joins).toHaveLength(1);
+    expect(joins[0].detail.gameStartInfo.config.tutorial).toBeUndefined();
+    expect(new UserSettings().tutorialDismissed()).toBe(false);
   });
 });

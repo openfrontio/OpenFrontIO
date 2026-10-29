@@ -1,6 +1,6 @@
 # Implementation: single-PR package split for #1701
 
-Status: implemented (2026-10-05); see [As built](#as-built) for where it differs from the plan. Tracks [#1701](https://github.com/openfrontio/OpenFrontIO/issues/1701).
+Status: implemented (2026-10-05); see [As built](#as-built) for where it differs from the plan. Tracks [#1701](https://github.com/openfrontio/OpenFrontIO/issues/1701). The split landed; the codemod it used is [disabled](#the-codemod) until TypeScript 7.1 ships a compiler API again.
 
 One PR turns `src/core` into three npm workspace packages, `@openfront/engine-api`, `@openfront/engine` and `@openfront/shared`, with no behaviour change. It's built as ordered commits: the code changes first, each small enough to read, then one generated commit that only moves files. Analysis is against `main` at `89fe8a704`.
 
@@ -115,6 +115,19 @@ Eight commits. Every one compiles, passes `npm test` on its own and leaves the t
 
 One script, `scripts/split-packages/run.ts`, built on the `typescript` compiler API (already a dependency) and run with `tsx`. It only rewrites import specifiers and runs `git mv`; it never edits declarations, so its output is easy to trust. It's deleted in a follow-up PR once the split has landed.
 
+> **Tooling status (2026-10-23): disabled.** The codemod and the analysis
+> scripts next to it (`scripts/split-packages/`) are built on the `typescript`
+> compiler API, which TypeScript 7.0 no longer ships - the package only
+> exports a version string. The replacement API (`typescript/sync`,
+> `typescript/ast`) arrives with TypeScript 7.1: it is in beta now
+> (`npm i -D typescript@7.1.0-beta`) and the final release is expected in
+> December 2026. Until then the scripts are kept as they are, but they are not
+> type-checked and they refuse to run, so **the next package split has to wait
+> for that release**. To re-enable them: install `typescript@7.1.0-beta`, drop
+> the `@ts-nocheck` markers and the `assertCompilerApiAvailable()` guards, and
+> port the AST calls to the 7.1 API. See
+> [#4982](https://github.com/openfrontio/OpenFrontIO/issues/4982).
+
 **Input: `moves.json`, one file per commit that uses it.**
 
 ```json
@@ -162,7 +175,7 @@ All of these land in commit 7 except where noted. CI only builds Docker in `depl
 | `Dockerfile` (final stage)                                          | `COPY packages ./packages` beside `src`; drop `COPY zbin`                                                                                                                                                                                                        |
 | `vite.config.ts`                                                    | `./src/core/AssetUrls` import becomes `@openfront/shared/AssetUrls`                                                                                                                                                                                              |
 | `scripts/buildAssetHashes.ts`                                       | `coreVersion` hashes `packages/engine/src` + `packages/engine-api/src` (+ `packages/zbin/src`), with paths prefixed by package so renames still change the hash                                                                                                  |
-| `eslint.config.js`                                                  | DetMath rule `files`/`ignores` globs move from `src/core/**` to `packages/engine*/src/**`                                                                                                                                                                        |
+| `eslint.config.js` (historical; now `.oxlintrc.json`)               | DetMath rule `files`/`ignores` globs move from `src/core/**` to `packages/engine*/src/**`; the restrictions now live in Oxlint overrides                                                                                                                         |
 | `map-generator/codegen.go` (+ its README)                           | Output path for `Maps.gen.ts` becomes `packages/engine-api/src/game/Maps.gen.ts`; rebuild and confirm `npm run gen-maps` writes the same bytes                                                                                                                   |
 | `.gitattributes`                                                    | Comment only: "hashes src/core" becomes the new paths                                                                                                                                                                                                            |
 | `.github/workflows/claude-code-review.yml`                          | Path comment/filters that mention `src/core`                                                                                                                                                                                                                     |

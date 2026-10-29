@@ -2,9 +2,14 @@ import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import { Cell, TerrainType } from "@openfront/engine-api/game/GameTypes";
 import { z } from "zod";
 import { snapshotType, zBytes, zInt, zTiles } from "../snapshot/SnapshotType";
+import { TileSet } from "./TileSet";
 
 export class GameMapImpl implements GameMap {
   private _numTilesWithFallout = 0;
+  private bfsVisited: Uint16Array | null = null;
+  private bfsQueue: TileRef[] = [];
+  private bfsGen = 0;
+  private inBfs = false;
 
   private readonly terrain: Uint8Array; // Immutable terrain data
   private readonly state: Uint16Array; // Mutable game state
@@ -156,6 +161,11 @@ export class GameMapImpl implements GameMap {
   // in first-edit order. Lets a snapshot store terrain as a diff against the
   // map file and verify the file it will be restored onto is the same one.
   private pristineTerrain: Map<TileRef, number> | null = null;
+
+  /** Tiles whose terrain may differ from the map file's. */
+  editedTerrainTiles(): TileRef[] {
+    return [...(this.pristineTerrain?.keys() ?? [])];
+  }
 
   private noteTerrainEdit(ref: TileRef): void {
     this.pristineTerrain ??= new Map();
@@ -420,37 +430,81 @@ export class GameMapImpl implements GameMap {
     }
     return tiles;
   }
-  bfs(
+  private bumpBfsGeneration(): number {
+    const totalTiles = this.width_ * this.height_;
+    if (!this.bfsVisited || this.bfsVisited.length < totalTiles) {
+      this.bfsVisited = new Uint16Array(totalTiles);
+      this.bfsGen = 0;
+    }
+    this.bfsGen++;
+    if (this.bfsGen === 0xffff) {
+      this.bfsVisited.fill(0);
+      this.bfsGen = 1;
+    }
+    return this.bfsGen;
+  }
+
+  private tryPushNeighbor(
+    n: TileRef,
+    gen: number,
+    filter: (gm: GameMap, tile: TileRef) => boolean,
+  ): void {
+    if (this.bfsVisited![n] !== gen && filter(this, n)) {
+      this.bfsVisited![n] = gen;
+      this.bfsQueue.push(n);
+    }
+  }
+
+  private expandNeighbors(
+    curr: TileRef,
+    gen: number,
+    filter: (gm: GameMap, tile: TileRef) => boolean,
+  ): void {
+    const w = this.width_;
+    const x = curr % w;
+    if (curr >= w) this.tryPushNeighbor(curr - w, gen, filter);
+    if (curr < (this.height_ - 1) * w)
+      this.tryPushNeighbor(curr + w, gen, filter);
+    if (x !== 0) this.tryPushNeighbor(curr - 1, gen, filter);
+    if (x !== w - 1) this.tryPushNeighbor(curr + 1, gen, filter);
+  }
+
+  bfsSearch(
     tile: TileRef,
     filter: (gm: GameMap, tile: TileRef) => boolean,
-  ): Set<TileRef> {
-    const seen = new Set<TileRef>();
-    const q: TileRef[] = [];
-    if (filter(this, tile)) {
-      seen.add(tile);
+    onVisit?: (tile: TileRef) => boolean | void,
+  ): boolean {
+    if (this.inBfs) {
+      throw new Error("Re-entrant bfsSearch is not supported");
+    }
+    this.inBfs = true;
+    try {
+      if (!filter(this, tile)) return true;
+      const gen = this.bumpBfsGeneration();
+      const q = this.bfsQueue;
+      q.length = 0;
+      this.bfsVisited![tile] = gen;
       q.push(tile);
-    }
 
-    // Neighbors are enumerated inline in the same order as neighbors() to
-    // avoid allocating an array per visited tile.
-    const w = this.width_;
-    const southLimit = (this.height_ - 1) * w;
-    const visit = (n: TileRef) => {
-      if (!seen.has(n) && filter(this, n)) {
-        seen.add(n);
-        q.push(n);
+      let head = 0;
+      while (head < q.length) {
+        const curr = q[head++];
+        if (onVisit && onVisit(curr) === false) return false;
+        this.expandNeighbors(curr, gen, filter);
       }
-    };
-    while (q.length > 0) {
-      const curr = q.pop();
-      if (curr === undefined) continue;
-      const x = curr % w;
-      if (curr >= w) visit(curr - w);
-      if (curr < southLimit) visit(curr + w);
-      if (x !== 0) visit(curr - 1);
-      if (x !== w - 1) visit(curr + 1);
+      return true;
+    } finally {
+      this.bfsQueue.length = 0;
+      this.inBfs = false;
     }
-    return seen;
+  }
+
+  bfs(tile: TileRef, filter: (gm: GameMap, tile: TileRef) => boolean): TileSet {
+    const result = new TileSet();
+    this.bfsSearch(tile, filter, (t) => {
+      result.add(t);
+    });
+    return result;
   }
 
   tileState(tile: TileRef): number {

@@ -1,6 +1,8 @@
 import { TileRef } from "../game/GameMap";
 import {
   BuildableUnit,
+  HumanDisconnects,
+  HumanStatsSnapshot,
   PlayerActions,
   PlayerBorderTiles,
   PlayerBuildableUnitType,
@@ -9,6 +11,7 @@ import {
 } from "../game/GameTypes";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { MapFiles } from "../game/MapFiles";
+import { SnapshotHeader } from "../game/SnapshotHeader";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
 export type WorkerMessageType =
@@ -36,7 +39,13 @@ export type WorkerMessageType =
   | "transport_ship_spawn"
   | "transport_ship_spawn_result"
   | "snapshot"
-  | "snapshot_result";
+  | "snapshot_result"
+  | "read_snapshot_header"
+  | "read_snapshot_header_result"
+  | "human_stats"
+  | "human_stats_result"
+  | "human_disconnects"
+  | "human_disconnects_result";
 
 // Base interface for all messages
 interface BaseWorkerMessage {
@@ -140,6 +149,8 @@ export interface PlayerBuildablesMessage extends BaseWorkerMessage {
   x?: number;
   y?: number;
   units?: readonly PlayerBuildableUnitType[];
+  // Include placement rails even when an upgrade target is also available.
+  includeBuildPreview?: boolean;
 }
 
 export interface PlayerBuildablesResultMessage extends BaseWorkerMessage {
@@ -200,6 +211,37 @@ export interface SnapshotResultMessage extends BaseWorkerMessage {
   snapshot: Uint8Array | null;
 }
 
+/** Reads a snapshot's header. Answered without an initialized game. */
+export interface ReadSnapshotHeaderMessage extends BaseWorkerMessage {
+  type: "read_snapshot_header";
+  snapshot: Uint8Array;
+}
+
+export interface ReadSnapshotHeaderResultMessage extends BaseWorkerMessage {
+  type: "read_snapshot_header_result";
+  /** Null if the bytes are not a snapshot this build can read. */
+  header: SnapshotHeader | null;
+  error?: string;
+}
+
+export interface HumanStatsMessage extends BaseWorkerMessage {
+  type: "human_stats";
+}
+
+export interface HumanStatsResultMessage extends BaseWorkerMessage {
+  type: "human_stats_result";
+  result: HumanStatsSnapshot;
+}
+
+export interface HumanDisconnectsMessage extends BaseWorkerMessage {
+  type: "human_disconnects";
+}
+
+export interface HumanDisconnectsResultMessage extends BaseWorkerMessage {
+  type: "human_disconnects_result";
+  result: HumanDisconnects;
+}
+
 // Union types for type safety
 export type MainThreadMessage =
   | InitMessage
@@ -212,7 +254,10 @@ export type MainThreadMessage =
   | PlayerBorderTilesMessage
   | AttackClusteredPositionsMessage
   | TransportShipSpawnMessage
-  | SnapshotMessage;
+  | SnapshotMessage
+  | ReadSnapshotHeaderMessage
+  | HumanStatsMessage
+  | HumanDisconnectsMessage;
 
 // Message send from worker
 export type WorkerMessage =
@@ -229,4 +274,7 @@ export type WorkerMessage =
   | PlayerBorderTilesResultMessage
   | AttackClusteredPositionsResultMessage
   | TransportShipSpawnResultMessage
-  | SnapshotResultMessage;
+  | SnapshotResultMessage
+  | ReadSnapshotHeaderResultMessage
+  | HumanStatsResultMessage
+  | HumanDisconnectsResultMessage;

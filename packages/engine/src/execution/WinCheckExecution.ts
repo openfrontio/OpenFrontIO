@@ -33,7 +33,7 @@ export class WinCheckExecution implements Execution {
     }
     if (this.mg === null) throw new Error("Not initialized");
 
-    if (this.checkRanked2v2Cancelled()) {
+    if (this.checkRankedTeamCancelled()) {
       return;
     }
 
@@ -44,20 +44,20 @@ export class WinCheckExecution implements Execution {
     }
   }
 
-  // A ranked 2v2 match is void unless all four matched players actually
-  // spawned — a player who never joined isn't in the game at all, and one who
-  // idled through the spawn phase never placed a spawn. Either way the match
-  // would be lopsided, so end it with no winner (the record is archived
+  // A ranked 2v2 or clan wars match is void unless every matched player
+  // actually spawned — a player who never joined isn't in the game at all, and
+  // one who idled through the spawn phase never placed a spawn. Either way the
+  // match would be lopsided, so end it with no winner (the record is archived
   // winnerless and never ranked). Runs once, on the first check after the
   // spawn phase ends (this execution is inactive during the spawn phase).
-  private checkRanked2v2Cancelled(): boolean {
+  private checkRankedTeamCancelled(): boolean {
     if (this.mg === null) throw new Error("Not initialized");
     if (this.checkedRankedSpawns) {
       return false;
     }
     this.checkedRankedSpawns = true;
     const gameConfig = this.mg.config().gameConfig();
-    if (gameConfig.rankedType !== RankedType.TwoVTwo) {
+    if (!isRankedTeamGame(gameConfig.rankedType)) {
       return false;
     }
     // allPlayers: players() hides tile-less players, which is exactly what a
@@ -70,7 +70,7 @@ export class WinCheckExecution implements Execution {
       return false;
     }
     console.log(
-      `ranked 2v2 cancelled: only ${spawned}/${expected} players spawned`,
+      `ranked ${gameConfig.rankedType} cancelled: only ${spawned}/${expected} players spawned`,
     );
     this.mg.setWinner(null, this.mg.stats().stats());
     this.active = false;
@@ -86,7 +86,23 @@ export class WinCheckExecution implements Execution {
       return;
     }
 
-    if (this.mg.config().gameConfig().rankedType === RankedType.OneVOne) {
+    // The tutorial is won by conquering the nation and the tribe, and
+    // nothing else ends it: no tile share, no timer.
+    if (this.mg.config().gameConfig().tutorial) {
+      if (sorted.every((p) => p.type() === PlayerType.Human)) {
+        this.mg.setWinner(sorted[0], this.mg.stats().stats());
+        this.active = false;
+      }
+      return;
+    }
+
+    // Ranked 1v1 and FFA end when one connected human is left: everyone else
+    // is dead or gone.
+    const rankedType = this.mg.config().gameConfig().rankedType;
+    if (
+      rankedType === RankedType.OneVOne ||
+      rankedType === RankedType.FreeForAll
+    ) {
       const humans = sorted.filter(
         (p) => p.type() === PlayerType.Human && !p.isDisconnected(),
       );
@@ -98,7 +114,17 @@ export class WinCheckExecution implements Execution {
       }
     }
 
-    const max = sorted[0];
+    // A bot can't win ranked FFA: the API only rates a winner who was in the
+    // match, so the largest human takes the threshold or the timer. Ranked 1v1
+    // keeps the old rule so archived 1v1 replays still resolve the same way.
+    const contenders =
+      rankedType === RankedType.FreeForAll
+        ? sorted.filter((p) => p.type() === PlayerType.Human)
+        : sorted;
+    const max = contenders[0];
+    if (max === undefined) {
+      return;
+    }
     if (this.hasWon(max.numTilesOwned())) {
       this.mg.setWinner(max, this.mg.stats().stats());
       console.log(`${max.name()} has won the game`);
@@ -125,19 +151,19 @@ export class WinCheckExecution implements Execution {
     }
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
-    // Cross-multiplied: the threshold is a whole percentage, so this is
-    // exact integer math.
+    // Cross-multiplied: the threshold is in whole tenths of a percent, so
+    // this is exact integer math.
     return (
-      tilesOwned * 100 >
+      tilesOwned * 1000 >
       numTilesWithoutFallout *
-        this.mg.config().percentageTilesOwnedToWin(timeElapsed)
+        this.mg.config().percentageTilesOwnedToWinTenths(timeElapsed)
     );
   }
 
   checkWinnerTeam(): void {
     if (this.mg === null) throw new Error("Not initialized");
 
-    if (this.mg.config().gameConfig().rankedType === RankedType.TwoVTwo) {
+    if (isRankedTeamGame(this.mg.config().gameConfig().rankedType)) {
       // players() only returns alive players, so a team drops out of this set
       // once every member is dead or disconnected.
       const teamsRemaining = new Set<Team>();
@@ -205,6 +231,14 @@ export class WinCheckExecution implements Execution {
     this.mg = s.initialized ? r.game : null;
     this.checkedRankedSpawns = s.checkedRankedSpawns;
   }
+}
+
+// Ranked team modes: matchmade teams that must all show up, and that win by
+// outlasting every other team.
+function isRankedTeamGame(rankedType: RankedType | undefined): boolean {
+  return (
+    rankedType === RankedType.TwoVTwo || rankedType === RankedType.ClanWars
+  );
 }
 
 const WinCheckStateSchema = z.object({

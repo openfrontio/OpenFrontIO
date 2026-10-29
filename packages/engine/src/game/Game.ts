@@ -22,7 +22,6 @@ import {
   TerraNullius,
   Tick,
   TrainType,
-  TrajectoryTile,
   TransportShipState,
   UnitInfo,
   UnitType,
@@ -73,12 +72,12 @@ export interface UnitParamsMap {
 
   [UnitType.AtomBomb]: {
     targetTile?: number;
-    trajectory: TrajectoryTile[];
+    trajectory: TileRef[];
   };
 
   [UnitType.HydrogenBomb]: {
     targetTile?: number;
-    trajectory: TrajectoryTile[];
+    trajectory: TileRef[];
   };
 
   [UnitType.MIRV]: {
@@ -88,7 +87,7 @@ export interface UnitParamsMap {
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
-    trajectory: TrajectoryTile[];
+    trajectory: TileRef[];
   };
 
   [UnitType.TradeShip]: {
@@ -149,6 +148,8 @@ export interface Attack {
   removeBorderTile(tile: TileRef): void;
   clearBorder(): void;
   borderSize(): number;
+  // Target tiles this attack is about to fight over.
+  borderTiles(): ReadonlySet<TileRef>;
   clusteredPositions(): TileRef[];
 }
 
@@ -233,7 +234,7 @@ export interface Unit extends UnitLike {
   targetPlayer(): Player | TerraNullius | undefined;
   setTrajectoryIndex(i: number): void;
   trajectoryIndex(): number;
-  trajectory(): TrajectoryTile[];
+  trajectory(): TileRef[];
   setTargetUnit(unit: Unit | undefined): void;
   targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;
@@ -395,6 +396,7 @@ export interface Player extends PlayerLike {
   buildableUnits(
     tile: TileRef | null,
     units?: readonly PlayerBuildableUnitType[],
+    includeBuildPreview?: boolean,
   ): BuildableUnit[];
   canBuild(
     type: UnitType,
@@ -466,6 +468,8 @@ export interface Player extends PlayerLike {
 
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
+  // Excludes the temporary embargo every attacked player places on its attacker
+  hasManualEmbargoAgainst(other: Player): boolean;
   tradingPartners(): Player[];
   addEmbargo(other: Player, isTemporary: boolean): void;
   getEmbargoes(): Embargo[];
@@ -551,6 +555,7 @@ export interface Game extends GameLike {
   ticks(): Tick;
   inSpawnPhase(): boolean;
   endSpawnPhase(): void;
+  queueViewResync(): void;
   executeNextTick(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;
   recordMotionPlan(record: MotionPlanRecord): void;

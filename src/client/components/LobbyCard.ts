@@ -3,7 +3,7 @@ import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { PublicGameInfo } from "@openfront/shared/WireSchemas";
 import { html, nothing, svg, TemplateResult } from "lit";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
-import { crazyGamesSDK } from "../CrazyGamesSDK";
+import { gamePortal } from "../GamePortal";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { notableLobbySettings } from "../utilities/LobbySettingsSummary";
 import { getMapName, getModifierLabels, translateText } from "../Utils";
@@ -22,7 +22,7 @@ export function viewerIsTrusted(userMe: UserMeResponse | false): boolean {
 /**
  * Whether the viewer has an account to become trusted on. A guest session
  * still resolves to a UserMeResponse, so a linked identity (Discord, Google,
- * Steam, email) is what counts. Callers on CrazyGames must OR in the SDK
+ * Steam, email) is what counts. Callers on a portal must OR in the SDK
  * profile themselves; it isn't on the API response.
  */
 export function viewerIsSignedIn(userMe: UserMeResponse | false): boolean {
@@ -37,26 +37,60 @@ export function canJoinTrustedLobby(
   return lobby.gameConfig?.trusted !== true || viewerTrusted;
 }
 
+/** Where the trust popup is shown: a trusted-only lobby, or ranked. */
+export type TrustRequiredContext = "lobby" | "ranked";
+
+const TRUST_REQUIRED_KEYS: Record<
+  TrustRequiredContext,
+  {
+    title: string;
+    body: string;
+    bodyCrazyGames: string;
+    bodySignedOut: string;
+    bodySignedOutCrazyGames: string;
+  }
+> = {
+  lobby: {
+    title: "public_lobby.trust_required_title",
+    body: "public_lobby.trust_required_body",
+    bodyCrazyGames: "public_lobby.trust_required_body_crazygames",
+    bodySignedOut: "public_lobby.trust_required_body_signed_out",
+    bodySignedOutCrazyGames:
+      "public_lobby.trust_required_body_signed_out_crazygames",
+  },
+  ranked: {
+    title: "mode_selector.ranked_trust_required_title",
+    body: "mode_selector.ranked_trust_required_body",
+    bodyCrazyGames: "mode_selector.ranked_trust_required_body_crazygames",
+    bodySignedOut: "mode_selector.ranked_trust_required_body_signed_out",
+    bodySignedOutCrazyGames:
+      "mode_selector.ranked_trust_required_body_signed_out_crazygames",
+  },
+};
+
 /**
- * Popup shown instead of attempting to join a trusted-only lobby the viewer
- * can't get into (the server would refuse them anyway). Tells them how to
- * become trusted rather than letting the join fail: a signed-out viewer is
- * told to sign in first, since trust only attaches to an account. CrazyGames
- * has no purchases, so its variants only suggest playing more games.
+ * Popup shown instead of attempting to join a trusted-only lobby, or ranked,
+ * when the viewer can't get in (the server would refuse them anyway). Tells
+ * them how to become trusted rather than letting the join fail: a signed-out
+ * viewer is told to sign in first, since trust only attaches to an account.
+ * Portals have no purchases, so their variants only suggest playing more
+ * games.
  */
 export function trustRequiredDialog(
   signedIn: boolean,
   onClose: () => void,
+  context: TrustRequiredContext = "lobby",
 ): TemplateResult {
-  const body = crazyGamesSDK.isOnCrazyGames()
+  const keys = TRUST_REQUIRED_KEYS[context];
+  const body = gamePortal.isOnGamePortal()
     ? signedIn
-      ? "public_lobby.trust_required_body_crazygames"
-      : "public_lobby.trust_required_body_signed_out_crazygames"
+      ? keys.bodyCrazyGames
+      : keys.bodySignedOutCrazyGames
     : signedIn
-      ? "public_lobby.trust_required_body"
-      : "public_lobby.trust_required_body_signed_out";
+      ? keys.body
+      : keys.bodySignedOut;
   return html`<confirm-dialog
-    .heading=${translateText("public_lobby.trust_required_title")}
+    .heading=${translateText(keys.title)}
     .message=${translateText(body)}
     variant="warning"
     .showClose=${true}
@@ -212,28 +246,27 @@ export function lobbyCard({
         class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
       >
         <div class="flex min-w-0 flex-col items-start gap-1">
-          ${custom
-            ? html`<span class=${CUSTOM_PILL}
-                >${translateText("public_lobby.custom")}</span
-              >`
-            : nothing}
+          ${
+            custom
+              ? html`<span class=${CUSTOM_PILL}
+                  >${translateText("public_lobby.custom")}</span
+                >`
+              : nothing
+          }
           ${modifiers.map((label) => html`<span class=${PILL}>${label}</span>`)}
         </div>
         <span
-          class="${PILL} shrink-0 tabular-nums ${timeDisplayUppercase
-            ? ""
-            : "normal-case"}"
+          class="${PILL} shrink-0 tabular-nums ${
+            timeDisplayUppercase ? "" : "normal-case"
+          }"
           >${timeDisplay}</span
         >
       </div>
 
       <div
-        class="absolute inset-x-0 bottom-0 flex flex-col bg-black/65 px-3 py-2 ${trustedOnly &&
-        custom
-          ? "pr-20"
-          : trustedOnly || custom
-            ? "pr-10"
-            : ""}"
+        class="absolute inset-x-0 bottom-0 flex flex-col bg-black/65 px-3 py-2 ${
+          trustedOnly && custom ? "pr-20" : trustedOnly || custom ? "pr-10" : ""
+        }"
       >
         <span
           class="${BADGE} absolute bottom-full right-2 mb-1 flex items-center gap-1 px-2 py-0.5 text-xs font-bold tabular-nums tracking-widest"
@@ -252,13 +285,15 @@ export function lobbyCard({
         </span>
         ${trustedOnly ? trustLockIcon(viewerTrusted) : nothing}
         ${custom ? customInfoIcon(lobby, trustedOnly) : nothing}
-        ${title
-          ? html`<p
-              class="text-sm font-bold leading-tight tracking-wider @[20rem]:text-base"
-            >
-              ${title}
-            </p>`
-          : nothing}
+        ${
+          title
+            ? html`<p
+                class="text-sm font-bold leading-tight tracking-wider @[20rem]:text-base"
+              >
+                ${title}
+              </p>`
+            : nothing
+        }
         <h3 class="text-xs tracking-wider text-white/70">${subtitleLine}</h3>
       </div>
     </button>
@@ -297,20 +332,22 @@ function customInfoIcon(
   const title = translateText("public_lobby.custom_tooltip_title");
   const tooltip = html`<div class="flex flex-col gap-0.5">
     <span class="font-bold">${title}</span>
-    ${lines.length > 0
-      ? lines.map((l) => html`<span class="text-white/80">${l}</span>`)
-      : html`<span class="text-white/80"
-          >${translateText("public_lobby.custom_default_settings")}</span
-        >`}
+    ${
+      lines.length > 0
+        ? lines.map((l) => html`<span class="text-white/80">${l}</span>`)
+        : html`<span class="text-white/80"
+            >${translateText("public_lobby.custom_default_settings")}</span
+          >`
+    }
   </div>`;
   // Floats in <body> (FloatingTooltip): the card clips its overflow, and so
   // do the modal panels the cards sit in.
   const show = (e: Event) =>
     showFloatingTooltip(e.currentTarget as HTMLElement, tooltip);
   return html`<span
-    class="${BADGE} absolute bottom-2 ${besideLock
-      ? "right-11"
-      : "right-2"} flex items-center px-1.5 py-1 text-orange-400"
+    class="${BADGE} absolute bottom-2 ${
+      besideLock ? "right-11" : "right-2"
+    } flex items-center px-1.5 py-1 text-orange-400"
     aria-label=${title}
     data-custom-info
     @mouseenter=${show}
@@ -332,16 +369,23 @@ function customInfoIcon(
 }
 
 /** Bottom-right lock: red and closed when the viewer can't join, green and open when they can. */
-function trustLockIcon(viewerTrusted: boolean): TemplateResult {
+export function trustLockIcon(
+  viewerTrusted: boolean,
+  {
+    tooltipTitle = translateText("public_lobby.trusted_tooltip_title"),
+    position = "bottom-2 right-2",
+    small = false,
+  }: { tooltipTitle?: string; position?: string; small?: boolean } = {},
+): TemplateResult {
   const label = translateText(
     viewerTrusted
       ? "public_lobby.trusted_unlocked"
       : "public_lobby.trusted_locked",
   );
   return html`<span
-    class="${BADGE} group/trust absolute bottom-2 right-2 flex items-center px-1.5 py-1 ${viewerTrusted
-      ? "text-green-400"
-      : "text-red-400"}"
+    class="${BADGE} group/trust absolute ${position} flex items-center ${
+      small ? "px-1 py-0.5" : "px-1.5 py-1"
+    } ${viewerTrusted ? "text-green-400" : "text-red-400"}"
     aria-label=${label}
     data-trust=${viewerTrusted ? "unlocked" : "locked"}
   >
@@ -349,26 +393,26 @@ function trustLockIcon(viewerTrusted: boolean): TemplateResult {
       role="tooltip"
       class="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden w-max max-w-48 flex-col gap-0.5 whitespace-normal rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-left text-xs normal-case tracking-normal text-white shadow-xl group-hover/trust:flex"
     >
-      <span class="font-bold"
-        >${translateText("public_lobby.trusted_tooltip_title")}</span
-      >
+      <span class="font-bold">${tooltipTitle}</span>
       <span class="text-white/80">${label}</span>
     </span>
     <svg
-      class="size-4"
+      class=${small ? "size-[11px]" : "size-4"}
       viewBox="0 0 20 20"
       fill="currentColor"
       aria-hidden="true"
     >
-      ${viewerTrusted
-        ? svg`<path
+      ${
+        viewerTrusted
+          ? svg`<path
             d="M14.5 1A4.5 4.5 0 0 0 10 5.5V9H3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-1.5V5.5a3 3 0 1 1 6 0v2.75a.75.75 0 0 0 1.5 0V5.5A4.5 4.5 0 0 0 14.5 1Z"
           />`
-        : svg`<path
+          : svg`<path
             fill-rule="evenodd"
             d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z"
             clip-rule="evenodd"
-          />`}
+          />`
+      }
     </svg>
   </span>`;
 }

@@ -14,7 +14,7 @@ import {
 } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { assertNever } from "@openfront/engine-lib/Util";
 import { z } from "zod";
-import { Game, Player } from "../../game/Game";
+import { Game, Player, Unit } from "../../game/Game";
 import type {
   SnapshotReader,
   SnapshotWriter,
@@ -26,9 +26,129 @@ import {
   NationEmojiBehavior,
   respondToMIRV,
 } from "./NationEmojiBehavior";
+import { randTerritoryTileArray } from "./NationUtils";
 
 // 30 seconds at 10 ticks/second
 const MIRV_COOLDOWN_TICKS = 300;
+
+/** Share of a MIRV's warheads that must get past SAMs for it to be worth saving for or launching, keyed by difficulty */
+const MIN_MIRV_LEAK_SHARE: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 0, // Never checks
+  [Difficulty.Medium]: 0.1,
+  [Difficulty.Hard]: 0.2,
+  [Difficulty.Impossible]: 0.25,
+};
+
+/** MirvExecution's warhead cap, and the target land per warhead its spacing works out to */
+const MIRV_MAX_WARHEADS = 350;
+const LAND_TILES_PER_MIRV_WARHEAD = 2000;
+
+/** Hard & Impossible MIRV a bordering rival with at least this share of their land, ahead of a land attack */
+const RIVAL_MIN_TILE_RATIO = 0.5;
+
+/** Target tiles sampled to estimate SAM coverage */
+const MIRV_COVERAGE_SAMPLES = 40;
+
+/** Estimated share of a MIRV's warheads at `target` that SAMs, each shooting its level in warheads, would miss */
+export function mirvLeakShare(
+  game: Game,
+  attacker: Player,
+  target: Player,
+): number {
+  const warheads = Math.min(
+    MIRV_MAX_WARHEADS,
+    Math.max(1, target.numTilesOwned() / LAND_TILES_PER_MIRV_WARHEAD),
+  );
+  // Own seed, so the estimate is a pure function of the game state
+  const random = new PseudoRandom(game.ticks() * 1024 + target.smallID());
+  const samples = randTerritoryTileArray(
+    random,
+    game,
+    target,
+    MIRV_COVERAGE_SAMPLES,
+  );
+  if (samples.length === 0) return 1;
+
+  const config = game.config();
+  const warheadsPerSample = warheads / samples.length;
+  const warheadsInRange = new Map<Unit, number>();
+  let coveredSamples = 0;
+  for (const tile of samples) {
+    let covered = false;
+    for (const { unit: sam, distSquared } of game.nearbyUnits(
+      tile,
+      config.maxSamRange(),
+      UnitType.SAMLauncher,
+    )) {
+      const owner = sam.owner();
+      if (owner === attacker || owner.isFriendly(attacker)) continue;
+      if (distSquared > config.samRange(sam.level()) ** 2) continue;
+      warheadsInRange.set(
+        sam,
+        (warheadsInRange.get(sam) ?? 0) + warheadsPerSample,
+      );
+      covered = true;
+    }
+    if (covered) coveredSamples++;
+  }
+
+  let shots = 0;
+  warheadsInRange.forEach((inRange, sam) => {
+    shots += Math.min(sam.level(), inRange);
+  });
+  const intercepted = Math.min(coveredSamples * warheadsPerSample, shots);
+  return 1 - intercepted / warheads;
+}
+
+/** Whether enough of a MIRV's warheads would get past the SAMs at `target`; Easy doesn't check. */
+export function mirvGetsThrough(
+  game: Game,
+  attacker: Player,
+  target: Player,
+): boolean {
+  const minLeakShare =
+    MIN_MIRV_LEAK_SHARE[game.config().gameConfig().difficulty];
+  return (
+    minLeakShare === 0 || mirvLeakShare(game, attacker, target) >= minLeakShare
+  );
+}
+
+/** Whether a MIRV would get through at the land or city leader, the players nations MIRV. */
+export function isMirvWorthSavingFor(game: Game, player: Player): boolean {
+  let landLeader: Player | null = null;
+  let cityLeader: Player | null = null;
+  for (const p of validMirvTargets(game, player)) {
+    if (landLeader === null || p.numTilesOwned() > landLeader.numTilesOwned()) {
+      landLeader = p;
+    }
+    if (
+      cityLeader === null ||
+      p.unitCount(UnitType.City) > cityLeader.unitCount(UnitType.City)
+    ) {
+      cityLeader = p;
+    }
+  }
+  if (landLeader !== null && mirvGetsThrough(game, player, landLeader)) {
+    return true;
+  }
+  return (
+    cityLeader !== null &&
+    cityLeader !== landLeader &&
+    mirvGetsThrough(game, player, cityLeader)
+  );
+}
+
+function validMirvTargets(game: Game, player: Player): Player[] {
+  return game
+    .players()
+    .filter(
+      (p) =>
+        p !== player &&
+        p.isPlayer() &&
+        p.type() !== PlayerType.Bot &&
+        !player.isOnSameTeam(p),
+    );
+}
 
 export class NationMIRVBehavior {
   // Shared across all NationMIRVBehavior instances.
@@ -146,24 +266,37 @@ export class NationMIRVBehavior {
     }
 
     const inboundMIRVSender = this.selectCounterMirvTarget();
-    if (inboundMIRVSender && !this.wasRecentlyMirved(inboundMIRVSender)) {
+    if (inboundMIRVSender && this.isWorthMirving(inboundMIRVSender)) {
       this.maybeSendMIRV(inboundMIRVSender);
       return true;
     }
 
     const victoryDenialTarget = this.selectVictoryDenialTarget();
-    if (victoryDenialTarget && !this.wasRecentlyMirved(victoryDenialTarget)) {
+    if (victoryDenialTarget && this.isWorthMirving(victoryDenialTarget)) {
       this.maybeSendMIRV(victoryDenialTarget);
       return true;
     }
 
     const steamrollStopTarget = this.selectSteamrollStopTarget();
-    if (steamrollStopTarget && !this.wasRecentlyMirved(steamrollStopTarget)) {
+    if (steamrollStopTarget && this.isWorthMirving(steamrollStopTarget)) {
       this.maybeSendMIRV(steamrollStopTarget);
       return true;
     }
 
+    const rivalTarget = this.selectRivalTarget();
+    if (rivalTarget && this.isWorthMirving(rivalTarget)) {
+      this.maybeSendMIRV(rivalTarget);
+      return true;
+    }
+
     return false;
+  }
+
+  private isWorthMirving(target: Player): boolean {
+    return (
+      !this.wasRecentlyMirved(target) &&
+      mirvGetsThrough(this.game, this.player, target)
+    );
   }
 
   // MIRV Strategy Methods
@@ -252,6 +385,25 @@ export class NationMIRVBehavior {
     return null;
   }
 
+  /** Hard & Impossible: the biggest bordering player about our size, wiped out by a MIRV and our attack when it lands. */
+  private selectRivalTarget(): Player | null {
+    const { difficulty } = this.game.config().gameConfig();
+    if (
+      difficulty !== Difficulty.Hard &&
+      difficulty !== Difficulty.Impossible
+    ) {
+      return null;
+    }
+    const minTiles = this.player.numTilesOwned() * RIVAL_MIN_TILE_RATIO;
+    let best: Player | null = null;
+    for (const p of this.getValidMirvTargetPlayers()) {
+      if (this.player.isFriendly(p) || p.numTilesOwned() < minTiles) continue;
+      if (best !== null && p.numTilesOwned() <= best.numTilesOwned()) continue;
+      if (this.player.sharesBorderWith(p)) best = p;
+    }
+    return best;
+  }
+
   // MIRV Cooldown Methods
   private wasRecentlyMirved(target: Player): boolean {
     const lastTick = this.game.nationMirvTargets().get(target.id());
@@ -266,15 +418,7 @@ export class NationMIRVBehavior {
   // MIRV Helper Methods
   private getValidMirvTargetPlayers(): Player[] {
     if (this.player === null) throw new Error("not initialized");
-
-    return this.game.players().filter((p) => {
-      return (
-        p !== this.player &&
-        p.isPlayer() &&
-        p.type() !== PlayerType.Bot &&
-        !this.player!.isOnSameTeam(p)
-      );
-    });
+    return validMirvTargets(this.game, this.player);
   }
 
   private isInboundMIRVFrom(attacker: Player): boolean {

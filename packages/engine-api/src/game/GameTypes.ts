@@ -1,7 +1,8 @@
-import { ClientID } from "../Schemas";
+import { AllPlayersStats, ClientID } from "../Schemas";
 
 import { TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import { maps, type MapInfo } from "./Maps.gen";
 
 function isEnumValue<T extends Record<string, string | number>>(
   enumObj: T,
@@ -34,8 +35,8 @@ export type TransportShipState = {
 };
 
 export type NukeState = {
-  trajectory: TrajectoryTile[];
-  trajectoryIndex: number;
+  trajectory?: TileRef[];
+  trajectoryIndex?: number;
   targetedBySam: boolean;
   waitTicks: number;
 };
@@ -119,6 +120,12 @@ export {
   type SpecialModifierKey,
 } from "./Maps.gen";
 
+/**
+ * The maps players can pick or be dealt: everything but `hidden` ones (the
+ * tutorial map), which only code that names them starts.
+ */
+export const listedMaps: readonly MapInfo[] = maps.filter((m) => !m.hidden);
+
 export enum GameType {
   Singleplayer = "Singleplayer",
   Public = "Public",
@@ -136,7 +143,15 @@ export enum GameMode {
 export enum RankedType {
   OneVOne = "1v1",
   TwoVTwo = "2v2",
+  FreeForAll = "ffa",
+  ClanWars = "clanwars",
 }
+
+// Ranked FFA lobby size. The API's matcher assigns between these many players
+// and only rates a game whose roster is in this range, so a match that ends
+// up with fewer is cancelled before it starts.
+export const RANKED_FFA_MIN_PLAYERS = 4;
+export const RANKED_FFA_MAX_PLAYERS = 10;
 
 export const isGameMode = (value: unknown): value is GameMode =>
   isEnumValue(GameMode, value);
@@ -241,11 +256,6 @@ export const PlayerBuildable = unitTypeGroup([
 ] as const);
 
 export type PlayerBuildableUnitType = (typeof PlayerBuildable.types)[number];
-
-export type TrajectoryTile = {
-  tile: TileRef;
-  targetable: boolean;
-};
 
 export enum Relation {
   Hostile = 0,
@@ -391,6 +401,31 @@ export interface PlayerProfile {
 
 export interface PlayerBorderTiles {
   borderTiles: ReadonlySet<TileRef>;
+}
+
+/**
+ * The humans' stats as they stand right now, for the client's provisional XP
+ * figure (src/client/ProvisionalXp.ts): the player's own XP is scored from
+ * the same per-player stats the end-of-game record carries, and in FFA from
+ * who went out before them. Built by the engine's humanStatsSnapshot().
+ */
+export interface HumanStatsSnapshot extends HumanDisconnects {
+  // Every human's stats, keyed by clientID: the object the archived record
+  // carries per player (players who never spawned have none).
+  stats: AllPlayersStats;
+}
+
+/**
+ * Just the snapshot's tick and who is disconnected, without the stats: what
+ * the client needs at the end of the game, where it has the stats from the
+ * Win update already. Built by the engine's humanDisconnects().
+ */
+export interface HumanDisconnects {
+  // The tick the snapshot was taken at.
+  tick: number;
+  // Humans whose connection is currently marked lost: clientID -> the tick
+  // it was. The API reads a player who never came back as having left then.
+  disconnectedAt: Record<ClientID, number>;
 }
 
 export interface AllianceInfo {

@@ -127,7 +127,7 @@ export class ReplayDesyncError extends Error {
  * this goes into the replay header), then the server's wire blanking is
  * applied.
  */
-export function wireGameStartInfo(record: GameRecord): WireGameStartInfo {
+function wireGameStartInfo(record: GameRecord): WireGameStartInfo {
   return toWireGameStartInfo(WireGameStartInfoSchema.parse(record.info));
 }
 
@@ -199,6 +199,9 @@ export async function processGameRecord(
         const turn = run[j];
         const gu = gameUpdates[j];
         if (gu === undefined) {
+          // As with a desync below: what was checked before this turn is
+          // still the game that was played.
+          await appendChecked();
           throw new Error(
             `simulation failed at turn ${turn.turnNumber}: ` +
               (error !== undefined

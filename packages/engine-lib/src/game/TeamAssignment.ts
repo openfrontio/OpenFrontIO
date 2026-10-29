@@ -224,3 +224,14 @@ export function resolveTeamsList(
   }
   return Array.from({ length: numTeams }, (_, i) => `Team ${i + 1}`);
 }
+
+export function adjustForTeams(
+  count: number,
+  teams: TeamCountConfig | undefined,
+): number {
+  if (count <= 0) return count;
+  if (teams !== Duos && teams !== Trios && teams !== Quads) return count;
+  const size = teams === Duos ? 2 : teams === Trios ? 3 : 4;
+  const rounded = count - (count % size);
+  return Math.max(size, rounded);
+}

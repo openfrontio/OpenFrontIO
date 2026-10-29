@@ -4,6 +4,7 @@ import {
   HumansVsNations,
   PlayerInfo,
   PlayerType,
+  RANKED_FFA_MIN_PLAYERS,
   RankedType,
 } from "@openfront/engine-api/game/GameTypes";
 import { maps } from "@openfront/engine-api/game/Maps.gen";
@@ -21,6 +22,7 @@ import {
   Winner,
 } from "@openfront/engine-api/Schemas";
 import {
+  adjustForTeams,
   assignTeamsLobbyPreview,
   resolveTeamsList,
 } from "@openfront/engine-lib/game/TeamAssignment";
@@ -65,26 +67,23 @@ import { z } from "zod";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { applyGameConfigPatch, hostCheatsEnabled } from "./ConfigPatch";
-import { LiveStatsVote, WinnerVote } from "./Consensus";
+import { LiveStatsVote, voteKey, WinnerVote } from "./Consensus";
 import { fetchCustomTribes } from "./CustomTribes";
 import { DesyncDetector } from "./DesyncDetector";
+import { Gatekeeper, MatchGatekeeper, noopGatekeeper } from "./Gatekeeper";
 import {
   authorizeIntent,
   IntentActor,
   IntentOutcome,
 } from "./IntentAuthorization";
 import { ListingState } from "./ListingState";
-import { identityFor, MatchTelemetryRecorder } from "./MatchTelemetryRecorder";
 import { friendsLookup, NameVisibility } from "./NameVisibility";
 import { poolTargetFor } from "./PoolRouting";
 import { Roster } from "./Roster";
 import { ServerEnv } from "./ServerEnv";
 import { SocketIngress } from "./SocketIngress";
 import {
-  noopMatchTelemetryEmitter,
-  type MatchTelemetryEmitter,
-} from "./telemetry/MatchTelemetry";
-import {
+  LONE_VOTER_REPLAY_CAP,
   replayWinnerInChild,
   winnerReplayMetrics,
   type WinnerReplayer,
@@ -119,12 +118,22 @@ export function hashPersistentID(persistentID: string): string {
 }
 
 // `pool` carries sibling lobby ids, which are join secrets. Strip it from every
-// config that leaves the server — telemetry, the client start message + game
+// config that leaves the server — the client start message + game
 // record, and the unauthenticated gameInfo route — in one place, so a new
 // export site can't forget.
 function configWithoutPool(config: GameConfig): GameConfig {
   const copy = { ...config };
   delete copy.pool;
+  return copy;
+}
+
+// Sibling lobby IDs and account publicId lists are server-internal secrets.
+// Strip them from every config that leaves the server to clients or public
+// routes (the start message, archived game record, lobby broadcast, and /api/game/:id).
+function sanitizeConfigForWire(config: GameConfig): GameConfig {
+  const copy = configWithoutPool(config);
+  delete copy.allowedPublicIds;
+  delete copy.nameRevealPublicIds;
   return copy;
 }
 
@@ -145,6 +154,8 @@ export interface GameServerOptions {
   // Matchmade team split from the matchmaking assignment: publicIds per
   // team. At start each client is stamped with its team's index.
   matchmakingTeams?: string[][];
+  // Clan wars: the clan each matchmade team plays for, in team order.
+  matchmakingClanTags?: string[];
 }
 
 // Everything a GameServer reaches outside itself for. Production takes the
@@ -159,11 +170,12 @@ export interface GameServerDeps {
   archive: (record: PartialGameRecord) => Promise<void>;
   // Replays the game to settle a disputed winner vote (see settleWinner).
   replayWinner: WinnerReplayer;
+  // Replays waiting or running on this worker, against LONE_VOTER_REPLAY_CAP.
+  replayPending: () => number;
   fetchTribes: typeof fetchCustomTribes;
   env: () => GameEnv;
   turnIntervalMs: () => number;
-  telemetry: MatchTelemetryEmitter;
-  telemetryBuildHash: string;
+  gatekeeper: Gatekeeper;
   // This game's opaque grouping token (see mintGroupToken). Injectable only
   // so a test can pin a value it can assert on; production always takes the
   // random default.
@@ -179,15 +191,15 @@ function mintGroupToken(): string {
   return randomBytes(12).toString("base64url");
 }
 
-export function defaultGameServerDeps(): GameServerDeps {
+function defaultGameServerDeps(): GameServerDeps {
   return {
     archive: (record) => archive(finalizeGameRecord(record)),
     replayWinner: replayWinnerInChild,
+    replayPending: () => winnerReplayMetrics.pending,
     fetchTribes: fetchCustomTribes,
     env: () => ServerEnv.env(),
     turnIntervalMs: () => ServerEnv.turnIntervalMs(),
-    telemetry: noopMatchTelemetryEmitter,
-    telemetryBuildHash: "DEV",
+    gatekeeper: noopGatekeeper,
     mintGroupToken,
   };
 }
@@ -279,9 +291,8 @@ export class GameServer {
   // id instead of minting another lobby.
   private successorLobbyId: GameID | null = null;
 
-  // This match's telemetry stream: envelopes, sequence, per-tick intent
-  // counters, finished-once (see MatchTelemetryRecorder.ts).
-  private readonly telemetry: MatchTelemetryRecorder;
+  // This match's security hooks (see Gatekeeper.ts).
+  private readonly gatekeeper: MatchGatekeeper;
 
   // Opaque per-game grouping token, minted once here and sent to every
   // participant (see mintGroupToken and the GroupToken comment in Schemas).
@@ -299,6 +310,7 @@ export class GameServer {
   // Matchmade team split from the matchmaking assignment: publicIds per
   // team. At start each client is stamped with its team's index.
   private matchmakingTeams?: string[][];
+  private matchmakingClanTags?: string[];
   private readonly deps: GameServerDeps;
   // Who may see whose real identity (anonymizeNames / pinned teams / admin
   // clan-tag reveal); shapes the per-viewer lobby roster and start message.
@@ -312,13 +324,10 @@ export class GameServer {
     this.startsAt = opts.startsAt;
     this.publicGameType = opts.publicGameType;
     this.matchmakingTeams = opts.matchmakingTeams;
+    this.matchmakingClanTags = opts.matchmakingClanTags;
     this.deps = { ...defaultGameServerDeps(), ...deps };
     this.groupToken = this.deps.mintGroupToken();
-    this.telemetry = new MatchTelemetryRecorder(
-      this.deps.telemetry,
-      opts.id,
-      this.deps.telemetryBuildHash,
-    );
+    this.gatekeeper = this.deps.gatekeeper.matchOpened({ gameID: opts.id });
     this.names = new NameVisibility({
       gameID: opts.id,
       config: () => this.gameConfig,
@@ -326,31 +335,21 @@ export class GameServer {
       teamIndex: (c) => this.matchmakingTeamIndex(c),
     });
     this.log = opts.log.child({ gameID: opts.id });
-    this.ingress = new SocketIngress(this.log, this.telemetry, {
-      zbinCtx: () => this.zbinCtx,
-      serverTick: () => this.turns.length,
-      onMessage: (client, msg) => this.handleClientMessage(client, msg),
-      onClose: (client) => this.handleClientDisconnect(client),
-      kick: (clientID, reasonKey) => this.kickClient(clientID, reasonKey),
-    });
+    this.ingress = new SocketIngress(
+      this.log,
+      {
+        zbinCtx: () => this.zbinCtx,
+        serverTick: () => this.turns.length,
+        onMessage: (client, msg) => this.handleClientMessage(client, msg),
+        onClose: (client) => this.handleClientDisconnect(client),
+        kick: (clientID, reasonKey) => this.kickClient(clientID, reasonKey),
+      },
+      undefined,
+      this.gatekeeper,
+    );
     if (opts.startsAt !== undefined) {
       this.visibleAt = Date.now();
     }
-    // Telemetry ships off-box, and sibling ids are join secrets.
-    const telemetryConfig = configWithoutPool(opts.gameConfig);
-    this.telemetry.emit(
-      "match_opened",
-      {
-        lobbyCreatedAt: opts.createdAt,
-        config: telemetryConfig,
-        publicGameType: opts.publicGameType,
-        buildHash: this.deps.telemetryBuildHash,
-        instanceId: ServerEnv.instanceId(),
-        workerId: ServerEnv.workerId(),
-        turnIntervalMs: this.deps.turnIntervalMs(),
-      },
-      this.turns.length,
-    );
   }
 
   private get lobbyCreatorID(): ClientID | undefined {
@@ -394,15 +393,14 @@ export class GameServer {
         const client = this.clients.get(actor.clientID);
         if (client !== undefined) {
           const accepted = outcome.status === 200;
-          this.telemetry.intentObserved(
+          this.gatekeeper.intentObserved({
             client,
-            stamped,
-            stamped.type,
-            accepted ? "accepted" : "rejected",
-            serverTick,
-            accepted ? acceptedReasonCode : String(outcome.status),
-            accepted ? undefined : outcome.error,
-          );
+            intent: stamped,
+            intentType: stamped.type,
+            outcome: accepted ? "accepted" : "rejected",
+            turn: serverTick,
+            reasonCode: accepted ? acceptedReasonCode : String(outcome.status),
+          });
         }
       }
       return outcome;
@@ -487,7 +485,7 @@ export class GameServer {
       default: {
         // Gameplay intents, into the turn queue.
         // While paused the intent is accepted at ingress but not queued into a
-        // turn; tag it so telemetry can tell it apart from a queued intent.
+        // turn; tag it so the gatekeeper can tell it apart from a queued intent.
         const paused = this.paused;
         const outcome = finish({ status: 200 }, paused ? "paused" : undefined);
         if (!paused) this.addIntent(stamped);
@@ -513,6 +511,18 @@ export class GameServer {
   // players are excluded so a kick still forces them back through the gate.
   public wasAdmitted(persistentID: string): boolean {
     return this.clients.wasAdmitted(persistentID);
+  }
+
+  public markAdmitted(persistentID: string, attemptID?: string): void {
+    this.clients.markAdmitted(persistentID, attemptID);
+  }
+
+  public unmarkAdmitted(persistentID: string, attemptID?: string): void {
+    this.clients.unmarkAdmitted(persistentID, attemptID);
+  }
+
+  public hasEverBeenSeated(persistentID: string): boolean {
+    return this.clients.hasEverBeenSeated(persistentID);
   }
 
   // Screened identity stored for this player's client record, or null if
@@ -694,17 +704,7 @@ export class GameServer {
     this.clients.add(client);
     client.lastPing = Date.now();
     this.markClientDisconnected(client.clientID, false);
-    this.telemetry.emit(
-      "player_joined",
-      {
-        identity: identityFor(client),
-        joinedAt: Date.now(),
-        username: client.username,
-        playerType: "human",
-        teamIndex: this.matchmakingTeamIndex(client),
-      },
-      this.turns.length,
-    );
+    this.gatekeeper.clientJoined(client);
     this.ingress.attach(client);
     this.startLobbyInfoBroadcast();
 
@@ -898,22 +898,29 @@ export class GameServer {
     return this.desync.count();
   }
 
-  // Matchmade ranked games (1v1/2v2) must start with full attendance: the
-  // roster freezes at start(), so a game missing a player would run
-  // short-handed only to be voided by the sim (2v2) or hand out a walkover
-  // the absent player never contested (1v1). Called at the start deadline;
-  // cancels the game and returns true when a matched player never connected.
+  // Matchmade ranked games (1v1/2v2/clan wars) must start with full
+  // attendance: the roster freezes at start(), so a game missing a player
+  // would run short-handed only to be voided by the sim (2v2, clan wars) or
+  // hand out a walkover the absent player never contested (1v1). Ranked FFA
+  // starts without the missing players as long as RANKED_FFA_MIN_PLAYERS
+  // showed up, the fewest the API rates. Called at the start deadline;
+  // cancels the game and returns true when too few matched players connected.
   public cancelShortHandedMatch(): boolean {
-    // Explicitly 1v1/2v2 only — a future ranked type must opt in rather
-    // than inherit pre-start cancellation.
+    // Explicitly 1v1/2v2/FFA/clan wars only — a future ranked type must opt
+    // in rather than inherit pre-start cancellation.
     const rankedType = this.gameConfig.rankedType;
+    let expected: number | undefined;
     if (
-      rankedType !== RankedType.OneVOne &&
-      rankedType !== RankedType.TwoVTwo
+      rankedType === RankedType.OneVOne ||
+      rankedType === RankedType.TwoVTwo ||
+      rankedType === RankedType.ClanWars
     ) {
+      expected = this.gameConfig.maxPlayers;
+    } else if (rankedType === RankedType.FreeForAll) {
+      expected = RANKED_FFA_MIN_PLAYERS;
+    } else {
       return false;
     }
-    const expected = this.gameConfig.maxPlayers;
     if (expected === undefined || this.playerCount() >= expected) {
       return false;
     }
@@ -1122,9 +1129,7 @@ export class GameServer {
     // enforced server-side against this.gameConfig (joinClient / seesReal).
     // Keep them out of gameStartInfo: its config goes to every client in the
     // start message and into the publicly downloadable game record.
-    const config = configWithoutPool(this.gameConfig);
-    delete config.allowedPublicIds;
-    delete config.nameRevealPublicIds;
+    const config = sanitizeConfigForWire(this.gameConfig);
 
     const result = WireGameStartInfoSchema.safeParse({
       gameID: this.id,
@@ -1133,7 +1138,7 @@ export class GameServer {
       config,
       players: this.clients.players().map((c) => ({
         username: c.username,
-        clanTag: c.clanTag ?? null,
+        clanTag: this.startClanTag(c),
         clientID: c.clientID,
         cosmetics: c.cosmetics,
         isLobbyCreator: this.lobbyCreatorID === c.clientID,
@@ -1148,16 +1153,6 @@ export class GameServer {
       return;
     }
     this.gameStartInfo = result.data satisfies WireGameStartInfo;
-    this.telemetry.emit(
-      "match_started",
-      {
-        startedAt: this._startTime,
-        gameStartInfo: this.gameStartInfo,
-        buildHash: this.deps.telemetryBuildHash,
-        turnIntervalMs: this.deps.turnIntervalMs(),
-      },
-      this.turns.length,
-    );
     const wireGameStartInfo = {
       ...this.gameStartInfo,
       listed: this.listing.isListed(),
@@ -1415,6 +1410,16 @@ export class GameServer {
     return idx === -1 ? undefined : idx;
   }
 
+  // The clan tag a player starts with. In clan wars it is their team's clan
+  // from the assignment, whatever tag they joined with: the API rates the
+  // clans by the tags in the game record.
+  private startClanTag(c: Client): string | null {
+    const team = this.matchmakingTeamIndex(c);
+    const matchmade =
+      team === undefined ? undefined : this.matchmakingClanTags?.[team];
+    return matchmade ?? c.clanTag ?? null;
+  }
+
   private addIntent(intent: StampedIntent) {
     this.intents.push(intent);
   }
@@ -1481,15 +1486,10 @@ export class GameServer {
     };
     this.turns.push(pastTurn);
     this.intents = [];
-    const counts = this.telemetry.takeTickCounts(pastTurn.turnNumber);
-    this.telemetry.emit(
-      "turn_committed",
-      {
-        turnNumber: pastTurn.turnNumber,
-        replayIntentCount: pastTurn.intents.length,
-        ...counts,
-      },
-      this.turns.length,
+    this.gatekeeper.turnCommitted(
+      pastTurn.turnNumber,
+      pastTurn.intents.length,
+      pastTurn.intents,
     );
 
     this.handleSynchronization();
@@ -1524,7 +1524,7 @@ export class GameServer {
     // start(), so a game that ends during prestart has nothing to upload.
     if (this.stage !== "started") {
       this.log.info(`game not started, not archiving game`);
-      this.telemetry.matchFinished(this.turns.length);
+      this.gatekeeper.matchEnded(this.turns.length);
       return;
     }
     this.log.info(`ending game with ${this.turns.length} turns`);
@@ -1534,7 +1534,7 @@ export class GameServer {
           gameID: this.id,
         });
       } else if (this.winnerVote.winner() !== null) {
-        this.log.info("game already archived", {
+        this.log.info("winner already settled, record sent or pending replay", {
           gameID: this.id,
         });
       } else {
@@ -1565,7 +1565,7 @@ export class GameServer {
         error: errorDetails,
       });
     }
-    this.telemetry.matchFinished(this.turns.length);
+    this.gatekeeper.matchEnded(this.turns.length);
   }
 
   // Drops the clients that have not pinged for 60s. GameManager calls this
@@ -1686,8 +1686,8 @@ export class GameServer {
   // anonymizes all names when the option is on.
   public gameInfo(viewer?: ClientID): GameInfo {
     // Goes out over the unauthenticated /api/game/:id route and the per-second
-    // lobby_info broadcast, so strip the pool secrets (see configWithoutPool).
-    const gameConfig = configWithoutPool(this.gameConfig);
+    // lobby_info broadcast, so strip secrets (see sanitizeConfigForWire).
+    const gameConfig = sanitizeConfigForWire(this.gameConfig);
     return {
       gameID: this.id,
       clients: this.names.lobbyClients(viewer, this.clients.active()),
@@ -1745,10 +1745,17 @@ export class GameServer {
     this.listing.setListed(listed, options.autoStartMs);
     // Only on the transition: relisting must not change the cap players
     // joined under.
-    if (listed && !wasListed && options.maxPlayers !== undefined) {
-      this.gameConfig.maxPlayers = options.maxPlayers;
-      if (this.playerCount() >= options.maxPlayers) {
-        this.hasReachedMaxPlayerCount = true;
+    if (listed && !wasListed) {
+      const raw = options.maxPlayers ?? this.gameConfig.maxPlayers;
+      if (raw !== undefined) {
+        const max =
+          this.gameConfig.gameMode === GameMode.Team
+            ? adjustForTeams(raw, this.gameConfig.playerTeams)
+            : raw;
+        this.gameConfig.maxPlayers = max;
+        if (this.playerCount() >= max) {
+          this.hasReachedMaxPlayerCount = true;
+        }
       }
     }
   }
@@ -1850,14 +1857,6 @@ export class GameServer {
     clientID: ClientID,
     reasonKey: string = KICK_REASON_DUPLICATE_SESSION,
   ): void {
-    if (this.isKicked(clientID)) {
-      this.log.warn(`cannot kick client, already kicked`, {
-        clientID,
-        reasonKey,
-      });
-      return;
-    }
-
     const client = this.clients.get(clientID);
     if (!client) {
       this.log.warn(`cannot kick client, not found in game`, {
@@ -1868,15 +1867,28 @@ export class GameServer {
     }
 
     // The persistentID is banned whether or not the client is still
-    // connected; only a connected one is told and cut off.
-    if (this.clients.kick(client)) {
+    // connected; every connected session holding it is told and cut off.
+    // An already-banned persistentID is not proof that nothing holds it: a
+    // duplicate session admitted alongside this record must still go.
+    const alreadyKicked = this.isKicked(clientID);
+    const dropped = this.clients.kick(client);
+    if (dropped.length === 0) {
+      this.log.warn(
+        alreadyKicked
+          ? `cannot kick client, already kicked`
+          : `cannot kick client, not found in game`,
+        { clientID, reasonKey },
+      );
+      return;
+    }
+    for (const c of dropped) {
       this.log.info("Kicking client from game", {
-        clientID: client.clientID,
-        persistentID: client.persistentID,
+        clientID: c.clientID,
+        persistentID: c.persistentID,
         reasonKey,
       });
-      if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(
           encodeServerMessage(
             {
               type: "error",
@@ -1885,13 +1897,8 @@ export class GameServer {
             this.zbinCtx,
           ),
         );
-        client.ws.close(CloseCode.Normal, reasonKey);
+        c.ws.close(CloseCode.Normal, reasonKey);
       }
-    } else {
-      this.log.warn(`cannot kick client, not found in game`, {
-        clientID,
-        reasonKey,
-      });
     }
   }
 
@@ -1934,96 +1941,152 @@ export class GameServer {
 
   // Archives the game once its winner is settled. Normally the vote settles
   // it, but a vote is only as good as its voters: when they disagree -- some
-  // client named a different winner, or the game ended with no majority --
-  // the server replays the game itself and archives what the simulation
-  // says. The record waits for the replay; if the replay fails, the vote's
-  // result (if any) goes out instead.
+  // client named a different winner or sent different stats, or the game
+  // ended with no majority -- the server replays the game itself and
+  // archives what the simulation says. A vote decided by a single IP is
+  // replayed too: nobody else confirmed its stats. It is common, though, so
+  // when the worker already has LONE_VOTER_REPLAY_CAP replays waiting or
+  // running it is archived unconfirmed instead of queued. The record waits for
+  // the replay; if the replay fails, the vote's result (if any) goes out
+  // instead.
+  //
+  // The record's statsAgreed says whether its winner and stats were checked:
+  // by at least two IPs sending the same ones, or by the replay.
   private settleWinner() {
     const voted = this.winnerVote.winner();
     const candidates = this.winnerVote.candidates();
-    if (candidates === 0 || (candidates === 1 && voted !== null)) {
-      this.archiveGame(voted);
+    const backers = this.winnerVote.backers();
+    const votedAgreed = voted !== null && backers >= 2;
+    if (candidates === 0 || (candidates === 1 && votedAgreed)) {
+      this.archiveGame(voted, votedAgreed);
+      return;
+    }
+    const reason =
+      candidates > 1
+        ? "disputed"
+        : voted !== null
+          ? "lone voter"
+          : "no majority";
+    const pending = this.deps.replayPending();
+    if (reason === "lone voter" && pending >= LONE_VOTER_REPLAY_CAP) {
+      winnerReplayMetrics.outcomes.skipped++;
+      this.log.warn(
+        "winner replay queue full, archiving the lone vote unconfirmed",
+        {
+          gameID: this.id,
+          voted: voted?.winner,
+          pending,
+          cap: LONE_VOTER_REPLAY_CAP,
+        },
+      );
+      this.archiveGame(voted, false);
       return;
     }
     // The record as of now; the game may run on while the replay does.
     const turns = this.turns.slice();
     const endTime = Date.now();
-    this.log.warn("winner vote disputed, replaying game", {
-      gameID: this.id,
-      voted: voted?.winner,
-      candidates,
-      turns: turns.length,
-    });
+    // A lone voter is the common case (the loser leaves without voting) and
+    // its replay almost always agrees, so it logs at info; the replay result
+    // still warns when it overturns the vote.
+    this.log[reason === "lone voter" ? "info" : "warn"](
+      {
+        disputed: "winner vote disputed, replaying game",
+        "lone voter": "winner vote decided by one IP, replaying game",
+        "no majority": "winner vote has no majority, replaying game",
+      }[reason],
+      {
+        gameID: this.id,
+        voted: voted?.winner,
+        candidates,
+        backers,
+        turns: turns.length,
+      },
+    );
+    // Set once a record is handed over, so the .catch below falls back to the
+    // vote only when nothing was archived.
+    let archived = false;
     this.deps
       .replayWinner(this.wireGameStartInfo, turns)
       .then((replayed) => {
         if (replayed === null) {
           winnerReplayMetrics.outcomes.failed++;
-          this.archiveGame(voted, turns, endTime);
+          this.log.warn("winner replay failed, archiving the vote", {
+            gameID: this.id,
+            reason,
+            voted: voted?.winner,
+            backers,
+            statsAgreed: votedAgreed,
+          });
+          archived = true;
+          this.archiveGame(voted, votedAgreed, turns, endTime);
           return;
         }
-        const replayedKey = JSON.stringify(replayed.winner ?? null);
-        const agrees = replayedKey === JSON.stringify(voted?.winner ?? null);
+        const replayedKey = voteKey(replayed);
+        const agrees =
+          voted === null
+            ? replayed.winner === undefined
+            : voteKey(voted) === replayedKey;
         const outcome = agrees ? "agreed" : "overturned";
         winnerReplayMetrics.outcomes[outcome]++;
         this.log[agrees ? "info" : "warn"]("winner replay result", {
           gameID: this.id,
+          reason,
           voted: voted?.winner,
           replayed: replayed.winner,
           winTick: replayed.tick,
           agrees,
         });
         // A vote is the client's own simulation's result, so an honest,
-        // in-sync client votes what the replay found (desynced clients'
-        // votes were dropped). One line per voter who didn't, departed ones
-        // included, so they can be counted per player: likely cheaters.
+        // in-sync client votes what the replay found, winner and stats
+        // (desynced clients' votes were dropped). One line per voter who
+        // didn't, departed ones included, so they can be counted per player:
+        // likely cheaters.
         for (const client of this.clients.all().values()) {
-          if (
-            client.reportedWinner === null ||
-            JSON.stringify(client.reportedWinner ?? null) === replayedKey
-          ) {
+          const vote = client.reportedVote;
+          if (vote === null || vote.key === replayedKey) {
             continue;
           }
           this.log.warn("wrong winner vote", {
             gameID: this.id,
             publicID: client.publicId,
             clientID: client.clientID,
-            voted: client.reportedWinner,
+            voted: vote.winner,
             replayed: replayed.winner,
+            // The winner was right, only the stats differed.
+            wrongStats:
+              JSON.stringify(vote.winner ?? null) ===
+              JSON.stringify(replayed.winner ?? null),
             outcome,
           });
         }
-        this.archiveGame(replayed, turns, endTime);
+        archived = true;
+        this.archiveGame(replayed, true, turns, endTime);
       })
       .catch((error) => {
         this.log.error(`error archiving replayed game: ${error}`, {
           gameID: this.id,
+          reason,
         });
+        // A replay that threw is a failed replay: the vote's result goes out,
+        // as when the replay answers null.
+        if (archived) return;
+        winnerReplayMetrics.outcomes.failed++;
+        this.archiveGame(voted, votedAgreed, turns, endTime);
       });
   }
 
   private archiveGame(
     winner: { winner?: Winner; allPlayersStats: AllPlayersStats } | null,
+    // See GameEndInfoSchema.statsAgreed and settleWinner.
+    statsAgreed: boolean,
     turns: Turn[] = this.turns,
     endTime: number = Date.now(),
   ) {
     this.log.info("archiving game", {
       gameID: this.id,
       winner: winner?.winner,
+      statsAgreed,
     });
-
-    // The record carries the first winning voter's stats, unchecked. Before
-    // the vote can also be made to agree on stats, measure how often honest
-    // voters actually differ: a "split" here means they did.
-    const agreement = this.winnerVote.statsAgreement();
-    if (agreement !== null) {
-      const split = agreement.versions > 1;
-      this.log[split ? "warn" : "info"]("winner stats agreement", {
-        gameID: this.id,
-        statsAgreement: split ? "split" : "agreed",
-        ...agreement,
-      });
-    }
 
     // Players must stay in the same order as the game start info.
     const playerRecords: PlayerRecord[] = this.gameStartInfo.players.map(
@@ -2051,8 +2114,7 @@ export class GameServer {
         } satisfies PlayerRecord;
       },
     );
-    this.telemetry.noteArchiveAttempted();
-    this.deps.archive(
+    void this.deps.archive(
       createPartialGameRecord(
         this.id,
         this.gameStartInfo.config,
@@ -2066,6 +2128,7 @@ export class GameServer {
         this.gameStartInfo.tribes,
         [...this.reports.values()],
         this.publicGameType,
+        statsAgreed,
       ),
     );
   }
@@ -2145,21 +2208,25 @@ export class GameServer {
   }
 
   private handleWinner(client: Client, clientMsg: ClientSendWinnerMessage) {
+    // Only a running game has a winner to vote on, and the replay that
+    // settles a vote needs the start info start() builds.
     if (
+      this.stage !== "started" ||
+      this.ended ||
       this.desync.isDesynced(client.clientID) ||
       this.isKicked(client.clientID) ||
       this.winnerVote.winner() !== null ||
-      client.reportedWinner !== null
+      client.reportedVote !== null
     ) {
       return;
     }
-    client.reportedWinner = clientMsg.winner;
 
     const activeUniqueIPs = this.clients.votingUniqueIPs();
     const { key: winnerKey, votes } = this.winnerVote.cast(
       clientMsg,
       client.ip,
     );
+    client.reportedVote = { winner: clientMsg.winner, key: winnerKey };
 
     this.log.info(
       `received winner vote ${clientMsg.winner}, ${votes}/${activeUniqueIPs} votes for this winner`,

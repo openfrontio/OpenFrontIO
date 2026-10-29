@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import {
   ACTIVE_LOADOUT_KEY,
   CROWN_KEY,
@@ -357,9 +358,8 @@ describe("UserSettings stats columns", () => {
   beforeEach(resetUserSettingsState);
 
   it("returns defaults when nothing is stored", () => {
-    // The player table opens with the clan tag shown; a team has no tag.
+    // The clan column is opt-in, so both tables open with the same stats.
     expect(new UserSettings().statsColumns("player")).toEqual([
-      "clan",
       "tiles",
       "gold",
       "maxtroops",
@@ -397,7 +397,6 @@ describe("UserSettings stats columns", () => {
   it("falls back to defaults on corrupt JSON", () => {
     localStorage.setItem(PLAYER_STATS_COLUMNS_KEY, "not json");
     expect(new UserSettings().statsColumns("player")).toEqual([
-      "clan",
       "tiles",
       "gold",
       "maxtroops",
@@ -407,7 +406,6 @@ describe("UserSettings stats columns", () => {
   it("falls back to defaults when no valid ids remain", () => {
     localStorage.setItem(PLAYER_STATS_COLUMNS_KEY, JSON.stringify(["bogus"]));
     expect(new UserSettings().statsColumns("player")).toEqual([
-      "clan",
       "tiles",
       "gold",
       "maxtroops",
@@ -598,6 +596,14 @@ describe("getDefaultKeybinds", () => {
     expect(keybinds.quickChat).toBe("KeyR");
     expect(keybinds.targetPlayer).toBe("KeyN");
     expect(keybinds.buildMenuModifier).toBe("ControlLeft");
+    expect(keybinds.moveUpArrow).toBe("ArrowUp");
+    expect(keybinds.moveLeftArrow).toBe("ArrowLeft");
+    expect(keybinds.moveDownArrow).toBe("ArrowDown");
+    expect(keybinds.moveRightArrow).toBe("ArrowRight");
+    expect(keybinds.zoomOutMinus).toBe("Minus");
+    expect(keybinds.zoomOutNumpad).toBe("NumpadSubtract");
+    expect(keybinds.zoomInEqual).toBe("Equal");
+    expect(keybinds.zoomInNumpad).toBe("NumpadAdd");
   });
 
   it("never gives two actions the same letter key, except shared pairs", () => {
@@ -611,6 +617,11 @@ describe("getDefaultKeybinds", () => {
         }
       }
     }
+    const keybinds = getDefaultKeybinds(false);
+    expect(keybinds.buildScrollModifier).toBe("AltLeft");
+    expect(keybinds.emojiMenuModifier).toBe("AltLeft");
+    // Note: this is related to user_setting.graphics_refresh_modifier, not the actual alt key.
+    expect(keybinds.altKey).toBe("AltLeft");
   });
 
   it("handles Mac-specific modifier keys correctly", () => {
@@ -705,6 +716,28 @@ describe("UserSettings keybinds with new defaults", () => {
     expect(
       new UserSettings().parsedUserKeybinds().selectAllWarships,
     ).toBeUndefined();
+  });
+
+  it("unbinds the new arrow and zoom defaults when saved bindings already use their keys", () => {
+    store({
+      boatAttack: { value: "ArrowUp", key: "ArrowUp" },
+      attackRatioUp: { value: "Equal", key: "=" },
+    });
+    const settings = new UserSettings();
+    const keybinds = settings.keybinds(false);
+
+    expect(keybinds.boatAttack).toBe("ArrowUp");
+    expect(keybinds.moveUpArrow).toBeUndefined();
+    expect(keybinds.attackRatioUp).toBe("Equal");
+    expect(keybinds.zoomInEqual).toBeUndefined();
+    expect(settings.parsedUserKeybinds().moveUpArrow).toEqual({
+      value: "Null",
+      key: "",
+    });
+    expect(settings.parsedUserKeybinds().zoomInEqual).toEqual({
+      value: "Null",
+      key: "",
+    });
   });
 
   it("keeps quick chat on R when the player saved reset graphics there", () => {

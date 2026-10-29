@@ -51,11 +51,14 @@ import type { LobbyConfig } from "../../src/client/ClientGameRunner";
 import { SendKickPlayerIntentEvent } from "../../src/client/LobbyEvents";
 import {
   CancelAttackIntentEvent,
+  counterAttackTroops,
   SendAttackIntentEvent,
+  SendBoatAttackIntentEvent,
   SendDonateGoldIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
   SendWinnerEvent,
+  SetIntentGateEvent,
   Transport,
 } from "../../src/client/Transport";
 import type { PlayerView } from "../../src/client/view";
@@ -200,6 +203,26 @@ describe("Transport send paths", () => {
       ]);
     });
 
+    // The server kicks a client whose message fails to parse, and the intent
+    // schemas reject a NaN troop count: drop the one intent, not the player.
+    it("drops attack and boat intents whose troops are not a finite count", () => {
+      const { eventBus, ws } = connected();
+      const before = ws.sent.length;
+      eventBus.emit(new SendAttackIntentEvent("player01", NaN));
+      eventBus.emit(new SendAttackIntentEvent(null, Infinity));
+      eventBus.emit(new SendBoatAttackIntentEvent(7, NaN));
+      eventBus.emit(new SendBoatAttackIntentEvent(7, -1));
+
+      expect(ws.sent).toHaveLength(before);
+      expect(console.error).toHaveBeenCalledTimes(4);
+
+      eventBus.emit(new SendBoatAttackIntentEvent(7, 0));
+      expect(decodeFrames(ws)).toContainEqual({
+        type: "intent",
+        intent: { type: "boat", troops: 0, dst: 7 },
+      });
+    });
+
     it("turns a kick-player event into a kick_player intent frame", () => {
       const { eventBus, ws } = connected();
       eventBus.emit(new SendKickPlayerIntentEvent("player01"));
@@ -216,6 +239,17 @@ describe("Transport send paths", () => {
 
       expect(() => eventBus.emit(new SendSpawnIntentEvent(123))).not.toThrow();
       expect(FakeWebSocket.instances).toHaveLength(0);
+    });
+  });
+
+  describe("counterAttackTroops", () => {
+    it("caps the counter at what the player would send", () => {
+      expect(counterAttackTroops(500, 200)).toBe(200);
+      expect(counterAttackTroops(100, 200)).toBe(100);
+    });
+
+    it("ignores an incoming attack whose count is not finite", () => {
+      expect(counterAttackTroops(NaN, 200)).toBe(200);
     });
   });
 
@@ -291,6 +325,43 @@ describe("Transport send paths", () => {
         winner: ["player", "player01"],
         allPlayersStats: {},
       });
+    });
+  });
+
+  describe("the intent gate", () => {
+    function local() {
+      const made = makeTransport({
+        gameRecord: {} as LobbyConfig["gameRecord"],
+      });
+      transports.push(made.transport);
+      made.transport.connect(
+        () => {},
+        () => {},
+      );
+      return made.eventBus;
+    }
+    const sentIntents = () =>
+      localServer.onMessage.mock.calls.map(([msg]) => msg.intent?.type);
+
+    it("drops the intents it refuses and sends the rest", () => {
+      const eventBus = local();
+      eventBus.emit(
+        new SetIntentGateEvent((intent) => intent.type !== "attack"),
+      );
+      eventBus.emit(new SendAttackIntentEvent(null, 10));
+      eventBus.emit(new SendSpawnIntentEvent(5));
+
+      expect(sentIntents()).toEqual(["spawn"]);
+    });
+
+    it("sends everything again once removed", () => {
+      const eventBus = local();
+      eventBus.emit(new SetIntentGateEvent(() => false));
+      eventBus.emit(new SendAttackIntentEvent(null, 10));
+      eventBus.emit(new SetIntentGateEvent(null));
+      eventBus.emit(new SendAttackIntentEvent(null, 10));
+
+      expect(sentIntents()).toEqual(["attack"]);
     });
   });
 

@@ -12,11 +12,19 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { ClientID, TeamCountConfig } from "@openfront/engine-api/Schemas";
 import { assignTeamsLobbyPreview } from "@openfront/engine-lib/game/TeamAssignment";
+import {
+  type LevelBadge,
+  unpackLevelBadge,
+} from "@openfront/shared/LevelBadgeWire";
 import { createRandomName } from "@openfront/shared/SharedUtil";
 import { ClientInfo } from "@openfront/shared/WireSchemas";
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
+import {
+  ownHiddenLevelBadge,
+  refreshOwnHiddenLevelBadge,
+} from "../OwnLevelBadge";
 import { Theme, themeProvider } from "../theme/ThemeProvider";
 import { UserSettings } from "../UserSettings";
 import {
@@ -24,6 +32,21 @@ import {
   resolveTeamClanTag,
   translateText,
 } from "../Utils";
+import "./LevelBadge";
+
+function sameBadge(
+  a: LevelBadge | undefined,
+  b: LevelBadge | undefined,
+): boolean {
+  return (
+    a === b ||
+    (a !== undefined &&
+      b !== undefined &&
+      a.level === b.level &&
+      a.prestige === b.prestige &&
+      a.legend === b.legend)
+  );
+}
 
 export interface TeamPreviewData {
   team: Team;
@@ -54,6 +77,10 @@ export class LobbyTeamView extends LitElement {
   private _clanUpdateTimeout: number | null = null;
   private _teamClanTags: Map<Team, string | null> = new Map();
   private _viewerFriends: ReadonlySet<ClientID> = new Set();
+  // The viewer's own badge while they hide their level: the server leaves it
+  // off their roster entry, but they still see their own level.
+  @state() private _ownHiddenBadge: LevelBadge | undefined =
+    ownHiddenLevelBadge();
 
   // Spectators are in the lobby roster (flagged) but hold no seat and never
   // reach the simulation — so the count header, the team preview and both
@@ -88,6 +115,22 @@ export class LobbyTeamView extends LitElement {
         : undefined;
       this._viewerFriends = new Set(self?.friends ?? []);
     }
+    // On joining and on every roster update, so a visibility change made in
+    // the account settings shows by the next lobby_info. From the memoised
+    // /users/@me, so normally no request at all.
+    if (
+      (changedProperties.has("currentClientID") ||
+        changedProperties.has("clients")) &&
+      this.currentClientID
+    ) {
+      const forClient = this.currentClientID;
+      void refreshOwnHiddenLevelBadge().then((badge) => {
+        if (this.currentClientID !== forClient) return;
+        if (!sameBadge(badge, this._ownHiddenBadge)) {
+          this._ownHiddenBadge = badge;
+        }
+      });
+    }
     // Recompute team preview when relevant properties change
     // clients is updated from WebSocket lobby_info events
     if (
@@ -119,22 +162,28 @@ export class LobbyTeamView extends LitElement {
             class="text-xs font-bold text-white/40 uppercase tracking-widest"
           >
             ${this.activePlayers.length}
-            ${this.activePlayers.length === 1
-              ? translateText("host_modal.player")
-              : translateText("host_modal.players")}
+            ${
+              this.activePlayers.length === 1
+                ? translateText("host_modal.player")
+                : translateText("host_modal.players")
+            }
             <span style="margin: 0 8px;">•</span>
             ${this.effectiveNationCount}
-            ${this.effectiveNationCount === 1
-              ? translateText("host_modal.nation_player")
-              : translateText("host_modal.nation_players")}
+            ${
+              this.effectiveNationCount === 1
+                ? translateText("host_modal.nation_player")
+                : translateText("host_modal.nation_players")
+            }
           </div>
         </div>
         <div
           class="players-list block rounded-lg border border-white/10 bg-white/5 p-2"
         >
-          ${this.gameMode === GameMode.Team
-            ? this.renderTeamMode()
-            : this.renderFreeForAll()}
+          ${
+            this.gameMode === GameMode.Team
+              ? this.renderTeamMode()
+              : this.renderFreeForAll()
+          }
         </div>
         ${this.renderSpectators()}
       </div>
@@ -155,9 +204,11 @@ export class LobbyTeamView extends LitElement {
           class="text-xs font-bold text-white/40 uppercase tracking-widest mb-4"
         >
           ${spectators.length}
-          ${spectators.length === 1
-            ? translateText("host_modal.spectator")
-            : translateText("host_modal.spectators")}
+          ${
+            spectators.length === 1
+              ? translateText("host_modal.spectator")
+              : translateText("host_modal.spectators")
+          }
         </div>
         <div
           class="players-list block rounded-lg border border-white/10 bg-white/5 p-2"
@@ -167,12 +218,15 @@ export class LobbyTeamView extends LitElement {
             (c) => c.clientID ?? c.username,
             (client) =>
               html`<span
-                class="player-tag ${this.isCurrentPlayer(client)
-                  ? "current-player"
-                  : ""}"
+                class="player-tag ${
+                  this.isCurrentPlayer(client) ? "current-player" : ""
+                }"
               >
                 <span class="text-white"
-                  >${this.getClientDisplayName(client)}
+                  >${this.renderLevelBadge(
+                    client,
+                    false,
+                  )}${this.getClientDisplayName(client)}
                   ${this.renderVerifiedBadge(client)}</span
                 >
               </span>`,
@@ -193,6 +247,7 @@ export class LobbyTeamView extends LitElement {
     const empty = this.teamPreview.filter(
       (t) => t.players.length === 0 && t.team !== ColoredTeams.Nations,
     );
+    const listSlot = this.anyVisibleLevelBadge(this.activePlayers);
     return html` <div
       class="flex flex-col md:flex-row gap-3 md:gap-4 items-stretch"
     >
@@ -209,11 +264,14 @@ export class LobbyTeamView extends LitElement {
             const displayName = this.getClientDisplayName(client);
             return html`<div
               class="px-2 py-1 rounded-sm mb-1 text-xs text-white border break-words
-                ${this.isCurrentPlayer(client)
-                ? "bg-malibu-blue/20 border-sky-500/40"
-                : "bg-gray-700/70 border-transparent"}"
+                ${
+                this.isCurrentPlayer(client)
+                  ? "bg-malibu-blue/20 border-sky-500/40"
+                  : "bg-gray-700/70 border-transparent"
+              }"
             >
-              ${displayName} ${this.renderVerifiedBadge(client)}
+              ${this.renderLevelBadge(client, listSlot)}${displayName}
+              ${this.renderVerifiedBadge(client)}
               ${this.renderFriendBadge(client)}
             </div>`;
           },
@@ -233,11 +291,13 @@ export class LobbyTeamView extends LitElement {
           </div>
         </div>
         <div>
-          ${empty.length > 0
-            ? html`<div class="font-semibold text-gray-200 mb-1 text-sm">
-                ${translateText("host_modal.empty_teams")}
-              </div>`
-            : ""}
+          ${
+            empty.length > 0
+              ? html`<div class="font-semibold text-gray-200 mb-1 text-sm">
+                  ${translateText("host_modal.empty_teams")}
+                </div>`
+              : ""
+          }
           <div class="w-full grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-3">
             ${repeat(
               empty,
@@ -257,9 +317,9 @@ export class LobbyTeamView extends LitElement {
     return html`<button
       @click=${() => this.onToggleNameReveal?.(clientID)}
       title=${translateText("host_modal.toggle_name_reveal")}
-      style="background:none;border:none;cursor:pointer;font-size:13px;line-height:1;margin-left:4px;opacity:${on
-        ? "1"
-        : "0.35"};"
+      style="background:none;border:none;cursor:pointer;font-size:13px;line-height:1;margin-left:4px;opacity:${
+        on ? "1" : "0.35"
+      };"
     >
       👁
     </button>`;
@@ -272,40 +332,43 @@ export class LobbyTeamView extends LitElement {
       (client) => {
         const displayName = this.getClientDisplayName(client);
         return html`<span
-          class="player-tag ${this.isCurrentPlayer(client)
-            ? "current-player"
-            : ""}"
+          class="player-tag ${
+            this.isCurrentPlayer(client) ? "current-player" : ""
+          }"
         >
           <span class="text-white"
-            >${displayName} ${this.renderVerifiedBadge(client)}
+            >${this.renderLevelBadge(client, false)}${displayName}
+            ${this.renderVerifiedBadge(client)}
             ${this.renderFriendBadge(client)}</span
           >
           ${this.renderRevealToggle(client.clientID)}
-          ${client.clientID === this.lobbyCreatorClientID
-            ? html`<span class="host-badge"
-                >(${translateText("host_modal.host_badge")})</span
-              >`
-            : this.onKickPlayer
-              ? html`<button
-                  class="remove-player-btn"
-                  @click=${() => this.onKickPlayer?.(client.clientID)}
-                  aria-label=${translateText("host_modal.remove_player", {
-                    username: displayName,
-                  })}
-                >
-                  <svg
-                    class="h-2.5 w-2.5 stroke-white"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
+          ${
+            client.clientID === this.lobbyCreatorClientID
+              ? html`<span class="host-badge"
+                  >(${translateText("host_modal.host_badge")})</span
+                >`
+              : this.onKickPlayer
+                ? html`<button
+                    class="remove-player-btn"
+                    @click=${() => this.onKickPlayer?.(client.clientID)}
+                    aria-label=${translateText("host_modal.remove_player", {
+                      username: displayName,
+                    })}
                   >
-                    <line x1="4" y1="4" x2="12" y2="12" />
-                    <line x1="12" y1="4" x2="4" y2="12" />
-                  </svg>
-                </button>`
-              : html``}
+                    <svg
+                      class="h-2.5 w-2.5 stroke-white"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                    >
+                      <line x1="4" y1="4" x2="12" y2="12" />
+                      <line x1="12" y1="4" x2="4" y2="12" />
+                    </svg>
+                  </button>`
+                : html``
+          }
         </span>`;
       },
     )} `;
@@ -324,24 +387,29 @@ export class LobbyTeamView extends LitElement {
 
     const clanTag = this._teamClanTags.get(preview.team) ?? null;
     const teamLabel = getTranslatedPlayerTeamLabel(preview.team, clanTag);
+    const badgeSlot = this.anyVisibleLevelBadge(preview.players);
 
     return html`
       <div
         class="bg-gray-800 border rounded-xl flex flex-col
-          ${this.teamContainsCurrentPlayer(preview)
-          ? "border-sky-500/60"
-          : "border-gray-700"}"
+          ${
+          this.teamContainsCurrentPlayer(preview)
+            ? "border-sky-500/60"
+            : "border-gray-700"
+        }"
       >
         <div
           class="px-2 py-1 font-bold flex items-center justify-between text-white rounded-t-xl text-[13px] gap-2 bg-gray-700/70"
         >
           <div class="flex items-center gap-1.5 min-w-0">
-            ${this.showTeamColors
-              ? html` <span
-                  class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner bg-(--bg) shrink-0"
-                  style="--bg:${this.teamHeaderColor(preview.team)};"
-                ></span>`
-              : null}
+            ${
+              this.showTeamColors
+                ? html` <span
+                    class="inline-block w-2.5 h-2.5 rounded-full border-2 border-white/90 shadow-inner bg-(--bg) shrink-0"
+                    style="--bg:${this.teamHeaderColor(preview.team)};"
+                  ></span>`
+                : null
+            }
             <span class="truncate">${teamLabel}</span>
           </div>
           <span class="text-white/90 font-bold text-[13px] shrink-0"
@@ -349,58 +417,65 @@ export class LobbyTeamView extends LitElement {
           >
         </div>
         <div class="p-2 ${isEmpty ? "" : "flex flex-col gap-1.5"}">
-          ${isEmpty
-            ? html`<div class="text-[11px] italic text-gray-400">
-                ${translateText("host_modal.empty_team")}
-              </div>`
-            : repeat(
-                preview.players,
-                (p) => p.clientID ?? p.username,
-                (p) => {
-                  const displayName = this.getClientDisplayName(p);
-                  return html` <div
-                    class="px-2 py-1 rounded-sm text-xs flex items-center justify-between border
-                      ${this.isCurrentPlayer(p)
-                      ? "bg-malibu-blue/20 border-sky-500/40"
-                      : "bg-gray-700/70 border-transparent"}"
-                  >
-                    <span class="flex items-center gap-1 min-w-0">
-                      <span class="truncate text-white">${displayName}</span>
-                      ${this.renderVerifiedBadge(p)}
-                      ${this.renderFriendBadge(p)}
-                    </span>
-                    ${this.renderRevealToggle(p.clientID)}
-                    ${p.clientID === this.lobbyCreatorClientID
-                      ? html`<span class="ml-2 text-[11px] text-green-300"
-                          >(${translateText("host_modal.host_badge")})</span
-                        >`
-                      : this.onKickPlayer
-                        ? html`<button
-                            class="remove-player-btn ml-2"
-                            @click=${() => this.onKickPlayer?.(p.clientID)}
-                            aria-label=${translateText(
-                              "host_modal.remove_player",
-                              {
-                                username: displayName,
-                              },
-                            )}
-                          >
-                            <svg
-                              class="h-2.5 w-2.5 stroke-white"
-                              viewBox="0 0 16 16"
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-width="2.5"
-                              stroke-linecap="round"
-                            >
-                              <line x1="4" y1="4" x2="12" y2="12" />
-                              <line x1="12" y1="4" x2="4" y2="12" />
-                            </svg>
-                          </button>`
-                        : html``}
-                  </div>`;
-                },
-              )}
+          ${
+            isEmpty
+              ? html`<div class="text-[11px] italic text-gray-400">
+                  ${translateText("host_modal.empty_team")}
+                </div>`
+              : repeat(
+                  preview.players,
+                  (p) => p.clientID ?? p.username,
+                  (p) => {
+                    const displayName = this.getClientDisplayName(p);
+                    return html` <div
+                      class="px-2 py-1 rounded-sm text-xs flex items-center justify-between border
+                      ${
+                        this.isCurrentPlayer(p)
+                          ? "bg-malibu-blue/20 border-sky-500/40"
+                          : "bg-gray-700/70 border-transparent"
+                      }"
+                    >
+                      <span class="flex items-center gap-1 min-w-0">
+                        ${this.renderLevelBadge(p, badgeSlot)}
+                        <span class="truncate text-white">${displayName}</span>
+                        ${this.renderVerifiedBadge(p)}
+                        ${this.renderFriendBadge(p)}
+                      </span>
+                      ${this.renderRevealToggle(p.clientID)}
+                      ${
+                        p.clientID === this.lobbyCreatorClientID
+                          ? html`<span class="ml-2 text-[11px] text-green-300"
+                              >(${translateText("host_modal.host_badge")})</span
+                            >`
+                          : this.onKickPlayer
+                            ? html`<button
+                                class="remove-player-btn ml-2"
+                                @click=${() => this.onKickPlayer?.(p.clientID)}
+                                aria-label=${translateText(
+                                  "host_modal.remove_player",
+                                  {
+                                    username: displayName,
+                                  },
+                                )}
+                              >
+                                <svg
+                                  class="h-2.5 w-2.5 stroke-white"
+                                  viewBox="0 0 16 16"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-width="2.5"
+                                  stroke-linecap="round"
+                                >
+                                  <line x1="4" y1="4" x2="12" y2="12" />
+                                  <line x1="12" y1="4" x2="4" y2="12" />
+                                </svg>
+                              </button>`
+                            : html``
+                      }
+                    </div>`;
+                  },
+                )
+          }
         </div>
       </div>
     `;
@@ -513,7 +588,8 @@ export class LobbyTeamView extends LitElement {
       this.teamMaxSize = Math.max(
         1,
         Math.ceil(
-          (this.clients.length + this.effectiveNationCount) / teams.length,
+          (this.activePlayers.length + this.effectiveNationCount) /
+            teams.length,
         ),
       );
     }
@@ -593,6 +669,52 @@ export class LobbyTeamView extends LitElement {
         stroke-linejoin="round"
       ></path>
     </svg>`;
+  }
+
+  // The level badge this viewer may see for `client`: none for guests and
+  // server-anonymized entries (they arrive without one), and none for other
+  // players while the viewer has anonymous names on — the badge belongs to
+  // the real name, like the verified check above.
+  // The viewer's own entry has no badge while they hide their level, so it
+  // falls back to the one from their own /users/@me.
+  private visibleLevelBadge(client: ClientInfo): LevelBadge | undefined {
+    if (this.isCurrentPlayer(client)) {
+      return unpackLevelBadge(client.levelBadge) ?? this._ownHiddenBadge;
+    }
+    return this.userSettings.anonymousNames()
+      ? undefined
+      : unpackLevelBadge(client.levelBadge);
+  }
+
+  private anyVisibleLevelBadge(clients: readonly ClientInfo[]): boolean {
+    return clients.some((c) => this.visibleLevelBadge(c) !== undefined);
+  }
+
+  // The player's level badge, in front of their name. With `slot`, a player
+  // without one gets an empty space the same size instead, so the names in a
+  // column line up; column layouts pass it only when someone in the list has
+  // a visible badge, so a list with no badges renders exactly as before.
+  // `stagger`: a full lobby's badges arriving at once are drawn over the
+  // next few frames instead of all in one (see LevelBadgeFill); a few at a
+  // time, like a player joining, are drawn straight away.
+  private renderLevelBadge(client: ClientInfo, slot: boolean) {
+    const badge = this.visibleLevelBadge(client);
+    if (badge === undefined) {
+      return slot
+        ? html`<span
+            class="lobby-level-slot inline-block w-6 h-6 align-[-7px] shrink-0 mr-1.5"
+            aria-hidden="true"
+          ></span>`
+        : html``;
+    }
+    return html`<level-badge
+      stagger
+      class="inline-block align-[-7px] shrink-0 mr-1.5"
+      .level=${badge.level}
+      .prestige=${badge.prestige}
+      ?legend=${badge.legend}
+      size="24"
+    ></level-badge>`;
   }
 
   // A mark for players on the viewer's friends list

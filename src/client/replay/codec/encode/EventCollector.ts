@@ -13,6 +13,10 @@ import {
   type SpawnPhaseEndUpdate,
   type UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
+import {
+  PackedUnitUpdateDecoder,
+  UNIT_UPDATE_STRIDE,
+} from "@openfront/engine-lib/game/PackedUnitUpdates";
 import type { NormalizedFrame } from "../FrameNormalizer";
 import {
   RailroadEventKind,
@@ -20,19 +24,43 @@ import {
   type DeadUnitEvent,
   type NukeImpactEvent,
   type RailroadEvent,
+  type ReplayEvents,
   type ReplayMotionPlan,
   type SpawnPhaseEndEvent,
 } from "../ReplayTypes";
 
 export class EventCollector {
-  readonly nukeImpacts: NukeImpactEvent[] = [];
-  readonly railroadEvents: RailroadEvent[] = [];
-  readonly motionPlans: ReplayMotionPlan[] = [];
-  readonly constructionStarts: ConstructionStartEvent[] = [];
-  readonly deadUnitEvents: DeadUnitEvent[] = [];
+  // The events since the last take().
+  private nukeImpacts: NukeImpactEvent[] = [];
+  private railroadEvents: RailroadEvent[] = [];
+  private motionPlans: ReplayMotionPlan[] = [];
+  private constructionStarts: ConstructionStartEvent[] = [];
+  private deadUnitEvents: DeadUnitEvent[] = [];
   spawnPhaseEnd: SpawnPhaseEndEvent | null = null;
 
   private constructing = new Set<number>();
+
+  /**
+   * The events collected since the last call. They're handed over, not
+   * kept: the worker sends each append on and never needs them again, so
+   * holding them would grow its memory for the whole game.
+   */
+  take(): ReplayEvents {
+    const events: ReplayEvents = {
+      nukeImpacts: this.nukeImpacts,
+      railroadEvents: this.railroadEvents,
+      motionPlans: this.motionPlans,
+      constructionStarts: this.constructionStarts,
+      deadUnitEvents: this.deadUnitEvents,
+      spawnPhaseEnd: this.spawnPhaseEnd,
+    };
+    this.nukeImpacts = [];
+    this.railroadEvents = [];
+    this.motionPlans = [];
+    this.constructionStarts = [];
+    this.deadUnitEvents = [];
+    return events;
+  }
 
   /** `isLand`: whether a tile is land after this frame's tick. */
   push(frame: NormalizedFrame, isLand: (ref: number) => boolean): void {
@@ -110,16 +138,40 @@ export class EventCollector {
     // Read from the raw updates like GameView does: a planned unit's last
     // update has where it actually ended up (a nuke's target), while the
     // normalized state is still on the plan's path.
-    for (const u of gu.updates[GameUpdateType.Unit] as UnitUpdate[]) {
-      if (u.isActive) continue;
-      this.deadUnitEvents.push({
-        tick,
-        unitId: u.id,
-        unitType: u.unitType,
-        ownerSmallID: u.ownerID,
-        pos: u.pos,
-        reachedTarget: u.reachedTarget,
-      });
+    if (gu.packedUnitUpdates) {
+      for (
+        let offset = 0;
+        offset < gu.packedUnitUpdates.length;
+        offset += UNIT_UPDATE_STRIDE
+      ) {
+        const decoder = new PackedUnitUpdateDecoder(
+          gu.packedUnitUpdates,
+          offset,
+        );
+        if (!decoder.isActive) {
+          this.deadUnitEvents.push({
+            tick,
+            unitId: decoder.id,
+            unitType: decoder.unitType,
+            ownerSmallID: decoder.ownerID,
+            pos: decoder.pos,
+            reachedTarget: decoder.reachedTarget,
+          });
+        }
+      }
+    } else {
+      const units = (gu.updates[GameUpdateType.Unit] as UnitUpdate[]) ?? [];
+      for (const u of units) {
+        if (u.isActive) continue;
+        this.deadUnitEvents.push({
+          tick,
+          unitId: u.id,
+          unitType: u.unitType,
+          ownerSmallID: u.ownerID,
+          pos: u.pos,
+          reachedTarget: u.reachedTarget,
+        });
+      }
     }
   }
 }

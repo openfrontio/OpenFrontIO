@@ -6,6 +6,10 @@
  */
 
 import {
+  REPLAY_VERSION,
+  type ReplayData,
+} from "../../../src/client/replay/codec/ReplayTypes";
+import {
   evictionsFor,
   fromStored,
   openIndexedDbBackend,
@@ -17,10 +21,6 @@ import {
   type StoredMeta,
   type StoredReplay,
 } from "../../../src/client/replay/ReplayStore";
-import {
-  REPLAY_VERSION,
-  type ReplayData,
-} from "../../../src/client/replay/codec/ReplayTypes";
 
 /** What IndexedDB holds, in memory. */
 function memoryBackend() {

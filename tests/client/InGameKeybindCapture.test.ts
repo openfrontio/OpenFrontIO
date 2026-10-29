@@ -137,4 +137,27 @@ describe("keybind capture over a live game", () => {
     expect(escaped).toBe(false);
     expect(button.textContent?.trim()).not.toBe("...");
   });
+
+  it("captures lone modifier keys only when allowModifiers is set", async () => {
+    const keybind = document.createElement("setting-keybind") as any;
+    keybind.allowModifiers = true;
+    document.body.appendChild(keybind);
+    await keybind.updateComplete;
+    const button = keybind.querySelector('[role="button"]') as HTMLElement;
+    button.click();
+    let val = "";
+    keybind.addEventListener("change", (e: any) => (val = e.detail.value));
+    button.dispatchEvent(
+      new KeyboardEvent("keydown", { code: "AltLeft", bubbles: true }),
+    );
+    expect(val).toBe("AltLeft");
+    keybind.allowModifiers = false;
+    button.click();
+    val = "";
+    button.dispatchEvent(
+      new KeyboardEvent("keydown", { code: "ShiftLeft", bubbles: true }),
+    );
+    expect(val).toBe("");
+    expect(keybind.listening).toBe(true);
+  });
 });
