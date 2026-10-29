@@ -4,10 +4,10 @@
   "translation_key": "map.tutorial",
   "categories": ["fictional"],
   "hidden": true,
-  "custom_tribes": [{ "name": "Hill Tribe", "coordinates": [55, 70] }],
+  "custom_tribes": [{ "name": "Hill Tribe", "coordinates": [38, 49] }],
   "nations": [
     {
-      "coordinates": [265, 105],
+      "coordinates": [175, 84],
       "flag": "",
       "name": "Red Empire"
     }

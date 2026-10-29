@@ -100,6 +100,7 @@ describe("PlayerInfoOverlay", () => {
     config: () => ({
       isUnitDisabled: () => true,
       maxTroops: () => 1000,
+      gameConfig: () => ({}),
     }),
     teamClanTag: () => undefined,
   });
@@ -137,6 +138,21 @@ describe("PlayerInfoOverlay", () => {
     expect(out).toContain("Bob");
     expect(out).toContain("text-white");
     expect(out).not.toContain("text-green-500");
+  });
+
+  it("stays hidden in the onboarding tutorial", () => {
+    const game = makeGame(null);
+    overlay.game = {
+      ...game,
+      config: () => ({
+        ...game.config(),
+        gameConfig: () => ({ tutorial: true }),
+      }),
+    } as never;
+
+    overlay.maybeShow(10, 10);
+
+    expect(flatten(overlay.render())).not.toContain("Bob");
   });
 
   it("keeps its target while the pointer is on the panel", () => {
