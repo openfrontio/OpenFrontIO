@@ -1452,6 +1452,38 @@
     "tutorial": "BEMUTATÓ",
     "warning": "FIGYELEM"
   },
+  "onboarding": {
+    "got_it": "Értem",
+    "intro_body": "Az OpenFront egy stratégiai játék, amelyben növeled a területedet, és meghódítod a szomszédaidat, hogy az egész térképet uralmad alá hajtsd.",
+    "intro_start": "Kezdés",
+    "intro_title": "Üdv az OpenFrontban!",
+    "low_troops": "Várd meg, amíg újra megszaporodnak, mielőtt megint támadsz.",
+    "low_troops_title": "Kevés a katonád!",
+    "main_menu": "Főmenü",
+    "play_solo": "Egyéni játék",
+    "step": {
+      "boat": "A hajók vízen át szállítják a katonákat. Kattints a kis szigetre, hogy odaküldj egyet.",
+      "boat_touch": "A hajók vízen át szállítják a katonákat. Koppints a kis szigetre, hogy odaküldj egyet.",
+      "coast": "Kattints tovább az üres földre, amíg a területed el nem éri a vizet.",
+      "coast_touch": "Koppints tovább az üres földre, amíg a területed el nem éri a vizet.",
+      "expand": "Ez a te területed. Kattints a mellette lévő üres földre, hogy terjeszkedj.",
+      "expand_touch": "Ez a te területed. Koppints a mellette lévő üres földre, hogy terjeszkedj.",
+      "nation": "Az utolsó: a Red Empire. Kattints a partjára, és küldj hajókat, amíg el nem esik.",
+      "nation_land": "Most kattints a területe közepére, és folytasd, amíg el nem esik.",
+      "nation_land_touch": "Most koppints a területe közepére, és folytasd, amíg el nem esik.",
+      "nation_touch": "Az utolsó: a Red Empire. Koppints a partjára, és küldj hajókat, amíg el nem esik.",
+      "spawn": "Kattints a világító körön belülre, és válaszd ki, hol kezdesz.",
+      "spawn_touch": "Koppints a világító körön belülre, és válaszd ki, hol kezdesz.",
+      "tribe": "Ez egy törzs. Kattints a területére a támadáshoz, és folytasd, amíg el nem tűnik.",
+      "tribe_touch": "Ez egy törzs. Koppints a területére a támadáshoz, és folytasd, amíg el nem tűnik.",
+      "troops": "Ez a sáv a sereged. Akkor nő a leggyorsabban, ha nagyjából félig van, ezért ne várd meg, amíg megtelik.",
+      "wrong_target": "Nem oda. Kattints oda, ahová a nyíl mutat.",
+      "wrong_target_touch": "Nem oda. Koppints oda, ahová a nyíl mutat."
+    },
+    "step_counter": "{current}/{total}. lépés",
+    "won_body": "Már ismered az alapokat. Most próbálj ki egy igazi játékot: egy útmutató bemutatja az épületeket, a szövetségeket, az atombombákat és még sok mást.",
+    "won_title": "Nyertél!"
+  },
   "overtime": {
     "started": "Hosszabbítás! A győzelemhez szükséges terület most csökken.",
     "title": "Hosszabbítás",

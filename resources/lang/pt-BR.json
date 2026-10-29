@@ -1714,6 +1714,38 @@
     "tutorial": "TUTORIAL",
     "warning": "ATENÇÃO"
   },
+  "onboarding": {
+    "got_it": "Entendi",
+    "intro_body": "OpenFront é um jogo de estratégia em que você expande seu território e conquista seus vizinhos para dominar o mapa.",
+    "intro_start": "Começar",
+    "intro_title": "Bem-vindo ao OpenFront",
+    "low_troops": "Espere elas se recuperarem antes de atacar de novo.",
+    "low_troops_title": "Você está com poucas tropas!",
+    "main_menu": "Menu principal",
+    "play_solo": "Jogar solo",
+    "step": {
+      "boat": "Barcos levam tropas pela água. Clique na ilha pequena para mandar um até lá.",
+      "boat_touch": "Barcos levam tropas pela água. Toque na ilha pequena para mandar um até lá.",
+      "coast": "Continue clicando na terra vazia até seu território chegar à água.",
+      "coast_touch": "Continue tocando na terra vazia até seu território chegar à água.",
+      "expand": "Este é o seu território. Clique na terra vazia ao lado para crescer.",
+      "expand_touch": "Este é o seu território. Toque na terra vazia ao lado para crescer.",
+      "nation": "O último: o Red Empire. Clique na costa dele para mandar barcos até ele cair.",
+      "nation_land": "Agora clique no meio do território dele e continue até ele cair.",
+      "nation_land_touch": "Agora toque no meio do território dele e continue até ele cair.",
+      "nation_touch": "O último: o Red Empire. Toque na costa dele para mandar barcos até ele cair.",
+      "spawn": "Clique dentro do círculo brilhante para escolher onde você vai começar.",
+      "spawn_touch": "Toque dentro do círculo brilhante para escolher onde você vai começar.",
+      "tribe": "Isso é uma tribo. Clique no território dela para atacá-la e continue até ela sumir.",
+      "tribe_touch": "Isso é uma tribo. Toque no território dela para atacá-la e continue até ela sumir.",
+      "troops": "Esta barra é o seu exército. Ela cresce mais rápido quando está mais ou menos pela metade, então não espere ela encher.",
+      "wrong_target": "Aí não. Clique onde a seta está apontando.",
+      "wrong_target_touch": "Aí não. Toque onde a seta está apontando."
+    },
+    "step_counter": "Passo {current} de {total}",
+    "won_body": "Você já sabe o básico. Agora experimente uma partida de verdade: um guia vai mostrar construções, alianças, bombas nucleares e muito mais.",
+    "won_title": "Você venceu!"
+  },
   "overtime": {
     "first_place": "1°: {name} ({pct}%)",
     "started": "Tempo Extra! O território necessário para ganhar está agora caindo.",

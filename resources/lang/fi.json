@@ -121,6 +121,38 @@
     "info_enemy_panel": "Vihollisen tietopaneeli",
     "exit_confirmation": "Haluatko varmasti poistua pelistä?"
   },
+  "onboarding": {
+    "got_it": "Selvä",
+    "intro_body": "OpenFront on strategiapeli, jossa laajennat aluettasi ja valloitat naapurisi, kunnes hallitset koko karttaa.",
+    "intro_start": "Aloita",
+    "intro_title": "Tervetuloa OpenFrontiin",
+    "low_troops": "Odota, että ne kasvavat takaisin, ennen kuin hyökkäät uudelleen.",
+    "low_troops_title": "Joukkosi ovat vähissä!",
+    "main_menu": "Päävalikko",
+    "play_solo": "Pelaa yksinpeliä",
+    "step": {
+      "boat": "Veneet kuljettavat joukkoja veden yli. Klikkaa pientä saarta lähettääksesi sinne veneen.",
+      "boat_touch": "Veneet kuljettavat joukkoja veden yli. Napauta pientä saarta lähettääksesi sinne veneen.",
+      "coast": "Jatka tyhjän maan klikkaamista, kunnes alueesi ulottuu veteen.",
+      "coast_touch": "Jatka tyhjän maan napauttamista, kunnes alueesi ulottuu veteen.",
+      "expand": "Tämä on alueesi. Klikkaa sen vieressä olevaa tyhjää maata laajentuaksesi.",
+      "expand_touch": "Tämä on alueesi. Napauta sen vieressä olevaa tyhjää maata laajentuaksesi.",
+      "nation": "Viimeinen: Red Empire. Klikkaa sen rannikkoa lähettääksesi veneitä, kunnes se kaatuu.",
+      "nation_land": "Klikkaa nyt sen alueen keskelle ja jatka, kunnes se kaatuu.",
+      "nation_land_touch": "Napauta nyt sen alueen keskelle ja jatka, kunnes se kaatuu.",
+      "nation_touch": "Viimeinen: Red Empire. Napauta sen rannikkoa lähettääksesi veneitä, kunnes se kaatuu.",
+      "spawn": "Valitse aloituspaikkasi klikkaamalla hehkuvan ympyrän sisälle.",
+      "spawn_touch": "Valitse aloituspaikkasi napauttamalla hehkuvan ympyrän sisälle.",
+      "tribe": "Tuo on botti. Klikkaa sen aluetta hyökätäksesi ja jatka, kunnes se on poissa.",
+      "tribe_touch": "Tuo on botti. Napauta sen aluetta hyökätäksesi ja jatka, kunnes se on poissa.",
+      "troops": "Tämä palkki on armeijasi. Se kasvaa nopeimmin, kun palkki on noin puolillaan, joten älä odota, että se täyttyy.",
+      "wrong_target": "Ei siihen. Klikkaa kohtaa, johon nuoli osoittaa.",
+      "wrong_target_touch": "Ei siihen. Napauta kohtaa, johon nuoli osoittaa."
+    },
+    "step_counter": "Vaihe {current}/{total}",
+    "won_body": "Osaat nyt perusteet. Kokeile seuraavaksi oikeaa peliä: opas näyttää sinulle rakennukset, liittoumat, ydinohjukset ja paljon muuta.",
+    "won_title": "Voitit!"
+  },
   "single_modal": {
     "title": "Yksinpeli",
     "allow_alliances": "Sallii liittoumat",

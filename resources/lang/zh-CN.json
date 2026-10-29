@@ -57,6 +57,38 @@
     "title": "发行说明",
     "github_link": "在 Github 上"
   },
+  "onboarding": {
+    "got_it": "知道了",
+    "intro_body": "OpenFront 是一款策略游戏：扩张你的领土，征服你的邻居，最终占领整张地图。",
+    "intro_start": "开始",
+    "intro_title": "欢迎来到 OpenFront",
+    "low_troops": "等军队恢复后再发起进攻吧。",
+    "low_troops_title": "你的军队不多了！",
+    "main_menu": "主菜单",
+    "play_solo": "开始单人游戏",
+    "step": {
+      "boat": "船可以载着军队渡海。点击那座小岛，派一艘船过去。",
+      "boat_touch": "船可以载着军队渡海。点按那座小岛，派一艘船过去。",
+      "coast": "继续点击空地，直到你的领土到达海边。",
+      "coast_touch": "继续点按空地，直到你的领土到达海边。",
+      "expand": "这是你的领土。点击旁边的空地来扩张。",
+      "expand_touch": "这是你的领土。点按旁边的空地来扩张。",
+      "nation": "最后一个：Red Empire。点击它的海岸派船进攻，直到它灭亡。",
+      "nation_land": "现在点击它领土的中间，一直进攻到它灭亡。",
+      "nation_land_touch": "现在点按它领土的中间，一直进攻到它灭亡。",
+      "nation_touch": "最后一个：Red Empire。点按它的海岸派船进攻，直到它灭亡。",
+      "spawn": "点击发光的圆圈内部，选择你的起点。",
+      "spawn_touch": "点按发光的圆圈内部，选择你的起点。",
+      "tribe": "那是一个部落。点击它的领土发起进攻，直到把它消灭。",
+      "tribe_touch": "那是一个部落。点按它的领土发起进攻，直到把它消灭。",
+      "troops": "这条是你的军队。军队在半满左右时增长最快，所以别等它满了。",
+      "wrong_target": "不是那里。请点击箭头指向的地方。",
+      "wrong_target_touch": "不是那里。请点按箭头指向的地方。"
+    },
+    "step_counter": "第 {current} 步，共 {total} 步",
+    "won_body": "你已经掌握了基础。现在来玩一局真正的游戏吧：向导会为你介绍建筑、联盟、核弹等更多内容。",
+    "won_title": "你获胜了！"
+  },
   "troubleshooting": {
     "title": "疑难解答",
     "environment": "环境",

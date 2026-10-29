@@ -55,6 +55,38 @@
     "github_link": "di GitHub",
     "title": "Catatan Rilis"
   },
+  "onboarding": {
+    "got_it": "Mengerti",
+    "intro_body": "OpenFront adalah game strategi tempat kamu memperluas wilayah dan menaklukkan tetanggamu untuk menguasai peta.",
+    "intro_start": "Mulai",
+    "intro_title": "Selamat datang di OpenFront",
+    "low_troops": "Tunggu pasukanmu pulih dulu sebelum menyerang lagi.",
+    "low_troops_title": "Pasukanmu tinggal sedikit!",
+    "main_menu": "Menu utama",
+    "play_solo": "Main solo",
+    "step": {
+      "boat": "Perahu membawa pasukan menyeberangi air. Klik pulau kecil itu untuk mengirim perahu ke sana.",
+      "boat_touch": "Perahu membawa pasukan menyeberangi air. Ketuk pulau kecil itu untuk mengirim perahu ke sana.",
+      "coast": "Terus klik tanah kosong sampai wilayahmu mencapai air.",
+      "coast_touch": "Terus ketuk tanah kosong sampai wilayahmu mencapai air.",
+      "expand": "Ini wilayahmu. Klik tanah kosong di sebelahnya untuk memperluasnya.",
+      "expand_touch": "Ini wilayahmu. Ketuk tanah kosong di sebelahnya untuk memperluasnya.",
+      "nation": "Yang terakhir: Red Empire. Klik pantainya untuk mengirim perahu sampai mereka jatuh.",
+      "nation_land": "Sekarang klik bagian tengah wilayahnya, dan terus serang sampai mereka jatuh.",
+      "nation_land_touch": "Sekarang ketuk bagian tengah wilayahnya, dan terus serang sampai mereka jatuh.",
+      "nation_touch": "Yang terakhir: Red Empire. Ketuk pantainya untuk mengirim perahu sampai mereka jatuh.",
+      "spawn": "Klik di dalam lingkaran yang bersinar untuk memilih tempat awalmu.",
+      "spawn_touch": "Ketuk di dalam lingkaran yang bersinar untuk memilih tempat awalmu.",
+      "tribe": "Itu adalah suku. Klik wilayahnya untuk menyerang, dan terus serang sampai mereka habis.",
+      "tribe_touch": "Itu adalah suku. Ketuk wilayahnya untuk menyerang, dan terus serang sampai mereka habis.",
+      "troops": "Bar ini adalah pasukanmu. Pasukan bertambah paling cepat saat bar terisi sekitar setengah, jadi jangan tunggu sampai penuh.",
+      "wrong_target": "Bukan di situ. Klik tempat yang ditunjuk panah.",
+      "wrong_target_touch": "Bukan di situ. Ketuk tempat yang ditunjuk panah."
+    },
+    "step_counter": "Langkah {current} dari {total}",
+    "won_body": "Kamu sudah tahu dasarnya. Sekarang coba game sungguhan: panduan akan menunjukkan bangunan, aliansi, nuklir, dan banyak lagi.",
+    "won_title": "Kamu menang!"
+  },
   "troubleshooting": {
     "title": "Penyelesaian masalah",
     "environment": "Lingkungan",

@@ -1714,6 +1714,38 @@
     "tutorial": "TUTORIEL",
     "warning": "AVERTISSEMENT"
   },
+  "onboarding": {
+    "got_it": "J'ai compris",
+    "intro_body": "OpenFront est un jeu de stratégie où vous agrandissez votre territoire et conquérez vos voisins pour dominer la carte.",
+    "intro_start": "Commencer",
+    "intro_title": "Bienvenue sur OpenFront",
+    "low_troops": "Attendez qu'elles se reconstituent avant d'attaquer de nouveau.",
+    "low_troops_title": "Il vous reste peu de troupes !",
+    "main_menu": "Menu principal",
+    "play_solo": "Jouer en solo",
+    "step": {
+      "boat": "Les bateaux transportent vos troupes sur l'eau. Cliquez sur la petite île pour y en envoyer un.",
+      "boat_touch": "Les bateaux transportent vos troupes sur l'eau. Touchez la petite île pour y en envoyer un.",
+      "coast": "Continuez à cliquer sur les terres libres jusqu'à ce que votre territoire atteigne l'eau.",
+      "coast_touch": "Continuez à toucher les terres libres jusqu'à ce que votre territoire atteigne l'eau.",
+      "expand": "Voici votre territoire. Cliquez sur les terres libres juste à côté pour vous agrandir.",
+      "expand_touch": "Voici votre territoire. Touchez les terres libres juste à côté pour vous agrandir.",
+      "nation": "Dernier adversaire : le Red Empire. Cliquez sur sa côte pour envoyer des bateaux jusqu'à ce qu'il tombe.",
+      "nation_land": "Cliquez maintenant au centre de son territoire, et continuez jusqu'à ce qu'il tombe.",
+      "nation_land_touch": "Touchez maintenant le centre de son territoire, et continuez jusqu'à ce qu'il tombe.",
+      "nation_touch": "Dernier adversaire : le Red Empire. Touchez sa côte pour envoyer des bateaux jusqu'à ce qu'il tombe.",
+      "spawn": "Cliquez à l'intérieur du cercle lumineux pour choisir votre point de départ.",
+      "spawn_touch": "Touchez l'intérieur du cercle lumineux pour choisir votre point de départ.",
+      "tribe": "Voici une tribu. Cliquez sur son territoire pour l'attaquer, et continuez jusqu'à ce qu'elle disparaisse.",
+      "tribe_touch": "Voici une tribu. Touchez son territoire pour l'attaquer, et continuez jusqu'à ce qu'elle disparaisse.",
+      "troops": "Cette barre représente votre armée. Elle grandit plus vite quand elle est à peu près à moitié pleine, alors n'attendez pas qu'elle se remplisse.",
+      "wrong_target": "Pas ici. Cliquez là où pointe la flèche.",
+      "wrong_target_touch": "Pas ici. Touchez là où pointe la flèche."
+    },
+    "step_counter": "Étape {current} sur {total}",
+    "won_body": "Vous connaissez les bases. Essayez maintenant une vraie partie : un guide vous fera découvrir les bâtiments, les alliances, les bombes nucléaires et bien plus encore.",
+    "won_title": "Vous avez gagné !"
+  },
   "overtime": {
     "first_place": "1er : {name} ({pct} %)",
     "started": "Blitz ! Le territoire nécessaire pour gagner diminue de 1% toutes les 2 minutes désormais.",

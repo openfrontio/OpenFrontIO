@@ -121,6 +121,38 @@
     "info_enemy_panel": "Informacijska plošča o sovražniku",
     "exit_confirmation": "Ste prepričani, da želite zapustiti igro?"
   },
+  "onboarding": {
+    "got_it": "Razumem",
+    "intro_body": "OpenFront je strateška igra, v kateri širiš svoje ozemlje in osvajaš sosede, dokler ne zavzameš celotnega zemljevida.",
+    "intro_start": "Začni",
+    "intro_title": "Dobrodošli v OpenFront",
+    "low_troops": "Počakaj, da se obnovijo, preden spet napadeš.",
+    "low_troops_title": "Imaš malo enot!",
+    "main_menu": "Glavni meni",
+    "play_solo": "Igraj solo",
+    "step": {
+      "boat": "Čolni prevažajo enote čez vodo. Klikni majhen otok, da tja pošlješ čoln.",
+      "boat_touch": "Čolni prevažajo enote čez vodo. Dotakni se majhnega otoka, da tja pošlješ čoln.",
+      "coast": "Klikaj prazno kopno, dokler tvoje ozemlje ne seže do vode.",
+      "coast_touch": "Dotikaj se praznega kopna, dokler tvoje ozemlje ne seže do vode.",
+      "expand": "To je tvoje ozemlje. Klikni prazno kopno ob njem, da se razširiš.",
+      "expand_touch": "To je tvoje ozemlje. Dotakni se praznega kopna ob njem, da se razširiš.",
+      "nation": "Še zadnji: Red Empire. Klikaj njegovo obalo in pošiljaj čolne, dokler ne pade.",
+      "nation_land": "Zdaj klikni sredino njegovega ozemlja in nadaljuj, dokler ne pade.",
+      "nation_land_touch": "Zdaj se dotakni sredine njegovega ozemlja in nadaljuj, dokler ne pade.",
+      "nation_touch": "Še zadnji: Red Empire. Dotikaj se njegove obale in pošiljaj čolne, dokler ne pade.",
+      "spawn": "Klikni znotraj svetlečega kroga in izberi, kje začneš.",
+      "spawn_touch": "Dotakni se mesta znotraj svetlečega kroga in izberi, kje začneš.",
+      "tribe": "To je pleme. Klikni njegovo ozemlje, da ga napadeš, in nadaljuj, dokler ne izgine.",
+      "tribe_touch": "To je pleme. Dotakni se njegovega ozemlja, da ga napadeš, in nadaljuj, dokler ne izgine.",
+      "troops": "Ta vrstica je tvoja vojska. Najhitreje raste, ko je napolnjena približno do polovice, zato ne čakaj, da se napolni.",
+      "wrong_target": "Ne tja. Klikni tja, kamor kaže puščica.",
+      "wrong_target_touch": "Ne tja. Dotakni se mesta, kamor kaže puščica."
+    },
+    "step_counter": "Korak {current} od {total}",
+    "won_body": "Osnove znaš. Zdaj poskusi pravo igro: vodnik ti bo pokazal zgradbe, zavezništva, jedrsko orožje in še več.",
+    "won_title": "Zmaga!"
+  },
   "single_modal": {
     "title": "En igralec",
     "allow_alliances": "Dovoli zavezništvo",

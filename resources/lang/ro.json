@@ -1714,6 +1714,38 @@
     "tutorial": "TUTORIALE",
     "warning": "ATENŢIE"
   },
+  "onboarding": {
+    "got_it": "Am înțeles",
+    "intro_body": "OpenFront este un joc de strategie în care îți extinzi teritoriul și îți cucerești vecinii ca să preiei controlul hărții.",
+    "intro_start": "Începe",
+    "intro_title": "Bine ai venit în OpenFront",
+    "low_troops": "Așteaptă să se refacă înainte să ataci din nou.",
+    "low_troops_title": "Ai puține trupe!",
+    "main_menu": "Meniu principal",
+    "play_solo": "Joacă singur",
+    "step": {
+      "boat": "Bărcile duc trupe peste apă. Dă clic pe insula mică pentru a trimite una acolo.",
+      "boat_touch": "Bărcile duc trupe peste apă. Atinge insula mică pentru a trimite una acolo.",
+      "coast": "Continuă să dai clic pe pământul liber până când teritoriul tău ajunge la apă.",
+      "coast_touch": "Continuă să atingi pământul liber până când teritoriul tău ajunge la apă.",
+      "expand": "Acesta este teritoriul tău. Dă clic pe pământul liber de lângă el ca să te extinzi.",
+      "expand_touch": "Acesta este teritoriul tău. Atinge pământul liber de lângă el ca să te extinzi.",
+      "nation": "Ultimul: Red Empire. Dă clic pe coasta lui ca să trimiți bărci până cade.",
+      "nation_land": "Acum dă clic în mijlocul teritoriului lui și continuă până cade.",
+      "nation_land_touch": "Acum atinge mijlocul teritoriului lui și continuă până cade.",
+      "nation_touch": "Ultimul: Red Empire. Atinge coasta lui ca să trimiți bărci până cade.",
+      "spawn": "Dă clic în cercul strălucitor ca să alegi unde începi.",
+      "spawn_touch": "Atinge cercul strălucitor ca să alegi unde începi.",
+      "tribe": "Acesta este un trib. Dă clic pe teritoriul lui ca să-l ataci și continuă până dispare.",
+      "tribe_touch": "Acesta este un trib. Atinge teritoriul lui ca să-l ataci și continuă până dispare.",
+      "troops": "Această bară este armata ta. Crește cel mai repede când e cam pe jumătate plină, așa că nu aștepta să se umple.",
+      "wrong_target": "Nu acolo. Dă clic unde arată săgeata.",
+      "wrong_target_touch": "Nu acolo. Atinge locul arătat de săgeată."
+    },
+    "step_counter": "Pasul {current} din {total}",
+    "won_body": "Acum știi elementele de bază. Încearcă un joc adevărat: un ghid îți va arăta clădirile, alianțele, bombele atomice și multe altele.",
+    "won_title": "Ai câștigat!"
+  },
   "overtime": {
     "first_place": "1st: {name} ({pct}%)",
     "started": "Timp trecut! Teritoriul necesar pentru a câștiga este acum abandonat.",

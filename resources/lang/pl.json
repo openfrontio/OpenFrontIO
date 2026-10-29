@@ -133,6 +133,38 @@
     "info_enemy_panel": "Panel informacji o wrogu",
     "exit_confirmation": "Czy na pewno chcesz wyjść z gry?"
   },
+  "onboarding": {
+    "got_it": "Rozumiem",
+    "intro_body": "OpenFront to gra strategiczna, w której powiększasz swoje ziemie i podbijasz sąsiadów, aby zapanować nad całą mapą.",
+    "intro_start": "Zaczynamy",
+    "intro_title": "Witaj w OpenFront",
+    "low_troops": "Poczekaj, aż wojsko się odbuduje, zanim znów zaatakujesz.",
+    "low_troops_title": "Masz mało wojska!",
+    "main_menu": "Menu główne",
+    "play_solo": "Zagraj solo",
+    "step": {
+      "boat": "Łodzie przewożą wojsko przez wodę. Kliknij małą wyspę, aby wysłać tam łódź.",
+      "boat_touch": "Łodzie przewożą wojsko przez wodę. Dotknij małej wyspy, aby wysłać tam łódź.",
+      "coast": "Klikaj pusty ląd, aż twoje ziemie dotrą do wody.",
+      "coast_touch": "Dotykaj pustego lądu, aż twoje ziemie dotrą do wody.",
+      "expand": "To twoje ziemie. Kliknij pusty ląd obok, aby się rozrosnąć.",
+      "expand_touch": "To twoje ziemie. Dotknij pustego lądu obok, aby się rozrosnąć.",
+      "nation": "Na koniec Red Empire. Klikaj jego wybrzeże i wysyłaj łodzie, aż upadnie.",
+      "nation_land": "Teraz kliknij środek jego ziem i nie przestawaj, aż upadnie.",
+      "nation_land_touch": "Teraz dotknij środka jego ziem i nie przestawaj, aż upadnie.",
+      "nation_touch": "Na koniec Red Empire. Dotykaj jego wybrzeża i wysyłaj łodzie, aż upadnie.",
+      "spawn": "Kliknij wewnątrz świecącego okręgu, aby wybrać miejsce startu.",
+      "spawn_touch": "Dotknij wnętrza świecącego okręgu, aby wybrać miejsce startu.",
+      "tribe": "To jest bot. Kliknij jego ziemie, aby go zaatakować, i nie przestawaj, aż zniknie.",
+      "tribe_touch": "To jest bot. Dotknij jego ziem, aby go zaatakować, i nie przestawaj, aż zniknie.",
+      "troops": "Ten pasek to twoja armia. Rośnie najszybciej, gdy jest wypełniony mniej więcej do połowy, więc nie czekaj, aż się zapełni.",
+      "wrong_target": "Nie tutaj. Kliknij tam, gdzie wskazuje strzałka.",
+      "wrong_target_touch": "Nie tutaj. Dotknij miejsca, które wskazuje strzałka."
+    },
+    "step_counter": "Krok {current} z {total}",
+    "won_body": "Znasz już podstawy. Teraz spróbuj prawdziwej gry: przewodnik pokaże ci budynki, sojusze, bomby atomowe i nie tylko.",
+    "won_title": "Wygrałeś!"
+  },
   "single_modal": {
     "title": "Gra jednoosobowa",
     "allow_alliances": "Pozwól na sojusze",

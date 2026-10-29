@@ -121,6 +121,38 @@
     "info_enemy_panel": "Painel de informações do inimigo",
     "exit_confirmation": "Tem a certeza que quer sair do jogo?"
   },
+  "onboarding": {
+    "got_it": "Percebi",
+    "intro_body": "OpenFront é um jogo de estratégia em que expandes o teu território e conquistas os teus vizinhos para dominar o mapa.",
+    "intro_start": "Começar",
+    "intro_title": "Bem-vindo ao OpenFront",
+    "low_troops": "Espera que recuperem antes de voltares a atacar.",
+    "low_troops_title": "Tens poucas tropas!",
+    "main_menu": "Menu principal",
+    "play_solo": "Jogar a solo",
+    "step": {
+      "boat": "Os barcos levam tropas pela água. Clica na ilha pequena para enviar um para lá.",
+      "boat_touch": "Os barcos levam tropas pela água. Toca na ilha pequena para enviar um para lá.",
+      "coast": "Continua a clicar na terra vazia até o teu território chegar à água.",
+      "coast_touch": "Continua a tocar na terra vazia até o teu território chegar à água.",
+      "expand": "Este é o teu território. Clica na terra vazia ao lado para cresceres.",
+      "expand_touch": "Este é o teu território. Toca na terra vazia ao lado para cresceres.",
+      "nation": "O último: o Red Empire. Clica na costa dele para enviar barcos até ele cair.",
+      "nation_land": "Agora clica no meio do território dele e continua até ele cair.",
+      "nation_land_touch": "Agora toca no meio do território dele e continua até ele cair.",
+      "nation_touch": "O último: o Red Empire. Toca na costa dele para enviar barcos até ele cair.",
+      "spawn": "Clica dentro do círculo brilhante para escolheres onde começas.",
+      "spawn_touch": "Toca dentro do círculo brilhante para escolheres onde começas.",
+      "tribe": "Isto é uma tribo. Clica no território dela para a atacares e continua até ela desaparecer.",
+      "tribe_touch": "Isto é uma tribo. Toca no território dela para a atacares e continua até ela desaparecer.",
+      "troops": "Esta barra é o teu exército. Cresce mais depressa quando está mais ou menos a meio, por isso não esperes que encha.",
+      "wrong_target": "Aí não. Clica onde a seta aponta.",
+      "wrong_target_touch": "Aí não. Toca onde a seta aponta."
+    },
+    "step_counter": "Passo {current} de {total}",
+    "won_body": "Já sabes o básico. Agora experimenta um jogo a sério: um guia vai mostrar-te os edifícios, as alianças, as bombas nucleares e muito mais.",
+    "won_title": "Ganhaste!"
+  },
   "single_modal": {
     "title": "Um jogador",
     "allow_alliances": "Permitir alianças",

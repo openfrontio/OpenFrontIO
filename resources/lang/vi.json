@@ -1714,6 +1714,38 @@
     "tutorial": "HƯỚNG DẪN",
     "warning": "CẢNH BÁO"
   },
+  "onboarding": {
+    "got_it": "Đã hiểu",
+    "intro_body": "OpenFront là trò chơi chiến thuật, nơi bạn mở rộng lãnh thổ và chinh phục các nước láng giềng để chiếm cả bản đồ.",
+    "intro_start": "Bắt đầu",
+    "intro_title": "Chào mừng đến với OpenFront",
+    "low_troops": "Hãy chờ quân hồi lại rồi hẵng tấn công tiếp.",
+    "low_troops_title": "Quân của bạn sắp hết!",
+    "main_menu": "Menu chính",
+    "play_solo": "Chơi đơn",
+    "step": {
+      "boat": "Tàu chở quân vượt biển. Nhấn vào hòn đảo nhỏ để gửi một chiếc tàu đến đó.",
+      "boat_touch": "Tàu chở quân vượt biển. Chạm vào hòn đảo nhỏ để gửi một chiếc tàu đến đó.",
+      "coast": "Tiếp tục nhấn vào vùng đất trống cho đến khi lãnh thổ của bạn chạm tới biển.",
+      "coast_touch": "Tiếp tục chạm vào vùng đất trống cho đến khi lãnh thổ của bạn chạm tới biển.",
+      "expand": "Đây là lãnh thổ của bạn. Nhấn vào vùng đất trống bên cạnh để mở rộng.",
+      "expand_touch": "Đây là lãnh thổ của bạn. Chạm vào vùng đất trống bên cạnh để mở rộng.",
+      "nation": "Đối thủ cuối cùng: Red Empire. Nhấn vào bờ biển của nó để gửi tàu cho đến khi nó sụp đổ.",
+      "nation_land": "Giờ hãy nhấn vào giữa lãnh thổ của nó, và tiếp tục cho đến khi nó sụp đổ.",
+      "nation_land_touch": "Giờ hãy chạm vào giữa lãnh thổ của nó, và tiếp tục cho đến khi nó sụp đổ.",
+      "nation_touch": "Đối thủ cuối cùng: Red Empire. Chạm vào bờ biển của nó để gửi tàu cho đến khi nó sụp đổ.",
+      "spawn": "Nhấn vào bên trong vòng tròn phát sáng để chọn nơi bắt đầu.",
+      "spawn_touch": "Chạm vào bên trong vòng tròn phát sáng để chọn nơi bắt đầu.",
+      "tribe": "Đó là một bộ lạc. Nhấn vào lãnh thổ của nó để tấn công, và tiếp tục cho đến khi nó biến mất.",
+      "tribe_touch": "Đó là một bộ lạc. Chạm vào lãnh thổ của nó để tấn công, và tiếp tục cho đến khi nó biến mất.",
+      "troops": "Thanh này là quân của bạn. Quân tăng nhanh nhất khi thanh đầy khoảng một nửa, nên đừng chờ đến khi đầy.",
+      "wrong_target": "Không phải chỗ đó. Hãy nhấn vào nơi mũi tên chỉ.",
+      "wrong_target_touch": "Không phải chỗ đó. Hãy chạm vào nơi mũi tên chỉ."
+    },
+    "step_counter": "Bước {current}/{total}",
+    "won_body": "Bạn đã nắm được những điều cơ bản. Giờ hãy thử một trận thật: hướng dẫn sẽ giới thiệu cho bạn về công trình, liên minh, bom hạt nhân và nhiều thứ khác.",
+    "won_title": "Bạn đã thắng!"
+  },
   "overtime": {
     "first_place": "Top 1: {name} ({pct}%)",
     "started": "Đã quá giờ! Diện tích lãnh thổ cần thiết để chiến thắng đang giảm xuống.",

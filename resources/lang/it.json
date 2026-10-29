@@ -103,6 +103,38 @@
     "icon_request": "Busta - Richiesta di alleanza. Questo giocatore ti ha inviato una richiesta di alleanza.",
     "info_enemy_panel": "Pannello informazioni nemico"
   },
+  "onboarding": {
+    "got_it": "Ho capito",
+    "intro_body": "OpenFront è un gioco di strategia in cui espandi il tuo territorio e conquisti i tuoi vicini per dominare la mappa.",
+    "intro_start": "Inizia",
+    "intro_title": "Benvenuto in OpenFront",
+    "low_troops": "Aspetta che si ricostituiscano prima di attaccare di nuovo.",
+    "low_troops_title": "Hai poche truppe!",
+    "main_menu": "Menu principale",
+    "play_solo": "Gioca in singolo",
+    "step": {
+      "boat": "Le navi trasportano le truppe sull'acqua. Fai clic sulla piccola isola per mandarne una lì.",
+      "boat_touch": "Le navi trasportano le truppe sull'acqua. Tocca la piccola isola per mandarne una lì.",
+      "coast": "Continua a fare clic sulla terra libera finché il tuo territorio non raggiunge l'acqua.",
+      "coast_touch": "Continua a toccare la terra libera finché il tuo territorio non raggiunge l'acqua.",
+      "expand": "Questo è il tuo territorio. Fai clic sulla terra libera accanto per espanderti.",
+      "expand_touch": "Questo è il tuo territorio. Tocca la terra libera accanto per espanderti.",
+      "nation": "L'ultimo: il Red Empire. Fai clic sulla sua costa per mandare navi finché non cade.",
+      "nation_land": "Ora fai clic al centro del suo territorio e continua finché non cade.",
+      "nation_land_touch": "Ora tocca il centro del suo territorio e continua finché non cade.",
+      "nation_touch": "L'ultimo: il Red Empire. Tocca la sua costa per mandare navi finché non cade.",
+      "spawn": "Fai clic dentro il cerchio luminoso per scegliere dove iniziare.",
+      "spawn_touch": "Tocca dentro il cerchio luminoso per scegliere dove iniziare.",
+      "tribe": "Quello è un bot. Fai clic sul suo territorio per attaccarlo e continua finché non scompare.",
+      "tribe_touch": "Quello è un bot. Tocca il suo territorio per attaccarlo e continua finché non scompare.",
+      "troops": "Questa barra è il tuo esercito. Cresce più in fretta quando è piena circa a metà, quindi non aspettare che si riempia.",
+      "wrong_target": "Non lì. Fai clic dove indica la freccia.",
+      "wrong_target_touch": "Non lì. Tocca dove indica la freccia."
+    },
+    "step_counter": "Passo {current} di {total}",
+    "won_body": "Ora conosci le basi. Prova una partita vera: una guida ti mostrerà gli edifici, le alleanze, le bombe nucleari e molto altro.",
+    "won_title": "Hai vinto!"
+  },
   "single_modal": {
     "title": "Giocatore Singolo",
     "allow_alliances": "Permetti Alleanze",

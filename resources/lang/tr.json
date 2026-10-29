@@ -151,6 +151,38 @@
     "exit_confirmation": "Oyundan çıkmak istediğine emin misin?",
     "bomb_direction": "Atom / Hidrojen bombası yay yönü"
   },
+  "onboarding": {
+    "got_it": "Anladım",
+    "intro_body": "OpenFront, topraklarını büyütüp komşularını fethederek haritayı ele geçirdiğin bir strateji oyunudur.",
+    "intro_start": "Başla",
+    "intro_title": "OpenFront'a hoş geldin",
+    "low_troops": "Tekrar saldırmadan önce birliklerinin yeniden artmasını bekle.",
+    "low_troops_title": "Birliklerin azaldı!",
+    "main_menu": "Ana menü",
+    "play_solo": "Tekli oyna",
+    "step": {
+      "boat": "Tekneler birlikleri su üzerinden taşır. Oraya bir tane göndermek için küçük adaya tıkla.",
+      "boat_touch": "Tekneler birlikleri su üzerinden taşır. Oraya bir tane göndermek için küçük adaya dokun.",
+      "coast": "Toprakların suya ulaşana kadar boş araziye tıklamaya devam et.",
+      "coast_touch": "Toprakların suya ulaşana kadar boş araziye dokunmaya devam et.",
+      "expand": "Burası senin toprağın. Büyümek için hemen yanındaki boş araziye tıkla.",
+      "expand_touch": "Burası senin toprağın. Büyümek için hemen yanındaki boş araziye dokun.",
+      "nation": "Sonuncusu: Red Empire. Düşene kadar kıyısına tıklayıp tekne gönder.",
+      "nation_land": "Şimdi topraklarının ortasına tıkla ve düşene kadar devam et.",
+      "nation_land_touch": "Şimdi topraklarının ortasına dokun ve düşene kadar devam et.",
+      "nation_touch": "Sonuncusu: Red Empire. Düşene kadar kıyısına dokunup tekne gönder.",
+      "spawn": "Nereden başlayacağını seçmek için parlayan dairenin içine tıkla.",
+      "spawn_touch": "Nereden başlayacağını seçmek için parlayan dairenin içine dokun.",
+      "tribe": "Bu bir bot. Saldırmak için topraklarına tıkla ve yok olana kadar devam et.",
+      "tribe_touch": "Bu bir bot. Saldırmak için topraklarına dokun ve yok olana kadar devam et.",
+      "troops": "Bu çubuk senin ordun. Yaklaşık yarıya kadar doluyken en hızlı büyür, o yüzden dolmasını bekleme.",
+      "wrong_target": "Orası değil. Okun gösterdiği yere tıkla.",
+      "wrong_target_touch": "Orası değil. Okun gösterdiği yere dokun."
+    },
+    "step_counter": "Adım {current}/{total}",
+    "won_body": "Temelleri öğrendin. Şimdi gerçek bir oyun dene: bir rehber sana binaları, ittifakları, atom bombalarını ve daha fazlasını gösterecek.",
+    "won_title": "Kazandın!"
+  },
   "single_modal": {
     "title": "Tekli",
     "random_spawn": "Rastgele doğma",

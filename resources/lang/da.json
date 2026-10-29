@@ -1025,6 +1025,38 @@
     "tutorial": "TUTORIAL",
     "warning": "ADVARSEL"
   },
+  "onboarding": {
+    "got_it": "Forstået",
+    "intro_body": "OpenFront er et strategispil, hvor du udvider dit land og erobrer dine naboer for at overtage kortet.",
+    "intro_start": "Start",
+    "intro_title": "Velkommen til OpenFront",
+    "low_troops": "Vent, til de er vokset tilbage, før du angriber igen.",
+    "low_troops_title": "Du har få tropper!",
+    "main_menu": "Hovedmenu",
+    "play_solo": "Spil solo",
+    "step": {
+      "boat": "Både fragter tropper over vand. Klik på den lille ø for at sende en derover.",
+      "boat_touch": "Både fragter tropper over vand. Tryk på den lille ø for at sende en derover.",
+      "coast": "Bliv ved med at klikke på det tomme land, indtil dit land når vandet.",
+      "coast_touch": "Bliv ved med at trykke på det tomme land, indtil dit land når vandet.",
+      "expand": "Det her er dit land. Klik på det tomme land ved siden af for at vokse.",
+      "expand_touch": "Det her er dit land. Tryk på det tomme land ved siden af for at vokse.",
+      "nation": "Til sidst: Red Empire. Klik på dens kyst for at sende både, indtil den falder.",
+      "nation_land": "Klik nu midt på dens land, og bliv ved, indtil den falder.",
+      "nation_land_touch": "Tryk nu midt på dens land, og bliv ved, indtil den falder.",
+      "nation_touch": "Til sidst: Red Empire. Tryk på dens kyst for at sende både, indtil den falder.",
+      "spawn": "Klik inde i den lysende cirkel for at vælge, hvor du starter.",
+      "spawn_touch": "Tryk inde i den lysende cirkel for at vælge, hvor du starter.",
+      "tribe": "Det er en stamme. Klik på dens land for at angribe den, og bliv ved, indtil den er væk.",
+      "tribe_touch": "Det er en stamme. Tryk på dens land for at angribe den, og bliv ved, indtil den er væk.",
+      "troops": "Denne bjælke er din hær. Den vokser hurtigst, når bjælken er cirka halvt fuld, så vent ikke på, at den bliver fyldt.",
+      "wrong_target": "Ikke der. Klik, hvor pilen peger.",
+      "wrong_target_touch": "Ikke der. Tryk, hvor pilen peger."
+    },
+    "step_counter": "Trin {current} af {total}",
+    "won_body": "Nu kan du det grundlæggende. Prøv et rigtigt spil: En guide viser dig bygninger, alliancer, atombomber og meget mere.",
+    "won_title": "Du vandt!"
+  },
   "performance_overlay": {
     "avg_60s": "Gns (60s):",
     "collapse": "Skjul",

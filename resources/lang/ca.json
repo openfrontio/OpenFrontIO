@@ -55,6 +55,38 @@
     "github_link": "a GitHub",
     "title": "Notes de publicació"
   },
+  "onboarding": {
+    "got_it": "Entesos",
+    "intro_body": "OpenFront és un joc d'estratègia en què fas créixer el teu territori i conquereixes els teus veïns per dominar el mapa.",
+    "intro_start": "Començar",
+    "intro_title": "Benvingut a OpenFront",
+    "low_troops": "Espera que es recuperin abans de tornar a atacar.",
+    "low_troops_title": "Et queden poques tropes!",
+    "main_menu": "Menú principal",
+    "play_solo": "Jugar en solitari",
+    "step": {
+      "boat": "Els vaixells porten tropes per l'aigua. Fes clic a l'illa petita per enviar-n'hi un.",
+      "boat_touch": "Els vaixells porten tropes per l'aigua. Toca l'illa petita per enviar-n'hi un.",
+      "coast": "Continua fent clic a la terra buida fins que el teu territori arribi a l'aigua.",
+      "coast_touch": "Continua tocant la terra buida fins que el teu territori arribi a l'aigua.",
+      "expand": "Aquest és el teu territori. Fes clic a la terra buida del costat per créixer.",
+      "expand_touch": "Aquest és el teu territori. Toca la terra buida del costat per créixer.",
+      "nation": "L'últim: el Red Empire. Fes clic a la seva costa per enviar-hi vaixells fins que caigui.",
+      "nation_land": "Ara fes clic al centre del seu territori i continua fins que caigui.",
+      "nation_land_touch": "Ara toca el centre del seu territori i continua fins que caigui.",
+      "nation_touch": "L'últim: el Red Empire. Toca la seva costa per enviar-hi vaixells fins que caigui.",
+      "spawn": "Fes clic dins del cercle brillant per triar on comences.",
+      "spawn_touch": "Toca dins del cercle brillant per triar on comences.",
+      "tribe": "Això és un bot. Fes clic al seu territori per atacar-lo i continua fins que desaparegui.",
+      "tribe_touch": "Això és un bot. Toca el seu territori per atacar-lo i continua fins que desaparegui.",
+      "troops": "Aquesta barra és el teu exèrcit. Creix més de pressa quan està més o menys a la meitat, així que no esperis que s'ompli.",
+      "wrong_target": "Aquí no. Fes clic on apunta la fletxa.",
+      "wrong_target_touch": "Aquí no. Toca on apunta la fletxa."
+    },
+    "step_counter": "Pas {current} de {total}",
+    "won_body": "Ja saps el més bàsic. Ara prova una partida de veritat: una guia t'ensenyarà els edificis, les aliances, les bombes nuclears i molt més.",
+    "won_title": "Has guanyat!"
+  },
   "troubleshooting": {
     "title": "Resolució de problemes",
     "environment": "Entorn",
