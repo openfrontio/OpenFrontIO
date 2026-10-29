@@ -1967,7 +1967,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["fictional"],
     defaultNationCount: 1,
     hidden: true,
-    customTribes: [{ name: "Hill Tribe", coordinates: [55, 70] }],
+    customTribes: [{ name: "Hill Tribe", coordinates: [38, 49] }],
   },
   {
     id: "TwoLakes",

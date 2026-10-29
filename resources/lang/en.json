@@ -1759,6 +1759,38 @@
     "tutorial": "TUTORIAL",
     "warning": "WARNING"
   },
+  "onboarding": {
+    "got_it": "Got it",
+    "intro_body": "OpenFront is a strategy game where you grow your land and conquer your neighbors to take over the map.",
+    "intro_start": "Start",
+    "intro_title": "Welcome to OpenFront",
+    "low_troops": "Wait for them to grow back before you attack again.",
+    "low_troops_title": "Your troops are low!",
+    "main_menu": "Main menu",
+    "play_solo": "Play a solo game",
+    "step": {
+      "boat": "Boats carry troops over water. Click the small island to send one there.",
+      "boat_touch": "Boats carry troops over water. Tap the small island to send one there.",
+      "coast": "Keep clicking the empty land until your land reaches the water.",
+      "coast_touch": "Keep tapping the empty land until your land reaches the water.",
+      "expand": "This is your land. Click the empty land next to it to grow.",
+      "expand_touch": "This is your land. Tap the empty land next to it to grow.",
+      "nation": "Last one: the Red Empire. Click its coast to send boats until it falls.",
+      "nation_land": "Now click the middle of its land, and keep going until it falls.",
+      "nation_land_touch": "Now tap the middle of its land, and keep going until it falls.",
+      "nation_touch": "Last one: the Red Empire. Tap its coast to send boats until it falls.",
+      "spawn": "Click inside the glowing circle to choose where you start.",
+      "spawn_touch": "Tap inside the glowing circle to choose where you start.",
+      "tribe": "That's a tribe. Click its land to attack it, and keep going until it's gone.",
+      "tribe_touch": "That's a tribe. Tap its land to attack it, and keep going until it's gone.",
+      "troops": "This bar is your army. It grows fastest when it's about half full, so don't wait for it to fill up.",
+      "wrong_target": "Not there. Click where the arrow points.",
+      "wrong_target_touch": "Not there. Tap where the arrow points."
+    },
+    "step_counter": "Step {current} of {total}",
+    "won_body": "You know the basics. Now try a real game: a guide will show you buildings, alliances, nukes and more.",
+    "won_title": "You won!"
+  },
   "overtime": {
     "first_place": "1st: {name} ({pct}%)",
     "started": "Overtime! The territory needed to win is now dropping.",
