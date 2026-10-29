@@ -416,8 +416,21 @@ describe("PublicAssetManifest", () => {
     expect(index["press/"]).toBe("text/html; charset=utf-8");
   });
 
-  test("hashes exactly OFstats's 30 FFA tier emblems", () => {
-    const manifest = buildPublicAssetManifest([path.resolve("resources")]);
+  test("hashes exactly OFstats's 30 FFA tier emblems", async () => {
+    // The real folder holds exactly the 30 emblems...
+    const tierDir = path.resolve("resources", "images", "ffa-tiers");
+    const onDisk = (await fs.readdir(tierDir, { recursive: true }))
+      .map((p) => `images/ffa-tiers/${p.split(path.sep).join("/")}`)
+      .filter((p) => p.endsWith(".svg"))
+      .sort();
+    expect(onDisk).toEqual(FFA_TIER_ART);
+    // ...and the manifest hashes every one of them. Built over a copy of that
+    // folder alone: hashing all of resources/ takes seconds.
+    const { resourcesDir } = await createTempResources();
+    await fs.cp(tierDir, path.join(resourcesDir, "images", "ffa-tiers"), {
+      recursive: true,
+    });
+    const manifest = buildPublicAssetManifest([resourcesDir]);
     const tierArt = Object.keys(manifest)
       .filter((p) => p.startsWith("images/ffa-tiers/"))
       .sort();
