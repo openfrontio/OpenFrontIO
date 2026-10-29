@@ -2062,6 +2062,80 @@ describe("mobile tap-preview placement", () => {
     expect(touches).toHaveLength(1);
   });
 
+  test("a pinch that moves does not swallow the next tap", () => {
+    const touches: TouchEvent[] = [];
+    eventBus.on(TouchEvent, (event) => touches.push(event));
+    uiState.ghostStructure = null;
+
+    const down = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    const up = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+
+    // The fingers move, so the release is a drag and never reads as a tap.
+    down(100, 100, 1);
+    down(140, 140, 2);
+    up(200, 200, 1);
+    expect(touches).toEqual([]);
+
+    // The next separate tap still acts on the map.
+    down(300, 300, 3);
+    up(300, 300, 3);
+    expect(touches).toHaveLength(1);
+  });
+
+  test("a pinch that ends with the second finger does not swallow the next placement", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    eventBus.on(TouchGhostPlacementEvent, (event) => placements.push(event));
+
+    const down = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    const up = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+
+    down(100, 100, 1);
+    down(140, 140, 2);
+    up(140, 140, 2);
+    expect(placements).toEqual([]);
+
+    // The next separate tap still places the preview.
+    down(300, 300, 3);
+    up(300, 300, 3);
+    expect(placements).toEqual([expect.objectContaining({ x: 300, y: 300 })]);
+  });
+
   test("movement starting on the preview drags it without a hold delay or map pan", () => {
     const moves: TouchGhostPlacementMoveEvent[] = [];
     const drags: DragEvent[] = [];

@@ -1077,6 +1077,10 @@ export class InputHandler {
       this.lastPointerDownX = event.clientX;
       this.lastPointerDownY = event.clientY;
 
+      // A new gesture starts clean: a tap suppression from an earlier
+      // gesture (eg. a pinch) must not swallow this one's tap.
+      this.suppressNextTap = false;
+
       this.eventBus.emit(new MouseDownEvent(event.clientX, event.clientY));
 
       this.touchPlacementDragState = "idle";
@@ -1339,7 +1343,13 @@ export class InputHandler {
       } else {
         this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
       }
+      return;
     }
+
+    // The gesture ended as a drag, so it was never a tap. Drop any tap
+    // suppression it left behind instead of letting it swallow the next
+    // gesture's tap.
+    this.suppressNextTap = false;
   }
 
   private onScroll(event: WheelEvent) {
