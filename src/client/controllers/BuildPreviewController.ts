@@ -70,6 +70,32 @@ export function samThreatensNukePreview(
   );
 }
 
+/** True when both tile lists hold the same refs in the same order. */
+export function sameTiles(
+  a: readonly TileRef[] | undefined,
+  b: readonly TileRef[] | undefined,
+): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+/** True when both path lists hold the same paths in the same order. */
+export function sameTilePaths(
+  a: readonly TileRef[][] | undefined,
+  b: readonly TileRef[][] | undefined,
+): boolean {
+  if (a === b) return true;
+  if (a === undefined || b === undefined || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (!sameTiles(a[i], b[i])) return false;
+  }
+  return true;
+}
+
 export class BuildPreviewController implements Controller {
   /** Current ghost (null when no build type is active). */
   private ghostUnit: { buildableUnit: BuildableUnit } | null = null;
@@ -279,6 +305,19 @@ export class BuildPreviewController implements Controller {
           return;
         }
 
+        // The worker deserialises a fresh result for every query. Keep the
+        // previous arrays when their content is unchanged so RailroadPass's
+        // identity check skips the orientation and diff work: a still cursor
+        // then costs the renderer nothing.
+        const previous = this.ghostUnit.buildableUnit;
+        if (sameTilePaths(previous.ghostRailPaths, unit.ghostRailPaths)) {
+          unit.ghostRailPaths = previous.ghostRailPaths;
+        }
+        if (
+          sameTiles(previous.overlappingRailroads, unit.overlappingRailroads)
+        ) {
+          unit.overlappingRailroads = previous.overlappingRailroads;
+        }
         this.ghostUnit.buildableUnit = unit;
 
         if (this.pendingConfirm !== null) {

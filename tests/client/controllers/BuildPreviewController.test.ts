@@ -3,10 +3,13 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { describe, expect, test, vi } from "vitest";
 import {
   BuildPreviewController,
+  sameTilePaths,
+  sameTiles,
   samThreatensNukePreview,
   shouldPreserveGhostAfterBuild,
 } from "../../../src/client/controllers/BuildPreviewController";
 import { MouseUpEvent } from "../../../src/client/InputHandler";
+import type { GhostPreviewData } from "../../../src/client/render/types";
 import { BuildUnitIntentEvent } from "../../../src/client/Transport";
 
 describe("BuildPreviewController ghost preservation (locked nuke / Enter confirm)", () => {
@@ -201,5 +204,105 @@ describe("BuildPreviewController worker-query cadence", () => {
 
     expect(buildables).toHaveBeenCalledTimes(2);
     vi.restoreAllMocks();
+  });
+});
+
+describe("BuildPreviewController rail array identity across worker results", () => {
+  test("sameTiles and sameTilePaths compare content, not identity", () => {
+    expect(sameTiles([1, 2, 3], [1, 2, 3])).toBe(true);
+    expect(sameTiles([1, 2, 3], [1, 2])).toBe(false);
+    expect(sameTiles([1, 2, 3], [1, 2, 4])).toBe(false);
+    expect(sameTiles(undefined, [])).toBe(false);
+    expect(sameTilePaths([[1, 2], [3]], [[1, 2], [3]])).toBe(true);
+    expect(sameTilePaths([[1, 2], [3]], [[1, 2], [4]])).toBe(false);
+    expect(sameTilePaths([[1, 2]], [[1, 2], [3]])).toBe(false);
+  });
+
+  test("keeps the previous arrays when a new result has the same content", async () => {
+    // Three worker results: the second repeats the first with fresh arrays,
+    // the third changes one path.
+    const results = [
+      {
+        ghostRailPaths: [
+          [1, 2, 3],
+          [7, 8],
+        ],
+        overlappingRailroads: [9],
+      },
+      {
+        ghostRailPaths: [
+          [1, 2, 3],
+          [7, 8],
+        ],
+        overlappingRailroads: [9],
+      },
+      {
+        ghostRailPaths: [
+          [1, 2, 3],
+          [7, 8, 10],
+        ],
+        overlappingRailroads: [9],
+      },
+    ].map((rails) => ({
+      type: UnitType.City,
+      canBuild: 42,
+      canUpgrade: false as const,
+      cost: 0n,
+      ...rails,
+    }));
+    const buildables = vi.fn(() => Promise.resolve([results.shift()!]));
+    const updates: GhostPreviewData[] = [];
+    const game = {
+      isValidCoord: () => true,
+      ref: () => 42,
+      isImpassable: () => false,
+      x: () => 2,
+      y: () => 4,
+      myPlayer: () => ({ buildables, gold: () => 100n, smallID: () => 1 }),
+    };
+    const controller = new BuildPreviewController(
+      game as any,
+      new EventBus(),
+      { ghostStructure: UnitType.City } as any,
+      { screenToWorldCoordinates: () => ({ x: 2, y: 4 }) } as any,
+      { updateGhostPreview: () => {}, updateNukeTrajectory: () => {} } as any,
+      { snapBuildPreview: () => false, cursorCostLabel: () => false } as any,
+    );
+    (controller as any).ghostUnit = {
+      buildableUnit: {
+        type: UnitType.City,
+        canBuild: false,
+        canUpgrade: false,
+        cost: 0n,
+        ghostRailPaths: [],
+        overlappingRailroads: [],
+      },
+    };
+
+    const query = async () => {
+      (controller as any).lastGhostQueryAt = 0;
+      controller.renderGhost();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      // A placeable preview is stashed for the cursor loop (not running
+      // here), which forwards it to the view every animation frame.
+      updates.push((controller as any).lastGhostData as GhostPreviewData);
+    };
+    await query();
+    await query();
+    await query();
+
+    expect(updates).toHaveLength(3);
+    // Same content: the arrays the pass already holds are reused, so its
+    // identity check short-circuits.
+    expect(updates[1].ghostRailPaths).toBe(updates[0].ghostRailPaths);
+    expect(updates[1].overlappingRailroads).toBe(
+      updates[0].overlappingRailroads,
+    );
+    // Changed content: a new array so the pass redraws.
+    expect(updates[2].ghostRailPaths).not.toBe(updates[0].ghostRailPaths);
+    expect(updates[2].ghostRailPaths[1]).toEqual([7, 8, 10]);
+    expect(updates[2].overlappingRailroads).toBe(
+      updates[0].overlappingRailroads,
+    );
   });
 });

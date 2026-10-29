@@ -35,12 +35,17 @@ export interface StationManager {
 export class StationManagerImpl implements StationManager {
   private stations: Set<TrainStation> = new Set();
   private stationsById: (TrainStation | undefined)[] = [];
+  // First station added for each unit, so findStation needn't scan them all.
+  private stationsByUnit = new Map<Unit, TrainStation>();
   private nextId = 1; // Start from 1; 0 is reserved as invalid/sentinel
 
   addStation(station: TrainStation) {
     station.id = this.nextId++;
     this.stationsById[station.id] = station;
     this.stations.add(station);
+    if (!this.stationsByUnit.has(station.unit)) {
+      this.stationsByUnit.set(station.unit, station);
+    }
   }
 
   removeStation(station: TrainStation) {
@@ -53,13 +58,20 @@ export class StationManagerImpl implements StationManager {
       this.stationsById.pop();
     }
     this.stations.delete(station);
+    if (this.stationsByUnit.get(station.unit) === station) {
+      this.stationsByUnit.delete(station.unit);
+      // A unit never has two stations in practice; keep the scan's answer if it did.
+      for (const other of this.stations) {
+        if (other.unit === station.unit) {
+          this.stationsByUnit.set(station.unit, other);
+          break;
+        }
+      }
+    }
   }
 
   findStation(unit: Unit): TrainStation | null {
-    for (const station of this.stations) {
-      if (station.unit === unit) return station;
-    }
-    return null;
+    return this.stationsByUnit.get(unit) ?? null;
   }
 
   getAll(): Set<TrainStation> {
@@ -87,8 +99,12 @@ export class StationManagerImpl implements StationManager {
   ): void {
     this.stations = new Set(s.stations.map((i) => r.station(i)));
     this.stationsById = [];
+    this.stationsByUnit = new Map();
     for (const station of this.stations) {
       this.stationsById[station.id] = station;
+      if (!this.stationsByUnit.has(station.unit)) {
+        this.stationsByUnit.set(station.unit, station);
+      }
     }
     this.nextId = s.nextId;
   }
@@ -109,25 +125,52 @@ interface NearbyGraphStation<T extends RailGraphStation> {
   distSquared: number;
 }
 
+/** Pathfinder calls a ghost plan may still spend; the plan stops at zero. */
+interface PathBudget {
+  remaining: number;
+}
+
+/**
+ * Pathfinder calls one ghost preview may spend before it is cut short. Main
+ * spent at most five; a factory's cascade over its nearest structures fits in
+ * this, while a dense late-game neighbourhood (hundreds of calls) does not.
+ */
+const GHOST_PATHFINDER_BUDGET = 32;
+/** Recent previews remembered per network; a cursor rarely hovers more tiles. */
+const GHOST_PATHS_CACHE_SIZE = 32;
+
+interface GhostPathsCacheEntry {
+  networkVersion: number;
+  structureVersion: number;
+  paths: TileRef[][];
+}
+
 interface GhostRailroad {
   from: GhostTrainStation;
   to: GhostTrainStation;
   tiles: TileRef[];
   /** True when this geometry would be introduced by the proposed build. */
   ghost: boolean;
+  /** The live railroad this stands for; unset for rails the plan created or split. */
+  live?: Railroad;
 }
 
 /**
  * A lightweight station used to dry-run the same connection rules as the live
  * rail network without mutating game state or allocating real station IDs.
+ * It stands in either for a live station, wrapped when the plan first reaches
+ * it, or for a structure the proposed build would create or promote.
  */
 class GhostTrainStation implements RailGraphStation {
   private railroads = new Set<GhostRailroad>();
 
   constructor(
+    private readonly state: GhostRailNetworkState,
     private tileRef: TileRef,
     readonly unit: Unit | null,
     readonly canConnect: boolean,
+    /** The live station this ghost stands in for; null for stations the build would add. */
+    readonly live: TrainStation | null,
   ) {}
 
   tile(): TileRef {
@@ -136,6 +179,16 @@ class GhostTrainStation implements RailGraphStation {
 
   neighbors(): GhostTrainStation[] {
     const result: GhostTrainStation[] = [];
+    if (this.live !== null) {
+      for (const rail of this.live.getRailroads()) {
+        if (this.state.removedLiveRails.has(rail)) continue;
+        result.push(
+          this.state.ghostForStation(
+            rail.from === this.live ? rail.to : rail.from,
+          ),
+        );
+      }
+    }
     for (const rail of this.railroads) {
       result.push(rail.from === this ? rail.to : rail.from);
     }
@@ -151,10 +204,62 @@ class GhostTrainStation implements RailGraphStation {
   }
 }
 
-interface GhostRailNetworkState {
-  stationsByUnit: Map<Unit, GhostTrainStation>;
-  railroads: Set<GhostRailroad>;
-  proposedFactory: GhostTrainStation | null;
+/**
+ * Scratch state for one ghost plan. Live stations are wrapped only when the
+ * plan reaches them and live rails are read through the rail grid, so a
+ * preview costs in proportion to what it touches, not to the whole map.
+ */
+class GhostRailNetworkState {
+  private readonly ghostByUnit = new Map<Unit, GhostTrainStation>();
+  private readonly ghostByStation = new Map<TrainStation, GhostTrainStation>();
+  /** Rails this plan created or split; live rails are found through the grid. */
+  readonly newRailroads = new Set<GhostRailroad>();
+  /** Live rails this plan split; their halves are in newRailroads. */
+  readonly removedLiveRails = new Set<Railroad>();
+  proposedFactory: GhostTrainStation | null = null;
+  readonly budget: PathBudget;
+
+  constructor(
+    private readonly stationManager: StationManager,
+    pathfinderBudget: number,
+  ) {
+    this.budget = { remaining: pathfinderBudget };
+  }
+
+  /** The ghost for `unit`'s station, or undefined when it isn't a station (yet). */
+  ghostForUnit(unit: Unit): GhostTrainStation | undefined {
+    const ghost = this.ghostByUnit.get(unit);
+    if (ghost !== undefined) return ghost;
+    const station = this.stationManager.findStation(unit);
+    return station ? this.ghostForStation(station) : undefined;
+  }
+
+  ghostForStation(station: TrainStation): GhostTrainStation {
+    let ghost = this.ghostByStation.get(station);
+    if (ghost === undefined) {
+      ghost = new GhostTrainStation(
+        this,
+        station.tile(),
+        station.unit,
+        station.getCluster() !== null,
+        station,
+      );
+      this.ghostByStation.set(station, ghost);
+      this.ghostByUnit.set(station.unit, ghost);
+    }
+    return ghost;
+  }
+
+  /** A station the proposed build would create (unit null) or promote. */
+  addGhostStation(tile: TileRef, unit: Unit | null): GhostTrainStation {
+    const ghost = new GhostTrainStation(this, tile, unit, true, null);
+    if (unit !== null) this.ghostByUnit.set(unit, ghost);
+    return ghost;
+  }
+
+  isStation(unit: Unit): boolean {
+    return this.ghostForUnit(unit) !== undefined;
+  }
 }
 
 class RailPathFinderServiceImpl implements RailPathFinderService {
@@ -182,6 +287,11 @@ export class RailNetworkImpl implements RailNetwork {
   private railGrid: RailSpatialGrid;
   private nextId: number = 0;
   private dirtyClusters = new Set<Cluster>();
+  // Preview-only state: a memo over pure functions of the network. Never part
+  // of the snapshot and never read by the simulation itself.
+  private networkVersion = 0;
+  private ghostPathfinderBudget = GHOST_PATHFINDER_BUDGET;
+  private readonly ghostPathsCache = new Map<string, GhostPathsCacheEntry>();
 
   constructor(
     private game: Game,
@@ -196,6 +306,7 @@ export class RailNetworkImpl implements RailNetwork {
   }
 
   connectStation(station: TrainStation) {
+    this.networkVersion++;
     this._stationManager.addStation(station);
     if (!this.connectToExistingRails(station)) {
       this.connectToNearbyStations(station);
@@ -204,6 +315,7 @@ export class RailNetworkImpl implements RailNetwork {
 
   recomputeClusters() {
     if (this.dirtyClusters.size === 0) return;
+    this.networkVersion++;
 
     for (const cluster of this.dirtyClusters) {
       const allOriginalStations = new Set(cluster.stations);
@@ -229,6 +341,7 @@ export class RailNetworkImpl implements RailNetwork {
   removeStation(unit: Unit): void {
     const station = this._stationManager.findStation(unit);
     if (!station) return;
+    this.networkVersion++;
 
     this.disconnectFromNetwork(station);
     this._stationManager.removeStation(station);
@@ -336,6 +449,38 @@ export class RailNetworkImpl implements RailNetwork {
       return [];
     }
 
+    // The client asks for the preview under the cursor on every game update,
+    // so a still cursor must cost nothing: memoise on everything a plan reads,
+    // the rail network and the structure/terrain version.
+    const structureVersion = this.game.structureVersion();
+    const key = `${unitType}:${tile}`;
+    const cached = this.ghostPathsCache.get(key);
+    if (cached !== undefined) {
+      this.ghostPathsCache.delete(key);
+      if (
+        cached.networkVersion === this.networkVersion &&
+        cached.structureVersion === structureVersion
+      ) {
+        // Re-insert so the entry counts as the most recently used.
+        this.ghostPathsCache.set(key, cached);
+        return cached.paths;
+      }
+    }
+
+    const paths = this.planGhostRailPaths(unitType, tile);
+    this.ghostPathsCache.set(key, {
+      networkVersion: this.networkVersion,
+      structureVersion,
+      paths,
+    });
+    if (this.ghostPathsCache.size > GHOST_PATHS_CACHE_SIZE) {
+      const oldest = this.ghostPathsCache.keys().next().value;
+      if (oldest !== undefined) this.ghostPathsCache.delete(oldest);
+    }
+    return paths;
+  }
+
+  private planGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][] {
     const maxRange = this.game.config().trainStationMaxRange();
 
     // A City or Port only joins the rail network when a Factory is already in
@@ -356,15 +501,17 @@ export class RailNetworkImpl implements RailNetwork {
       return [];
     }
 
-    const state = this.createGhostRailNetworkState();
+    const state = new GhostRailNetworkState(
+      this._stationManager,
+      this.ghostPathfinderBudget,
+    );
     if (buildingFactory) {
       this.planFactoryGhostNetwork(state, tile, maxRange);
     } else {
-      const station = new GhostTrainStation(tile, null, true);
-      this.connectGhostStation(state, station);
+      this.connectGhostStation(state, state.addGhostStation(tile, null));
     }
 
-    return Array.from(state.railroads)
+    return Array.from(state.newRailroads)
       .filter((railroad) => railroad.ghost)
       .map((railroad) => railroad.tiles);
   }
@@ -375,6 +522,9 @@ export class RailNetworkImpl implements RailNetwork {
    * before the new FactoryExecution runs. The Factory station comes next, then
    * FactoryExecution promotes completed Cities and any remaining structures in
    * the same UnitGrid order returned by nearbyUnits().
+   *
+   * The cascade stops once the plan's pathfinder budget is spent: the preview
+   * is then a prefix of the full one rather than a stall of the worker.
    */
   private planFactoryGhostNetwork(
     state: GhostRailNetworkState,
@@ -389,64 +539,26 @@ export class RailNetworkImpl implements RailNetwork {
 
     const pendingPorts = structures
       .map(({ unit }) => unit)
-      .filter(
-        (unit) =>
-          unit.type() === UnitType.Port && !state.stationsByUnit.has(unit),
-      )
+      .filter((unit) => unit.type() === UnitType.Port && !state.isStation(unit))
       // Existing execution order follows construction order, represented by
       // monotonically increasing unit IDs.
       .sort((a, b) => a.id() - b.id());
 
     for (const port of pendingPorts) {
+      if (state.budget.remaining <= 0) return;
       this.addAndConnectGhostStation(state, port.tile(), port);
     }
 
-    const factory = new GhostTrainStation(tile, null, true);
+    if (state.budget.remaining <= 0) return;
+    const factory = state.addGhostStation(tile, null);
     state.proposedFactory = factory;
     this.connectGhostStation(state, factory);
 
     for (const { unit } of structures) {
-      if (state.stationsByUnit.has(unit)) continue;
+      if (state.budget.remaining <= 0) return;
+      if (state.isStation(unit)) continue;
       this.addAndConnectGhostStation(state, unit.tile(), unit);
     }
-  }
-
-  private createGhostRailNetworkState(): GhostRailNetworkState {
-    const stationsByUnit = new Map<Unit, GhostTrainStation>();
-    const stationCopies = new Map<TrainStation, GhostTrainStation>();
-    const railroads = new Set<GhostRailroad>();
-
-    for (const station of this._stationManager.getAll()) {
-      const copy = new GhostTrainStation(
-        station.tile(),
-        station.unit,
-        station.getCluster() !== null,
-      );
-      stationsByUnit.set(station.unit, copy);
-      stationCopies.set(station, copy);
-    }
-
-    const copiedRailroads = new Set<Railroad>();
-    for (const station of this._stationManager.getAll()) {
-      for (const railroad of station.getRailroads()) {
-        if (copiedRailroads.has(railroad)) continue;
-        copiedRailroads.add(railroad);
-        const from = stationCopies.get(railroad.from);
-        const to = stationCopies.get(railroad.to);
-        if (!from || !to) continue;
-        const copy: GhostRailroad = {
-          from,
-          to,
-          tiles: railroad.tiles,
-          ghost: false,
-        };
-        from.addRailroad(copy);
-        to.addRailroad(copy);
-        railroads.add(copy);
-      }
-    }
-
-    return { stationsByUnit, railroads, proposedFactory: null };
   }
 
   private addAndConnectGhostStation(
@@ -454,8 +566,7 @@ export class RailNetworkImpl implements RailNetwork {
     tile: TileRef,
     unit: Unit,
   ): GhostTrainStation {
-    const station = new GhostTrainStation(tile, unit, true);
-    state.stationsByUnit.set(unit, station);
+    const station = state.addGhostStation(tile, unit);
     this.connectGhostStation(state, station);
     return station;
   }
@@ -466,15 +577,22 @@ export class RailNetworkImpl implements RailNetwork {
   ): void {
     if (this.splitGhostRailroadsAtStation(state, station)) return;
 
+    const maxRange = this.game.config().trainStationMaxRange();
     const neighbors: NearbyGraphStation<GhostTrainStation>[] = [];
-    const nearbyUnits = this.game.nearbyUnits(
-      station.tile(),
-      this.game.config().trainStationMaxRange(),
-      [UnitType.City, UnitType.Factory, UnitType.Port],
-    );
+    const nearbyUnits = this.game.nearbyUnits(station.tile(), maxRange, [
+      UnitType.City,
+      UnitType.Factory,
+      UnitType.Port,
+    ]);
     for (const { unit, distSquared } of nearbyUnits) {
-      const neighbor = state.stationsByUnit.get(unit);
-      if (!neighbor || neighbor === station || !neighbor.canConnect) continue;
+      const neighbor = state.ghostForUnit(unit);
+      if (
+        neighbor === undefined ||
+        neighbor === station ||
+        !neighbor.canConnect
+      ) {
+        continue;
+      }
       neighbors.push({ station: neighbor, distSquared });
     }
 
@@ -484,24 +602,28 @@ export class RailNetworkImpl implements RailNetwork {
         station.tile(),
         proposedFactory.tile(),
       );
-      const maxRange = this.game.config().trainStationMaxRange();
       if (distSquared <= maxRange * maxRange) {
         neighbors.push({ station: proposedFactory, distSquared });
       }
     }
     neighbors.sort((a, b) => a.distSquared - b.distSquared);
 
-    this.planNearbyConnections(station, neighbors, (to, path) => {
-      const railroad: GhostRailroad = {
-        from: station,
-        to,
-        tiles: path,
-        ghost: true,
-      };
-      station.addRailroad(railroad);
-      to.addRailroad(railroad);
-      state.railroads.add(railroad);
-    });
+    this.planNearbyConnections(
+      station,
+      neighbors,
+      (to, path) => {
+        const railroad: GhostRailroad = {
+          from: station,
+          to,
+          tiles: path,
+          ghost: true,
+        };
+        station.addRailroad(railroad);
+        to.addRailroad(railroad);
+        state.newRailroads.add(railroad);
+      },
+      state.budget,
+    );
   }
 
   private splitGhostRailroadsAtStation(
@@ -524,9 +646,14 @@ export class RailNetworkImpl implements RailNetwork {
         continue;
       }
 
-      railroad.from.removeRailroad(railroad);
-      railroad.to.removeRailroad(railroad);
-      state.railroads.delete(railroad);
+      if (railroad.live !== undefined) {
+        // Hide the live rail from this plan; the halves below stand in for it.
+        state.removedLiveRails.add(railroad.live);
+      } else {
+        railroad.from.removeRailroad(railroad);
+        railroad.to.removeRailroad(railroad);
+        state.newRailroads.delete(railroad);
+      }
 
       const fromHalf: GhostRailroad = {
         from: railroad.from,
@@ -544,28 +671,45 @@ export class RailNetworkImpl implements RailNetwork {
       station.addRailroad(fromHalf);
       station.addRailroad(toHalf);
       railroad.to.addRailroad(toHalf);
-      state.railroads.add(fromHalf);
-      state.railroads.add(toHalf);
+      state.newRailroads.add(fromHalf);
+      state.newRailroads.add(toHalf);
       splitAny = true;
     }
 
     return splitAny;
   }
 
+  /**
+   * Rails within `radius` of `tile`: live ones through the rail grid, then
+   * the few this plan created or split, which the grid doesn't know about.
+   */
   private ghostRailroadsNear(
     state: GhostRailNetworkState,
     tile: TileRef,
     radius: number,
   ): GhostRailroad[] {
+    const result: GhostRailroad[] = [];
+    for (const rail of this.railGrid.query(tile, radius)) {
+      if (state.removedLiveRails.has(rail)) continue;
+      result.push({
+        from: state.ghostForStation(rail.from),
+        to: state.ghostForStation(rail.to),
+        tiles: rail.tiles,
+        ghost: false,
+        live: rail,
+      });
+    }
+    if (state.newRailroads.size === 0) return result;
+
+    // Same cell test as RailSpatialGrid.query, applied to the unregistered rails.
     const tileX = this.game.x(tile);
     const tileY = this.game.y(tile);
     const minCellX = Math.floor((tileX - radius) / this.gridCellSize);
     const maxCellX = Math.floor((tileX + radius) / this.gridCellSize);
     const minCellY = Math.floor((tileY - radius) / this.gridCellSize);
     const maxCellY = Math.floor((tileY + radius) / this.gridCellSize);
-
-    return Array.from(state.railroads).filter((railroad) =>
-      railroad.tiles.some((railTile) => {
+    for (const railroad of state.newRailroads) {
+      const near = railroad.tiles.some((railTile) => {
         const cellX = Math.floor(this.game.x(railTile) / this.gridCellSize);
         const cellY = Math.floor(this.game.y(railTile) / this.gridCellSize);
         return (
@@ -574,8 +718,10 @@ export class RailNetworkImpl implements RailNetwork {
           cellY >= minCellY &&
           cellY <= maxCellY
         );
-      }),
-    );
+      });
+      if (near) result.push(railroad);
+    }
+    return result;
   }
 
   private closestTileIndex(tiles: TileRef[], target: TileRef): number {
@@ -680,59 +826,59 @@ export class RailNetworkImpl implements RailNetwork {
     return null;
   }
 
+  /**
+   * Connect `station` to each neighbor not already within
+   * maxConnectionDistance rail hops of it. With a `budget`, stop once it is
+   * spent; the live network passes none.
+   */
   private planNearbyConnections<T extends RailGraphStation>(
     station: T,
     neighbors: NearbyGraphStation<T>[],
     connect: (neighbor: T, path: TileRef[]) => void,
+    budget?: PathBudget,
   ): void {
     const minRangeSquared = this.game.config().trainStationMinRange() ** 2;
+    // Rails are undirected, so one search out from the station tells for every
+    // neighbor at once whether it is already in reach. Each new rail extends
+    // the reach, so the search is redone after one.
+    let reachable = this.stationsWithin(station, this.maxConnectionDistance);
     for (const neighbor of neighbors) {
-      const distanceToStation = this.distanceFrom(
-        neighbor.station,
-        station,
-        this.maxConnectionDistance,
-      );
-      const connectionAvailable =
-        distanceToStation > this.maxConnectionDistance ||
-        distanceToStation === -1;
-      if (!connectionAvailable || neighbor.distSquared <= minRangeSquared) {
+      if (budget !== undefined && budget.remaining <= 0) return;
+      if (
+        reachable.has(neighbor.station) ||
+        neighbor.distSquared <= minRangeSquared
+      ) {
         continue;
       }
 
+      if (budget !== undefined) budget.remaining--;
       const path = this.validRailPath(station.tile(), neighbor.station.tile());
-      if (path !== null) connect(neighbor.station, path);
+      if (path !== null) {
+        connect(neighbor.station, path);
+        reachable = this.stationsWithin(station, this.maxConnectionDistance);
+      }
     }
   }
 
-  private distanceFrom(
+  /** Every station within `maxDistance` rail hops of `start`, itself included. */
+  private stationsWithin(
     start: RailGraphStation,
-    dest: RailGraphStation,
     maxDistance: number,
-  ): number {
-    if (start === dest) return 0;
-
-    const visited = new Set<RailGraphStation>();
-    const queue: Array<{ station: RailGraphStation; distance: number }> = [
-      { station: start, distance: 0 },
-    ];
-
-    while (queue.length > 0) {
-      const { station, distance } = queue.shift()!;
-      if (visited.has(station)) continue;
-      visited.add(station);
-
-      if (distance >= maxDistance) continue;
-
-      for (const neighbor of station.neighbors()) {
-        if (neighbor === dest) return distance + 1;
-        if (!visited.has(neighbor)) {
-          queue.push({ station: neighbor, distance: distance + 1 });
+  ): Set<RailGraphStation> {
+    const visited = new Set<RailGraphStation>([start]);
+    let frontier: RailGraphStation[] = [start];
+    for (let hop = 0; hop < maxDistance && frontier.length > 0; hop++) {
+      const next: RailGraphStation[] = [];
+      for (const station of frontier) {
+        for (const neighbor of station.neighbors()) {
+          if (visited.has(neighbor)) continue;
+          visited.add(neighbor);
+          next.push(neighbor);
         }
       }
+      frontier = next;
     }
-
-    // If destination not found within maxDistance
-    return -1;
+    return visited;
   }
 
   private computeCluster(start: TrainStation): Set<TrainStation> {
@@ -778,6 +924,8 @@ export class RailNetworkImpl implements RailNetwork {
     this.nextId = s.nextId;
     this.dirtyClusters = new Set(s.dirtyClusters.map((i) => r.cluster(i)));
     this.railGrid.restoreSnapshot(s.railGrid, (i) => r.railroad(i));
+    this.networkVersion++;
+    this.ghostPathsCache.clear();
   }
 }
 
