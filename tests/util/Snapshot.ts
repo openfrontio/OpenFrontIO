@@ -30,7 +30,7 @@ import { TestConfig } from "./TestConfig";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** Loads a test map fresh (unshared), as setup() does. */
-export async function loadTestMaps(
+async function loadTestMaps(
   mapName: string,
 ): Promise<{ gameMap: GameMap; miniGameMap: GameMap }> {
   const dir = path.join(__dirname, `../testdata/maps/${mapName}`);
@@ -121,7 +121,7 @@ export function diffSnapshots(a: Uint8Array, b: Uint8Array): string[] {
   return diffs;
 }
 
-export function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
+function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
   return true;
@@ -130,7 +130,7 @@ export function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
 // Fields that are caches rebuilt on demand, per-tick output buffers, or
 // render-side bookkeeping. A restored game starts with them empty; anything
 // else that differs is a snapshot bug.
-export const DERIVED_FIELDS = new Set<string>([
+const DERIVED_FIELDS = new Set<string>([
   // GameImpl
   "updates",
   "tileUpdatePairs",
@@ -151,6 +151,11 @@ export const DERIVED_FIELDS = new Set<string>([
   "myUnitCountMemo",
   "myUnitsOwnedMemo",
   "nearbyMemo",
+  // GameMapImpl BFS scratch buffers
+  "bfsVisited",
+  "bfsQueue",
+  "bfsGen",
+  "inBfs",
   // SharedWaterCache
   "playerWater",
   // Config / EngineConfig

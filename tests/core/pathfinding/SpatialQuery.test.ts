@@ -63,6 +63,16 @@ describe("SpatialQuery", () => {
       const result = spatial.closestShore(player, game.ref(3, 3), 1);
 
       expect(result).toBeNull();
+
+      // (2, 3) is distance 1 from shore (1, 3)
+      const near = spatial.closestShore(player, game.ref(2, 3), 1);
+      expect(near).not.toBeNull();
+      expect(game.manhattanDist(game.ref(2, 3), near!)).toBe(1);
+
+      // (1, 3) is shore itself (distance 0)
+      expect(spatial.closestShore(player, game.ref(1, 3), 0)).toBe(
+        game.ref(1, 3),
+      );
     });
 
     it("finds shore on player's island (two separate islands)", () => {

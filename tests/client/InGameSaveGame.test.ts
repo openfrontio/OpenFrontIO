@@ -30,13 +30,16 @@ type TestMenu = SettingsModal & { updateComplete: Promise<unknown> };
 
 const SNAPSHOT = new Uint8Array([1, 2, 3]);
 
-function fakeGame(opts: { gameType?: GameType; replay?: boolean } = {}) {
+function fakeGame(
+  opts: { gameType?: GameType; replay?: boolean; tutorial?: boolean } = {},
+) {
   const snapshot = vi.fn(async () => SNAPSHOT);
   const game = {
     config: () => ({
       gameConfig: () => ({
         gameType: opts.gameType ?? GameType.Singleplayer,
         gameMap: "World",
+        tutorial: opts.tutorial,
       }),
       isReplay: () => opts.replay ?? false,
     }),
@@ -86,6 +89,7 @@ describe("in-game menu: save game", () => {
   it.each([
     ["a multiplayer game", { gameType: GameType.Public }],
     ["a replay", { replay: true }],
+    ["the onboarding tutorial", { tutorial: true }],
   ])("is not offered in %s", async (_, opts) => {
     await open(fakeGame(opts).game);
     expect(saveRow()).toBeNull();

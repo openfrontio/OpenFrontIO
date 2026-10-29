@@ -175,7 +175,7 @@ describe("the viewer's cosmetics visibility settings", () => {
     expect(built.skins.has(1)).toBe(true);
   });
 
-  test.each(["teammates", "self"] as const)(
+  test.each(["teammates", "self", "none"] as const)(
     "a replay is nobody's: showing only %s hides every player's",
     (showFrom) => {
       const built = shown({ showFrom });

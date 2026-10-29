@@ -67,9 +67,7 @@ function generateTeamColors(baseColor: Colord): Colord[] {
  * Build the per-team variation palettes from theme settings. The Bot team
  * stays a single flat color; every other team gets generated variations.
  */
-export function buildTeamPalettes(
-  settings: ThemeSettings,
-): Map<Team, Colord[]> {
+function buildTeamPalettes(settings: ThemeSettings): Map<Team, Colord[]> {
   const palettes = new Map<Team, Colord[]>();
   for (const [team, hex] of Object.entries(settings.teamColors)) {
     const base = colord(hex);

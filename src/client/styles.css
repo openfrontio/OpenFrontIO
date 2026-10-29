@@ -5,6 +5,16 @@
 @custom-variant hover (&:hover);
 /* The Steam shell has no ad slots, so it can use the width they reserve. */
 @custom-variant desktop (&:where(.desktop-shell, .desktop-shell *));
+/* Short or narrow viewports (small laptops, phones, Poki's embedded frame): an
+   open inline page fills the screen there, without the header and footer. */
+@custom-variant compact {
+  @media (max-height: 800px) {
+    @slot;
+  }
+  @media (max-width: 1023px) {
+    @slot;
+  }
+}
 
 @theme {
   --default-ring-width: 3px;
@@ -685,6 +695,22 @@ news-button .active button::after {
   background: #f59e0b;
   border: 2px solid #fff;
   animation: newsPulse 1.5s ease-in-out infinite;
+}
+
+/* Red flash over the troop bar while the onboarding tutorial warns that
+   troops are too low. */
+.troop-bar-alert {
+  animation: troopBarAlert 0.6s ease-in-out infinite;
+}
+
+@keyframes troopBarAlert {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 0.75;
+  }
 }
 
 /* Pulsing ring the in-game tutorial puts around the HUD element it's describing. */

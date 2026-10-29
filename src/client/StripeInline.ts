@@ -141,6 +141,7 @@ export type InlineConfirmResult =
  */
 export class InlineCheckoutSession {
   private clientSecret: string | null = null;
+  private pendingUpdate: Promise<void> = Promise.resolve();
 
   private constructor(
     private readonly stripe: Stripe,
@@ -206,7 +207,7 @@ export class InlineCheckoutSession {
     this.request = request;
     if (amountCents !== this.amountCents) {
       this.amountCents = amountCents;
-      this.elements.update({ amount: amountCents });
+      this.pendingUpdate = this.elements.update({ amount: amountCents });
     }
     // Always dropped, even when only the request changed: a cached intent was
     // minted for the OLD request and the server will not reprice it.
@@ -252,6 +253,7 @@ export class InlineCheckoutSession {
   private async confirmInner(options: {
     receiptEmail?: string | null;
   }): Promise<InlineConfirmResult> {
+    await this.pendingUpdate;
     const { error: submitError } = await this.elements.submit();
     if (submitError) {
       // Validation problems ("incomplete card number") carry a message meant

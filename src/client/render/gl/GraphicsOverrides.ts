@@ -7,7 +7,12 @@ import { z } from "zod";
  */
 export const PALETTE_NAMES = ["default", "colorblind"] as const;
 
-export const COSMETICS_SHOW_FROM = ["everyone", "teammates", "self"] as const;
+export const COSMETICS_SHOW_FROM = [
+  "everyone",
+  "teammates",
+  "self",
+  "none",
+] as const;
 
 export const GraphicsOverridesSchema = z
   .object({
@@ -116,12 +121,12 @@ export const GraphicsOverridesSchema = z
       })
       .partial(),
     /**
-     * Which of other players' cosmetics are drawn. Your own are always drawn.
+     * Whose cosmetics are drawn. None also hides your own cosmetics.
      * Category keys are shown unless explicitly false.
      */
     cosmetics: z
       .object({
-        // Whose cosmetics besides your own are drawn.
+        // Whose cosmetics are drawn.
         showFrom: z.enum(COSMETICS_SHOW_FROM),
         territorySkins: z.boolean(),
         flags: z.boolean(),

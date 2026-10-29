@@ -10,7 +10,7 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, nothing } from "lit";
 import { customElement } from "lit/decorators.js";
 import { Controller } from "../../Controller";
-import { ToggleStructureEvent } from "../../InputHandler";
+import { InputHandler, ToggleStructureEvent } from "../../InputHandler";
 import { KeyboardLayoutController } from "../../KeyboardLayout";
 import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
@@ -36,6 +36,7 @@ export class UnitDisplay extends LitElement implements Controller {
   public game: GameView;
   public eventBus: EventBus;
   public uiState: UIState;
+  public inputHandler: InputHandler;
   private playerBuildables: BuildableUnit[] | null = null;
   private keybinds: Record<string, { value: string; key: string }> = {};
   private keyboardLayout = new KeyboardLayoutController(this);
@@ -116,9 +117,12 @@ export class UnitDisplay extends LitElement implements Controller {
   tick() {
     const player = this.game?.myPlayer();
     if (!player) return;
-    player.buildables(undefined, BuildMenus.types).then((buildables) => {
-      this.playerBuildables = buildables;
-    });
+    player
+      .buildables(undefined, BuildMenus.types)
+      .then((buildables) => {
+        this.playerBuildables = buildables;
+      })
+      .catch((error) => console.warn("Failed to refresh unit costs", error));
     this._cities = player.totalUnitLevels(UnitType.City);
     this._missileSilo = player.totalUnitLevels(UnitType.MissileSilo);
     this._port = player.totalUnitLevels(UnitType.Port);
@@ -300,9 +304,9 @@ export class UnitDisplay extends LitElement implements Controller {
              ${this.tutorialHighlight === unitType ? "tutorial-highlight" : ""}"
           @click=${() => {
             if (selected) {
-              this.uiState.ghostStructure = null;
+              this.inputHandler.setGhostStructure(null);
             } else if (this.canBuild(unitType)) {
-              this.uiState.ghostStructure = unitType;
+              this.inputHandler.setGhostStructure(unitType, "GUIclick");
             }
             this.requestUpdate();
           }}

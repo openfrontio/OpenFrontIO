@@ -3,12 +3,13 @@ import {
   MessageType,
   Structures,
   TerraNullius,
-  TrajectoryTile,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import { ReadonlyTileSet } from "@openfront/engine-api/game/ReadViews";
 import { NukeType } from "@openfront/engine-api/StatsSchemas";
 import { atan2 } from "@openfront/engine-lib/DetMath";
 import { listNukeBreakAlliance } from "@openfront/engine-lib/execution/NukeAlliance";
+import { TileSet } from "@openfront/engine-lib/game/TileSet";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -41,7 +42,7 @@ export class NukeExecution implements Execution {
   private active = true;
   private mg: Game;
   private nuke: Unit | null = null;
-  private tilesToDestroyCache: Set<TileRef> | undefined;
+  private tilesToDestroyCache: ReadonlyTileSet | undefined;
   private pathFinder: ParabolaUniversalPathFinder;
 
   constructor(
@@ -69,7 +70,7 @@ export class NukeExecution implements Execution {
     return this.mg.owner(this.dst);
   }
 
-  private tilesToDestroy(): Set<TileRef> {
+  private tilesToDestroy(): ReadonlyTileSet {
     if (this.tilesToDestroyCache !== undefined) {
       return this.tilesToDestroyCache;
     }
@@ -104,7 +105,7 @@ export class NukeExecution implements Execution {
       const cy = this.mg.y(this.dst);
       const outer = magnitude.outer;
 
-      const result = new Set<TileRef>();
+      const result = new TileSet();
       const x0 = Math.max(0, cx - outer);
       const y0 = Math.max(0, cy - outer);
       const x1 = Math.min(this.mg.width() - 1, cx + outer);
@@ -316,24 +317,14 @@ export class NukeExecution implements Execution {
   /**
    * Record a motion plan so the client can derive the nuke's position each
    * tick instead of receiving per-tick unit updates (see TradeShipExecution).
-   * Replays a separate pathfinder because the curve's cached points don't
-   * advance exactly one index per tick — the plan path must be the exact
-   * tile sequence that movement's `next()` calls will produce.
+   * Uses the nuke's precomputed trajectory directly so the plan matches the
+   * exact tile sequence of flight.
    */
   private recordMotionPlan(ticks: number): void {
     if (this.nuke === null || this.src === undefined || this.src === null) {
       return;
     }
-    const pathFinder = UniversalPathFinding.Parabola(this.mg, {
-      increment: this.speed,
-      directionUp: this.rocketDirectionUp,
-    });
-    const path: TileRef[] = [this.src];
-    let result = pathFinder.next(this.src, this.dst, this.speed);
-    while (result.status === PathStatus.NEXT) {
-      path.push(result.node);
-      result = pathFinder.next(this.src, this.dst, this.speed);
-    }
+    const path: TileRef[] = this.nuke.trajectory();
     this.mg.recordMotionPlan({
       kind: "grid",
       unitId: this.nuke.id(),
@@ -344,19 +335,8 @@ export class NukeExecution implements Execution {
     });
   }
 
-  private getTrajectory(target: TileRef): TrajectoryTile[] {
-    const trajectoryTiles: TrajectoryTile[] = [];
-    const targetRangeSquared =
-      this.mg.config().defaultNukeTargetableRange() ** 2;
-    const allTiles = this.pathFinder.findPath(this.src!, target) ?? [];
-    for (const tile of allTiles) {
-      trajectoryTiles.push({
-        tile,
-        targetable: this.isTargetable(target, tile, targetRangeSquared),
-      });
-    }
-
-    return trajectoryTiles;
+  private getTrajectory(target: TileRef): TileRef[] {
+    return this.pathFinder.findPath(this.src!, target) ?? [];
   }
 
   private isTargetable(

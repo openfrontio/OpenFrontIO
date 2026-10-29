@@ -29,4 +29,46 @@ describe("Game.structureVersion", () => {
     (game as GameImpl).setWater(game.ref(60, 60));
     expect(game.structureVersion()).toBe(start + 5);
   });
+
+  test("moves when a structure's construction state flips", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+    const city = player.buildUnit(UnitType.City, game.ref(20, 20), {});
+    const post = player.buildUnit(UnitType.DefensePost, game.ref(5, 5), {});
+    const start = game.structureVersion();
+
+    // nearbyUnits hides structures under construction, so both the start and
+    // the completion of construction change what a rail plan sees.
+    city.setUnderConstruction(true);
+    expect(game.structureVersion()).toBe(start + 1);
+    city.setUnderConstruction(true);
+    expect(game.structureVersion()).toBe(start + 1);
+    city.setUnderConstruction(false);
+    expect(game.structureVersion()).toBe(start + 2);
+
+    post.setUnderConstruction(true);
+    post.setUnderConstruction(false);
+    expect(game.structureVersion()).toBe(start + 2);
+  });
+
+  test("moves when queued water conversions flush", async () => {
+    const game = await setup("plains", { waterNukes: true }, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const start = game.structureVersion();
+
+    // A tick with nothing queued leaves it alone.
+    game.executeNextTick();
+    expect(game.structureVersion()).toBe(start);
+
+    // Queued conversions write the map inside WaterManager.tick, bypassing
+    // setWater, so the flush itself must count.
+    game.queueWaterConversion(game.ref(60, 60));
+    expect(game.structureVersion()).toBe(start);
+    game.executeNextTick();
+    expect(game.structureVersion()).toBe(start + 1);
+    expect(game.isWater(game.ref(60, 60))).toBe(true);
+  });
 });

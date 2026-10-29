@@ -35,7 +35,7 @@ export interface StationManager {
 export class StationManagerImpl implements StationManager {
   private stations: Set<TrainStation> = new Set();
   private stationsById: (TrainStation | undefined)[] = [];
-  // First station added for each unit, so findStation needn't scan them all.
+  // A unit's station, so findStation needn't scan them all.
   private stationsByUnit = new Map<Unit, TrainStation>();
   private nextId = 1; // Start from 1; 0 is reserved as invalid/sentinel
 
@@ -43,9 +43,7 @@ export class StationManagerImpl implements StationManager {
     station.id = this.nextId++;
     this.stationsById[station.id] = station;
     this.stations.add(station);
-    if (!this.stationsByUnit.has(station.unit)) {
-      this.stationsByUnit.set(station.unit, station);
-    }
+    this.stationsByUnit.set(station.unit, station);
   }
 
   removeStation(station: TrainStation) {
@@ -60,13 +58,6 @@ export class StationManagerImpl implements StationManager {
     this.stations.delete(station);
     if (this.stationsByUnit.get(station.unit) === station) {
       this.stationsByUnit.delete(station.unit);
-      // A unit never has two stations in practice; keep the scan's answer if it did.
-      for (const other of this.stations) {
-        if (other.unit === station.unit) {
-          this.stationsByUnit.set(station.unit, other);
-          break;
-        }
-      }
     }
   }
 
@@ -102,9 +93,7 @@ export class StationManagerImpl implements StationManager {
     this.stationsByUnit = new Map();
     for (const station of this.stations) {
       this.stationsById[station.id] = station;
-      if (!this.stationsByUnit.has(station.unit)) {
-        this.stationsByUnit.set(station.unit, station);
-      }
+      this.stationsByUnit.set(station.unit, station);
     }
     this.nextId = s.nextId;
   }
@@ -174,7 +163,6 @@ class GhostTrainStation implements RailGraphStation {
   constructor(
     private readonly state: GhostRailNetworkState,
     private tileRef: TileRef,
-    readonly unit: Unit | null,
     readonly canConnect: boolean,
     /** The live station this ghost stands in for; null for stations the build would add. */
     readonly live: TrainStation | null,
@@ -247,7 +235,6 @@ class GhostRailNetworkState {
       ghost = new GhostTrainStation(
         this,
         station.tile(),
-        station.unit,
         station.getCluster() !== null,
         station,
       );
@@ -259,7 +246,7 @@ class GhostRailNetworkState {
 
   /** A station the proposed build would create (unit null) or promote. */
   addGhostStation(tile: TileRef, unit: Unit | null): GhostTrainStation {
-    const ghost = new GhostTrainStation(this, tile, unit, true, null);
+    const ghost = new GhostTrainStation(this, tile, true, null);
     if (unit !== null) this.ghostByUnit.set(unit, ghost);
     return ghost;
   }
@@ -570,7 +557,7 @@ export class RailNetworkImpl implements RailNetwork {
 
     for (const port of pendingPorts) {
       if (state.budget.remaining <= 0) return;
-      this.addAndConnectGhostStation(state, port.tile(), port);
+      this.connectGhostStation(state, state.addGhostStation(port.tile(), port));
     }
 
     if (state.budget.remaining <= 0) return;
@@ -581,18 +568,8 @@ export class RailNetworkImpl implements RailNetwork {
     for (const { unit } of pending) {
       if (state.budget.remaining <= 0) return;
       if (state.isStation(unit)) continue;
-      this.addAndConnectGhostStation(state, unit.tile(), unit);
+      this.connectGhostStation(state, state.addGhostStation(unit.tile(), unit));
     }
-  }
-
-  private addAndConnectGhostStation(
-    state: GhostRailNetworkState,
-    tile: TileRef,
-    unit: Unit,
-  ): GhostTrainStation {
-    const station = state.addGhostStation(tile, unit);
-    this.connectGhostStation(state, station);
-    return station;
   }
 
   private connectGhostStation(
@@ -927,6 +904,26 @@ export class RailNetworkImpl implements RailNetwork {
     for (const cluster of clustersToMerge) {
       merged.merge(cluster);
     }
+  }
+
+  /**
+   * Order-independent digest of every station and rail (id, length, end
+   * tiles), so a restored network hashes the same although its sets are
+   * rebuilt. Each rail is counted once, from its `from` station.
+   */
+  hash(): number {
+    let hash = 0;
+    for (const station of this._stationManager.getAll()) {
+      hash = (hash + station.unit.id() * 7919) >>> 0;
+      for (const rail of station.getRailroads()) {
+        if (rail.from !== station) continue;
+        const tiles = rail.tiles;
+        const ends =
+          tiles.length === 0 ? 0 : tiles[0] * 3 + tiles[tiles.length - 1];
+        hash = (hash + (rail.id + 1) * (tiles.length * 31 + ends)) >>> 0;
+      }
+    }
+    return hash;
   }
 
   snapshot(w: SnapshotWriter): RailNetworkState {

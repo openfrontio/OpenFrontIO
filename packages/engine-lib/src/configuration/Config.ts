@@ -290,8 +290,12 @@ export class Config {
     return 300 * 10; // 5 minutes.
   }
 
-  percentageTilesOwnedToWin(elapsedGameSeconds: number): number {
-    const base = PERCENT_TILES_OWNED_TO_WIN;
+  // The win bar in tenths of a percent (800 = 80.0%). Integer math, so the
+  // sim's check is exact; a host can set the base to any tenth (see
+  // GameConfig.winThresholdTenths).
+  percentageTilesOwnedToWinTenths(elapsedGameSeconds: number): number {
+    const base =
+      this._gameConfig.winThresholdTenths ?? PERCENT_TILES_OWNED_TO_WIN * 10;
     const sd = this.overtimeConfig();
     if (!sd.enabled) {
       return base;
@@ -307,8 +311,13 @@ export class Config {
     }
     return Math.max(
       0,
-      base - Math.floor((secondsPastStart * sd.dropPercentPerMinute) / 60),
+      base - Math.floor((secondsPastStart * sd.dropPercentPerMinute) / 60) * 10,
     );
+  }
+
+  // The same bar as a percentage, for display (80, or 75.5 for a custom one).
+  percentageTilesOwnedToWin(elapsedGameSeconds: number): number {
+    return this.percentageTilesOwnedToWinTenths(elapsedGameSeconds) / 10;
   }
   armyLimitWarningThreshold(): number {
     return 0.8;
@@ -344,6 +353,12 @@ export class Config {
       player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
         ? 1_000_000_000
         : 2 * (pow(player.numTilesOwned(), 0.6) * 1000 + 50000) + cityTroops;
+
+    // The tutorial's nation and tribe never spend troops on attacks: at their
+    // usual cap they'd bank more than a new player could beat.
+    if (this._gameConfig.tutorial && player.type() !== PlayerType.Human) {
+      return maxTroops * 0.1;
+    }
 
     if (player.type() === PlayerType.Bot) {
       return maxTroops / 3;

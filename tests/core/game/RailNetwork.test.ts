@@ -823,6 +823,33 @@ describe("ghost rail preview cost controls", () => {
     expect(farthest(full)).toBeGreaterThan(60);
   });
 
+  test("the rail network contributes to the game-state hash", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+    const network = game.railNetwork();
+    const gameHash = () => (game as unknown as { hash(): number }).hash();
+    expect(network.hash()).toBe(0);
+
+    const factory = player.buildUnit(UnitType.Factory, game.ref(10, 10), {});
+    const city = player.buildUnit(UnitType.City, game.ref(10, 40), {});
+    game.addExecution(new FactoryExecution(factory));
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+    expect(network.stationManager().getAll().size).toBe(2);
+
+    const withRails = network.hash();
+    expect(withRails).not.toBe(0);
+    expect(network.hash()).toBe(withRails);
+
+    // Dropping a station changes the rail digest and, through it, the game
+    // hash, while the set of units is unchanged.
+    const gameHashBefore = gameHash();
+    network.removeStation(city);
+    expect(network.hash()).not.toBe(withRails);
+    expect(gameHash()).not.toBe(gameHashBefore);
+  });
+
   test("a preview touches only the stations its plan reaches", async () => {
     const game = await setup("big_plains", {}, [
       playerInfo("player", PlayerType.Human),
