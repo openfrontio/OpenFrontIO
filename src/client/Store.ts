@@ -187,6 +187,8 @@ export class StoreModal extends BaseModal {
   private saleEndTimer: ReturnType<typeof setTimeout> | null = null;
   /** Retries that refetch while the API's cached catalog still has the sale. */
   private saleRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Bumped on close, so a sale-end refetch still in flight then is dropped. */
+  private saleRefetchGeneration = 0;
   private alignFrame: number | null = null;
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
@@ -740,9 +742,11 @@ export class StoreModal extends BaseModal {
    * sale's prices; while it does, try again, for up to two minutes.
    */
   private async refetchAfterSaleEnd(attempt: number): Promise<void> {
+    const generation = this.saleRefetchGeneration;
     invalidateCosmetics();
     const fresh = await fetchCosmetics();
-    if (!this.isModalOpen) return;
+    // Closed (and maybe reopened) since: that open's own fetch wins.
+    if (!this.isModalOpen || generation !== this.saleRefetchGeneration) return;
     this.cosmetics = fresh ?? this.cosmetics;
     this.selectVisible(this.groupsForTab(this.activeTab));
     this.requestUpdate();
@@ -841,6 +845,7 @@ export class StoreModal extends BaseModal {
     this.saleEndTimer = null;
     if (this.saleRetryTimer !== null) clearTimeout(this.saleRetryTimer);
     this.saleRetryTimer = null;
+    this.saleRefetchGeneration++;
     // The store hides via CSS (inline modal), so the tiles never disconnect
     // and an open card-payment modal — portaled to <body> — would float over
     // the play page after Escape closes the store. Close it explicitly.

@@ -439,14 +439,24 @@ describe("StoreModal cosmetic browser", () => {
       vi.mocked(fetchCosmetics).mockResolvedValue({
         promotions: [{ id: "1", name: "Flash", percentOff: 10, endsAt }],
       } as unknown as Cosmetics);
+      resolvedCatalog = [
+        {
+          ...red,
+          cosmetic: { ...pattern, priceHard: 108, listPriceHard: 120 } as never,
+        },
+      ];
       const modal = await openStoreOnCosmetic("patterns");
       await vi.waitFor(() =>
         expect(modal.querySelector("[data-store-sale-banner]")).toBeTruthy(),
       );
+      expect(
+        modal.querySelector<PurchaseButton>("purchase-button")!.listPriceHard,
+      ).toBe(120);
 
       const after = { promotions: [] } as unknown as Cosmetics;
       vi.mocked(fetchCosmetics).mockClear();
       vi.mocked(fetchCosmetics).mockResolvedValue(after);
+      resolvedCatalog = [red];
       await vi.advanceTimersByTimeAsync(61_000);
 
       await vi.waitFor(() => expect(fetchCosmetics).toHaveBeenCalled());
@@ -455,6 +465,49 @@ describe("StoreModal cosmetic browser", () => {
       );
       expect((modal as unknown as { cosmetics: unknown }).cosmetics).toBe(
         after,
+      );
+      const button = modal.querySelector<PurchaseButton>("purchase-button")!;
+      expect(button.priceHard).toBe(120);
+      expect(button.listPriceHard).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("drops a sale-end refetch that lands after the store was closed and reopened", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const endsAt = new Date(Date.now() + 60_000).toISOString();
+      const during = {
+        promotions: [{ id: "1", name: "Flash", percentOff: 10, endsAt }],
+      } as unknown as Cosmetics;
+      vi.mocked(fetchCosmetics).mockResolvedValue(during);
+      const modal = await openStoreOnCosmetic("patterns");
+
+      let resolveLate: (c: Cosmetics) => void = () => {};
+      vi.mocked(fetchCosmetics).mockReturnValueOnce(
+        new Promise<Cosmetics>((resolve) => {
+          resolveLate = resolve;
+        }) as never,
+      );
+      await vi.advanceTimersByTimeAsync(61_000);
+      await vi.waitFor(() => expect(fetchCosmetics).toHaveBeenCalled());
+
+      modal.close();
+      const reopened = { promotions: [] } as unknown as Cosmetics;
+      vi.mocked(refreshStaleCosmetics).mockReturnValueOnce(true);
+      vi.mocked(fetchCosmetics).mockResolvedValue(reopened);
+      modal.open({ tab: "cosmetics" });
+      await vi.waitFor(() =>
+        expect((modal as unknown as { cosmetics: unknown }).cosmetics).toBe(
+          reopened,
+        ),
+      );
+
+      resolveLate({ promotions: [] } as unknown as Cosmetics);
+      await vi.advanceTimersByTimeAsync(0);
+      expect((modal as unknown as { cosmetics: unknown }).cosmetics).toBe(
+        reopened,
       );
     } finally {
       vi.useRealTimers();
