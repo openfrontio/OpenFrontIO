@@ -1,5 +1,7 @@
 {
-  "categories": ["arcade"],
+  "categories": [
+    "arcade"
+  ],
   "id": "BranchingPaths",
   "map": {
     "height": 2148,
@@ -19,79 +21,136 @@
   "name": "Branching Paths",
   "nations": [
     {
-      "coordinates": [1240, 1431],
+      "coordinates": [
+        1240,
+        1431
+      ],
       "name": "Last Hold"
     },
     {
-      "coordinates": [1128, 1407],
+      "coordinates": [
+        1128,
+        1407
+      ],
       "name": "First Wall"
     },
     {
-      "coordinates": [1319, 1351],
+      "coordinates": [
+        1319,
+        1351
+      ],
       "name": "Second Wall"
     },
     {
-      "coordinates": [1272, 1540],
+      "coordinates": [
+        1272,
+        1540
+      ],
       "name": "Third Wall"
     },
     {
-      "coordinates": [1238, 35],
+      "coordinates": [
+        1238,
+        35
+      ],
       "name": "Scorching Rays"
     },
     {
-      "coordinates": [17, 2139],
+      "coordinates": [
+        17,
+        2139
+      ],
       "name": "Frozen Winds"
     },
     {
-      "coordinates": [2471, 2143],
+      "coordinates": [
+        2471,
+        2143
+      ],
       "name": "Barren Plains"
     },
     {
-      "coordinates": [1839, 1769],
+      "coordinates": [
+        1839,
+        1769
+      ],
       "name": "Thriving Farmland"
     },
     {
-      "coordinates": [642, 1783],
+      "coordinates": [
+        642,
+        1783
+      ],
       "name": "Desperate Farmland"
     },
     {
-      "coordinates": [1232, 743],
+      "coordinates": [
+        1232,
+        743
+      ],
       "name": "Stable Farmland"
     },
     {
-      "coordinates": [1271, 1896],
+      "coordinates": [
+        1271,
+        1896
+      ],
       "name": "Border Town"
     },
     {
-      "coordinates": [801, 1224],
+      "coordinates": [
+        801,
+        1224
+      ],
       "name": "Border Village"
     },
     {
-      "coordinates": [1617, 1171],
+      "coordinates": [
+        1617,
+        1171
+      ],
       "name": "Border Hamlet"
     },
     {
-      "coordinates": [932, 1667],
+      "coordinates": [
+        932,
+        1667
+      ],
       "name": "City of Trade"
     },
     {
-      "coordinates": [1607, 1580],
+      "coordinates": [
+        1607,
+        1580
+      ],
       "name": "City of Craftsmen"
     },
     {
-      "coordinates": [1189, 1047],
+      "coordinates": [
+        1189,
+        1047
+      ],
       "name": "City of Industry"
     },
     {
-      "coordinates": [1243, 1666],
+      "coordinates": [
+        1243,
+        1666
+      ],
       "name": "Fishing Town"
     },
     {
-      "coordinates": [1031, 1316],
+      "coordinates": [
+        1031,
+        1316
+      ],
       "name": "Fishing Village"
     },
     {
-      "coordinates": [1446, 1314],
+      "coordinates": [
+        1446,
+        1314
+      ],
       "name": "Fishing Hamlet"
     }
   ],

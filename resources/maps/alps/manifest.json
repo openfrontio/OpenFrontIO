@@ -1,6 +1,10 @@
 {
-  "categories": ["europe"],
-  "forced_modifiers": ["isWaterNukes:75"],
+  "categories": [
+    "europe"
+  ],
+  "forced_modifiers": [
+    "isWaterNukes:75"
+  ],
   "id": "Alps",
   "map": {
     "height": 1836,
@@ -20,156 +24,248 @@
   "name": "Alps",
   "nations": [
     {
-      "coordinates": [669, 356],
+      "coordinates": [
+        669,
+        356
+      ],
       "flag": "ch",
       "name": "Bern"
     },
     {
-      "coordinates": [1108, 113],
+      "coordinates": [
+        1108,
+        113
+      ],
       "flag": "ch",
       "name": "Lucerne"
     },
     {
-      "coordinates": [1388, 21],
+      "coordinates": [
+        1388,
+        21
+      ],
       "flag": "ch",
       "name": "Zürich"
     },
     {
-      "coordinates": [1831, 61],
+      "coordinates": [
+        1831,
+        61
+      ],
       "flag": "li",
       "name": "Liechtenstein"
     },
     {
-      "coordinates": [16, 695],
+      "coordinates": [
+        16,
+        695
+      ],
       "flag": "ch",
       "name": "Geneva"
     },
     {
-      "coordinates": [268, 518],
+      "coordinates": [
+        268,
+        518
+      ],
       "flag": "ch",
       "name": "Vaud"
     },
     {
-      "coordinates": [518, 876],
+      "coordinates": [
+        518,
+        876
+      ],
       "flag": "ch",
       "name": "Matterhorn"
     },
     {
-      "coordinates": [832, 50],
+      "coordinates": [
+        832,
+        50
+      ],
       "flag": "ch",
       "name": "Aargau"
     },
     {
-      "coordinates": [1975, 356],
+      "coordinates": [
+        1975,
+        356
+      ],
       "flag": "at",
       "name": "Tyrol"
     },
     {
-      "coordinates": [458, 82],
+      "coordinates": [
+        458,
+        82
+      ],
       "flag": "ch",
       "name": "Jura"
     },
     {
-      "coordinates": [126, 1340],
+      "coordinates": [
+        126,
+        1340
+      ],
       "flag": "fr",
       "name": "French Alps"
     },
     {
-      "coordinates": [1572, 369],
+      "coordinates": [
+        1572,
+        369
+      ],
       "flag": "ch",
       "name": "St. Gallen"
     },
     {
-      "coordinates": [204, 1064],
+      "coordinates": [
+        204,
+        1064
+      ],
       "flag": "fr",
       "name": "Mont-Blanc"
     },
     {
-      "coordinates": [1968, 1628],
+      "coordinates": [
+        1968,
+        1628
+      ],
       "flag": "venice",
       "name": "Veneto"
     },
     {
-      "coordinates": [1122, 1694],
+      "coordinates": [
+        1122,
+        1694
+      ],
       "flag": "it",
       "name": "Piedmont"
     },
     {
-      "coordinates": [1573, 1596],
+      "coordinates": [
+        1573,
+        1596
+      ],
       "flag": "it",
       "name": "Lombardy"
     },
     {
-      "coordinates": [1388, 1325],
+      "coordinates": [
+        1388,
+        1325
+      ],
       "flag": "it",
       "name": "Milan"
     },
     {
-      "coordinates": [1319, 1026],
+      "coordinates": [
+        1319,
+        1026
+      ],
       "flag": "it",
       "name": "Como"
     },
     {
-      "coordinates": [1652, 1159],
+      "coordinates": [
+        1652,
+        1159
+      ],
       "flag": "it",
       "name": "Bergamo"
     },
     {
-      "coordinates": [758, 1514],
+      "coordinates": [
+        758,
+        1514
+      ],
       "flag": "it",
       "name": "Turin"
     },
     {
-      "coordinates": [1058, 1342],
+      "coordinates": [
+        1058,
+        1342
+      ],
       "flag": "it",
       "name": "Novara"
     },
     {
-      "coordinates": [571, 1240],
+      "coordinates": [
+        571,
+        1240
+      ],
       "flag": "ch",
       "name": "Valais"
     },
     {
-      "coordinates": [723, 770],
+      "coordinates": [
+        723,
+        770
+      ],
       "flag": "ch",
       "name": "Zermatt"
     },
     {
-      "coordinates": [1907, 807],
+      "coordinates": [
+        1907,
+        807
+      ],
       "flag": "ch",
       "name": "St. Moritz"
     },
     {
-      "coordinates": [1023, 426],
+      "coordinates": [
+        1023,
+        426
+      ],
       "flag": "ch",
       "name": "Unterwalden"
     },
     {
-      "coordinates": [1899, 538],
+      "coordinates": [
+        1899,
+        538
+      ],
       "flag": "ch",
       "name": "Davos"
     },
     {
-      "coordinates": [1602, 680],
+      "coordinates": [
+        1602,
+        680
+      ],
       "flag": "ch",
       "name": "Graubünden"
     },
     {
-      "coordinates": [1041, 854],
+      "coordinates": [
+        1041,
+        854
+      ],
       "flag": "ch",
       "name": "Ticino"
     },
     {
-      "coordinates": [182, 1716],
+      "coordinates": [
+        182,
+        1716
+      ],
       "flag": "provence",
       "name": "Provence"
     },
     {
-      "coordinates": [67, 125],
+      "coordinates": [
+        67,
+        125
+      ],
       "flag": "fr",
       "name": "Franche-Comté"
     }
   ],
-  "themes": ["europe"],
+  "themes": [
+    "europe"
+  ],
   "translation_key": "map.alps"
 }

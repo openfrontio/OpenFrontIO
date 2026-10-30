@@ -13,7 +13,10 @@
       "name": "The Thing"
     }
   ],
-  "categories": ["antarctica", "continental"],
+  "categories": [
+    "antarctica",
+    "continental"
+  ],
   "id": "Antarctica",
   "map": {
     "height": 2212,
@@ -33,156 +36,248 @@
   "name": "Antarctica",
   "nations": [
     {
-      "coordinates": [1123, 1302],
+      "coordinates": [
+        1123,
+        1302
+      ],
       "flag": "nz",
       "name": "Ross Dependency"
     },
     {
-      "coordinates": [1694, 1571],
+      "coordinates": [
+        1694,
+        1571
+      ],
       "flag": "tf",
       "name": "Adelie Land"
     },
     {
-      "coordinates": [1739, 1170],
+      "coordinates": [
+        1739,
+        1170
+      ],
       "flag": "au",
       "name": "Australian Territory"
     },
     {
-      "coordinates": [1285, 458],
+      "coordinates": [
+        1285,
+        458
+      ],
       "flag": "no",
       "name": "Queen Maud Land"
     },
     {
-      "coordinates": [945, 885],
+      "coordinates": [
+        945,
+        885
+      ],
       "flag": "British Antarctic Territory",
       "name": "British Antarctic Territory"
     },
     {
-      "coordinates": [637, 1061],
+      "coordinates": [
+        637,
+        1061
+      ],
       "flag": "Tierra del Fuego",
       "name": "Argentine Territory"
     },
     {
-      "coordinates": [565, 1083],
+      "coordinates": [
+        565,
+        1083
+      ],
       "flag": "Magallanes",
       "name": "Chilean Antarctic Territory"
     },
     {
-      "coordinates": [842, 1311],
+      "coordinates": [
+        842,
+        1311
+      ],
       "flag": "aq",
       "name": "Marie Byrd Land"
     },
     {
-      "coordinates": [1180, 1097],
+      "coordinates": [
+        1180,
+        1097
+      ],
       "flag": "us",
       "name": "Amundsen-Scott"
     },
     {
-      "coordinates": [598, 125],
+      "coordinates": [
+        598,
+        125
+      ],
       "flag": "gs",
       "name": "South Sandwich Islands"
     },
     {
-      "coordinates": [1234, 1527],
+      "coordinates": [
+        1234,
+        1527
+      ],
       "flag": "us",
       "name": "McMurdo"
     },
     {
-      "coordinates": [1499, 1242],
+      "coordinates": [
+        1499,
+        1242
+      ],
       "flag": "ru",
       "name": "Vostok"
     },
     {
-      "coordinates": [1452, 1491],
+      "coordinates": [
+        1452,
+        1491
+      ],
       "flag": "it",
       "name": "Concordia"
     },
     {
-      "coordinates": [1302, 841],
+      "coordinates": [
+        1302,
+        841
+      ],
       "flag": "jp",
       "name": "Dome Fuji"
     },
     {
-      "coordinates": [885, 771],
+      "coordinates": [
+        885,
+        771
+      ],
       "flag": "ar",
       "name": "Belgrano II"
     },
     {
-      "coordinates": [347, 816],
+      "coordinates": [
+        347,
+        816
+      ],
       "flag": "us",
       "name": "Palmer"
     },
     {
-      "coordinates": [299, 612],
+      "coordinates": [
+        299,
+        612
+      ],
       "flag": "cl",
       "name": "O´Higgins"
     },
     {
-      "coordinates": [350, 373],
+      "coordinates": [
+        350,
+        373
+      ],
       "flag": "gb",
       "name": "Signy"
     },
     {
-      "coordinates": [451, 830],
+      "coordinates": [
+        451,
+        830
+      ],
       "flag": "ar",
       "name": "San Martin"
     },
     {
-      "coordinates": [931, 668],
+      "coordinates": [
+        931,
+        668
+      ],
       "flag": "gb",
       "name": "Halley"
     },
     {
-      "coordinates": [1144, 629],
+      "coordinates": [
+        1144,
+        629
+      ],
       "flag": "de",
       "name": "Kohnen"
     },
     {
-      "coordinates": [1120, 504],
+      "coordinates": [
+        1120,
+        504
+      ],
       "flag": "no",
       "name": "Troll"
     },
     {
-      "coordinates": [1043, 474],
+      "coordinates": [
+        1043,
+        474
+      ],
       "flag": "za",
       "name": "Sanae IV"
     },
     {
-      "coordinates": [1498, 534],
+      "coordinates": [
+        1498,
+        534
+      ],
       "flag": "jp",
       "name": "Syowa"
     },
     {
-      "coordinates": [1794, 776],
+      "coordinates": [
+        1794,
+        776
+      ],
       "flag": "au",
       "name": "Mawson"
     },
     {
-      "coordinates": [1871, 1448],
+      "coordinates": [
+        1871,
+        1448
+      ],
       "flag": "au",
       "name": "Casey"
     },
     {
-      "coordinates": [1556, 1740],
+      "coordinates": [
+        1556,
+        1740
+      ],
       "flag": "fr",
       "name": "Dumont D'Urville"
     },
     {
-      "coordinates": [1830, 980],
+      "coordinates": [
+        1830,
+        980
+      ],
       "flag": "ru",
       "name": "Druzhanaya IV"
     },
     {
-      "coordinates": [1459, 1033],
+      "coordinates": [
+        1459,
+        1033
+      ],
       "flag": "cn",
       "name": "Kunlun"
     },
     {
-      "coordinates": [862, 1044],
+      "coordinates": [
+        862,
+        1044
+      ],
       "flag": "cl",
       "name": "Glaciar Union"
     }
   ],
-  "themes": ["antarctica"],
+  "themes": [
+    "antarctica"
+  ],
   "translation_key": "map.antarctica"
 }

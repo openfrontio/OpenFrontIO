@@ -1,5 +1,7 @@
 {
-  "categories": ["north_america"],
+  "categories": [
+    "north_america"
+  ],
   "id": "ClearwaterLakes",
   "map": {
     "height": 1656,
@@ -19,71 +21,112 @@
   "name": "Clearwater Lakes",
   "nations": [
     {
-      "coordinates": [671, 847],
+      "coordinates": [
+        671,
+        847
+      ],
       "flag": "Nunavik",
       "name": "Atkinson Island"
     },
     {
-      "coordinates": [903, 583],
+      "coordinates": [
+        903,
+        583
+      ],
       "flag": "Nunavik",
       "name": "Kamiskutanikaw Island"
     },
     {
-      "coordinates": [769, 442],
+      "coordinates": [
+        769,
+        442
+      ],
       "flag": "Nunavik",
       "name": "Lepage Island"
     },
     {
-      "coordinates": [1090, 878],
+      "coordinates": [
+        1090,
+        878
+      ],
       "flag": "Nunavik",
       "name": "Mantunikw Island"
     },
     {
-      "coordinates": [1534, 706],
+      "coordinates": [
+        1534,
+        706
+      ],
       "flag": "Nunavik",
       "name": "Lake Donat"
     },
     {
-      "coordinates": [218, 280],
+      "coordinates": [
+        218,
+        280
+      ],
       "flag": "Nunavik",
       "name": "Lake Ichikami"
     },
     {
-      "coordinates": [246, 911],
+      "coordinates": [
+        246,
+        911
+      ],
       "flag": "Nunavik",
       "name": "Awikwataukach"
     },
     {
-      "coordinates": [458, 523],
+      "coordinates": [
+        458,
+        523
+      ],
       "flag": "Nunavik",
       "name": "Wiskichanikw Islands"
     },
     {
-      "coordinates": [1136, 1517],
+      "coordinates": [
+        1136,
+        1517
+      ],
       "flag": "Nunavik",
       "name": "Lake Quereur"
     },
     {
-      "coordinates": [1715, 828],
+      "coordinates": [
+        1715,
+        828
+      ],
       "flag": "Nunavik",
       "name": "Lake Lussay"
     },
     {
-      "coordinates": [692, 66],
+      "coordinates": [
+        692,
+        66
+      ],
       "flag": "Nunavik",
       "name": "Tursujuq National Park"
     },
     {
-      "coordinates": [1152, 297],
+      "coordinates": [
+        1152,
+        297
+      ],
       "flag": "Nunavik",
       "name": "Lake Nipischi"
     },
     {
-      "coordinates": [245, 1038],
+      "coordinates": [
+        245,
+        1038
+      ],
       "flag": "Nunavik",
       "name": "Baie Crafton"
     }
   ],
-  "themes": ["north_america"],
+  "themes": [
+    "north_america"
+  ],
   "translation_key": "map.clearwaterlakes"
 }

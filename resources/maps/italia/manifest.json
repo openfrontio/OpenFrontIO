@@ -1,5 +1,7 @@
 {
-  "categories": ["europe"],
+  "categories": [
+    "europe"
+  ],
   "id": "Italia",
   "map": {
     "height": 1272,
@@ -19,81 +21,128 @@
   "name": "Italia",
   "nations": [
     {
-      "coordinates": [1038, 993],
+      "coordinates": [
+        1038,
+        993
+      ],
       "flag": "TwoSicilies",
       "name": "Kingdom of the Two Sicilies"
     },
     {
-      "coordinates": [370, 1137],
+      "coordinates": [
+        370,
+        1137
+      ],
       "flag": "tn",
       "name": "Beylik of Tunis"
     },
     {
-      "coordinates": [785, 578],
+      "coordinates": [
+        785,
+        578
+      ],
       "flag": "PapalStates",
       "name": "Papal States"
     },
     {
-      "coordinates": [625, 534],
+      "coordinates": [
+        625,
+        534
+      ],
       "flag": "Grand Duchy of Tuscany",
       "name": "Grand Duchy of Tuscany"
     },
     {
-      "coordinates": [595, 190],
+      "coordinates": [
+        595,
+        190
+      ],
       "flag": "venice",
       "name": "Republic of Venice"
     },
     {
-      "coordinates": [469, 386],
+      "coordinates": [
+        469,
+        386
+      ],
       "flag": "Duchy of Modena and Reggio",
       "name": "Duchy of Modena"
     },
     {
-      "coordinates": [391, 254],
+      "coordinates": [
+        391,
+        254
+      ],
       "flag": "Duchy of Parma",
       "name": "Duchy of Parma"
     },
     {
-      "coordinates": [361, 68],
+      "coordinates": [
+        361,
+        68
+      ],
       "flag": "ch",
       "name": "Switzerland"
     },
     {
-      "coordinates": [278, 774],
+      "coordinates": [
+        278,
+        774
+      ],
       "flag": "Kingdom of Sardinia",
       "name": "Kingdom of Sardinia"
     },
     {
-      "coordinates": [29, 266],
+      "coordinates": [
+        29,
+        266
+      ],
       "flag": "fr",
       "name": "France"
     },
     {
-      "coordinates": [747, 39],
+      "coordinates": [
+        747,
+        39
+      ],
       "flag": "Habsburg Austria",
       "name": "Austrian Empire"
     },
     {
-      "coordinates": [870, 1240],
+      "coordinates": [
+        870,
+        1240
+      ],
       "flag": "gb",
       "name": "Colony of Malta"
     },
     {
-      "coordinates": [1255, 31],
+      "coordinates": [
+        1255,
+        31
+      ],
       "flag": "Kingdom of Hungary",
       "name": "Kingdom of Hungary"
     },
     {
-      "coordinates": [630, 350],
+      "coordinates": [
+        630,
+        350
+      ],
       "flag": "sm",
       "name": "San Marino"
     },
     {
-      "coordinates": [1238, 349],
+      "coordinates": [
+        1238,
+        349
+      ],
       "flag": "tr",
       "name": "Ottoman Empire"
     }
   ],
-  "themes": ["europe"],
+  "themes": [
+    "europe"
+  ],
   "translation_key": "map.italia"
 }
