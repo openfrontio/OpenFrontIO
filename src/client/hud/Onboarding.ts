@@ -107,7 +107,8 @@ export type OnboardingTarget = "free" | "kingdom" | "empire" | "other";
 export type OnboardingAction =
   | { kind: "spawn"; inZone: boolean }
   | { kind: "attack" | "boat"; target: OnboardingTarget }
-  | { kind: "build"; atomBomb: boolean };
+  /** `onTarget`: it lands where the arrow points. */
+  | { kind: "build"; atomBomb: boolean; onTarget: boolean };
 
 export type OnboardingVerdict = "ok" | "wrong_target" | "low_troops";
 
@@ -132,7 +133,8 @@ const BOAT_TARGETS: Record<OnboardingStep, readonly OnboardingTarget[]> = {
 /**
  * Whether the action may go through on this step. Growing into free land
  * is always fine; boats and the empire wait for the last step, and the
- * nuke step is for the atom bomb alone, the only thing ever built.
+ * nuke step is for the atom bomb alone, the only thing ever built, aimed
+ * at the empire's port.
  * `troopShareAfter` is the player's troops over their max once the action
  * has sent its troops.
  */
@@ -145,9 +147,9 @@ export function judge(
     return step === "spawn" && action.inZone ? "ok" : "wrong_target";
   }
   if (action.kind === "build") {
-    return action.atomBomb && (step === "nuke" || step === "empire")
-      ? "ok"
-      : "wrong_target";
+    if (!action.atomBomb) return "wrong_target";
+    if (step === "nuke") return action.onTarget ? "ok" : "wrong_target";
+    return step === "empire" ? "ok" : "wrong_target";
   }
   const allowed = (action.kind === "attack" ? ATTACK_TARGETS : BOAT_TARGETS)[
     step

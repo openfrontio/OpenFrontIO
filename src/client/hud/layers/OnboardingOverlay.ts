@@ -286,12 +286,29 @@ export class OnboardingOverlay extends LitElement implements Controller {
       case "build_unit":
         return judge(
           this.step,
-          { kind: "build", atomBomb: intent.unit === UnitType.AtomBomb },
+          {
+            kind: "build",
+            atomBomb: intent.unit === UnitType.AtomBomb,
+            onTarget: this.inBlast(intent.tile),
+          },
           share,
         );
+      // Deleting the captured silo would leave no way to fire the bomb.
+      case "delete_unit":
+        return "wrong_target";
       default:
         return "ok";
     }
+  }
+
+  /** Whether an atom bomb on `tile` would hit where the arrow points. */
+  private inBlast(tile: number): boolean {
+    const t = this.target;
+    if (t === null) return false;
+    const r = this.game.config().nukeMagnitudes(UnitType.AtomBomb).outer;
+    const dx = this.game.x(tile) - t.x;
+    const dy = this.game.y(tile) - t.y;
+    return dx * dx + dy * dy <= r * r;
   }
 
   private targetOf(p: PlayerView): OnboardingTarget {
@@ -443,7 +460,12 @@ export class OnboardingOverlay extends LitElement implements Controller {
       nuked: this.nuked,
     });
     this.hasCoast = hasCoast;
-    this.landed = bordersEmpire || me.units(UnitType.TransportShip).length > 0;
+    this.landed =
+      bordersEmpire ||
+      me.units(UnitType.TransportShip).some((b) => {
+        const dst = b.targetTile();
+        return dst !== undefined && g.ownerID(dst) === empireID;
+      });
     this.armed =
       this.step === "nuke" && this.uiState.ghostStructure === UnitType.AtomBomb;
     this.reloading = this.step === "nuke" && mySilo?.isInCooldown() === true;

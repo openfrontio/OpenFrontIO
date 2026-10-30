@@ -39,13 +39,18 @@ export function tutorialSilo(game: Game, nation: Player, fire: boolean): void {
     topUpGold(game, nation, UnitType.MissileSilo);
     silo = nation.buildUnit(UnitType.MissileSilo, tile, {});
     game.addExecution(new MissileSiloExecution(silo));
-    for (const p of game.players()) {
-      if (p.type() === PlayerType.Nation && !onPlayersIsland(game, p)) {
-        buildHarbor(game, p, human);
-      }
-    }
     // The first nuke goes as soon as it's up, so even a quick player sees one.
     fire = true;
+  }
+  // The empire's harbor goes up with the silo, or once it reaches the shore.
+  for (const p of game.players()) {
+    if (
+      p.type() === PlayerType.Nation &&
+      !onPlayersIsland(game, p) &&
+      p.unitsConstructed(UnitType.Port) === 0
+    ) {
+      buildHarbor(game, p, human);
+    }
   }
 
   if (!fire || silo.isInCooldown()) return;

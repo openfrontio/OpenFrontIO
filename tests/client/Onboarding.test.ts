@@ -129,15 +129,20 @@ describe("onboarding rules", () => {
   });
 
   it("only builds the atom bomb, once the kingdom is gone", () => {
-    expect(judge("kingdom", { kind: "build", atomBomb: true }, full)).toBe(
-      "wrong_target",
-    );
+    const bomb = { kind: "build", atomBomb: true, onTarget: true } as const;
+    expect(judge("kingdom", bomb, full)).toBe("wrong_target");
     for (const step of ["nuke", "empire"] as const) {
-      expect(judge(step, { kind: "build", atomBomb: true }, full)).toBe("ok");
-      expect(judge(step, { kind: "build", atomBomb: false }, full)).toBe(
+      expect(judge(step, bomb, full)).toBe("ok");
+      expect(judge(step, { ...bomb, atomBomb: false }, full)).toBe(
         "wrong_target",
       );
     }
+  });
+
+  it("aims the first bomb at the port", () => {
+    const off = { kind: "build", atomBomb: true, onTarget: false } as const;
+    expect(judge("nuke", off, full)).toBe("wrong_target");
+    expect(judge("empire", off, full)).toBe("ok");
   });
 
   it("stops attacks that would leave troops low", () => {
