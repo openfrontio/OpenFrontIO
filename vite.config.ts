@@ -507,6 +507,7 @@ export default defineConfig(({ mode }) => {
 
     server: {
       port: 9000,
+      strictPort: true,
       host: process.env.VITE_HOST === "lan",
       // Automatically open the browser when the server starts
       open: process.env.SKIP_BROWSER_OPEN !== "true",

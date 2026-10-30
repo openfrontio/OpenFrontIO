@@ -321,4 +321,14 @@ describe("Stats", () => {
       BigInt(tiles),
     );
   });
+
+  test("migrateClientID moves stats from old to new client ID", () => {
+    stats.attack(player1, player2, 10);
+    const p1Stats = stats.stats().client1;
+    expect(p1Stats).toBeDefined();
+
+    stats.migrateClientID("client1", "new_client1");
+    expect(stats.stats().client1).toBeUndefined();
+    expect(stats.stats().new_client1).toBe(p1Stats);
+  });
 });

@@ -1785,6 +1785,7 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     if (this.usernameInput && !this.usernameInput.canPlay()) {
+      event.preventDefault();
       // The singleplayer modal shows the starting overlay before dispatching
       // join-lobby; a refused join must release it or it stays over the menu.
       const startingModal = document.querySelector("game-starting-modal");
@@ -1794,6 +1795,7 @@ class Client {
       return;
     }
     if (this.blockedJoin(lobby)) {
+      event.preventDefault();
       return;
     }
     // Only once the join is actually going ahead: a refused dispatch that
@@ -1841,6 +1843,19 @@ class Client {
           : presenceLobbyId(joinConfig, lobby.gameID),
     };
     this.emitPresence();
+
+    if (this.replayViewerID !== null) {
+      console.log("joining lobby, tearing down replay viewer");
+      this.replayViewerID = null;
+      document.querySelector("replay-viewer")?.remove();
+      if (parseReplayViewerHash(window.location.hash) !== null) {
+        history.replaceState(
+          null,
+          "",
+          window.location.pathname + window.location.search,
+        );
+      }
+    }
 
     if (this.lobbyHandle !== null) {
       console.log("joining lobby, stopping existing game");
