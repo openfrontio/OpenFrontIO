@@ -16,6 +16,7 @@ export const CloseCode = {
   InvalidClan: 4101,
   ClanVerificationFailed: 4102,
   NotTrusted: 4103,
+  ModeRetired: 4104,
 } as const;
 
 export type CloseCode = (typeof CloseCode)[keyof typeof CloseCode];
@@ -44,6 +45,7 @@ export const CloseReason = {
   CannotJoin: "close_reason.cannot_join",
   NotAllowlisted: "close_reason.not_allowlisted",
   NotTrusted: "close_reason.not_trusted",
+  ModeRetired: "close_reason.mode_retired",
   LobbyFull: "close_reason.lobby_full",
   WrongWorker: "close_reason.wrong_worker",
   InternalError: "close_reason.internal_error",

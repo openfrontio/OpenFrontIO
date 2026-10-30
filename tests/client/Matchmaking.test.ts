@@ -1,5 +1,9 @@
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
-import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
+import {
+  CloseCode,
+  CloseReason,
+  isTerminalClose,
+} from "@openfront/shared/CloseCodes";
 import type { Mock } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -344,6 +348,25 @@ describe("MatchmakingModal clan-aware joins", () => {
     window.removeEventListener("show-message", showMessage);
   });
 
+  it("shows the retired-queue message without reconnecting on ModeRetired", async () => {
+    apiMocks.getUserMe.mockResolvedValue(userMe());
+    const showMessage = vi.fn();
+    window.addEventListener("show-message", showMessage);
+
+    const { modal, socket } = await openAndJoin("1v1");
+    socket.serverClose(CloseCode.ModeRetired, CloseReason.ModeRetired);
+    await vi.runAllTimersAsync();
+
+    expect(modal.isOpen()).toBe(false);
+    expect(showMessage).toHaveBeenCalledOnce();
+    const { translateText } = await import("../../src/client/Utils");
+    const shown = (showMessage.mock.calls[0][0] as CustomEvent).detail.message;
+    expect(shown).toBe(translateText(CloseReason.ModeRetired));
+    expect(shown).not.toBe(translateText("matchmaking_modal.rejected"));
+    expect(sockets).toHaveLength(1);
+    window.removeEventListener("show-message", showMessage);
+  });
+
   // The deployed matchmaking service still closes with 1008/1011 and a bare
   // reason. Until it ships the 41xx codes, those must land on the same
   // branches — not on the generic rejoin-with-backoff path.
@@ -521,6 +544,15 @@ describe("MatchmakingModal trust gate", () => {
     expect(modal.isOpen()).toBe(true);
     expect(notTrusted(modal)).toBe(true);
     expect(sockets).toHaveLength(1);
+  });
+
+  it("stops without reconnecting when the service says the mode is retired", async () => {
+    apiMocks.getUserMe.mockResolvedValue(withTrust("trusted"));
+    const { socket } = await openAndJoin("1v1");
+    socket.serverClose(CloseCode.ModeRetired, CloseReason.ModeRetired);
+    await vi.runAllTimersAsync();
+    expect(sockets).toHaveLength(1);
+    expect(isTerminalClose(CloseCode.ModeRetired)).toBe(true);
   });
 });
 
