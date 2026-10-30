@@ -40,6 +40,7 @@ import {
   fetchClanDonations,
 } from "../../../src/client/ClanApi";
 import { ClanDonationsView } from "../../../src/client/components/clan/ClanDonationsView";
+import { translateText } from "../../../src/client/Utils";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -302,6 +303,9 @@ describe("ClanDonationsView", () => {
       expect(rows[0].textContent).toContain("alice");
       expect(rows[0].textContent).toContain(BigInt(33450).toLocaleString());
       expect(rows[0].textContent).toContain("clan_modal.donations_count");
+      expect(translateText).toHaveBeenCalledWith("clan_modal.donations_count", {
+        count: 4,
+      });
       expect(rows[0].querySelector("cap-icon")).not.toBeNull();
       expect(rows[1].textContent).toContain("bob");
       expect(rows[1].textContent).toContain("🥈");
