@@ -1626,6 +1626,7 @@
     "vietnam": "Vietnam",
     "warshipwarship": "Warship Warship",
     "world": "World",
+    "world4k": "World 4000",
     "worldinverted": "World Inverted",
     "yangtzeriver": "Yangtze River",
     "yellowsea": "Yellow Sea",
@@ -1664,7 +1665,11 @@
     "brland": "brland",
     "eyeland": "eyeland",
     "eyewater": "eyewater",
-    "label": "label"
+    "label": "label",
+    "w2kland": "w2kland",
+    "w2kwater": "w2kwater",
+    "w4kland": "w4kland",
+    "w4kwater": "w4kwater"
   },
   "marketing_consent": {
     "body": "News and updates by email. Change it anytime in your account.",
