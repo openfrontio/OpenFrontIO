@@ -2195,9 +2195,8 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Tutorial,
     translationKey: "map.tutorial",
     categories: ["fictional"],
-    defaultNationCount: 1,
+    defaultNationCount: 2,
     hidden: true,
-    customTribes: [{ name: "Hill Tribe", coordinates: [38, 49] }],
     author: "evanpelle",
   },
   {

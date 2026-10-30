@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   inCircle,
-  ISLET,
   judge,
   LOW_TROOP_SHARE,
   OnboardingProgress,
@@ -11,45 +10,71 @@ import {
 
 const start: OnboardingProgress = {
   hasSpawned: false,
-  bordersTribe: false,
+  bordersKingdom: false,
+  expandedAWhile: false,
   troopsSeen: false,
-  tribeAlive: true,
-  ownsIslet: false,
-  nationAlive: true,
+  kingdomAlive: true,
+  empireAlive: true,
+  ownsSilo: false,
+  nuked: false,
 };
 
 describe("onboarding steps", () => {
-  it("walks spawn, expand, troops, tribe, boat, nation, then won", () => {
+  it("walks spawn, expand, troops, kingdom, nuke, empire, then won", () => {
     expect(stepFor(start)).toBe("spawn");
     const spawned = { ...start, hasSpawned: true };
     expect(stepFor(spawned)).toBe("expand");
-    expect(stepFor({ ...spawned, bordersTribe: true })).toBe("troops");
-    expect(stepFor({ ...spawned, bordersTribe: true, troopsSeen: true })).toBe(
-      "tribe",
+    const expanding = { ...spawned, expandedAWhile: true };
+    expect(stepFor(expanding)).toBe("troops");
+    // Back to expanding until we reach the kingdom.
+    expect(stepFor({ ...expanding, troopsSeen: true })).toBe("expand");
+    const met = { ...expanding, bordersKingdom: true };
+    expect(stepFor({ ...met, troopsSeen: true })).toBe("kingdom");
+    // Taking the silo doesn't end the kingdom step: the kingdom goes first.
+    expect(stepFor({ ...met, troopsSeen: true, ownsSilo: true })).toBe(
+      "kingdom",
     );
-    const tribeGone = { ...spawned, tribeAlive: false };
-    expect(stepFor(tribeGone)).toBe("boat");
-    expect(stepFor({ ...tribeGone, ownsIslet: true })).toBe("nation");
-    expect(stepFor({ ...tribeGone, ownsIslet: true, nationAlive: false })).toBe(
+    const kingdomGone = { ...spawned, kingdomAlive: false, ownsSilo: true };
+    expect(stepFor(kingdomGone)).toBe("nuke");
+    expect(stepFor({ ...kingdomGone, nuked: true })).toBe("empire");
+    expect(stepFor({ ...kingdomGone, nuked: true, empireAlive: false })).toBe(
       "won",
     );
   });
 
-  it("is won once the nation falls, islet or not", () => {
+  it("shows the troop bar on reaching the kingdom early", () => {
+    expect(stepFor({ ...start, hasSpawned: true, bordersKingdom: true })).toBe(
+      "troops",
+    );
+  });
+
+  it("goes to the empire without a silo to fire", () => {
+    expect(stepFor({ ...start, hasSpawned: true, kingdomAlive: false })).toBe(
+      "empire",
+    );
+  });
+
+  it("is won once both nations fall, nuked or not", () => {
     expect(
       stepFor({
         ...start,
         hasSpawned: true,
-        tribeAlive: false,
-        nationAlive: false,
+        kingdomAlive: false,
+        empireAlive: false,
       }),
     ).toBe("won");
   });
 
-  it("sends a player whose tribe border was pushed back to expanding", () => {
-    expect(stepFor({ ...start, hasSpawned: true, bordersTribe: false })).toBe(
-      "expand",
-    );
+  it("sends a player whose kingdom border was pushed back to expanding", () => {
+    expect(
+      stepFor({
+        ...start,
+        hasSpawned: true,
+        expandedAWhile: true,
+        troopsSeen: true,
+        bordersKingdom: false,
+      }),
+    ).toBe("expand");
   });
 });
 
@@ -71,50 +96,60 @@ describe("onboarding rules", () => {
     for (const step of [
       "expand",
       "troops",
-      "tribe",
-      "boat",
-      "nation",
+      "kingdom",
+      "nuke",
+      "empire",
     ] as const) {
       expect(judge(step, { kind: "attack", target: "free" }, full)).toBe("ok");
     }
   });
 
-  it("keeps the nation for the last step", () => {
-    for (const kind of ["attack", "boat"] as const) {
-      expect(judge("expand", { kind, target: "nation" }, full)).toBe(
-        "wrong_target",
-      );
-      expect(judge("boat", { kind, target: "nation" }, full)).toBe(
-        "wrong_target",
-      );
-      expect(judge("nation", { kind, target: "nation" }, full)).toBe("ok");
-    }
-  });
-
-  it("holds boats until the boat step, then sends them to the islet", () => {
-    expect(judge("tribe", { kind: "boat", target: "islet" }, full)).toBe(
-      "wrong_target",
-    );
-    expect(judge("boat", { kind: "boat", target: "islet" }, full)).toBe("ok");
-    expect(inCircle(ISLET, ISLET.x, ISLET.y)).toBe(true);
-  });
-
-  it("lets the tribe be attacked while it's the target", () => {
-    expect(judge("tribe", { kind: "attack", target: "tribe" }, full)).toBe(
+  it("lets the kingdom be attacked while it's the target", () => {
+    expect(judge("kingdom", { kind: "attack", target: "kingdom" }, full)).toBe(
       "ok",
     );
   });
 
+  it("keeps the empire for the last step, after the nuke", () => {
+    for (const kind of ["attack", "boat"] as const) {
+      for (const step of ["expand", "kingdom", "nuke"] as const) {
+        expect(judge(step, { kind, target: "empire" }, full)).toBe(
+          "wrong_target",
+        );
+      }
+      expect(judge("empire", { kind, target: "empire" }, full)).toBe("ok");
+    }
+  });
+
+  it("holds boats until the kingdom is gone", () => {
+    expect(judge("kingdom", { kind: "boat", target: "free" }, full)).toBe(
+      "wrong_target",
+    );
+    expect(judge("empire", { kind: "boat", target: "free" }, full)).toBe("ok");
+  });
+
+  it("only builds the atom bomb, once the kingdom is gone", () => {
+    expect(judge("kingdom", { kind: "build", atomBomb: true }, full)).toBe(
+      "wrong_target",
+    );
+    for (const step of ["nuke", "empire"] as const) {
+      expect(judge(step, { kind: "build", atomBomb: true }, full)).toBe("ok");
+      expect(judge(step, { kind: "build", atomBomb: false }, full)).toBe(
+        "wrong_target",
+      );
+    }
+  });
+
   it("stops attacks that would leave troops low", () => {
     const low = LOW_TROOP_SHARE - 0.01;
-    expect(judge("tribe", { kind: "attack", target: "tribe" }, low)).toBe(
+    expect(judge("kingdom", { kind: "attack", target: "kingdom" }, low)).toBe(
       "low_troops",
     );
-    expect(judge("boat", { kind: "boat", target: "islet" }, low)).toBe(
+    expect(judge("empire", { kind: "boat", target: "empire" }, low)).toBe(
       "low_troops",
     );
     // A wrong target is the thing to fix first.
-    expect(judge("expand", { kind: "attack", target: "nation" }, low)).toBe(
+    expect(judge("expand", { kind: "attack", target: "empire" }, low)).toBe(
       "wrong_target",
     );
   });

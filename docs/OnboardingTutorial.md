@@ -25,7 +25,7 @@ It opens with a welcome card that describes OpenFront in one sentence, with a **
 
 1. **Spawn.** A glowing zone marks the spawn area. Only a click inside it counts.
 2. **Expand.** Click the empty land next to your territory.
-3. **Troops.** The arrow points at the troop bar: troops grow fastest when it's about half full, so don't wait for it to fill. **Got it** moves on.
+3. **Troops.** A few seconds into expanding, before the player reaches the kingdom, the arrow points at the troop bar: troops grow fastest when it's about half full, so don't wait for it to fill. **Got it** moves on.
 4. **Attack the tribe.** Attack the tribe next to you and take its land.
 5. **Send a boat.** Click the coast across the strait and send a boat.
 6. **Attack the nation.** Send a boat to its coast, then attack the middle of its land until it falls.
@@ -39,10 +39,10 @@ What makes it different from the guide:
 - **Target.** A target marker and an animated arrow show where to click. The rest of the screen stays as it is. When the target is empty land, the marker covers only empty land.
 - **Input gating.** Clicks and taps outside the current target are ignored, so the player can't wander off the script. Camera pan and zoom stay free, but the map fits on one screen, so they shouldn't be needed.
 - **One sentence per step**, large and in the middle of the screen, not in a corner panel. Touch devices get their own wording, as the guide already does (`tutorial.step_touch.*`).
-- **Low-troops rule.** New players click again and again and send their whole army away. This rule is on for the whole tutorial, not a single step:
+- **Low-troops rule.** New players click again and again and send their whole army away. The first time it happens, at any step:
   - the attack ratio starts low;
-  - a big centered warning appears when troops drop below about 30% of max ("Your troops are low — wait for them to regrow");
-  - attack clicks are ignored until troops are back above the threshold.
+  - a big centered warning appears when troops drop below 10% of max ("Your troops are low — wait for them to regrow");
+  - attack clicks are ignored until the warning goes away. After that it never shows again, and attacks are never held back.
 
   The player learns to wait for troops by running into the rule, not by reading about it.
 
