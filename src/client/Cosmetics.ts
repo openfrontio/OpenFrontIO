@@ -844,12 +844,6 @@ function simpleHash(str: string): string {
 }
 
 /**
- * Drops the cached cosmetics.json so the next fetchCosmetics() goes to the
- * network. The remedy for a checkout rejected with a stale listing ("Pack not
- * available" / "Tier not available"): the catalog the store rendered from no
- * longer matches what the rail sells.
- */
-/**
  * An item's price in one currency as the store shows and the server charges
  * it now. While the item's own sale runs that is the catalog price (the sale
  * price); once the sale's endsAt has passed it is the list price, even if the
@@ -882,6 +876,12 @@ export function saleHasEnded(item: {
   );
 }
 
+/**
+ * Drops the cached cosmetics.json so the next fetchCosmetics() goes to the
+ * network. The remedy for a checkout rejected with a stale listing ("Pack not
+ * available" / "Tier not available"): the catalog the store rendered from no
+ * longer matches what the rail sells.
+ */
 export function invalidateCosmetics(): void {
   __cosmetics = null;
 }
