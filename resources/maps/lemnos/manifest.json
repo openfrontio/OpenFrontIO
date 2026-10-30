@@ -1,7 +1,5 @@
 {
-  "categories": [
-    "europe"
-  ],
+  "categories": ["europe"],
   "id": "Lemnos",
   "map": {
     "height": 1420,
@@ -21,80 +19,51 @@
   "name": "Lemnos",
   "nations": [
     {
-      "coordinates": [
-        550,
-        317
-      ],
+      "coordinates": [550, 317],
       "flag": "gr",
       "name": "Gomati"
     },
     {
-      "coordinates": [
-        1371,
-        254
-      ],
+      "coordinates": [1371, 254],
       "flag": "gr",
       "name": "Zematas"
     },
     {
-      "coordinates": [
-        1096,
-        605
-      ],
+      "coordinates": [1096, 605],
       "flag": "gr",
       "name": "Kotsinas"
     },
     {
-      "coordinates": [
-        518,
-        894
-      ],
+      "coordinates": [518, 894],
       "flag": "gr",
       "name": "Evgatis"
     },
     {
-      "coordinates": [
-        250,
-        879
-      ],
+      "coordinates": [250, 879],
       "flag": "gr",
       "name": "Kavala"
     },
     {
-      "coordinates": [
-        814,
-        460
-      ],
+      "coordinates": [814, 460],
       "flag": "gr",
       "name": "Atsiki"
     },
     {
-      "coordinates": [
-        474,
-        542
-      ],
+      "coordinates": [474, 542],
       "flag": "gr",
       "name": "Sardes"
     },
     {
-      "coordinates": [
-        691,
-        755
-      ],
+      "coordinates": [691, 755],
       "flag": "gr",
       "name": "Portianou"
     },
     {
-      "coordinates": [
-        1177,
-        975
-      ],
+      "coordinates": [1177, 975],
       "flag": "gr",
       "name": "Pyrgos"
     }
   ],
-  "themes": [
-    "europe"
-  ],
+  "themes": ["europe"],
   "translation_key": "map.lemnos"
 }
