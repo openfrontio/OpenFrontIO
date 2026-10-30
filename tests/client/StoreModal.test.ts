@@ -461,6 +461,46 @@ describe("StoreModal cosmetic browser", () => {
     }
   });
 
+  it("keeps refetching after a sale ends while the API still serves it", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const sale = {
+        id: "1",
+        name: "Flash",
+        percentOff: 10,
+        endsAt: new Date(Date.now() + 60_000).toISOString(),
+      };
+      const during = { promotions: [sale] } as unknown as Cosmetics;
+      vi.mocked(fetchCosmetics).mockResolvedValue(during);
+      const modal = await openStoreOnCosmetic("patterns");
+      await vi.waitFor(() =>
+        expect(modal.querySelector("[data-store-sale-banner]")).toBeTruthy(),
+      );
+
+      // The API's cached catalog still lists the sale just after it ends.
+      const after = { promotions: [] } as unknown as Cosmetics;
+      vi.mocked(fetchCosmetics).mockClear();
+      vi.mocked(fetchCosmetics)
+        .mockResolvedValueOnce(during)
+        .mockResolvedValue(after);
+      await vi.advanceTimersByTimeAsync(61_000);
+      await vi.waitFor(() => expect(fetchCosmetics).toHaveBeenCalledTimes(1));
+      expect((modal as unknown as { cosmetics: unknown }).cosmetics).toBe(
+        during,
+      );
+
+      await vi.advanceTimersByTimeAsync(16_000);
+      await vi.waitFor(() => expect(fetchCosmetics).toHaveBeenCalledTimes(2));
+      await vi.waitFor(() =>
+        expect((modal as unknown as { cosmetics: unknown }).cosmetics).toBe(
+          after,
+        ),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("shows no banner or list price without a sale", async () => {
     const modal = await openStoreOnCosmetic("patterns");
     expect(modal.querySelector("[data-store-sale-banner]")).toBeNull();
