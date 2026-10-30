@@ -1779,6 +1779,13 @@
     "tutorial": "TUTORIAL",
     "warning": "WARNING"
   },
+  "notifications": {
+    "empty": "No new notifications",
+    "friend_request": "Friend request",
+    "new_version": "Version {version} is now live!",
+    "title": "Notifications",
+    "view_release_notes": "View release notes"
+  },
   "onboarding": {
     "got_it": "Got it",
     "intro_body": "OpenFront is a strategy game where you grow your land and conquer your neighbors to take over the map.",
