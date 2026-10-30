@@ -62,6 +62,9 @@ export class UnitDisplay extends LitElement implements Controller {
     this.keybinds = userSettings.parsedUserKeybinds();
 
     this.allDisabled = BuildMenus.types.every((u) => config.isUnitDisabled(u));
+    // The bar is hidden on small screens, where the radial menu builds, but
+    // the onboarding tutorial fires its atom bomb from here on every screen.
+    if (config.gameConfig().tutorial) this.classList.remove("hidden");
 
     const highlightUnits: Partial<
       Record<TutorialHighlight, PlayerBuildableUnitType>
