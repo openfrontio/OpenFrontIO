@@ -2,7 +2,7 @@
   "$schema": "../../../info.schema.json",
   "id": "world4000",
   "name": "World 4000",
-  "translation_key": "map.world4k",
+  "translation_key": "map.world4000",
   "categories": ["new", "world"],
   "nations": [
     {
