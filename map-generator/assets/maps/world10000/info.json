@@ -1727,7 +1727,7 @@
     { "coordinates": [5783, 1508], "name": "Wassukanni" },
 
     {
-      "coordinates": [4964, 5000],
+      "coordinates": [4964, 4999],
       "name": "Amundsen Scott",
       "flag": "us"
     },
@@ -1784,7 +1784,7 @@
     {
       "coordinates": [4588, 4789],
       "name": "Maitri",
-      "flag": "id"
+      "flag": "in"
     },
     {
       "coordinates": [4351, 4624],
