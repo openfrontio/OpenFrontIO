@@ -1392,6 +1392,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 9,
     themes: ["oceania"],
     author: "gabigabogabu",
+    descriptionKey: "map_description.hawaii",
     location: { lat: 20.5, lon: -157 },
   },
   {
@@ -1830,6 +1831,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 11,
     themes: ["africa"],
     author: "gabigabogabu",
+    descriptionKey: "map_description.niledelta",
     location: { lat: 30.8, lon: 31 },
   },
   {
