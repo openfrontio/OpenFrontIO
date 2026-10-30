@@ -141,8 +141,8 @@ export function saleCoversEverything(
 ): boolean {
   if (cosmetics === null) return false;
   const items: { priceHard?: number; promotion?: { id: string } }[] = [
-    ...Object.values(cosmetics.patterns),
-    ...Object.values(cosmetics.flags),
+    ...Object.values(cosmetics.patterns ?? {}),
+    ...Object.values(cosmetics.flags ?? {}),
     ...Object.values(cosmetics.crowns ?? {}),
     ...Object.values(cosmetics.skins ?? {}),
     ...Object.values(cosmetics.packs ?? {}),
