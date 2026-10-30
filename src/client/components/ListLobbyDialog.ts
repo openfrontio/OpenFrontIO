@@ -1,3 +1,5 @@
+import { Duos, Quads, Trios } from "@openfront/engine-api/game/GameTypes";
+import { TeamCountConfig } from "@openfront/engine-api/Schemas";
 import {
   HOSTED_LOBBY_AUTO_START_MS,
   MAX_HOSTED_LOBBY_PLAYERS,
@@ -30,6 +32,10 @@ export class ListLobbyDialog extends LitElement {
   // The player limit the host already set, if any: the cap starts there
   // instead of at the maximum, so listing doesn't quietly raise it.
   @property({ attribute: false }) suggestedMaxPlayers: number | undefined;
+  // In team modes with preset sizes (Duos/Trios/Quads), the cap must round up
+  // to a full team multiple so the server's team alignment won't drop it back
+  // down to or below currentPlayers.
+  @property({ attribute: false }) playerTeams: TeamCountConfig | undefined;
 
   @state() private startMinutes = MAX_START_MINUTES;
   @state() private maxPlayers = MAX_HOSTED_LOBBY_PLAYERS;
@@ -75,10 +81,17 @@ export class ListLobbyDialog extends LitElement {
   }
 
   private minPlayers(): number {
-    return Math.min(
-      MAX_HOSTED_LOBBY_PLAYERS,
-      Math.max(MIN_HOSTED_LOBBY_PLAYERS, this.currentPlayers + 1),
-    );
+    const size =
+      this.playerTeams === Duos
+        ? 2
+        : this.playerTeams === Trios
+          ? 3
+          : this.playerTeams === Quads
+            ? 4
+            : 1;
+    const baseMin = Math.max(MIN_HOSTED_LOBBY_PLAYERS, this.currentPlayers + 1);
+    const min = size > 1 ? Math.ceil(baseMin / size) * size : baseMin;
+    return Math.min(MAX_HOSTED_LOBBY_PLAYERS, min);
   }
 
   private renderOverlay() {

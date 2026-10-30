@@ -95,6 +95,7 @@ function comparable(fd: FrameData) {
   return {
     tick: fd.tick,
     inSpawnPhase: fd.inSpawnPhase,
+    namesSnap: fd.namesSnap,
     // Live keeps a unit that died this tick (inactive) until the next one;
     // the renderer skips inactive units.
     units: [...fd.units].filter(([, u]) => u.isActive),

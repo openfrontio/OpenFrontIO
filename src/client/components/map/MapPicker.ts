@@ -3,6 +3,7 @@ import {
   GameMapType,
   MapCategory,
   mapCategoryOrder,
+  listedMaps,
   MapInfo,
   maps,
 } from "@openfront/engine-api/game/GameTypes";
@@ -18,7 +19,7 @@ const randomMap = assetUrl("images/RandomMap.webp");
 type MapTab = "featured" | "all" | "favorites";
 
 // Featured grid order: ranked maps first (1 = first), unranked alphabetical.
-const featuredMaps: MapInfo[] = maps
+const featuredMaps: MapInfo[] = listedMaps
   .filter((m) => m.categories.includes("featured"))
   .sort(
     (a, b) =>
@@ -27,7 +28,7 @@ const featuredMaps: MapInfo[] = maps
   );
 
 function mapsInCategory(category: MapCategory): MapInfo[] {
-  return maps.filter((m) => m.categories.includes(category));
+  return listedMaps.filter((m) => m.categories.includes(category));
 }
 
 @customElement("map-picker")
@@ -89,7 +90,7 @@ export class MapPicker extends LitElement {
   private get filteredMaps(): MapInfo[] {
     if (!this.searchQuery.trim()) return [];
     const query = this.searchQuery.trim().toLowerCase();
-    return maps.filter((m) => {
+    return listedMaps.filter((m) => {
       const name = translateText(m.translationKey).toLowerCase();
       const id = m.id.toLowerCase();
       return name.includes(query) || id.includes(query);

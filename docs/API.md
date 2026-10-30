@@ -4,12 +4,13 @@
 
 ### List Game Metadata
 
-Get game IDs and basic metadata for games that started within a specified time range. Results are sorted by start time and paginated.
+Get game IDs and basic metadata for games that started within a specified time range. Results are sorted by start time (then game ID) and paginated.
 
 **Constraints:**
 
 - Maximum time range: 2 days
 - Maximum limit per request: 1000 games
+- `offset + limit` cannot exceed 10000. Page further with `after`, or narrow the time range.
 
 **Endpoint:**
 
@@ -27,6 +28,7 @@ GET https://api.openfront.io/public/games
 - `playerTeams` (optional): Player team configuration (e.g. `Duos`)
 - `limit` (optional): Number of results (max 1000, default 50)
 - `offset` (optional): Pagination offset
+- `after` (optional): `<start>,<game>` of the last row of the previous page (e.g. `2025-10-25T00:00:10.526Z,ABSgwin6`). Returns the rows that follow it. Cannot be combined with `offset`.
 
 **Example Request:**
 
@@ -39,6 +41,7 @@ curl "https://api.openfront.io/public/games?start=2025-10-25T00:00:00Z&end=2025-
 ```json
 [
   {
+    "id": "48211093",
     "game": "ABSgwin6",
     "start": "2025-10-25T00:00:10.526Z",
     "end": "2025-10-25T00:19:45.187Z",
@@ -54,7 +57,13 @@ curl "https://api.openfront.io/public/games?start=2025-10-25T00:00:00Z&end=2025-
 ]
 ```
 
-The response includes a `Content-Range` header indicating pagination (e.g., `games 5-15/399`).
+The response includes a `Content-Range` header indicating pagination (e.g., `games 5-15/399`). The total is only counted on the first page and the last; other pages report it as `*` (e.g., `games 50-100/*`). Pages fetched with `after` have no `Content-Range` header.
+
+**Archive order:** to process every game exactly once as it is stored, page with `afterId` instead of a time range. Pass `afterId=0` to start from the oldest game, then the `id` of the last row you received. Results are sorted by `id`, and `type`, `mode`, `rankedType`, `playerTeams` and `limit` still apply. `afterId` cannot be combined with `start`, `end`, `offset` or `after`, and the response has no `Content-Range` header. A game that finishes archiving late can get an `id` below one you have already passed, so re-read a small margin below your cursor and skip games you have already seen.
+
+```bash
+curl "https://api.openfront.io/public/games?afterId=48211093&limit=1000"
+```
 
 ---
 
@@ -82,7 +91,7 @@ curl "https://api.openfront.io/public/game/ABSgwin6"
 curl "https://api.openfront.io/public/game/ABSgwin6?turns=false"
 ```
 
-**Note:** Public player IDs are stripped from game records for privacy.
+**Note:** Each player in `info.players` carries their `publicID`, which works with the player endpoints below. It is `null` for some older games. A player who has since deleted their account has `publicID` and `username` set to `"REDACTED"`.
 
 ## Players
 
@@ -96,10 +105,18 @@ Retrieve information and stats for a specific player.
 GET https://api.openfront.io/public/player/:playerId
 ```
 
+`:playerId` can be the player's public ID or their account username:
+
+- `name.1234` or `name#1234` (URL-encode the `#` as `%23`): the username with its four-digit suffix, as shown in the game.
+- `name`: a bare username without a suffix. This only matches players who hold that name exclusively (premium usernames).
+
+Usernames match case-insensitively. The response's `publicId` is always the player's public ID, so look a player up by name once and use that ID with the other player endpoints, which only accept public IDs. Usernames are optional and can change (once every 30 days), so store the public ID, not the name. 404 means no player matches.
+
 **Example:**
 
 ```bash
 curl "https://api.openfront.io/public/player/HabCsQYR"
+curl "https://api.openfront.io/public/player/alice.1234"
 ```
 
 ### Get Player Sessions
@@ -315,6 +332,56 @@ The player's public ID is the `sub` claim.
 }
 ```
 
+## Leaderboards
+
+### Ranked Leaderboard
+
+The top players on each ranked ladder (`1v1`, `2v2` and `ffa`), 50 per page. Each ladder is ranked on its own. Refreshed about every 15 minutes.
+
+**Endpoint:**
+
+```
+GET https://api.openfront.io/public/leaderboard/ranked
+```
+
+**Query Parameters:**
+
+- `page` (optional): `1` or `2` (default: 1)
+
+**Response:**
+
+```json
+{
+  "1v1": [
+    {
+      "rank": 1,
+      "elo": 1834,
+      "peakElo": 1902,
+      "wins": 120,
+      "losses": 41,
+      "total": 161,
+      "public_id": "HabCsQYR",
+      "accountUsername": "alice.1234",
+      "username": "alice.1234",
+      "level": 42,
+      "prestige": 0,
+      "legend": false
+    }
+  ],
+  "2v2": [],
+  "ffa": []
+}
+```
+
+- `accountUsername` is `null` when the player has not set a username; `username` falls back to the public ID.
+- `level`, `prestige` and `legend` are missing for players who hid their level or have no progress yet.
+
+**Example:**
+
+```bash
+curl "https://api.openfront.io/public/leaderboard/ranked?page=2"
+```
+
 ## Clans
 
 ### Clan Leaderboard
@@ -361,7 +428,7 @@ END FUNCTION
 
 ### Clan stats
 
-Displays comprehensive clan performance statistics for a specified clan over a chosen time range. If no time range is provided, it shows lifetime stats (starting from early November 2025).
+Displays comprehensive clan performance statistics for a specified clan over a chosen time range of at most 1 day. Ranked and Humans vs Nations games are not counted.
 
 Key metrics include:
 
@@ -375,24 +442,23 @@ Key metrics include:
 **Endpoint**
 
 ```
-GET https://openfront.io/public/clan/:clanTag
+GET https://api.openfront.io/public/clan/:clanTag
 ```
 
 **Query Parameters:**
 
-- `start` (optional): ISO 8601 timestamp
-- `end` (optional): ISO 8601 timestamp
+- `start` (required): ISO 8601 timestamp
+- `end` (required): ISO 8601 timestamp, at most 1 day after `start`
 
 **Example**
 
 ```bash
-curl https://api.openfront.io/public/clan/UN?start=2025-11-15T00:00:00Z &
-end=2025-11-18T23:59:59Z
+curl "https://api.openfront.io/public/clan/UN?start=2025-11-15T00:00:00Z&end=2025-11-15T23:59:59Z"
 ```
 
 ### Clan Sessions
 
-A clan session is created any time a player with that clan tag is in a public team game. If no start or end query parameter is provided, lifetime sessions (starting early November 2025) are shown.
+A clan session is created any time a player with that clan tag is in a public team game. Ranked and Humans vs Nations games are not listed.
 
 **Endpoint**
 
@@ -402,10 +468,10 @@ GET https://api.openfront.io/public/clan/:clanTag/sessions
 
 **Query Parameters:**
 
-- `start` (optional): ISO 8601 timestamp
-- `end` (optional): ISO 8601 timestamp
-- `page` (optional): Page number, 1-200 (default: 1)
-- `limit` (optional): Results per page, 1-50 (default: 20)
+- `start` (required): ISO 8601 timestamp
+- `end` (required): ISO 8601 timestamp, at most 1 day after `start`
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Results per page, 1-50 (default: 10)
 
 **Response:**
 
@@ -414,7 +480,7 @@ GET https://api.openfront.io/public/clan/:clanTag/sessions
   "results": [ ... ],
   "total": 150,
   "page": 1,
-  "limit": 20
+  "limit": 10
 }
 ```
 
@@ -423,5 +489,5 @@ Results are ordered by game start time, newest first.
 **Example**
 
 ```bash
-curl "https://api.openfront.io/public/clan/UN/sessions?start=2025-11-15T00:00:00Z&end=2025-11-18T23:59:59Z&limit=10&page=1"
+curl "https://api.openfront.io/public/clan/UN/sessions?start=2025-11-15T00:00:00Z&end=2025-11-15T23:59:59Z&limit=10&page=1"
 ```

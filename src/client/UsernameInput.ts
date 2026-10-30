@@ -127,7 +127,7 @@ const NAME_BOX =
 // box; the span only lands on the same pixel when it sizes from font metrics
 // too. Any fixed leading drifts a pixel under some fonts.
 const NAME_TEXT =
-  "text-xl/[normal] sm:text-2xl/[normal] font-medium tracking-wider " +
+  "text-xl/[normal] sm:text-2xl/[normal] sm:compact:text-xl/[normal] font-medium tracking-wider " +
   "[text-shadow:0_1px_2px_rgba(0,0,0,0.9)]";
 
 @customElement("username-input")
@@ -665,7 +665,7 @@ export class UsernameInput extends LitElement {
     // keeping the account name. addAuthListener only fires on login; portals
     // refresh the page on logout, so there is no logout event to handle.
     const nameBeforePortalRequest = this.baseUsername;
-    gamePortal.getUsername().then((username) => {
+    void gamePortal.getUsername().then((username) => {
       // A delayed initial response must not overwrite a name the player chose.
       if (username && this.baseUsername === nameBeforePortalRequest) {
         this.baseUsername = clampUsername(username);
@@ -673,7 +673,7 @@ export class UsernameInput extends LitElement {
         this.validateAndStore();
       }
     });
-    gamePortal.addAuthListener((user) => {
+    void gamePortal.addAuthListener((user) => {
       if (user) {
         this.baseUsername = clampUsername(user.username);
         this.usernameIsGenerated = false;

@@ -16,7 +16,7 @@ export const SINGLEPLAYER_PRESENCE_TTL_MS =
 // The route is unauthenticated and any well-formed id is accepted, so cap
 // how many distinct games a worker will track: well above what one worker
 // legitimately sees, small enough that a flood cannot grow the map.
-export const SINGLEPLAYER_PRESENCE_MAX_GAMES = 50_000;
+const SINGLEPLAYER_PRESENCE_MAX_GAMES = 50_000;
 
 type Platform = ClientPlatform | "unknown";
 
