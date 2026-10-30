@@ -461,7 +461,6 @@
     "leave_clan": "Părăsește Clanul",
     "left_clan": "Ai părăsit clanul.",
     "manage_clan": "Administrați",
-    "map_coming_soon": "În curând",
     "map_frame_title": "Harta teritoriului clanului",
     "member_banned": "Jucător banat.",
     "member_count": "{count, plural, one {# membru} other {# membri}}",
@@ -535,12 +534,13 @@
     "status": "Statut",
     "tab_donations": "Donațiile",
     "tab_game_history": "Istoricul partidelor",
-    "tab_map": "Harta",
     "tab_overview": "Rezumat",
     "title": "Clanuri",
     "transfer_leadership": "Transferă funcția de lider",
     "transfer_warning": "Acest lucru va face membrul selectat noul lider. Veți deveni un membru obișnuit. Această acțiune nu poate fi anulată.",
-    "unban": "Deblochează"
+    "unban": "Deblochează",
+    "map_coming_soon": "În curând",
+    "tab_map": "Harta"
   },
   "close_reason": {
     "account_lookup_failed": "Contul vostru nu a putut fi căutat. Vă rugăm să încercați din nou.",
@@ -2375,9 +2375,9 @@
     "humans": "Oameni",
     "nations": "Națiuni",
     "orange": "Portocaliu",
-    "purple": "Purpuriu",
+    "purple": "Violet",
     "red": "Roșu",
-    "teal": "Albastru verziu",
+    "teal": "Turcoaz",
     "yellow": "Galben"
   },
   "territory_patterns": {
