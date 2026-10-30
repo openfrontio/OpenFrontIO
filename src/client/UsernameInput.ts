@@ -666,8 +666,12 @@ export class UsernameInput extends LitElement {
     // refresh the page on logout, so there is no logout event to handle.
     const nameBeforePortalRequest = this.baseUsername;
     void gamePortal.getUsername().then((username) => {
-      // A delayed initial response must not overwrite a name the player chose.
-      if (username && this.baseUsername === nameBeforePortalRequest) {
+      // Even restoring the original text is a player choice, not a fresh seed.
+      if (
+        username &&
+        this.baseUsername === nameBeforePortalRequest &&
+        this.usernameIsGenerated
+      ) {
         this.baseUsername = clampUsername(username);
         this.usernameIsGenerated = false;
         this.validateAndStore();

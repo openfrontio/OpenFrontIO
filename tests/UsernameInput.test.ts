@@ -198,7 +198,7 @@ describe("UsernameInput random name button", () => {
     },
   );
 
-  it.each(["dice", "typing", "unchanged"])(
+  it.each(["dice", "typing", "restored", "unchanged"])(
     "handles a delayed portal name after %s",
     async (action) => {
       vi.spyOn(gamePortal, "isOnGamePortal").mockReturnValue(true);
@@ -214,10 +214,15 @@ describe("UsernameInput random name button", () => {
           el,
           'button[aria-label="username.random_name"]',
         )!.click();
-      } else if (action === "typing") {
+      } else if (action === "typing" || action === "restored") {
         const input = q<HTMLInputElement>(el, 'input[type="text"]')!;
+        const originalName = input.value;
         input.value = "MyChosenName";
         input.dispatchEvent(new Event("input", { bubbles: true }));
+        if (action === "restored") {
+          input.value = originalName;
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        }
       }
       const chosenName = el.getUsername();
       resolvePortal("PortalPlayer");
