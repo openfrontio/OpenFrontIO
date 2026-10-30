@@ -329,6 +329,7 @@ export function createRenderer(
   onboardingOverlay.game = game;
   onboardingOverlay.eventBus = eventBus;
   onboardingOverlay.transformHandler = transformHandler;
+  onboardingOverlay.uiState = uiState;
 
   const layers: Controller[] = [
     new WarshipSelectionController(game, eventBus, transformHandler, view),

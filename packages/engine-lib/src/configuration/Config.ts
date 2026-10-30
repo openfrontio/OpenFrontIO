@@ -412,6 +412,9 @@ export class Config {
       case UnitType.MIRVWarhead:
         return { inner: 12, outer: 18 };
       case UnitType.AtomBomb:
+        // The onboarding tutorial's nukes hurt without wiping out a new
+        // player's small territory.
+        if (this._gameConfig.tutorial) return { inner: 8, outer: 16 };
         return { inner: 12, outer: 30 };
       case UnitType.HydrogenBomb:
         return { inner: 80, outer: 100 };

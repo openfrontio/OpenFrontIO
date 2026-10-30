@@ -59,6 +59,9 @@ export class UnitDisplay extends LitElement implements Controller {
     this.keybinds = userSettings.parsedUserKeybinds();
 
     this.allDisabled = BuildMenus.types.every((u) => config.isUnitDisabled(u));
+    // The bar is hidden on small screens, where the radial menu builds, but
+    // the onboarding tutorial fires its atom bomb from here on every screen.
+    if (config.gameConfig().tutorial) this.classList.remove("hidden");
 
     const highlightUnits: Partial<
       Record<TutorialHighlight, PlayerBuildableUnitType>
@@ -138,6 +141,14 @@ export class UnitDisplay extends LitElement implements Controller {
       return null;
     }
     if (this.allDisabled) {
+      return null;
+    }
+    // The onboarding tutorial's one build is the atom bomb, fired from the
+    // nation's silo once captured.
+    if (
+      this.game.config().gameConfig().tutorial &&
+      myPlayer.units(UnitType.MissileSilo).length === 0
+    ) {
       return null;
     }
 
@@ -226,7 +237,11 @@ export class UnitDisplay extends LitElement implements Controller {
     structureKey: string,
     hotkey: string,
   ) {
-    if (this.game.config().isUnitDisabled(unitType)) {
+    if (
+      this.game.config().isUnitDisabled(unitType) ||
+      (this.game.config().gameConfig().tutorial &&
+        unitType !== UnitType.AtomBomb)
+    ) {
       return html``;
     }
     const selected = this.uiState.ghostStructure === unitType;
