@@ -261,13 +261,14 @@ export class StoreModal extends BaseModal {
   private saleRetryTimer: ReturnType<typeof setTimeout> | null = null;
   /** Bumped on close, so a sale-end refetch still in flight then is dropped. */
   private saleRefetchGeneration = 0;
+  /** Bumped by every catalog fetch, so only the newest one's answer is kept. */
+  private catalogRequest = 0;
   private alignFrame: number | null = null;
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
     this.userMeResponse = userMeResponse;
     this.authSettled = true;
-    // A failed fetch keeps the catalog already shown (see onOpen).
-    this.cosmetics = (await fetchCosmetics()) ?? this.cosmetics;
+    await this.loadCatalog();
     this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();
   }
@@ -1038,6 +1039,21 @@ export class StoreModal extends BaseModal {
   }
 
   /**
+   * Fetches the catalog and shows it, unless a newer fetch started meanwhile
+   * (sign-in, reopening, a sale ending): an older answer landing last would
+   * otherwise replace a newer catalog. A failed fetch keeps the catalog
+   * already shown rather than emptying the store; the purchase endpoint
+   * charges the live price either way. Returns what this fetch got.
+   */
+  private async loadCatalog(): Promise<Cosmetics | null> {
+    const request = ++this.catalogRequest;
+    const fresh = await fetchCosmetics();
+    if (request === this.catalogRequest)
+      this.cosmetics = fresh ?? this.cosmetics;
+    return fresh;
+  }
+
+  /**
    * Refetches the catalog after a sale ends. The API serves cosmetics.json
    * from a one-minute cache, so the first answer may still carry the ended
    * sale's prices; while it does, try again, for up to two minutes.
@@ -1045,13 +1061,15 @@ export class StoreModal extends BaseModal {
   private async refetchAfterSaleEnd(attempt: number): Promise<void> {
     const generation = this.saleRefetchGeneration;
     invalidateCosmetics();
-    const fresh = await fetchCosmetics();
+    const fresh = await this.loadCatalog();
     // Closed (and maybe reopened) since: that open's own fetch wins.
     if (!this.isModalOpen || generation !== this.saleRefetchGeneration) return;
-    this.cosmetics = fresh ?? this.cosmetics;
     this.selectVisible(this.groupsForTab(this.activeTab));
     this.requestUpdate();
-    if ((fresh === null || hasEndedSale(fresh)) && attempt < SALE_END_RETRIES) {
+    if (
+      (fresh === null || hasEndedSale(this.cosmetics)) &&
+      attempt < SALE_END_RETRIES
+    ) {
       if (this.saleRetryTimer !== null) clearTimeout(this.saleRetryTimer);
       this.saleRetryTimer = setTimeout(() => {
         this.saleRetryTimer = null;
@@ -1127,12 +1145,9 @@ export class StoreModal extends BaseModal {
     }
     // Prices change when a sale starts or ends, so a catalog fetched more than
     // a minute ago is refetched rather than shown with stale prices.
-    // A failed refetch keeps the catalog already shown rather than emptying
-    // the store; the purchase endpoint charges the live price either way.
-    if (refreshStaleCosmetics()) {
-      this.cosmetics = (await fetchCosmetics()) ?? this.cosmetics;
+    if (refreshStaleCosmetics() || this.cosmetics === null) {
+      await this.loadCatalog();
     }
-    this.cosmetics ??= await fetchCosmetics();
     this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();
     // A catalog still carrying a sale that has ended (the store was closed

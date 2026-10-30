@@ -443,6 +443,44 @@ describe("StoreModal cosmetic browser", () => {
     expect(modal.querySelector("cosmetic-card")).toBeTruthy();
   });
 
+  it("keeps the newer catalog when an older fetch lands last", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const endsAt = new Date(Date.now() + 60_000).toISOString();
+      vi.mocked(fetchCosmetics).mockResolvedValue({
+        patterns: {},
+        flags: {},
+        promotions: [{ id: "1", name: "Sale", percentOff: 10, endsAt }],
+      } as unknown as Cosmetics);
+      const modal = await openStoreOnCosmetic("patterns");
+
+      // A sign-in refetch starts, then the sale ends and a newer one starts.
+      let resolveOlder: (c: Cosmetics) => void = () => {};
+      vi.mocked(fetchCosmetics).mockReturnValueOnce(
+        new Promise<Cosmetics>((resolve) => {
+          resolveOlder = resolve;
+        }) as never,
+      );
+      const signIn = modal.onUserMe(false);
+      const newer = { promotions: [] } as unknown as Cosmetics;
+      vi.mocked(fetchCosmetics).mockResolvedValue(newer);
+      await vi.advanceTimersByTimeAsync(61_000);
+      await vi.waitFor(() =>
+        expect((modal as unknown as { cosmetics: unknown }).cosmetics).toBe(
+          newer,
+        ),
+      );
+
+      resolveOlder({ promotions: [] } as unknown as Cosmetics);
+      await signIn;
+      expect((modal as unknown as { cosmetics: unknown }).cosmetics).toBe(
+        newer,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("refetches prices when a sale ends while the store is open", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
@@ -492,6 +530,8 @@ describe("StoreModal cosmetic browser", () => {
     try {
       const endsAt = new Date(Date.now() + 60_000).toISOString();
       const during = {
+        patterns: {},
+        flags: {},
         promotions: [{ id: "1", name: "Flash", percentOff: 10, endsAt }],
       } as unknown as Cosmetics;
       vi.mocked(fetchCosmetics).mockResolvedValue(during);
@@ -573,6 +613,8 @@ describe("StoreModal cosmetic browser", () => {
 
   it("refetches on reopen when the kept catalog still has an ended sale", async () => {
     const ended = {
+      patterns: {},
+      flags: {},
       promotions: [
         {
           id: "1",
