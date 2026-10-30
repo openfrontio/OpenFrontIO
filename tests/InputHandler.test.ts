@@ -18,12 +18,18 @@ import {
   EmojiTableVisibleEvent,
   InputHandler,
   MouseDownEvent,
+  MouseMoveEvent,
   MouseOverEvent,
   MouseUpEvent,
   RefreshGraphicsEvent,
   ShowChatMenuEvent,
   ShowEmojiMenuEvent,
+  TouchGhostPlacementDragStartEvent,
+  TouchGhostPlacementEvent,
+  TouchGhostPlacementMoveEvent,
   TouchLongPressStartEvent,
+  TouchEvent,
+  ToggleStructureEvent,
   UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
   WarshipSelectionBoxCompleteEvent,
@@ -1828,6 +1834,538 @@ describe("Warship box selection (Shift+drag)", () => {
     expect(mockCanvas.style.cursor).toBe("crosshair");
     window.dispatchEvent(new Event("blur"));
     expect(mockCanvas.style.cursor).toBe("");
+  });
+});
+
+describe("mobile tap-preview placement", () => {
+  let inputHandler: InputHandler;
+  let eventBus: EventBus;
+  let uiState: UIState;
+
+  beforeEach(() => {
+    eventBus = new EventBus();
+    uiState = {
+      attackRatio: 20,
+      ghostStructure: UnitType.City,
+      rocketDirectionUp: true,
+    } as UIState;
+    inputHandler = new InputHandler(
+      { inSpawnPhase: () => false } as GameView,
+      uiState,
+      document.createElement("canvas"),
+      eventBus,
+    );
+  });
+
+  afterEach(() => {
+    inputHandler.destroy();
+  });
+
+  test("touch taps are delegated to the preview controller", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    eventBus.on(TouchGhostPlacementEvent, (event) => placements.push(event));
+
+    const tap = (x: number, y: number, pointerId: number) => {
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    };
+
+    tap(100, 110, 1);
+    tap(140, 150, 2);
+
+    expect(placements).toEqual([
+      expect.objectContaining({ x: 100, y: 110 }),
+      expect.objectContaining({ x: 140, y: 150 }),
+    ]);
+  });
+
+  test("GUI build selection closes overlays and deselection clears structure highlights", () => {
+    const closeViews: CloseViewEvent[] = [];
+    const highlights: ToggleStructureEvent[] = [];
+    eventBus.on(CloseViewEvent, (event) => closeViews.push(event));
+    eventBus.on(ToggleStructureEvent, (event) => highlights.push(event));
+    uiState.ghostStructure = null;
+
+    inputHandler.setGhostStructure(UnitType.City, "GUIclick");
+    expect(closeViews).toHaveLength(1);
+    expect(highlights).toEqual([]);
+
+    inputHandler.setGhostStructure(null, "GUIclick");
+    expect(closeViews).toHaveLength(2);
+    expect(highlights).toHaveLength(1);
+    expect(highlights[0].structureTypes).toBeNull();
+  });
+
+  test("touches return to the normal map action after the ghost is canceled", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    const touches: TouchEvent[] = [];
+    eventBus.on(TouchGhostPlacementEvent, (event) => {
+      placements.push(event);
+      uiState.ghostStructure = null;
+    });
+    eventBus.on(TouchEvent, (event) => touches.push(event));
+
+    const tap = (x: number, y: number, pointerId: number) => {
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    };
+
+    tap(100, 100, 1);
+    expect(placements).toHaveLength(1);
+    expect(touches).toHaveLength(0);
+
+    tap(100, 100, 2);
+    expect(touches).toHaveLength(1);
+  });
+
+  test("quick-build selection closes the radial before the next map tap", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    const touches: TouchEvent[] = [];
+    const contextMenus: ContextMenuEvent[] = [];
+    const closeViews: CloseViewEvent[] = [];
+    eventBus.on(TouchGhostPlacementEvent, (event) => placements.push(event));
+    eventBus.on(TouchEvent, (event) => touches.push(event));
+    eventBus.on(ContextMenuEvent, (event) => contextMenus.push(event));
+    eventBus.on(CloseViewEvent, (event) => closeViews.push(event));
+
+    uiState.ghostStructure = null;
+    eventBus.emit(new ContextMenuEvent(100, 100));
+    inputHandler.setGhostStructure(UnitType.City, "GUIclick");
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 200,
+        clientY: 200,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    inputHandler["onPointerUp"](
+      new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 200,
+        clientY: 200,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+    expect(closeViews).toHaveLength(1);
+    expect(contextMenus).toHaveLength(1);
+    expect(placements).toEqual([expect.objectContaining({ x: 200, y: 200 })]);
+    expect(touches).toEqual([]);
+  });
+
+  test("a pinch does not confirm the build preview", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    eventBus.on(TouchGhostPlacementEvent, (event) => placements.push(event));
+
+    const down = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    const up = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+
+    // The second finger ends the placement drag; releasing the first one
+    // must not read as a tap that confirms the preview.
+    down(100, 100, 1);
+    down(140, 140, 2);
+    up(100, 100, 1);
+    expect(placements).toEqual([]);
+
+    // The next independent tap still places.
+    down(200, 200, 3);
+    up(200, 200, 3);
+    expect(placements).toEqual([expect.objectContaining({ x: 200, y: 200 })]);
+  });
+
+  test("a pinch does not turn into a map tap", () => {
+    const touches: TouchEvent[] = [];
+    eventBus.on(TouchEvent, (event) => touches.push(event));
+    uiState.ghostStructure = null;
+
+    const down = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    const up = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+
+    down(100, 100, 1);
+    down(140, 140, 2);
+    up(100, 100, 1);
+    expect(touches).toEqual([]);
+
+    down(200, 200, 3);
+    up(200, 200, 3);
+    expect(touches).toHaveLength(1);
+  });
+
+  test("a pinch that moves does not swallow the next tap", () => {
+    const touches: TouchEvent[] = [];
+    eventBus.on(TouchEvent, (event) => touches.push(event));
+    uiState.ghostStructure = null;
+
+    const down = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    const up = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+
+    // The fingers move, so the release is a drag and never reads as a tap.
+    down(100, 100, 1);
+    down(140, 140, 2);
+    up(200, 200, 1);
+    expect(touches).toEqual([]);
+
+    // The next separate tap still acts on the map.
+    down(300, 300, 3);
+    up(300, 300, 3);
+    expect(touches).toHaveLength(1);
+  });
+
+  test("a pinch that ends with the second finger does not swallow the next placement", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    eventBus.on(TouchGhostPlacementEvent, (event) => placements.push(event));
+
+    const down = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    const up = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+
+    down(100, 100, 1);
+    down(140, 140, 2);
+    up(140, 140, 2);
+    expect(placements).toEqual([]);
+
+    // The next separate tap still places the preview.
+    down(300, 300, 3);
+    up(300, 300, 3);
+    expect(placements).toEqual([expect.objectContaining({ x: 300, y: 300 })]);
+  });
+
+  test("movement starting on the preview drags it without a hold delay or map pan", () => {
+    const moves: TouchGhostPlacementMoveEvent[] = [];
+    const drags: DragEvent[] = [];
+    eventBus.on(TouchGhostPlacementDragStartEvent, (event) => {
+      event.handled = true;
+    });
+    eventBus.on(TouchGhostPlacementMoveEvent, (event) => moves.push(event));
+    eventBus.on(DragEvent, (event) => drags.push(event));
+
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    inputHandler["onPointerMove"](
+      new PointerEvent("pointermove", {
+        button: 0,
+        clientX: 104,
+        clientY: 104,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    expect(moves).toHaveLength(0);
+
+    inputHandler["onPointerMove"](
+      new PointerEvent("pointermove", {
+        button: 0,
+        clientX: 125,
+        clientY: 130,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+    expect(moves).toEqual([expect.objectContaining({ x: 125, y: 130 })]);
+
+    inputHandler["onPointerUp"](
+      new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 135,
+        clientY: 142,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+    expect(moves).toEqual([
+      expect.objectContaining({ x: 125, y: 130 }),
+      expect.objectContaining({ x: 135, y: 142 }),
+    ]);
+    expect(drags).toEqual([]);
+  });
+
+  test("pointercancel does not become a placement tap or a final preview move", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    const moves: TouchGhostPlacementMoveEvent[] = [];
+    eventBus.on(TouchGhostPlacementDragStartEvent, (event) => {
+      event.handled = true;
+    });
+    eventBus.on(TouchGhostPlacementEvent, (event) => placements.push(event));
+    eventBus.on(TouchGhostPlacementMoveEvent, (event) => moves.push(event));
+
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    inputHandler["onPointerCancel"](
+      new PointerEvent("pointercancel", {
+        button: 0,
+        clientX: 101,
+        clientY: 101,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    expect(placements).toEqual([]);
+    expect(moves).toEqual([]);
+
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    inputHandler["onPointerMove"](
+      new PointerEvent("pointermove", {
+        button: 0,
+        clientX: 125,
+        clientY: 130,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    expect(moves).toHaveLength(1);
+    inputHandler["onPointerCancel"](
+      new PointerEvent("pointercancel", {
+        button: 0,
+        clientX: 140,
+        clientY: 145,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+
+    expect(placements).toEqual([]);
+    expect(moves).toHaveLength(1);
+  });
+
+  test("non-touch pointer movement emits MouseMoveEvent", () => {
+    const moves: MouseMoveEvent[] = [];
+    eventBus.on(MouseMoveEvent, (event) => moves.push(event));
+    inputHandler.initialize();
+
+    const compatibilityMove = new MouseEvent("mousemove", {
+      clientX: 50,
+      clientY: 60,
+    });
+    Object.defineProperty(compatibilityMove, "movementX", { value: 5 });
+    window.dispatchEvent(compatibilityMove);
+    expect(moves).toEqual([]);
+
+    const touchPointerMove = new PointerEvent("pointermove", {
+      button: -1,
+      clientX: 60,
+      clientY: 70,
+      pointerId: 2,
+      pointerType: "touch",
+    });
+    Object.defineProperty(touchPointerMove, "movementX", { value: 5 });
+    inputHandler["onPointerMove"](touchPointerMove);
+    expect(moves).toEqual([]);
+
+    const mousePointerMove = new PointerEvent("pointermove", {
+      button: -1,
+      clientX: 70,
+      clientY: 80,
+      pointerId: 3,
+      pointerType: "mouse",
+    });
+    Object.defineProperty(mousePointerMove, "movementX", { value: 5 });
+    inputHandler["onPointerMove"](mousePointerMove);
+
+    expect(moves).toHaveLength(1);
+    expect(moves[0]).toEqual(expect.objectContaining({ x: 70, y: 80 }));
+
+    const penPointerMove = new PointerEvent("pointermove", {
+      button: -1,
+      clientX: 90,
+      clientY: 100,
+      pointerId: 4,
+      pointerType: "pen",
+    });
+    Object.defineProperty(penPointerMove, "movementX", { value: 5 });
+    inputHandler["onPointerMove"](penPointerMove);
+
+    expect(moves).toHaveLength(2);
+    expect(moves[1]).toEqual(expect.objectContaining({ x: 90, y: 100 }));
+  });
+
+  test("a touch-generated context menu does not cancel placement", () => {
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+    inputHandler["onContextMenu"](
+      new MouseEvent("contextmenu", { clientX: 100, clientY: 100 }),
+    );
+
+    expect(uiState.ghostStructure).toBe(UnitType.City);
+  });
+
+  test("a touch context menu remains available when no ghost is active", () => {
+    const contextMenus: ContextMenuEvent[] = [];
+    eventBus.on(ContextMenuEvent, (event) => contextMenus.push(event));
+    uiState.ghostStructure = null;
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+    inputHandler["onContextMenu"](
+      new MouseEvent("contextmenu", { clientX: 100, clientY: 100 }),
+    );
+
+    expect(contextMenus).toHaveLength(1);
+    expect(contextMenus[0]).toEqual(
+      expect.objectContaining({ x: 100, y: 100 }),
+    );
+  });
+
+  test("a mouse context menu still cancels placement", () => {
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 2,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+
+    inputHandler["onContextMenu"](
+      new MouseEvent("contextmenu", { clientX: 100, clientY: 100 }),
+    );
+
+    expect(uiState.ghostStructure).toBeNull();
   });
 });
 
