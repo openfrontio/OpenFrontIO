@@ -4,6 +4,7 @@
   "name": "Chopping Block",
   "translation_key": "map.choppingblock",
   "categories": ["arcade"],
+  "author": "Patrick Plays Badly",
   "special_team_count": 4,
   "forced_modifiers": ["isWaterNukes:50"],
   "nations": [

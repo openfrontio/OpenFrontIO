@@ -4,6 +4,7 @@
   "name": "Branching Paths",
   "translation_key": "map.branchingpaths",
   "categories": ["arcade"],
+  "author": "NotRocketfish",
   "special_team_count": 3,
   "nations": [
     {

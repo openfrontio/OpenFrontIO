@@ -275,6 +275,8 @@ export class LangSelector extends LitElement {
       "cosmetic-info",
       "cosmetic-preview",
       "difficulty-info",
+      "map-details",
+      "earth-map",
       "inventory-loadout-bar",
       "purchase-button",
       "custom-currency-card",

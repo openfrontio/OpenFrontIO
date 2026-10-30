@@ -4,6 +4,8 @@
   "name": "Yellow Sea",
   "translation_key": "map.yellowsea",
   "categories": ["asia"],
+  "location": { "lat": 37, "lon": 122.5 },
+  "author": "crunchybbb",
   "nations": [
     {
       "coordinates": [1350, 575],

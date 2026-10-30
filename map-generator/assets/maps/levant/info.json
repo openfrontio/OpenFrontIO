@@ -4,6 +4,8 @@
   "name": "Levant",
   "translation_key": "map.levant",
   "categories": ["asia"],
+  "location": { "lat": 34, "lon": 36.5 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [722, 1683],

@@ -4,6 +4,7 @@
   "name": "Dyslexdria",
   "translation_key": "map.dyslexdria",
   "categories": ["world", "fictional"],
+  "author": "Patrick Plays Badly",
   "nations": [
     {
       "name": "ZOMIBES",

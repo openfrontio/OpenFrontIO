@@ -1535,6 +1535,7 @@
     "didier": "Didier",
     "didierfrance": "Didier (France)",
     "dyslexdria": "Dyslexdria",
+    "earth": "Earth",
     "eastasia": "East Asia",
     "europe": "Europe",
     "europeclassic": "Europe (Classic)",
@@ -1652,13 +1653,31 @@
     "world": "World"
   },
   "map_component": {
+    "by_author": "Map maker: {author}",
+    "earth_continental": "Continental",
+    "earth_regional": "Regional",
+    "earth_reset": "Reset view",
     "error": "Error",
     "favorite": "Add to favourites",
     "favorites_empty": "Click the star on any map to favourite it",
+    "info": "Map info",
     "no_results": "No maps found",
     "search_maps": "Search maps...",
     "search_results": "Search Results",
-    "unfavorite": "Remove from favourites"
+    "stat_land": "{percent}% land",
+    "stat_nations": "{count, plural, one {# nation} other {# nations}}",
+    "stat_players": "~{count} players",
+    "unfavorite": "Remove from favourites",
+    "zoom_in": "Zoom in",
+    "zoom_out": "Zoom out"
+  },
+  "map_description": {
+    "amazonriver": "A stretch of the upper Amazon, from the Peru–Colombia border into Brazil, with nations at real riverside towns. The land is so narrow that the river is your main way out. The first OpenFront map with a very unusual size.",
+    "didier": "Didier, the mascot and companion of French YouTuber Fuze, as a fantasy island, made for his OpenFront videos.",
+    "didierfrance": "France reshaped into Didier, French YouTuber Fuze's mascot. Made for his OpenFront videos. Basically France, but with eyes, hands and feet.",
+    "fourislands": "Four islands, one in each corner, each holding exactly a quarter of the land. A classic nuke wars map. Probably the first completely fictional map in OpenFront.",
+    "surrounded": "A ring of islands around a central one, so every expansion needs a boat. One hydrogen bomb can wipe out a whole island. Can you win a public FFA after spawning in the middle?",
+    "tradersdream": "Big islands against small ones: two large islands hold about half the land, while a swarm of tiny islands is made for trade."
   },
   "map_layers": {
     "brland": "brland",

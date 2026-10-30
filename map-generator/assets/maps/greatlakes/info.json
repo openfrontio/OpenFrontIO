@@ -4,6 +4,8 @@
   "name": "Great Lakes",
   "translation_key": "map.greatlakes",
   "categories": ["north_america"],
+  "location": { "lat": 45, "lon": -84 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [38, 326],

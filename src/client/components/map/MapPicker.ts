@@ -12,11 +12,12 @@ import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { translateText } from "../../Utils";
+import "./EarthMap";
 import "./MapDisplay";
 import { getFavoriteMaps, starIcon, toggleFavoriteMap } from "./MapFavorites";
 const randomMap = assetUrl("images/RandomMap.webp");
 
-type MapTab = "featured" | "all" | "favorites";
+type MapTab = "featured" | "all" | "earth" | "favorites";
 
 // Featured grid order: ranked maps first (1 = first), unranked alphabetical.
 const featuredMaps: MapInfo[] = listedMaps
@@ -262,10 +263,21 @@ export class MapPicker extends LitElement {
     </div>`;
   }
 
+  private renderEarthTab() {
+    return html`<earth-map
+      class="block"
+      .selectedMap=${this.selectedMap}
+      .useRandomMap=${this.useRandomMap}
+      .onSelectMap=${(map: GameMapType) => this.handleMapSelection(map)}
+    ></earth-map>`;
+  }
+
   private renderActiveTab() {
     switch (this.activeTab) {
       case "all":
         return this.renderAllTab();
+      case "earth":
+        return this.renderEarthTab();
       case "favorites":
         return this.renderFavoritesTab();
       default:
@@ -309,7 +321,7 @@ export class MapPicker extends LitElement {
       type="button"
       role="tab"
       aria-selected=${isActive}
-      class="px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all active:scale-95 ${
+      class="min-w-0 truncate px-1 sm:px-3 py-2 rounded-lg text-xs font-bold uppercase sm:tracking-wider transition-all active:scale-95 ${
         isActive
           ? "bg-malibu-blue/20 text-white shadow-[var(--shadow-malibu-blue-soft)]"
           : "text-white/60 hover:text-white"
@@ -331,13 +343,14 @@ export class MapPicker extends LitElement {
               : html`<div
                     role="tablist"
                     aria-label="${translateText("map.map")}"
-                    class="flex-1 grid grid-cols-3 gap-2 rounded-xl border border-white/10 bg-black/20 p-1"
+                    class="flex-1 grid grid-cols-4 gap-1 sm:gap-2 rounded-xl border border-white/10 bg-black/20 p-1"
                   >
                     ${this.renderTabButton(
                       "featured",
                       translateText("map.featured"),
                     )}
                     ${this.renderTabButton("all", translateText("map.all"))}
+                    ${this.renderTabButton("earth", translateText("map.earth"))}
                     ${this.renderTabButton(
                       "favorites",
                       translateText("map.favorites"),

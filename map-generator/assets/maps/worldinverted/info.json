@@ -4,6 +4,7 @@
   "name": "World Inverted",
   "translation_key": "map.worldinverted",
   "categories": ["world", "fictional"],
+  "author": "Patrick Plays Badly",
   "nations": [
     {
       "name": "Titan Submersible",

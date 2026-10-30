@@ -38,12 +38,13 @@ const EN_JSON_META_KEYS = new Set([
   "all",
   "favorites",
   "random",
+  "earth",
 ]);
 
-/** Get the en.json "map" section. */
-function getEnJsonMapSection(): Record<string, string> {
+/** Get an en.json section. */
+function getEnJsonSection(section: string): Record<string, string> {
   const content = JSON.parse(fs.readFileSync(EN_JSON, "utf8"));
-  return content.map as Record<string, string>;
+  return content[section] as Record<string, string>;
 }
 
 const mapsById = new Map<GameMapName, MapInfo>(maps.map((m) => [m.id, m]));
@@ -206,6 +207,9 @@ describe("Map consistency", () => {
         continue; // Other tests catch missing files/entries.
       }
       const value = GameMapType[key];
+      const location = info.location as
+        | { lat: number; lon: number }
+        | undefined;
       if (info.id !== key) {
         errors.push(`${key}: info.json id is "${info.id}", expected "${key}"`);
       }
@@ -243,6 +247,21 @@ describe("Map consistency", () => {
           "defaultNationCount",
           Array.isArray(info.nations) ? info.nations.length : 0,
           map.defaultNationCount,
+        ],
+        ["author", info.author, map.author],
+        [
+          "description",
+          info.description === undefined
+            ? undefined
+            : `map_description.${toFolderName(key)}`,
+          map.descriptionKey,
+        ],
+        [
+          "location",
+          location === undefined ? undefined : [location.lat, location.lon],
+          map.location === undefined
+            ? undefined
+            : [map.location.lat, map.location.lon],
         ],
       ];
       for (const [field, infoValue, mapValue] of fields) {
@@ -288,7 +307,7 @@ describe("Map consistency", () => {
   // The en.json "map" section is generated from the info.json files.
   // If this test fails, run `npm run gen-maps` to regenerate it.
   test("en.json map translations match info.json display names", () => {
-    const enMapSection = getEnJsonMapSection();
+    const enMapSection = getEnJsonSection("map");
     const errors: string[] = [];
     for (const key of allMapKeys) {
       const folder = toFolderName(key);
@@ -317,6 +336,17 @@ describe("Map consistency", () => {
           errors.join("\n"),
       );
     }
+  });
+
+  // The en.json "map_description" section is generated from the info.json files.
+  // If this test fails, run `npm run gen-maps` to regenerate it.
+  test("en.json map descriptions match info.json", () => {
+    const expected: Record<string, unknown> = {};
+    for (const key of allMapKeys) {
+      const description = readInfoJson(key)?.description;
+      if (description !== undefined) expected[toFolderName(key)] = description;
+    }
+    expect(getEnJsonSection("map_description")).toEqual(expected);
   });
 
   test("Every GameMapType has resources/maps/ with thumbnail.webp, bin files, and manifest.json", () => {

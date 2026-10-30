@@ -4,6 +4,8 @@
   "name": "Four Islands",
   "translation_key": "map.fourislands",
   "categories": ["fictional"],
+  "author": "FloPinguin",
+  "description": "Four islands, one in each corner, each holding exactly a quarter of the land. A classic nuke wars map. Probably the first completely fictional map in OpenFront.",
   "special_team_count": 4,
   "forced_modifiers": ["isWaterNukes:50"],
   "nations": [

@@ -4,6 +4,8 @@
   "name": "France",
   "translation_key": "map.france",
   "categories": ["europe", "countries"],
+  "location": { "lat": 46.6, "lon": 2.4 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [1140, 389],

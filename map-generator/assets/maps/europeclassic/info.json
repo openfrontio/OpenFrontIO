@@ -5,6 +5,8 @@
   "display_name": "Europe (Classic)",
   "translation_key": "map.europeclassic",
   "categories": ["europe", "continental"],
+  "location": { "lat": 48, "lon": 22 },
+  "author": "evanpelle",
   "nations": [
     {
       "coordinates": [171, 171],
