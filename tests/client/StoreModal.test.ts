@@ -2,9 +2,12 @@ import type { Cosmetics, Effect } from "@openfront/shared/CosmeticSchemas";
 import { nothing, type LitElement } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
-import "../../src/client/Store";
 import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
 import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
+import {
+  clockUntil,
+  saleEndsIn,
+} from "../../src/client/components/SaleCountdown";
 import {
   fetchCosmetics,
   purchaseCosmetic,
@@ -12,7 +15,7 @@ import {
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../src/client/Cosmetics";
-import type { StoreModal } from "../../src/client/Store";
+import { saleCoversEverything, type StoreModal } from "../../src/client/Store";
 import {
   EFFECTS_KEY,
   PATTERN_KEY,
@@ -359,6 +362,8 @@ describe("StoreModal cosmetic browser", () => {
   it("shows a running sale: banner, struck list price and discount", async () => {
     const endsAt = new Date(Date.now() + 3_600_000).toISOString();
     vi.mocked(fetchCosmetics).mockResolvedValue({
+      patterns: {},
+      flags: {},
       promotions: [
         { id: "1", name: "Weekend Sale", percentOff: 25, endsAt },
         // Already over: the banner drops it even before the catalog refetches.
@@ -370,10 +375,16 @@ describe("StoreModal cosmetic browser", () => {
         },
       ],
     } as unknown as Cosmetics);
+    const promotion = { id: "1", name: "Weekend Sale", percentOff: 25, endsAt };
     resolvedCatalog = [
       {
         ...red,
-        cosmetic: { ...pattern, priceHard: 90, listPriceHard: 120 } as never,
+        cosmetic: {
+          ...pattern,
+          priceHard: 90,
+          listPriceHard: 120,
+          promotion,
+        } as never,
       },
     ];
     const modal = await openStoreOnCosmetic("patterns");
@@ -383,24 +394,24 @@ describe("StoreModal cosmetic browser", () => {
 
     const banner = modal.querySelector("[data-store-sale-banner]")!;
     expect(banner.children).toHaveLength(1);
-    expect(banner.textContent).toContain("store.sale_banner");
-    expect(translateText).toHaveBeenCalledWith("store.sale_banner", {
-      name: "Weekend Sale",
+    expect(banner.textContent).toContain("Weekend Sale");
+    expect(banner.textContent).not.toContain("Old Sale");
+    expect(banner.textContent).toContain("store.sale_ends_in_hours");
+    expect(translateText).toHaveBeenCalledWith("store.sale_percent_off", {
       percent: 25,
-      ends: new Date(endsAt).toLocaleString(undefined, {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }),
     });
-    expect(translateText).not.toHaveBeenCalledWith(
-      "store.sale_banner",
-      expect.objectContaining({ name: "Old Sale" }),
-    );
+    const saleCard = card(modal, red.key)!;
+    await saleCard.updateComplete;
+    expect(saleCard.querySelector("[data-cosmetic-sale]")).toBeTruthy();
     const button = modal.querySelector<PurchaseButton>("purchase-button")!;
     expect(button.listPriceHard).toBe(120);
     await button.updateComplete;
-    const tag = button.querySelector("[data-sale-tag]")!;
-    expect(tag.querySelector("s")?.textContent?.trim()).toBe("120");
+    // The struck price, after its screen-reader "was" label.
+    const struck = button.querySelector("s[data-sale-tag]")!;
+    expect(struck.querySelector(".sr-only")?.textContent).toContain(
+      "store.sale_was",
+    );
+    expect(struck.lastChild?.textContent?.trim()).toBe("120");
   });
 
   it("keeps the shown catalog when a stale refetch fails", async () => {
@@ -437,6 +448,8 @@ describe("StoreModal cosmetic browser", () => {
     try {
       const endsAt = new Date(Date.now() + 60_000).toISOString();
       vi.mocked(fetchCosmetics).mockResolvedValue({
+        patterns: {},
+        flags: {},
         promotions: [{ id: "1", name: "Flash", percentOff: 10, endsAt }],
       } as unknown as Cosmetics);
       resolvedCatalog = [
@@ -523,7 +536,11 @@ describe("StoreModal cosmetic browser", () => {
         percentOff: 10,
         endsAt: new Date(Date.now() + 60_000).toISOString(),
       };
-      const during = { promotions: [sale] } as unknown as Cosmetics;
+      const during = {
+        patterns: {},
+        flags: {},
+        promotions: [sale],
+      } as unknown as Cosmetics;
       vi.mocked(fetchCosmetics).mockResolvedValue(during);
       const modal = await openStoreOnCosmetic("patterns");
       await vi.waitFor(() =>
@@ -615,6 +632,169 @@ describe("StoreModal cosmetic browser", () => {
     await button.updateComplete;
     expect(button.listPriceHard).toBeNull();
     expect(button.querySelector("[data-sale-tag]")).toBeNull();
+    expect(modal.querySelector("[data-cosmetic-sale]")).toBeNull();
+  });
+
+  it("lists discounted items first and under an On sale tab", async () => {
+    const promotion = {
+      id: "1",
+      name: "Weekend Sale",
+      percentOff: 25,
+      endsAt: new Date(Date.now() + 3_600_000).toISOString(),
+    };
+    const dots: ResolvedCosmetic = {
+      ...red,
+      cosmetic: {
+        ...pattern,
+        name: "dots",
+        priceHard: 90,
+        listPriceHard: 120,
+        promotion,
+      } as never,
+      key: "pattern:dots:red",
+    };
+    const saleFlag: ResolvedCosmetic = {
+      ...flag,
+      cosmetic: {
+        ...(flag.cosmetic as object),
+        priceSoft: 400,
+        listPriceSoft: 500,
+        promotion,
+      } as never,
+    };
+    resolvedCatalog = [red, blue, green, dots, saleFlag];
+    const modal = await openStoreOnCosmetic("patterns");
+
+    // On sale first, ahead of the catalog order.
+    const keys = () =>
+      [...modal.querySelectorAll<CosmeticCard>("cosmetic-card")].map(
+        (c) => c.resolved.key,
+      );
+    expect(keys()).toEqual([dots.key, red.key]);
+
+    const saleTab = modal.querySelector<HTMLButtonElement>(
+      '[data-store-subtab="sale"]',
+    )!;
+    expect(saleTab.textContent).toContain("store.on_sale");
+    saleTab.click();
+    await modal.updateComplete;
+    expect(keys()).toEqual([dots.key, saleFlag.key]);
+  });
+
+  it("leads On sale with the flash item, and its banner line opens it", async () => {
+    const endsAt = new Date(Date.now() + 3_600_000).toISOString();
+    const flashSale = {
+      id: "9",
+      name: "Flash",
+      percentOff: 50,
+      endsAt,
+      kind: "flash" as const,
+    };
+    vi.mocked(fetchCosmetics).mockResolvedValue({
+      patterns: {},
+      flags: {},
+      promotions: [flashSale],
+    } as unknown as Cosmetics);
+    const zap: ResolvedCosmetic = {
+      ...red,
+      cosmetic: {
+        ...pattern,
+        name: "zap",
+        priceHard: 60,
+        listPriceHard: 120,
+        promotion: flashSale,
+      } as never,
+      key: "pattern:zap:red",
+    };
+    resolvedCatalog = [red, blue, green, zap];
+    const modal = await openStoreOnCosmetic("patterns");
+    await vi.waitFor(() =>
+      expect(modal.querySelector("[data-store-flash-banner]")).toBeTruthy(),
+    );
+    // On the Skins tab the flash item sorts first, with a ribboned card.
+    expect(
+      modal.querySelector<CosmeticCard>("cosmetic-card")!.resolved.key,
+    ).toBe(zap.key);
+
+    // The flash item glows and counts down; regular sale items don't.
+    const flashCard = card(modal, zap.key)!;
+    await flashCard.updateComplete;
+    expect(
+      flashCard.querySelector("[data-cosmetic-shell][data-cosmetic-flash]"),
+    ).toBeTruthy();
+    expect(flashCard.querySelector("[data-cosmetic-flash-ring]")).toBeTruthy();
+    expect(
+      flashCard.querySelector("[data-cosmetic-flash-timer] sale-countdown"),
+    ).toBeTruthy();
+    const plain = card(modal, red.key)!;
+    expect(plain.querySelector("[data-cosmetic-flash]")).toBeNull();
+    expect(plain.querySelector("[data-cosmetic-flash-timer]")).toBeNull();
+
+    modal
+      .querySelector<HTMLButtonElement>("[data-store-flash-banner]")!
+      .click();
+    await modal.updateComplete;
+    const hero = modal.querySelector("[data-store-flash]")!;
+    expect(hero).toBeTruthy();
+    expect(
+      hero.querySelector<CosmeticCard>("cosmetic-card")!.resolved.key,
+    ).toBe(zap.key);
+    expect(hero.querySelector("sale-countdown")).toBeTruthy();
+    // The flash item leads in the hero, not again in the grid below it.
+    const gridKeys = [
+      ...modal.querySelectorAll<CosmeticCard>(
+        "[data-store-grid] cosmetic-card",
+      ),
+    ].map((c) => c.resolved.key);
+    expect(gridKeys).not.toContain(zap.key);
+  });
+
+  it("hides the On sale tab without a sale", async () => {
+    const modal = await openStoreOnCosmetic("patterns");
+    expect(modal.querySelector('[data-store-subtab="sale"]')).toBeNull();
+    expect(modal.querySelector('[data-store-subtab="patterns"]')).toBeTruthy();
+  });
+
+  it("tells a store-wide sale from one on selected items", () => {
+    const promotion = { id: "s", name: "Sale", percentOff: 20, endsAt: "" };
+    const catalog = (secondOnSale: boolean) =>
+      ({
+        patterns: {
+          a: { priceHard: 80, listPriceHard: 100, promotion },
+        },
+        flags: {
+          b: secondOnSale
+            ? { priceSoft: 400, listPriceSoft: 500, promotion }
+            : { priceSoft: 500 },
+          // Not for sale: doesn't count either way.
+          c: {},
+        },
+      }) as unknown as Cosmetics;
+    expect(saleCoversEverything(catalog(true), "s")).toBe(true);
+    expect(saleCoversEverything(catalog(false), "s")).toBe(false);
+    expect(saleCoversEverything(null, "s")).toBe(false);
+  });
+
+  it("shows a flash sale's clock with seconds", () => {
+    const now = Date.parse("2026-10-30T12:00:00Z");
+    const at = (s: number) => new Date(now + s * 1000).toISOString();
+    expect(clockUntil(at(3600 + 23 * 60 + 45), now)).toBe("1:23:45");
+    expect(clockUntil(at(9 * 60 + 5), now)).toBe("9:05");
+    expect(clockUntil(at(-5), now)).toBe("0:00");
+  });
+
+  it("counts a sale's end down in days, hours or minutes", () => {
+    const now = Date.parse("2026-10-30T12:00:00Z");
+    const at = (ms: number) => new Date(now + ms).toISOString();
+    vi.mocked(translateText).mockClear();
+    saleEndsIn(at((2 * 24 + 5) * 3_600_000), now);
+    saleEndsIn(at(3 * 3_600_000 + 12 * 60_000), now);
+    saleEndsIn(at(7 * 60_000 + 30_000), now);
+    expect(vi.mocked(translateText).mock.calls).toEqual([
+      ["store.sale_ends_in_days", { days: 2, hours: 5 }],
+      ["store.sale_ends_in_hours", { hours: 3, minutes: 12 }],
+      ["store.sale_ends_in_minutes", { minutes: 8 }],
+    ]);
   });
 
   it("selects the first visible item and purchases the selected variant", async () => {

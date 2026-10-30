@@ -887,6 +887,30 @@ export function invalidateCosmetics(): void {
 }
 
 /**
+ * The running sale that discounts a catalog item, or null: it names a
+ * promotion that hasn't ended, and a list price above its price in at least
+ * one currency.
+ */
+export function activeSale(
+  cosmetic: unknown,
+  now: number = Date.now(),
+): { percentOff: number; endsAt: string; kind?: "flash" } | null {
+  const priced = cosmetic as {
+    promotion?: { percentOff: number; endsAt: string; kind?: "flash" };
+    priceHard?: number;
+    priceSoft?: number;
+    listPriceHard?: number;
+    listPriceSoft?: number;
+  } | null;
+  const promotion = priced?.promotion;
+  if (!promotion || new Date(promotion.endsAt).getTime() <= now) return null;
+  const discounted =
+    (priced.listPriceHard ?? 0) > (priced.priceHard ?? Infinity) ||
+    (priced.listPriceSoft ?? 0) > (priced.priceSoft ?? Infinity);
+  return discounted ? promotion : null;
+}
+
+/**
  * Drops a catalog fetched more than COSMETICS_STALE_MS ago, so the next
  * fetchCosmetics() refetches it. Sale prices start and end on the server's
  * clock; the API serves cosmetics.json from a one-minute cache, so this keeps

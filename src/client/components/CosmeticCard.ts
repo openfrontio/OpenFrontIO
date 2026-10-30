@@ -1,7 +1,7 @@
 import { Subscription } from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
+import { activeSale, ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
 import { isDesktopShell } from "../DesktopShell";
 import { translateText } from "../Utils";
 import "./CosmeticInfo";
@@ -12,6 +12,7 @@ import {
 } from "./CosmeticPresentation";
 import "./CosmeticPreview";
 import "./CosmeticPreviewBubble";
+import "./SaleCountdown";
 
 const COSMETIC_CARD_STYLE_ID = "cosmetic-card-styles";
 if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
@@ -179,6 +180,56 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
     /* No prefers-reduced-motion opt-out: these animations are the legendary
        treatment, and suppressing them left the card with a frozen gold wash
        and invisible (opacity: 0) sparkles rather than a calmer effect. */
+
+    /* A flash sale's item: the theme's accent (blue; orange under the
+       Halloween theme, which overrides --color-aquarius), pulsing all the
+       time (not only on hover), with a light running round the edge. Listed
+       after the rarity rules so it wins over a legendary card's hover pulse. */
+    @keyframes cosmetic-card-flash-pulse {
+      0%, 100% { box-shadow: 0 0 0 2px var(--color-aquarius), 0 0 8px color-mix(in srgb, var(--color-aquarius) 40%, transparent); }
+      50% { box-shadow: 0 0 0 2px var(--color-aquarius), 0 0 30px color-mix(in srgb, var(--color-aquarius) 90%, transparent); }
+    }
+    @keyframes cosmetic-card-flash-spin {
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+    cosmetic-card [data-cosmetic-shell][data-cosmetic-flash],
+    cosmetic-card:hover [data-cosmetic-shell][data-cosmetic-flash] {
+      border-color: var(--color-aquarius);
+      animation: cosmetic-card-flash-pulse 1.8s ease-in-out infinite;
+    }
+    [data-cosmetic-flash-ring] {
+      pointer-events: none;
+      position: absolute;
+      inset: -4px;
+      z-index: 8;
+      border-radius: 15px;
+      padding: 3px;
+      overflow: hidden;
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+    }
+    [data-cosmetic-flash-ring]::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 250%;
+      aspect-ratio: 1;
+      background: conic-gradient(from 0deg, transparent 0 55%, var(--color-aquarius) 72%, #fff 80%, var(--color-aquarius) 88%, transparent 100%);
+      transform: translate(-50%, -50%);
+      animation: cosmetic-card-flash-spin 2.6s linear infinite;
+    }
+    /* Unlike the legendary hover, a flash item glows all the time, so it
+       calms to a steady outline rather than pulsing and spinning. */
+    @media (prefers-reduced-motion: reduce) {
+      cosmetic-card [data-cosmetic-shell][data-cosmetic-flash],
+      cosmetic-card:hover [data-cosmetic-shell][data-cosmetic-flash] {
+        animation: none;
+        box-shadow: 0 0 0 2px var(--color-aquarius), 0 0 14px color-mix(in srgb, var(--color-aquarius) 60%, transparent);
+      }
+      [data-cosmetic-flash-ring] { display: none; }
+    }
   `;
   document.head.appendChild(style);
 }
@@ -374,12 +425,64 @@ export class CosmeticCard extends LitElement {
     return perks;
   }
 
+  /**
+   * The sale's discount as a band across the artwork's top-right corner,
+   * while one runs; the same for a flash sale's item, which the card's glow
+   * and timer mark instead. The "?" moved to the top-left to give it the
+   * corner (CosmeticInfo).
+   */
+  private renderSaleRibbon(active: ResolvedCosmetic) {
+    if (active.relationship !== "purchasable") return nothing;
+    const sale = activeSale(active.cosmetic);
+    if (sale === null) return nothing;
+    return html`<span
+      data-cosmetic-sale=${sale.kind === "flash" ? "flash" : "sale"}
+      class="pointer-events-none absolute right-0 top-0 z-[5] h-16 w-16 overflow-hidden rounded-tr-lg sm:h-[88px] sm:w-[88px]"
+    >
+      <span
+        class="absolute -right-[26px] top-3.5 w-24 rotate-45 bg-aquarius py-0.5 text-center text-xs font-black tabular-nums text-deep-navy shadow-[0_2px_6px_rgba(0,0,0,0.5)] sm:-right-[34px] sm:top-5 sm:w-[130px] sm:py-[3px] sm:text-[15px]"
+        >${translateText("store.sale_percent_off", {
+          percent: sale.percentOff,
+        })}</span
+      >
+    </span>`;
+  }
+
+  /** A flash sale's item: the time left, fading up from the artwork's foot. */
+  private renderFlashTimer(active: ResolvedCosmetic) {
+    const sale = this.flashSale(active);
+    if (sale === null) return nothing;
+    return html`<div
+      data-cosmetic-flash-timer
+      class="pointer-events-none absolute inset-x-0 bottom-0 z-[3] rounded-b-lg bg-gradient-to-t from-deep-navy/95 to-transparent pb-1.5 pt-5 text-center leading-none"
+    >
+      <sale-countdown
+        class="text-base font-black tabular-nums text-white"
+        format="clock"
+        .endsAt=${sale.endsAt}
+      ></sale-countdown>
+      <div
+        class="mt-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-aquarius"
+      >
+        ${translateText("store.flash_left")}
+      </div>
+    </div>`;
+  }
+
+  /** The running flash sale on this item, if it's one the player can buy. */
+  private flashSale(active: ResolvedCosmetic) {
+    if (active.relationship !== "purchasable") return null;
+    const sale = activeSale(active.cosmetic);
+    return sale?.kind === "flash" ? sale : null;
+  }
+
   render() {
     const active = this.activeResolved;
     const rarity = cosmeticRarity(active);
     const displayName = cosmeticDisplayName(active);
     const isFocused = this.state === "focused";
     const isEquipped = this.state === "equipped";
+    const isFlash = this.flashSale(active) !== null;
     const shellClass = `${this.rarityClass(rarity)} ${
       isEquipped
         ? "ring-2 ring-emerald-400/70 shadow-[0_0_24px_rgba(52,211,153,0.45)]"
@@ -410,6 +513,7 @@ export class CosmeticCard extends LitElement {
             size=${this.previewSize}
           ></cosmetic-preview>
         </div>
+        ${this.renderSaleRibbon(active)} ${this.renderFlashTimer(active)}
         ${
           isEquipped
             ? html`<span
@@ -434,8 +538,14 @@ export class CosmeticCard extends LitElement {
       data-cosmetic-shell
       data-cosmetic-state=${this.state}
       data-cosmetic-rarity=${rarity}
+      ?data-cosmetic-flash=${isFlash}
       class="relative flex h-full flex-col items-center overflow-visible rounded-xl border transition-all duration-200 ease-out hover:-translate-y-1 ${shellClass}"
     >
+      ${
+        isFlash
+          ? html`<span data-cosmetic-flash-ring aria-hidden="true"></span>`
+          : nothing
+      }
       ${
         rarity === "epic" || rarity === "legendary"
           ? html`<span data-cosmetic-shimmer aria-hidden="true"></span>`

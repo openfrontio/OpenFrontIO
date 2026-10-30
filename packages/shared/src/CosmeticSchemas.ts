@@ -96,7 +96,12 @@ export const PromotionSchema = z.object({
   id: z.string(),
   name: z.string(),
   percentOff: z.number(),
+  // For a flash sale, when the current item's discount ends and the next
+  // item's starts.
   endsAt: z.string(),
+  // A flash sale discounts one item at a time, the same for every player,
+  // a new one every slot. Absent on a store-wide or scoped sale.
+  kind: z.literal("flash").optional(),
 });
 export type Promotion = z.infer<typeof PromotionSchema>;
 

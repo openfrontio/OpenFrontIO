@@ -7,14 +7,7 @@ vi.mock("../../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn().mockResolvedValue(true),
 }));
 
-vi.mock("../../src/client/Utils", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../src/client/Utils")>();
-  return { ...actual, translateText: vi.fn(actual.translateText) };
-});
-
 const { showInGameAlert } = await import("../../src/client/InGameModal");
-const { translateText } = await import("../../src/client/Utils");
 
 describe("PurchaseButton", () => {
   let button: PurchaseButton | undefined;
@@ -88,8 +81,7 @@ describe("PurchaseButton", () => {
     }
   });
 
-  it("strikes through the list price and shows the discount during a sale", async () => {
-    vi.mocked(translateText).mockClear();
+  it("strikes through the list price during a sale", async () => {
     button = document.createElement("purchase-button") as PurchaseButton;
     button.priceHard = 75;
     button.listPriceHard = 100;
@@ -101,13 +93,12 @@ describe("PurchaseButton", () => {
     await button.updateComplete;
 
     const hard = button.querySelector(".purchase-sparkle-btn-hard")!;
-    expect(hard.querySelector("s")?.textContent?.trim()).toBe("100");
-    expect(hard.querySelector("[data-sale-tag]")?.textContent).toContain(
-      "store.sale_percent_off",
+    // The struck price, after its screen-reader "was" label.
+    const struck = hard.querySelector("s[data-sale-tag]")!;
+    expect(struck.querySelector(".sr-only")?.textContent).toContain(
+      "store.sale_was",
     );
-    expect(translateText).toHaveBeenCalledWith("store.sale_percent_off", {
-      percent: 25,
-    });
+    expect(struck.lastChild?.textContent?.trim()).toBe("100");
     // A list price not above the price is no sale.
     const soft = button.querySelector(".purchase-sparkle-btn-soft")!;
     expect(soft.querySelector("[data-sale-tag]")).toBeNull();

@@ -6,10 +6,11 @@ import {
   CosmeticPack,
   Cosmetics,
   Product,
+  Promotion,
   Subscription,
 } from "@openfront/shared/CosmeticSchemas";
 import type { PropertyValues, TemplateResult } from "lit";
-import { html } from "lit";
+import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
@@ -22,11 +23,13 @@ import "./components/EffectsGrid";
 import type { InlineCheckout } from "./components/InlineCheckout";
 import "./components/NotLoggedInWarning";
 import "./components/PackContentsDialog";
+import "./components/SaleCountdown";
 import { ProgressiveList } from "./components/ProgressiveList";
 import { alignPurchaseRows } from "./components/PurchaseButton";
 import "./components/TribesPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
+  activeSale,
   currentPrice,
   fetchCosmetics,
   invalidateCosmetics,
@@ -66,7 +69,9 @@ type StoreTab =
   | "subscriptions"
   | "tribes";
 
-const COSMETICS_SUB_TABS = ["patterns", "flags", "crowns"] as const;
+// "sale" lists every discounted skin, flag and crown; its tab shows only
+// while a sale covers one of them.
+const COSMETICS_SUB_TABS = ["sale", "patterns", "flags", "crowns"] as const;
 type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
 
 /** Sub-tab holding the catalog item a store deep link points at. */
@@ -96,6 +101,63 @@ function hasEndedSale(cosmetics: Cosmetics | null): boolean {
   const now = Date.now();
   return (cosmetics?.promotions ?? []).some(
     (sale) => new Date(sale.endsAt).getTime() <= now,
+  );
+}
+
+/** The running flash sale's item group, if one is among `groups`. */
+function flashGroup<T extends readonly ResolvedCosmetic[]>(
+  groups: readonly T[],
+): T | undefined {
+  return groups.find((group) =>
+    group.some((resolved) => activeSale(resolved.cosmetic)?.kind === "flash"),
+  );
+}
+
+/** Whether a running sale discounts any variant in a card's group. */
+function groupOnSale(group: readonly ResolvedCosmetic[]): boolean {
+  return group.some((resolved) => activeSale(resolved.cosmetic) !== null);
+}
+
+/** The flash item, then the rest on sale, then everything else. */
+export function saleFirst<T extends readonly ResolvedCosmetic[]>(
+  groups: readonly T[],
+): T[] {
+  const flash = flashGroup(groups);
+  const rest = groups.filter((group) => group !== flash);
+  return [
+    ...(flash ? [flash] : []),
+    ...rest.filter(groupOnSale),
+    ...rest.filter((group) => !groupOnSale(group)),
+  ];
+}
+
+/**
+ * Whether a sale covers every priced item in the catalog, so the banner can
+ * say "store-wide" rather than "selected items".
+ */
+export function saleCoversEverything(
+  cosmetics: Cosmetics | null,
+  promotionId: string,
+): boolean {
+  if (cosmetics === null) return false;
+  const items: { priceHard?: number; promotion?: { id: string } }[] = [
+    ...Object.values(cosmetics.patterns),
+    ...Object.values(cosmetics.flags),
+    ...Object.values(cosmetics.crowns ?? {}),
+    ...Object.values(cosmetics.skins ?? {}),
+    ...Object.values(cosmetics.packs ?? {}),
+    ...Object.values(cosmetics.effects ?? {}).flatMap((byName) =>
+      Object.values(byName ?? {}),
+    ),
+  ];
+  const priced = items.filter(
+    (item) =>
+      item.priceHard !== undefined ||
+      (item as { priceSoft?: number }).priceSoft !== undefined,
+  );
+  return (
+    priced.length > 0 &&
+    priced.every((item) => item.promotion?.id === promotionId)
   );
 }
 
@@ -245,20 +307,22 @@ export class StoreModal extends BaseModal {
     tab: CosmeticsSubTab,
   ): readonly (readonly ResolvedCosmetic[])[] {
     const items = this.resolvedPurchasables();
-    if (tab === "flags") {
-      return items
-        .filter((resolved) => resolved.type === "flag")
-        .map((r) => [r]);
-    }
-    if (tab === "crowns") {
-      return items
-        .filter((resolved) => resolved.type === "crown")
-        .map((r) => [r]);
-    }
-    return groupCosmeticVariants(
+    const skins = groupCosmeticVariants(
       items.filter(
         (resolved) => resolved.type === "pattern" || resolved.type === "skin",
       ),
+    );
+    const flags = items
+      .filter((resolved) => resolved.type === "flag")
+      .map((r) => [r]);
+    const crowns = items
+      .filter((resolved) => resolved.type === "crown")
+      .map((r) => [r]);
+    if (tab === "sale") {
+      return saleFirst([...skins, ...flags, ...crowns].filter(groupOnSale));
+    }
+    return saleFirst(
+      tab === "flags" ? flags : tab === "crowns" ? crowns : skins,
     );
   }
 
@@ -276,6 +340,13 @@ export class StoreModal extends BaseModal {
       );
     }
     if (tab === "cosmetics") {
+      // The sale ended (or the catalog dropped it) while its tab was open.
+      if (
+        this.cosmeticsSubTab === "sale" &&
+        this.cosmeticsGroups("sale").length === 0
+      ) {
+        this.cosmeticsSubTab = "patterns";
+      }
       return this.cosmeticsGroups(this.cosmeticsSubTab);
     }
     if (tab === "effects") {
@@ -367,6 +438,12 @@ export class StoreModal extends BaseModal {
   protected onTabEnter(key: string): void {
     this.selectVisible(this.groupsForTab(key));
     this.requestUpdate();
+  }
+
+  /** The sub-tabs to show: "On sale" only while something is discounted. */
+  private visibleCosmeticsSubTabs(): CosmeticsSubTab[] {
+    const hasSale = this.cosmeticsGroups("sale").length > 0;
+    return COSMETICS_SUB_TABS.filter((tab) => tab !== "sale" || hasSale);
   }
 
   private setCosmeticsSubTab(tab: CosmeticsSubTab): void {
@@ -592,6 +669,11 @@ export class StoreModal extends BaseModal {
   // Skins / Flags / Crowns grouped under one top-level tab; a sub-tab bar
   // (styled like effects-grid's) picks which grid shows.
   private renderCosmeticsPanel(): TemplateResult {
+    const subTabs = this.visibleCosmeticsSubTabs();
+    const flash =
+      this.cosmeticsSubTab === "sale"
+        ? flashGroup(this.visibleGroups)
+        : undefined;
     const emptyKey =
       this.cosmeticsSubTab === "flags"
         ? "store.no_flags"
@@ -600,26 +682,89 @@ export class StoreModal extends BaseModal {
           : "store.no_skins";
     return html`
       <div
-        class="flex items-center justify-center gap-6 border-b border-white/10 px-4"
+        class="flex flex-nowrap items-center gap-6 overflow-x-auto border-b border-white/10 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>button:first-of-type]:ms-auto [&>button:last-of-type]:me-auto"
       >
-        ${COSMETICS_SUB_TABS.map((tab) => {
+        ${subTabs.map((tab) => {
           const active = this.cosmeticsSubTab === tab;
           return html`<button
-            class="-mb-px whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${
+            data-store-subtab=${tab}
+            class="-mb-px flex items-center gap-1.5 shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${
               active
                 ? "border-malibu-blue text-aquarius"
                 : "border-transparent text-white/40 hover:text-white/70"
             }"
             @click=${() => this.setCosmeticsSubTab(tab)}
           >
-            ${translateText(`store.${tab}`)}
+            ${
+              tab === "sale"
+                ? html`<span
+                    class="h-2 w-2 rounded-full bg-aquarius shadow-[0_0_6px_var(--color-aquarius)]"
+                    aria-hidden="true"
+                  ></span>`
+                : nothing
+            }${translateText(tab === "sale" ? "store.on_sale" : `store.${tab}`)}
           </button>`;
         })}
       </div>
-      ${this.renderBrowser(this.visibleGroups, {
-        emptyTranslationKey: emptyKey,
-      })}
+      ${
+        flash
+          ? html`${this.renderFlashHero(flash)}
+            ${this.renderBrowser(
+              this.visibleGroups.filter((group) => group !== flash),
+              { emptyTranslationKey: emptyKey },
+            )}`
+          : this.renderBrowser(this.visibleGroups, {
+              emptyTranslationKey: emptyKey,
+            })
+      }
     `;
+  }
+
+  /**
+   * The flash sale's item, leading the On sale tab: its card beside what the
+   * sale is and a clock to the next item.
+   */
+  private renderFlashHero(group: readonly ResolvedCosmetic[]): TemplateResult {
+    const sale = group
+      .map((resolved) => activeSale(resolved.cosmetic))
+      .find((found) => found !== null);
+    if (!sale) return html``;
+    return html`<section
+      data-store-flash
+      class="mx-3 mt-3 flex flex-col items-center gap-4 rounded-xl border border-aquarius/50 bg-gradient-to-br from-deep-navy via-deep-navy to-malibu-blue/50 p-4 shadow-[0_0_28px_rgba(63,169,245,0.25)] sm:flex-row sm:items-stretch"
+    >
+      <div class="w-44 shrink-0 sm:w-52">
+        ${this.renderCosmeticCards([group])}
+      </div>
+      <div
+        class="flex flex-1 flex-col items-center justify-center gap-3 text-center sm:items-start sm:text-left"
+      >
+        <span
+          class="flex items-center gap-1.5 text-sm font-black uppercase tracking-widest text-aquarius"
+        >
+          ${translateText("store.flash_sale")}
+        </span>
+        <span class="text-2xl font-black leading-tight text-white"
+          >${translateText("store.flash_sale_hero_title", {
+            name: cosmeticSelectionLabel(group[0]),
+            percent: sale.percentOff,
+          })}</span
+        >
+        <span class="max-w-sm text-sm text-dawn-blue"
+          >${translateText("store.flash_sale_hero_body")}</span
+        >
+        <span
+          class="flex items-baseline gap-2 rounded-lg bg-black/30 px-3 py-2 text-xs font-bold uppercase tracking-wider text-dawn-blue"
+        >
+          ${translateText("store.flash_next_in")}
+          <sale-countdown
+            class="text-2xl font-black normal-case tracking-normal tabular-nums text-white"
+            format="clock"
+            .endsAt=${sale.endsAt}
+          ></sale-countdown>
+        </span>
+      </div>
+    </section>`;
   }
 
   private renderEffectGrid(): TemplateResult {
@@ -711,26 +856,166 @@ export class StoreModal extends BaseModal {
     );
     this.scheduleSaleEnd(sales);
     if (sales.length === 0) return "";
+    // A flash sale rides along the first sale's strip as a slim row, rather
+    // than a second strip; alone, it takes the strip itself.
+    const flash = sales.find((sale) => sale.kind === "flash");
+    const regular = sales.filter((sale) => sale.kind !== "flash");
+    if (regular.length === 0 && flash) {
+      return html`<div data-store-sale-banner class="px-3 pt-2">
+        ${this.renderFlashBannerLine(flash)}
+      </div>`;
+    }
     return html`<div
       data-store-sale-banner
-      class="flex flex-col gap-1 px-3 pt-2"
+      class="flex flex-col gap-1.5 px-3 pt-2"
     >
-      ${sales.map(
-        (sale) =>
-          html`<div
-            class="rounded-lg border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-center text-sm font-bold text-rose-200"
-          >
-            ${translateText("store.sale_banner", {
-              name: sale.name,
-              percent: sale.percentOff,
-              ends: new Date(sale.endsAt).toLocaleString(undefined, {
+      ${regular.map((sale, index) => {
+        const endingSoon =
+          new Date(sale.endsAt).getTime() - Date.now() < 86_400_000;
+        return html`<div
+          class="overflow-hidden rounded-lg border border-aquarius/40 bg-gradient-to-r from-deep-navy via-malibu-blue/70 to-malibu-blue shadow-[0_4px_20px_rgba(63,169,245,0.3)]"
+        >
+          <div class="flex items-center gap-3 px-3 py-2">
+            <span
+              class="shrink-0 rounded-md bg-aquarius px-2 py-0.5 text-base font-black tabular-nums text-deep-navy shadow-md shadow-black/40"
+              >${translateText("store.sale_percent_off", {
+                percent: sale.percentOff,
+              })}</span
+            >
+            <div class="flex min-w-0 flex-1 flex-col leading-tight">
+              <span
+                class="flex min-w-0 items-center gap-1.5 text-base font-black uppercase tracking-wide text-white"
+              >
+                <svg
+                  class="h-4 w-4 shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"
+                  />
+                  <circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" />
+                </svg>
+                <span class="truncate">${sale.name}</span>
+              </span>
+              <span class="truncate text-xs font-semibold text-dawn-blue"
+                >${translateText(
+                  saleCoversEverything(this.cosmetics, sale.id)
+                    ? "store.sale_store_wide"
+                    : "store.sale_selected_items",
+                  { percent: sale.percentOff },
+                )}</span
+              >
+            </div>
+            <span
+              class="flex shrink-0 items-center gap-1.5 rounded-md bg-deep-navy/60 px-2 py-1 text-xs font-bold tabular-nums ${
+                endingSoon ? "text-cyber-yellow" : "text-white"
+              }"
+              title=${new Date(sale.endsAt).toLocaleString(undefined, {
                 dateStyle: "medium",
                 timeStyle: "short",
-              }),
-            })}
-          </div>`,
-      )}
+              })}
+            >
+              <sale-countdown .endsAt=${sale.endsAt}></sale-countdown>
+            </span>
+          </div>
+          ${index === 0 && flash ? this.renderFlashBannerRow(flash) : nothing}
+        </div>`;
+      })}
     </div>`;
+  }
+
+  /**
+   * A flash sale as a slim row under another sale's strip: what it is and a
+   * clock to the next item. It opens the On sale tab, where that item leads.
+   */
+  private renderFlashBannerRow(sale: Promotion): TemplateResult {
+    return html`<button
+      data-store-flash-banner
+      class="flex w-full items-center gap-2 border-t border-white/15 bg-deep-navy/50 px-3 py-1.5 text-left text-xs font-bold text-white transition-colors hover:bg-deep-navy/70"
+      @click=${() => this.openSaleTab()}
+    >
+      <span class="shrink-0 uppercase tracking-wider text-aquarius"
+        >${translateText("store.flash_sale")}</span
+      >
+      <span class="min-w-0 truncate font-semibold text-dawn-blue"
+        >${translateText("store.flash_sale_row", {
+          percent: sale.percentOff,
+        })}</span
+      >
+      <span class="ml-auto flex shrink-0 items-center gap-1.5 tabular-nums">
+        <span class="hidden font-semibold text-dawn-blue sm:inline"
+          >${translateText("store.flash_next_in")}</span
+        >
+        <sale-countdown format="clock" .endsAt=${sale.endsAt}></sale-countdown>
+        <svg
+          class="h-3 w-3 text-dawn-blue"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m9 18 6-6-6-6" />
+        </svg>
+      </span>
+    </button>`;
+  }
+
+  /**
+   * A flash sale's line in the banner: one item at a time, with a clock to
+   * the next. It opens the On sale tab, where that item leads.
+   */
+  private renderFlashBannerLine(sale: Promotion): TemplateResult {
+    return html`<button
+      data-store-flash-banner
+      class="flex w-full items-center gap-3 rounded-lg border border-aquarius/60 bg-gradient-to-r from-deep-navy via-malibu-blue/70 to-malibu-blue px-3 py-2 text-left shadow-[0_4px_20px_rgba(63,169,245,0.3)] transition-[filter] hover:brightness-110"
+      @click=${() => this.openSaleTab()}
+    >
+      <span
+        class="shrink-0 rounded-md bg-aquarius px-2 py-0.5 text-base font-black tabular-nums text-deep-navy shadow-md shadow-black/40"
+        >${translateText("store.sale_percent_off", {
+          percent: sale.percentOff,
+        })}</span
+      >
+      <span class="flex min-w-0 flex-1 flex-col leading-tight">
+        <span
+          class="flex min-w-0 items-center gap-1.5 text-base font-black uppercase tracking-wide text-white"
+        >
+          <span class="truncate">${translateText("store.flash_sale")}</span>
+        </span>
+        <span class="truncate text-xs font-semibold text-dawn-blue"
+          >${translateText("store.flash_sale_banner", {
+            percent: sale.percentOff,
+          })}</span
+        >
+      </span>
+      <span
+        class="flex shrink-0 items-center gap-1.5 rounded-md bg-deep-navy/60 px-2 py-1 text-xs font-bold tabular-nums text-white"
+      >
+        <span class="hidden sm:inline"
+          >${translateText("store.flash_next_in")}</span
+        >
+        <sale-countdown format="clock" .endsAt=${sale.endsAt}></sale-countdown>
+      </span>
+    </button>`;
+  }
+
+  /** Cosmetics → On sale, from the flash sale's banner line. */
+  private openSaleTab(): void {
+    this.cosmeticsSubTab = "sale";
+    if (this.activeTab === "cosmetics") {
+      this.setCosmeticsSubTab("sale");
+    } else {
+      this.setActiveTab("cosmetics");
+    }
   }
 
   /**
