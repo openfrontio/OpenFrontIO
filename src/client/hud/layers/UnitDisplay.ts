@@ -48,8 +48,19 @@ export class UnitDisplay extends LitElement implements Controller {
   private _defensePost = 0;
   private _samLauncher = 0;
   private allDisabled = false;
-  private _hoveredUnit: PlayerBuildableUnitType | null = null;
+  private _hoveredUnitTooltip: {
+    unitType: PlayerBuildableUnitType;
+    structureKey: string;
+    hotkey: string;
+    element: HTMLElement;
+  } | null = null;
   private tutorialHighlight: PlayerBuildableUnitType | null = null;
+  // Whether the build bar has actions hidden off either edge. The fade on that
+  // edge tells the player there is more to swipe to.
+  private moreActionsLeft = false;
+  private moreActionsRight = false;
+  private observedScroller: HTMLElement | null = null;
+  private resizeListenerAttached = false;
 
   createRenderRoot() {
     return this;
@@ -84,7 +95,50 @@ export class UnitDisplay extends LitElement implements Controller {
       this.tutorialHighlight = (e.target && highlightUnits[e.target]) ?? null;
       this.requestUpdate();
     });
+    if (!this.resizeListenerAttached) {
+      window.addEventListener("resize", this.onLayoutChange);
+      this.resizeListenerAttached = true;
+    }
     this.requestUpdate();
+  }
+
+  /** The bar moved or resized: the tooltip and the edge fades have to follow. */
+  private onLayoutChange = () => {
+    this.requestUpdate();
+  };
+
+  private onScroll = () => {
+    this.requestUpdate();
+  };
+
+  /**
+   * Track which edge of the build bar still hides actions, so the fade can
+   * point at it. The bar only scrolls where it does not fit, so on a wide
+   * screen neither side is marked.
+   */
+  private measureScrollState() {
+    const scroller = this.getScroller();
+    if (!scroller) return;
+    this.moreActionsLeft = scroller.scrollLeft > 1;
+    this.moreActionsRight =
+      scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1;
+  }
+
+  private getScroller(): HTMLElement | null {
+    return this.querySelector<HTMLElement>(".unit-display-scroll");
+  }
+
+  willUpdate() {
+    this.measureScrollState();
+  }
+
+  updated() {
+    const scroller = this.getScroller();
+    if (scroller !== this.observedScroller) {
+      this.observedScroller?.removeEventListener("scroll", this.onScroll);
+      this.observedScroller = scroller;
+      scroller?.addEventListener("scroll", this.onScroll);
+    }
   }
 
   private cost(item: UnitType): Gold {
@@ -159,79 +213,92 @@ export class UnitDisplay extends LitElement implements Controller {
     }
 
     return html`
-      <div class="border-t border-white/10 p-0.5 w-full">
-        <div class="grid grid-rows-1 grid-flow-col gap-0.5 w-fit mx-auto">
-          ${this.renderUnitItem(
-            cityIcon,
-            this._cities,
-            UnitType.City,
-            "city",
-            this.getHotkey("buildCity", "Digit1"),
-          )}
-          ${this.renderUnitItem(
-            factoryIcon,
-            this._factories,
-            UnitType.Factory,
-            "factory",
-            this.getHotkey("buildFactory", "Digit2"),
-          )}
-          ${this.renderUnitItem(
-            portIcon,
-            this._port,
-            UnitType.Port,
-            "port",
-            this.getHotkey("buildPort", "Digit3"),
-          )}
-          ${this.renderUnitItem(
-            defensePostIcon,
-            this._defensePost,
-            UnitType.DefensePost,
-            "defense_post",
-            this.getHotkey("buildDefensePost", "Digit4"),
-          )}
-          ${this.renderUnitItem(
-            missileSiloIcon,
-            this._missileSilo,
-            UnitType.MissileSilo,
-            "missile_silo",
-            this.getHotkey("buildMissileSilo", "Digit5"),
-          )}
-          ${this.renderUnitItem(
-            samLauncherIcon,
-            this._samLauncher,
-            UnitType.SAMLauncher,
-            "sam_launcher",
-            this.getHotkey("buildSamLauncher", "Digit6"),
-          )}
-          ${this.renderUnitItem(
-            warshipIcon,
-            this._warships,
-            UnitType.Warship,
-            "warship",
-            this.getHotkey("buildWarship", "Digit7"),
-          )}
-          ${this.renderUnitItem(
-            atomBombIcon,
-            null,
-            UnitType.AtomBomb,
-            "atom_bomb",
-            this.getHotkey("buildAtomBomb", "Digit8"),
-          )}
-          ${this.renderUnitItem(
-            hydrogenBombIcon,
-            null,
-            UnitType.HydrogenBomb,
-            "hydrogen_bomb",
-            this.getHotkey("buildHydrogenBomb", "Digit9"),
-          )}
-          ${this.renderUnitItem(
-            mirvIcon,
-            null,
-            UnitType.MIRV,
-            "mirv",
-            this.getHotkey("buildMIRV", "Digit0"),
-          )}
+      <div
+        class="unit-display-root relative border-t border-white/10 p-0.5 w-full
+          ${this.moreActionsLeft ? "unit-display-more-left" : ""}
+          ${this.moreActionsRight ? "unit-display-more-right" : ""}"
+        data-radial-click-through
+      >
+        <div
+          class="unit-display-scroll w-full overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x lg:overflow-visible"
+          @scroll=${this.onScroll}
+        >
+          <div
+            class="unit-display-grid grid grid-cols-10 gap-0.5 w-full mx-auto lg:grid-rows-1 lg:grid-flow-col lg:w-fit max-lg:landscape:grid-rows-1 max-lg:landscape:grid-flow-col max-lg:landscape:grid-cols-none max-lg:landscape:auto-cols-[47px] max-lg:landscape:w-max max-[360px]:grid-cols-none max-[360px]:grid-flow-col max-[360px]:auto-cols-[44px] max-[360px]:w-max"
+          >
+            ${this.renderUnitItem(
+              cityIcon,
+              this._cities,
+              UnitType.City,
+              "city",
+              this.getHotkey("buildCity", "Digit1"),
+            )}
+            ${this.renderUnitItem(
+              factoryIcon,
+              this._factories,
+              UnitType.Factory,
+              "factory",
+              this.getHotkey("buildFactory", "Digit2"),
+            )}
+            ${this.renderUnitItem(
+              portIcon,
+              this._port,
+              UnitType.Port,
+              "port",
+              this.getHotkey("buildPort", "Digit3"),
+            )}
+            ${this.renderUnitItem(
+              defensePostIcon,
+              this._defensePost,
+              UnitType.DefensePost,
+              "defense_post",
+              this.getHotkey("buildDefensePost", "Digit4"),
+            )}
+            ${this.renderUnitItem(
+              missileSiloIcon,
+              this._missileSilo,
+              UnitType.MissileSilo,
+              "missile_silo",
+              this.getHotkey("buildMissileSilo", "Digit5"),
+            )}
+            ${this.renderUnitItem(
+              samLauncherIcon,
+              this._samLauncher,
+              UnitType.SAMLauncher,
+              "sam_launcher",
+              this.getHotkey("buildSamLauncher", "Digit6"),
+            )}
+            ${this.renderUnitItem(
+              warshipIcon,
+              this._warships,
+              UnitType.Warship,
+              "warship",
+              this.getHotkey("buildWarship", "Digit7"),
+            )}
+            ${this.renderUnitItem(
+              atomBombIcon,
+              null,
+              UnitType.AtomBomb,
+              "atom_bomb",
+              this.getHotkey("buildAtomBomb", "Digit8"),
+            )}
+            ${this.renderUnitItem(
+              hydrogenBombIcon,
+              null,
+              UnitType.HydrogenBomb,
+              "hydrogen_bomb",
+              this.getHotkey("buildHydrogenBomb", "Digit9"),
+            )}
+            ${this.renderUnitItem(
+              mirvIcon,
+              null,
+              UnitType.MIRV,
+              "mirv",
+              this.getHotkey("buildMIRV", "Digit0"),
+            )}
+          </div>
         </div>
+        ${this.renderUnitTooltip()}
       </div>
     `;
   }
@@ -259,7 +326,6 @@ export class UnitDisplay extends LitElement implements Controller {
       return html``;
     }
     const selected = this.uiState.ghostStructure === unitType;
-    const hovered = this._hoveredUnit === unitType;
     const displayHotkey = hotkey
       .replace("Digit", "")
       .replace("Key", "")
@@ -268,58 +334,31 @@ export class UnitDisplay extends LitElement implements Controller {
     return html`
       <div
         class="flex flex-col items-center relative"
-        @mouseenter=${() => {
-          this._hoveredUnit = unitType;
+        @mouseenter=${(event: MouseEvent) => {
+          const item = event.currentTarget as HTMLElement;
+          this._hoveredUnitTooltip = {
+            unitType,
+            structureKey,
+            hotkey,
+            element: item,
+          };
           this.requestUpdate();
         }}
         @mouseleave=${() => {
-          this._hoveredUnit = null;
+          this._hoveredUnitTooltip = null;
           this.requestUpdate();
         }}
       >
-        ${
-          hovered
-            ? html`
-                <div
-                  class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
-                >
-                  <div class="font-bold text-sm mb-1">
-                    ${translateText("unit_type." + structureKey)}${
-                      hotkey ? ` [${displayHotkey}]` : ""
-                    }
-                  </div>
-                  <div class="p-2">
-                    ${translateText("build_menu.desc." + structureKey)}
-                  </div>
-                  ${
-                    unitType === UnitType.Warship
-                      ? html`<div
-                          class="mt-1 px-2 py-1 text-[10px] text-cyan-300 border-t border-white/10"
-                        >
-                          ⇧ ${translateText("build_menu.warship_shift_hint")}
-                        </div>`
-                      : null
-                  }
-                  <div class="flex items-center justify-center gap-1">
-                    <img src=${goldCoinIcon} width="13" height="13" />
-                    <span class="text-yellow-300"
-                      >${renderNumber(this.cost(unitType))}</span
-                    >
-                  </div>
-                </div>
-              `
-            : null
-        }
         <div
           class="${
             this.canBuild(unitType) ? "" : "opacity-40"
-          } border border-slate-500 rounded-sm px-0.5 pb-0.5 flex items-center gap-0.5 cursor-pointer
+          } border border-slate-500 rounded-sm min-h-11 w-full px-1 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:min-h-0 lg:px-0.5 lg:justify-start landscape:px-0.5
              ${selected ? "hover:bg-gray-400/10" : "hover:bg-gray-800"}
              rounded-sm text-white ${selected ? "bg-slate-400/20" : ""}
              ${this.tutorialHighlight === unitType ? "tutorial-highlight" : ""}"
           @click=${() => {
             if (selected) {
-              this.inputHandler.setGhostStructure(null);
+              this.inputHandler.setGhostStructure(null, "GUIclick");
             } else if (this.canBuild(unitType)) {
               this.inputHandler.setGhostStructure(unitType, "GUIclick");
             }
@@ -349,20 +388,78 @@ export class UnitDisplay extends LitElement implements Controller {
           ${
             hotkey
               ? html`<div
-                  class="ml-0.5 text-[10px] relative -top-1 text-gray-400"
+                  class="hidden pointer-fine:block ml-0.5 text-[10px] relative -top-1 text-gray-400"
                 >
                   ${displayHotkey}
                 </div>`
               : nothing
           }
-          <div class="flex items-center gap-0.5 pt-0.5">
-            <img src=${icon} alt=${structureKey} class="align-middle size-5" />
+          <div
+            class="flex flex-col items-center gap-0 pt-0.5 lg:flex-row lg:gap-0.5 max-lg:landscape:flex-row max-lg:landscape:gap-0.5"
+          >
+            <img
+              src=${icon}
+              alt=${translateText("unit_type." + structureKey)}
+              class="align-middle size-7 lg:size-5 max-lg:landscape:size-6"
+            />
             ${
               number !== null
-                ? html`<span class="text-xs">${renderNumber(number)}</span>`
+                ? html`<span class="text-[10px] leading-none lg:text-xs"
+                    >${renderNumber(number)}</span
+                  >`
                 : null
             }
           </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderUnitTooltip() {
+    const tooltip = this._hoveredUnitTooltip;
+    if (!tooltip) return nothing;
+    // The item can go away (a unit gets disabled) while it is hovered.
+    if (!tooltip.element.isConnected) return nothing;
+    const displayHotkey = tooltip.hotkey
+      .replace("Digit", "")
+      .replace("Key", "")
+      .toUpperCase();
+    // Measured at render time so the tooltip follows the item when the bar
+    // scrolls or the layout changes, instead of staying where it was hovered.
+    const root = this.querySelector<HTMLElement>(".unit-display-root");
+    const itemBounds = tooltip.element.getBoundingClientRect();
+    const rootBounds = root?.getBoundingClientRect();
+    const left =
+      itemBounds.left + itemBounds.width / 2 - (rootBounds?.left ?? 0);
+    const top = itemBounds.top - (rootBounds?.top ?? 0) - 4;
+
+    return html`
+      <div
+        class="unit-display-tooltip hidden pointer-fine:block absolute -translate-x-1/2 -translate-y-full text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
+        style=${`left: ${left}px; top: ${top}px;`}
+      >
+        <div class="font-bold text-sm mb-1">
+          ${translateText("unit_type." + tooltip.structureKey)}${
+            tooltip.hotkey ? ` [${displayHotkey}]` : ""
+          }
+        </div>
+        <div class="p-2">
+          ${translateText("build_menu.desc." + tooltip.structureKey)}
+        </div>
+        ${
+          tooltip.unitType === UnitType.Warship
+            ? html`<div
+                class="mt-1 px-2 py-1 text-[10px] text-cyan-300 border-t border-white/10"
+              >
+                ⇧ ${translateText("build_menu.warship_shift_hint")}
+              </div>`
+            : null
+        }
+        <div class="flex items-center justify-center gap-1">
+          <img src=${goldCoinIcon} width="13" height="13" />
+          <span class="text-yellow-300"
+            >${renderNumber(this.cost(tooltip.unitType))}</span
+          >
         </div>
       </div>
     `;

@@ -805,3 +805,46 @@ unit-display .tutorial-highlight::after {
 .remove-player-btn:hover {
   background: #ef4444;
 }
+
+.unit-display-scroll {
+  scrollbar-width: none;
+}
+
+.unit-display-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* The narrow build bar scrolls sideways. Fade the edge that still hides
+   actions, so the player can tell there is more to swipe to. The bar itself
+   keeps the gray-800 background, so the fade matches it. */
+.unit-display-root::before,
+.unit-display-root::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1.25rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+  z-index: 1;
+}
+
+.unit-display-root::before {
+  left: 0;
+  background: linear-gradient(
+    to right,
+    rgb(31 41 55 / 0.92),
+    rgb(31 41 55 / 0)
+  );
+}
+
+.unit-display-root::after {
+  right: 0;
+  background: linear-gradient(to left, rgb(31 41 55 / 0.92), rgb(31 41 55 / 0));
+}
+
+.unit-display-more-left::before,
+.unit-display-more-right::after {
+  opacity: 1;
+}

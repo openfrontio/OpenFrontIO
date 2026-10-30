@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { EventBus } from "@openfront/shared/EventBus";
 import "../../src/client/hud/layers/ControlPanel";
 import type { ControlPanel } from "../../src/client/hud/layers/ControlPanel";
+import { FORWARDED_CLICK } from "../../src/client/InputHandler";
 import type { UIState } from "../../src/client/UIState";
 import { UserSettings } from "../../src/client/UserSettings";
 import type { GameView } from "../../src/client/view";
@@ -128,5 +129,50 @@ describe("control-panel attack ratio", () => {
     expect(() => fresh.onAttackRatioChange(0.3)).not.toThrow();
 
     fresh.remove();
+  });
+
+  it("moves the slider when the radial menu forwards a tap to it", async () => {
+    panel.game = {
+      inSpawnPhase: () => false,
+      myPlayer: () => ({ isAlive: () => true, troops: () => 100_000 }),
+    } as unknown as GameView;
+    panel.setVisibile(true);
+    await (panel as any).updateComplete;
+
+    const slider = panel.querySelector(
+      'input[type="range"]',
+    ) as HTMLInputElement;
+    expect(slider.hasAttribute("data-radial-click-through")).toBe(true);
+    slider.getBoundingClientRect = () => ({ left: 0, width: 100 }) as DOMRect;
+
+    // A forwarded tap is the click the radial menu's overlay sends down.
+    const forwarded = new MouseEvent("click", { bubbles: true, clientX: 50 });
+    (forwarded as unknown as Record<string, unknown>)[FORWARDED_CLICK] = true;
+    slider.dispatchEvent(forwarded);
+
+    expect(Number(slider.value)).toBe(51);
+    expect(uiState.attackRatio).toBeCloseTo(0.51, 2);
+  });
+
+  it("leaves a real slider press to the browser", async () => {
+    panel.game = {
+      inSpawnPhase: () => false,
+      myPlayer: () => ({ isAlive: () => true, troops: () => 100_000 }),
+    } as unknown as GameView;
+    panel.setVisibile(true);
+    await (panel as any).updateComplete;
+
+    const slider = panel.querySelector(
+      'input[type="range"]',
+    ) as HTMLInputElement;
+    slider.getBoundingClientRect = () => ({ left: 0, width: 100 }) as DOMRect;
+
+    // A plain click is a press the browser handles itself.
+    slider.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, clientX: 50 }),
+    );
+
+    expect(Number(slider.value)).toBe(20);
+    expect(uiState.attackRatio).toBeCloseTo(0.2, 2);
   });
 });
