@@ -1,5 +1,7 @@
 {
-  "categories": ["cosmic"],
+  "categories": [
+    "cosmic"
+  ],
   "id": "Titan",
   "map": {
     "height": 2160,

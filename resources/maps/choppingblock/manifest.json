@@ -142,8 +142,12 @@
       "name": "Honeycomb"
     }
   ],
-  "categories": ["arcade"],
-  "forced_modifiers": ["isWaterNukes:50"],
+  "categories": [
+    "arcade"
+  ],
+  "forced_modifiers": [
+    "isWaterNukes:50"
+  ],
   "id": "ChoppingBlock",
   "map": {
     "height": 1616,
@@ -163,162 +167,258 @@
   "name": "Chopping Block",
   "nations": [
     {
-      "coordinates": [230, 230],
+      "coordinates": [
+        230,
+        230
+      ],
       "flag": "",
       "name": "Boxey"
     },
     {
-      "coordinates": [230, 570],
+      "coordinates": [
+        230,
+        570
+      ],
       "flag": "",
       "name": "Gridsly"
     },
     {
-      "coordinates": [580, 230],
+      "coordinates": [
+        580,
+        230
+      ],
       "flag": "",
       "name": "Blocko"
     },
     {
-      "coordinates": [570, 570],
+      "coordinates": [
+        570,
+        570
+      ],
       "flag": "",
       "name": "Squarm"
     },
     {
-      "coordinates": [1030, 230],
+      "coordinates": [
+        1030,
+        230
+      ],
       "flag": "",
       "name": "Boximilian"
     },
     {
-      "coordinates": [1030, 570],
+      "coordinates": [
+        1030,
+        570
+      ],
       "flag": "",
       "name": "Rectanglo"
     },
     {
-      "coordinates": [1370, 230],
+      "coordinates": [
+        1370,
+        230
+      ],
       "flag": "",
       "name": "Cornerlius"
     },
     {
-      "coordinates": [1380, 570],
+      "coordinates": [
+        1380,
+        570
+      ],
       "flag": "",
       "name": "Repeater"
     },
     {
-      "coordinates": [230, 1030],
+      "coordinates": [
+        230,
+        1030
+      ],
       "flag": "",
       "name": "Derorrim"
     },
     {
-      "coordinates": [230, 1380],
+      "coordinates": [
+        230,
+        1380
+      ],
       "flag": "",
       "name": "Boxedin"
     },
     {
-      "coordinates": [580, 1040],
+      "coordinates": [
+        580,
+        1040
+      ],
       "flag": "",
       "name": "Mazely"
     },
     {
-      "coordinates": [580, 1380],
+      "coordinates": [
+        580,
+        1380
+      ],
       "flag": "",
       "name": "Diagonalf"
     },
     {
-      "coordinates": [1040, 1040],
+      "coordinates": [
+        1040,
+        1040
+      ],
       "flag": "",
       "name": "Blockedhof"
     },
     {
-      "coordinates": [1040, 1390],
+      "coordinates": [
+        1040,
+        1390
+      ],
       "flag": "",
       "name": "Blockhead"
     },
     {
-      "coordinates": [1380, 1035],
+      "coordinates": [
+        1380,
+        1035
+      ],
       "flag": "",
       "name": "Chopin"
     },
     {
-      "coordinates": [1380, 1390],
+      "coordinates": [
+        1380,
+        1390
+      ],
       "flag": "",
       "name": "Hacker"
     },
     {
-      "coordinates": [400, 160],
+      "coordinates": [
+        400,
+        160
+      ],
       "flag": "",
       "name": "Slasher"
     },
     {
-      "coordinates": [160, 410],
+      "coordinates": [
+        160,
+        410
+      ],
       "flag": "",
       "name": "Brixs"
     },
     {
-      "coordinates": [410, 650],
+      "coordinates": [
+        410,
+        650
+      ],
       "flag": "",
       "name": "Plaido"
     },
     {
-      "coordinates": [650, 415],
+      "coordinates": [
+        650,
+        415
+      ],
       "flag": "",
       "name": "Harlequin"
     },
     {
-      "coordinates": [410, 970],
+      "coordinates": [
+        410,
+        970
+      ],
       "flag": "",
       "name": "Checkheir"
     },
     {
-      "coordinates": [160, 1210],
+      "coordinates": [
+        160,
+        1210
+      ],
       "flag": "",
       "name": "Zigzag"
     },
     {
-      "coordinates": [410, 1460],
+      "coordinates": [
+        410,
+        1460
+      ],
       "flag": "",
       "name": "Scaler"
     },
     {
-      "coordinates": [650, 1220],
+      "coordinates": [
+        650,
+        1220
+      ],
       "flag": "",
       "name": "Crossed"
     },
     {
-      "coordinates": [1210, 970],
+      "coordinates": [
+        1210,
+        970
+      ],
       "flag": "",
       "name": "Beeline"
     },
     {
-      "coordinates": [960, 1220],
+      "coordinates": [
+        960,
+        1220
+      ],
       "flag": "",
       "name": "Bowtie"
     },
     {
-      "coordinates": [1210, 1460],
+      "coordinates": [
+        1210,
+        1460
+      ],
       "flag": "",
       "name": "Buckly"
     },
     {
-      "coordinates": [1450, 1210],
+      "coordinates": [
+        1450,
+        1210
+      ],
       "flag": "",
       "name": "Dexted"
     },
     {
-      "coordinates": [1210, 170],
+      "coordinates": [
+        1210,
+        170
+      ],
       "flag": "",
       "name": "Flukes"
     },
     {
-      "coordinates": [970, 410],
+      "coordinates": [
+        970,
+        410
+      ],
       "flag": "",
       "name": "Jonqal"
     },
     {
-      "coordinates": [1210, 650],
+      "coordinates": [
+        1210,
+        650
+      ],
       "flag": "",
       "name": "Huggins"
     },
     {
-      "coordinates": [1460, 410],
+      "coordinates": [
+        1460,
+        410
+      ],
       "flag": "",
       "name": "Keeko"
     }

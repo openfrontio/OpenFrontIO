@@ -1,5 +1,7 @@
 {
-  "categories": ["asia"],
+  "categories": [
+    "asia"
+  ],
   "id": "StraitOfHormuz",
   "map": {
     "height": 1200,
@@ -19,107 +21,170 @@
   "name": "Strait of Hormuz",
   "nations": [
     {
-      "coordinates": [837, 356],
+      "coordinates": [
+        837,
+        356
+      ],
       "flag": "ir",
       "name": "Hormozgan"
     },
     {
-      "coordinates": [717, 162],
+      "coordinates": [
+        717,
+        162
+      ],
       "flag": "ir",
       "name": "Fars"
     },
     {
-      "coordinates": [97, 939],
+      "coordinates": [
+        97,
+        939
+      ],
       "flag": "sa",
       "name": "Ash Sharqiyah"
     },
     {
-      "coordinates": [1725, 360],
+      "coordinates": [
+        1725,
+        360
+      ],
       "flag": "ir",
       "name": "Sistan and Baluchestan"
     },
     {
-      "coordinates": [745, 1003],
+      "coordinates": [
+        745,
+        1003
+      ],
       "flag": "ae",
       "name": "Abu Dhabi"
     },
     {
-      "coordinates": [1513, 289],
+      "coordinates": [
+        1513,
+        289
+      ],
       "flag": "ir",
       "name": "Kerman"
     },
     {
-      "coordinates": [311, 147],
+      "coordinates": [
+        311,
+        147
+      ],
       "flag": "ir",
       "name": "Bushehr"
     },
     {
-      "coordinates": [1165, 1092],
+      "coordinates": [
+        1165,
+        1092
+      ],
       "flag": "om",
       "name": "Al Dhahira"
     },
     {
-      "coordinates": [1219, 959],
+      "coordinates": [
+        1219,
+        959
+      ],
       "flag": "om",
       "name": "Al Batnah North"
     },
     {
-      "coordinates": [1114, 956],
+      "coordinates": [
+        1114,
+        956
+      ],
       "flag": "om",
       "name": "Al Buraymi"
     },
     {
-      "coordinates": [1316, 1141],
+      "coordinates": [
+        1316,
+        1141
+      ],
       "flag": "om",
       "name": "Ad Dakhliyah"
     },
     {
-      "coordinates": [1431, 1111],
+      "coordinates": [
+        1431,
+        1111
+      ],
       "flag": "om",
       "name": "Al Batnah South"
     },
     {
-      "coordinates": [926, 849],
+      "coordinates": [
+        926,
+        849
+      ],
       "flag": "ae",
       "name": "Dubay"
     },
     {
-      "coordinates": [1615, 1134],
+      "coordinates": [
+        1615,
+        1134
+      ],
       "flag": "om",
       "name": "Muscat"
     },
     {
-      "coordinates": [1070, 774],
+      "coordinates": [
+        1070,
+        774
+      ],
       "flag": "ae",
       "name": "Sharjah"
     },
     {
-      "coordinates": [1166, 583],
+      "coordinates": [
+        1166,
+        583
+      ],
       "flag": "om",
       "name": "Musandam"
     },
     {
-      "coordinates": [159, 756],
+      "coordinates": [
+        159,
+        756
+      ],
       "flag": "qa",
       "name": "Ar Rayyan"
     },
     {
-      "coordinates": [1103, 647],
+      "coordinates": [
+        1103,
+        647
+      ],
       "flag": "ae",
       "name": "Ras Al Khaymah"
     },
     {
-      "coordinates": [1155, 703],
+      "coordinates": [
+        1155,
+        703
+      ],
       "flag": "ae",
       "name": "Fujayrah"
     },
     {
-      "coordinates": [216, 815],
+      "coordinates": [
+        216,
+        815
+      ],
       "flag": "qa",
       "name": "Al Wakrah"
     },
     {
-      "coordinates": [56, 554],
+      "coordinates": [
+        56,
+        554
+      ],
       "flag": "bh",
       "name": "Bahrain"
     }
@@ -141,6 +206,8 @@
       }
     ]
   },
-  "themes": ["asia"],
+  "themes": [
+    "asia"
+  ],
   "translation_key": "map.straitofhormuz"
 }

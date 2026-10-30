@@ -226,7 +226,9 @@
       "name": "Zapopan"
     }
   ],
-  "categories": ["arcade"],
+  "categories": [
+    "arcade"
+  ],
   "id": "Labyrinth",
   "map": {
     "height": 1360,
@@ -246,132 +248,210 @@
   "name": "Labyrinth",
   "nations": [
     {
-      "coordinates": [50, 50],
+      "coordinates": [
+        50,
+        50
+      ],
       "flag": "",
       "name": "Alpha"
     },
     {
-      "coordinates": [500, 50],
+      "coordinates": [
+        500,
+        50
+      ],
       "flag": "",
       "name": "Bravo"
     },
     {
-      "coordinates": [950, 50],
+      "coordinates": [
+        950,
+        50
+      ],
       "flag": "",
       "name": "Charlie"
     },
     {
-      "coordinates": [1300, 175],
+      "coordinates": [
+        1300,
+        175
+      ],
       "flag": "",
       "name": "Delta"
     },
     {
-      "coordinates": [1300, 625],
+      "coordinates": [
+        1300,
+        625
+      ],
       "flag": "",
       "name": "Echo"
     },
     {
-      "coordinates": [1300, 1074],
+      "coordinates": [
+        1300,
+        1074
+      ],
       "flag": "",
       "name": "Foxtrot"
     },
     {
-      "coordinates": [1050, 1300],
+      "coordinates": [
+        1050,
+        1300
+      ],
       "flag": "",
       "name": "Golf"
     },
     {
-      "coordinates": [625, 1300],
+      "coordinates": [
+        625,
+        1300
+      ],
       "flag": "",
       "name": "Hotel"
     },
     {
-      "coordinates": [150, 1300],
+      "coordinates": [
+        150,
+        1300
+      ],
       "flag": "",
       "name": "India"
     },
     {
-      "coordinates": [50, 950],
+      "coordinates": [
+        50,
+        950
+      ],
       "flag": "",
       "name": "Juliett"
     },
     {
-      "coordinates": [50, 500],
+      "coordinates": [
+        50,
+        500
+      ],
       "flag": "",
       "name": "Kilo"
     },
     {
-      "coordinates": [275, 275],
+      "coordinates": [
+        275,
+        275
+      ],
       "flag": "",
       "name": "Lima"
     },
     {
-      "coordinates": [740, 290],
+      "coordinates": [
+        740,
+        290
+      ],
       "flag": "",
       "name": "Mike"
     },
     {
-      "coordinates": [1080, 380],
+      "coordinates": [
+        1080,
+        380
+      ],
       "flag": "",
       "name": "November"
     },
     {
-      "coordinates": [1080, 850],
+      "coordinates": [
+        1080,
+        850
+      ],
       "flag": "",
       "name": "Oscar"
     },
     {
-      "coordinates": [850, 1080],
+      "coordinates": [
+        850,
+        1080
+      ],
       "flag": "",
       "name": "Papa"
     },
     {
-      "coordinates": [400, 1080],
+      "coordinates": [
+        400,
+        1080
+      ],
       "flag": "",
       "name": "Quebec"
     },
     {
-      "coordinates": [280, 740],
+      "coordinates": [
+        280,
+        740
+      ],
       "flag": "",
       "name": "Romeo"
     },
     {
-      "coordinates": [510, 510],
+      "coordinates": [
+        510,
+        510
+      ],
       "flag": "",
       "name": "Sierra"
     },
     {
-      "coordinates": [850, 630],
+      "coordinates": [
+        850,
+        630
+      ],
       "flag": "",
       "name": "Tango"
     },
     {
-      "coordinates": [625, 850],
+      "coordinates": [
+        625,
+        850
+      ],
       "flag": "",
       "name": "Uniform"
     },
     {
-      "coordinates": [745, 520],
+      "coordinates": [
+        745,
+        520
+      ],
       "flag": "",
       "name": "Victor"
     },
     {
-      "coordinates": [850, 850],
+      "coordinates": [
+        850,
+        850
+      ],
       "flag": "",
       "name": "Whiskey"
     },
     {
-      "coordinates": [510, 740],
+      "coordinates": [
+        510,
+        740
+      ],
       "flag": "",
       "name": "X-ray"
     },
     {
-      "coordinates": [735, 735],
+      "coordinates": [
+        735,
+        735
+      ],
       "flag": "",
       "name": "Yankee"
     },
     {
-      "coordinates": [630, 630],
+      "coordinates": [
+        630,
+        630
+      ],
       "flag": "",
       "name": "Zulu"
     }

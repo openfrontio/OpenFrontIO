@@ -1662,14 +1662,14 @@
     "unfavorite": "Remove from favourites"
   },
   "map_layers": {
-    "brland": "brland",
-    "eyeland": "eyeland",
-    "eyewater": "eyewater",
+    "brland": "Brain-Land",
+    "eyeland": "Eye-Land",
+    "eyewater": "Eye-Water",
     "label": "label",
-    "w2kland": "w2kland",
-    "w2kwater": "w2kwater",
-    "w4kland": "w4kland",
-    "w4kwater": "w4kwater"
+    "w2kland": "2K-Land",
+    "w2kwater": "2K-Water",
+    "w4kland": "4K-Land",
+    "w4kwater": "4K-Water"
   },
   "marketing_consent": {
     "body": "News and updates by email. Change it anytime in your account.",
