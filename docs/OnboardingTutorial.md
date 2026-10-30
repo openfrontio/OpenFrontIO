@@ -26,7 +26,7 @@ It opens with a welcome card that describes OpenFront in one sentence, with a **
 1. **Spawn.** A glowing zone marks the spawn area. Only a click inside it counts.
 2. **Expand.** Click the empty land next to your territory.
 3. **Troops.** A few seconds into expanding, before the player reaches the kingdom, the arrow points at the troop bar: troops grow fastest when it's about half full, so don't let it get too high or too low. **Got it** moves on.
-4. **Attack the kingdom.** Reaching the Hill Kingdom, the player gets nuked from its silo. The arrow points at the silo; taking it, and most of the kingdom, makes the kingdom fall.
+4. **Attack the kingdom.** Reaching the Iron Kingdom, the player gets nuked from its silo. The arrow points at the silo; taking it, and most of the kingdom, makes the kingdom fall.
 5. **Nuke the port.** The captured silo arms the atom bomb button. Only a bomb that would hit the Red Empire's port, and the warship moving around it, counts.
 6. **Conquer the empire.** Send a boat to its coast, then attack its land until it falls.
 
@@ -53,7 +53,7 @@ What makes it different from the guide:
 The tutorial uses a new, tiny map made for it (roughly 300×300) so the whole scenario fits on one screen:
 
 - the player's island, with the spawn zone on its coast;
-- the Hill Kingdom on the player's island, next to the spawn zone;
+- the Iron Kingdom on the player's island, next to the spawn zone;
 - a narrow strait;
 - the Red Empire on the far side.
 
