@@ -1489,6 +1489,7 @@
     "wiki": "Wiki"
   },
   "map": {
+    "World4000": "World 4000",
     "achiran": "Achiran",
     "aegean": "Aegean",
     "africa": "Africa",
@@ -1627,7 +1628,6 @@
     "warshipwarship": "Warship Warship",
     "world": "World",
     "world4000": "World 4000",
-    "world4k": "World 4000",
     "worldinverted": "World Inverted",
     "yangtzeriver": "Yangtze River",
     "yellowsea": "Yellow Sea",

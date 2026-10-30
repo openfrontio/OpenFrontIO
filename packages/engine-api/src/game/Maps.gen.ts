@@ -135,7 +135,7 @@ export enum GameMapType {
   Vietnam = "Vietnam", // map-generator/assets/maps/vietnam/info.json
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
   World = "World", // map-generator/assets/maps/world/info.json
-  world4000 = "World 4000", // map-generator/assets/maps/world4000/info.json
+  World4000 = "World 4000", // map-generator/assets/maps/world4000/info.json
   WorldInverted = "World Inverted", // map-generator/assets/maps/worldinverted/info.json
   YangtzeRiver = "Yangtze River", // map-generator/assets/maps/yangtzeriver/info.json
   YellowSea = "Yellow Sea", // map-generator/assets/maps/yellowsea/info.json
@@ -2030,8 +2030,8 @@ export const maps: readonly MapInfo[] = [
     ],
   },
   {
-    id: "world4000",
-    type: GameMapType.world4000,
+    id: "World4000",
+    type: GameMapType.World4000,
     translationKey: "map.world4000",
     categories: ["new", "world"],
     defaultNationCount: 111,
