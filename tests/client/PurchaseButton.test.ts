@@ -7,7 +7,14 @@ vi.mock("../../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn().mockResolvedValue(true),
 }));
 
+vi.mock("../../src/client/Utils", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/client/Utils")>();
+  return { ...actual, translateText: vi.fn(actual.translateText) };
+});
+
 const { showInGameAlert } = await import("../../src/client/InGameModal");
+const { translateText } = await import("../../src/client/Utils");
 
 describe("PurchaseButton", () => {
   let button: PurchaseButton | undefined;
@@ -82,6 +89,7 @@ describe("PurchaseButton", () => {
   });
 
   it("strikes through the list price and shows the discount during a sale", async () => {
+    vi.mocked(translateText).mockClear();
     button = document.createElement("purchase-button") as PurchaseButton;
     button.priceHard = 75;
     button.listPriceHard = 100;
@@ -97,6 +105,9 @@ describe("PurchaseButton", () => {
     expect(hard.querySelector("[data-sale-tag]")?.textContent).toContain(
       "store.sale_percent_off",
     );
+    expect(translateText).toHaveBeenCalledWith("store.sale_percent_off", {
+      percent: 25,
+    });
     // A list price not above the price is no sale.
     const soft = button.querySelector(".purchase-sparkle-btn-soft")!;
     expect(soft.querySelector("[data-sale-tag]")).toBeNull();

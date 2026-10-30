@@ -28,6 +28,7 @@ import "./components/TribesPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
+  invalidateCosmetics,
   refreshStaleCosmetics,
   findPackItem,
   groupCosmeticVariants,
@@ -177,12 +178,15 @@ export class StoreModal extends BaseModal {
   };
 
   private rowObserver: ResizeObserver | null = null;
+  /** Fires when the soonest running sale ends, to refetch its prices. */
+  private saleEndTimer: ReturnType<typeof setTimeout> | null = null;
   private alignFrame: number | null = null;
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
     this.userMeResponse = userMeResponse;
     this.authSettled = true;
-    this.cosmetics = await fetchCosmetics();
+    // A failed fetch keeps the catalog already shown (see onOpen).
+    this.cosmetics = (await fetchCosmetics()) ?? this.cosmetics;
     this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();
   }
@@ -680,6 +684,7 @@ export class StoreModal extends BaseModal {
     const sales = (this.cosmetics?.promotions ?? []).filter(
       (sale) => new Date(sale.endsAt).getTime() > Date.now(),
     );
+    this.scheduleSaleEnd(sales);
     if (sales.length === 0) return "";
     return html`<div
       data-store-sale-banner
@@ -701,6 +706,30 @@ export class StoreModal extends BaseModal {
           </div>`,
       )}
     </div>`;
+  }
+
+  /**
+   * When the soonest running sale ends, refetch the catalog so its items go
+   * back to list price and its banner drops, even if the player never touches
+   * the open store. Rescheduled on every render; cleared on close.
+   */
+  private scheduleSaleEnd(sales: readonly { endsAt: string }[]): void {
+    if (this.saleEndTimer !== null) clearTimeout(this.saleEndTimer);
+    this.saleEndTimer = null;
+    if (sales.length === 0 || !this.isModalOpen) return;
+    const nextEnd = Math.min(...sales.map((s) => new Date(s.endsAt).getTime()));
+    // setTimeout overflows past ~24.8 days; a later end is rescheduled by a
+    // later render.
+    const delay = Math.min(Math.max(nextEnd - Date.now(), 0), 2 ** 31 - 1);
+    this.saleEndTimer = setTimeout(() => {
+      this.saleEndTimer = null;
+      invalidateCosmetics();
+      void fetchCosmetics().then((fresh) => {
+        this.cosmetics = fresh ?? this.cosmetics;
+        this.selectVisible(this.groupsForTab(this.activeTab));
+        this.requestUpdate();
+      });
+    }, delay);
   }
 
   protected renderHeaderSlot() {
@@ -781,6 +810,8 @@ export class StoreModal extends BaseModal {
   }
 
   protected onClose(): void {
+    if (this.saleEndTimer !== null) clearTimeout(this.saleEndTimer);
+    this.saleEndTimer = null;
     // The store hides via CSS (inline modal), so the tiles never disconnect
     // and an open card-payment modal — portaled to <body> — would float over
     // the play page after Escape closes the store. Close it explicitly.

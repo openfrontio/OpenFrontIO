@@ -18,6 +18,13 @@ import {
   PATTERN_KEY,
   UserSettings,
 } from "../../src/client/UserSettings";
+import { translateText } from "../../src/client/Utils";
+
+vi.mock("../../src/client/Utils", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/client/Utils")>();
+  return { ...actual, translateText: vi.fn(actual.translateText) };
+});
 
 vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
@@ -377,6 +384,18 @@ describe("StoreModal cosmetic browser", () => {
     const banner = modal.querySelector("[data-store-sale-banner]")!;
     expect(banner.children).toHaveLength(1);
     expect(banner.textContent).toContain("store.sale_banner");
+    expect(translateText).toHaveBeenCalledWith("store.sale_banner", {
+      name: "Weekend Sale",
+      percent: 25,
+      ends: new Date(endsAt).toLocaleString(undefined, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }),
+    });
+    expect(translateText).not.toHaveBeenCalledWith(
+      "store.sale_banner",
+      expect.objectContaining({ name: "Old Sale" }),
+    );
     const button = modal.querySelector<PurchaseButton>("purchase-button")!;
     expect(button.listPriceHard).toBe(120);
     await button.updateComplete;
@@ -399,6 +418,47 @@ describe("StoreModal cosmetic browser", () => {
 
     expect((modal as unknown as { cosmetics: unknown }).cosmetics).toBe(shown);
     expect(modal.querySelector("cosmetic-card")).toBeTruthy();
+  });
+
+  it("keeps the shown catalog when the sign-in refetch fails", async () => {
+    const shown = { promotions: [] } as unknown as Cosmetics;
+    vi.mocked(fetchCosmetics).mockResolvedValue(shown);
+    const modal = await openStoreOnCosmetic("patterns");
+
+    vi.mocked(fetchCosmetics).mockResolvedValue(null);
+    await modal.onUserMe(false);
+
+    expect((modal as unknown as { cosmetics: unknown }).cosmetics).toBe(shown);
+    expect(modal.querySelector("cosmetic-card")).toBeTruthy();
+  });
+
+  it("refetches prices when a sale ends while the store is open", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const endsAt = new Date(Date.now() + 60_000).toISOString();
+      vi.mocked(fetchCosmetics).mockResolvedValue({
+        promotions: [{ id: "1", name: "Flash", percentOff: 10, endsAt }],
+      } as unknown as Cosmetics);
+      const modal = await openStoreOnCosmetic("patterns");
+      await vi.waitFor(() =>
+        expect(modal.querySelector("[data-store-sale-banner]")).toBeTruthy(),
+      );
+
+      const after = { promotions: [] } as unknown as Cosmetics;
+      vi.mocked(fetchCosmetics).mockClear();
+      vi.mocked(fetchCosmetics).mockResolvedValue(after);
+      await vi.advanceTimersByTimeAsync(61_000);
+
+      await vi.waitFor(() => expect(fetchCosmetics).toHaveBeenCalled());
+      await vi.waitFor(() =>
+        expect(modal.querySelector("[data-store-sale-banner]")).toBeNull(),
+      );
+      expect((modal as unknown as { cosmetics: unknown }).cosmetics).toBe(
+        after,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("shows no banner or list price without a sale", async () => {
