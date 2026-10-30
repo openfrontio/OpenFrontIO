@@ -5,11 +5,13 @@ import type { ClanInfo, ClanMember } from "../../../src/client/ClanApi";
 import {
   apiMockFactory,
   clanApiMockFactory,
+  cosmeticsMockFactory,
   utilsMockFactory,
 } from "./ClanModalTestUtils";
 
 vi.mock("../../../src/client/Api", () => apiMockFactory());
 vi.mock("../../../src/client/ClanApi", () => clanApiMockFactory());
+vi.mock("../../../src/client/Cosmetics", () => cosmeticsMockFactory());
 vi.mock("../../../src/client/Utils", () => utilsMockFactory());
 
 import { ClanDetailView } from "../../../src/client/components/clan/ClanDetailView";

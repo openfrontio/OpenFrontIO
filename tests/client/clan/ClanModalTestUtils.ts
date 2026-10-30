@@ -132,6 +132,12 @@ export function crazyGamesSdkMockFactory() {
   };
 }
 
+export function cosmeticsMockFactory() {
+  return {
+    fetchCosmetics: vi.fn(async () => null),
+  };
+}
+
 export async function virtualizerMockFactory() {
   const { html } = await import("lit");
   return {
