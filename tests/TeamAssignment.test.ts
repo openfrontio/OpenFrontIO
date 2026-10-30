@@ -10,6 +10,7 @@ import {
 import {
   adjustForTeams,
   assignTeams,
+  humanTeams,
   resolveTeamsList,
 } from "@openfront/engine-lib/game/TeamAssignment";
 
@@ -513,6 +514,50 @@ describe("resolveTeamsList", () => {
     // Config.playerTeams(); that must stay a loud error.
     expect(() => resolveTeamsList(0, 50)).toThrow("Too few teams: 0");
     expect(() => resolveTeamsList(1, 50)).toThrow("Too few teams: 1");
+  });
+});
+
+describe("humanTeams", () => {
+  const human = (i: number, clan: string | null = null) =>
+    new PlayerInfo(`p${i}`, PlayerType.Human, `c${i}`, `id${i}`, false, clan);
+
+  it("matches assignTeams over humans and nations together", () => {
+    const humans = [
+      human(0, "AAA"),
+      human(1),
+      human(2, "AAA"),
+      human(3),
+      human(4),
+    ];
+    const nations = [0, 1, 2].map(
+      (i) => new PlayerInfo(`n${i}`, PlayerType.Nation, null, `n${i}`),
+    );
+    const teams = resolveTeamsList(3, humans.length + nations.length);
+    const all = assignTeams([...humans, ...nations], teams, false);
+    expect(humanTeams(humans, 3, nations.length)).toEqual(
+      humans.map((h) => all.get(h)),
+    );
+  });
+
+  it("leaves kicked clan overflow players without a team", () => {
+    const humans = [0, 1, 2, 3].map((i) => human(i, "AAA"));
+    // 4 players, 2 teams of 2: half the clan doesn't fit.
+    expect(humanTeams(humans, 2, 0)).toEqual([
+      ColoredTeams.Red,
+      ColoredTeams.Red,
+      undefined,
+      undefined,
+    ]);
+  });
+
+  it("puts every human on Humans in Humans vs Nations", () => {
+    expect(humanTeams([human(0), human(1, "AAA")], HumansVsNations, 9)).toEqual(
+      [ColoredTeams.Humans, ColoredTeams.Humans],
+    );
+  });
+
+  it("throws, as the game does, for a team config below 2 teams", () => {
+    expect(() => humanTeams([human(0)], 0, 0)).toThrow("Too few teams: 0");
   });
 });
 

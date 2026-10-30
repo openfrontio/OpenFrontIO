@@ -178,6 +178,34 @@ export function assignTeamsLobbyPreview(
   );
 }
 
+// The team the game puts each human on (same order as `humans`), or
+// undefined for one it kicks. `humans` and `nationCount` must be exactly what
+// the game is created with (GameImpl.addPlayers): humans are placed before
+// any nation, so the nations themselves don't matter, only how many there
+// are. Throws, as the game does, when the team config resolves to too few
+// teams.
+export function humanTeams(
+  humans: PlayerInfo[],
+  playerTeams: TeamCountConfig,
+  nationCount: number,
+): (Team | undefined)[] {
+  if (playerTeams === HumansVsNations) {
+    return humans.map(() => ColoredTeams.Humans);
+  }
+  const totalPlayers = humans.length + nationCount;
+  const teams = resolveTeamsList(playerTeams, totalPlayers);
+  const assignment = assignTeams(
+    humans,
+    teams,
+    playerTeams === Duos || playerTeams === Trios || playerTeams === Quads,
+    getMaxTeamSize(totalPlayers, teams.length),
+  );
+  return humans.map((p) => {
+    const team = assignment.get(p);
+    return team === "kicked" ? undefined : team;
+  });
+}
+
 export function getMaxTeamSize(numPlayers: number, numTeams: number): number {
   return Math.ceil(numPlayers / numTeams);
 }
