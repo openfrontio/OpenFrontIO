@@ -466,6 +466,7 @@ export class StoreModal extends BaseModal {
       priceSoft?: number;
       listPriceHard?: number;
       listPriceSoft?: number;
+      promotion?: { endsAt: string };
       rarity?: string;
     } | null;
     const isPurchasable = resolved.relationship === "purchasable";
@@ -483,8 +484,22 @@ export class StoreModal extends BaseModal {
       isPurchasable && resolved.type === "subscription" && product === null
         ? formatUsdCents((resolved.cosmetic as Subscription).priceMonthly)
         : "";
-    const priceHard = isPurchasable ? priced?.priceHard : undefined;
-    const priceSoft = isPurchasable ? priced?.priceSoft : undefined;
+    // Once the item's own sale has ended, show its list price (what the
+    // server charges now) even if the catalog in hand predates the end: a
+    // refetch that lands late, or never, can't leave a sale price showing.
+    const saleEnded =
+      priced?.promotion !== undefined &&
+      new Date(priced.promotion.endsAt).getTime() <= Date.now();
+    const priceHard = isPurchasable
+      ? saleEnded
+        ? (priced?.listPriceHard ?? priced?.priceHard)
+        : priced?.priceHard
+      : undefined;
+    const priceSoft = isPurchasable
+      ? saleEnded
+        ? (priced?.listPriceSoft ?? priced?.priceSoft)
+        : priced?.priceSoft
+      : undefined;
     const purchase = (method: "dollar" | "hard" | "soft") =>
       purchaseCosmetic(resolved, method);
     // Currency packs check out inline (wallet button / in-page card form)
@@ -514,8 +529,8 @@ export class StoreModal extends BaseModal {
       .inlineCheckout=${inlineCheckout}
       .priceHard=${priceHard ?? null}
       .priceSoft=${priceSoft ?? null}
-      .listPriceHard=${priceHard !== undefined ? (priced?.listPriceHard ?? null) : null}
-      .listPriceSoft=${priceSoft !== undefined ? (priced?.listPriceSoft ?? null) : null}
+      .listPriceHard=${priceHard !== undefined && !saleEnded ? (priced?.listPriceHard ?? null) : null}
+      .listPriceSoft=${priceSoft !== undefined && !saleEnded ? (priced?.listPriceSoft ?? null) : null}
       .rarity=${priced?.rarity ?? "common"}
       .itemName=${cosmeticSelectionLabel(resolved)}
       .dollarLabelKey=${

@@ -582,6 +582,32 @@ describe("StoreModal cosmetic browser", () => {
     expect(fetchCosmetics).toHaveBeenCalled();
   });
 
+  it("shows the list price once an item's sale has ended, whatever the catalog says", async () => {
+    resolvedCatalog = [
+      {
+        ...red,
+        cosmetic: {
+          ...pattern,
+          priceHard: 90,
+          listPriceHard: 120,
+          promotion: {
+            id: "1",
+            name: "Flash",
+            percentOff: 25,
+            endsAt: new Date(Date.now() - 1000).toISOString(),
+          },
+        } as never,
+      },
+    ];
+    const modal = await openStoreOnCosmetic("patterns");
+    const button = modal.querySelector<PurchaseButton>("purchase-button")!;
+    await button.updateComplete;
+
+    expect(button.priceHard).toBe(120);
+    expect(button.listPriceHard).toBeNull();
+    expect(button.querySelector("[data-sale-tag]")).toBeNull();
+  });
+
   it("shows no banner or list price without a sale", async () => {
     const modal = await openStoreOnCosmetic("patterns");
     expect(modal.querySelector("[data-store-sale-banner]")).toBeNull();
