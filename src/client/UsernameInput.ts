@@ -2,6 +2,8 @@ import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { sanitizeClanTag } from "@openfront/shared/SharedUtil";
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { unsafeSVG } from "lit/directives/unsafe-svg.js";
+import diceIcon from "../../resources/images/DiceIcon.svg?raw";
 import { translateText } from "../client/Utils";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { checkClanTagOwnership } from "./ClanApi";
@@ -13,6 +15,7 @@ import {
   accountVerifiedName,
   clampUsername,
   genAnonUsername,
+  generateRandomPlayerName,
   LAPSE_NOTICE_KEY,
   lapseNoticeMarker,
   looksGenerated,
@@ -29,6 +32,7 @@ import {
   steamGrantEndedShown,
 } from "./SteamGrantNotices";
 import { steamSDK } from "./SteamSDK";
+import { UserSettings } from "./UserSettings";
 import {
   MAX_CLAN_TAG_LENGTH,
   MAX_USERNAME_LENGTH,
@@ -660,8 +664,14 @@ export class UsernameInput extends LitElement {
     // reloads the whole page — falls back to a fresh guest username instead of
     // keeping the account name. addAuthListener only fires on login; portals
     // refresh the page on logout, so there is no logout event to handle.
+    const nameBeforePortalRequest = this.baseUsername;
     void gamePortal.getUsername().then((username) => {
-      if (username) {
+      // Even restoring the original text is a player choice, not a fresh seed.
+      if (
+        username &&
+        this.baseUsername === nameBeforePortalRequest &&
+        this.usernameIsGenerated
+      ) {
         this.baseUsername = clampUsername(username);
         this.usernameIsGenerated = false;
         this.validateAndStore();
@@ -1034,6 +1044,7 @@ export class UsernameInput extends LitElement {
       ${
         this.verifiedActive ? this.renderVerifiedChip() : this.renderNameInput()
       }
+      ${this.verifiedActive ? null : this.renderRandomNameButton()}
       <!-- The buttons differ in width, so this resizes the name field — which
            is transparent and left-aligned, so only its invisible right edge
            moves. -->
@@ -1104,6 +1115,34 @@ export class UsernameInput extends LitElement {
         class="text-left text-white placeholder-white/50 transition-colors text-ellipsis hover:bg-white/5 focus:bg-white/5 focus:outline-none focus:ring-2 focus:ring-malibu-blue/60 ${NAME_BOX} ${NAME_TEXT}"
       />
     `;
+  }
+
+  private renderRandomNameButton() {
+    return html`
+      <button
+        type="button"
+        class="shrink-0 h-full max-h-[44px] px-2 flex items-center justify-center rounded-lg border border-white/15 bg-black/25 text-white/70 hover:bg-black/40 hover:text-white focus-visible:outline-2 focus-visible:outline-malibu-blue cursor-pointer"
+        title=${translateText("username.random_name")}
+        aria-label=${translateText("username.random_name")}
+        @click=${this.handleRandomName}
+      >
+        <span class="w-5 h-5" aria-hidden="true"> ${unsafeSVG(diceIcon)} </span>
+      </button>
+    `;
+  }
+
+  private handleRandomName() {
+    this.baseUsername = generateRandomPlayerName(
+      new UserSettings().randomNameStyle(),
+      this.resolvedName().name,
+    );
+    // A button-generated name is an explicit choice: Steam must not reseed it.
+    this.usernameIsGenerated = false;
+    // Account details may still be loading, so clear the preference even when
+    // the verified chip has not appeared yet.
+    this.verifiedActive = false;
+    localStorage.setItem(useVerifiedNameKey, "false");
+    this.validateAndStore();
   }
 
   private renderUseVerifiedButton() {

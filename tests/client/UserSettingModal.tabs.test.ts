@@ -62,6 +62,29 @@ describe("user-setting tabs", () => {
     expect(strings.tab_graphics).toBe("Graphics");
   });
 
+  it("saves the random-name style chosen on Gameplay", async () => {
+    const el = await mount(false);
+    el.open({ tab: "gameplay" });
+    await el.updateComplete;
+    const select = el.querySelector(
+      "#random-name-style-select",
+    ) as HTMLElement & {
+      value: string;
+      options: { value: string }[];
+    };
+    expect(select.value).toBe("anon");
+    expect(select.options.map((option) => option.value)).toEqual([
+      "tribe",
+      "anon",
+    ]);
+    select.dispatchEvent(
+      new CustomEvent("change", { detail: { value: "tribe" } }),
+    );
+    await el.updateComplete;
+    expect(new UserSettings().randomNameStyle()).toBe("tribe");
+    expect(select.value).toBe("tribe");
+  });
+
   it("opens on the requested tab", async () => {
     const el = await mount(false);
     el.open({ tab: "audio" });
