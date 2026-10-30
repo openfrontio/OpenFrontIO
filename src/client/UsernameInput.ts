@@ -664,8 +664,10 @@ export class UsernameInput extends LitElement {
     // reloads the whole page — falls back to a fresh guest username instead of
     // keeping the account name. addAuthListener only fires on login; portals
     // refresh the page on logout, so there is no logout event to handle.
+    const nameBeforePortalRequest = this.baseUsername;
     gamePortal.getUsername().then((username) => {
-      if (username) {
+      // A delayed initial response must not overwrite a name the player chose.
+      if (username && this.baseUsername === nameBeforePortalRequest) {
         this.baseUsername = clampUsername(username);
         this.usernameIsGenerated = false;
         this.validateAndStore();
@@ -1038,7 +1040,7 @@ export class UsernameInput extends LitElement {
       ${
         this.verifiedActive ? this.renderVerifiedChip() : this.renderNameInput()
       }
-      ${this.renderRandomNameButton()}
+      ${this.verifiedActive ? null : this.renderRandomNameButton()}
       <!-- The buttons differ in width, so this resizes the name field — which
            is transparent and left-aligned, so only its invisible right edge
            moves. -->
@@ -1132,10 +1134,10 @@ export class UsernameInput extends LitElement {
     );
     // A button-generated name is an explicit choice: Steam must not reseed it.
     this.usernameIsGenerated = false;
-    if (this.verifiedActive) {
-      this.verifiedActive = false;
-      localStorage.setItem(useVerifiedNameKey, "false");
-    }
+    // Account details may still be loading, so clear the preference even when
+    // the verified chip has not appeared yet.
+    this.verifiedActive = false;
+    localStorage.setItem(useVerifiedNameKey, "false");
     this.validateAndStore();
   }
 
