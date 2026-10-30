@@ -46,7 +46,7 @@ export interface BuildItemDisplay {
   countable?: boolean;
 }
 
-export const buildTable: BuildItemDisplay[][] = [
+const buildTable: BuildItemDisplay[][] = [
   [
     {
       unitType: UnitType.AtomBomb,
@@ -160,7 +160,7 @@ export class BuildMenu extends LitElement implements Controller {
 
   tick() {
     if (!this._hidden) {
-      this.refresh();
+      void this.refresh();
     }
   }
 
@@ -361,6 +361,7 @@ export class BuildMenu extends LitElement implements Controller {
       return false;
     }
     const unit = this.playerBuildables.find((u) => u.type === item.unitType);
+    if (this.uiState.preventStacking) return !!unit && unit.canBuild !== false;
     return unit ? unit.canBuild !== false || unit.canUpgrade !== false : false;
   }
 
@@ -383,14 +384,14 @@ export class BuildMenu extends LitElement implements Controller {
   }
 
   public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
-    if (buildableUnit.canUpgrade !== false) {
+    if (buildableUnit.canUpgrade !== false && !this.uiState.preventStacking) {
       this.eventBus.emit(
         new SendUpgradeStructureIntentEvent(
           buildableUnit.canUpgrade,
           buildableUnit.type,
         ),
       );
-    } else if (buildableUnit.canBuild) {
+    } else if (buildableUnit.canBuild !== false) {
       const rocketDirectionUp =
         buildableUnit.type === UnitType.AtomBomb ||
         buildableUnit.type === UnitType.HydrogenBomb
@@ -419,9 +420,7 @@ export class BuildMenu extends LitElement implements Controller {
                 if (buildableUnit === undefined) {
                   return html``;
                 }
-                const enabled =
-                  buildableUnit.canBuild !== false ||
-                  buildableUnit.canUpgrade !== false;
+                const enabled = this.canBuildOrUpgrade(item);
                 return html`
                   <button
                     class="build-button"
@@ -485,20 +484,25 @@ export class BuildMenu extends LitElement implements Controller {
   showMenu(clickedTile: TileRef) {
     this.clickedTile = clickedTile;
     this._hidden = false;
-    this.refresh();
+    void this.refresh();
   }
 
   private refresh() {
-    this.game
+    const refresh = this.game
       .myPlayer()
       ?.buildables(this.clickedTile, BuildMenus.types)
       .then((buildables) => {
         this.playerBuildables = buildables;
         this.requestUpdate();
+      })
+      .catch((error) => {
+        // Retain the last successful snapshot, including newer overlapping replies.
+        console.warn("Failed to refresh build menu", error);
       });
 
     // remove disabled buildings from the buildtable
     this.filteredBuildTable = this.getBuildableUnits();
+    return refresh;
   }
 
   private getBuildableUnits(): BuildItemDisplay[][] {

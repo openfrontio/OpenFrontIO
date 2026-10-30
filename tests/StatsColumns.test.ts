@@ -88,7 +88,7 @@ describe("Stats column registry", () => {
         expect(columnById(id).kinds).toContain(kind);
       }
     }
-    expect(DEFAULT_STATS_COLUMNS.player).toContain("clan");
+    expect(DEFAULT_STATS_COLUMNS.player).not.toContain("clan");
     expect(DEFAULT_STATS_COLUMNS.team).not.toContain("clan");
   });
 

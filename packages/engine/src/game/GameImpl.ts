@@ -26,7 +26,10 @@ import {
   GameUpdate,
   GameUpdateType,
 } from "@openfront/engine-api/game/GameUpdates";
-import { UnitPredicate } from "@openfront/engine-api/game/ReadViews";
+import {
+  ReadonlyTileSet,
+  UnitPredicate,
+} from "@openfront/engine-api/game/ReadViews";
 import {
   AllPlayersStats,
   ClientID,
@@ -600,22 +603,24 @@ export class GameImpl implements Game {
         e.tick(this._ticks);
       }
     });
-    const inited: Execution[] = [];
-    const unInited: Execution[] = [];
-    this.unInitExecs.forEach((e) => {
-      if (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) {
-        e.init(this, this._ticks);
-        inited.push(e);
-      } else {
-        unInited.push(e);
+    if (this.unInitExecs.length > 0) {
+      const inited: Execution[] = [];
+      const unInited: Execution[] = [];
+      for (const e of this.unInitExecs) {
+        if (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) {
+          e.init(this, this._ticks);
+          inited.push(e);
+        } else {
+          unInited.push(e);
+        }
       }
-    });
+      this.execs.push(...inited);
+      this.unInitExecs = unInited;
+    }
 
     this.removeInactiveExecutions();
 
-    this.execs.push(...inited);
-    this.unInitExecs = unInited;
-    for (const player of this._players.values()) {
+    for (const player of this._playersBySmallID) {
       // Sampled before toUpdate so the reading is of the tick that just ran.
       // Dead and unspawned players are skipped: an eliminated player's fall
       // to zero tiles would otherwise register as a total collapse.
@@ -755,11 +760,11 @@ export class GameImpl implements Game {
   }
 
   players(): Player[] {
-    return Array.from(this._players.values()).filter((p) => p.isAlive());
+    return this._playersBySmallID.filter((p) => p.isAlive());
   }
 
   allPlayers(): Player[] {
-    return Array.from(this._players.values());
+    return this._playersBySmallID.slice();
   }
 
   executions(): Execution[] {
@@ -1428,10 +1433,17 @@ export class GameImpl implements Game {
   ): Set<TileRef> {
     return this._map.circleSearch(tile, radius, filter);
   }
+  bfsSearch(
+    tile: TileRef,
+    filter: (gm: GameMap, tile: TileRef) => boolean,
+    onVisit?: (tile: TileRef) => boolean | void,
+  ): boolean {
+    return this._map.bfsSearch(tile, filter, onVisit);
+  }
   bfs(
     tile: TileRef,
     filter: (gm: GameMap, tile: TileRef) => boolean,
-  ): Set<TileRef> {
+  ): ReadonlyTileSet {
     return this._map.bfs(tile, filter);
   }
   tileState(tile: TileRef): number {
@@ -1728,13 +1740,14 @@ export const GameSnapshot = snapshotType({
 });
 export type GameState = z.infer<typeof GameSnapshot.schema>;
 
-// Or a more dynamic approach that will catch new enum values:
+const ALL_GAME_UPDATE_TYPES: readonly GameUpdateType[] = Object.values(
+  GameUpdateType,
+).filter((key): key is GameUpdateType => typeof key === "number");
+
 const createGameUpdatesMap = (): GameUpdates => {
   const map = {} as GameUpdates;
-  Object.values(GameUpdateType)
-    .filter((key) => !isNaN(Number(key))) // Filter out reverse mappings
-    .forEach((key) => {
-      map[key as GameUpdateType] = [];
-    });
+  for (let i = 0; i < ALL_GAME_UPDATE_TYPES.length; i++) {
+    map[ALL_GAME_UPDATE_TYPES[i]] = [];
+  }
   return map;
 };

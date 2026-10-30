@@ -56,7 +56,7 @@ export class KeyboardLayoutController implements ReactiveController {
       }
     }
     listeners.add(this.onUpdate);
-    refreshGlobalLayoutMap();
+    void refreshGlobalLayoutMap();
   }
 
   hostDisconnected() {

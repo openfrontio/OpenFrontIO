@@ -183,7 +183,7 @@ describe("nav-account-menu", () => {
     }
   });
 
-  it("keeps the menu on CrazyGames, minus the log-out they own", async () => {
+  it("keeps the menu on CrazyGames, minus log-out and account settings", async () => {
     isOnCrazyGames.mockReturnValue(true);
     getUserProfile.mockResolvedValue({ username: "cg-player" });
     fireUserMe(userMe());
@@ -196,6 +196,8 @@ describe("nav-account-menu", () => {
     expect(itemKeys()).toContain("change-username");
     // …but signing out happens on CrazyGames, not through /auth/logout.
     expect(itemKeys()).not.toContain("log-out");
+    // Nor are their players asked for an email in account settings.
+    expect(itemKeys()).not.toContain("account-settings");
   });
 
   it("drops log-out on Steam, where the ticket signs the player back in", async () => {

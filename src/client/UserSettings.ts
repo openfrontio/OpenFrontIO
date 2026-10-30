@@ -21,6 +21,7 @@ import type { RandomNameStyle } from "./PlayerName";
 export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
   return {
     toggleView: "Space",
+    preventStacking: "KeyH",
     coordinateGrid: "KeyM",
     buildCity: "Digit1",
     buildFactory: "Digit2",
@@ -59,6 +60,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     moveDownArrow: "ArrowDown",
     moveRightArrow: "ArrowRight",
     buildMenuModifier: isMac ? "MetaLeft" : "ControlLeft",
+    buildScrollModifier: "AltLeft",
     emojiMenuModifier: "AltLeft",
     boxSelectWarships: "ShiftLeft",
     shiftKey: "ShiftLeft",
@@ -202,7 +204,6 @@ const AUDIO_LEGACY_KEY: Partial<Record<AudioCategory, string>> = {
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
 export const CROWN_KEY = "crown";
-export const COLOR_KEY = "settings.territoryColor";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 // Kept out of the graphics overrides so picking a preset doesn't turn it back on.
 export const MAP_LAYERS_KEY = "settings.mapLayers";
@@ -256,7 +257,7 @@ export interface CosmeticLoadout {
 export const MAX_LOADOUTS = 10;
 
 /** Slots are numbered rather than named: "01", "02", … */
-export function loadoutSlotName(slot: number): string {
+function loadoutSlotName(slot: number): string {
   return slot.toString().padStart(2, "0");
 }
 
@@ -324,6 +325,11 @@ export class UserSettings {
     for (const key of PER_PLAYER_KEYS) {
       settings.emitChange(key, settings.getCached(key));
     }
+  }
+
+  /** publicId of the logged-in player, or null when logged out. */
+  static currentPlayerId(): string | null {
+    return UserSettings.playerId;
   }
 
   private storageKey(key: string): string {

@@ -1,9 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "QingChina",
   "name": "Qing China",
   "translation_key": "map.qingchina",
   "categories": ["asia", "countries"],
-  "multiplayer_frequency": 4,
   "themes": ["asia"],
   "nations": [
     {

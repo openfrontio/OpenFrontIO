@@ -4,7 +4,7 @@
  * they were at that tick once later ticks have run.
  */
 
-import { GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { GameMapType, PlayerType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateViewData } from "@openfront/engine-api/game/GameUpdates";
 import { createGameRunner } from "@openfront/engine/GameRunner";
 import { loadMapFiles } from "@openfront/shared/GameMapLoader";
@@ -51,3 +51,51 @@ test("an update's name placements don't change as later ticks run", async () => 
   expect(new Set(held.map((h) => h.atTick)).size).toBeGreaterThan(2);
   for (const h of held) expect(JSON.stringify(h.data)).toBe(h.atTick);
 }, 60_000);
+
+test("bot and tribe names are placed during the spawn phase", async () => {
+  const start = toWireGameStartInfo({
+    gameID: "tribeSpawnName1",
+    lobbyCreatedAt: 1_700_000_000_000,
+    config: config({ gameMap: GameMapType.Onion, bots: 3 }),
+    players: [human(1)],
+  });
+  const namedBotIDs = new Set<string>();
+  const map = await loadMapFiles(
+    mapLoader,
+    start.config.gameMap,
+    start.config.gameMapSize,
+  );
+  let tick4ViewDataSent = false;
+  const runner = await createGameRunner(start, undefined, map, (gu) => {
+    if ("updates" in gu && gu.playerNameViewData !== undefined) {
+      if (gu.tick === 4) {
+        tick4ViewDataSent = true;
+      }
+      if (runner.game.inSpawnPhase()) {
+        const bots = runner.game
+          .players()
+          .filter((p) => p.type() === PlayerType.Bot);
+        for (const bot of bots) {
+          if (gu.playerNameViewData[bot.id()] !== undefined) {
+            namedBotIDs.add(bot.id());
+          }
+        }
+      }
+    }
+  });
+
+  runner.addTurn({ turnNumber: 0, intents: [] });
+  expect(runner.executeNextTick()).toBe(true);
+  runner.addTurn({ turnNumber: 1, intents: [] });
+  expect(runner.executeNextTick()).toBe(true);
+
+  expect(runner.game.inSpawnPhase()).toBe(true);
+  expect(namedBotIDs.size).toBe(3);
+
+  runner.addTurn({ turnNumber: 2, intents: [] });
+  expect(runner.executeNextTick()).toBe(true);
+
+  runner.addTurn({ turnNumber: 3, intents: [] });
+  expect(runner.executeNextTick()).toBe(true);
+  expect(tick4ViewDataSent).toBe(false);
+});

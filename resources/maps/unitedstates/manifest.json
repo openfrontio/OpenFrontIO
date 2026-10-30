@@ -70,7 +70,7 @@
   "id": "UnitedStates",
   "map": {
     "height": 1548,
-    "num_land_tiles": 1868818,
+    "num_land_tiles": 1868817,
     "width": 2800
   },
   "map16x": {
@@ -80,10 +80,9 @@
   },
   "map4x": {
     "height": 774,
-    "num_land_tiles": 458394,
+    "num_land_tiles": 458393,
     "width": 1400
   },
-  "multiplayer_frequency": 9,
   "name": "United States",
   "nations": [
     {

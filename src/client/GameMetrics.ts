@@ -24,7 +24,7 @@ import { reportMeasurement } from "./Telemetry";
  *   behind other work on the client's main thread. Multiplayer only.
  */
 
-export const FLUSH_INTERVAL_MS = 30_000;
+const FLUSH_INTERVAL_MS = 30_000;
 
 export interface Percentiles {
   p50: number;
