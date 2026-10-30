@@ -6,8 +6,12 @@
   "categories": ["fictional"],
   "author": "evanpelle",
   "hidden": true,
-  "custom_tribes": [{ "name": "Hill Tribe", "coordinates": [38, 49] }],
   "nations": [
+    {
+      "coordinates": [38, 49],
+      "flag": "",
+      "name": "Iron Kingdom"
+    },
     {
       "coordinates": [175, 84],
       "flag": "",

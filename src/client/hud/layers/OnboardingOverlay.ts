@@ -1,18 +1,23 @@
-import { Cell, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import {
+  Cell,
+  PlayerType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import { Intent } from "@openfront/engine-api/Schemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
+import { InputHandler } from "../../InputHandler";
 import { Platform } from "../../Platform";
 import { GoToPositionEvent, TransformHandler } from "../../TransformHandler";
 import { SetIntentGateEvent } from "../../Transport";
+import { UIState } from "../../UIState";
 import { homeHref, textDirection, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import {
   inCircle,
-  ISLET,
   judge,
   LOW_TROOP_SHARE,
   ONBOARDING_STEPS,
@@ -22,8 +27,11 @@ import {
   OnboardingVerdict,
   SPAWN_ZONE,
   stepFor,
+  STRAIT,
+  STRAIT_X,
+  TROOPS_AFTER_TICKS,
 } from "../Onboarding";
-import { TutorialHighlightEvent } from "../Tutorial";
+import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 
 /** How often (in ticks) to re-read the map for the step and its target. */
 const SCAN_TICKS = 5;
@@ -75,11 +83,12 @@ const VIEW_Y = [0.35, 0.75];
 const TOUCH_TEXT = new Set([
   "spawn",
   "expand",
-  "tribe",
+  "kingdom",
+  "nuke",
+  "nuke_aim",
   "coast",
-  "boat",
-  "nation",
-  "nation_land",
+  "empire",
+  "empire_land",
   "wrong_target",
 ]);
 
@@ -91,25 +100,32 @@ interface Target {
 /**
  * The onboarding tutorial (docs/OnboardingTutorial.md): on a `tutorial`
  * game it marks the step's target with an arrow, shows one sentence,
- * and drops (through the Transport's intent gate) any spawn, attack or boat
- * the step doesn't ask for, or any attack while troops are low.
+ * and drops (through the Transport's intent gate) any spawn, attack, boat
+ * or build the step doesn't ask for, or any attack while troops are low.
  */
 @customElement("onboarding-overlay")
 export class OnboardingOverlay extends LitElement implements Controller {
   public game: GameView;
   public eventBus: EventBus;
   public transformHandler: TransformHandler;
+  public uiState: UIState;
+  public inputHandler: InputHandler;
 
   @state() private active = false;
   /** The welcome card, shown until the player clicks Start. */
   @state() private intro = true;
   @state() private step: OnboardingStep | "won" = "spawn";
   @state() private hasCoast = true;
+  /** On the nuke step: the atom bomb is picked, waiting for a target. */
+  @state() private armed = false;
+  /** On the nuke step: our silo is reloading. */
+  @state() private reloading = false;
   @state() private lowTroops = false;
   @state() private nudging = false;
   /**
    * Screen position and radius of the target marker, in px; on the troops
-   * step, the top of the troop bar, with the arrow and no marker.
+   * step, the top of the troop bar, and on the nuke step the atom bomb
+   * button, with the arrow and no marker.
    */
   @state() private spot: {
     x: number;
@@ -120,14 +136,25 @@ export class OnboardingOverlay extends LitElement implements Controller {
 
   private target: Target | null = null;
   private lowTroopsUntil = 0;
+  /** The low-troops warning has come and gone; it isn't shown again. */
+  private lowTroopsWarned = false;
   private nudgeUntil = 0;
   private frame: number | null = null;
-  /** The tribe and nation spawn a tick or two in; until then none is "gone". */
+  /** The nations spawn a tick or two in; until then neither is "gone". */
   private rivalsSeen = false;
   /** Clicked "Got it" on the troops step. */
   private troopsSeen = false;
-  /** Sent a boat to the nation: its middle is the target from then on. */
-  private boatedNation = false;
+  /** The tick our first expansion went through. */
+  private expandedAt: number | null = null;
+  /**
+   * We border the empire, or a boat is on its way there: the arrow moves
+   * from its coast inland.
+   */
+  private landed = false;
+  /** Fired an atom bomb. */
+  private nuked = false;
+  /** What the HUD last highlighted for us. */
+  private highlight: TutorialHighlight | null = null;
   /**
    * The last scan's instruction: when it changes, the camera makes sure its
    * target is in view.
@@ -157,19 +184,27 @@ export class OnboardingOverlay extends LitElement implements Controller {
     if (!this.active) return;
     const me = this.game.myPlayer();
     if (me === null) return;
-    if (this.game.ticks() % SCAN_TICKS === 0 || this.step === "spawn") {
+    // The nuke step follows the build bar, which is picked between ticks.
+    if (
+      this.game.ticks() % SCAN_TICKS === 0 ||
+      this.step === "spawn" ||
+      this.step === "nuke"
+    ) {
       this.scan(me);
     }
     const now = performance.now();
-    const low = me.hasSpawned() && this.troopShare(me) < LOW_TROOP_SHARE;
-    if (low && !this.lowTroops) this.lowTroopsUntil = now + LOW_TROOPS_MS;
-    this.setLowTroops(low || now < this.lowTroopsUntil);
+    if (!this.lowTroopsWarned) {
+      const low = me.hasSpawned() && this.troopShare(me) < LOW_TROOP_SHARE;
+      if (low && !this.lowTroops) this.lowTroopsUntil = now + LOW_TROOPS_MS;
+      this.setLowTroops(low || now < this.lowTroopsUntil);
+    }
     this.nudging = now < this.nudgeUntil;
   }
 
   private setLowTroops(low: boolean) {
     if (low === this.lowTroops) return;
     this.lowTroops = low;
+    if (!low) this.lowTroopsWarned = true;
     this.eventBus.emit(new OnboardingLowTroopsEvent(low));
   }
 
@@ -191,12 +226,7 @@ export class OnboardingOverlay extends LitElement implements Controller {
     if (verdict === "ok") {
       if (intent.type === "attack" || intent.type === "boat") {
         this.inFlight.push({ troops: intent.troops ?? 0, at: now });
-      }
-      if (
-        intent.type === "boat" &&
-        this.targetOfTile(intent.dst) === "nation"
-      ) {
-        this.boatedNation = true;
+        this.expandedAt ??= this.game.ticks();
       }
       return true;
     }
@@ -218,7 +248,9 @@ export class OnboardingOverlay extends LitElement implements Controller {
       intent.type === "attack" || intent.type === "boat"
         ? (intent.troops ?? 0)
         : 0;
-    const share = me === null ? 0 : this.troopShare(me, sending);
+    let share = 1;
+    if (me === null) share = 0;
+    else if (!this.lowTroopsWarned) share = this.troopShare(me, sending);
     switch (intent.type) {
       case "spawn":
         return judge(
@@ -251,63 +283,108 @@ export class OnboardingOverlay extends LitElement implements Controller {
           { kind: "boat", target: this.targetOfTile(intent.dst) },
           share,
         );
+      case "build_unit":
+        return judge(
+          this.step,
+          {
+            kind: "build",
+            atomBomb: intent.unit === UnitType.AtomBomb,
+            onTarget: this.inBlast(intent.tile),
+          },
+          share,
+        );
+      // Deleting the captured silo would leave no way to fire the bomb.
+      case "delete_unit":
+        return "wrong_target";
       default:
         return "ok";
     }
   }
 
+  /** Whether an atom bomb on `tile` would hit where the arrow points. */
+  private inBlast(tile: number): boolean {
+    const t = this.target;
+    if (t === null) return false;
+    const r = this.game.config().nukeMagnitudes(UnitType.AtomBomb).outer;
+    const dx = this.game.x(tile) - t.x;
+    const dy = this.game.y(tile) - t.y;
+    return dx * dx + dy * dy <= r * r;
+  }
+
   private targetOf(p: PlayerView): OnboardingTarget {
-    if (p.type() === PlayerType.Bot) return "tribe";
-    if (p.type() === PlayerType.Nation) return "nation";
-    return "other";
+    if (p.type() !== PlayerType.Nation) return "other";
+    return this.onOurIsland(p) ? "kingdom" : "empire";
   }
 
   private targetOfTile(tile: number): OnboardingTarget {
     const owner = this.game.playerBySmallID(this.game.ownerID(tile));
     if (owner.isPlayer()) return this.targetOf(owner as PlayerView);
-    return inCircle(ISLET, this.game.x(tile), this.game.y(tile))
-      ? "islet"
-      : "free";
+    return "free";
   }
 
-  private living(type: PlayerType): PlayerView | null {
+  /** Whether the nation spawned on our island (west of the strait). */
+  private onOurIsland(p: PlayerView): boolean {
+    const spawn = p.state.spawnTile;
+    return spawn !== undefined && this.game.x(spawn) < STRAIT_X;
+  }
+
+  /** The living kingdom, or the living empire. */
+  private rival(kingdom: boolean): PlayerView | null {
     return (
-      this.game.playerViews().find((p) => p.type() === type && p.isAlive()) ??
-      null
+      this.game
+        .playerViews()
+        .find(
+          (p) =>
+            p.type() === PlayerType.Nation &&
+            p.isAlive() &&
+            p.state.spawnTile !== undefined &&
+            this.onOurIsland(p) === kingdom,
+        ) ?? null
     );
   }
 
   /**
    * Reads the step off the map, and where its arrow points: the free land
-   * at our edge nearest where we're headed, the tribe's land nearest its
-   * name (its middle), the islet, or the nation's coast nearest the islet
-   * until a boat goes there, then its middle.
+   * at our edge nearest where we're headed, the kingdom's silo, then its
+   * land nearest its name (its middle), the atom bomb button and the
+   * empire's port, or the empire's coast until we land there, then its
+   * middle.
    */
   private scan(me: PlayerView) {
     const g = this.game;
-    const tribe = this.living(PlayerType.Bot);
-    const nation = this.living(PlayerType.Nation);
+    const kingdom = this.rival(true);
+    const empire = this.rival(false);
     const mine = me.smallID();
-    const tribeID = tribe?.smallID() ?? -1;
-    const nationID = nation?.smallID() ?? -1;
-    const tribeLoc = tribe?.nameLocation();
-    const nationLoc = nation?.nameLocation();
-    // Grow toward the tribe while it's alive, then toward the islet.
-    const goal = tribeLoc ?? ISLET;
+    const kingdomID = kingdom?.smallID() ?? -1;
+    const empireID = empire?.smallID() ?? -1;
+    const kingdomLoc = kingdom?.nameLocation();
+    const empireLoc = empire?.nameLocation();
+    const cellOf = (u: { tile(): number } | undefined) =>
+      u === undefined ? null : new Cell(g.x(u.tile()), g.y(u.tile()));
+    const silo = cellOf(kingdom?.units(UnitType.MissileSilo)[0]);
+    const port = cellOf(empire?.units(UnitType.Port)[0]);
+    const mySilo = me.units(UnitType.MissileSilo)[0];
+    if (!this.nuked && me.units(UnitType.AtomBomb).length > 0) {
+      this.nuked = true;
+      // The bomb stays picked after it's fired; the next clicks attack.
+      this.inputHandler.setGhostStructure(null);
+    }
+    // Grow toward the kingdom while it's alive, then toward the strait.
+    const goal = kingdomLoc ?? STRAIT;
     const near = (from: { x: number; y: number }, x: number, y: number) =>
       (x - from.x) * (x - from.x) + (y - from.y) * (y - from.y);
 
-    let bordersTribe = false;
-    let ownsIslet = false;
+    let bordersKingdom = false;
+    let bordersEmpire = false;
     let hasCoast = false;
     let frontier: Cell | null = null;
     let frontierDist = Infinity;
-    let tribeMiddle: Cell | null = null;
-    let tribeMiddleDist = Infinity;
-    let nationCoast: Cell | null = null;
-    let nationCoastDist = Infinity;
-    let nationMiddle: Cell | null = null;
-    let nationMiddleDist = Infinity;
+    let kingdomMiddle: Cell | null = null;
+    let kingdomMiddleDist = Infinity;
+    let empireCoast: Cell | null = null;
+    let empireCoastDist = Infinity;
+    let empireMiddle: Cell | null = null;
+    let empireMiddleDist = Infinity;
 
     const w = g.width();
     const h = g.height();
@@ -321,33 +398,32 @@ export class OnboardingOverlay extends LitElement implements Controller {
       for (let x = 0; x < w; x++) {
         const t = g.ref(x, y);
         const owner = g.ownerID(t);
-        if (owner === nationID) {
+        if (owner === empireID) {
           if (g.isShore(t)) {
-            const d = near(ISLET, x, y);
-            if (d < nationCoastDist) {
-              nationCoastDist = d;
-              nationCoast = new Cell(x, y);
+            const d = near(STRAIT, x, y);
+            if (d < empireCoastDist) {
+              empireCoastDist = d;
+              empireCoast = new Cell(x, y);
             }
           }
-          if (nationLoc) {
-            const d = near(nationLoc, x, y);
-            if (d < nationMiddleDist) {
-              nationMiddleDist = d;
-              nationMiddle = new Cell(x, y);
+          if (empireLoc) {
+            const d = near(empireLoc, x, y);
+            if (d < empireMiddleDist) {
+              empireMiddleDist = d;
+              empireMiddle = new Cell(x, y);
             }
           }
           continue;
         }
-        if (owner === tribeID && tribeLoc) {
-          const d = near(tribeLoc, x, y);
-          if (d < tribeMiddleDist) {
-            tribeMiddleDist = d;
-            tribeMiddle = new Cell(x, y);
+        if (owner === kingdomID && kingdomLoc) {
+          const d = near(kingdomLoc, x, y);
+          if (d < kingdomMiddleDist) {
+            kingdomMiddleDist = d;
+            kingdomMiddle = new Cell(x, y);
           }
           continue;
         }
         if (owner !== mine) continue;
-        if (inCircle(ISLET, x, y)) ownsIslet = true;
         if (g.isShore(t)) hasCoast = true;
         for (const [dx, dy] of offsets) {
           const nx = x + dx;
@@ -355,8 +431,10 @@ export class OnboardingOverlay extends LitElement implements Controller {
           if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
           const n = g.ref(nx, ny);
           const no = g.ownerID(n);
-          if (no === tribeID) {
-            bordersTribe = true;
+          if (no === kingdomID) {
+            bordersKingdom = true;
+          } else if (no === empireID) {
+            bordersEmpire = true;
           } else if (no === 0 && g.isLand(n)) {
             const d = near(goal, nx, ny);
             if (d < frontierDist) {
@@ -368,17 +446,29 @@ export class OnboardingOverlay extends LitElement implements Controller {
       }
     }
 
-    if (tribe !== null && nation !== null) this.rivalsSeen = true;
-    const previous = this.step;
+    if (kingdom !== null && empire !== null) this.rivalsSeen = true;
     this.step = stepFor({
       hasSpawned: me.hasSpawned(),
-      bordersTribe,
+      bordersKingdom,
+      expandedAWhile:
+        this.expandedAt !== null &&
+        this.game.ticks() - this.expandedAt >= TROOPS_AFTER_TICKS,
       troopsSeen: this.troopsSeen,
-      tribeAlive: tribe !== null || !this.rivalsSeen,
-      ownsIslet,
-      nationAlive: nation !== null || !this.rivalsSeen,
+      kingdomAlive: kingdom !== null || !this.rivalsSeen,
+      empireAlive: empire !== null || !this.rivalsSeen,
+      ownsSilo: mySilo !== undefined,
+      nuked: this.nuked,
     });
     this.hasCoast = hasCoast;
+    this.landed =
+      bordersEmpire ||
+      me.units(UnitType.TransportShip).some((b) => {
+        const dst = b.targetTile();
+        return dst !== undefined && g.ownerID(dst) === empireID;
+      });
+    this.armed =
+      this.step === "nuke" && this.uiState.ghostStructure === UnitType.AtomBomb;
+    this.reloading = this.step === "nuke" && mySilo?.isInCooldown() === true;
 
     const at = (c: Cell | null): Target | null =>
       c === null ? null : { x: c.x, y: c.y };
@@ -392,16 +482,20 @@ export class OnboardingOverlay extends LitElement implements Controller {
       case "troops":
         this.target = null;
         break;
-      case "tribe":
-        this.target = at(tribeMiddle);
+      case "kingdom":
+        this.target = at(silo ?? kingdomMiddle);
         break;
-      case "boat":
-        this.target = hasCoast
-          ? { x: ISLET.x, y: ISLET.y }
-          : at(this.intoFreeLand(frontier, ISLET));
+      case "nuke":
+        // Until the bomb is picked the arrow is on its button.
+        this.target =
+          this.armed && !this.reloading ? at(port ?? empireMiddle) : null;
         break;
-      case "nation":
-        this.target = at(this.boatedNation ? nationMiddle : nationCoast);
+      case "empire":
+        if (!hasCoast) {
+          this.target = at(this.intoFreeLand(frontier, goal));
+        } else {
+          this.target = at(this.landed ? empireMiddle : empireCoast);
+        }
         break;
       case "won":
         this.target = null;
@@ -409,10 +503,15 @@ export class OnboardingOverlay extends LitElement implements Controller {
         this.eventBus.emit(new SetIntentGateEvent(null));
         break;
     }
-    if ((this.step === "troops") !== (previous === "troops")) {
-      this.eventBus.emit(
-        new TutorialHighlightEvent(this.step === "troops" ? "troops" : null),
-      );
+    const highlight =
+      this.step === "troops"
+        ? "troops"
+        : this.step === "nuke" && !this.armed && !this.reloading
+          ? "atom"
+          : null;
+    if (highlight !== this.highlight) {
+      this.highlight = highlight;
+      this.eventBus.emit(new TutorialHighlightEvent(highlight));
     }
     // A new instruction's target can be across the map, or under the HUD.
     const t = this.target;
@@ -480,12 +579,12 @@ export class OnboardingOverlay extends LitElement implements Controller {
 
   /**
    * Keeps the target marker on the target as the camera moves, or the
-   * arrow on the troop bar.
+   * arrow on the button the HUD highlights.
    */
   private followTarget = () => {
     this.frame = requestAnimationFrame(this.followTarget);
     const next =
-      this.step === "troops" ? this.troopBarSpot() : this.markerSpot();
+      this.highlight !== null ? this.highlightSpot() : this.markerSpot();
     if (next === null) {
       if (this.spot !== null) this.spot = null;
       return;
@@ -518,10 +617,13 @@ export class OnboardingOverlay extends LitElement implements Controller {
     return { x: p.x, y: p.y, r, marker: true };
   }
 
-  /** The top middle of the troop bar the control panel highlights. */
-  private troopBarSpot() {
+  /**
+   * The top middle of what the HUD highlights: the control panel's troop
+   * bar, or the build bar's atom bomb.
+   */
+  private highlightSpot() {
     for (const el of document.querySelectorAll(
-      "control-panel .tutorial-highlight",
+      "control-panel .tutorial-highlight, unit-display .tutorial-highlight",
     )) {
       const rect = el.getBoundingClientRect();
       if (rect.width === 0) continue;
@@ -547,8 +649,10 @@ export class OnboardingOverlay extends LitElement implements Controller {
   }
 
   private stepKey(): string {
-    if (this.step === "boat" && !this.hasCoast) return "coast";
-    if (this.step === "nation" && this.boatedNation) return "nation_land";
+    if (this.step === "empire" && !this.hasCoast) return "coast";
+    if (this.step === "nuke" && this.reloading) return "nuke_reload";
+    if (this.step === "nuke" && this.armed) return "nuke_aim";
+    if (this.step === "empire" && this.landed) return "empire_land";
     return this.step;
   }
 
