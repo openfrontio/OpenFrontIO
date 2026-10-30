@@ -579,8 +579,7 @@ export async function purchaseCosmetic(
   // ResolvedCosmetic isn't a discriminated union, so the guard above doesn't
   // narrow cosmetic's type. Subscriptions are excluded by the runtime check.
   const priced = c as Pattern | Flag | Pack;
-  const price =
-    method === "hard" ? (priced.priceHard ?? 0) : (priced.priceSoft ?? 0);
+  const price = currentPrice(priced, method) ?? 0;
   const userMe = await getUserMe();
   if (userMe === false) {
     await showInGameAlert(translateText("store.login_required"));
@@ -728,6 +727,7 @@ async function purchasePack(
     console.error("purchaseCosmetic: packs are only sold for hard currency");
     return;
   }
+  const price = currentPrice(pack, "hard") ?? pack.priceHard;
   const userMe = await getUserMe();
   if (userMe === false) {
     await showInGameAlert(translateText("store.login_required"));
@@ -735,7 +735,7 @@ async function purchasePack(
   }
   const insufficient = (balance: number): InsufficientCurrency => ({
     currency: translateText("cosmetics.hard"),
-    shortfall: pack.priceHard - balance,
+    shortfall: price - balance,
     item: pack.displayName,
     canTopUp: true,
   });
@@ -747,7 +747,7 @@ async function purchasePack(
     await showInGameAlert(debtMessage(-balance));
     return;
   }
-  if (balance < pack.priceHard) {
+  if (balance < price) {
     return insufficient(balance);
   }
 
@@ -771,7 +771,7 @@ async function purchasePack(
         return;
       }
       const available = fresh.player.currency?.hard ?? 0;
-      const outcome = balanceOutcome(available, pack.priceHard);
+      const outcome = balanceOutcome(available, price);
       if (outcome === "debt") {
         await showInGameAlert(debtMessage(-available));
         return;
@@ -849,6 +849,39 @@ function simpleHash(str: string): string {
  * available" / "Tier not available"): the catalog the store rendered from no
  * longer matches what the rail sells.
  */
+/**
+ * An item's price in one currency as the store shows and the server charges
+ * it now. While the item's own sale runs that is the catalog price (the sale
+ * price); once the sale's endsAt has passed it is the list price, even if the
+ * catalog in hand predates the end. The store's buttons and the purchase
+ * balance check both read this, so they never disagree.
+ */
+export function currentPrice(
+  item: {
+    priceHard?: number;
+    priceSoft?: number;
+    listPriceHard?: number;
+    listPriceSoft?: number;
+    promotion?: { endsAt: string };
+  },
+  currency: "hard" | "soft",
+): number | undefined {
+  const price = currency === "hard" ? item.priceHard : item.priceSoft;
+  const listPrice =
+    currency === "hard" ? item.listPriceHard : item.listPriceSoft;
+  return saleHasEnded(item) ? (listPrice ?? price) : price;
+}
+
+/** Whether the item's own sale has ended (its endsAt has passed). */
+export function saleHasEnded(item: {
+  promotion?: { endsAt: string };
+}): boolean {
+  return (
+    item.promotion !== undefined &&
+    new Date(item.promotion.endsAt).getTime() <= Date.now()
+  );
+}
+
 export function invalidateCosmetics(): void {
   __cosmetics = null;
 }

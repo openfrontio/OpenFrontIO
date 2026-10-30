@@ -27,6 +27,7 @@ import { alignPurchaseRows } from "./components/PurchaseButton";
 import "./components/TribesPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
+  currentPrice,
   fetchCosmetics,
   invalidateCosmetics,
   refreshStaleCosmetics,
@@ -35,6 +36,7 @@ import {
   ownedPackItems,
   purchaseCosmetic,
   resolveCosmetics,
+  saleHasEnded,
   ResolvedCosmetic,
 } from "./Cosmetics";
 import { matchesStoreItem } from "./EquippedCosmetics";
@@ -484,22 +486,13 @@ export class StoreModal extends BaseModal {
       isPurchasable && resolved.type === "subscription" && product === null
         ? formatUsdCents((resolved.cosmetic as Subscription).priceMonthly)
         : "";
-    // Once the item's own sale has ended, show its list price (what the
-    // server charges now) even if the catalog in hand predates the end: a
-    // refetch that lands late, or never, can't leave a sale price showing.
-    const saleEnded =
-      priced?.promotion !== undefined &&
-      new Date(priced.promotion.endsAt).getTime() <= Date.now();
-    const priceHard = isPurchasable
-      ? saleEnded
-        ? (priced?.listPriceHard ?? priced?.priceHard)
-        : priced?.priceHard
-      : undefined;
-    const priceSoft = isPurchasable
-      ? saleEnded
-        ? (priced?.listPriceSoft ?? priced?.priceSoft)
-        : priced?.priceSoft
-      : undefined;
+    // The price as the server charges it now: once the item's own sale has
+    // ended that is its list price, whatever the catalog in hand says.
+    const saleEnded = priced !== null && saleHasEnded(priced);
+    const priceHard =
+      isPurchasable && priced ? currentPrice(priced, "hard") : undefined;
+    const priceSoft =
+      isPurchasable && priced ? currentPrice(priced, "soft") : undefined;
     const purchase = (method: "dollar" | "hard" | "soft") =>
       purchaseCosmetic(resolved, method);
     // Currency packs check out inline (wallet button / in-page card form)
