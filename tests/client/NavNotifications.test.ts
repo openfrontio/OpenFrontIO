@@ -7,14 +7,19 @@ const {
   getUserProfile,
   isOnCrazyGames,
   latestUserMeResponse,
-} = vi.hoisted(() => ({
-  fetchFriendRequests: vi.fn(),
-  getCosmeticsHash: vi.fn(async () => "hash-2"),
-  getGamesPlayed: vi.fn(() => 0),
-  getUserProfile: vi.fn(async () => null),
-  isOnCrazyGames: vi.fn(() => false),
-  latestUserMeResponse: vi.fn(),
-}));
+  nextFriendRequestsSeq,
+} = vi.hoisted(() => {
+  let seq = 0;
+  return {
+    fetchFriendRequests: vi.fn(),
+    getCosmeticsHash: vi.fn(async () => "hash-2"),
+    getGamesPlayed: vi.fn(() => 0),
+    getUserProfile: vi.fn(async () => null),
+    isOnCrazyGames: vi.fn(() => false),
+    latestUserMeResponse: vi.fn(),
+    nextFriendRequestsSeq: () => ++seq,
+  };
+});
 
 vi.mock("../../src/client/Cosmetics", () => ({ getCosmeticsHash }));
 vi.mock("../../src/client/Utils", () => ({ getGamesPlayed }));
@@ -25,9 +30,12 @@ vi.mock("../../src/client/NavAccountButton", () => ({ latestUserMeResponse }));
 vi.mock("../../src/client/FriendsApi", () => ({
   fetchFriendRequests,
   FRIEND_REQUESTS_UPDATED_EVENT: "friend-requests-updated",
-  publishFriendRequests: (requests: unknown) =>
+  nextFriendRequestsSeq,
+  publishFriendRequests: (requests: object, seq: number) =>
     document.dispatchEvent(
-      new CustomEvent("friend-requests-updated", { detail: requests }),
+      new CustomEvent("friend-requests-updated", {
+        detail: { ...requests, seq },
+      }),
     ),
 }));
 vi.mock("resources/version.txt?raw", () => ({ default: "v9.9.9" }));
@@ -121,7 +129,7 @@ describe("nav notifications", () => {
 
     document.dispatchEvent(
       new CustomEvent("friend-requests-updated", {
-        detail: { incoming: [], outgoing: [] },
+        detail: { incoming: [], outgoing: [], seq: nextFriendRequestsSeq() },
       }),
     );
     expect(bell.controller.showBellDot()).toBe(false);
@@ -254,12 +262,59 @@ describe("nav notifications", () => {
 
     document.dispatchEvent(
       new CustomEvent("friend-requests-updated", {
-        detail: { incoming: [], outgoing: [] },
+        detail: { incoming: [], outgoing: [], seq: nextFriendRequestsSeq() },
       }),
     );
     resolvePoll({ incoming: [pendingRequest], outgoing: [] });
     await flush();
 
+    expect(bell.controller.friendRequests()).toEqual([]);
+  });
+
+  it("applies a poll that started after an older snapshot that arrives first", async () => {
+    // The Friends tab's fetch started before this poll, so its snapshot is
+    // older, but its response lands first and still lists a request the poll
+    // knows is resolved. Fetch-start order decides, not arrival order.
+    const olderFetch = nextFriendRequestsSeq();
+    let resolvePoll!: (value: { incoming: never[]; outgoing: never[] }) => void;
+    fetchFriendRequests.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolvePoll = resolve;
+      }),
+    );
+    latestUserMeResponse.mockReturnValue(linkedUser);
+    const bell = host();
+
+    document.dispatchEvent(
+      new CustomEvent("friend-requests-updated", {
+        detail: { incoming: [pendingRequest], outgoing: [], seq: olderFetch },
+      }),
+    );
+    expect(bell.controller.friendRequests()).toEqual([pendingRequest]);
+
+    resolvePoll({ incoming: [], outgoing: [] });
+    await flush();
+    expect(bell.controller.friendRequests()).toEqual([]);
+  });
+
+  it("ignores a snapshot older than the one already applied", async () => {
+    latestUserMeResponse.mockReturnValue(linkedUser);
+    const bell = host();
+    await flush();
+
+    // A Friends tab detached mid-fetch publishes its response after a newer
+    // snapshot has already been applied.
+    const staleFetch = nextFriendRequestsSeq();
+    document.dispatchEvent(
+      new CustomEvent("friend-requests-updated", {
+        detail: { incoming: [], outgoing: [], seq: nextFriendRequestsSeq() },
+      }),
+    );
+    document.dispatchEvent(
+      new CustomEvent("friend-requests-updated", {
+        detail: { incoming: [pendingRequest], outgoing: [], seq: staleFetch },
+      }),
+    );
     expect(bell.controller.friendRequests()).toEqual([]);
   });
 

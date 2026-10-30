@@ -5,14 +5,28 @@ const {
   deleteFriendRequest,
   fetchFriendRequests,
   fetchFriends,
+  nextFriendRequestsSeq,
   publishFriendRequests,
-} = vi.hoisted(() => ({
-  acceptFriendRequest: vi.fn(async () => true as const),
-  deleteFriendRequest: vi.fn(async () => true as const),
-  fetchFriendRequests: vi.fn(),
-  fetchFriends: vi.fn(),
-  publishFriendRequests: vi.fn(),
-}));
+} = vi.hoisted(() => {
+  let seq = 0;
+  return {
+    acceptFriendRequest: vi.fn(async () => true as const),
+    deleteFriendRequest: vi.fn(async () => true as const),
+    fetchFriendRequests: vi.fn(),
+    fetchFriends: vi.fn(),
+    nextFriendRequestsSeq: () => ++seq,
+    // Dispatch like the real one: the tab applies its own fetches through the
+    // event it listens to. The calls are still recorded.
+    publishFriendRequests: vi.fn(
+      (requests: { incoming: unknown[]; outgoing: unknown[] }, at: number) =>
+        document.dispatchEvent(
+          new CustomEvent("friend-requests-updated", {
+            detail: { ...requests, seq: at },
+          }),
+        ),
+    ),
+  };
+});
 
 vi.mock("../../../src/client/FriendsApi", () => ({
   acceptFriendRequest,
@@ -20,6 +34,7 @@ vi.mock("../../../src/client/FriendsApi", () => ({
   fetchFriendRequests,
   fetchFriends,
   FRIEND_REQUESTS_UPDATED_EVENT: "friend-requests-updated",
+  nextFriendRequestsSeq,
   publishFriendRequests,
   removeFriend: vi.fn(),
   sendFriendRequest: vi.fn(),
@@ -107,20 +122,20 @@ describe("FriendsList notification synchronization", () => {
 
   it("publishes the initial server snapshot and an immediate update after accept", async () => {
     const element = await mount();
-    expect(publishFriendRequests).toHaveBeenCalledWith({
-      incoming: [pendingRequest],
-      outgoing: [],
-    });
+    expect(publishFriendRequests).toHaveBeenCalledWith(
+      { incoming: [pendingRequest], outgoing: [] },
+      expect.any(Number),
+    );
     publishFriendRequests.mockClear();
 
     button(element, "friends.accept").click();
     await settle(element);
 
     expect(acceptFriendRequest).toHaveBeenCalledWith(pendingRequest.publicId);
-    expect(publishFriendRequests).toHaveBeenCalledWith({
-      incoming: [],
-      outgoing: [],
-    });
+    expect(publishFriendRequests).toHaveBeenCalledWith(
+      { incoming: [], outgoing: [] },
+      expect.any(Number),
+    );
   });
 
   it("applies poller snapshots while the Friends tab is already open", async () => {
@@ -133,7 +148,11 @@ describe("FriendsList notification synchronization", () => {
 
     document.dispatchEvent(
       new CustomEvent("friend-requests-updated", {
-        detail: { incoming: [arriving], outgoing: [] },
+        detail: {
+          incoming: [arriving],
+          outgoing: [],
+          seq: nextFriendRequestsSeq(),
+        },
       }),
     );
     await element.updateComplete;
@@ -157,17 +176,55 @@ describe("FriendsList notification synchronization", () => {
     await settle(element);
 
     // The nav poller (or an accept in this tab) publishes a newer snapshot
-    // before the slower initial fetch resolves. Republishing the older
-    // response would put the resolved request back on the bell.
+    // before the slower initial fetch resolves. The tab still publishes its
+    // response, but every listener, itself included, keeps the newer one, so
+    // the resolved request comes back neither on screen nor on the bell.
     document.dispatchEvent(
       new CustomEvent("friend-requests-updated", {
-        detail: { incoming: [], outgoing: [newerRequest] },
+        detail: {
+          incoming: [],
+          outgoing: [newerRequest],
+          seq: nextFriendRequestsSeq(),
+        },
       }),
     );
     resolveLoad({ incoming: [pendingRequest], outgoing: [] });
     await settle(element);
 
-    expect(publishFriendRequests).not.toHaveBeenCalled();
+    expect(element.textContent).toContain("newer.9999");
+    expect(element.textContent).not.toContain("friend.1234");
+  });
+
+  it("applies its own fetch over an older fetch's snapshot that arrives first", async () => {
+    // A nav poll started before this tab's fetch, so its snapshot is older,
+    // but its response lands first and still lists a request the tab's own
+    // fetch knows is resolved. Fetch-start order decides, not arrival order.
+    const olderPoll = nextFriendRequestsSeq();
+    let resolveLoad!: (value: {
+      incoming: never[];
+      outgoing: (typeof newerRequest)[];
+    }) => void;
+    fetchFriendRequests.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveLoad = resolve;
+      }),
+    );
+    const element = document.createElement("friends-list") as FriendsElement;
+    document.body.appendChild(element);
+    await settle(element);
+
+    document.dispatchEvent(
+      new CustomEvent("friend-requests-updated", {
+        detail: { incoming: [pendingRequest], outgoing: [], seq: olderPoll },
+      }),
+    );
+    resolveLoad({ incoming: [], outgoing: [newerRequest] });
+    await settle(element);
+
+    expect(publishFriendRequests).toHaveBeenCalledWith(
+      { incoming: [], outgoing: [newerRequest] },
+      expect.any(Number),
+    );
     expect(element.textContent).toContain("newer.9999");
     expect(element.textContent).not.toContain("friend.1234");
   });
@@ -197,10 +254,10 @@ describe("FriendsList notification synchronization", () => {
     // made for the account signed in now, is what gets applied and published.
     expect(fetchFriendRequests).toHaveBeenCalledTimes(2);
     expect(publishFriendRequests).toHaveBeenCalledTimes(1);
-    expect(publishFriendRequests).toHaveBeenCalledWith({
-      incoming: [otherAccountRequest],
-      outgoing: [],
-    });
+    expect(publishFriendRequests).toHaveBeenCalledWith(
+      { incoming: [otherAccountRequest], outgoing: [] },
+      expect.any(Number),
+    );
     expect(element.textContent).toContain("other.5678");
     expect(element.textContent).not.toContain("friend.1234");
   });
@@ -227,13 +284,13 @@ describe("FriendsList notification synchronization", () => {
 
     expect(fetchFriendRequests).toHaveBeenCalledTimes(1);
     expect(publishFriendRequests).toHaveBeenCalledTimes(1);
-    expect(publishFriendRequests).toHaveBeenCalledWith({
-      incoming: [],
-      outgoing: [otherAccountRequest],
-    });
-    expect(publishFriendRequests).not.toHaveBeenCalledWith({
-      incoming: [],
-      outgoing: [],
-    });
+    expect(publishFriendRequests).toHaveBeenCalledWith(
+      { incoming: [], outgoing: [otherAccountRequest] },
+      expect.any(Number),
+    );
+    expect(publishFriendRequests).not.toHaveBeenCalledWith(
+      { incoming: [], outgoing: [] },
+      expect.any(Number),
+    );
   });
 });

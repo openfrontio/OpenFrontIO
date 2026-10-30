@@ -7,6 +7,8 @@ import { crazyGamesSDK } from "../CrazyGamesSDK";
 import {
   fetchFriendRequests,
   FRIEND_REQUESTS_UPDATED_EVENT,
+  type FriendRequestsSnapshot,
+  nextFriendRequestsSeq,
   publishFriendRequests,
 } from "../FriendsApi";
 import { latestUserMeResponse } from "../NavAccountButton";
@@ -49,7 +51,8 @@ class NavNotificationsStore {
     promise: Promise<void>;
   } | null = null;
   private authGeneration = 0;
-  private friendRequestsRevision = 0;
+  // Seq of the snapshot on the bell; see nextFriendRequestsSeq.
+  private friendRequestsSeq = 0;
 
   subscribe(host: ReactiveControllerHost): void {
     this.hosts.add(host);
@@ -189,13 +192,13 @@ class NavNotificationsStore {
 
   private handleFriendRequestsUpdated = (event: Event): void => {
     if (!this.friendRequestsEnabled) return;
-    // Any published snapshot is newer than a poll already in flight. Remember
-    // that publication so the older response cannot resurrect a request that
-    // was just accepted, denied, or withdrawn in the Friends tab.
-    this.friendRequestsRevision++;
-    this.setFriendRequests(
-      (event as CustomEvent<{ incoming: FriendEntry[] }>).detail.incoming,
-    );
+    const snapshot = (event as CustomEvent<FriendRequestsSnapshot>).detail;
+    // Keep the highest seq: a poll that started before the Friends tab's edit
+    // or refetch must not resurrect a request it has since resolved, however
+    // late its response arrives.
+    if (snapshot.seq <= this.friendRequestsSeq) return;
+    this.friendRequestsSeq = snapshot.seq;
+    this.setFriendRequests(snapshot.incoming);
   };
 
   private setFriendRequests(requests: FriendEntry[]): void {
@@ -232,20 +235,19 @@ class NavNotificationsStore {
 
     const authGeneration = this.authGeneration;
     const pollingGeneration = this.friendRequestPollingGeneration;
-    const requestsRevision = this.friendRequestsRevision;
+    const seq = nextFriendRequestsSeq();
     const request = (async () => {
       const requests = await fetchFriendRequests();
       if (
         requests === false ||
         authGeneration !== this.authGeneration ||
         pollingGeneration !== this.friendRequestPollingGeneration ||
-        requestsRevision !== this.friendRequestsRevision ||
         !this.friendRequestsEnabled ||
         this.friendRequestPollingPaused
       ) {
         return;
       }
-      publishFriendRequests(requests);
+      publishFriendRequests(requests, seq);
     })();
     this.friendRequestFetch = {
       authGeneration,
@@ -344,7 +346,7 @@ class NavNotificationsStore {
     this.friendRequestPollingPaused = false;
     this.friendRequestPollingGeneration++;
     this.friendRequestFetch = null;
-    this.friendRequestsRevision = 0;
+    this.friendRequestsSeq = 0;
   }
 }
 

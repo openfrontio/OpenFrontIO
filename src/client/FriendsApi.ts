@@ -11,15 +11,35 @@ import { getAuthHeader } from "./Auth";
 
 export const FRIEND_REQUESTS_UPDATED_EVENT = "friend-requests-updated";
 
+/** Friend requests plus their place in {@link nextFriendRequestsSeq}'s order. */
+export type FriendRequestsSnapshot = FriendRequestsResponse & { seq: number };
+
+let friendRequestsSeq = 0;
+
+/**
+ * Snapshots are ordered by when their fetch started, or when a local edit
+ * (accept, deny, withdraw) was made, not by when they were published: the
+ * Friends tab and the nav poller fetch independently, so an older fetch can
+ * resolve after a newer one. Take a seq before fetching and pass it to
+ * {@link publishFriendRequests}; a local edit takes a fresh one as it publishes.
+ */
+export function nextFriendRequestsSeq(): number {
+  return ++friendRequestsSeq;
+}
+
 /**
  * Keep every friend-request surface in the tab on the same server snapshot.
  * The account page and nav notification poller both fetch this resource, so
- * whichever one refreshes first publishes the result for the other.
+ * whichever one refreshes publishes the result for the other. Listeners keep
+ * the highest seq they have seen, so publishing an older snapshot is harmless.
  */
-export function publishFriendRequests(requests: FriendRequestsResponse): void {
+export function publishFriendRequests(
+  requests: FriendRequestsResponse,
+  seq: number,
+): void {
   document.dispatchEvent(
-    new CustomEvent<FriendRequestsResponse>(FRIEND_REQUESTS_UPDATED_EVENT, {
-      detail: requests,
+    new CustomEvent<FriendRequestsSnapshot>(FRIEND_REQUESTS_UPDATED_EVENT, {
+      detail: { ...requests, seq },
     }),
   );
 }

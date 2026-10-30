@@ -1,7 +1,4 @@
-import type {
-  FriendEntry,
-  FriendRequestsResponse,
-} from "@openfront/shared/ApiSchemas";
+import type { FriendEntry } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
@@ -10,6 +7,8 @@ import {
   fetchFriendRequests,
   fetchFriends,
   FRIEND_REQUESTS_UPDATED_EVENT,
+  type FriendRequestsSnapshot,
+  nextFriendRequestsSeq,
   publishFriendRequests,
   removeFriend,
   sendFriendRequest,
@@ -69,10 +68,9 @@ export class FriendsList extends LitElement {
   @state() private outgoing: FriendEntry[] = [];
   @state() private addInput = "";
 
-  // Bumped by every friend-requests-updated event, this tab's own publishes
-  // included. A fetch that started before the latest one is older than what
-  // is on screen, so it must neither overwrite nor republish it.
-  private requestsRevision = 0;
+  // Seq of the snapshot on screen; see nextFriendRequestsSeq. The tab's own
+  // fetches and edits reach it through the event, like the nav poller's do.
+  private requestsSeq = 0;
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -92,29 +90,28 @@ export class FriendsList extends LitElement {
   }
 
   private handleRequestsUpdated = (event: Event): void => {
-    this.requestsRevision++;
-    const requests = (event as CustomEvent<FriendRequestsResponse>).detail;
-    this.incoming = requests.incoming;
-    this.outgoing = requests.outgoing;
+    const snapshot = (event as CustomEvent<FriendRequestsSnapshot>).detail;
+    // Keep the highest seq: an older fetch resolving late must not put a
+    // resolved request back on screen.
+    if (snapshot.seq <= this.requestsSeq) return;
+    this.requestsSeq = snapshot.seq;
+    this.incoming = snapshot.incoming;
+    this.outgoing = snapshot.outgoing;
   };
 
   private async loadAll(): Promise<void> {
     this.loading = true;
     try {
       const generation = userMeGeneration();
-      const requestsRevision = this.requestsRevision;
+      const seq = nextFriendRequestsSeq();
       const [requests, firstPage] = await Promise.all([
         fetchFriendRequests(),
         fetchFriends(1, PAGE_LIMIT),
       ]);
       if (await this.resyncIfAccountChanged(generation)) return;
-      // A snapshot published meanwhile (the nav poller's, or an accept in
-      // this tab) is newer than this response, so keep that one.
-      if (requests && requestsRevision === this.requestsRevision) {
-        this.incoming = requests.incoming;
-        this.outgoing = requests.outgoing;
-        publishFriendRequests(requests);
-      }
+      // handleRequestsUpdated applies this synchronously, unless a newer
+      // snapshot (the nav poller's, or an edit in this tab) is already shown.
+      if (requests) publishFriendRequests(requests, seq);
       if (firstPage) {
         this.friends = firstPage.results;
         this.friendsTotal = firstPage.total;
@@ -210,14 +207,10 @@ export class FriendsList extends LitElement {
         // If the refetch fails the list is just stale until the next load —
         // never insert `target`, which may not be a publicId.
         const generation = userMeGeneration();
-        const requestsRevision = this.requestsRevision;
+        const seq = nextFriendRequestsSeq();
         const requests = await fetchFriendRequests();
         if (await this.resyncIfAccountChanged(generation)) return;
-        if (requests && requestsRevision === this.requestsRevision) {
-          this.incoming = requests.incoming;
-          this.outgoing = requests.outgoing;
-          publishFriendRequests(requests);
-        }
+        if (requests) publishFriendRequests(requests, seq);
       }
     } finally {
       this.actionPending = false;
@@ -236,10 +229,10 @@ export class FriendsList extends LitElement {
         return;
       }
       this.incoming = this.incoming.filter((r) => r.publicId !== publicId);
-      publishFriendRequests({
-        incoming: this.incoming,
-        outgoing: this.outgoing,
-      });
+      publishFriendRequests(
+        { incoming: this.incoming, outgoing: this.outgoing },
+        nextFriendRequestsSeq(),
+      );
       this.friends = [
         { publicId, createdAt: new Date().toISOString() },
         ...this.friends,
@@ -268,17 +261,17 @@ export class FriendsList extends LitElement {
       }
       if (direction === "incoming") {
         this.incoming = this.incoming.filter((r) => r.publicId !== publicId);
-        publishFriendRequests({
-          incoming: this.incoming,
-          outgoing: this.outgoing,
-        });
+        publishFriendRequests(
+          { incoming: this.incoming, outgoing: this.outgoing },
+          nextFriendRequestsSeq(),
+        );
         showToast(translateText("friends.request_denied"), "green");
       } else {
         this.outgoing = this.outgoing.filter((r) => r.publicId !== publicId);
-        publishFriendRequests({
-          incoming: this.incoming,
-          outgoing: this.outgoing,
-        });
+        publishFriendRequests(
+          { incoming: this.incoming, outgoing: this.outgoing },
+          nextFriendRequestsSeq(),
+        );
         showToast(translateText("friends.request_withdrawn"), "green");
       }
     } finally {
