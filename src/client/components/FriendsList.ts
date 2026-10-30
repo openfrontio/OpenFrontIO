@@ -15,6 +15,7 @@ import {
   sendFriendRequest,
 } from "../FriendsApi";
 import { showInGameConfirm } from "../InGameModal";
+import { userMeGeneration } from "../UserMeBroadcast";
 import { parsePlayerProfilePath } from "../utilities/PlayerProfileUrl";
 import { showToast, translateText } from "../Utils";
 import { playerNameLink } from "./ui/PlayerNameLink";
@@ -94,10 +95,12 @@ export class FriendsList extends LitElement {
   private async loadAll(): Promise<void> {
     this.loading = true;
     try {
+      const generation = userMeGeneration();
       const [requests, firstPage] = await Promise.all([
         fetchFriendRequests(),
         fetchFriends(1, PAGE_LIMIT),
       ]);
+      if (await this.resyncIfAccountChanged(generation)) return;
       if (requests) {
         this.incoming = requests.incoming;
         this.outgoing = requests.outgoing;
@@ -111,6 +114,20 @@ export class FriendsList extends LitElement {
     } finally {
       this.loading = false;
     }
+  }
+
+  /**
+   * Auth was re-resolved while a request was in flight: a login, an account
+   * switch, a logout, or a same-account refresh after a purchase. The response
+   * may belong to the previous account, and publishing it would put that
+   * account's requests on this one's bell (the nav poller cannot tell the
+   * snapshots apart), so drop it and reload for the account signed in now.
+   * Returns true when it did, so the caller skips its own update.
+   */
+  private async resyncIfAccountChanged(generation: number): Promise<boolean> {
+    if (generation === userMeGeneration()) return false;
+    await this.loadAll();
+    return true;
   }
 
   private async loadMore(): Promise<void> {
@@ -183,7 +200,9 @@ export class FriendsList extends LitElement {
         // the real publicId + account username (so the verified check shows).
         // If the refetch fails the list is just stale until the next load —
         // never insert `target`, which may not be a publicId.
+        const generation = userMeGeneration();
         const requests = await fetchFriendRequests();
+        if (await this.resyncIfAccountChanged(generation)) return;
         if (requests) {
           this.incoming = requests.incoming;
           this.outgoing = requests.outgoing;
@@ -199,7 +218,9 @@ export class FriendsList extends LitElement {
     if (this.actionPending) return;
     this.actionPending = true;
     try {
+      const generation = userMeGeneration();
       const result = await acceptFriendRequest(publicId);
+      if (await this.resyncIfAccountChanged(generation)) return;
       if (result !== true) {
         showToast(translateText(this.errorKey(result)), "red");
         return;
@@ -228,7 +249,9 @@ export class FriendsList extends LitElement {
     if (this.actionPending) return;
     this.actionPending = true;
     try {
+      const generation = userMeGeneration();
       const result = await deleteFriendRequest(publicId);
+      if (await this.resyncIfAccountChanged(generation)) return;
       if (result !== true) {
         showToast(translateText(this.errorKey(result)), "red");
         return;

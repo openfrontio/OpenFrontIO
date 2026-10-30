@@ -44,6 +44,22 @@ const pendingRequest = {
   createdAt: "2026-10-02T12:00:00.000Z",
 };
 
+const otherAccountRequest = {
+  publicId: "other.5678",
+  username: "other.5678",
+  createdAt: "2026-10-02T14:00:00.000Z",
+};
+
+// Main re-broadcasts userMeResponse when auth is re-resolved, e.g. after a
+// portal sign-in switches the page to another account without a reload.
+function switchAccount(): void {
+  document.dispatchEvent(
+    new CustomEvent("userMeResponse", {
+      detail: { user: {}, player: { publicId: "other" } },
+    }),
+  );
+}
+
 type FriendsElement = HTMLElement & { updateComplete: Promise<unknown> };
 
 async function settle(element: FriendsElement): Promise<void> {
@@ -118,5 +134,70 @@ describe("FriendsList notification synchronization", () => {
 
     expect(element.textContent).toContain("new-friend");
     expect(element.textContent).not.toContain("friend.1234");
+  });
+
+  it("reloads instead of publishing a snapshot that resolves after the account changed", async () => {
+    let resolveFirst!: (value: {
+      incoming: (typeof pendingRequest)[];
+      outgoing: never[];
+    }) => void;
+    fetchFriendRequests
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        }),
+      )
+      .mockResolvedValueOnce({ incoming: [otherAccountRequest], outgoing: [] });
+    const element = document.createElement("friends-list") as FriendsElement;
+    document.body.appendChild(element);
+    await settle(element);
+    expect(fetchFriendRequests).toHaveBeenCalledTimes(1);
+
+    switchAccount();
+    resolveFirst({ incoming: [pendingRequest], outgoing: [] });
+    await settle(element);
+
+    // The first account's list never reaches the bell; the second fetch,
+    // made for the account signed in now, is what gets applied and published.
+    expect(fetchFriendRequests).toHaveBeenCalledTimes(2);
+    expect(publishFriendRequests).toHaveBeenCalledTimes(1);
+    expect(publishFriendRequests).toHaveBeenCalledWith({
+      incoming: [otherAccountRequest],
+      outgoing: [],
+    });
+    expect(element.textContent).toContain("other.5678");
+    expect(element.textContent).not.toContain("friend.1234");
+  });
+
+  it("reloads instead of publishing a local update when the account changes during accept", async () => {
+    let resolveAccept!: (value: true) => void;
+    acceptFriendRequest.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveAccept = resolve;
+      }),
+    );
+    const element = await mount();
+    publishFriendRequests.mockClear();
+    fetchFriendRequests.mockClear();
+    fetchFriendRequests.mockResolvedValue({
+      incoming: [],
+      outgoing: [otherAccountRequest],
+    });
+
+    button(element, "friends.accept").click();
+    switchAccount();
+    resolveAccept(true);
+    await settle(element);
+
+    expect(fetchFriendRequests).toHaveBeenCalledTimes(1);
+    expect(publishFriendRequests).toHaveBeenCalledTimes(1);
+    expect(publishFriendRequests).toHaveBeenCalledWith({
+      incoming: [],
+      outgoing: [otherAccountRequest],
+    });
+    expect(publishFriendRequests).not.toHaveBeenCalledWith({
+      incoming: [],
+      outgoing: [],
+    });
   });
 });
