@@ -353,3 +353,34 @@ export class ServerEnv {
       .filter((s) => s.length > 0);
   }
 }
+
+  static turnstileSecretKey(): string {
+    const value = process.env.TURNSTILE_SECRET_KEY;
+    if (!value) {
+      throw new Error("TURNSTILE_SECRET_KEY not set");
+    }
+    return value;
+  }
+
+  static standaloneMode(): boolean {
+    return process.env.OPENWAR_STANDALONE === "true";
+  }
+
+  static guestJwtIssuer(): string {
+    return "openwar:guest";
+  }
+
+  static guestJwtSecret(): Uint8Array {
+    let value = process.env.OPENWAR_JWT_SECRET;
+    if (!value && ServerEnv.gameEnv === GameEnv.Dev) {
+      value = "openwar-development-only-secret-change-before-production";
+    }
+    if (!value) {
+      throw new Error("OPENWAR_JWT_SECRET not set");
+    }
+    const secret = new TextEncoder().encode(value);
+    if (secret.byteLength < 32) {
+      throw new Error("OPENWAR_JWT_SECRET must be at least 32 bytes");
+    }
+    return secret;
+  }
