@@ -8,6 +8,7 @@ import type { PurchaseButton } from "../../src/client/components/PurchaseButton"
 import {
   fetchCosmetics,
   purchaseCosmetic,
+  refreshStaleCosmetics,
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../src/client/Cosmetics";
@@ -22,6 +23,7 @@ vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
   fetchCosmetics: vi.fn(),
   purchaseCosmetic: vi.fn(),
+  refreshStaleCosmetics: vi.fn(() => false),
   resolveCosmetics: vi.fn(),
 }));
 
@@ -380,6 +382,23 @@ describe("StoreModal cosmetic browser", () => {
     await button.updateComplete;
     const tag = button.querySelector("[data-sale-tag]")!;
     expect(tag.querySelector("s")?.textContent?.trim()).toBe("120");
+  });
+
+  it("keeps the shown catalog when a stale refetch fails", async () => {
+    const shown = { promotions: [] } as unknown as Cosmetics;
+    vi.mocked(fetchCosmetics).mockResolvedValue(shown);
+    const modal = await openStoreOnCosmetic("patterns");
+    modal.close();
+
+    vi.mocked(refreshStaleCosmetics).mockReturnValueOnce(true);
+    vi.mocked(fetchCosmetics).mockReset();
+    vi.mocked(fetchCosmetics).mockResolvedValue(null);
+    modal.open({ tab: "cosmetics" });
+    await vi.waitFor(() => expect(fetchCosmetics).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect((modal as unknown as { cosmetics: unknown }).cosmetics).toBe(shown);
+    expect(modal.querySelector("cosmetic-card")).toBeTruthy();
   });
 
   it("shows no banner or list price without a sale", async () => {

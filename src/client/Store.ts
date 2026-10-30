@@ -770,7 +770,11 @@ export class StoreModal extends BaseModal {
     }
     // Prices change when a sale starts or ends, so a catalog fetched more than
     // a minute ago is refetched rather than shown with stale prices.
-    if (refreshStaleCosmetics()) this.cosmetics = null;
+    // A failed refetch keeps the catalog already shown rather than emptying
+    // the store; the purchase endpoint charges the live price either way.
+    if (refreshStaleCosmetics()) {
+      this.cosmetics = (await fetchCosmetics()) ?? this.cosmetics;
+    }
     this.cosmetics ??= await fetchCosmetics();
     this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();
