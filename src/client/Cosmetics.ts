@@ -60,6 +60,10 @@ export const COSMETICS_FETCH_TIMEOUT_MS = 10_000;
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
 let __cosmeticsCache: Cosmetics | null = null;
+let __cosmeticsFetchedAt = 0;
+
+/** How long a fetched catalog is trusted before the store refetches it. */
+export const COSMETICS_STALE_MS = 60_000;
 
 /**
  * Synchronous accessor for the most recently resolved cosmetics. Returns null
@@ -849,6 +853,24 @@ export function invalidateCosmetics(): void {
   __cosmetics = null;
 }
 
+/**
+ * Drops a catalog fetched more than COSMETICS_STALE_MS ago, so the next
+ * fetchCosmetics() refetches it. Sale prices start and end on the server's
+ * clock; the API serves cosmetics.json from a one-minute cache, so this keeps
+ * the store within about two minutes of what a purchase is charged. Returns
+ * whether it dropped the catalog.
+ */
+export function refreshStaleCosmetics(now: number = Date.now()): boolean {
+  if (
+    __cosmeticsCache === null ||
+    now - __cosmeticsFetchedAt <= COSMETICS_STALE_MS
+  ) {
+    return false;
+  }
+  invalidateCosmetics();
+  return true;
+}
+
 export type TierListingRail = "steam" | "web";
 
 // cosmetics.json lists subscription tiers per rail: the one this device checks
@@ -883,6 +905,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
       const hashInput = patternKeys.join(",");
       __cosmeticsHash = simpleHash(hashInput);
       __cosmeticsCache = result.data;
+      __cosmeticsFetchedAt = Date.now();
       return result.data;
     } catch (error) {
       console.warn("Error getting cosmetics:", error);

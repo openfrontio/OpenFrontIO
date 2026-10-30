@@ -347,6 +347,50 @@ describe("StoreModal cosmetic browser", () => {
     localStorage.clear();
   });
 
+  it("shows a running sale: banner, struck list price and discount", async () => {
+    const endsAt = new Date(Date.now() + 3_600_000).toISOString();
+    vi.mocked(fetchCosmetics).mockResolvedValue({
+      promotions: [
+        { id: "1", name: "Weekend Sale", percentOff: 25, endsAt },
+        // Already over: the banner drops it even before the catalog refetches.
+        {
+          id: "2",
+          name: "Old Sale",
+          percentOff: 50,
+          endsAt: new Date(Date.now() - 1000).toISOString(),
+        },
+      ],
+    } as unknown as Cosmetics);
+    resolvedCatalog = [
+      {
+        ...red,
+        cosmetic: { ...pattern, priceHard: 90, listPriceHard: 120 } as never,
+      },
+    ];
+    const modal = await openStoreOnCosmetic("patterns");
+    await vi.waitFor(() =>
+      expect(modal.querySelector("[data-store-sale-banner]")).toBeTruthy(),
+    );
+
+    const banner = modal.querySelector("[data-store-sale-banner]")!;
+    expect(banner.children).toHaveLength(1);
+    expect(banner.textContent).toContain("store.sale_banner");
+    const button = modal.querySelector<PurchaseButton>("purchase-button")!;
+    expect(button.listPriceHard).toBe(120);
+    await button.updateComplete;
+    const tag = button.querySelector("[data-sale-tag]")!;
+    expect(tag.querySelector("s")?.textContent?.trim()).toBe("120");
+  });
+
+  it("shows no banner or list price without a sale", async () => {
+    const modal = await openStoreOnCosmetic("patterns");
+    expect(modal.querySelector("[data-store-sale-banner]")).toBeNull();
+    const button = modal.querySelector<PurchaseButton>("purchase-button")!;
+    await button.updateComplete;
+    expect(button.listPriceHard).toBeNull();
+    expect(button.querySelector("[data-sale-tag]")).toBeNull();
+  });
+
   it("selects the first visible item and purchases the selected variant", async () => {
     const modal = await openStoreOnCosmetic("patterns");
     expect(card(modal, red.key)?.activeVariantKey).toBe(red.key);

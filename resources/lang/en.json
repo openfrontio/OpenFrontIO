@@ -2438,6 +2438,8 @@
     "purchase_pending": "Your purchase is still being processed. It will appear in your account shortly — check your order history if it doesn't.",
     "purchase_success": "Purchase succeeded: {name}",
     "purchase_tribe_button": "Purchase",
+    "sale_banner": "{name}: {percent}% off. Ends {ends}.",
+    "sale_percent_off": "-{percent}%",
     "steam_browser_approval": "Steam has opened the purchase in your browser. Approve it there, then come back here. It will show up once Steam confirms it.",
     "steam_licence_required": "This subscription is only for players who own OpenFront on Steam.",
     "steam_overlay_cancelled": "Purchase cancelled. You haven't been charged.",

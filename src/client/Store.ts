@@ -28,6 +28,7 @@ import "./components/TribesPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   fetchCosmetics,
+  refreshStaleCosmetics,
   findPackItem,
   groupCosmeticVariants,
   ownedPackItems,
@@ -442,6 +443,8 @@ export class StoreModal extends BaseModal {
       product?: Product | null;
       priceHard?: number;
       priceSoft?: number;
+      listPriceHard?: number;
+      listPriceSoft?: number;
       rarity?: string;
     } | null;
     const isPurchasable = resolved.relationship === "purchasable";
@@ -490,6 +493,8 @@ export class StoreModal extends BaseModal {
       .inlineCheckout=${inlineCheckout}
       .priceHard=${priceHard ?? null}
       .priceSoft=${priceSoft ?? null}
+      .listPriceHard=${priceHard !== undefined ? (priced?.listPriceHard ?? null) : null}
+      .listPriceSoft=${priceSoft !== undefined ? (priced?.listPriceSoft ?? null) : null}
       .rarity=${priced?.rarity ?? "common"}
       .itemName=${cosmeticSelectionLabel(resolved)}
       .dollarLabelKey=${
@@ -670,8 +675,36 @@ export class StoreModal extends BaseModal {
     });
   }
 
+  /** One line per running sale, under the header. */
+  private renderSaleBanner(): TemplateResult | string {
+    const sales = (this.cosmetics?.promotions ?? []).filter(
+      (sale) => new Date(sale.endsAt).getTime() > Date.now(),
+    );
+    if (sales.length === 0) return "";
+    return html`<div
+      data-store-sale-banner
+      class="flex flex-col gap-1 px-3 pt-2"
+    >
+      ${sales.map(
+        (sale) =>
+          html`<div
+            class="rounded-lg border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-center text-sm font-bold text-rose-200"
+          >
+            ${translateText("store.sale_banner", {
+              name: sale.name,
+              percent: sale.percentOff,
+              ends: new Date(sale.endsAt).toLocaleString(undefined, {
+                dateStyle: "medium",
+                timeStyle: "short",
+              }),
+            })}
+          </div>`,
+      )}
+    </div>`;
+  }
+
   protected renderHeaderSlot() {
-    return html`${this.renderHeader()}
+    return html`${this.renderHeader()} ${this.renderSaleBanner()}
     ${
       this.previewingCosmetic
         ? html`<cosmetic-preview-modal
@@ -735,6 +768,9 @@ export class StoreModal extends BaseModal {
     if (this.requestedItem !== null) {
       this.cosmeticsSubTab = subTabForItem(this.requestedItem);
     }
+    // Prices change when a sale starts or ends, so a catalog fetched more than
+    // a minute ago is refetched rather than shown with stale prices.
+    if (refreshStaleCosmetics()) this.cosmetics = null;
     this.cosmetics ??= await fetchCosmetics();
     this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();

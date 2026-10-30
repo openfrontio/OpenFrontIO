@@ -210,6 +210,21 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
   document.head.appendChild(style);
 }
 
+/**
+ * The list price struck through and the discount, beside a sale price. Nothing
+ * when the item isn't on sale (no list price, or one not above the price).
+ */
+export function renderSaleTag(price: number, listPrice: number | null) {
+  if (listPrice === null || listPrice <= price) return nothing;
+  const percentOff = Math.round((1 - price / listPrice) * 100);
+  return html`<span data-sale-tag class="flex items-center gap-1.5">
+    <s class="text-sm font-normal opacity-60">${listPrice.toLocaleString()}</s>
+    <span class="rounded bg-rose-500/90 px-1 py-px text-xs font-bold text-white"
+      >${translateText("store.sale_percent_off", { percent: percentOff })}</span
+    >
+  </span>`;
+}
+
 @customElement("purchase-button")
 export class PurchaseButton extends LitElement {
   @property({ type: Object })
@@ -224,6 +239,15 @@ export class PurchaseButton extends LitElement {
 
   @property({ type: Number })
   priceSoft: number | null = null;
+
+  /** Price before a running sale, shown struck through beside priceHard.
+   * Null (or not above priceHard) means the item isn't on sale. */
+  @property({ type: Number })
+  listPriceHard: number | null = null;
+
+  /** Price before a running sale, shown struck through beside priceSoft. */
+  @property({ type: Number })
+  listPriceSoft: number | null = null;
 
   @property({ type: String })
   rarity: string = "common";
@@ -385,6 +409,7 @@ export class PurchaseButton extends LitElement {
       >
         <plutonium-icon .size=${20} style="margin-top:3px"></plutonium-icon>
         ${this.priceHard!.toLocaleString()}
+        ${renderSaleTag(this.priceHard!, this.listPriceHard)}
       </button>
     `;
   }
@@ -402,6 +427,7 @@ export class PurchaseButton extends LitElement {
       >
         <cap-icon .size=${22} style="margin-top:3px"></cap-icon>
         ${this.priceSoft!.toLocaleString()}
+        ${renderSaleTag(this.priceSoft!, this.listPriceSoft)}
       </button>
     `;
   }
