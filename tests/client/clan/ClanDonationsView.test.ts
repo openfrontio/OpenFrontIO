@@ -19,15 +19,26 @@ vi.mock("../../../src/client/ClanApi", () => ({
     page: 1,
     limit: 10,
   })),
+  fetchClanDonationLeaderboard: vi.fn(async () => ({
+    results: [],
+    total: 0,
+    page: 1,
+    limit: 10,
+  })),
 }));
 
 // ─── Imports under test ──────────────────────────────────────────────────────
 
 import type {
   ClanDonation,
+  ClanDonationLeaderboardResponse,
   ClanDonationsResponse,
+  ClanDonor,
 } from "../../../src/client/ClanApi";
-import { fetchClanDonations } from "../../../src/client/ClanApi";
+import {
+  fetchClanDonationLeaderboard,
+  fetchClanDonations,
+} from "../../../src/client/ClanApi";
 import { ClanDonationsView } from "../../../src/client/components/clan/ClanDonationsView";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -56,6 +67,33 @@ const okPage = (
 const mockFetch = (impl: () => Promise<unknown>) => {
   (fetchClanDonations as ReturnType<typeof vi.fn>).mockImplementationOnce(impl);
 };
+
+function makeDonor(overrides: Partial<ClanDonor> = {}): ClanDonor {
+  return {
+    rank: 1,
+    playerId: "donor-1",
+    username: "alice.0042",
+    total: "33450",
+    donations: 4,
+    ...overrides,
+  };
+}
+
+const donorPage = (
+  results: ClanDonor[],
+  total = results.length,
+  page = 1,
+  limit = 10,
+): ClanDonationLeaderboardResponse => ({ results, total, page, limit });
+
+const mockLeaderboard = (impl: () => Promise<unknown>) => {
+  (
+    fetchClanDonationLeaderboard as ReturnType<typeof vi.fn>
+  ).mockImplementationOnce(impl);
+};
+
+const tab = (el: Element, tabs: string, key: string) =>
+  el.querySelector<HTMLButtonElement>(`[data-tabs=${tabs}] [data-tab=${key}]`)!;
 
 async function mountView() {
   if (!customElements.get("clan-donations-view")) {
@@ -209,7 +247,7 @@ describe("ClanDonationsView", () => {
     });
 
     mockFetch(() => Promise.resolve(okPage([makeDonation()], 3)));
-    el.querySelector<HTMLButtonElement>("[data-currency-filter=hard]")!.click();
+    tab(el, "currency", "hard").click();
     await flushAsync(el);
 
     expect(fetchClanDonations).toHaveBeenLastCalledWith("TST", {
@@ -224,5 +262,129 @@ describe("ClanDonationsView", () => {
     const el = await mountView();
 
     expect(el.textContent).not.toContain("clan_modal.per_page");
+  });
+
+  describe("Top donors", () => {
+    it("ranks caps over all time by default, with no All currency tab", async () => {
+      mockLeaderboard(() =>
+        Promise.resolve(
+          donorPage([
+            makeDonor(),
+            makeDonor({
+              rank: 2,
+              playerId: "donor-2",
+              username: "bob.0001",
+              total: "10550",
+              donations: 1,
+            }),
+          ]),
+        ),
+      );
+      const el = await mountView();
+      tab(el, "mode", "top").click();
+      await flushAsync(el);
+
+      expect(fetchClanDonationLeaderboard).toHaveBeenCalledWith("TST", {
+        currencyType: "soft",
+        period: "all",
+        page: 1,
+        limit: 10,
+      });
+      expect(tab(el, "currency", "all")).toBeNull();
+      expect(tab(el, "currency", "soft").getAttribute("aria-selected")).toBe(
+        "true",
+      );
+
+      const rows = el.querySelectorAll("[data-donor-id]");
+      expect(rows).toHaveLength(2);
+      expect(rows[0].getAttribute("data-rank")).toBe("1");
+      expect(rows[0].textContent).toContain("👑");
+      expect(rows[0].textContent).toContain("alice");
+      expect(rows[0].textContent).toContain(BigInt(33450).toLocaleString());
+      expect(rows[0].textContent).toContain("clan_modal.donations_count");
+      expect(rows[0].querySelector("cap-icon")).not.toBeNull();
+      expect(rows[1].textContent).toContain("bob");
+      expect(rows[1].textContent).toContain("🥈");
+      // Bars measure each donor against #1.
+      const share = (row: Element) =>
+        row.querySelector<HTMLElement>("[data-share]")!.style.width;
+      expect(share(rows[0])).toBe("100%");
+      expect(share(rows[1])).toBe("31.5%");
+      expect(el.querySelector("[data-donation-id]")).toBeNull();
+    });
+
+    it("refetches for plutonium and the chosen period, back on page 1", async () => {
+      const el = await mountView();
+      mockLeaderboard(() => Promise.resolve(donorPage([makeDonor()], 30)));
+      tab(el, "mode", "top").click();
+      await flushAsync(el);
+
+      mockLeaderboard(() => Promise.resolve(donorPage([makeDonor()], 30, 2)));
+      buttonWithText(el, ">").click();
+      await flushAsync(el);
+
+      mockLeaderboard(() =>
+        Promise.resolve(donorPage([makeDonor({ total: "40" })])),
+      );
+      tab(el, "period", "week").click();
+      await flushAsync(el);
+      expect(fetchClanDonationLeaderboard).toHaveBeenLastCalledWith("TST", {
+        currencyType: "soft",
+        period: "week",
+        page: 1,
+        limit: 10,
+      });
+
+      mockLeaderboard(() =>
+        Promise.resolve(donorPage([makeDonor({ total: "40" })])),
+      );
+      tab(el, "currency", "hard").click();
+      await flushAsync(el);
+      expect(fetchClanDonationLeaderboard).toHaveBeenLastCalledWith("TST", {
+        currencyType: "hard",
+        period: "week",
+        page: 1,
+        limit: 10,
+      });
+      const row = el.querySelector("[data-donor-id]")!;
+      expect(row.querySelector("plutonium-icon")).not.toBeNull();
+      expect(row.querySelector("cap-icon")).toBeNull();
+    });
+
+    it("shows the period's empty state and goes back to Recent", async () => {
+      const el = await mountView();
+      tab(el, "mode", "top").click();
+      await flushAsync(el);
+      expect(el.textContent).toContain("clan_modal.donations_top_empty");
+      expect(el.querySelector("[data-tabs=period]")).not.toBeNull();
+
+      mockFetch(() => Promise.resolve(okPage([makeDonation()])));
+      tab(el, "mode", "recent").click();
+      await flushAsync(el);
+      expect(fetchClanDonations).toHaveBeenLastCalledWith("TST", {
+        page: 1,
+        limit: 10,
+        currencyType: "soft",
+      });
+      expect(el.querySelector("[data-tabs=period]")).toBeNull();
+      expect(el.querySelectorAll("[data-donation-id]")).toHaveLength(1);
+    });
+
+    it("raises view-profile with the donor's public ID", async () => {
+      mockLeaderboard(() => Promise.resolve(donorPage([makeDonor()])));
+      const el = await mountView();
+      tab(el, "mode", "top").click();
+      await flushAsync(el);
+      const seen: string[] = [];
+      el.addEventListener("view-profile", (e) => {
+        seen.push((e as CustomEvent<{ publicId: string }>).detail.publicId);
+      });
+
+      el.querySelector<HTMLButtonElement>(
+        "[data-donor-id] player-name button",
+      )!.click();
+
+      expect(seen).toEqual(["donor-1"]);
+    });
   });
 });
