@@ -13,6 +13,7 @@ import {
   joinClan,
   leaveClan,
 } from "../../ClanApi";
+import { broadcastFreshUserMe } from "../../Cosmetics";
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
 import "../CopyButton";
@@ -393,7 +394,7 @@ export class ClanDetailView extends LitElement {
       }),
       "green",
     );
-    invalidateUserMe();
+    void broadcastFreshUserMe();
     const gen = this.asyncGeneration;
     const detail = await fetchClanDetail(clan.tag);
     if (!detail || gen !== this.asyncGeneration || this.clanTag !== clan.tag) {
