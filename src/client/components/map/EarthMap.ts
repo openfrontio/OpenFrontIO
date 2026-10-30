@@ -4,7 +4,7 @@ import {
   MapInfo,
 } from "@openfront/engine-api/game/GameTypes";
 import { assetUrl } from "@openfront/shared/AssetUrls";
-import { html, LitElement, nothing } from "lit";
+import { html, LitElement, nothing, type PropertyValues } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import {
   loadCachedManifest,
@@ -92,12 +92,24 @@ export class EarthMap extends LitElement {
   @state() private view = { x: 0, y: 0, width: EARTH_MAP_WIDTH };
   @state() private hovered: EarthPin | null = null;
   @state() private stats = new Map<GameMapType, MapStats>();
+  @state() private revealDetails = false;
   @query("[data-earth-frame]") private frame!: HTMLElement;
   private pointers = new Map<number, { x: number; y: number }>();
   private dragDistance = 0;
 
   createRenderRoot() {
     return this;
+  }
+
+  updated(changed: PropertyValues) {
+    if (
+      this.revealDetails &&
+      (changed.has("revealDetails") || changed.has("stats"))
+    ) {
+      this.querySelector('[role="tooltip"]')?.scrollIntoView({
+        block: "nearest",
+      });
+    }
   }
 
   connectedCallback() {
@@ -212,6 +224,7 @@ export class EarthMap extends LitElement {
 
   private hover(pin: EarthPin) {
     this.hovered = pin;
+    this.revealDetails = false;
     const map = pin.map.type;
     if (this.stats.has(map)) return;
     loadCachedManifest(map)
@@ -226,6 +239,7 @@ export class EarthMap extends LitElement {
   private selectPin(pin: EarthPin) {
     if (this.dragDistance > DRAG_THRESHOLD) return;
     this.hover(pin);
+    this.revealDetails = true;
     this.onSelectMap?.(pin.map.type);
   }
 
@@ -304,25 +318,34 @@ export class EarthMap extends LitElement {
     const pin = this.hovered;
     if (pin === null) return nothing;
     const [left, top] = this.position(pin);
-    const vertical =
-      top < 50
-        ? `top: calc(${top}% + 16px)`
-        : `bottom: calc(${100 - top}% + 16px)`;
+    const x = Math.max(0, Math.min(100, left));
+    const y = Math.max(0, Math.min(100, top));
+    // A narrow map is too short to hold the details, so they go below it.
     return html`<div
-      role="tooltip"
-      class="pointer-events-none absolute z-30 flex w-56 flex-col gap-1 rounded-lg border border-white/10 bg-zinc-900/95 p-2 text-xs text-white/90 shadow-xl"
-      style="left: clamp(4px, calc(${left}% - 7rem), calc(100% - 14rem - 4px)); ${vertical}"
+      class="pointer-events-none mt-2 @lg:absolute @lg:inset-y-1 @lg:z-30 @lg:mt-0 @lg:flex @lg:w-56 @lg:flex-col"
+      style=${
+        x < 50 ? `left: calc(${x}% + 16px)` : `right: calc(${100 - x}% + 16px)`
+      }
     >
-      <img
-        src=${terrainMapFileLoader.getMapData(pin.map.type).webpPath}
-        alt=""
-        draggable="false"
-        class="mb-1 aspect-[2/1] w-full rounded-md bg-black/30 object-contain"
-      />
-      <div class="text-sm font-bold uppercase tracking-wider text-white">
-        ${translateText(pin.map.translationKey)}
+      <div style="flex-grow: ${y}"></div>
+      <div
+        role="tooltip"
+        class="flex shrink-0 flex-col gap-1 rounded-lg border border-white/10 bg-zinc-900/95 p-2 text-xs text-white/90 shadow-xl"
+      >
+        <div class="flex items-center gap-2 @lg:flex-col @lg:items-stretch">
+          <img
+            src=${terrainMapFileLoader.getMapData(pin.map.type).webpPath}
+            alt=""
+            draggable="false"
+            class="aspect-[2/1] w-24 shrink-0 rounded-md bg-black/30 object-contain @lg:mb-1 @lg:w-full"
+          />
+          <div class="text-sm font-bold uppercase tracking-wider text-white">
+            ${translateText(pin.map.translationKey)}
+          </div>
+        </div>
+        ${renderMapDetails(pin.map, this.stats.get(pin.map.type))}
       </div>
-      ${renderMapDetails(pin.map, this.stats.get(pin.map.type))}
+      <div style="flex-grow: ${100 - y}"></div>
     </div>`;
   }
 
@@ -399,49 +422,52 @@ export class EarthMap extends LitElement {
 
   render() {
     const { x, y, width } = this.view;
-    return html`<div
-      data-earth-frame
-      class="relative w-full select-none overflow-hidden rounded-xl border border-white/10 bg-slate-950/60 ${
-        this.zoomed ? "cursor-grab active:cursor-grabbing" : ""
-      }"
-      style="aspect-ratio: ${EARTH_MAP_WIDTH} / ${EARTH_MAP_HEIGHT}; touch-action: ${
-        this.zoomed ? "none" : "pan-y"
-      }"
-      @wheel=${{
-        handleEvent: (event: WheelEvent) => this.handleWheel(event),
-        passive: false,
-      }}
-      @pointerdown=${this.handlePointerDown}
-      @pointermove=${this.handlePointerMove}
-      @pointerup=${this.handlePointerUp}
-      @pointercancel=${this.handlePointerUp}
-      @pointerleave=${this.handlePointerUp}
-    >
-      <svg
-        class="absolute inset-0 h-full w-full ${
-          this.paths.land ? "" : "animate-pulse"
+    return html`<div class="@container relative">
+      <div
+        data-earth-frame
+        class="relative w-full select-none overflow-hidden rounded-xl border border-white/10 bg-slate-950/60 ${
+          this.zoomed ? "cursor-grab active:cursor-grabbing" : ""
         }"
-        viewBox="${x} ${y} ${width} ${width * ASPECT}"
-        preserveAspectRatio="none"
-        aria-hidden="true"
+        style="aspect-ratio: ${EARTH_MAP_WIDTH} / ${EARTH_MAP_HEIGHT}; touch-action: ${
+          this.zoomed ? "none" : "pan-y"
+        }"
+        @wheel=${{
+          handleEvent: (event: WheelEvent) => this.handleWheel(event),
+          passive: false,
+        }}
+        @pointerdown=${this.handlePointerDown}
+        @pointermove=${this.handlePointerMove}
+        @pointerup=${this.handlePointerUp}
+        @pointercancel=${this.handlePointerUp}
+        @pointerleave=${this.handlePointerUp}
       >
-        <path
-          d=${this.paths.sphere}
-          vector-effect="non-scaling-stroke"
-          stroke-width="0.75"
-          class="fill-slate-900/80 stroke-slate-500/30"
-        ></path>
-        <path
-          d=${this.paths.land}
-          fill-rule="evenodd"
-          vector-effect="non-scaling-stroke"
-          stroke-width="0.75"
-          class="fill-slate-700/60 stroke-slate-400/30"
-        ></path>
-      </svg>
-      ${continents.map((pin) => this.renderContinentLabel(pin))}
-      ${pins.map((pin) => this.renderPin(pin))} ${this.renderTooltip()}
-      ${this.renderControls()} ${this.renderLegend()}
+        <svg
+          class="absolute inset-0 h-full w-full ${
+            this.paths.land ? "" : "animate-pulse"
+          }"
+          viewBox="${x} ${y} ${width} ${width * ASPECT}"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+        >
+          <path
+            d=${this.paths.sphere}
+            vector-effect="non-scaling-stroke"
+            stroke-width="0.75"
+            class="fill-slate-900/80 stroke-slate-500/30"
+          ></path>
+          <path
+            d=${this.paths.land}
+            fill-rule="evenodd"
+            vector-effect="non-scaling-stroke"
+            stroke-width="0.75"
+            class="fill-slate-700/60 stroke-slate-400/30"
+          ></path>
+        </svg>
+        ${continents.map((pin) => this.renderContinentLabel(pin))}
+        ${pins.map((pin) => this.renderPin(pin))} ${this.renderControls()}
+        ${this.renderLegend()}
+      </div>
+      ${this.renderTooltip()}
     </div>`;
   }
 }

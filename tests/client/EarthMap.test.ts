@@ -43,6 +43,7 @@ describe("<earth-map>", () => {
   let earth: EarthMap;
   let frame: HTMLElement;
   let selected: GameMapType[];
+  let scrolled: Element[];
 
   beforeEach(async () => {
     vi.stubGlobal(
@@ -65,11 +66,16 @@ describe("<earth-map>", () => {
     frame.getBoundingClientRect = () => new DOMRect(0, 0, 1000, 652);
     frame.setPointerCapture = () => {};
     frame.hasPointerCapture = () => false;
+    scrolled = [];
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this);
+    };
   });
 
   afterEach(() => {
     earth.remove();
     vi.unstubAllGlobals();
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
   });
 
   const pin = (id: string) =>
@@ -144,6 +150,28 @@ describe("<earth-map>", () => {
     for (let i = 0; i < 10; i++) wheel(-100);
     await earth.updateComplete;
     expect(wheel(-100).defaultPrevented).toBe(false);
+  });
+
+  // The frame clips its content, and on a phone it's shorter than the details.
+  it("shows a pin's details outside the frame, on the side with room", async () => {
+    const hover = async (id: string) => {
+      pin(id)!.dispatchEvent(new PointerEvent("pointerenter"));
+      await earth.updateComplete;
+      return earth.querySelector<HTMLElement>('[role="tooltip"]')!;
+    };
+
+    const hawaii = await hover("Hawaii");
+    expect(frame.contains(hawaii)).toBe(false);
+    expect(hawaii.parentElement!.style.left).not.toBe("");
+
+    const japan = await hover("Japan");
+    expect(frame.contains(japan)).toBe(false);
+    expect(japan.parentElement!.style.right).not.toBe("");
+    expect(scrolled).toEqual([]);
+
+    pin("Japan")!.click();
+    await earth.updateComplete;
+    expect(scrolled).toContain(earth.querySelector('[role="tooltip"]'));
   });
 
   it("pans a zoomed view and keeps it inside the world", async () => {
