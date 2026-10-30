@@ -81,6 +81,29 @@ describe("PurchaseButton", () => {
     }
   });
 
+  it("strikes through the list price during a sale", async () => {
+    button = document.createElement("purchase-button") as PurchaseButton;
+    button.priceHard = 75;
+    button.listPriceHard = 100;
+    button.priceSoft = 500;
+    button.listPriceSoft = 500;
+    button.onPurchaseHard = vi.fn(async () => undefined);
+    button.onPurchaseSoft = vi.fn(async () => undefined);
+    document.body.appendChild(button);
+    await button.updateComplete;
+
+    const hard = button.querySelector(".purchase-sparkle-btn-hard")!;
+    // The struck price, after its screen-reader "was" label.
+    const struck = hard.querySelector("s[data-sale-tag]")!;
+    expect(struck.querySelector(".sr-only")?.textContent).toContain(
+      "store.sale_was",
+    );
+    expect(struck.lastChild?.textContent?.trim()).toBe("100");
+    // A list price not above the price is no sale.
+    const soft = button.querySelector(".purchase-sparkle-btn-soft")!;
+    expect(soft.querySelector("[data-sale-tag]")).toBeNull();
+  });
+
   it("clears busy state and reports a synchronous purchase throw", async () => {
     vi.mocked(showInGameAlert).mockClear();
     vi.spyOn(console, "error").mockImplementation(() => undefined);

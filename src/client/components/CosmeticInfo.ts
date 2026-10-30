@@ -46,13 +46,14 @@ export class CosmeticInfo extends LitElement {
 
     const aiLabelKey = cosmeticAiLabelKey(this.aiDisclosed, this.artist);
     const rarityColor = rarityColors[this.rarity ?? ""] ?? "text-white/70";
-    // The strip spans the card so the bubble (right-aligned under the "?")
+    // The strip spans the card so the bubble (left-aligned under the "?")
     // can be capped at the card's width and wrap. Sized to its longest line,
-    // it used to run past the modal's left edge on first-column cards and
-    // get clipped. Only the button takes pointer events.
+    // it used to run past the modal's edge and get clipped. Only the button
+    // takes pointer events. The "?" sits top-left: a sale's band takes the
+    // artwork's top-right corner (CosmeticCard renderSaleRibbon).
     return html`<div
       data-cosmetic-info
-      class="group/cosmetic-info pointer-events-none absolute inset-x-2 top-2 z-10 flex justify-end"
+      class="group/cosmetic-info pointer-events-none absolute inset-x-2 top-2 z-10 flex justify-start"
       @click=${(event: Event) => event.stopPropagation()}
     >
       <button
@@ -64,7 +65,7 @@ export class CosmeticInfo extends LitElement {
       </button>
       <div
         role="tooltip"
-        class="pointer-events-none absolute right-0 top-9 hidden w-max max-w-full flex-col gap-0.5 whitespace-normal rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-left text-xs text-white shadow-xl group-hover/cosmetic-info:flex group-focus-within/cosmetic-info:flex"
+        class="pointer-events-none absolute left-0 top-9 hidden w-max max-w-full flex-col gap-0.5 whitespace-normal rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-left text-xs text-white shadow-xl group-hover/cosmetic-info:flex group-focus-within/cosmetic-info:flex"
       >
         ${
           this.rarity
