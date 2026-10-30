@@ -1724,11 +1724,11 @@
     { "coordinates": [1973, 2062], "name": "Teotihuacan" },
     { "coordinates": [5600, 2072], "name": "Thinis" },
     { "coordinates": [4928, 1428], "name": "Tibula" },
-    { "coordinates": [5783, 1508], "name": "Waššukanni" },
+    { "coordinates": [5783, 1508], "name": "Wassukanni" },
 
     {
       "coordinates": [4964, 5000],
-      "name": "Amundsen–Scott",
+      "name": "Amundsen Scott",
       "flag": "us"
     },
     {
