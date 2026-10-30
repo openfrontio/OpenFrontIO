@@ -4,7 +4,7 @@ import type { AllPlayersStats, Winner } from "@openfront/engine-api/Schemas";
 import type { GameXpEligible, Progress } from "@openfront/shared/ApiSchemas";
 import { Pattern } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
-import { html, LitElement, TemplateResult } from "lit";
+import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   copyToClipboard,
@@ -21,6 +21,11 @@ import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
 import { ClientEnv } from "../../ClientEnv";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
+import {
+  ffaRatingGameOf,
+  type FfaRatingGame,
+  viewerHasFfaRating,
+} from "../../components/ffaRating/FfaRatingEligibility";
 import type { GameXpPanelState } from "../../components/GameXpPanel";
 import type { LegendCeremony } from "../../components/LegendCeremony";
 import "../../components/ProfileShare";
@@ -34,6 +39,7 @@ import {
 } from "../../Cosmetics";
 import { isDesktopShell } from "../../DesktopShell";
 import { gamePortal } from "../../GamePortal";
+import { lobbyPublicGameType } from "../../LobbyPublicGameType";
 import {
   gameShareMoment,
   momentShareLabel,
@@ -94,6 +100,12 @@ function loadGameXpPanel(): void {
   );
 }
 
+// The rating panel is only worth its bytes after a rated FFA game: fetched
+// when the win screen finds the viewer has a rating to show.
+function loadFfaRatingPanel(): Promise<unknown> {
+  return import("../../components/ffaRating/FfaRatingPanel");
+}
+
 const iconShare = html`<svg
   xmlns="http://www.w3.org/2000/svg"
   viewBox="0 0 24 24"
@@ -135,6 +147,11 @@ export class WinModal extends LitElement implements Controller {
   // no progression, a spectator or a replay never see the section at all.
   @state()
   private xpView: GameXpPanelState = { kind: "hidden" };
+  // The FFA rating this game may have changed; null shows no panel.
+  @state()
+  private ffaRating: FfaRatingGame | null = null;
+  // Decided once per game.
+  private ffaRatingChecked = false;
   // Polling starts once, at the end of the game.
   private xpPolling = false;
   private xpAbort: AbortController | null = null;
@@ -205,6 +222,15 @@ export class WinModal extends LitElement implements Controller {
             .gameType=${this.game?.config().gameConfig().gameType ?? null}
             @xp-legend=${this.onXpLegend}
           ></game-xp-panel>
+          ${
+            this.ffaRating === null
+              ? nothing
+              : html`<ffa-rating-panel
+                  class="mt-3 block"
+                  .gameId=${this.ffaRating.gameId}
+                  .lobbyHumans=${this.ffaRating.lobbyHumans}
+                ></ffa-rating-panel>`
+          }
           ${this.innerHtml()}
         </div>
         <!-- Leaving is the quieter action, on the left; staying in the game
@@ -1132,7 +1158,41 @@ export class WinModal extends LitElement implements Controller {
       }
     });
     // After the vote, so a figure from the end has what was voted.
-    if (winUpdates.length > 0) void this.updateXp(true);
+    if (winUpdates.length > 0) {
+      void this.updateXp(true);
+      void this.updateFfaRating();
+    }
+  }
+
+  /**
+   * Shows the FFA rating panel when this game can have changed the viewer's
+   * rating: a public unranked FFA game they played, and a signed-in account
+   * (a linked login or a portal profile) that already carries live rating
+   * fields (see viewerHasFfaRating). Trust only gates board listing, so it
+   * isn't checked here.
+   * Decided once per game; any failure shows nothing.
+   */
+  private async updateFfaRating(): Promise<void> {
+    if (this.ffaRatingChecked) return;
+    try {
+      const ffaGame = ffaRatingGameOf(
+        this.game,
+        lobbyPublicGameType(this.game.gameID()),
+      );
+      if (ffaGame === null) return;
+      // Only a human winner ends a rated game: a nation or tribe win, a team
+      // win or a cancelled match is never rated.
+      if (this.gameEnd?.winner?.[0] !== "player") return;
+      this.ffaRatingChecked = true;
+      const account = await resolveXpAccount();
+      if (account.kind !== "signed_in" || !viewerHasFfaRating(account.me)) {
+        return;
+      }
+      await loadFfaRatingPanel();
+      this.ffaRating = ffaGame;
+    } catch (err) {
+      console.warn("WinModal: no FFA rating panel", err);
+    }
   }
 
   private playEndOfGameSound(): void {

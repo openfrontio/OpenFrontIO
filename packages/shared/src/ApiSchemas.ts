@@ -276,6 +276,28 @@ export type GameXpEligible = z.infer<typeof GameXpEligibleSchema>;
 export type GameXpIneligible = z.infer<typeof GameXpIneligibleSchema>;
 export type GameXpResponse = z.infer<typeof GameXpResponseSchema>;
 
+// GET /users/@me/ffa_rating/:gameId — what one FFA game did to the caller's rating.
+// While calibrating (`calibrating: true`) only the games count is sent; once
+// rated, the before/after numbers and tiers follow. Strict, unlike the fields
+// added to the lists above: the caller treats a body that fails to parse as
+// "unavailable", which is the right outcome for a drifted response. The
+// endpoint 404s until the API serves the FFA rating (FFA_RATING=live).
+export const FfaGameRatingResponseSchema = z.object({
+  gameId: z.string(),
+  calibrating: z.boolean(),
+  revealed: z.boolean().optional(),
+  calibrationGames: z.number().int().min(0).max(10),
+  ratingBefore: z.number().optional(),
+  ratingAfter: z.number().optional(),
+  uncertaintyAfter: z.number().optional(),
+  tierBefore: z.string().optional(),
+  tierAfter: z.string().optional(),
+  expected: z.number().optional(),
+  deltaResult: z.number().optional(),
+  deltaPlace: z.number().optional(),
+});
+export type FfaGameRatingResponse = z.infer<typeof FfaGameRatingResponseSchema>;
+
 // GET /public/player/:publicId/progress — another player's level. No auth.
 export const PublicProgressSchema = z.object({
   prestige: z.number(),
@@ -627,6 +649,20 @@ export const UserMeResponseSchema = z.object({
         ffa: z
           .object({
             elo: z.number().optional(),
+            // Absent until the API serves the FFA rating (FFA_RATING=live); a
+            // malformed value reads as absent.
+            uncertainty: z.number().optional().catch(undefined),
+            tier: z.string().optional().catch(undefined),
+            games: z.number().int().nonnegative().optional().catch(undefined),
+            wins: z.number().int().nonnegative().optional().catch(undefined),
+            peak: z.number().optional().catch(undefined),
+            calibrationGames: z
+              .number()
+              .int()
+              .min(0)
+              .max(10)
+              .optional()
+              .catch(undefined),
           })
           .optional(),
       })
@@ -1158,6 +1194,17 @@ export const PlayerStatsTreeSchema = z.object({
 });
 export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
 
+// A player's FFA rating on their public profile.
+export const PublicFfaRatingSchema = z.object({
+  rating: z.number(),
+  uncertainty: z.number(),
+  tier: z.string(),
+  games: z.number().int().nonnegative(),
+  wins: z.number().int().nonnegative(),
+  peak: z.number(),
+});
+export type PublicFfaRating = z.infer<typeof PublicFfaRatingSchema>;
+
 export const PlayerProfileSchema = z.object({
   createdAt: z.iso.datetime(),
   user: DiscordUserSchema.optional(),
@@ -1189,6 +1236,10 @@ export const PlayerProfileSchema = z.object({
   // games has one. Optional so responses from an API without the field still
   // parse (→ no tag shown).
   displayClanTag: z.string().nullable().optional(),
+  // null = unrated (calibrating or never played FFA).
+  // Absent until the API serves the FFA rating (FFA_RATING=live); a malformed
+  // value reads as absent.
+  ffaRating: PublicFfaRatingSchema.nullable().optional().catch(undefined),
 });
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
 
@@ -1216,6 +1267,16 @@ export const PlayerGameResultSchema = z.enum([
 ]);
 export type PlayerGameResult = z.infer<typeof PlayerGameResultSchema>;
 
+// What one FFA game did to the player's rating, for the history list.
+export const FfaRatingGameDeltaSchema = z.object({
+  before: z.number(),
+  after: z.number(),
+  expected: z.number(),
+  deltaResult: z.number(),
+  deltaPlace: z.number(),
+});
+export type FfaRatingGameDelta = z.infer<typeof FfaRatingGameDeltaSchema>;
+
 export const PublicPlayerGameSchema = z.object({
   gameId: z.string(),
   start: z.iso.datetime(),
@@ -1229,6 +1290,11 @@ export const PublicPlayerGameSchema = z.object({
   totalPlayers: z.number().int().nonnegative().nullable(),
   username: z.string(),
   clanTag: z.string().nullable(),
+  // null = this game did not move the rating (not a rated FFA game, or still
+  // calibrating).
+  // Absent until the API serves the FFA rating (FFA_RATING=live); a malformed
+  // value reads as absent.
+  ffaRating: FfaRatingGameDeltaSchema.nullable().optional().catch(undefined),
 });
 export type PublicPlayerGame = z.infer<typeof PublicPlayerGameSchema>;
 
@@ -1279,6 +1345,10 @@ export const RankedLeaderboardEntrySchema = z.object({
   // Account username (null = never set). The client displays
   // `accountUsername ?? public_id`.
   accountUsername: z.string().nullable(),
+  // Absent until the API serves the FFA rating (FFA_RATING=live); a malformed
+  // value reads as absent.
+  uncertainty: z.number().optional().catch(undefined),
+  tier: z.string().optional().catch(undefined),
   ...RowLevelFields,
 });
 export type RankedLeaderboardEntry = z.infer<

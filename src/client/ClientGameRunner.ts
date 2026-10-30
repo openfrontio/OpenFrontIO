@@ -49,6 +49,7 @@ import {
   TickMetricsEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
+import { rememberLobbyPublicGameType } from "./LobbyPublicGameType";
 import { rememberLobbyRoster } from "./LobbyRosterLevels";
 import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
@@ -231,6 +232,11 @@ export function joinLobby(
         message.lobby.gameID,
         message.lobby.clients,
         message.myClientID,
+      );
+      // Kept past game start for the win screen's FFA rating check.
+      rememberLobbyPublicGameType(
+        message.lobby.gameID,
+        message.lobby.publicGameType,
       );
       // Preload the map while still in the lobby so game start can reuse the
       // cached result instead of blocking on the download in the short

@@ -13,6 +13,26 @@ import {
   writeRootFilesIndex,
 } from "../../src/server/PublicAssetManifest";
 
+// OFstats's emblem kit: a flat emblem per family for small sizes, and a
+// shaded one per tier, numeral included, for large ones.
+const FFA_TIER_FAMILIES = [
+  "iron",
+  "bronze",
+  "silver",
+  "gold",
+  "platinum",
+  "diamond",
+  "master",
+  "grandmaster",
+];
+const FFA_TIER_ART = [
+  ...FFA_TIER_FAMILIES.map((f) => `images/ffa-tiers/compact/${f}.svg`),
+  ...FFA_TIER_FAMILIES.slice(0, 7).flatMap((f) =>
+    ["iii", "ii", "i"].map((d) => `images/ffa-tiers/detailed/${f}-${d}.svg`),
+  ),
+  "images/ffa-tiers/detailed/grandmaster.svg",
+].sort();
+
 describe("PublicAssetManifest", () => {
   let tempDir: string | null = null;
 
@@ -394,5 +414,42 @@ describe("PublicAssetManifest", () => {
       index[".well-known/apple-developer-merchantid-domain-association"],
     ).toBe("text/plain; charset=utf-8");
     expect(index["press/"]).toBe("text/html; charset=utf-8");
+  });
+
+  test("hashes exactly OFstats's 30 FFA tier emblems", async () => {
+    // The real folder holds exactly the 30 emblems...
+    const tierDir = path.resolve("resources", "images", "ffa-tiers");
+    const onDisk = (await fs.readdir(tierDir, { recursive: true }))
+      .map((p) => `images/ffa-tiers/${p.split(path.sep).join("/")}`)
+      .filter((p) => p.endsWith(".svg"))
+      .sort();
+    expect(onDisk).toEqual(FFA_TIER_ART);
+    // ...and the manifest hashes every one of them. Built over a copy of that
+    // folder alone: hashing all of resources/ takes seconds.
+    const { resourcesDir } = await createTempResources();
+    await fs.cp(tierDir, path.join(resourcesDir, "images", "ffa-tiers"), {
+      recursive: true,
+    });
+    const manifest = buildPublicAssetManifest([resourcesDir]);
+    const tierArt = Object.keys(manifest)
+      .filter((p) => p.startsWith("images/ffa-tiers/"))
+      .sort();
+    expect(tierArt).toEqual(FFA_TIER_ART);
+    for (const asset of tierArt) {
+      const { dir, name } = path.posix.parse(asset);
+      expect(manifest[asset], asset).toMatch(
+        new RegExp(`^/_assets/${dir}/${name}\\.[0-9a-f]+\\.svg$`),
+      );
+    }
+  });
+
+  test("ships only inert FFA tier SVGs", async () => {
+    for (const asset of FFA_TIER_ART) {
+      const svg = await fs.readFile(path.resolve("resources", asset), "utf8");
+      expect(svg, asset).toMatch(/^<svg[\s>]/);
+      expect(svg, asset).not.toMatch(
+        /<script|\son[a-z]+\s*=|<foreignObject|(?:xlink:)?href\s*=\s*["'](?!#|data:image\/)/i,
+      );
+    }
   });
 });
