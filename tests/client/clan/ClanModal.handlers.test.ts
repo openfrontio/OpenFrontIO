@@ -859,7 +859,10 @@ describe("ClanModal — handlers", () => {
 
     it("after a donation: closes the dialog, toasts, refreshes the clan and the wallet", async () => {
       const { fetchClanDetail } = await import("../../../src/client/ClanApi");
-      const { invalidateUserMe } = await import("../../../src/client/Api");
+      const { getUserMe, invalidateUserMe } =
+        await import("../../../src/client/Api");
+      const { lastUserMeResponse } =
+        await import("../../../src/client/UserMeBroadcast");
       const { showToast, translateText } =
         await import("../../../src/client/Utils");
       const detailView = await openDetailAs("member");
@@ -875,6 +878,21 @@ describe("ClanModal — handlers", () => {
         [makeClan({ softBalance: "1000", hardBalance: "25" })] as never,
       );
 
+      const me = await getUserMe();
+      if (!me) throw new Error("Expected signed-in fixture");
+      const before = {
+        ...me,
+        player: { ...me.player, currency: { soft: 16600, hard: 75 } },
+      };
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", { detail: before }),
+      );
+      const fresh = {
+        ...me,
+        player: { ...me.player, currency: { soft: 16300, hard: 75 } },
+      };
+      vi.mocked(getUserMe).mockResolvedValueOnce(fresh);
+
       modal.querySelector("clan-donate-dialog")!.dispatchEvent(
         new CustomEvent("donated", {
           detail: { currencyType: "soft", amount: "300" },
@@ -884,6 +902,7 @@ describe("ClanModal — handlers", () => {
 
       expect(modal.querySelector("clan-donate-dialog")).toBeNull();
       expect(invalidateUserMe).toHaveBeenCalled();
+      expect(lastUserMeResponse()?.response).toBe(fresh);
       expect(showToast).toHaveBeenCalledWith(
         "clan_modal.donate_success",
         "green",
