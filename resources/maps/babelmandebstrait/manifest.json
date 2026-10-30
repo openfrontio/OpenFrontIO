@@ -1,131 +1,82 @@
 {
   "additionalNations": [
     {
-      "coordinates": [
-        779,
-        670
-      ],
+      "coordinates": [779, 670],
       "flag": "North yemen",
       "name": "Zabid"
     },
     {
-      "coordinates": [
-        1326,
-        653
-      ],
+      "coordinates": [1326, 653],
       "flag": "South Arabia Federation",
       "name": "Audhali"
     },
     {
-      "coordinates": [
-        657,
-        260
-      ],
+      "coordinates": [657, 260],
       "flag": "North yemen",
       "name": "Al Luḩayyah"
     },
     {
-      "coordinates": [
-        1165,
-        131
-      ],
+      "coordinates": [1165, 131],
       "flag": "North yemen",
       "name": "Al Hazm"
     },
     {
-      "coordinates": [
-        1203,
-        697
-      ],
+      "coordinates": [1203, 697],
       "flag": "Upper Yafa",
       "name": "Upper Yafa"
     },
     {
-      "coordinates": [
-        1125,
-        734
-      ],
+      "coordinates": [1125, 734],
       "flag": "South Arabia Federation",
       "name": "Muflihi Sheikdom"
     },
     {
-      "coordinates": [
-        1155,
-        705
-      ],
+      "coordinates": [1155, 705],
       "flag": "South Arabia Federation",
       "name": "Sheikhdom of Sha'ib"
     },
     {
-      "coordinates": [
-        804,
-        230
-      ],
+      "coordinates": [804, 230],
       "flag": "North yemen",
       "name": "Hajjah"
     },
     {
-      "coordinates": [
-        1118,
-        941
-      ],
+      "coordinates": [1118, 941],
       "flag": "Aqrabi Sheikhdom",
       "name": "Aqrabi Sheikhdom"
     },
     {
-      "coordinates": [
-        1048,
-        837
-      ],
+      "coordinates": [1048, 837],
       "flag": "Haushabi",
       "name": "Haushebi Sultanate"
     },
     {
-      "coordinates": [
-        1453,
-        600
-      ],
+      "coordinates": [1453, 600],
       "flag": "South Arabia Federation",
       "name": "Upper Aulaqi Sultanate"
     },
     {
-      "coordinates": [
-        1081,
-        810
-      ],
+      "coordinates": [1081, 810],
       "flag": "Alawi Sheikhdom",
       "name": "Alawi Sheikhdom"
     },
     {
-      "coordinates": [
-        1410,
-        687
-      ],
+      "coordinates": [1410, 687],
       "flag": "Dathina Sheikhdom",
       "name": "Dathina Sheikhdom"
     },
     {
-      "coordinates": [
-        1116,
-        787
-      ],
+      "coordinates": [1116, 787],
       "flag": "Emirate of Dhala",
       "name": "Emirate of Dhala"
     },
     {
-      "coordinates": [
-        727,
-        1158
-      ],
+      "coordinates": [727, 1158],
       "flag": "fr",
       "name": "Tadjoura"
     }
   ],
-  "categories": [
-    "new",
-    "africa",
-    "asia"
-  ],
+  "categories": ["new", "africa", "asia"],
   "id": "BabelMandebStrait",
   "map": {
     "height": 1500,
@@ -145,210 +96,132 @@
   "name": "Bab el-Mandeb Strait",
   "nations": [
     {
-      "coordinates": [
-        744,
-        1228
-      ],
+      "coordinates": [744, 1228],
       "flag": "fr",
       "name": "French Somaliland"
     },
     {
-      "coordinates": [
-        695,
-        32
-      ],
+      "coordinates": [695, 32],
       "flag": "sa",
       "name": "Jizan"
     },
     {
-      "coordinates": [
-        1166,
-        923
-      ],
+      "coordinates": [1166, 923],
       "flag": "North yemen",
       "name": "Aden"
     },
     {
-      "coordinates": [
-        994,
-        407
-      ],
+      "coordinates": [994, 407],
       "flag": "North yemen",
       "name": "Sanaa"
     },
     {
-      "coordinates": [
-        1198,
-        1477
-      ],
+      "coordinates": [1198, 1477],
       "flag": "so",
       "name": "Berbera"
     },
     {
-      "coordinates": [
-        787,
-        816
-      ],
+      "coordinates": [787, 816],
       "flag": "North yemen",
       "name": "Mocha"
     },
     {
-      "coordinates": [
-        735,
-        519
-      ],
+      "coordinates": [735, 519],
       "flag": "North yemen",
       "name": "Al-Hudaydah"
     },
     {
-      "coordinates": [
-        967,
-        961
-      ],
+      "coordinates": [967, 961],
       "flag": "Sultanate of Lahej",
       "name": "Sultanate of Lahej"
     },
     {
-      "coordinates": [
-        1307,
-        809
-      ],
+      "coordinates": [1307, 809],
       "flag": "Sultanate of Fadhli",
       "name": "Sultanate of Fadhli"
     },
     {
-      "coordinates": [
-        1241,
-        757
-      ],
+      "coordinates": [1241, 757],
       "flag": "Sultanate of Lower Yafa",
       "name": "Sultanate of Lower Yafa"
     },
     {
-      "coordinates": [
-        1476,
-        762
-      ],
+      "coordinates": [1476, 762],
       "flag": "Lower Aulaqi Sultanate",
       "name": "Lower Aulaqi Sultanate"
     },
     {
-      "coordinates": [
-        1374,
-        560
-      ],
+      "coordinates": [1374, 560],
       "flag": "Emirate of Beihan",
       "name": "Emirate of Beihan"
     },
     {
-      "coordinates": [
-        966,
-        725
-      ],
+      "coordinates": [966, 725],
       "flag": "North yemen",
       "name": "Taiz"
     },
     {
-      "coordinates": [
-        1047,
-        651
-      ],
+      "coordinates": [1047, 651],
       "flag": "North yemen",
       "name": "Ibb"
     },
     {
-      "coordinates": [
-        1284,
-        318
-      ],
+      "coordinates": [1284, 318],
       "flag": "North yemen",
       "name": "Marib"
     },
     {
-      "coordinates": [
-        894,
-        44
-      ],
+      "coordinates": [894, 44],
       "flag": "North yemen",
       "name": "Saada"
     },
     {
-      "coordinates": [
-        627,
-        897
-      ],
+      "coordinates": [627, 897],
       "flag": "Eritrea (Ethiopian)",
       "name": "Assab"
     },
     {
-      "coordinates": [
-        396,
-        684
-      ],
+      "coordinates": [396, 684],
       "flag": "Eritrea (Ethiopian)",
       "name": "Edd"
     },
     {
-      "coordinates": [
-        228,
-        538
-      ],
+      "coordinates": [228, 538],
       "flag": "Eritrea (Ethiopian)",
       "name": "Tio"
     },
     {
-      "coordinates": [
-        66,
-        436
-      ],
+      "coordinates": [66, 436],
       "flag": "Eritrea (Ethiopian)",
       "name": "Mersa Fatuma"
     },
     {
-      "coordinates": [
-        226,
-        1194
-      ],
+      "coordinates": [226, 1194],
       "flag": "Ethiopian Empire",
       "name": "Asayita"
     },
     {
-      "coordinates": [
-        63,
-        1374
-      ],
+      "coordinates": [63, 1374],
       "flag": "Ethiopian Empire",
       "name": "Bati"
     },
     {
-      "coordinates": [
-        11,
-        696
-      ],
+      "coordinates": [11, 696],
       "flag": "Ethiopian Empire",
       "name": "Mekelle"
     },
     {
-      "coordinates": [
-        16,
-        538
-      ],
+      "coordinates": [16, 538],
       "flag": "Ethiopian Empire",
       "name": "Adigrat"
     },
     {
-      "coordinates": [
-        70,
-        275
-      ],
+      "coordinates": [70, 275],
       "flag": "Eritrea (Ethiopian)",
       "name": "Dahlak"
     },
     {
-      "coordinates": [
-        821,
-        1301
-      ],
+      "coordinates": [821, 1301],
       "flag": "so",
       "name": "Zeila"
     }
@@ -370,9 +243,6 @@
       }
     ]
   },
-  "themes": [
-    "africa",
-    "asia"
-  ],
+  "themes": ["africa", "asia"],
   "translation_key": "map.babelmandebstrait"
 }

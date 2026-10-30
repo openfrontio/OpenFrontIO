@@ -1,8 +1,5 @@
 {
-  "categories": [
-    "arcade",
-    "new"
-  ],
+  "categories": ["arcade", "new"],
   "id": "Ommatrypta",
   "layers": [
     {
@@ -139,9 +136,6 @@
     }
   ],
   "special_team_count": 13,
-  "themes": [
-    "scary",
-    "fantasy"
-  ],
+  "themes": ["scary", "fantasy"],
   "translation_key": "map.ommatrypta"
 }

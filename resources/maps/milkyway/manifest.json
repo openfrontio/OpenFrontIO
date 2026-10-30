@@ -1,7 +1,5 @@
 {
-  "categories": [
-    "cosmic"
-  ],
+  "categories": ["cosmic"],
   "display_name": "Milky Way",
   "id": "MilkyWay",
   "map": {
@@ -22,18 +20,12 @@
   "name": "MilkyWay",
   "nations": [
     {
-      "coordinates": [
-        869,
-        886
-      ],
+      "coordinates": [869, 886],
       "flag": "Abbasid Caliphate",
       "name": "Sagittarius A*"
     },
     {
-      "coordinates": [
-        816,
-        1188
-      ],
+      "coordinates": [816, 1188],
       "flag": "un",
       "name": "Empire of Mankind"
     },

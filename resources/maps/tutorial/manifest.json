@@ -1,13 +1,8 @@
 {
-  "categories": [
-    "fictional"
-  ],
+  "categories": ["fictional"],
   "custom_tribes": [
     {
-      "coordinates": [
-        38,
-        49
-      ],
+      "coordinates": [38, 49],
       "name": "Hill Tribe"
     }
   ],
@@ -31,10 +26,7 @@
   "name": "Tutorial",
   "nations": [
     {
-      "coordinates": [
-        175,
-        84
-      ],
+      "coordinates": [175, 84],
       "flag": "",
       "name": "Red Empire"
     }

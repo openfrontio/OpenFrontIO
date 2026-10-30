@@ -1,8 +1,5 @@
 {
-  "categories": [
-    "asia",
-    "north_america"
-  ],
+  "categories": ["asia", "north_america"],
   "id": "BeringStrait",
   "map": {
     "height": 916,
@@ -22,18 +19,12 @@
   "name": "Bering Strait",
   "nations": [
     {
-      "coordinates": [
-        1297,
-        287
-      ],
+      "coordinates": [1297, 287],
       "flag": "us",
       "name": "Alaska"
     },
     {
-      "coordinates": [
-        186,
-        427
-      ],
+      "coordinates": [186, 427],
       "flag": "ru",
       "name": "Russia"
     }
@@ -55,9 +46,6 @@
       }
     ]
   },
-  "themes": [
-    "asia",
-    "north_america"
-  ],
+  "themes": ["asia", "north_america"],
   "translation_key": "map.beringstrait"
 }
