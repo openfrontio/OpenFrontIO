@@ -44,6 +44,9 @@ export class NavUtilityIcons extends LitElement {
     super.connectedCallback();
     window.addEventListener("showPage", this._onShowPage);
     document.addEventListener("click", this.handleDocumentClick);
+    // The panel hangs off document.body, so the in-game rule that hides the
+    // nav never reaches it: close it when a game starts.
+    document.addEventListener("game-starting", this.closeNotifications);
     window.addEventListener("keydown", this.handleKeyDown);
     window.addEventListener("resize", this.closeNotifications);
   }
@@ -51,6 +54,7 @@ export class NavUtilityIcons extends LitElement {
   disconnectedCallback() {
     window.removeEventListener("showPage", this._onShowPage);
     document.removeEventListener("click", this.handleDocumentClick);
+    document.removeEventListener("game-starting", this.closeNotifications);
     window.removeEventListener("keydown", this.handleKeyDown);
     window.removeEventListener("resize", this.closeNotifications);
     this.removeNotificationsPanel();

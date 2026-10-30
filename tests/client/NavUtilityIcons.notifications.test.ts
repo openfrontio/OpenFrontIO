@@ -148,6 +148,19 @@ describe("nav notification menu", () => {
     });
   });
 
+  it("closes when a game starts, since hiding the nav cannot reach its body portal", async () => {
+    const element = await mount();
+    const bell = trigger(element);
+    await openMenu(element);
+    expect(document.querySelector('[role="menu"]')).not.toBeNull();
+
+    document.dispatchEvent(new CustomEvent("game-starting"));
+    await element.updateComplete;
+
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+    expect(bell.getAttribute("aria-expanded")).toBe("false");
+  });
+
   it("closes on Escape and removes its body portal on disconnect", async () => {
     const element = await mount();
     const menu = await openMenu(element);

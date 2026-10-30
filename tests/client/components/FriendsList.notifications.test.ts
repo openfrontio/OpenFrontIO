@@ -44,6 +44,12 @@ const pendingRequest = {
   createdAt: "2026-10-02T12:00:00.000Z",
 };
 
+const newerRequest = {
+  publicId: "newer.9999",
+  username: "newer.9999",
+  createdAt: "2026-10-02T15:00:00.000Z",
+};
+
 const otherAccountRequest = {
   publicId: "other.5678",
   username: "other.5678",
@@ -133,6 +139,36 @@ describe("FriendsList notification synchronization", () => {
     await element.updateComplete;
 
     expect(element.textContent).toContain("new-friend");
+    expect(element.textContent).not.toContain("friend.1234");
+  });
+
+  it("keeps a snapshot published while the initial load is still in flight", async () => {
+    let resolveLoad!: (value: {
+      incoming: (typeof pendingRequest)[];
+      outgoing: never[];
+    }) => void;
+    fetchFriendRequests.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveLoad = resolve;
+      }),
+    );
+    const element = document.createElement("friends-list") as FriendsElement;
+    document.body.appendChild(element);
+    await settle(element);
+
+    // The nav poller (or an accept in this tab) publishes a newer snapshot
+    // before the slower initial fetch resolves. Republishing the older
+    // response would put the resolved request back on the bell.
+    document.dispatchEvent(
+      new CustomEvent("friend-requests-updated", {
+        detail: { incoming: [], outgoing: [newerRequest] },
+      }),
+    );
+    resolveLoad({ incoming: [pendingRequest], outgoing: [] });
+    await settle(element);
+
+    expect(publishFriendRequests).not.toHaveBeenCalled();
+    expect(element.textContent).toContain("newer.9999");
     expect(element.textContent).not.toContain("friend.1234");
   });
 

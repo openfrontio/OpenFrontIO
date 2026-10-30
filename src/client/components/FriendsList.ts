@@ -69,6 +69,11 @@ export class FriendsList extends LitElement {
   @state() private outgoing: FriendEntry[] = [];
   @state() private addInput = "";
 
+  // Bumped by every friend-requests-updated event, this tab's own publishes
+  // included. A fetch that started before the latest one is older than what
+  // is on screen, so it must neither overwrite nor republish it.
+  private requestsRevision = 0;
+
   connectedCallback(): void {
     super.connectedCallback();
     document.addEventListener(
@@ -87,6 +92,7 @@ export class FriendsList extends LitElement {
   }
 
   private handleRequestsUpdated = (event: Event): void => {
+    this.requestsRevision++;
     const requests = (event as CustomEvent<FriendRequestsResponse>).detail;
     this.incoming = requests.incoming;
     this.outgoing = requests.outgoing;
@@ -96,12 +102,15 @@ export class FriendsList extends LitElement {
     this.loading = true;
     try {
       const generation = userMeGeneration();
+      const requestsRevision = this.requestsRevision;
       const [requests, firstPage] = await Promise.all([
         fetchFriendRequests(),
         fetchFriends(1, PAGE_LIMIT),
       ]);
       if (await this.resyncIfAccountChanged(generation)) return;
-      if (requests) {
+      // A snapshot published meanwhile (the nav poller's, or an accept in
+      // this tab) is newer than this response, so keep that one.
+      if (requests && requestsRevision === this.requestsRevision) {
         this.incoming = requests.incoming;
         this.outgoing = requests.outgoing;
         publishFriendRequests(requests);
@@ -201,9 +210,10 @@ export class FriendsList extends LitElement {
         // If the refetch fails the list is just stale until the next load —
         // never insert `target`, which may not be a publicId.
         const generation = userMeGeneration();
+        const requestsRevision = this.requestsRevision;
         const requests = await fetchFriendRequests();
         if (await this.resyncIfAccountChanged(generation)) return;
-        if (requests) {
+        if (requests && requestsRevision === this.requestsRevision) {
           this.incoming = requests.incoming;
           this.outgoing = requests.outgoing;
           publishFriendRequests(requests);
