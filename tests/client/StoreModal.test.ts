@@ -554,6 +554,34 @@ describe("StoreModal cosmetic browser", () => {
     }
   });
 
+  it("refetches on reopen when the kept catalog still has an ended sale", async () => {
+    const ended = {
+      promotions: [
+        {
+          id: "1",
+          name: "Flash",
+          percentOff: 10,
+          endsAt: new Date(Date.now() - 1000).toISOString(),
+        },
+      ],
+    } as unknown as Cosmetics;
+    vi.mocked(fetchCosmetics).mockResolvedValue(ended);
+    const modal = await openStoreOnCosmetic("patterns");
+    modal.close();
+
+    const after = { promotions: [] } as unknown as Cosmetics;
+    vi.mocked(fetchCosmetics).mockClear();
+    vi.mocked(fetchCosmetics).mockResolvedValue(after);
+    modal.open({ tab: "cosmetics" });
+
+    await vi.waitFor(() =>
+      expect((modal as unknown as { cosmetics: unknown }).cosmetics).toBe(
+        after,
+      ),
+    );
+    expect(fetchCosmetics).toHaveBeenCalled();
+  });
+
   it("shows no banner or list price without a sale", async () => {
     const modal = await openStoreOnCosmetic("patterns");
     expect(modal.querySelector("[data-store-sale-banner]")).toBeNull();

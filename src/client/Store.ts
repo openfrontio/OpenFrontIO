@@ -89,6 +89,14 @@ interface StoreBrowserOptions {
 const SALE_END_RETRY_MS = 15_000;
 const SALE_END_RETRIES = 8;
 
+/** Whether the catalog still lists a sale whose end time has passed. */
+function hasEndedSale(cosmetics: Cosmetics | null): boolean {
+  const now = Date.now();
+  return (cosmetics?.promotions ?? []).some(
+    (sale) => new Date(sale.endsAt).getTime() <= now,
+  );
+}
+
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
   protected routerName = "store";
@@ -750,11 +758,7 @@ export class StoreModal extends BaseModal {
     this.cosmetics = fresh ?? this.cosmetics;
     this.selectVisible(this.groupsForTab(this.activeTab));
     this.requestUpdate();
-    const now = Date.now();
-    const stillHasEnded = (fresh?.promotions ?? []).some(
-      (sale) => new Date(sale.endsAt).getTime() <= now,
-    );
-    if ((fresh === null || stillHasEnded) && attempt < SALE_END_RETRIES) {
+    if ((fresh === null || hasEndedSale(fresh)) && attempt < SALE_END_RETRIES) {
       if (this.saleRetryTimer !== null) clearTimeout(this.saleRetryTimer);
       this.saleRetryTimer = setTimeout(() => {
         this.saleRetryTimer = null;
@@ -838,6 +842,10 @@ export class StoreModal extends BaseModal {
     this.cosmetics ??= await fetchCosmetics();
     this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();
+    // A catalog still carrying a sale that has ended (the store was closed
+    // while the sale-end refetch was retrying, then reopened within the
+    // stale window) would show its prices with no banner: refetch it.
+    if (hasEndedSale(this.cosmetics)) void this.refetchAfterSaleEnd(0);
   }
 
   protected onClose(): void {
