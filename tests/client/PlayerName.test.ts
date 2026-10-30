@@ -1,12 +1,14 @@
 import { UsernameSchema } from "@openfront/engine-api/Schemas";
+import { resolveTribeNameData } from "@openfront/engine-lib/execution/utils/TribeNames";
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   accountNameHeld,
   accountVerifiedName,
   clampUsername,
   fallbackPlayerName,
   genAnonUsername,
+  generateRandomPlayerName,
   lapseNoticeDue,
   lapseNoticeMarker,
   looksGenerated,
@@ -822,5 +824,56 @@ describe("lapseNoticeDue against a marker from before and after the write", () =
     // What announceLapse stores, the moment before it opens its alert.
     const afterWrite = lapseNoticeMarker(verifiedClaimGrace(lapsed, NOW)!);
     expect(lapseNoticeDue(lapsed, afterWrite, NOW)).toBe(false);
+  });
+});
+
+describe("random player names", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("uses complete default tribe prefix/suffix pairs within the name limit", () => {
+    const { prefixes, suffixes } = resolveTribeNameData();
+    for (let i = 0; i < 100; i++) {
+      const name = generateRandomPlayerName("tribe");
+      expect(
+        prefixes.some((prefix) =>
+          suffixes.some((suffix) => name === `${prefix} ${suffix}`),
+        ),
+      ).toBe(true);
+      expect(name.length).toBeLessThanOrEqual(MAX_USERNAME_LENGTH);
+      expect(UsernameSchema.safeParse(name).success).toBe(true);
+    }
+  });
+
+  it.each(["tribe", "anon"] as const)(
+    "does not repeat the current %s name, including when the draw repeats",
+    (style) => {
+      const draw = vi
+        .spyOn(crypto, "getRandomValues")
+        .mockImplementation((buffer) => {
+          (buffer as Uint32Array)[0] = 0;
+          return buffer;
+        });
+      const first = generateRandomPlayerName(style);
+      draw
+        .mockImplementationOnce((buffer) => {
+          (buffer as Uint32Array)[0] = 0;
+          return buffer;
+        })
+        .mockImplementation((buffer) => {
+          (buffer as Uint32Array)[0] = 1;
+          return buffer;
+        });
+      const next = generateRandomPlayerName(style, first);
+      expect(next).not.toBe(first);
+      expect(UsernameSchema.safeParse(next).success).toBe(true);
+    },
+  );
+
+  it("uses the same Anon generator as the default name", () => {
+    vi.spyOn(crypto, "getRandomValues").mockImplementation((buffer) => {
+      (buffer as Uint32Array)[0] = 42;
+      return buffer;
+    });
+    expect(generateRandomPlayerName("anon")).toBe(genAnonUsername());
   });
 });

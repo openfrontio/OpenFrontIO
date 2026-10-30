@@ -16,6 +16,7 @@ import {
 // DesktopShell.ts imports nothing, so this cannot introduce an import cycle
 // (verified with madge: 58 cycles before and after, none involving it).
 import { isDesktopShell } from "./DesktopShell";
+import type { RandomNameStyle } from "./PlayerName";
 
 export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
   return {
@@ -435,6 +436,16 @@ export class UserSettings {
 
   anonymousNames() {
     return this.getBool("settings.anonymousNames", false);
+  }
+
+  randomNameStyle(): RandomNameStyle {
+    return this.getCached("settings.randomNameStyle") === "tribe"
+      ? "tribe"
+      : "anon";
+  }
+
+  setRandomNameStyle(style: RandomNameStyle): void {
+    this.setCached("settings.randomNameStyle", style);
   }
 
   lobbyIdVisibility() {

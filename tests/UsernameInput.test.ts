@@ -59,6 +59,7 @@ vi.mock("../src/client/Utils", async (importOriginal) => ({
 import { STEAM_GRANT_NOTICE_KEY } from "../src/client/SteamGrantNotices";
 import "../src/client/UsernameInput";
 import type { UsernameInput as UsernameInputEl } from "../src/client/UsernameInput";
+import { UserSettings } from "../src/client/UserSettings";
 
 function premiumUser(
   clans: { tag: string; name: string }[] = [],
@@ -125,6 +126,50 @@ beforeEach(() => {
 
 // Lets a handler's `await getUserMe()` continuation run before asserting.
 const settle = () => new Promise((r) => setTimeout(r, 0));
+
+describe("UsernameInput random name button", () => {
+  it.each(["tribe", "anon"] as const)(
+    "applies and stores a %s name while preserving the clan tag",
+    async (style) => {
+      new UserSettings().setRandomNameStyle(style);
+      localStorage.setItem("username", "MyName");
+      localStorage.setItem("clanTag", "TAG");
+      const el = await mount();
+      const button = q<HTMLButtonElement>(
+        el,
+        'button[aria-label="username.random_name"]',
+      )!;
+      expect(button.querySelector('[aria-hidden="true"] svg')).not.toBeNull();
+      button.click();
+      await el.updateComplete;
+      const name = q<HTMLInputElement>(el, 'input[type="text"]')!.value;
+      expect(name).not.toBe("MyName");
+      expect(name.startsWith("Anon")).toBe(style === "anon");
+      expect(localStorage.getItem("username")).toBe(name);
+      expect(localStorage.getItem("usernameIsGenerated")).toBe("false");
+      expect(el.getClanTag()).toBe("TAG");
+      expect(el.resolvedName().name).toBe(name);
+      button.click();
+      await el.updateComplete;
+      expect(el.resolvedName().name).not.toBe(name);
+    },
+  );
+
+  it("switches verified play to the generated custom name", async () => {
+    localStorage.setItem("useVerifiedName", "true");
+    const el = await mount();
+    await signIn(el, premiumUser());
+    expect(el.resolvedName().verified).toBe(true);
+    q<HTMLButtonElement>(
+      el,
+      'button[aria-label="username.random_name"]',
+    )!.click();
+    await el.updateComplete;
+    expect(el.resolvedName().verified).toBe(false);
+    expect(localStorage.getItem("useVerifiedName")).toBe("false");
+    expect(localStorage.getItem("username")).toBe(el.resolvedName().name);
+  });
+});
 
 describe("UsernameInput clan tag picker", () => {
   it("shows the tag placeholder and no menu until opened", async () => {
