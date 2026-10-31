@@ -40,6 +40,8 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     requestAlliance: "KeyK",
     breakAlliance: "KeyL",
     targetPlayer: "KeyN",
+    donateTroops: "KeyJ",
+    donateGold: "KeyO",
     emojiMenu: "KeyF",
     quickChat: "KeyR",
     swapDirection: "KeyU",
