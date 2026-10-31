@@ -1875,7 +1875,12 @@ export class UserSettingModal extends BaseModal {
         class="w-full p-4 text-left text-white font-bold bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
         @click=${() => this.openGraphicsPanel()}
       >
-        ${translateText("graphics_setting.open_panel")}
+        <span class="block"
+          >${translateText("graphics_setting.advanced_label")}</span
+        >
+        <span class="block text-white/50 text-sm font-normal mt-1">
+          ${translateText("graphics_setting.advanced_desc")}
+        </span>
       </button>
       <setting-slider
         label=${translateText("user_setting.hud_opacity_label")}
