@@ -4,6 +4,8 @@
   "name": "Balkhash",
   "translation_key": "map.balkhash",
   "categories": ["asia"],
+  "location": { "lat": 46.3, "lon": 74.5 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [979, 101],

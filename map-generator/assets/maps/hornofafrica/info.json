@@ -4,6 +4,8 @@
   "name": "Horn Of Africa",
   "translation_key": "map.hornofafrica",
   "categories": ["africa", "new"],
+  "location": { "lat": 8, "lon": 46 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [1767, 1707],
