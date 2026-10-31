@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -67,6 +68,17 @@ type mapInfo struct {
 	} `json:"nations"`
 	// Map layers rendered between terrain and territory.
 	Layers []mapLayer `json:"layers"`
+	// Map creator, shown in the map picker.
+	Author string `json:"author"`
+	// English description shown in the map picker, written to en.json.
+	Description string `json:"description"`
+	// Where the map lies on Earth, for the map picker's Earth view.
+	Location *mapLocation `json:"location"`
+}
+
+type mapLocation struct {
+	Lat *float64 `json:"lat"`
+	Lon *float64 `json:"lon"`
 }
 
 // mapLayer represents a single map layer definition from info.json.
@@ -207,6 +219,9 @@ func loadMapInfos() ([]mapInfo, error) {
 			if !validModifiers[mod] {
 				return nil, fmt.Errorf("map %s: info.json disabled_modifiers contains invalid modifier %q", m.Name, mod)
 			}
+		}
+		if loc := info.Location; loc != nil && (loc.Lat == nil || loc.Lon == nil || *loc.Lat < -90 || *loc.Lat > 90 || *loc.Lon < -180 || *loc.Lon > 180) {
+			return nil, fmt.Errorf("map %s: info.json \"location\" must have lat in [-90, 90] and lon in [-180, 180]", m.Name)
 		}
 		if len(info.Categories) == 0 {
 			return nil, fmt.Errorf("map %s: info.json \"categories\" must list at least one category", m.Name)
@@ -366,6 +381,12 @@ func generateMapsTS(infos []mapInfo) (string, error) {
 	b.WriteString("  layers?: MapLayer[];\n")
 	b.WriteString("  /** Default nation count defined in the map's manifest/info. */\n")
 	b.WriteString("  defaultNationCount: number;\n")
+	b.WriteString("  /** Map creator. */\n")
+	b.WriteString("  author?: string;\n")
+	b.WriteString("  /** Key of the map's description in resources/lang/en.json. */\n")
+	b.WriteString("  descriptionKey?: string;\n")
+	b.WriteString("  /** Where the map lies on Earth (the map picker's Earth view). */\n")
+	b.WriteString("  location?: { lat: number; lon: number };\n")
 	b.WriteString("}\n\n")
 	b.WriteString("export interface CustomTribe {\n")
 	b.WriteString("  name: string;\n")
@@ -465,6 +486,17 @@ func generateMapsTS(infos []mapInfo) (string, error) {
 			}
 			b.WriteString("],\n")
 		}
+		if info.Author != "" {
+			b.WriteString(fmt.Sprintf("    author: %q,\n", info.Author))
+		}
+		if info.Description != "" {
+			b.WriteString(fmt.Sprintf("    descriptionKey: %q,\n", "map_description."+strings.ToLower(info.ID)))
+		}
+		if info.Location != nil {
+			b.WriteString(fmt.Sprintf("    location: {lat: %s, lon: %s},\n",
+				strconv.FormatFloat(*info.Location.Lat, 'f', -1, 64),
+				strconv.FormatFloat(*info.Location.Lon, 'f', -1, 64)))
+		}
 		b.WriteString("  },\n")
 	}
 	b.WriteString("];\n")
@@ -478,6 +510,7 @@ func generateMapsTS(infos []mapInfo) (string, error) {
 // generateEnJSON rewrites the "map" section of resources/lang/en.json with
 // each map's display name, keyed by folder name. Existing keys in the
 // section that are not maps (e.g. "featured", "random") are preserved.
+// The "map_description" section is rewritten from the maps' descriptions.
 //
 // The whole file is round-tripped through encoding/json, which marshals
 // object keys in sorted order — a no-op for everything but the map section
@@ -517,6 +550,14 @@ func generateEnJSON(infos []mapInfo) (string, error) {
 		section[strings.ToLower(info.ID)] = info.displayName()
 	}
 	root["map"] = section
+
+	descriptions := make(map[string]interface{})
+	for _, info := range infos {
+		if info.Description != "" {
+			descriptions[strings.ToLower(info.ID)] = info.Description
+		}
+	}
+	root["map_description"] = descriptions
 
 	// Update the "map_layers" section with layer display names.
 	// Keyed by layer id; the value is the layer id (used as default display name).

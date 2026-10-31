@@ -4,6 +4,8 @@
   "name": "Hawaii",
   "translation_key": "map.hawaii",
   "categories": ["oceania"],
+  "location": { "lat": 20.5, "lon": -157 },
+  "author": "gabigabogabu",
   "nations": [
     {
       "coordinates": [283, 281],

@@ -4,6 +4,8 @@
   "name": "Italia",
   "translation_key": "map.italia",
   "categories": ["europe"],
+  "location": { "lat": 42.8, "lon": 12.6 },
+  "author": "evanpelle",
   "nations": [
     {
       "coordinates": [1038, 993],

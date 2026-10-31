@@ -4,6 +4,8 @@
   "name": "Caucasus",
   "translation_key": "map.caucasus",
   "categories": ["europe", "asia"],
+  "location": { "lat": 42.5, "lon": 44.5 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [624, 581],

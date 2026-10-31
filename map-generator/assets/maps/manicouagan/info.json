@@ -4,6 +4,8 @@
   "name": "Manicouagan",
   "translation_key": "map.manicouagan",
   "categories": ["north_america"],
+  "location": { "lat": 51.4, "lon": -68.7 },
+  "author": "jachisc",
   "nations": [
     {
       "coordinates": [784, 1034],

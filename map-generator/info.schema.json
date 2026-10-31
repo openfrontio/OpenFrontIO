@@ -299,6 +299,34 @@
         "required": ["id", "placement"],
         "additionalProperties": false
       }
+    },
+    "author": {
+      "description": "Map creator.",
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "description": "English description, written to en.json's map_description section.",
+      "type": "string",
+      "minLength": 1
+    },
+    "location": {
+      "description": "Where the map lies on Earth, for the map picker's Earth view.",
+      "type": "object",
+      "properties": {
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      },
+      "required": ["lat", "lon"],
+      "additionalProperties": false
     }
   },
   "required": ["id", "name", "translation_key", "categories", "nations"],

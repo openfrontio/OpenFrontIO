@@ -220,8 +220,10 @@ func processMap(ctx context.Context, name string, isTest bool) (string, error) {
 		}
 	}
 
-	// The editor hint only applies to the authored info.json.
-	delete(manifest, "$schema")
+	// The editor hint and the map picker's metadata only apply to the authored info.json.
+	for _, key := range []string{"$schema", "author", "description", "location"} {
+		delete(manifest, key)
+	}
 	updatedManifest, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to serialize manifest for %s: %w", name, err)

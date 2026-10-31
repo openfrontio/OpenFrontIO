@@ -4,6 +4,8 @@
   "name": "Central America",
   "translation_key": "map.centralamerica",
   "categories": ["north_america"],
+  "location": { "lat": 13, "lon": -86.5 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [518, 141],

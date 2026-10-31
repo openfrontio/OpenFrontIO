@@ -4,6 +4,8 @@
   "name": "Bering Sea",
   "translation_key": "map.beringsea",
   "categories": ["asia", "north_america"],
+  "location": { "lat": 58, "lon": -175 },
+  "author": "Tristar",
   "special_team_count": 2,
   "nations": [
     {

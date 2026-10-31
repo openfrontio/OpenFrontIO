@@ -4,6 +4,7 @@
   "name": "Labyrinth",
   "translation_key": "map.labyrinth",
   "categories": ["arcade"],
+  "author": "Patrick Plays Badly",
   "nations": [
     {
       "coordinates": [50, 50],
