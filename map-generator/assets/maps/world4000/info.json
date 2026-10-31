@@ -3,7 +3,10 @@
   "id": "World4000",
   "name": "World 4000",
   "translation_key": "map.world4000",
-  "categories": ["new", "world"],
+  "categories": ["new", "featured", "world"],
+  "author": "evanpelle",
+  "forced_modifiers": ["isCrowded:50"],
+  "featured_rank": 1,
   "nations": [
     {
       "coordinates": [150, 300],
