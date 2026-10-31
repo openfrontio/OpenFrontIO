@@ -51,7 +51,45 @@
     0 0 0 1px #0084d1, 0 0 12px rgba(0, 132, 209, 0.35);
 }
 
-/* Stack slider labels and tracks in the narrow graphics preview panel. */
+/* Match the in-game HUD surface; opacity affects the surface, not the controls. */
+.graphics-panel-surface {
+  background-color: rgb(
+    from var(--color-gray-800) r g b / calc(0.92 * var(--hud-opacity, 1))
+  );
+  border-color: rgb(from var(--color-slate-600) r g b / var(--hud-opacity, 1));
+  backdrop-filter: blur(calc(4px * var(--hud-opacity, 1)));
+  box-shadow: 0 8px 24px rgb(0 0 0 / calc(0.25 * var(--hud-opacity, 1)));
+}
+
+/* Reuse the settings controls with the compact rows of the HUD, not page cards. */
+.graphics-settings-panel
+  :is(setting-slider, setting-color, setting-select)
+  > div,
+.graphics-settings-panel setting-toggle > label,
+.graphics-settings-panel graphics-preset-tools > :is(div, button),
+.graphics-settings-panel #graphics-reset {
+  padding: 0.75rem 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.graphics-settings-panel .text-base {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.graphics-settings-panel [class~="text-white/50"] {
+  color: var(--color-slate-400);
+  font-size: 0.75rem;
+}
+
+.graphics-settings-panel graphics-advanced-settings > .text-xs {
+  color: var(--color-slate-400);
+  padding: 1rem 0 0.25rem;
+}
+
+/* Stack slider labels and tracks even on a wide screen with a narrow panel. */
 .graphics-settings-panel setting-slider > div {
   flex-direction: column;
   align-items: stretch;

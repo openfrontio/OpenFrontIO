@@ -208,6 +208,7 @@ export class OModal extends LitElement {
     `;
   }
 
+  /** Share scrolling and dismissal across pages, centered dialogs, and HUD panels. */
   render() {
     const shouldRender = this.isModalOpen || this.inline;
     if (!shouldRender) {
@@ -236,9 +237,11 @@ export class OModal extends LitElement {
     // not `in-[.page-open]:` as in MainLayout: this renders in a shadow root,
     // which body.page-open can't reach, and an inline modal only shows while
     // its page is open anyway.
-    const sectionClass = `relative flex-1 min-h-0 flex flex-col text-white bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10 overflow-hidden ${
-      this.inline ? "compact:rounded-none! compact:border-0!" : ""
-    }`;
+    const sectionClass = this.sidePanel
+      ? "graphics-panel-surface relative flex-1 min-h-0 flex flex-col text-white rounded-lg border overflow-hidden"
+      : `relative flex-1 min-h-0 flex flex-col text-white bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10 overflow-hidden ${
+          this.inline ? "compact:rounded-none! compact:border-0!" : ""
+        }`;
 
     return html`
       <aside
