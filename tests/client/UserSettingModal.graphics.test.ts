@@ -21,9 +21,8 @@ const LAYERS: MapLayer[] = [
 ];
 
 /**
- * Open the Graphics tab. The tuning controls folded in from the old in-game
- * graphics modal sit behind the Advanced fold; the preset tools do not, so
- * pass `advanced: false` to assert what a player sees without expanding it.
+ * Open the Graphics tab and its dedicated tuning panel. The preset tools
+ * remain on the tab, so pass `advanced: false` to test them with the panel closed.
  */
 async function mountGraphics(
   wire?: Partial<
@@ -45,9 +44,7 @@ async function mountGraphics(
   el.open({ tab: "graphics" });
   await el.updateComplete;
   if (wire?.advanced !== false) {
-    el.querySelector("#graphics-advanced-toggle")!.dispatchEvent(
-      new Event("change", { bubbles: true }),
-    );
+    el.querySelector<HTMLButtonElement>("[data-open-graphics-panel]")!.click();
   }
   await el.updateComplete;
   // The advanced body is a child component with its own update cycle, and the
@@ -97,7 +94,7 @@ function resetGraphicsSettings() {
   settings.removeCached(MAP_LAYERS_KEY);
 }
 
-describe("Graphics tab: advanced options folded in from the in-game modal", () => {
+describe("Graphics tab: advanced options in the graphics panel", () => {
   beforeEach(resetGraphicsSettings);
 
   it("offers everyone, my team, only me and nobody, and persists the selection", async () => {
@@ -153,7 +150,7 @@ describe("Graphics tab: advanced options folded in from the in-game modal", () =
     expect(overrides().cosmetics?.showFrom).toBe("teammates");
   });
 
-  it("renders every folded control", async () => {
+  it("renders every advanced control", async () => {
     const el = await mountGraphics();
     for (const id of [
       "ambient-light-slider",
@@ -276,7 +273,7 @@ describe("Graphics tab: advanced options folded in from the in-game modal", () =
     expect(overrides().mapOverlay?.staleNukeColor).toBe("#aabbcc");
   });
 
-  it("flips each folded toggle away from its default", async () => {
+  it("flips each advanced toggle away from its default", async () => {
     const el = await mountGraphics();
 
     // Names are black by default, so the toggle turns player color on.
@@ -310,7 +307,7 @@ describe("Graphics tab: advanced options folded in from the in-game modal", () =
     expect(overrides().terrain?.oceanColor).toBeUndefined();
   });
 
-  it("resets every override from the Advanced fold", async () => {
+  it("resets every override from the graphics panel", async () => {
     const el = await mountGraphics();
     slide(el, "territory-alpha-slider", 0.5);
     expect(overrides()).not.toEqual({});
@@ -320,7 +317,7 @@ describe("Graphics tab: advanced options folded in from the in-game modal", () =
   });
 });
 
-describe("Graphics tab: preset tools sit outside the Advanced fold", () => {
+describe("Graphics tab: preset tools sit outside the graphics panel", () => {
   beforeEach(resetGraphicsSettings);
 
   function typeInto(el: TestModal, id: string, value: string) {
@@ -544,7 +541,7 @@ describe("Graphics tab: live apply from the in-game instance", () => {
   });
 });
 
-describe("Graphics tab: layer state reaches the renderer with Advanced collapsed", () => {
+describe("Graphics tab: layer state reaches the renderer with the graphics panel closed", () => {
   beforeEach(resetGraphicsSettings);
 
   /** Everything the renderer was told, in order. */
@@ -564,7 +561,7 @@ describe("Graphics tab: layer state reaches the renderer with Advanced collapsed
 
   it("pushes an imported configuration's layer state", async () => {
     // The advanced body is the only thing that draws layer rows, and it does
-    // not exist while the fold is collapsed. Nothing else about an import
+    // not exist while the panel is closed. Nothing else about an import
     // changes, so the layers would be stored and never applied.
     const w = wire();
     const el = await mountGraphics({ ...w, advanced: false });

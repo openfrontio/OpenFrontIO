@@ -51,6 +51,17 @@
     0 0 0 1px #0084d1, 0 0 12px rgba(0, 132, 209, 0.35);
 }
 
+/* Stack slider labels and tracks in the narrow graphics preview panel. */
+.graphics-settings-panel setting-slider > div {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.graphics-settings-panel setting-slider > div > div {
+  width: 100%;
+  margin-right: 0;
+}
+
 @layer base {
   *,
   ::after,

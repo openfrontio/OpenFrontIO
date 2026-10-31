@@ -1,5 +1,5 @@
 import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
-import { html, nothing } from "lit";
+import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   formatKeyForDisplay,
@@ -18,10 +18,10 @@ import { SettingSelect } from "./components/baseComponents/setting/SettingSelect
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
-import "./components/GraphicsAdvancedSettings";
-import type { GraphicsAdvancedSettings } from "./components/GraphicsAdvancedSettings";
 import "./components/GraphicsPresetSelector";
 import "./components/GraphicsPresetTools";
+import "./components/GraphicsSettingsModal";
+import type { GraphicsSettingsModal } from "./components/GraphicsSettingsModal";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   desktopDisplay,
@@ -138,7 +138,6 @@ export class UserSettingModal extends BaseModal {
   private onReturn?: () => void;
 
   @state() private keySequence: string[] = [];
-  @state() private graphicsAdvancedOpen = false;
   @state() private showEasterEggSettings = false;
 
   @state() private userKeybinds: Record<
@@ -220,9 +219,9 @@ export class UserSettingModal extends BaseModal {
   /**
    * The single place layer state reaches the renderer.
    *
-   * It belongs here rather than in the advanced graphics body because that
-   * body only exists while the Advanced fold is open, and a preset picked or a
-   * configuration imported with the fold collapsed changes layers just the
+   * It belongs here rather than in the graphics panel because that
+   * panel only renders its controls while open, and a preset picked or a
+   * configuration imported from the Graphics tab changes layers just the
    * same. Off a game the callbacks are null and this is a no-op.
    */
   private readonly onGraphicsChanged = () => {
@@ -843,6 +842,48 @@ export class UserSettingModal extends BaseModal {
     });
   }
 
+  render() {
+    return html`${super.render()}
+      <graphics-settings-modal
+        .mapLayers=${this.mapLayers}
+      ></graphics-settings-modal>`;
+  }
+
+  /** The parent keeps owning live layer updates even while its shell is closed. */
+  public isGraphicsPanelOpen(): boolean {
+    return (
+      this.querySelector<GraphicsSettingsModal>(
+        "graphics-settings-modal",
+      )?.isOpen() === true
+    );
+  }
+
+  public openGraphicsPanel(onReturn?: () => void): boolean {
+    const panel = this.querySelector<GraphicsSettingsModal>(
+      "graphics-settings-modal",
+    );
+    if (!panel) return false;
+    if (panel.isOpen()) return true;
+    panel.mapLayers = this.mapLayers;
+    if (this.inline && this.isOpen()) {
+      // Closing an inline page hides this whole subtree. Keep the page mounted,
+      // but let only the panel handle Escape until the player returns.
+      this.unregisterEscapeHandler();
+      panel.open({ onReturn: () => this.registerEscapeHandler() });
+    } else if (this.isOpen()) {
+      const previousReturn = this.onReturn;
+      this.onReturn = undefined;
+      this.close();
+      panel.open({
+        onReturn: () =>
+          this.open({ tab: "graphics", onReturn: previousReturn }),
+      });
+    } else {
+      panel.open({ onReturn });
+    }
+    return true;
+  }
+
   protected renderBody(tab: string) {
     let body;
     switch (tab) {
@@ -868,25 +909,6 @@ export class UserSettingModal extends BaseModal {
 
   protected updated(): void {
     this.syncDisplayControls();
-    this.syncGraphicsLayerWiring();
-  }
-
-  /**
-   * Hand the advanced graphics body the current game's layers, so it can draw
-   * a row per layer. It only exists while the Graphics tab is open and
-   * Advanced is expanded, so this runs on every update rather than once: the
-   * element is created and destroyed as the player moves between tabs.
-   */
-  private syncGraphicsLayerWiring(): void {
-    const advanced = this.querySelector<GraphicsAdvancedSettings>(
-      "graphics-advanced-settings",
-    );
-    if (advanced === null) return;
-    advanced.mapLayers = this.mapLayers;
-  }
-
-  private toggleGraphicsAdvanced() {
-    this.graphicsAdvancedOpen = !this.graphicsAdvancedOpen;
   }
 
   protected onTabEnter(key: string): void {
@@ -902,6 +924,11 @@ export class UserSettingModal extends BaseModal {
   }
 
   protected onClose(): void {
+    this.querySelector<GraphicsSettingsModal>("graphics-settings-modal")?.close(
+      {
+        silent: true,
+      },
+    );
     this.leaveDisplayTab();
     window.removeEventListener("keydown", this.handleEasterEggKey);
     // Fire once: a caller that reopens us on return would otherwise inherit
@@ -1842,6 +1869,14 @@ export class UserSettingModal extends BaseModal {
    */
   private renderGraphicsSettings() {
     return html`
+      <button
+        type="button"
+        data-open-graphics-panel
+        class="w-full p-4 text-left text-white font-bold bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+        @click=${() => this.openGraphicsPanel()}
+      >
+        ${translateText("graphics_setting.open_panel")}
+      </button>
       <setting-slider
         label=${translateText("user_setting.hud_opacity_label")}
         description=${translateText("user_setting.hud_opacity_desc")}
@@ -1905,21 +1940,6 @@ export class UserSettingModal extends BaseModal {
         .checked=${this.userSettings.mapLayers()}
         @change=${this.toggleMapLayers}
       ></setting-toggle>
-
-      <!-- 🔧 Advanced -->
-      <setting-toggle
-        label="${translateText("graphics_setting.advanced_label")}"
-        description="${translateText("graphics_setting.advanced_desc")}"
-        id="graphics-advanced-toggle"
-        .checked=${this.graphicsAdvancedOpen}
-        @change=${this.toggleGraphicsAdvanced}
-      ></setting-toggle>
-
-      ${
-        this.graphicsAdvancedOpen
-          ? html`<graphics-advanced-settings></graphics-advanced-settings>`
-          : nothing
-      }
     `;
   }
 
