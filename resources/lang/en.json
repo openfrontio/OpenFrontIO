@@ -2772,6 +2772,8 @@
     "highlight_small_players_desc": "Add a glow to small players so they're easy to find.",
     "hud_opacity_desc": "Adjust panel backgrounds without fading text or icons. 100% keeps their original appearance.",
     "hud_opacity_label": "HUD background opacity",
+    "keep_build_selected_desc": "Keep {unit} selected after placing one, so you can place more. Press Escape to deselect.",
+    "keep_build_selected_title": "Keep Selected After Placing",
     "keybind_conflict_error": "The key {key} is already bound to another action.",
     "keybind_shift_prefix": "Shift+",
     "keybinds_hint": "Click a key to rebind it. You can assign a single key or Shift + key combination.",
