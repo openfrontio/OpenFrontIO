@@ -117,6 +117,16 @@ Licensed under ODbL
 © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)  
 Licensed under ODbL
 
+### Ottoman Empire Map
+
+Elevation: [USGS GMTED2010](https://www.usgs.gov/coastal-changes-and-impacts/gmted2010) 30 arc-second mean elevation  
+[Public Domain](https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits)
+
+Provinces, lakes and rivers: [Natural Earth](https://www.naturalearthdata.com/)  
+Public Domain
+
+1683 borders approximated from modern provinces.
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)
