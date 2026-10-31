@@ -4,6 +4,8 @@
   "name": "Indian Subcontinent",
   "translation_key": "map.indiansubcontinent",
   "categories": ["asia"],
+  "location": { "lat": 22, "lon": 79 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [1601, 840],

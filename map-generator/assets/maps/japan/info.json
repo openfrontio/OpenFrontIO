@@ -4,6 +4,8 @@
   "name": "Japan",
   "translation_key": "map.japan",
   "categories": ["countries", "asia"],
+  "location": { "lat": 36.5, "lon": 138.5 },
+  "author": "Aotumuri",
   "nations": [
     {
       "coordinates": [1895, 288],

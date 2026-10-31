@@ -4,6 +4,8 @@
   "name": "Yenisei",
   "translation_key": "map.yenisei",
   "categories": ["asia"],
+  "location": { "lat": 68.5, "lon": 86.5 },
+  "author": "Duwibi",
   "nations": [
     {
       "coordinates": [1050, 535],

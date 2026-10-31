@@ -4,6 +4,8 @@
   "name": "Bab el-Mandeb Strait",
   "translation_key": "map.babelmandebstrait",
   "categories": ["new", "africa", "asia"],
+  "location": { "lat": 12.6, "lon": 43.3 },
+  "author": "Tristar",
   "special_team_count": 2,
   "nations": [
     {

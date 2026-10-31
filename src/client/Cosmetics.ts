@@ -217,10 +217,13 @@ export function handlePurchaseReturn(
  * whole app to its logged-out UI immediately after a successful purchase. A
  * stale balance is much the better failure.
  */
+let freshUserMeRequestId = 0;
 export async function broadcastFreshUserMe(): Promise<UserMeResponse | false> {
+  const requestId = ++freshUserMeRequestId;
   invalidateUserMe();
   const fresh = await getUserMe();
-  if (fresh === false) return false;
+  // A newer refresh owns the broadcast, even if it is still pending or failed.
+  if (fresh === false || requestId !== freshUserMeRequestId) return fresh;
   document.dispatchEvent(
     new CustomEvent("userMeResponse", {
       detail: fresh,
@@ -228,8 +231,7 @@ export async function broadcastFreshUserMe(): Promise<UserMeResponse | false> {
       cancelable: true,
     }),
   );
-  // Returned so a caller that also needs the new balance reads the same
-  // profile it just broadcast, rather than re-fetching it separately.
+  // Return this call's result even when a newer refresh superseded its broadcast.
   return fresh;
 }
 

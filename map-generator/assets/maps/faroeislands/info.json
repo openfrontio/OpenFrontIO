@@ -4,6 +4,8 @@
   "name": "Faroe Islands",
   "translation_key": "map.faroeislands",
   "categories": ["europe"],
+  "location": { "lat": 62, "lon": -6.9 },
+  "author": "Duwibi",
   "nations": [
     {
       "coordinates": [920, 1780],

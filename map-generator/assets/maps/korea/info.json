@@ -4,6 +4,8 @@
   "name": "Korea",
   "translation_key": "map.korea",
   "categories": ["asia", "countries"],
+  "location": { "lat": 36.5, "lon": 127.8 },
+  "author": "crunchybbb",
   "special_team_count": 2,
   "nations": [
     {

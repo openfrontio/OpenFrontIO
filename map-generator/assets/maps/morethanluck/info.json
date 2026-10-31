@@ -4,6 +4,7 @@
   "name": "More Than Luck",
   "translation_key": "map.morethanluck",
   "categories": ["arcade"],
+  "author": "Patrick Plays Badly",
   "special_team_count": 5,
 
   "nations": [

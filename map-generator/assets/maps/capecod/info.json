@@ -4,6 +4,8 @@
   "name": "Cape Cod",
   "translation_key": "map.capecod",
   "categories": ["north_america"],
+  "location": { "lat": 41.7, "lon": -70.2 },
+  "author": "truffle383-byte",
   "nations": [
     {
       "coordinates": [417, 227],

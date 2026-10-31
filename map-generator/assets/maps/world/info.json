@@ -4,6 +4,7 @@
   "name": "World",
   "translation_key": "map.world",
   "categories": ["featured", "world"],
+  "author": "evanpelle",
   "forced_modifiers": ["isCrowded:50"],
   "featured_rank": 1,
   "nations": [

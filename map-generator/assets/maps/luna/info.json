@@ -4,6 +4,7 @@
   "name": "Luna",
   "translation_key": "map.luna",
   "categories": ["cosmic"],
+  "author": "Patrick Plays Badly",
   "special_team_count": 2,
   "forced_modifiers": ["isWaterNukes:50"],
   "nations": [

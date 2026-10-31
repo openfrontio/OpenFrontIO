@@ -4,6 +4,7 @@
   "name": "Titan",
   "translation_key": "map.titan",
   "categories": ["cosmic"],
+  "author": "Tristar",
   "nations": [
     {
       "name": "Stone-Keeping Purple Aliens",
