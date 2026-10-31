@@ -12,9 +12,15 @@ import { colord } from "colord";
 import { getCachedCosmetics } from "./Cosmetics";
 import { buildTerrainRowSpans } from "./render/frame/derive/TerrainRowSpans";
 import { uploadFrameData } from "./render/frame/Upload";
+import { themeProvider } from "./theme/ThemeProvider";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader
 // imports into any non-Vite consumer (e.g. the Node perf harness).
-import type { MapRenderer, PlayerStatic, SpawnCenter } from "./render/gl";
+import type {
+  MapRenderer,
+  PlayerStatic,
+  SpawnCenter,
+  TeamMarker,
+} from "./render/gl";
 import {
   DEFAULT_NUKE_EXPLOSION_COLOR,
   MAX_NUKE_EXPLOSION_COLORS,
@@ -49,6 +55,8 @@ const SMALL_PLAYER_GLOW_GRACE_SECONDS = 60;
 // The set is a visual aid, not tick-critical, so rescan ~once a second
 // (10 ticks) instead of every tick.
 const SMALL_PLAYER_GLOW_RESCAN_TICKS = 10;
+// Nation teammates' spawn stars are drawn at this fraction of a human's.
+const NATION_MARKER_SCALE = 0.6;
 
 // Attribute → render-param mappings:
 //   size      = the ring's final WIDTH (diameter) in world tiles when it fades
@@ -239,6 +247,7 @@ export class WebGLFrameBuilder {
     this.syncLocalPlayer(gameView);
     this.syncSpawnOverlay(gameView);
     this.syncSmallPlayerGlow(gameView);
+    this.syncTeamMarkers(gameView);
     this.syncTerrainDeltas(gameView);
     this.syncNukeImpacts(gameView);
     this.resolveDeadUnitExplosions(gameView);
@@ -393,10 +402,14 @@ export class WebGLFrameBuilder {
     const myTeam = me?.team() ?? null;
     const centers: SpawnCenter[] = [];
     for (const p of gameView.players()) {
-      if (!p.isPlayer() || p.type() !== PlayerType.Human) continue;
+      if (!p.isPlayer()) continue;
+      const isSelf = me !== null && p.smallID() === me.smallID();
+      const isTeammate = myTeam !== null && p.team() === myTeam && !isSelf;
+      // Nations only take part as teammates (their ring), never as enemy
+      // highlights.
+      if (p.type() !== PlayerType.Human && !isTeammate) continue;
       const spawnTile = p.state.spawnTile;
       if (spawnTile === undefined) continue;
-      const isSelf = me !== null && p.smallID() === me.smallID();
       if (!inSpawnPhase && !isSelf) continue;
       // myPlayer's ring pulses white→this color in SpawnOverlayPass: gold
       // when teamless, own territory tint in team games (matches teammates'
@@ -413,10 +426,7 @@ export class WebGLFrameBuilder {
         g: useGold ? 0.84 : c.g / 255,
         b: useGold ? 0 : c.b / 255,
         isSelf,
-        isTeammate:
-          myTeam !== null &&
-          p.team() === myTeam &&
-          p.smallID() !== me?.smallID(),
+        isTeammate,
       });
     }
     this.view.updateSpawnOverlay(inSpawnPhase, centers);
@@ -463,6 +473,42 @@ export class WebGLFrameBuilder {
       }
     }
     this.view.updateSmallPlayerGlow(any ? set : null);
+  }
+
+  /**
+   * Spawn phase in team games: a pulsing star over each teammate's spawn so
+   * you can find your team while picking your own spot. Off once the spawn
+   * phase ends and in games without teams.
+   */
+  private syncTeamMarkers(gameView: GameView): void {
+    const me = gameView.myPlayer();
+    if (!me || me.team() === null || !gameView.inSpawnPhase()) {
+      this.view.updateTeamMarkers([]);
+      return;
+    }
+    // The team's base color (not the per-player variation) so every star on
+    // the map reads as "my team" at a glance.
+    const c = themeProvider.current().teamColor(me.team()!).toRgb();
+    const markers: TeamMarker[] = [];
+    for (const p of gameView.players()) {
+      if (!p.isPlayer() || p.smallID() === me.smallID()) continue;
+      if (!p.isOnSameTeam(me)) continue;
+      // spawnTile tracks the currently-selected spawn directly (see
+      // syncSpawnOverlay); nameLocation lags it by a couple of ticks.
+      const spawnTile = p.state.spawnTile;
+      if (spawnTile === undefined) continue;
+      markers.push({
+        x: gameView.x(spawnTile),
+        y: gameView.y(spawnTile),
+        r: c.r / 255,
+        g: c.g / 255,
+        b: c.b / 255,
+        // Human teammates get the full star; nations a smaller one so real
+        // players stand out.
+        scale: p.type() === PlayerType.Human ? 1 : NATION_MARKER_SCALE,
+      });
+    }
+    this.view.updateTeamMarkers(markers);
   }
 
   private syncPlayers(gameView: GameView): void {
