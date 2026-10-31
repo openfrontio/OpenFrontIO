@@ -135,6 +135,13 @@ export class RailroadPass {
   private dirtyMaxX = -Infinity;
   private dirtyMaxY = -Infinity;
   private ghostOwnerID = 0;
+  // BuildPreviewController re-emits the same rail arrays every animation frame
+  // while only the structure's sub-tile cursor position changes. Keep their
+  // identities so tile orientation/diff work only runs for a new worker result.
+  private lastGhostRailPaths: GhostPreviewData["ghostRailPaths"] | null = null;
+  private lastOverlappingRailroads:
+    | GhostPreviewData["overlappingRailroads"]
+    | null = null;
 
   private localPlayerID = 0;
   private localRailColor: [number, number, number] = [0.75, 0.75, 0.75];
@@ -294,6 +301,23 @@ export class RailroadPass {
   }
 
   updateGhostPreview(data: GhostPreviewData | null): void {
+    if (
+      data !== null &&
+      data.ghostRailPaths === this.lastGhostRailPaths &&
+      data.overlappingRailroads === this.lastOverlappingRailroads
+    ) {
+      this.ghostOwnerID = data.ownerID;
+      return;
+    }
+    if (
+      data === null &&
+      this.lastGhostRailPaths === null &&
+      this.lastOverlappingRailroads === null
+    ) {
+      this.ghostOwnerID = 0;
+      return;
+    }
+
     const next = new Map<number, number>();
 
     if (data) {
@@ -319,8 +343,12 @@ export class RailroadPass {
       }
 
       this.ghostOwnerID = data.ownerID;
+      this.lastGhostRailPaths = data.ghostRailPaths;
+      this.lastOverlappingRailroads = data.overlappingRailroads;
     } else {
       this.ghostOwnerID = 0;
+      this.lastGhostRailPaths = null;
+      this.lastOverlappingRailroads = null;
     }
 
     // Write dirty tiles: clear tiles that left the ghost,

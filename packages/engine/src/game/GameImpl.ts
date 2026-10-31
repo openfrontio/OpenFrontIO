@@ -308,6 +308,8 @@ export class GameImpl implements Game {
       this._map.setFallout(tile, false);
     }
     this._territoryVersion++;
+    // Rail paths route around water, so a rail plan must be redone too.
+    this._structureVersion++;
     this._map.setWater(tile);
     this.recordTileUpdate(tile);
   }
@@ -650,6 +652,8 @@ export class GameImpl implements Game {
     for (const tile of waterChangedTiles) {
       this.recordTileUpdate(tile);
     }
+    // Queued conversions write the map directly, bypassing setWater.
+    if (waterChangedTiles.length > 0) this._structureVersion++;
     this._ticks++;
     return this.updates;
   }
@@ -734,6 +738,9 @@ export class GameImpl implements Game {
     this._players.forEach((p) => {
       hash += p.hash();
     });
+    // Rails are not units, so without this a divergence in which rails got
+    // built would only show up through the trains that later run on them.
+    hash += this._railNetwork.hash();
     return hash;
   }
 
@@ -1234,6 +1241,26 @@ export class GameImpl implements Game {
     this._unitsVersion++;
   }
 
+  // Bumped when a City, Port or Factory is added or removed (the structures
+  // the rail network connects) and when land turns to water (rail paths route
+  // around it), so rail previews can be memoised while the trains, shells and
+  // boats that churn _unitsVersion come and go.
+  private _structureVersion = 0;
+  structureVersion(): number {
+    return this._structureVersion;
+  }
+  /** Call when a unit the rail network cares about appears, vanishes or changes visibility. */
+  noteStructureChange(u: Unit): void {
+    const type = u.type();
+    if (
+      type === UnitType.City ||
+      type === UnitType.Port ||
+      type === UnitType.Factory
+    ) {
+      this._structureVersion++;
+    }
+  }
+
   // Bumped on every change of tile ownership, fallout or land/water — i.e.
   // anything Player.nearby() can observe — so per-player answers can be memoised
   // for as long as nothing on the map moved.
@@ -1244,11 +1271,13 @@ export class GameImpl implements Game {
 
   addUnit(u: Unit) {
     this._unitsVersion++;
+    this.noteStructureChange(u);
     this.unitGrid.addUnit(u);
     this._unitMap.set(u.id(), u);
   }
   removeUnit(u: Unit) {
     this._unitsVersion++;
+    this.noteStructureChange(u);
     this.unitGrid.removeUnit(u);
     this._unitMap.delete(u.id());
     this.planDrivenUnitIds.delete(u.id());
@@ -1597,6 +1626,8 @@ export class GameImpl implements Game {
           : r.player(s.winner.player);
     this._unitsVersion = s.unitsVersion;
     this._territoryVersion = s.territoryVersion;
+    // Not snapshotted: it only keys memos, which must not outlive the restore.
+    this._structureVersion++;
     this.shipStaggers = { ...s.shipStaggers };
     this._nationMirvTargets = new Map(s.nationMirvTargets);
     this._mirvsLaunched = s.mirvsLaunched;

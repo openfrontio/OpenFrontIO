@@ -141,6 +141,10 @@ const DERIVED_FIELDS = new Set<string>([
   "unitCountMemo",
   "unitsByTypeMemo",
   "borderNbuf",
+  "_structureVersion", // keys the rail preview memo; a restore just bumps it
+  // RailNetworkImpl: the rail preview memo and the version that keys it
+  "networkVersion",
+  "ghostPathsCache",
   // PlayerImpl
   "lastSentUpdate",
   "myUnitsMemo",

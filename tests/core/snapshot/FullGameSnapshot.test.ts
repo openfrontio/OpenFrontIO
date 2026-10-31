@@ -16,7 +16,7 @@ import { diffSnapshots } from "../../util/Snapshot";
  * The oracle from the design doc: a game played straight through and the
  * same game snapshotted and restored along the way must agree on every
  * tick's hash and, at every checkpoint, on the snapshot bytes themselves
- * (the hash only covers troops, tiles and unit positions).
+ * (the hash covers troops, tiles, unit positions and the rail network).
  */
 
 const MAP = "world";

@@ -545,6 +545,9 @@ export class UnitImpl implements Unit {
   setUnderConstruction(underConstruction: boolean): void {
     if (this._underConstruction !== underConstruction) {
       this._underConstruction = underConstruction;
+      // nearbyUnits skips structures under construction, so this flip changes
+      // what a rail plan sees.
+      this.mg.noteStructureChange(this);
       this._owner._myUnitsVersion++; // unitsOwned() weighs under-construction units differently
       this.mg.addUpdate(this.toUpdate());
     }
