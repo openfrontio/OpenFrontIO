@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import "../../src/client/UserSettingModal";
+import type { GraphicsPresetTools } from "../../src/client/components/GraphicsPresetTools";
+import type { GraphicsSettingsModal } from "../../src/client/components/GraphicsSettingsModal";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
 import {
   GRAPHICS_KEY,
@@ -45,6 +47,7 @@ async function mountGraphics(
   await el.updateComplete;
   if (wire?.advanced !== false) {
     el.querySelector<HTMLButtonElement>("[data-open-graphics-panel]")!.click();
+    await graphicsPanel(el).updateComplete;
   }
   await el.updateComplete;
   // The advanced body is a child component with its own update cycle, and the
@@ -52,6 +55,14 @@ async function mountGraphics(
   await el.updateComplete;
   await new Promise((resolve) => setTimeout(resolve, 0));
   return el;
+}
+
+function graphicsPanel(el: TestModal): GraphicsSettingsModal {
+  const panel = el.querySelector<GraphicsSettingsModal>(
+    "graphics-settings-modal",
+  )!;
+  expect(panel.isOpen()).toBe(true);
+  return panel;
 }
 
 function control(el: TestModal, id: string): Element {
@@ -317,12 +328,12 @@ describe("Graphics tab: advanced options in the graphics panel", () => {
   });
 });
 
-describe("Graphics tab: preset tools sit outside the graphics panel", () => {
+describe("Graphics presets: tools on the page and in the panel", () => {
   beforeEach(resetGraphicsSettings);
 
-  function typeInto(el: TestModal, id: string, value: string) {
+  function typeInto(el: ParentNode, id: string, value: string) {
     const field = el.querySelector<HTMLInputElement | HTMLTextAreaElement>(
-      `#${id}`,
+      `[id="${id}"]`,
     )!;
     field.value = value;
     field.dispatchEvent(new Event("input", { bubbles: true }));
@@ -344,25 +355,40 @@ describe("Graphics tab: preset tools sit outside the graphics panel", () => {
 
   it("saves the current configuration under a name", async () => {
     const el = await mountGraphics();
+    const panel = graphicsPanel(el);
     slide(el, "territory-alpha-slider", 0.5);
 
-    typeInto(el, "graphics-preset-name", "Mine");
-    await el.updateComplete;
-    el.querySelector<HTMLButtonElement>("#graphics-save-preset")!.click();
+    typeInto(panel, "graphics-preset-name", "Mine");
+    await panel.querySelector<GraphicsPresetTools>("graphics-preset-tools")!
+      .updateComplete;
+    panel
+      .querySelector<HTMLButtonElement>('[id="graphics-save-preset"]')!
+      .click();
 
     expect(new UserSettings().graphicsPresets().Mine).toMatchObject({
       mapOverlay: { territoryAlpha: 0.5 },
     });
   });
 
-  it("applies an imported configuration", async () => {
-    const el = await mountGraphics({ advanced: false });
-    typeInto(el, "graphics-import-json", '{"name":{"nameScaleFactor":1.1}}');
-    await el.updateComplete;
-    el.querySelector<HTMLButtonElement>("#graphics-import-apply")!.click();
+  it.each([false, true])(
+    "applies an imported configuration (panel open: %s)",
+    async (advanced) => {
+      const el = await mountGraphics({ advanced });
+      const scope = advanced ? graphicsPanel(el) : el;
+      typeInto(
+        scope,
+        "graphics-import-json",
+        '{"name":{"nameScaleFactor":1.1}}',
+      );
+      await scope.querySelector<GraphicsPresetTools>("graphics-preset-tools")!
+        .updateComplete;
+      scope
+        .querySelector<HTMLButtonElement>('[id="graphics-import-apply"]')!
+        .click();
 
-    expect(overrides()).toEqual({ name: { nameScaleFactor: 1.1 } });
-  });
+      expect(overrides()).toEqual({ name: { nameScaleFactor: 1.1 } });
+    },
+  );
 
   it("flags an unparseable import instead of applying it", async () => {
     const el = await mountGraphics({ advanced: false });
@@ -442,7 +468,7 @@ describe("Graphics tab: live apply from the in-game instance", () => {
     visibility.length = 0;
     alphas.length = 0;
 
-    const dropdown = el.querySelector<HTMLSelectElement>(
+    const dropdown = graphicsPanel(el).querySelector<HTMLSelectElement>(
       "graphics-preset-selector select",
     )!;
     dropdown.value = "builtin:graphics_setting.preset_night";
