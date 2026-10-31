@@ -1634,6 +1634,7 @@
     "vietnam": "Vietnam",
     "warshipwarship": "Warship Warship",
     "world": "World",
+    "world4000": "World 4000",
     "worldinverted": "World Inverted",
     "yangtzeriver": "Yangtze River",
     "yellowsea": "Yellow Sea",
@@ -1687,10 +1688,14 @@
     "tradersdream": "Big islands against small ones: two large islands hold about half the land, while a swarm of tiny islands is made for trade."
   },
   "map_layers": {
-    "brland": "brland",
-    "eyeland": "eyeland",
-    "eyewater": "eyewater",
-    "label": "label"
+    "brland": "Brain-Land",
+    "eyeland": "Eye-Land",
+    "eyewater": "Eye-Water",
+    "label": "label",
+    "w2kland": "2K-Land",
+    "w2kwater": "2K-Water",
+    "w4kland": "4K-Land",
+    "w4kwater": "4K-Water"
   },
   "marketing_consent": {
     "body": "News and updates by email. Change it anytime in your account.",

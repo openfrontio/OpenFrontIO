@@ -135,6 +135,7 @@ export enum GameMapType {
   Vietnam = "Vietnam", // map-generator/assets/maps/vietnam/info.json
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
   World = "World", // map-generator/assets/maps/world/info.json
+  World4000 = "World 4000", // map-generator/assets/maps/world4000/info.json
   WorldInverted = "World Inverted", // map-generator/assets/maps/worldinverted/info.json
   YangtzeRiver = "Yangtze River", // map-generator/assets/maps/yangtzeriver/info.json
   YellowSea = "Yellow Sea", // map-generator/assets/maps/yellowsea/info.json
@@ -2263,9 +2264,27 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.World,
     translationKey: "map.world",
     categories: ["featured", "world"],
-    defaultNationCount: 72,
+    defaultNationCount: 70,
     featuredRank: 1,
     forcedModifiers: ["isCrowded:50"],
+    layers: [
+      { id: "w2kland", placement: "land", nukeable: true },
+      { id: "w2kwater", placement: "water" },
+    ],
+    author: "evanpelle",
+  },
+  {
+    id: "World4000",
+    type: GameMapType.World4000,
+    translationKey: "map.world4000",
+    categories: ["new", "featured", "world"],
+    defaultNationCount: 111,
+    featuredRank: 1,
+    forcedModifiers: ["isCrowded:50"],
+    layers: [
+      { id: "w4kland", placement: "land", nukeable: true },
+      { id: "w4kwater", placement: "water" },
+    ],
     author: "evanpelle",
   },
   {
