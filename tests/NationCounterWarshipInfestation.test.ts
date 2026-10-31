@@ -7,7 +7,12 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
+import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
+import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { NationExecution } from "@openfront/engine/execution/NationExecution";
+import { Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
 // The half_land_half_ocean map is 16x16:
@@ -317,4 +322,74 @@ describe("Counter Warship Infestation", () => {
       warshipCountBefore,
     );
   });
+
+  test.each([
+    [0, 1],
+    [16, 0],
+  ])(
+    "Team game: with %i warships on our team against the enemy team's 16, orders %i",
+    async (ownWarships, expected) => {
+      const info = (name: string, type: PlayerType, clan: string) =>
+        new PlayerInfo(name, type, null, `${name}_id`, false, clan);
+      const game = await setup(
+        "half_land_half_ocean",
+        {
+          difficulty: Difficulty.Hard,
+          gameMode: GameMode.Team,
+          playerTeams: 2,
+        },
+        [
+          info("nation", PlayerType.Nation, "ALPHA"),
+          info("ally", PlayerType.Human, "ALPHA"),
+          info("enemy1", PlayerType.Human, "BETA"),
+          info("enemy2", PlayerType.Human, "BETA"),
+        ],
+      );
+      const [nation, ally, enemy1, enemy2] = [
+        "nation",
+        "ally",
+        "enemy1",
+        "enemy2",
+      ].map((name) => game.player(`${name}_id`));
+      game.map().forEachTile((tile) => {
+        if (!game.map().isLand(tile)) return;
+        const y = game.y(tile);
+        const x = game.x(tile);
+        if (y < 4) nation.conquer(tile);
+        else if (y < 8) ally.conquer(tile);
+        else (x < 4 ? enemy1 : enemy2).conquer(tile);
+      });
+      const port = [...nation.tiles()].find((t) => game.map().isShore(t));
+      nation.buildUnit(UnitType.Port, port!, {});
+      nation.addGold(10_000_000n);
+
+      const warshipsAt = (owner: Player, count: number, y: number) => {
+        for (let i = 0; i < count; i++) {
+          const tile = game.ref(8 + (i % 8), y + Math.floor(i / 8));
+          owner.buildUnit(UnitType.Warship, tile, { patrolTile: tile });
+        }
+      };
+      warshipsAt(enemy1, 10, 10);
+      warshipsAt(enemy2, 6, 13);
+      warshipsAt(ally, ownWarships, 4);
+
+      const random = new PseudoRandom(42);
+      const warships = new NationWarshipBehavior(
+        random,
+        game,
+        nation,
+        new NationEmojiBehavior(random, game, nation),
+      );
+      const spy = vi.spyOn(game, "addExecution");
+      warships.counterWarshipInfestation();
+      const ordered = spy.mock.calls
+        .map((c) => c[0])
+        .filter(
+          (e) =>
+            e instanceof ConstructionExecution &&
+            e["constructionType"] === UnitType.Warship,
+        );
+      expect(ordered).toHaveLength(expected);
+    },
+  );
 });
