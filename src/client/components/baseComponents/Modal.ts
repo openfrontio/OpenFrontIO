@@ -34,6 +34,10 @@ export class OModal extends LitElement {
   @property({ type: String })
   public maxWidth = "";
 
+  /** A left-aligned panel with an unobscured preview of the game behind it. */
+  @property({ type: Boolean })
+  public sidePanel = false;
+
   @property({ type: Array })
   public tabs: OModalTab[] = [];
 
@@ -204,6 +208,7 @@ export class OModal extends LitElement {
     `;
   }
 
+  /** Share scrolling and dismissal across pages, centered dialogs, and HUD panels. */
   render() {
     const shouldRender = this.isModalOpen || this.inline;
     if (!shouldRender) {
@@ -212,13 +217,17 @@ export class OModal extends LitElement {
 
     const backdropClass = this.inline
       ? "relative z-10 w-full h-full flex items-stretch bg-transparent"
-      : "fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center overflow-hidden";
+      : this.sidePanel
+        ? "fixed inset-0 z-[9999] flex items-stretch justify-start overflow-hidden p-2 sm:p-4"
+        : "fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center overflow-hidden";
 
     const wrapperClass = this.inline
       ? "relative flex flex-col w-full h-full m-0 max-w-full max-h-none shadow-none"
-      : `relative flex flex-col w-full h-full lg:w-[90%] lg:h-auto lg:min-w-[400px] lg:max-w-[900px] lg:m-8 lg:rounded-lg lg:max-h-[calc(100vh-4rem)] ${
-          this.alwaysMaximized ? "h-auto" : ""
-        }`;
+      : this.sidePanel
+        ? "relative flex flex-col w-full h-full max-w-[400px] min-w-0"
+        : `relative flex flex-col w-full h-full lg:w-[90%] lg:h-auto lg:min-w-[400px] lg:max-w-[900px] lg:m-8 lg:rounded-lg lg:max-h-[calc(100vh-4rem)] ${
+            this.alwaysMaximized ? "h-auto" : ""
+          }`;
     const wrapperStyle =
       !this.inline && this.maxWidth ? `max-width: ${this.maxWidth};` : "";
 
@@ -228,9 +237,11 @@ export class OModal extends LitElement {
     // not `in-[.page-open]:` as in MainLayout: this renders in a shadow root,
     // which body.page-open can't reach, and an inline modal only shows while
     // its page is open anyway.
-    const sectionClass = `relative flex-1 min-h-0 flex flex-col text-white bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10 overflow-hidden ${
-      this.inline ? "compact:rounded-none! compact:border-0!" : ""
-    }`;
+    const sectionClass = this.sidePanel
+      ? "graphics-panel-surface relative flex-1 min-h-0 flex flex-col text-white rounded-lg border overflow-hidden"
+      : `relative flex-1 min-h-0 flex flex-col text-white bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10 overflow-hidden ${
+          this.inline ? "compact:rounded-none! compact:border-0!" : ""
+        }`;
 
     return html`
       <aside

@@ -412,9 +412,11 @@ test("playback keys do nothing while the game settings are open, or in their sli
   v.playback = playback;
   // Opened from the settings menu, which has closed by then.
   let open = true;
+  let graphicsOpen = false;
   const gameSettings = Object.assign(document.createElement("div"), {
     id: "game-settings",
     isOpen: () => open,
+    isGraphicsPanelOpen: () => graphicsOpen,
   });
   document.body.appendChild(gameSettings);
   const slider = Object.assign(document.createElement("input"), {
@@ -437,8 +439,16 @@ test("playback keys do nothing while the game settings are open, or in their sli
     expect(playback.play).not.toHaveBeenCalled();
     expect(playback.seek).not.toHaveBeenCalled();
 
-    // Closed, a slider still keeps its arrow keys. The timeline seeks.
+    // The graphics panel owns the keys even with the main settings closed.
     open = false;
+    graphicsOpen = true;
+    v.onKey(key("Space"));
+    v.onKey(key("ArrowRight", timeline));
+    expect(playback.play).not.toHaveBeenCalled();
+    expect(playback.seek).not.toHaveBeenCalled();
+
+    // Closed, a slider still keeps its arrow keys. The timeline seeks.
+    graphicsOpen = false;
     v.onKey(key("ArrowRight", slider));
     expect(playback.seek).not.toHaveBeenCalled();
     v.onKey(key("ArrowRight", timeline));
