@@ -814,6 +814,12 @@ unit-display .tutorial-highlight::after {
   display: none;
 }
 
+/* Holding a build button shows what it costs. The browser's own long press
+   menu could take the gesture over, so it is turned off here. */
+.unit-display-root {
+  -webkit-touch-callout: none;
+}
+
 /* The narrow build bar scrolls sideways. Fade the edge that still hides
    actions, so the player can tell there is more to swipe to. The bar itself
    keeps the gray-800 background, so the fade matches it. */

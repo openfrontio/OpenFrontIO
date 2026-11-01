@@ -12,6 +12,7 @@ import { customElement } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import { InputHandler, ToggleStructureEvent } from "../../InputHandler";
 import { KeyboardLayoutController } from "../../KeyboardLayout";
+import { Platform } from "../../Platform";
 import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
 import { resolveKeybindLabel, translateText } from "../../Utils";
@@ -30,6 +31,11 @@ import {
   warshipIcon,
 } from "../HotbarIcons";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
+
+/** How long a build button has to be held before it shows its details (cost etc.) */
+const PEEK_HOLD_MS = 450;
+/** How long the details stay up after the browser cancels the touch itself. */
+const PEEK_GRACE_MS = 1200;
 
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Controller {
@@ -54,13 +60,31 @@ export class UnitDisplay extends LitElement implements Controller {
     hotkey: string;
     element: HTMLElement;
   } | null = null;
+  /**
+   * The unit the player is holding down. A touch device has no hover, so a
+   * press-and-hold is how the cost and description are read before the unit
+   * is picked.
+   */
+  private _peekedUnitTooltip: {
+    unitType: PlayerBuildableUnitType;
+    structureKey: string;
+    hotkey: string; //touch device may still have a keyboard
+    element: HTMLElement;
+  } | null = null;
+  private peekTimer: ReturnType<typeof setTimeout> | null = null;
+  private peekGraceTimer: ReturnType<typeof setTimeout> | null = null;
+  private suppressNextClick = false;
+  private peekTouchIdentifier: number | null = null;
+  // Where the tooltip is centred, in the bar's own coordinates.
+  private _tooltipCenter: number | null = null;
   private tutorialHighlight: PlayerBuildableUnitType | null = null;
   // Whether the build bar has actions hidden off either edge. The fade on that
   // edge tells the player there is more to swipe to.
   private moreActionsLeft = false;
   private moreActionsRight = false;
   private observedScroller: HTMLElement | null = null;
-  private resizeListenerAttached = false;
+  private windowListenersAttached = false;
+  private lastHasKeyboard = Platform.hasKeyboard;
 
   createRenderRoot() {
     return this;
@@ -92,16 +116,164 @@ export class UnitDisplay extends LitElement implements Controller {
       this.tutorialHighlight = (e.target && highlightUnits[e.target]) ?? null;
       this.requestUpdate();
     });
-    if (!this.resizeListenerAttached) {
-      window.addEventListener("resize", this.onLayoutChange);
-      this.resizeListenerAttached = true;
-    }
     this.requestUpdate();
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    if (this.windowListenersAttached) return;
+    window.addEventListener("resize", this.onLayoutChange);
+    window.addEventListener("keydown", this.handleKeyboardDetection);
+    document.addEventListener("pointerdown", this.handleDocumentPointerDown);
+    document.addEventListener("pointerup", this.handleDocumentPointerUp);
+    document.addEventListener(
+      "pointercancel",
+      this.handleDocumentPointerCancel,
+    );
+    document.addEventListener("touchstart", this.handlePeekTouchEvent, true);
+    document.addEventListener("touchend", this.handlePeekTouchEvent, true);
+    document.addEventListener("touchcancel", this.handlePeekTouchEvent, true);
+    this.windowListenersAttached = true;
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener("resize", this.onLayoutChange);
+    window.removeEventListener("keydown", this.handleKeyboardDetection);
+    document.removeEventListener("pointerdown", this.handleDocumentPointerDown);
+    document.removeEventListener("pointerup", this.handleDocumentPointerUp);
+    document.removeEventListener(
+      "pointercancel",
+      this.handleDocumentPointerCancel,
+    );
+    document.removeEventListener("touchstart", this.handlePeekTouchEvent, true);
+    document.removeEventListener("touchend", this.handlePeekTouchEvent, true);
+    document.removeEventListener(
+      "touchcancel",
+      this.handlePeekTouchEvent,
+      true,
+    );
+    this.windowListenersAttached = false;
   }
 
   /** The bar moved or resized: the tooltip and the edge fades have to follow. */
   private onLayoutChange = () => {
     this.requestUpdate();
+  };
+
+  /**
+   * A keyboard can show up after the page loaded (a tablet with a Bluetooth
+   * keyboard, a desktop user who only now typed). Show the hotkeys from then on.
+   */
+  private handleKeyboardDetection = () => {
+    if (Platform.hasKeyboard && !this.lastHasKeyboard) {
+      this.lastHasKeyboard = true;
+      this.requestUpdate();
+    }
+  };
+
+  /**
+   * Holding a build button shows its cost and description. Touch devices have
+   * no hover, and a tap selects the unit right away, so the details need a
+   * press of their own.
+   */
+  private startPeek = (
+    event: PointerEvent,
+    unitType: PlayerBuildableUnitType,
+    structureKey: string,
+    hotkey: string,
+  ) => {
+    if (event.pointerType !== "touch") return;
+    // A new press replaces the peek of the previous one.
+    this.dismissPeek();
+    // The press that follows is a new gesture: it may select the unit.
+    this.suppressNextClick = false;
+    const element = event.currentTarget as HTMLElement;
+    this.peekTimer = setTimeout(() => {
+      this.peekTimer = null;
+      // The hold becomes a peek: releasing it must not select the unit.
+      this.suppressNextClick = true;
+      this._peekedUnitTooltip = { unitType, structureKey, hotkey, element };
+      this.requestUpdate();
+    }, PEEK_HOLD_MS);
+  };
+
+  private cancelPeekTimer() {
+    if (this.peekTimer === null) return;
+    clearTimeout(this.peekTimer);
+    this.peekTimer = null;
+  }
+
+  private dismissPeek() {
+    this.cancelPeekTimer();
+    if (this.peekGraceTimer !== null) {
+      clearTimeout(this.peekGraceTimer);
+      this.peekGraceTimer = null;
+    }
+    if (this._peekedUnitTooltip === null) return;
+    this._peekedUnitTooltip = null;
+    this.requestUpdate();
+  }
+
+  /** A press outside the bar dismisses the peek it opened. */
+  private handleDocumentPointerDown = (event: PointerEvent) => {
+    if (this._peekedUnitTooltip === null) return;
+    const root = this.querySelector(".unit-display-root");
+    if (root && event.target instanceof Node && root.contains(event.target)) {
+      return;
+    }
+    this.dismissPeek();
+  };
+
+  /** Releasing anywhere ends the hold, wherever the finger ended up. */
+  private handleDocumentPointerUp = () => {
+    this.cancelPeekTimer();
+    // The details are only useful while the button is held down.
+    if (this._peekedUnitTooltip !== null) this.dismissPeek();
+  };
+
+  /** Pointer cancellation can precede touchend; the touch event ends the peek. */
+  private handleDocumentPointerCancel = () => {
+    this.cancelPeekTimer();
+  };
+
+  private handlePeekTouchEvent = (event: TouchEvent) => {
+    const root = this.querySelector(".unit-display-root");
+    const isInBuildBar =
+      event.target instanceof Node && root?.contains(event.target);
+    const changedTouches = Array.from(event.changedTouches);
+
+    if (
+      event.type === "touchstart" &&
+      isInBuildBar &&
+      this.peekTouchIdentifier === null
+    ) {
+      this.peekTouchIdentifier = changedTouches[0]?.identifier ?? null;
+    } else if (
+      event.type === "touchend" &&
+      changedTouches.some(
+        (touch) => touch.identifier === this.peekTouchIdentifier,
+      )
+    ) {
+      this.peekTouchIdentifier = null;
+      this.cancelPeekTimer();
+      if (this._peekedUnitTooltip !== null) this.dismissPeek();
+    } else if (
+      event.type === "touchcancel" &&
+      changedTouches.some(
+        (touch) => touch.identifier === this.peekTouchIdentifier,
+      )
+    ) {
+      this.peekTouchIdentifier = null;
+      this.cancelPeekTimer();
+      if (this._peekedUnitTooltip !== null) {
+        if (this.peekGraceTimer !== null) clearTimeout(this.peekGraceTimer);
+        this.peekGraceTimer = setTimeout(() => {
+          this.peekGraceTimer = null;
+          if (this._peekedUnitTooltip !== null) this.dismissPeek();
+        }, PEEK_GRACE_MS);
+      }
+    }
   };
 
   private onScroll = () => {
@@ -136,6 +308,29 @@ export class UnitDisplay extends LitElement implements Controller {
       this.observedScroller = scroller;
       scroller?.addEventListener("scroll", this.onScroll);
     }
+    this.clampTooltipToViewport();
+  }
+
+  /**
+   * Keep the tooltip on the mobile screen: next to the left or right edge it would
+   * otherwise hang off.
+   */
+  private clampTooltipToViewport() {
+    const tooltip = this.querySelector<HTMLElement>(".unit-display-tooltip");
+    const root = this.querySelector<HTMLElement>(".unit-display-root");
+    if (!tooltip || !root || this._tooltipCenter === null) return;
+    const rootBounds = root.getBoundingClientRect();
+    const tooltipBounds = tooltip.getBoundingClientRect();
+    const margin = 8;
+    // The tooltip is centred on the item, so its left edge sits half its
+    // width to the left of that centre.
+    let left = rootBounds.left + this._tooltipCenter - tooltipBounds.width / 2;
+    const max = window.innerWidth - margin - tooltipBounds.width;
+    if (left < margin) left = margin;
+    else if (left > max) left = max;
+    // The tooltip is pulled left by half its width with the transform, so the
+    // style has to put that half back, or the box ends up twice shifted.
+    tooltip.style.left = `${left - rootBounds.left + tooltipBounds.width / 2}px`;
   }
 
   private cost(item: UnitType): Gold {
@@ -207,6 +402,7 @@ export class UnitDisplay extends LitElement implements Controller {
           ${this.moreActionsLeft ? "unit-display-more-left" : ""}
           ${this.moreActionsRight ? "unit-display-more-right" : ""}"
         data-radial-click-through
+        @contextmenu=${(event: Event) => event.preventDefault()}
       >
         <div
           class="unit-display-scroll w-full overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x lg:overflow-visible"
@@ -293,6 +489,9 @@ export class UnitDisplay extends LitElement implements Controller {
   }
 
   private getHotkey(action: string, defaultCode: string): string {
+    // Without a keyboard the hotkeys cannot be used, so don't resolve them
+    // (or the keyboard layout behind them) and don't show them.
+    if (!Platform.hasKeyboard) return "";
     return resolveKeybindLabel(
       this.keybinds[action],
       defaultCode,
@@ -333,6 +532,8 @@ export class UnitDisplay extends LitElement implements Controller {
           this._hoveredUnitTooltip = null;
           this.requestUpdate();
         }}
+        @pointerdown=${(event: PointerEvent) =>
+          this.startPeek(event, unitType, structureKey, hotkey)}
       >
         <div
           class="${
@@ -342,6 +543,12 @@ export class UnitDisplay extends LitElement implements Controller {
              rounded-sm text-white ${selected ? "bg-slate-400/20" : ""}
              ${this.tutorialHighlight === unitType ? "tutorial-highlight" : ""}"
           @click=${() => {
+            // A press that turned into a peek shows the details instead of
+            // selecting the unit
+            if (this.suppressNextClick) {
+              this.suppressNextClick = false;
+              return;
+            }
             if (selected) {
               this.inputHandler.setGhostStructure(null, "GUIclick");
             } else if (this.canBuild(unitType)) {
@@ -373,7 +580,7 @@ export class UnitDisplay extends LitElement implements Controller {
           ${
             hotkey
               ? html`<div
-                  class="hidden pointer-fine:block ml-0.5 text-[10px] relative -top-1 text-gray-400"
+                  class="unit-display-hotkey ml-0.5 text-[10px] relative -top-1 text-gray-400"
                 >
                   ${displayHotkey}
                 </div>`
@@ -401,7 +608,10 @@ export class UnitDisplay extends LitElement implements Controller {
   }
 
   private renderUnitTooltip() {
-    const tooltip = this._hoveredUnitTooltip;
+    // A peek wins over a hover: it is the one the player asked for by
+    // holding the button.
+    const peek = this._peekedUnitTooltip;
+    const tooltip = peek ?? this._hoveredUnitTooltip;
     if (!tooltip) return nothing;
     // The item can go away (a unit gets disabled) while it is hovered.
     if (!tooltip.element.isConnected) return nothing;
@@ -417,10 +627,13 @@ export class UnitDisplay extends LitElement implements Controller {
     const left =
       itemBounds.left + itemBounds.width / 2 - (rootBounds?.left ?? 0);
     const top = itemBounds.top - (rootBounds?.top ?? 0) - 4;
+    // Kept for the clamp after the render: the tooltip cannot be measured
+    // before it exists.
+    this._tooltipCenter = left;
 
     return html`
       <div
-        class="unit-display-tooltip hidden pointer-fine:block absolute -translate-x-1/2 -translate-y-full text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
+        class="unit-display-tooltip ${peek ? "block" : "hidden pointer-fine:block"} absolute -translate-x-1/2 -translate-y-full text-gray-200 text-center w-max max-w-[min(100%_-_1rem,100vw_-_1rem)] break-words text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
         style=${`left: ${left}px; top: ${top}px;`}
       >
         <div class="font-bold text-sm mb-1">
@@ -432,7 +645,7 @@ export class UnitDisplay extends LitElement implements Controller {
           ${translateText("build_menu.desc." + tooltip.structureKey)}
         </div>
         ${
-          tooltip.unitType === UnitType.Warship
+          tooltip.unitType === UnitType.Warship && Platform.hasKeyboard
             ? html`<div
                 class="mt-1 px-2 py-1 text-[10px] text-cyan-300 border-t border-white/10"
               >
