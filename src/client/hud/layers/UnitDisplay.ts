@@ -677,7 +677,14 @@ export class UnitDisplay extends LitElement implements Controller {
           }}
           @pointerleave=${(event: PointerEvent) => {
             if (event.pointerType === "touch") return;
-            this.eventBus?.emit(new ToggleStructureEvent(null));
+            const selectedGhost = this.uiState.ghostStructure;
+            this.eventBus?.emit(
+              new ToggleStructureEvent(
+                selectedGhost === null
+                  ? null
+                  : highlightTypesForUnit(selectedGhost),
+              ),
+            );
           }}
         >
           ${
