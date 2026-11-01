@@ -4,6 +4,8 @@
   "name": "Canary Islands",
   "translation_key": "map.canaryislands",
   "categories": ["new", "africa"],
+  "location": { "lat": 28.3, "lon": -15.6 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [229, 1022],

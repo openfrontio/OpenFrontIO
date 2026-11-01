@@ -4,6 +4,8 @@
   "name": "Cape Of Good Hope",
   "translation_key": "map.capeofgoodhope",
   "categories": ["new", "africa"],
+  "location": { "lat": -34.4, "lon": 18.5 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [467, 395],

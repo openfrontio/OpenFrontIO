@@ -13,7 +13,6 @@ import "./components/clan/ClanGameHistoryView";
 import type { ClanGameHistoryCache } from "./components/clan/ClanGameHistoryView";
 import "./components/clan/ClanManageView";
 import "./components/clan/ClanMapView";
-import type { ClanMapView } from "./components/clan/ClanMapView";
 import "./components/clan/ClanMyRequestsView";
 import "./components/clan/ClanRequestsView";
 import type { ClanRole } from "./components/clan/ClanShared";
@@ -165,8 +164,6 @@ export class ClanModal extends BaseModal {
           title: translateText("clan_modal.title"),
           onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
-          rightContent:
-            this.activeTab === "map" ? this.fullscreenButton() : undefined,
         })
       : this.renderSubViewHeader();
   }
@@ -195,34 +192,6 @@ export class ClanModal extends BaseModal {
     }
     // Detail tabs: BaseModal already updated activeTab; renderInner reads it.
     // No additional side effects required here.
-  }
-
-  private fullscreenButton() {
-    const label = translateText("fullscreen.enter");
-    return html`<button
-      type="button"
-      data-testid="map-fullscreen"
-      title=${label}
-      aria-label=${label}
-      class="flex items-center justify-center w-10 h-10 rounded-full shrink-0 bg-white/5 hover:bg-white/10 transition-all border border-white/10 text-white/70 hover:text-white"
-      @click=${() =>
-        this.querySelector<ClanMapView>("clan-map-view")?.enterFullscreen()}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="w-5 h-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"
-        />
-      </svg>
-    </button>`;
   }
 
   private tagPill(tag: string) {

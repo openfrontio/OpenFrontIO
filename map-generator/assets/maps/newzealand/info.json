@@ -4,6 +4,8 @@
   "name": "New Zealand",
   "translation_key": "map.newzealand",
   "categories": ["new", "oceania"],
+  "location": { "lat": -41.5, "lon": 172.5 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [1096, 415],

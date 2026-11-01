@@ -401,8 +401,9 @@ describe("SinglePlayerModal start feedback", () => {
     const config = joins[0].detail.gameStartInfo.config;
     expect(config.gameMap).toBe(GameMapType.Tutorial);
     expect(config.tutorial).toBe(true);
-    expect(config.bots).toBe(1);
+    expect(config.bots).toBe(0);
     expect(config.nations).toBe("default");
+    expect(config.startingGold).toBe(750_000);
   });
 
   it("starts a default solo game with the guide back on", async () => {

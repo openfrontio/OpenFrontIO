@@ -4,6 +4,7 @@
   "name": "Pluto",
   "translation_key": "map.pluto",
   "categories": ["cosmic"],
+  "author": "djmrFunnyMan",
   "special_team_count": 2,
   "nations": [
     {

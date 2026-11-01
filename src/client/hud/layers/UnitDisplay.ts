@@ -108,6 +108,8 @@ export class UnitDisplay extends LitElement implements Controller {
     this.keybinds = userSettings.parsedUserKeybinds();
 
     this.tutorialMode = config.gameConfig().tutorial ?? false;
+    // The bar is hidden on small screens, where the radial menu builds, but
+    // the onboarding tutorial fires its atom bomb from here on every screen.
     if (this.tutorialMode) this.classList.remove("hidden");
 
     this.enabledUnitCount = BuildMenus.types.filter((unitType) =>
@@ -447,6 +449,8 @@ export class UnitDisplay extends LitElement implements Controller {
     if (this.allDisabled) {
       return null;
     }
+    // The onboarding tutorial's one build is the atom bomb, fired from the
+    // nation's silo once captured.
     if (
       this.tutorialMode &&
       myPlayer.units(UnitType.MissileSilo).length === 0
