@@ -419,7 +419,9 @@ describe("mobile UnitDisplay layout", () => {
           pointerType: "mouse",
         }),
       );
-      expect(highlights[highlights.length - 1]?.structureTypes).toBeNull();
+      expect(highlights[highlights.length - 1]?.structureTypes).toEqual([
+        UnitType.City,
+      ]);
     } finally {
       display.remove();
     }
