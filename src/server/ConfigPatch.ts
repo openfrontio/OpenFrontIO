@@ -1,4 +1,6 @@
+import { GameMode } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig, GameConfigPatch } from "@openfront/engine-api/Schemas";
+import { adjustForTeams } from "@openfront/engine-lib/game/TeamAssignment";
 
 // The host edits its lobby through update_game_config, which carries a
 // partial GameConfig. Only the keys listed here are taken from it. gameType
@@ -92,6 +94,15 @@ export function applyGameConfigPatch(
   // players (spectators never count, see GameServer.joinClient).
   if (maxPlayers !== undefined) {
     target.maxPlayers = maxPlayers ?? undefined;
+  }
+  if (
+    target.gameMode === GameMode.Team &&
+    target.maxPlayers !== undefined &&
+    (maxPlayers !== undefined ||
+      patch.gameMode !== undefined ||
+      patch.playerTeams !== undefined)
+  ) {
+    target.maxPlayers = adjustForTeams(target.maxPlayers, target.playerTeams);
   }
   // Unconditional on purpose: the host clears cheats by omitting hostCheats
   // (the full config it sends has hostCheats: undefined when the toggle is

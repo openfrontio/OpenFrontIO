@@ -151,10 +151,14 @@ Public-lobby rotation weights are not set here: the API computes them from how f
 | `forced_modifiers`   |          | Array of modifiers always forced on in special games. Plain key (e.g. `"startingGold5M"`) or `"key:percentage"` (e.g. `"goldMultiplier:75"` = 75% chance). Counts toward the 3-modifier cap.                                     |
 | `display_name`       |          | English display name written to `../resources/lang/en.json`. Defaults to `name`. Set only when the display name differs from the canonical name (e.g. `"MENA"`, `"Europe (Classic)"`).                                           |
 | `featured_rank`      |          | Position in the featured grid (`1` = first). Requires `"featured"` in `categories`. Unranked featured maps sort after ranked ones, alphabetically.                                                                               |
+| `hidden`             |          | `true` keeps the map out of the map pickers, random map picks and public lobbies. Only code that names the map can start it (the tutorial map).                                                                                  |
 | `special_team_count` |          | Preferred team count for team/special games — see `SPECIAL_TEAM_MAPS` in `../src/server/MapPlaylist.ts`. Must be `0` or `≥ 2` (1 is not allowed).                                                                                |
 | `custom_tribes`      |          | Array of tribe names or `{ "name": "...", "coordinates": [x, y] }` objects. Coordinates are optional (omit for random spawn). Tribe names must be unique and must not collide with `nations[].name`. Empty strings are rejected. |
 | `themes`             |          | Array of theme strings for tribe name generation.                                                                                                                                                                                |
 | `layers`             |          | Array of map layer definitions rendered between terrain and territory (see below).                                                                                                                                               |
+| `author`             |          | Map creator, shown in the map picker's info tooltip, the Earth view and the lobby.                                                                                                                                               |
+| `description`        |          | Short English description shown alongside `author`. Written to the `map_description` section of `../resources/lang/en.json`, so Crowdin translates it.                                                                           |
+| `location`           |          | `{ "lat": 48.5, "lon": -62 }`: where the map lies on Earth. Places a pin for it on the map picker's Earth view; maps without one (fictional, world, arcade) are left off.                                                        |
 | `nations`            | ✅       | Array of nation objects (see below). May be empty.                                                                                                                                                                               |
 | `additionalNations`  |          | Nation objects drawn at random when a game asks for more nations than `nations` lists.                                                                                                                                           |
 | `teamGameSpawnAreas` |          | Spawn rectangles per team count: `{ "2": [{ "x", "y", "width", "height" }, ...] }`. Must lie inside the map.                                                                                                                     |
@@ -211,7 +215,8 @@ there are no manual steps:
 - The `GameMapType` enum and the `maps` list (one `MapInfo` per map) are
   written to `../packages/engine-api/src/game/Maps.gen.ts`. Do not edit that file by hand.
 - The `map` section of `../resources/lang/en.json` is rewritten with each
-  map's `display_name` (or `name`). Translations to other languages are
+  map's `display_name` (or `name`), and the `map_description` section with
+  each map's `description`. Translations to other languages are
   managed via Crowdin.
 
 ## Notes

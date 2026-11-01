@@ -4,6 +4,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  Trios,
 } from "@openfront/engine-api/game/GameTypes";
 import { LOBBY_LABEL_MAX } from "@openfront/engine-lib/Util";
 import { GameEnv } from "@openfront/shared/configuration/Env";
@@ -191,6 +192,42 @@ describe("GameServer listing", () => {
     it("rejects when player count meets or exceeds maxPlayers cap", () => {
       const game = makeGame();
       expect(getListingEligibilityError(game, 0)).toBe(
+        "listing_max_players_too_low",
+      );
+    });
+
+    it("checks the effective team cap against player count", () => {
+      const game = makeGame("team-eligibility", CREATOR, {
+        gameMode: GameMode.Team,
+        playerTeams: Trios,
+      });
+      game.joinClient(makeClient("p1", "c1", fakeWs()));
+      game.joinClient(makeClient("p2", "c2", fakeWs()));
+      game.joinClient(makeClient("p3", "c3", fakeWs()));
+      expect(getListingEligibilityError(game, 5)).toBe(
+        "listing_max_players_too_low",
+      );
+      expect(getListingEligibilityError(game, 6)).toBeNull();
+
+      game.gameConfig.maxPlayers = 3;
+      expect(getListingEligibilityError(game)).toBe(
+        "listing_max_players_too_low",
+      );
+    });
+
+    it("skips stored maxPlayers cap check when lobby is already listed and request omits maxPlayers", () => {
+      const game = makeGame("listed-game", CREATOR);
+      game.joinClient(makeClient("p1", "c1", fakeWs()));
+      game.joinClient(makeClient("p2", "c2", fakeWs()));
+      game.setListed(true, { maxPlayers: 2 });
+      expect(game.isListed()).toBe(true);
+      expect(game.numPlayers()).toBe(2);
+
+      // Omitting maxPlayers on relist skips the stored cap check even when full.
+      expect(getListingEligibilityError(game)).toBeNull();
+
+      // Passing explicit maxPlayers <= numPlayers still rejects.
+      expect(getListingEligibilityError(game, 2)).toBe(
         "listing_max_players_too_low",
       );
     });
@@ -395,6 +432,44 @@ describe("listed lobby auto-start", () => {
     // Filling to the cap starts the game before the deadline.
     game.joinClient(makeClient("guest", OTHER_CREATOR, fakeWs()));
     expect(game.phase()).toBe(GamePhase.Active);
+  });
+
+  it("adjusts the listing player cap for team games", () => {
+    const game = makeGame("team-game", CREATOR, {
+      gameMode: GameMode.Team,
+      playerTeams: Trios,
+    });
+    game.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game.setListed(true, { maxPlayers: 100 });
+    expect(game.gameInfo().gameConfig?.maxPlayers).toBe(99);
+
+    // Adjusts unaligned stored maxPlayers when options omit maxPlayers.
+    const game2 = makeGame("team-game-no-opts", CREATOR, {
+      gameMode: GameMode.Team,
+      playerTeams: Trios,
+      maxPlayers: 100,
+    });
+    game2.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game2.setListed(true);
+    expect(game2.gameInfo().gameConfig?.maxPlayers).toBe(99);
+
+    // Enforces at least a full team size when cap is smaller than team size.
+    const game3 = makeGame("team-game-small", CREATOR, {
+      gameMode: GameMode.Team,
+      playerTeams: Trios,
+    });
+    game3.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game3.setListed(true, { maxPlayers: 2 });
+    expect(game3.gameInfo().gameConfig?.maxPlayers).toBe(3);
+
+    // Leaves configured cap unchanged for numeric team counts.
+    const game4 = makeGame("team-game-numeric", CREATOR, {
+      gameMode: GameMode.Team,
+      playerTeams: 3,
+    });
+    game4.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game4.setListed(true, { maxPlayers: 5 });
+    expect(game4.gameInfo().gameConfig?.maxPlayers).toBe(5);
   });
 
   it("never auto-starts an unlisted lobby", () => {

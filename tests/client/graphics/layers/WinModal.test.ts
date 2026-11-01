@@ -1,4 +1,5 @@
 import { RankedType } from "@openfront/engine-api/game/GameTypes";
+import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import {
@@ -9,13 +10,34 @@ import {
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 
+const copyToClipboardMock = vi.hoisted(() =>
+  vi.fn(async (_text: string) => {}),
+);
+const showToastMock = vi.hoisted(() => vi.fn());
+
+const gamePortalMock = vi.hoisted(() => ({
+  happytime: vi.fn(),
+  gameplayStop: vi.fn(),
+  name: vi.fn(() => null),
+  isOnGamePortal: vi.fn(() => false),
+  createInviteLink: vi.fn(
+    async (gameId: string): Promise<string | null> =>
+      `https://crazygames.com/game?invite=${gameId}`,
+  ),
+}));
+
 vi.mock("../../../../src/client/Utils", () => ({
+  copyToClipboard: copyToClipboardMock,
+  showToast: showToastMock,
   translateText: vi.fn((key: string) => {
     const translations: Record<string, string> = {
       "win_modal.exit": "Exit",
       "win_modal.requeue": "Play Again",
       "win_modal.keep": "Keep Playing",
       "win_modal.spectate": "Spectate",
+      "win_modal.share": "Share",
+      "common.copied": "Copied!",
+      "common.failed_copy": "Failed to copy",
     };
     return translations[key] || key;
   }),
@@ -37,13 +59,11 @@ vi.mock("../../../../src/client/Cosmetics", async (importOriginal) => ({
 }));
 
 vi.mock("../../../../src/client/GamePortal", () => ({
-  gamePortal: {
-    happytime: vi.fn(),
-    gameplayStop: vi.fn(),
-    // Read by the win modal's <steam-wishlist> and <profile-share>.
-    name: () => null,
-  },
+  gamePortal: gamePortalMock,
 }));
+
+import { ClientEnv } from "../../../../src/client/ClientEnv";
+import type { GameView } from "../../../../src/client/view";
 
 // jsdom has no ResizeObserver.
 globalThis.ResizeObserver ??= class {
@@ -51,6 +71,11 @@ globalThis.ResizeObserver ??= class {
   unobserve() {}
   disconnect() {}
 } as unknown as typeof ResizeObserver;
+
+const realLocationDescriptor = Object.getOwnPropertyDescriptor(
+  window,
+  "location",
+)!;
 
 describe("WinModal Requeue", () => {
   let mockLocationHref = "";
@@ -74,6 +99,7 @@ describe("WinModal Requeue", () => {
   });
 
   afterEach(() => {
+    Object.defineProperty(window, "location", realLocationDescriptor);
     vi.restoreAllMocks();
   });
 
@@ -230,5 +256,254 @@ describe("WinModal pattern promotion", () => {
     expect(css).toContain(".win-action:hover ~ [data-share-ring]");
     expect(css).toContain("top: -6px");
     expect(css).toContain("bottom: -2px");
+  });
+});
+
+describe("WinModal share button", () => {
+  let modal: WinModal | undefined;
+
+  function setBootstrapConfig(
+    overrides: { jwtAudience?: string; serverHost?: string } = {},
+  ) {
+    (window as any).BOOTSTRAP_CONFIG = {
+      gameEnv: "prod",
+      numWorkers: 1,
+      turnstileSiteKey: "x",
+      jwtAudience: "openfront.io",
+      instanceId: "d",
+      gitCommit: "t",
+      ...overrides,
+    };
+    ClientEnv.reset();
+  }
+
+  beforeEach(() => {
+    vi.spyOn(ClientEnv, "shareOrigin").mockReturnValue("https://openfront.io");
+    setBootstrapConfig({ serverHost: "openfront.io" });
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    copyToClipboardMock.mockClear();
+    showToastMock.mockClear();
+    gamePortalMock.isOnGamePortal.mockReturnValue(false);
+    gamePortalMock.createInviteLink.mockClear();
+  });
+
+  afterEach(() => {
+    modal?.remove();
+    modal = undefined;
+    delete (window as { BOOTSTRAP_CONFIG?: unknown }).BOOTSTRAP_CONFIG;
+    ClientEnv.reset();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  async function createModal(opts?: {
+    isWin?: boolean;
+    gameId?: string;
+    resumedFromSave?: boolean;
+  }) {
+    modal = document.createElement("win-modal") as WinModal;
+    modal.game = {
+      gameID: () => opts?.gameId ?? "gamexyz123",
+      myPlayer: () => null,
+      resumedFromSave: () => opts?.resumedFromSave ?? false,
+      config: () => ({
+        gameConfig: () => ({ rankedType: undefined }),
+      }),
+    } as unknown as GameView;
+    modal.isVisible = true;
+    if (opts?.isWin !== undefined) {
+      (modal as unknown as { isWin: boolean }).isWin = opts.isWin;
+    }
+    document.body.appendChild(modal);
+    await modal.updateComplete;
+    return modal;
+  }
+
+  it("hides the share button when the game was resumed from a save", async () => {
+    const el = await createModal({ resumedFromSave: true });
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
+    );
+    expect(shareButton).toBeNull();
+  });
+
+  it("renders a square share button with tooltip and aria-label matching row height", async () => {
+    const el = await createModal();
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
+    );
+    expect(shareButton).not.toBeNull();
+    expect(shareButton?.title).toBe("Share");
+    expect(shareButton?.getAttribute("aria-label")).toBe("Share");
+    expect(shareButton?.classList.contains("win-action")).toBe(true);
+    expect(shareButton?.classList.contains("win-action-main")).toBe(true);
+    expect(shareButton?.classList.contains("win-action-icon")).toBe(true);
+  });
+
+  it("appears on both the win and the death/loss modal", async () => {
+    const winEl = await createModal({ isWin: true });
+    expect(
+      winEl.querySelector('button[data-win-action="share"]'),
+    ).not.toBeNull();
+    winEl.remove();
+
+    const lossEl = await createModal({ isWin: false });
+    expect(
+      lossEl.querySelector('button[data-win-action="share"]'),
+    ).not.toBeNull();
+  });
+
+  it("copies working game link using ClientEnv.shareOrigin and shows green toast", async () => {
+    const gameId = "game123456";
+    expect(GAME_ID_REGEX.test(gameId)).toBe(true);
+
+    const el = await createModal({ gameId });
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
+    )!;
+
+    shareButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const expectedUrl = `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
+    expect(copyToClipboardMock).toHaveBeenCalledWith(expectedUrl);
+    expect(showToastMock).toHaveBeenCalledWith("Copied!", "green");
+
+    const url = new URL(expectedUrl);
+    const pathMatch = url.pathname.match(
+      /^(?:\/v\/[^/]+)?\/(?:w\d+\/)?game\/([^/]+)/,
+    );
+    expect(pathMatch).not.toBeNull();
+    expect(pathMatch![1]).toBe(gameId);
+    expect(GAME_ID_REGEX.test(pathMatch![1])).toBe(true);
+  });
+
+  it("uses share origin from desktop shell instead of app://", async () => {
+    const shareOriginSpy = vi
+      .spyOn(ClientEnv, "shareOrigin")
+      .mockReturnValue("https://openfront.io");
+    setBootstrapConfig({ serverHost: "openfront.io" });
+
+    const gameId = "desk456789";
+    expect(GAME_ID_REGEX.test(gameId)).toBe(true);
+
+    const el = await createModal({ gameId });
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
+    )!;
+
+    shareButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(shareOriginSpy).toHaveBeenCalled();
+    expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
+    const copiedUrl = copyToClipboardMock.mock.calls[0][0];
+    expect(copiedUrl).toBe(`https://openfront.io${ClientEnv.gamePath(gameId)}`);
+    expect(copiedUrl).not.toContain("app:");
+    expect(showToastMock).toHaveBeenCalledWith("Copied!", "green");
+
+    const url = new URL(copiedUrl);
+    const pathMatch = url.pathname.match(
+      /^(?:\/v\/[^/]+)?\/(?:w\d+\/)?game\/([^/]+)/,
+    );
+    expect(pathMatch).not.toBeNull();
+    expect(pathMatch![1]).toBe(gameId);
+    expect(GAME_ID_REGEX.test(pathMatch![1])).toBe(true);
+  });
+
+  it("uses gamePortal.createInviteLink on game portals", async () => {
+    const gameId = "cg99912345";
+    expect(GAME_ID_REGEX.test(gameId)).toBe(true);
+
+    gamePortalMock.isOnGamePortal.mockReturnValue(true);
+    gamePortalMock.createInviteLink.mockResolvedValue(
+      `https://crazygames.com/game?invite=${gameId}`,
+    );
+
+    const el = await createModal({ gameId });
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
+    )!;
+
+    shareButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(gamePortalMock.createInviteLink).toHaveBeenCalledWith(gameId);
+    expect(copyToClipboardMock).toHaveBeenCalledWith(
+      `https://crazygames.com/game?invite=${gameId}`,
+    );
+    expect(showToastMock).toHaveBeenCalledWith("Copied!", "green");
+  });
+
+  it("shows failure toast when game portal invite link fails", async () => {
+    const gameId = "cgfail1234";
+    gamePortalMock.isOnGamePortal.mockReturnValue(true);
+    gamePortalMock.createInviteLink.mockResolvedValue(null);
+
+    const el = await createModal({ gameId });
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
+    )!;
+
+    shareButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(copyToClipboardMock).not.toHaveBeenCalled();
+    expect(showToastMock).toHaveBeenCalledWith("Failed to copy", "red");
+  });
+
+  it("shows failure toast when game portal invite link throws", async () => {
+    const gameId = "cgerror1234";
+    gamePortalMock.isOnGamePortal.mockReturnValue(true);
+    gamePortalMock.createInviteLink.mockRejectedValue(
+      new Error("portal network failure"),
+    );
+
+    const el = await createModal({ gameId });
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
+    )!;
+
+    shareButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(copyToClipboardMock).not.toHaveBeenCalled();
+    expect(showToastMock).toHaveBeenCalledWith("Failed to copy", "red");
+  });
+
+  it("shows failure toast when game ID is missing", async () => {
+    const el = await createModal({ gameId: "" });
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
+    )!;
+
+    shareButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(copyToClipboardMock).not.toHaveBeenCalled();
+    expect(showToastMock).toHaveBeenCalledWith("Failed to copy", "red");
+  });
+
+  it("shows failure toast when copyToClipboard throws", async () => {
+    copyToClipboardMock.mockRejectedValueOnce(new Error("clipboard denied"));
+
+    const gameId = "gamefail12";
+    const el = await createModal({ gameId });
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
+    )!;
+
+    shareButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
+    expect(showToastMock).toHaveBeenCalledWith("Failed to copy", "red");
   });
 });

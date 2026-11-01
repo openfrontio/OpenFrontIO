@@ -5,6 +5,8 @@
   "display_name": "Baikal (Nuke Wars)",
   "translation_key": "map.baikalnukewars",
   "categories": ["fictional"],
+  "location": { "lat": 51.8, "lon": 104.5 },
+  "author": "Duwibi",
   "special_team_count": 2,
   "forced_modifiers": ["isWaterNukes:50"],
   "nations": [],

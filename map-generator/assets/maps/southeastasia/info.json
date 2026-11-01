@@ -5,6 +5,8 @@
   "display_name": "Southeast Asia",
   "translation_key": "map.southeastasia",
   "categories": ["asia"],
+  "location": { "lat": 12, "lon": 118 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [1319, 76],

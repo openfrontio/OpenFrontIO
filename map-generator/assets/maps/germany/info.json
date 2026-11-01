@@ -4,6 +4,8 @@
   "name": "Germany",
   "translation_key": "map.germany",
   "categories": ["europe", "countries"],
+  "location": { "lat": 51.2, "lon": 10.4 },
+  "author": "SpeakIsntThere",
   "custom_tribes": [
     "Aachen, Städteregion",
     "Ahrweiler",

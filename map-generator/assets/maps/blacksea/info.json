@@ -4,6 +4,8 @@
   "name": "Black Sea",
   "translation_key": "map.blacksea",
   "categories": ["europe", "asia"],
+  "location": { "lat": 43, "lon": 35 },
+  "author": "evanpelle",
   "nations": [
     {
       "coordinates": [122, 647],
