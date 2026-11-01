@@ -14,6 +14,7 @@ import {
   InputHandler,
   ToggleStructureEvent,
   TouchGhostPlacementSelectEvent,
+  isForwardedTouchClick,
 } from "../../InputHandler";
 import { KeyboardLayoutController } from "../../KeyboardLayout";
 import { Platform } from "../../Platform";
@@ -59,6 +60,7 @@ export class UnitDisplay extends LitElement implements Controller {
   private _samLauncher = 0;
   private allDisabled = false;
   private enabledUnitCount = 0;
+  private tutorialMode = false;
   private _hoveredUnitTooltip: {
     unitType: PlayerBuildableUnitType;
     structureKey: string;
@@ -79,6 +81,8 @@ export class UnitDisplay extends LitElement implements Controller {
   private peekTimer: ReturnType<typeof setTimeout> | null = null;
   private peekGraceTimer: ReturnType<typeof setTimeout> | null = null;
   private suppressNextClick = false;
+  // Keep the hold's release click suppressed, but not a later physical click.
+  private suppressReleaseClick = false;
   private peekPointerId: number | null = null;
   private peekTouchIdentifier: number | null = null;
   private activeTouchIdentifiers = new Set<number>();
@@ -103,8 +107,11 @@ export class UnitDisplay extends LitElement implements Controller {
 
     this.keybinds = userSettings.parsedUserKeybinds();
 
-    this.enabledUnitCount = BuildMenus.types.filter(
-      (unitType) => !config.isUnitDisabled(unitType),
+    this.tutorialMode = config.gameConfig().tutorial ?? false;
+    if (this.tutorialMode) this.classList.remove("hidden");
+
+    this.enabledUnitCount = BuildMenus.types.filter((unitType) =>
+      this.isUnitDisplayed(unitType),
     ).length;
     this.allDisabled = this.enabledUnitCount === 0;
 
@@ -166,6 +173,7 @@ export class UnitDisplay extends LitElement implements Controller {
     this.dismissPeek();
     this.activeTouchIdentifiers.clear();
     this.suppressNextClick = false;
+    this.suppressReleaseClick = false;
     this.windowListenersAttached = false;
   }
 
@@ -233,6 +241,7 @@ export class UnitDisplay extends LitElement implements Controller {
 
   /** A press outside the bar dismisses the peek it opened. */
   private handleDocumentPointerDown = (event: PointerEvent) => {
+    this.suppressReleaseClick = false;
     if (this._peekedUnitTooltip === null) return;
     const root = this.querySelector(".unit-display-root");
     if (root && event.target instanceof Node && root.contains(event.target)) {
@@ -244,6 +253,8 @@ export class UnitDisplay extends LitElement implements Controller {
   /** Releasing anywhere ends the hold, wherever the finger ended up. */
   private handleDocumentPointerUp = (event: PointerEvent) => {
     if (this.peekPointerId !== event.pointerId) return;
+    this.suppressReleaseClick = this.suppressNextClick;
+    this.suppressNextClick = false;
     this.cancelPeekTimer();
     this.peekPointerId = null;
     this.peekTouchIdentifier = null;
@@ -289,9 +300,12 @@ export class UnitDisplay extends LitElement implements Controller {
       this.peekPointerId = null;
       this.cancelPeekTimer();
       if (event.type === "touchend") {
+        this.suppressReleaseClick ||= this.suppressNextClick;
+        this.suppressNextClick = false;
         if (this._peekedUnitTooltip !== null) this.dismissPeek();
       } else {
         this.suppressNextClick = false;
+        this.suppressReleaseClick = false;
         if (this._peekedUnitTooltip !== null) {
           this.startPeekGraceTimer();
         }
@@ -394,6 +408,13 @@ export class UnitDisplay extends LitElement implements Controller {
     }
   }
 
+  private isUnitDisplayed(unitType: PlayerBuildableUnitType): boolean {
+    return (
+      !this.game.config().isUnitDisabled(unitType) &&
+      (!this.tutorialMode || unitType === UnitType.AtomBomb)
+    );
+  }
+
   tick() {
     const player = this.game?.myPlayer();
     if (!player) return;
@@ -424,6 +445,12 @@ export class UnitDisplay extends LitElement implements Controller {
       return null;
     }
     if (this.allDisabled) {
+      return null;
+    }
+    if (
+      this.tutorialMode &&
+      myPlayer.units(UnitType.MissileSilo).length === 0
+    ) {
       return null;
     }
     return html`
@@ -537,7 +564,7 @@ export class UnitDisplay extends LitElement implements Controller {
     structureKey: string,
     hotkey: string,
   ) {
-    if (this.game.config().isUnitDisabled(unitType)) {
+    if (!this.isUnitDisplayed(unitType)) {
       return html``;
     }
     const selected = this.uiState.ghostStructure === unitType;
@@ -580,8 +607,9 @@ export class UnitDisplay extends LitElement implements Controller {
           @click=${(event: Event) => {
             // A press that turned into a peek shows the details instead of
             // selecting the unit
-            if (this.suppressNextClick) {
+            if (this.suppressNextClick || this.suppressReleaseClick) {
               this.suppressNextClick = false;
+              this.suppressReleaseClick = false;
               return;
             }
             if (selected) {
@@ -589,8 +617,9 @@ export class UnitDisplay extends LitElement implements Controller {
             } else if (this.canBuild(unitType)) {
               this.inputHandler.setGhostStructure(unitType, "GUIclick");
               if (
-                event instanceof PointerEvent &&
-                event.pointerType === "touch"
+                (event instanceof PointerEvent &&
+                  event.pointerType === "touch") ||
+                isForwardedTouchClick(event)
               ) {
                 this.eventBus?.emit(new TouchGhostPlacementSelectEvent());
               }

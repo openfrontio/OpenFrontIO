@@ -2,7 +2,11 @@ import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus, GameEvent } from "@openfront/shared/EventBus";
 import * as d3 from "d3";
 import { Controller } from "../../Controller";
-import { CloseViewEvent, FORWARDED_CLICK } from "../../InputHandler";
+import {
+  CloseViewEvent,
+  FORWARDED_CLICK,
+  FORWARDED_TOUCH_CLICK,
+} from "../../InputHandler";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { getSvgAspectRatio, translateText } from "../../Utils";
 import {
@@ -65,7 +69,10 @@ const CLICK_THROUGH_SELECTOR = "[data-radial-click-through]";
  * HUD. Menu items stop the click from bubbling, so every click that reaches
  * this handler is a tap on the menu's background.
  */
-export function forwardClickToLayerBelow(event: MouseEvent): void {
+export function forwardClickToLayerBelow(
+  event: MouseEvent,
+  pointerType: string | null = null,
+): void {
   const below = document.elementFromPoint(event.clientX, event.clientY);
   if (!below?.closest(CLICK_THROUGH_SELECTOR)) return;
   const forwarded = new MouseEvent("click", {
@@ -77,6 +84,10 @@ export function forwardClickToLayerBelow(event: MouseEvent): void {
   // The layer below has to tell this tap apart from a real press: the browser
   // only moves a range input on a press it made itself.
   (forwarded as unknown as Record<string, unknown>)[FORWARDED_CLICK] = true;
+  if (pointerType === "touch") {
+    (forwarded as unknown as Record<string, unknown>)[FORWARDED_TOUCH_CLICK] =
+      true;
+  }
   below.dispatchEvent(forwarded);
 }
 
@@ -85,6 +96,7 @@ export class RadialMenu implements Controller {
   private tooltipElement: HTMLDivElement | null = null;
   private tooltipStyleElement: HTMLStyleElement | null = null;
   private isVisible: boolean = false;
+  private lastPointerType: string | null = null;
 
   private currentLevel: number = 0; // Current menu level (0 = main menu, 1 = submenu, etc.)
   private menuStack: MenuElement[][] = []; // Stack to track menu navigation history
@@ -192,7 +204,14 @@ export class RadialMenu implements Controller {
       .on("click", (event: MouseEvent) => {
         this.hideRadialMenu();
         this.eventBus.emit(new CloseRadialMenuEvent());
-        forwardClickToLayerBelow(event);
+        forwardClickToLayerBelow(event, this.lastPointerType);
+        this.lastPointerType = null;
+      })
+      .on("pointerdown", (event: PointerEvent) => {
+        this.lastPointerType = event.pointerType;
+      })
+      .on("pointercancel", () => {
+        this.lastPointerType = null;
       })
       .on("contextmenu", (e) => {
         e.preventDefault();

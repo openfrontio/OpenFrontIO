@@ -4,6 +4,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { UnitDisplay } from "../../src/client/hud/layers/UnitDisplay";
 import "../../src/client/hud/layers/UnitDisplay";
 import {
+  FORWARDED_TOUCH_CLICK,
   ToggleStructureEvent,
   TouchGhostPlacementSelectEvent,
 } from "../../src/client/InputHandler";
@@ -11,11 +12,14 @@ import {
 function makeDisplay(
   ghostStructure: UnitType | null = null,
   disabledUnits: UnitType[] = [],
+  tutorial = false,
+  hasMissileSilo = false,
 ) {
   const player = {
     gold: () => 1000n,
     isAlive: () => true,
-    units: () => [],
+    units: (unitType: UnitType) =>
+      hasMissileSilo && unitType === UnitType.MissileSilo ? [{}] : [],
   };
   const inputHandler = { setGhostStructure: vi.fn() };
   const display = document.createElement("unit-display") as UnitDisplay;
@@ -24,13 +28,14 @@ function makeDisplay(
     inSpawnPhase: () => false,
     config: () => ({
       isUnitDisabled: (unitType: UnitType) => disabledUnits.includes(unitType),
-      gameConfig: () => ({ tutorial: false }),
+      gameConfig: () => ({ tutorial }),
     }),
   } as any;
   const eventBus = new EventBus();
   display.eventBus = eventBus;
   display.inputHandler = inputHandler as any;
   display.uiState = { ghostStructure, upgradeMultiplier: 1 } as any;
+  if (tutorial) display.classList.add("hidden");
   display.init();
   document.body.appendChild(display);
   display.requestUpdate();
@@ -114,6 +119,20 @@ describe("mobile UnitDisplay layout", () => {
     }
   });
 
+  test("tutorial shows only enabled atom button after silo is captured", async () => {
+    const { display } = makeDisplay(null, [], true, true);
+    try {
+      await display.updateComplete;
+
+      const grid = display.querySelector<HTMLElement>(".unit-display-grid");
+      expect(display.classList.contains("hidden")).toBe(false);
+      expect(grid?.children).toHaveLength(1);
+      expect(grid?.style.getPropertyValue("--unit-display-columns")).toBe("1");
+    } finally {
+      display.remove();
+    }
+  });
+
   test("the build bar opts into radial-menu click-through", async () => {
     const { display } = makeDisplay();
     try {
@@ -186,6 +205,7 @@ describe("mobile UnitDisplay layout", () => {
             bubbles: true,
           }),
         );
+        dispatchTouch(cityItem, "touchstart", 42);
 
         vi.advanceTimersByTime(500);
         await display.updateComplete;
@@ -207,6 +227,7 @@ describe("mobile UnitDisplay layout", () => {
             bubbles: true,
           }),
         );
+        dispatchTouch(cityItem, "touchend", 42);
         cityItem
           .querySelector("div > div")
           ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -305,6 +326,79 @@ describe("mobile UnitDisplay layout", () => {
         );
 
         expect(selected).toHaveLength(1);
+      } finally {
+        display.remove();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a touch tap forwarded as a MouseEvent enables touch placement mode", async () => {
+    const { display, eventBus } = makeDisplay();
+    try {
+      const selected: TouchGhostPlacementSelectEvent[] = [];
+      eventBus.on(TouchGhostPlacementSelectEvent, (event) =>
+        selected.push(event),
+      );
+      await display.updateComplete;
+      const button = display.querySelector(
+        ".unit-display-grid > * > div > div",
+      ) as HTMLElement;
+      const click = new MouseEvent("click", { bubbles: true });
+      Object.defineProperty(click, FORWARDED_TOUCH_CLICK, { value: true });
+      button.dispatchEvent(click);
+
+      expect(selected).toHaveLength(1);
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("a hold without a generated click does not suppress the next mouse click", async () => {
+    vi.useFakeTimers();
+    try {
+      const { display, inputHandler } = makeDisplay();
+      try {
+        await display.updateComplete;
+        const cityItem = display.querySelector(".unit-display-grid")
+          ?.firstElementChild as HTMLElement;
+        cityItem.dispatchEvent(
+          new PointerEvent("pointerdown", {
+            button: 0,
+            pointerId: 1,
+            pointerType: "touch",
+            bubbles: true,
+          }),
+        );
+        dispatchTouch(cityItem, "touchstart", 42);
+        vi.advanceTimersByTime(500);
+        cityItem.dispatchEvent(
+          new PointerEvent("pointerup", {
+            button: 0,
+            pointerId: 1,
+            pointerType: "touch",
+            bubbles: true,
+          }),
+        );
+        dispatchTouch(cityItem, "touchend", 42);
+
+        cityItem.dispatchEvent(
+          new PointerEvent("pointerdown", {
+            button: 0,
+            pointerId: 2,
+            pointerType: "mouse",
+            bubbles: true,
+          }),
+        );
+        cityItem
+          .querySelector("div > div")
+          ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+        expect(inputHandler.setGhostStructure).toHaveBeenCalledWith(
+          UnitType.City,
+          "GUIclick",
+        );
       } finally {
         display.remove();
       }
@@ -598,6 +692,7 @@ describe("mobile UnitDisplay layout", () => {
       const cityItem = display.querySelector(".unit-display-grid")
         ?.firstElementChild as HTMLElement;
       const button = cityItem.querySelector("div > div") as HTMLElement;
+      button.dispatchEvent(new MouseEvent("mouseenter"));
       cityItem.dispatchEvent(
         new PointerEvent("pointerdown", {
           button: 0,
@@ -625,6 +720,7 @@ describe("mobile UnitDisplay layout", () => {
       );
 
       expect(inputHandler.setGhostStructure).not.toHaveBeenCalled();
+      expect(emitted[0]?.structureTypes).toEqual([UnitType.City]);
       expect(emitted[emitted.length - 1]?.structureTypes).toBeNull();
     } finally {
       display.remove();

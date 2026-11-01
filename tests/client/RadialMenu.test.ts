@@ -5,7 +5,11 @@ import {
   centerButtonElement,
   rootMenuElement,
 } from "../../src/client/hud/layers/RadialMenuElements";
-import { CloseViewEvent, FORWARDED_CLICK } from "../../src/client/InputHandler";
+import {
+  CloseViewEvent,
+  FORWARDED_CLICK,
+  FORWARDED_TOUCH_CLICK,
+} from "../../src/client/InputHandler";
 
 // jsdom has no layout, so there is no element under a point to forward to.
 function stubElementFromPoint(element: Element | null) {
@@ -60,6 +64,28 @@ describe("RadialMenu overlay click-through", () => {
     // The layer has to be able to tell a forwarded tap from a real press.
     expect(
       (clicks[0] as unknown as Record<string, unknown>)[FORWARDED_CLICK],
+    ).toBe(true);
+  });
+
+  test("preserves touch identity when forwarding a click", () => {
+    const { overlay } = makeMenu();
+    const { button, clicks } = makeBuildBarButton();
+    stubElementFromPoint(button);
+
+    overlay.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 1,
+        pointerType: "touch",
+        bubbles: true,
+      }),
+    );
+    overlay.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, clientX: 10, clientY: 20 }),
+    );
+
+    expect(clicks).toHaveLength(1);
+    expect(
+      (clicks[0] as unknown as Record<string, unknown>)[FORWARDED_TOUCH_CLICK],
     ).toBe(true);
   });
 

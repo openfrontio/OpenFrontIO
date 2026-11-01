@@ -103,10 +103,19 @@ export class CloseViewEvent implements GameEvent {}
  * the browser handles itself.
  */
 export const FORWARDED_CLICK = "forwardedFromRadialOverlay";
+/** Marks a click forwarded by the radial overlay that originated from touch. */
+export const FORWARDED_TOUCH_CLICK = "forwardedTouchFromRadialOverlay";
 
 export function isForwardedClick(event: Event): boolean {
   return (
     (event as unknown as Record<string, unknown>)[FORWARDED_CLICK] === true
+  );
+}
+
+export function isForwardedTouchClick(event: Event): boolean {
+  return (
+    (event as unknown as Record<string, unknown>)[FORWARDED_TOUCH_CLICK] ===
+    true
   );
 }
 

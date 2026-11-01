@@ -1703,6 +1703,7 @@ describe("BuildPreviewController touch preview", () => {
     const { controller, player, eventBus, view } = makeController(
       UnitType.City,
     );
+    (controller as any).ghostUnit = null;
     const requestAnimationFrame = vi
       .spyOn(globalThis, "requestAnimationFrame")
       .mockImplementation(() => 0);
@@ -2171,6 +2172,7 @@ describe("BuildPreviewController touch preview", () => {
     c.lastGhostData.snapToPlacement = false;
     expect(c.isNearTouchPreview(100, 100)).toBe(true);
     expect(c.isNearTouchPreview(200, 200)).toBe(false);
+    expect(c.isNearTouchPreview(100, 200)).toBe(false);
   });
 
   test("ignores validation returned for an earlier touch preview", async () => {

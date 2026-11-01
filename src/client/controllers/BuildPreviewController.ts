@@ -469,6 +469,7 @@ export class BuildPreviewController implements Controller {
     const target = this.uiState.ghostStructure;
     if (this.ghostUnit) {
       if (target === null) {
+        this.touchPlacementMode = false;
         this.removeGhostStructure();
       } else if (target !== this.ghostUnit.buildableUnit.type) {
         const touchPreviewTile = this.touchPlacementMode
