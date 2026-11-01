@@ -1912,6 +1912,20 @@ describe("mobile tap-preview placement", () => {
     expect(highlights[0].structureTypes).toBeNull();
   });
 
+  test("hotkey build selection updates structure highlight types", () => {
+    const highlights: ToggleStructureEvent[] = [];
+    eventBus.on(ToggleStructureEvent, (event) => highlights.push(event));
+
+    inputHandler.setGhostStructure(UnitType.SAMLauncher, "hotkey");
+
+    expect(highlights).toHaveLength(1);
+    expect(highlights[0].structureTypes).toEqual([UnitType.SAMLauncher]);
+
+    inputHandler.setGhostStructure(UnitType.Warship, "hotkey");
+    expect(highlights).toHaveLength(2);
+    expect(highlights[1].structureTypes).toEqual([UnitType.Port]);
+  });
+
   test("touches return to the normal map action after the ghost is canceled", () => {
     const placements: TouchGhostPlacementEvent[] = [];
     const touches: TouchEvent[] = [];

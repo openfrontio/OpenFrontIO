@@ -14,6 +14,7 @@ import {
   InputHandler,
   ToggleStructureEvent,
   TouchGhostPlacementSelectEvent,
+  highlightTypesForUnit,
   isForwardedTouchClick,
 } from "../../InputHandler";
 import { KeyboardLayoutController } from "../../KeyboardLayout";
@@ -328,20 +329,6 @@ export class UnitDisplay extends LitElement implements Controller {
 
   private clearTouchClickTarget() {
     this.lastTouchClickItem = null;
-  }
-
-  private highlightTypesForUnit(
-    unitType: PlayerBuildableUnitType,
-  ): PlayerBuildableUnitType[] {
-    switch (unitType) {
-      case UnitType.AtomBomb:
-      case UnitType.HydrogenBomb:
-        return [UnitType.MissileSilo, UnitType.SAMLauncher];
-      case UnitType.Warship:
-        return [UnitType.Port];
-      default:
-        return [unitType];
-    }
   }
 
   private isTouchClick(event: Event, item: Element | null): boolean {
@@ -667,20 +654,25 @@ export class UnitDisplay extends LitElement implements Controller {
               if (fromTouch) {
                 this.eventBus?.emit(new TouchGhostPlacementSelectEvent());
                 this.eventBus?.emit(
-                  new ToggleStructureEvent(
-                    this.highlightTypesForUnit(unitType),
-                  ),
+                  new ToggleStructureEvent(highlightTypesForUnit(unitType)),
                 );
               }
             } else {
-              this.eventBus?.emit(new ToggleStructureEvent(null));
+              const selectedGhost = this.uiState.ghostStructure;
+              this.eventBus?.emit(
+                new ToggleStructureEvent(
+                  selectedGhost === null
+                    ? null
+                    : highlightTypesForUnit(selectedGhost),
+                ),
+              );
             }
             this.requestUpdate();
           }}
           @pointerenter=${(event: PointerEvent) => {
             if (event.pointerType === "touch") return;
             this.eventBus?.emit(
-              new ToggleStructureEvent(this.highlightTypesForUnit(unitType)),
+              new ToggleStructureEvent(highlightTypesForUnit(unitType)),
             );
           }}
           @pointerleave=${(event: PointerEvent) => {

@@ -13,6 +13,7 @@ import {
   TouchGhostPlacementDragStartEvent,
   TouchGhostPlacementEvent,
   TouchGhostPlacementSelectEvent,
+  ToggleStructureEvent,
 } from "../../../src/client/InputHandler";
 import { BuildUnitIntentEvent } from "../../../src/client/Transport";
 
@@ -283,8 +284,12 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     expect(emitted).toEqual([]);
     pending[1]([{ type: UnitType.City, canBuild: 45, canUpgrade: false }]);
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(emitted).toHaveLength(1);
-    expect((emitted[0] as BuildUnitIntentEvent).tile).toBe(45);
+    const intents = emitted.filter(
+      (event): event is BuildUnitIntentEvent =>
+        event instanceof BuildUnitIntentEvent,
+    );
+    expect(intents).toHaveLength(1);
+    expect(intents[0].tile).toBe(45);
     expect(c.pendingConfirmations).toHaveLength(0);
   });
 
@@ -307,8 +312,11 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       c.uiState.preventStacking = !held;
       reply([{ type: UnitType.City, canBuild: 43, canUpgrade: 7 }]);
       await Promise.resolve();
-      expect(emitted).toHaveLength(1);
-      expect(emitted[0] instanceof BuildUnitIntentEvent).toBe(held);
+      const intents = emitted.filter(
+        (event): event is BuildUnitIntentEvent =>
+          event instanceof BuildUnitIntentEvent,
+      );
+      expect(intents).toHaveLength(held ? 1 : 0);
     },
   );
 
@@ -363,7 +371,12 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     await Promise.resolve();
     expect(c.ghostUnit).toBeNull();
     expect(c.pendingConfirmations).toHaveLength(0);
-    expect(emitted).toEqual([]);
+    expect(
+      emitted.filter((event) => event instanceof BuildUnitIntentEvent),
+    ).toEqual([]);
+    expect(emitted).toEqual([
+      expect.objectContaining({ structureTypes: null }),
+    ]);
   });
 
   test("renderGhost requests rails without flooding a slow worker or reviving canceled ghosts", async () => {
@@ -1729,6 +1742,21 @@ describe("BuildPreviewController touch preview", () => {
     } finally {
       requestAnimationFrame.mockRestore();
     }
+  });
+
+  test("removing an existing ghost clears its highlight", () => {
+    const { controller, eventBus } = makeController(UnitType.City);
+    const highlights: ToggleStructureEvent[] = [];
+    eventBus.on(ToggleStructureEvent, (event) => highlights.push(event));
+
+    (controller as any).removeGhostStructure();
+    expect(highlights).toHaveLength(1);
+    expect(highlights[0].structureTypes).toBeNull();
+
+    (controller as any).ghostUnit = null;
+    highlights.length = 0;
+    (controller as any).removeGhostStructure();
+    expect(highlights).toHaveLength(0);
   });
 
   function makeDeferredBuildablesController(type: UnitType) {

@@ -30,6 +30,7 @@ import {
   TouchGhostPlacementEvent,
   TouchGhostPlacementMoveEvent,
   TouchGhostPlacementSelectEvent,
+  ToggleStructureEvent,
 } from "../InputHandler";
 import type { MapRenderer } from "../render/gl";
 import {
@@ -1353,9 +1354,12 @@ export class BuildPreviewController implements Controller {
   }
 
   private removeGhostStructure() {
+    const hadGhost =
+      this.ghostUnit !== null || this.uiState.ghostStructure !== null;
     this.touchPlacementMode = false;
     this.clearGhostStructure();
     this.uiState.ghostStructure = null;
+    if (hadGhost) this.eventBus.emit(new ToggleStructureEvent(null));
   }
 
   private resolveGhostRangeLevel(

@@ -486,6 +486,28 @@ describe("mobile UnitDisplay layout", () => {
     }
   });
 
+  test("a second touchstart invalidates a pending iOS-style click", async () => {
+    const { display, eventBus } = makeDisplay();
+    try {
+      const selected: TouchGhostPlacementSelectEvent[] = [];
+      eventBus.on(TouchGhostPlacementSelectEvent, (event) =>
+        selected.push(event),
+      );
+      await display.updateComplete;
+      const item = display.querySelector(".unit-display-grid > *")
+        ?.firstElementChild as HTMLElement;
+
+      dispatchTouch(item, "touchstart", 43);
+      dispatchTouch(item, "touchend", 43);
+      dispatchTouch(item, "touchstart", 44);
+      item.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
+
+      expect(selected).toHaveLength(0);
+    } finally {
+      display.remove();
+    }
+  });
+
   test("a hold without a generated click does not suppress the next mouse click", async () => {
     vi.useFakeTimers();
     try {
@@ -811,8 +833,10 @@ describe("mobile UnitDisplay layout", () => {
     }
   });
 
-  test("touch tap on an unbuildable button clears its structure highlight", async () => {
-    const { display, inputHandler, eventBus } = makeDisplay();
+  test("touch tap on an unbuildable button preserves the selected ghost highlight", async () => {
+    const { display, inputHandler, eventBus } = makeDisplay(
+      UnitType.SAMLauncher,
+    );
     try {
       const emitted: ToggleStructureEvent[] = [];
       eventBus.on(ToggleStructureEvent, (event) => emitted.push(event));
@@ -857,7 +881,9 @@ describe("mobile UnitDisplay layout", () => {
 
       expect(inputHandler.setGhostStructure).not.toHaveBeenCalled();
       expect(emitted[0]?.structureTypes).toEqual([UnitType.City]);
-      expect(emitted[emitted.length - 1]?.structureTypes).toBeNull();
+      expect(emitted[emitted.length - 1]?.structureTypes).toEqual([
+        UnitType.SAMLauncher,
+      ]);
     } finally {
       display.remove();
     }

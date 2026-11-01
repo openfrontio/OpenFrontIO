@@ -131,6 +131,22 @@ export class ToggleStructureEvent implements GameEvent {
   ) {}
 }
 
+export function highlightTypesForUnit(
+  unitType: PlayerBuildableUnitType,
+): PlayerBuildableUnitType[] {
+  switch (unitType) {
+    case UnitType.AtomBomb:
+    case UnitType.HydrogenBomb:
+      return [UnitType.MissileSilo, UnitType.SAMLauncher];
+    case UnitType.Warship:
+      return [UnitType.Port];
+    case UnitType.MIRV:
+      return [UnitType.MissileSilo];
+    default:
+      return [unitType];
+  }
+}
+
 export class ConfirmGhostStructureEvent implements GameEvent {}
 
 export class TouchGhostPlacementEvent implements GameEvent {
@@ -1575,6 +1591,15 @@ export class InputHandler {
     }
     if (previousGhostStructure !== null && ghostStructure === null) {
       this.eventBus.emit(new ToggleStructureEvent(null));
+    }
+    if (
+      source === "hotkey" &&
+      ghostStructure !== null &&
+      previousGhostStructure !== ghostStructure
+    ) {
+      this.eventBus.emit(
+        new ToggleStructureEvent(highlightTypesForUnit(ghostStructure)),
+      );
     }
 
     if (
