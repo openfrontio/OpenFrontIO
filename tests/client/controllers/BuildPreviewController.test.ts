@@ -1699,6 +1699,17 @@ describe("BuildPreviewController touch preview", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
+  test("removing a ghost resets touch placement mode but changing its type preserves it", () => {
+    const { controller } = makeController(UnitType.City);
+    (controller as any).touchPlacementMode = true;
+
+    (controller as any).clearGhostStructure();
+    expect((controller as any).touchPlacementMode).toBe(true);
+
+    (controller as any).removeGhostStructure();
+    expect((controller as any).touchPlacementMode).toBe(false);
+  });
+
   test("touch build selection hides the initial preview until a map touch", () => {
     const { controller, player, eventBus, view } = makeController(
       UnitType.City,

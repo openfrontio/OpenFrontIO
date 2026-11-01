@@ -83,6 +83,7 @@ export class UnitDisplay extends LitElement implements Controller {
   private suppressNextClick = false;
   // Keep the hold's release click suppressed, but not a later physical click.
   private suppressReleaseClick = false;
+  private lastTouchClickItem: HTMLElement | null = null;
   private peekPointerId: number | null = null;
   private peekTouchIdentifier: number | null = null;
   private activeTouchIdentifiers = new Set<number>();
@@ -176,6 +177,7 @@ export class UnitDisplay extends LitElement implements Controller {
     this.activeTouchIdentifiers.clear();
     this.suppressNextClick = false;
     this.suppressReleaseClick = false;
+    this.clearTouchClickTarget();
     this.windowListenersAttached = false;
   }
 
@@ -244,6 +246,7 @@ export class UnitDisplay extends LitElement implements Controller {
   /** A press outside the bar dismisses the peek it opened. */
   private handleDocumentPointerDown = (event: PointerEvent) => {
     this.suppressReleaseClick = false;
+    if (event.pointerType !== "touch") this.clearTouchClickTarget();
     if (this._peekedUnitTooltip === null) return;
     const root = this.querySelector(".unit-display-root");
     if (root && event.target instanceof Node && root.contains(event.target)) {
@@ -283,6 +286,7 @@ export class UnitDisplay extends LitElement implements Controller {
     const changedTouches = Array.from(event.changedTouches);
 
     if (event.type === "touchstart") {
+      this.clearTouchClickTarget();
       for (const touch of changedTouches) {
         this.activeTouchIdentifiers.add(touch.identifier);
       }
@@ -290,6 +294,12 @@ export class UnitDisplay extends LitElement implements Controller {
         this.peekTouchIdentifier = changedTouches[0]?.identifier ?? null;
       }
     } else {
+      if (event.type === "touchend" && isInBuildBar) {
+        this.lastTouchClickItem =
+          event.target instanceof Element
+            ? event.target.closest<HTMLElement>(".unit-display-grid > div")
+            : null;
+      }
       const trackedTouchEnded = changedTouches.some(
         (touch) => touch.identifier === this.peekTouchIdentifier,
       );
@@ -306,6 +316,7 @@ export class UnitDisplay extends LitElement implements Controller {
         this.suppressNextClick = false;
         if (this._peekedUnitTooltip !== null) this.dismissPeek();
       } else {
+        this.clearTouchClickTarget();
         this.suppressNextClick = false;
         this.suppressReleaseClick = false;
         if (this._peekedUnitTooltip !== null) {
@@ -314,6 +325,35 @@ export class UnitDisplay extends LitElement implements Controller {
       }
     }
   };
+
+  private clearTouchClickTarget() {
+    this.lastTouchClickItem = null;
+  }
+
+  private highlightTypesForUnit(
+    unitType: PlayerBuildableUnitType,
+  ): PlayerBuildableUnitType[] {
+    switch (unitType) {
+      case UnitType.AtomBomb:
+      case UnitType.HydrogenBomb:
+        return [UnitType.MissileSilo, UnitType.SAMLauncher];
+      case UnitType.Warship:
+        return [UnitType.Port];
+      default:
+        return [unitType];
+    }
+  }
+
+  private isTouchClick(event: Event, item: Element | null): boolean {
+    const isTouch =
+      (event instanceof PointerEvent && event.pointerType === "touch") ||
+      isForwardedTouchClick(event) ||
+      (event instanceof MouseEvent &&
+        event.detail > 0 &&
+        item === this.lastTouchClickItem);
+    this.clearTouchClickTarget();
+    return isTouch;
+  }
 
   private startPeekGraceTimer() {
     if (this.peekGraceTimer !== null) clearTimeout(this.peekGraceTimer);
@@ -609,6 +649,10 @@ export class UnitDisplay extends LitElement implements Controller {
              rounded-sm text-white ${selected ? "bg-slate-400/20" : ""}
              ${this.tutorialHighlight === unitType ? "tutorial-highlight" : ""}"
           @click=${(event: Event) => {
+            const item = (event.currentTarget as HTMLElement).closest(
+              ".unit-display-grid > div",
+            );
+            const fromTouch = this.isTouchClick(event, item);
             // A press that turned into a peek shows the details instead of
             // selecting the unit
             if (this.suppressNextClick || this.suppressReleaseClick) {
@@ -620,38 +664,29 @@ export class UnitDisplay extends LitElement implements Controller {
               this.inputHandler.setGhostStructure(null, "GUIclick");
             } else if (this.canBuild(unitType)) {
               this.inputHandler.setGhostStructure(unitType, "GUIclick");
-              if (
-                (event instanceof PointerEvent &&
-                  event.pointerType === "touch") ||
-                isForwardedTouchClick(event)
-              ) {
+              if (fromTouch) {
                 this.eventBus?.emit(new TouchGhostPlacementSelectEvent());
+                this.eventBus?.emit(
+                  new ToggleStructureEvent(
+                    this.highlightTypesForUnit(unitType),
+                  ),
+                );
               }
             } else {
               this.eventBus?.emit(new ToggleStructureEvent(null));
             }
             this.requestUpdate();
           }}
-          @mouseenter=${() => {
-            switch (unitType) {
-              case UnitType.AtomBomb:
-              case UnitType.HydrogenBomb:
-                this.eventBus?.emit(
-                  new ToggleStructureEvent([
-                    UnitType.MissileSilo,
-                    UnitType.SAMLauncher,
-                  ]),
-                );
-                break;
-              case UnitType.Warship:
-                this.eventBus?.emit(new ToggleStructureEvent([UnitType.Port]));
-                break;
-              default:
-                this.eventBus?.emit(new ToggleStructureEvent([unitType]));
-            }
+          @pointerenter=${(event: PointerEvent) => {
+            if (event.pointerType === "touch") return;
+            this.eventBus?.emit(
+              new ToggleStructureEvent(this.highlightTypesForUnit(unitType)),
+            );
           }}
-          @mouseleave=${() =>
-            this.eventBus?.emit(new ToggleStructureEvent(null))}
+          @pointerleave=${(event: PointerEvent) => {
+            if (event.pointerType === "touch") return;
+            this.eventBus?.emit(new ToggleStructureEvent(null));
+          }}
         >
           ${
             hotkey

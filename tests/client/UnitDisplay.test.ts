@@ -1,4 +1,8 @@
-import { BuildMenus, UnitType } from "@openfront/engine-api/game/GameTypes";
+import {
+  BuildMenus,
+  PlayerBuildableUnitType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import { EventBus } from "@openfront/shared/EventBus";
 import { describe, expect, test, vi } from "vitest";
 import type { UnitDisplay } from "../../src/client/hud/layers/UnitDisplay";
@@ -21,8 +25,16 @@ function makeDisplay(
     units: (unitType: UnitType) =>
       hasMissileSilo && unitType === UnitType.MissileSilo ? [{}] : [],
   };
-  const inputHandler = { setGhostStructure: vi.fn() };
+  const eventBus = new EventBus();
   const display = document.createElement("unit-display") as UnitDisplay;
+  const inputHandler = {
+    setGhostStructure: vi.fn((unitType: PlayerBuildableUnitType | null) => {
+      if (display.uiState.ghostStructure !== null && unitType === null) {
+        eventBus.emit(new ToggleStructureEvent(null));
+      }
+      display.uiState.ghostStructure = unitType;
+    }),
+  };
   display.game = {
     myPlayer: () => player,
     inSpawnPhase: () => false,
@@ -31,7 +43,6 @@ function makeDisplay(
       gameConfig: () => ({ tutorial }),
     }),
   } as any;
-  const eventBus = new EventBus();
   display.eventBus = eventBus;
   display.inputHandler = inputHandler as any;
   display.uiState = { ghostStructure, upgradeMultiplier: 1 } as any;
@@ -334,6 +345,86 @@ describe("mobile UnitDisplay layout", () => {
     }
   });
 
+  test("repeated touch taps reapply build highlights after toggling off", async () => {
+    const { display, eventBus } = makeDisplay();
+    try {
+      const highlights: ToggleStructureEvent[] = [];
+      eventBus.on(ToggleStructureEvent, (event) => highlights.push(event));
+      await display.updateComplete;
+      const item = display.querySelectorAll(".unit-display-grid > *")[5];
+      const button = item.querySelector("div > div") as HTMLElement;
+
+      const tap = () =>
+        button.dispatchEvent(
+          new PointerEvent("click", {
+            bubbles: true,
+            pointerId: 1,
+            pointerType: "touch",
+          }),
+        );
+
+      tap();
+      expect(highlights[highlights.length - 1]?.structureTypes).toEqual([
+        UnitType.SAMLauncher,
+      ]);
+      await display.updateComplete;
+
+      tap();
+      expect(highlights[highlights.length - 1]?.structureTypes).toBeNull();
+      await display.updateComplete;
+
+      tap();
+      expect(highlights[highlights.length - 1]?.structureTypes).toEqual([
+        UnitType.SAMLauncher,
+      ]);
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("touch pointer leave does not clear a selected build highlight", async () => {
+    const { display, eventBus } = makeDisplay();
+    try {
+      const highlights: ToggleStructureEvent[] = [];
+      eventBus.on(ToggleStructureEvent, (event) => highlights.push(event));
+      await display.updateComplete;
+      const button = display.querySelectorAll(
+        ".unit-display-grid > * > div > div",
+      )[0] as HTMLElement;
+
+      button.dispatchEvent(
+        new PointerEvent("click", {
+          bubbles: true,
+          pointerId: 1,
+          pointerType: "touch",
+        }),
+      );
+      button.dispatchEvent(
+        new PointerEvent("pointerleave", {
+          bubbles: true,
+          pointerId: 1,
+          pointerType: "touch",
+        }),
+      );
+      button.dispatchEvent(new MouseEvent("mouseleave"));
+
+      expect(highlights[highlights.length - 1]?.structureTypes).toEqual([
+        UnitType.City,
+      ]);
+
+      button.dispatchEvent(
+        new PointerEvent("pointerleave", {
+          bubbles: true,
+          pointerId: 2,
+          pointerType: "mouse",
+        }),
+      );
+      expect(highlights[highlights.length - 1]?.structureTypes).toBeNull();
+    } finally {
+      display.remove();
+    }
+  });
+
   test("a touch tap forwarded as a MouseEvent enables touch placement mode", async () => {
     const { display, eventBus } = makeDisplay();
     try {
@@ -350,6 +441,46 @@ describe("mobile UnitDisplay layout", () => {
       button.dispatchEvent(click);
 
       expect(selected).toHaveLength(1);
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("an iOS-style MouseEvent click after touchend enters touch placement mode", async () => {
+    const { display, eventBus } = makeDisplay();
+    try {
+      const selected: TouchGhostPlacementSelectEvent[] = [];
+      const highlights: ToggleStructureEvent[] = [];
+      eventBus.on(TouchGhostPlacementSelectEvent, (event) =>
+        selected.push(event),
+      );
+      eventBus.on(ToggleStructureEvent, (event) => highlights.push(event));
+      await display.updateComplete;
+      const item = display.querySelector(".unit-display-grid > *")
+        ?.firstElementChild as HTMLElement;
+
+      item.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          pointerId: 7,
+          pointerType: "touch",
+        }),
+      );
+      dispatchTouch(item, "touchstart", 43);
+      item.dispatchEvent(
+        new PointerEvent("pointerup", {
+          bubbles: true,
+          pointerId: 7,
+          pointerType: "touch",
+        }),
+      );
+      dispatchTouch(item, "touchend", 43);
+      item.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
+
+      expect(selected).toHaveLength(1);
+      expect(highlights[highlights.length - 1]?.structureTypes).toEqual([
+        UnitType.City,
+      ]);
     } finally {
       display.remove();
     }
@@ -692,7 +823,12 @@ describe("mobile UnitDisplay layout", () => {
       const cityItem = display.querySelector(".unit-display-grid")
         ?.firstElementChild as HTMLElement;
       const button = cityItem.querySelector("div > div") as HTMLElement;
-      button.dispatchEvent(new MouseEvent("mouseenter"));
+      button.dispatchEvent(
+        new PointerEvent("pointerenter", {
+          pointerId: 1,
+          pointerType: "mouse",
+        }),
+      );
       cityItem.dispatchEvent(
         new PointerEvent("pointerdown", {
           button: 0,
