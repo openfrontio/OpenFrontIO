@@ -12,6 +12,7 @@ import {
   MouseUpEvent,
   TouchGhostPlacementDragStartEvent,
   TouchGhostPlacementEvent,
+  TouchGhostPlacementSelectEvent,
 } from "../../../src/client/InputHandler";
 import { BuildUnitIntentEvent } from "../../../src/client/Transport";
 
@@ -1653,6 +1654,10 @@ describe("BuildPreviewController touch preview", () => {
           ),
       ),
     };
+    const view = {
+      updateGhostPreview: vi.fn(),
+      updateNukeTrajectory: vi.fn(),
+    };
     const controller = new BuildPreviewController(
       {
         myPlayer: () => player,
@@ -1677,10 +1682,7 @@ describe("BuildPreviewController touch preview", () => {
         worldToScreenCoordinates: (cell: { x: number }) =>
           cell.x < 2 ? { x: 100, y: 100 } : { x: 200, y: 200 },
       } as any,
-      {
-        updateGhostPreview: vi.fn(),
-        updateNukeTrajectory: vi.fn(),
-      } as any,
+      view as any,
       {
         nukeAllianceSafetyDuration: () => 0,
         cursorCostLabel: () => false,
@@ -1690,12 +1692,32 @@ describe("BuildPreviewController touch preview", () => {
     (controller as any).ghostUnit = {
       buildableUnit: { type, canBuild: true, canUpgrade: false },
     };
-    return { controller, builds, uiState, player, eventBus };
+    return { controller, builds, uiState, player, eventBus, view };
   }
 
   async function flushBuildables(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
+
+  test("touch build selection hides the initial preview until a map touch", () => {
+    const { controller, player, eventBus, view } = makeController(
+      UnitType.City,
+    );
+    const requestAnimationFrame = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockImplementation(() => 0);
+    try {
+      controller.init();
+      eventBus.emit(new TouchGhostPlacementSelectEvent());
+
+      expect((controller as any).touchPlacementMode).toBe(true);
+      expect((controller as any).touchPreviewTile).toBeNull();
+      expect(player.buildables).not.toHaveBeenCalled();
+      expect(view.updateGhostPreview).toHaveBeenLastCalledWith(null);
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
 
   function makeDeferredBuildablesController(type: UnitType) {
     const fixture = makeController(type);

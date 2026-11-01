@@ -131,6 +131,8 @@ export class TouchGhostPlacementEvent implements GameEvent {
   ) {}
 }
 
+export class TouchGhostPlacementSelectEvent implements GameEvent {}
+
 export class TouchGhostPlacementMoveEvent implements GameEvent {
   constructor(
     public readonly x: number,

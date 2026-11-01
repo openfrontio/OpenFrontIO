@@ -29,6 +29,7 @@ import {
   TouchGhostPlacementDragStartEvent,
   TouchGhostPlacementEvent,
   TouchGhostPlacementMoveEvent,
+  TouchGhostPlacementSelectEvent,
 } from "../InputHandler";
 import type { MapRenderer } from "../render/gl";
 import {
@@ -306,6 +307,11 @@ export class BuildPreviewController implements Controller {
     this.eventBus.on(TouchGhostPlacementMoveEvent, (e) =>
       this.moveTouchPreview(e.x, e.y),
     );
+    this.eventBus.on(TouchGhostPlacementSelectEvent, () => {
+      this.touchPlacementMode = true;
+      this.syncGhostState();
+      this.renderGhost();
+    });
     this.eventBus.on(TouchGhostPlacementDragStartEvent, (e) => {
       e.handled =
         this.touchPreviewTile === null || this.isNearTouchPreview(e.x, e.y);

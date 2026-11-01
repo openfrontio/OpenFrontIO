@@ -1,10 +1,17 @@
-import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { BuildMenus, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { EventBus } from "@openfront/shared/EventBus";
 import { describe, expect, test, vi } from "vitest";
-import "../../src/client/hud/layers/UnitDisplay";
 import type { UnitDisplay } from "../../src/client/hud/layers/UnitDisplay";
+import "../../src/client/hud/layers/UnitDisplay";
+import {
+  ToggleStructureEvent,
+  TouchGhostPlacementSelectEvent,
+} from "../../src/client/InputHandler";
 
-function makeDisplay(ghostStructure: UnitType | null = null) {
+function makeDisplay(
+  ghostStructure: UnitType | null = null,
+  disabledUnits: UnitType[] = [],
+) {
   const player = {
     gold: () => 1000n,
     isAlive: () => true,
@@ -15,14 +22,19 @@ function makeDisplay(ghostStructure: UnitType | null = null) {
   display.game = {
     myPlayer: () => player,
     inSpawnPhase: () => false,
-    config: () => ({ isUnitDisabled: () => false }),
+    config: () => ({
+      isUnitDisabled: (unitType: UnitType) => disabledUnits.includes(unitType),
+      gameConfig: () => ({ tutorial: false }),
+    }),
   } as any;
-  display.eventBus = new EventBus();
+  const eventBus = new EventBus();
+  display.eventBus = eventBus;
   display.inputHandler = inputHandler as any;
   display.uiState = { ghostStructure, upgradeMultiplier: 1 } as any;
+  display.init();
   document.body.appendChild(display);
   display.requestUpdate();
-  return { display, inputHandler };
+  return { display, inputHandler, eventBus };
 }
 
 /**
@@ -64,7 +76,7 @@ describe("mobile UnitDisplay layout", () => {
       await display.updateComplete;
 
       const scroller = display.querySelector(".unit-display-scroll");
-      const grid = scroller?.querySelector(".unit-display-grid");
+      const grid = scroller?.querySelector<HTMLElement>(".unit-display-grid");
       expect(scroller).not.toBeNull();
       expect(scroller?.classList.contains("touch-pan-x")).toBe(true);
       expect(scroller?.classList.contains("lg:overflow-visible")).toBe(true);
@@ -79,6 +91,24 @@ describe("mobile UnitDisplay layout", () => {
         true,
       );
       expect(grid?.children).toHaveLength(10);
+      expect(grid?.style.getPropertyValue("--unit-display-columns")).toBe("10");
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("portrait grid uses only the visible build buttons", async () => {
+    const { display } = makeDisplay(null, [UnitType.City]);
+    try {
+      await display.updateComplete;
+
+      const grid = display.querySelector<HTMLElement>(".unit-display-grid");
+      expect(grid?.children).toHaveLength(BuildMenus.types.length - 1);
+      expect(grid?.style.getPropertyValue("--unit-display-columns")).toBe(
+        String(BuildMenus.types.length - 1),
+      );
+      expect(grid?.classList.contains("lg:grid-cols-none")).toBe(true);
+      expect(grid?.classList.contains("lg:auto-cols-max")).toBe(true);
     } finally {
       display.remove();
     }
@@ -91,6 +121,21 @@ describe("mobile UnitDisplay layout", () => {
 
       const root = display.querySelector(".unit-display-root");
       expect(root?.hasAttribute("data-radial-click-through")).toBe(true);
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("button hover backgrounds are limited to fine pointers", async () => {
+    const { display } = makeDisplay();
+    try {
+      await display.updateComplete;
+      const cityButton = display.querySelector(".unit-display-grid > * > div");
+
+      expect(cityButton?.classList.contains("hover:bg-gray-800")).toBe(false);
+      expect(
+        cityButton?.classList.contains("pointer-fine:hover:bg-gray-800"),
+      ).toBe(true);
     } finally {
       display.remove();
     }
@@ -220,6 +265,54 @@ describe("mobile UnitDisplay layout", () => {
     }
   });
 
+  test("a touch build selection enables touch placement mode", async () => {
+    vi.useFakeTimers();
+    try {
+      const { display, eventBus } = makeDisplay();
+      try {
+        const selected: TouchGhostPlacementSelectEvent[] = [];
+        eventBus.on(TouchGhostPlacementSelectEvent, (event) =>
+          selected.push(event),
+        );
+        await display.updateComplete;
+        const cityItem = display.querySelector(".unit-display-grid")
+          ?.firstElementChild as HTMLElement;
+        const button = cityItem.querySelector("div > div") as HTMLElement;
+        cityItem.dispatchEvent(
+          new PointerEvent("pointerdown", {
+            button: 0,
+            pointerId: 1,
+            pointerType: "touch",
+            bubbles: true,
+          }),
+        );
+        dispatchTouch(cityItem, "touchstart", 42);
+        cityItem.dispatchEvent(
+          new PointerEvent("pointerup", {
+            button: 0,
+            pointerId: 1,
+            pointerType: "touch",
+            bubbles: true,
+          }),
+        );
+        dispatchTouch(cityItem, "touchend", 42);
+        button.dispatchEvent(
+          new PointerEvent("click", {
+            pointerId: 1,
+            pointerType: "touch",
+            bubbles: true,
+          }),
+        );
+
+        expect(selected).toHaveLength(1);
+      } finally {
+        display.remove();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   test("the peek ends when the button is released", async () => {
     vi.useFakeTimers();
     try {
@@ -272,7 +365,6 @@ describe("mobile UnitDisplay layout", () => {
         const cityItem = display.querySelector(".unit-display-grid")
           ?.firstElementChild as HTMLElement;
 
-        dispatchTouch(cityItem, "touchstart", 42);
         cityItem.dispatchEvent(
           new PointerEvent("pointerdown", {
             button: 0,
@@ -281,6 +373,7 @@ describe("mobile UnitDisplay layout", () => {
             bubbles: true,
           }),
         );
+        dispatchTouch(cityItem, "touchstart", 42);
         vi.advanceTimersByTime(500);
         await display.updateComplete;
         expect(display.querySelector(".unit-display-tooltip")).not.toBeNull();
@@ -305,6 +398,236 @@ describe("mobile UnitDisplay layout", () => {
       }
     } finally {
       vi.useRealTimers();
+    }
+  });
+
+  test("touch cancellation hides the peek after its grace period", async () => {
+    vi.useFakeTimers();
+    try {
+      const { display } = makeDisplay();
+      try {
+        await display.updateComplete;
+        const cityItem = display.querySelector(".unit-display-grid")
+          ?.firstElementChild as HTMLElement;
+        cityItem.dispatchEvent(
+          new PointerEvent("pointerdown", {
+            button: 0,
+            pointerId: 1,
+            pointerType: "touch",
+            bubbles: true,
+          }),
+        );
+        dispatchTouch(cityItem, "touchstart", 42);
+        vi.advanceTimersByTime(500);
+        await display.updateComplete;
+        expect(display.querySelector(".unit-display-tooltip")).not.toBeNull();
+
+        cityItem.dispatchEvent(
+          new PointerEvent("pointercancel", {
+            button: 0,
+            pointerId: 1,
+            pointerType: "touch",
+            bubbles: true,
+          }),
+        );
+        dispatchTouch(cityItem, "touchcancel", 42);
+        vi.advanceTimersByTime(1300);
+        await display.updateComplete;
+
+        expect(display.querySelector(".unit-display-tooltip")).toBeNull();
+      } finally {
+        display.remove();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("unrelated pointer cancellation does not stop or dismiss the peek", async () => {
+    vi.useFakeTimers();
+    try {
+      const { display } = makeDisplay();
+      try {
+        await display.updateComplete;
+        const cityItem = display.querySelector(".unit-display-grid")
+          ?.firstElementChild as HTMLElement;
+        cityItem.dispatchEvent(
+          new PointerEvent("pointerdown", {
+            button: 0,
+            pointerId: 1,
+            pointerType: "touch",
+            bubbles: true,
+          }),
+        );
+        dispatchTouch(cityItem, "touchstart", 42);
+        vi.advanceTimersByTime(500);
+        await display.updateComplete;
+
+        document.body.dispatchEvent(
+          new PointerEvent("pointercancel", {
+            pointerId: 2,
+            pointerType: "touch",
+            bubbles: true,
+          }),
+        );
+        document.body.dispatchEvent(
+          new PointerEvent("pointerup", {
+            pointerId: 2,
+            pointerType: "touch",
+            bubbles: true,
+          }),
+        );
+        vi.advanceTimersByTime(1300);
+        await display.updateComplete;
+
+        expect(display.querySelector(".unit-display-tooltip")).not.toBeNull();
+        dispatchTouch(cityItem, "touchend", 42);
+        await display.updateComplete;
+        expect(display.querySelector(".unit-display-tooltip")).toBeNull();
+      } finally {
+        display.remove();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a canceled build touch gets a grace period while another touch remains down", async () => {
+    vi.useFakeTimers();
+    try {
+      const { display } = makeDisplay();
+      try {
+        await display.updateComplete;
+        const cityItem = display.querySelector(".unit-display-grid")
+          ?.firstElementChild as HTMLElement;
+
+        dispatchTouch(document.body, "touchstart", 7);
+        cityItem.dispatchEvent(
+          new PointerEvent("pointerdown", {
+            button: 0,
+            pointerId: 1,
+            pointerType: "touch",
+            bubbles: true,
+          }),
+        );
+        dispatchTouch(cityItem, "touchstart", 42);
+        vi.advanceTimersByTime(500);
+        await display.updateComplete;
+        expect(display.querySelector(".unit-display-tooltip")).not.toBeNull();
+
+        cityItem.dispatchEvent(
+          new PointerEvent("pointercancel", {
+            button: 0,
+            pointerId: 1,
+            pointerType: "touch",
+            bubbles: true,
+          }),
+        );
+        vi.advanceTimersByTime(1300);
+        await display.updateComplete;
+
+        expect(display.querySelector(".unit-display-tooltip")).toBeNull();
+        dispatchTouch(document.body, "touchend", 7);
+      } finally {
+        display.remove();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("a canceled touch does not leave the next click suppressed", async () => {
+    vi.useFakeTimers();
+    try {
+      const { display, inputHandler } = makeDisplay();
+      try {
+        await display.updateComplete;
+        const cityItem = display.querySelector(".unit-display-grid")
+          ?.firstElementChild as HTMLElement;
+        const button = cityItem.querySelector("div > div") as HTMLElement;
+        cityItem.dispatchEvent(
+          new PointerEvent("pointerdown", {
+            button: 0,
+            pointerId: 1,
+            pointerType: "touch",
+            bubbles: true,
+          }),
+        );
+        dispatchTouch(cityItem, "touchstart", 42);
+        vi.advanceTimersByTime(500);
+        await display.updateComplete;
+
+        cityItem.dispatchEvent(
+          new PointerEvent("pointercancel", {
+            button: 0,
+            pointerId: 1,
+            pointerType: "touch",
+            bubbles: true,
+          }),
+        );
+        dispatchTouch(cityItem, "touchcancel", 42);
+        button.dispatchEvent(
+          new PointerEvent("click", {
+            pointerId: 1,
+            pointerType: "touch",
+            bubbles: true,
+          }),
+        );
+
+        expect(inputHandler.setGhostStructure).toHaveBeenCalledWith(
+          UnitType.City,
+          "GUIclick",
+        );
+      } finally {
+        display.remove();
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  test("touch tap on an unbuildable button clears its structure highlight", async () => {
+    const { display, inputHandler, eventBus } = makeDisplay();
+    try {
+      const emitted: ToggleStructureEvent[] = [];
+      eventBus.on(ToggleStructureEvent, (event) => emitted.push(event));
+      (display as any).playerBuildables = [
+        { type: UnitType.City, cost: 1001n },
+      ];
+      await display.updateComplete;
+      const cityItem = display.querySelector(".unit-display-grid")
+        ?.firstElementChild as HTMLElement;
+      const button = cityItem.querySelector("div > div") as HTMLElement;
+      cityItem.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          button: 0,
+          pointerId: 1,
+          pointerType: "touch",
+          bubbles: true,
+        }),
+      );
+      dispatchTouch(cityItem, "touchstart", 42);
+      cityItem.dispatchEvent(
+        new PointerEvent("pointerup", {
+          button: 0,
+          pointerId: 1,
+          pointerType: "touch",
+          bubbles: true,
+        }),
+      );
+      dispatchTouch(cityItem, "touchend", 42);
+      button.dispatchEvent(
+        new PointerEvent("click", {
+          pointerId: 1,
+          pointerType: "touch",
+          bubbles: true,
+        }),
+      );
+
+      expect(inputHandler.setGhostStructure).not.toHaveBeenCalled();
+      expect(emitted[emitted.length - 1]?.structureTypes).toBeNull();
+    } finally {
+      display.remove();
     }
   });
 

@@ -10,7 +10,11 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, nothing } from "lit";
 import { customElement } from "lit/decorators.js";
 import { Controller } from "../../Controller";
-import { InputHandler, ToggleStructureEvent } from "../../InputHandler";
+import {
+  InputHandler,
+  ToggleStructureEvent,
+  TouchGhostPlacementSelectEvent,
+} from "../../InputHandler";
 import { KeyboardLayoutController } from "../../KeyboardLayout";
 import { Platform } from "../../Platform";
 import { UIState } from "../../UIState";
@@ -54,6 +58,7 @@ export class UnitDisplay extends LitElement implements Controller {
   private _defensePost = 0;
   private _samLauncher = 0;
   private allDisabled = false;
+  private enabledUnitCount = 0;
   private _hoveredUnitTooltip: {
     unitType: PlayerBuildableUnitType;
     structureKey: string;
@@ -74,7 +79,9 @@ export class UnitDisplay extends LitElement implements Controller {
   private peekTimer: ReturnType<typeof setTimeout> | null = null;
   private peekGraceTimer: ReturnType<typeof setTimeout> | null = null;
   private suppressNextClick = false;
+  private peekPointerId: number | null = null;
   private peekTouchIdentifier: number | null = null;
+  private activeTouchIdentifiers = new Set<number>();
   // Where the tooltip is centred, in the bar's own coordinates.
   private _tooltipCenter: number | null = null;
   private tutorialHighlight: PlayerBuildableUnitType | null = null;
@@ -96,7 +103,10 @@ export class UnitDisplay extends LitElement implements Controller {
 
     this.keybinds = userSettings.parsedUserKeybinds();
 
-    this.allDisabled = BuildMenus.types.every((u) => config.isUnitDisabled(u));
+    this.enabledUnitCount = BuildMenus.types.filter(
+      (unitType) => !config.isUnitDisabled(unitType),
+    ).length;
+    this.allDisabled = this.enabledUnitCount === 0;
 
     const highlightUnits: Partial<
       Record<TutorialHighlight, PlayerBuildableUnitType>
@@ -153,6 +163,9 @@ export class UnitDisplay extends LitElement implements Controller {
       this.handlePeekTouchEvent,
       true,
     );
+    this.dismissPeek();
+    this.activeTouchIdentifiers.clear();
+    this.suppressNextClick = false;
     this.windowListenersAttached = false;
   }
 
@@ -186,6 +199,7 @@ export class UnitDisplay extends LitElement implements Controller {
     if (event.pointerType !== "touch") return;
     // A new press replaces the peek of the previous one.
     this.dismissPeek();
+    this.peekPointerId = event.pointerId;
     // The press that follows is a new gesture: it may select the unit.
     this.suppressNextClick = false;
     const element = event.currentTarget as HTMLElement;
@@ -206,6 +220,8 @@ export class UnitDisplay extends LitElement implements Controller {
 
   private dismissPeek() {
     this.cancelPeekTimer();
+    this.peekPointerId = null;
+    this.peekTouchIdentifier = null;
     if (this.peekGraceTimer !== null) {
       clearTimeout(this.peekGraceTimer);
       this.peekGraceTimer = null;
@@ -226,15 +242,25 @@ export class UnitDisplay extends LitElement implements Controller {
   };
 
   /** Releasing anywhere ends the hold, wherever the finger ended up. */
-  private handleDocumentPointerUp = () => {
+  private handleDocumentPointerUp = (event: PointerEvent) => {
+    if (this.peekPointerId !== event.pointerId) return;
     this.cancelPeekTimer();
+    this.peekPointerId = null;
+    this.peekTouchIdentifier = null;
     // The details are only useful while the button is held down.
     if (this._peekedUnitTooltip !== null) this.dismissPeek();
   };
 
   /** Pointer cancellation can precede touchend; the touch event ends the peek. */
-  private handleDocumentPointerCancel = () => {
+  private handleDocumentPointerCancel = (event: PointerEvent) => {
+    if (this.peekPointerId !== event.pointerId) return;
     this.cancelPeekTimer();
+    if (
+      this._peekedUnitTooltip !== null &&
+      this.activeTouchIdentifiers.size > 1
+    ) {
+      this.startPeekGraceTimer();
+    }
   };
 
   private handlePeekTouchEvent = (event: TouchEvent) => {
@@ -243,38 +269,43 @@ export class UnitDisplay extends LitElement implements Controller {
       event.target instanceof Node && root?.contains(event.target);
     const changedTouches = Array.from(event.changedTouches);
 
-    if (
-      event.type === "touchstart" &&
-      isInBuildBar &&
-      this.peekTouchIdentifier === null
-    ) {
-      this.peekTouchIdentifier = changedTouches[0]?.identifier ?? null;
-    } else if (
-      event.type === "touchend" &&
-      changedTouches.some(
+    if (event.type === "touchstart") {
+      for (const touch of changedTouches) {
+        this.activeTouchIdentifiers.add(touch.identifier);
+      }
+      if (isInBuildBar && this.peekTouchIdentifier === null) {
+        this.peekTouchIdentifier = changedTouches[0]?.identifier ?? null;
+      }
+    } else {
+      const trackedTouchEnded = changedTouches.some(
         (touch) => touch.identifier === this.peekTouchIdentifier,
-      )
-    ) {
+      );
+      for (const touch of changedTouches) {
+        this.activeTouchIdentifiers.delete(touch.identifier);
+      }
+
+      if (!trackedTouchEnded) return;
       this.peekTouchIdentifier = null;
+      this.peekPointerId = null;
       this.cancelPeekTimer();
-      if (this._peekedUnitTooltip !== null) this.dismissPeek();
-    } else if (
-      event.type === "touchcancel" &&
-      changedTouches.some(
-        (touch) => touch.identifier === this.peekTouchIdentifier,
-      )
-    ) {
-      this.peekTouchIdentifier = null;
-      this.cancelPeekTimer();
-      if (this._peekedUnitTooltip !== null) {
-        if (this.peekGraceTimer !== null) clearTimeout(this.peekGraceTimer);
-        this.peekGraceTimer = setTimeout(() => {
-          this.peekGraceTimer = null;
-          if (this._peekedUnitTooltip !== null) this.dismissPeek();
-        }, PEEK_GRACE_MS);
+      if (event.type === "touchend") {
+        if (this._peekedUnitTooltip !== null) this.dismissPeek();
+      } else {
+        this.suppressNextClick = false;
+        if (this._peekedUnitTooltip !== null) {
+          this.startPeekGraceTimer();
+        }
       }
     }
   };
+
+  private startPeekGraceTimer() {
+    if (this.peekGraceTimer !== null) clearTimeout(this.peekGraceTimer);
+    this.peekGraceTimer = setTimeout(() => {
+      this.peekGraceTimer = null;
+      if (this._peekedUnitTooltip !== null) this.dismissPeek();
+    }, PEEK_GRACE_MS);
+  }
 
   private onScroll = () => {
     this.requestUpdate();
@@ -395,7 +426,6 @@ export class UnitDisplay extends LitElement implements Controller {
     if (this.allDisabled) {
       return null;
     }
-
     return html`
       <div
         class="unit-display-root relative border-t border-white/10 p-0.5 w-full
@@ -409,7 +439,8 @@ export class UnitDisplay extends LitElement implements Controller {
           @scroll=${this.onScroll}
         >
           <div
-            class="unit-display-grid grid grid-cols-10 gap-0.5 w-full mx-auto lg:grid-rows-1 lg:grid-flow-col lg:w-fit max-lg:landscape:grid-rows-1 max-lg:landscape:grid-flow-col max-lg:landscape:grid-cols-none max-lg:landscape:auto-cols-[47px] max-lg:landscape:w-max max-[360px]:grid-cols-none max-[360px]:grid-flow-col max-[360px]:auto-cols-[44px] max-[360px]:w-max"
+            class="unit-display-grid grid grid-cols-[repeat(var(--unit-display-columns),minmax(0,1fr))] gap-0.5 w-full mx-auto lg:grid-rows-1 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-max lg:w-fit max-lg:landscape:grid-rows-1 max-lg:landscape:grid-flow-col max-lg:landscape:grid-cols-none max-lg:landscape:auto-cols-[47px] max-lg:landscape:w-max max-[360px]:grid-cols-none max-[360px]:grid-flow-col max-[360px]:auto-cols-[44px] max-[360px]:w-max"
+            style=${`--unit-display-columns: ${this.enabledUnitCount}`}
           >
             ${this.renderUnitItem(
               cityIcon,
@@ -539,10 +570,14 @@ export class UnitDisplay extends LitElement implements Controller {
           class="${
             this.canBuild(unitType) ? "" : "opacity-40"
           } border border-slate-500 rounded-sm min-h-11 w-full px-1 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:min-h-0 lg:px-0.5 lg:justify-start landscape:px-0.5
-             ${selected ? "hover:bg-gray-400/10" : "hover:bg-gray-800"}
+             ${
+            selected
+              ? "pointer-fine:hover:bg-gray-400/10"
+              : "pointer-fine:hover:bg-gray-800"
+          }
              rounded-sm text-white ${selected ? "bg-slate-400/20" : ""}
              ${this.tutorialHighlight === unitType ? "tutorial-highlight" : ""}"
-          @click=${() => {
+          @click=${(event: Event) => {
             // A press that turned into a peek shows the details instead of
             // selecting the unit
             if (this.suppressNextClick) {
@@ -553,6 +588,14 @@ export class UnitDisplay extends LitElement implements Controller {
               this.inputHandler.setGhostStructure(null, "GUIclick");
             } else if (this.canBuild(unitType)) {
               this.inputHandler.setGhostStructure(unitType, "GUIclick");
+              if (
+                event instanceof PointerEvent &&
+                event.pointerType === "touch"
+              ) {
+                this.eventBus?.emit(new TouchGhostPlacementSelectEvent());
+              }
+            } else {
+              this.eventBus?.emit(new ToggleStructureEvent(null));
             }
             this.requestUpdate();
           }}
