@@ -62,8 +62,8 @@ export function replayViewerHref(gameID: string): string {
 
 /**
  * Opens the viewer for a game this build can replay (the caller already
- * checked the build). Returns false if the player hasn't turned the viewer
- * on, or the viewer sent this game back, and the caller should use the
+ * checked the build). Returns false if the player turned the viewer off,
+ * or the viewer sent this game back, and the caller should use the
  * client-side replay.
  */
 export function openReplayViewer(gameID: string, record: GameRecord): boolean {
