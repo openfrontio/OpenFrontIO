@@ -1011,9 +1011,11 @@ export class WinModal extends LitElement implements Controller {
     }
 
     try {
-      const text = gamePortal.isOnGamePortal()
-        ? await gamePortal.createInviteLink(gameId)
-        : `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
+      // VIVERSE has no invite links of its own, so it shares a plain link.
+      const text =
+        gamePortal.isOnGamePortal() && gamePortal.name() !== "viverse"
+          ? await gamePortal.createInviteLink(gameId)
+          : `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
 
       if (!text) {
         showToast(translateText("common.failed_copy"), "red");

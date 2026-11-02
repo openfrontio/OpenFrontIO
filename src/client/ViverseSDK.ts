@@ -58,8 +58,8 @@ function writeSession(key: string, value: string): void {
 
 // Mirrors the CrazyGames/Poki SDK surface so GamePortal can route to it. The
 // game never loads VIVERSE's SDK: it asks the wrapper (window.parent) for a
-// token over postMessage. VIVERSE has no ads, gameplay events or invites we
-// use, so those are no-ops.
+// token over postMessage. VIVERSE has no ads, gameplay events or invite links
+// we use, so those are no-ops (copied invites fall back to a plain game link).
 export class ViverseSDK {
   private requestCount = 0;
   // The last token request's answer. Shared by every profile read so they
