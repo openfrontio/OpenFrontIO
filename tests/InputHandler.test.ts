@@ -3182,6 +3182,18 @@ describe("GhostStructure Hotkeys tapping/Scrolling", () => {
     expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
   });
 
+  test("repeated hotkey taps do not cycle multiplier when disabled", () => {
+    vi.spyOn(
+      inputHandler["userSettings"],
+      "buildMultiplierCycle",
+    ).mockReturnValue(false);
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+    inputHandler.setGhostStructure(UnitType.AtomBomb, "GUIclick");
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+  });
+
   test("wheel scroll up increases upgrade multiplier", () => {
     uiState.ghostStructure = UnitType.City;
     // Use the actual buildScrollModifier keybind

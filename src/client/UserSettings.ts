@@ -516,6 +516,14 @@ export class UserSettings {
     this.setBool("settings.snapBuildPreview", !this.snapBuildPreview());
   }
 
+  buildMultiplierCycle() {
+    return this.getBool("settings.buildMultiplierCycle", true);
+  }
+
+  toggleBuildMultiplierCycle() {
+    this.setBool("settings.buildMultiplierCycle", !this.buildMultiplierCycle());
+  }
+
   toggleLeftClickOpenMenu() {
     this.setBool("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
   }

@@ -1442,6 +1442,9 @@ export class InputHandler {
       switch (source) {
         case "GUIclick":
         case "hotkey":
+          if (!this.userSettings.buildMultiplierCycle()) {
+            return;
+          }
           // first jump goes 1 -> 5 as before
           this.uiState.upgradeMultiplier =
             currentMultiplier === 1 ? 5 : currentMultiplier + 5;
