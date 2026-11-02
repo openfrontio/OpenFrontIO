@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenFront</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+      }
+      iframe {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <iframe
+      id="game"
+      title="OpenFront"
+      allow="fullscreen; autoplay; clipboard-read; clipboard-write; gamepad"
+      allowfullscreen
+    ></iframe>
+    <script>
+      // build.sh rewrites this line for the test zip.
+      const GAME_ORIGIN = "https://openfront.io";
+      const VIVERSE_APP_ID = "ceen82ugqx";
+      const SDK_URL =
+        "https://www.viverse.com/static-assets/viverse-sdk/1.3.3/index.umd.cjs";
+      const CHECK_AUTH_TIMEOUT_MS = 15000;
+
+      const game = document.getElementById("game");
+      game.addEventListener("load", () => game.focus());
+      game.src = GAME_ORIGIN + "/";
+
+      // Resolves to the SDK client, or null if the SDK failed to load.
+      const clientPromise = new Promise((resolve) => {
+        const script = document.createElement("script");
+        script.src = SDK_URL;
+        script.onload = () => {
+          try {
+            resolve(
+              new globalThis.viverse.client({
+                clientId: VIVERSE_APP_ID,
+                domain: "account.htcvive.com",
+                cookieDomain: location.hostname,
+              }),
+            );
+          } catch (e) {
+            console.error("VIVERSE SDK client init failed", e);
+            resolve(null);
+          }
+        };
+        script.onerror = () => {
+          console.error("VIVERSE SDK failed to load");
+          resolve(null);
+        };
+        document.head.appendChild(script);
+      });
+
+      async function getAuth() {
+        const client = await clientPromise;
+        if (!client) return undefined;
+        try {
+          // checkAuth caches and refreshes the token itself, so call it per request.
+          return await client.checkAuth({ timeout: CHECK_AUTH_TIMEOUT_MS });
+        } catch (e) {
+          console.error("VIVERSE checkAuth failed", e);
+          return undefined;
+        }
+      }
+
+      window.addEventListener("message", async (event) => {
+        if (event.source !== game.contentWindow) return;
+        if (event.origin !== GAME_ORIGIN) return;
+        const msg = event.data;
+        if (!msg || typeof msg !== "object") return;
+
+        if (msg.type === "openfront:viverse:get-token") {
+          const auth = await getAuth();
+          game.contentWindow.postMessage(
+            {
+              type: "openfront:viverse:token",
+              id: msg.id,
+              token: auth?.access_token ?? null,
+              accountId: auth?.account_id ?? null,
+            },
+            GAME_ORIGIN,
+          );
+        } else if (msg.type === "openfront:viverse:login") {
+          const client = await clientPromise;
+          client?.loginWithWorlds();
+        }
+      });
+    </script>
+  </body>
+</html>

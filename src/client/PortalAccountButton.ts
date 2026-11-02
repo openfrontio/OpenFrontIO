@@ -1,10 +1,11 @@
 import { gamePortal } from "./GamePortal";
 import { translateText } from "./Utils";
 
-// On a game portal (CrazyGames, Poki) the player's identity comes from the
-// portal SDK, not our backend user object. Show their avatar + username on
-// every account trigger (<nav-account-menu> renders one in the desktop nav and
-// one in the mobile top bar), or the "Sign in" affordance when they're a guest.
+// On a game portal (CrazyGames, Poki, VIVERSE) the player's identity comes
+// from the portal SDK, not our backend user object. Show their avatar +
+// username on every account trigger (<nav-account-menu> renders one in the
+// desktop nav and one in the mobile top bar), or the "Sign in" affordance when
+// they're a guest.
 //
 // Clicking a trigger opens the profile menu either way — signing in is the
 // menu's own "Sign in" item, which hands off to the portal's prompt — so this
@@ -38,12 +39,18 @@ export async function updatePortalNavButton() {
       const bordered = trigger.hasAttribute("data-account-border");
 
       if (profile) {
+        const avatarUrl = profile.profilePictureUrl;
         if (avatarEl) {
           avatarEl.alt = profile.username;
-          avatarEl.src = profile.profilePictureUrl;
-          avatarEl.classList.remove("hidden");
+          if (avatarUrl !== null) {
+            avatarEl.src = avatarUrl;
+            avatarEl.classList.remove("hidden");
+          } else {
+            avatarEl.classList.add("hidden");
+          }
         }
-        personIconEl?.classList.add("hidden");
+        // No avatar (VIVERSE): keep the person icon in its place.
+        personIconEl?.classList.toggle("hidden", avatarUrl !== null);
         if (signInTextEl) {
           // The translation pass rewrites every [data-i18n] element's text,
           // which would clobber the username — drop the attribute while it

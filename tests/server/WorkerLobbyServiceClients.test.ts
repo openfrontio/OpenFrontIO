@@ -55,6 +55,7 @@ describe("WorkerLobbyService.connectedClients", () => {
       steam: 1,
       crazygames: 0,
       poki: 0,
+      viverse: 0,
       unknown: 2,
     });
   });
