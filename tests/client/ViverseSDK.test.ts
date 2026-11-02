@@ -1,3 +1,4 @@
+import { MAX_USERNAME_LENGTH } from "@openfront/engine-api/Schemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ViverseSDK } from "../../src/client/ViverseSDK";
 
@@ -202,6 +203,17 @@ describe("ViverseSDK", () => {
       });
       expect(await sdk.getUsername()).toBe("Evan");
       expect(posts).toHaveBeenCalledTimes(1);
+    });
+
+    it("caps a long VIVERSE name", async () => {
+      const profile = sdk.getUserProfile();
+      reply({
+        type: "openfront:viverse:token",
+        id: lastRequestId(),
+        token: "tok",
+        username: "x".repeat(MAX_USERNAME_LENGTH + 50),
+      });
+      expect((await profile)?.username).toBe("x".repeat(MAX_USERNAME_LENGTH));
     });
 
     it("shows the VIVERSE account when the wrapper has no name", async () => {

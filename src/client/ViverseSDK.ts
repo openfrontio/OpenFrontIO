@@ -1,4 +1,5 @@
 import type { PortalUser } from "./GamePortal";
+import { clampUsername } from "./PlayerName";
 import { translateText } from "./Utils";
 
 // VIVERSE only lets the frame it embeds sign in, so we upload a wrapper page
@@ -183,7 +184,7 @@ export class ViverseSDK {
           token,
           username:
             typeof username === "string" && username.trim() !== ""
-              ? username.trim()
+              ? clampUsername(username.trim())
               : null,
           avatarUrl:
             typeof avatarUrl === "string" && AVATAR_URL.test(avatarUrl)
