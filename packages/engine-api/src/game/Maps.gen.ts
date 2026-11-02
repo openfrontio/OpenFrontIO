@@ -2279,6 +2279,8 @@ export const maps: readonly MapInfo[] = [
       { id: "w10kland", placement: "land", nukeable: true },
       { id: "w10kwater", placement: "water" },
     ],
+    author: "Patrick Plays Badly",
+    descriptionKey: "map_description.world10000",
   },
   {
     id: "WorldInverted",
