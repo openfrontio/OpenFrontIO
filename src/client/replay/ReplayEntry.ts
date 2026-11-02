@@ -2,8 +2,8 @@
  * Decides which replay a "watch replay" click opens.
  *
  * The viewer, which can seek and plays the game while it's being processed
- * (LocalProcessing), is opt-in for now (the "new replay viewer" setting);
- * without it the classic client-side replay opens. A game from another build goes to
+ * (LocalProcessing), is enabled by default (the "new replay viewer" setting);
+ * players who turn it off get the classic client-side replay. A game from another build goes to
  * that build's versioned shell (#4934). The old client-side replay is the
  * fallback the viewer offers when it can't show a game.
  */
