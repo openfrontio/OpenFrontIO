@@ -18,6 +18,7 @@ import {
 import { GameConfig, TeamCountConfig } from "@openfront/engine-api/Schemas";
 import { SAM_CONSTRUCTION_TICKS } from "@openfront/engine-lib/configuration/Config";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { mapPlayerCounts } from "@openfront/shared/MapPlayerCounts";
 import { ScheduledPublicGameType } from "@openfront/shared/WireSchemas";
 import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
@@ -369,7 +370,7 @@ export class MapPlaylist {
     if (appliedForced.has("isWaterNukes")) isWaterNukes = true;
     if (appliedForced.has("isDoomsdayClock")) isDoomsdayClock = true;
 
-    // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
+    // Crowded modifier: if the map's biggest player count (first number of mapPlayerCounts) is 60 or lower (small maps),
     // set player count to CROWDED_PLAYER_COUNT (or CROWDED_COMPACT_PLAYER_COUNT if compact map is also enabled)
     let crowdedMaxPlayers: number | undefined;
     if (isCrowded) {
@@ -835,7 +836,7 @@ export class MapPlaylist {
     playerTeams: TeamCountConfig,
   ): Promise<boolean> {
     const landTiles = await getMapLandTiles(map);
-    const [l, , s] = this.calculateMapPlayerCounts(landTiles);
+    const [l, , s] = mapPlayerCounts(landTiles);
     // Worst case: smallest tier with team mode 1.5x multiplier, capped at l
     let p = Math.min(Math.ceil(s * 1.5), l);
     // Apply compact 75% player reduction
@@ -915,7 +916,7 @@ export class MapPlaylist {
     isCompact: boolean,
   ): Promise<number | undefined> {
     const landTiles = await getMapLandTiles(map);
-    const [firstPlayerCount] = this.calculateMapPlayerCounts(landTiles);
+    const [firstPlayerCount] = mapPlayerCounts(landTiles);
     if (firstPlayerCount <= 60) {
       return isCompact ? CROWDED_COMPACT_PLAYER_COUNT : CROWDED_PLAYER_COUNT;
     }
@@ -928,7 +929,7 @@ export class MapPlaylist {
     isCompactMap?: boolean,
   ): Promise<number> {
     const landTiles = await getMapLandTiles(map);
-    const [l, m, s] = this.calculateMapPlayerCounts(landTiles);
+    const [l, m, s] = mapPlayerCounts(landTiles);
     const r = Math.random();
     const base = r < 0.3 ? l : r < 0.6 ? m : s;
     let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
@@ -983,20 +984,5 @@ export class MapPlaylist {
         break;
     }
     return p;
-  }
-
-  /**
-   * Calculate player counts from land tiles
-   * For every 1,000,000 land tiles, take 50 players
-   * Second value is 75% of calculated value, third is 50%
-   * All values are rounded to the nearest 5
-   */
-  private calculateMapPlayerCounts(
-    landTiles: number,
-  ): [number, number, number] {
-    const roundToNearest5 = (n: number) => Math.round(n / 5) * 5;
-
-    const base = Math.max(roundToNearest5((landTiles / 1_000_000) * 50), 5);
-    return [base, roundToNearest5(base * 0.75), roundToNearest5(base * 0.5)];
   }
 }

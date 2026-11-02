@@ -4,6 +4,8 @@
   "name": "Halkidiki",
   "translation_key": "map.halkidiki",
   "categories": ["europe"],
+  "location": { "lat": 40.3, "lon": 23.6 },
+  "author": "Duwibi",
   "nations": [
     {
       "coordinates": [1798, 984],

@@ -4,6 +4,8 @@
   "name": "Arctic",
   "translation_key": "map.arctic",
   "categories": ["europe", "north_america", "asia"],
+  "location": { "lat": 79, "lon": -60 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [622, 1171],

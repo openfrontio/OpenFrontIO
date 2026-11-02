@@ -4,6 +4,8 @@
   "name": "Gulf Of Mexico",
   "translation_key": "map.gulfofmexico",
   "categories": ["north_america"],
+  "location": { "lat": 25, "lon": -90 },
+  "author": "LounNight",
   "nations": [
     {
       "coordinates": [2639, 1752],

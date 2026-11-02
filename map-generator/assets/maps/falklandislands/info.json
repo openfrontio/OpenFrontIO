@@ -4,6 +4,8 @@
   "name": "Falkland Islands",
   "translation_key": "map.falklandislands",
   "categories": ["south_america"],
+  "location": { "lat": -51.8, "lon": -59.5 },
+  "author": "Duwibi",
   "special_team_count": 2,
   "nations": [
     {
