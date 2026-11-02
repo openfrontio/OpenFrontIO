@@ -2272,6 +2272,7 @@ export const maps: readonly MapInfo[] = [
       { id: "w2kwater", placement: "water" },
     ],
     author: "evanpelle",
+    descriptionKey: "map_description.world",
   },
   {
     id: "World4000",
@@ -2286,6 +2287,7 @@ export const maps: readonly MapInfo[] = [
       { id: "w4kwater", placement: "water" },
     ],
     author: "evanpelle",
+    descriptionKey: "map_description.world4000",
   },
   {
     id: "WorldInverted",

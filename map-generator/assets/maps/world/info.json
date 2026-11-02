@@ -5,6 +5,7 @@
   "translation_key": "map.world",
   "categories": ["featured", "world"],
   "author": "evanpelle",
+  "description": "Rebuild by Patrick Plays Badly. This classic World map was the first in game. It's smaller with almost no rivers. Just the continents, oceans, and a few major water ways.",
   "forced_modifiers": ["isCrowded:50"],
   "featured_rank": 1,
   "nations": [
