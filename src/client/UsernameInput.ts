@@ -811,13 +811,13 @@ export class UsernameInput extends LitElement {
       ${
         this.validationError || this.clanTagOwnershipError || this.claimGrace
           ? html`<div
-              class="absolute top-full left-0 z-50 w-full mt-1 flex flex-col gap-1"
+              class="absolute top-full left-0 z-50 w-full sm:w-auto sm:max-w-[calc((100%-1rem)*2/3)] mt-1 flex flex-col gap-1 items-start"
             >
               ${
                 this.validationError
                   ? html`<div
                       id="username-validation-error"
-                      class="w-full px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg"
+                      class="w-full sm:w-auto px-3 py-2 text-sm font-medium border border-red-500/50 rounded-lg bg-red-900/90 text-red-200 backdrop-blur-md shadow-lg"
                     >
                       ${this.validationError}
                     </div>`
@@ -846,7 +846,7 @@ export class UsernameInput extends LitElement {
     if (grace === null) return null;
     return html`<div
       id="username-claim-grace"
-      class="w-full px-3 py-2 text-sm font-medium border border-amber-500/40 rounded-lg bg-amber-950/90 text-amber-200 backdrop-blur-md shadow-lg"
+      class="w-full sm:w-auto px-3 py-2 text-sm font-medium border border-amber-500/40 rounded-lg bg-amber-950/90 text-amber-200 backdrop-blur-md shadow-lg"
     >
       ${translateText(
         grace.atRisk ? "username.claim_at_risk" : "username.claim_reserved",
