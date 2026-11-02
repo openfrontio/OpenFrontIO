@@ -18,7 +18,7 @@ const showToastMock = vi.hoisted(() => vi.fn());
 const gamePortalMock = vi.hoisted(() => ({
   happytime: vi.fn(),
   gameplayStop: vi.fn(),
-  name: vi.fn(() => null),
+  name: vi.fn((): string | null => null),
   isOnGamePortal: vi.fn(() => false),
   createInviteLink: vi.fn(
     async (gameId: string): Promise<string | null> =>
@@ -291,6 +291,7 @@ describe("WinModal share button", () => {
     copyToClipboardMock.mockClear();
     showToastMock.mockClear();
     gamePortalMock.isOnGamePortal.mockReturnValue(false);
+    gamePortalMock.name.mockReturnValue(null);
     gamePortalMock.createInviteLink.mockClear();
   });
 
@@ -438,6 +439,25 @@ describe("WinModal share button", () => {
     expect(gamePortalMock.createInviteLink).toHaveBeenCalledWith(gameId);
     expect(copyToClipboardMock).toHaveBeenCalledWith(
       `https://crazygames.com/game?invite=${gameId}`,
+    );
+    expect(showToastMock).toHaveBeenCalledWith("Copied!", "green");
+  });
+
+  it("shares a plain game link on VIVERSE, which has no invite links", async () => {
+    const gameId = "vv99912345";
+    gamePortalMock.isOnGamePortal.mockReturnValue(true);
+    gamePortalMock.name.mockReturnValue("viverse");
+    vi.spyOn(ClientEnv, "shareOrigin").mockReturnValue("https://openfront.io");
+
+    const el = await createModal({ gameId });
+    el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
+    )!.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(gamePortalMock.createInviteLink).not.toHaveBeenCalled();
+    expect(copyToClipboardMock).toHaveBeenCalledWith(
+      `https://openfront.io${ClientEnv.gamePath(gameId)}`,
     );
     expect(showToastMock).toHaveBeenCalledWith("Copied!", "green");
   });
