@@ -4,6 +4,7 @@
   "id": "WarshipWarship",
   "translation_key": "map.warshipwarship",
   "categories": ["arcade"],
+  "author": "crunchybbb",
   "nations": [
     {
       "coordinates": [750, 680],
