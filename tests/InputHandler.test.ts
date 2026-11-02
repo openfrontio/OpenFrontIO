@@ -3188,6 +3188,7 @@ describe("GhostStructure Hotkeys tapping/Scrolling", () => {
       "buildMultiplierCycle",
     ).mockReturnValue(false);
     window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.AtomBomb);
     window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
     expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
     inputHandler.setGhostStructure(UnitType.AtomBomb, "GUIclick");
