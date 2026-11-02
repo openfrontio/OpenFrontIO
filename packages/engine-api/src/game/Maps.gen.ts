@@ -2274,7 +2274,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.World10000,
     translationKey: "map.world10000",
     categories: ["new", "world"],
-    defaultNationCount: 378,
+    defaultNationCount: 377,
     layers: [
       { id: "w10kland", placement: "land", nukeable: true },
       { id: "w10kwater", placement: "water" },
