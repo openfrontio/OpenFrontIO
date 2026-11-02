@@ -192,13 +192,64 @@ describe("ViverseSDK", () => {
         id: lastRequestId(),
         token: "tok",
         accountId: "acc",
+        username: " Evan ",
+        avatarUrl: "https://cdn.viverse.example/head.png",
       });
       await token;
       expect(await sdk.getUserProfile()).toEqual({
+        username: "Evan",
+        profilePictureUrl: "https://cdn.viverse.example/head.png",
+      });
+      expect(await sdk.getUsername()).toBe("Evan");
+      expect(posts).toHaveBeenCalledTimes(1);
+    });
+
+    it("shows the VIVERSE account when the wrapper has no name", async () => {
+      const profile = sdk.getUserProfile();
+      reply({
+        type: "openfront:viverse:token",
+        id: lastRequestId(),
+        token: "tok",
+        accountId: "acc",
+        username: "",
+        avatarUrl: null,
+      });
+      expect(await profile).toEqual({
         username: "account_modal.viverse_account",
         profilePictureUrl: null,
       });
-      expect(posts).toHaveBeenCalledTimes(1);
+      expect(await sdk.getUsername()).toBeNull();
+    });
+
+    it.each([
+      "javascript:alert(1)",
+      "http://cdn.viverse.example/head.png",
+      "data:text/html,<script>alert(1)</script>",
+      42,
+    ])("drops an unsafe avatar URL (%s)", async (avatarUrl) => {
+      const profile = sdk.getUserProfile();
+      reply({
+        type: "openfront:viverse:token",
+        id: lastRequestId(),
+        token: "tok",
+        username: "Evan",
+        avatarUrl,
+      });
+      expect((await profile)?.profilePictureUrl).toBeNull();
+    });
+
+    it("keeps a data: image avatar", async () => {
+      const profile = sdk.getUserProfile();
+      reply({
+        type: "openfront:viverse:token",
+        id: lastRequestId(),
+        token: "tok",
+        username: "Evan",
+        avatarUrl: "data:image/png;base64,AAAA",
+      });
+      expect((await profile)?.profilePictureUrl).toBe(
+        "data:image/png;base64,AAAA",
+      );
     });
 
     it("has no profile when signed out", async () => {

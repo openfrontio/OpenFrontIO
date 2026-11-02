@@ -12,6 +12,18 @@ const WRAPPER_HOST = /(^|\.)viverse\.app$/;
 // seconds. A wrapper that never answers counts as signed out.
 const TOKEN_TIMEOUT_MS = 15_000;
 
+// VIVERSE's avatar head icon. Anything else (javascript:, http:) is dropped.
+const AVATAR_URL = /^(https:\/\/|data:image\/)/;
+
+// The wrapper's answer. The name and avatar are only for display: they come
+// from the parent frame, unverified, and our identity is what the backend gets
+// from the token.
+type WrapperReply = {
+  token: string;
+  username: string | null;
+  avatarUrl: string | null;
+};
+
 const GET_TOKEN = "openfront:viverse:get-token";
 const TOKEN = "openfront:viverse:token";
 const LOGIN = "openfront:viverse:login";
@@ -50,9 +62,9 @@ function writeSession(key: string, value: string): void {
 // use, so those are no-ops.
 export class ViverseSDK {
   private requestCount = 0;
-  // Whether the last token request found a signed-in VIVERSE account. Shared
-  // by every profile read so they don't each make the wrapper run checkAuth().
-  private signedIn: Promise<boolean> | null = null;
+  // The last token request's answer. Shared by every profile read so they
+  // don't each make the wrapper run checkAuth().
+  private lastReply: Promise<WrapperReply | null> | null = null;
 
   // Same approach as PokiSDK.isOnPoki: ancestorOrigins where the browser has
   // it, else (Firefox) the referrer, which is the wrapper's URL. A positive
@@ -74,30 +86,34 @@ export class ViverseSDK {
   // Nothing to load: the wrapper owns VIVERSE's SDK.
   async maybeInit(): Promise<void> {}
 
-  // The wrapper only hands us a token, not the player's VIVERSE name.
   async getUsername(): Promise<string | null> {
-    return null;
+    if (!this.isOnViverse()) return null;
+    return (await this.reply())?.username ?? null;
   }
 
   // A fresh VIVERSE access token for our backend to verify, or null when the
   // player isn't signed in to VIVERSE (or the wrapper didn't answer).
   async getUserToken(): Promise<string | null> {
     if (!this.isOnViverse()) return null;
-    const token = this.requestToken();
-    this.signedIn = token.then((t) => t !== null);
-    return token;
+    this.lastReply = this.requestToken();
+    return (await this.lastReply)?.token ?? null;
   }
 
-  // VIVERSE gives us no name or avatar, so a signed-in player shows as their
-  // VIVERSE account.
+  // Without a VIVERSE name (the wrapper couldn't fetch it), a signed-in player
+  // shows as their VIVERSE account.
   async getUserProfile(): Promise<PortalUser | null> {
     if (!this.isOnViverse()) return null;
-    this.signedIn ??= this.requestToken().then((t) => t !== null);
-    if (!(await this.signedIn)) return null;
+    const reply = await this.reply();
+    if (reply === null) return null;
     return {
-      username: translateText("account_modal.viverse_account"),
-      profilePictureUrl: null,
+      username:
+        reply.username ?? translateText("account_modal.viverse_account"),
+      profilePictureUrl: reply.avatarUrl,
     };
+  }
+
+  private reply(): Promise<WrapperReply | null> {
+    return (this.lastReply ??= this.requestToken());
   }
 
   // VIVERSE's login reloads the wrapper, and with it the game, so there is
@@ -144,21 +160,36 @@ export class ViverseSDK {
 
   // The request carries no secret, so any target origin will do; the reply
   // carries the token, so only the wrapper's is accepted.
-  private requestToken(): Promise<string | null> {
+  private requestToken(): Promise<WrapperReply | null> {
     const id = `${Date.now()}-${++this.requestCount}`;
     return new Promise((resolve) => {
-      const finish = (token: string | null) => {
+      const finish = (reply: WrapperReply | null) => {
         clearTimeout(timer);
         window.removeEventListener("message", onMessage);
-        resolve(token);
+        resolve(reply);
       };
       const onMessage = (event: MessageEvent) => {
         if (event.source !== window.parent) return;
         if (!hostMatches(event.origin, WRAPPER_HOST)) return;
         const data = event.data as { type?: unknown; id?: unknown } | null;
         if (data?.type !== TOKEN || data.id !== id) return;
-        const { token } = event.data as { token?: unknown };
-        finish(typeof token === "string" && token !== "" ? token : null);
+        const { token, username, avatarUrl } = event.data as {
+          token?: unknown;
+          username?: unknown;
+          avatarUrl?: unknown;
+        };
+        if (typeof token !== "string" || token === "") return finish(null);
+        finish({
+          token,
+          username:
+            typeof username === "string" && username.trim() !== ""
+              ? username.trim()
+              : null,
+          avatarUrl:
+            typeof avatarUrl === "string" && AVATAR_URL.test(avatarUrl)
+              ? avatarUrl
+              : null,
+        });
       };
       const timer = setTimeout(() => finish(null), TOKEN_TIMEOUT_MS);
       window.addEventListener("message", onMessage);

@@ -49,7 +49,7 @@ export async function updatePortalNavButton() {
             avatarEl.classList.add("hidden");
           }
         }
-        // No avatar (VIVERSE): keep the person icon in its place.
+        // No avatar (a VIVERSE player without one): keep the person icon.
         personIconEl?.classList.toggle("hidden", avatarUrl !== null);
         if (signInTextEl) {
           // The translation pass rewrites every [data-i18n] element's text,
