@@ -2,7 +2,7 @@ import type { PortalUser } from "./GamePortal";
 import { translateText } from "./Utils";
 
 // VIVERSE only lets the frame it embeds sign in, so we upload a wrapper page
-// (viverse/) that loads their SDK and frames us. Its origin is
+// to VIVERSE that loads their SDK and frames us. Its origin is
 // <app id>.world.viverse.app, framed in turn by www.viverse.com.
 const VIVERSE_HOST = /(^|\.)(viverse\.app|viverse\.com)$/;
 // Only the wrapper answers us, so replies must come from a viverse.app origin.

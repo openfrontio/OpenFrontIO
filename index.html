@@ -256,7 +256,7 @@
 
     <!-- CrazyGames SDK -->
     <script>
-      // Not inside our VIVERSE wrapper (viverse/), which isn't CrazyGames
+      // Not inside our VIVERSE wrapper, which isn't CrazyGames
       // even though it's an iframe. Same check as ViverseSDK.isOnViverse().
       window.__onViverse = (function () {
         if (window.self === window.top) return false;
