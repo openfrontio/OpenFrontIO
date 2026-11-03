@@ -184,9 +184,15 @@ export class MainRadialMenu implements Controller {
     if (!owner.isPlayer()) return;
     const recipient = owner as PlayerView;
     if (!recipient.isFriendly(myPlayer) || recipient.isDisconnected()) return;
+    const request = {};
+    this.menuRequest = request;
     myPlayer
       .actions(tile)
-      .then((actions) => donate(myPlayer, recipient, actions, tile))
+      .then((actions) => {
+        if (this.menuRequest !== request) return;
+        if (this.game.owner(tile) !== recipient) return;
+        donate(myPlayer, recipient, actions, tile);
+      })
       .catch((error) => {
         console.warn("Failed to check donate actions:", error);
       });

@@ -17,6 +17,7 @@ vi.mock("@openfront/engine-lib/Format", () => ({
 import { EventBus } from "@openfront/shared/EventBus";
 import { MainRadialMenu } from "../../../src/client/hud/layers/MainRadialMenu";
 import {
+  CloseViewEvent,
   DoDonateGoldEvent,
   DoDonateTroopsEvent,
 } from "../../../src/client/InputHandler";
@@ -75,6 +76,7 @@ function setup({
   bus.on(SendDonateTroopsIntentEvent, (e) => donations.push(e));
   return {
     bus,
+    game,
     recipient,
     actions,
     myPlayer,
@@ -140,6 +142,32 @@ describe("MainRadialMenu donate keybinds", () => {
     const { bus, playerPanel } = setup({ canDonateGold: false });
 
     bus.emit(new DoDonateGoldEvent(50, 60));
+    await flush();
+
+    expect(playerPanel.openSendGoldModal).not.toHaveBeenCalled();
+  });
+
+  it("drops a pending donate action when the view closes before actions resolve", async () => {
+    const { bus, playerPanel, donations } = setup();
+
+    bus.emit(new DoDonateGoldEvent(50, 60));
+    bus.emit(new CloseViewEvent());
+    await flush();
+
+    expect(playerPanel.openSendGoldModal).not.toHaveBeenCalled();
+    expect(donations).toHaveLength(0);
+  });
+
+  it("does not open the send-gold modal if the tile changes owner before actions resolve", async () => {
+    const { bus, game, playerPanel } = setup();
+    const newOwner = {
+      isPlayer: () => true,
+      isFriendly: () => false,
+      isDisconnected: () => false,
+    };
+
+    bus.emit(new DoDonateGoldEvent(50, 60));
+    game.owner = () => newOwner;
     await flush();
 
     expect(playerPanel.openSendGoldModal).not.toHaveBeenCalled();
