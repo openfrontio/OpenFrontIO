@@ -4,6 +4,8 @@
   "name": "Balkans",
   "translation_key": "map.balkans",
   "categories": ["europe"],
+  "location": { "lat": 43.5, "lon": 20.5 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [122, 281],

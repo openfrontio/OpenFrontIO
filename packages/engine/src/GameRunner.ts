@@ -18,10 +18,13 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import {
   ErrorUpdate,
+  GameUpdateType,
   GameUpdateViewData,
+  UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import { ClientID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
+import { packUnitUpdates } from "@openfront/engine-lib/game/PackedUnitUpdates";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { simpleHash } from "@openfront/engine-lib/Util";
@@ -150,9 +153,12 @@ export class GameRunner {
   private isExecuting = false;
 
   private playerViewData: Record<PlayerID, NameViewData> = {};
+
   // Name placements are recomputed periodically; a runner that starts
   // mid-game (restored from a snapshot) computes them on its first tick.
   private viewDataStale = true;
+
+  private lastSpawnTiles = new Map<PlayerID, TileRef>();
 
   constructor(
     public game: Game,
@@ -247,24 +253,33 @@ export class GameRunner {
     // every other tick.
     let viewDataChanged = false;
     if (this.game.inSpawnPhase()) {
-      for (const p of this.game.players()) {
-        if (p.type() !== PlayerType.Human && p.type() !== PlayerType.Nation) {
-          continue;
+      for (const p of this.game.allPlayers()) {
+        const spawnTile = p.spawnTile();
+        if (spawnTile === undefined) continue;
+        if (this.lastSpawnTiles.get(p.id()) !== spawnTile) {
+          this.lastSpawnTiles.set(p.id(), spawnTile);
+          this.playerViewData[p.id()] = placeSpawnName(this.game, p);
+          viewDataChanged = true;
         }
-        if (p.spawnTile() === undefined) continue;
-        this.playerViewData[p.id()] = placeSpawnName(this.game, p);
-        viewDataChanged = true;
       }
     }
 
     const spawnJustEnded = wasInSpawnPhase && !this.game.inSpawnPhase();
     if (
       spawnJustEnded ||
-      this.viewDataStale ||
-      this.game.ticks() < 3 ||
-      this.game.ticks() % 30 === 0
+      (!this.game.inSpawnPhase() && this.lastSpawnTiles.size > 0)
+    ) {
+      this.lastSpawnTiles.clear();
+    }
+    if (
+      spawnJustEnded ||
+      (!this.game.inSpawnPhase() &&
+        (this.viewDataStale ||
+          this.game.ticks() < 3 ||
+          this.game.ticks() % 30 === 0))
     ) {
       this.viewDataStale = false;
+      this.playerViewData = {};
       for (const p of this.game.players()) {
         this.playerViewData[p.id()] = placeName(this.game, p);
       }
@@ -279,6 +294,20 @@ export class GameRunner {
     const packedNukeImpacts =
       nukeImpactTiles.length > 0 ? new Uint32Array(nukeImpactTiles) : undefined;
 
+    let packedUnitUpdates: Float64Array | undefined;
+    let packedMissileTimers: Uint32Array | undefined;
+
+    const unitUpdates = updates[GameUpdateType.Unit] as UnitUpdate[];
+    if (unitUpdates && unitUpdates.length > 0) {
+      const packed = packUnitUpdates(unitUpdates);
+      packedUnitUpdates = packed.packedUnitUpdates;
+      if (packed.packedMissileTimers.length > 0) {
+        packedMissileTimers = packed.packedMissileTimers;
+      }
+      // Clear the original array so it's not structured-cloned
+      updates[GameUpdateType.Unit] = [];
+    }
+
     this.callBack({
       tick: this.game.ticks(),
       packedTileUpdates,
@@ -286,6 +315,8 @@ export class GameRunner {
       ...(packedPlayerUpdates ? { packedPlayerUpdates } : {}),
       ...(packedAttackUpdates ? { packedAttackUpdates } : {}),
       ...(packedNukeImpacts ? { packedNukeImpacts } : {}),
+      ...(packedUnitUpdates ? { packedUnitUpdates } : {}),
+      ...(packedMissileTimers ? { packedMissileTimers } : {}),
       updates: updates,
       // A copy: hosts hold several ticks' updates before reading them, and
       // the record changes in place on later ticks.

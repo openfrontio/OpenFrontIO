@@ -4,6 +4,8 @@
   "name": "Clearwater Lakes",
   "translation_key": "map.clearwaterlakes",
   "categories": ["north_america"],
+  "location": { "lat": 56.2, "lon": -74.4 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [671, 847],

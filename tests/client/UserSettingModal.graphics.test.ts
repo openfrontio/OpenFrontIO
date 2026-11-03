@@ -100,6 +100,59 @@ function resetGraphicsSettings() {
 describe("Graphics tab: advanced options folded in from the in-game modal", () => {
   beforeEach(resetGraphicsSettings);
 
+  it("offers everyone, my team, only me and nobody, and persists the selection", async () => {
+    const el = await mountGraphics();
+    const select = control(el, "cosmetics-show-from-select") as HTMLElement & {
+      options: { value: string }[];
+      value: string;
+    };
+    expect(select.options.map(({ value }) => value)).toEqual([
+      "everyone",
+      "teammates",
+      "self",
+      "none",
+    ]);
+    select.dispatchEvent(
+      new CustomEvent("change", { detail: { value: "none" }, bubbles: true }),
+    );
+    expect(overrides().cosmetics?.showFrom).toBe("none");
+    expect(
+      JSON.parse(localStorage.getItem(GRAPHICS_KEY)!).cosmetics.showFrom,
+    ).toBe("none");
+    el.remove();
+    const reopened = await mountGraphics();
+    expect(
+      (control(reopened, "cosmetics-show-from-select") as typeof select).value,
+    ).toBe("none");
+    expect(
+      control(reopened, "cosmetics-territorySkins-toggle").hasAttribute(
+        "disabled",
+      ),
+    ).toBe(true);
+  });
+
+  it("allows switching from nobody back to my team", async () => {
+    new UserSettings().setGraphicsOverrides({
+      cosmetics: { showFrom: "none" },
+    });
+    const el = await mountGraphics();
+    const select = control(el, "cosmetics-show-from-select") as HTMLElement & {
+      options: { value: string }[];
+      value: string;
+    };
+    expect(select.value).toBe("none");
+    expect(select.options.some(({ value }) => value === "teammates")).toBe(
+      true,
+    );
+    select.dispatchEvent(
+      new CustomEvent("change", {
+        detail: { value: "teammates" },
+        bubbles: true,
+      }),
+    );
+    expect(overrides().cosmetics?.showFrom).toBe("teammates");
+  });
+
   it("renders every folded control", async () => {
     const el = await mountGraphics();
     for (const id of [

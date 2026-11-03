@@ -101,24 +101,33 @@ class SAMTargetingSystem {
     const trajectory = unit.trajectory();
     const maxIdx = trajectory.length - 2;
     const finalTile = trajectory[trajectory.length - 1];
-    if (!finalTile?.targetable) return undefined;
+    if (finalTile === undefined) return undefined;
 
     const curIdx = unit.trajectoryIndex();
     const waitTicks = unit.nukeState().waitTicks ?? 0;
     const expTicks = trajectory.length - 1 - curIdx + waitTicks;
     const range = this.mg.config().dynamicSamRange(this.sam, ticks + expTicks);
-    if (this.mg.euclideanDistSquared(samTile, finalTile.tile) > range * range) {
+    if (this.mg.euclideanDistSquared(samTile, finalTile) > range * range) {
       return undefined;
     }
     const flightTile = trajectory[maxIdx];
-    if (!flightTile?.targetable) return undefined;
+    if (flightTile === undefined) return undefined;
 
     const nukeTicks = maxIdx - curIdx + waitTicks;
-    const samTicks = this.tickToReach(samTile, flightTile.tile);
+    const samTicks = this.tickToReach(samTile, flightTile);
     const tickBeforeShooting = nukeTicks - samTicks;
     return tickBeforeShooting >= 0
-      ? { tick: tickBeforeShooting, tile: flightTile.tile }
+      ? { tick: tickBeforeShooting, tile: flightTile }
       : undefined;
+  }
+
+  private isTargetableAt(tile: TileRef, src: TileRef, dst: TileRef): boolean {
+    const targetRangeSquared =
+      this.mg.config().defaultNukeTargetableRange() ** 2;
+    return (
+      this.mg.euclideanDistSquared(tile, dst) < targetRangeSquared ||
+      this.mg.euclideanDistSquared(tile, src) < targetRangeSquared
+    );
   }
 
   private computeInterceptionTile(
@@ -136,29 +145,35 @@ class SAMTargetingSystem {
     let incSteps = 0;
     let lastDistSq = -1;
 
+    const src = trajectory[0];
+    const dst = trajectory[trajectory.length - 1];
+
     for (let i = curIdx; i <= maxIdx; i++) {
       const tile = trajectory[i];
-      const distSq = this.mg.euclideanDistSquared(samTile, tile.tile);
+      if (tile === undefined) continue;
+      const distSq = this.mg.euclideanDistSquared(samTile, tile);
       if (distSq < minDistSq) {
         minDistSq = distSq;
-        closestTile = tile.tile;
+        closestTile = tile;
       }
       incSteps = lastDistSq !== -1 && distSq > lastDistSq ? incSteps + 1 : 0;
       lastDistSq = distSq;
 
       const nukeTicks = i - curIdx + waitTicks;
-      const samTicks = this.tickToReach(samTile, tile.tile);
+      const samTicks = this.tickToReach(samTile, tile);
       const allowed = this.mg
         .config()
         .dynamicSamRange(this.sam, ticks + nukeTicks);
       if (
-        tile.targetable &&
         distSq <= allowed * allowed &&
-        nukeTicks >= samTicks
+        nukeTicks >= samTicks &&
+        src !== undefined &&
+        dst !== undefined &&
+        this.isTargetableAt(tile, src, dst)
       ) {
         return {
           tick: nukeTicks - samTicks,
-          tile: tile.tile,
+          tile: tile,
           minDistSq,
           lastSeenTick: ticks,
         };
@@ -216,9 +231,7 @@ class SAMTargetingSystem {
 
     const targetTile =
       unit.targetTile() ??
-      (trajectory.length > 0
-        ? trajectory[trajectory.length - 1].tile
-        : samTile);
+      (trajectory.length > 0 ? trajectory[trajectory.length - 1] : samTile);
 
     const distToSilo = this.mg.manhattanDist(samTile, targetTile);
 
