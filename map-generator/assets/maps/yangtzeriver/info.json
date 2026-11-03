@@ -4,6 +4,8 @@
   "id": "YangtzeRiver",
   "translation_key": "map.yangtzeriver",
   "categories": ["asia"],
+  "location": { "lat": 30.5, "lon": 114.3 },
+  "author": "crunchybbb",
   "nations": [
     {
       "coordinates": [3306, 1778],

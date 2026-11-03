@@ -276,6 +276,164 @@ const STRUCTURES = [
   UnitType.MissileSilo,
 ] as const;
 
+function nearbyWater(
+  game: Game,
+  tile: TileRef,
+  rand: PseudoRandom,
+): TileRef | null {
+  const x = game.x(tile);
+  const y = game.y(tile);
+  const direct: TileRef[] = [];
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dy = -1; dy <= 1; dy++) {
+      if (dx === 0 && dy === 0) continue;
+      const nx = x + dx;
+      const ny = y + dy;
+      if (game.isValidCoord(nx, ny)) {
+        const t = game.ref(nx, ny);
+        if (game.isWater(t)) direct.push(t);
+      }
+    }
+  }
+  if (direct.length > 0) return direct[rand.nextInt(0, direct.length)];
+  for (let i = 0; i < 20; i++) {
+    const nx = x + rand.nextInt(-12, 13);
+    const ny = y + rand.nextInt(-12, 13);
+    if (!game.isValidCoord(nx, ny)) continue;
+    const t = game.ref(nx, ny);
+    if (game.isWater(t)) return t;
+  }
+  return null;
+}
+
+function canAfford(game: Game, p: Player, unit: UnitType): boolean {
+  if (game.config().isUnitDisabled(unit)) return false;
+  const cost = game.unitInfo(unit).cost(game, p);
+  return p.gold() >= cost;
+}
+
+function buildStructureIntent(
+  game: Game,
+  p: Player,
+  rand: PseudoRandom,
+): Intent | null {
+  const shores = [...p.borderTiles()].filter((t) => game.isShore(t));
+  let unit: UnitType;
+  if (
+    p.units(UnitType.Port).length === 0 &&
+    shores.length > 0 &&
+    rand.chance(2)
+  ) {
+    unit = UnitType.Port;
+  } else if (
+    p.units(UnitType.MissileSilo).length === 0 &&
+    canAfford(game, p, UnitType.MissileSilo) &&
+    rand.chance(2)
+  ) {
+    unit = UnitType.MissileSilo;
+  } else if (
+    p.units(UnitType.SAMLauncher).length === 0 &&
+    canAfford(game, p, UnitType.SAMLauncher) &&
+    rand.chance(2)
+  ) {
+    unit = UnitType.SAMLauncher;
+  } else {
+    const affordable = STRUCTURES.filter((t) => canAfford(game, p, t));
+    const picked = pick(rand, affordable);
+    if (picked === null) return null;
+    unit = picked;
+  }
+  if (unit === UnitType.Port) {
+    const tile = pick(rand, shores);
+    if (tile === null || p.canBuild(unit, tile) === false) return null;
+    return { type: "build_unit", unit, tile };
+  }
+  for (let i = 0; i < 10; i++) {
+    const tile = randomOwnedTile(rand, p);
+    if (tile !== null && p.canBuild(unit, tile) !== false) {
+      return { type: "build_unit", unit, tile };
+    }
+  }
+  return null;
+}
+
+function buildWarshipIntent(
+  game: Game,
+  p: Player,
+  rand: PseudoRandom,
+): Intent | null {
+  const ports = p
+    .units(UnitType.Port)
+    .filter((port) => port.isActive() && !port.isUnderConstruction());
+  const port = pick(rand, ports);
+  if (port === null) return null;
+  const water = nearbyWater(game, port.tile(), rand);
+  if (water === null || p.canBuild(UnitType.Warship, water) === false) {
+    return null;
+  }
+  return { type: "build_unit", unit: UnitType.Warship, tile: water };
+}
+
+function launchBombIntent(
+  game: Game,
+  p: Player,
+  rand: PseudoRandom,
+  other: Player | null,
+): Intent | null {
+  const readySilos = p
+    .units(UnitType.MissileSilo)
+    .filter(
+      (s) => s.isActive() && !s.isInCooldown() && !s.isUnderConstruction(),
+    );
+  if (readySilos.length === 0 || other === null) {
+    return null;
+  }
+  const affordable = [
+    UnitType.AtomBomb,
+    UnitType.HydrogenBomb,
+    UnitType.MIRV,
+  ].filter((t) => canAfford(game, p, t));
+  const unit = pick(rand, affordable);
+  if (unit === null) return null;
+  const sams = game
+    .units(UnitType.SAMLauncher)
+    .filter(
+      (s) =>
+        !p.isFriendly(s.owner(), true) &&
+        s.isActive() &&
+        !s.isUnderConstruction(),
+    );
+  const sam = sams.length > 0 ? pick(rand, sams) : null;
+  const tile = sam?.tile() ?? randomOwnedTile(rand, other);
+  if (tile === null || p.canBuild(unit, tile) === false) return null;
+  return {
+    type: "build_unit",
+    unit,
+    tile,
+    rocketDirectionUp: rand.chance(2),
+  };
+}
+
+function moveWarshipIntent(
+  game: Game,
+  p: Player,
+  rand: PseudoRandom,
+): Intent | null {
+  const ships = p.units(UnitType.Warship);
+  const ship = pick(rand, ships);
+  if (ship === null) return null;
+  const enemyBoats = game
+    .units(UnitType.TransportShip)
+    .filter((b) => !p.isFriendly(b.owner(), true));
+  const target = pick(rand, enemyBoats);
+  const water =
+    target !== null
+      ? nearbyWater(game, target.tile(), rand)
+      : nearbyWater(game, ship.tile(), rand);
+  if (water === null) return null;
+  return { type: "move_warship", unitIds: [ship.id()], tile: water };
+}
+
 function playIntent(game: Game, p: Player, rand: PseudoRandom): Intent | null {
   if (!p.isAlive()) return null;
   // Most ticks a human does nothing; keep the game moving.
@@ -291,9 +449,40 @@ function playIntent(game: Game, p: Player, rand: PseudoRandom): Intent | null {
   if (embargoedHuman !== undefined && rand.chance(2)) {
     return { type: "embargo", targetID: embargoedHuman.id(), action: "stop" };
   }
+  if (
+    p
+      .units(UnitType.Port)
+      .some((prt) => prt.isActive() && !prt.isUnderConstruction()) &&
+    p.units(UnitType.Warship).length === 0 &&
+    rand.chance(2)
+  ) {
+    const warshipIntent = buildWarshipIntent(game, p, rand);
+    if (warshipIntent !== null) return warshipIntent;
+  }
   const others = game.players().filter((o) => o !== p && o.isPlayer());
   const other = pick(rand, others);
   const own = (types: UnitType[]) => p.units(types);
+
+  const readySilo = own([UnitType.MissileSilo]).some(
+    (s) => s.isActive() && !s.isInCooldown() && !s.isUnderConstruction(),
+  );
+  const enemySam = game
+    .units(UnitType.SAMLauncher)
+    .some(
+      (s) =>
+        !p.isFriendly(s.owner(), true) &&
+        s.isActive() &&
+        !s.isUnderConstruction(),
+    );
+  if (
+    readySilo &&
+    enemySam &&
+    canAfford(game, p, UnitType.AtomBomb) &&
+    rand.chance(2)
+  ) {
+    const bombIntent = launchBombIntent(game, p, rand, other);
+    if (bombIntent !== null) return bombIntent;
+  }
 
   switch (rand.nextInt(0, 22)) {
     case 0:
@@ -318,54 +507,12 @@ function playIntent(game: Game, p: Player, rand: PseudoRandom): Intent | null {
     }
     case 4:
     case 5:
-    case 6: {
-      const unit = pick(rand, STRUCTURES)!;
-      const tile =
-        unit === UnitType.Port
-          ? pick(
-              rand,
-              [...p.borderTiles()].filter((t) => game.isShore(t)),
-            )
-          : randomOwnedTile(rand, p);
-      if (tile === null || p.canBuild(unit, tile) === false) return null;
-      return { type: "build_unit", unit, tile };
-    }
-    case 7: {
-      const port = pick(rand, own([UnitType.Port]));
-      if (port === null) return null;
-      const water = nearbyWater(game, port.tile(), rand);
-      if (water === null || p.canBuild(UnitType.Warship, water) === false) {
-        return null;
-      }
-      return { type: "build_unit", unit: UnitType.Warship, tile: water };
-    }
-    case 8: {
-      if (own([UnitType.MissileSilo]).length === 0 || other === null) {
-        return null;
-      }
-      const unit = pick(rand, [
-        UnitType.AtomBomb,
-        UnitType.HydrogenBomb,
-        UnitType.MIRV,
-      ])!;
-      // Half the bombs fly at an enemy SAM, so SAMs get to shoot
-      const sam = rand.chance(2)
-        ? pick(
-            rand,
-            game
-              .units(UnitType.SAMLauncher)
-              .filter((s) => !p.isFriendly(s.owner(), true)),
-          )
-        : null;
-      const tile = sam?.tile() ?? randomOwnedTile(rand, other);
-      if (tile === null || p.canBuild(unit, tile) === false) return null;
-      return {
-        type: "build_unit",
-        unit,
-        tile,
-        rocketDirectionUp: rand.chance(2),
-      };
-    }
+    case 6:
+      return buildStructureIntent(game, p, rand);
+    case 7:
+      return buildWarshipIntent(game, p, rand);
+    case 8:
+      return launchBombIntent(game, p, rand, other);
     case 9: {
       const s = pick(rand, own([...STRUCTURES]));
       if (s === null) return null;
@@ -426,14 +573,8 @@ function playIntent(game: Game, p: Player, rand: PseudoRandom): Intent | null {
       if (boat === null) return null;
       return { type: "cancel_boat", unitID: boat.id() };
     }
-    case 19: {
-      const ships = own([UnitType.Warship]);
-      const ship = pick(rand, ships);
-      if (ship === null) return null;
-      const water = nearbyWater(game, ship.tile(), rand);
-      if (water === null) return null;
-      return { type: "move_warship", unitIds: [ship.id()], tile: water };
-    }
+    case 19:
+      return moveWarshipIntent(game, p, rand);
     case 20: {
       const s = pick(rand, own([UnitType.DefensePost, UnitType.City]));
       if (s === null || !rand.chance(4)) return null;
@@ -444,23 +585,6 @@ function playIntent(game: Game, p: Player, rand: PseudoRandom): Intent | null {
         type: "mark_disconnected",
         isDisconnected: !p.isDisconnected() && rand.chance(3),
       };
-  }
-  return null;
-}
-
-function nearbyWater(
-  game: Game,
-  tile: TileRef,
-  rand: PseudoRandom,
-): TileRef | null {
-  const x = game.x(tile);
-  const y = game.y(tile);
-  for (let i = 0; i < 20; i++) {
-    const nx = x + rand.nextInt(-12, 13);
-    const ny = y + rand.nextInt(-12, 13);
-    if (!game.isValidCoord(nx, ny)) continue;
-    const t = game.ref(nx, ny);
-    if (game.isOcean(t)) return t;
   }
   return null;
 }

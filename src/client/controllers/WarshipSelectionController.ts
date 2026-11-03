@@ -218,7 +218,12 @@ export class WarshipSelectionController implements Controller {
     if (!this.game.isValidCoord(cell.x, cell.y)) return;
 
     const clickRef = this.game.ref(cell.x, cell.y);
-    if (this.game.inSpawnPhase()) {
+    // The onboarding tutorial teaches one tap: on land it spawns, attacks
+    // or sends a boat directly, without the radial menu.
+    if (
+      this.game.inSpawnPhase() ||
+      this.game.config().gameConfig().tutorial === true
+    ) {
       if (!this.game.isWater(clickRef)) {
         this.eventBus.emit(new MouseUpEvent(event.x, event.y));
       }

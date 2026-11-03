@@ -4,6 +4,7 @@ import {
   UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
+import { unpackUnitUpdates } from "@openfront/engine-lib/game/PackedUnitUpdates";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { createGameRunnerFromSnapshot } from "@openfront/engine/GameRunner";
 import { readSnapshotHeader } from "@openfront/engine/snapshot/GameSnapshot";
@@ -81,9 +82,10 @@ describe("resyncing a view of a restored game", { timeout: 60_000 }, () => {
 
     expect(mismatchedTiles).toBe(0);
 
-    const sentUnits = new Set(
-      (gu.updates[GameUpdateType.Unit] as UnitUpdate[]).map((u) => u.id),
-    );
+    const unitUpdates = gu.packedUnitUpdates
+      ? unpackUnitUpdates(gu.packedUnitUpdates, gu.packedMissileTimers)
+      : (gu.updates[GameUpdateType.Unit] as UnitUpdate[]);
+    const sentUnits = new Set(unitUpdates.map((u) => u.id));
     const units = runner.game.units();
     expect(units.length).toBeGreaterThan(0);
     for (const unit of units) expect(sentUnits.has(unit.id())).toBe(true);

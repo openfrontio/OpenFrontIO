@@ -4,6 +4,8 @@
   "name": "Los Angeles",
   "translation_key": "map.losangeles",
   "categories": ["north_america"],
+  "location": { "lat": 34.05, "lon": -118.25 },
+  "author": "Patrick Plays Badly",
   "nations": [
     {
       "coordinates": [546, 16],

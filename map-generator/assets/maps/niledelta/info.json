@@ -4,6 +4,8 @@
   "name": "Nile Delta",
   "translation_key": "map.niledelta",
   "categories": ["africa"],
+  "location": { "lat": 30.8, "lon": 31 },
+  "author": "gabigabogabu",
   "nations": [
     {
       "coordinates": [305, 414],
