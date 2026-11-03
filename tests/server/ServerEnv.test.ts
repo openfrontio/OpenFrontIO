@@ -286,7 +286,7 @@ describe("ServerEnv.jwkPublicKey", () => {
     await expect(ServerEnv.jwkPublicKey()).resolves.toEqual(key);
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.openfront.io/.well-known/jwks.json",
-      { headers: { "x-api-key": "test-api-key" } },
+      { headers: { "x-api-key": "test-api-key" }, redirect: "error" },
     );
   });
 });
