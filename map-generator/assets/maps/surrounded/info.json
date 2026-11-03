@@ -4,6 +4,8 @@
   "name": "Surrounded",
   "translation_key": "map.surrounded",
   "categories": ["fictional"],
+  "author": "FloPinguin",
+  "description": "A ring of islands around a central one, so every expansion needs a boat. One hydrogen bomb can wipe out a whole island. Can you win a public FFA after spawning in the middle?",
   "special_team_count": 4,
   "nations": [
     {

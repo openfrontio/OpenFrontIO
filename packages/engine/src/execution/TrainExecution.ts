@@ -96,6 +96,7 @@ export class TrainExecution implements Execution {
     if (pathTiles.length === 0 || pathTiles[0] !== startTile) {
       pathTiles.unshift(startTile);
       this.pathIndex = 1;
+      this.currentTile = -1;
     }
     this.pathTiles = pathTiles;
 
@@ -216,7 +217,11 @@ export class TrainExecution implements Execution {
       i < speed && tileToSave < this.currentRailroad.getTiles().length;
       i++
     ) {
-      this.saveTile(this.currentRailroad.getTiles()[tileToSave]);
+      const tile =
+        tileToSave < 0
+          ? this.pathTiles[tileToSave + this.pathIndex]
+          : this.currentRailroad.getTiles()[tileToSave];
+      this.saveTile(tile);
       tileToSave = tileToSave + 1;
     }
   }

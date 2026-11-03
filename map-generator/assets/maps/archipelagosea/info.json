@@ -5,6 +5,8 @@
   "translation_key": "map.archipelagosea",
   "display_name": "Archipelago Sea",
   "categories": ["europe"],
+  "location": { "lat": 60.2, "lon": 21.6 },
+  "author": "Tristar",
   "forced_modifiers": ["isWaterNukes:50"],
   "themes": ["europe"],
   "nations": [

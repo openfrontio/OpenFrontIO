@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../../src/client/HomepagePromos";
 import type { HomepagePromos } from "../../src/client/HomepagePromos";
 import { hideMenuChrome, restoreMenuChrome } from "../../src/client/MenuChrome";
+import { reportEvent } from "../../src/client/Telemetry";
+
+vi.mock("../../src/client/Telemetry", () => ({ reportEvent: vi.fn() }));
 
 // The index.html stub before ramp.js loads: a queue and nothing else. drain()
 // stands in for ramp.js arriving and running whatever was queued.
@@ -114,65 +117,187 @@ describe("HomepagePromos in a running game", () => {
 });
 
 describe("HomepagePromos bottom rail after its destroy", () => {
-  const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+  const flush = () => vi.advanceTimersByTimeAsync(0);
+  const slot =
+    "/154013155/1025558-w:75940-bottom_rail/1025558-w:75940-bottom_rail-HP_0";
 
   function renderRail(): HTMLElement {
     const rail = document.createElement("div");
     rail.id = "pw-oop-bottom_rail";
+    rail.className = "pw-tag pointer-modifier pw-size-728x90";
+    const creative = document.createElement("iframe");
+    creative.id = `google_ads_iframe_${slot}`;
+    rail.appendChild(creative);
     document.body.appendChild(rail);
     return rail;
   }
 
-  let error: ReturnType<typeof vi.spyOn>;
+  function joinLobby(): void {
+    document.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: { gameID: "cSkwPxCLWx", source: "public" },
+      }),
+    );
+  }
 
   beforeEach(() => {
-    error = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.useFakeTimers();
+    vi.mocked(reportEvent).mockClear();
   });
 
   afterEach(() => {
     document.getElementById("pw-oop-bottom_rail")?.remove();
-    error.mockRestore();
+    vi.useRealTimers();
   });
 
-  it("destroys a rail that finishes rendering after the destroy", async () => {
+  it("destroys and reports a rail that finishes rendering after the destroy", async () => {
     const { ramp, drain } = stubRamp();
-    promos.loadBottomRail();
+    joinLobby();
     drain();
     promos.destroyBottomRail();
     await flush();
 
-    renderRail();
-    await flush();
-
-    expect(ramp.destroyUnits).toHaveBeenCalledTimes(2);
-    expect(error).toHaveBeenCalledTimes(1);
-  });
-
-  it("removes the rail itself when destroyUnits leaves it on the page", async () => {
-    stubRamp();
-    promos.loadBottomRail();
-    promos.destroyBottomRail();
-
     const rail = renderRail();
     await flush();
 
+    expect(ramp.destroyUnits).toHaveBeenCalledTimes(2);
     expect(rail.isConnected).toBe(false);
+    expect(reportEvent).toHaveBeenCalledExactlyOnceWith("bottom_rail_in_game", {
+      gameID: "cSkwPxCLWx",
+      lobbySource: "public",
+      secondsAfterDestroy: "0",
+      size: "728x90",
+      adSlot: slot,
+      destroyUnits: "resolved",
+      removedBy: "openfront",
+      outcome: "removed",
+    });
   });
 
-  it("removes the rail when destroyUnits rejects", async () => {
+  it("reports Playwire's removal when destroyUnits takes the rail away", async () => {
+    const { ramp } = stubRamp();
+    joinLobby();
+    promos.destroyBottomRail();
+    await flush();
+    const rail = renderRail();
+    ramp.destroyUnits.mockImplementation(() => {
+      rail.remove();
+      return Promise.resolve();
+    });
+
+    await flush();
+
+    expect(reportEvent).toHaveBeenCalledWith(
+      "bottom_rail_in_game",
+      expect.objectContaining({ removedBy: "playwire", outcome: "removed" }),
+    );
+  });
+
+  it("reports an unknown remover once the next lobby lifted the ban", async () => {
+    const { ramp } = stubRamp();
+    joinLobby();
+    promos.destroyBottomRail();
+    await flush();
+    let settle = () => {};
+    ramp.destroyUnits.mockImplementation(
+      () => new Promise<void>((resolve) => (settle = resolve)),
+    );
+    renderRail();
+    await flush();
+
+    joinLobby();
+    settle();
+    await flush();
+
+    expect(reportEvent).toHaveBeenCalledExactlyOnceWith(
+      "bottom_rail_in_game",
+      expect.objectContaining({ removedBy: "unknown", outcome: "removed" }),
+    );
+    expect(document.getElementById("pw-oop-bottom_rail")).not.toBeNull();
+  });
+
+  it("reports an unknown remover when a later lobby came and went mid-destroy", async () => {
+    const { ramp } = stubRamp();
+    joinLobby();
+    promos.destroyBottomRail();
+    await flush();
+    let settle = () => {};
+    ramp.destroyUnits.mockImplementation(
+      () => new Promise<void>((resolve) => (settle = resolve)),
+    );
+    renderRail();
+    await flush();
+
+    joinLobby();
+    promos.destroyBottomRail();
+    settle();
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(reportEvent).toHaveBeenCalledExactlyOnceWith(
+      "bottom_rail_in_game",
+      expect.objectContaining({ removedBy: "unknown", outcome: "removed" }),
+    );
+  });
+
+  it("removes and reports the rail when destroyUnits rejects", async () => {
     const { ramp } = stubRamp();
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     ramp.destroyUnits.mockImplementation(() =>
       Promise.reject(new Error("unknown unit")),
     );
-    promos.loadBottomRail();
+    joinLobby();
     promos.destroyBottomRail();
 
     const rail = renderRail();
     await flush();
 
     expect(rail.isConnected).toBe(false);
+    expect(reportEvent).toHaveBeenCalledWith(
+      "bottom_rail_in_game",
+      expect.objectContaining({ destroyUnits: "rejected" }),
+    );
     warn.mockRestore();
+  });
+
+  it("reports a rail creative still on the page two seconds later", async () => {
+    stubRamp();
+    joinLobby();
+    promos.destroyBottomRail();
+    renderRail();
+    await flush();
+    const elsewhere = document.createElement("iframe");
+    elsewhere.id = `google_ads_iframe_${slot}`;
+    document.body.appendChild(elsewhere);
+
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(reportEvent).toHaveBeenLastCalledWith(
+      "bottom_rail_in_game",
+      expect.objectContaining({ outcome: "still_visible", adSlot: slot }),
+    );
+    elsewhere.remove();
+  });
+
+  it("does not pin a later lobby's rail on this one's game", async () => {
+    stubRamp();
+    joinLobby();
+    promos.destroyBottomRail();
+    renderRail();
+    await flush();
+
+    joinLobby();
+    promos.destroyBottomRail();
+    await flush();
+    const later = document.createElement("iframe");
+    later.id = `google_ads_iframe_${slot}`;
+    document.body.appendChild(later);
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(reportEvent).not.toHaveBeenCalledWith(
+      "bottom_rail_in_game",
+      expect.objectContaining({ outcome: "still_visible" }),
+    );
+    later.remove();
   });
 
   it("does not report a rail that its own destroy removes", async () => {
@@ -182,29 +307,30 @@ describe("HomepagePromos bottom rail after its destroy", () => {
       rail.remove();
       return Promise.resolve();
     });
-    promos.loadBottomRail();
+    joinLobby();
     drain();
     promos.destroyBottomRail();
     // An unrelated in-game DOM change while the destroy is in flight.
-    document.body.appendChild(document.createElement("div"));
-    await flush();
+    const unrelated = document.body.appendChild(document.createElement("div"));
+    await vi.advanceTimersByTimeAsync(2000);
 
     expect(ramp.destroyUnits).toHaveBeenCalledTimes(1);
-    expect(error).not.toHaveBeenCalled();
+    expect(reportEvent).not.toHaveBeenCalled();
+    unrelated.remove();
   });
 
   it("leaves the rail of the next lobby alone", async () => {
     const { ramp, drain } = stubRamp();
-    promos.loadBottomRail();
+    joinLobby();
     promos.destroyBottomRail();
-    promos.loadBottomRail();
+    joinLobby();
     drain();
 
     const rail = renderRail();
-    await flush();
+    await vi.advanceTimersByTimeAsync(2000);
 
     expect(rail.isConnected).toBe(true);
     expect(ramp.destroyUnits).toHaveBeenCalledTimes(1);
-    expect(error).not.toHaveBeenCalled();
+    expect(reportEvent).not.toHaveBeenCalled();
   });
 });

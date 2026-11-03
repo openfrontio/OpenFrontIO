@@ -4,6 +4,8 @@
   "name": "Las Vegas Strip",
   "translation_key": "map.lasvegasstrip",
   "categories": ["north_america"],
+  "location": { "lat": 36.1, "lon": -115.2 },
+  "author": "crunchybbb",
   "nations": [
     {
       "coordinates": [954, 2653],
