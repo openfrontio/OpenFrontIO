@@ -4,6 +4,8 @@
   "name": "Finger Lakes",
   "translation_key": "map.fingerlakes",
   "categories": ["north_america"],
+  "location": { "lat": 42.6, "lon": -76.9 },
+  "author": "crunchybbb",
   "nations": [
     {
       "coordinates": [1156, 1222],

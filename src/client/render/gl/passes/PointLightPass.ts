@@ -232,19 +232,32 @@ export class PointLightPass {
   private applySmoothing(): void {
     const segs = this.smoothSegs;
     if (segs.length === 0) return;
-    const alpha = Math.min(
-      1,
-      (performance.now() - this.lastUnitsUpdateMs) / this.tickIntervalMs,
+    const alpha = Math.max(
+      0,
+      Math.min(
+        1,
+        (performance.now() - this.lastUnitsUpdateMs) / this.tickIntervalMs,
+      ),
     );
     const data = this.lightData;
-    const gl = this.gl;
-    gl.bindBuffer(gl.ARRAY_BUFFER, this.lightBuf);
+    let dirty = false;
     for (let i = 0; i < segs.length; i += SMOOTH_SEG_STRIDE) {
       const idx = segs[i];
       const off = idx * FLOATS_PER_LIGHT;
       data[off + 0] = segs[i + 1] + (segs[i + 3] - segs[i + 1]) * alpha;
       data[off + 1] = segs[i + 2] + (segs[i + 4] - segs[i + 2]) * alpha;
-      gl.bufferSubData(gl.ARRAY_BUFFER, idx * BYTES_PER_LIGHT, data, off, 2);
+      dirty = true;
+    }
+    if (dirty && this.lightCount > 0) {
+      const gl = this.gl;
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.lightBuf);
+      gl.bufferSubData(
+        gl.ARRAY_BUFFER,
+        0,
+        this.lightData,
+        0,
+        this.lightCount * FLOATS_PER_LIGHT,
+      );
     }
   }
 

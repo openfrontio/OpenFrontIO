@@ -309,6 +309,9 @@ export const GameConfigSchema = z.object({
   nameRevealPublicIds: z.string().array().max(200).optional(),
   waterNukes: z.boolean().nullable().optional(),
   randomSpawn: z.boolean(),
+  // The onboarding tutorial (docs/OnboardingTutorial.md): nations and tribes
+  // only grow into free land, and the game ends once the human is alone.
+  tutorial: z.boolean().optional(),
   maxPlayers: zb.uint().optional(),
   // OFM: allowlist of publicIds allowed to join (admin-only, see create_game).
   allowedPublicIds: z.array(z.string()).max(200).optional(),

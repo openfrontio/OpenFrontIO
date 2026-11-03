@@ -314,6 +314,22 @@ describe("Telemetry", () => {
     expect(beforeSend(signal("exception", outside))).toBeNull();
   });
 
+  it("sends bottom rail removals from every prod session, up to a page cap", async () => {
+    const beforeSend = await beforeSendFor();
+    const { outside } = sessionIds();
+    const event = (name: string) => ({
+      type: "event",
+      payload: { name, attributes: {} },
+      meta: { session: { id: outside } },
+    });
+
+    expect(beforeSend(event("some_other_event"))).toBeNull();
+    for (let i = 0; i < 20; i++) {
+      expect(beforeSend(event("bottom_rail_in_game"))).not.toBeNull();
+    }
+    expect(beforeSend(event("bottom_rail_in_game"))).toBeNull();
+  });
+
   it("sends everything from every session on staging", async () => {
     const beforeSend = await beforeSendFor({ gameEnv: "staging" });
     expect(initializeFaro.mock.calls[0][0]).toMatchObject({

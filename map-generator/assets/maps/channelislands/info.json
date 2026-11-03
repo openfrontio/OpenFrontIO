@@ -4,6 +4,8 @@
   "id": "ChannelIslands",
   "translation_key": "map.channelislands",
   "categories": ["north_america"],
+  "location": { "lat": 33.5, "lon": -119 },
+  "author": "crunchybbb",
   "nations": [
     {
       "coordinates": [4060, 214],

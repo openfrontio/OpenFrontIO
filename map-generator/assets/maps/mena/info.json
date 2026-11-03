@@ -5,6 +5,8 @@
   "display_name": "MENA",
   "translation_key": "map.mena",
   "categories": ["asia", "africa"],
+  "location": { "lat": 27, "lon": 18 },
+  "author": "evanpelle",
   "nations": [
     {
       "coordinates": [257, 82],

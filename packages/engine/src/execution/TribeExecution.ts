@@ -73,6 +73,13 @@ export class TribeExecution implements Execution {
       return;
     }
 
+    // The tutorial's tribe only grows into free land, and accepts no
+    // alliance: the tutorial has the new player conquer it.
+    if (this.mg.config().gameConfig().tutorial) {
+      this.attackBehavior.expandIntoFreeLand();
+      return;
+    }
+
     this.acceptAllAllianceRequests();
     this.deleteNextStructure();
     this.maybeAttack();

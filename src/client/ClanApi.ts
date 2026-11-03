@@ -9,6 +9,9 @@ import {
   ClanBrowseResponseSchema,
   type ClanBrowseSort,
   type ClanDiscord,
+  type ClanDonationLeaderboardResponse,
+  ClanDonationLeaderboardResponseSchema,
+  type ClanDonationPeriod,
   type ClanDonationsResponse,
   ClanDonationsResponseSchema,
   type ClanGameFilter,
@@ -39,7 +42,10 @@ export type {
   ClanBrowseSort,
   ClanDiscord,
   ClanDonation,
+  ClanDonationLeaderboardResponse,
+  ClanDonationPeriod,
   ClanDonationsResponse,
+  ClanDonor,
   ClanGame,
   ClanGameFilter,
   ClanGamePlayer,
@@ -763,6 +769,47 @@ export async function fetchClanDonations(
     const parsed = ClanDonationsResponseSchema.safeParse(json);
     if (!parsed.success) {
       console.warn("fetchClanDonations: Zod validation failed", parsed.error);
+      return { error: "failed" };
+    }
+    return parsed.data;
+  } catch {
+    return { error: "failed" };
+  }
+}
+
+/**
+ * Members-only ranking of current members by net donations of one currency,
+ * over all time or the last 7 (`week`) / 30 (`month`) days.
+ */
+export async function fetchClanDonationLeaderboard(
+  tag: string,
+  opts: {
+    currencyType: ClanCurrencyType;
+    period?: ClanDonationPeriod;
+    page?: number;
+    limit?: number;
+  },
+): Promise<
+  ClanDonationLeaderboardResponse | { error: ClanDonationsFetchError }
+> {
+  try {
+    const params = new URLSearchParams();
+    params.set("currencyType", opts.currencyType);
+    params.set("period", opts.period ?? "all");
+    params.set("page", String(opts.page ?? 1));
+    params.set("limit", String(opts.limit ?? 10));
+    const res = await clanFetch(
+      `/clans/${encodeURIComponent(tag)}/donations/leaderboard?${params}`,
+    );
+    if (res.status === 403) return { error: "forbidden" };
+    if (!res.ok) return { error: "failed" };
+    const json = await res.json();
+    const parsed = ClanDonationLeaderboardResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn(
+        "fetchClanDonationLeaderboard: Zod validation failed",
+        parsed.error,
+      );
       return { error: "failed" };
     }
     return parsed.data;
