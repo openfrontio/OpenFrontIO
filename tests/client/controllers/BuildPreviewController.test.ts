@@ -99,7 +99,11 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
         }
         return y * width + x;
       },
-      myPlayer: () => ({ gold: () => 100n, smallID: () => 1 }),
+      myPlayer: () => ({
+        gold: () => 100n,
+        smallID: () => 1,
+        isAlive: () => true,
+      }),
       x: (t: number) => t % width,
       y: (t: number) => Math.floor(t / width),
     };
@@ -241,7 +245,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       .mockResolvedValue([
         { type: UnitType.City, canBuild: false, canUpgrade: 7 },
       ]);
-    c.game.myPlayer = () => ({ buildables });
+    c.game.myPlayer = () => ({ buildables, isAlive: () => true });
     c.requestConfirmStructure(new MouseUpEvent(0, 0));
     expect(c.pendingConfirmations).toHaveLength(1);
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -258,7 +262,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     const buildables = vi.fn(
       () => new Promise((resolve) => pending.push(resolve)),
     );
-    c.game.myPlayer = () => ({ buildables });
+    c.game.myPlayer = () => ({ buildables, isAlive: () => true });
     const coordinates = vi.fn().mockReturnValue({ x: 3, y: 4 });
     c.transformHandler.screenToWorldCoordinates = coordinates;
     vi.spyOn(c, "emitGhostPreview").mockImplementation(() => {});
@@ -300,6 +304,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       const c = controller as any;
       let reply: (units: unknown[]) => void = () => {};
       c.game.myPlayer = () => ({
+        isAlive: () => true,
         buildables: () =>
           new Promise((resolve) => {
             reply = resolve;
@@ -339,7 +344,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
           }),
       )
       .mockResolvedValue([fresh]);
-    c.game.myPlayer = () => ({ buildables });
+    c.game.myPlayer = () => ({ buildables, isAlive: () => true });
     vi.spyOn(c, "emitGhostPreview").mockImplementation(() => {});
     c.renderGhost();
     c.uiState.preventStacking = true;
@@ -363,7 +368,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
           reply = resolve;
         }),
     );
-    c.game.myPlayer = () => ({ buildables });
+    c.game.myPlayer = () => ({ buildables, isAlive: () => true });
     c.ghostResolved = false;
     c.requestConfirmStructure(new MouseUpEvent(0, 0));
     c.uiState.ghostStructure = null; // Escape arrives before the next tick.
@@ -389,6 +394,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     c.game.myPlayer = () => ({
       gold: () => 100n,
       smallID: () => 1,
+      isAlive: () => true,
       buildables,
     });
     c.game.isImpassable = () => false;
@@ -458,6 +464,7 @@ describe("BuildPreviewController idle diffing optimization", () => {
     const mockMyPlayer = {
       gold: () => playerGold,
       smallID: () => 1,
+      isAlive: () => true,
       readyMissileCount: () => 5,
       units: (type: UnitType) => {
         if (type === UnitType.MissileSilo) return mockSilos;
@@ -932,6 +939,7 @@ describe("BuildPreviewController 0-allocation mutable render buffer", () => {
     const mockMyPlayer = {
       gold: () => 1000n,
       smallID: () => 1,
+      isAlive: () => true,
       readyMissileCount: () => 5,
       units: () => [],
       allies: () => [],
@@ -1199,6 +1207,7 @@ describe("BuildPreviewController Single-Flight Coalescing Guard with Tile-Change
     const mockMyPlayer = {
       gold: () => playerGold,
       smallID: () => 1,
+      isAlive: () => true,
       allies: () => [],
       buildables: vi.fn((tileRef: number | undefined, types: any) => {
         buildablesCalls.push({ tile: tileRef, types });
@@ -1645,6 +1654,7 @@ describe("BuildPreviewController touch preview", () => {
     const player = {
       gold: () => 1000n,
       smallID: () => 1,
+      isAlive: () => true,
       readyMissileCount: () => 10,
       allies: () => [],
       units: () => [],
@@ -2126,6 +2136,25 @@ describe("BuildPreviewController touch preview", () => {
     expect(c.pendingConfirmations).toHaveLength(0);
   });
 
+  test("a dead player's nuke ghost is dropped on the next tick, releasing touch placement", () => {
+    const { controller, uiState, player, eventBus } = makeController(
+      UnitType.AtomBomb,
+    );
+    const c = controller as any;
+    const highlights: ToggleStructureEvent[] = [];
+    eventBus.on(ToggleStructureEvent, (event) => highlights.push(event));
+    c.touchPlacementMode = true;
+    c.touchPreviewTile = 101;
+    (player as any).isAlive = () => false;
+
+    controller.tick();
+
+    expect(uiState.ghostStructure).toBeNull();
+    expect(c.ghostUnit).toBeNull();
+    expect(c.touchPlacementMode).toBe(false);
+    expect(highlights).toEqual([new ToggleStructureEvent(null)]);
+  });
+
   test.each([UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRV])(
     "touch confirmation never auto-cancels the nuke selection (%s)",
     async (unitType) => {
@@ -2225,7 +2254,7 @@ describe("BuildPreviewController touch preview", () => {
     const eventBus = new EventBus();
     const controller = new BuildPreviewController(
       {
-        myPlayer: () => ({ buildables }),
+        myPlayer: () => ({ buildables, isAlive: () => true }),
         isValidCoord: () => true,
         ref: (x: number, y: number) => x * 100 + y,
         x: (ref: number) => Math.floor(ref / 100),

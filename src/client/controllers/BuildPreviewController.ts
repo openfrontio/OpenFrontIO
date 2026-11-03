@@ -467,6 +467,13 @@ export class BuildPreviewController implements Controller {
    * UI bits (build menu, key bindings) toggle uiState; we mirror it here.
    */
   private syncGhostState(): void {
+    // A dead player keeps a ghost forever otherwise: on touch every map tap
+    // is routed to it, the build bar is gone, and a nuke never cancels on an
+    // invalid tap, so the radial menu is unreachable for the rest of the game.
+    if (this.game.myPlayer()?.isAlive() === false) {
+      this.removeGhostStructure();
+      return;
+    }
     const target = this.uiState.ghostStructure;
     if (this.ghostUnit) {
       if (target === null) {
