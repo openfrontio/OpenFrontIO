@@ -152,9 +152,9 @@ async function runBenchmark(): Promise<void> {
             ? UnitType.MIRVWarhead
             : UnitType.AtomBomb;
 
-      const trajectory: { tile: number; targetable: boolean }[] = [];
+      const trajectory: number[] = [];
       for (let step = fromX; step <= toX; step += 6) {
-        trajectory.push({ tile: game.ref(step, fromY), targetable: true });
+        trajectory.push(game.ref(step, fromY));
       }
 
       attacker.buildUnit(nukeType, game.ref(fromX, fromY), {

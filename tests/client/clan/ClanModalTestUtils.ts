@@ -140,7 +140,7 @@ export async function virtualizerMockFactory() {
 }
 
 /**
- * ClanModal gates the Map tab on ClientEnv.env() (prod = Coming Soon), which
+ * The map tab's iframe takes its origin from ClientEnv.jwtAudience(), which
  * reads the config the server normally injects into index.html. Call before
  * rendering the map tab.
  */

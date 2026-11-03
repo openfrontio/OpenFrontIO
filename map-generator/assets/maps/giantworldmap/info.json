@@ -4,6 +4,7 @@
   "name": "Giant World Map",
   "translation_key": "map.giantworldmap",
   "categories": ["world"],
+  "author": "1brucben",
   "nations": [
     {
       "coordinates": [2309, 535],

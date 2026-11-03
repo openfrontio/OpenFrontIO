@@ -28,6 +28,26 @@ export function expectFrameMatchesTruth(
   for (const [smallID, t] of truth.players) {
     const p = frame.players.get(smallID);
     if (p === undefined) continue; // never emitted on the wire (e.g. not yet spawned)
+
+    // Player.toUpdate() computes isTraitor before GameImpl._ticks++ runs, whereas
+    // captureTruth runs after _ticks++. On the exact tick boundary where traitorDuration
+    // expires, the wire update has isTraitor=true for 1 tick after truth transitions to false.
+    let expectedTraitor = t.isTraitor;
+    if (p.isTraitor !== t.isTraitor) {
+      const prevTraitor = rec.truth[index - 1]?.players.get(smallID)?.isTraitor;
+      const nextTraitor = rec.truth[index + 1]?.players.get(smallID)?.isTraitor;
+      if (
+        (prevTraitor !== undefined &&
+          prevTraitor !== t.isTraitor &&
+          p.isTraitor === prevTraitor) ||
+        (nextTraitor !== undefined &&
+          nextTraitor !== t.isTraitor &&
+          p.isTraitor === nextTraitor)
+      ) {
+        expectedTraitor = p.isTraitor;
+      }
+    }
+
     expectSame(
       {
         tilesOwned: p.tilesOwned,
@@ -39,7 +59,11 @@ export function expectFrameMatchesTruth(
         betrayals: p.betrayals,
         allies: [...p.allies].sort((a, b) => a - b),
       },
-      { ...t, allies: [...t.allies].sort((a, b) => a - b) },
+      {
+        ...t,
+        isTraitor: expectedTraitor,
+        allies: [...t.allies].sort((a, b) => a - b),
+      },
       `${at} player ${smallID}`,
     );
   }

@@ -4,6 +4,8 @@
   "name": "Tierra Del Fuego",
   "translation_key": "map.tierradelfuego",
   "categories": ["south_america"],
+  "location": { "lat": -54, "lon": -68.5 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [1320, 945],

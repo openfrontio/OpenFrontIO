@@ -102,6 +102,9 @@ const results: string[] = [];
 
 new Benchmark.Suite()
   .add("MIRV target selection - sparse territory", () => {
+    sparsePlayer.units(UnitType.MissileSilo).forEach((s) => {
+      while (s.isInCooldown()) s.reloadMissile();
+    });
     const targetTile = sparseTerritoryGame.ref(100, 100);
     const mirvExec = new MirvExecution(sparsePlayer, targetTile);
 
@@ -113,6 +116,9 @@ new Benchmark.Suite()
     }
   })
   .add("MIRV target selection - dense territory", () => {
+    densePlayer.units(UnitType.MissileSilo).forEach((s) => {
+      while (s.isInCooldown()) s.reloadMissile();
+    });
     const targetTile = denseTerritoryGame.ref(100, 100);
     const mirvExec = new MirvExecution(densePlayer, targetTile);
 
@@ -124,6 +130,9 @@ new Benchmark.Suite()
     }
   })
   .add("MIRV target selection - giant world map (350 targets)", () => {
+    giantMapPlayer.units(UnitType.MissileSilo).forEach((s) => {
+      while (s.isInCooldown()) s.reloadMissile();
+    });
     const targetTile = giantMapGame.ref(2150, 800);
     const mirvExec = new MirvExecution(giantMapPlayer, targetTile);
 

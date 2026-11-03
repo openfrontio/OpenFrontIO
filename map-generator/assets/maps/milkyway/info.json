@@ -5,6 +5,7 @@
   "display_name": "Milky Way",
   "translation_key": "map.milkyway",
   "categories": ["cosmic"],
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [869, 886],

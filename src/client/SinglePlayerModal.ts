@@ -4,7 +4,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
-  maps,
+  listedMaps,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import type { SnapshotHeader } from "@openfront/engine-api/game/SnapshotHeader";
@@ -108,6 +108,15 @@ type StartPreparation = {
   cosmetics: PlayerCosmetics;
 };
 
+const TUTORIAL_DISABLED_UNITS: UnitType[] = [
+  UnitType.City,
+  UnitType.DefensePost,
+  UnitType.Factory,
+  UnitType.SAMLauncher,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+];
+
 const DEFAULT_OPTIONS = {
   selectedMap: GameMapType.World,
   selectedDifficulty: Difficulty.Easy,
@@ -153,7 +162,7 @@ async function loadAchievementEligibleMaps(): Promise<Set<GameMapType> | null> {
     const eligible = new Set<GameMapType>();
     let hadFailure = false;
     await Promise.all(
-      maps.map(async (m) => {
+      listedMaps.map(async (m) => {
         try {
           const manifest = await terrainMapFileLoader
             .getMapData(m.type)
@@ -680,11 +689,64 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   /**
-   * Starts a solo game on the default settings without opening the modal,
-   * with the in-game tutorial switched back on (the play page's Tutorial
-   * card for new players).
+   * Starts the onboarding tutorial (docs/OnboardingTutorial.md) without
+   * opening the modal: the Tutorial map, with OnboardingOverlay guiding the
+   * player through spawning, attacking and boats.
    */
   public async startTutorial(): Promise<void> {
+    // The modal never opens on this path, so onOpen's prewarm never runs.
+    void prewarmCosmetics();
+    if (this.starting) return;
+    await this.launch(async ({ resolvedName, cosmetics }, usernameInput) => {
+      const gameID = generateID();
+      return {
+        gameID,
+        gameStartInfo: {
+          gameID,
+          players: [
+            {
+              clientID: generateID(),
+              username: resolvedName.name,
+              clanTag: usernameInput?.getClanTag() ?? null,
+              cosmetics,
+            },
+          ],
+          config: {
+            gameMap: GameMapType.Tutorial,
+            gameMapSize: GameMapSize.Normal,
+            gameType: GameType.Singleplayer,
+            gameMode: GameMode.FFA,
+            difficulty: Difficulty.Easy,
+            // Just the map's two positioned nations.
+            bots: 0,
+            nations: "default",
+            infiniteGold: false,
+            donateGold: false,
+            donateTroops: false,
+            infiniteTroops: false,
+            instantBuild: false,
+            randomSpawn: false,
+            disableAlliances: true,
+            // The only things built are the nation's silo, port and warship,
+            // and the atom bomb the player fires from the silo once captured;
+            // the gold is that one bomb's.
+            disabledUnits: TUTORIAL_DISABLED_UNITS,
+            startingGold: 750_000,
+            tutorial: true,
+          },
+          lobbyCreatedAt: Date.now(),
+        },
+        source: "singleplayer",
+      };
+    });
+  }
+
+  /**
+   * Starts a solo game on the default settings without opening the modal,
+   * with the in-game guide switched back on (where the onboarding
+   * tutorial's "Play a solo game" leads).
+   */
+  public async startSoloWithGuide(): Promise<void> {
     // The modal never opens on this path, so onOpen's prewarm never runs.
     // Overlap it with the manifest load below.
     void prewarmCosmetics();
@@ -1009,6 +1071,7 @@ export class SinglePlayerModal extends BaseModal {
    * resolution here is a cost with nothing to show for it, so
    * START_PREPARE_DEADLINE_MS cuts it short rather than pinning Start at
    * "Starting…" for the rest of the session, which would take startTutorial()
+   * or startSoloWithGuide()
    * down with it on the re-entrancy guard.
    *
    * The midgame ad is deliberately not part of this — see awaitMidgameAd.

@@ -354,6 +354,12 @@ export class Config {
         ? 1_000_000_000
         : 2 * (pow(player.numTilesOwned(), 0.6) * 1000 + 50000) + cityTroops;
 
+    // The tutorial's nation and tribe never spend troops on attacks: at their
+    // usual cap they'd bank more than a new player could beat.
+    if (this._gameConfig.tutorial && player.type() !== PlayerType.Human) {
+      return maxTroops * 0.1;
+    }
+
     if (player.type() === PlayerType.Bot) {
       return maxTroops / 3;
     }
@@ -415,6 +421,9 @@ export class Config {
       case UnitType.MIRVWarhead:
         return { inner: 12, outer: 18 };
       case UnitType.AtomBomb:
+        // The onboarding tutorial's nukes hurt without wiping out a new
+        // player's small territory.
+        if (this._gameConfig.tutorial) return { inner: 8, outer: 16 };
         return { inner: 12, outer: 30 };
       case UnitType.HydrogenBomb:
         return { inner: 80, outer: 100 };

@@ -188,8 +188,10 @@ export class HeadsUpMessage extends LitElement implements Controller {
       elapsed >= overtimeStart &&
       elapsed < overtimeStart + HeadsUpMessage.OVERTIME_NOTICE_SECONDS;
 
+    // The onboarding tutorial's own card says where to spawn.
     this.isVisible =
-      this.game.inSpawnPhase() ||
+      (this.game.inSpawnPhase() &&
+        this.game.config().gameConfig().tutorial !== true) ||
       this.isPaused ||
       this.isImmunityActive ||
       this.isCatchingUp ||

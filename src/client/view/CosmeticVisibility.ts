@@ -8,17 +8,18 @@ export type CosmeticVisibility = NonNullable<GraphicsOverrides["cosmetics"]>;
 export type CosmeticOwner = "self" | "teammate" | "other";
 
 /**
- * The part of a player's equipped cosmetics this client draws. Your own
- * cosmetics are always drawn; anyone else's are limited first by whose
- * cosmetics the player chose to see, then by the per-category toggles.
+ * The part of a player's equipped cosmetics this client draws. None hides
+ * everyone's cosmetics; otherwise your own are always drawn and other
+ * players' cosmetics are limited by the owner and per-category toggles.
  */
 export function visibleCosmetics(
   cosmetics: PlayerCosmetics,
   visibility: CosmeticVisibility,
   owner: CosmeticOwner,
 ): PlayerCosmetics {
-  if (owner === "self") return cosmetics;
   const showFrom = visibility.showFrom ?? "everyone";
+  if (showFrom === "none") return { verified: cosmetics.verified };
+  if (owner === "self") return cosmetics;
   if (
     showFrom === "self" ||
     (showFrom === "teammates" && owner !== "teammate")

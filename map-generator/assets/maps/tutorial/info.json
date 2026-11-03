@@ -1,0 +1,21 @@
+{
+  "$schema": "../../../info.schema.json",
+  "id": "Tutorial",
+  "name": "Tutorial",
+  "translation_key": "map.tutorial",
+  "categories": ["fictional"],
+  "author": "evanpelle",
+  "hidden": true,
+  "nations": [
+    {
+      "coordinates": [38, 49],
+      "flag": "",
+      "name": "Iron Kingdom"
+    },
+    {
+      "coordinates": [175, 84],
+      "flag": "",
+      "name": "Red Empire"
+    }
+  ]
+}
