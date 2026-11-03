@@ -791,6 +791,50 @@ describe("StoreModal cosmetic browser", () => {
     expect(gridKeys).not.toContain(zap.key);
   });
 
+  it("lists a flash effect under On sale, with no empty-tab line under it", async () => {
+    const endsAt = new Date(Date.now() + 3_600_000).toISOString();
+    const flashSale = {
+      id: "9",
+      name: "Flash",
+      percentOff: 50,
+      endsAt,
+      kind: "flash" as const,
+    };
+    vi.mocked(fetchCosmetics).mockResolvedValue({
+      patterns: {},
+      flags: {},
+      promotions: [flashSale],
+    } as unknown as Cosmetics);
+    const base = trail("comet");
+    const comet: ResolvedCosmetic = {
+      ...base,
+      cosmetic: {
+        ...(base.cosmetic as object),
+        priceHard: 40,
+        listPriceHard: 80,
+        promotion: flashSale,
+      } as never,
+    };
+    // The flash pick is an effect, which lives on the Effects tab, and it is
+    // the only thing on sale.
+    resolvedCatalog = [red, blue, comet];
+    const modal = await openStoreOnCosmetic("patterns");
+    await vi.waitFor(() =>
+      expect(modal.querySelector("[data-store-flash-banner]")).toBeTruthy(),
+    );
+
+    modal
+      .querySelector<HTMLButtonElement>("[data-store-flash-banner]")!
+      .click();
+    await modal.updateComplete;
+    expect(modal.querySelector('[data-store-subtab="sale"]')).toBeTruthy();
+    const hero = modal.querySelector("[data-store-flash]")!;
+    expect(
+      hero.querySelector<CosmeticCard>("cosmetic-card")!.resolved.key,
+    ).toBe(comet.key);
+    expect(modal.textContent).not.toContain("store.no_skins");
+  });
+
   it("hides the On sale tab without a sale", async () => {
     const modal = await openStoreOnCosmetic("patterns");
     expect(modal.querySelector('[data-store-subtab="sale"]')).toBeNull();

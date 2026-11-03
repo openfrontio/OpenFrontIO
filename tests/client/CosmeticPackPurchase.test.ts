@@ -31,6 +31,7 @@ const translations = {
   "store.pack_unavailable": "gone",
   "store.purchase_failed": "failed",
   "store.purchase_success": "bought {name}",
+  "store.purchase_success_charged": "bought {name} for {amount} {currency}",
 };
 
 const starter: ResolvedCosmetic = {
@@ -105,6 +106,28 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
     expect(purchaseCosmeticPack).toHaveBeenCalledWith("starter");
     expect(showInGameAlert).toHaveBeenCalledWith("bought Starter Pack");
     expect(invalidateUserMe).toHaveBeenCalled();
+    expect(reloadMock).toHaveBeenCalled();
+  });
+
+  it("says what was charged when the server's price differs from the shown one", async () => {
+    // A sale ended between loading the store and buying: the server charged
+    // the list price, not the 250 the card showed.
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(600));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValue({
+      ok: true,
+      data: {
+        packName: "starter",
+        currencyType: "hard",
+        amount: "500",
+        flareNames: ["pattern:camo", "flag:pirate"],
+      },
+    });
+
+    await purchaseCosmetic(starter, "hard");
+
+    expect(showInGameAlert).toHaveBeenCalledWith(
+      "bought Starter Pack for 500 plutonium",
+    );
     expect(reloadMock).toHaveBeenCalled();
   });
 

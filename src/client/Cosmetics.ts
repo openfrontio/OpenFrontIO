@@ -710,10 +710,35 @@ export async function purchaseCosmetic(
     }
   }
   await showInGameAlert(
-    translateText("store.purchase_success", { name: c.name }),
+    purchaseSuccessMessage(c.name, price, result.amount, method),
   );
   invalidateUserMe();
   window.location.reload();
+}
+
+/**
+ * The success alert. The server prices off its own clock, so a sale that
+ * started or ended since the store loaded (or a client clock that is off)
+ * can charge something other than the price shown: say what was taken, and
+ * drop the catalog that showed the wrong price.
+ */
+function purchaseSuccessMessage(
+  name: string,
+  shownPrice: number,
+  charged: number | undefined,
+  method: "hard" | "soft",
+): string {
+  if (charged === undefined || charged === shownPrice) {
+    return translateText("store.purchase_success", { name });
+  }
+  invalidateCosmetics();
+  return translateText("store.purchase_success_charged", {
+    name,
+    amount: charged,
+    currency: translateText(
+      method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
+    ),
+  });
 }
 
 /**
@@ -755,8 +780,14 @@ async function purchasePack(
 
   const result = await purchaseCosmeticPack(pack.name);
   if (result.ok) {
+    const charged = Number(result.data.amount);
     await showInGameAlert(
-      translateText("store.purchase_success", { name: pack.displayName }),
+      purchaseSuccessMessage(
+        pack.displayName,
+        price,
+        Number.isFinite(charged) ? charged : undefined,
+        "hard",
+      ),
     );
     invalidateUserMe();
     window.location.reload();

@@ -224,7 +224,18 @@ describe("purchaseWithCurrency", () => {
       cosmeticName: "pirate",
       currencyType: "hard",
     });
-    expect(result).toEqual({ ok: true });
+    // What was charged, so the caller can tell a changed price from the
+    // one it showed.
+    expect(result).toEqual({ ok: true, amount: 100 });
+  });
+
+  it("still reports success when the body carries no amount", async () => {
+    respond(200, {});
+
+    expect(await purchaseWithCurrency("flag", "pirate", "hard")).toEqual({
+      ok: true,
+      amount: undefined,
+    });
   });
 
   it("reports the debt and its amount", async () => {

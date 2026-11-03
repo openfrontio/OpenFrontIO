@@ -69,8 +69,8 @@ type StoreTab =
   | "subscriptions"
   | "tribes";
 
-// "sale" lists every discounted skin, flag and crown; its tab shows only
-// while a sale covers one of them.
+// "sale" lists every discounted skin, flag, crown, effect and bundle; its tab
+// shows only while a sale covers one of them.
 const COSMETICS_SUB_TABS = ["sale", "patterns", "flags", "crowns"] as const;
 type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
 
@@ -320,7 +320,18 @@ export class StoreModal extends BaseModal {
       .filter((resolved) => resolved.type === "crown")
       .map((r) => [r]);
     if (tab === "sale") {
-      return saleFirst([...skins, ...flags, ...crowns].filter(groupOnSale));
+      // A sale (a flash sale's pick included) can land on an effect or a
+      // bundle too, and those live on other tabs; list them here as well so
+      // the banner's "On sale" always leads to the item.
+      const others = items
+        .filter(
+          (resolved) =>
+            resolved.type === "effect" || resolved.type === "cosmeticPack",
+        )
+        .map((r) => [r]);
+      return saleFirst(
+        [...skins, ...flags, ...crowns, ...others].filter(groupOnSale),
+      );
     }
     return saleFirst(
       tab === "flags" ? flags : tab === "crowns" ? crowns : skins,
@@ -600,8 +611,16 @@ export class StoreModal extends BaseModal {
       .inlineCheckout=${inlineCheckout}
       .priceHard=${priceHard ?? null}
       .priceSoft=${priceSoft ?? null}
-      .listPriceHard=${priceHard !== undefined && !saleEnded ? (priced?.listPriceHard ?? null) : null}
-      .listPriceSoft=${priceSoft !== undefined && !saleEnded ? (priced?.listPriceSoft ?? null) : null}
+      .listPriceHard=${
+        priceHard !== undefined && !saleEnded
+          ? (priced?.listPriceHard ?? null)
+          : null
+      }
+      .listPriceSoft=${
+        priceSoft !== undefined && !saleEnded
+          ? (priced?.listPriceSoft ?? null)
+          : null
+      }
       .rarity=${priced?.rarity ?? "common"}
       .itemName=${cosmeticSelectionLabel(resolved)}
       .dollarLabelKey=${
@@ -710,10 +729,16 @@ export class StoreModal extends BaseModal {
       ${
         flash
           ? html`${this.renderFlashHero(flash)}
-            ${this.renderBrowser(
-              this.visibleGroups.filter((group) => group !== flash),
-              { emptyTranslationKey: emptyKey },
-            )}`
+            ${(() => {
+              // With the flash item the only thing on sale, the hero is the
+              // whole tab: no "No skins available" under it.
+              const rest = this.visibleGroups.filter(
+                (group) => group !== flash,
+              );
+              return rest.length > 0
+                ? this.renderBrowser(rest, { emptyTranslationKey: emptyKey })
+                : nothing;
+            })()}`
           : this.renderBrowser(this.visibleGroups, {
               emptyTranslationKey: emptyKey,
             })
