@@ -129,4 +129,44 @@ describe("TeamStats", () => {
 
     teamStats.remove();
   });
+
+  it("renders clan tag team name when teamClanTag is present", async () => {
+    const players = [
+      {
+        id: () => "player-1",
+        smallID: () => 0,
+        team: () => "Team 16",
+        numTilesOwned: () => 10,
+        gold: () => 10n,
+        tradeGold: () => 0,
+        trainGold: () => 0,
+        piracyGold: () => 0,
+        goldEarned: () => 0,
+        isAlive: () => true,
+      },
+    ] as unknown as PlayerView[];
+    const game = {
+      myPlayer: () => players[0],
+      playerViews: () => players,
+      config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
+      numLandTiles: () => 100,
+      numTilesWithFallout: () => 0,
+      teamClanTag: (team: string) => (team === "Team 16" ? "AST2" : null),
+    } as unknown as GameView;
+    const teamStats = new TeamStats();
+    teamStats.game = game;
+    teamStats.visible = true;
+    document.body.append(teamStats);
+
+    teamStats.refresh();
+    await teamStats.updateComplete;
+
+    const rowCells = teamStats.querySelectorAll(
+      '.stats-table-row > [role="cell"]',
+    );
+    expect(rowCells[1]?.textContent?.trim()).toContain("[AST2]");
+
+    teamStats.remove();
+  });
 });
