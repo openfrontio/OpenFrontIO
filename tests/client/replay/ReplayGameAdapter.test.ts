@@ -15,6 +15,7 @@ import "../../../src/client/hud/layers/PlayerInfoOverlay";
 import type { PlayerInfoOverlay } from "../../../src/client/hud/layers/PlayerInfoOverlay";
 import "../../../src/client/hud/layers/PlayerStats";
 import type { PlayerStats } from "../../../src/client/hud/layers/PlayerStats";
+import { getPlayerIcons } from "../../../src/client/hud/PlayerIcons";
 import type { UnitState } from "../../../src/client/render/types";
 import type { ReplayReader } from "../../../src/client/replay/codec/decode/ReplayReader";
 import type { ReplayFrame } from "../../../src/client/replay/codec/ReplayTypes";
@@ -365,6 +366,44 @@ describe("ReplayGameAdapter", () => {
       adapter.focus = null;
     }
   }, 30_000);
+
+  test("a nuke at unowned land gets the plain icon while a player is followed", () => {
+    const frame = reader.seek(119);
+    adapter.update(frame, EMPTY, 0, false);
+    const owners = adapter
+      .playerViews()
+      .filter((p) => p.isAlive() && p.numTilesOwned() > 0);
+    const [followed, hovered] = owners;
+    const unowned = [...frame.tileState].findIndex(
+      (t, ref) => ref > 0 && (t & 0xfff) === 0,
+    );
+    const ownedByFollowed = [...frame.tileState].findIndex(
+      (t) => (t & 0xfff) === followed.smallID(),
+    );
+    const nukeIcon = (targetTile: number) => {
+      adapter.update(
+        withUnits(frame, [
+          unit(1, UnitType.AtomBomb, hovered.smallID(), { targetTile }),
+        ]),
+        EMPTY,
+        0,
+        false,
+      );
+      return getPlayerIcons({
+        game: adapter.asGameView(),
+        player: hovered as never,
+        firstPlace: null,
+      }).find((i) => i.id === "nuke");
+    };
+    adapter.focus = followed;
+    try {
+      expect(adapter.owner(unowned).isPlayer()).toBe(false);
+      expect(nukeIcon(unowned)?.src).toContain("NukeIconWhite");
+      expect(nukeIcon(ownedByFollowed)?.src).toContain("NukeIconRed");
+    } finally {
+      adapter.focus = null;
+    }
+  });
 
   test("players follow the latest frame, read when the HUD asks", () => {
     const early = reader.seek(0);

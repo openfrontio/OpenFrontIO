@@ -657,6 +657,8 @@ export class WinModal extends LitElement implements Controller {
 
   async show() {
     void gamePortal.gameplayStop();
+    // The onboarding tutorial ends on its own card (OnboardingOverlay).
+    if (this.game.config().gameConfig().tutorial === true) return;
     this.isRankedGame =
       this.game.config().gameConfig().rankedType !== undefined;
     this.isVisible = true;
@@ -1009,9 +1011,11 @@ export class WinModal extends LitElement implements Controller {
     }
 
     try {
-      const text = gamePortal.isOnGamePortal()
-        ? await gamePortal.createInviteLink(gameId)
-        : `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
+      // VIVERSE has no invite links of its own, so it shares a plain link.
+      const text =
+        gamePortal.isOnGamePortal() && gamePortal.name() !== "viverse"
+          ? await gamePortal.createInviteLink(gameId)
+          : `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
 
       if (!text) {
         showToast(translateText("common.failed_copy"), "red");

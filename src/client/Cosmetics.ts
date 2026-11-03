@@ -60,6 +60,10 @@ export const COSMETICS_FETCH_TIMEOUT_MS = 10_000;
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
 let __cosmeticsCache: Cosmetics | null = null;
+let __cosmeticsFetchedAt = 0;
+
+/** How long a fetched catalog is trusted before the store refetches it. */
+export const COSMETICS_STALE_MS = 60_000;
 
 /**
  * Synchronous accessor for the most recently resolved cosmetics. Returns null
@@ -217,10 +221,13 @@ export function handlePurchaseReturn(
  * whole app to its logged-out UI immediately after a successful purchase. A
  * stale balance is much the better failure.
  */
+let freshUserMeRequestId = 0;
 export async function broadcastFreshUserMe(): Promise<UserMeResponse | false> {
+  const requestId = ++freshUserMeRequestId;
   invalidateUserMe();
   const fresh = await getUserMe();
-  if (fresh === false) return false;
+  // A newer refresh owns the broadcast, even if it is still pending or failed.
+  if (fresh === false || requestId !== freshUserMeRequestId) return fresh;
   document.dispatchEvent(
     new CustomEvent("userMeResponse", {
       detail: fresh,
@@ -228,8 +235,7 @@ export async function broadcastFreshUserMe(): Promise<UserMeResponse | false> {
       cancelable: true,
     }),
   );
-  // Returned so a caller that also needs the new balance reads the same
-  // profile it just broadcast, rather than re-fetching it separately.
+  // Return this call's result even when a newer refresh superseded its broadcast.
   return fresh;
 }
 
@@ -575,8 +581,7 @@ export async function purchaseCosmetic(
   // ResolvedCosmetic isn't a discriminated union, so the guard above doesn't
   // narrow cosmetic's type. Subscriptions are excluded by the runtime check.
   const priced = c as Pattern | Flag | Pack;
-  const price =
-    method === "hard" ? (priced.priceHard ?? 0) : (priced.priceSoft ?? 0);
+  const price = currentPrice(priced, method) ?? 0;
   const userMe = await getUserMe();
   if (userMe === false) {
     await showInGameAlert(translateText("store.login_required"));
@@ -705,10 +710,35 @@ export async function purchaseCosmetic(
     }
   }
   await showInGameAlert(
-    translateText("store.purchase_success", { name: c.name }),
+    purchaseSuccessMessage(c.name, price, result.amount, method),
   );
   invalidateUserMe();
   window.location.reload();
+}
+
+/**
+ * The success alert. The server prices off its own clock, so a sale that
+ * started or ended since the store loaded (or a client clock that is off)
+ * can charge something other than the price shown: say what was taken, and
+ * drop the catalog that showed the wrong price.
+ */
+function purchaseSuccessMessage(
+  name: string,
+  shownPrice: number,
+  charged: number | undefined,
+  method: "hard" | "soft",
+): string {
+  if (charged === undefined || charged === shownPrice) {
+    return translateText("store.purchase_success", { name });
+  }
+  invalidateCosmetics();
+  return translateText("store.purchase_success_charged", {
+    name,
+    amount: charged,
+    currency: translateText(
+      method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
+    ),
+  });
 }
 
 /**
@@ -724,6 +754,7 @@ async function purchasePack(
     console.error("purchaseCosmetic: packs are only sold for hard currency");
     return;
   }
+  const price = currentPrice(pack, "hard") ?? pack.priceHard;
   const userMe = await getUserMe();
   if (userMe === false) {
     await showInGameAlert(translateText("store.login_required"));
@@ -731,7 +762,7 @@ async function purchasePack(
   }
   const insufficient = (balance: number): InsufficientCurrency => ({
     currency: translateText("cosmetics.hard"),
-    shortfall: pack.priceHard - balance,
+    shortfall: price - balance,
     item: pack.displayName,
     canTopUp: true,
   });
@@ -743,14 +774,20 @@ async function purchasePack(
     await showInGameAlert(debtMessage(-balance));
     return;
   }
-  if (balance < pack.priceHard) {
+  if (balance < price) {
     return insufficient(balance);
   }
 
   const result = await purchaseCosmeticPack(pack.name);
   if (result.ok) {
+    const charged = Number(result.data.amount);
     await showInGameAlert(
-      translateText("store.purchase_success", { name: pack.displayName }),
+      purchaseSuccessMessage(
+        pack.displayName,
+        price,
+        Number.isFinite(charged) ? charged : undefined,
+        "hard",
+      ),
     );
     invalidateUserMe();
     window.location.reload();
@@ -767,7 +804,7 @@ async function purchasePack(
         return;
       }
       const available = fresh.player.currency?.hard ?? 0;
-      const outcome = balanceOutcome(available, pack.priceHard);
+      const outcome = balanceOutcome(available, price);
       if (outcome === "debt") {
         await showInGameAlert(debtMessage(-available));
         return;
@@ -840,6 +877,39 @@ function simpleHash(str: string): string {
 }
 
 /**
+ * An item's price in one currency as the store shows and the server charges
+ * it now. While the item's own sale runs that is the catalog price (the sale
+ * price); once the sale's endsAt has passed it is the list price, even if the
+ * catalog in hand predates the end. The store's buttons and the purchase
+ * balance check both read this, so they never disagree.
+ */
+export function currentPrice(
+  item: {
+    priceHard?: number;
+    priceSoft?: number;
+    listPriceHard?: number;
+    listPriceSoft?: number;
+    promotion?: { endsAt: string };
+  },
+  currency: "hard" | "soft",
+): number | undefined {
+  const price = currency === "hard" ? item.priceHard : item.priceSoft;
+  const listPrice =
+    currency === "hard" ? item.listPriceHard : item.listPriceSoft;
+  return saleHasEnded(item) ? (listPrice ?? price) : price;
+}
+
+/** Whether the item's own sale has ended (its endsAt has passed). */
+export function saleHasEnded(item: {
+  promotion?: { endsAt: string };
+}): boolean {
+  return (
+    item.promotion !== undefined &&
+    new Date(item.promotion.endsAt).getTime() <= Date.now()
+  );
+}
+
+/**
  * Drops the cached cosmetics.json so the next fetchCosmetics() goes to the
  * network. The remedy for a checkout rejected with a stale listing ("Pack not
  * available" / "Tier not available"): the catalog the store rendered from no
@@ -847,6 +917,48 @@ function simpleHash(str: string): string {
  */
 export function invalidateCosmetics(): void {
   __cosmetics = null;
+}
+
+/**
+ * The running sale that discounts a catalog item, or null: it names a
+ * promotion that hasn't ended, and a list price above its price in at least
+ * one currency.
+ */
+export function activeSale(
+  cosmetic: unknown,
+  now: number = Date.now(),
+): { percentOff: number; endsAt: string; kind?: "flash" } | null {
+  const priced = cosmetic as {
+    promotion?: { percentOff: number; endsAt: string; kind?: "flash" };
+    priceHard?: number;
+    priceSoft?: number;
+    listPriceHard?: number;
+    listPriceSoft?: number;
+  } | null;
+  const promotion = priced?.promotion;
+  if (!promotion || new Date(promotion.endsAt).getTime() <= now) return null;
+  const discounted =
+    (priced.listPriceHard ?? 0) > (priced.priceHard ?? Infinity) ||
+    (priced.listPriceSoft ?? 0) > (priced.priceSoft ?? Infinity);
+  return discounted ? promotion : null;
+}
+
+/**
+ * Drops a catalog fetched more than COSMETICS_STALE_MS ago, so the next
+ * fetchCosmetics() refetches it. Sale prices start and end on the server's
+ * clock; the API serves cosmetics.json from a one-minute cache, so this keeps
+ * the store within about two minutes of what a purchase is charged. Returns
+ * whether it dropped the catalog.
+ */
+export function refreshStaleCosmetics(now: number = Date.now()): boolean {
+  if (
+    __cosmeticsCache === null ||
+    now - __cosmeticsFetchedAt <= COSMETICS_STALE_MS
+  ) {
+    return false;
+  }
+  invalidateCosmetics();
+  return true;
 }
 
 export type TierListingRail = "steam" | "web";
@@ -883,6 +995,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
       const hashInput = patternKeys.join(",");
       __cosmeticsHash = simpleHash(hashInput);
       __cosmeticsCache = result.data;
+      __cosmeticsFetchedAt = Date.now();
       return result.data;
     } catch (error) {
       console.warn("Error getting cosmetics:", error);

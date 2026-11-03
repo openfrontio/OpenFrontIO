@@ -174,4 +174,28 @@ describe("HelpModal keyboard layout refresh", () => {
 
     state.disconnectedCallback();
   });
+
+  it("loads the layout map when the keyboard is not an EventTarget", async () => {
+    const map = new Map([["KeyQ", "a"]]);
+    const keyboard = { getLayoutMap: vi.fn().mockResolvedValue(map) };
+
+    Object.defineProperty(Navigator.prototype, "keyboard", {
+      configurable: true,
+      value: keyboard,
+    });
+
+    const modal = new HelpModal();
+    const state = modal as unknown as {
+      keyboardLayout: { map: Map<string, string> | null };
+      connectedCallback: () => void;
+      disconnectedCallback: () => void;
+    };
+
+    expect(() => state.connectedCallback()).not.toThrow();
+    await vi.waitFor(() => {
+      expect(state.keyboardLayout.map).toBe(map);
+    });
+
+    state.disconnectedCallback();
+  });
 });

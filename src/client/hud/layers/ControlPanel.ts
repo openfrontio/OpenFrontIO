@@ -6,17 +6,18 @@ import { Config } from "@openfront/engine-lib/configuration/Config";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
-import { LitElement, html } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
 import { Controller } from "../../Controller";
-import { AttackRatioEvent } from "../../InputHandler";
+import { AttackRatioEvent, isForwardedClick } from "../../InputHandler";
 import { UIState } from "../../UIState";
 import { USER_SETTINGS_CHANGED_EVENT, UserSettings } from "../../UserSettings";
 import { getGamesPlayed, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import { goldCoinIcon, soldierIcon } from "../HotbarIcons";
+import { OnboardingLowTroopsEvent } from "../Onboarding";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 const swordIcon = assetUrl("images/SwordIcon.svg");
 
@@ -60,6 +61,9 @@ export class ControlPanel extends LitElement implements Controller {
 
   @state()
   private _tutorialHighlight: TutorialHighlight | null = null;
+  /** The onboarding tutorial's low-troops warning is up: flash the bar. */
+  @state()
+  private _lowTroopsAlert = false;
 
   private _troopRateIsIncreasing: boolean = true;
 
@@ -91,6 +95,9 @@ export class ControlPanel extends LitElement implements Controller {
     this.uiState.attackRatio = this.attackRatio;
     this.eventBus.on(TutorialHighlightEvent, (e) => {
       this._tutorialHighlight = e.target;
+    });
+    this.eventBus.on(OnboardingLowTroopsEvent, (e) => {
+      this._lowTroopsAlert = e.low;
     });
     this.eventBus.on(AttackRatioEvent, (event) => {
       let newAttackRatio = this.attackRatio + event.attackRatio / 100;
@@ -356,6 +363,28 @@ export class ControlPanel extends LitElement implements Controller {
     (e.target as HTMLInputElement).blur();
   }
 
+  /**
+   * The browser only moves a range input on a real pointer press. A tap that
+   * the radial menu forwarded down from its overlay never reaches the slider
+   * as a press, so move it from the tap position here.
+   */
+  private handleRatioSliderClick(e: MouseEvent) {
+    if (!isForwardedClick(e)) return;
+    const input = e.currentTarget as HTMLInputElement | null;
+    if (!input) return;
+    const rect = input.getBoundingClientRect();
+    if (rect.width === 0) return;
+    const min = Number(input.min);
+    const max = Number(input.max);
+    const position = Math.min(
+      Math.max((e.clientX - rect.left) / rect.width, 0),
+      1,
+    );
+    const value = Math.round(min + position * (max - min));
+    input.value = String(value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
   private calculateTroopBar(): { greenPercent: number; orangePercent: number } {
     const base = Math.max(this._maxTroops, 1);
     const greenPercentRaw = (this._troops / base) * 100;
@@ -374,7 +403,9 @@ export class ControlPanel extends LitElement implements Controller {
     const { greenPercent, orangePercent } = this.calculateTroopBar();
     return html`
       <div
-        class="w-full h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
+        class="w-full h-6 border ${
+          this._lowTroopsAlert ? "border-red-500" : "border-gray-600"
+        } rounded-md bg-gray-900/60 overflow-hidden relative"
       >
         <div class="relative h-full">
           <div
@@ -388,6 +419,13 @@ export class ControlPanel extends LitElement implements Controller {
             });"
           ></div>
         </div>
+        ${
+          this._lowTroopsAlert
+            ? html`<div
+                class="troop-bar-alert absolute inset-0 bg-red-600"
+              ></div>`
+            : nothing
+        }
         <div
           class="absolute inset-0 flex items-center justify-between px-1.5 text-xs font-bold leading-none pointer-events-none"
           translate="no"
@@ -434,7 +472,9 @@ export class ControlPanel extends LitElement implements Controller {
     const { greenPercent, orangePercent } = this.calculateTroopBar();
     return html`
       <div
-        class="w-full h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
+        class="w-full h-6 border ${
+          this._lowTroopsAlert ? "border-red-500" : "border-gray-600"
+        } rounded-md bg-gray-900/60 overflow-hidden relative"
       >
         <div class="relative h-full">
           <div
@@ -448,6 +488,13 @@ export class ControlPanel extends LitElement implements Controller {
             });"
           ></div>
         </div>
+        ${
+          this._lowTroopsAlert
+            ? html`<div
+                class="troop-bar-alert absolute inset-0 bg-red-600"
+              ></div>`
+            : nothing
+        }
         <div
           class="absolute inset-0 flex items-center text-lg font-bold leading-none pointer-events-none"
           translate="no"
@@ -597,6 +644,8 @@ export class ControlPanel extends LitElement implements Controller {
           .value=${String(Math.round(this.attackRatio * 100))}
           @input=${(e: Event) => this.handleRatioSliderInput(e)}
           @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
+          @click=${(e: MouseEvent) => this.handleRatioSliderClick(e)}
+          data-radial-click-through
           class="flex-1 h-1.5 accent-aquarius cursor-pointer"
         />
       </div>
@@ -680,6 +729,8 @@ export class ControlPanel extends LitElement implements Controller {
             .value=${String(Math.round(this.attackRatio * 100))}
             @input=${(e: Event) => this.handleRatioSliderInput(e)}
             @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
+            @click=${(e: MouseEvent) => this.handleRatioSliderClick(e)}
+            data-radial-click-through
             class="w-full h-1.5 accent-aquarius cursor-pointer"
           />
         </div>

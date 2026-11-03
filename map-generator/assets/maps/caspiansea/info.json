@@ -4,6 +4,8 @@
   "id": "CaspianSea",
   "translation_key": "map.caspiansea",
   "categories": ["asia"],
+  "location": { "lat": 41.5, "lon": 50.5 },
+  "author": "crunchybbb",
   "special_team_count": 2,
   "nations": [
     {

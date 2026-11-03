@@ -658,6 +658,9 @@ export class EngineConfig extends Config {
           assertNever(this._gameConfig.difficulty);
       }
     }
+    // The onboarding tutorial's player starts about half full, where troops
+    // grow fastest, so the first attacks take more land.
+    if (this._gameConfig.tutorial) return 60_000;
     return this.hasInfiniteTroopsForInfo(playerInfo) ? 1_000_000 : 25_000;
   }
 

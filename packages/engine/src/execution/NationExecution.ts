@@ -39,6 +39,8 @@ import { NationMIRVBehavior } from "./nation/NationMIRVBehavior";
 import { NationNukeBehavior } from "./nation/NationNukeBehavior";
 import { NationStructureBehavior } from "./nation/NationStructureBehavior";
 import { NationWarshipBehavior } from "./nation/NationWarshipBehavior";
+import { tutorialCollapse } from "./nation/TutorialCollapse";
+import { tutorialSilo, tutorialWarship } from "./nation/TutorialSilo";
 import { SpawnExecution } from "./SpawnExecution";
 
 export class NationExecution implements Execution {
@@ -196,12 +198,17 @@ export class NationExecution implements Execution {
       return;
     }
 
-    // The tutorial's nation only fills its own island: no attacks, boats,
-    // alliances, structures or nukes.
+    // The tutorial's nations only grow into free land, and the one on the
+    // player's island nukes them from its silo (TutorialSilo): no attacks,
+    // boats, alliances or other structures. Each falls once the player has
+    // taken most of it (TutorialCollapse).
     if (this.mg.config().gameConfig().tutorial) {
-      if (ticks % this.attackRate === this.attackTick) {
-        this.attackBehavior.expandIntoFreeLand();
-      }
+      tutorialCollapse(this.mg, this.player);
+      if (!this.player.isAlive()) return;
+      const attackTick = ticks % this.attackRate === this.attackTick;
+      if (attackTick) this.attackBehavior.expandIntoFreeLand();
+      tutorialSilo(this.mg, this.player, attackTick);
+      tutorialWarship(this.mg, this.player, ticks);
       return;
     }
 

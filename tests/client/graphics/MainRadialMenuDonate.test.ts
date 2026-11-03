@@ -29,6 +29,9 @@ function setup({
   disconnected = false,
   canDonateTroops = true,
   canDonateGold = true,
+  isSpectator = false,
+  inSpawnPhase = false,
+  isValidCoord = true,
 } = {}) {
   const bus = new EventBus();
   const recipient = {
@@ -47,10 +50,10 @@ function setup({
     actions: vi.fn(async () => actions),
   };
   const game = {
-    isSpectator: () => false,
-    inSpawnPhase: () => false,
+    isSpectator: () => isSpectator,
+    inSpawnPhase: () => inSpawnPhase,
     myPlayer: () => myPlayer,
-    isValidCoord: () => true,
+    isValidCoord: () => isValidCoord,
     ref: () => TILE,
     owner: () => recipient,
   };
@@ -107,6 +110,9 @@ describe("MainRadialMenu donate keybinds", () => {
     ["an enemy", { friendly: false }],
     ["a disconnected teammate", { disconnected: true }],
     ["a player who can't take troops yet", { canDonateTroops: false }],
+    ["a spectator", { isSpectator: true }],
+    ["a player during the spawn phase", { inSpawnPhase: true }],
+    ["an invalid cursor position", { isValidCoord: false }],
   ])("does not donate troops to %s", async (_, opts) => {
     const { bus, donations } = setup(opts);
 
@@ -116,7 +122,7 @@ describe("MainRadialMenu donate keybinds", () => {
     expect(donations).toHaveLength(0);
   });
 
-  it("opens the send-gold modal for the friendly player at the cursor", async () => {
+  it("opens the send-gold modal for the friendly player at the cursor without suppressing the next hide", async () => {
     const { bus, recipient, actions, playerPanel } = setup();
 
     bus.emit(new DoDonateGoldEvent(50, 60));
@@ -126,6 +132,7 @@ describe("MainRadialMenu donate keybinds", () => {
       actions,
       TILE,
       recipient,
+      false,
     );
   });
 

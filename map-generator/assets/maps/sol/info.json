@@ -4,6 +4,7 @@
   "name": "Sol",
   "translation_key": "map.sol",
   "categories": ["cosmic"],
+  "author": "Tristar",
   "forced_modifiers": ["isWaterNukes:50", "startingGold5M:100"],
   "themes": ["space"],
   "nations": [
