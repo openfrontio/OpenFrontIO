@@ -14,6 +14,7 @@ const gamePortalMock = vi.hoisted(() => ({
   requestMidgameAd: vi.fn(),
   isInstantMultiplayer: vi.fn(async () => false),
   isOnGamePortal: vi.fn(() => false),
+  name: vi.fn(() => "crazygames" as any),
   createInviteLink: vi.fn(
     async (gameId: string): Promise<string | null> =>
       `https://crazygames.com/game?invite=${gameId}`,

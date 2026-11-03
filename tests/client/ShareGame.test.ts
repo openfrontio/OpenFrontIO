@@ -7,6 +7,7 @@ const showToastMock = vi.hoisted(() => vi.fn());
 
 const gamePortalMock = vi.hoisted(() => ({
   isOnGamePortal: vi.fn(() => false),
+  name: vi.fn(() => "crazygames" as string | null),
   createInviteLink: vi.fn(
     async (gameId: string): Promise<string | null> =>
       `https://crazygames.com/game?invite=${gameId}`,
@@ -55,6 +56,7 @@ describe("shareGame", () => {
     copyToClipboardMock.mockClear();
     showToastMock.mockClear();
     gamePortalMock.isOnGamePortal.mockReturnValue(false);
+    gamePortalMock.name.mockReturnValue("crazygames");
     gamePortalMock.createInviteLink.mockClear();
   });
 
@@ -120,6 +122,20 @@ describe("shareGame", () => {
     expect(gamePortalMock.createInviteLink).toHaveBeenCalledWith(gameId);
     expect(copyToClipboardMock).toHaveBeenCalledWith(
       `https://crazygames.com/game?invite=${gameId}`,
+    );
+    expect(showToastMock).toHaveBeenCalledWith("Copied!", "green");
+  });
+
+  it("uses plain link on VIVERSE since it has no invite links of its own", async () => {
+    const gameId = "viverse123";
+    gamePortalMock.isOnGamePortal.mockReturnValue(true);
+    gamePortalMock.name.mockReturnValue("viverse");
+
+    await shareGame(gameId);
+
+    expect(gamePortalMock.createInviteLink).not.toHaveBeenCalled();
+    expect(copyToClipboardMock).toHaveBeenCalledWith(
+      `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`,
     );
     expect(showToastMock).toHaveBeenCalledWith("Copied!", "green");
   });

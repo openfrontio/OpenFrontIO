@@ -16,6 +16,7 @@ import type {
   RendererConfig,
 } from "../../../types";
 import type { RenderSettings } from "../../RenderSettings";
+import { GLContextLostError } from "../../utils/GlUtils";
 import { FxAttackRingPass } from "./FxAttackRingPass";
 import { nukeExplosionRadius } from "./FxSettings";
 import {
@@ -27,10 +28,84 @@ import { FxSpritePass } from "./FxSpritePass";
 export type { AttackRingInput } from "../../../types";
 export { calculateExplosionDurationMs };
 
+// What FxPass calls on each sub-pass. A sub-pass whose program fails to build
+// is replaced by a no-op of the same shape (see buildOptional).
+type SpritePass = Pick<
+  FxSpritePass,
+  | "spawnFxForUnit"
+  | "applyRailroadDust"
+  | "applyConquestEvents"
+  | "tick"
+  | "draw"
+  | "setTimeFn"
+  | "clear"
+  | "dispose"
+>;
+type ShockwavePass = Pick<
+  FxShockwavePass,
+  | "pushNukeShockwave"
+  | "pushSAMShockwave"
+  | "tick"
+  | "draw"
+  | "setTimeFn"
+  | "clear"
+  | "dispose"
+>;
+type AttackRingPass = Pick<
+  FxAttackRingPass,
+  "update" | "tick" | "draw" | "clear" | "dispose"
+>;
+
+const noop = () => {};
+const NOOP_SPRITE_PASS: SpritePass = {
+  spawnFxForUnit: noop,
+  applyRailroadDust: noop,
+  applyConquestEvents: noop,
+  tick: noop,
+  draw: noop,
+  setTimeFn: noop,
+  clear: noop,
+  dispose: noop,
+};
+const NOOP_SHOCKWAVE_PASS: ShockwavePass = {
+  pushNukeShockwave: noop,
+  pushSAMShockwave: noop,
+  tick: noop,
+  draw: noop,
+  setTimeFn: noop,
+  clear: noop,
+  dispose: noop,
+};
+const NOOP_ATTACK_RING_PASS: AttackRingPass = {
+  update: noop,
+  tick: noop,
+  draw: noop,
+  clear: noop,
+  dispose: noop,
+};
+
+/**
+ * Build a cosmetic sub-pass, or fall back to a no-op when its shader program
+ * won't compile or link. Some drivers (Adreno 6xx/7xx under ANGLE) reject a
+ * program with no info log; a player without explosions can still play, one
+ * whose renderer setup threw cannot. The failure is still logged, so
+ * telemetry keeps naming the program. A lost context is not a shader problem
+ * and nothing else would draw either, so that one still propagates.
+ */
+function buildOptional<T>(build: () => T, fallback: T): T {
+  try {
+    return build();
+  } catch (e) {
+    if (e instanceof GLContextLostError) throw e;
+    console.error(e);
+    return fallback;
+  }
+}
+
 export class FxPass {
-  private spritePass: FxSpritePass;
-  private shockwavePass: FxShockwavePass;
-  private attackRingPass: FxAttackRingPass;
+  private spritePass: SpritePass;
+  private shockwavePass: ShockwavePass;
+  private attackRingPass: AttackRingPass;
   private mapW: number;
   private settings: RenderSettings;
   private timeFn: () => number = () => performance.now();
@@ -43,9 +118,18 @@ export class FxPass {
   ) {
     this.mapW = header.mapWidth;
     this.settings = settings;
-    this.spritePass = new FxSpritePass(gl, header, settings, config);
-    this.shockwavePass = new FxShockwavePass(gl, settings);
-    this.attackRingPass = new FxAttackRingPass(gl, settings);
+    this.spritePass = buildOptional(
+      () => new FxSpritePass(gl, header, settings, config),
+      NOOP_SPRITE_PASS,
+    );
+    this.shockwavePass = buildOptional(
+      () => new FxShockwavePass(gl, settings),
+      NOOP_SHOCKWAVE_PASS,
+    );
+    this.attackRingPass = buildOptional(
+      () => new FxAttackRingPass(gl, settings),
+      NOOP_ATTACK_RING_PASS,
+    );
   }
 
   // -------------------------------------------------------------------------

@@ -97,6 +97,28 @@ export class AlternateViewEvent implements GameEvent {
 
 export class CloseViewEvent implements GameEvent {}
 
+/**
+ * Marks a click that the radial menu's overlay forwarded to a layer below it.
+ * The layer uses this to tell a forwarded tap apart from a real press, which
+ * the browser handles itself.
+ */
+export const FORWARDED_CLICK = "forwardedFromRadialOverlay";
+/** Marks a click forwarded by the radial overlay that originated from touch. */
+export const FORWARDED_TOUCH_CLICK = "forwardedTouchFromRadialOverlay";
+
+export function isForwardedClick(event: Event): boolean {
+  return (
+    (event as unknown as Record<string, unknown>)[FORWARDED_CLICK] === true
+  );
+}
+
+export function isForwardedTouchClick(event: Event): boolean {
+  return (
+    (event as unknown as Record<string, unknown>)[FORWARDED_TOUCH_CLICK] ===
+    true
+  );
+}
+
 export class RefreshGraphicsEvent implements GameEvent {}
 
 export class ToggleRenderDebugGuiEvent implements GameEvent {}
@@ -109,7 +131,48 @@ export class ToggleStructureEvent implements GameEvent {
   ) {}
 }
 
+export function highlightTypesForUnit(
+  unitType: PlayerBuildableUnitType,
+): PlayerBuildableUnitType[] {
+  switch (unitType) {
+    case UnitType.AtomBomb:
+    case UnitType.HydrogenBomb:
+      return [UnitType.MissileSilo, UnitType.SAMLauncher];
+    case UnitType.Warship:
+      return [UnitType.Port];
+    case UnitType.MIRV:
+      return [UnitType.MissileSilo];
+    default:
+      return [unitType];
+  }
+}
+
 export class ConfirmGhostStructureEvent implements GameEvent {}
+
+export class TouchGhostPlacementEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
+export class TouchGhostPlacementSelectEvent implements GameEvent {}
+
+export class TouchGhostPlacementMoveEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
+export class TouchGhostPlacementDragStartEvent implements GameEvent {
+  public handled = false;
+
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
 
 export class SwapRocketDirectionEvent implements GameEvent {
   constructor(public readonly rocketDirectionUp: boolean) {}
@@ -294,6 +357,7 @@ export class InputHandler {
   private lastGestureScale: number | null = null;
 
   private pointerDown: boolean = false;
+  private lastPointerType: string | null = null;
 
   private alternateView = false;
 
@@ -309,6 +373,7 @@ export class InputHandler {
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private longPressActive: boolean = false;
   private suppressNextTap: boolean = false;
+  private touchPlacementDragState: "idle" | "candidate" | "active" = "idle";
   private readonly LONG_PRESS_MS = 800;
 
   private moveInterval: NodeJS.Timeout | null = null;
@@ -426,6 +491,7 @@ export class InputHandler {
     }
     this.longPressActive = false;
     this.suppressNextTap = false;
+    this.touchPlacementDragState = "idle";
     this.selectionBoxActive = false;
     this.multiSelectionActive = false;
   }
@@ -658,9 +724,6 @@ export class InputHandler {
       (e) => {
         this.lastMouseX = e.clientX;
         this.lastMouseY = e.clientY;
-        if (e.movementX || e.movementY) {
-          this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
-        }
       },
       { signal },
     );
@@ -1020,6 +1083,7 @@ export class InputHandler {
   }
 
   private onPointerDown(event: PointerEvent) {
+    this.lastPointerType = event.pointerType;
     if (event.button === 1) {
       event.preventDefault();
       this.eventBus.emit(new AutoUpgradeEvent(event.clientX, event.clientY));
@@ -1040,10 +1104,32 @@ export class InputHandler {
       this.lastPointerDownX = event.clientX;
       this.lastPointerDownY = event.clientY;
 
+      // A new gesture starts clean: a tap suppression from an earlier
+      // gesture (eg. a pinch) must not swallow this one's tap.
+      this.suppressNextTap = false;
+
       this.eventBus.emit(new MouseDownEvent(event.clientX, event.clientY));
 
+      this.touchPlacementDragState = "idle";
+      if (
+        event.pointerType === "touch" &&
+        this.uiState.ghostStructure !== null
+      ) {
+        const dragStart = new TouchGhostPlacementDragStartEvent(
+          event.clientX,
+          event.clientY,
+        );
+        this.eventBus.emit(dragStart);
+        if (dragStart.handled) {
+          this.touchPlacementDragState = "candidate";
+        }
+      }
+
       // Start long-press timer for touch devices
-      if (event.pointerType === "touch") {
+      if (
+        event.pointerType === "touch" &&
+        this.uiState.ghostStructure === null
+      ) {
         this.longPressActive = false;
         if (this.longPressTimer !== null) {
           clearTimeout(this.longPressTimer);
@@ -1072,6 +1158,10 @@ export class InputHandler {
         this.longPressActive = false;
         this.canvas.style.cursor = "";
       }
+      this.touchPlacementDragState = "idle";
+      // The drag is over, but the finger that started it must not read as a
+      // tap: releasing it would confirm the build preview it was dragging.
+      this.suppressNextTap = true;
       this.lastPinchDistance = this.getPinchDistance();
     }
   }
@@ -1172,6 +1262,29 @@ export class InputHandler {
     }
     const wasLongPress = this.longPressActive;
     this.longPressActive = false;
+    const wasTouchPlacementDrag = this.touchPlacementDragState === "active";
+    this.touchPlacementDragState = "idle";
+    if (wasTouchPlacementDrag) {
+      if (event.type === "pointerup") {
+        this.eventBus.emit(
+          new TouchGhostPlacementMoveEvent(event.clientX, event.clientY),
+        );
+      } else {
+        this.suppressNextTap = false;
+      }
+      event.preventDefault();
+      return;
+    }
+    if (event.type === "pointercancel") {
+      this.suppressNextTap = false;
+      this.canvas.style.cursor = "";
+      if (this.selectionBoxActive) {
+        this.selectionBoxActive = false;
+        this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
+      }
+      event.preventDefault();
+      return;
+    }
     if (wasLongPress) {
       this.canvas.style.cursor = "";
       // If long-press fired but no drag happened (selectionBoxActive is false),
@@ -1237,7 +1350,11 @@ export class InputHandler {
           event.preventDefault();
           return;
         }
-        this.eventBus.emit(new TouchEvent(event.x, event.y));
+        if (this.uiState.ghostStructure !== null) {
+          this.eventBus.emit(new TouchGhostPlacementEvent(event.x, event.y));
+        } else {
+          this.eventBus.emit(new TouchEvent(event.x, event.y));
+        }
         event.preventDefault();
         return;
       }
@@ -1246,13 +1363,20 @@ export class InputHandler {
         !this.userSettings.leftClickOpensMenu() ||
         event.shiftKey ||
         this.gameView.inSpawnPhase() || // No Radial Menu during spawn phase, only spawn point selection
-        this.uiState.ghostStructure !== null // Block radial menu on left click if building
+        this.uiState.ghostStructure !== null || // Block radial menu on left click if building
+        this.gameView.config().gameConfig().tutorial === true // The tutorial teaches the click that attacks
       ) {
         this.eventBus.emit(new MouseUpEvent(event.x, event.y));
       } else {
         this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
       }
+      return;
     }
+
+    // The gesture ended as a drag, so it was never a tap. Drop any tap
+    // suppression it left behind instead of letting it swallow the next
+    // gesture's tap.
+    this.suppressNextTap = false;
   }
 
   private onScroll(event: WheelEvent) {
@@ -1330,6 +1454,14 @@ export class InputHandler {
   }
 
   private onPointerMove(event: PointerEvent) {
+    if (event.pointerType !== "touch") {
+      this.lastMouseX = event.clientX;
+      this.lastMouseY = event.clientY;
+      if (event.movementX || event.movementY) {
+        this.eventBus.emit(new MouseMoveEvent(event.clientX, event.clientY));
+      }
+    }
+
     if (event.button === 1) {
       event.preventDefault();
       return;
@@ -1363,12 +1495,19 @@ export class InputHandler {
     if (this.pointers.size === 1) {
       const deltaX = event.clientX - this.lastPointerX;
       const deltaY = event.clientY - this.lastPointerY;
+      const moveDist =
+        Math.abs(event.clientX - this.lastPointerDownX) +
+        Math.abs(event.clientY - this.lastPointerDownY);
+
+      if (
+        this.touchPlacementDragState === "candidate" &&
+        moveDist >= this.DRAG_THRESHOLD_PX
+      ) {
+        this.touchPlacementDragState = "active";
+      }
 
       // Cancel long-press if finger moved significantly before timer fires
       if (this.longPressTimer !== null) {
-        const moveDist =
-          Math.abs(event.clientX - this.lastPointerDownX) +
-          Math.abs(event.clientY - this.lastPointerDownY);
         if (moveDist >= this.DRAG_THRESHOLD_PX) {
           clearTimeout(this.longPressTimer);
           this.longPressTimer = null;
@@ -1377,7 +1516,14 @@ export class InputHandler {
 
       // If shift is held OR touch long-press is active OR selection box already
       // started, continue emitting selection box updates
-      if (
+      if (this.touchPlacementDragState === "active") {
+        this.eventBus.emit(
+          new TouchGhostPlacementMoveEvent(event.clientX, event.clientY),
+        );
+      } else if (this.touchPlacementDragState === "candidate") {
+        // Keep a hold that began on the preview stable until the long-press
+        // threshold is reached; ordinary touches elsewhere still pan.
+      } else if (
         this.selectionBoxActive ||
         this.activeKeys.has(this.keybinds.boxSelectWarships) ||
         this.longPressActive
@@ -1413,6 +1559,12 @@ export class InputHandler {
 
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
+    if (
+      this.lastPointerType === "touch" &&
+      this.uiState.ghostStructure !== null
+    ) {
+      return;
+    }
     if (this.gameView.inSpawnPhase()) {
       return;
     }
@@ -1433,6 +1585,23 @@ export class InputHandler {
     ghostStructure: PlayerBuildableUnitType | null,
     source: "increase" | "decrease" | "GUIclick" | "hotkey" = "hotkey",
   ) {
+    const previousGhostStructure = this.uiState.ghostStructure;
+    if (source === "GUIclick" && previousGhostStructure !== ghostStructure) {
+      this.eventBus.emit(new CloseViewEvent());
+    }
+    if (previousGhostStructure !== null && ghostStructure === null) {
+      this.eventBus.emit(new ToggleStructureEvent(null));
+    }
+    if (
+      source === "hotkey" &&
+      ghostStructure !== null &&
+      previousGhostStructure !== ghostStructure
+    ) {
+      this.eventBus.emit(
+        new ToggleStructureEvent(highlightTypesForUnit(ghostStructure)),
+      );
+    }
+
     if (
       this.uiState.ghostStructure === ghostStructure &&
       ghostStructure !== null

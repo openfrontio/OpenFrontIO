@@ -718,7 +718,10 @@ export class ReplayViewer extends LitElement {
     const gameSettings = document.getElementById(
       "game-settings",
     ) as UserSettingModal | null;
-    return gameSettings?.isOpen?.() === true;
+    return (
+      gameSettings?.isOpen?.() === true ||
+      gameSettings?.isGraphicsPanelOpen?.() === true
+    );
   }
 
   private onPointerDown(e: PointerEvent): void {

@@ -4,6 +4,7 @@
   "name": "Onion",
   "translation_key": "map.onion",
   "categories": ["arcade"],
+  "author": "TKTK123456",
   "nations": [
     {
       "coordinates": [51, 188],
