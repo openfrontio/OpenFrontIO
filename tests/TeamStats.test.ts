@@ -144,6 +144,18 @@ describe("TeamStats", () => {
         goldEarned: () => 0,
         isAlive: () => true,
       },
+      {
+        id: () => "player-2",
+        smallID: () => 1,
+        team: () => "Team 17",
+        numTilesOwned: () => 5,
+        gold: () => 20n,
+        tradeGold: () => 0,
+        trainGold: () => 0,
+        piracyGold: () => 0,
+        goldEarned: () => 0,
+        isAlive: () => true,
+      },
     ] as unknown as PlayerView[];
     const game = {
       myPlayer: () => players[0],
@@ -152,7 +164,11 @@ describe("TeamStats", () => {
       ticks: () => 600,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
-      teamClanTag: (team: string) => (team === "Team 16" ? "AST2" : null),
+      teamClanTag: (team: string) => {
+        if (team === "Team 16") return "AST2";
+        if (team === "Team 17") return "BRV";
+        return null;
+      },
     } as unknown as GameView;
     const teamStats = new TeamStats();
     teamStats.game = game;
@@ -162,10 +178,12 @@ describe("TeamStats", () => {
     teamStats.refresh();
     await teamStats.updateComplete;
 
-    const rowCells = teamStats.querySelectorAll(
-      '.stats-table-row > [role="cell"]',
-    );
-    expect(rowCells[1]?.textContent?.trim()).toContain("[AST2]");
+    const rows = teamStats.querySelectorAll(".stats-table-row");
+    expect(rows).toHaveLength(2);
+    const row1Cells = rows[0].querySelectorAll('[role="cell"]');
+    const row2Cells = rows[1].querySelectorAll('[role="cell"]');
+    expect(row1Cells[1]?.textContent?.trim()).toContain("[AST2]");
+    expect(row2Cells[1]?.textContent?.trim()).toContain("[BRV]");
 
     teamStats.remove();
   });
