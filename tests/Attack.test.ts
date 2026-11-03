@@ -644,7 +644,7 @@ describe("Attack immunity", () => {
     game.executeNextTick();
     game.executeNextTick();
     giveBorderTile(playerA, nationA);
-    giveBorderTile(playerA, nationB);
+    giveBorderTile(nationA, nationB);
 
     // Nation A attacks Nation B during PVP immunity - should succeed
     game.addExecution(new AttackExecution(null, nationA, "nationB_id", null));

@@ -420,14 +420,14 @@ export async function userAuth(
     if (iss !== getApiBase()) {
       // JWT was not issued by the correct server
       console.error('unexpected "iss" claim value');
-      logOut();
+      void logOut();
       return false;
     }
     const myAud = getAudience();
     if (myAud !== "localhost" && aud !== myAud) {
       // JWT was not issued for this website
       console.error('unexpected "aud" claim value');
-      logOut();
+      void logOut();
       return false;
     }
     if (Date.now() >= __expiresAt - 3 * 60 * 1000) {
@@ -538,7 +538,7 @@ async function doRefreshJwt(): Promise<void> {
       // The only answer that means the session is dead: the server has
       // already cleared the refresh cookie.
       console.warn("Refresh rejected", response);
-      logOut();
+      void logOut();
       return;
     }
     if (response.status !== 200) {
@@ -841,7 +841,7 @@ export function rememberPublicId(persistentId: string, publicId: string): void {
  * in-memory publicId learned from /users/@me during this session, and falling
  * back to localStorage.
  */
-export function getCachedPublicId(persistentId: string): string | null {
+function getCachedPublicId(persistentId: string): string | null {
   if (__inMemoryPublicIdSub === persistentId && __inMemoryPublicId !== null) {
     return __inMemoryPublicId;
   }

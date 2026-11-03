@@ -238,7 +238,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     if (owner && owner.isPlayer()) {
       this.player = owner as PlayerView;
       this.tile = tile;
-      this.player.profile().then((p) => {
+      void this.player.profile().then((p) => {
         this.playerProfile = p;
       });
       this.refreshPlayerActions(this.player, tile);
@@ -908,7 +908,8 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
   }
 
   render() {
-    if (!this._isActive) {
+    // The onboarding tutorial keeps the screen to its own guide.
+    if (!this._isActive || this.game.config().gameConfig().tutorial === true) {
       return html``;
     }
 

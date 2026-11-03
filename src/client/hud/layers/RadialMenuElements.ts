@@ -378,7 +378,7 @@ const infoEmojiElement: MenuElement = {
   },
 };
 
-export const infoMenuElement: MenuElement = {
+const infoMenuElement: MenuElement = {
   id: Slot.Info,
   name: "info",
   disabled: (params: MenuElementParams) =>
@@ -627,7 +627,7 @@ const donateGoldRadialElement: MenuElement = {
   },
 };
 
-export const deleteUnitElement: MenuElement = {
+const deleteUnitElement: MenuElement = {
   id: Slot.Delete,
   name: "delete",
   cooldown: (params: MenuElementParams) => params.myPlayer.deleteUnitCooldown(),
@@ -714,7 +714,7 @@ export const buildMenuElement: MenuElement = {
   },
 };
 
-export const boatMenuElement: MenuElement = {
+const boatMenuElement: MenuElement = {
   id: Slot.Boat,
   name: "boat",
   disabled: (params: MenuElementParams) =>

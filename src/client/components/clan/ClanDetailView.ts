@@ -13,6 +13,7 @@ import {
   joinClan,
   leaveClan,
 } from "../../ClanApi";
+import { broadcastFreshUserMe } from "../../Cosmetics";
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
 import "../CopyButton";
@@ -90,7 +91,7 @@ export class ClanDetailView extends LitElement {
     if (this.cachedDetail && this.cachedDetail.tag === this.clanTag) {
       this.restoreFromCache(this.cachedDetail);
     } else if (this.clanTag) {
-      this.loadDetail();
+      void this.loadDetail();
     }
   }
 
@@ -251,7 +252,7 @@ export class ClanDetailView extends LitElement {
       this.members.length === 0 &&
       this.myClanRoles.has(this.clanTag)
     ) {
-      this.loadInitialMembers();
+      void this.loadInitialMembers();
     }
   }
 
@@ -293,12 +294,12 @@ export class ClanDetailView extends LitElement {
     if (sort === this.memberSort) return;
     this.memberSort = sort;
     this.memberOrder = defaultOrderForSort(sort);
-    this.loadMemberPage(1);
+    void this.loadMemberPage(1);
   }
 
   private onOrderToggle() {
     this.memberOrder = this.memberOrder === "asc" ? "desc" : "asc";
-    this.loadMemberPage(1);
+    void this.loadMemberPage(1);
   }
 
   private async handleJoin() {
@@ -393,7 +394,7 @@ export class ClanDetailView extends LitElement {
       }),
       "green",
     );
-    invalidateUserMe();
+    void broadcastFreshUserMe();
     const gen = this.asyncGeneration;
     const detail = await fetchClanDetail(clan.tag);
     if (!detail || gen !== this.asyncGeneration || this.clanTag !== clan.tag) {
@@ -696,7 +697,7 @@ export class ClanDetailView extends LitElement {
           (p) => this.loadMemberPage(p),
           (pp) => {
             this.membersPerPage = pp;
-            this.loadMemberPage(1);
+            void this.loadMemberPage(1);
           },
         )}
       </div>

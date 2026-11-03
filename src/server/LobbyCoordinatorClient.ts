@@ -30,7 +30,7 @@ export const COORDINATOR_STALE_MS = 5_000;
 export const SOCKET_SILENCE_MS = 15_000;
 // Reports: at most one a second while lobbies change, at least one every
 // 5s as a heartbeat, whatever the workers report.
-export const REPORT_MIN_INTERVAL_MS = 1_000;
+const REPORT_MIN_INTERVAL_MS = 1_000;
 export const REPORT_HEARTBEAT_MS = 5_000;
 // Reconnect backoff: 1s doubling to 30s. A refusal that will not clear by
 // itself (a 4xx on the upgrade, the site turning shared lobbies off, this

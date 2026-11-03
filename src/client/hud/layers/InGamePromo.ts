@@ -61,7 +61,7 @@ export class InGamePromo extends LitElement implements Controller {
       this.shouldShow = true;
       this.requestUpdate();
 
-      this.updateComplete.then(() => {
+      void this.updateComplete.then(() => {
         this.loadAd();
         this.checkForAds();
       });
@@ -131,10 +131,13 @@ export class InGamePromo extends LitElement implements Controller {
     }
     this.shouldShow = false;
     try {
-      for (const { type } of AD_TYPES) {
-        window.ramp.destroyUnits(type);
-      }
-      console.log("successfully destroyed in-game bottom-left ads");
+      Promise.all(AD_TYPES.map(({ type }) => window.ramp.destroyUnits(type)))
+        .then(() =>
+          console.log("successfully destroyed in-game bottom-left ads"),
+        )
+        .catch((e: unknown) => {
+          console.warn("error destroying in-game ads:", e);
+        });
     } catch (e) {
       console.warn("error destroying in-game ads:", e);
     }

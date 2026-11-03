@@ -1293,7 +1293,9 @@ export async function fetchTribeStats(
 }
 
 export type PurchaseWithCurrencyResult =
-  | { ok: true }
+  // `amount` is what was charged, when the response says so. It differs from
+  // the price the store showed when a sale started or ended in between.
+  | { ok: true; amount?: number }
   // 400 "Insufficient balance": the balance moved since the client's
   // pre-check. Nothing charged.
   | { ok: false; code: "insufficient_balance" }
@@ -1363,7 +1365,16 @@ export async function purchaseWithCurrency(
       );
       return { ok: false, code: "failed" };
     }
-    return { ok: true };
+    // The purchase went through: an unreadable body only loses the amount.
+    const body = await response.json().catch(() => null);
+    const amount = Number(body?.amount);
+    return {
+      ok: true,
+      amount:
+        typeof body?.amount === "string" && Number.isFinite(amount)
+          ? amount
+          : undefined,
+    };
   } catch (e) {
     console.error("purchaseWithCurrency: request failed", e);
     return { ok: false, code: "failed" };
@@ -1554,40 +1565,6 @@ export async function claimAllRewards(): Promise<
     return parsed.data;
   } catch (e) {
     console.error("claimAllRewards: request failed", e);
-    return false;
-  }
-}
-
-export async function createCustomCurrencyCheckout(
-  hardAmount: number,
-): Promise<string | false> {
-  try {
-    const response = await fetch(
-      `${getApiBase()}/stripe/create-custom-currency-checkout`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: await getAuthHeader(),
-        },
-        body: JSON.stringify({
-          hardAmount: hardAmount,
-          hostname: window.location.origin,
-        }),
-      },
-    );
-    if (!response.ok) {
-      console.error(
-        "createCustomCurrencyCheckout: request failed",
-        response.status,
-        response.statusText,
-      );
-      return false;
-    }
-    const json = await response.json();
-    return json.url;
-  } catch (e) {
-    console.error("createCustomCurrencyCheckout: request failed", e);
     return false;
   }
 }

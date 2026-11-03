@@ -141,7 +141,7 @@ export function milestoneRuns(progress: PublicProgress): MilestoneRun[] {
 
 // The pop-in: every item in one sequence, in document order, a step apart;
 // items past the cap share its delay.
-export const POP_STEP_MS = 55;
+const POP_STEP_MS = 55;
 export const POP_CAP = 12;
 const POP_MS = 380;
 

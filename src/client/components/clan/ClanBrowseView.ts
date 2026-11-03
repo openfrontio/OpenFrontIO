@@ -114,7 +114,7 @@ export class ClanBrowseView extends LitElement {
     this.searchDebounce = setTimeout(() => {
       this.browsePage = 1;
       this.pinnedBucket = undefined;
-      this.loadBrowse();
+      void this.loadBrowse();
     }, 400);
   }
 
@@ -122,14 +122,14 @@ export class ClanBrowseView extends LitElement {
     this.browseSort = sort;
     this.browsePage = 1;
     this.pinnedBucket = undefined;
-    this.loadBrowse();
+    void this.loadBrowse();
   }
 
   private onFilterChange(filter: ClanBrowseFilter) {
     this.browseFilter = filter;
     this.browsePage = 1;
     this.pinnedBucket = undefined;
-    this.loadBrowse();
+    void this.loadBrowse();
   }
 
   connectedCallback() {
@@ -142,7 +142,7 @@ export class ClanBrowseView extends LitElement {
       this.browseFilter = this.cachedState.filter;
       this.pinnedBucket = this.cachedState.data.bucket;
     } else {
-      this.loadBrowse();
+      void this.loadBrowse();
     }
   }
 
@@ -306,7 +306,7 @@ export class ClanBrowseView extends LitElement {
                   <button
                     @click=${() => {
                       this.browsePage = Math.max(1, this.browsePage - 1);
-                      this.loadBrowse();
+                      void this.loadBrowse();
                     }}
                     ?disabled=${this.browsePage <= 1}
                     class="px-2 py-1 text-xs font-bold rounded-lg transition-all ${
@@ -326,7 +326,7 @@ export class ClanBrowseView extends LitElement {
                         totalPages,
                         this.browsePage + 1,
                       );
-                      this.loadBrowse();
+                      void this.loadBrowse();
                     }}
                     ?disabled=${this.browsePage >= totalPages}
                     class="px-2 py-1 text-xs font-bold rounded-lg transition-all ${

@@ -29,7 +29,7 @@ const WIDGET_MIN_WIDTH = 501;
  *
  * See https://partner.steamgames.com/doc/marketing/utm_analytics
  */
-export function steamWidgetUrl(campaign: string): string {
+function steamWidgetUrl(campaign: string): string {
   return steamUrl(`widget/${STEAM_APP_ID}/`, "widget", campaign);
 }
 

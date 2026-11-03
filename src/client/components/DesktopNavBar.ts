@@ -20,7 +20,7 @@ export class DesktopNavBar extends LitElement {
     const current = window.currentPageId;
     if (current) {
       // Wait for render
-      this.updateComplete.then(() => {
+      void this.updateComplete.then(() => {
         this._updateActiveState(current);
       });
     }
@@ -50,9 +50,11 @@ export class DesktopNavBar extends LitElement {
     window.currentPageId ??= "page-play";
     const currentPage = window.currentPageId;
 
+    // Scaled to 3/4 on compact screens (styles.css), e.g. Poki's frame. The bar,
+    // not the sticky host, so the host's offset below a header ad stays exact.
     return html`
       <nav
-        class="hidden lg:flex w-full bg-zinc-900/90 backdrop-blur-md items-center justify-center gap-8 py-4 shrink-0 z-50 relative"
+        class="hidden lg:flex w-full bg-zinc-900/90 backdrop-blur-md items-center justify-center gap-8 py-4 shrink-0 z-50 relative compact:[zoom:0.75]"
       >
         <div class="flex flex-col items-center justify-center">
           <div class="h-8">

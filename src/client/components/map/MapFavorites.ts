@@ -20,10 +20,6 @@ export function getFavoriteMaps(): GameMapType[] {
   }
 }
 
-export function isFavoriteMap(map: GameMapType): boolean {
-  return getFavoriteMaps().includes(map);
-}
-
 export function toggleFavoriteMap(map: GameMapType): GameMapType[] {
   const favorites = getFavoriteMaps();
   const index = favorites.indexOf(map);

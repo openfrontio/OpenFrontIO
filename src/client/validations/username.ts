@@ -40,7 +40,7 @@ const FREE_FORM_USERNAME_PATTERN = new RegExp(
 // it, so the two cannot drift: a sanitiser that seeds this form has to agree
 // with the form about which characters survive, and re-typing the class in the
 // sanitiser is exactly how that goes wrong.
-export const ACCOUNT_NAME_CHARS = "a-zA-Z0-9_-";
+const ACCOUNT_NAME_CHARS = "a-zA-Z0-9_-";
 export const ACCOUNT_NAME_CHAR_RE = new RegExp(`^[${ACCOUNT_NAME_CHARS}]$`);
 
 export const AccountUsernameSchema = z

@@ -4,6 +4,8 @@
   "name": "Qing China",
   "translation_key": "map.qingchina",
   "categories": ["asia", "countries"],
+  "location": { "lat": 40, "lon": 98 },
+  "author": "crunchybbb",
   "themes": ["asia"],
   "nations": [
     {

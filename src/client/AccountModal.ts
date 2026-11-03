@@ -420,12 +420,16 @@ export class AccountModal extends BaseModal {
               ${translateText("account_modal.connected_as")}
             </div>
             <div class="flex flex-col items-center gap-3">
-              <img
-                src=${user.profilePictureUrl}
-                alt=${user.username}
-                class="w-16 h-16 rounded-full object-cover"
-                referrerpolicy="no-referrer"
-              />
+              ${
+                user.profilePictureUrl !== null
+                  ? html`<img
+                      src=${user.profilePictureUrl}
+                      alt=${user.username}
+                      class="w-16 h-16 rounded-full object-cover"
+                      referrerpolicy="no-referrer"
+                    />`
+                  : nothing
+              }
               <div class="text-white text-lg font-medium">${user.username}</div>
               ${this.renderCurrency()}
             </div>
@@ -451,7 +455,11 @@ export class AccountModal extends BaseModal {
             variant="primary"
             width="block"
             size="md"
-            translationKey="main.sign_in"
+            translationKey=${
+              gamePortal.name() === "viverse"
+                ? "account_modal.sign_in_viverse"
+                : "main.sign_in"
+            }
             @click=${this.handlePortalSignIn}
           ></o-button>
         </div>
@@ -1241,7 +1249,7 @@ export class AccountModal extends BaseModal {
           this.userMeResponse = userMe;
           this.prefetchPrestigeFlow();
           if (this.userMeResponse?.player?.publicId) {
-            this.loadPlayerProfile(this.userMeResponse.player.publicId);
+            void this.loadPlayerProfile(this.userMeResponse.player.publicId);
           }
         }
         this.finishLoadingUser(opening);

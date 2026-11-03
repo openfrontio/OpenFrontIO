@@ -22,7 +22,6 @@ import {
   TerraNullius,
   Tick,
   TrainType,
-  TrajectoryTile,
   TransportShipState,
   UnitInfo,
   UnitType,
@@ -73,12 +72,12 @@ export interface UnitParamsMap {
 
   [UnitType.AtomBomb]: {
     targetTile?: number;
-    trajectory: TrajectoryTile[];
+    trajectory: TileRef[];
   };
 
   [UnitType.HydrogenBomb]: {
     targetTile?: number;
-    trajectory: TrajectoryTile[];
+    trajectory: TileRef[];
   };
 
   [UnitType.MIRV]: {
@@ -88,7 +87,7 @@ export interface UnitParamsMap {
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
-    trajectory: TrajectoryTile[];
+    trajectory: TileRef[];
   };
 
   [UnitType.TradeShip]: {
@@ -235,7 +234,7 @@ export interface Unit extends UnitLike {
   targetPlayer(): Player | TerraNullius | undefined;
   setTrajectoryIndex(i: number): void;
   trajectoryIndex(): number;
-  trajectory(): TrajectoryTile[];
+  trajectory(): TileRef[];
   setTargetUnit(unit: Unit | undefined): void;
   targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;
@@ -639,6 +638,13 @@ export interface Game extends GameLike {
 
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
+  /**
+   * Bumped whenever a City, Port or Factory is added or removed (the
+   * structures the rail network connects) and whenever land turns to water
+   * (rail paths route around it), so rail previews can be memoised while
+   * other units churn.
+   */
+  structureVersion(): number;
   /** MIRVs launched so far by anyone; each one raises the next one's price. */
   mirvsLaunched(): number;
   recordMirvLaunch(): void;

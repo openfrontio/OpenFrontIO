@@ -30,7 +30,7 @@ export class ClanBansView extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.loadBans(1);
+    void this.loadBans(1);
   }
 
   disconnectedCallback() {

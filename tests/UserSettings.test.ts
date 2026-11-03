@@ -617,6 +617,11 @@ describe("getDefaultKeybinds", () => {
         }
       }
     }
+    const keybinds = getDefaultKeybinds(false);
+    expect(keybinds.buildScrollModifier).toBe("AltLeft");
+    expect(keybinds.emojiMenuModifier).toBe("AltLeft");
+    // Note: this is related to user_setting.graphics_refresh_modifier, not the actual alt key.
+    expect(keybinds.altKey).toBe("AltLeft");
   });
 
   it("handles Mac-specific modifier keys correctly", () => {
@@ -644,12 +649,12 @@ describe("UserSettings audio volumes", () => {
 describe("UserSettings replay viewer", () => {
   beforeEach(resetUserSettingsState);
 
-  it("is off by default, and remembers being turned on", () => {
-    expect(new UserSettings().replayViewer()).toBe(false);
-    new UserSettings().setReplayViewer(true);
+  it("is on by default, and remembers being turned off", () => {
     expect(new UserSettings().replayViewer()).toBe(true);
     new UserSettings().setReplayViewer(false);
     expect(new UserSettings().replayViewer()).toBe(false);
+    new UserSettings().setReplayViewer(true);
+    expect(new UserSettings().replayViewer()).toBe(true);
   });
 });
 

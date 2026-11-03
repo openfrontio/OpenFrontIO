@@ -371,7 +371,10 @@ export class NavAccountMenu extends LitElement {
       return [
         {
           key: "sign-in",
-          labelKey: "main.sign_in",
+          labelKey:
+            gamePortal.name() === "viverse"
+              ? "account_modal.sign_in_viverse"
+              : "main.sign_in",
           icon: iconUser,
           onSelect: () => this.signIn(),
         },

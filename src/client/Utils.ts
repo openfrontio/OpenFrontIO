@@ -18,7 +18,6 @@ import { ClientEnv } from "./ClientEnv";
 import type { KeyboardLayoutMap } from "./KeyboardLayout";
 import type { LangSelector } from "./LangSelector";
 import { pagePin } from "./PagePin";
-import { Platform } from "./Platform";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/7J5zwb_s_Cg";
 
@@ -508,6 +507,12 @@ function getCachedLangSelector(): LangSelector | null {
   return found;
 }
 
+/** The locale selected in OpenFront's language picker, with a safe UI fallback. */
+export const getCurrentLanguage = (): string => {
+  const lang = getCachedLangSelector()?.currentLang ?? "en";
+  return lang === "debug" ? "en" : lang;
+};
+
 /** Language codes whose script reads right-to-left (resources/lang/metadata.json). */
 const RTL_LANGUAGES = new Set(["ar", "fa", "he"]);
 
@@ -726,14 +731,6 @@ export function getMessageTypeClasses(type: MessageType): string {
       console.warn(`Message type ${type} has no explicit color`);
       return severityColors["white"];
   }
-}
-
-export function getModifierKey(): string {
-  return Platform.isMac ? "⌘" : "Ctrl";
-}
-
-export function getAltKey(): string {
-  return Platform.isMac ? "⌥" : "Alt";
 }
 
 export function getGamesPlayed(): number {

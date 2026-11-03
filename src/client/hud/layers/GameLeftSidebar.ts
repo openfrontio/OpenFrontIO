@@ -4,6 +4,7 @@ import type { EventBus } from "@openfront/shared/EventBus";
 import { Colord } from "colord";
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import { isCompactViewport } from "../../CompactViewport";
 import type { Controller } from "../../Controller";
 import { Platform } from "../../Platform";
 import { themeProvider } from "../../theme/ThemeProvider";
@@ -61,8 +62,9 @@ export class GameLeftSidebar extends LitElement implements Controller {
     if (this.isTeamGame) {
       this.isPlayerTeamLabelVisible = true;
     }
-    // Make it visible by default on large screens
-    if (Platform.isDesktopWidth) {
+    // Make it visible by default on large screens; compact ones (short laptops,
+    // Poki's frame) need the room for the map.
+    if (Platform.isDesktopWidth && !isCompactViewport()) {
       this.showPlayerStatsAfterSpawn = true;
     }
   }

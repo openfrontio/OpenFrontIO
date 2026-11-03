@@ -4,6 +4,7 @@
   "name": "Pangaea",
   "translation_key": "map.pangaea",
   "categories": ["fictional"],
+  "author": "MRH",
   "nations": [
     {
       "coordinates": [389, 800],

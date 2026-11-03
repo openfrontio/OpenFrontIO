@@ -38,7 +38,7 @@ export class LangSelector extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.setupDebugKey();
-    this.initializeLanguage();
+    void this.initializeLanguage();
     window.addEventListener(
       "language-selected",
       this.handleLanguageSelected as EventListener,
@@ -55,7 +55,7 @@ export class LangSelector extends LitElement {
 
   private handleLanguageSelected = (e: CustomEvent) => {
     if (e.detail && e.detail.lang) {
-      this.changeLanguage(e.detail.lang);
+      void this.changeLanguage(e.detail.lang);
     }
   };
 
@@ -275,6 +275,8 @@ export class LangSelector extends LitElement {
       "cosmetic-info",
       "cosmetic-preview",
       "difficulty-info",
+      "map-details",
+      "earth-map",
       "inventory-loadout-bar",
       "purchase-button",
       "custom-currency-card",

@@ -68,7 +68,7 @@ export class FluentSlider extends LitElement {
 
   private enableEditing() {
     this.isEditing = true;
-    this.updateComplete.then(() => this.numberInput?.focus());
+    void this.updateComplete.then(() => this.numberInput?.focus());
   }
 
   render() {

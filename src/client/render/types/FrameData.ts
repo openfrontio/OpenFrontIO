@@ -22,6 +22,8 @@ export interface FrameData {
   readonly tick: number;
   /** True during spawn phase (before gameplay begins). */
   readonly inSpawnPhase: boolean;
+  /** True when name positions should snap instantly without lerping (e.g. spawn phase end or seek). */
+  readonly namesSnap?: boolean;
   readonly tileState: Uint16Array;
   readonly trailState: Uint16Array;
   readonly railroadState: Uint8Array;

@@ -388,7 +388,7 @@ describe("GameServer.joinClient — active game reconnection", () => {
     expect(game.wasAdmitted(pid)).toBe(true);
 
     // Player leaves the lobby before game starts (triggers forgetReconnect)
-    mockWsOf(client).trigger("close");
+    void mockWsOf(client).trigger("close");
     expect(game.getClientIdForPersistentId(pid)).toBeNull();
     expect(game.wasAdmitted(pid)).toBe(true);
 
@@ -416,7 +416,7 @@ describe("GameServer.joinClient — active game reconnection", () => {
     expect(game.joinClient(client1)).toBe("joined");
 
     // Player leaves before start
-    mockWsOf(client1).trigger("close");
+    void mockWsOf(client1).trigger("close");
     expect(game.wasAdmitted(pid)).toBe(true);
 
     // Game starts in their absence
@@ -454,7 +454,7 @@ describe("GameServer.joinClient — active game reconnection", () => {
     expect(game.joinClient(clientB)).toBe("joined");
 
     // Client B leaves the lobby before game starts (triggers forgetReconnect)
-    mockWsOf(clientB).trigger("close");
+    void mockWsOf(clientB).trigger("close");
     expect(game.getClientIdForPersistentId(pid)).toBeNull();
     expect(game.wasAdmitted(pid)).toBe(true);
 

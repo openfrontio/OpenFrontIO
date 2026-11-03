@@ -143,8 +143,11 @@ export class TutorialPanel extends LitElement implements Controller {
       this.started = true;
       // The steps walk a new game from its spawn; a resumed save is well
       // past that, and would hold the spawn ring up until the next attack.
+      // The onboarding tutorial has its own guide (OnboardingOverlay).
       this.setActive(
-        !this.userSettings.tutorialDismissed() && !this.game.resumedFromSave(),
+        !this.userSettings.tutorialDismissed() &&
+          !this.game.resumedFromSave() &&
+          this.game.config().gameConfig().tutorial !== true,
       );
     }
     if (!this.active) return;
@@ -334,12 +337,17 @@ export class TutorialPanel extends LitElement implements Controller {
     for (const id of ids) {
       const nation = this.game.playerBySmallID(id);
       if (!nation.isPlayer()) continue;
-      (nation as PlayerView).profile().then((profile) => {
-        this.nationRelations.set(
-          id,
-          profile.relations[me.smallID()] ?? Relation.Neutral,
+      (nation as PlayerView)
+        .profile()
+        .then((profile) => {
+          this.nationRelations.set(
+            id,
+            profile.relations[me.smallID()] ?? Relation.Neutral,
+          );
+        })
+        .catch((error) =>
+          console.warn("Failed to fetch nation relations", error),
         );
-      });
     }
   }
 

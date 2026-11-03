@@ -28,7 +28,7 @@ import {
  * Convert engine TrainType (string enum) to renderer's numeric encoding.
  * UnitState uses 0/1/2 so it can be uploaded to GPU buffers without lookup.
  */
-export function trainTypeToNum(t: TrainType | undefined): number | null {
+function trainTypeToNum(t: TrainType | undefined): number | null {
   switch (t) {
     case TrainType.Engine:
       return RendererTrainType.Engine;
@@ -109,7 +109,7 @@ export function applyUnitUpdateInPlace(target: UnitState, u: UnitUpdate): void {
   target.samUpgradeDuration = u.samUpgrade?.duration ?? null;
 }
 
-export function gamePlayerTypeToEnum(t: PlayerType): PlayerTypeEnum {
+function gamePlayerTypeToEnum(t: PlayerType): PlayerTypeEnum {
   switch (t) {
     case PlayerType.Human:
       return PlayerTypeEnum.Human;

@@ -26,7 +26,7 @@ export class MobileNavBar extends LitElement {
 
     const current = window.currentPageId;
     if (current) {
-      this.updateComplete.then(() => {
+      void this.updateComplete.then(() => {
         this._updateActiveState(current);
       });
     }

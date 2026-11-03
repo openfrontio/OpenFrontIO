@@ -1,4 +1,5 @@
 import { Cell, TerrainType } from "./GameTypes";
+import { ReadonlyTileSet } from "./ReadViews";
 
 export type TileRef = number;
 
@@ -67,10 +68,15 @@ export interface GameMap {
     radius: number,
     filter?: (tile: TileRef, d2: number) => boolean,
   ): Set<TileRef>;
+  bfsSearch(
+    tile: TileRef,
+    filter: (gm: GameMap, tile: TileRef) => boolean,
+    onVisit?: (tile: TileRef) => boolean | void,
+  ): boolean;
   bfs(
     tile: TileRef,
     filter: (gm: GameMap, tile: TileRef) => boolean,
-  ): Set<TileRef>;
+  ): ReadonlyTileSet;
 
   /**
    * Returns the packed per-tile state as an unsigned 16-bit value (`0..65535`).

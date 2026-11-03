@@ -45,7 +45,7 @@ const FILL_ALPHA = 150 / 255;
  * 4 (train), railroad.frag.glsl block 5. nukeExplosion is not palette-styled;
  * it renders through the FX pass.
  */
-export const PALETTE_EFFECT_TYPES = [
+const PALETTE_EFFECT_TYPES = [
   ...TRAIL_EFFECT_TYPES,
   "structures",
   "warship",
@@ -146,7 +146,7 @@ export function catalogEffectAttributes(
  * block `block` of the effect palette. Returns whether anything changed, so
  * a caller can re-upload only when needed.
  */
-export function writeEffectEntry(
+function writeEffectEntry(
   effectPalette: Float32Array,
   smallID: number,
   block: number,

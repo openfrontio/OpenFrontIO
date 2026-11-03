@@ -4,6 +4,8 @@
   "name": "Conakry",
   "translation_key": "map.conakry",
   "categories": ["africa"],
+  "location": { "lat": 9.6, "lon": -13.6 },
+  "author": "Patrick Plays Badly",
   "special_team_count": 2,
   "nations": [
     {

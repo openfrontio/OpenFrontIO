@@ -38,8 +38,15 @@ describe("page-footer version line", () => {
     return footer;
   }
 
-  it("renders the game version on the web, with no Steam subtext", async () => {
+  it("renders no version line on the web", async () => {
     window.openfrontDesktop = undefined;
+    await mount();
+
+    expect(footer.querySelector(".footer-version")).toBeNull();
+  });
+
+  it("renders the game version alone when the shell reports no version", async () => {
+    window.openfrontDesktop = {};
     await mount();
 
     const line = footer.querySelector(".footer-version");
@@ -72,7 +79,7 @@ describe("page-footer version line", () => {
       instanceId: "test",
       gitCommit: SHA,
     };
-    window.openfrontDesktop = undefined;
+    window.openfrontDesktop = {};
     await mount();
 
     const line = footer.querySelector(".footer-version");

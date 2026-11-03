@@ -10,7 +10,7 @@ import { z } from "zod";
 import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";
 import { ServerEnv } from "./ServerEnv";
 
-export const PlayerInfoSchema = z.object({
+const PlayerInfoSchema = z.object({
   clientID: z.string().optional(),
   username: UsernameSchema.optional(),
   clanTag: ClanTagSchema,

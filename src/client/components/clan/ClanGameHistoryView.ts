@@ -89,7 +89,7 @@ export class ClanGameHistoryView extends LitElement {
       this.nextCursor = this.cachedState.nextCursor;
       this.filter = this.cachedState.filter;
     } else if (this.clanTag) {
-      this.reload();
+      void this.reload();
     }
   }
 
@@ -117,7 +117,7 @@ export class ClanGameHistoryView extends LitElement {
   private setFilter(filter: FilterKey) {
     if (filter === this.filter) return;
     this.filter = filter;
-    this.reload();
+    void this.reload();
   }
 
   private async load({ append }: { append: boolean }) {

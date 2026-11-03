@@ -44,7 +44,7 @@ export class ClanTransferView extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.loadMembers(1);
+    void this.loadMembers(1);
   }
 
   disconnectedCallback() {
@@ -145,7 +145,7 @@ export class ClanTransferView extends LitElement {
       ?disabled=${this.actionPending}
       @confirm=${() => {
         this.confirmAction = null;
-        this.handleTransfer();
+        void this.handleTransfer();
       }}
       @cancel=${() => {
         this.confirmAction = null;

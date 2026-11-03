@@ -17,7 +17,7 @@ import {
 import { MAX_NUKE_EXPLOSION_COLORS } from "../../types";
 
 /** Max colors a palette slot can carry — the effect palette holds 8 rows per block. */
-export const EFFECT_EDITOR_MAX_COLORS = 8;
+const EFFECT_EDITOR_MAX_COLORS = 8;
 
 /**
  * Max colors the renderer can actually carry for a slot: nuke explosions

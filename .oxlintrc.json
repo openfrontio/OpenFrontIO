@@ -24,7 +24,6 @@
   },
   "rules": {
     "typescript/no-explicit-any": "off",
-    "typescript/no-floating-promises": "off",
     "typescript/restrict-template-expressions": "off",
     "typescript/unbound-method": "off",
     "typescript/no-base-to-string": "off",
@@ -54,12 +53,6 @@
   },
   "jsPlugins": [{ "name": "eslint-js", "specifier": "oxlint-plugin-eslint" }],
   "overrides": [
-    {
-      "files": ["src/server/**/*.ts"],
-      "rules": {
-        "typescript/no-floating-promises": "error"
-      }
-    },
     {
       "files": [
         "packages/engine/src/**/*.ts",

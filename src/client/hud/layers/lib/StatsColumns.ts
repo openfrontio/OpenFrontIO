@@ -22,11 +22,7 @@ import {
 } from "../../HotbarIcons";
 import { goldRateTracker } from "./GoldRateTracker";
 
-export {
-  COLUMN_IDS,
-  DEFAULT_STATS_COLUMNS,
-  type ColumnId,
-} from "../../../StatsConstants";
+export { type ColumnId } from "../../../StatsConstants";
 
 export type ColumnHeaderVisual =
   | {

@@ -18,10 +18,11 @@ import { SettingSelect } from "./components/baseComponents/setting/SettingSelect
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
-import "./components/GraphicsAdvancedSettings";
-import type { GraphicsAdvancedSettings } from "./components/GraphicsAdvancedSettings";
 import "./components/GraphicsPresetSelector";
 import "./components/GraphicsPresetTools";
+import "./components/GraphicsSettingsModal";
+import type { GraphicsSettingsModal } from "./components/GraphicsSettingsModal";
+import { hudOpacitySetting } from "./components/ui/HudOpacitySetting";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   desktopDisplay,
@@ -220,9 +221,9 @@ export class UserSettingModal extends BaseModal {
   /**
    * The single place layer state reaches the renderer.
    *
-   * It belongs here rather than in the advanced graphics body because that
-   * body only exists while the Advanced fold is open, and a preset picked or a
-   * configuration imported with the fold collapsed changes layers just the
+   * It belongs here rather than in the graphics panel because that
+   * panel only renders its controls while open, and a preset picked or a
+   * configuration imported from the Graphics tab changes layers just the
    * same. Off a game the callbacks are null and this is a no-op.
    */
   private readonly onGraphicsChanged = () => {
@@ -299,7 +300,13 @@ export class UserSettingModal extends BaseModal {
       actions: [string, string];
       keyPrefix: string;
     }> = [
-      { actions: ["emojiMenuModifier", "altKey"], keyPrefix: "Alt" },
+      // This is a tad ugly, but it's the only solution I found.
+      {
+        actions: ["buildScrollModifier", "emojiMenuModifier"],
+        keyPrefix: "Alt",
+      },
+      { actions: ["altKey", "emojiMenuModifier"], keyPrefix: "Alt" },
+      { actions: ["buildScrollModifier", "altKey"], keyPrefix: "Alt" },
       { actions: ["boxSelectWarships", "shiftKey"], keyPrefix: "Shift" },
     ];
 
@@ -551,7 +558,12 @@ export class UserSettingModal extends BaseModal {
   }
 
   private sliderNukeAllianceSafetyDuration(e: CustomEvent<{ value: number }>) {
-    this.userSettings.setNukeAllianceSafetyDuration(e.detail.value);
+    const value = e.detail?.value;
+    if (typeof value !== "number") {
+      console.warn("Slider event missing detail.value", e);
+      return;
+    }
+    this.userSettings.setNukeAllianceSafetyDuration(value);
     this.requestUpdate();
   }
 
@@ -832,6 +844,53 @@ export class UserSettingModal extends BaseModal {
     });
   }
 
+  /** Inline pages own their controls and must not acquire a nested modal's scroll lock. */
+  render() {
+    return html`${super.render()}
+    ${
+      this.inline
+        ? nothing
+        : html`<graphics-settings-modal
+            .mapLayers=${this.mapLayers}
+          ></graphics-settings-modal>`
+    }`;
+  }
+
+  /** The parent keeps owning live layer updates even while its shell is closed. */
+  public isGraphicsPanelOpen(): boolean {
+    return (
+      this.querySelector<GraphicsSettingsModal>(
+        "graphics-settings-modal",
+      )?.isOpen() === true
+    );
+  }
+
+  /** Expand page controls in place; use a separate preview panel during a game. */
+  public openGraphicsPanel(onReturn?: () => void): boolean {
+    if (this.inline) {
+      this.graphicsAdvancedOpen = !this.graphicsAdvancedOpen;
+      return true;
+    }
+    const panel = this.querySelector<GraphicsSettingsModal>(
+      "graphics-settings-modal",
+    );
+    if (!panel) return false;
+    if (panel.isOpen()) return true;
+    panel.mapLayers = this.mapLayers;
+    if (this.isOpen()) {
+      const previousReturn = this.onReturn;
+      this.onReturn = undefined;
+      this.close();
+      panel.open({
+        onReturn: () =>
+          this.open({ tab: "graphics", onReturn: previousReturn }),
+      });
+    } else {
+      panel.open({ onReturn });
+    }
+    return true;
+  }
+
   protected renderBody(tab: string) {
     let body;
     switch (tab) {
@@ -857,25 +916,6 @@ export class UserSettingModal extends BaseModal {
 
   protected updated(): void {
     this.syncDisplayControls();
-    this.syncGraphicsLayerWiring();
-  }
-
-  /**
-   * Hand the advanced graphics body the current game's layers, so it can draw
-   * a row per layer. It only exists while the Graphics tab is open and
-   * Advanced is expanded, so this runs on every update rather than once: the
-   * element is created and destroyed as the player moves between tabs.
-   */
-  private syncGraphicsLayerWiring(): void {
-    const advanced = this.querySelector<GraphicsAdvancedSettings>(
-      "graphics-advanced-settings",
-    );
-    if (advanced === null) return;
-    advanced.mapLayers = this.mapLayers;
-  }
-
-  private toggleGraphicsAdvanced() {
-    this.graphicsAdvancedOpen = !this.graphicsAdvancedOpen;
   }
 
   protected onTabEnter(key: string): void {
@@ -891,6 +931,12 @@ export class UserSettingModal extends BaseModal {
   }
 
   protected onClose(): void {
+    this.graphicsAdvancedOpen = false;
+    this.querySelector<GraphicsSettingsModal>("graphics-settings-modal")?.close(
+      {
+        silent: true,
+      },
+    );
     this.leaveDisplayTab();
     window.removeEventListener("keydown", this.handleEasterEggKey);
     // Fire once: a caller that reopens us on return would otherwise inherit
@@ -1456,6 +1502,17 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
+        action="buildScrollModifier"
+        .allowModifiers=${true}
+        label=${translateText("user_setting.build_scroll_modifier")}
+        description=${translateText("user_setting.build_scroll_modifier_desc")}
+        .defaultKey=${this.defaultKeybinds.buildScrollModifier}
+        .value=${this.getKeyValue("buildScrollModifier")}
+        .display=${this.getKeyChar("buildScrollModifier")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
         action="emojiMenuModifier"
         .allowModifiers=${true}
         label=${translateText("user_setting.emoji_menu_modifier")}
@@ -1820,19 +1877,7 @@ export class UserSettingModal extends BaseModal {
    */
   private renderGraphicsSettings() {
     return html`
-      <setting-slider
-        label=${translateText("user_setting.hud_opacity_label")}
-        description=${translateText("user_setting.hud_opacity_desc")}
-        id="hud-opacity-slider"
-        .value=${this.userSettings.hudOpacity() * 100}
-        @change=${(e: CustomEvent<{ value: number }>) => {
-          this.userSettings.setHudOpacity(e.detail.value / 100);
-          document.documentElement.style.setProperty(
-            "--hud-opacity",
-            String(this.userSettings.hudOpacity()),
-          );
-        }}
-      ></setting-slider>
+      ${hudOpacitySetting(this.userSettings)}
       <!-- 🎨 Graphics preset -->
       <div
         class="flex flex-col w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-3"
@@ -1878,19 +1923,28 @@ export class UserSettingModal extends BaseModal {
         .checked=${this.userSettings.mapLayers()}
         @change=${this.toggleMapLayers}
       ></setting-toggle>
-
-      <!-- 🔧 Advanced -->
-      <setting-toggle
-        label="${translateText("graphics_setting.advanced_label")}"
-        description="${translateText("graphics_setting.advanced_desc")}"
-        id="graphics-advanced-toggle"
-        .checked=${this.graphicsAdvancedOpen}
-        @change=${this.toggleGraphicsAdvanced}
-      ></setting-toggle>
-
+      <button
+        type="button"
+        data-open-graphics-panel
+        aria-expanded=${this.inline ? String(this.graphicsAdvancedOpen) : nothing}
+        aria-controls=${this.inline ? "graphics-advanced-inline" : nothing}
+        class="w-full p-4 text-left text-white font-bold bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+        @click=${() => this.openGraphicsPanel()}
+      >
+        <span class="block"
+          >${translateText("graphics_setting.advanced_label")}</span
+        >
+        <span class="block text-white/50 text-sm font-normal mt-1">
+          ${translateText("graphics_setting.advanced_desc")}
+        </span>
+      </button>
       ${
-        this.graphicsAdvancedOpen
-          ? html`<graphics-advanced-settings></graphics-advanced-settings>`
+        this.inline && this.graphicsAdvancedOpen
+          ? html`<graphics-advanced-settings
+              id="graphics-advanced-inline"
+              class="flex flex-col gap-2"
+              .mapLayers=${this.mapLayers}
+            ></graphics-advanced-settings>`
           : nothing
       }
     `;
@@ -1961,7 +2015,7 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleLobbyStartAlerts}
       ></setting-toggle>
 
-      <!-- 🎬 New replay viewer (opt-in while it's rolled out) -->
+      <!-- 🎬 New replay viewer (on by default) -->
       <setting-toggle
         label="${translateText("user_setting.replay_viewer_label")}"
         description="${translateText("user_setting.replay_viewer_desc")}"

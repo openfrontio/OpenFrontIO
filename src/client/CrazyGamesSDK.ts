@@ -47,7 +47,7 @@ declare global {
   }
 }
 
-export class CrazyGamesSDK {
+class CrazyGamesSDK {
   private initialized = false;
   private isGameplayActive = false;
   // Resolves true once the SDK initialized, false once init definitively

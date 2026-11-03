@@ -194,7 +194,7 @@ describe("empty game reaping", () => {
     // Started for real by the manager, then abandoned.
     runManager(4_000);
     expect(game.hasStarted()).toBe(true);
-    mockWsOf(client).trigger("close");
+    void mockWsOf(client).trigger("close");
 
     // Something keeps the game-wide clock warm with nobody on the roster —
     // the backstop must not depend on that clock.

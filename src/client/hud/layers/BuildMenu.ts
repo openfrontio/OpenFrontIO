@@ -46,7 +46,7 @@ export interface BuildItemDisplay {
   countable?: boolean;
 }
 
-export const buildTable: BuildItemDisplay[][] = [
+const buildTable: BuildItemDisplay[][] = [
   [
     {
       unitType: UnitType.AtomBomb,
@@ -160,7 +160,7 @@ export class BuildMenu extends LitElement implements Controller {
 
   tick() {
     if (!this._hidden) {
-      this.refresh();
+      void this.refresh();
     }
   }
 
@@ -484,7 +484,7 @@ export class BuildMenu extends LitElement implements Controller {
   showMenu(clickedTile: TileRef) {
     this.clickedTile = clickedTile;
     this._hidden = false;
-    this.refresh();
+    void this.refresh();
   }
 
   private refresh() {
