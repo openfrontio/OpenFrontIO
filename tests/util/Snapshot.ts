@@ -53,7 +53,7 @@ async function loadTestMaps(
  * Restores a snapshot of a game built by tests/util/Setup on `mapName`, with
  * the given EngineConfig class (TestConfig and its variants override behavior).
  */
-async function restoreTestGame(
+export async function restoreTestGame(
   bytes: Uint8Array,
   mapName: string,
   ConfigClass: typeof EngineConfig = TestConfig,
@@ -147,6 +147,11 @@ const DERIVED_FIELDS = new Set<string>([
   "myUnitCountMemo",
   "myUnitsOwnedMemo",
   "nearbyMemo",
+  // GameMapImpl BFS scratch buffers
+  "bfsVisited",
+  "bfsQueue",
+  "bfsGen",
+  "inBfs",
   // SharedWaterCache
   "playerWater",
   // Config / EngineConfig

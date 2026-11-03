@@ -6,7 +6,7 @@ import { Config } from "@openfront/engine-lib/configuration/Config";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
-import { LitElement, html } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
 import { Controller } from "../../Controller";
@@ -17,6 +17,7 @@ import { getGamesPlayed, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import { goldCoinIcon, soldierIcon } from "../HotbarIcons";
+import { OnboardingLowTroopsEvent } from "../Onboarding";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 const swordIcon = assetUrl("images/SwordIcon.svg");
 
@@ -60,6 +61,9 @@ export class ControlPanel extends LitElement implements Controller {
 
   @state()
   private _tutorialHighlight: TutorialHighlight | null = null;
+  /** The onboarding tutorial's low-troops warning is up: flash the bar. */
+  @state()
+  private _lowTroopsAlert = false;
 
   private _troopRateIsIncreasing: boolean = true;
 
@@ -91,6 +95,9 @@ export class ControlPanel extends LitElement implements Controller {
     this.uiState.attackRatio = this.attackRatio;
     this.eventBus.on(TutorialHighlightEvent, (e) => {
       this._tutorialHighlight = e.target;
+    });
+    this.eventBus.on(OnboardingLowTroopsEvent, (e) => {
+      this._lowTroopsAlert = e.low;
     });
     this.eventBus.on(AttackRatioEvent, (event) => {
       let newAttackRatio = this.attackRatio + event.attackRatio / 100;
@@ -374,7 +381,9 @@ export class ControlPanel extends LitElement implements Controller {
     const { greenPercent, orangePercent } = this.calculateTroopBar();
     return html`
       <div
-        class="w-full h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
+        class="w-full h-6 border ${
+          this._lowTroopsAlert ? "border-red-500" : "border-gray-600"
+        } rounded-md bg-gray-900/60 overflow-hidden relative"
       >
         <div class="relative h-full">
           <div
@@ -388,6 +397,13 @@ export class ControlPanel extends LitElement implements Controller {
             });"
           ></div>
         </div>
+        ${
+          this._lowTroopsAlert
+            ? html`<div
+                class="troop-bar-alert absolute inset-0 bg-red-600"
+              ></div>`
+            : nothing
+        }
         <div
           class="absolute inset-0 flex items-center justify-between px-1.5 text-xs font-bold leading-none pointer-events-none"
           translate="no"
@@ -434,7 +450,9 @@ export class ControlPanel extends LitElement implements Controller {
     const { greenPercent, orangePercent } = this.calculateTroopBar();
     return html`
       <div
-        class="w-full h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
+        class="w-full h-6 border ${
+          this._lowTroopsAlert ? "border-red-500" : "border-gray-600"
+        } rounded-md bg-gray-900/60 overflow-hidden relative"
       >
         <div class="relative h-full">
           <div
@@ -448,6 +466,13 @@ export class ControlPanel extends LitElement implements Controller {
             });"
           ></div>
         </div>
+        ${
+          this._lowTroopsAlert
+            ? html`<div
+                class="troop-bar-alert absolute inset-0 bg-red-600"
+              ></div>`
+            : nothing
+        }
         <div
           class="absolute inset-0 flex items-center text-lg font-bold leading-none pointer-events-none"
           translate="no"

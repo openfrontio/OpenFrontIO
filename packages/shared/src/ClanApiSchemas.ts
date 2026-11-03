@@ -347,3 +347,35 @@ export const ClanDonationsResponseSchema = z.object({
   limit: z.number(),
 });
 export type ClanDonationsResponse = z.infer<typeof ClanDonationsResponseSchema>;
+
+export const ClanDonationPeriodSchema = z.enum(["all", "week", "month"]);
+export type ClanDonationPeriod = z.infer<typeof ClanDonationPeriodSchema>;
+
+// One row of the clan's Top donors ranking (GET /clans/:tag/donations/
+// leaderboard): a current member's net donations of one currency in the
+// period — refund reversals are subtracted, so it can be less than the sum of
+// their rows in the Recent list. Week/month are the last 7/30 days.
+export const ClanDonorSchema = z.object({
+  // 1-based across pages.
+  rank: z.number(),
+  // Donor's public ID.
+  playerId: z.string(),
+  // Display username; null when never set.
+  username: z.string().nullable(),
+  // Positive integer as a decimal bigint string; parse with BigInt.
+  total: z.string(),
+  // Donations counted towards `total`.
+  donations: z.number(),
+});
+export type ClanDonor = z.infer<typeof ClanDonorSchema>;
+
+export const ClanDonationLeaderboardResponseSchema = z.object({
+  results: ClanDonorSchema.array(),
+  // Ranked donors in the period, not just this page.
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+});
+export type ClanDonationLeaderboardResponse = z.infer<
+  typeof ClanDonationLeaderboardResponseSchema
+>;
