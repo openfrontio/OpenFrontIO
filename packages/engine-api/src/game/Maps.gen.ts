@@ -2192,6 +2192,13 @@ export const maps: readonly MapInfo[] = [
     descriptionKey: "map_description.tradersdream",
   },
   {
+    id: "Turkiye",
+    type: GameMapType.Turkiye,
+    translationKey: "map.turkiye",
+    categories: ["countries", "europe", "asia"],
+    defaultNationCount: 30,
+  },
+  {
     id: "Tutorial",
     type: GameMapType.Tutorial,
     translationKey: "map.tutorial",
@@ -2199,13 +2206,6 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 2,
     hidden: true,
     author: "evanpelle",
-  },
-  {
-    id: "Turkiye",
-    type: GameMapType.Turkiye,
-    translationKey: "map.turkiye",
-    categories: ["countries", "europe", "asia"],
-    defaultNationCount: 30,
   },
   {
     id: "TwoLakes",
