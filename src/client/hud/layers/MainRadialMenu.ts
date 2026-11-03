@@ -11,7 +11,11 @@ import { ChatIntegration } from "./ChatIntegration";
 import { EmojiTable } from "./EmojiTable";
 import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerPanel } from "./PlayerPanel";
-import { RadialMenu, RadialMenuConfig } from "./RadialMenu";
+import {
+  CloseRadialMenuEvent,
+  RadialMenu,
+  RadialMenuConfig,
+} from "./RadialMenu";
 import {
   centerButtonElement,
   COLORS,
@@ -21,7 +25,7 @@ import {
 const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
 const swordIcon = assetUrl("images/SwordIconWhite.svg");
 
-import { ContextMenuEvent } from "../../InputHandler";
+import { CloseViewEvent, ContextMenuEvent } from "../../InputHandler";
 
 function emptyPlayerActions(): PlayerActions {
   return {
@@ -38,6 +42,12 @@ export class MainRadialMenu implements Controller {
   private chatIntegration: ChatIntegration;
 
   private clickedTile: TileRef | null = null;
+  /**
+   * Identifies the menu request a pending action query belongs to. Closing the
+   * menu (or opening a new one) replaces it, so a response that arrives late
+   * is dropped instead of reopening a menu the player already dismissed.
+   */
+  private menuRequest: object | null = null;
 
   getTickIntervalMs() {
     return 500;
@@ -82,7 +92,15 @@ export class MainRadialMenu implements Controller {
 
   init() {
     this.radialMenu.init();
+    this.eventBus.on(CloseViewEvent, () => {
+      this.menuRequest = null;
+    });
+    this.eventBus.on(CloseRadialMenuEvent, () => {
+      this.menuRequest = null;
+    });
     this.eventBus.on(ContextMenuEvent, (event) => {
+      const request = {};
+      this.menuRequest = request;
       const worldCoords = this.transformHandler.screenToWorldCoordinates(
         event.x,
         event.y,
@@ -107,6 +125,9 @@ export class MainRadialMenu implements Controller {
       myPlayer
         .actions(clickedTile)
         .then((actions) => {
+          // A tap or click elsewhere can close the menu while this query is in
+          // flight. Its late result must not reopen the menu over eg. a build preview.
+          if (this.menuRequest !== request) return;
           void this.updatePlayerActions(
             myPlayer,
             actions,
@@ -179,9 +200,11 @@ export class MainRadialMenu implements Controller {
     const myPlayer = this.game.myPlayer();
     if (myPlayer === null) return;
     const tile = this.clickedTile;
+    const request = this.menuRequest;
     myPlayer
       .actions(tile)
       .then((actions) => {
+        if (request === null || this.menuRequest !== request) return;
         void this.updatePlayerActions(myPlayer, actions, tile);
       })
       .catch((error) => {
@@ -190,6 +213,7 @@ export class MainRadialMenu implements Controller {
   }
 
   closeMenu() {
+    this.menuRequest = null;
     if (this.radialMenu.isMenuVisible()) {
       this.radialMenu.hideRadialMenu();
     }
