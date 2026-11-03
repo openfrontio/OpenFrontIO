@@ -56,6 +56,46 @@ class FakePlayer {
   }
 }
 
+// Stand-in for the YouTube IFrame Player API, the same way.
+type YouTubeEvents = {
+  onReady: () => void;
+  onStateChange: (e: { data: number }) => void;
+  onError: () => void;
+};
+class FakeYouTubePlayer {
+  static constructed: string[] = [];
+  static last: FakeYouTubePlayer | undefined;
+  events: YouTubeEvents;
+  paused = false;
+  constructor(
+    _el: HTMLElement,
+    opts: { videoId: string; events: YouTubeEvents },
+  ) {
+    FakeYouTubePlayer.constructed.push(opts.videoId);
+    FakeYouTubePlayer.last = this;
+    this.events = opts.events;
+  }
+  playVideo() {
+    this.paused = false;
+  }
+  pauseVideo() {
+    this.paused = true;
+  }
+  destroy() {}
+}
+const YT_ENDED = 0;
+
+const youtubeStream = (
+  url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+): LiveStream => ({
+  platform: "youtube",
+  channel: "@Enzo",
+  displayName: "Enzo",
+  viewers: 10,
+  url,
+  startedAt: "2026-08-03T12:00:00Z",
+});
+
 const stream = (
   channel: string,
   startedAt = "2026-08-03T12:00:00Z",
@@ -76,8 +116,14 @@ describe("featured-stream panel", () => {
     FakePlayer.constructed = [];
     FakePlayer.last = undefined;
     FakePlayer.failNext = false;
+    FakeYouTubePlayer.constructed = [];
+    FakeYouTubePlayer.last = undefined;
     localStorage.clear();
     (window as unknown as { Twitch: unknown }).Twitch = { Player: FakePlayer };
+    (window as unknown as { YT: unknown }).YT = {
+      Player: FakeYouTubePlayer,
+      PlayerState: { ENDED: YT_ENDED },
+    };
     // Importing registers the custom element; the SDK loader short-circuits on the
     // window.Twitch set above, so no script tag is ever appended.
     await import("../../../src/client/FeaturedStream");
@@ -90,6 +136,7 @@ describe("featured-stream panel", () => {
     // feed arrives, or leave polling stopped.
     streamsFeed.reset();
     delete (window as unknown as { Twitch?: unknown }).Twitch;
+    delete (window as unknown as { YT?: unknown }).YT;
     delete (window as unknown as { adsEnabled?: boolean }).adsEnabled;
     vi.useRealTimers();
     vi.clearAllMocks();
@@ -361,6 +408,58 @@ describe("featured-stream panel", () => {
     FakePlayer.last!.fire(FakePlayer.ENDED);
     await el.updateComplete;
     expect(card()).toBeNull();
+  });
+
+  describe("YouTube", () => {
+    it("embeds the broadcast's video with the YouTube player, not Twitch", async () => {
+      const el = await mount(youtubeStream());
+      expect(FakeYouTubePlayer.constructed).toEqual(["dQw4w9WgXcQ"]);
+      expect(FakePlayer.constructed).toEqual([]);
+      expect(card()?.className).toContain("opacity-0"); // hidden while it boots
+
+      FakeYouTubePlayer.last!.events.onReady();
+      await el.updateComplete;
+      expect(card()?.className).toContain("opacity-100");
+      expect(
+        el.querySelector('[aria-label="featured_stream.open_on_youtube"]'),
+      ).not.toBeNull();
+    });
+
+    // Same rule as Twitch's OFFLINE: the broadcast is over, and the feed may name it for
+    // a few more minutes, so it must not be re-mounted on the next poll.
+    it("hides when the broadcast ends and never re-mounts it", async () => {
+      const el = await mount(youtubeStream());
+      FakeYouTubePlayer.last!.events.onReady();
+      await el.updateComplete;
+      FakeYouTubePlayer.last!.events.onStateChange({ data: YT_ENDED });
+      await el.updateComplete;
+      expect(card()).toBeNull();
+
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+      expect(FakeYouTubePlayer.constructed).toEqual(["dQw4w9WgXcQ"]);
+    });
+
+    // e.g. a broadcast with embedding turned off: it can't play here, so don't show it.
+    it("hides when the player reports an error", async () => {
+      const el = await mount(youtubeStream());
+      FakeYouTubePlayer.last!.events.onError();
+      await el.updateComplete;
+      expect(card()).toBeNull();
+    });
+
+    it("embeds nothing without a watch URL to take the video from", async () => {
+      await mount(youtubeStream("https://www.youtube.com/@Enzo"));
+      expect(FakeYouTubePlayer.constructed).toEqual([]);
+      expect(card()).toBeNull();
+    });
+
+    it("pauses the YouTube player when a game starts", async () => {
+      const el = await mount(youtubeStream());
+      FakeYouTubePlayer.last!.events.onReady();
+      await el.updateComplete;
+      document.dispatchEvent(new CustomEvent("game-starting"));
+      expect(FakeYouTubePlayer.last!.paused).toBe(true);
+    });
   });
 
   // Polling must stop while a game is running: a stream coming online must not mount an
