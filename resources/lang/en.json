@@ -106,6 +106,7 @@
     "search_visibility_failed": "Couldn't update your search setting. Please try again.",
     "search_visibility_title": "Show my profile in search engines",
     "sign_in_desc": "Sign in to save your stats and progress",
+    "sign_in_viverse": "Sign in with VIVERSE",
     "sub_granted_from_purchase": "Included with your Steam purchase, paid for once on Steam. It isn't billed and doesn't renew, so there's nothing to manage or cancel. When it ends you keep the full game at no charge.",
     "sub_granted_indefinite": "Free access granted to your account. It isn't billed, so there's nothing to manage or cancel.",
     "sub_granted_perks_end_on": "{tier} perks end {date}",
@@ -162,7 +163,8 @@
     "username_temporary_notice": "Your name was taken by another player. Pick a new one — this rename is free.",
     "username_temporary_prompt": "Your username was taken by another player. Choose a new one now? The rename is free.",
     "username_temporary_prompt_confirm": "Choose a name",
-    "username_title": "Username"
+    "username_title": "Username",
+    "viverse_account": "VIVERSE account"
   },
   "account_settings_modal": {
     "title": "Account Settings"
