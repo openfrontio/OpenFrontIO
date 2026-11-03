@@ -638,6 +638,13 @@ export interface Game extends GameLike {
 
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
+  /**
+   * Bumped whenever a City, Port or Factory is added or removed (the
+   * structures the rail network connects) and whenever land turns to water
+   * (rail paths route around it), so rail previews can be memoised while
+   * other units churn.
+   */
+  structureVersion(): number;
   /** MIRVs launched so far by anyone; each one raises the next one's price. */
   mirvsLaunched(): number;
   recordMirvLaunch(): void;

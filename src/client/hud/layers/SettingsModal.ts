@@ -191,6 +191,14 @@ export class SettingsModal extends LitElement implements Controller {
     this.closeModal();
   }
 
+  private onOpenGraphicsButtonClick() {
+    const settings = document.getElementById(
+      "game-settings",
+    ) as UserSettingModal | null;
+    if (!settings?.openGraphicsPanel(() => this.openModal())) return;
+    this.closeModal({ keepPause: true });
+  }
+
   // Saves are kept on the player's account: singleplayer games only, and
   // only for a signed-in account, since a guest's saves would be lost with
   // the browser's session. Not the onboarding tutorial: its overlay keeps
@@ -343,6 +351,17 @@ export class SettingsModal extends LitElement implements Controller {
           </div>
 
           <div class="p-4 flex flex-col gap-3">
+            <button
+              type="button"
+              data-open-graphics
+              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              @click=${this.onOpenGraphicsButtonClick}
+            >
+              <img src=${settingsIcon} alt="" width="20" height="20" />
+              <span class="font-medium">
+                ${translateText("user_setting.tab_graphics")}
+              </span>
+            </button>
             ${this.renderSaveRow()}
 
             <button
