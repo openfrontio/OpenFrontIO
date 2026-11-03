@@ -699,6 +699,7 @@ export const ClientPlatformSchema = z.enum([
   "steam",
   "crazygames",
   "poki",
+  "viverse",
 ]);
 
 export type ClientPlatform = z.infer<typeof ClientPlatformSchema>;

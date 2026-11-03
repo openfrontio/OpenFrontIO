@@ -256,7 +256,31 @@
 
     <!-- CrazyGames SDK -->
     <script>
-      __loadThirdPartyScript("https://sdk.crazygames.com/crazygames-sdk-v3.js");
+      // Not inside our VIVERSE wrapper, which isn't CrazyGames
+      // even though it's an iframe. Same check as ViverseSDK.isOnViverse().
+      window.__onViverse = (function () {
+        if (window.self === window.top) return false;
+        try {
+          if (sessionStorage.getItem("onViverse") === "true") return true;
+        } catch (e) {}
+        var viverseHost = /(^|\.)(viverse\.app|viverse\.com)$/;
+        function isViverseUrl(url) {
+          try {
+            return viverseHost.test(new URL(url).hostname);
+          } catch (e) {
+            return false;
+          }
+        }
+        var ancestors = location.ancestorOrigins;
+        return ancestors && ancestors.length > 0
+          ? Array.prototype.some.call(ancestors, isViverseUrl)
+          : isViverseUrl(document.referrer);
+      })();
+      if (!window.__onViverse) {
+        __loadThirdPartyScript(
+          "https://sdk.crazygames.com/crazygames-sdk-v3.js",
+        );
+      }
     </script>
 
     <!-- Cloudflare Turnstile -->
