@@ -1988,7 +1988,7 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleLobbyStartAlerts}
       ></setting-toggle>
 
-      <!-- 🎬 New replay viewer (opt-in while it's rolled out) -->
+      <!-- 🎬 New replay viewer (on by default) -->
       <setting-toggle
         label="${translateText("user_setting.replay_viewer_label")}"
         description="${translateText("user_setting.replay_viewer_desc")}"
