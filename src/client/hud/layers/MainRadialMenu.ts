@@ -53,6 +53,7 @@ export class MainRadialMenu implements Controller {
    * is dropped instead of reopening a menu the player already dismissed.
    */
   private menuRequest: object | null = null;
+  private pendingDonations = new Set<object>();
 
   getTickIntervalMs() {
     return 500;
@@ -99,13 +100,16 @@ export class MainRadialMenu implements Controller {
     this.radialMenu.init();
     this.eventBus.on(CloseViewEvent, () => {
       this.menuRequest = null;
+      this.pendingDonations.clear();
     });
     this.eventBus.on(CloseRadialMenuEvent, () => {
       this.menuRequest = null;
+      this.pendingDonations.clear();
     });
     this.eventBus.on(ContextMenuEvent, (event) => {
       const request = {};
       this.menuRequest = request;
+      this.pendingDonations.clear();
       const worldCoords = this.transformHandler.screenToWorldCoordinates(
         event.x,
         event.y,
@@ -185,15 +189,19 @@ export class MainRadialMenu implements Controller {
     const recipient = owner as PlayerView;
     if (!recipient.isFriendly(myPlayer) || recipient.isDisconnected()) return;
     const request = {};
-    this.menuRequest = request;
+    this.pendingDonations.add(request);
     myPlayer
       .actions(tile)
       .then((actions) => {
-        if (this.menuRequest !== request) return;
+        if (!this.pendingDonations.delete(request)) return;
         if (this.game.owner(tile) !== recipient) return;
+        if (!recipient.isFriendly(myPlayer) || recipient.isDisconnected()) {
+          return;
+        }
         donate(myPlayer, recipient, actions, tile);
       })
       .catch((error) => {
+        this.pendingDonations.delete(request);
         console.warn("Failed to check donate actions:", error);
       });
   }
@@ -270,6 +278,7 @@ export class MainRadialMenu implements Controller {
 
   closeMenu() {
     this.menuRequest = null;
+    this.pendingDonations.clear();
     if (this.radialMenu.isMenuVisible()) {
       this.radialMenu.hideRadialMenu();
     }

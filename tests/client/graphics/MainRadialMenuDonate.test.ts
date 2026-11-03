@@ -172,4 +172,26 @@ describe("MainRadialMenu donate keybinds", () => {
 
     expect(playerPanel.openSendGoldModal).not.toHaveBeenCalled();
   });
+
+  it("completes all rapid troop donations instead of dropping earlier ones", async () => {
+    const { bus, donations } = setup();
+
+    bus.emit(new DoDonateTroopsEvent(50, 60));
+    bus.emit(new DoDonateTroopsEvent(50, 60));
+    await flush();
+
+    expect(donations).toHaveLength(2);
+  });
+
+  it("does not donate if the recipient disconnects or becomes hostile before actions resolve", async () => {
+    const { bus, recipient, playerPanel, donations } = setup();
+
+    bus.emit(new DoDonateTroopsEvent(50, 60));
+    bus.emit(new DoDonateGoldEvent(50, 60));
+    recipient.isFriendly = () => false;
+    await flush();
+
+    expect(donations).toHaveLength(0);
+    expect(playerPanel.openSendGoldModal).not.toHaveBeenCalled();
+  });
 });
