@@ -607,7 +607,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.ChannelIslands,
     translationKey: "map.channelislands",
     categories: ["north_america"],
-    defaultNationCount: 44,
+    defaultNationCount: 40,
     themes: ["north_america", "western"],
     customTribes: [
       { name: "Abenaki Tribe" },
