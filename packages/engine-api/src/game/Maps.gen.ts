@@ -228,7 +228,7 @@ export interface MapInfo {
   author?: string;
   /** Key of the map's description in resources/lang/en.json. */
   descriptionKey?: string;
-  /** Where the map lies on Earth (the map picker's Earth view). */
+  /** Where the map lies on Earth (the map picker's Atlas tab). */
   location?: { lat: number; lon: number };
 }
 
