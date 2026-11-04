@@ -85,6 +85,64 @@ describe("samThreatensNukePreview (nuke trajectory threat set, #4226)", () => {
   });
 });
 
+describe("BuildPreviewController nuke traitor warning", () => {
+  // The ally owns a structure inside the blast, so the strike breaks the
+  // alliance; the warning should flag only strikes that mark us a traitor.
+  function checkTargetingAlly(ally: {
+    isTraitor: boolean;
+    isDisconnected: boolean;
+  }) {
+    const allyPlayer = {
+      smallID: () => 2,
+      isPlayer: () => true,
+      isTraitor: () => ally.isTraitor,
+      isDisconnected: () => ally.isDisconnected,
+    };
+    const game = {
+      myPlayer: () => ({ smallID: () => 1, allies: () => [allyPlayer] }),
+      config: () => ({
+        nukeMagnitudes: () => ({ inner: 1, outer: 2 }),
+        nukeAllianceBreakThreshold: () => 0,
+      }),
+      anyUnitNearby: (
+        _tile: number,
+        _radius: number,
+        _types: unknown,
+        predicate: (unit: unknown) => boolean,
+      ) => predicate({ owner: () => allyPlayer }),
+      circleSearch: () => {},
+    };
+    const controller = new BuildPreviewController(
+      game as any,
+      new EventBus(),
+      { ghostStructure: UnitType.AtomBomb } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    ) as any;
+    controller.ghostUnit = { buildableUnit: { type: UnitType.AtomBomb } };
+    return controller.checkTargetingAlly(0);
+  }
+
+  test("warns when the strike would betray a connected, non-traitor ally", () => {
+    expect(
+      checkTargetingAlly({ isTraitor: false, isDisconnected: false }),
+    ).toBe(true);
+  });
+
+  test("no warning when the ally is a traitor (no traitor mark for us)", () => {
+    expect(checkTargetingAlly({ isTraitor: true, isDisconnected: false })).toBe(
+      false,
+    );
+  });
+
+  test("no warning when the ally is disconnected", () => {
+    expect(checkTargetingAlly({ isTraitor: false, isDisconnected: true })).toBe(
+      false,
+    );
+  });
+});
+
 describe("BuildPreviewController confirm with the pointer off the map", () => {
   function makeController(worldX: number, worldY: number, snap = false) {
     const width = 10;
