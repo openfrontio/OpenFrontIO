@@ -12,6 +12,8 @@ import {
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
   DoBoatAttackEvent,
+  DoDonateGoldEvent,
+  DoDonateTroopsEvent,
   DoTargetPlayerEvent,
   DragEvent,
   EmojiKeyEvent,
@@ -1410,7 +1412,7 @@ describe("InputHandler AutoUpgrade", () => {
     });
   });
 
-  describe("Target player keybind", () => {
+  describe("Player action keybinds", () => {
     beforeEach(() => {
       inputHandler.destroy();
       inputHandler = new InputHandler(
@@ -1440,6 +1442,35 @@ describe("InputHandler AutoUpgrade", () => {
       expect(targets).toHaveLength(1);
       // No tile: the runner uses the one under the cursor.
       expect(targets[0].tile).toBeUndefined();
+    });
+
+    test("J and O donate troops and gold at the last mouse position", () => {
+      const troops: DoDonateTroopsEvent[] = [];
+      const gold: DoDonateGoldEvent[] = [];
+      eventBus.on(DoDonateTroopsEvent, (e) => troops.push(e));
+      eventBus.on(DoDonateGoldEvent, (e) => gold.push(e));
+
+      window.dispatchEvent(
+        new MouseEvent("mousemove", { clientX: 50, clientY: 60 }),
+      );
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyJ" }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyO" }));
+
+      expect(troops).toEqual([expect.objectContaining({ x: 50, y: 60 })]);
+      expect(gold).toEqual([expect.objectContaining({ x: 50, y: 60 })]);
+    });
+
+    test("J and O do nothing before the first mousemove", () => {
+      const troops: DoDonateTroopsEvent[] = [];
+      const gold: DoDonateGoldEvent[] = [];
+      eventBus.on(DoDonateTroopsEvent, (e) => troops.push(e));
+      eventBus.on(DoDonateGoldEvent, (e) => gold.push(e));
+
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyJ" }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyO" }));
+
+      expect(troops).toHaveLength(0);
+      expect(gold).toHaveLength(0);
     });
   });
 
