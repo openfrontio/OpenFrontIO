@@ -14,12 +14,12 @@ The script lives next to this file (`.claude/skills/release-notes/scripts/range.
 in the repo). Run it from the root of the checkout whose notes you want
 (OpenFrontIO normally; openfront-desktop works with an explicit `a..b`).
 
-| User asks for | Run | Output shape |
-|---|---|---|
-| next hotfix block, "v0.35.4", "v35 since last tag" | `range.sh v35` | patch block (§2) |
-| a specific hotfix, a replay, "missing from v0.35.3" | `range.sh v0.35.2..v0.35.3` | patch block |
-| the .0 beta of the next line, "v36 beta", "main vs v35" | `range.sh --major v35` | major body (§3) |
-| beta2 over beta1, "beta1 to main" | `range.sh v0.36.0-beta1..main --minus v35` | patch block or a short diff list |
+| User asks for                                           | Run                                        | Output shape                     |
+| ------------------------------------------------------- | ------------------------------------------ | -------------------------------- |
+| next hotfix block, "v0.35.4", "v35 since last tag"      | `range.sh v35`                             | patch block (§2)                 |
+| a specific hotfix, a replay, "missing from v0.35.3"     | `range.sh v0.35.2..v0.35.3`                | patch block                      |
+| the .0 beta of the next line, "v36 beta", "main vs v35" | `range.sh --major v35`                     | major body (§3)                  |
+| beta2 over beta1, "beta1 to main"                       | `range.sh v0.36.0-beta1..main --minus v35` | patch block or a short diff list |
 
 `--major vNN` lists main since the point `vNN` branched, and `--minus vNN`
 leaves out everything that already shipped on `vNN` (matched by patch id, PR
