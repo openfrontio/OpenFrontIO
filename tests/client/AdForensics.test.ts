@@ -217,6 +217,24 @@ describe("findStrayAdFrames", () => {
     expect(recent[3]).toBe(`${railPath}|728x90|2|222|333|||`);
   });
 
+  it("still knows the rail's creative after a long game of refreshes", () => {
+    render("rail-slot", railPath, { creativeId: 2 });
+    for (let i = 0; i < 40; i++) {
+      render("left1", "/154013155/1025558-w:75940-left1", { creativeId: i });
+    }
+    const empty = document.body.appendChild(document.createElement("div"));
+    const overlay = document.body.appendChild(document.createElement("div"));
+    placeFrame(overlay, "creative");
+
+    expect(creativeAttributes(empty, "bottom_rail")).toMatchObject({
+      creativeMatch: "unit",
+      creativeId: "2",
+    });
+    expect(findStrayAdFrames()[0].attributes.recentCreatives).toContain(
+      `${railPath}|728x90|2|`,
+    );
+  });
+
   it("leaves our own UI and Playwire's containers alone", () => {
     customElements.define("stray-test-hud", class extends HTMLElement {});
     const hud = document.body.appendChild(

@@ -26,7 +26,12 @@ interface RenderedCreative {
   advertiserDomain: string;
 }
 
+// Every render, for matching a frame from an earlier load still on screen.
 const renders: RenderedCreative[] = [];
+// The newest render of each unit, in order of render. Kept apart from the
+// bounded history, which the in-game units' refreshes cycle through within
+// minutes.
+const newestByUnit = new Map<string, RenderedCreative>();
 let tracking = false;
 
 /**
@@ -54,7 +59,7 @@ function recordRender(event: SlotRenderEndedEvent): void {
   try {
     const { slot } = event;
     const targeting = (key: string) => slot.getTargeting(key)[0] ?? "";
-    renders.push({
+    const render: RenderedCreative = {
       slotElementId: slot.getSlotElementId(),
       containerId:
         document
@@ -75,8 +80,11 @@ function recordRender(event: SlotRenderEndedEvent): void {
       bidder: targeting("hb_bidder"),
       bidId: targeting("hb_adid"),
       advertiserDomain: targeting("hb_adomain"),
-    });
+    };
+    renders.push(render);
     if (renders.length > MAX_RENDERS) renders.shift();
+    newestByUnit.delete(render.adUnitPath);
+    newestByUnit.set(render.adUnitPath, render);
   } catch (e) {
     console.warn("Failed to record an ad render:", e);
   }
@@ -104,26 +112,29 @@ function renderedIn(
       return { render: renders[i], match: "frame" };
     }
   }
+  const newest = newestRenders();
   // The newest render of the unit, which may not be the one in this frame.
-  for (let i = renders.length - 1; i >= 0; i--) {
-    const framePrefix = `${GAM_IFRAME_PREFIX}${renders[i].adUnitPath}_`;
+  for (const render of newest) {
+    const framePrefix = `${GAM_IFRAME_PREFIX}${render.adUnitPath}_`;
     // The rest must be the frame counter alone, so /foo cannot claim /foo_bar.
     const isUnitFrame = (frame: Element) =>
       frame.id.startsWith(framePrefix) &&
       /^\d+$/.test(frame.id.slice(framePrefix.length));
-    if (frames.some(isUnitFrame)) {
-      return { render: renders[i], match: "path" };
-    }
+    if (frames.some(isUnitFrame)) return { render, match: "path" };
   }
   // Playwire reuses a unit's element (#pw-oop-bottom_rail) for every load,
   // so the newest render into it may be an earlier load's.
-  for (let i = renders.length - 1; i >= 0; i--) {
-    const slotElement = document.getElementById(renders[i].slotElementId);
+  for (const render of newest) {
+    const slotElement = document.getElementById(render.slotElementId);
     if (slotElement !== null && el.contains(slotElement)) {
-      return { render: renders[i], match: "slot" };
+      return { render, match: "slot" };
     }
   }
   return null;
+}
+
+function newestRenders(): RenderedCreative[] {
+  return [...newestByUnit.values()].reverse();
 }
 
 /**
@@ -141,9 +152,7 @@ export function creativeAttributes(
   let render = found?.render ?? null;
   if (render === null && adUnit !== undefined) {
     match = "unit";
-    for (let i = renders.length - 1; i >= 0 && render === null; i--) {
-      if (renders[i].adUnitPath.includes(adUnit)) render = renders[i];
-    }
+    render = newestRenders().find((r) => r.adUnitPath.includes(adUnit)) ?? null;
   }
   return {
     creativeMatch: render === null ? "none" : match,
@@ -160,14 +169,8 @@ export function creativeAttributes(
 // The newest render of each unit, not the newest renders overall: the
 // in-game units render as the bottom rail goes, and would push it out.
 function recentCreatives(): string {
-  const newestPerUnit = new Map<string, RenderedCreative>();
-  for (let i = renders.length - 1; i >= 0; i--) {
-    if (newestPerUnit.size >= UNITS_IN_REPORT) break;
-    if (!newestPerUnit.has(renders[i].adUnitPath)) {
-      newestPerUnit.set(renders[i].adUnitPath, renders[i]);
-    }
-  }
-  return [...newestPerUnit.values()]
+  return newestRenders()
+    .slice(0, UNITS_IN_REPORT)
     .map((r) =>
       [
         r.adUnitPath,
@@ -269,5 +272,6 @@ function frameOrigin(frame: HTMLIFrameElement): string {
 
 export function resetAdForensics(): void {
   renders.length = 0;
+  newestByUnit.clear();
   tracking = false;
 }
