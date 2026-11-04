@@ -525,7 +525,7 @@ GET https://api.openfront.io/public/clanmap/history
 - Each event is `[seq, x, y, clanId, previousClanId, createdAt]`. `x` and `y` are pixels on the 4108 × 1948 map, and `createdAt` is a Unix timestamp in milliseconds. `"0"` means neutral in either clan column: a `previousClanId` of `"0"` is a capture of empty land, and a `clanId` of `"0"` is a clan giving the pixel up. `previousClanId` lets you scrub backwards without replaying from the start.
 - `clans` names every clan in the page. Tags, names and colors (`0xRRGGBB` as a number, or `null` when the clan has none) are current, not as they were at the time of the event. A clan that has since been deleted is missing.
 - `next` is `null` on a short page, which means you have reached the end of history for now. To pick up new events, poll again later with the last event's `seq` as `after`. Sequence numbers have gaps, so take `after` from the response rather than counting.
-- A full page never changes and is cached for a day. Fetch the history from `after=0` with the default `limit` so your requests hit the cache.
+- The events in a full page never change, so a full page is cached for a day. Its `clans` block can be up to a day out of date as a result. Fetch the history from `after=0` with the default `limit` so your requests hit the cache.
 
 **Example**
 
