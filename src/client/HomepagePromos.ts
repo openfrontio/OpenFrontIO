@@ -1,5 +1,10 @@
 import { LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
+import {
+  creativeAttributes,
+  findStrayAdFrames,
+  trackAdCreatives,
+} from "./AdForensics";
 import { adGatekeeper } from "./AdGatekeeper";
 import { menuChromeIsTornDown } from "./MenuChrome";
 import { reportEvent } from "./Telemetry";
@@ -7,6 +12,7 @@ import { reportEvent } from "./Telemetry";
 const BOTTOM_RAIL_ID = "pw-oop-bottom_rail";
 const GAM_IFRAME_PREFIX = "google_ads_iframe_";
 const STILL_VISIBLE_CHECK_MS = 2000;
+const STRAY_FRAME_SCAN_MS = 1000;
 
 type DestroyUnitsResult = "resolved" | "rejected" | "unavailable";
 
@@ -54,6 +60,8 @@ export class HomepagePromos extends LitElement {
   private bottomRailDestroyedAt: number | null = null;
   private railDestroy: Promise<void> | null = null;
   private railDestroyCount = 0;
+  private strayFrameScan: ReturnType<typeof setInterval> | null = null;
+  private reportedStrayFrames = new WeakSet<Element>();
 
   // The header ad ("flex" leaderboard, GumGum via Playwire) renders in a
   // #pw-oop-flex element that ramp.js nests inside a #pw-oop-flex_container
@@ -75,6 +83,7 @@ export class HomepagePromos extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    trackAdCreatives();
     document.addEventListener("userMeResponse", this.onUserMeResponse);
     document.addEventListener("join-lobby", this.onJoinLobby);
     document.addEventListener("leave-lobby", this.onLeaveLobby);
@@ -100,6 +109,7 @@ export class HomepagePromos extends LitElement {
     document.removeEventListener("join-lobby", this.onJoinLobby);
     document.removeEventListener("leave-lobby", this.onLeaveLobby);
     this.topAdMutation?.disconnect();
+    this.stopStrayFrameScan();
     this.topAdStyle?.disconnect();
     this.topAdResize?.disconnect();
     document.documentElement.style.removeProperty("--top-ad-height");
@@ -269,6 +279,7 @@ export class HomepagePromos extends LitElement {
     if (!this.bottomRailActive) return;
     this.bottomRailActive = false;
     this.bottomRailDestroyedAt = performance.now();
+    this.startStrayFrameScan();
     this.railDestroyCount++;
     this.railDestroy = this.destroyBottomRailUnit().then(() => {
       this.railDestroy = null;
@@ -311,6 +322,8 @@ export class HomepagePromos extends LitElement {
         rail
           .querySelector(`iframe[id^="${GAM_IFRAME_PREFIX}"]`)
           ?.id.slice(GAM_IFRAME_PREFIX.length) ?? "",
+      // Read before the destroy, which takes the slot and its creative away.
+      ...creativeAttributes(rail, "bottom_rail"),
     };
     console.log(
       `Bottom rail ad still on the page ${seconds}s after it was destroyed; destroying it again`,
@@ -349,10 +362,47 @@ export class HomepagePromos extends LitElement {
         reportEvent("bottom_rail_in_game", {
           ...details,
           adSlot: creative.id.slice(GAM_IFRAME_PREFIX.length),
+          ...creativeAttributes(creative, "bottom_rail"),
           outcome: "still_visible",
         });
       }, STILL_VISIBLE_CHECK_MS);
     });
+  }
+
+  // Polled rather than driven by the body observer: a frame can appear
+  // through a style change alone, and watching every attribute in a game
+  // costs more than a scan.
+  private startStrayFrameScan(): void {
+    this.strayFrameScan ??= setInterval(
+      () => this.reportStrayAdFrames(),
+      STRAY_FRAME_SCAN_MS,
+    );
+  }
+
+  private stopStrayFrameScan(): void {
+    if (this.strayFrameScan !== null) clearInterval(this.strayFrameScan);
+    this.strayFrameScan = null;
+  }
+
+  // Reported, not removed: the match is a heuristic, and taking down
+  // something that is not an ad would break the page for the player.
+  private reportStrayAdFrames(): void {
+    if (this.bottomRailDestroyedAt === null || !menuChromeIsTornDown()) {
+      this.stopStrayFrameScan();
+      return;
+    }
+    for (const { root, attributes } of findStrayAdFrames()) {
+      if (this.reportedStrayFrames.has(root)) continue;
+      this.reportedStrayFrames.add(root);
+      reportEvent("ad_frame_in_game", {
+        gameID: this.lobby?.gameID ?? "",
+        lobbySource: this.lobby?.source ?? "",
+        secondsAfterDestroy: String(
+          Math.round((performance.now() - this.bottomRailDestroyedAt) / 1000),
+        ),
+        ...attributes,
+      });
+    }
   }
 
   private loadGutterAds(): void {
