@@ -218,7 +218,18 @@ describe("findStrayAdFrames", () => {
     expect(findStrayAdFrames()).toEqual([]);
   });
 
+  it("reports a small unit hanging half off the bottom of the screen", () => {
+    const overlay = document.body.appendChild(document.createElement("div"));
+    const frame = placeFrame(overlay, "half");
+    frame.getBoundingClientRect = () =>
+      new DOMRect(0, window.innerHeight - 25, 320, 50);
+
+    expect(findStrayAdFrames()).toHaveLength(1);
+  });
+
   it("skips frames too small or off screen to be an ad on display", () => {
+    const strip = placeFrame(document.body, "strip");
+    strip.getBoundingClientRect = () => new DOMRect(0, 0, 3840, 1);
     placeFrame(document.body, "pixel", 1, 1);
     const offscreen = placeFrame(document.body, "parked");
     offscreen.getBoundingClientRect = () => new DOMRect(-1000, -1000, 728, 90);

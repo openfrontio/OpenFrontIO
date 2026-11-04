@@ -3,9 +3,10 @@ import type { SlotRenderEndedEvent } from "./GoogleTag";
 const GAM_IFRAME_PREFIX = "google_ads_iframe_";
 const MAX_RENDERS = 30;
 const RECENT_IN_REPORT = 3;
-// Below the smallest unit we serve (320x50 is 16,000), above the 1x1 and 0x0
-// frames that bidder and ID-sync scripts leave on the page.
-const MIN_FRAME_AREA = 10_000;
+// Measured on screen, so it must catch a 320x50 unit half off the edge
+// (8,000) while skipping the 1px strips bidder and ID-sync scripts leave
+// across the viewport (3,840 on a 4K screen).
+const MIN_FRAME_AREA = 7_000;
 
 interface RenderedCreative {
   slotElementId: string;
