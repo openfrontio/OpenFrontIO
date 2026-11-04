@@ -164,7 +164,7 @@ const DROPPED_EVENTS = new Set(["securitypolicyviolation"]);
 // Sent from every session, whatever its sampling: each one is looked up by
 // game ID from a player's report, and ad removals are reported to the ad
 // partner. Only for events rare enough not to move the per-session bill.
-const UNSAMPLED_EVENTS = new Set(["bottom_rail_in_game"]);
+const UNSAMPLED_EVENTS = new Set(["bottom_rail_in_game", "ad_frame_in_game"]);
 // Unsampled events skip isRepeated, so they get a page-wide cap of their own
 // against an ad script stuck re-adding what we remove.
 const MAX_UNSAMPLED_EVENTS = 20;
