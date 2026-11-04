@@ -502,3 +502,47 @@ test("playback keys do nothing while the game settings are open, or in their sli
     gameSettings.remove();
   }
 });
+
+test("Escape key aborts active export and prevents default", () => {
+  const element = new ReplayViewer();
+  const v = element as unknown as {
+    exporting: boolean;
+    exportAbort: AbortController | null;
+    cancelExport(): void;
+    onKey(e: KeyboardEvent): void;
+  };
+  v.exporting = true;
+  const abortController = new AbortController();
+  v.exportAbort = abortController;
+
+  const escEvent = new KeyboardEvent("keydown", {
+    key: "Escape",
+    cancelable: true,
+  });
+  v.onKey(escEvent);
+
+  expect(escEvent.defaultPrevented).toBe(true);
+  expect(abortController.signal.aborted).toBe(true);
+  expect(v.exportAbort).toBeNull();
+});
+
+test("Escape key does not prevent default when not exporting", () => {
+  const element = new ReplayViewer();
+  const v = element as unknown as {
+    status: string;
+    playback: unknown;
+    exporting: boolean;
+    onKey(e: KeyboardEvent): void;
+  };
+  v.status = "ready";
+  v.playback = { playing: false, frame: 10 };
+  v.exporting = false;
+
+  const escEvent = new KeyboardEvent("keydown", {
+    key: "Escape",
+    cancelable: true,
+  });
+  v.onKey(escEvent);
+
+  expect(escEvent.defaultPrevented).toBe(false);
+});

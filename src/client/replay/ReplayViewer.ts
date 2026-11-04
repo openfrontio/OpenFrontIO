@@ -180,6 +180,7 @@ export class ReplayViewer extends LitElement {
   @state() private playing = false;
   @state() private speed = 1;
   @state() private exporting = false;
+  private exportAbort: AbortController | null = null;
   private playback: ReplayPlayback | null = null;
   private appearance: ReplayAppearance | null = null;
   private initialTerrain: Uint8Array | null = null;
@@ -205,6 +206,7 @@ export class ReplayViewer extends LitElement {
   disconnectedCallback(): void {
     super.disconnectedCallback();
     this.abort.abort();
+    this.cancelExport();
     this.processing?.cancel();
     if (this.rafId !== null) cancelAnimationFrame(this.rafId);
     if (this.hudTimer !== null) clearInterval(this.hudTimer);
@@ -712,6 +714,11 @@ export class ReplayViewer extends LitElement {
   // ---- Input ----
 
   private onKey(e: KeyboardEvent): void {
+    if (e.key === "Escape" && this.exporting) {
+      e.preventDefault();
+      this.cancelExport();
+      return;
+    }
     const p = this.playback;
     if (p === null || this.status !== "ready" || this.exporting) return;
     // The settings menu paused playback, so keys wait until it closes. So
@@ -822,6 +829,13 @@ export class ReplayViewer extends LitElement {
     );
   }
 
+  private cancelExport(): void {
+    if (this.exportAbort !== null) {
+      this.exportAbort.abort();
+      this.exportAbort = null;
+    }
+  }
+
   private async exportReplay(format: ReplayExportFormat): Promise<void> {
     const p = this.playback;
     if (p === null || this.exporting) return;
@@ -830,6 +844,19 @@ export class ReplayViewer extends LitElement {
       return;
     }
     this.exporting = true;
+    const exportAbort = new AbortController();
+    this.exportAbort = exportAbort;
+    const onParentAbort = () => exportAbort.abort();
+    this.abort.signal.addEventListener("abort", onParentAbort, { once: true });
+
+    if (format === "mp4" || format === "webm") {
+      showToast(
+        translateText("replay_viewer.export_tab_warning"),
+        "green",
+        5000,
+      );
+    }
+
     const savedTick = this.tick;
     try {
       let blob: Blob;
@@ -856,7 +883,7 @@ export class ReplayViewer extends LitElement {
               maxFrames: isFull ? null : 120,
               fps: isFull ? TICKS_PER_SECOND : 30,
               preferredFormat: isFull ? "mp4" : "webm",
-              signal: this.abort.signal,
+              signal: exportAbort.signal,
               seekAndDraw: async (frame) => {
                 await p.seek(frame);
                 if (p.frame !== frame) {
@@ -897,17 +924,21 @@ export class ReplayViewer extends LitElement {
           });
           break;
       }
-      if (!this.abort.signal.aborted) {
+      if (!this.abort.signal.aborted && !exportAbort.signal.aborted) {
         downloadBlob(
           blob,
           exportFilename(this.gameID, format, savedTick, extOverride),
         );
       }
     } catch (err) {
-      if (this.abort.signal.aborted) return;
+      if (this.abort.signal.aborted || exportAbort.signal.aborted) return;
       console.error("replay viewer: export failed:", err);
       showToast(translateText("replay_viewer.export_failed"), "red");
     } finally {
+      this.abort.signal.removeEventListener("abort", onParentAbort);
+      if (this.exportAbort === exportAbort) {
+        this.exportAbort = null;
+      }
       this.exporting = false;
     }
   }
@@ -973,6 +1004,7 @@ export class ReplayViewer extends LitElement {
                 }}
                 @replay-export=${(e: CustomEvent<ReplayExportFormat>) =>
                   void this.exportReplay(e.detail)}
+                @replay-cancel-export=${() => this.cancelExport()}
                 @replay-menu=${() => this.openMenu()}
               ></replay-controls>`
             : html`<replay-status

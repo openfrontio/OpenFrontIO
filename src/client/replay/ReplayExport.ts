@@ -211,6 +211,24 @@ export function pickVideoMimeType(preferred: "mp4" | "webm" = "mp4"): {
   return { mimeType: "video/webm", ext: "webm" };
 }
 
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  if (ms <= 0 || signal?.aborted) return Promise.resolve();
+  return new Promise((resolve) => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onAbort = () => {
+      if (timer !== null) clearTimeout(timer);
+      resolve();
+    };
+    if (signal) {
+      signal.addEventListener("abort", onAbort, { once: true });
+    }
+    timer = setTimeout(() => {
+      if (signal) signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+  });
+}
+
 export async function exportVideo(
   opts: VideoExportOptions,
 ): Promise<VideoExportResult> {
@@ -272,7 +290,8 @@ export async function exportVideo(
   });
 
   const targetIntervalMs = frameDelayMs ?? Math.max(1, Math.round(1000 / fps));
-  recorder.start();
+  // Flush chunks periodically so memory stays bounded over long matches.
+  recorder.start(1000);
   try {
     let nextFrameTime = performance.now();
     for (const f of frames) {
@@ -283,10 +302,10 @@ export async function exportVideo(
       nextFrameTime += targetIntervalMs;
       const delay = nextFrameTime - performance.now();
       if (delay > 0) {
-        await new Promise((r) => setTimeout(r, delay));
+        await sleep(delay, signal);
       } else {
         nextFrameTime = performance.now();
-        await new Promise((r) => setTimeout(r, 0));
+        await sleep(0, signal);
       }
     }
   } finally {

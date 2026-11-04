@@ -291,12 +291,14 @@ describe("WebM timelapse export", () => {
       state = "inactive";
       mimeType = "video/mp4";
       private listeners = new Map<string, ((e: any) => void)[]>();
+      static lastTimeslice: number | undefined;
       addEventListener(type: string, cb: (e: any) => void) {
         const list = this.listeners.get(type) ?? [];
         list.push(cb);
         this.listeners.set(type, list);
       }
-      start() {
+      start(timeslice?: number) {
+        FakeMp4Recorder.lastTimeslice = timeslice;
         this.state = "recording";
       }
       stop() {
@@ -324,6 +326,7 @@ describe("WebM timelapse export", () => {
     });
 
     expect(seeked).toEqual([0, 1, 2, 3, 4]);
+    expect(FakeMp4Recorder.lastTimeslice).toBe(1000);
     expect(res.ext).toBe("mp4");
     expect(res.blob.type).toBe("video/mp4");
   });
@@ -648,5 +651,30 @@ describe("<replay-controls> export menu", () => {
     expect(received).toEqual(["gif"]);
     // Menu closes after selecting a format
     expect(el.querySelector("[data-export-format]")).toBeNull();
+  });
+
+  test("emits replay-cancel-export when clicking export button while exporting is true", async () => {
+    const el = new ReplayControls();
+    el.frame = 5;
+    el.loaded = 100;
+    el.total = 100;
+    el.exporting = true;
+    document.body.appendChild(el);
+    await el.updateComplete;
+
+    let cancelEmitted = false;
+    el.addEventListener("replay-cancel-export", () => {
+      cancelEmitted = true;
+    });
+
+    const buttons = [...el.querySelectorAll("button")];
+    const exportBtn = buttons.find((b) =>
+      b.querySelector("img")?.getAttribute("src")?.includes("ExportIconWhite"),
+    );
+    expect(exportBtn).toBeDefined();
+    expect(exportBtn!.disabled).toBe(false);
+
+    exportBtn!.click();
+    expect(cancelEmitted).toBe(true);
   });
 });

@@ -140,7 +140,10 @@ export class ReplayControls extends LitElement {
   }
 
   private toggleExportMenu(): void {
-    if (this.exporting) return;
+    if (this.exporting) {
+      this.emit("replay-cancel-export");
+      return;
+    }
     this.speedMenuOpen = false;
     this.exportMenuOpen = !this.exportMenuOpen;
   }
@@ -232,7 +235,7 @@ export class ReplayControls extends LitElement {
             exportIcon,
             translateText(
               this.exporting
-                ? "replay_viewer.exporting"
+                ? "replay_viewer.export_cancel"
                 : "replay_viewer.export",
             ),
             () => this.toggleExportMenu(),
