@@ -1,10 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../../src/client/HomepagePromos";
+import type { SlotRenderEndedEvent } from "../../src/client/GoogleTag";
 import type { HomepagePromos } from "../../src/client/HomepagePromos";
 import { hideMenuChrome, restoreMenuChrome } from "../../src/client/MenuChrome";
 import { reportEvent } from "../../src/client/Telemetry";
 
 vi.mock("../../src/client/Telemetry", () => ({ reportEvent: vi.fn() }));
+
+// GPT, already loaded: <homepage-promos> subscribes to renders as it connects.
+let onRender: (event: SlotRenderEndedEvent) => void = () => {};
+window.googletag = {
+  cmd: {
+    push: (fn: () => void) => fn(),
+  } as unknown as Array<() => void>,
+  pubads: () => ({
+    setTargeting: () => {},
+    addEventListener: (_type, listener) => (onRender = listener),
+  }),
+};
 
 // The index.html stub before ramp.js loads: a queue and nothing else. drain()
 // stands in for ramp.js arriving and running whatever was queued.
@@ -127,6 +140,7 @@ describe("HomepagePromos bottom rail after its destroy", () => {
     rail.className = "pw-tag pointer-modifier pw-size-728x90";
     const creative = document.createElement("iframe");
     creative.id = `google_ads_iframe_${slot}`;
+    creative.setAttribute("data-google-container-id", "4");
     rail.appendChild(creative);
     document.body.appendChild(rail);
     return rail;
@@ -158,6 +172,19 @@ describe("HomepagePromos bottom rail after its destroy", () => {
     await flush();
 
     const rail = renderRail();
+    onRender({
+      slot: {
+        getSlotElementId: () => "pw-oop-bottom_rail",
+        getAdUnitPath: () => slot.slice(0, -"_0".length),
+        getTargeting: (key) => (key === "hb_bidder" ? ["rubicon"] : []),
+      },
+      isEmpty: false,
+      size: [728, 90],
+      creativeId: 138512345678,
+      lineItemId: 6789012345,
+      advertiserId: 4567,
+      campaignId: 8901,
+    });
     await flush();
 
     expect(ramp.destroyUnits).toHaveBeenCalledTimes(2);
@@ -168,6 +195,14 @@ describe("HomepagePromos bottom rail after its destroy", () => {
       secondsAfterDestroy: "0",
       size: "728x90",
       adSlot: slot,
+      creativeMatch: "frame",
+      creativeId: "138512345678",
+      lineItemId: "6789012345",
+      advertiserId: "4567",
+      campaignId: "8901",
+      bidder: "rubicon",
+      bidId: "",
+      advertiserDomain: "",
       destroyUnits: "resolved",
       removedBy: "openfront",
       outcome: "removed",
@@ -331,6 +366,105 @@ describe("HomepagePromos bottom rail after its destroy", () => {
 
     expect(rail.isConnected).toBe(true);
     expect(ramp.destroyUnits).toHaveBeenCalledTimes(1);
+    expect(reportEvent).not.toHaveBeenCalled();
+  });
+});
+
+describe("HomepagePromos ad frames over the game", () => {
+  function joinLobby(): void {
+    document.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: { gameID: "cSkwPxCLWx", source: "public" },
+      }),
+    );
+  }
+
+  function drawOverlay(): HTMLElement {
+    const overlay = document.createElement("div");
+    overlay.id = "takeover";
+    const frame = document.createElement("iframe");
+    frame.getBoundingClientRect = () => new DOMRect(0, 600, 728, 90);
+    overlay.appendChild(frame);
+    return document.body.appendChild(overlay);
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.mocked(reportEvent).mockClear();
+    stubRamp();
+    hideMenuChrome();
+    joinLobby();
+  });
+
+  afterEach(() => {
+    document.getElementById("takeover")?.remove();
+    vi.useRealTimers();
+  });
+
+  it("reports an ad frame drawn over the game once, and leaves it there", async () => {
+    promos.destroyBottomRail();
+    await vi.advanceTimersByTimeAsync(0);
+
+    const overlay = drawOverlay();
+    await vi.advanceTimersByTimeAsync(1000);
+    document.body.appendChild(document.createElement("div")).remove();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(reportEvent).toHaveBeenCalledExactlyOnceWith(
+      "ad_frame_in_game",
+      expect.objectContaining({
+        gameID: "cSkwPxCLWx",
+        lobbySource: "public",
+        elementId: "takeover",
+        frameRect: "0,600,728,90",
+      }),
+    );
+    expect(overlay.isConnected).toBe(true);
+  });
+
+  it("reports an ad frame already over the game when the rail goes", async () => {
+    drawOverlay();
+    promos.destroyBottomRail();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(reportEvent).toHaveBeenCalledWith(
+      "ad_frame_in_game",
+      expect.objectContaining({ elementId: "takeover" }),
+    );
+  });
+
+  it("reports an ad frame that a style change alone brings on screen", async () => {
+    promos.destroyBottomRail();
+    const overlay = drawOverlay();
+    const frame = overlay.querySelector("iframe")!;
+    frame.getBoundingClientRect = () => new DOMRect(0, 0, 0, 0);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(reportEvent).not.toHaveBeenCalled();
+
+    frame.getBoundingClientRect = () => new DOMRect(0, 600, 728, 90);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(reportEvent).toHaveBeenCalledWith(
+      "ad_frame_in_game",
+      expect.objectContaining({ elementId: "takeover" }),
+    );
+  });
+
+  it("ignores ad frames during spawn, where the bottom rail belongs", async () => {
+    drawOverlay();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(reportEvent).not.toHaveBeenCalled();
+  });
+
+  it("ignores ad frames once the player is back on the menu", async () => {
+    promos.destroyBottomRail();
+    await vi.advanceTimersByTimeAsync(0);
+    restoreMenuChrome();
+
+    drawOverlay();
+    await vi.advanceTimersByTimeAsync(1000);
+
     expect(reportEvent).not.toHaveBeenCalled();
   });
 });

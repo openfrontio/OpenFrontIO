@@ -25,7 +25,12 @@ import {
 const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
 const swordIcon = assetUrl("images/SwordIconWhite.svg");
 
-import { CloseViewEvent, ContextMenuEvent } from "../../InputHandler";
+import {
+  CloseViewEvent,
+  ContextMenuEvent,
+  DoDonateGoldEvent,
+  DoDonateTroopsEvent,
+} from "../../InputHandler";
 
 function emptyPlayerActions(): PlayerActions {
   return {
@@ -48,6 +53,7 @@ export class MainRadialMenu implements Controller {
    * is dropped instead of reopening a menu the player already dismissed.
    */
   private menuRequest: object | null = null;
+  private pendingDonations = new Set<object>();
 
   getTickIntervalMs() {
     return 500;
@@ -94,13 +100,16 @@ export class MainRadialMenu implements Controller {
     this.radialMenu.init();
     this.eventBus.on(CloseViewEvent, () => {
       this.menuRequest = null;
+      this.pendingDonations.clear();
     });
     this.eventBus.on(CloseRadialMenuEvent, () => {
       this.menuRequest = null;
+      this.pendingDonations.clear();
     });
     this.eventBus.on(ContextMenuEvent, (event) => {
       const request = {};
       this.menuRequest = request;
+      this.pendingDonations.clear();
       const worldCoords = this.transformHandler.screenToWorldCoordinates(
         event.x,
         event.y,
@@ -140,6 +149,61 @@ export class MainRadialMenu implements Controller {
           console.warn("Failed to load radial menu actions:", error);
         });
     });
+    this.eventBus.on(DoDonateTroopsEvent, (e) =>
+      this.donateAt(e.x, e.y, (myPlayer, recipient, actions) => {
+        if (!actions.interaction?.canDonateTroops) return;
+        this.playerActionHandler.handleDonateTroops(
+          recipient,
+          Math.floor(this.uiState.attackRatio * myPlayer.troops()),
+        );
+      }),
+    );
+    this.eventBus.on(DoDonateGoldEvent, (e) =>
+      this.donateAt(e.x, e.y, (myPlayer, recipient, actions, tile) => {
+        if (!actions.interaction?.canDonateGold) return;
+        this.playerPanel.openSendGoldModal(actions, tile, recipient, false);
+      }),
+    );
+  }
+
+  // The donate keybinds do what the radial menu's donate buttons do, which it
+  // only offers on a connected friendly player.
+  private donateAt(
+    x: number,
+    y: number,
+    donate: (
+      myPlayer: PlayerView,
+      recipient: PlayerView,
+      actions: PlayerActions,
+      tile: TileRef,
+    ) => void,
+  ) {
+    if (this.game.isSpectator() || this.game.inSpawnPhase()) return;
+    const myPlayer = this.game.myPlayer();
+    if (myPlayer === null) return;
+    const cell = this.transformHandler.screenToWorldCoordinates(x, y);
+    if (!this.game.isValidCoord(cell.x, cell.y)) return;
+    const tile = this.game.ref(cell.x, cell.y);
+    const owner = this.game.owner(tile);
+    if (!owner.isPlayer()) return;
+    const recipient = owner as PlayerView;
+    if (!recipient.isFriendly(myPlayer) || recipient.isDisconnected()) return;
+    const request = {};
+    this.pendingDonations.add(request);
+    myPlayer
+      .actions(tile)
+      .then((actions) => {
+        if (!this.pendingDonations.delete(request)) return;
+        if (this.game.owner(tile) !== recipient) return;
+        if (!recipient.isFriendly(myPlayer) || recipient.isDisconnected()) {
+          return;
+        }
+        donate(myPlayer, recipient, actions, tile);
+      })
+      .catch((error) => {
+        this.pendingDonations.delete(request);
+        console.warn("Failed to check donate actions:", error);
+      });
   }
 
   private async updatePlayerActions(
@@ -214,6 +278,7 @@ export class MainRadialMenu implements Controller {
 
   closeMenu() {
     this.menuRequest = null;
+    this.pendingDonations.clear();
     if (this.radialMenu.isMenuVisible()) {
       this.radialMenu.hideRadialMenu();
     }

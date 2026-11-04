@@ -233,6 +233,21 @@ export class ShowChatMenuEvent implements GameEvent {
   ) {}
 }
 
+/** The donate keybinds: donate to the player at screen position (x, y). */
+export class DoDonateTroopsEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
+export class DoDonateGoldEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
 /** Emitted by the emoji table whenever it opens or closes. */
 export class EmojiTableVisibleEvent implements GameEvent {
   constructor(public readonly visible: boolean) {}
@@ -337,8 +352,8 @@ export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
 
-  private lastMouseX: number = 0;
-  private lastMouseY: number = 0;
+  private lastMouseX: number | null = null;
+  private lastMouseY: number | null = null;
 
   private emojiTableOpen = false;
   /** Favorite keys pressed while the emoji table was open. */
@@ -526,13 +541,25 @@ export class InputHandler {
     this.addKeybindAndEvent(this.keybinds.targetPlayer, () => {
       this.eventBus.emit(new DoTargetPlayerEvent());
     });
+    this.addKeybindAndEvent(this.keybinds.donateTroops, () => {
+      if (this.lastMouseX === null || this.lastMouseY === null) return;
+      this.eventBus.emit(
+        new DoDonateTroopsEvent(this.lastMouseX, this.lastMouseY),
+      );
+    });
+    this.addKeybindAndEvent(this.keybinds.donateGold, () => {
+      if (this.lastMouseX === null || this.lastMouseY === null) return;
+      this.eventBus.emit(
+        new DoDonateGoldEvent(this.lastMouseX, this.lastMouseY),
+      );
+    });
     // Shares R with reset graphics, which needs its modifier held, so quick
     // chat only takes the key on its own.
     this.addKeybindAndEvent(
       this.keybinds.quickChat,
       () => {
         this.eventBus.emit(
-          new ShowChatMenuEvent(this.lastMouseX, this.lastMouseY),
+          new ShowChatMenuEvent(this.lastMouseX ?? 0, this.lastMouseY ?? 0),
         );
       },
       (e: KeyboardEvent) =>
@@ -830,7 +857,10 @@ export class InputHandler {
             this.eventBus.emit(new CloseViewEvent());
           } else {
             this.eventBus.emit(
-              new ShowEmojiMenuEvent(this.lastMouseX, this.lastMouseY),
+              new ShowEmojiMenuEvent(
+                this.lastMouseX ?? 0,
+                this.lastMouseY ?? 0,
+              ),
             );
           }
           return;
