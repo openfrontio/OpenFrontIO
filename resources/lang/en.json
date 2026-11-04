@@ -2216,8 +2216,8 @@
   },
   "replay_viewer": {
     "export": "Export",
-    "export_csv": "Match Stats (.csv)",
     "export_cancel": "Cancel export",
+    "export_csv": "Match Stats (.csv)",
     "export_failed": "Export failed",
     "export_gif": "Animated Timelapse (.gif)",
     "export_incomplete": "Incomplete replays cannot be exported.",
@@ -2226,7 +2226,6 @@
     "export_png": "Screenshot (.png)",
     "export_tab_warning": "Keep this tab open and in view while exporting video.",
     "export_webm": "Video Timelapse (.webm)",
-    "exporting": "Exporting…",
     "following": "Following {name}",
     "load_failed": "This replay could not be loaded.",
     "loading": "Loading replay…",

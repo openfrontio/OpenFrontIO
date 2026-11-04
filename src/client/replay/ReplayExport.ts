@@ -520,6 +520,7 @@ export interface GifExportOptions {
   maxDimension?: number;
   delayCs?: number;
   players?: readonly PlayerStatic[];
+  signal?: AbortSignal;
 }
 
 /**
@@ -537,6 +538,7 @@ export async function exportReplayGif(
     maxDimension = 320,
     delayCs = 8,
     players = data.append.players,
+    signal,
   } = opts;
 
   const reader = new ReplayReader(data.base, inflate);
@@ -595,7 +597,13 @@ export async function exportReplayGif(
   const SHORE_OR_MAG = 0x7f;
 
   for (const frameIdx of indices) {
+    if (signal?.aborted) {
+      throw new DOMException("The operation was aborted.", "AbortError");
+    }
     await reader.load(reader.chunkOf(frameIdx));
+    if (signal?.aborted) {
+      throw new DOMException("The operation was aborted.", "AbortError");
+    }
     const f = reader.seek(frameIdx);
     terrain.apply(f);
 
@@ -750,6 +758,7 @@ export interface StatsCsvOptions {
   /** Frame step interval (defaults to TICKS_PER_SECOND = 10 frames = 1s). */
   frameStep?: number;
   players?: readonly PlayerStatic[];
+  signal?: AbortSignal;
 }
 
 export async function buildMatchStatsCsv(
@@ -757,7 +766,11 @@ export async function buildMatchStatsCsv(
   inflate: InflateFn = gunzipInBrowser,
   opts: StatsCsvOptions = {},
 ): Promise<string> {
-  const { frameStep = TICKS_PER_SECOND, players = data.append.players } = opts;
+  const {
+    frameStep = TICKS_PER_SECOND,
+    players = data.append.players,
+    signal,
+  } = opts;
   const step = Math.max(1, Math.floor(frameStep));
 
   const reader = new ReplayReader(data.base, inflate);
@@ -801,7 +814,13 @@ export async function buildMatchStatsCsv(
   }
 
   for (const fIdx of targetFrames) {
+    if (signal?.aborted) {
+      throw new DOMException("The operation was aborted.", "AbortError");
+    }
     await reader.load(reader.chunkOf(fIdx));
+    if (signal?.aborted) {
+      throw new DOMException("The operation was aborted.", "AbortError");
+    }
     const frame = reader.seek(fIdx);
 
     // Count active units per owner smallID.

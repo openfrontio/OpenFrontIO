@@ -912,6 +912,7 @@ export class ReplayViewer extends LitElement {
             new Uint8Array(p.header.mapWidth * p.header.mapHeight);
           blob = await exportReplayGif(p.data(), gunzipInBrowser, terrain, {
             players: this.appearance?.palette.players ?? p.header.players,
+            signal: exportAbort.signal,
           });
           break;
         }
@@ -921,6 +922,7 @@ export class ReplayViewer extends LitElement {
         case "csv":
           blob = await exportMatchStatsCsv(p.data(), gunzipInBrowser, {
             players: this.appearance?.palette.players ?? p.header.players,
+            signal: exportAbort.signal,
           });
           break;
       }

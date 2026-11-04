@@ -458,6 +458,18 @@ describe("Animated GIF89a timelapse export", () => {
     expect(String.fromCharCode(...bytes.subarray(0, 6))).toBe("GIF89a");
     expect(bytes[bytes.length - 1]).toBe(0x3b);
   });
+
+  test("aborts exportReplayGif early when signal is aborted", async () => {
+    const { replay, terrain } = await buildSampleReplay(15, 5);
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      exportReplayGif(replay, inflate, terrain, {
+        maxFrames: 5,
+        signal: controller.signal,
+      }),
+    ).rejects.toThrow();
+  });
 });
 
 describe("Replay archive JSON export & round-trip", () => {
@@ -570,6 +582,17 @@ describe("Match telemetry CSV export", () => {
     // Boolean and numbers must not have single quotes added
     expect(csv).toContain(",true,12,1500,250,");
     expect(csv).toContain(",true,8,800,100,");
+  });
+
+  test("aborts buildMatchStatsCsv early when signal is aborted", async () => {
+    const { replay } = await buildSampleReplay(5, 5);
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      buildMatchStatsCsv(replay, inflate, {
+        signal: controller.signal,
+      }),
+    ).rejects.toThrow();
   });
 });
 
