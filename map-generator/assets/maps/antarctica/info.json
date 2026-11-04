@@ -6,7 +6,7 @@
   "categories": ["antarctica", "continental"],
   "location": { "lat": -76, "lon": 0 },
   "author": "Tristar",
-  "description": "Located in the South Pole, a continent covered on ice with no permanent human population - the terrain of this map is almost entirely white, with no green land. Can you defeat your enemies in this brutal and frozen battlefield?",
+  "description": "Located at the South Pole, a continent covered in ice with no permanent human population - the terrain of this map is almost entirely white, with no green land. Can you defeat your enemies in this brutal and frozen battlefield?",
   "nations": [
     {
       "coordinates": [1123, 1302],
