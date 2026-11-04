@@ -6,7 +6,6 @@
   "categories": ["countries", "asia"],
   "location": { "lat": 33, "lon": 105 },
   "author": "crunchybbb",
-  "layers": [{ "id": "label", "placement": "water", "nukeable": false }],
   "nations": [
     {
       "coordinates": [2086, 2052],
