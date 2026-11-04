@@ -202,6 +202,21 @@ describe("findStrayAdFrames", () => {
     });
   });
 
+  it("keeps the rail in the recent creatives after other units render", () => {
+    render("rail-slot", railPath, { creativeId: 1 });
+    render("rail-slot", railPath, { creativeId: 2 });
+    for (const unit of ["left1", "left3", "left4"]) {
+      render(unit, `/154013155/1025558-w:75940-${unit}`, { creativeId: 9 });
+    }
+    const overlay = document.body.appendChild(document.createElement("div"));
+    placeFrame(overlay, "creative");
+
+    const recent = findStrayAdFrames()[0].attributes.recentCreatives.split(";");
+
+    expect(recent).toHaveLength(4);
+    expect(recent[3]).toBe(`${railPath}|728x90|2|222|333|||`);
+  });
+
   it("leaves our own UI and Playwire's containers alone", () => {
     customElements.define("stray-test-hud", class extends HTMLElement {});
     const hud = document.body.appendChild(

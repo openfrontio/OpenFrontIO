@@ -2,7 +2,9 @@ import type { SlotRenderEndedEvent } from "./GoogleTag";
 
 const GAM_IFRAME_PREFIX = "google_ads_iframe_";
 const MAX_RENDERS = 30;
-const RECENT_IN_REPORT = 3;
+// Every unit we load: gutter rails, header, bottom rail, the three in-game
+// units and the corner video.
+const UNITS_IN_REPORT = 8;
 // Measured on screen, so it must catch a 320x50 unit half off the edge
 // (8,000) while skipping the 1px strips bidder and ID-sync scripts leave
 // across the viewport (3,840 on a 4K screen).
@@ -155,10 +157,17 @@ export function creativeAttributes(
   };
 }
 
+// The newest render of each unit, not the newest renders overall: the
+// in-game units render as the bottom rail goes, and would push it out.
 function recentCreatives(): string {
-  return renders
-    .slice(-RECENT_IN_REPORT)
-    .reverse()
+  const newestPerUnit = new Map<string, RenderedCreative>();
+  for (let i = renders.length - 1; i >= 0; i--) {
+    if (newestPerUnit.size >= UNITS_IN_REPORT) break;
+    if (!newestPerUnit.has(renders[i].adUnitPath)) {
+      newestPerUnit.set(renders[i].adUnitPath, renders[i]);
+    }
+  }
+  return [...newestPerUnit.values()]
     .map((r) =>
       [
         r.adUnitPath,
