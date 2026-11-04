@@ -553,12 +553,12 @@ describe("ClanModal — rendering", () => {
     it("uses the compact card variant, not the header size", async () => {
       const card = await showMyClan(makeClan({ hardBalance: "25" }));
       const cardSize = (
-        card?.querySelector("plutonium-icon") as HTMLElement & { size: number }
+        card!.querySelector("plutonium-icon") as HTMLElement & { size: number }
       ).size;
 
       const header = await openDetail(makeClan({ hardBalance: "25" }));
       const headerSize = (
-        header?.querySelector("plutonium-icon") as HTMLElement & {
+        header!.querySelector("plutonium-icon") as HTMLElement & {
           size: number;
         }
       ).size;

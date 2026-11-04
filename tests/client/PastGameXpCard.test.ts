@@ -109,7 +109,7 @@ describe("<past-game-xp-card>", () => {
     await mount({ kind: "result", data: levelUp });
     expect(stateOf()).toBe("result");
     expect(q("[data-past-xp-total]")!.textContent).toContain(
-      'progression.xp_total:{"xp":"1,150"}',
+      `progression.xp_total:{"xp":"${(1150).toLocaleString()}"}`,
     );
     const change = q("[data-past-xp-levelup]")!;
     expect(change.getAttribute("data-past-xp-levelup")).toBe("47");
@@ -224,7 +224,7 @@ describe("<past-game-xp-card>", () => {
     const level = q("[data-past-xp-level]")!;
     expect(level.textContent).toContain('progression.level:{"level":47}');
     expect(level.textContent).toContain(
-      'progression.xp_progress:{"current":"769","next":"2,260"}',
+      `progression.xp_progress:{"current":"769","next":"${(2260).toLocaleString()}"}`,
     );
     expect(q("[data-past-xp-new-badge]")).toBeNull();
   });

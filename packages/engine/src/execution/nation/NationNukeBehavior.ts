@@ -24,7 +24,6 @@ import {
 import { assertNever, boundingBoxTiles } from "@openfront/engine-lib/Util";
 import { z } from "zod";
 import { Game, Player, Unit } from "../../game/Game";
-import { UniversalPathFinding } from "../../pathfinding/PathFinder";
 import type {
   SnapshotReader,
   SnapshotWriter,
@@ -32,17 +31,23 @@ import type {
 import { NukeExecution } from "../NukeExecution";
 import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
 import { closestTwoTiles } from "../Util";
-import { AiAttackBehavior } from "../utils/AiAttackBehavior";
+import { NationAttackBehavior } from "./NationAttackBehavior";
 import { EMOJI_NUKE, NationEmojiBehavior } from "./NationEmojiBehavior";
 import { isMirvWorthSavingFor } from "./NationMIRVBehavior";
+import {
+  blastHitsFriendlyLand,
+  enemyLandBlastCoverage,
+  isNukeAlreadyLandingNear,
+  isTrajectoryInterceptableBySam,
+  NukeType,
+  planSamSalvo,
+  siloToUpgradeForSalvo,
+} from "./NationNukePlanning";
 import {
   findRunawayLeader,
   isSaveUpWithinReach,
   randTerritoryTileArray,
 } from "./NationUtils";
-
-/** Cap on silo levels reachable via maybeDestroyEnemySam's upgrade fallback. */
-const MAX_NATION_SILO_UPGRADE_LEVEL = 5;
 
 /**
  * Level-weighted structure density (sum of structure levels per tile owned)
@@ -107,7 +112,7 @@ export class NationNukeBehavior {
     private random: PseudoRandom,
     private game: Game,
     private player: Player,
-    private attackBehavior: AiAttackBehavior,
+    private attackBehavior: NationAttackBehavior,
     private emojiBehavior: NationEmojiBehavior,
   ) {}
 
@@ -138,7 +143,7 @@ export class NationNukeBehavior {
     r: SnapshotReader,
     random: PseudoRandom,
     player: Player,
-    attackBehavior: AiAttackBehavior,
+    attackBehavior: NationAttackBehavior,
     emojiBehavior: NationEmojiBehavior,
   ): void {
     const s = readVersioned(NationNukeBehaviorSnapshot, raw);
@@ -282,7 +287,7 @@ export class NationNukeBehavior {
     const scored: { tile: TileRef; score: number }[] = [];
 
     outer: for (const tile of candidates) {
-      // Cheap pre-filter, blastHitsFriendlyLand() checks the whole blast of the winner
+      // Cheap pre-filter, blastHitsFriendlyLand checks the whole blast of the winner
       const boundingBox = boundingBoxTiles(this.game, tile, range)
         // Add radius / 2 in case there is a piece of unwanted territory inside the outer radius that we miss.
         .concat(boundingBoxTiles(this.game, tile, Math.floor(range / 2)));
@@ -297,8 +302,13 @@ export class NationNukeBehavior {
       // Above Easy, skip spots that are already being nuked or where the blast would be mostly wasted
       let coverage = 0;
       if (difficulty !== Difficulty.Easy) {
-        if (this.isNukeAlreadyLandingNear(tile, nukeType)) continue;
-        coverage = this.enemyLandBlastCoverage(tile, nukeType);
+        if (isNukeAlreadyLandingNear(this.game, tile, nukeType)) continue;
+        coverage = enemyLandBlastCoverage(
+          this.game,
+          this.player,
+          tile,
+          nukeType,
+        );
         if (coverage < MIN_BLAST_COVERAGE[nukeType]) continue;
       }
 
@@ -306,7 +316,7 @@ export class NationNukeBehavior {
       if (
         (difficulty === Difficulty.Hard ||
           difficulty === Difficulty.Impossible) &&
-        this.isTrajectoryInterceptableBySam(spawnTile, tile)
+        isTrajectoryInterceptableBySam(this.game, this.player, spawnTile, tile)
       ) {
         continue;
       }
@@ -327,7 +337,8 @@ export class NationNukeBehavior {
     scored.sort((a, b) => b.score - a.score);
     const margin = strike ? STRIKE_BORDER_MARGIN : 0;
     const best = scored.find(
-      ({ tile }) => !this.blastHitsFriendlyLand(tile, nukeType, margin),
+      ({ tile }) =>
+        !blastHitsFriendlyLand(this.game, this.player, tile, nukeType, margin),
     );
     return best?.tile ?? null;
   }
@@ -343,7 +354,7 @@ export class NationNukeBehavior {
         strike = false;
         break;
       case Difficulty.Medium:
-        strike = this.troopsAttacking(target) > 0;
+        strike = this.ourTroopsAttacking(target) > 0;
         break;
       case Difficulty.Hard:
       case Difficulty.Impossible:
@@ -586,7 +597,7 @@ export class NationNukeBehavior {
     return null;
   }
 
-  private troopsAttacking(target: Player): number {
+  private ourTroopsAttacking(target: Player): number {
     let troops = 0;
     for (const attack of this.player.outgoingAttacks()) {
       if (attack.target() === target) troops += attack.troops();
@@ -961,168 +972,6 @@ export class NationNukeBehavior {
     }
   }
 
-  /** Whether our inner blast would overlap the inner blast of any player's nuke in flight. */
-  private isNukeAlreadyLandingNear(tile: TileRef, nukeType: NukeType): boolean {
-    const config = this.game.config();
-    const ourInnerRadius = config.nukeMagnitudes(nukeType).inner;
-    const nukesInFlight = this.game.units(
-      UnitType.AtomBomb,
-      UnitType.HydrogenBomb,
-      UnitType.MIRVWarhead,
-    );
-    for (const nuke of nukesInFlight) {
-      const targetTile = nuke.targetTile();
-      if (targetTile === undefined) continue;
-      const sumRadius =
-        ourInnerRadius + config.nukeMagnitudes(nuke.type()).inner;
-      if (
-        this.game.euclideanDistSquared(tile, targetTile) <=
-        sumRadius * sumRadius
-      ) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Grid-sampled share of the blast that hits enemy land. Inner radius tiles
-   * count double, as the outer ring is only partially destroyed.
-   */
-  private enemyLandBlastCoverage(center: TileRef, nukeType: NukeType): number {
-    const { inner, outer } = this.game.config().nukeMagnitudes(nukeType);
-    const step = Math.max(1, Math.floor(outer / 10));
-    const cx = this.game.x(center);
-    const cy = this.game.y(center);
-    let total = 0;
-    let enemyLand = 0;
-    for (let dy = -outer; dy <= outer; dy += step) {
-      for (let dx = -outer; dx <= outer; dx += step) {
-        const distSquared = dx * dx + dy * dy;
-        if (distSquared > outer * outer) continue;
-        const weight = distSquared <= inner * inner ? 2 : 1;
-        total += weight;
-        if (!this.game.isValidCoord(cx + dx, cy + dy)) continue;
-        // Water, fallout and unowned land have no player owner
-        const owner = this.game.owner(this.game.ref(cx + dx, cy + dy));
-        if (owner.isPlayer() && !this.player.isFriendly(owner, true)) {
-          enemyLand += weight;
-        }
-      }
-    }
-    return enemyLand / total;
-  }
-
-  /** Whether any tile in the blast, widened by margin, belongs to us, a teammate or an ally (even AFK ones). */
-  private blastHitsFriendlyLand(
-    center: TileRef,
-    nukeType: NukeType,
-    margin = 0,
-  ): boolean {
-    const friendlyIds = new Set(
-      this.game
-        .players()
-        .filter((p) => this.player.isFriendly(p, true))
-        .map((p) => p.smallID()),
-    );
-    const outer = this.game.config().nukeMagnitudes(nukeType).outer + margin;
-    const cx = this.game.x(center);
-    const cy = this.game.y(center);
-    for (let dy = -outer; dy <= outer; dy++) {
-      for (let dx = -outer; dx <= outer; dx++) {
-        if (dx * dx + dy * dy > outer * outer) continue;
-        if (!this.game.isValidCoord(cx + dx, cy + dy)) continue;
-        const ownerId = this.game.ownerID(this.game.ref(cx + dx, cy + dy));
-        if (friendlyIds.has(ownerId)) return true;
-      }
-    }
-    return false;
-  }
-
-  // mirroring NukeTrajectoryPreviewLayer.ts logic a bit
-  private isTrajectoryInterceptableBySam(
-    spawnTile: TileRef,
-    targetTile: TileRef,
-    excludedSamIds?: Set<number>,
-  ): boolean {
-    const speed = this.game.config().nukeSpeed(UnitType.AtomBomb);
-    const pathFinder = UniversalPathFinding.Parabola(this.game, {
-      increment: speed,
-      distanceBasedHeight: true, // Atom/Hydrogen bombs use distance-based height
-      directionUp: true, // AI nukes always go "up" for now
-    });
-
-    const trajectory = pathFinder.findPath(spawnTile, targetTile) ?? [];
-    if (trajectory.length === 0) {
-      return false;
-    }
-
-    const targetRangeSquared =
-      this.game.config().defaultNukeTargetableRange() ** 2;
-
-    let untargetableStart = -1;
-    let untargetableEnd = -1;
-    for (let i = 0; i < trajectory.length; i++) {
-      const tile = trajectory[i];
-      if (untargetableStart === -1) {
-        if (
-          this.game.euclideanDistSquared(tile, spawnTile) > targetRangeSquared
-        ) {
-          if (
-            this.game.euclideanDistSquared(tile, targetTile) <
-            targetRangeSquared
-          ) {
-            // Overlapping spawn & target range – no untargetable segment.
-            break;
-          } else {
-            untargetableStart = i;
-          }
-        }
-      } else if (
-        this.game.euclideanDistSquared(tile, targetTile) < targetRangeSquared
-      ) {
-        untargetableEnd = i;
-        break;
-      }
-    }
-
-    for (let i = 0; i < trajectory.length; i++) {
-      // Skip the mid-air untargetable portion
-      if (
-        untargetableStart !== -1 &&
-        untargetableEnd !== -1 &&
-        i === untargetableStart
-      ) {
-        i = untargetableEnd - 1;
-        continue;
-      }
-
-      const tile = trajectory[i];
-      const nearbySams = this.game.nearbyUnits(
-        tile,
-        this.game.config().maxSamRange(),
-        UnitType.SAMLauncher,
-      );
-
-      for (const sam of nearbySams) {
-        const owner = sam.unit.owner();
-        if (owner === this.player || this.player.isFriendly(owner)) {
-          continue;
-        }
-        // Skip SAMs we're intentionally overwhelming
-        if (excludedSamIds?.has(sam.unit.id())) {
-          continue;
-        }
-        const rangeSquared = this.game.config().samRange(sam.unit.level()) ** 2;
-        if (sam.distSquared <= rangeSquared) {
-          return true;
-        }
-      }
-    }
-
-    return false;
-  }
-
   private isValidNukeTile(t: TileRef, nukeTarget: Player | null): boolean {
     const difficulty = this.game.config().gameConfig().difficulty;
 
@@ -1266,12 +1115,7 @@ export class NationNukeBehavior {
     this.emojiBehavior.maybeSendEmoji(targetPlayer, EMOJI_NUKE);
   }
 
-  /**
-   * On Impossible difficulty, when no good nuke target is available (score <= 0),
-   * attempt to destroy enemy SAMs by overwhelming them with atom bombs.
-   * A SAM of level N can intercept N nukes before going on cooldown,
-   * so we need N+1 bombs to destroy it (accounting for all covering SAMs).
-   */
+  // On Impossible, when no spot is worth a nuke, overwhelm one of the target's SAMs with atom bombs
   private maybeDestroyEnemySam(nukeTarget: Player): void {
     if (this.game.config().isUnitDisabled(UnitType.AtomBomb)) {
       return;
@@ -1283,212 +1127,14 @@ export class NationNukeBehavior {
       return;
     }
 
-    const atomCost = this.cost(UnitType.AtomBomb);
-    const enemySams = nukeTarget.units(UnitType.SAMLauncher);
-    if (enemySams.length === 0) {
-      return;
-    }
-
-    const ourSilos = this.player
-      .units(UnitType.MissileSilo)
-      .filter((silo) => !silo.isUnderConstruction());
-    if (ourSilos.length === 0) {
-      return;
-    }
-
-    // Try each enemy SAM as a target, easiest (lowest level) first
-    const sortedSams = enemySams.slice().sort((a, b) => a.level() - b.level());
-    let needsMoreSilos = false;
-    // Track the first failed attempt so we can upgrade a silo that would
-    // actually have helped that plan (rather than an unrelated silo).
-    let failedTarget: {
-      targetTile: TileRef;
-      coveringSamIds: Set<number>;
-      totalBombs: number;
-    } | null = null;
-
-    for (const targetSam of sortedSams) {
-      const targetTile = targetSam.tile();
-      // Hitting an ally's land would break the alliance
-      if (this.blastHitsFriendlyLand(targetTile, UnitType.AtomBomb)) continue;
-
-      // Find all enemy SAMs whose range covers the target tile (they will all try to intercept)
-      const coveringSams = this.findEnemySamsCoveringTile(targetTile);
-      const coveringSamIds = new Set(coveringSams.map((s) => s.id()));
-
-      // Total interception capacity = sum of covering SAM levels
-      const totalInterceptions = coveringSams.reduce(
-        (sum, sam) => sum + sam.level(),
-        0,
-      );
-      const bombsNeeded = totalInterceptions + 1;
-
-      // NukeExecution always picks the closest non-cooldown silo by Manhattan
-      // distance to target (via nukeSpawn). Our planning must mirror that order.
-      // Silos with interceptable trajectories will still be picked first by
-      // NukeExecution — their bombs launch but get intercepted, "wasting" slots.
-      const nukeSpeed = this.game.config().nukeSpeed(UnitType.AtomBomb);
-      const allAvailableSilos: {
-        silo: Unit;
-        slots: number;
-        flightTicks: number;
-        interceptable: boolean;
-      }[] = [];
-      for (const silo of ourSilos) {
-        const availableSlots = silo.level() - silo.missileTimerQueue().length;
-        if (availableSlots <= 0) {
-          continue;
-        }
-        const interceptable = this.isTrajectoryInterceptableBySam(
-          silo.tile(),
-          targetTile,
-          coveringSamIds,
-        );
-        // Compute actual parabolic flight time in ticks
-        const pathFinder = UniversalPathFinding.Parabola(this.game, {
-          increment: nukeSpeed,
-          distanceBasedHeight: true,
-          directionUp: true,
-        });
-        const trajectory = pathFinder.findPath(silo.tile(), targetTile) ?? [];
-        if (trajectory.length === 0) continue;
-        allAvailableSilos.push({
-          silo,
-          slots: availableSlots,
-          flightTicks: trajectory.length,
-          interceptable,
-        });
-      }
-
-      // Sort by Manhattan distance to target (matching nukeSpawn's pick order)
-      allAvailableSilos.sort(
-        (a, b) =>
-          this.game.manhattanDist(a.silo.tile(), targetTile) -
-          this.game.manhattanDist(b.silo.tile(), targetTile),
-      );
-
-      // Flatten into a per-bomb launch sequence matching NukeExecution's order.
-      // Each silo contributes `slots` consecutive bombs before NukeExecution
-      // moves to the next silo.
-      const launchSequence: {
-        flightTicks: number;
-        interceptable: boolean;
-      }[] = [];
-      for (const entry of allAvailableSilos) {
-        for (let s = 0; s < entry.slots; s++) {
-          launchSequence.push({
-            flightTicks: entry.flightTicks,
-            interceptable: entry.interceptable,
-          });
-        }
-      }
-
-      // Use half the SAM cooldown as the max total arrival spread to be safe.
-      const samCooldown = this.game.config().SAMCooldown();
-      const maxTotalArrivalSpread = Math.floor(samCooldown / 2);
-
-      // Add extra bombs: 1 for every 5 to account for enemy building more SAMs
-      // while our bombs are in flight
-      const extraBombs = Math.floor(bombsNeeded / 5);
-      const totalBombs = bombsNeeded + extraBombs;
-
-      // Collect bombs from silos whose trajectory to the target is NOT blocked
-      // by enemy SAMs other than the covering SAMs we're trying to overwhelm.
-      const unblockedBombs: { index: number; flightTicks: number }[] = [];
-      for (let i = 0; i < launchSequence.length; i++) {
-        if (!launchSequence[i].interceptable) {
-          unblockedBombs.push({
-            index: i,
-            flightTicks: launchSequence[i].flightTicks,
-          });
-        }
-      }
-
-      if (unblockedBombs.length < totalBombs) {
-        failedTarget ??= { targetTile, coveringSamIds, totalBombs };
-        needsMoreSilos = true;
-        continue;
-      }
-
-      // Sort unblocked bombs by flight time to find a sliding window
-      // of maxTotalArrivalSpread that captures the most bombs.
-      const sortedByFlight = [...unblockedBombs].sort(
-        (a, b) => a.flightTicks - b.flightTicks,
-      );
-
-      let bestWindowStart = 0;
-      let bestWindowCount = 0;
-      for (let start = 0; start < sortedByFlight.length; start++) {
-        let end = start;
-        while (
-          end < sortedByFlight.length &&
-          sortedByFlight[end].flightTicks - sortedByFlight[start].flightTicks <=
-            maxTotalArrivalSpread
-        ) {
-          end++;
-        }
-        if (end - start > bestWindowCount) {
-          bestWindowCount = end - start;
-          bestWindowStart = start;
-        }
-      }
-
-      if (bestWindowCount < totalBombs) {
-        failedTarget ??= { targetTile, coveringSamIds, totalBombs };
-        needsMoreSilos = true;
-        continue;
-      }
-
-      // From the window, pick totalBombs with the lowest launch-sequence
-      // indices to minimise how many bombs we need to fire (minimise gold cost).
-      const windowBombs = sortedByFlight.slice(
-        bestWindowStart,
-        bestWindowStart + bestWindowCount,
-      );
-      const windowByIndex = [...windowBombs].sort((a, b) => a.index - b.index);
-      const selected = windowByIndex.slice(0, totalBombs);
-      const selectedSet = new Set(selected.map((b) => b.index));
-      const lastSelectedIndex = selected[selected.length - 1].index;
-      const bombsToFire = lastSelectedIndex + 1;
-
-      // Compute per-bomb waitTicks so all selected bombs arrive in the window.
-      // Target: spread arrivals evenly, anchored at the earliest flight time
-      // in the selected set.
-      const selectedFlightMin = Math.min(...selected.map((b) => b.flightTicks));
-      const staggerInterval = Math.max(
-        1,
-        Math.floor(maxTotalArrivalSpread / totalBombs),
-      );
-      let selectedIdx = 0;
-      const waitTicksPerBomb: number[] = [];
-      for (let i = 0; i < bombsToFire; i++) {
-        if (selectedSet.has(i)) {
-          const targetArrival =
-            selectedFlightMin + selectedIdx * staggerInterval;
-          waitTicksPerBomb.push(
-            Math.max(0, targetArrival - launchSequence[i].flightTicks),
-          );
-          selectedIdx++;
-        } else {
-          // Wasted bomb (interceptable or out-of-window) — launch immediately
-          waitTicksPerBomb.push(0);
-        }
-      }
-
-      // Check gold for all fired bombs (including wasted ones)
-      const totalCost = atomCost * BigInt(bombsToFire);
-      if (this.player.gold() < totalCost) {
-        continue;
-      }
-
-      // Fire the salvo — NukeExecution will pick silos in the same
-      // Manhattan distance order we planned.
-      for (let i = 0; i < bombsToFire; i++) {
+    const { salvo, failed } = planSamSalvo(this.game, this.player, nukeTarget);
+    if (salvo !== null) {
+      for (const waitTicks of salvo.waitTicks) {
         this.sendNuke(
-          targetTile,
+          salvo.targetTile,
           UnitType.AtomBomb,
           nukeTarget,
-          waitTicksPerBomb[i],
+          waitTicks,
         );
       }
       return;
@@ -1496,101 +1142,13 @@ export class NationNukeBehavior {
 
     // Couldn't destroy any SAM — upgrade silos only if capacity was the bottleneck.
     // If we only lack gold, don't waste it upgrading silos — just wait and save.
-    if (needsMoreSilos && failedTarget !== null) {
-      this.maybeUpgradeHelpfulSilo(failedTarget);
-    }
-  }
-
-  /**
-   * Find all enemy SAMs whose range covers a given tile.
-   */
-  private findEnemySamsCoveringTile(tile: TileRef): Unit[] {
-    const nearbySams = this.game.nearbyUnits(
-      tile,
-      this.game.config().maxSamRange(),
-      UnitType.SAMLauncher,
-    );
-
-    const result: Unit[] = [];
-    for (const sam of nearbySams) {
-      const owner = sam.unit.owner();
-      if (owner === this.player || this.player.isFriendly(owner)) {
-        continue;
-      }
-      const range = this.game.config().samRange(sam.unit.level());
-      if (sam.distSquared <= range * range) {
-        result.push(sam.unit);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Upgrade a missile silo that would actually have helped the failed
-   * overwhelm attempt: trajectory to the failed target is not blocked by
-   * non-covering enemy SAMs, and the silo is below the upgrade cap. Among
-   * those, picks the one best protected by our own SAMs.
-   */
-  private maybeUpgradeHelpfulSilo(failedTarget: {
-    targetTile: TileRef;
-    coveringSamIds: Set<number>;
-    totalBombs: number;
-  }): void {
-    const silos = this.player.units(UnitType.MissileSilo);
-    if (silos.length === 0) return;
-
-    // First pass: find silos with an unblocked trajectory to the failed
-    // target. Only these contribute slots to the overwhelm plan.
-    // "Unblocked" means not interceptable by non-covering enemy SAMs.
-    const unblockedSilos: Unit[] = [];
-    for (const silo of silos) {
-      if (
-        !this.isTrajectoryInterceptableBySam(
-          silo.tile(),
-          failedTarget.targetTile,
-          failedTarget.coveringSamIds,
-        )
-      ) {
-        unblockedSilos.push(silo);
-      }
-    }
-    if (unblockedSilos.length === 0) return;
-
-    // Bail out if the target is unreachable even at max silo level —
-    // crazy amounts of covering SAMs, upgrading is wasted gold.
-    const maxAchievableSlots =
-      unblockedSilos.length * MAX_NATION_SILO_UPGRADE_LEVEL;
-    if (maxAchievableSlots < failedTarget.totalBombs) return;
-
-    const ourSams = this.player.units(UnitType.SAMLauncher);
-    let bestSilo: Unit | null = null;
-    let bestProtection = -1;
-
-    for (const silo of unblockedSilos) {
-      if (silo.level() >= MAX_NATION_SILO_UPGRADE_LEVEL) continue;
-      if (!this.player.canUpgradeUnit(silo)) continue;
-
-      let protection = 0;
-      for (const sam of ourSams) {
-        const range = this.game.config().samRange(sam.level());
-        const distSquared = this.game.euclideanDistSquared(
-          silo.tile(),
-          sam.tile(),
-        );
-        if (distSquared <= range * range) {
-          protection += sam.level();
-        }
-      }
-
-      if (protection > bestProtection) {
-        bestProtection = protection;
-        bestSilo = silo;
-      }
-    }
-
-    if (bestSilo !== null) {
+    const silo =
+      failed === null
+        ? null
+        : siloToUpgradeForSalvo(this.game, this.player, failed);
+    if (silo !== null) {
       this.game.addExecution(
-        new UpgradeStructureExecution(this.player, bestSilo.id()),
+        new UpgradeStructureExecution(this.player, silo.id()),
       );
     }
   }
@@ -1599,8 +1157,6 @@ export class NationNukeBehavior {
     return this.game.unitInfo(type).cost(this.game, this.player);
   }
 }
-
-type NukeType = UnitType.AtomBomb | UnitType.HydrogenBomb;
 
 function structureLevels(player: Player): number {
   let levels = 0;

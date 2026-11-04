@@ -1,6 +1,7 @@
 import type { LiveStream } from "@openfront/shared/ApiSchemas";
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { compactViewportQuery } from "../CompactViewport";
 import { streamsFeed, watchUrl } from "../StreamsFeed";
 import { translateText } from "../Utils";
 
@@ -25,6 +26,7 @@ export function formatViewers(n: number): string {
 export class StreamingNow extends LitElement {
   @state() private streams: LiveStream[] = [];
   private unsubscribe: (() => void) | null = null;
+  private compactQuery: MediaQueryList | null = null;
 
   // Light DOM so Tailwind classes apply (matches NewsBox).
   createRenderRoot() {
@@ -34,32 +36,47 @@ export class StreamingNow extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.style.display = "none"; // hidden until the feed reports a live stream (no flash)
-    // Desktop only (host carries `hidden lg:block`); below lg, don't even subscribe.
-    if (
-      typeof window.matchMedia === "function" &&
-      !window.matchMedia("(min-width: 1024px)").matches
-    ) {
+    // Not on compact screens (below lg, where the host is also `hidden`, or short
+    // ones such as Poki's frame): don't even subscribe. Followed live, so toggling
+    // fullscreen drops or brings back the strip.
+    this.compactQuery = compactViewportQuery();
+    this.compactQuery?.addEventListener("change", this.syncSubscription);
+    this.syncSubscription();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.compactQuery?.removeEventListener("change", this.syncSubscription);
+    this.compactQuery = null;
+    this.unsubscribe?.();
+    this.unsubscribe = null;
+  }
+
+  private syncSubscription = () => {
+    if (this.compactQuery?.matches ?? false) {
+      this.unsubscribe?.();
+      this.unsubscribe = null;
+      this.show([]);
       return;
     }
+    if (this.unsubscribe !== null) return;
     // The shared poller owns the cadence and stops itself in-game and while the tab is
     // hidden. This previously ran its own setInterval and only cleared it in
     // disconnectedCallback — which never fires, because <play-page> is never removed
     // from the DOM — so it polled for the entire session, games included.
     this.unsubscribe = streamsFeed.subscribe((feed) => {
       // Highest viewer counts first (defensive; the API already sorts).
-      this.streams = [...feed.live].sort((a, b) => b.viewers - a.viewers);
-      // Collapse the host when nobody is live; .streaming-live lets the play-page strip
-      // switch to its 2-column grid (via has-[]) only while the panel is actually shown.
-      const live = this.streams.length > 0;
-      this.style.display = live ? "" : "none";
-      this.classList.toggle("streaming-live", live);
+      this.show([...feed.live].sort((a, b) => b.viewers - a.viewers));
     });
-  }
+  };
 
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    this.unsubscribe?.();
-    this.unsubscribe = null;
+  private show(streams: LiveStream[]) {
+    this.streams = streams;
+    // Collapse the host when nobody is live; .streaming-live lets the play-page strip
+    // switch to its 2-column grid (via has-[]) only while the panel is actually shown.
+    const live = streams.length > 0;
+    this.style.display = live ? "" : "none";
+    this.classList.toggle("streaming-live", live);
   }
 
   render() {
@@ -121,17 +138,19 @@ export class StreamingNow extends LitElement {
         class="group flex w-20 shrink-0 snap-start flex-col items-center gap-1 text-center"
       >
         <div class="relative">
-          ${s.avatarUrl
-            ? html`<img
-                src="${s.avatarUrl}"
-                alt=""
-                loading="lazy"
-                referrerpolicy="no-referrer"
-                class="h-11 w-11 rounded-full object-cover ring-2 ring-red-500/70"
-              />`
-            : html`<div
-                class="h-11 w-11 rounded-full bg-white/10 ring-2 ring-red-500/70"
-              ></div>`}
+          ${
+            s.avatarUrl
+              ? html`<img
+                  src="${s.avatarUrl}"
+                  alt=""
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                  class="h-11 w-11 rounded-full object-cover ring-2 ring-red-500/70"
+                />`
+              : html`<div
+                  class="h-11 w-11 rounded-full bg-white/10 ring-2 ring-red-500/70"
+                ></div>`
+          }
           <span
             class="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface"
           >

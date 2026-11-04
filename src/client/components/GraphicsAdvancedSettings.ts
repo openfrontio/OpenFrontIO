@@ -29,6 +29,7 @@ const COSMETICS_SHOW_FROM_LABELS: Record<
   everyone: "graphics_setting.cosmetics_show_from_everyone",
   teammates: "graphics_setting.cosmetics_show_from_teammates",
   self: "graphics_setting.cosmetics_show_from_self",
+  none: "graphics_setting.cosmetics_show_from_none",
 };
 
 type CosmeticCategory = Exclude<
@@ -957,21 +958,23 @@ export class GraphicsAdvancedSettings extends LitElement {
                 ?disabled=${!layersOn}
                 @change=${() => this.onToggleLayer(layer.id)}
               ></setting-toggle>
-              ${layersOn && this.isLayerVisible(layer.id)
-                ? html`<setting-slider
-                    label=${`${this.layerName(layer.id)} — ${translateText("graphics_setting.layer_alpha_label")}`}
-                    description=""
-                    id=${`map-layer-${layer.id}-alpha-slider`}
-                    min=${LAYER_ALPHA_MIN}
-                    max=${LAYER_ALPHA_MAX}
-                    step=${LAYER_ALPHA_STEP}
-                    unit=""
-                    .formatValue=${(v: number) => v.toFixed(2)}
-                    .value=${alpha}
-                    @change=${(e: Event) =>
-                      this.onLayerAlphaSliderChange(layer.id, e)}
-                  ></setting-slider>`
-                : nothing}
+              ${
+                layersOn && this.isLayerVisible(layer.id)
+                  ? html`<setting-slider
+                      label=${`${this.layerName(layer.id)} — ${translateText("graphics_setting.layer_alpha_label")}`}
+                      description=""
+                      id=${`map-layer-${layer.id}-alpha-slider`}
+                      min=${LAYER_ALPHA_MIN}
+                      max=${LAYER_ALPHA_MAX}
+                      step=${LAYER_ALPHA_STEP}
+                      unit=""
+                      .formatValue=${(v: number) => v.toFixed(2)}
+                      .value=${alpha}
+                      @change=${(e: Event) =>
+                        this.onLayerAlphaSliderChange(layer.id, e)}
+                    ></setting-slider>`
+                  : nothing
+              }
             </div>
           `;
         })}
@@ -1006,7 +1009,7 @@ export class GraphicsAdvancedSettings extends LitElement {
             description=${translateText(descKey)}
             id=${`cosmetics-${key}-toggle`}
             .checked=${cosmetics[key] !== false}
-            ?disabled=${showFrom === "self"}
+            ?disabled=${showFrom === "self" || showFrom === "none"}
             @change=${() => this.onToggleCosmeticCategory(key)}
           ></setting-toggle>
         `,

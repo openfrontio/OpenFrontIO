@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "UnitedStates",
   "name": "United States",
   "translation_key": "map.unitedstates",
   "categories": ["north_america", "countries"],
-  "multiplayer_frequency": 9,
+  "location": { "lat": 38.5, "lon": -97 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [320, 692],

@@ -16,7 +16,7 @@ import { getStreams } from "./Api";
 const POLL_MS = 60_000; // matches the endpoint's edge cache; faster just re-fetches bytes
 const MAX_AGE_MS = 10 * 60_000; // matches the API's snapshot TTL
 
-export const EMPTY_FEED: StreamsFeed = {
+const EMPTY_FEED: StreamsFeed = {
   verifiedAt: "1970-01-01T00:00:00.000Z",
   featured: [],
   live: [],

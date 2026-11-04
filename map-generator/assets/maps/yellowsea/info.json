@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "YellowSea",
   "name": "Yellow Sea",
   "translation_key": "map.yellowsea",
   "categories": ["asia"],
-  "multiplayer_frequency": 5,
+  "location": { "lat": 37, "lon": 122.5 },
+  "author": "crunchybbb",
   "nations": [
     {
       "coordinates": [1350, 575],

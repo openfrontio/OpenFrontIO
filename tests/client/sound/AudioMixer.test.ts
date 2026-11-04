@@ -63,11 +63,13 @@ vi.mock("howler", () => {
 });
 
 import { Howler } from "howler";
+import { Platform } from "../../../src/client/Platform";
 import {
   AudioMixer,
   initAudioMixer,
   perceptualGain,
   resetAudioMixerForTest,
+  streamsMusic,
 } from "../../../src/client/sound/AudioMixer";
 import {
   AmbienceTrack,
@@ -142,6 +144,72 @@ describe("cue routing", () => {
     expect(categoryOf("message")).toBe("alerts");
     expect(categoryOf("build-city")).toBe("effects");
     expect(categoryOf("victory")).toBe("effects");
+  });
+});
+
+describe("streamsMusic", () => {
+  const originalMatches = Element.prototype.matches;
+
+  /** Stands in for a browser that does (or does not) support the selector. */
+  function setVolumeLocked(result: boolean | "unsupported") {
+    return vi.spyOn(Element.prototype, "matches").mockImplementation(function (
+      this: Element,
+      selector: string,
+    ) {
+      if (selector !== ":volume-locked") {
+        return originalMatches.call(this, selector);
+      }
+      if (result === "unsupported") {
+        throw new DOMException("Unknown pseudo-class", "SyntaxError");
+      }
+      return result;
+    });
+  }
+
+  function withIOS<T>(isIOS: boolean, body: () => T): T {
+    const previous = Platform.isIOS;
+    Platform.isIOS = isIOS;
+    try {
+      return body();
+    } finally {
+      Platform.isIOS = previous;
+    }
+  }
+
+  it("uses Web Audio whenever :volume-locked reports locked volume", () => {
+    setVolumeLocked(true);
+    // The signal wins over the UA: a locked browser is not necessarily iOS.
+    expect(withIOS(false, streamsMusic)).toBe(false);
+  });
+
+  it("streams on iOS when :volume-locked reports unlocked volume", () => {
+    setVolumeLocked(false);
+    // The signal also lets a newer iOS take the cheap streaming path.
+    expect(withIOS(true, streamsMusic)).toBe(true);
+  });
+
+  it("falls back to iOS when the selector is unsupported", () => {
+    setVolumeLocked("unsupported");
+    // Safari before 15.4 and browsers that never shipped the selector.
+    expect(withIOS(true, streamsMusic)).toBe(false);
+    expect(withIOS(false, streamsMusic)).toBe(true);
+  });
+
+  it("probes a detached audio element with no source", () => {
+    const probes: Element[] = [];
+    vi.spyOn(Element.prototype, "matches").mockImplementation(function (
+      this: Element,
+      selector: string,
+    ) {
+      probes.push(this);
+      return selector === ":volume-locked";
+    });
+
+    expect(streamsMusic()).toBe(false);
+    expect(probes).toHaveLength(1);
+    expect(probes[0]).toBeInstanceOf(HTMLAudioElement);
+    expect(probes[0].isConnected).toBe(false);
+    expect(probes[0].getAttribute("src")).toBeNull();
   });
 });
 

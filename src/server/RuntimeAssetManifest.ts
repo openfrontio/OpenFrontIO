@@ -28,7 +28,3 @@ export async function getRuntimeAssetManifest(): Promise<AssetManifest> {
   }
   return cachedManifest;
 }
-
-export function clearRuntimeAssetManifestCache(): void {
-  cachedManifest = null;
-}

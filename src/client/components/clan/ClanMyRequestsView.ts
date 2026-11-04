@@ -45,46 +45,48 @@ export class ClanMyRequestsView extends LitElement {
   render() {
     return html`
       <div>
-        ${this.myPendingRequests.length === 0
-          ? html`<p class="text-white/40 text-sm text-center py-8">
-              ${translateText("clan_modal.no_pending_applications")}
-            </p>`
-          : html`
-              <div class="space-y-3">
-                ${this.myPendingRequests.map(
-                  (req) => html`
-                    <div
-                      class="flex items-center gap-3 bg-white/5 rounded-xl border border-white/10 p-4"
-                    >
+        ${
+          this.myPendingRequests.length === 0
+            ? html`<p class="text-white/40 text-sm text-center py-8">
+                ${translateText("clan_modal.no_pending_applications")}
+              </p>`
+            : html`
+                <div class="space-y-3">
+                  ${this.myPendingRequests.map(
+                    (req) => html`
                       <div
-                        class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0"
+                        class="flex items-center gap-3 bg-white/5 rounded-xl border border-white/10 p-4"
                       >
-                        <span class="text-amber-400 font-bold text-xs"
-                          >${req.tag}</span
+                        <div
+                          class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shrink-0"
                         >
-                      </div>
-                      <div class="flex-1 min-w-0">
-                        <span
-                          class="text-white font-bold text-sm truncate block"
-                          >${req.name}</span
+                          <span class="text-amber-400 font-bold text-xs"
+                            >${req.tag}</span
+                          >
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <span
+                            class="text-white font-bold text-sm truncate block"
+                            >${req.name}</span
+                          >
+                          <span class="text-white/30 text-xs">
+                            ${translateText("clan_modal.applied")}
+                            ${formatClanDate(req.createdAt)}
+                          </span>
+                        </div>
+                        <button
+                          @click=${() => this.handleWithdrawRequest(req.tag)}
+                          ?disabled=${this.actionPending}
+                          class="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                         >
-                        <span class="text-white/30 text-xs">
-                          ${translateText("clan_modal.applied")}
-                          ${formatClanDate(req.createdAt)}
-                        </span>
+                          ${translateText("clan_modal.cancel_request")}
+                        </button>
                       </div>
-                      <button
-                        @click=${() => this.handleWithdrawRequest(req.tag)}
-                        ?disabled=${this.actionPending}
-                        class="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25 transition-all cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-                      >
-                        ${translateText("clan_modal.cancel_request")}
-                      </button>
-                    </div>
-                  `,
-                )}
-              </div>
-            `}
+                    `,
+                  )}
+                </div>
+              `
+        }
       </div>
     `;
   }

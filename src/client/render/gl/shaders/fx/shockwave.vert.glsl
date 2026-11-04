@@ -15,9 +15,11 @@ layout(location = 10) in float aThickness; // EMP: ring band thickness (world ti
 layout(location = 11) in float aCell;   // sparkles: grid pitch (front-normalized)
 
 uniform mat3 uCamera;
+uniform float uTime;
 
 out vec2  vLocalPos;
 flat out float vAlpha;
+flat out float vLife;
 flat out float vStyle;
 flat out vec3  vColor0;
 flat out vec3  vColor1;
@@ -31,6 +33,20 @@ flat out float vCell;
 flat out float vRadius;  // current ring radius (world tiles) — converts
                          // absolute thickness into local ring units
 
+// --- cheap 1D value noise -------------------------------------------------
+float hash11(float p) {
+  p = fract(p * 0.1031);
+  p *= p + 33.33;
+  p *= p + p;
+  return fract(p);
+}
+float vnoise(float x) {
+  float i = floor(x);
+  float f = fract(x);
+  float u = f * f * (3.0 - 2.0 * f);
+  return mix(hash11(i), hash11(i + 1.0), u);
+}
+
 // Extra margin so the ring's outer feathering isn't clipped at the quad edge.
 const float MARGIN = 1.1; // 10% beyond ring radius
 
@@ -38,6 +54,9 @@ void main() {
   vec2 center = vec2(aInstData.x + 0.5, aInstData.y + 0.5);
   float r = aInstData.z;
   vAlpha = aInstData.w;
+  float tt = uTime * aSpeed;
+  float flicker = (aStyle > 0.5 && aStyle < 1.5) ? (0.75 + 0.25 * vnoise(tt * 30.0)) : 1.0;
+  vLife = aInstData.w * flicker;
   vStyle = aStyle;
   vColor0 = aColor0;
   vColor1 = aColor1;

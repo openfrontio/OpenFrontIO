@@ -93,11 +93,13 @@ export class MatchmakingModal extends BaseModal {
     // Clan wars rates the clan, so show who the player is playing for instead.
     const eloDisplay = html`
       <p class="text-center mt-2 mb-4 text-white/60">
-        ${this.mode === "clanwars"
-          ? translateText("matchmaking_modal.clanwars_clan", {
-              clan: this.selectedClanTag ?? "",
-            })
-          : translateText("matchmaking_modal.elo", { elo: this.elo })}
+        ${
+          this.mode === "clanwars"
+            ? translateText("matchmaking_modal.clanwars_clan", {
+                clan: this.selectedClanTag ?? "",
+              })
+            : translateText("matchmaking_modal.elo", { elo: this.elo })
+        }
       </p>
     `;
     return html`
@@ -148,25 +150,29 @@ export class MatchmakingModal extends BaseModal {
     }
     if (this.gameID === null) {
       return html`
-        ${this.queueSize !== null
-          ? html`
-              <p class="text-center text-white/60">
-                ${translateText("matchmaking_modal.queue_size", {
-                  count: this.queueSize.count,
-                })}
-              </p>
-              ${this.queueSize.clanCount !== undefined
-                ? html`
-                    <p class="text-center text-white/60">
-                      ${translateText("matchmaking_modal.clan_queue_size", {
-                        count: this.queueSize.clanCount,
-                        clan: this.selectedClanTag ?? "",
-                      })}
-                    </p>
-                  `
-                : ""}
-            `
-          : ""}
+        ${
+          this.queueSize !== null
+            ? html`
+                <p class="text-center text-white/60">
+                  ${translateText("matchmaking_modal.queue_size", {
+                    count: this.queueSize.count,
+                  })}
+                </p>
+                ${
+                  this.queueSize.clanCount !== undefined
+                    ? html`
+                        <p class="text-center text-white/60">
+                          ${translateText("matchmaking_modal.clan_queue_size", {
+                            count: this.queueSize.clanCount,
+                            clan: this.selectedClanTag ?? "",
+                          })}
+                        </p>
+                      `
+                    : ""
+                }
+              `
+            : ""
+        }
         ${this.renderLoadingSpinner(
           translateText("matchmaking_modal.searching"),
           "green",
@@ -200,7 +206,7 @@ export class MatchmakingModal extends BaseModal {
     this.notTrusted = false;
     this.queueSize = null;
     this.reconnectAttempts = 0;
-    this.connect();
+    void this.connect();
     return true;
   }
 
@@ -230,7 +236,7 @@ export class MatchmakingModal extends BaseModal {
       }
       this.connected = false;
       this.queueSize = null;
-      this.connect();
+      void this.connect();
     }, 15000);
   }
 
@@ -358,14 +364,18 @@ export class MatchmakingModal extends BaseModal {
         // otherwise the "searching" message will be shown immediately.
         // Also wait so people who back out immediately aren't added
         // to the matchmaking queue.
+        const jwt = await getPlayToken();
+        if (this.socket !== socket || socket.readyState !== WebSocket.OPEN) {
+          return;
+        }
         const message: MatchmakingJoin = {
           type: "join",
-          jwt: await getPlayToken(),
+          jwt,
           ...(this.selectedClanTag === null
             ? {}
             : { clanTag: this.selectedClanTag }),
         };
-        this.socket.send(JSON.stringify(message));
+        socket.send(JSON.stringify(message));
         this.connected = true;
         // The server starts broadcasting queue-size once we're queued;
         // from here on, silence means the connection is dead.
@@ -537,7 +547,7 @@ export class MatchmakingModal extends BaseModal {
     this.queueSize = null;
     this.reconnectAttempts = 0;
     this.notTrusted = false;
-    this.connect();
+    void this.connect();
   }
 
   protected onClose(): void {
@@ -558,6 +568,11 @@ export class MatchmakingModal extends BaseModal {
       clearInterval(this.gameCheckInterval);
       this.gameCheckInterval = null;
     }
+  }
+
+  disconnectedCallback(): void {
+    this.onClose();
+    super.disconnectedCallback();
   }
 
   private async checkGame() {

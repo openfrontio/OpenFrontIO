@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Hecatestrait",
   "name": "Hecate Strait",
   "translation_key": "map.hecatestrait",
   "categories": ["north_america"],
-  "multiplayer_frequency": 4,
+  "location": { "lat": 53.3, "lon": -130.8 },
+  "author": "Liam Langford",
   "nations": [
     {
       "coordinates": [421, 628],

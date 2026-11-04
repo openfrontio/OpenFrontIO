@@ -1,10 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "SoutheastAsia",
   "name": "SoutheastAsia",
   "display_name": "Southeast Asia",
   "translation_key": "map.southeastasia",
   "categories": ["asia"],
-  "multiplayer_frequency": 5,
+  "location": { "lat": 12, "lon": 118 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [1319, 76],

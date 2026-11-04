@@ -93,9 +93,11 @@ jobs:
         - Leave no conflict markers anywhere.
         - Before you stop, typecheck the whole project (`npm run typecheck`
           if package.json defines it, otherwise `npx tsc --noEmit`) and fix
-          every error the backport causes. Then run `npx eslint` and this
-          branch's formatter (`npx oxfmt --check` if package.json has oxfmt,
-          otherwise `npx prettier --check`) on the files the backport changes.
+          every error the backport causes. Then run the linter(s) (`npx oxlint`
+          if package.json only has oxlint, otherwise 'npx oxlint' and then
+          'npx eslint'), and this branch's formatter (`npx oxfmt --check` if
+          package.json has oxfmt, otherwise `npx prettier --check`) on the files
+          the backport changes.
 
         Only edit files. Do not run git commands that change state (add,
         commit, cherry-pick, checkout, reset, stash); the workflow commits
@@ -197,8 +199,32 @@ jobs:
           if [ ${#files[@]} -gt 0 ]; then
             bash "$RUNNER_TEMP/format.sh" check "${files[@]}" || failed+=(format)
           fi
-          if [ ${#code[@]} -gt 0 ]; then
-            { npx oxlint "${code[@]}" && npx eslint --no-warn-ignored "${code[@]}"; } || failed+=(lint)
+          lint_configured=false
+          if jq -e '(.devDependencies.oxlint // .dependencies.oxlint) != null' package.json > /dev/null; then
+            lint_configured=true
+            if [ ${#code[@]} -gt 0 ]; then
+              if [ -x ./node_modules/.bin/oxlint ]; then
+                ./node_modules/.bin/oxlint "${code[@]}" || failed+=(lint)
+              else
+                echo "::error::package.json declares oxlint but its local executable is missing" >&2
+                failed+=(lint)
+              fi
+            fi
+          fi
+          if jq -e '(.devDependencies.eslint // .dependencies.eslint) != null' package.json > /dev/null; then
+            lint_configured=true
+            if [ ${#code[@]} -gt 0 ]; then
+              if [ -x ./node_modules/.bin/eslint ]; then
+                ./node_modules/.bin/eslint --no-warn-ignored "${code[@]}" || failed+=(lint)
+              else
+                echo "::error::package.json declares eslint but its local executable is missing" >&2
+                failed+=(lint)
+              fi
+            fi
+          fi
+          if [ "$lint_configured" = false ]; then
+            echo "::error::package.json declares neither oxlint nor eslint" >&2
+            failed+=(lint)
           fi
           echo "${failed[*]}" | sed 's/ /, /g' > "$RUNNER_TEMP/failed"
           [ ${#failed[@]} -eq 0 ]

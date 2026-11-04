@@ -1,5 +1,6 @@
 import {
   Difficulty,
+  GameType,
   Gold,
   PlayerInfo,
   PlayerType,
@@ -130,6 +131,14 @@ export class EngineConfig extends Config {
 
   teamLandShareWinThresholdTenths(): number {
     return 7;
+  }
+
+  setDifficulty(difficulty: Difficulty): void {
+    this._gameConfig = { ...this._gameConfig, difficulty };
+  }
+
+  setGameType(gameType: GameType): void {
+    this._gameConfig = { ...this._gameConfig, gameType };
   }
 
   falloutDefenseModifier(falloutRatio: number): number {
@@ -624,10 +633,6 @@ export class EngineConfig extends Config {
     return 20; // in ticks (one tick is 100ms)
   }
 
-  radiusPortSpawn() {
-    return 20;
-  }
-
   tradeShipShortRangeDebuff(): number {
     return 300;
   }
@@ -662,6 +667,9 @@ export class EngineConfig extends Config {
           assertNever(this._gameConfig.difficulty);
       }
     }
+    // The onboarding tutorial's player starts about half full, where troops
+    // grow fastest, so the first attacks take more land.
+    if (this._gameConfig.tutorial) return 60_000;
     return this.hasInfiniteTroopsForInfo(playerInfo) ? 1_000_000 : 25_000;
   }
 

@@ -132,6 +132,20 @@ describe("featured-stream panel", () => {
     expect(card()).not.toBeNull();
   });
 
+  it("embeds nothing on a compact screen", async () => {
+    const matchMedia = vi.fn((query: string) => ({
+      matches: query.includes("max-height: 800px"),
+    }));
+    vi.stubGlobal("matchMedia", matchMedia);
+    try {
+      await mount(stream("openfrontmasters"));
+      expect(FakePlayer.constructed).toEqual([]);
+      expect(card()).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("shows the panel once the player reports it is playing", async () => {
     const el = await mount(stream("openfrontmasters"));
     expect(card()?.className).toContain("opacity-0"); // hidden while the player boots

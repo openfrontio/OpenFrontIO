@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "NorthwestPassage",
   "name": "Northwest Passage",
   "translation_key": "map.northwestpassage",
   "categories": ["north_america"],
-  "multiplayer_frequency": 5,
+  "location": { "lat": 72, "lon": -100 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [1203, 592],

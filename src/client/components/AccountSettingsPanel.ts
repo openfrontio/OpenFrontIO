@@ -126,35 +126,43 @@ export class AccountSettingsPanel extends LitElement {
               ${translateText("account_modal.marketing_title")}
             </div>
             <div class="text-white/50 text-sm mt-1">
-              ${hasEmail
-                ? translateText("account_modal.marketing_desc")
-                : steamNoEmail
-                  ? translateText("account_modal.marketing_no_email_steam")
-                  : translateText("account_modal.marketing_no_email")}
+              ${
+                hasEmail
+                  ? translateText("account_modal.marketing_desc")
+                  : steamNoEmail
+                    ? translateText("account_modal.marketing_no_email_steam")
+                    : translateText("account_modal.marketing_no_email")
+              }
             </div>
           </div>
-          ${hasEmail || steamNoEmail
-            ? html`<button
-                role="switch"
-                aria-checked=${on ? "true" : "false"}
-                aria-label=${translateText("account_modal.marketing_title")}
-                ?disabled=${this.consentBusy || steamNoEmail}
-                @click=${() => this.setConsent(!on)}
-                class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${on
-                  ? "bg-malibu-blue shadow-[var(--shadow-malibu-blue-pill)]"
-                  : "bg-white/15"}"
-              >
-                <span
-                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${on
-                    ? "translate-x-6"
-                    : "translate-x-1"}"
-                ></span>
-              </button>`
-            : nothing}
+          ${
+            hasEmail || steamNoEmail
+              ? html`<button
+                  role="switch"
+                  aria-checked=${on ? "true" : "false"}
+                  aria-label=${translateText("account_modal.marketing_title")}
+                  ?disabled=${this.consentBusy || steamNoEmail}
+                  @click=${() => this.setConsent(!on)}
+                  class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${
+                    on
+                      ? "bg-malibu-blue shadow-[var(--shadow-malibu-blue-pill)]"
+                      : "bg-white/15"
+                  }"
+                >
+                  <span
+                    class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+                      on ? "translate-x-6" : "translate-x-1"
+                    }"
+                  ></span>
+                </button>`
+              : nothing
+          }
         </div>
-        ${hasEmail || this.isSteamPrimary()
-          ? nothing
-          : this.renderEmailBinding()}
+        ${
+          hasEmail || this.isSteamPrimary()
+            ? nothing
+            : this.renderEmailBinding()
+        }
       </div>
     `;
   }
@@ -176,31 +184,37 @@ export class AccountSettingsPanel extends LitElement {
         >
           ${translateText("account_modal.privacy_title")}
         </div>
-        ${levelHidden === undefined
-          ? nothing
-          : html`${this.renderPrivacySwitchRow(
-              translateText("account_modal.level_visibility_title"),
-              translateText("account_modal.level_visibility_desc"),
-              !levelHidden,
-              this.privacyBusy.levelHidden,
-              (shown) => this.setPrivacyShown("levelHidden", shown),
-            )}
-            ${this.renderLevelPreview(!levelHidden)}`}
-        ${searchHidden === undefined
-          ? nothing
-          : html`<div
-              class=${levelHidden === undefined
-                ? ""
-                : "mt-4 pt-4 border-t border-white/10"}
-            >
-              ${this.renderPrivacySwitchRow(
-                translateText("account_modal.search_visibility_title"),
-                translateText("account_modal.search_visibility_desc"),
-                !searchHidden,
-                this.privacyBusy.searchHidden,
-                (shown) => this.setPrivacyShown("searchHidden", shown),
+        ${
+          levelHidden === undefined
+            ? nothing
+            : html`${this.renderPrivacySwitchRow(
+                translateText("account_modal.level_visibility_title"),
+                translateText("account_modal.level_visibility_desc"),
+                !levelHidden,
+                this.privacyBusy.levelHidden,
+                (shown) => this.setPrivacyShown("levelHidden", shown),
               )}
-            </div>`}
+              ${this.renderLevelPreview(!levelHidden)}`
+        }
+        ${
+          searchHidden === undefined
+            ? nothing
+            : html`<div
+                class=${
+                  levelHidden === undefined
+                    ? ""
+                    : "mt-4 pt-4 border-t border-white/10"
+                }
+              >
+                ${this.renderPrivacySwitchRow(
+                  translateText("account_modal.search_visibility_title"),
+                  translateText("account_modal.search_visibility_desc"),
+                  !searchHidden,
+                  this.privacyBusy.searchHidden,
+                  (shown) => this.setPrivacyShown("searchHidden", shown),
+                )}
+              </div>`
+        }
       </div>
     `;
   }
@@ -226,14 +240,16 @@ export class AccountSettingsPanel extends LitElement {
           aria-label=${title}
           ?disabled=${busy}
           @click=${() => setShown(!shown)}
-          class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${shown
-            ? "bg-malibu-blue shadow-[var(--shadow-malibu-blue-pill)]"
-            : "bg-white/15"}"
+          class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${
+            shown
+              ? "bg-malibu-blue shadow-[var(--shadow-malibu-blue-pill)]"
+              : "bg-white/15"
+          }"
         >
           <span
-            class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${shown
-              ? "translate-x-6"
-              : "translate-x-1"}"
+            class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${
+              shown ? "translate-x-6" : "translate-x-1"
+            }"
           ></span>
         </button>
       </div>
@@ -257,22 +273,26 @@ export class AccountSettingsPanel extends LitElement {
           >${translateText("account_modal.level_visibility_others_see")}</span
         >
         <span class="flex items-center gap-1.5 text-white font-semibold">
-          ${shown
-            ? html`<level-badge
-                class="shrink-0"
-                .level=${progress.level}
-                .prestige=${progress.prestige}
-                ?legend=${progress.legend}
-                size="24"
-              ></level-badge>`
-            : nothing}
+          ${
+            shown
+              ? html`<level-badge
+                  class="shrink-0"
+                  .level=${progress.level}
+                  .prestige=${progress.prestige}
+                  ?legend=${progress.legend}
+                  size="24"
+                ></level-badge>`
+              : nothing
+          }
           ${this.player?.username ?? ""}
         </span>
-        ${shown
-          ? nothing
-          : html`<span class="ml-auto text-xs text-white/40"
-              >${translateText("account_modal.level_visibility_hidden")}</span
-            >`}
+        ${
+          shown
+            ? nothing
+            : html`<span class="ml-auto text-xs text-white/40"
+                >${translateText("account_modal.level_visibility_hidden")}</span
+              >`
+        }
       </div>
     `;
   }
@@ -294,16 +314,18 @@ export class AccountSettingsPanel extends LitElement {
           </span>
           <div class="h-px bg-white/10 flex-1"></div>
         </div>
-        ${this.user?.google
-          ? nothing
-          : googleLinkButton(
-              this.handleLinkGoogle,
-              // The shell sends the player to the website for this (see
-              // linkGoogle in Auth.ts); the caption has to say so.
-              isDesktopShell()
-                ? "account_modal.link_google_on_web"
-                : "account_modal.link_google",
-            )}
+        ${
+          this.user?.google
+            ? nothing
+            : googleLinkButton(
+                this.handleLinkGoogle,
+                // The shell sends the player to the website for this (see
+                // linkGoogle in Auth.ts); the caption has to say so.
+                isDesktopShell()
+                  ? "account_modal.link_google_on_web"
+                  : "account_modal.link_google",
+              )
+        }
       </div>
     `;
   }
@@ -358,14 +380,16 @@ export class AccountSettingsPanel extends LitElement {
           ></o-button>
         </div>
       </div>
-      ${this.deleteDialogOpen
-        ? html`<delete-account-dialog
-            @confirm=${this.handleDeleteAccount}
-            @cancel=${() => {
-              this.deleteDialogOpen = false;
-            }}
-          ></delete-account-dialog>`
-        : nothing}
+      ${
+        this.deleteDialogOpen
+          ? html`<delete-account-dialog
+              @confirm=${this.handleDeleteAccount}
+              @cancel=${() => {
+                this.deleteDialogOpen = false;
+              }}
+            ></delete-account-dialog>`
+          : nothing
+      }
     `;
   }
 

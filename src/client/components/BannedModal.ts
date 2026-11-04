@@ -77,17 +77,21 @@ export class BannedModal extends LitElement {
           <p style="font-weight: 600; font-size: 1.05rem; margin: 0 0 0.5rem;">
             ${this.categoryLabel(ban.category)}
           </p>
-          ${ban.reason
-            ? html`<p style="margin: 0 0 0.5rem;">
-                ${translateText("ban_notice.reason", { reason: ban.reason })}
-              </p>`
-            : null}
+          ${
+            ban.reason
+              ? html`<p style="margin: 0 0 0.5rem;">
+                  ${translateText("ban_notice.reason", { reason: ban.reason })}
+                </p>`
+              : null
+          }
           <p style="margin: 0 0 0.75rem;">
-            ${ban.expiresAt
-              ? translateText("ban_notice.until", {
-                  date: new Date(ban.expiresAt).toLocaleString(),
-                })
-              : translateText("ban_notice.permanent")}
+            ${
+              ban.expiresAt
+                ? translateText("ban_notice.until", {
+                    date: new Date(ban.expiresAt).toLocaleString(),
+                  })
+                : translateText("ban_notice.permanent")
+            }
           </p>
           <p style="margin: 0; opacity: 0.8;">
             ${translateText("ban_notice.appeal")}

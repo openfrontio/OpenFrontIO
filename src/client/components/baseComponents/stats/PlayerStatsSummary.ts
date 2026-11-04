@@ -324,9 +324,9 @@ export class PlayerStatsSummary extends LitElement {
       <div
         data-stat=${key}
         title=${fullLabel}
-        class="min-w-0 rounded-xl border bg-white/5 px-3 py-3 text-center ${METRIC_TONES[
-          key
-        ]}"
+        class="min-w-0 rounded-xl border bg-white/5 px-3 py-3 text-center ${
+          METRIC_TONES[key]
+        }"
       >
         <div
           data-label
@@ -416,22 +416,24 @@ export class PlayerStatsSummary extends LitElement {
                   ${summary.winRate}
                 </div>
               </div>
-              ${showRecentWinRate
-                ? html`
-                    <div data-last-100>
-                      <div
-                        class="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-200/60"
-                      >
-                        ${translateText("player_stats_tree.stats_last_100")}
+              ${
+                showRecentWinRate
+                  ? html`
+                      <div data-last-100>
+                        <div
+                          class="text-[10px] font-bold uppercase tracking-[0.18em] text-blue-200/60"
+                        >
+                          ${translateText("player_stats_tree.stats_last_100")}
+                        </div>
+                        <div
+                          class="mt-1 text-3xl font-black leading-none tabular-nums text-cyan-300"
+                        >
+                          ${summary.recentWinRate}
+                        </div>
                       </div>
-                      <div
-                        class="mt-1 text-3xl font-black leading-none tabular-nums text-cyan-300"
-                      >
-                        ${summary.recentWinRate}
-                      </div>
-                    </div>
-                  `
-                : nothing}
+                    `
+                  : nothing
+              }
             </div>
             <div
               data-record-group
@@ -441,9 +443,9 @@ export class PlayerStatsSummary extends LitElement {
                 (stat, index) => html`
                   <div
                     data-record-stat=${stat.key}
-                    class="min-w-0 px-2 py-3 text-center ${index === 0
-                      ? ""
-                      : "border-l border-white/10"}"
+                    class="min-w-0 px-2 py-3 text-center ${
+                      index === 0 ? "" : "border-l border-white/10"
+                    }"
                   >
                     <div
                       class="truncate text-[10px] font-bold uppercase tracking-wider text-blue-200/55"

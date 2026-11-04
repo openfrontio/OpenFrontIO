@@ -1,10 +1,10 @@
 {
+  "$schema": "../../../info.schema.json",
   "name": "Warship Warship",
   "id": "WarshipWarship",
   "translation_key": "map.warshipwarship",
-  "multiplayer_frequency": 3,
-  "team_frequency": 6,
   "categories": ["arcade"],
+  "author": "crunchybbb",
   "nations": [
     {
       "coordinates": [750, 680],

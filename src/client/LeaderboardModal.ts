@@ -153,10 +153,12 @@ export class LeaderboardModal extends BaseModal {
             ${translateText("leaderboard_modal.title")}
           </span>
           ${this.activeTab === "clans" ? dateRange : ""}
-          ${this.rankedTypeFor(this.activeTab) !== null ||
-          this.activeTab === "tribes"
-            ? refreshTime
-            : ""}
+          ${
+            this.rankedTypeFor(this.activeTab) !== null ||
+            this.activeTab === "tribes"
+              ? refreshTime
+              : ""
+          }
         </div>
       `,
       onBack: () => this.close(),
@@ -168,11 +170,12 @@ export class LeaderboardModal extends BaseModal {
     return html`
       <div class="flex-1 min-h-0 h-full">
         <leaderboard-player-list
-          class=${this.rankedTypeFor(this.activeTab) !== null
-            ? "h-full"
-            : "hidden"}
-          .rankedType=${this.rankedTypeFor(this.activeTab) ??
-          this.lastRankedType}
+          class=${
+            this.rankedTypeFor(this.activeTab) !== null ? "h-full" : "hidden"
+          }
+          .rankedType=${
+            this.rankedTypeFor(this.activeTab) ?? this.lastRankedType
+          }
         ></leaderboard-player-list>
         <leaderboard-clan-table
           class=${this.activeTab === "clans" ? "h-full" : "hidden"}

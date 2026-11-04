@@ -6,7 +6,7 @@ import {
   TILE_INDEX_DRAWDOWN_TROUGH,
   TILE_INDEX_PEAK,
 } from "@openfront/engine-api/StatsSchemas";
-import { Game } from "@openfront/engine/game/Game";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { StatsImpl } from "@openfront/engine/game/StatsImpl";
 import { setup } from "./util/Setup";
 
@@ -101,6 +101,170 @@ describe("tick sampling", () => {
     const tiles = client1Stats().tiles!;
     expect(tiles[TILE_INDEX_DRAWDOWN_PEAK]).toBe(1000n);
     expect(tiles[TILE_INDEX_DRAWDOWN_TROUGH]).toBe(100n);
+  });
+
+  it("handles restoreSnapshot correctly by continuing to track peaks and drawdowns", () => {
+    sample(100, 200, 1);
+    sample(50, 150, 1);
+
+    const snapshot = structuredClone(stats.snapshot());
+    const restoredStats = new StatsImpl();
+    restoredStats.restoreSnapshot(snapshot);
+
+    // Continue sampling on restored instance
+    restoredStats.recordTickSample(player1, 200, 500, 3);
+    restoredStats.recordTickSample(player1, 10, 300, 2);
+
+    const s = restoredStats.stats().client1!;
+    expect(s.tiles![TILE_INDEX_PEAK]).toBe(200n);
+    // Decline from 200 to 10 (95% drop) beats 100 to 50 (50% drop)
+    expect(s.tiles![TILE_INDEX_DRAWDOWN_PEAK]).toBe(200n);
+    expect(s.tiles![TILE_INDEX_DRAWDOWN_TROUGH]).toBe(10n);
+    expect(s.peakTroops).toBe(500n);
+    expect(s.alliances![ALLIANCE_INDEX_PEAK_CONCURRENT]).toBe(3n);
+  });
+
+  it("matches the original reference all-bigint sampler across randomized mixed inputs", () => {
+    class ReferenceStats {
+      data: Record<string, PlayerStats> = {};
+
+      recordTickSample(
+        player: Player,
+        tiles: bigint | number,
+        troops: bigint | number,
+        allianceCount: number,
+      ): void {
+        const clientID = player.clientID();
+        if (clientID === null) return;
+        let p = this.data[clientID];
+        if (p === undefined) {
+          p = {};
+          this.data[clientID] = p;
+        }
+
+        const t = typeof tiles === "bigint" ? tiles : BigInt(Math.floor(tiles));
+        p.tiles ??= [0n, 0n, 0n];
+        while (p.tiles.length <= TILE_INDEX_DRAWDOWN_TROUGH) p.tiles.push(0n);
+        if (t > p.tiles[TILE_INDEX_PEAK]) p.tiles[TILE_INDEX_PEAK] = t;
+        const peak = p.tiles[TILE_INDEX_PEAK];
+        const ddPeak = p.tiles[TILE_INDEX_DRAWDOWN_PEAK];
+        const ddTrough = p.tiles[TILE_INDEX_DRAWDOWN_TROUGH];
+        if (ddPeak === 0n || (peak - t) * ddPeak > (ddPeak - ddTrough) * peak) {
+          p.tiles[TILE_INDEX_DRAWDOWN_PEAK] = peak;
+          p.tiles[TILE_INDEX_DRAWDOWN_TROUGH] = t;
+        }
+
+        const tr =
+          typeof troops === "bigint" ? troops : BigInt(Math.floor(troops));
+        if (p.peakTroops === undefined || tr > p.peakTroops) p.peakTroops = tr;
+
+        p.alliances ??= [0n, 0n];
+        while (p.alliances.length <= ALLIANCE_INDEX_PEAK_CONCURRENT) {
+          p.alliances.push(0n);
+        }
+        const a = BigInt(Math.floor(allianceCount));
+        if (a > p.alliances[ALLIANCE_INDEX_PEAK_CONCURRENT]) {
+          p.alliances[ALLIANCE_INDEX_PEAK_CONCURRENT] = a;
+        }
+      }
+    }
+
+    // Deterministic Mulberry32 PRNG
+    let s = 1337;
+    const rand = () => {
+      s = (s + 0x6d2b79f5) | 0;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+
+    const players = [
+      { clientID: () => "p1" } as Player,
+      { clientID: () => "p2" } as Player,
+      { clientID: () => "p3" } as Player,
+    ];
+
+    let actualStats = new StatsImpl();
+    let refStats = new ReferenceStats();
+
+    // Value generator mixing:
+    // - zero leads (0)
+    // - repeated peaks
+    // - normal integers (< 90_000_000)
+    // - normal BigInts
+    // - fractional numbers
+    // - large values (>= 90_000_000 number & BigInt)
+    const samplePool = (fixedPeak: number) => {
+      const roll = rand();
+      if (roll < 0.05) return 0;
+      if (roll < 0.15) return fixedPeak;
+      if (roll < 0.45) return Math.floor(rand() * 50_000);
+      if (roll < 0.6) return BigInt(Math.floor(rand() * 50_000));
+      if (roll < 0.75) return Math.floor(rand() * 50_000) + rand();
+      if (roll < 0.88) return 90_000_000 + Math.floor(rand() * 10_000_000);
+      return BigInt(90_000_000 + Math.floor(rand() * 50_000_000));
+    };
+
+    const TOTAL_TICKS = 600;
+    const SNAPSHOT_TICK = 300;
+    const playerPeaks = [12_345, 45_678, 89_000];
+
+    for (let tick = 0; tick < TOTAL_TICKS; tick++) {
+      if (tick === SNAPSHOT_TICK) {
+        // structuredClone snapshot round trip partway through
+        const snapshot = structuredClone(actualStats.snapshot());
+        actualStats = new StatsImpl();
+        actualStats.restoreSnapshot(snapshot);
+        refStats.data = structuredClone(refStats.data);
+      }
+
+      for (let i = 0; i < players.length; i++) {
+        const player = players[i];
+        // Ensure first few ticks for player 0 are 0 (zero-tile lead)
+        const tiles = tick < 5 && i === 0 ? 0 : samplePool(playerPeaks[i]);
+        const troops = samplePool(50_000);
+        const alliances = Math.floor(rand() * 8);
+
+        actualStats.recordTickSample(player, tiles, troops, alliances);
+        refStats.recordTickSample(player, tiles, troops, alliances);
+      }
+    }
+
+    for (const player of players) {
+      const client = player.clientID()!;
+      const actual = actualStats.stats()[client]!;
+      const expected = refStats.data[client]!;
+
+      expect(actual.tiles).toEqual(expected.tiles);
+      expect(actual.peakTroops).toEqual(expected.peakTroops);
+      expect(actual.alliances).toEqual(expected.alliances);
+    }
+  });
+
+  it("handles BigInt and large inputs via the fallback path", () => {
+    stats.recordTickSample(player1, 100_000_000n, 500_000_000n, 2);
+    stats.recordTickSample(player1, 20_000_000n, 100_000_000n, 1);
+
+    const s = client1Stats();
+    expect(s.tiles![TILE_INDEX_PEAK]).toBe(100_000_000n);
+    expect(s.tiles![TILE_INDEX_DRAWDOWN_PEAK]).toBe(100_000_000n);
+    expect(s.tiles![TILE_INDEX_DRAWDOWN_TROUGH]).toBe(20_000_000n);
+    expect(s.peakTroops).toBe(500_000_000n);
+  });
+
+  it("handles fractional samples via fallback path without throwing", () => {
+    stats.recordTickSample(player1, 10.8, 20.4, 1);
+    const s = client1Stats();
+    expect(s.tiles![TILE_INDEX_PEAK]).toBe(10n);
+    expect(s.tiles![TILE_INDEX_DRAWDOWN_PEAK]).toBe(10n);
+    expect(s.tiles![TILE_INDEX_DRAWDOWN_TROUGH]).toBe(10n);
+    expect(s.peakTroops).toBe(20n);
+  });
+
+  it("safely ignores players with null clientID without allocating or throwing", () => {
+    const fakeBot = { clientID: () => null } as any;
+    stats.recordTickSample(fakeBot, 500, 1000, 0);
+    expect(Object.keys(stats.stats()).length).toBe(0);
   });
 });
 

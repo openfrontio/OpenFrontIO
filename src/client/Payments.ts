@@ -82,7 +82,7 @@ function steamBridge(): SteamPaymentsBridge | undefined {
  * to say is assumed to have the overlay, which is what every purchase before
  * this assumed.
  */
-export async function steamOverlayAttached(): Promise<boolean> {
+async function steamOverlayAttached(): Promise<boolean> {
   const check = steamBridge()?.isOverlayAttached;
   if (typeof check !== "function") return true;
   try {
@@ -98,7 +98,7 @@ export async function steamOverlayAttached(): Promise<boolean> {
  * window re-reads the account. The purchase settles when their browser
  * reaches the return route, which this window never hears about.
  */
-export const BROWSER_APPROVAL_REFRESH_MS = 15 * 60 * 1000;
+const BROWSER_APPROVAL_REFRESH_MS = 15 * 60 * 1000;
 
 let refreshAccount: () => unknown = () => invalidateUserMe();
 let browserApprovalUntil = 0;

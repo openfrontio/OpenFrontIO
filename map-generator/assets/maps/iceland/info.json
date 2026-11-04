@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Iceland",
   "name": "Iceland",
   "translation_key": "map.iceland",
   "categories": ["europe"],
-  "multiplayer_frequency": 4,
+  "location": { "lat": 64.9, "lon": -18.6 },
+  "author": "Duwibi",
   "nations": [
     {
       "coordinates": [455, 1115],

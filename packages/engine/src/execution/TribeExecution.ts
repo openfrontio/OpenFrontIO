@@ -1,4 +1,4 @@
-﻿import { Structures } from "@openfront/engine-api/game/GameTypes";
+import { Structures } from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   VersionedSchema,
@@ -17,7 +17,7 @@ import type {
 } from "../snapshot/SnapshotContext";
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
 import { DeleteUnitExecution } from "./DeleteUnitExecution";
-import { AiAttackBehavior } from "./utils/AiAttackBehavior";
+import { TribeAttackBehavior } from "./TribeAttackBehavior";
 
 export class TribeExecution implements Execution {
   private active = true;
@@ -25,7 +25,7 @@ export class TribeExecution implements Execution {
   private mg: Game;
   private neighborsTerraNullius = true;
 
-  private attackBehavior: AiAttackBehavior | null = null;
+  private attackBehavior: TribeAttackBehavior | null = null;
   private attackRate: number;
   private attackTick: number;
   private triggerRatio: number;
@@ -39,6 +39,10 @@ export class TribeExecution implements Execution {
     this.triggerRatio = this.random.nextInt(50, 60) / 100;
     this.reserveRatio = this.random.nextInt(30, 40) / 100;
     this.expandRatio = this.random.nextInt(10, 20) / 100;
+  }
+
+  playerID(): string {
+    return this.tribe.id();
   }
 
   activeDuringSpawnPhase(): boolean {
@@ -59,7 +63,7 @@ export class TribeExecution implements Execution {
     }
 
     if (this.attackBehavior === null) {
-      this.attackBehavior = new AiAttackBehavior(
+      this.attackBehavior = new TribeAttackBehavior(
         this.random,
         this.mg,
         this.tribe,
@@ -70,6 +74,13 @@ export class TribeExecution implements Execution {
 
       // Send an attack on the first tick
       this.attackBehavior.sendAttack(this.mg.terraNullius());
+      return;
+    }
+
+    // The tutorial's tribe only grows into free land, and accepts no
+    // alliance: the tutorial has the new player conquer it.
+    if (this.mg.config().gameConfig().tutorial) {
+      this.attackBehavior.expandIntoFreeLand();
       return;
     }
 
@@ -111,7 +122,7 @@ export class TribeExecution implements Execution {
     if (this.attackBehavior === null) {
       throw new Error("not initialized");
     }
-    const toAttack = this.attackBehavior.getNeighborTraitorToAttack();
+    const toAttack = this.attackBehavior.getNeighborTraitorToAttack(true);
     if (toAttack !== null) {
       const odds = this.tribe.isFriendly(toAttack) ? 6 : 3;
       if (this.random.chance(odds)) {
@@ -168,8 +179,8 @@ export class TribeExecution implements Execution {
       this.attackBehavior = null;
     } else {
       const attack = Object.create(
-        AiAttackBehavior.prototype,
-      ) as AiAttackBehavior;
+        TribeAttackBehavior.prototype,
+      ) as TribeAttackBehavior;
       attack.restoreSnapshot(s.attackBehavior, r, this.random, this.tribe);
       this.attackBehavior = attack;
     }

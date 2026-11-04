@@ -1,10 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "CanaryIslands",
   "name": "Canary Islands",
   "translation_key": "map.canaryislands",
-  "categories": ["new", "africa"],
-  "multiplayer_frequency": 3,
-  "team_frequency": 10,
+  "categories": ["africa"],
+  "location": { "lat": 28.3, "lon": -15.6 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [229, 1022],

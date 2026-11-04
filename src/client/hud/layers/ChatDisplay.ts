@@ -125,17 +125,16 @@ export class ChatDisplay extends LitElement implements Controller {
     }
     return html`
       <div
-        class="pointer-events-auto ${this._hidden
-          ? "w-fit px-2.5 py-1.25"
-          : ""} rounded-md bg-black/60 relative max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:max-w-[30vw] lg:w-full lg:w-auto"
+        class="pointer-events-auto ${
+          this._hidden ? "w-fit px-2.5 py-1.25" : ""
+        } rounded-md bg-black/60 relative max-h-[30vh] flex flex-col-reverse overflow-y-auto w-full lg:bottom-2.5 lg:right-2.5 z-50 lg:max-w-[30vw] lg:w-full lg:w-auto"
       >
         <div>
           <div class="w-full bg-black/80 sticky top-0 px-2.5">
             <button
-              class="text-white cursor-pointer pointer-events-auto ${this
-                ._hidden
-                ? "hidden"
-                : ""}"
+              class="text-white cursor-pointer pointer-events-auto ${
+                this._hidden ? "hidden" : ""
+              }"
               @click=${this.toggleHidden}
             >
               Hide
@@ -143,25 +142,24 @@ export class ChatDisplay extends LitElement implements Controller {
           </div>
 
           <button
-            class="text-white cursor-pointer pointer-events-auto ${this._hidden
-              ? ""
-              : "hidden"}"
+            class="text-white cursor-pointer pointer-events-auto ${
+              this._hidden ? "" : "hidden"
+            }"
             @click=${this.toggleHidden}
           >
             Chat
             <span
-              class="${this.newEvents
-                ? ""
-                : "hidden"} inline-block px-2 bg-red-500 rounded-xs"
+              class="${
+                this.newEvents ? "" : "hidden"
+              } inline-block px-2 bg-red-500 rounded-xs"
               >${this.newEvents}</span
             >
           </button>
 
           <table
-            class="w-full border-collapse text-white shadow-lg lg:text-xl text-xs pointer-events-none ${this
-              ._hidden
-              ? "hidden"
-              : ""}"
+            class="w-full border-collapse text-white shadow-lg lg:text-xl text-xs pointer-events-none ${
+              this._hidden ? "hidden" : ""
+            }"
           >
             <tbody>
               ${this.chatEvents.map(

@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Montreal",
   "name": "Montreal",
   "translation_key": "map.montreal",
   "categories": ["north_america"],
-  "multiplayer_frequency": 6,
+  "location": { "lat": 45.5, "lon": -73.6 },
+  "author": "Duwibi",
   "nations": [
     {
       "coordinates": [800, 430],

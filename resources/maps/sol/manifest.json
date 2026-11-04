@@ -190,7 +190,6 @@
       "name": "Deimos"
     }
   ],
-  "ffa_frequency": 0,
   "forced_modifiers": ["isWaterNukes:50", "startingGold5M:100"],
   "id": "Sol",
   "map": {
@@ -208,7 +207,6 @@
     "num_land_tiles": 209669,
     "width": 2216
   },
-  "multiplayer_frequency": 20,
   "name": "Sol",
   "nations": [
     {
@@ -477,7 +475,6 @@
       "name": "Uranus Trojans"
     }
   ],
-  "team_frequency": 0,
   "themes": ["space"],
   "translation_key": "map.sol"
 }

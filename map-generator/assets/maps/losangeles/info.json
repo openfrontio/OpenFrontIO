@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "LosAngeles",
   "name": "Los Angeles",
   "translation_key": "map.losangeles",
   "categories": ["north_america"],
-  "multiplayer_frequency": 8,
+  "location": { "lat": 34.05, "lon": -118.25 },
+  "author": "Patrick Plays Badly",
   "nations": [
     {
       "coordinates": [700, 30],

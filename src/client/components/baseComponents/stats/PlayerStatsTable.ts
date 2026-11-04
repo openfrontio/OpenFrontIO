@@ -88,13 +88,15 @@ function statsSection(
         <table class="w-full table-fixed text-sm text-gray-300">
           <thead>
             <tr class="bg-white/5">
-              ${rowHeader === undefined
-                ? nothing
-                : html`<th
-                    class="px-4 py-2 text-left font-semibold text-gray-400"
-                  >
-                    ${translateText(rowHeader)}
-                  </th>`}
+              ${
+                rowHeader === undefined
+                  ? nothing
+                  : html`<th
+                      class="px-4 py-2 text-left font-semibold text-gray-400"
+                    >
+                      ${translateText(rowHeader)}
+                    </th>`
+              }
               ${columns.map(
                 (column) => html`
                   <th class="px-3 py-2 text-center font-semibold text-gray-400">
@@ -108,13 +110,15 @@ function statsSection(
             ${rows.map(
               (row) => html`
                 <tr class="hover:bg-white/5 transition-colors">
-                  ${row.label === undefined
-                    ? nothing
-                    : html`<td
-                        class="px-4 py-2 text-left font-medium text-white/80"
-                      >
-                        ${translateText(row.label)}
-                      </td>`}
+                  ${
+                    row.label === undefined
+                      ? nothing
+                      : html`<td
+                          class="px-4 py-2 text-left font-medium text-white/80"
+                        >
+                          ${translateText(row.label)}
+                        </td>`
+                  }
                   ${row.values.map(
                     (value) => html`
                       <td class="px-3 py-2 text-center text-white/60">

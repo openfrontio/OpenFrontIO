@@ -12,7 +12,7 @@ import {
   type UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 
-export function emptyUpdates(): GameUpdates {
+function emptyUpdates(): GameUpdates {
   const updates = {} as Record<number, unknown[]>;
   for (const v of Object.values(GameUpdateType)) {
     if (typeof v === "number") updates[v] = [];

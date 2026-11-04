@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "IndianSubcontinent",
   "name": "Indian Subcontinent",
   "translation_key": "map.indiansubcontinent",
   "categories": ["asia"],
-  "multiplayer_frequency": 8,
+  "location": { "lat": 22, "lon": 79 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [1601, 840],

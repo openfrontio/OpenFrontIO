@@ -7,6 +7,7 @@ import type {
 } from "@openfront/shared/WireSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../src/client/ClientEnv";
+// This named import also registers <game-mode-selector> as a side effect.
 import { shouldBlockMultiplayerAction } from "../src/client/GameModeSelector";
 import {
   attemptInFlight,
@@ -41,9 +42,6 @@ vi.mock("../src/client/LazyModals", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/client/LazyModals")>()),
   whenModalLoaded: (_tag: string, open: () => void) => open(),
 }));
-
-// Registers <game-mode-selector> as a side effect.
-import "../src/client/GameModeSelector";
 
 /**
  * OPE-439. The server-list heartbeat already knows whether the API answers;

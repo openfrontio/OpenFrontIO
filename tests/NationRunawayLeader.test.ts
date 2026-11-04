@@ -8,9 +8,10 @@ import {
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { findRunawayLeader } from "@openfront/engine/execution/nation/NationUtils";
-import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { AllianceRequest, Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
@@ -60,7 +61,7 @@ async function setupStripes(
     nation,
     emojiBehavior,
   );
-  const attackBehavior = new AiAttackBehavior(
+  const attackBehavior = new NationAttackBehavior(
     new PseudoRandom(42),
     game,
     nation,
@@ -69,6 +70,12 @@ async function setupStripes(
     0.2, // expandRatio
     allianceBehavior,
     emojiBehavior,
+    new NationWarshipBehavior(
+      new PseudoRandom(42),
+      game,
+      nation,
+      emojiBehavior,
+    ),
   );
 
   return {

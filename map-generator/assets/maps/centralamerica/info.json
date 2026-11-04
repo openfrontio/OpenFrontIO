@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "CentralAmerica",
   "name": "Central America",
   "translation_key": "map.centralamerica",
   "categories": ["north_america"],
-  "multiplayer_frequency": 5,
+  "location": { "lat": 13, "lon": -86.5 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [518, 141],

@@ -11,6 +11,7 @@ const JoinVerifyVerdictSchema = z.discriminatedUnion("status", [
   z.object({
     status: z.literal("rejected"),
     reason: z.string(),
+    errorCodes: z.array(z.string()).optional(),
   }),
   // The API answered, but a leg (siteverify or the name check) failed or ran
   // past its budget. The name verdict rides along when the name check did
@@ -25,7 +26,7 @@ const JoinVerifyVerdictSchema = z.discriminatedUnion("status", [
 
 export type JoinVerifyResponse =
   | { status: "approved"; username: string; clanTag: string | null }
-  | { status: "rejected"; reason: string }
+  | { status: "rejected"; reason: string; errorCodes?: string[] }
   | {
       status: "error";
       reason: string;
@@ -110,6 +111,88 @@ export function planJoinVerify(args: {
   return { action: "verify", token: null };
 }
 
+// In-flight verifyJoin requests coalesced by (token, persistentId, username, clanTag).
+const inFlightByToken = new Map<string, Promise<JoinVerifyResponse>>();
+
+function parseJoinVerifyResponse(data: unknown): JoinVerifyResponse {
+  const parsed = JoinVerifyVerdictSchema.safeParse(data);
+  if (!parsed.success) {
+    return {
+      status: "error",
+      reason: `api-worker returned malformed response: ${parsed.error.message}`,
+      degraded: false,
+    };
+  }
+  if (parsed.data.status === "approved") {
+    return {
+      status: "approved",
+      username: parsed.data.username,
+      clanTag: parsed.data.clanTag ?? null,
+    };
+  }
+  if (parsed.data.status === "error") {
+    const { reason, username, clanTag } = parsed.data;
+    return {
+      status: "error",
+      reason,
+      degraded: true,
+      ...(username !== undefined && {
+        identity: { username, clanTag: clanTag ?? null },
+      }),
+    };
+  }
+  return parsed.data;
+}
+
+async function fetchJoinVerify(
+  ip: string,
+  token: string | null,
+  username: string,
+  clanTag: string | null,
+): Promise<Response> {
+  return fetch(`${ServerEnv.jwtIssuer()}/join_verify`, {
+    method: "POST",
+    // First sighting of a novel flagged name adds an LLM round-trip of
+    // up to ~3s server-side, so the timeout must stay at 5s or above.
+    signal: AbortSignal.timeout(5000),
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": ServerEnv.apiKey(),
+    },
+    body: JSON.stringify({ ip, token, username, clanTag }),
+  });
+}
+
+async function verifyJoinRequest(
+  ip: string,
+  turnstileToken: string | null,
+  username: string,
+  clanTag: string | null,
+): Promise<JoinVerifyResponse> {
+  try {
+    const response = await fetchJoinVerify(
+      ip,
+      turnstileToken,
+      username,
+      clanTag,
+    );
+    if (!response.ok) {
+      return {
+        status: "error",
+        reason: `api-worker returned ${response.status}`,
+        degraded: false,
+      };
+    }
+    return parseJoinVerifyResponse(await response.json());
+  } catch (e) {
+    return {
+      status: "error",
+      reason: `api-worker unavailable: ${e}`,
+      degraded: false,
+    };
+  }
+}
+
 /**
  * Verify a joining player against the API's join_verify endpoint, which runs
  * the Turnstile check and name censoring concurrently: `status` is the
@@ -137,58 +220,32 @@ export async function verifyJoin(
   turnstileToken: string | null,
   username: string,
   clanTag: string | null,
+  persistentId?: string,
 ): Promise<JoinVerifyResponse> {
-  try {
-    const response = await fetch(`${ServerEnv.jwtIssuer()}/join_verify`, {
-      method: "POST",
-      // First sighting of a novel flagged name adds an LLM round-trip of
-      // up to ~3s server-side, so the timeout must stay at 5s or above.
-      signal: AbortSignal.timeout(5000),
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ServerEnv.apiKey(),
-      },
-      body: JSON.stringify({ ip, token: turnstileToken, username, clanTag }),
+  if (turnstileToken !== null && turnstileToken.length > 0) {
+    const key = `${turnstileToken}\0${persistentId ?? ""}\0${username}\0${clanTag ?? ""}`;
+    const inFlight = inFlightByToken.get(key);
+    if (inFlight) {
+      return inFlight;
+    }
+    const promise = verifyJoinRequest(
+      ip,
+      turnstileToken,
+      username,
+      clanTag,
+    ).finally(() => {
+      inFlightByToken.delete(key);
     });
-    if (!response.ok) {
-      return {
-        status: "error",
-        reason: `api-worker returned ${response.status}`,
-        degraded: false,
-      };
-    }
-    const parsed = JoinVerifyVerdictSchema.safeParse(await response.json());
-    if (!parsed.success) {
-      return {
-        status: "error",
-        reason: `api-worker returned malformed response: ${parsed.error.message}`,
-        degraded: false,
-      };
-    }
-    if (parsed.data.status === "approved") {
-      return {
-        status: "approved",
-        username: parsed.data.username,
-        clanTag: parsed.data.clanTag ?? null,
-      };
-    }
-    if (parsed.data.status === "error") {
-      const { reason, username, clanTag } = parsed.data;
-      return {
-        status: "error",
-        reason,
-        degraded: true,
-        ...(username !== undefined && {
-          identity: { username, clanTag: clanTag ?? null },
-        }),
-      };
-    }
-    return parsed.data;
-  } catch (e) {
-    return {
-      status: "error",
-      reason: `api-worker unavailable: ${e}`,
-      degraded: false,
-    };
+    inFlightByToken.set(key, promise);
+    return promise;
   }
+  return verifyJoinRequest(ip, turnstileToken, username, clanTag);
+}
+
+export function _inFlightTokenCount(): number {
+  return inFlightByToken.size;
+}
+
+export function _clearInFlightTokens(): void {
+  inFlightByToken.clear();
 }

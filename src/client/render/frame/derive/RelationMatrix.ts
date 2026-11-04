@@ -1,4 +1,4 @@
-import type { PlayerState, PlayerStatic } from "../../types";
+import type { PlayerState } from "../../types";
 
 const RELATION_SIZE = 1024;
 const RELATION_NEUTRAL = 0;
@@ -77,15 +77,4 @@ export function buildRelationMatrix(
   }
 
   return { matrix, size: RELATION_SIZE };
-}
-
-/** Build a smallID→team map from a player list. Skips players with no team. */
-export function buildTeamMap(
-  players: readonly PlayerStatic[],
-): ReadonlyMap<number, string> {
-  const m = new Map<number, string>();
-  for (const p of players) {
-    if (p.team !== null) m.set(p.smallID, p.team);
-  }
-  return m;
 }

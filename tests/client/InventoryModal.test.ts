@@ -525,7 +525,7 @@ describe("InventoryModal", () => {
   it("announces flag, crown and skin selections too", async () => {
     const onMessage = vi.fn();
     const lastMessage = () =>
-      (onMessage.mock.lastCall?.[0] as CustomEvent).detail.message;
+      (onMessage.mock.lastCall![0] as CustomEvent).detail.message;
     window.addEventListener("show-message", onMessage);
     try {
       await showTab(modal, "skins");

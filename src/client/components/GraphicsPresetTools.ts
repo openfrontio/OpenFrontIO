@@ -163,15 +163,17 @@ export class GraphicsPresetTools extends LitElement {
           .value=${this.importText}
           spellcheck="false"
           @input=${this.onImportTextInput}
-          class="w-full px-2 py-1.5 bg-black/40 border ${this.importError
-            ? "border-red-500"
-            : "border-white/20"} rounded-lg text-sm text-white font-mono"
+          class="w-full px-2 py-1.5 bg-black/40 border ${
+            this.importError ? "border-red-500" : "border-white/20"
+          } rounded-lg text-sm text-white font-mono"
         ></textarea>
-        ${this.importError
-          ? html`<div id="graphics-import-error" class="text-sm text-red-400">
-              ${translateText("graphics_setting.import_json_invalid")}
-            </div>`
-          : nothing}
+        ${
+          this.importError
+            ? html`<div id="graphics-import-error" class="text-sm text-red-400">
+                ${translateText("graphics_setting.import_json_invalid")}
+              </div>`
+            : nothing
+        }
         <button
           id="graphics-import-apply"
           class="self-start px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-white disabled:opacity-50"

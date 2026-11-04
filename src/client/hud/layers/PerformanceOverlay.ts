@@ -1203,116 +1203,140 @@ export class PerformanceOverlay extends LitElement implements Controller {
             <span>${this.tickDelayAvg.toFixed(2)}ms</span>
             (${this.uiText.maxLabel} <span>${this.tickDelayMax}ms</span>)
           </div>
-          ${this.layerStats.size
-            ? html`<div class="layers-section">
-                <div class="performance-line section-header">
-                  <span>${this.uiText.layersHeader}</span>
-                  <button
-                    class="collapse-button"
-                    @click=${this.toggleRenderLayersExpanded}
-                    title=${this.renderLayersExpanded
-                      ? this.uiText.collapse
-                      : this.uiText.expand}
-                  >
-                    ${this.renderLayersExpanded ? "▾" : "▸"}
-                  </button>
-                </div>
-                <div class="performance-line">
-                  ${translateText("performance_overlay.render_layers_summary", {
-                    frames: this.renderLastTickFrameCount,
-                    ms: this.renderLastTickLayerTotalMs.toFixed(2),
-                  })}
-                </div>
-                ${this.renderLayersExpanded
-                  ? html`<div class="layer-row table-header" style="--pct: 0%;">
-                        <span class="layer-name"></span>
-                        <span class="layer-metrics">
-                          ${this.uiText.renderLayersTableHeader}
-                        </span>
-                      </div>
-                      ${renderLayersToShow.map((layer) => {
-                        const width = Math.min(
-                          100,
-                          (layer.avg / maxLayerAvg) * 100 || 0,
-                        );
-                        const perTickRenderMs =
-                          this.renderLastTickLayerDurations[layer.name] ?? 0;
-                        const perTickRenderAvgMs =
-                          this.renderPerTickLayerStats.get(layer.name)?.avg ??
-                          0;
-                        const isInactive = perTickRenderMs <= 0.01;
-                        const title = `${layer.name} | last tick render: ${perTickRenderMs.toFixed(
-                          2,
-                        )}ms`;
-                        return html`<div
-                          class="layer-row ${isInactive ? "inactive" : ""}"
-                          style="--pct: ${width}%;"
-                          title=${title}
-                        >
-                          <span class="layer-name" title=${layer.name}
-                            >${layer.name}
-                          </span>
-                          <span class="layer-metrics">
-                            ${layer.avg.toFixed(2)} / ${layer.max.toFixed(2)}ms
-                            | ${perTickRenderAvgMs.toFixed(2)}ms
-                          </span>
-                        </div>`;
-                      })}`
-                  : html``}
-              </div>`
-            : html``}
-          ${this.tickLayerStats.size
-            ? html`<div class="layers-section">
-                <div class="performance-line section-header">
-                  <span>${this.uiText.tickLayersHeader}</span>
-                  <button
-                    class="collapse-button"
-                    @click=${this.toggleTickLayersExpanded}
-                    title=${this.tickLayersExpanded
-                      ? this.uiText.collapse
-                      : this.uiText.expand}
-                  >
-                    ${this.tickLayersExpanded ? "▾" : "▸"}
-                  </button>
-                </div>
-                <div class="performance-line">
-                  ${translateText("performance_overlay.tick_layers_summary", {
-                    count: this.tickLayerLastCount,
-                    ms: this.tickLayerLastTotalMs.toFixed(2),
-                  })}
-                </div>
-                ${this.tickLayersExpanded
-                  ? html`<div class="layer-row table-header" style="--pct: 0%;">
-                        <span class="layer-name"></span>
-                        <span class="layer-metrics">
-                          ${this.uiText.tickLayersTableHeader}
-                        </span>
-                      </div>
-                      ${tickLayersToShow.map((layer) => {
-                        const width = Math.min(
-                          100,
-                          (layer.avg / maxTickLayerAvg) * 100 || 0,
-                        );
-                        const lastTickMs =
-                          this.tickLayerLastDurations[layer.name] ?? 0;
-                        const isInactive = lastTickMs <= 0.01;
-                        const title = `${layer.name} | last tick: ${lastTickMs.toFixed(2)}ms`;
-                        return html`<div
-                          class="layer-row ${isInactive ? "inactive" : ""}"
-                          style="--pct: ${width}%;"
-                          title=${title}
-                        >
-                          <span class="layer-name" title=${layer.name}
-                            >${layer.name}</span
+          ${
+            this.layerStats.size
+              ? html`<div class="layers-section">
+                  <div class="performance-line section-header">
+                    <span>${this.uiText.layersHeader}</span>
+                    <button
+                      class="collapse-button"
+                      @click=${this.toggleRenderLayersExpanded}
+                      title=${
+                        this.renderLayersExpanded
+                          ? this.uiText.collapse
+                          : this.uiText.expand
+                      }
+                    >
+                      ${this.renderLayersExpanded ? "▾" : "▸"}
+                    </button>
+                  </div>
+                  <div class="performance-line">
+                    ${translateText(
+                      "performance_overlay.render_layers_summary",
+                      {
+                        frames: this.renderLastTickFrameCount,
+                        ms: this.renderLastTickLayerTotalMs.toFixed(2),
+                      },
+                    )}
+                  </div>
+                  ${
+                    this.renderLayersExpanded
+                      ? html`<div
+                            class="layer-row table-header"
+                            style="--pct: 0%;"
                           >
-                          <span class="layer-metrics">
-                            ${layer.avg.toFixed(2)} / ${layer.max.toFixed(2)}ms
-                          </span>
-                        </div>`;
-                      })}`
-                  : html``}
-              </div>`
-            : html``}
+                            <span class="layer-name"></span>
+                            <span class="layer-metrics">
+                              ${this.uiText.renderLayersTableHeader}
+                            </span>
+                          </div>
+                          ${renderLayersToShow.map((layer) => {
+                            const width = Math.min(
+                              100,
+                              (layer.avg / maxLayerAvg) * 100 || 0,
+                            );
+                            const perTickRenderMs =
+                              this.renderLastTickLayerDurations[layer.name] ??
+                              0;
+                            const perTickRenderAvgMs =
+                              this.renderPerTickLayerStats.get(layer.name)
+                                ?.avg ?? 0;
+                            const isInactive = perTickRenderMs <= 0.01;
+                            const title = `${layer.name} | last tick render: ${perTickRenderMs.toFixed(
+                              2,
+                            )}ms`;
+                            return html`<div
+                              class="layer-row ${isInactive ? "inactive" : ""}"
+                              style="--pct: ${width}%;"
+                              title=${title}
+                            >
+                              <span class="layer-name" title=${layer.name}
+                                >${layer.name}
+                              </span>
+                              <span class="layer-metrics">
+                                ${layer.avg.toFixed(2)} /
+                                ${layer.max.toFixed(2)}ms |
+                                ${perTickRenderAvgMs.toFixed(2)}ms
+                              </span>
+                            </div>`;
+                          })}`
+                      : html``
+                  }
+                </div>`
+              : html``
+          }
+          ${
+            this.tickLayerStats.size
+              ? html`<div class="layers-section">
+                  <div class="performance-line section-header">
+                    <span>${this.uiText.tickLayersHeader}</span>
+                    <button
+                      class="collapse-button"
+                      @click=${this.toggleTickLayersExpanded}
+                      title=${
+                        this.tickLayersExpanded
+                          ? this.uiText.collapse
+                          : this.uiText.expand
+                      }
+                    >
+                      ${this.tickLayersExpanded ? "▾" : "▸"}
+                    </button>
+                  </div>
+                  <div class="performance-line">
+                    ${translateText("performance_overlay.tick_layers_summary", {
+                      count: this.tickLayerLastCount,
+                      ms: this.tickLayerLastTotalMs.toFixed(2),
+                    })}
+                  </div>
+                  ${
+                    this.tickLayersExpanded
+                      ? html`<div
+                            class="layer-row table-header"
+                            style="--pct: 0%;"
+                          >
+                            <span class="layer-name"></span>
+                            <span class="layer-metrics">
+                              ${this.uiText.tickLayersTableHeader}
+                            </span>
+                          </div>
+                          ${tickLayersToShow.map((layer) => {
+                            const width = Math.min(
+                              100,
+                              (layer.avg / maxTickLayerAvg) * 100 || 0,
+                            );
+                            const lastTickMs =
+                              this.tickLayerLastDurations[layer.name] ?? 0;
+                            const isInactive = lastTickMs <= 0.01;
+                            const title = `${layer.name} | last tick: ${lastTickMs.toFixed(2)}ms`;
+                            return html`<div
+                              class="layer-row ${isInactive ? "inactive" : ""}"
+                              style="--pct: ${width}%;"
+                              title=${title}
+                            >
+                              <span class="layer-name" title=${layer.name}
+                                >${layer.name}</span
+                              >
+                              <span class="layer-metrics">
+                                ${layer.avg.toFixed(2)} /
+                                ${layer.max.toFixed(2)}ms
+                              </span>
+                            </div>`;
+                          })}`
+                      : html``
+                  }
+                </div>`
+              : html``
+          }
         </div>
       </div>
     `;

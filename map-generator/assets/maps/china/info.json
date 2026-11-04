@@ -1,9 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "name": "China",
   "id": "China",
   "translation_key": "map.china",
   "categories": ["countries", "asia"],
-  "multiplayer_frequency": 9,
+  "location": { "lat": 33, "lon": 105 },
+  "author": "crunchybbb",
+  "layers": [{ "id": "label", "placement": "water", "nukeable": false }],
   "nations": [
     {
       "coordinates": [2086, 2052],

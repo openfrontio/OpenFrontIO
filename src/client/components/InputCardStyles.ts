@@ -1,6 +1,6 @@
-export const ACTIVE_CARD =
+const ACTIVE_CARD =
   "bg-malibu-blue/20 border-malibu-blue/50 shadow-[var(--shadow-malibu-blue)]";
-export const INACTIVE_CARD =
+const INACTIVE_CARD =
   "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20";
 export const INPUT_CLASS =
   "w-full text-center rounded bg-black/60 text-white text-sm font-bold border border-white/20 focus:outline-none focus:border-malibu-blue p-1 my-1";

@@ -37,33 +37,33 @@ export class InventoryLoadoutBar extends LitElement {
 
     return html`<div
       data-loadout-previews
-      class="flex h-10 items-center justify-center ${entry.category ===
-      "effects"
-        ? "-space-x-3"
-        : ""}"
+      class="flex h-10 items-center justify-center ${
+        entry.category === "effects" ? "-space-x-3" : ""
+      }"
     >
       ${items.map(
         (item, index) =>
           html`<div
             data-loadout-preview
-            class="h-10 w-10 overflow-hidden rounded-lg border border-white/20 bg-black/30 p-1 ${entry.category ===
-            "effects"
-              ? "relative"
-              : ""}"
-            style=${entry.category === "effects"
-              ? `z-index:${3 - index}`
-              : nothing}
+            class="h-10 w-10 overflow-hidden rounded-lg border border-white/20 bg-black/30 p-1 ${
+              entry.category === "effects" ? "relative" : ""
+            }"
+            style=${
+              entry.category === "effects" ? `z-index:${3 - index}` : nothing
+            }
           >
             <cosmetic-preview .resolved=${item}></cosmetic-preview>
           </div>`,
       )}
-      ${hiddenCount > 0
-        ? html`<span
-            data-loadout-more
-            class="relative z-10 flex h-7 min-w-7 items-center justify-center rounded-full border border-white/20 bg-slate-800 px-1 text-xs font-black text-white"
-            >+${hiddenCount}</span
-          >`
-        : nothing}
+      ${
+        hiddenCount > 0
+          ? html`<span
+              data-loadout-more
+              class="relative z-10 flex h-7 min-w-7 items-center justify-center rounded-full border border-white/20 bg-slate-800 px-1 text-xs font-black text-white"
+              >+${hiddenCount}</span
+            >`
+          : nothing
+      }
     </div>`;
   }
 
@@ -91,9 +91,11 @@ export class InventoryLoadoutBar extends LitElement {
                 category: entry.label,
                 summary: ariaSummary,
               })}
-              class="flex min-h-24 min-w-36 flex-col items-center justify-center gap-1 rounded-xl border p-3 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${isActive
-                ? "border-blue-400 bg-blue-500/20 text-white"
-                : "border-white/10 bg-white/5 text-white/75 hover:bg-white/10"}"
+              class="flex min-h-24 min-w-36 flex-col items-center justify-center gap-1 rounded-xl border p-3 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+                isActive
+                  ? "border-blue-400 bg-blue-500/20 text-white"
+                  : "border-white/10 bg-white/5 text-white/75 hover:bg-white/10"
+              }"
               @click=${() => this.onCategorySelect?.(entry.category)}
             >
               ${this.renderPreviews(entry)}

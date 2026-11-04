@@ -1,5 +1,6 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
+  MAX_UPGRADE_AMOUNT,
   PlayerBuildableUnitType,
   PlayerID,
   UnitType,
@@ -13,6 +14,7 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "./UserSettings";
+
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 import { GameView, UnitView } from "./view";
 
@@ -95,6 +97,28 @@ export class AlternateViewEvent implements GameEvent {
 
 export class CloseViewEvent implements GameEvent {}
 
+/**
+ * Marks a click that the radial menu's overlay forwarded to a layer below it.
+ * The layer uses this to tell a forwarded tap apart from a real press, which
+ * the browser handles itself.
+ */
+export const FORWARDED_CLICK = "forwardedFromRadialOverlay";
+/** Marks a click forwarded by the radial overlay that originated from touch. */
+export const FORWARDED_TOUCH_CLICK = "forwardedTouchFromRadialOverlay";
+
+export function isForwardedClick(event: Event): boolean {
+  return (
+    (event as unknown as Record<string, unknown>)[FORWARDED_CLICK] === true
+  );
+}
+
+export function isForwardedTouchClick(event: Event): boolean {
+  return (
+    (event as unknown as Record<string, unknown>)[FORWARDED_TOUCH_CLICK] ===
+    true
+  );
+}
+
 export class RefreshGraphicsEvent implements GameEvent {}
 
 export class ToggleRenderDebugGuiEvent implements GameEvent {}
@@ -107,7 +131,48 @@ export class ToggleStructureEvent implements GameEvent {
   ) {}
 }
 
+export function highlightTypesForUnit(
+  unitType: PlayerBuildableUnitType,
+): PlayerBuildableUnitType[] {
+  switch (unitType) {
+    case UnitType.AtomBomb:
+    case UnitType.HydrogenBomb:
+      return [UnitType.MissileSilo, UnitType.SAMLauncher];
+    case UnitType.Warship:
+      return [UnitType.Port];
+    case UnitType.MIRV:
+      return [UnitType.MissileSilo];
+    default:
+      return [unitType];
+  }
+}
+
 export class ConfirmGhostStructureEvent implements GameEvent {}
+
+export class TouchGhostPlacementEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
+export class TouchGhostPlacementSelectEvent implements GameEvent {}
+
+export class TouchGhostPlacementMoveEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
+export class TouchGhostPlacementDragStartEvent implements GameEvent {
+  public handled = false;
+
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
 
 export class SwapRocketDirectionEvent implements GameEvent {
   constructor(public readonly rocketDirectionUp: boolean) {}
@@ -162,6 +227,21 @@ export class ShowEmojiMenuEvent implements GameEvent {
 
 /** Toggles quick chat for the player at screen position (x, y). */
 export class ShowChatMenuEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
+/** The donate keybinds: donate to the player at screen position (x, y). */
+export class DoDonateTroopsEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
+export class DoDonateGoldEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
@@ -272,8 +352,8 @@ export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
 
-  private lastMouseX: number = 0;
-  private lastMouseY: number = 0;
+  private lastMouseX: number | null = null;
+  private lastMouseY: number | null = null;
 
   private emojiTableOpen = false;
   /** Favorite keys pressed while the emoji table was open. */
@@ -292,6 +372,7 @@ export class InputHandler {
   private lastGestureScale: number | null = null;
 
   private pointerDown: boolean = false;
+  private lastPointerType: string | null = null;
 
   private alternateView = false;
 
@@ -307,6 +388,7 @@ export class InputHandler {
   private longPressTimer: ReturnType<typeof setTimeout> | null = null;
   private longPressActive: boolean = false;
   private suppressNextTap: boolean = false;
+  private touchPlacementDragState: "idle" | "candidate" | "active" = "idle";
   private readonly LONG_PRESS_MS = 800;
 
   private moveInterval: NodeJS.Timeout | null = null;
@@ -314,6 +396,8 @@ export class InputHandler {
    * `initializePointerAndKeyboardEvents()`. */
   private listenerAbort: AbortController | null = null;
   private activeKeys = new Set<string>();
+  private zoomKeysHeldBeforeControl = new Set<string>();
+  private shiftHeld = false;
   private keybinds: Record<string, string> = {};
   private keybindAndEvent: Array<[string, KeybindEntry]> = [];
   private coordinateGridEnabled = false;
@@ -422,12 +506,14 @@ export class InputHandler {
     }
     this.longPressActive = false;
     this.suppressNextTap = false;
+    this.touchPlacementDragState = "idle";
     this.selectionBoxActive = false;
     this.multiSelectionActive = false;
   }
 
   /** Re-read the player's keybinds and rebuild the key dispatch table. */
   private buildKeybindTable() {
+    this.uiState.preventStacking = false;
     this.keybinds = this.userSettings.keybinds(Platform.isMac);
     this.keybindAndEvent = [];
 
@@ -455,13 +541,25 @@ export class InputHandler {
     this.addKeybindAndEvent(this.keybinds.targetPlayer, () => {
       this.eventBus.emit(new DoTargetPlayerEvent());
     });
+    this.addKeybindAndEvent(this.keybinds.donateTroops, () => {
+      if (this.lastMouseX === null || this.lastMouseY === null) return;
+      this.eventBus.emit(
+        new DoDonateTroopsEvent(this.lastMouseX, this.lastMouseY),
+      );
+    });
+    this.addKeybindAndEvent(this.keybinds.donateGold, () => {
+      if (this.lastMouseX === null || this.lastMouseY === null) return;
+      this.eventBus.emit(
+        new DoDonateGoldEvent(this.lastMouseX, this.lastMouseY),
+      );
+    });
     // Shares R with reset graphics, which needs its modifier held, so quick
     // chat only takes the key on its own.
     this.addKeybindAndEvent(
       this.keybinds.quickChat,
       () => {
         this.eventBus.emit(
-          new ShowChatMenuEvent(this.lastMouseX, this.lastMouseY),
+          new ShowChatMenuEvent(this.lastMouseX ?? 0, this.lastMouseY ?? 0),
         );
       },
       (e: KeyboardEvent) =>
@@ -613,7 +711,6 @@ export class InputHandler {
       "wheel",
       (e) => {
         this.onScroll(e);
-        this.onShiftScroll(e);
         e.preventDefault();
       },
       { passive: false, signal },
@@ -654,9 +751,6 @@ export class InputHandler {
       (e) => {
         this.lastMouseX = e.clientX;
         this.lastMouseY = e.clientY;
-        if (e.movementX || e.movementY) {
-          this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
-        }
       },
       { signal },
     );
@@ -668,6 +762,9 @@ export class InputHandler {
       "blur",
       () => {
         this.activeKeys.clear();
+        this.uiState.preventStacking = false;
+        this.zoomKeysHeldBeforeControl.clear();
+        this.shiftHeld = false;
         if (this.alternateView) {
           this.alternateView = false;
           this.eventBus.emit(new AlternateViewEvent(false));
@@ -688,29 +785,34 @@ export class InputHandler {
       let deltaX = 0;
       let deltaY = 0;
 
-      // Skip if select warship modifier is held down
-      if (this.activeKeys.has(this.keybinds.boxSelectWarships)) {
+      // Skip movement if selection box drag is active or a non-Shift warship selector is held
+      if (
+        this.selectionBoxActive ||
+        (this.keybinds.boxSelectWarships !== "ShiftLeft" &&
+          this.keybinds.boxSelectWarships !== "ShiftRight" &&
+          this.activeKeys.has(this.keybinds.boxSelectWarships))
+      ) {
         return;
       }
 
       if (
-        this.activeKeys.has(this.keybinds.moveUp) ||
-        this.activeKeys.has(this.keybinds.moveUpArrow)
+        this.isContinuousActionActive(this.keybinds.moveUp) ||
+        this.isContinuousActionActive(this.keybinds.moveUpArrow)
       )
         deltaY += this.PAN_SPEED;
       if (
-        this.activeKeys.has(this.keybinds.moveDown) ||
-        this.activeKeys.has(this.keybinds.moveDownArrow)
+        this.isContinuousActionActive(this.keybinds.moveDown) ||
+        this.isContinuousActionActive(this.keybinds.moveDownArrow)
       )
         deltaY -= this.PAN_SPEED;
       if (
-        this.activeKeys.has(this.keybinds.moveLeft) ||
-        this.activeKeys.has(this.keybinds.moveLeftArrow)
+        this.isContinuousActionActive(this.keybinds.moveLeft) ||
+        this.isContinuousActionActive(this.keybinds.moveLeftArrow)
       )
         deltaX += this.PAN_SPEED;
       if (
-        this.activeKeys.has(this.keybinds.moveRight) ||
-        this.activeKeys.has(this.keybinds.moveRightArrow)
+        this.isContinuousActionActive(this.keybinds.moveRight) ||
+        this.isContinuousActionActive(this.keybinds.moveRightArrow)
       )
         deltaX -= this.PAN_SPEED;
 
@@ -722,16 +824,16 @@ export class InputHandler {
       const cy = window.innerHeight / 2;
 
       if (
-        this.activeKeys.has(this.keybinds.zoomOut) ||
-        this.activeKeys.has(this.keybinds.zoomOutMinus) ||
-        this.activeKeys.has(this.keybinds.zoomOutNumpad)
+        this.isContinuousActionActive(this.keybinds.zoomOut) ||
+        this.isContinuousActionActive(this.keybinds.zoomOutMinus) ||
+        this.isContinuousActionActive(this.keybinds.zoomOutNumpad)
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, this.ZOOM_SPEED));
       }
       if (
-        this.activeKeys.has(this.keybinds.zoomIn) ||
-        this.activeKeys.has(this.keybinds.zoomInEqual) ||
-        this.activeKeys.has(this.keybinds.zoomInNumpad)
+        this.isContinuousActionActive(this.keybinds.zoomIn) ||
+        this.isContinuousActionActive(this.keybinds.zoomInEqual) ||
+        this.isContinuousActionActive(this.keybinds.zoomInNumpad)
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, -this.ZOOM_SPEED));
       }
@@ -755,7 +857,10 @@ export class InputHandler {
             this.eventBus.emit(new CloseViewEvent());
           } else {
             this.eventBus.emit(
-              new ShowEmojiMenuEvent(this.lastMouseX, this.lastMouseY),
+              new ShowEmojiMenuEvent(
+                this.lastMouseX ?? 0,
+                this.lastMouseY ?? 0,
+              ),
             );
           }
           return;
@@ -768,7 +873,16 @@ export class InputHandler {
           this.emojiKeysDown.add(e.code);
           return;
         }
+        // for hotkey usage, mostly an issue on Firefox.
+        // we specifically prevent the Left Alt key to avoid browser menu triggers,
+        // but allow Right Alt (often AltGr) to preserve international character input.
+        if (e.code === "AltLeft") {
+          e.preventDefault();
+        }
 
+        if (this.keybindMatchesEvent(e, this.keybinds.preventStacking)) {
+          this.uiState.preventStacking = true;
+        }
         if (this.keybindMatchesEvent(e, this.keybinds.toggleView)) {
           e.preventDefault();
           if (!this.alternateView) {
@@ -832,43 +946,56 @@ export class InputHandler {
             e.code === "NumpadAdd" ||
             e.code === "NumpadSubtract");
 
+        if (
+          (e.code === "ControlLeft" || e.code === "ControlRight") &&
+          !this.activeKeys.has("ControlLeft") &&
+          !this.activeKeys.has("ControlRight")
+        ) {
+          const zoomCodes = this.getZoomPhysicalCodes();
+          this.zoomKeysHeldBeforeControl = new Set(
+            zoomCodes.filter((code) => this.activeKeys.has(code)),
+          );
+        }
+
+        const continuousBindings = this.getContinuousBindings();
+
         const isConfiguredKeybind =
-          Object.values(this.keybinds).includes(e.code) ||
+          Object.values(this.keybinds).some((k) =>
+            this.keybindMatchesEvent(e, k),
+          ) ||
           this.keybindAndEvent.some(([k, entry]) =>
             this.keybindMatchesEvent(e, k, entry.ignoreShift),
-          );
+          ) ||
+          continuousBindings.some((k) => this.keybindMatchesEvent(e, k));
 
         if (isConfiguredKeybind && !isBrowserZoomCombo) {
           e.preventDefault();
         }
 
+        this.shiftHeld = e.shiftKey;
+
+        const continuousPhysicalCodes = continuousBindings.map(
+          (k) => this.parseKeybind(k).code,
+        );
+
         if (
           !isBrowserZoomCombo &&
-          [
-            this.keybinds.moveUp,
-            this.keybinds.moveDown,
-            this.keybinds.moveLeft,
-            this.keybinds.moveRight,
-            this.keybinds.moveUpArrow,
-            this.keybinds.moveDownArrow,
-            this.keybinds.moveLeftArrow,
-            this.keybinds.moveRightArrow,
-            this.keybinds.zoomOut,
-            this.keybinds.zoomIn,
-            this.keybinds.zoomOutMinus,
-            this.keybinds.zoomOutNumpad,
-            this.keybinds.zoomInEqual,
-            this.keybinds.zoomInNumpad,
-            this.keybinds.attackRatioDown,
-            this.keybinds.attackRatioUp,
-            this.keybinds.centerCamera,
-            "ControlLeft",
-            "ControlRight",
-            this.keybinds.boxSelectWarships,
-            this.keybinds.emojiMenuModifier,
-            this.keybinds.buildMenuModifier,
-            this.keybinds.altKey,
-          ].includes(e.code)
+          (continuousPhysicalCodes.includes(e.code) ||
+            [
+              "ShiftLeft",
+              "ShiftRight",
+              "ControlLeft",
+              "ControlRight",
+              "AltLeft",
+              "AltRight",
+              "MetaLeft",
+              "MetaRight",
+              this.keybinds.boxSelectWarships,
+              this.keybinds.emojiMenuModifier,
+              this.keybinds.buildMenuModifier,
+              this.keybinds.buildScrollModifier,
+              this.keybinds.altKey,
+            ].includes(e.code))
         ) {
           this.activeKeys.add(e.code);
         }
@@ -887,33 +1014,67 @@ export class InputHandler {
     window.addEventListener(
       "keyup",
       (e) => {
+        const hold = this.parseKeybind(this.keybinds.preventStacking);
+        // macOS can swallow H's keyup while Cmd is held. Reset on Cmd release
+        // before the text-input guard as focus may have moved into a menu.
+        if (
+          e.code === hold.code ||
+          (hold.shift && !e.shiftKey) ||
+          e.code === "MetaLeft" ||
+          e.code === "MetaRight"
+        ) {
+          this.uiState.preventStacking = false;
+        }
         const isTextInput = this.isTextInputTarget(e.target);
         if (isTextInput && !this.activeKeys.has(e.code)) {
           return;
         }
+        // for hotkey usage, mostly an issue on Firefox.
+        // we specifically prevent the Left Alt key to avoid browser menu triggers,
+        // but allow Right Alt (often AltGr) to preserve international character input.
+        if (e.code === "AltLeft") {
+          e.preventDefault();
+        }
 
-        // When the meta (cmd) or ctrl key is released, any keys that were held
-        // simultaneously will have had their keyup swallowed by the browser
-        // (e.g. cmd+Plus for browser zoom). Clear zoom-related keys to
-        // prevent them staying stuck in activeKeys.
-        if (
-          e.code === "MetaLeft" ||
-          e.code === "MetaRight" ||
-          e.code === "ControlLeft" ||
-          e.code === "ControlRight"
-        ) {
-          this.activeKeys.delete("Minus");
-          this.activeKeys.delete("Equal");
-          this.activeKeys.delete("NumpadAdd");
-          this.activeKeys.delete("NumpadSubtract");
-          this.activeKeys.delete(this.keybinds.zoomIn);
-          this.activeKeys.delete(this.keybinds.zoomOut);
+        this.shiftHeld = e.shiftKey;
+
+        // When meta (Cmd on macOS) is released, any keys released while Cmd was
+        // held will have had their keyup swallowed by the browser (e.g. Cmd+Plus
+        // for browser zoom, or releasing a zoom key while Cmd was held). Clear all
+        // zoom keys to prevent them staying stuck in activeKeys forever.
+        if (e.code === "MetaLeft" || e.code === "MetaRight") {
+          const otherMetaHeld =
+            (e.code === "MetaLeft" && this.activeKeys.has("MetaRight")) ||
+            (e.code === "MetaRight" && this.activeKeys.has("MetaLeft"));
+          if (!otherMetaHeld) {
+            for (const code of this.getZoomPhysicalCodes()) {
+              this.activeKeys.delete(code);
+            }
+          }
+        }
+
+        // When Control is released, clear zoom keys that were pressed after
+        // Control was held (e.g. Ctrl+Plus for browser zoom), but preserve keys
+        // that were already held before Control was pressed.
+        if (e.code === "ControlLeft" || e.code === "ControlRight") {
+          const otherCtrlHeld =
+            (e.code === "ControlLeft" && this.activeKeys.has("ControlRight")) ||
+            (e.code === "ControlRight" && this.activeKeys.has("ControlLeft"));
+          if (!otherCtrlHeld) {
+            for (const code of this.getZoomPhysicalCodes()) {
+              if (!this.zoomKeysHeldBeforeControl.has(code)) {
+                this.activeKeys.delete(code);
+              }
+            }
+            this.zoomKeysHeldBeforeControl.clear();
+          }
         }
 
         if (this.emojiTableOpen) {
           const slot = favoriteSlotForKey(e);
           if (slot !== null) {
             e.preventDefault();
+            this.zoomKeysHeldBeforeControl.delete(e.code);
             this.activeKeys.delete(e.code);
             // Only a press made while the table was open sends; releasing a
             // key held from before (say, to pan) doesn't.
@@ -935,6 +1096,7 @@ export class InputHandler {
             item[1].handler(e);
           }
         }
+        this.zoomKeysHeldBeforeControl.delete(e.code);
         this.activeKeys.delete(e.code);
 
         // Reset crosshair when Shift is released (unless selection box or multi-selection still active)
@@ -951,6 +1113,7 @@ export class InputHandler {
   }
 
   private onPointerDown(event: PointerEvent) {
+    this.lastPointerType = event.pointerType;
     if (event.button === 1) {
       event.preventDefault();
       this.eventBus.emit(new AutoUpgradeEvent(event.clientX, event.clientY));
@@ -971,10 +1134,32 @@ export class InputHandler {
       this.lastPointerDownX = event.clientX;
       this.lastPointerDownY = event.clientY;
 
+      // A new gesture starts clean: a tap suppression from an earlier
+      // gesture (eg. a pinch) must not swallow this one's tap.
+      this.suppressNextTap = false;
+
       this.eventBus.emit(new MouseDownEvent(event.clientX, event.clientY));
 
+      this.touchPlacementDragState = "idle";
+      if (
+        event.pointerType === "touch" &&
+        this.uiState.ghostStructure !== null
+      ) {
+        const dragStart = new TouchGhostPlacementDragStartEvent(
+          event.clientX,
+          event.clientY,
+        );
+        this.eventBus.emit(dragStart);
+        if (dragStart.handled) {
+          this.touchPlacementDragState = "candidate";
+        }
+      }
+
       // Start long-press timer for touch devices
-      if (event.pointerType === "touch") {
+      if (
+        event.pointerType === "touch" &&
+        this.uiState.ghostStructure === null
+      ) {
         this.longPressActive = false;
         if (this.longPressTimer !== null) {
           clearTimeout(this.longPressTimer);
@@ -1003,6 +1188,10 @@ export class InputHandler {
         this.longPressActive = false;
         this.canvas.style.cursor = "";
       }
+      this.touchPlacementDragState = "idle";
+      // The drag is over, but the finger that started it must not read as a
+      // tap: releasing it would confirm the build preview it was dragging.
+      this.suppressNextTap = true;
       this.lastPinchDistance = this.getPinchDistance();
     }
   }
@@ -1103,6 +1292,29 @@ export class InputHandler {
     }
     const wasLongPress = this.longPressActive;
     this.longPressActive = false;
+    const wasTouchPlacementDrag = this.touchPlacementDragState === "active";
+    this.touchPlacementDragState = "idle";
+    if (wasTouchPlacementDrag) {
+      if (event.type === "pointerup") {
+        this.eventBus.emit(
+          new TouchGhostPlacementMoveEvent(event.clientX, event.clientY),
+        );
+      } else {
+        this.suppressNextTap = false;
+      }
+      event.preventDefault();
+      return;
+    }
+    if (event.type === "pointercancel") {
+      this.suppressNextTap = false;
+      this.canvas.style.cursor = "";
+      if (this.selectionBoxActive) {
+        this.selectionBoxActive = false;
+        this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
+      }
+      event.preventDefault();
+      return;
+    }
     if (wasLongPress) {
       this.canvas.style.cursor = "";
       // If long-press fired but no drag happened (selectionBoxActive is false),
@@ -1168,7 +1380,11 @@ export class InputHandler {
           event.preventDefault();
           return;
         }
-        this.eventBus.emit(new TouchEvent(event.x, event.y));
+        if (this.uiState.ghostStructure !== null) {
+          this.eventBus.emit(new TouchGhostPlacementEvent(event.x, event.y));
+        } else {
+          this.eventBus.emit(new TouchEvent(event.x, event.y));
+        }
         event.preventDefault();
         return;
       }
@@ -1177,42 +1393,71 @@ export class InputHandler {
         !this.userSettings.leftClickOpensMenu() ||
         event.shiftKey ||
         this.gameView.inSpawnPhase() || // No Radial Menu during spawn phase, only spawn point selection
-        this.uiState.ghostStructure !== null // Block radial menu on left click if building
+        this.uiState.ghostStructure !== null || // Block radial menu on left click if building
+        this.gameView.config().gameConfig().tutorial === true // The tutorial teaches the click that attacks
       ) {
         this.eventBus.emit(new MouseUpEvent(event.x, event.y));
       } else {
         this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
       }
+      return;
     }
+
+    // The gesture ended as a drag, so it was never a tap. Drop any tap
+    // suppression it left behind instead of letting it swallow the next
+    // gesture's tap.
+    this.suppressNextTap = false;
   }
 
   private onScroll(event: WheelEvent) {
-    if (!event.shiftKey) {
-      const realCtrl =
-        this.activeKeys.has("ControlLeft") ||
-        this.activeKeys.has("ControlRight");
-      if (event.ctrlKey) {
-        if (!realCtrl) {
-          // Pinch-to-zoom gesture (trackpad): small deltas, amplify.
-          // Ignore large deltas — those are browser zoom shortcuts (cmd+/cmd-)
-          // which fire synthetic wheel events we don't want to handle.
-          if (Math.abs(event.deltaY) <= 10) {
-            this.eventBus.emit(
-              new ZoomEvent(event.x, event.y, event.deltaY * 10),
-            );
-          }
-        }
-        // Always return when ctrlKey is set — whether it's a real ctrl scroll,
-        // a pinch gesture, or a browser zoom event, none should reach the
-        // regular scroll path below.
-        return;
-      }
-      // Regular scroll wheel: ignore tiny residual momentum events that macOS
-      // keeps sending after a gesture ends (especially after browser zoom changes
-      // devicePixelRatio, which can cause these to accumulate into runaway zoom).
-      if (Math.abs(event.deltaY) < 2) return;
-      this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY));
+    const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
+    // The hardcoded shift scroll attack ratio changing takes priority.
+    if (event.shiftKey) {
+      const increment = this.userSettings.attackRatioIncrement();
+      const ratio = scrollValue > 0 ? -increment : increment;
+      this.eventBus.emit(new AttackRatioEvent(ratio));
+      return;
     }
+
+    if (this.activeKeys.has(this.keybinds.buildScrollModifier)) {
+      if (Math.abs(scrollValue) > 2) {
+        this.setGhostStructure(
+          this.uiState.ghostStructure,
+          scrollValue > 0 ? "decrease" : "increase",
+        );
+      }
+      // Prevent zooming if the build scroll modifier is active.
+      return;
+    }
+
+    // Any alt also blocks zooming, to match behavior of Ctrl / Shift
+    if (event.altKey) {
+      return;
+    }
+
+    const realCtrl =
+      this.activeKeys.has("ControlLeft") || this.activeKeys.has("ControlRight");
+    if (event.ctrlKey) {
+      if (!realCtrl) {
+        // Pinch-to-zoom gesture (trackpad): small deltas, amplify.
+        // Ignore large deltas — those are browser zoom shortcuts (cmd+/cmd-)
+        // which fire synthetic wheel events we don't want to handle.
+        if (Math.abs(event.deltaY) <= 10) {
+          this.eventBus.emit(
+            new ZoomEvent(event.x, event.y, event.deltaY * 10),
+          );
+        }
+      }
+      // Always return when ctrlKey is set — whether it's a real ctrl scroll,
+      // a pinch gesture, or a browser zoom event, none should reach the
+      // regular scroll path below.
+      return;
+    }
+    // Regular scroll wheel: ignore tiny residual momentum events that macOS
+    // keeps sending after a gesture ends (especially after browser zoom changes
+    // devicePixelRatio, which can cause these to accumulate into runaway zoom).
+    if (Math.abs(event.deltaY) < 2) return;
+    this.eventBus.emit(new ZoomEvent(event.x, event.y, event.deltaY));
   }
 
   /**
@@ -1238,16 +1483,15 @@ export class InputHandler {
     this.eventBus.emit(new ZoomEvent(event.clientX, event.clientY, delta));
   }
 
-  private onShiftScroll(event: WheelEvent) {
-    if (event.shiftKey) {
-      const scrollValue = event.deltaY === 0 ? event.deltaX : event.deltaY;
-      const increment = this.userSettings.attackRatioIncrement();
-      const ratio = scrollValue > 0 ? -increment : increment;
-      this.eventBus.emit(new AttackRatioEvent(ratio));
-    }
-  }
-
   private onPointerMove(event: PointerEvent) {
+    if (event.pointerType !== "touch") {
+      this.lastMouseX = event.clientX;
+      this.lastMouseY = event.clientY;
+      if (event.movementX || event.movementY) {
+        this.eventBus.emit(new MouseMoveEvent(event.clientX, event.clientY));
+      }
+    }
+
     if (event.button === 1) {
       event.preventDefault();
       return;
@@ -1281,12 +1525,19 @@ export class InputHandler {
     if (this.pointers.size === 1) {
       const deltaX = event.clientX - this.lastPointerX;
       const deltaY = event.clientY - this.lastPointerY;
+      const moveDist =
+        Math.abs(event.clientX - this.lastPointerDownX) +
+        Math.abs(event.clientY - this.lastPointerDownY);
+
+      if (
+        this.touchPlacementDragState === "candidate" &&
+        moveDist >= this.DRAG_THRESHOLD_PX
+      ) {
+        this.touchPlacementDragState = "active";
+      }
 
       // Cancel long-press if finger moved significantly before timer fires
       if (this.longPressTimer !== null) {
-        const moveDist =
-          Math.abs(event.clientX - this.lastPointerDownX) +
-          Math.abs(event.clientY - this.lastPointerDownY);
         if (moveDist >= this.DRAG_THRESHOLD_PX) {
           clearTimeout(this.longPressTimer);
           this.longPressTimer = null;
@@ -1295,7 +1546,14 @@ export class InputHandler {
 
       // If shift is held OR touch long-press is active OR selection box already
       // started, continue emitting selection box updates
-      if (
+      if (this.touchPlacementDragState === "active") {
+        this.eventBus.emit(
+          new TouchGhostPlacementMoveEvent(event.clientX, event.clientY),
+        );
+      } else if (this.touchPlacementDragState === "candidate") {
+        // Keep a hold that began on the preview stable until the long-press
+        // threshold is reached; ordinary touches elsewhere still pan.
+      } else if (
         this.selectionBoxActive ||
         this.activeKeys.has(this.keybinds.boxSelectWarships) ||
         this.longPressActive
@@ -1331,6 +1589,12 @@ export class InputHandler {
 
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
+    if (
+      this.lastPointerType === "touch" &&
+      this.uiState.ghostStructure !== null
+    ) {
+      return;
+    }
     if (this.gameView.inSpawnPhase()) {
       return;
     }
@@ -1347,13 +1611,56 @@ export class InputHandler {
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 
-  private setGhostStructure(ghostStructure: PlayerBuildableUnitType | null) {
+  public setGhostStructure(
+    ghostStructure: PlayerBuildableUnitType | null,
+    source: "increase" | "decrease" | "GUIclick" | "hotkey" = "hotkey",
+  ) {
+    const previousGhostStructure = this.uiState.ghostStructure;
+    if (source === "GUIclick" && previousGhostStructure !== ghostStructure) {
+      this.eventBus.emit(new CloseViewEvent());
+    }
+    if (previousGhostStructure !== null && ghostStructure === null) {
+      this.eventBus.emit(new ToggleStructureEvent(null));
+    }
+    if (
+      source === "hotkey" &&
+      ghostStructure !== null &&
+      previousGhostStructure !== ghostStructure
+    ) {
+      this.eventBus.emit(
+        new ToggleStructureEvent(highlightTypesForUnit(ghostStructure)),
+      );
+    }
+
     if (
       this.uiState.ghostStructure === ghostStructure &&
       ghostStructure !== null
     ) {
-      this.uiState.upgradeMultiplier =
-        this.uiState.upgradeMultiplier === 1 ? 5 : 1;
+      const currentMultiplier = this.uiState.upgradeMultiplier ?? 1;
+      switch (source) {
+        case "GUIclick":
+        case "hotkey":
+          // first jump goes 1 -> 5 as before
+          this.uiState.upgradeMultiplier =
+            currentMultiplier === 1 ? 5 : currentMultiplier + 5;
+          // allow going back to 1 quickly by using hotkey.
+          if (this.uiState.upgradeMultiplier > MAX_UPGRADE_AMOUNT) {
+            this.uiState.upgradeMultiplier = 1;
+          }
+          break;
+        case "increase":
+          this.uiState.upgradeMultiplier = currentMultiplier + 1;
+          // clamp mouse wheel users to max
+          if (this.uiState.upgradeMultiplier > MAX_UPGRADE_AMOUNT) {
+            this.uiState.upgradeMultiplier = MAX_UPGRADE_AMOUNT;
+          }
+          break;
+        case "decrease":
+          // decrease only if above 1, we do not clear ghosts with scrollDown
+          this.uiState.upgradeMultiplier =
+            currentMultiplier > 1 ? currentMultiplier - 1 : 1;
+          break;
+      }
     } else {
       this.uiState.upgradeMultiplier = 1;
       this.uiState.ghostStructure = ghostStructure;
@@ -1385,6 +1692,67 @@ export class InputHandler {
     return (
       e.code === parsed.code && (ignoreShift || e.shiftKey === parsed.shift)
     );
+  }
+
+  private isShiftHeld(): boolean {
+    return this.shiftHeld;
+  }
+
+  /**
+   * Evaluates whether a continuous movement or zoom action is currently active.
+   *
+   * A binding is active when its physical key is held in `activeKeys` and its
+   * Shift-modifier condition is satisfied:
+   * - Shift-modified bindings (e.g. "Shift+ArrowUp") require Shift to be held.
+   *   Releasing Shift while the physical key remains held stops the action.
+   *   Pressing Shift while the physical key is already held activates the action.
+   * - Unmodified bindings (e.g. "ArrowUp") require Shift NOT to be held.
+   *   This ensures unmodified controls do not activate when Shift is held for
+   *   other actions (such as warship box selection).
+   * - Unbound ("Null" or undefined) bindings never activate.
+   */
+  private isContinuousActionActive(keybindValue: string | undefined): boolean {
+    if (!keybindValue || keybindValue === "Null") {
+      return false;
+    }
+    const { shift, code } = this.parseKeybind(keybindValue);
+    if (!this.activeKeys.has(code)) {
+      return false;
+    }
+    const shiftHeld = this.isShiftHeld();
+    return shift ? shiftHeld : !shiftHeld;
+  }
+
+  private getContinuousBindings(): string[] {
+    const bindings = [
+      this.keybinds.moveUp,
+      this.keybinds.moveUpArrow,
+      this.keybinds.moveDown,
+      this.keybinds.moveDownArrow,
+      this.keybinds.moveLeft,
+      this.keybinds.moveLeftArrow,
+      this.keybinds.moveRight,
+      this.keybinds.moveRightArrow,
+      this.keybinds.zoomOut,
+      this.keybinds.zoomOutMinus,
+      this.keybinds.zoomOutNumpad,
+      this.keybinds.zoomIn,
+      this.keybinds.zoomInEqual,
+      this.keybinds.zoomInNumpad,
+      this.keybinds.attackRatioDown,
+      this.keybinds.attackRatioUp,
+      this.keybinds.centerCamera,
+    ];
+    return bindings.filter(
+      (k): k is string => typeof k === "string" && k !== "" && k !== "Null",
+    );
+  }
+
+  private getZoomPhysicalCodes(): string[] {
+    const configured = [this.keybinds.zoomIn, this.keybinds.zoomOut]
+      .filter((code): code is string => Boolean(code) && code !== "Null")
+      .map((code) => this.parseKeybind(code).code);
+    return ["Minus", "Equal", "NumpadAdd", "NumpadSubtract", ...configured];
   }
 
   /**
@@ -1579,6 +1947,9 @@ export class InputHandler {
     // renderer has already removed.
     this.resetPointerState();
     this.activeKeys.clear();
+    this.uiState.preventStacking = false;
+    this.zoomKeysHeldBeforeControl.clear();
+    this.shiftHeld = false;
     this.emojiTableOpen = false;
     this.emojiKeysDown.clear();
     this.keybindAndEvent = [];

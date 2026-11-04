@@ -39,6 +39,7 @@ describe("WinCheckExecution", () => {
         gameMode: GameMode.Team,
       })),
       percentageTilesOwnedToWin: vi.fn(() => 50),
+      percentageTilesOwnedToWinTenths: vi.fn(() => 500),
     }));
     winCheck.init(mg, 0);
     const spy = vi.spyOn(winCheck as any, "checkWinnerTeam");
@@ -921,5 +922,87 @@ describe("WinCheckExecution - Clan Wars Team Elimination", () => {
       expect.anything(),
     );
     expect(winCheck.isActive()).toBe(false);
+  });
+});
+
+describe("WinCheckExecution - Custom win threshold", () => {
+  // 1000 land tiles keeps the math readable: 1 tile = 0.1%.
+  async function checkWithTiles(
+    tiles: number,
+    winThresholdTenths: number | null | undefined,
+  ) {
+    const game: any = await setup("big_plains", {
+      gameMode: GameMode.FFA,
+      winThresholdTenths,
+    });
+    const player = {
+      numTilesOwned: vi.fn(() => tiles),
+      name: vi.fn(() => "P1"),
+      type: vi.fn(() => PlayerType.Human),
+    };
+    game.players = vi.fn(() => [player]);
+    game.numLandTiles = vi.fn(() => 1000);
+    game.numTilesWithFallout = vi.fn(() => 0);
+    game.stats = vi.fn(() => ({ stats: () => ({}) }));
+    game.setWinner = vi.fn();
+    const winCheck = new WinCheckExecution();
+    winCheck.init(game, 0);
+    winCheck.checkWinnerFFA();
+    return { game, player, won: game.setWinner.mock.calls.length > 0 };
+  }
+
+  test("defaults to 80% when no threshold is set", async () => {
+    const game = await setup("big_plains", { gameMode: GameMode.FFA });
+    expect(game.config().percentageTilesOwnedToWinTenths(0)).toBe(800);
+    expect(game.config().percentageTilesOwnedToWin(0)).toBe(80);
+  });
+
+  test("null (host toggle off) falls back to the 80% default", async () => {
+    const game = await setup("big_plains", {
+      gameMode: GameMode.FFA,
+      winThresholdTenths: null,
+    });
+    expect(game.config().percentageTilesOwnedToWinTenths(0)).toBe(800);
+  });
+
+  test("a custom threshold keeps its decimal", async () => {
+    const game = await setup("big_plains", {
+      gameMode: GameMode.FFA,
+      winThresholdTenths: 755,
+    });
+    expect(game.config().percentageTilesOwnedToWinTenths(0)).toBe(755);
+    expect(game.config().percentageTilesOwnedToWin(0)).toBe(75.5);
+  });
+
+  test("holding exactly the threshold does not win (strict >)", async () => {
+    expect((await checkWithTiles(505, 505)).won).toBe(false);
+  });
+
+  test("one tile over a decimal threshold wins", async () => {
+    expect((await checkWithTiles(506, 505)).won).toBe(true);
+  });
+
+  test("a low threshold lets a small share win", async () => {
+    expect((await checkWithTiles(101, 100)).won).toBe(true);
+    expect((await checkWithTiles(100, 100)).won).toBe(false);
+  });
+
+  test("the 99.9% maximum can still be won", async () => {
+    expect((await checkWithTiles(1000, 999)).won).toBe(true);
+    expect((await checkWithTiles(999, 999)).won).toBe(false);
+  });
+
+  test("overtime decays from the custom base in whole points", async () => {
+    const game = await setup("big_plains", {
+      gameMode: GameMode.FFA,
+      winThresholdTenths: 755,
+      overtime: { enabled: true, startMinutes: 1 },
+    });
+    const config = game.config();
+    expect(config.percentageTilesOwnedToWinTenths(60)).toBe(755);
+    // 2%/min -> one whole point (10 tenths) every 30 seconds.
+    expect(config.percentageTilesOwnedToWinTenths(90)).toBe(745);
+    expect(config.percentageTilesOwnedToWinTenths(60 + 5 * 60)).toBe(655);
+    expect(config.percentageTilesOwnedToWinTenths(60 + 60 * 60)).toBe(0);
   });
 });

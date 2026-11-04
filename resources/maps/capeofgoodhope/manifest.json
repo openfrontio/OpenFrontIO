@@ -181,7 +181,7 @@
       "name": "Boulders"
     }
   ],
-  "categories": ["new", "africa"],
+  "categories": ["africa"],
   "id": "CapeOfGoodHope",
   "map": {
     "height": 1928,
@@ -198,7 +198,6 @@
     "num_land_tiles": 447475,
     "width": 964
   },
-  "multiplayer_frequency": 4,
   "name": "Cape Of Good Hope",
   "nations": [
     {

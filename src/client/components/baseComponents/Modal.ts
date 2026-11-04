@@ -1,5 +1,7 @@
 import { LitElement, PropertyValues, html } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import { prefersReducedMotion } from "../../utilities/ReducedMotion";
+import { translateText } from "../../Utils";
 import { documentStylesSheet } from "./SharedStyles";
 
 export type OModalTab = { key: string; label: string };
@@ -32,6 +34,10 @@ export class OModal extends LitElement {
   @property({ type: String })
   public maxWidth = "";
 
+  /** A left-aligned panel with an unobscured preview of the game behind it. */
+  @property({ type: Boolean })
+  public sidePanel = false;
+
   @property({ type: Array })
   public tabs: OModalTab[] = [];
 
@@ -41,7 +47,25 @@ export class OModal extends LitElement {
   @property({ attribute: false })
   public onTabChange?: (key: string) => void;
 
+  @property({ type: Boolean }) public showScrollToTop = false;
+  @state() private showScrollTopButton = false;
+  private scrollingToTop = false;
+  private lastScrollTop = 0;
+
   public onClose?: () => void;
+
+  public resetScrollToTop(): void {
+    this.scrollingToTop = false;
+    this.showScrollTopButton = false;
+    this.lastScrollTop = 0;
+  }
+
+  public syncScrollToTop(): void {
+    const scrollTop = this.scrollContainer?.scrollTop ?? 0;
+    this.scrollingToTop = false;
+    this.lastScrollTop = scrollTop;
+    this.showScrollTopButton = this.showScrollToTop && scrollTop > 200;
+  }
 
   public open() {
     if (!this.isModalOpen) {
@@ -56,6 +80,7 @@ export class OModal extends LitElement {
   public close() {
     if (this.isModalOpen) {
       this.isModalOpen = false;
+      this.resetScrollToTop();
       this.onClose?.();
       if (!this.inline) {
         OModal.openCount = Math.max(0, OModal.openCount - 1);
@@ -95,6 +120,40 @@ export class OModal extends LitElement {
     }
   }
 
+  private handleScroll(e: Event) {
+    if (!this.showScrollToTop) return;
+    const target = e.currentTarget as HTMLElement;
+    const { scrollTop } = target;
+    if (this.scrollingToTop) {
+      if (scrollTop > this.lastScrollTop || scrollTop <= 200) {
+        this.scrollingToTop = false;
+      } else {
+        this.lastScrollTop = scrollTop;
+        return;
+      }
+    }
+    this.lastScrollTop = scrollTop;
+    this.showScrollTopButton = scrollTop > 200;
+  }
+
+  private handleScrollEnd(e: Event) {
+    if (!this.showScrollToTop) return;
+    this.scrollingToTop = false;
+    this.showScrollTopButton = (e.currentTarget as HTMLElement).scrollTop > 200;
+  }
+
+  private scrollToTop() {
+    this.scrollingToTop = true;
+    this.showScrollTopButton = false;
+    this.lastScrollTop = this.scrollContainer?.scrollTop ?? 0;
+    // The button unmounts on this click; keep keyboard focus inside the modal.
+    this.scrollContainer?.focus({ preventScroll: true });
+    this.scrollContainer?.scrollTo({
+      top: 0,
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
+  }
+
   disconnectedCallback() {
     // Ensure global counter is decremented if this modal is removed while open.
     if (this.isModalOpen && !this.inline) {
@@ -129,17 +188,19 @@ export class OModal extends LitElement {
               role="tab"
               data-key=${tab.key}
               aria-selected=${active}
-              class="shrink-0 whitespace-nowrap min-h-10 px-2 py-3 text-[11px] leading-4 tracking-wide sm:px-4 sm:text-sm sm:leading-5 sm:tracking-wider font-bold uppercase transition-all relative cursor-pointer ${active
-                ? "text-aquarius"
-                : "text-white/40 hover:text-white/70"}"
+              class="shrink-0 whitespace-nowrap min-h-10 px-2 py-3 text-[11px] leading-4 tracking-wide sm:px-4 sm:text-sm sm:leading-5 sm:tracking-wider font-bold uppercase transition-all relative cursor-pointer ${
+                active ? "text-aquarius" : "text-white/40 hover:text-white/70"
+              }"
               @click=${() => this.handleTabClick(tab.key)}
             >
               ${tab.label}
-              ${active
-                ? html`<div
-                    class="absolute bottom-0 left-0 right-0 h-0.5 bg-malibu-blue"
-                  ></div>`
-                : ""}
+              ${
+                active
+                  ? html`<div
+                      class="absolute bottom-0 left-0 right-0 h-0.5 bg-malibu-blue"
+                    ></div>`
+                  : ""
+              }
             </button>
           `;
         })}
@@ -147,6 +208,7 @@ export class OModal extends LitElement {
     `;
   }
 
+  /** Share scrolling and dismissal across pages, centered dialogs, and HUD panels. */
   render() {
     const shouldRender = this.isModalOpen || this.inline;
     if (!shouldRender) {
@@ -155,19 +217,31 @@ export class OModal extends LitElement {
 
     const backdropClass = this.inline
       ? "relative z-10 w-full h-full flex items-stretch bg-transparent"
-      : "fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center overflow-hidden";
+      : this.sidePanel
+        ? "fixed inset-0 z-[9999] flex items-stretch justify-start overflow-hidden p-2 sm:p-4"
+        : "fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center overflow-hidden";
 
     const wrapperClass = this.inline
       ? "relative flex flex-col w-full h-full m-0 max-w-full max-h-none shadow-none"
-      : `relative flex flex-col w-full h-full lg:w-[90%] lg:h-auto lg:min-w-[400px] lg:max-w-[900px] lg:m-8 lg:rounded-lg lg:max-h-[calc(100vh-4rem)] ${
-          this.alwaysMaximized ? "h-auto" : ""
-        }`;
+      : this.sidePanel
+        ? "relative flex flex-col w-full h-full max-w-[400px] min-w-0"
+        : `relative flex flex-col w-full h-full lg:w-[90%] lg:h-auto lg:min-w-[400px] lg:max-w-[900px] lg:m-8 lg:rounded-lg lg:max-h-[calc(100vh-4rem)] ${
+            this.alwaysMaximized ? "h-auto" : ""
+          }`;
     const wrapperStyle =
       !this.inline && this.maxWidth ? `max-width: ${this.maxWidth};` : "";
 
     const hasTabs = this.tabs.length > 0;
-    const sectionClass =
-      "relative flex-1 min-h-0 flex flex-col text-white bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10 overflow-hidden";
+    // An inline page on a compact screen fills it edge to edge (see the `compact`
+    // variant in styles.css), so it drops its frame there. Plain `compact:`,
+    // not `in-[.page-open]:` as in MainLayout: this renders in a shadow root,
+    // which body.page-open can't reach, and an inline modal only shows while
+    // its page is open anyway.
+    const sectionClass = this.sidePanel
+      ? "graphics-panel-surface relative flex-1 min-h-0 flex flex-col text-white rounded-lg border overflow-hidden"
+      : `relative flex-1 min-h-0 flex flex-col text-white bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10 overflow-hidden ${
+          this.inline ? "compact:rounded-none! compact:border-0!" : ""
+        }`;
 
     return html`
       <aside
@@ -179,27 +253,62 @@ export class OModal extends LitElement {
           class="${wrapperClass}"
           style="${wrapperStyle}"
         >
-          ${this.inline || this.hideCloseButton
-            ? html``
-            : html`<div
-                class="absolute top-5 right-5 z-10 text-white cursor-pointer"
-                @click=${() => this.close()}
-              >
-                ✕
-              </div>`}
-          ${!this.hideHeader && this.title
-            ? html`<div
-                class="px-[1.4rem] py-[1rem] text-2xl font-bold text-white"
-              >
-                ${this.title}
-              </div>`
-            : html``}
+          ${
+            this.inline || this.hideCloseButton
+              ? html``
+              : html`<div
+                  class="absolute top-5 right-5 z-10 text-white cursor-pointer"
+                  @click=${() => this.close()}
+                >
+                  ✕
+                </div>`
+          }
+          ${
+            !this.hideHeader && this.title
+              ? html`<div
+                  class="px-[1.4rem] py-[1rem] text-2xl font-bold text-white"
+                >
+                  ${this.title}
+                </div>`
+              : html``
+          }
           <section class="${sectionClass}">
             <slot name="header"></slot>
             ${hasTabs ? this.renderTabs() : html``}
-            <div data-modal-scroll class="flex-1 min-h-0 overflow-y-auto">
+            <div
+              data-modal-scroll
+              tabindex="-1"
+              @scroll=${this.handleScroll}
+              @scrollend=${this.handleScrollEnd}
+              class="flex-1 min-h-0 overflow-y-auto outline-none ${
+                this.showScrollToTop ? "pb-16" : ""
+              }"
+            >
               <slot></slot>
             </div>
+            ${
+              this.showScrollToTop && this.showScrollTopButton
+                ? html`<button
+                    type="button"
+                    aria-label=${translateText("common.scroll_to_top")}
+                    class="absolute bottom-4 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/80 border border-white/20 text-white shadow-lg backdrop-blur-md transition-all hover:bg-white/20 active:scale-95 cursor-pointer"
+                    @click=${this.scrollToTop}
+                  >
+                    <svg
+                      class="h-5 w-5 stroke-2"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 19V5M5 12l7-7 7 7"
+                      />
+                    </svg>
+                  </button>`
+                : html``
+            }
           </section>
         </div>
       </aside>

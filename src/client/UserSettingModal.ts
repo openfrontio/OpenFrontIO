@@ -1,19 +1,28 @@
 import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { formatKeyForDisplay, translateText } from "../client/Utils";
+import {
+  formatKeyForDisplay,
+  resolveKeybindLabel,
+  translateText,
+} from "../client/Utils";
+// This type is erased at runtime; retain the import to register the setting.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
+// This type is erased at runtime; retain the import to register the setting.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./components/baseComponents/setting/SettingSelect";
 import { SettingSelect } from "./components/baseComponents/setting/SettingSelect";
 import "./components/baseComponents/setting/SettingSlider";
 import "./components/baseComponents/setting/SettingToggle";
 import { BaseModal } from "./components/BaseModal";
-import "./components/GraphicsAdvancedSettings";
-import type { GraphicsAdvancedSettings } from "./components/GraphicsAdvancedSettings";
 import "./components/GraphicsPresetSelector";
 import "./components/GraphicsPresetTools";
+import "./components/GraphicsSettingsModal";
+import type { GraphicsSettingsModal } from "./components/GraphicsSettingsModal";
+import { hudOpacitySetting } from "./components/ui/HudOpacitySetting";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   desktopDisplay,
@@ -27,6 +36,7 @@ import {
   type DesktopDisplaySnapshot,
 } from "./DesktopDisplay";
 import { isDesktopShell } from "./DesktopShell";
+import { KeyboardLayoutController } from "./KeyboardLayout";
 import { pushMapLayerState } from "./MapLayerSettings";
 import { Platform } from "./Platform";
 import type { AudioControls } from "./sound/CuePlayer";
@@ -88,6 +98,7 @@ function isHalloweenSeason(): boolean {
 
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
+  private keyboardLayout = new KeyboardLayoutController(this);
   private currentUiScale: number | undefined;
   protected routerName: string | undefined = "settings";
 
@@ -159,6 +170,14 @@ export class UserSettingModal extends BaseModal {
   private displayRequestId = 0;
 
   private displaySettleTimer: ReturnType<typeof setTimeout> | undefined;
+  private lastHasKeyboard = Platform.hasKeyboard;
+
+  private handleKeyboardDetection = () => {
+    if (Platform.hasKeyboard && !this.lastHasKeyboard) {
+      this.lastHasKeyboard = true;
+      this.requestUpdate();
+    }
+  };
 
   connectedCallback() {
     super.connectedCallback();
@@ -169,6 +188,8 @@ export class UserSettingModal extends BaseModal {
       this.routerName = undefined;
     }
     this.loadKeybindsFromStorage();
+    this.lastHasKeyboard = Platform.hasKeyboard;
+    window.addEventListener("keydown", this.handleKeyboardDetection);
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
@@ -180,6 +201,7 @@ export class UserSettingModal extends BaseModal {
   }
 
   disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyboardDetection);
     globalThis.removeEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
@@ -199,9 +221,9 @@ export class UserSettingModal extends BaseModal {
   /**
    * The single place layer state reaches the renderer.
    *
-   * It belongs here rather than in the advanced graphics body because that
-   * body only exists while the Advanced fold is open, and a preset picked or a
-   * configuration imported with the fold collapsed changes layers just the
+   * It belongs here rather than in the graphics panel because that
+   * panel only renders its controls while open, and a preset picked or a
+   * configuration imported from the Graphics tab changes layers just the
    * same. Off a game the callbacks are null and this is a no-op.
    */
   private readonly onGraphicsChanged = () => {
@@ -278,7 +300,13 @@ export class UserSettingModal extends BaseModal {
       actions: [string, string];
       keyPrefix: string;
     }> = [
-      { actions: ["emojiMenuModifier", "altKey"], keyPrefix: "Alt" },
+      // This is a tad ugly, but it's the only solution I found.
+      {
+        actions: ["buildScrollModifier", "emojiMenuModifier"],
+        keyPrefix: "Alt",
+      },
+      { actions: ["altKey", "emojiMenuModifier"], keyPrefix: "Alt" },
+      { actions: ["buildScrollModifier", "altKey"], keyPrefix: "Alt" },
       { actions: ["boxSelectWarships", "shiftKey"], keyPrefix: "Shift" },
     ];
 
@@ -361,16 +389,16 @@ export class UserSettingModal extends BaseModal {
 
   private getKeyChar(action: string): string {
     const entry = this.userKeybinds[action];
-    if (!entry) return formatKeyForDisplay(this.defaultKeybinds[action] || "");
-    return entry.key || formatKeyForDisplay(entry.value || "");
+    const defaultCode = this.defaultKeybinds[action] || "";
+    return resolveKeybindLabel(entry, defaultCode, this.keyboardLayout.map);
   }
 
   private handleEasterEggKey = (e: KeyboardEvent) => {
     if (!this.isModalOpen || this.showEasterEggSettings) return;
 
     // Validate that the event target is inside this component
-    const target = e.target as Node;
-    if (!this.contains(target)) {
+    const target = e.target;
+    if (!(target instanceof Node) || !this.contains(target)) {
       return;
     }
 
@@ -530,7 +558,12 @@ export class UserSettingModal extends BaseModal {
   }
 
   private sliderNukeAllianceSafetyDuration(e: CustomEvent<{ value: number }>) {
-    this.userSettings.setNukeAllianceSafetyDuration(e.detail.value);
+    const value = e.detail?.value;
+    if (typeof value !== "number") {
+      console.warn("Slider event missing detail.value", e);
+      return;
+    }
+    this.userSettings.setNukeAllianceSafetyDuration(value);
     this.requestUpdate();
   }
 
@@ -680,10 +713,11 @@ export class UserSettingModal extends BaseModal {
     return html`
       <button
         id="audio-${category}-test"
-        class="self-end px-3 py-1 text-sm font-medium rounded-lg border border-white/10 text-white transition-colors ${muted ||
-        pending
-          ? "opacity-40 cursor-not-allowed"
-          : "bg-white/5 hover:bg-white/15"}"
+        class="self-end px-3 py-1 text-sm font-medium rounded-lg border border-white/10 text-white transition-colors ${
+          muted || pending
+            ? "opacity-40 cursor-not-allowed"
+            : "bg-white/5 hover:bg-white/15"
+        }"
         ?disabled=${muted || pending}
         title=${muted ? translateText(hint) : ""}
         @click=${() => this.playTestCue(category)}
@@ -708,11 +742,13 @@ export class UserSettingModal extends BaseModal {
           @change=${(e: CustomEvent<{ value: number }>) =>
             this.sliderAudio(category, e)}
         ></setting-slider>
-        ${controls !== null && PREVIEWABLE.includes(category as CueCategory)
-          ? html`<div class="flex justify-end">
-              ${this.renderTestButton(controls, category as CueCategory)}
-            </div>`
-          : ""}
+        ${
+          controls !== null && PREVIEWABLE.includes(category as CueCategory)
+            ? html`<div class="flex justify-end">
+                ${this.renderTestButton(controls, category as CueCategory)}
+              </div>`
+            : ""
+        }
       </div>
     `;
   }
@@ -787,7 +823,7 @@ export class UserSettingModal extends BaseModal {
         // validates a requested tab against this list -- lands
         // open({ tab: "keybinds" }) on Gameplay instead of selecting a tab
         // with nothing behind it.
-        ...(Platform.isTouch
+        ...(Platform.isTouch && !Platform.hasKeyboard
           ? []
           : [
               {
@@ -806,6 +842,53 @@ export class UserSettingModal extends BaseModal {
       ariaLabel: translateText("common.back"),
       showDivider: true,
     });
+  }
+
+  /** Inline pages own their controls and must not acquire a nested modal's scroll lock. */
+  render() {
+    return html`${super.render()}
+    ${
+      this.inline
+        ? nothing
+        : html`<graphics-settings-modal
+            .mapLayers=${this.mapLayers}
+          ></graphics-settings-modal>`
+    }`;
+  }
+
+  /** The parent keeps owning live layer updates even while its shell is closed. */
+  public isGraphicsPanelOpen(): boolean {
+    return (
+      this.querySelector<GraphicsSettingsModal>(
+        "graphics-settings-modal",
+      )?.isOpen() === true
+    );
+  }
+
+  /** Expand page controls in place; use a separate preview panel during a game. */
+  public openGraphicsPanel(onReturn?: () => void): boolean {
+    if (this.inline) {
+      this.graphicsAdvancedOpen = !this.graphicsAdvancedOpen;
+      return true;
+    }
+    const panel = this.querySelector<GraphicsSettingsModal>(
+      "graphics-settings-modal",
+    );
+    if (!panel) return false;
+    if (panel.isOpen()) return true;
+    panel.mapLayers = this.mapLayers;
+    if (this.isOpen()) {
+      const previousReturn = this.onReturn;
+      this.onReturn = undefined;
+      this.close();
+      panel.open({
+        onReturn: () =>
+          this.open({ tab: "graphics", onReturn: previousReturn }),
+      });
+    } else {
+      panel.open({ onReturn });
+    }
+    return true;
   }
 
   protected renderBody(tab: string) {
@@ -833,25 +916,6 @@ export class UserSettingModal extends BaseModal {
 
   protected updated(): void {
     this.syncDisplayControls();
-    this.syncGraphicsLayerWiring();
-  }
-
-  /**
-   * Hand the advanced graphics body the current game's layers, so it can draw
-   * a row per layer. It only exists while the Graphics tab is open and
-   * Advanced is expanded, so this runs on every update rather than once: the
-   * element is created and destroyed as the player moves between tabs.
-   */
-  private syncGraphicsLayerWiring(): void {
-    const advanced = this.querySelector<GraphicsAdvancedSettings>(
-      "graphics-advanced-settings",
-    );
-    if (advanced === null) return;
-    advanced.mapLayers = this.mapLayers;
-  }
-
-  private toggleGraphicsAdvanced() {
-    this.graphicsAdvancedOpen = !this.graphicsAdvancedOpen;
   }
 
   protected onTabEnter(key: string): void {
@@ -867,6 +931,12 @@ export class UserSettingModal extends BaseModal {
   }
 
   protected onClose(): void {
+    this.graphicsAdvancedOpen = false;
+    this.querySelector<GraphicsSettingsModal>("graphics-settings-modal")?.close(
+      {
+        silent: true,
+      },
+    );
     this.leaveDisplayTab();
     window.removeEventListener("keydown", this.handleEasterEggKey);
     // Fire once: a caller that reopens us on return would otherwise inherit
@@ -1186,40 +1256,44 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleDisplayModeChange}
       ></setting-select>
 
-      ${uiScale === undefined
-        ? null
-        : html`
-            <setting-select
-              id="display-ui-scale-select"
-              label=${translateText("user_setting.display_ui_scale_label")}
-              description=${translateText("user_setting.display_ui_scale_desc")}
-              .value=${String(uiScale)}
-              ?disabled=${this.displayBusy}
-              .options=${uiScaleOptions(uiScale).map((scale) => ({
-                value: scale,
-                label: translateText("user_setting.display_ui_scale_option", {
-                  scale,
-                }),
-              }))}
-              @change=${this.handleUiScaleChange}
-            ></setting-select>
-          `}
-      ${displays.length > 1
-        ? html`
-            <setting-select
-              id="display-monitor-select"
-              label=${translateText("user_setting.display_monitor_label")}
-              description=${translateText("user_setting.display_monitor_desc")}
-              .value=${String(selectedId)}
-              ?disabled=${this.displayBusy}
-              .options=${displays.map((d, i) => ({
-                value: d.id,
-                label: this.displayOptionLabel(d, i),
-              }))}
-              @change=${this.handleDisplayMonitorChange}
-            ></setting-select>
-          `
-        : null}
+      ${
+        uiScale === undefined
+          ? null
+          : html`
+              <setting-select
+                id="display-ui-scale-select"
+                label=${translateText("user_setting.display_ui_scale_label")}
+                description=${translateText("user_setting.display_ui_scale_desc")}
+                .value=${String(uiScale)}
+                ?disabled=${this.displayBusy}
+                .options=${uiScaleOptions(uiScale).map((scale) => ({
+                  value: scale,
+                  label: translateText("user_setting.display_ui_scale_option", {
+                    scale,
+                  }),
+                }))}
+                @change=${this.handleUiScaleChange}
+              ></setting-select>
+            `
+      }
+      ${
+        displays.length > 1
+          ? html`
+              <setting-select
+                id="display-monitor-select"
+                label=${translateText("user_setting.display_monitor_label")}
+                description=${translateText("user_setting.display_monitor_desc")}
+                .value=${String(selectedId)}
+                ?disabled=${this.displayBusy}
+                .options=${displays.map((d, i) => ({
+                  value: d.id,
+                  label: this.displayOptionLabel(d, i),
+                }))}
+                @change=${this.handleDisplayMonitorChange}
+              ></setting-select>
+            `
+          : null
+      }
     `;
   }
 
@@ -1261,6 +1335,15 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
+      <setting-keybind
+        action="preventStacking"
+        label=${translateText("user_setting.prevent_stacking")}
+        description=${translateText("user_setting.prevent_stacking_desc")}
+        defaultKey=${this.defaultKeybinds.preventStacking}
+        .value=${this.getKeyValue("preventStacking")}
+        .display=${this.getKeyChar("preventStacking")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
       <setting-keybind
         action="coordinateGrid"
         label=${translateText("user_setting.coordinate_grid_label")}
@@ -1415,6 +1498,17 @@ export class UserSettingModal extends BaseModal {
         .defaultKey=${this.defaultKeybinds.buildMenuModifier}
         .value=${this.getKeyValue("buildMenuModifier")}
         .display=${this.getKeyChar("buildMenuModifier")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildScrollModifier"
+        .allowModifiers=${true}
+        label=${translateText("user_setting.build_scroll_modifier")}
+        description=${translateText("user_setting.build_scroll_modifier_desc")}
+        .defaultKey=${this.defaultKeybinds.buildScrollModifier}
+        .value=${this.getKeyValue("buildScrollModifier")}
+        .display=${this.getKeyChar("buildScrollModifier")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -1593,6 +1687,26 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
+        action="donateTroops"
+        label=${translateText("user_setting.donate_troops")}
+        description=${translateText("user_setting.donate_troops_desc")}
+        defaultKey=${this.defaultKeybinds.donateTroops}
+        .value=${this.getKeyValue("donateTroops")}
+        .display=${this.getKeyChar("donateTroops")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="donateGold"
+        label=${translateText("user_setting.donate_gold")}
+        description=${translateText("user_setting.donate_gold_desc")}
+        defaultKey=${this.defaultKeybinds.donateGold}
+        .value=${this.getKeyValue("donateGold")}
+        .display=${this.getKeyChar("donateGold")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
         action="emojiMenu"
         label=${translateText("user_setting.emoji_menu")}
         description=${translateText("user_setting.emoji_menu_desc")}
@@ -1708,7 +1822,7 @@ export class UserSettingModal extends BaseModal {
         action="moveUpArrow"
         label=${translateText("user_setting.move_up")}
         description=${translateText("user_setting.move_up_desc")}
-        .defaultKey=${this.defaultKeybinds.moveUpArrow}
+        defaultKey=${this.defaultKeybinds.moveUpArrow}
         .value=${this.getKeyValue("moveUpArrow")}
         .display=${this.getKeyChar("moveUpArrow")}
         @change=${this.handleKeybindChange}
@@ -1728,7 +1842,7 @@ export class UserSettingModal extends BaseModal {
         action="moveLeftArrow"
         label=${translateText("user_setting.move_left")}
         description=${translateText("user_setting.move_left_desc")}
-        .defaultKey=${this.defaultKeybinds.moveLeftArrow}
+        defaultKey=${this.defaultKeybinds.moveLeftArrow}
         .value=${this.getKeyValue("moveLeftArrow")}
         .display=${this.getKeyChar("moveLeftArrow")}
         @change=${this.handleKeybindChange}
@@ -1748,7 +1862,7 @@ export class UserSettingModal extends BaseModal {
         action="moveDownArrow"
         label=${translateText("user_setting.move_down")}
         description=${translateText("user_setting.move_down_desc")}
-        .defaultKey=${this.defaultKeybinds.moveDownArrow}
+        defaultKey=${this.defaultKeybinds.moveDownArrow}
         .value=${this.getKeyValue("moveDownArrow")}
         .display=${this.getKeyChar("moveDownArrow")}
         @change=${this.handleKeybindChange}
@@ -1768,7 +1882,7 @@ export class UserSettingModal extends BaseModal {
         action="moveRightArrow"
         label=${translateText("user_setting.move_right")}
         description=${translateText("user_setting.move_right_desc")}
-        .defaultKey=${this.defaultKeybinds.moveRightArrow}
+        defaultKey=${this.defaultKeybinds.moveRightArrow}
         .value=${this.getKeyValue("moveRightArrow")}
         .display=${this.getKeyChar("moveRightArrow")}
         @change=${this.handleKeybindChange}
@@ -1783,19 +1897,7 @@ export class UserSettingModal extends BaseModal {
    */
   private renderGraphicsSettings() {
     return html`
-      <setting-slider
-        label=${translateText("user_setting.hud_opacity_label")}
-        description=${translateText("user_setting.hud_opacity_desc")}
-        id="hud-opacity-slider"
-        .value=${this.userSettings.hudOpacity() * 100}
-        @change=${(e: CustomEvent<{ value: number }>) => {
-          this.userSettings.setHudOpacity(e.detail.value / 100);
-          document.documentElement.style.setProperty(
-            "--hud-opacity",
-            String(this.userSettings.hudOpacity()),
-          );
-        }}
-      ></setting-slider>
+      ${hudOpacitySetting(this.userSettings)}
       <!-- 🎨 Graphics preset -->
       <div
         class="flex flex-col w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-3"
@@ -1841,19 +1943,30 @@ export class UserSettingModal extends BaseModal {
         .checked=${this.userSettings.mapLayers()}
         @change=${this.toggleMapLayers}
       ></setting-toggle>
-
-      <!-- 🔧 Advanced -->
-      <setting-toggle
-        label="${translateText("graphics_setting.advanced_label")}"
-        description="${translateText("graphics_setting.advanced_desc")}"
-        id="graphics-advanced-toggle"
-        .checked=${this.graphicsAdvancedOpen}
-        @change=${this.toggleGraphicsAdvanced}
-      ></setting-toggle>
-
-      ${this.graphicsAdvancedOpen
-        ? html`<graphics-advanced-settings></graphics-advanced-settings>`
-        : nothing}
+      <button
+        type="button"
+        data-open-graphics-panel
+        aria-expanded=${this.inline ? String(this.graphicsAdvancedOpen) : nothing}
+        aria-controls=${this.inline ? "graphics-advanced-inline" : nothing}
+        class="w-full p-4 text-left text-white font-bold bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors"
+        @click=${() => this.openGraphicsPanel()}
+      >
+        <span class="block"
+          >${translateText("graphics_setting.advanced_label")}</span
+        >
+        <span class="block text-white/50 text-sm font-normal mt-1">
+          ${translateText("graphics_setting.advanced_desc")}
+        </span>
+      </button>
+      ${
+        this.inline && this.graphicsAdvancedOpen
+          ? html`<graphics-advanced-settings
+              id="graphics-advanced-inline"
+              class="flex flex-col gap-2"
+              .mapLayers=${this.mapLayers}
+            ></graphics-advanced-settings>`
+          : nothing
+      }
     `;
   }
 
@@ -1922,7 +2035,7 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleLobbyStartAlerts}
       ></setting-toggle>
 
-      <!-- 🎬 New replay viewer (opt-in while it's rolled out) -->
+      <!-- 🎬 New replay viewer (on by default) -->
       <setting-toggle
         label="${translateText("user_setting.replay_viewer_label")}"
         description="${translateText("user_setting.replay_viewer_desc")}"
@@ -1931,17 +2044,19 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleReplayViewer}
       ></setting-toggle>
 
-      ${canHandOffToSteam()
-        ? html`<setting-toggle
-            label="${translateText("user_setting.steam_lobby_links_label")}"
-            description="${translateText(
-              "user_setting.steam_lobby_links_desc",
-            )}"
-            id="steam-lobby-links-toggle"
-            .checked=${this.userSettings.steamLobbyLinks() === "steam"}
-            @change=${this.toggleSteamLobbyLinks}
-          ></setting-toggle>`
-        : null}
+      ${
+        canHandOffToSteam()
+          ? html`<setting-toggle
+              label="${translateText("user_setting.steam_lobby_links_label")}"
+              description="${translateText(
+                "user_setting.steam_lobby_links_desc",
+              )}"
+              id="steam-lobby-links-toggle"
+              .checked=${this.userSettings.steamLobbyLinks() === "steam"}
+              @change=${this.toggleSteamLobbyLinks}
+            ></setting-toggle>`
+          : null
+      }
 
       <!-- 🔍 Go to player -->
       <setting-toggle
@@ -1952,15 +2067,17 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleGoToPlayer}
       ></setting-toggle>
 
-      ${isHalloweenSeason()
-        ? html`<setting-toggle
-            label="${translateText("user_setting.halloween_theme_label")}"
-            description="${translateText("user_setting.halloween_theme_desc")}"
-            id="halloween-theme-toggle"
-            .checked=${this.userSettings.halloweenTheme()}
-            @change=${this.toggleHalloweenTheme}
-          ></setting-toggle>`
-        : null}
+      ${
+        isHalloweenSeason()
+          ? html`<setting-toggle
+              label="${translateText("user_setting.halloween_theme_label")}"
+              description="${translateText("user_setting.halloween_theme_desc")}"
+              id="halloween-theme-toggle"
+              .checked=${this.userSettings.halloweenTheme()}
+              @change=${this.toggleHalloweenTheme}
+            ></setting-toggle>`
+          : null
+      }
 
       <!-- Help messages (moved here from the in-game menu) -->
       <setting-toggle
@@ -2024,53 +2141,56 @@ export class UserSettingModal extends BaseModal {
         @change=${this.sliderNukeAllianceSafetyDuration}
       ></setting-slider>
 
-      ${this.showEasterEggSettings
-        ? html`
-            <setting-slider
-              label="${translateText(
-                "user_setting.easter_writing_speed_label",
-              )}"
-              description="${translateText(
-                "user_setting.easter_writing_speed_desc",
-              )}"
-              min="0"
-              max="100"
-              value="40"
-              easter="true"
-              @change=${(e: CustomEvent) => {
-                const value = e.detail?.value;
-                if (value !== undefined) {
-                  console.log("Changed:", value);
-                } else {
-                  console.warn("Slider event missing detail.value", e);
-                }
-              }}
-            ></setting-slider>
+      ${
+        this.showEasterEggSettings
+          ? html`
+              <setting-slider
+                label="${translateText(
+                  "user_setting.easter_writing_speed_label",
+                )}"
+                description="${translateText(
+                  "user_setting.easter_writing_speed_desc",
+                )}"
+                min="0"
+                max="100"
+                value="40"
+                easter="true"
+                @change=${(e: CustomEvent) => {
+                  const value = e.detail?.value;
+                  if (value !== undefined) {
+                    console.log("Changed:", value);
+                  } else {
+                    console.warn("Slider event missing detail.value", e);
+                  }
+                }}
+              ></setting-slider>
 
-            <setting-number
-              label="${translateText("user_setting.easter_bug_count_label")}"
-              description="${translateText(
-                "user_setting.easter_bug_count_desc",
-              )}"
-              value="100"
-              min="0"
-              max="1000"
-              easter="true"
-              @change=${(e: CustomEvent) => {
-                const value = e.detail?.value;
-                if (value !== undefined) {
-                  console.log("Changed:", value);
-                } else {
-                  console.warn("Slider event missing detail.value", e);
-                }
-              }}
-            ></setting-number>
-          `
-        : null}
+              <setting-number
+                label="${translateText("user_setting.easter_bug_count_label")}"
+                description="${translateText(
+                  "user_setting.easter_bug_count_desc",
+                )}"
+                value="100"
+                min="0"
+                max="1000"
+                easter="true"
+                @change=${(e: CustomEvent) => {
+                  const value = e.detail?.value;
+                  if (value !== undefined) {
+                    console.log("Changed:", value);
+                  } else {
+                    console.warn("Slider event missing detail.value", e);
+                  }
+                }}
+              ></setting-number>
+            `
+          : null
+      }
     `;
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
+    this.lastHasKeyboard = Platform.hasKeyboard;
     window.addEventListener("keydown", this.handleEasterEggKey);
     // Keybinds are editable from either instance and were only read in
     // connectedCallback, so re-read them or the other one renders stale.

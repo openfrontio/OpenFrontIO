@@ -60,8 +60,9 @@ export function xpBar(
     : 0;
   return html`<div
     data-xp-bar
-    class="w-full overflow-hidden rounded-full bg-white/15 ${opts.heightClass ??
-    "h-2"}"
+    class="w-full overflow-hidden rounded-full bg-white/15 ${
+      opts.heightClass ?? "h-2"
+    }"
     role="progressbar"
     aria-label=${translateText("progression.xp_bar_label")}
     aria-valuemin="0"
@@ -72,9 +73,11 @@ export function xpBar(
     <div
       data-xp-bar-fill
       class="h-full rounded-full bg-malibu-blue ${opts.fillClass ?? ""}"
-      style="width: ${fill}%${ms > 0
-        ? `; transition: width ${ms}ms cubic-bezier(0.3, 0.7, 0.2, 1)`
-        : ""}"
+      style="width: ${fill}%${
+        ms > 0
+          ? `; transition: width ${ms}ms cubic-bezier(0.3, 0.7, 0.2, 1)`
+          : ""
+      }"
       @transitionend=${opts.onFillTransitionEnd ?? nothing}
     ></div>
   </div>`;

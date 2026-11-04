@@ -83,7 +83,7 @@ export class TurnstileError extends Error {
 }
 
 /** The code to show for any failure, Turnstile's own or otherwise. */
-export function turnstileErrorCode(error: unknown): string {
+function turnstileErrorCode(error: unknown): string {
   return error instanceof TurnstileError ? error.code : "unknown";
 }
 

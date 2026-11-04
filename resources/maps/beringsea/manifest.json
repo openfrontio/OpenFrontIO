@@ -16,7 +16,6 @@
     "num_land_tiles": 396641,
     "width": 1250
   },
-  "multiplayer_frequency": 5,
   "name": "Bering Sea",
   "nations": [
     {
@@ -157,7 +156,6 @@
       }
     ]
   },
-  "team_frequency": 10,
   "themes": ["asia", "north_america"],
   "translation_key": "map.beringsea"
 }

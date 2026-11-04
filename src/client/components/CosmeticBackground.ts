@@ -50,8 +50,9 @@ export class CosmeticBackground extends LitElement {
     if (this.skin) {
       return html`<div
         class="w-full h-full pointer-events-none"
-        style="background-image:url('${this.skin
-          .url}');background-size:cover;background-position:center"
+        style="background-image:url('${
+          this.skin.url
+        }');background-size:cover;background-position:center"
       ></div>`;
     }
     if (this.pattern) {

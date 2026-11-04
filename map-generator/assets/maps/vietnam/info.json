@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "additionalNations": [
     {
       "coordinates": [1085, 1363],
@@ -105,8 +106,8 @@
   "name": "Vietnam",
   "translation_key": "map.vietnam",
   "categories": ["countries", "asia"],
-  "multiplayer_frequency": 4,
-  "team_frequency": 8,
+  "location": { "lat": 16, "lon": 106.5 },
+  "author": "crunchybbb",
   "special_team_count": 2,
   "nations": [
     {

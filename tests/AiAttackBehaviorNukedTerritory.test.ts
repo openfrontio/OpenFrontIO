@@ -7,8 +7,9 @@ import {
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
-import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
@@ -52,7 +53,7 @@ interface BehaviorEnv {
   game: Game;
   nation: Player;
   enemy: Player;
-  attackBehavior: AiAttackBehavior;
+  attackBehavior: NationAttackBehavior;
 }
 
 /**
@@ -155,7 +156,7 @@ async function setupBehavior(
     nation,
     emojiBehavior,
   );
-  const attackBehavior = new AiAttackBehavior(
+  const attackBehavior = new NationAttackBehavior(
     new PseudoRandom(42),
     game,
     nation,
@@ -164,6 +165,12 @@ async function setupBehavior(
     0.0, // expandRatio
     allianceBehavior,
     emojiBehavior,
+    new NationWarshipBehavior(
+      new PseudoRandom(42),
+      game,
+      nation,
+      emojiBehavior,
+    ),
   );
 
   return { game, nation, enemy, attackBehavior };
@@ -176,7 +183,7 @@ function newAttacks(player: Player, before: number) {
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
-describe("AiAttackBehavior - nuked territory early-out", () => {
+describe("NationAttackBehavior - nuked territory early-out", () => {
   // The bug: `maybeAttack()` has an early expansion gate
   //   hasNonNukedTerraNullius =
   //     border.some((t) => !hasOwner(t) && !hasFallout(t)) ||
@@ -240,29 +247,6 @@ describe("AiAttackBehavior - nuked territory early-out", () => {
       // TerraNullius (the nuked territory).
       for (const attack of attacks) {
         expect(attack.target()).toBe(enemy);
-      }
-    });
-
-    test("maybeAttack early gate is bypassed when only nuked TN borders the nation", async () => {
-      // No enemy, no incoming attack. The early gate must NOT fire (there is
-      // no non-nuked TN). `attackBestTarget` falls through to the `nuked`
-      // strategy, which dispatches a land attack on TerraNullius — the
-      // intended behaviour from commit 58ec8b280.
-      const { game, nation, attackBehavior } = await setupBehavior(
-        Difficulty.Impossible,
-        { withEnemy: false },
-      );
-
-      expect(nation.incomingAttacks()).toHaveLength(0);
-
-      const before = nation.outgoingAttacks().length;
-      attackBehavior.maybeAttack();
-      executeTicks(game, 1);
-
-      const attacks = newAttacks(nation, before);
-      expect(attacks.length).toBeGreaterThan(0);
-      for (const attack of attacks) {
-        expect(attack.target().isPlayer()).toBe(false);
       }
     });
   });

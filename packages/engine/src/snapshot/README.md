@@ -14,7 +14,7 @@ scenarios, and replay seeking.
   `restoreGame(bytes, deps)`: resume. Don't call `GameRunner.init()`; the
   first turn added afterwards is the turn for the snapshot's tick.
 - Worker: `WorkerClient.snapshot()`, and `new WorkerClient(start, clientID,
-snapshot)` to start from one.
+  snapshot)` to start from one.
 - `readSnapshotHeader(bytes)`: tick, game id, writer's commit, and config,
   without restoring.
 

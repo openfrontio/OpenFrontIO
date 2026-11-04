@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "GulfOfGuinea",
   "name": "Gulf Of Guinea",
   "translation_key": "map.gulfofguinea",
   "categories": ["africa"],
-  "multiplayer_frequency": 5,
+  "location": { "lat": 3, "lon": 3 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [1807, 739],

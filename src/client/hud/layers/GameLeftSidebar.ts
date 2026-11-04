@@ -4,6 +4,7 @@ import type { EventBus } from "@openfront/shared/EventBus";
 import { Colord } from "colord";
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import { isCompactViewport } from "../../CompactViewport";
 import type { Controller } from "../../Controller";
 import { Platform } from "../../Platform";
 import { themeProvider } from "../../theme/ThemeProvider";
@@ -61,8 +62,9 @@ export class GameLeftSidebar extends LitElement implements Controller {
     if (this.isTeamGame) {
       this.isPlayerTeamLabelVisible = true;
     }
-    // Make it visible by default on large screens
-    if (Platform.isDesktopWidth) {
+    // Make it visible by default on large screens; compact ones (short laptops,
+    // Poki's frame) need the room for the map.
+    if (Platform.isDesktopWidth && !isCompactViewport()) {
       this.showPlayerStatsAfterSpawn = true;
     }
   }
@@ -112,7 +114,7 @@ export class GameLeftSidebar extends LitElement implements Controller {
   render() {
     return html`
       <aside
-        class=${`fixed top-0 left-0 z-900 flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-br-lg ${this.isPlayerStatsShown || this.isTeamStatsShown ? "max-[400px]:w-full max-[400px]:rounded-none" : ""} transition-all duration-300 ease-out transform ${
+        class=${`max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:z-900 lg:pointer-events-auto flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-br-lg ${this.isPlayerStatsShown || this.isTeamStatsShown ? "max-[400px]:w-full max-[400px]:rounded-none" : ""} transition-all duration-300 ease-out transform ${
           this.isVisible ? "translate-x-0" : "hidden"
         }`}
         style="margin-top: ${this.barOffset}px;"
@@ -131,74 +133,87 @@ export class GameLeftSidebar extends LitElement implements Controller {
             }}
           >
             <img
-              src=${this.isPlayerStatsShown
-                ? playerStatsSolidIcon
-                : playerStatsRegularIcon}
-              alt=${translateText("help_modal.icon_alt_player_leaderboard") ||
-              "Player Leaderboard Icon"}
+              src=${
+                this.isPlayerStatsShown
+                  ? playerStatsSolidIcon
+                  : playerStatsRegularIcon
+              }
+              alt=${
+                translateText("help_modal.icon_alt_player_leaderboard") ||
+                "Player Leaderboard Icon"
+              }
               width="20"
               height="20"
             />
           </div>
-          ${this.isTeamGame
+          ${
+            this.isTeamGame
+              ? html`
+                  <div
+                    class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
+                    @click=${this.toggleTeamStats}
+                    role="button"
+                    tabindex="0"
+                    @keydown=${(e: KeyboardEvent) => {
+                      if (
+                        e.key === "Enter" ||
+                        e.key === " " ||
+                        e.code === "Space"
+                      ) {
+                        e.preventDefault();
+                        this.toggleTeamStats();
+                      }
+                    }}
+                  >
+                    <img
+                      src=${
+                        this.isTeamStatsShown
+                          ? teamStatsSolidIcon
+                          : teamStatsRegularIcon
+                      }
+                      alt=${
+                        translateText("help_modal.icon_alt_team_leaderboard") ||
+                        "Team Leaderboard Icon"
+                      }
+                      width="20"
+                      height="20"
+                    />
+                  </div>
+                `
+              : null
+          }
+          ${
+            this.isPlayerStatsShown || this.isTeamStatsShown
+              ? html`<span
+                  class="ml-auto text-[10px] text-slate-500 select-all leading-none self-start"
+                  title=${translateText("help_modal.game_id_tooltip")}
+                  >${this.game?.gameID() ?? ""}</span
+                >`
+              : null
+          }
+        </div>
+        ${
+          this.isPlayerTeamLabelVisible
             ? html`
                 <div
-                  class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
-                  @click=${this.toggleTeamStats}
-                  role="button"
-                  tabindex="0"
-                  @keydown=${(e: KeyboardEvent) => {
-                    if (
-                      e.key === "Enter" ||
-                      e.key === " " ||
-                      e.code === "Space"
-                    ) {
-                      e.preventDefault();
-                      this.toggleTeamStats();
-                    }
-                  }}
+                  class="flex items-center w-full text-white mt-2"
+                  @contextmenu=${(e: Event) => e.preventDefault()}
                 >
-                  <img
-                    src=${this.isTeamStatsShown
-                      ? teamStatsSolidIcon
-                      : teamStatsRegularIcon}
-                    alt=${translateText(
-                      "help_modal.icon_alt_team_leaderboard",
-                    ) || "Team Leaderboard Icon"}
-                    width="20"
-                    height="20"
-                  />
+                  ${translateText("help_modal.ui_your_team")}
+                  <span
+                    style="--color: ${this.playerColor.toRgbString()}"
+                    class="text-(--color)"
+                  >
+                    &nbsp;${getTranslatedPlayerTeamLabel(
+                      this.playerTeam,
+                      this.game?.teamClanTag(this.playerTeam),
+                    )}
+                    &#10687;
+                  </span>
                 </div>
               `
-            : null}
-          ${this.isPlayerStatsShown || this.isTeamStatsShown
-            ? html`<span
-                class="ml-auto text-[10px] text-slate-500 select-all leading-none self-start"
-                title=${translateText("help_modal.game_id_tooltip")}
-                >${this.game?.gameID() ?? ""}</span
-              >`
-            : null}
-        </div>
-        ${this.isPlayerTeamLabelVisible
-          ? html`
-              <div
-                class="flex items-center w-full text-white mt-2"
-                @contextmenu=${(e: Event) => e.preventDefault()}
-              >
-                ${translateText("help_modal.ui_your_team")}
-                <span
-                  style="--color: ${this.playerColor.toRgbString()}"
-                  class="text-(--color)"
-                >
-                  &nbsp;${getTranslatedPlayerTeamLabel(
-                    this.playerTeam,
-                    this.game?.teamClanTag(this.playerTeam),
-                  )}
-                  &#10687;
-                </span>
-              </div>
-            `
-          : null}
+            : null
+        }
         <div class="flex flex-col gap-2 min-w-0 w-full">
           <player-stats
             class=${this.isPlayerStatsShown ? "block min-w-0" : "hidden"}
@@ -207,9 +222,11 @@ export class GameLeftSidebar extends LitElement implements Controller {
             .visible=${this.isPlayerStatsShown}
           ></player-stats>
           <team-stats
-            class=${this.isTeamStatsShown && this.isTeamGame
-              ? "block min-w-0"
-              : "hidden"}
+            class=${
+              this.isTeamStatsShown && this.isTeamGame
+                ? "block min-w-0"
+                : "hidden"
+            }
             .game=${this.game}
             .visible=${this.isTeamStatsShown && this.isTeamGame}
           ></team-stats>

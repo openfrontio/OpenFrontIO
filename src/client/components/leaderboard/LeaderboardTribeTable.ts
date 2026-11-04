@@ -343,8 +343,9 @@ export class LeaderboardTribeTable extends LitElement {
                           >
                             <div
                               class="h-full bg-blue-500/50 rounded-full"
-                              style="width: ${(tribe.playerReach / maxReach) *
-                              100}%"
+                              style="width: ${
+                                (tribe.playerReach / maxReach) * 100
+                              }%"
                             ></div>
                           </div>
                         </div>

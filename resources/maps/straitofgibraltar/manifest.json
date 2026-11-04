@@ -16,7 +16,6 @@
     "num_land_tiles": 486917,
     "width": 1450
   },
-  "multiplayer_frequency": 5,
   "name": "Strait of Gibraltar",
   "nations": [
     {
@@ -117,7 +116,6 @@
       }
     ]
   },
-  "team_frequency": 10,
   "themes": ["europe", "africa"],
   "translation_key": "map.straitofgibraltar"
 }

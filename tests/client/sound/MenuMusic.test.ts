@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const howlInstances: any[] = [];
+const originalMatches = Element.prototype.matches;
 
 vi.mock("howler", () => {
   class MockHowl {
@@ -117,6 +118,37 @@ afterEach(() => {
 
 const themes = () => howlInstances.filter((h) => h.src.includes("menu-theme"));
 
+/** Stands in for a browser that does (or does not) support the selector. */
+function setVolumeLocked(result: boolean | "unsupported") {
+  vi.spyOn(Element.prototype, "matches").mockImplementation(function (
+    this: Element,
+    selector: string,
+  ) {
+    if (selector !== ":volume-locked") {
+      return originalMatches.call(this, selector);
+    }
+    if (result === "unsupported") {
+      throw new DOMException("Unknown pseudo-class", "SyntaxError");
+    }
+    return result;
+  });
+}
+
+/** Defaults to Safari before 15.4, where iOS is the fallback. */
+function withIOS(
+  body: () => void,
+  result: boolean | "unsupported" = "unsupported",
+) {
+  const previousIsIOS = Platform.isIOS;
+  Platform.isIOS = true;
+  setVolumeLocked(result);
+  try {
+    body();
+  } finally {
+    Platform.isIOS = previousIsIOS;
+  }
+}
+
 /** Most recent volume the ramp wrote at this Howl. */
 const volumeWrites = (howl: any): number[] =>
   howl.volume.mock.calls
@@ -144,17 +176,36 @@ describe("menu music", () => {
     expect(theme.play).toHaveBeenCalled();
   });
 
-  it("uses Web Audio on iOS", () => {
-    const previousIsIOS = Platform.isIOS;
-    Platform.isIOS = true;
-    try {
+  it("uses Web Audio on older iOS without :volume-locked", () => {
+    withIOS(() => {
       startMenuMusic(mixer);
       document.dispatchEvent(new Event("pointerdown"));
 
       expect(themes()[0].html5).toBe(false);
-    } finally {
-      Platform.isIOS = previousIsIOS;
-    }
+    });
+  });
+
+  it("uses Web Audio when :volume-locked reports locked volume off iOS", () => {
+    setVolumeLocked(true);
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
+
+    const theme = themes()[0];
+    expect(theme.html5).toBe(false);
+    expect(theme.preload).toBe(false);
+    expect(theme.load).toHaveBeenCalled();
+  });
+
+  it("streams on iOS when :volume-locked reports unlocked volume", () => {
+    withIOS(() => {
+      startMenuMusic(mixer);
+      document.dispatchEvent(new Event("pointerdown"));
+
+      const theme = themes()[0];
+      expect(theme.html5).toBe(true);
+      expect(theme.preload).toBe(true);
+      expect(theme.load).not.toHaveBeenCalled();
+    }, false);
   });
 
   it("ramps up from silence instead of arriving at full level", () => {
@@ -507,10 +558,8 @@ describe("menu music", () => {
     expect(themes()).toHaveLength(1);
   });
 
-  it("loads the theme itself on iOS, where nothing is preloaded", () => {
-    const previousIsIOS = Platform.isIOS;
-    Platform.isIOS = true;
-    try {
+  it("loads the theme itself on older iOS, where nothing is preloaded", () => {
+    withIOS(() => {
       startMenuMusic(mixer);
       document.dispatchEvent(new Event("pointerdown"));
 
@@ -522,9 +571,7 @@ describe("menu music", () => {
       expect(theme.preload).toBe(false);
       expect(theme.load).toHaveBeenCalled();
       expect(theme.play).toHaveBeenCalled();
-    } finally {
-      Platform.isIOS = previousIsIOS;
-    }
+    });
   });
 
   it("ramps again on the start after a menu restore", () => {

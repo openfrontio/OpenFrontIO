@@ -18,6 +18,7 @@ const SPEEDS = [0.5, 1, 2, 4, 8, 16, 32];
 // Same icons as the in-game controls (GameRightSidebar).
 const playIcon = assetUrl("images/PlayIconWhite.svg");
 const pauseIcon = assetUrl("images/PauseIconWhite.svg");
+const continueIcon = assetUrl("images/SwordIconWhite.svg");
 const speedIcon = assetUrl("images/FastForwardIconSolidWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 const fullscreenIcon = assetUrl("images/FullscreenIconWhite.svg");
@@ -47,7 +48,7 @@ export function timelineFrames(
 }
 
 /** An icon button in the in-game style (GameRightSidebar). */
-export function iconButton(src: string, label: string, onClick: () => void) {
+function iconButton(src: string, label: string, onClick: () => void) {
   return html`<button
     class="p-1 rounded-md cursor-pointer hover:bg-white/10"
     title=${label}
@@ -79,6 +80,7 @@ export class ReplayControls extends LitElement {
   @property({ type: Number }) total = 0;
   @property({ type: Boolean }) playing = false;
   @property({ type: Number }) speed = 1;
+  @property({ type: Boolean }) canContinue = true;
 
   @state() private speedMenuOpen = false;
   @state() private isFullscreen = document.fullscreenElement !== null;
@@ -194,20 +196,31 @@ export class ReplayControls extends LitElement {
             translateText("replay_panel.replay_speed"),
             () => (this.speedMenuOpen = !this.speedMenuOpen),
           )}
+          ${
+            this.canContinue
+              ? iconButton(
+                  continueIcon,
+                  translateText("replay_viewer.continue_from_here"),
+                  () => this.emit("replay-continue"),
+                )
+              : nothing
+          }
           ${iconButton(
             settingsIcon,
             translateText("user_setting.game_menu_title"),
             () => this.openMenu(),
           )}
-          ${this.showFullscreen
-            ? iconButton(
-                this.isFullscreen ? exitFullscreenIcon : fullscreenIcon,
-                translateText(
-                  this.isFullscreen ? "fullscreen.exit" : "fullscreen.enter",
-                ),
-                () => this.toggleFullscreen(),
-              )
-            : nothing}
+          ${
+            this.showFullscreen
+              ? iconButton(
+                  this.isFullscreen ? exitFullscreenIcon : fullscreenIcon,
+                  translateText(
+                    this.isFullscreen ? "fullscreen.exit" : "fullscreen.enter",
+                  ),
+                  () => this.toggleFullscreen(),
+                )
+              : nothing
+          }
           ${exitButton()}
           ${this.speedMenuOpen ? this.renderSpeedMenu() : nothing}
         </div>
@@ -228,10 +241,9 @@ export class ReplayControls extends LitElement {
           ${SPEEDS.map(
             (sp) =>
               html`<button
-                class="py-0.5 px-1 text-sm text-white rounded-sm border transition border-gray-500 hover:border-gray-200 ${sp ===
-                this.speed
-                  ? "bg-malibu-blue"
-                  : ""}"
+                class="py-0.5 px-1 text-sm text-white rounded-sm border transition border-gray-500 hover:border-gray-200 ${
+                  sp === this.speed ? "bg-malibu-blue" : ""
+                }"
                 @click=${() => this.setSpeed(sp)}
               >
                 ×${sp}

@@ -58,20 +58,22 @@ export class CosmeticPreview extends LitElement {
 
   render() {
     return html`<div
-      data-cosmetic-preview=${this.resolved.cosmetic === null
-        ? "default"
-        : this.resolved.type}
-      class=${this.size === "detail"
-        ? "h-full w-full"
-        : // A subscription paints a wrapping list of perks, not artwork: a square
-          // box cuts the last perk off once cards are phone-width.
-          this.resolved.type === "subscription"
-          ? "w-full"
-          : "aspect-square w-full"}
+      data-cosmetic-preview=${
+        this.resolved.cosmetic === null ? "default" : this.resolved.type
+      }
+      class=${
+        this.size === "detail"
+          ? "h-full w-full"
+          : // A subscription paints a wrapping list of perks, not artwork: a square
+            // box cuts the last perk off once cards are phone-width.
+            this.resolved.type === "subscription"
+            ? "w-full"
+            : "aspect-square w-full"
+      }
     >
-      ${this.near || !this.deferrable()
-        ? this.renderResolvedPreview()
-        : nothing}
+      ${
+        this.near || !this.deferrable() ? this.renderResolvedPreview() : nothing
+      }
     </div>`;
   }
 
@@ -175,22 +177,26 @@ export class CosmeticPreview extends LitElement {
         <span class="text-[10px] font-bold leading-none text-white/50 uppercase"
           >${translateText(currencyKey)}</span
         >
-        ${pack.product?.price
-          ? html`<span
-              data-pack-price
-              class="pt-0.5 text-sm font-bold leading-none text-blue-300"
-              >${pack.product.price}</span
-            >`
-          : nothing}
-        ${pack.bonusAmount > 0
-          ? html`<div
-              class="absolute top-8 -right-10 w-40 bg-green-500 text-white text-[10px] font-black py-0.5 rotate-45 shadow-md uppercase tracking-wide pointer-events-none"
-            >
-              ${translateText("cosmetics.free", {
-                numFree: pack.bonusAmount.toLocaleString(),
-              })}
-            </div>`
-          : nothing}
+        ${
+          pack.product?.price
+            ? html`<span
+                data-pack-price
+                class="pt-0.5 text-sm font-bold leading-none text-blue-300"
+                >${pack.product.price}</span
+              >`
+            : nothing
+        }
+        ${
+          pack.bonusAmount > 0
+            ? html`<div
+                class="absolute top-8 -right-10 w-40 bg-green-500 text-white text-[10px] font-black py-0.5 rotate-45 shadow-md uppercase tracking-wide pointer-events-none"
+              >
+                ${translateText("cosmetics.free", {
+                  numFree: pack.bonusAmount.toLocaleString(),
+                })}
+              </div>`
+            : nothing
+        }
       </div>`;
     }
 
@@ -236,24 +242,28 @@ export class CosmeticPreview extends LitElement {
               >${translateText("cosmetics.per_day")}</span
             >
           </div>
-          ${licencePerks
-            ? html`<span
-                data-subscription-perk="verified_name"
-                class=${perkClass}
-                ><span class="text-green-400">✓</span> ${translateText(
-                  "cosmetics.verified_name",
-                )}</span
-              >`
-            : nothing}
-          ${licencePerks && subscription.canCreatePublicLobbies
-            ? html`<span
-                data-subscription-perk="public_lobbies"
-                class=${perkClass}
-                ><span class="text-green-400">✓</span> ${translateText(
-                  "cosmetics.public_lobbies",
-                )}</span
-              >`
-            : nothing}
+          ${
+            licencePerks
+              ? html`<span
+                  data-subscription-perk="verified_name"
+                  class=${perkClass}
+                  ><span class="text-green-400">✓</span> ${translateText(
+                    "cosmetics.verified_name",
+                  )}</span
+                >`
+              : nothing
+          }
+          ${
+            licencePerks && subscription.canCreatePublicLobbies
+              ? html`<span
+                  data-subscription-perk="public_lobbies"
+                  class=${perkClass}
+                  ><span class="text-green-400">✓</span> ${translateText(
+                    "cosmetics.public_lobbies",
+                  )}</span
+                >`
+              : nothing
+          }
         </div>
       </div>`;
     }
@@ -294,14 +304,16 @@ export class CosmeticPreview extends LitElement {
             <cosmetic-preview .resolved=${item} size="card"></cosmetic-preview>
           </div>`,
       )}
-      ${hidden > 0
-        ? html`<span
-            class="absolute bottom-1 right-1 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white"
-            >${translateText("cosmetics.pack_more_items", {
-              count: hidden,
-            })}</span
-          >`
-        : nothing}
+      ${
+        hidden > 0
+          ? html`<span
+              class="absolute bottom-1 right-1 rounded-full bg-black/70 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white"
+              >${translateText("cosmetics.pack_more_items", {
+                count: hidden,
+              })}</span
+            >`
+          : nothing
+      }
     </div>`;
   }
 

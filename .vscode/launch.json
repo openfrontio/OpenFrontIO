@@ -16,9 +16,8 @@
       "name": "Debug Server",
       "runtimeExecutable": "node",
       "runtimeArgs": [
-        "--loader",
-        "ts-node/esm",
-        "--experimental-specifier-resolution=node",
+        "--import",
+        "tsx",
         "${workspaceFolder}/src/server/Server.ts"
       ],
       "env": {

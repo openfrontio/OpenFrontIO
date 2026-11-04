@@ -2,10 +2,36 @@
  * Module-reference scanning and resolution shared by the split-packages
  * codemod and analysis scripts. Throwaway tooling for #1701.
  */
+// DISABLED: TypeScript 7.0 ships no JavaScript compiler API - the package
+// only exports a version string - so this script cannot parse TypeScript any
+// more. The replacement API (typescript/sync, typescript/ast) arrives with
+// TypeScript 7.1: it is in beta today (`npm i -D typescript@7.1.0-beta`) and
+// the final release is expected in December 2026. Until then this script is
+// kept as it is, but is not type-checked and refuses to run. The next split
+// has to wait for that release.
+// See https://github.com/openfrontio/OpenFrontIO/issues/4982
+// @ts-nocheck
 import fs from "fs";
 import path from "path";
 import ts from "typescript";
 import { fileURLToPath } from "url";
+
+/**
+ * The TypeScript compiler API the codemod is built on. TypeScript 7.0 has
+ * none, so every script that needs it stops here with an explanation
+ * instead of failing with "ts.createSourceFile is not a function".
+ */
+export function assertCompilerApiAvailable(): void {
+  const api = ts as unknown as { createSourceFile?: unknown };
+  if (typeof api.createSourceFile !== "function") {
+    throw new Error(
+      "scripts/split-packages is disabled: TypeScript 7.0 ships no compiler " +
+        "API. Use typescript@7.1.0-beta to run it now; the 7.1 API is " +
+        "expected to ship in December 2026. See " +
+        "https://github.com/openfrontio/OpenFrontIO/issues/4982",
+    );
+  }
+}
 
 export const ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),

@@ -33,6 +33,13 @@ vi.mock("../../src/client/SubscriptionPolicy", () => ({
   },
 }));
 
+vi.stubGlobal(
+  "fetch",
+  vi.fn(async () => {
+    throw new TypeError("fetch failed");
+  }),
+);
+
 import type {
   Cosmetics,
   Pack,

@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "HornOfAfrica",
   "name": "Horn Of Africa",
   "translation_key": "map.hornofafrica",
-  "categories": ["africa", "new"],
-  "multiplayer_frequency": 5,
+  "categories": ["africa"],
+  "location": { "lat": 8, "lon": 46 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [1767, 1707],

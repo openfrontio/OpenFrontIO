@@ -51,8 +51,9 @@ export function notableLobbySettings(
       value: enabled,
     });
   if (
-    pm?.isHardNations ||
-    (c.gameType === GameType.Private && c.difficulty !== Difficulty.Easy)
+    c.nations !== "disabled" &&
+    (pm?.isHardNations ||
+      (c.gameType === GameType.Private && c.difficulty !== Difficulty.Easy))
   )
     items.push({
       label: translateText("difficulty.difficulty"),
@@ -82,6 +83,11 @@ export function notableLobbySettings(
     items.push({
       label: translateText("private_lobby.game_length"),
       value: renderDuration(c.maxTimerValue * 60),
+    });
+  if (c.winThresholdTenths)
+    items.push({
+      label: translateText("game_settings.win_threshold"),
+      value: `${c.winThresholdTenths / 10}%`,
     });
   if (
     c.spawnImmunityDuration &&

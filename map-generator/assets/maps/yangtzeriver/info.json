@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "name": "Yangtze River",
   "id": "YangtzeRiver",
   "translation_key": "map.yangtzeriver",
   "categories": ["asia"],
-  "multiplayer_frequency": 3,
+  "location": { "lat": 30.5, "lon": 114.3 },
+  "author": "crunchybbb",
   "nations": [
     {
       "coordinates": [3306, 1778],

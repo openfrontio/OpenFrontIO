@@ -6,17 +6,18 @@ import { Config } from "@openfront/engine-lib/configuration/Config";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
-import { LitElement, html } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
 import { Controller } from "../../Controller";
-import { AttackRatioEvent } from "../../InputHandler";
+import { AttackRatioEvent, isForwardedClick } from "../../InputHandler";
 import { UIState } from "../../UIState";
 import { USER_SETTINGS_CHANGED_EVENT, UserSettings } from "../../UserSettings";
 import { getGamesPlayed, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import { goldCoinIcon, soldierIcon } from "../HotbarIcons";
+import { OnboardingLowTroopsEvent } from "../Onboarding";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 const swordIcon = assetUrl("images/SwordIcon.svg");
 
@@ -60,6 +61,9 @@ export class ControlPanel extends LitElement implements Controller {
 
   @state()
   private _tutorialHighlight: TutorialHighlight | null = null;
+  /** The onboarding tutorial's low-troops warning is up: flash the bar. */
+  @state()
+  private _lowTroopsAlert = false;
 
   private _troopRateIsIncreasing: boolean = true;
 
@@ -91,6 +95,9 @@ export class ControlPanel extends LitElement implements Controller {
     this.uiState.attackRatio = this.attackRatio;
     this.eventBus.on(TutorialHighlightEvent, (e) => {
       this._tutorialHighlight = e.target;
+    });
+    this.eventBus.on(OnboardingLowTroopsEvent, (e) => {
+      this._lowTroopsAlert = e.low;
     });
     this.eventBus.on(AttackRatioEvent, (event) => {
       let newAttackRatio = this.attackRatio + event.attackRatio / 100;
@@ -356,6 +363,28 @@ export class ControlPanel extends LitElement implements Controller {
     (e.target as HTMLInputElement).blur();
   }
 
+  /**
+   * The browser only moves a range input on a real pointer press. A tap that
+   * the radial menu forwarded down from its overlay never reaches the slider
+   * as a press, so move it from the tap position here.
+   */
+  private handleRatioSliderClick(e: MouseEvent) {
+    if (!isForwardedClick(e)) return;
+    const input = e.currentTarget as HTMLInputElement | null;
+    if (!input) return;
+    const rect = input.getBoundingClientRect();
+    if (rect.width === 0) return;
+    const min = Number(input.min);
+    const max = Number(input.max);
+    const position = Math.min(
+      Math.max((e.clientX - rect.left) / rect.width, 0),
+      1,
+    );
+    const value = Math.round(min + position * (max - min));
+    input.value = String(value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
   private calculateTroopBar(): { greenPercent: number; orangePercent: number } {
     const base = Math.max(this._maxTroops, 1);
     const greenPercentRaw = (this._troops / base) * 100;
@@ -374,7 +403,9 @@ export class ControlPanel extends LitElement implements Controller {
     const { greenPercent, orangePercent } = this.calculateTroopBar();
     return html`
       <div
-        class="w-full h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
+        class="w-full h-6 border ${
+          this._lowTroopsAlert ? "border-red-500" : "border-gray-600"
+        } rounded-md bg-gray-900/60 overflow-hidden relative"
       >
         <div class="relative h-full">
           <div
@@ -383,10 +414,18 @@ export class ControlPanel extends LitElement implements Controller {
           ></div>
           <div
             class="absolute inset-y-0 left-0 w-full origin-left bg-aquarius transition-transform duration-200 ease-out"
-            style="transform: translateX(${greenPercent}%) scaleX(${orangePercent /
-            100});"
+            style="transform: translateX(${greenPercent}%) scaleX(${
+              orangePercent / 100
+            });"
           ></div>
         </div>
+        ${
+          this._lowTroopsAlert
+            ? html`<div
+                class="troop-bar-alert absolute inset-0 bg-red-600"
+              ></div>`
+            : nothing
+        }
         <div
           class="absolute inset-0 flex items-center justify-between px-1.5 text-xs font-bold leading-none pointer-events-none"
           translate="no"
@@ -416,10 +455,11 @@ export class ControlPanel extends LitElement implements Controller {
               class="brightness-0 invert drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
             />
             <span
-              class="text-[10px] font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${this
-                ._troopRateIsIncreasing
-                ? "text-green-400"
-                : "text-orange-400"}"
+              class="text-[10px] font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${
+                this._troopRateIsIncreasing
+                  ? "text-green-400"
+                  : "text-orange-400"
+              }"
               >+${renderTroops(this.troopRate)}/s</span
             >
           </div>
@@ -432,7 +472,9 @@ export class ControlPanel extends LitElement implements Controller {
     const { greenPercent, orangePercent } = this.calculateTroopBar();
     return html`
       <div
-        class="w-full h-6 border border-gray-600 rounded-md bg-gray-900/60 overflow-hidden relative"
+        class="w-full h-6 border ${
+          this._lowTroopsAlert ? "border-red-500" : "border-gray-600"
+        } rounded-md bg-gray-900/60 overflow-hidden relative"
       >
         <div class="relative h-full">
           <div
@@ -441,10 +483,18 @@ export class ControlPanel extends LitElement implements Controller {
           ></div>
           <div
             class="absolute inset-y-0 left-0 w-full origin-left bg-aquarius transition-transform duration-200 ease-out"
-            style="transform: translateX(${greenPercent}%) scaleX(${orangePercent /
-            100});"
+            style="transform: translateX(${greenPercent}%) scaleX(${
+              orangePercent / 100
+            });"
           ></div>
         </div>
+        ${
+          this._lowTroopsAlert
+            ? html`<div
+                class="troop-bar-alert absolute inset-0 bg-red-600"
+              ></div>`
+            : nothing
+        }
         <div
           class="absolute inset-0 flex items-center text-lg font-bold leading-none pointer-events-none"
           translate="no"
@@ -488,9 +538,11 @@ export class ControlPanel extends LitElement implements Controller {
     const isWarning = this._notification.type === "warning";
     return html`
       <div
-        class="flex items-center gap-1.5 px-1.5 py-1 rounded-md border text-xs font-medium mb-1 ${isWarning
-          ? "border-orange-400/60 bg-orange-400/10 text-orange-300"
-          : "border-blue-400/60 bg-blue-400/10 text-blue-300"}"
+        class="flex items-center gap-1.5 px-1.5 py-1 rounded-md border text-xs font-medium mb-1 ${
+          isWarning
+            ? "border-orange-400/60 bg-orange-400/10 text-orange-300"
+            : "border-blue-400/60 bg-blue-400/10 text-blue-300"
+        }"
       >
         <span class="shrink-0">${isWarning ? "⚠" : "ℹ"}</span>
         <span>${translateText(this._notification.message)}</span>
@@ -507,9 +559,11 @@ export class ControlPanel extends LitElement implements Controller {
         <div
           class="flex items-center gap-1 shrink-0 border rounded-md font-bold text-sm py-0.5 px-1 w-[5.5rem] ${this.tutorialHighlightClass(
             "troop_rate",
-          )} ${this._troopRateIsIncreasing
-            ? "border-green-400"
-            : "border-orange-400"}"
+          )} ${
+            this._troopRateIsIncreasing
+              ? "border-green-400"
+              : "border-orange-400"
+          }"
           translate="no"
         >
           <img
@@ -519,14 +573,16 @@ export class ControlPanel extends LitElement implements Controller {
             width="13"
             height="13"
             class="shrink-0"
-            style="filter: ${this._troopRateIsIncreasing
-              ? "brightness(0) saturate(100%) invert(74%) sepia(44%) saturate(500%) hue-rotate(83deg) brightness(103%)"
-              : "brightness(0) saturate(100%) invert(65%) sepia(60%) saturate(600%) hue-rotate(330deg) brightness(105%)"}"
+            style="filter: ${
+              this._troopRateIsIncreasing
+                ? "brightness(0) saturate(100%) invert(74%) sepia(44%) saturate(500%) hue-rotate(83deg) brightness(103%)"
+                : "brightness(0) saturate(100%) invert(65%) sepia(60%) saturate(600%) hue-rotate(330deg) brightness(105%)"
+            }"
           />
           <span
-            class="text-sm font-bold tabular-nums ${this._troopRateIsIncreasing
-              ? "text-green-400"
-              : "text-orange-400"}"
+            class="text-sm font-bold tabular-nums ${
+              this._troopRateIsIncreasing ? "text-green-400" : "text-orange-400"
+            }"
             >+${renderTroops(this.troopRate)}/s</span
           >
         </div>
@@ -541,15 +597,17 @@ export class ControlPanel extends LitElement implements Controller {
           )}"
           translate="no"
         >
-          ${this._goldGain !== null
-            ? keyed(
-                this._goldGainPulseId,
-                html`<span
-                  class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-sm font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
-                  >+${renderNumber(this._goldGain)}</span
-                >`,
-              )
-            : ""}
+          ${
+            this._goldGain !== null
+              ? keyed(
+                  this._goldGainPulseId,
+                  html`<span
+                    class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-sm font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
+                    >+${renderNumber(this._goldGain)}</span
+                  >`,
+                )
+              : ""
+          }
           <img src=${goldCoinIcon} width="13" height="13" class="shrink-0" />
           <span class="tabular-nums">${renderNumber(this._gold)}</span>
         </div>
@@ -586,6 +644,8 @@ export class ControlPanel extends LitElement implements Controller {
           .value=${String(Math.round(this.attackRatio * 100))}
           @input=${(e: Event) => this.handleRatioSliderInput(e)}
           @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
+          @click=${(e: MouseEvent) => this.handleRatioSliderClick(e)}
+          data-radial-click-through
           class="flex-1 h-1.5 accent-aquarius cursor-pointer"
         />
       </div>
@@ -618,15 +678,17 @@ export class ControlPanel extends LitElement implements Controller {
           )}"
           translate="no"
         >
-          ${this._goldGain !== null
-            ? keyed(
-                this._goldGainPulseId,
-                html`<span
-                  class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-xs font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
-                  >+${renderNumber(this._goldGain)}</span
-                >`,
-              )
-            : ""}
+          ${
+            this._goldGain !== null
+              ? keyed(
+                  this._goldGainPulseId,
+                  html`<span
+                    class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-xs font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
+                    >+${renderNumber(this._goldGain)}</span
+                  >`,
+                )
+              : ""
+          }
           <img src=${goldCoinIcon} width="13" height="13" />
           <span class="px-0.5">${renderNumber(this._gold)}</span>
         </div>
@@ -667,6 +729,8 @@ export class ControlPanel extends LitElement implements Controller {
             .value=${String(Math.round(this.attackRatio * 100))}
             @input=${(e: Event) => this.handleRatioSliderInput(e)}
             @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
+            @click=${(e: MouseEvent) => this.handleRatioSliderClick(e)}
+            data-radial-click-through
             class="w-full h-1.5 accent-aquarius cursor-pointer"
           />
         </div>
@@ -692,9 +756,9 @@ export class ControlPanel extends LitElement implements Controller {
         }
       </style>
       <div
-        class="relative pointer-events-auto ${this._isVisible
-          ? "relative w-full text-sm px-2 py-1"
-          : "hidden"}"
+        class="relative pointer-events-auto ${
+          this._isVisible ? "relative w-full text-sm px-2 py-1" : "hidden"
+        }"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div class="lg:hidden">${this.renderMobile()}</div>

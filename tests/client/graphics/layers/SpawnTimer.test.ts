@@ -1,9 +1,8 @@
 import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
 import { EventBus } from "@openfront/shared/EventBus";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import "../../../../src/client/hud/layers/SpawnTimer";
-import type { SpawnTimer } from "../../../../src/client/hud/layers/SpawnTimer";
 import { SpawnBarVisibleEvent } from "../../../../src/client/hud/layers/SpawnTimer";
+import type { SpawnTimer } from "../../../../src/client/hud/layers/SpawnTimer";
 import type { GameView } from "../../../../src/client/view";
 
 function makePlayer(team: string | null, tiles: number) {

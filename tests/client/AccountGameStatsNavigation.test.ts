@@ -272,4 +272,10 @@ describe("Account Games stats navigation", () => {
 
     expect(fetchPublicPlayerGames).toHaveBeenCalledOnce();
   });
+
+  it("renders date headers with pointer-events-none so action buttons are clickable", () => {
+    const historyView = modal.querySelector("player-game-history-view");
+    const dayHeader = historyView?.querySelector("h3")?.parentElement;
+    expect(dayHeader?.className).toContain("pointer-events-none");
+  });
 });

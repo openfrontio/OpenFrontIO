@@ -164,13 +164,15 @@ export class RankedModal extends BaseModal {
         <p class="mt-6 text-xs text-white/60 leading-relaxed text-center">
           ${translateText("mode_selector.ranked_pairing_note")}
         </p>
-        ${this.showTrustRequired
-          ? trustRequiredDialog(
-              this.isRankedEligible(),
-              () => (this.showTrustRequired = false),
-              "ranked",
-            )
-          : ""}
+        ${
+          this.showTrustRequired
+            ? trustRequiredDialog(
+                this.isRankedEligible(),
+                () => (this.showTrustRequired = false),
+                "ranked",
+              )
+            : ""
+        }
       </div>
     `;
   }

@@ -4,6 +4,7 @@ import {
   AllPlayers,
   BuildableUnit,
   Cell,
+  Difficulty,
   EmojiMessage,
   GameUpdates,
   Gold,
@@ -22,7 +23,6 @@ import {
   TerraNullius,
   Tick,
   TrainType,
-  TrajectoryTile,
   TransportShipState,
   UnitInfo,
   UnitType,
@@ -40,7 +40,11 @@ import {
   UnitLike,
   UnitPredicate,
 } from "@openfront/engine-api/game/ReadViews";
-import { AllPlayersStats, ClientID } from "@openfront/engine-api/Schemas";
+import {
+  AllPlayersStats,
+  ClientID,
+  GameID,
+} from "@openfront/engine-api/Schemas";
 import { MotionPlanRecord } from "@openfront/engine-lib/game/MotionPlans";
 import type { EngineConfig } from "../configuration/EngineConfig";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
@@ -73,12 +77,12 @@ export interface UnitParamsMap {
 
   [UnitType.AtomBomb]: {
     targetTile?: number;
-    trajectory: TrajectoryTile[];
+    trajectory: TileRef[];
   };
 
   [UnitType.HydrogenBomb]: {
     targetTile?: number;
-    trajectory: TrajectoryTile[];
+    trajectory: TileRef[];
   };
 
   [UnitType.MIRV]: {
@@ -88,7 +92,7 @@ export interface UnitParamsMap {
 
   [UnitType.MIRVWarhead]: {
     targetTile?: number;
-    trajectory: TrajectoryTile[];
+    trajectory: TileRef[];
   };
 
   [UnitType.TradeShip]: {
@@ -235,7 +239,7 @@ export interface Unit extends UnitLike {
   targetPlayer(): Player | TerraNullius | undefined;
   setTrajectoryIndex(i: number): void;
   trajectoryIndex(): number;
-  trajectory(): TrajectoryTile[];
+  trajectory(): TileRef[];
   setTargetUnit(unit: Unit | undefined): void;
   targetUnit(): Unit | undefined;
   setTargetedBySAM(targeted: boolean): void;
@@ -311,6 +315,7 @@ export interface Player extends PlayerLike {
   // Basic Info
   smallID(): number;
   info(): PlayerInfo;
+  setPlayerInfo(info: PlayerInfo): void;
   name(): string;
   displayName(): string;
   clanTag(): string | null;
@@ -397,6 +402,7 @@ export interface Player extends PlayerLike {
   buildableUnits(
     tile: TileRef | null,
     units?: readonly PlayerBuildableUnitType[],
+    includeBuildPreview?: boolean,
   ): BuildableUnit[];
   canBuild(
     type: UnitType,
@@ -605,6 +611,13 @@ export interface Game extends GameLike {
   ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
+  executions(): Execution[];
+  removeExecution(exec: Execution): void;
+  takeoverPlayer(player: Player | PlayerID, localClientID: ClientID): void;
+  convertHumanToNation(player: Player | PlayerID, gameID: GameID): Execution;
+  clearHumanPlayer(player: Player | PlayerID): void;
+  clearOtherHumans(keptPlayer: Player | PlayerID): void;
+  applySingleplayerConfig(difficulty?: Difficulty): void;
   displayMessage(
     message: string,
     type: MessageType,
@@ -638,6 +651,13 @@ export interface Game extends GameLike {
 
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
+  /**
+   * Bumped whenever a City, Port or Factory is added or removed (the
+   * structures the rail network connects) and whenever land turns to water
+   * (rail paths route around it), so rail previews can be memoised while
+   * other units churn.
+   */
+  structureVersion(): number;
   /** MIRVs launched so far by anyone; each one raises the next one's price. */
   mirvsLaunched(): number;
   recordMirvLaunch(): void;

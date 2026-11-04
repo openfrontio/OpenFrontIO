@@ -228,11 +228,9 @@ export class GameManager {
         if (game.pastMaxDuration()) {
           this.log.info("game past max duration", { gameID: id });
         }
-        try {
-          game.end();
-        } catch (error) {
+        game.end().catch((error) => {
           this.log.error(`error ending game ${id}: ${error}`);
-        }
+        });
       } else {
         active.set(id, game);
       }

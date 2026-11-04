@@ -413,11 +413,13 @@ export class PrestigeFlow extends LitElement {
       ${renderHoneycomb(this.honeycombMode(), {
         className: "prestige-honeycomb",
       })}
-      ${charging
-        ? renderHoneycomb("hx-charge", {
-            className: `prestige-honeycomb prestige-charge-comb ${chargeFading ? "is-off" : ""}`,
-          })
-        : nothing}
+      ${
+        charging
+          ? renderHoneycomb("hx-charge", {
+              className: `prestige-honeycomb prestige-charge-comb ${chargeFading ? "is-off" : ""}`,
+            })
+          : nothing
+      }
       <div aria-hidden="true" class="ceremony-vignette absolute inset-0"></div>
       ${ceremony ? this.renderCeremony(before) : this.renderConfirm(before)}
     </div>`;
@@ -494,16 +496,20 @@ export class PrestigeFlow extends LitElement {
         <p class="m-0 mt-6 max-w-md text-sm text-white/75">
           ${translateText("prestige.summary")}
         </p>
-        ${this.error === null
-          ? nothing
-          : html`<p
-              data-prestige-error
-              class="m-0 mt-2 text-sm font-bold text-rose-400"
-            >
-              ${this.error === "signed_out"
-                ? translateText("prestige.error_signed_out")
-                : translateText("prestige.error")}
-            </p>`}
+        ${
+          this.error === null
+            ? nothing
+            : html`<p
+                data-prestige-error
+                class="m-0 mt-2 text-sm font-bold text-rose-400"
+              >
+                ${
+                  this.error === "signed_out"
+                    ? translateText("prestige.error_signed_out")
+                    : translateText("prestige.error")
+                }
+              </p>`
+        }
 
         <div class="mt-6 flex w-full max-w-md gap-3">
           <button
@@ -543,11 +549,13 @@ export class PrestigeFlow extends LitElement {
               ?data-holding=${holding}
             ></span>
             <span class="relative">
-              ${submitting
-                ? translateText("prestige.submitting")
-                : holding
-                  ? translateText("prestige.keep_holding")
-                  : translateText("prestige.confirm")}
+              ${
+                submitting
+                  ? translateText("prestige.submitting")
+                  : holding
+                    ? translateText("prestige.keep_holding")
+                    : translateText("prestige.confirm")
+              }
             </span>
           </button>
         </div>
@@ -645,12 +653,14 @@ export class PrestigeFlow extends LitElement {
             class="block text-[13px] font-black normal-case tracking-normal text-white"
             >${exclusive.name}</span
           ><span class="mt-0.5 block"
-            >${exclusive.typeLabel === ""
-              ? translateText("prestige.exclusive_untyped", { rank })
-              : translateText("prestige.exclusive", {
-                  type: exclusive.typeLabel,
-                  rank,
-                })}</span
+            >${
+              exclusive.typeLabel === ""
+                ? translateText("prestige.exclusive_untyped", { rank })
+                : translateText("prestige.exclusive", {
+                    type: exclusive.typeLabel,
+                    rank,
+                  })
+            }</span
           >`,
       });
     }
@@ -905,80 +915,93 @@ export class PrestigeFlow extends LitElement {
       @click=${() => this.skipCeremony()}
     >
       <div class="relative grid h-[260px] w-[260px] place-items-center">
-        ${!shattered
-          ? html`<div aria-hidden="true" class="absolute inset-0">
-                ${particles.map(
-                  (deg, i) =>
+        ${
+          !shattered
+            ? html`<div aria-hidden="true" class="absolute inset-0">
+                  ${particles.map(
+                    (deg, i) =>
+                      html`<span
+                        class="prestige-particle"
+                        style="--a: ${deg}deg; animation-delay: ${
+                          (i % 6) * 0.18
+                        }s"
+                      ></span>`,
+                  )}
+                </div>
+                <div class="prestige-charge relative">
+                  <level-badge
+                    .level=${levelCap(this.config)}
+                    .prestige=${before.prestige}
+                    .size=${200}
+                  ></level-badge>
+                </div>`
+            : nothing
+        }
+        ${
+          shattered && !done
+            ? html`<div aria-hidden="true" class="absolute inset-0">
+                <span class="ceremony-shockwave"></span>
+                ${shards.map(
+                  (deg) =>
                     html`<span
-                      class="prestige-particle"
-                      style="--a: ${deg}deg; animation-delay: ${(i % 6) *
-                      0.18}s"
+                      class="prestige-shard"
+                      style="--a: ${deg}deg"
                     ></span>`,
                 )}
-              </div>
-              <div class="prestige-charge relative">
+              </div>`
+            : nothing
+        }
+        ${
+          revealed
+            ? html`<div
+                class="relative ${done ? "" : "prestige-reveal"}"
+                data-prestige-new-badge
+              >
                 <level-badge
-                  .level=${levelCap(this.config)}
-                  .prestige=${before.prestige}
-                  .size=${200}
+                  .level=${after?.level ?? 1}
+                  .prestige=${rank}
+                  .size=${220}
                 ></level-badge>
               </div>`
-          : nothing}
-        ${shattered && !done
-          ? html`<div aria-hidden="true" class="absolute inset-0">
-              <span class="ceremony-shockwave"></span>
-              ${shards.map(
-                (deg) =>
-                  html`<span
-                    class="prestige-shard"
-                    style="--a: ${deg}deg"
-                  ></span>`,
-              )}
-            </div>`
-          : nothing}
-        ${revealed
-          ? html`<div
-              class="relative ${done ? "" : "prestige-reveal"}"
-              data-prestige-new-badge
-            >
-              <level-badge
-                .level=${after?.level ?? 1}
-                .prestige=${rank}
-                .size=${220}
-              ></level-badge>
-            </div>`
-          : nothing}
+            : nothing
+        }
       </div>
 
       <div class="relative mt-6 flex min-h-[200px] flex-col items-center">
-        ${this.reached("title")
-          ? html`<div
-              data-prestige-title
-              class="${done
-                ? ""
-                : "ceremony-slam"} prestige-title text-5xl font-black uppercase italic tracking-wide sm:text-7xl"
-            >
-              ${translateText("prestige.ceremony_title", { rank })}
-            </div>`
-          : nothing}
+        ${
+          this.reached("title")
+            ? html`<div
+                data-prestige-title
+                class="${
+                  done ? "" : "ceremony-slam"
+                } prestige-title text-5xl font-black uppercase italic tracking-wide sm:text-7xl"
+              >
+                ${translateText("prestige.ceremony_title", { rank })}
+              </div>`
+            : nothing
+        }
         ${done ? this.renderShare(rank) : nothing}
-        ${done
-          ? html`<button
-              type="button"
-              data-prestige-continue
-              class="prestige-fade prestige-cut mt-6 border-0 bg-gradient-to-b from-yellow-300 to-amber-500 px-10 py-3 text-base font-black uppercase tracking-wider text-zinc-900 transition-transform hover:-translate-y-0.5"
-              @click=${(e: Event) => {
-                e.stopPropagation();
-                this.close();
-              }}
-            >
-              ${translateText("prestige.continue")}
-            </button>`
-          : nothing}
+        ${
+          done
+            ? html`<button
+                type="button"
+                data-prestige-continue
+                class="prestige-fade prestige-cut mt-6 border-0 bg-gradient-to-b from-yellow-300 to-amber-500 px-10 py-3 text-base font-black uppercase tracking-wider text-zinc-900 transition-transform hover:-translate-y-0.5"
+                @click=${(e: Event) => {
+                  e.stopPropagation();
+                  this.close();
+                }}
+              >
+                ${translateText("prestige.continue")}
+              </button>`
+            : nothing
+        }
       </div>
-      ${shattered && !this.reached("title")
-        ? html`<div aria-hidden="true" class="ceremony-flash"></div>`
-        : nothing}
+      ${
+        shattered && !this.reached("title")
+          ? html`<div aria-hidden="true" class="ceremony-flash"></div>`
+          : nothing
+      }
     </div>`;
   }
 

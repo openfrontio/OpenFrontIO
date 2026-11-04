@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Benelux",
   "name": "Benelux",
   "translation_key": "map.benelux",
-  "categories": ["new", "europe", "countries"],
-  "multiplayer_frequency": 5,
+  "categories": ["europe", "countries"],
+  "location": { "lat": 51, "lon": 5 },
+  "author": "Niels_600",
   "nations": [
     {
       "coordinates": [718, 492],
@@ -46,5 +48,5 @@
       "flag": "Flanders"
     }
   ],
-  "themes": ["Europe"]
+  "themes": ["europe"]
 }

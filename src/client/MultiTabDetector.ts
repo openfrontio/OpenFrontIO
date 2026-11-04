@@ -8,10 +8,12 @@ export class MultiTabDetector {
   private isPunished = false;
   private punishmentCount = 0;
   private startPenaltyCallback: (duration: number) => void = () => {};
+  private readonly storageListener = this.onStorageEvent.bind(this);
+  private readonly beforeUnloadListener = this.onBeforeUnload.bind(this);
 
   constructor() {
-    window.addEventListener("storage", this.onStorageEvent.bind(this));
-    window.addEventListener("beforeunload", this.onBeforeUnload.bind(this));
+    window.addEventListener("storage", this.storageListener);
+    window.addEventListener("beforeunload", this.beforeUnloadListener);
   }
 
   public startMonitoring(startPenalty: (duration: number) => void): void {
@@ -33,8 +35,8 @@ export class MultiTabDetector {
     if (lock?.owner === this.tabId) {
       localStorage.removeItem(this.lockKey);
     }
-    window.removeEventListener("storage", this.onStorageEvent.bind(this));
-    window.removeEventListener("beforeunload", this.onBeforeUnload.bind(this));
+    window.removeEventListener("storage", this.storageListener);
+    window.removeEventListener("beforeunload", this.beforeUnloadListener);
   }
 
   private heartbeat(): void {

@@ -57,6 +57,7 @@ import {
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
+import { shareGame } from "../../utilities/ShareGame";
 import { GameView } from "../../view";
 
 type LegendCeremonyModule = typeof import("../../components/LegendCeremony");
@@ -90,6 +91,24 @@ function loadGameXpPanel(): void {
     },
   );
 }
+
+const iconShare = html`<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class="w-5 h-5"
+  aria-hidden="true"
+>
+  <circle cx="18" cy="5" r="3" />
+  <circle cx="6" cy="12" r="3" />
+  <circle cx="18" cy="19" r="3" />
+  <line x1="8.6" y1="10.5" x2="15.4" y2="6.5" />
+  <line x1="8.6" y1="13.5" x2="15.4" y2="17.5" />
+</svg>`;
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Controller {
@@ -166,9 +185,11 @@ export class WinModal extends LitElement implements Controller {
   render() {
     return html`
       <div
-        class="${this.isVisible
-          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-4 md:p-6 shrink-0 rounded-lg z-[10010] shadow-2xl backdrop-blur-xs text-white w-[min(90vw,700px)] max-w-[90%] max-h-[90dvh] overflow-hidden flex flex-col"
-          : "hidden"}"
+        class="${
+          this.isVisible
+            ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-4 md:p-6 shrink-0 rounded-lg z-[10010] shadow-2xl backdrop-blur-xs text-white w-[min(90vw,700px)] max-w-[90%] max-h-[90dvh] overflow-hidden flex flex-col"
+            : "hidden"
+        }"
       >
         <h2 class="m-0 mb-4 text-[26px] text-center text-white shrink-0">
           ${this._title || ""}
@@ -195,14 +216,16 @@ export class WinModal extends LitElement implements Controller {
             "exit",
           )}
           ${this.renderShare()}
-          ${this.isRankedGame
-            ? this.actionButton(
-                "main",
-                translateText("win_modal.requeue"),
-                () => this._handleRequeue(),
-                "requeue",
-              )
-            : null}
+          ${
+            this.isRankedGame
+              ? this.actionButton(
+                  "main",
+                  translateText("win_modal.requeue"),
+                  () => this._handleRequeue(),
+                  "requeue",
+                )
+              : null
+          }
           ${this.actionButton(
             "main",
             this.game?.myPlayer()?.isAlive()
@@ -211,6 +234,22 @@ export class WinModal extends LitElement implements Controller {
             () => this.hide(),
             "keep",
           )}
+          ${
+            this.game?.resumedFromSave?.()
+              ? null
+              : html`<button
+                  type="button"
+                  data-win-action="share"
+                  class="win-action win-action-main win-action-icon"
+                  title=${translateText("win_modal.share")}
+                  aria-label=${translateText("win_modal.share")}
+                  @click=${this._handleShare}
+                >
+                  <span class="relative flex items-center justify-center"
+                    >${iconShare}</span
+                  >
+                </button>`
+          }
         </div>
         ${this.renderActionStyles()}
       </div>
@@ -415,6 +454,12 @@ export class WinModal extends LitElement implements Controller {
         border-color: rgba(255, 255, 255, 0.35);
         box-shadow: 0 0 14px rgba(255, 255, 255, 0.25);
       }
+      .win-action-icon {
+        padding: 0;
+        width: 3rem;
+        aspect-ratio: 1 / 1;
+        flex-shrink: 0;
+      }
       /* The share menu's flash ring sits in the trigger's wrapper so it isn't
          clipped by .win-action's overflow:hidden. When the button translates up
          on hover/focus, keep the ring centered around it. */
@@ -482,21 +527,23 @@ export class WinModal extends LitElement implements Controller {
         </h3>
         <!-- 56.25% = 9:16 -->
         <div class="relative w-full pb-[56.25%]">
-          ${Platform.isElectron
-            ? html`<video
-                class="absolute top-0 left-0 w-full h-full rounded-sm"
-                src="${this.isVisible ? DESKTOP_TUTORIAL_VIDEO_URL : ""}"
-                controls
-                preload="metadata"
-              ></video>`
-            : html`<iframe
-                class="absolute top-0 left-0 w-full h-full rounded-sm"
-                src="${this.isVisible ? TUTORIAL_VIDEO_URL : ""}"
-                title="YouTube video player"
-                frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowfullscreen
-              ></iframe>`}
+          ${
+            Platform.isElectron
+              ? html`<video
+                  class="absolute top-0 left-0 w-full h-full rounded-sm"
+                  src="${this.isVisible ? DESKTOP_TUTORIAL_VIDEO_URL : ""}"
+                  controls
+                  preload="metadata"
+                ></video>`
+              : html`<iframe
+                  class="absolute top-0 left-0 w-full h-full rounded-sm"
+                  src="${this.isVisible ? TUTORIAL_VIDEO_URL : ""}"
+                  title="YouTube video player"
+                  frameborder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowfullscreen
+                ></iframe>`
+          }
         </div>
       </div>
     `;
@@ -508,11 +555,13 @@ export class WinModal extends LitElement implements Controller {
         <h3 class="text-xl font-semibold text-white mb-3">
           ${translateText("win_modal.support_openfront")}
         </h3>
-        ${isDesktopShell()
-          ? null
-          : html`<p class="text-white mb-3">
-              ${translateText("win_modal.territory_pattern")}
-            </p>`}
+        ${
+          isDesktopShell()
+            ? null
+            : html`<p class="text-white mb-3">
+                ${translateText("win_modal.territory_pattern")}
+              </p>`
+        }
         <div
           class="mx-auto w-full overflow-x-auto overflow-y-visible rounded-sm"
         >
@@ -605,7 +654,9 @@ export class WinModal extends LitElement implements Controller {
   }
 
   async show() {
-    gamePortal.gameplayStop();
+    void gamePortal.gameplayStop();
+    // The onboarding tutorial ends on its own card (OnboardingOverlay).
+    if (this.game.config().gameConfig().tutorial === true) return;
     this.isRankedGame =
       this.game.config().gameConfig().rankedType !== undefined;
     this.isVisible = true;
@@ -950,6 +1001,10 @@ export class WinModal extends LitElement implements Controller {
     );
   }
 
+  private async _handleShare() {
+    await shareGame(this.game?.gameID());
+  }
+
   init() {
     if (this.game.config().isReplay()) return;
     loadGameXpPanel();
@@ -984,7 +1039,7 @@ export class WinModal extends LitElement implements Controller {
       this._title = translateText("win_modal.died");
       this.eventBus.emit(new PlaySoundEffectEvent("defeat"));
       void this.updateXp(false);
-      this.show();
+      void this.show();
     }
     const updates = this.game.updatesSinceLastTick();
     const winUpdates = updates?.[GameUpdateType.Win] ?? [];
@@ -1005,13 +1060,13 @@ export class WinModal extends LitElement implements Controller {
         this._title = translateText("win_modal.match_cancelled");
         this.isWin = false;
         history.replaceState(null, "", `${window.location.pathname}?replay`);
-        this.show();
+        void this.show();
       } else if (wu.winner[0] === "team") {
         vote(wu.winner, wu.allPlayersStats);
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
           this.isWin = true;
-          gamePortal.happytime();
+          void gamePortal.happytime();
         } else {
           this._title = translateText("win_modal.other_team", {
             team: getTranslatedPlayerTeamLabel(wu.winner[1]),
@@ -1020,7 +1075,7 @@ export class WinModal extends LitElement implements Controller {
         }
         this.playEndOfGameSound();
         history.replaceState(null, "", `${window.location.pathname}?replay`);
-        this.show();
+        void this.show();
       } else if (wu.winner[0] === "nation") {
         vote(wu.winner, wu.allPlayersStats);
         this._title = translateText("win_modal.nation_won", {
@@ -1028,7 +1083,7 @@ export class WinModal extends LitElement implements Controller {
         });
         this.isWin = false;
         this.playEndOfGameSound();
-        this.show();
+        void this.show();
       } else {
         const winner = this.game.playerByClientID(wu.winner[1]);
         if (!winner?.isPlayer()) return;
@@ -1042,7 +1097,7 @@ export class WinModal extends LitElement implements Controller {
         ) {
           this._title = translateText("win_modal.you_won");
           this.isWin = true;
-          gamePortal.happytime();
+          void gamePortal.happytime();
         } else {
           this._title = translateText("win_modal.other_won", {
             player: winner.displayName(),
@@ -1051,7 +1106,7 @@ export class WinModal extends LitElement implements Controller {
         }
         this.playEndOfGameSound();
         history.replaceState(null, "", `${window.location.pathname}?replay`);
-        this.show();
+        void this.show();
       }
     });
     // After the vote, so a figure from the end has what was voted.

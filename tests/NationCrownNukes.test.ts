@@ -5,9 +5,10 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { NationNukeBehavior } from "@openfront/engine/execution/nation/NationNukeBehavior";
-import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
@@ -71,7 +72,7 @@ function nukeTarget(game: Game, nation: Player): Player | null {
     nation,
     emojiBehavior,
   );
-  const attackBehavior = new AiAttackBehavior(
+  const attackBehavior = new NationAttackBehavior(
     new PseudoRandom(42),
     game,
     nation,
@@ -80,6 +81,12 @@ function nukeTarget(game: Game, nation: Player): Player | null {
     0.2,
     allianceBehavior,
     emojiBehavior,
+    new NationWarshipBehavior(
+      new PseudoRandom(42),
+      game,
+      nation,
+      emojiBehavior,
+    ),
   );
   return new NationNukeBehavior(
     new PseudoRandom(42),

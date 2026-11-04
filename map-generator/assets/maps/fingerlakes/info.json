@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "FingerLakes",
   "name": "Finger Lakes",
   "translation_key": "map.fingerlakes",
   "categories": ["north_america"],
-  "multiplayer_frequency": 4,
+  "location": { "lat": 42.6, "lon": -76.9 },
+  "author": "crunchybbb",
   "nations": [
     {
       "coordinates": [1156, 1222],

@@ -174,9 +174,9 @@ export class EmojiTable extends LitElement {
               <button
                 class="relative flex items-center justify-center size-16 rounded-lg text-5xl transition-colors ${look}"
                 draggable=${emoji ? "true" : "false"}
-                title=${emoji
-                  ? translateText("emoji_table.favorite_remove_hint")
-                  : ""}
+                title=${
+                  emoji ? translateText("emoji_table.favorite_remove_hint") : ""
+                }
                 @click=${() => emoji && this.onEmojiClicked(emoji)}
                 @dragstart=${(e: DragEvent) =>
                   emoji && this.startDrag(e, emoji, slot)}
@@ -186,26 +186,30 @@ export class EmojiTable extends LitElement {
                 @drop=${(e: DragEvent) => this.drop(e, slot)}
               >
                 ${emoji ?? ""}
-                ${showKeys
-                  ? html`<span
-                      class="pointer-events-none absolute top-0.5 left-1.5 text-xs leading-tight font-mono text-zinc-400"
-                      translate="no"
-                      >${favoriteKeyLabel(slot)}</span
-                    >`
-                  : null}
+                ${
+                  showKeys
+                    ? html`<span
+                        class="pointer-events-none absolute top-0.5 left-1.5 text-xs leading-tight font-mono text-zinc-400"
+                        translate="no"
+                        >${favoriteKeyLabel(slot)}</span
+                      >`
+                    : null
+                }
               </button>
             `;
           })}
         </div>
-        ${empty
-          ? html`<p class="mt-1 text-center text-xs text-zinc-500">
-              ${translateText(
-                showKeys
-                  ? "emoji_table.favorites_hint"
-                  : "emoji_table.favorites_hint_touch",
-              )}
-            </p>`
-          : null}
+        ${
+          empty
+            ? html`<p class="mt-1 text-center text-xs text-zinc-500">
+                ${translateText(
+                  showKeys
+                    ? "emoji_table.favorites_hint"
+                    : "emoji_table.favorites_hint_touch",
+                )}
+              </p>`
+            : null
+        }
       </section>
     `;
   }

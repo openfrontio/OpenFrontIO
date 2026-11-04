@@ -41,25 +41,29 @@ export class ReplayStatus extends LitElement {
         <div
           class="pointer-events-auto w-full max-w-sm flex flex-col items-center gap-4 p-6 rounded-2xl border border-white/10 bg-black/70 backdrop-blur-xl shadow-2xl text-center text-white"
         >
-          ${this.status === "loading"
-            ? html`${spinner()}
-                <h2 class="text-lg font-bold text-white">
-                  ${translateText("replay_viewer.loading")}
-                </h2>`
-            : nothing}
+          ${
+            this.status === "loading"
+              ? html`${spinner()}
+                  <h2 class="text-lg font-bold text-white">
+                    ${translateText("replay_viewer.loading")}
+                  </h2>`
+              : nothing
+          }
           ${this.status === "processing" ? this.renderProgress() : nothing}
           ${this.status === "error" ? this.renderError() : nothing}
-          ${this.classicFallback
-            ? html`<div class="w-full flex flex-col gap-2 pt-2">
-                <o-button
-                  width="block"
-                  size="sm"
-                  translationKey="replay_viewer.watch_classic"
-                  @click=${() =>
-                    window.location.assign(classicReplayHref(this.gameID))}
-                ></o-button>
-              </div>`
-            : nothing}
+          ${
+            this.classicFallback
+              ? html`<div class="w-full flex flex-col gap-2 pt-2">
+                  <o-button
+                    width="block"
+                    size="sm"
+                    translationKey="replay_viewer.watch_classic"
+                    @click=${() =>
+                      window.location.assign(classicReplayHref(this.gameID))}
+                  ></o-button>
+                </div>`
+              : nothing
+          }
         </div>
       </div>
       <div

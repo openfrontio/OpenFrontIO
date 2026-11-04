@@ -69,7 +69,10 @@ export interface MockWs {
 // readyState leaves OPEN once the socket is closed from either side, as the
 // real one does, so server guards like `readyState === OPEN` behave the same.
 export function makeMockWs(): MockWs {
-  const listeners = new Map<string, ((...args: any[]) => void)[]>();
+  const listeners = new Map<
+    string,
+    ((...args: any[]) => void | Promise<void>)[]
+  >();
   const CLOSED = 3;
   const ws: MockWs = {
     on: (event, handler) => {

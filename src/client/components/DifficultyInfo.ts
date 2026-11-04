@@ -68,11 +68,13 @@ export class DifficultyInfo extends LitElement {
             troops,
           })}
         </div>
-        ${DIFFICULTIES_WITH_NOTE.has(difficulty)
-          ? html`<div class="text-white/60">
-              ${translateText(`difficulty.info_note_${key}`)}
-            </div>`
-          : nothing}
+        ${
+          DIFFICULTIES_WITH_NOTE.has(difficulty)
+            ? html`<div class="text-white/60">
+                ${translateText(`difficulty.info_note_${key}`)}
+              </div>`
+            : nothing
+        }
       </div>
     </div>`;
   }

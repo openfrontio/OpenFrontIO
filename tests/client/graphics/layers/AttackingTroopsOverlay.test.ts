@@ -2,6 +2,7 @@ import { Cell } from "@openfront/engine-api/game/GameTypes";
 import { describe, expect, test } from "vitest";
 import {
   alignClusterOrder,
+  AttackingTroopsController,
   Slot,
 } from "../../../../src/client/controllers/AttackingTroopsController";
 
@@ -72,5 +73,41 @@ describe("alignClusterOrder", () => {
     const next = [c(100, 0), c(0, 0), c(50, 0)];
     alignClusterOrder(next, [slot(0, 0), slot(100, 0)]);
     expect(next.map((p) => p.x)).toEqual([100, 0, 50]);
+  });
+});
+
+describe("pushLabels buffer reuse", () => {
+  test("reuses the same labelBuf array and objects across frames", () => {
+    let captured: unknown[] = [];
+    const view = { setAttackTroopLabels: (l: unknown[]) => (captured = l) };
+    const ctrl = new (AttackingTroopsController as any)({}, {}, {}, view);
+    ctrl.attacks.set("a", {
+      text: "1",
+      isIncoming: true,
+      slots: [
+        { curX: 0, curY: 0, srcX: 0, srcY: 0, dstX: 1, dstY: 1, startMs: 0 },
+      ],
+    });
+    ctrl.pushLabels();
+    const firstBuf = captured;
+    const firstItem = captured[0];
+    ctrl.pushLabels();
+    expect(captured).toBe(firstBuf);
+    expect(captured[0]).toBe(firstItem);
+
+    ctrl.attacks.clear();
+    ctrl.pushLabels();
+    expect(captured.length).toBe(0);
+
+    ctrl.attacks.set("a", {
+      text: "2",
+      isIncoming: false,
+      slots: [
+        { curX: 1, curY: 1, srcX: 0, srcY: 0, dstX: 2, dstY: 2, startMs: 0 },
+      ],
+    });
+    ctrl.pushLabels();
+    expect(captured.length).toBe(1);
+    expect(captured[0]).toBe(firstItem);
   });
 });

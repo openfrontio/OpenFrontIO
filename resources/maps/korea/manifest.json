@@ -16,7 +16,6 @@
     "num_land_tiles": 192353,
     "width": 544
   },
-  "multiplayer_frequency": 5,
   "name": "Korea",
   "nations": [
     {
@@ -197,7 +196,6 @@
       }
     ]
   },
-  "team_frequency": 10,
   "themes": ["asia"],
   "translation_key": "map.korea"
 }

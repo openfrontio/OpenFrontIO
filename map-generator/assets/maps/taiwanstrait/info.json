@@ -1,10 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "TaiwanStrait",
   "name": "Taiwan Strait",
   "translation_key": "map.taiwanstrait",
   "categories": ["asia"],
-  "multiplayer_frequency": 5,
-  "team_frequency": 10,
+  "location": { "lat": 24.5, "lon": 119.5 },
+  "author": "Tristar",
   "special_team_count": 2,
   "nations": [
     {

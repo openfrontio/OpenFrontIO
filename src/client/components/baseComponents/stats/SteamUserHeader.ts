@@ -36,20 +36,22 @@ export class SteamUserHeader extends LitElement {
     const avatar = this._data.avatarUrl;
     return html`
       <div class="flex items-center gap-2">
-        ${avatar && !this._avatarError
-          ? html`
-              <div class="p-[3px] rounded-full bg-gray-500">
-                <img
-                  class="w-12 h-12 rounded-full block"
-                  src="${avatar}"
-                  alt="${translateText("steam_user_header.avatar_alt")}"
-                  @error=${() => {
-                    this._avatarError = true;
-                  }}
-                />
-              </div>
-            `
-          : null}
+        ${
+          avatar && !this._avatarError
+            ? html`
+                <div class="p-[3px] rounded-full bg-gray-500">
+                  <img
+                    class="w-12 h-12 rounded-full block"
+                    src="${avatar}"
+                    alt="${translateText("steam_user_header.avatar_alt")}"
+                    @error=${() => {
+                      this._avatarError = true;
+                    }}
+                  />
+                </div>
+              `
+            : null
+        }
         <span class="font-semibold text-white">${name}</span>
       </div>
     `;

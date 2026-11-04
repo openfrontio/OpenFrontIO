@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "MareNostrum",
   "name": "Mare Nostrum",
   "translation_key": "map.marenostrum",
   "categories": ["europe", "asia", "africa"],
-  "multiplayer_frequency": 6,
+  "location": { "lat": 36.5, "lon": 17 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [141, 574],

@@ -135,9 +135,11 @@ export class PlayerStatsTreeView extends LitElement {
         aria-selected=${isActive}
         title=${title ?? nothing}
         @click=${onSelect}
-        class="grow basis-20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${isActive
-          ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30"
-          : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"}"
+        class="grow basis-20 px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${
+          isActive
+            ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30"
+            : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"
+        }"
       >
         ${label}
       </button>
@@ -501,81 +503,89 @@ export class PlayerStatsTreeView extends LitElement {
               ),
             ),
           ])}
-          ${this.selectedType === "Ranked" && rankedTypes.length
-            ? this.renderFilterRow([
-                this.renderFilterTab(
-                  this.labelForType(ALL_SELECTION),
-                  this.selectedRankedType === ALL_SELECTION,
-                  () => this.setRankedType(ALL_SELECTION),
-                ),
-                ...rankedTypes.map((r) =>
+          ${
+            this.selectedType === "Ranked" && rankedTypes.length
+              ? this.renderFilterRow([
                   this.renderFilterTab(
-                    this.labelForRankedType(r) ?? "",
-                    this.selectedRankedType === r,
-                    () => this.setRankedType(r),
+                    this.labelForType(ALL_SELECTION),
+                    this.selectedRankedType === ALL_SELECTION,
+                    () => this.setRankedType(ALL_SELECTION),
                   ),
-                ),
-              ])
-            : nothing}
-          ${modes.length
-            ? this.renderFilterRow([
-                this.renderFilterTab(
-                  this.labelForType(ALL_SELECTION),
-                  this.selectedMode === ALL_SELECTION,
-                  () => this.setMode(ALL_SELECTION),
-                  translateText("player_stats_tree.mode"),
-                ),
-                ...modes.map((m) =>
+                  ...rankedTypes.map((r) =>
+                    this.renderFilterTab(
+                      this.labelForRankedType(r) ?? "",
+                      this.selectedRankedType === r,
+                      () => this.setRankedType(r),
+                    ),
+                  ),
+                ])
+              : nothing
+          }
+          ${
+            modes.length
+              ? this.renderFilterRow([
                   this.renderFilterTab(
-                    this.labelForMode(m),
-                    this.selectedMode === m,
-                    () => this.setMode(m),
+                    this.labelForType(ALL_SELECTION),
+                    this.selectedMode === ALL_SELECTION,
+                    () => this.setMode(ALL_SELECTION),
                     translateText("player_stats_tree.mode"),
                   ),
-                ),
-              ])
-            : nothing}
-          ${diffs.length
-            ? this.renderFilterRow([
-                this.renderFilterTab(
-                  this.labelForType(ALL_SELECTION),
-                  this.selectedDifficulty === ALL_SELECTION,
-                  () => this.setDifficulty(ALL_SELECTION),
-                  translateText("difficulty.difficulty"),
-                ),
-                ...diffs.map((d) =>
+                  ...modes.map((m) =>
+                    this.renderFilterTab(
+                      this.labelForMode(m),
+                      this.selectedMode === m,
+                      () => this.setMode(m),
+                      translateText("player_stats_tree.mode"),
+                    ),
+                  ),
+                ])
+              : nothing
+          }
+          ${
+            diffs.length
+              ? this.renderFilterRow([
                   this.renderFilterTab(
-                    translateText(`difficulty.${d.toLowerCase()}`),
-                    this.selectedDifficulty === d,
-                    () => this.setDifficulty(d),
+                    this.labelForType(ALL_SELECTION),
+                    this.selectedDifficulty === ALL_SELECTION,
+                    () => this.setDifficulty(ALL_SELECTION),
                     translateText("difficulty.difficulty"),
                   ),
-                ),
-              ])
-            : nothing}
+                  ...diffs.map((d) =>
+                    this.renderFilterTab(
+                      translateText(`difficulty.${d.toLowerCase()}`),
+                      this.selectedDifficulty === d,
+                      () => this.setDifficulty(d),
+                      translateText("difficulty.difficulty"),
+                    ),
+                  ),
+                ])
+              : nothing
+          }
         </div>
 
-        ${leaf
-          ? html`
-              <div class="border-t border-white/10">
-                <div class="py-3">
-                  <player-stats-summary .leaf=${leaf}></player-stats-summary>
-                </div>
+        ${
+          leaf
+            ? html`
+                <div class="border-t border-white/10">
+                  <div class="py-3">
+                    <player-stats-summary .leaf=${leaf}></player-stats-summary>
+                  </div>
 
-                <div class="border-t border-white/10 pt-6">
-                  <player-stats-table
-                    .stats=${leaf?.stats ?? null}
-                  ></player-stats-table>
+                  <div class="border-t border-white/10 pt-6">
+                    <player-stats-table
+                      .stats=${leaf?.stats ?? null}
+                    ></player-stats-table>
+                  </div>
                 </div>
-              </div>
-            `
-          : html`
-              <div
-                class="py-12 text-center text-white/30 italic border border-white/5 rounded-xl bg-white/5"
-              >
-                ${translateText("player_stats_tree.no_stats")}
-              </div>
-            `}
+              `
+            : html`
+                <div
+                  class="py-12 text-center text-white/30 italic border border-white/5 rounded-xl bg-white/5"
+                >
+                  ${translateText("player_stats_tree.no_stats")}
+                </div>
+              `
+        }
       </div>
     `;
   }

@@ -9,13 +9,14 @@ import {
 } from "../Cosmetics";
 import { translateText } from "../Utils";
 import {
+  cosmeticAiLabelKey,
   cosmeticDisplayName,
   cosmeticRarityBadgeClass,
   cosmeticRarityLabel,
 } from "./CosmeticPresentation";
 import type { CosmeticRenderCanvas } from "./cosmetics/CosmeticRenderCanvas";
 
-export const TEAM_COLORS = [
+const TEAM_COLORS = [
   { name: "Red", hex: "#eb3333" },
   { name: "Blue", hex: "#2962ff" },
   { name: "Teal", hex: "#06b6d4" },
@@ -209,9 +210,11 @@ export class CosmeticPreviewModal extends LitElement {
         title=${option.label}
         aria-label=${option.label}
         aria-pressed=${isSelected ? "true" : "false"}
-        class="group relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${isSelected
-          ? `${ring} bg-white/25 text-white shadow-sm`
-          : "border-white/30 bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"}"
+        class="group relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-all duration-150 hover:scale-105 active:scale-95 cursor-pointer ${
+          isSelected
+            ? `${ring} bg-white/25 text-white shadow-sm`
+            : "border-white/30 bg-white/10 text-white/70 hover:bg-white/20 hover:text-white"
+        }"
         @click=${() => this.selectPalette(option, isSkinPalette)}
       >
         <svg
@@ -239,9 +242,11 @@ export class CosmeticPreviewModal extends LitElement {
     >
       <div
         class="w-full h-full"
-        style=${split
-          ? `background-image: linear-gradient(135deg, ${option.primaryColor} 0 calc(50% - 0.5px), rgba(255,255,255,0.55) calc(50% - 0.5px) calc(50% + 0.5px), ${option.secondaryColor} calc(50% + 0.5px) 100%);`
-          : `background-color: ${option.primaryColor};`}
+        style=${
+          split
+            ? `background-image: linear-gradient(135deg, ${option.primaryColor} 0 calc(50% - 0.5px), rgba(255,255,255,0.55) calc(50% - 0.5px) calc(50% + 0.5px), ${option.secondaryColor} calc(50% + 0.5px) 100%);`
+            : `background-color: ${option.primaryColor};`
+        }
       ></div>
     </button>`;
   }
@@ -276,6 +281,7 @@ export class CosmeticPreviewModal extends LitElement {
       aiDisclosed?: boolean;
     } | null;
     const artist = credits?.artist;
+    const aiLabelKey = cosmeticAiLabelKey(credits?.aiDisclosed, artist);
 
     return html`<div
       data-cosmetic-preview-modal
@@ -309,28 +315,31 @@ export class CosmeticPreviewModal extends LitElement {
               // the line past the panel and the last one is clipped away. Stacked, they take the
               // height they need and the row keeps its one long truncating item (the name).
               //
-              // Same rule as <cosmetic-info> for the AI line itself: only a declaration that was
-              // actually made shows, so a cosmetic can't say it used AI on the card and stay
-              // silent here.
-              artist || credits?.aiDisclosed === true
+              // Same rule as <cosmetic-info> for the AI line itself (cosmeticAiLabelKey), so the
+              // card and this header never disagree about a cosmetic.
+              artist || aiLabelKey
                 ? html`<div class="flex min-w-0 flex-col items-start gap-y-0.5">
-                    ${artist
-                      ? html`<span
-                          class="truncate text-xs text-white/60 max-w-full"
-                        >
-                          ${translateText("cosmetics.artist_label")}
-                          <span class="text-white/90 font-medium"
-                            >${artist}</span
+                    ${
+                      artist
+                        ? html`<span
+                            class="truncate text-xs text-white/60 max-w-full"
                           >
-                        </span>`
-                      : nothing}
-                    ${credits?.aiDisclosed === true
-                      ? html`<span
-                          class="truncate text-xs text-white/60 max-w-full"
-                        >
-                          ${translateText("cosmetics.ai_label")}
-                        </span>`
-                      : nothing}
+                            ${translateText("cosmetics.artist_label")}
+                            <span class="text-white/90 font-medium"
+                              >${artist}</span
+                            >
+                          </span>`
+                        : nothing
+                    }
+                    ${
+                      aiLabelKey
+                        ? html`<span
+                            class="truncate text-xs text-white/60 max-w-full"
+                          >
+                            ${translateText(aiLabelKey)}
+                          </span>`
+                        : nothing
+                    }
                   </div>`
                 : nothing
             }
@@ -380,24 +389,26 @@ export class CosmeticPreviewModal extends LitElement {
         </div>
 
         <!-- Skin colors (catalog palettes) and team colors (team-game look) -->
-        ${skinPalettes.length + teamPalettes.length > 1
-          ? html`
-              <div
-                class="flex flex-wrap items-center gap-x-6 gap-y-1 px-6 py-2 border-t border-white/10 bg-zinc-900/80 text-xs text-white/80 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              >
-                ${this.renderPaletteGroup(
-                  "store.preview_skin_colors",
-                  skinPalettes,
-                  true,
-                )}
-                ${this.renderPaletteGroup(
-                  "store.preview_team_colors",
-                  teamPalettes,
-                  false,
-                )}
-              </div>
-            `
-          : nothing}
+        ${
+          skinPalettes.length + teamPalettes.length > 1
+            ? html`
+                <div
+                  class="flex flex-wrap items-center gap-x-6 gap-y-1 px-6 py-2 border-t border-white/10 bg-zinc-900/80 text-xs text-white/80 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  ${this.renderPaletteGroup(
+                    "store.preview_skin_colors",
+                    skinPalettes,
+                    true,
+                  )}
+                  ${this.renderPaletteGroup(
+                    "store.preview_team_colors",
+                    teamPalettes,
+                    false,
+                  )}
+                </div>
+              `
+            : nothing
+        }
       </div>
     </div>`;
   }

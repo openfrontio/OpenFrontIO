@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Baltics",
   "name": "Baltics",
   "translation_key": "map.baltics",
   "categories": ["europe"],
-  "multiplayer_frequency": 5,
+  "location": { "lat": 57, "lon": 24.5 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [10, 220],

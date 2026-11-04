@@ -17,7 +17,6 @@
     "num_land_tiles": 127769,
     "width": 750
   },
-  "multiplayer_frequency": 4,
   "name": "Four Islands",
   "nations": [
     {
@@ -84,6 +83,5 @@
       }
     ]
   },
-  "team_frequency": 30,
   "translation_key": "map.fourislands"
 }

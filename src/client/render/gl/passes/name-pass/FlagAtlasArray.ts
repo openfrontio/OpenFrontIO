@@ -30,7 +30,7 @@ export const FLAG_CELL_H = 85;
  * error" with an empty info log. Start at 128 (7 MB) — the low end of
  * the working set, so most games never grow — and let the rest come on demand.
  */
-export const MAX_FLAG_LAYERS = 128;
+const MAX_FLAG_LAYERS = 128;
 
 interface PendingEntry {
   layer: number;
@@ -43,6 +43,7 @@ export class FlagAtlasArray {
   private layerCount: number;
   private readonly hwMaxLayers: number;
   private nextLayer = 0;
+  private disposed = false;
 
   private entries = new Map<string, PendingEntry>();
   private onLayerReady: (url: string, layer: number) => void;
@@ -166,6 +167,7 @@ export class FlagAtlasArray {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
+      if (this.disposed) return;
       // Draw into a fixed-size cell to normalize the image to layer dimensions.
       // Center via aspect-fit so mismatched images don't stretch.
       this.ctx.clearRect(0, 0, this.cellW, this.cellH);
@@ -211,6 +213,7 @@ export class FlagAtlasArray {
   }
 
   dispose(): void {
+    this.disposed = true;
     this.gl.deleteTexture(this.tex);
     this.entries.clear();
   }

@@ -21,20 +21,30 @@ export type PlayableCategory = Exclude<AudioCategory, "master">;
  * Whether the two music tracks stream from a media element instead of being
  * decoded into memory up front.
  *
- * False only on iOS, which ignores volume writes to a media element: a
- * streamed track there cannot be turned down or muted at all, which is the
- * whole of #5457. Web Audio is the only path with a working gain, so iOS
- * takes it despite the cost -- the decoded track is roughly an order of
- * magnitude larger than the file, so it is never loaded until the music
- * channel is audible (SoundManager, MenuMusic).
+ * Streaming is only safe where the browser honours `volume` on a media
+ * element. Safari 15.4+ exposes that exact behaviour through
+ * `:volume-locked`: WebKit sets the state when the element is constructed, so
+ * a detached, source-less `<audio>` is enough and needs no media fetch or
+ * gesture. When it matches, a streamed track cannot be turned down or muted at
+ * all (#5457), so it takes the Web Audio path instead, despite the cost -- the
+ * decoded track is roughly an order of magnitude larger than the file, so it is
+ * never loaded until the music channel is audible (SoundManager, MenuMusic).
+ *
+ * Browsers without the selector throw from `matches()`. `Platform.isIOS` is
+ * the fallback there, chiefly for iOS before 15.4; feature detection wins
+ * everywhere the selector exists, including a future iOS that unlocks volume.
  *
  * Cues and ambience are Web Audio everywhere and were never affected.
  *
  * A function, not a constant: it is read when a track is built, so a test can
- * stand in a different platform without re-importing the module graph.
+ * stand in a different capability without re-importing the module graph.
  */
 export function streamsMusic(): boolean {
-  return !Platform.isIOS;
+  try {
+    return !document.createElement("audio").matches(":volume-locked");
+  } catch {
+    return !Platform.isIOS;
+  }
 }
 
 const PLAYABLE: readonly PlayableCategory[] = [
@@ -176,9 +186,9 @@ export class AudioMixer {
    * risk was always the cue layer, where the per-channel budgets allow up to
    * 16 voices at once with nothing holding the sum down.
    *
-   * On iOS the music IS routed through here, because it has to be Web Audio to
-   * have a working volume at all. Left alone deliberately: at the default
-   * music slider the track peaks around -13 dBFS, far below the -3 dB
+   * On a volume-locked browser the music IS routed through here, because it has
+   * to be Web Audio to have a working volume at all. This is deliberate: at the
+   * default music slider the track peaks around -13 dBFS, far below the -3 dB
    * threshold, so the limiter is transparent. It only engages with the slider
    * near the top, where this bounce's inter-sample peaks (+0.11 and +0.19
    * dBTP) clear the threshold -- and a couple of dB of reduction shared with

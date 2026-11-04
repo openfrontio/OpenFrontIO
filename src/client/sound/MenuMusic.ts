@@ -206,6 +206,9 @@ export function startMenuMusic(
     // here costs nothing.
     if (!mixer.isAudible("music")) return;
     try {
+      // Read once so html5 and preload describe the same path, even if the
+      // browser's volume-lock state changes between two probes.
+      const streaming = streamsMusic();
       theme = new Howl({
         src: [assetUrl("sounds/music/menu-theme.mp3")],
         loop: true,
@@ -213,9 +216,11 @@ export function startMenuMusic(
         // Stream rather than decode 2.2 MB up front -- see the gameplay track
         // in SoundManager. This one starts on the player's first click, so the
         // wait would land right when they are trying to use the page.
-        html5: streamsMusic(),
-        // Off with streaming, so nothing is fetched until the load() below.
-        preload: streamsMusic(),
+        html5: streaming,
+        // Preload only the streamed path; Web Audio needs the explicit load()
+        // below because Howler's play() queues behind a load but never starts
+        // one.
+        preload: streaming,
       });
       // Armed before play(), so the "play" handler is on the Howl no matter
       // how quickly playback starts. Every start, including the re-arm after

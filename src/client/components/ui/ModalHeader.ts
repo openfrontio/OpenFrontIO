@@ -71,8 +71,10 @@ export const modalHeader = ({
             />
           </svg>
         </button>
-        ${titleContent ??
-        html`<span class="${resolvedTitleClass}">${title}</span>`}
+        ${
+          titleContent ??
+          html`<span class="${resolvedTitleClass}">${title}</span>`
+        }
       </div>
       ${rightContent ?? ""}
     </div>

@@ -1,10 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "name": "Caspian Sea",
   "id": "CaspianSea",
   "translation_key": "map.caspiansea",
   "categories": ["asia"],
-  "multiplayer_frequency": 5,
-  "team_frequency": 10,
+  "location": { "lat": 41.5, "lon": 50.5 },
+  "author": "crunchybbb",
   "special_team_count": 2,
   "nations": [
     {

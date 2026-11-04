@@ -72,9 +72,11 @@ export class ClanCard extends LitElement {
       >
         <div class="flex items-center gap-4">
           <div
-            class="w-12 h-12 rounded-xl bg-gradient-to-br ${clan.isOpen
-              ? "from-malibu-blue/20 to-aquarius/20"
-              : "from-amber-500/20 to-orange-500/20"} flex items-center justify-center border border-white/10 shrink-0"
+            class="w-12 h-12 rounded-xl bg-gradient-to-br ${
+              clan.isOpen
+                ? "from-malibu-blue/20 to-aquarius/20"
+                : "from-amber-500/20 to-orange-500/20"
+            } flex items-center justify-center border border-white/10 shrink-0"
           >
             <span class="text-white font-bold text-sm">${clan.tag}</span>
           </div>
@@ -99,13 +101,15 @@ export class ClanCard extends LitElement {
               ></currency-display>
             </div>
           </div>
-          ${this.clan.boosted
-            ? html`<span
-                data-boosted
-                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 bg-malibu-blue/15 text-aquarius border border-malibu-blue/40 shadow-malibu-blue-pill"
-                >${translateText("clan_modal.boosted")}</span
-              >`
-            : ""}
+          ${
+            this.clan.boosted
+              ? html`<span
+                  data-boosted
+                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 bg-malibu-blue/15 text-aquarius border border-malibu-blue/40 shadow-malibu-blue-pill"
+                  >${translateText("clan_modal.boosted")}</span
+                >`
+              : ""
+          }
           ${this.renderBadge()}
           <svg
             xmlns="http://www.w3.org/2000/svg"

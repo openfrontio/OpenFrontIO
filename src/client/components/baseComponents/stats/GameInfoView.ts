@@ -81,11 +81,13 @@ export class GameInfoView extends LitElement {
     if (!this.gameId) return html``;
     return html`
       <div class="w-full max-w-[800px] mx-auto">
-        ${this.isLoadingGame
-          ? this.renderLoadingAnimation()
-          : this.loadFailed
-            ? this.renderError()
-            : this.renderRanking()}
+        ${
+          this.isLoadingGame
+            ? this.renderLoadingAnimation()
+            : this.loadFailed
+              ? this.renderError()
+              : this.renderRanking()
+        }
       </div>
     `;
   }
@@ -194,17 +196,19 @@ export class GameInfoView extends LitElement {
           <div
             class="relative min-h-36 overflow-hidden border-b border-white/10 bg-deep-navy sm:min-h-44 sm:border-b-0 sm:border-r"
           >
-            ${this.mapImage
-              ? html`<img
-                  data-map-image
-                  src=${this.mapImage}
-                  alt=${mapName}
-                  draggable="false"
-                  decoding="async"
-                  @error=${() => this.handleMapImageError()}
-                  class="absolute inset-0 h-full w-full object-cover"
-                />`
-              : this.renderMapFallback()}
+            ${
+              this.mapImage
+                ? html`<img
+                    data-map-image
+                    src=${this.mapImage}
+                    alt=${mapName}
+                    draggable="false"
+                    decoding="async"
+                    @error=${() => this.handleMapImageError()}
+                    class="absolute inset-0 h-full w-full object-cover"
+                  />`
+                : this.renderMapFallback()
+            }
             <div
               class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-black/10 sm:bg-gradient-to-r sm:from-transparent sm:via-transparent sm:to-black/25"
             ></div>

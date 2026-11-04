@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Levant",
   "name": "Levant",
   "translation_key": "map.levant",
   "categories": ["asia"],
-  "multiplayer_frequency": 5,
+  "location": { "lat": 34, "lon": 36.5 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [722, 1683],

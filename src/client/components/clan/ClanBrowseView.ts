@@ -114,7 +114,7 @@ export class ClanBrowseView extends LitElement {
     this.searchDebounce = setTimeout(() => {
       this.browsePage = 1;
       this.pinnedBucket = undefined;
-      this.loadBrowse();
+      void this.loadBrowse();
     }, 400);
   }
 
@@ -122,14 +122,14 @@ export class ClanBrowseView extends LitElement {
     this.browseSort = sort;
     this.browsePage = 1;
     this.pinnedBucket = undefined;
-    this.loadBrowse();
+    void this.loadBrowse();
   }
 
   private onFilterChange(filter: ClanBrowseFilter) {
     this.browseFilter = filter;
     this.browsePage = 1;
     this.pinnedBucket = undefined;
-    this.loadBrowse();
+    void this.loadBrowse();
   }
 
   connectedCallback() {
@@ -142,7 +142,7 @@ export class ClanBrowseView extends LitElement {
       this.browseFilter = this.cachedState.filter;
       this.pinnedBucket = this.cachedState.data.bucket;
     } else {
-      this.loadBrowse();
+      void this.loadBrowse();
     }
   }
 
@@ -253,81 +253,94 @@ export class ClanBrowseView extends LitElement {
           </div>
         </div>
 
-        ${this.errorMsg
-          ? html`<p class="text-red-400 text-sm text-center py-4">
-              ${this.errorMsg}
-            </p>`
-          : ""}
-        ${boostedBlock.length > 0
-          ? html`<section
-              data-boosted-block
-              class="space-y-3 rounded-2xl border border-malibu-blue/50 bg-malibu-blue/5 shadow-malibu-blue p-3"
-            >
-              <h3
-                class="text-[10px] font-bold text-aquarius uppercase tracking-wider px-1"
+        ${
+          this.errorMsg
+            ? html`<p class="text-red-400 text-sm text-center py-4">
+                ${this.errorMsg}
+              </p>`
+            : ""
+        }
+        ${
+          boostedBlock.length > 0
+            ? html`<section
+                data-boosted-block
+                class="space-y-3 rounded-2xl border border-malibu-blue/50 bg-malibu-blue/5 shadow-malibu-blue p-3"
               >
-                ${translateText("clan_modal.boosted_clans")}
-              </h3>
-              ${boostedBlock.map(
-                (clan) =>
-                  html`<clan-card
-                    .clan=${clan}
-                    source="boosted"
-                    ?pending=${pendingTags.has(clan.tag)}
-                  ></clan-card>`,
-              )}
-            </section>`
-          : ""}
+                <h3
+                  class="text-[10px] font-bold text-aquarius uppercase tracking-wider px-1"
+                >
+                  ${translateText("clan_modal.boosted_clans")}
+                </h3>
+                ${boostedBlock.map(
+                  (clan) =>
+                    html`<clan-card
+                      .clan=${clan}
+                      source="boosted"
+                      ?pending=${pendingTags.has(clan.tag)}
+                    ></clan-card>`,
+                )}
+              </section>`
+            : ""
+        }
 
         <div class="space-y-3">
-          ${filtered.length === 0 && this.browseData
-            ? html`<p class="text-white/40 text-sm text-center py-8">
-                ${translateText("clan_modal.no_results")}
-              </p>`
-            : filtered.map(
-                (clan) =>
-                  html`<clan-card
-                    .clan=${clan}
-                    ?pending=${pendingTags.has(clan.tag)}
-                  ></clan-card>`,
-              )}
+          ${
+            filtered.length === 0 && this.browseData
+              ? html`<p class="text-white/40 text-sm text-center py-8">
+                  ${translateText("clan_modal.no_results")}
+                </p>`
+              : filtered.map(
+                  (clan) =>
+                    html`<clan-card
+                      .clan=${clan}
+                      ?pending=${pendingTags.has(clan.tag)}
+                    ></clan-card>`,
+                )
+          }
         </div>
 
-        ${totalPages > 1
-          ? html`
-              <div class="flex items-center justify-center gap-2 pt-2">
-                <button
-                  @click=${() => {
-                    this.browsePage = Math.max(1, this.browsePage - 1);
-                    this.loadBrowse();
-                  }}
-                  ?disabled=${this.browsePage <= 1}
-                  class="px-2 py-1 text-xs font-bold rounded-lg transition-all ${this
-                    .browsePage <= 1
-                    ? "text-white/20 cursor-not-allowed"
-                    : "text-white/60 hover:text-white hover:bg-white/10"}"
-                >
-                  &lt;
-                </button>
-                <span class="text-xs text-white/50 font-medium">
-                  ${this.browsePage} / ${totalPages}
-                </span>
-                <button
-                  @click=${() => {
-                    this.browsePage = Math.min(totalPages, this.browsePage + 1);
-                    this.loadBrowse();
-                  }}
-                  ?disabled=${this.browsePage >= totalPages}
-                  class="px-2 py-1 text-xs font-bold rounded-lg transition-all ${this
-                    .browsePage >= totalPages
-                    ? "text-white/20 cursor-not-allowed"
-                    : "text-white/60 hover:text-white hover:bg-white/10"}"
-                >
-                  &gt;
-                </button>
-              </div>
-            `
-          : ""}
+        ${
+          totalPages > 1
+            ? html`
+                <div class="flex items-center justify-center gap-2 pt-2">
+                  <button
+                    @click=${() => {
+                      this.browsePage = Math.max(1, this.browsePage - 1);
+                      void this.loadBrowse();
+                    }}
+                    ?disabled=${this.browsePage <= 1}
+                    class="px-2 py-1 text-xs font-bold rounded-lg transition-all ${
+                      this.browsePage <= 1
+                        ? "text-white/20 cursor-not-allowed"
+                        : "text-white/60 hover:text-white hover:bg-white/10"
+                    }"
+                  >
+                    &lt;
+                  </button>
+                  <span class="text-xs text-white/50 font-medium">
+                    ${this.browsePage} / ${totalPages}
+                  </span>
+                  <button
+                    @click=${() => {
+                      this.browsePage = Math.min(
+                        totalPages,
+                        this.browsePage + 1,
+                      );
+                      void this.loadBrowse();
+                    }}
+                    ?disabled=${this.browsePage >= totalPages}
+                    class="px-2 py-1 text-xs font-bold rounded-lg transition-all ${
+                      this.browsePage >= totalPages
+                        ? "text-white/20 cursor-not-allowed"
+                        : "text-white/60 hover:text-white hover:bg-white/10"
+                    }"
+                  >
+                    &gt;
+                  </button>
+                </div>
+              `
+            : ""
+        }
       </div>
     `;
   }

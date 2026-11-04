@@ -1,7 +1,20 @@
 import { LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
+import {
+  creativeAttributes,
+  findStrayAdFrames,
+  trackAdCreatives,
+} from "./AdForensics";
 import { adGatekeeper } from "./AdGatekeeper";
 import { menuChromeIsTornDown } from "./MenuChrome";
+import { reportEvent } from "./Telemetry";
+
+const BOTTOM_RAIL_ID = "pw-oop-bottom_rail";
+const GAM_IFRAME_PREFIX = "google_ads_iframe_";
+const STILL_VISIBLE_CHECK_MS = 2000;
+const STRAY_FRAME_SCAN_MS = 1000;
+
+type DestroyUnitsResult = "resolved" | "rejected" | "unavailable";
 
 // ─── Gutter Ads ──────────────────────────────────────────────────────────────
 
@@ -25,15 +38,30 @@ export class HomepagePromos extends LitElement {
     }
   };
 
-  private onJoinLobby = () => {
+  private onJoinLobby = (event: DocumentEventMap["join-lobby"]) => {
+    this.lobby = {
+      gameID: event.detail?.gameID ?? "",
+      source: event.detail?.source ?? "",
+    };
     this.loadBottomRail();
   };
+
+  private lobby: { gameID: string; source: string } | null = null;
 
   private onLeaveLobby = () => {
     this.destroyBottomRail();
   };
 
   private bottomRailActive: boolean = false;
+  // From destroyBottomRail() until the next loadBottomRail(). A destroy that
+  // lands while Playwire is still filling the rail finds nothing to remove,
+  // and the rail renders afterwards over the game, so while this is set any
+  // rail that appears is destroyed again.
+  private bottomRailDestroyedAt: number | null = null;
+  private railDestroy: Promise<void> | null = null;
+  private railDestroyCount = 0;
+  private strayFrameScan: ReturnType<typeof setInterval> | null = null;
+  private reportedStrayFrames = new WeakSet<Element>();
 
   // The header ad ("flex" leaderboard, GumGum via Playwire) renders in a
   // #pw-oop-flex element that ramp.js nests inside a #pw-oop-flex_container
@@ -55,6 +83,7 @@ export class HomepagePromos extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    trackAdCreatives();
     document.addEventListener("userMeResponse", this.onUserMeResponse);
     document.addEventListener("join-lobby", this.onJoinLobby);
     document.addEventListener("leave-lobby", this.onLeaveLobby);
@@ -63,6 +92,7 @@ export class HomepagePromos extends LitElement {
     // syncTopAd attaches to the banner itself track its size and position.
     this.topAdMutation = new MutationObserver(() => {
       if (this.findTopAd() !== this.topAdEl) this.syncTopAd();
+      if (this.bottomRailDestroyedAt !== null) this.destroyStrayBottomRail();
     });
     // subtree: the banner is nested inside a wrapper (#pw-oop-flex_container),
     // so watching body's direct children alone misses it.
@@ -79,6 +109,7 @@ export class HomepagePromos extends LitElement {
     document.removeEventListener("join-lobby", this.onJoinLobby);
     document.removeEventListener("leave-lobby", this.onLeaveLobby);
     this.topAdMutation?.disconnect();
+    this.stopStrayFrameScan();
     this.topAdStyle?.disconnect();
     this.topAdResize?.disconnect();
     document.documentElement.style.removeProperty("--top-ad-height");
@@ -193,10 +224,17 @@ export class HomepagePromos extends LitElement {
         // ids (see destroyBottomRail). The header ad must go too: nothing hides
         // #pw-oop-flex_container in-game and its docked state is fixed at the
         // viewport top, so it would sit over the map.
-        window.ramp.destroyUnits("pw-oop-left_rail");
-        window.ramp.destroyUnits("pw-oop-right_rail");
-        window.ramp.destroyUnits("pw-oop-flex");
-        console.log("successfully destroyed gutter rails and header ad");
+        Promise.all([
+          window.ramp.destroyUnits("pw-oop-left_rail"),
+          window.ramp.destroyUnits("pw-oop-right_rail"),
+          window.ramp.destroyUnits("pw-oop-flex"),
+        ])
+          .then(() =>
+            console.log("successfully destroyed gutter rails and header ad"),
+          )
+          .catch((e: unknown) => {
+            console.warn("error destroying gutter rails and header ad", e);
+          });
       } catch (e) {
         console.warn("error destroying gutter rails and header ad", e);
       }
@@ -219,6 +257,7 @@ export class HomepagePromos extends LitElement {
     }
 
     this.bottomRailActive = true;
+    this.bottomRailDestroyedAt = null;
     try {
       window.ramp.que.push(() => {
         // The queue drains when ramp.js loads, which can be after the rail
@@ -239,14 +278,130 @@ export class HomepagePromos extends LitElement {
   public destroyBottomRail(): void {
     if (!this.bottomRailActive) return;
     this.bottomRailActive = false;
-
-    if (typeof window.ramp?.destroyUnits !== "function") return;
-
-    try {
-      window.ramp.destroyUnits("pw-oop-bottom_rail");
+    this.bottomRailDestroyedAt = performance.now();
+    this.startStrayFrameScan();
+    this.railDestroyCount++;
+    this.railDestroy = this.destroyBottomRailUnit().then(() => {
+      this.railDestroy = null;
       console.log("Bottom rail ad destroyed");
-    } catch (e) {
-      console.warn("Error destroying bottom_rail ad:", e);
+      if (this.bottomRailDestroyedAt !== null) this.destroyStrayBottomRail();
+    });
+  }
+
+  private destroyBottomRailUnit(): Promise<DestroyUnitsResult> {
+    if (typeof window.ramp?.destroyUnits !== "function") {
+      return Promise.resolve("unavailable");
+    }
+    // destroyUnits can throw synchronously or reject; neither may escape.
+    return Promise.resolve()
+      .then(() => window.ramp.destroyUnits(BOTTOM_RAIL_ID))
+      .then(
+        (): DestroyUnitsResult => "resolved",
+        (e: unknown): DestroyUnitsResult => {
+          console.warn("Error destroying bottom_rail ad:", e);
+          return "rejected";
+        },
+      );
+  }
+
+  private destroyStrayBottomRail(): void {
+    // The rail is expected on the page until a destroy in flight settles.
+    if (this.railDestroy !== null) return;
+    const rail = document.getElementById(BOTTOM_RAIL_ID);
+    if (rail === null) return;
+    const destroyCount = this.railDestroyCount;
+    const seconds = Math.round(
+      (performance.now() - (this.bottomRailDestroyedAt ?? 0)) / 1000,
+    );
+    const details = {
+      gameID: this.lobby?.gameID ?? "",
+      lobbySource: this.lobby?.source ?? "",
+      secondsAfterDestroy: String(seconds),
+      size: /\bpw-size-(\S+)/.exec(rail.className)?.[1] ?? "",
+      adSlot:
+        rail
+          .querySelector(`iframe[id^="${GAM_IFRAME_PREFIX}"]`)
+          ?.id.slice(GAM_IFRAME_PREFIX.length) ?? "",
+      // Read before the destroy, which takes the slot and its creative away.
+      ...creativeAttributes(rail, "bottom_rail"),
+    };
+    console.log(
+      `Bottom rail ad still on the page ${seconds}s after it was destroyed; destroying it again`,
+    );
+    this.railDestroy = this.destroyBottomRailUnit().then((destroyUnits) => {
+      this.railDestroy = null;
+      const stillBanned = this.bottomRailDestroyedAt !== null;
+      // Still here after its destroy settled: one destroyUnits does not know
+      // about, so nothing else will remove it.
+      const left = stillBanned ? document.getElementById(BOTTOM_RAIL_ID) : null;
+      left?.remove();
+      // A later lobby joined, or joined and left, while this destroy ran: the
+      // rail on the page now may be that lobby's, not this one's.
+      const isCurrent = () =>
+        this.bottomRailDestroyedAt !== null &&
+        this.railDestroyCount === destroyCount;
+      reportEvent("bottom_rail_in_game", {
+        ...details,
+        destroyUnits,
+        removedBy: !isCurrent()
+          ? "unknown"
+          : left === null
+            ? "playwire"
+            : "openfront",
+        outcome: "removed",
+      });
+      if (!isCurrent()) return;
+      setTimeout(() => {
+        if (!isCurrent()) return;
+        // Any rail creative, not only #pw-oop-bottom_rail: the guard already
+        // destroys that element again whenever it comes back.
+        const creative = document.querySelector(
+          `iframe[id^="${GAM_IFRAME_PREFIX}"][id*="bottom_rail"]`,
+        );
+        if (creative === null) return;
+        reportEvent("bottom_rail_in_game", {
+          ...details,
+          adSlot: creative.id.slice(GAM_IFRAME_PREFIX.length),
+          ...creativeAttributes(creative, "bottom_rail"),
+          outcome: "still_visible",
+        });
+      }, STILL_VISIBLE_CHECK_MS);
+    });
+  }
+
+  // Polled rather than driven by the body observer: a frame can appear
+  // through a style change alone, and watching every attribute in a game
+  // costs more than a scan.
+  private startStrayFrameScan(): void {
+    this.strayFrameScan ??= setInterval(
+      () => this.reportStrayAdFrames(),
+      STRAY_FRAME_SCAN_MS,
+    );
+  }
+
+  private stopStrayFrameScan(): void {
+    if (this.strayFrameScan !== null) clearInterval(this.strayFrameScan);
+    this.strayFrameScan = null;
+  }
+
+  // Reported, not removed: the match is a heuristic, and taking down
+  // something that is not an ad would break the page for the player.
+  private reportStrayAdFrames(): void {
+    if (this.bottomRailDestroyedAt === null || !menuChromeIsTornDown()) {
+      this.stopStrayFrameScan();
+      return;
+    }
+    for (const { root, attributes } of findStrayAdFrames()) {
+      if (this.reportedStrayFrames.has(root)) continue;
+      this.reportedStrayFrames.add(root);
+      reportEvent("ad_frame_in_game", {
+        gameID: this.lobby?.gameID ?? "",
+        lobbySource: this.lobby?.source ?? "",
+        secondsAfterDestroy: String(
+          Math.round((performance.now() - this.bottomRailDestroyedAt) / 1000),
+        ),
+        ...attributes,
+      });
     }
   }
 

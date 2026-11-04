@@ -1,9 +1,10 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Dyslexdria",
   "name": "Dyslexdria",
   "translation_key": "map.dyslexdria",
   "categories": ["world", "fictional"],
-  "multiplayer_frequency": 8,
+  "author": "Patrick Plays Badly",
   "nations": [
     {
       "name": "ZOMIBES",

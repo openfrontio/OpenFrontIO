@@ -1,12 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "ArchipelagoSea",
   "name": "ArchipelagoSea",
   "translation_key": "map.archipelagosea",
   "display_name": "Archipelago Sea",
   "categories": ["europe"],
-  "multiplayer_frequency": 1,
-  "ffa_frequency": 0,
-  "team_frequency": 0,
+  "location": { "lat": 60.2, "lon": 21.6 },
+  "author": "Tristar",
   "forced_modifiers": ["isWaterNukes:50"],
   "themes": ["europe"],
   "nations": [

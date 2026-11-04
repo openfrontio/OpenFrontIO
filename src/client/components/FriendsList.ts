@@ -6,10 +6,15 @@ import {
   deleteFriendRequest,
   fetchFriendRequests,
   fetchFriends,
+  FRIEND_REQUESTS_UPDATED_EVENT,
+  type FriendRequestsSnapshot,
+  nextFriendRequestsSeq,
+  publishFriendRequests,
   removeFriend,
   sendFriendRequest,
 } from "../FriendsApi";
 import { showInGameConfirm } from "../InGameModal";
+import { userMeGeneration } from "../UserMeBroadcast";
 import { parsePlayerProfilePath } from "../utilities/PlayerProfileUrl";
 import { showToast, translateText } from "../Utils";
 import { playerNameLink } from "./ui/PlayerNameLink";
@@ -63,22 +68,50 @@ export class FriendsList extends LitElement {
   @state() private outgoing: FriendEntry[] = [];
   @state() private addInput = "";
 
+  // Seq of the snapshot on screen; see nextFriendRequestsSeq. The tab's own
+  // fetches and edits reach it through the event, like the nav poller's do.
+  private requestsSeq = 0;
+
   connectedCallback(): void {
     super.connectedCallback();
+    document.addEventListener(
+      FRIEND_REQUESTS_UPDATED_EVENT,
+      this.handleRequestsUpdated,
+    );
     void this.loadAll();
   }
+
+  disconnectedCallback(): void {
+    document.removeEventListener(
+      FRIEND_REQUESTS_UPDATED_EVENT,
+      this.handleRequestsUpdated,
+    );
+    super.disconnectedCallback();
+  }
+
+  private handleRequestsUpdated = (event: Event): void => {
+    const snapshot = (event as CustomEvent<FriendRequestsSnapshot>).detail;
+    // Keep the highest seq: an older fetch resolving late must not put a
+    // resolved request back on screen.
+    if (snapshot.seq <= this.requestsSeq) return;
+    this.requestsSeq = snapshot.seq;
+    this.incoming = snapshot.incoming;
+    this.outgoing = snapshot.outgoing;
+  };
 
   private async loadAll(): Promise<void> {
     this.loading = true;
     try {
+      const generation = userMeGeneration();
+      const seq = nextFriendRequestsSeq();
       const [requests, firstPage] = await Promise.all([
         fetchFriendRequests(),
         fetchFriends(1, PAGE_LIMIT),
       ]);
-      if (requests) {
-        this.incoming = requests.incoming;
-        this.outgoing = requests.outgoing;
-      }
+      if (await this.resyncIfAccountChanged(generation)) return;
+      // handleRequestsUpdated applies this synchronously, unless a newer
+      // snapshot (the nav poller's, or an edit in this tab) is already shown.
+      if (requests) publishFriendRequests(requests, seq);
       if (firstPage) {
         this.friends = firstPage.results;
         this.friendsTotal = firstPage.total;
@@ -87,6 +120,20 @@ export class FriendsList extends LitElement {
     } finally {
       this.loading = false;
     }
+  }
+
+  /**
+   * Auth was re-resolved while a request was in flight: a login, an account
+   * switch, a logout, or a same-account refresh after a purchase. The response
+   * may belong to the previous account, and publishing it would put that
+   * account's requests on this one's bell (the nav poller cannot tell the
+   * snapshots apart), so drop it and reload for the account signed in now.
+   * Returns true when it did, so the caller skips its own update.
+   */
+  private async resyncIfAccountChanged(generation: number): Promise<boolean> {
+    if (generation === userMeGeneration()) return false;
+    await this.loadAll();
+    return true;
   }
 
   private async loadMore(): Promise<void> {
@@ -159,11 +206,11 @@ export class FriendsList extends LitElement {
         // the real publicId + account username (so the verified check shows).
         // If the refetch fails the list is just stale until the next load —
         // never insert `target`, which may not be a publicId.
+        const generation = userMeGeneration();
+        const seq = nextFriendRequestsSeq();
         const requests = await fetchFriendRequests();
-        if (requests) {
-          this.incoming = requests.incoming;
-          this.outgoing = requests.outgoing;
-        }
+        if (await this.resyncIfAccountChanged(generation)) return;
+        if (requests) publishFriendRequests(requests, seq);
       }
     } finally {
       this.actionPending = false;
@@ -174,12 +221,18 @@ export class FriendsList extends LitElement {
     if (this.actionPending) return;
     this.actionPending = true;
     try {
+      const generation = userMeGeneration();
       const result = await acceptFriendRequest(publicId);
+      if (await this.resyncIfAccountChanged(generation)) return;
       if (result !== true) {
         showToast(translateText(this.errorKey(result)), "red");
         return;
       }
       this.incoming = this.incoming.filter((r) => r.publicId !== publicId);
+      publishFriendRequests(
+        { incoming: this.incoming, outgoing: this.outgoing },
+        nextFriendRequestsSeq(),
+      );
       this.friends = [
         { publicId, createdAt: new Date().toISOString() },
         ...this.friends,
@@ -199,16 +252,26 @@ export class FriendsList extends LitElement {
     if (this.actionPending) return;
     this.actionPending = true;
     try {
+      const generation = userMeGeneration();
       const result = await deleteFriendRequest(publicId);
+      if (await this.resyncIfAccountChanged(generation)) return;
       if (result !== true) {
         showToast(translateText(this.errorKey(result)), "red");
         return;
       }
       if (direction === "incoming") {
         this.incoming = this.incoming.filter((r) => r.publicId !== publicId);
+        publishFriendRequests(
+          { incoming: this.incoming, outgoing: this.outgoing },
+          nextFriendRequestsSeq(),
+        );
         showToast(translateText("friends.request_denied"), "green");
       } else {
         this.outgoing = this.outgoing.filter((r) => r.publicId !== publicId);
+        publishFriendRequests(
+          { incoming: this.incoming, outgoing: this.outgoing },
+          nextFriendRequestsSeq(),
+        );
         showToast(translateText("friends.request_withdrawn"), "green");
       }
     } finally {
@@ -330,34 +393,38 @@ export class FriendsList extends LitElement {
           <span class="text-blue-400">✉️</span>
           ${translateText("friends.pending_requests")}
         </h3>
-        ${this.incoming.length > 0
-          ? html`
-              <div
-                class="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2"
-              >
-                ${translateText("friends.incoming")}
-              </div>
-              <div class="space-y-2 mb-4">
-                ${this.incoming.map((r) =>
-                  this.renderRequestRow(r, "incoming"),
-                )}
-              </div>
-            `
-          : ""}
-        ${this.outgoing.length > 0
-          ? html`
-              <div
-                class="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2"
-              >
-                ${translateText("friends.outgoing")}
-              </div>
-              <div class="space-y-2">
-                ${this.outgoing.map((r) =>
-                  this.renderRequestRow(r, "outgoing"),
-                )}
-              </div>
-            `
-          : ""}
+        ${
+          this.incoming.length > 0
+            ? html`
+                <div
+                  class="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2"
+                >
+                  ${translateText("friends.incoming")}
+                </div>
+                <div class="space-y-2 mb-4">
+                  ${this.incoming.map((r) =>
+                    this.renderRequestRow(r, "incoming"),
+                  )}
+                </div>
+              `
+            : ""
+        }
+        ${
+          this.outgoing.length > 0
+            ? html`
+                <div
+                  class="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2"
+                >
+                  ${translateText("friends.outgoing")}
+                </div>
+                <div class="space-y-2">
+                  ${this.outgoing.map((r) =>
+                    this.renderRequestRow(r, "outgoing"),
+                  )}
+                </div>
+              `
+            : ""
+        }
       </div>
     `;
   }
@@ -377,34 +444,42 @@ export class FriendsList extends LitElement {
           </div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          ${direction === "incoming"
-            ? html`
-                <button
-                  @click=${() => void this.handleAccept(entry.publicId)}
-                  ?disabled=${this.actionPending}
-                  class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-all disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  ${translateText("friends.accept")}
-                </button>
-                <button
-                  @click=${() =>
-                    void this.handleDenyOrWithdraw(entry.publicId, "incoming")}
-                  ?disabled=${this.actionPending}
-                  class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  ${translateText("friends.deny")}
-                </button>
-              `
-            : html`
-                <button
-                  @click=${() =>
-                    void this.handleDenyOrWithdraw(entry.publicId, "outgoing")}
-                  ?disabled=${this.actionPending}
-                  class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-white/10 text-white/70 border border-white/10 hover:bg-white/20 transition-all disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  ${translateText("friends.withdraw")}
-                </button>
-              `}
+          ${
+            direction === "incoming"
+              ? html`
+                  <button
+                    @click=${() => void this.handleAccept(entry.publicId)}
+                    ?disabled=${this.actionPending}
+                    class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    ${translateText("friends.accept")}
+                  </button>
+                  <button
+                    @click=${() =>
+                      void this.handleDenyOrWithdraw(
+                        entry.publicId,
+                        "incoming",
+                      )}
+                    ?disabled=${this.actionPending}
+                    class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    ${translateText("friends.deny")}
+                  </button>
+                `
+              : html`
+                  <button
+                    @click=${() =>
+                      void this.handleDenyOrWithdraw(
+                        entry.publicId,
+                        "outgoing",
+                      )}
+                    ?disabled=${this.actionPending}
+                    class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-white/10 text-white/70 border border-white/10 hover:bg-white/20 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    ${translateText("friends.withdraw")}
+                  </button>
+                `
+          }
         </div>
       </div>
     `;
@@ -458,19 +533,21 @@ export class FriendsList extends LitElement {
             `,
           )}
         </div>
-        ${hasMore
-          ? html`
-              <div class="flex justify-center mt-4">
-                <button
-                  @click=${() => void this.loadMore()}
-                  ?disabled=${this.actionPending}
-                  class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-white/10 text-white/80 border border-white/10 hover:bg-white/20 transition-all disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  ${translateText("friends.load_more")}
-                </button>
-              </div>
-            `
-          : ""}
+        ${
+          hasMore
+            ? html`
+                <div class="flex justify-center mt-4">
+                  <button
+                    @click=${() => void this.loadMore()}
+                    ?disabled=${this.actionPending}
+                    class="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-white/10 text-white/80 border border-white/10 hover:bg-white/20 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    ${translateText("friends.load_more")}
+                  </button>
+                </div>
+              `
+            : ""
+        }
       </div>
     `;
   }

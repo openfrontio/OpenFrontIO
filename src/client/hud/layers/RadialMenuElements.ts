@@ -378,7 +378,7 @@ const infoEmojiElement: MenuElement = {
   },
 };
 
-export const infoMenuElement: MenuElement = {
+const infoMenuElement: MenuElement = {
   id: Slot.Info,
   name: "info",
   disabled: (params: MenuElementParams) =>
@@ -472,6 +472,7 @@ function createMenuElements(
             item.unitType === UnitType.AtomBomb &&
             buildableUnit.canBuild !== false;
           if (
+            (params.uiState?.preventStacking && !isStackableNuke) ||
             (buildableUnit.canUpgrade === false && !isStackableNuke) ||
             !params.buildMenu.canBuildOrUpgrade(item)
           ) {
@@ -532,6 +533,7 @@ function createMenuElements(
               disabled: (p: MenuElementParams) =>
                 !executable || (p.game.myPlayer()?.gold() ?? 0n) < cost,
               action: (p: MenuElementParams) => {
+                if (p.uiState?.preventStacking && !isStackableNuke) return;
                 if (isStackableNuke) {
                   p.eventBus.emit(
                     new BuildUnitIntentEvent(
@@ -563,7 +565,10 @@ function createMenuElements(
             return;
           }
           if (params.buildMenu.canBuildOrUpgrade(item)) {
-            if (buildableUnit.canUpgrade !== false) {
+            if (
+              buildableUnit.canUpgrade !== false &&
+              !params.uiState?.preventStacking
+            ) {
               params.eventBus.emit(
                 new SendUpgradeStructureIntentEvent(
                   buildableUnit.canUpgrade,
@@ -622,7 +627,7 @@ const donateGoldRadialElement: MenuElement = {
   },
 };
 
-export const deleteUnitElement: MenuElement = {
+const deleteUnitElement: MenuElement = {
   id: Slot.Delete,
   name: "delete",
   cooldown: (params: MenuElementParams) => params.myPlayer.deleteUnitCooldown(),
@@ -709,7 +714,7 @@ export const buildMenuElement: MenuElement = {
   },
 };
 
-export const boatMenuElement: MenuElement = {
+const boatMenuElement: MenuElement = {
   id: Slot.Boat,
   name: "boat",
   disabled: (params: MenuElementParams) =>

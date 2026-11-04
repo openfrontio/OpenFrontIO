@@ -30,7 +30,7 @@ export class ClanBansView extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.loadBans(1);
+    void this.loadBans(1);
   }
 
   disconnectedCallback() {
@@ -117,78 +117,84 @@ export class ClanBansView extends LitElement {
           this.memberSearch,
           "clan_modal.search_members_placeholder",
         )}
-        ${filtered.length === 0
-          ? html`<div
-              class="flex flex-col items-center justify-center p-12 text-center"
-            >
-              <p class="text-white/40 text-sm">
-                ${translateText("clan_modal.no_bans")}
-              </p>
-            </div>`
-          : html`
-              <div class="space-y-3">
-                ${filtered.map(
-                  (ban) => html`
-                    <div
-                      class="bg-white/5 rounded-xl border border-white/10 p-4 space-y-2"
-                    >
-                      <div class="flex items-center gap-2">
-                        <div
-                          class="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center shrink-0"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            class="w-4 h-4 text-red-400"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            stroke-width="2"
+        ${
+          filtered.length === 0
+            ? html`<div
+                class="flex flex-col items-center justify-center p-12 text-center"
+              >
+                <p class="text-white/40 text-sm">
+                  ${translateText("clan_modal.no_bans")}
+                </p>
+              </div>`
+            : html`
+                <div class="space-y-3">
+                  ${filtered.map(
+                    (ban) => html`
+                      <div
+                        class="bg-white/5 rounded-xl border border-white/10 p-4 space-y-2"
+                      >
+                        <div class="flex items-center gap-2">
+                          <div
+                            class="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center shrink-0"
                           >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                            />
-                          </svg>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              class="w-4 h-4 text-red-400"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              stroke-width="2"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                              />
+                            </svg>
+                          </div>
+                          ${playerNameLink(this, ban.username, ban.publicId)}
+                          <span class="text-white/30 text-xs shrink-0"
+                            >${translateText("clan_modal.banned_by_label")}</span
+                          >
+                          ${playerNameLink(
+                            this,
+                            ban.bannedByUsername,
+                            ban.bannedBy,
+                          )}
+                          <span class="text-white/30 text-xs shrink-0"
+                            >${formatClanDate(ban.createdAt)}</span
+                          >
+                          <div class="flex-1"></div>
+                          <button
+                            @click=${() => this.handleUnban(ban.publicId)}
+                            ?disabled=${this.memberActionPending}
+                            class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-all disabled:opacity-50 disabled:pointer-events-none shrink-0"
+                          >
+                            ${translateText("clan_modal.unban")}
+                          </button>
                         </div>
-                        ${playerNameLink(this, ban.username, ban.publicId)}
-                        <span class="text-white/30 text-xs shrink-0"
-                          >${translateText("clan_modal.banned_by_label")}</span
-                        >
-                        ${playerNameLink(
-                          this,
-                          ban.bannedByUsername,
-                          ban.bannedBy,
-                        )}
-                        <span class="text-white/30 text-xs shrink-0"
-                          >${formatClanDate(ban.createdAt)}</span
-                        >
-                        <div class="flex-1"></div>
-                        <button
-                          @click=${() => this.handleUnban(ban.publicId)}
-                          ?disabled=${this.memberActionPending}
-                          class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30 transition-all disabled:opacity-50 disabled:pointer-events-none shrink-0"
-                        >
-                          ${translateText("clan_modal.unban")}
-                        </button>
+                        ${
+                          ban.reason
+                            ? html`<div class="text-white/50 text-xs pl-10">
+                                ${translateText("clan_modal.ban_reason", {
+                                  reason: ban.reason,
+                                })}
+                              </div>`
+                            : ""
+                        }
                       </div>
-                      ${ban.reason
-                        ? html`<div class="text-white/50 text-xs pl-10">
-                            ${translateText("clan_modal.ban_reason", {
-                              reason: ban.reason,
-                            })}
-                          </div>`
-                        : ""}
-                    </div>
-                  `,
-                )}
-              </div>
-              ${totalPages > 1
-                ? renderServerPagination(this.bansPage, totalPages, (p) =>
-                    this.loadBans(p, false),
-                  )
-                : ""}
-            `}
+                    `,
+                  )}
+                </div>
+                ${
+                  totalPages > 1
+                    ? renderServerPagination(this.bansPage, totalPages, (p) =>
+                        this.loadBans(p, false),
+                      )
+                    : ""
+                }
+              `
+        }
       </div>
     `;
   }

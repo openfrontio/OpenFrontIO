@@ -1,10 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Korea",
   "name": "Korea",
   "translation_key": "map.korea",
   "categories": ["asia", "countries"],
-  "multiplayer_frequency": 5,
-  "team_frequency": 10,
+  "location": { "lat": 36.5, "lon": 127.8 },
+  "author": "crunchybbb",
   "special_team_count": 2,
   "nations": [
     {
