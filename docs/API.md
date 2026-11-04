@@ -491,3 +491,44 @@ Results are ordered by game start time, newest first.
 ```bash
 curl "https://api.openfront.io/public/clan/UN/sessions?start=2025-11-15T00:00:00Z&end=2025-11-15T23:59:59Z&limit=10&page=1"
 ```
+
+### Clan Map History
+
+Every change of hands on the clan territory map, oldest first, a page at a time. Use it to build timelapses. The map started empty, so replaying the events from the start rebuilds the map as it stood at any point.
+
+**Endpoint**
+
+```
+GET https://api.openfront.io/public/clanmap/history
+```
+
+**Query Parameters:**
+
+- `after` (optional): Return the events after this sequence number (default: 0, the start of history). Pass the previous page's `next`.
+- `limit` (optional): Events per page, 1-10000 (default: 5000)
+
+**Response:**
+
+```json
+{
+  "events": [
+    ["48214", 1203, 455, "17", "0", 1793793600000],
+    ["48215", 1203, 455, "0", "17", 1793794200000]
+  ],
+  "clans": {
+    "17": { "tag": "ABC", "name": "Alpha Bravo", "color": 10741301 }
+  },
+  "next": "48215"
+}
+```
+
+- Each event is `[seq, x, y, clanId, previousClanId, createdAt]`. `x` and `y` are pixels on the 4108 × 1948 map, and `createdAt` is a Unix timestamp in milliseconds. `"0"` means neutral in either clan column: a `previousClanId` of `"0"` is a capture of empty land, and a `clanId` of `"0"` is a clan giving the pixel up. `previousClanId` lets you scrub backwards without replaying from the start.
+- `clans` names every clan in the page. Tags, names and colors (`0xRRGGBB` as a number, or `null` when the clan has none) are current, not as they were at the time of the event. A clan that has since been deleted is missing.
+- `next` is `null` on a short page, which means you have reached the end of history for now. To pick up new events, poll again later with the last event's `seq` as `after`. Sequence numbers have gaps, so take `after` from the response rather than counting.
+- A full page never changes and is cached for a day. Fetch the history from `after=0` with the default `limit` so your requests hit the cache.
+
+**Example**
+
+```bash
+curl "https://api.openfront.io/public/clanmap/history?after=48215&limit=5000"
+```
