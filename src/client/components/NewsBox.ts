@@ -1,15 +1,25 @@
 import type { NewsItem } from "@openfront/shared/ApiSchemas";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import type { ClientPlatform } from "@openfront/shared/WireSchemas";
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getNews } from "../Api";
 import { clientPlatform } from "../ClientPlatform";
+import { fetchCosmetics, invalidateCosmetics } from "../Cosmetics";
 import { translateText } from "../Utils";
+import { runningSales } from "./SaleBanner";
 
 export type { NewsItem };
 
 const DISMISSED_NEWS_KEY = "dismissedNewsItems";
 const CYCLE_INTERVAL_MS = 5000;
+// After a sale (or a flash sale's slot) ends, the API's one-minute-cached
+// catalog can still list it, so the refetch retries (8 x 15s = 2 minutes).
+const SALE_END_RETRY_MS = 15_000;
+const SALE_END_RETRIES = 8;
+// news.json lists each running sale set to announce as "promotion-<sale id>".
+// The sale banner replaces those items.
+const SALE_NEWS_PREFIX = "promotion-";
 
 function getDismissedIds(): Set<string> {
   const raw = localStorage.getItem(DISMISSED_NEWS_KEY);
@@ -53,6 +63,11 @@ const typeLabelColors: Record<string, string> = {
 export class NewsBox extends LitElement {
   @state() private items: NewsItem[] = [];
   @state() private activeIndex = 0;
+  // While a sale runs, the box is its banner rather than the news.
+  @state() private cosmetics: Cosmetics | null = null;
+  // The sales news.json announces: a sale set not to announce gets no banner.
+  @state() private announcedSales: ReadonlySet<string> = new Set();
+  private saleTimer: ReturnType<typeof setTimeout> | null = null;
   // The markdown renderer is its own chunk, loaded alongside the news.
   private renderMarkdown: typeof import("../Markdown").renderMarkdown | null =
     null;
@@ -65,6 +80,57 @@ export class NewsBox extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     void this.loadNews();
+    void this.loadSales();
+  }
+
+  /**
+   * Fetches the catalog for its running sales, and again when the soonest
+   * one ends, so the banner drops it (or moves to a flash sale's next item).
+   */
+  private async loadSales(attempt = 0) {
+    const cosmetics = await fetchCosmetics();
+    if (!this.isConnected) return;
+    if (cosmetics !== null) this.cosmetics = cosmetics;
+    // Re-render even when the refetch hands back the same catalog: a sale
+    // whose end has passed drops out of the banner on time.
+    this.requestUpdate();
+    this.clearSaleTimer();
+    const listsEnded = (cosmetics?.promotions ?? []).some(
+      (sale) => new Date(sale.endsAt).getTime() <= Date.now(),
+    );
+    if ((cosmetics === null || listsEnded) && attempt < SALE_END_RETRIES) {
+      this.saleTimer = setTimeout(() => {
+        invalidateCosmetics();
+        void this.loadSales(attempt + 1);
+      }, SALE_END_RETRY_MS);
+      return;
+    }
+    // Every running sale, not just the announced ones: news.json may not
+    // have landed yet.
+    const sales = runningSales(this.cosmetics);
+    if (sales.length === 0) return;
+    const nextEnd = Math.min(...sales.map((s) => new Date(s.endsAt).getTime()));
+    // setTimeout overflows past ~24.8 days; a sale ending later is picked up
+    // on the next visit.
+    const delay = nextEnd - Date.now();
+    if (delay > 2 ** 31 - 1) return;
+    this.saleTimer = setTimeout(
+      () => {
+        invalidateCosmetics();
+        void this.loadSales();
+      },
+      Math.max(delay, 0),
+    );
+  }
+
+  private clearSaleTimer() {
+    if (this.saleTimer !== null) clearTimeout(this.saleTimer);
+    this.saleTimer = null;
+  }
+
+  /** The store's On sale tab, where everything the banner covers is listed. */
+  private openSale() {
+    window.location.hash = "modal=store&tab=cosmetics&sub=sale";
   }
 
   private async loadNews() {
@@ -75,7 +141,16 @@ export class NewsBox extends LitElement {
       ]);
       if (!this.isConnected) return;
       this.renderMarkdown = renderMarkdown;
-      const allItems = filterNewsByPlatform(news, clientPlatform());
+      const platformItems = filterNewsByPlatform(news, clientPlatform());
+      this.announcedSales = new Set(
+        platformItems
+          .filter((item) => item.id.startsWith(SALE_NEWS_PREFIX))
+          .map((item) => item.id.slice(SALE_NEWS_PREFIX.length)),
+      );
+      // The sale banner says these, with a countdown.
+      const allItems = platformItems.filter(
+        (item) => !item.id.startsWith(SALE_NEWS_PREFIX),
+      );
       // Reset stale dismissed list when all items would be hidden
       const visible = getVisibleNewsItems(allItems);
       if (visible.length === 0 && allItems.length > 0) {
@@ -93,6 +168,7 @@ export class NewsBox extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     this.stopCycle();
+    this.clearSaleTimer();
   }
 
   private startCycle() {
@@ -128,6 +204,16 @@ export class NewsBox extends LitElement {
   }
 
   render() {
+    // A running sale takes the box for as long as it runs: no rotation and
+    // no dismiss, so it's there every time the player looks.
+    if (runningSales(this.cosmetics, this.announcedSales).length > 0) {
+      return html`<sale-banner
+        linked
+        .cosmetics=${this.cosmetics}
+        .only=${this.announcedSales}
+        @open-sale=${() => this.openSale()}
+      ></sale-banner>`;
+    }
     if (this.items.length === 0) return nothing;
 
     const item = this.items[this.activeIndex];
