@@ -6,6 +6,7 @@
   "categories": ["new", "africa"],
   "location": { "lat": -34.4, "lon": 18.5 },
   "author": "Tristar",
+  "description": "A headland located in the larger Cape Peninsula, itself located in South Africa, near the legislative capital city of Cape Town. Once a significant port and waypoint point for sailors traveling from Europe to Asia, the opening of the Suez Canal in 1869 provided a much shorter route from the Europe to Asia, turning the long trip around Africa inefficient.",
   "nations": [
     {
       "coordinates": [467, 395],

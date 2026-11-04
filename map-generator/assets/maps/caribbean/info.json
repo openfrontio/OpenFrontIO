@@ -6,6 +6,7 @@
   "categories": ["north_america"],
   "location": { "lat": 16, "lon": -73 },
   "author": "Tristar",
+  "description": "Stretching from Florida and the Yucatan peninsula, the Greater Antilles in the north and the Lesser Antilles to the south, to the northern coast of South America. The caribbean is home to 13 sovereign states and various european dependencies. This is a very heavy naval map - become a pirate or be pirated.",
   "nations": [
     {
       "coordinates": [538, 200],

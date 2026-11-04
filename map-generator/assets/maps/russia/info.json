@@ -6,6 +6,7 @@
   "categories": ["europe", "asia", "countries"],
   "location": { "lat": 61.5, "lon": 100 },
   "author": "Tristar",
+  "description": "The largest country in the world, spanning from Europe to Siberia in Asia, with 11 time zones and sharing land borders with 14 countries. With a population of over 140M, It is the most populous country in Europe and the 9th-most populous in the world. Players who control European Russia have the highest chance of winning.",
   "nations": [
     {
       "coordinates": [715, 415],
