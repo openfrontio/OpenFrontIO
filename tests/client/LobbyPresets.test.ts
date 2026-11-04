@@ -641,10 +641,38 @@ describe("<lobby-preset-controls> component", () => {
     element.presets = samplePresets;
     document.body.appendChild(element);
     await element.updateComplete;
+    (element.querySelector("[data-test-preset-toggle]") as HTMLElement).click();
+    await element.updateComplete;
   });
 
   afterEach(() => {
     element.remove();
+  });
+
+  it("starts collapsed and toggles open and closed", async () => {
+    const fresh = document.createElement(
+      "lobby-preset-controls",
+    ) as LobbyPresetControls;
+    fresh.presets = samplePresets;
+    document.body.appendChild(fresh);
+    await fresh.updateComplete;
+
+    const toggle = fresh.querySelector(
+      "[data-test-preset-toggle]",
+    ) as HTMLElement;
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(fresh.querySelector("[data-test-preset-select]")).toBeNull();
+
+    toggle.click();
+    await fresh.updateComplete;
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(fresh.querySelector("[data-test-preset-select]")).not.toBeNull();
+
+    toggle.click();
+    await fresh.updateComplete;
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(fresh.querySelector("[data-test-preset-select]")).toBeNull();
+    fresh.remove();
   });
 
   it("renders select dropdown with presets options", () => {
