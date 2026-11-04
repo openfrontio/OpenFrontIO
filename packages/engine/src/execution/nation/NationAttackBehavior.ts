@@ -111,9 +111,7 @@ export class NationAttackBehavior extends AiAttackBehavior {
     let landFront = false;
     try {
       this.chooseAttack();
-      for (const neighbor of this.landNeighbors ?? []) {
-        if (!this.player.isFriendly(neighbor)) landFront = true;
-      }
+      landFront = this.hasLandFront();
     } finally {
       this.landNeighbors = null;
       this.boatRoutes = null;
@@ -711,12 +709,14 @@ export class NationAttackBehavior extends AiAttackBehavior {
   // Bots that own structures are prioritized as targets (they might have stolen our structures and they will delete them!)
   // Hard & Impossible order them to wall in other bots instead (see planBotAttacks)
   private attackBots(): boolean {
+    this.botAttackTroopsSent = 0;
     const bots = this.neighboringBots();
     if (bots.length === 0) {
-      return false;
+      if (this.hasLandFront()) return false;
+      return this.overseasBots().some(
+        (bot) => this.canReach(bot) && this.sendAttack(bot),
+      );
     }
-
-    this.botAttackTroopsSent = 0;
 
     let ordered: Player[];
     if (this.annexesBots()) {
@@ -757,6 +757,46 @@ export class NationAttackBehavior extends AiAttackBehavior {
           this.player.isFriendly(n) === false &&
           n.type() === PlayerType.Bot,
       );
+  }
+
+  // The 3 nearest bots within boat range (not on Easy), skipping those our boats already sail to
+  private overseasBots(): Player[] {
+    if (
+      this.game.config().gameConfig().difficulty === Difficulty.Easy ||
+      this.game.config().isUnitDisabled(UnitType.TransportShip) ||
+      this.player.unitCount(UnitType.TransportShip) >=
+        this.game.config().boatMaxNumber()
+    ) {
+      return [];
+    }
+    const boarded = new Set<Player | TerraNullius>();
+    for (const boat of this.player.units(UnitType.TransportShip)) {
+      const dst = boat.targetTile();
+      if (dst !== undefined) boarded.add(this.game.owner(dst));
+    }
+    const range = this.maxBoatRoute();
+    const ours = this.player.largestClusterBoundingBox;
+    const candidates: { bot: Player; gap: number }[] = [];
+    for (const p of this.game.players()) {
+      if (
+        p.type() !== PlayerType.Bot ||
+        this.player.isFriendly(p) ||
+        boarded.has(p)
+      ) {
+        continue;
+      }
+      const gap = boxGap(ours, p.largestClusterBoundingBox);
+      if (gap <= range) candidates.push({ bot: p, gap });
+    }
+    candidates.sort((a, b) => a.gap - b.gap);
+    return candidates.slice(0, 3).map((c) => c.bot);
+  }
+
+  private hasLandFront(): boolean {
+    for (const neighbor of this.landNeighbors ?? []) {
+      if (!this.player.isFriendly(neighbor)) return true;
+    }
+    return false;
   }
 
   // Hard & Impossible take bots in an order that walls others in, annexing them for free
