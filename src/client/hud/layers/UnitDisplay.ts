@@ -627,7 +627,7 @@ export class UnitDisplay extends LitElement implements Controller {
         <div
           class="${
             this.canBuild(unitType) ? "" : "opacity-40"
-          } border border-slate-500 rounded-sm min-h-11 w-full px-1 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:min-h-0 lg:px-0.5 lg:justify-start landscape:px-0.5
+          } border border-slate-500 rounded-sm max-lg:h-7.5 w-full px-1 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:px-0.5 lg:justify-start landscape:px-0.5
              ${
             selected
               ? "pointer-fine:hover:bg-gray-400/10"
@@ -702,11 +702,11 @@ export class UnitDisplay extends LitElement implements Controller {
             <img
               src=${icon}
               alt=${translateText("unit_type." + structureKey)}
-              class="align-middle size-7 lg:size-5 max-lg:landscape:size-6"
+              class="align-middle size-6 lg:size-5 max-lg:landscape:size-5"
             />
             ${
               number !== null
-                ? html`<span class="text-[10px] leading-none lg:text-xs"
+                ? html`<span class="hidden lg:inline text-xs leading-none"
                     >${renderNumber(number)}</span
                   >`
                 : null
