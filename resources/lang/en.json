@@ -1023,6 +1023,9 @@
     "hvn": "Humans vs Nations",
     "teams": "Teams"
   },
+  "game_right_sidebar": {
+    "share_link": "Share Link"
+  },
   "game_settings": {
     "bots": "Tribes: ",
     "compact_map": "Compact Map",
@@ -1466,6 +1469,24 @@
     "lifetime_xp": "{xp} lifetime XP",
     "top_of_track": "The top of the track"
   },
+  "lobby_config": {
+    "preset": {
+      "delete": "Delete",
+      "delete_failed": "Failed to delete preset",
+      "deleted": "Preset deleted",
+      "load": "Load",
+      "loaded": "Preset loaded",
+      "no_presets": "No saved presets",
+      "placeholder": "Preset name...",
+      "save": "Save Current",
+      "save_failed": "Failed to save preset",
+      "save_label": "Save Preset",
+      "saved": "Preset saved",
+      "select": "Select a preset...",
+      "select_label": "Saved Presets",
+      "title": "Presets"
+    }
+  },
   "main": {
     "account": "Account",
     "clans": "Clans",
@@ -1686,6 +1707,8 @@
     "didier": "Didier, the mascot and companion of French YouTuber Fuze, as a fantasy island, made for his OpenFront videos.",
     "didierfrance": "France reshaped into Didier, French YouTuber Fuze's mascot. Made for his OpenFront videos. Basically France, but with eyes, hands and feet.",
     "fourislands": "Four islands, one in each corner, each holding exactly a quarter of the land. A classic nuke wars map. Probably the first completely fictional map in OpenFront.",
+    "hawaii": "Eight volcanic islands built by one hotspot under the Pacific: the oldest lie in the northwest, and the Big Island in the southeast is still growing. It holds almost two thirds of the land, split between Kona and Hilo. Everyone else starts alone on an island, like Kahoolawe, a US Navy bombing range until 1990.",
+    "niledelta": "The delta that gave every delta its name: Greek writers saw the letter Δ in its shape. In ancient times the Nile reached the sea through seven branches; today only two remain, Rosetta and Damietta. Nations sit at real cities, from Alexandria to Memphis, the first capital of united Egypt.",
     "surrounded": "A ring of islands around a central one, so every expansion needs a boat. One hydrogen bomb can wipe out a whole island. Can you win a public FFA after spawning in the middle?",
     "tradersdream": "Big islands against small ones: two large islands hold about half the land, while a swarm of tiny islands is made for trade."
   },
@@ -2216,15 +2239,29 @@
     "replay_speed": "Replay speed"
   },
   "replay_viewer": {
+    "bot_difficulty": "Bot Difficulty",
+    "cancel": "Cancel",
+    "continue_failed": "Failed to continue this game.",
+    "continue_from_here": "Continue Game from Here",
+    "continue_modal_desc": "Take over and continue playing as a singleplayer match from this moment.",
+    "continue_modal_title": "Play from this Time",
     "following": "Following {name}",
+    "game_time": "Game Time",
     "load_failed": "This replay could not be loaded.",
     "loading": "Loading replay…",
+    "no_players_found": "No players found",
     "partial": "Only the first {time} of this game can be watched.",
     "pause": "Pause",
     "play": "Play",
+    "play_now": "Play Now",
+    "player_stats_control": "{percent} map control",
+    "player_stats_troops": "{troops} troops",
+    "preparing_game": "Preparing game state…",
     "processing": "Preparing this replay…",
     "processing_fetching": "Fetching the game record",
     "processing_simulating": "Replaying the game: {percent}%",
+    "search_players": "Search players…",
+    "select_player": "Choose Player to Control",
     "timeline": "Replay timeline",
     "unavailable_desync": "This game doesn't replay correctly on this version of OpenFront.",
     "unavailable_failed": "Processing this game failed.",
@@ -2766,6 +2803,10 @@
     "display_ui_scale_label": "UI scale",
     "display_ui_scale_option": "{scale, number, percent}",
     "display_unnamed": "Display {index}",
+    "donate_gold": "Donate Gold",
+    "donate_gold_desc": "Open the gold donation menu for the ally or teammate whose tile is under your cursor.",
+    "donate_troops": "Donate Troops",
+    "donate_troops_desc": "Send your attack ratio's share of troops to the ally or teammate whose tile is under your cursor.",
     "easter_bug_count_desc": "How many bugs you're okay with (0–1000, emotionally)",
     "easter_bug_count_label": "Bug Count",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",

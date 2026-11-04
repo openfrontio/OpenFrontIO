@@ -107,11 +107,21 @@ You need a game record. Either:
   hash mismatch if the core has changed since.
 
 ```bash
-GAME=dqKzit4cWu # the game's ID
-mkdir -p /tmp/records && cp "$GAME.json" /tmp/records/
-# The dev client expects its API on 8787. Other API calls will 404.
-npx tsx scripts/replay/stub-game-api.mts /tmp/records 8787
-npm run dev
+# Generate a demo record:
+npm run replay:demo
+
+# Or restore a saved production record:
+# Place the saved record at records/<gameID>.json
+
+# Run client, server, and replay stub API concurrently:
+npm run dev:all
+```
+
+Then open `http://localhost:9000/#replay-viewer=<gameID>` (or `#replay-viewer=demoGame1` for the sample record).
+You can also test directly with live records from production using:
+
+```bash
+npm run dev:prod
 ```
 
 Then open `http://localhost:9000/#replay-viewer=<gameID>`.

@@ -35,3 +35,7 @@ map-generator/map-generator.exe
 # src/core package split (#1701): tick-trace inputs and baselines
 .tick-records/
 .tick-baseline/
+
+# Saved replay records for local testing
+records/*
+!records/demoGame1.json

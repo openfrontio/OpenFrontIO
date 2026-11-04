@@ -13,6 +13,7 @@ import { gamePortal } from "../../GamePortal";
 import { showInGameAlert, showInGameConfirm } from "../../InGameModal";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
+import { shareGame } from "../../utilities/ShareGame";
 import { homeHref, showToast, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
@@ -25,6 +26,7 @@ const pauseIcon = assetUrl("images/PauseIconWhite.svg");
 const playIcon = assetUrl("images/PlayIconWhite.svg");
 const newLobbyIcon = assetUrl("images/ReplayRegularIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
+const shareIcon = assetUrl("images/ShareIconWhite.svg");
 const fullscreenIcon = assetUrl("images/FullscreenIconWhite.svg");
 const exitFullscreenIcon = assetUrl("images/ExitFullscreenIconWhite.svg");
 
@@ -288,6 +290,35 @@ export class GameRightSidebar extends LitElement implements Controller {
     );
   }
 
+  private isShareable(): boolean {
+    const isReplay = this.game?.config?.()?.isReplay?.();
+    const gameType = this.game?.config?.()?.gameConfig?.()?.gameType;
+    return (
+      Boolean(this.game?.gameID?.()) &&
+      gameType !== GameType.Singleplayer &&
+      !isReplay
+    );
+  }
+
+  private async onShareButtonClick(e?: Event) {
+    if (e && (e as MouseEvent).detail !== 0) {
+      (e.currentTarget as HTMLElement | null)?.blur();
+    }
+    await shareGame(this.game?.gameID?.());
+  }
+
+  private onShareButtonKeyDown(e: KeyboardEvent) {
+    if (e.code === "Space" || e.key === " " || e.key === "Enter") {
+      e.stopPropagation();
+    }
+  }
+
+  private onShareButtonKeyUp(e: KeyboardEvent) {
+    if (e.code === "Space" || e.key === " " || e.key === "Enter") {
+      e.stopPropagation();
+    }
+  }
+
   private onFullscreenButtonClick() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => {
@@ -363,7 +394,7 @@ export class GameRightSidebar extends LitElement implements Controller {
         }
       </style>
       <aside
-        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-bl-lg transition-transform duration-300 ease-out transform text-white ${shouldFlashSidebar ? "game-end-timer-sidebar-flash" : ""} ${
+        class=${`w-fit flex flex-row items-center gap-2 sm:gap-3 py-2 px-2 sm:px-3 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-bl-lg transition-transform duration-300 ease-out transform text-white ${shouldFlashSidebar ? "game-end-timer-sidebar-flash" : ""} ${
           this._isVisible ? "translate-x-0" : "translate-x-full"
         }`}
         @contextmenu=${(e: Event) => e.preventDefault()}
@@ -380,6 +411,28 @@ export class GameRightSidebar extends LitElement implements Controller {
           <img src=${settingsIcon} alt="settings" width="20" height="20" />
         </div>
 
+        ${
+          this.isShareable()
+            ? html`<button
+                type="button"
+                class="cursor-pointer bg-transparent border-0 p-0 flex items-center justify-center text-white"
+                @mousedown=${(e: MouseEvent) => e.preventDefault()}
+                @click=${this.onShareButtonClick}
+                @keydown=${this.onShareButtonKeyDown}
+                @keyup=${this.onShareButtonKeyUp}
+                title=${translateText("game_right_sidebar.share_link")}
+                aria-label=${translateText("game_right_sidebar.share_link")}
+              >
+                <img
+                  src=${shareIcon}
+                  alt=""
+                  aria-hidden="true"
+                  width="20"
+                  height="20"
+                />
+              </button>`
+            : ""
+        }
         ${
           document.fullscreenEnabled && !this.hideFullscreenButton
             ? html`<div
