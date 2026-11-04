@@ -1,6 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { invalidateUserMe } from "../../Api";
+import { getUserMe, invalidateUserMe } from "../../Api";
 import {
   type ClanDiscord,
   type ClanInfo,
@@ -88,9 +88,13 @@ export class ClanDetailView extends LitElement {
 
   // Re-renders once a minute so the boost's "time left" counts down.
   private boostTicker: ReturnType<typeof setInterval> | null = null;
+  private onUserMeEvent = () => {
+    void this.loadAffiliateCode(this.clanTag, this.asyncGeneration);
+  };
 
   connectedCallback() {
     super.connectedCallback();
+    document.addEventListener("userMeResponse", this.onUserMeEvent);
     this.boostTicker = setInterval(() => {
       if (this.selectedClan?.boostEndsAt) this.requestUpdate();
     }, 60_000);
@@ -131,13 +135,16 @@ export class ClanDetailView extends LitElement {
   }
 
   // Resolves the catalog's affiliateCode matching this clan's tag (if any) so
-  // the Overview actions only offer the Clan Shop button when items exist for
-  // the clan. Floating; guarded by asyncGeneration + tag.
+  // the Overview actions only offer the Clan Shop button when items exist and
+  // are purchasable by the viewer. Floating; guarded by asyncGeneration + tag.
   private async loadAffiliateCode(tag: string, gen: number) {
     refreshStaleCosmetics();
-    const cosmetics = await fetchCosmetics();
+    const [cosmetics, userMe] = await Promise.all([
+      fetchCosmetics(),
+      getUserMe().catch(() => false as const),
+    ]);
     if (gen !== this.asyncGeneration || this.clanTag !== tag) return;
-    this.affiliateCode = findClanAffiliateCode(cosmetics, tag);
+    this.affiliateCode = findClanAffiliateCode(cosmetics, tag, userMe);
   }
 
   private openClanShop(affiliateCode: string) {
@@ -148,6 +155,7 @@ export class ClanDetailView extends LitElement {
   }
 
   disconnectedCallback() {
+    document.removeEventListener("userMeResponse", this.onUserMeEvent);
     if (this.boostTicker) clearInterval(this.boostTicker);
     this.boostTicker = null;
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);

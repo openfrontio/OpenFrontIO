@@ -132,8 +132,12 @@ export function crazyGamesSdkMockFactory() {
   };
 }
 
-export function cosmeticsMockFactory() {
+export async function cosmeticsMockFactory() {
+  const actual = await vi.importActual<
+    typeof import("../../../src/client/Cosmetics")
+  >("../../../src/client/Cosmetics");
   return {
+    ...actual,
     fetchCosmetics: vi.fn(async () => null),
     refreshStaleCosmetics: vi.fn(() => false),
     broadcastFreshUserMe: vi.fn(async () => {

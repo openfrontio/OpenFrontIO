@@ -379,7 +379,9 @@ describe("findClanAffiliateCode", () => {
               name: "stripes",
               pattern: "AA==",
               product: null,
+              priceSoft: 500,
               rarity: "common",
+              colorPalettes: [{ name: "default", isArchived: false }],
               affiliateCode: "vik",
             },
           },
@@ -397,7 +399,9 @@ describe("findClanAffiliateCode", () => {
               name: "stripes",
               pattern: "AA==",
               product: null,
+              priceSoft: 500,
               rarity: "common",
+              colorPalettes: [{ name: "default", isArchived: false }],
               affiliateCode: "vik",
             },
           },
@@ -416,6 +420,7 @@ describe("findClanAffiliateCode", () => {
               name: "banner",
               url: "https://example.com/flag.svg",
               product: null,
+              priceSoft: 500,
               rarity: "common",
               affiliateCode: "ClanTag",
             },
@@ -435,6 +440,7 @@ describe("findClanAffiliateCode", () => {
               name: "tiara",
               url: "https://example.com/tiara.svg",
               product: null,
+              priceSoft: 500,
               rarity: "rare",
               affiliateCode: "crOwn",
             },
@@ -454,6 +460,7 @@ describe("findClanAffiliateCode", () => {
               name: "armored",
               url: "https://example.com/skin.svg",
               product: null,
+              priceSoft: 500,
               rarity: "epic",
               affiliateCode: "sKiN",
             },
@@ -474,6 +481,7 @@ describe("findClanAffiliateCode", () => {
                 name: "wake",
                 effectType: "transportShipTrail",
                 product: null,
+                priceSoft: 500,
                 rarity: "common",
                 affiliateCode: "wAkE",
                 attributes: {
@@ -489,5 +497,101 @@ describe("findClanAffiliateCode", () => {
         "WAKE",
       ),
     ).toBe("wAkE");
+  });
+
+  it("returns null when matching affiliate items are off-market (no price)", () => {
+    expect(
+      findClanAffiliateCode(
+        {
+          patterns: {
+            stripes: {
+              name: "stripes",
+              pattern: "AA==",
+              product: null,
+              rarity: "common",
+              colorPalettes: [{ name: "default", isArchived: false }],
+              affiliateCode: "vik",
+            },
+          },
+          flags: {},
+        },
+        "VIK",
+      ),
+    ).toBeNull();
+  });
+
+  it("returns null when all matching affiliate items are already owned by the viewer", () => {
+    const userMe = {
+      player: {
+        publicId: "viewer",
+        flares: ["flag:banner"],
+      },
+    } as any;
+
+    expect(
+      findClanAffiliateCode(
+        {
+          patterns: {},
+          flags: {
+            banner: {
+              name: "banner",
+              url: "https://example.com/flag.svg",
+              product: null,
+              priceSoft: 500,
+              rarity: "common",
+              affiliateCode: "VIK",
+            },
+          },
+        },
+        "VIK",
+        userMe,
+      ),
+    ).toBeNull();
+  });
+
+  it("returns the affiliate code when at least one matching item is purchasable even if another is owned or off-market", () => {
+    const userMe = {
+      player: {
+        publicId: "viewer",
+        flares: ["flag:banner"],
+      },
+    } as any;
+
+    expect(
+      findClanAffiliateCode(
+        {
+          patterns: {
+            stripes: {
+              name: "stripes",
+              pattern: "AA==",
+              product: null,
+              priceSoft: 500,
+              rarity: "common",
+              colorPalettes: [{ name: "default", isArchived: false }],
+              affiliateCode: "VIK",
+            },
+            offmarket: {
+              name: "offmarket",
+              pattern: "AA==",
+              product: null,
+              rarity: "common",
+              affiliateCode: "VIK",
+            },
+          },
+          flags: {
+            banner: {
+              name: "banner",
+              url: "https://example.com/flag.svg",
+              product: null,
+              priceSoft: 500,
+              rarity: "common",
+              affiliateCode: "VIK",
+            },
+          },
+        },
+        "VIK",
+        userMe,
+      ),
+    ).toBe("VIK");
   });
 });

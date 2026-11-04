@@ -622,6 +622,68 @@ describe("ClanModal — rendering", () => {
       expect(modal.querySelector("[data-action='clan-shop']")).toBeNull();
     });
 
+    it("hides the Clan Shop button when matching affiliate items are off-market (no price)", async () => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      const { fetchCosmetics } = await import("../../../src/client/Cosmetics");
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeClan({ tag: "TST" }),
+      );
+      (fetchCosmetics as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        patterns: {
+          clan_camo: {
+            name: "clan_camo",
+            pattern: "AA==",
+            product: null,
+            rarity: "common",
+            colorPalettes: [{ name: "default", isArchived: false }],
+            affiliateCode: "tst",
+          },
+        },
+        flags: {},
+      });
+
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "view" as keyof ClanModal, "detail" as never);
+      await waitForSubComponent(modal, "clan-detail-view");
+
+      expect(modal.querySelector("[data-action='clan-shop']")).toBeNull();
+    });
+
+    it("hides the Clan Shop button when all matching affiliate items are already owned by the player", async () => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      const { fetchCosmetics } = await import("../../../src/client/Cosmetics");
+      const { getUserMe } = await import("../../../src/client/Api");
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeClan({ tag: "TST" }),
+      );
+      (getUserMe as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        player: {
+          publicId: "test-player",
+          flares: ["flag:clan_flag"],
+          clans: [],
+        },
+      });
+      (fetchCosmetics as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        patterns: {},
+        flags: {
+          clan_flag: {
+            name: "clan_flag",
+            url: "https://example.com/flag.svg",
+            product: null,
+            priceSoft: 500,
+            rarity: "common",
+            affiliateCode: "tst",
+          },
+        },
+      });
+
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "view" as keyof ClanModal, "detail" as never);
+      await waitForSubComponent(modal, "clan-detail-view");
+
+      expect(modal.querySelector("[data-action='clan-shop']")).toBeNull();
+    });
+
     it("renders the Clan Shop button when a cosmetic matches the clan tag case-insensitively and opens the affiliate store on click", async () => {
       const { fetchClanDetail } = await import("../../../src/client/ClanApi");
       const { fetchCosmetics, refreshStaleCosmetics } =
