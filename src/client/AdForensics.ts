@@ -104,7 +104,11 @@ function renderedIn(
   // The newest render of the unit, which may not be the one in this frame.
   for (let i = renders.length - 1; i >= 0; i--) {
     const framePrefix = `${GAM_IFRAME_PREFIX}${renders[i].adUnitPath}_`;
-    if (frames.some((frame) => frame.id.startsWith(framePrefix))) {
+    // The rest must be the frame counter alone, so /foo cannot claim /foo_bar.
+    const isUnitFrame = (frame: Element) =>
+      frame.id.startsWith(framePrefix) &&
+      /^\d+$/.test(frame.id.slice(framePrefix.length));
+    if (frames.some(isUnitFrame)) {
       return { render: renders[i], match: "path" };
     }
   }

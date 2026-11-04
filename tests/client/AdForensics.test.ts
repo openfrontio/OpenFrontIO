@@ -129,6 +129,14 @@ describe("creativeAttributes", () => {
     });
   });
 
+  it("does not take a longer unit's frame for a shorter unit's", () => {
+    render("rail-slot", railPath, { creativeId: 1 });
+    const other = document.body.appendChild(document.createElement("div"));
+    placeFrame(other, `google_ads_iframe_${railPath}_bar_0`);
+
+    expect(creativeAttributes(other).creativeMatch).toBe("none");
+  });
+
   it("prefers the source-agnostic ids, which backfill fills in", () => {
     render("rail-slot", railPath, {
       creativeId: null,
