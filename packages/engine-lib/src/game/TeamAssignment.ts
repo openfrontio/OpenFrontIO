@@ -36,12 +36,61 @@ export function assignTeams(
     teamPlayerCount.set(pinnedTeam, (teamPlayerCount.get(pinnedTeam) ?? 0) + 1);
   }
 
+  // Parties come first and override clans: a player who joined with a party
+  // is seated with that party, whatever clan tag they wear. A party goes to
+  // the emptiest team together; members past maxTeamSize spill onto the next
+  // emptiest team that still has room rather than being kicked (a party is a
+  // group of friends, not an all-or-nothing opt-in like a clan). Only when
+  // every team is full is a member kicked.
+  const partyGroups = new Map<number, PlayerInfo[]>();
+  const nonPartyPlayers: PlayerInfo[] = [];
+  for (const p of unpinned) {
+    if (p.party !== null && p.playerType === PlayerType.Human) {
+      if (!partyGroups.has(p.party)) partyGroups.set(p.party, []);
+      partyGroups.get(p.party)!.push(p);
+    } else {
+      nonPartyPlayers.push(p);
+    }
+  }
+  const emptiestTeam = (): Team | null => {
+    let best: Team | null = null;
+    let bestSize = Infinity;
+    for (const t of teams) {
+      const size = teamPlayerCount.get(t) ?? 0;
+      if (size >= maxTeamSize) continue;
+      if (size < bestSize) {
+        bestSize = size;
+        best = t;
+      }
+    }
+    return best;
+  };
+  // Largest party first; ties keep the order of the party numbers, which
+  // the server hands out in join order.
+  const sortedParties = Array.from(partyGroups.entries())
+    .sort(([a, pa], [b, pb]) => pb.length - pa.length || a - b)
+    .map(([, members]) => members);
+  for (const party of sortedParties) {
+    let team = emptiestTeam();
+    for (const player of party) {
+      if (team === null || (teamPlayerCount.get(team) ?? 0) >= maxTeamSize) {
+        team = emptiestTeam();
+      }
+      if (team === null) {
+        result.set(player, "kicked");
+        continue;
+      }
+      result.set(player, team);
+      teamPlayerCount.set(team, (teamPlayerCount.get(team) ?? 0) + 1);
+    }
+  }
+
   // Clans are strict: a clan goes to one team together, and any overflow
   // members get kicked. (You opted into the clan, so we honor "all or
   // nothing" for placement.)
   const clanGroups = new Map<string, PlayerInfo[]>();
   const nonClanPlayers: PlayerInfo[] = [];
-  for (const p of unpinned) {
+  for (const p of nonPartyPlayers) {
     if (p.clanTag) {
       if (!clanGroups.has(p.clanTag)) clanGroups.set(p.clanTag, []);
       clanGroups.get(p.clanTag)!.push(p);

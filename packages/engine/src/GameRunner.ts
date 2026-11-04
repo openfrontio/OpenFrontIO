@@ -65,6 +65,8 @@ export async function createGameRunner(
       p.clanTag,
       p.friends ?? [],
       p.teamIndex ?? null,
+      null,
+      p.party ?? null,
     );
   });
 

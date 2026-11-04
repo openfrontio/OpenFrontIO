@@ -28,6 +28,7 @@ import {
   ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
+  ClientPartyMessage,
   ClientMessage,
   ClientPingMessage,
   ClientRejoinMessage,
@@ -738,6 +739,13 @@ export class Transport {
       platform: clientPlatform(),
       device: clientDevice(),
     } satisfies ClientJoinMessage);
+    // Held until the join handshake completes, like any non-handshake frame.
+    if (this.lobbyConfig.partyID !== undefined && !this.isLocal) {
+      this.sendMsg({
+        type: "party",
+        partyID: this.lobbyConfig.partyID,
+      } satisfies ClientPartyMessage);
+    }
   }
 
   async rejoinGame(lastTurn: number) {

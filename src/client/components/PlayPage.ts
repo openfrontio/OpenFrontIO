@@ -5,6 +5,7 @@ import "./CosmeticBackground";
 import "./NavAccountMenu";
 import "./NavUtilityIcons";
 import "./NewsBox";
+import "./PartyPanel";
 import "./SteamWishlist";
 import "./StreamingNow";
 
@@ -109,6 +110,9 @@ export class PlayPage extends LitElement {
                 ></username-input>
               </div>
             </div>
+
+            <!-- Party: friends who move between games together. -->
+            <party-panel class="block px-2 sm:px-0"></party-panel>
           </div>
 
           <!-- Right column: Streaming Now (desktop only), stretched to the left column's

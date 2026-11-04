@@ -4,6 +4,7 @@ import { simpleHash } from "@openfront/engine-lib/Util";
 import { anonWordName } from "@openfront/shared/AnonNames";
 import { GameInfo, WireGameStartInfo } from "@openfront/shared/WireSchemas";
 import { Client } from "./Client";
+import { partyLookup } from "./PartyLookup";
 
 // Who may see whose real identity, and what each viewer is shown instead.
 //
@@ -183,6 +184,7 @@ export class NameVisibility {
     active: readonly Client[],
   ): LobbyClient[] {
     const friendsFor = friendsLookup(active);
+    const partyFor = partyLookup(active);
     const config = this.view.config();
     const hideClanTags = config.disableClanTags ?? false;
     return active.map((c) => {
@@ -215,6 +217,9 @@ export class NameVisibility {
         // level beside an anonymous name would point out the veterans. Kept on
         // a teammate reveal: it describes the teammate alone, like `verified`.
         levelBadge: c.wireLevelBadge,
+        // Omitted on the anonymized branch above: which strangers queued
+        // together is not the viewer's to know.
+        party: partyFor(c),
       };
     });
   }

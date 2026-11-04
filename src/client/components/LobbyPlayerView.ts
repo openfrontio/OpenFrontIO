@@ -557,6 +557,8 @@ export class LobbyTeamView extends LitElement {
           c.clanTag,
           c.friends ?? [],
           c.teamIndex ?? null,
+          null,
+          c.party ?? null,
         ),
     );
     const assignment = assignTeamsLobbyPreview(

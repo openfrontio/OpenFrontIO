@@ -24,6 +24,11 @@ export class Client {
   // once here rather than for every entry of every per-recipient broadcast.
   public readonly wireLevelBadge: number | undefined;
 
+  // The party this player came with (the "party" client message), or
+  // undefined. The id is the party's invite code, so it never leaves the
+  // server: games see only the per-game number partyLookup derives from it.
+  public partyID: string | undefined = undefined;
+
   constructor(
     public readonly clientID: ClientID,
     public readonly persistentID: string,

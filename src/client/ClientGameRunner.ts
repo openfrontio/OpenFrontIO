@@ -122,6 +122,9 @@ export interface LobbyConfig {
   // Host only: the play token the lobby was created under, used for the
   // first join so the host joins as the creator (see createLobby).
   creatorToken?: string;
+  // The party this player came with (PartyClient.ts), sent to the server
+  // after the join so it seats the party on one team.
+  partyID?: string;
 }
 
 export interface JoinLobbyResult {

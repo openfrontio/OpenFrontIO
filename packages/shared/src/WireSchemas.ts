@@ -40,7 +40,8 @@ export type ClientMessage =
   | ClientLogMessage
   | ClientHashMessage
   | ClientSpectateMessage
-  | ClientReportMessage;
+  | ClientReportMessage
+  | ClientPartyMessage;
 
 export type ServerMessage =
   | ServerTurnMessage
@@ -107,6 +108,8 @@ export type ClientLogMessage = z.infer<typeof ClientLogMessageSchema>;
 export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
 
 export type ClientSpectateMessage = z.infer<typeof ClientSpectateMessageSchema>;
+
+export type ClientPartyMessage = z.infer<typeof ClientPartyMessageSchema>;
 
 export type PlayerCosmeticRefs = z.infer<typeof PlayerCosmeticRefsSchema>;
 
@@ -235,6 +238,11 @@ export const ClientInfoSchema = z.object({
   // second header byte. No range check here on purpose: one bad value must
   // not fail the whole roster's parse, so unpackLevelBadge drops it instead.
   levelBadge: zb.uint().optional(),
+  // Per-game party number (see PlayerSchema.party), so the lobby's team
+  // preview seats a party together the way the game will. Placed after
+  // levelBadge, so it opens this object's second header byte. Absent for
+  // players without a party here and on anonymized entries.
+  party: zb.uint().optional(),
 });
 
 export const GameInfoSchema = z.object({
@@ -361,6 +369,8 @@ export interface ClientInfo {
   // Server-stamped level for the name badge, packed (packLevelBadge); read it
   // with unpackLevelBadge. Display-only; never set on anonymized entries.
   levelBadge?: number;
+  // Per-game party number; absent when not in a party with others here.
+  party?: number;
 }
 
 export enum LogSeverity {
@@ -754,6 +764,17 @@ export const ClientSpectateMessageSchema = z.object({
   spectator: z.boolean(),
 });
 
+// Sent right after join by a player who came with a party (PartySchemas.ts):
+// the party's id, which only its members know. Lobby-phase only; the server
+// turns it into a per-game party number and never shares the id itself. A
+// message of its own rather than a join field, so the join frame's layout
+// (which stale bundles must still decode far enough to be told to refresh)
+// is untouched.
+export const ClientPartyMessageSchema = z.object({
+  type: z.literal("party"),
+  partyID: ID,
+});
+
 export const ClientMessageSchema = zb.discriminatedUnion("type", [
   ClientSendWinnerSchema,
   ClientSendLiveStatsSchema,
@@ -765,6 +786,7 @@ export const ClientMessageSchema = zb.discriminatedUnion("type", [
   ClientHashSchema,
   ClientSpectateMessageSchema,
   ClientReportMessageSchema,
+  ClientPartyMessageSchema,
 ]);
 
 //

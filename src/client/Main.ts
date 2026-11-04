@@ -107,6 +107,7 @@ import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import { capturePagePin } from "./PagePin";
+import { parsePartyHash, party } from "./PartyClient";
 import { setPurchaseAccountRefresh } from "./Payments";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import { updatePortalNavButton } from "./PortalAccountButton";
@@ -262,6 +263,8 @@ declare global {
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "session-cleared": CustomEvent;
     "leave-lobby": CustomEvent;
+    // From the party panel: join the game the party leader is in.
+    "party-follow": CustomEvent<string>;
     "game-starting": CustomEvent;
     "menu-restored": CustomEvent;
     "update-game-config": CustomEvent;
@@ -317,6 +320,9 @@ function setInGameSignal(inGame: boolean): void {
 
 class Client {
   private lobbyHandle: JoinLobbyResult | null = null;
+  // The multiplayer game this tab last joined and has not left, so a party
+  // follow for the game we are already in is a no-op.
+  private joinedGameID: string | null = null;
   /** The game the replay viewer is showing, once it has replaced the menu. */
   private replayViewerID: string | null = null;
   private eventBus: EventBus = new EventBus();
@@ -678,6 +684,7 @@ class Client {
       });
     });
     document.addEventListener("leave-lobby", this.handleLeaveLobby.bind(this));
+    this.setupParty();
     document.addEventListener("kick-player", this.handleKickPlayer.bind(this));
     document.addEventListener(
       "toggle_game_start_timer",
@@ -1458,6 +1465,15 @@ class Client {
     // method is ever scheduled -- see the comment there for why that has to
     // run ahead of userAuth()/getUserMe() rather than here.
 
+    // A party invite: join the party, and stay on the menu until the
+    // leader picks a game.
+    const partyCode = parsePartyHash(decodedHash);
+    if (partyCode !== null) {
+      history.replaceState(null, "", "/");
+      party.join(partyCode);
+      return;
+    }
+
     // Handle different hash sections
     if (decodedHash.startsWith("#purchase-completed")) {
       handlePurchaseReturn(params, {
@@ -1782,6 +1798,35 @@ class Client {
     return true;
   }
 
+  // Party mode (PartyClient.ts): who we are in the party, picking the party
+  // back up after a reload, and following the leader into their games.
+  private setupParty() {
+    party.setIdentityProvider(() => ({
+      username: (this.usernameInput?.resolvedName() ?? fallbackPlayerName())
+        .name,
+      clanTag: this.usernameInput?.getClanTag() ?? null,
+    }));
+    party.onFollow((gameID) => this.followParty(gameID));
+    document.addEventListener("party-follow", (e) =>
+      this.followParty(e.detail),
+    );
+    party.resume();
+  }
+
+  private followParty(gameID: string) {
+    if (!GAME_ID_REGEX.test(gameID) || this.joinedGameID === gameID) return;
+    // Mid-match the player stays put; the party's next game picks them up.
+    if (this.presenceInGame) {
+      console.log(`party: leader joined ${gameID}, staying in current game`);
+      return;
+    }
+    console.log(`party: following leader into ${gameID}`);
+    whenModalLoaded("join-lobby-modal", () => {
+      window.showPage?.("page-join-lobby");
+      this.joinModal.open({ lobbyId: gameID });
+    });
+  }
+
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     if (this.usernameInput && !this.usernameInput.canPlay()) {
@@ -1920,7 +1965,17 @@ class Client {
       void showInGameAlert(translateText("error_modal.game_client_failed"));
       return;
     }
+    // A party comes along to multiplayer lobbies only: singleplayer and
+    // replays have no server, matchmaking pins its own teams, and a
+    // spectator takes no seat to group.
+    const partyGame =
+      party.inParty() &&
+      lobby.source !== "singleplayer" &&
+      lobby.source !== "matchmaking" &&
+      lobby.gameRecord === undefined &&
+      lobby.spectator !== true;
     const newLobbyHandle = joinLobby(this.eventBus, {
+      partyID: partyGame ? party.partyID() : undefined,
       gameID: lobby.gameID,
       cosmetics: await getPlayerCosmeticsRefs({
         verified: resolvedName.verified,
@@ -1958,6 +2013,8 @@ class Client {
     this.lobbyHandle = newLobbyHandle;
     // From here lobbyHandle is the guard.
     this.joinInFlight = false;
+    this.joinedGameID = lobby.source === "singleplayer" ? null : lobby.gameID;
+    if (partyGame) party.announceGame(lobby.gameID);
 
     void this.lobbyHandle.prestart.then(() => {
       // The game is actually starting now (lobby wait is over). Let listeners that stay up
@@ -2190,6 +2247,7 @@ class Client {
     console.log("leaving lobby, cancelling game");
     this.lobbyHandle.stop(true);
     this.lobbyHandle = null;
+    this.joinedGameID = null;
     this.currentUrl = null;
 
     try {

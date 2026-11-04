@@ -53,6 +53,7 @@ import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
 import { levelBadgeForPlayer } from "./LevelBadge";
 import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
 import { logger } from "./Logger";
+import { PartyService, servePartySockets } from "./PartyService";
 import { registerPlayerProfileRoute } from "./PlayerProfileRoute";
 import { resolveVerifiedJoin } from "./Privilege";
 
@@ -299,8 +300,18 @@ export async function startWorker() {
   const gatekeeper = await loadGatekeeper(log);
   const gm = new GameManager(log, gatekeeper);
 
+  // Parties (PartySchemas.ts) live on the worker their id hashes to, like a
+  // game, so the id is minted to route back here.
+  const partyWss = new WebSocketServer({ noServer: true, maxPayload: 4096 });
+  servePartySockets(
+    partyWss,
+    new PartyService({
+      mintPartyID: () => ServerEnv.generateGameIdForWorker(workerId),
+    }),
+  );
+
   // Initialize lobby service (handles WebSocket upgrade routing)
-  const lobbyService = new WorkerLobbyService(server, wss, gm, log);
+  const lobbyService = new WorkerLobbyService(server, wss, gm, log, partyWss);
   const singleplayerPresence = new SingleplayerPresence();
 
   setTimeout(

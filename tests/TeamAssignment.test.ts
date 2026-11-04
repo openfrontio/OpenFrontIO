@@ -546,6 +546,127 @@ describe("assignTeams", () => {
   });
 });
 
+describe("assignTeams with parties", () => {
+  const member = (
+    id: string,
+    party: number | null,
+    clan: string | null = null,
+    friends: string[] = [],
+  ): PlayerInfo =>
+    new PlayerInfo(
+      `Player ${id}`,
+      PlayerType.Human,
+      id,
+      id,
+      false,
+      clan,
+      friends,
+      null,
+      null,
+      party,
+    );
+
+  it("seats a party on one team", () => {
+    const players = [
+      member("1", null),
+      member("2", 1),
+      member("3", null),
+      member("4", 1),
+      member("5", null),
+      member("6", 1),
+    ];
+    const result = assignTeams(players, teams, false);
+    expect(result.get(players[1])).toBe(result.get(players[3]));
+    expect(result.get(players[1])).toBe(result.get(players[5]));
+    expect([...result.values()]).not.toContain("kicked");
+  });
+
+  it("overrides the clan tag for party members", () => {
+    // Members 1 and 2 wear clan ABC but are in a party with 3, who wears XYZ.
+    // The party must stay together even though ABC has another member (4).
+    const players = [
+      member("1", 1, "ABC"),
+      member("2", 1, "ABC"),
+      member("3", 1, "XYZ"),
+      member("4", null, "ABC"),
+      member("5", null, "ABC"),
+      member("6", null),
+    ];
+    const result = assignTeams(players, teams, false);
+    const partyTeam = result.get(players[0]);
+    expect(result.get(players[1])).toBe(partyTeam);
+    expect(result.get(players[2])).toBe(partyTeam);
+    // The remaining clan members are grouped on their own, on the other team.
+    expect(result.get(players[3])).toBe(result.get(players[4]));
+    expect(result.get(players[3])).not.toBe(partyTeam);
+  });
+
+  it("keeps two parties apart and balanced", () => {
+    const players = [
+      member("1", 1),
+      member("2", 2),
+      member("3", 1),
+      member("4", 2),
+    ];
+    const result = assignTeams(players, teams, false);
+    expect(result.get(players[0])).toBe(result.get(players[2]));
+    expect(result.get(players[1])).toBe(result.get(players[3]));
+    expect(result.get(players[0])).not.toBe(result.get(players[1]));
+  });
+
+  it("spills a party larger than a team onto another team instead of kicking", () => {
+    const players = [
+      member("1", 1),
+      member("2", 1),
+      member("3", 1),
+      member("4", null),
+    ];
+    // Two teams of two.
+    const result = assignTeams(players, teams, false, 2);
+    expect([...result.values()]).not.toContain("kicked");
+    expect(result.get(players[0])).toBe(result.get(players[1]));
+    expect(result.get(players[2])).not.toBe(result.get(players[0]));
+  });
+
+  it("is deterministic regardless of party numbering gaps", () => {
+    const players = [member("1", 7), member("2", 7), member("3", null)];
+    const a = assignTeams(players, teams, false);
+    const b = assignTeams(players, teams, false);
+    expect([...a.values()]).toEqual([...b.values()]);
+    expect(a.get(players[0])).toBe(a.get(players[1]));
+  });
+
+  it("honors matchmade pins over parties", () => {
+    const pinned = new PlayerInfo(
+      "Pinned",
+      PlayerType.Human,
+      "p",
+      "p",
+      false,
+      null,
+      [],
+      1,
+      null,
+      1,
+    );
+    const players = [pinned, member("2", 1)];
+    const result = assignTeams(players, teams, false);
+    expect(result.get(pinned)).toBe(teams[1]);
+  });
+
+  it("puts friends of a party member beside the party", () => {
+    const players = [
+      member("1", 1),
+      member("2", 1),
+      member("3", null),
+      member("4", null, null, ["1"]),
+    ];
+    // Room for three per team, so the party's team has a seat left.
+    const result = assignTeams(players, teams, false, 3);
+    expect(result.get(players[3])).toBe(result.get(players[0]));
+  });
+});
+
 describe("resolveTeamsList", () => {
   it("derives the team count from attendance for named modes", () => {
     expect(resolveTeamsList(Duos, 10)).toHaveLength(5);

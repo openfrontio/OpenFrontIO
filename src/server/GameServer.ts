@@ -78,6 +78,7 @@ import {
 } from "./IntentAuthorization";
 import { ListingState } from "./ListingState";
 import { friendsLookup, NameVisibility } from "./NameVisibility";
+import { partyLookup } from "./PartyLookup";
 import { poolTargetFor } from "./PoolRouting";
 import { Roster } from "./Roster";
 import { ServerEnv } from "./ServerEnv";
@@ -827,6 +828,13 @@ export class GameServer {
         this.setSpectator(client, clientMsg.spectator);
         break;
       }
+      case "party": {
+        // Lobby-phase only: the player list, and with it every party number,
+        // is frozen at start.
+        if (this.hasStarted()) break;
+        client.partyID = clientMsg.partyID;
+        break;
+      }
       case "winner": {
         this.handleWinner(client, clientMsg);
         break;
@@ -1124,6 +1132,7 @@ export class GameServer {
     this.convertClanOverflowToSpectators();
 
     const friendsFor = friendsLookup(this.clients.active());
+    const partyFor = partyLookup(this.clients.active());
 
     // allowedPublicIds / nameRevealPublicIds hold account publicIds and are
     // enforced server-side against this.gameConfig (joinClient / seesReal).
@@ -1144,6 +1153,7 @@ export class GameServer {
         isLobbyCreator: this.lobbyCreatorID === c.clientID,
         friends: friendsFor(c),
         teamIndex: this.matchmakingTeamIndex(c),
+        party: partyFor(c),
       })),
       tribes: this.tribes,
     });
@@ -1248,6 +1258,7 @@ export class GameServer {
     } catch {
       return [];
     }
+    const partyFor = partyLookup(this.clients.active());
     const playerInfos = playingClients.map(
       (c) =>
         new PlayerInfo(
@@ -1257,6 +1268,10 @@ export class GameServer {
           c.clientID,
           false,
           c.clanTag ?? null,
+          [],
+          null,
+          null,
+          partyFor(c) ?? null,
         ),
     );
     const preview = assignTeamsLobbyPreview(
@@ -1267,7 +1282,14 @@ export class GameServer {
     );
     const kickedIDs = new Set<ClientID>();
     for (const [info, assignment] of preview.entries()) {
-      if (assignment === "kicked" && info.clanTag && info.clientID !== null) {
+      // Only clan overflow is benched; a party member's tag doesn't group
+      // them, and a party spills rather than kicks.
+      if (
+        assignment === "kicked" &&
+        info.clanTag &&
+        info.party === null &&
+        info.clientID !== null
+      ) {
         kickedIDs.add(info.clientID);
       }
     }
@@ -2110,6 +2132,7 @@ export class GameServer {
           // the replay diverge from the recorded hashes (desync errors).
           teamIndex: player.teamIndex,
           friends: player.friends,
+          party: player.party,
           isLobbyCreator: player.isLobbyCreator,
         } satisfies PlayerRecord;
       },

@@ -628,6 +628,10 @@ export const PlayerSchema = z.object({
   // game's team list). Feeds deterministic team assignment, so it must be
   // identical for every client (like clanTag/friends).
   teamIndex: zb.uint().optional(),
+  // Server-stamped per-game party number (1-based): players who queued into
+  // this game together as a party. Never the party's own id, which stays
+  // with its members. Feeds deterministic team assignment like clanTag.
+  party: zb.uint().optional(),
 });
 
 // A purchased bot tribe name in use this game (active names are globally

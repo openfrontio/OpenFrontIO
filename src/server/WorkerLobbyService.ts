@@ -63,6 +63,8 @@ export class WorkerLobbyService {
     private readonly gameWss: WebSocketServer,
     private readonly gm: GameManager,
     private readonly log: typeof logger,
+    // The party socket (PartyService.ts), on the same upgrade path split.
+    private readonly partyWss?: WebSocketServer,
   ) {
     this.lobbiesWss = new WebSocketServer({
       noServer: true,
@@ -311,6 +313,14 @@ export class WorkerLobbyService {
       if (pathname === "/lobbies" || pathname.endsWith("/lobbies")) {
         this.lobbiesWss.handleUpgrade(request, socket, head, (ws) => {
           this.lobbiesWss.emit("connection", ws, request);
+        });
+      } else if (
+        this.partyWss !== undefined &&
+        (pathname === "/party" || pathname.endsWith("/party"))
+      ) {
+        const partyWss = this.partyWss;
+        partyWss.handleUpgrade(request, socket, head, (ws) => {
+          partyWss.emit("connection", ws, request);
         });
       } else {
         this.gameWss.handleUpgrade(request, socket, head, (ws) => {

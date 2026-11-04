@@ -330,6 +330,12 @@ export class PlayerInfo {
     // the correct flag even when multiple nations on a map share a display
     // name (e.g. India's and Pakistan's "Punjab").
     public readonly nationFlag: string | null = null,
+    // Per-game party number (1-based) stamped by the server for players who
+    // joined together as a party; null = not in a party. Parties are seated
+    // on one team before clans and friends, and override the clan tag for
+    // grouping. Feeds deterministic team assignment, so it must be identical
+    // for every client.
+    public readonly party: number | null = null,
   ) {
     this.displayName = formatPlayerDisplayName(this.name, this.clanTag);
   }
