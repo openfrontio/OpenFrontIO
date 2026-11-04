@@ -110,13 +110,9 @@ type StartPreparation = {
 
 const TUTORIAL_DISABLED_UNITS: UnitType[] = [
   UnitType.City,
-  UnitType.Port,
   UnitType.DefensePost,
   UnitType.Factory,
-  UnitType.Warship,
-  UnitType.MissileSilo,
   UnitType.SAMLauncher,
-  UnitType.AtomBomb,
   UnitType.HydrogenBomb,
   UnitType.MIRV,
 ];
@@ -721,8 +717,8 @@ export class SinglePlayerModal extends BaseModal {
             gameType: GameType.Singleplayer,
             gameMode: GameMode.FFA,
             difficulty: Difficulty.Easy,
-            // The map's one positioned tribe and one nation.
-            bots: 1,
+            // Just the map's two positioned nations.
+            bots: 0,
             nations: "default",
             infiniteGold: false,
             donateGold: false,
@@ -731,8 +727,11 @@ export class SinglePlayerModal extends BaseModal {
             instantBuild: false,
             randomSpawn: false,
             disableAlliances: true,
-            // Nothing to build: the tutorial is land, attacks and boats.
+            // The only things built are the nation's silo, port and warship,
+            // and the atom bomb the player fires from the silo once captured;
+            // the gold is that one bomb's.
             disabledUnits: TUTORIAL_DISABLED_UNITS,
+            startingGold: 750_000,
             tutorial: true,
           },
           lobbyCreatedAt: Date.now(),

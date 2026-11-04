@@ -3,7 +3,7 @@
   "id": "PulicatLake",
   "name": "Pulicat Lake",
   "translation_key": "map.pulicatlake",
-  "categories": ["asia", "new"],
+  "categories": ["asia"],
   "location": { "lat": 13.6, "lon": 80.2 },
   "author": "Panindhra Tallapudi",
   "special_team_count": 2,

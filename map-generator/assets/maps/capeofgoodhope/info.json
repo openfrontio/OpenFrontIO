@@ -3,7 +3,7 @@
   "id": "CapeOfGoodHope",
   "name": "Cape Of Good Hope",
   "translation_key": "map.capeofgoodhope",
-  "categories": ["new", "africa"],
+  "categories": ["africa"],
   "location": { "lat": -34.4, "lon": 18.5 },
   "author": "Tristar",
   "description": "A headland located in the larger Cape Peninsula, itself located in South Africa, near the legislative capital city of Cape Town. Once a significant port and waypoint for sailors traveling from Europe to Asia, the opening of the Suez Canal in 1869 provided a much shorter route, making the long trip around Africa inefficient.",

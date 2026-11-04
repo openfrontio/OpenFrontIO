@@ -3,7 +3,7 @@
   "id": "BrainRot",
   "name": "Brain Rot",
   "translation_key": "map.brainrot",
-  "categories": ["arcade", "new"],
+  "categories": ["arcade"],
   "author": "Patrick Plays Badly",
   "special_team_count": 27,
 

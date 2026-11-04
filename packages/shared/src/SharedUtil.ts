@@ -1,12 +1,22 @@
-import { GameType, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import {
+  GameMode,
+  GameType,
+  PlayerInfo,
+  PlayerType,
+  Team,
+} from "@openfront/engine-api/game/GameTypes";
+import { maps } from "@openfront/engine-api/game/Maps.gen";
 import {
   GameConfig,
   GameID,
+  Player,
   Tribe,
   Turn,
   Winner,
 } from "@openfront/engine-api/Schemas";
 import { resolveTribeNameData } from "@openfront/engine-lib/execution/utils/TribeNames";
+import { nationCountForGame } from "@openfront/engine-lib/game/NationCount";
+import { humanTeams } from "@openfront/engine-lib/game/TeamAssignment";
 import { LOBBY_LABEL_MAX, simpleHash } from "@openfront/engine-lib/Util";
 import { customAlphabet } from "nanoid";
 import {
@@ -37,30 +47,86 @@ export function sanitize(name: string): string {
 export function toWireGameStartInfo(
   info: WireGameStartInfo,
 ): WireGameStartInfo {
-  const config = info.config;
+  const players = simulatedPlayers(info.config, info.players);
+  return players === info.players ? info : { ...info, players };
+}
+
+// The players as the clients simulated them (see toWireGameStartInfo).
+// Returns the same array when nothing is blanked.
+function simulatedPlayers<P extends Player>(
+  config: GameConfig,
+  players: P[],
+): P[] {
   if (config.gameType === GameType.Singleplayer) {
-    return info;
+    return players;
   }
   const blankClanTags =
     (config.disableClanTags ?? false) || (config.anonymizeNames ?? false);
   const blankFriends = config.anonymizeNames ?? false;
   if (!blankClanTags && !blankFriends) {
-    return info;
+    return players;
   }
-  return {
-    ...info,
-    players: info.players.map((p) => ({
-      ...p,
-      clanTag: blankClanTags ? null : p.clanTag,
-      friends: blankFriends ? undefined : p.friends,
-    })),
-  };
+  return players.map((p) => ({
+    ...p,
+    clanTag: blankClanTags ? null : p.clanTag,
+    friends: blankFriends ? undefined : p.friends,
+  }));
+}
+
+// Match telemetry: records the team the game put each player on (see
+// PlayerRecordSchema.team). Runs the simulation's own team assignment on its
+// exact inputs: `players` must be the game's humans in start order (the
+// start info's players), with the clan tags and friends the clients
+// simulated with, plus the nation count the game creates. Those are all
+// fixed when the game starts, so the result is the in-game team. Leaves
+// `team` unset for a player the game kicks, and for everyone when the inputs
+// can't be known (unknown map) or the team config is invalid (the game
+// itself fails to start then).
+function withRecordedTeams(
+  config: GameConfig,
+  players: PlayerRecord[],
+): PlayerRecord[] {
+  if (config.gameMode !== GameMode.Team) {
+    return players;
+  }
+  const map = maps.find((m) => m.type === config.gameMap);
+  if (map === undefined) {
+    return players;
+  }
+  const humans = simulatedPlayers(config, players).map(
+    (p) =>
+      new PlayerInfo(
+        p.username,
+        PlayerType.Human,
+        p.clientID,
+        p.clientID,
+        p.isLobbyCreator ?? false,
+        p.clanTag,
+        p.friends ?? [],
+        p.teamIndex ?? null,
+      ),
+  );
+  let teams: (Team | undefined)[];
+  try {
+    teams = humanTeams(
+      humans,
+      config.playerTeams ?? 0,
+      nationCountForGame(config, map.defaultNationCount, humans.length),
+    );
+  } catch {
+    return players;
+  }
+  return players.map((p, i) => {
+    const team = teams[i];
+    return team === undefined ? p : { ...p, team };
+  });
 }
 
 export function createPartialGameRecord(
   gameID: GameID,
   config: GameConfig,
-  // username does not need to be set.
+  // username does not need to be set. Every human the game was created
+  // with, in start order: their teams are derived from it (withRecordedTeams).
   players: PlayerRecord[],
   allTurns: Turn[],
   start: number,
@@ -102,7 +168,7 @@ export function createPartialGameRecord(
       visibleAt,
       lobbyFillTime,
       config,
-      players,
+      players: withRecordedTeams(config, players),
       start,
       end,
       duration,

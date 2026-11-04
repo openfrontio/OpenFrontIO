@@ -3,7 +3,7 @@
   "id": "Ommatrypta",
   "name": "Ommatrypta",
   "translation_key": "map.ommatrypta",
-  "categories": ["arcade", "new"],
+  "categories": ["arcade"],
   "author": "Patrick Plays Badly",
   "special_team_count": 13,
   "nations": [

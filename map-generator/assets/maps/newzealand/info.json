@@ -3,7 +3,7 @@
   "id": "NewZealand",
   "name": "New Zealand",
   "translation_key": "map.newzealand",
-  "categories": ["new", "oceania"],
+  "categories": ["oceania"],
   "location": { "lat": -41.5, "lon": 172.5 },
   "author": "Tristar",
   "description": "New Zealand is a country in the southwest Pacific, comprising 2 main islands. The nations of this map are indigenous Māori tribes, who settled New Zealand in canoe voyages between 1320 and 1350, long before explorer James Cook stepped foot in 1769.",
