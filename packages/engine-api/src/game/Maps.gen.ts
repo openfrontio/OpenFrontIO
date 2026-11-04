@@ -106,6 +106,7 @@ export enum GameMapType {
   PulicatLake = "Pulicat Lake", // map-generator/assets/maps/pulicatlake/info.json
   QingChina = "Qing China", // map-generator/assets/maps/qingchina/info.json
   RioDeJaneiro = "Rio de Janeiro", // map-generator/assets/maps/riodejaneiro/info.json
+  RockyMountains = "Rocky Mountains", // map-generator/assets/maps/rockymountains/info.json
   Russia = "Russia", // map-generator/assets/maps/russia/info.json
   SanFrancisco = "San Francisco", // map-generator/assets/maps/sanfrancisco/info.json
   Scandinavia = "Scandinavia", // map-generator/assets/maps/scandinavia/info.json
@@ -1940,6 +1941,16 @@ export const maps: readonly MapInfo[] = [
     themes: ["south_america"],
     author: "Renan Scarpin",
     location: { lat: -22.9, lon: -43.2 },
+  },
+  {
+    id: "RockyMountains",
+    type: GameMapType.RockyMountains,
+    translationKey: "map.rockymountains",
+    categories: ["north_america"],
+    defaultNationCount: 38,
+    themes: ["western", "north_america"],
+    author: "crunchybbb",
+    location: { lat: 44, lon: -111 },
   },
   {
     id: "Russia",
