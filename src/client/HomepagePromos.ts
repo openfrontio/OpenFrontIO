@@ -60,7 +60,7 @@ export class HomepagePromos extends LitElement {
   private bottomRailDestroyedAt: number | null = null;
   private railDestroy: Promise<void> | null = null;
   private railDestroyCount = 0;
-  private strayFrameScan: ReturnType<typeof setTimeout> | null = null;
+  private strayFrameScan: ReturnType<typeof setInterval> | null = null;
   private reportedStrayFrames = new WeakSet<Element>();
 
   // The header ad ("flex" leaderboard, GumGum via Playwire) renders in a
@@ -92,10 +92,7 @@ export class HomepagePromos extends LitElement {
     // syncTopAd attaches to the banner itself track its size and position.
     this.topAdMutation = new MutationObserver(() => {
       if (this.findTopAd() !== this.topAdEl) this.syncTopAd();
-      if (this.bottomRailDestroyedAt !== null) {
-        this.destroyStrayBottomRail();
-        this.scheduleStrayFrameScan();
-      }
+      if (this.bottomRailDestroyedAt !== null) this.destroyStrayBottomRail();
     });
     // subtree: the banner is nested inside a wrapper (#pw-oop-flex_container),
     // so watching body's direct children alone misses it.
@@ -112,8 +109,7 @@ export class HomepagePromos extends LitElement {
     document.removeEventListener("join-lobby", this.onJoinLobby);
     document.removeEventListener("leave-lobby", this.onLeaveLobby);
     this.topAdMutation?.disconnect();
-    if (this.strayFrameScan !== null) clearTimeout(this.strayFrameScan);
-    this.strayFrameScan = null;
+    this.stopStrayFrameScan();
     this.topAdStyle?.disconnect();
     this.topAdResize?.disconnect();
     document.documentElement.style.removeProperty("--top-ad-height");
@@ -283,6 +279,7 @@ export class HomepagePromos extends LitElement {
     if (!this.bottomRailActive) return;
     this.bottomRailActive = false;
     this.bottomRailDestroyedAt = performance.now();
+    this.startStrayFrameScan();
     this.railDestroyCount++;
     this.railDestroy = this.destroyBottomRailUnit().then(() => {
       this.railDestroy = null;
@@ -372,17 +369,28 @@ export class HomepagePromos extends LitElement {
     });
   }
 
-  private scheduleStrayFrameScan(): void {
-    this.strayFrameScan ??= setTimeout(() => {
-      this.strayFrameScan = null;
-      this.reportStrayAdFrames();
-    }, STRAY_FRAME_SCAN_MS);
+  // Polled rather than driven by the body observer: a frame can appear
+  // through a style change alone, and watching every attribute in a game
+  // costs more than a scan.
+  private startStrayFrameScan(): void {
+    this.strayFrameScan ??= setInterval(
+      () => this.reportStrayAdFrames(),
+      STRAY_FRAME_SCAN_MS,
+    );
+  }
+
+  private stopStrayFrameScan(): void {
+    if (this.strayFrameScan !== null) clearInterval(this.strayFrameScan);
+    this.strayFrameScan = null;
   }
 
   // Reported, not removed: the match is a heuristic, and taking down
   // something that is not an ad would break the page for the player.
   private reportStrayAdFrames(): void {
-    if (this.bottomRailDestroyedAt === null || !menuChromeIsTornDown()) return;
+    if (this.bottomRailDestroyedAt === null || !menuChromeIsTornDown()) {
+      this.stopStrayFrameScan();
+      return;
+    }
     for (const { root, attributes } of findStrayAdFrames()) {
       if (this.reportedStrayFrames.has(root)) continue;
       this.reportedStrayFrames.add(root);

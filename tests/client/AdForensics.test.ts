@@ -33,9 +33,18 @@ function render(
   });
 }
 
-function placeFrame(parent: Element, id: string, width = 728, height = 90) {
+function placeFrame(
+  parent: Element,
+  id: string,
+  width = 728,
+  height = 90,
+  containerId = "",
+) {
   const frame = document.createElement("iframe");
   frame.id = id;
+  if (containerId !== "") {
+    frame.setAttribute("data-google-container-id", containerId);
+  }
   frame.getBoundingClientRect = () =>
     new DOMRect(100, window.innerHeight - height, width, height);
   parent.appendChild(frame);
@@ -63,6 +72,9 @@ afterEach(() => {
 
 describe("creativeAttributes", () => {
   it("names the creative whose GAM iframe is inside the element", () => {
+    const rail = document.body.appendChild(document.createElement("div"));
+    rail.id = "rail-slot";
+    placeFrame(rail, `google_ads_iframe_${railPath}_0`, 728, 90, "7");
     render(
       "rail-slot",
       railPath,
@@ -76,8 +88,6 @@ describe("creativeAttributes", () => {
     render("other-slot", "/154013155/1025558-w:75940-left_rail", {
       creativeId: 999,
     });
-    const rail = document.body.appendChild(document.createElement("div"));
-    placeFrame(rail, `google_ads_iframe_${railPath}_0`);
 
     expect(creativeAttributes(rail)).toEqual({
       creativeMatch: "frame",
@@ -88,6 +98,34 @@ describe("creativeAttributes", () => {
       bidder: "rubicon",
       bidId: "3f2a",
       advertiserDomain: "example.com",
+    });
+  });
+
+  it("is unsure of a frame a later load of the unit could have reused", () => {
+    const slot = document.body.appendChild(document.createElement("div"));
+    slot.id = "rail-slot";
+    const frame = placeFrame(
+      slot,
+      `google_ads_iframe_${railPath}_0`,
+      728,
+      90,
+      "1",
+    );
+    render("rail-slot", railPath, { creativeId: 1 });
+    frame.setAttribute("data-google-container-id", "2");
+    render("rail-slot", railPath, { creativeId: 2 });
+    slot.remove();
+    const stale = document.body.appendChild(document.createElement("div"));
+    placeFrame(stale, `google_ads_iframe_${railPath}_0`, 728, 90, "1");
+
+    expect(creativeAttributes(stale)).toMatchObject({
+      creativeMatch: "frame",
+      creativeId: "1",
+    });
+    stale.firstElementChild?.removeAttribute("data-google-container-id");
+    expect(creativeAttributes(stale)).toMatchObject({
+      creativeMatch: "path",
+      creativeId: "2",
     });
   });
 

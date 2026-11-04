@@ -140,6 +140,7 @@ describe("HomepagePromos bottom rail after its destroy", () => {
     rail.className = "pw-tag pointer-modifier pw-size-728x90";
     const creative = document.createElement("iframe");
     creative.id = `google_ads_iframe_${slot}`;
+    creative.setAttribute("data-google-container-id", "4");
     rail.appendChild(creative);
     document.body.appendChild(rail);
     return rail;
@@ -169,9 +170,11 @@ describe("HomepagePromos bottom rail after its destroy", () => {
     drain();
     promos.destroyBottomRail();
     await flush();
+
+    const rail = renderRail();
     onRender({
       slot: {
-        getSlotElementId: () => "pw-oop-bottom_rail-slot",
+        getSlotElementId: () => "pw-oop-bottom_rail",
         getAdUnitPath: () => slot.slice(0, -"_0".length),
         getTargeting: (key) => (key === "hb_bidder" ? ["rubicon"] : []),
       },
@@ -182,8 +185,6 @@ describe("HomepagePromos bottom rail after its destroy", () => {
       advertiserId: 4567,
       campaignId: 8901,
     });
-
-    const rail = renderRail();
     await flush();
 
     expect(ramp.destroyUnits).toHaveBeenCalledTimes(2);
@@ -419,6 +420,34 @@ describe("HomepagePromos ad frames over the game", () => {
       }),
     );
     expect(overlay.isConnected).toBe(true);
+  });
+
+  it("reports an ad frame already over the game when the rail goes", async () => {
+    drawOverlay();
+    promos.destroyBottomRail();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(reportEvent).toHaveBeenCalledWith(
+      "ad_frame_in_game",
+      expect.objectContaining({ elementId: "takeover" }),
+    );
+  });
+
+  it("reports an ad frame that a style change alone brings on screen", async () => {
+    promos.destroyBottomRail();
+    const overlay = drawOverlay();
+    const frame = overlay.querySelector("iframe")!;
+    frame.getBoundingClientRect = () => new DOMRect(0, 0, 0, 0);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(reportEvent).not.toHaveBeenCalled();
+
+    frame.getBoundingClientRect = () => new DOMRect(0, 600, 728, 90);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(reportEvent).toHaveBeenCalledWith(
+      "ad_frame_in_game",
+      expect.objectContaining({ elementId: "takeover" }),
+    );
   });
 
   it("ignores ad frames during spawn, where the bottom rail belongs", async () => {

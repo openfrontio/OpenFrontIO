@@ -9,6 +9,9 @@ const MIN_FRAME_AREA = 10_000;
 
 interface RenderedCreative {
   slotElementId: string;
+  // GPT's per-render id on the creative's iframe. Iframe ids are not unique
+  // to a render: a later load of the same unit can reuse them.
+  containerId: string;
   adUnitPath: string;
   size: string;
   creativeId: string;
@@ -50,6 +53,11 @@ function recordRender(event: SlotRenderEndedEvent): void {
     const targeting = (key: string) => slot.getTargeting(key)[0] ?? "";
     renders.push({
       slotElementId: slot.getSlotElementId(),
+      containerId:
+        document
+          .getElementById(slot.getSlotElementId())
+          ?.querySelector(`iframe[id^="${GAM_IFRAME_PREFIX}"]`)
+          ?.getAttribute("data-google-container-id") ?? "",
       adUnitPath: slot.getAdUnitPath(),
       size: Array.isArray(event.size)
         ? event.size.join("x")
@@ -77,16 +85,27 @@ function idString(id: number | null | undefined): string {
 
 function renderedIn(
   el: Element,
-): { render: RenderedCreative; match: "frame" | "slot" } | null {
+): { render: RenderedCreative; match: "frame" | "path" | "slot" } | null {
   const frames = [
     ...(el.matches("iframe") ? [el] : []),
     ...el.querySelectorAll(`iframe[id^="${GAM_IFRAME_PREFIX}"]`),
   ];
+  const containerIds = new Set(
+    frames.map((frame) => frame.getAttribute("data-google-container-id")),
+  );
   for (let i = renders.length - 1; i >= 0; i--) {
-    const render = renders[i];
-    const framePrefix = `${GAM_IFRAME_PREFIX}${render.adUnitPath}_`;
+    if (
+      renders[i].containerId !== "" &&
+      containerIds.has(renders[i].containerId)
+    ) {
+      return { render: renders[i], match: "frame" };
+    }
+  }
+  // The newest render of the unit, which may not be the one in this frame.
+  for (let i = renders.length - 1; i >= 0; i--) {
+    const framePrefix = `${GAM_IFRAME_PREFIX}${renders[i].adUnitPath}_`;
     if (frames.some((frame) => frame.id.startsWith(framePrefix))) {
-      return { render, match: "frame" };
+      return { render: renders[i], match: "path" };
     }
   }
   // Playwire reuses a unit's element (#pw-oop-bottom_rail) for every load,
