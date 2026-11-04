@@ -6,6 +6,7 @@ import {
   clanApiMockFactory,
   cosmeticsMockFactory,
   crazyGamesSdkMockFactory,
+  flushAsync,
   getElState,
   makeClan,
   setState,
@@ -767,6 +768,73 @@ describe("ClanModal — rendering", () => {
         window.removeEventListener("hashchange", onHashChange);
         storeModal.remove();
       }
+    });
+
+    it("discards an older out-of-order lookup when a newer lookup finishes first", async () => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      const { fetchCosmetics } = await import("../../../src/client/Cosmetics");
+      const { getUserMe } = await import("../../../src/client/Api");
+
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValue(
+        makeClan({ tag: "TST" }),
+      );
+
+      const positiveCatalog = {
+        patterns: {},
+        flags: {
+          clan_flag: {
+            name: "clan_flag",
+            url: "https://example.com/flag.svg",
+            product: null,
+            priceSoft: 500,
+            rarity: "common",
+            affiliateCode: "tst",
+          },
+        },
+      };
+      (fetchCosmetics as ReturnType<typeof vi.fn>).mockResolvedValue(
+        positiveCatalog,
+      );
+
+      let resolveOldUserMe!: (val: unknown) => void;
+      const oldUserMePromise = new Promise((resolve) => {
+        resolveOldUserMe = resolve;
+      });
+
+      // 1st lookup in loadAffiliateCode hangs on oldUserMePromise
+      // 2nd lookup in loadAffiliateCode resolves immediately with owned flare
+      (getUserMe as ReturnType<typeof vi.fn>)
+        .mockImplementationOnce(() => oldUserMePromise)
+        .mockResolvedValueOnce({
+          player: {
+            publicId: "test-player",
+            flares: ["flag:clan_flag"],
+          },
+        });
+
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "view" as keyof ClanModal, "detail" as never);
+      const detailView = await waitForSubComponent(modal, "clan-detail-view");
+
+      // Trigger newer lookup via userMeResponse
+      document.dispatchEvent(new Event("userMeResponse"));
+      await flushAsync(modal, detailView);
+
+      // Newer lookup finished first: item is owned, so button is hidden
+      expect(modal.querySelector("[data-action='clan-shop']")).toBeNull();
+
+      // Now resolve the older lookup as unowned (which would have shown button)
+      resolveOldUserMe({
+        player: {
+          publicId: "test-player",
+          flares: [],
+        },
+      });
+      await oldUserMePromise;
+      await flushAsync(modal, detailView);
+
+      // Stale lookup was discarded, button remains hidden
+      expect(modal.querySelector("[data-action='clan-shop']")).toBeNull();
     });
   });
 

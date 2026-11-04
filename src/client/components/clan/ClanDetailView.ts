@@ -84,6 +84,7 @@ export class ClanDetailView extends LitElement {
   @state() private boostOpen = false;
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
   private memberLoadSeq = 0;
+  private affiliateLoadSeq = 0;
   private asyncGeneration = 0;
 
   // Re-renders once a minute so the boost's "time left" counts down.
@@ -136,14 +137,22 @@ export class ClanDetailView extends LitElement {
 
   // Resolves the catalog's affiliateCode matching this clan's tag (if any) so
   // the Overview actions only offer the Clan Shop button when items exist and
-  // are purchasable by the viewer. Floating; guarded by asyncGeneration + tag.
+  // are purchasable by the viewer. Floating; guarded by affiliateLoadSeq,
+  // asyncGeneration + tag so stale in-flight lookups cannot overwrite the current view.
   private async loadAffiliateCode(tag: string, gen: number) {
+    const seq = ++this.affiliateLoadSeq;
     refreshStaleCosmetics();
     const [cosmetics, userMe] = await Promise.all([
       fetchCosmetics(),
       getUserMe().catch(() => false as const),
     ]);
-    if (gen !== this.asyncGeneration || this.clanTag !== tag) return;
+    if (
+      seq !== this.affiliateLoadSeq ||
+      gen !== this.asyncGeneration ||
+      this.clanTag !== tag
+    ) {
+      return;
+    }
     this.affiliateCode = findClanAffiliateCode(cosmetics, tag, userMe);
   }
 
@@ -160,6 +169,7 @@ export class ClanDetailView extends LitElement {
     this.boostTicker = null;
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
     this.memberLoadSeq++;
+    this.affiliateLoadSeq++;
     super.disconnectedCallback();
   }
 
@@ -174,6 +184,7 @@ export class ClanDetailView extends LitElement {
   private async loadDetail() {
     const gen = ++this.asyncGeneration;
     this.memberLoadSeq++;
+    this.affiliateLoadSeq++;
     this.loading = true;
     this.myRole = null;
     this.pendingRequestCount = 0;
