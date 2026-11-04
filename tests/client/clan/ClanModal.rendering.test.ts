@@ -775,7 +775,7 @@ describe("ClanModal — rendering", () => {
       const { fetchCosmetics } = await import("../../../src/client/Cosmetics");
       const { getUserMe } = await import("../../../src/client/Api");
 
-      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValue(
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
         makeClan({ tag: "TST" }),
       );
 
@@ -792,9 +792,9 @@ describe("ClanModal — rendering", () => {
           },
         },
       };
-      (fetchCosmetics as ReturnType<typeof vi.fn>).mockResolvedValue(
-        positiveCatalog,
-      );
+      (fetchCosmetics as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(positiveCatalog)
+        .mockResolvedValueOnce(positiveCatalog);
 
       let resolveOldUserMe!: (val: unknown) => void;
       const oldUserMePromise = new Promise((resolve) => {
