@@ -46,7 +46,7 @@ type WrapperMessage = {
   args: unknown[];
 };
 
-// Stands in for our Poki wrapper page (poki-wrapper/index.html): answers the
+// Stands in for our Poki wrapper page (src/client/PokiWrapper.html): answers the
 // frame's postMessage calls with the fake SDK, as the page's own SDK would.
 // jsdom's parent is the window itself.
 function fakeWrapper(

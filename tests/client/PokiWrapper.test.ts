@@ -9,11 +9,11 @@ import {
   vi,
 } from "vitest";
 
-// Runs the script of the page we upload to Poki (poki-wrapper/index.html)
+// Runs the script of the page we upload to Poki (src/client/PokiWrapper.html)
 // against a fake SDK, with the game frame's messages handed straight to it.
 
 const GAME = "https://openfront.io";
-const page = readFileSync("poki-wrapper/index.html", "utf8");
+const page = readFileSync("src/client/PokiWrapper.html", "utf8");
 const script = /<script>([\s\S]*?)<\/script>/i.exec(page)![1];
 
 type Poki = NonNullable<Window["PokiSDK"]>;

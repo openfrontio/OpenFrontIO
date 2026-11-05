@@ -1,13 +1,14 @@
 <!doctype html>
 <!--
   The page we upload to Poki as our game build. It frames the game and holds
-  Poki's SDK, which the game calls over postMessage (src/client/PokiBridge.ts).
+  Poki's SDK, which the game calls over postMessage (PokiBridge.ts).
   Leaving a game reloads the game's frame; Poki can't follow an SDK through a
   reload, so the SDK stays here, inited once per session.
 
   To upload: set GAME below (https://openfront.io for production,
-  https://poki.openfront.dev for staging), zip this one file, and upload the
-  zip as a new version in Poki for Developers.
+  https://poki.openfront.dev for staging), zip this one file as index.html,
+  and upload the zip as a new version in Poki for Developers. The game's build
+  doesn't include it.
 -->
 <html>
   <head>

@@ -1,7 +1,7 @@
 // Poki counts a session from the SDK's init() to the page unloading, and
 // leaving any game reloads our frame. So the SDK lives in the wrapper page we
 // upload to Poki (which never reloads) and our frame calls it over
-// postMessage. The wrapper (poki-wrapper/index.html) marks the frame's URL
+// postMessage. The wrapper (PokiWrapper.html) marks the frame's URL
 // with BRIDGE_PARAM.
 
 type PokiApi = NonNullable<Window["PokiSDK"]>;
