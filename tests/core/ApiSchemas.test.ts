@@ -1,4 +1,10 @@
-import { UserMeResponseSchema } from "@openfront/shared/ApiSchemas";
+import {
+  giftSubscriptionOf,
+  paidSubscriptionOf,
+  renewalPushedBy,
+  subscriptionsOf,
+  UserMeResponseSchema,
+} from "@openfront/shared/ApiSchemas";
 import { describe, expect, it } from "vitest";
 
 function samplePlayer() {
@@ -153,5 +159,57 @@ describe("UserMeResponseSchema searchHidden", () => {
       expect(parsed.player.searchHidden).toBe(true);
       expect(parsed.player.levelHidden).toBe(false);
     }
+  });
+});
+
+describe("UserMeResponseSchema subscriptions", () => {
+  const row = (tier: string, provider: string | null) => ({
+    tier,
+    status: "active",
+    currentPeriodEnd: "2026-10-01T00:00:00Z",
+    cancelAtPeriodEnd: false,
+    provider,
+  });
+  const parsePlayer = (extra: Record<string, unknown>) =>
+    UserMeResponseSchema.parse({
+      user: {},
+      player: { ...samplePlayer(), ...extra },
+    }).player;
+
+  it("finds the paid row behind a higher-tier grant", () => {
+    const gift = row("sovereign", null);
+    const paid = { ...row("steam_plus", "steam"), renewalPushedBy: "dlc" };
+    const player = parsePlayer({
+      subscription: gift,
+      subscriptions: [gift, paid],
+    });
+    expect(paidSubscriptionOf(player)?.tier).toBe("steam_plus");
+    expect(giftSubscriptionOf(player)?.tier).toBe("sovereign");
+    expect(renewalPushedBy(paidSubscriptionOf(player))).toBe("dlc");
+  });
+
+  it("falls back to `subscription` on a server without the list", () => {
+    const player = parsePlayer({ subscription: row("steam_plus", "stripe") });
+    expect(subscriptionsOf(player)).toHaveLength(1);
+    expect(paidSubscriptionOf(player)?.tier).toBe("steam_plus");
+    expect(giftSubscriptionOf(player)).toBeNull();
+  });
+
+  it("reads a malformed list as absent rather than failing the response", () => {
+    const player = parsePlayer({
+      subscription: row("steam_plus", null),
+      subscriptions: [{ tier: 3 }],
+    });
+    expect(player.subscriptions).toBeUndefined();
+    expect(giftSubscriptionOf(player)?.tier).toBe("steam_plus");
+  });
+
+  it("treats an unknown renewalPushedBy as not pushed", () => {
+    expect(
+      renewalPushedBy({
+        ...parsePlayer({ subscription: row("a", "stripe") }).subscription!,
+        renewalPushedBy: "xbox",
+      }),
+    ).toBeNull();
   });
 });

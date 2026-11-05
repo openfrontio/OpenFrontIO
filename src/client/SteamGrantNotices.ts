@@ -25,8 +25,9 @@
 // the welcome and the sign-off, both of which name the purchase.
 
 import {
-  isGrantedSubscription,
+  giftSubscriptionOf,
   isSteamGrant,
+  paidSubscriptionOf,
   type UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 
@@ -53,6 +54,8 @@ export interface SteamGrantRecord {
   steam: boolean;
   welcomed: boolean;
   endedShown: boolean;
+  /** The ending-soon notice for this end date has been shown. */
+  endingShown: boolean;
   /** Last boot that observed this record's grant; used only for pruning. */
   seenAt: number;
 }
@@ -75,8 +78,8 @@ function datedGrantOf(
   userMe: UserMeResponse | false | null,
 ): DatedGrant | null {
   if (userMe === null || userMe === false) return null;
-  const sub = userMe.player.subscription;
-  if (!isGrantedSubscription(sub) || !sub?.currentPeriodEnd) return null;
+  const sub = giftSubscriptionOf(userMe.player);
+  if (!sub?.currentPeriodEnd) return null;
   return {
     tier: sub.tier,
     periodEnd: sub.currentPeriodEnd,
@@ -95,7 +98,7 @@ export function steamGrantOf(
   userMe: UserMeResponse | false | null,
 ): SteamGrant | null {
   if (userMe === null || userMe === false) return null;
-  const sub = userMe.player.subscription;
+  const sub = giftSubscriptionOf(userMe.player);
   if (!isSteamGrant(sub) || !sub?.currentPeriodEnd) return null;
   return { tier: sub.tier, periodEnd: sub.currentPeriodEnd };
 }
@@ -121,8 +124,15 @@ export function parseSteamGrantStore(raw: string | null): SteamGrantStore {
   )) {
     if (publicId === "") continue;
     if (typeof value !== "object" || value === null) continue;
-    const { periodEnd, tier, steam, welcomed, endedShown, seenAt } =
-      value as Record<string, unknown>;
+    const {
+      periodEnd,
+      tier,
+      steam,
+      welcomed,
+      endedShown,
+      endingShown,
+      seenAt,
+    } = value as Record<string, unknown>;
     if (typeof periodEnd !== "string" || Number.isNaN(Date.parse(periodEnd)))
       continue;
     if (typeof tier !== "string") continue;
@@ -130,12 +140,14 @@ export function parseSteamGrantStore(raw: string | null): SteamGrantStore {
       continue;
     if (typeof seenAt !== "number" || !Number.isFinite(seenAt)) continue;
     if (steam !== undefined && typeof steam !== "boolean") continue;
+    if (endingShown !== undefined && typeof endingShown !== "boolean") continue;
     store[publicId] = {
       periodEnd,
       tier,
       steam: steam ?? true,
       welcomed,
       endedShown,
+      endingShown: endingShown ?? false,
       seenAt,
     };
   }
@@ -146,15 +158,16 @@ export function parseSteamGrantStore(raw: string | null): SteamGrantStore {
  * Bring the store up to date with what /users/@me just said. Returns the same
  * object when nothing changed, so the caller can skip the write.
  *
- * - A visible dated grant is recorded, Steam or not, saying which. A
- *   different end date is a different grant
+ * - A visible dated grant is recorded, Steam or not, saying which, even
+ *   beside a paid subscription. A different end date is a different grant
  *   (the Deluxe DLC extends the same row) and starts a fresh record, so the
  *   new span gets its own welcome.
- * - A PAID subscription drops the record outright. The sign-off would be a
- *   lie to someone who has since subscribed, and a later lapse of that paid
- *   subscription must get the ordinary lapse copy, not the after-grant one.
- *   An absent `provider` (older server) counts as paid here too — the safe
- *   side, exactly as `isGrantedSubscription` documents.
+ * - A PAID subscription with no grant beside it drops the record outright.
+ *   The sign-off would be a lie to someone who has since subscribed, and a
+ *   later lapse of that paid subscription must get the ordinary lapse copy,
+ *   not the after-grant one. An absent `provider` (older server) counts as
+ *   paid here too — the safe side, exactly as `isGrantedSubscription`
+ *   documents.
  * - No subscription at all leaves the record alone: that is the state the
  *   sign-off is waiting for.
  */
@@ -165,18 +178,17 @@ export function recordSteamGrant(
 ): SteamGrantStore {
   if (userMe === null || userMe === false) return store;
   const publicId = userMe.player.publicId;
-  const sub = userMe.player.subscription;
   const existing = store[publicId];
+  const grant = datedGrantOf(userMe);
 
-  if (sub && !isGrantedSubscription(sub)) {
-    if (existing === undefined) return store;
+  if (grant === null) {
+    if (paidSubscriptionOf(userMe.player) === null || existing === undefined)
+      return store;
     const rest = { ...store };
     delete rest[publicId];
     return rest;
   }
 
-  const grant = datedGrantOf(userMe);
-  if (grant === null) return store;
   const periodEnd = grant.periodEnd.toISOString();
   if (existing?.periodEnd === periodEnd && existing.tier === grant.tier) {
     return {
@@ -193,6 +205,7 @@ export function recordSteamGrant(
         steam: grant.steam,
         welcomed: false,
         endedShown: false,
+        endingShown: false,
         seenAt: now,
       },
     },
@@ -252,10 +265,10 @@ export function steamGrantEnded(
   // Anything still entitling them means the month has not "ended" in any
   // sense the player would recognise: a paid subscription, a running dated
   // grant, or an open-ended admin comp (provider null, no end date).
-  const sub = userMe.player.subscription;
-  if (sub) {
-    if (!isGrantedSubscription(sub)) return null;
-    if (!sub.currentPeriodEnd || sub.currentPeriodEnd.getTime() > now)
+  if (paidSubscriptionOf(userMe.player) !== null) return null;
+  const gift = giftSubscriptionOf(userMe.player);
+  if (gift) {
+    if (!gift.currentPeriodEnd || gift.currentPeriodEnd.getTime() > now)
       return null;
   }
   return record;
@@ -287,4 +300,56 @@ export function steamGrantEndedShown(
   const record = store[publicId];
   if (record === undefined) return store;
   return { ...store, [publicId]: { ...record, endedShown: true } };
+}
+
+export function steamGrantEndingShown(
+  store: SteamGrantStore,
+  publicId: string,
+): SteamGrantStore {
+  const record = store[publicId];
+  if (record === undefined) return store;
+  return { ...store, [publicId]: { ...record, endingShown: true } };
+}
+
+export const GIFT_ENDING_NOTICE_MS = 3 * 24 * 60 * 60 * 1000;
+
+/**
+ * Is the ending-soon notice owed: a dated grant, Steam or not, that ends
+ * within GIFT_ENDING_NOTICE_MS and has not had it for this end date?
+ */
+export function giftEndingDue(
+  store: SteamGrantStore,
+  userMe: UserMeResponse | false | null,
+  now: number,
+): boolean {
+  const grant = datedGrantOf(userMe);
+  if (grant === null || userMe === null || userMe === false) return false;
+  const left = grant.periodEnd.getTime() - now;
+  if (left <= 0 || left > GIFT_ENDING_NOTICE_MS) return false;
+  const record = store[userMe.player.publicId];
+  return (
+    record !== undefined &&
+    record.periodEnd === grant.periodEnd.toISOString() &&
+    !record.endingShown
+  );
+}
+
+export interface PaidFacts {
+  tier: string;
+  nextPayment: Date | null;
+  /** False once it is set to cancel: it will not renew. */
+  renews: boolean;
+}
+
+export function paidFactsOf(
+  userMe: UserMeResponse | false | null,
+): PaidFacts | null {
+  if (userMe === null || userMe === false) return null;
+  const paid = paidSubscriptionOf(userMe.player);
+  if (paid === null) return null;
+  return {
+    tier: paid.tier,
+    nextPayment: paid.currentPeriodEnd,
+    renews: !paid.cancelAtPeriodEnd,
+  };
 }

@@ -1,12 +1,16 @@
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { describe, expect, it } from "vitest";
 import {
+  GIFT_ENDING_NOTICE_MS,
+  giftEndingDue,
+  paidFactsOf,
   parseSteamGrantStore,
   recordSteamGrant,
   STEAM_GRANT_NOTICE_MAX_ACCOUNTS,
   steamGrantEnded,
   steamGrantEndedDue,
   steamGrantEndedShown,
+  steamGrantEndingShown,
   steamGrantOf,
   steamGrantWelcomed,
   steamGrantWelcomeDue,
@@ -53,6 +57,7 @@ function recorded(overrides: Partial<SteamGrantStore[string]> = {}) {
       steam: true,
       welcomed: false,
       endedShown: false,
+      endingShown: false,
       seenAt: NOW,
       ...overrides,
     },
@@ -179,6 +184,7 @@ describe("recordSteamGrant", () => {
         steam: true,
         welcomed: false,
         endedShown: false,
+        endingShown: false,
         seenAt: NOW,
       },
     });
@@ -341,5 +347,121 @@ describe("marking", () => {
     const marked = steamGrantWelcomed(store, ME);
     expect(marked.other).toEqual(store.other);
     expect(marked[ME].welcomed).toBe(true);
+  });
+});
+
+// A paid subscription and a grant at once: `subscription` is the higher tier,
+// `subscriptions` lists both.
+function stacked(paidOverrides: Partial<Sub> = {}): UserMeResponse {
+  const gift = {
+    tier: "sovereign",
+    status: "active",
+    cancelAtPeriodEnd: false,
+    currentPeriodEnd: new Date(MONTH_END),
+    provider: null,
+    grantSource: "steam",
+  } as Sub;
+  const paidRow = {
+    tier: "steam_plus",
+    status: "active",
+    cancelAtPeriodEnd: false,
+    currentPeriodEnd: new Date("2026-09-30T00:00:00.000Z"),
+    provider: "stripe",
+    ...paidOverrides,
+  } as Sub;
+  return {
+    user: {},
+    player: {
+      publicId: ME,
+      subscription: gift,
+      subscriptions: [gift, paidRow],
+    },
+  } as unknown as UserMeResponse;
+}
+
+describe("a grant beside a paid subscription", () => {
+  it("is recorded, so the payer still gets a welcome", () => {
+    const store = recordSteamGrant({}, stacked(), NOW);
+    expect(store[ME]).toMatchObject({
+      tier: "sovereign",
+      periodEnd: MONTH_END,
+      steam: true,
+    });
+    expect(steamGrantWelcomeDue(store, stacked(), NOW)).toBe(true);
+  });
+
+  // The paid subscription carries on, so nothing has "ended" for them.
+  it("is never signed off as ended", () => {
+    const store = recordSteamGrant({}, stacked(), NOW);
+    expect(steamGrantEnded(store, stacked(), MONTH_END_MS + 1)).toBeNull();
+  });
+
+  it("is dropped once only the paid row is left", () => {
+    const store = recordSteamGrant({}, stacked(), NOW);
+    expect(recordSteamGrant(store, paid(), NOW)).toEqual({});
+  });
+
+  it("describes the paid row for the notices", () => {
+    expect(paidFactsOf(stacked())).toEqual({
+      tier: "steam_plus",
+      nextPayment: new Date("2026-09-30T00:00:00.000Z"),
+      renews: true,
+    });
+    expect(paidFactsOf(stacked({ cancelAtPeriodEnd: true }))?.renews).toBe(
+      false,
+    );
+    expect(paidFactsOf(steamMonth())).toBeNull();
+  });
+
+  it("is read from `subscription` alone on an older server", () => {
+    expect(paidFactsOf(paid())?.tier).toBe("warlord");
+    expect(steamGrantOf(steamMonth())?.tier).toBe("warlord");
+  });
+});
+
+describe("giftEndingDue", () => {
+  const soon = MONTH_END_MS - GIFT_ENDING_NOTICE_MS + 1;
+
+  it("is due within three days of the end", () => {
+    expect(giftEndingDue(recorded(), steamMonth(), soon)).toBe(true);
+    expect(
+      giftEndingDue(recorded(), steamMonth(), soon - 2 * 60 * 60 * 1000),
+    ).toBe(false);
+  });
+
+  it("is not due once the grant has ended", () => {
+    expect(giftEndingDue(recorded(), steamMonth(), MONTH_END_MS)).toBe(false);
+  });
+
+  it("is due beside a paid subscription, and for a dated admin comp", () => {
+    const store = recordSteamGrant({}, stacked(), NOW);
+    expect(giftEndingDue(store, stacked(), soon)).toBe(true);
+    const comp = me({ grantSource: "admin" });
+    expect(giftEndingDue(recordSteamGrant({}, comp, NOW), comp, soon)).toBe(
+      true,
+    );
+  });
+
+  it("is shown once per end date", () => {
+    const shown = steamGrantEndingShown(recorded(), ME);
+    expect(giftEndingDue(shown, steamMonth(), soon)).toBe(false);
+    const later = me({
+      currentPeriodEnd: new Date("2026-11-14T00:00:00.000Z"),
+    });
+    const renewed = recordSteamGrant(shown, later, NOW);
+    expect(
+      giftEndingDue(
+        renewed,
+        later,
+        Date.parse("2026-11-14T00:00:00.000Z") - GIFT_ENDING_NOTICE_MS + 1,
+      ),
+    ).toBe(true);
+  });
+
+  it("reads an older stored record as not yet shown", () => {
+    const old: Record<string, unknown> = { ...recorded()[ME] };
+    delete old.endingShown;
+    const parsed = parseSteamGrantStore(JSON.stringify({ [ME]: old }));
+    expect(parsed[ME].endingShown).toBe(false);
   });
 });

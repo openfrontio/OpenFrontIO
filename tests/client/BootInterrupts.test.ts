@@ -1,3 +1,4 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   BOOT_INTERRUPT_KEYS,
@@ -12,8 +13,12 @@ import {
   joinOwnsInFlightFlag,
   nextBootInterrupt,
   parseClaimPromptStore,
+  renewalPushedDueThisLaunch,
+  renewalPushedOf,
+  renewalPushedStringsReady,
   reportThanksDueThisLaunch,
   reportThanksStringsReady,
+  resetRenewalPushedForTest,
   resetReportThanksForTest,
   runBootInterrupt,
   steamGrantStringsReady,
@@ -52,6 +57,10 @@ function boot(
     claimStringsReady: true,
     reportThanksDue: false,
     reportThanksStringsReady: true,
+    giftEndingDue: false,
+    giftEndingStringsReady: true,
+    renewalPushedDue: false,
+    renewalPushedStringsReady: true,
     ...overrides,
   };
 }
@@ -793,6 +802,10 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
     claimStringsReady: claimPromptStringsReady(unready),
     reportThanksDue: false,
     reportThanksStringsReady: false,
+    giftEndingDue: false,
+    giftEndingStringsReady: false,
+    renewalPushedDue: false,
+    renewalPushedStringsReady: false,
   };
 
   it("does not choose the claim prompt", () => {
@@ -916,6 +929,7 @@ describe("running the Steam grant notices", () => {
     steam: true,
     welcomed: false,
     endedShown: false,
+    endingShown: false,
     seenAt: now,
   };
   const grantStore = { [ME]: record };
@@ -1043,7 +1057,7 @@ describe("steamGrantStringsReady", () => {
     });
     expect(ready).toBe(true);
     for (const params of probed) {
-      expect(params).toEqual({ tier: "", date: "" });
+      expect(params).toEqual({ tier: "", date: "", paidTier: "", amount: "" });
     }
   });
 
@@ -1063,6 +1077,7 @@ describe("an interrupt the player never answered", () => {
     steam: true,
     welcomed: false,
     endedShown: false,
+    endingShown: false,
     seenAt: now,
   };
   const context = {
@@ -1300,4 +1315,273 @@ describe("running the report thank-you", () => {
       "seen report_thanks",
     ]);
   });
+});
+
+// ---------------------------------------------------------------------------
+// A paid subscription and a grant at once
+// ---------------------------------------------------------------------------
+
+function quietPorts(overrides: Partial<BootInterruptPorts> = {}) {
+  const calls = {
+    alerted: [] as { body: string; heading: string }[],
+    params: [] as (Record<string, string | number> | undefined)[],
+    seen: [] as string[],
+    grantStored: [] as SteamGrantStore[],
+  };
+  const ports: BootInterruptPorts = {
+    translate: (key, params) => {
+      calls.params.push(params);
+      return `t(${key})`;
+    },
+    confirm: async () => true,
+    alert: async (body, heading) => {
+      calls.alerted.push({ body, heading });
+    },
+    tierName: (tier) => `name(${tier})`,
+    navigate: () => {},
+    openRewards: () => {},
+    storeClaimPrompt: () => {},
+    updateSteamGrant: () => {},
+    markNoticeSeen: () => {},
+    markMessageSeen: (kind) => calls.seen.push(kind),
+    now: () => 1_757_000_000_000,
+    ...overrides,
+  };
+  return { ports, calls };
+}
+
+const fmt = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+
+describe("the payer's notices in the ordering", () => {
+  it("ranks the renewal notice after the grant welcome and before the claim prompt", () => {
+    expect(
+      nextBootInterrupt(
+        boot({ renewalPushedDue: true, username: null, usernameBase: null }),
+      ),
+    ).toBe("renewal-pushed");
+    expect(
+      nextBootInterrupt(
+        boot({ renewalPushedDue: true, grantWelcomeDue: true }),
+      ),
+    ).toBe("grant-welcome");
+  });
+
+  it("ranks the ending-soon notice ahead of rewards", () => {
+    expect(
+      nextBootInterrupt(boot({ giftEndingDue: true, rewardCount: 2 })),
+    ).toBe("gift-ending");
+    expect(
+      nextBootInterrupt(boot({ giftEndingDue: true, lapseNoticeDue: true })),
+    ).toBe("lapse-notice");
+  });
+
+  it("waits for their strings", () => {
+    expect(
+      nextBootInterrupt(
+        boot({ renewalPushedDue: true, renewalPushedStringsReady: false }),
+      ),
+    ).toBeNull();
+    expect(
+      nextBootInterrupt(
+        boot({ giftEndingDue: true, giftEndingStringsReady: false }),
+      ),
+    ).toBeNull();
+    expect(renewalPushedStringsReady((key) => key)).toBe(false);
+  });
+});
+
+describe("the welcome for a grant beside a paid subscription", () => {
+  const record = {
+    periodEnd: "2026-12-23T00:00:00.000Z",
+    tier: "sovereign",
+    steam: true,
+    welcomed: false,
+    endedShown: false,
+    endingShown: false,
+    seenAt: 0,
+  };
+  const paid = {
+    tier: "steam_plus",
+    nextPayment: new Date("2026-11-23T00:00:00.000Z"),
+    renews: true,
+  };
+  const context = (p: typeof paid) => ({
+    claimStore: {},
+    grantStore: { [ME]: record },
+    publicId: ME,
+    steamNotice: null,
+    paid: p,
+  });
+
+  it("does not tell a payer that nothing is billed", async () => {
+    const { ports, calls } = quietPorts({ dailyPlutonium: () => 25 });
+    await runBootInterrupt("grant-welcome", context(paid), ports);
+    expect(calls.alerted[0].body).toBe(
+      `t(${BOOT_INTERRUPT_KEYS.grantStackedBody}) t(${BOOT_INTERRUPT_KEYS.grantStackedRenews})`,
+    );
+    expect(calls.params[0]).toEqual({
+      tier: "name(sovereign)",
+      date: fmt(record.periodEnd),
+      paidTier: "name(steam_plus)",
+      amount: 25,
+    });
+    expect(calls.params[1]).toEqual({
+      paidTier: "name(steam_plus)",
+      date: fmt("2026-11-23T00:00:00.000Z"),
+    });
+  });
+
+  it("drops the plutonium clause when the catalog has no amount", async () => {
+    const { ports, calls } = quietPorts({ dailyPlutonium: () => null });
+    await runBootInterrupt("grant-welcome", context(paid), ports);
+    expect(calls.alerted[0].body).toContain(
+      `t(${BOOT_INTERRUPT_KEYS.grantStackedBodyNoAmount})`,
+    );
+  });
+
+  it("does not say it renews once it is set to cancel", async () => {
+    const { ports, calls } = quietPorts({ dailyPlutonium: () => 25 });
+    await runBootInterrupt(
+      "grant-welcome",
+      context({ ...paid, renews: false }),
+      ports,
+    );
+    expect(calls.alerted[0].body).toBe(
+      `t(${BOOT_INTERRUPT_KEYS.grantStackedBody})`,
+    );
+  });
+});
+
+describe("the ending-soon notice", () => {
+  const record = {
+    periodEnd: "2026-12-23T00:00:00.000Z",
+    tier: "sovereign",
+    steam: true,
+    welcomed: true,
+    endedShown: false,
+    endingShown: false,
+    seenAt: 0,
+  };
+
+  async function run(
+    steam: boolean,
+    paid: { tier: string; nextPayment: Date | null; renews: boolean } | null,
+  ) {
+    const grantStore = { [ME]: { ...record, steam } };
+    const stored: SteamGrantStore[] = [];
+    const { ports, calls } = quietPorts({
+      updateSteamGrant: (update) => stored.push(update(grantStore)),
+    });
+    let key = "";
+    const translate = ports.translate;
+    ports.translate = (k, params) => {
+      if (k !== BOOT_INTERRUPT_KEYS.giftEndingHeading) key = k;
+      return translate(k, params);
+    };
+    await runBootInterrupt(
+      "gift-ending",
+      { claimStore: {}, grantStore, publicId: ME, steamNotice: null, paid },
+      ports,
+    );
+    return { key, stored, calls };
+  }
+
+  const paid = { tier: "steam_plus", nextPayment: null, renews: true };
+
+  it("names the paid tier they go back to", async () => {
+    const { key, calls } = await run(true, paid);
+    expect(key).toBe(BOOT_INTERRUPT_KEYS.giftEndingSteamPaid);
+    expect(calls.params[0]).toEqual({
+      tier: "name(sovereign)",
+      date: fmt(record.periodEnd),
+      paidTier: "name(steam_plus)",
+    });
+  });
+
+  it("asks a player with nothing else to subscribe", async () => {
+    expect((await run(true, null)).key).toBe(
+      BOOT_INTERRUPT_KEYS.giftEndingSteamUnpaid,
+    );
+  });
+
+  it("does not call an admin comp a month", async () => {
+    expect((await run(false, paid)).key).toBe(
+      BOOT_INTERRUPT_KEYS.giftEndingOtherPaid,
+    );
+    expect((await run(false, null)).key).toBe(
+      BOOT_INTERRUPT_KEYS.giftEndingOtherUnpaid,
+    );
+  });
+
+  it("records itself shown", async () => {
+    const { stored } = await run(true, null);
+    expect(stored[0][ME].endingShown).toBe(true);
+  });
+});
+
+describe("the renewal notice", () => {
+  beforeEach(() => resetRenewalPushedForTest());
+
+  function userMe(
+    renewalPushedBy: string | null,
+    pendingMessages = ["renewal_pushed"],
+  ): UserMeResponse {
+    const row = {
+      tier: "steam_plus",
+      status: "active",
+      cancelAtPeriodEnd: false,
+      currentPeriodEnd: new Date("2026-12-23T00:00:00.000Z"),
+      provider: "steam",
+      renewalPushedBy,
+    };
+    return {
+      pendingMessages,
+      player: { publicId: ME, subscription: row, subscriptions: [row] },
+    } as unknown as UserMeResponse;
+  }
+
+  it("is due only with the message and a pushed paid row", () => {
+    expect(renewalPushedDueThisLaunch(userMe("dlc"))).toBe(true);
+    expect(renewalPushedDueThisLaunch(userMe("dlc", []))).toBe(false);
+    expect(renewalPushedDueThisLaunch(userMe(null))).toBe(false);
+    expect(renewalPushedDueThisLaunch(userMe("something_new"))).toBe(false);
+  });
+
+  for (const [by, key] of [
+    ["dlc", BOOT_INTERRUPT_KEYS.renewalPushedDlc],
+    ["base", BOOT_INTERRUPT_KEYS.renewalPushedBase],
+    ["gift", BOOT_INTERRUPT_KEYS.renewalPushedGift],
+  ] as const) {
+    it(`says why the payment moved (${by}), then marks it seen`, async () => {
+      const { ports, calls } = quietPorts();
+      await runBootInterrupt(
+        "renewal-pushed",
+        {
+          claimStore: {},
+          grantStore: {},
+          publicId: ME,
+          steamNotice: null,
+          renewalPushed: renewalPushedOf(userMe(by)),
+        },
+        ports,
+      );
+      expect(calls.alerted).toEqual([
+        {
+          body: `t(${key})`,
+          heading: `t(${BOOT_INTERRUPT_KEYS.renewalPushedHeading})`,
+        },
+      ]);
+      expect(calls.params[0]).toEqual({
+        tier: "name(steam_plus)",
+        date: fmt("2026-12-23T00:00:00.000Z"),
+      });
+      expect(calls.seen).toEqual(["renewal_pushed"]);
+      expect(renewalPushedDueThisLaunch(userMe(by))).toBe(false);
+    });
+  }
 });

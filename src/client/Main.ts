@@ -37,10 +37,14 @@ import {
   CLAIM_PROMPT_KEY,
   claimPromptDue,
   claimPromptStringsReady,
+  giftEndingStringsReady,
   joinOwnsInFlightFlag,
   lapseShownAfterDispatch,
   nextBootInterrupt,
   parseClaimPromptStore,
+  renewalPushedDueThisLaunch,
+  renewalPushedOf,
+  renewalPushedStringsReady,
   reportThanksDueThisLaunch,
   reportThanksStringsReady,
   runBootInterrupt,
@@ -49,8 +53,10 @@ import {
 import type { JoinLobbyResult } from "./ClientGameRunner";
 import {
   broadcastFreshUserMe,
+  fetchCosmetics,
   getPlayerCosmeticsRefs,
   handlePurchaseReturn,
+  subscriptionTier,
   translateCosmetic,
 } from "./Cosmetics";
 import {
@@ -127,6 +133,8 @@ import {
 } from "./ServerList";
 import type { SinglePlayerModal } from "./SinglePlayerModal";
 import {
+  giftEndingDue,
+  paidFactsOf,
   parseSteamGrantStore,
   recordSteamGrant,
   STEAM_GRANT_NOTICE_KEY,
@@ -944,43 +952,61 @@ class Client {
           isDesktopShell(),
           Date.now(),
         );
+        const paid = paidFactsOf(userMeResponse);
+        const interrupt = nextBootInterrupt({
+          cleanHomepage,
+          usernameStatus,
+          username,
+          usernameBase,
+          lapseNoticeDue: lapseShown,
+          grantWelcomeDue: steamGrantWelcomeDue(
+            grantStoreAfterDispatch,
+            userMeResponse,
+            Date.now(),
+          ),
+          grantEndedDue: steamGrantEndedDue(
+            grantStoreAfterDispatch,
+            userMeResponse,
+            Date.now(),
+          ),
+          grantStringsReady: steamGrantStringsReady(translateText),
+          giftEndingDue: giftEndingDue(
+            grantStoreAfterDispatch,
+            userMeResponse,
+            Date.now(),
+          ),
+          giftEndingStringsReady: giftEndingStringsReady(translateText),
+          renewalPushedDue: renewalPushedDueThisLaunch(userMeResponse),
+          renewalPushedStringsReady: renewalPushedStringsReady(translateText),
+          steamNotice,
+          steamNoticeStringsReady: steamNoticeStringsReady(translateText),
+          // Held rewards can't be claimed yet: on their own they'd open the
+          // popup every boot with nothing to do.
+          rewardCount: rewards.filter(isRewardClaimable).length,
+          claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
+          claimStringsReady: claimPromptStringsReady(translateText),
+          // Not every caller's response went through the schema default.
+          reportThanksDue: reportThanksDueThisLaunch(
+            userMeResponse.pendingMessages ?? [],
+            publicId,
+          ),
+          reportThanksStringsReady: reportThanksStringsReady(translateText),
+        });
+        // Only the payer's welcome names a daily amount, so only it waits on
+        // the catalog.
+        const catalog =
+          interrupt === "grant-welcome" && paid !== null
+            ? await fetchCosmetics()
+            : null;
         await runBootInterrupt(
-          nextBootInterrupt({
-            cleanHomepage,
-            usernameStatus,
-            username,
-            usernameBase,
-            lapseNoticeDue: lapseShown,
-            grantWelcomeDue: steamGrantWelcomeDue(
-              grantStoreAfterDispatch,
-              userMeResponse,
-              Date.now(),
-            ),
-            grantEndedDue: steamGrantEndedDue(
-              grantStoreAfterDispatch,
-              userMeResponse,
-              Date.now(),
-            ),
-            grantStringsReady: steamGrantStringsReady(translateText),
-            steamNotice,
-            steamNoticeStringsReady: steamNoticeStringsReady(translateText),
-            // Held rewards can't be claimed yet: on their own they'd open the
-            // popup every boot with nothing to do.
-            rewardCount: rewards.filter(isRewardClaimable).length,
-            claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
-            claimStringsReady: claimPromptStringsReady(translateText),
-            // Not every caller's response went through the schema default.
-            reportThanksDue: reportThanksDueThisLaunch(
-              userMeResponse.pendingMessages ?? [],
-              publicId,
-            ),
-            reportThanksStringsReady: reportThanksStringsReady(translateText),
-          }),
+          interrupt,
           {
             claimStore,
             grantStore: grantStoreAfterDispatch,
             publicId,
             steamNotice,
+            paid,
+            renewalPushed: renewalPushedOf(userMeResponse),
           },
           {
             translate: translateText,
@@ -996,6 +1022,8 @@ class Client {
               await showInGameAlert(body, { heading });
             },
             tierName: (tier) => translateCosmetic("subscriptions", tier),
+            dailyPlutonium: (tier) =>
+              subscriptionTier(catalog, tier)?.dailyHardCurrency ?? null,
             navigate: (hash) => {
               window.location.hash = hash;
             },
