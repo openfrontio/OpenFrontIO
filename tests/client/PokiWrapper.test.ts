@@ -14,7 +14,7 @@ import {
 
 const GAME = "https://openfront.io";
 const page = readFileSync("poki-wrapper/index.html", "utf8");
-const script = /<script>([\s\S]*?)<\/script>/.exec(page)![1];
+const script = /<script>([\s\S]*?)<\/script>/i.exec(page)![1];
 
 type Poki = NonNullable<Window["PokiSDK"]>;
 type Handler = (event: Partial<MessageEvent>) => void;
