@@ -364,18 +364,52 @@ describe("PublicAssetManifest", () => {
     writeRootFilesIndex(publicDir, outDir);
 
     const html = "text/html; charset=utf-8";
-    expect(
-      JSON.parse(
-        await fs.readFile(path.join(outDir, "root-files.json"), "utf8"),
-      ),
-    ).toEqual({
-      ".well-known/apple": "text/plain; charset=utf-8",
-      "index.html": html,
-      "press/": html,
-      "press/Kit 1.png": "image/png",
-      "press/index.html": html,
-      "privacy-policy.html": html,
+    const index = JSON.parse(
+      await fs.readFile(path.join(outDir, "root-files.json"), "utf8"),
+    );
+    const hashed = (type: string, key: RegExp) => ({
+      type,
+      key: expect.stringMatching(key),
     });
+    expect(index).toEqual({
+      ".well-known/apple": hashed(
+        "text/plain; charset=utf-8",
+        /^_assets\/root\/\.well-known\/apple\.[0-9a-f]{12}$/,
+      ),
+      "index.html": hashed(html, /^_assets\/root\/index\.[0-9a-f]{12}\.html$/),
+      "press/": index["press/index.html"],
+      "press/Kit 1.png": hashed(
+        "image/png",
+        /^_assets\/root\/press\/Kit 1\.[0-9a-f]{12}\.png$/,
+      ),
+      "press/index.html": hashed(
+        html,
+        /^_assets\/root\/press\/index\.[0-9a-f]{12}\.html$/,
+      ),
+      "privacy-policy.html": hashed(
+        html,
+        /^_assets\/root\/privacy-policy\.[0-9a-f]{12}\.html$/,
+      ),
+    });
+    // update.sh uploads each file from its key.
+    await expect(
+      fs.readFile(path.join(outDir, index["press/Kit 1.png"].key), "utf8"),
+    ).resolves.toBe("png");
+  });
+
+  test("keys a root file by its content, so an unchanged file keeps its key", async () => {
+    const { resourcesDir } = await createTempResources();
+    const publicDir = getPublicDir(resourcesDir);
+    await fs.mkdir(publicDir, { recursive: true });
+    await fs.writeFile(path.join(publicDir, "robots.txt"), "a");
+    await fs.writeFile(path.join(publicDir, "ads.txt"), "a");
+    const first = buildRootFilesIndex(publicDir);
+    expect(buildRootFilesIndex(publicDir)).toEqual(first);
+
+    await fs.writeFile(path.join(publicDir, "robots.txt"), "b");
+    const second = buildRootFilesIndex(publicDir);
+    expect(second["robots.txt"].key).not.toBe(first["robots.txt"].key);
+    expect(second["ads.txt"]).toEqual(first["ads.txt"]);
   });
 
   test("refuses a root file it has no content type for", async () => {
@@ -388,11 +422,13 @@ describe("PublicAssetManifest", () => {
 
   test("indexes the real resources/public/, policy pages included", () => {
     const index = buildRootFilesIndex(getPublicDir(path.resolve("resources")));
-    expect(index["privacy-policy.html"]).toBe("text/html; charset=utf-8");
-    expect(index["terms-of-service.html"]).toBe("text/html; charset=utf-8");
+    expect(index["privacy-policy.html"].type).toBe("text/html; charset=utf-8");
+    expect(index["terms-of-service.html"].type).toBe(
+      "text/html; charset=utf-8",
+    );
     expect(
-      index[".well-known/apple-developer-merchantid-domain-association"],
+      index[".well-known/apple-developer-merchantid-domain-association"].type,
     ).toBe("text/plain; charset=utf-8");
-    expect(index["press/"]).toBe("text/html; charset=utf-8");
+    expect(index["press/"]).toEqual(index["press/index.html"]);
   });
 });

@@ -4,6 +4,7 @@
   "name": "Mars",
   "translation_key": "map.mars",
   "categories": ["cosmic"],
+  "author": "NewHappyRabbit",
   "nations": [
     {
       "coordinates": [650, 415],

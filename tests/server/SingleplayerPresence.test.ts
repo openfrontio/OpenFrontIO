@@ -25,14 +25,16 @@ describe("SingleplayerPresence", () => {
     presence.heartbeat("gameAAAA", "web");
     presence.heartbeat("gameBBBB", "steam");
     presence.heartbeat("gameCCCC", "web");
+    presence.heartbeat("gameDDDD", "viverse");
     expect(Object.fromEntries(presence.activeGamesByPlatform())).toEqual({
       web: 2,
       steam: 1,
       crazygames: 0,
       poki: 0,
+      viverse: 1,
       unknown: 0,
     });
-    expect(presence.activeGames()).toBe(3);
+    expect(presence.activeGames()).toBe(4);
   });
 
   it("refreshes a repeated id instead of counting it twice", () => {

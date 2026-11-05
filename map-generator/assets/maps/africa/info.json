@@ -4,6 +4,8 @@
   "name": "Africa",
   "translation_key": "map.africa",
   "categories": ["featured", "continental", "africa"],
+  "location": { "lat": 2, "lon": 20 },
+  "author": "SunnyBoyWTF",
   "featured_rank": 6,
   "nations": [
     {

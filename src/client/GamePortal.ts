@@ -1,23 +1,29 @@
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { pokiSDK } from "./PokiSDK";
+import { viverseSDK } from "./ViverseSDK";
 
-/** A signed-in portal account, as both portals report it. */
+/** A signed-in portal account. VIVERSE gives us no avatar. */
 export interface PortalUser {
   username: string;
-  profilePictureUrl: string;
+  profilePictureUrl: string | null;
 }
 
-export type GamePortalName = "crazygames" | "poki";
+export type GamePortalName = "crazygames" | "poki" | "viverse";
 
 /**
- * The web game portal (CrazyGames or Poki) framing us. Portals own the
- * player's account, ads and gameplay events, and allow no purchases, outside
- * ads or our own login. Each call routes to the portal's SDK and is a no-op
- * (or null/false) on the open web.
+ * The web game portal (CrazyGames, Poki or VIVERSE) framing us. Portals own
+ * the player's account, ads and gameplay events, and allow no purchases,
+ * outside ads or our own login. Each call routes to the portal's SDK and is a
+ * no-op (or null/false) on the open web.
  */
-function active(): typeof crazyGamesSDK | typeof pokiSDK | null {
-  // Poki first: CrazyGames claims any iframe it can't identify.
+function active():
+  | typeof crazyGamesSDK
+  | typeof pokiSDK
+  | typeof viverseSDK
+  | null {
+  // CrazyGames last: it claims any iframe it can't identify.
   if (pokiSDK.isOnPoki()) return pokiSDK;
+  if (viverseSDK.isOnViverse()) return viverseSDK;
   if (crazyGamesSDK.isOnCrazyGames()) return crazyGamesSDK;
   return null;
 }
@@ -25,6 +31,7 @@ function active(): typeof crazyGamesSDK | typeof pokiSDK | null {
 export const gamePortal = {
   name(): GamePortalName | null {
     if (pokiSDK.isOnPoki()) return "poki";
+    if (viverseSDK.isOnViverse()) return "viverse";
     if (crazyGamesSDK.isOnCrazyGames()) return "crazygames";
     return null;
   },

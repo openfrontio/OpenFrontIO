@@ -4,6 +4,8 @@
   "name": "Asia",
   "translation_key": "map.asia",
   "categories": ["featured", "continental", "asia"],
+  "location": { "lat": 48, "lon": 90 },
+  "author": "SunnyBoyWTF",
   "featured_rank": 5,
   "nations": [
     {

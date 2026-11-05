@@ -2,7 +2,11 @@ import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus, GameEvent } from "@openfront/shared/EventBus";
 import * as d3 from "d3";
 import { Controller } from "../../Controller";
-import { CloseViewEvent } from "../../InputHandler";
+import {
+  CloseViewEvent,
+  FORWARDED_CLICK,
+  FORWARDED_TOUCH_CLICK,
+} from "../../InputHandler";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { getSvgAspectRatio, translateText } from "../../Utils";
 import {
@@ -51,11 +55,48 @@ type CenterButtonState = "default" | "back";
 
 type RequiredRadialMenuConfig = Required<RadialMenuConfig>;
 
+// HUD layers that want a tap to reach them even while the radial menu's
+// full-screen overlay is open. Such as Control Panel and Unit Display (build bar)
+const CLICK_THROUGH_SELECTOR = "[data-radial-click-through]";
+
+/**
+ * The radial menu overlay covers the whole viewport, so a tap on a HUD layer
+ * below it (the build bar or the attack % slider) would only dismiss the menu.
+ * Forward the tap to the layer underneath so a single tap still selects the build/attack %.
+ *
+ * The menu's own SVG is a large hit-testable box around the tap point, so the
+ * tap lands on it rather than on the overlay whenever the menu is close to the
+ * HUD. Menu items stop the click from bubbling, so every click that reaches
+ * this handler is a tap on the menu's background.
+ */
+export function forwardClickToLayerBelow(
+  event: MouseEvent,
+  pointerType: string | null = null,
+): void {
+  const below = document.elementFromPoint(event.clientX, event.clientY);
+  if (!below?.closest(CLICK_THROUGH_SELECTOR)) return;
+  const forwarded = new MouseEvent("click", {
+    bubbles: true,
+    cancelable: true,
+    clientX: event.clientX,
+    clientY: event.clientY,
+  });
+  // The layer below has to tell this tap apart from a real press: the browser
+  // only moves a range input on a press it made itself.
+  (forwarded as unknown as Record<string, unknown>)[FORWARDED_CLICK] = true;
+  if (pointerType === "touch") {
+    (forwarded as unknown as Record<string, unknown>)[FORWARDED_TOUCH_CLICK] =
+      true;
+  }
+  below.dispatchEvent(forwarded);
+}
+
 export class RadialMenu implements Controller {
   private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
   private tooltipElement: HTMLDivElement | null = null;
   private tooltipStyleElement: HTMLStyleElement | null = null;
   private isVisible: boolean = false;
+  private lastPointerType: string | null = null;
 
   private currentLevel: number = 0; // Current menu level (0 = main menu, 1 = submenu, etc.)
   private menuStack: MenuElement[][] = []; // Stack to track menu navigation history
@@ -160,9 +201,17 @@ export class RadialMenu implements Controller {
       .style("left", "0")
       .style("width", "100vw")
       .style("height", "100vh")
-      .on("click", () => {
+      .on("click", (event: MouseEvent) => {
         this.hideRadialMenu();
         this.eventBus.emit(new CloseRadialMenuEvent());
+        forwardClickToLayerBelow(event, this.lastPointerType);
+        this.lastPointerType = null;
+      })
+      .on("pointerdown", (event: PointerEvent) => {
+        this.lastPointerType = event.pointerType;
+      })
+      .on("pointercancel", () => {
+        this.lastPointerType = null;
       })
       .on("contextmenu", (e) => {
         e.preventDefault();

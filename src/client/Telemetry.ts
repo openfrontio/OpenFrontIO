@@ -164,11 +164,11 @@ const DROPPED_EVENTS = new Set(["securitypolicyviolation"]);
 // Sent from every session, whatever its sampling: each one is looked up by
 // game ID from a player's report, and ad removals are reported to the ad
 // partner. Only for events rare enough not to move the per-session bill.
-const UNSAMPLED_EVENTS = new Set(["bottom_rail_in_game"]);
-// Unsampled events skip isRepeated, so they get a page-wide cap of their own
+const UNSAMPLED_EVENTS = new Set(["bottom_rail_in_game", "ad_frame_in_game"]);
+// Unsampled events skip isRepeated, so each gets a page-wide cap of its own
 // against an ad script stuck re-adding what we remove.
 const MAX_UNSAMPLED_EVENTS = 20;
-let unsampledSent = 0;
+const unsampledSent = new Map<string, number>();
 
 /**
  * Forwards console[method] calls made from our bundle to Faro as log lines
@@ -220,8 +220,9 @@ function filterSignal(
       const name = (item.payload as { name?: unknown } | null)?.name;
       if (typeof name === "string" && DROPPED_EVENTS.has(name)) return null;
       if (typeof name === "string" && UNSAMPLED_EVENTS.has(name)) {
-        if (unsampledSent >= MAX_UNSAMPLED_EVENTS) return null;
-        unsampledSent++;
+        const count = unsampledSent.get(name) ?? 0;
+        if (count >= MAX_UNSAMPLED_EVENTS) return null;
+        unsampledSent.set(name, count + 1);
         return slimBrowserMeta(scrubUrls(item));
       }
     }
@@ -334,7 +335,7 @@ export function resetTelemetry(): void {
   faroPromise = null;
   sent.clear();
   sentTotal = 0;
-  unsampledSent = 0;
+  unsampledSent.clear();
 }
 
 /**

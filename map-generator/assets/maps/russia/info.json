@@ -4,6 +4,8 @@
   "name": "Russia",
   "translation_key": "map.russia",
   "categories": ["europe", "asia", "countries"],
+  "location": { "lat": 61.5, "lon": 100 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [715, 415],
