@@ -13,10 +13,13 @@ import {
   accountVerifiedName,
   clampUsername,
   genAnonUsername,
+  isTrackingOptedOut,
   LAPSE_NOTICE_KEY,
   lapseNoticeMarker,
   looksGenerated,
   resolvePlayerName,
+  toggleTrackingOptOut,
+  TRACKING_OPT_OUT_PREFIX,
   verifiedClaimGrace,
   verifiedNameOptIn,
   type ClaimGrace,
@@ -547,6 +550,12 @@ export class UsernameInput extends LitElement {
     return this.resolvedName().verified;
   }
 
+  /** True when the active name has the _0_ tracking opt-out prefix. */
+  public isTrackingOptedOut(): boolean {
+    if (this.verifiedActive) return false;
+    return isTrackingOptedOut(this.baseUsername);
+  }
+
   public getClanTag(): string | null {
     return this.clanTag.length >= MIN_CLAN_TAG_LENGTH &&
       this.clanTag.length <= MAX_CLAN_TAG_LENGTH &&
@@ -1027,6 +1036,76 @@ export class UsernameInput extends LitElement {
     `;
   }
 
+  private handleTrackingToggle = () => {
+    if (this.verifiedActive) {
+      this.verifiedActive = false;
+      if (!this.onGamePortal) {
+        localStorage.setItem(useVerifiedNameKey, "false");
+      }
+      const rawName = this.verifiedName() ?? this.baseUsername;
+      this.baseUsername = clampUsername(TRACKING_OPT_OUT_PREFIX + rawName);
+      this.usernameIsGenerated = false;
+      this.validateAndStore();
+      this.requestUpdate();
+      return;
+    }
+
+    this.baseUsername = toggleTrackingOptOut(
+      this.baseUsername,
+      this.generatedName,
+    );
+    this.usernameIsGenerated = false;
+    this.validateAndStore();
+    this.requestUpdate();
+  };
+
+  private renderTrackingToggle() {
+    const optedOut = this.isTrackingOptedOut();
+    const hint = translateText(
+      optedOut
+        ? "username.tracking_opt_out_active_hint"
+        : "username.tracking_opt_out_inactive_hint",
+    );
+    const label = translateText(
+      optedOut
+        ? "username.tracking_opt_out_active"
+        : "username.tracking_opt_out_inactive",
+    );
+
+    return html`
+      <button
+        type="button"
+        id="toggle-tracking-button"
+        role="checkbox"
+        class="flex h-full aspect-square items-center justify-center rounded-lg border transition-colors cursor-pointer select-none ${
+          optedOut
+            ? "border-amber-400/60 bg-amber-400/15 text-amber-300 hover:border-amber-400/90 hover:bg-amber-400/25 hover:text-amber-200"
+            : "border-white/15 bg-black/25 text-white/50 hover:border-white/30 hover:bg-black/40 hover:text-white"
+        }"
+        title=${hint}
+        aria-label=${label}
+        aria-checked=${optedOut ? "true" : "false"}
+        @click=${this.handleTrackingToggle}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          class="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="18" y1="20" x2="18" y2="10"></line>
+          <line x1="12" y1="20" x2="12" y2="4"></line>
+          <line x1="6" y1="20" x2="6" y2="14"></line>
+          ${optedOut ? html`<line x1="2" y1="2" x2="22" y2="22"></line>` : null}
+        </svg>
+      </button>
+    `;
+  }
+
   // Name field. Verified play swaps the free-text input for a badge-led chip so
   // the state reads as "this is my account name", not "the input broke".
   private renderNameControl() {
@@ -1037,12 +1116,17 @@ export class UsernameInput extends LitElement {
       <!-- The buttons differ in width, so this resizes the name field — which
            is transparent and left-aligned, so only its invisible right edge
            moves. -->
-      <div class="no-game-portal shrink-0 h-full max-h-[44px]">
-        ${
-          this.verifiedActive
-            ? this.renderUseCustomButton()
-            : this.renderUseVerifiedButton()
-        }
+      <div
+        class="flex items-center gap-1 sm:gap-1.5 shrink-0 h-full max-h-[44px]"
+      >
+        ${this.renderTrackingToggle()}
+        <div class="no-game-portal shrink-0 h-full max-h-[44px]">
+          ${
+            this.verifiedActive
+              ? this.renderUseCustomButton()
+              : this.renderUseVerifiedButton()
+          }
+        </div>
       </div>
     `;
   }

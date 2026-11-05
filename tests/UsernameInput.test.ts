@@ -1178,3 +1178,100 @@ describe("UsernameInput held bare name", () => {
     expect(el.isVerified()).toBe(false);
   });
 });
+
+describe("UsernameInput tracking opt-out toggle", () => {
+  const TRACKING_BUTTON = "#toggle-tracking-button";
+
+  it("renders tracking toggle button with inactive state by default for clean name", async () => {
+    localStorage.setItem("username", "TestPlayer");
+    const el = await mount();
+
+    const btn = q(el, TRACKING_BUTTON);
+    expect(btn).not.toBeNull();
+    expect(el.isTrackingOptedOut()).toBe(false);
+    expect(btn!.getAttribute("aria-checked")).toBe("false");
+    expect(btn!.getAttribute("title")).toBe(
+      "username.tracking_opt_out_inactive_hint",
+    );
+  });
+
+  it("toggles opt-out on click, updating name, aria-checked and isTrackingOptedOut", async () => {
+    localStorage.setItem("username", "TestPlayer");
+    const el = await mount();
+
+    const btn = q(el, TRACKING_BUTTON)!;
+    btn.click();
+    await el.updateComplete;
+
+    expect(el.getUsername()).toBe("_0_TestPlayer");
+    expect(el.isTrackingOptedOut()).toBe(true);
+    expect(btn.getAttribute("aria-checked")).toBe("true");
+    expect(btn.getAttribute("title")).toBe(
+      "username.tracking_opt_out_active_hint",
+    );
+
+    // Toggle off again
+    btn.click();
+    await el.updateComplete;
+
+    expect(el.getUsername()).toBe("TestPlayer");
+    expect(el.isTrackingOptedOut()).toBe(false);
+    expect(btn.getAttribute("aria-checked")).toBe("false");
+    expect(btn.getAttribute("title")).toBe(
+      "username.tracking_opt_out_inactive_hint",
+    );
+  });
+
+  it("initializes as opted out when stored username begins with _0_", async () => {
+    localStorage.setItem("username", "_0_StealthPro");
+    const el = await mount();
+
+    expect(el.getUsername()).toBe("_0_StealthPro");
+    expect(el.isTrackingOptedOut()).toBe(true);
+    const btn = q(el, TRACKING_BUTTON)!;
+    expect(btn.getAttribute("aria-checked")).toBe("true");
+    expect(btn.getAttribute("title")).toBe(
+      "username.tracking_opt_out_active_hint",
+    );
+  });
+
+  it("reacts dynamically when player types or erases _0_ manually", async () => {
+    localStorage.setItem("username", "RegularPlayer");
+    const el = await mount();
+    const btn = q(el, TRACKING_BUTTON)!;
+    const input = q<HTMLInputElement>(el, "input")!;
+
+    expect(el.isTrackingOptedOut()).toBe(false);
+
+    input.value = "_0_RegularPlayer";
+    input.dispatchEvent(new Event("input"));
+    await el.updateComplete;
+
+    expect(el.isTrackingOptedOut()).toBe(true);
+    expect(btn.getAttribute("aria-checked")).toBe("true");
+
+    input.value = "RegularPlayer";
+    input.dispatchEvent(new Event("input"));
+    await el.updateComplete;
+
+    expect(el.isTrackingOptedOut()).toBe(false);
+    expect(btn.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("switches from verified name to custom untracked name when clicked while verified", async () => {
+    const el = await mount();
+    await signIn(el, premiumUser());
+
+    expect(el.isVerified()).toBe(true);
+    expect(el.getUsername()).toBe("RyanTheGreat");
+
+    const btn = q(el, TRACKING_BUTTON)!;
+    btn.click();
+    await el.updateComplete;
+
+    expect(el.isVerified()).toBe(false);
+    expect(el.getUsername()).toBe("_0_RyanTheGreat");
+    expect(el.isTrackingOptedOut()).toBe(true);
+    expect(btn.getAttribute("aria-checked")).toBe("true");
+  });
+});

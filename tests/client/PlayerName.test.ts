@@ -7,12 +7,15 @@ import {
   clampUsername,
   fallbackPlayerName,
   genAnonUsername,
+  isTrackingOptedOut,
   lapseNoticeDue,
   lapseNoticeMarker,
   looksGenerated,
   resolvePlayerName,
   sanitizeAccountPersona,
   sanitizePersona,
+  toggleTrackingOptOut,
+  TRACKING_OPT_OUT_PREFIX,
   verifiedClaimGrace,
   verifiedNameOptIn,
   type PlayerNameInputs,
@@ -822,5 +825,52 @@ describe("lapseNoticeDue against a marker from before and after the write", () =
     // What announceLapse stores, the moment before it opens its alert.
     const afterWrite = lapseNoticeMarker(verifiedClaimGrace(lapsed, NOW)!);
     expect(lapseNoticeDue(lapsed, afterWrite, NOW)).toBe(false);
+  });
+});
+
+describe("isTrackingOptedOut", () => {
+  it("uses the _0_ tracking opt-out prefix constant", () => {
+    expect(TRACKING_OPT_OUT_PREFIX).toBe("_0_");
+  });
+
+  it("detects names starting with the _0_ tracking opt-out prefix", () => {
+    expect(isTrackingOptedOut("_0_")).toBe(true);
+    expect(isTrackingOptedOut("_0_Player")).toBe(true);
+    expect(isTrackingOptedOut("_0_ Player")).toBe(true);
+    expect(isTrackingOptedOut("_0_12345")).toBe(true);
+  });
+
+  it("returns false for untracked-clean names, null, or empty", () => {
+    expect(isTrackingOptedOut(null)).toBe(false);
+    expect(isTrackingOptedOut(undefined)).toBe(false);
+    expect(isTrackingOptedOut("")).toBe(false);
+    expect(isTrackingOptedOut("Player")).toBe(false);
+    expect(isTrackingOptedOut("0_Player")).toBe(false);
+    expect(isTrackingOptedOut("_1_Player")).toBe(false);
+    expect(isTrackingOptedOut("Player_0_")).toBe(false);
+  });
+});
+
+describe("toggleTrackingOptOut", () => {
+  it("prepends _0_ when not currently opted out", () => {
+    expect(toggleTrackingOptOut("Player")).toBe("_0_Player");
+    expect(toggleTrackingOptOut("AnonBadger")).toBe("_0_AnonBadger");
+  });
+
+  it("strips _0_ when already opted out", () => {
+    expect(toggleTrackingOptOut("_0_Player")).toBe("Player");
+    expect(toggleTrackingOptOut("_0_ AnonBadger")).toBe("AnonBadger");
+  });
+
+  it("clamps to MAX_USERNAME_LENGTH when adding prefix to long names", () => {
+    const longName = "12345678901234567890"; // 20 chars
+    const toggled = toggleTrackingOptOut(longName);
+    expect(toggled).toBe("_0_12345678901234567");
+    expect(toggled.length).toBe(MAX_USERNAME_LENGTH);
+  });
+
+  it("uses fallback name when stripping _0_ leaves an empty string", () => {
+    expect(toggleTrackingOptOut("_0_", "FallbackName")).toBe("FallbackName");
+    expect(toggleTrackingOptOut("_0_ ", "FallbackName")).toBe("FallbackName");
   });
 });

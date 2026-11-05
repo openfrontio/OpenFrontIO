@@ -64,6 +64,40 @@ export function clampUsername(name: string): string {
     : name;
 }
 
+export const TRACKING_OPT_OUT_PREFIX = "_0_";
+
+/**
+ * Whether the given name is opted out of tracking / ladder stats
+ * via the community _0_ prefix convention.
+ */
+export function isTrackingOptedOut(name: string | null | undefined): boolean {
+  if (!name) return false;
+  return name.startsWith(TRACKING_OPT_OUT_PREFIX);
+}
+
+/**
+ * Toggles the _0_ tracking opt-out prefix on a username.
+ * If already prefixed, strips the prefix (and any immediate whitespace).
+ * If not prefixed, prepends _0_ and clamps to MAX_USERNAME_LENGTH.
+ */
+export function toggleTrackingOptOut(
+  name: string,
+  fallbackName?: string,
+): string {
+  const trimmed = name.trim();
+  if (isTrackingOptedOut(trimmed)) {
+    let stripped = trimmed.slice(TRACKING_OPT_OUT_PREFIX.length);
+    if (stripped.startsWith(" ")) {
+      stripped = stripped.slice(1);
+    }
+    if (stripped.length === 0) {
+      return fallbackName ?? "";
+    }
+    return stripped;
+  }
+  return clampUsername(TRACKING_OPT_OUT_PREFIX + trimmed);
+}
+
 // The server-resolved bare name this player may play verified under, or null
 // when ineligible. Eligible means "holds the bare claim": entitled AND the
 // display name equals the base (a held bare name renders as base.disc). The
