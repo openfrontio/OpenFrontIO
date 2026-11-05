@@ -20,6 +20,7 @@ import {
   NationEmojiBehavior,
 } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
+import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
 import { TribeAttackBehavior } from "@openfront/engine/execution/TribeAttackBehavior";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
@@ -279,6 +280,36 @@ describe("Hard/Impossible troop floor", () => {
     expect(exec.startTroops).toBeLessThanOrEqual(expectedCap);
   });
 
+  it("Hard: a second attack sent in the same tick keeps the reserve home", async () => {
+    const { testGame, attacker, neighbor, behavior } =
+      await setupTroopFloorTest(Difficulty.Hard);
+    const maxTroops = testGame.config().maxTroops(attacker);
+    attacker.addTroops(maxTroops);
+    neighbor.addTroops(1_000);
+
+    // Like a landing follow-up and the regular attack decision on one tick
+    expect(behavior.strike(neighbor)).toBe(true);
+    expect(behavior.sendAttack(neighbor, true)).toBe(false);
+    testGame.executeNextTick();
+
+    expect(attacker.troops()).toBeGreaterThanOrEqual(maxTroops * 0.3);
+  });
+
+  it("Hard: keeps the reserve when troops above max are cut back before the attack starts", async () => {
+    const { testGame, attacker, neighbor, behavior } =
+      await setupTroopFloorTest(Difficulty.Hard);
+    testGame.addExecution(new PlayerExecution(attacker));
+    testGame.executeNextTick();
+    const maxTroops = testGame.config().maxTroops(attacker);
+    attacker.setTroops(maxTroops * 2);
+    neighbor.addTroops(1_000);
+
+    expect(behavior.sendAttack(neighbor, true)).toBe(true);
+    testGame.executeNextTick();
+
+    expect(attacker.troops()).toBeGreaterThanOrEqual(maxTroops * 0.3);
+  });
+
   it("Hard: prevents attack when nation troops < 75% of strongest neighbor", async () => {
     const { testGame, attacker, neighbor, bot, behavior } =
       await setupTroopFloorTest(Difficulty.Hard);
@@ -394,7 +425,7 @@ describe("Hard/Impossible troop floor", () => {
       if (assigned >= 90 || !testGame.map().isLand(tile)) return;
       [nation, bot][assigned++ % 2].conquer(tile);
     });
-    nation.addTroops(100_000);
+    nation.setTroops(100_000);
     bot.addTroops(1_000_000);
     expect(nation.nearby()).toContain(bot);
 
@@ -747,7 +778,13 @@ describe("Juicy target strategy - end-to-end via maybeAttack", () => {
     expect(attacker.sharesBorderWith(weak)).toBe(true);
     expect(attacker.sharesBorderWith(rich)).toBe(true);
 
+    // Cities lift the attacker's max troops above the 5M it gets
+    for (const tile of Array.from(attacker.tiles()).slice(0, 4)) {
+      const city = attacker.buildUnit(UnitType.City, tile, {});
+      for (let i = 0; i < 4; i++) city.increaseLevel();
+    }
     attacker.setTroops(5_000_000);
+    expect(testGame.config().maxTroops(attacker)).toBeGreaterThan(5_000_000);
     // Both must clear the 15%-of-own-max floor (else `veryWeak` would grab
     // them first) and the 75%-of-attacker cap (else `juicy` would reject
     // them). `rich` is still the juicier one: more tiles, upgraded cities,
