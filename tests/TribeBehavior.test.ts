@@ -174,6 +174,7 @@ describe("Tribe upkeep", () => {
     game.executeNextTick();
     game.addExecution(new AllianceRequestExecution(tribe, human.id()));
     game.executeNextTick();
+    vi.spyOn(game, "ticks").mockReturnValue(2800);
     game.addExecution(new AllianceExtensionExecution(human, tribe.id()));
     game.executeNextTick();
     const alliance = tribe.allianceWith(human)!;
