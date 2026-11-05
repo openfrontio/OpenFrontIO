@@ -62,6 +62,7 @@ export class HomepagePromos extends LitElement {
   private railDestroy: Promise<void> | null = null;
   private railDestroyCount = 0;
   private strayFrameScan: ReturnType<typeof setInterval> | null = null;
+  private escapedAdScan: ReturnType<typeof setInterval> | null = null;
   private reportedStrayFrames = new WeakSet<Element>();
 
   // The header ad ("flex" leaderboard, GumGum via Playwire) renders in a
@@ -103,6 +104,12 @@ export class HomepagePromos extends LitElement {
       childList: true,
       subtree: true,
     });
+    // On its own timer, from the spawn phase on: the observer sees new
+    // elements, not an existing one that takes the class later.
+    this.escapedAdScan ??= setInterval(
+      () => this.removeEscapedAds(),
+      STRAY_FRAME_SCAN_MS,
+    );
     this.syncTopAd();
   }
 
@@ -113,6 +120,8 @@ export class HomepagePromos extends LitElement {
     document.removeEventListener("leave-lobby", this.onLeaveLobby);
     this.topAdMutation?.disconnect();
     this.stopStrayFrameScan();
+    if (this.escapedAdScan !== null) clearInterval(this.escapedAdScan);
+    this.escapedAdScan = null;
     this.topAdStyle?.disconnect();
     this.topAdResize?.disconnect();
     document.documentElement.style.removeProperty("--top-ad-height");
@@ -376,10 +385,10 @@ export class HomepagePromos extends LitElement {
   // through a style change alone, and watching every attribute in a game
   // costs more than a scan.
   private startStrayFrameScan(): void {
-    this.strayFrameScan ??= setInterval(() => {
-      this.removeEscapedAds();
-      this.reportStrayAdFrames();
-    }, STRAY_FRAME_SCAN_MS);
+    this.strayFrameScan ??= setInterval(
+      () => this.reportStrayAdFrames(),
+      STRAY_FRAME_SCAN_MS,
+    );
   }
 
   private stopStrayFrameScan(): void {

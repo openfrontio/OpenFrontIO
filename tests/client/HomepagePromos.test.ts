@@ -390,6 +390,9 @@ describe("HomepagePromos ad frames over the game", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    // Reconnected so its escaped-ad timer runs on the fake clock.
+    promos.remove();
+    document.body.appendChild(promos);
     vi.mocked(reportEvent).mockClear();
     stubRamp();
     hideMenuChrome();
@@ -471,6 +474,21 @@ describe("HomepagePromos ad frames over the game", () => {
         secondsAfterDestroy: "",
         action: "removed",
       }),
+    );
+  });
+
+  it("removes an element that becomes The Trade Desk's overlay during spawn", async () => {
+    const overlay = document.body.appendChild(document.createElement("div"));
+    overlay.appendChild(document.createElement("iframe"));
+    await vi.advanceTimersByTimeAsync(0);
+    overlay.className = "ttx-lb";
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(overlay.isConnected).toBe(false);
+    expect(reportEvent).toHaveBeenCalledWith(
+      "ad_frame_in_game",
+      expect.objectContaining({ action: "removed" }),
     );
   });
 

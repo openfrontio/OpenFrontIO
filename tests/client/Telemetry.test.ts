@@ -361,6 +361,13 @@ describe("Telemetry", () => {
       meta: { session: { id: outside } },
     };
     expect(beforeSend(item)).toEqual(item);
+    expect(
+      beforeSend({
+        type: "event",
+        payload: { name: "ad_frame_in_game", attributes: {} },
+        meta: { session: { id: outside } },
+      }),
+    ).not.toBeNull();
   });
 
   it("drops the user agent and brand list from the browser meta", async () => {
