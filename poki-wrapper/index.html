@@ -15,13 +15,27 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>OpenFront</title>
     <style>
-      html, body, #f { margin: 0; width: 100%; height: 100%; border: 0; }
-      body { overflow: hidden; }
-      #f { display: block; }
+      html,
+      body,
+      #f {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+      body {
+        overflow: hidden;
+      }
+      #f {
+        display: block;
+      }
     </style>
   </head>
   <body>
-    <iframe id="f" allow="fullscreen; autoplay; clipboard-write; web-share"></iframe>
+    <iframe
+      id="f"
+      allow="fullscreen; autoplay; clipboard-write; web-share"
+    ></iframe>
     <script>
       var GAME = "https://openfront.io";
 
@@ -35,8 +49,12 @@
       var sdkLoaded = new Promise(function (resolve) {
         var script = document.createElement("script");
         script.src = "https://game-cdn.poki.com/scripts/v2/poki-sdk.js";
-        script.onload = function () { resolve(window.PokiSDK !== undefined); };
-        script.onerror = function () { resolve(false); };
+        script.onload = function () {
+          resolve(window.PokiSDK !== undefined);
+        };
+        script.onerror = function () {
+          resolve(false);
+        };
         document.head.appendChild(script);
       });
 
@@ -51,16 +69,20 @@
         PokiSDK.gameplayStop();
       }
 
-      // A reload mid-game may never send gameplayStop.
-      f.addEventListener("load", stopGameplay);
-
       function reply(message) {
         f.contentWindow.postMessage(message, GAME);
       }
 
       var methods = {
-        hello: function () { return sdkLoaded; },
-        init: function () { return initDone || (initDone = PokiSDK.init()); },
+        // Each game load says hello first, before any gameplayStart of its
+        // own; the load before it may have left mid-game without a stop.
+        hello: function () {
+          stopGameplay();
+          return sdkLoaded;
+        },
+        init: function () {
+          return initDone || (initDone = PokiSDK.init());
+        },
         gameLoadingFinished: function () {
           if (loadingFinished) return;
           loadingFinished = true;
@@ -77,11 +99,21 @@
             reply({ ofPoki: true, id: id, event: "commercialBreakStart" });
           });
         },
-        shareableURL: function (args) { return PokiSDK.shareableURL(args[0]); },
-        openExternalLink: function (args) { PokiSDK.openExternalLink(args[0]); },
-        login: function () { return PokiSDK.login(); },
-        getUser: function () { return PokiSDK.getUser(); },
-        getToken: function () { return PokiSDK.getToken(); },
+        shareableURL: function (args) {
+          return PokiSDK.shareableURL(args[0]);
+        },
+        openExternalLink: function (args) {
+          PokiSDK.openExternalLink(args[0]);
+        },
+        login: function () {
+          return PokiSDK.login();
+        },
+        getUser: function () {
+          return PokiSDK.getUser();
+        },
+        getToken: function () {
+          return PokiSDK.getToken();
+        },
       };
 
       addEventListener("message", function (event) {
@@ -89,18 +121,26 @@
         if (event.source !== f.contentWindow || event.origin !== GAME) return;
         if (!message || message.ofPoki !== true) return;
         // Own properties only: "constructor" and the like aren't calls.
-        if (!Object.prototype.hasOwnProperty.call(methods, message.method)) return;
+        if (!Object.prototype.hasOwnProperty.call(methods, message.method))
+          return;
         var method = methods[message.method];
         var id = message.id;
         Promise.resolve()
-          .then(function () { return method(message.args || [], id); })
+          .then(function () {
+            return method(message.args || [], id);
+          })
           .then(
             function (result) {
-              if (id !== undefined) reply({ ofPoki: true, id: id, result: result });
+              if (id !== undefined)
+                reply({ ofPoki: true, id: id, result: result });
             },
             function (error) {
               if (id === undefined) return;
-              reply({ ofPoki: true, id: id, error: String((error && error.message) || error) });
+              reply({
+                ofPoki: true,
+                id: id,
+                error: String((error && error.message) || error),
+              });
             },
           );
       });

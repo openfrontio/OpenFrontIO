@@ -464,12 +464,29 @@ describe("PokiSDK", () => {
       expect(mute).toHaveBeenLastCalledWith(false);
     });
 
+    // A fresh module, so only sessionStorage carries the flag, as on a reload.
+    async function reload(): Promise<PokiSDK> {
+      vi.resetModules();
+      const { PokiSDK: Reloaded } = await import("../../src/client/PokiSDK");
+      return new Reloaded();
+    }
+
     it("keeps using the wrapper after our routing drops the marker", async () => {
       history.replaceState(null, "", "/");
-      const reloaded = new PokiSDK();
+      const reloaded = await reload();
       await reloaded.maybeInit();
       expect(appendChild).not.toHaveBeenCalled();
       expect(reloaded.isReady()).toBe(true);
+    });
+
+    it("loads its own SDK once a wrapper without the bridge loads us", async () => {
+      history.replaceState(null, "", "/?site_id=3");
+      await initWith(await reload(), poki);
+      expect(appendChild).toHaveBeenCalledOnce();
+
+      history.replaceState(null, "", "/");
+      await initWith(await reload(), poki);
+      expect(appendChild).toHaveBeenCalledTimes(2);
     });
   });
 

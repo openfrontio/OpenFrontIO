@@ -31,13 +31,20 @@ function writeSession(key: string, value: string): void {
 
 // The marker is only on the URL the wrapper first loads us with; our routing
 // drops it, so it's kept for the frame's session like the Poki detection.
+// Run after keepPokiParams: a URL with Poki's params is then a wrapper's load
+// (or a copy of it), whose marker decides, so a frame later loaded by a
+// wrapper without the bridge stops waiting for one.
 export function isPokiBridged(): boolean {
-  if (readSession(BRIDGE_SESSION_KEY) === "true") return true;
-  if (!new URLSearchParams(window.location.search).has(BRIDGE_PARAM)) {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has(BRIDGE_PARAM)) {
+    writeSession(BRIDGE_SESSION_KEY, "true");
+    return true;
+  }
+  if (params.has("site_id")) {
+    writeSession(BRIDGE_SESSION_KEY, "false");
     return false;
   }
-  writeSession(BRIDGE_SESSION_KEY, "true");
-  return true;
+  return readSession(BRIDGE_SESSION_KEY) === "true";
 }
 
 // Ids are unique across reloads: a reply to the page before one (a token
