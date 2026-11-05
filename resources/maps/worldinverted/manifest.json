@@ -951,9 +951,7 @@
       "name": "Reykjanes Delta"
     }
   ],
-  "author": "Patrick Plays Badly",
   "categories": ["world", "fictional"],
-  "description": "A design based on an inverted world elevation map. For fun; sea levels have been raised in the North. Otherwise almost everything else has come from adjusting the natural data. Nations are based on ship wrecks and geographic features.",
   "id": "WorldInverted",
   "map": {
     "height": 1248,

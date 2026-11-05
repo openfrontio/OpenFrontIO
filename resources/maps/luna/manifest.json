@@ -1,7 +1,5 @@
 {
-  "author": "Patrick Plays Badly",
   "categories": ["cosmic"],
-  "description": "Rectangular moon maps were boring, so this projection was chosen instead. The lines symbolizing the orbits around and the making of a bridge between. Almost looks like an hourglass.",
   "forced_modifiers": ["isWaterNukes:50"],
   "id": "Luna",
   "map": {

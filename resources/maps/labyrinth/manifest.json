@@ -226,9 +226,7 @@
       "name": "Zapopan"
     }
   ],
-  "author": "Patrick Plays Badly",
   "categories": ["arcade"],
-  "description": "A map that will keep you and your enemies busy. Have no fear. Even the most experienced are overwhelmed on Labyrinth! While they're busy you can build a base and make allies, but don't expect chaos to protect you forever.",
   "id": "Labyrinth",
   "map": {
     "height": 1360,

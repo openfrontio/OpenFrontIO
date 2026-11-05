@@ -1703,13 +1703,23 @@
   },
   "map_description": {
     "amazonriver": "A stretch of the upper Amazon, from the Peru–Colombia border into Brazil, with nations at real riverside towns. The land is so narrow that the river is your main way out. The first OpenFront map with a very unusual size.",
+    "brainrot": "Think of a number between 5 and 8. Studies have shown your answer will be near equal to the number of folds (gyrus) in your brain. The average person has near 200+ folds! How did you stack up?",
+    "choppingblock": "Inspired by an actual chopping block this map is designed to be somewhat unstable. Long connecting land masses offer fast conquest, but over expose the attacker if they move too quickly. The center channel is plugged pushing traded into multiple corners.",
+    "conakry": "A very unique landmass created by two unrelated natural features; the islands and the stretch of highlands out to them. I always thought it looked like phoenix.",
     "didier": "Didier, the mascot and companion of French YouTuber Fuze, as a fantasy island, made for his OpenFront videos.",
     "didierfrance": "France reshaped into Didier, French YouTuber Fuze's mascot. Made for his OpenFront videos. Basically France, but with eyes, hands and feet.",
+    "dyslexdria": "Waht?",
     "fourislands": "Four islands, one in each corner, each holding exactly a quarter of the land. A classic nuke wars map. Probably the first completely fictional map in OpenFront.",
     "hawaii": "Eight volcanic islands built by one hotspot under the Pacific: the oldest lie in the northwest, and the Big Island in the southeast is still growing. It holds almost two thirds of the land, split between Kona and Hilo. Everyone else starts alone on an island, like Kahoolawe, a US Navy bombing range until 1990.",
+    "labyrinth": "A map that will keep you and your enemies busy. Have no fear. Even the most experienced are overwhelmed on Labyrinth! While they're busy you can build a base and make allies, but don't expect chaos to protect you forever.",
+    "losangeles": "What's LA without its roads? No, really??",
+    "luna": "Rectangular moon maps were boring, so this projection was chosen instead. The lines symbolizing the orbits around and the making of a bridge between. Almost looks like an hourglass.",
+    "morethanluck": "A clover with randomized nations based on the most common leaked pin-codes. Even so, the winner is almost always based on More Than Luck.",
     "niledelta": "The delta that gave every delta its name: Greek writers saw the letter Δ in its shape. In ancient times the Nile reached the sea through seven branches; today only two remain, Rosetta and Damietta. Nations sit at real cities, from Alexandria to Memphis, the first capital of united Egypt.",
+    "ommatrypta": "Eyes!! So many eyes!?!",
     "surrounded": "A ring of islands around a central one, so every expansion needs a boat. One hydrogen bomb can wipe out a whole island. Can you win a public FFA after spawning in the middle?",
-    "tradersdream": "Big islands against small ones: two large islands hold about half the land, while a swarm of tiny islands is made for trade."
+    "tradersdream": "Big islands against small ones: two large islands hold about half the land, while a swarm of tiny islands is made for trade.",
+    "worldinverted": "A design based on an inverted world elevation map. For fun; sea levels have been raised in the North. Otherwise almost everything else has come from adjusting the natural data. Nations are based on ship wrecks and geographic features."
   },
   "map_layers": {
     "brainland": "Brain-Land",
