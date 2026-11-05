@@ -523,10 +523,16 @@ export class UserSettings {
     this.setBool("settings.snapBuildPreview", !this.snapBuildPreview());
   }
 
+  /**
+   * Returns whether pressing a build hotkey cycles the build multiplier.
+   */
   buildMultiplierCycle() {
     return this.getBool("settings.buildMultiplierCycle", true);
   }
 
+  /**
+   * Toggles whether pressing a build hotkey cycles the build multiplier.
+   */
   toggleBuildMultiplierCycle() {
     this.setBool("settings.buildMultiplierCycle", !this.buildMultiplierCycle());
   }

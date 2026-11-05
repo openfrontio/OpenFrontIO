@@ -450,6 +450,9 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
+  /**
+   * Toggles the snap build preview setting.
+   */
   private toggleSnapBuildPreview() {
     this.userSettings.toggleSnapBuildPreview();
     console.log(
@@ -458,8 +461,14 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
+  /**
+   * Toggles the build multiplier cycle setting and resets the active multiplier when disabled.
+   */
   private toggleBuildMultiplierCycle() {
     this.userSettings.toggleBuildMultiplierCycle();
+    if (!this.userSettings.buildMultiplierCycle() && this.uiState) {
+      this.uiState.upgradeMultiplier = 1;
+    }
   }
 
   private toggleAnonymousNames() {
