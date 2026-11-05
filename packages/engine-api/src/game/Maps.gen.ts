@@ -497,7 +497,6 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.brainrot",
     categories: ["arcade"],
     defaultNationCount: 43,
-    specialTeamCount: 27,
     themes: ["space", "war"],
     layers: [{ id: "brainland", placement: "land", nukeable: true }],
     author: "Patrick Plays Badly",
