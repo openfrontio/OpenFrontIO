@@ -34,11 +34,13 @@ export class LobbyPresetControls extends LitElement {
     if (open) this.place();
     this.open = open;
     if (open) {
+      window.addEventListener("resize", this.onResize);
       document.addEventListener("pointerdown", this.onOutside, true);
       // Capture on window runs before BaseModal's own Escape listener there,
       // wherever focus has moved since the popover opened.
       window.addEventListener("keydown", this.onKeyDown, true);
     } else {
+      window.removeEventListener("resize", this.onResize);
       document.removeEventListener("pointerdown", this.onOutside, true);
       window.removeEventListener("keydown", this.onKeyDown, true);
     }
@@ -64,6 +66,11 @@ export class LobbyPresetControls extends LitElement {
     this.popoverWidth = width;
   }
 
+  // A resize can move the button (the header wraps) or narrow the modal.
+  private onResize = (): void => {
+    if (this.open) this.place();
+  };
+
   // A press anywhere else closes the popover.
   private onOutside = (e: Event): void => {
     if (!this.contains(e.target as Node)) this.setOpen(false);
@@ -74,7 +81,15 @@ export class LobbyPresetControls extends LitElement {
     // Only the popover closes: the modal holding it stays open.
     e.preventDefault();
     e.stopPropagation();
+    // Focus inside the popover would be lost with it: hand it to the button.
+    // Focus the player has already moved elsewhere stays where it is.
+    const hadFocus = this.contains(document.activeElement);
     this.setOpen(false);
+    if (hadFocus) {
+      void this.updateComplete.then(() =>
+        this.querySelector<HTMLElement>("[data-test-preset-toggle]")?.focus(),
+      );
+    }
   };
 
   protected override willUpdate(changed: PropertyValues<this>) {
