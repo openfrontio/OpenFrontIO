@@ -142,7 +142,9 @@
       "name": "Honeycomb"
     }
   ],
+  "author": "Patrick Plays Badly",
   "categories": ["arcade"],
+  "description": "Inspired by an actual chopping block this map is designed to be somewhat unstable. Long connecting land masses offer fast conquest, but over expose the attacker if they move too quickly. The center channel is plugged pushing traded into multiple corners.",
   "forced_modifiers": ["isWaterNukes:50"],
   "id": "ChoppingBlock",
   "map": {

@@ -1661,9 +1661,9 @@
     "unfavorite": "Remove from favourites"
   },
   "map_layers": {
-    "brland": "brland",
-    "eyeland": "eyeland",
-    "eyewater": "eyewater",
+    "brainland": "Brain-Land",
+    "eyeland": "Eye-Land",
+    "eyewater": "Eye-Water",
     "label": "label"
   },
   "marketing_consent": {

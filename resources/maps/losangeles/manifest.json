@@ -1,4 +1,5 @@
 {
+  "author": "Patrick Plays Badly",
   "categories": ["north_america"],
   "custom_tribes": [
     {
@@ -554,6 +555,7 @@
       "name": "Maywood"
     }
   ],
+  "description": "What's LA without its roads? No, really??",
   "id": "LosAngeles",
   "map": {
     "height": 2276,

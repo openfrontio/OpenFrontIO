@@ -1102,7 +1102,9 @@
       "name": "0-0-6-9"
     }
   ],
+  "author": "Patrick Plays Badly",
   "categories": ["arcade"],
+  "description": "A clover with randomized nations based on the most common leaked pin-codes. Even so, the winner is almost always based on More Than Luck.",
   "id": "MoreThanLuck",
   "map": {
     "height": 1344,

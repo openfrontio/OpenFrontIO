@@ -445,9 +445,8 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.brainrot",
     categories: ["arcade", "new"],
     defaultNationCount: 43,
-    specialTeamCount: 27,
     themes: ["space", "war"],
-    layers: [{ id: "brland", placement: "land", nukeable: true }],
+    layers: [{ id: "brainland", placement: "land", nukeable: true }],
   },
   {
     id: "BranchingPaths",
@@ -718,7 +717,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Dyslexdria,
     translationKey: "map.dyslexdria",
     categories: ["world", "fictional"],
-    defaultNationCount: 82,
+    defaultNationCount: 80,
   },
   {
     id: "EastAsia",

@@ -754,10 +754,16 @@
     },
     {
       "flag": "",
+      "name": "Waht"
+    },
+    {
+      "flag": "",
       "name": "Patrick Plays Badly"
     }
   ],
+  "author": "Patrick Plays Badly",
   "categories": ["world", "fictional"],
+  "description": "Waht?",
   "id": "Dyslexdria",
   "map": {
     "height": 1440,
@@ -778,19 +784,15 @@
   "nations": [
     {
       "flag": "",
-      "name": "ZOMIBES"
+      "name": "Xombies"
+    },
+    {
+      "flag": "",
+      "name": "Roque AI"
     },
     {
       "flag": "",
       "name": "The Plack Plaque"
-    },
-    {
-      "flag": "",
-      "name": "Globel Warnimg"
-    },
-    {
-      "flag": "",
-      "name": "Globel Coologne"
     },
     {
       "flag": "",
@@ -803,10 +805,6 @@
     {
       "flag": "cd",
       "name": "Depublic of Congo"
-    },
-    {
-      "flag": "cg",
-      "name": "Republic of Congo"
     },
     {
       "flag": "sn",
@@ -822,7 +820,7 @@
     },
     {
       "flag": "nl",
-      "name": "Neitherlands"
+      "name": "Upperlands"
     },
     {
       "flag": "jm",
