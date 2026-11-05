@@ -73,59 +73,58 @@
         f.contentWindow.postMessage(message, GAME);
       }
 
-      var methods = {
-        // Each game load says hello first, before any gameplayStart of its
-        // own; the load before it may have left mid-game without a stop.
-        hello: function () {
-          stopGameplay();
-          return sdkLoaded;
-        },
-        init: function () {
-          return initDone || (initDone = PokiSDK.init());
-        },
-        gameLoadingFinished: function () {
-          if (loadingFinished) return;
-          loadingFinished = true;
-          PokiSDK.gameLoadingFinished();
-        },
-        gameplayStart: function () {
-          if (gameplayActive) return;
-          gameplayActive = true;
-          PokiSDK.gameplayStart();
-        },
-        gameplayStop: stopGameplay,
-        commercialBreak: function (args, id) {
-          return PokiSDK.commercialBreak(function () {
-            reply({ ofPoki: true, id: id, event: "commercialBreakStart" });
-          });
-        },
-        shareableURL: function (args) {
-          return PokiSDK.shareableURL(args[0]);
-        },
-        openExternalLink: function (args) {
-          PokiSDK.openExternalLink(args[0]);
-        },
-        login: function () {
-          return PokiSDK.login();
-        },
-        getUser: function () {
-          return PokiSDK.getUser();
-        },
-        getToken: function () {
-          return PokiSDK.getToken();
-        },
-      };
+      // A Map, so names like "constructor" find nothing.
+      var methods = new Map(
+        Object.entries({
+          // Each game load says hello first, before any gameplayStart of its
+          // own; the load before it may have left mid-game without a stop.
+          hello: function () {
+            stopGameplay();
+            return sdkLoaded;
+          },
+          init: function () {
+            return initDone || (initDone = PokiSDK.init());
+          },
+          gameLoadingFinished: function () {
+            if (loadingFinished) return;
+            loadingFinished = true;
+            PokiSDK.gameLoadingFinished();
+          },
+          gameplayStart: function () {
+            if (gameplayActive) return;
+            gameplayActive = true;
+            PokiSDK.gameplayStart();
+          },
+          gameplayStop: stopGameplay,
+          commercialBreak: function (args, id) {
+            return PokiSDK.commercialBreak(function () {
+              reply({ ofPoki: true, id: id, event: "commercialBreakStart" });
+            });
+          },
+          shareableURL: function (args) {
+            return PokiSDK.shareableURL(args[0]);
+          },
+          openExternalLink: function (args) {
+            PokiSDK.openExternalLink(args[0]);
+          },
+          login: function () {
+            return PokiSDK.login();
+          },
+          getUser: function () {
+            return PokiSDK.getUser();
+          },
+          getToken: function () {
+            return PokiSDK.getToken();
+          },
+        }),
+      );
 
       addEventListener("message", function (event) {
         var message = event.data;
         if (event.source !== f.contentWindow || event.origin !== GAME) return;
         if (!message || message.ofPoki !== true) return;
-        // Own properties only: "constructor" and the like aren't calls.
-        if (!Object.prototype.hasOwnProperty.call(methods, message.method))
-          return;
-        var method = methods[message.method];
-        // Always true here, but it's the check CodeQL's dynamic-call rule wants.
-        if (typeof method !== "function") return;
+        var method = methods.get(message.method);
+        if (method === undefined) return;
         var id = message.id;
         Promise.resolve()
           .then(function () {
