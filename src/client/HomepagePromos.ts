@@ -412,6 +412,8 @@ export class HomepagePromos extends LitElement {
       this.stopStrayFrameScan();
       return;
     }
+    // First, so an escaped ad is reported once, as removed, not as stray.
+    this.removeEscapedAds();
     for (const { root, attributes } of findStrayAdFrames()) {
       if (this.reportedStrayFrames.has(root)) continue;
       this.reportedStrayFrames.add(root);
