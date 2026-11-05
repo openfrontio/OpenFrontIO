@@ -2365,6 +2365,6 @@ async function getTurnstileToken(): Promise<TurnstileToken> {
   // lives in TurnstileToken.ts.
   return requestTurnstileToken(turnstile, {
     sitekey: ClientEnv.turnstileSiteKey(),
-    container: "#turnstile-container",
+    container: document.getElementById("turnstile-container") ?? document.body,
   });
 }
