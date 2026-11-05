@@ -261,6 +261,27 @@ describe("findStrayAdFrames", () => {
     expect(findStrayAdFrames()).toHaveLength(1);
   });
 
+  it("skips our checkout and ad-recovery frames", () => {
+    for (const src of [
+      "https://js.stripe.com/v3/elements-inner-card.html",
+      "https://my.getadmiral.com/prompt",
+    ]) {
+      const overlay = document.body.appendChild(document.createElement("div"));
+      placeFrame(overlay, "").src = src;
+    }
+
+    expect(findStrayAdFrames()).toEqual([]);
+  });
+
+  it("names the host of a frame whose scheme has no origin", () => {
+    const overlay = document.body.appendChild(document.createElement("div"));
+    placeFrame(overlay, "").src = "x-app://abcdef/frame.html";
+
+    expect(findStrayAdFrames()[0].attributes.frameOrigin).toBe(
+      "x-app://abcdef",
+    );
+  });
+
   it("skips frames too small or off screen to be an ad on display", () => {
     const strip = placeFrame(document.body, "strip");
     strip.getBoundingClientRect = () => new DOMRect(0, 0, 3840, 1);

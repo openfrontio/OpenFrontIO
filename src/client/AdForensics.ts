@@ -15,6 +15,13 @@ const MIN_FRAME_AREA = 7_000;
 // The Trade Desk's overlay is .ttx-lb, with a .ttx-close "Close Ad" button.
 const ESCAPED_AD = ".ttx-lb";
 const ESCAPED_AD_CLOSE = ".ttx-close";
+// Frames on the page that are not escaped ads: Stripe's checkout, Admiral's
+// ad-recovery prompt and Turnstile.
+const NOT_AD_FRAME_PREFIXES = [
+  "https://js.stripe.com/",
+  "https://my.getadmiral.com/",
+  "https://challenges.cloudflare.com/",
+];
 
 interface RenderedCreative {
   slotElementId: string;
@@ -209,6 +216,9 @@ export function findStrayAdFrames(): AdOnPage[] {
   for (const frame of document.querySelectorAll("iframe")) {
     const root = unownedRoot(frame);
     if (root === null || found.has(root)) continue;
+    if (NOT_AD_FRAME_PREFIXES.some((prefix) => frame.src.startsWith(prefix))) {
+      continue;
+    }
     const rect = frame.getBoundingClientRect();
     if (visibleArea(rect) < MIN_FRAME_AREA) continue;
     if (
@@ -306,7 +316,9 @@ function visibleArea(rect: DOMRect): number {
 function frameOrigin(frame: HTMLIFrameElement): string {
   if (frame.src === "") return "";
   try {
-    return new URL(frame.src, location.href).origin;
+    const url = new URL(frame.src, location.href);
+    // Schemes other than http(s) have an opaque origin, "null".
+    return url.origin === "null" ? `${url.protocol}//${url.host}` : url.origin;
   } catch {
     return "";
   }
