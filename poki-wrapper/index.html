@@ -124,26 +124,30 @@
         if (event.source !== f.contentWindow || event.origin !== GAME) return;
         if (!message || message.ofPoki !== true) return;
         var method = methods.get(message.method);
-        if (method === undefined) return;
+        if (typeof method !== "function") return;
         var id = message.id;
-        Promise.resolve()
-          .then(function () {
-            return method(message.args || [], id);
-          })
-          .then(
-            function (result) {
-              if (id !== undefined)
-                reply({ ofPoki: true, id: id, result: result });
-            },
-            function (error) {
-              if (id === undefined) return;
-              reply({
-                ofPoki: true,
-                id: id,
-                error: String((error && error.message) || error),
-              });
-            },
-          );
+        // Called here, next to the check, rather than in a callback, where
+        // CodeQL loses track of it. A throw (the SDK didn't load) is replied.
+        var result;
+        try {
+          result = Promise.resolve(method(message.args || [], id));
+        } catch (error) {
+          result = Promise.reject(error);
+        }
+        result.then(
+          function (result) {
+            if (id !== undefined)
+              reply({ ofPoki: true, id: id, result: result });
+          },
+          function (error) {
+            if (id === undefined) return;
+            reply({
+              ofPoki: true,
+              id: id,
+              error: String((error && error.message) || error),
+            });
+          },
+        );
       });
     </script>
   </body>
