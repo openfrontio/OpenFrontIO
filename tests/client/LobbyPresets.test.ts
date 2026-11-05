@@ -701,6 +701,31 @@ describe("<lobby-preset-controls> component", () => {
     expect(onWindowKey).not.toHaveBeenCalled();
   });
 
+  it("closes the popover on Escape after focus has left it", async () => {
+    const onWindowKey = vi.fn();
+    window.addEventListener("keydown", onWindowKey);
+    document.body.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await element.updateComplete;
+    window.removeEventListener("keydown", onWindowKey);
+
+    expect(element.querySelector("[data-test-preset-select]")).toBeNull();
+    expect(onWindowKey).not.toHaveBeenCalled();
+  });
+
+  it("lets Escape through once the popover is closed", async () => {
+    (element.querySelector("[data-test-preset-toggle]") as HTMLElement).click();
+    await element.updateComplete;
+    const onWindowKey = vi.fn();
+    window.addEventListener("keydown", onWindowKey);
+    document.body.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    window.removeEventListener("keydown", onWindowKey);
+    expect(onWindowKey).toHaveBeenCalledOnce();
+  });
+
   it("closes the popover after loading a preset", async () => {
     element.selectedName = "Casual Team";
     await element.updateComplete;

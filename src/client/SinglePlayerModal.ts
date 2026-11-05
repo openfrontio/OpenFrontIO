@@ -373,7 +373,7 @@ export class SinglePlayerModal extends BaseModal {
       title: translateText("main.solo") || "Solo",
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
-      rightContent: html`<div class="flex items-center gap-2">
+      rightContent: html`<div class="flex flex-wrap items-center gap-2">
           <lobby-preset-controls
             .presets=${this.lobbyPresets}
             .selectedName=${this.selectedPresetName}

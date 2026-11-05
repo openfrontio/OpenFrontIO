@@ -321,7 +321,7 @@ export class HostLobbyModal extends BaseModal {
         // no shadow lobby behind it — the invite would silently no-op. The
         // join modal gets this free from its own !currentLobbyId early return.
         const invite = this.lobbyId ? inviteFriendsButton() : undefined;
-        return html`<div class="flex items-center gap-2">
+        return html`<div class="flex flex-wrap items-center gap-2">
           ${presets}${copy}${invite}
         </div>`;
       })(),

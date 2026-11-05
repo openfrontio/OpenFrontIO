@@ -4,8 +4,10 @@ import { LobbyPreset, MAX_PRESET_NAME_LENGTH } from "../LobbyPresets";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 
-// The popover's width (24rem) in CSS pixels.
+// The popover's width (24rem) in CSS pixels, and the gap it keeps from the
+// modal's edges.
 const POPOVER_WIDTH_PX = 384;
+const EDGE_PX = 16;
 
 @customElement("lobby-preset-controls")
 export class LobbyPresetControls extends LitElement {
@@ -15,9 +17,9 @@ export class LobbyPresetControls extends LitElement {
 
   @state() private nameInput = "";
   @state() private open = false;
-  // Open rightward when the button sits too far left for the popover to fit
-  // leftward, as it does once a narrow header wraps it onto its own row.
-  @state() private alignLeft = false;
+  // Where the popover sits, relative to the button, and how wide it is.
+  @state() private popoverLeft = 0;
+  @state() private popoverWidth = POPOVER_WIDTH_PX;
 
   createRenderRoot() {
     return this;
@@ -29,13 +31,37 @@ export class LobbyPresetControls extends LitElement {
   }
 
   private setOpen(open: boolean) {
-    if (open) {
-      this.alignLeft =
-        this.getBoundingClientRect().right < POPOVER_WIDTH_PX + 16;
-    }
+    if (open) this.place();
     this.open = open;
-    if (open) document.addEventListener("pointerdown", this.onOutside, true);
-    else document.removeEventListener("pointerdown", this.onOutside, true);
+    if (open) {
+      document.addEventListener("pointerdown", this.onOutside, true);
+      // Capture on window runs before BaseModal's own Escape listener there,
+      // wherever focus has moved since the popover opened.
+      window.addEventListener("keydown", this.onKeyDown, true);
+    } else {
+      document.removeEventListener("pointerdown", this.onOutside, true);
+      window.removeEventListener("keydown", this.onKeyDown, true);
+    }
+  }
+
+  // Right-aligned under the button, shifted sideways to stay inside the modal
+  // header, which spans the modal's width. Wherever the header puts the
+  // button, including on its own row once a narrow header wraps.
+  private place() {
+    const header = this.closest('[slot="header"]')?.getBoundingClientRect();
+    const boundLeft = header?.left ?? 0;
+    const boundRight = header?.right ?? window.innerWidth;
+    const trigger = this.getBoundingClientRect();
+    const width = Math.max(
+      0,
+      Math.min(POPOVER_WIDTH_PX, boundRight - boundLeft - 2 * EDGE_PX),
+    );
+    const left = Math.max(
+      boundLeft + EDGE_PX,
+      Math.min(trigger.right - width, boundRight - EDGE_PX - width),
+    );
+    this.popoverLeft = left - trigger.left;
+    this.popoverWidth = width;
   }
 
   // A press anywhere else closes the popover.
@@ -43,13 +69,13 @@ export class LobbyPresetControls extends LitElement {
     if (!this.contains(e.target as Node)) this.setOpen(false);
   };
 
-  private onKeyDown(e: KeyboardEvent) {
+  private onKeyDown = (e: KeyboardEvent): void => {
     if (e.key !== "Escape" || !this.open) return;
     // Only the popover closes: the modal holding it stays open.
     e.preventDefault();
     e.stopPropagation();
     this.setOpen(false);
-  }
+  };
 
   protected override willUpdate(changed: PropertyValues<this>) {
     if (changed.has("selectedName") && !this.selectedName) {
@@ -126,7 +152,7 @@ export class LobbyPresetControls extends LitElement {
     const open = this.open;
 
     return html`
-      <div class="relative shrink-0" @keydown=${this.onKeyDown}>
+      <div class="relative shrink-0">
         <button
           type="button"
           aria-haspopup="dialog"
@@ -164,9 +190,8 @@ export class LobbyPresetControls extends LitElement {
             ? html`<div
                 role="dialog"
                 aria-label=${translateText("lobby_config.preset.title")}
-                class="absolute top-[calc(100%+8px)] ${
-                  this.alignLeft ? "left-0" : "right-0"
-                } z-50 w-[min(calc(100vw-2rem),24rem)] rounded-xl border border-white/15 bg-zinc-900 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.55)] ${
+                style="left: ${this.popoverLeft}px; width: ${this.popoverWidth}px"
+                class="absolute top-[calc(100%+8px)] z-50 rounded-xl border border-white/15 bg-zinc-900 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.55)] ${
                   this.disabled ? "opacity-60" : ""
                 }"
               >
