@@ -88,8 +88,9 @@
         var message = event.data;
         if (event.source !== f.contentWindow || event.origin !== GAME) return;
         if (!message || message.ofPoki !== true) return;
+        // Own properties only: "constructor" and the like aren't calls.
+        if (!Object.prototype.hasOwnProperty.call(methods, message.method)) return;
         var method = methods[message.method];
-        if (!method) return;
         var id = message.id;
         Promise.resolve()
           .then(function () { return method(message.args || [], id); })
