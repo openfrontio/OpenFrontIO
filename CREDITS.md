@@ -77,7 +77,7 @@ Skull and brain normal human diagram.
 Creative Commons Attribution 2.5 License 2006
 File:Skull and brain normal human.svg
 
-[commons.wikimedia.org/wiki/File:Nesterov-Pavlov.jpg](commons.wikimedia.org/wiki/File:Nesterov-Pavlov.jpg)
+[https://commons.wikimedia.org/wiki/File:Nesterov-Pavlov.jpg](https://commons.wikimedia.org/wiki/File:Nesterov-Pavlov.jpg)
 Mikhail Nesterov (1862–1942)
 Portrait of Ivan Pavlov 1935
 Public Domain
