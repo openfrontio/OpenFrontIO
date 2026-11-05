@@ -236,6 +236,32 @@ describe("findStrayAdFrames", () => {
     );
   });
 
+  it("says what is drawn on top at the frame's centre, and where the frame sits", () => {
+    const overlay = document.body.appendChild(document.createElement("div"));
+    const sticky = overlay.appendChild(document.createElement("div"));
+    sticky.style.position = "fixed";
+    sticky.style.zIndex = "2147483647";
+    const frame = placeFrame(sticky, "sticky-frame");
+    const hud = document.body.appendChild(document.createElement("div"));
+    hud.id = "control-panel";
+    let topmost: Element = frame;
+    document.elementFromPoint = (x, y) => {
+      expect([x, y]).toEqual([464, window.innerHeight - 45]);
+      return topmost;
+    };
+
+    expect(findStrayAdFrames()[0].attributes).toMatchObject({
+      position: "static",
+      framePlacement: "fixed 2147483647",
+      topAtCentre: "frame",
+    });
+    topmost = hud;
+    expect(findStrayAdFrames()[0].attributes.topAtCentre).toBe(
+      "div#control-panel",
+    );
+    Reflect.deleteProperty(document, "elementFromPoint");
+  });
+
   it("leaves our own UI and Playwire's containers alone", () => {
     customElements.define("stray-test-hud", class extends HTMLElement {});
     const hud = document.body.appendChild(

@@ -282,9 +282,46 @@ function describeAd(
     frameRect: [rect.left, rect.top, rect.width, rect.height]
       .map(Math.round)
       .join(","),
+    framePlacement: frame === null ? "" : placement(frame, root),
+    topAtCentre: frame === null ? "" : topAtCentre(frame, root, rect),
     ...creativeAttributes(root),
     recentCreatives: recentCreatives(),
   };
+}
+
+// The position and z-index of the frame's nearest positioned element: the
+// root's own say nothing when a static wrapper holds a fixed ad.
+function placement(frame: HTMLIFrameElement, root: HTMLElement): string {
+  for (let el: Element | null = frame; el !== null; el = el.parentElement) {
+    const style = getComputedStyle(el);
+    if (style.position !== "static") return `${style.position} ${style.zIndex}`;
+    if (el === root) break;
+  }
+  return "static auto";
+}
+
+// What is topmost at the centre of the frame's on-screen part: "frame" when
+// nothing is drawn over it there. Hit testing skips pointer-events: none,
+// so this never names the game canvas, but the canvas is the body's first
+// child with no z-index, and any fixed ad added after it draws above it.
+function topAtCentre(
+  frame: HTMLIFrameElement,
+  root: HTMLElement,
+  rect: DOMRect,
+): string {
+  const left = Math.max(rect.left, 0);
+  const right = Math.min(rect.right, window.innerWidth);
+  const upper = Math.max(rect.top, 0);
+  const lower = Math.min(rect.bottom, window.innerHeight);
+  if (right <= left || lower <= upper) return "offscreen";
+  const hit = document.elementFromPoint?.(
+    (left + right) / 2,
+    (upper + lower) / 2,
+  );
+  if (hit === null || hit === undefined) return "";
+  if (hit === frame) return "frame";
+  if (root.contains(hit)) return "ad";
+  return hit.id === "" ? hit.localName : `${hit.localName}#${hit.id}`;
 }
 
 // The body-level element holding `start`, or null when that subtree is ours
