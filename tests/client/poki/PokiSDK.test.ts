@@ -1,6 +1,6 @@
 import { Howler } from "howler";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PokiSDK } from "../../src/client/PokiSDK";
+import { PokiSDK } from "../../../src/client/poki/PokiSDK";
 
 type FakePoki = NonNullable<Window["PokiSDK"]>;
 
@@ -46,7 +46,7 @@ type WrapperMessage = {
   args: unknown[];
 };
 
-// Stands in for our Poki wrapper page (src/client/PokiWrapper.html): answers the
+// Stands in for our Poki wrapper page (src/client/poki/PokiWrapper.html): answers the
 // frame's postMessage calls with the fake SDK, as the page's own SDK would.
 // jsdom's parent is the window itself.
 function fakeWrapper(
@@ -467,7 +467,8 @@ describe("PokiSDK", () => {
     // A fresh module, so only sessionStorage carries the flag, as on a reload.
     async function reload(): Promise<PokiSDK> {
       vi.resetModules();
-      const { PokiSDK: Reloaded } = await import("../../src/client/PokiSDK");
+      const { PokiSDK: Reloaded } =
+        await import("../../../src/client/poki/PokiSDK");
       return new Reloaded();
     }
 

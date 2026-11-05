@@ -1,5 +1,5 @@
 import { Howler } from "howler";
-import type { PortalUser } from "./GamePortal";
+import type { PortalUser } from "../GamePortal";
 import { connectPokiBridge, isPokiBridged } from "./PokiBridge";
 
 const POKI_SDK_URL = "https://game-cdn.poki.com/scripts/v2/poki-sdk.js";
