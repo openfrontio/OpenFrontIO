@@ -417,6 +417,7 @@ describe("HomepagePromos ad frames over the game", () => {
         lobbySource: "public",
         elementId: "takeover",
         frameRect: "0,600,728,90",
+        action: "reported",
       }),
     );
     expect(overlay.isConnected).toBe(true);
@@ -448,6 +449,39 @@ describe("HomepagePromos ad frames over the game", () => {
       "ad_frame_in_game",
       expect.objectContaining({ elementId: "takeover" }),
     );
+  });
+
+  function drawTtxOverlay(): HTMLElement {
+    const overlay = document.createElement("div");
+    overlay.className = "ttx-lb";
+    overlay.appendChild(document.createElement("iframe"));
+    return document.body.appendChild(overlay);
+  }
+
+  it("removes The Trade Desk's overlay as it lands, spawn phase included", async () => {
+    const overlay = drawTtxOverlay();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(overlay.isConnected).toBe(false);
+    expect(reportEvent).toHaveBeenCalledExactlyOnceWith(
+      "ad_frame_in_game",
+      expect.objectContaining({
+        gameID: "cSkwPxCLWx",
+        elementClass: "ttx-lb",
+        secondsAfterDestroy: "",
+        action: "removed",
+      }),
+    );
+  });
+
+  it("leaves The Trade Desk's overlay alone on the menu", async () => {
+    restoreMenuChrome();
+    const overlay = drawTtxOverlay();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(overlay.isConnected).toBe(true);
+    expect(reportEvent).not.toHaveBeenCalled();
+    overlay.remove();
   });
 
   it("ignores ad frames during spawn, where the bottom rail belongs", async () => {
