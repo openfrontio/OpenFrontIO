@@ -384,10 +384,14 @@ export function copyRootPublicFiles(publicDir: string, outDir: string): void {
   }
 }
 
-// Path -> content type for every root file, plus a "<dir>/" entry for each
-// directory with an index.html. The site Worker serves exactly what this lists,
-// from sites/<site>/v/<short>/root/<path> (update.sh uploads both).
-export type RootFilesIndex = Record<string, string>;
+// Path -> content type and content-addressed key (under game_assets/) for
+// every root file, plus a "<dir>/" entry for each directory with an
+// index.html, carrying that file's. The site Worker serves exactly what this
+// lists. update.sh uploads the hashed copies with the other hashed assets, so
+// a root file that did not change is not uploaded again, and the index itself
+// to sites/<site>/v/<short>/root-files.json.
+export type RootFile = { type: string; key: string };
+export type RootFilesIndex = Record<string, RootFile>;
 
 const ROOT_FILES_INDEX = "root-files.json";
 
@@ -418,21 +422,37 @@ function rootFileContentType(relativePath: string): string {
 export function buildRootFilesIndex(publicDir: string): RootFilesIndex {
   const index: RootFilesIndex = {};
   for (const relativePath of listRootPublicFiles(publicDir)) {
-    const contentType = rootFileContentType(relativePath);
-    index[relativePath] = contentType;
+    const file: RootFile = {
+      type: rootFileContentType(relativePath),
+      key: normalizeAssetPath(
+        createHashedAssetUrl(
+          path.posix.join("root", relativePath),
+          createContentHash(path.join(publicDir, relativePath)),
+        ),
+      ),
+    };
+    index[relativePath] = file;
     if (path.posix.basename(relativePath) === "index.html") {
       const dir = path.posix.dirname(relativePath);
-      if (dir !== ".") index[`${dir}/`] = contentType;
+      if (dir !== ".") index[`${dir}/`] = file;
     }
   }
   return index;
 }
 
+// Writes the index and each root file's hashed copy at its key.
 export function writeRootFilesIndex(publicDir: string, outDir: string): void {
+  const index = buildRootFilesIndex(publicDir);
+  for (const [relativePath, { key }] of Object.entries(index)) {
+    if (relativePath.endsWith("/")) continue;
+    const outputPath = path.join(outDir, key);
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.copyFileSync(path.join(publicDir, relativePath), outputPath);
+  }
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(
     path.join(outDir, ROOT_FILES_INDEX),
-    `${JSON.stringify(buildRootFilesIndex(publicDir), null, 2)}\n`,
+    `${JSON.stringify(index, null, 2)}\n`,
   );
 }
 

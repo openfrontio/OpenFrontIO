@@ -4,6 +4,8 @@
   "name": "Baltics",
   "translation_key": "map.baltics",
   "categories": ["europe"],
+  "location": { "lat": 57, "lon": 24.5 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [10, 220],

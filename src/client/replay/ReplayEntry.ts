@@ -2,8 +2,8 @@
  * Decides which replay a "watch replay" click opens.
  *
  * The viewer, which can seek and plays the game while it's being processed
- * (LocalProcessing), is opt-in for now (the "new replay viewer" setting);
- * without it the classic client-side replay opens. A game from another build goes to
+ * (LocalProcessing), is enabled by default (the "new replay viewer" setting);
+ * players who turn it off get the classic client-side replay. A game from another build goes to
  * that build's versioned shell (#4934). The old client-side replay is the
  * fallback the viewer offers when it can't show a game.
  */
@@ -62,8 +62,8 @@ export function replayViewerHref(gameID: string): string {
 
 /**
  * Opens the viewer for a game this build can replay (the caller already
- * checked the build). Returns false if the player hasn't turned the viewer
- * on, or the viewer sent this game back, and the caller should use the
+ * checked the build). Returns false if the player turned the viewer off,
+ * or the viewer sent this game back, and the caller should use the
  * client-side replay.
  */
 export function openReplayViewer(gameID: string, record: GameRecord): boolean {

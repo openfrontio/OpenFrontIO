@@ -6,6 +6,7 @@
   "categories": ["north_america"],
   "author": "Patrick Plays Badly",
   "description": "What's LA without its roads? No, really??",
+  "location": { "lat": 34.05, "lon": -118.25 },
   "nations": [
     {
       "coordinates": [546, 16],

@@ -4,6 +4,8 @@
   "name": "Crimea",
   "translation_key": "map.crimea",
   "categories": ["europe"],
+  "location": { "lat": 45.3, "lon": 34 },
+  "author": "crunchybbb",
   "nations": [
     {
       "coordinates": [539, 1112],

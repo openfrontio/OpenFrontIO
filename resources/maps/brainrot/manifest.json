@@ -1,6 +1,6 @@
 {
   "author": "Patrick Plays Badly",
-  "categories": ["arcade", "new"],
+  "categories": ["arcade"],
   "description": "Think of a number between 5 and 8. Studies have shown your answer will be near equal to the number of folds (gyrus) in your brain. The average person has near 200+ folds! How did you stack up?",
   "id": "BrainRot",
   "layers": [
