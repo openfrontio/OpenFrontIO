@@ -183,8 +183,11 @@ describe("requestTurnstileToken runs exactly one challenge", () => {
 
     expect(fake.renders).toHaveLength(2);
     expect(container.childElementCount).toBe(2);
+    const firstHost = container.children[0];
     fake.renders[1].callback?.("second");
     await expect(second).resolves.toMatchObject({ token: "second" });
+    expect(container.children).toHaveLength(1);
+    expect(container.children[0]).toBe(firstHost);
     fake.renders[0].callback?.("first");
     await expect(first).resolves.toMatchObject({ token: "first" });
   });
