@@ -245,13 +245,17 @@ export interface GhostPreviewData {
   upgradeTargetTile: number | null;
   /** Range radius in tiles for the placement circle (0 = no circle). */
   rangeRadius: number;
-  /**
-   * True if placing here would mark you a traitor (nuking a non-traitor
-   * ally) — flashes the range circle red. Betraying a traitor or
-   * disconnected ally carries no traitor mark, so it stays white.
-   */
-  rangeWarning: boolean;
+  /** What nuking here would do to your alliances (colors the range circle). */
+  rangeWarning: RangeWarning;
 }
+
+/**
+ * Range circle warning for a nuke preview: "breaksAlliance" (solid red)
+ * breaks an alliance with a traitor or disconnected ally, which carries no
+ * traitor mark; "traitor" (flashing red) betrays an ally and marks you a
+ * traitor.
+ */
+export type RangeWarning = "none" | "breaksAlliance" | "traitor";
 
 /** Nuke trajectory preview data — Bezier control points + color thresholds. */
 export interface NukeTrajectoryData {

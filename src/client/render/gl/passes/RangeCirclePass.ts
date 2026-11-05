@@ -1,14 +1,14 @@
 /**
  * RangeCirclePass — draws a translucent circle showing the effective
  * range of a structure during build-mode ghost preview. White by default,
- * flashing red when the ghost flags a warning (nuking here would mark
- * you a traitor).
+ * solid red when nuking here would break an alliance without marking you a
+ * traitor, flashing red when it would mark you a traitor.
  *
  * Single quad with circle SDF in the fragment shader.
  * Active only when a ghost preview with rangeRadius > 0 is set.
  */
 
-import type { GhostPreviewData } from "../../types";
+import type { GhostPreviewData, RangeWarning } from "../../types";
 import { createProgram } from "../utils/GlUtils";
 
 import fragSrc from "../shaders/range-circle/range-circle.frag.glsl?raw";
@@ -27,7 +27,7 @@ export class RangeCirclePass {
   private centerX = 0;
   private centerY = 0;
   private radius = 0;
-  private warning = false;
+  private warning: RangeWarning = "none";
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl;
@@ -61,7 +61,7 @@ export class RangeCirclePass {
       this.warning = data.rangeWarning;
     } else {
       this.radius = 0;
-      this.warning = false;
+      this.warning = "none";
     }
   }
 
@@ -75,7 +75,9 @@ export class RangeCirclePass {
 
     gl.uniform2f(this.uCenter, this.centerX, this.centerY);
     gl.uniform1f(this.uRadius, this.radius);
-    if (this.warning) {
+    if (this.warning === "breaksAlliance") {
+      gl.uniform3f(this.uColor, 1.0, 0.2, 0.2);
+    } else if (this.warning === "traitor") {
       // Flash red↔white so the traitor-mark warning is unmistakable.
       const t = 0.5 + 0.5 * Math.sin(performance.now() * 0.01257); // ~2 Hz
       const gb = 0.2 + 0.8 * (1.0 - t);

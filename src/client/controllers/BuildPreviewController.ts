@@ -37,7 +37,7 @@ import {
   buildNukeTrajectory,
   type SAMInfo,
 } from "../render/gl/utils/NukeTrajectory";
-import type { GhostPreviewData } from "../render/types";
+import type { GhostPreviewData, RangeWarning } from "../render/types";
 import { TransformHandler } from "../TransformHandler";
 import {
   BuildUnitIntentEvent,
@@ -253,7 +253,8 @@ function isTrajectoryEqual(
 export class BuildPreviewController implements Controller {
   /** Current ghost (null when no build type is active). */
   private ghostUnit: { buildableUnit: BuildableUnit } | null = null;
-  private readonly connectedAllySmallIds: Set<number> = new Set();
+  private readonly traitorMarkAllySmallIds: Set<number> = new Set();
+  private readonly noMarkAllySmallIds: Set<number> = new Set();
   private readonly usedSafetyAllies: Set<number> = new Set();
   private readonly teammateIds: Set<number> = new Set();
   private readonly allyIds: Set<number> = new Set();
@@ -494,33 +495,52 @@ export class BuildPreviewController implements Controller {
     }
   }
 
-  private checkTargetingAlly(tileRef: TileRef | undefined): boolean {
-    if (tileRef === undefined || !this.ghostUnit) return false;
+  private checkRangeWarning(tileRef: TileRef | undefined): RangeWarning {
+    if (tileRef === undefined || !this.ghostUnit) return "none";
     const myPlayer = this.game.myPlayer();
     const nukeType = this.ghostUnit.buildableUnit.type;
     if (
       !myPlayer ||
       (nukeType !== UnitType.AtomBomb && nukeType !== UnitType.HydrogenBomb)
     ) {
-      return false;
+      return "none";
     }
-    // Traitor allies are excluded: betraying a traitor breaks the alliance
-    // but carries no traitor mark (GameImpl.breakAlliance), so nuking one
-    // is safe and shows no warning.
-    this.connectedAllySmallIds.clear();
+    // Nuking any ally breaks the alliance, but only betraying a connected,
+    // non-traitor ally marks us a traitor (GameImpl.breakAlliance).
+    this.traitorMarkAllySmallIds.clear();
+    this.noMarkAllySmallIds.clear();
     for (const ally of myPlayer.allies()) {
-      if (!ally.isDisconnected() && !ally.isTraitor()) {
-        this.connectedAllySmallIds.add(ally.smallID());
+      if (ally.isTraitor() || ally.isDisconnected()) {
+        this.noMarkAllySmallIds.add(ally.smallID());
+      } else {
+        this.traitorMarkAllySmallIds.add(ally.smallID());
       }
     }
-    if (this.connectedAllySmallIds.size === 0) return false;
-    return wouldNukeBreakAlliance({
-      game: this.game,
-      targetTile: tileRef,
-      magnitude: this.game.config().nukeMagnitudes(nukeType),
-      allySmallIds: this.connectedAllySmallIds,
-      threshold: this.game.config().nukeAllianceBreakThreshold(),
-    });
+    const magnitude = this.game.config().nukeMagnitudes(nukeType);
+    const threshold = this.game.config().nukeAllianceBreakThreshold();
+    if (
+      wouldNukeBreakAlliance({
+        game: this.game,
+        targetTile: tileRef,
+        magnitude,
+        allySmallIds: this.traitorMarkAllySmallIds,
+        threshold,
+      })
+    ) {
+      return "traitor";
+    }
+    if (
+      wouldNukeBreakAlliance({
+        game: this.game,
+        targetTile: tileRef,
+        magnitude,
+        allySmallIds: this.noMarkAllySmallIds,
+        threshold,
+      })
+    ) {
+      return "breaksAlliance";
+    }
+    return "none";
   }
 
   private resolveGhostTarget(
@@ -529,7 +549,7 @@ export class BuildPreviewController implements Controller {
   ): {
     tileRef: TileRef | undefined;
     trajectoryTileRef: TileRef | undefined;
-    targetingAlly: boolean;
+    rangeWarning: RangeWarning;
   } {
     let tileRef: TileRef | undefined;
     let trajectoryTileRef: TileRef | undefined;
@@ -551,18 +571,18 @@ export class BuildPreviewController implements Controller {
         tileRef = undefined;
       }
     }
-    const targetingAlly = this.checkTargetingAlly(tileRef);
-    return { tileRef, trajectoryTileRef, targetingAlly };
+    const rangeWarning = this.checkRangeWarning(tileRef);
+    return { tileRef, trajectoryTileRef, rangeWarning };
   }
 
   private handleBuildablesResponse(
     buildables: BuildableUnit[],
     tileRef: TileRef | undefined,
-    targetingAlly: boolean,
+    rangeWarning: RangeWarning,
     trajectoryTileRef: TileRef | undefined,
   ): void {
     if (!this.ghostUnit) {
-      this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+      this.emitGhostPreview(tileRef, rangeWarning, trajectoryTileRef);
       return;
     }
 
@@ -574,13 +594,13 @@ export class BuildPreviewController implements Controller {
         canBuild: false,
         canUpgrade: false,
       });
-      this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+      this.emitGhostPreview(tileRef, rangeWarning, trajectoryTileRef);
       return;
     }
 
     this.ghostUnit.buildableUnit = unit;
 
-    this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+    this.emitGhostPreview(tileRef, rangeWarning, trajectoryTileRef);
   }
 
   private onQueryFinished(seq: number): void {
@@ -598,7 +618,7 @@ export class BuildPreviewController implements Controller {
   private dispatchBuildablesQuery(
     seq: number,
     tileRef: TileRef | undefined,
-    targetingAlly: boolean,
+    rangeWarning: RangeWarning,
     trajectoryTileRef: TileRef | undefined,
   ): void {
     const ghost = this.ghostUnit;
@@ -619,7 +639,7 @@ export class BuildPreviewController implements Controller {
 
     if (!promise) {
       this.isQueryInFlight = false;
-      this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+      this.emitGhostPreview(tileRef, rangeWarning, trajectoryTileRef);
       return;
     }
 
@@ -645,7 +665,7 @@ export class BuildPreviewController implements Controller {
         this.handleBuildablesResponse(
           b,
           tileRef,
-          targetingAlly,
+          rangeWarning,
           trajectoryTileRef,
         );
       })
@@ -679,17 +699,12 @@ export class BuildPreviewController implements Controller {
     if (this.isQueryInFlight) return;
 
     this.isQueryInFlight = true;
-    const { tileRef, trajectoryTileRef, targetingAlly } =
+    const { tileRef, trajectoryTileRef, rangeWarning } =
       this.resolveGhostTarget();
     this.lastQueriedTileRef = tileRef;
 
     const seq = ++this.querySeq;
-    this.dispatchBuildablesQuery(
-      seq,
-      tileRef,
-      targetingAlly,
-      trajectoryTileRef,
-    );
+    this.dispatchBuildablesQuery(seq, tileRef, rangeWarning, trajectoryTileRef);
   }
 
   /**
@@ -700,10 +715,10 @@ export class BuildPreviewController implements Controller {
    */
   private emitGhostPreview(
     tileRef: TileRef | undefined,
-    targetingAlly: boolean,
+    rangeWarning: RangeWarning,
     trajectoryTileRef: TileRef | undefined,
   ): void {
-    const data = this.buildGhostPreviewData(tileRef, targetingAlly);
+    const data = this.buildGhostPreviewData(tileRef, rangeWarning);
     if (data === null) {
       this.lastGhostData = null;
       this.prevGhostDataRef = null;
@@ -878,7 +893,7 @@ export class BuildPreviewController implements Controller {
 
   private buildGhostPreviewData(
     tileRef: TileRef | undefined,
-    targetingAlly: boolean,
+    rangeWarning: RangeWarning,
   ): GhostPreviewData | null {
     if (!this.ghostUnit || tileRef === undefined) return null;
     const myPlayer = this.game.myPlayer();
@@ -925,7 +940,7 @@ export class BuildPreviewController implements Controller {
       ownerID: myPlayer.smallID(),
       upgradeTargetTile,
       rangeRadius,
-      rangeWarning: targetingAlly,
+      rangeWarning,
     };
 
     if (
