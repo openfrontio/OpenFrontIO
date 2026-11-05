@@ -9,6 +9,7 @@
  */
 
 import type { GhostPreviewData, RangeWarning } from "../../types";
+import type { RenderSettings } from "../RenderSettings";
 import { createProgram } from "../utils/GlUtils";
 
 import fragSrc from "../shaders/range-circle/range-circle.frag.glsl?raw";
@@ -28,9 +29,11 @@ export class RangeCirclePass {
   private centerY = 0;
   private radius = 0;
   private warning: RangeWarning = "none";
+  private settings: RenderSettings;
 
-  constructor(gl: WebGL2RenderingContext) {
+  constructor(gl: WebGL2RenderingContext, settings: RenderSettings) {
     this.gl = gl;
+    this.settings = settings;
     this.program = createProgram(gl, vertSrc, fragSrc, "RangeCirclePass");
 
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
@@ -75,13 +78,25 @@ export class RangeCirclePass {
 
     gl.uniform2f(this.uCenter, this.centerX, this.centerY);
     gl.uniform1f(this.uRadius, this.radius);
+    const s = this.settings.rangeCircle;
     if (this.warning === "breaksAlliance") {
-      gl.uniform3f(this.uColor, 1.0, 0.85, 0.1);
+      gl.uniform3f(
+        this.uColor,
+        s.allianceColorR,
+        s.allianceColorG,
+        s.allianceColorB,
+      );
     } else if (this.warning === "traitor") {
-      // Flash red↔white so the traitor-mark warning is unmistakable.
-      const t = 0.5 + 0.5 * Math.sin(performance.now() * 0.01257); // ~2 Hz
-      const gb = 0.2 + 0.8 * (1.0 - t);
-      gl.uniform3f(this.uColor, 1.0, gb, gb);
+      // Flash white↔traitor color so the traitor-mark warning is unmistakable.
+      const t =
+        0.5 +
+        0.5 * Math.sin((performance.now() / 1000) * s.flashHz * 2 * Math.PI);
+      gl.uniform3f(
+        this.uColor,
+        1.0 + (s.traitorColorR - 1.0) * t,
+        1.0 + (s.traitorColorG - 1.0) * t,
+        1.0 + (s.traitorColorB - 1.0) * t,
+      );
     } else {
       gl.uniform3f(this.uColor, 1.0, 1.0, 1.0);
     }
