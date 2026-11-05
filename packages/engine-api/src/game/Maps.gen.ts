@@ -274,7 +274,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Africa,
     translationKey: "map.africa",
     categories: ["featured", "continental", "africa"],
-    defaultNationCount: 44,
+    defaultNationCount: 72,
     featuredRank: 6,
     themes: ["africa"],
     author: "SunnyBoyWTF",
