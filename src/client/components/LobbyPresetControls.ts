@@ -4,6 +4,9 @@ import { LobbyPreset, MAX_PRESET_NAME_LENGTH } from "../LobbyPresets";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 
+// The popover's width (24rem) in CSS pixels.
+const POPOVER_WIDTH_PX = 384;
+
 @customElement("lobby-preset-controls")
 export class LobbyPresetControls extends LitElement {
   @property({ type: Array }) presets: LobbyPreset[] = [];
@@ -11,10 +14,41 @@ export class LobbyPresetControls extends LitElement {
   @property({ type: Boolean }) disabled = false;
 
   @state() private nameInput = "";
-  @state() private expanded = false;
+  @state() private open = false;
+  // Open rightward when the button sits too far left for the popover to fit
+  // leftward, as it does once a narrow header wraps it onto its own row.
+  @state() private alignLeft = false;
 
   createRenderRoot() {
     return this;
+  }
+
+  disconnectedCallback(): void {
+    this.setOpen(false);
+    super.disconnectedCallback();
+  }
+
+  private setOpen(open: boolean) {
+    if (open) {
+      this.alignLeft =
+        this.getBoundingClientRect().right < POPOVER_WIDTH_PX + 16;
+    }
+    this.open = open;
+    if (open) document.addEventListener("pointerdown", this.onOutside, true);
+    else document.removeEventListener("pointerdown", this.onOutside, true);
+  }
+
+  // A press anywhere else closes the popover.
+  private onOutside = (e: Event): void => {
+    if (!this.contains(e.target as Node)) this.setOpen(false);
+  };
+
+  private onKeyDown(e: KeyboardEvent) {
+    if (e.key !== "Escape" || !this.open) return;
+    // Only the popover closes: the modal holding it stays open.
+    e.preventDefault();
+    e.stopPropagation();
+    this.setOpen(false);
   }
 
   protected override willUpdate(changed: PropertyValues<this>) {
@@ -42,6 +76,7 @@ export class LobbyPresetControls extends LitElement {
   private handleLoad() {
     const name = this.selectedName.trim();
     if (!name || this.disabled) return;
+    this.setOpen(false);
     this.dispatchEvent(
       new CustomEvent<string>("preset-load", {
         detail: name,
@@ -88,35 +123,57 @@ export class LobbyPresetControls extends LitElement {
   }
 
   render() {
-    const expanded = this.expanded;
+    const open = this.open;
 
     return html`
-      <div class="w-full mb-8 ${this.disabled ? "opacity-60" : ""}">
+      <div class="relative shrink-0" @keydown=${this.onKeyDown}>
         <button
           type="button"
-          aria-expanded=${expanded}
+          aria-haspopup="dialog"
+          aria-expanded=${open}
           data-test-preset-toggle
-          @click=${() => (this.expanded = !this.expanded)}
-          class="w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold text-white uppercase tracking-wider transition-all duration-200 active:scale-[0.99] ${
-            expanded
-              ? "bg-malibu-blue/20 border-malibu-blue/50"
-              : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+          @click=${() => this.setOpen(!this.open)}
+          class="flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
+            open
+              ? "bg-malibu-blue/20 border-malibu-blue/50 text-white"
+              : "border-white/10 bg-white/5 hover:bg-white/10 text-white/60"
           }"
         >
           <svg
-            class="w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
-              expanded ? "rotate-90" : ""
-            }"
-            viewBox="0 0 12 12"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
             fill="currentColor"
+            class="w-4 h-4 shrink-0"
             aria-hidden="true"
           >
-            <path d="M4 2l5 4-5 4z" />
+            <path
+              d="M5.625 1.5c-1.036 0-1.875.84-1.875 1.875v17.25c0 1.035.84 1.875 1.875 1.875h12.75c1.035 0 1.875-.84 1.875-1.875V12.75A3.75 3.75 0 0016.5 9h-1.875a1.875 1.875 0 01-1.875-1.875V5.25A3.75 3.75 0 009 1.5H5.625z"
+            />
+            <path
+              d="M12.971 1.816A5.23 5.23 0 0114.25 5.25v1.875c0 .207.168.375.375.375H16.5a5.23 5.23 0 013.434 1.279 9.768 9.768 0 00-6.963-6.963z"
+            />
           </svg>
-          ${translateText("lobby_config.preset.title")}
+          <span
+            class="text-xs font-bold uppercase tracking-wider whitespace-nowrap"
+            >${translateText("lobby_config.preset.title")}</span
+          >
         </button>
 
-        ${expanded ? this.renderControls() : null}
+        ${
+          open
+            ? html`<div
+                role="dialog"
+                aria-label=${translateText("lobby_config.preset.title")}
+                class="absolute top-[calc(100%+8px)] ${
+                  this.alignLeft ? "left-0" : "right-0"
+                } z-50 w-[min(calc(100vw-2rem),24rem)] rounded-xl border border-white/15 bg-zinc-900 p-4 shadow-[0_12px_32px_rgba(0,0,0,0.55)] ${
+                  this.disabled ? "opacity-60" : ""
+                }"
+              >
+                ${this.renderControls()}
+              </div>`
+            : null
+        }
       </div>
     `;
   }
@@ -127,7 +184,7 @@ export class LobbyPresetControls extends LitElement {
     const canSave = !this.disabled && Boolean(this.nameInput.trim());
 
     return html`
-      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="flex flex-col gap-4">
         <!-- Load / Delete Existing Preset -->
         <div class="flex flex-col gap-2">
           <label

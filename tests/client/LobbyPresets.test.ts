@@ -649,30 +649,66 @@ describe("<lobby-preset-controls> component", () => {
     element.remove();
   });
 
-  it("starts collapsed and toggles open and closed", async () => {
-    const fresh = document.createElement(
+  it("starts closed and the header button opens and closes the popover", async () => {
+    element.remove();
+    element = document.createElement(
       "lobby-preset-controls",
     ) as LobbyPresetControls;
-    fresh.presets = samplePresets;
-    document.body.appendChild(fresh);
-    await fresh.updateComplete;
+    element.presets = samplePresets;
+    document.body.appendChild(element);
+    await element.updateComplete;
 
-    const toggle = fresh.querySelector(
+    const toggle = element.querySelector(
       "[data-test-preset-toggle]",
     ) as HTMLElement;
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    expect(fresh.querySelector("[data-test-preset-select]")).toBeNull();
+    expect(element.querySelector("[data-test-preset-select]")).toBeNull();
 
     toggle.click();
-    await fresh.updateComplete;
+    await element.updateComplete;
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    expect(fresh.querySelector("[data-test-preset-select]")).not.toBeNull();
+    expect(element.querySelector("[data-test-preset-select]")).not.toBeNull();
 
     toggle.click();
-    await fresh.updateComplete;
+    await element.updateComplete;
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    expect(fresh.querySelector("[data-test-preset-select]")).toBeNull();
-    fresh.remove();
+    expect(element.querySelector("[data-test-preset-select]")).toBeNull();
+  });
+
+  it("closes the popover on a press outside it, not inside", async () => {
+    const select = element.querySelector("[data-test-preset-select]")!;
+    select.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    await element.updateComplete;
+    expect(element.querySelector("[data-test-preset-select]")).not.toBeNull();
+
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    await element.updateComplete;
+    expect(element.querySelector("[data-test-preset-select]")).toBeNull();
+  });
+
+  it("closes the popover on Escape without letting it reach the modal", async () => {
+    const onWindowKey = vi.fn();
+    window.addEventListener("keydown", onWindowKey);
+    element
+      .querySelector("[data-test-preset-select]")!
+      .dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    await element.updateComplete;
+    window.removeEventListener("keydown", onWindowKey);
+
+    expect(element.querySelector("[data-test-preset-select]")).toBeNull();
+    expect(onWindowKey).not.toHaveBeenCalled();
+  });
+
+  it("closes the popover after loading a preset", async () => {
+    element.selectedName = "Casual Team";
+    await element.updateComplete;
+    (
+      element.querySelector("[data-test-preset-load-btn]") as HTMLElement
+    ).click();
+    await element.updateComplete;
+    expect(element.querySelector("[data-test-preset-select]")).toBeNull();
   });
 
   it("renders select dropdown with presets options", () => {
