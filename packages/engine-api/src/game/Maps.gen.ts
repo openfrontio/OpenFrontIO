@@ -712,6 +712,7 @@ export const maps: readonly MapInfo[] = [
       { name: "Ventureño Tribe" },
     ],
     author: "crunchybbb",
+    descriptionKey: "map_description.channelislands",
     location: { lat: 33.5, lon: -119 },
   },
   {
@@ -721,7 +722,6 @@ export const maps: readonly MapInfo[] = [
     categories: ["countries", "asia"],
     defaultNationCount: 34,
     themes: ["asia"],
-    layers: [{ id: "label", placement: "water" }],
     author: "crunchybbb",
     location: { lat: 33, lon: 105 },
   },
@@ -872,6 +872,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 10,
     themes: ["north_america"],
     author: "crunchybbb",
+    descriptionKey: "map_description.fingerlakes",
     location: { lat: 42.6, lon: -76.9 },
   },
   {
@@ -1702,6 +1703,7 @@ export const maps: readonly MapInfo[] = [
       { name: "Fashion District", coordinates: [1271, 767] },
     ],
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.losangeles",
     location: { lat: 34.05, lon: -118.25 },
   },
   {
@@ -1939,6 +1941,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 32,
     themes: ["asia"],
     author: "crunchybbb",
+    descriptionKey: "map_description.qingchina",
     location: { lat: 40, lon: 98 },
   },
   {
@@ -2293,6 +2296,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["asia"],
     defaultNationCount: 9,
     author: "crunchybbb",
+    descriptionKey: "map_description.yangtzeriver",
     location: { lat: 30.5, lon: 114.3 },
   },
   {
@@ -2303,6 +2307,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 8,
     themes: ["asia"],
     author: "crunchybbb",
+    descriptionKey: "map_description.yellowsea",
     location: { lat: 37, lon: 122.5 },
   },
   {
