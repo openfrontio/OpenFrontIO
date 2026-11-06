@@ -1,4 +1,5 @@
 import type { SteamSkinDrop } from "@openfront/shared/ApiSchemas";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import type { ResolvedCosmetic } from "./Cosmetics";
 
 /**
@@ -66,4 +67,41 @@ export function steamSkinDropStringsReady(
   return Object.values(STEAM_SKIN_DROP_KEYS).every(
     (key) => translate(key) !== key,
   );
+}
+
+/**
+ * The drop to announce, with its catalog entry, or null when there is none to
+ * show. The catalog is only fetched when the API names a drop, so every other
+ * player pays nothing. A catalog that fails to load, or lacks the item, is an
+ * unresolved item: no popup, nothing marked seen, the next interrupt runs.
+ */
+export async function steamSkinDropFor(
+  drop: SteamSkinDrop | null | undefined,
+  fetchCatalog: () => Promise<Cosmetics | null>,
+  resolve: (cosmetics: Cosmetics | null) => ResolvedCosmetic[],
+): Promise<{ notice: string; resolved: ResolvedCosmetic } | null> {
+  if (!drop) return null;
+  const resolved = findSteamSkinDrop(drop, resolve(await fetchCatalog()));
+  return resolved === null ? null : { notice: drop.notice, resolved };
+}
+
+/**
+ * Loads the lazy popup and shows it. A chunk that will not load, or an element
+ * that is not on the page, resolves "abandoned" so nothing is marked seen and
+ * the player is told next launch.
+ */
+export async function showSteamSkinDrop(
+  resolved: ResolvedCosmetic,
+  load: () => Promise<void>,
+  find: () => {
+    show(resolved: ResolvedCosmetic): Promise<SteamSkinDropAnswer>;
+  } | null,
+): Promise<SteamSkinDropAnswer> {
+  try {
+    await load();
+  } catch (err) {
+    console.error("steam-skin-drop-modal failed to load:", err);
+    return "abandoned";
+  }
+  return (await find()?.show(resolved)) ?? "abandoned";
 }

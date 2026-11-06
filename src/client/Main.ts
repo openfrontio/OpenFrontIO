@@ -50,7 +50,10 @@ import type { JoinLobbyResult } from "./ClientGameRunner";
 import {
   broadcastFreshUserMe,
   getPlayerCosmeticsRefs,
+  fetchCosmetics,
   handlePurchaseReturn,
+  resolveCosmetics,
+  selectedPatternNameFor,
   translateCosmetic,
 } from "./Cosmetics";
 import {
@@ -144,6 +147,13 @@ import {
 import type { SteamLinkModal } from "./SteamLinkModal";
 import { steamNoticeDue, steamNoticeStringsReady } from "./SteamNotices";
 import { steamSDK } from "./SteamSDK";
+import {
+  showSteamSkinDrop,
+  steamSkinDropDueThisLaunch,
+  steamSkinDropFor,
+  steamSkinDropStringsReady,
+} from "./SteamSkinDrop";
+import type { SteamSkinDropModal } from "./SteamSkinDropModal";
 import type { StoreModal } from "./Store";
 import { initTelemetry } from "./Telemetry";
 import type { TokenLoginModal } from "./TokenLoginModal";
@@ -944,6 +954,15 @@ class Client {
           isDesktopShell(),
           Date.now(),
         );
+        // The catalog is read only for a drop that could actually show, so
+        // every other player skips the request.
+        const drop = userMeResponse.steamSkinDrop;
+        const steamSkinDrop =
+          cleanHomepage && drop && steamSkinDropDueThisLaunch(drop.notice)
+            ? await steamSkinDropFor(drop, fetchCosmetics, (cosmetics) =>
+                resolveCosmetics(cosmetics, userMeResponse, null),
+              )
+            : null;
         await runBootInterrupt(
           nextBootInterrupt({
             cleanHomepage,
@@ -975,15 +994,15 @@ class Client {
               publicId,
             ),
             reportThanksStringsReady: reportThanksStringsReady(translateText),
-            steamSkinDropDue: false,
-            steamSkinDropStringsReady: false,
+            steamSkinDropDue: steamSkinDrop !== null,
+            steamSkinDropStringsReady: steamSkinDropStringsReady(translateText),
           }),
           {
             claimStore,
             grantStore: grantStoreAfterDispatch,
             publicId,
             steamNotice,
-            steamSkinDrop: null,
+            steamSkinDrop,
           },
           {
             translate: translateText,
@@ -1030,8 +1049,19 @@ class Client {
               ),
             markNoticeSeen: (notice) => void markNoticeSeen(notice),
             markMessageSeen: (kind) => void markMessageSeen(kind),
-            openSteamSkinDrop: async () => "dismiss",
-            equipCosmetic: () => {},
+            openSteamSkinDrop: (resolved) =>
+              showSteamSkinDrop(
+                resolved,
+                () => loadModal("steam-skin-drop-modal"),
+                () =>
+                  document.querySelector<SteamSkinDropModal>(
+                    "steam-skin-drop-modal",
+                  ),
+              ),
+            equipCosmetic: (resolved) =>
+              this.userSettings.setSelectedPatternName(
+                selectedPatternNameFor(resolved),
+              ),
             now: () => Date.now(),
           },
         );

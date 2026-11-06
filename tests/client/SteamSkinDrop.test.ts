@@ -1,9 +1,12 @@
 import { UserMeResponseSchema } from "@openfront/shared/ApiSchemas";
-import { beforeEach, describe, expect, it } from "vitest";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 import {
   findSteamSkinDrop,
   resetSteamSkinDropForTest,
+  showSteamSkinDrop,
+  steamSkinDropFor,
   steamSkinDropDueThisLaunch,
   steamSkinDropShown,
   steamSkinDropStringsReady,
@@ -120,5 +123,105 @@ describe("steamSkinDropStringsReady", () => {
         key === STEAM_SKIN_DROP_KEYS.claim ? key : "x",
       ),
     ).toBe(false);
+  });
+});
+
+describe("steamSkinDropFor", () => {
+  const drop = {
+    type: "skin" as const,
+    name: "mountain",
+    colorPalette: null,
+    notice: "steam_skin:mountain",
+  };
+  const catalogJson = {} as Cosmetics;
+
+  it("does not touch the catalog when the API names no drop", async () => {
+    const fetchCatalog = vi.fn(async () => catalogJson);
+    expect(
+      await steamSkinDropFor(null, fetchCatalog, () => catalog),
+    ).toBeNull();
+    expect(
+      await steamSkinDropFor(undefined, fetchCatalog, () => catalog),
+    ).toBeNull();
+    expect(fetchCatalog).not.toHaveBeenCalled();
+  });
+
+  it("pairs the notice with the catalog entry", async () => {
+    expect(
+      await steamSkinDropFor(
+        drop,
+        async () => catalogJson,
+        () => catalog,
+      ),
+    ).toEqual({ notice: "steam_skin:mountain", resolved: catalog[1] });
+  });
+
+  it("is null when the catalog failed to load", async () => {
+    expect(
+      await steamSkinDropFor(
+        drop,
+        async () => null,
+        // resolveCosmetics answers an empty list for a missing catalog.
+        (cosmetics) => (cosmetics ? catalog : []),
+      ),
+    ).toBeNull();
+  });
+
+  it("is null when the catalog lacks the item", async () => {
+    expect(
+      await steamSkinDropFor(
+        drop,
+        async () => catalogJson,
+        () => [catalog[0]],
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("showSteamSkinDrop", () => {
+  const item = resolved("skin:mountain");
+
+  it("loads the modal, then shows the item and returns the answer", async () => {
+    const order: string[] = [];
+    const answer = await showSteamSkinDrop(
+      item,
+      async () => {
+        order.push("load");
+      },
+      () => ({
+        show: async (r) => {
+          order.push(r === item ? "show" : "wrong item");
+          return "equip";
+        },
+      }),
+    );
+    expect(answer).toBe("equip");
+    expect(order).toEqual(["load", "show"]);
+  });
+
+  it("is abandoned when the chunk fails to load", async () => {
+    const find = vi.fn();
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(
+      await showSteamSkinDrop(
+        item,
+        async () => {
+          throw new Error("chunk");
+        },
+        find,
+      ),
+    ).toBe("abandoned");
+    expect(find).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  it("is abandoned when the element is missing", async () => {
+    expect(
+      await showSteamSkinDrop(
+        item,
+        async () => {},
+        () => null,
+      ),
+    ).toBe("abandoned");
   });
 });
