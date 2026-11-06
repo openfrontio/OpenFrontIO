@@ -3764,7 +3764,13 @@ describe("GhostStructure Hotkeys tapping/Scrolling", () => {
     window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
     expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
 
+    mockGameView.updatesSinceLastTick = () => null;
+    mockGameView.isCatchingUp = () => false;
     mockGameView.isPaused = () => false;
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+
+    mockGameView.updatesSinceLastTick = () => ({}) as any;
     mockGameView.isCatchingUp = () => true;
     window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
     expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);

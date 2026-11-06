@@ -1638,7 +1638,9 @@ export class InputHandler {
     ) {
       if (
         source === "hotkey" &&
-        (this.gameView.isCatchingUp?.() || this.gameView.isPaused?.())
+        (this.gameView.updatesSinceLastTick?.() === null ||
+          this.gameView.isCatchingUp?.() ||
+          this.gameView.isPaused?.())
       ) {
         return;
       }
