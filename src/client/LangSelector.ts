@@ -246,6 +246,7 @@ export class LangSelector extends LitElement {
 
   private applyTranslation() {
     const components = [
+      "banned-modal",
       "single-player-modal",
       "host-lobby-modal",
       "map-picker",

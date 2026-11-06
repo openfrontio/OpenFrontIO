@@ -7,14 +7,14 @@ exports[`trade ship scenarios > a thousand ports each, giant map 1`] = `
     "goldPerMinute": 61250000,
     "shipsArrived": 1393,
     "shipsSent": 1448,
-    "tradeGold": 612467086n,
+    "tradeGold": 612457386n,
   },
   "b": {
     "arrivalsPerMinute": 136,
     "goldPerMinute": 61250000,
     "shipsArrived": 1360,
-    "shipsSent": 1469,
-    "tradeGold": 612467086n,
+    "shipsSent": 1468,
+    "tradeGold": 612457386n,
   },
   "goldPerTrade": 222500,
 }

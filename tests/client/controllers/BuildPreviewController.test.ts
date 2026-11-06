@@ -85,6 +85,69 @@ describe("samThreatensNukePreview (nuke trajectory threat set, #4226)", () => {
   });
 });
 
+describe("BuildPreviewController nuke range warning", () => {
+  // Each ally owns a structure inside the blast, so the strike breaks every
+  // alliance; the warning level depends on whether that marks us a traitor.
+  function checkRangeWarning(
+    allies: { isTraitor: boolean; isDisconnected: boolean }[],
+  ) {
+    const allyPlayers = allies.map((ally, i) => ({
+      smallID: () => i + 2,
+      isPlayer: () => true,
+      isTraitor: () => ally.isTraitor,
+      isDisconnected: () => ally.isDisconnected,
+    }));
+    const game = {
+      myPlayer: () => ({ smallID: () => 1, allies: () => allyPlayers }),
+      config: () => ({
+        nukeMagnitudes: () => ({ inner: 1, outer: 2 }),
+        nukeAllianceBreakThreshold: () => 0,
+      }),
+      anyUnitNearby: (
+        _tile: number,
+        _radius: number,
+        _types: unknown,
+        predicate: (unit: unknown) => boolean,
+      ) => allyPlayers.some((owner) => predicate({ owner: () => owner })),
+      circleSearch: () => {},
+    };
+    const controller = new BuildPreviewController(
+      game as any,
+      new EventBus(),
+      { ghostStructure: UnitType.AtomBomb } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    ) as any;
+    controller.ghostUnit = { buildableUnit: { type: UnitType.AtomBomb } };
+    return controller.checkRangeWarning(0);
+  }
+
+  const loyal = { isTraitor: false, isDisconnected: false };
+  const traitor = { isTraitor: true, isDisconnected: false };
+  const disconnected = { isTraitor: false, isDisconnected: true };
+
+  test("no warning when no ally is hit", () => {
+    expect(checkRangeWarning([])).toBe("none");
+  });
+
+  test("betraying a connected, non-traitor ally marks us a traitor", () => {
+    expect(checkRangeWarning([loyal])).toBe("traitor");
+  });
+
+  test("hitting a traitor ally only breaks the alliance", () => {
+    expect(checkRangeWarning([traitor])).toBe("breaksAlliance");
+  });
+
+  test("hitting a disconnected ally only breaks the alliance", () => {
+    expect(checkRangeWarning([disconnected])).toBe("breaksAlliance");
+  });
+
+  test("the traitor mark wins when both kinds of ally are hit", () => {
+    expect(checkRangeWarning([traitor, loyal])).toBe("traitor");
+  });
+});
+
 describe("BuildPreviewController confirm with the pointer off the map", () => {
   function makeController(worldX: number, worldY: number, snap = false) {
     const width = 10;
@@ -142,7 +205,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       const { controller } = makeController(3, 4, true);
       const buildable = (controller as any).ghostUnit.buildableUnit;
       Object.assign(buildable, { type, canBuild: 0, cost: 1n });
-      const data = (controller as any).buildGhostPreviewData(43, false);
+      const data = (controller as any).buildGhostPreviewData(43, "none");
       const position = type === UnitType.Warship ? [3, 4] : [0, 0];
       expect([data.tileX, data.tileY]).toEqual(position);
       expect([data.radiusTileX, data.radiusTileY]).toEqual(position);
@@ -154,7 +217,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     const { controller } = makeController(3, 4);
     const buildable = (controller as any).ghostUnit.buildableUnit;
     Object.assign(buildable, { type: UnitType.City, canBuild: 0, cost: 1n });
-    const data = (controller as any).buildGhostPreviewData(43, false);
+    const data = (controller as any).buildGhostPreviewData(43, "none");
     expect([data.tileX, data.tileY]).toEqual([3, 4]);
     expect([data.radiusTileX, data.radiusTileY]).toEqual([3, 4]);
     expect(data.snapToPlacement).toBe(false);
@@ -175,7 +238,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
         canUpgrade: 7,
         cost: 1n,
       });
-      const preview = c.buildGhostPreviewData(43, false);
+      const preview = c.buildGhostPreviewData(43, "none");
       expect(preview.ghostRailPaths).toEqual(held ? rails.ghostRailPaths : []);
       expect(preview.overlappingRailroads).toEqual(
         held ? rails.overlappingRailroads : [],
@@ -226,7 +289,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       cost: 2n,
       upgradeCosts: [20n],
     });
-    const preview = c.buildGhostPreviewData(43, false);
+    const preview = c.buildGhostPreviewData(43, "none");
     expect(preview.cost).toBe(2);
     expect(preview.multiplier).toBe(1);
   });
@@ -570,16 +633,16 @@ describe("BuildPreviewController idle diffing optimization", () => {
   test("buildGhostPreviewData preserves object reference when underlying data matches", () => {
     const { controller, setPlayerGold } = createTestFixture();
 
-    const data1 = (controller as any).buildGhostPreviewData(100, false);
+    const data1 = (controller as any).buildGhostPreviewData(100, "none");
     (controller as any).lastGhostData = data1;
 
     // Second call with identical data should return exact same object reference
-    const data2 = (controller as any).buildGhostPreviewData(100, false);
+    const data2 = (controller as any).buildGhostPreviewData(100, "none");
     expect(data2).toBe(data1);
 
     // Call after state change (gold dropped below cost) should return new object reference
     setPlayerGold(5n);
-    const data3 = (controller as any).buildGhostPreviewData(100, false);
+    const data3 = (controller as any).buildGhostPreviewData(100, "none");
     expect(data3).not.toBe(data1);
     expect(data3.canAfford).toBe(false);
   });
@@ -588,7 +651,7 @@ describe("BuildPreviewController idle diffing optimization", () => {
     const { controller } = createTestFixture();
     // In OpenFront, water is a valid tile where isImpassable is false
     const waterTile = 100;
-    const data = (controller as any).buildGhostPreviewData(waterTile, false);
+    const data = (controller as any).buildGhostPreviewData(waterTile, "none");
     expect(data).not.toBeNull();
     expect(data.tileX).toBe(0);
     expect(data.tileY).toBe(5);
@@ -663,6 +726,27 @@ describe("BuildPreviewController idle diffing optimization", () => {
     expect(traj5).toBe(traj4);
   });
 
+  test.each([UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRV])(
+    "%s ghost clears when the last missile silo is lost",
+    (type) => {
+      const f = createTestFixture();
+      const c = f.controller as any;
+      c.uiState.ghostStructure = type;
+      c.ghostUnit.buildableUnit.type = type;
+      f.mockSilos.push({});
+      c.syncGhostState();
+      expect(c.ghostUnit).not.toBeNull();
+      f.mockSilos.length = 0;
+      c.isQueryInFlight = true;
+      f.controller.tick();
+
+      expect(c.ghostUnit).toBeNull();
+      expect(c.uiState.ghostStructure).toBeNull();
+      expect(f.updateGhostPreview).toHaveBeenLastCalledWith(null);
+      expect(f.updateNukeTrajectory).toHaveBeenLastCalledWith(null);
+    },
+  );
+
   test("cursorLoop skips calculations and WebGL updates while cursor is idle", () => {
     const {
       controller,
@@ -681,7 +765,7 @@ describe("BuildPreviewController idle diffing optimization", () => {
     });
 
     // Populate initial ghost data and trajectory
-    const ghostData = (controller as any).buildGhostPreviewData(100, false);
+    const ghostData = (controller as any).buildGhostPreviewData(100, "none");
     (controller as any).lastGhostData = ghostData;
     (controller as any).updateNukeTrajectoryPreview(100);
 
@@ -730,7 +814,7 @@ describe("BuildPreviewController idle diffing optimization", () => {
 
     (controller as any).lastGhostData = (
       controller as any
-    ).buildGhostPreviewData(100, false);
+    ).buildGhostPreviewData(100, "none");
     (controller as any).updateNukeTrajectoryPreview(100);
 
     stepFrame();
@@ -768,7 +852,7 @@ describe("BuildPreviewController idle diffing optimization", () => {
 
     (controller as any).lastGhostData = (
       controller as any
-    ).buildGhostPreviewData(100, false);
+    ).buildGhostPreviewData(100, "none");
     (controller as any).updateNukeTrajectoryPreview(100);
 
     stepFrame();
@@ -801,7 +885,7 @@ describe("BuildPreviewController idle diffing optimization", () => {
 
     (controller as any).lastGhostData = (
       controller as any
-    ).buildGhostPreviewData(100, false);
+    ).buildGhostPreviewData(100, "none");
     (controller as any).updateNukeTrajectoryPreview(100);
     (controller as any).cursorLoop();
 
@@ -823,18 +907,18 @@ describe("BuildPreviewController idle diffing optimization", () => {
 
   test("buildGhostPreviewData invalidates cache when railroad properties change", () => {
     const { controller } = createTestFixture();
-    const data1 = (controller as any).buildGhostPreviewData(100, false);
+    const data1 = (controller as any).buildGhostPreviewData(100, "none");
     (controller as any).lastGhostData = data1;
 
     // Mutate overlapping railroads
     (controller as any).ghostUnit.buildableUnit.overlappingRailroads = [10, 11];
-    const data2 = (controller as any).buildGhostPreviewData(100, false);
+    const data2 = (controller as any).buildGhostPreviewData(100, "none");
     expect(data2).not.toBe(data1);
 
     (controller as any).lastGhostData = data2;
     // Mutate ghost rail paths
     (controller as any).ghostUnit.buildableUnit.ghostRailPaths = [[10, 11, 12]];
-    const data3 = (controller as any).buildGhostPreviewData(100, false);
+    const data3 = (controller as any).buildGhostPreviewData(100, "none");
     expect(data3).not.toBe(data2);
   });
 
@@ -914,7 +998,7 @@ describe("BuildPreviewController idle diffing optimization", () => {
 
     (controller as any).lastGhostData = (
       controller as any
-    ).buildGhostPreviewData(100, false);
+    ).buildGhostPreviewData(100, "none");
     (controller as any).updateNukeTrajectoryPreview(100);
     (controller as any).cursorLoop();
 
@@ -1031,7 +1115,7 @@ describe("BuildPreviewController 0-allocation mutable render buffer", () => {
     const { controller, updateGhostPreview, setCoords, stepFrame } =
       createFixture(5.0, 5.0);
 
-    const ghostData = (controller as any).buildGhostPreviewData(100, false);
+    const ghostData = (controller as any).buildGhostPreviewData(100, "none");
     (controller as any).lastGhostData = ghostData;
 
     // Frame 1
@@ -1061,7 +1145,7 @@ describe("BuildPreviewController 0-allocation mutable render buffer", () => {
   test("lastGhostData remains strictly immutable with canonical integer coordinates", () => {
     const { controller, setCoords, stepFrame } = createFixture(5.2, 5.8);
 
-    const ghostData = (controller as any).buildGhostPreviewData(100, false);
+    const ghostData = (controller as any).buildGhostPreviewData(100, "none");
     (controller as any).lastGhostData = ghostData;
 
     expect(ghostData.tileX).toBe(0);
@@ -1084,7 +1168,7 @@ describe("BuildPreviewController 0-allocation mutable render buffer", () => {
   test("snapping rules preserve canonical tileX and tileY on renderedGhostBuffer when snapToPlacement is true", () => {
     const { controller, setCoords, stepFrame } = createFixture(5.2, 5.8);
 
-    const ghostData = (controller as any).buildGhostPreviewData(100, false);
+    const ghostData = (controller as any).buildGhostPreviewData(100, "none");
     // Force snapToPlacement to true (like city or defense post placement)
     const snappedGhost = {
       ...ghostData,
@@ -1117,7 +1201,7 @@ describe("BuildPreviewController 0-allocation mutable render buffer", () => {
 
     (controller as any).lastGhostData = (
       controller as any
-    ).buildGhostPreviewData(100, false);
+    ).buildGhostPreviewData(100, "none");
     stepFrame();
     expect((controller as any).renderedGhostBuffer).not.toBeNull();
 
@@ -1130,7 +1214,7 @@ describe("BuildPreviewController 0-allocation mutable render buffer", () => {
   test("renderedGhostBuffer synchronizes with new ghost reference", () => {
     const { controller, stepFrame } = createFixture(5.0, 5.0);
 
-    const ghost1 = (controller as any).buildGhostPreviewData(100, false);
+    const ghost1 = (controller as any).buildGhostPreviewData(100, "none");
     (controller as any).lastGhostData = ghost1;
     stepFrame();
     const buf1 = (controller as any).renderedGhostBuffer;
@@ -1148,7 +1232,7 @@ describe("BuildPreviewController 0-allocation mutable render buffer", () => {
     const { controller, setCoords, stepFrame, updateGhostPreview } =
       createFixture(5.0, 5.0);
 
-    const ghostData = (controller as any).buildGhostPreviewData(100, false);
+    const ghostData = (controller as any).buildGhostPreviewData(100, "none");
     // Simulate an upgrade ghost targeting tile 42 (x=2, y=2 in 20-wide grid)
     const upgradeGhost = {
       ...ghostData,
@@ -1657,7 +1741,14 @@ describe("BuildPreviewController touch preview", () => {
       isAlive: () => true,
       readyMissileCount: () => 10,
       allies: () => [],
-      units: () => [],
+      units: () => [
+        {
+          isActive: () => true,
+          isInCooldown: () => false,
+          isUnderConstruction: () => false,
+          tile: () => 101,
+        },
+      ],
       isOnSameTeam: () => false,
       buildables: vi.fn(
         (
@@ -1752,6 +1843,45 @@ describe("BuildPreviewController touch preview", () => {
     } finally {
       requestAnimationFrame.mockRestore();
     }
+  });
+
+  test("touch handlers stop when silo loss clears the nuke ghost", () => {
+    const handlers = [
+      (controller: any) =>
+        controller.handleTouchPlacement(new TouchGhostPlacementEvent(200, 200)),
+      (controller: any) => controller.moveTouchPreview(200, 200),
+    ];
+
+    for (const handleTouch of handlers) {
+      const { controller, player } = makeController(UnitType.AtomBomb);
+      (player as any).units = () => [];
+
+      handleTouch(controller as any);
+
+      expect((controller as any).touchPreviewTile).toBeNull();
+      expect((controller as any).touchPlacementMode).toBe(false);
+      expect(player.buildables).not.toHaveBeenCalled();
+    }
+  });
+
+  test("touch movement without a ghost restores placement for later selections", async () => {
+    const { controller, player } = makeController(UnitType.City);
+    const c = controller as any;
+    c.removeGhostStructure();
+    const convert = vi.spyOn(c.transformHandler, "screenToWorldCoordinates");
+
+    c.moveTouchPreview(200, 200);
+
+    expect(convert).not.toHaveBeenCalled();
+    expect(c.touchPreviewTile).toBeNull();
+    expect(c.touchPlacementMode).toBe(false);
+    expect(player.buildables).not.toHaveBeenCalled();
+
+    c.uiState.ghostStructure = UnitType.City;
+    controller.tick();
+    await flushBuildables();
+
+    expect(c.lastGhostData).not.toBeNull();
   });
 
   test("removing an existing ghost clears its highlight", () => {
@@ -2204,7 +2334,7 @@ describe("BuildPreviewController touch preview", () => {
       overlappingRailroads: [],
       ghostRailPaths: [],
     });
-    c.lastGhostData = c.buildGhostPreviewData(101, false);
+    c.lastGhostData = c.buildGhostPreviewData(101, "none");
     c.prevGhostDataRef = c.lastGhostData;
     c.renderedGhostBuffer = { ...c.lastGhostData };
 

@@ -1,5 +1,6 @@
 import { Howler } from "howler";
-import type { PortalUser } from "./GamePortal";
+import type { PortalUser } from "../GamePortal";
+import { connectPokiBridge, isPokiBridged } from "./PokiBridge";
 
 const POKI_SDK_URL = "https://game-cdn.poki.com/scripts/v2/poki-sdk.js";
 
@@ -28,6 +29,8 @@ declare global {
     };
   }
 }
+
+type PokiApi = NonNullable<Window["PokiSDK"]>;
 
 function isPokiHost(url: string): boolean {
   try {
@@ -84,11 +87,24 @@ function keepPokiParams(): void {
   history.replaceState(history.state, "", `${pathname}?${params}${hash}`);
 }
 
+function loadSdkScript(): Promise<PokiApi | null> {
+  return new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = POKI_SDK_URL;
+    script.onload = () => resolve(window.PokiSDK ?? null);
+    script.onerror = () => resolve(null);
+    document.head.appendChild(script);
+  });
+}
+
 // Mirrors CrazyGamesSDK's surface so GamePortal can route to either. Poki has
 // no loading events per join, no invite button and no happytime, so those are
 // no-ops here.
 export class PokiSDK {
   private initialized = false;
+  // Poki's SDK: loaded into our frame, or the one in our Poki wrapper page
+  // (PokiBridge.ts).
+  private sdk: PokiApi | null = null;
   private isGameplayActive = false;
   private authListeners: ((user: PortalUser | null) => void)[] = [];
   private readyPromise: Promise<boolean>;
@@ -141,23 +157,22 @@ export class PokiSDK {
     }
 
     keepPokiParams();
-    const loaded = await new Promise<boolean>((resolve) => {
-      const script = document.createElement("script");
-      script.src = POKI_SDK_URL;
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      setTimeout(() => resolve(false), SDK_DEADLINE_MS);
-      document.head.appendChild(script);
-    });
-    if (!loaded || window.PokiSDK === undefined) {
+    const sdk = await Promise.race([
+      isPokiBridged() ? connectPokiBridge() : loadSdkScript(),
+      new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), SDK_DEADLINE_MS),
+      ),
+    ]);
+    if (sdk === null) {
       console.warn("Poki SDK not available");
       this.resolveReady(false);
       return;
     }
+    this.sdk = sdk;
 
     try {
       await Promise.race([
-        window.PokiSDK.init(),
+        sdk.init(),
         new Promise((_, reject) =>
           setTimeout(
             () => reject(new Error("init timed out")),
@@ -175,7 +190,7 @@ export class PokiSDK {
     this.initialized = true;
     this.resolveReady(true);
     // Main has already rendered the homepage by the time the SDK is up.
-    window.PokiSDK.gameLoadingFinished();
+    sdk.gameLoadingFinished();
     this.routeExternalLinks();
   }
 
@@ -194,7 +209,7 @@ export class PokiSDK {
           );
         if (anchor === undefined || anchor.href === "") return;
         event.preventDefault();
-        window.PokiSDK!.openExternalLink(anchor.href);
+        this.sdk!.openExternalLink(anchor.href);
       },
       true,
     );
@@ -211,7 +226,7 @@ export class PokiSDK {
       return null;
     }
     try {
-      return await window.PokiSDK!.getToken();
+      return await this.sdk!.getToken();
     } catch (e) {
       // Thrown when accounts aren't available or the player opted out.
       console.log("error getting Poki user token: ", e);
@@ -224,7 +239,7 @@ export class PokiSDK {
       return null;
     }
     try {
-      const user = await window.PokiSDK!.getUser();
+      const user = await this.sdk!.getUser();
       if (user === null) return null;
       return { username: user.username, profilePictureUrl: user.avatarUrl };
     } catch (e) {
@@ -240,7 +255,7 @@ export class PokiSDK {
       return;
     }
     try {
-      await window.PokiSDK!.login();
+      await this.sdk!.login();
     } catch (e) {
       console.log("Poki login dismissed: ", e);
       return;
@@ -262,17 +277,17 @@ export class PokiSDK {
     if (!(await this.whenReady())) {
       return false;
     }
-    if (window.PokiSDK!.getURLParam("gameId")) {
+    if (this.sdk!.getURLParam("gameId")) {
       return false;
     }
-    return Boolean(window.PokiSDK!.getURLParam("host"));
+    return Boolean(this.sdk!.getURLParam("host"));
   }
 
   async gameplayStart(): Promise<void> {
     if (!this.isReady() || this.isGameplayActive) {
       return;
     }
-    window.PokiSDK!.gameplayStart();
+    this.sdk!.gameplayStart();
     this.isGameplayActive = true;
   }
 
@@ -280,7 +295,7 @@ export class PokiSDK {
     if (!this.isReady() || !this.isGameplayActive) {
       return;
     }
-    window.PokiSDK!.gameplayStop();
+    this.sdk!.gameplayStop();
     this.isGameplayActive = false;
   }
 
@@ -304,7 +319,7 @@ export class PokiSDK {
     }
     keepPokiParams();
     try {
-      return await window.PokiSDK!.shareableURL({ gameId });
+      return await this.sdk!.shareableURL({ gameId });
     } catch (error) {
       console.error("Failed to create Poki invite link:", error);
       return null;
@@ -315,7 +330,7 @@ export class PokiSDK {
     if (!(await this.whenReady())) {
       return null;
     }
-    return window.PokiSDK!.getURLParam("gameId") || null;
+    return this.sdk!.getURLParam("gameId") || null;
   }
 
   // Poki decides whether an ad actually plays, and requires gameplay stopped
@@ -326,7 +341,7 @@ export class PokiSDK {
     }
     await this.gameplayStop();
     try {
-      await window.PokiSDK!.commercialBreak(() => Howler.mute(true));
+      await this.sdk!.commercialBreak(() => Howler.mute(true));
     } catch (error) {
       console.warn("Poki commercial break failed:", error);
     } finally {

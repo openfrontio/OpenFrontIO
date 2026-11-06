@@ -158,22 +158,34 @@ describe("Platform", () => {
   it("detects keyboard from keydown outside text inputs on touch devices", async () => {
     vi.stubGlobal("matchMedia", () => ({ matches: false }));
     const p = await loadPlatform({ userAgent: "Mozilla/5.0" });
+    const { KEYBOARD_DETECTED_EVENT } =
+      await import("../../src/client/Platform");
     vi.spyOn(p, "isTouch", "get").mockReturnValue(true);
+    const keyboardDetected = vi.fn();
+    window.addEventListener(KEYBOARD_DETECTED_EVENT, keyboardDetected);
 
     const input = document.createElement("input");
     input.type = "text";
     document.body.appendChild(input);
-    input.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
-    expect(p.hasKeyboard).toBe(false);
-
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     document.body.appendChild(checkbox);
-    checkbox.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
-    expect(p.hasKeyboard).toBe(true);
+    try {
+      input.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
+      expect(p.hasKeyboard).toBe(false);
+      expect(keyboardDetected).not.toHaveBeenCalled();
 
-    input.remove();
-    checkbox.remove();
+      checkbox.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
+      expect(p.hasKeyboard).toBe(true);
+      expect(keyboardDetected).toHaveBeenCalledOnce();
+
+      checkbox.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
+      expect(keyboardDetected).toHaveBeenCalledOnce();
+    } finally {
+      window.removeEventListener(KEYBOARD_DETECTED_EVENT, keyboardDetected);
+      input.remove();
+      checkbox.remove();
+    }
   });
 
   it("recognizes inputs inside shadow root using composedPath", async () => {
