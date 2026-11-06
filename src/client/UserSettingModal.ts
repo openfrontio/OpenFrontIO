@@ -1361,7 +1361,7 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="buildCity"
         label=${translateText("user_setting.build_city")}
-        description=${translateText("user_setting.build_city_desc")}
+        description=${translateText("user_setting.build_hotkey_desc")}
         defaultKey=${this.defaultKeybinds.buildCity}
         .value=${this.getKeyValue("buildCity")}
         .display=${this.getKeyChar("buildCity")}
@@ -1371,7 +1371,7 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="buildFactory"
         label=${translateText("user_setting.build_factory")}
-        description=${translateText("user_setting.build_factory_desc")}
+        description=${translateText("user_setting.build_hotkey_desc")}
         defaultKey=${this.defaultKeybinds.buildFactory}
         .value=${this.getKeyValue("buildFactory")}
         .display=${this.getKeyChar("buildFactory")}
@@ -1381,7 +1381,7 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="buildPort"
         label=${translateText("user_setting.build_port")}
-        description=${translateText("user_setting.build_port_desc")}
+        description=${translateText("user_setting.build_hotkey_desc")}
         defaultKey=${this.defaultKeybinds.buildPort}
         .value=${this.getKeyValue("buildPort")}
         .display=${this.getKeyChar("buildPort")}
@@ -1391,7 +1391,7 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="buildDefensePost"
         label=${translateText("user_setting.build_defense_post")}
-        description=${translateText("user_setting.build_defense_post_desc")}
+        description=${translateText("user_setting.build_hotkey_desc")}
         defaultKey=${this.defaultKeybinds.buildDefensePost}
         .value=${this.getKeyValue("buildDefensePost")}
         .display=${this.getKeyChar("buildDefensePost")}
@@ -1401,7 +1401,7 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="buildMissileSilo"
         label=${translateText("user_setting.build_missile_silo")}
-        description=${translateText("user_setting.build_missile_silo_desc")}
+        description=${translateText("user_setting.build_hotkey_desc")}
         defaultKey=${this.defaultKeybinds.buildMissileSilo}
         .value=${this.getKeyValue("buildMissileSilo")}
         .display=${this.getKeyChar("buildMissileSilo")}
@@ -1411,7 +1411,7 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="buildSamLauncher"
         label=${translateText("user_setting.build_sam_launcher")}
-        description=${translateText("user_setting.build_sam_launcher_desc")}
+        description=${translateText("user_setting.build_hotkey_desc")}
         defaultKey=${this.defaultKeybinds.buildSamLauncher}
         .value=${this.getKeyValue("buildSamLauncher")}
         .display=${this.getKeyChar("buildSamLauncher")}
@@ -1421,7 +1421,7 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="buildWarship"
         label=${translateText("user_setting.build_warship")}
-        description=${translateText("user_setting.build_warship_desc")}
+        description=${translateText("user_setting.build_hotkey_desc")}
         defaultKey=${this.defaultKeybinds.buildWarship}
         .value=${this.getKeyValue("buildWarship")}
         .display=${this.getKeyChar("buildWarship")}
@@ -1431,7 +1431,7 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="buildAtomBomb"
         label=${translateText("user_setting.build_atom_bomb")}
-        description=${translateText("user_setting.build_atom_bomb_desc")}
+        description=${translateText("user_setting.build_hotkey_desc")}
         defaultKey=${this.defaultKeybinds.buildAtomBomb}
         .value=${this.getKeyValue("buildAtomBomb")}
         .display=${this.getKeyChar("buildAtomBomb")}
@@ -1441,7 +1441,7 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="buildHydrogenBomb"
         label=${translateText("user_setting.build_hydrogen_bomb")}
-        description=${translateText("user_setting.build_hydrogen_bomb_desc")}
+        description=${translateText("user_setting.build_hotkey_desc")}
         defaultKey=${this.defaultKeybinds.buildHydrogenBomb}
         .value=${this.getKeyValue("buildHydrogenBomb")}
         .display=${this.getKeyChar("buildHydrogenBomb")}
@@ -1451,10 +1451,21 @@ export class UserSettingModal extends BaseModal {
       <setting-keybind
         action="buildMIRV"
         label=${translateText("user_setting.build_mirv")}
-        description=${translateText("user_setting.build_mirv_desc")}
+        description=${translateText("user_setting.build_hotkey_desc")}
         defaultKey=${this.defaultKeybinds.buildMIRV}
         .value=${this.getKeyValue("buildMIRV")}
         .display=${this.getKeyChar("buildMIRV")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildScrollModifier"
+        .allowModifiers=${true}
+        label=${translateText("user_setting.build_scroll_modifier")}
+        description=${translateText("user_setting.build_scroll_modifier_desc")}
+        .defaultKey=${this.defaultKeybinds.buildScrollModifier}
+        .value=${this.getKeyValue("buildScrollModifier")}
+        .display=${this.getKeyChar("buildScrollModifier")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -1472,17 +1483,6 @@ export class UserSettingModal extends BaseModal {
         .defaultKey=${this.defaultKeybinds.buildMenuModifier}
         .value=${this.getKeyValue("buildMenuModifier")}
         .display=${this.getKeyChar("buildMenuModifier")}
-        @change=${this.handleKeybindChange}
-      ></setting-keybind>
-
-      <setting-keybind
-        action="buildScrollModifier"
-        .allowModifiers=${true}
-        label=${translateText("user_setting.build_scroll_modifier")}
-        description=${translateText("user_setting.build_scroll_modifier_desc")}
-        .defaultKey=${this.defaultKeybinds.buildScrollModifier}
-        .value=${this.getKeyValue("buildScrollModifier")}
-        .display=${this.getKeyChar("buildScrollModifier")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
