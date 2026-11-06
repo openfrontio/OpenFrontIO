@@ -1845,6 +1845,25 @@ describe("BuildPreviewController touch preview", () => {
     }
   });
 
+  test("touch handlers stop when silo loss clears the nuke ghost", () => {
+    const handlers = [
+      (controller: any) =>
+        controller.handleTouchPlacement(new TouchGhostPlacementEvent(200, 200)),
+      (controller: any) => controller.moveTouchPreview(200, 200),
+    ];
+
+    for (const handleTouch of handlers) {
+      const { controller, player } = makeController(UnitType.AtomBomb);
+      (player as any).units = () => [];
+
+      handleTouch(controller as any);
+
+      expect((controller as any).touchPreviewTile).toBeNull();
+      expect((controller as any).touchPlacementMode).toBe(false);
+      expect(player.buildables).not.toHaveBeenCalled();
+    }
+  });
+
   test("removing an existing ghost clears its highlight", () => {
     const { controller, eventBus } = makeController(UnitType.City);
     const highlights: ToggleStructureEvent[] = [];

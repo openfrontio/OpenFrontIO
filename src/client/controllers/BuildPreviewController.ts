@@ -474,15 +474,16 @@ export class BuildPreviewController implements Controller {
   /**
    * Reconcile our internal ghost state with uiState.ghostStructure. Other
    * UI bits (build menu, key bindings) toggle uiState; we mirror it here.
+   * @returns true when synchronization clears a ghost selection.
    */
-  private syncGhostState(): void {
+  private syncGhostState(): boolean {
     // A dead player keeps a ghost forever otherwise: on touch every map tap
     // is routed to it, the build bar is gone, and a nuke never cancels on an
     // invalid tap, so the radial menu is unreachable for the rest of the game.
     const myPlayer = this.game.myPlayer();
     if (myPlayer?.isAlive() === false) {
       this.removeGhostStructure();
-      return;
+      return true;
     }
     const target = this.uiState.ghostStructure;
     const ghostType = target ?? this.ghostUnit?.buildableUnit.type;
@@ -492,11 +493,12 @@ export class BuildPreviewController implements Controller {
       myPlayer.units(UnitType.MissileSilo).length === 0
     ) {
       this.removeGhostStructure();
-      return;
+      return true;
     }
     if (this.ghostUnit) {
       if (target === null) {
         this.removeGhostStructure();
+        return true;
       } else if (target !== this.ghostUnit.buildableUnit.type) {
         const touchPreviewTile = this.touchPlacementMode
           ? this.touchPreviewTile
@@ -511,6 +513,7 @@ export class BuildPreviewController implements Controller {
     } else if (target !== null) {
       this.createGhostStructure(target);
     }
+    return false;
   }
 
   private checkRangeWarning(tileRef: TileRef | undefined): RangeWarning {
@@ -1278,7 +1281,7 @@ export class BuildPreviewController implements Controller {
 
   private handleTouchPlacement(e: TouchGhostPlacementEvent): void {
     this.touchPlacementMode = true;
-    this.syncGhostState();
+    if (this.syncGhostState()) return;
     if (this.touchPreviewTile !== null && this.isNearTouchPreview(e.x, e.y)) {
       const preview = this.touchPreviewScreenPosition();
       if (preview !== null) {
@@ -1295,7 +1298,7 @@ export class BuildPreviewController implements Controller {
 
   private moveTouchPreview(x: number, y: number): void {
     this.touchPlacementMode = true;
-    this.syncGhostState();
+    if (this.syncGhostState()) return;
     const tile = this.transformHandler.screenToWorldCoordinates(x, y);
     if (!this.game.isValidCoord(tile.x, tile.y)) return;
     const next = this.game.ref(tile.x, tile.y);
