@@ -2761,7 +2761,7 @@
     "build_controls": "Build Controls",
     "build_defense_post": "Build Defense Post",
     "build_factory": "Build Factory",
-    "build_hotkey_desc": "Build under your cursor; repeat the hotkey on an upgradeable structure to add 5 levels at a time (up to 50).",
+    "build_hotkey_desc": "Build under your cursor. Repeat the key on an upgradeable structure to add 5 upgrades at a time (up to 50).",
     "build_hydrogen_bomb": "Build Hydrogen Bomb",
     "build_menu_modifier": "Build Menu Modifier",
     "build_menu_modifier_desc": "Hold this key while clicking to open the build menu.",
