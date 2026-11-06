@@ -20,6 +20,7 @@ import { renderNavVersion } from "src/client/GameVersion";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
+import { wasAdmitted } from "./AdmittedLobbies";
 import {
   getUserMe,
   invalidateUserMe,
@@ -2328,7 +2329,9 @@ class Client {
       // Single-player and replays: no server to verify a token against (and
       // on the CDN replay shells Turnstile cannot load at all). Shared with
       // the desktop gate so the exemption has one definition.
-      !joinIsGateable(lobby)
+      !joinIsGateable(lobby) ||
+      // Rejoining a game the server already let this tab into.
+      wasAdmitted(lobby.gameID)
     ) {
       return null;
     }

@@ -28,6 +28,7 @@ import {
 } from "@openfront/shared/WireSchemas";
 import { ClientEnv } from "../client/ClientEnv";
 import { reloadForUpdate, translateText } from "../client/Utils";
+import { rememberAdmitted } from "./AdmittedLobbies";
 import { MapLayerController } from "./controllers/MapLayerController";
 import { isDesktopShell } from "./DesktopShell";
 import { GameMetrics } from "./GameMetrics";
@@ -222,6 +223,7 @@ export function joinLobby(
     if (message.type === "lobby_info") {
       // Server tells us our assigned clientID
       clientID = message.myClientID;
+      rememberAdmitted(message.lobby.gameID);
       eventBus.emit(new LobbyInfoEvent(message.lobby, message.myClientID));
       // Kept past game start for the in-game level badges.
       rememberLobbyRoster(
@@ -279,6 +281,7 @@ export function joinLobby(
       );
       // Server tells us our assigned clientID (also sent on start for late joins)
       clientID = message.myClientID;
+      rememberAdmitted(lobbyConfig.gameID);
       resolveJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
