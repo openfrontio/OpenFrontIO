@@ -298,7 +298,7 @@
       },
       "warnings": {
         "mirv_ready": "[P1]がMIRVが打てるようになったぞ！",
-        "pirating": "[P1]はチートを使ってるぞ",
+        "pirating": "[P1]が貿易船を襲ってるぞ！",
         "saving_for_mirv": "[P1]はMIRVのために資金を貯めてる",
         "snowballing": "[P1]が急速に勢力を拡大している",
         "stalemate": "和平？膠着状態だ。",
@@ -310,7 +310,7 @@
     "warnings": {
       "betrayed": "[P1]は味方を裏切った！",
       "betrayed_me": "[P1]が私を裏切った！",
-      "pirating": "[P1]が貿易船を襲ってるぞ！",
+      "cheating": "[P1]はチートを使っている！",
       "danger_base": "[P1]は無防備だ！",
       "disconnected": "[P1]が寝たよ！",
       "getting_big": "[P1]の成長が速すぎる！",
