@@ -178,16 +178,16 @@
   "teamGameSpawnAreas": {
     "2": [
       {
-        "height": 1210,
-        "width": 1088,
+        "height": 1632,
+        "width": 1815,
         "x": 0,
         "y": 0
       },
       {
-        "height": 978,
-        "width": 1088,
+        "height": 1632,
+        "width": 1469,
         "x": 0,
-        "y": 1210
+        "y": 1815
       }
     ]
   },
