@@ -47,6 +47,16 @@ do something, don't, and tell the user.
 - Tell the user the `head_sha` the notes describe. If they merge something
   after, re-run the script: the new commits are `old_head..new_head`.
 
+## Output
+
+Put the notes themselves in one fenced `markdown` code block, whether a
+three-line patch section or a whole beta body. If the notes contain a
+backtick fence of their own, make the outer fence longer. The user copies it into
+GitHub's release form, and a chat UI that renders the raw markdown turns the
+headings and bold authors into styled text that can't be pasted. Commentary
+(skipped commits, head sha, judgement calls) goes outside the block as normal
+prose.
+
 ## 2. Patch block
 
 One section, pasted on top of the previous release's body (which `/release`
@@ -144,7 +154,7 @@ v36 took N people. Code, maps, perf, translations, the lot. Thank you:
   anything gated behind a prod flag, and the dropped list as in §2.
 
 Write a body this long to a scratch file (`/tmp/<tag>.md`) as well as showing
-it, so it can be pasted into the release form.
+it in the code block, and give the path.
 
 ## Author names
 
