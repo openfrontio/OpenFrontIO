@@ -161,14 +161,18 @@ export function initTelemetry(): Promise<Faro | null> {
 // event volume, none of it actionable since nothing is actually blocked.
 const DROPPED_EVENTS = new Set(["securitypolicyviolation"]);
 
-// Sent from every session, whatever its sampling: each one is looked up by
-// game ID from a player's report, and ad removals are reported to the ad
-// partner. Only for events rare enough not to move the per-session bill.
-const UNSAMPLED_EVENTS = new Set(["bottom_rail_in_game", "ad_frame_in_game"]);
-// Unsampled events skip isRepeated, so each gets a page-wide cap of its own
-// against an ad script stuck re-adding what we remove.
-const MAX_UNSAMPLED_EVENTS = 20;
-const unsampledSent = new Map<string, number>();
+// Sent from this fraction of prod sessions, whatever their sampling: a
+// bottom rail report is looked up by game ID from a player's report, and the
+// ad partner is sent our ad reports. Ad frames turn up in thousands of games
+// a day, so a tenth of sessions is enough to see each format's rate.
+const EVENT_RATES = new Map([
+  ["bottom_rail_in_game", 1],
+  ["ad_frame_in_game", 0.1],
+]);
+// These skip isRepeated, so each gets a page-wide cap of its own against an
+// ad script stuck re-adding what we remove.
+const MAX_EVENTS_PER_NAME = 20;
+const eventsSent = new Map<string, number>();
 
 /**
  * Forwards console[method] calls made from our bundle to Faro as log lines
@@ -219,10 +223,18 @@ function filterSignal(
     if (item.type === "event") {
       const name = (item.payload as { name?: unknown } | null)?.name;
       if (typeof name === "string" && DROPPED_EVENTS.has(name)) return null;
-      if (typeof name === "string" && UNSAMPLED_EVENTS.has(name)) {
-        const count = unsampledSent.get(name) ?? 0;
-        if (count >= MAX_UNSAMPLED_EVENTS) return null;
-        unsampledSent.set(name, count + 1);
+      const eventRate =
+        typeof name === "string" ? EVENT_RATES.get(name) : undefined;
+      if (typeof name === "string" && eventRate !== undefined) {
+        const rate = Math.max(eventRate, samplingRate);
+        const sessionId = item.meta.session?.id;
+        if (rate < 1) {
+          if (sessionId === undefined) return null;
+          if (!isSessionSampled(sessionId, rate)) return null;
+        }
+        const count = eventsSent.get(name) ?? 0;
+        if (count >= MAX_EVENTS_PER_NAME) return null;
+        eventsSent.set(name, count + 1);
         return slimBrowserMeta(scrubUrls(item));
       }
     }
@@ -335,7 +347,7 @@ export function resetTelemetry(): void {
   faroPromise = null;
   sent.clear();
   sentTotal = 0;
-  unsampledSent.clear();
+  eventsSent.clear();
 }
 
 /**
@@ -379,7 +391,7 @@ export function reportMeasurement(
   });
 }
 
-/** A named Faro event; see UNSAMPLED_EVENTS for the ones never sampled. */
+/** A named Faro event; see EVENT_RATES for the ones sampled at their own rate. */
 export function reportEvent(
   name: string,
   attributes: Record<string, string>,
