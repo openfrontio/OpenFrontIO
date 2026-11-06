@@ -68,14 +68,28 @@ describe("banned-modal", () => {
       player: {},
     });
     const t = await text();
-    // Title is set on the modal shell (an attribute), the rest is body text.
-    expect(el.querySelector("o-modal")?.getAttribute("title")).toContain(
-      "ban_notice.title",
-    );
+    // The title is a heading inside the card, not the shell's floating header.
+    expect(el.querySelector("h2")?.textContent).toContain("ban_notice.title");
+    expect(el.querySelector("o-modal")?.hasAttribute("title")).toBe(false);
     expect(t).toContain("ban_notice.category.cheating");
-    expect(t).toContain("reason=aimbot in ranked");
-    expect(t).toContain("ban_notice.until");
-    expect(t).not.toContain("ban_notice.permanent");
+    expect(t).toContain("ban_notice.reason_label");
+    expect(t).toContain("aimbot in ranked");
+    expect(t).toContain("ban_notice.expires_label");
+    expect(t).not.toContain("ban_notice.expires_never");
+  });
+
+  it("links the appeal to the OpenFront Discord in a new tab", async () => {
+    fireUserMe({
+      ban: { category: "other", reason: null, expiresAt: null },
+      user: {},
+      player: {},
+    });
+    await el.updateComplete;
+    const link = el.querySelector("a");
+    expect(link?.getAttribute("href")).toBe("https://discord.gg/openfront");
+    expect(link?.getAttribute("target")).toBe("_blank");
+    expect(link?.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(link?.textContent).toContain("ban_notice.contact_discord");
   });
 
   it("shows 'permanent' and no reason line for a permanent ban with no reason", async () => {
@@ -86,8 +100,8 @@ describe("banned-modal", () => {
     });
     const t = await text();
     expect(t).toContain("ban_notice.category.other");
-    expect(t).toContain("ban_notice.permanent");
-    expect(t).not.toContain("ban_notice.reason");
+    expect(t).toContain("ban_notice.expires_never");
+    expect(t).not.toContain("ban_notice.reason_label");
   });
 
   it("clears the notice when a later @me arrives with no ban (unbanned in-session)", async () => {

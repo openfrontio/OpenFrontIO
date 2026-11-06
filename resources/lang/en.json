@@ -170,7 +170,7 @@
     "title": "Account Settings"
   },
   "ban_notice": {
-    "appeal": "If you believe this is a mistake, contact us on Discord.",
+    "appeal_prompt": "Think this is a mistake or want to appeal?",
     "category": {
       "cheating": "Cheating or unauthorised software",
       "child_safety": "Child-safety violation",
@@ -185,10 +185,11 @@
       "rank_manipulation": "Rank or rating manipulation",
       "teaming": "Teaming or collusion"
     },
-    "permanent": "This ban is permanent.",
-    "reason": "Reason: {reason}",
-    "title": "Your account is banned",
-    "until": "Banned until {date}."
+    "contact_discord": "Contact us on Discord",
+    "expires_label": "Expires",
+    "expires_never": "Never",
+    "reason_label": "Reason",
+    "title": "Your account is banned"
   },
   "build_menu": {
     "desc": {
