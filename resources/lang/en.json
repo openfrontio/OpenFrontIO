@@ -2833,6 +2833,7 @@
     "build_defense_post_desc": "Build a Defense Post under your cursor.",
     "build_factory": "Build Factory",
     "build_factory_desc": "Build a Factory under your cursor.",
+    "build_hotkey_desc": "Build under your cursor; repeat the hotkey on an upgradeable structure to add 5 levels at a time (up to 50).",
     "build_hydrogen_bomb": "Build Hydrogen Bomb",
     "build_hydrogen_bomb_desc": "Build a Hydrogen Bomb under your cursor.",
     "build_menu_modifier": "Build Menu Modifier",
