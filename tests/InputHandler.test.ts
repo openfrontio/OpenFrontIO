@@ -3763,6 +3763,10 @@ describe("GhostStructure Hotkeys tapping/Scrolling", () => {
     inputHandler["uiState"].upgradeMultiplier = MAX_UPGRADE_AMOUNT;
     window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
     expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+
+    mockGameView.isPaused = () => true;
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
   });
 
   test("wheel scroll up increases upgrade multiplier", () => {
