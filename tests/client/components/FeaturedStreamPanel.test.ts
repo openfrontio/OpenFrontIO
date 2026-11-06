@@ -67,18 +67,28 @@ class FakeYouTubePlayer {
   static last: FakeYouTubePlayer | undefined;
   events: YouTubeEvents;
   paused = false;
+  // The real API adds its playback methods only once the player is ready.
+  ready = false;
   constructor(
     _el: HTMLElement,
     opts: { videoId: string; events: YouTubeEvents },
   ) {
     FakeYouTubePlayer.constructed.push(opts.videoId);
     FakeYouTubePlayer.last = this;
-    this.events = opts.events;
+    this.events = {
+      ...opts.events,
+      onReady: () => {
+        this.ready = true;
+        opts.events.onReady();
+      },
+    };
   }
   playVideo() {
+    if (!this.ready) throw new Error("playVideo is not a function");
     this.paused = false;
   }
   pauseVideo() {
+    if (!this.ready) throw new Error("pauseVideo is not a function");
     this.paused = true;
   }
   destroy() {}
@@ -459,6 +469,21 @@ describe("featured-stream panel", () => {
       await el.updateComplete;
       document.dispatchEvent(new CustomEvent("game-starting"));
       expect(FakeYouTubePlayer.last!.paused).toBe(true);
+    });
+
+    // Autoplay would otherwise run behind the hidden panel for the whole game.
+    it("stays paused if a game starts before the player is ready, then resumes", async () => {
+      const el = await mount(youtubeStream());
+      document.dispatchEvent(new CustomEvent("game-starting"));
+      FakeYouTubePlayer.last!.events.onReady();
+      await el.updateComplete;
+      expect(FakeYouTubePlayer.last!.paused).toBe(true);
+
+      document.dispatchEvent(new CustomEvent("leave-lobby"));
+      await vi.advanceTimersByTimeAsync(61_000);
+      await el.updateComplete;
+      expect(card()?.className).toContain("opacity-100");
+      expect(FakeYouTubePlayer.last!.paused).toBe(false);
     });
   });
 

@@ -132,9 +132,6 @@ export function isOffFrame(
   return cx < 0 || cx > vw || cy < 0 || cy > vh;
 }
 
-// Which broadcast to embed, or null for "embed nothing". The API serves only channels
-// its cron currently sees live, in admin priority order, so this is just the first entry
-// we have not already watched die — no client-side probing. Pure for tests.
 // The video id of a served YouTube watch URL (https://www.youtube.com/watch?v=<id>), or
 // null when the URL is not one. Checked strictly because it goes into the embed. Pure for
 // tests.
@@ -155,6 +152,9 @@ export function youTubeVideoId(url: string | undefined): string | null {
   return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
 }
 
+// Which broadcast to embed, or null for "embed nothing". The API serves only channels
+// its cron currently sees live, in admin priority order, so this is just the first entry
+// we have not already watched die — no client-side probing. Pure for tests.
 export function featuredStream(
   feed: StreamsFeed,
   dead: Set<string>,
@@ -458,7 +458,12 @@ export class FeaturedStream extends LitElement {
       },
       events: {
         onReady: () => {
-          if (fresh()) this.setLive();
+          if (!fresh()) return;
+          this.setLive();
+          // A game that started while this loaded couldn't pause it (YouTube adds
+          // pauseVideo only once the player is ready), and autoplay would now run behind
+          // the hidden panel. The next feed tick after the game resumes it.
+          if (this.inGame) player.pauseVideo();
         },
         onStateChange: (e) => {
           if (e.data === YT.PlayerState.ENDED) ended();
