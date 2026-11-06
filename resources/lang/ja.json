@@ -2123,7 +2123,7 @@
     "claim_plutonium": "+{amount}プロトニウム",
     "earlier": "前のレベル",
     "key_claimed": "受取済みです",
-    "key_locked": "解除済み",
+    "key_locked": "未解除",
     "key_ready": "受け取り可能",
     "later": "レベル以降",
     "legend_reward": "レジェンド報酬",
