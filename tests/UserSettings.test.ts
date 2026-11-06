@@ -623,6 +623,9 @@ describe("getDefaultKeybinds", () => {
     expect(keybinds.emojiMenuModifier).toBe("AltLeft");
     // Note: this is related to user_setting.graphics_refresh_modifier, not the actual alt key.
     expect(keybinds.altKey).toBe("AltLeft");
+    const sharedModifierPair = ["buildScrollModifier", "altKey"] as const;
+    expect(keysMayBeShared(...sharedModifierPair, "AltRight")).toBe(true);
+    expect(keysMayBeShared(...sharedModifierPair, "ShiftRight")).toBe(false);
   });
 
   it("handles Mac-specific modifier keys correctly", () => {
