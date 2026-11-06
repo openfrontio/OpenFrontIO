@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import {
   ACTIVE_LOADOUT_KEY,
   CROWN_KEY,
   EFFECTS_KEY,
   FAVORITE_EMOJIS_KEY,
   FLAG_KEY,
+  KEEP_BUILD_SELECTED_UNITS,
   LOADOUTS_KEY,
   MAX_LOADOUTS,
   PATTERN_KEY,
@@ -752,6 +754,38 @@ describe("UserSettings keybinds with new defaults", () => {
     store({ altKey: { value: "AltLeft", key: "Alt" } });
     expect(new UserSettings().keybinds(false).emojiMenuModifier).toBe(
       "AltLeft",
+    );
+  });
+});
+
+describe("UserSettings keep build selected", () => {
+  beforeEach(resetUserSettingsState);
+
+  it("defaults on only for atom and hydrogen bombs", () => {
+    const settings = new UserSettings();
+    for (const unit of KEEP_BUILD_SELECTED_UNITS) {
+      expect(settings.keepBuildSelected(unit.type)).toBe(
+        unit.type === UnitType.AtomBomb || unit.type === UnitType.HydrogenBomb,
+      );
+    }
+  });
+
+  it("toggles one type without touching the others", () => {
+    new UserSettings().toggleKeepBuildSelected(UnitType.DefensePost);
+    const settings = new UserSettings();
+    expect(settings.keepBuildSelected(UnitType.DefensePost)).toBe(true);
+    expect(settings.keepBuildSelected(UnitType.City)).toBe(false);
+    expect(
+      localStorage.getItem("settings.keepBuildSelected.defense_post"),
+    ).toBe("true");
+
+    settings.toggleKeepBuildSelected(UnitType.AtomBomb);
+    expect(settings.keepBuildSelected(UnitType.AtomBomb)).toBe(false);
+  });
+
+  it("is off for types that can't be kept selected", () => {
+    expect(new UserSettings().keepBuildSelected(UnitType.TradeShip)).toBe(
+      false,
     );
   });
 });
