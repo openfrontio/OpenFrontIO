@@ -187,12 +187,14 @@ export class UsernameInput extends LitElement {
   // membership the newer one just corrected.
   private userMeGen = 0;
 
-  // Resolves once the one-shot Steam name-seed has settled (or immediately for
-  // non-Steam players). The join flow awaits this before reading getUsername()
-  // so a fast join can't start the game under the generated anon name before
-  // the Steam persona lands. Always resolves — never rejects — so a failed or
-  // slow getUser() falls back to the generated name instead of blocking.
-  private steamSeedReady: Promise<void> = Promise.resolve();
+  // Resolves once the one-shot Steam name-seed (or, where a portal's name is
+  // kept, the account name lookup) has settled, and immediately for everyone
+  // else. The join flow awaits this before reading getUsername() so a fast
+  // join can't start the game under the generated anon name before the Steam
+  // persona lands, or under an earlier VIVERSE account's name before this
+  // one's arrives. Always resolves — never rejects — so a failed or slow
+  // lookup falls back to the name in hand instead of blocking.
+  private seedReady: Promise<void> = Promise.resolve();
 
   // Remove static styles since we're using Tailwind
 
@@ -589,7 +591,7 @@ export class UsernameInput extends LitElement {
   // rather than the interim generated anon name. Never blocks: the underlying
   // chain always resolves, even when getUser() fails or the persona is invalid.
   public whenSeeded(): Promise<void> {
-    return this.steamSeedReady;
+    return this.seedReady;
   }
 
   private startClanCheck() {
@@ -666,9 +668,13 @@ export class UsernameInput extends LitElement {
     // — falls back to a fresh guest username instead of keeping the account
     // name. addAuthListener only fires on login; portals refresh the page on
     // logout, so there is no logout event to handle.
-    void gamePortal.getUsername().then((username) => {
-      this.applyPortalUsername(username);
-    });
+    const portalSeed = gamePortal
+      .getUsername()
+      .then((username) => this.applyPortalUsername(username))
+      .catch(() => {
+        // Swallow: keep the name in hand so the player can always play.
+      });
+    if (this.onGamePortal && this.keepsName) this.seedReady = portalSeed;
     void gamePortal.addAuthListener((user) => {
       if (user) this.applyPortalUsername(user.username);
     });
@@ -684,7 +690,7 @@ export class UsernameInput extends LitElement {
       // Store the seeding promise so the join path can await it (see
       // whenSeeded). The chain never rejects — on any failure we keep the
       // generated name — so awaiting it can only delay, never block, a join.
-      this.steamSeedReady = steamSDK
+      this.seedReady = steamSDK
         .getUser()
         .then((user) => {
           // Both halves matter. The text check catches the player typing

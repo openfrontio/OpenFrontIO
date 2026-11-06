@@ -86,6 +86,18 @@ describe("UsernameInput on VIVERSE", () => {
     expect(localStorage.getItem("username")).toBe(next.getUsername());
   });
 
+  it("doesn't join under an earlier account's name before this one's arrives", async () => {
+    mountOnPortal("viverse", "Ada");
+    await flush();
+
+    vi.restoreAllMocks();
+    let resolve!: (name: string) => void;
+    const next = mountOnPortal("viverse", new Promise((r) => (resolve = r)));
+    const seeded = next.whenSeeded().then(() => next.getUsername());
+    resolve("Grace");
+    expect(await seeded).toBe("Grace");
+  });
+
   it("keeps a typed name when the VIVERSE name is unavailable", async () => {
     type(mountOnPortal("viverse", null), "Countess");
 
