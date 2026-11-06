@@ -866,6 +866,21 @@ describe("LeaderboardModal", () => {
       expect(modal.querySelector("[data-ffa-season]")).toBeNull();
     });
 
+    it("drops a season with a malformed date, keeping the board", async () => {
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [],
+          "2v2": [],
+          ffa: [rated(1, "p4", 2012.6, "Diamond II")],
+          ffaSeason: { number: 1, startDate: "soon" },
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await showLadder("playersFfa");
+      expect(modal.querySelector("[data-ffa-season]")).toBeNull();
+      expect(modal.querySelector("[data-ffa-rating-cell]")).not.toBeNull();
+    });
+
     it("pins a hidden player's row with the note saying why", async () => {
       await meOnce({
         user: linked,
