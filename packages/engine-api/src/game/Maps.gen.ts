@@ -580,6 +580,7 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 2,
     themes: ["asia"],
     author: "crunchybbb",
+    descriptionKey: "map_description.caspiansea",
     location: { lat: 41.5, lon: 50.5 },
   },
   {
