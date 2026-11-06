@@ -2268,7 +2268,7 @@ export const maps: readonly MapInfo[] = [
     themes: ["asia"],
     author: "crunchybbb",
     descriptionKey: "map_description.vietnam",
-    location: { lat: 16, lon: 106.5 },
+    location: { lat: 17, lon: 106.5 },
   },
   {
     id: "WarshipWarship",
