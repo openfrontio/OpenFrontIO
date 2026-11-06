@@ -656,6 +656,8 @@ export const UserMeResponseSchema = z.object({
             games: z.number().int().nonnegative().optional().catch(undefined),
             wins: z.number().int().nonnegative().optional().catch(undefined),
             peak: z.number().optional().catch(undefined),
+            // True when the board's ± rule keeps this rating off the board.
+            hiddenByUncertainty: z.boolean().optional().catch(undefined),
             calibrationGames: z
               .number()
               .int()
@@ -1363,6 +1365,12 @@ export const RankedLeaderboardResponseSchema = z.object({
   [RankedType.TwoVTwo]: RankedLeaderboardEntrySchema.array().default([]),
   // Defaulted for the same reason: older APIs have no FFA ladder.
   [RankedType.FreeForAll]: RankedLeaderboardEntrySchema.array().default([]),
+  // The season today falls in, for the FFA board's label. Absent before the
+  // first season and until the API serves the rating; malformed reads as absent.
+  ffaSeason: z
+    .object({ number: z.number().int().positive(), startDate: z.string() })
+    .optional()
+    .catch(undefined),
 });
 export type RankedLeaderboardResponse = z.infer<
   typeof RankedLeaderboardResponseSchema

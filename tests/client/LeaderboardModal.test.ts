@@ -836,6 +836,107 @@ describe("LeaderboardModal", () => {
       expect(value.textContent).toContain("± 61");
     });
 
+    it("labels a live FFA board with its season, and only that board", async () => {
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [entry(1, "p1", 1200)],
+          "2v2": [],
+          ffa: [rated(1, "p4", 2012.6, "Diamond II")],
+          ffaSeason: { number: 1, startDate: "2026-11-09" },
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      expect(modal.querySelector("[data-ffa-season]")).toBeNull(); // 1v1 tab
+      await showLadder("playersFfa");
+      const label = modal.querySelector("[data-ffa-season]")!;
+      expect(label.textContent).toContain("ffa_rating.season");
+      expect(label.textContent).toContain("ffa_rating.season_started");
+    });
+
+    it("shows no season label when the API sends none", async () => {
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [],
+          "2v2": [],
+          ffa: [rated(1, "p4", 2012.6, "Diamond II")],
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await showLadder("playersFfa");
+      expect(modal.querySelector("[data-ffa-season]")).toBeNull();
+    });
+
+    it("pins a hidden player's row with the note saying why", async () => {
+      await meOnce({
+        user: linked,
+        player: {
+          publicId: "me",
+          username: "me.1",
+          leaderboard: {
+            ffa: {
+              elo: 2240.4,
+              uncertainty: 61.2,
+              tier: "Master I",
+              games: 410,
+              wins: 66,
+              peak: 2300,
+              hiddenByUncertainty: true,
+            },
+          },
+        },
+      });
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [],
+          "2v2": [],
+          ffa: [rated(1, "p4", 2012.6, "Diamond II")],
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await showLadder("playersFfa");
+      const row = modal.querySelector("tfoot [data-ffa-hidden-row]")!;
+      expect(row.textContent).toContain("—");
+      expect(row.textContent).toContain("2240");
+      expect(row.textContent).toContain("± 61");
+      expect(row.textContent).toContain("410");
+      expect(row.textContent).toContain("16.1%");
+      const note = modal.querySelector("tfoot [data-ffa-hidden-note]")!;
+      expect(note.textContent).toContain("ffa_rating.off_board_note");
+      // No calibrating row beside it.
+      expect(modal.querySelector("[data-ffa-calibrating-row]")).toBeNull();
+    });
+
+    it("pins no note for a rated player on the board", async () => {
+      await meOnce({
+        user: linked,
+        player: {
+          publicId: "me",
+          username: "me.1",
+          leaderboard: {
+            ffa: {
+              elo: 2012.6,
+              uncertainty: 40,
+              tier: "Diamond II",
+              games: 50,
+              wins: 5,
+              peak: 2100,
+            },
+          },
+        },
+      });
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [],
+          "2v2": [],
+          ffa: [rated(1, "me", 2012.6, "Diamond II")],
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await showLadder("playersFfa");
+      expect(modal.querySelector("[data-ffa-hidden-row]")).toBeNull();
+      expect(modal.querySelector("[data-ffa-hidden-note]")).toBeNull();
+    });
+
     it("pins the calibrating row even when the FFA board is empty", async () => {
       await meOnce({
         user: linked,
@@ -1012,7 +1113,7 @@ describe("LeaderboardModal", () => {
     const unprestiged: Level = { level: 80, prestige: 0, legend: false };
 
     const load = async (
-      ladders: Record<string, unknown[]>,
+      ladders: Record<string, unknown>,
       userPublicId?: string,
     ) => {
       if (userPublicId) {

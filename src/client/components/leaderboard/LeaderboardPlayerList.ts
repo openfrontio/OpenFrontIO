@@ -95,6 +95,10 @@ export class LeaderboardPlayerList extends LitElement {
   private currentUserId: string | null = null;
   private currentUserIdLoaded = false;
   @state() private ffaCalibration: FfaCalibration | null = null;
+  // The signed-in player's rating while the board's ± rule keeps them off it.
+  @state() private ffaHidden: LadderRow | null = null;
+  @state() private ffaSeason: { number: number; startDate: string } | null =
+    null;
 
   @query(".scroll-container") private scrollContainer?: HTMLElement;
 
@@ -199,6 +203,8 @@ export class LeaderboardPlayerList extends LitElement {
         return;
       }
 
+      this.ffaSeason = result.ffaSeason ?? this.ffaSeason;
+
       if (reset && !this.currentUserIdLoaded) {
         this.currentUserIdLoaded = true;
         const userMe = await getUserMe();
@@ -218,6 +224,25 @@ export class LeaderboardPlayerList extends LitElement {
                 calibrationGames: ffa.calibrationGames,
                 games: ffa.games ?? 0,
                 wins: ffa.wins ?? 0,
+              }
+            : null;
+        this.ffaHidden =
+          userMe &&
+          ffa?.hiddenByUncertainty === true &&
+          ffa.elo !== undefined &&
+          ffa.tier !== undefined &&
+          (await isRealAccount(userMe))
+            ? {
+                rank: 0,
+                playerId: userMe.player.publicId,
+                accountUsername: userMe.player.username ?? null,
+                elo: ffa.elo,
+                games: ffa.games ?? 0,
+                wins: ffa.wins ?? 0,
+                losses: (ffa.games ?? 0) - (ffa.wins ?? 0),
+                winRate: ffa.games ? (ffa.wins ?? 0) / ffa.games : 0,
+                uncertainty: ffa.uncertainty,
+                tier: ffa.tier,
               }
             : null;
       }
@@ -379,6 +404,13 @@ export class LeaderboardPlayerList extends LitElement {
     ) {
       return this.renderCalibratingRow(this.ffaCalibration);
     }
+    if (
+      this.rankedType === RankedType.FreeForAll &&
+      this.currentUserEntry === null &&
+      this.ffaHidden !== null
+    ) {
+      return this.renderHiddenRow(this.ffaHidden);
+    }
     if (!this.currentUserEntry || !this.showStickyUser) return nothing;
     const entry = this.currentUserEntry;
 
@@ -486,6 +518,94 @@ export class LeaderboardPlayerList extends LitElement {
           </td>
         </tr>
       </tfoot>
+    `;
+  }
+
+  // A player the board's ± rule hides has no row on it either. This one shows
+  // their rating and says why, and goes once games narrow the ± (the API stops
+  // sending hiddenByUncertainty).
+  private renderHiddenRow(me: LadderRow) {
+    return html`
+      <tfoot class="sticky bottom-0 z-20">
+        <tr data-ffa-hidden-row class="bg-blue-600 border-t border-blue-400/30">
+          <td class="py-3 px-4 text-center">
+            <div
+              class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg bg-white/20 text-white"
+            >
+              —
+            </div>
+          </td>
+          <td class="py-3 px-4">
+            <div class="flex flex-col">
+              <span
+                class="text-[10px] uppercase font-bold text-blue-200/80 leading-tight"
+                >${translateText("leaderboard_modal.your_ranking")}</span
+              >
+              <player-name
+                class="min-w-0"
+                .username=${me.accountUsername}
+                .publicId=${me.playerId}
+                .nameClass=${"font-bold text-white truncate text-base hover:underline"}
+                .onNameClick=${() => this.openProfile(me.playerId)}
+              ></player-name>
+            </div>
+          </td>
+          <td class="py-3 px-4 text-right">
+            ${this.renderRatingCell(me, true)}
+          </td>
+          <td class="py-3 px-4 text-right">
+            <span class="font-mono text-white font-bold">${me.games}</span>
+          </td>
+          <td class="py-3 px-4 text-right pr-6">
+            <div class="inline-flex flex-col items-end">
+              <span class="font-mono font-bold text-white"
+                >${(me.winRate * 100).toFixed(1)}%</span
+              >
+              <span
+                class="text-[10px] uppercase text-blue-200/80 font-bold tracking-wider"
+                >${translateText("leaderboard_modal.ratio")}</span
+              >
+            </div>
+          </td>
+        </tr>
+        <tr data-ffa-hidden-note class="bg-blue-700 shadow-2xl">
+          <td colspan="5" class="py-2 px-4 text-xs text-blue-100">
+            <!-- Below 34rem the table scrolls sideways: keep the note in view. -->
+            <div class="sticky left-4 max-w-[calc(100vw-2rem)]">
+              ${translateText("ffa_rating.off_board_note")}
+            </div>
+          </td>
+        </tr>
+      </tfoot>
+    `;
+  }
+
+  // Which season the live FFA board is in. The API sends it, so a new season
+  // needs no client release.
+  private renderSeasonLabel() {
+    if (this.ffaSeason === null) return nothing;
+    const date = new Date(
+      `${this.ffaSeason.startDate}T00:00:00Z`,
+    ).toLocaleDateString(undefined, {
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC",
+    });
+    return html`
+      <div
+        data-ffa-season
+        class="flex shrink-0 items-center gap-2 px-4 py-2 border-b border-white/5 text-xs"
+      >
+        <span
+          class="rounded-md bg-blue-500/20 px-2 py-0.5 font-bold text-blue-300"
+          >${translateText("ffa_rating.season", {
+            n: this.ffaSeason.number,
+          })}</span
+        >
+        <span class="text-white/50"
+          >${translateText("ffa_rating.season_started", { date })}</span
+        >
+      </div>
     `;
   }
 
@@ -709,9 +829,11 @@ export class LeaderboardPlayerList extends LitElement {
     if (this.isLoading && this.playerData.length === 0)
       return this.renderLoading();
     if (this.error) return this.renderError();
-    // An empty FFA board still shows a calibrating player their pinned row.
+    // An empty FFA board still shows a calibrating or hidden player their
+    // pinned row.
     const pinnedCalibration =
-      this.rankedType === RankedType.FreeForAll && this.ffaCalibration !== null;
+      this.rankedType === RankedType.FreeForAll &&
+      (this.ffaCalibration !== null || this.ffaHidden !== null);
     if (
       this.hasLoadedPlayers &&
       this.playerData.length === 0 &&
@@ -738,6 +860,7 @@ export class LeaderboardPlayerList extends LitElement {
             ratingLive ? "flex flex-col" : ""
           }"
         >
+          ${ratingLive ? this.renderSeasonLabel() : nothing}
           <div
             class="scroll-container ${
               ratingLive ? "flex-1 min-h-0" : "h-full"
