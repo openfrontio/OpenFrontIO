@@ -3,16 +3,19 @@
   "id": "GatewayToTheAtlantic",
   "map": {
     "height": 1968,
+    "num_impassable_tiles": 168333,
     "num_land_tiles": 2239824,
     "width": 2216
   },
   "map16x": {
     "height": 492,
+    "num_impassable_tiles": 10311,
     "num_land_tiles": 136293,
     "width": 554
   },
   "map4x": {
     "height": 984,
+    "num_impassable_tiles": 41791,
     "num_land_tiles": 554984,
     "width": 1108
   },

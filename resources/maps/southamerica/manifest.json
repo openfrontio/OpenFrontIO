@@ -4,16 +4,19 @@
   "id": "SouthAmerica",
   "map": {
     "height": 2376,
+    "num_impassable_tiles": 190014,
     "num_land_tiles": 1411064,
     "width": 1744
   },
   "map16x": {
     "height": 594,
+    "num_impassable_tiles": 11644,
     "num_land_tiles": 81160,
     "width": 436
   },
   "map4x": {
     "height": 1188,
+    "num_impassable_tiles": 47185,
     "num_land_tiles": 342275,
     "width": 872
   },

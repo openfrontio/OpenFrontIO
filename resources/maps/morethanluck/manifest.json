@@ -1106,16 +1106,19 @@
   "id": "MoreThanLuck",
   "map": {
     "height": 1344,
+    "num_impassable_tiles": 866250,
     "num_land_tiles": 915740,
     "width": 1348
   },
   "map16x": {
     "height": 336,
+    "num_impassable_tiles": 55092,
     "num_land_tiles": 55536,
     "width": 337
   },
   "map4x": {
     "height": 672,
+    "num_impassable_tiles": 217858,
     "num_land_tiles": 226651,
     "width": 674
   },

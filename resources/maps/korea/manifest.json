@@ -3,16 +3,19 @@
   "id": "Korea",
   "map": {
     "height": 3284,
+    "num_impassable_tiles": 1084230,
     "num_land_tiles": 1760413,
     "width": 1632
   },
   "map16x": {
     "height": 821,
+    "num_impassable_tiles": 67122,
     "num_land_tiles": 106857,
     "width": 408
   },
   "map4x": {
     "height": 1642,
+    "num_impassable_tiles": 270219,
     "num_land_tiles": 435506,
     "width": 816
   },

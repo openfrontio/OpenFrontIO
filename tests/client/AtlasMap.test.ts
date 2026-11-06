@@ -37,6 +37,18 @@ describe("mapStats", () => {
       players: 45,
     });
   });
+
+  it("excludes impassable terrain from the land percentage denominator", () => {
+    const sanFrancisco = manifest("sanfrancisco");
+    expect(sanFrancisco.map.num_impassable_tiles).toBeGreaterThan(0);
+    expect(mapStats(sanFrancisco)).toEqual({
+      width: 2000,
+      height: 1700,
+      landPercent: 58,
+      nations: 21,
+      players: 95,
+    });
+  });
 });
 
 describe("<atlas-map>", () => {

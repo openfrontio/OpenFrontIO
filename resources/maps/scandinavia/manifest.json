@@ -195,16 +195,19 @@
   "id": "Scandinavia",
   "map": {
     "height": 2240,
+    "num_impassable_tiles": 275176,
     "num_land_tiles": 2475461,
     "width": 2004
   },
   "map16x": {
     "height": 560,
+    "num_impassable_tiles": 17013,
     "num_land_tiles": 145629,
     "width": 501
   },
   "map4x": {
     "height": 1120,
+    "num_impassable_tiles": 68544,
     "num_land_tiles": 605086,
     "width": 1002
   },

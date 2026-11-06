@@ -4,16 +4,19 @@
   "id": "MilkyWay",
   "map": {
     "height": 1748,
+    "num_impassable_tiles": 1083359,
     "num_land_tiles": 442979,
     "width": 1748
   },
   "map16x": {
     "height": 437,
+    "num_impassable_tiles": 66052,
     "num_land_tiles": 24782,
     "width": 437
   },
   "map4x": {
     "height": 874,
+    "num_impassable_tiles": 268669,
     "num_land_tiles": 105950,
     "width": 874
   },

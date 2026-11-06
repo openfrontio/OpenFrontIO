@@ -17,16 +17,19 @@
   "id": "Antarctica",
   "map": {
     "height": 2212,
+    "num_impassable_tiles": 1029856,
     "num_land_tiles": 1292224,
     "width": 2212
   },
   "map16x": {
     "height": 553,
+    "num_impassable_tiles": 63604,
     "num_land_tiles": 79007,
     "width": 553
   },
   "map4x": {
     "height": 1106,
+    "num_impassable_tiles": 256436,
     "num_land_tiles": 320398,
     "width": 1106
   },

@@ -185,16 +185,19 @@
   "id": "CapeOfGoodHope",
   "map": {
     "height": 1928,
+    "num_impassable_tiles": 405139,
     "num_land_tiles": 1807478,
     "width": 1928
   },
   "map16x": {
     "height": 482,
+    "num_impassable_tiles": 25406,
     "num_land_tiles": 109883,
     "width": 482
   },
   "map4x": {
     "height": 964,
+    "num_impassable_tiles": 101404,
     "num_land_tiles": 447475,
     "width": 964
   },

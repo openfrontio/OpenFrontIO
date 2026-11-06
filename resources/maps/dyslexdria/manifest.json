@@ -761,16 +761,19 @@
   "id": "Dyslexdria",
   "map": {
     "height": 1440,
+    "num_impassable_tiles": 175321,
     "num_land_tiles": 2103253,
     "width": 3308
   },
   "map16x": {
     "height": 360,
+    "num_impassable_tiles": 11095,
     "num_land_tiles": 120034,
     "width": 827
   },
   "map4x": {
     "height": 720,
+    "num_impassable_tiles": 43913,
     "num_land_tiles": 508102,
     "width": 1654
   },

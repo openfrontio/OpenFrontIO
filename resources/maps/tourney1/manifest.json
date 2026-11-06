@@ -3,16 +3,19 @@
   "id": "Tourney1",
   "map": {
     "height": 1500,
+    "num_impassable_tiles": 551346,
     "num_land_tiles": 984577,
     "width": 1500
   },
   "map16x": {
     "height": 375,
+    "num_impassable_tiles": 33907,
     "num_land_tiles": 60237,
     "width": 375
   },
   "map4x": {
     "height": 750,
+    "num_impassable_tiles": 137106,
     "num_land_tiles": 244567,
     "width": 750
   },

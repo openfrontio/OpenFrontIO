@@ -225,16 +225,19 @@
   "id": "JuanDeFucaStrait",
   "map": {
     "height": 1100,
+    "num_impassable_tiles": 76516,
     "num_land_tiles": 1666141,
     "width": 3000
   },
   "map16x": {
     "height": 275,
+    "num_impassable_tiles": 4663,
     "num_land_tiles": 100385,
     "width": 750
   },
   "map4x": {
     "height": 550,
+    "num_impassable_tiles": 18972,
     "num_land_tiles": 410851,
     "width": 1500
   },

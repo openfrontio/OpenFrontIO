@@ -210,16 +210,19 @@
   "id": "CentralAmerica",
   "map": {
     "height": 1956,
+    "num_impassable_tiles": 282884,
     "num_land_tiles": 1162805,
     "width": 2500
   },
   "map16x": {
     "height": 489,
+    "num_impassable_tiles": 17432,
     "num_land_tiles": 69355,
     "width": 625
   },
   "map4x": {
     "height": 978,
+    "num_impassable_tiles": 70384,
     "num_land_tiles": 285673,
     "width": 1250
   },

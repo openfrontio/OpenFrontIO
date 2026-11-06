@@ -3,16 +3,19 @@
   "id": "NewYorkCity",
   "map": {
     "height": 1900,
+    "num_impassable_tiles": 74533,
     "num_land_tiles": 1648646,
     "width": 1500
   },
   "map16x": {
     "height": 475,
+    "num_impassable_tiles": 4552,
     "num_land_tiles": 98783,
     "width": 375
   },
   "map4x": {
     "height": 950,
+    "num_impassable_tiles": 18488,
     "num_land_tiles": 406215,
     "width": 750
   },

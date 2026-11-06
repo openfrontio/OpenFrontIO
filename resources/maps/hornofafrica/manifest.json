@@ -170,16 +170,19 @@
   "id": "HornOfAfrica",
   "map": {
     "height": 1864,
+    "num_impassable_tiles": 37510,
     "num_land_tiles": 2024462,
     "width": 2000
   },
   "map16x": {
     "height": 466,
+    "num_impassable_tiles": 2278,
     "num_land_tiles": 123100,
     "width": 500
   },
   "map4x": {
     "height": 932,
+    "num_impassable_tiles": 9316,
     "num_land_tiles": 501259,
     "width": 1000
   },

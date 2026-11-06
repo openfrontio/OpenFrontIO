@@ -105,16 +105,19 @@
   "id": "ChannelIslands",
   "map": {
     "height": 1844,
+    "num_impassable_tiles": 178281,
     "num_land_tiles": 1433261,
     "width": 4744
   },
   "map16x": {
     "height": 461,
+    "num_impassable_tiles": 11106,
     "num_land_tiles": 86448,
     "width": 1186
   },
   "map4x": {
     "height": 922,
+    "num_impassable_tiles": 44531,
     "num_land_tiles": 353740,
     "width": 2372
   },

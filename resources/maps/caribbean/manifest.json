@@ -145,16 +145,19 @@
   "id": "Caribbean",
   "map": {
     "height": 1808,
+    "num_impassable_tiles": 214478,
     "num_land_tiles": 577573,
     "width": 3200
   },
   "map16x": {
     "height": 452,
+    "num_impassable_tiles": 13221,
     "num_land_tiles": 32566,
     "width": 800
   },
   "map4x": {
     "height": 904,
+    "num_impassable_tiles": 53364,
     "num_land_tiles": 138280,
     "width": 1600
   },
@@ -258,7 +261,7 @@
     {
       "coordinates": [3007, 1361],
       "flag": "vc",
-      "name": "St Vincent \u0026 the Grenadines"
+      "name": "St Vincent & the Grenadines"
     },
     {
       "coordinates": [3015, 1291],

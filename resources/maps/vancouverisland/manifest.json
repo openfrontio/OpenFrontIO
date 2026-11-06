@@ -155,16 +155,19 @@
   "id": "VancouverIsland",
   "map": {
     "height": 1980,
+    "num_impassable_tiles": 1123292,
     "num_land_tiles": 2012664,
     "width": 2600
   },
   "map16x": {
     "height": 495,
+    "num_impassable_tiles": 70199,
     "num_land_tiles": 117919,
     "width": 650
   },
   "map4x": {
     "height": 990,
+    "num_impassable_tiles": 280816,
     "num_land_tiles": 491184,
     "width": 1300
   },

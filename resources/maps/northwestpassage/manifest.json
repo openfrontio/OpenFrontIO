@@ -200,16 +200,19 @@
   "id": "NorthwestPassage",
   "map": {
     "height": 1664,
+    "num_impassable_tiles": 173551,
     "num_land_tiles": 1569905,
     "width": 2500
   },
   "map16x": {
     "height": 416,
+    "num_impassable_tiles": 10620,
     "num_land_tiles": 89831,
     "width": 625
   },
   "map4x": {
     "height": 832,
+    "num_impassable_tiles": 43088,
     "num_land_tiles": 379907,
     "width": 1250
   },

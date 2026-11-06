@@ -135,21 +135,20 @@ func processMap(ctx context.Context, name string, isTest bool) (string, error) {
 		return "", fmt.Errorf("failed to generate map for %s: %w", name, err)
 	}
 
-	manifest["map"] = map[string]interface{}{
-		"width":          result.Map.Width,
-		"height":         result.Map.Height,
-		"num_land_tiles": result.Map.NumLandTiles,
+	mapMeta := func(info MapInfo) map[string]interface{} {
+		m := map[string]interface{}{
+			"width":          info.Width,
+			"height":         info.Height,
+			"num_land_tiles": info.NumLandTiles,
+		}
+		if info.NumImpassableTiles > 0 {
+			m["num_impassable_tiles"] = info.NumImpassableTiles
+		}
+		return m
 	}
-	manifest["map4x"] = map[string]interface{}{
-		"width":          result.Map4x.Width,
-		"height":         result.Map4x.Height,
-		"num_land_tiles": result.Map4x.NumLandTiles,
-	}
-	manifest["map16x"] = map[string]interface{}{
-		"width":          result.Map16x.Width,
-		"height":         result.Map16x.Height,
-		"num_land_tiles": result.Map16x.NumLandTiles,
-	}
+	manifest["map"] = mapMeta(result.Map)
+	manifest["map4x"] = mapMeta(result.Map4x)
+	manifest["map16x"] = mapMeta(result.Map16x)
 
 	mapDir := filepath.Join(outputMapBaseDir, name)
 	if err := os.MkdirAll(mapDir, 0755); err != nil {

@@ -14,11 +14,20 @@ export interface MapStats {
 }
 
 export function mapStats(manifest: MapManifest): MapStats {
-  const { width, height, num_land_tiles } = manifest.map;
+  const {
+    width,
+    height,
+    num_land_tiles,
+    num_impassable_tiles = 0,
+  } = manifest.map;
+  const playableTiles = width * height - num_impassable_tiles;
   return {
     width,
     height,
-    landPercent: Math.round((num_land_tiles / (width * height)) * 100),
+    landPercent:
+      playableTiles > 0
+        ? Math.round((num_land_tiles / playableTiles) * 100)
+        : 0,
     nations: manifest.nations.length,
     players: mapPlayerCounts(num_land_tiles)[0],
   };

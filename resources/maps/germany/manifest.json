@@ -413,16 +413,19 @@
   "id": "Germany",
   "map": {
     "height": 1516,
+    "num_impassable_tiles": 821937,
     "num_land_tiles": 1072928,
     "width": 1548
   },
   "map16x": {
     "height": 379,
+    "num_impassable_tiles": 50477,
     "num_land_tiles": 64963,
     "width": 387
   },
   "map4x": {
     "height": 758,
+    "num_impassable_tiles": 204295,
     "num_land_tiles": 265159,
     "width": 774
   },

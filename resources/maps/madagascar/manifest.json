@@ -151,16 +151,19 @@
   "id": "Madagascar",
   "map": {
     "height": 2332,
+    "num_impassable_tiles": 122558,
     "num_land_tiles": 1887622,
     "width": 3500
   },
   "map16x": {
     "height": 583,
+    "num_impassable_tiles": 7426,
     "num_land_tiles": 114968,
     "width": 875
   },
   "map4x": {
     "height": 1166,
+    "num_impassable_tiles": 30315,
     "num_land_tiles": 467723,
     "width": 1750
   },

@@ -3,16 +3,19 @@
   "id": "Didier",
   "map": {
     "height": 1348,
+    "num_impassable_tiles": 589855,
     "num_land_tiles": 1122321,
     "width": 1500
   },
   "map16x": {
     "height": 337,
+    "num_impassable_tiles": 36329,
     "num_land_tiles": 68539,
     "width": 375
   },
   "map4x": {
     "height": 674,
+    "num_impassable_tiles": 146718,
     "num_land_tiles": 278357,
     "width": 750
   },

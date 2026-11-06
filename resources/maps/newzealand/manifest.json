@@ -320,16 +320,19 @@
   "id": "NewZealand",
   "map": {
     "height": 3448,
+    "num_impassable_tiles": 95078,
     "num_land_tiles": 772373,
     "width": 1888
   },
   "map16x": {
     "height": 862,
+    "num_impassable_tiles": 5774,
     "num_land_tiles": 45942,
     "width": 472
   },
   "map4x": {
     "height": 1724,
+    "num_impassable_tiles": 23541,
     "num_land_tiles": 189565,
     "width": 944
   },

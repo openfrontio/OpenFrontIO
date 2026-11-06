@@ -11,16 +11,19 @@
   ],
   "map": {
     "height": 2352,
+    "num_impassable_tiles": 5537899,
     "num_land_tiles": 1455663,
     "width": 2996
   },
   "map16x": {
     "height": 588,
+    "num_impassable_tiles": 347417,
     "num_land_tiles": 86594,
     "width": 749
   },
   "map4x": {
     "height": 1176,
+    "num_impassable_tiles": 1386220,
     "num_land_tiles": 357985,
     "width": 1498
   },
@@ -116,7 +119,7 @@
     },
     {
       "coordinates": [1830, 500],
-      "name": "Weight \u0026 Texture"
+      "name": "Weight & Texture"
     },
     {
       "coordinates": [2140, 790],

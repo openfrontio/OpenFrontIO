@@ -3,16 +3,19 @@
   "id": "SanFrancisco",
   "map": {
     "height": 1700,
+    "num_impassable_tiles": 139398,
     "num_land_tiles": 1887961,
     "width": 2000
   },
   "map16x": {
     "height": 425,
+    "num_impassable_tiles": 8611,
     "num_land_tiles": 112962,
     "width": 500
   },
   "map4x": {
     "height": 850,
+    "num_impassable_tiles": 34715,
     "num_land_tiles": 464870,
     "width": 1000
   },

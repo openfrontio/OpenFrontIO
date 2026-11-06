@@ -3,16 +3,19 @@
   "id": "Benelux",
   "map": {
     "height": 1444,
+    "num_impassable_tiles": 792736,
     "num_land_tiles": 780942,
     "width": 1604
   },
   "map16x": {
     "height": 361,
+    "num_impassable_tiles": 49172,
     "num_land_tiles": 46852,
     "width": 401
   },
   "map4x": {
     "height": 722,
+    "num_impassable_tiles": 197646,
     "num_land_tiles": 192650,
     "width": 802
   },

@@ -41,16 +41,19 @@
   "id": "Balkhash",
   "map": {
     "height": 1500,
+    "num_impassable_tiles": 1851015,
     "num_land_tiles": 2361045,
     "width": 3300
   },
   "map16x": {
     "height": 375,
+    "num_impassable_tiles": 116153,
     "num_land_tiles": 143351,
     "width": 825
   },
   "map4x": {
     "height": 750,
+    "num_impassable_tiles": 463111,
     "num_land_tiles": 584289,
     "width": 1650
   },

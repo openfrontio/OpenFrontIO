@@ -90,16 +90,19 @@
   "id": "Crimea",
   "map": {
     "height": 1316,
+    "num_impassable_tiles": 422863,
     "num_land_tiles": 957870,
     "width": 2040
   },
   "map16x": {
     "height": 329,
+    "num_impassable_tiles": 26188,
     "num_land_tiles": 57836,
     "width": 510
   },
   "map4x": {
     "height": 658,
+    "num_impassable_tiles": 105393,
     "num_land_tiles": 236425,
     "width": 1020
   },

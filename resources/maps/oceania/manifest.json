@@ -3,16 +3,19 @@
   "id": "Oceania",
   "map": {
     "height": 1000,
+    "num_impassable_tiles": 74831,
     "num_land_tiles": 197878,
     "width": 1664
   },
   "map16x": {
     "height": 250,
+    "num_impassable_tiles": 4494,
     "num_land_tiles": 10889,
     "width": 416
   },
   "map4x": {
     "height": 500,
+    "num_impassable_tiles": 18462,
     "num_land_tiles": 46580,
     "width": 832
   },

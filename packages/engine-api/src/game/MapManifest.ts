@@ -99,6 +99,7 @@ const MapMetadataSchema = z.strictObject({
   width: z.int().positive(),
   height: z.int().positive(),
   num_land_tiles: z.int().nonnegative(),
+  num_impassable_tiles: z.int().nonnegative().optional(),
 });
 
 const unique = (values: readonly string[]) =>

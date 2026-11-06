@@ -97,7 +97,7 @@
     {
       "coordinates": [568, 3483],
       "flag": "Nevada",
-      "name": "M\u0026M's World"
+      "name": "M&M's World"
     },
     {
       "coordinates": [531, 3530],
@@ -159,16 +159,19 @@
   "id": "LasVegasStrip",
   "map": {
     "height": 4428,
+    "num_impassable_tiles": 6089984,
     "num_land_tiles": 1395508,
     "width": 2036
   },
   "map16x": {
     "height": 1107,
+    "num_impassable_tiles": 350943,
     "num_land_tiles": 82675,
     "width": 509
   },
   "map4x": {
     "height": 2214,
+    "num_impassable_tiles": 1481492,
     "num_land_tiles": 341959,
     "width": 1018
   },

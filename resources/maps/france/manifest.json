@@ -3,16 +3,19 @@
   "id": "France",
   "map": {
     "height": 2424,
+    "num_impassable_tiles": 1999557,
     "num_land_tiles": 2047093,
     "width": 2424
   },
   "map16x": {
     "height": 606,
+    "num_impassable_tiles": 121904,
     "num_land_tiles": 123911,
     "width": 606
   },
   "map4x": {
     "height": 1212,
+    "num_impassable_tiles": 495734,
     "num_land_tiles": 506105,
     "width": 1212
   },

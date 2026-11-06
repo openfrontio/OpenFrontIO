@@ -3,16 +3,19 @@
   "id": "Iceland",
   "map": {
     "height": 1500,
+    "num_impassable_tiles": 254178,
     "num_land_tiles": 1069645,
     "width": 2000
   },
   "map16x": {
     "height": 375,
+    "num_impassable_tiles": 15516,
     "num_land_tiles": 64964,
     "width": 500
   },
   "map4x": {
     "height": 750,
+    "num_impassable_tiles": 63049,
     "num_land_tiles": 264736,
     "width": 1000
   },

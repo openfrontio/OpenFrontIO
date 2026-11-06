@@ -3,16 +3,19 @@
   "id": "BranchingPaths",
   "map": {
     "height": 2148,
+    "num_impassable_tiles": 2676933,
     "num_land_tiles": 2103911,
     "width": 2480
   },
   "map16x": {
     "height": 537,
+    "num_impassable_tiles": 168250,
     "num_land_tiles": 122812,
     "width": 620
   },
   "map4x": {
     "height": 1074,
+    "num_impassable_tiles": 670076,
     "num_land_tiles": 514307,
     "width": 1240
   },

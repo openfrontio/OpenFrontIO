@@ -3,16 +3,19 @@
   "id": "GulfOfStLawrence",
   "map": {
     "height": 1348,
+    "num_impassable_tiles": 119537,
     "num_land_tiles": 874013,
     "width": 1620
   },
   "map16x": {
     "height": 337,
+    "num_impassable_tiles": 7372,
     "num_land_tiles": 50845,
     "width": 405
   },
   "map4x": {
     "height": 674,
+    "num_impassable_tiles": 29753,
     "num_land_tiles": 212526,
     "width": 810
   },

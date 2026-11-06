@@ -205,16 +205,19 @@
   "id": "GulfOfGuinea",
   "map": {
     "height": 2200,
+    "num_impassable_tiles": 647984,
     "num_land_tiles": 1788041,
     "width": 2500
   },
   "map16x": {
     "height": 550,
+    "num_impassable_tiles": 40170,
     "num_land_tiles": 109223,
     "width": 625
   },
   "map4x": {
     "height": 1100,
+    "num_impassable_tiles": 161567,
     "num_land_tiles": 443514,
     "width": 1250
   },

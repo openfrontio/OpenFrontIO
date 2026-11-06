@@ -70,16 +70,19 @@
   "id": "UnitedStates",
   "map": {
     "height": 1548,
+    "num_impassable_tiles": 716829,
     "num_land_tiles": 1868817,
     "width": 2800
   },
   "map16x": {
     "height": 387,
+    "num_impassable_tiles": 42280,
     "num_land_tiles": 110657,
     "width": 700
   },
   "map4x": {
     "height": 774,
+    "num_impassable_tiles": 175503,
     "num_land_tiles": 458393,
     "width": 1400
   },

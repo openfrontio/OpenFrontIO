@@ -3,16 +3,19 @@
   "id": "Hecatestrait",
   "map": {
     "height": 1932,
+    "num_impassable_tiles": 413047,
     "num_land_tiles": 2266145,
     "width": 2248
   },
   "map16x": {
     "height": 483,
+    "num_impassable_tiles": 25603,
     "num_land_tiles": 132192,
     "width": 562
   },
   "map4x": {
     "height": 966,
+    "num_impassable_tiles": 102977,
     "num_land_tiles": 552480,
     "width": 1124
   },

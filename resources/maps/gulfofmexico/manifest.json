@@ -255,16 +255,19 @@
   "id": "GulfOfMexico",
   "map": {
     "height": 1928,
+    "num_impassable_tiles": 257604,
     "num_land_tiles": 1552933,
     "width": 3000
   },
   "map16x": {
     "height": 482,
+    "num_impassable_tiles": 16100,
     "num_land_tiles": 92055,
     "width": 750
   },
   "map4x": {
     "height": 964,
+    "num_impassable_tiles": 64390,
     "num_land_tiles": 380354,
     "width": 1500
   },

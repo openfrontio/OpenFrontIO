@@ -3,16 +3,19 @@
   "id": "BajaCalifornia",
   "map": {
     "height": 2120,
+    "num_impassable_tiles": 246753,
     "num_land_tiles": 1345295,
     "width": 1800
   },
   "map16x": {
     "height": 530,
+    "num_impassable_tiles": 15225,
     "num_land_tiles": 80847,
     "width": 450
   },
   "map4x": {
     "height": 1060,
+    "num_impassable_tiles": 61425,
     "num_land_tiles": 331582,
     "width": 900
   },

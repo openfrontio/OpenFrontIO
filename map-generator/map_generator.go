@@ -67,10 +67,11 @@ type MapResult struct {
 
 // MapInfo contains the serialized map data and metadata for a specific scale.
 type MapInfo struct {
-	Data         []byte // packed map data
-	Width        int
-	Height       int
-	NumLandTiles int
+	Data               []byte // packed map data
+	Width              int
+	Height             int
+	NumLandTiles       int
+	NumImpassableTiles int
 }
 
 // GeneratorArgs defines the input parameters for the map generation process.
@@ -191,11 +192,11 @@ func GenerateMap(ctx context.Context, args GeneratorArgs) (MapResult, error) {
 		return MapResult{}, fmt.Errorf("failed to save thumbnail: %w", err)
 	}
 
-	mapData, mapNumLandTiles := packTerrain(ctx, terrain)
+	mapData, mapNumLandTiles, mapNumImpassableTiles := packTerrain(ctx, terrain)
 	terrain = nil
-	mapData4x, numLandTiles4x := packTerrain(ctx, terrain4x)
+	mapData4x, numLandTiles4x, numImpassableTiles4x := packTerrain(ctx, terrain4x)
 	terrain4x = nil
-	mapData16x, numLandTiles16x := packTerrain(ctx, terrain16x)
+	mapData16x, numLandTiles16x, numImpassableTiles16x := packTerrain(ctx, terrain16x)
 	terrain16x = nil
 
 	logger.Debug(fmt.Sprintf("Land Tile Count (1x): %d", mapNumLandTiles))
@@ -211,22 +212,25 @@ func GenerateMap(ctx context.Context, args GeneratorArgs) (MapResult, error) {
 
 	return MapResult{
 		Map: MapInfo{
-			Data:         mapData,
-			Width:        width,
-			Height:       height,
-			NumLandTiles: mapNumLandTiles,
+			Data:               mapData,
+			Width:              width,
+			Height:             height,
+			NumLandTiles:       mapNumLandTiles,
+			NumImpassableTiles: mapNumImpassableTiles,
 		},
 		Map4x: MapInfo{
-			Data:         mapData4x,
-			Width:        width / 2,
-			Height:       height / 2,
-			NumLandTiles: numLandTiles4x,
+			Data:               mapData4x,
+			Width:              width / 2,
+			Height:             height / 2,
+			NumLandTiles:       numLandTiles4x,
+			NumImpassableTiles: numImpassableTiles4x,
 		},
 		Map16x: MapInfo{
-			Data:         mapData16x,
-			Width:        width / 4,
-			Height:       height / 4,
-			NumLandTiles: numLandTiles16x,
+			Data:               mapData16x,
+			Width:              width / 4,
+			Height:             height / 4,
+			NumLandTiles:       numLandTiles16x,
+			NumImpassableTiles: numImpassableTiles16x,
 		},
 		Thumbnail: webp,
 	}, nil
@@ -639,12 +643,13 @@ func removeSmallIslands(ctx context.Context, terrain [][]Terrain, minSize int, r
 // Impassable tiles are encoded as 0b10011111 (isLand=1, magnitude=31) and are
 // NOT counted in numLandTiles (they cannot be owned/attacked/nuked).
 //
-// Returns the packed data and the count of land tiles.
-func packTerrain(ctx context.Context, terrain [][]Terrain) (data []byte, numLandTiles int) {
+// Returns the packed data, the count of land tiles, and the count of impassable tiles.
+func packTerrain(ctx context.Context, terrain [][]Terrain) (data []byte, numLandTiles int, numImpassableTiles int) {
 	width := len(terrain)
 	height := len(terrain[0])
 	packedData := make([]byte, width*height)
 	numLandTiles = 0
+	numImpassableTiles = 0
 
 	for x := 0; x < width; x++ {
 		for y := 0; y < height; y++ {
@@ -654,6 +659,7 @@ func packTerrain(ctx context.Context, terrain [][]Terrain) (data []byte, numLand
 				// Impassable: isLand=1, magnitude=31, no shoreline, no ocean.
 				// Not counted as a land tile (can't be owned/attacked/nuked).
 				packedData[y*width+x] = 0b10011111
+				numImpassableTiles++
 				continue
 			}
 
@@ -681,7 +687,7 @@ func packTerrain(ctx context.Context, terrain [][]Terrain) (data []byte, numLand
 	}
 
 	logBinaryAsBits(ctx, packedData, 8)
-	return packedData, numLandTiles
+	return packedData, numLandTiles, numImpassableTiles
 }
 
 // createMapThumbnail generates an RGBA image representation of the terrain.
