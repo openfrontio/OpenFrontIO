@@ -7,7 +7,7 @@
   "location": { "lat": 40, "lon": 98 },
   "author": "crunchybbb",
   "themes": ["asia"],
-  "description": "A map of the approximate territorial claims of China sometime during the range of 1850-1930. This time period is considered to be the decline of the Qing Dynasty, the last imperial dynasty of China. Provinces, warlord states, rebel factions and European colonies are included as nations.",
+  "description": "A map of the approximate territorial claims of China sometime during the range of 1850-1930. This time period is considered to be the decline of the Qing Dynasty, the last imperial dynasty of China, and also the period of instability after that. Provinces, warlord states, rebel factions and European colonies are included as nations.",
   "nations": [
     {
       "coordinates": [1739, 1718],

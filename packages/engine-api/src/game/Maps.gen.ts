@@ -1497,7 +1497,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Korea,
     translationKey: "map.korea",
     categories: ["asia", "countries"],
-    defaultNationCount: 32,
+    defaultNationCount: 33,
     specialTeamCount: 2,
     themes: ["asia"],
     author: "crunchybbb",
