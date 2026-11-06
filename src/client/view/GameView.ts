@@ -243,7 +243,7 @@ export class GameView implements GameLike {
   }
 
   public isCatchingUp(): boolean {
-    return (this.lastUpdate?.pendingTurns ?? 0) > 1;
+    return this.lastUpdate === null || (this.lastUpdate.pendingTurns ?? 0) > 1;
   }
 
   public update(gu: GameUpdateViewData) {

@@ -1636,7 +1636,12 @@ export class InputHandler {
       this.uiState.ghostStructure === ghostStructure &&
       ghostStructure !== null
     ) {
-      if (source === "hotkey" && this.gameView.isPaused?.()) return;
+      if (
+        source === "hotkey" &&
+        (this.gameView.isCatchingUp?.() || this.gameView.isPaused?.())
+      ) {
+        return;
+      }
 
       const currentMultiplier = this.uiState.upgradeMultiplier ?? 1;
       switch (source) {

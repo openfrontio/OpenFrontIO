@@ -3745,7 +3745,7 @@ describe("GhostStructure Hotkeys tapping/Scrolling", () => {
     expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
   });
 
-  test("repeated hotkey taps increase the build multiplier by 5 each time and loop", () => {
+  test("repeated hotkeys wait for view sync before changing the multiplier", () => {
     // First tap sets ghostStructure and resets multiplier to 1
     window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
     expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.AtomBomb);
@@ -3764,9 +3764,18 @@ describe("GhostStructure Hotkeys tapping/Scrolling", () => {
     window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
     expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
 
-    mockGameView.isPaused = () => true;
+    mockGameView.isPaused = () => false;
+    mockGameView.isCatchingUp = () => true;
     window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
     expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+
+    mockGameView.isCatchingUp = () => false;
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(5);
+
+    mockGameView.isPaused = () => true;
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(5);
   });
 
   test("wheel scroll up increases upgrade multiplier", () => {

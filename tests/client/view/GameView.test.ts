@@ -603,6 +603,21 @@ describe("GameView.update — tick & lifecycle", () => {
     expect(game.ticks()).toBe(43);
   });
 
+  it("isCatchingUp() stays true until the view has caught up", () => {
+    const game = makeGameView();
+    expect(game.isCatchingUp()).toBe(true);
+
+    const backlog = makeEmptyGu(1);
+    backlog.pendingTurns = 2;
+    game.update(backlog);
+    expect(game.isCatchingUp()).toBe(true);
+
+    const current = makeEmptyGu(2);
+    current.pendingTurns = 1;
+    game.update(current);
+    expect(game.isCatchingUp()).toBe(false);
+  });
+
   it("inSpawnPhase() is true until a SpawnPhaseEnd update flips it off", () => {
     const game = makeGameView();
     expect(game.inSpawnPhase()).toBe(true);
