@@ -847,7 +847,9 @@ export class HostLobbyModal extends BaseModal {
         </div>
 
         <!-- Player List / footer -->
-        <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
+        <div
+          class="p-6 pt-4 compact:py-3 border-t border-white/10 bg-black/20 shrink-0"
+        >
           <o-button
             variant=${secondsRemaining !== null ? "warning" : "primary"}
             width="block"
