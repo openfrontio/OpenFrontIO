@@ -998,6 +998,19 @@ class Client {
           interrupt === "grant-welcome" && paid !== null
             ? await fetchCosmetics()
             : null;
+        // A join or a deep link can land while the catalog loads.
+        if (
+          interrupt === "grant-welcome" &&
+          paid !== null &&
+          !bootInterruptsAllowed(
+            window.location,
+            isDesktopShell(),
+            { joinInFlight: this.joinInFlight, lobbyHandle: this.lobbyHandle },
+            getDesktopUpdateState(),
+          )
+        ) {
+          return;
+        }
         await runBootInterrupt(
           interrupt,
           {

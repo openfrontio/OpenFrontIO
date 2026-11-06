@@ -16,6 +16,7 @@ import {
   renewalPushedDueThisLaunch,
   renewalPushedOf,
   renewalPushedStringsReady,
+  giftEndingStringsReady,
   reportThanksDueThisLaunch,
   reportThanksStringsReady,
   resetRenewalPushedForTest,
@@ -33,6 +34,7 @@ import type {
   DesktopUpdateStatus,
 } from "../../src/client/DesktopShell";
 import type { SteamGrantStore } from "../../src/client/SteamGrantNotices";
+import { STEAM_PLUS_WELCOME_NOTICE } from "../../src/client/SteamNotices";
 
 const ME = "player-public-id";
 
@@ -930,6 +932,7 @@ describe("running the Steam grant notices", () => {
     welcomed: false,
     endedShown: false,
     endingShown: false,
+    besidePaid: false,
     seenAt: now,
   };
   const grantStore = { [ME]: record };
@@ -1078,6 +1081,7 @@ describe("an interrupt the player never answered", () => {
     welcomed: false,
     endedShown: false,
     endingShown: false,
+    besidePaid: false,
     seenAt: now,
   };
   const context = {
@@ -1392,6 +1396,13 @@ describe("the payer's notices in the ordering", () => {
       ),
     ).toBeNull();
     expect(renewalPushedStringsReady((key) => key)).toBe(false);
+    expect(giftEndingStringsReady((key) => key)).toBe(false);
+  });
+
+  it("are ready once every string resolves", () => {
+    const translated = (key: string) => `text:${key}`;
+    expect(renewalPushedStringsReady(translated)).toBe(true);
+    expect(giftEndingStringsReady(translated)).toBe(true);
   });
 });
 
@@ -1403,6 +1414,7 @@ describe("the welcome for a grant beside a paid subscription", () => {
     welcomed: false,
     endedShown: false,
     endingShown: false,
+    besidePaid: false,
     seenAt: 0,
   };
   const paid = {
@@ -1436,6 +1448,16 @@ describe("the welcome for a grant beside a paid subscription", () => {
     });
   });
 
+  it("marks the standalone Steam Plus welcome seen", async () => {
+    const notices: string[] = [];
+    const { ports } = quietPorts({
+      dailyPlutonium: () => 25,
+      markNoticeSeen: (n) => notices.push(n),
+    });
+    await runBootInterrupt("grant-welcome", context(paid), ports);
+    expect(notices).toEqual([STEAM_PLUS_WELCOME_NOTICE]);
+  });
+
   it("drops the plutonium clause when the catalog has no amount", async () => {
     const { ports, calls } = quietPorts({ dailyPlutonium: () => null });
     await runBootInterrupt("grant-welcome", context(paid), ports);
@@ -1465,6 +1487,7 @@ describe("the ending-soon notice", () => {
     welcomed: true,
     endedShown: false,
     endingShown: false,
+    besidePaid: false,
     seenAt: 0,
   };
 
@@ -1522,6 +1545,20 @@ describe("the ending-soon notice", () => {
     const { stored } = await run(true, null);
     expect(stored[0][ME].endingShown).toBe(true);
   });
+
+  it("does not promise a paid tier that ends before the gift", async () => {
+    const ending = (date: string) => ({
+      tier: "steam_plus",
+      nextPayment: new Date(date),
+      renews: false,
+    });
+    expect((await run(true, ending("2026-12-01T00:00:00.000Z"))).key).toBe(
+      BOOT_INTERRUPT_KEYS.giftEndingSteamUnpaid,
+    );
+    expect((await run(true, ending("2027-01-10T00:00:00.000Z"))).key).toBe(
+      BOOT_INTERRUPT_KEYS.giftEndingSteamPaid,
+    );
+  });
 });
 
 describe("the renewal notice", () => {
@@ -1530,11 +1567,12 @@ describe("the renewal notice", () => {
   function userMe(
     renewalPushedBy: string | null,
     pendingMessages = ["renewal_pushed"],
+    cancelAtPeriodEnd = false,
   ): UserMeResponse {
     const row = {
       tier: "steam_plus",
       status: "active",
-      cancelAtPeriodEnd: false,
+      cancelAtPeriodEnd,
       currentPeriodEnd: new Date("2026-12-23T00:00:00.000Z"),
       provider: "steam",
       renewalPushedBy,
@@ -1572,7 +1610,7 @@ describe("the renewal notice", () => {
       );
       expect(calls.alerted).toEqual([
         {
-          body: `t(${key})`,
+          body: `t(${key}) t(${BOOT_INTERRUPT_KEYS.renewalPushedNextPayment})`,
           heading: `t(${BOOT_INTERRUPT_KEYS.renewalPushedHeading})`,
         },
       ]);
@@ -1584,4 +1622,22 @@ describe("the renewal notice", () => {
       expect(renewalPushedDueThisLaunch(userMe(by))).toBe(false);
     });
   }
+
+  it("calls the date an end, not a payment, once it is set to cancel", async () => {
+    const { ports, calls } = quietPorts();
+    await runBootInterrupt(
+      "renewal-pushed",
+      {
+        claimStore: {},
+        grantStore: {},
+        publicId: ME,
+        steamNotice: null,
+        renewalPushed: renewalPushedOf(userMe("gift", undefined, true)),
+      },
+      ports,
+    );
+    expect(calls.alerted[0].body).toBe(
+      `t(${BOOT_INTERRUPT_KEYS.renewalPushedGift}) t(${BOOT_INTERRUPT_KEYS.renewalPushedRunsUntil})`,
+    );
+  });
 });

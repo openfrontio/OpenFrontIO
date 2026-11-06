@@ -117,7 +117,7 @@
     "sub_next_payment": "next payment {date}",
     "sub_next_payment_pushed_base": "Next payment {date} (free month from the base game)",
     "sub_next_payment_pushed_dlc": "Next payment {date} (free month from the Deluxe Edition)",
-    "sub_next_payment_pushed_gift": "Next payment {date} (the rest of your free month)",
+    "sub_next_payment_pushed_gift": "Next payment {date} (your free days carried over)",
     "sub_past_due_note": "Your last payment didn't go through, so your {tier} perks are paused. Update your payment method to restore them.",
     "sub_price_monthly": "{price}/mo",
     "sub_renews_on": "Renews {date}",
@@ -2241,10 +2241,12 @@
     "neutral": "Neutral"
   },
   "renewal_pushed": {
-    "body_base": "You already have {tier}, so your copy of OpenFront gives you a free month instead. Your next payment is on {date}.",
-    "body_dlc": "You already have {tier}, so the Deluxe Edition gives you a free month instead. Your next payment is on {date}.",
-    "body_gift": "The free days you had left have been added to your subscription. Your next payment is on {date}.",
-    "heading": "Your next payment has moved"
+    "body_base": "You already have {tier}, so your copy of OpenFront gives you a free month instead.",
+    "body_dlc": "You already have {tier}, so the Deluxe Edition gives you a free month instead.",
+    "body_gift": "The free days you had left have been added to your subscription.",
+    "heading": "Your next payment has moved",
+    "next_payment": "Your next payment is on {date}.",
+    "runs_until": "Your subscription is set to end, so it now runs until {date}."
   },
   "replay_panel": {
     "fastest_game_speed": "Max",

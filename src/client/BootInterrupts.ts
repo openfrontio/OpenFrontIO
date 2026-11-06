@@ -32,6 +32,7 @@ import {
 } from "./SteamGrantNotices";
 import {
   STEAM_LICENCE_INTRO_NOTICE,
+  STEAM_PLUS_WELCOME_NOTICE,
   steamNoticeCopy,
   steamNoticeShown,
   type SteamNotice,
@@ -489,6 +490,8 @@ export const BOOT_INTERRUPT_KEYS = {
   renewalPushedBase: "renewal_pushed.body_base",
   renewalPushedDlc: "renewal_pushed.body_dlc",
   renewalPushedGift: "renewal_pushed.body_gift",
+  renewalPushedNextPayment: "renewal_pushed.next_payment",
+  renewalPushedRunsUntil: "renewal_pushed.runs_until",
   grantEndedBody: "steam_grant.ended_body",
   grantEndedHeading: "steam_grant.ended_heading",
   reportThanksBody: "report_thanks.body",
@@ -609,6 +612,8 @@ export interface RenewalPushed {
   tier: string;
   by: RenewalPushedBy;
   nextPayment: Date;
+  /** False once it is set to cancel: the date is then its end, not a payment. */
+  renews: boolean;
 }
 
 export function renewalPushedOf(
@@ -618,7 +623,12 @@ export function renewalPushedOf(
   const paid = paidSubscriptionOf(userMe.player);
   const by = renewalPushedBy(paid);
   if (paid === null || by === null || !paid.currentPeriodEnd) return null;
-  return { tier: paid.tier, by, nextPayment: paid.currentPeriodEnd };
+  return {
+    tier: paid.tier,
+    by,
+    nextPayment: paid.currentPeriodEnd,
+    renews: !paid.cancelAtPeriodEnd,
+  };
 }
 
 // One showing per launch, for the reason reportThanksShownThisLaunch gives.
@@ -653,6 +663,8 @@ export function renewalPushedStringsReady(
       BOOT_INTERRUPT_KEYS.renewalPushedBase,
       BOOT_INTERRUPT_KEYS.renewalPushedDlc,
       BOOT_INTERRUPT_KEYS.renewalPushedGift,
+      BOOT_INTERRUPT_KEYS.renewalPushedNextPayment,
+      BOOT_INTERRUPT_KEYS.renewalPushedRunsUntil,
     ] as string[]
   ).every((key) => translate(key, params) !== key);
 }
@@ -849,6 +861,10 @@ async function runInterrupt(
           : stackedWelcomeBody(record.tier, tier, date, paid, ports),
         ports.translate(BOOT_INTERRUPT_KEYS.grantWelcomeHeading),
       );
+      // The payer was never offered the standalone Steam Plus welcome; once
+      // their paid sub lapses it would explain this same month again.
+      if (paid !== null && record.steam)
+        ports.markNoticeSeen(STEAM_PLUS_WELCOME_NOTICE);
       ports.updateSteamGrant(
         forShownGrant(record, context.publicId, steamGrantWelcomed),
       );
@@ -870,7 +886,14 @@ async function runInterrupt(
     case "gift-ending": {
       const record = context.grantStore[context.publicId];
       if (record === undefined) return;
-      const paid = context.paid ?? null;
+      // "Back on {paidTier}" only if the paid sub is still there afterwards.
+      const giftEnd = Date.parse(record.periodEnd);
+      const paid =
+        context.paid &&
+        (context.paid.renews ||
+          (context.paid.nextPayment?.getTime() ?? 0) > giftEnd)
+          ? context.paid
+          : null;
       const params = {
         tier: ports.tierName(record.tier),
         date: formatGrantDate(record.periodEnd),
@@ -901,14 +924,17 @@ async function runInterrupt(
         tier: ports.tierName(pushed.tier),
         date: formatGrantDate(pushed.nextPayment),
       };
-      const body =
+      const reason =
         pushed.by === "dlc"
           ? ports.translate("renewal_pushed.body_dlc", params)
           : pushed.by === "base"
             ? ports.translate("renewal_pushed.body_base", params)
             : ports.translate("renewal_pushed.body_gift", params);
+      const when = pushed.renews
+        ? ports.translate("renewal_pushed.next_payment", params)
+        : ports.translate("renewal_pushed.runs_until", params);
       await ports.alert(
-        body,
+        `${reason} ${when}`,
         ports.translate(BOOT_INTERRUPT_KEYS.renewalPushedHeading),
       );
       ports.markMessageSeen("renewal_pushed");

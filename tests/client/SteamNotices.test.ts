@@ -467,6 +467,7 @@ describe("the steam-notice boot interrupt", () => {
       welcomed: false,
       endedShown: false,
       endingShown: false,
+      besidePaid: false,
       seenAt: NOW,
     },
   };

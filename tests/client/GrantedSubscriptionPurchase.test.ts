@@ -375,6 +375,21 @@ describe("purchaseCosmetic: the confirm a granted subscriber is shown", () => {
     );
   });
 
+  it("does not promise to keep a higher grant whose end has passed", async () => {
+    signedInWith({
+      tier: "platinum",
+      provider: null,
+      currentPeriodEnd: new Date(Date.now() - DAY_MS),
+    });
+
+    await purchaseCosmetic(tier("gold", 5), "dollar");
+
+    expect(confirmMock).toHaveBeenCalledWith(
+      "store.confirm_subscribe_over_grant_no_days",
+      expect.anything(),
+    );
+  });
+
   it("says 1 day, not 0, on the last day of the grant", async () => {
     // Twelve hours left. The singular is the case a player converting near
     // the end of their month actually sees.

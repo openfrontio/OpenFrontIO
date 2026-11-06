@@ -58,6 +58,7 @@ function recorded(overrides: Partial<SteamGrantStore[string]> = {}) {
       welcomed: false,
       endedShown: false,
       endingShown: false,
+      besidePaid: false,
       seenAt: NOW,
       ...overrides,
     },
@@ -185,6 +186,7 @@ describe("recordSteamGrant", () => {
         welcomed: false,
         endedShown: false,
         endingShown: false,
+        besidePaid: false,
         seenAt: NOW,
       },
     });
@@ -308,6 +310,24 @@ describe("steamGrantEnded", () => {
       currentPeriodEnd: new Date("2026-12-01T00:00:00.000Z"),
     });
     expect(steamGrantEnded(recorded(), renewed, after)).toBeNull();
+  });
+
+  // Both rows lapsed between boots. The sign-off says nothing was charged,
+  // which is false for someone who was paying beside the gift.
+  it("finds nothing for a grant once seen beside a paid subscription", () => {
+    const gift = steamMonth().player.subscription as Sub;
+    const payer = paid().player.subscription as Sub;
+    const stacked = {
+      ...steamMonth(),
+      player: {
+        ...steamMonth().player,
+        subscription: gift,
+        subscriptions: [gift, payer],
+      },
+    } as unknown as UserMeResponse;
+    const store = recordSteamGrant({}, stacked, NOW);
+    expect(store[ME].besidePaid).toBe(true);
+    expect(steamGrantEnded(store, nothing(), after)).toBeNull();
   });
 
   it("finds nothing without a record or an account", () => {

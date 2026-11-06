@@ -305,9 +305,11 @@ async function purchaseOverGrant(
 ): Promise<void> {
   const targetName = translateCosmetic("subscriptions", sub.name);
   const giftTier = subscriptionTier(await fetchCosmetics(), gift.tier);
-  const keepsGift =
-    giftTier !== null && giftTier.priceMonthly > sub.priceMonthly;
   const days = grantedDaysRemaining(gift);
+  const keepsGift =
+    giftTier !== null &&
+    giftTier.priceMonthly > sub.priceMonthly &&
+    (!gift.currentPeriodEnd || days !== null);
   // Every key passed as a literal so the en.json sync test can see them.
   const confirmed = await showInGameConfirm(
     keepsGift
