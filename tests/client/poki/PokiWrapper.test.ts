@@ -123,6 +123,21 @@ describe("Poki wrapper page", () => {
     ]);
   });
 
+  it("replays the game's input where the SDK listens for it", async () => {
+    const pointerdown = vi.fn();
+    const keydown = vi.fn();
+    window.addEventListener("pointerdown", pointerdown);
+    document.addEventListener("keydown", keydown);
+    await fromGame("interaction", ["pointerdown"]);
+    await fromGame("interaction", ["keydown", "Space"]);
+    window.removeEventListener("pointerdown", pointerdown);
+    document.removeEventListener("keydown", keydown);
+    expect(pointerdown).toHaveBeenCalledOnce();
+    expect(keydown).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "Space" }),
+    );
+  });
+
   it("only answers our game frame, and only for its own methods", async () => {
     await fromGame("getToken", [], { origin: "https://evil.example" });
     await fromGame("getToken", [], { source: window });

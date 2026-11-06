@@ -120,6 +120,20 @@ function getURLParam(name: string): string {
 // adblocker), like PokiSDK's own script load.
 export async function connectPokiBridge(): Promise<PokiApi | null> {
   if (!(await call<boolean>("hello"))) return null;
+  // The SDK takes a player's input from its own page's pointerdown and
+  // keydown: gameplayStart wants one just before it, and the playerfit test
+  // reports whether there was any. Input in our frame never reaches the
+  // wrapper's page, so it's passed on.
+  window.addEventListener(
+    "pointerdown",
+    () => send("interaction", ["pointerdown"]),
+    { capture: true, passive: true },
+  );
+  document.addEventListener(
+    "keydown",
+    (event) => send("interaction", ["keydown", event.code]),
+    { capture: true },
+  );
   return {
     init: () => call("init"),
     gameLoadingFinished: () => send("gameLoadingFinished"),
