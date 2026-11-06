@@ -1,7 +1,7 @@
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { translateText } from "../Utils";
+import { getCurrentLanguage, translateText } from "../Utils";
 import "./baseComponents/Modal";
 import type { OModal } from "./baseComponents/Modal";
 
@@ -125,10 +125,13 @@ export class BannedModal extends LitElement {
             ${this.detailRow(
               translateText("ban_notice.expires_label"),
               ban.expiresAt
-                ? new Date(ban.expiresAt).toLocaleString(undefined, {
-                    dateStyle: "long",
-                    timeStyle: "short",
-                  })
+                ? new Date(ban.expiresAt).toLocaleString(
+                    [getCurrentLanguage(), "en"],
+                    {
+                      dateStyle: "long",
+                      timeStyle: "short",
+                    },
+                  )
                 : translateText("ban_notice.expires_never"),
             )}
           </dl>

@@ -5,7 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // unknown-category fallback keys off `label === key`), an UNKNOWN key returns
 // the key unchanged (simulating a missing translation), and params are appended
 // so assertions can see interpolated values.
+const language = vi.hoisted(() => ({ current: "en" }));
+
 vi.mock("../../src/client/Utils", () => ({
+  getCurrentLanguage: () => language.current,
   translateText: (key: string, params?: Record<string, string | number>) => {
     // Only this category has no translation, to exercise the fallback path.
     if (key === "ban_notice.category.brand_new_reason") return key;
@@ -39,6 +42,7 @@ describe("banned-modal", () => {
 
   afterEach(() => {
     el.remove();
+    language.current = "en";
     vi.clearAllMocks();
   });
 
@@ -76,6 +80,35 @@ describe("banned-modal", () => {
     expect(t).toContain("aimbot in ranked");
     expect(t).toContain("ban_notice.expires_label");
     expect(t).not.toContain("ban_notice.expires_never");
+  });
+
+  it("writes the expiry date in the selected game language", async () => {
+    language.current = "de";
+    fireUserMe({
+      ban: {
+        category: "other",
+        reason: null,
+        expiresAt: "2026-03-15T12:00:00.000Z",
+      },
+      user: {},
+      player: {},
+    });
+    expect(await text()).toContain("März");
+  });
+
+  it("writes the expiry date in English for a language Intl doesn't support", async () => {
+    // Toki Pona: selectable in game, but without it Intl would use the browser's.
+    language.current = "tp";
+    fireUserMe({
+      ban: {
+        category: "other",
+        reason: null,
+        expiresAt: "2026-03-15T12:00:00.000Z",
+      },
+      user: {},
+      player: {},
+    });
+    expect(await text()).toContain("March");
   });
 
   it("links the appeal to the OpenFront Discord in a new tab", async () => {
