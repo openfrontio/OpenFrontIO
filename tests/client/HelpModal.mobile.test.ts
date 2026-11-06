@@ -115,31 +115,4 @@ describe("HelpModal mobile rendering", () => {
     expect(button?.classList.contains("whitespace-normal")).toBe(true);
     expect(button?.classList.contains("break-words")).toBe(true);
   });
-
-  it("omits an intentionally empty troubleshooting description", async () => {
-    setPrimaryPointerIsTouch(false);
-    const language = document.createElement("lang-selector") as HTMLElement & {
-      currentLang: string;
-      defaultTranslations: Record<string, string>;
-      translations: Record<string, string>;
-    };
-    language.currentLang = "nl";
-    language.defaultTranslations = {};
-    language.translations = {
-      "help_modal.troubleshooting_desc": "",
-      "main.go_to_troubleshooting":
-        "Ga naar onze pagina voor probleemoplossing",
-    };
-    document.body.appendChild(language);
-
-    const modal = await mountHelpModal();
-    const button = modal.querySelector<HTMLButtonElement>(
-      "#troubleshooting-button",
-    );
-
-    expect(button?.textContent?.trim()).toBe(
-      "Ga naar onze pagina voor probleemoplossing",
-    );
-    expect(button?.closest("section")?.querySelector("p")).toBeNull();
-  });
 });

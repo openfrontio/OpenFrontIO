@@ -1,5 +1,5 @@
 import { assetUrl } from "@openfront/shared/AssetUrls";
-import { html, nothing } from "lit";
+import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import {
   DESKTOP_TUTORIAL_VIDEO_URL,
@@ -112,9 +112,6 @@ export class HelpModal extends BaseModal {
   protected renderBody() {
     const keybinds = this.keybinds;
     const hideHotkeys = Platform.isTouch && !Platform.hasKeyboard;
-    const troubleshootingDescription = translateText(
-      "help_modal.troubleshooting_desc",
-    );
 
     return html`
       <div
@@ -238,13 +235,9 @@ export class HelpModal extends BaseModal {
           </div>
           <section>
             <div class="w-full flex flex-col items-center">
-              ${
-                troubleshootingDescription
-                  ? html`<p class="mb-6 text-white/70 text-sm">
-                      ${troubleshootingDescription}
-                    </p>`
-                  : nothing
-              }
+              <p class="mb-6 text-white/70 text-sm">
+                ${translateText("help_modal.troubleshooting_desc")}
+              </p>
               <button
                 id="troubleshooting-button"
                 class="w-full sm:w-fit max-w-full hover:bg-white/5 px-4 sm:px-6 py-2 text-sm sm:text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)] whitespace-normal break-words text-center"

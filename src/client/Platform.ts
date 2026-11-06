@@ -20,11 +20,6 @@ export const Platform = (() => {
     "submit",
   ]);
 
-  const isTouchDevice = () =>
-    isBrowser() &&
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(pointer: coarse)").matches;
-
   if (typeof window !== "undefined") {
     window.addEventListener(
       "keydown",
@@ -165,7 +160,11 @@ export const Platform = (() => {
 
     /** Touch devices (phones, tablets) report a coarse primary pointer. */
     get isTouch(): boolean {
-      return isTouchDevice();
+      return (
+        isBrowser() &&
+        typeof window.matchMedia === "function" &&
+        window.matchMedia("(pointer: coarse)").matches
+      );
     },
 
     /** Whether a physical keyboard is present or has been detected via keypress. */
