@@ -9,7 +9,10 @@ import {
   buildNukeTrajectory,
   type SAMInfo,
 } from "../../src/client/render/gl/utils/NukeTrajectory";
-import type { GhostPreviewData } from "../../src/client/render/types";
+import type {
+  GhostPreviewData,
+  RangeWarning,
+} from "../../src/client/render/types";
 import type { TransformHandler } from "../../src/client/TransformHandler";
 import type { UIState } from "../../src/client/UIState";
 import type { UserSettings } from "../../src/client/UserSettings";
@@ -39,7 +42,7 @@ interface ControllerInternals {
   updateNukeTrajectoryPreview(tileRef: TileRef | undefined): void;
   buildGhostPreviewData(
     tileRef: TileRef | undefined,
-    targetingAlly: boolean,
+    rangeWarning: RangeWarning,
   ): GhostPreviewData | null;
   lastGhostData: GhostPreviewData | null;
   nukeTrajectoryStatic: {
@@ -220,7 +223,7 @@ function setupControllerPreview(
   controller.updateNukeTrajectoryPreview(targetTile);
   controller.lastGhostData = controller.buildGhostPreviewData(
     targetTile,
-    false,
+    "none",
   );
 }
 
