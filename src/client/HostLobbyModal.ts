@@ -297,12 +297,19 @@ export class HostLobbyModal extends BaseModal {
         this.close();
       },
       ariaLabel: translateText("common.back"),
-      // Both answer "get my friends into this lobby", so they sit together —
-      // the host is the player holding the code and deciding who joins, and
-      // was the one surface the invite button originally missed. Paired behind
-      // a wrapper only when the invite is present, so a browser renders exactly
-      // the markup it did before.
+      // Copy and invite both answer "get my friends into this lobby", so they
+      // sit together — the host is the player holding the code and deciding
+      // who joins, and was the one surface the invite button originally missed.
       rightContent: (() => {
+        const presets = html`<lobby-preset-controls
+          .presets=${this.lobbyPresets}
+          .selectedName=${this.selectedPresetName}
+          ?disabled=${this.publiclyListed}
+          @preset-select=${this.handlePresetSelect}
+          @preset-load=${this.handlePresetLoad}
+          @preset-save=${this.handlePresetSave}
+          @preset-delete=${this.handlePresetDelete}
+        ></lobby-preset-controls>`;
         const copy = html`<copy-button
           .lobbyId=${this.lobbyId}
           .lobbySuffix=${this.lobbyUrlSuffix}
@@ -314,9 +321,9 @@ export class HostLobbyModal extends BaseModal {
         // no shadow lobby behind it — the invite would silently no-op. The
         // join modal gets this free from its own !currentLobbyId early return.
         const invite = this.lobbyId ? inviteFriendsButton() : undefined;
-        return invite
-          ? html`<div class="flex items-center gap-2">${copy}${invite}</div>`
-          : copy;
+        return html`<div class="flex flex-wrap items-center gap-2">
+          ${presets}${copy}${invite}
+        </div>`;
       })(),
     });
   }
@@ -688,15 +695,6 @@ export class HostLobbyModal extends BaseModal {
                 </div>`
               : nothing
           }
-          <lobby-preset-controls
-            .presets=${this.lobbyPresets}
-            .selectedName=${this.selectedPresetName}
-            ?disabled=${this.publiclyListed}
-            @preset-select=${this.handlePresetSelect}
-            @preset-load=${this.handlePresetLoad}
-            @preset-save=${this.handlePresetSave}
-            @preset-delete=${this.handlePresetDelete}
-          ></lobby-preset-controls>
           <!-- Players joined a listed lobby for its advertised settings, so
                they are frozen (the server rejects changes too). -->
           <game-config-settings
