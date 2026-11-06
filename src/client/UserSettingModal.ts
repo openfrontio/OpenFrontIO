@@ -38,7 +38,7 @@ import {
 import { isDesktopShell } from "./DesktopShell";
 import { KeyboardLayoutController } from "./KeyboardLayout";
 import { pushMapLayerState } from "./MapLayerSettings";
-import { Platform } from "./Platform";
+import { KEYBOARD_DETECTED_EVENT, Platform } from "./Platform";
 import type { AudioControls } from "./sound/CuePlayer";
 import { audioControls, playCue } from "./sound/CuePlayer";
 import type { CueCategory } from "./sound/Sounds";
@@ -50,6 +50,7 @@ import {
   GRAPHICS_KEY,
   keysMayBeShared,
   MAP_LAYERS_KEY,
+  PERFORMANCE_OVERLAY_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "./UserSettings";
@@ -170,13 +171,9 @@ export class UserSettingModal extends BaseModal {
   private displayRequestId = 0;
 
   private displaySettleTimer: ReturnType<typeof setTimeout> | undefined;
-  private lastHasKeyboard = Platform.hasKeyboard;
 
-  private handleKeyboardDetection = () => {
-    if (Platform.hasKeyboard && !this.lastHasKeyboard) {
-      this.lastHasKeyboard = true;
-      this.requestUpdate();
-    }
+  private handleKeyboardDetected = () => {
+    this.requestUpdate();
   };
 
   connectedCallback() {
@@ -188,8 +185,10 @@ export class UserSettingModal extends BaseModal {
       this.routerName = undefined;
     }
     this.loadKeybindsFromStorage();
-    this.lastHasKeyboard = Platform.hasKeyboard;
-    window.addEventListener("keydown", this.handleKeyboardDetection);
+    window.addEventListener(
+      KEYBOARD_DETECTED_EVENT,
+      this.handleKeyboardDetected,
+    );
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
@@ -197,11 +196,18 @@ export class UserSettingModal extends BaseModal {
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${MAP_LAYERS_KEY}`,
       this.onGraphicsChanged,
+    );
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${PERFORMANCE_OVERLAY_KEY}`,
+      this.onPerformanceOverlayChanged,
     );
   }
 
   disconnectedCallback() {
-    window.removeEventListener("keydown", this.handleKeyboardDetection);
+    window.removeEventListener(
+      KEYBOARD_DETECTED_EVENT,
+      this.handleKeyboardDetected,
+    );
     globalThis.removeEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
@@ -209,6 +215,10 @@ export class UserSettingModal extends BaseModal {
     globalThis.removeEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${MAP_LAYERS_KEY}`,
       this.onGraphicsChanged,
+    );
+    globalThis.removeEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${PERFORMANCE_OVERLAY_KEY}`,
+      this.onPerformanceOverlayChanged,
     );
     window.removeEventListener("keydown", this.handleEasterEggKey);
     // An element torn down without close() being called (the in-game instance
@@ -233,6 +243,10 @@ export class UserSettingModal extends BaseModal {
       this.onLayerVisibilityChange,
       this.onLayerAlphaChange,
     );
+  };
+
+  private readonly onPerformanceOverlayChanged = () => {
+    this.requestUpdate();
   };
 
   private loadKeybindsFromStorage() {
@@ -292,36 +306,10 @@ export class UserSettingModal extends BaseModal {
     }
 
     const values = Object.entries(activeKeybinds)
-      .filter(([k]) => k !== action && !keysMayBeShared(action, k))
+      .filter(([k]) => k !== action && !keysMayBeShared(action, k, value))
       .map(([, v]) => v);
 
-    // Allow specific key pairs to share physical modifier keys without reporting conflict
-    const ALLOWED_SHARED_MODIFIERS: Array<{
-      actions: [string, string];
-      keyPrefix: string;
-    }> = [
-      // This is a tad ugly, but it's the only solution I found.
-      {
-        actions: ["buildScrollModifier", "emojiMenuModifier"],
-        keyPrefix: "Alt",
-      },
-      { actions: ["altKey", "emojiMenuModifier"], keyPrefix: "Alt" },
-      { actions: ["buildScrollModifier", "altKey"], keyPrefix: "Alt" },
-      { actions: ["boxSelectWarships", "shiftKey"], keyPrefix: "Shift" },
-    ];
-
-    const isAllowedSharedModifier = ALLOWED_SHARED_MODIFIERS.some(
-      ({ actions: [a1, a2], keyPrefix }) =>
-        ((action === a1 && activeKeybinds[a2] === value) ||
-          (action === a2 && activeKeybinds[a1] === value)) &&
-        (value === `${keyPrefix}Left` || value === `${keyPrefix}Right`),
-    );
-
-    if (
-      values.includes(value) &&
-      value !== "Null" &&
-      !isAllowedSharedModifier
-    ) {
+    if (values.includes(value) && value !== "Null") {
       const displayKey = formatKeyForDisplay(key || value);
       window.dispatchEvent(
         new CustomEvent("show-message", {
@@ -391,6 +379,20 @@ export class UserSettingModal extends BaseModal {
     const entry = this.userKeybinds[action];
     const defaultCode = this.defaultKeybinds[action] || "";
     return resolveKeybindLabel(entry, defaultCode, this.keyboardLayout.map);
+  }
+
+  private performanceOverlayDescription(): string {
+    const key = this.getKeyChar("performanceOverlay");
+    const description = translateText(
+      "user_setting.performance_overlay_keybind_desc",
+    );
+
+    return key
+      ? translateText("user_setting.performance_overlay_desc", {
+          description,
+          key,
+        })
+      : description;
   }
 
   private handleEasterEggKey = (e: KeyboardEvent) => {
@@ -1524,23 +1526,22 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
-        action="boxSelectWarships"
-        .allowModifiers=${true}
-        label=${translateText("user_setting.box_select_warships")}
-        description=${translateText("user_setting.box_select_warships_desc")}
-        .defaultKey=${this.defaultKeybinds.boxSelectWarships}
-        .value=${this.getKeyValue("boxSelectWarships")}
-        .display=${this.getKeyChar("boxSelectWarships")}
+        action="emojiMenu"
+        label=${translateText("user_setting.emoji_menu")}
+        description=${translateText("user_setting.emoji_menu_desc")}
+        defaultKey=${this.defaultKeybinds.emojiMenu}
+        .value=${this.getKeyValue("emojiMenu")}
+        .display=${this.getKeyChar("emojiMenu")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="selectAllWarships"
-        label=${translateText("user_setting.select_all_warships")}
-        description=${translateText("user_setting.select_all_warships_desc")}
-        .defaultKey=${this.defaultKeybinds.selectAllWarships}
-        .value=${this.getKeyValue("selectAllWarships")}
-        .display=${this.getKeyChar("selectAllWarships")}
+        action="quickChat"
+        label=${translateText("user_setting.quick_chat")}
+        description=${translateText("user_setting.quick_chat_desc")}
+        defaultKey=${this.defaultKeybinds.quickChat}
+        .value=${this.getKeyValue("quickChat")}
+        .display=${this.getKeyChar("quickChat")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -1571,6 +1572,18 @@ export class UserSettingModal extends BaseModal {
         .defaultKey=${this.defaultKeybinds.gameSpeedDown}
         .value=${this.getKeyValue("gameSpeedDown")}
         .display=${this.getKeyChar("gameSpeedDown")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="performanceOverlay"
+        label=${translateText("user_setting.performance_overlay_label")}
+        description=${translateText(
+          "user_setting.performance_overlay_keybind_desc",
+        )}
+        defaultKey=${this.defaultKeybinds.performanceOverlay}
+        .value=${this.getKeyValue("performanceOverlay")}
+        .display=${this.getKeyChar("performanceOverlay")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -1650,6 +1663,27 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
+      <setting-keybind
+        action="boxSelectWarships"
+        .allowModifiers=${true}
+        label=${translateText("user_setting.box_select_warships")}
+        description=${translateText("user_setting.box_select_warships_desc")}
+        .defaultKey=${this.defaultKeybinds.boxSelectWarships}
+        .value=${this.getKeyValue("boxSelectWarships")}
+        .display=${this.getKeyChar("boxSelectWarships")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="selectAllWarships"
+        label=${translateText("user_setting.select_all_warships")}
+        description=${translateText("user_setting.select_all_warships_desc")}
+        .defaultKey=${this.defaultKeybinds.selectAllWarships}
+        .value=${this.getKeyValue("selectAllWarships")}
+        .display=${this.getKeyChar("selectAllWarships")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
@@ -1687,22 +1721,22 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
-        action="emojiMenu"
-        label=${translateText("user_setting.emoji_menu")}
-        description=${translateText("user_setting.emoji_menu_desc")}
-        defaultKey=${this.defaultKeybinds.emojiMenu}
-        .value=${this.getKeyValue("emojiMenu")}
-        .display=${this.getKeyChar("emojiMenu")}
+        action="donateTroops"
+        label=${translateText("user_setting.donate_troops")}
+        description=${translateText("user_setting.donate_troops_desc")}
+        defaultKey=${this.defaultKeybinds.donateTroops}
+        .value=${this.getKeyValue("donateTroops")}
+        .display=${this.getKeyChar("donateTroops")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
       <setting-keybind
-        action="quickChat"
-        label=${translateText("user_setting.quick_chat")}
-        description=${translateText("user_setting.quick_chat_desc")}
-        defaultKey=${this.defaultKeybinds.quickChat}
-        .value=${this.getKeyValue("quickChat")}
-        .display=${this.getKeyChar("quickChat")}
+        action="donateGold"
+        label=${translateText("user_setting.donate_gold")}
+        description=${translateText("user_setting.donate_gold_desc")}
+        defaultKey=${this.defaultKeybinds.donateGold}
+        .value=${this.getKeyValue("donateGold")}
+        .display=${this.getKeyChar("donateGold")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -1909,7 +1943,7 @@ export class UserSettingModal extends BaseModal {
       <!-- 📱 Performance Overlay -->
       <setting-toggle
         label="${translateText("user_setting.performance_overlay_label")}"
-        description="${translateText("user_setting.performance_overlay_desc")}"
+        description="${this.performanceOverlayDescription()}"
         id="performance-overlay-toggle"
         .checked=${this.userSettings.performanceOverlay()}
         @change=${this.togglePerformanceOverlay}
@@ -2170,7 +2204,6 @@ export class UserSettingModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
-    this.lastHasKeyboard = Platform.hasKeyboard;
     window.addEventListener("keydown", this.handleEasterEggKey);
     // Keybinds are editable from either instance and were only read in
     // connectedCallback, so re-read them or the other one renders stale.

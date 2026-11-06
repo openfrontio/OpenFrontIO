@@ -57,7 +57,11 @@ function setupSea(
   }
 
   const nation = player("nation");
+  // A city lifts the nation's max troops above its army
+  const city = nation.buildUnit(UnitType.City, game.ref(0, 0), {});
+  for (let i = 0; i < 3; i++) city.increaseLevel();
   nation.setTroops(1_000_000);
+  expect(game.config().maxTroops(nation)).toBeGreaterThan(1_000_000);
   const random = new PseudoRandom(42);
   const emoji = new NationEmojiBehavior(random, game, nation);
   const behavior = new NationAttackBehavior(

@@ -18,7 +18,7 @@ import {
   isForwardedTouchClick,
 } from "../../InputHandler";
 import { KeyboardLayoutController } from "../../KeyboardLayout";
-import { Platform } from "../../Platform";
+import { KEYBOARD_DETECTED_EVENT, Platform } from "../../Platform";
 import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
 import { resolveKeybindLabel, translateText } from "../../Utils";
@@ -97,7 +97,6 @@ export class UnitDisplay extends LitElement implements Controller {
   private moreActionsRight = false;
   private observedScroller: HTMLElement | null = null;
   private windowListenersAttached = false;
-  private lastHasKeyboard = Platform.hasKeyboard;
 
   createRenderRoot() {
     return this;
@@ -144,7 +143,10 @@ export class UnitDisplay extends LitElement implements Controller {
     super.connectedCallback();
     if (this.windowListenersAttached) return;
     window.addEventListener("resize", this.onLayoutChange);
-    window.addEventListener("keydown", this.handleKeyboardDetection);
+    window.addEventListener(
+      KEYBOARD_DETECTED_EVENT,
+      this.handleKeyboardDetected,
+    );
     document.addEventListener("pointerdown", this.handleDocumentPointerDown);
     document.addEventListener("pointerup", this.handleDocumentPointerUp);
     document.addEventListener(
@@ -160,7 +162,10 @@ export class UnitDisplay extends LitElement implements Controller {
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener("resize", this.onLayoutChange);
-    window.removeEventListener("keydown", this.handleKeyboardDetection);
+    window.removeEventListener(
+      KEYBOARD_DETECTED_EVENT,
+      this.handleKeyboardDetected,
+    );
     document.removeEventListener("pointerdown", this.handleDocumentPointerDown);
     document.removeEventListener("pointerup", this.handleDocumentPointerUp);
     document.removeEventListener(
@@ -191,11 +196,8 @@ export class UnitDisplay extends LitElement implements Controller {
    * A keyboard can show up after the page loaded (a tablet with a Bluetooth
    * keyboard, a desktop user who only now typed). Show the hotkeys from then on.
    */
-  private handleKeyboardDetection = () => {
-    if (Platform.hasKeyboard && !this.lastHasKeyboard) {
-      this.lastHasKeyboard = true;
-      this.requestUpdate();
-    }
+  private handleKeyboardDetected = () => {
+    this.requestUpdate();
   };
 
   /**
@@ -627,7 +629,7 @@ export class UnitDisplay extends LitElement implements Controller {
         <div
           class="${
             this.canBuild(unitType) ? "" : "opacity-40"
-          } border border-slate-500 rounded-sm min-h-11 w-full px-1 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:min-h-0 lg:px-0.5 lg:justify-start landscape:px-0.5
+          } border border-slate-500 rounded-sm max-lg:h-7.5 w-full px-1 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:px-0.5 lg:justify-start landscape:px-0.5
              ${
             selected
               ? "pointer-fine:hover:bg-gray-400/10"
@@ -702,11 +704,11 @@ export class UnitDisplay extends LitElement implements Controller {
             <img
               src=${icon}
               alt=${translateText("unit_type." + structureKey)}
-              class="align-middle size-7 lg:size-5 max-lg:landscape:size-6"
+              class="align-middle size-6 lg:size-5 max-lg:landscape:size-5"
             />
             ${
               number !== null
-                ? html`<span class="text-[10px] leading-none lg:text-xs"
+                ? html`<span class="hidden lg:inline text-xs leading-none"
                     >${renderNumber(number)}</span
                   >`
                 : null

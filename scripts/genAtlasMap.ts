@@ -1,21 +1,21 @@
-// Writes resources/images/EarthMap.svg, the map picker's Earth view, from
+// Writes resources/images/AtlasMap.svg, the map picker's Atlas tab, from
 // Natural Earth's 1:50m countries (world-atlas TopoJSON).
-// Run with `npx tsx scripts/genEarthMap.ts [topojson path or URL]`.
+// Run with `npx tsx scripts/genAtlasMap.ts [topojson path or URL]`.
 import { geoArea, geoEqualEarth, geoPath } from "d3";
 import fs from "fs";
 import path from "path";
 import {
-  EARTH_MAP_HEIGHT,
-  EARTH_MAP_SCALE,
-  EARTH_MAP_WIDTH,
-  projectEarth,
-} from "../src/client/components/map/EarthProjection";
+  ATLAS_MAP_HEIGHT,
+  ATLAS_MAP_SCALE,
+  ATLAS_MAP_WIDTH,
+  projectToAtlas,
+} from "../src/client/components/map/AtlasProjection";
 
 const SOURCE =
   "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json";
 const OUT = path.resolve(
   import.meta.dirname,
-  "../resources/images/EarthMap.svg",
+  "../resources/images/AtlasMap.svg",
 );
 // Simplification tolerance and smallest area kept, in viewBox units.
 const TOLERANCE = 0.12;
@@ -36,11 +36,11 @@ interface Topology {
 }
 
 const projection = geoEqualEarth()
-  .scale(EARTH_MAP_SCALE)
-  .translate([EARTH_MAP_WIDTH / 2, EARTH_MAP_HEIGHT / 2])
+  .scale(ATLAS_MAP_SCALE)
+  .translate([ATLAS_MAP_WIDTH / 2, ATLAS_MAP_HEIGHT / 2])
   .precision(0.5);
 
-const project = ([lon, lat]: Point): Point => projectEarth(lat, lon);
+const project = ([lon, lat]: Point): Point => projectToAtlas(lat, lon);
 
 // Arc points as [lon, lat].
 function decodeArc(topology: Topology, arc: Point[]): Point[] {
@@ -131,7 +131,7 @@ function relative(d: string): string {
 function largeEnough(rings: Point[][]): boolean {
   const area = geoArea({ type: "Polygon", coordinates: rings });
   const smaller = Math.min(area, 4 * Math.PI - area);
-  return smaller * EARTH_MAP_SCALE * EARTH_MAP_SCALE >= MIN_RING_AREA;
+  return smaller * ATLAS_MAP_SCALE * ATLAS_MAP_SCALE >= MIN_RING_AREA;
 }
 
 async function main() {
@@ -141,9 +141,9 @@ async function main() {
     [64.1, -21.9],
   ]) {
     const [x, y] = projection([lon, lat])!;
-    const [ex, ey] = projectEarth(lat, lon);
+    const [ex, ey] = projectToAtlas(lat, lon);
     if (Math.hypot(x - ex, y - ey) > 0.01) {
-      throw new Error("d3's Equal Earth disagrees with EarthProjection.ts");
+      throw new Error("d3's Equal Earth disagrees with AtlasProjection.ts");
     }
   }
 
@@ -181,7 +181,7 @@ async function main() {
   const land = relative(draw({ type: "MultiPolygon", coordinates: polygons })!);
   fs.writeFileSync(
     OUT,
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${EARTH_MAP_WIDTH} ${EARTH_MAP_HEIGHT}"><path id="sphere" fill="#0f172a" d="${sphere}"/><path id="land" fill="#1e293b" stroke="#334155" stroke-width="0.3" fill-rule="evenodd" d="${land}"/></svg>\n`,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${ATLAS_MAP_WIDTH} ${ATLAS_MAP_HEIGHT}"><path id="sphere" fill="#0f172a" d="${sphere}"/><path id="land" fill="#1e293b" stroke="#334155" stroke-width="0.3" fill-rule="evenodd" d="${land}"/></svg>\n`,
   );
   console.log(`Wrote ${OUT} (${polygons.length} polygons)`);
 }

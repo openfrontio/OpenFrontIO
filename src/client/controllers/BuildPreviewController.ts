@@ -37,7 +37,7 @@ import {
   buildNukeTrajectory,
   type SAMInfo,
 } from "../render/gl/utils/NukeTrajectory";
-import type { GhostPreviewData } from "../render/types";
+import type { GhostPreviewData, RangeWarning } from "../render/types";
 import { TransformHandler } from "../TransformHandler";
 import {
   BuildUnitIntentEvent,
@@ -50,6 +50,14 @@ import { GameView } from "../view";
 /** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
 export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
   return unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb;
+}
+
+function requiresMissileSilo(unitType: UnitType | null | undefined): boolean {
+  return (
+    unitType === UnitType.AtomBomb ||
+    unitType === UnitType.HydrogenBomb ||
+    unitType === UnitType.MIRV
+  );
 }
 
 // tSamIntercept value used to flag an untargetable (impassable) destination:
@@ -253,7 +261,8 @@ function isTrajectoryEqual(
 export class BuildPreviewController implements Controller {
   /** Current ghost (null when no build type is active). */
   private ghostUnit: { buildableUnit: BuildableUnit } | null = null;
-  private readonly connectedAllySmallIds: Set<number> = new Set();
+  private readonly traitorMarkAllySmallIds: Set<number> = new Set();
+  private readonly noMarkAllySmallIds: Set<number> = new Set();
   private readonly usedSafetyAllies: Set<number> = new Set();
   private readonly teammateIds: Set<number> = new Set();
   private readonly allyIds: Set<number> = new Set();
@@ -465,19 +474,31 @@ export class BuildPreviewController implements Controller {
   /**
    * Reconcile our internal ghost state with uiState.ghostStructure. Other
    * UI bits (build menu, key bindings) toggle uiState; we mirror it here.
+   * @returns true when synchronization clears a ghost selection.
    */
-  private syncGhostState(): void {
+  private syncGhostState(): boolean {
     // A dead player keeps a ghost forever otherwise: on touch every map tap
     // is routed to it, the build bar is gone, and a nuke never cancels on an
     // invalid tap, so the radial menu is unreachable for the rest of the game.
-    if (this.game.myPlayer()?.isAlive() === false) {
+    const myPlayer = this.game.myPlayer();
+    if (myPlayer?.isAlive() === false) {
       this.removeGhostStructure();
-      return;
+      return true;
     }
     const target = this.uiState.ghostStructure;
+    const ghostType = target ?? this.ghostUnit?.buildableUnit.type;
+    if (
+      myPlayer &&
+      requiresMissileSilo(ghostType) &&
+      myPlayer.units(UnitType.MissileSilo).length === 0
+    ) {
+      this.removeGhostStructure();
+      return true;
+    }
     if (this.ghostUnit) {
       if (target === null) {
         this.removeGhostStructure();
+        return true;
       } else if (target !== this.ghostUnit.buildableUnit.type) {
         const touchPreviewTile = this.touchPlacementMode
           ? this.touchPreviewTile
@@ -492,32 +513,55 @@ export class BuildPreviewController implements Controller {
     } else if (target !== null) {
       this.createGhostStructure(target);
     }
+    return false;
   }
 
-  private checkTargetingAlly(tileRef: TileRef | undefined): boolean {
-    if (tileRef === undefined || !this.ghostUnit) return false;
+  private checkRangeWarning(tileRef: TileRef | undefined): RangeWarning {
+    if (tileRef === undefined || !this.ghostUnit) return "none";
     const myPlayer = this.game.myPlayer();
     const nukeType = this.ghostUnit.buildableUnit.type;
     if (
       !myPlayer ||
       (nukeType !== UnitType.AtomBomb && nukeType !== UnitType.HydrogenBomb)
     ) {
-      return false;
+      return "none";
     }
-    this.connectedAllySmallIds.clear();
+    // Nuking any ally breaks the alliance, but only betraying a connected,
+    // non-traitor ally marks us a traitor (GameImpl.breakAlliance).
+    this.traitorMarkAllySmallIds.clear();
+    this.noMarkAllySmallIds.clear();
     for (const ally of myPlayer.allies()) {
-      if (!ally.isDisconnected()) {
-        this.connectedAllySmallIds.add(ally.smallID());
+      if (ally.isTraitor() || ally.isDisconnected()) {
+        this.noMarkAllySmallIds.add(ally.smallID());
+      } else {
+        this.traitorMarkAllySmallIds.add(ally.smallID());
       }
     }
-    if (this.connectedAllySmallIds.size === 0) return false;
-    return wouldNukeBreakAlliance({
-      game: this.game,
-      targetTile: tileRef,
-      magnitude: this.game.config().nukeMagnitudes(nukeType),
-      allySmallIds: this.connectedAllySmallIds,
-      threshold: this.game.config().nukeAllianceBreakThreshold(),
-    });
+    const magnitude = this.game.config().nukeMagnitudes(nukeType);
+    const threshold = this.game.config().nukeAllianceBreakThreshold();
+    if (
+      wouldNukeBreakAlliance({
+        game: this.game,
+        targetTile: tileRef,
+        magnitude,
+        allySmallIds: this.traitorMarkAllySmallIds,
+        threshold,
+      })
+    ) {
+      return "traitor";
+    }
+    if (
+      wouldNukeBreakAlliance({
+        game: this.game,
+        targetTile: tileRef,
+        magnitude,
+        allySmallIds: this.noMarkAllySmallIds,
+        threshold,
+      })
+    ) {
+      return "breaksAlliance";
+    }
+    return "none";
   }
 
   private resolveGhostTarget(
@@ -526,7 +570,7 @@ export class BuildPreviewController implements Controller {
   ): {
     tileRef: TileRef | undefined;
     trajectoryTileRef: TileRef | undefined;
-    targetingAlly: boolean;
+    rangeWarning: RangeWarning;
   } {
     let tileRef: TileRef | undefined;
     let trajectoryTileRef: TileRef | undefined;
@@ -548,18 +592,18 @@ export class BuildPreviewController implements Controller {
         tileRef = undefined;
       }
     }
-    const targetingAlly = this.checkTargetingAlly(tileRef);
-    return { tileRef, trajectoryTileRef, targetingAlly };
+    const rangeWarning = this.checkRangeWarning(tileRef);
+    return { tileRef, trajectoryTileRef, rangeWarning };
   }
 
   private handleBuildablesResponse(
     buildables: BuildableUnit[],
     tileRef: TileRef | undefined,
-    targetingAlly: boolean,
+    rangeWarning: RangeWarning,
     trajectoryTileRef: TileRef | undefined,
   ): void {
     if (!this.ghostUnit) {
-      this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+      this.emitGhostPreview(tileRef, rangeWarning, trajectoryTileRef);
       return;
     }
 
@@ -571,13 +615,13 @@ export class BuildPreviewController implements Controller {
         canBuild: false,
         canUpgrade: false,
       });
-      this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+      this.emitGhostPreview(tileRef, rangeWarning, trajectoryTileRef);
       return;
     }
 
     this.ghostUnit.buildableUnit = unit;
 
-    this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+    this.emitGhostPreview(tileRef, rangeWarning, trajectoryTileRef);
   }
 
   private onQueryFinished(seq: number): void {
@@ -595,7 +639,7 @@ export class BuildPreviewController implements Controller {
   private dispatchBuildablesQuery(
     seq: number,
     tileRef: TileRef | undefined,
-    targetingAlly: boolean,
+    rangeWarning: RangeWarning,
     trajectoryTileRef: TileRef | undefined,
   ): void {
     const ghost = this.ghostUnit;
@@ -616,7 +660,7 @@ export class BuildPreviewController implements Controller {
 
     if (!promise) {
       this.isQueryInFlight = false;
-      this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+      this.emitGhostPreview(tileRef, rangeWarning, trajectoryTileRef);
       return;
     }
 
@@ -642,7 +686,7 @@ export class BuildPreviewController implements Controller {
         this.handleBuildablesResponse(
           b,
           tileRef,
-          targetingAlly,
+          rangeWarning,
           trajectoryTileRef,
         );
       })
@@ -676,17 +720,12 @@ export class BuildPreviewController implements Controller {
     if (this.isQueryInFlight) return;
 
     this.isQueryInFlight = true;
-    const { tileRef, trajectoryTileRef, targetingAlly } =
+    const { tileRef, trajectoryTileRef, rangeWarning } =
       this.resolveGhostTarget();
     this.lastQueriedTileRef = tileRef;
 
     const seq = ++this.querySeq;
-    this.dispatchBuildablesQuery(
-      seq,
-      tileRef,
-      targetingAlly,
-      trajectoryTileRef,
-    );
+    this.dispatchBuildablesQuery(seq, tileRef, rangeWarning, trajectoryTileRef);
   }
 
   /**
@@ -697,10 +736,10 @@ export class BuildPreviewController implements Controller {
    */
   private emitGhostPreview(
     tileRef: TileRef | undefined,
-    targetingAlly: boolean,
+    rangeWarning: RangeWarning,
     trajectoryTileRef: TileRef | undefined,
   ): void {
-    const data = this.buildGhostPreviewData(tileRef, targetingAlly);
+    const data = this.buildGhostPreviewData(tileRef, rangeWarning);
     if (data === null) {
       this.lastGhostData = null;
       this.prevGhostDataRef = null;
@@ -875,7 +914,7 @@ export class BuildPreviewController implements Controller {
 
   private buildGhostPreviewData(
     tileRef: TileRef | undefined,
-    targetingAlly: boolean,
+    rangeWarning: RangeWarning,
   ): GhostPreviewData | null {
     if (!this.ghostUnit || tileRef === undefined) return null;
     const myPlayer = this.game.myPlayer();
@@ -922,7 +961,7 @@ export class BuildPreviewController implements Controller {
       ownerID: myPlayer.smallID(),
       upgradeTargetTile,
       rangeRadius,
-      rangeWarning: targetingAlly,
+      rangeWarning,
     };
 
     if (
@@ -1242,7 +1281,7 @@ export class BuildPreviewController implements Controller {
 
   private handleTouchPlacement(e: TouchGhostPlacementEvent): void {
     this.touchPlacementMode = true;
-    this.syncGhostState();
+    if (this.syncGhostState()) return;
     if (this.touchPreviewTile !== null && this.isNearTouchPreview(e.x, e.y)) {
       const preview = this.touchPreviewScreenPosition();
       if (preview !== null) {
@@ -1259,7 +1298,11 @@ export class BuildPreviewController implements Controller {
 
   private moveTouchPreview(x: number, y: number): void {
     this.touchPlacementMode = true;
-    this.syncGhostState();
+    if (this.syncGhostState()) return;
+    if (!this.ghostUnit) {
+      this.touchPlacementMode = false;
+      return;
+    }
     const tile = this.transformHandler.screenToWorldCoordinates(x, y);
     if (!this.game.isValidCoord(tile.x, tile.y)) return;
     const next = this.game.ref(tile.x, tile.y);
