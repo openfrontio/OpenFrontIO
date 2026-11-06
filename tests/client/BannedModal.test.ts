@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // translateText stand-in that mirrors the real one's key-resolution: a known
@@ -109,6 +111,34 @@ describe("banned-modal", () => {
       player: {},
     });
     expect(await text()).toContain("March");
+  });
+
+  // The notice can render before the language files load, and nothing else
+  // re-renders it: LangSelector.applyTranslation() has to requestUpdate() it by
+  // tag, or it keeps the raw keys and an English date.
+  it("recovers from rendering before the language loaded", async () => {
+    fireUserMe({
+      ban: {
+        category: "other",
+        reason: null,
+        expiresAt: "2026-03-15T12:00:00.000Z",
+      },
+      user: {},
+      player: {},
+    });
+    expect(await text()).toContain("March");
+
+    language.current = "de";
+    el.requestUpdate();
+    expect(await text()).toContain("März");
+  });
+
+  it("is registered for re-translation in LangSelector", () => {
+    const source = fs.readFileSync(
+      path.join(__dirname, "..", "..", "src", "client", "LangSelector.ts"),
+      "utf8",
+    );
+    expect(source).toContain('"banned-modal",');
   });
 
   it("links the appeal to the OpenFront Discord in a new tab", async () => {
