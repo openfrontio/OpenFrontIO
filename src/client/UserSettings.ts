@@ -27,6 +27,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     toggleView: "Space",
     preventStacking: "KeyH",
     coordinateGrid: "KeyM",
+    performanceOverlay: "Shift+KeyD",
     buildCity: "Digit1",
     buildFactory: "Digit2",
     buildPort: "Digit3",
@@ -531,7 +532,8 @@ export class UserSettings {
     this.setBool("settings.emojis", !this.emojis());
   }
 
-  // Performance overlay specifically needs a direct setter for Shift-D
+  // The performance overlay's close button needs a direct setter to persist
+  // visibility.
   setPerformanceOverlay(value: boolean) {
     this.setBool(PERFORMANCE_OVERLAY_KEY, value);
   }

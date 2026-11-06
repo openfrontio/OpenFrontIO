@@ -591,6 +591,7 @@ describe("getDefaultKeybinds", () => {
     const keybinds = getDefaultKeybinds(false);
     expect(keybinds.boxSelectWarships).toBe("ShiftLeft");
     expect(keybinds.resetGfx).toBe("KeyR");
+    expect(keybinds.performanceOverlay).toBe("Shift+KeyD");
     expect(keybinds.selectAllWarships).toBe("KeyX");
     expect(keybinds.emojiMenu).toBe("KeyF");
     expect(keybinds.quickChat).toBe("KeyR");

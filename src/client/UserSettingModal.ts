@@ -50,6 +50,7 @@ import {
   GRAPHICS_KEY,
   keysMayBeShared,
   MAP_LAYERS_KEY,
+  PERFORMANCE_OVERLAY_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "./UserSettings";
@@ -198,6 +199,10 @@ export class UserSettingModal extends BaseModal {
       `${USER_SETTINGS_CHANGED_EVENT}:${MAP_LAYERS_KEY}`,
       this.onGraphicsChanged,
     );
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${PERFORMANCE_OVERLAY_KEY}`,
+      this.onPerformanceOverlayChanged,
+    );
   }
 
   disconnectedCallback() {
@@ -209,6 +214,10 @@ export class UserSettingModal extends BaseModal {
     globalThis.removeEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${MAP_LAYERS_KEY}`,
       this.onGraphicsChanged,
+    );
+    globalThis.removeEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${PERFORMANCE_OVERLAY_KEY}`,
+      this.onPerformanceOverlayChanged,
     );
     window.removeEventListener("keydown", this.handleEasterEggKey);
     // An element torn down without close() being called (the in-game instance
@@ -233,6 +242,10 @@ export class UserSettingModal extends BaseModal {
       this.onLayerVisibilityChange,
       this.onLayerAlphaChange,
     );
+  };
+
+  private readonly onPerformanceOverlayChanged = () => {
+    this.requestUpdate();
   };
 
   private loadKeybindsFromStorage() {
@@ -391,6 +404,20 @@ export class UserSettingModal extends BaseModal {
     const entry = this.userKeybinds[action];
     const defaultCode = this.defaultKeybinds[action] || "";
     return resolveKeybindLabel(entry, defaultCode, this.keyboardLayout.map);
+  }
+
+  private performanceOverlayDescription(): string {
+    const key = this.getKeyChar("performanceOverlay");
+    const description = translateText(
+      "user_setting.performance_overlay_keybind_desc",
+    );
+
+    return key
+      ? translateText("user_setting.performance_overlay_desc", {
+          description,
+          key,
+        })
+      : description;
   }
 
   private handleEasterEggKey = (e: KeyboardEvent) => {
@@ -1574,6 +1601,18 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
+      <setting-keybind
+        action="performanceOverlay"
+        label=${translateText("user_setting.performance_overlay_label")}
+        description=${translateText(
+          "user_setting.performance_overlay_keybind_desc",
+        )}
+        defaultKey=${this.defaultKeybinds.performanceOverlay}
+        .value=${this.getKeyValue("performanceOverlay")}
+        .display=${this.getKeyChar("performanceOverlay")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
@@ -1929,7 +1968,7 @@ export class UserSettingModal extends BaseModal {
       <!-- 📱 Performance Overlay -->
       <setting-toggle
         label="${translateText("user_setting.performance_overlay_label")}"
-        description="${translateText("user_setting.performance_overlay_desc")}"
+        description="${this.performanceOverlayDescription()}"
         id="performance-overlay-toggle"
         .checked=${this.userSettings.performanceOverlay()}
         @change=${this.togglePerformanceOverlay}
