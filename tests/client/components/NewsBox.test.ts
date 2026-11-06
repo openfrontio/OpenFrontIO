@@ -7,7 +7,11 @@ import {
   NewsBox,
   NewsItem,
 } from "../../../src/client/components/NewsBox";
-import { fetchCosmetics } from "../../../src/client/Cosmetics";
+import {
+  fetchCosmetics,
+  invalidateCosmetics,
+  refreshStaleCosmetics,
+} from "../../../src/client/Cosmetics";
 
 vi.mock("../../../src/client/Api", () => ({
   getNews: vi.fn(async () => [
@@ -24,6 +28,7 @@ vi.mock("../../../src/client/Api", () => ({
 vi.mock("../../../src/client/Cosmetics", () => ({
   fetchCosmetics: vi.fn(async () => null),
   invalidateCosmetics: vi.fn(),
+  refreshStaleCosmetics: vi.fn(() => true),
 }));
 
 /** A catalog running `sales`, with nothing else in it. */
@@ -187,26 +192,109 @@ describe("NewsBox", () => {
       expect(box.querySelector("[data-store-sale-banner]")).toBeNull();
     });
 
-    it("goes back to the news when the sale ends", async () => {
-      const sale = {
-        id: "7",
-        name: "Weekend Sale",
-        endsAt: new Date(Date.now() + 300).toISOString(),
-      };
-      vi.mocked(getNews).mockResolvedValueOnce(newsAnnouncing("7"));
-      // The refetch at its end still lists it (the API caches for a minute).
-      vi.mocked(fetchCosmetics).mockResolvedValue(catalogWith(sale));
-      const box = document.createElement("news-box");
-      document.body.appendChild(box);
-      await vi.waitFor(() =>
-        expect(box.querySelector("[data-store-sale-banner]")).toBeTruthy(),
-      );
+    describe("as time passes", () => {
+      const MINUTE = 60_000;
+      const sale = (id: string, name: string, endsInMs: number) => ({
+        id,
+        name,
+        endsAt: new Date(Date.now() + endsInMs).toISOString(),
+      });
+      const bannerOf = (box: Element) =>
+        box.querySelector("[data-store-sale-banner]");
 
-      await vi.waitFor(() => expect(box.textContent).toContain("Patch notes"));
-      expect(box.querySelector("[data-store-sale-banner]")).toBeNull();
-      // The ended sale's news item stays out of the rotation.
-      expect(box.textContent).not.toContain("25% off cosmetics");
-      vi.mocked(fetchCosmetics).mockResolvedValue(null);
+      beforeEach(() => {
+        vi.useFakeTimers();
+        vi.mocked(invalidateCosmetics).mockClear();
+        vi.mocked(refreshStaleCosmetics).mockClear();
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+        vi.mocked(fetchCosmetics).mockReset();
+        vi.mocked(fetchCosmetics).mockResolvedValue(null);
+        vi.unstubAllGlobals();
+        vi.stubGlobal("localStorage", createMockLocalStorage());
+      });
+
+      it("goes back to the news when the sale ends", async () => {
+        const weekend = sale("7", "Weekend Sale", 60 * MINUTE);
+        vi.mocked(getNews).mockResolvedValueOnce(newsAnnouncing("7"));
+        // The refetch at its end still lists it (the API caches for a minute).
+        vi.mocked(fetchCosmetics).mockResolvedValue(catalogWith(weekend));
+        const box = document.createElement("news-box");
+        document.body.appendChild(box);
+        await vi.waitFor(() => expect(bannerOf(box)).toBeTruthy());
+
+        await vi.advanceTimersByTimeAsync(60 * MINUTE + 1_000);
+
+        await vi.waitFor(() =>
+          expect(box.textContent).toContain("Patch notes"),
+        );
+        expect(bannerOf(box)).toBeNull();
+        // The ended sale's news item stays out of the rotation.
+        expect(box.textContent).not.toContain("25% off cosmetics");
+      });
+
+      it("shows a sale that starts after the page loaded", async () => {
+        vi.mocked(fetchCosmetics).mockResolvedValue(catalogWith());
+        const box = document.createElement("news-box");
+        document.body.appendChild(box);
+        await vi.waitFor(() => expect(box.textContent).toContain("Markdown"));
+        expect(bannerOf(box)).toBeNull();
+
+        vi.mocked(fetchCosmetics).mockResolvedValue(
+          catalogWith(sale("7", "Surprise Sale", 60 * MINUTE)),
+        );
+        vi.mocked(getNews).mockResolvedValueOnce(newsAnnouncing("7"));
+        await vi.advanceTimersByTimeAsync(5 * MINUTE);
+
+        await vi.waitFor(() => expect(bannerOf(box)).toBeTruthy());
+        expect(bannerOf(box)!.textContent).toContain("Surprise Sale");
+        expect(refreshStaleCosmetics).toHaveBeenCalled();
+      });
+
+      it("doesn't refetch while nobody can see the box", async () => {
+        vi.mocked(fetchCosmetics).mockResolvedValue(catalogWith());
+        const box = document.createElement("news-box");
+        box.checkVisibility = () => false;
+        document.body.appendChild(box);
+        await vi.waitFor(() => expect(box.textContent).toContain("Markdown"));
+
+        await vi.advanceTimersByTimeAsync(5 * MINUTE);
+
+        expect(refreshStaleCosmetics).not.toHaveBeenCalled();
+        expect(invalidateCosmetics).not.toHaveBeenCalled();
+      });
+
+      it("drops a sale on time while a stale catalog is retried", async () => {
+        // The first sale has ended but is still listed, so the box is retrying
+        // every 15 seconds. The other ends well before the next retry.
+        const ended = sale("6", "Old Sale", -MINUTE);
+        const ending = sale("7", "Ending Sale", 2_000);
+        vi.mocked(getNews).mockResolvedValueOnce(newsAnnouncing("7"));
+        vi.mocked(fetchCosmetics).mockResolvedValue(catalogWith(ended, ending));
+        const box = document.createElement("news-box");
+        document.body.appendChild(box);
+        await vi.waitFor(() => expect(bannerOf(box)).toBeTruthy());
+
+        await vi.advanceTimersByTimeAsync(3_000);
+
+        expect(bannerOf(box)).toBeNull();
+      });
+
+      it("copes with a sale ending further off than a timer can wait", async () => {
+        const spy = vi.spyOn(globalThis, "setTimeout");
+        vi.mocked(fetchCosmetics).mockResolvedValue(
+          catalogWith(sale("7", "Long Sale", 40 * 24 * 60 * MINUTE)),
+        );
+        vi.mocked(getNews).mockResolvedValueOnce(newsAnnouncing("7"));
+        const box = document.createElement("news-box");
+        document.body.appendChild(box);
+        await vi.waitFor(() => expect(bannerOf(box)).toBeTruthy());
+
+        expect(spy).toHaveBeenCalledWith(expect.any(Function), 5 * MINUTE);
+        spy.mockRestore();
+      });
     });
 
     it("does not start cycle timer if disconnected before loadNews resolves", async () => {

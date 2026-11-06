@@ -5,7 +5,11 @@ import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getNews } from "../Api";
 import { clientPlatform } from "../ClientPlatform";
-import { fetchCosmetics, invalidateCosmetics } from "../Cosmetics";
+import {
+  fetchCosmetics,
+  invalidateCosmetics,
+  refreshStaleCosmetics,
+} from "../Cosmetics";
 import { translateText } from "../Utils";
 import { runningSales } from "./SaleBanner";
 
@@ -17,6 +21,8 @@ const CYCLE_INTERVAL_MS = 5000;
 // catalog can still list it, so the refetch retries (8 x 15s = 2 minutes).
 const SALE_END_RETRY_MS = 15_000;
 const SALE_END_RETRIES = 8;
+// How often an open page looks for a sale that has started since it loaded.
+const SALE_RECHECK_MS = 5 * 60_000;
 // news.json lists each running sale set to announce as "promotion-<sale id>".
 // The sale banner replaces those items.
 const SALE_NEWS_PREFIX = "promotion-";
@@ -84,8 +90,10 @@ export class NewsBox extends LitElement {
   }
 
   /**
-   * Fetches the catalog for its running sales, and again when the soonest
-   * one ends, so the banner drops it (or moves to a flash sale's next item).
+   * Fetches the catalog for its running sales, and keeps it current for as long
+   * as the box is up: when the soonest sale ends (so the banner drops it, or
+   * moves to a flash sale's next item), and every few minutes in case a sale
+   * has started.
    */
   private async loadSales(attempt = 0) {
     const cosmetics = await fetchCosmetics();
@@ -98,29 +106,41 @@ export class NewsBox extends LitElement {
     const listsEnded = (cosmetics?.promotions ?? []).some(
       (sale) => new Date(sale.endsAt).getTime() <= Date.now(),
     );
-    if ((cosmetics === null || listsEnded) && attempt < SALE_END_RETRIES) {
-      this.saleTimer = setTimeout(() => {
-        invalidateCosmetics();
-        void this.loadSales(attempt + 1);
-      }, SALE_END_RETRY_MS);
-      return;
-    }
+    const retrying =
+      (cosmetics === null || listsEnded) && attempt < SALE_END_RETRIES;
+    const wait = retrying ? SALE_END_RETRY_MS : SALE_RECHECK_MS;
     // Every running sale, not just the announced ones: news.json may not
     // have landed yet.
-    const sales = runningSales(this.cosmetics);
-    if (sales.length === 0) return;
-    const nextEnd = Math.min(...sales.map((s) => new Date(s.endsAt).getTime()));
-    // setTimeout overflows past ~24.8 days; a sale ending later is picked up
-    // on the next visit.
-    const delay = nextEnd - Date.now();
-    if (delay > 2 ** 31 - 1) return;
-    this.saleTimer = setTimeout(
-      () => {
-        invalidateCosmetics();
-        void this.loadSales();
-      },
-      Math.max(delay, 0),
+    const untilSaleEnds = Math.min(
+      Infinity,
+      ...runningSales(this.cosmetics).map(
+        (sale) => new Date(sale.endsAt).getTime() - Date.now(),
+      ),
     );
+    const refetch = retrying || untilSaleEnds <= wait;
+    this.saleTimer = setTimeout(
+      () => void this.recheckSales(refetch, retrying ? attempt + 1 : 0),
+      Math.max(Math.min(untilSaleEnds, wait), 0),
+    );
+  }
+
+  /**
+   * One timer's worth of {@link loadSales}. A box nobody can see (a game is on,
+   * the tab is in the background, or the window is too short for it) stays on
+   * the catalog it has, and catches up within a recheck of being seen again.
+   */
+  private async recheckSales(refetch: boolean, attempt: number) {
+    const seen = !document.hidden && (this.checkVisibility?.() ?? true);
+    if (seen) {
+      if (refetch) invalidateCosmetics();
+      else refreshStaleCosmetics();
+    }
+    await this.loadSales(attempt);
+    // The banner needs news.json to announce a sale, too.
+    const unannounced = runningSales(this.cosmetics).some(
+      (sale) => !this.announcedSales.has(sale.id),
+    );
+    if (seen && unannounced && this.isConnected) void this.loadNews();
   }
 
   private clearSaleTimer() {
