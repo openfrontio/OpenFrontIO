@@ -2,6 +2,7 @@ import {
   ClaimAllRewardsResponseSchema,
   ClaimRewardHeldResponseSchema,
   ClaimRewardResponseSchema,
+  FfaGameRatingResponseSchema,
   FriendEntrySchema,
   GetMyTribeNamesResponseSchema,
   GoogleUser,
@@ -532,22 +533,22 @@ describe("PlayerGameResultSchema", () => {
   });
 });
 
-describe("PublicPlayerGameSchema", () => {
-  const validGame = {
-    gameId: "g1",
-    start: "2024-06-01T00:00:00.000Z",
-    durationSeconds: 1234,
-    map: "World",
-    mode: "Team",
-    type: "Public",
-    playerTeams: "Duos",
-    rankedType: "unranked",
-    result: "victory" as const,
-    totalPlayers: 8,
-    username: "alice",
-    clanTag: "ABC",
-  };
+const validGame = {
+  gameId: "g1",
+  start: "2024-06-01T00:00:00.000Z",
+  durationSeconds: 1234,
+  map: "World",
+  mode: "Team",
+  type: "Public",
+  playerTeams: "Duos",
+  rankedType: "unranked",
+  result: "victory" as const,
+  totalPlayers: 8,
+  username: "alice",
+  clanTag: "ABC",
+};
 
+describe("PublicPlayerGameSchema", () => {
   it("accepts a fully-populated game", () => {
     expect(PublicPlayerGameSchema.safeParse(validGame).success).toBe(true);
   });
@@ -1738,5 +1739,127 @@ describe("UserMeResponseSchema player achievements", () => {
   it("defaults player to an empty array when the server omits it", () => {
     const parsed = achievements.parse({ singleplayerMap: [] });
     expect(parsed.player).toEqual([]);
+  });
+});
+
+describe("FFA rating fields", () => {
+  const ranked = {
+    rank: 1,
+    elo: 2012.6,
+    peakElo: 2050,
+    wins: 9,
+    losses: 31,
+    total: 40,
+    public_id: "abc123",
+    accountUsername: "bob.4821",
+  };
+  const meFfa =
+    UserMeResponseSchema.shape.player.shape.leaderboard.unwrap().shape.ffa;
+
+  it("keeps a board entry's uncertainty and tier", () => {
+    expect(
+      RankedLeaderboardEntrySchema.parse({
+        ...ranked,
+        uncertainty: 61.2,
+        tier: "Diamond II",
+      }),
+    ).toMatchObject({ uncertainty: 61.2, tier: "Diamond II" });
+  });
+
+  it("parses a board entry without them (API not live)", () => {
+    const e = RankedLeaderboardEntrySchema.parse(ranked);
+    expect(e.tier).toBeUndefined();
+    expect(e.uncertainty).toBeUndefined();
+  });
+
+  it("drops a malformed tier instead of rejecting the entry", () => {
+    const e = RankedLeaderboardEntrySchema.parse({ ...ranked, tier: 7 });
+    expect(e.tier).toBeUndefined();
+    expect(e.public_id).toBe("abc123");
+  });
+
+  it("parses @me's frozen, calibrating and rated FFA shapes", () => {
+    expect(meFfa.parse({ elo: 1234 })).toEqual({ elo: 1234 });
+    expect(
+      meFfa.parse({ games: 3, wins: 1, calibrationGames: 3 }),
+    ).toMatchObject({ games: 3, wins: 1, calibrationGames: 3 });
+    expect(
+      meFfa.parse({
+        elo: 1612.6,
+        uncertainty: 84.7,
+        tier: "Gold I",
+        games: 40,
+        wins: 5,
+        peak: 1700,
+      }),
+    ).toMatchObject({ tier: "Gold I", peak: 1700 });
+  });
+
+  it("drops an out-of-range calibrationGames", () => {
+    expect(
+      meFfa.parse({ games: 3, wins: 1, calibrationGames: 12 })!
+        .calibrationGames,
+    ).toBeUndefined();
+  });
+
+  it("parses a history game with, without and with a null ffaRating", () => {
+    const delta = {
+      before: 1600.4,
+      after: 1612.6,
+      expected: 0.0623,
+      deltaResult: 9.1,
+      deltaPlace: 3.1,
+    };
+    expect(
+      PublicPlayerGameSchema.parse({ ...validGame, ffaRating: delta })
+        .ffaRating,
+    ).toEqual(delta);
+    expect(
+      PublicPlayerGameSchema.parse({ ...validGame, ffaRating: null }).ffaRating,
+    ).toBeNull();
+    expect(PublicPlayerGameSchema.parse(validGame).ffaRating).toBeUndefined();
+  });
+
+  it("parses a profile's ffaRating, and null", () => {
+    const r = {
+      rating: 1612.6,
+      uncertainty: 84.7,
+      tier: "Gold I",
+      games: 40,
+      wins: 5,
+      peak: 1700,
+    };
+    const base = { createdAt: "2024-01-15T12:00:00.000Z", stats: {} };
+    expect(
+      PlayerProfileSchema.parse({ ...base, ffaRating: r }).ffaRating,
+    ).toEqual(r);
+    expect(
+      PlayerProfileSchema.parse({ ...base, ffaRating: null }).ffaRating,
+    ).toBeNull();
+  });
+
+  it("parses the per-game response while calibrating and once rated", () => {
+    expect(
+      FfaGameRatingResponseSchema.safeParse({
+        gameId: "g1",
+        calibrating: true,
+        calibrationGames: 4,
+      }).success,
+    ).toBe(true);
+    expect(
+      FfaGameRatingResponseSchema.parse({
+        gameId: "g1",
+        calibrating: false,
+        calibrationGames: 10,
+        ratingBefore: 1600.4,
+        ratingAfter: 1612.6,
+        uncertaintyAfter: 84.7,
+        tierBefore: "Gold I",
+        tierAfter: "Platinum III",
+        expected: 0.0623,
+        deltaResult: 9.1,
+        deltaPlace: 3.1,
+      }).tierAfter,
+    ).toBe("Platinum III");
   });
 });

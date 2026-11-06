@@ -328,6 +328,7 @@ describe("Telemetry", () => {
       expect(beforeSend(event("bottom_rail_in_game"))).not.toBeNull();
     }
     expect(beforeSend(event("bottom_rail_in_game"))).toBeNull();
+    expect(beforeSend(event("ad_frame_in_game"))).not.toBeNull();
   });
 
   it("sends everything from every session on staging", async () => {

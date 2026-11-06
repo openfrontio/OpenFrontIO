@@ -4,6 +4,9 @@
   "name": "Amazon River",
   "translation_key": "map.amazonriver",
   "categories": ["south_america"],
+  "location": { "lat": -3.7, "lon": -69 },
+  "author": "FloPinguin",
+  "description": "A stretch of the upper Amazon, from the Peru–Colombia border into Brazil, with nations at real riverside towns. The land is so narrow that the river is your main way out. The first OpenFront map with a very unusual size.",
   "nations": [
     {
       "coordinates": [524, 60],

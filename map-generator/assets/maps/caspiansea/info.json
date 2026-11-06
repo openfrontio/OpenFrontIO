@@ -4,6 +4,9 @@
   "id": "CaspianSea",
   "translation_key": "map.caspiansea",
   "categories": ["asia"],
+  "location": { "lat": 41.5, "lon": 50.5 },
+  "author": "crunchybbb",
+  "description": "The Caspian Sea is the world's largest enclosed inland body of water, often classified as both the world's largest lake and a full-fledged sea due to its immense size and saline water. Situated at the crossroads of Eastern Europe and Western Asia, it covers an area of roughly 371,000 square kilometers (143,000 sq mi).",
   "special_team_count": 2,
   "nations": [
     {

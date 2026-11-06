@@ -4,6 +4,8 @@
   "name": "Gulf Of Guinea",
   "translation_key": "map.gulfofguinea",
   "categories": ["africa"],
+  "location": { "lat": 3, "lon": 3 },
+  "author": "Tristar",
   "nations": [
     {
       "coordinates": [1807, 739],

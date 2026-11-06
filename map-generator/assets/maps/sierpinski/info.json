@@ -4,6 +4,7 @@
   "name": "Sierpinski",
   "translation_key": "map.sierpinski",
   "categories": ["arcade"],
+  "author": "bijx",
   "nations": [
     {
       "coordinates": [216, 701],

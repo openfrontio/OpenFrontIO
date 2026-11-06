@@ -4,6 +4,9 @@
   "name": "Crimea",
   "translation_key": "map.crimea",
   "categories": ["europe"],
+  "location": { "lat": 45.3, "lon": 34 },
+  "author": "crunchybbb",
+  "description": "Crimea is a peninsula located along the northern coast of the Black Sea and the Sea of Azov in Eastern Europe. It is currently disputed between Ukraine and Russia.",
   "nations": [
     {
       "coordinates": [539, 1112],

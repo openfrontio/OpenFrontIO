@@ -33,6 +33,7 @@ import { isDesktopShell } from "./DesktopShell";
 import { GameMetrics } from "./GameMetrics";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
+import { OnboardingOverlay } from "./hud/layers/OnboardingOverlay";
 import { UnitDisplay } from "./hud/layers/UnitDisplay";
 import { showInGameAlert } from "./InGameModal";
 import {
@@ -49,6 +50,7 @@ import {
   TickMetricsEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
+import { rememberLobbyPublicGameType } from "./LobbyPublicGameType";
 import { rememberLobbyRoster } from "./LobbyRosterLevels";
 import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
@@ -231,6 +233,11 @@ export function joinLobby(
         message.lobby.gameID,
         message.lobby.clients,
         message.myClientID,
+      );
+      // Kept past game start for the win screen's FFA rating check.
+      rememberLobbyPublicGameType(
+        message.lobby.gameID,
+        message.lobby.publicGameType,
       );
       // Preload the map while still in the lobby so game start can reuse the
       // cached result instead of blocking on the download in the short
@@ -916,6 +923,12 @@ async function createClientGame(
     ) as UnitDisplay | null;
     if (unitDisplay) {
       unitDisplay.inputHandler = inputHandler;
+    }
+    const onboardingOverlay = document.querySelector(
+      "onboarding-overlay",
+    ) as OnboardingOverlay | null;
+    if (onboardingOverlay) {
+      onboardingOverlay.inputHandler = inputHandler;
     }
 
     return new ClientGameRunner(

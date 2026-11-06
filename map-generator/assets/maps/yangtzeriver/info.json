@@ -4,6 +4,9 @@
   "id": "YangtzeRiver",
   "translation_key": "map.yangtzeriver",
   "categories": ["asia"],
+  "location": { "lat": 32, "lon": 119.3 },
+  "author": "crunchybbb",
+  "description": "A rainbow-shaped, 300-mile stretch of the lower Yangtze river from its mouth up to the border of the Anhui & Jiangsu provinces. It encompasses much of the Yangtze River Delta megacity region, the country’s economic and urban core",
   "nations": [
     {
       "coordinates": [3306, 1778],

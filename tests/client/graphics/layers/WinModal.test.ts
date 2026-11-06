@@ -1,6 +1,14 @@
-import { GameType, RankedType } from "@openfront/engine-api/game/GameTypes";
-import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
+import {
+  GameMode,
+  GameType,
+  PlayerType,
+  RankedType,
+} from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { GAME_ID_REGEX, type Winner } from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/shared/EventBus";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { FfaRatingPanel } from "../../../../src/client/components/ffaRating/FfaRatingPanel";
 import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import {
   fetchCosmetics,
@@ -9,6 +17,8 @@ import {
 } from "../../../../src/client/Cosmetics";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
+import { rememberLobbyPublicGameType } from "../../../../src/client/LobbyPublicGameType";
+import { resolveXpAccount } from "../../../../src/client/ProgressionAccount";
 import type { GameView } from "../../../../src/client/view";
 
 const copyToClipboardMock = vi.hoisted(() =>
@@ -19,7 +29,7 @@ const showToastMock = vi.hoisted(() => vi.fn());
 const gamePortalMock = vi.hoisted(() => ({
   happytime: vi.fn(),
   gameplayStop: vi.fn(),
-  name: vi.fn(() => null),
+  name: vi.fn((): string | null => null),
   isOnGamePortal: vi.fn(() => false),
   createInviteLink: vi.fn(
     async (gameId: string): Promise<string | null> =>
@@ -49,6 +59,15 @@ vi.mock("../../../../src/client/Utils", () => ({
 
 vi.mock("../../../../src/client/Api", () => ({
   getUserMe: vi.fn(async () => null),
+}));
+
+vi.mock("../../../../src/client/ProgressionAccount", () => ({
+  resolveXpAccount: vi.fn(),
+}));
+
+// The mounted rating panel must make no request.
+vi.mock("../../../../src/client/FfaRatingApi", () => ({
+  pollFfaGameRating: vi.fn(() => new Promise(() => {})),
 }));
 
 vi.mock("../../../../src/client/Cosmetics", async (importOriginal) => ({
@@ -289,6 +308,152 @@ describe("WinModal pattern promotion", () => {
   });
 });
 
+describe("WinModal FFA rating panel", () => {
+  let modal: WinModal | undefined;
+
+  // The lobby_info that put the viewer in the plain FFA slot.
+  beforeEach(() => rememberLobbyPublicGameType("g1", "ffa"));
+
+  afterEach(() => {
+    modal?.remove();
+    modal = undefined;
+    vi.mocked(resolveXpAccount).mockReset();
+  });
+
+  const signedIn = (ffa: Record<string, unknown>) =>
+    vi.mocked(resolveXpAccount).mockResolvedValue({
+      kind: "signed_in",
+      me: { player: { trustTier: "trusted", leaderboard: { ffa } } },
+    } as never);
+
+  const mount = async (
+    rankedType?: RankedType,
+    winner: Winner = ["player", "c1"],
+  ) => {
+    const el = document.createElement("win-modal") as WinModal;
+    el.game = {
+      gameID: () => "g1",
+      config: () => ({
+        gameConfig: () => ({
+          gameType: GameType.Public,
+          gameMode: GameMode.FFA,
+          rankedType,
+        }),
+        isReplay: () => false,
+      }),
+      myPlayer: () => ({ isAlive: () => true, hasSpawned: () => true }),
+      players: () =>
+        Array.from({ length: 12 }, () => ({
+          type: () => PlayerType.Human,
+          hasSpawned: () => true,
+        })),
+    } as never;
+    // What vote() records when the Win update arrives.
+    (el as unknown as { gameEnd: unknown }).gameEnd = {
+      winner,
+      allPlayersStats: {},
+      tick: 0,
+    };
+    document.body.appendChild(el);
+    await el.updateComplete;
+    modal = el;
+    return el as unknown as HTMLElement & {
+      updateComplete: Promise<boolean>;
+      updateFfaRating(): Promise<void>;
+    };
+  };
+
+  it("shows the FFA rating panel after a public FFA game for a rated viewer", async () => {
+    signedIn({ calibrationGames: 3 });
+    const m = await mount();
+    await m.updateFfaRating();
+    await m.updateComplete;
+    const panel = m.querySelector<FfaRatingPanel>("ffa-rating-panel")!;
+    expect(panel.gameId).toBe("g1");
+    expect(panel.lobbyHumans).toBe(12);
+  });
+
+  it("shows no panel while the API sends no rating", async () => {
+    signedIn({ elo: 1234 });
+    const m = await mount();
+    await m.updateFfaRating();
+    await m.updateComplete;
+    expect(m.querySelector("ffa-rating-panel")).toBeNull();
+  });
+
+  it("shows no panel when a nation won", async () => {
+    signedIn({ calibrationGames: 3 });
+    const m = await mount(undefined, ["nation", "Atlantis"]);
+    await m.updateFfaRating();
+    await m.updateComplete;
+    expect(m.querySelector("ffa-rating-panel")).toBeNull();
+    expect(resolveXpAccount).not.toHaveBeenCalled();
+  });
+
+  it("shows no panel after a special FFA lobby", async () => {
+    rememberLobbyPublicGameType("g1", "special");
+    signedIn({ calibrationGames: 3 });
+    const m = await mount();
+    await m.updateFfaRating();
+    await m.updateComplete;
+    expect(m.querySelector("ffa-rating-panel")).toBeNull();
+    expect(resolveXpAccount).not.toHaveBeenCalled();
+  });
+
+  it("shows no panel after a ranked game", async () => {
+    signedIn({ calibrationGames: 3 });
+    const m = await mount(RankedType.OneVOne);
+    await m.updateFfaRating();
+    await m.updateComplete;
+    expect(m.querySelector("ffa-rating-panel")).toBeNull();
+    expect(resolveXpAccount).not.toHaveBeenCalled();
+  });
+
+  it("shows the panel when the Win update arrives through tick()", async () => {
+    signedIn({ calibrationGames: 3 });
+    const el = document.createElement("win-modal") as WinModal;
+    const winner = { isPlayer: () => true, clientID: () => "c1" };
+    el.game = {
+      gameID: () => "g1",
+      config: () => ({
+        gameConfig: () => ({
+          gameType: GameType.Public,
+          gameMode: GameMode.FFA,
+        }),
+        isReplay: () => false,
+      }),
+      myPlayer: () => ({
+        isAlive: () => true,
+        hasSpawned: () => true,
+        clientID: () => "c1",
+      }),
+      players: () =>
+        Array.from({ length: 12 }, () => ({
+          type: () => PlayerType.Human,
+          hasSpawned: () => true,
+        })),
+      inSpawnPhase: () => false,
+      ticks: () => 6000,
+      playerByClientID: () => winner,
+      updatesSinceLastTick: () => ({
+        [GameUpdateType.Win]: [
+          { winner: ["player", "c1"], allPlayersStats: {} },
+        ],
+      }),
+    } as never;
+    el.eventBus = new EventBus();
+    document.body.appendChild(el);
+    modal = el;
+
+    el.tick();
+
+    await vi.waitFor(() => {
+      const panel = el.querySelector<FfaRatingPanel>("ffa-rating-panel");
+      expect(panel?.gameId).toBe("g1");
+    });
+  });
+});
+
 describe("WinModal share button", () => {
   let modal: WinModal | undefined;
 
@@ -321,6 +486,7 @@ describe("WinModal share button", () => {
     copyToClipboardMock.mockClear();
     showToastMock.mockClear();
     gamePortalMock.isOnGamePortal.mockReturnValue(false);
+    gamePortalMock.name.mockReturnValue(null);
     gamePortalMock.createInviteLink.mockClear();
   });
 
@@ -468,6 +634,25 @@ describe("WinModal share button", () => {
     expect(gamePortalMock.createInviteLink).toHaveBeenCalledWith(gameId);
     expect(copyToClipboardMock).toHaveBeenCalledWith(
       `https://crazygames.com/game?invite=${gameId}`,
+    );
+    expect(showToastMock).toHaveBeenCalledWith("Copied!", "green");
+  });
+
+  it("shares a plain game link on VIVERSE, which has no invite links", async () => {
+    const gameId = "vv99912345";
+    gamePortalMock.isOnGamePortal.mockReturnValue(true);
+    gamePortalMock.name.mockReturnValue("viverse");
+    vi.spyOn(ClientEnv, "shareOrigin").mockReturnValue("https://openfront.io");
+
+    const el = await createModal({ gameId });
+    el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
+    )!.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(gamePortalMock.createInviteLink).not.toHaveBeenCalled();
+    expect(copyToClipboardMock).toHaveBeenCalledWith(
+      `https://openfront.io${ClientEnv.gamePath(gameId)}`,
     );
     expect(showToastMock).toHaveBeenCalledWith("Copied!", "green");
   });

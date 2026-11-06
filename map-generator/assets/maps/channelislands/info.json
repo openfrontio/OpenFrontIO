@@ -4,74 +4,72 @@
   "id": "ChannelIslands",
   "translation_key": "map.channelislands",
   "categories": ["north_america"],
+  "location": { "lat": 33.5, "lon": -119 },
+  "author": "crunchybbb",
+  "description": "The Channel Islands of California (Not to be confused with the English Channel Islands) are an archipelago of 8 islands off the coast of Los Angeles and Southern California. The isolated islands feature unique wildlife, rich archaeological history, and pristine coastal landscapes. A stretch of the mainland coast is included, covering 72% of the map",
   "nations": [
     {
-      "coordinates": [4060, 214],
+      "coordinates": [4040, 138],
       "name": "Huntington Beach",
       "flag": "California"
     },
     {
-      "coordinates": [4201, 197],
+      "coordinates": [4177, 143],
       "name": "Newport Beach",
       "flag": "California"
     },
     {
-      "coordinates": [4450, 223],
+      "coordinates": [4511, 162],
       "name": "Laguna Beach",
       "flag": "California"
     },
     {
-      "coordinates": [4689, 264],
+      "coordinates": [4641, 220],
       "name": "San Clemente",
       "flag": "California"
     },
     {
-      "coordinates": [4659, 143],
-      "name": "San Juan Capistrano",
-      "flag": "California"
-    },
-    {
-      "coordinates": [4200, 1936],
+      "coordinates": [4203, 1645],
       "name": "San Clemente Island",
       "flag": "California"
     },
     {
-      "coordinates": [3668, 1027],
+      "coordinates": [3719, 738],
       "name": "Santa Catalina",
       "flag": "California"
     },
     {
-      "coordinates": [2323, 2145],
+      "coordinates": [2316, 1516],
       "name": "San Nicolas",
       "flag": "California"
     },
     {
-      "coordinates": [767, 1448],
+      "coordinates": [759, 1095],
       "name": "Santa Rosa",
       "flag": "California"
     },
     {
-      "coordinates": [1180, 1114],
+      "coordinates": [1180, 786],
       "name": "Santa Cruz",
       "flag": "California"
     },
     {
-      "coordinates": [1674, 802],
+      "coordinates": [1676, 500],
       "name": "Anacapa Island",
       "flag": "California"
     },
     {
-      "coordinates": [300, 1549],
+      "coordinates": [312, 1247],
       "name": "San Miguel",
       "flag": "California"
     },
     {
-      "coordinates": [3653, 180],
+      "coordinates": [3652, 151],
       "name": "Long Beach",
       "flag": "California"
     },
     {
-      "coordinates": [3523, 329],
+      "coordinates": [3554, 254],
       "name": "San Pedro",
       "flag": "California"
     },
@@ -81,22 +79,22 @@
       "flag": "California"
     },
     {
-      "coordinates": [2914, 5],
+      "coordinates": [3124, 10],
       "name": "Santa Monica",
       "flag": "California"
     },
     {
-      "coordinates": [3142, 8],
+      "coordinates": [3129, 144],
       "name": "Beverly Hills",
       "flag": "California"
     },
     {
-      "coordinates": [3259, 92],
+      "coordinates": [3314, 83],
       "name": "Inglewood",
       "flag": "California"
     },
     {
-      "coordinates": [3552, 103],
+      "coordinates": [3579, 65],
       "name": "Compton",
       "flag": "California"
     },
@@ -111,7 +109,7 @@
       "flag": "California"
     },
     {
-      "coordinates": [4286, 108],
+      "coordinates": [4326, 95],
       "name": "Costa Mesa",
       "flag": "California"
     },
@@ -126,32 +124,17 @@
       "flag": "California"
     },
     {
-      "coordinates": [4698, 23],
-      "name": "Mission Viejo",
-      "flag": "California"
-    },
-    {
-      "coordinates": [3828, 16],
+      "coordinates": [3850, 13],
       "name": "Buena Park",
       "flag": "California"
     },
     {
-      "coordinates": [3714, 32],
+      "coordinates": [3674, 18],
       "name": "Downey",
       "flag": "California"
     },
     {
-      "coordinates": [4088, 111],
-      "name": "Garden Grove",
-      "flag": "California"
-    },
-    {
-      "coordinates": [3939, 94],
-      "name": "Westminster",
-      "flag": "California"
-    },
-    {
-      "coordinates": [3810, 152],
+      "coordinates": [3814, 80],
       "name": "Seal Beach",
       "flag": "California"
     },
@@ -171,17 +154,17 @@
       "flag": "California"
     },
     {
-      "coordinates": [1825, 361],
+      "coordinates": [1814, 285],
       "name": "Port Hueneme",
       "flag": "California"
     },
     {
-      "coordinates": [1638, 204],
+      "coordinates": [1677, 159],
       "name": "Ventura",
       "flag": "California"
     },
     {
-      "coordinates": [1862, 227],
+      "coordinates": [1878, 174],
       "name": "Oxnard",
       "flag": "California"
     },
@@ -216,12 +199,12 @@
       "flag": "California"
     },
     {
-      "coordinates": [18, 152],
+      "coordinates": [89, 248],
       "name": "Buellton",
       "flag": "California"
     },
     {
-      "coordinates": [198, 198],
+      "coordinates": [378, 66],
       "name": "Solvang",
       "flag": "dk"
     }

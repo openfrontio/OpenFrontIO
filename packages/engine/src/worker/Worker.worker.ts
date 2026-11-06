@@ -4,6 +4,8 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import {
   AttackClusteredPositionsResultMessage,
+  ExtractSnapshotErrorMessage,
+  ExtractSnapshotResultMessage,
   HumanDisconnectsResultMessage,
   HumanStatsResultMessage,
   InitErrorMessage,
@@ -26,6 +28,7 @@ import {
   GameRunner,
 } from "../GameRunner";
 import { readSnapshotHeader } from "../snapshot/GameSnapshot";
+import { extractSnapshot } from "../snapshot/SnapshotExtractor";
 
 const ctx: Worker = self as any;
 // Where answers go: the page that started this worker, or the port it
@@ -471,6 +474,38 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
         };
       }
       sendMessage(result);
+      break;
+    }
+    case "extract_snapshot": {
+      try {
+        const result = await extractSnapshot({
+          gameStartInfo: message.gameStartInfo,
+          turns: message.turns,
+          mapFiles: message.map,
+          targetTick: message.targetTick,
+          chosenPlayerID: message.chosenPlayerID,
+          localClientID: message.localClientID,
+          difficulty: message.difficulty,
+          newGameID: message.newGameID,
+        });
+        out.postMessage(
+          {
+            type: "extract_snapshot_result",
+            id: message.id,
+            snapshot: result.snapshot,
+            gameStartInfo: result.gameStartInfo,
+            tick: result.tick,
+          } as ExtractSnapshotResultMessage,
+          [result.snapshot.buffer],
+        );
+      } catch (error) {
+        console.error("Failed to extract snapshot:", error);
+        out.postMessage({
+          type: "extract_snapshot_error",
+          id: message.id,
+          error: error instanceof Error ? error.message : String(error),
+        } as ExtractSnapshotErrorMessage);
+      }
       break;
     }
     default:

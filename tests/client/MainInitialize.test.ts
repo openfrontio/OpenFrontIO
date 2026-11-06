@@ -66,6 +66,10 @@ vi.mock("../../src/client/BootInterrupts", () => ({
   steamGrantStringsReady: () => false,
   reportThanksStringsReady: () => false,
   reportThanksDueThisLaunch: () => false,
+  giftEndingStringsReady: () => false,
+  renewalPushedStringsReady: () => false,
+  renewalPushedDueThisLaunch: () => false,
+  renewalPushedOf: () => null,
   joinOwnsInFlightFlag: () => true,
   lapseShownAfterDispatch: (
     _resp: unknown,
@@ -364,13 +368,14 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     const canPlay = vi.fn(() => false);
     input.canPlay = canPlay;
     logSpy.mockClear();
-    document.dispatchEvent(
-      new CustomEvent("join-lobby", {
-        detail: { gameID: "AbCd1234" },
-        bubbles: true,
-      }),
-    );
+    const event = new CustomEvent("join-lobby", {
+      detail: { gameID: "AbCd1234" },
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(event);
     await vi.waitFor(() => expect(canPlay).toHaveBeenCalled());
+    expect(event.defaultPrevented).toBe(true);
     // Early return before the "joining lobby" log — nothing joined.
     expect(logSpy).not.toHaveBeenCalledWith(
       expect.stringContaining("joining lobby"),

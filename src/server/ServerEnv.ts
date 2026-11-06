@@ -119,7 +119,12 @@ export class ServerEnv {
     if (ServerEnv.publicKey) return ServerEnv.publicKey;
     const jwksUrl = ServerEnv.jwtIssuer() + "/.well-known/jwks.json";
     console.log(`Fetching JWKS from ${jwksUrl}`);
-    const response = await fetch(jwksUrl);
+    // A redirect would forward x-api-key to the new origin; the JWKS
+    // endpoint never redirects, so refuse to follow one.
+    const response = await fetch(jwksUrl, {
+      headers: { "x-api-key": ServerEnv.apiKey() },
+      redirect: "error",
+    });
     if (!response.ok) {
       const body = await response.text();
       throw new Error(`JWKS fetch failed: ${response.status} ${body}`);
