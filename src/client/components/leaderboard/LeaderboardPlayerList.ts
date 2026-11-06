@@ -114,9 +114,17 @@ export class LeaderboardPlayerList extends LitElement {
   // only once the API sends them. Until then it is the plain Elo ladder.
   // The modal relabels its tab on "ffa-rating-live" (see updated()).
   private get ffaRatingLive(): boolean {
+    return this.rankedType === RankedType.FreeForAll && this.ffaRatingServed;
+  }
+
+  // A hidden player counts: right after a season reset the ± rule can empty
+  // the whole board, and only a live API sends hiddenByUncertainty.
+  private get ffaRatingServed(): boolean {
     return (
-      this.rankedType === RankedType.FreeForAll &&
-      this.playerData.some((row) => row.tier !== undefined)
+      this.ffaHidden !== null ||
+      this.ladders[RankedType.FreeForAll].entries.some(
+        (row) => row.tier !== undefined,
+      )
     );
   }
 
@@ -143,11 +151,9 @@ export class LeaderboardPlayerList extends LitElement {
   protected updated(changed: PropertyValues) {
     // Tells the modal once, whichever tab is up: a page carries every ladder.
     if (
-      changed.has("ladders") &&
+      (changed.has("ladders") || changed.has("ffaHidden")) &&
       !this.ffaRatingAnnounced &&
-      this.ladders[RankedType.FreeForAll].entries.some(
-        (row) => row.tier !== undefined,
-      )
+      this.ffaRatingServed
     ) {
       this.ffaRatingAnnounced = true;
       this.dispatchEvent(new CustomEvent("ffa-rating-live", { bubbles: true }));

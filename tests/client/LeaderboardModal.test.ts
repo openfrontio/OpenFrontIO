@@ -906,6 +906,46 @@ describe("LeaderboardModal", () => {
       expect(modal.querySelector("[data-ffa-calibrating-row]")).toBeNull();
     });
 
+    it("shows a hidden player as rated when the whole board is empty", async () => {
+      // Right after a season reset, every top player can be over the ± limit.
+      await meOnce({
+        user: linked,
+        player: {
+          publicId: "me",
+          username: "me.1",
+          leaderboard: {
+            ffa: {
+              elo: 2240.4,
+              uncertainty: 61.2,
+              tier: "Master I",
+              games: 410,
+              wins: 66,
+              peak: 2300,
+              hiddenByUncertainty: true,
+            },
+          },
+        },
+      });
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [],
+          "2v2": [],
+          ffa: [],
+          ffaSeason: { number: 1, startDate: "2026-11-09" },
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await showLadder("playersFfa");
+      const row = modal.querySelector("tfoot [data-ffa-hidden-row]")!;
+      expect(row.querySelector("ffa-tier-badge")).not.toBeNull();
+      expect(row.textContent).toContain("2240");
+      expect(row.textContent).not.toContain("2240.4");
+      expect(row.textContent).toContain("± 61");
+      expect(modal.querySelector("[data-ffa-season]")).not.toBeNull();
+      await modal.updateComplete;
+      expect(ffaTabLabel()).toBe("FFA Rating");
+    });
+
     it("pins no note for a rated player on the board", async () => {
       await meOnce({
         user: linked,
