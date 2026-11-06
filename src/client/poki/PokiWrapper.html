@@ -97,6 +97,17 @@
             PokiSDK.gameplayStart();
           },
           gameplayStop: stopGameplay,
+          // The player's input in the game frame (PokiBridge.ts), replayed
+          // here, where the SDK listens for it.
+          interaction: function (args) {
+            if (args[0] === "keydown") {
+              document.dispatchEvent(
+                new KeyboardEvent("keydown", { code: String(args[1]) }),
+              );
+            } else {
+              dispatchEvent(new PointerEvent("pointerdown"));
+            }
+          },
           commercialBreak: function (args, id) {
             return PokiSDK.commercialBreak(function () {
               reply({ ofPoki: true, id: id, event: "commercialBreakStart" });
