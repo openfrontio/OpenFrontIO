@@ -19,172 +19,183 @@
   "name": "Korea",
   "nations": [
     {
-      "coordinates": [1270, 2361],
+      "coordinates": [845, 1587],
       "flag": "kr",
       "name": "Ulsan"
     },
     {
-      "coordinates": [1242, 2556],
+      "coordinates": [823, 1708],
       "flag": "kr",
       "name": "Busan"
     },
     {
-      "coordinates": [599, 3149],
+      "coordinates": [392, 2008],
       "flag": "kr",
       "name": "Jeju"
     },
     {
-      "coordinates": [1367, 3187],
+      "coordinates": [927, 2146],
       "flag": "Empire of Japan",
       "name": "Nagasaki"
     },
     {
-      "coordinates": [1604, 3066],
+      "coordinates": [1072, 2033],
       "flag": "jp",
       "name": "Fukuoka"
     },
     {
-      "coordinates": [1104, 2312],
+      "coordinates": [735, 1564],
       "flag": "kr",
       "name": "Daegu"
     },
     {
-      "coordinates": [926, 2419],
+      "coordinates": [602, 1619],
       "flag": "kr",
       "name": "South Gyeongsang"
     },
     {
-      "coordinates": [1078, 2112],
+      "coordinates": [738, 1419],
       "flag": "kr",
       "name": "North Gyeongsang"
     },
     {
-      "coordinates": [713, 2667],
+      "coordinates": [450, 1817],
       "flag": "kr",
       "name": "South Jeolla"
     },
     {
-      "coordinates": [723, 2382],
+      "coordinates": [462, 1654],
       "flag": "kr",
       "name": "North Jeolla"
     },
     {
-      "coordinates": [731, 1832],
+      "coordinates": [473, 1251],
       "flag": "kr",
       "name": "Seoul"
     },
     {
-      "coordinates": [842, 2310],
+      "coordinates": [535, 1542],
       "flag": "kr",
       "name": "Daejeon"
     },
     {
-      "coordinates": [812, 2245],
+      "coordinates": [513, 1505],
       "flag": "kr",
       "name": "Sejong"
     },
     {
-      "coordinates": [879, 2134],
+      "coordinates": [590, 1450],
       "flag": "kr",
       "name": "North Chungcheong"
     },
     {
-      "coordinates": [639, 2229],
+      "coordinates": [418, 1415],
       "flag": "kr",
       "name": "South Chungcheong"
     },
     {
-      "coordinates": [632, 1907],
+      "coordinates": [414, 1269],
       "flag": "kr",
       "name": "Incheon"
     },
     {
-      "coordinates": [1001, 1835],
+      "coordinates": [684, 1228],
       "flag": "kr",
       "name": "Gangwon"
     },
     {
-      "coordinates": [738, 2003],
+      "coordinates": [507, 1334],
       "flag": "kr",
       "name": "Gyeonggi"
     },
     {
-      "coordinates": [597, 1726],
+      "coordinates": [364, 1136],
       "flag": "kp",
       "name": "Kaesong"
     },
     {
-      "coordinates": [481, 1477],
+      "coordinates": [294, 986],
       "flag": "kp",
       "name": "Pyongyang"
     },
     {
-      "coordinates": [705, 1528],
+      "coordinates": [416, 997],
       "flag": "kp",
       "name": "North Hwanghae"
     },
     {
-      "coordinates": [395, 1696],
+      "coordinates": [184, 1116],
       "flag": "kp",
       "name": "South Hwanghae"
     },
     {
-      "coordinates": [309, 1497],
+      "coordinates": [188, 980],
       "flag": "kp",
       "name": "Nampo"
     },
     {
-      "coordinates": [885, 1586],
+      "coordinates": [599, 1062],
       "flag": "kp",
       "name": "Kangwon"
     },
     {
-      "coordinates": [709, 1170],
+      "coordinates": [565, 726],
       "flag": "kp",
       "name": "South Hamgyong"
     },
     {
-      "coordinates": [1213, 605],
+      "coordinates": [817, 384],
       "flag": "kp",
       "name": "North Hamgyong"
     },
     {
-      "coordinates": [932, 864],
+      "coordinates": [595, 530],
       "flag": "kp",
       "name": "Ryanggang"
     },
     {
-      "coordinates": [445, 1281],
+      "coordinates": [283, 794],
       "flag": "kp",
       "name": "South Pyongan"
     },
     {
-      "coordinates": [260, 1111],
+      "coordinates": [158, 720],
       "flag": "kp",
       "name": "North Pyongan"
     },
     {
-      "coordinates": [561, 919],
+      "coordinates": [383, 609],
       "flag": "kp",
       "name": "Chagang"
     },
     {
-      "coordinates": [1601, 3242],
+      "coordinates": [1046, 2178],
       "flag": "jp",
       "name": "Saga"
     },
     {
-      "coordinates": [743, 2534],
+      "coordinates": [455, 1742],
       "flag": "kr",
       "name": "Gwangju"
-    },
-    {
-      "coordinates": [1277, 2824],
-      "flag": "jp",
-      "name": "Tsushima Island"
     }
   ],
   "special_team_count": 2,
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1210,
+        "width": 1088,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 978,
+        "width": 1088,
+        "x": 0,
+        "y": 1210
+      }
+    ]
+  },
   "themes": ["asia"],
   "translation_key": "map.korea"
 }

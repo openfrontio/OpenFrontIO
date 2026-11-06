@@ -8,174 +8,174 @@
   "author": "crunchybbb",
   "nations": [
     {
-      "coordinates": [2086, 2052],
+      "coordinates": [1737, 1732],
       "name": "Hong Kong",
       "flag": "hk"
     },
     {
-      "coordinates": [1966, 1994],
+      "coordinates": [1626, 1687],
       "name": "Guangdong",
       "flag": "cn"
     },
     {
-      "coordinates": [1368, 1716],
+      "coordinates": [1082, 1322],
       "name": "Sichuan",
       "flag": "cn"
     },
     {
-      "coordinates": [2126, 548],
+      "coordinates": [1758, 388],
       "name": "Heilongjiang",
       "flag": "cn"
     },
     {
-      "coordinates": [1853, 964],
+      "coordinates": [1479, 759],
       "name": "Inner Mongolia",
       "flag": "cn"
     },
     {
-      "coordinates": [715, 1205],
+      "coordinates": [571, 866],
       "name": "Xinjiang",
       "flag": "Eastern_Turkistan_Flag"
     },
     {
-      "coordinates": [662, 1607],
+      "coordinates": [475, 1336],
       "name": "Tibet",
       "flag": "tibet"
     },
     {
-      "coordinates": [1114, 1225],
+      "coordinates": [1030, 1075],
       "name": "Gansu",
       "flag": "cn"
     },
     {
-      "coordinates": [1383, 2090],
+      "coordinates": [1101, 1744],
       "name": "Yunnan",
       "flag": "cn"
     },
     {
-      "coordinates": [1894, 2332],
+      "coordinates": [1572, 1936],
       "name": "Hainan",
       "flag": "cn"
     },
     {
-      "coordinates": [2161, 1385],
+      "coordinates": [1794, 1163],
       "name": "Jiangsu",
       "flag": "cn"
     },
     {
-      "coordinates": [2013, 2111],
+      "coordinates": [1691, 1760],
       "name": "Macau",
       "flag": "mo"
     },
     {
-      "coordinates": [2415, 1863],
+      "coordinates": [2021, 1609],
       "name": "Taiwan",
       "flag": "tw"
     },
     {
-      "coordinates": [2251, 1871],
+      "coordinates": [1870, 1566],
       "name": "Fujian",
       "flag": "cn"
     },
     {
-      "coordinates": [1901, 1830],
+      "coordinates": [1578, 1499],
       "name": "Hunan",
       "flag": "cn"
     },
     {
-      "coordinates": [1623, 1874],
+      "coordinates": [1338, 1543],
       "name": "Guizhou",
       "flag": "cn"
     },
     {
-      "coordinates": [2316, 746],
+      "coordinates": [1953, 579],
       "name": "Jilin",
       "flag": "cn"
     },
     {
-      "coordinates": [1693, 2056],
+      "coordinates": [1402, 1716],
       "name": "Guangxi",
       "flag": "cn"
     },
     {
-      "coordinates": [2098, 1791],
+      "coordinates": [1751, 1471],
       "name": "Jiangxi",
       "flag": "cn"
     },
     {
-      "coordinates": [1566, 1730],
+      "coordinates": [1245, 1363],
       "name": "Chongqing",
       "flag": "cn"
     },
     {
-      "coordinates": [2316, 1520],
+      "coordinates": [1927, 1265],
       "name": "Shanghai",
       "flag": "cn"
     },
     {
-      "coordinates": [2284, 1666],
+      "coordinates": [1896, 1404],
       "name": "Zhejiang",
       "flag": "cn"
     },
     {
-      "coordinates": [2132, 1259],
+      "coordinates": [1751, 1057],
       "name": "Shandong",
       "flag": "cn"
     },
     {
-      "coordinates": [1857, 1151],
+      "coordinates": [1590, 999],
       "name": "Hebei",
       "flag": "cn"
     },
     {
-      "coordinates": [1973, 1114],
+      "coordinates": [1631, 880],
       "name": "Beijing",
       "flag": "cn"
     },
     {
-      "coordinates": [2060, 1121],
+      "coordinates": [1680, 952],
       "name": "Tianjin",
       "flag": "cn"
     },
     {
-      "coordinates": [2263, 960],
+      "coordinates": [1876, 770],
       "name": "Liaoning",
       "flag": "cn"
     },
     {
-      "coordinates": [1794, 1605],
+      "coordinates": [1488, 1353],
       "name": "Hubei",
       "flag": "cn"
     },
     {
-      "coordinates": [2105, 1587],
+      "coordinates": [1661, 1262],
       "name": "Anhui",
       "flag": "cn"
     },
     {
-      "coordinates": [1962, 1456],
+      "coordinates": [1516, 1163],
       "name": "Henan",
       "flag": "cn"
     },
     {
-      "coordinates": [1579, 1385],
+      "coordinates": [1226, 1147],
       "name": "Shaanxi",
       "flag": "cn"
     },
     {
-      "coordinates": [1685, 1243],
+      "coordinates": [1402, 1049],
       "name": "Shanxi",
       "flag": "cn"
     },
     {
-      "coordinates": [1081, 1454],
+      "coordinates": [779, 1192],
       "name": "Qinghai",
       "flag": "cn"
     },
     {
-      "coordinates": [1368, 1225],
-      "name": "Ningxia",
-      "flag": "cn"
+      "coordinates": [1226, 1049],
+      "flag": "cn",
+      "name": "Ningxia"
     }
   ],
   "themes": ["asia"]
