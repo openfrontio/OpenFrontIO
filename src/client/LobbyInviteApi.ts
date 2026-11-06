@@ -39,6 +39,8 @@ export async function fetchLobbyInvites(
       },
     });
     if (!res.ok) return [];
+    const contentType = res.headers.get("content-type");
+    if (!contentType?.includes("application/json")) return [];
     const data = await res.json();
     return (data.invites as LobbyInvite[]) ?? [];
   } catch (err) {
