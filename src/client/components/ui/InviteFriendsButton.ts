@@ -1,31 +1,39 @@
+import type { ClientInfo } from "@openfront/shared/WireSchemas";
 import { html, TemplateResult } from "lit";
-import { desktopPresence } from "../../DesktopPresence";
+import { whenModalLoaded } from "../../LazyModals";
 import { translateText } from "../../Utils";
+import type { InviteLobbyModal } from "../InviteLobbyModal";
+
+export interface InviteFriendsButtonOptions {
+  lobbyId?: string;
+  gameMode?: string;
+  map?: string;
+  clients?: ClientInfo[];
+}
 
 /**
- * "Invite Friends", or nothing when Steam's invite dialog is not reachable.
+ * Universal "Invite Friends" button for private lobbies across web and desktop.
  *
- * Shared by every lobby surface rather than living on one of them. It first
- * shipped inline in JoinLobbyModal, which meant the host of a private lobby —
- * the player holding the code and deciding who joins — was the only one who
- * never got it. Two copies would drift the same way; one cannot.
- *
- * Desktop-shell-only: isAvailable() checks shell.api >= 2, which is false in a
- * browser and on an older depot's shell. Returning undefined rather than an
- * empty template lets callers keep rendering byte-identical markup where the
- * button is absent.
- *
- * The click is best-effort. The bridge resolves false when Steam is absent or
- * the overlay refuses, and a lobby must not break on that.
+ * Opens <invite-lobby-modal> which lists friends and clan members with fuzzy
+ * filtering and status indicators, plus a Steam invite fallback on desktop.
  */
-export function inviteFriendsButton(): TemplateResult | undefined {
-  if (!desktopPresence.isAvailable()) return undefined;
+export function inviteFriendsButton(
+  options?: InviteFriendsButtonOptions,
+): TemplateResult {
   const label = translateText("public_lobby.invite_friends");
+  const handleClick = () => {
+    whenModalLoaded("invite-lobby-modal", () => {
+      const modal =
+        document.querySelector<InviteLobbyModal>("invite-lobby-modal");
+      modal?.open(options as Record<string, unknown> | undefined);
+    });
+  };
+
   return html`<button
     data-test-invite-friends
     type="button"
-    @click=${() => void desktopPresence.openInviteDialog()}
-    class="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 rounded-lg px-2 py-1 border border-white/10 text-white/60 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors"
+    @click=${handleClick}
+    class="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 rounded-lg px-2 py-1 border border-white/10 text-white/60 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
     title=${label}
     aria-label=${label}
   >

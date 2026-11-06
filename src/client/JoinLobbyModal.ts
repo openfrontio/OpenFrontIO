@@ -141,7 +141,15 @@ export class JoinLobbyModal extends BaseModal {
     const copy = canShare
       ? html`<copy-button .lobbyId=${this.currentLobbyId}></copy-button>`
       : undefined;
-    const invite = canShare ? inviteFriendsButton() : undefined;
+    const invite =
+      canShare && this.currentLobbyId
+        ? inviteFriendsButton({
+            lobbyId: this.currentLobbyId,
+            gameMode: this.gameConfig?.gameMode,
+            map: this.gameConfig?.gameMap,
+            clients: this.players,
+          })
+        : undefined;
     return modalHeader({
       // titleContent (not title) so the bell can sit at the right edge of the
       // title row via ml-auto, next to the copy/invite cluster.

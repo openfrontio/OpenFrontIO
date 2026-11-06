@@ -1,4 +1,5 @@
 import type { FriendEntry, UserMeResponse } from "@openfront/shared/ApiSchemas";
+import type { LobbyInvite } from "@openfront/shared/LobbyInviteSchemas";
 import { ReactiveController, ReactiveControllerHost } from "lit";
 import version from "resources/version.txt?raw";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
@@ -11,6 +12,10 @@ import {
   nextFriendRequestsSeq,
   publishFriendRequests,
 } from "../FriendsApi";
+import {
+  dismissLobbyInvite as dismissLobbyInviteApi,
+  fetchLobbyInvites,
+} from "../LobbyInviteApi";
 import { latestUserMeResponse } from "../NavAccountButton";
 import { getGamesPlayed } from "../Utils";
 
@@ -18,6 +23,7 @@ const HELP_SEEN_KEY = "helpSeen";
 const STORE_SEEN_HASH_KEY = "storeSeenHash";
 const NEWS_SEEN_VERSION_KEY = "newsSeenVersion";
 const FRIEND_REQUEST_POLL_MS = 60_000;
+const LOBBY_INVITE_POLL_MS = 15_000;
 
 function normalizedVersion(): string {
   const trimmed = version.trim();
@@ -40,6 +46,11 @@ class NavNotificationsStore {
   private _hasNewCosmetics = false;
   private _hasNewVersion = false;
   private _friendRequests: FriendEntry[] = [];
+  private _lobbyInvites: LobbyInvite[] = [];
+
+  private currentPublicId: string | null = null;
+  private lobbyInvitePoll: number | null = null;
+  private lobbyInviteTicker: number | null = null;
 
   private friendRequestsEnabled = false;
   private friendRequestPollingPaused = false;
@@ -119,8 +130,17 @@ class NavNotificationsStore {
   private applyUserMeResponse(response: UserMeResponse | false): void {
     const generation = ++this.authGeneration;
     this.stopFriendRequestPolling();
+    this.stopLobbyInvitePolling();
     this.friendRequestsEnabled = false;
     this.setFriendRequests([]);
+    this.setLobbyInvites([]);
+
+    if (response !== false && response.player?.publicId) {
+      this.currentPublicId = response.player.publicId;
+      this.startLobbyInvitePolling();
+    } else {
+      this.currentPublicId = null;
+    }
 
     if (responseHasLinkedIdentity(response)) {
       this.startFriendRequestPolling(generation);
@@ -164,10 +184,76 @@ class NavNotificationsStore {
     }
   }
 
+  private startLobbyInvitePolling(): void {
+    if (!this.currentPublicId || this.friendRequestPollingPaused) return;
+    this.beginLobbyInvitePolling();
+  }
+
+  private beginLobbyInvitePolling(): void {
+    this.lobbyInvitePoll ??= window.setInterval(
+      () => void this.refreshLobbyInvites(),
+      LOBBY_INVITE_POLL_MS,
+    );
+    this.lobbyInviteTicker ??= window.setInterval(
+      () => this.pruneLobbyInvitesTick(),
+      1000,
+    );
+    void this.refreshLobbyInvites();
+  }
+
+  private stopLobbyInvitePolling(): void {
+    if (this.lobbyInvitePoll !== null) {
+      window.clearInterval(this.lobbyInvitePoll);
+      this.lobbyInvitePoll = null;
+    }
+    if (this.lobbyInviteTicker !== null) {
+      window.clearInterval(this.lobbyInviteTicker);
+      this.lobbyInviteTicker = null;
+    }
+  }
+
+  private pruneLobbyInvitesTick(): void {
+    const now = Date.now();
+    const active = this._lobbyInvites.filter((inv) => inv.expiresAt > now);
+    if (active.length !== this._lobbyInvites.length) {
+      this._lobbyInvites = active;
+      this.notify();
+    } else if (active.length > 0) {
+      this.notify();
+    }
+  }
+
+  private setLobbyInvites(invites: LobbyInvite[]): void {
+    this._lobbyInvites = invites;
+    this.notify();
+  }
+
+  async refreshLobbyInvites(): Promise<void> {
+    if (
+      !this.currentPublicId ||
+      this.friendRequestPollingPaused ||
+      document.hidden
+    ) {
+      return;
+    }
+    const invites = await fetchLobbyInvites(this.currentPublicId);
+    this._lobbyInvites = invites;
+    this.notify();
+  }
+
+  dismissLobbyInvite(inviteId: string): void {
+    this._lobbyInvites = this._lobbyInvites.filter((i) => i.id !== inviteId);
+    this.notify();
+    if (this.currentPublicId) {
+      void dismissLobbyInviteApi(this.currentPublicId, inviteId);
+    }
+  }
+
   private handleGameStarting = (): void => {
     if (this.friendRequestPollingPaused) return;
     this.friendRequestPollingPaused = true;
     this.stopFriendRequestPolling();
+    this.stopLobbyInvitePolling();
 
     // Let a restored menu start a fresh request immediately even if a request
     // from before the match is still in flight. Its generation check below
@@ -180,14 +266,19 @@ class NavNotificationsStore {
     if (!this.friendRequestPollingPaused) return;
     this.friendRequestPollingPaused = false;
     if (this.friendRequestsEnabled) this.beginFriendRequestPolling();
+    if (this.currentPublicId) this.beginLobbyInvitePolling();
   };
 
   private handleVisibilityChange = (): void => {
-    if (!document.hidden) void this.refreshFriendRequests();
+    if (!document.hidden) {
+      void this.refreshFriendRequests();
+      void this.refreshLobbyInvites();
+    }
   };
 
   private handleFocus = (): void => {
     void this.refreshFriendRequests();
+    void this.refreshLobbyInvites();
   };
 
   private handleFriendRequestsUpdated = (event: Event): void => {
@@ -275,10 +366,18 @@ class NavNotificationsStore {
     return this._friendRequests;
   }
 
+  lobbyInvites(): readonly LobbyInvite[] {
+    return this._lobbyInvites;
+  }
+
   // Only show one nav dot at a time to prevent overwhelming users. The bell
-  // represents both release and friend notifications and wins the priority.
+  // represents release, friend, and lobby invite notifications and wins the priority.
   showBellDot(): boolean {
-    return this._hasNewVersion || this._friendRequests.length > 0;
+    return (
+      this._hasNewVersion ||
+      this._friendRequests.length > 0 ||
+      this._lobbyInvites.length > 0
+    );
   }
 
   showStoreDot(): boolean {
@@ -335,6 +434,7 @@ class NavNotificationsStore {
       window.removeEventListener("focus", this.handleFocus);
     }
     this.stopFriendRequestPolling();
+    this.stopLobbyInvitePolling();
     this.authGeneration++;
     this.hosts.clear();
     this.loaded = false;
@@ -342,6 +442,8 @@ class NavNotificationsStore {
     this._hasNewCosmetics = false;
     this._hasNewVersion = false;
     this._friendRequests = [];
+    this._lobbyInvites = [];
+    this.currentPublicId = null;
     this.friendRequestsEnabled = false;
     this.friendRequestPollingPaused = false;
     this.friendRequestPollingGeneration++;
@@ -382,6 +484,14 @@ export class NavNotificationsController implements ReactiveController {
 
   friendRequests(): readonly FriendEntry[] {
     return navNotifications.friendRequests();
+  }
+
+  lobbyInvites(): readonly LobbyInvite[] {
+    return navNotifications.lobbyInvites();
+  }
+
+  dismissLobbyInvite(inviteId: string): void {
+    navNotifications.dismissLobbyInvite(inviteId);
   }
 
   showBellDot(): boolean {

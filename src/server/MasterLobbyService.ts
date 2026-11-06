@@ -10,6 +10,7 @@ import {
   InternalGameInfoSchema,
   MasterCreateGame,
   MasterLobbiesBroadcast,
+  MasterMessage,
   MasterUpdateGame,
   WorkerMessageSchema,
 } from "./IPCBridgeSchema";
@@ -115,6 +116,18 @@ export class MasterLobbyService {
           // still reaches the site roster within a second.
           this.coordinator?.report(this.ownLobbies(), this.liveGames());
           break;
+        case "lobbyInvite":
+          this.broadcastMessage({
+            type: "lobbyInviteBroadcast",
+            invite: msg.invite,
+          });
+          break;
+        case "lobbyInviteDismiss":
+          this.broadcastMessage({
+            type: "lobbyInviteDismissBroadcast",
+            inviteId: msg.inviteId,
+          });
+          break;
       }
     });
   }
@@ -135,6 +148,16 @@ export class MasterLobbyService {
       }
     }
     return valid;
+  }
+
+  private broadcastMessage(msg: MasterMessage): void {
+    for (const [workerId, worker] of this.workers.entries()) {
+      worker.send(msg, (e) => {
+        if (e) {
+          this.log.error(`Failed to send message to worker ${workerId}:`, e);
+        }
+      });
+    }
   }
 
   removeWorker(workerId: number) {

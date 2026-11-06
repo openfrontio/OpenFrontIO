@@ -313,7 +313,14 @@ export class HostLobbyModal extends BaseModal {
         // lands, so without this the button is live during that window with
         // no shadow lobby behind it — the invite would silently no-op. The
         // join modal gets this free from its own !currentLobbyId early return.
-        const invite = this.lobbyId ? inviteFriendsButton() : undefined;
+        const invite = this.lobbyId
+          ? inviteFriendsButton({
+              lobbyId: this.lobbyId,
+              gameMode: this.gameMode,
+              map: this.selectedMap,
+              clients: this.clients,
+            })
+          : undefined;
         return invite
           ? html`<div class="flex items-center gap-2">${copy}${invite}</div>`
           : copy;

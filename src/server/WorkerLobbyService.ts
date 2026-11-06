@@ -1,5 +1,6 @@
 import { GameConfig } from "@openfront/engine-api/Schemas";
 import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
+import { LobbyInvite } from "@openfront/shared/LobbyInviteSchemas";
 import {
   ClientPlatform,
   ClientPlatformSchema,
@@ -16,8 +17,9 @@ import {
   InternalPublicGames,
   MasterMessageSchema,
   WorkerLobbyList,
-  WorkerReady,
+  WorkerMessage,
 } from "./IPCBridgeSchema";
+import { LobbyInviteService } from "./LobbyInviteService";
 import { logger } from "./Logger";
 import { ServerEnv } from "./ServerEnv";
 
@@ -166,6 +168,12 @@ export class WorkerLobbyService {
         game.setStartsAt(msg.startsAt);
         break;
       }
+      case "lobbyInviteBroadcast":
+        LobbyInviteService.instance.addExternalInvite(msg.invite);
+        break;
+      case "lobbyInviteDismissBroadcast":
+        LobbyInviteService.instance.dismissExternalInvite(msg.inviteId);
+        break;
     }
   }
 
@@ -173,7 +181,15 @@ export class WorkerLobbyService {
     this.sendToMaster({ type: "workerReady", workerId });
   }
 
-  private sendToMaster(msg: WorkerReady | WorkerLobbyList) {
+  sendLobbyInvite(invite: LobbyInvite) {
+    this.sendToMaster({ type: "lobbyInvite", invite });
+  }
+
+  sendLobbyInviteDismiss(inviteId: string) {
+    this.sendToMaster({ type: "lobbyInviteDismiss", inviteId });
+  }
+
+  private sendToMaster(msg: WorkerMessage) {
     process.send?.(msg);
   }
 

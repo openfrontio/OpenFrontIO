@@ -612,6 +612,7 @@
     "copied": "Copied!",
     "copy": "Copy",
     "disabled": "Disabled",
+    "dismiss": "Dismiss",
     "duration_hour_short": "h",
     "duration_minute_short": "min",
     "duration_second_short": "s",
@@ -1375,6 +1376,16 @@
     "unequip_all": "Unequip all",
     "unequipped_all": "Unequipped everything"
   },
+  "invite_modal": {
+    "empty": "No friends or clan members found",
+    "friends": "Friends",
+    "in_lobby": "In Lobby",
+    "invite": "Invite",
+    "invited": "Invited",
+    "search_placeholder": "Search friends and clan members...",
+    "steam_invite": "Invite via Steam",
+    "title": "Invite Friends"
+  },
   "ios_banner": {
     "got_it": "Got it",
     "how": "How",
@@ -1814,7 +1825,10 @@
   "notifications": {
     "empty": "No new notifications",
     "friend_request": "Friend request",
+    "join_lobby": "Join Lobby",
+    "lobby_invite": "Lobby Invite",
     "new_version": "Version {version} is now live!",
+    "private_lobby": "Private Lobby",
     "title": "Notifications",
     "view_release_notes": "View release notes"
   },

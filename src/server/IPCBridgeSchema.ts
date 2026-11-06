@@ -1,4 +1,5 @@
 import { GameConfigSchema } from "@openfront/engine-api/Schemas";
+import { LobbyInviteSchema } from "@openfront/shared/LobbyInviteSchemas";
 import {
   PublicGameInfoSchema,
   PublicGameTypeSchema,
@@ -15,6 +16,16 @@ export type MasterLobbiesBroadcast = z.infer<
 
 export type MasterUpdateGame = z.infer<typeof MasterUpdateGameSchema>;
 export type MasterCreateGame = z.infer<typeof MasterCreateGameSchema>;
+export type WorkerLobbyInvite = z.infer<typeof WorkerLobbyInviteSchema>;
+export type WorkerLobbyInviteDismiss = z.infer<
+  typeof WorkerLobbyInviteDismissSchema
+>;
+export type MasterLobbyInviteBroadcast = z.infer<
+  typeof MasterLobbyInviteBroadcastSchema
+>;
+export type MasterLobbyInviteDismissBroadcast = z.infer<
+  typeof MasterLobbyInviteDismissBroadcastSchema
+>;
 export type WorkerMessage = z.infer<typeof WorkerMessageSchema>;
 export type MasterMessage = z.infer<typeof MasterMessageSchema>;
 
@@ -61,9 +72,21 @@ const WorkerReadySchema = z.object({
   workerId: z.number(),
 });
 
+const WorkerLobbyInviteSchema = z.object({
+  type: z.literal("lobbyInvite"),
+  invite: LobbyInviteSchema,
+});
+
+const WorkerLobbyInviteDismissSchema = z.object({
+  type: z.literal("lobbyInviteDismiss"),
+  inviteId: z.string(),
+});
+
 export const WorkerMessageSchema = z.discriminatedUnion("type", [
   WorkerLobbyListSchema,
   WorkerReadySchema,
+  WorkerLobbyInviteSchema,
+  WorkerLobbyInviteDismissSchema,
 ]);
 
 // --- Master Messages ---
@@ -100,8 +123,20 @@ const MasterCreateGameSchema = z.object({
   publicGameType: PublicGameTypeSchema,
 });
 
+const MasterLobbyInviteBroadcastSchema = z.object({
+  type: z.literal("lobbyInviteBroadcast"),
+  invite: LobbyInviteSchema,
+});
+
+const MasterLobbyInviteDismissBroadcastSchema = z.object({
+  type: z.literal("lobbyInviteDismissBroadcast"),
+  inviteId: z.string(),
+});
+
 export const MasterMessageSchema = z.discriminatedUnion("type", [
   MasterLobbiesBroadcastSchema,
   MasterCreateGameSchema,
   MasterUpdateGameSchema,
+  MasterLobbyInviteBroadcastSchema,
+  MasterLobbyInviteDismissBroadcastSchema,
 ]);

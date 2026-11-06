@@ -1,21 +1,36 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { closeMobileSidebar, markVersionSeen, notificationState } = vi.hoisted(
-  () => ({
-    closeMobileSidebar: vi.fn(),
-    markVersionSeen: vi.fn(),
-    notificationState: {
-      hasNewVersion: true,
-      requests: [
-        {
-          publicId: "friend.1234",
-          username: "friend.1234",
-          createdAt: "2026-10-02T12:00:00.000Z",
-        },
-      ],
-    },
-  }),
-);
+const {
+  closeMobileSidebar,
+  dismissLobbyInvite,
+  markVersionSeen,
+  notificationState,
+} = vi.hoisted(() => ({
+  closeMobileSidebar: vi.fn(),
+  dismissLobbyInvite: vi.fn(),
+  markVersionSeen: vi.fn(),
+  notificationState: {
+    hasNewVersion: true,
+    requests: [
+      {
+        publicId: "friend.1234",
+        username: "friend.1234",
+        createdAt: "2026-10-02T12:00:00.000Z",
+      },
+    ],
+    invites: [] as {
+      id: string;
+      lobbyId: string;
+      senderPublicId: string;
+      senderUsername?: string | null;
+      targetPublicId: string;
+      gameMode?: string;
+      map?: string;
+      createdAt: number;
+      expiresAt: number;
+    }[],
+  },
+}));
 
 vi.mock("../../src/client/DesktopShell", () => ({
   desktopQuit: () => null,
@@ -36,11 +51,15 @@ vi.mock("../../src/client/components/NavNotificationsController", () => ({
     currentVersion = () => "v9.9.9";
     friendRequests = () => notificationState.requests;
     hasNewVersion = () => notificationState.hasNewVersion;
+    lobbyInvites = () => notificationState.invites;
+    dismissLobbyInvite = dismissLobbyInvite;
     markVersionSeen = markVersionSeen;
     onHelpClick = vi.fn();
     onStoreClick = vi.fn();
     showBellDot = () =>
-      notificationState.hasNewVersion || notificationState.requests.length > 0;
+      notificationState.hasNewVersion ||
+      notificationState.requests.length > 0 ||
+      notificationState.invites.length > 0;
     showHelpDot = () => false;
   },
 }));
@@ -80,6 +99,7 @@ describe("nav notification menu", () => {
         createdAt: "2026-10-02T12:00:00.000Z",
       },
     ];
+    notificationState.invites = [];
   });
 
   afterEach(() => {
@@ -178,5 +198,73 @@ describe("nav notification menu", () => {
     await openMenu(element);
     element.remove();
     expect(document.querySelector('[role="menu"]')).toBeNull();
+  });
+
+  it("renders lobby invites and handles accepting them", async () => {
+    notificationState.invites = [
+      {
+        id: "inv_1",
+        lobbyId: "lobby_abc",
+        senderPublicId: "sender.123",
+        senderUsername: "HostPlayer",
+        targetPublicId: "target.456",
+        gameMode: "ffa",
+        map: "Europe",
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 25000,
+      },
+    ];
+
+    let joinedEvent: CustomEvent | null = null;
+    const listener = (e: Event) => {
+      joinedEvent = e as CustomEvent;
+    };
+    document.addEventListener("join-lobby", listener);
+
+    const element = await mount();
+    const menu = await openMenu(element);
+
+    expect(menu.textContent).toContain("HostPlayer");
+    expect(menu.textContent).toContain("Europe");
+
+    const joinButton = Array.from(menu.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("notifications.join_lobby"),
+    );
+    expect(joinButton).toBeDefined();
+
+    joinButton!.click();
+    await element.updateComplete;
+
+    expect(dismissLobbyInvite).toHaveBeenCalledWith("inv_1");
+    expect(joinedEvent).not.toBeNull();
+    expect((joinedEvent as any)!.detail.gameID).toBe("lobby_abc");
+    expect(closeMobileSidebar).toHaveBeenCalled();
+    expect(document.querySelector('[role="menu"]')).toBeNull();
+
+    document.removeEventListener("join-lobby", listener);
+  });
+
+  it("handles dismissing a lobby invite", async () => {
+    notificationState.invites = [
+      {
+        id: "inv_2",
+        lobbyId: "lobby_xyz",
+        senderPublicId: "sender.999",
+        targetPublicId: "target.456",
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 20000,
+      },
+    ];
+
+    const element = await mount();
+    const menu = await openMenu(element);
+
+    const dismissButton = Array.from(menu.querySelectorAll("button")).find(
+      (b) => b.getAttribute("aria-label") === "common.dismiss",
+    );
+    expect(dismissButton).toBeDefined();
+
+    dismissButton!.click();
+    expect(dismissLobbyInvite).toHaveBeenCalledWith("inv_2");
   });
 });
