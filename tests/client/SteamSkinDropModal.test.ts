@@ -160,16 +160,16 @@ describe("SteamSkinDropModal", () => {
     expect(await answer).toBe("claim");
   });
 
-  it('a second show() settles the first as "dismiss"', async () => {
+  it('a second show() settles the first as "abandoned"', async () => {
     const second = modal.show(resolved);
-    expect(await answer).toBe("dismiss");
+    expect(await answer).toBe("abandoned");
     await modal.updateComplete;
     buttonWithText(K.claim).click();
     expect(await second).toBe("claim");
   });
 
-  it('removing the popup settles a pending answer as "dismiss"', async () => {
+  it('removing the popup settles a pending answer as "abandoned"', async () => {
     modal.remove();
-    expect(await answer).toBe("dismiss");
+    expect(await answer).toBe("abandoned");
   });
 });

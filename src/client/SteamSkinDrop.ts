@@ -1,8 +1,12 @@
 import type { SteamSkinDrop } from "@openfront/shared/ApiSchemas";
 import type { ResolvedCosmetic } from "./Cosmetics";
 
-/** What the player chose in the Steam skin popup. */
-export type SteamSkinDropAnswer = "claim" | "equip" | "dismiss";
+/**
+ * What the player chose in the Steam skin popup. "abandoned" is not a choice:
+ * the popup was removed or replaced before they answered, so nothing is
+ * recorded and the notice is still owed.
+ */
+export type SteamSkinDropAnswer = "claim" | "equip" | "dismiss" | "abandoned";
 
 /** Translation keys the Steam skin popup renders through. */
 export const STEAM_SKIN_DROP_KEYS = {

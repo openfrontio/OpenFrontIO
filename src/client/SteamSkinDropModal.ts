@@ -47,13 +47,13 @@ export class SteamSkinDropModal extends LitElement {
     this.removeEventListener("open-cosmetic-preview", this.onOpenPreview);
     // Nobody can answer a removed popup, and the boot-interrupt runner holds
     // its "a dialog is open" flag until this settles.
-    this.settle("dismiss");
+    this.settle("abandoned");
     super.disconnectedCallback();
   }
 
   show(resolved: ResolvedCosmetic): Promise<SteamSkinDropAnswer> {
     // A second call replaces the first rather than leaking its promise.
-    this.settle("dismiss");
+    this.settle("abandoned");
     this.resolved = resolved;
     this.view = "popup";
     return new Promise((resolve) => {

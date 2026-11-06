@@ -770,6 +770,7 @@ async function runInterrupt(
       if (drop === null) return;
       steamSkinDropShown(drop.notice);
       const answer = await ports.openSteamSkinDrop(drop.resolved);
+      if (answer === "abandoned") return;
       ports.markNoticeSeen(drop.notice);
       if (answer === "claim") ports.navigate("modal=inventory");
       else if (answer === "equip") ports.equipCosmetic(drop.resolved);

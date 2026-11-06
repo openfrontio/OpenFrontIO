@@ -1475,6 +1475,12 @@ describe("steam-skin-drop", () => {
     expect(events).toEqual(["open skin:mountain", `seen ${NOTICE}`]);
   });
 
+  it("abandoned marks nothing seen, and does not navigate or equip", async () => {
+    const { base, events } = dropPorts(Promise.resolve("abandoned"));
+    await runBootInterrupt("steam-skin-drop", dropContext, base);
+    expect(events).toEqual(["open skin:mountain"]);
+  });
+
   it("nothing is marked seen until the popup answers", async () => {
     let answer!: (a: SteamSkinDropAnswer) => void;
     const { base, events } = dropPorts(
