@@ -1,5 +1,5 @@
 import { assetUrl } from "@openfront/shared/AssetUrls";
-import { html } from "lit";
+import { html, nothing } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import {
   DESKTOP_TUTORIAL_VIDEO_URL,
@@ -11,7 +11,7 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { KeyboardLayoutController } from "./KeyboardLayout";
-import { Platform } from "./Platform";
+import { KEYBOARD_DETECTED_EVENT, Platform } from "./Platform";
 import { TroubleshootingModal } from "./TroubleshootingModal";
 import { UserSettings } from "./UserSettings";
 
@@ -23,6 +23,26 @@ export class HelpModal extends BaseModal {
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
   @query("#tutorial-video-player") private videoPlayer?: HTMLVideoElement;
   private keyboardLayout = new KeyboardLayoutController(this);
+
+  private handleKeyboardDetected = () => {
+    this.requestUpdate();
+  };
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener(
+      KEYBOARD_DETECTED_EVENT,
+      this.handleKeyboardDetected,
+    );
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener(
+      KEYBOARD_DETECTED_EVENT,
+      this.handleKeyboardDetected,
+    );
+    super.disconnectedCallback();
+  }
 
   private getKeybinds(): Record<string, string> {
     return new UserSettings().keybinds(Platform.isMac);
@@ -92,6 +112,9 @@ export class HelpModal extends BaseModal {
   protected renderBody() {
     const keybinds = this.keybinds;
     const hideHotkeys = Platform.isTouch && !Platform.hasKeyboard;
+    const troubleshootingDescription = translateText(
+      "help_modal.troubleshooting_desc",
+    );
 
     return html`
       <div
@@ -215,17 +238,21 @@ export class HelpModal extends BaseModal {
           </div>
           <section>
             <div class="w-full flex flex-col items-center">
-              <p class="mb-6 text-white/70 text-sm">
-                ${translateText("help_modal.troubleshooting_desc")}
-              </p>
+              ${
+                troubleshootingDescription
+                  ? html`<p class="mb-6 text-white/70 text-sm">
+                      ${troubleshootingDescription}
+                    </p>`
+                  : nothing
+              }
               <button
                 id="troubleshooting-button"
-                class="w-full sm:w-fit max-w-full hover:bg-white/5 px-4 sm:px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)] whitespace-normal break-words text-center"
+                class="w-full sm:w-fit max-w-full hover:bg-white/5 px-4 sm:px-6 py-2 text-sm sm:text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)] whitespace-normal break-words text-center"
                 data-page="page-troubleshooting"
                 @click="${this.openTroubleshooting}"
               >
                 <span
-                  class="relative z-10 block max-w-full text-base sm:text-2xl leading-snug"
+                  class="relative z-10 block max-w-full leading-snug"
                   >${translateText("main.go_to_troubleshooting")}</span
                 >
               </button>

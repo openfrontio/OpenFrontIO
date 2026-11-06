@@ -38,7 +38,7 @@ import {
 import { isDesktopShell } from "./DesktopShell";
 import { KeyboardLayoutController } from "./KeyboardLayout";
 import { pushMapLayerState } from "./MapLayerSettings";
-import { Platform } from "./Platform";
+import { KEYBOARD_DETECTED_EVENT, Platform } from "./Platform";
 import type { AudioControls } from "./sound/CuePlayer";
 import { audioControls, playCue } from "./sound/CuePlayer";
 import type { CueCategory } from "./sound/Sounds";
@@ -170,13 +170,9 @@ export class UserSettingModal extends BaseModal {
   private displayRequestId = 0;
 
   private displaySettleTimer: ReturnType<typeof setTimeout> | undefined;
-  private lastHasKeyboard = Platform.hasKeyboard;
 
-  private handleKeyboardDetection = () => {
-    if (Platform.hasKeyboard && !this.lastHasKeyboard) {
-      this.lastHasKeyboard = true;
-      this.requestUpdate();
-    }
+  private handleKeyboardDetected = () => {
+    this.requestUpdate();
   };
 
   connectedCallback() {
@@ -188,8 +184,10 @@ export class UserSettingModal extends BaseModal {
       this.routerName = undefined;
     }
     this.loadKeybindsFromStorage();
-    this.lastHasKeyboard = Platform.hasKeyboard;
-    window.addEventListener("keydown", this.handleKeyboardDetection);
+    window.addEventListener(
+      KEYBOARD_DETECTED_EVENT,
+      this.handleKeyboardDetected,
+    );
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
@@ -201,7 +199,10 @@ export class UserSettingModal extends BaseModal {
   }
 
   disconnectedCallback() {
-    window.removeEventListener("keydown", this.handleKeyboardDetection);
+    window.removeEventListener(
+      KEYBOARD_DETECTED_EVENT,
+      this.handleKeyboardDetected,
+    );
     globalThis.removeEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
@@ -2190,7 +2191,6 @@ export class UserSettingModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
-    this.lastHasKeyboard = Platform.hasKeyboard;
     window.addEventListener("keydown", this.handleEasterEggKey);
     // Keybinds are editable from either instance and were only read in
     // connectedCallback, so re-read them or the other one renders stale.

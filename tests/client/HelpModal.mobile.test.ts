@@ -67,6 +67,25 @@ describe("HelpModal mobile rendering", () => {
     ).toBe(false);
   });
 
+  it("reveals Hotkeys when a keyboard is detected after rendering", async () => {
+    setPrimaryPointerIsTouch(true);
+
+    const modal = await mountHelpModal();
+    const heading = modal.querySelector<HTMLElement>("#help-hotkeys-heading");
+    const content = modal.querySelector<HTMLElement>("#help-hotkeys-content");
+
+    expect(heading?.hidden).toBe(true);
+    expect(content?.hidden).toBe(true);
+
+    document.body.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "a", bubbles: true }),
+    );
+    await modal.updateComplete;
+
+    expect(heading?.hidden).toBe(false);
+    expect(content?.hidden).toBe(false);
+  });
+
   it("shows Hotkeys on a non-touch device", async () => {
     setPrimaryPointerIsTouch(false);
 
@@ -91,7 +110,36 @@ describe("HelpModal mobile rendering", () => {
 
     expect(label?.textContent?.trim()).toBeTruthy();
     expect(button?.classList.contains("w-full")).toBe(true);
+    expect(button?.classList.contains("text-sm")).toBe(true);
+    expect(button?.classList.contains("sm:text-xs")).toBe(true);
     expect(button?.classList.contains("whitespace-normal")).toBe(true);
     expect(button?.classList.contains("break-words")).toBe(true);
+  });
+
+  it("omits an intentionally empty troubleshooting description", async () => {
+    setPrimaryPointerIsTouch(false);
+    const language = document.createElement("lang-selector") as HTMLElement & {
+      currentLang: string;
+      defaultTranslations: Record<string, string>;
+      translations: Record<string, string>;
+    };
+    language.currentLang = "nl";
+    language.defaultTranslations = {};
+    language.translations = {
+      "help_modal.troubleshooting_desc": "",
+      "main.go_to_troubleshooting":
+        "Ga naar onze pagina voor probleemoplossing",
+    };
+    document.body.appendChild(language);
+
+    const modal = await mountHelpModal();
+    const button = modal.querySelector<HTMLButtonElement>(
+      "#troubleshooting-button",
+    );
+
+    expect(button?.textContent?.trim()).toBe(
+      "Ga naar onze pagina voor probleemoplossing",
+    );
+    expect(button?.closest("section")?.querySelector("p")).toBeNull();
   });
 });
