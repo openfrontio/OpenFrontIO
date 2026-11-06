@@ -390,6 +390,9 @@ describe("HomepagePromos ad frames over the game", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    // Reconnected so its escaped-ad timer runs on the fake clock.
+    promos.remove();
+    document.body.appendChild(promos);
     vi.mocked(reportEvent).mockClear();
     stubRamp();
     hideMenuChrome();
@@ -417,6 +420,7 @@ describe("HomepagePromos ad frames over the game", () => {
         lobbySource: "public",
         elementId: "takeover",
         frameRect: "0,600,728,90",
+        action: "reported",
       }),
     );
     expect(overlay.isConnected).toBe(true);
@@ -448,6 +452,75 @@ describe("HomepagePromos ad frames over the game", () => {
       "ad_frame_in_game",
       expect.objectContaining({ elementId: "takeover" }),
     );
+  });
+
+  function drawTtxOverlay(): HTMLElement {
+    const overlay = document.createElement("div");
+    overlay.className = "ttx-lb";
+    overlay.appendChild(document.createElement("iframe"));
+    return document.body.appendChild(overlay);
+  }
+
+  it("removes The Trade Desk's overlay as it lands, spawn phase included", async () => {
+    const overlay = drawTtxOverlay();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(overlay.isConnected).toBe(false);
+    expect(reportEvent).toHaveBeenCalledExactlyOnceWith(
+      "ad_frame_in_game",
+      expect.objectContaining({
+        gameID: "cSkwPxCLWx",
+        elementClass: "ttx-lb",
+        secondsAfterDestroy: "",
+        action: "removed",
+      }),
+    );
+  });
+
+  it("removes an element that becomes The Trade Desk's overlay during spawn", async () => {
+    const overlay = document.body.appendChild(document.createElement("div"));
+    overlay.appendChild(document.createElement("iframe"));
+    await vi.advanceTimersByTimeAsync(0);
+    overlay.className = "ttx-lb";
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(overlay.isConnected).toBe(false);
+    expect(reportEvent).toHaveBeenCalledWith(
+      "ad_frame_in_game",
+      expect.objectContaining({ action: "removed" }),
+    );
+  });
+
+  it("reports an overlay that turns escaped mid-game once, as removed", async () => {
+    // Offsets the stray-frame scan (ticks at 1.5s, 2.5s) from the
+    // escaped-ad check (ticks at 1s, 2s, 3s), so the scan sees it first.
+    await vi.advanceTimersByTimeAsync(500);
+    promos.destroyBottomRail();
+    await vi.advanceTimersByTimeAsync(1600);
+    const stray = document.body.appendChild(document.createElement("div"));
+    const frame = stray.appendChild(document.createElement("iframe"));
+    frame.getBoundingClientRect = () => new DOMRect(0, 600, 728, 90);
+    await vi.advanceTimersByTimeAsync(0);
+    stray.className = "ttx-lb";
+
+    await vi.advanceTimersByTimeAsync(400);
+
+    expect(stray.isConnected).toBe(false);
+    expect(reportEvent).toHaveBeenCalledExactlyOnceWith(
+      "ad_frame_in_game",
+      expect.objectContaining({ elementClass: "ttx-lb", action: "removed" }),
+    );
+  });
+
+  it("leaves The Trade Desk's overlay alone on the menu", async () => {
+    restoreMenuChrome();
+    const overlay = drawTtxOverlay();
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(overlay.isConnected).toBe(true);
+    expect(reportEvent).not.toHaveBeenCalled();
+    overlay.remove();
   });
 
   it("ignores ad frames during spawn, where the bottom rail belongs", async () => {
