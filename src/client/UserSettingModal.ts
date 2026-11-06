@@ -406,6 +406,20 @@ export class UserSettingModal extends BaseModal {
     return resolveKeybindLabel(entry, defaultCode, this.keyboardLayout.map);
   }
 
+  private performanceOverlayDescription(): string {
+    const key = this.getKeyChar("performanceOverlay");
+    const description = translateText(
+      "user_setting.performance_overlay_keybind_desc",
+    );
+
+    return key
+      ? translateText("user_setting.performance_overlay_desc", {
+          description,
+          key,
+        })
+      : description;
+  }
+
   private handleEasterEggKey = (e: KeyboardEvent) => {
     if (!this.isModalOpen || this.showEasterEggSettings) return;
 
@@ -1954,12 +1968,7 @@ export class UserSettingModal extends BaseModal {
       <!-- 📱 Performance Overlay -->
       <setting-toggle
         label="${translateText("user_setting.performance_overlay_label")}"
-        description="${translateText("user_setting.performance_overlay_desc", {
-          description: translateText(
-            "user_setting.performance_overlay_keybind_desc",
-          ),
-          key: this.getKeyChar("performanceOverlay"),
-        })}"
+        description="${this.performanceOverlayDescription()}"
         id="performance-overlay-toggle"
         .checked=${this.userSettings.performanceOverlay()}
         @change=${this.togglePerformanceOverlay}

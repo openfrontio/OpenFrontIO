@@ -226,6 +226,23 @@ describe("user-setting tabs", () => {
     );
   });
 
+  it("omits the keybind hint from the Graphics description when unbound", async () => {
+    installEnglishTranslations();
+    new UserSettings().setKeybinds({
+      performanceOverlay: { value: "Null", key: "" },
+    });
+
+    const el = await mount(false);
+    el.open({ tab: "graphics" });
+    await el.updateComplete;
+
+    expect(
+      el
+        .querySelector("#performance-overlay-toggle")
+        ?.getAttribute("description"),
+    ).toBe("Toggles the in-game performance overlay.");
+  });
+
   it.each(GRAPHICS_CONTROLS)(
     "does not render %s on Gameplay",
     async (selector) => {
