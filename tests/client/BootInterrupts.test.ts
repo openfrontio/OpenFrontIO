@@ -23,11 +23,17 @@ import {
   type BootInterruptPorts,
   type ClaimPromptStore,
 } from "../../src/client/BootInterrupts";
+import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 import type {
   DesktopUpdateState,
   DesktopUpdateStatus,
 } from "../../src/client/DesktopShell";
 import type { SteamGrantStore } from "../../src/client/SteamGrantNotices";
+import {
+  resetSteamSkinDropForTest,
+  steamSkinDropDueThisLaunch,
+  type SteamSkinDropAnswer,
+} from "../../src/client/SteamSkinDrop";
 
 const ME = "player-public-id";
 
@@ -52,6 +58,8 @@ function boot(
     claimStringsReady: true,
     reportThanksDue: false,
     reportThanksStringsReady: true,
+    steamSkinDropDue: false,
+    steamSkinDropStringsReady: true,
     ...overrides,
   };
 }
@@ -442,6 +450,8 @@ describe("runBootInterrupt", () => {
         calls.grantStored.push(update(context.grantStore)),
       markNoticeSeen: () => {},
       markMessageSeen: () => {},
+      openSteamSkinDrop: async () => "dismiss",
+      equipCosmetic: () => {},
       now: () => now,
       ...overrides,
     };
@@ -453,6 +463,7 @@ describe("runBootInterrupt", () => {
     grantStore: {},
     publicId: ME,
     steamNotice: null,
+    steamSkinDrop: null,
   };
 
   async function run(
@@ -793,6 +804,8 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
     claimStringsReady: claimPromptStringsReady(unready),
     reportThanksDue: false,
     reportThanksStringsReady: false,
+    steamSkinDropDue: false,
+    steamSkinDropStringsReady: true,
   };
 
   it("does not choose the claim prompt", () => {
@@ -809,7 +822,13 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
     };
     await runBootInterrupt(
       nextBootInterrupt(inputs),
-      { claimStore: {}, grantStore: {}, publicId: ME, steamNotice: null },
+      {
+        claimStore: {},
+        grantStore: {},
+        publicId: ME,
+        steamNotice: null,
+        steamSkinDrop: null,
+      },
       {
         translate: unready,
         confirm: async (body) => {
@@ -824,6 +843,8 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
         updateSteamGrant: () => {},
         markNoticeSeen: () => {},
         markMessageSeen: () => {},
+        openSteamSkinDrop: async () => "dismiss",
+        equipCosmetic: () => {},
         now: () => 1_757_000_000_000,
       },
     );
@@ -943,6 +964,8 @@ describe("running the Steam grant notices", () => {
       updateSteamGrant: (update) => calls.grantStored.push(update(grantStore)),
       markNoticeSeen: () => {},
       markMessageSeen: () => {},
+      openSteamSkinDrop: async () => "dismiss",
+      equipCosmetic: () => {},
       now: () => now,
     };
     return { base, calls };
@@ -952,7 +975,13 @@ describe("running the Steam grant notices", () => {
     const { base, calls } = ports();
     await runBootInterrupt(
       "grant-welcome",
-      { claimStore: {}, grantStore, publicId: ME, steamNotice: null },
+      {
+        claimStore: {},
+        grantStore,
+        publicId: ME,
+        steamNotice: null,
+        steamSkinDrop: null,
+      },
       base,
     );
     expect(calls.alerted).toEqual([
@@ -976,7 +1005,13 @@ describe("running the Steam grant notices", () => {
     const { base, calls } = ports();
     await runBootInterrupt(
       "grant-welcome",
-      { claimStore: {}, grantStore, publicId: ME, steamNotice: null },
+      {
+        claimStore: {},
+        grantStore,
+        publicId: ME,
+        steamNotice: null,
+        steamSkinDrop: null,
+      },
       base,
     );
     expect(calls.grantStored).toEqual([
@@ -988,7 +1023,13 @@ describe("running the Steam grant notices", () => {
     const { base, calls } = ports();
     await runBootInterrupt(
       "grant-ended",
-      { claimStore: {}, grantStore, publicId: ME, steamNotice: null },
+      {
+        claimStore: {},
+        grantStore,
+        publicId: ME,
+        steamNotice: null,
+        steamSkinDrop: null,
+      },
       base,
     );
     expect(calls.alerted).toEqual([
@@ -1008,7 +1049,13 @@ describe("running the Steam grant notices", () => {
     for (const interrupt of ["grant-welcome", "grant-ended"] as const) {
       await runBootInterrupt(
         interrupt,
-        { claimStore: {}, grantStore: {}, publicId: ME, steamNotice: null },
+        {
+          claimStore: {},
+          grantStore: {},
+          publicId: ME,
+          steamNotice: null,
+          steamSkinDrop: null,
+        },
         base,
       );
     }
@@ -1023,7 +1070,13 @@ describe("running the Steam grant notices", () => {
     for (const interrupt of ["grant-welcome", "grant-ended"] as const) {
       await runBootInterrupt(
         interrupt,
-        { claimStore: {}, grantStore, publicId: ME, steamNotice: null },
+        {
+          claimStore: {},
+          grantStore,
+          publicId: ME,
+          steamNotice: null,
+          steamSkinDrop: null,
+        },
         base,
       );
     }
@@ -1070,6 +1123,7 @@ describe("an interrupt the player never answered", () => {
     grantStore: { [ME]: grantRecord },
     publicId: ME,
     steamNotice: null,
+    steamSkinDrop: null,
   };
 
   function deferred() {
@@ -1105,6 +1159,8 @@ describe("an interrupt the player never answered", () => {
         calls.grantStored.push(update(context.grantStore)),
       markNoticeSeen: () => {},
       markMessageSeen: () => {},
+      openSteamSkinDrop: async () => "dismiss",
+      equipCosmetic: () => {},
       now: () => now,
     };
     return { base, calls, settle: open.settle };
@@ -1247,7 +1303,13 @@ describe("running the report thank-you", () => {
     expect(reportThanksDueThisLaunch(["report_thanks"], ME)).toBe(true);
     await runBootInterrupt(
       "report-thanks",
-      { claimStore: {}, grantStore: {}, publicId: ME, steamNotice: null },
+      {
+        claimStore: {},
+        grantStore: {},
+        publicId: ME,
+        steamNotice: null,
+        steamSkinDrop: null,
+      },
       {
         translate: (key) => `t(${key})`,
         confirm: async () => true,
@@ -1259,6 +1321,8 @@ describe("running the report thank-you", () => {
         updateSteamGrant: () => {},
         markNoticeSeen: () => {},
         markMessageSeen: () => {},
+        openSteamSkinDrop: async () => "dismiss",
+        equipCosmetic: () => {},
         now: () => 1_757_000_000_000,
       },
     );
@@ -1278,7 +1342,13 @@ describe("running the report thank-you", () => {
     const events: string[] = [];
     await runBootInterrupt(
       "report-thanks",
-      { claimStore: {}, grantStore: {}, publicId: ME, steamNotice: null },
+      {
+        claimStore: {},
+        grantStore: {},
+        publicId: ME,
+        steamNotice: null,
+        steamSkinDrop: null,
+      },
       {
         translate: (key) => `t(${key})`,
         confirm: async () => true,
@@ -1292,6 +1362,8 @@ describe("running the report thank-you", () => {
         updateSteamGrant: () => {},
         markNoticeSeen: () => {},
         markMessageSeen: (kind) => events.push(`seen ${kind}`),
+        openSteamSkinDrop: async () => "dismiss",
+        equipCosmetic: () => {},
         now: () => 1_757_000_000_000,
       },
     );
@@ -1299,5 +1371,134 @@ describe("running the report thank-you", () => {
       `alert t(${BOOT_INTERRUPT_KEYS.reportThanksHeading}): t(${BOOT_INTERRUPT_KEYS.reportThanksBody})`,
       "seen report_thanks",
     ]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// steam-skin-drop
+// ---------------------------------------------------------------------------
+
+describe("steam-skin-drop", () => {
+  const resolved: ResolvedCosmetic = {
+    type: "skin",
+    cosmetic: null,
+    colorPalette: null,
+    relationship: "blocked",
+    key: "skin:mountain",
+  };
+  const NOTICE = "steam_skin:mountain";
+  const dropContext = {
+    claimStore: {},
+    grantStore: {},
+    publicId: ME,
+    steamNotice: null,
+    steamSkinDrop: { notice: NOTICE, resolved },
+  };
+
+  function dropPorts(answer: Promise<SteamSkinDropAnswer>) {
+    const events: string[] = [];
+    const base: BootInterruptPorts = {
+      translate: (key) => `t(${key})`,
+      confirm: async () => true,
+      alert: async () => {},
+      tierName: (tier) => tier,
+      navigate: (hash) => events.push(`navigate ${hash}`),
+      openRewards: () => {},
+      storeClaimPrompt: () => {},
+      updateSteamGrant: () => {},
+      markNoticeSeen: (notice) => events.push(`seen ${notice}`),
+      markMessageSeen: () => {},
+      openSteamSkinDrop: (r) => {
+        events.push(`open ${r.key}`);
+        return answer;
+      },
+      equipCosmetic: (r) => events.push(`equip ${r.key}`),
+      now: () => 0,
+    };
+    return { base, events };
+  }
+
+  beforeEach(resetSteamSkinDropForTest);
+
+  it("ranks below grant-ended and above rewards", () => {
+    const due = { steamSkinDropDue: true, rewardCount: 2 };
+    expect(nextBootInterrupt(boot(due))).toBe("steam-skin-drop");
+    expect(nextBootInterrupt(boot({ ...due, grantEndedDue: true }))).toBe(
+      "grant-ended",
+    );
+    expect(nextBootInterrupt(boot({ ...due, lapseNoticeDue: true }))).toBe(
+      "lapse-notice",
+    );
+  });
+
+  it("is not chosen when strings are not ready, and rewards takes the boot", () => {
+    expect(
+      nextBootInterrupt(
+        boot({
+          steamSkinDropDue: true,
+          steamSkinDropStringsReady: false,
+          rewardCount: 1,
+        }),
+      ),
+    ).toBe("rewards");
+  });
+
+  it("is not chosen on an unclean homepage", () => {
+    expect(
+      nextBootInterrupt(boot({ cleanHomepage: false, steamSkinDropDue: true })),
+    ).toBeNull();
+  });
+
+  it("claim marks the notice seen and navigates to modal=inventory", async () => {
+    const { base, events } = dropPorts(Promise.resolve("claim"));
+    await runBootInterrupt("steam-skin-drop", dropContext, base);
+    expect(events).toEqual([
+      "open skin:mountain",
+      `seen ${NOTICE}`,
+      "navigate modal=inventory",
+    ]);
+  });
+
+  it("equip marks seen and equips, with no navigation", async () => {
+    const { base, events } = dropPorts(Promise.resolve("equip"));
+    await runBootInterrupt("steam-skin-drop", dropContext, base);
+    expect(events).toEqual([
+      "open skin:mountain",
+      `seen ${NOTICE}`,
+      "equip skin:mountain",
+    ]);
+  });
+
+  it("dismiss marks seen only", async () => {
+    const { base, events } = dropPorts(Promise.resolve("dismiss"));
+    await runBootInterrupt("steam-skin-drop", dropContext, base);
+    expect(events).toEqual(["open skin:mountain", `seen ${NOTICE}`]);
+  });
+
+  it("nothing is marked seen until the popup answers", async () => {
+    let answer!: (a: SteamSkinDropAnswer) => void;
+    const { base, events } = dropPorts(
+      new Promise<SteamSkinDropAnswer>((resolve) => (answer = resolve)),
+    );
+    const running = runBootInterrupt("steam-skin-drop", dropContext, base);
+    await Promise.resolve();
+    expect(events).toEqual(["open skin:mountain"]);
+    expect(steamSkinDropDueThisLaunch(NOTICE)).toBe(false);
+    answer("dismiss");
+    await running;
+    expect(events).toEqual(["open skin:mountain", `seen ${NOTICE}`]);
+  });
+
+  it("a re-run while the popup is open does not open a second one", async () => {
+    let answer!: (a: SteamSkinDropAnswer) => void;
+    const { base, events } = dropPorts(
+      new Promise<SteamSkinDropAnswer>((resolve) => (answer = resolve)),
+    );
+    const first = runBootInterrupt("steam-skin-drop", dropContext, base);
+    await runBootInterrupt("steam-skin-drop", dropContext, base);
+    expect(events).toEqual(["open skin:mountain"]);
+    answer("claim");
+    await first;
+    expect(events.filter((e) => e.startsWith("open"))).toHaveLength(1);
   });
 });

@@ -17,6 +17,7 @@ import {
   isTemporaryUsername,
   type UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
+import type { ResolvedCosmetic } from "./Cosmetics";
 import type { DesktopUpdateState } from "./DesktopShell";
 import { lapseNoticeDue } from "./PlayerName";
 import {
@@ -31,6 +32,7 @@ import {
   steamNoticeShown,
   type SteamNotice,
 } from "./SteamNotices";
+import { steamSkinDropShown, type SteamSkinDropAnswer } from "./SteamSkinDrop";
 
 /** Every boot-time interrupt, in the order they win. */
 export type BootInterrupt =
@@ -40,6 +42,7 @@ export type BootInterrupt =
   | "username-claim"
   | "lapse-notice"
   | "grant-ended"
+  | "steam-skin-drop"
   | "rewards"
   | "report-thanks";
 
@@ -72,6 +75,10 @@ export interface BootInterruptInputs {
   steamNotice: SteamNotice | null;
   /** steamNoticeStringsReady(...), as grantStringsReady. */
   steamNoticeStringsReady: boolean;
+  /** steamSkinDropDueThisLaunch(...) for a drop the catalog resolved. */
+  steamSkinDropDue: boolean;
+  /** steamSkinDropStringsReady(...), as grantStringsReady. */
+  steamSkinDropStringsReady: boolean;
   /**
    * How many of the account's unclaimed rewards can be claimed now
    * (isRewardClaimable): held ones don't count, since on their own they'd
@@ -256,7 +263,10 @@ function entitled(status: string | undefined): boolean {
  *    at risk, but every day it goes unsaid is a day the player believes they
  *    are about to be charged. Marks itself shown when the lapse notice covers
  *    it, so a former grant holder with a reserved name hears it once.
- * 7. `rewards` — money already in the account. Nothing is at risk and it
+ * 7. `steam-skin-drop` — this month's Steam exclusive skin has dropped and
+ *    the owner has not been told. Nothing is at risk, but it is time-limited
+ *    news the player wants, so it ranks above the rewards popup.
+ * 8. `rewards` — money already in the account. Nothing is at risk and it
  *    survives to the next load unchanged, so it always yields.
  *
  * 1 and 4 are mutually exclusive by state (a TEMPORARY#### rename IS a name),
@@ -297,6 +307,9 @@ export function nextBootInterrupt(
   if (inputs.lapseNoticeDue) return "lapse-notice";
 
   if (inputs.grantEndedDue && inputs.grantStringsReady) return "grant-ended";
+
+  if (inputs.steamSkinDropDue && inputs.steamSkinDropStringsReady)
+    return "steam-skin-drop";
 
   if (inputs.rewardCount > 0) return "rewards";
 
@@ -566,6 +579,10 @@ export interface BootInterruptPorts {
   alert(body: string, heading: string): Promise<void>;
   /** The display name of a subscription tier id (translateCosmetic). */
   tierName(tier: string): string;
+  /** Opens the Steam skin popup; resolves with what the player chose. */
+  openSteamSkinDrop(resolved: ResolvedCosmetic): Promise<SteamSkinDropAnswer>;
+  /** Equips a cosmetic the player owns. */
+  equipCosmetic(resolved: ResolvedCosmetic): void;
   /** Sets window.location.hash. */
   navigate(hash: string): void;
   /** Opens the unclaimed-rewards popup. */
@@ -590,6 +607,8 @@ export interface BootInterruptContext {
   grantStore: SteamGrantStore;
   publicId: string;
   steamNotice: SteamNotice | null;
+  /** The drop to announce, resolved against the catalog, or null. */
+  steamSkinDrop: { notice: string; resolved: ResolvedCosmetic } | null;
 }
 
 // The panel's own date format, so the dialog and the account panel agree on
@@ -629,6 +648,8 @@ export async function runBootInterrupt(
     ...ports,
     confirm: (...args) => whileDialogOpen(() => ports.confirm(...args)),
     alert: (...args) => whileDialogOpen(() => ports.alert(...args)),
+    openSteamSkinDrop: (...args) =>
+      whileDialogOpen(() => ports.openSteamSkinDrop(...args)),
   });
 }
 
@@ -742,6 +763,16 @@ async function runInterrupt(
           forShownGrant(grant, context.publicId, steamGrantWelcomed),
         );
       }
+      return;
+    }
+    case "steam-skin-drop": {
+      const drop = context.steamSkinDrop;
+      if (drop === null) return;
+      steamSkinDropShown(drop.notice);
+      const answer = await ports.openSteamSkinDrop(drop.resolved);
+      ports.markNoticeSeen(drop.notice);
+      if (answer === "claim") ports.navigate("modal=inventory");
+      else if (answer === "equip") ports.equipCosmetic(drop.resolved);
       return;
     }
     case "lapse-notice":

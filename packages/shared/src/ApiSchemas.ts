@@ -533,6 +533,15 @@ export const IdentityTokenResponseSchema = z.object({
 });
 export type IdentityTokenResponse = z.infer<typeof IdentityTokenResponseSchema>;
 
+export const SteamSkinDropSchema = z.object({
+  type: z.enum(["skin", "pattern"]),
+  name: z.string(),
+  colorPalette: z.string().nullable(),
+  // Notice key the player's dismissal is recorded under.
+  notice: z.string(),
+});
+export type SteamSkinDrop = z.infer<typeof SteamSkinDropSchema>;
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
@@ -564,6 +573,10 @@ export const UserMeResponseSchema = z.object({
   // Server-raised messages due for this player and not yet shown
   // (POST /users/@me/messages/seen once shown), e.g. "report_thanks".
   pendingMessages: z.array(z.string()).optional().default([]),
+  // This month's Steam exclusive skin or pattern, announced once on the
+  // homepage to Steam owners. A bad value reads as no drop, never a failed
+  // response.
+  steamSkinDrop: SteamSkinDropSchema.nullable().optional().catch(null),
   // The player's most recent automatic tier conversion, if any.
   tierConversion: z
     .object({

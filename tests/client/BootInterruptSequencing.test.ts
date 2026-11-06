@@ -102,6 +102,8 @@ describe("boot sequencing against a real <username-input>", () => {
       updateSteamGrant: () => {},
       markNoticeSeen: () => {},
       markMessageSeen: () => {},
+      openSteamSkinDrop: async () => "dismiss",
+      equipCosmetic: () => {},
       now: () => Date.now(),
     };
     const player = userMe.player;
@@ -121,10 +123,18 @@ describe("boot sequencing against a real <username-input>", () => {
       claimStringsReady: true,
       reportThanksDue: false,
       reportThanksStringsReady: true,
+      steamSkinDropDue: false,
+      steamSkinDropStringsReady: true,
     });
     await runBootInterrupt(
       interrupt,
-      { claimStore: {}, grantStore: {}, publicId: "p", steamNotice: null },
+      {
+        claimStore: {},
+        grantStore: {},
+        publicId: "p",
+        steamNotice: null,
+        steamSkinDrop: null,
+      },
       ports,
     );
     return { interrupt, ...calls };

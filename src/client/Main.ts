@@ -975,12 +975,15 @@ class Client {
               publicId,
             ),
             reportThanksStringsReady: reportThanksStringsReady(translateText),
+            steamSkinDropDue: false,
+            steamSkinDropStringsReady: false,
           }),
           {
             claimStore,
             grantStore: grantStoreAfterDispatch,
             publicId,
             steamNotice,
+            steamSkinDrop: null,
           },
           {
             translate: translateText,
@@ -1027,6 +1030,8 @@ class Client {
               ),
             markNoticeSeen: (notice) => void markNoticeSeen(notice),
             markMessageSeen: (kind) => void markMessageSeen(kind),
+            openSteamSkinDrop: async () => "dismiss",
+            equipCosmetic: () => {},
             now: () => Date.now(),
           },
         );
