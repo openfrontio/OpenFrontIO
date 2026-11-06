@@ -74,6 +74,26 @@ describe("UsernameInput on VIVERSE", () => {
     await flush();
     expect(next.getUsername()).toBe("Grace");
   });
+
+  it("doesn't pass an account's name to a player without one", async () => {
+    mountOnPortal("viverse", "Ada");
+    await flush();
+
+    vi.restoreAllMocks();
+    const next = mountOnPortal("viverse", null);
+    await flush();
+    expect(next.getUsername()).toMatch(/^Anon/);
+    expect(localStorage.getItem("username")).toBe(next.getUsername());
+  });
+
+  it("keeps a typed name when the VIVERSE name is unavailable", async () => {
+    type(mountOnPortal("viverse", null), "Countess");
+
+    vi.restoreAllMocks();
+    const next = mountOnPortal("viverse", null);
+    await flush();
+    expect(next.getUsername()).toBe("Countess");
+  });
 });
 
 describe("UsernameInput on Poki", () => {

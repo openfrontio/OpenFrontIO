@@ -667,7 +667,7 @@ export class UsernameInput extends LitElement {
     // name. addAuthListener only fires on login; portals refresh the page on
     // logout, so there is no logout event to handle.
     void gamePortal.getUsername().then((username) => {
-      if (username) this.applyPortalUsername(username);
+      this.applyPortalUsername(username);
     });
     void gamePortal.addAuthListener((user) => {
       if (user) this.applyPortalUsername(user.username);
@@ -755,10 +755,23 @@ export class UsernameInput extends LitElement {
 
   // Where the name is kept (VIVERSE), the account name stands in for a name we
   // generated but never for one the player typed, and stays ours to replace,
-  // so another account signing in on this browser gets its own name.
-  private applyPortalUsername(username: string) {
+  // so another account signing in on this browser gets its own name. Without
+  // an account name (signed out, or the wrapper didn't answer), an earlier
+  // account's name goes back to a guest name rather than passing to whoever
+  // plays next.
+  private applyPortalUsername(username: string | null) {
     if (this.keepsName && !this.usernameIsGenerated) return;
-    this.baseUsername = clampUsername(username);
+    if (username) {
+      this.baseUsername = clampUsername(username);
+    } else if (
+      this.onGamePortal &&
+      this.keepsName &&
+      !looksGenerated(this.baseUsername)
+    ) {
+      this.baseUsername = this.generatedName;
+    } else {
+      return;
+    }
     this.usernameIsGenerated = this.keepsName;
     this.validateAndStore();
   }
