@@ -292,6 +292,7 @@ describe("Hard/Impossible troop floor", () => {
     expect(behavior.sendAttack(neighbor, true)).toBe(false);
     testGame.executeNextTick();
 
+    expect(attacker.outgoingAttacks()).toHaveLength(1);
     expect(attacker.troops()).toBeGreaterThanOrEqual(maxTroops * 0.3);
   });
 
@@ -307,6 +308,7 @@ describe("Hard/Impossible troop floor", () => {
     expect(behavior.sendAttack(neighbor, true)).toBe(true);
     testGame.executeNextTick();
 
+    expect(attacker.outgoingAttacks()).toHaveLength(1);
     expect(attacker.troops()).toBeGreaterThanOrEqual(maxTroops * 0.3);
   });
 
