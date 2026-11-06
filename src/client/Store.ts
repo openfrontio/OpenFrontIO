@@ -1,5 +1,5 @@
 import {
-  isGrantedSubscription,
+  paidSubscriptionOf,
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import {
@@ -829,11 +829,9 @@ export class StoreModal extends BaseModal {
     // player is deliberately NOT counted (OPE-440): they have nothing to
     // switch from — nobody is billing them — so every tier, theirs included,
     // is a first purchase and reads as a plain price.
-    const sub =
-      this.userMeResponse === false
-        ? null
-        : this.userMeResponse.player.subscription;
-    const userHasSubscription = sub !== null && !isGrantedSubscription(sub);
+    const userHasSubscription =
+      this.userMeResponse !== false &&
+      paidSubscriptionOf(this.userMeResponse.player) !== null;
     // The Steam store lists one tier; a lone card in the narrow tile column
     // reads as a cramped list, so it gets a wider card and a larger preview.
     const lone = this.visibleGroups.length === 1;

@@ -168,6 +168,23 @@ describe("steamNoticeDue for owners since launch", () => {
     });
   });
 
+  // The grant welcome speaks to a payer instead, naming their paid tier.
+  it("leaves a paying subscriber's month to the grant welcome", () => {
+    const grant = steamGrant(MONTH_END);
+    const paidRow: Sub = {
+      ...grant,
+      tier: "vanguard",
+      provider: "stripe",
+      grantSource: null,
+    };
+    const userMe = me({ steamLicenceSince: at(AFTER), subscription: grant });
+    (userMe.player as { subscriptions?: Sub[] }).subscriptions = [
+      grant,
+      paidRow,
+    ];
+    expect(steamNoticeDue(userMe, true, AFTER)).toBeNull();
+  });
+
   it("welcomes them once", () => {
     expect(
       steamNoticeDue(
@@ -372,6 +389,10 @@ describe("the steam-notice boot interrupt", () => {
       rewardCount: 0,
       claimPromptDue: true,
       claimStringsReady: true,
+      giftEndingDue: false,
+      giftEndingStringsReady: true,
+      renewalPushedDue: false,
+      renewalPushedStringsReady: true,
       ...overrides,
     };
   }
@@ -430,6 +451,7 @@ describe("the steam-notice boot interrupt", () => {
       storeClaimPrompt: () => {},
       updateSteamGrant: (update) => calls.grantStored.push(update(grantStore)),
       markNoticeSeen: (notice) => calls.seen.push(notice),
+      markMessageSeen: () => {},
       now: () => NOW,
     };
     return { base, calls };
@@ -442,6 +464,8 @@ describe("the steam-notice boot interrupt", () => {
       steam: true,
       welcomed: false,
       endedShown: false,
+      endingShown: false,
+      besidePaid: false,
       seenAt: NOW,
     },
   };

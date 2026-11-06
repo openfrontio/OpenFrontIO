@@ -102,6 +102,7 @@ describe("boot sequencing on CrazyGames", () => {
       storeClaimPrompt: () => {},
       updateSteamGrant: () => {},
       markNoticeSeen: () => {},
+      markMessageSeen: () => {},
       now: () => Date.now(),
     };
     const player = userMe.player;
@@ -119,6 +120,10 @@ describe("boot sequencing on CrazyGames", () => {
       rewardCount: (player.rewards ?? []).length,
       claimPromptDue: true,
       claimStringsReady: true,
+      giftEndingDue: false,
+      giftEndingStringsReady: true,
+      renewalPushedDue: false,
+      renewalPushedStringsReady: true,
     });
     await runBootInterrupt(
       interrupt,

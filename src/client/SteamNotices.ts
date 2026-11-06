@@ -1,4 +1,7 @@
-import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import {
+  paidSubscriptionOf,
+  type UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 import { steamGrantOf } from "./SteamGrantNotices";
 
 export const STEAM_LICENCE_INTRO_NOTICE = "steam_licence_intro";
@@ -69,7 +72,10 @@ export function steamNoticeDue(
     }
   }
   if (!desktopShell || !userMe.steamLicence) return null;
-  const grant = steamGrantOf(userMe);
+  // A payer's month is explained by the grant welcome instead, which says
+  // their paid subscription carries on beside it.
+  const grant =
+    paidSubscriptionOf(userMe.player) === null ? steamGrantOf(userMe) : null;
   const grantEnd =
     grant !== null && grant.periodEnd.getTime() > now ? grant.periodEnd : null;
   if (!ownedSinceLaunch(userMe.steamLicenceSince)) {
