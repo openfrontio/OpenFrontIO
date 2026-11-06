@@ -495,6 +495,75 @@ describe("CosmeticCard", () => {
     expect(badgeZ).toBeLessThan(ruleZ("data-cosmetic-sparkle"));
   });
 
+  describe("Steam exclusive badge", () => {
+    const BADGE = "[data-cosmetic-steam-exclusive]";
+    const skin = (steamExclusive?: boolean): ResolvedCosmetic => ({
+      type: "skin",
+      cosmetic: {
+        name: "moon",
+        url: "/skins/moon.png",
+        product: null,
+        rarity: "epic",
+        ...(steamExclusive === undefined ? {} : { steamExclusive }),
+      } as never,
+      colorPalette: null,
+      relationship: "owned",
+      key: "skin:moon",
+    });
+    const pattern = (palette: "red" | "blue"): ResolvedCosmetic => ({
+      ...red,
+      cosmetic: {
+        ...(red.cosmetic as object),
+        colorPalettes: [
+          { name: "red", isArchived: false, steamExclusive: true },
+          { name: "blue", isArchived: false },
+        ],
+      } as never,
+      colorPalette: (palette === "red" ? red : blue).colorPalette,
+      key: `pattern:stripes:${palette}`,
+    });
+
+    async function show(resolved: ResolvedCosmetic) {
+      installTranslations();
+      await createCard();
+      card!.resolved = resolved;
+      await card!.updateComplete;
+    }
+
+    it("shows the badge on a skin marked steamExclusive", async () => {
+      await show(skin(true));
+      expect(card!.querySelector(BADGE)).toBeTruthy();
+    });
+
+    it("hides it on an unmarked skin", async () => {
+      await show(skin());
+      expect(card!.querySelector(BADGE)).toBeNull();
+    });
+
+    it("shows it only on the granted palette of a pattern", async () => {
+      await show(pattern("red"));
+      expect(card!.querySelector(BADGE)).toBeTruthy();
+      card!.resolved = pattern("blue");
+      await card!.updateComplete;
+      expect(card!.querySelector(BADGE)).toBeNull();
+    });
+
+    it("an equipped exclusive shows both pills", async () => {
+      await show(skin(true));
+      expect(card!.querySelector<HTMLElement>(BADGE)!.className).toContain(
+        "bottom-1 ",
+      );
+      card!.state = "equipped";
+      await card!.updateComplete;
+      const badge = card!.querySelector<HTMLElement>(BADGE)!;
+      expect(
+        card!.querySelector("[data-cosmetic-equipped='true']"),
+      ).toBeTruthy();
+      expect(badge.className).toContain("bottom-7");
+      expect(badge.className).not.toContain("bottom-1 ");
+    });
+  });
+
   describe("subscription perks tooltip", () => {
     const tier = (requiresSteamLicence: boolean): ResolvedCosmetic => ({
       type: "subscription",
