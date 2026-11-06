@@ -239,7 +239,7 @@
       "defend": "[P1]を守る！",
       "defend_from": "[P1] から守れ！",
       "dont_attack": "[P1]を攻撃しないで！",
-      "make_ally": "{P1}と同盟を結べ！"
+      "make_ally": "[P1]と同盟を結べ！"
     },
     "from": "{user}から着信:{msg}",
     "greet": {
@@ -265,8 +265,8 @@
       "gold": "お金を頂戴！",
       "help_defend": "[P1]から守るのを手伝って！",
       "no_attack": "攻撃しないで！",
-      "send_gold_to": "{P1}に資金を送れ！",
-      "send_troops_to": "{P1}に兵士を送れ！",
+      "send_gold_to": "[P1]に資金を送れ！",
+      "send_troops_to": "[P1]に兵士を送れ！",
       "sorry_attack": "ごめん、攻撃するつもりはなかった。",
       "trade_partners": "貿易相手になろう！",
       "troops": "部隊を頂戴！",
