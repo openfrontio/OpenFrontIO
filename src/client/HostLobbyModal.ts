@@ -307,6 +307,7 @@ export class HostLobbyModal extends BaseModal {
           .lobbyId=${this.lobbyId}
           .lobbySuffix=${this.lobbyUrlSuffix}
           include-lobby-query
+          class="shrink-0"
         ></copy-button>`;
         // Not until there is a lobby to invite anyone into. createLobby()
         // assigns lobbyId asynchronously and the modal renders before it
@@ -320,10 +321,10 @@ export class HostLobbyModal extends BaseModal {
               map: this.selectedMap,
               clients: this.clients,
             })
-          : undefined;
-        return invite
-          ? html`<div class="flex items-center gap-2">${copy}${invite}</div>`
-          : copy;
+          : nothing;
+        return html`<div class="flex items-center gap-2 shrink-0">
+          ${copy}${invite}
+        </div>`;
       })(),
     });
   }

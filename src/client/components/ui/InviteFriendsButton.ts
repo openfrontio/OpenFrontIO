@@ -33,7 +33,7 @@ export function inviteFriendsButton(
     data-test-invite-friends
     type="button"
     @click=${handleClick}
-    class="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 rounded-lg px-2 py-1 border border-white/10 text-white/60 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
+    class="flex items-center gap-1.5 shrink-0 whitespace-nowrap bg-white/5 hover:bg-white/10 rounded-lg px-2 py-1 border border-white/10 text-white/60 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
     title=${label}
     aria-label=${label}
   >

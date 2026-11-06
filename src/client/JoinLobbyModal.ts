@@ -9,7 +9,7 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
 } from "@openfront/shared/WireSchemas";
-import { html, TemplateResult } from "lit";
+import { html, nothing, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import {
@@ -139,7 +139,10 @@ export class JoinLobbyModal extends BaseModal {
       this.gameConfig.gameMode !== GameMode.Team;
     const canShare = this.gameConfig !== null && !isPublicFfa;
     const copy = canShare
-      ? html`<copy-button .lobbyId=${this.currentLobbyId}></copy-button>`
+      ? html`<copy-button
+          class="shrink-0"
+          .lobbyId=${this.currentLobbyId}
+        ></copy-button>`
       : undefined;
     const invite =
       canShare && this.currentLobbyId
@@ -149,7 +152,7 @@ export class JoinLobbyModal extends BaseModal {
             map: this.gameConfig?.gameMap,
             clients: this.players,
           })
-        : undefined;
+        : nothing;
     return modalHeader({
       // titleContent (not title) so the bell can sit at the right edge of the
       // title row via ml-auto, next to the copy/invite cluster.
@@ -159,9 +162,11 @@ export class JoinLobbyModal extends BaseModal {
         ${this.gameStartAlert.renderBell()}`,
       onBack: () => this.closeAndLeave(),
       ariaLabel: translateText("common.close"),
-      rightContent: invite
-        ? html`<div class="flex items-center gap-2">${copy}${invite}</div>`
-        : copy,
+      rightContent: canShare
+        ? html`<div class="flex items-center gap-2 shrink-0">
+            ${copy}${invite}
+          </div>`
+        : undefined,
     });
   }
 
