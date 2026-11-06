@@ -765,6 +765,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 9,
     themes: ["europe"],
     author: "crunchybbb",
+    descriptionKey: "map_description.crimea",
     location: { lat: 45.3, lon: 34 },
   },
   {
@@ -2277,6 +2278,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["arcade"],
     defaultNationCount: 10,
     author: "crunchybbb",
+    descriptionKey: "map_description.warshipwarship",
   },
   {
     id: "World",
