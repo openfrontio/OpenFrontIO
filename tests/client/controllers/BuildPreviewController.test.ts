@@ -1864,7 +1864,7 @@ describe("BuildPreviewController touch preview", () => {
     }
   });
 
-  test("touch movement without a ghost does not convert or store a tile", () => {
+  test("touch movement without a ghost restores placement for later selections", async () => {
     const { controller, player } = makeController(UnitType.City);
     const c = controller as any;
     c.removeGhostStructure();
@@ -1874,7 +1874,14 @@ describe("BuildPreviewController touch preview", () => {
 
     expect(convert).not.toHaveBeenCalled();
     expect(c.touchPreviewTile).toBeNull();
+    expect(c.touchPlacementMode).toBe(false);
     expect(player.buildables).not.toHaveBeenCalled();
+
+    c.uiState.ghostStructure = UnitType.City;
+    controller.tick();
+    await flushBuildables();
+
+    expect(c.lastGhostData).not.toBeNull();
   });
 
   test("removing an existing ghost clears its highlight", () => {
