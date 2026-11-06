@@ -445,6 +445,13 @@ describe("PokiSDK", () => {
       expect(poki.shareableURL).toHaveBeenCalledWith({ gameId: "cd" });
     });
 
+    it("passes the player's input on to the wrapper's SDK", () => {
+      window.dispatchEvent(new PointerEvent("pointerdown"));
+      document.dispatchEvent(new KeyboardEvent("keydown", { code: "Space" }));
+      expect(wrapper).toHaveBeenCalledWith("interaction", "pointerdown");
+      expect(wrapper).toHaveBeenCalledWith("interaction", "keydown", "Space");
+    });
+
     it("reads invite params from our own URL", async () => {
       expect(await sdk.getInviteGameId()).toBe("ab12");
     });
