@@ -5,7 +5,7 @@
   "translation_key": "map.choppingblock",
   "categories": ["arcade"],
   "author": "Patrick Plays Badly",
-  "description": "Inspired by an actual chopping block this map is designed to be somewhat unstable. Long connecting land masses offer fast conquest, but over expose the attacker if they move too quickly. The center channel is plugged pushing traded into multiple corners.",
+  "description": "Inspired by an actual chopping block this map is designed to be somewhat unstable. Long connecting land masses offer fast conquest, but over expose the attacker if they move too quickly. The center channel is plugged pushing trade into multiple corners.",
   "special_team_count": 4,
   "forced_modifiers": ["isWaterNukes:50"],
   "nations": [
