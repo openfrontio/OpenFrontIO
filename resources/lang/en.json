@@ -963,6 +963,12 @@
     "rating": "Rating",
     "result": "Result",
     "season": "Season {n}",
+    "season_dates": "{start} – {end}",
+    "season_days_left": "{days, plural, one {# day left} other {# days left}}",
+    "season_ends_midnight_utc": "Ends at midnight UTC",
+    "season_in_progress": "In progress",
+    "season_last_day": "Last day",
+    "season_no_end_date": "No end date yet",
     "season_started": "Started {date}",
     "tier": {
       "bronze": "Bronze",
