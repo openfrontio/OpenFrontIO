@@ -52,6 +52,14 @@ export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
   return unitType === UnitType.AtomBomb || unitType === UnitType.HydrogenBomb;
 }
 
+function requiresMissileSilo(unitType: UnitType | null | undefined): boolean {
+  return (
+    unitType === UnitType.AtomBomb ||
+    unitType === UnitType.HydrogenBomb ||
+    unitType === UnitType.MIRV
+  );
+}
+
 // tSamIntercept value used to flag an untargetable (impassable) destination:
 // draws the red X marker essentially at the destination while leaving the
 // visible line unchanged (1.0 would mean "no marker").
@@ -471,11 +479,21 @@ export class BuildPreviewController implements Controller {
     // A dead player keeps a ghost forever otherwise: on touch every map tap
     // is routed to it, the build bar is gone, and a nuke never cancels on an
     // invalid tap, so the radial menu is unreachable for the rest of the game.
-    if (this.game.myPlayer()?.isAlive() === false) {
+    const myPlayer = this.game.myPlayer();
+    if (myPlayer?.isAlive() === false) {
       this.removeGhostStructure();
       return;
     }
     const target = this.uiState.ghostStructure;
+    const ghostType = target ?? this.ghostUnit?.buildableUnit.type;
+    if (
+      myPlayer &&
+      requiresMissileSilo(ghostType) &&
+      myPlayer.units(UnitType.MissileSilo).length === 0
+    ) {
+      this.removeGhostStructure();
+      return;
+    }
     if (this.ghostUnit) {
       if (target === null) {
         this.removeGhostStructure();

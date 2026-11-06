@@ -726,6 +726,27 @@ describe("BuildPreviewController idle diffing optimization", () => {
     expect(traj5).toBe(traj4);
   });
 
+  test.each([UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRV])(
+    "%s ghost clears when the last missile silo is lost",
+    (type) => {
+      const f = createTestFixture();
+      const c = f.controller as any;
+      c.uiState.ghostStructure = type;
+      c.ghostUnit.buildableUnit.type = type;
+      f.mockSilos.push({});
+      c.syncGhostState();
+      expect(c.ghostUnit).not.toBeNull();
+      f.mockSilos.length = 0;
+      c.isQueryInFlight = true;
+      f.controller.tick();
+
+      expect(c.ghostUnit).toBeNull();
+      expect(c.uiState.ghostStructure).toBeNull();
+      expect(f.updateGhostPreview).toHaveBeenLastCalledWith(null);
+      expect(f.updateNukeTrajectory).toHaveBeenLastCalledWith(null);
+    },
+  );
+
   test("cursorLoop skips calculations and WebGL updates while cursor is idle", () => {
     const {
       controller,
@@ -1720,7 +1741,14 @@ describe("BuildPreviewController touch preview", () => {
       isAlive: () => true,
       readyMissileCount: () => 10,
       allies: () => [],
-      units: () => [],
+      units: () => [
+        {
+          isActive: () => true,
+          isInCooldown: () => false,
+          isUnderConstruction: () => false,
+          tile: () => 101,
+        },
+      ],
       isOnSameTeam: () => false,
       buildables: vi.fn(
         (
