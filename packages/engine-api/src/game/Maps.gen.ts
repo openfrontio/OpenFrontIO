@@ -1558,7 +1558,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.LosAngeles,
     translationKey: "map.losangeles",
     categories: ["north_america"],
-    defaultNationCount: 40,
+    defaultNationCount: 39,
     themes: ["north_america"],
     customTribes: [
       { name: "El Monte", coordinates: [1734, 682] },
