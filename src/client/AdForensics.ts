@@ -9,6 +9,19 @@ const UNITS_IN_REPORT = 8;
 // (8,000) while skipping the 1px strips bidder and ID-sync scripts leave
 // across the viewport (3,840 on a 4K screen).
 const MIN_FRAME_AREA = 7_000;
+// Formats that draw themselves over the game outside any slot, confirmed by
+// Playwire as escapes, so removed on sight. Only confirmed ones go here:
+// other stray frames may be formats sold on purpose, and stay on screen.
+// The Trade Desk's overlay is .ttx-lb, with a .ttx-close "Close Ad" button.
+const ESCAPED_AD = ".ttx-lb";
+const ESCAPED_AD_CLOSE = ".ttx-close";
+// Frames on the page that are not escaped ads: Stripe's checkout, Admiral's
+// ad-recovery prompt and Turnstile.
+const NOT_AD_FRAME_PREFIXES = [
+  "https://js.stripe.com/",
+  "https://my.getadmiral.com/",
+  "https://challenges.cloudflare.com/",
+];
 
 interface RenderedCreative {
   slotElementId: string;
@@ -186,7 +199,7 @@ function recentCreatives(): string {
     .join(";");
 }
 
-export interface StrayAdFrame {
+export interface AdOnPage {
   root: HTMLElement;
   attributes: Record<string, string>;
 }
@@ -198,11 +211,14 @@ export interface StrayAdFrame {
  * A creative that breaks out of its slot and draws on the page itself shows
  * up here, which the slot-based checks cannot see.
  */
-export function findStrayAdFrames(): StrayAdFrame[] {
-  const found = new Map<HTMLElement, StrayAdFrame>();
+export function findStrayAdFrames(): AdOnPage[] {
+  const found = new Map<HTMLElement, AdOnPage>();
   for (const frame of document.querySelectorAll("iframe")) {
     const root = unownedRoot(frame);
     if (root === null || found.has(root)) continue;
+    if (NOT_AD_FRAME_PREFIXES.some((prefix) => frame.src.startsWith(prefix))) {
+      continue;
+    }
     const rect = frame.getBoundingClientRect();
     if (visibleArea(rect) < MIN_FRAME_AREA) continue;
     if (
@@ -213,32 +229,105 @@ export function findStrayAdFrames(): StrayAdFrame[] {
     ) {
       continue;
     }
-    const style = getComputedStyle(root);
-    found.set(root, {
-      root,
-      attributes: {
-        element: root.localName,
-        elementId: root.id,
-        elementClass: root.className.slice(0, 200),
-        position: style.position,
-        zIndex: style.zIndex,
-        frameId: frame.id.slice(0, 200),
-        frameOrigin: frameOrigin(frame),
-        frameRect: [rect.left, rect.top, rect.width, rect.height]
-          .map(Math.round)
-          .join(","),
-        ...creativeAttributes(root),
-        recentCreatives: recentCreatives(),
-      },
+    found.set(root, { root, attributes: describeAd(root, frame) });
+  }
+  return [...found.values()];
+}
+
+/**
+ * Confirmed escaped ads (ESCAPED_AD) outside our UI and Playwire's
+ * containers, shown or not. Each is the element to remove.
+ */
+export function findEscapedAds(): AdOnPage[] {
+  const found = new Map<HTMLElement, AdOnPage>();
+  for (const el of document.querySelectorAll(
+    `${ESCAPED_AD}, ${ESCAPED_AD_CLOSE}`,
+  )) {
+    const root = unownedRoot(el);
+    if (root === null) continue;
+    let ad = el.closest<HTMLElement>(ESCAPED_AD);
+    // A close button with no .ttx-lb round it: only a fixed overlay holding
+    // an ad frame is taken for the ad, never whatever body-level element of
+    // the page happens to hold the button.
+    if (
+      ad === null &&
+      getComputedStyle(root).position === "fixed" &&
+      root.querySelector("iframe") !== null
+    ) {
+      ad = root;
+    }
+    if (ad === null || found.has(ad)) continue;
+    found.set(ad, {
+      root: ad,
+      attributes: describeAd(ad, ad.querySelector("iframe")),
     });
   }
   return [...found.values()];
 }
 
-// The body-level element holding `frame`, or null when that subtree is ours
+function describeAd(
+  root: HTMLElement,
+  frame: HTMLIFrameElement | null,
+): Record<string, string> {
+  const style = getComputedStyle(root);
+  const rect = (frame ?? root).getBoundingClientRect();
+  return {
+    element: root.localName,
+    elementId: root.id,
+    elementClass: root.className.slice(0, 200),
+    position: style.position,
+    zIndex: style.zIndex,
+    frameId: frame?.id.slice(0, 200) ?? "",
+    frameOrigin: frame === null ? "" : frameOrigin(frame),
+    frameRect: [rect.left, rect.top, rect.width, rect.height]
+      .map(Math.round)
+      .join(","),
+    framePlacement: frame === null ? "" : placement(frame, root),
+    topAtCentre: frame === null ? "" : topAtCentre(frame, root, rect),
+    ...creativeAttributes(root),
+    recentCreatives: recentCreatives(),
+  };
+}
+
+// The position and z-index of the frame's nearest positioned element: the
+// root's own say nothing when a static wrapper holds a fixed ad.
+function placement(frame: HTMLIFrameElement, root: HTMLElement): string {
+  for (let el: Element | null = frame; el !== null; el = el.parentElement) {
+    const style = getComputedStyle(el);
+    if (style.position !== "static") return `${style.position} ${style.zIndex}`;
+    if (el === root) break;
+  }
+  return "static auto";
+}
+
+// What is topmost at the centre of the frame's on-screen part: "frame" when
+// nothing is drawn over it there. Hit testing skips pointer-events: none,
+// so this never names the game canvas, but the canvas is the body's first
+// child with no z-index, and any fixed ad added after it draws above it.
+function topAtCentre(
+  frame: HTMLIFrameElement,
+  root: HTMLElement,
+  rect: DOMRect,
+): string {
+  const left = Math.max(rect.left, 0);
+  const right = Math.min(rect.right, window.innerWidth);
+  const upper = Math.max(rect.top, 0);
+  const lower = Math.min(rect.bottom, window.innerHeight);
+  if (right <= left || lower <= upper) return "offscreen";
+  const hit = document.elementFromPoint?.(
+    (left + right) / 2,
+    (upper + lower) / 2,
+  );
+  if (hit === null || hit === undefined) return "";
+  if (hit === frame) return "frame";
+  if (root.contains(hit)) return "ad";
+  return hit.id === "" ? hit.localName : `${hit.localName}#${hit.id}`;
+}
+
+// The body-level element holding `start`, or null when that subtree is ours
 // or Playwire's.
-function unownedRoot(frame: HTMLIFrameElement): HTMLElement | null {
-  let el: HTMLElement = frame;
+function unownedRoot(start: Element): HTMLElement | null {
+  let el: Element = start;
   for (;;) {
     if (customElements.get(el.localName) !== undefined) return null;
     if (el.id.startsWith("pw-")) return null;
@@ -247,7 +336,7 @@ function unownedRoot(frame: HTMLIFrameElement): HTMLElement | null {
     const parent = el.parentElement;
     if (parent === null) return null;
     if (parent === document.body || parent === document.documentElement) {
-      return el;
+      return el instanceof HTMLElement ? el : null;
     }
     el = parent;
   }
@@ -264,7 +353,9 @@ function visibleArea(rect: DOMRect): number {
 function frameOrigin(frame: HTMLIFrameElement): string {
   if (frame.src === "") return "";
   try {
-    return new URL(frame.src, location.href).origin;
+    const url = new URL(frame.src, location.href);
+    // Schemes other than http(s) have an opaque origin, "null".
+    return url.origin === "null" ? `${url.protocol}//${url.host}` : url.origin;
   } catch {
     return "";
   }

@@ -596,7 +596,10 @@ describe("resolveCosmetics: the granted tier is for sale, not owned", () => {
   }
 
   it("marks a granted tier purchasable so the store renders a buy button", () => {
-    const user = userMe({ tier: "gold", status: "active", provider: null });
+    // infra sends a `subscription:<tier>` flare for every row held.
+    const user = userMe({ tier: "gold", status: "active", provider: null }, [
+      "subscription:gold",
+    ]);
     expect(relationshipOf(user, "subscription:gold")).toBe("purchasable");
   });
 
@@ -618,7 +621,7 @@ describe("resolveCosmetics: the granted tier is for sale, not owned", () => {
           { tier: "platinum", status: "active", provider: null },
           { tier: "gold", status: "active", provider: "stripe" },
         ],
-        flares: [],
+        flares: ["subscription:platinum", "subscription:gold"],
       },
     };
     expect(relationshipOf(user, "subscription:gold")).toBe("owned");

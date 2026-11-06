@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   creativeAttributes,
+  findEscapedAds,
   findStrayAdFrames,
   resetAdForensics,
   trackAdCreatives,
@@ -235,6 +236,32 @@ describe("findStrayAdFrames", () => {
     );
   });
 
+  it("says what is drawn on top at the frame's centre, and where the frame sits", () => {
+    const overlay = document.body.appendChild(document.createElement("div"));
+    const sticky = overlay.appendChild(document.createElement("div"));
+    sticky.style.position = "fixed";
+    sticky.style.zIndex = "2147483647";
+    const frame = placeFrame(sticky, "sticky-frame");
+    const hud = document.body.appendChild(document.createElement("div"));
+    hud.id = "control-panel";
+    let topmost: Element = frame;
+    document.elementFromPoint = (x, y) => {
+      expect([x, y]).toEqual([464, window.innerHeight - 45]);
+      return topmost;
+    };
+
+    expect(findStrayAdFrames()[0].attributes).toMatchObject({
+      position: "static",
+      framePlacement: "fixed 2147483647",
+      topAtCentre: "frame",
+    });
+    topmost = hud;
+    expect(findStrayAdFrames()[0].attributes.topAtCentre).toBe(
+      "div#control-panel",
+    );
+    Reflect.deleteProperty(document, "elementFromPoint");
+  });
+
   it("leaves our own UI and Playwire's containers alone", () => {
     customElements.define("stray-test-hud", class extends HTMLElement {});
     const hud = document.body.appendChild(
@@ -260,6 +287,27 @@ describe("findStrayAdFrames", () => {
     expect(findStrayAdFrames()).toHaveLength(1);
   });
 
+  it("skips our checkout and ad-recovery frames", () => {
+    for (const src of [
+      "https://js.stripe.com/v3/elements-inner-card.html",
+      "https://my.getadmiral.com/prompt",
+    ]) {
+      const overlay = document.body.appendChild(document.createElement("div"));
+      placeFrame(overlay, "").src = src;
+    }
+
+    expect(findStrayAdFrames()).toEqual([]);
+  });
+
+  it("names the host of a frame whose scheme has no origin", () => {
+    const overlay = document.body.appendChild(document.createElement("div"));
+    placeFrame(overlay, "").src = "x-app://abcdef/frame.html";
+
+    expect(findStrayAdFrames()[0].attributes.frameOrigin).toBe(
+      "x-app://abcdef",
+    );
+  });
+
   it("skips frames too small or off screen to be an ad on display", () => {
     const strip = placeFrame(document.body, "strip");
     strip.getBoundingClientRect = () => new DOMRect(0, 0, 3840, 1);
@@ -268,5 +316,68 @@ describe("findStrayAdFrames", () => {
     offscreen.getBoundingClientRect = () => new DOMRect(-1000, -1000, 728, 90);
 
     expect(findStrayAdFrames()).toEqual([]);
+  });
+});
+
+describe("findEscapedAds", () => {
+  function ttxOverlay(parent: Element, className = "ttx-lb"): HTMLElement {
+    const overlay = document.createElement("div");
+    overlay.className = className;
+    overlay.style.position = "fixed";
+    placeFrame(overlay, "");
+    const close = overlay.appendChild(document.createElement("div"));
+    close.className = "ttx-close";
+    close.textContent = "× Close Ad";
+    return parent.appendChild(overlay);
+  }
+
+  it("finds The Trade Desk's overlay, shown or not", () => {
+    const shown = ttxOverlay(document.body);
+    const parked = ttxOverlay(document.body);
+    parked.style.display = "none";
+
+    expect(findEscapedAds().map((ad) => ad.root)).toEqual([shown, parked]);
+    expect(findEscapedAds()[0].attributes).toMatchObject({
+      elementClass: "ttx-lb",
+      position: "fixed",
+    });
+  });
+
+  it("takes the overlay itself, not the element holding it", () => {
+    const wrapper = document.body.appendChild(document.createElement("div"));
+    const overlay = ttxOverlay(wrapper);
+
+    expect(findEscapedAds().map((ad) => ad.root)).toEqual([overlay]);
+  });
+
+  it("finds an overlay by its close button when it has no class", () => {
+    const overlay = ttxOverlay(document.body, "");
+
+    expect(findEscapedAds().map((ad) => ad.root)).toEqual([overlay]);
+  });
+
+  it("does not take a page element for the ad round a stray close button", () => {
+    const page = document.body.appendChild(document.createElement("div"));
+    page.appendChild(document.createElement("div")).className = "ttx-close";
+    const fixedNoFrame = document.body.appendChild(
+      document.createElement("div"),
+    );
+    fixedNoFrame.style.position = "fixed";
+    fixedNoFrame.appendChild(document.createElement("div")).className =
+      "ttx-close";
+
+    expect(findEscapedAds()).toEqual([]);
+  });
+
+  it("leaves our own UI and Playwire's containers alone", () => {
+    customElements.define("escaped-test-hud", class extends HTMLElement {});
+    ttxOverlay(
+      document.body.appendChild(document.createElement("escaped-test-hud")),
+    );
+    const rail = document.body.appendChild(document.createElement("div"));
+    rail.id = "pw-oop-bottom_rail";
+    ttxOverlay(rail);
+
+    expect(findEscapedAds()).toEqual([]);
   });
 });
