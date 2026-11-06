@@ -935,6 +935,46 @@ describe("LeaderboardModal", () => {
       expect(label.querySelector("[data-ffa-season-progress]")).toBeNull();
     });
 
+    it("shows no banner for a season whose dates are reversed", async () => {
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [],
+          "2v2": [],
+          ffa: [rated(1, "p4", 2012.6, "Diamond II")],
+          ffaSeason: {
+            number: 1,
+            startDate: "2026-11-09",
+            endDate: "2026-11-08",
+          },
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await showLadder("playersFfa");
+      expect(modal.querySelector("[data-ffa-season]")).toBeNull();
+    });
+
+    it("drops the banner on a fresh load once the season has ended", async () => {
+      const page = (ffaSeason?: unknown) =>
+        jsonRes({
+          "1v1": [],
+          "2v2": [],
+          ffa: [rated(1, "p4", 2012.6, "Diamond II")],
+          ...(ffaSeason ? { ffaSeason } : {}),
+        });
+      fetchMock().mockResolvedValueOnce(
+        page({ number: 1, startDate: "2026-11-09", endDate: "2027-02-06" }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await showLadder("playersFfa");
+      expect(modal.querySelector("[data-ffa-season]")).not.toBeNull();
+
+      // Between seasons the API sends none.
+      fetchMock().mockResolvedValueOnce(page());
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await getPlayerList()!.updateComplete;
+      expect(modal.querySelector("[data-ffa-season]")).toBeNull();
+    });
+
     it("shows no season label when the API sends none", async () => {
       fetchMock().mockResolvedValueOnce(
         jsonRes({

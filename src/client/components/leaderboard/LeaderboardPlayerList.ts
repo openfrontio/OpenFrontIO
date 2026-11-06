@@ -212,7 +212,8 @@ export class LeaderboardPlayerList extends LitElement {
         return;
       }
 
-      this.ffaSeason = result.ffaSeason ?? this.ffaSeason;
+      // A fresh load replaces it: between seasons the API sends none.
+      this.ffaSeason = result.ffaSeason ?? (reset ? null : this.ffaSeason);
 
       if (reset && !this.currentUserIdLoaded) {
         this.currentUserIdLoaded = true;
@@ -594,6 +595,8 @@ export class LeaderboardPlayerList extends LitElement {
   private renderSeasonLabel() {
     if (this.ffaSeason === null) return nothing;
     const { number, startDate, endDate } = this.ffaSeason;
+    // The API refuses these, so this only guards against a bad response.
+    if (endDate && endDate < startDate) return nothing;
     const timing = endDate
       ? seasonTiming(startDate, endDate, new Date())
       : null;
