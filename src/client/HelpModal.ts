@@ -91,6 +91,7 @@ export class HelpModal extends BaseModal {
 
   protected renderBody() {
     const keybinds = this.keybinds;
+    const hideHotkeys = Platform.isTouch && !Platform.hasKeyboard;
 
     return html`
       <div
@@ -219,20 +220,23 @@ export class HelpModal extends BaseModal {
               </p>
               <button
                 id="troubleshooting-button"
-                class="hover:bg-white/5 px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)]"
+                class="w-full sm:w-fit max-w-full hover:bg-white/5 px-4 sm:px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)] whitespace-normal break-words text-center"
                 data-page="page-troubleshooting"
                 @click="${this.openTroubleshooting}"
-                data-i18n="main.go_to_troubleshooting"
               >
                 <span
-                  class="relative z-10 text-2xl"
-                  data-i18n="main.go_to_troubleshooting"
-                ></span>
+                  class="relative z-10 block max-w-full text-base sm:text-2xl leading-snug"
+                  >${translateText("main.go_to_troubleshooting")}</span
+                >
               </button>
             </div>
           </section>
           <!-- Hotkeys Section -->
-          <div class="flex items-center gap-3 mb-3">
+          <div
+            id="help-hotkeys-heading"
+            class="flex items-center gap-3 mb-3"
+            ?hidden=${hideHotkeys}
+          >
             <div class="text-blue-400">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -266,7 +270,9 @@ export class HelpModal extends BaseModal {
             ></div>
           </div>
           <section
+            id="help-hotkeys-content"
             class="bg-white/5 rounded-xl border border-white/10 overflow-hidden"
+            ?hidden=${hideHotkeys}
           >
             <div class="pt-2 pb-4 px-4 overflow-x-auto">
               <table class="w-full text-sm border-separate border-spacing-y-1">
