@@ -264,7 +264,7 @@ export class NationAttackBehavior extends AiAttackBehavior {
     const cap = owner.isPlayer()
       ? this.troopSendCap()
       : this.expansionTroopCap();
-    const troops = Math.min(this.player.troops() / 5, cap);
+    const troops = Math.min(this.homeTroops() / 5, cap);
     if (troops < 1) return;
 
     // Hard & Impossible: don't attack if we'd send less than 20% of target's troops
@@ -272,9 +272,7 @@ export class NationAttackBehavior extends AiAttackBehavior {
       return;
     }
 
-    this.game.addExecution(
-      new TransportShipExecution(this.player, dst, troops),
-    );
+    this.send(new TransportShipExecution(this.player, dst, troops), troops);
   }
 
   private findRandomBoatTarget(
@@ -594,7 +592,7 @@ export class NationAttackBehavior extends AiAttackBehavior {
 
   private hasReserveRatioTroops(): boolean {
     const maxTroops = this.game.config().maxTroops(this.player);
-    const ratio = this.player.troops() / maxTroops;
+    const ratio = this.homeTroops() / maxTroops;
     return ratio >= this.reserveRatio;
   }
 
@@ -644,7 +642,7 @@ export class NationAttackBehavior extends AiAttackBehavior {
     for (const attack of this.player.outgoingAttacks()) {
       if (attack.target() === attacker) pressing += attack.troops();
     }
-    const troops = this.player.troops();
+    const troops = this.homeTroops();
     const maxTroops = this.game.config().maxTroops(this.player);
     const spare = Math.min(
       troops - maxTroops * this.expandRatio,
@@ -663,7 +661,7 @@ export class NationAttackBehavior extends AiAttackBehavior {
   strikeTroops(target: Player): number {
     const maxTroops = this.game.config().maxTroops(this.player);
     return Math.min(
-      this.player.troops() - maxTroops * this.reserveRatio,
+      this.homeTroops() - maxTroops * this.reserveRatio,
       this.troopSendCap(target),
     );
   }
@@ -773,12 +771,10 @@ export class NationAttackBehavior extends AiAttackBehavior {
     if (!this.annexesBots()) return;
     const bots = this.neighboringBots();
     if (bots.length === 0) return;
-    const troops = Math.floor(this.player.troops() / 100);
+    const troops = Math.floor(this.homeTroops() / 100);
     if (troops < 1) return;
     for (const bot of walledInBots(this.game, this.player, bots)) {
-      this.game.addExecution(
-        new AttackExecution(troops, this.player, bot.id()),
-      );
+      this.send(new AttackExecution(troops, this.player, bot.id()), troops);
     }
   }
 
@@ -1133,14 +1129,22 @@ export class NationAttackBehavior extends AiAttackBehavior {
 
     if (maxNeighborTroops === 0) return Infinity;
     const minRetained = Math.ceil(maxNeighborTroops * retainFraction);
-    return Math.max(0, this.player.troops() - minRetained);
+    return Math.max(0, this.homeTroops() - minRetained);
+  }
+
+  // Our PlayerExecution ticks after us and cuts troops above max back first
+  protected override troopsAtInit(): number {
+    return Math.min(
+      this.player.troops(),
+      this.game.config().maxTroops(this.player),
+    );
   }
 
   // Like troopSendCap(), but floored above 0 — TerraNullius can't fight back, so it's throttled, not frozen.
   protected override expansionTroopCap(): number {
     const cap = this.troopSendCap();
     if (cap > 0) return cap;
-    return Math.ceil(this.player.troops() * 0.05);
+    return Math.ceil(this.homeTroops() * 0.05);
   }
 
   // `opponent` is a player we take on on purpose (retaliation, runaway leader):
@@ -1158,7 +1162,10 @@ export class NationAttackBehavior extends AiAttackBehavior {
     if (isBotAttack) {
       troops = this.calculateBotAttackTroops(
         target,
-        this.player.troops() - reserveTroops - this.botAttackTroopsSent,
+        Math.min(
+          this.player.troops() - this.botAttackTroopsSent,
+          this.homeTroops(),
+        ) - reserveTroops,
       );
     } else {
       troops = nonBotTroops(reserveTroops);
@@ -1233,17 +1240,18 @@ export class NationAttackBehavior extends AiAttackBehavior {
   ): boolean {
     const troops = this.calculateAttackTroops(
       target,
-      (targetTroops) => this.player.troops() - targetTroops,
+      (targetTroops) => this.homeTroops() - targetTroops,
       target.isPlayer() ? target : undefined,
     );
     if (troops === null) return false;
-    const boatTroops = Math.max(1, Math.floor(this.player.troops() / 100));
+    const boatTroops = Math.max(1, Math.floor(this.homeTroops() / 100));
     // Only the boat leaves now: the land attack is budgeted once it lands
     if (target.isPlayer() && target.type() === PlayerType.Bot) {
       this.botAttackTroopsSent += boatTroops - troops;
     }
-    this.game.addExecution(
+    this.send(
       new TransportShipExecution(this.player, landing, boatTroops),
+      boatTroops,
     );
     return true;
   }
@@ -1579,18 +1587,19 @@ export class NationAttackBehavior extends AiAttackBehavior {
     // Donate a portion of our troops (keeping reserve)
     const maxTroops = this.game.config().maxTroops(this.player);
     const troopsToKeep = maxTroops * this.reserveRatio;
-    const availableTroops = this.player.troops() - troopsToKeep;
+    const availableTroops = this.homeTroops() - troopsToKeep;
 
     if (availableTroops < 1) {
       return false;
     }
 
-    this.game.addExecution(
+    this.send(
       new DonateTroopsExecution(
         this.player,
         selectedTeammate.id(),
         availableTroops,
       ),
+      availableTroops,
     );
 
     return true;

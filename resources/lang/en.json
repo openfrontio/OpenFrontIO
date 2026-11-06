@@ -178,7 +178,7 @@
     "title": "Account Settings"
   },
   "ban_notice": {
-    "appeal": "If you believe this is a mistake, contact us on Discord.",
+    "appeal_prompt": "Think this is a mistake or want to appeal?",
     "category": {
       "cheating": "Cheating or unauthorised software",
       "child_safety": "Child-safety violation",
@@ -193,10 +193,11 @@
       "rank_manipulation": "Rank or rating manipulation",
       "teaming": "Teaming or collusion"
     },
-    "permanent": "This ban is permanent.",
-    "reason": "Reason: {reason}",
-    "title": "Your account is banned",
-    "until": "Banned until {date}."
+    "contact_discord": "Contact us on Discord",
+    "expires_label": "Expires",
+    "expires_never": "Never",
+    "reason_label": "Reason",
+    "title": "Your account is banned"
   },
   "build_menu": {
     "desc": {
@@ -1570,6 +1571,7 @@
     "archipelagosea": "Archipelago Sea",
     "arctic": "Arctic",
     "asia": "Asia",
+    "atlas": "Atlas",
     "australia": "Australia",
     "babelmandebstrait": "Bab el-Mandeb Strait",
     "baikal": "Baikal",
@@ -1606,7 +1608,6 @@
     "didier": "Didier",
     "didierfrance": "Didier (France)",
     "dyslexdria": "Dyslexdria",
-    "earth": "Earth",
     "eastasia": "East Asia",
     "europe": "Europe",
     "europeclassic": "Europe (Classic)",
@@ -1724,10 +1725,10 @@
     "world": "World"
   },
   "map_component": {
-    "by_author": "Map maker: {author}",
-    "earth_continental": "Continental",
-    "earth_regional": "Regional",
-    "earth_reset": "Reset view",
+    "atlas_continental": "Continental",
+    "atlas_regional": "Regional",
+    "atlas_reset": "Reset view",
+    "by_author": "Map designer: {author}",
     "error": "Error",
     "favorite": "Add to favourites",
     "favorites_empty": "Click the star on any map to favourite it",
@@ -2943,7 +2944,8 @@
     "open_settings_label": "Settings",
     "pause_game": "Pause",
     "pause_game_desc": "Pause or resume the game (single player and custom games for host).",
-    "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
+    "performance_overlay_desc": "{description} Press {key} during game to toggle.",
+    "performance_overlay_keybind_desc": "Toggles the in-game performance overlay.",
     "performance_overlay_label": "Performance Overlay",
     "press_a_key": "Press a key",
     "prevent_stacking": "Prevent Building Stacking",
