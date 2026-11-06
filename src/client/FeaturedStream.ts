@@ -6,6 +6,7 @@ import { isDesktopShell } from "./DesktopShell";
 import { gamePortal } from "./GamePortal";
 import { broadcastKey, streamsFeed, watchUrl } from "./StreamsFeed";
 import { translateText } from "./Utils";
+import { YouTubeGlobal, loadYouTubeSdk } from "./YouTubeSdk";
 
 // Homepage "featured stream" panel: embeds a Twitch channel or a YouTube broadcast and
 // shows ONLY while it is actually live, then hides. Data comes from the shared streams feed (GET /streams.json,
@@ -53,34 +54,9 @@ interface TwitchGlobal {
   Player: TwitchPlayerCtor;
 }
 
-interface YouTubePlayer {
-  playVideo(): void;
-  pauseVideo(): void;
-  destroy(): void;
-}
-interface YouTubeGlobal {
-  Player: new (
-    el: HTMLElement,
-    opts: {
-      videoId: string;
-      width: string;
-      height: string;
-      playerVars: Record<string, string | number>;
-      events: {
-        onReady: () => void;
-        onStateChange: (e: { data: number }) => void;
-        onError: () => void;
-      };
-    },
-  ) => YouTubePlayer;
-  PlayerState: { ENDED: number };
-}
-
 declare global {
   interface Window {
     Twitch?: TwitchGlobal;
-    YT?: YouTubeGlobal;
-    onYouTubeIframeAPIReady?: () => void;
   }
 }
 
@@ -190,28 +166,9 @@ function loadTwitchSdk(): Promise<TwitchGlobal> {
   return sdkPromise;
 }
 
-// The YouTube API script calls window.onYouTubeIframeAPIReady once YT.Player is usable,
-// which is after the script's own load event.
-const YT_SDK_SRC = "https://www.youtube.com/iframe_api";
-let ytSdkPromise: Promise<YouTubeGlobal> | undefined;
-function loadYouTubeSdk(): Promise<YouTubeGlobal> {
-  if (ytSdkPromise) return ytSdkPromise;
-  ytSdkPromise = new Promise((resolve, reject) => {
-    if (window.YT?.Player) return resolve(window.YT);
-    const prev = window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady = () => {
-      prev?.();
-      if (window.YT?.Player) resolve(window.YT);
-      else reject(new Error("YouTube SDK missing"));
-    };
-    const s = document.createElement("script");
-    s.src = YT_SDK_SRC;
-    s.async = true;
-    s.onerror = () => reject(new Error("YouTube SDK failed to load"));
-    document.head.appendChild(s);
-  });
-  return ytSdkPromise;
-}
+// A YouTube player that loads but never reports ready, ended or an error would otherwise
+// sit invisible until the page reloads, and later polls would see it as already mounted.
+export const YT_PLAYER_READY_TIMEOUT_MS = 30_000;
 
 @customElement("featured-stream")
 export class FeaturedStream extends LitElement {
@@ -225,6 +182,7 @@ export class FeaturedStream extends LitElement {
   @state() private adFree = false; // entitlement from /user/me; gates "hide for today"
 
   private player?: EmbedPlayer;
+  private playerReadyTimer?: ReturnType<typeof setTimeout>;
   private mountGen = 0; // bumped each mount; events from older mounts are ignored
   // Broadcasts whose own player told us they are not actually live. Without this, a feed
   // listing an offline channel re-mounted a full Twitch player on every poll, forever:
@@ -459,6 +417,7 @@ export class FeaturedStream extends LitElement {
       events: {
         onReady: () => {
           if (!fresh()) return;
+          clearTimeout(this.playerReadyTimer);
           this.setLive();
           // A game that started while this loaded couldn't pause it (YouTube adds
           // pauseVideo only once the player is ready), and autoplay would now run behind
@@ -477,9 +436,14 @@ export class FeaturedStream extends LitElement {
       pause: () => player.pauseVideo(),
       destroy: () => player.destroy(),
     };
+    // Not ended(): nothing says this broadcast is over, so the next feed tick may retry.
+    this.playerReadyTimer = setTimeout(() => {
+      if (fresh()) this.goOffline();
+    }, YT_PLAYER_READY_TIMEOUT_MS);
   }
 
   private teardownPlayer() {
+    clearTimeout(this.playerReadyTimer);
     try {
       this.player?.destroy?.();
     } catch {
