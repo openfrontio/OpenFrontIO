@@ -1864,6 +1864,19 @@ describe("BuildPreviewController touch preview", () => {
     }
   });
 
+  test("touch movement without a ghost does not convert or store a tile", () => {
+    const { controller, player } = makeController(UnitType.City);
+    const c = controller as any;
+    c.removeGhostStructure();
+    const convert = vi.spyOn(c.transformHandler, "screenToWorldCoordinates");
+
+    c.moveTouchPreview(200, 200);
+
+    expect(convert).not.toHaveBeenCalled();
+    expect(c.touchPreviewTile).toBeNull();
+    expect(player.buildables).not.toHaveBeenCalled();
+  });
+
   test("removing an existing ghost clears its highlight", () => {
     const { controller, eventBus } = makeController(UnitType.City);
     const highlights: ToggleStructureEvent[] = [];

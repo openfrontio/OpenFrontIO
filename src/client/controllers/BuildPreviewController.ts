@@ -1298,7 +1298,7 @@ export class BuildPreviewController implements Controller {
 
   private moveTouchPreview(x: number, y: number): void {
     this.touchPlacementMode = true;
-    if (this.syncGhostState()) return;
+    if (this.syncGhostState() || !this.ghostUnit) return;
     const tile = this.transformHandler.screenToWorldCoordinates(x, y);
     if (!this.game.isValidCoord(tile.x, tile.y)) return;
     const next = this.game.ref(tile.x, tile.y);
