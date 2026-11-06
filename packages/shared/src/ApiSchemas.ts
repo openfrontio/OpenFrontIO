@@ -555,6 +555,49 @@ export const IdentityTokenResponseSchema = z.object({
 });
 export type IdentityTokenResponse = z.infer<typeof IdentityTokenResponseSchema>;
 
+const UserSubscriptionSchema = z.object({
+  tier: z.string(),
+  status: z.string(),
+  currentPeriodEnd: z.coerce.date().nullable(),
+  cancelAtPeriodEnd: z.boolean(),
+  // Which rail is billing this subscription, and `null` means NOBODY IS:
+  // it is a grant (a free month from a Steam purchase, or an admin comp).
+  // The server branches on the same distinction — cancelling a grant has
+  // no period to run out, so it expires the subscription immediately and
+  // takes the premium username with it.
+  //
+  // Three states, and the client must keep all three apart:
+  //   "stripe" / "steam" — paid, someone is being billed.
+  //   null               — granted.
+  //   undefined          — the server predates the field (it reaches
+  //                        staging at the next deploy), so we do not
+  //                        know. Callers must fall back to the PAID
+  //                        behaviour here: on an old server a grant is
+  //                        indistinguishable from a Stripe subscription,
+  //                        and treating everyone as granted would hide
+  //                        Cancel from paying subscribers.
+  // Test `=== null` and `=== undefined`, never `!provider` — that is true
+  // for both and collapses the two states that must not collapse.
+  //
+  // Loose `z.string()` rather than z.enum(["stripe", "steam"]), matching
+  // `status` above: a parse failure here fails the WHOLE /users/@me
+  // response (Api.ts logs and returns false, and the account view goes
+  // blank), so a future third rail must not be able to brick an older
+  // client. An unrecognised value is simply not `null`, which lands on
+  // the paid behaviour — the safe side.
+  provider: z.string().nullable().optional(),
+  // Who gave a GRANTED subscription: "steam", "admin" or
+  // "discord_role", and null on a paid one. Absent on a server that
+  // predates the field; see `isSteamGrant` for what that falls back to.
+  // Loose `z.string()` for the same reason as `provider`.
+  grantSource: z.string().nullable().optional(),
+  // On a PAID row whose next payment was moved later by a free month:
+  // "base" (OpenFront on Steam), "dlc" (the Deluxe Edition) or "gift" (the
+  // unused days of a grant it replaced). Loose for the same reason as
+  // `provider`; an unknown value is treated as not pushed.
+  renewalPushedBy: z.string().nullable().optional(),
+});
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
@@ -718,48 +761,16 @@ export const UserMeResponseSchema = z.object({
       )
       .optional(),
     friends: z.array(z.string()),
-    subscription: z
-      .object({
-        tier: z.string(),
-        status: z.string(),
-        currentPeriodEnd: z.coerce.date().nullable(),
-        cancelAtPeriodEnd: z.boolean(),
-        // Which rail is billing this subscription, and `null` means NOBODY IS:
-        // it is a grant (a free month from a Steam purchase, or an admin comp).
-        // The server branches on the same distinction — cancelling a grant has
-        // no period to run out, so it expires the subscription immediately and
-        // takes the premium username with it.
-        //
-        // Three states, and the client must keep all three apart:
-        //   "stripe" / "steam" — paid, someone is being billed.
-        //   null               — granted.
-        //   undefined          — the server predates the field (it reaches
-        //                        staging at the next deploy), so we do not
-        //                        know. Callers must fall back to the PAID
-        //                        behaviour here: on an old server a grant is
-        //                        indistinguishable from a Stripe subscription,
-        //                        and treating everyone as granted would hide
-        //                        Cancel from paying subscribers.
-        // Test `=== null` and `=== undefined`, never `!provider` — that is true
-        // for both and collapses the two states that must not collapse.
-        //
-        // Loose `z.string()` rather than z.enum(["stripe", "steam"]), matching
-        // `status` above: a parse failure here fails the WHOLE /users/@me
-        // response (Api.ts logs and returns false, and the account view goes
-        // blank), so a future third rail must not be able to brick an older
-        // client. An unrecognised value is simply not `null`, which lands on
-        // the paid behaviour — the safe side.
-        provider: z.string().nullable().optional(),
-        // Who gave a GRANTED subscription: "steam", "admin" or
-        // "discord_role", and null on a paid one. Absent on a server that
-        // predates the field; see `isSteamGrant` for what that falls back to.
-        // Loose `z.string()` for the same reason as `provider`.
-        grantSource: z.string().nullable().optional(),
-      })
-      .nullable(),
+    subscription: UserSubscriptionSchema.nullable(),
+    // Every entitled row, highest tier first: at most one paid and one grant.
+    // `subscription` is the first of them. Absent on an older server, and a
+    // malformed list reads as absent too, which falls back to `subscription`
+    // alone (see `subscriptionsOf`) rather than failing the whole parse.
+    subscriptions: z.array(UserSubscriptionSchema).optional().catch(undefined),
     // A Stripe subscription whose renewal failed and is still being retried,
-    // sent only when `subscription` is null. It entitles nothing, which is
-    // why it is not `subscription`: every caller reads that as "subscribed".
+    // sent whenever no PAID row is entitled (a grant may still be running).
+    // It entitles nothing, which is why it is not `subscription`: every
+    // caller reads that as "subscribed".
     // It exists so the account can say the payment failed and offer the
     // billing portal. Optional so an older API without the field still parses.
     pastDueSubscription: z.object({ tier: z.string() }).nullable().optional(),
@@ -869,6 +880,46 @@ export function isSteamGrant(
 ): boolean {
   if (!isGrantedSubscription(sub) || !sub?.currentPeriodEnd) return false;
   return sub.grantSource === "steam" || sub.grantSource === undefined;
+}
+
+type SubscriptionHolder = Pick<
+  UserMeResponse["player"],
+  "subscription" | "subscriptions"
+>;
+
+/**
+ * Every entitled row. An older server sends only `subscription`, which is
+ * then the one row there is.
+ */
+export function subscriptionsOf(
+  player: SubscriptionHolder,
+): UserSubscription[] {
+  if (player.subscriptions && player.subscriptions.length > 0) {
+    return player.subscriptions;
+  }
+  return player.subscription ? [player.subscription] : [];
+}
+
+/** The row someone is billed for, or null. Undefined `provider` counts as paid. */
+export function paidSubscriptionOf(
+  player: SubscriptionHolder,
+): UserSubscription | null {
+  return subscriptionsOf(player).find((s) => !isGrantedSubscription(s)) ?? null;
+}
+
+export function giftSubscriptionOf(
+  player: SubscriptionHolder,
+): UserSubscription | null {
+  return subscriptionsOf(player).find(isGrantedSubscription) ?? null;
+}
+
+export type RenewalPushedBy = "base" | "dlc" | "gift";
+
+export function renewalPushedBy(
+  sub: UserSubscription | null | undefined,
+): RenewalPushedBy | null {
+  const by = sub?.renewalPushedBy;
+  return by === "base" || by === "dlc" || by === "gift" ? by : null;
 }
 
 // PUT /users/@me/username success payload. `username` is the resolved display
