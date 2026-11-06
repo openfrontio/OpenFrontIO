@@ -292,36 +292,10 @@ export class UserSettingModal extends BaseModal {
     }
 
     const values = Object.entries(activeKeybinds)
-      .filter(([k]) => k !== action && !keysMayBeShared(action, k))
+      .filter(([k]) => k !== action && !keysMayBeShared(action, k, value))
       .map(([, v]) => v);
 
-    // Allow specific key pairs to share physical modifier keys without reporting conflict
-    const ALLOWED_SHARED_MODIFIERS: Array<{
-      actions: [string, string];
-      keyPrefix: string;
-    }> = [
-      // This is a tad ugly, but it's the only solution I found.
-      {
-        actions: ["buildScrollModifier", "emojiMenuModifier"],
-        keyPrefix: "Alt",
-      },
-      { actions: ["altKey", "emojiMenuModifier"], keyPrefix: "Alt" },
-      { actions: ["buildScrollModifier", "altKey"], keyPrefix: "Alt" },
-      { actions: ["boxSelectWarships", "shiftKey"], keyPrefix: "Shift" },
-    ];
-
-    const isAllowedSharedModifier = ALLOWED_SHARED_MODIFIERS.some(
-      ({ actions: [a1, a2], keyPrefix }) =>
-        ((action === a1 && activeKeybinds[a2] === value) ||
-          (action === a2 && activeKeybinds[a1] === value)) &&
-        (value === `${keyPrefix}Left` || value === `${keyPrefix}Right`),
-    );
-
-    if (
-      values.includes(value) &&
-      value !== "Null" &&
-      !isAllowedSharedModifier
-    ) {
+    if (values.includes(value) && value !== "Null") {
       const displayKey = formatKeyForDisplay(key || value);
       window.dispatchEvent(
         new CustomEvent("show-message", {
