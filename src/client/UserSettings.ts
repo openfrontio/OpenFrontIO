@@ -50,6 +50,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     donateGold: "KeyO",
     emojiMenu: "KeyF",
     quickChat: "KeyR",
+    playerPanel: "KeyI",
     swapDirection: "KeyU",
     zoomOut: "KeyQ",
     zoomIn: "KeyE",

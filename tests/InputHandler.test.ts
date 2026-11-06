@@ -26,6 +26,7 @@ import {
   RefreshGraphicsEvent,
   ShowChatMenuEvent,
   ShowEmojiMenuEvent,
+  ShowPlayerPanelEvent,
   TouchGhostPlacementDragStartEvent,
   TouchGhostPlacementEvent,
   TouchGhostPlacementMoveEvent,
@@ -1556,6 +1557,87 @@ describe("InputHandler AutoUpgrade", () => {
 
       expect(chats).toHaveLength(0);
       expect(refreshes).toHaveLength(1);
+    });
+  });
+
+  describe("Player panel keybind", () => {
+    beforeEach(() => {
+      inputHandler.destroy();
+      inputHandler = new InputHandler(
+        mockGameView,
+        {
+          attackRatio: 20,
+          ghostStructure: null,
+          rocketDirectionUp: true,
+          upgradeMultiplier: 1,
+        },
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+    });
+
+    afterEach(() => {
+      new UserSettings().removeCached(KEYBINDS_KEY, false);
+    });
+
+    test("I emits ShowPlayerPanelEvent with the last mouse position", () => {
+      const panels: ShowPlayerPanelEvent[] = [];
+      eventBus.on(ShowPlayerPanelEvent, (e) => panels.push(e));
+
+      window.dispatchEvent(
+        new MouseEvent("mousemove", { clientX: 50, clientY: 60 }),
+      );
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyI" }));
+
+      expect(panels).toEqual([expect.objectContaining({ x: 50, y: 60 })]);
+    });
+
+    test("I emits null coordinates before the first mousemove so an open panel can close", () => {
+      const panels: ShowPlayerPanelEvent[] = [];
+      eventBus.on(ShowPlayerPanelEvent, (e) => panels.push(e));
+
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyI" }));
+
+      expect(panels).toEqual([expect.objectContaining({ x: null, y: null })]);
+    });
+
+    test("Ctrl+I, Alt+I and Cmd+I don't emit ShowPlayerPanelEvent", () => {
+      const panels: ShowPlayerPanelEvent[] = [];
+      eventBus.on(ShowPlayerPanelEvent, (e) => panels.push(e));
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyI", ctrlKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyI", altKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyI", metaKey: true }),
+      );
+
+      expect(panels).toHaveLength(0);
+    });
+
+    test("Cmd+Option+I and Ctrl+Alt+I don't call preventDefault on keydown", () => {
+      const cmdOptI = new KeyboardEvent("keydown", {
+        code: "KeyI",
+        metaKey: true,
+        altKey: true,
+        cancelable: true,
+      });
+      const ctrlAltI = new KeyboardEvent("keydown", {
+        code: "KeyI",
+        ctrlKey: true,
+        altKey: true,
+        cancelable: true,
+      });
+
+      window.dispatchEvent(cmdOptI);
+      window.dispatchEvent(ctrlAltI);
+
+      expect(cmdOptI.defaultPrevented).toBe(false);
+      expect(ctrlAltI.defaultPrevented).toBe(false);
     });
   });
 

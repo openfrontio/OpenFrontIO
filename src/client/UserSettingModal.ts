@@ -1546,6 +1546,16 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
+        action="playerPanel"
+        label=${translateText("user_setting.player_panel")}
+        description=${translateText("user_setting.player_panel_desc")}
+        defaultKey=${this.defaultKeybinds.playerPanel}
+        .value=${this.getKeyValue("playerPanel")}
+        .display=${this.getKeyChar("playerPanel")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
         action="pauseGame"
         label=${translateText("user_setting.pause_game")}
         description=${translateText("user_setting.pause_game_desc")}
