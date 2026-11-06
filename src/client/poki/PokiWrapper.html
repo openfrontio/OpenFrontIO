@@ -1,0 +1,155 @@
+<!doctype html>
+<!--
+  The page we upload to Poki as our game build. It frames the game and holds
+  Poki's SDK, which the game calls over postMessage (PokiBridge.ts).
+  Leaving a game reloads the game's frame; Poki can't follow an SDK through a
+  reload, so the SDK stays here, inited once per session.
+
+  To upload: set GAME below (https://openfront.io for production,
+  https://poki.openfront.dev for staging), zip this one file as index.html,
+  and upload the zip as a new version in Poki for Developers. The game's build
+  doesn't include it.
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>OpenFront</title>
+    <style>
+      html,
+      body,
+      #f {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+      body {
+        overflow: hidden;
+      }
+      #f {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <iframe
+      id="f"
+      allow="fullscreen; autoplay; clipboard-write; web-share"
+    ></iframe>
+    <script>
+      var GAME = "https://openfront.io";
+
+      // Poki's params (site_id, poki_url, the gd* invite params) go on to the
+      // game, which reads the invite params itself. pokiBridge tells it to use
+      // this page's SDK rather than load its own.
+      var query = new URLSearchParams(location.search);
+      query.set("pokiBridge", "1");
+      f.src = GAME + "/?" + query;
+
+      var sdkLoaded = new Promise(function (resolve) {
+        var script = document.createElement("script");
+        script.src = "https://game-cdn.poki.com/scripts/v2/poki-sdk.js";
+        script.onload = function () {
+          resolve(window.PokiSDK !== undefined);
+        };
+        script.onerror = function () {
+          resolve(false);
+        };
+        document.head.appendChild(script);
+      });
+
+      // Each game load asks for these again; Poki gets them once.
+      var initDone = null;
+      var loadingFinished = false;
+      var gameplayActive = false;
+
+      function stopGameplay() {
+        if (!gameplayActive) return;
+        gameplayActive = false;
+        PokiSDK.gameplayStop();
+      }
+
+      function reply(message) {
+        f.contentWindow.postMessage(message, GAME);
+      }
+
+      // A Map, so names like "constructor" find nothing.
+      var methods = new Map(
+        Object.entries({
+          // Each game load says hello first, before any gameplayStart of its
+          // own; the load before it may have left mid-game without a stop.
+          hello: function () {
+            stopGameplay();
+            return sdkLoaded;
+          },
+          init: function () {
+            return initDone || (initDone = PokiSDK.init());
+          },
+          gameLoadingFinished: function () {
+            if (loadingFinished) return;
+            loadingFinished = true;
+            PokiSDK.gameLoadingFinished();
+          },
+          gameplayStart: function () {
+            if (gameplayActive) return;
+            gameplayActive = true;
+            PokiSDK.gameplayStart();
+          },
+          gameplayStop: stopGameplay,
+          commercialBreak: function (args, id) {
+            return PokiSDK.commercialBreak(function () {
+              reply({ ofPoki: true, id: id, event: "commercialBreakStart" });
+            });
+          },
+          shareableURL: function (args) {
+            return PokiSDK.shareableURL(args[0]);
+          },
+          openExternalLink: function (args) {
+            PokiSDK.openExternalLink(args[0]);
+          },
+          login: function () {
+            return PokiSDK.login();
+          },
+          getUser: function () {
+            return PokiSDK.getUser();
+          },
+          getToken: function () {
+            return PokiSDK.getToken();
+          },
+        }),
+      );
+
+      addEventListener("message", function (event) {
+        var message = event.data;
+        if (event.source !== f.contentWindow || event.origin !== GAME) return;
+        if (!message || message.ofPoki !== true) return;
+        var method = methods.get(message.method);
+        if (typeof method !== "function") return;
+        var id = message.id;
+        // Called here, next to the check, rather than in a callback, where
+        // CodeQL loses track of it. A throw (the SDK didn't load) is replied.
+        var result;
+        try {
+          result = Promise.resolve(method(message.args || [], id));
+        } catch (error) {
+          result = Promise.reject(error);
+        }
+        result.then(
+          function (result) {
+            if (id !== undefined)
+              reply({ ofPoki: true, id: id, result: result });
+          },
+          function (error) {
+            if (id === undefined) return;
+            reply({
+              ofPoki: true,
+              id: id,
+              error: String((error && error.message) || error),
+            });
+          },
+        );
+      });
+    </script>
+  </body>
+</html>
