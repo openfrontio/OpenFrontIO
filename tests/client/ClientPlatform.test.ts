@@ -9,7 +9,7 @@ const { onCrazyGames, onPoki, onViverse } = vi.hoisted(() => ({
 vi.mock("../../src/client/CrazyGamesSDK", () => ({
   crazyGamesSDK: { isOnCrazyGames: () => onCrazyGames.value },
 }));
-vi.mock("../../src/client/PokiSDK", () => ({
+vi.mock("../../src/client/poki/PokiSDK", () => ({
   pokiSDK: { isOnPoki: () => onPoki.value },
 }));
 vi.mock("../../src/client/ViverseSDK", () => ({

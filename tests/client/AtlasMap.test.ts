@@ -9,8 +9,8 @@ import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "../../resources/lang/en.json";
-import type { EarthMap } from "../../src/client/components/map/EarthMap";
-import "../../src/client/components/map/EarthMap";
+import type { AtlasMap } from "../../src/client/components/map/AtlasMap";
+import "../../src/client/components/map/AtlasMap";
 import {
   type MapDetails,
   type MapStats,
@@ -39,8 +39,8 @@ describe("mapStats", () => {
   });
 });
 
-describe("<earth-map>", () => {
-  let earth: EarthMap;
+describe("<atlas-map>", () => {
+  let atlas: AtlasMap;
   let frame: HTMLElement;
   let selected: GameMapType[];
   let scrolled: Element[];
@@ -56,12 +56,12 @@ describe("<earth-map>", () => {
       ),
     );
     selected = [];
-    earth = document.createElement("earth-map") as EarthMap;
-    earth.onSelectMap = (map) => selected.push(map);
-    document.body.appendChild(earth);
-    await earth.updateComplete;
+    atlas = document.createElement("atlas-map") as AtlasMap;
+    atlas.onSelectMap = (map) => selected.push(map);
+    document.body.appendChild(atlas);
+    await atlas.updateComplete;
     // jsdom does no layout and has no pointer capture.
-    frame = earth.querySelector<HTMLElement>("[data-earth-frame]")!;
+    frame = atlas.querySelector<HTMLElement>("[data-atlas-frame]")!;
     Object.defineProperty(frame, "clientWidth", { value: 1000 });
     frame.getBoundingClientRect = () => new DOMRect(0, 0, 1000, 652);
     frame.setPointerCapture = () => {};
@@ -73,13 +73,13 @@ describe("<earth-map>", () => {
   });
 
   afterEach(() => {
-    earth.remove();
+    atlas.remove();
     vi.unstubAllGlobals();
     delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
   });
 
   const pin = (id: string) =>
-    earth.querySelector<HTMLElement>(`[data-earth-pin="${id}"]`);
+    atlas.querySelector<HTMLElement>(`[data-atlas-pin="${id}"]`);
 
   function pointer(type: string, clientX: number) {
     frame.dispatchEvent(
@@ -107,8 +107,8 @@ describe("<earth-map>", () => {
   }
 
   it("pins every listed map that has a location", () => {
-    const pinned = [...earth.querySelectorAll("[data-earth-pin]")]
-      .map((p) => p.getAttribute("data-earth-pin"))
+    const pinned = [...atlas.querySelectorAll("[data-atlas-pin]")]
+      .map((p) => p.getAttribute("data-atlas-pin"))
       .sort();
 
     expect(pinned).toEqual(
@@ -124,8 +124,8 @@ describe("<earth-map>", () => {
     pin("Japan")!.click();
     expect(selected).toEqual([GameMapType.Japan]);
 
-    earth.selectedMap = GameMapType.Japan;
-    await earth.updateComplete;
+    atlas.selectedMap = GameMapType.Japan;
+    await atlas.updateComplete;
     expect(pin("Japan")!.getAttribute("aria-pressed")).toBe("true");
     expect(pin("Korea")!.getAttribute("aria-pressed")).toBe("false");
   });
@@ -144,11 +144,11 @@ describe("<earth-map>", () => {
     expect(wheel(100).defaultPrevented).toBe(false);
 
     expect(wheel(-100).defaultPrevented).toBe(true);
-    await earth.updateComplete;
+    await atlas.updateComplete;
     expect(wheel(100).defaultPrevented).toBe(true);
 
     for (let i = 0; i < 10; i++) wheel(-100);
-    await earth.updateComplete;
+    await atlas.updateComplete;
     expect(wheel(-100).defaultPrevented).toBe(false);
   });
 
@@ -156,8 +156,8 @@ describe("<earth-map>", () => {
   it("shows a pin's details outside the frame, on the side with room", async () => {
     const hover = async (id: string) => {
       pin(id)!.dispatchEvent(new PointerEvent("pointerenter"));
-      await earth.updateComplete;
-      return earth.querySelector<HTMLElement>('[role="tooltip"]')!;
+      await atlas.updateComplete;
+      return atlas.querySelector<HTMLElement>('[role="tooltip"]')!;
     };
 
     const hawaii = await hover("Hawaii");
@@ -170,23 +170,23 @@ describe("<earth-map>", () => {
     expect(scrolled).toEqual([]);
 
     pin("Japan")!.click();
-    await earth.updateComplete;
-    expect(scrolled).toContain(earth.querySelector('[role="tooltip"]'));
+    await atlas.updateComplete;
+    expect(scrolled).toContain(atlas.querySelector('[role="tooltip"]'));
   });
 
   it("pans a zoomed view and keeps it inside the world", async () => {
     wheel(-100);
-    await earth.updateComplete;
+    await atlas.updateComplete;
     const left = () => parseFloat(pin("Africa")!.style.left);
     const before = left();
 
     pointer("pointerdown", 400);
     pointer("pointermove", 300);
-    await earth.updateComplete;
+    await atlas.updateComplete;
     expect(left()).toBeLessThan(before);
 
     pointer("pointermove", -100_000);
-    await earth.updateComplete;
+    await atlas.updateComplete;
     expect(pin("Hawaii")).toBeNull();
     expect(pin("NewZealand")).not.toBeNull();
   });
@@ -243,7 +243,7 @@ describe("<map-details>", () => {
       .replace(/\s+/g, " ");
 
     expect(el.querySelector("button")).toBeTruthy();
-    expect(text).toBe("A narrow strait. Map maker: Mapmaker");
+    expect(text).toBe("A narrow strait. Map designer: Mapmaker");
   });
 
   it("shows the stats between description and author", async () => {
@@ -257,7 +257,7 @@ describe("<map-details>", () => {
       .replace(/\s+/g, " ");
 
     expect(text).toBe(
-      "1748×1420 1 nation 35% land ~45 players Map maker: Mapmaker",
+      "1748×1420 1 nation 35% land ~45 players Map designer: Mapmaker",
     );
   });
 });

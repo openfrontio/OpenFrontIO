@@ -32,6 +32,7 @@ vi.mock("../../src/client/ClientEnv", () => ({
 }));
 vi.mock("../../src/client/Auth", () => ({
   getPlayToken: async () => "8f1d2c3e-4b5a-4c6d-8e7f-90a1b2c3d4e5",
+  getPersistentID: () => "8f1d2c3e-4b5a-4c6d-8e7f-90a1b2c3d4e5",
 }));
 vi.mock("../../src/client/LocalServer", () => ({
   LocalServer: class {},

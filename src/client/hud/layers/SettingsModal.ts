@@ -351,6 +351,8 @@ export class SettingsModal extends LitElement implements Controller {
           </div>
 
           <div class="p-4 flex flex-col gap-3">
+            ${this.renderSaveRow()}
+
             <button
               type="button"
               data-open-graphics
@@ -362,7 +364,6 @@ export class SettingsModal extends LitElement implements Controller {
                 ${translateText("user_setting.tab_graphics")}
               </span>
             </button>
-            ${this.renderSaveRow()}
 
             <button
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
