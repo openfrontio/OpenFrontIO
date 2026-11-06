@@ -155,6 +155,12 @@ export class UsernameInput extends LitElement {
 
   // Clans aren't supported on portals — hide the tag input and never submit one.
   private readonly onGamePortal = gamePortal.isOnGamePortal();
+  // Whether the name is kept across page loads. Not on Poki or CrazyGames, so
+  // a logout (a reload) there drops the account name. VIVERSE keeps it like
+  // the web, so a name the player typed survives the next session; there the
+  // account name only replaces a name we put in (see applyPortalUsername).
+  private readonly keepsName =
+    !this.onGamePortal || gamePortal.name() === "viverse";
   // Steam identity is fixed for the session (no login/logout events like
   // the portals), so it's only used to seed the name once in connectedCallback.
   private readonly onSteam = steamSDK.isOnSteam();
@@ -655,24 +661,16 @@ export class UsernameInput extends LitElement {
     // ours to overwrite; a name the player typed never is.
     const reseedable = this.onSteam && this.storedNameIsGenerated();
     this.loadStoredUsername();
-    // On a portal the account username is applied here but never persisted
-    // (see loadStoredUsername / validateAndStore), so logging out — which
-    // reloads the whole page — falls back to a fresh guest username instead of
-    // keeping the account name. addAuthListener only fires on login; portals
-    // refresh the page on logout, so there is no logout event to handle.
+    // On Poki and CrazyGames the account username is applied here but never
+    // persisted (see keepsName), so logging out — which reloads the whole page
+    // — falls back to a fresh guest username instead of keeping the account
+    // name. addAuthListener only fires on login; portals refresh the page on
+    // logout, so there is no logout event to handle.
     void gamePortal.getUsername().then((username) => {
-      if (username) {
-        this.baseUsername = clampUsername(username);
-        this.usernameIsGenerated = false;
-        this.validateAndStore();
-      }
+      if (username) this.applyPortalUsername(username);
     });
     void gamePortal.addAuthListener((user) => {
-      if (user) {
-        this.baseUsername = clampUsername(user.username);
-        this.usernameIsGenerated = false;
-        this.validateAndStore();
-      }
+      if (user) this.applyPortalUsername(user.username);
     });
     // Seed the in-game name from the Steam persona whenever the name in hand
     // is one we generated. Unlike the portals, Steam persists normally (see
@@ -755,14 +753,26 @@ export class UsernameInput extends LitElement {
     }
   }
 
+  // Where the name is kept (VIVERSE), the account name stands in for a name we
+  // generated but never for one the player typed, and stays ours to replace,
+  // so another account signing in on this browser gets its own name.
+  private applyPortalUsername(username: string) {
+    if (this.keepsName && !this.usernameIsGenerated) return;
+    this.baseUsername = clampUsername(username);
+    this.usernameIsGenerated = this.keepsName;
+    this.validateAndStore();
+  }
+
   private loadStoredUsername() {
-    // On a portal the username is never persisted, so ignore any stored value
+    // Where the username isn't kept (see keepsName), ignore any stored value
     // and start from a fresh guest name; the account name (if signed in) is
     // applied afterwards in connectedCallback.
-    const storedUsername = this.onGamePortal
-      ? null
-      : localStorage.getItem(usernameKey);
-    if (storedUsername) {
+    const storedUsername = this.keepsName
+      ? localStorage.getItem(usernameKey)
+      : null;
+    // Clans aren't supported on portals, so only the web restores a tag.
+    const restoresClan = storedUsername !== null && !this.onGamePortal;
+    if (restoresClan) {
       this.clanTag = localStorage.getItem(clanTagKey) ?? "";
     }
     // No persona yet — it arrives asynchronously and reseeds in
@@ -779,7 +789,7 @@ export class UsernameInput extends LitElement {
       ? this.storedNameIsGenerated()
       : resolved.source === "generated";
     this.validateAndStore();
-    if (storedUsername) this.startClanCheck();
+    if (restoresClan) this.startClanCheck();
   }
 
   // Whether the name already in localStorage is one we generated.
@@ -1260,9 +1270,10 @@ export class UsernameInput extends LitElement {
     const result = validateUsername(trimmedBase);
     this._isValid = result.isValid;
     if (result.isValid) {
-      // Never persist on a portal: keeping localStorage empty means a logout
-      // (page reload) restores a guest username instead of the account name.
-      if (!this.onGamePortal) {
+      // Not on Poki or CrazyGames (see keepsName): keeping localStorage empty
+      // means a logout (page reload) restores a guest username instead of the
+      // account name.
+      if (this.keepsName) {
         localStorage.setItem(usernameKey, trimmedBase);
         // Written with the name, never separately: a stale flag would either
         // strand a player on a generated name or overwrite one they chose.
@@ -1270,6 +1281,8 @@ export class UsernameInput extends LitElement {
           usernameIsGeneratedKey,
           String(this.usernameIsGenerated),
         );
+      }
+      if (!this.onGamePortal) {
         localStorage.setItem(clanTagKey, this.getClanTag() ?? "");
       }
       this.validationError = "";
