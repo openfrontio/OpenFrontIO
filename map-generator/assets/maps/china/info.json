@@ -6,6 +6,7 @@
   "categories": ["countries", "asia"],
   "location": { "lat": 33, "lon": 105 },
   "author": "crunchybbb",
+  "description": "China (officially the People's Republic of China, or PRC) is the world's most populous nation alongside India, the second-largest global economy, and a major geopolitical power located in East Asia. ",
   "nations": [
     {
       "coordinates": [1737, 1732],

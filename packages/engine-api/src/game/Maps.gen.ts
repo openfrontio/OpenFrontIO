@@ -723,6 +723,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 34,
     themes: ["asia"],
     author: "crunchybbb",
+    descriptionKey: "map_description.china",
     location: { lat: 33, lon: 105 },
   },
   {
@@ -1414,6 +1415,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 71,
     themes: ["asia"],
     author: "crunchybbb",
+    descriptionKey: "map_description.hongkong",
     location: { lat: 22.3, lon: 114.2 },
   },
   {
@@ -1497,6 +1499,7 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 2,
     themes: ["asia"],
     author: "crunchybbb",
+    descriptionKey: "map_description.korea",
     location: { lat: 36.5, lon: 127.8 },
   },
   {
@@ -1515,6 +1518,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 34,
     themes: ["north_america", "western"],
     author: "crunchybbb",
+    descriptionKey: "map_description.lasvegasstrip",
     location: { lat: 36.1, lon: -115.2 },
   },
   {
@@ -1982,6 +1986,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 24,
     themes: ["europe"],
     author: "crunchybbb",
+    descriptionKey: "map_description.scandinavia",
     location: { lat: 63, lon: 15 },
   },
   {
@@ -2131,7 +2136,8 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 25,
     specialTeamCount: 2,
     themes: ["asia"],
-    author: "Tristar",
+    author: "Tristar, crunchybbb",
+    descriptionKey: "map_description.taiwanstrait",
     location: { lat: 24.5, lon: 119.5 },
   },
   {
@@ -2261,6 +2267,7 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 2,
     themes: ["asia"],
     author: "crunchybbb",
+    descriptionKey: "map_description.vietnam",
     location: { lat: 16, lon: 106.5 },
   },
   {
@@ -2297,7 +2304,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 9,
     author: "crunchybbb",
     descriptionKey: "map_description.yangtzeriver",
-    location: { lat: 30.5, lon: 114.3 },
+    location: { lat: 32, lon: 119.3 },
   },
   {
     id: "YellowSea",
