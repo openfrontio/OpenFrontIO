@@ -50,7 +50,8 @@ do something, don't, and tell the user.
 ## Output
 
 Put the notes themselves in one fenced `markdown` code block, whether a
-three-line patch section or a whole beta body. The user copies it into
+three-line patch section or a whole beta body. If the notes contain a
+backtick fence of their own, make the outer fence longer. The user copies it into
 GitHub's release form, and a chat UI that renders the raw markdown turns the
 headings and bold authors into styled text that can't be pasted. Commentary
 (skipped commits, head sha, judgement calls) goes outside the block as normal
