@@ -2,6 +2,7 @@ import {
   giftSubscriptionOf,
   isGrantedSubscription,
   paidSubscriptionOf,
+  subscriptionsOf,
   UserMeResponse,
   UserSubscription,
 } from "@openfront/shared/ApiSchemas";
@@ -1495,6 +1496,13 @@ export function resolveCosmetics(
   // A flare is untouched by this: it is a permanent unlock, not a month, and
   // there is genuinely nothing to sell someone who holds one.
   const grantIsCurrent = isGrantedSubscription(currentSub);
+  // infra adds a `subscription:<tier>` flare for every row held, gift rows
+  // included, so for a held tier the flare says nothing the rows don't.
+  const heldTiers = new Set(
+    userMeResponse === false
+      ? []
+      : subscriptionsOf(userMeResponse.player).map((s) => s.tier),
+  );
   for (const [subKey, sub] of Object.entries(cosmetics.subscriptions ?? {})) {
     const key = `subscription:${subKey}`;
     // `subscriptions` is this rail's storefront, so every tier in it is for
@@ -1503,7 +1511,9 @@ export function resolveCosmetics(
     // (see currency packs above). If a rail cannot sell it, checkout says so.
     const isCurrentTier = subKey === currentSubTier;
     const demoteGrant = grantIsCurrent && isCurrentTier;
-    const isCurrent = flares.includes(key) || (isCurrentTier && !demoteGrant);
+    const isCurrent =
+      (flares.includes(key) && !heldTiers.has(subKey)) ||
+      (isCurrentTier && !demoteGrant);
     const rel: ResolvedCosmetic["relationship"] = isCurrent
       ? "owned"
       : "purchasable";
