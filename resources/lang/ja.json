@@ -310,7 +310,7 @@
     "warnings": {
       "betrayed": "[P1]は味方を裏切った！",
       "betrayed_me": "[P1]が私を裏切った！",
-      "cheating": "[P1] はチートを使っている！",
+      "pirating": "[P1]が貿易船を襲ってるぞ！",
       "danger_base": "[P1]は無防備だ！",
       "disconnected": "[P1]が寝たよ！",
       "getting_big": "[P1]の成長が速すぎる！",
@@ -345,7 +345,7 @@
     "boost_error_failed": "ブーストに失敗しました。もう一度お試しください。",
     "boost_error_forbidden": "クランをブーストできるのは、オフィサーとリーダーのみです。",
     "boost_error_insufficient_balance": "このブーストに必要な{currency}がクランの残高に不足しています。",
-    "boost_error_key_conflict": "先ほどの購入がすでに完了している可能性があります。",
+    "boost_error_key_conflict": "先ほどの購入がすでに完了している可能性があります。再度購入する前に、一度画面を閉じて開き直し、購入状況を確認してください。",
     "boost_error_not_enough_members": "ブーストするには、クランのメンバーが最低{min}人必要です。",
     "boost_error_not_recently_active": "クランメンバーのうち1人以上が、過去7日以内に公開試合をプレイしている必要があります。",
     "boost_error_unknown_tier": "このブーストは現在利用できません。画面を閉じて開き直し、最新の選択肢を確認してください。",
