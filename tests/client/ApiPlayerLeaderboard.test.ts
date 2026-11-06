@@ -69,6 +69,37 @@ describe("fetchPlayerLeaderboard", () => {
     });
   });
 
+  it("keeps the FFA season", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      res({
+        "1v1": [entry(1)],
+        ffaSeason: { number: 1, startDate: "2026-11-09" },
+      }),
+    );
+
+    const result = await fetchPlayerLeaderboard(1);
+
+    expect(result).toMatchObject({
+      ffaSeason: { number: 1, startDate: "2026-11-09" },
+    });
+  });
+
+  it("drops a season with a malformed date, and keeps the page", async () => {
+    for (const startDate of ["soon", "2026-13-45", ""]) {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        res({ "1v1": [entry(1)], ffaSeason: { number: 1, startDate } }),
+      );
+
+      const result = await fetchPlayerLeaderboard(1);
+
+      if (result === false || result === "reached_limit") {
+        throw new Error("expected a parsed page");
+      }
+      expect(result.ffaSeason).toBeUndefined();
+      expect(result["1v1"]).toHaveLength(1);
+    }
+  });
+
   it("requests the page it was asked for", async () => {
     const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
     fetchMock.mockResolvedValueOnce(res({ "1v1": [], "2v2": [] }));
