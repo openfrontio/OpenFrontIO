@@ -105,3 +105,27 @@ export async function showSteamSkinDrop(
   }
   return (await find()?.show(resolved)) ?? "abandoned";
 }
+
+/**
+ * Resolves the drop and decides whether the homepage is still clean, in an
+ * order that cannot go stale: check, fetch the catalog, check again with
+ * nothing awaited after. A join that starts during the fetch leaves
+ * `cleanHomepage` false, so no interrupt opens over a starting game. The
+ * catalog is fetched only on a clean page, for a drop due this launch.
+ */
+export async function steamSkinDropWhenClean(
+  drop: SteamSkinDrop | null | undefined,
+  homepageIsClean: () => boolean,
+  fetchCatalog: () => Promise<Cosmetics | null>,
+  resolve: (cosmetics: Cosmetics | null) => ResolvedCosmetic[],
+): Promise<{
+  steamSkinDrop: { notice: string; resolved: ResolvedCosmetic } | null;
+  cleanHomepage: boolean;
+}> {
+  const due =
+    drop && homepageIsClean() && steamSkinDropDueThisLaunch(drop.notice);
+  const steamSkinDrop = due
+    ? await steamSkinDropFor(drop, fetchCatalog, resolve)
+    : null;
+  return { steamSkinDrop, cleanHomepage: homepageIsClean() };
+}

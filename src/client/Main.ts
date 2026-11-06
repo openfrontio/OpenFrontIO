@@ -49,8 +49,8 @@ import {
 import type { JoinLobbyResult } from "./ClientGameRunner";
 import {
   broadcastFreshUserMe,
-  getPlayerCosmeticsRefs,
   fetchCosmetics,
+  getPlayerCosmeticsRefs,
   handlePurchaseReturn,
   resolveCosmetics,
   selectedPatternNameFor,
@@ -149,8 +149,7 @@ import { steamNoticeDue, steamNoticeStringsReady } from "./SteamNotices";
 import { steamSDK } from "./SteamSDK";
 import {
   showSteamSkinDrop,
-  steamSkinDropDueThisLaunch,
-  steamSkinDropFor,
+  steamSkinDropWhenClean,
   steamSkinDropStringsReady,
 } from "./SteamSkinDrop";
 import type { SteamSkinDropModal } from "./SteamSkinDropModal";
@@ -934,12 +933,13 @@ class Client {
         // still sees a pristine URL — the join only rewrites it once
         // lobbyHandle.join resolves — so without it the confirm opens on top
         // of a game that is starting.
-        const cleanHomepage = bootInterruptsAllowed(
-          window.location,
-          isDesktopShell(),
-          { joinInFlight: this.joinInFlight, lobbyHandle: this.lobbyHandle },
-          getDesktopUpdateState(),
-        );
+        const homepageIsClean = () =>
+          bootInterruptsAllowed(
+            window.location,
+            isDesktopShell(),
+            { joinInFlight: this.joinInFlight, lobbyHandle: this.lobbyHandle },
+            getDesktopUpdateState(),
+          );
 
         // One interrupt per boot, chosen by the ordering in BootInterrupts —
         // not by which branch happens to be written first here.
@@ -955,14 +955,14 @@ class Client {
           Date.now(),
         );
         // The catalog is read only for a drop that could actually show, so
-        // every other player skips the request.
-        const drop = userMeResponse.steamSkinDrop;
-        const steamSkinDrop =
-          cleanHomepage && drop && steamSkinDropDueThisLaunch(drop.notice)
-            ? await steamSkinDropFor(drop, fetchCosmetics, (cosmetics) =>
-                resolveCosmetics(cosmetics, userMeResponse, null),
-              )
-            : null;
+        // every other player skips the request. The page is checked again once
+        // it lands: a join can start during the fetch.
+        const { steamSkinDrop, cleanHomepage } = await steamSkinDropWhenClean(
+          userMeResponse.steamSkinDrop,
+          homepageIsClean,
+          fetchCosmetics,
+          (cosmetics) => resolveCosmetics(cosmetics, userMeResponse, null),
+        );
         await runBootInterrupt(
           nextBootInterrupt({
             cleanHomepage,

@@ -52,8 +52,7 @@ import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 import { LAPSE_NOTICE_KEY } from "../../src/client/PlayerName";
 import {
   resetSteamSkinDropForTest,
-  steamSkinDropDueThisLaunch,
-  steamSkinDropFor,
+  steamSkinDropWhenClean,
 } from "../../src/client/SteamSkinDrop";
 import { UsernameInput } from "../../src/client/UsernameInput";
 
@@ -221,21 +220,26 @@ describe("the Steam skin drop in the boot sequence", () => {
   } as ResolvedCosmetic;
 
   // Main's wiring, reduced: the same helper and the same ordering call.
-  async function boot(catalog: ResolvedCosmetic[], rewardCount: number) {
+  async function boot(
+    catalog: ResolvedCosmetic[],
+    rewardCount: number,
+    homepageIsClean: () => boolean = () => true,
+    fetchCatalog: () => Promise<Cosmetics | null> = async () =>
+      ({}) as Cosmetics,
+  ) {
     const calls = {
       opened: [] as ResolvedCosmetic[],
       seen: [] as string[],
       rewardsOpened: 0,
     };
-    const steamSkinDrop = steamSkinDropDueThisLaunch(drop.notice)
-      ? await steamSkinDropFor(
-          drop,
-          async () => ({}) as Cosmetics,
-          () => catalog,
-        )
-      : null;
+    const { steamSkinDrop, cleanHomepage } = await steamSkinDropWhenClean(
+      drop,
+      homepageIsClean,
+      fetchCatalog,
+      () => catalog,
+    );
     const interrupt = nextBootInterrupt({
-      cleanHomepage: true,
+      cleanHomepage,
       usernameStatus: "claimed",
       username: "p",
       usernameBase: "p",
@@ -299,5 +303,23 @@ describe("the Steam skin drop in the boot sequence", () => {
     expect(result.seen).toEqual([]);
     expect(result.interrupt).toBe("rewards");
     expect(result.rewardsOpened).toBe(1);
+  });
+
+  it("a join starting during the catalog fetch means no popup, nothing marked seen", async () => {
+    let clean = true;
+    let land: (c: Cosmetics) => void = () => {};
+    const fetchCatalog = () =>
+      new Promise<Cosmetics | null>((resolve) => {
+        land = resolve;
+      });
+    const booting = boot([entry], 1, () => clean, fetchCatalog);
+    // The player clicks Join while the catalog is still on the wire.
+    clean = false;
+    land({} as Cosmetics);
+    const result = await booting;
+    expect(result.interrupt).toBeNull();
+    expect(result.opened).toEqual([]);
+    expect(result.seen).toEqual([]);
+    expect(result.rewardsOpened).toBe(0);
   });
 });
