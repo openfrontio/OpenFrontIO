@@ -1,3 +1,4 @@
+import { LobbyInvite } from "@openfront/shared/LobbyInviteSchemas";
 import {
   MAX_HOSTED_LOBBIES,
   PublicGameType,
@@ -21,6 +22,7 @@ import {
   CoordinatorUpdateLobby,
   LobbyCoordinatorClient,
 } from "./LobbyCoordinatorClient";
+import { LobbyInviteService } from "./LobbyInviteService";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { startPolling } from "./PollingLoop";
@@ -117,12 +119,14 @@ export class MasterLobbyService {
           this.coordinator?.report(this.ownLobbies(), this.liveGames());
           break;
         case "lobbyInvite":
+          LobbyInviteService.instance.addExternalInvite(msg.invite);
           this.broadcastMessage({
             type: "lobbyInviteBroadcast",
             invite: msg.invite,
           });
           break;
         case "lobbyInviteDismiss":
+          LobbyInviteService.instance.dismissExternalInvite(msg.inviteId);
           this.broadcastMessage({
             type: "lobbyInviteDismissBroadcast",
             inviteId: msg.inviteId,
@@ -158,6 +162,20 @@ export class MasterLobbyService {
         }
       });
     }
+  }
+
+  broadcastLobbyInvite(invite: LobbyInvite): void {
+    this.broadcastMessage({
+      type: "lobbyInviteBroadcast",
+      invite,
+    });
+  }
+
+  broadcastLobbyInviteDismiss(inviteId: string): void {
+    this.broadcastMessage({
+      type: "lobbyInviteDismissBroadcast",
+      inviteId,
+    });
   }
 
   removeWorker(workerId: number) {

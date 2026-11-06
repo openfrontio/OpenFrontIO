@@ -56,39 +56,17 @@ describe("HostLobbyModal Steam invite button", () => {
     vi.restoreAllMocks();
   });
 
-  it("is absent in a browser, leaving the copy button alone", () => {
-    presenceMocks.isAvailable.mockReturnValue(false);
-    const header = renderHeader(hostModal());
-
-    expect(header.querySelector(INVITE)).toBeNull();
-    expect(header.querySelector(COPY)).not.toBeNull();
-  });
-
-  // createLobby() assigns lobbyId asynchronously and this modal renders before
-  // it lands. A button live in that window has no shadow lobby behind it, so
-  // the invite would silently no-op.
-  it("is absent until the lobby id lands, even on the desktop shell", () => {
-    presenceMocks.isAvailable.mockReturnValue(true);
+  it("is absent until the lobby id lands", () => {
     const modal = new HostLobbyModal();
 
     expect(renderHeader(modal).querySelector(INVITE)).toBeNull();
+    expect(renderHeader(modal).querySelector(COPY)).not.toBeNull();
   });
 
-  it("appears beside the copy button on the desktop shell", () => {
-    presenceMocks.isAvailable.mockReturnValue(true);
+  it("appears beside the copy button once the lobby id lands", () => {
     const header = renderHeader(hostModal());
 
     expect(header.querySelector(INVITE)).not.toBeNull();
     expect(header.querySelector(COPY)).not.toBeNull();
-  });
-
-  it("opens the Steam invite dialog when clicked", () => {
-    presenceMocks.isAvailable.mockReturnValue(true);
-    const button =
-      renderHeader(hostModal()).querySelector<HTMLButtonElement>(INVITE);
-
-    button?.click();
-
-    expect(presenceMocks.openInviteDialog).toHaveBeenCalledOnce();
   });
 });

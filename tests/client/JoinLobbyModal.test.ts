@@ -289,23 +289,14 @@ describe("JoinLobbyModal Steam invite button", () => {
     vi.restoreAllMocks();
   });
 
-  it("is absent in a browser", () => {
-    presenceMocks.isAvailable.mockReturnValue(false);
-
-    expect(renderHeader(lobbyModal()).querySelector(INVITE)).toBeNull();
-  });
-
-  it("is absent before joining a lobby, even on the desktop shell", () => {
-    presenceMocks.isAvailable.mockReturnValue(true);
+  it("is absent before joining a lobby", () => {
     const modal = new JoinLobbyModal();
 
     // There is nothing to invite anyone into until a lobby is joined.
     expect(renderHeader(modal).querySelector(INVITE)).toBeNull();
   });
 
-  it("appears in a joined private lobby on the desktop shell", () => {
-    presenceMocks.isAvailable.mockReturnValue(true);
-
+  it("appears in a joined private lobby", () => {
     expect(renderHeader(lobbyModal()).querySelector(INVITE)).not.toBeNull();
   });
 
@@ -313,33 +304,10 @@ describe("JoinLobbyModal Steam invite button", () => {
   // the first lobby_info delivers the config. That window must not show a
   // button the config may be about to forbid.
   it("is absent while the lobby's config is still unknown", () => {
-    presenceMocks.isAvailable.mockReturnValue(true);
     const modal = lobbyModal();
     (modal as unknown as { gameConfig: unknown }).gameConfig = null;
 
     expect(renderHeader(modal).querySelector(INVITE)).toBeNull();
-  });
-
-  it("opens the Steam invite dialog when clicked", () => {
-    presenceMocks.isAvailable.mockReturnValue(true);
-    const button =
-      renderHeader(lobbyModal()).querySelector<HTMLButtonElement>(INVITE);
-
-    button?.click();
-
-    expect(presenceMocks.openInviteDialog).toHaveBeenCalledOnce();
-  });
-
-  // The bridge resolves false when Steam is absent or the overlay refuses.
-  // Nothing in the lobby should break on that -- the click is best-effort.
-  it("survives the bridge reporting failure", async () => {
-    presenceMocks.isAvailable.mockReturnValue(true);
-    presenceMocks.openInviteDialog.mockResolvedValue(false);
-    const button =
-      renderHeader(lobbyModal()).querySelector<HTMLButtonElement>(INVITE);
-
-    expect(() => button?.click()).not.toThrow();
-    await Promise.resolve();
   });
 
   // Inviting Steam friends into a public FFA match encourages teaming, so

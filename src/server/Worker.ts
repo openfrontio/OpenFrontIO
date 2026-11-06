@@ -56,12 +56,11 @@ import { logger } from "./Logger";
 import { registerPlayerProfileRoute } from "./PlayerProfileRoute";
 import { resolveVerifiedJoin } from "./Privilege";
 
-import {
-  DismissLobbyInviteInputSchema,
-  SendLobbyInviteInputSchema,
-} from "@openfront/shared/LobbyInviteSchemas";
 import { loadGatekeeper } from "./Gatekeeper";
-import { LobbyInviteService } from "./LobbyInviteService";
+import {
+  LobbyInviteService,
+  registerLobbyInviteRoutes,
+} from "./LobbyInviteService";
 import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
@@ -591,78 +590,11 @@ export async function startWorker() {
     },
   );
 
-  app.post("/api/lobby/invite", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Authorization header required" });
-    }
-    const token = authHeader.substring("Bearer ".length);
-    const auth = await verifyClientToken(token);
-    if (auth.type !== "success") {
-      return res.status(401).json({ error: "Invalid token" });
-    }
-
-    const parsed = SendLobbyInviteInputSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: z.prettifyError(parsed.error) });
-    }
-
-    const invite = LobbyInviteService.instance.createInvite(parsed.data);
-    res.json({ ok: true, invite });
-  });
-
-  app.get("/api/lobby/invites", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Authorization header required" });
-    }
-    const token = authHeader.substring("Bearer ".length);
-    const auth = await verifyClientToken(token);
-    if (auth.type !== "success") {
-      return res.status(401).json({ error: "Invalid token" });
-    }
-
-    const publicId = req.query.publicId;
-    if (typeof publicId !== "string" || !publicId) {
-      return res
-        .status(400)
-        .json({ error: "publicId query parameter required" });
-    }
-
-    const invites = LobbyInviteService.instance.getInvitesForUser(
-      publicId,
-      (gameId) => {
-        const game = gm.game(gameId);
-        return (
-          game === null ||
-          (game.phase() === GamePhase.Lobby && !game.hasStarted())
-        );
-      },
+  registerLobbyInviteRoutes(app, (gameId) => {
+    const game = gm.game(gameId);
+    return (
+      game === null || (game.phase() === GamePhase.Lobby && !game.hasStarted())
     );
-    res.json({ invites });
-  });
-
-  app.post("/api/lobby/invites/dismiss", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Authorization header required" });
-    }
-    const token = authHeader.substring("Bearer ".length);
-    const auth = await verifyClientToken(token);
-    if (auth.type !== "success") {
-      return res.status(401).json({ error: "Invalid token" });
-    }
-
-    const parsed = DismissLobbyInviteInputSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: z.prettifyError(parsed.error) });
-    }
-
-    const ok = LobbyInviteService.instance.dismissInvite(
-      parsed.data.publicId,
-      parsed.data.inviteId,
-    );
-    res.json({ ok });
   });
 
   // WebSocket handling

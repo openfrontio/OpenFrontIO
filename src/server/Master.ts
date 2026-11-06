@@ -19,6 +19,10 @@ import {
   coordinatorUrl,
   LobbyCoordinatorClient,
 } from "./LobbyCoordinatorClient";
+import {
+  LobbyInviteService,
+  registerLobbyInviteRoutes,
+} from "./LobbyInviteService";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { fetchMapWeights, MAP_WEIGHTS_POLL_MS } from "./MapWeights";
@@ -322,6 +326,11 @@ export async function startMaster() {
       playlist.setWeights(await fetchMapWeights());
     }, MAP_WEIGHTS_POLL_MS);
   }
+  LobbyInviteService.instance.setBroadcasters(
+    (invite) => lobbyService?.broadcastLobbyInvite(invite),
+    (inviteId) => lobbyService?.broadcastLobbyInviteDismiss(inviteId),
+  );
+  registerLobbyInviteRoutes(app);
 }
 
 app.get("/api/health", (_req, res) => {
