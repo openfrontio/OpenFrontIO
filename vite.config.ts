@@ -41,7 +41,6 @@ const clientForksTests = [
   "tests/client/MainInitialize.test.ts",
   "tests/client/Matchmaking.test.ts",
   "tests/client/Platform.test.ts",
-  "tests/client/PokiSDK.test.ts",
   "tests/client/ServerList.test.ts",
   "tests/client/ShareLinks.test.ts",
   "tests/client/TransportConnectionRefused.test.ts",
@@ -50,6 +49,7 @@ const clientForksTests = [
   "tests/client/UsernameBareClaim.test.ts",
   "tests/client/UsernameClaimPrefill.test.ts",
   "tests/client/graphics/layers/WinModal.test.ts",
+  "tests/client/poki/PokiSDK.test.ts",
 ];
 
 // Dev-only: resources/public/ is served at the site root, as the build copies
