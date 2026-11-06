@@ -84,7 +84,6 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
 const SHARED_KEY_ACTIONS: ReadonlyArray<readonly [string, string, string?]> = [
   ["quickChat", "resetGfx"],
   // Allow only the intended physical modifier pairs to share a key.
-  // This is a tad ugly, but it's the only solution I found.
   ["buildScrollModifier", "emojiMenuModifier", "Alt"],
   ["altKey", "emojiMenuModifier", "Alt"],
   ["buildScrollModifier", "altKey", "Alt"],
