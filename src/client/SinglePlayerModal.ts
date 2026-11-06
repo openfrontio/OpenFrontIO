@@ -641,7 +641,9 @@ export class SinglePlayerModal extends BaseModal {
         </div>
 
         <!-- Footer Action -->
-        <div class="p-6 border-t border-white/10 bg-black/20 shrink-0">
+        <div
+          class="p-6 compact:py-3 border-t border-white/10 bg-black/20 shrink-0"
+        >
           ${
             responseHasLinkedIdentity(this.userMeResponse) &&
             this.hasOptionsChanged()
