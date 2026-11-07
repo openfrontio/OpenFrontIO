@@ -553,7 +553,7 @@ export class GPURenderer {
     );
 
     // --- Range circle (ghost preview radius) ---
-    this.rangeCirclePass = new RangeCirclePass(gl);
+    this.rangeCirclePass = new RangeCirclePass(gl, this.settings);
 
     // --- SAM radius overlay (dashed green circles during build mode) ---
     this.samRadiusPass = new SAMRadiusPass(gl, mapW, this.settings);

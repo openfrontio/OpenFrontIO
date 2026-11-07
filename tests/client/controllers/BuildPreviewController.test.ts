@@ -6,7 +6,15 @@ import {
   samThreatensNukePreview,
   shouldPreserveGhostAfterBuild,
 } from "../../../src/client/controllers/BuildPreviewController";
-import { MouseMoveEvent, MouseUpEvent } from "../../../src/client/InputHandler";
+import {
+  ConfirmGhostStructureEvent,
+  MouseMoveEvent,
+  MouseUpEvent,
+  TouchGhostPlacementDragStartEvent,
+  TouchGhostPlacementEvent,
+  TouchGhostPlacementSelectEvent,
+  ToggleStructureEvent,
+} from "../../../src/client/InputHandler";
 import { BuildUnitIntentEvent } from "../../../src/client/Transport";
 
 describe("BuildPreviewController ghost preservation (locked nuke / Enter confirm)", () => {
@@ -77,6 +85,69 @@ describe("samThreatensNukePreview (nuke trajectory threat set, #4226)", () => {
   });
 });
 
+describe("BuildPreviewController nuke range warning", () => {
+  // Each ally owns a structure inside the blast, so the strike breaks every
+  // alliance; the warning level depends on whether that marks us a traitor.
+  function checkRangeWarning(
+    allies: { isTraitor: boolean; isDisconnected: boolean }[],
+  ) {
+    const allyPlayers = allies.map((ally, i) => ({
+      smallID: () => i + 2,
+      isPlayer: () => true,
+      isTraitor: () => ally.isTraitor,
+      isDisconnected: () => ally.isDisconnected,
+    }));
+    const game = {
+      myPlayer: () => ({ smallID: () => 1, allies: () => allyPlayers }),
+      config: () => ({
+        nukeMagnitudes: () => ({ inner: 1, outer: 2 }),
+        nukeAllianceBreakThreshold: () => 0,
+      }),
+      anyUnitNearby: (
+        _tile: number,
+        _radius: number,
+        _types: unknown,
+        predicate: (unit: unknown) => boolean,
+      ) => allyPlayers.some((owner) => predicate({ owner: () => owner })),
+      circleSearch: () => {},
+    };
+    const controller = new BuildPreviewController(
+      game as any,
+      new EventBus(),
+      { ghostStructure: UnitType.AtomBomb } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    ) as any;
+    controller.ghostUnit = { buildableUnit: { type: UnitType.AtomBomb } };
+    return controller.checkRangeWarning(0);
+  }
+
+  const loyal = { isTraitor: false, isDisconnected: false };
+  const traitor = { isTraitor: true, isDisconnected: false };
+  const disconnected = { isTraitor: false, isDisconnected: true };
+
+  test("no warning when no ally is hit", () => {
+    expect(checkRangeWarning([])).toBe("none");
+  });
+
+  test("betraying a connected, non-traitor ally marks us a traitor", () => {
+    expect(checkRangeWarning([loyal])).toBe("traitor");
+  });
+
+  test("hitting a traitor ally only breaks the alliance", () => {
+    expect(checkRangeWarning([traitor])).toBe("breaksAlliance");
+  });
+
+  test("hitting a disconnected ally only breaks the alliance", () => {
+    expect(checkRangeWarning([disconnected])).toBe("breaksAlliance");
+  });
+
+  test("the traitor mark wins when both kinds of ally are hit", () => {
+    expect(checkRangeWarning([traitor, loyal])).toBe("traitor");
+  });
+});
+
 describe("BuildPreviewController confirm with the pointer off the map", () => {
   function makeController(worldX: number, worldY: number, snap = false) {
     const width = 10;
@@ -91,7 +162,11 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
         }
         return y * width + x;
       },
-      myPlayer: () => ({ gold: () => 100n, smallID: () => 1 }),
+      myPlayer: () => ({
+        gold: () => 100n,
+        smallID: () => 1,
+        isAlive: () => true,
+      }),
       x: (t: number) => t % width,
       y: (t: number) => Math.floor(t / width),
     };
@@ -130,7 +205,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       const { controller } = makeController(3, 4, true);
       const buildable = (controller as any).ghostUnit.buildableUnit;
       Object.assign(buildable, { type, canBuild: 0, cost: 1n });
-      const data = (controller as any).buildGhostPreviewData(43, false);
+      const data = (controller as any).buildGhostPreviewData(43, "none");
       const position = type === UnitType.Warship ? [3, 4] : [0, 0];
       expect([data.tileX, data.tileY]).toEqual(position);
       expect([data.radiusTileX, data.radiusTileY]).toEqual(position);
@@ -142,7 +217,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     const { controller } = makeController(3, 4);
     const buildable = (controller as any).ghostUnit.buildableUnit;
     Object.assign(buildable, { type: UnitType.City, canBuild: 0, cost: 1n });
-    const data = (controller as any).buildGhostPreviewData(43, false);
+    const data = (controller as any).buildGhostPreviewData(43, "none");
     expect([data.tileX, data.tileY]).toEqual([3, 4]);
     expect([data.radiusTileX, data.radiusTileY]).toEqual([3, 4]);
     expect(data.snapToPlacement).toBe(false);
@@ -163,7 +238,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
         canUpgrade: 7,
         cost: 1n,
       });
-      const preview = c.buildGhostPreviewData(43, false);
+      const preview = c.buildGhostPreviewData(43, "none");
       expect(preview.ghostRailPaths).toEqual(held ? rails.ghostRailPaths : []);
       expect(preview.overlappingRailroads).toEqual(
         held ? rails.overlappingRailroads : [],
@@ -187,7 +262,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     expect(emitted).toEqual([]);
     expect(c.uiState.ghostStructure).toBe(UnitType.City);
     expect(c.ghostUnit).not.toBeNull();
-    expect(c.pendingConfirm).toBeNull();
+    expect(c.pendingConfirmations).toHaveLength(0);
     c.createStructure(43);
     expect(c.ghostUnit).not.toBeNull();
     c.uiState.preventStacking = false;
@@ -214,12 +289,12 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       cost: 2n,
       upgradeCosts: [20n],
     });
-    const preview = c.buildGhostPreviewData(43, false);
+    const preview = c.buildGhostPreviewData(43, "none");
     expect(preview.cost).toBe(2);
     expect(preview.multiplier).toBe(1);
   });
 
-  test("a pending initial click on a subsequently invalid held preview keeps the tool", async () => {
+  test("a pending confirmation on an invalid held tile keeps the tool", async () => {
     const { controller, emitted } = makeController(3, 4);
     const c = controller as any;
     c.uiState.preventStacking = true;
@@ -233,15 +308,11 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       .mockResolvedValue([
         { type: UnitType.City, canBuild: false, canUpgrade: 7 },
       ]);
-    c.game.myPlayer = () => ({ buildables });
-    c.game.isImpassable = () => false;
-    vi.spyOn(c, "emitGhostPreview").mockImplementation(() => {});
+    c.game.myPlayer = () => ({ buildables, isAlive: () => true });
     c.requestConfirmStructure(new MouseUpEvent(0, 0));
-    expect(c.pendingConfirm).not.toBeNull();
-    c.lastGhostQueryAt = -Infinity;
-    c.renderGhost();
-    await Promise.resolve();
-    expect(c.pendingConfirm).toBeNull();
+    expect(c.pendingConfirmations).toHaveLength(1);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(c.pendingConfirmations).toHaveLength(0);
     expect(c.uiState.ghostStructure).toBe(UnitType.City);
     expect(c.ghostUnit).not.toBeNull();
     expect(emitted).toEqual([]);
@@ -254,7 +325,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     const buildables = vi.fn(
       () => new Promise((resolve) => pending.push(resolve)),
     );
-    c.game.myPlayer = () => ({ buildables });
+    c.game.myPlayer = () => ({ buildables, isAlive: () => true });
     const coordinates = vi.fn().mockReturnValue({ x: 3, y: 4 });
     c.transformHandler.screenToWorldCoordinates = coordinates;
     vi.spyOn(c, "emitGhostPreview").mockImplementation(() => {});
@@ -263,18 +334,30 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     c.renderGhost(); // The old hover query is still in flight for tile 43.
     coordinates.mockReturnValue({ x: 5, y: 4 });
     c.requestConfirmStructure(new MouseUpEvent(0, 0));
-    expect(c.pendingConfirm).toEqual({ tile: 45, preventStacking: false });
+    expect(c.pendingConfirmations).toHaveLength(1);
+    expect(c.pendingConfirmations[0]).toEqual({
+      tile: 45,
+      ghostType: UnitType.City,
+      preventStacking: false,
+      ghostGeneration: c.ghostGeneration,
+      cancelOnInvalid: false,
+    });
+    expect(buildables).toHaveBeenNthCalledWith(1, 43, [UnitType.City], false);
+    expect(buildables).toHaveBeenNthCalledWith(2, 45, [UnitType.City], false);
     expect(emitted).toEqual([]);
     coordinates.mockReturnValue({ x: 8, y: 8 }); // Move away before either reply.
     pending[0]([{ type: UnitType.City, canBuild: false, canUpgrade: false }]);
     await Promise.resolve();
-    expect(buildables).toHaveBeenLastCalledWith(45, [UnitType.City], false);
     expect(emitted).toEqual([]);
     pending[1]([{ type: UnitType.City, canBuild: 45, canUpgrade: false }]);
-    await Promise.resolve();
-    expect(emitted).toHaveLength(1);
-    expect((emitted[0] as BuildUnitIntentEvent).tile).toBe(45);
-    expect(c.pendingConfirm).toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const intents = emitted.filter(
+      (event): event is BuildUnitIntentEvent =>
+        event instanceof BuildUnitIntentEvent,
+    );
+    expect(intents).toHaveLength(1);
+    expect(intents[0].tile).toBe(45);
+    expect(c.pendingConfirmations).toHaveLength(0);
   });
 
   test.each([false, true])(
@@ -284,6 +367,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       const c = controller as any;
       let reply: (units: unknown[]) => void = () => {};
       c.game.myPlayer = () => ({
+        isAlive: () => true,
         buildables: () =>
           new Promise((resolve) => {
             reply = resolve;
@@ -296,8 +380,11 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       c.uiState.preventStacking = !held;
       reply([{ type: UnitType.City, canBuild: 43, canUpgrade: 7 }]);
       await Promise.resolve();
-      expect(emitted).toHaveLength(1);
-      expect(emitted[0] instanceof BuildUnitIntentEvent).toBe(held);
+      const intents = emitted.filter(
+        (event): event is BuildUnitIntentEvent =>
+          event instanceof BuildUnitIntentEvent,
+      );
+      expect(intents).toHaveLength(held ? 1 : 0);
     },
   );
 
@@ -320,7 +407,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
           }),
       )
       .mockResolvedValue([fresh]);
-    c.game.myPlayer = () => ({ buildables });
+    c.game.myPlayer = () => ({ buildables, isAlive: () => true });
     vi.spyOn(c, "emitGhostPreview").mockImplementation(() => {});
     c.renderGhost();
     c.uiState.preventStacking = true;
@@ -334,7 +421,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     expect(c.ghostUnit.buildableUnit.ghostRailPaths).toEqual([[43, 44]]);
   });
 
-  test("canceling a queued click before the worker replies cannot build", async () => {
+  test("clearing the ghost before confirmation validation cannot build", async () => {
     const { controller, emitted } = makeController(3, 4);
     const c = controller as any;
     let reply: (units: unknown[]) => void = () => {};
@@ -344,15 +431,20 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
           reply = resolve;
         }),
     );
-    c.game.myPlayer = () => ({ buildables });
+    c.game.myPlayer = () => ({ buildables, isAlive: () => true });
     c.ghostResolved = false;
     c.requestConfirmStructure(new MouseUpEvent(0, 0));
     c.uiState.ghostStructure = null; // Escape arrives before the next tick.
     reply([{ type: UnitType.City, canBuild: 43, canUpgrade: false }]);
     await Promise.resolve();
     expect(c.ghostUnit).toBeNull();
-    expect(c.pendingConfirm).toBeNull();
-    expect(emitted).toEqual([]);
+    expect(c.pendingConfirmations).toHaveLength(0);
+    expect(
+      emitted.filter((event) => event instanceof BuildUnitIntentEvent),
+    ).toEqual([]);
+    expect(emitted).toEqual([
+      expect.objectContaining({ structureTypes: null }),
+    ]);
   });
 
   test("renderGhost requests rails without flooding a slow worker or reviving canceled ghosts", async () => {
@@ -365,6 +457,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     c.game.myPlayer = () => ({
       gold: () => 100n,
       smallID: () => 1,
+      isAlive: () => true,
       buildables,
     });
     c.game.isImpassable = () => false;
@@ -434,6 +527,7 @@ describe("BuildPreviewController idle diffing optimization", () => {
     const mockMyPlayer = {
       gold: () => playerGold,
       smallID: () => 1,
+      isAlive: () => true,
       readyMissileCount: () => 5,
       units: (type: UnitType) => {
         if (type === UnitType.MissileSilo) return mockSilos;
@@ -539,16 +633,16 @@ describe("BuildPreviewController idle diffing optimization", () => {
   test("buildGhostPreviewData preserves object reference when underlying data matches", () => {
     const { controller, setPlayerGold } = createTestFixture();
 
-    const data1 = (controller as any).buildGhostPreviewData(100, false);
+    const data1 = (controller as any).buildGhostPreviewData(100, "none");
     (controller as any).lastGhostData = data1;
 
     // Second call with identical data should return exact same object reference
-    const data2 = (controller as any).buildGhostPreviewData(100, false);
+    const data2 = (controller as any).buildGhostPreviewData(100, "none");
     expect(data2).toBe(data1);
 
     // Call after state change (gold dropped below cost) should return new object reference
     setPlayerGold(5n);
-    const data3 = (controller as any).buildGhostPreviewData(100, false);
+    const data3 = (controller as any).buildGhostPreviewData(100, "none");
     expect(data3).not.toBe(data1);
     expect(data3.canAfford).toBe(false);
   });
@@ -557,7 +651,7 @@ describe("BuildPreviewController idle diffing optimization", () => {
     const { controller } = createTestFixture();
     // In OpenFront, water is a valid tile where isImpassable is false
     const waterTile = 100;
-    const data = (controller as any).buildGhostPreviewData(waterTile, false);
+    const data = (controller as any).buildGhostPreviewData(waterTile, "none");
     expect(data).not.toBeNull();
     expect(data.tileX).toBe(0);
     expect(data.tileY).toBe(5);
@@ -632,6 +726,27 @@ describe("BuildPreviewController idle diffing optimization", () => {
     expect(traj5).toBe(traj4);
   });
 
+  test.each([UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRV])(
+    "%s ghost clears when the last missile silo is lost",
+    (type) => {
+      const f = createTestFixture();
+      const c = f.controller as any;
+      c.uiState.ghostStructure = type;
+      c.ghostUnit.buildableUnit.type = type;
+      f.mockSilos.push({});
+      c.syncGhostState();
+      expect(c.ghostUnit).not.toBeNull();
+      f.mockSilos.length = 0;
+      c.isQueryInFlight = true;
+      f.controller.tick();
+
+      expect(c.ghostUnit).toBeNull();
+      expect(c.uiState.ghostStructure).toBeNull();
+      expect(f.updateGhostPreview).toHaveBeenLastCalledWith(null);
+      expect(f.updateNukeTrajectory).toHaveBeenLastCalledWith(null);
+    },
+  );
+
   test("cursorLoop skips calculations and WebGL updates while cursor is idle", () => {
     const {
       controller,
@@ -650,7 +765,7 @@ describe("BuildPreviewController idle diffing optimization", () => {
     });
 
     // Populate initial ghost data and trajectory
-    const ghostData = (controller as any).buildGhostPreviewData(100, false);
+    const ghostData = (controller as any).buildGhostPreviewData(100, "none");
     (controller as any).lastGhostData = ghostData;
     (controller as any).updateNukeTrajectoryPreview(100);
 
@@ -699,7 +814,7 @@ describe("BuildPreviewController idle diffing optimization", () => {
 
     (controller as any).lastGhostData = (
       controller as any
-    ).buildGhostPreviewData(100, false);
+    ).buildGhostPreviewData(100, "none");
     (controller as any).updateNukeTrajectoryPreview(100);
 
     stepFrame();
@@ -737,7 +852,7 @@ describe("BuildPreviewController idle diffing optimization", () => {
 
     (controller as any).lastGhostData = (
       controller as any
-    ).buildGhostPreviewData(100, false);
+    ).buildGhostPreviewData(100, "none");
     (controller as any).updateNukeTrajectoryPreview(100);
 
     stepFrame();
@@ -770,7 +885,7 @@ describe("BuildPreviewController idle diffing optimization", () => {
 
     (controller as any).lastGhostData = (
       controller as any
-    ).buildGhostPreviewData(100, false);
+    ).buildGhostPreviewData(100, "none");
     (controller as any).updateNukeTrajectoryPreview(100);
     (controller as any).cursorLoop();
 
@@ -792,18 +907,18 @@ describe("BuildPreviewController idle diffing optimization", () => {
 
   test("buildGhostPreviewData invalidates cache when railroad properties change", () => {
     const { controller } = createTestFixture();
-    const data1 = (controller as any).buildGhostPreviewData(100, false);
+    const data1 = (controller as any).buildGhostPreviewData(100, "none");
     (controller as any).lastGhostData = data1;
 
     // Mutate overlapping railroads
     (controller as any).ghostUnit.buildableUnit.overlappingRailroads = [10, 11];
-    const data2 = (controller as any).buildGhostPreviewData(100, false);
+    const data2 = (controller as any).buildGhostPreviewData(100, "none");
     expect(data2).not.toBe(data1);
 
     (controller as any).lastGhostData = data2;
     // Mutate ghost rail paths
     (controller as any).ghostUnit.buildableUnit.ghostRailPaths = [[10, 11, 12]];
-    const data3 = (controller as any).buildGhostPreviewData(100, false);
+    const data3 = (controller as any).buildGhostPreviewData(100, "none");
     expect(data3).not.toBe(data2);
   });
 
@@ -883,7 +998,7 @@ describe("BuildPreviewController idle diffing optimization", () => {
 
     (controller as any).lastGhostData = (
       controller as any
-    ).buildGhostPreviewData(100, false);
+    ).buildGhostPreviewData(100, "none");
     (controller as any).updateNukeTrajectoryPreview(100);
     (controller as any).cursorLoop();
 
@@ -908,6 +1023,7 @@ describe("BuildPreviewController 0-allocation mutable render buffer", () => {
     const mockMyPlayer = {
       gold: () => 1000n,
       smallID: () => 1,
+      isAlive: () => true,
       readyMissileCount: () => 5,
       units: () => [],
       allies: () => [],
@@ -999,7 +1115,7 @@ describe("BuildPreviewController 0-allocation mutable render buffer", () => {
     const { controller, updateGhostPreview, setCoords, stepFrame } =
       createFixture(5.0, 5.0);
 
-    const ghostData = (controller as any).buildGhostPreviewData(100, false);
+    const ghostData = (controller as any).buildGhostPreviewData(100, "none");
     (controller as any).lastGhostData = ghostData;
 
     // Frame 1
@@ -1029,7 +1145,7 @@ describe("BuildPreviewController 0-allocation mutable render buffer", () => {
   test("lastGhostData remains strictly immutable with canonical integer coordinates", () => {
     const { controller, setCoords, stepFrame } = createFixture(5.2, 5.8);
 
-    const ghostData = (controller as any).buildGhostPreviewData(100, false);
+    const ghostData = (controller as any).buildGhostPreviewData(100, "none");
     (controller as any).lastGhostData = ghostData;
 
     expect(ghostData.tileX).toBe(0);
@@ -1052,7 +1168,7 @@ describe("BuildPreviewController 0-allocation mutable render buffer", () => {
   test("snapping rules preserve canonical tileX and tileY on renderedGhostBuffer when snapToPlacement is true", () => {
     const { controller, setCoords, stepFrame } = createFixture(5.2, 5.8);
 
-    const ghostData = (controller as any).buildGhostPreviewData(100, false);
+    const ghostData = (controller as any).buildGhostPreviewData(100, "none");
     // Force snapToPlacement to true (like city or defense post placement)
     const snappedGhost = {
       ...ghostData,
@@ -1085,7 +1201,7 @@ describe("BuildPreviewController 0-allocation mutable render buffer", () => {
 
     (controller as any).lastGhostData = (
       controller as any
-    ).buildGhostPreviewData(100, false);
+    ).buildGhostPreviewData(100, "none");
     stepFrame();
     expect((controller as any).renderedGhostBuffer).not.toBeNull();
 
@@ -1098,7 +1214,7 @@ describe("BuildPreviewController 0-allocation mutable render buffer", () => {
   test("renderedGhostBuffer synchronizes with new ghost reference", () => {
     const { controller, stepFrame } = createFixture(5.0, 5.0);
 
-    const ghost1 = (controller as any).buildGhostPreviewData(100, false);
+    const ghost1 = (controller as any).buildGhostPreviewData(100, "none");
     (controller as any).lastGhostData = ghost1;
     stepFrame();
     const buf1 = (controller as any).renderedGhostBuffer;
@@ -1116,7 +1232,7 @@ describe("BuildPreviewController 0-allocation mutable render buffer", () => {
     const { controller, setCoords, stepFrame, updateGhostPreview } =
       createFixture(5.0, 5.0);
 
-    const ghostData = (controller as any).buildGhostPreviewData(100, false);
+    const ghostData = (controller as any).buildGhostPreviewData(100, "none");
     // Simulate an upgrade ghost targeting tile 42 (x=2, y=2 in 20-wide grid)
     const upgradeGhost = {
       ...ghostData,
@@ -1175,6 +1291,7 @@ describe("BuildPreviewController Single-Flight Coalescing Guard with Tile-Change
     const mockMyPlayer = {
       gold: () => playerGold,
       smallID: () => 1,
+      isAlive: () => true,
       allies: () => [],
       buildables: vi.fn((tileRef: number | undefined, types: any) => {
         buildablesCalls.push({ tile: tileRef, types });
@@ -1395,7 +1512,7 @@ describe("BuildPreviewController Single-Flight Coalescing Guard with Tile-Change
     await Promise.resolve();
   });
 
-  test("pendingConfirm during in-flight query does not build on wrong tile", async () => {
+  test("confirmation validation waits for its own tile", async () => {
     const fixture = createCoalescingFixture();
     fixture.setMousePos(1, 1);
     fixture.eventBus.emit(new MouseMoveEvent(10, 10));
@@ -1411,8 +1528,16 @@ describe("BuildPreviewController Single-Flight Coalescing Guard with Tile-Change
     fixture.eventBus.emit(new MouseUpEvent(20, 20));
     // Should NOT have confirmed with tile 11's data
     expect(fixture.emitted.length).toBe(0);
+    expect(fixture.buildablesCalls.length).toBe(3);
+    expect(fixture.buildablesCalls[2].tile).toBe(22);
 
-    // Query for tile 22 completes as buildable
+    // The preview query for tile 22 may complete first; it cannot consume the
+    // separately queued confirmation.
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+    expect(fixture.emitted.length).toBe(0);
+
+    // The confirmation query for tile 22 completes as buildable.
     await fixture.resolveNextQuery(true);
     await Promise.resolve();
 
@@ -1423,7 +1548,7 @@ describe("BuildPreviewController Single-Flight Coalescing Guard with Tile-Change
     expect(intent.tile).toBe(22);
   });
 
-  test("pendingConfirm drops build if in-flight query resolves as unbuildable", async () => {
+  test("confirmation validation drops an unbuildable tile", async () => {
     const fixture = createCoalescingFixture();
     fixture.setMousePos(1, 1);
     fixture.eventBus.emit(new MouseMoveEvent(10, 10));
@@ -1437,8 +1562,11 @@ describe("BuildPreviewController Single-Flight Coalescing Guard with Tile-Change
     // Click on tile 22 while query is in-flight
     fixture.eventBus.emit(new MouseUpEvent(20, 20));
     expect(fixture.emitted.length).toBe(0);
+    expect(fixture.buildablesCalls.length).toBe(3);
 
-    // Query for tile 22 resolves with canBuild: false
+    // Resolve the preview query, then the confirmation's exact-tile query.
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
     await fixture.resolveNextQuery(false);
     await Promise.resolve();
 
@@ -1549,7 +1677,7 @@ describe("BuildPreviewController Single-Flight Coalescing Guard with Tile-Change
     expect(intent.tile).toBe(33);
   });
 
-  test("cursor movement after click during in-flight query does not drop pending confirm tile", async () => {
+  test("cursor movement after click does not retarget queued confirmation", async () => {
     const fixture = createCoalescingFixture();
     fixture.setMousePos(1, 1);
     fixture.eventBus.emit(new MouseMoveEvent(10, 10));
@@ -1567,11 +1695,13 @@ describe("BuildPreviewController Single-Flight Coalescing Guard with Tile-Change
     await fixture.resolveNextQuery(true);
     await Promise.resolve();
 
-    // Next query must be for tile 22 (the pending confirm tile), not skipped
-    expect(fixture.buildablesCalls.length).toBe(2);
+    // Confirmation query stays pinned to tile 22; pointer movement may schedule
+    // a separate preview query for tile 33.
+    expect(fixture.buildablesCalls.length).toBe(3);
     expect(fixture.buildablesCalls[1].tile).toBe(22);
+    expect(fixture.buildablesCalls[2].tile).toBe(33);
 
-    // Tile 22 resolves as buildable
+    // Resolve the exact confirmation query for tile 22.
     await fixture.resolveNextQuery(true);
     await Promise.resolve();
 
@@ -1579,9 +1709,11 @@ describe("BuildPreviewController Single-Flight Coalescing Guard with Tile-Change
     expect(fixture.emitted.length).toBe(1);
     const intent = fixture.emitted[0] as BuildUnitIntentEvent;
     expect(intent.tile).toBe(22);
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
   });
 
-  test("clicking on known unbuildable tile when not in flight does not confirm or leave pendingConfirm", async () => {
+  test("clicking a known unbuildable tile leaves the queue empty", async () => {
     const fixture = createCoalescingFixture();
     fixture.setMousePos(1, 1);
     fixture.eventBus.emit(new MouseMoveEvent(10, 10));
@@ -1591,8 +1723,721 @@ describe("BuildPreviewController Single-Flight Coalescing Guard with Tile-Change
     // Now click on tile 11
     fixture.eventBus.emit(new MouseUpEvent(10, 10));
     expect(fixture.emitted.length).toBe(0);
-    expect((fixture.controller as any).pendingConfirm).toBeNull();
+    expect((fixture.controller as any).pendingConfirmations).toHaveLength(0);
     // No new query dispatched
     expect(fixture.buildablesCalls.length).toBe(1);
+  });
+});
+
+describe("BuildPreviewController touch preview", () => {
+  function makeController(type: UnitType) {
+    const eventBus = new EventBus();
+    const builds: BuildUnitIntentEvent[] = [];
+    eventBus.on(BuildUnitIntentEvent, (event) => builds.push(event));
+    const uiState = { ghostStructure: type, upgradeMultiplier: 1 };
+    const player = {
+      gold: () => 1000n,
+      smallID: () => 1,
+      isAlive: () => true,
+      readyMissileCount: () => 10,
+      allies: () => [],
+      units: () => [
+        {
+          isActive: () => true,
+          isInCooldown: () => false,
+          isUnderConstruction: () => false,
+          tile: () => 101,
+        },
+      ],
+      isOnSameTeam: () => false,
+      buildables: vi.fn(
+        (
+          _tile: number | undefined,
+          types: UnitType[],
+          _preventStacking?: boolean,
+        ) =>
+          Promise.resolve(
+            types.map((unitType) => ({
+              type: unitType,
+              canBuild: true,
+              canUpgrade: false,
+              cost: 1n,
+              overlappingRailroads: [],
+              ghostRailPaths: [],
+            })),
+          ),
+      ),
+    };
+    const view = {
+      updateGhostPreview: vi.fn(),
+      updateNukeTrajectory: vi.fn(),
+    };
+    const controller = new BuildPreviewController(
+      {
+        myPlayer: () => player,
+        players: () => [player],
+        units: () => [],
+        unit: () => null,
+        isValidCoord: () => true,
+        isImpassable: () => false,
+        ref: (x: number, y: number) => x * 100 + y,
+        x: (ref: number) => Math.floor(ref / 100),
+        y: (ref: number) => ref % 100,
+        config: () => ({
+          nukeMagnitudes: () => ({ inner: 5, outer: 10 }),
+          nukeAllianceBreakThreshold: () => 100,
+        }),
+      } as any,
+      eventBus,
+      uiState as any,
+      {
+        screenToWorldCoordinates: (x: number) =>
+          x < 150 ? { x: 1, y: 1 } : { x: 2, y: 2 },
+        worldToScreenCoordinates: (cell: { x: number }) =>
+          cell.x < 2 ? { x: 100, y: 100 } : { x: 200, y: 200 },
+      } as any,
+      view as any,
+      {
+        nukeAllianceSafetyDuration: () => 0,
+        cursorCostLabel: () => false,
+        snapBuildPreview: () => false,
+      } as any,
+    );
+    (controller as any).ghostUnit = {
+      buildableUnit: { type, canBuild: true, canUpgrade: false },
+    };
+    return { controller, builds, uiState, player, eventBus, view };
+  }
+
+  async function flushBuildables(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  test("removing a ghost resets touch placement mode but changing its type preserves it", () => {
+    const { controller } = makeController(UnitType.City);
+    (controller as any).touchPlacementMode = true;
+
+    (controller as any).clearGhostStructure();
+    expect((controller as any).touchPlacementMode).toBe(true);
+
+    (controller as any).removeGhostStructure();
+    expect((controller as any).touchPlacementMode).toBe(false);
+  });
+
+  test("touch build selection hides the initial preview until a map touch", () => {
+    const { controller, player, eventBus, view } = makeController(
+      UnitType.City,
+    );
+    (controller as any).ghostUnit = null;
+    const requestAnimationFrame = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockImplementation(() => 0);
+    try {
+      controller.init();
+      eventBus.emit(new TouchGhostPlacementSelectEvent());
+
+      expect((controller as any).touchPlacementMode).toBe(true);
+      expect((controller as any).touchPreviewTile).toBeNull();
+      expect(player.buildables).not.toHaveBeenCalled();
+      expect(view.updateGhostPreview).toHaveBeenLastCalledWith(null);
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
+
+  test("touch handlers stop when silo loss clears the nuke ghost", () => {
+    const handlers = [
+      (controller: any) =>
+        controller.handleTouchPlacement(new TouchGhostPlacementEvent(200, 200)),
+      (controller: any) => controller.moveTouchPreview(200, 200),
+    ];
+
+    for (const handleTouch of handlers) {
+      const { controller, player } = makeController(UnitType.AtomBomb);
+      (player as any).units = () => [];
+
+      handleTouch(controller as any);
+
+      expect((controller as any).touchPreviewTile).toBeNull();
+      expect((controller as any).touchPlacementMode).toBe(false);
+      expect(player.buildables).not.toHaveBeenCalled();
+    }
+  });
+
+  test("touch movement without a ghost restores placement for later selections", async () => {
+    const { controller, player } = makeController(UnitType.City);
+    const c = controller as any;
+    c.removeGhostStructure();
+    const convert = vi.spyOn(c.transformHandler, "screenToWorldCoordinates");
+
+    c.moveTouchPreview(200, 200);
+
+    expect(convert).not.toHaveBeenCalled();
+    expect(c.touchPreviewTile).toBeNull();
+    expect(c.touchPlacementMode).toBe(false);
+    expect(player.buildables).not.toHaveBeenCalled();
+
+    c.uiState.ghostStructure = UnitType.City;
+    controller.tick();
+    await flushBuildables();
+
+    expect(c.lastGhostData).not.toBeNull();
+  });
+
+  test("removing an existing ghost clears its highlight", () => {
+    const { controller, eventBus } = makeController(UnitType.City);
+    const highlights: ToggleStructureEvent[] = [];
+    eventBus.on(ToggleStructureEvent, (event) => highlights.push(event));
+
+    (controller as any).removeGhostStructure();
+    expect(highlights).toHaveLength(1);
+    expect(highlights[0].structureTypes).toBeNull();
+
+    (controller as any).ghostUnit = null;
+    highlights.length = 0;
+    (controller as any).removeGhostStructure();
+    expect(highlights).toHaveLength(0);
+  });
+
+  function makeDeferredBuildablesController(type: UnitType) {
+    const fixture = makeController(type);
+    const requests: Array<{
+      tile: number | undefined;
+      types: UnitType[];
+      preventStacking: boolean;
+      resolve: (buildables: any[]) => void;
+    }> = [];
+    fixture.player.buildables.mockImplementation(
+      (tile, types, preventStacking = false) =>
+        new Promise((resolve) => {
+          requests.push({
+            tile,
+            types,
+            preventStacking,
+            resolve,
+          });
+        }),
+    );
+    return { ...fixture, requests };
+  }
+
+  test("moves on a distant tap and confirms the anchored tile on a nearby tap", async () => {
+    const { controller, builds } = makeController(UnitType.City);
+
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(100, 100),
+    );
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(200, 200),
+    );
+    expect((controller as any).touchPreviewTile).toBe(202);
+    expect(builds).toHaveLength(0);
+    (controller as any).ghostUnit.buildableUnit.canBuild = true;
+
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(205, 205),
+    );
+    await flushBuildables();
+    await flushBuildables();
+    expect(builds.map((event) => event.tile)).toEqual([202]);
+  });
+
+  test("dragging before the first tap anchors and validates the ghost at the drag tile", async () => {
+    const { controller, player } = makeController(UnitType.City);
+
+    (controller as any).moveTouchPreview(200, 200);
+
+    expect((controller as any).touchPlacementMode).toBe(true);
+    expect(player.buildables).toHaveBeenCalledWith(202, [UnitType.City], false);
+    await flushBuildables();
+    expect((controller as any).lastGhostData.tileX).toBe(2);
+    expect((controller as any).lastGhostData.tileY).toBe(2);
+  });
+
+  test("a touch off the map leaves the preview where it was", () => {
+    const { controller, player } = makeController(UnitType.City);
+    (controller as any).game.isValidCoord = () => false;
+    (controller as any).touchPreviewTile = 101;
+    const queriesBefore = player.buildables.mock.calls.length;
+
+    (controller as any).moveTouchPreview(200, 200);
+
+    expect((controller as any).touchPreviewTile).toBe(101);
+    expect(player.buildables).toHaveBeenCalledTimes(queriesBefore);
+  });
+
+  test("a drag start on the preview is handled, one away from it is not", () => {
+    const { controller, eventBus } = makeController(UnitType.City);
+    const requestAnimationFrame = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockImplementation(() => 1);
+
+    try {
+      controller.init();
+      (controller as any).touchPlacementMode = true;
+      (controller as any).touchPreviewTile = 202;
+
+      const onPreview = new TouchGhostPlacementDragStartEvent(200, 200);
+      eventBus.emit(onPreview);
+      expect(onPreview.handled).toBe(true);
+
+      const awayFromPreview = new TouchGhostPlacementDragStartEvent(100, 100);
+      eventBus.emit(awayFromPreview);
+      expect(awayFromPreview.handled).toBe(false);
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
+
+  test("init subscribes to touch placement events", async () => {
+    const { controller, eventBus, player } = makeController(UnitType.City);
+    const requestAnimationFrame = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockImplementation(() => 1);
+
+    try {
+      controller.init();
+      eventBus.emit(new TouchGhostPlacementEvent(200, 200));
+
+      expect((controller as any).touchPreviewTile).toBe(202);
+      expect(player.buildables).toHaveBeenCalledWith(
+        202,
+        [UnitType.City],
+        false,
+      );
+      await flushBuildables();
+      expect((controller as any).lastGhostData.tileX).toBe(2);
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
+
+  test("Enter uses the preserved touch preview after changing build type", async () => {
+    const { controller, builds, eventBus, requests } =
+      makeDeferredBuildablesController(UnitType.City);
+    const requestAnimationFrame = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockImplementation(() => 1);
+    (controller as any).ghostResolved = false;
+    (controller as any).touchPlacementMode = true;
+    (controller as any).touchPreviewTile = 202;
+    (controller as any).mousePos.x = 100;
+    (controller as any).mousePos.y = 100;
+    (controller as any).uiState.ghostStructure = UnitType.Port;
+
+    try {
+      controller.init();
+      eventBus.emit(new ConfirmGhostStructureEvent());
+
+      expect((controller as any).touchPreviewTile).toBe(202);
+      expect(requests).toHaveLength(2);
+      expect(requests[0]).toEqual(
+        expect.objectContaining({ tile: 202, types: [UnitType.Port] }),
+      );
+      expect(requests[1]).toEqual(
+        expect.objectContaining({ tile: 202, types: [UnitType.Port] }),
+      );
+      requests[0].resolve([
+        {
+          type: UnitType.Port,
+          canBuild: 202,
+          canUpgrade: false,
+          cost: 1n,
+        },
+      ]);
+      await flushBuildables();
+      requests[1].resolve([
+        {
+          type: UnitType.Port,
+          canBuild: 202,
+          canUpgrade: false,
+          cost: 1n,
+        },
+      ]);
+      await flushBuildables();
+      expect(builds.map((event) => event.tile)).toEqual([202]);
+      expect(builds[0].unit).toBe(UnitType.Port);
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
+
+  test("Enter does not confirm at a stale mouse position without a touch preview", () => {
+    const { controller, eventBus, player } = makeController(UnitType.City);
+    const requestAnimationFrame = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockImplementation(() => 1);
+    (controller as any).touchPlacementMode = true;
+    (controller as any).touchPreviewTile = null;
+    (controller as any).mousePos.x = 100;
+    (controller as any).mousePos.y = 100;
+
+    try {
+      controller.init();
+      eventBus.emit(new ConfirmGhostStructureEvent());
+
+      expect(player.buildables).not.toHaveBeenCalled();
+      expect((controller as any).pendingConfirmations).toHaveLength(0);
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
+
+  test("preserves a selected nuke for repeated touch launches", async () => {
+    const { controller, builds, uiState } = makeController(UnitType.AtomBomb);
+
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(100, 100),
+    );
+    (controller as any).ghostUnit.buildableUnit.canBuild = true;
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(105, 105),
+    );
+    await flushBuildables();
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(200, 200),
+    );
+    (controller as any).ghostUnit.buildableUnit.canBuild = true;
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(205, 205),
+    );
+    await flushBuildables();
+    await flushBuildables();
+
+    expect(builds.map((event) => event.tile)).toEqual([101, 202]);
+    expect(uiState.ghostStructure).toBe(UnitType.AtomBomb);
+  });
+
+  test("keeps separate desktop confirmations queued while validation is pending", async () => {
+    const { controller, builds, requests } = makeDeferredBuildablesController(
+      UnitType.AtomBomb,
+    );
+    (controller as any).ghostResolved = false;
+
+    (controller as any).requestConfirmStructure(new MouseUpEvent(100, 100));
+    (controller as any).requestConfirmStructure(new MouseUpEvent(200, 200));
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].tile).toBe(101);
+    expect((controller as any).pendingConfirmations).toHaveLength(2);
+
+    requests[0].resolve([
+      {
+        type: UnitType.AtomBomb,
+        canBuild: 101,
+        canUpgrade: false,
+        cost: 1n,
+      },
+    ]);
+    await flushBuildables();
+
+    expect(requests).toHaveLength(2);
+    expect(requests[1].tile).toBe(202);
+    requests[1].resolve([
+      {
+        type: UnitType.AtomBomb,
+        canBuild: 202,
+        canUpgrade: false,
+        cost: 1n,
+      },
+    ]);
+    await flushBuildables();
+
+    expect(builds.map((event) => event.tile)).toEqual([101, 202]);
+    expect((controller as any).pendingConfirmations).toHaveLength(0);
+  });
+
+  test("an invalid nuke tile does not block a valid one", async () => {
+    const { controller, builds, requests } = makeDeferredBuildablesController(
+      UnitType.AtomBomb,
+    );
+    (controller as any).ghostResolved = false;
+
+    (controller as any).requestConfirmStructure(new MouseUpEvent(100, 100));
+    (controller as any).requestConfirmStructure(new MouseUpEvent(200, 200));
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].tile).toBe(101);
+    requests[0].resolve([
+      {
+        type: UnitType.AtomBomb,
+        canBuild: false,
+        canUpgrade: false,
+        cost: 1n,
+      },
+    ]);
+    await flushBuildables();
+
+    // The invalid tile is dropped and the queued valid one is queried.
+    expect(requests).toHaveLength(2);
+    expect(requests[1].tile).toBe(202);
+    requests[1].resolve([
+      {
+        type: UnitType.AtomBomb,
+        canBuild: 202,
+        canUpgrade: false,
+        cost: 1n,
+      },
+    ]);
+    await flushBuildables();
+
+    expect(builds.map((event) => event.tile)).toEqual([202]);
+    expect((controller as any).pendingConfirmations).toHaveLength(0);
+  });
+
+  test("drains repeated touch confirmations for a validated nuke tile", async () => {
+    const { controller, builds, requests, uiState } =
+      makeDeferredBuildablesController(UnitType.AtomBomb);
+    (controller as any).ghostResolved = false;
+    (controller as any).touchPlacementMode = true;
+    (controller as any).touchPreviewTile = 101;
+
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(100, 100),
+    );
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(100, 100),
+    );
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0].tile).toBe(101);
+    expect((controller as any).pendingConfirmations).toHaveLength(2);
+    requests[0].resolve([
+      {
+        type: UnitType.AtomBomb,
+        canBuild: 101,
+        canUpgrade: false,
+        cost: 1n,
+      },
+    ]);
+    await flushBuildables();
+
+    expect(builds.map((event) => event.tile)).toEqual([101, 101]);
+    expect(uiState.ghostStructure).toBe(UnitType.AtomBomb);
+    expect((controller as any).pendingConfirmations).toHaveLength(0);
+  });
+
+  test("touch confirmation on an unbuildable structure cancels the selection (to be able to eg. quickly attack enemy, since touch-only device has no right-click or Esc option)", async () => {
+    const { controller, requests, uiState } = makeDeferredBuildablesController(
+      UnitType.City,
+    );
+    (controller as any).ghostResolved = false;
+    (controller as any).touchPlacementMode = true;
+    (controller as any).touchPreviewTile = 101;
+
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(100, 100),
+    );
+    expect(requests).toHaveLength(1);
+    expect((controller as any).pendingConfirmations[0].cancelOnInvalid).toBe(
+      true,
+    );
+
+    requests[0].resolve([
+      {
+        type: UnitType.City,
+        canBuild: false,
+        canUpgrade: false,
+        cost: 1n,
+      },
+    ]);
+    await flushBuildables();
+
+    expect(uiState.ghostStructure).toBeNull();
+    expect((controller as any).pendingConfirmations).toHaveLength(0);
+  });
+
+  test("touching a resolved unbuildable structure preview cancels immediately (to be able to eg. quickly attack enemy, since touch-only device has no right-click or Esc option", () => {
+    const { controller, builds, uiState } = makeController(UnitType.City);
+    const c = controller as any;
+    c.touchPlacementMode = true;
+    c.touchPreviewTile = 101;
+    c.ghostResolved = true;
+    c.resolvedGhostTile = 101;
+    Object.assign(c.ghostUnit.buildableUnit, {
+      canBuild: false,
+      canUpgrade: false,
+    });
+
+    c.handleTouchPlacement(new TouchGhostPlacementEvent(100, 100));
+
+    expect(uiState.ghostStructure).toBeNull();
+    expect(builds).toEqual([]);
+    expect(c.pendingConfirmations).toHaveLength(0);
+  });
+
+  test("a dead player's nuke ghost is dropped on the next tick, releasing touch placement", () => {
+    const { controller, uiState, player, eventBus } = makeController(
+      UnitType.AtomBomb,
+    );
+    const c = controller as any;
+    const highlights: ToggleStructureEvent[] = [];
+    eventBus.on(ToggleStructureEvent, (event) => highlights.push(event));
+    c.touchPlacementMode = true;
+    c.touchPreviewTile = 101;
+    (player as any).isAlive = () => false;
+
+    controller.tick();
+
+    expect(uiState.ghostStructure).toBeNull();
+    expect(c.ghostUnit).toBeNull();
+    expect(c.touchPlacementMode).toBe(false);
+    expect(highlights).toEqual([new ToggleStructureEvent(null)]);
+  });
+
+  test.each([UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRV])(
+    "touch confirmation never auto-cancels the nuke selection (%s)",
+    async (unitType) => {
+      const { controller, requests, uiState } =
+        makeDeferredBuildablesController(unitType);
+      (controller as any).ghostResolved = false;
+      (controller as any).touchPlacementMode = true;
+      (controller as any).touchPreviewTile = 101;
+
+      (controller as any).handleTouchPlacement(
+        new TouchGhostPlacementEvent(100, 100),
+      );
+      expect(requests).toHaveLength(1);
+      expect((controller as any).pendingConfirmations[0].cancelOnInvalid).toBe(
+        false,
+      );
+      requests[0].resolve([
+        {
+          type: unitType,
+          canBuild: false,
+          canUpgrade: false,
+          cost: 1n,
+        },
+      ]);
+      await flushBuildables();
+
+      expect(uiState.ghostStructure).toBe(unitType);
+      expect((controller as any).pendingConfirmations).toHaveLength(0);
+    },
+  );
+
+  test("moving the preview clears cached eligibility without dropping confirmations", async () => {
+    const { controller } = makeController(UnitType.City);
+    const c = controller as any;
+    c.touchPreviewTile = 101;
+    c.pendingConfirmations.push({
+      tile: 101,
+      ghostType: UnitType.City,
+      preventStacking: false,
+      ghostGeneration: c.ghostGeneration,
+      cancelOnInvalid: false,
+    });
+    Object.assign(c.ghostUnit.buildableUnit, {
+      canBuild: 101,
+      canUpgrade: 42,
+      cost: 1n,
+      overlappingRailroads: [],
+      ghostRailPaths: [],
+    });
+    c.lastGhostData = c.buildGhostPreviewData(101, "none");
+    c.prevGhostDataRef = c.lastGhostData;
+    c.renderedGhostBuffer = { ...c.lastGhostData };
+
+    c.moveTouchPreview(200, 200);
+
+    expect(c.touchPreviewTile).toBe(202);
+    expect(c.pendingConfirmations).toHaveLength(1);
+    expect(c.pendingConfirmations[0].tile).toBe(101);
+    expect(c.ghostUnit.buildableUnit).toEqual(
+      expect.objectContaining({ canBuild: false, canUpgrade: false }),
+    );
+    expect(c.lastGhostData).toEqual(
+      expect.objectContaining({ canBuild: false, canUpgrade: false }),
+    );
+    expect(c.prevGhostDataRef).toBeNull();
+    expect(c.renderedGhostBuffer).toBeNull();
+    await flushBuildables();
+  });
+
+  test("hit testing follows the snapped preview position only when snapping is enabled", () => {
+    const { controller } = makeController(UnitType.City);
+    const c = controller as any;
+    c.touchPreviewTile = 101;
+    c.lastGhostData = {
+      snapToPlacement: true,
+      tileX: 5,
+      tileY: 5,
+    };
+
+    expect(c.isNearTouchPreview(200, 200)).toBe(true);
+    expect(c.isNearTouchPreview(100, 100)).toBe(false);
+
+    c.lastGhostData.snapToPlacement = false;
+    expect(c.isNearTouchPreview(100, 100)).toBe(true);
+    expect(c.isNearTouchPreview(200, 200)).toBe(false);
+    expect(c.isNearTouchPreview(100, 200)).toBe(false);
+  });
+
+  test("ignores validation returned for an earlier touch preview", async () => {
+    const pendingBuildables: Array<(value: any[]) => void> = [];
+    const buildables = vi.fn(
+      () =>
+        new Promise<any[]>((resolve) => {
+          pendingBuildables.push(resolve);
+        }),
+    );
+    const eventBus = new EventBus();
+    const controller = new BuildPreviewController(
+      {
+        myPlayer: () => ({ buildables, isAlive: () => true }),
+        isValidCoord: () => true,
+        ref: (x: number, y: number) => x * 100 + y,
+        x: (ref: number) => Math.floor(ref / 100),
+        y: (ref: number) => ref % 100,
+        isImpassable: () => false,
+      } as any,
+      eventBus,
+      { ghostStructure: UnitType.City, upgradeMultiplier: 1 } as any,
+      {
+        screenToWorldCoordinates: (x: number) =>
+          x < 150 ? { x: 1, y: 1 } : { x: 2, y: 2 },
+        worldToScreenCoordinates: () => ({ x: 100, y: 100 }),
+      } as any,
+      {
+        updateGhostPreview: vi.fn(),
+        updateNukeTrajectory: vi.fn(),
+      } as any,
+      { nukeAllianceSafetyDuration: () => 0 } as any,
+    );
+    (controller as any).ghostUnit = {
+      buildableUnit: {
+        type: UnitType.City,
+        canBuild: false,
+        canUpgrade: false,
+      },
+    };
+    (controller as any).touchPlacementMode = true;
+    (controller as any).touchPreviewTile = 101;
+    (controller as any).lastGhostQueryAt = -Infinity;
+
+    controller.renderGhost();
+    expect(buildables).toHaveBeenCalledWith(101, [UnitType.City], false);
+
+    (controller as any).moveTouchPreview(200, 200);
+    pendingBuildables[0]([
+      { type: UnitType.City, canBuild: false, canUpgrade: 42 },
+    ]);
+    await flushBuildables();
+
+    expect((controller as any).touchPreviewTile).toBe(202);
+    expect(buildables).toHaveBeenLastCalledWith(202, [UnitType.City], false);
+    expect((controller as any).ghostUnit.buildableUnit).toEqual(
+      expect.objectContaining({ canBuild: false, canUpgrade: false }),
+    );
+
+    // The live query for the tile the preview moved to still applies.
+    pendingBuildables[1]([
+      { type: UnitType.City, canBuild: true, canUpgrade: false, cost: 1n },
+    ]);
+    await flushBuildables();
+
+    expect((controller as any).ghostUnit.buildableUnit).toEqual(
+      expect.objectContaining({ canBuild: true, canUpgrade: false }),
+    );
   });
 });

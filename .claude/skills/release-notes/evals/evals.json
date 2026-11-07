@@ -1,0 +1,44 @@
+{
+  "skill_name": "release-notes",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Can you write me a changelog block for v0.35.3 hotfix please? (replay: range v0.35.2..v0.35.3, 23 commits including three backport-bot picks)",
+      "expected_output": "One '# v0.35.3' block of roughly 14-16 player-facing lines, the three backports credited to their original authors (FloPinguin, JB940, LoSt543215543), the troop duplication exploit fix near the top, internal commits listed as skipped underneath, no release created.",
+      "files": [],
+      "assertions": [
+        "Output starts with '# v0.35.3' and an italic unpadded date line",
+        "Every bullet ends with ' — **Author**' (em dash, bold author); no (#1234) suffixes or emails",
+        "The nation AI backport is credited **FloPinguin**, not the backport bot or Evan",
+        "The troop duplication fix is present and in the first few lines",
+        "CI, lint, deploy-env, GHCR and metrics commits are not bullets but appear in the skipped list with PR numbers",
+        "The translation bump appears as 'Translation updates (mls v5.21) — **Aotumuri**'",
+        "No gh release create/edit is run and the reply does not claim a release exists"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Now one for v0.35.4 please (replay: range v0.35.3..v0.35.4, one commit: raise the archive timeout, PR body explains most public games lost XP)",
+      "expected_output": "A one-line block describing the player effect (XP/stats/rewards not awarded, levels differing between devices), credited **Evan**, plus a note that it is the only commit and the head sha.",
+      "files": [],
+      "assertions": [
+        "Exactly one bullet",
+        "The bullet describes lost XP/stats/rewards for players, not 'raise ARCHIVE_TIMEOUT_MS to 120 s'",
+        "The reply names the commit sha or PR the block covers and says it is the only one"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I need to put up a beta for v36, but it needs a changelog. Same shape as the v0.35.0 one.",
+      "expected_output": "The script is run with --major v35, the v0.35.0 release body is read for structure, and a full body is produced: Overview with bold headline paragraphs, grouped sections with authored lines, a Translators TODO, a Contributors list, saved to /tmp, followed by a list of judgement calls and dropped commits.",
+      "files": [],
+      "assertions": [
+        "range.sh is invoked with --major v35 (or an equivalent --minus v35) so v0.35.x patch content is excluded",
+        "Body has '## Overview' with bold headings followed by prose paragraphs, then '## ' sections with '— **Author**' bullets",
+        "Body ends with Translators (TODO/Crowdin) and Contributors sections",
+        "The reply lists name ambiguities, seasonal or flag-gated items, and dropped commits for the user to decide",
+        "No release is created"
+      ]
+    }
+  ]
+}

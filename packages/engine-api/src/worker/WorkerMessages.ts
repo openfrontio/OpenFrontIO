@@ -1,6 +1,7 @@
 import { TileRef } from "../game/GameMap";
 import {
   BuildableUnit,
+  Difficulty,
   HumanDisconnects,
   HumanStatsSnapshot,
   PlayerActions,
@@ -42,6 +43,9 @@ export type WorkerMessageType =
   | "snapshot_result"
   | "read_snapshot_header"
   | "read_snapshot_header_result"
+  | "extract_snapshot"
+  | "extract_snapshot_result"
+  | "extract_snapshot_error"
   | "human_stats"
   | "human_stats_result"
   | "human_disconnects"
@@ -233,6 +237,30 @@ export interface HumanStatsResultMessage extends BaseWorkerMessage {
   result: HumanStatsSnapshot;
 }
 
+export interface ExtractSnapshotMessage extends BaseWorkerMessage {
+  type: "extract_snapshot";
+  gameStartInfo: GameStartInfo;
+  turns: Turn[];
+  map: MapFiles;
+  targetTick: number;
+  chosenPlayerID: PlayerID;
+  localClientID: ClientID;
+  difficulty?: Difficulty;
+  newGameID?: string;
+}
+
+export interface ExtractSnapshotResultMessage extends BaseWorkerMessage {
+  type: "extract_snapshot_result";
+  snapshot: Uint8Array;
+  gameStartInfo: GameStartInfo;
+  tick: number;
+}
+
+export interface ExtractSnapshotErrorMessage extends BaseWorkerMessage {
+  type: "extract_snapshot_error";
+  error: string;
+}
+
 export interface HumanDisconnectsMessage extends BaseWorkerMessage {
   type: "human_disconnects";
 }
@@ -256,6 +284,7 @@ export type MainThreadMessage =
   | TransportShipSpawnMessage
   | SnapshotMessage
   | ReadSnapshotHeaderMessage
+  | ExtractSnapshotMessage
   | HumanStatsMessage
   | HumanDisconnectsMessage;
 
@@ -276,5 +305,7 @@ export type WorkerMessage =
   | TransportShipSpawnResultMessage
   | SnapshotResultMessage
   | ReadSnapshotHeaderResultMessage
+  | ExtractSnapshotResultMessage
+  | ExtractSnapshotErrorMessage
   | HumanStatsResultMessage
   | HumanDisconnectsResultMessage;
