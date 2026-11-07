@@ -1419,7 +1419,12 @@ export const RankedLeaderboardResponseSchema = z.object({
   // The season today falls in, for the FFA board's label. Absent before the
   // first season and until the API serves the rating; malformed reads as absent.
   ffaSeason: z
-    .object({ number: z.number().int().positive(), startDate: z.iso.date() })
+    .object({
+      number: z.number().int().positive(),
+      startDate: z.iso.date(),
+      // Null until the next season is scheduled; absent on an older API.
+      endDate: z.iso.date().nullable().optional(),
+    })
     .optional()
     .catch(undefined),
 });
