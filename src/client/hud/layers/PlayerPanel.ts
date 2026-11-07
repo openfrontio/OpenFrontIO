@@ -29,6 +29,9 @@ import {
   CloseViewEvent,
   ContextMenuEvent,
   MouseUpEvent,
+  ShowBuildMenuEvent,
+  ShowChatMenuEvent,
+  ShowEmojiMenuEvent,
   ShowPlayerPanelEvent,
   SwapRocketDirectionEvent,
 } from "../../InputHandler";
@@ -142,12 +145,14 @@ export class PlayerPanel extends LitElement implements Controller {
         this.hide();
       }
     });
-    eventBus.on(ContextMenuEvent, () => {
+    const cancelPendingOpen = () => {
       this.pendingOpenRequest = null;
-    });
-    eventBus.on(MouseUpEvent, () => {
-      this.pendingOpenRequest = null;
-    });
+    };
+    eventBus.on(ContextMenuEvent, cancelPendingOpen);
+    eventBus.on(MouseUpEvent, cancelPendingOpen);
+    eventBus.on(ShowBuildMenuEvent, cancelPendingOpen);
+    eventBus.on(ShowEmojiMenuEvent, cancelPendingOpen);
+    eventBus.on(ShowChatMenuEvent, cancelPendingOpen);
     eventBus.on(ShowPlayerPanelEvent, (e) => {
       this.toggleAt(e.x, e.y);
     });
@@ -189,7 +194,7 @@ export class PlayerPanel extends LitElement implements Controller {
   }
 
   private toggleAt(x: number | null, y: number | null) {
-    if (this.isVisible) {
+    if (this.isVisible || this.pendingOpenRequest !== null) {
       this.hide();
       return;
     }

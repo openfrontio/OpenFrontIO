@@ -49,6 +49,9 @@ import {
   CloseViewEvent,
   ContextMenuEvent,
   MouseUpEvent,
+  ShowBuildMenuEvent,
+  ShowChatMenuEvent,
+  ShowEmojiMenuEvent,
   ShowPlayerPanelEvent,
 } from "../../../../src/client/InputHandler";
 import {
@@ -449,6 +452,9 @@ describe("PlayerPanel - ShowPlayerPanelEvent keybind", () => {
     ["CloseViewEvent", () => new CloseViewEvent()],
     ["MouseUpEvent", () => new MouseUpEvent(10, 20)],
     ["ContextMenuEvent", () => new ContextMenuEvent(10, 20)],
+    ["ShowBuildMenuEvent", () => new ShowBuildMenuEvent(10, 20)],
+    ["ShowEmojiMenuEvent", () => new ShowEmojiMenuEvent(10, 20)],
+    ["ShowChatMenuEvent", () => new ShowChatMenuEvent(10, 20)],
   ])(
     "drops a pending player panel open when %s fires before actions resolve",
     async (_, makeEvent) => {
@@ -463,6 +469,19 @@ describe("PlayerPanel - ShowPlayerPanelEvent keybind", () => {
       expect(panel.isVisible).toBe(false);
     },
   );
+
+  test("a second press before actions resolve cancels the pending open", async () => {
+    const { bus, myPlayer, panel } = setupKeybind();
+    const showSpy = vi.spyOn(panel, "show");
+
+    bus.emit(new ShowPlayerPanelEvent(50, 60));
+    bus.emit(new ShowPlayerPanelEvent(50, 60));
+    await flush();
+
+    expect(myPlayer.actions).toHaveBeenCalledOnce();
+    expect(showSpy).not.toHaveBeenCalled();
+    expect(panel.isVisible).toBe(false);
+  });
 
   test("does not open the player panel if the tile changes owner before actions resolve", async () => {
     const { bus, game, panel } = setupKeybind();
