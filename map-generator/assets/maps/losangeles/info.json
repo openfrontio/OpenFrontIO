@@ -84,11 +84,6 @@
       "flag": "California"
     },
     {
-      "coordinates": [2043, 903],
-      "name": "Diamond Bar",
-      "flag": "California"
-    },
-    {
       "coordinates": [1284, 748],
       "name": "Skid Row",
       "flag": "California"
@@ -212,15 +207,14 @@
       "coordinates": [2039, 1603],
       "name": "Newport Beach",
       "flag": "California"
-    },
-    {
-      "coordinates": [1976, 526],
-      "name": "Azusa",
-      "flag": "California"
     }
   ],
   "themes": ["north_america"],
   "custom_tribes": [
+    {
+      "coordinates": [1976, 526],
+      "name": "Azusa"
+    },
     {
       "coordinates": [1734, 682],
       "name": "El Monte"
@@ -416,6 +410,10 @@
     {
       "coordinates": [945, 783],
       "name": "Culver City"
+    },
+    {
+      "coordinates": [2043, 903],
+      "name": "Diamond Bar"
     },
     {
       "coordinates": [1029, 830],

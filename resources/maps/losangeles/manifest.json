@@ -2,6 +2,10 @@
   "categories": ["north_america"],
   "custom_tribes": [
     {
+      "coordinates": [1976, 526],
+      "name": "Azusa"
+    },
+    {
       "coordinates": [1734, 682],
       "name": "El Monte"
     },
@@ -196,6 +200,10 @@
     {
       "coordinates": [945, 783],
       "name": "Culver City"
+    },
+    {
+      "coordinates": [2043, 903],
+      "name": "Diamond Bar"
     },
     {
       "coordinates": [1029, 830],
@@ -672,11 +680,6 @@
       "name": "Hollywood"
     },
     {
-      "coordinates": [2043, 903],
-      "flag": "California",
-      "name": "Diamond Bar"
-    },
-    {
       "coordinates": [1284, 748],
       "flag": "California",
       "name": "Skid Row"
@@ -800,11 +803,6 @@
       "coordinates": [2039, 1603],
       "flag": "California",
       "name": "Newport Beach"
-    },
-    {
-      "coordinates": [1976, 526],
-      "flag": "California",
-      "name": "Azusa"
     }
   ],
   "themes": ["north_america"],
