@@ -1,4 +1,5 @@
 import { html, LitElement, nothing } from "lit";
+import type { PropertyValues } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./components/CosmeticCard";
 import "./components/CosmeticPreviewModal";
@@ -69,6 +70,43 @@ export class SteamSkinDropModal extends LitElement {
     resolve?.(answer);
   }
 
+  protected updated(changed: PropertyValues) {
+    // Focus starts behind the overlay otherwise, so Tab then Enter would reach
+    // the homepage under it. Re-run when the popup comes back from the preview.
+    if (
+      this.resolved !== null &&
+      this.view === "popup" &&
+      (changed.has("resolved") || changed.has("view"))
+    ) {
+      this.querySelector<HTMLElement>(
+        "[data-steam-skin-drop-primary]",
+      )?.focus();
+    }
+  }
+
+  // Keeps Tab inside the panel while it is the only thing on screen.
+  private onKeydown = (event: KeyboardEvent) => {
+    if (event.key !== "Tab") return;
+    const panel = event.currentTarget as HTMLElement;
+    const items = [
+      ...panel.querySelectorAll<HTMLElement>("button, [tabindex='0']"),
+    ];
+    if (items.length === 0) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !panel.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (
+      !event.shiftKey &&
+      (active === last || !panel.contains(active))
+    ) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   private onOpenPreview = (event: Event) => {
     // Stopped so no ancestor opens its own preview over the popup.
     event.stopPropagation();
@@ -85,6 +123,8 @@ export class SteamSkinDropModal extends LitElement {
         <div
           class="relative w-full max-w-[440px] rounded-2xl border border-white/10 bg-black/70 p-6 text-white shadow-2xl backdrop-blur-xl"
           role="dialog"
+          aria-modal="true"
+          @keydown=${this.onKeydown}
           aria-label=${translateText(keys.message)}
         >
           <button
@@ -119,6 +159,7 @@ export class SteamSkinDropModal extends LitElement {
             </button>
             <button
               type="button"
+              data-steam-skin-drop-primary
               class="flex-1 cursor-pointer rounded-xl border-0 bg-malibu-blue px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition-all hover:brightness-110"
               @click=${() => this.settle("equip")}
             >

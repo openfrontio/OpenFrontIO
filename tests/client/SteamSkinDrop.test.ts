@@ -1,5 +1,7 @@
 import { UserMeResponseSchema } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 import {
@@ -194,6 +196,7 @@ describe("showSteamSkinDrop", () => {
           return "equip";
         },
       }),
+      () => true,
     );
     expect(answer).toBe("equip");
     expect(order).toEqual(["load", "show"]);
@@ -209,6 +212,7 @@ describe("showSteamSkinDrop", () => {
           throw new Error("chunk");
         },
         find,
+        () => true,
       ),
     ).toBe("abandoned");
     expect(find).not.toHaveBeenCalled();
@@ -221,7 +225,50 @@ describe("showSteamSkinDrop", () => {
         item,
         async () => {},
         () => null,
+        () => true,
       ),
     ).toBe("abandoned");
+  });
+
+  it("is abandoned, without showing, when a join starts during the chunk load", async () => {
+    let clean = true;
+    const show = vi.fn(async () => "claim" as const);
+    expect(
+      await showSteamSkinDrop(
+        item,
+        async () => {
+          clean = false;
+        },
+        () => ({ show }),
+        () => clean,
+      ),
+    ).toBe("abandoned");
+    expect(show).not.toHaveBeenCalled();
+  });
+});
+
+describe("language file", () => {
+  const en = JSON.parse(
+    readFileSync(
+      path.join(__dirname, "..", "..", "resources", "lang", "en.json"),
+      "utf8",
+    ),
+  ) as Record<string, unknown>;
+  const lookup = (key: string): unknown =>
+    key
+      .split(".")
+      .reduce<unknown>(
+        (node, part) => (node as Record<string, unknown> | undefined)?.[part],
+        en,
+      );
+
+  it("has every key the popup renders", () => {
+    for (const key of [
+      ...Object.values(STEAM_SKIN_DROP_KEYS),
+      "cosmetics.steam_exclusive",
+    ]) {
+      expect(typeof lookup(key), key).toBe("string");
+      expect(lookup(key) as string, key).not.toBe("");
+    }
   });
 });

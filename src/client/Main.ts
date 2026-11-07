@@ -1057,6 +1057,7 @@ class Client {
                   document.querySelector<SteamSkinDropModal>(
                     "steam-skin-drop-modal",
                   ),
+                homepageIsClean,
               ),
             equipCosmetic: (resolved) =>
               this.userSettings.setSelectedPatternName(

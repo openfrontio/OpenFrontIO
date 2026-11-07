@@ -78,6 +78,28 @@ describe("SteamSkinDropModal", () => {
     expect(modal.textContent).toContain(K.message);
   });
 
+  it("is aria-modal and moves focus into the panel", () => {
+    const panel = modal.querySelector<HTMLElement>("[role='dialog']")!;
+    expect(panel.getAttribute("aria-modal")).toBe("true");
+    expect(panel.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).toBe(buttonWithText(K.claimEquip));
+  });
+
+  it("keeps Tab inside the panel", () => {
+    const panel = modal.querySelector<HTMLElement>("[role='dialog']")!;
+    const primary = buttonWithText(K.claimEquip);
+    primary.focus();
+    const tab = new KeyboardEvent("keydown", {
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    });
+    primary.dispatchEvent(tab);
+    expect(tab.defaultPrevented).toBe(true);
+    expect(panel.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement).not.toBe(primary);
+  });
+
   it("puts the card first, then the message, then the buttons", () => {
     const card = modal.querySelector("cosmetic-card")!;
     const message = [...modal.querySelectorAll("p")].find((p) =>

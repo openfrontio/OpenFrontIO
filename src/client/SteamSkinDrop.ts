@@ -86,9 +86,10 @@ export async function steamSkinDropFor(
 }
 
 /**
- * Loads the lazy popup and shows it. A chunk that will not load, or an element
- * that is not on the page, resolves "abandoned" so nothing is marked seen and
- * the player is told next launch.
+ * Loads the lazy popup and shows it. A chunk that will not load, an element
+ * that is not on the page, or a homepage that stopped being clean while the
+ * chunk downloaded (a join started) resolves "abandoned" so nothing is marked
+ * seen and the player is told next launch.
  */
 export async function showSteamSkinDrop(
   resolved: ResolvedCosmetic,
@@ -96,6 +97,7 @@ export async function showSteamSkinDrop(
   find: () => {
     show(resolved: ResolvedCosmetic): Promise<SteamSkinDropAnswer>;
   } | null,
+  homepageIsClean: () => boolean,
 ): Promise<SteamSkinDropAnswer> {
   try {
     await load();
@@ -103,15 +105,19 @@ export async function showSteamSkinDrop(
     console.error("steam-skin-drop-modal failed to load:", err);
     return "abandoned";
   }
+  // The chunk can still be downloading when the player clicks Join; nothing
+  // is awaited between this check and show().
+  if (!homepageIsClean()) return "abandoned";
   return (await find()?.show(resolved)) ?? "abandoned";
 }
 
 /**
  * Resolves the drop and decides whether the homepage is still clean, in an
- * order that cannot go stale: check, fetch the catalog, check again with
- * nothing awaited after. A join that starts during the fetch leaves
- * `cleanHomepage` false, so no interrupt opens over a starting game. The
- * catalog is fetched only on a clean page, for a drop due this launch.
+ * order that cannot go stale: check, fetch the catalog, check again. A join
+ * that starts during the fetch leaves
+ * `cleanHomepage` false, so no interrupt is chosen over a starting game. The
+ * catalog is fetched only on a clean page, for a drop due this launch. The
+ * popup's own chunk loads after this, so `showSteamSkinDrop` checks again.
  */
 export async function steamSkinDropWhenClean(
   drop: SteamSkinDrop | null | undefined,
