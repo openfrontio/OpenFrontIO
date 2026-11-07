@@ -12,13 +12,13 @@ import {
 } from "../../TerrainMapFileLoader";
 import { translateText } from "../../Utils";
 import {
-  EARTH_MAP_HEIGHT,
-  EARTH_MAP_WIDTH,
-  projectEarth,
-} from "./EarthProjection";
+  ATLAS_MAP_HEIGHT,
+  ATLAS_MAP_WIDTH,
+  projectToAtlas,
+} from "./AtlasProjection";
 import { type MapStats, mapStats, renderMapDetails } from "./MapDetails";
 
-interface EarthPin {
+interface AtlasPin {
   map: MapInfo;
   x: number;
   y: number;
@@ -26,10 +26,10 @@ interface EarthPin {
 }
 
 // Continental pins first, so the regional pins drawn over them stay clickable.
-const pins: EarthPin[] = listedMaps
+const pins: AtlasPin[] = listedMaps
   .flatMap((map) => {
     if (map.location === undefined) return [];
-    const [x, y] = projectEarth(map.location.lat, map.location.lon);
+    const [x, y] = projectToAtlas(map.location.lat, map.location.lon);
     return [{ map, x, y, continental: map.categories.includes("continental") }];
   })
   .sort((a, b) => Number(b.continental) - Number(a.continental));
@@ -48,21 +48,21 @@ const labelsBelow = new Set(
   ),
 );
 
-const ASPECT = EARTH_MAP_HEIGHT / EARTH_MAP_WIDTH;
-const MIN_VIEW_WIDTH = EARTH_MAP_WIDTH / 10;
+const ASPECT = ATLAS_MAP_HEIGHT / ATLAS_MAP_WIDTH;
+const MIN_VIEW_WIDTH = ATLAS_MAP_WIDTH / 10;
 const BUTTON_ZOOM = 1.6;
 // Pointer travel, in pixels, after which a press pans instead of clicking.
 const DRAG_THRESHOLD = 5;
 
-interface EarthPaths {
+interface AtlasPaths {
   sphere: string;
   land: string;
 }
 
-let earthPaths: Promise<EarthPaths> | null = null;
+let atlasPaths: Promise<AtlasPaths> | null = null;
 
-function loadEarthPaths(): Promise<EarthPaths> {
-  earthPaths ??= fetch(assetUrl("images/EarthMap.svg"))
+function loadAtlasPaths(): Promise<AtlasPaths> {
+  atlasPaths ??= fetch(assetUrl("images/AtlasMap.svg"))
     .then((response) => {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response.text();
@@ -72,28 +72,28 @@ function loadEarthPaths(): Promise<EarthPaths> {
       const d = (id: string) => doc.getElementById(id)?.getAttribute("d") ?? "";
       const paths = { sphere: d("sphere"), land: d("land") };
       if (!paths.sphere || !paths.land) {
-        throw new Error("EarthMap.svg is missing the sphere or land path");
+        throw new Error("AtlasMap.svg is missing the sphere or land path");
       }
       return paths;
     })
     .catch((error: unknown) => {
-      earthPaths = null;
+      atlasPaths = null;
       throw error;
     });
-  return earthPaths;
+  return atlasPaths;
 }
 
-@customElement("earth-map")
-export class EarthMap extends LitElement {
+@customElement("atlas-map")
+export class AtlasMap extends LitElement {
   @property({ type: String }) selectedMap: GameMapType = GameMapType.World;
   @property({ type: Boolean }) useRandomMap = false;
   @property({ attribute: false }) onSelectMap?: (map: GameMapType) => void;
-  @state() private paths: EarthPaths = { sphere: "", land: "" };
-  @state() private view = { x: 0, y: 0, width: EARTH_MAP_WIDTH };
-  @state() private hovered: EarthPin | null = null;
+  @state() private paths: AtlasPaths = { sphere: "", land: "" };
+  @state() private view = { x: 0, y: 0, width: ATLAS_MAP_WIDTH };
+  @state() private hovered: AtlasPin | null = null;
   @state() private stats = new Map<GameMapType, MapStats>();
   @state() private revealDetails = false;
-  @query("[data-earth-frame]") private frame!: HTMLElement;
+  @query("[data-atlas-frame]") private frame!: HTMLElement;
   private pointers = new Map<number, { x: number; y: number }>();
   private dragDistance = 0;
 
@@ -114,22 +114,22 @@ export class EarthMap extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    loadEarthPaths()
+    loadAtlasPaths()
       .then((paths) => (this.paths = paths))
       .catch((error: unknown) =>
-        console.warn("Failed to load the Earth map:", error),
+        console.warn("Failed to load the atlas map:", error),
       );
   }
 
   private get zoomed(): boolean {
-    return this.view.width < EARTH_MAP_WIDTH;
+    return this.view.width < ATLAS_MAP_WIDTH;
   }
 
   private setView(x: number, y: number, width: number) {
     const height = width * ASPECT;
     this.view = {
-      x: Math.min(EARTH_MAP_WIDTH - width, Math.max(0, x)),
-      y: Math.min(EARTH_MAP_HEIGHT - height, Math.max(0, y)),
+      x: Math.min(ATLAS_MAP_WIDTH - width, Math.max(0, x)),
+      y: Math.min(ATLAS_MAP_HEIGHT - height, Math.max(0, y)),
       width,
     };
   }
@@ -137,7 +137,7 @@ export class EarthMap extends LitElement {
   /** Zooms to `width` keeping the point at frame fractions (fx, fy) still. */
   private zoomTo(width: number, fx = 0.5, fy = 0.5) {
     const { x, y, width: oldWidth } = this.view;
-    const newWidth = Math.min(EARTH_MAP_WIDTH, Math.max(MIN_VIEW_WIDTH, width));
+    const newWidth = Math.min(ATLAS_MAP_WIDTH, Math.max(MIN_VIEW_WIDTH, width));
     this.setView(
       x + fx * (oldWidth - newWidth),
       y + fy * (oldWidth - newWidth) * ASPECT,
@@ -219,10 +219,10 @@ export class EarthMap extends LitElement {
   }
 
   private isOnPin(event: Event): boolean {
-    return (event.target as Element).closest("[data-earth-pin]") !== null;
+    return (event.target as Element).closest("[data-atlas-pin]") !== null;
   }
 
-  private hover(pin: EarthPin) {
+  private hover(pin: AtlasPin) {
     this.hovered = pin;
     this.revealDetails = false;
     const map = pin.map.type;
@@ -236,21 +236,21 @@ export class EarthMap extends LitElement {
       );
   }
 
-  private selectPin(pin: EarthPin) {
+  private selectPin(pin: AtlasPin) {
     if (this.dragDistance > DRAG_THRESHOLD) return;
     this.hover(pin);
     this.revealDetails = true;
     this.onSelectMap?.(pin.map.type);
   }
 
-  private position(pin: EarthPin): [number, number] {
+  private position(pin: AtlasPin): [number, number] {
     return [
       ((pin.x - this.view.x) / this.view.width) * 100,
       ((pin.y - this.view.y) / (this.view.width * ASPECT)) * 100,
     ];
   }
 
-  private renderPin(pin: EarthPin) {
+  private renderPin(pin: AtlasPin) {
     const [left, top] = this.position(pin);
     if (left < -2 || left > 102 || top < -2 || top > 102) return nothing;
     const selected = !this.useRandomMap && pin.map.type === this.selectedMap;
@@ -258,7 +258,7 @@ export class EarthMap extends LitElement {
     return html`<button
       type="button"
       tabindex="-1"
-      data-earth-pin=${pin.map.id}
+      data-atlas-pin=${pin.map.id}
       aria-label=${name}
       aria-pressed=${selected}
       class="group/pin absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center ${
@@ -299,7 +299,7 @@ export class EarthMap extends LitElement {
     </button>`;
   }
 
-  private renderContinentLabel(pin: EarthPin) {
+  private renderContinentLabel(pin: AtlasPin) {
     const [left, top] = this.position(pin);
     if (left < 0 || left > 100 || top < 0 || top > 100) return nothing;
     return html`<span
@@ -381,9 +381,9 @@ export class EarthMap extends LitElement {
           ? html`<button
               type="button"
               class=${buttonClass}
-              aria-label=${translateText("map_component.earth_reset")}
-              title=${translateText("map_component.earth_reset")}
-              @click=${() => this.setView(0, 0, EARTH_MAP_WIDTH)}
+              aria-label=${translateText("map_component.atlas_reset")}
+              title=${translateText("map_component.atlas_reset")}
+              @click=${() => this.setView(0, 0, ATLAS_MAP_WIDTH)}
             >
               <svg
                 viewBox="0 0 20 20"
@@ -411,11 +411,11 @@ export class EarthMap extends LitElement {
         <span
           class="h-3 w-3 rounded-full border-2 border-aquarius bg-black/40"
         ></span>
-        ${translateText("map_component.earth_continental")}
+        ${translateText("map_component.atlas_continental")}
       </span>
       <span class="flex items-center gap-1.5">
         <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
-        ${translateText("map_component.earth_regional")}
+        ${translateText("map_component.atlas_regional")}
       </span>
     </div>`;
   }
@@ -424,11 +424,11 @@ export class EarthMap extends LitElement {
     const { x, y, width } = this.view;
     return html`<div class="@container relative">
       <div
-        data-earth-frame
+        data-atlas-frame
         class="relative w-full select-none overflow-hidden rounded-xl border border-white/10 bg-slate-950/60 ${
           this.zoomed ? "cursor-grab active:cursor-grabbing" : ""
         }"
-        style="aspect-ratio: ${EARTH_MAP_WIDTH} / ${EARTH_MAP_HEIGHT}; touch-action: ${
+        style="aspect-ratio: ${ATLAS_MAP_WIDTH} / ${ATLAS_MAP_HEIGHT}; touch-action: ${
           this.zoomed ? "none" : "pan-y"
         }"
         @wheel=${{

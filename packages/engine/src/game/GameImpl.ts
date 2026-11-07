@@ -2,9 +2,11 @@ import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   Cell,
   ColoredTeams,
+  Difficulty,
   Duos,
   EmojiMessage,
   GameMode,
+  GameType,
   GameUpdates,
   HumansVsNations,
   MessageType,
@@ -33,6 +35,7 @@ import {
 import {
   AllPlayersStats,
   ClientID,
+  GameID,
   Winner,
 } from "@openfront/engine-api/Schemas";
 import { ATTACK_INDEX_SENT } from "@openfront/engine-api/StatsSchemas";
@@ -63,6 +66,9 @@ import {
   SharedWaterCache,
   SharedWaterCacheSnapshot,
 } from "../execution/nation/SharedWaterCache";
+import { NationExecution } from "../execution/NationExecution";
+import { SpawnTimerExecution } from "../execution/SpawnTimerExecution";
+import { TribeExecution } from "../execution/TribeExecution";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathFinder } from "../pathfinding/types";
@@ -308,6 +314,8 @@ export class GameImpl implements Game {
       this._map.setFallout(tile, false);
     }
     this._territoryVersion++;
+    // Rail paths route around water, so a rail plan must be redone too.
+    this._structureVersion++;
     this._map.setWater(tile);
     this.recordTileUpdate(tile);
   }
@@ -650,6 +658,8 @@ export class GameImpl implements Game {
     for (const tile of waterChangedTiles) {
       this.recordTileUpdate(tile);
     }
+    // Queued conversions write the map directly, bypassing setWater.
+    if (waterChangedTiles.length > 0) this._structureVersion++;
     this._ticks++;
     return this.updates;
   }
@@ -734,6 +744,9 @@ export class GameImpl implements Game {
     this._players.forEach((p) => {
       hash += p.hash();
     });
+    // Rails are not units, so without this a divergence in which rails got
+    // built would only show up through the trains that later run on them.
+    hash += this._railNetwork.hash();
     return hash;
   }
 
@@ -780,6 +793,110 @@ export class GameImpl implements Game {
     this.unInitExecs = this.unInitExecs.filter(
       (execution) => execution !== exec,
     );
+  }
+
+  takeoverPlayer(player: Player | PlayerID, localClientID: ClientID): void {
+    const target = typeof player === "string" ? this.player(player) : player;
+
+    const oldClientID = target.clientID();
+    if (oldClientID !== null) {
+      this._stats.migrateClientID(oldClientID, localClientID);
+    }
+
+    // Remove any NationExecution or TribeExecution controlling this player
+    for (const exec of this.executions()) {
+      if (
+        (exec instanceof NationExecution || exec instanceof TribeExecution) &&
+        exec.playerID() === target.id()
+      ) {
+        this.removeExecution(exec);
+      }
+    }
+
+    // Update chosen player to be the local human
+    const chosenInfo = target.info();
+    const updatedChosenInfo = new PlayerInfo(
+      chosenInfo.name,
+      PlayerType.Human,
+      localClientID,
+      chosenInfo.id,
+      chosenInfo.isLobbyCreator,
+      chosenInfo.clanTag,
+      chosenInfo.friends,
+      chosenInfo.teamIndex,
+      chosenInfo.nationFlag,
+    );
+    target.setPlayerInfo(updatedChosenInfo);
+    target.markDisconnected(false);
+
+    this._humans = this._humans.filter((h) => h.id !== target.id());
+    this._humans.push(updatedChosenInfo);
+    this._nations = this._nations.filter(
+      (n) => n.playerInfo.id !== target.id(),
+    );
+  }
+
+  clearHumanPlayer(player: Player | PlayerID): void {
+    const target = typeof player === "string" ? this.player(player) : player;
+    const pInfo = target.info();
+    const updatedBotInfo = new PlayerInfo(
+      pInfo.name,
+      PlayerType.Nation,
+      null,
+      pInfo.id,
+      false,
+      pInfo.clanTag,
+      pInfo.friends,
+      pInfo.teamIndex,
+      pInfo.nationFlag,
+    );
+    target.setPlayerInfo(updatedBotInfo);
+    target.markDisconnected(false);
+
+    this._humans = this._humans.filter((h) => h.id !== target.id());
+  }
+
+  clearOtherHumans(keptPlayer: Player | PlayerID): void {
+    const target =
+      typeof keptPlayer === "string" ? this.player(keptPlayer) : keptPlayer;
+    this._humans = this._humans.filter((h) => h.id === target.id());
+  }
+
+  convertHumanToNation(player: Player | PlayerID, gameID: GameID): Execution {
+    const target = typeof player === "string" ? this.player(player) : player;
+    this.clearHumanPlayer(target);
+
+    this._nations = this._nations.filter(
+      (n) => n.playerInfo.id !== target.id(),
+    );
+    const spawnTile = target.spawnTile();
+    const spawnCell =
+      spawnTile !== undefined ? this.cell(spawnTile) : undefined;
+    const nation = new Nation(spawnCell, target.info());
+    this._nations.push(nation);
+
+    const nationExec = new NationExecution(gameID, nation);
+    this.addExecution(nationExec);
+    return nationExec;
+  }
+
+  applySingleplayerConfig(difficulty?: Difficulty): void {
+    this.config().setGameType(GameType.Singleplayer);
+    if (difficulty !== undefined) {
+      this.config().setDifficulty(difficulty);
+    }
+    for (const exec of this.executions()) {
+      if (exec instanceof SpawnTimerExecution) {
+        this.removeExecution(exec);
+      } else if (
+        difficulty !== undefined &&
+        exec instanceof NationExecution &&
+        exec.isActive() &&
+        exec.isInitialized()
+      ) {
+        exec.refreshDifficulty();
+      }
+    }
   }
 
   playerView(id: PlayerID): Player {
@@ -1234,6 +1351,26 @@ export class GameImpl implements Game {
     this._unitsVersion++;
   }
 
+  // Bumped when a City, Port or Factory is added or removed (the structures
+  // the rail network connects) and when land turns to water (rail paths route
+  // around it), so rail previews can be memoised while the trains, shells and
+  // boats that churn _unitsVersion come and go.
+  private _structureVersion = 0;
+  structureVersion(): number {
+    return this._structureVersion;
+  }
+  /** Call when a unit the rail network cares about appears, vanishes or changes visibility. */
+  noteStructureChange(u: Unit): void {
+    const type = u.type();
+    if (
+      type === UnitType.City ||
+      type === UnitType.Port ||
+      type === UnitType.Factory
+    ) {
+      this._structureVersion++;
+    }
+  }
+
   // Bumped on every change of tile ownership, fallout or land/water — i.e.
   // anything Player.nearby() can observe — so per-player answers can be memoised
   // for as long as nothing on the map moved.
@@ -1244,11 +1381,13 @@ export class GameImpl implements Game {
 
   addUnit(u: Unit) {
     this._unitsVersion++;
+    this.noteStructureChange(u);
     this.unitGrid.addUnit(u);
     this._unitMap.set(u.id(), u);
   }
   removeUnit(u: Unit) {
     this._unitsVersion++;
+    this.noteStructureChange(u);
     this.unitGrid.removeUnit(u);
     this._unitMap.delete(u.id());
     this.planDrivenUnitIds.delete(u.id());
@@ -1597,6 +1736,8 @@ export class GameImpl implements Game {
           : r.player(s.winner.player);
     this._unitsVersion = s.unitsVersion;
     this._territoryVersion = s.territoryVersion;
+    // Not snapshotted: it only keys memos, which must not outlive the restore.
+    this._structureVersion++;
     this.shipStaggers = { ...s.shipStaggers };
     this._nationMirvTargets = new Map(s.nationMirvTargets);
     this._mirvsLaunched = s.mirvsLaunched;

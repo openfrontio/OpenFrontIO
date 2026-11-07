@@ -7,7 +7,7 @@ function fakeSdk(name: string) {
   return { getUserToken: vi.fn(async () => `${name}-token`) };
 }
 
-vi.mock("../../src/client/PokiSDK", () => ({
+vi.mock("../../src/client/poki/PokiSDK", () => ({
   pokiSDK: { isOnPoki: () => on.poki, ...fakeSdk("poki") },
 }));
 vi.mock("../../src/client/ViverseSDK", () => ({

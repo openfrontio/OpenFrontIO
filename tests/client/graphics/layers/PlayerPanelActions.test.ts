@@ -45,6 +45,7 @@ import { flattenedEmojiTable } from "@openfront/engine-api/Schemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import { actionButton } from "../../../../src/client/components/ui/ActionButton";
 import { PlayerPanel } from "../../../../src/client/hud/layers/PlayerPanel";
+import { MouseUpEvent } from "../../../../src/client/InputHandler";
 import {
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
@@ -259,5 +260,46 @@ describe("PlayerPanel - action buttons follow PlayerActions capability flags", (
     (panel as any).renderActions(my, my);
 
     expect(renderedLabels()).not.toContain("player_panel.emotes");
+  });
+});
+
+describe("PlayerPanel - openSendGoldModal suppressNextHide", () => {
+  const actions = {
+    canAttack: false,
+    buildableUnits: [],
+    canSendEmojiAllPlayers: false,
+  };
+
+  test("swallows the first MouseUpEvent by default (radial menu click)", () => {
+    const panel = new PlayerPanel();
+    (panel as any).requestUpdate = vi.fn();
+    (panel as any).g = makeGame();
+    const eventBus = new EventBus();
+    panel.initEventBus(eventBus);
+    panel.init();
+
+    panel.openSendGoldModal(actions, 7, other);
+    expect(panel.isVisible).toBe(true);
+
+    eventBus.emit(new MouseUpEvent(10, 20));
+    expect(panel.isVisible).toBe(true);
+
+    eventBus.emit(new MouseUpEvent(10, 20));
+    expect(panel.isVisible).toBe(false);
+  });
+
+  test("closes on the first MouseUpEvent when suppressNextHide is false (keybind)", () => {
+    const panel = new PlayerPanel();
+    (panel as any).requestUpdate = vi.fn();
+    (panel as any).g = makeGame();
+    const eventBus = new EventBus();
+    panel.initEventBus(eventBus);
+    panel.init();
+
+    panel.openSendGoldModal(actions, 7, other, false);
+    expect(panel.isVisible).toBe(true);
+
+    eventBus.emit(new MouseUpEvent(10, 20));
+    expect(panel.isVisible).toBe(false);
   });
 });

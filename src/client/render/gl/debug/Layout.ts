@@ -674,6 +674,34 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
       ),
     ]),
 
+    folder("Range Circle", [
+      color(
+        s.rangeCircle,
+        "allianceColorR",
+        "allianceColorG",
+        "allianceColorB",
+        d.rangeCircle,
+        "Alliance Break Color",
+      ),
+      color(
+        s.rangeCircle,
+        "traitorColorR",
+        "traitorColorG",
+        "traitorColorB",
+        d.rangeCircle,
+        "Traitor Flash Color",
+      ),
+      slider(
+        s.rangeCircle,
+        "flashHz",
+        d.rangeCircle,
+        0.5,
+        6,
+        0.25,
+        "Flash Rate (Hz)",
+      ),
+    ]),
+
     folder("SAM Radius", [
       slider(
         s.samRadius,
