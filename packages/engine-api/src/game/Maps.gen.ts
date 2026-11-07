@@ -1585,7 +1585,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.LosAngeles,
     translationKey: "map.losangeles",
     categories: ["north_america"],
-    defaultNationCount: 39,
+    defaultNationCount: 42,
     themes: ["north_america"],
     customTribes: [
       { name: "El Monte", coordinates: [1734, 682] },
@@ -1719,9 +1719,7 @@ export const maps: readonly MapInfo[] = [
       { name: "Citrus", coordinates: [1956, 609] },
       { name: "Charter Oak", coordinates: [2027, 642] },
       { name: "Glendora", coordinates: [2002, 559] },
-      { name: "Pomona", coordinates: [2046, 725] },
       { name: "Villa Park", coordinates: [2049, 1193] },
-      { name: "Newport Beach", coordinates: [1958, 1563] },
       { name: "Westmont", coordinates: [1179, 957] },
       { name: "Willowbrook", coordinates: [1313, 995] },
       { name: "West Rancho Dominguez", coordinates: [1241, 1040] },

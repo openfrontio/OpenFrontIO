@@ -29,22 +29,22 @@
       "flag": "California"
     },
     {
-      "coordinates": [2009, 858],
+      "coordinates": [2018, 762],
       "name": "Walnut",
       "flag": "California"
     },
     {
-      "coordinates": [2002, 1364],
+      "coordinates": [1982, 1348],
       "name": "Santa Ana",
       "flag": "California"
     },
     {
-      "coordinates": [1762, 1473],
+      "coordinates": [1738, 1454],
       "name": "Huntington Beach",
       "flag": "California"
     },
     {
-      "coordinates": [1382, 1270],
+      "coordinates": [1392, 1254],
       "name": "Long Beach",
       "flag": "California"
     },
@@ -129,7 +129,7 @@
       "flag": "California"
     },
     {
-      "coordinates": [750, 2100],
+      "coordinates": [952, 2073],
       "name": "Santa Catalina",
       "flag": "California"
     },
@@ -159,7 +159,7 @@
       "flag": "California"
     },
     {
-      "coordinates": [1918, 1473],
+      "coordinates": [1877, 1455],
       "name": "Costa Mesa",
       "flag": "California"
     },
@@ -184,16 +184,6 @@
       "flag": "California"
     },
     {
-      "coordinates": [1975, 514],
-      "name": "Azusa",
-      "flag": "California"
-    },
-    {
-      "coordinates": [1608, 1306],
-      "name": "Seal Beach",
-      "flag": "California"
-    },
-    {
       "coordinates": [231, 303],
       "name": "Simi Valley",
       "flag": "California"
@@ -201,6 +191,31 @@
     {
       "coordinates": [490, 214],
       "name": "Chatsworth",
+      "flag": "California"
+    },
+    {
+      "coordinates": [663, 343],
+      "name": "Northridge",
+      "flag": "California"
+    },
+    {
+      "coordinates": [2141, 716],
+      "name": "Pomona",
+      "flag": "California"
+    },
+    {
+      "coordinates": [2133, 1454],
+      "name": "Irvine",
+      "flag": "California"
+    },
+    {
+      "coordinates": [2039, 1603],
+      "name": "Newport Beach",
+      "flag": "California"
+    },
+    {
+      "coordinates": [1976, 526],
+      "name": "Azusa",
       "flag": "California"
     }
   ],
@@ -731,16 +746,8 @@
       "name": "Glendora"
     },
     {
-      "coordinates": [2046, 725],
-      "name": "Pomona"
-    },
-    {
       "coordinates": [2049, 1193],
       "name": "Villa Park"
-    },
-    {
-      "coordinates": [1958, 1563],
-      "name": "Newport Beach"
     },
     {
       "coordinates": [1179, 957],
