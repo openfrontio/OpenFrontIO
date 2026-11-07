@@ -3,7 +3,7 @@
   "id": "RockyMountains",
   "name": "Rocky Mountains",
   "translation_key": "map.rockymountains",
-  "categories": ["north_america"],
+  "categories": ["north_america", "new"],
   "location": { "lat": 44, "lon": -111 },
   "author": "crunchybbb",
   "description": "The Rockies are a massive mountain range system located in the western USA. The mountains are known for their abundant wildlife and national parks. The map is similar to a smaller Alps with rivers.",
