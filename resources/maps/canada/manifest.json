@@ -66,7 +66,7 @@
       "name": "Vancouver"
     },
     {
-      "coordinates": [1260, 1982],
+      "coordinates": [1260, 1981],
       "name": "Calgary"
     },
     {
@@ -90,7 +90,7 @@
       "name": "Windsor"
     },
     {
-      "coordinates": [1521, 1985],
+      "coordinates": [1521, 1983],
       "name": "Saskatoon"
     },
     {
@@ -150,11 +150,11 @@
       "name": "Saint-Jérôme"
     },
     {
-      "coordinates": [1288, 1923],
+      "coordinates": [1288, 1924],
       "name": "Red Deer"
     },
     {
-      "coordinates": [1280, 2068],
+      "coordinates": [1282, 2068],
       "name": "Lethbridge"
     },
     {
@@ -162,11 +162,11 @@
       "name": "Kamloops"
     },
     {
-      "coordinates": [1044, 1733],
+      "coordinates": [1046, 1734],
       "name": "Prince George"
     },
     {
-      "coordinates": [1359, 2070],
+      "coordinates": [1359, 2072],
       "name": "Medicine Hat"
     },
     {
@@ -245,17 +245,17 @@
   "id": "Canada",
   "map": {
     "height": 2568,
-    "num_land_tiles": 2337356,
+    "num_land_tiles": 2319011,
     "width": 3428
   },
   "map16x": {
     "height": 642,
-    "num_land_tiles": 137907,
+    "num_land_tiles": 135543,
     "width": 857
   },
   "map4x": {
     "height": 1284,
-    "num_land_tiles": 571675,
+    "num_land_tiles": 565361,
     "width": 1714
   },
   "name": "Canada",
@@ -276,7 +276,7 @@
       "name": "Saskatchewan"
     },
     {
-      "coordinates": [1836, 2146],
+      "coordinates": [1835, 2148],
       "flag": "manitoba",
       "name": "Manitoba"
     },
@@ -331,7 +331,7 @@
       "name": "Canada"
     },
     {
-      "coordinates": [1545, 1957],
+      "coordinates": [1546, 1957],
       "flag": "Metis",
       "name": "Métis"
     },
@@ -373,7 +373,7 @@
       "name": "Anishinaabe"
     },
     {
-      "coordinates": [1262, 1356],
+      "coordinates": [1262, 1355],
       "name": "Dene"
     },
     {
@@ -393,7 +393,7 @@
       "name": "Nisga'a"
     },
     {
-      "coordinates": [1047, 1929],
+      "coordinates": [1047, 1930],
       "name": "Secwepemc"
     },
     {
@@ -417,7 +417,7 @@
       "name": "Oji-Cree"
     },
     {
-      "coordinates": [1231, 1967],
+      "coordinates": [1231, 1965],
       "name": "Nakoda"
     },
     {

@@ -28,7 +28,7 @@
       "flag": "saskatchewan"
     },
     {
-      "coordinates": [1836, 2146],
+      "coordinates": [1835, 2148],
       "name": "Manitoba",
       "flag": "manitoba"
     },
@@ -83,7 +83,7 @@
       "flag": "ca"
     },
     {
-      "coordinates": [1545, 1957],
+      "coordinates": [1546, 1957],
       "name": "Métis",
       "flag": "Metis"
     },
@@ -125,7 +125,7 @@
       "name": "Anishinaabe"
     },
     {
-      "coordinates": [1262, 1356],
+      "coordinates": [1262, 1355],
       "name": "Dene"
     },
     {
@@ -145,7 +145,7 @@
       "name": "Nisga'a"
     },
     {
-      "coordinates": [1047, 1929],
+      "coordinates": [1047, 1930],
       "name": "Secwepemc"
     },
     {
@@ -169,7 +169,7 @@
       "name": "Oji-Cree"
     },
     {
-      "coordinates": [1231, 1967],
+      "coordinates": [1231, 1965],
       "name": "Nakoda"
     },
     {
@@ -248,7 +248,7 @@
     },
     {
       "name": "Calgary",
-      "coordinates": [1260, 1982]
+      "coordinates": [1260, 1981]
     },
     {
       "name": "Hamilton",
@@ -272,7 +272,7 @@
     },
     {
       "name": "Saskatoon",
-      "coordinates": [1521, 1985]
+      "coordinates": [1521, 1983]
     },
     {
       "name": "Barrie",
@@ -332,11 +332,11 @@
     },
     {
       "name": "Red Deer",
-      "coordinates": [1288, 1923]
+      "coordinates": [1288, 1924]
     },
     {
       "name": "Lethbridge",
-      "coordinates": [1280, 2068]
+      "coordinates": [1282, 2068]
     },
     {
       "name": "Kamloops",
@@ -344,11 +344,11 @@
     },
     {
       "name": "Prince George",
-      "coordinates": [1044, 1733]
+      "coordinates": [1046, 1734]
     },
     {
       "name": "Medicine Hat",
-      "coordinates": [1359, 2070]
+      "coordinates": [1359, 2072]
     },
     {
       "name": "Drummondville",
