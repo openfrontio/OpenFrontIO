@@ -95,9 +95,9 @@ describe("user-setting tabs", () => {
       "tribe",
       "anon",
     ]);
-    select.dispatchEvent(
-      new CustomEvent("change", { detail: { value: "tribe" } }),
-    );
+    const input = select.querySelector("select")!;
+    input.value = "tribe";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
     await el.updateComplete;
     expect(new UserSettings().randomNameStyle()).toBe("tribe");
     expect(select.value).toBe("tribe");

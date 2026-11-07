@@ -2039,8 +2039,10 @@ export class UserSettingModal extends BaseModal {
         ]}
         .value=${this.userSettings.randomNameStyle()}
         @change=${(event: CustomEvent<{ value: string }>) => {
+          const value = event.detail?.value;
+          if (value === undefined) return;
           this.userSettings.setRandomNameStyle(
-            event.detail.value === "tribe" ? "tribe" : "anon",
+            value === "tribe" ? "tribe" : "anon",
           );
           this.requestUpdate();
         }}
