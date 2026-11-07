@@ -2,6 +2,7 @@ import { RankedType } from "@openfront/engine-api/game/GameTypes";
 import {
   PlayerLeaderboardEntry,
   RankedLeaderboardEntry,
+  RankedLeaderboardResponse,
 } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
@@ -10,6 +11,7 @@ import { loadModal } from "../../LazyModals";
 import { isRealAccount } from "../../ProgressionAccount";
 import { translateText } from "../../Utils";
 import "../ffaRating/FfaTierBadge";
+import { formatSeasonDate, seasonTiming } from "../ffaRating/FfaSeason";
 import { formatRating } from "../ffaRating/FfaTier";
 import "../ffaRating/OfstatsCredit";
 import { isPrestigedOrLegend, levelBadgeSlot } from "../LevelBadgeSlot";
@@ -97,8 +99,9 @@ export class LeaderboardPlayerList extends LitElement {
   @state() private ffaCalibration: FfaCalibration | null = null;
   // The signed-in player's rating while the board's ± rule keeps them off it.
   @state() private ffaHidden: LadderRow | null = null;
-  @state() private ffaSeason: { number: number; startDate: string } | null =
-    null;
+  @state() private ffaSeason: NonNullable<
+    RankedLeaderboardResponse["ffaSeason"]
+  > | null = null;
 
   @query(".scroll-container") private scrollContainer?: HTMLElement;
 
@@ -209,7 +212,8 @@ export class LeaderboardPlayerList extends LitElement {
         return;
       }
 
-      this.ffaSeason = result.ffaSeason ?? this.ffaSeason;
+      // A fresh load replaces it: between seasons the API sends none.
+      this.ffaSeason = result.ffaSeason ?? (reset ? null : this.ffaSeason);
 
       if (reset && !this.currentUserIdLoaded) {
         this.currentUserIdLoaded = true;
@@ -590,27 +594,117 @@ export class LeaderboardPlayerList extends LitElement {
   // needs no client release.
   private renderSeasonLabel() {
     if (this.ffaSeason === null) return nothing;
-    const date = new Date(
-      `${this.ffaSeason.startDate}T00:00:00Z`,
-    ).toLocaleDateString(undefined, {
-      day: "numeric",
-      month: "short",
-      timeZone: "UTC",
-    });
+    const { number, startDate, endDate } = this.ffaSeason;
+    // The API refuses these, so this only guards against a bad response.
+    if (endDate && endDate < startDate) return nothing;
+    const timing = endDate
+      ? seasonTiming(startDate, endDate, new Date())
+      : null;
+    const end = endDate ? formatSeasonDate(endDate, true) : null;
+    const start = formatSeasonDate(startDate);
+    const lastDay = timing?.daysLeft === 0;
+
+    const panel = lastDay
+      ? "border-orange-400/70 shadow-[0_0_24px_rgba(251,146,60,0.25)]"
+      : "border-aquarius/40 shadow-[0_0_24px_rgba(63,169,245,0.15)]";
+    const statusColor = lastDay ? "text-orange-400" : "text-aquarius";
+    const status = lastDay
+      ? translateText("ffa_rating.season_last_day")
+      : timing
+        ? translateText("ffa_rating.season_days_left", {
+            days: timing.daysLeft,
+          })
+        : translateText("ffa_rating.season_in_progress");
+
     return html`
-      <div
-        data-ffa-season
-        class="flex shrink-0 items-center gap-2 px-4 py-2 border-b border-white/5 text-xs"
-      >
-        <span
-          class="rounded-md bg-blue-500/20 px-2 py-0.5 font-bold text-blue-300"
-          >${translateText("ffa_rating.season", {
-            n: this.ffaSeason.number,
-          })}</span
+      <div data-ffa-season class="shrink-0 px-2 py-2 sm:px-3 sm:pt-3">
+        <section
+          class="rounded-xl border bg-gradient-to-br from-deep-navy via-[#0b1830] to-[#132644] px-4 py-3 text-white sm:px-5 sm:py-4 ${panel}"
         >
-        <span class="text-white/50"
-          >${translateText("ffa_rating.season_started", { date })}</span
-        >
+          <div
+            class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1"
+          >
+            <h2
+              class="text-2xl font-black uppercase italic leading-none tracking-wide sm:text-4xl"
+            >
+              ${translateText("ffa_rating.season", { n: number })}
+            </h2>
+            <span
+              class="text-base font-black uppercase tracking-wide tabular-nums sm:text-2xl ${statusColor}"
+              >${status}</span
+            >
+          </div>
+          ${
+            end === null
+              ? nothing
+              : html`<span class="sr-only"
+                  >${translateText("ffa_rating.season_dates", {
+                    start,
+                    end,
+                  })}</span
+                >`
+          }
+          <div
+            class="mt-3 flex items-center gap-3 text-xs font-bold tabular-nums sm:mt-4 sm:text-sm [@media(max-height:500px)]:hidden"
+          >
+            ${
+              timing === null || end === null
+                ? html`<span class="shrink-0 text-white/80"
+                      >${translateText("ffa_rating.season_started", {
+                        date: start,
+                      })}</span
+                    >
+                    <span
+                      aria-hidden="true"
+                      class="h-3.5 w-3.5 shrink-0 rounded-full border-2 border-aquarius bg-white"
+                    ></span>
+                    <div
+                      class="-ml-3 h-0 min-w-0 flex-1 border-t-2 border-dashed border-aquarius/50"
+                    ></div>
+                    <span class="shrink-0 text-white/70"
+                      >${translateText("ffa_rating.season_no_end_date")}</span
+                    >`
+                : html`<span aria-hidden="true" class="shrink-0 text-white/80"
+                      >${start}</span
+                    >
+                    <div
+                      aria-hidden="true"
+                      class="h-2 min-w-0 flex-1 rounded-full bg-white/10"
+                    >
+                      <div
+                        data-ffa-season-progress
+                        class="relative h-full rounded-full ${
+                          lastDay
+                            ? "bg-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.7)]"
+                            : "bg-aquarius shadow-[0_0_10px_rgba(63,169,245,0.6)]"
+                        }"
+                        style="width: ${Math.round(timing.progress * 100)}%"
+                      >
+                        <span
+                          class="absolute -right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 bg-white ${
+                            lastDay
+                              ? "border-orange-400 motion-safe:animate-pulse"
+                              : "border-aquarius"
+                          }"
+                        ></span>
+                      </div>
+                    </div>
+                    ${
+                      lastDay
+                        ? html`<span class="shrink-0 text-orange-400"
+                            >${translateText(
+                              "ffa_rating.season_ends_midnight_utc",
+                            )}</span
+                          >`
+                        : html`<span
+                            aria-hidden="true"
+                            class="shrink-0 text-white/80"
+                            >${end}</span
+                          >`
+                    }`
+            }
+          </div>
+        </section>
       </div>
     `;
   }

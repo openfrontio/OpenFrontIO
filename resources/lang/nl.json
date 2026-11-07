@@ -461,7 +461,6 @@
     "leave_clan": "Clan Verlaten",
     "left_clan": "Je hebt de clan verlaten.",
     "manage_clan": "Beheren",
-    "map_coming_soon": "Binnenkort",
     "map_frame_title": "Clan territorium kaart",
     "member_banned": "Speler verbannen.",
     "member_count": "{count, plural, one{# lid} other{# leden}}",
@@ -535,12 +534,13 @@
     "status": "Status",
     "tab_donations": "Donaties",
     "tab_game_history": "Spel Geschiedenis",
-    "tab_map": "Kaart",
     "tab_overview": "Overzicht",
     "title": "Clans",
     "transfer_leadership": "Leiderschap Overdragen",
     "transfer_warning": "Dit maakt het geselecteerde lid tot de nieuwe leider. Jij wordt een normaal lid. Deze actie kan niet ongedaan worden gemaakt.",
-    "unban": "Verbanning opheffen"
+    "unban": "Verbanning opheffen",
+    "map_coming_soon": "Binnenkort",
+    "tab_map": "Kaart"
   },
   "close_reason": {
     "account_lookup_failed": "Uw account kon niet worden opgezocht. Probeer het opnieuw.",

@@ -87,6 +87,7 @@ export enum GameMapType {
   MareNostrum = "Mare Nostrum", // map-generator/assets/maps/marenostrum/info.json
   Mars = "Mars", // map-generator/assets/maps/mars/info.json
   Mena = "Mena", // map-generator/assets/maps/mena/info.json
+  Mexico = "Mexico", // map-generator/assets/maps/mexico/info.json
   MiddleEast = "Middle East", // map-generator/assets/maps/middleeast/info.json
   MilkyWay = "MilkyWay", // map-generator/assets/maps/milkyway/info.json
   MississippiRiver = "Mississippi River", // map-generator/assets/maps/mississippiriver/info.json
@@ -228,7 +229,7 @@ export interface MapInfo {
   author?: string;
   /** Key of the map's description in resources/lang/en.json. */
   descriptionKey?: string;
-  /** Where the map lies on Earth (the map picker's Earth view). */
+  /** Where the map lies on Earth (the map picker's Atlas tab). */
   location?: { lat: number; lon: number };
 }
 
@@ -267,6 +268,7 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 2,
     themes: ["europe", "asia"],
     author: "Tristar",
+    descriptionKey: "map_description.aegean",
     location: { lat: 38, lon: 25.3 },
   },
   {
@@ -274,7 +276,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Africa,
     translationKey: "map.africa",
     categories: ["featured", "continental", "africa"],
-    defaultNationCount: 44,
+    defaultNationCount: 72,
     featuredRank: 6,
     themes: ["africa"],
     author: "SunnyBoyWTF",
@@ -310,6 +312,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 30,
     themes: ["antarctica"],
     author: "Tristar",
+    descriptionKey: "map_description.antarctica",
     location: { lat: -76, lon: 0 },
   },
   {
@@ -321,6 +324,7 @@ export const maps: readonly MapInfo[] = [
     forcedModifiers: ["isWaterNukes:50"],
     themes: ["europe"],
     author: "Tristar",
+    descriptionKey: "map_description.archipelagosea",
     location: { lat: 60.2, lon: 21.6 },
   },
   {
@@ -331,6 +335,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 44,
     themes: ["europe", "asia", "north_america"],
     author: "Tristar",
+    descriptionKey: "map_description.arctic",
     location: { lat: 79, lon: -60 },
   },
   {
@@ -363,6 +368,7 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 2,
     themes: ["africa", "asia"],
     author: "Tristar",
+    descriptionKey: "map_description.babelmandebstrait",
     location: { lat: 12.6, lon: 43.3 },
   },
   {
@@ -396,6 +402,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 8,
     themes: ["north_america"],
     author: "Tristar",
+    descriptionKey: "map_description.bajacalifornia",
     location: { lat: 30, lon: -115 },
   },
   {
@@ -406,6 +413,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 23,
     themes: ["europe"],
     author: "Tristar",
+    descriptionKey: "map_description.balkans",
     location: { lat: 43.5, lon: 20.5 },
   },
   {
@@ -416,6 +424,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 26,
     themes: ["asia"],
     author: "Tristar",
+    descriptionKey: "map_description.balkhash",
     location: { lat: 46.3, lon: 74.5 },
   },
   {
@@ -426,6 +435,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 35,
     themes: ["europe"],
     author: "Tristar",
+    descriptionKey: "map_description.baltics",
     location: { lat: 57, lon: 24.5 },
   },
   {
@@ -447,6 +457,7 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 2,
     themes: ["asia", "north_america"],
     author: "Tristar",
+    descriptionKey: "map_description.beringsea",
     location: { lat: 58, lon: -175 },
   },
   {
@@ -539,6 +550,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 14,
     themes: ["africa"],
     author: "Tristar",
+    descriptionKey: "map_description.canaryislands",
     location: { lat: 28.3, lon: -15.6 },
   },
   {
@@ -559,6 +571,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 26,
     themes: ["africa"],
     author: "Tristar",
+    descriptionKey: "map_description.capeofgoodhope",
     location: { lat: -34.4, lon: 18.5 },
   },
   {
@@ -569,6 +582,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 34,
     themes: ["north_america"],
     author: "Tristar",
+    descriptionKey: "map_description.caribbean",
     location: { lat: 16, lon: -73 },
   },
   {
@@ -591,6 +605,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 21,
     themes: ["europe", "asia"],
     author: "Tristar",
+    descriptionKey: "map_description.caucasus",
     location: { lat: 42.5, lon: 44.5 },
   },
   {
@@ -601,6 +616,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 22,
     themes: ["north_america", "south_america"],
     author: "Tristar",
+    descriptionKey: "map_description.centralamerica",
     location: { lat: 13, lon: -86.5 },
   },
   {
@@ -746,6 +762,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 13,
     themes: ["north_america"],
     author: "Tristar",
+    descriptionKey: "map_description.clearwaterlakes",
     location: { lat: 56.2, lon: -74.4 },
   },
   {
@@ -779,6 +796,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 26,
     themes: ["europe"],
     author: "Tristar",
+    descriptionKey: "map_description.danishstraits",
     location: { lat: 55.7, lon: 11.5 },
   },
   {
@@ -900,6 +918,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 25,
     themes: ["europe"],
     author: "Tristar",
+    descriptionKey: "map_description.france",
     location: { lat: 46.6, lon: 2.4 },
   },
   {
@@ -1348,6 +1367,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 34,
     themes: ["north_america"],
     author: "Tristar",
+    descriptionKey: "map_description.greatlakes",
     location: { lat: 45, lon: -84 },
   },
   {
@@ -1358,6 +1378,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 22,
     themes: ["africa"],
     author: "Tristar",
+    descriptionKey: "map_description.gulfofguinea",
     location: { lat: 3, lon: 3 },
   },
   {
@@ -1368,6 +1389,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 37,
     themes: ["north_america"],
     author: "LounNight",
+    descriptionKey: "map_description.gulfofmexico",
     location: { lat: 25, lon: -90 },
   },
   {
@@ -1431,6 +1453,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 29,
     themes: ["africa"],
     author: "Tristar",
+    descriptionKey: "map_description.hornofafrica",
     location: { lat: 8, lon: 46 },
   },
   {
@@ -1451,6 +1474,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 52,
     themes: ["asia"],
     author: "Tristar",
+    descriptionKey: "map_description.indiansubcontinent",
     location: { lat: 22, lon: 79 },
   },
   {
@@ -1462,6 +1486,7 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 3,
     themes: ["europe"],
     author: "Tristar",
+    descriptionKey: "map_description.irishsea",
     location: { lat: 53.8, lon: -5 },
   },
   {
@@ -1493,6 +1518,7 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 3,
     themes: ["north_america"],
     author: "Tristar",
+    descriptionKey: "map_description.juandefucastrait",
     location: { lat: 48.3, lon: -124 },
   },
   {
@@ -1545,6 +1571,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 15,
     themes: ["asia"],
     author: "Tristar",
+    descriptionKey: "map_description.levant",
     location: { lat: 34, lon: 36.5 },
   },
   {
@@ -1737,6 +1764,7 @@ export const maps: readonly MapInfo[] = [
     forcedModifiers: ["isWaterNukes:50"],
     themes: ["africa"],
     author: "Tristar",
+    descriptionKey: "map_description.madagascar",
     location: { lat: -19, lon: 46.7 },
   },
   {
@@ -1757,6 +1785,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 38,
     themes: ["europe", "asia", "africa"],
     author: "Tristar",
+    descriptionKey: "map_description.marenostrum",
     location: { lat: 36.5, lon: 17 },
   },
   {
@@ -1778,6 +1807,17 @@ export const maps: readonly MapInfo[] = [
     location: { lat: 27, lon: 18 },
   },
   {
+    id: "Mexico",
+    type: GameMapType.Mexico,
+    translationKey: "map.mexico",
+    categories: ["north_america", "new", "countries"],
+    defaultNationCount: 32,
+    themes: ["north_america"],
+    author: "crunchybbb",
+    descriptionKey: "map_description.mexico",
+    location: { lat: 23, lon: -102 },
+  },
+  {
     id: "MiddleEast",
     type: GameMapType.MiddleEast,
     translationKey: "map.middleeast",
@@ -1785,6 +1825,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 27,
     themes: ["asia"],
     author: "Tristar",
+    descriptionKey: "map_description.middleeast",
     location: { lat: 24, lon: 46 },
   },
   {
@@ -1794,6 +1835,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["cosmic"],
     defaultNationCount: 18,
     author: "Tristar",
+    descriptionKey: "map_description.milkyway",
   },
   {
     id: "MississippiRiver",
@@ -1803,6 +1845,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 11,
     themes: ["north_america"],
     author: "Tristar",
+    descriptionKey: "map_description.mississippiriver",
     location: { lat: 33, lon: -91 },
   },
   {
@@ -1843,6 +1886,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 20,
     themes: ["oceania"],
     author: "Tristar",
+    descriptionKey: "map_description.newzealand",
     location: { lat: -41.5, lon: 172.5 },
   },
   {
@@ -1875,6 +1919,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 21,
     themes: ["north_america"],
     author: "Tristar",
+    descriptionKey: "map_description.northwestpassage",
     location: { lat: 72, lon: -100 },
   },
   {
@@ -1975,6 +2020,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 82,
     themes: ["europe", "asia"],
     author: "Tristar",
+    descriptionKey: "map_description.russia",
     location: { lat: 61.5, lon: 100 },
   },
   {
@@ -1985,6 +2031,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 21,
     themes: ["north_america"],
     author: "Tristar",
+    descriptionKey: "map_description.sanfrancisco",
     location: { lat: 37.8, lon: -122.4 },
   },
   {
@@ -2064,6 +2111,7 @@ export const maps: readonly MapInfo[] = [
       { name: "Deimos", coordinates: [2296, 1714] },
     ],
     author: "Tristar",
+    descriptionKey: "map_description.sol",
   },
   {
     id: "SouthAmerica",
@@ -2084,6 +2132,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 31,
     themes: ["asia"],
     author: "Tristar",
+    descriptionKey: "map_description.southeastasia",
     location: { lat: 12, lon: 118 },
   },
   {
@@ -2166,6 +2215,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 20,
     themes: ["south_america"],
     author: "Tristar",
+    descriptionKey: "map_description.tierradelfuego",
     location: { lat: -54, lon: -68.5 },
   },
   {
@@ -2175,6 +2225,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["cosmic"],
     defaultNationCount: 28,
     author: "Tristar",
+    descriptionKey: "map_description.titan",
   },
   {
     id: "Tourney1",
@@ -2245,6 +2296,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 49,
     themes: ["north_america"],
     author: "Tristar",
+    descriptionKey: "map_description.unitedstates",
     location: { lat: 38.5, lon: -97 },
   },
   {
@@ -2255,6 +2307,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 32,
     themes: ["north_america"],
     author: "Tristar",
+    descriptionKey: "map_description.vancouverisland",
     location: { lat: 49.6, lon: -125.5 },
   },
   {
@@ -2265,6 +2318,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 15,
     themes: ["europe"],
     author: "Tristar",
+    descriptionKey: "map_description.venice",
     location: { lat: 45.4, lon: 12.3 },
   },
   {

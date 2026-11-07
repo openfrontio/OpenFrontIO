@@ -2,6 +2,7 @@ import {
   Difficulty,
   PlayerInfo,
   PlayerType,
+  UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { CHEAPEST_TROOP_RATIO } from "@openfront/engine/configuration/EngineConfig";
@@ -187,7 +188,13 @@ describe("Bot annexation", () => {
     async function setupDenseBot(difficulty: Difficulty) {
       await setupPlains(difficulty, ["a"]);
       paint((x) => (x < 30 ? "nation" : "a"));
+      // Cities lift the nation's max troops above its army
+      for (const tile of Array.from(nation.tiles()).slice(0, 3)) {
+        const city = nation.buildUnit(UnitType.City, tile, {});
+        for (let i = 0; i < 3; i++) city.increaseLevel();
+      }
       nation.setTroops(2_000_000);
+      expect(game.config().maxTroops(nation)).toBeGreaterThan(2_000_000);
       const bot = game.player("a");
       bot.setTroops(200_000);
       return bot;

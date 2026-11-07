@@ -6,6 +6,7 @@
   "categories": ["asia"],
   "location": { "lat": 22, "lon": 79 },
   "author": "Tristar",
+  "description": "From the Himalayas down to the Indian Ocean: This place has seen kingdoms rise and fall for millenia, such as the Indus civilisation, the Maurya, Gupta, and Mughal Empires - and is the birthplace of some of the largest religions on Earth, such as Hinduism and Buddhism. Later British rule joined much of the region as the Raj, whose partition in 1947 created independent India and Pakistan. Players who control the Ganges and Indus rivers have the best chance of Victory.",
   "nations": [
     {
       "coordinates": [1601, 840],
