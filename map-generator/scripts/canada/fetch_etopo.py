@@ -1,3 +1,4 @@
+"""Download one lon/lat window of the ETOPO 2022 30s GeoTIFF (remote tiled read) into data/etopo_canada_30s.tif."""
 import sys, os, time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'pylibs'))
 import rasterio, numpy as np

@@ -37,6 +37,8 @@ ICELAND = shp_transform(fwd, box(-30, 60, -10, 70))  # everything in this lon/la
 
 
 def read_shapes(name, pred=None, folder=None):
+    """Read a shapefile into (record, geometry) pairs, clipped to BBOX and projected to LCC.
+    `pred` filters records; `folder` defaults to the Natural Earth folder."""
     r = shapefile.Reader(os.path.join(folder or NE, name))
     flds = [f[0] for f in r.fields[1:]]
     bb = BBOX.bounds
@@ -87,6 +89,8 @@ dem = rasterio.open(DEM)
 
 
 def build(width):
+    """Rasterize the frame at `width` pixels (multiple of 4): returns the grid geometry plus the mean land
+    elevation, the Canadian land mask and the impassable (foreign land) mask."""
     width -= width % 4
     height = int(round(width / aspect)); height -= height % 4
     res = (maxx - minx) / width
@@ -95,6 +99,7 @@ def build(width):
     trs = from_origin(minx, maxy, res / SS, (maxy - miny) / height / SS)
 
     def rz(geoms, scale=1):
+        """Boolean raster of the union of `geoms`, at pixel (scale=1) or sub-pixel (scale=SS) resolution."""
         t = tr if scale == 1 else trs
         if not geoms:
             return np.zeros((height * scale, width * scale), dtype=bool)
@@ -242,6 +247,7 @@ np.save(os.path.join(OUT, 'land.npy'), land)
 
 # --- nation candidates: project lat/lon to pixel ---
 def px(lon, lat):
+    """Pixel [column, row] of a lon/lat point."""
     x, y = fwd(lon, lat)
     c, r = ~tr * (x, y)
     return [int(round(c)), int(round(r))]
@@ -316,6 +322,7 @@ print('nations off land:', [n['name'] for n in nations if not n['_on_land']])
 
 
 def nearest_land(c, r, radius=6):
+    """(column, row) of the nearest Canadian land pixel within `radius`, or None."""
     if 0 <= r < height and 0 <= c < width and land[r, c]:
         return c, r
     best = None
@@ -334,21 +341,47 @@ pp = shapefile.Reader(os.path.join(NE, 'ne_10m_populated_places.shp'))
 pf = [f[0] for f in pp.fields[1:]]
 cities = [dict(zip(pf, r)) for r in pp.records()]
 cities = [c for c in cities if c['ADM0NAME'] == 'Canada']
-cities.sort(key=lambda c: -c['POP_MAX'])
-nation_px = {tuple(n['coordinates']) for n in nations}
+# every provincial/territorial capital first (Whitehorse, Yellowknife and Iqaluit are small), then by population
+cities.sort(key=lambda c: (c['FEATURECLA'] not in ('Admin-0 capital', 'Admin-1 capital'), -c['POP_MAX']))
+MIN_GAP_KM = 24  # tribes keep this far from nation spawns and from each other
+taken = {tuple(n['coordinates']) for n in nations}
 nation_names = {n['name'] for n in nations}
+RENAME = {'Québec': 'Québec City'}  # avoid confusion with the Quebec nation
+
+
+def too_close(pos, gap_px):
+    """True when `pos` is within `gap_px` of any spawn already taken."""
+    return any((pos[0] - x) ** 2 + (pos[1] - y) ** 2 < gap_px * gap_px for x, y in taken)
+
+
+def place_apart(pos, gap_px):
+    """keep pos if free; otherwise the nearest land pixel at least gap_px from every taken spawn, searched outwards"""
+    if not too_close(pos, gap_px):
+        return pos
+    best = None
+    for dr in range(-3 * gap_px, 3 * gap_px + 1):
+        for dc in range(-3 * gap_px, 3 * gap_px + 1):
+            rr, cc = pos[1] + dr, pos[0] + dc
+            if 0 <= rr < height and 0 <= cc < width and land[rr, cc] and not too_close((cc, rr), gap_px):
+                d = dr * dr + dc * dc
+                if best is None or d < best[0]:
+                    best = (d, cc, rr)
+    return (best[1], best[2]) if best else None
+
+
 tribes, seen = [], set()
+gap = max(3, int(round(MIN_GAP_KM * KM)))
 for c in cities:
-    name = c['NAME']
+    name = RENAME.get(c['NAME'], c['NAME'])
     if name in seen or name in nation_names:
         continue
     pos = nearest_land(*px(c['LONGITUDE'], c['LATITUDE']))
     if pos is None:
         continue
-    # keep tribes at least 12 px from any nation spawn or other tribe
-    if any((pos[0] - x) ** 2 + (pos[1] - y) ** 2 < 12 * 12 for x, y in nation_px):
+    pos = place_apart(pos, gap)  # capitals sit next to their nation, pushed just far enough apart
+    if pos is None:
         continue
-    nation_px.add(pos); seen.add(name)
+    taken.add(pos); seen.add(name)
     tribes.append({'name': name, 'coordinates': [pos[0], pos[1]]})
     if len(tribes) >= 60:
         break

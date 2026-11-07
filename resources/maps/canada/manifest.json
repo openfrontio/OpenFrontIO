@@ -2,6 +2,62 @@
   "categories": ["north_america", "countries"],
   "custom_tribes": [
     {
+      "coordinates": [2538, 2415],
+      "name": "Toronto"
+    },
+    {
+      "coordinates": [2668, 2269],
+      "name": "Ottawa"
+    },
+    {
+      "coordinates": [1318, 1845],
+      "name": "Edmonton"
+    },
+    {
+      "coordinates": [1836, 2134],
+      "name": "Winnipeg"
+    },
+    {
+      "coordinates": [2806, 2136],
+      "name": "Québec City"
+    },
+    {
+      "coordinates": [3131, 2121],
+      "name": "Halifax"
+    },
+    {
+      "coordinates": [897, 1988],
+      "name": "Victoria"
+    },
+    {
+      "coordinates": [1575, 2078],
+      "name": "Regina"
+    },
+    {
+      "coordinates": [3398, 1774],
+      "name": "St. John's"
+    },
+    {
+      "coordinates": [2990, 2110],
+      "name": "Fredericton"
+    },
+    {
+      "coordinates": [3092, 2045],
+      "name": "Charlottetown"
+    },
+    {
+      "coordinates": [921, 1221],
+      "name": "Whitehorse"
+    },
+    {
+      "coordinates": [1425, 1384],
+      "name": "Yellowknife"
+    },
+    {
+      "coordinates": [2529, 1250],
+      "name": "Iqaluit"
+    },
+    {
       "coordinates": [2746, 2250],
       "name": "Montréal"
     },
@@ -18,7 +74,7 @@
       "name": "Hamilton"
     },
     {
-      "coordinates": [2570, 2399],
+      "coordinates": [2569, 2399],
       "name": "Oshawa"
     },
     {
@@ -66,7 +122,7 @@
       "name": "Trois-Rivières"
     },
     {
-      "coordinates": [2659, 2355],
+      "coordinates": [2659, 2351],
       "name": "Kingston"
     },
     {
@@ -82,7 +138,7 @@
       "name": "Saint John"
     },
     {
-      "coordinates": [894, 1952],
+      "coordinates": [893, 1952],
       "name": "Nanaimo"
     },
     {
@@ -100,6 +156,10 @@
     {
       "coordinates": [1280, 2068],
       "name": "Lethbridge"
+    },
+    {
+      "coordinates": [1047, 1917],
+      "name": "Kamloops"
     },
     {
       "coordinates": [1044, 1733],
@@ -130,7 +190,7 @@
       "name": "Shawinigan"
     },
     {
-      "coordinates": [2711, 2290],
+      "coordinates": [2711, 2289],
       "name": "Cornwall"
     },
     {
@@ -154,6 +214,10 @@
       "name": "Penticton"
     },
     {
+      "coordinates": [3215, 2002],
+      "name": "Sydney"
+    },
+    {
       "coordinates": [2537, 2366],
       "name": "Orillia"
     },
@@ -166,7 +230,7 @@
       "name": "Timmins"
     },
     {
-      "coordinates": [1561, 1935],
+      "coordinates": [1561, 1936],
       "name": "Prince Albert"
     },
     {
@@ -176,70 +240,6 @@
     {
       "coordinates": [873, 1908],
       "name": "Courtenay"
-    },
-    {
-      "coordinates": [2520, 2410],
-      "name": "Orangeville"
-    },
-    {
-      "coordinates": [1542, 2087],
-      "name": "Moose Jaw"
-    },
-    {
-      "coordinates": [1736, 2143],
-      "name": "Brandon"
-    },
-    {
-      "coordinates": [2681, 2324],
-      "name": "Brockville"
-    },
-    {
-      "coordinates": [2842, 2177],
-      "name": "Saint-Georges"
-    },
-    {
-      "coordinates": [2501, 2163],
-      "name": "Rouyn-Noranda"
-    },
-    {
-      "coordinates": [2481, 2381],
-      "name": "Owen Sound"
-    },
-    {
-      "coordinates": [1429, 1709],
-      "name": "Fort McMurray"
-    },
-    {
-      "coordinates": [3195, 1815],
-      "name": "Corner Brook"
-    },
-    {
-      "coordinates": [2549, 2158],
-      "name": "Val-d'Or"
-    },
-    {
-      "coordinates": [3140, 2068],
-      "name": "New Glasgow"
-    },
-    {
-      "coordinates": [894, 1618],
-      "name": "Terrace"
-    },
-    {
-      "coordinates": [1474, 1942],
-      "name": "North Battleford"
-    },
-    {
-      "coordinates": [1152, 1641],
-      "name": "Fort St. John"
-    },
-    {
-      "coordinates": [1176, 2046],
-      "name": "Cranbrook"
-    },
-    {
-      "coordinates": [2897, 2077],
-      "name": "Edmundston"
     }
   ],
   "id": "Canada",
