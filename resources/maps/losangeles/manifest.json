@@ -581,17 +581,17 @@
   "id": "LosAngeles",
   "map": {
     "height": 2276,
-    "num_land_tiles": 2475159,
+    "num_land_tiles": 2474924,
     "width": 2152
   },
   "map16x": {
     "height": 569,
-    "num_land_tiles": 147425,
+    "num_land_tiles": 147396,
     "width": 538
   },
   "map4x": {
     "height": 1138,
-    "num_land_tiles": 608559,
+    "num_land_tiles": 608475,
     "width": 1076
   },
   "name": "Los Angeles",
