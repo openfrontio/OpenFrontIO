@@ -46,7 +46,7 @@
     {
       "coordinates": [1028, 1469],
       "flag": "Colorado",
-      "name": "Black Canyon of the Gunnison Nat'l Park"
+      "name": "Black Canyon Gunnison NP"
     },
     {
       "coordinates": [992, 759],
@@ -76,7 +76,7 @@
     {
       "coordinates": [711, 750],
       "flag": "Idaho",
-      "name": "Caribou-Targhee Nat'l Forest"
+      "name": "Caribou-Targhee NF"
     },
     {
       "coordinates": [401, 564],
@@ -86,17 +86,17 @@
     {
       "coordinates": [426, 420],
       "flag": "Idaho",
-      "name": "Nez Perce-Clearwater Nat'l Forest"
+      "name": "Nez Perce-Clearwater NF"
     },
     {
       "coordinates": [649, 554],
       "flag": "Montana",
-      "name": "Beaverhead-Deerlodge Nat'l Forest"
+      "name": "Beaverhead-Deerlodge NF"
     },
     {
       "coordinates": [873, 559],
       "flag": "Montana",
-      "name": "Custer-Gallatin Nat'l Forest"
+      "name": "Custer-Gallatin NF"
     },
     {
       "coordinates": [576, 387],
@@ -111,7 +111,7 @@
     {
       "coordinates": [402, 146],
       "flag": "Idaho",
-      "name": "Idaho Panhandle Nat'l Forests"
+      "name": "Idaho Panhandle NFs"
     },
     {
       "coordinates": [393, 287],
@@ -136,7 +136,7 @@
     {
       "coordinates": [1323, 962],
       "flag": "Wyoming",
-      "name": "Thunder Basin Nat'l Grassland"
+      "name": "Thunder Basin Grassland"
     },
     {
       "coordinates": [919, 195],
@@ -166,12 +166,12 @@
     {
       "coordinates": [1135, 1175],
       "flag": "Wyoming",
-      "name": "Medicine Bow-Routt Nat'l Forest"
+      "name": "Medicine Bow-Routt NF"
     },
     {
       "coordinates": [753, 1138],
       "flag": "Utah",
-      "name": "Uinta-Wasatch-Cache Nat'l Forest"
+      "name": "Uinta-Wasatch-Cache NF"
     },
     {
       "coordinates": [1451, 1470],
@@ -186,17 +186,17 @@
     {
       "coordinates": [1219, 1501],
       "flag": "Colorado",
-      "name": "Arapaho \u0026 Roosevelt Nat'l Forests"
+      "name": "Arapaho \u0026 Roosevelt NFs"
     },
     {
       "coordinates": [1274, 1612],
       "flag": "Colorado",
-      "name": "Pike \u0026 San Isabel Nat'l Forests"
+      "name": "Pike \u0026 San Isabel NFs"
     },
     {
       "coordinates": [972, 1573],
       "flag": "Colorado",
-      "name": "Grand Mesa, Uncompahgre \u0026 Gunnison Nat'l Forests"
+      "name": "Grandmesa \u0026 Uncompahgre NF"
     },
     {
       "coordinates": [1018, 1675],
@@ -216,7 +216,7 @@
     {
       "coordinates": [795, 1341],
       "flag": "Utah",
-      "name": "Uintah and Ouray Reservation"
+      "name": "Uintah \u0026 Ouray Res."
     },
     {
       "coordinates": [764, 1554],
