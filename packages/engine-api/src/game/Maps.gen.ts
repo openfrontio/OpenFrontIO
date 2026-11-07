@@ -1806,7 +1806,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Mexico,
     translationKey: "map.mexico",
     categories: ["north_america", "new", "countries"],
-    defaultNationCount: 31,
+    defaultNationCount: 32,
     themes: ["north_america"],
     author: "crunchybbb",
     descriptionKey: "map_description.mexico",

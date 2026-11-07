@@ -130,8 +130,8 @@
     },
     {
       "coordinates": [2671, 1282],
-      "flag": "Flag_of_Yucatán",
-      "name": "Yucatan"
+      "flag": "Flag_of_Yucatan",
+      "name": "Yucatán"
     },
     {
       "coordinates": [2745, 1434],
@@ -165,13 +165,18 @@
     },
     {
       "coordinates": [1769, 1450],
-      "flag": "mx",
+      "flag": "Flag_of_the_State_of_Mexico",
       "name": "State of México"
     },
     {
       "coordinates": [1758, 1295],
       "flag": "Flag_of_Hidalgo",
       "name": "Hidalgo"
+    },
+    {
+      "coordinates": [1932, 1443],
+      "flag": "Flag_of_Tlaxcala",
+      "name": "Tlaxcala"
     }
   ],
   "themes": ["north_america"],
