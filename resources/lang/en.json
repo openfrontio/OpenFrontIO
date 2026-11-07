@@ -2892,6 +2892,8 @@
     "build_mirv_desc": "Build a MIRV under your cursor.",
     "build_missile_silo": "Build Missile Silo",
     "build_missile_silo_desc": "Build a Missile Silo under your cursor.",
+    "build_multiplier_cycle_desc": "Pressing a build hotkey repeatedly cycles the build multiplier (x1 → x5 → x10...)",
+    "build_multiplier_cycle_label": "Cycle Build Multiplier on Hotkey",
     "build_port": "Build Port",
     "build_port_desc": "Build a Port under your cursor.",
     "build_sam_launcher": "Build SAM Launcher",
