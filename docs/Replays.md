@@ -4,8 +4,8 @@ The replay viewer plays a finished game with the game's own renderer and
 HUD, and can seek anywhere in it. The replay is made in the viewer's
 browser from the game's archived record. Nothing runs on the server.
 
-It's opt-in while it's rolled out: "watch replay" opens the classic replay
-unless the player turns on **New Replay Viewer** in the settings
+It's enabled by default: "watch replay" opens the new replay viewer unless the
+player turns off **New Replay Viewer** in the settings
 (`UserSettings.replayViewer`). A `#replay-viewer=<gameID>` link opens the
 viewer either way.
 
@@ -107,11 +107,21 @@ You need a game record. Either:
   hash mismatch if the core has changed since.
 
 ```bash
-GAME=dqKzit4cWu # the game's ID
-mkdir -p /tmp/records && cp "$GAME.json" /tmp/records/
-# The dev client expects its API on 8787. Other API calls will 404.
-npx tsx scripts/replay/stub-game-api.mts /tmp/records 8787
-npm run dev
+# Generate a demo record:
+npm run replay:demo
+
+# Or restore a saved production record:
+# Place the saved record at records/<gameID>.json
+
+# Run client, server, and replay stub API concurrently:
+npm run dev:all
+```
+
+Then open `http://localhost:9000/#replay-viewer=<gameID>` (or `#replay-viewer=demoGame1` for the sample record).
+You can also test directly with live records from production using:
+
+```bash
+npm run dev:prod
 ```
 
 Then open `http://localhost:9000/#replay-viewer=<gameID>`.

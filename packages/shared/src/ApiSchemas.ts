@@ -276,6 +276,28 @@ export type GameXpEligible = z.infer<typeof GameXpEligibleSchema>;
 export type GameXpIneligible = z.infer<typeof GameXpIneligibleSchema>;
 export type GameXpResponse = z.infer<typeof GameXpResponseSchema>;
 
+// GET /users/@me/ffa_rating/:gameId — what one FFA game did to the caller's rating.
+// While calibrating (`calibrating: true`) only the games count is sent; once
+// rated, the before/after numbers and tiers follow. Strict, unlike the fields
+// added to the lists above: the caller treats a body that fails to parse as
+// "unavailable", which is the right outcome for a drifted response. The
+// endpoint 404s until the API serves the FFA rating (FFA_RATING=live).
+export const FfaGameRatingResponseSchema = z.object({
+  gameId: z.string(),
+  calibrating: z.boolean(),
+  revealed: z.boolean().optional(),
+  calibrationGames: z.number().int().min(0).max(10),
+  ratingBefore: z.number().optional(),
+  ratingAfter: z.number().optional(),
+  uncertaintyAfter: z.number().optional(),
+  tierBefore: z.string().optional(),
+  tierAfter: z.string().optional(),
+  expected: z.number().optional(),
+  deltaResult: z.number().optional(),
+  deltaPlace: z.number().optional(),
+});
+export type FfaGameRatingResponse = z.infer<typeof FfaGameRatingResponseSchema>;
+
 // GET /public/player/:publicId/progress — another player's level. No auth.
 export const PublicProgressSchema = z.object({
   prestige: z.number(),
@@ -533,6 +555,49 @@ export const IdentityTokenResponseSchema = z.object({
 });
 export type IdentityTokenResponse = z.infer<typeof IdentityTokenResponseSchema>;
 
+const UserSubscriptionSchema = z.object({
+  tier: z.string(),
+  status: z.string(),
+  currentPeriodEnd: z.coerce.date().nullable(),
+  cancelAtPeriodEnd: z.boolean(),
+  // Which rail is billing this subscription, and `null` means NOBODY IS:
+  // it is a grant (a free month from a Steam purchase, or an admin comp).
+  // The server branches on the same distinction — cancelling a grant has
+  // no period to run out, so it expires the subscription immediately and
+  // takes the premium username with it.
+  //
+  // Three states, and the client must keep all three apart:
+  //   "stripe" / "steam" — paid, someone is being billed.
+  //   null               — granted.
+  //   undefined          — the server predates the field (it reaches
+  //                        staging at the next deploy), so we do not
+  //                        know. Callers must fall back to the PAID
+  //                        behaviour here: on an old server a grant is
+  //                        indistinguishable from a Stripe subscription,
+  //                        and treating everyone as granted would hide
+  //                        Cancel from paying subscribers.
+  // Test `=== null` and `=== undefined`, never `!provider` — that is true
+  // for both and collapses the two states that must not collapse.
+  //
+  // Loose `z.string()` rather than z.enum(["stripe", "steam"]), matching
+  // `status` above: a parse failure here fails the WHOLE /users/@me
+  // response (Api.ts logs and returns false, and the account view goes
+  // blank), so a future third rail must not be able to brick an older
+  // client. An unrecognised value is simply not `null`, which lands on
+  // the paid behaviour — the safe side.
+  provider: z.string().nullable().optional(),
+  // Who gave a GRANTED subscription: "steam", "admin" or
+  // "discord_role", and null on a paid one. Absent on a server that
+  // predates the field; see `isSteamGrant` for what that falls back to.
+  // Loose `z.string()` for the same reason as `provider`.
+  grantSource: z.string().nullable().optional(),
+  // On a PAID row whose next payment was moved later by a free month:
+  // "base" (OpenFront on Steam), "dlc" (the Deluxe Edition) or "gift" (the
+  // unused days of a grant it replaced). Loose for the same reason as
+  // `provider`; an unknown value is treated as not pushed.
+  renewalPushedBy: z.string().nullable().optional(),
+});
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
@@ -627,6 +692,22 @@ export const UserMeResponseSchema = z.object({
         ffa: z
           .object({
             elo: z.number().optional(),
+            // Absent until the API serves the FFA rating (FFA_RATING=live); a
+            // malformed value reads as absent.
+            uncertainty: z.number().optional().catch(undefined),
+            tier: z.string().optional().catch(undefined),
+            games: z.number().int().nonnegative().optional().catch(undefined),
+            wins: z.number().int().nonnegative().optional().catch(undefined),
+            peak: z.number().optional().catch(undefined),
+            // True when the board's ± rule keeps this rating off the board.
+            hiddenByUncertainty: z.boolean().optional().catch(undefined),
+            calibrationGames: z
+              .number()
+              .int()
+              .min(0)
+              .max(10)
+              .optional()
+              .catch(undefined),
           })
           .optional(),
       })
@@ -680,48 +761,16 @@ export const UserMeResponseSchema = z.object({
       )
       .optional(),
     friends: z.array(z.string()),
-    subscription: z
-      .object({
-        tier: z.string(),
-        status: z.string(),
-        currentPeriodEnd: z.coerce.date().nullable(),
-        cancelAtPeriodEnd: z.boolean(),
-        // Which rail is billing this subscription, and `null` means NOBODY IS:
-        // it is a grant (a free month from a Steam purchase, or an admin comp).
-        // The server branches on the same distinction — cancelling a grant has
-        // no period to run out, so it expires the subscription immediately and
-        // takes the premium username with it.
-        //
-        // Three states, and the client must keep all three apart:
-        //   "stripe" / "steam" — paid, someone is being billed.
-        //   null               — granted.
-        //   undefined          — the server predates the field (it reaches
-        //                        staging at the next deploy), so we do not
-        //                        know. Callers must fall back to the PAID
-        //                        behaviour here: on an old server a grant is
-        //                        indistinguishable from a Stripe subscription,
-        //                        and treating everyone as granted would hide
-        //                        Cancel from paying subscribers.
-        // Test `=== null` and `=== undefined`, never `!provider` — that is true
-        // for both and collapses the two states that must not collapse.
-        //
-        // Loose `z.string()` rather than z.enum(["stripe", "steam"]), matching
-        // `status` above: a parse failure here fails the WHOLE /users/@me
-        // response (Api.ts logs and returns false, and the account view goes
-        // blank), so a future third rail must not be able to brick an older
-        // client. An unrecognised value is simply not `null`, which lands on
-        // the paid behaviour — the safe side.
-        provider: z.string().nullable().optional(),
-        // Who gave a GRANTED subscription: "steam", "admin" or
-        // "discord_role", and null on a paid one. Absent on a server that
-        // predates the field; see `isSteamGrant` for what that falls back to.
-        // Loose `z.string()` for the same reason as `provider`.
-        grantSource: z.string().nullable().optional(),
-      })
-      .nullable(),
+    subscription: UserSubscriptionSchema.nullable(),
+    // Every entitled row, highest tier first: at most one paid and one grant.
+    // `subscription` is the first of them. Absent on an older server, and a
+    // malformed list reads as absent too, which falls back to `subscription`
+    // alone (see `subscriptionsOf`) rather than failing the whole parse.
+    subscriptions: z.array(UserSubscriptionSchema).optional().catch(undefined),
     // A Stripe subscription whose renewal failed and is still being retried,
-    // sent only when `subscription` is null. It entitles nothing, which is
-    // why it is not `subscription`: every caller reads that as "subscribed".
+    // sent whenever no PAID row is entitled (a grant may still be running).
+    // It entitles nothing, which is why it is not `subscription`: every
+    // caller reads that as "subscribed".
     // It exists so the account can say the payment failed and offer the
     // billing portal. Optional so an older API without the field still parses.
     pastDueSubscription: z.object({ tier: z.string() }).nullable().optional(),
@@ -831,6 +880,46 @@ export function isSteamGrant(
 ): boolean {
   if (!isGrantedSubscription(sub) || !sub?.currentPeriodEnd) return false;
   return sub.grantSource === "steam" || sub.grantSource === undefined;
+}
+
+type SubscriptionHolder = Pick<
+  UserMeResponse["player"],
+  "subscription" | "subscriptions"
+>;
+
+/**
+ * Every entitled row. An older server sends only `subscription`, which is
+ * then the one row there is.
+ */
+export function subscriptionsOf(
+  player: SubscriptionHolder,
+): UserSubscription[] {
+  if (player.subscriptions && player.subscriptions.length > 0) {
+    return player.subscriptions;
+  }
+  return player.subscription ? [player.subscription] : [];
+}
+
+/** The row someone is billed for, or null. Undefined `provider` counts as paid. */
+export function paidSubscriptionOf(
+  player: SubscriptionHolder,
+): UserSubscription | null {
+  return subscriptionsOf(player).find((s) => !isGrantedSubscription(s)) ?? null;
+}
+
+export function giftSubscriptionOf(
+  player: SubscriptionHolder,
+): UserSubscription | null {
+  return subscriptionsOf(player).find(isGrantedSubscription) ?? null;
+}
+
+export type RenewalPushedBy = "base" | "dlc" | "gift";
+
+export function renewalPushedBy(
+  sub: UserSubscription | null | undefined,
+): RenewalPushedBy | null {
+  const by = sub?.renewalPushedBy;
+  return by === "base" || by === "dlc" || by === "gift" ? by : null;
 }
 
 // PUT /users/@me/username success payload. `username` is the resolved display
@@ -1158,6 +1247,17 @@ export const PlayerStatsTreeSchema = z.object({
 });
 export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
 
+// A player's FFA rating on their public profile.
+export const PublicFfaRatingSchema = z.object({
+  rating: z.number(),
+  uncertainty: z.number(),
+  tier: z.string(),
+  games: z.number().int().nonnegative(),
+  wins: z.number().int().nonnegative(),
+  peak: z.number(),
+});
+export type PublicFfaRating = z.infer<typeof PublicFfaRatingSchema>;
+
 export const PlayerProfileSchema = z.object({
   createdAt: z.iso.datetime(),
   user: DiscordUserSchema.optional(),
@@ -1189,6 +1289,10 @@ export const PlayerProfileSchema = z.object({
   // games has one. Optional so responses from an API without the field still
   // parse (→ no tag shown).
   displayClanTag: z.string().nullable().optional(),
+  // null = unrated (calibrating or never played FFA).
+  // Absent until the API serves the FFA rating (FFA_RATING=live); a malformed
+  // value reads as absent.
+  ffaRating: PublicFfaRatingSchema.nullable().optional().catch(undefined),
 });
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
 
@@ -1216,6 +1320,16 @@ export const PlayerGameResultSchema = z.enum([
 ]);
 export type PlayerGameResult = z.infer<typeof PlayerGameResultSchema>;
 
+// What one FFA game did to the player's rating, for the history list.
+export const FfaRatingGameDeltaSchema = z.object({
+  before: z.number(),
+  after: z.number(),
+  expected: z.number(),
+  deltaResult: z.number(),
+  deltaPlace: z.number(),
+});
+export type FfaRatingGameDelta = z.infer<typeof FfaRatingGameDeltaSchema>;
+
 export const PublicPlayerGameSchema = z.object({
   gameId: z.string(),
   start: z.iso.datetime(),
@@ -1229,6 +1343,11 @@ export const PublicPlayerGameSchema = z.object({
   totalPlayers: z.number().int().nonnegative().nullable(),
   username: z.string(),
   clanTag: z.string().nullable(),
+  // null = this game did not move the rating (not a rated FFA game, or still
+  // calibrating).
+  // Absent until the API serves the FFA rating (FFA_RATING=live); a malformed
+  // value reads as absent.
+  ffaRating: FfaRatingGameDeltaSchema.nullable().optional().catch(undefined),
 });
 export type PublicPlayerGame = z.infer<typeof PublicPlayerGameSchema>;
 
@@ -1279,6 +1398,10 @@ export const RankedLeaderboardEntrySchema = z.object({
   // Account username (null = never set). The client displays
   // `accountUsername ?? public_id`.
   accountUsername: z.string().nullable(),
+  // Absent until the API serves the FFA rating (FFA_RATING=live); a malformed
+  // value reads as absent.
+  uncertainty: z.number().optional().catch(undefined),
+  tier: z.string().optional().catch(undefined),
   ...RowLevelFields,
 });
 export type RankedLeaderboardEntry = z.infer<
@@ -1293,6 +1416,17 @@ export const RankedLeaderboardResponseSchema = z.object({
   [RankedType.TwoVTwo]: RankedLeaderboardEntrySchema.array().default([]),
   // Defaulted for the same reason: older APIs have no FFA ladder.
   [RankedType.FreeForAll]: RankedLeaderboardEntrySchema.array().default([]),
+  // The season today falls in, for the FFA board's label. Absent before the
+  // first season and until the API serves the rating; malformed reads as absent.
+  ffaSeason: z
+    .object({
+      number: z.number().int().positive(),
+      startDate: z.iso.date(),
+      // Null until the next season is scheduled; absent on an older API.
+      endDate: z.iso.date().nullable().optional(),
+    })
+    .optional()
+    .catch(undefined),
 });
 export type RankedLeaderboardResponse = z.infer<
   typeof RankedLeaderboardResponseSchema

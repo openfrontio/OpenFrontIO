@@ -53,6 +53,85 @@ describe("fetchPlayerLeaderboard", () => {
     expect((result as { "1v1": unknown[] })["1v1"]).toHaveLength(1);
   });
 
+  it("keeps an FFA entry's uncertainty and tier", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      res({
+        "1v1": [],
+        "2v2": [],
+        ffa: [{ ...entry(1), uncertainty: 61.2, tier: "Diamond II" }],
+      }),
+    );
+
+    const result = (await fetchPlayerLeaderboard(1)) as { ffa: unknown[] };
+    expect(result.ffa[0]).toMatchObject({
+      uncertainty: 61.2,
+      tier: "Diamond II",
+    });
+  });
+
+  it("keeps the FFA season", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      res({
+        "1v1": [entry(1)],
+        ffaSeason: { number: 1, startDate: "2026-11-09" },
+      }),
+    );
+
+    const result = await fetchPlayerLeaderboard(1);
+
+    expect(result).toMatchObject({
+      ffaSeason: { number: 1, startDate: "2026-11-09" },
+    });
+  });
+
+  it("keeps a season's end date, and accepts one with none", async () => {
+    for (const endDate of ["2026-12-20", null]) {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        res({
+          "1v1": [entry(1)],
+          ffaSeason: { number: 1, startDate: "2026-11-09", endDate },
+        }),
+      );
+
+      const result = await fetchPlayerLeaderboard(1);
+
+      expect(result).toMatchObject({ ffaSeason: { endDate } });
+    }
+  });
+
+  it("drops a season with a malformed end date, and keeps the page", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      res({
+        "1v1": [entry(1)],
+        ffaSeason: { number: 1, startDate: "2026-11-09", endDate: "soon" },
+      }),
+    );
+
+    const result = await fetchPlayerLeaderboard(1);
+
+    if (result === false || result === "reached_limit") {
+      throw new Error("expected a parsed page");
+    }
+    expect(result.ffaSeason).toBeUndefined();
+    expect(result["1v1"]).toHaveLength(1);
+  });
+
+  it("drops a season with a malformed date, and keeps the page", async () => {
+    for (const startDate of ["soon", "2026-13-45", ""]) {
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        res({ "1v1": [entry(1)], ffaSeason: { number: 1, startDate } }),
+      );
+
+      const result = await fetchPlayerLeaderboard(1);
+
+      if (result === false || result === "reached_limit") {
+        throw new Error("expected a parsed page");
+      }
+      expect(result.ffaSeason).toBeUndefined();
+      expect(result["1v1"]).toHaveLength(1);
+    }
+  });
+
   it("requests the page it was asked for", async () => {
     const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
     fetchMock.mockResolvedValueOnce(res({ "1v1": [], "2v2": [] }));

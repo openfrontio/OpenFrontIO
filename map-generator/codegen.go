@@ -72,7 +72,7 @@ type mapInfo struct {
 	Author string `json:"author"`
 	// English description shown in the map picker, written to en.json.
 	Description string `json:"description"`
-	// Where the map lies on Earth, for the map picker's Earth view.
+	// Where the map lies on Earth, for the map picker's Atlas tab.
 	Location *mapLocation `json:"location"`
 }
 
@@ -385,7 +385,7 @@ func generateMapsTS(infos []mapInfo) (string, error) {
 	b.WriteString("  author?: string;\n")
 	b.WriteString("  /** Key of the map's description in resources/lang/en.json. */\n")
 	b.WriteString("  descriptionKey?: string;\n")
-	b.WriteString("  /** Where the map lies on Earth (the map picker's Earth view). */\n")
+	b.WriteString("  /** Where the map lies on Earth (the map picker's Atlas tab). */\n")
 	b.WriteString("  location?: { lat: number; lon: number };\n")
 	b.WriteString("}\n\n")
 	b.WriteString("export interface CustomTribe {\n")

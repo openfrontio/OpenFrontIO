@@ -445,7 +445,8 @@ describe("Nation nuke saving", () => {
         difficulty,
         { split: 20, humanFrom: 20 },
       );
-      setTroops(game, nation, human, 1_000_000, 1_000_000);
+      setTroops(game, nation, human, 200_000, 200_000);
+      expect(nation.troops()).toBeLessThan(game.config().maxTroops(nation));
       nation.removeGold(nation.gold() - 20_000_000n);
       const launch = () => {
         nukeBehavior.maybeSendNuke();
