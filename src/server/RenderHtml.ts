@@ -87,6 +87,7 @@ export async function renderHtmlContent(
     // refs to use this placeholder.
     cdnBaseRaw: cdnBase,
     gameEnv: JSON.stringify(ServerEnv.gameEnvName()),
+    noThirdParty: process.env.NO_THIRD_PARTY === "1",
     turnstileSiteKey: JSON.stringify(ServerEnv.turnstileSiteKey()),
     jwtAudience: JSON.stringify(ServerEnv.jwtAudience()),
     // Environment-scoped like the two above (so the static per-version page

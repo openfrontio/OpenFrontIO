@@ -241,6 +241,9 @@ export default defineConfig(({ mode }) => {
     assetManifest: JSON.stringify(assetManifest),
     cdnBase: JSON.stringify(cdnBase),
     gameEnv: JSON.stringify(env.GAME_ENV ?? "dev"),
+    // NO_THIRD_PARTY=1 (set by `npm run dev`) keeps ads, analytics and
+    // tracking scripts off the page, see index.html.
+    noThirdParty: env.NO_THIRD_PARTY === "1",
     cluster: devClusterJson,
     instanceLetter: JSON.stringify(devInstanceLetter),
     turnstileSiteKey: JSON.stringify(

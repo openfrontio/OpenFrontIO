@@ -61,6 +61,10 @@ export function loadAdmiral(): void {
   if (injected) return;
   injected = true;
 
+  // Local / self-hosted copies (NO_THIRD_PARTY=1, see index.html) load no
+  // third-party scripts at all.
+  if ((window as { __noThirdParty?: boolean }).__noThirdParty) return;
+
   // 1. Command-queue stub — must exist before the payload loads so buffered
   //    admiral(...) calls replay once it initializes (same pattern as gtag).
   if (!window.admiral) {

@@ -326,6 +326,21 @@ describe("RenderHtml environment-only render", () => {
     expect(config[field], field).toBeDefined();
   });
 
+  // Local / self-hosted copies (NO_THIRD_PARTY=1) must keep ads, analytics and
+  // tracking scripts off the page; the default render must not change.
+  it.each([
+    ["1", "true"],
+    [undefined, "false"],
+  ])("sets window.__noThirdParty for NO_THIRD_PARTY=%s", async (env, flag) => {
+    if (env !== undefined) vi.stubEnv("NO_THIRD_PARTY", env);
+    const html = await renderHtmlContent(REAL_TEMPLATE, { perServer: false });
+    expect(html).toMatch(new RegExp(`window\\.__noThirdParty =\\s*${flag};`));
+    // Both loaders honour the flag: the helper behind the CrazyGames and
+    // analytics tags, and the AdShield script's own guard.
+    expect(html).toContain("if (window.__onPoki || window.__noThirdParty)");
+    expect(html).toContain("if(!window.__onPoki&&!window.__noThirdParty)");
+  });
+
   // Rendering without the per-server locals must not go anywhere near the
   // server's identity: the pipeline builds this page from an image, and
   // requiring one for the rendering host would be a deploy-time failure for

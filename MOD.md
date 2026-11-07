@@ -11,6 +11,36 @@ working. Tunable numbers are in
 `packages/engine-lib/src/game/ModRules.ts`; costs are in
 `packages/engine/src/configuration/EngineConfig.ts`.
 
+## Run it locally (offline, no OpenFront servers)
+
+Needs Node 24.15+ and npm 12+ (`npm install -g npm@12`), then:
+
+```
+git clone -b mod/tanks-airports-zombie-raid https://github.com/<you>/OpenFrontIOModded
+cd OpenFrontIOModded
+npm ci --ignore-scripts      # same as `npm run inst`
+npm run dev                  # open http://localhost:9000
+```
+
+`npm run dev` starts the game client, the game server and a tiny local
+stand-in for OpenFront's closed-source account API
+(`scripts/mod/local-api.mjs`, port 8787). Nothing talks to the real OpenFront
+servers, and ads, analytics and tracking scripts are switched off
+(`NO_THIRD_PARTY=1`). The one external request left is Cloudflare's Turnstile
+script, which the game uses to issue join tokens for multiplayer lobbies. What
+you give up: accounts, the shop and cosmetics, public matchmaking and the server
+list. Single player and private lobbies work.
+
+### Playing with friends
+
+On the same network, start the server with `npm run dev:lan`, open the
+"Network" address Vite prints (for example `http://192.168.1.20:9000`) instead
+of `localhost`, choose **Create Lobby**, tick **Zombie Raid** if you want it,
+and send friends the lobby link. It is built from the address you opened, so it
+only works for them if that address is not `localhost`. Allow Node through the
+firewall if asked. Friends over the internet need port 9000 forwarded to your
+PC, or a tunnel.
+
 ## New units
 
 | Unit            | Build                        | What it does                                                                                                                                            |
@@ -58,5 +88,7 @@ Pillow and `rsvg-convert`.
 - Combat is direct damage; there are no shell or bullet visuals yet.
 - Balance numbers are first guesses and have not been playtested.
 - Replays do not carry the Zombie Raid HUD feed.
+- Play across separate computers has not been tested (two browsers on one
+  machine has).
 - Licensed AGPL-3.0 like upstream: if you host a modified version, publish its
   source.
