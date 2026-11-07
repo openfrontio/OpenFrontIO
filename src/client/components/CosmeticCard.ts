@@ -505,7 +505,7 @@ export class CosmeticCard extends LitElement {
     // below it rather than over the text. The artwork clips inside its own box
     // so the info tooltip can still overflow the card.
     const content = html`
-      <div class="relative w-full flex-1 ${previewShape}">
+      <div class="@container relative w-full flex-1 ${previewShape}">
         <div
           class="flex h-full w-full items-center justify-center overflow-hidden rounded-lg bg-white/5 p-2"
         >
@@ -531,9 +531,9 @@ export class CosmeticCard extends LitElement {
                 title=${translateText("cosmetics.steam_exclusive")}
                 class="absolute ${
                   isEquipped ? "bottom-7" : "bottom-1"
-                } left-1 z-[4] inline-flex max-w-[calc(100%-0.5rem)] items-center gap-0.5 overflow-hidden whitespace-nowrap rounded-full bg-slate-800 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-normal text-white shadow-lg shadow-black/60 ring-1 ring-sky-300/70"
+                } left-1 z-[4] inline-flex max-w-[calc(100%-0.5rem)] items-center gap-0.5 overflow-hidden whitespace-nowrap rounded-full bg-slate-800 px-1.5 @max-[120px]:px-1 py-0.5 text-[9px] font-black uppercase tracking-normal text-white shadow-lg shadow-black/60 ring-1 ring-sky-300/70"
                 ><svg
-                  class="h-2.5 w-2.5 shrink-0"
+                  class="h-2.5 w-2.5 shrink-0 @max-[120px]:hidden"
                   viewBox="0 0 24 24"
                   fill="currentColor"
                   aria-hidden="true"

@@ -555,6 +555,10 @@ describe("CosmeticCard", () => {
       expect(badge.className).toContain("overflow-hidden");
       expect(badge.className).toMatch(/max-w-\[calc\(100%/);
       expect(badge.title).toBe("cosmetics.steam_exclusive");
+      expect(badge.className).toContain("@max-[120px]:px-1");
+      expect(badge.querySelector("svg")!.getAttribute("class")).toContain(
+        "@max-[120px]:hidden",
+      );
       expect(badge.querySelector("span")!.className).toContain("truncate");
     });
 
