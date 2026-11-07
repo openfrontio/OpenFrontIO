@@ -4,6 +4,8 @@
   "name": "Iceland",
   "translation_key": "map.iceland",
   "categories": ["europe"],
+  "location": { "lat": 64.9, "lon": -18.6 },
+  "author": "Duwibi",
   "nations": [
     {
       "coordinates": [455, 1115],

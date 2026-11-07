@@ -3,7 +3,10 @@
   "id": "CanaryIslands",
   "name": "Canary Islands",
   "translation_key": "map.canaryislands",
-  "categories": ["new", "africa"],
+  "categories": ["africa"],
+  "location": { "lat": 28.3, "lon": -15.6 },
+  "author": "Tristar",
+  "description": "An archipelago in the Atlantic Ocean, off the coast of Africa and an overseas territory of Spain. The archipelago is made up of 7 major islands, from West to East: El Hierro, La Palma, La Gomera, Tenerife, Gran Canaria, Fuerteventura and Lanzarote.",
   "nations": [
     {
       "coordinates": [229, 1022],

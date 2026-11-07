@@ -246,6 +246,7 @@ export class LangSelector extends LitElement {
 
   private applyTranslation() {
     const components = [
+      "banned-modal",
       "single-player-modal",
       "host-lobby-modal",
       "map-picker",
@@ -275,6 +276,8 @@ export class LangSelector extends LitElement {
       "cosmetic-info",
       "cosmetic-preview",
       "difficulty-info",
+      "map-details",
+      "atlas-map",
       "inventory-loadout-bar",
       "purchase-button",
       "custom-currency-card",

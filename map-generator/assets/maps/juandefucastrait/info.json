@@ -4,7 +4,10 @@
   "name": "Juan De Fuca Strait",
   "translation_key": "map.juandefucastrait",
   "categories": ["north_america"],
+  "location": { "lat": 48.3, "lon": -124 },
+  "author": "Tristar",
   "special_team_count": 3,
+  "description": "A narrow passage located in the eastern North Pacific Ocean, between Washington State, U.S., and Vancouver Island, British Columbia, Canada. Part of the United States-Canada international boundary lies in mid-channel. This map has 3 main landmasses: Vancouver Island to the North, the Olympic Peninsula to the South and the mainland off Bellingham to the East; excellent for 3 Team games.",
   "nations": [
     {
       "coordinates": [1812, 445],

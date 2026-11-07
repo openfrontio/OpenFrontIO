@@ -4,6 +4,8 @@
   "name": "Titan",
   "translation_key": "map.titan",
   "categories": ["cosmic"],
+  "author": "Tristar",
+  "description": "The largest moon of Saturn and the second largest in the Solar System. It is the only moon that is known to have a dense atmosphere, and the only one besides Earth with stable bodies of liquid on its surface. Instead of water, its rivers, lakes, and seas (like Kraken Mare, the focus of this map) are composed of methane and ethane.",
   "nations": [
     {
       "name": "Stone-Keeping Purple Aliens",

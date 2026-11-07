@@ -4,6 +4,8 @@
   "name": "Montreal",
   "translation_key": "map.montreal",
   "categories": ["north_america"],
+  "location": { "lat": 45.5, "lon": -73.6 },
+  "author": "Duwibi",
   "nations": [
     {
       "coordinates": [800, 430],

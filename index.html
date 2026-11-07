@@ -159,6 +159,7 @@
         "name": "OpenFront",
         "alternateName": "OpenFront.io",
         "url": "https://openfront.io/",
+        "image": "<%- gameplayScreenshotUrl %>",
         "description": "Conquer the world in this multiplayer battle royale! Expand your nation, eliminate opponents, and dominate the map in this fast-paced IO game.",
         "applicationCategory": "Game",
         "operatingSystem": "Any",
@@ -256,7 +257,31 @@
 
     <!-- CrazyGames SDK -->
     <script>
-      __loadThirdPartyScript("https://sdk.crazygames.com/crazygames-sdk-v3.js");
+      // Not inside our VIVERSE wrapper, which isn't CrazyGames
+      // even though it's an iframe. Same check as ViverseSDK.isOnViverse().
+      window.__onViverse = (function () {
+        if (window.self === window.top) return false;
+        try {
+          if (sessionStorage.getItem("onViverse") === "true") return true;
+        } catch (e) {}
+        var viverseHost = /(^|\.)(viverse\.app|viverse\.com)$/;
+        function isViverseUrl(url) {
+          try {
+            return viverseHost.test(new URL(url).hostname);
+          } catch (e) {
+            return false;
+          }
+        }
+        var ancestors = location.ancestorOrigins;
+        return ancestors && ancestors.length > 0
+          ? Array.prototype.some.call(ancestors, isViverseUrl)
+          : isViverseUrl(document.referrer);
+      })();
+      if (!window.__onViverse) {
+        __loadThirdPartyScript(
+          "https://sdk.crazygames.com/crazygames-sdk-v3.js",
+        );
+      }
     </script>
 
     <!-- Cloudflare Turnstile -->
@@ -537,10 +562,10 @@
           class="hidden w-full order-3 sm:order-none"
         ></tutorial-panel>
         <div
-          class="pointer-events-auto bg-gray-800/92 backdrop-blur-sm sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none"
+          class="pointer-events-auto bg-gray-800/92 backdrop-blur-sm sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none z-10"
         >
           <control-panel class="w-full"></control-panel>
-          <unit-display class="hidden lg:block w-full"></unit-display>
+          <unit-display class="block w-full"></unit-display>
         </div>
       </div>
 

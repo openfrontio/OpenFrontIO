@@ -1078,6 +1078,13 @@ describe("UsernameInput lapse notice", () => {
     expect(line).not.toBeNull();
     expect(line!.textContent).toContain("username.claim_reserved");
     expect(line!.textContent).toContain("RyanTheGreat");
+    expect(line!.className).toContain("sm:w-auto");
+    expect(line!.parentElement?.className).toContain(
+      "sm:max-w-[calc((100%-1rem)*2/3)]",
+    );
+    expect(line!.parentElement?.className).toContain(
+      "lg:group-has-[.streaming-live]/strip:max-w-full",
+    );
   });
 
   // The player dismissed the one-time notice; the standing line is what they

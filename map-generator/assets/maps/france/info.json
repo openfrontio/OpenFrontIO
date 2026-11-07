@@ -4,6 +4,9 @@
   "name": "France",
   "translation_key": "map.france",
   "categories": ["europe", "countries"],
+  "location": { "lat": 46.6, "lon": 2.4 },
+  "author": "Tristar",
+  "description": "France is a country in northwestern Europe bounded by the Atlantic and the Mediterranean Sea, the Alps and the Pyrenees. Historically and culturally among the most important nations in the Western World, with the Modern period often considered to start with the French Revolution. Become the new Napoleon and conquer all of France!",
   "nations": [
     {
       "coordinates": [1140, 389],

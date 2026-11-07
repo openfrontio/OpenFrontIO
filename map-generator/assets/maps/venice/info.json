@@ -4,6 +4,9 @@
   "name": "Venice",
   "translation_key": "map.venice",
   "categories": ["europe"],
+  "location": { "lat": 45.4, "lon": 12.3 },
+  "author": "Tristar",
+  "description": "A map of the iconic Italian city of Venice. Once the capital of the Republic of Venice, a maritime power that dominated Adriatic and eastern Mediterranean trade for centuries. Play and control the Grand Canal!",
   "nations": [
     {
       "coordinates": [760, 593],

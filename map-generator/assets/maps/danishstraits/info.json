@@ -4,6 +4,9 @@
   "name": "Danish Straits",
   "translation_key": "map.danishstraits",
   "categories": ["europe"],
+  "location": { "lat": 55.7, "lon": 11.5 },
+  "author": "Tristar",
+  "description": "This historical map is focused around Denmark and the surrounding regions of Sweden-Norway and Prussia. The Danish Straits are important international waterways that connect the Baltic Sea to the North Sea through the Kattegat, Skagerrak and other smaller straits separating Denmark and Sweden.",
   "nations": [
     {
       "coordinates": [37, 227],

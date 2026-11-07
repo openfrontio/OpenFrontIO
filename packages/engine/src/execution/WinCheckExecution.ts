@@ -86,7 +86,7 @@ export class WinCheckExecution implements Execution {
       return;
     }
 
-    // The tutorial is won by conquering the nation and the tribe, and
+    // The tutorial is won by conquering its two nations, and
     // nothing else ends it: no tile share, no timer.
     if (this.mg.config().gameConfig().tutorial) {
       if (sorted.every((p) => p.type() === PlayerType.Human)) {

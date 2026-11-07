@@ -35,6 +35,7 @@ import "./components/CreatorCodePanel";
 import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
+import { ffaSummaryFromMe } from "./components/ffaRating/FfaRatingSummary";
 import "./components/FriendsList";
 import type { PrestigeFlow } from "./components/PrestigeFlow";
 import "./components/ProfileCard";
@@ -420,12 +421,16 @@ export class AccountModal extends BaseModal {
               ${translateText("account_modal.connected_as")}
             </div>
             <div class="flex flex-col items-center gap-3">
-              <img
-                src=${user.profilePictureUrl}
-                alt=${user.username}
-                class="w-16 h-16 rounded-full object-cover"
-                referrerpolicy="no-referrer"
-              />
+              ${
+                user.profilePictureUrl !== null
+                  ? html`<img
+                      src=${user.profilePictureUrl}
+                      alt=${user.username}
+                      class="w-16 h-16 rounded-full object-cover"
+                      referrerpolicy="no-referrer"
+                    />`
+                  : nothing
+              }
               <div class="text-white text-lg font-medium">${user.username}</div>
               ${this.renderCurrency()}
             </div>
@@ -451,7 +456,11 @@ export class AccountModal extends BaseModal {
             variant="primary"
             width="block"
             size="md"
-            translationKey="main.sign_in"
+            translationKey=${
+              gamePortal.name() === "viverse"
+                ? "account_modal.sign_in_viverse"
+                : "main.sign_in"
+            }
             @click=${this.handlePortalSignIn}
           ></o-button>
         </div>
@@ -652,6 +661,16 @@ export class AccountModal extends BaseModal {
     variant: "full" | "compact",
   ): TemplateResult | typeof nothing {
     const player = this.userMeResponse?.player;
+    const ffaRating = ffaSummaryFromMe(player?.leaderboard?.ffa);
+    // No level to show (progression off): the full tab still shows the rating.
+    if (player?.publicId && !player.progress) {
+      return variant === "full" && ffaRating !== null
+        ? html`<ffa-rating-summary
+            class="mb-4 block"
+            .rating=${ffaRating}
+          ></ffa-rating-summary>`
+        : nothing;
+    }
     if (!player?.publicId || !player.progress) return nothing;
     // With any XP still waiting to be scored, provisionally: it never offers
     // Prestige (only the confirmed level can).
@@ -663,6 +682,7 @@ export class AccountModal extends BaseModal {
       .clanTag=${this.displayClanTag}
       .progress=${view.progress}
       .provisional=${view.provisional}
+      .ffaRating=${ffaRating}
       .openKey=${`account-${this.openCount}`}
       prestigeable
       @prestige-request=${this.handlePrestigeRequest}

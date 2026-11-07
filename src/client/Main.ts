@@ -20,6 +20,7 @@ import { renderNavVersion } from "src/client/GameVersion";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
+import { wasAdmitted } from "./AdmittedLobbies";
 import {
   getUserMe,
   invalidateUserMe,
@@ -37,10 +38,14 @@ import {
   CLAIM_PROMPT_KEY,
   claimPromptDue,
   claimPromptStringsReady,
+  giftEndingStringsReady,
   joinOwnsInFlightFlag,
   lapseShownAfterDispatch,
   nextBootInterrupt,
   parseClaimPromptStore,
+  renewalPushedDueThisLaunch,
+  renewalPushedOf,
+  renewalPushedStringsReady,
   reportThanksDueThisLaunch,
   reportThanksStringsReady,
   runBootInterrupt,
@@ -49,8 +54,10 @@ import {
 import type { JoinLobbyResult } from "./ClientGameRunner";
 import {
   broadcastFreshUserMe,
+  fetchCosmetics,
   getPlayerCosmeticsRefs,
   handlePurchaseReturn,
+  subscriptionTier,
   translateCosmetic,
 } from "./Cosmetics";
 import {
@@ -127,6 +134,8 @@ import {
 } from "./ServerList";
 import type { SinglePlayerModal } from "./SinglePlayerModal";
 import {
+  giftEndingDue,
+  paidFactsOf,
   parseSteamGrantStore,
   recordSteamGrant,
   STEAM_GRANT_NOTICE_KEY,
@@ -944,43 +953,74 @@ class Client {
           isDesktopShell(),
           Date.now(),
         );
+        const paid = paidFactsOf(userMeResponse);
+        const interrupt = nextBootInterrupt({
+          cleanHomepage,
+          usernameStatus,
+          username,
+          usernameBase,
+          lapseNoticeDue: lapseShown,
+          grantWelcomeDue: steamGrantWelcomeDue(
+            grantStoreAfterDispatch,
+            userMeResponse,
+            Date.now(),
+          ),
+          grantEndedDue: steamGrantEndedDue(
+            grantStoreAfterDispatch,
+            userMeResponse,
+            Date.now(),
+          ),
+          grantStringsReady: steamGrantStringsReady(translateText),
+          giftEndingDue: giftEndingDue(
+            grantStoreAfterDispatch,
+            userMeResponse,
+            Date.now(),
+          ),
+          giftEndingStringsReady: giftEndingStringsReady(translateText),
+          renewalPushedDue: renewalPushedDueThisLaunch(userMeResponse),
+          renewalPushedStringsReady: renewalPushedStringsReady(translateText),
+          steamNotice,
+          steamNoticeStringsReady: steamNoticeStringsReady(translateText),
+          // Held rewards can't be claimed yet: on their own they'd open the
+          // popup every boot with nothing to do.
+          rewardCount: rewards.filter(isRewardClaimable).length,
+          claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
+          claimStringsReady: claimPromptStringsReady(translateText),
+          // Not every caller's response went through the schema default.
+          reportThanksDue: reportThanksDueThisLaunch(
+            userMeResponse.pendingMessages ?? [],
+            publicId,
+          ),
+          reportThanksStringsReady: reportThanksStringsReady(translateText),
+        });
+        // Only the payer's welcome names a daily amount, so only it waits on
+        // the catalog.
+        const catalog =
+          interrupt === "grant-welcome" && paid !== null
+            ? await fetchCosmetics()
+            : null;
+        // A join or a deep link can land while the catalog loads.
+        if (
+          interrupt === "grant-welcome" &&
+          paid !== null &&
+          !bootInterruptsAllowed(
+            window.location,
+            isDesktopShell(),
+            { joinInFlight: this.joinInFlight, lobbyHandle: this.lobbyHandle },
+            getDesktopUpdateState(),
+          )
+        ) {
+          return;
+        }
         await runBootInterrupt(
-          nextBootInterrupt({
-            cleanHomepage,
-            usernameStatus,
-            username,
-            usernameBase,
-            lapseNoticeDue: lapseShown,
-            grantWelcomeDue: steamGrantWelcomeDue(
-              grantStoreAfterDispatch,
-              userMeResponse,
-              Date.now(),
-            ),
-            grantEndedDue: steamGrantEndedDue(
-              grantStoreAfterDispatch,
-              userMeResponse,
-              Date.now(),
-            ),
-            grantStringsReady: steamGrantStringsReady(translateText),
-            steamNotice,
-            steamNoticeStringsReady: steamNoticeStringsReady(translateText),
-            // Held rewards can't be claimed yet: on their own they'd open the
-            // popup every boot with nothing to do.
-            rewardCount: rewards.filter(isRewardClaimable).length,
-            claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
-            claimStringsReady: claimPromptStringsReady(translateText),
-            // Not every caller's response went through the schema default.
-            reportThanksDue: reportThanksDueThisLaunch(
-              userMeResponse.pendingMessages ?? [],
-              publicId,
-            ),
-            reportThanksStringsReady: reportThanksStringsReady(translateText),
-          }),
+          interrupt,
           {
             claimStore,
             grantStore: grantStoreAfterDispatch,
             publicId,
             steamNotice,
+            paid,
+            renewalPushed: renewalPushedOf(userMeResponse),
           },
           {
             translate: translateText,
@@ -996,6 +1036,8 @@ class Client {
               await showInGameAlert(body, { heading });
             },
             tierName: (tier) => translateCosmetic("subscriptions", tier),
+            dailyPlutonium: (tier) =>
+              subscriptionTier(catalog, tier)?.dailyHardCurrency ?? null,
             navigate: (hash) => {
               window.location.hash = hash;
             },
@@ -1785,6 +1827,7 @@ class Client {
   private async handleJoinLobby(event: CustomEvent<JoinLobbyEvent>) {
     const lobby = event.detail;
     if (this.usernameInput && !this.usernameInput.canPlay()) {
+      event.preventDefault();
       // The singleplayer modal shows the starting overlay before dispatching
       // join-lobby; a refused join must release it or it stays over the menu.
       const startingModal = document.querySelector("game-starting-modal");
@@ -1794,6 +1837,7 @@ class Client {
       return;
     }
     if (this.blockedJoin(lobby)) {
+      event.preventDefault();
       return;
     }
     // Only once the join is actually going ahead: a refused dispatch that
@@ -1841,6 +1885,19 @@ class Client {
           : presenceLobbyId(joinConfig, lobby.gameID),
     };
     this.emitPresence();
+
+    if (this.replayViewerID !== null) {
+      console.log("joining lobby, tearing down replay viewer");
+      this.replayViewerID = null;
+      document.querySelector("replay-viewer")?.remove();
+      if (parseReplayViewerHash(window.location.hash) !== null) {
+        history.replaceState(
+          null,
+          "",
+          window.location.pathname + window.location.search,
+        );
+      }
+    }
 
     if (this.lobbyHandle !== null) {
       console.log("joining lobby, stopping existing game");
@@ -2310,7 +2367,9 @@ class Client {
       // Single-player and replays: no server to verify a token against (and
       // on the CDN replay shells Turnstile cannot load at all). Shared with
       // the desktop gate so the exemption has one definition.
-      !joinIsGateable(lobby)
+      !joinIsGateable(lobby) ||
+      // Rejoining a game the server already let this tab into.
+      wasAdmitted(lobby.gameID)
     ) {
       return null;
     }
@@ -2394,6 +2453,6 @@ async function getTurnstileToken(): Promise<TurnstileToken> {
   // lives in TurnstileToken.ts.
   return requestTurnstileToken(turnstile, {
     sitekey: ClientEnv.turnstileSiteKey(),
-    container: "#turnstile-container",
+    container: document.getElementById("turnstile-container") ?? document.body,
   });
 }
