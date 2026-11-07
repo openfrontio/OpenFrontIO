@@ -1700,6 +1700,7 @@
     "vietnam": "Vietnam",
     "warshipwarship": "Warship Warship",
     "world": "World",
+    "world10000": "World 10000",
     "worldinverted": "World Inverted",
     "yangtzeriver": "Yangtze River",
     "yellowsea": "Yellow Sea",
@@ -1810,6 +1811,7 @@
     "venice": "A map of the iconic Italian city of Venice. Once the capital of the Republic of Venice, a maritime power that dominated Adriatic and eastern Mediterranean trade for centuries. Play and control the Grand Canal!",
     "vietnam": "Vietnam is a country in Southeast Asia located on the eastern edge of the Indochinese Peninsula. It was divided into North and South during the Vietnam war. The skinny shape of the country makes for a fun little linearly-expanding map.",
     "warshipwarship": "Two massive warship-shaped islands. The map is inspired by a meme created by the Openfront Youtuber Ultimus_Rex when he says the catchphrase 'Warship Warship' when deploying them",
+    "world10000": "Oh my gosh, what have they done?!? Why, why would they have done it?? Shirley you don't just listen when people ask for a stupid huge map? And I can't play it on mobile? - A lot, of love, thats right, you got it, and don't call me Shirley.",
     "yangtzeriver": "A rainbow-shaped, 300-mile stretch of the lower Yangtze river from its mouth up to the border of the Anhui & Jiangsu provinces. It encompasses much of the Yangtze River Delta megacity region, the country’s economic and urban core",
     "yellowsea": "The Yellow Sea is a sea located between the Korean peninsula and the east coast of China. It opens into the East China Sea to the south and derives its name from the yellow silt washed into it by the Yellow River. The two peninsulas jutting out into the sea contribute to its unique shape and appearance."
   },
@@ -1817,7 +1819,9 @@
     "brland": "brland",
     "eyeland": "eyeland",
     "eyewater": "eyewater",
-    "label": "label"
+    "label": "label",
+    "w10kland": "10K-Land",
+    "w10kwater": "10K-Water"
   },
   "marketing_consent": {
     "body": "News and updates by email. Change it anytime in your account.",
