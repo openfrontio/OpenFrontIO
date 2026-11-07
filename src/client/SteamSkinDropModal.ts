@@ -78,10 +78,23 @@ export class SteamSkinDropModal extends LitElement {
       this.view === "popup" &&
       (changed.has("resolved") || changed.has("view"))
     ) {
-      this.querySelector<HTMLElement>(
-        "[data-steam-skin-drop-primary]",
-      )?.focus();
+      this.focusPrimary();
+      // Something outside can still take focus in the frame after the first
+      // paint (the boot path re-renders the homepage), so check once more.
+      requestAnimationFrame(() => {
+        if (
+          this.resolved !== null &&
+          this.view === "popup" &&
+          !this.contains(document.activeElement)
+        ) {
+          this.focusPrimary();
+        }
+      });
     }
+  }
+
+  private focusPrimary() {
+    this.querySelector<HTMLElement>("[data-steam-skin-drop-primary]")?.focus();
   }
 
   // Keeps Tab inside the panel while it is the only thing on screen.

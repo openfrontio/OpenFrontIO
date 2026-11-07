@@ -85,6 +85,13 @@ describe("SteamSkinDropModal", () => {
     expect(document.activeElement).toBe(buttonWithText(K.claimEquip));
   });
 
+  it("takes focus back if it is lost right after show()", async () => {
+    (document.activeElement as HTMLElement).blur();
+    expect(modal.contains(document.activeElement)).toBe(false);
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    expect(document.activeElement).toBe(buttonWithText(K.claimEquip));
+  });
+
   it("keeps Tab inside the panel", () => {
     const panel = modal.querySelector<HTMLElement>("[role='dialog']")!;
     const primary = buttonWithText(K.claimEquip);

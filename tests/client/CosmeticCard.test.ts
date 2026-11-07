@@ -576,6 +576,16 @@ describe("CosmeticCard", () => {
       expect(badge.className).toContain("bottom-7");
       expect(badge.className).not.toContain("bottom-1 ");
     });
+
+    it("sits above the preview bubble on narrow cards, equipped or not", async () => {
+      await show(skin(true));
+      const badge = () => card!.querySelector<HTMLElement>(BADGE)!;
+      expect(badge().className).toContain("@max-[140px]:bottom-7");
+      expect(badge().className).not.toContain("bottom-10");
+      card!.state = "equipped";
+      await card!.updateComplete;
+      expect(badge().className).toContain("@max-[140px]:bottom-7");
+    });
   });
 
   describe("subscription perks tooltip", () => {
