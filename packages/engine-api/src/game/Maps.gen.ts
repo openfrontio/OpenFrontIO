@@ -80,6 +80,7 @@ export enum GameMapType {
   Lemnos = "Lemnos", // map-generator/assets/maps/lemnos/info.json
   Levant = "Levant", // map-generator/assets/maps/levant/info.json
   Lisbon = "Lisbon", // map-generator/assets/maps/lisbon/info.json
+  London = "London", // map-generator/assets/maps/london/info.json
   LosAngeles = "Los Angeles", // map-generator/assets/maps/losangeles/info.json
   Luna = "Luna", // map-generator/assets/maps/luna/info.json
   Madagascar = "Madagascar", // map-generator/assets/maps/madagascar/info.json
@@ -1552,6 +1553,17 @@ export const maps: readonly MapInfo[] = [
     themes: ["europe"],
     author: "jachisc",
     location: { lat: 38.7, lon: -9.1 },
+  },
+  {
+    id: "London",
+    type: GameMapType.London,
+    translationKey: "map.london",
+    categories: ["new", "europe"],
+    defaultNationCount: 32,
+    themes: ["europe"],
+    author: "Tristar",
+    descriptionKey: "map_description.london",
+    location: { lat: 51.3, lon: 0 },
   },
   {
     id: "LosAngeles",
