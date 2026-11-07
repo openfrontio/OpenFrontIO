@@ -528,11 +528,12 @@ export class CosmeticCard extends LitElement {
           isSteamExclusive(active)
             ? html`<span
                 data-cosmetic-steam-exclusive
+                title=${translateText("cosmetics.steam_exclusive")}
                 class="absolute ${
                   isEquipped ? "bottom-7" : "bottom-1"
-                } left-1 z-[4] inline-flex items-center gap-1 rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow-lg shadow-black/60 ring-1 ring-sky-300/70"
+                } left-1 z-[4] inline-flex max-w-[calc(100%-0.5rem)] items-center gap-0.5 overflow-hidden whitespace-nowrap rounded-full bg-slate-800 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-normal text-white shadow-lg shadow-black/60 ring-1 ring-sky-300/70"
                 ><svg
-                  class="h-3 w-3 shrink-0"
+                  class="h-2.5 w-2.5 shrink-0"
                   viewBox="0 0 24 24"
                   fill="currentColor"
                   aria-hidden="true"
@@ -540,7 +541,9 @@ export class CosmeticCard extends LitElement {
                   <path
                     d="M12 1a11 11 0 0 0-11 10.2l5.9 2.4a3.1 3.1 0 0 1 1.8-.5l2.6-3.8v-.1a4.2 4.2 0 1 1 4.2 4.2h-.1l-3.7 2.7a3.1 3.1 0 0 1-6.1.7L1.2 14.6A11 11 0 1 0 12 1zM7.4 18.5l-1.4-.6a2.3 2.3 0 1 0 1.3-3.1l1.5.6a1.7 1.7 0 1 1-1.4 3.1zm8.3-5.3a2.8 2.8 0 1 1 0-5.6 2.8 2.8 0 0 1 0 5.6z"
                   /></svg
-                >${translateText("cosmetics.steam_exclusive")}</span
+                ><span class="truncate"
+                  >${translateText("cosmetics.steam_exclusive")}</span
+                ></span
               >`
             : nothing
         }

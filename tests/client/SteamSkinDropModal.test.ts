@@ -78,6 +78,17 @@ describe("SteamSkinDropModal", () => {
     expect(modal.textContent).toContain(K.message);
   });
 
+  it("puts the card first, then the message, then the buttons", () => {
+    const card = modal.querySelector("cosmetic-card")!;
+    const message = [...modal.querySelectorAll("p")].find((p) =>
+      p.textContent?.includes(K.message),
+    )!;
+    const claim = buttonWithText(K.claim);
+    const before = Node.DOCUMENT_POSITION_FOLLOWING;
+    expect(card.compareDocumentPosition(message) & before).toBeTruthy();
+    expect(message.compareDocumentPosition(claim) & before).toBeTruthy();
+  });
+
   it('Claim resolves "claim"', async () => {
     buttonWithText(K.claim).click();
     expect(await answer).toBe("claim");

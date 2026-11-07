@@ -548,6 +548,16 @@ describe("CosmeticCard", () => {
       expect(card!.querySelector(BADGE)).toBeNull();
     });
 
+    it("keeps the pill on one line, truncating a long label inside the card", async () => {
+      await show(skin(true));
+      const badge = card!.querySelector<HTMLElement>(BADGE)!;
+      expect(badge.className).toContain("whitespace-nowrap");
+      expect(badge.className).toContain("overflow-hidden");
+      expect(badge.className).toMatch(/max-w-\[calc\(100%/);
+      expect(badge.title).toBe("cosmetics.steam_exclusive");
+      expect(badge.querySelector("span")!.className).toContain("truncate");
+    });
+
     it("an equipped exclusive shows both pills", async () => {
       await show(skin(true));
       expect(card!.querySelector<HTMLElement>(BADGE)!.className).toContain(

@@ -95,10 +95,7 @@ export class SteamSkinDropModal extends LitElement {
           >
             ×
           </button>
-          <p class="mb-4 pr-8 text-sm font-medium text-white/90">
-            ${translateText(keys.message)}
-          </p>
-          <div class="mx-auto mb-5 w-56 max-w-full">
+          <div class="mx-auto mb-4 mt-6 w-56 max-w-full">
             <cosmetic-card
               .resolved=${resolved}
               .interactive=${true}
@@ -109,6 +106,9 @@ export class SteamSkinDropModal extends LitElement {
               }}
             ></cosmetic-card>
           </div>
+          <p class="mb-5 text-center text-sm font-medium text-white/90">
+            ${translateText(keys.message)}
+          </p>
           <div class="flex gap-3">
             <button
               type="button"
