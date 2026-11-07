@@ -28,7 +28,7 @@
       "flag": "saskatchewan"
     },
     {
-      "coordinates": [1835, 2148],
+      "coordinates": [1833, 2148],
       "name": "Manitoba",
       "flag": "manitoba"
     },
@@ -105,7 +105,7 @@
       "name": "Nunatsiavut"
     },
     {
-      "coordinates": [2429, 1866],
+      "coordinates": [2429, 1868],
       "name": "Cree"
     },
     {
@@ -169,7 +169,7 @@
       "name": "Oji-Cree"
     },
     {
-      "coordinates": [1231, 1965],
+      "coordinates": [1231, 1963],
       "name": "Nakoda"
     },
     {
@@ -248,7 +248,7 @@
     },
     {
       "name": "Calgary",
-      "coordinates": [1260, 1981]
+      "coordinates": [1260, 1979]
     },
     {
       "name": "Hamilton",
@@ -272,7 +272,7 @@
     },
     {
       "name": "Saskatoon",
-      "coordinates": [1521, 1983]
+      "coordinates": [1519, 1983]
     },
     {
       "name": "Barrie",

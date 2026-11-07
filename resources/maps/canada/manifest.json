@@ -66,7 +66,7 @@
       "name": "Vancouver"
     },
     {
-      "coordinates": [1260, 1981],
+      "coordinates": [1260, 1979],
       "name": "Calgary"
     },
     {
@@ -90,7 +90,7 @@
       "name": "Windsor"
     },
     {
-      "coordinates": [1521, 1983],
+      "coordinates": [1519, 1983],
       "name": "Saskatoon"
     },
     {
@@ -245,17 +245,17 @@
   "id": "Canada",
   "map": {
     "height": 2568,
-    "num_land_tiles": 2319011,
+    "num_land_tiles": 2320563,
     "width": 3428
   },
   "map16x": {
     "height": 642,
-    "num_land_tiles": 135543,
+    "num_land_tiles": 135485,
     "width": 857
   },
   "map4x": {
     "height": 1284,
-    "num_land_tiles": 565361,
+    "num_land_tiles": 565572,
     "width": 1714
   },
   "name": "Canada",
@@ -276,7 +276,7 @@
       "name": "Saskatchewan"
     },
     {
-      "coordinates": [1835, 2148],
+      "coordinates": [1833, 2148],
       "flag": "manitoba",
       "name": "Manitoba"
     },
@@ -353,7 +353,7 @@
       "name": "Nunatsiavut"
     },
     {
-      "coordinates": [2429, 1866],
+      "coordinates": [2429, 1868],
       "name": "Cree"
     },
     {
@@ -417,7 +417,7 @@
       "name": "Oji-Cree"
     },
     {
-      "coordinates": [1231, 1965],
+      "coordinates": [1231, 1963],
       "name": "Nakoda"
     },
     {
