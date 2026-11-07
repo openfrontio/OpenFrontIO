@@ -141,8 +141,7 @@ export class PortExecution implements Execution {
     const weightedPorts: Unit[] = [];
 
     for (const [i, otherPort] of ports.entries()) {
-      const expanded = new Array(otherPort.level()).fill(otherPort);
-      weightedPorts.push(...expanded);
+      let copies = 1;
       const tooClose =
         this.mg.manhattanDist(this.port!.tile(), otherPort.tile()) <
         this.mg.config().tradeShipShortRangeDebuff();
@@ -151,10 +150,14 @@ export class PortExecution implements Execution {
       if (!tooClose && closeBonus) {
         // If the port is close, but not too close, add it again
         // to increase the chances of trading with it.
-        weightedPorts.push(...expanded);
+        copies++;
       }
       if (!tooClose && this.port!.owner().isFriendly(otherPort.owner())) {
-        weightedPorts.push(...expanded);
+        copies++;
+      }
+      // Not push(...): spreading a high-level port's copies overflows the stack.
+      for (let n = otherPort.level() * copies; n > 0; n--) {
+        weightedPorts.push(otherPort);
       }
     }
     return weightedPorts;

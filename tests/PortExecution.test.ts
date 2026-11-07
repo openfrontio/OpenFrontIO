@@ -94,6 +94,24 @@ describe("PortExecution", () => {
     expect(ports.length).toBe(1);
   });
 
+  test("Very high level ports don't overflow the stack", () => {
+    game.config().proximityBonusPortsNb = () => 10;
+    game.config().tradeShipShortRangeDebuff = () => 0;
+
+    player.conquer(game.ref(7, 10));
+    const port = player.buildUnit(UnitType.Port, game.ref(7, 10), {});
+    const execution = new PortExecution(port);
+    execution.init(game, 0);
+
+    other.conquer(game.ref(0, 0));
+    const otherPort = other.buildUnit(UnitType.Port, game.ref(0, 0), {});
+    vi.spyOn(otherPort, "level").mockReturnValue(1_000_000);
+
+    const ports = execution.tradingPorts();
+    expect(ports.length).toBe(2_000_000);
+    expect(ports.every((p) => p === otherPort)).toBe(true);
+  });
+
   test("shouldSpawnTradeShip recomputes spawn rate per level with updated rejection count", () => {
     player.conquer(game.ref(7, 10));
     const port = player.buildUnit(UnitType.Port, game.ref(7, 10), {});
