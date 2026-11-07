@@ -482,6 +482,8 @@ export type RandomNameStyle = "tribe" | "anon";
 const { prefixes, suffixes } = resolveTribeNameData();
 const tribeNames = prefixes.flatMap((prefix) =>
   suffixes
+    // The censor removes spaces, so "an Alliance" matches its "anal" pattern.
+    .filter((suffix) => !(prefix.endsWith("an") && suffix === "Alliance"))
     .map((suffix) => `${prefix} ${suffix}`)
     .filter((name) => name.length <= MAX_USERNAME_LENGTH),
 );

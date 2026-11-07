@@ -24,6 +24,7 @@ import {
   validateAccountUsername,
   validateUsername,
 } from "../../src/client/validations/username";
+import { profanityMatcher } from "../../src/server/Censor";
 
 // The resolver takes plain values, so every case below is expressed as a full
 // set of inputs rather than by mounting the component.
@@ -829,6 +830,23 @@ describe("lapseNoticeDue against a marker from before and after the write", () =
 
 describe("random player names", () => {
   afterEach(() => vi.restoreAllMocks());
+
+  it("never generates a tribe name rejected by the profanity matcher", () => {
+    const { prefixes, suffixes } = resolveTribeNameData();
+    let index = 0;
+    vi.spyOn(crypto, "getRandomValues").mockImplementation((buffer) => {
+      (buffer as Uint32Array)[0] = index++;
+      return buffer;
+    });
+    // The unfiltered combination count covers every slot in the filtered pool.
+    const names = new Set<string>();
+    for (let i = 0; i < prefixes.length * suffixes.length; i++) {
+      names.add(generateRandomPlayerName("tribe"));
+    }
+    expect(
+      [...names].filter((name) => profanityMatcher.hasMatch(name)),
+    ).toEqual([]);
+  });
 
   it("uses complete default tribe prefix/suffix pairs within the name limit", () => {
     const { prefixes, suffixes } = resolveTribeNameData();
