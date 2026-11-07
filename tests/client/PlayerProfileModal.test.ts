@@ -136,6 +136,54 @@ describe("public player profile route", () => {
     expect(window.location.hash).toBe("");
   });
 
+  it("shows another player's FFA rating", async () => {
+    fetchPublicPlayerProfileMock.mockResolvedValue({
+      createdAt: "2026-01-01T00:00:00.000Z",
+      stats: {},
+      username: "Bob",
+      ffaRating: {
+        rating: 1612.6,
+        uncertainty: 84.7,
+        tier: "Gold I",
+        games: 40,
+        wins: 5,
+        peak: 1700,
+      },
+    });
+    history.replaceState(null, "", "/#modal=profile&publicID=bob");
+    expect(modalRouter.routeFromHash()).toBe(true);
+
+    await vi.waitFor(async () => {
+      await modal.updateComplete;
+      const summary = modal.querySelector<
+        HTMLElement & { updateComplete: Promise<boolean> }
+      >("ffa-rating-summary");
+      await summary?.updateComplete;
+      expect(
+        modal.querySelector("ffa-rating-summary [data-ffa-rating-value]")!
+          .textContent,
+      ).toContain("1613 ± 85");
+    });
+  });
+
+  it("shows no FFA rating when the profile has none", async () => {
+    fetchPublicPlayerProfileMock.mockResolvedValue({
+      createdAt: "2026-01-01T00:00:00.000Z",
+      stats: statsTree,
+      username: "Bob",
+      ffaRating: null,
+    });
+    history.replaceState(null, "", "/#modal=profile&publicID=bob");
+    expect(modalRouter.routeFromHash()).toBe(true);
+
+    await vi.waitFor(async () => {
+      await modal.updateComplete;
+      expect(modal.querySelector("player-stats-tree-view")).not.toBeNull();
+    });
+    expect(modal.querySelector("[data-ffa-rating-summary]")).toBeNull();
+    expect(modal.textContent).not.toContain("ffa_rating.title");
+  });
+
   it("shows not-found when the profile fetch fails", async () => {
     fetchPublicPlayerProfileMock.mockResolvedValue(false);
     history.replaceState(null, "", "/#modal=profile&publicID=missing");

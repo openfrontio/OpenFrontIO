@@ -461,7 +461,6 @@
     "leave_clan": "خروج از قبیله",
     "left_clan": "شما از کلن خارج شدید.",
     "manage_clan": "مدیریت",
-    "map_coming_soon": "به زودی",
     "map_frame_title": "نقشه قلمرو کلن",
     "member_banned": "بازیکن محروم شد.",
     "member_count": "{count, plural, one {# عضو} other {# عضو}}",
@@ -535,12 +534,13 @@
     "status": "وضعیت",
     "tab_donations": "حمایت های مالی",
     "tab_game_history": "تاریخچه بازی",
-    "tab_map": "نقشه",
     "tab_overview": "نمای کلی",
     "title": "قبیله ها",
     "transfer_leadership": "انتقال رهبری",
     "transfer_warning": "این کار عضو انتخاب شده را به عنوان رهبر جدید تبدیل می‌کند. شما به یک عضو عادی تبدیل خواهید شد. این اقدام قابل لغو نیست.",
-    "unban": "آن بن"
+    "unban": "آن بن",
+    "map_coming_soon": "به زودی",
+    "tab_map": "نقشه"
   },
   "close_reason": {
     "account_lookup_failed": "حساب شما پیدا نشد. لطفاً دوباره تلاش کنید.",

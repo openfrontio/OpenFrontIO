@@ -1,6 +1,6 @@
 import { Howler } from "howler";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PokiSDK } from "../../src/client/PokiSDK";
+import { PokiSDK } from "../../../src/client/poki/PokiSDK";
 
 type FakePoki = NonNullable<Window["PokiSDK"]>;
 
@@ -37,6 +37,46 @@ async function initWith(sdk: PokiSDK, poki: FakePoki): Promise<void> {
     return node;
   });
   await sdk.maybeInit();
+}
+
+type WrapperMessage = {
+  ofPoki: true;
+  id?: string;
+  method: string;
+  args: unknown[];
+};
+
+// Stands in for our Poki wrapper page (src/client/poki/PokiWrapper.html): answers the
+// frame's postMessage calls with the fake SDK, as the page's own SDK would.
+// jsdom's parent is the window itself.
+function fakeWrapper(
+  poki: FakePoki,
+  available = true,
+): ReturnType<typeof vi.fn> {
+  const received = vi.fn();
+  const answer = (data: unknown) =>
+    window.dispatchEvent(new MessageEvent("message", { data, source: window }));
+  vi.spyOn(window, "postMessage").mockImplementation((data: unknown) => {
+    const { id, method, args } = data as WrapperMessage;
+    received(method, ...args);
+    const run = async (): Promise<unknown> => {
+      if (method === "hello") return available;
+      if (method === "commercialBreak") {
+        return poki.commercialBreak(() =>
+          answer({ ofPoki: true, id, event: "commercialBreakStart" }),
+        );
+      }
+      return (poki[method as keyof FakePoki] as (...a: unknown[]) => unknown)(
+        ...args,
+      );
+    };
+    void run().then(
+      (result) => id !== undefined && answer({ ofPoki: true, id, result }),
+      (error: Error) =>
+        id !== undefined && answer({ ofPoki: true, id, error: error.message }),
+    );
+  });
+  return received;
 }
 
 describe("PokiSDK", () => {
@@ -347,6 +387,124 @@ describe("PokiSDK", () => {
       expect(pokiUrl).toBe("https://poki.com/en/g/openfront");
       expect(window.location.pathname).toBe("/game/abcd1234");
     });
+  });
+
+  // Leaving a game reloads our frame, which Poki can't follow an SDK through,
+  // so on our wrapper the SDK is the wrapper's (PokiBridge.ts).
+  describe("through our Poki wrapper", () => {
+    let poki: FakePoki;
+    let wrapper: ReturnType<typeof vi.fn>;
+    let appendChild: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(async () => {
+      framedBy("https://abc123.gdn.poki.com/");
+      history.replaceState(null, "", "/?site_id=3&pokiBridge=1&gdgameId=ab12");
+      poki = fakePoki({
+        getToken: vi.fn(async () => "poki-token"),
+        getUser: vi.fn(async () => ({
+          username: "Pokey",
+          avatarUrl: "https://example.com/a.png",
+        })),
+      });
+      wrapper = fakeWrapper(poki);
+      appendChild = vi.spyOn(document.head, "appendChild");
+      await sdk.maybeInit();
+    });
+
+    it("uses the wrapper's SDK instead of loading one", () => {
+      expect(appendChild).not.toHaveBeenCalled();
+      expect(poki.init).toHaveBeenCalledOnce();
+      expect(poki.gameLoadingFinished).toHaveBeenCalledOnce();
+      expect(sdk.isReady()).toBe(true);
+    });
+
+    it("gets the user and token from the wrapper", async () => {
+      expect(await sdk.getUserToken()).toBe("poki-token");
+      expect(await sdk.getUserProfile()).toEqual({
+        username: "Pokey",
+        profilePictureUrl: "https://example.com/a.png",
+      });
+    });
+
+    it("treats an error from the wrapper as signed out", async () => {
+      poki.getToken = vi.fn(async () => {
+        throw new Error("User accounts is not available");
+      });
+      expect(await sdk.getUserToken()).toBeNull();
+    });
+
+    it("reports gameplay and passes on links and invites", async () => {
+      await sdk.gameplayStart();
+      await sdk.gameplayStop();
+      poki.shareableURL = vi.fn(async () => "https://poki.com/x?gdgameId=cd");
+      expect(await sdk.createInviteLink("cd")).toBe(
+        "https://poki.com/x?gdgameId=cd",
+      );
+      expect(wrapper).toHaveBeenCalledWith("gameplayStart");
+      expect(wrapper).toHaveBeenCalledWith("gameplayStop");
+      expect(poki.shareableURL).toHaveBeenCalledWith({ gameId: "cd" });
+    });
+
+    it("passes the player's input on to the wrapper's SDK", () => {
+      window.dispatchEvent(new PointerEvent("pointerdown"));
+      document.dispatchEvent(new KeyboardEvent("keydown", { code: "Space" }));
+      expect(wrapper).toHaveBeenCalledWith("interaction", "pointerdown");
+      expect(wrapper).toHaveBeenCalledWith("interaction", "keydown", "Space");
+    });
+
+    it("reads invite params from our own URL", async () => {
+      expect(await sdk.getInviteGameId()).toBe("ab12");
+    });
+
+    it("mutes only once the wrapper's ad starts, and unmutes after", async () => {
+      const mute = vi.spyOn(Howler, "mute");
+      let started = () => {};
+      poki.commercialBreak = vi.fn(async (onStart) => {
+        expect(mute).not.toHaveBeenCalled();
+        onStart?.();
+        await new Promise<void>((resolve) => (started = resolve));
+      });
+      const ad = sdk.requestMidgameAd();
+      await vi.waitFor(() => expect(mute).toHaveBeenCalledWith(true));
+      started();
+      await ad;
+      expect(mute).toHaveBeenLastCalledWith(false);
+    });
+
+    // A fresh module, so only sessionStorage carries the flag, as on a reload.
+    async function reload(): Promise<PokiSDK> {
+      vi.resetModules();
+      const { PokiSDK: Reloaded } =
+        await import("../../../src/client/poki/PokiSDK");
+      return new Reloaded();
+    }
+
+    it("keeps using the wrapper after our routing drops the marker", async () => {
+      history.replaceState(null, "", "/");
+      const reloaded = await reload();
+      await reloaded.maybeInit();
+      expect(appendChild).not.toHaveBeenCalled();
+      expect(reloaded.isReady()).toBe(true);
+    });
+
+    it("loads its own SDK once a wrapper without the bridge loads us", async () => {
+      history.replaceState(null, "", "/?site_id=3");
+      await initWith(await reload(), poki);
+      expect(appendChild).toHaveBeenCalledOnce();
+
+      history.replaceState(null, "", "/");
+      await initWith(await reload(), poki);
+      expect(appendChild).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  it("gives up when the wrapper's SDK didn't load", async () => {
+    framedBy("https://abc123.gdn.poki.com/");
+    history.replaceState(null, "", "/?pokiBridge=1");
+    fakeWrapper(fakePoki(), false);
+    await sdk.maybeInit();
+    expect(sdk.isReady()).toBe(false);
+    expect(await sdk.getUserToken()).toBeNull();
   });
 
   it("is a no-op off Poki", async () => {
