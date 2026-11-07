@@ -77,6 +77,12 @@ Skull and brain normal human diagram.
 Creative Commons Attribution 2.5 License 2006
 File:Skull and brain normal human.svg
 
+[https://commons.wikimedia.org/wiki/File:Nesterov-Pavlov.jpg](https://commons.wikimedia.org/wiki/File:Nesterov-Pavlov.jpg)
+Mikhail Nesterov (1862–1942)
+Portrait of Ivan Pavlov 1935
+Public Domain
+File:Nesterov-Pavlov.jpg
+
 ### Strait Of Malacca Map
 
 [https://commons.wikimedia.org/wiki/User:Sadalmelik#/media/File:Sumatra_Topography.png](https://commons.wikimedia.org/wiki/File:Sumatra_Topography.png#/media/File:Sumatra_Topography.png)
