@@ -50,8 +50,8 @@ import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
 import { renderDuration, showToast, translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
-import { ChatModal } from "./ChatModal";
-import { EmojiTable } from "./EmojiTable";
+import { ChatModal, ShowPlayerChatEvent } from "./ChatModal";
+import { EmojiTable, ShowPlayerEmojiMenuEvent } from "./EmojiTable";
 import "./PlayerModerationModal";
 import "./PlayerReportModal";
 import "./SendResourceModal";
@@ -153,6 +153,8 @@ export class PlayerPanel extends LitElement implements Controller {
     eventBus.on(ShowBuildMenuEvent, cancelPendingOpen);
     eventBus.on(ShowEmojiMenuEvent, cancelPendingOpen);
     eventBus.on(ShowChatMenuEvent, cancelPendingOpen);
+    eventBus.on(ShowPlayerChatEvent, cancelPendingOpen);
+    eventBus.on(ShowPlayerEmojiMenuEvent, cancelPendingOpen);
     eventBus.on(ShowPlayerPanelEvent, (e) => {
       this.toggleAt(e.x, e.y);
     });

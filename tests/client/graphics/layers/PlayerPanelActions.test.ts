@@ -44,6 +44,8 @@ import {
 import { flattenedEmojiTable } from "@openfront/engine-api/Schemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import { actionButton } from "../../../../src/client/components/ui/ActionButton";
+import { ShowPlayerChatEvent } from "../../../../src/client/hud/layers/ChatModal";
+import { ShowPlayerEmojiMenuEvent } from "../../../../src/client/hud/layers/EmojiTable";
 import { PlayerPanel } from "../../../../src/client/hud/layers/PlayerPanel";
 import {
   CloseViewEvent,
@@ -455,6 +457,8 @@ describe("PlayerPanel - ShowPlayerPanelEvent keybind", () => {
     ["ShowBuildMenuEvent", () => new ShowBuildMenuEvent(10, 20)],
     ["ShowEmojiMenuEvent", () => new ShowEmojiMenuEvent(10, 20)],
     ["ShowChatMenuEvent", () => new ShowChatMenuEvent(10, 20)],
+    ["ShowPlayerChatEvent", () => new ShowPlayerChatEvent(other)],
+    ["ShowPlayerEmojiMenuEvent", () => new ShowPlayerEmojiMenuEvent(other)],
   ])(
     "drops a pending player panel open when %s fires before actions resolve",
     async (_, makeEvent) => {
