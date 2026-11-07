@@ -123,6 +123,11 @@ export class TrainExecution implements Execution {
       return;
     }
 
+    // A tank can steal the train: from then on it pays whoever holds it.
+    if (this.train.owner() !== this.player) {
+      this.player = this.train.owner();
+    }
+
     this.reconcileCurrentRailroadSplit();
 
     if (!this.activeSourceOrDestination()) {

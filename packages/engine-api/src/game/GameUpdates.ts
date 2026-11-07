@@ -124,6 +124,7 @@ export enum GameUpdateType {
   SpawnPhaseEnd,
   GamePaused,
   DonateEvent,
+  ZombieRaid,
 }
 
 export type GameUpdate =
@@ -149,7 +150,8 @@ export type GameUpdate =
   | EmbargoUpdate
   | SpawnPhaseEndUpdate
   | GamePausedUpdate
-  | DonateEventUpdate;
+  | DonateEventUpdate
+  | ZombieRaidUpdate;
 
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
@@ -392,6 +394,26 @@ export interface EmbargoUpdate {
 export interface SpawnPhaseEndUpdate {
   type: GameUpdateType.SpawnPhaseEnd;
   startTick: Tick;
+}
+
+export interface ZombieRaidPlayerUpdate {
+  smallID: number;
+  /** Cure research points (the target is CURE_TARGET). */
+  curePoints: number;
+  /** Rescued survivors per buff kind, indexed like SURVIVOR_BUFF_KINDS. */
+  buffs: number[];
+}
+
+/** Sent about once a second in Zombie Raid games. */
+export interface ZombieRaidUpdate {
+  type: GameUpdateType.ZombieRaid;
+  outbreakTick: Tick;
+  outbroken: boolean;
+  /** Small id of the zombie faction; 0 before the outbreak. */
+  zombieSmallID: number;
+  survivorsRescued: number;
+  survivorsLeft: number;
+  players: ZombieRaidPlayerUpdate[];
 }
 
 export interface GamePausedUpdate {

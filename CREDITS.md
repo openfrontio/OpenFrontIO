@@ -5,6 +5,20 @@
 OpenFront is licensed under AGPL-3.0.  
 See [Contributors](https://github.com/openfrontio/OpenFrontIO/graphs/contributors) for code contributors.
 
+## Icons (mod)
+
+### Font Awesome Free
+
+Some modded unit, building and HUD icons are rasterized or reused from
+[Font Awesome Free](https://github.com/FortAwesome/Font-Awesome) 7.x
+(`jet-fighter`, `plane-departure`, `plane`, `truck-field`, `person-shelter`,
+`skull`, `virus`, `syringe`, `heart-pulse`, `sack-dollar`, `microscope`,
+`crosshairs`, ...).  
+Icons licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); the
+files live in `resources/icons/fa/` with the upstream license text. Colours were
+changed to white so the game can tint them. Font Awesome Free has no tank glyph,
+so the in-game tank sprite is hand-drawn pixel art.
+
 ## Map Data
 
 ### OpenStreetMap

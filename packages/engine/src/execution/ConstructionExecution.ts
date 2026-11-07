@@ -14,14 +14,17 @@ import type {
   SnapshotReader,
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
+import { AirportExecution } from "./AirportExecution";
 import { CityExecution } from "./CityExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
 import { FactoryExecution } from "./FactoryExecution";
+import { FighterJetExecution } from "./FighterJetExecution";
 import { MirvExecution } from "./MIRVExecution";
 import { MissileSiloExecution } from "./MissileSiloExecution";
 import { NukeExecution } from "./NukeExecution";
 import { PortExecution } from "./PortExecution";
 import { SAMLauncherExecution } from "./SAMLauncherExecution";
+import { TankExecution } from "./TankExecution";
 import { WarshipExecution } from "./WarshipExecution";
 
 export class ConstructionExecution implements Execution {
@@ -144,6 +147,19 @@ export class ConstructionExecution implements Execution {
           new WarshipExecution({ owner: player, patrolTile: this.tile }),
         );
         break;
+      case UnitType.Tank:
+        this.mg.addExecution(
+          new TankExecution({ owner: player, patrolTile: this.tile }),
+        );
+        break;
+      case UnitType.FighterJet:
+        this.mg.addExecution(
+          new FighterJetExecution({ owner: player, patrolTile: this.tile }),
+        );
+        break;
+      case UnitType.Airport:
+        this.mg.addExecution(new AirportExecution(this.structure!));
+        break;
       case UnitType.Port:
         this.mg.addExecution(new PortExecution(this.structure!));
         break;
@@ -175,6 +191,7 @@ export class ConstructionExecution implements Execution {
   private isStructure(type: UnitType): boolean {
     switch (type) {
       case UnitType.Port:
+      case UnitType.Airport:
       case UnitType.MissileSilo:
       case UnitType.DefensePost:
       case UnitType.SAMLauncher:

@@ -100,6 +100,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private customAllianceMinutes: number | undefined = undefined;
   @state() private doomsdayClock: boolean = false;
   @state() private doomsdayClockSpeed: DoomsdayClockSpeed = "normal";
+  @state() private zombieRaid: boolean = false;
+  @state() private zombieRaidMinutes: number = 10;
   @state() private overtime: boolean = false;
   @state() private overtimeStartMinutes: number | undefined = undefined;
   @state() private anonymizeNames: boolean = false;
@@ -749,6 +751,11 @@ export class HostLobbyModal extends BaseModal {
                     checked: this.doomsdayClock,
                     doomsdayClockSpeed: this.doomsdayClockSpeed,
                   },
+                  {
+                    labelKey: "game_settings.zombie_raid",
+                    checked: this.zombieRaid,
+                    zombieRaidMinutes: this.zombieRaidMinutes,
+                  },
                   // Host cheats and public listing are mutually exclusive
                   // (the server rejects both combinations), so the controls
                   // disappear while the lobby is listed.
@@ -788,6 +795,9 @@ export class HostLobbyModal extends BaseModal {
             @difficulty-selected=${this.handleConfigDifficultySelected}
             @doomsday-clock-speed-selected=${
               this.handleConfigDoomsdayClockSpeedSelected
+            }
+            @zombie-raid-minutes-selected=${
+              this.handleConfigZombieRaidMinutesSelected
             }
             @game-mode-selected=${this.handleConfigGameModeSelected}
             @team-count-selected=${this.handleConfigTeamCountSelected}
@@ -1095,6 +1105,8 @@ export class HostLobbyModal extends BaseModal {
     this.customAllianceMinutes = undefined;
     this.doomsdayClock = false;
     this.doomsdayClockSpeed = "normal";
+    this.zombieRaid = false;
+    this.zombieRaidMinutes = 10;
     this.overtime = false;
     this.overtimeStartMinutes = undefined;
     this.anonymizeNames = false;
@@ -1152,6 +1164,12 @@ export class HostLobbyModal extends BaseModal {
     void this.handleDifficultySelection(customEvent.detail.difficulty);
   };
 
+  private handleConfigZombieRaidMinutesSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ minutes: number }>;
+    this.zombieRaidMinutes = customEvent.detail.minutes;
+    void this.putGameConfig();
+  };
+
   private handleConfigDoomsdayClockSpeedSelected = (e: Event) => {
     const customEvent = e as CustomEvent<{ speed: DoomsdayClockSpeed }>;
     this.doomsdayClockSpeed = customEvent.detail.speed;
@@ -1207,6 +1225,10 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "game_settings.doomsday_clock":
         this.doomsdayClock = checked;
+        void this.putGameConfig();
+        break;
+      case "game_settings.zombie_raid":
+        this.zombieRaid = checked;
         void this.putGameConfig();
         break;
       case "host_modal.host_cheats":
@@ -1776,6 +1798,10 @@ export class HostLobbyModal extends BaseModal {
             // previously-enabled config and the toggle could never turn off.
             doomsdayClock: this.doomsdayClock
               ? { enabled: true, speed: this.doomsdayClockSpeed }
+              : { enabled: false },
+            // {enabled:false} when off, for the same reason as doomsdayClock.
+            zombieRaid: this.zombieRaid
+              ? { enabled: true, outbreakMinutes: this.zombieRaidMinutes }
               : { enabled: false },
             // Same {enabled:false} rule as doomsdayClock above: undefined is
             // dropped by JSON.stringify, so the toggle could never turn off.

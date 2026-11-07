@@ -217,6 +217,13 @@ export const DoomsdayClockConfigSchema = z.object({
   speed: z.enum(["slow", "normal", "fast", "veryfast"]).optional(),
 });
 
+// Zombie Raid. After outbreakMinutes of game time a zombie outbreak starts (see
+// ZombieRaidExecution). Played on top of Free For All.
+export const ZombieRaidConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  outbreakMinutes: zb.uint({ min: 1, max: 120 }).optional(),
+});
+
 // Overtime (anti-stalemate). After startMinutes of game time the tile share
 // required to win drops steadily from the 80% base at a fixed rate (see
 // OVERTIME_DEFAULTS in Config.ts), so the leading side eventually crosses the
@@ -265,6 +272,7 @@ export const GameConfigSchema = z.object({
   rankedType: z.enum(RankedType).optional(), // Only set for ranked games.
   gameMapSize: z.enum(GameMapSize),
   doomsdayClock: DoomsdayClockConfigSchema.optional(),
+  zombieRaid: ZombieRaidConfigSchema.optional(),
   overtime: OvertimeConfigSchema.optional(),
   publicGameModifiers: z
     .object({

@@ -2,7 +2,7 @@
  * StructurePass — GPU-rendered structures with icon sprites.
  *
  * Renders a filled circle in player color with a white icon overlay,
- * sampled from a pre-built 6-column sprite atlas (generate-sprite-atlases.mjs).
+ * sampled from a pre-built 8-column sprite atlas (generate-sprite-atlases.mjs).
  *
  * Two LODs based on zoom:
  *   - zoom > 0.5: full icon with circle background
@@ -16,12 +16,14 @@
 
 import type { GhostPreviewData, RendererConfig, UnitState } from "../../types";
 import {
+  UT_AIRPORT,
   UT_CITY,
   UT_DEFENSE_POST,
   UT_FACTORY,
   UT_MISSILE_SILO,
   UT_PORT,
   UT_SAM_LAUNCHER,
+  UT_SURVIVOR_CAMP,
 } from "../../types";
 import { DynamicInstanceBuffer } from "../DynamicBuffer";
 import type { RenderSettings } from "../RenderSettings";
@@ -53,6 +55,9 @@ const STRUCTURE_ORDER = [
   UT_DEFENSE_POST,
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,
+  // Mod: appended so the original columns keep their place in the atlas.
+  UT_AIRPORT,
+  UT_SURVIVOR_CAMP,
 ] as const;
 
 const ATLAS_COLS = STRUCTURE_ORDER.length;

@@ -82,6 +82,8 @@ const UPDATE_TYPE_ROUTING: Record<
   SpawnPhaseEnd: "events",
   GamePaused: "misc",
   DonateEvent: "misc",
+  // The Zombie Raid HUD feed is not part of a replay frame.
+  ZombieRaid: "dropped",
 };
 
 /**

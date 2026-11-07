@@ -27,6 +27,11 @@ import {
 import { UIState } from "../../UIState";
 import { GameView } from "../../view";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
+// Mod icons: Font Awesome Free (CC BY 4.0), see resources/icons/fa/LICENSE.txt.
+// Font Awesome Free has no tank, so the tank uses its military truck.
+const tankIcon = assetUrl("icons/fa/truck-field.svg");
+const fighterJetIcon = assetUrl("icons/fa/jet-fighter.svg");
+const airportIcon = assetUrl("icons/fa/plane-departure.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
@@ -77,10 +82,31 @@ const buildTable: BuildItemDisplay[][] = [
       countable: true,
     },
     {
+      unitType: UnitType.Tank,
+      icon: tankIcon,
+      description: "build_menu.desc.tank",
+      key: "unit_type.tank",
+      countable: true,
+    },
+    {
+      unitType: UnitType.FighterJet,
+      icon: fighterJetIcon,
+      description: "build_menu.desc.fighter_jet",
+      key: "unit_type.fighter_jet",
+      countable: true,
+    },
+    {
       unitType: UnitType.Port,
       icon: portIcon,
       description: "build_menu.desc.port",
       key: "unit_type.port",
+      countable: true,
+    },
+    {
+      unitType: UnitType.Airport,
+      icon: airportIcon,
+      description: "build_menu.desc.airport",
+      key: "unit_type.airport",
       countable: true,
     },
     {

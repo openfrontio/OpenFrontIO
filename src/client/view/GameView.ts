@@ -17,6 +17,7 @@ import {
   GameUpdateViewData,
   SpawnPhaseEndUpdate,
   UnitUpdate,
+  ZombieRaidUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import {
   GameLike,
@@ -283,6 +284,12 @@ export class GameView implements GameLike {
       | undefined;
     if (spawnPhaseEndUpdate) {
       this.startTick = spawnPhaseEndUpdate.startTick;
+    }
+    const zombieRaidUpdate = gu.updates[GameUpdateType.ZombieRaid]?.[0] as
+      | ZombieRaidUpdate
+      | undefined;
+    if (zombieRaidUpdate) {
+      this._zombieRaid = zombieRaidUpdate;
     }
     if (gu.updates[GameUpdateType.Win].length > 0) {
       this._gameOver = true;
@@ -872,6 +879,11 @@ export class GameView implements GameLike {
   // Set once the sim has decided the game (WinUpdate). Play may go on for
   // those who stay, but the server archives the record at that point.
   private _gameOver = false;
+  private _zombieRaid: ZombieRaidUpdate | null = null;
+  /** Latest Zombie Raid HUD state, or null while the mode is off / not started. */
+  zombieRaid(): ZombieRaidUpdate | null {
+    return this._zombieRaid;
+  }
   gameOver(): boolean {
     return this._gameOver;
   }

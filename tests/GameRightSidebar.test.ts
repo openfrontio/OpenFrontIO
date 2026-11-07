@@ -45,6 +45,8 @@ function createSidebar(overrides: Partial<TimerState> = {}) {
       // The overtime panel is embedded in the sidebar's template, so its
       // config read must exist even though these tests keep the mode off.
       overtimeConfig: () => ({ enabled: false, startMinutes: 30 }),
+      // Same for the Zombie Raid panel embedded in the sidebar.
+      zombieRaidConfig: () => ({ enabled: false, outbreakMinutes: 10 }),
       gameConfig: () => ({
         gameType: GameType.Public,
         maxTimerValue: state.maxTimerValue,

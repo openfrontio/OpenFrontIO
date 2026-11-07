@@ -214,6 +214,12 @@ export enum UnitType {
   MIRVWarhead = "MIRV Warhead",
   Train = "Train",
   Factory = "Factory",
+  // --- Mod: land, air and zombie content ---
+  Tank = "Tank",
+  Airport = "Airport",
+  FighterJet = "Fighter Jet",
+  CargoPlane = "Cargo Plane",
+  SurvivorCamp = "Survivor Camp",
 }
 
 export enum TrainType {
@@ -234,6 +240,8 @@ export const BuildableAttacks = unitTypeGroup([
   UnitType.HydrogenBomb,
   UnitType.MIRV,
   UnitType.Warship,
+  UnitType.Tank,
+  UnitType.FighterJet,
 ] as const);
 
 export const Structures = unitTypeGroup([
@@ -243,6 +251,7 @@ export const Structures = unitTypeGroup([
   UnitType.MissileSilo,
   UnitType.Port,
   UnitType.Factory,
+  UnitType.Airport,
 ] as const);
 
 export const BuildMenus = unitTypeGroup([

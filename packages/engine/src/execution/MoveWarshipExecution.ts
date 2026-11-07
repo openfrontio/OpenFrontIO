@@ -9,6 +9,7 @@ import type {
   SnapshotReader,
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
+import { isDrivable } from "./ModMovement";
 
 export class MoveWarshipExecution implements Execution {
   constructor(
@@ -24,9 +25,13 @@ export class MoveWarshipExecution implements Execution {
     }
     // Get water component of new TargetTile for connectivity check
     const newPatrolTileWaterComponent = mg.getWaterComponent(this.position);
-    // Cache warship list and build a lookup map — avoids repeated iteration
+    // Cache the orderable units (warships, plus the tanks and fighter jets
+    // that patrol the same way) and build a lookup map — avoids repeated
+    // iteration
     const warshipMap = new Map(
-      this.owner.units(UnitType.Warship).map((u) => [u.id(), u]),
+      this.owner
+        .units([UnitType.Warship, UnitType.Tank, UnitType.FighterJet])
+        .map((u) => [u.id(), u]),
     );
     // Deduplicate ids so each warship is only moved once
     for (const unitId of new Set(this.unitIds)) {
@@ -39,10 +44,18 @@ export class MoveWarshipExecution implements Execution {
         console.warn(`MoveWarshipExecution: warship ${unitId} is not active`);
         continue;
       }
-      // Do not update the warship's patrolTile if it is in a different Water Component
-      if (!mg.hasWaterComponent(warship.tile(), newPatrolTileWaterComponent!)) {
-        continue;
+      if (warship.type() === UnitType.Tank) {
+        // Tanks patrol on land they can drive on.
+        if (!isDrivable(mg, this.position)) continue;
+      } else if (warship.type() === UnitType.Warship) {
+        // Do not update the warship's patrolTile if it is in a different Water Component
+        if (
+          !mg.hasWaterComponent(warship.tile(), newPatrolTileWaterComponent!)
+        ) {
+          continue;
+        }
       }
+      // Fighter jets fly anywhere.
       warship.updateWarshipState({
         patrolTile: this.position,
       });

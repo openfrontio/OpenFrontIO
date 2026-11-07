@@ -3,6 +3,7 @@ import {
   PlayerType,
   Team,
 } from "@openfront/engine-api/game/GameTypes";
+import { ZOMBIE_PLAYER_ID } from "@openfront/engine-lib/game/ModRules";
 import { simpleHash } from "@openfront/engine-lib/Util";
 import { Colord, colord, LabaColor } from "colord";
 import { PALETTE_NAMES } from "../render/gl/GraphicsOverrides";
@@ -14,6 +15,8 @@ import {
 import { UserSettings } from "../UserSettings";
 import { PlayerView } from "../view";
 import { ColorAllocator } from "./ColorAllocator";
+
+const ZOMBIE_HORDE_COLOR = colord("#5fa83a");
 
 /**
  * The color surface consumed by PlayerView and HUD components. Built from
@@ -161,6 +164,8 @@ export class SettingsTheme implements Theme {
       return this.humanColorAllocator.assignColor(player.id());
     }
     if (player.type() === PlayerType.Bot) {
+      // Zombie Raid horde: always the same sickly green, never a tribe colour.
+      if (player.id() === ZOMBIE_PLAYER_ID) return ZOMBIE_HORDE_COLOR;
       if (this.useClassicBotColors) {
         return this.classicBotColorAllocator.assignColor(player.id());
       }

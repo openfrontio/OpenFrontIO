@@ -47,6 +47,7 @@ import { PathFinder } from "../pathfinding/types";
 import type { ExecRecord, SnapshotWriter } from "../snapshot/SnapshotContext";
 import { RailNetwork } from "./RailNetwork";
 import { Stats } from "./Stats";
+import type { ZombieRaidState } from "./ZombieRaidState";
 
 export interface OwnerComp {
   owner: Player;
@@ -110,6 +111,22 @@ export interface UnitParamsMap {
   [UnitType.SAMLauncher]: Record<string, never>;
 
   [UnitType.City]: Record<string, never>;
+
+  [UnitType.Airport]: Record<string, never>;
+
+  [UnitType.Tank]: {
+    patrolTile: TileRef;
+  };
+
+  [UnitType.FighterJet]: {
+    patrolTile: TileRef;
+  };
+
+  [UnitType.CargoPlane]: {
+    targetUnit: Unit;
+  };
+
+  [UnitType.SurvivorCamp]: Record<string, never>;
 }
 
 // Type helper to get params type for a specific unit type
@@ -640,6 +657,9 @@ export interface Game extends GameLike {
   railNetwork(): RailNetwork;
   /** MIRVs launched so far by anyone; each one raises the next one's price. */
   mirvsLaunched(): number;
+  /** Zombie Raid state, or null when the mode is off or has not started. */
+  zombieRaid(): ZombieRaidState | null;
+  setZombieRaid(state: ZombieRaidState | null): void;
   recordMirvLaunch(): void;
   /**
    * Round-robin counter per ship kind, used to spread the ships' water

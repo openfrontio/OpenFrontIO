@@ -190,15 +190,18 @@
   },
   "build_menu": {
     "desc": {
+      "airport": "Sends cargo planes to other airports to generate gold. Also speeds up cure research in Zombie Raid.",
       "atom_bomb": "Small explosion",
       "city": "Increases max population",
       "defense_post": "Increases defenses of nearby borders",
       "factory": "Creates railroads and spawns trains",
+      "fighter_jet": "Steals enemy cargo planes and attacks enemy fighter jets and tanks. Needs an Airport.",
       "hydrogen_bomb": "Large explosion",
       "mirv": "Huge explosion, only targets selected player",
       "missile_silo": "Used to launch nukes",
       "port": "Sends trade ships to generate gold",
       "sam_launcher": "Defends against incoming nukes",
+      "tank": "Land warship. Hunts enemy tanks, shoots attackers' troops and steals enemy trains. Needs a Factory.",
       "warship": "Captures trade ships, destroys ships and boats"
     },
     "not_enough_money": "Not enough money",
@@ -906,7 +909,9 @@
     "betrayal_debuff_ends": "{time} seconds left until betrayal debuff ends",
     "betrayal_description": "You broke your alliance with {name}, making you a TRAITOR ({malusPercent}% defense debuff for {durationText})",
     "betrayed_you": "{name} broke their alliance with you",
+    "cargo_plane_captured": "Your cargo plane was captured by {name}",
     "conquered_no_gold": "Conquered {name} (didn't play, no gold awarded)",
+    "cure_completed": "{name} finished the cure and can now reclaim zombie land",
     "duration_second": "1 second",
     "duration_seconds_plural": "{seconds} seconds",
     "focus": "Focus",
@@ -917,6 +922,7 @@
     "missile_intercepted": "SAM intercepted {unit}",
     "naval_invasion_inbound": "Naval invasion incoming from {name} ({troops})",
     "no_boats_available": "No boats available, max {max}",
+    "received_gold_from_captured_plane": "Captured a cargo plane from {name}: +{gold}",
     "received_gold_from_captured_ship": "Received {gold} gold from ship captured from {name}",
     "received_gold_from_conquest": "Conquered {name}, received {gold} gold",
     "received_gold_from_player": "Received {gold} gold from {name}",
@@ -929,10 +935,13 @@
     "sent_emoji_all": "Sent everyone: {emoji}",
     "sent_gold_to_player": "Sent {gold} gold to {name}",
     "sent_troops_to_player": "Sent {troops} troops to {name}",
+    "survivors_rescued": "Survivors rescued! Permanent buff: {buff}",
     "trade_ship_captured": "Your trade ship was captured by {name}",
+    "train_captured": "{name} stole one of your trains",
     "unit_destroyed": "Your {unit} was destroyed",
     "unit_voluntarily_deleted": "Unit voluntarily deleted",
-    "wants_to_renew_alliance": "{name} wants to renew your alliance"
+    "wants_to_renew_alliance": "{name} wants to renew your alliance",
+    "zombie_outbreak": "The zombie outbreak has begun! Research a cure and rescue survivors."
   },
   "featured_stream": {
     "expand": "Expand",
@@ -1041,7 +1050,8 @@
     "starting": "Starting…",
     "starting_gold": "Starting Gold (Millions)",
     "water_nukes": "Water nukes",
-    "win_threshold": "Win threshold (%)"
+    "win_threshold": "Win threshold (%)",
+    "zombie_raid": "Zombie Raid"
   },
   "game_starting_modal": {
     "code_license": "Code licensed under AGPL-3.0 (no warranty)",
@@ -2527,6 +2537,12 @@
     "none": "You don't have an active subscription.",
     "title": "Your Subscription"
   },
+  "survivor_buff": {
+    "gunner": "Gunner (+tank and jet damage)",
+    "medic": "Medic (+troops)",
+    "researcher": "Researcher (+cure speed)",
+    "scavenger": "Scavenger (+gold)"
+  },
   "team_colors": {
     "blue": "Blue",
     "bot": "Tribes",
@@ -2633,16 +2649,19 @@
     "title": "Tutorial"
   },
   "unit_type": {
+    "airport": "Airport",
     "atom_bomb": "Atom Bomb",
     "boat": "Boat",
     "city": "City",
     "defense_post": "Defense Post",
     "factory": "Factory",
+    "fighter_jet": "Fighter Jet",
     "hydrogen_bomb": "Hydrogen Bomb",
     "mirv": "MIRV",
     "missile_silo": "Missile Silo",
     "port": "Port",
     "sam_launcher": "SAM Launcher",
+    "tank": "Tank",
     "warship": "Warship"
   },
   "update_available": {
@@ -2907,5 +2926,14 @@
     "you_won": "You Won!",
     "your_team": "Your team won!",
     "youtube_tutorial": "Need some help?"
+  },
+  "zombie_raid": {
+    "camps_left": "camps left",
+    "cure": "Cure",
+    "cured": "Cured",
+    "minutes": "{minutes} min",
+    "outbreak_active": "Outbreak!",
+    "outbreak_in": "Outbreak in",
+    "survivors": "Survivors rescued"
   }
 }

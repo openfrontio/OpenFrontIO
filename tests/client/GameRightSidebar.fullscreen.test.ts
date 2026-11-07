@@ -12,6 +12,7 @@ function fakeGame(): GameView {
     gameConfig: () => ({ maxTimerValue: undefined }),
     doomsdayClockConfig: () => ({ enabled: false }),
     overtimeConfig: () => ({ enabled: false, startMinutes: 0 }),
+    zombieRaidConfig: () => ({ enabled: false, outbreakMinutes: 10 }),
     isReplay: () => false,
     listed: true,
   };

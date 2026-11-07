@@ -10,6 +10,7 @@ import { PlayerLike } from "@openfront/engine-api/game/ReadViews";
 import { GameConfig } from "@openfront/engine-api/Schemas";
 import { pow } from "../DetMath";
 import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
+import { FIGHTER_JET, TANK, ZOMBIE_RAID_DEFAULTS } from "../game/ModRules";
 import { assertNever } from "../Util";
 
 export interface NukeMagnitude {
@@ -132,6 +133,15 @@ export class Config {
       warshipDrainCurveExponent: d.warshipDrainCurveExponent,
     };
   }
+  // Zombie Raid config, resolved against defaults.
+  zombieRaidConfig(): { enabled: boolean; outbreakMinutes: number } {
+    const c = this._gameConfig.zombieRaid;
+    return {
+      enabled: c?.enabled ?? ZOMBIE_RAID_DEFAULTS.enabled,
+      outbreakMinutes:
+        c?.outbreakMinutes ?? ZOMBIE_RAID_DEFAULTS.outbreakMinutes,
+    };
+  }
   // Overtime config, resolved against defaults.
   overtimeConfig(): typeof OVERTIME_DEFAULTS {
     const c = this._gameConfig.overtime;
@@ -246,6 +256,22 @@ export class Config {
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
         };
+        break;
+      case UnitType.Airport:
+        info = {
+          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
+          upgradable: true,
+        };
+        break;
+      case UnitType.Tank:
+        info = { maxHealth: TANK.maxHealth };
+        break;
+      case UnitType.FighterJet:
+        info = { maxHealth: FIGHTER_JET.maxHealth };
+        break;
+      case UnitType.CargoPlane:
+      case UnitType.SurvivorCamp:
+        info = {};
         break;
       case UnitType.TransportShip:
       case UnitType.SAMMissile:

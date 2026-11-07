@@ -26,6 +26,9 @@
  *   Col 9: Train Engine (5×5)
  *   Col 10: Train Carriage (5×5)
  *   Col 11: Train Carriage Loaded (5×5)
+ *   Col 12: Tank (9×7)
+ *   Col 13: Fighter Jet (9×9)
+ *   Col 14: Cargo Plane (7×7)
  *
  * Data flow:
  *   FrameSnapshot.units → filter by typeToAtlasIdx → instance VBO → GPU
@@ -39,11 +42,14 @@ import {
   SMOOTHED_NUKE_TYPES,
   TrainType,
   UT_ATOM_BOMB,
+  UT_CARGO_PLANE,
+  UT_FIGHTER_JET,
   UT_HYDROGEN_BOMB,
   UT_MIRV,
   UT_MIRV_WARHEAD,
   UT_SAM_MISSILE,
   UT_SHELL,
+  UT_TANK,
   UT_TRADE_SHIP,
   UT_TRAIN,
   UT_TRANSPORT,
@@ -85,6 +91,10 @@ const UNIT_ORDER = [
   "TrainEngine",
   "TrainCarriage",
   "TrainCarriageLoaded",
+  // Mod units, appended so the original columns keep their place.
+  UT_TANK,
+  UT_FIGHTER_JET,
+  UT_CARGO_PLANE,
 ] as const;
 
 const ATLAS_COLS = UNIT_ORDER.length;
@@ -106,7 +116,7 @@ const TRAIN_FIRST_COL = UNIT_ORDER.indexOf("TrainEngine");
 /**
  * Per-instance data (16 bytes):
  *   float x, y, ownerID   — 12 bytes (3 floats)
- *   uint8 atlasIdx         —  1 byte  (atlas column 0–11)
+ *   uint8 atlasIdx         —  1 byte  (atlas column 0–14)
  *   uint8 flags            —  1 byte  (0 = normal, 1 = flicker, 2 = angry, 3 = trade-friendly, 4 = retreating, 5 = flicker-untargetable)
  *   uint8 flickerHash      —  1 byte  (per-instance flicker phase offset)
  *   1 byte padding         — aligns to 4-byte boundary

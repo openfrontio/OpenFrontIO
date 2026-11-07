@@ -119,6 +119,9 @@ const unitOptions: { type: UnitType; translationKey: string }[] = [
   { type: UnitType.HydrogenBomb, translationKey: "unit_type.hydrogen_bomb" },
   { type: UnitType.MIRV, translationKey: "unit_type.mirv" },
   { type: UnitType.Factory, translationKey: "unit_type.factory" },
+  { type: UnitType.Tank, translationKey: "unit_type.tank" },
+  { type: UnitType.Airport, translationKey: "unit_type.airport" },
+  { type: UnitType.FighterJet, translationKey: "unit_type.fighter_jet" },
 ];
 
 const MAP_ICON = svg`<path
@@ -182,12 +185,17 @@ function renderSectionHeader(
   `;
 }
 
+// Outbreak delays offered in the lobby (minutes after the spawn phase).
+export const ZOMBIE_RAID_MINUTE_CHOICES = [1, 3, 5, 10, 15, 20, 30, 45, 60];
+
 export interface ToggleOptionConfig {
   labelKey: string;
   checked: boolean;
   hidden?: boolean;
   // When set, this toggle's card expands to a pace dropdown while it is checked.
   doomsdayClockSpeed?: DoomsdayClockSpeed;
+  // Same idea for Zombie Raid: the card expands to an outbreak-time dropdown.
+  zombieRaidMinutes?: number;
 }
 
 export interface GameConfigSettingsData {
@@ -283,6 +291,11 @@ export class GameConfigSettings extends LitElement {
     this.emit("doomsday-clock-speed-selected", { speed });
   };
 
+  private handleZombieRaidMinutesChange = (e: Event) => {
+    const minutes = Number((e.target as HTMLSelectElement).value);
+    this.emit("zombie-raid-minutes-selected", { minutes });
+  };
+
   private handleGameModeSelect = (mode: GameMode) => {
     this.emit("game-mode-selected", { mode });
   };
@@ -326,12 +339,57 @@ export class GameConfigSettings extends LitElement {
       return this.renderDoomsdayClockToggle(toggle);
     }
 
+    if (toggle.zombieRaidMinutes !== undefined) {
+      return this.renderZombieRaidToggle(toggle);
+    }
+
     return renderTextCardButton(
       translateText(toggle.labelKey),
       toggle.checked,
       () => this.handleOptionToggle(toggle),
       "p-4 text-center",
     );
+  }
+
+  // Toggle card that grows an outbreak-time dropdown while it is on (same
+  // pattern as the Doomsday Clock card above).
+  private renderZombieRaidToggle(toggle: ToggleOptionConfig): TemplateResult {
+    const selected = toggle.zombieRaidMinutes;
+    return html`
+      <div
+        class="${cardClass(
+          toggle.checked,
+          "p-4 flex flex-col items-center justify-center gap-2 text-center",
+        )}"
+        @click=${() => this.handleOptionToggle(toggle)}
+      >
+        <span class="${CARD_LABEL_CLASS} ${stateTextClass(toggle.checked)}">
+          ${translateText(toggle.labelKey)}
+        </span>
+        ${
+          toggle.checked
+            ? html`
+                <select
+                  class="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-xs"
+                  @click=${(e: Event) => e.stopPropagation()}
+                  @change=${this.handleZombieRaidMinutesChange}
+                >
+                  ${ZOMBIE_RAID_MINUTE_CHOICES.map(
+                    (minutes) => html`
+                      <option
+                        value=${minutes}
+                        ?selected=${selected === minutes}
+                      >
+                        ${translateText("zombie_raid.minutes", { minutes })}
+                      </option>
+                    `,
+                  )}
+                </select>
+              `
+            : nothing
+        }
+      </div>
+    `;
   }
 
   // Same toggle card as the others, but when on it grows to hold the pace

@@ -197,6 +197,17 @@ describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
       // Runs during the spawn phase and finishes inside init, so it is never
       // alive at a tick boundary. BasicExecutions.test.ts covers it directly.
       const neverStored = new Set(["Pause"]);
+      // Mod content the scripted AI game never builds. Their snapshots are
+      // round-tripped in tests/ModSnapshots.test.ts instead.
+      for (const name of [
+        "Airport",
+        "CargoPlane",
+        "FighterJet",
+        "Tank",
+        "ZombieRaid",
+      ]) {
+        neverStored.add(name);
+      }
       const missing = EXECUTION_SNAPSHOT_TYPES.map((t) => t.name).filter(
         (name) => !reference.execTypes.has(name) && !neverStored.has(name),
       );

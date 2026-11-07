@@ -34,6 +34,7 @@ import type {
 import { AllUnitParams, EngineUnitInfo, Player, Unit } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { PlayerImpl } from "./PlayerImpl";
+import { REANIMATED_UNIT_TYPES } from "./ZombieRaidState";
 
 export class UnitImpl implements Unit {
   private _active = true;
@@ -364,6 +365,7 @@ export class UnitImpl implements Unit {
     const wasDestroyed = displayMessage !== false;
 
     if (wasDestroyed) {
+      this.queueZombieRise();
       this.displayMessageOnDeleted();
       switch (this._type) {
         case UnitType.TransportShip:
@@ -395,6 +397,31 @@ export class UnitImpl implements Unit {
           break;
       }
     }
+  }
+
+  /**
+   * Zombie Raid: after the outbreak, a unit that dies rises again as a zombie
+   * for good. ZombieRaidExecution raises it on the next tick. Cured players are
+   * spared, and zombie units simply die.
+   */
+  private queueZombieRise(): void {
+    const zombieRaid = this.mg.zombieRaid();
+    if (
+      zombieRaid === null ||
+      !zombieRaid.outbroken ||
+      !REANIMATED_UNIT_TYPES.includes(this._type)
+    ) {
+      return;
+    }
+    const ownerID = this._owner.smallID();
+    if (ownerID === zombieRaid.zombieSmallID || zombieRaid.isCured(ownerID)) {
+      return;
+    }
+    zombieRaid.pendingDeaths.push({
+      type: this._type,
+      tile: this._tile,
+      formerOwnerSmallID: ownerID,
+    });
   }
 
   private displayMessageOnDeleted(): void {

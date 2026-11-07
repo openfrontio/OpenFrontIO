@@ -141,6 +141,8 @@ const DEFAULT_OPTIONS = {
   waterNukes: false,
   doomsdayClock: false,
   doomsdayClockSpeed: "normal" as DoomsdayClockSpeed,
+  zombieRaid: false,
+  zombieRaidMinutes: 10,
   overtime: false,
   overtimeStartMinutes: undefined as number | undefined,
 } as const;
@@ -231,6 +233,9 @@ export class SinglePlayerModal extends BaseModal {
   @state() private doomsdayClock: boolean = DEFAULT_OPTIONS.doomsdayClock;
   @state() private doomsdayClockSpeed: DoomsdayClockSpeed =
     DEFAULT_OPTIONS.doomsdayClockSpeed;
+  @state() private zombieRaid: boolean = DEFAULT_OPTIONS.zombieRaid;
+  @state() private zombieRaidMinutes: number =
+    DEFAULT_OPTIONS.zombieRaidMinutes;
   @state() private overtime: boolean = DEFAULT_OPTIONS.overtime;
   @state() private overtimeStartMinutes: number | undefined =
     DEFAULT_OPTIONS.overtimeStartMinutes;
@@ -589,6 +594,11 @@ export class SinglePlayerModal extends BaseModal {
                     checked: this.doomsdayClock,
                     doomsdayClockSpeed: this.doomsdayClockSpeed,
                   },
+                  {
+                    labelKey: "game_settings.zombie_raid",
+                    checked: this.zombieRaid,
+                    zombieRaidMinutes: this.zombieRaidMinutes,
+                  },
                 ],
                 inputCards,
               },
@@ -600,6 +610,9 @@ export class SinglePlayerModal extends BaseModal {
             @map-selected=${this.handleConfigMapSelected}
             @random-map-selected=${this.handleConfigRandomMapSelected}
             @difficulty-selected=${this.handleConfigDifficultySelected}
+            @zombie-raid-minutes-selected=${
+              this.handleConfigZombieRaidMinutesSelected
+            }
             @doomsday-clock-speed-selected=${
               this.handleConfigDoomsdayClockSpeedSelected
             }
@@ -660,6 +673,9 @@ export class SinglePlayerModal extends BaseModal {
       // Pace only matters when the mode is on (startGame drops it when off).
       (this.doomsdayClock &&
         this.doomsdayClockSpeed !== DEFAULT_OPTIONS.doomsdayClockSpeed) ||
+      this.zombieRaid !== DEFAULT_OPTIONS.zombieRaid ||
+      (this.zombieRaid &&
+        this.zombieRaidMinutes !== DEFAULT_OPTIONS.zombieRaidMinutes) ||
       this.overtime !== DEFAULT_OPTIONS.overtime ||
       this.disabledUnits.length > 0
     );
@@ -788,6 +804,8 @@ export class SinglePlayerModal extends BaseModal {
     this.waterNukes = DEFAULT_OPTIONS.waterNukes;
     this.doomsdayClock = DEFAULT_OPTIONS.doomsdayClock;
     this.doomsdayClockSpeed = DEFAULT_OPTIONS.doomsdayClockSpeed;
+    this.zombieRaid = DEFAULT_OPTIONS.zombieRaid;
+    this.zombieRaidMinutes = DEFAULT_OPTIONS.zombieRaidMinutes;
     this.overtime = DEFAULT_OPTIONS.overtime;
     this.overtimeStartMinutes = DEFAULT_OPTIONS.overtimeStartMinutes;
   }
@@ -835,6 +853,11 @@ export class SinglePlayerModal extends BaseModal {
   private handleConfigDifficultySelected = (e: Event) => {
     const customEvent = e as CustomEvent<{ difficulty: Difficulty }>;
     this.handleDifficultySelection(customEvent.detail.difficulty);
+  };
+
+  private handleConfigZombieRaidMinutesSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ minutes: number }>;
+    this.zombieRaidMinutes = customEvent.detail.minutes;
   };
 
   private handleConfigDoomsdayClockSpeedSelected = (e: Event) => {
@@ -887,6 +910,9 @@ export class SinglePlayerModal extends BaseModal {
         break;
       case "game_settings.water_nukes":
         this.waterNukes = checked;
+        break;
+      case "game_settings.zombie_raid":
+        this.zombieRaid = checked;
         break;
       case "game_settings.doomsday_clock":
         this.doomsdayClock = checked;
@@ -1224,6 +1250,14 @@ export class SinglePlayerModal extends BaseModal {
                   doomsdayClock: {
                     enabled: true,
                     speed: this.doomsdayClockSpeed,
+                  },
+                }
+              : {}),
+            ...(this.zombieRaid
+              ? {
+                  zombieRaid: {
+                    enabled: true,
+                    outbreakMinutes: this.zombieRaidMinutes,
                   },
                 }
               : {}),

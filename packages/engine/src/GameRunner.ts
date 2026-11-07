@@ -34,6 +34,7 @@ import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
+import { ZombieRaidExecution } from "./execution/ZombieRaidExecution";
 import { Game, Player } from "./game/Game";
 import { createGame } from "./game/GameImpl";
 import { humanDisconnects, humanStatsSnapshot } from "./game/HumanStats";
@@ -198,6 +199,12 @@ export class GameRunner {
     this.game.addExecution(new WinCheckExecution());
     if (this.game.config().doomsdayClockConfig().enabled) {
       this.game.addExecution(new DoomsdayClockExecution());
+    }
+    const zombieRaid = this.game.config().zombieRaidConfig();
+    if (zombieRaid.enabled) {
+      this.game.addExecution(
+        new ZombieRaidExecution(zombieRaid.outbreakMinutes),
+      );
     }
     if (!this.game.config().isUnitDisabled(UnitType.Factory)) {
       this.game.addExecution(

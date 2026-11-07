@@ -100,6 +100,7 @@ import { Railroad } from "./Railroad";
 import { Stats } from "./Stats";
 import { StatsImpl, StatsSnapshot } from "./StatsImpl";
 import { WaterManager, WaterManagerSnapshot } from "./WaterManager";
+import type { ZombieRaidState } from "./ZombieRaidState";
 
 export function createGame(
   humans: PlayerInfo[],
@@ -162,6 +163,9 @@ export class GameImpl implements Game {
   private nextAllianceID: number = 0;
 
   private _mirvsLaunched = 0;
+  // Zombie Raid. Owned and snapshotted by ZombieRaidExecution; held here so
+  // units and rules can read it.
+  private _zombieRaid: ZombieRaidState | null = null;
   private shipStaggers = { tradeShip: 0, transportShip: 0 };
   private _nationMirvTargets = new Map<PlayerID, Tick>();
 
@@ -1463,6 +1467,12 @@ export class GameImpl implements Game {
   }
   railNetwork(): RailNetwork {
     return this._railNetwork;
+  }
+  zombieRaid(): ZombieRaidState | null {
+    return this._zombieRaid;
+  }
+  setZombieRaid(state: ZombieRaidState | null): void {
+    this._zombieRaid = state;
   }
   mirvsLaunched(): number {
     return this._mirvsLaunched;

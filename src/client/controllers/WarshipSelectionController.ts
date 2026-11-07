@@ -19,6 +19,16 @@ import { MoveWarshipIntentEvent } from "../Transport";
 import { GameView, UnitView } from "../view";
 
 const WARSHIP_SELECTION_RADIUS = 10;
+// Tanks and jets are small sprites on land, so they need a click right on top.
+const LAND_UNIT_SELECTION_RADIUS = 4;
+// Everything the player can order around with the warship controls. The engine
+// (MoveWarshipExecution) rejects an order a unit cannot follow, e.g. a tank sent
+// to sea, so mixed selections are safe.
+const ORDERABLE_UNITS = [
+  UnitType.Warship,
+  UnitType.Tank,
+  UnitType.FighterJet,
+] as const;
 
 /**
  * Controller for warship selection state + click handling.
@@ -142,15 +152,19 @@ export class WarshipSelectionController implements Controller {
   private findWarshipsNearCell(clickRef: TileRef): UnitView[] {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return [];
+    const clickedWater = this.game.isWater(clickRef);
     return this.game
-      .units(UnitType.Warship)
-      .filter(
-        (unit) =>
-          unit.isActive() &&
-          unit.owner() === myPlayer &&
-          this.game.manhattanDist(unit.tile(), clickRef) <=
-            WARSHIP_SELECTION_RADIUS,
-      )
+      .units(...ORDERABLE_UNITS)
+      .filter((unit) => {
+        if (!unit.isActive() || unit.owner() !== myPlayer) return false;
+        const radius =
+          unit.type() === UnitType.Warship
+            ? WARSHIP_SELECTION_RADIUS
+            : LAND_UNIT_SELECTION_RADIUS;
+        // A click on land never grabs a ship hugging the coast.
+        if (unit.type() === UnitType.Warship && !clickedWater) return false;
+        return this.game.manhattanDist(unit.tile(), clickRef) <= radius;
+      })
       .sort(
         (a, b) =>
           this.game.manhattanDist(a.tile(), clickRef) -
@@ -177,7 +191,28 @@ export class WarshipSelectionController implements Controller {
       if (!this.game.isValidCoord(cell.x, cell.y)) return;
       clickRef = this.game.ref(cell.x, cell.y);
     }
-    if (!this.game.isWater(clickRef)) return;
+    const hasSelection =
+      this.selectedUnit !== null || this.multiSelectedWarships.length > 0;
+    // Ships only take orders on water; with a selection active a land click is
+    // a move order for tanks and jets. Without one, a land click only counts
+    // when it lands on one of our own tanks or jets.
+    if (!hasSelection && !this.game.isWater(clickRef)) {
+      const nearby = nearbyWarships ?? this.findWarshipsNearCell(clickRef);
+      if (nearby.length > 0) {
+        this.eventBus.emit(new UnitSelectionEvent(nearby[0], true));
+      }
+      return;
+    }
+
+    if (hasSelection && !this.game.isWater(clickRef)) {
+      // Keep the old behaviour for ships: a land click does nothing unless a
+      // tank or jet is among the selected units.
+      const selection =
+        this.multiSelectedWarships.length > 0
+          ? this.multiSelectedWarships
+          : [this.selectedUnit!];
+      if (selection.every((u) => u.type() === UnitType.Warship)) return;
+    }
 
     if (this.multiSelectedWarships.length > 0) {
       const myPlayer = this.game.myPlayer();
@@ -229,12 +264,21 @@ export class WarshipSelectionController implements Controller {
       }
       return;
     }
-    if (!this.game.isWater(clickRef)) {
-      this.eventBus.emit(new ContextMenuEvent(event.x, event.y));
-      return;
-    }
     if (this.selectedUnit || this.multiSelectedWarships.length > 0) {
       this.onMouseUp(new MouseUpEvent(event.x, event.y), clickRef);
+      return;
+    }
+    if (!this.game.isWater(clickRef)) {
+      const nearbyLand = this.findWarshipsNearCell(clickRef);
+      if (nearbyLand.length > 0) {
+        this.onMouseUp(
+          new MouseUpEvent(event.x, event.y),
+          clickRef,
+          nearbyLand,
+        );
+      } else {
+        this.eventBus.emit(new ContextMenuEvent(event.x, event.y));
+      }
       return;
     }
     const nearbyWarships = this.findWarshipsNearCell(clickRef);
@@ -262,7 +306,7 @@ export class WarshipSelectionController implements Controller {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
-    const selected = this.game.units(UnitType.Warship).filter((unit) => {
+    const selected = this.game.units(...ORDERABLE_UNITS).filter((unit) => {
       if (!unit.isActive() || unit.owner() !== myPlayer) return false;
       const screen = this.transformHandler.worldToScreenCoordinates(
         new Cell(this.game.x(unit.tile()), this.game.y(unit.tile())),
@@ -283,7 +327,7 @@ export class WarshipSelectionController implements Controller {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return [];
     return this.game
-      .units(UnitType.Warship)
+      .units(...ORDERABLE_UNITS)
       .filter((u) => u.isActive() && u.owner() === myPlayer);
   }
 

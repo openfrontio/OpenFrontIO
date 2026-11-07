@@ -135,6 +135,13 @@ export function notableLobbySettings(
         `doomsday_clock_speed.${c.doomsdayClock.speed ?? "normal"}`,
       ),
     });
+  if (c.zombieRaid?.enabled)
+    items.push({
+      label: translateText("game_settings.zombie_raid"),
+      value: translateText("zombie_raid.minutes", {
+        minutes: c.zombieRaid.outbreakMinutes ?? 10,
+      }),
+    });
   if (c.overtime?.enabled)
     items.push({
       label: translateText("overtime.title"),

@@ -1,10 +1,12 @@
 // Every entry is `<ClassName>Snapshot`, exported next to its class.
+import { AirportExecutionSnapshot } from "../execution/AirportExecution";
 import { AllianceExtensionExecutionSnapshot } from "../execution/alliance/AllianceExtensionExecution";
 import { AllianceRejectExecutionSnapshot } from "../execution/alliance/AllianceRejectExecution";
 import { AllianceRequestExecutionSnapshot } from "../execution/alliance/AllianceRequestExecution";
 import { BreakAllianceExecutionSnapshot } from "../execution/alliance/BreakAllianceExecution";
 import { AttackExecutionSnapshot } from "../execution/AttackExecution";
 import { BoatRetreatExecutionSnapshot } from "../execution/BoatRetreatExecution";
+import { CargoPlaneExecutionSnapshot } from "../execution/CargoPlaneExecution";
 import { CityExecutionSnapshot } from "../execution/CityExecution";
 import { ConstructionExecutionSnapshot } from "../execution/ConstructionExecution";
 import { DefensePostExecutionSnapshot } from "../execution/DefensePostExecution";
@@ -16,6 +18,7 @@ import { EmbargoAllExecutionSnapshot } from "../execution/EmbargoAllExecution";
 import { EmbargoExecutionSnapshot } from "../execution/EmbargoExecution";
 import { EmojiExecutionSnapshot } from "../execution/EmojiExecution";
 import { FactoryExecutionSnapshot } from "../execution/FactoryExecution";
+import { FighterJetExecutionSnapshot } from "../execution/FighterJetExecution";
 import { MarkDisconnectedExecutionSnapshot } from "../execution/MarkDisconnectedExecution";
 import { MirvExecutionSnapshot } from "../execution/MIRVExecution";
 import { MissileSiloExecutionSnapshot } from "../execution/MissileSiloExecution";
@@ -34,6 +37,7 @@ import { SAMMissileExecutionSnapshot } from "../execution/SAMMissileExecution";
 import { ShellExecutionSnapshot } from "../execution/ShellExecution";
 import { SpawnExecutionSnapshot } from "../execution/SpawnExecution";
 import { SpawnTimerExecutionSnapshot } from "../execution/SpawnTimerExecution";
+import { TankExecutionSnapshot } from "../execution/TankExecution";
 import { TargetPlayerExecutionSnapshot } from "../execution/TargetPlayerExecution";
 import { TradeShipExecutionSnapshot } from "../execution/TradeShipExecution";
 import { TrainExecutionSnapshot } from "../execution/TrainExecution";
@@ -43,6 +47,7 @@ import { TribeExecutionSnapshot } from "../execution/TribeExecution";
 import { UpgradeStructureExecutionSnapshot } from "../execution/UpgradeStructureExecution";
 import { WarshipExecutionSnapshot } from "../execution/WarshipExecution";
 import { WinCheckExecutionSnapshot } from "../execution/WinCheckExecution";
+import { ZombieRaidExecutionSnapshot } from "../execution/ZombieRaidExecution";
 import type { ExecutionSnapshotType } from "./ExecutionSnapshot";
 
 /**
@@ -53,12 +58,14 @@ import type { ExecutionSnapshotType } from "./ExecutionSnapshot";
  * replaced it.
  */
 export const EXECUTION_SNAPSHOT_TYPES = [
+  AirportExecutionSnapshot,
   AllianceExtensionExecutionSnapshot,
   AllianceRejectExecutionSnapshot,
   AllianceRequestExecutionSnapshot,
   AttackExecutionSnapshot,
   BoatRetreatExecutionSnapshot,
   BreakAllianceExecutionSnapshot,
+  CargoPlaneExecutionSnapshot,
   CityExecutionSnapshot,
   ConstructionExecutionSnapshot,
   DefensePostExecutionSnapshot,
@@ -70,6 +77,7 @@ export const EXECUTION_SNAPSHOT_TYPES = [
   EmbargoExecutionSnapshot,
   EmojiExecutionSnapshot,
   FactoryExecutionSnapshot,
+  FighterJetExecutionSnapshot,
   MarkDisconnectedExecutionSnapshot,
   MirvExecutionSnapshot,
   MissileSiloExecutionSnapshot,
@@ -88,6 +96,7 @@ export const EXECUTION_SNAPSHOT_TYPES = [
   ShellExecutionSnapshot,
   SpawnExecutionSnapshot,
   SpawnTimerExecutionSnapshot,
+  TankExecutionSnapshot,
   TargetPlayerExecutionSnapshot,
   TradeShipExecutionSnapshot,
   TrainExecutionSnapshot,
@@ -97,4 +106,5 @@ export const EXECUTION_SNAPSHOT_TYPES = [
   UpgradeStructureExecutionSnapshot,
   WarshipExecutionSnapshot,
   WinCheckExecutionSnapshot,
+  ZombieRaidExecutionSnapshot,
 ] as unknown as readonly ExecutionSnapshotType<unknown>[];

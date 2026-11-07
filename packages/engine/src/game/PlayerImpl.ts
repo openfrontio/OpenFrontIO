@@ -1622,11 +1622,19 @@ export class PlayerImpl implements Player {
         return this.tradeShipSpawn(targetTile);
       case UnitType.Train:
         return this.landBasedUnitSpawn(targetTile);
+      case UnitType.Tank:
+        return this.tankSpawn(targetTile);
+      case UnitType.FighterJet:
+        return this.fighterJetSpawn(targetTile);
+      case UnitType.CargoPlane:
+      case UnitType.SurvivorCamp:
+        return targetTile;
       case UnitType.MissileSilo:
       case UnitType.DefensePost:
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
+      case UnitType.Airport:
         return this.landBasedStructureSpawn(targetTile, validTiles);
       default:
         assertNever(unitType);
@@ -1712,6 +1720,32 @@ export class PlayerImpl implements Player {
     );
 
     return bestPort?.tile() ?? false;
+  }
+
+  /** Tanks roll out of the nearest finished factory and fight on land. */
+  tankSpawn(tile: TileRef): TileRef | false {
+    if (!this.mg.isLand(tile) || this.mg.isImpassable(tile)) {
+      return false;
+    }
+    const factory = findClosestBy(
+      this.units(UnitType.Factory),
+      (f) => this.mg.manhattanDist(f.tile(), tile),
+      (f) => f.isActive() && !f.isUnderConstruction(),
+    );
+    return factory?.tile() ?? false;
+  }
+
+  /** Fighter jets take off from the nearest finished airport. */
+  fighterJetSpawn(tile: TileRef): TileRef | false {
+    if (!this.mg.isValidRef(tile)) {
+      return false;
+    }
+    const airport = findClosestBy(
+      this.units(UnitType.Airport),
+      (a) => this.mg.manhattanDist(a.tile(), tile),
+      (a) => a.isActive() && !a.isUnderConstruction(),
+    );
+    return airport?.tile() ?? false;
   }
 
   landBasedUnitSpawn(tile: TileRef): TileRef | false {

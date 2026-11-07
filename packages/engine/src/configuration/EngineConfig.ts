@@ -13,6 +13,7 @@ import { TeamCountConfig } from "@openfront/engine-api/Schemas";
 import { NukeType } from "@openfront/engine-api/StatsSchemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { exp, log, pow2 } from "@openfront/engine-lib/DetMath";
+import { cargoPlaneBaseGold } from "@openfront/engine-lib/game/ModRules";
 import {
   assertNever,
   sigmoid,
@@ -265,6 +266,13 @@ export class EngineConfig extends Config {
     return this.trainStationMaxRange() * 1.4142;
   }
 
+  /** Gold for one completed cargo plane route; both airports are paid it. */
+  cargoPlaneGold(dist: number, player: PlayerLike): Gold {
+    return BigInt(
+      Math.floor(cargoPlaneBaseGold(dist) * this.goldMultiplierFor(player)),
+    );
+  }
+
   tradeShipGold(dist: number, player: PlayerLike): Gold {
     // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
     const debuff = this.tradeShipShortRangeDebuff();
@@ -386,12 +394,29 @@ export class EngineConfig extends Config {
           UnitType.Factory,
           UnitType.Port,
         );
+      case UnitType.Tank:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(500_000, (numUnits + 1) * 100_000),
+          UnitType.Tank,
+        );
+      case UnitType.Airport:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(1_000_000, pow2(numUnits) * 150_000),
+          UnitType.Airport,
+        );
+      case UnitType.FighterJet:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(800_000, (numUnits + 1) * 200_000),
+          UnitType.FighterJet,
+        );
       case UnitType.TransportShip:
       case UnitType.Shell:
       case UnitType.SAMMissile:
       case UnitType.MIRVWarhead:
       case UnitType.TradeShip:
       case UnitType.Train:
+      case UnitType.CargoPlane:
+      case UnitType.SurvivorCamp:
         return () => 0n;
       default:
         assertNever(type);
