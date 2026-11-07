@@ -1,5 +1,5 @@
 import { Product } from "@openfront/shared/CosmeticSchemas";
-import { html, LitElement, nothing } from "lit";
+import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type { InsufficientCurrency, PurchaseResult } from "../Cosmetics";
 import { showInGameAlert } from "../InGameModal";
@@ -210,6 +210,50 @@ if (!document.getElementById(PURCHASE_STYLE_ID)) {
   document.head.appendChild(style);
 }
 
+/** Whether a list price marks the price as a sale (it's above it). */
+function isOnSale(price: number, listPrice: number | null): boolean {
+  return listPrice !== null && listPrice > price;
+}
+
+/**
+ * A currency button's icon and price. On sale, the price goes bold white with
+ * the list price struck through on a small line beneath it; the card carries
+ * the discount itself (see CosmeticCard). Both lines fit the button's normal
+ * height, so a row of cards stays aligned. An empty box as wide as the icon
+ * balances it on the right, so the price, not icon and price together, sits
+ * at the button's centre.
+ */
+export function renderPrice(
+  icon: TemplateResult,
+  iconSize: number,
+  price: number,
+  listPrice: number | null,
+) {
+  const balance = html`<span
+    aria-hidden="true"
+    class="shrink-0"
+    style="width:${iconSize}px"
+  ></span>`;
+  if (!isOnSale(price, listPrice)) {
+    return html`${icon}<span>${price.toLocaleString()}</span>${balance}`;
+  }
+  // <s> isn't announced by screen readers, so the prices say "now"/"was".
+  return html`${icon}<span
+      class="flex flex-col items-center gap-0.5 leading-none"
+    >
+      <span class="font-black text-white"
+        ><span class="sr-only">${translateText("store.sale_now")} </span
+        >${price.toLocaleString()}</span
+      >
+      <s
+        data-sale-tag
+        class="text-[11px] font-semibold text-white/55 decoration-aquarius decoration-2"
+        ><span class="sr-only">${translateText("store.sale_was")} </span
+        >${listPrice!.toLocaleString()}</s
+      > </span
+    >${balance}`;
+}
+
 @customElement("purchase-button")
 export class PurchaseButton extends LitElement {
   @property({ type: Object })
@@ -224,6 +268,15 @@ export class PurchaseButton extends LitElement {
 
   @property({ type: Number })
   priceSoft: number | null = null;
+
+  /** Price before a running sale, shown struck through beside priceHard.
+   * Null (or not above priceHard) means the item isn't on sale. */
+  @property({ type: Number })
+  listPriceHard: number | null = null;
+
+  /** Price before a running sale, shown struck through beside priceSoft. */
+  @property({ type: Number })
+  listPriceSoft: number | null = null;
 
   @property({ type: String })
   rarity: string = "common";
@@ -373,9 +426,14 @@ export class PurchaseButton extends LitElement {
   }
 
   private renderHardButton() {
+    const hardOnSale = isOnSale(this.priceHard!, this.listPriceHard);
     return html`
       <button
-        class="purchase-sparkle-btn-hard relative overflow-hidden w-full min-h-11 px-2 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
+        class="purchase-sparkle-btn-hard relative overflow-hidden w-full min-h-11 px-2 py-1.5 ${
+          hardOnSale
+            ? "bg-blue-500/30 border-blue-400/70"
+            : "bg-blue-500/20 border-blue-500/40"
+        } text-blue-300 border rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
          hover:bg-blue-600 hover:border-blue-400 hover:text-white hover:shadow-[0_0_20px_rgba(96,165,250,0.6)]"
         ?disabled=${this.busy}
         @click=${(e: Event) => {
@@ -383,16 +441,28 @@ export class PurchaseButton extends LitElement {
           this.requestCurrencyPurchase("hard");
         }}
       >
-        <plutonium-icon .size=${20} style="margin-top:3px"></plutonium-icon>
-        ${this.priceHard!.toLocaleString()}
+        ${renderPrice(
+          html`<plutonium-icon
+            .size=${20}
+            style="margin-top:3px"
+          ></plutonium-icon>`,
+          20,
+          this.priceHard!,
+          this.listPriceHard,
+        )}
       </button>
     `;
   }
 
   private renderSoftButton() {
+    const softOnSale = isOnSale(this.priceSoft!, this.listPriceSoft);
     return html`
       <button
-        class="purchase-sparkle-btn-soft relative overflow-hidden w-full min-h-11 px-2 py-1.5 bg-amber-700/20 text-amber-600 border border-amber-700/30 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
+        class="purchase-sparkle-btn-soft relative overflow-hidden w-full min-h-11 px-2 py-1.5 ${
+          softOnSale
+            ? "bg-amber-600/30 border-amber-500/70"
+            : "bg-amber-700/20 border-amber-700/30"
+        } text-amber-600 border rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center gap-2
          hover:bg-amber-700 hover:border-amber-600 hover:text-white hover:shadow-[0_0_20px_rgba(217,119,6,0.6)]"
         ?disabled=${this.busy}
         @click=${(e: Event) => {
@@ -400,8 +470,12 @@ export class PurchaseButton extends LitElement {
           this.requestCurrencyPurchase("soft");
         }}
       >
-        <cap-icon .size=${22} style="margin-top:3px"></cap-icon>
-        ${this.priceSoft!.toLocaleString()}
+        ${renderPrice(
+          html`<cap-icon .size=${22} style="margin-top:3px"></cap-icon>`,
+          22,
+          this.priceSoft!,
+          this.listPriceSoft,
+        )}
       </button>
     `;
   }

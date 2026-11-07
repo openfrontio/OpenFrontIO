@@ -1,0 +1,173 @@
+{
+  "$schema": "../../../info.schema.json",
+  "id": "Mexico",
+  "name": "Mexico",
+  "translation_key": "map.mexico",
+  "categories": ["north_america", "new", "countries"],
+  "location": { "lat": 23, "lon": -102 },
+  "author": "crunchybbb",
+  "description": "A country located in the southern part of North America, sandwiched between the Pacific and the Gulf of Mexico. The country is primarily mountainous, with hot deserts in the north and wet jungles in the south.",
+  "nations": [
+    {
+      "coordinates": [261, 273],
+      "name": "Baja California",
+      "flag": "Flag_of_Baja_California"
+    },
+    {
+      "coordinates": [606, 841],
+      "name": "Baja California Sur",
+      "flag": "Flag_of_Baja_California_Sur"
+    },
+    {
+      "coordinates": [712, 385],
+      "name": "Sonora",
+      "flag": "Flag_of_Sonora"
+    },
+    {
+      "coordinates": [1023, 396],
+      "name": "Chihuahua",
+      "flag": "Flag_of_Chihuahua"
+    },
+    {
+      "coordinates": [1116, 704],
+      "name": "Durango",
+      "flag": "Flag_of_Durango"
+    },
+    {
+      "coordinates": [844, 665],
+      "name": "Sinaloa",
+      "flag": "Flag_of_Sinaloa"
+    },
+    {
+      "coordinates": [1421, 597],
+      "name": "Coahuila",
+      "flag": "Flag_of_Coahuila"
+    },
+    {
+      "coordinates": [1825, 927],
+      "name": "Tamaulipas",
+      "flag": "Flag_of_Tamaulipas"
+    },
+    {
+      "coordinates": [1618, 807],
+      "name": "Nuevo León",
+      "flag": "Flag_of_Nuevo_Leon"
+    },
+    {
+      "coordinates": [1096, 1026],
+      "name": "Nayarit",
+      "flag": "Flag_of_Nayarit"
+    },
+    {
+      "coordinates": [1289, 890],
+      "name": "Zacatecas",
+      "flag": "Flag_of_Zacatecas"
+    },
+    {
+      "coordinates": [1660, 1052],
+      "name": "San Luis Potosí",
+      "flag": "Flag_of_San_Luis_Potosi"
+    },
+    {
+      "coordinates": [1318, 1283],
+      "name": "Jalisco",
+      "flag": "Flag_of_Jalisco"
+    },
+    {
+      "coordinates": [1339, 1461],
+      "name": "Colima",
+      "flag": "Flag_of_Colima"
+    },
+    {
+      "coordinates": [1403, 1137],
+      "name": "Aguascalientes",
+      "flag": "Flag_of_Aguascalientes"
+    },
+    {
+      "coordinates": [1527, 1443],
+      "name": "Michoacán",
+      "flag": "Flag_of_Michoacan"
+    },
+    {
+      "coordinates": [1659, 1612],
+      "name": "Guerrero",
+      "flag": "Flag_of_Guerrero"
+    },
+    {
+      "coordinates": [1936, 1667],
+      "name": "Oaxaca",
+      "flag": "Flag_of_Oaxaca"
+    },
+    {
+      "coordinates": [2264, 1720],
+      "name": "Chiapas",
+      "flag": "Flag_of_Chiapas"
+    },
+    {
+      "coordinates": [1907, 1327],
+      "name": "Veracruz",
+      "flag": "Flag_of_Veracruz"
+    },
+    {
+      "coordinates": [2228, 1566],
+      "name": "Tabasco",
+      "flag": "Flag_of_Tabasco"
+    },
+    {
+      "coordinates": [2540, 1495],
+      "name": "Campeche",
+      "flag": "Flag_of_Campeche"
+    },
+    {
+      "coordinates": [2671, 1282],
+      "name": "Yucatán",
+      "flag": "Flag_of_Yucatan"
+    },
+    {
+      "coordinates": [2745, 1434],
+      "name": "Quintana Roo",
+      "flag": "Flag_of_Quintana_Roo"
+    },
+    {
+      "coordinates": [1471, 1270],
+      "name": "Guanajato",
+      "flag": "Flag_of_Guanajuato"
+    },
+    {
+      "coordinates": [1583, 1268],
+      "name": "Querétaro",
+      "flag": "Flag_of_Queretaro"
+    },
+    {
+      "coordinates": [1932, 1530],
+      "name": "Puebla",
+      "flag": "Flag_of_Puebla"
+    },
+    {
+      "coordinates": [1853, 1459],
+      "name": "Mexico City",
+      "flag": "Flag_of_Mexico_City_(variant)"
+    },
+    {
+      "coordinates": [1692, 1552],
+      "name": "Morelos",
+      "flag": "Flag_of_Morelos"
+    },
+    {
+      "coordinates": [1769, 1450],
+      "name": "State of México",
+      "flag": "Flag_of_the_State_of_Mexico"
+    },
+    {
+      "coordinates": [1758, 1295],
+      "name": "Hidalgo",
+      "flag": "Flag_of_Hidalgo"
+    },
+    {
+      "coordinates": [1932, 1443],
+      "name": "Tlaxcala",
+      "flag": "Flag_of_Tlaxcala"
+    }
+  ],
+  "themes": ["north_america"]
+}

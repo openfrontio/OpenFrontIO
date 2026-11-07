@@ -7,6 +7,7 @@
   "categories": ["asia"],
   "location": { "lat": 12, "lon": 118 },
   "author": "Tristar",
+  "description": "A subregion of Asia located south of China, east of the Indian Subcontinent, and north of Australia, comprising 11 countries with a total population of over 675M people. This region is famous for its history of naval trade with India, China and the wider Islamic world. Prepare your boats, conquering islands is necessary to win.",
   "nations": [
     {
       "coordinates": [1319, 76],
