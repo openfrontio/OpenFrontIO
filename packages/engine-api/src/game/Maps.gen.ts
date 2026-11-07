@@ -1997,9 +1997,10 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.RockyMountains,
     translationKey: "map.rockymountains",
     categories: ["north_america"],
-    defaultNationCount: 38,
+    defaultNationCount: 48,
     themes: ["western", "north_america"],
     author: "crunchybbb",
+    descriptionKey: "map_description.rockymountains",
     location: { lat: 44, lon: -111 },
   },
   {

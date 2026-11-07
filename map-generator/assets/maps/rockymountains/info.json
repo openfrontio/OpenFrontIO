@@ -6,46 +6,46 @@
   "categories": ["north_america"],
   "location": { "lat": 44, "lon": -111 },
   "author": "crunchybbb",
+  "description": "The Rockies are a massive mountain range system located in the western USA. The mountains are known for their abundant wildlife and national parks. The map is similar to a smaller Alps with rivers.",
   "themes": ["western", "north_america"],
-
   "nations": [
     {
-      "coordinates": [861, 697],
+      "coordinates": [849, 768],
       "name": "Yellowstone Nat'l Park",
       "flag": "Wyoming"
     },
     {
-      "coordinates": [835, 792],
+      "coordinates": [837, 877],
       "name": "Grand Teton Nat'l Park",
       "flag": "Wyoming"
     },
     {
-      "coordinates": [724, 137],
+      "coordinates": [712, 174],
       "name": "Glacier Nat'l Park",
       "flag": "Montana"
     },
     {
-      "coordinates": [833, 1616],
+      "coordinates": [862, 1758],
       "name": "Mesa Verde Nat'l Park",
       "flag": "Colorado"
     },
     {
-      "coordinates": [1193, 1263],
+      "coordinates": [1226, 1404],
       "name": "Rocky Mountain Nat'l Park",
       "flag": "Colorado"
     },
     {
-      "coordinates": [964, 1415],
+      "coordinates": [1028, 1469],
       "name": "Black Canyon of the Gunnison Nat'l Park",
       "flag": "Colorado"
     },
     {
-      "coordinates": [979, 764],
+      "coordinates": [992, 759],
       "name": "Shoshone Nat'l Forest",
       "flag": "Wyoming"
     },
     {
-      "coordinates": [792, 927],
+      "coordinates": [855, 998],
       "name": "Bridger-Teton Nat'l Forest",
       "flag": "Wyoming"
     },
@@ -70,7 +70,7 @@
       "flag": "Idaho"
     },
     {
-      "coordinates": [403, 545],
+      "coordinates": [401, 564],
       "name": "Payette Nat'l Forest",
       "flag": "Idaho"
     },
@@ -85,7 +85,7 @@
       "flag": "Montana"
     },
     {
-      "coordinates": [843, 529],
+      "coordinates": [873, 559],
       "name": "Custer-Gallatin Nat'l Forest",
       "flag": "Montana"
     },
@@ -115,17 +115,17 @@
       "flag": "Montana"
     },
     {
-      "coordinates": [907, 392],
+      "coordinates": [884, 447],
       "name": "Helena-Lewis & Clark Nat'l Forest",
       "flag": "Montana"
     },
     {
-      "coordinates": [1158, 797],
+      "coordinates": [1187, 819],
       "name": "Bighorn Nat'l Forest",
       "flag": "Wyoming"
     },
     {
-      "coordinates": [1314, 984],
+      "coordinates": [1323, 962],
       "name": "Thunder Basin Nat'l Grassland",
       "flag": "Wyoming"
     },
@@ -135,17 +135,17 @@
       "flag": "Montana"
     },
     {
-      "coordinates": [1067, 958],
+      "coordinates": [1043, 994],
       "name": "Wind River Reservation",
       "flag": "Wyoming"
     },
     {
-      "coordinates": [1159, 555],
+      "coordinates": [1235, 540],
       "name": "Crow Reservation",
       "flag": "Montana"
     },
     {
-      "coordinates": [1377, 286],
+      "coordinates": [1377, 350],
       "name": "Fort Peck Reservation",
       "flag": "Montana"
     },
@@ -155,49 +155,99 @@
       "flag": "Montana"
     },
     {
-      "coordinates": [1133, 1110],
+      "coordinates": [1135, 1175],
       "name": "Medicine Bow-Routt Nat'l Forest",
       "flag": "Wyoming"
     },
     {
-      "coordinates": [797, 1128],
+      "coordinates": [753, 1138],
       "name": "Uinta-Wasatch-Cache Nat'l Forest",
       "flag": "Utah"
     },
     {
-      "coordinates": [1415, 1261],
+      "coordinates": [1451, 1470],
       "name": "Pawnee Nat'l Grassland",
       "flag": "Colorado"
     },
     {
-      "coordinates": [1048, 1286],
+      "coordinates": [982, 1335],
       "name": "White River Nat'l Forest",
       "flag": "Colorado"
     },
     {
-      "coordinates": [1167, 1336],
+      "coordinates": [1219, 1501],
       "name": "Arapaho & Roosevelt Nat'l Forests",
       "flag": "Colorado"
     },
     {
-      "coordinates": [1236, 1472],
+      "coordinates": [1274, 1612],
       "name": "Pike & San Isabel Nat'l Forests",
       "flag": "Colorado"
     },
     {
-      "coordinates": [1008, 1491],
+      "coordinates": [972, 1573],
       "name": "Grand Mesa, Uncompahgre & Gunnison Nat'l Forests",
       "flag": "Colorado"
     },
     {
-      "coordinates": [1026, 1605],
+      "coordinates": [1018, 1675],
       "name": "San Juan Nat'l Forest",
       "flag": "Colorado"
     },
     {
-      "coordinates": [1221, 1596],
+      "coordinates": [1271, 1770],
       "name": "Rio Grande Nat'l Forest",
       "flag": "Colorado"
+    },
+    {
+      "coordinates": [707, 1247],
+      "name": "Ashley Nat'l Forest",
+      "flag": "Utah"
+    },
+    {
+      "coordinates": [795, 1341],
+      "name": "Uintah and Ouray Reservation",
+      "flag": "Utah"
+    },
+    {
+      "coordinates": [764, 1554],
+      "name": "Canyonlands Nat'l Park",
+      "flag": "Utah"
+    },
+    {
+      "coordinates": [840, 1443],
+      "name": "Arches Nat'l Park",
+      "flag": "Utah"
+    },
+    {
+      "coordinates": [627, 1391],
+      "name": "Manti-La Sal Nat'l Forest",
+      "flag": "Utah"
+    },
+    {
+      "coordinates": [489, 1422],
+      "name": "Fishlake Nat'l Forest",
+      "flag": "Utah"
+    },
+    {
+      "coordinates": [608, 1624],
+      "name": "Capitol Reef Nat'l Park",
+      "flag": "Utah"
+    },
+    {
+      "coordinates": [379, 1672],
+      "name": "Zion Nat'l Park",
+      "flag": "Utah"
+    },
+    {
+      "coordinates": [485, 1596],
+      "name": "Bryce Canyon Nat'l Park",
+      "flag": "Utah"
+    },
+    {
+      "coordinates": [597, 1502],
+      "name": "Dixie Nat'l Forest",
+      "flag": "Utah"
     }
   ]
 }
