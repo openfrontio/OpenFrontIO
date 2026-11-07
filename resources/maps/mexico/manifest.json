@@ -1,0 +1,179 @@
+{
+  "categories": ["north_america", "new", "countries"],
+  "id": "Mexico",
+  "map": {
+    "height": 2100,
+    "num_land_tiles": 1598841,
+    "width": 2920
+  },
+  "map16x": {
+    "height": 525,
+    "num_land_tiles": 96538,
+    "width": 730
+  },
+  "map4x": {
+    "height": 1050,
+    "num_land_tiles": 394880,
+    "width": 1460
+  },
+  "name": "Mexico",
+  "nations": [
+    {
+      "coordinates": [261, 273],
+      "flag": "Flag_of_Baja_California",
+      "name": "Baja California"
+    },
+    {
+      "coordinates": [606, 841],
+      "flag": "Flag_of_Baja_California_Sur",
+      "name": "Baja California Sur"
+    },
+    {
+      "coordinates": [712, 385],
+      "flag": "Flag_of_Sonora",
+      "name": "Sonora"
+    },
+    {
+      "coordinates": [1023, 396],
+      "flag": "Flag_of_Chihuahua",
+      "name": "Chihuahua"
+    },
+    {
+      "coordinates": [1116, 704],
+      "flag": "Flag_of_Durango",
+      "name": "Durango"
+    },
+    {
+      "coordinates": [844, 665],
+      "flag": "Flag_of_Sinaloa",
+      "name": "Sinaloa"
+    },
+    {
+      "coordinates": [1421, 597],
+      "flag": "Flag_of_Coahuila",
+      "name": "Coahuila"
+    },
+    {
+      "coordinates": [1825, 927],
+      "flag": "Flag_of_Tamaulipas",
+      "name": "Tamaulipas"
+    },
+    {
+      "coordinates": [1618, 807],
+      "flag": "Flag_of_Nuevo_Leon",
+      "name": "Nuevo León"
+    },
+    {
+      "coordinates": [1096, 1026],
+      "flag": "Flag_of_Nayarit",
+      "name": "Nayarit"
+    },
+    {
+      "coordinates": [1289, 890],
+      "flag": "Flag_of_Zacatecas",
+      "name": "Zacatecas"
+    },
+    {
+      "coordinates": [1660, 1052],
+      "flag": "Flag_of_San_Luis_Potosi",
+      "name": "San Luis Potosí"
+    },
+    {
+      "coordinates": [1318, 1283],
+      "flag": "Flag_of_Jalisco",
+      "name": "Jalisco"
+    },
+    {
+      "coordinates": [1339, 1461],
+      "flag": "Flag_of_Colima",
+      "name": "Colima"
+    },
+    {
+      "coordinates": [1403, 1137],
+      "flag": "Flag_of_Aguascalientes",
+      "name": "Aguascalientes"
+    },
+    {
+      "coordinates": [1527, 1443],
+      "flag": "Flag_of_Michoacan",
+      "name": "Michoacán"
+    },
+    {
+      "coordinates": [1659, 1612],
+      "flag": "Flag_of_Guerrero",
+      "name": "Guerrero"
+    },
+    {
+      "coordinates": [1936, 1667],
+      "flag": "Flag_of_Oaxaca",
+      "name": "Oaxaca"
+    },
+    {
+      "coordinates": [2264, 1720],
+      "flag": "Flag_of_Chiapas",
+      "name": "Chiapas"
+    },
+    {
+      "coordinates": [1907, 1327],
+      "flag": "Flag_of_Veracruz",
+      "name": "Veracruz"
+    },
+    {
+      "coordinates": [2228, 1566],
+      "flag": "Flag_of_Tabasco",
+      "name": "Tabasco"
+    },
+    {
+      "coordinates": [2540, 1495],
+      "flag": "Flag_of_Campeche",
+      "name": "Campeche"
+    },
+    {
+      "coordinates": [2671, 1282],
+      "flag": "Flag_of_Yucatán",
+      "name": "Yucatan"
+    },
+    {
+      "coordinates": [2745, 1434],
+      "flag": "Flag_of_Quintana_Roo",
+      "name": "Quintana Roo"
+    },
+    {
+      "coordinates": [1471, 1270],
+      "flag": "Flag_of_Guanajuato",
+      "name": "Guanajato"
+    },
+    {
+      "coordinates": [1583, 1268],
+      "flag": "Flag_of_Queretaro",
+      "name": "Querétaro"
+    },
+    {
+      "coordinates": [1932, 1530],
+      "flag": "Flag_of_Puebla",
+      "name": "Puebla"
+    },
+    {
+      "coordinates": [1853, 1459],
+      "flag": "Flag_of_Mexico_City_(variant)",
+      "name": "Mexico City"
+    },
+    {
+      "coordinates": [1692, 1552],
+      "flag": "Flag_of_Morelos",
+      "name": "Morelos"
+    },
+    {
+      "coordinates": [1769, 1450],
+      "flag": "mx",
+      "name": "State of México"
+    },
+    {
+      "coordinates": [1758, 1295],
+      "flag": "Flag_of_Hidalgo",
+      "name": "Hidalgo"
+    }
+  ],
+  "themes": ["north_america"],
+  "translation_key": "map.mexico"
+}
