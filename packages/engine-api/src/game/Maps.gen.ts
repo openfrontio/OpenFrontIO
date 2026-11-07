@@ -87,6 +87,7 @@ export enum GameMapType {
   MareNostrum = "Mare Nostrum", // map-generator/assets/maps/marenostrum/info.json
   Mars = "Mars", // map-generator/assets/maps/mars/info.json
   Mena = "Mena", // map-generator/assets/maps/mena/info.json
+  Mexico = "Mexico", // map-generator/assets/maps/mexico/info.json
   MiddleEast = "Middle East", // map-generator/assets/maps/middleeast/info.json
   MilkyWay = "MilkyWay", // map-generator/assets/maps/milkyway/info.json
   MississippiRiver = "Mississippi River", // map-generator/assets/maps/mississippiriver/info.json
@@ -1799,6 +1800,17 @@ export const maps: readonly MapInfo[] = [
     themes: ["asia", "africa"],
     author: "evanpelle",
     location: { lat: 27, lon: 18 },
+  },
+  {
+    id: "Mexico",
+    type: GameMapType.Mexico,
+    translationKey: "map.mexico",
+    categories: ["north_america", "new", "countries"],
+    defaultNationCount: 32,
+    themes: ["north_america"],
+    author: "crunchybbb",
+    descriptionKey: "map_description.mexico",
+    location: { lat: 23, lon: -102 },
   },
   {
     id: "MiddleEast",
