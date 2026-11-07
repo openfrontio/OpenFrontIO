@@ -1,5 +1,5 @@
-// Equal Earth projection in the viewBox units of resources/images/EarthMap.svg,
-// which scripts/genEarthMap.ts draws with d3's geoEqualEarth at this scale.
+// Equal Earth projection in the viewBox units of resources/images/AtlasMap.svg,
+// which scripts/genAtlasMap.ts draws with d3's geoEqualEarth at this scale.
 const A1 = 1.340264;
 const A2 = -0.081106;
 const A3 = 0.000893;
@@ -17,16 +17,16 @@ function equalEarth(lat: number, lon: number): [number, number] {
   ];
 }
 
-export const EARTH_MAP_WIDTH = 1000;
-export const EARTH_MAP_SCALE = EARTH_MAP_WIDTH / 2 / equalEarth(0, 180)[0];
-export const EARTH_MAP_HEIGHT = Math.ceil(
-  2 * equalEarth(90, 0)[1] * EARTH_MAP_SCALE,
+export const ATLAS_MAP_WIDTH = 1000;
+export const ATLAS_MAP_SCALE = ATLAS_MAP_WIDTH / 2 / equalEarth(0, 180)[0];
+export const ATLAS_MAP_HEIGHT = Math.ceil(
+  2 * equalEarth(90, 0)[1] * ATLAS_MAP_SCALE,
 );
 
-export function projectEarth(lat: number, lon: number): [number, number] {
+export function projectToAtlas(lat: number, lon: number): [number, number] {
   const [x, y] = equalEarth(lat, lon);
   return [
-    EARTH_MAP_WIDTH / 2 + x * EARTH_MAP_SCALE,
-    EARTH_MAP_HEIGHT / 2 - y * EARTH_MAP_SCALE,
+    ATLAS_MAP_WIDTH / 2 + x * ATLAS_MAP_SCALE,
+    ATLAS_MAP_HEIGHT / 2 - y * ATLAS_MAP_SCALE,
   ];
 }

@@ -598,7 +598,7 @@ export class InputHandler {
       const nextDirection = !this.uiState.rocketDirectionUp;
       this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
     });
-    this.addKeybindAndEvent("Shift+KeyD", () => {
+    this.addKeybindAndEvent(this.keybinds.performanceOverlay, () => {
       this.eventBus.emit(new TogglePerformanceOverlayEvent());
     });
     this.addKeybindAndEvent(this.keybinds.toggleView, () => {

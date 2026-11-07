@@ -6,6 +6,7 @@
   "categories": ["north_america"],
   "location": { "lat": 49.6, "lon": -125.5 },
   "author": "Tristar",
+  "description": "An island in Western North America, part of the Canadian province of British Columbia, separated from the mainland by the Straits of Georgia, Johnstone, and Queen Charlotte and from the USA by the Juan de Fuca Strait. Indigenous peoples - the Coast Salish, Nuu-chah-nulth and Kwakwakaw'akw have inhabited it for thousands of years, long before the arrival of Spanish and British naval expeditions in the 18th century.",
   "nations": [
     {
       "coordinates": [2478, 1308],

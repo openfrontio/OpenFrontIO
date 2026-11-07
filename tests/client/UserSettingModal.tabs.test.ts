@@ -21,6 +21,24 @@ async function mount(inline: boolean): Promise<TestModal> {
   return el;
 }
 
+function installEnglishTranslations() {
+  const selector = document.createElement("lang-selector") as HTMLElement & {
+    currentLang: string;
+    translations: Record<string, string>;
+    defaultTranslations: Record<string, string>;
+  };
+  selector.currentLang = "en";
+  selector.translations = {};
+  selector.defaultTranslations = {
+    "user_setting.performance_overlay_desc":
+      en.user_setting.performance_overlay_desc,
+    "user_setting.performance_overlay_keybind_desc":
+      en.user_setting.performance_overlay_keybind_desc,
+    "user_setting.keybind_shift_prefix": "Shift+",
+  };
+  document.body.appendChild(selector);
+}
+
 describe("user-setting tabs", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
@@ -141,6 +159,88 @@ describe("user-setting tabs", () => {
     el.open({ tab: "graphics" });
     await el.updateComplete;
     expect(el.querySelector(selector)).not.toBeNull();
+  });
+
+  it("updates the performance overlay toggle when its visibility changes elsewhere", async () => {
+    const userSettings = new UserSettings();
+    userSettings.setPerformanceOverlay(true);
+
+    const el = await mount(false);
+    el.open({ tab: "graphics" });
+    await el.updateComplete;
+
+    const getToggleInput = () =>
+      el.querySelector<HTMLInputElement>(
+        "#performance-overlay-toggle input[type=checkbox]",
+      );
+    expect(getToggleInput()?.checked).toBe(true);
+
+    userSettings.setPerformanceOverlay(false);
+    await el.updateComplete;
+
+    expect(getToggleInput()?.checked).toBe(false);
+  });
+
+  it("uses the configured performance overlay key in its Graphics description", async () => {
+    installEnglishTranslations();
+    const el = await mount(false);
+    el.open({ tab: "graphics" });
+    await el.updateComplete;
+
+    const description = () =>
+      el
+        .querySelector("#performance-overlay-toggle")
+        ?.getAttribute("description");
+    expect(description()).toBe(
+      "Toggles the in-game performance overlay. Press Shift+D during game to toggle.",
+    );
+
+    el.setActiveTab("keybinds");
+    await el.updateComplete;
+    const keybind = el.querySelector(
+      'setting-keybind[action="performanceOverlay"]',
+    );
+    expect(keybind).not.toBeNull();
+    expect(keybind?.getAttribute("defaultkey")).toBe("Shift+KeyD");
+    expect(keybind?.getAttribute("description")).toBe(
+      "Toggles the in-game performance overlay.",
+    );
+
+    keybind!.dispatchEvent(
+      new CustomEvent("change", {
+        detail: {
+          action: "performanceOverlay",
+          value: "Shift+KeyF",
+          key: "Shift+F",
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await el.updateComplete;
+
+    el.setActiveTab("graphics");
+    await el.updateComplete;
+    expect(description()).toBe(
+      "Toggles the in-game performance overlay. Press Shift+F during game to toggle.",
+    );
+  });
+
+  it("omits the keybind hint from the Graphics description when unbound", async () => {
+    installEnglishTranslations();
+    new UserSettings().setKeybinds({
+      performanceOverlay: { value: "Null", key: "" },
+    });
+
+    const el = await mount(false);
+    el.open({ tab: "graphics" });
+    await el.updateComplete;
+
+    expect(
+      el
+        .querySelector("#performance-overlay-toggle")
+        ?.getAttribute("description"),
+    ).toBe("Toggles the in-game performance overlay.");
   });
 
   it.each(GRAPHICS_CONTROLS)(
