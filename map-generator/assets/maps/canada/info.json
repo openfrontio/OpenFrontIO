@@ -3,7 +3,7 @@
   "id": "Canada",
   "name": "Canada",
   "translation_key": "map.canada",
-  "categories": ["north_america", "countries"],
+  "categories": ["north_america", "new", "countries"],
   "location": {
     "lat": 60,
     "lon": -95
@@ -18,7 +18,7 @@
       "flag": "britishcolumbia"
     },
     {
-      "coordinates": [1318, 1857],
+      "coordinates": [1317, 1857],
       "name": "Alberta",
       "flag": "alberta"
     },
@@ -38,7 +38,7 @@
       "flag": "ontario"
     },
     {
-      "coordinates": [2806, 2148],
+      "coordinates": [2805, 2148],
       "name": "Quebec",
       "flag": "Quebec"
     },
@@ -58,7 +58,7 @@
       "flag": "princeedwardisland"
     },
     {
-      "coordinates": [3398, 1762],
+      "coordinates": [3397, 1762],
       "name": "Newfoundland and Labrador",
       "flag": "newfoundlandandlabrador"
     },
@@ -73,7 +73,7 @@
       "flag": "northwestterritories"
     },
     {
-      "coordinates": [2529, 1262],
+      "coordinates": [2529, 1261],
       "name": "Nunavut",
       "flag": "Nunavut"
     },
@@ -84,11 +84,11 @@
     },
     {
       "coordinates": [1545, 1957],
-      "name": "Metis",
+      "name": "Métis",
       "flag": "Metis"
     },
     {
-      "coordinates": [762, 1616],
+      "coordinates": [762, 1615],
       "name": "Haida",
       "flag": "haida_flag"
     },
@@ -109,7 +109,7 @@
       "name": "Cree"
     },
     {
-      "coordinates": [2896, 1904],
+      "coordinates": [2896, 1903],
       "name": "Innu"
     },
     {
@@ -125,7 +125,7 @@
       "name": "Anishinaabe"
     },
     {
-      "coordinates": [1261, 1356],
+      "coordinates": [1262, 1356],
       "name": "Dene"
     },
     {
@@ -137,7 +137,7 @@
       "name": "Gwich'in"
     },
     {
-      "coordinates": [955, 1293],
+      "coordinates": [956, 1293],
       "name": "Tlingit"
     },
     {
@@ -149,11 +149,11 @@
       "name": "Secwepemc"
     },
     {
-      "coordinates": [830, 1920],
+      "coordinates": [832, 1920],
       "name": "Nuu-chah-nulth"
     },
     {
-      "coordinates": [831, 1829],
+      "coordinates": [831, 1830],
       "name": "Kwakwaka'wakw"
     },
     {
@@ -177,7 +177,7 @@
       "name": "Kitikmeot Inuit"
     },
     {
-      "coordinates": [1985, 1441],
+      "coordinates": [1983, 1439],
       "name": "Kivalliq Inuit"
     }
   ],
@@ -268,7 +268,7 @@
     },
     {
       "name": "Windsor",
-      "coordinates": [2419, 2525]
+      "coordinates": [2420, 2525]
     },
     {
       "name": "Saskatoon",
@@ -300,7 +300,7 @@
     },
     {
       "name": "Trois-Rivières",
-      "coordinates": [2768, 2191]
+      "coordinates": [2767, 2191]
     },
     {
       "name": "Kingston",

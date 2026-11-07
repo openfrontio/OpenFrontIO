@@ -1,5 +1,5 @@
 {
-  "categories": ["north_america", "countries"],
+  "categories": ["north_america", "new", "countries"],
   "custom_tribes": [
     {
       "coordinates": [2538, 2415],
@@ -86,7 +86,7 @@
       "name": "London"
     },
     {
-      "coordinates": [2419, 2525],
+      "coordinates": [2420, 2525],
       "name": "Windsor"
     },
     {
@@ -118,7 +118,7 @@
       "name": "Kelowna"
     },
     {
-      "coordinates": [2768, 2191],
+      "coordinates": [2767, 2191],
       "name": "Trois-Rivières"
     },
     {
@@ -245,17 +245,17 @@
   "id": "Canada",
   "map": {
     "height": 2568,
-    "num_land_tiles": 2338185,
+    "num_land_tiles": 2337356,
     "width": 3428
   },
   "map16x": {
     "height": 642,
-    "num_land_tiles": 138009,
+    "num_land_tiles": 137907,
     "width": 857
   },
   "map4x": {
     "height": 1284,
-    "num_land_tiles": 571973,
+    "num_land_tiles": 571675,
     "width": 1714
   },
   "name": "Canada",
@@ -266,7 +266,7 @@
       "name": "British Columbia"
     },
     {
-      "coordinates": [1318, 1857],
+      "coordinates": [1317, 1857],
       "flag": "alberta",
       "name": "Alberta"
     },
@@ -286,7 +286,7 @@
       "name": "Ontario"
     },
     {
-      "coordinates": [2806, 2148],
+      "coordinates": [2805, 2148],
       "flag": "Quebec",
       "name": "Quebec"
     },
@@ -306,7 +306,7 @@
       "name": "Prince Edward Island"
     },
     {
-      "coordinates": [3398, 1762],
+      "coordinates": [3397, 1762],
       "flag": "newfoundlandandlabrador",
       "name": "Newfoundland and Labrador"
     },
@@ -321,7 +321,7 @@
       "name": "Northwest Territories"
     },
     {
-      "coordinates": [2529, 1262],
+      "coordinates": [2529, 1261],
       "flag": "Nunavut",
       "name": "Nunavut"
     },
@@ -333,10 +333,10 @@
     {
       "coordinates": [1545, 1957],
       "flag": "Metis",
-      "name": "Metis"
+      "name": "Métis"
     },
     {
-      "coordinates": [762, 1616],
+      "coordinates": [762, 1615],
       "flag": "haida_flag",
       "name": "Haida"
     },
@@ -357,7 +357,7 @@
       "name": "Cree"
     },
     {
-      "coordinates": [2896, 1904],
+      "coordinates": [2896, 1903],
       "name": "Innu"
     },
     {
@@ -373,7 +373,7 @@
       "name": "Anishinaabe"
     },
     {
-      "coordinates": [1261, 1356],
+      "coordinates": [1262, 1356],
       "name": "Dene"
     },
     {
@@ -385,7 +385,7 @@
       "name": "Gwich'in"
     },
     {
-      "coordinates": [955, 1293],
+      "coordinates": [956, 1293],
       "name": "Tlingit"
     },
     {
@@ -397,11 +397,11 @@
       "name": "Secwepemc"
     },
     {
-      "coordinates": [830, 1920],
+      "coordinates": [832, 1920],
       "name": "Nuu-chah-nulth"
     },
     {
-      "coordinates": [831, 1829],
+      "coordinates": [831, 1830],
       "name": "Kwakwaka'wakw"
     },
     {
@@ -425,7 +425,7 @@
       "name": "Kitikmeot Inuit"
     },
     {
-      "coordinates": [1985, 1441],
+      "coordinates": [1983, 1439],
       "name": "Kivalliq Inuit"
     }
   ],

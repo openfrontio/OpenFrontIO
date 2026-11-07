@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { GameMapType, GameType } from "@openfront/engine-api/game/GameTypes";
+import { positionedTribeCount } from "@openfront/engine-lib/execution/utils/TribeNames";
 import { createGameWireContext } from "@openfront/shared/ZbinWire";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
@@ -99,6 +100,44 @@ describe("GameServer custom tribes", () => {
     game.start();
 
     expect(startInfo(game, guest).tribes).toEqual([{ name: "Dragon Riders" }]);
+  });
+
+  it("leaves the map's positioned custom tribes their bot slots", async () => {
+    // Canada places its 60 largest cities at fixed coordinates; TribeSpawner
+    // seats them before any purchased name, so only the slots left over take
+    // purchased names and the start info must not promise more than that.
+    const positioned = positionedTribeCount(GameMapType.Canada);
+    expect(positioned).toBeGreaterThan(0);
+    fetchTribes.mockResolvedValue([
+      { name: "Dragon Riders" },
+      { name: "Night Wolves" },
+    ]);
+    const game = makeGame({
+      gameMap: GameMapType.Canada,
+      bots: positioned + 1,
+    });
+    const guest = watcher(game);
+
+    game.prestart();
+    await flushMicrotasks();
+    game.start();
+
+    expect(startInfo(game, guest).tribes).toEqual([{ name: "Dragon Riders" }]);
+  });
+
+  it("omits tribes when positioned custom tribes fill every bot slot", async () => {
+    fetchTribes.mockResolvedValue([{ name: "Dragon Riders" }]);
+    const game = makeGame({
+      gameMap: GameMapType.Canada,
+      bots: positionedTribeCount(GameMapType.Canada),
+    });
+    const guest = watcher(game);
+
+    game.prestart();
+    await flushMicrotasks();
+    game.start();
+
+    expect(startInfo(game, guest).tribes).toBeUndefined();
   });
 
   it("skips the fetch for non-public games", async () => {

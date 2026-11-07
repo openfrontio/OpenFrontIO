@@ -91,3 +91,14 @@ export function resolveTribeNameData(mapType?: GameMapType): TribeNameData {
     suffixes: defaultTheme.suffixes,
   };
 }
+
+/**
+ * How many of a map's custom tribes spawn at fixed coordinates. TribeSpawner
+ * places them before purchased tribe names get a slot, so the server caps the
+ * purchased list at bots minus this count (GameServer.fetchTribes).
+ */
+export function positionedTribeCount(mapType?: GameMapType): number {
+  const { customTribes } = resolveTribeNameData(mapType);
+  if (customTribes === undefined) return 0;
+  return customTribes.filter((ct) => ct.coordinates !== undefined).length;
+}
