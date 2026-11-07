@@ -843,6 +843,7 @@ describe("random player names", () => {
     for (let i = 0; i < prefixes.length * suffixes.length; i++) {
       names.add(generateRandomPlayerName("tribe"));
     }
+    expect(names.size).toBeGreaterThan(1);
     expect(
       [...names].filter((name) => profanityMatcher.hasMatch(name)),
     ).toEqual([]);
