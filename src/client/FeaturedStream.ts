@@ -6,14 +6,16 @@ import { isDesktopShell } from "./DesktopShell";
 import { gamePortal } from "./GamePortal";
 import { broadcastKey, streamsFeed, watchUrl } from "./StreamsFeed";
 import { translateText } from "./Utils";
+import { YouTubeGlobal, loadYouTubeSdk } from "./YouTubeSdk";
 
-// Homepage "featured stream" panel: embeds a Twitch channel and shows ONLY while it is
-// actually live, then hides. Data comes from the shared streams feed (GET /streams.json,
+// Homepage "featured stream" panel: embeds a Twitch channel or a YouTube broadcast and
+// shows ONLY while it is actually live, then hides. Data comes from the shared streams feed (GET /streams.json,
 // with a bundled empty fallback in resources/streams.json): `featured` is a list of
 // verified-live broadcasts in admin priority order (e.g. the OFM channel for tournaments
 // ahead of the OF channel for releases). Empty = nothing to show (renders nothing).
 //
-// Liveness is decided server-side: the API polls Twitch Helix on a cron and serves only
+// Liveness is decided server-side: the API polls Twitch Helix (and YouTube) on a cron and
+// serves only
 // broadcasts that are live right now, each carrying a `startedAt` no static config could
 // produce. So `featured[0]` is simply what to embed. The client used to work this out
 // itself by mounting a real autoplaying Twitch.Player per configured channel and reading
@@ -28,6 +30,10 @@ import { translateText } from "./Utils";
 //
 // Crucially, that verdict is REMEMBERED (see `dead`). It previously was not, so a feed
 // naming an offline channel re-booted a full player every 60 seconds indefinitely.
+//
+// A YouTube broadcast is embedded with the YouTube IFrame Player API instead, by video
+// id (taken from the served watch URL). Its ENDED state and its errors (a broadcast
+// with embedding turned off, a removed video) mean the same as Twitch's OFFLINE/ENDED.
 
 interface TwitchPlayer {
   addEventListener(event: string, cb: () => void): void;
@@ -47,10 +53,18 @@ interface TwitchPlayerCtor {
 interface TwitchGlobal {
   Player: TwitchPlayerCtor;
 }
+
 declare global {
   interface Window {
     Twitch?: TwitchGlobal;
   }
+}
+
+// What the panel needs from either platform's player.
+interface EmbedPlayer {
+  play(): void;
+  pause(): void;
+  destroy?(): void;
 }
 
 export type Corner = "tl" | "tr" | "bl" | "br";
@@ -94,6 +108,26 @@ export function isOffFrame(
   return cx < 0 || cx > vw || cy < 0 || cy > vh;
 }
 
+// The video id of a served YouTube watch URL (https://www.youtube.com/watch?v=<id>), or
+// null when the URL is not one. Checked strictly because it goes into the embed. Pure for
+// tests.
+export function youTubeVideoId(url: string | undefined): string | null {
+  if (!url) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (
+    parsed.hostname !== "www.youtube.com" &&
+    parsed.hostname !== "youtube.com"
+  )
+    return null;
+  const id = parsed.searchParams.get("v");
+  return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? id : null;
+}
+
 // Which broadcast to embed, or null for "embed nothing". The API serves only channels
 // its cron currently sees live, in admin priority order, so this is just the first entry
 // we have not already watched die — no client-side probing. Pure for tests.
@@ -132,6 +166,10 @@ function loadTwitchSdk(): Promise<TwitchGlobal> {
   return sdkPromise;
 }
 
+// A YouTube player that loads but never reports ready, ended or an error would otherwise
+// sit invisible until the page reloads, and later polls would see it as already mounted.
+export const YT_PLAYER_READY_TIMEOUT_MS = 30_000;
+
 @customElement("featured-stream")
 export class FeaturedStream extends LitElement {
   @state() private live = false;
@@ -143,7 +181,8 @@ export class FeaturedStream extends LitElement {
   @state() private stream: LiveStream | null = null; // broadcast the API reports live
   @state() private adFree = false; // entitlement from /user/me; gates "hide for today"
 
-  private player?: TwitchPlayer;
+  private player?: EmbedPlayer;
+  private playerReadyTimer?: ReturnType<typeof setTimeout>;
   private mountGen = 0; // bumped each mount; events from older mounts are ignored
   // Broadcasts whose own player told us they are not actually live. Without this, a feed
   // listing an offline channel re-mounted a full Twitch player on every poll, forever:
@@ -275,12 +314,20 @@ export class FeaturedStream extends LitElement {
 
   private async mountPlayer(stream: LiveStream) {
     if (this.inGame || this.dismissed) return; // never mount behind a hidden/dismissed panel
-    let Twitch: TwitchGlobal;
+    const youtube = stream.platform === "youtube";
+    const videoId = youtube ? youTubeVideoId(stream.url) : null;
+    if (youtube && videoId === null) {
+      // Nothing to embed; remember it so later ticks don't retry the same broadcast.
+      this.dead.add(broadcastKey(stream));
+      this.goOffline();
+      return;
+    }
+    let sdk: TwitchGlobal | YouTubeGlobal;
     try {
-      Twitch = await loadTwitchSdk();
+      sdk = youtube ? await loadYouTubeSdk() : await loadTwitchSdk();
     } catch (e) {
       // SDK blocked (extension, network): the next feed tick retries rather than never.
-      console.warn("featured-stream: Twitch SDK load failed", e);
+      console.warn("featured-stream: player SDK load failed", e);
       if (this.dismissed) return;
       this.goOffline();
       return;
@@ -293,7 +340,6 @@ export class FeaturedStream extends LitElement {
       return;
     }
     if (this.stream !== stream) return; // superseded while the SDK loaded
-    const channel = stream.channel;
     const host = this.querySelector(
       "#featured-stream-mount",
     ) as HTMLElement | null;
@@ -302,6 +348,29 @@ export class FeaturedStream extends LitElement {
     host.innerHTML = "";
     const gen = ++this.mountGen;
     const fresh = () => gen === this.mountGen; // ignore events from a superseded mount
+    // The API already said this broadcast is live, so these events mean it *stopped* (or
+    // the served feed is inside its ~3 min staleness window). Record the verdict so we
+    // never boot a player for this broadcast again, then hide. Remembering it is what
+    // stops an offline-but-listed channel re-mounting on every poll, forever.
+    const ended = () => {
+      if (!fresh()) return;
+      this.dead.add(broadcastKey(stream));
+      this.goOffline();
+    };
+    if (videoId !== null) {
+      this.mountYouTube(host, sdk as YouTubeGlobal, videoId, fresh, ended);
+    } else {
+      this.mountTwitch(host, sdk as TwitchGlobal, stream.channel, fresh, ended);
+    }
+  }
+
+  private mountTwitch(
+    host: HTMLElement,
+    Twitch: TwitchGlobal,
+    channel: string,
+    fresh: () => boolean,
+    ended: () => void,
+  ) {
     const player = new Twitch.Player(host, {
       channel,
       parent: [window.location.hostname], // bare host; self-adapts to any domain/subdomain
@@ -312,15 +381,6 @@ export class FeaturedStream extends LitElement {
     });
     this.player = player;
     const P = Twitch.Player;
-    // The API already said this broadcast is live, so these events mean it *stopped* (or
-    // the served feed is inside its ~3 min staleness window). Record the verdict so we
-    // never boot a player for this broadcast again, then hide. Remembering it is what
-    // stops an offline-but-listed channel re-mounting on every poll, forever.
-    const ended = () => {
-      if (!fresh()) return;
-      this.dead.add(broadcastKey(stream));
-      this.goOffline();
-    };
     player.addEventListener(P.READY, () => {
       if (!fresh()) return;
       // offline-at-load = READY -> ENDED (no OFFLINE); read state synchronously here
@@ -332,7 +392,58 @@ export class FeaturedStream extends LitElement {
     player.addEventListener(P.ENDED, ended);
   }
 
+  // YT.Player replaces the element it is given with its iframe, so it gets a child of the
+  // mount node rather than the node itself (which render() and the next mount look up).
+  private mountYouTube(
+    host: HTMLElement,
+    YT: YouTubeGlobal,
+    videoId: string,
+    fresh: () => boolean,
+    ended: () => void,
+  ) {
+    const el = document.createElement("div");
+    host.appendChild(el);
+    const player = new YT.Player(el, {
+      videoId,
+      width: "100%",
+      height: "100%",
+      playerVars: {
+        autoplay: 1,
+        mute: 1, // required for autoplay
+        playsinline: 1,
+        rel: 0,
+        origin: window.location.origin,
+      },
+      events: {
+        onReady: () => {
+          if (!fresh()) return;
+          clearTimeout(this.playerReadyTimer);
+          this.setLive();
+          // A game that started while this loaded couldn't pause it (YouTube adds
+          // pauseVideo only once the player is ready), and autoplay would now run behind
+          // the hidden panel. The next feed tick after the game resumes it.
+          if (this.inGame) player.pauseVideo();
+        },
+        onStateChange: (e) => {
+          if (e.data === YT.PlayerState.ENDED) ended();
+        },
+        // Embedding disabled, video removed or private: it can't be shown here.
+        onError: ended,
+      },
+    });
+    this.player = {
+      play: () => player.playVideo(),
+      pause: () => player.pauseVideo(),
+      destroy: () => player.destroy(),
+    };
+    // Not ended(): nothing says this broadcast is over, so the next feed tick may retry.
+    this.playerReadyTimer = setTimeout(() => {
+      if (fresh()) this.goOffline();
+    }, YT_PLAYER_READY_TIMEOUT_MS);
+  }
+
   private teardownPlayer() {
+    clearTimeout(this.playerReadyTimer);
     try {
       this.player?.destroy?.();
     } catch {
@@ -491,6 +602,10 @@ export class FeaturedStream extends LitElement {
   render() {
     if (this.stream === null || this.dismissed) return html``;
     const channel = this.stream.channel;
+    const openLabel =
+      this.stream.platform === "youtube"
+        ? "featured_stream.open_on_youtube"
+        : "featured_stream.open_on_twitch";
     const min = this.minimized;
     // Twitch pauses the player when it's off-screen/clipped (and hiding the embed violates
     // Twitch ToS), so "minimized" stays a small but still-visible corner thumbnail that
@@ -522,9 +637,7 @@ export class FeaturedStream extends LitElement {
           <button
             type="button"
             class="flex min-w-0 items-center gap-2 text-sm font-semibold hover:underline"
-            aria-label=${translateText("featured_stream.open_on_twitch", {
-              channel,
-            })}
+            aria-label=${translateText(openLabel, { channel })}
             @click=${this.openStream}
           >
             <span

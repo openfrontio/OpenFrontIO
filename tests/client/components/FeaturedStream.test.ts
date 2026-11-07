@@ -6,6 +6,7 @@ import {
   cornerFromCenter,
   featuredStream,
   isOffFrame,
+  youTubeVideoId,
 } from "../../../src/client/FeaturedStream";
 
 const entry = {
@@ -172,5 +173,29 @@ describe("FeaturedStream", () => {
       expect(isOffFrame(500, -1, 1000, 800)).toBe(true); // top
       expect(isOffFrame(500, 801, 1000, 800)).toBe(true); // bottom
     });
+  });
+});
+
+describe("youTubeVideoId", () => {
+  it("takes the id from a watch URL", () => {
+    expect(youTubeVideoId("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe(
+      "dQw4w9WgXcQ",
+    );
+    expect(youTubeVideoId("https://youtube.com/watch?v=dQw4w9WgXcQ&t=1")).toBe(
+      "dQw4w9WgXcQ",
+    );
+  });
+
+  it("rejects anything that is not a YouTube watch URL", () => {
+    for (const url of [
+      undefined,
+      "not a url",
+      "https://www.youtube.com/@Enzo",
+      "https://evil.example/watch?v=dQw4w9WgXcQ",
+      "https://www.youtube.com/watch?v=short",
+      "https://www.youtube.com/watch?v=dQw4w9WgXc%22",
+    ]) {
+      expect(youTubeVideoId(url)).toBeNull();
+    }
   });
 });

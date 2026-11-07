@@ -56,6 +56,56 @@ class FakePlayer {
   }
 }
 
+// Stand-in for the YouTube IFrame Player API, the same way.
+type YouTubeEvents = {
+  onReady: () => void;
+  onStateChange: (e: { data: number }) => void;
+  onError: () => void;
+};
+class FakeYouTubePlayer {
+  static constructed: string[] = [];
+  static last: FakeYouTubePlayer | undefined;
+  events: YouTubeEvents;
+  paused = false;
+  // The real API adds its playback methods only once the player is ready.
+  ready = false;
+  constructor(
+    _el: HTMLElement,
+    opts: { videoId: string; events: YouTubeEvents },
+  ) {
+    FakeYouTubePlayer.constructed.push(opts.videoId);
+    FakeYouTubePlayer.last = this;
+    this.events = {
+      ...opts.events,
+      onReady: () => {
+        this.ready = true;
+        opts.events.onReady();
+      },
+    };
+  }
+  playVideo() {
+    if (!this.ready) throw new Error("playVideo is not a function");
+    this.paused = false;
+  }
+  pauseVideo() {
+    if (!this.ready) throw new Error("pauseVideo is not a function");
+    this.paused = true;
+  }
+  destroy() {}
+}
+const YT_ENDED = 0;
+
+const youtubeStream = (
+  url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+): LiveStream => ({
+  platform: "youtube",
+  channel: "@Enzo",
+  displayName: "Enzo",
+  viewers: 10,
+  url,
+  startedAt: "2026-08-03T12:00:00Z",
+});
+
 const stream = (
   channel: string,
   startedAt = "2026-08-03T12:00:00Z",
@@ -69,6 +119,8 @@ const stream = (
 });
 
 describe("featured-stream panel", () => {
+  let YT_PLAYER_READY_TIMEOUT_MS: number;
+
   beforeEach(async () => {
     // shouldAdvanceTime keeps awaited microtask/0ms hops working while still letting a
     // test inspect pending timers and jump the poll interval.
@@ -76,11 +128,18 @@ describe("featured-stream panel", () => {
     FakePlayer.constructed = [];
     FakePlayer.last = undefined;
     FakePlayer.failNext = false;
+    FakeYouTubePlayer.constructed = [];
+    FakeYouTubePlayer.last = undefined;
     localStorage.clear();
     (window as unknown as { Twitch: unknown }).Twitch = { Player: FakePlayer };
+    (window as unknown as { YT: unknown }).YT = {
+      Player: FakeYouTubePlayer,
+      PlayerState: { ENDED: YT_ENDED },
+    };
     // Importing registers the custom element; the SDK loader short-circuits on the
     // window.Twitch set above, so no script tag is ever appended.
-    await import("../../../src/client/FeaturedStream");
+    ({ YT_PLAYER_READY_TIMEOUT_MS } =
+      await import("../../../src/client/FeaturedStream"));
   });
 
   afterEach(() => {
@@ -90,6 +149,7 @@ describe("featured-stream panel", () => {
     // feed arrives, or leave polling stopped.
     streamsFeed.reset();
     delete (window as unknown as { Twitch?: unknown }).Twitch;
+    delete (window as unknown as { YT?: unknown }).YT;
     delete (window as unknown as { adsEnabled?: boolean }).adsEnabled;
     vi.useRealTimers();
     vi.clearAllMocks();
@@ -361,6 +421,100 @@ describe("featured-stream panel", () => {
     FakePlayer.last!.fire(FakePlayer.ENDED);
     await el.updateComplete;
     expect(card()).toBeNull();
+  });
+
+  describe("YouTube", () => {
+    it("embeds the broadcast's video with the YouTube player, not Twitch", async () => {
+      const el = await mount(youtubeStream());
+      expect(FakeYouTubePlayer.constructed).toEqual(["dQw4w9WgXcQ"]);
+      expect(FakePlayer.constructed).toEqual([]);
+      expect(card()?.className).toContain("opacity-0"); // hidden while it boots
+
+      FakeYouTubePlayer.last!.events.onReady();
+      await el.updateComplete;
+      expect(card()?.className).toContain("opacity-100");
+      expect(
+        el.querySelector('[aria-label="featured_stream.open_on_youtube"]'),
+      ).not.toBeNull();
+    });
+
+    // Same rule as Twitch's OFFLINE: the broadcast is over, and the feed may name it for
+    // a few more minutes, so it must not be re-mounted on the next poll.
+    it("hides when the broadcast ends and never re-mounts it", async () => {
+      const el = await mount(youtubeStream());
+      FakeYouTubePlayer.last!.events.onReady();
+      await el.updateComplete;
+      FakeYouTubePlayer.last!.events.onStateChange({ data: YT_ENDED });
+      await el.updateComplete;
+      expect(card()).toBeNull();
+
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+      expect(FakeYouTubePlayer.constructed).toEqual(["dQw4w9WgXcQ"]);
+    });
+
+    // e.g. a broadcast with embedding turned off: it can't play here, so don't show it.
+    it("hides when the player reports an error", async () => {
+      const el = await mount(youtubeStream());
+      FakeYouTubePlayer.last!.events.onError();
+      await el.updateComplete;
+      expect(card()).toBeNull();
+    });
+
+    it("gives up on a player that never gets ready, then retries it", async () => {
+      const el = await mount(youtubeStream());
+      await vi.advanceTimersByTimeAsync(YT_PLAYER_READY_TIMEOUT_MS);
+      await el.updateComplete;
+      expect(card()).toBeNull();
+
+      // Not marked dead: the next poll mounts it again, and this time it works.
+      await vi.advanceTimersByTimeAsync(61_000 - YT_PLAYER_READY_TIMEOUT_MS);
+      await el.updateComplete;
+      expect(FakeYouTubePlayer.constructed).toEqual([
+        "dQw4w9WgXcQ",
+        "dQw4w9WgXcQ",
+      ]);
+      FakeYouTubePlayer.last!.events.onReady();
+      await el.updateComplete;
+      expect(card()?.className).toContain("opacity-100");
+    });
+
+    it("leaves a ready player alone once the timeout has passed", async () => {
+      const el = await mount(youtubeStream());
+      FakeYouTubePlayer.last!.events.onReady();
+      await vi.advanceTimersByTimeAsync(YT_PLAYER_READY_TIMEOUT_MS * 2);
+      await el.updateComplete;
+      expect(card()?.className).toContain("opacity-100");
+      expect(FakeYouTubePlayer.constructed).toEqual(["dQw4w9WgXcQ"]);
+    });
+
+    it("embeds nothing without a watch URL to take the video from", async () => {
+      await mount(youtubeStream("https://www.youtube.com/@Enzo"));
+      expect(FakeYouTubePlayer.constructed).toEqual([]);
+      expect(card()).toBeNull();
+    });
+
+    it("pauses the YouTube player when a game starts", async () => {
+      const el = await mount(youtubeStream());
+      FakeYouTubePlayer.last!.events.onReady();
+      await el.updateComplete;
+      document.dispatchEvent(new CustomEvent("game-starting"));
+      expect(FakeYouTubePlayer.last!.paused).toBe(true);
+    });
+
+    // Autoplay would otherwise run behind the hidden panel for the whole game.
+    it("stays paused if a game starts before the player is ready, then resumes", async () => {
+      const el = await mount(youtubeStream());
+      document.dispatchEvent(new CustomEvent("game-starting"));
+      FakeYouTubePlayer.last!.events.onReady();
+      await el.updateComplete;
+      expect(FakeYouTubePlayer.last!.paused).toBe(true);
+
+      document.dispatchEvent(new CustomEvent("leave-lobby"));
+      await vi.advanceTimersByTimeAsync(61_000);
+      await el.updateComplete;
+      expect(card()?.className).toContain("opacity-100");
+      expect(FakeYouTubePlayer.last!.paused).toBe(false);
+    });
   });
 
   // Polling must stop while a game is running: a stream coming online must not mount an

@@ -950,7 +950,8 @@
     "hide_today": "Hide for today",
     "live": "LIVE",
     "minimize": "Minimize",
-    "open_on_twitch": "Open {channel} on Twitch"
+    "open_on_twitch": "Open {channel} on Twitch",
+    "open_on_youtube": "Open {channel} on YouTube"
   },
   "ffa_rating": {
     "calibrating": "Calibrating {n}/10",
