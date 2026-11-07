@@ -222,6 +222,9 @@ describe("CosmeticCard", () => {
     // longest line, so on a first-column card it ran past the modal's left
     // edge and was clipped. Its strip spans the card and caps it there.
     expect(info.className).toContain("inset-x-2");
+    // Top-left, leaving the artwork's top-right corner to a sale's band.
+    expect(info.className).toContain("justify-start");
+    expect(bubble.className).toContain("left-0");
     expect(bubble.className).toContain("max-w-full");
     expect(bubble.className).not.toContain("whitespace-nowrap");
     // The strip must not swallow clicks meant for the artwork beneath it.

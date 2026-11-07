@@ -222,8 +222,9 @@ export class PlayerPanel extends LitElement implements Controller {
     actions: PlayerActions,
     tile: TileRef,
     target: PlayerView,
+    suppressNextHide = true,
   ) {
-    this.suppressNextHide = true;
+    this.suppressNextHide = suppressNextHide;
     this.actions = actions;
     this.tile = tile;
     this.sendTarget = target;

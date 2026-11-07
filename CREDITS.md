@@ -126,6 +126,13 @@ Elevation: [Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) by Mapz
 GMTED2010 and SRTM terrain data courtesy of the [U.S. Geological Survey](https://www.usgs.gov/)  
 [Public Domain](https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits)
 
+## FFA Rating
+
+### OFstats
+
+FFA rating model by [OFstats](https://ofstats.io/leaderboard/how-it-works) (MIT, © 2026 Klaudiusz Dembler; the model's code runs in the API, not in this repository).  
+Rank emblems in `resources/images/ffa-tiers/` by [OFstats](https://ofstats.io), licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)

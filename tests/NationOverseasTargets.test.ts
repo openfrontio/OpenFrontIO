@@ -30,7 +30,8 @@ function setupSea(
   const player = (name: string): Player => {
     const id = `${name}_id`;
     if (!game.hasPlayer(id)) {
-      game.addPlayer(new PlayerInfo(name, PlayerType.Nation, null, id));
+      const type = name.startsWith("bot") ? PlayerType.Bot : PlayerType.Nation;
+      game.addPlayer(new PlayerInfo(name, type, null, id));
     }
     return game.player(id);
   };
@@ -57,7 +58,11 @@ function setupSea(
   }
 
   const nation = player("nation");
+  // A city lifts the nation's max troops above its army
+  const city = nation.buildUnit(UnitType.City, game.ref(0, 0), {});
+  for (let i = 0; i < 4; i++) city.increaseLevel();
   nation.setTroops(1_000_000);
+  expect(game.config().maxTroops(nation)).toBeGreaterThan(1_000_000);
   const random = new PseudoRandom(42);
   const emoji = new NationEmojiBehavior(random, game, nation);
   const behavior = new NationAttackBehavior(
@@ -130,6 +135,54 @@ describe("Nation targets across the water", () => {
       juicy(player("rich"), [60, 20]);
       behavior.maybeAttack();
       expect(boatTargets()).toContain(player("rich"));
+    },
+  );
+
+  // `rival` straight across the strait, a bot further along the same coast
+  it.each([Difficulty.Medium, Difficulty.Hard, Difficulty.Impossible])(
+    "%s without a land front boats a bot across the water before other players",
+    (difficulty) => {
+      const { player, behavior, halfStrength, boatTargets } = setupSea(
+        difficulty,
+        100,
+        24,
+        (x, y) => {
+          if (y <= 7) return x < 20 ? "nation" : null;
+          if (y < 16) return null;
+          if (x < 20) return "rival";
+          return x >= 40 && x < 60 ? "bot" : null;
+        },
+      );
+      halfStrength(player("rival"));
+      halfStrength(player("bot"));
+      behavior.maybeAttack();
+      expect(boatTargets()).toContain(player("bot"));
+      expect(boatTargets()).not.toContain(player("rival"));
+    },
+  );
+
+  // Along the far coast: a bot too strong to take, `rival`, then a weaker bot
+  it.each([Difficulty.Medium, Difficulty.Hard, Difficulty.Impossible])(
+    "%s boats a weaker bot further away when the nearest is too strong to take",
+    (difficulty) => {
+      const { player, behavior, halfStrength, boatTargets } = setupSea(
+        difficulty,
+        100,
+        24,
+        (x, y) => {
+          if (y <= 7) return x < 20 ? "nation" : null;
+          if (y < 16) return null;
+          if (x < 20) return "botStrong";
+          if (x >= 24 && x < 36) return "rival";
+          return x >= 40 && x < 60 ? "botWeak" : null;
+        },
+      );
+      player("botStrong").setTroops(player("nation").troops());
+      halfStrength(player("rival"));
+      halfStrength(player("botWeak"));
+      behavior.maybeAttack();
+      expect(boatTargets()).toContain(player("botWeak"));
+      expect(boatTargets()).not.toContain(player("rival"));
     },
   );
 

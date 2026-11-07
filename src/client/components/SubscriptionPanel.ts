@@ -1,6 +1,7 @@
 import {
   isGrantedSubscription,
   isSteamGrant,
+  renewalPushedBy,
   UserSubscription,
 } from "@openfront/shared/ApiSchemas";
 import { Subscription } from "@openfront/shared/CosmeticSchemas";
@@ -43,6 +44,13 @@ export class SubscriptionPanel extends LitElement {
 
   @property({ type: Boolean })
   steamLicence = false;
+
+  /**
+   * Set when the player holds a paid subscription and a grant at once: this
+   * panel is one of two, drawn as a compact tile. Null for the only panel.
+   */
+  @property({ type: String })
+  stacked: "paid" | "gift" | null = null;
 
   createRenderRoot() {
     return this;
@@ -213,6 +221,10 @@ export class SubscriptionPanel extends LitElement {
         false,
       );
     }
+    if (!this.sub.cancelAtPeriodEnd) {
+      const pushed = this.pushedLine(periodEnd);
+      if (pushed !== null) return this.renderDateLine(pushed, false);
+    }
     const dateKey = this.sub.cancelAtPeriodEnd
       ? "account_modal.sub_status_canceling_on"
       : "account_modal.sub_renews_on";
@@ -220,6 +232,26 @@ export class SubscriptionPanel extends LitElement {
       translateText(dateKey, { date: periodEnd }),
       this.sub.cancelAtPeriodEnd,
     );
+  }
+
+  private pushedLine(date: string): string | null {
+    // Every key passed as a literal so the en.json sync test can see them.
+    switch (renewalPushedBy(this.sub)) {
+      case "dlc":
+        return translateText("account_modal.sub_next_payment_pushed_dlc", {
+          date,
+        });
+      case "base":
+        return translateText("account_modal.sub_next_payment_pushed_base", {
+          date,
+        });
+      case "gift":
+        return translateText("account_modal.sub_next_payment_pushed_gift", {
+          date,
+        });
+      case null:
+        return null;
+    }
   }
 
   private renderDateLine(text: string, windingDown: boolean): TemplateResult {
@@ -496,12 +528,83 @@ export class SubscriptionPanel extends LitElement {
     `;
   }
 
+  // Null when the paid row is not simply renewing: the ordinary period line
+  // then says why.
+  private paidSummary(tierName: string): string | null {
+    const date = this.periodEnd();
+    if (
+      date === null ||
+      this.sub.cancelAtPeriodEnd ||
+      UNENTITLED_STATUSES.has(this.sub.status) ||
+      renewalPushedBy(this.sub) !== null
+    )
+      return null;
+    const price = this.cosmetic?.product?.price;
+    return [
+      tierName,
+      translateText("account_modal.sub_next_payment", { date }),
+      ...(price
+        ? [translateText("account_modal.sub_price_monthly", { price })]
+        : []),
+    ].join(" · ");
+  }
+
+  private giftSummary(tierName: string): string {
+    const date = this.periodEnd();
+    const daily = this.cosmetic?.dailyHardCurrency ?? 0;
+    return [
+      isSteamGrant(this.sub)
+        ? translateText("account_modal.sub_gift_from_steam", {
+            tier: tierName,
+          })
+        : translateText("account_modal.sub_gift_free", { tier: tierName }),
+      ...(date ? [translateText("account_modal.sub_gift_ends", { date })] : []),
+      ...(daily > 0
+        ? [
+            translateText("account_modal.sub_gift_daily", {
+              amount: daily.toLocaleString(),
+            }),
+          ]
+        : []),
+    ].join(" · ");
+  }
+
+  // The paid tile keeps every control; the gift tile has none, since the
+  // paid subscription is what the player manages.
+  private renderStacked(tierName: string): TemplateResult {
+    const summary =
+      this.stacked === "paid"
+        ? this.paidSummary(tierName)
+        : this.giftSummary(tierName);
+    return html`
+      <div
+        class="rounded-xl border border-white/10 bg-gradient-to-br from-white/10 to-white/[0.02] p-5 flex flex-col gap-4"
+      >
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+          <div class="text-base font-bold text-white leading-snug min-w-0">
+            ${summary ?? tierName}
+          </div>
+          ${this.renderStatusPill()}
+        </div>
+        ${summary === null ? this.renderPeriodLine(tierName) : nothing}
+        ${
+          this.stacked === "paid"
+            ? html`<div class="border-t border-white/10 pt-4">
+                ${this.renderActions(tierName)}
+              </div>`
+            : nothing
+        }
+      </div>
+    `;
+  }
+
   render() {
     const { sub, cosmetic } = this;
     const tierName = translateCosmetic(
       "subscriptions",
       cosmetic?.name ?? sub.tier,
     );
+    if (this.stacked !== null) return this.renderStacked(tierName);
     return html`
       <div class="flex flex-col gap-4">
         <div

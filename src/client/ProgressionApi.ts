@@ -30,7 +30,7 @@ export type GameXpFetchResult =
 // The request's own timeout, plus the caller's signal when there is one, so
 // aborting cancels a request already in flight rather than leaving it to run
 // to its timeout. Without AbortSignal.any (older browsers), just the timeout.
-function requestSignal(signal: AbortSignal | undefined): AbortSignal {
+export function requestSignal(signal: AbortSignal | undefined): AbortSignal {
   const timeout = AbortSignal.timeout(10_000);
   if (signal === undefined || typeof AbortSignal.any !== "function") {
     return timeout;
@@ -76,33 +76,33 @@ export async function fetchMyGameXp(
   }
 }
 
-export interface PollGameXpOptions {
+export type PollResult<T> =
+  | { status: "ok"; data: T }
+  | { status: "pending" }
+  | { status: "unavailable" };
+
+export interface PollOptions {
   intervalMs?: number;
   timeoutMs?: number;
   signal?: AbortSignal;
-  // Injectable for tests.
-  fetcher?: (
-    gameId: string,
-    signal?: AbortSignal,
-  ) => Promise<GameXpFetchResult>;
 }
 
 /**
- * Asks for a game's XP until it is processed, the deadline passes, or the
- * caller aborts. Resolves to the response, or null when there is nothing to
- * show (timed out, signed out, unreadable, aborted) — never a zero.
+ * Asks until the answer settles, the deadline passes, or the caller aborts.
+ * Resolves to the data, or null when there is nothing to show (timed out,
+ * unavailable, aborted). Shared by every "ask until the API has scored it"
+ * poll.
  */
-export async function pollGameXp(
-  gameId: string,
-  opts: PollGameXpOptions = {},
-): Promise<GameXpResponse | null> {
+export async function pollUntilSettled<T>(
+  ask: (signal?: AbortSignal) => Promise<PollResult<T>>,
+  opts: PollOptions = {},
+): Promise<T | null> {
   const intervalMs = opts.intervalMs ?? 3_000;
   const timeoutMs = opts.timeoutMs ?? 60_000;
-  const fetcher = opts.fetcher ?? fetchMyGameXp;
   const deadline = Date.now() + timeoutMs;
   for (;;) {
     if (opts.signal?.aborted) return null;
-    const result = await fetcher(gameId, opts.signal);
+    const result = await ask(opts.signal);
     if (opts.signal?.aborted) return null;
     if (result.status === "ok") return result.data;
     if (result.status === "unavailable") return null;
@@ -122,6 +122,29 @@ export async function pollGameXp(
       signal?.addEventListener("abort", onAbort, { once: true });
     });
   }
+}
+
+export interface PollGameXpOptions extends PollOptions {
+  // Injectable for tests.
+  fetcher?: (
+    gameId: string,
+    signal?: AbortSignal,
+  ) => Promise<GameXpFetchResult>;
+}
+
+/**
+ * Asks for a game's XP until it is processed, the deadline passes, or the
+ * caller aborts. Resolves to the response, or null when there is nothing to
+ * show (timed out, signed out, unreadable, aborted) — never a zero.
+ */
+export function pollGameXp(
+  gameId: string,
+  opts: PollGameXpOptions = {},
+): Promise<GameXpResponse | null> {
+  return pollUntilSettled(
+    (signal) => (opts.fetcher ?? fetchMyGameXp)(gameId, signal),
+    opts,
+  );
 }
 
 // GET /public/player/:publicId/progress — another player's level. False on a
