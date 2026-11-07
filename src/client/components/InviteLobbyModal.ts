@@ -67,7 +67,12 @@ export class InviteLobbyModal extends BaseModal {
       let userMe: UserMeResponse | false | null =
         lastUserMeResponse()?.response ?? null;
       userMe ??= await getUserMe();
-      const myPublicId = userMe ? userMe.player.publicId : null;
+      if (!userMe) {
+        this.friends = [];
+        this.clanGroups = [];
+        return;
+      }
+      const myPublicId = userMe.player.publicId;
 
       // 1. Fetch friends
       const friendsRes = await fetchFriends(1, 100);

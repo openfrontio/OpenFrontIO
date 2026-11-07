@@ -890,9 +890,9 @@ export async function startWorker() {
           if (isSocketClosed(ws)) {
             return;
           }
-          flares = result.response.player.flares;
+          flares = result.response.player.flares ?? [];
           publicId = result.response.player.publicId;
-          friends = result.response.player.friends;
+          friends = result.response.player.friends ?? [];
           ownedClanTags = result.response.player.clans?.map((c) => c.tag) ?? [];
           accountUsername = result.response.player;
           trusted = result.response.player.trustTier === "trusted";

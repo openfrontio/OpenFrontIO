@@ -182,6 +182,15 @@ describe("friendsLookup", () => {
     });
     expect(friendsLookup([alice, cast])(alice)).toBeUndefined();
   });
+
+  it("handles clients with missing friends array gracefully", () => {
+    const anon = makeClient({
+      clientID: "anon",
+      friends: undefined as unknown as string[],
+    });
+    expect(() => friendsLookup([anon])(anon)).not.toThrow();
+    expect(friendsLookup([anon])(anon)).toBeUndefined();
+  });
 });
 
 describe("admin clan-tag reveal through the start message GameServer sends", () => {
