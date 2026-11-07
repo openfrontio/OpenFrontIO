@@ -2,19 +2,19 @@
   "categories": ["north_america"],
   "id": "RockyMountains",
   "map": {
-    "height": 1976,
-    "num_land_tiles": 1961143,
-    "width": 1700
+    "height": 2044,
+    "num_land_tiles": 2124655,
+    "width": 1892
   },
   "map16x": {
-    "height": 494,
-    "num_land_tiles": 119105,
-    "width": 425
+    "height": 511,
+    "num_land_tiles": 129200,
+    "width": 473
   },
   "map4x": {
-    "height": 988,
-    "num_land_tiles": 485634,
-    "width": 850
+    "height": 1022,
+    "num_land_tiles": 526255,
+    "width": 946
   },
   "name": "Rocky Mountains",
   "nations": [
