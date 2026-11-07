@@ -121,4 +121,24 @@ describe("desync handling in the turn loop", () => {
     const turns = replayedTurns(game, clients[0].persistentID, ctx);
     expect(turns[0].hash).toBeUndefined();
   });
+
+  it("caps stored hashes and ignores reports outside the retention window", async () => {
+    const { game, clients } = startedWith(3);
+    const [a, b, c] = clients;
+    for (let turn = 0; turn < 200; turn++) {
+      vi.advanceTimersByTime(TURN_MS);
+      await reportHash(a, turn, turn === 190 ? 9999 : 1000 + turn);
+      await reportHash(b, turn, 1000 + turn);
+      await reportHash(c, turn, 1000 + turn);
+    }
+    await reportHash(a, 5000, 1234);
+    for (let turn = 0; turn < 100; turn++) {
+      await reportHash(a, turn, 1234);
+    }
+    expect(a.hashes.has(0)).toBe(false);
+    expect(a.hashes.has(190)).toBe(true);
+    expect(a.hashes.has(5000)).toBe(false);
+    expect(a.hashes.size).toBeLessThanOrEqual(33);
+    expect(game.numDesyncedClients()).toBe(1);
+  });
 });
