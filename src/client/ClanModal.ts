@@ -595,6 +595,7 @@ export class ClanModal extends BaseModal {
             },
           ];
         }}
+        @close-clan-modal=${() => this.close()}
       ></clan-detail-view>`;
     }
 

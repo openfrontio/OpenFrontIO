@@ -1,6 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { invalidateUserMe } from "../../Api";
+import { getUserMe, invalidateUserMe } from "../../Api";
 import {
   type ClanDiscord,
   type ClanInfo,
@@ -13,7 +13,11 @@ import {
   joinClan,
   leaveClan,
 } from "../../ClanApi";
-import { broadcastFreshUserMe } from "../../Cosmetics";
+import {
+  broadcastFreshUserMe,
+  fetchCosmetics,
+  refreshStaleCosmetics,
+} from "../../Cosmetics";
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
 import "../CopyButton";
@@ -23,6 +27,7 @@ import {
   type ClanRole,
   defaultOrderForSort,
   filterMembersBySearch,
+  findClanAffiliateCode,
   formatBoostRemaining,
   membersHaveLevels,
   renderLoadingSpinner,
@@ -61,6 +66,7 @@ export class ClanDetailView extends LitElement {
   @property({ type: Object }) cachedClan: ClanInfo | null = null;
   @state() private selectedClan: ClanInfo | null = null;
   @state() private discordMeta: ClanDiscord | null = null;
+  @state() private affiliateCode: string | null = null;
   @state() private myRole: ClanRole | null = null;
   @state() private members: ClanMember[] = [];
   @state() private membersTotal = 0;
@@ -78,13 +84,18 @@ export class ClanDetailView extends LitElement {
   @state() private boostOpen = false;
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
   private memberLoadSeq = 0;
+  private affiliateLoadSeq = 0;
   private asyncGeneration = 0;
 
   // Re-renders once a minute so the boost's "time left" counts down.
   private boostTicker: ReturnType<typeof setInterval> | null = null;
+  private onUserMeEvent = () => {
+    void this.loadAffiliateCode(this.clanTag, this.asyncGeneration);
+  };
 
   connectedCallback() {
     super.connectedCallback();
+    document.addEventListener("userMeResponse", this.onUserMeEvent);
     this.boostTicker = setInterval(() => {
       if (this.selectedClan?.boostEndsAt) this.requestUpdate();
     }, 60_000);
@@ -111,6 +122,8 @@ export class ClanDetailView extends LitElement {
         this.asyncGeneration,
       );
     }
+    this.affiliateCode = null;
+    void this.loadAffiliateCode(this.clanTag, this.asyncGeneration);
   }
 
   // Fetches live Discord invite metadata (server name, icon, counts) for the
@@ -122,11 +135,41 @@ export class ClanDetailView extends LitElement {
     this.discordMeta = meta;
   }
 
+  // Resolves the catalog's affiliateCode matching this clan's tag (if any) so
+  // the Overview actions only offer the Clan Shop button when items exist and
+  // are purchasable by the viewer. Floating; guarded by affiliateLoadSeq,
+  // asyncGeneration + tag so stale in-flight lookups cannot overwrite the current view.
+  private async loadAffiliateCode(tag: string, gen: number) {
+    const seq = ++this.affiliateLoadSeq;
+    refreshStaleCosmetics();
+    const [cosmetics, userMe] = await Promise.all([
+      fetchCosmetics(),
+      getUserMe().catch(() => false as const),
+    ]);
+    if (
+      seq !== this.affiliateLoadSeq ||
+      gen !== this.asyncGeneration ||
+      this.clanTag !== tag
+    ) {
+      return;
+    }
+    this.affiliateCode = findClanAffiliateCode(cosmetics, tag, userMe);
+  }
+
+  private openClanShop(affiliateCode: string) {
+    this.dispatchEvent(
+      new CustomEvent("close-clan-modal", { bubbles: true, composed: true }),
+    );
+    window.location.hash = `modal=store&affiliateCode=${encodeURIComponent(affiliateCode)}`;
+  }
+
   disconnectedCallback() {
+    document.removeEventListener("userMeResponse", this.onUserMeEvent);
     if (this.boostTicker) clearInterval(this.boostTicker);
     this.boostTicker = null;
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
     this.memberLoadSeq++;
+    this.affiliateLoadSeq++;
     super.disconnectedCallback();
   }
 
@@ -141,6 +184,7 @@ export class ClanDetailView extends LitElement {
   private async loadDetail() {
     const gen = ++this.asyncGeneration;
     this.memberLoadSeq++;
+    this.affiliateLoadSeq++;
     this.loading = true;
     this.myRole = null;
     this.pendingRequestCount = 0;
@@ -177,6 +221,8 @@ export class ClanDetailView extends LitElement {
     if (detail.discordUrl) {
       void this.loadDiscordMeta(detail.discordUrl, this.clanTag, gen);
     }
+    this.affiliateCode = null;
+    void this.loadAffiliateCode(this.clanTag, gen);
     this.memberPage = 1;
     if (!goingToMembers) {
       // Members tab will populate these via loadInitialMembers; the
@@ -947,6 +993,18 @@ export class ClanDetailView extends LitElement {
           class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-white/10 hover:bg-white/15 rounded-xl transition-all border border-white/10"
         >
           ${translateText("clan_modal.manage_clan")}
+        </button>
+      `);
+    }
+    if (this.affiliateCode) {
+      const affiliateCode = this.affiliateCode;
+      buttons.push(html`
+        <button
+          data-action="clan-shop"
+          @click=${() => this.openClanShop(affiliateCode)}
+          class="no-game-portal w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-white/10 hover:bg-white/15 rounded-xl transition-all border border-white/10"
+        >
+          ${translateText("clan_modal.clan_shop")}
         </button>
       `);
     }

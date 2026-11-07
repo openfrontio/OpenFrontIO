@@ -1,3 +1,5 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { html, type TemplateResult } from "lit";
 import type {
   ClanJoinRequest,
@@ -6,6 +8,7 @@ import type {
   ClanMemberSort,
   ClanMemberStats,
 } from "../../ClanApi";
+import { resolveCosmetics } from "../../Cosmetics";
 import { showToast, translateText } from "../../Utils";
 import { hasLevel, levelBadgeSlot } from "../LevelBadgeSlot";
 import { playerNameLink } from "../ui/PlayerNameLink";
@@ -552,4 +555,51 @@ export function formatBoostRemaining(
     hours,
     minutes: totalMinutes % 60,
   });
+}
+
+// Resolves the catalog's canonical `affiliateCode` matching `clanTag`
+// case-insensitively, or null when no cosmetic in the catalog uses that code
+// or when none of the clan's affiliate items are currently purchasable
+// (e.g. all off-market or all owned by the viewer).
+export function findClanAffiliateCode(
+  cosmetics: Cosmetics | null | undefined,
+  clanTag: string,
+  userMeResponse: UserMeResponse | false = false,
+): string | null {
+  if (!cosmetics) return null;
+  const trimmed = clanTag.trim();
+  if (!trimmed) return null;
+  const lower = trimmed.toLowerCase();
+  const groups: Record<string, { affiliateCode?: string | null }>[] = [
+    cosmetics.patterns ?? {},
+    cosmetics.flags ?? {},
+    cosmetics.crowns ?? {},
+    cosmetics.skins ?? {},
+    ...Object.values(cosmetics.effects ?? {}),
+  ];
+  const candidateCodes = new Set<string>();
+  for (const group of groups) {
+    for (const item of Object.values(group)) {
+      if (
+        typeof item.affiliateCode === "string" &&
+        item.affiliateCode.toLowerCase() === lower
+      ) {
+        candidateCodes.add(item.affiliateCode);
+      }
+    }
+  }
+  for (const code of candidateCodes) {
+    const resolved = resolveCosmetics(cosmetics, userMeResponse, code);
+    const hasPurchasable = resolved.some(
+      (r) =>
+        r.relationship === "purchasable" &&
+        r.cosmetic !== null &&
+        "affiliateCode" in r.cosmetic &&
+        r.cosmetic.affiliateCode === code,
+    );
+    if (hasPurchasable) {
+      return code;
+    }
+  }
+  return null;
 }

@@ -132,6 +132,32 @@ export function crazyGamesSdkMockFactory() {
   };
 }
 
+export async function cosmeticsMockFactory() {
+  const actual = await vi.importActual<
+    typeof import("../../../src/client/Cosmetics")
+  >("../../../src/client/Cosmetics");
+  return {
+    ...actual,
+    fetchCosmetics: vi.fn(async () => null),
+    refreshStaleCosmetics: vi.fn(() => false),
+    broadcastFreshUserMe: vi.fn(async () => {
+      const api = await import("../../../src/client/Api");
+      api.invalidateUserMe();
+      const fresh = await api.getUserMe();
+      if (fresh) {
+        document.dispatchEvent(
+          new CustomEvent("userMeResponse", {
+            detail: fresh,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      }
+      return fresh;
+    }),
+  };
+}
+
 export async function virtualizerMockFactory() {
   const { html } = await import("lit");
   return {
