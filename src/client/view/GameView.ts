@@ -229,6 +229,11 @@ export class GameView implements GameLike {
     return this.lastUpdate?.updates ?? null;
   }
 
+  public isPaused(): boolean {
+    const pauses = this.lastUpdate?.updates[GameUpdateType.GamePaused];
+    return pauses?.[pauses.length - 1]?.paused ?? false;
+  }
+
   public motionPlans(): ReadonlyMap<number, GridMotionPlan> {
     return this.motion.gridPlans();
   }
