@@ -12,11 +12,12 @@ import { encodeLobbyMessage } from "@openfront/shared/ZbinWire";
 import http from "http";
 import { WebSocket, WebSocketServer } from "ws";
 import { GameManager } from "./GameManager";
-import { GamePhase } from "./GameServer";
+import { GamePhase, hashPersistentID } from "./GameServer";
 import {
   InternalGameInfo,
   InternalPublicGames,
   MasterMessageSchema,
+  OpenLobbyMeta,
   WorkerLobbyList,
   WorkerMessage,
 } from "./IPCBridgeSchema";
@@ -61,6 +62,8 @@ export class WorkerLobbyService {
   // (RankedCheckin.ts, OPE-469).
   private deploymentActive = true;
   private lastOpenLobbies: Record<string, string[]> | null = null;
+  private lastOpenLobbyMeta: Record<string, OpenLobbyMeta> | null = null;
+  private readonly seenOpenLobbies = new Set<string>();
   private workerId?: number;
 
   constructor(
@@ -139,6 +142,12 @@ export class WorkerLobbyService {
         this.lastPublicGames = msg.publicGames;
         if (msg.openLobbies !== undefined) {
           this.lastOpenLobbies = msg.openLobbies;
+          for (const gameID of Object.keys(msg.openLobbies)) {
+            this.seenOpenLobbies.add(gameID);
+          }
+        }
+        if (msg.openLobbyMeta !== undefined) {
+          this.lastOpenLobbyMeta = msg.openLobbyMeta;
         }
         // Forward message to all clients
         this.broadcastLobbiesToClients(msg.publicGames);
@@ -204,11 +213,16 @@ export class WorkerLobbyService {
   /**
    * Forwards a lobby invite dismissal to the master for cross-worker synchronization.
    */
-  sendLobbyInviteDismiss(inviteId: string, dismissedAt?: number) {
+  sendLobbyInviteDismiss(
+    inviteId: string,
+    dismissedAt?: number,
+    targetPublicId?: string,
+  ) {
     this.sendToMaster({
       type: "lobbyInviteDismiss",
       inviteId,
       dismissedAt,
+      targetPublicId,
     });
   }
 
@@ -234,9 +248,51 @@ export class WorkerLobbyService {
       return false;
     }
     if (this.lastOpenLobbies !== null) {
-      return Object.prototype.hasOwnProperty.call(this.lastOpenLobbies, gameID);
+      if (Object.prototype.hasOwnProperty.call(this.lastOpenLobbies, gameID)) {
+        return true;
+      }
+      // A newly created lobby on another worker may not have arrived in the
+      // master's snapshot yet; only treat a missing entry as closed once we
+      // have previously observed it open.
+      return !this.seenOpenLobbies.has(gameID);
     }
-    return false;
+    return true;
+  }
+
+  /**
+   * Returns authoritative metadata (mode, map, join allowlist) for `gameID` if known.
+   */
+  public getLobbyMeta(gameID: string): OpenLobbyMeta | null {
+    const localGame = this.gm.game(gameID);
+    if (localGame !== null) {
+      if (localGame.phase() !== GamePhase.Lobby || localGame.hasStarted()) {
+        return null;
+      }
+      return {
+        gameMode: localGame.gameConfig.gameMode,
+        map: localGame.gameConfig.gameMap,
+        allowedPublicIds: localGame.gameConfig.allowedPublicIds,
+      };
+    }
+    return this.lastOpenLobbyMeta?.[gameID] ?? null;
+  }
+
+  /**
+   * Returns whether `targetPublicId` is permitted to join `gameID` under its allowlist.
+   */
+  public isTargetAllowedInLobby(
+    gameID: string,
+    targetPublicId: string,
+  ): boolean {
+    const localGame = this.gm.game(gameID);
+    if (localGame !== null) {
+      return localGame.isPublicIdAllowed(targetPublicId);
+    }
+    const allowed = this.lastOpenLobbyMeta?.[gameID]?.allowedPublicIds;
+    if (!allowed || allowed.length === 0) {
+      return true;
+    }
+    return allowed.includes(targetPublicId);
   }
 
   /**
@@ -273,7 +329,12 @@ export class WorkerLobbyService {
     if (!members) {
       return false;
     }
-    return members.includes(persistentId) || members.includes(publicId);
+    const hashedPersistentId = hashPersistentID(persistentId);
+    return (
+      members.includes(persistentId) ||
+      members.includes(hashedPersistentId) ||
+      members.includes(publicId)
+    );
   }
 
   private sendToMaster(msg: WorkerMessage) {
@@ -334,7 +395,8 @@ export class WorkerLobbyService {
       type: "lobbyList",
       lobbies: [...publicLobbies, ...hostedLobbies],
       liveGames: this.gm.activeGames(),
-      openLobbies: this.gm.openLobbyMembers(),
+      openLobbies: this.gm.openLobbyMembers?.(),
+      openLobbyMeta: this.gm.openLobbyMeta?.(),
     } satisfies WorkerLobbyList);
   }
 

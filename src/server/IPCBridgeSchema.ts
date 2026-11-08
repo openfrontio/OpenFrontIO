@@ -26,8 +26,15 @@ export type MasterLobbyInviteBroadcast = z.infer<
 export type MasterLobbyInviteDismissBroadcast = z.infer<
   typeof MasterLobbyInviteDismissBroadcastSchema
 >;
+export type OpenLobbyMeta = z.infer<typeof OpenLobbyMetaSchema>;
 export type WorkerMessage = z.infer<typeof WorkerMessageSchema>;
 export type MasterMessage = z.infer<typeof MasterMessageSchema>;
+
+export const OpenLobbyMetaSchema = z.object({
+  gameMode: z.string().optional(),
+  map: z.string().optional(),
+  allowedPublicIds: z.array(z.string()).optional(),
+});
 
 // Master/worker-internal lobby info: PublicGameInfo plus the hashed creator
 // ID (hosted lobbies only) used for the one-listed-lobby-per-creator check,
@@ -68,6 +75,7 @@ const WorkerLobbyListSchema = z.object({
   // Map of open lobby gameID (public or private) to connected member IDs
   // (publicId and persistentID) on this worker.
   openLobbies: z.record(z.string(), z.array(z.string())).optional(),
+  openLobbyMeta: z.record(z.string(), OpenLobbyMetaSchema).optional(),
 });
 
 const WorkerReadySchema = z.object({
@@ -84,6 +92,7 @@ const WorkerLobbyInviteDismissSchema = z.object({
   type: z.literal("lobbyInviteDismiss"),
   inviteId: z.string(),
   dismissedAt: z.number().optional(),
+  targetPublicId: z.string().optional(),
 });
 
 export const WorkerMessageSchema = z.discriminatedUnion("type", [
@@ -119,6 +128,7 @@ const MasterLobbiesBroadcastSchema = z.object({
   active: z.boolean().optional(),
   // Aggregated map of open lobby gameID -> member IDs across all workers.
   openLobbies: z.record(z.string(), z.array(z.string())).optional(),
+  openLobbyMeta: z.record(z.string(), OpenLobbyMetaSchema).optional(),
 });
 
 // Master sends a message to worker to schedule a new public game/lobby.

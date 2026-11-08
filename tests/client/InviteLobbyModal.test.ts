@@ -177,7 +177,16 @@ describe("InviteLobbyModal", () => {
       lobbyId: "lobby_one",
       gameMode: "Free For All",
       map: "World",
-      clients: [{ clientID: "c1", username: "Bob", clanTag: null }],
+      clients: [
+        {
+          clientID: "c1",
+          publicId: "friend_2",
+          username: "Bob",
+          clanTag: null,
+        },
+        // Another player using Alice's display name without Alice's publicId does not mark Alice In Lobby
+        { clientID: "c_impersonator", username: "Alice", clanTag: null },
+      ],
     });
     await modal.updateComplete;
     await new Promise((r) => setTimeout(r, 0));
@@ -188,13 +197,18 @@ describe("InviteLobbyModal", () => {
         modal.querySelectorAll("div.flex.items-center.justify-between"),
       ).find((el) => el.textContent?.includes(name));
 
-    // Bob is initially In Lobby; Alice is not
+    // Bob is initially In Lobby; Alice is not (username alone does not match)
     expect(findRow("Bob")?.textContent).toContain("In Lobby");
     expect(findRow("Alice")?.querySelector("button")).not.toBeNull();
 
     // Update clients: Bob leaves, Charlie joins
     modal.updateClients([
-      { clientID: "c2", username: "Charlie", clanTag: "DEV" },
+      {
+        clientID: "c2",
+        publicId: "clan_1",
+        username: "Charlie",
+        clanTag: "DEV",
+      },
     ]);
     await modal.updateComplete;
     expect(findRow("Bob")?.querySelector("button")).not.toBeNull();
@@ -216,24 +230,39 @@ describe("InviteLobbyModal", () => {
     expect(shownError).toBe(true);
     expect(findRow("Alice")?.querySelector("button")).not.toBeNull();
 
-    // Successful invite in lobby_one marks Alice Invited in lobby_one, but not in lobby_two
-    apiMocks.sendLobbyInvite.mockResolvedValueOnce(true);
-    findRow("Alice")?.querySelector("button")?.click();
-    await modal.updateComplete;
-    await new Promise((r) => setTimeout(r, 0));
-    await modal.updateComplete;
-    expect(findRow("Alice")?.textContent).toContain("Invited");
+    // Successful invite in lobby_one marks Alice Invited in lobby_one, but not in lobby_two, and expires after 30s
+    vi.useFakeTimers();
+    try {
+      apiMocks.sendLobbyInvite.mockResolvedValueOnce(true);
+      findRow("Alice")?.querySelector("button")?.click();
+      await vi.advanceTimersByTimeAsync(0);
+      await modal.updateComplete;
+      expect(findRow("Alice")?.textContent).toContain("Invited");
 
-    modal.open({
-      lobbyId: "lobby_two",
-      gameMode: "Free For All",
-      map: "World",
-      clients: [],
-    });
-    await modal.updateComplete;
-    await new Promise((r) => setTimeout(r, 0));
-    await modal.updateComplete;
-    expect(findRow("Alice")?.querySelector("button")).not.toBeNull();
+      modal.open({
+        lobbyId: "lobby_two",
+        gameMode: "Free For All",
+        map: "World",
+        clients: [],
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      await modal.updateComplete;
+      expect(findRow("Alice")?.querySelector("button")).not.toBeNull();
+
+      // Advance past the 30-second cooldown and reopen lobby_one: Alice can be invited again
+      await vi.advanceTimersByTimeAsync(30_001);
+      modal.open({
+        lobbyId: "lobby_one",
+        gameMode: "Free For All",
+        map: "World",
+        clients: [],
+      });
+      await vi.advanceTimersByTimeAsync(0);
+      await modal.updateComplete;
+      expect(findRow("Alice")?.querySelector("button")).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("paginates clan members beyond page 1 and friends beyond 100", async () => {

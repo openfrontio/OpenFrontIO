@@ -6,6 +6,7 @@ import {
 } from "@openfront/shared/WireSchemas";
 import { Worker } from "cluster";
 import winston from "winston";
+import { hashPersistentID } from "./GameServer";
 import {
   InternalGameInfo,
   InternalGameInfoSchema,
@@ -13,6 +14,7 @@ import {
   MasterLobbiesBroadcast,
   MasterMessage,
   MasterUpdateGame,
+  OpenLobbyMeta,
   WorkerMessageSchema,
 } from "./IPCBridgeSchema";
 import {
@@ -50,6 +52,10 @@ export class MasterLobbyService {
   private readonly workerOpenLobbies = new Map<
     number,
     Record<string, string[]>
+  >();
+  private readonly workerOpenLobbyMeta = new Map<
+    number,
+    Record<string, OpenLobbyMeta>
   >();
   private readonly readyWorkers = new Set<number>();
   // gameID => consecutive broadcast cycles a hosted lobby has lost the
@@ -121,6 +127,9 @@ export class MasterLobbyService {
           if (msg.openLobbies !== undefined) {
             this.workerOpenLobbies.set(workerId, msg.openLobbies);
           }
+          if (msg.openLobbyMeta !== undefined) {
+            this.workerOpenLobbyMeta.set(workerId, msg.openLobbyMeta);
+          }
           // The client coalesces: at most one report a second, plus a
           // heartbeat. Every change is offered so a numClients-only change
           // still reaches the site roster within a second.
@@ -135,15 +144,19 @@ export class MasterLobbyService {
           }
           break;
         case "lobbyInviteDismiss":
-          LobbyInviteService.instance.dismissExternalInvite(
-            msg.inviteId,
-            msg.dismissedAt,
-          );
-          this.broadcastMessage({
-            type: "lobbyInviteDismissBroadcast",
-            inviteId: msg.inviteId,
-            dismissedAt: msg.dismissedAt,
-          });
+          if (
+            LobbyInviteService.instance.dismissExternalInvite(
+              msg.inviteId,
+              msg.dismissedAt,
+              msg.targetPublicId,
+            )
+          ) {
+            this.broadcastMessage({
+              type: "lobbyInviteDismissBroadcast",
+              inviteId: msg.inviteId,
+              dismissedAt: msg.dismissedAt,
+            });
+          }
           break;
       }
     });
@@ -210,10 +223,69 @@ export class MasterLobbyService {
     }
     for (const lobby of this.ownLobbies()) {
       if (!Object.prototype.hasOwnProperty.call(merged, lobby.gameID)) {
-        merged[lobby.gameID] = [];
+        merged[lobby.gameID] = lobby.creatorID ? [lobby.creatorID] : [];
       }
     }
     return merged;
+  }
+
+  /**
+   * Returns a merged map of open lobby metadata across all workers.
+   */
+  public openLobbyMeta(): Record<string, OpenLobbyMeta> {
+    const merged: Record<string, OpenLobbyMeta> = {};
+    for (const workerMeta of this.workerOpenLobbyMeta.values()) {
+      for (const [gameID, meta] of Object.entries(workerMeta)) {
+        merged[gameID] = meta;
+      }
+    }
+    for (const lobby of this.ownLobbies()) {
+      if (
+        !Object.prototype.hasOwnProperty.call(merged, lobby.gameID) &&
+        lobby.gameConfig
+      ) {
+        merged[lobby.gameID] = {
+          gameMode: lobby.gameConfig.gameMode,
+          map: lobby.gameConfig.gameMap,
+          allowedPublicIds: lobby.gameConfig.allowedPublicIds,
+        };
+      }
+    }
+    return merged;
+  }
+
+  /**
+   * Returns authoritative metadata (mode, map, join allowlist) for `gameID` if known.
+   */
+  public getLobbyMeta(gameID: string): OpenLobbyMeta | null {
+    const ownerWorkerId = ServerEnv.workerIndex(gameID);
+    const meta = this.workerOpenLobbyMeta.get(ownerWorkerId)?.[gameID];
+    if (meta) {
+      return meta;
+    }
+    const lobby = this.ownLobbies().find((l) => l.gameID === gameID);
+    if (lobby?.gameConfig) {
+      return {
+        gameMode: lobby.gameConfig.gameMode,
+        map: lobby.gameConfig.gameMap,
+        allowedPublicIds: lobby.gameConfig.allowedPublicIds,
+      };
+    }
+    return null;
+  }
+
+  /**
+   * Returns whether `targetPublicId` is permitted to join `gameID` under its allowlist.
+   */
+  public isTargetAllowedInLobby(
+    gameID: string,
+    targetPublicId: string,
+  ): boolean {
+    const allowed = this.getLobbyMeta(gameID)?.allowedPublicIds;
+    if (!allowed || allowed.length === 0) {
+      return true;
+    }
+    return allowed.includes(targetPublicId);
   }
 
   /**
@@ -242,9 +314,18 @@ export class MasterLobbyService {
     const ownerWorkerId = ServerEnv.workerIndex(gameID);
     const members = this.workerOpenLobbies.get(ownerWorkerId)?.[gameID];
     if (!members) {
+      const lobby = this.ownLobbies().find((l) => l.gameID === gameID);
+      if (lobby?.creatorID) {
+        return lobby.creatorID === hashPersistentID(persistentId);
+      }
       return false;
     }
-    return members.includes(persistentId) || members.includes(publicId);
+    const hashedPersistentId = hashPersistentID(persistentId);
+    return (
+      members.includes(persistentId) ||
+      members.includes(hashedPersistentId) ||
+      members.includes(publicId)
+    );
   }
 
   removeWorker(workerId: number) {
@@ -252,6 +333,7 @@ export class MasterLobbyService {
     this.workerLobbies.delete(workerId);
     this.workerLiveGames.delete(workerId);
     this.workerOpenLobbies.delete(workerId);
+    this.workerOpenLobbyMeta.delete(workerId);
     this.readyWorkers.delete(workerId);
   }
 
@@ -528,6 +610,8 @@ export class MasterLobbyService {
       active: this.active || !this.stateKnown,
       openLobbies:
         this.workerOpenLobbies.size > 0 ? this.openLobbies() : undefined,
+      openLobbyMeta:
+        this.workerOpenLobbyMeta.size > 0 ? this.openLobbyMeta() : undefined,
     } satisfies MasterLobbiesBroadcast;
     for (const [workerId, worker] of this.workers.entries()) {
       worker.send(msg, (e) => {

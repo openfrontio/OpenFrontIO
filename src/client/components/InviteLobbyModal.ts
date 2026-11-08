@@ -15,11 +15,15 @@ import { BaseModal, ModalConfig } from "./BaseModal";
 import { modalHeader } from "./ui/ModalHeader";
 import { usernameText } from "./ui/UsernameText";
 
+export type InviteLobbyClient = ClientInfo & {
+  publicId?: string | null;
+};
+
 export interface InviteLobbyModalOpenArgs {
   lobbyId: string;
   gameMode?: string;
   map?: string;
-  clients?: ClientInfo[];
+  clients?: InviteLobbyClient[];
 }
 
 interface ClanGroup {
@@ -36,7 +40,7 @@ export class InviteLobbyModal extends BaseModal {
   @state() private lobbyId = "";
   @state() private gameMode?: string;
   @state() private map?: string;
-  @state() private clients: ClientInfo[] = [];
+  @state() private clients: InviteLobbyClient[] = [];
 
   @state() private searchQuery = "";
   @state() private loading = false;
@@ -83,7 +87,7 @@ export class InviteLobbyModal extends BaseModal {
   /**
    * Updates the modal's active lobby client roster when lobby membership changes.
    */
-  public updateClients(clients: ClientInfo[], lobbyId?: string): void {
+  public updateClients(clients: InviteLobbyClient[], lobbyId?: string): void {
     if (lobbyId !== undefined && this.lobbyId && lobbyId !== this.lobbyId) {
       return;
     }
@@ -247,13 +251,12 @@ export class InviteLobbyModal extends BaseModal {
   }
 
   /**
-   * Checks whether a player with `username` is already in the current lobby's client list.
+   * Checks whether a player with `publicId` is already in the current lobby's client list by account identity.
    */
-  private isClientInLobby(username?: string | null): boolean {
-    if (!username) return false;
-    const lower = username.toLowerCase();
+  private isClientInLobby(publicId?: string | null): boolean {
+    if (!publicId) return false;
     return this.clients.some(
-      (c) => c.username && c.username.toLowerCase() === lower,
+      (c) => typeof c.publicId === "string" && c.publicId === publicId,
     );
   }
 
@@ -264,7 +267,7 @@ export class InviteLobbyModal extends BaseModal {
     publicId: string,
     username?: string | null,
   ): TemplateResult {
-    const inLobby = this.isClientInLobby(username);
+    const inLobby = this.isClientInLobby(publicId);
     const key = this.inviteKey(publicId);
     const invited = this.invitedKeys.has(key);
     const pending = this.pendingKeys.has(key);

@@ -589,12 +589,22 @@ export async function startWorker() {
     (inviteId, dismissedAt) => {
       lobbyService.sendLobbyInviteDismiss(inviteId, dismissedAt);
     },
+    (inviteId, dismissedAt, targetPublicId) => {
+      lobbyService.sendLobbyInviteDismiss(
+        inviteId,
+        dismissedAt,
+        targetPublicId,
+      );
+    },
   );
 
   registerLobbyInviteRoutes(app, {
     isLobbyActive: (gameId) => lobbyService.isLobbyOpen(gameId),
     isPlayerInLobby: (gameId, persistentId, publicId) =>
       lobbyService.isPlayerInLobby(gameId, persistentId, publicId),
+    getLobbyMeta: (gameId) => lobbyService.getLobbyMeta(gameId),
+    isTargetAllowedInLobby: (gameId, targetPublicId) =>
+      lobbyService.isTargetAllowedInLobby(gameId, targetPublicId),
   });
 
   // WebSocket handling

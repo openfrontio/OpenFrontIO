@@ -1,6 +1,7 @@
 import {
   DismissLobbyInviteInput,
   LobbyInvite,
+  LobbyInviteSchema,
   LobbyInvitesResponseSchema,
   SendLobbyInviteInput,
 } from "@openfront/shared/LobbyInviteSchemas";
@@ -9,12 +10,16 @@ import { ClientEnv } from "./ClientEnv";
 import { ensureServerList } from "./ServerList";
 
 /**
- * Resolves the target HTTP base and optional worker path for a lobby ID so invites can reach the lobby's owning deployment.
+ * Resolves the target HTTP base and optional worker path for a lobby ID so invites reach the lobby's owning deployment, with a same-deployment master fallback when a worker prefix is not routed.
  */
-function resolveLobbyInviteEndpoints(lobbyId: string): string[] {
+function resolveLobbyInviteEndpoints(lobbyId: string): {
+  primary: string;
+  masterFallback?: string;
+} {
   const defaultEndpoint = `${ClientEnv.serverHttpBase()}/api/lobby/invite`;
   try {
     const gameBase = ClientEnv.gameHttpBase(lobbyId);
+    const masterEndpoint = `${gameBase}/api/lobby/invite`;
     let workerPrefix = "";
     try {
       const wp = ClientEnv.gameWorkerPath(lobbyId);
@@ -22,17 +27,32 @@ function resolveLobbyInviteEndpoints(lobbyId: string): string[] {
     } catch {
       // numWorkers may not be configured in unit tests
     }
-    const gameEndpoint = `${gameBase}${workerPrefix}/api/lobby/invite`;
-    if (gameEndpoint === defaultEndpoint) {
-      return [defaultEndpoint];
+    const primary = `${gameBase}${workerPrefix}/api/lobby/invite`;
+    if (primary === masterEndpoint) {
+      return { primary };
     }
-    if (gameBase !== ClientEnv.serverHttpBase()) {
-      // Post to the lobby's deployment and mirror to the current serverHttpBase so recipients polling either deployment see the invite.
-      return [gameEndpoint, defaultEndpoint];
-    }
-    return [gameEndpoint, defaultEndpoint];
+    return { primary, masterFallback: masterEndpoint };
   } catch {
-    return [defaultEndpoint];
+    return { primary: defaultEndpoint };
+  }
+}
+
+/**
+ * Returns true only when `res` indicates the worker prefix route itself was not mounted/routed (e.g. non-JSON 404 from a proxy or dev server), as opposed to a handler validation/state response.
+ */
+async function isUnroutedWorkerResponse(res: Response): Promise<boolean> {
+  if (res.status !== 404) {
+    return false;
+  }
+  const contentType = res.headers?.get?.("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    return true;
+  }
+  try {
+    const body = (await res.clone().json()) as { error?: unknown } | null;
+    return typeof body?.error !== "string";
+  } catch {
+    return true;
   }
 }
 
@@ -45,29 +65,26 @@ export async function sendLobbyInvite(
   try {
     await ensureServerList().catch(() => {});
     const token = await getPlayToken();
-    const endpoints = resolveLobbyInviteEndpoints(input.lobbyId);
-    const primaryRes = await fetch(endpoints[0], {
+    const { primary, masterFallback } = resolveLobbyInviteEndpoints(
+      input.lobbyId,
+    );
+    const requestInit: RequestInit = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(input),
-    });
-    if (
-      endpoints.length > 1 &&
-      ClientEnv.gameHttpBase(input.lobbyId) !== ClientEnv.serverHttpBase()
-    ) {
-      void fetch(endpoints[1], {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(input),
-      }).catch(() => {});
+    };
+    const primaryRes = await fetch(primary, requestInit);
+    if (primaryRes.ok) {
+      return true;
     }
-    return primaryRes.ok;
+    if (masterFallback && (await isUnroutedWorkerResponse(primaryRes))) {
+      const fallbackRes = await fetch(masterFallback, requestInit);
+      return fallbackRes.ok;
+    }
+    return false;
   } catch (err) {
     console.error("sendLobbyInvite failed:", err);
     return false;
@@ -105,10 +122,21 @@ export async function fetchLobbyInvites(
       return parsed.data;
     }
     if (Array.isArray(data?.invites)) {
+      const validatedInvites: LobbyInvite[] = [];
+      for (const item of data.invites) {
+        const itemParsed = LobbyInviteSchema.safeParse(item);
+        if (!itemParsed.success) {
+          return false;
+        }
+        validatedInvites.push(itemParsed.data);
+      }
       return {
-        invites: data.invites as LobbyInvite[],
+        invites: validatedInvites,
         serverTime:
-          typeof data.serverTime === "number" ? data.serverTime : Date.now(),
+          typeof data.serverTime === "number" &&
+          Number.isFinite(data.serverTime)
+            ? data.serverTime
+            : Date.now(),
       };
     }
     return false;

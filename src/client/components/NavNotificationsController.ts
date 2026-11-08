@@ -51,6 +51,7 @@ class NavNotificationsStore {
   private currentPublicId: string | null = null;
   private lobbyInvitePoll: number | null = null;
   private lobbyInviteTicker: number | null = null;
+  private lobbyInviteRefreshSeq = 0;
   private lobbyInviteServerOffsetMs = 0;
   // Tracks locally dismissed invite IDs -> createdAt timestamp so stale polls or failed dismiss calls do not resurrect them.
   private dismissedInviteCreatedAt = new Map<string, number>();
@@ -205,6 +206,7 @@ class NavNotificationsStore {
   }
 
   private stopLobbyInvitePolling(): void {
+    this.lobbyInviteRefreshSeq++;
     if (this.lobbyInvitePoll !== null) {
       window.clearInterval(this.lobbyInvitePoll);
       this.lobbyInvitePoll = null;
@@ -252,9 +254,11 @@ class NavNotificationsStore {
     }
     const authGeneration = this.authGeneration;
     const pollingGeneration = this.friendRequestPollingGeneration;
+    const refreshSeq = ++this.lobbyInviteRefreshSeq;
     const publicId = this.currentPublicId;
     const result = await fetchLobbyInvites(publicId);
     if (
+      refreshSeq !== this.lobbyInviteRefreshSeq ||
       authGeneration !== this.authGeneration ||
       pollingGeneration !== this.friendRequestPollingGeneration ||
       this.currentPublicId !== publicId ||

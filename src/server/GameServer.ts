@@ -1831,6 +1831,15 @@ export class GameServer {
     return (this.gameConfig.allowedPublicIds?.length ?? 0) > 0;
   }
 
+  /**
+   * Returns whether a player with `publicId` is permitted by this lobby's join allowlist.
+   */
+  public isPublicIdAllowed(publicId: string): boolean {
+    const allowed = this.gameConfig.allowedPublicIds;
+    if (allowed === undefined || allowed.length === 0) return true;
+    return allowed.includes(publicId);
+  }
+
   // Whether any host-only cheat is actually granted. A lobby with host
   // cheats must not be publicly listed.
   public hasHostCheats(): boolean {

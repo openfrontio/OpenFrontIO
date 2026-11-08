@@ -14,8 +14,14 @@ import {
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { Client } from "./Client";
-import { GamePhase, GameServer, JoinResult } from "./GameServer";
+import {
+  GamePhase,
+  GameServer,
+  hashPersistentID,
+  JoinResult,
+} from "./GameServer";
 import { Gatekeeper, noopGatekeeper } from "./Gatekeeper";
+import { OpenLobbyMeta } from "./IPCBridgeSchema";
 import { ClientAuth, clientAuth } from "./JoinVerify";
 import { LobbyInviteService } from "./LobbyInviteService";
 
@@ -55,20 +61,46 @@ export class GameManager {
   }
 
   /**
-   * Returns a map of open lobby game IDs on this worker to their connected member identifiers (`persistentID` and `publicId`).
+   * Returns a map of open lobby game IDs on this worker to their connected member identifiers (`persistentID`, hashed creator ID, and `publicId`).
    */
   public openLobbyMembers(): Record<string, string[]> {
     const out: Record<string, string[]> = {};
     for (const [id, game] of this.games.entries()) {
       if (game.phase() === GamePhase.Lobby && !game.hasStarted()) {
         const members = new Set<string>();
+        const creatorId = game.hashedCreatorID();
+        if (creatorId !== undefined) {
+          members.add(creatorId);
+        }
         for (const client of game.activeClients()) {
           members.add(client.persistentID);
+          members.add(hashPersistentID(client.persistentID));
           if (client.publicId) {
             members.add(client.publicId);
           }
         }
         out[id] = [...members];
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Returns a map of open lobby game IDs on this worker to their authoritative mode, map, and join allowlist.
+   */
+  public openLobbyMeta(): Record<string, OpenLobbyMeta> {
+    const out: Record<string, OpenLobbyMeta> = {};
+    for (const [id, game] of this.games.entries()) {
+      if (game.phase() === GamePhase.Lobby && !game.hasStarted()) {
+        out[id] = {
+          gameMode: game.gameConfig.gameMode,
+          map: game.gameConfig.gameMap,
+          allowedPublicIds:
+            game.gameConfig.allowedPublicIds &&
+            game.gameConfig.allowedPublicIds.length > 0
+              ? [...game.gameConfig.allowedPublicIds]
+              : undefined,
+        };
       }
     }
     return out;

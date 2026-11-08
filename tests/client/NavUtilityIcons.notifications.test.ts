@@ -36,6 +36,9 @@ vi.mock("../../src/client/DesktopShell", () => ({
   desktopQuit: () => null,
   requestDesktopQuit: vi.fn(),
 }));
+vi.mock("../../src/client/LazyModals", () => ({
+  whenModalLoaded: (_tag: string, cb: () => void) => cb(),
+}));
 vi.mock("../../src/client/Navigation", () => ({ closeMobileSidebar }));
 vi.mock("../../src/client/Utils", () => ({
   getCurrentLanguage: () => "fr",
@@ -249,6 +252,7 @@ describe("nav notification menu", () => {
     expect(joinButton).toBeDefined();
 
     joinButton!.click();
+    await new Promise((r) => setTimeout(r, 0));
     await element.updateComplete;
 
     expect(dismissLobbyInvite).toHaveBeenCalledWith("inv_1");
@@ -258,6 +262,66 @@ describe("nav notification menu", () => {
     expect(document.querySelector('[role="menu"]')).toBeNull();
 
     document.removeEventListener("join-lobby", listener);
+  });
+
+  it("opens join-lobby-modal via showPage when present and respects confirmBeforeClose", async () => {
+    notificationState.invites = [
+      {
+        id: "inv_modal",
+        lobbyId: "lobby_xyz",
+        senderPublicId: "sender.123",
+        senderUsername: "HostPlayer",
+        targetPublicId: "target.456",
+        gameMode: "ffa",
+        map: "Europe",
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 25000,
+      },
+    ];
+
+    const showPageSpy = vi.fn();
+    window.showPage = showPageSpy;
+    window.currentPageId = "page-play";
+
+    const joinModalEl = document.createElement("join-lobby-modal") as any;
+    const openSpy = vi.fn();
+    joinModalEl.open = openSpy;
+    let confirmResult = false;
+    joinModalEl.className = "page-content";
+    joinModalEl.isOpen = () => true;
+    joinModalEl.confirmBeforeClose = vi.fn(async () => confirmResult);
+    document.body.appendChild(joinModalEl);
+
+    try {
+      const element = await mount();
+      let menu = await openMenu(element);
+      let joinButton = Array.from(menu.querySelectorAll("button")).find((b) =>
+        b.textContent?.includes("notifications.join_lobby"),
+      );
+
+      // Cancel confirmation -> does not dismiss invite, close menu, or open new lobby
+      joinButton!.click();
+      await new Promise((r) => setTimeout(r, 0));
+      expect(dismissLobbyInvite).not.toHaveBeenCalled();
+      expect(showPageSpy).not.toHaveBeenCalled();
+      expect(openSpy).not.toHaveBeenCalled();
+      expect(document.querySelector('[role="menu"]')).not.toBeNull();
+
+      // Confirm -> dismisses invite, navigates to page-join-lobby, and opens modal
+      confirmResult = true;
+      joinButton!.click();
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(dismissLobbyInvite).toHaveBeenCalledWith("inv_modal");
+      expect(showPageSpy).toHaveBeenCalledWith("page-join-lobby");
+      expect(openSpy).toHaveBeenCalledWith({
+        lobbyId: "lobby_xyz",
+        source: "private",
+      });
+    } finally {
+      joinModalEl.remove();
+      delete window.showPage;
+    }
   });
 
   it("handles dismissing a lobby invite", async () => {

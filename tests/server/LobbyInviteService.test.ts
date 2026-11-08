@@ -1,6 +1,16 @@
 import type { LobbyInvite } from "@openfront/shared/LobbyInviteSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LobbyInviteService } from "../../src/server/LobbyInviteService";
+import { verifyClientToken } from "../../src/server/jwt";
+import {
+  LobbyInviteService,
+  registerLobbyInviteRoutes,
+} from "../../src/server/LobbyInviteService";
+import { ServerEnv } from "../../src/server/ServerEnv";
+
+vi.mock("../../src/server/jwt", () => ({
+  verifyClientToken: vi.fn(),
+  getUserMe: vi.fn(),
+}));
 
 describe("LobbyInviteService", () => {
   let service: LobbyInviteService;
@@ -156,6 +166,17 @@ describe("LobbyInviteService", () => {
       expiresAt: now + 34000,
     });
     expect(staleAdded).toBe(false);
+
+    const exactDismissalAdded = service.addExternalInvite({
+      id: "inv_1",
+      lobbyId: "lobby123",
+      senderPublicId: "user.sender",
+      senderUsername: "Sender",
+      targetPublicId: "user.target",
+      createdAt: now + 5000,
+      expiresAt: now + 35000,
+    });
+    expect(exactDismissalAdded).toBe(false);
     expect(service.getInvitesForUser("user.target")).toHaveLength(0);
 
     // Genuinely newer refresh created after dismissal is accepted
@@ -170,6 +191,144 @@ describe("LobbyInviteService", () => {
     });
     expect(freshAdded).toBe(true);
     expect(service.getInvitesForUser("user.target")).toHaveLength(1);
+  });
+
+  it("converges concurrent creates for the same logical invite across processes", () => {
+    const now = 1_000_000;
+    vi.setSystemTime(now);
+
+    service.addExternalInvite({
+      id: "inv_a",
+      lobbyId: "lobby123",
+      senderPublicId: "user.sender",
+      senderUsername: "Sender",
+      targetPublicId: "user.target",
+      createdAt: now,
+      expiresAt: now + 30000,
+    });
+    service.addExternalInvite({
+      id: "inv_b",
+      lobbyId: "lobby123",
+      senderPublicId: "user.sender",
+      senderUsername: "Sender",
+      targetPublicId: "user.target",
+      createdAt: now + 100,
+      expiresAt: now + 30100,
+    });
+
+    const active = service.getInvitesForUser("user.target");
+    expect(active).toHaveLength(1);
+    expect(active[0].id).toBe("inv_b");
+
+    // Dismissing even by the superseded id clears the logical invite
+    expect(service.dismissInvite("user.target", "inv_a")).toBe(true);
+    expect(service.getInvitesForUser("user.target")).toHaveLength(0);
+  });
+
+  it("allows inviting a clan member who is not a friend and enforces lobby allowlist and authoritative settings", async () => {
+    vi.useRealTimers();
+    LobbyInviteService.instance.reset();
+
+    vi.mocked(verifyClientToken).mockResolvedValue({
+      type: "success",
+      persistentId: "sender-persistent-id",
+      claims: {} as any,
+    });
+
+    vi.spyOn(ServerEnv, "jwtIssuer").mockReturnValue("https://api.example.com");
+    vi.spyOn(ServerEnv, "apiKey").mockReturnValue("test-api-key");
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          results: [{ publicId: "clan.mate" }],
+          total: 1,
+          page: 1,
+          limit: 50,
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const postHandlers = new Map<
+      string,
+      (req: any, res: any) => Promise<any>
+    >();
+    const mockApp = {
+      post(path: string, handler: (req: any, res: any) => Promise<any>) {
+        postHandlers.set(path, handler);
+      },
+      get() {},
+    };
+    let allowedPublicIds: string[] | undefined = ["clan.mate"];
+    registerLobbyInviteRoutes(mockApp as any, {
+      isLobbyActive: () => true,
+      isPlayerInLobby: () => true,
+      getLobbyMeta: () => ({
+        gameMode: "Team",
+        map: "Europe",
+        allowedPublicIds,
+      }),
+      resolveCaller: async () => ({
+        publicId: "caller.pub",
+        username: "CallerName",
+        friends: [],
+        clanTags: ["DEV"],
+      }),
+    });
+
+    const inviteHandler = postHandlers.get("/api/lobby/invite")!;
+    const callInvite = async (body: Record<string, unknown>) => {
+      const res: any = {
+        statusCode: 200,
+        body: undefined,
+        status(code: number) {
+          this.statusCode = code;
+          return this;
+        },
+        json(data: unknown) {
+          this.body = data;
+          return this;
+        },
+      };
+      await inviteHandler(
+        {
+          headers: { authorization: "Bearer valid-token" },
+          body,
+        },
+        res,
+      );
+      return res;
+    };
+
+    try {
+      // 1. Target is in clan DEV (not a friend) and on the lobby allowlist -> succeeds with authoritative gameMode/map
+      const okRes = await callInvite({
+        targetPublicId: "clan.mate",
+        lobbyId: "lobby_clan",
+        gameMode: "Free For All",
+        map: "World",
+      });
+      expect(okRes.statusCode).toBe(200);
+      expect(okRes.body.ok).toBe(true);
+      expect(okRes.body.invite.gameMode).toBe("Team");
+      expect(okRes.body.invite.map).toBe("Europe");
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining("/clans/DEV/members?page=1&limit=50"),
+        expect.any(Object),
+      );
+
+      // 2. Target is blocked by the lobby allowlist -> 403
+      allowedPublicIds = ["someone.else"];
+      const blockedRes = await callInvite({
+        targetPublicId: "clan.mate",
+        lobbyId: "lobby_clan",
+      });
+      expect(blockedRes.statusCode).toBe(403);
+    } finally {
+      fetchSpy.mockRestore();
+      LobbyInviteService.instance.reset();
+    }
   });
 
   it("filters out invites if lobby is no longer active", () => {

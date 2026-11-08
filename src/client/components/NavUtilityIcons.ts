@@ -39,6 +39,7 @@ export class NavUtilityIcons extends LitElement {
   private _notifications = new NavNotificationsController(this);
   private notificationsPanel: HTMLDivElement | null = null;
   private readonly notificationsPanelId = `nav-notifications-${++nextNotificationsPanelId}`;
+  private pendingAcceptedInviteId: string | null = null;
 
   createRenderRoot() {
     return this;
@@ -234,12 +235,40 @@ export class NavUtilityIcons extends LitElement {
     window.location.hash = "modal=news";
   };
 
-  private acceptLobbyInvite = (invite: LobbyInvite): void => {
+  private acceptLobbyInvite = async (invite: LobbyInvite): Promise<void> => {
+    const visibleModal = document.querySelector(
+      ".page-content:not(.hidden)",
+    ) as
+      | (HTMLElement & {
+          isOpen?: () => boolean;
+          confirmBeforeClose?: () => Promise<boolean>;
+        })
+      | null;
+    if (
+      visibleModal &&
+      typeof visibleModal.isOpen === "function" &&
+      visibleModal.isOpen() &&
+      typeof visibleModal.confirmBeforeClose === "function" &&
+      !(await visibleModal.confirmBeforeClose())
+    ) {
+      return;
+    }
+
+    this.pendingAcceptedInviteId = invite.id;
+    const pageAtAccept = window.currentPageId;
     this._notifications.dismissLobbyInvite(invite.id);
     this.closeNotifications();
     closeMobileSidebar();
     if (document.querySelector("join-lobby-modal") !== null) {
       whenModalLoaded("join-lobby-modal", () => {
+        if (
+          this.pendingAcceptedInviteId !== invite.id ||
+          document.body.classList.contains("in-game") ||
+          window.currentPageId !== pageAtAccept
+        ) {
+          return;
+        }
+        this.pendingAcceptedInviteId = null;
         window.showPage?.("page-join-lobby");
         (
           document.querySelector("join-lobby-modal") as
@@ -254,6 +283,7 @@ export class NavUtilityIcons extends LitElement {
       });
       return;
     }
+    this.pendingAcceptedInviteId = null;
     document.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {

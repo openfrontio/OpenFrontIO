@@ -340,6 +340,12 @@ registerLobbyInviteRoutes(app, {
     lobbyService
       ? lobbyService.isPlayerInLobby(lobbyId, persistentId, publicId)
       : false,
+  getLobbyMeta: (lobbyId) =>
+    lobbyService ? lobbyService.getLobbyMeta(lobbyId) : null,
+  isTargetAllowedInLobby: (lobbyId, targetPublicId) =>
+    lobbyService
+      ? lobbyService.isTargetAllowedInLobby(lobbyId, targetPublicId)
+      : true,
 });
 
 app.get("/api/health", (_req, res) => {
