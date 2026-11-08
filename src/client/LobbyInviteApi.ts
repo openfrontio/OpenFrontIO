@@ -19,7 +19,6 @@ function resolveLobbyInviteEndpoints(
   primary: string;
   masterFallback?: string;
 } {
-  const defaultEndpoint = `${ClientEnv.serverHttpBase()}${routePath}`;
   try {
     const gameBase = ClientEnv.gameHttpBase(lobbyId);
     const masterEndpoint = `${gameBase}${routePath}`;
@@ -36,6 +35,7 @@ function resolveLobbyInviteEndpoints(
     }
     return { primary, masterFallback: masterEndpoint };
   } catch {
+    const defaultEndpoint = `${ClientEnv.serverHttpBase()}${routePath}`;
     return { primary: defaultEndpoint };
   }
 }

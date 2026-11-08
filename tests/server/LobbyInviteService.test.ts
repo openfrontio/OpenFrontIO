@@ -238,6 +238,38 @@ describe("LobbyInviteService", () => {
     expect(serviceA.getInvitesForUser("user.target")).toHaveLength(0);
     expect(serviceB.getInvitesForUser("user.target")).toHaveLength(0);
 
+    // Relay test: master knows inv_a and inv_b, recipient replica knows only inv_b.
+    // Dismissing inv_a at or after inv_b.createdAt on master resolves to inv_b and broadcasts inv_b,
+    // so recipient replica clears inv_b upon receiving the broadcast.
+    const masterService = new LobbyInviteService();
+    const recipientReplica = new LobbyInviteService();
+    const broadcasts: { id: string; dismissedAt: number }[] = [];
+    masterService.setBroadcasters(
+      () => {},
+      (id, ts) => {
+        broadcasts.push({ id, dismissedAt: ts });
+      },
+    );
+
+    // Fast forward slightly so dismissal timestamp > invB.createdAt
+    vi.setSystemTime(now + 200);
+
+    masterService.addExternalInvite(invA);
+    masterService.addExternalInvite(invB);
+    recipientReplica.addExternalInvite(invB);
+    expect(recipientReplica.getInvitesForUser("user.target")).toHaveLength(1);
+
+    const dismissedOnMaster = masterService.dismissInvite(
+      "user.target",
+      "inv_a",
+    );
+    expect(dismissedOnMaster).toBe(true);
+    expect(broadcasts.some((b) => b.id === "inv_b")).toBe(true);
+    for (const b of broadcasts) {
+      recipientReplica.dismissExternalInvite(b.id, b.dismissedAt);
+    }
+    expect(recipientReplica.getInvitesForUser("user.target")).toHaveLength(0);
+
     // Equal timestamps tie-break deterministically by lexicographic invite id regardless of arrival order
     const invTie1: LobbyInvite = {
       id: "inv_tie_1",

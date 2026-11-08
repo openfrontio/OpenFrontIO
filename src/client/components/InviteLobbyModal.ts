@@ -92,6 +92,19 @@ export class InviteLobbyModal extends BaseModal {
   }
 
   /**
+   * Resets active lobby references and member state when the modal closes.
+   */
+  protected onClose(): void {
+    this.lobbyId = "";
+    this.gameMode = undefined;
+    this.map = undefined;
+    this.clients = [];
+    this.memberPublicIds.clear();
+    this.searchQuery = "";
+    this.appliedMemberRefreshSeq = ++this.nextMemberRefreshSeq;
+  }
+
+  /**
    * Updates the modal's active lobby client roster when lobby membership changes.
    */
   public updateClients(
@@ -99,9 +112,22 @@ export class InviteLobbyModal extends BaseModal {
     lobbyId?: string,
     memberPublicIds?: Iterable<string>,
   ): void {
+    if (!this.isOpen()) {
+      return;
+    }
     if (lobbyId !== undefined && this.lobbyId && lobbyId !== this.lobbyId) {
       return;
     }
+    const prevClientIds = this.clients
+      .map((c) => c.clientID)
+      .sort()
+      .join(",");
+    const nextClientIds = clients
+      .map((c) => c.clientID)
+      .sort()
+      .join(",");
+    const rosterChanged = prevClientIds !== nextClientIds;
+
     this.clients = [...clients];
     if (memberPublicIds !== undefined) {
       this.appliedMemberRefreshSeq = ++this.nextMemberRefreshSeq;
@@ -113,7 +139,9 @@ export class InviteLobbyModal extends BaseModal {
       this.memberPublicIds = new Set();
       return;
     }
-    void this.refreshLobbyMembers();
+    if (rosterChanged) {
+      void this.refreshLobbyMembers();
+    }
   }
 
   /**

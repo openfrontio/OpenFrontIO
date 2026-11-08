@@ -216,10 +216,15 @@ export class HostLobbyModal extends BaseModal {
     }
     const inviteModal = document.querySelector<
       HTMLElement & {
+        isOpen?: () => boolean;
         updateClients?: (clients: ClientInfo[], lobbyId?: string) => void;
       }
     >("invite-lobby-modal");
-    if (typeof inviteModal?.updateClients === "function") {
+    if (
+      typeof inviteModal?.updateClients === "function" &&
+      typeof inviteModal?.isOpen === "function" &&
+      inviteModal.isOpen()
+    ) {
       inviteModal.updateClients(this.clients, this.lobbyId);
     }
     // The server can delist on its own (duplicate creator / cap overflow

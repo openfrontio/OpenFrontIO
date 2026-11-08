@@ -191,11 +191,8 @@ export class LobbyInviteService {
   // Tracks the latest dismissal timestamp per invite id and per logical key so stale IPC refreshes cannot resurrect dismissed invites
   private dismissedAtByInviteId = new Map<string, number>();
   private dismissedAtByLogicalKey = new Map<string, number>();
-  // Retains target-scoped dismissals that arrive before the invite itself, verified against targetPublicId on arrival
-  private pendingDismissalsByInviteId = new Map<
-    string,
-    { targetPublicId: string; dismissedAt: number }
-  >();
+  // Retains target-scoped dismissals that arrive before the invite itself, keyed by inviteId -> targetPublicId -> dismissedAt
+  private pendingDismissalsByInviteId = new Map<string, Map<string, number>>();
   private pruneTimer: ReturnType<typeof setInterval> | null = null;
 
   private onInviteAdded?: (invite: LobbyInvite) => void;
@@ -336,20 +333,38 @@ export class LobbyInviteService {
     }
     const key = this.logicalKey(invite);
 
-    const pendingDismissal = this.pendingDismissalsByInviteId.get(invite.id);
-    if (pendingDismissal !== undefined) {
-      this.pendingDismissalsByInviteId.delete(invite.id);
-      if (pendingDismissal.targetPublicId === invite.targetPublicId) {
+    const pendingTargets = this.pendingDismissalsByInviteId.get(invite.id);
+    if (pendingTargets !== undefined) {
+      const pendingDismissedAt = pendingTargets.get(invite.targetPublicId);
+      if (pendingDismissedAt !== undefined) {
+        pendingTargets.delete(invite.targetPublicId);
+        if (pendingTargets.size === 0) {
+          this.pendingDismissalsByInviteId.delete(invite.id);
+        }
         const prevId = this.dismissedAtByInviteId.get(invite.id) ?? 0;
         this.dismissedAtByInviteId.set(
           invite.id,
-          Math.max(prevId, pendingDismissal.dismissedAt),
+          Math.max(prevId, pendingDismissedAt),
         );
         const prevKey = this.dismissedAtByLogicalKey.get(key) ?? 0;
         this.dismissedAtByLogicalKey.set(
           key,
-          Math.max(prevKey, pendingDismissal.dismissedAt),
+          Math.max(prevKey, pendingDismissedAt),
         );
+
+        // Also clean up any active invite for the same logical key if predated
+        const existingLogicalId = this.inviteIdByLogicalKey.get(key);
+        const existingLogical = existingLogicalId
+          ? this.invites.get(existingLogicalId)
+          : undefined;
+        if (
+          existingLogical &&
+          existingLogical.createdAt <= pendingDismissedAt
+        ) {
+          this.unindexInvite(existingLogical);
+          this.invites.delete(existingLogical.id);
+          this.onInviteDismissed?.(existingLogical.id, pendingDismissedAt);
+        }
       }
     }
 
@@ -414,12 +429,22 @@ export class LobbyInviteService {
       (logicalActiveId ? this.invites.get(logicalActiveId) : undefined);
 
     if (!invite) {
+      if (targetPublicId) {
+        let targets = this.pendingDismissalsByInviteId.get(inviteId);
+        if (!targets) {
+          targets = new Map<string, number>();
+          this.pendingDismissalsByInviteId.set(inviteId, targets);
+        }
+        const now = Date.now();
+        const prev = targets.get(targetPublicId) ?? 0;
+        targets.set(targetPublicId, Math.max(prev, now));
+      }
       if (this.onUnresolvedInviteDismissed) {
         const now = Date.now();
         this.onUnresolvedInviteDismissed(inviteId, now, targetPublicId);
         return true;
       }
-      return false;
+      return Boolean(targetPublicId);
     }
 
     if (invite.targetPublicId !== targetPublicId) return false;
@@ -460,13 +485,13 @@ export class LobbyInviteService {
           return false;
         }
       } else {
-        const prevPending = this.pendingDismissalsByInviteId.get(inviteId);
-        if (!prevPending || dismissedAt >= prevPending.dismissedAt) {
-          this.pendingDismissalsByInviteId.set(inviteId, {
-            targetPublicId,
-            dismissedAt,
-          });
+        let targets = this.pendingDismissalsByInviteId.get(inviteId);
+        if (!targets) {
+          targets = new Map<string, number>();
+          this.pendingDismissalsByInviteId.set(inviteId, targets);
         }
+        const prev = targets.get(targetPublicId) ?? 0;
+        targets.set(targetPublicId, Math.max(prev, dismissedAt));
         return inviteId;
       }
     }
@@ -599,8 +624,13 @@ export class LobbyInviteService {
         this.dismissedAtByLogicalKey.delete(key);
       }
     }
-    for (const [id, pending] of this.pendingDismissalsByInviteId.entries()) {
-      if (now - pending.dismissedAt > LOBBY_INVITE_TTL_MS * 2) {
+    for (const [id, targets] of this.pendingDismissalsByInviteId.entries()) {
+      for (const [targetPublicId, dismissedAt] of targets.entries()) {
+        if (now - dismissedAt > LOBBY_INVITE_TTL_MS * 2) {
+          targets.delete(targetPublicId);
+        }
+      }
+      if (targets.size === 0) {
         this.pendingDismissalsByInviteId.delete(id);
       }
     }

@@ -813,10 +813,15 @@ export class JoinLobbyModal extends BaseModal {
     this.players = "clients" in lobby ? (lobby.clients ?? []) : [];
     const inviteModal = document.querySelector<
       HTMLElement & {
+        isOpen?: () => boolean;
         updateClients?: (clients: ClientInfo[], lobbyId?: string) => void;
       }
     >("invite-lobby-modal");
-    if (typeof inviteModal?.updateClients === "function") {
+    if (
+      typeof inviteModal?.updateClients === "function" &&
+      typeof inviteModal?.isOpen === "function" &&
+      inviteModal.isOpen()
+    ) {
       inviteModal.updateClients(this.players, this.currentLobbyId);
     }
     if ("serverTime" in lobby && typeof lobby.serverTime === "number") {

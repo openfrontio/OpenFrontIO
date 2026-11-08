@@ -1841,11 +1841,6 @@ export class GameServer {
     const allowed = this.gameConfig.allowedPublicIds;
     if (allowed === undefined || allowed.length === 0) return true;
     if (isAdminRole(role)) return true;
-    for (const client of this.clients.all().values()) {
-      if (client.publicId === publicId && isAdminRole(client.role)) {
-        return true;
-      }
-    }
     return allowed.includes(publicId);
   }
 
