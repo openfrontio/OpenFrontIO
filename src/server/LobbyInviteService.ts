@@ -121,6 +121,50 @@ const ClanMembersLookupSchema = z.object({
 });
 
 /**
+ * Fetches all member publicIds for the caller's clans in batch.
+ */
+async function fetchCallerClanMemberIds(
+  caller: VerifiedCallerIdentity,
+  token: string,
+): Promise<Set<string>> {
+  const clanMemberIds = new Set<string>();
+  for (const tag of caller.clanTags) {
+    let page = 1;
+    const limit = 50;
+    while (true) {
+      try {
+        const res = await fetch(
+          `${ServerEnv.jwtIssuer()}/clans/${encodeURIComponent(tag)}/members?page=${page}&limit=${limit}`,
+          {
+            headers: {
+              authorization: `Bearer ${token}`,
+              "x-api-key": ServerEnv.apiKey(),
+            },
+          },
+        );
+        if (!res.ok) break;
+        const parsed = ClanMembersLookupSchema.safeParse(await res.json());
+        if (!parsed.success) break;
+        const list = parsed.data.results ?? parsed.data.members ?? [];
+        for (const m of list) {
+          if (m.publicId) {
+            clanMemberIds.add(m.publicId);
+          }
+        }
+        const total = parsed.data.total ?? list.length;
+        if (list.length < limit || page * limit >= total) {
+          break;
+        }
+        page += 1;
+      } catch {
+        break;
+      }
+    }
+  }
+  return clanMemberIds;
+}
+
+/**
  * Checks whether the target player is in the caller's friends list or shares a clan with the caller.
  */
 async function defaultIsTargetEligible(
@@ -859,12 +903,23 @@ export function registerLobbyInviteRoutes(
       ? getLobbyMemberPublicIds(lobbyId, auth.persistentId, caller.publicId)
       : (lobbyMeta?.memberPublicIds ?? []);
 
+    const nonFriendNonCallerIds = rawMemberPublicIds.filter(
+      (id) => id !== caller.publicId && !caller.friends.includes(id),
+    );
+
+    let clanMemberIds: Set<string> | null = null;
+    if (nonFriendNonCallerIds.length > 0 && caller.clanTags.length > 0) {
+      clanMemberIds = await fetchCallerClanMemberIds(caller, token);
+    }
+
     const eligibleMemberPublicIds: string[] = [];
     for (const memberId of rawMemberPublicIds) {
       if (
         memberId === caller.publicId ||
         caller.friends.includes(memberId) ||
-        (await isTargetEligible(caller, memberId, token))
+        (clanMemberIds !== null && clanMemberIds.has(memberId)) ||
+        (options.isTargetEligible &&
+          (await isTargetEligible(caller, memberId, token)))
       ) {
         eligibleMemberPublicIds.push(memberId);
       }

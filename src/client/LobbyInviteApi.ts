@@ -99,6 +99,7 @@ export async function sendLobbyInvite(
  */
 export async function fetchLobbyMemberPublicIds(
   lobbyId: string,
+  signal?: AbortSignal,
 ): Promise<string[] | false> {
   if (!lobbyId) return false;
   try {
@@ -110,6 +111,7 @@ export async function fetchLobbyMemberPublicIds(
       routePath,
     );
     const requestInit: RequestInit = {
+      signal,
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -184,44 +186,51 @@ export async function fetchLobbyInvites(
     const fetchFromBase = async (
       base: string,
     ): Promise<FetchLobbyInvitesResult> => {
-      const url = new URL(`${base}/api/lobby/invites`);
-      if (publicId) {
-        url.searchParams.set("publicId", publicId);
-      }
-      const res = await fetch(url.toString(), {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const contentType = res.headers.get("content-type");
-      if (!contentType?.includes("application/json")) {
-        throw new Error("Not JSON");
-      }
-      const data = await res.json();
-      const parsed = LobbyInvitesResponseSchema.safeParse(data);
-      if (parsed.success) {
-        return parsed.data;
-      }
-      if (Array.isArray(data?.invites)) {
-        const validatedInvites: LobbyInvite[] = [];
-        for (const item of data.invites) {
-          const itemParsed = LobbyInviteSchema.safeParse(item);
-          if (!itemParsed.success) {
-            throw new Error("Invalid invite item");
-          }
-          validatedInvites.push(itemParsed.data);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      try {
+        const url = new URL(`${base}/api/lobby/invites`);
+        if (publicId) {
+          url.searchParams.set("publicId", publicId);
         }
-        return {
-          invites: validatedInvites,
-          serverTime:
-            typeof data.serverTime === "number" &&
-            Number.isFinite(data.serverTime)
-              ? data.serverTime
-              : Date.now(),
-        };
+        const res = await fetch(url.toString(), {
+          signal: controller.signal,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const contentType = res.headers.get("content-type");
+        if (!contentType?.includes("application/json")) {
+          throw new Error("Not JSON");
+        }
+        const data = await res.json();
+        const parsed = LobbyInvitesResponseSchema.safeParse(data);
+        if (parsed.success) {
+          return parsed.data;
+        }
+        if (Array.isArray(data?.invites)) {
+          const validatedInvites: LobbyInvite[] = [];
+          for (const item of data.invites) {
+            const itemParsed = LobbyInviteSchema.safeParse(item);
+            if (!itemParsed.success) {
+              throw new Error("Invalid invite item");
+            }
+            validatedInvites.push(itemParsed.data);
+          }
+          return {
+            invites: validatedInvites,
+            serverTime:
+              typeof data.serverTime === "number" &&
+              Number.isFinite(data.serverTime)
+                ? data.serverTime
+                : Date.now(),
+          };
+        }
+        throw new Error("Invalid payload");
+      } finally {
+        clearTimeout(timer);
       }
-      throw new Error("Invalid payload");
     };
 
     const settled = await Promise.allSettled(

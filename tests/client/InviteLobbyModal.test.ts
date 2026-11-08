@@ -354,7 +354,12 @@ describe("InviteLobbyModal", () => {
     vi.useFakeTimers();
     try {
       vi.advanceTimersByTime(5001);
-      apiMocks.fetchLobbyMemberPublicIds.mockResolvedValueOnce(["f1"]);
+      let resolveSecond!: (value: string[] | false) => void;
+      apiMocks.fetchLobbyMemberPublicIds.mockReturnValueOnce(
+        new Promise<string[] | false>((resolve) => {
+          resolveSecond = resolve;
+        }),
+      );
 
       modal.updateClients([
         { clientID: "c1", username: "Alice", clanTag: null },
@@ -363,7 +368,18 @@ describe("InviteLobbyModal", () => {
         initialCalls + 2,
       );
 
-      resolveFirst(["f_stale"]);
+      resolveFirst(false);
+      await Promise.resolve();
+
+      // Updating again while replacement is in flight does not trigger another request
+      modal.updateClients([
+        { clientID: "c1", username: "Alice", clanTag: null },
+      ]);
+      expect(apiMocks.fetchLobbyMemberPublicIds).toHaveBeenCalledTimes(
+        initialCalls + 2,
+      );
+
+      resolveSecond(["f1"]);
       await Promise.resolve();
     } finally {
       vi.useRealTimers();

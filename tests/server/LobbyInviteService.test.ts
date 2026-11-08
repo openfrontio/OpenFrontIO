@@ -607,6 +607,11 @@ describe("LobbyInviteService", () => {
     expect(privRes.body.memberPublicIds).toEqual(["caller.pub", "friend.pub"]);
     expect(privRes.body.memberPublicIds).not.toContain("stranger.pub");
 
+    // Private lobby: invite returns 200 ok
+    const privInviteRes = await callInvite();
+    expect(privInviteRes.statusCode).toBe(200);
+    expect(privInviteRes.body.ok).toBe(true);
+
     // Public lobby: members returns 403
     isLobbyPublic = true;
     const pubRes = await callMembers();

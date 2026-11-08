@@ -1,3 +1,4 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { isAdminRole } from "@openfront/shared/ApiSchemas";
 import { LobbyInvite } from "@openfront/shared/LobbyInviteSchemas";
 import {
@@ -251,7 +252,7 @@ export class MasterLobbyService {
           gameMode: lobby.gameConfig.gameMode,
           map: lobby.gameConfig.gameMap,
           allowedPublicIds: lobby.gameConfig.allowedPublicIds,
-          isPublic: lobby.publicGameType !== undefined,
+          isPublic: lobby.gameConfig.gameType === GameType.Public,
         };
       }
     }
@@ -273,7 +274,7 @@ export class MasterLobbyService {
         gameMode: lobby.gameConfig.gameMode,
         map: lobby.gameConfig.gameMap,
         allowedPublicIds: lobby.gameConfig.allowedPublicIds,
-        isPublic: lobby.publicGameType !== undefined,
+        isPublic: lobby.gameConfig.gameType === GameType.Public,
       };
     }
     return null;

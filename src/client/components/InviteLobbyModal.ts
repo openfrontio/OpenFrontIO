@@ -56,6 +56,7 @@ export class InviteLobbyModal extends BaseModal {
   private inFlightRosterKey: string | null = null;
   private inFlightRosterSeq = 0;
   private inFlightRosterStartedAt = 0;
+  private memberRefreshAbortController: AbortController | null = null;
   private rosterLoadSeq = 0;
 
   /**
@@ -110,6 +111,8 @@ export class InviteLobbyModal extends BaseModal {
     this.inFlightRosterKey = null;
     this.inFlightRosterSeq = 0;
     this.inFlightRosterStartedAt = 0;
+    this.memberRefreshAbortController?.abort();
+    this.memberRefreshAbortController = null;
     this.rosterLoadSeq++;
     this.loading = false;
     this.searchQuery = "";
@@ -170,6 +173,9 @@ export class InviteLobbyModal extends BaseModal {
   private async refreshLobbyMembers(rosterKey?: string): Promise<void> {
     const lobbyId = this.lobbyId;
     if (!lobbyId) return;
+    this.memberRefreshAbortController?.abort();
+    const abortController = new AbortController();
+    this.memberRefreshAbortController = abortController;
     const seq = ++this.nextMemberRefreshSeq;
     if (rosterKey !== undefined) {
       this.inFlightRosterKey = rosterKey;
@@ -177,7 +183,10 @@ export class InviteLobbyModal extends BaseModal {
       this.inFlightRosterStartedAt = Date.now();
     }
     try {
-      const memberIds = await fetchLobbyMemberPublicIds(lobbyId);
+      const memberIds = await fetchLobbyMemberPublicIds(
+        lobbyId,
+        abortController.signal,
+      );
       if (
         memberIds === false ||
         seq <= this.appliedMemberRefreshSeq ||
@@ -191,6 +200,9 @@ export class InviteLobbyModal extends BaseModal {
       }
       this.memberPublicIds = new Set(memberIds);
     } finally {
+      if (this.memberRefreshAbortController === abortController) {
+        this.memberRefreshAbortController = null;
+      }
       if (this.inFlightRosterSeq === seq) {
         this.inFlightRosterKey = null;
         this.inFlightRosterSeq = 0;
