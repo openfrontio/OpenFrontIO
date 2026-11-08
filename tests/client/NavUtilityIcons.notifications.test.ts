@@ -5,10 +5,12 @@ const {
   dismissLobbyInvite,
   markVersionSeen,
   notificationState,
+  whenModalLoadedMock,
 } = vi.hoisted(() => ({
   closeMobileSidebar: vi.fn(),
   dismissLobbyInvite: vi.fn(),
   markVersionSeen: vi.fn(),
+  whenModalLoadedMock: vi.fn((_tag: string, cb: () => void) => cb()),
   notificationState: {
     hasNewVersion: true,
     requests: [
@@ -37,7 +39,8 @@ vi.mock("../../src/client/DesktopShell", () => ({
   requestDesktopQuit: vi.fn(),
 }));
 vi.mock("../../src/client/LazyModals", () => ({
-  whenModalLoaded: (_tag: string, cb: () => void) => cb(),
+  whenModalLoaded: (tag: string, cb: () => void) =>
+    whenModalLoadedMock(tag, cb),
 }));
 vi.mock("../../src/client/Navigation", () => ({ closeMobileSidebar }));
 vi.mock("../../src/client/Utils", () => ({
@@ -319,6 +322,109 @@ describe("nav notification menu", () => {
         source: "private",
       });
     } finally {
+      joinModalEl.remove();
+      delete window.showPage;
+    }
+  });
+
+  it("aborts deferred join-lobby-modal navigation when invite is superseded, page changes, or game starts", async () => {
+    const showPageSpy = vi.fn();
+    window.showPage = showPageSpy;
+    window.currentPageId = "page-play";
+
+    const joinModalEl = document.createElement("join-lobby-modal") as any;
+    const openSpy = vi.fn();
+    joinModalEl.open = openSpy;
+    document.body.appendChild(joinModalEl);
+
+    try {
+      const element = await mount();
+
+      // 1. Stale invite: a second invite is accepted before the first modal callback runs
+      notificationState.invites = [
+        {
+          id: "inv_first",
+          lobbyId: "lobby_one",
+          senderPublicId: "sender.1",
+          targetPublicId: "target.456",
+          createdAt: Date.now(),
+          expiresAt: Date.now() + 25000,
+        },
+        {
+          id: "inv_second",
+          lobbyId: "lobby_two",
+          senderPublicId: "sender.2",
+          targetPublicId: "target.456",
+          createdAt: Date.now(),
+          expiresAt: Date.now() + 25000,
+        },
+      ];
+      const deferredCallbacks: (() => void)[] = [];
+      whenModalLoadedMock.mockImplementation((_tag: string, cb: () => void) => {
+        deferredCallbacks.push(cb);
+      });
+
+      let menu = await openMenu(element);
+      let joinButtons = Array.from(menu.querySelectorAll("button")).filter(
+        (b) => b.textContent?.includes("notifications.join_lobby"),
+      );
+      joinButtons[0]!.click();
+      await new Promise((r) => setTimeout(r, 0));
+
+      menu = await openMenu(element);
+      joinButtons = Array.from(menu.querySelectorAll("button")).filter((b) =>
+        b.textContent?.includes("notifications.join_lobby"),
+      );
+      joinButtons[1]!.click();
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(deferredCallbacks).toHaveLength(2);
+      // First callback was superseded by second invite
+      deferredCallbacks[0]!();
+      expect(showPageSpy).not.toHaveBeenCalled();
+      expect(openSpy).not.toHaveBeenCalled();
+      // Second callback is still current and succeeds
+      deferredCallbacks[1]!();
+      expect(showPageSpy).toHaveBeenCalledTimes(1);
+      expect(openSpy).toHaveBeenCalledWith({
+        lobbyId: "lobby_two",
+        source: "private",
+      });
+
+      // 2. Page changed before callback resolves
+      showPageSpy.mockClear();
+      openSpy.mockClear();
+      deferredCallbacks.length = 0;
+      window.currentPageId = "page-play";
+      menu = await openMenu(element);
+      joinButtons = Array.from(menu.querySelectorAll("button")).filter((b) =>
+        b.textContent?.includes("notifications.join_lobby"),
+      );
+      joinButtons[0]!.click();
+      await new Promise((r) => setTimeout(r, 0));
+      window.currentPageId = "page-host-lobby";
+      deferredCallbacks[0]!();
+      expect(showPageSpy).not.toHaveBeenCalled();
+      expect(openSpy).not.toHaveBeenCalled();
+
+      // 3. Player entered in-game state before callback resolves
+      deferredCallbacks.length = 0;
+      window.currentPageId = "page-play";
+      menu = await openMenu(element);
+      joinButtons = Array.from(menu.querySelectorAll("button")).filter((b) =>
+        b.textContent?.includes("notifications.join_lobby"),
+      );
+      joinButtons[0]!.click();
+      await new Promise((r) => setTimeout(r, 0));
+      document.body.classList.add("in-game");
+      deferredCallbacks[0]!();
+      expect(showPageSpy).not.toHaveBeenCalled();
+      expect(openSpy).not.toHaveBeenCalled();
+    } finally {
+      document.body.classList.remove("in-game");
+      whenModalLoadedMock.mockImplementation((_tag: string, cb: () => void) =>
+        cb(),
+      );
       joinModalEl.remove();
       delete window.showPage;
     }

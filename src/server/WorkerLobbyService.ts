@@ -1,6 +1,10 @@
 import { GameConfig } from "@openfront/engine-api/Schemas";
+import { isAdminRole } from "@openfront/shared/ApiSchemas";
 import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
-import { LobbyInvite } from "@openfront/shared/LobbyInviteSchemas";
+import {
+  LOBBY_INVITE_TTL_MS,
+  LobbyInvite,
+} from "@openfront/shared/LobbyInviteSchemas";
 import {
   ClientPlatform,
   ClientPlatformSchema,
@@ -63,7 +67,8 @@ export class WorkerLobbyService {
   private deploymentActive = true;
   private lastOpenLobbies: Record<string, string[]> | null = null;
   private lastOpenLobbyMeta: Record<string, OpenLobbyMeta> | null = null;
-  private readonly seenOpenLobbies = new Set<string>();
+  private readonly seenOpenLobbies = new Map<string, number>();
+  private readonly workerExitedAt = new Map<number, number>();
   private workerId?: number;
 
   constructor(
@@ -142,8 +147,23 @@ export class WorkerLobbyService {
         this.lastPublicGames = msg.publicGames;
         if (msg.openLobbies !== undefined) {
           this.lastOpenLobbies = msg.openLobbies;
+          const now = Date.now();
           for (const gameID of Object.keys(msg.openLobbies)) {
-            this.seenOpenLobbies.add(gameID);
+            this.seenOpenLobbies.delete(gameID);
+            this.seenOpenLobbies.set(gameID, now);
+          }
+          for (const [gameID, seenAt] of this.seenOpenLobbies.entries()) {
+            if (
+              !Object.prototype.hasOwnProperty.call(msg.openLobbies, gameID) &&
+              now - seenAt > LOBBY_INVITE_TTL_MS * 2
+            ) {
+              this.seenOpenLobbies.delete(gameID);
+            }
+          }
+          while (this.seenOpenLobbies.size > 2_000) {
+            const oldestKey = this.seenOpenLobbies.keys().next().value;
+            if (oldestKey === undefined) break;
+            this.seenOpenLobbies.delete(oldestKey);
           }
         }
         if (msg.openLobbyMeta !== undefined) {
@@ -190,8 +210,29 @@ export class WorkerLobbyService {
         LobbyInviteService.instance.dismissExternalInvite(
           msg.inviteId,
           msg.dismissedAt,
+          msg.targetPublicId,
         );
         break;
+      case "workerExited": {
+        const exitedAt = msg.exitedAt ?? Date.now();
+        this.workerExitedAt.set(msg.workerId, exitedAt);
+        if (this.lastOpenLobbies !== null) {
+          for (const gameID of Object.keys(this.lastOpenLobbies)) {
+            if (ServerEnv.workerIndex(gameID) === msg.workerId) {
+              delete this.lastOpenLobbies[gameID];
+            }
+          }
+        }
+        if (this.lastOpenLobbyMeta !== null) {
+          for (const gameID of Object.keys(this.lastOpenLobbyMeta)) {
+            if (ServerEnv.workerIndex(gameID) === msg.workerId) {
+              delete this.lastOpenLobbyMeta[gameID];
+            }
+          }
+        }
+        LobbyInviteService.instance.removeInvitesForWorker(msg.workerId);
+        break;
+      }
     }
   }
 
@@ -241,20 +282,31 @@ export class WorkerLobbyService {
     if (localGame !== null) {
       return localGame.phase() === GamePhase.Lobby && !localGame.hasStarted();
     }
-    if (
-      this.workerId !== undefined &&
-      ServerEnv.workerIndex(gameID) === this.workerId
-    ) {
+    const ownerWorkerId = ServerEnv.workerIndex(gameID);
+    if (this.workerId !== undefined && ownerWorkerId === this.workerId) {
       return false;
     }
+    const exitedAt = this.workerExitedAt.get(ownerWorkerId);
     if (this.lastOpenLobbies !== null) {
       if (Object.prototype.hasOwnProperty.call(this.lastOpenLobbies, gameID)) {
         return true;
       }
+      if (this.seenOpenLobbies.has(gameID)) {
+        return false;
+      }
       // A newly created lobby on another worker may not have arrived in the
-      // master's snapshot yet; only treat a missing entry as closed once we
-      // have previously observed it open.
-      return !this.seenOpenLobbies.has(gameID);
+      // master's snapshot yet; keep it eligible while an active invite created
+      // after the owning worker's last exit exists for it.
+      return LobbyInviteService.instance.hasActiveInviteForLobby(
+        gameID,
+        exitedAt,
+      );
+    }
+    if (exitedAt !== undefined) {
+      return LobbyInviteService.instance.hasActiveInviteForLobby(
+        gameID,
+        exitedAt,
+      );
     }
     return true;
   }
@@ -268,10 +320,19 @@ export class WorkerLobbyService {
       if (localGame.phase() !== GamePhase.Lobby || localGame.hasStarted()) {
         return null;
       }
+      const memberPublicIds = localGame.gameConfig.anonymizeNames
+        ? []
+        : localGame
+            .activeClients()
+            .map((c) => c.publicId)
+            .filter(
+              (id): id is string => typeof id === "string" && id.length > 0,
+            );
       return {
         gameMode: localGame.gameConfig.gameMode,
         map: localGame.gameConfig.gameMap,
         allowedPublicIds: localGame.gameConfig.allowedPublicIds,
+        memberPublicIds,
       };
     }
     return this.lastOpenLobbyMeta?.[gameID] ?? null;
@@ -283,16 +344,38 @@ export class WorkerLobbyService {
   public isTargetAllowedInLobby(
     gameID: string,
     targetPublicId: string,
+    targetRole?: string | null,
   ): boolean {
+    if (isAdminRole(targetRole)) {
+      return true;
+    }
     const localGame = this.gm.game(gameID);
     if (localGame !== null) {
-      return localGame.isPublicIdAllowed(targetPublicId);
+      return localGame.isPublicIdAllowed(targetPublicId, targetRole);
     }
     const allowed = this.lastOpenLobbyMeta?.[gameID]?.allowedPublicIds;
     if (!allowed || allowed.length === 0) {
       return true;
     }
     return allowed.includes(targetPublicId);
+  }
+
+  /**
+   * Returns the member `publicId`s visible to the caller in the open lobby `gameID`.
+   */
+  public getLobbyMemberPublicIds(
+    gameID: string,
+    persistentId: string,
+    publicId?: string,
+  ): string[] {
+    const localGame = this.gm.game(gameID);
+    if (localGame !== null) {
+      if (localGame.phase() !== GamePhase.Lobby || localGame.hasStarted()) {
+        return [];
+      }
+      return localGame.visibleMemberPublicIds(persistentId, publicId);
+    }
+    return this.lastOpenLobbyMeta?.[gameID]?.memberPublicIds ?? [];
   }
 
   /**

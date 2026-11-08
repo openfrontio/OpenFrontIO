@@ -25,10 +25,22 @@ export type LobbyInviteRouteOptions = {
     persistentId: string,
     publicId: string,
   ) => boolean;
-  getLobbyMeta?: (
+  getLobbyMeta?: (lobbyId: string) => {
+    gameMode?: string;
+    map?: string;
+    allowedPublicIds?: string[];
+    memberPublicIds?: string[];
+  } | null;
+  isTargetAllowedInLobby?: (
     lobbyId: string,
-  ) => { gameMode?: string; map?: string; allowedPublicIds?: string[] } | null;
-  isTargetAllowedInLobby?: (lobbyId: string, targetPublicId: string) => boolean;
+    targetPublicId: string,
+    targetRole?: string | null,
+  ) => boolean;
+  getLobbyMemberPublicIds?: (
+    lobbyId: string,
+    callerPersistentId: string,
+    callerPublicId: string,
+  ) => string[];
   resolveCaller?: (
     token: string,
     persistentId: string,
@@ -179,6 +191,11 @@ export class LobbyInviteService {
   // Tracks the latest dismissal timestamp per invite id and per logical key so stale IPC refreshes cannot resurrect dismissed invites
   private dismissedAtByInviteId = new Map<string, number>();
   private dismissedAtByLogicalKey = new Map<string, number>();
+  // Retains target-scoped dismissals that arrive before the invite itself, verified against targetPublicId on arrival
+  private pendingDismissalsByInviteId = new Map<
+    string,
+    { targetPublicId: string; dismissedAt: number }
+  >();
   private pruneTimer: ReturnType<typeof setInterval> | null = null;
 
   private onInviteAdded?: (invite: LobbyInvite) => void;
@@ -234,6 +251,12 @@ export class LobbyInviteService {
     if (this.inviteIdByLogicalKey.get(key) === invite.id) {
       this.inviteIdByLogicalKey.delete(key);
     }
+    if (
+      !this.inviteIdByLogicalKey.has(key) &&
+      !this.dismissedAtByInviteId.has(invite.id)
+    ) {
+      this.logicalKeyByInviteId.delete(invite.id);
+    }
   }
 
   /**
@@ -277,6 +300,7 @@ export class LobbyInviteService {
       existing.map = input.map;
       this.dismissedAtByInviteId.delete(existing.id);
       this.dismissedAtByLogicalKey.delete(key);
+      this.pendingDismissalsByInviteId.delete(existing.id);
       this.indexInvite(existing);
       this.onInviteAdded?.(existing);
       return existing;
@@ -297,6 +321,7 @@ export class LobbyInviteService {
     this.invites.set(invite.id, invite);
     this.dismissedAtByInviteId.delete(invite.id);
     this.dismissedAtByLogicalKey.delete(key);
+    this.pendingDismissalsByInviteId.delete(invite.id);
     this.indexInvite(invite);
     this.onInviteAdded?.(invite);
     return invite;
@@ -310,7 +335,23 @@ export class LobbyInviteService {
       return false;
     }
     const key = this.logicalKey(invite);
-    this.logicalKeyByInviteId.set(invite.id, key);
+
+    const pendingDismissal = this.pendingDismissalsByInviteId.get(invite.id);
+    if (pendingDismissal !== undefined) {
+      this.pendingDismissalsByInviteId.delete(invite.id);
+      if (pendingDismissal.targetPublicId === invite.targetPublicId) {
+        const prevId = this.dismissedAtByInviteId.get(invite.id) ?? 0;
+        this.dismissedAtByInviteId.set(
+          invite.id,
+          Math.max(prevId, pendingDismissal.dismissedAt),
+        );
+        const prevKey = this.dismissedAtByLogicalKey.get(key) ?? 0;
+        this.dismissedAtByLogicalKey.set(
+          key,
+          Math.max(prevKey, pendingDismissal.dismissedAt),
+        );
+      }
+    }
 
     const dismissedById = this.dismissedAtByInviteId.get(invite.id);
     const dismissedByKey = this.dismissedAtByLogicalKey.get(key);
@@ -342,6 +383,7 @@ export class LobbyInviteService {
         (invite.createdAt === existingLogical.createdAt &&
           invite.id > existingLogical.id);
       if (!incomingWins) {
+        this.logicalKeyByInviteId.set(invite.id, key);
         return false;
       }
       this.unindexInvite(existingLogical);
@@ -353,6 +395,9 @@ export class LobbyInviteService {
     }
     this.invites.set(invite.id, invite);
     this.indexInvite(invite);
+    if (existingLogical) {
+      this.logicalKeyByInviteId.set(existingLogical.id, key);
+    }
     return true;
   }
 
@@ -394,13 +439,13 @@ export class LobbyInviteService {
   }
 
   /**
-   * Records an external invite dismissal from IPC so stale refreshes older than `dismissedAt` are ignored.
+   * Records an external invite dismissal from IPC so stale refreshes older than `dismissedAt` are ignored, returning the resolved active invite ID or `false` if rejected.
    */
   dismissExternalInvite(
     inviteId: string,
     dismissedAt: number = Date.now(),
     targetPublicId?: string,
-  ): boolean {
+  ): string | false {
     const key = this.logicalKeyByInviteId.get(inviteId);
     const logicalActiveId = key
       ? this.inviteIdByLogicalKey.get(key)
@@ -410,14 +455,27 @@ export class LobbyInviteService {
       (logicalActiveId ? this.invites.get(logicalActiveId) : undefined);
 
     if (targetPublicId !== undefined) {
-      if (!existing || existing.targetPublicId !== targetPublicId) {
-        return false;
+      if (existing) {
+        if (existing.targetPublicId !== targetPublicId) {
+          return false;
+        }
+      } else {
+        const prevPending = this.pendingDismissalsByInviteId.get(inviteId);
+        if (!prevPending || dismissedAt >= prevPending.dismissedAt) {
+          this.pendingDismissalsByInviteId.set(inviteId, {
+            targetPublicId,
+            dismissedAt,
+          });
+        }
+        return inviteId;
       }
     }
 
+    const resolvedInviteId = existing ? existing.id : inviteId;
     const prev = this.dismissedAtByInviteId.get(inviteId) ?? 0;
     const effectiveDismissedAt = Math.max(prev, dismissedAt);
     this.dismissedAtByInviteId.set(inviteId, effectiveDismissedAt);
+    this.dismissedAtByInviteId.set(resolvedInviteId, effectiveDismissedAt);
 
     const effectiveKey = existing ? this.logicalKey(existing) : key;
     if (effectiveKey) {
@@ -433,7 +491,7 @@ export class LobbyInviteService {
       this.invites.delete(existing.id);
       this.dismissedAtByInviteId.set(existing.id, effectiveDismissedAt);
     }
-    return true;
+    return resolvedInviteId;
   }
 
   /**
@@ -457,6 +515,39 @@ export class LobbyInviteService {
       this.onInviteDismissed?.(id, now);
     }
     this.invitesByLobbyId.delete(lobbyId);
+  }
+
+  /**
+   * Removes all active invites whose lobby is owned by `workerId` (e.g. when that worker process exits).
+   */
+  removeInvitesForWorker(workerId: number): void {
+    for (const lobbyId of [...this.invitesByLobbyId.keys()]) {
+      if (ServerEnv.workerIndex(lobbyId) === workerId) {
+        this.removeInvitesForLobby(lobbyId);
+      }
+    }
+  }
+
+  /**
+   * Returns whether there is at least one non-expired invite targeting `lobbyId` created after `minCreatedAt`.
+   */
+  hasActiveInviteForLobby(lobbyId: string, minCreatedAt?: number): boolean {
+    const ids = this.invitesByLobbyId.get(lobbyId);
+    if (!ids || ids.size === 0) {
+      return false;
+    }
+    const now = Date.now();
+    for (const id of ids) {
+      const invite = this.invites.get(id);
+      if (
+        invite &&
+        invite.expiresAt > now &&
+        (minCreatedAt === undefined || invite.createdAt > minCreatedAt)
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -508,6 +599,20 @@ export class LobbyInviteService {
         this.dismissedAtByLogicalKey.delete(key);
       }
     }
+    for (const [id, pending] of this.pendingDismissalsByInviteId.entries()) {
+      if (now - pending.dismissedAt > LOBBY_INVITE_TTL_MS * 2) {
+        this.pendingDismissalsByInviteId.delete(id);
+      }
+    }
+    for (const [id, key] of this.logicalKeyByInviteId.entries()) {
+      if (
+        !this.invites.has(id) &&
+        !this.dismissedAtByInviteId.has(id) &&
+        !this.inviteIdByLogicalKey.has(key)
+      ) {
+        this.logicalKeyByInviteId.delete(id);
+      }
+    }
   }
 
   /**
@@ -520,6 +625,7 @@ export class LobbyInviteService {
     this.logicalKeyByInviteId.clear();
     this.dismissedAtByInviteId.clear();
     this.dismissedAtByLogicalKey.clear();
+    this.pendingDismissalsByInviteId.clear();
     callerCache.clear();
   }
 }
@@ -541,8 +647,30 @@ export function registerLobbyInviteRoutes(
   const isPlayerInLobby = options.isPlayerInLobby;
   const getLobbyMeta = options.getLobbyMeta;
   const isTargetAllowedInLobby = options.isTargetAllowedInLobby;
+  const getLobbyMemberPublicIds = options.getLobbyMemberPublicIds;
   const resolveCaller = options.resolveCaller ?? defaultResolveCaller;
   const isTargetEligible = options.isTargetEligible ?? defaultIsTargetEligible;
+
+  const isTargetPermittedByLobby = (
+    lobbyId: string,
+    targetPublicId: string,
+    lobbyMeta?: {
+      gameMode?: string;
+      map?: string;
+      allowedPublicIds?: string[];
+      memberPublicIds?: string[];
+    } | null,
+  ): boolean => {
+    if (isTargetAllowedInLobby) {
+      return isTargetAllowedInLobby(lobbyId, targetPublicId);
+    }
+    const meta =
+      lobbyMeta !== undefined ? lobbyMeta : (getLobbyMeta?.(lobbyId) ?? null);
+    return (
+      !meta?.allowedPublicIds?.length ||
+      meta.allowedPublicIds.includes(targetPublicId)
+    );
+  };
 
   app.post("/api/lobby/invite", async (req, res) => {
     const authHeader = req.headers.authorization;
@@ -580,12 +708,14 @@ export function registerLobbyInviteRoutes(
       return res.status(403).json({ error: "Caller is not in lobby" });
     }
 
-    const lobbyMeta = getLobbyMeta?.(parsed.data.lobbyId) ?? null;
-    const allowedInLobby = isTargetAllowedInLobby
-      ? isTargetAllowedInLobby(parsed.data.lobbyId, parsed.data.targetPublicId)
-      : !lobbyMeta?.allowedPublicIds?.length ||
-        lobbyMeta.allowedPublicIds.includes(parsed.data.targetPublicId);
-    if (!allowedInLobby) {
+    const initialLobbyMeta = getLobbyMeta?.(parsed.data.lobbyId) ?? null;
+    if (
+      !isTargetPermittedByLobby(
+        parsed.data.lobbyId,
+        parsed.data.targetPublicId,
+        initialLobbyMeta,
+      )
+    ) {
       return res
         .status(403)
         .json({ error: "Target is not allowed in this lobby" });
@@ -602,6 +732,30 @@ export function registerLobbyInviteRoutes(
         .json({ error: "Target is not an eligible friend or clan member" });
     }
 
+    if (isLobbyActive && !isLobbyActive(parsed.data.lobbyId)) {
+      return res.status(404).json({ error: "Lobby is not open" });
+    }
+
+    if (
+      isPlayerInLobby &&
+      !isPlayerInLobby(parsed.data.lobbyId, auth.persistentId, caller.publicId)
+    ) {
+      return res.status(403).json({ error: "Caller is not in lobby" });
+    }
+
+    const lobbyMeta = getLobbyMeta?.(parsed.data.lobbyId) ?? null;
+    if (
+      !isTargetPermittedByLobby(
+        parsed.data.lobbyId,
+        parsed.data.targetPublicId,
+        lobbyMeta,
+      )
+    ) {
+      return res
+        .status(403)
+        .json({ error: "Target is not allowed in this lobby" });
+    }
+
     const invite = LobbyInviteService.instance.createInvite({
       ...parsed.data,
       gameMode: lobbyMeta?.gameMode ?? parsed.data.gameMode,
@@ -610,6 +764,47 @@ export function registerLobbyInviteRoutes(
       senderUsername: caller.username,
     });
     res.json({ ok: true, invite });
+  });
+
+  app.get("/api/lobby/members", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Authorization header required" });
+    }
+    const token = authHeader.substring("Bearer ".length);
+    const auth = await verifyClientToken(token);
+    if (auth.type !== "success") {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const lobbyId =
+      typeof req.query?.lobbyId === "string" ? req.query.lobbyId.trim() : "";
+    if (!lobbyId) {
+      return res
+        .status(400)
+        .json({ error: "lobbyId query parameter required" });
+    }
+
+    const caller = await resolveCaller(token, auth.persistentId);
+    if (!caller) {
+      return res.status(401).json({ error: "Unable to verify caller" });
+    }
+
+    if (isLobbyActive && !isLobbyActive(lobbyId)) {
+      return res.status(404).json({ error: "Lobby is not open" });
+    }
+
+    if (
+      isPlayerInLobby &&
+      !isPlayerInLobby(lobbyId, auth.persistentId, caller.publicId)
+    ) {
+      return res.status(403).json({ error: "Caller is not in lobby" });
+    }
+
+    const memberPublicIds = getLobbyMemberPublicIds
+      ? getLobbyMemberPublicIds(lobbyId, auth.persistentId, caller.publicId)
+      : (getLobbyMeta?.(lobbyId)?.memberPublicIds ?? []);
+    res.json({ memberPublicIds });
   });
 
   app.get("/api/lobby/invites", async (req, res) => {

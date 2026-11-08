@@ -8,7 +8,7 @@ import { fetchClanMembers } from "../ClanApi";
 import { desktopPresence } from "../DesktopPresence";
 import { fetchFriends } from "../FriendsApi";
 import { fuzzyMatch } from "../FuzzySearch";
-import { sendLobbyInvite } from "../LobbyInviteApi";
+import { fetchLobbyMemberPublicIds, sendLobbyInvite } from "../LobbyInviteApi";
 import { lastUserMeResponse } from "../UserMeBroadcast";
 import { translateText } from "../Utils";
 import { BaseModal, ModalConfig } from "./BaseModal";
@@ -24,6 +24,7 @@ export interface InviteLobbyModalOpenArgs {
   gameMode?: string;
   map?: string;
   clients?: InviteLobbyClient[];
+  memberPublicIds?: Iterable<string>;
 }
 
 interface ClanGroup {
@@ -41,6 +42,7 @@ export class InviteLobbyModal extends BaseModal {
   @state() private gameMode?: string;
   @state() private map?: string;
   @state() private clients: InviteLobbyClient[] = [];
+  @state() private memberPublicIds = new Set<string>();
 
   @state() private searchQuery = "";
   @state() private loading = false;
@@ -48,6 +50,8 @@ export class InviteLobbyModal extends BaseModal {
   @state() private clanGroups: ClanGroup[] = [];
   @state() private invitedKeys = new Set<string>();
   @state() private pendingKeys = new Set<string>();
+  private nextMemberRefreshSeq = 0;
+  private appliedMemberRefreshSeq = 0;
 
   /**
    * Returns configuration for the underlying `<o-modal>` container.
@@ -79,19 +83,56 @@ export class InviteLobbyModal extends BaseModal {
       this.gameMode = inviteArgs.gameMode;
       this.map = inviteArgs.map;
       this.clients = inviteArgs.clients ?? [];
+      this.memberPublicIds = new Set(inviteArgs.memberPublicIds ?? []);
     }
+    this.appliedMemberRefreshSeq = ++this.nextMemberRefreshSeq;
     this.searchQuery = "";
+    void this.refreshLobbyMembers();
     void this.loadRoster();
   }
 
   /**
    * Updates the modal's active lobby client roster when lobby membership changes.
    */
-  public updateClients(clients: InviteLobbyClient[], lobbyId?: string): void {
+  public updateClients(
+    clients: InviteLobbyClient[],
+    lobbyId?: string,
+    memberPublicIds?: Iterable<string>,
+  ): void {
     if (lobbyId !== undefined && this.lobbyId && lobbyId !== this.lobbyId) {
       return;
     }
     this.clients = [...clients];
+    if (memberPublicIds !== undefined) {
+      this.appliedMemberRefreshSeq = ++this.nextMemberRefreshSeq;
+      this.memberPublicIds = new Set(memberPublicIds);
+      return;
+    }
+    if (this.clients.length === 0) {
+      this.appliedMemberRefreshSeq = ++this.nextMemberRefreshSeq;
+      this.memberPublicIds = new Set();
+      return;
+    }
+    void this.refreshLobbyMembers();
+  }
+
+  /**
+   * Fetches the server-validated member `publicId`s for the active lobby.
+   */
+  private async refreshLobbyMembers(): Promise<void> {
+    const lobbyId = this.lobbyId;
+    if (!lobbyId) return;
+    const seq = ++this.nextMemberRefreshSeq;
+    const memberIds = await fetchLobbyMemberPublicIds(lobbyId);
+    if (
+      memberIds === false ||
+      seq <= this.appliedMemberRefreshSeq ||
+      this.lobbyId !== lobbyId
+    ) {
+      return;
+    }
+    this.appliedMemberRefreshSeq = seq;
+    this.memberPublicIds = new Set(memberIds);
   }
 
   /**
@@ -251,10 +292,13 @@ export class InviteLobbyModal extends BaseModal {
   }
 
   /**
-   * Checks whether a player with `publicId` is already in the current lobby's client list by account identity.
+   * Checks whether a player with `publicId` is already in the current lobby using server-validated member IDs or client `publicId` identity.
    */
   private isClientInLobby(publicId?: string | null): boolean {
     if (!publicId) return false;
+    if (this.memberPublicIds.has(publicId)) {
+      return true;
+    }
     return this.clients.some(
       (c) => typeof c.publicId === "string" && c.publicId === publicId,
     );

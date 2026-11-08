@@ -213,14 +213,14 @@ export class HostLobbyModal extends BaseModal {
     this.lobbyCreatorClientID = lobby.lobbyCreatorClientID ?? "";
     if (lobby.clients) {
       this.clients = lobby.clients;
-      const inviteModal = document.querySelector<
-        HTMLElement & {
-          updateClients?: (clients: ClientInfo[], lobbyId?: string) => void;
-        }
-      >("invite-lobby-modal");
-      if (typeof inviteModal?.updateClients === "function") {
-        inviteModal.updateClients(this.clients, this.lobbyId);
+    }
+    const inviteModal = document.querySelector<
+      HTMLElement & {
+        updateClients?: (clients: ClientInfo[], lobbyId?: string) => void;
       }
+    >("invite-lobby-modal");
+    if (typeof inviteModal?.updateClients === "function") {
+      inviteModal.updateClients(this.clients, this.lobbyId);
     }
     // The server can delist on its own (duplicate creator / cap overflow
     // resolved by the master); follow its state unless our own toggle

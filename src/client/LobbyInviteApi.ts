@@ -10,16 +10,19 @@ import { ClientEnv } from "./ClientEnv";
 import { ensureServerList } from "./ServerList";
 
 /**
- * Resolves the target HTTP base and optional worker path for a lobby ID so invites reach the lobby's owning deployment, with a same-deployment master fallback when a worker prefix is not routed.
+ * Resolves the target HTTP base and optional worker path for a lobby ID so requests reach the lobby's owning deployment, with a same-deployment master fallback when a worker prefix is not routed.
  */
-function resolveLobbyInviteEndpoints(lobbyId: string): {
+function resolveLobbyInviteEndpoints(
+  lobbyId: string,
+  routePath = "/api/lobby/invite",
+): {
   primary: string;
   masterFallback?: string;
 } {
-  const defaultEndpoint = `${ClientEnv.serverHttpBase()}/api/lobby/invite`;
+  const defaultEndpoint = `${ClientEnv.serverHttpBase()}${routePath}`;
   try {
     const gameBase = ClientEnv.gameHttpBase(lobbyId);
-    const masterEndpoint = `${gameBase}/api/lobby/invite`;
+    const masterEndpoint = `${gameBase}${routePath}`;
     let workerPrefix = "";
     try {
       const wp = ClientEnv.gameWorkerPath(lobbyId);
@@ -27,7 +30,7 @@ function resolveLobbyInviteEndpoints(lobbyId: string): {
     } catch {
       // numWorkers may not be configured in unit tests
     }
-    const primary = `${gameBase}${workerPrefix}/api/lobby/invite`;
+    const primary = `${gameBase}${workerPrefix}${routePath}`;
     if (primary === masterEndpoint) {
       return { primary };
     }
@@ -87,6 +90,47 @@ export async function sendLobbyInvite(
     return false;
   } catch (err) {
     console.error("sendLobbyInvite failed:", err);
+    return false;
+  }
+}
+
+/**
+ * Fetches the server-validated visible member `publicId`s for `lobbyId`, respecting lobby anonymity rules.
+ */
+export async function fetchLobbyMemberPublicIds(
+  lobbyId: string,
+): Promise<string[] | false> {
+  if (!lobbyId) return false;
+  try {
+    await ensureServerList().catch(() => {});
+    const token = await getPlayToken();
+    const routePath = `/api/lobby/members?lobbyId=${encodeURIComponent(lobbyId)}`;
+    const { primary, masterFallback } = resolveLobbyInviteEndpoints(
+      lobbyId,
+      routePath,
+    );
+    const requestInit: RequestInit = {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+    let res = await fetch(primary, requestInit);
+    if (!res.ok && masterFallback && (await isUnroutedWorkerResponse(res))) {
+      res = await fetch(masterFallback, requestInit);
+    }
+    if (!res.ok) return false;
+    const contentType = res.headers?.get?.("content-type") ?? "";
+    if (!contentType.includes("application/json")) return false;
+    const data = (await res.json()) as { memberPublicIds?: unknown } | null;
+    if (!Array.isArray(data?.memberPublicIds)) return false;
+    const ids: string[] = [];
+    for (const item of data.memberPublicIds) {
+      if (typeof item !== "string" || item.length === 0) return false;
+      ids.push(item);
+    }
+    return ids;
+  } catch (err) {
+    console.warn("fetchLobbyMemberPublicIds failed:", err);
     return false;
   }
 }

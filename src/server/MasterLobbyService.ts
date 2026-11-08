@@ -1,3 +1,4 @@
+import { isAdminRole } from "@openfront/shared/ApiSchemas";
 import { LobbyInvite } from "@openfront/shared/LobbyInviteSchemas";
 import {
   MAX_HOSTED_LOBBIES,
@@ -143,21 +144,23 @@ export class MasterLobbyService {
             });
           }
           break;
-        case "lobbyInviteDismiss":
-          if (
+        case "lobbyInviteDismiss": {
+          const resolvedInviteId =
             LobbyInviteService.instance.dismissExternalInvite(
               msg.inviteId,
               msg.dismissedAt,
               msg.targetPublicId,
-            )
-          ) {
+            );
+          if (resolvedInviteId) {
             this.broadcastMessage({
               type: "lobbyInviteDismissBroadcast",
-              inviteId: msg.inviteId,
+              inviteId: resolvedInviteId,
               dismissedAt: msg.dismissedAt,
+              targetPublicId: msg.targetPublicId,
             });
           }
           break;
+        }
       }
     });
   }
@@ -280,12 +283,23 @@ export class MasterLobbyService {
   public isTargetAllowedInLobby(
     gameID: string,
     targetPublicId: string,
+    targetRole?: string | null,
   ): boolean {
+    if (isAdminRole(targetRole)) {
+      return true;
+    }
     const allowed = this.getLobbyMeta(gameID)?.allowedPublicIds;
     if (!allowed || allowed.length === 0) {
       return true;
     }
     return allowed.includes(targetPublicId);
+  }
+
+  /**
+   * Returns non-anonymized member `publicId`s known for `gameID` on the master.
+   */
+  public getLobbyMemberPublicIds(gameID: string): string[] {
+    return this.getLobbyMeta(gameID)?.memberPublicIds ?? [];
   }
 
   /**
@@ -335,6 +349,12 @@ export class MasterLobbyService {
     this.workerOpenLobbies.delete(workerId);
     this.workerOpenLobbyMeta.delete(workerId);
     this.readyWorkers.delete(workerId);
+    LobbyInviteService.instance.removeInvitesForWorker(workerId);
+    this.broadcastMessage({
+      type: "workerExited",
+      workerId,
+      exitedAt: Date.now(),
+    });
   }
 
   // Games running on this server, summed over the workers' last reports.

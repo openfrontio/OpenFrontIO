@@ -342,10 +342,12 @@ registerLobbyInviteRoutes(app, {
       : false,
   getLobbyMeta: (lobbyId) =>
     lobbyService ? lobbyService.getLobbyMeta(lobbyId) : null,
-  isTargetAllowedInLobby: (lobbyId, targetPublicId) =>
+  isTargetAllowedInLobby: (lobbyId, targetPublicId, targetRole) =>
     lobbyService
-      ? lobbyService.isTargetAllowedInLobby(lobbyId, targetPublicId)
+      ? lobbyService.isTargetAllowedInLobby(lobbyId, targetPublicId, targetRole)
       : true,
+  getLobbyMemberPublicIds: (lobbyId) =>
+    lobbyService ? lobbyService.getLobbyMemberPublicIds(lobbyId) : [],
 });
 
 app.get("/api/health", (_req, res) => {

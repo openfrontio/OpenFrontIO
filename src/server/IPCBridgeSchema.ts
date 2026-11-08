@@ -34,6 +34,7 @@ export const OpenLobbyMetaSchema = z.object({
   gameMode: z.string().optional(),
   map: z.string().optional(),
   allowedPublicIds: z.array(z.string()).optional(),
+  memberPublicIds: z.array(z.string()).optional(),
 });
 
 // Master/worker-internal lobby info: PublicGameInfo plus the hashed creator
@@ -148,6 +149,13 @@ const MasterLobbyInviteDismissBroadcastSchema = z.object({
   type: z.literal("lobbyInviteDismissBroadcast"),
   inviteId: z.string(),
   dismissedAt: z.number().optional(),
+  targetPublicId: z.string().optional(),
+});
+
+const MasterWorkerExitedSchema = z.object({
+  type: z.literal("workerExited"),
+  workerId: z.number(),
+  exitedAt: z.number().optional(),
 });
 
 export const MasterMessageSchema = z.discriminatedUnion("type", [
@@ -156,4 +164,5 @@ export const MasterMessageSchema = z.discriminatedUnion("type", [
   MasterUpdateGameSchema,
   MasterLobbyInviteBroadcastSchema,
   MasterLobbyInviteDismissBroadcastSchema,
+  MasterWorkerExitedSchema,
 ]);

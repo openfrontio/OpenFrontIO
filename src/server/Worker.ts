@@ -603,8 +603,10 @@ export async function startWorker() {
     isPlayerInLobby: (gameId, persistentId, publicId) =>
       lobbyService.isPlayerInLobby(gameId, persistentId, publicId),
     getLobbyMeta: (gameId) => lobbyService.getLobbyMeta(gameId),
-    isTargetAllowedInLobby: (gameId, targetPublicId) =>
-      lobbyService.isTargetAllowedInLobby(gameId, targetPublicId),
+    isTargetAllowedInLobby: (gameId, targetPublicId, targetRole) =>
+      lobbyService.isTargetAllowedInLobby(gameId, targetPublicId, targetRole),
+    getLobbyMemberPublicIds: (gameId, persistentId, publicId) =>
+      lobbyService.getLobbyMemberPublicIds(gameId, persistentId, publicId),
   });
 
   // WebSocket handling

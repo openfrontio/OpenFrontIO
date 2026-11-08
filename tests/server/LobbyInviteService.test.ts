@@ -197,7 +197,10 @@ describe("LobbyInviteService", () => {
     const now = 1_000_000;
     vi.setSystemTime(now);
 
-    service.addExternalInvite({
+    const serviceA = new LobbyInviteService();
+    const serviceB = new LobbyInviteService();
+
+    const invA: LobbyInvite = {
       id: "inv_a",
       lobbyId: "lobby123",
       senderPublicId: "user.sender",
@@ -205,8 +208,8 @@ describe("LobbyInviteService", () => {
       targetPublicId: "user.target",
       createdAt: now,
       expiresAt: now + 30000,
-    });
-    service.addExternalInvite({
+    };
+    const invB: LobbyInvite = {
       id: "inv_b",
       lobbyId: "lobby123",
       senderPublicId: "user.sender",
@@ -214,15 +217,101 @@ describe("LobbyInviteService", () => {
       targetPublicId: "user.target",
       createdAt: now + 100,
       expiresAt: now + 30100,
-    });
+    };
 
-    const active = service.getInvitesForUser("user.target");
-    expect(active).toHaveLength(1);
-    expect(active[0].id).toBe("inv_b");
+    // Process A receives inv_a then inv_b; Process B receives inv_b then inv_a
+    serviceA.addExternalInvite(invA);
+    serviceA.addExternalInvite(invB);
+    serviceB.addExternalInvite(invB);
+    serviceB.addExternalInvite(invA);
 
-    // Dismissing even by the superseded id clears the logical invite
-    expect(service.dismissInvite("user.target", "inv_a")).toBe(true);
-    expect(service.getInvitesForUser("user.target")).toHaveLength(0);
+    const activeA = serviceA.getInvitesForUser("user.target");
+    const activeB = serviceB.getInvitesForUser("user.target");
+    expect(activeA).toHaveLength(1);
+    expect(activeB).toHaveLength(1);
+    expect(activeA[0].id).toBe("inv_b");
+    expect(activeB[0].id).toBe("inv_b");
+
+    // Dismissing even by the superseded id clears the logical invite on both processes
+    expect(serviceA.dismissInvite("user.target", "inv_a")).toBe(true);
+    expect(serviceB.dismissInvite("user.target", "inv_a")).toBe(true);
+    expect(serviceA.getInvitesForUser("user.target")).toHaveLength(0);
+    expect(serviceB.getInvitesForUser("user.target")).toHaveLength(0);
+
+    // Equal timestamps tie-break deterministically by lexicographic invite id regardless of arrival order
+    const invTie1: LobbyInvite = {
+      id: "inv_tie_1",
+      lobbyId: "lobby_tie",
+      senderPublicId: "user.sender",
+      senderUsername: "Sender",
+      targetPublicId: "user.target",
+      createdAt: now + 200,
+      expiresAt: now + 30200,
+    };
+    const invTie2: LobbyInvite = {
+      id: "inv_tie_2",
+      lobbyId: "lobby_tie",
+      senderPublicId: "user.sender",
+      senderUsername: "Sender",
+      targetPublicId: "user.target",
+      createdAt: now + 200,
+      expiresAt: now + 30200,
+    };
+
+    serviceA.addExternalInvite(invTie1);
+    serviceA.addExternalInvite(invTie2);
+    serviceB.addExternalInvite(invTie2);
+    serviceB.addExternalInvite(invTie1);
+
+    expect(serviceA.getInvitesForUser("user.target")[0]?.id).toBe("inv_tie_2");
+    expect(serviceB.getInvitesForUser("user.target")[0]?.id).toBe("inv_tie_2");
+  });
+
+  it("retains target-scoped dismissal arriving before the invite and verifies ownership on arrival", () => {
+    const now = 1_000_000;
+    vi.setSystemTime(now);
+
+    // Non-owner dismissal arriving before the invite is retained as pending and does not suppress it for the real target
+    expect(
+      service.dismissExternalInvite("inv_early", now + 1000, "wrong.user"),
+    ).toBe("inv_early");
+    expect(
+      service.addExternalInvite({
+        id: "inv_early",
+        lobbyId: "lobby123",
+        senderPublicId: "user.sender",
+        senderUsername: "Sender",
+        targetPublicId: "user.target",
+        createdAt: now,
+        expiresAt: now + 30000,
+      }),
+    ).toBe(true);
+    expect(service.getInvitesForUser("user.target")).toHaveLength(1);
+
+    // Legitimate target dismissal arriving before the invite suppresses it on arrival
+    expect(
+      service.dismissExternalInvite(
+        "inv_early_legit",
+        now + 1000,
+        "user.target",
+      ),
+    ).toBe("inv_early_legit");
+    expect(
+      service.addExternalInvite({
+        id: "inv_early_legit",
+        lobbyId: "lobby456",
+        senderPublicId: "user.sender",
+        senderUsername: "Sender",
+        targetPublicId: "user.target",
+        createdAt: now,
+        expiresAt: now + 30000,
+      }),
+    ).toBe(false);
+    expect(
+      service
+        .getInvitesForUser("user.target")
+        .some((inv) => inv.id === "inv_early_legit"),
+    ).toBe(false);
   });
 
   it("allows inviting a clan member who is not a friend and enforces lobby allowlist and authoritative settings", async () => {
@@ -238,17 +327,21 @@ describe("LobbyInviteService", () => {
     vi.spyOn(ServerEnv, "jwtIssuer").mockReturnValue("https://api.example.com");
     vi.spyOn(ServerEnv, "apiKey").mockReturnValue("test-api-key");
 
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          results: [{ publicId: "clan.mate" }],
-          total: 1,
-          page: 1,
-          limit: 50,
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
-    );
+    let onEligibilityCheck: (() => void) | undefined;
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => {
+        onEligibilityCheck?.();
+        return new Response(
+          JSON.stringify({
+            results: [{ publicId: "clan.mate" }],
+            total: 1,
+            page: 1,
+            limit: 50,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      });
 
     const postHandlers = new Map<
       string,
@@ -261,6 +354,7 @@ describe("LobbyInviteService", () => {
       get() {},
     };
     let allowedPublicIds: string[] | undefined = ["clan.mate"];
+    let customAllowedOverride: boolean | undefined;
     registerLobbyInviteRoutes(mockApp as any, {
       isLobbyActive: () => true,
       isPlayerInLobby: () => true,
@@ -269,6 +363,16 @@ describe("LobbyInviteService", () => {
         map: "Europe",
         allowedPublicIds,
       }),
+      isTargetAllowedInLobby: (_lobbyId, targetPublicId) => {
+        if (customAllowedOverride !== undefined) {
+          return customAllowedOverride;
+        }
+        return (
+          !allowedPublicIds ||
+          allowedPublicIds.length === 0 ||
+          allowedPublicIds.includes(targetPublicId)
+        );
+      },
       resolveCaller: async () => ({
         publicId: "caller.pub",
         username: "CallerName",
@@ -325,6 +429,35 @@ describe("LobbyInviteService", () => {
         lobbyId: "lobby_clan",
       });
       expect(blockedRes.statusCode).toBe(403);
+
+      // 3. isTargetAllowedInLobby takes precedence over conflicting getLobbyMeta.allowedPublicIds
+      allowedPublicIds = ["someone.else"];
+      customAllowedOverride = true;
+      const overrideAllowRes = await callInvite({
+        targetPublicId: "clan.mate",
+        lobbyId: "lobby_clan",
+      });
+      expect(overrideAllowRes.statusCode).toBe(200);
+
+      allowedPublicIds = ["clan.mate"];
+      customAllowedOverride = false;
+      const overrideDenyRes = await callInvite({
+        targetPublicId: "clan.mate",
+        lobbyId: "lobby_clan",
+      });
+      expect(overrideDenyRes.statusCode).toBe(403);
+
+      // 4. Target removed from allowlist while async eligibility check is in flight -> 403
+      customAllowedOverride = undefined;
+      allowedPublicIds = ["clan.mate"];
+      onEligibilityCheck = () => {
+        allowedPublicIds = ["someone.else"];
+      };
+      const raceDeniedRes = await callInvite({
+        targetPublicId: "clan.mate",
+        lobbyId: "lobby_clan",
+      });
+      expect(raceDeniedRes.statusCode).toBe(403);
     } finally {
       fetchSpy.mockRestore();
       LobbyInviteService.instance.reset();

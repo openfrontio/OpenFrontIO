@@ -51,7 +51,8 @@ class NavNotificationsStore {
   private currentPublicId: string | null = null;
   private lobbyInvitePoll: number | null = null;
   private lobbyInviteTicker: number | null = null;
-  private lobbyInviteRefreshSeq = 0;
+  private nextLobbyInviteSeq = 0;
+  private appliedLobbyInviteSeq = 0;
   private lobbyInviteServerOffsetMs = 0;
   // Tracks locally dismissed invite IDs -> createdAt timestamp so stale polls or failed dismiss calls do not resurrect them.
   private dismissedInviteCreatedAt = new Map<string, number>();
@@ -206,7 +207,7 @@ class NavNotificationsStore {
   }
 
   private stopLobbyInvitePolling(): void {
-    this.lobbyInviteRefreshSeq++;
+    this.appliedLobbyInviteSeq = this.nextLobbyInviteSeq;
     if (this.lobbyInvitePoll !== null) {
       window.clearInterval(this.lobbyInvitePoll);
       this.lobbyInvitePoll = null;
@@ -254,11 +255,10 @@ class NavNotificationsStore {
     }
     const authGeneration = this.authGeneration;
     const pollingGeneration = this.friendRequestPollingGeneration;
-    const refreshSeq = ++this.lobbyInviteRefreshSeq;
+    const refreshSeq = ++this.nextLobbyInviteSeq;
     const publicId = this.currentPublicId;
     const result = await fetchLobbyInvites(publicId);
     if (
-      refreshSeq !== this.lobbyInviteRefreshSeq ||
       authGeneration !== this.authGeneration ||
       pollingGeneration !== this.friendRequestPollingGeneration ||
       this.currentPublicId !== publicId ||
@@ -270,6 +270,10 @@ class NavNotificationsStore {
       this.pruneLobbyInvitesTick();
       return;
     }
+    if (refreshSeq <= this.appliedLobbyInviteSeq) {
+      return;
+    }
+    this.appliedLobbyInviteSeq = refreshSeq;
     if (
       typeof result.serverTime === "number" &&
       Number.isFinite(result.serverTime)
@@ -506,6 +510,8 @@ class NavNotificationsStore {
     this._hasNewVersion = false;
     this._friendRequests = [];
     this._lobbyInvites = [];
+    this.nextLobbyInviteSeq = 0;
+    this.appliedLobbyInviteSeq = 0;
     this.lobbyInviteServerOffsetMs = 0;
     this.dismissedInviteCreatedAt.clear();
     this.currentPublicId = null;

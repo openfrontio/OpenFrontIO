@@ -5,6 +5,7 @@ const apiMocks = vi.hoisted(() => ({
   lastUserMeResponse: vi.fn(),
   fetchFriends: vi.fn(),
   fetchClanMembers: vi.fn(),
+  fetchLobbyMemberPublicIds: vi.fn(),
   sendLobbyInvite: vi.fn(),
   isAvailable: vi.fn(() => false),
   openInviteDialog: vi.fn(async () => true),
@@ -27,6 +28,7 @@ vi.mock("../../src/client/ClanApi", () => ({
 }));
 
 vi.mock("../../src/client/LobbyInviteApi", () => ({
+  fetchLobbyMemberPublicIds: apiMocks.fetchLobbyMemberPublicIds,
   sendLobbyInvite: apiMocks.sendLobbyInvite,
 }));
 
@@ -87,6 +89,7 @@ describe("InviteLobbyModal", () => {
       total: 1,
       page: 1,
     });
+    apiMocks.fetchLobbyMemberPublicIds.mockReset().mockResolvedValue([]);
     apiMocks.sendLobbyInvite.mockReset().mockResolvedValue(true);
     apiMocks.isAvailable.mockReset().mockReturnValue(false);
 
@@ -173,17 +176,14 @@ describe("InviteLobbyModal", () => {
   });
 
   it("keys invite cooldown by lobbyId and targetPublicId, restores button on failure, and updates roster via updateClients", async () => {
+    apiMocks.fetchLobbyMemberPublicIds.mockResolvedValueOnce(["friend_2"]);
     modal.open({
       lobbyId: "lobby_one",
       gameMode: "Free For All",
       map: "World",
       clients: [
-        {
-          clientID: "c1",
-          publicId: "friend_2",
-          username: "Bob",
-          clanTag: null,
-        },
+        // Real ClientInfo entries lack publicId; server-validated memberPublicIds identifies Bob
+        { clientID: "c1", username: "Bob", clanTag: null },
         // Another player using Alice's display name without Alice's publicId does not mark Alice In Lobby
         { clientID: "c_impersonator", username: "Alice", clanTag: null },
       ],
@@ -201,15 +201,13 @@ describe("InviteLobbyModal", () => {
     expect(findRow("Bob")?.textContent).toContain("In Lobby");
     expect(findRow("Alice")?.querySelector("button")).not.toBeNull();
 
-    // Update clients: Bob leaves, Charlie joins
+    // Update clients: Bob leaves, Charlie joins (using server-validated memberPublicIds)
+    apiMocks.fetchLobbyMemberPublicIds.mockResolvedValueOnce(["clan_1"]);
     modal.updateClients([
-      {
-        clientID: "c2",
-        publicId: "clan_1",
-        username: "Charlie",
-        clanTag: "DEV",
-      },
+      { clientID: "c2", username: "Charlie", clanTag: "DEV" },
     ]);
+    await modal.updateComplete;
+    await new Promise((r) => setTimeout(r, 0));
     await modal.updateComplete;
     expect(findRow("Bob")?.querySelector("button")).not.toBeNull();
     expect(findRow("Charlie")?.textContent).toContain("In Lobby");
@@ -247,10 +245,9 @@ describe("InviteLobbyModal", () => {
       });
       await vi.advanceTimersByTimeAsync(0);
       await modal.updateComplete;
-      expect(findRow("Alice")?.querySelector("button")).not.toBeNull();
+      expect(findRow("Alice")?.querySelector("button")).toBeTruthy();
 
-      // Advance past the 30-second cooldown and reopen lobby_one: Alice can be invited again
-      await vi.advanceTimersByTimeAsync(30_001);
+      // Reopen lobby_one before cooldown expires: Alice is still Invited with no button
       modal.open({
         lobbyId: "lobby_one",
         gameMode: "Free For All",
@@ -259,7 +256,13 @@ describe("InviteLobbyModal", () => {
       });
       await vi.advanceTimersByTimeAsync(0);
       await modal.updateComplete;
-      expect(findRow("Alice")?.querySelector("button")).not.toBeNull();
+      expect(findRow("Alice")?.textContent).toContain("Invited");
+      expect(findRow("Alice")?.querySelector("button")).toBeNull();
+
+      // Advance past the 30-second cooldown in lobby_one: Alice can be invited again
+      await vi.advanceTimersByTimeAsync(30_001);
+      await modal.updateComplete;
+      expect(findRow("Alice")?.querySelector("button")).toBeTruthy();
     } finally {
       vi.useRealTimers();
     }
