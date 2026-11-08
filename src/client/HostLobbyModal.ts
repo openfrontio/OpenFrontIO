@@ -310,12 +310,19 @@ export class HostLobbyModal extends BaseModal {
         this.close();
       },
       ariaLabel: translateText("common.back"),
-      // Both answer "get my friends into this lobby", so they sit together —
-      // the host is the player holding the code and deciding who joins, and
-      // was the one surface the invite button originally missed. Paired behind
-      // a wrapper only when the invite is present, so a browser renders exactly
-      // the markup it did before.
+      // Copy and invite both answer "get my friends into this lobby", so they
+      // sit together — the host is the player holding the code and deciding
+      // who joins, and was the one surface the invite button originally missed.
       rightContent: (() => {
+        const presets = html`<lobby-preset-controls
+          .presets=${this.lobbyPresets}
+          .selectedName=${this.selectedPresetName}
+          ?disabled=${this.publiclyListed}
+          @preset-select=${this.handlePresetSelect}
+          @preset-load=${this.handlePresetLoad}
+          @preset-save=${this.handlePresetSave}
+          @preset-delete=${this.handlePresetDelete}
+        ></lobby-preset-controls>`;
         const copy = html`<copy-button
           .lobbyId=${this.lobbyId}
           .lobbySuffix=${this.lobbyUrlSuffix}
@@ -338,8 +345,8 @@ export class HostLobbyModal extends BaseModal {
                 this.isOpen() && this.lobbyId === capturedLobbyId,
             })
           : nothing;
-        return html`<div class="flex items-center gap-2 shrink-0">
-          ${copy}${invite}
+        return html`<div class="flex flex-wrap items-center gap-2">
+          ${presets}${copy}${invite}
         </div>`;
       })(),
     });
@@ -712,15 +719,6 @@ export class HostLobbyModal extends BaseModal {
                 </div>`
               : nothing
           }
-          <lobby-preset-controls
-            .presets=${this.lobbyPresets}
-            .selectedName=${this.selectedPresetName}
-            ?disabled=${this.publiclyListed}
-            @preset-select=${this.handlePresetSelect}
-            @preset-load=${this.handlePresetLoad}
-            @preset-save=${this.handlePresetSave}
-            @preset-delete=${this.handlePresetDelete}
-          ></lobby-preset-controls>
           <!-- Players joined a listed lobby for its advertised settings, so
                they are frozen (the server rejects changes too). -->
           <game-config-settings
@@ -873,7 +871,9 @@ export class HostLobbyModal extends BaseModal {
         </div>
 
         <!-- Player List / footer -->
-        <div class="p-6 pt-4 border-t border-white/10 bg-black/20 shrink-0">
+        <div
+          class="p-6 pt-4 compact:py-3 border-t border-white/10 bg-black/20 shrink-0"
+        >
           <o-button
             variant=${secondsRemaining !== null ? "warning" : "primary"}
             width="block"

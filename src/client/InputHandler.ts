@@ -598,7 +598,7 @@ export class InputHandler {
       const nextDirection = !this.uiState.rocketDirectionUp;
       this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
     });
-    this.addKeybindAndEvent("Shift+KeyD", () => {
+    this.addKeybindAndEvent(this.keybinds.performanceOverlay, () => {
       this.eventBus.emit(new TogglePerformanceOverlayEvent());
     });
     this.addKeybindAndEvent(this.keybinds.toggleView, () => {
@@ -1636,6 +1636,15 @@ export class InputHandler {
       this.uiState.ghostStructure === ghostStructure &&
       ghostStructure !== null
     ) {
+      if (
+        source === "hotkey" &&
+        (this.gameView.updatesSinceLastTick?.() === null ||
+          this.gameView.isCatchingUp?.() ||
+          this.gameView.isPaused?.())
+      ) {
+        return;
+      }
+
       const currentMultiplier = this.uiState.upgradeMultiplier ?? 1;
       switch (source) {
         case "GUIclick":
