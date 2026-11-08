@@ -53,6 +53,8 @@ export class InviteLobbyModal extends BaseModal {
   private nextMemberRefreshSeq = 0;
   private appliedMemberRefreshSeq = 0;
   private lastRefreshedRosterKey = "";
+  private inFlightRosterKey: string | null = null;
+  private rosterLoadSeq = 0;
 
   /**
    * Returns configuration for the underlying `<o-modal>` container.
@@ -103,6 +105,9 @@ export class InviteLobbyModal extends BaseModal {
     this.clients = [];
     this.memberPublicIds.clear();
     this.lastRefreshedRosterKey = "";
+    this.inFlightRosterKey = null;
+    this.rosterLoadSeq++;
+    this.loading = false;
     this.searchQuery = "";
     this.appliedMemberRefreshSeq = ++this.nextMemberRefreshSeq;
   }
@@ -137,10 +142,11 @@ export class InviteLobbyModal extends BaseModal {
     if (this.clients.length === 0) {
       this.appliedMemberRefreshSeq = ++this.nextMemberRefreshSeq;
       this.lastRefreshedRosterKey = nextRosterKey;
+      this.inFlightRosterKey = null;
       this.memberPublicIds = new Set();
       return;
     }
-    if (rosterChanged) {
+    if (rosterChanged && this.inFlightRosterKey !== nextRosterKey) {
       void this.refreshLobbyMembers(nextRosterKey);
     }
   }
@@ -151,20 +157,29 @@ export class InviteLobbyModal extends BaseModal {
   private async refreshLobbyMembers(rosterKey?: string): Promise<void> {
     const lobbyId = this.lobbyId;
     if (!lobbyId) return;
-    const seq = ++this.nextMemberRefreshSeq;
-    const memberIds = await fetchLobbyMemberPublicIds(lobbyId);
-    if (
-      memberIds === false ||
-      seq <= this.appliedMemberRefreshSeq ||
-      this.lobbyId !== lobbyId
-    ) {
-      return;
-    }
-    this.appliedMemberRefreshSeq = seq;
     if (rosterKey !== undefined) {
-      this.lastRefreshedRosterKey = rosterKey;
+      this.inFlightRosterKey = rosterKey;
     }
-    this.memberPublicIds = new Set(memberIds);
+    const seq = ++this.nextMemberRefreshSeq;
+    try {
+      const memberIds = await fetchLobbyMemberPublicIds(lobbyId);
+      if (
+        memberIds === false ||
+        seq <= this.appliedMemberRefreshSeq ||
+        this.lobbyId !== lobbyId
+      ) {
+        return;
+      }
+      this.appliedMemberRefreshSeq = seq;
+      if (rosterKey !== undefined) {
+        this.lastRefreshedRosterKey = rosterKey;
+      }
+      this.memberPublicIds = new Set(memberIds);
+    } finally {
+      if (this.inFlightRosterKey === rosterKey) {
+        this.inFlightRosterKey = null;
+      }
+    }
   }
 
   /**
@@ -188,11 +203,13 @@ export class InviteLobbyModal extends BaseModal {
    * Loads all pages of friends and clan members for the authenticated player.
    */
   private async loadRoster(): Promise<void> {
+    const loadSeq = ++this.rosterLoadSeq;
     this.loading = true;
     try {
       let userMe: UserMeResponse | false | null =
         lastUserMeResponse()?.response ?? null;
       userMe ??= await getUserMe();
+      if (loadSeq !== this.rosterLoadSeq) return;
       if (!userMe) {
         this.friends = [];
         this.clanGroups = [];
@@ -208,6 +225,7 @@ export class InviteLobbyModal extends BaseModal {
       let loadedFriendsCount = 0;
       for (let page = 1; ; page++) {
         const friendsRes = await fetchFriends(page, FRIENDS_PAGE_LIMIT);
+        if (loadSeq !== this.rosterLoadSeq) return;
         if (friendsRes === false) break;
         loadedFriendsCount += friendsRes.results.length;
         accumulatedFriends.push(
@@ -220,6 +238,7 @@ export class InviteLobbyModal extends BaseModal {
           break;
         }
       }
+      if (loadSeq !== this.rosterLoadSeq) return;
       this.friends = accumulatedFriends;
 
       // 2. Fetch all pages of clan members (limit=50 matches ClanShared.ts perPageOptions max)
@@ -234,6 +253,7 @@ export class InviteLobbyModal extends BaseModal {
               page,
               CLAN_MEMBERS_LIMIT,
             );
+            if (loadSeq !== this.rosterLoadSeq) return null;
             if (membersRes === false) {
               return page === 1
                 ? null
@@ -261,9 +281,12 @@ export class InviteLobbyModal extends BaseModal {
           };
         }),
       );
+      if (loadSeq !== this.rosterLoadSeq) return;
       this.clanGroups = clanResults.filter((g): g is ClanGroup => g !== null);
     } finally {
-      this.loading = false;
+      if (loadSeq === this.rosterLoadSeq) {
+        this.loading = false;
+      }
     }
   }
 
@@ -282,16 +305,18 @@ export class InviteLobbyModal extends BaseModal {
     let userMe: UserMeResponse | false | null =
       lastUserMeResponse()?.response ?? null;
     userMe ??= await getUserMe();
-    const senderPublicId = userMe ? userMe.player.publicId : "";
-    const senderUsername = userMe ? (userMe.player.username ?? null) : null;
+    const senderPublicId = userMe ? userMe.player.publicId : undefined;
+    const senderUsername = userMe
+      ? (userMe.player.username ?? null)
+      : undefined;
 
     let ok = false;
     try {
       ok = await sendLobbyInvite({
         targetPublicId,
         lobbyId,
-        senderPublicId,
-        senderUsername,
+        ...(senderPublicId ? { senderPublicId } : {}),
+        ...(senderUsername !== undefined ? { senderUsername } : {}),
         gameMode: this.gameMode,
         map: this.map,
       });

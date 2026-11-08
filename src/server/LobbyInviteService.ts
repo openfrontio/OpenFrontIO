@@ -328,9 +328,6 @@ export class LobbyInviteService {
    * Adds or updates an invite received from another worker or master process, reconciling concurrent logical creates and rejecting expired or stale dismissed refreshes.
    */
   addExternalInvite(invite: LobbyInvite): boolean {
-    if (invite.expiresAt <= Date.now()) {
-      return false;
-    }
     const key = this.logicalKey(invite);
 
     const pendingTargets = this.pendingDismissalsByInviteId.get(invite.id);
@@ -371,6 +368,10 @@ export class LobbyInviteService {
           this.onInviteDismissed?.(invite.id, pendingDismissedAt);
         }
       }
+    }
+
+    if (invite.expiresAt <= Date.now()) {
+      return false;
     }
 
     const dismissedById = this.dismissedAtByInviteId.get(invite.id);
@@ -890,6 +891,11 @@ export function registerLobbyInviteRoutes(
       caller.publicId,
       parsed.data.inviteId,
     );
-    res.json({ ok });
+    if (!ok) {
+      return res
+        .status(404)
+        .json({ error: "Invite not found or not authorized" });
+    }
+    res.json({ ok: true });
   });
 }
