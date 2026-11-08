@@ -7,7 +7,7 @@ import {
 import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
 import { GameEnv } from "@openfront/shared/configuration/Env";
 import { PersistentIdSchema } from "@openfront/shared/WireSchemas";
-import { decodeJwt, jwtVerify } from "jose";
+import { jwtVerify } from "jose";
 import { z } from "zod";
 import { ServerEnv } from "./ServerEnv";
 
@@ -30,21 +30,6 @@ export async function verifyClientToken(
         type: "error",
         message: "persistent ID not allowed in production",
       };
-    }
-  }
-  if (ServerEnv.env() === GameEnv.Dev) {
-    try {
-      const payload = decodeJwt(token);
-      const result = TokenPayloadSchema.safeParse(payload);
-      if (result.success) {
-        return {
-          type: "success",
-          persistentId: result.data.sub,
-          claims: result.data,
-        };
-      }
-    } catch {
-      // Fall through to strict verification
     }
   }
   try {
@@ -85,30 +70,14 @@ export async function getUserMe(
   token: string,
 ): Promise<{ type: "success"; response: UserMeResponse } | UserMeError> {
   try {
-    let issuer = ServerEnv.jwtIssuer();
-    const headers: Record<string, string> = {
-      authorization: `Bearer ${token}`,
-      "x-api-key": ServerEnv.apiKey(),
-    };
-    if (ServerEnv.env() === GameEnv.Dev) {
-      try {
-        const payload = decodeJwt(token);
-        if (typeof payload.iss === "string" && payload.iss.startsWith("http")) {
-          issuer = payload.iss;
-          if (payload.iss.includes("openfront.io")) {
-            delete headers["x-api-key"];
-          }
-        }
-      } catch {}
-    }
     // Get the user object
-    const response = await fetch(issuer + "/users/@me", {
-      headers,
+    const response = await fetch(ServerEnv.jwtIssuer() + "/users/@me", {
+      headers: {
+        authorization: `Bearer ${token}`,
+        "x-api-key": ServerEnv.apiKey(),
+      },
     });
     if (response.status !== 200) {
-      if (ServerEnv.env() === GameEnv.Dev) {
-        return getDevMockUserMe(token);
-      }
       return {
         type: "error",
         status: response.status,
@@ -118,9 +87,6 @@ export async function getUserMe(
     const body = await response.json();
     const result = UserMeResponseSchema.safeParse(body);
     if (!result.success) {
-      if (ServerEnv.env() === GameEnv.Dev) {
-        return getDevMockUserMe(token);
-      }
       return {
         type: "error",
         message: `Invalid response: ${z.prettifyError(result.error)}`,
@@ -128,49 +94,11 @@ export async function getUserMe(
     }
     return { type: "success", response: result.data };
   } catch (e) {
-    if (ServerEnv.env() === GameEnv.Dev) {
-      return getDevMockUserMe(token);
-    }
     return {
       type: "error",
       message: `Failed to fetch user me: ${e}`,
     };
   }
-}
-
-function getDevMockUserMe(token: string): {
-  type: "success";
-  response: UserMeResponse;
-} {
-  let sub = "dev-user";
-  try {
-    const payload = decodeJwt(token);
-    if (typeof payload.sub === "string") sub = payload.sub;
-  } catch {}
-  return {
-    type: "success",
-    response: {
-      user: { email: "dev@openfront.io" },
-      player: {
-        publicId: sub,
-        username: "DevPlayer",
-        canCreatePublicLobbies: true,
-        role: "admin",
-        clans: [],
-        friends: [],
-        flares: [],
-        trustTier: "trusted",
-        adfree: true,
-        achievements: {
-          singleplayerMap: [],
-          player: [],
-        },
-      } as unknown as UserMeResponse["player"],
-      steamLicence: false,
-      noticesSeen: [],
-      pendingMessages: [],
-    } as unknown as UserMeResponse,
-  };
 }
 
 // How a join closes when /users/@me fails. A 401/403 is the API rejecting the
