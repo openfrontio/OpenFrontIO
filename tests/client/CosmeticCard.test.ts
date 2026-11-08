@@ -548,43 +548,29 @@ describe("CosmeticCard", () => {
       expect(card!.querySelector(BADGE)).toBeNull();
     });
 
-    it("keeps the pill on one line, truncating a long label inside the card", async () => {
+    it("is a band across the artwork's top-right corner, like a sale", async () => {
       await show(skin(true));
-      const badge = card!.querySelector<HTMLElement>(BADGE)!;
-      expect(badge.className).toContain("whitespace-nowrap");
-      expect(badge.className).toContain("overflow-hidden");
-      expect(badge.className).toMatch(/max-w-\[calc\(100%/);
-      expect(badge.title).toBe("cosmetics.steam_exclusive");
-      expect(badge.className).toContain("@max-[120px]:px-1");
-      expect(badge.querySelector("svg")!.getAttribute("class")).toContain(
-        "@max-[120px]:hidden",
-      );
-      expect(badge.querySelector("span")!.className).toContain("truncate");
+      const corner = card!.querySelector<HTMLElement>(BADGE)!;
+      expect(corner.className).toContain("right-0");
+      expect(corner.className).toContain("top-0");
+      expect(corner.className).toContain("overflow-hidden");
+      expect(corner.className).toContain("pointer-events-none");
+      const band = corner.querySelector<HTMLElement>("span")!;
+      expect(band.className).toContain("rotate-45");
+      expect(band.className).toContain("truncate");
+      expect(band.textContent).toBe("cosmetics.steam_exclusive");
     });
 
-    it("an equipped exclusive shows both pills", async () => {
+    it("stays in the corner when the skin is equipped", async () => {
       await show(skin(true));
-      expect(card!.querySelector<HTMLElement>(BADGE)!.className).toContain(
-        "bottom-1 ",
-      );
       card!.state = "equipped";
       await card!.updateComplete;
-      const badge = card!.querySelector<HTMLElement>(BADGE)!;
       expect(
         card!.querySelector("[data-cosmetic-equipped='true']"),
       ).toBeTruthy();
-      expect(badge.className).toContain("bottom-7");
-      expect(badge.className).not.toContain("bottom-1 ");
-    });
-
-    it("sits above the preview bubble on narrow cards, equipped or not", async () => {
-      await show(skin(true));
-      const badge = () => card!.querySelector<HTMLElement>(BADGE)!;
-      expect(badge().className).toContain("@max-[140px]:bottom-7");
-      expect(badge().className).not.toContain("bottom-10");
-      card!.state = "equipped";
-      await card!.updateComplete;
-      expect(badge().className).toContain("@max-[140px]:bottom-7");
+      const corner = card!.querySelector<HTMLElement>(BADGE)!;
+      expect(corner.className).toContain("top-0");
+      expect(corner.className).not.toContain("bottom-");
     });
   });
 

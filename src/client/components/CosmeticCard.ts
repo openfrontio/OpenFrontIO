@@ -528,23 +528,13 @@ export class CosmeticCard extends LitElement {
           isSteamExclusive(active)
             ? html`<span
                 data-cosmetic-steam-exclusive
-                title=${translateText("cosmetics.steam_exclusive")}
-                class="absolute ${
-                  isEquipped ? "bottom-7" : "bottom-1"
-                } @max-[140px]:bottom-7 left-1 z-[4] inline-flex max-w-[calc(100%-0.5rem)] items-center gap-0.5 overflow-hidden whitespace-nowrap rounded-full bg-slate-800 px-1.5 @max-[120px]:px-1 py-0.5 text-[9px] font-black uppercase tracking-normal text-white shadow-lg shadow-black/60 ring-1 ring-sky-300/70"
-                ><svg
-                  class="h-2.5 w-2.5 shrink-0 @max-[120px]:hidden"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M12 1a11 11 0 0 0-11 10.2l5.9 2.4a3.1 3.1 0 0 1 1.8-.5l2.6-3.8v-.1a4.2 4.2 0 1 1 4.2 4.2h-.1l-3.7 2.7a3.1 3.1 0 0 1-6.1.7L1.2 14.6A11 11 0 1 0 12 1zM7.4 18.5l-1.4-.6a2.3 2.3 0 1 0 1.3-3.1l1.5.6a1.7 1.7 0 1 1-1.4 3.1zm8.3-5.3a2.8 2.8 0 1 1 0-5.6 2.8 2.8 0 0 1 0 5.6z"
-                  /></svg
-                ><span class="truncate"
+                class="pointer-events-none absolute right-0 top-0 z-[5] h-20 w-20 overflow-hidden rounded-tr-lg @min-[140px]:h-28 @min-[140px]:w-28"
+              >
+                <span
+                  class="absolute -right-[21px] top-[27px] w-[110px] rotate-45 truncate bg-aquarius px-[10px] py-px text-center text-[9px] font-black uppercase leading-[12px] tracking-normal text-deep-navy shadow-[0_2px_6px_rgba(0,0,0,0.5)] @min-[140px]:-right-[26px] @min-[140px]:top-[35px] @min-[140px]:w-[140px] @min-[140px]:px-[18px] @min-[140px]:text-[11px] @min-[140px]:leading-4"
                   >${translateText("cosmetics.steam_exclusive")}</span
-                ></span
-              >`
+                >
+              </span>`
             : nothing
         }
       </div>
