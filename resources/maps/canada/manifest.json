@@ -245,17 +245,17 @@
   "id": "Canada",
   "map": {
     "height": 2568,
-    "num_land_tiles": 2323945,
+    "num_land_tiles": 2327780,
     "width": 3428
   },
   "map16x": {
     "height": 642,
-    "num_land_tiles": 135972,
+    "num_land_tiles": 136561,
     "width": 857
   },
   "map4x": {
     "height": 1284,
-    "num_land_tiles": 566805,
+    "num_land_tiles": 568227,
     "width": 1714
   },
   "name": "Canada",
