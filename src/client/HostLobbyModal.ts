@@ -1068,11 +1068,15 @@ export class HostLobbyModal extends BaseModal {
   }
 
   public confirmBeforeClose(): boolean | Promise<boolean> {
+    if (document.querySelector<BaseModal>("invite-lobby-modal")?.isOpen()) {
+      return false;
+    }
     return this.confirmClose(translateText("host_modal.leave_confirmation"));
   }
 
   protected onClose(): void {
     console.log("Closing host lobby modal");
+    document.querySelector<BaseModal>("invite-lobby-modal")?.close();
     this.stopLobbyUpdates();
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();

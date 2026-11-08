@@ -330,8 +330,9 @@ export async function startMaster() {
     (invite) => lobbyService?.broadcastLobbyInvite(invite),
     (inviteId) => lobbyService?.broadcastLobbyInviteDismiss(inviteId),
   );
-  registerLobbyInviteRoutes(app);
 }
+
+registerLobbyInviteRoutes(app);
 
 app.get("/api/health", (_req, res) => {
   const ready = lobbyService?.isHealthy() ?? false;

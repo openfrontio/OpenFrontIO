@@ -648,11 +648,15 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   public confirmBeforeClose(): boolean | Promise<boolean> {
+    if (document.querySelector<BaseModal>("invite-lobby-modal")?.isOpen()) {
+      return false;
+    }
     if (!this.currentLobbyId) return true;
     return this.confirmClose(translateText("host_modal.leave_confirmation"));
   }
 
   protected onClose(): void {
+    document.querySelector<BaseModal>("invite-lobby-modal")?.close();
     this.hostedLobbySocket.stop();
     this.hostedLobbies = [];
     this.hostedLobbiesLoaded = false;

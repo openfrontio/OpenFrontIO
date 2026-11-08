@@ -43,12 +43,19 @@ export class InviteLobbyModal extends BaseModal {
 
   protected modalConfig(): ModalConfig {
     return {
-      title: translateText("invite_modal.title"),
-      maxWidth: "max-w-md",
+      maxWidth: "480px",
     };
   }
 
-  open(args?: Record<string, unknown>): void {
+  protected renderHeaderSlot(): TemplateResult {
+    return modalHeader({
+      title: translateText("invite_modal.title"),
+      onBack: () => this.close(),
+      ariaLabel: translateText("common.close"),
+    });
+  }
+
+  protected onOpen(args?: Record<string, unknown>): void {
     const inviteArgs = args as unknown as InviteLobbyModalOpenArgs | undefined;
     if (inviteArgs?.lobbyId) {
       this.lobbyId = inviteArgs.lobbyId;
@@ -57,8 +64,14 @@ export class InviteLobbyModal extends BaseModal {
       this.clients = inviteArgs.clients ?? [];
     }
     this.searchQuery = "";
-    super.open();
     void this.loadRoster();
+  }
+
+  protected firstUpdated(): void {
+    super.firstUpdated();
+    if (this.isModalOpen && !this.inline) {
+      this.modalEl?.open();
+    }
   }
 
   private async loadRoster(): Promise<void> {
@@ -195,7 +208,7 @@ export class InviteLobbyModal extends BaseModal {
     `;
   }
 
-  protected renderContent(): TemplateResult {
+  protected renderBody(): TemplateResult {
     const query = this.searchQuery.trim();
 
     const filteredFriends = this.friends.filter(
@@ -225,11 +238,6 @@ export class InviteLobbyModal extends BaseModal {
 
     return html`
       <div class="flex flex-col gap-4 p-4 text-white">
-        ${modalHeader({
-          title: translateText("invite_modal.title"),
-          onBack: () => this.close(),
-          ariaLabel: translateText("common.close"),
-        })}
         ${
           canSteamInvite
             ? html`
