@@ -21,7 +21,6 @@ import {
   Turn,
   Winner,
 } from "@openfront/engine-api/Schemas";
-import { positionedTribeCount } from "@openfront/engine-lib/execution/utils/TribeNames";
 import {
   adjustForTeams,
   assignTeamsLobbyPreview,
@@ -1018,15 +1017,9 @@ export class GameServer {
     this.deps
       .fetchTribes(players)
       .then((tribes) => {
-        // One tribe per free bot slot: the map's positioned custom tribes
-        // take the first slots (TribeSpawner), so with fewer free slots than
-        // tribes, drop from the tail (the global-pool slice). The engine
-        // slices the same way, so every embedded name spawns.
-        const freeSlots = Math.max(
-          0,
-          this.gameConfig.bots - positionedTribeCount(this.gameConfig.gameMap),
-        );
-        const used = tribes.slice(0, freeSlots);
+        // One tribe per bot: with fewer bots than tribes, drop from the
+        // tail (the global-pool slice).
+        const used = tribes.slice(0, this.gameConfig.bots);
         if (used.length > 0) {
           this.tribes = used;
         }
