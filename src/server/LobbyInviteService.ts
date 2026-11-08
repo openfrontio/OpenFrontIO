@@ -357,13 +357,18 @@ export class LobbyInviteService {
         const existingLogical = existingLogicalId
           ? this.invites.get(existingLogicalId)
           : undefined;
+        let removedActiveId: string | undefined;
         if (
           existingLogical &&
           existingLogical.createdAt <= pendingDismissedAt
         ) {
+          removedActiveId = existingLogical.id;
           this.unindexInvite(existingLogical);
           this.invites.delete(existingLogical.id);
           this.onInviteDismissed?.(existingLogical.id, pendingDismissedAt);
+        }
+        if (removedActiveId !== invite.id) {
+          this.onInviteDismissed?.(invite.id, pendingDismissedAt);
         }
       }
     }

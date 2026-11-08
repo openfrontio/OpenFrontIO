@@ -52,6 +52,7 @@ export class InviteLobbyModal extends BaseModal {
   @state() private pendingKeys = new Set<string>();
   private nextMemberRefreshSeq = 0;
   private appliedMemberRefreshSeq = 0;
+  private lastRefreshedRosterKey = "";
 
   /**
    * Returns configuration for the underlying `<o-modal>` container.
@@ -86,6 +87,7 @@ export class InviteLobbyModal extends BaseModal {
       this.memberPublicIds = new Set(inviteArgs.memberPublicIds ?? []);
     }
     this.appliedMemberRefreshSeq = ++this.nextMemberRefreshSeq;
+    this.lastRefreshedRosterKey = "";
     this.searchQuery = "";
     void this.refreshLobbyMembers();
     void this.loadRoster();
@@ -100,6 +102,7 @@ export class InviteLobbyModal extends BaseModal {
     this.map = undefined;
     this.clients = [];
     this.memberPublicIds.clear();
+    this.lastRefreshedRosterKey = "";
     this.searchQuery = "";
     this.appliedMemberRefreshSeq = ++this.nextMemberRefreshSeq;
   }
@@ -118,36 +121,34 @@ export class InviteLobbyModal extends BaseModal {
     if (lobbyId !== undefined && this.lobbyId && lobbyId !== this.lobbyId) {
       return;
     }
-    const prevClientIds = this.clients
-      .map((c) => c.clientID)
+    const nextRosterKey = clients
+      .map((c) => `${c.clientID}:${c.username ?? ""}:${c.publicId ?? ""}`)
       .sort()
-      .join(",");
-    const nextClientIds = clients
-      .map((c) => c.clientID)
-      .sort()
-      .join(",");
-    const rosterChanged = prevClientIds !== nextClientIds;
+      .join("|");
+    const rosterChanged = this.lastRefreshedRosterKey !== nextRosterKey;
 
     this.clients = [...clients];
     if (memberPublicIds !== undefined) {
       this.appliedMemberRefreshSeq = ++this.nextMemberRefreshSeq;
+      this.lastRefreshedRosterKey = nextRosterKey;
       this.memberPublicIds = new Set(memberPublicIds);
       return;
     }
     if (this.clients.length === 0) {
       this.appliedMemberRefreshSeq = ++this.nextMemberRefreshSeq;
+      this.lastRefreshedRosterKey = nextRosterKey;
       this.memberPublicIds = new Set();
       return;
     }
     if (rosterChanged) {
-      void this.refreshLobbyMembers();
+      void this.refreshLobbyMembers(nextRosterKey);
     }
   }
 
   /**
    * Fetches the server-validated member `publicId`s for the active lobby.
    */
-  private async refreshLobbyMembers(): Promise<void> {
+  private async refreshLobbyMembers(rosterKey?: string): Promise<void> {
     const lobbyId = this.lobbyId;
     if (!lobbyId) return;
     const seq = ++this.nextMemberRefreshSeq;
@@ -160,6 +161,9 @@ export class InviteLobbyModal extends BaseModal {
       return;
     }
     this.appliedMemberRefreshSeq = seq;
+    if (rosterKey !== undefined) {
+      this.lastRefreshedRosterKey = rosterKey;
+    }
     this.memberPublicIds = new Set(memberIds);
   }
 
