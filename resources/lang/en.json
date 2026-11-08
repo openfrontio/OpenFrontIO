@@ -1377,10 +1377,12 @@
     "unequipped_all": "Unequipped everything"
   },
   "invite_modal": {
+    "clan_group": "Clan [{tag}] ({count})",
     "empty": "No friends or clan members found",
     "friends": "Friends",
     "in_lobby": "In Lobby",
     "invite": "Invite",
+    "invite_failed": "Could not send invite. Please try again.",
     "invited": "Invited",
     "search_placeholder": "Search friends and clan members...",
     "steam_invite": "Invite via Steam",
@@ -1825,6 +1827,7 @@
   "notifications": {
     "empty": "No new notifications",
     "friend_request": "Friend request",
+    "invite_countdown": "{seconds}s",
     "join_lobby": "Join Lobby",
     "lobby_invite": "Lobby Invite",
     "new_version": "Version {version} is now live!",

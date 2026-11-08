@@ -144,13 +144,16 @@ export class JoinLobbyModal extends BaseModal {
           .lobbyId=${this.currentLobbyId}
         ></copy-button>`
       : undefined;
+    const capturedLobbyId = this.currentLobbyId;
     const invite =
-      canShare && this.currentLobbyId
+      canShare && capturedLobbyId
         ? inviteFriendsButton({
-            lobbyId: this.currentLobbyId,
+            lobbyId: capturedLobbyId,
             gameMode: this.gameConfig?.gameMode,
             map: this.gameConfig?.gameMap,
             clients: this.players,
+            isStillInLobby: () =>
+              this.isOpen() && this.currentLobbyId === capturedLobbyId,
           })
         : nothing;
     return modalHeader({
@@ -648,7 +651,8 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   public confirmBeforeClose(): boolean | Promise<boolean> {
-    if (document.querySelector<BaseModal>("invite-lobby-modal")?.isOpen()) {
+    const inviteModal = document.querySelector<BaseModal>("invite-lobby-modal");
+    if (typeof inviteModal?.isOpen === "function" && inviteModal.isOpen()) {
       return false;
     }
     if (!this.currentLobbyId) return true;
@@ -656,7 +660,10 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   protected onClose(): void {
-    document.querySelector<BaseModal>("invite-lobby-modal")?.close();
+    const inviteModal = document.querySelector<BaseModal>("invite-lobby-modal");
+    if (typeof inviteModal?.close === "function") {
+      inviteModal.close();
+    }
     this.hostedLobbySocket.stop();
     this.hostedLobbies = [];
     this.hostedLobbiesLoaded = false;
@@ -804,6 +811,14 @@ export class JoinLobbyModal extends BaseModal {
 
   private updateFromLobby(lobby: GameInfo | PublicGameInfo) {
     this.players = "clients" in lobby ? (lobby.clients ?? []) : [];
+    const inviteModal = document.querySelector<
+      HTMLElement & {
+        updateClients?: (clients: ClientInfo[], lobbyId?: string) => void;
+      }
+    >("invite-lobby-modal");
+    if (typeof inviteModal?.updateClients === "function") {
+      inviteModal.updateClients(this.players, this.currentLobbyId);
+    }
     if ("serverTime" in lobby && typeof lobby.serverTime === "number") {
       this.serverTimeOffset = calculateServerTimeOffset(lobby.serverTime);
     }

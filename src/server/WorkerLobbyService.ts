@@ -12,6 +12,7 @@ import { encodeLobbyMessage } from "@openfront/shared/ZbinWire";
 import http from "http";
 import { WebSocket, WebSocketServer } from "ws";
 import { GameManager } from "./GameManager";
+import { GamePhase } from "./GameServer";
 import {
   InternalGameInfo,
   InternalPublicGames,
@@ -59,6 +60,8 @@ export class WorkerLobbyService {
   // ranked check-in loop so a draining server stops offering matches too
   // (RankedCheckin.ts, OPE-469).
   private deploymentActive = true;
+  private lastOpenLobbies: Record<string, string[]> | null = null;
+  private workerId?: number;
 
   constructor(
     private readonly server: http.Server,
@@ -134,6 +137,9 @@ export class WorkerLobbyService {
           this.lastFullGameIds = null;
         }
         this.lastPublicGames = msg.publicGames;
+        if (msg.openLobbies !== undefined) {
+          this.lastOpenLobbies = msg.openLobbies;
+        }
         // Forward message to all clients
         this.broadcastLobbiesToClients(msg.publicGames);
         // Update master with my lobby info
@@ -172,21 +178,102 @@ export class WorkerLobbyService {
         LobbyInviteService.instance.addExternalInvite(msg.invite);
         break;
       case "lobbyInviteDismissBroadcast":
-        LobbyInviteService.instance.dismissExternalInvite(msg.inviteId);
+        LobbyInviteService.instance.dismissExternalInvite(
+          msg.inviteId,
+          msg.dismissedAt,
+        );
         break;
     }
   }
 
+  /**
+   * Notifies the master that this worker is ready to accept lobby scheduling and broadcasts.
+   */
   sendReady(workerId: number) {
+    this.workerId = workerId;
     this.sendToMaster({ type: "workerReady", workerId });
   }
 
+  /**
+   * Forwards a newly created or refreshed lobby invite to the master for cross-worker distribution.
+   */
   sendLobbyInvite(invite: LobbyInvite) {
     this.sendToMaster({ type: "lobbyInvite", invite });
   }
 
-  sendLobbyInviteDismiss(inviteId: string) {
-    this.sendToMaster({ type: "lobbyInviteDismiss", inviteId });
+  /**
+   * Forwards a lobby invite dismissal to the master for cross-worker synchronization.
+   */
+  sendLobbyInviteDismiss(inviteId: string, dismissedAt?: number) {
+    this.sendToMaster({
+      type: "lobbyInviteDismiss",
+      inviteId,
+      dismissedAt,
+    });
+  }
+
+  /**
+   * Immediately reports this worker's current open lobbies and membership to the master.
+   */
+  public reportLobbies(): void {
+    this.sendMyLobbiesToMaster();
+  }
+
+  /**
+   * Returns whether `gameID` is an open lobby on this worker or in the latest cluster snapshot from master.
+   */
+  public isLobbyOpen(gameID: string): boolean {
+    const localGame = this.gm.game(gameID);
+    if (localGame !== null) {
+      return localGame.phase() === GamePhase.Lobby && !localGame.hasStarted();
+    }
+    if (
+      this.workerId !== undefined &&
+      ServerEnv.workerIndex(gameID) === this.workerId
+    ) {
+      return false;
+    }
+    if (this.lastOpenLobbies !== null) {
+      return Object.prototype.hasOwnProperty.call(this.lastOpenLobbies, gameID);
+    }
+    return false;
+  }
+
+  /**
+   * Returns whether the given player (`persistentId` or `publicId`) is a member of the open lobby `gameID`.
+   */
+  public isPlayerInLobby(
+    gameID: string,
+    persistentId: string,
+    publicId: string,
+  ): boolean {
+    const localGame = this.gm.game(gameID);
+    if (localGame !== null) {
+      if (localGame.phase() !== GamePhase.Lobby || localGame.hasStarted()) {
+        return false;
+      }
+      if (localGame.isCreator(persistentId)) {
+        return true;
+      }
+      return localGame
+        .activeClients()
+        .some(
+          (c) =>
+            c.persistentID === persistentId ||
+            (c.publicId !== undefined && c.publicId === publicId),
+        );
+    }
+    if (
+      this.workerId !== undefined &&
+      ServerEnv.workerIndex(gameID) === this.workerId
+    ) {
+      return false;
+    }
+    const members = this.lastOpenLobbies?.[gameID];
+    if (!members) {
+      return false;
+    }
+    return members.includes(persistentId) || members.includes(publicId);
   }
 
   private sendToMaster(msg: WorkerMessage) {
@@ -247,6 +334,7 @@ export class WorkerLobbyService {
       type: "lobbyList",
       lobbies: [...publicLobbies, ...hostedLobbies],
       liveGames: this.gm.activeGames(),
+      openLobbies: this.gm.openLobbyMembers(),
     } satisfies WorkerLobbyList);
   }
 

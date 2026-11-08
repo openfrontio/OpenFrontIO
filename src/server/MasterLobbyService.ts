@@ -46,6 +46,11 @@ export class MasterLobbyService {
   private readonly workerLobbies = new Map<number, InternalGameInfo[]>();
   // Worker id => games it last reported running (lobbies included).
   private readonly workerLiveGames = new Map<number, number>();
+  // Worker id => open lobbies (gameID => connected member IDs) on that worker.
+  private readonly workerOpenLobbies = new Map<
+    number,
+    Record<string, string[]>
+  >();
   private readonly readyWorkers = new Set<number>();
   // gameID => consecutive broadcast cycles a hosted lobby has lost the
   // per-creator dedup or overflowed the cluster-wide cap. Losing once can be
@@ -113,23 +118,31 @@ export class MasterLobbyService {
         case "lobbyList":
           this.workerLobbies.set(workerId, this.validLobbies(msg.lobbies));
           this.workerLiveGames.set(workerId, msg.liveGames ?? 0);
+          if (msg.openLobbies !== undefined) {
+            this.workerOpenLobbies.set(workerId, msg.openLobbies);
+          }
           // The client coalesces: at most one report a second, plus a
           // heartbeat. Every change is offered so a numClients-only change
           // still reaches the site roster within a second.
           this.coordinator?.report(this.ownLobbies(), this.liveGames());
           break;
         case "lobbyInvite":
-          LobbyInviteService.instance.addExternalInvite(msg.invite);
-          this.broadcastMessage({
-            type: "lobbyInviteBroadcast",
-            invite: msg.invite,
-          });
+          if (LobbyInviteService.instance.addExternalInvite(msg.invite)) {
+            this.broadcastMessage({
+              type: "lobbyInviteBroadcast",
+              invite: msg.invite,
+            });
+          }
           break;
         case "lobbyInviteDismiss":
-          LobbyInviteService.instance.dismissExternalInvite(msg.inviteId);
+          LobbyInviteService.instance.dismissExternalInvite(
+            msg.inviteId,
+            msg.dismissedAt,
+          );
           this.broadcastMessage({
             type: "lobbyInviteDismissBroadcast",
             inviteId: msg.inviteId,
+            dismissedAt: msg.dismissedAt,
           });
           break;
       }
@@ -164,6 +177,9 @@ export class MasterLobbyService {
     }
   }
 
+  /**
+   * Broadcasts a newly created or refreshed lobby invite to all worker processes.
+   */
   broadcastLobbyInvite(invite: LobbyInvite): void {
     this.broadcastMessage({
       type: "lobbyInviteBroadcast",
@@ -171,17 +187,71 @@ export class MasterLobbyService {
     });
   }
 
-  broadcastLobbyInviteDismiss(inviteId: string): void {
+  /**
+   * Broadcasts a lobby invite dismissal to all worker processes.
+   */
+  broadcastLobbyInviteDismiss(inviteId: string, dismissedAt?: number): void {
     this.broadcastMessage({
       type: "lobbyInviteDismissBroadcast",
       inviteId,
+      dismissedAt,
     });
+  }
+
+  /**
+   * Returns a merged map of open lobby game IDs across all workers to their connected member IDs.
+   */
+  public openLobbies(): Record<string, string[]> {
+    const merged: Record<string, string[]> = {};
+    for (const workerMap of this.workerOpenLobbies.values()) {
+      for (const [gameID, members] of Object.entries(workerMap)) {
+        merged[gameID] = members;
+      }
+    }
+    for (const lobby of this.ownLobbies()) {
+      if (!Object.prototype.hasOwnProperty.call(merged, lobby.gameID)) {
+        merged[lobby.gameID] = [];
+      }
+    }
+    return merged;
+  }
+
+  /**
+   * Returns whether `gameID` is currently reported as an open lobby by its owning worker.
+   */
+  public isLobbyOpen(gameID: string): boolean {
+    const ownerWorkerId = ServerEnv.workerIndex(gameID);
+    const ownerMap = this.workerOpenLobbies.get(ownerWorkerId);
+    if (ownerMap !== undefined) {
+      return Object.prototype.hasOwnProperty.call(ownerMap, gameID);
+    }
+    return this.ownLobbies().some((l) => l.gameID === gameID);
+  }
+
+  /**
+   * Returns whether the given player (`persistentId` or `publicId`) is in the open lobby `gameID`.
+   */
+  public isPlayerInLobby(
+    gameID: string,
+    persistentId: string,
+    publicId: string,
+  ): boolean {
+    if (!this.isLobbyOpen(gameID)) {
+      return false;
+    }
+    const ownerWorkerId = ServerEnv.workerIndex(gameID);
+    const members = this.workerOpenLobbies.get(ownerWorkerId)?.[gameID];
+    if (!members) {
+      return false;
+    }
+    return members.includes(persistentId) || members.includes(publicId);
   }
 
   removeWorker(workerId: number) {
     this.workers.delete(workerId);
     this.workerLobbies.delete(workerId);
     this.workerLiveGames.delete(workerId);
+    this.workerOpenLobbies.delete(workerId);
     this.readyWorkers.delete(workerId);
   }
 
@@ -456,6 +526,8 @@ export class MasterLobbyService {
       },
       delistGameIDs: delist.length > 0 ? delist : undefined,
       active: this.active || !this.stateKnown,
+      openLobbies:
+        this.workerOpenLobbies.size > 0 ? this.openLobbies() : undefined,
     } satisfies MasterLobbiesBroadcast;
     for (const [workerId, worker] of this.workers.entries()) {
       worker.send(msg, (e) => {

@@ -9,6 +9,37 @@ export interface InviteFriendsButtonOptions {
   gameMode?: string;
   map?: string;
   clients?: ClientInfo[];
+  isStillInLobby?: () => boolean;
+}
+
+/**
+ * Checks whether the player is still in the target lobby before opening the lazy-loaded invite modal.
+ */
+function isPlayerStillInLobby(options?: InviteFriendsButtonOptions): boolean {
+  const lobbyId = options?.lobbyId;
+  if (!lobbyId) return false;
+  if (typeof options?.isStillInLobby === "function") {
+    return options.isStillInLobby();
+  }
+  if (document.body.classList.contains("in-game")) {
+    return false;
+  }
+  const hostModal = document.querySelector<
+    HTMLElement & { lobbyId?: string; isOpen?: () => boolean }
+  >("host-lobby-modal");
+  const joinModal = document.querySelector<
+    HTMLElement & { currentLobbyId?: string; isOpen?: () => boolean }
+  >("join-lobby-modal");
+  if (hostModal || joinModal) {
+    const inHost =
+      (typeof hostModal?.isOpen !== "function" || hostModal.isOpen()) &&
+      hostModal?.lobbyId === lobbyId;
+    const inJoin =
+      (typeof joinModal?.isOpen !== "function" || joinModal.isOpen()) &&
+      joinModal?.currentLobbyId === lobbyId;
+    return Boolean(inHost || inJoin);
+  }
+  return true;
 }
 
 /**
@@ -23,6 +54,9 @@ export function inviteFriendsButton(
   const label = translateText("public_lobby.invite_friends");
   const handleClick = () => {
     whenModalLoaded("invite-lobby-modal", () => {
+      if (!isPlayerStillInLobby(options)) {
+        return;
+      }
       const modal =
         document.querySelector<InviteLobbyModal>("invite-lobby-modal");
       modal?.open(options as Record<string, unknown> | undefined);

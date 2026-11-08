@@ -51,6 +51,9 @@ class NavNotificationsStore {
   private currentPublicId: string | null = null;
   private lobbyInvitePoll: number | null = null;
   private lobbyInviteTicker: number | null = null;
+  private lobbyInviteServerOffsetMs = 0;
+  // Tracks locally dismissed invite IDs -> createdAt timestamp so stale polls or failed dismiss calls do not resurrect them.
+  private dismissedInviteCreatedAt = new Map<string, number>();
 
   private friendRequestsEnabled = false;
   private friendRequestPollingPaused = false;
@@ -212,8 +215,19 @@ class NavNotificationsStore {
     }
   }
 
+  private serverNow(): number {
+    return Date.now() + this.lobbyInviteServerOffsetMs;
+  }
+
+  /**
+   * Computes the remaining seconds before `invite` expires using server-adjusted time.
+   */
+  inviteRemainingSeconds(invite: Pick<LobbyInvite, "expiresAt">): number {
+    return Math.max(1, Math.ceil((invite.expiresAt - this.serverNow()) / 1000));
+  }
+
   private pruneLobbyInvitesTick(): void {
-    const now = Date.now();
+    const now = this.serverNow();
     const active = this._lobbyInvites.filter((inv) => inv.expiresAt > now);
     if (active.length !== this._lobbyInvites.length) {
       this._lobbyInvites = active;
@@ -236,16 +250,61 @@ class NavNotificationsStore {
     ) {
       return;
     }
-    const invites = await fetchLobbyInvites(this.currentPublicId);
-    this._lobbyInvites = invites;
+    const authGeneration = this.authGeneration;
+    const pollingGeneration = this.friendRequestPollingGeneration;
+    const publicId = this.currentPublicId;
+    const result = await fetchLobbyInvites(publicId);
+    if (
+      authGeneration !== this.authGeneration ||
+      pollingGeneration !== this.friendRequestPollingGeneration ||
+      this.currentPublicId !== publicId ||
+      this.friendRequestPollingPaused
+    ) {
+      return;
+    }
+    if (result === false) {
+      this.pruneLobbyInvitesTick();
+      return;
+    }
+    if (
+      typeof result.serverTime === "number" &&
+      Number.isFinite(result.serverTime)
+    ) {
+      this.lobbyInviteServerOffsetMs = result.serverTime - Date.now();
+    }
+    const now = this.serverNow();
+    this._lobbyInvites = result.invites.filter((inv) => {
+      if (inv.expiresAt <= now) return false;
+      const dismissedCreatedAt = this.dismissedInviteCreatedAt.get(inv.id);
+      if (dismissedCreatedAt !== undefined) {
+        if (inv.createdAt <= dismissedCreatedAt) {
+          return false;
+        }
+        this.dismissedInviteCreatedAt.delete(inv.id);
+      }
+      return true;
+    });
     this.notify();
   }
 
   dismissLobbyInvite(inviteId: string): void {
+    const existing = this._lobbyInvites.find((i) => i.id === inviteId);
+    this.dismissedInviteCreatedAt.set(
+      inviteId,
+      existing?.createdAt ?? this.serverNow(),
+    );
     this._lobbyInvites = this._lobbyInvites.filter((i) => i.id !== inviteId);
     this.notify();
     if (this.currentPublicId) {
-      void dismissLobbyInviteApi(this.currentPublicId, inviteId);
+      const publicId = this.currentPublicId;
+      void dismissLobbyInviteApi(publicId, inviteId).then((ok) => {
+        if (!ok) {
+          console.warn(
+            "Failed to dismiss lobby invite on server; keeping local dismissal tombstone",
+            inviteId,
+          );
+        }
+      });
     }
   }
 
@@ -443,6 +502,8 @@ class NavNotificationsStore {
     this._hasNewVersion = false;
     this._friendRequests = [];
     this._lobbyInvites = [];
+    this.lobbyInviteServerOffsetMs = 0;
+    this.dismissedInviteCreatedAt.clear();
     this.currentPublicId = null;
     this.friendRequestsEnabled = false;
     this.friendRequestPollingPaused = false;
@@ -488,6 +549,10 @@ export class NavNotificationsController implements ReactiveController {
 
   lobbyInvites(): readonly LobbyInvite[] {
     return navNotifications.lobbyInvites();
+  }
+
+  inviteRemainingSeconds(invite: Pick<LobbyInvite, "expiresAt">): number {
+    return navNotifications.inviteRemainingSeconds(invite);
   }
 
   dismissLobbyInvite(inviteId: string): void {

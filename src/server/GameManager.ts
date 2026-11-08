@@ -17,6 +17,7 @@ import { Client } from "./Client";
 import { GamePhase, GameServer, JoinResult } from "./GameServer";
 import { Gatekeeper, noopGatekeeper } from "./Gatekeeper";
 import { ClientAuth, clientAuth } from "./JoinVerify";
+import { LobbyInviteService } from "./LobbyInviteService";
 
 export interface ClientSegmentCount {
   platform: Client["platform"];
@@ -51,6 +52,26 @@ export class GameManager {
     return Array.from(this.games.values()).filter(
       (g) => g.phase() === GamePhase.Lobby && !g.isPublic() && g.isListed(),
     );
+  }
+
+  /**
+   * Returns a map of open lobby game IDs on this worker to their connected member identifiers (`persistentID` and `publicId`).
+   */
+  public openLobbyMembers(): Record<string, string[]> {
+    const out: Record<string, string[]> = {};
+    for (const [id, game] of this.games.entries()) {
+      if (game.phase() === GamePhase.Lobby && !game.hasStarted()) {
+        const members = new Set<string>();
+        for (const client of game.activeClients()) {
+          members.add(client.persistentID);
+          if (client.publicId) {
+            members.add(client.publicId);
+          }
+        }
+        out[id] = [...members];
+      }
+    }
+    return out;
   }
 
   joinClient(client: Client, gameID: GameID): JoinResult | "not_found" {
@@ -179,6 +200,8 @@ export class GameManager {
       const phase = game.phase();
       if (phase === GamePhase.Lobby) {
         game.maybeAutoStartListed();
+      } else {
+        LobbyInviteService.instance.removeInvitesForLobby(id);
       }
       if (phase === GamePhase.Active) {
         // A matchmade game missing a player at the start deadline is

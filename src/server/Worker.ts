@@ -476,6 +476,7 @@ export async function startWorker() {
     // idempotency) and broadcasts it to everyone still connected. Done after
     // creation so a failed creation never broadcasts a dead id.
     previousGame?.setSuccessorLobby(id);
+    lobbyService.reportLobbies();
 
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     const clientIP = req.ip || req.socket.remoteAddress || "unknown";
@@ -585,16 +586,15 @@ export async function startWorker() {
     (invite) => {
       lobbyService.sendLobbyInvite(invite);
     },
-    (inviteId) => {
-      lobbyService.sendLobbyInviteDismiss(inviteId);
+    (inviteId, dismissedAt) => {
+      lobbyService.sendLobbyInviteDismiss(inviteId, dismissedAt);
     },
   );
 
-  registerLobbyInviteRoutes(app, (gameId) => {
-    const game = gm.game(gameId);
-    return (
-      game === null || (game.phase() === GamePhase.Lobby && !game.hasStarted())
-    );
+  registerLobbyInviteRoutes(app, {
+    isLobbyActive: (gameId) => lobbyService.isLobbyOpen(gameId),
+    isPlayerInLobby: (gameId, persistentId, publicId) =>
+      lobbyService.isPlayerInLobby(gameId, persistentId, publicId),
   });
 
   // WebSocket handling
@@ -849,6 +849,7 @@ export async function startWorker() {
             verifySkipped ? undefined : { username, clanTag },
           )
         ) {
+          lobbyService.reportLobbies();
           return;
         }
 
@@ -990,6 +991,9 @@ export async function startWorker() {
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);
+        if (joinResult === "joined") {
+          lobbyService.reportLobbies();
+        }
         if (joinResult !== "joined" && joinResult !== "redirected") {
           admissionGuard.rollback();
         }

@@ -1,7 +1,9 @@
+import { maps } from "@openfront/engine-api/game/GameTypes";
 import type { LobbyInvite } from "@openfront/shared/LobbyInviteSchemas";
 import { html, LitElement, nothing, render, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { desktopQuit, requestDesktopQuit } from "../DesktopShell";
+import { whenModalLoaded } from "../LazyModals";
 import type { JoinLobbyEvent } from "../Main";
 import { closeMobileSidebar } from "../Navigation";
 import { getCurrentLanguage, translateText } from "../Utils";
@@ -236,6 +238,22 @@ export class NavUtilityIcons extends LitElement {
     this._notifications.dismissLobbyInvite(invite.id);
     this.closeNotifications();
     closeMobileSidebar();
+    if (document.querySelector("join-lobby-modal") !== null) {
+      whenModalLoaded("join-lobby-modal", () => {
+        window.showPage?.("page-join-lobby");
+        (
+          document.querySelector("join-lobby-modal") as
+            | (HTMLElement & {
+                open?: (args?: Record<string, unknown>) => void;
+              })
+            | null
+        )?.open?.({
+          lobbyId: invite.lobbyId,
+          source: "private",
+        });
+      });
+      return;
+    }
     document.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {
@@ -251,6 +269,41 @@ export class NavUtilityIcons extends LitElement {
   private dismissLobbyInvite = (inviteId: string): void => {
     this._notifications.dismissLobbyInvite(inviteId);
   };
+
+  private formatInviteCountdown(invite: LobbyInvite): string {
+    const remaining =
+      typeof this._notifications.inviteRemainingSeconds === "function"
+        ? this._notifications.inviteRemainingSeconds(invite)
+        : Math.max(1, Math.ceil((invite.expiresAt - Date.now()) / 1000));
+    return translateText("notifications.invite_countdown", {
+      seconds: remaining,
+    });
+  }
+
+  private formatInviteMode(gameMode: string | undefined): string {
+    if (!gameMode) {
+      return translateText("notifications.private_lobby");
+    }
+    const normalized = gameMode.trim().toLowerCase();
+    if (normalized === "free for all" || normalized === "ffa") {
+      return translateText("game_mode.ffa");
+    }
+    if (normalized === "team" || normalized === "teams") {
+      return translateText("game_mode.teams");
+    }
+    return translateText(`game_mode.${normalized.replace(/\s+/g, "_")}`);
+  }
+
+  private formatInviteMap(mapName: string | undefined): string | null {
+    if (!mapName) return null;
+    const matched = maps.find(
+      (m) => m.type === mapName || m.id.toLowerCase() === mapName.toLowerCase(),
+    );
+    const key =
+      matched?.translationKey ??
+      `map.${(matched?.id ?? mapName).toLowerCase().replace(/[\s.]+/g, "")}`;
+    return translateText(key);
+  }
 
   private formatRequestDate(iso: string): string {
     return new Date(iso).toLocaleDateString(
@@ -275,10 +328,10 @@ export class NavUtilityIcons extends LitElement {
           ${translateText("notifications.title")}
         </div>
         <div class="max-h-[min(28rem,calc(100vh-8rem))] overflow-y-auto">
-          ${lobbyInvites.map(
-            (invite) => html`
+          ${lobbyInvites.map((invite) => {
+            const localizedMap = this.formatInviteMap(invite.map);
+            return html`
               <div
-                role="menuitem"
                 class="w-full px-4 py-3 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border-b border-white/10"
               >
                 <div class="flex items-start justify-between gap-2">
@@ -302,10 +355,7 @@ export class NavUtilityIcons extends LitElement {
                       <span
                         class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-200"
                       >
-                        ${Math.max(
-                          1,
-                          Math.ceil((invite.expiresAt - Date.now()) / 1000),
-                        )}s
+                        ${this.formatInviteCountdown(invite)}
                       </span>
                     </div>
                     <div class="mt-1 text-sm font-bold text-white truncate">
@@ -319,11 +369,8 @@ export class NavUtilityIcons extends LitElement {
                       }
                     </div>
                     <div class="text-xs text-white/60">
-                      ${
-                        invite.gameMode ??
-                        translateText("notifications.private_lobby")
-                      }
-                      ${invite.map ? ` • ${invite.map}` : ""}
+                      ${this.formatInviteMode(invite.gameMode)}
+                      ${localizedMap ? ` • ${localizedMap}` : ""}
                     </div>
                   </div>
                   <button
@@ -338,6 +385,7 @@ export class NavUtilityIcons extends LitElement {
                 <div class="mt-2.5 flex items-center gap-2">
                   <button
                     type="button"
+                    role="menuitem"
                     @click=${() => this.acceptLobbyInvite(invite)}
                     class="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-colors shadow-sm cursor-pointer"
                   >
@@ -345,6 +393,7 @@ export class NavUtilityIcons extends LitElement {
                   </button>
                   <button
                     type="button"
+                    role="menuitem"
                     @click=${() => this.dismissLobbyInvite(invite.id)}
                     class="px-3 py-1.5 bg-white/10 hover:bg-white/15 text-white/70 hover:text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer"
                   >
@@ -352,8 +401,8 @@ export class NavUtilityIcons extends LitElement {
                   </button>
                 </div>
               </div>
-            `,
-          )}
+            `;
+          })}
           ${
             hasNewVersion
               ? html`

@@ -65,6 +65,9 @@ const WorkerLobbyListSchema = z.object({
   // when a draining server is empty. Optional for a worker build that
   // predates it; absent counts as zero.
   liveGames: z.number().int().min(0).optional(),
+  // Map of open lobby gameID (public or private) to connected member IDs
+  // (publicId and persistentID) on this worker.
+  openLobbies: z.record(z.string(), z.array(z.string())).optional(),
 });
 
 const WorkerReadySchema = z.object({
@@ -80,6 +83,7 @@ const WorkerLobbyInviteSchema = z.object({
 const WorkerLobbyInviteDismissSchema = z.object({
   type: z.literal("lobbyInviteDismiss"),
   inviteId: z.string(),
+  dismissedAt: z.number().optional(),
 });
 
 export const WorkerMessageSchema = z.discriminatedUnion("type", [
@@ -113,6 +117,8 @@ const MasterLobbiesBroadcastSchema = z.object({
   // deployment learn to reload (see PublicLobbyFullSchema.active). Optional
   // only for old fixtures; the master always sends it, absent means active.
   active: z.boolean().optional(),
+  // Aggregated map of open lobby gameID -> member IDs across all workers.
+  openLobbies: z.record(z.string(), z.array(z.string())).optional(),
 });
 
 // Master sends a message to worker to schedule a new public game/lobby.
@@ -131,6 +137,7 @@ const MasterLobbyInviteBroadcastSchema = z.object({
 const MasterLobbyInviteDismissBroadcastSchema = z.object({
   type: z.literal("lobbyInviteDismissBroadcast"),
   inviteId: z.string(),
+  dismissedAt: z.number().optional(),
 });
 
 export const MasterMessageSchema = z.discriminatedUnion("type", [

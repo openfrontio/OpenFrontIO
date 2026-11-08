@@ -328,11 +328,19 @@ export async function startMaster() {
   }
   LobbyInviteService.instance.setBroadcasters(
     (invite) => lobbyService?.broadcastLobbyInvite(invite),
-    (inviteId) => lobbyService?.broadcastLobbyInviteDismiss(inviteId),
+    (inviteId, dismissedAt) =>
+      lobbyService?.broadcastLobbyInviteDismiss(inviteId, dismissedAt),
   );
 }
 
-registerLobbyInviteRoutes(app);
+registerLobbyInviteRoutes(app, {
+  isLobbyActive: (lobbyId) =>
+    lobbyService ? lobbyService.isLobbyOpen(lobbyId) : true,
+  isPlayerInLobby: (lobbyId, persistentId, publicId) =>
+    lobbyService
+      ? lobbyService.isPlayerInLobby(lobbyId, persistentId, publicId)
+      : false,
+});
 
 app.get("/api/health", (_req, res) => {
   const ready = lobbyService?.isHealthy() ?? false;

@@ -213,6 +213,14 @@ export class HostLobbyModal extends BaseModal {
     this.lobbyCreatorClientID = lobby.lobbyCreatorClientID ?? "";
     if (lobby.clients) {
       this.clients = lobby.clients;
+      const inviteModal = document.querySelector<
+        HTMLElement & {
+          updateClients?: (clients: ClientInfo[], lobbyId?: string) => void;
+        }
+      >("invite-lobby-modal");
+      if (typeof inviteModal?.updateClients === "function") {
+        inviteModal.updateClients(this.clients, this.lobbyId);
+      }
     }
     // The server can delist on its own (duplicate creator / cap overflow
     // resolved by the master); follow its state unless our own toggle
@@ -314,12 +322,15 @@ export class HostLobbyModal extends BaseModal {
         // lands, so without this the button is live during that window with
         // no shadow lobby behind it — the invite would silently no-op. The
         // join modal gets this free from its own !currentLobbyId early return.
-        const invite = this.lobbyId
+        const capturedLobbyId = this.lobbyId;
+        const invite = capturedLobbyId
           ? inviteFriendsButton({
-              lobbyId: this.lobbyId,
+              lobbyId: capturedLobbyId,
               gameMode: this.gameMode,
               map: this.selectedMap,
               clients: this.clients,
+              isStillInLobby: () =>
+                this.isOpen() && this.lobbyId === capturedLobbyId,
             })
           : nothing;
         return html`<div class="flex items-center gap-2 shrink-0">
@@ -1068,7 +1079,8 @@ export class HostLobbyModal extends BaseModal {
   }
 
   public confirmBeforeClose(): boolean | Promise<boolean> {
-    if (document.querySelector<BaseModal>("invite-lobby-modal")?.isOpen()) {
+    const inviteModal = document.querySelector<BaseModal>("invite-lobby-modal");
+    if (typeof inviteModal?.isOpen === "function" && inviteModal.isOpen()) {
       return false;
     }
     return this.confirmClose(translateText("host_modal.leave_confirmation"));
@@ -1076,7 +1088,10 @@ export class HostLobbyModal extends BaseModal {
 
   protected onClose(): void {
     console.log("Closing host lobby modal");
-    document.querySelector<BaseModal>("invite-lobby-modal")?.close();
+    const inviteModal = document.querySelector<BaseModal>("invite-lobby-modal");
+    if (typeof inviteModal?.close === "function") {
+      inviteModal.close();
+    }
     this.stopLobbyUpdates();
     if (this.leaveLobbyOnClose) {
       this.leaveLobby();

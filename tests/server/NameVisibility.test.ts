@@ -184,10 +184,8 @@ describe("friendsLookup", () => {
   });
 
   it("handles clients with missing friends array gracefully", () => {
-    const anon = makeClient({
-      clientID: "anon",
-      friends: undefined as unknown as string[],
-    });
+    const anon = makeClient({ clientID: "anon" });
+    (anon as unknown as { friends: string[] | undefined }).friends = undefined;
     expect(() => friendsLookup([anon])(anon)).not.toThrow();
     expect(friendsLookup([anon])(anon)).toBeUndefined();
   });

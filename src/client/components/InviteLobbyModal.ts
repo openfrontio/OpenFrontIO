@@ -28,6 +28,9 @@ interface ClanGroup {
   members: ClanMember[];
 }
 
+/**
+ * Modal for inviting OpenFront friends and clan members into a private lobby.
+ */
 @customElement("invite-lobby-modal")
 export class InviteLobbyModal extends BaseModal {
   @state() private lobbyId = "";
@@ -39,14 +42,21 @@ export class InviteLobbyModal extends BaseModal {
   @state() private loading = false;
   @state() private friends: FriendEntry[] = [];
   @state() private clanGroups: ClanGroup[] = [];
-  @state() private invitedIds = new Set<string>();
+  @state() private invitedKeys = new Set<string>();
+  @state() private pendingKeys = new Set<string>();
 
+  /**
+   * Returns configuration for the underlying `<o-modal>` container.
+   */
   protected modalConfig(): ModalConfig {
     return {
       maxWidth: "480px",
     };
   }
 
+  /**
+   * Renders the modal header with title and close button.
+   */
   protected renderHeaderSlot(): TemplateResult {
     return modalHeader({
       title: translateText("invite_modal.title"),
@@ -55,6 +65,9 @@ export class InviteLobbyModal extends BaseModal {
     });
   }
 
+  /**
+   * Initializes modal state from `args` and starts loading the friends and clan roster.
+   */
   protected onOpen(args?: Record<string, unknown>): void {
     const inviteArgs = args as unknown as InviteLobbyModalOpenArgs | undefined;
     if (inviteArgs?.lobbyId) {
@@ -67,6 +80,26 @@ export class InviteLobbyModal extends BaseModal {
     void this.loadRoster();
   }
 
+  /**
+   * Updates the modal's active lobby client roster when lobby membership changes.
+   */
+  public updateClients(clients: ClientInfo[], lobbyId?: string): void {
+    if (lobbyId !== undefined && this.lobbyId && lobbyId !== this.lobbyId) {
+      return;
+    }
+    this.clients = [...clients];
+  }
+
+  /**
+   * Builds the composite cooldown key for a lobby ID and target player ID.
+   */
+  private inviteKey(targetPublicId: string, lobbyId = this.lobbyId): string {
+    return `${lobbyId}:${targetPublicId}`;
+  }
+
+  /**
+   * Opens the inner `<o-modal>` if `open()` was called before first render.
+   */
   protected firstUpdated(): void {
     super.firstUpdated();
     if (this.isModalOpen && !this.inline) {
@@ -74,6 +107,9 @@ export class InviteLobbyModal extends BaseModal {
     }
   }
 
+  /**
+   * Loads all pages of friends and clan members for the authenticated player.
+   */
   private async loadRoster(): Promise<void> {
     this.loading = true;
     try {
@@ -90,39 +126,61 @@ export class InviteLobbyModal extends BaseModal {
       const FRIENDS_PAGE_LIMIT = 20;
       const CLAN_MEMBERS_LIMIT = 50;
 
-      // 1. Fetch friends (limit=20 matches FriendsList.ts; API rejects >50 with 400)
+      // 1. Fetch all pages of friends (limit=20 matches FriendsList.ts; API rejects >50 with 400)
       const accumulatedFriends: FriendEntry[] = [];
-      for (let page = 1; page <= 5; page++) {
+      let loadedFriendsCount = 0;
+      for (let page = 1; ; page++) {
         const friendsRes = await fetchFriends(page, FRIENDS_PAGE_LIMIT);
         if (friendsRes === false) break;
+        loadedFriendsCount += friendsRes.results.length;
         accumulatedFriends.push(
           ...friendsRes.results.filter((f) => f.publicId !== myPublicId),
         );
         if (
           friendsRes.results.length < FRIENDS_PAGE_LIMIT ||
-          page * FRIENDS_PAGE_LIMIT >= friendsRes.total
+          loadedFriendsCount >= friendsRes.total
         ) {
           break;
         }
       }
       this.friends = accumulatedFriends;
 
-      // 2. Fetch clan members (limit=50 matches ClanShared.ts perPageOptions max)
+      // 2. Fetch all pages of clan members (limit=50 matches ClanShared.ts perPageOptions max)
       const clans = userMe.player.clans ?? [];
       const clanResults = await Promise.all(
         clans.map(async (clan) => {
-          const membersRes = await fetchClanMembers(
-            clan.tag,
-            1,
-            CLAN_MEMBERS_LIMIT,
-          );
-          if (membersRes === false) return null;
+          const accumulatedMembers: ClanMember[] = [];
+          let loadedMembersCount = 0;
+          for (let page = 1; ; page++) {
+            const membersRes = await fetchClanMembers(
+              clan.tag,
+              page,
+              CLAN_MEMBERS_LIMIT,
+            );
+            if (membersRes === false) {
+              return page === 1
+                ? null
+                : {
+                    tag: clan.tag,
+                    name: clan.name,
+                    members: accumulatedMembers,
+                  };
+            }
+            loadedMembersCount += membersRes.results.length;
+            accumulatedMembers.push(
+              ...membersRes.results.filter((m) => m.publicId !== myPublicId),
+            );
+            if (
+              membersRes.results.length < CLAN_MEMBERS_LIMIT ||
+              loadedMembersCount >= membersRes.total
+            ) {
+              break;
+            }
+          }
           return {
             tag: clan.tag,
             name: clan.name,
-            members: membersRes.results.filter(
-              (m) => m.publicId !== myPublicId,
-            ),
+            members: accumulatedMembers,
           };
         }),
       );
@@ -132,8 +190,17 @@ export class InviteLobbyModal extends BaseModal {
     }
   }
 
+  /**
+   * Sends a lobby invitation to `targetPublicId`, handling errors and the 30-second cooldown.
+   */
   private async handleInvite(targetPublicId: string): Promise<void> {
-    if (!this.lobbyId || this.invitedIds.has(targetPublicId)) return;
+    const lobbyId = this.lobbyId;
+    if (!lobbyId) return;
+    const key = this.inviteKey(targetPublicId, lobbyId);
+    if (this.invitedKeys.has(key) || this.pendingKeys.has(key)) return;
+
+    this.pendingKeys.add(key);
+    this.requestUpdate();
 
     let userMe: UserMeResponse | false | null =
       lastUserMeResponse()?.response ?? null;
@@ -141,25 +208,47 @@ export class InviteLobbyModal extends BaseModal {
     const senderPublicId = userMe ? userMe.player.publicId : "";
     const senderUsername = userMe ? (userMe.player.username ?? null) : null;
 
-    this.invitedIds.add(targetPublicId);
+    let ok = false;
+    try {
+      ok = await sendLobbyInvite({
+        targetPublicId,
+        lobbyId,
+        senderPublicId,
+        senderUsername,
+        gameMode: this.gameMode,
+        map: this.map,
+      });
+    } finally {
+      this.pendingKeys.delete(key);
+    }
+
+    if (!ok) {
+      window.dispatchEvent(
+        new CustomEvent("show-message", {
+          detail: {
+            message: translateText("invite_modal.invite_failed"),
+            duration: 3000,
+            color: "red",
+          },
+        }),
+      );
+      this.requestUpdate();
+      return;
+    }
+
+    this.invitedKeys.add(key);
     this.requestUpdate();
 
-    // 30-second TTL countdown for invite button state
+    // 30-second TTL countdown for invite button state keyed by lobbyId + targetPublicId
     setTimeout(() => {
-      this.invitedIds.delete(targetPublicId);
+      this.invitedKeys.delete(key);
       this.requestUpdate();
     }, 30_000);
-
-    await sendLobbyInvite({
-      targetPublicId,
-      lobbyId: this.lobbyId,
-      senderPublicId,
-      senderUsername,
-      gameMode: this.gameMode,
-      map: this.map,
-    });
   }
 
+  /**
+   * Checks whether a player with `username` is already in the current lobby's client list.
+   */
   private isClientInLobby(username?: string | null): boolean {
     if (!username) return false;
     const lower = username.toLowerCase();
@@ -168,12 +257,17 @@ export class InviteLobbyModal extends BaseModal {
     );
   }
 
+  /**
+   * Renders a single friend or clan member row with status badge or Invite button.
+   */
   private renderPlayerRow(
     publicId: string,
     username?: string | null,
   ): TemplateResult {
     const inLobby = this.isClientInLobby(username);
-    const invited = this.invitedIds.has(publicId);
+    const key = this.inviteKey(publicId);
+    const invited = this.invitedKeys.has(key);
+    const pending = this.pendingKeys.has(key);
 
     return html`
       <div
@@ -209,8 +303,9 @@ export class InviteLobbyModal extends BaseModal {
                   </span>`
                 : html`<button
                     type="button"
+                    ?disabled=${pending}
                     @click=${() => void this.handleInvite(publicId)}
-                    class="text-xs font-bold uppercase tracking-wider px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-md transition-colors cursor-pointer"
+                    class="text-xs font-bold uppercase tracking-wider px-3 py-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-md transition-colors cursor-pointer"
                   >
                     ${translateText("invite_modal.invite")}
                   </button>`
@@ -220,6 +315,9 @@ export class InviteLobbyModal extends BaseModal {
     `;
   }
 
+  /**
+   * Renders the modal body with optional Steam invite button, search input, and grouped player lists.
+   */
   protected renderBody(): TemplateResult {
     const query = this.searchQuery.trim();
 
@@ -346,7 +444,10 @@ export class InviteLobbyModal extends BaseModal {
                           <div
                             class="text-xs font-bold uppercase tracking-wider text-white/40 px-3 py-1"
                           >
-                            Clan [${group.tag}] (${group.members.length})
+                            ${translateText("invite_modal.clan_group", {
+                              tag: group.tag,
+                              count: group.members.length,
+                            })}
                           </div>
                           <div class="flex flex-col">
                             ${group.members.map((member) =>

@@ -43,6 +43,9 @@ vi.mock("../../src/client/Utils", () => ({
     if (key === "notifications.new_version") {
       return `Version ${params?.version} is now live!`;
     }
+    if (key === "notifications.invite_countdown") {
+      return `${params?.seconds}s`;
+    }
     return key;
   },
 }));
@@ -52,6 +55,8 @@ vi.mock("../../src/client/components/NavNotificationsController", () => ({
     friendRequests = () => notificationState.requests;
     hasNewVersion = () => notificationState.hasNewVersion;
     lobbyInvites = () => notificationState.invites;
+    inviteRemainingSeconds = (invite: { expiresAt: number }) =>
+      Math.max(1, Math.ceil((invite.expiresAt - Date.now()) / 1000));
     dismissLobbyInvite = dismissLobbyInvite;
     markVersionSeen = markVersionSeen;
     onHelpClick = vi.fn();
@@ -225,7 +230,18 @@ describe("nav notification menu", () => {
     const menu = await openMenu(element);
 
     expect(menu.textContent).toContain("HostPlayer");
-    expect(menu.textContent).toContain("Europe");
+    expect(menu.textContent).toContain("game_mode.ffa");
+    expect(menu.textContent).toContain("map.europe");
+
+    const menuItems = menu.querySelectorAll<HTMLElement>('[role="menuitem"]');
+    expect(menuItems[0]?.textContent).toContain("notifications.join_lobby");
+    expect(menuItems[1]?.textContent).toContain("common.dismiss");
+    expect(document.activeElement).toBe(menuItems[0]);
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown" }));
+    expect(document.activeElement).toBe(menuItems[1]);
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp" }));
+    expect(document.activeElement).toBe(menuItems[0]);
 
     const joinButton = Array.from(menu.querySelectorAll("button")).find((b) =>
       b.textContent?.includes("notifications.join_lobby"),
