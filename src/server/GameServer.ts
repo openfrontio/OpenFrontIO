@@ -1851,6 +1851,9 @@ export class GameServer {
     persistentId: string,
     publicId?: string,
   ): string[] {
+    if (this.isPublic()) {
+      return [];
+    }
     let viewerClient: Client | undefined;
     for (const client of this.activeClients()) {
       if (

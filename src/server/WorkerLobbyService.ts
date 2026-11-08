@@ -333,6 +333,7 @@ export class WorkerLobbyService {
         map: localGame.gameConfig.gameMap,
         allowedPublicIds: localGame.gameConfig.allowedPublicIds,
         memberPublicIds,
+        isPublic: localGame.isPublic(),
       };
     }
     return this.lastOpenLobbyMeta?.[gameID] ?? null;
@@ -370,12 +371,20 @@ export class WorkerLobbyService {
   ): string[] {
     const localGame = this.gm.game(gameID);
     if (localGame !== null) {
-      if (localGame.phase() !== GamePhase.Lobby || localGame.hasStarted()) {
+      if (
+        localGame.isPublic() ||
+        localGame.phase() !== GamePhase.Lobby ||
+        localGame.hasStarted()
+      ) {
         return [];
       }
       return localGame.visibleMemberPublicIds(persistentId, publicId);
     }
-    return this.lastOpenLobbyMeta?.[gameID]?.memberPublicIds ?? [];
+    const meta = this.getLobbyMeta(gameID);
+    if (meta?.isPublic) {
+      return [];
+    }
+    return meta?.memberPublicIds ?? [];
   }
 
   /**

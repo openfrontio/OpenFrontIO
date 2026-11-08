@@ -92,16 +92,17 @@ export class GameManager {
     const out: Record<string, OpenLobbyMeta> = {};
     for (const [id, game] of this.games.entries()) {
       if (game.phase() === GamePhase.Lobby && !game.hasStarted()) {
-        const memberPublicIds = game.gameConfig.anonymizeNames
-          ? undefined
-          : [
-              ...new Set(
-                game
-                  .activeClients()
-                  .map((c) => c.publicId)
-                  .filter((pid): pid is string => Boolean(pid)),
-              ),
-            ];
+        const memberPublicIds =
+          game.isPublic() || game.gameConfig.anonymizeNames
+            ? undefined
+            : [
+                ...new Set(
+                  game
+                    .activeClients()
+                    .map((c) => c.publicId)
+                    .filter((pid): pid is string => Boolean(pid)),
+                ),
+              ];
         out[id] = {
           gameMode: game.gameConfig.gameMode,
           map: game.gameConfig.gameMap,
@@ -111,6 +112,7 @@ export class GameManager {
               ? [...game.gameConfig.allowedPublicIds]
               : undefined,
           memberPublicIds,
+          isPublic: game.isPublic(),
         };
       }
     }

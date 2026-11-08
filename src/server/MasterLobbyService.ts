@@ -251,6 +251,7 @@ export class MasterLobbyService {
           gameMode: lobby.gameConfig.gameMode,
           map: lobby.gameConfig.gameMap,
           allowedPublicIds: lobby.gameConfig.allowedPublicIds,
+          isPublic: lobby.publicGameType !== undefined,
         };
       }
     }
@@ -272,6 +273,7 @@ export class MasterLobbyService {
         gameMode: lobby.gameConfig.gameMode,
         map: lobby.gameConfig.gameMap,
         allowedPublicIds: lobby.gameConfig.allowedPublicIds,
+        isPublic: lobby.publicGameType !== undefined,
       };
     }
     return null;
@@ -299,7 +301,11 @@ export class MasterLobbyService {
    * Returns non-anonymized member `publicId`s known for `gameID` on the master.
    */
   public getLobbyMemberPublicIds(gameID: string): string[] {
-    return this.getLobbyMeta(gameID)?.memberPublicIds ?? [];
+    const meta = this.getLobbyMeta(gameID);
+    if (meta?.isPublic) {
+      return [];
+    }
+    return meta?.memberPublicIds ?? [];
   }
 
   /**

@@ -514,4 +514,106 @@ describe("LobbyInviteService", () => {
     expect(invites).toHaveLength(1);
     expect(invites[0].lobbyId).toBe("lobby_active");
   });
+
+  it("rejects invites and member queries for public lobbies and hides strangers' public IDs", async () => {
+    vi.mocked(verifyClientToken).mockResolvedValue({
+      type: "success",
+      persistentId: "pid1",
+      token: "valid-token",
+    } as any);
+
+    const getHandlers = new Map<string, (req: any, res: any) => Promise<any>>();
+    const postHandlers = new Map<
+      string,
+      (req: any, res: any) => Promise<any>
+    >();
+    const mockApp = {
+      get(path: string, handler: (req: any, res: any) => Promise<any>) {
+        getHandlers.set(path, handler);
+      },
+      post(path: string, handler: (req: any, res: any) => Promise<any>) {
+        postHandlers.set(path, handler);
+      },
+    };
+
+    let isLobbyPublic = false;
+    registerLobbyInviteRoutes(mockApp as any, {
+      isLobbyActive: () => true,
+      isPlayerInLobby: () => true,
+      getLobbyMeta: () => ({
+        isPublic: isLobbyPublic,
+        memberPublicIds: ["caller.pub", "friend.pub", "stranger.pub"],
+      }),
+      resolveCaller: async () => ({
+        publicId: "caller.pub",
+        username: "CallerName",
+        friends: ["friend.pub"],
+        clanTags: [],
+      }),
+    });
+
+    const membersHandler = getHandlers.get("/api/lobby/members")!;
+    const inviteHandler = postHandlers.get("/api/lobby/invite")!;
+
+    const callMembers = async () => {
+      const res: any = {
+        statusCode: 200,
+        body: undefined,
+        status(c: number) {
+          this.statusCode = c;
+          return this;
+        },
+        json(d: unknown) {
+          this.body = d;
+          return this;
+        },
+      };
+      await membersHandler(
+        {
+          headers: { authorization: "Bearer valid-token" },
+          query: { lobbyId: "lob1" },
+        },
+        res,
+      );
+      return res;
+    };
+
+    const callInvite = async () => {
+      const res: any = {
+        statusCode: 200,
+        body: undefined,
+        status(c: number) {
+          this.statusCode = c;
+          return this;
+        },
+        json(d: unknown) {
+          this.body = d;
+          return this;
+        },
+      };
+      await inviteHandler(
+        {
+          headers: { authorization: "Bearer valid-token" },
+          body: { lobbyId: "lob1", targetPublicId: "friend.pub" },
+        },
+        res,
+      );
+      return res;
+    };
+
+    // Private lobby: members only returns caller and friend, NOT stranger
+    const privRes = await callMembers();
+    expect(privRes.statusCode).toBe(200);
+    expect(privRes.body.memberPublicIds).toEqual(["caller.pub", "friend.pub"]);
+    expect(privRes.body.memberPublicIds).not.toContain("stranger.pub");
+
+    // Public lobby: members returns 403
+    isLobbyPublic = true;
+    const pubRes = await callMembers();
+    expect(pubRes.statusCode).toBe(403);
+
+    // Public lobby: invite returns 403
+    const pubInviteRes = await callInvite();
+    expect(pubInviteRes.statusCode).toBe(403);
+  });
 });

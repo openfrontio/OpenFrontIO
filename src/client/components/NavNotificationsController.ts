@@ -305,14 +305,16 @@ class NavNotificationsStore {
     this.notify();
     if (this.currentPublicId) {
       const publicId = this.currentPublicId;
-      void dismissLobbyInviteApi(publicId, inviteId).then((ok) => {
-        if (!ok) {
-          console.warn(
-            "Failed to dismiss lobby invite on server; keeping local dismissal tombstone",
-            inviteId,
-          );
-        }
-      });
+      void dismissLobbyInviteApi(publicId, inviteId, existing?.lobbyId).then(
+        (ok) => {
+          if (!ok) {
+            console.warn(
+              "Failed to dismiss lobby invite on server; keeping local dismissal tombstone",
+              inviteId,
+            );
+          }
+        },
+      );
     }
   }
 

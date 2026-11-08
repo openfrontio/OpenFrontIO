@@ -318,4 +318,55 @@ describe("InviteLobbyModal", () => {
     expect(text).toContain("Friend110");
     expect(text).toContain("ClanMember65");
   });
+
+  it("tracks in-flight roster refresh ownership and recovers when stalled", async () => {
+    const modal = document.createElement(
+      "invite-lobby-modal",
+    ) as InviteLobbyModal;
+    document.body.appendChild(modal);
+
+    modal.open({
+      lobbyId: "lobby_stalled",
+      clients: [{ clientID: "c1", username: "Alice", clanTag: null }],
+    });
+    await modal.updateComplete;
+
+    let resolveFirst!: (value: string[] | false) => void;
+    apiMocks.fetchLobbyMemberPublicIds.mockReturnValueOnce(
+      new Promise<string[] | false>((resolve) => {
+        resolveFirst = resolve;
+      }),
+    );
+
+    const initialCalls = apiMocks.fetchLobbyMemberPublicIds.mock.calls.length;
+    modal.updateClients([{ clientID: "c1", username: "Alice", clanTag: null }]);
+    expect(apiMocks.fetchLobbyMemberPublicIds).toHaveBeenCalledTimes(
+      initialCalls + 1,
+    );
+
+    // Repeated call with same roster before timeout is skipped
+    modal.updateClients([{ clientID: "c1", username: "Alice", clanTag: null }]);
+    expect(apiMocks.fetchLobbyMemberPublicIds).toHaveBeenCalledTimes(
+      initialCalls + 1,
+    );
+
+    // Advance past stall threshold to allow retry
+    vi.useFakeTimers();
+    try {
+      vi.advanceTimersByTime(5001);
+      apiMocks.fetchLobbyMemberPublicIds.mockResolvedValueOnce(["f1"]);
+
+      modal.updateClients([
+        { clientID: "c1", username: "Alice", clanTag: null },
+      ]);
+      expect(apiMocks.fetchLobbyMemberPublicIds).toHaveBeenCalledTimes(
+        initialCalls + 2,
+      );
+
+      resolveFirst(["f_stale"]);
+      await Promise.resolve();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

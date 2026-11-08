@@ -30,6 +30,7 @@ export type LobbyInviteRouteOptions = {
     map?: string;
     allowedPublicIds?: string[];
     memberPublicIds?: string[];
+    isPublic?: boolean;
   } | null;
   isTargetAllowedInLobby?: (
     lobbyId: string,
@@ -745,6 +746,11 @@ export function registerLobbyInviteRoutes(
     }
 
     const initialLobbyMeta = getLobbyMeta?.(parsed.data.lobbyId) ?? null;
+    if (initialLobbyMeta?.isPublic) {
+      return res
+        .status(403)
+        .json({ error: "Invites are only available for private lobbies" });
+    }
     if (
       !isTargetPermittedByLobby(
         parsed.data.lobbyId,
@@ -780,6 +786,11 @@ export function registerLobbyInviteRoutes(
     }
 
     const lobbyMeta = getLobbyMeta?.(parsed.data.lobbyId) ?? null;
+    if (lobbyMeta?.isPublic) {
+      return res
+        .status(403)
+        .json({ error: "Invites are only available for private lobbies" });
+    }
     if (
       !isTargetPermittedByLobby(
         parsed.data.lobbyId,
@@ -837,10 +848,28 @@ export function registerLobbyInviteRoutes(
       return res.status(403).json({ error: "Caller is not in lobby" });
     }
 
-    const memberPublicIds = getLobbyMemberPublicIds
+    const lobbyMeta = getLobbyMeta?.(lobbyId) ?? null;
+    if (lobbyMeta?.isPublic) {
+      return res.status(403).json({
+        error: "Lobby member queries are only available for private lobbies",
+      });
+    }
+
+    const rawMemberPublicIds = getLobbyMemberPublicIds
       ? getLobbyMemberPublicIds(lobbyId, auth.persistentId, caller.publicId)
-      : (getLobbyMeta?.(lobbyId)?.memberPublicIds ?? []);
-    res.json({ memberPublicIds });
+      : (lobbyMeta?.memberPublicIds ?? []);
+
+    const eligibleMemberPublicIds: string[] = [];
+    for (const memberId of rawMemberPublicIds) {
+      if (
+        memberId === caller.publicId ||
+        caller.friends.includes(memberId) ||
+        (await isTargetEligible(caller, memberId, token))
+      ) {
+        eligibleMemberPublicIds.push(memberId);
+      }
+    }
+    res.json({ memberPublicIds: eligibleMemberPublicIds });
   });
 
   app.get("/api/lobby/invites", async (req, res) => {

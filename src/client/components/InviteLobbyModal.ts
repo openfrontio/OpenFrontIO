@@ -54,6 +54,8 @@ export class InviteLobbyModal extends BaseModal {
   private appliedMemberRefreshSeq = 0;
   private lastRefreshedRosterKey = "";
   private inFlightRosterKey: string | null = null;
+  private inFlightRosterSeq = 0;
+  private inFlightRosterStartedAt = 0;
   private rosterLoadSeq = 0;
 
   /**
@@ -106,6 +108,8 @@ export class InviteLobbyModal extends BaseModal {
     this.memberPublicIds.clear();
     this.lastRefreshedRosterKey = "";
     this.inFlightRosterKey = null;
+    this.inFlightRosterSeq = 0;
+    this.inFlightRosterStartedAt = 0;
     this.rosterLoadSeq++;
     this.loading = false;
     this.searchQuery = "";
@@ -143,10 +147,19 @@ export class InviteLobbyModal extends BaseModal {
       this.appliedMemberRefreshSeq = ++this.nextMemberRefreshSeq;
       this.lastRefreshedRosterKey = nextRosterKey;
       this.inFlightRosterKey = null;
+      this.inFlightRosterSeq = 0;
+      this.inFlightRosterStartedAt = 0;
       this.memberPublicIds = new Set();
       return;
     }
-    if (rosterChanged && this.inFlightRosterKey !== nextRosterKey) {
+    const inFlightStalled =
+      this.inFlightRosterKey === nextRosterKey &&
+      this.inFlightRosterStartedAt > 0 &&
+      Date.now() - this.inFlightRosterStartedAt > 5000;
+    if (
+      rosterChanged &&
+      (this.inFlightRosterKey !== nextRosterKey || inFlightStalled)
+    ) {
       void this.refreshLobbyMembers(nextRosterKey);
     }
   }
@@ -157,10 +170,12 @@ export class InviteLobbyModal extends BaseModal {
   private async refreshLobbyMembers(rosterKey?: string): Promise<void> {
     const lobbyId = this.lobbyId;
     if (!lobbyId) return;
+    const seq = ++this.nextMemberRefreshSeq;
     if (rosterKey !== undefined) {
       this.inFlightRosterKey = rosterKey;
+      this.inFlightRosterSeq = seq;
+      this.inFlightRosterStartedAt = Date.now();
     }
-    const seq = ++this.nextMemberRefreshSeq;
     try {
       const memberIds = await fetchLobbyMemberPublicIds(lobbyId);
       if (
@@ -176,8 +191,10 @@ export class InviteLobbyModal extends BaseModal {
       }
       this.memberPublicIds = new Set(memberIds);
     } finally {
-      if (this.inFlightRosterKey === rosterKey) {
+      if (this.inFlightRosterSeq === seq) {
         this.inFlightRosterKey = null;
+        this.inFlightRosterSeq = 0;
+        this.inFlightRosterStartedAt = 0;
       }
     }
   }

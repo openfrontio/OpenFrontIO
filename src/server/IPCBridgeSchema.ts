@@ -35,6 +35,7 @@ export const OpenLobbyMetaSchema = z.object({
   map: z.string().optional(),
   allowedPublicIds: z.array(z.string()).optional(),
   memberPublicIds: z.array(z.string()).optional(),
+  isPublic: z.boolean().optional(),
 });
 
 // Master/worker-internal lobby info: PublicGameInfo plus the hashed creator
