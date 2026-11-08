@@ -87,34 +87,46 @@ export class InviteLobbyModal extends BaseModal {
       }
       const myPublicId = userMe.player.publicId;
 
-      // 1. Fetch friends
-      const friendsRes = await fetchFriends(1, 100);
-      if (friendsRes !== false) {
-        this.friends = friendsRes.results.filter(
-          (f) => f.publicId !== myPublicId,
+      const FRIENDS_PAGE_LIMIT = 20;
+      const CLAN_MEMBERS_LIMIT = 50;
+
+      // 1. Fetch friends (limit=20 matches FriendsList.ts; API rejects >50 with 400)
+      const accumulatedFriends: FriendEntry[] = [];
+      for (let page = 1; page <= 5; page++) {
+        const friendsRes = await fetchFriends(page, FRIENDS_PAGE_LIMIT);
+        if (friendsRes === false) break;
+        accumulatedFriends.push(
+          ...friendsRes.results.filter((f) => f.publicId !== myPublicId),
         );
-      } else {
-        this.friends = [];
-      }
-
-      // 2. Fetch clan members
-      const clans = userMe ? (userMe.player.clans ?? []) : [];
-      const groups: ClanGroup[] = [];
-
-      for (const clan of clans) {
-        const membersRes = await fetchClanMembers(clan.tag, 1, 100);
-        if (membersRes !== false) {
-          const members = membersRes.results.filter(
-            (m) => m.publicId !== myPublicId,
-          );
-          groups.push({
-            tag: clan.tag,
-            name: clan.name,
-            members,
-          });
+        if (
+          friendsRes.results.length < FRIENDS_PAGE_LIMIT ||
+          page * FRIENDS_PAGE_LIMIT >= friendsRes.total
+        ) {
+          break;
         }
       }
-      this.clanGroups = groups;
+      this.friends = accumulatedFriends;
+
+      // 2. Fetch clan members (limit=50 matches ClanShared.ts perPageOptions max)
+      const clans = userMe.player.clans ?? [];
+      const clanResults = await Promise.all(
+        clans.map(async (clan) => {
+          const membersRes = await fetchClanMembers(
+            clan.tag,
+            1,
+            CLAN_MEMBERS_LIMIT,
+          );
+          if (membersRes === false) return null;
+          return {
+            tag: clan.tag,
+            name: clan.name,
+            members: membersRes.results.filter(
+              (m) => m.publicId !== myPublicId,
+            ),
+          };
+        }),
+      );
+      this.clanGroups = clanResults.filter((g): g is ClanGroup => g !== null);
     } finally {
       this.loading = false;
     }

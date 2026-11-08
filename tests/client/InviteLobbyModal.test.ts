@@ -102,6 +102,10 @@ describe("InviteLobbyModal", () => {
     const headerSlot = modal.querySelector('[slot="header"]');
     expect(headerSlot).not.toBeNull();
 
+    // API limits stay within server bounds (20 for friends, 50 for clan members)
+    expect(apiMocks.fetchFriends).toHaveBeenCalledWith(1, 20);
+    expect(apiMocks.fetchClanMembers).toHaveBeenCalledWith("DEV", 1, 50);
+
     // Friends and clan members are rendered in the body
     const text = modal.textContent ?? "";
     expect(text).toContain("Alice");
