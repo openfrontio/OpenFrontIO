@@ -726,6 +726,27 @@ describe("BuildPreviewController idle diffing optimization", () => {
     expect(traj5).toBe(traj4);
   });
 
+  test.each([UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRV])(
+    "%s ghost clears when the last missile silo is lost",
+    (type) => {
+      const f = createTestFixture();
+      const c = f.controller as any;
+      c.uiState.ghostStructure = type;
+      c.ghostUnit.buildableUnit.type = type;
+      f.mockSilos.push({});
+      c.syncGhostState();
+      expect(c.ghostUnit).not.toBeNull();
+      f.mockSilos.length = 0;
+      c.isQueryInFlight = true;
+      f.controller.tick();
+
+      expect(c.ghostUnit).toBeNull();
+      expect(c.uiState.ghostStructure).toBeNull();
+      expect(f.updateGhostPreview).toHaveBeenLastCalledWith(null);
+      expect(f.updateNukeTrajectory).toHaveBeenLastCalledWith(null);
+    },
+  );
+
   test("cursorLoop skips calculations and WebGL updates while cursor is idle", () => {
     const {
       controller,
@@ -1720,7 +1741,14 @@ describe("BuildPreviewController touch preview", () => {
       isAlive: () => true,
       readyMissileCount: () => 10,
       allies: () => [],
-      units: () => [],
+      units: () => [
+        {
+          isActive: () => true,
+          isInCooldown: () => false,
+          isUnderConstruction: () => false,
+          tile: () => 101,
+        },
+      ],
       isOnSameTeam: () => false,
       buildables: vi.fn(
         (
@@ -1815,6 +1843,45 @@ describe("BuildPreviewController touch preview", () => {
     } finally {
       requestAnimationFrame.mockRestore();
     }
+  });
+
+  test("touch handlers stop when silo loss clears the nuke ghost", () => {
+    const handlers = [
+      (controller: any) =>
+        controller.handleTouchPlacement(new TouchGhostPlacementEvent(200, 200)),
+      (controller: any) => controller.moveTouchPreview(200, 200),
+    ];
+
+    for (const handleTouch of handlers) {
+      const { controller, player } = makeController(UnitType.AtomBomb);
+      (player as any).units = () => [];
+
+      handleTouch(controller as any);
+
+      expect((controller as any).touchPreviewTile).toBeNull();
+      expect((controller as any).touchPlacementMode).toBe(false);
+      expect(player.buildables).not.toHaveBeenCalled();
+    }
+  });
+
+  test("touch movement without a ghost restores placement for later selections", async () => {
+    const { controller, player } = makeController(UnitType.City);
+    const c = controller as any;
+    c.removeGhostStructure();
+    const convert = vi.spyOn(c.transformHandler, "screenToWorldCoordinates");
+
+    c.moveTouchPreview(200, 200);
+
+    expect(convert).not.toHaveBeenCalled();
+    expect(c.touchPreviewTile).toBeNull();
+    expect(c.touchPlacementMode).toBe(false);
+    expect(player.buildables).not.toHaveBeenCalled();
+
+    c.uiState.ghostStructure = UnitType.City;
+    controller.tick();
+    await flushBuildables();
+
+    expect(c.lastGhostData).not.toBeNull();
   });
 
   test("removing an existing ghost clears its highlight", () => {

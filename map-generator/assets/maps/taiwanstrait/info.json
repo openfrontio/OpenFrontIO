@@ -5,8 +5,9 @@
   "translation_key": "map.taiwanstrait",
   "categories": ["asia"],
   "location": { "lat": 24.5, "lon": 119.5 },
-  "author": "Tristar",
+  "author": "Tristar, crunchybbb",
   "special_team_count": 2,
+  "description": "This body of water between China and the island of Taiwan is one of the most heavily-used international trade corridors. It is also the site of heavy military tensions between the two governments. Play as the mainland and simulate retaking the island, or the other way around, reconquering “West Taiwan”. ",
   "nations": [
     {
       "coordinates": [694, 26],

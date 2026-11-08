@@ -28,6 +28,7 @@ import {
 } from "@openfront/shared/WireSchemas";
 import { ClientEnv } from "../client/ClientEnv";
 import { reloadForUpdate, translateText } from "../client/Utils";
+import { rememberAdmitted } from "./AdmittedLobbies";
 import { MapLayerController } from "./controllers/MapLayerController";
 import { isDesktopShell } from "./DesktopShell";
 import { GameMetrics } from "./GameMetrics";
@@ -50,6 +51,7 @@ import {
   TickMetricsEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
+import { rememberLobbyPublicGameType } from "./LobbyPublicGameType";
 import { rememberLobbyRoster } from "./LobbyRosterLevels";
 import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
@@ -226,12 +228,18 @@ export function joinLobby(
     if (message.type === "lobby_info") {
       // Server tells us our assigned clientID
       clientID = message.myClientID;
+      rememberAdmitted(message.lobby.gameID);
       eventBus.emit(new LobbyInfoEvent(message.lobby, message.myClientID));
       // Kept past game start for the in-game level badges.
       rememberLobbyRoster(
         message.lobby.gameID,
         message.lobby.clients,
         message.myClientID,
+      );
+      // Kept past game start for the win screen's FFA rating check.
+      rememberLobbyPublicGameType(
+        message.lobby.gameID,
+        message.lobby.publicGameType,
       );
       // Preload the map while still in the lobby so game start can reuse the
       // cached result instead of blocking on the download in the short
@@ -283,6 +291,7 @@ export function joinLobby(
       );
       // Server tells us our assigned clientID (also sent on start for late joins)
       clientID = message.myClientID;
+      rememberAdmitted(lobbyConfig.gameID);
       resolveJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;

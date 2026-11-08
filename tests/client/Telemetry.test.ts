@@ -328,7 +328,25 @@ describe("Telemetry", () => {
       expect(beforeSend(event("bottom_rail_in_game"))).not.toBeNull();
     }
     expect(beforeSend(event("bottom_rail_in_game"))).toBeNull();
-    expect(beforeSend(event("ad_frame_in_game"))).not.toBeNull();
+  });
+
+  it("sends ad frame reports from 10% of prod sessions, with a cap of their own", async () => {
+    const beforeSend = await beforeSendFor();
+    const { errorsOnly, outside } = sessionIds();
+    const event = (name: string, session: string) => ({
+      type: "event",
+      payload: { name, attributes: {} },
+      meta: { session: { id: session } },
+    });
+
+    expect(beforeSend(event("ad_frame_in_game", outside))).toBeNull();
+    for (let i = 0; i < 20; i++) {
+      expect(beforeSend(event("bottom_rail_in_game", outside))).not.toBeNull();
+    }
+    for (let i = 0; i < 20; i++) {
+      expect(beforeSend(event("ad_frame_in_game", errorsOnly))).not.toBeNull();
+    }
+    expect(beforeSend(event("ad_frame_in_game", errorsOnly))).toBeNull();
   });
 
   it("sends everything from every session on staging", async () => {
@@ -343,6 +361,13 @@ describe("Telemetry", () => {
       meta: { session: { id: outside } },
     };
     expect(beforeSend(item)).toEqual(item);
+    expect(
+      beforeSend({
+        type: "event",
+        payload: { name: "ad_frame_in_game", attributes: {} },
+        meta: { session: { id: outside } },
+      }),
+    ).not.toBeNull();
   });
 
   it("drops the user agent and brand list from the browser meta", async () => {

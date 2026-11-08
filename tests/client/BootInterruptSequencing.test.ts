@@ -121,6 +121,10 @@ describe("boot sequencing against a real <username-input>", () => {
       claimStringsReady: true,
       reportThanksDue: false,
       reportThanksStringsReady: true,
+      giftEndingDue: false,
+      giftEndingStringsReady: true,
+      renewalPushedDue: false,
+      renewalPushedStringsReady: true,
     });
     await runBootInterrupt(
       interrupt,

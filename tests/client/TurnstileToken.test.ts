@@ -21,10 +21,17 @@ import {
 function fakeTurnstile() {
   const renders: TurnstileRenderOptions[] = [];
   const api: TurnstileApi = {
-    render: vi.fn((_container, options: TurnstileRenderOptions) => {
-      renders.push(options);
-      return `widget-${renders.length}`;
-    }),
+    // Like the real one, refuses an element that already holds a widget.
+    render: vi.fn(
+      (host: string | HTMLElement, options: TurnstileRenderOptions) => {
+        if (typeof host === "string" || host.childElementCount > 0) {
+          throw new Error("already rendered in this container");
+        }
+        renders.push(options);
+        host.appendChild(document.createElement("iframe"));
+        return `widget-${renders.length}`;
+      },
+    ),
     execute: vi.fn(),
     remove: vi.fn(),
   };
@@ -38,16 +45,19 @@ function fakeTurnstile() {
   };
 }
 
+let container: HTMLElement;
+
 function request(turnstile: TurnstileApi, timeoutMs?: number) {
   return requestTurnstileToken(turnstile, {
     sitekey: "site-key",
-    container: "#turnstile-container",
+    container,
     timeoutMs,
   });
 }
 
 describe("requestTurnstileToken runs exactly one challenge", () => {
   beforeEach(() => {
+    container = document.createElement("div");
     vi.spyOn(console, "log").mockImplementation(() => undefined);
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
     vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -95,7 +105,7 @@ describe("requestTurnstileToken runs exactly one challenge", () => {
 
     const promise = requestTurnstileToken(fake.api, {
       sitekey: "site-key",
-      container: "#turnstile-container",
+      container,
       now: () => 1000,
     });
     fake.options().callback?.("tok");
@@ -158,6 +168,73 @@ describe("requestTurnstileToken runs exactly one challenge", () => {
 
     await expect(request(fake.api)).rejects.toThrow("boom");
     expect(fake.remove).toHaveBeenCalledWith("widget-1");
+    expect(container.childElementCount).toBe(0);
+  });
+
+  // CrazyGames: every join requests a fresh token while the boot prefetch may
+  // still be running. Both used to render into #turnstile-container itself;
+  // Turnstile refused the second, its execute() hit the first widget, and the
+  // join timed out.
+  it("gives overlapping requests their own host elements", async () => {
+    const fake = fakeTurnstile();
+
+    const first = request(fake.api);
+    const second = request(fake.api);
+
+    expect(fake.renders).toHaveLength(2);
+    expect(container.childElementCount).toBe(2);
+    const firstHost = container.children[0];
+    fake.renders[1].callback?.("second");
+    await expect(second).resolves.toMatchObject({ token: "second" });
+    expect(container.children).toHaveLength(1);
+    expect(container.children[0]).toBe(firstHost);
+    fake.renders[0].callback?.("first");
+    await expect(first).resolves.toMatchObject({ token: "first" });
+  });
+
+  // Turnstile sometimes loses track of a widget id ("Nothing to remove found
+  // for the provided container") and leaves the widget in the page. Dropping
+  // its host takes it out regardless, so it cannot block the next render.
+  it("removes the widget's host even when Turnstile cannot", async () => {
+    const fake = fakeTurnstile();
+    fake.remove.mockImplementation(() => {
+      throw new Error("Nothing to remove found");
+    });
+
+    const promise = request(fake.api);
+    fake.options().callback?.("tok");
+    await promise;
+
+    expect(container.childElementCount).toBe(0);
+    const next = request(fake.api);
+    fake.options().callback?.("next");
+    await expect(next).resolves.toMatchObject({ token: "next" });
+  });
+
+  it("removes the host when render throws", async () => {
+    const fake = fakeTurnstile();
+    fake.render.mockImplementation(() => {
+      throw new Error("boom");
+    });
+
+    await expect(request(fake.api)).rejects.toThrow("boom");
+    expect(container.childElementCount).toBe(0);
+  });
+
+  it("removes the host when a callback fires during render", async () => {
+    const fake = fakeTurnstile();
+    fake.render.mockImplementation(
+      (host: HTMLElement, options: TurnstileRenderOptions) => {
+        host.appendChild(document.createElement("iframe"));
+        options.callback?.("early");
+        return "widget-1";
+      },
+    );
+
+    await expect(request(fake.api)).resolves.toMatchObject({ token: "early" });
+    expect(fake.execute).not.toHaveBeenCalled();
+    expect(fake.remove).toHaveBeenCalledWith("widget-1");
+    expect(container.childElementCount).toBe(0);
   });
 });
 
