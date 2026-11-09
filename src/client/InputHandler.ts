@@ -233,6 +233,14 @@ export class ShowChatMenuEvent implements GameEvent {
   ) {}
 }
 
+/** Toggles the player info panel for the player at screen position (x, y). */
+export class ShowPlayerPanelEvent implements GameEvent {
+  constructor(
+    public readonly x: number | null,
+    public readonly y: number | null,
+  ) {}
+}
+
 /** The donate keybinds: donate to the player at screen position (x, y). */
 export class DoDonateTroopsEvent implements GameEvent {
   constructor(
@@ -564,6 +572,15 @@ export class InputHandler {
       },
       (e: KeyboardEvent) =>
         !e.altKey && !e.ctrlKey && !e.metaKey && !this.resetGfxModifierHeld(e),
+    );
+    this.addKeybindAndEvent(
+      this.keybinds.playerPanel,
+      () => {
+        this.eventBus.emit(
+          new ShowPlayerPanelEvent(this.lastMouseX, this.lastMouseY),
+        );
+      },
+      (e: KeyboardEvent) => !e.altKey && !e.ctrlKey && !e.metaKey,
     );
     this.addKeybindAndEvent(
       this.keybinds.pauseGame,
@@ -968,7 +985,10 @@ export class InputHandler {
           ) ||
           continuousBindings.some((k) => this.keybindMatchesEvent(e, k));
 
-        if (isConfiguredKeybind && !isBrowserZoomCombo) {
+        const isDevToolsCombo =
+          (e.metaKey || e.ctrlKey) && e.altKey && e.code === "KeyI";
+
+        if (isConfiguredKeybind && !isBrowserZoomCombo && !isDevToolsCombo) {
           e.preventDefault();
         }
 
@@ -1636,6 +1656,15 @@ export class InputHandler {
       this.uiState.ghostStructure === ghostStructure &&
       ghostStructure !== null
     ) {
+      if (
+        source === "hotkey" &&
+        (this.gameView.updatesSinceLastTick?.() === null ||
+          this.gameView.isCatchingUp?.() ||
+          this.gameView.isPaused?.())
+      ) {
+        return;
+      }
+
       const currentMultiplier = this.uiState.upgradeMultiplier ?? 1;
       switch (source) {
         case "GUIclick":

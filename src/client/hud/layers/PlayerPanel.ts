@@ -27,10 +27,16 @@ import "../../components/ui/Divider";
 import { Controller } from "../../Controller";
 import {
   CloseViewEvent,
+  ContextMenuEvent,
   MouseUpEvent,
+  ShowBuildMenuEvent,
+  ShowChatMenuEvent,
+  ShowEmojiMenuEvent,
+  ShowPlayerPanelEvent,
   SwapRocketDirectionEvent,
 } from "../../InputHandler";
 import { lobbyLevelBadge } from "../../LobbyRosterLevels";
+import { TransformHandler } from "../../TransformHandler";
 import {
   PlayerReportedEvent,
   SendAllianceRequestIntentEvent,
@@ -44,8 +50,8 @@ import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
 import { renderDuration, showToast, translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
-import { ChatModal } from "./ChatModal";
-import { EmojiTable } from "./EmojiTable";
+import { ChatModal, ShowPlayerChatEvent } from "./ChatModal";
+import { EmojiTable, ShowPlayerEmojiMenuEvent } from "./EmojiTable";
 import "./PlayerModerationModal";
 import "./PlayerReportModal";
 import "./SendResourceModal";
@@ -61,6 +67,14 @@ const targetIcon = assetUrl("images/TargetIconWhite.svg");
 const startTradingIcon = assetUrl("images/TradingIconWhite.svg");
 const traitorIcon = assetUrl("images/TraitorIconLightRed.svg");
 const breakAllianceIcon = assetUrl("images/TraitorIconWhite.svg");
+
+export function emptyPlayerActions(): PlayerActions {
+  return {
+    canAttack: false,
+    buildableUnits: [],
+    canSendEmojiAllPlayers: false,
+  };
+}
 
 // The viewer's own badge from their /users/@me progress. Shown even when they
 // hide their level from others, as their profile does.
@@ -78,11 +92,13 @@ export function ownLevelBadgeFrom(
 export class PlayerPanel extends LitElement implements Controller {
   public g: GameView;
   public eventBus: EventBus;
+  public transformHandler: TransformHandler;
   public emojiTable: EmojiTable;
   public uiState: UIState;
 
   private actions: PlayerActions | null = null;
   private tile: TileRef | null = null;
+  private pendingOpenRequest: object | null = null;
   private _profileForPlayerId: number | null = null;
   private kickedPlayerIDs = new Set<string>();
   private userSettings = new UserSettings();
@@ -123,10 +139,24 @@ export class PlayerPanel extends LitElement implements Controller {
 
   initEventBus(eventBus: EventBus) {
     this.eventBus = eventBus;
-    eventBus.on(CloseViewEvent, (e) => {
+    eventBus.on(CloseViewEvent, () => {
+      this.pendingOpenRequest = null;
       if (this.isVisible) {
         this.hide();
       }
+    });
+    const cancelPendingOpen = () => {
+      this.pendingOpenRequest = null;
+    };
+    eventBus.on(ContextMenuEvent, cancelPendingOpen);
+    eventBus.on(MouseUpEvent, cancelPendingOpen);
+    eventBus.on(ShowBuildMenuEvent, cancelPendingOpen);
+    eventBus.on(ShowEmojiMenuEvent, cancelPendingOpen);
+    eventBus.on(ShowChatMenuEvent, cancelPendingOpen);
+    eventBus.on(ShowPlayerChatEvent, cancelPendingOpen);
+    eventBus.on(ShowPlayerEmojiMenuEvent, cancelPendingOpen);
+    eventBus.on(ShowPlayerPanelEvent, (e) => {
+      this.toggleAt(e.x, e.y);
     });
     eventBus.on(SwapRocketDirectionEvent, (event) => {
       this.uiState.rocketDirectionUp = event.rocketDirectionUp;
@@ -163,6 +193,46 @@ export class PlayerPanel extends LitElement implements Controller {
     void getUserMe().then((me) => {
       this.ownLevelBadge = ownLevelBadgeFrom(me);
     });
+  }
+
+  private toggleAt(x: number | null, y: number | null) {
+    if (this.isVisible || this.pendingOpenRequest !== null) {
+      this.hide();
+      return;
+    }
+    if (this.g.inSpawnPhase() || x === null || y === null) return;
+    const cell = this.transformHandler.screenToWorldCoordinates(x, y);
+    if (!this.g.isValidCoord(cell.x, cell.y)) return;
+    const tile = this.g.ref(cell.x, cell.y);
+    const owner = this.g.owner(tile);
+    if (!owner.isPlayer()) return;
+
+    if (this.g.isSpectator()) {
+      this.eventBus.emit(new CloseViewEvent());
+      this.show(emptyPlayerActions(), tile);
+      return;
+    }
+
+    const myPlayer = this.g.myPlayer();
+    if (myPlayer === null) return;
+    const target = owner as PlayerView;
+    const request = {};
+    this.pendingOpenRequest = request;
+    myPlayer
+      .actions(tile)
+      .then((actions) => {
+        if (this.pendingOpenRequest !== request) return;
+        this.pendingOpenRequest = null;
+        if (this.g.owner(tile) !== target) return;
+        this.eventBus.emit(new CloseViewEvent());
+        this.show(actions, tile);
+      })
+      .catch((error) => {
+        if (this.pendingOpenRequest === request) {
+          this.pendingOpenRequest = null;
+        }
+        console.warn("Failed to load player panel actions:", error);
+      });
   }
 
   async tick() {
@@ -210,8 +280,12 @@ export class PlayerPanel extends LitElement implements Controller {
   }
 
   public show(actions: PlayerActions, tile: TileRef) {
+    this.pendingOpenRequest = null;
+    this.suppressNextHide = false;
     this.actions = actions;
     this.tile = tile;
+    this.sendMode = "none";
+    this.sendTarget = null;
     this.moderationTarget = null;
     this.reportTarget = null;
     this.isVisible = true;
@@ -224,6 +298,7 @@ export class PlayerPanel extends LitElement implements Controller {
     target: PlayerView,
     suppressNextHide = true,
   ) {
+    this.pendingOpenRequest = null;
     this.suppressNextHide = suppressNextHide;
     this.actions = actions;
     this.tile = tile;
@@ -236,6 +311,8 @@ export class PlayerPanel extends LitElement implements Controller {
   }
 
   public hide() {
+    this.pendingOpenRequest = null;
+    this.suppressNextHide = false;
     this.isVisible = false;
     this.sendMode = "none";
     this.sendTarget = null;
