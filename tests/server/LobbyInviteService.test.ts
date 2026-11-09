@@ -1,4 +1,13 @@
-import type { LobbyInvite } from "@openfront/shared/LobbyInviteSchemas";
+import {
+  type LobbyInvite,
+  LobbyInviteSchema,
+  MAX_GAME_MODE_LENGTH,
+  MAX_LOBBY_ID_LENGTH,
+  MAX_MAP_NAME_LENGTH,
+  MAX_PUBLIC_ID_LENGTH,
+  MAX_USERNAME_LENGTH,
+  SendLobbyInviteInputSchema,
+} from "@openfront/shared/LobbyInviteSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { verifyClientToken } from "../../src/server/jwt";
 import {
@@ -1168,5 +1177,116 @@ describe("LobbyInviteService", () => {
     } finally {
       LobbyInviteService.instance.reset();
     }
+  });
+
+  it("enforces maximum lengths on SendLobbyInviteInputSchema and LobbyInviteSchema fields", () => {
+    const validSendInput = {
+      targetPublicId: "target.pub",
+      lobbyId: "lobby123",
+      senderPublicId: "sender.pub",
+      senderUsername: "FriendlySender",
+      gameMode: "Free For All",
+      map: "World",
+    };
+    expect(SendLobbyInviteInputSchema.safeParse(validSendInput).success).toBe(
+      true,
+    );
+
+    expect(
+      SendLobbyInviteInputSchema.safeParse({
+        ...validSendInput,
+        targetPublicId: "a".repeat(MAX_PUBLIC_ID_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+
+    expect(
+      SendLobbyInviteInputSchema.safeParse({
+        ...validSendInput,
+        lobbyId: "b".repeat(MAX_LOBBY_ID_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+
+    expect(
+      SendLobbyInviteInputSchema.safeParse({
+        ...validSendInput,
+        senderPublicId: "c".repeat(MAX_PUBLIC_ID_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+
+    expect(
+      SendLobbyInviteInputSchema.safeParse({
+        ...validSendInput,
+        senderUsername: "d".repeat(MAX_USERNAME_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+
+    expect(
+      SendLobbyInviteInputSchema.safeParse({
+        ...validSendInput,
+        gameMode: "e".repeat(MAX_GAME_MODE_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+
+    expect(
+      SendLobbyInviteInputSchema.safeParse({
+        ...validSendInput,
+        map: "f".repeat(MAX_MAP_NAME_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+
+    const validInvite: LobbyInvite = {
+      id: "inv_123",
+      lobbyId: "lobby123",
+      senderPublicId: "sender.pub",
+      senderUsername: "FriendlySender",
+      targetPublicId: "target.pub",
+      gameMode: "Free For All",
+      map: "World",
+      createdAt: 1000,
+      expiresAt: 31000,
+    };
+    expect(LobbyInviteSchema.safeParse(validInvite).success).toBe(true);
+
+    expect(
+      LobbyInviteSchema.safeParse({
+        ...validInvite,
+        targetPublicId: "a".repeat(MAX_PUBLIC_ID_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+
+    expect(
+      LobbyInviteSchema.safeParse({
+        ...validInvite,
+        lobbyId: "b".repeat(MAX_LOBBY_ID_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+
+    expect(
+      LobbyInviteSchema.safeParse({
+        ...validInvite,
+        senderPublicId: "c".repeat(MAX_PUBLIC_ID_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+
+    expect(
+      LobbyInviteSchema.safeParse({
+        ...validInvite,
+        senderUsername: "d".repeat(MAX_USERNAME_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+
+    expect(
+      LobbyInviteSchema.safeParse({
+        ...validInvite,
+        gameMode: "e".repeat(MAX_GAME_MODE_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+
+    expect(
+      LobbyInviteSchema.safeParse({
+        ...validInvite,
+        map: "f".repeat(MAX_MAP_NAME_LENGTH + 1),
+      }).success,
+    ).toBe(false);
   });
 });
