@@ -526,10 +526,10 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.brainrot",
     categories: ["arcade"],
     defaultNationCount: 43,
-    specialTeamCount: 27,
     themes: ["space", "war"],
-    layers: [{ id: "brland", placement: "land", nukeable: true }],
+    layers: [{ id: "brainland", placement: "land", nukeable: true }],
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.brainrot",
   },
   {
     id: "BranchingPaths",
@@ -843,6 +843,7 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 4,
     forcedModifiers: ["isWaterNukes:50"],
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.choppingblock",
   },
   {
     id: "ClearwaterLakes",
@@ -864,6 +865,7 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 2,
     themes: ["africa"],
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.conakry",
     location: { lat: 9.6, lon: -13.6 },
   },
   {
@@ -921,8 +923,9 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Dyslexdria,
     translationKey: "map.dyslexdria",
     categories: ["world", "fictional"],
-    defaultNationCount: 82,
+    defaultNationCount: 80,
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.dyslexdria",
   },
   {
     id: "EastAsia",
@@ -1628,6 +1631,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["arcade"],
     defaultNationCount: 26,
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.labyrinth",
   },
   {
     id: "LasVegasStrip",
@@ -1850,6 +1854,7 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 2,
     forcedModifiers: ["isWaterNukes:50"],
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.luna",
   },
   {
     id: "Madagascar",
@@ -1963,6 +1968,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 35,
     specialTeamCount: 5,
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.morethanluck",
   },
   {
     id: "NewYorkCity",
@@ -2041,6 +2047,7 @@ export const maps: readonly MapInfo[] = [
       { id: "eyewater", placement: "water" },
     ],
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.ommatrypta",
   },
   {
     id: "Onion",
@@ -2521,6 +2528,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["world", "fictional"],
     defaultNationCount: 93,
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.worldinverted",
   },
   {
     id: "YangtzeRiver",
