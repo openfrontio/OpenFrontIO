@@ -136,8 +136,6 @@ export class LeaderboardPlayerList extends LitElement {
   // Kept per rank: a rank can fail in the background while another ladder is
   // open, and that ladder must not show its retry.
   @state() private ffaRanksFailed: ReadonlySet<FfaTierBase> = new Set();
-  // A rank's next page owns isLoadingMore, so a reload can release it.
-  private ffaRankPagePending = false;
   private ffaOwnRank: FfaTierBase | null = null;
   // The signed-in player's row with their exact position, for when they aren't
   // in the loaded rows of their own rank.
@@ -263,10 +261,6 @@ export class LeaderboardPlayerList extends LitElement {
       this.ffaRanksFailed = new Set();
       this.ffaPositionRow = null;
       this.ffaRankGeneration++;
-      if (this.ffaRankPagePending) {
-        this.ffaRankPagePending = false;
-        this.isLoadingMore = false;
-      }
     } else if (!this.playerHasMore) {
       return;
     }
@@ -490,13 +484,8 @@ export class LeaderboardPlayerList extends LitElement {
     if (!ladder.hasMore || this.ffaRanksLoading.has(rank)) return;
 
     const generation = this.ffaRankGeneration;
-    const isNextPage = ladder.nextPage > 1;
     this.ffaRanksLoading = new Set([...this.ffaRanksLoading, rank]);
     this.setFfaRankFailed(rank, false);
-    if (isNextPage) {
-      this.isLoadingMore = true;
-      this.ffaRankPagePending = true;
-    }
 
     const result = await fetchFfaRankLeaderboard(rank, ladder.nextPage);
 
@@ -504,10 +493,6 @@ export class LeaderboardPlayerList extends LitElement {
     const loading = new Set(this.ffaRanksLoading);
     loading.delete(rank);
     this.ffaRanksLoading = loading;
-    if (isNextPage) {
-      this.isLoadingMore = false;
-      this.ffaRankPagePending = false;
-    }
 
     if (result === false) {
       this.setFfaRankFailed(rank, true);
@@ -1104,9 +1089,12 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   private renderPlayerFooter() {
-    const rankLoading =
-      this.ffaRankActive && this.ffaRanksLoading.has(this.ffaRank!);
-    if (this.isLoadingMore || rankLoading) {
+    // Each FFA rank tracks its own load, so a slow one can't hold up the
+    // other ladders, which share isLoadingMore.
+    const loading = this.ffaRankActive
+      ? this.ffaRanksLoading.has(this.ffaRank!)
+      : this.isLoadingMore;
+    if (loading) {
       return html`
         <div class="flex items-center justify-center py-4 text-white/50">
           <div

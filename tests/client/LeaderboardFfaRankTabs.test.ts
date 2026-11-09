@@ -425,6 +425,48 @@ describe("FFA rank tabs", () => {
     expect(fetchFfaRankLeaderboard).toHaveBeenCalledWith("diamond", 2);
   });
 
+  describe("a slow rank page", () => {
+    const openWithSlowPage = async () => {
+      vi.mocked(fetchPlayerLeaderboard).mockResolvedValue({
+        "1v1": Array.from({ length: 50 }, (_, i) => row(i + 1, `d-${i}`)),
+        "2v2": [],
+        ffa: [row(1, "top", "Diamond II")],
+      } as never);
+      vi.mocked(fetchFfaRankLeaderboard).mockResolvedValue(
+        fullPage("p1") as never,
+      );
+      await open();
+      vi.mocked(fetchFfaRankLeaderboard).mockReturnValueOnce(
+        new Promise(() => {}) as never,
+      );
+      void list.loadPlayerLeaderboard();
+      await settle();
+    };
+
+    it("shows its loading state on the FFA tab", async () => {
+      await openWithSlowPage();
+      expect(list.textContent).toContain("common.loading");
+    });
+
+    it("doesn't show loading on another ladder", async () => {
+      await openWithSlowPage();
+      list.rankedType =
+        RankedType.OneVOne as LeaderboardPlayerList["rankedType"];
+      await settle();
+      expect(list.textContent).not.toContain("common.loading");
+    });
+
+    it("doesn't stop another ladder loading its next page", async () => {
+      await openWithSlowPage();
+      list.rankedType =
+        RankedType.OneVOne as LeaderboardPlayerList["rankedType"];
+      await settle();
+      vi.mocked(fetchPlayerLeaderboard).mockClear();
+      await list.loadPlayerLeaderboard();
+      expect(fetchPlayerLeaderboard).toHaveBeenCalledWith(2);
+    });
+  });
+
   describe("a rank that fails while another ladder is open", () => {
     beforeEach(() => {
       vi.mocked(fetchFfaRankLeaderboard).mockResolvedValue(false as never);
