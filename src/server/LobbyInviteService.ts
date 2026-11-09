@@ -170,6 +170,89 @@ async function fetchCallerClanMemberIds(
 }
 
 /**
+ * Error indicating that an upstream service failed while verifying clan membership.
+ */
+export class ClanLookupError extends Error {
+  constructor(message: string = "Failed to verify clan membership") {
+    super(message);
+    this.name = "ClanLookupError";
+  }
+}
+
+/**
+ * Checks whether the target player is in any of the caller's clans, stopping pagination
+ * as soon as the target is found. Throws ClanLookupError if upstream requests fail before
+ * membership can be determined.
+ */
+async function isTargetInCallerClans(
+  caller: VerifiedCallerIdentity,
+  targetPublicId: string,
+  token: string,
+): Promise<boolean> {
+  if (caller.clanTags.length === 0) {
+    return false;
+  }
+  for (const tag of caller.clanTags) {
+    let page = 1;
+    const limit = 50;
+    while (true) {
+      let res: Response;
+      try {
+        res = await fetch(
+          `${ServerEnv.jwtIssuer()}/clans/${encodeURIComponent(tag)}/members?page=${page}&limit=${limit}`,
+          {
+            headers: {
+              authorization: `Bearer ${token}`,
+              "x-api-key": ServerEnv.apiKey(),
+            },
+          },
+        );
+      } catch (err) {
+        throw new ClanLookupError(
+          `Network error fetching clan members: ${String(err)}`,
+        );
+      }
+
+      if (!res.ok) {
+        throw new ClanLookupError(
+          `Upstream clan service returned HTTP ${res.status}`,
+        );
+      }
+
+      let json: unknown;
+      try {
+        json = await res.json();
+      } catch (err) {
+        throw new ClanLookupError(
+          `Invalid JSON from clan service: ${String(err)}`,
+        );
+      }
+
+      const parsed = ClanMembersLookupSchema.safeParse(json);
+      if (!parsed.success) {
+        throw new ClanLookupError("Invalid clan members response schema");
+      }
+
+      const list = parsed.data.results ?? parsed.data.members;
+      if (!list) {
+        throw new ClanLookupError("Missing clan members list in response");
+      }
+
+      if (list.some((m) => m.publicId === targetPublicId)) {
+        return true;
+      }
+
+      const total = parsed.data.total ?? list.length;
+      if (list.length < limit || page * limit >= total) {
+        break;
+      }
+      page += 1;
+    }
+  }
+  return false;
+}
+
+/**
  * Checks whether the target player is in the caller's friends list or shares a clan with the caller.
  */
 async function defaultIsTargetEligible(
@@ -183,11 +266,7 @@ async function defaultIsTargetEligible(
   if (caller.friends.includes(targetPublicId)) {
     return true;
   }
-  const clanMemberIds = await fetchCallerClanMemberIds(caller, token);
-  if (!clanMemberIds) {
-    return false;
-  }
-  return clanMemberIds.has(targetPublicId);
+  return isTargetInCallerClans(caller, targetPublicId, token);
 }
 
 /**
@@ -785,11 +864,18 @@ export function registerLobbyInviteRoutes(
         .json({ error: "Target is not allowed in this lobby" });
     }
 
-    const eligible = await isTargetEligible(
-      caller,
-      parsed.data.targetPublicId,
-      token,
-    );
+    let eligible: boolean;
+    try {
+      eligible = await isTargetEligible(
+        caller,
+        parsed.data.targetPublicId,
+        token,
+      );
+    } catch {
+      return res
+        .status(502)
+        .json({ error: "Failed to verify clan membership" });
+    }
     if (!eligible) {
       return res
         .status(403)
@@ -897,13 +983,20 @@ export function registerLobbyInviteRoutes(
 
     const eligibleMemberPublicIds: string[] = [];
     for (const memberId of rawMemberPublicIds) {
-      if (
+      let isEligible =
         memberId === caller.publicId ||
         caller.friends.includes(memberId) ||
-        (clanMemberIds !== null && clanMemberIds.has(memberId)) ||
-        (options.isTargetEligible &&
-          (await isTargetEligible(caller, memberId, token)))
-      ) {
+        (clanMemberIds !== null && clanMemberIds.has(memberId));
+      if (!isEligible && options.isTargetEligible) {
+        try {
+          isEligible = await isTargetEligible(caller, memberId, token);
+        } catch {
+          return res
+            .status(502)
+            .json({ error: "Failed to resolve clan membership" });
+        }
+      }
+      if (isEligible) {
         eligibleMemberPublicIds.push(memberId);
       }
     }

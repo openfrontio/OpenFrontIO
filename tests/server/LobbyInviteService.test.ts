@@ -739,4 +739,140 @@ describe("LobbyInviteService", () => {
       fetchSpy.mockRestore();
     }
   });
+
+  it("stops fetching clan roster pages as soon as target is found and returns 502 on upstream pagination failure", async () => {
+    vi.mocked(verifyClientToken).mockResolvedValue({
+      type: "success",
+      persistentId: "pid1",
+      token: "valid-token",
+    } as any);
+
+    const postHandlers = new Map<
+      string,
+      (req: any, res: any) => Promise<any>
+    >();
+    const mockApp = {
+      get() {},
+      post(path: string, handler: (req: any, res: any) => Promise<any>) {
+        postHandlers.set(path, handler);
+      },
+    };
+
+    registerLobbyInviteRoutes(mockApp as any, {
+      isLobbyActive: () => true,
+      isPlayerInLobby: () => true,
+      getLobbyMeta: () => ({
+        isPublic: false,
+        memberPublicIds: ["caller.pub"],
+      }),
+      resolveCaller: async () => ({
+        publicId: "caller.pub",
+        username: "CallerName",
+        friends: [],
+        clanTags: ["CLAN_A"],
+      }),
+    });
+
+    const inviteHandler = postHandlers.get("/api/lobby/invite")!;
+    const callInvite = async (targetPublicId: string) => {
+      const res: any = {
+        statusCode: 200,
+        body: undefined,
+        status(c: number) {
+          this.statusCode = c;
+          return this;
+        },
+        json(d: unknown) {
+          this.body = d;
+          return this;
+        },
+      };
+      await inviteHandler(
+        {
+          headers: { authorization: "Bearer valid-token" },
+          body: { lobbyId: "lob1", targetPublicId },
+        },
+        res,
+      );
+      return res;
+    };
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    try {
+      // 1. Target found on page 1 of multi-page clan: stops immediately without fetching page 2
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            results: [{ publicId: "clan_member_1" }],
+            total: 100,
+            page: 1,
+            limit: 50,
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+      const okRes = await callInvite("clan_member_1");
+      expect(okRes.statusCode).toBe(200);
+      expect(okRes.body.ok).toBe(true);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      fetchSpy.mockClear();
+
+      // 2. Upstream failure on page 1 before membership is determined -> 502
+      fetchSpy.mockResolvedValueOnce(
+        new Response("Upstream Error", { status: 500 }),
+      );
+      const failRes = await callInvite("clan_member_unknown");
+      expect(failRes.statusCode).toBe(502);
+      expect(failRes.body.error).toBe("Failed to verify clan membership");
+
+      fetchSpy.mockClear();
+
+      // 3. Page 1 succeeds without target, page 2 fails before target is found -> 502
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            results: Array.from({ length: 50 }, (_, i) => ({
+              publicId: `other_${i}`,
+            })),
+            total: 100,
+            page: 1,
+            limit: 50,
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+      fetchSpy.mockResolvedValueOnce(
+        new Response("Gateway Timeout", { status: 504 }),
+      );
+      const partialFailRes = await callInvite("clan_member_unknown");
+      expect(partialFailRes.statusCode).toBe(502);
+      expect(partialFailRes.body.error).toBe(
+        "Failed to verify clan membership",
+      );
+
+      fetchSpy.mockClear();
+
+      // 4. All pages complete and target is not in clan -> 403
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            results: [{ publicId: "other_member" }],
+            total: 1,
+            page: 1,
+            limit: 50,
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+      const nonmemberRes = await callInvite("nonmember");
+      expect(nonmemberRes.statusCode).toBe(403);
+      expect(nonmemberRes.body.error).toBe(
+        "Target is not an eligible friend or clan member",
+      );
+    } finally {
+      fetchSpy.mockRestore();
+      LobbyInviteService.instance.reset();
+    }
+  });
 });
