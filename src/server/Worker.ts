@@ -53,7 +53,7 @@ import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
 import { levelBadgeForPlayer } from "./LevelBadge";
 import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
 import { logger } from "./Logger";
-import { getMapLandTiles } from "./MapLandTiles";
+import { readMapLandTiles } from "./MapLandTiles";
 import { registerPlayerProfileRoute } from "./PlayerProfileRoute";
 import { resolveVerifiedJoin } from "./Privilege";
 
@@ -222,17 +222,27 @@ export function registerListingRoute(opts: {
 
       if (listed) {
         // The cap's ceiling follows the map, like public lobby sizes do.
-        if (
-          maxPlayers !== undefined &&
-          maxPlayers >
-            hostedLobbyMaxPlayers(
-              await getMapLandTiles(game.gameConfig.gameMap),
-              game.gameConfig.gameMapSize === GameMapSize.Compact,
-            )
-        ) {
-          return res
-            .status(409)
-            .json({ error: "listing_max_players_too_high" });
+        // Without the map's size there is no ceiling to check against, so
+        // refuse rather than guess.
+        if (maxPlayers !== undefined) {
+          let landTiles: number;
+          try {
+            landTiles = await readMapLandTiles(game.gameConfig.gameMap);
+          } catch (error) {
+            log.error(`listing rejected, map size unavailable: ${error}`, {
+              gameID: game.id,
+            });
+            return res.status(503).json({ error: "listing_failed" });
+          }
+          const ceiling = hostedLobbyMaxPlayers(
+            landTiles,
+            game.gameConfig.gameMapSize === GameMapSize.Compact,
+          );
+          if (maxPlayers > ceiling) {
+            return res
+              .status(409)
+              .json({ error: "listing_max_players_too_high" });
+          }
         }
 
         const preError = getListingEligibilityError(game, maxPlayers);

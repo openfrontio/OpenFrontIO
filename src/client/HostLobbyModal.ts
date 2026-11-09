@@ -18,7 +18,6 @@ import {
   hostedLobbyMaxPlayers,
   LOBBY_QUEUE_CUTOFF_MS,
   LobbyInfoEvent,
-  MIN_HOSTED_LOBBY_PLAYERS,
 } from "@openfront/shared/WireSchemas";
 import { html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
@@ -78,8 +77,11 @@ export class HostLobbyModal extends BaseModal {
   @state() private selectedDifficulty: Difficulty = Difficulty.Easy;
   @state() private nations: number = 0;
   @state() private defaultNationCount: number = 0;
-  // The selected map's land tiles, which set how big a listed lobby can be.
-  @state() private mapLandTiles: number | undefined = undefined;
+  // A map's land tiles, which set how big a listed lobby can be. Tagged with
+  // the map so a previous map's size is never used for the selected one.
+  @state() private mapLandTiles:
+    | { map: GameMapType; tiles: number }
+    | undefined = undefined;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
 
@@ -345,7 +347,7 @@ export class HostLobbyModal extends BaseModal {
             ? "bg-malibu-blue text-white"
             : "text-white/50 hover:text-white"
         }"
-        @click=${() => this.handleVisibilitySelect(isPublic)}
+        @click=${() => void this.handleVisibilitySelect(isPublic)}
       >
         ${translateText(labelKey)}
       </button>
@@ -447,7 +449,13 @@ export class HostLobbyModal extends BaseModal {
     >`;
   }
 
-  private handleVisibilitySelect(isPublic: boolean) {
+  private selectedMapLandTiles(): number | undefined {
+    return this.mapLandTiles?.map === this.selectedMap
+      ? this.mapLandTiles.tiles
+      : undefined;
+  }
+
+  private async handleVisibilitySelect(isPublic: boolean) {
     if (
       this.listingRequestInFlight ||
       isPublic === this.publiclyListed ||
@@ -460,6 +468,15 @@ export class HostLobbyModal extends BaseModal {
       return;
     }
     if (isPublic) {
+      // The cap's ceiling comes from the map's size, so retry a manifest
+      // that failed to load rather than offer a cap the server rejects.
+      if (this.selectedMapLandTiles() === undefined) {
+        await this.loadNationCount();
+        if (this.selectedMapLandTiles() === undefined) {
+          this.showListingError();
+          return;
+        }
+      }
       // Listing needs the host's start time and player cap first.
       this.showListLobbyDialog = true;
       return;
@@ -878,11 +895,10 @@ export class HostLobbyModal extends BaseModal {
                 .playerTeams=${
                   this.gameMode === GameMode.Team ? this.teamCount : undefined
                 }
-                .maxAllowedPlayers=${
-                  this.mapLandTiles !== undefined
-                    ? hostedLobbyMaxPlayers(this.mapLandTiles, this.compactMap)
-                    : MIN_HOSTED_LOBBY_PLAYERS
-                }
+                .maxAllowedPlayers=${hostedLobbyMaxPlayers(
+                  this.selectedMapLandTiles() ?? 0,
+                  this.compactMap,
+                )}
                 @cancel=${() => (this.showListLobbyDialog = false)}
                 @confirm=${(e: CustomEvent<ListLobbyOptions>) => {
                   this.showListLobbyDialog = false;
@@ -2076,7 +2092,10 @@ export class HostLobbyModal extends BaseModal {
       // Only update if the map hasn't changed
       if (this.selectedMap === currentMap) {
         this.defaultNationCount = manifest.nations.length;
-        this.mapLandTiles = manifest.map.num_land_tiles;
+        this.mapLandTiles = {
+          map: currentMap,
+          tiles: manifest.map.num_land_tiles,
+        };
         this.nations = this.compactMap
           ? Math.max(0, Math.floor(manifest.nations.length * 0.25))
           : manifest.nations.length;

@@ -59,9 +59,10 @@ vi.mock("../../src/server/PollingLoop", () => ({
   startPolling: vi.fn(),
 }));
 
-// The Box's land tiles: its public lobbies reach 210 players.
+// The Box's land tiles by default: its public lobbies reach 210 players.
+const landTiles = vi.hoisted(() => ({ read: async () => 4_194_304 }));
 vi.mock("../../src/server/MapLandTiles", () => ({
-  getMapLandTiles: async () => 4_194_304,
+  readMapLandTiles: () => landTiles.read(),
 }));
 
 const mockLogger = harnessLogger();
@@ -388,6 +389,21 @@ describe("GameServer listing", () => {
       expect(res.statusCode).toBe(409);
       expect(res.body).toEqual({ error: "listing_max_players_too_high" });
       expect(game.isListed()).toBe(false);
+    });
+
+    it("refuses to list when the map's size can't be read", async () => {
+      const read = landTiles.read;
+      landTiles.read = async () => {
+        throw new Error("no manifest");
+      };
+      try {
+        const { game, res } = await list(50);
+        expect(res.statusCode).toBe(503);
+        expect(res.body).toEqual({ error: "listing_failed" });
+        expect(game.isListed()).toBe(false);
+      } finally {
+        landTiles.read = read;
+      }
     });
 
     it("uses the compact size on compact maps", async () => {
