@@ -26,6 +26,7 @@ import {
   RefreshGraphicsEvent,
   ShowChatMenuEvent,
   ShowEmojiMenuEvent,
+  ShowPlayerPanelEvent,
   TouchGhostPlacementDragStartEvent,
   TouchGhostPlacementEvent,
   TouchGhostPlacementMoveEvent,
@@ -1556,6 +1557,87 @@ describe("InputHandler AutoUpgrade", () => {
 
       expect(chats).toHaveLength(0);
       expect(refreshes).toHaveLength(1);
+    });
+  });
+
+  describe("Player panel keybind", () => {
+    beforeEach(() => {
+      inputHandler.destroy();
+      inputHandler = new InputHandler(
+        mockGameView,
+        {
+          attackRatio: 20,
+          ghostStructure: null,
+          rocketDirectionUp: true,
+          upgradeMultiplier: 1,
+        },
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+    });
+
+    afterEach(() => {
+      new UserSettings().removeCached(KEYBINDS_KEY, false);
+    });
+
+    test("I emits ShowPlayerPanelEvent with the last mouse position", () => {
+      const panels: ShowPlayerPanelEvent[] = [];
+      eventBus.on(ShowPlayerPanelEvent, (e) => panels.push(e));
+
+      window.dispatchEvent(
+        new MouseEvent("mousemove", { clientX: 50, clientY: 60 }),
+      );
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyI" }));
+
+      expect(panels).toEqual([expect.objectContaining({ x: 50, y: 60 })]);
+    });
+
+    test("I emits null coordinates before the first mousemove so an open panel can close", () => {
+      const panels: ShowPlayerPanelEvent[] = [];
+      eventBus.on(ShowPlayerPanelEvent, (e) => panels.push(e));
+
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyI" }));
+
+      expect(panels).toEqual([expect.objectContaining({ x: null, y: null })]);
+    });
+
+    test("Ctrl+I, Alt+I and Cmd+I don't emit ShowPlayerPanelEvent", () => {
+      const panels: ShowPlayerPanelEvent[] = [];
+      eventBus.on(ShowPlayerPanelEvent, (e) => panels.push(e));
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyI", ctrlKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyI", altKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyI", metaKey: true }),
+      );
+
+      expect(panels).toHaveLength(0);
+    });
+
+    test("Cmd+Option+I and Ctrl+Alt+I don't call preventDefault on keydown", () => {
+      const cmdOptI = new KeyboardEvent("keydown", {
+        code: "KeyI",
+        metaKey: true,
+        altKey: true,
+        cancelable: true,
+      });
+      const ctrlAltI = new KeyboardEvent("keydown", {
+        code: "KeyI",
+        ctrlKey: true,
+        altKey: true,
+        cancelable: true,
+      });
+
+      window.dispatchEvent(cmdOptI);
+      window.dispatchEvent(ctrlAltI);
+
+      expect(cmdOptI.defaultPrevented).toBe(false);
+      expect(ctrlAltI.defaultPrevented).toBe(false);
     });
   });
 
@@ -3745,7 +3827,7 @@ describe("GhostStructure Hotkeys tapping/Scrolling", () => {
     expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
   });
 
-  test("repeated hotkey taps increase the build multiplier by 5 each time and loop", () => {
+  test("repeated hotkeys wait for view sync before changing the multiplier", () => {
     // First tap sets ghostStructure and resets multiplier to 1
     window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
     expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.AtomBomb);
@@ -3763,6 +3845,25 @@ describe("GhostStructure Hotkeys tapping/Scrolling", () => {
     inputHandler["uiState"].upgradeMultiplier = MAX_UPGRADE_AMOUNT;
     window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
     expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+
+    mockGameView.updatesSinceLastTick = () => null;
+    mockGameView.isCatchingUp = () => false;
+    mockGameView.isPaused = () => false;
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+
+    mockGameView.updatesSinceLastTick = () => ({}) as any;
+    mockGameView.isCatchingUp = () => true;
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+
+    mockGameView.isCatchingUp = () => false;
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(5);
+
+    mockGameView.isPaused = () => true;
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(5);
   });
 
   test("wheel scroll up increases upgrade multiplier", () => {
