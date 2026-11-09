@@ -1451,6 +1451,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.giantworldmap",
     categories: ["world"],
     defaultNationCount: 107,
+    hidden: true,
     author: "1brucben",
   },
   {
