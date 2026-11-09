@@ -1,5 +1,5 @@
 {
-  "categories": ["europe", "asia", "africa"],
+  "categories": ["europe", "asia", "africa", "new"],
   "id": "OttomanEmpire",
   "map": {
     "height": 2132,
@@ -248,5 +248,6 @@
       "name": "Adana"
     }
   ],
+  "themes": ["europe", "asia", "africa"],
   "translation_key": "map.ottomanempire"
 }
