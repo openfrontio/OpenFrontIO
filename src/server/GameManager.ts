@@ -61,7 +61,7 @@ export class GameManager {
   }
 
   /**
-   * Returns a map of open lobby game IDs on this worker to their connected member identifiers (`persistentID`, hashed creator ID, and `publicId`).
+   * Returns a map of open lobby game IDs on this worker to their connected member identifiers (`hashedCreatorID`, hashed persistentID, and `publicId`).
    */
   public openLobbyMembers(): Record<string, string[]> {
     const out: Record<string, string[]> = {};
@@ -73,7 +73,6 @@ export class GameManager {
           members.add(creatorId);
         }
         for (const client of game.activeClients()) {
-          members.add(client.persistentID);
           members.add(hashPersistentID(client.persistentID));
           if (client.publicId) {
             members.add(client.publicId);

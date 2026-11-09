@@ -423,9 +423,8 @@ export class WorkerLobbyService {
     }
     const hashedPersistentId = hashPersistentID(persistentId);
     return (
-      members.includes(persistentId) ||
       members.includes(hashedPersistentId) ||
-      members.includes(publicId)
+      (publicId ? members.includes(publicId) : false)
     );
   }
 

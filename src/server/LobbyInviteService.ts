@@ -269,6 +269,12 @@ async function defaultIsTargetEligible(
   return isTargetInCallerClans(caller, targetPublicId, token);
 }
 
+function isLobbyInviteForbidden(
+  lobbyMeta: { isPublic?: boolean; gameMode?: string } | null,
+): boolean {
+  return Boolean(lobbyMeta?.isPublic && lobbyMeta?.gameMode !== "Team");
+}
+
 /**
  * Ephemeral in-memory store and synchronization coordinator for private lobby invitations.
  */
@@ -384,24 +390,20 @@ export class LobbyInviteService {
       senderUsername?: string | null;
     },
     ttlMs: number = LOBBY_INVITE_TTL_MS,
-  ): LobbyInvite {
+  ): LobbyInvite | null {
     this.pruneExpired();
 
     const now = Date.now();
     const key = this.logicalKey(input);
+
+    const dismissedAt = this.dismissedAtByLogicalKey.get(key);
+    if (dismissedAt !== undefined && now < dismissedAt + ttlMs) {
+      return null;
+    }
+
     const existingId = this.inviteIdByLogicalKey.get(key);
     const existing = existingId ? this.invites.get(existingId) : undefined;
-    if (existing) {
-      existing.createdAt = now;
-      existing.expiresAt = now + ttlMs;
-      existing.senderUsername = input.senderUsername ?? null;
-      existing.gameMode = input.gameMode;
-      existing.map = input.map;
-      this.dismissedAtByInviteId.delete(existing.id);
-      this.dismissedAtByLogicalKey.delete(key);
-      this.pendingDismissalsByInviteId.delete(existing.id);
-      this.indexInvite(existing);
-      this.onInviteAdded?.(existing);
+    if (existing && existing.expiresAt > now) {
       return existing;
     }
 
@@ -537,7 +539,7 @@ export class LobbyInviteService {
       (logicalActiveId ? this.invites.get(logicalActiveId) : undefined);
 
     if (!invite) {
-      if (targetPublicId) {
+      if (key && targetPublicId) {
         let targets = this.pendingDismissalsByInviteId.get(inviteId);
         if (!targets) {
           targets = new Map<string, number>();
@@ -546,13 +548,10 @@ export class LobbyInviteService {
         const now = Date.now();
         const prev = targets.get(targetPublicId) ?? 0;
         targets.set(targetPublicId, Math.max(prev, now));
-      }
-      if (this.onUnresolvedInviteDismissed) {
-        const now = Date.now();
-        this.onUnresolvedInviteDismissed(inviteId, now, targetPublicId);
+        this.onUnresolvedInviteDismissed?.(inviteId, now, targetPublicId);
         return true;
       }
-      return Boolean(targetPublicId);
+      return false;
     }
 
     if (invite.targetPublicId !== targetPublicId) return false;
@@ -847,10 +846,10 @@ export function registerLobbyInviteRoutes(
     }
 
     const initialLobbyMeta = getLobbyMeta?.(parsed.data.lobbyId) ?? null;
-    if (initialLobbyMeta?.isPublic) {
+    if (isLobbyInviteForbidden(initialLobbyMeta)) {
       return res
         .status(403)
-        .json({ error: "Invites are only available for private lobbies" });
+        .json({ error: "Invites are not available for public FFA lobbies" });
     }
     if (
       !isTargetPermittedByLobby(
@@ -894,10 +893,10 @@ export function registerLobbyInviteRoutes(
     }
 
     const lobbyMeta = getLobbyMeta?.(parsed.data.lobbyId) ?? null;
-    if (lobbyMeta?.isPublic) {
+    if (isLobbyInviteForbidden(lobbyMeta)) {
       return res
         .status(403)
-        .json({ error: "Invites are only available for private lobbies" });
+        .json({ error: "Invites are not available for public FFA lobbies" });
     }
     if (
       !isTargetPermittedByLobby(
@@ -918,6 +917,11 @@ export function registerLobbyInviteRoutes(
       senderPublicId: caller.publicId,
       senderUsername: caller.username,
     });
+    if (!invite) {
+      return res
+        .status(429)
+        .json({ error: "Invite was recently dismissed or is on cooldown" });
+    }
     res.json({ ok: true, invite });
   });
 
@@ -957,9 +961,9 @@ export function registerLobbyInviteRoutes(
     }
 
     const lobbyMeta = getLobbyMeta?.(lobbyId) ?? null;
-    if (lobbyMeta?.isPublic) {
+    if (isLobbyInviteForbidden(lobbyMeta)) {
       return res.status(403).json({
-        error: "Lobby member queries are only available for private lobbies",
+        error: "Lobby member queries are not available for public FFA lobbies",
       });
     }
 

@@ -43,7 +43,7 @@ describe("LobbyInviteService", () => {
       lobbyId: "lobby123",
       gameMode: "ffa",
       map: "Europe",
-    });
+    })!;
 
     expect(invite.id).toBeDefined();
     expect(invite.targetPublicId).toBe("user.target");
@@ -69,7 +69,7 @@ describe("LobbyInviteService", () => {
       senderPublicId: "user.sender",
       senderUsername: "SenderBob",
       lobbyId: "lobby123",
-    });
+    })!;
 
     expect(onInviteAdded).toHaveBeenCalledWith(created);
     expect(service.getInvitesForUser("user.target")).toHaveLength(1);
@@ -83,7 +83,7 @@ describe("LobbyInviteService", () => {
     expect(service.getInvitesForUser("user.target")).toHaveLength(0);
   });
 
-  it("updates existing invite when same sender invites same target to same lobby", () => {
+  it("no-ops repeat invite while live and enforces cooldown after dismissal", () => {
     const now = 1000000;
     vi.setSystemTime(now);
 
@@ -93,16 +93,10 @@ describe("LobbyInviteService", () => {
       senderUsername: "OldName",
       lobbyId: "lobby123",
     });
+    expect(first).not.toBeNull();
     expect(onInviteAdded).toHaveBeenCalledTimes(1);
-    expect(onInviteAdded).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        id: first.id,
-        senderUsername: "OldName",
-        createdAt: now,
-        expiresAt: now + 30000,
-      }),
-    );
 
+    // Calling invite again while live is a no-op: does not bump timestamps and does not re-broadcast over IPC
     vi.setSystemTime(now + 10000);
     const second = service.createInvite({
       targetPublicId: "user.target",
@@ -111,19 +105,34 @@ describe("LobbyInviteService", () => {
       lobbyId: "lobby123",
     });
 
-    expect(second.id).toBe(first.id);
-    expect(second.senderUsername).toBe("NewName");
-    expect(second.expiresAt).toBe(now + 10000 + 30000);
+    expect(second?.id).toBe(first!.id);
+    expect(second?.createdAt).toBe(now);
+    expect(second?.expiresAt).toBe(now + 30000);
+    expect(onInviteAdded).toHaveBeenCalledTimes(1);
+
+    // Target dismisses the invite
+    const dismissed = service.dismissInvite("user.target", first!.id);
+    expect(dismissed).toBe(true);
+
+    // Sender cannot spam invite to bypass dismissal while TTL is active
+    vi.setSystemTime(now + 15000);
+    const rejected = service.createInvite({
+      targetPublicId: "user.target",
+      senderPublicId: "user.sender",
+      lobbyId: "lobby123",
+    });
+    expect(rejected).toBeNull();
+    expect(onInviteAdded).toHaveBeenCalledTimes(1);
+
+    // After 30s TTL from dismissal passes, new invite can be created
+    vi.setSystemTime(now + 45000);
+    const newInvite = service.createInvite({
+      targetPublicId: "user.target",
+      senderPublicId: "user.sender",
+      lobbyId: "lobby123",
+    });
+    expect(newInvite).not.toBeNull();
     expect(onInviteAdded).toHaveBeenCalledTimes(2);
-    expect(onInviteAdded).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        id: first.id,
-        senderUsername: "NewName",
-        createdAt: now + 10000,
-        expiresAt: now + 10000 + 30000,
-      }),
-    );
-    expect(service.getInvitesForUser("user.target")).toHaveLength(1);
   });
 
   it("dismisses an invite for the target user", () => {
@@ -134,13 +143,16 @@ describe("LobbyInviteService", () => {
       targetPublicId: "user.target",
       senderPublicId: "user.sender",
       lobbyId: "lobby123",
-    });
+    })!;
 
     // Another user cannot dismiss someone else's invite
     const wrongDismiss = service.dismissInvite("wrong.user", invite.id);
     expect(wrongDismiss).toBe(false);
     expect(onInviteDismissed).not.toHaveBeenCalled();
     expect(service.getInvitesForUser("user.target")).toHaveLength(1);
+
+    // Unknown invite ID returns false without dismissing anything
+    expect(service.dismissInvite("user.target", "nonexistent_id")).toBe(false);
 
     // Target user dismisses
     const rightDismiss = service.dismissInvite("user.target", invite.id);
@@ -542,11 +554,13 @@ describe("LobbyInviteService", () => {
       };
 
       let isLobbyPublic = false;
+      let lobbyGameMode: string | undefined = "Free For All";
       registerLobbyInviteRoutes(mockApp as any, {
         isLobbyActive: () => true,
         isPlayerInLobby: () => true,
         getLobbyMeta: () => ({
           isPublic: isLobbyPublic,
+          gameMode: lobbyGameMode,
           memberPublicIds: ["caller.pub", "friend.pub", "stranger.pub"],
         }),
         resolveCaller: async () => ({
@@ -625,14 +639,26 @@ describe("LobbyInviteService", () => {
       expect(stored[0].senderPublicId).toBe("caller.pub");
       expect(stored[0].lobbyId).toBe("lob1");
 
-      // Public lobby: members returns 403
+      // Public FFA lobby: members returns 403
       isLobbyPublic = true;
+      lobbyGameMode = "Free For All";
       const pubRes = await callMembers();
       expect(pubRes.statusCode).toBe(403);
 
-      // Public lobby: invite returns 403
+      // Public FFA lobby: invite returns 403
       const pubInviteRes = await callInvite();
       expect(pubInviteRes.statusCode).toBe(403);
+
+      // Public Team lobby: members returns 200, invite returns 200
+      lobbyGameMode = "Team";
+      const pubTeamMembersRes = await callMembers();
+      expect(pubTeamMembersRes.statusCode).toBe(200);
+      expect(pubTeamMembersRes.body.memberPublicIds).toEqual([
+        "caller.pub",
+        "friend.pub",
+      ]);
+      const pubTeamInviteRes = await callInvite();
+      expect(pubTeamInviteRes.statusCode).toBe(200);
     } finally {
       LobbyInviteService.instance.reset();
     }
