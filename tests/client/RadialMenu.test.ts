@@ -1,6 +1,9 @@
 import { EventBus } from "@openfront/shared/EventBus";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { RadialMenu } from "../../src/client/hud/layers/RadialMenu";
+import {
+  CloseRadialMenuEvent,
+  RadialMenu,
+} from "../../src/client/hud/layers/RadialMenu";
 import {
   centerButtonElement,
   rootMenuElement,
@@ -153,5 +156,50 @@ describe("RadialMenu overlay click-through", () => {
     eventBus.emit(new CloseViewEvent());
 
     expect(overlay.style.display).toBe("none");
+  });
+
+  // The player info panel opens with the menu and closes on this event, so
+  // it has to fire however the menu closes, including from an action like
+  // the attack button, which hides the menu directly.
+  function openMenu(radialMenu: RadialMenu, overlay: HTMLElement) {
+    vi.spyOn(radialMenu as any, "resetMenu").mockImplementation(() => {});
+    (radialMenu as any).isVisible = true;
+    overlay.style.display = "block";
+  }
+
+  function countCloseEvents(eventBus: EventBus) {
+    const closes: CloseRadialMenuEvent[] = [];
+    eventBus.on(CloseRadialMenuEvent, (e) => closes.push(e));
+    return closes;
+  }
+
+  test("announces it closed when an action hides it", () => {
+    const { eventBus, radialMenu, overlay } = makeMenu();
+    openMenu(radialMenu, overlay);
+    const closes = countCloseEvents(eventBus);
+
+    radialMenu.hideRadialMenu();
+
+    expect(closes).toHaveLength(1);
+  });
+
+  test("announces it closed once when the backdrop is tapped", () => {
+    const { eventBus, radialMenu, overlay } = makeMenu();
+    stubElementFromPoint(null);
+    openMenu(radialMenu, overlay);
+    const closes = countCloseEvents(eventBus);
+
+    overlay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(closes).toHaveLength(1);
+  });
+
+  test("does not announce a close when it was already hidden", () => {
+    const { eventBus, radialMenu } = makeMenu();
+    const closes = countCloseEvents(eventBus);
+
+    radialMenu.hideRadialMenu();
+
+    expect(closes).toHaveLength(0);
   });
 });
