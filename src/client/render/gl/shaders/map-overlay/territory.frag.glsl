@@ -48,7 +48,8 @@ void main() {
   // Renders for owned tiles too so the player's territory color can't bleed
   // through dim/transparent spots in the fallout bloom above.
   if (fallout) {
-    float h = fract(sin(float(tc.x) * 12.9898 + float(tc.y) * 78.233) * 43758.5453);
+    vec2 tcMod = mod(vec2(tc), 6.2831853);
+    float h = fract(sin(tcMod.x * 12.9898 + tcMod.y * 78.233) * 43758.5453);
     float noise = uStaleNukeBase + h * uStaleNukeVariation;
     fragColor = vec4(uStaleNukeColor + vec3(noise), uStaleNukeAlpha);
     return;
