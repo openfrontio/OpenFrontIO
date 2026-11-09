@@ -804,10 +804,10 @@ describe("LobbyInviteService", () => {
         new Response(
           JSON.stringify({
             results: [
-              { publicId: "clan_member_1" },
               ...Array.from({ length: 49 }, (_, i) => ({
                 publicId: `other_member_${i}`,
               })),
+              { publicId: "clan_member_1" },
             ],
             total: 100,
             page: 1,
