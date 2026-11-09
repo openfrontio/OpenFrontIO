@@ -1419,6 +1419,7 @@
   },
   "invite_modal": {
     "clan_group": "Clan [{tag}] ({count})",
+    "cooldown": "Invite on cooldown. Please wait {seconds}s before retrying.",
     "empty": "No friends or clan members found",
     "friends": "Friends",
     "in_lobby": "In Lobby",

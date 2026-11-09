@@ -2,7 +2,6 @@ import { CloseCode } from "@openfront/shared/CloseCodes";
 import { PublicGames } from "@openfront/shared/WireSchemas";
 import { decodeLobbyMessage } from "@openfront/shared/ZbinWire";
 import { ClientEnv, NoServerError } from "src/client/ClientEnv";
-import { getPlayToken } from "./Auth";
 import { clientPlatform } from "./ClientPlatform";
 import { showInGameAlert } from "./InGameModal";
 import {
@@ -18,6 +17,7 @@ interface LobbySocketOptions {
   reconnectDelay?: number;
   maxWsAttempts?: number;
   pollIntervalMs?: number;
+  getToken?: () => Promise<string | null> | string | null;
   // Fired at most once, when the server advertises a different build commit
   // than this bundle — i.e. a new version deployed while this tab was open.
   onUpdateAvailable?: () => void;
@@ -56,6 +56,7 @@ export class PublicLobbySocket {
 
   private readonly reconnectDelay: number;
   private readonly maxWsAttempts: number;
+  private readonly getToken?: () => Promise<string | null> | string | null;
   private readonly onUpdateAvailable?: () => void;
   private readonly onGaveUp?: () => void;
   private updateAvailableFired = false;
@@ -66,6 +67,7 @@ export class PublicLobbySocket {
   ) {
     this.reconnectDelay = options?.reconnectDelay ?? 3000;
     this.maxWsAttempts = options?.maxWsAttempts ?? 3;
+    this.getToken = options?.getToken;
     this.onUpdateAvailable = options?.onUpdateAvailable;
     this.onGaveUp = options?.onGaveUp;
   }
@@ -147,13 +149,15 @@ export class PublicLobbySocket {
       this.handleConnectError(e, true);
       return;
     }
-    try {
-      const token = await getPlayToken();
-      if (token) {
-        this.tokenParam = `&token=${encodeURIComponent(token)}`;
+    if (this.getToken) {
+      try {
+        const token = await this.getToken();
+        if (token) {
+          this.tokenParam = `&token=${encodeURIComponent(token)}`;
+        }
+      } catch {
+        this.tokenParam = "";
       }
-    } catch {
-      this.tokenParam = "";
     }
     this.connectWebSocket();
   }
