@@ -273,7 +273,7 @@ export class LeaderboardPlayerList extends LitElement {
       // A fresh load replaces it: between seasons the API sends none.
       this.ffaSeason = result.ffaSeason ?? (reset ? null : this.ffaSeason);
 
-      if (reset && !this.currentUserIdLoaded) {
+      if (!this.currentUserIdLoaded) {
         this.currentUserIdLoaded = true;
         const userMe = await getUserMe();
         this.currentUserId = userMe ? userMe.player.publicId : null;
@@ -357,7 +357,7 @@ export class LeaderboardPlayerList extends LitElement {
         this.currentPage++;
       }
 
-      if (reset && this.ffaRatingServed) {
+      if (this.ffaRank === null && this.ffaRatingServed) {
         // The overall board's first row is in the highest rank with players.
         const topTier = nextLadders[RankedType.FreeForAll].entries[0]?.tier;
         const topRank = topTier ? parseFfaTier(topTier)?.base : undefined;

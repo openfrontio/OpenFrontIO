@@ -148,6 +148,26 @@ describe("FFA rank tabs", () => {
     expect(fetchFfaRankLeaderboard).toHaveBeenCalledWith("diamond", 1);
   });
 
+  // The board's own fill check can start the first load before ensureLoaded.
+  it("still opens a rank when the first load isn't a reset", async () => {
+    vi.mocked(getUserMe).mockResolvedValue({
+      player: {
+        publicId: "me",
+        leaderboard: { ffa: { tier: "Gold II", elo: 1800, games: 20 } },
+      },
+    } as never);
+    list = document.createElement(
+      "leaderboard-player-list",
+    ) as LeaderboardPlayerList;
+    list.rankedType =
+      RankedType.FreeForAll as LeaderboardPlayerList["rankedType"];
+    document.body.appendChild(list);
+    await list.loadPlayerLeaderboard();
+    await settle();
+    expect(selectedTab()?.dataset.rank).toBe("gold");
+    expect(fetchFfaRankLeaderboard).toHaveBeenCalledWith("gold", 1);
+  });
+
   it("shows the rank's rows, not the overall board's", async () => {
     await open();
     expect(shownIds()).toEqual(["a", "b"]);
