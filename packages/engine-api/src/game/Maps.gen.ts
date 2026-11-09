@@ -104,6 +104,7 @@ export enum GameMapType {
   Oceania = "Oceania", // map-generator/assets/maps/oceania/info.json
   Ommatrypta = "Ommatrypta", // map-generator/assets/maps/ommatrypta/info.json
   Onion = "Onion", // map-generator/assets/maps/onion/info.json
+  OttomanEmpire = "Ottoman Empire", // map-generator/assets/maps/ottomanempire/info.json
   Pangaea = "Pangaea", // map-generator/assets/maps/pangaea/info.json
   Paris = "Paris", // map-generator/assets/maps/paris/info.json
   Passage = "Passage", // map-generator/assets/maps/passage/info.json
@@ -142,6 +143,7 @@ export enum GameMapType {
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
   World = "World", // map-generator/assets/maps/world/info.json
   World10000 = "World 10000", // map-generator/assets/maps/world10000/info.json
+  World4000 = "World 4000", // map-generator/assets/maps/world4000/info.json
   WorldInverted = "World Inverted", // map-generator/assets/maps/worldinverted/info.json
   YangtzeRiver = "Yangtze River", // map-generator/assets/maps/yangtzeriver/info.json
   YellowSea = "Yellow Sea", // map-generator/assets/maps/yellowsea/info.json
@@ -2059,6 +2061,13 @@ export const maps: readonly MapInfo[] = [
     author: "TKTK123456",
   },
   {
+    id: "OttomanEmpire",
+    type: GameMapType.OttomanEmpire,
+    translationKey: "map.ottomanempire",
+    categories: ["europe", "asia", "africa"],
+    defaultNationCount: 46,
+  },
+  {
     id: "Pangaea",
     type: GameMapType.Pangaea,
     translationKey: "map.pangaea",
@@ -2517,10 +2526,15 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.World,
     translationKey: "map.world",
     categories: ["featured", "world"],
-    defaultNationCount: 72,
+    defaultNationCount: 70,
     featuredRank: 1,
     forcedModifiers: ["isCrowded:50"],
+    layers: [
+      { id: "w2kland", placement: "land", nukeable: true },
+      { id: "w2kwater", placement: "water" },
+    ],
     author: "evanpelle",
+    descriptionKey: "map_description.world",
   },
   {
     id: "World10000",
@@ -2534,6 +2548,21 @@ export const maps: readonly MapInfo[] = [
     ],
     author: "Patrick Plays Badly",
     descriptionKey: "map_description.world10000",
+  },
+  {
+    id: "World4000",
+    type: GameMapType.World4000,
+    translationKey: "map.world4000",
+    categories: ["new", "featured", "world"],
+    defaultNationCount: 111,
+    featuredRank: 1,
+    forcedModifiers: ["isCrowded:50"],
+    layers: [
+      { id: "w4kland", placement: "land", nukeable: true },
+      { id: "w4kwater", placement: "water" },
+    ],
+    author: "evanpelle",
+    descriptionKey: "map_description.world4000",
   },
   {
     id: "WorldInverted",

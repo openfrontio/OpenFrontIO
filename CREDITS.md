@@ -158,6 +158,16 @@ NOAA National Centers for Environmental Information. 2022: ETOPO 2022 15 Arc-Sec
 Borders and lakes: [Natural Earth](https://www.naturalearthdata.com/)  
 Public Domain
 
+### Ottoman Empire Map
+
+Elevation: [USGS GMTED2010](https://www.usgs.gov/coastal-changes-and-impacts/gmted2010) 30 arc-second mean elevation  
+[Public Domain](https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits)
+
+Provinces, lakes and rivers: [Natural Earth](https://www.naturalearthdata.com/)  
+Public Domain
+
+1683 borders approximated from modern provinces.
+
 ## FFA Rating
 
 ### OFstats
