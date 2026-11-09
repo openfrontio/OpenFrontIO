@@ -177,6 +177,16 @@ describe("train golden values", () => {
     expect(table).toMatchSnapshot();
   });
 
+  test("trainSpawnRate: per-level odds stay flat once the small-economy boost has faded", () => {
+    for (const trainUnits of [0, 300]) {
+      const atCap = config.trainSpawnRate(6, trainUnits);
+      for (const factories of [10, 20, 100]) {
+        expect(config.trainSpawnRate(factories, trainUnits)).toBe(atCap);
+      }
+      expect(config.trainSpawnRate(4, trainUnits)).toBeLessThan(atCap);
+    }
+  });
+
   test("smallEconomySpawnBoost: every level built still adds spawns", () => {
     // levels × per-unit multiplier must rise strictly, or building another
     // port/factory would lower a small player's total income.

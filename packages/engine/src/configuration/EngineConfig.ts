@@ -219,9 +219,8 @@ export class EngineConfig extends Config {
   }
 
   trainSpawnRate(numPlayerFactories: number, numTrainUnits: number): number {
-    // hyperbolic decay, midpoint at 10 factories
-    // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    const rate = (numPlayerFactories + 10) * 15;
+    // The per-player penalty stops growing at 5 levels; past that only trainSaturation throttles.
+    const rate = (Math.min(numPlayerFactories, 5) + 10) * 15;
     const boost = this.smallEconomySpawnBoost(numPlayerFactories);
     return Math.max(
       1,
@@ -252,18 +251,18 @@ export class EngineConfig extends Config {
     let baseGold: number;
     switch (rel) {
       case "ally":
-        baseGold = 35_000;
+        baseGold = 43_750;
         break;
       case "team":
       case "other":
-        baseGold = 25_000;
+        baseGold = 31_250;
         break;
       case "self":
-        baseGold = 10_000;
+        baseGold = 12_500;
         break;
     }
-    const distPenalty = citiesVisited * 5_000;
-    const gold = Math.max(5000, baseGold - distPenalty);
+    const distPenalty = citiesVisited * 6_250;
+    const gold = Math.max(6_250, baseGold - distPenalty);
     return toInt(gold * this.goldMultiplierFor(player));
   }
 
