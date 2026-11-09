@@ -803,7 +803,12 @@ describe("LobbyInviteService", () => {
       fetchSpy.mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            results: [{ publicId: "clan_member_1" }],
+            results: [
+              { publicId: "clan_member_1" },
+              ...Array.from({ length: 49 }, (_, i) => ({
+                publicId: `other_member_${i}`,
+              })),
+            ],
             total: 100,
             page: 1,
             limit: 50,
@@ -811,12 +816,16 @@ describe("LobbyInviteService", () => {
           { status: 200, headers: { "content-type": "application/json" } },
         ),
       );
+      // Stub any unexpected second-page fetch so it would fail if early stop didn't work
+      fetchSpy.mockResolvedValueOnce(
+        new Response("Unexpected page 2 fetch", { status: 500 }),
+      );
       const okRes = await callInvite("clan_member_1");
       expect(okRes.statusCode).toBe(200);
       expect(okRes.body.ok).toBe(true);
       expect(fetchSpy).toHaveBeenCalledTimes(1);
 
-      fetchSpy.mockClear();
+      fetchSpy.mockReset();
 
       // 2. Upstream failure on page 1 before membership is determined -> 502
       fetchSpy.mockResolvedValueOnce(
@@ -826,7 +835,7 @@ describe("LobbyInviteService", () => {
       expect(failRes.statusCode).toBe(502);
       expect(failRes.body.error).toBe("Failed to verify clan membership");
 
-      fetchSpy.mockClear();
+      fetchSpy.mockReset();
 
       // 3. Page 1 succeeds without target, page 2 fails before target is found -> 502
       fetchSpy.mockResolvedValueOnce(
@@ -851,7 +860,7 @@ describe("LobbyInviteService", () => {
         "Failed to verify clan membership",
       );
 
-      fetchSpy.mockClear();
+      fetchSpy.mockReset();
 
       // 4. All pages complete and target is not in clan -> 403
       fetchSpy.mockResolvedValueOnce(
