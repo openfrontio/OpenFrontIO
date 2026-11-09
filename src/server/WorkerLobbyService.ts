@@ -25,7 +25,8 @@ import {
   WorkerLobbyList,
   WorkerMessage,
 } from "./IPCBridgeSchema";
-import { LobbyInviteService } from "./LobbyInviteService";
+import { verifyClientToken } from "./jwt";
+import { defaultResolveCaller, LobbyInviteService } from "./LobbyInviteService";
 import { logger } from "./Logger";
 import { ServerEnv } from "./ServerEnv";
 
@@ -50,6 +51,8 @@ export class WorkerLobbyService {
   // upgrade URL's ?platform= (see LobbySocket.ts), for the per-platform gauge.
   private readonly lobbyClients: Map<WebSocket, ClientPlatform | "unknown"> =
     new Map();
+  private readonly lobbySocketsByPublicId = new Map<string, Set<WebSocket>>();
+  private readonly publicIdBySocket = new Map<WebSocket, string>();
   // Most recent snapshot from master, serialized on demand for new
   // connections so they don't have to wait for the next broadcast.
   private lastPublicGames: InternalPublicGames | null = null;
@@ -205,6 +208,7 @@ export class WorkerLobbyService {
       }
       case "lobbyInviteBroadcast":
         LobbyInviteService.instance.addExternalInvite(msg.invite);
+        this.pushLobbyInvite(msg.invite);
         break;
       case "lobbyInviteDismissBroadcast":
         LobbyInviteService.instance.dismissExternalInvite(
@@ -212,6 +216,7 @@ export class WorkerLobbyService {
           msg.dismissedAt,
           msg.targetPublicId,
         );
+        this.pushLobbyInviteDismiss(msg.inviteId, msg.targetPublicId);
         break;
       case "workerExited": {
         const exitedAt = msg.exitedAt ?? Date.now();
@@ -249,6 +254,7 @@ export class WorkerLobbyService {
    */
   sendLobbyInvite(invite: LobbyInvite) {
     this.sendToMaster({ type: "lobbyInvite", invite });
+    this.pushLobbyInvite(invite);
   }
 
   /**
@@ -265,6 +271,7 @@ export class WorkerLobbyService {
       dismissedAt,
       targetPublicId,
     });
+    this.pushLobbyInviteDismiss(inviteId, targetPublicId);
   }
 
   /**
@@ -582,6 +589,32 @@ export class WorkerLobbyService {
       "connection",
       (ws: WebSocket, request?: http.IncomingMessage) => {
         this.lobbyClients.set(ws, lobbyClientPlatform(request?.url));
+
+        const queryIndex = request?.url?.indexOf("?");
+        if (queryIndex !== undefined && queryIndex !== -1) {
+          const searchParams = new URLSearchParams(
+            request!.url!.substring(queryIndex),
+          );
+          const token = searchParams.get("token");
+          if (token) {
+            void verifyClientToken(token)
+              .then(async (auth) => {
+                if (
+                  auth.type !== "success" ||
+                  ws.readyState !== WebSocket.OPEN
+                ) {
+                  return;
+                }
+                const caller = await defaultResolveCaller(token);
+                if (!caller || ws.readyState !== WebSocket.OPEN) {
+                  return;
+                }
+                this.registerAuthenticatedLobbySocket(ws, caller.publicId);
+              })
+              .catch(() => {});
+          }
+        }
+
         // Prime the new client with the most recent snapshot — otherwise it
         // would only see counts-only deltas (which it can't apply without a
         // base) until the next structural change.
@@ -601,6 +634,7 @@ export class WorkerLobbyService {
         });
         ws.on("close", () => {
           this.lobbyClients.delete(ws);
+          this.unregisterAuthenticatedLobbySocket(ws);
         });
 
         ws.on("error", (error) => {
@@ -614,6 +648,7 @@ export class WorkerLobbyService {
             this.log.error(`Lobbies WebSocket error:`, error);
           }
           this.lobbyClients.delete(ws);
+          this.unregisterAuthenticatedLobbySocket(ws);
           try {
             if (
               ws.readyState === WebSocket.OPEN ||
@@ -627,6 +662,89 @@ export class WorkerLobbyService {
         });
       },
     );
+  }
+
+  private registerAuthenticatedLobbySocket(ws: WebSocket, publicId: string) {
+    this.publicIdBySocket.set(ws, publicId);
+    let sockets = this.lobbySocketsByPublicId.get(publicId);
+    if (!sockets) {
+      sockets = new Set();
+      this.lobbySocketsByPublicId.set(publicId, sockets);
+    }
+    sockets.add(ws);
+
+    const activeInvites =
+      LobbyInviteService.instance.getInvitesForUser(publicId);
+    for (const invite of activeInvites) {
+      try {
+        ws.send(JSON.stringify({ type: "lobby_invite", invite }));
+      } catch {
+        // ignore send error
+      }
+    }
+  }
+
+  private unregisterAuthenticatedLobbySocket(ws: WebSocket) {
+    const publicId = this.publicIdBySocket.get(ws);
+    if (publicId) {
+      this.publicIdBySocket.delete(ws);
+      const sockets = this.lobbySocketsByPublicId.get(publicId);
+      if (sockets) {
+        sockets.delete(ws);
+        if (sockets.size === 0) {
+          this.lobbySocketsByPublicId.delete(publicId);
+        }
+      }
+    }
+  }
+
+  private pushLobbyInvite(invite: LobbyInvite) {
+    const sockets = this.lobbySocketsByPublicId.get(invite.targetPublicId);
+    if (!sockets || sockets.size === 0) return;
+    const payload = JSON.stringify({ type: "lobby_invite", invite });
+    for (const ws of sockets) {
+      if (ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(payload);
+        } catch (err) {
+          this.log.warn("Failed to push lobby invite over WebSocket", { err });
+        }
+      }
+    }
+  }
+
+  private pushLobbyInviteDismiss(inviteId: string, targetPublicId?: string) {
+    const payload = JSON.stringify({ type: "lobby_invite_dismiss", inviteId });
+    if (targetPublicId) {
+      const sockets = this.lobbySocketsByPublicId.get(targetPublicId);
+      if (sockets) {
+        for (const ws of sockets) {
+          if (ws.readyState === WebSocket.OPEN) {
+            try {
+              ws.send(payload);
+            } catch (err) {
+              this.log.warn(
+                "Failed to push lobby invite dismissal over WebSocket",
+                { err },
+              );
+            }
+          }
+        }
+      }
+      return;
+    }
+    for (const ws of this.publicIdBySocket.keys()) {
+      if (ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(payload);
+        } catch (err) {
+          this.log.warn(
+            "Failed to push lobby invite dismissal over WebSocket",
+            { err },
+          );
+        }
+      }
+    }
   }
 
   private broadcastLobbiesToClients(publicGames: InternalPublicGames) {

@@ -2,6 +2,7 @@ import { CloseCode } from "@openfront/shared/CloseCodes";
 import { PublicGames } from "@openfront/shared/WireSchemas";
 import { decodeLobbyMessage } from "@openfront/shared/ZbinWire";
 import { ClientEnv, NoServerError } from "src/client/ClientEnv";
+import { getPlayToken } from "./Auth";
 import { clientPlatform } from "./ClientPlatform";
 import { showInGameAlert } from "./InGameModal";
 import {
@@ -51,6 +52,7 @@ export class PublicLobbySocket {
   private generation = 0;
   // Latest full snapshot, used as the base for applying counts-only deltas.
   private lastFull: PublicGames | null = null;
+  private tokenParam = "";
 
   private readonly reconnectDelay: number;
   private readonly maxWsAttempts: number;
@@ -145,6 +147,14 @@ export class PublicLobbySocket {
       this.handleConnectError(e, true);
       return;
     }
+    try {
+      const token = await getPlayToken();
+      if (token) {
+        this.tokenParam = `&token=${encodeURIComponent(token)}`;
+      }
+    } catch {
+      this.tokenParam = "";
+    }
     this.connectWebSocket();
   }
 
@@ -170,7 +180,7 @@ export class PublicLobbySocket {
       // the desktop app://openfront origin), not window.location.host.
       // ?platform= is only for the server's per-platform lobby gauge: the
       // lobby socket has no join message to carry it in.
-      const wsUrl = `${ClientEnv.serverWsBase()}${this.workerPath}/lobbies?platform=${clientPlatform()}`;
+      const wsUrl = `${ClientEnv.serverWsBase()}${this.workerPath}/lobbies?platform=${clientPlatform()}${this.tokenParam}`;
 
       const ws = new WebSocket(wsUrl);
       this.ws = ws;
@@ -216,6 +226,23 @@ export class PublicLobbySocket {
   }
 
   private handleMessage(event: MessageEvent) {
+    if (typeof event.data === "string") {
+      try {
+        const payload = JSON.parse(event.data);
+        if (
+          payload &&
+          (payload.type === "lobby_invite" ||
+            payload.type === "lobby_invite_dismiss")
+        ) {
+          window.dispatchEvent(
+            new CustomEvent("lobby-invite-received", { detail: payload }),
+          );
+        }
+      } catch (error) {
+        console.error("Error parsing lobby invite message:", error);
+      }
+      return;
+    }
     try {
       const message = decodeLobbyMessage(
         new Uint8Array(event.data as ArrayBuffer),

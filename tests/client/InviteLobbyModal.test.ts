@@ -263,6 +263,35 @@ describe("InviteLobbyModal", () => {
       await vi.advanceTimersByTimeAsync(30_001);
       await modal.updateComplete;
       expect(findRow("Alice")?.querySelector("button")).toBeTruthy();
+
+      // 429 cooldown response retains Invited state for retryAfter duration and shows remaining seconds in toast
+      apiMocks.sendLobbyInvite.mockResolvedValueOnce({
+        ok: false,
+        retryAfterSeconds: 15,
+        retryAfterMs: 15_000,
+      });
+      let toastMsg = "";
+      const toastHandler = (e: any) => {
+        toastMsg = e.detail?.message ?? "";
+      };
+      window.addEventListener("show-message", toastHandler);
+      findRow("Alice")?.querySelector("button")?.click();
+      await vi.advanceTimersByTimeAsync(0);
+      await modal.updateComplete;
+      window.removeEventListener("show-message", toastHandler);
+
+      expect(toastMsg).toContain("15s");
+      expect(findRow("Alice")?.textContent).toContain("Invited");
+
+      // Advance 14s: still in Invited state
+      await vi.advanceTimersByTimeAsync(14_000);
+      await modal.updateComplete;
+      expect(findRow("Alice")?.textContent).toContain("Invited");
+
+      // Advance remaining 1.1s: cooldown expires and button is restored
+      await vi.advanceTimersByTimeAsync(1_100);
+      await modal.updateComplete;
+      expect(findRow("Alice")?.querySelector("button")).toBeTruthy();
     } finally {
       vi.useRealTimers();
     }

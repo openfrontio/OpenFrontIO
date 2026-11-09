@@ -340,8 +340,10 @@ export class InviteLobbyModal extends BaseModal {
       : undefined;
 
     let ok = false;
+    let retryAfterSeconds: number | undefined;
+    let retryAfterMs: number | undefined;
     try {
-      ok = await sendLobbyInvite({
+      const res = await sendLobbyInvite({
         targetPublicId,
         lobbyId,
         ...(senderPublicId ? { senderPublicId } : {}),
@@ -349,20 +351,53 @@ export class InviteLobbyModal extends BaseModal {
         gameMode: this.gameMode,
         map: this.map,
       });
+      ok = typeof res === "object" && res !== null ? res.ok : Boolean(res);
+      if (typeof res === "object" && res !== null) {
+        retryAfterSeconds = res.retryAfterSeconds;
+        retryAfterMs = res.retryAfterMs;
+      }
     } finally {
       this.pendingKeys.delete(key);
     }
 
     if (!ok) {
-      window.dispatchEvent(
-        new CustomEvent("show-message", {
-          detail: {
-            message: translateText("invite_modal.invite_failed"),
-            duration: 3000,
-            color: "red",
-          },
-        }),
-      );
+      if (retryAfterSeconds !== undefined && retryAfterSeconds > 0) {
+        const cooldownMs = retryAfterMs ?? retryAfterSeconds * 1000;
+        this.invitedKeys.add(key);
+        setTimeout(() => {
+          this.invitedKeys.delete(key);
+          this.requestUpdate();
+        }, cooldownMs);
+
+        const msgKey = "invite_modal.cooldown";
+        const translated = translateText(msgKey, {
+          seconds: String(retryAfterSeconds),
+        });
+        const message =
+          translated === msgKey
+            ? `Invite on cooldown. Please wait ${retryAfterSeconds}s before retrying.`
+            : translated;
+
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message,
+              duration: 3000,
+              color: "yellow",
+            },
+          }),
+        );
+      } else {
+        window.dispatchEvent(
+          new CustomEvent("show-message", {
+            detail: {
+              message: translateText("invite_modal.invite_failed"),
+              duration: 3000,
+              color: "red",
+            },
+          }),
+        );
+      }
       this.requestUpdate();
       return;
     }

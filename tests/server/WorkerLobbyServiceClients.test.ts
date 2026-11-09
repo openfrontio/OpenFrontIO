@@ -82,4 +82,48 @@ describe("WorkerLobbyService.connectedClients", () => {
     });
     expect(service.connectedClients()).toBe(0);
   });
+
+  it("pushes lobby invite and dismissal over WebSocket to target player", () => {
+    const ws = connectClient("/w0/lobbies?platform=web");
+    (service as any).registerAuthenticatedLobbySocket(ws, "target.pub");
+
+    const sampleInvite = {
+      id: "inv_ws_1",
+      lobbyId: "lob_ws",
+      senderPublicId: "sender.pub",
+      senderUsername: "Sender",
+      targetPublicId: "target.pub",
+      gameMode: "Team",
+      map: "World",
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 30_000,
+    };
+
+    // Broadcast invite
+    (service as any).handleMasterMessage({
+      type: "lobbyInviteBroadcast",
+      invite: sampleInvite,
+    });
+
+    expect(ws.send).toHaveBeenCalledTimes(1);
+    const sentData = JSON.parse(ws.send.mock.calls[0][0]);
+    expect(sentData).toEqual({
+      type: "lobby_invite",
+      invite: sampleInvite,
+    });
+
+    // Broadcast dismissal
+    (service as any).handleMasterMessage({
+      type: "lobbyInviteDismissBroadcast",
+      inviteId: "inv_ws_1",
+      targetPublicId: "target.pub",
+    });
+
+    expect(ws.send).toHaveBeenCalledTimes(2);
+    const sentDismiss = JSON.parse(ws.send.mock.calls[1][0]);
+    expect(sentDismiss).toEqual({
+      type: "lobby_invite_dismiss",
+      inviteId: "inv_ws_1",
+    });
+  });
 });

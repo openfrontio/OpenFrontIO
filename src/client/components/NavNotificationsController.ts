@@ -118,6 +118,10 @@ class NavNotificationsStore {
     document.addEventListener("menu-restored", this.handleMenuRestored);
     document.addEventListener("visibilitychange", this.handleVisibilityChange);
     window.addEventListener("focus", this.handleFocus);
+    window.addEventListener(
+      "lobby-invite-received",
+      this.handleLobbyInviteReceived,
+    );
 
     // Auth normally resolves before late-created mobile/desktop nav instances.
     // Seed from its cache so such an instance does not wait for an event that
@@ -294,6 +298,37 @@ class NavNotificationsStore {
     });
     this.notify();
   }
+
+  private handleLobbyInviteReceived = (event: Event): void => {
+    const customEvent = event as CustomEvent<{
+      type: "lobby_invite" | "lobby_invite_dismiss";
+      invite?: LobbyInvite;
+      inviteId?: string;
+    }>;
+    const detail = customEvent?.detail;
+    if (!detail) return;
+    if (detail.type === "lobby_invite" && detail.invite) {
+      const inv = detail.invite;
+      if (inv.expiresAt <= this.serverNow()) return;
+      const dismissedCreatedAt = this.dismissedInviteCreatedAt.get(inv.id);
+      if (
+        dismissedCreatedAt !== undefined &&
+        inv.createdAt <= dismissedCreatedAt
+      ) {
+        return;
+      }
+      const filtered = this._lobbyInvites.filter(
+        (existing) => existing.id !== inv.id,
+      );
+      this._lobbyInvites = [...filtered, inv];
+      this.notify();
+    } else if (detail.type === "lobby_invite_dismiss" && detail.inviteId) {
+      this._lobbyInvites = this._lobbyInvites.filter(
+        (existing) => existing.id !== detail.inviteId,
+      );
+      this.notify();
+    }
+  };
 
   dismissLobbyInvite(inviteId: string): void {
     const existing = this._lobbyInvites.find((i) => i.id === inviteId);

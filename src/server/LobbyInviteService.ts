@@ -53,7 +53,7 @@ export type LobbyInviteRouteOptions = {
   ) => Promise<boolean>;
 };
 
-const CALLER_CACHE_TTL_MS = 30_000;
+const CALLER_CACHE_TTL_MS = 600_000; // 10 minutes, avoids frequent /users/@me round-trips for menu-sitting clients
 const MAX_CALLER_CACHE_SIZE = 2_000;
 const PRUNE_INTERVAL_MS = 30_000;
 const callerCache = new Map<
@@ -72,7 +72,7 @@ function pruneCallerCache(now: number = Date.now()): void {
 /**
  * Resolves the authenticated caller's public identity, friend list, and clan tags via `/users/@me`.
  */
-async function defaultResolveCaller(
+export async function defaultResolveCaller(
   token: string,
 ): Promise<VerifiedCallerIdentity | null> {
   const now = Date.now();
@@ -299,6 +299,8 @@ export class LobbyInviteService {
   // Tracks the latest dismissal timestamp per invite id and per logical key so stale IPC refreshes cannot resurrect dismissed invites
   private dismissedAtByInviteId = new Map<string, number>();
   private dismissedAtByLogicalKey = new Map<string, number>();
+  // Tracks explicit player dismissal timestamp per logical key for cooldown enforcement (distinguished from cleanup tombstones)
+  private explicitDismissCooldownByLogicalKey = new Map<string, number>();
   // Retains target-scoped dismissals that arrive before the invite itself, keyed by inviteId -> targetPublicId -> dismissedAt
   private pendingDismissalsByInviteId = new Map<string, Map<string, number>>();
   private pruneTimer: ReturnType<typeof setInterval> | null = null;
@@ -396,7 +398,7 @@ export class LobbyInviteService {
     const now = Date.now();
     const key = this.logicalKey(input);
 
-    const dismissedAt = this.dismissedAtByLogicalKey.get(key);
+    const dismissedAt = this.explicitDismissCooldownByLogicalKey.get(key);
     if (dismissedAt !== undefined && now < dismissedAt + ttlMs) {
       return null;
     }
@@ -422,10 +424,27 @@ export class LobbyInviteService {
     this.invites.set(invite.id, invite);
     this.dismissedAtByInviteId.delete(invite.id);
     this.dismissedAtByLogicalKey.delete(key);
+    this.explicitDismissCooldownByLogicalKey.delete(key);
     this.pendingDismissalsByInviteId.delete(invite.id);
     this.indexInvite(invite);
     this.onInviteAdded?.(invite);
     return invite;
+  }
+
+  /**
+   * Returns remaining cooldown in milliseconds if an invite between sender and target for lobby is on dismissal cooldown, or 0.
+   */
+  getInviteCooldownRemainingMs(
+    input: SendLobbyInviteInput & { senderPublicId: string },
+    now = Date.now(),
+    ttlMs: number = LOBBY_INVITE_TTL_MS,
+  ): number {
+    const key = this.logicalKey(input);
+    const dismissedAt = this.explicitDismissCooldownByLogicalKey.get(key);
+    if (dismissedAt !== undefined && now < dismissedAt + ttlMs) {
+      return dismissedAt + ttlMs - now;
+    }
+    return 0;
   }
 
   /**
@@ -563,6 +582,7 @@ export class LobbyInviteService {
     this.dismissedAtByInviteId.set(invite.id, now);
     this.dismissedAtByInviteId.set(inviteId, now);
     this.dismissedAtByLogicalKey.set(effectiveKey, now);
+    this.explicitDismissCooldownByLogicalKey.set(effectiveKey, now);
     this.onInviteDismissed?.(inviteId, now);
     if (invite.id !== inviteId) {
       this.onInviteDismissed?.(invite.id, now);
@@ -615,6 +635,12 @@ export class LobbyInviteService {
       this.dismissedAtByLogicalKey.set(
         effectiveKey,
         Math.max(prevKey, effectiveDismissedAt),
+      );
+      const prevCooldown =
+        this.explicitDismissCooldownByLogicalKey.get(effectiveKey) ?? 0;
+      this.explicitDismissCooldownByLogicalKey.set(
+        effectiveKey,
+        Math.max(prevCooldown, effectiveDismissedAt),
       );
     }
 
@@ -731,6 +757,14 @@ export class LobbyInviteService {
         this.dismissedAtByLogicalKey.delete(key);
       }
     }
+    for (const [
+      key,
+      dismissedAt,
+    ] of this.explicitDismissCooldownByLogicalKey.entries()) {
+      if (now - dismissedAt > LOBBY_INVITE_TTL_MS * 2) {
+        this.explicitDismissCooldownByLogicalKey.delete(key);
+      }
+    }
     for (const [id, targets] of this.pendingDismissalsByInviteId.entries()) {
       for (const [targetPublicId, dismissedAt] of targets.entries()) {
         if (now - dismissedAt > LOBBY_INVITE_TTL_MS * 2) {
@@ -762,6 +796,7 @@ export class LobbyInviteService {
     this.logicalKeyByInviteId.clear();
     this.dismissedAtByInviteId.clear();
     this.dismissedAtByLogicalKey.clear();
+    this.explicitDismissCooldownByLogicalKey.clear();
     this.pendingDismissalsByInviteId.clear();
     callerCache.clear();
   }
@@ -918,9 +953,18 @@ export function registerLobbyInviteRoutes(
       senderUsername: caller.username,
     });
     if (!invite) {
-      return res
-        .status(429)
-        .json({ error: "Invite was recently dismissed or is on cooldown" });
+      const remainingMs =
+        LobbyInviteService.instance.getInviteCooldownRemainingMs({
+          ...parsed.data,
+          senderPublicId: caller.publicId,
+        });
+      const retryAfterSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+      res.setHeader("Retry-After", String(retryAfterSeconds));
+      return res.status(429).json({
+        error: "Invite was recently dismissed or is on cooldown",
+        retryAfterMs: remainingMs,
+        retryAfterSeconds,
+      });
     }
     res.json({ ok: true, invite });
   });

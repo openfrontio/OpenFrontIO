@@ -361,4 +361,47 @@ describe("nav notifications", () => {
     bell.controller.onStoreClick();
     expect(bell.controller.showHelpDot()).toBe(true);
   });
+
+  it("updates lobby invites in real-time from lobby-invite-received events", async () => {
+    const bell = host();
+    await flush();
+
+    const sampleInvite = {
+      id: "ws_invite_1",
+      lobbyId: "ws_lobby_1",
+      senderPublicId: "sender_ws",
+      senderUsername: "SenderWS",
+      targetPublicId: "target_ws",
+      gameMode: "Team",
+      map: "World",
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 30_000,
+    };
+
+    // 1. Receiving a lobby_invite event pushes it to bell controller
+    window.dispatchEvent(
+      new CustomEvent("lobby-invite-received", {
+        detail: {
+          type: "lobby_invite",
+          invite: sampleInvite,
+        },
+      }),
+    );
+    await flush();
+
+    expect(bell.controller.lobbyInvites()).toEqual([sampleInvite]);
+
+    // 2. Receiving a lobby_invite_dismiss event removes it from bell controller
+    window.dispatchEvent(
+      new CustomEvent("lobby-invite-received", {
+        detail: {
+          type: "lobby_invite_dismiss",
+          inviteId: "ws_invite_1",
+        },
+      }),
+    );
+    await flush();
+
+    expect(bell.controller.lobbyInvites()).toEqual([]);
+  });
 });

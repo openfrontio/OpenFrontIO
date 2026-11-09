@@ -910,4 +910,128 @@ describe("LobbyInviteService", () => {
       LobbyInviteService.instance.reset();
     }
   });
+
+  it("applies cooldown only on explicit dismissal, allowing re-invite after lobby cleanup", () => {
+    LobbyInviteService.instance.reset();
+    try {
+      const inviteInput = {
+        lobbyId: "lob_cleanup",
+        senderPublicId: "sender_1",
+        targetPublicId: "target_1",
+        gameMode: "Team",
+        map: "World",
+      };
+
+      // 1. Initial invite created successfully
+      const inv1 = LobbyInviteService.instance.createInvite(inviteInput);
+      expect(inv1).not.toBeNull();
+
+      // 2. Host cancels start / lobby is cleaned up
+      LobbyInviteService.instance.removeInvitesForLobby("lob_cleanup");
+      expect(
+        LobbyInviteService.instance.getInvitesForUser("target_1"),
+      ).toHaveLength(0);
+
+      // 3. Creating a new invite for the same lobby/pair succeeds immediately (no cooldown from lobby removal)
+      const inv2 = LobbyInviteService.instance.createInvite(inviteInput);
+      expect(inv2).not.toBeNull();
+
+      // 4. Target explicitly dismisses the invite
+      const dismissed = LobbyInviteService.instance.dismissInvite(
+        "target_1",
+        inv2!.id,
+      );
+      expect(dismissed).toBe(true);
+
+      // 5. Creating invite again is now blocked by explicit dismissal cooldown
+      const inv3 = LobbyInviteService.instance.createInvite(inviteInput);
+      expect(inv3).toBeNull();
+
+      // 6. Remaining cooldown is positive
+      const remainingMs =
+        LobbyInviteService.instance.getInviteCooldownRemainingMs(inviteInput);
+      expect(remainingMs).toBeGreaterThan(0);
+      expect(remainingMs).toBeLessThanOrEqual(30_000);
+    } finally {
+      LobbyInviteService.instance.reset();
+    }
+  });
+
+  it("returns HTTP 429 with Retry-After and retryAfterSeconds when invite is on cooldown", async () => {
+    LobbyInviteService.instance.reset();
+    let inviteHandler: any;
+    const app: any = {
+      post(path: string, handler: any) {
+        if (path === "/api/lobby/invite") inviteHandler = handler;
+      },
+      get() {},
+    };
+
+    registerLobbyInviteRoutes(app, {
+      resolveCaller: async () => ({
+        publicId: "caller_cd",
+        username: "CallerCD",
+        friends: ["target_cd"],
+        clanTags: [],
+      }),
+      isLobbyActive: () => true,
+      isPlayerInLobby: () => true,
+      getLobbyMeta: () => ({
+        gameMode: "Team",
+        map: "World",
+        isPublic: false,
+      }),
+    });
+
+    try {
+      const callInvite = async () => {
+        const headers: Record<string, string> = {};
+        const res: any = {
+          statusCode: 200,
+          body: undefined,
+          setHeader(name: string, val: string) {
+            headers[name.toLowerCase()] = val;
+            return this;
+          },
+          status(c: number) {
+            this.statusCode = c;
+            return this;
+          },
+          json(d: unknown) {
+            this.body = d;
+            return this;
+          },
+          headers,
+        };
+        await inviteHandler(
+          {
+            headers: { authorization: "Bearer token" },
+            body: { lobbyId: "lob_cd", targetPublicId: "target_cd" },
+          },
+          res,
+        );
+        return res;
+      };
+
+      // First invite succeeds
+      const res1 = await callInvite();
+      expect(res1.statusCode).toBe(200);
+      expect(res1.body.ok).toBe(true);
+      const inviteId = res1.body.invite.id;
+
+      // Target dismisses
+      LobbyInviteService.instance.dismissInvite("target_cd", inviteId);
+
+      // Next invite immediately gets 429 with Retry-After header and body
+      const res2 = await callInvite();
+      expect(res2.statusCode).toBe(429);
+      expect(res2.headers["retry-after"]).toBeDefined();
+      expect(Number(res2.headers["retry-after"])).toBeGreaterThan(0);
+      expect(res2.body.error).toContain("cooldown");
+      expect(res2.body.retryAfterSeconds).toBeGreaterThan(0);
+      expect(res2.body.retryAfterMs).toBeGreaterThan(0);
+    } finally {
+      LobbyInviteService.instance.reset();
+    }
+  });
 });
