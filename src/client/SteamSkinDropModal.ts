@@ -42,13 +42,11 @@ export class SteamSkinDropModal extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.addEventListener("open-cosmetic-preview", this.onOpenPreview);
-    document.addEventListener("join-lobby", this.abandon);
     document.addEventListener("session-cleared", this.abandon);
   }
 
   disconnectedCallback() {
     this.removeEventListener("open-cosmetic-preview", this.onOpenPreview);
-    document.removeEventListener("join-lobby", this.abandon);
     document.removeEventListener("session-cleared", this.abandon);
     // Nobody can answer a removed popup, and the boot-interrupt runner holds
     // its "a dialog is open" flag until this settles.
@@ -66,9 +64,10 @@ export class SteamSkinDropModal extends LitElement {
     });
   }
 
-  // A join or a lost session takes the popup away unanswered: it must not sit
-  // over the lobby, hold the boot dialog guard, or answer for another account.
-  private abandon = () => this.settle("abandoned");
+  // An accepted join (Main calls this) or a lost session takes the popup away
+  // unanswered: it must not sit over the lobby, hold the boot dialog guard, or
+  // answer for another account.
+  abandon = () => this.settle("abandoned");
 
   private settle(answer: SteamSkinDropAnswer) {
     const resolve = this.pending;

@@ -56,15 +56,26 @@ describe("SteamSkinDropModal", () => {
     await Promise.resolve();
     await Promise.resolve();
   };
-  it.each(["join-lobby", "session-cleared"])(
-    "%s abandons the open popup",
-    async (event) => {
-      document.dispatchEvent(new CustomEvent(event));
-      await flush();
-      expect(settled).toEqual(["abandoned"]);
-      expect(modal.querySelector("[data-steam-skin-drop]")).toBeNull();
-    },
-  );
+  it("a lost session abandons the open popup", async () => {
+    document.dispatchEvent(new CustomEvent("session-cleared"));
+    await flush();
+    expect(settled).toEqual(["abandoned"]);
+    expect(modal.querySelector("[data-steam-skin-drop]")).toBeNull();
+  });
+
+  it("a join-lobby Main has not accepted leaves it open", async () => {
+    document.dispatchEvent(new CustomEvent("join-lobby"));
+    await flush();
+    expect(settled).toEqual([]);
+    expect(modal.querySelector("[data-steam-skin-drop]")).not.toBeNull();
+  });
+
+  it("abandon() settles it unanswered", async () => {
+    modal.abandon();
+    await flush();
+    expect(settled).toEqual(["abandoned"]);
+    expect(modal.querySelector("[data-steam-skin-drop]")).toBeNull();
+  });
 
   const buttonWithText = (text: string) =>
     [...document.body.querySelectorAll("button")].find(

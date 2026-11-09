@@ -58,15 +58,19 @@ export function unseenSteamSkinDrop(
 // nothing was marked seen.
 const shownThisLaunch = new Set<string>();
 
+// JSON, so no account and notice pair can read as another pair.
+const shownKey = (publicId: string, notice: string) =>
+  JSON.stringify([publicId, notice]);
+
 export function steamSkinDropDueThisLaunch(
   publicId: string,
   notice: string,
 ): boolean {
-  return !shownThisLaunch.has(`${publicId}:${notice}`);
+  return !shownThisLaunch.has(shownKey(publicId, notice));
 }
 
 export function steamSkinDropShown(publicId: string, notice: string): void {
-  shownThisLaunch.add(`${publicId}:${notice}`);
+  shownThisLaunch.add(shownKey(publicId, notice));
 }
 
 export function resetSteamSkinDropForTest(): void {

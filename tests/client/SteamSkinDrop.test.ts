@@ -145,6 +145,11 @@ describe("steamSkinDropDueThisLaunch", () => {
     expect(steamSkinDropDueThisLaunch("me", "steam_skin:b")).toBe(true);
   });
 
+  it("does not confuse pairs that join to the same text", () => {
+    steamSkinDropShown("a:b", "c");
+    expect(steamSkinDropDueThisLaunch("a", "b:c")).toBe(true);
+  });
+
   it("another account is still due the same notice", () => {
     steamSkinDropShown("me", "steam_skin:a");
     expect(steamSkinDropDueThisLaunch("other", "steam_skin:a")).toBe(true);

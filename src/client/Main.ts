@@ -1851,6 +1851,12 @@ class Client {
     // handle being assigned) and by handleLeaveLobby, which runs its reset
     // above its own lobbyHandle guard precisely because this window exists.
     this.joinInFlight = true;
+    // Lazy, so the tag is a plain element until its chunk has loaded.
+    if (customElements.get("steam-skin-drop-modal")) {
+      document
+        .querySelector<SteamSkinDropModal>("steam-skin-drop-modal")
+        ?.abandon();
+    }
 
     console.log(`joining lobby ${lobby.gameID}`);
     // Entering a lobby. Singleplayer, public lobbies and replays know their
