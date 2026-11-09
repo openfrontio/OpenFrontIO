@@ -637,4 +637,106 @@ describe("LobbyInviteService", () => {
       LobbyInviteService.instance.reset();
     }
   });
+
+  it("returns 502 from /api/lobby/members when clan lookup fails or receives invalid data", async () => {
+    vi.mocked(verifyClientToken).mockResolvedValue({
+      type: "success",
+      persistentId: "pid1",
+      token: "valid-token",
+    } as any);
+
+    const getHandlers = new Map<string, (req: any, res: any) => Promise<any>>();
+    const mockApp = {
+      get(path: string, handler: (req: any, res: any) => Promise<any>) {
+        getHandlers.set(path, handler);
+      },
+      post() {},
+    };
+
+    registerLobbyInviteRoutes(mockApp as any, {
+      isLobbyActive: () => true,
+      isPlayerInLobby: () => true,
+      getLobbyMeta: () => ({
+        isPublic: false,
+        memberPublicIds: ["caller.pub", "clan_candidate.pub"],
+      }),
+      resolveCaller: async () => ({
+        publicId: "caller.pub",
+        username: "CallerName",
+        friends: [],
+        clanTags: ["CLAN_A"],
+      }),
+    });
+
+    const membersHandler = getHandlers.get("/api/lobby/members")!;
+    const callMembers = async () => {
+      const res: any = {
+        statusCode: 200,
+        body: undefined,
+        status(c: number) {
+          this.statusCode = c;
+          return this;
+        },
+        json(d: unknown) {
+          this.body = d;
+          return this;
+        },
+      };
+      await membersHandler(
+        {
+          headers: { authorization: "Bearer valid-token" },
+          query: { lobbyId: "lob1" },
+        },
+        res,
+      );
+      return res;
+    };
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    try {
+      // 1. HTTP 500 error on clan lookup -> 502
+      fetchSpy.mockResolvedValueOnce(
+        new Response("Internal Server Error", { status: 500 }),
+      );
+      const failRes = await callMembers();
+      expect(failRes.statusCode).toBe(502);
+
+      // 2. HTTP 200 with invalid schema (empty object missing members/results) -> 502
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({}), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+      const invalidRes = await callMembers();
+      expect(invalidRes.statusCode).toBe(502);
+
+      // 3. Network fetch rejection -> 502
+      fetchSpy.mockRejectedValueOnce(new Error("Network connection dropped"));
+      const rejectRes = await callMembers();
+      expect(rejectRes.statusCode).toBe(502);
+
+      // 4. Page 1 succeeds with 50 members and total=100, but page 2 fails -> 502
+      fetchSpy.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            results: Array.from({ length: 50 }, (_, i) => ({
+              publicId: `m_${i}`,
+            })),
+            total: 100,
+            page: 1,
+            limit: 50,
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+      );
+      fetchSpy.mockResolvedValueOnce(
+        new Response("Gateway Timeout", { status: 504 }),
+      );
+      const partialPageFailRes = await callMembers();
+      expect(partialPageFailRes.statusCode).toBe(502);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
 });

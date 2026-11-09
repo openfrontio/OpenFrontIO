@@ -356,11 +356,15 @@ describe("InviteLobbyModal", () => {
     vi.useFakeTimers();
     try {
       vi.advanceTimersByTime(5001);
+      let secondSignal: AbortSignal | undefined;
       let resolveSecond!: (value: string[] | false) => void;
-      apiMocks.fetchLobbyMemberPublicIds.mockReturnValueOnce(
-        new Promise<string[] | false>((resolve) => {
-          resolveSecond = resolve;
-        }),
+      apiMocks.fetchLobbyMemberPublicIds.mockImplementationOnce(
+        (_id, signal) => {
+          secondSignal = signal;
+          return new Promise<string[] | false>((resolve) => {
+            resolveSecond = resolve;
+          });
+        },
       );
 
       modal.updateClients([
@@ -371,8 +375,11 @@ describe("InviteLobbyModal", () => {
       );
       expect(firstSignal?.aborted).toBe(true);
 
-      resolveFirst(false);
+      // Resolving the obsolete first request with a member ID is ignored while replacement is pending
+      resolveFirst(["friend_1"]);
       await Promise.resolve();
+      await modal.updateComplete;
+      expect(modal.textContent ?? "").not.toContain("In Lobby");
 
       // Updating again while replacement is in flight does not trigger another request
       modal.updateClients([
@@ -382,6 +389,7 @@ describe("InviteLobbyModal", () => {
         initialCalls + 2,
       );
       expect(firstSignal?.aborted).toBe(true);
+      expect(secondSignal?.aborted).toBe(false);
 
       resolveSecond(["f1"]);
       await Promise.resolve();

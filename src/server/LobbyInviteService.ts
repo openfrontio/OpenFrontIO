@@ -112,13 +112,17 @@ async function defaultResolveCaller(
   return caller;
 }
 
-const ClanMembersLookupSchema = z.object({
-  results: z.array(z.object({ publicId: z.string() })).optional(),
-  members: z.array(z.object({ publicId: z.string() })).optional(),
-  total: z.number().optional(),
-  page: z.number().optional(),
-  limit: z.number().optional(),
-});
+const ClanMembersLookupSchema = z
+  .object({
+    results: z.array(z.object({ publicId: z.string() })).optional(),
+    members: z.array(z.object({ publicId: z.string() })).optional(),
+    total: z.number().optional(),
+    page: z.number().optional(),
+    limit: z.number().optional(),
+  })
+  .refine((data) => data.results !== undefined || data.members !== undefined, {
+    message: "Expected results or members array",
+  });
 
 /**
  * Fetches all member publicIds for the caller's clans in batch.
@@ -145,7 +149,8 @@ async function fetchCallerClanMemberIds(
         if (!res.ok) return null;
         const parsed = ClanMembersLookupSchema.safeParse(await res.json());
         if (!parsed.success) return null;
-        const list = parsed.data.results ?? parsed.data.members ?? [];
+        const list = parsed.data.results ?? parsed.data.members;
+        if (!list) return null;
         for (const m of list) {
           if (m.publicId) {
             clanMemberIds.add(m.publicId);
@@ -178,38 +183,11 @@ async function defaultIsTargetEligible(
   if (caller.friends.includes(targetPublicId)) {
     return true;
   }
-  for (const tag of caller.clanTags) {
-    let page = 1;
-    const limit = 50;
-    while (true) {
-      try {
-        const res = await fetch(
-          `${ServerEnv.jwtIssuer()}/clans/${encodeURIComponent(tag)}/members?page=${page}&limit=${limit}`,
-          {
-            headers: {
-              authorization: `Bearer ${token}`,
-              "x-api-key": ServerEnv.apiKey(),
-            },
-          },
-        );
-        if (!res.ok) break;
-        const parsed = ClanMembersLookupSchema.safeParse(await res.json());
-        if (!parsed.success) break;
-        const list = parsed.data.results ?? parsed.data.members ?? [];
-        if (list.some((m) => m.publicId === targetPublicId)) {
-          return true;
-        }
-        const total = parsed.data.total ?? list.length;
-        if (list.length < limit || page * limit >= total) {
-          break;
-        }
-        page += 1;
-      } catch {
-        break;
-      }
-    }
+  const clanMemberIds = await fetchCallerClanMemberIds(caller, token);
+  if (!clanMemberIds) {
+    return false;
   }
-  return false;
+  return clanMemberIds.has(targetPublicId);
 }
 
 /**
