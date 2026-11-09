@@ -78,6 +78,52 @@ export class MapDetails extends LitElement {
     return this;
   }
 
+  private clampTooltip = () => {
+    const tooltip = this.querySelector<HTMLElement>('[role="tooltip"]');
+    if (!tooltip) return;
+    tooltip.style.transform = "";
+
+    const tooltipRect = tooltip.getBoundingClientRect();
+    if (tooltipRect.width === 0) return;
+
+    let container = this.parentElement;
+    let minLeft = 8;
+    let maxRight = window.innerWidth - 8;
+
+    while (container && container !== document.body) {
+      const style = window.getComputedStyle(container);
+      if (
+        style.overflowX === "auto" ||
+        style.overflowX === "scroll" ||
+        style.overflowX === "hidden" ||
+        style.overflowY === "auto" ||
+        style.overflowY === "scroll"
+      ) {
+        const rect = container.getBoundingClientRect();
+        minLeft = Math.max(minLeft, rect.left + 8);
+        maxRight = Math.min(maxRight, rect.right - 8);
+        break;
+      }
+      container = container.parentElement;
+    }
+
+    let shift = 0;
+    if (tooltipRect.left < minLeft) {
+      shift = minLeft - tooltipRect.left;
+    } else if (tooltipRect.right > maxRight) {
+      shift = maxRight - tooltipRect.right;
+    }
+
+    if (shift !== 0) {
+      tooltip.style.transform = `translateX(calc(-50% + ${shift}px))`;
+    }
+  };
+
+  private resetTooltip = () => {
+    const tooltip = this.querySelector<HTMLElement>('[role="tooltip"]');
+    if (tooltip) tooltip.style.transform = "";
+  };
+
   render() {
     const map = this.map;
     if (map === undefined || (!hasMapDetails(map) && !this.stats)) {
@@ -87,6 +133,10 @@ export class MapDetails extends LitElement {
       class="group/map-details pointer-events-none absolute inset-x-3 top-3 z-10 flex p-1.5"
       @click=${(event: Event) => event.stopPropagation()}
       @keydown=${(event: Event) => event.stopPropagation()}
+      @pointerenter=${this.clampTooltip}
+      @pointerleave=${this.resetTooltip}
+      @focusin=${this.clampTooltip}
+      @focusout=${this.resetTooltip}
     >
       <button
         type="button"
