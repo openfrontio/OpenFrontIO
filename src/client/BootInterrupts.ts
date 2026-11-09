@@ -15,6 +15,9 @@
 
 import {
   isTemporaryUsername,
+  paidSubscriptionOf,
+  renewalPushedBy,
+  type RenewalPushedBy,
   type UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import type { ResolvedCosmetic } from "./Cosmetics";
@@ -22,12 +25,15 @@ import type { DesktopUpdateState } from "./DesktopShell";
 import { lapseNoticeDue } from "./PlayerName";
 import {
   steamGrantEndedShown,
+  steamGrantEndingShown,
   steamGrantWelcomed,
+  type PaidFacts,
   type SteamGrantRecord,
   type SteamGrantStore,
 } from "./SteamGrantNotices";
 import {
   STEAM_LICENCE_INTRO_NOTICE,
+  STEAM_PLUS_WELCOME_NOTICE,
   steamNoticeCopy,
   steamNoticeShown,
   type SteamNotice,
@@ -39,9 +45,11 @@ export type BootInterrupt =
   | "username-temporary"
   | "steam-notice"
   | "grant-welcome"
+  | "renewal-pushed"
   | "username-claim"
   | "lapse-notice"
   | "grant-ended"
+  | "gift-ending"
   | "steam-skin-drop"
   | "rewards"
   | "report-thanks";
@@ -66,6 +74,14 @@ export interface BootInterruptInputs {
   grantWelcomeDue: boolean;
   /** steamGrantEndedDue(...) — a Steam month that ran out unannounced. */
   grantEndedDue: boolean;
+  /** giftEndingDue(...) — a dated grant ends within three days. */
+  giftEndingDue: boolean;
+  /** giftEndingStringsReady(...), as grantStringsReady. */
+  giftEndingStringsReady: boolean;
+  /** renewalPushedDueThisLaunch(...) — a free month moved the next payment. */
+  renewalPushedDue: boolean;
+  /** renewalPushedStringsReady(...), as grantStringsReady. */
+  renewalPushedStringsReady: boolean;
   /**
    * steamGrantStringsReady(...) — same precondition as claimStringsReady, for
    * the two grant notices. Failing it lets the next interrupt take the boot.
@@ -250,6 +266,8 @@ function entitled(status: string | undefined): boolean {
  *    use a perk of a thing they have not yet been told they own; a player who
  *    does not know the month is a one-off reads every later prompt as a
  *    subscription they never agreed to. It fires once per grant.
+ *    `renewal-pushed` is its counterpart for a payer whose free month moved
+ *    the next payment instead, so it ranks beside it.
  * 4. `username-claim` — entitled, no name at all. The perk is running down
  *    unused and nothing else in the client will ever mention it, which is the
  *    whole reason this prompt exists.
@@ -263,6 +281,7 @@ function entitled(status: string | undefined): boolean {
  *    at risk, but every day it goes unsaid is a day the player believes they
  *    are about to be charged. Marks itself shown when the lapse notice covers
  *    it, so a former grant holder with a reserved name hears it once.
+ *    `gift-ending` follows it: a running grant ends within three days.
  * 7. `steam-skin-drop` — this month's Steam exclusive skin has dropped and
  *    the owner has not been told. Nothing is at risk, but it is time-limited
  *    news the player wants, so it ranks above the rewards popup.
@@ -291,6 +310,9 @@ export function nextBootInterrupt(
   if (inputs.grantWelcomeDue && inputs.grantStringsReady)
     return "grant-welcome";
 
+  if (inputs.renewalPushedDue && inputs.renewalPushedStringsReady)
+    return "renewal-pushed";
+
   // `username === null` is the whole population: a day-0 buyer is entitled
   // from the moment the grant lands and has never opened the account modal,
   // which is the only place a name can be claimed. Note this is the DISPLAY
@@ -307,6 +329,9 @@ export function nextBootInterrupt(
   if (inputs.lapseNoticeDue) return "lapse-notice";
 
   if (inputs.grantEndedDue && inputs.grantStringsReady) return "grant-ended";
+
+  if (inputs.giftEndingDue && inputs.giftEndingStringsReady)
+    return "gift-ending";
 
   if (inputs.steamSkinDropDue && inputs.steamSkinDropStringsReady)
     return "steam-skin-drop";
@@ -466,6 +491,20 @@ export const BOOT_INTERRUPT_KEYS = {
   claimConfirm: "account_modal.username_claim_prompt_confirm",
   grantWelcomeBody: "steam_grant.welcome_body",
   grantWelcomeHeading: "steam_grant.welcome_heading",
+  grantStackedBody: "steam_grant.stacked_body",
+  grantStackedBodyNoAmount: "steam_grant.stacked_body_no_amount",
+  grantStackedRenews: "steam_grant.stacked_renews",
+  giftEndingHeading: "steam_grant.ending_heading",
+  giftEndingSteamPaid: "steam_grant.ending_steam_paid",
+  giftEndingSteamUnpaid: "steam_grant.ending_steam_unpaid",
+  giftEndingOtherPaid: "steam_grant.ending_other_paid",
+  giftEndingOtherUnpaid: "steam_grant.ending_other_unpaid",
+  renewalPushedHeading: "renewal_pushed.heading",
+  renewalPushedBase: "renewal_pushed.body_base",
+  renewalPushedDlc: "renewal_pushed.body_dlc",
+  renewalPushedGift: "renewal_pushed.body_gift",
+  renewalPushedNextPayment: "renewal_pushed.next_payment",
+  renewalPushedRunsUntil: "renewal_pushed.runs_until",
   grantEndedBody: "steam_grant.ended_body",
   grantEndedHeading: "steam_grant.ended_heading",
   reportThanksBody: "report_thanks.body",
@@ -514,15 +553,18 @@ export function claimPromptStringsReady(
 export function steamGrantStringsReady(
   translate: (key: string, params: Record<string, string>) => string,
 ): boolean {
-  // The bodies take {tier} and {date}; formatting them without those fails
+  // The bodies take these params; formatting them without those fails
   // and logs an ICU error on every boot. Only key !== result matters here.
-  const params = { tier: "", date: "" };
+  const params = { tier: "", date: "", paidTier: "", amount: "" };
   return (
     [
       BOOT_INTERRUPT_KEYS.grantWelcomeBody,
       BOOT_INTERRUPT_KEYS.grantWelcomeHeading,
       BOOT_INTERRUPT_KEYS.grantEndedBody,
       BOOT_INTERRUPT_KEYS.grantEndedHeading,
+      BOOT_INTERRUPT_KEYS.grantStackedBody,
+      BOOT_INTERRUPT_KEYS.grantStackedBodyNoAmount,
+      BOOT_INTERRUPT_KEYS.grantStackedRenews,
     ] as string[]
   ).every((key) => translate(key, params) !== key);
 }
@@ -563,6 +605,83 @@ export function reportThanksStringsReady(
   ].every((key) => translate(key) !== key);
 }
 
+/** The same precondition for the ending-soon notice. */
+export function giftEndingStringsReady(
+  translate: (key: string, params: Record<string, string>) => string,
+): boolean {
+  const params = { tier: "", date: "", paidTier: "" };
+  return (
+    [
+      BOOT_INTERRUPT_KEYS.giftEndingHeading,
+      BOOT_INTERRUPT_KEYS.giftEndingSteamPaid,
+      BOOT_INTERRUPT_KEYS.giftEndingSteamUnpaid,
+      BOOT_INTERRUPT_KEYS.giftEndingOtherPaid,
+      BOOT_INTERRUPT_KEYS.giftEndingOtherUnpaid,
+    ] as string[]
+  ).every((key) => translate(key, params) !== key);
+}
+
+export interface RenewalPushed {
+  tier: string;
+  by: RenewalPushedBy;
+  nextPayment: Date;
+  /** False once it is set to cancel: the date is then its end, not a payment. */
+  renews: boolean;
+}
+
+export function renewalPushedOf(
+  userMe: UserMeResponse | false | null,
+): RenewalPushed | null {
+  if (userMe === null || userMe === false) return null;
+  const paid = paidSubscriptionOf(userMe.player);
+  const by = renewalPushedBy(paid);
+  if (paid === null || by === null || !paid.currentPeriodEnd) return null;
+  return {
+    tier: paid.tier,
+    by,
+    nextPayment: paid.currentPeriodEnd,
+    renews: !paid.cancelAtPeriodEnd,
+  };
+}
+
+// One showing per launch, for the reason reportThanksShownThisLaunch gives.
+const renewalPushedShownThisLaunch = new Set<string>();
+
+/**
+ * Is the renewal notice owed on this boot? Needs the pushed row as well as the
+ * message: without a date there is nothing true to say, so it waits.
+ */
+export function renewalPushedDueThisLaunch(
+  userMe: UserMeResponse | false | null,
+): boolean {
+  if (userMe === null || userMe === false) return false;
+  return (
+    !renewalPushedShownThisLaunch.has(userMe.player.publicId) &&
+    (userMe.pendingMessages ?? []).includes("renewal_pushed") &&
+    renewalPushedOf(userMe) !== null
+  );
+}
+
+export function resetRenewalPushedForTest(): void {
+  renewalPushedShownThisLaunch.clear();
+}
+
+export function renewalPushedStringsReady(
+  translate: (key: string, params: Record<string, string>) => string,
+): boolean {
+  const params = { tier: "", date: "" };
+  return (
+    [
+      BOOT_INTERRUPT_KEYS.renewalPushedHeading,
+      BOOT_INTERRUPT_KEYS.renewalPushedBase,
+      BOOT_INTERRUPT_KEYS.renewalPushedDlc,
+      BOOT_INTERRUPT_KEYS.renewalPushedGift,
+      BOOT_INTERRUPT_KEYS.renewalPushedNextPayment,
+      BOOT_INTERRUPT_KEYS.renewalPushedRunsUntil,
+    ] as string[]
+  ).every((key) => translate(key, params) !== key);
+}
+
 /**
  * Everything acting on an interrupt has to reach outside itself for. Passed in
  * rather than imported so the wiring below is exercised by tests instead of
@@ -583,6 +702,8 @@ export interface BootInterruptPorts {
   openSteamSkinDrop(resolved: ResolvedCosmetic): Promise<SteamSkinDropAnswer>;
   /** Equips a cosmetic the player owns. */
   equipCosmetic(resolved: ResolvedCosmetic): void;
+  /** A tier's daily plutonium from the loaded catalog, or null if unknown. */
+  dailyPlutonium?(tier: string): number | null;
   /** Sets window.location.hash. */
   navigate(hash: string): void;
   /** Opens the unclaimed-rewards popup. */
@@ -608,7 +729,11 @@ export interface BootInterruptContext {
   publicId: string;
   steamNotice: SteamNotice | null;
   /** The drop to announce, resolved against the catalog, or null. */
-  steamSkinDrop: { notice: string; resolved: ResolvedCosmetic } | null;
+  steamSkinDrop?: { notice: string; resolved: ResolvedCosmetic } | null;
+  /** paidFactsOf(...): a paid subscription beside the grant, if any. */
+  paid?: PaidFacts | null;
+  /** renewalPushedOf(...). */
+  renewalPushed?: RenewalPushed | null;
 }
 
 // The panel's own date format, so the dialog and the account panel agree on
@@ -680,6 +805,35 @@ function forShownGrant(
   };
 }
 
+function stackedWelcomeBody(
+  giftTierId: string,
+  tier: string,
+  date: string,
+  paid: PaidFacts,
+  ports: BootInterruptPorts,
+): string {
+  const paidTier = ports.tierName(paid.tier);
+  const amount = ports.dailyPlutonium?.(giftTierId) ?? null;
+  const first =
+    amount !== null && amount > 0
+      ? ports.translate(BOOT_INTERRUPT_KEYS.grantStackedBody, {
+          tier,
+          date,
+          paidTier,
+          amount,
+        })
+      : ports.translate(BOOT_INTERRUPT_KEYS.grantStackedBodyNoAmount, {
+          tier,
+          date,
+          paidTier,
+        });
+  if (!paid.renews || paid.nextPayment === null) return first;
+  return `${first} ${ports.translate(BOOT_INTERRUPT_KEYS.grantStackedRenews, {
+    paidTier,
+    date: formatGrantDate(paid.nextPayment),
+  })}`;
+}
+
 async function runInterrupt(
   interrupt: BootInterrupt | null,
   context: BootInterruptContext,
@@ -716,13 +870,22 @@ async function runInterrupt(
       const record = context.grantStore[context.publicId];
       if (record === undefined) return;
       const tier = ports.tierName(record.tier);
+      const date = formatGrantDate(record.periodEnd);
+      // The plain welcome says nothing is billed, which is untrue for a payer.
+      const paid = context.paid ?? null;
       await ports.alert(
-        ports.translate(BOOT_INTERRUPT_KEYS.grantWelcomeBody, {
-          tier,
-          date: formatGrantDate(record.periodEnd),
-        }),
+        paid === null
+          ? ports.translate(BOOT_INTERRUPT_KEYS.grantWelcomeBody, {
+              tier,
+              date,
+            })
+          : stackedWelcomeBody(record.tier, tier, date, paid, ports),
         ports.translate(BOOT_INTERRUPT_KEYS.grantWelcomeHeading),
       );
+      // The payer was never offered the standalone Steam Plus welcome; once
+      // their paid sub lapses it would explain this same month again.
+      if (paid !== null && record.steam)
+        ports.markNoticeSeen(STEAM_PLUS_WELCOME_NOTICE);
       ports.updateSteamGrant(
         forShownGrant(record, context.publicId, steamGrantWelcomed),
       );
@@ -739,6 +902,63 @@ async function runInterrupt(
       ports.updateSteamGrant(
         forShownGrant(record, context.publicId, steamGrantEndedShown),
       );
+      return;
+    }
+    case "gift-ending": {
+      const record = context.grantStore[context.publicId];
+      if (record === undefined) return;
+      // "Back on {paidTier}" only if the paid sub is still there afterwards.
+      const giftEnd = Date.parse(record.periodEnd);
+      const paid =
+        context.paid &&
+        (context.paid.renews ||
+          (context.paid.nextPayment?.getTime() ?? 0) > giftEnd)
+          ? context.paid
+          : null;
+      const params = {
+        tier: ports.tierName(record.tier),
+        date: formatGrantDate(record.periodEnd),
+        paidTier: paid === null ? "" : ports.tierName(paid.tier),
+      };
+      // Every key passed as a literal so the en.json sync test can see them.
+      const body = record.steam
+        ? paid === null
+          ? ports.translate("steam_grant.ending_steam_unpaid", params)
+          : ports.translate("steam_grant.ending_steam_paid", params)
+        : paid === null
+          ? ports.translate("steam_grant.ending_other_unpaid", params)
+          : ports.translate("steam_grant.ending_other_paid", params);
+      await ports.alert(
+        body,
+        ports.translate(BOOT_INTERRUPT_KEYS.giftEndingHeading),
+      );
+      ports.updateSteamGrant(
+        forShownGrant(record, context.publicId, steamGrantEndingShown),
+      );
+      return;
+    }
+    case "renewal-pushed": {
+      const pushed = context.renewalPushed ?? null;
+      if (pushed === null) return;
+      renewalPushedShownThisLaunch.add(context.publicId);
+      const params = {
+        tier: ports.tierName(pushed.tier),
+        date: formatGrantDate(pushed.nextPayment),
+      };
+      const reason =
+        pushed.by === "dlc"
+          ? ports.translate("renewal_pushed.body_dlc", params)
+          : pushed.by === "base"
+            ? ports.translate("renewal_pushed.body_base", params)
+            : ports.translate("renewal_pushed.body_gift", params);
+      const when = pushed.renews
+        ? ports.translate("renewal_pushed.next_payment", params)
+        : ports.translate("renewal_pushed.runs_until", params);
+      await ports.alert(
+        `${reason} ${when}`,
+        ports.translate(BOOT_INTERRUPT_KEYS.renewalPushedHeading),
+      );
+      ports.markMessageSeen("renewal_pushed");
       return;
     }
     case "steam-notice": {
@@ -767,7 +987,7 @@ async function runInterrupt(
     }
     case "steam-skin-drop": {
       const drop = context.steamSkinDrop;
-      if (drop === null) return;
+      if (!drop) return;
       steamSkinDropShown(context.publicId, drop.notice);
       const answer = await ports.openSteamSkinDrop(drop.resolved);
       if (answer === "abandoned") return;

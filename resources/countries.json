@@ -1583,6 +1583,11 @@
     "name": "Grande Comore"
   },
   {
+    "code": "Greater London",
+    "continent": "Europe",
+    "name": "Greater London"
+  },
+  {
     "code": "gr",
     "continent": "Europe",
     "name": "Greece"
@@ -2313,6 +2318,11 @@
     "name": "Lithuanian SSR"
   },
   {
+    "code": "gb-lnd",
+    "continent": "Europe",
+    "name": "London"
+  },
+  {
     "code": "Los Altos",
     "continent": "North America",
     "name": "Los Altos"
@@ -2391,6 +2401,11 @@
     "code": "mg",
     "continent": "Africa",
     "name": "Madagascar"
+  },
+  {
+    "code": "pt-ma",
+    "continent": "Africa",
+    "name": "Madeira"
   },
   {
     "code": "Mahra Sultanate",

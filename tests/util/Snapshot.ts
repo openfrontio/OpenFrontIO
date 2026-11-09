@@ -175,6 +175,8 @@ const DERIVED_FIELDS = new Set<string>([
   "reachableStationsCache",
   // NationStructureBehavior: only read in the tick it was computed in
   "mirvWorthSavingMemo",
+  // AiAttackBehavior: only read in the tick it was written in
+  "sentThisTick",
 ]);
 
 // Search engines whose fields are per-query scratch (stamps, scores, open

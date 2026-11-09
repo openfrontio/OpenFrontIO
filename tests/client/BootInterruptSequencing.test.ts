@@ -131,6 +131,10 @@ describe("boot sequencing against a real <username-input>", () => {
       reportThanksStringsReady: true,
       steamSkinDropDue: false,
       steamSkinDropStringsReady: true,
+      giftEndingDue: false,
+      giftEndingStringsReady: true,
+      renewalPushedDue: false,
+      renewalPushedStringsReady: true,
     });
     await runBootInterrupt(
       interrupt,
@@ -255,6 +259,10 @@ describe("the Steam skin drop in the boot sequence", () => {
       claimStringsReady: true,
       reportThanksDue: false,
       reportThanksStringsReady: true,
+      giftEndingDue: false,
+      giftEndingStringsReady: true,
+      renewalPushedDue: false,
+      renewalPushedStringsReady: true,
       steamSkinDropDue: steamSkinDrop !== null,
       steamSkinDropStringsReady: true,
     });

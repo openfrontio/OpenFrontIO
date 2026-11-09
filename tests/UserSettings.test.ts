@@ -591,9 +591,11 @@ describe("getDefaultKeybinds", () => {
     const keybinds = getDefaultKeybinds(false);
     expect(keybinds.boxSelectWarships).toBe("ShiftLeft");
     expect(keybinds.resetGfx).toBe("KeyR");
+    expect(keybinds.performanceOverlay).toBe("Shift+KeyD");
     expect(keybinds.selectAllWarships).toBe("KeyX");
     expect(keybinds.emojiMenu).toBe("KeyF");
     expect(keybinds.quickChat).toBe("KeyR");
+    expect(keybinds.playerPanel).toBe("KeyI");
     expect(keybinds.targetPlayer).toBe("KeyN");
     expect(keybinds.buildMenuModifier).toBe("ControlLeft");
     expect(keybinds.moveUpArrow).toBe("ArrowUp");
@@ -622,6 +624,9 @@ describe("getDefaultKeybinds", () => {
     expect(keybinds.emojiMenuModifier).toBe("AltLeft");
     // Note: this is related to user_setting.graphics_refresh_modifier, not the actual alt key.
     expect(keybinds.altKey).toBe("AltLeft");
+    const sharedModifierPair = ["buildScrollModifier", "altKey"] as const;
+    expect(keysMayBeShared(...sharedModifierPair, "AltRight")).toBe(true);
+    expect(keysMayBeShared(...sharedModifierPair, "ShiftRight")).toBe(false);
   });
 
   it("handles Mac-specific modifier keys correctly", () => {
