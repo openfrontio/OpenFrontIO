@@ -285,7 +285,14 @@ class NavNotificationsStore {
       this.lobbyInviteServerOffsetMs = result.serverTime - Date.now();
     }
     const now = this.serverNow();
-    this._lobbyInvites = result.invites.filter((inv) => {
+    const resultInvites = [...result.invites];
+    const resultIds = new Set(resultInvites.map((i) => i.id));
+    for (const existing of this._lobbyInvites) {
+      if (!resultIds.has(existing.id) && existing.expiresAt > now) {
+        resultInvites.push(existing);
+      }
+    }
+    this._lobbyInvites = resultInvites.filter((inv) => {
       if (inv.expiresAt <= now) return false;
       const dismissedCreatedAt = this.dismissedInviteCreatedAt.get(inv.id);
       if (dismissedCreatedAt !== undefined) {
@@ -309,6 +316,9 @@ class NavNotificationsStore {
     if (!detail) return;
     if (detail.type === "lobby_invite" && detail.invite) {
       const inv = detail.invite;
+      if (this.currentPublicId && inv.targetPublicId !== this.currentPublicId) {
+        return;
+      }
       if (inv.expiresAt <= this.serverNow()) return;
       const dismissedCreatedAt = this.dismissedInviteCreatedAt.get(inv.id);
       if (

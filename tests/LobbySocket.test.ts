@@ -1161,14 +1161,39 @@ describe("PublicLobbySocket token and stop handling", () => {
   });
 
   it("clears token when getToken returns null or throws", async () => {
-    const getToken = vi.fn(async () => null);
-    const socket = new PublicLobbySocket(vi.fn(), { getToken });
-
-    await socket.start();
-
+    // 1. Returns null
+    const getTokenNull = vi.fn(async () => null);
+    const socket1 = new PublicLobbySocket(vi.fn(), { getToken: getTokenNull });
+    await socket1.start();
     expect(dialed).toHaveLength(1);
     expect(dialed[0]).not.toContain("&token=");
-    socket.stop();
+    socket1.stop();
+    dialed.length = 0;
+
+    // 2. Synchronous throw
+    const getTokenSyncThrow = vi.fn(() => {
+      throw new Error("sync error");
+    });
+    const socket2 = new PublicLobbySocket(vi.fn(), {
+      getToken: getTokenSyncThrow,
+    });
+    await expect(socket2.start()).resolves.toBeUndefined();
+    expect(dialed).toHaveLength(1);
+    expect(dialed[0]).not.toContain("&token=");
+    socket2.stop();
+    dialed.length = 0;
+
+    // 3. Rejected promise
+    const getTokenReject = vi.fn(async () => {
+      throw new Error("rejected error");
+    });
+    const socket3 = new PublicLobbySocket(vi.fn(), {
+      getToken: getTokenReject,
+    });
+    await socket3.start();
+    expect(dialed).toHaveLength(1);
+    expect(dialed[0]).not.toContain("&token=");
+    socket3.stop();
   });
 
   it("aborts connection and does not dial when stop() is called while getToken is resolving", async () => {

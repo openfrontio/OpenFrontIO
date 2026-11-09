@@ -207,17 +207,22 @@ export class WorkerLobbyService {
         break;
       }
       case "lobbyInviteBroadcast":
-        LobbyInviteService.instance.addExternalInvite(msg.invite);
-        this.pushLobbyInvite(msg.invite);
+        if (LobbyInviteService.instance.addExternalInvite(msg.invite)) {
+          this.pushLobbyInvite(msg.invite);
+        }
         break;
-      case "lobbyInviteDismissBroadcast":
-        LobbyInviteService.instance.dismissExternalInvite(
+      case "lobbyInviteDismissBroadcast": {
+        const resolvedId = LobbyInviteService.instance.dismissExternalInvite(
           msg.inviteId,
           msg.dismissedAt,
           msg.targetPublicId,
+          msg.isExplicit,
         );
-        this.pushLobbyInviteDismiss(msg.inviteId, msg.targetPublicId);
+        const inviteIdToPush =
+          typeof resolvedId === "string" ? resolvedId : msg.inviteId;
+        this.pushLobbyInviteDismiss(inviteIdToPush, msg.targetPublicId);
         break;
+      }
       case "workerExited": {
         const exitedAt = msg.exitedAt ?? Date.now();
         this.workerExitedAt.set(msg.workerId, exitedAt);
@@ -264,12 +269,14 @@ export class WorkerLobbyService {
     inviteId: string,
     dismissedAt?: number,
     targetPublicId?: string,
+    isExplicit?: boolean,
   ) {
     this.sendToMaster({
       type: "lobbyInviteDismiss",
       inviteId,
       dismissedAt,
       targetPublicId,
+      isExplicit,
     });
     this.pushLobbyInviteDismiss(inviteId, targetPublicId);
   }
@@ -715,8 +722,10 @@ export class WorkerLobbyService {
 
   private pushLobbyInviteDismiss(inviteId: string, targetPublicId?: string) {
     const payload = JSON.stringify({ type: "lobby_invite_dismiss", inviteId });
-    if (targetPublicId) {
-      const sockets = this.lobbySocketsByPublicId.get(targetPublicId);
+    const resolvedTarget =
+      targetPublicId ?? LobbyInviteService.instance.getInviteTarget(inviteId);
+    if (resolvedTarget) {
+      const sockets = this.lobbySocketsByPublicId.get(resolvedTarget);
       if (sockets) {
         for (const ws of sockets) {
           if (ws.readyState === WebSocket.OPEN) {
@@ -729,19 +738,6 @@ export class WorkerLobbyService {
               );
             }
           }
-        }
-      }
-      return;
-    }
-    for (const ws of this.publicIdBySocket.keys()) {
-      if (ws.readyState === WebSocket.OPEN) {
-        try {
-          ws.send(payload);
-        } catch (err) {
-          this.log.warn(
-            "Failed to push lobby invite dismissal over WebSocket",
-            { err },
-          );
         }
       }
     }

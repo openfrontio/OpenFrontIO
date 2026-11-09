@@ -134,9 +134,9 @@ export class PublicLobbySocket {
     const generation = this.generation;
     const [listStatus, token] = await Promise.all([
       refreshList ? refreshServerList() : ensureServerList(),
-      this.getToken
-        ? Promise.resolve(this.getToken()).catch(() => null)
-        : Promise.resolve(null),
+      Promise.resolve()
+        .then(() => (this.getToken ? this.getToken() : null))
+        .catch(() => null),
     ]);
     if (generation !== this.generation) return;
     this.tokenParam = token ? `&token=${encodeURIComponent(token)}` : "";

@@ -15,6 +15,7 @@ import {
   sendCheckin,
 } from "./ClusterCheckin";
 import { getDescriptor } from "./DesktopRelease";
+import { gameApiCors } from "./GameApiCors";
 import {
   coordinatorUrl,
   LobbyCoordinatorClient,
@@ -328,10 +329,20 @@ export async function startMaster() {
   }
   LobbyInviteService.instance.setBroadcasters(
     (invite) => lobbyService?.broadcastLobbyInvite(invite),
-    (inviteId, dismissedAt) =>
-      lobbyService?.broadcastLobbyInviteDismiss(inviteId, dismissedAt),
+    (inviteId, dismissedAt) => {
+      const targetPublicId =
+        LobbyInviteService.instance.getInviteTarget(inviteId);
+      lobbyService?.broadcastLobbyInviteDismiss(
+        inviteId,
+        dismissedAt,
+        targetPublicId,
+        true,
+      );
+    },
   );
 }
+
+app.use("/api", gameApiCors);
 
 registerLobbyInviteRoutes(app, {
   isLobbyActive: (lobbyId) =>

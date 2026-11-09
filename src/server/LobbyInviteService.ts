@@ -197,10 +197,13 @@ async function isTargetInCallerClans(
     const limit = 50;
     while (true) {
       let res: Response;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
       try {
         res = await fetch(
           `${ServerEnv.jwtIssuer()}/clans/${encodeURIComponent(tag)}/members?page=${page}&limit=${limit}`,
           {
+            signal: controller.signal,
             headers: {
               authorization: `Bearer ${token}`,
               "x-api-key": ServerEnv.apiKey(),
@@ -211,6 +214,8 @@ async function isTargetInCallerClans(
         throw new ClanLookupError(
           `Network error fetching clan members: ${String(err)}`,
         );
+      } finally {
+        clearTimeout(timer);
       }
 
       if (!res.ok) {
@@ -303,6 +308,7 @@ export class LobbyInviteService {
   private explicitDismissCooldownByLogicalKey = new Map<string, number>();
   // Retains target-scoped dismissals that arrive before the invite itself, keyed by inviteId -> targetPublicId -> dismissedAt
   private pendingDismissalsByInviteId = new Map<string, Map<string, number>>();
+  private targetPublicIdByInviteId = new Map<string, string>();
   private pruneTimer: ReturnType<typeof setInterval> | null = null;
 
   private onInviteAdded?: (invite: LobbyInvite) => void;
@@ -344,6 +350,14 @@ export class LobbyInviteService {
     const key = this.logicalKey(invite);
     this.inviteIdByLogicalKey.set(key, invite.id);
     this.logicalKeyByInviteId.set(invite.id, key);
+    this.targetPublicIdByInviteId.set(invite.id, invite.targetPublicId);
+  }
+
+  getInviteTarget(inviteId: string): string | undefined {
+    return (
+      this.invites.get(inviteId)?.targetPublicId ??
+      this.targetPublicIdByInviteId.get(inviteId)
+    );
   }
 
   private unindexInvite(invite: LobbyInvite): void {
@@ -597,6 +611,7 @@ export class LobbyInviteService {
     inviteId: string,
     dismissedAt: number = Date.now(),
     targetPublicId?: string,
+    isExplicit = false,
   ): string | false {
     const key = this.logicalKeyByInviteId.get(inviteId);
     const logicalActiveId = key
@@ -636,12 +651,14 @@ export class LobbyInviteService {
         effectiveKey,
         Math.max(prevKey, effectiveDismissedAt),
       );
-      const prevCooldown =
-        this.explicitDismissCooldownByLogicalKey.get(effectiveKey) ?? 0;
-      this.explicitDismissCooldownByLogicalKey.set(
-        effectiveKey,
-        Math.max(prevCooldown, effectiveDismissedAt),
-      );
+      if (isExplicit) {
+        const prevCooldown =
+          this.explicitDismissCooldownByLogicalKey.get(effectiveKey) ?? 0;
+        this.explicitDismissCooldownByLogicalKey.set(
+          effectiveKey,
+          Math.max(prevCooldown, effectiveDismissedAt),
+        );
+      }
     }
 
     if (existing && existing.createdAt <= effectiveDismissedAt) {
@@ -798,6 +815,7 @@ export class LobbyInviteService {
     this.dismissedAtByLogicalKey.clear();
     this.explicitDismissCooldownByLogicalKey.clear();
     this.pendingDismissalsByInviteId.clear();
+    this.targetPublicIdByInviteId.clear();
     callerCache.clear();
   }
 }

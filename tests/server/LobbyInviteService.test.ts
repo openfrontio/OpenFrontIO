@@ -959,6 +959,11 @@ describe("LobbyInviteService", () => {
 
   it("returns HTTP 429 with Retry-After and retryAfterSeconds when invite is on cooldown", async () => {
     LobbyInviteService.instance.reset();
+    vi.mocked(verifyClientToken).mockResolvedValue({
+      type: "success",
+      persistentId: "caller_cd",
+      claims: {} as any,
+    });
     let inviteHandler: any;
     const app: any = {
       post(path: string, handler: any) {

@@ -587,13 +587,21 @@ export async function startWorker() {
       lobbyService.sendLobbyInvite(invite);
     },
     (inviteId, dismissedAt) => {
-      lobbyService.sendLobbyInviteDismiss(inviteId, dismissedAt);
+      const targetPublicId =
+        LobbyInviteService.instance.getInviteTarget(inviteId);
+      lobbyService.sendLobbyInviteDismiss(
+        inviteId,
+        dismissedAt,
+        targetPublicId,
+        true,
+      );
     },
     (inviteId, dismissedAt, targetPublicId) => {
       lobbyService.sendLobbyInviteDismiss(
         inviteId,
         dismissedAt,
         targetPublicId,
+        true,
       );
     },
   );

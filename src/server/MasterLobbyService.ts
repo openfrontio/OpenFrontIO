@@ -151,6 +151,7 @@ export class MasterLobbyService {
               msg.inviteId,
               msg.dismissedAt,
               msg.targetPublicId,
+              msg.isExplicit,
             );
           if (resolvedInviteId) {
             this.broadcastMessage({
@@ -158,6 +159,7 @@ export class MasterLobbyService {
               inviteId: resolvedInviteId,
               dismissedAt: msg.dismissedAt,
               targetPublicId: msg.targetPublicId,
+              isExplicit: msg.isExplicit,
             });
           }
           break;
@@ -207,11 +209,18 @@ export class MasterLobbyService {
   /**
    * Broadcasts a lobby invite dismissal to all worker processes.
    */
-  broadcastLobbyInviteDismiss(inviteId: string, dismissedAt?: number): void {
+  broadcastLobbyInviteDismiss(
+    inviteId: string,
+    dismissedAt?: number,
+    targetPublicId?: string,
+    isExplicit?: boolean,
+  ): void {
     this.broadcastMessage({
       type: "lobbyInviteDismissBroadcast",
       inviteId,
       dismissedAt,
+      targetPublicId,
+      isExplicit,
     });
   }
 

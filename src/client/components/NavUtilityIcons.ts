@@ -256,7 +256,6 @@ export class NavUtilityIcons extends LitElement {
 
     this.pendingAcceptedInviteId = invite.id;
     const pageAtAccept = window.currentPageId;
-    this._notifications.dismissLobbyInvite(invite.id);
     this.closeNotifications();
     closeMobileSidebar();
     if (document.querySelector("join-lobby-modal") !== null) {
@@ -269,6 +268,7 @@ export class NavUtilityIcons extends LitElement {
           return;
         }
         this.pendingAcceptedInviteId = null;
+        this._notifications.dismissLobbyInvite(invite.id);
         window.showPage?.("page-join-lobby");
         (
           document.querySelector("join-lobby-modal") as
@@ -284,6 +284,7 @@ export class NavUtilityIcons extends LitElement {
       return;
     }
     this.pendingAcceptedInviteId = null;
+    this._notifications.dismissLobbyInvite(invite.id);
     document.dispatchEvent(
       new CustomEvent("join-lobby", {
         detail: {

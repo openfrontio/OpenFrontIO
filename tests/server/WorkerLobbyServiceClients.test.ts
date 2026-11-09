@@ -87,6 +87,11 @@ describe("WorkerLobbyService.connectedClients", () => {
     const ws = connectClient("/w0/lobbies?platform=web");
     (service as any).registerAuthenticatedLobbySocket(ws, "target.pub");
 
+    const wsOther = connectClient("/w0/lobbies?platform=web");
+    (service as any).registerAuthenticatedLobbySocket(wsOther, "other.pub");
+
+    const wsUnauth = connectClient("/w0/lobbies?platform=web");
+
     const sampleInvite = {
       id: "inv_ws_1",
       lobbyId: "lob_ws",
@@ -106,6 +111,8 @@ describe("WorkerLobbyService.connectedClients", () => {
     });
 
     expect(ws.send).toHaveBeenCalledTimes(1);
+    expect(wsOther.send).not.toHaveBeenCalled();
+    expect(wsUnauth.send).not.toHaveBeenCalled();
     const sentData = JSON.parse(ws.send.mock.calls[0][0]);
     expect(sentData).toEqual({
       type: "lobby_invite",
@@ -120,6 +127,8 @@ describe("WorkerLobbyService.connectedClients", () => {
     });
 
     expect(ws.send).toHaveBeenCalledTimes(2);
+    expect(wsOther.send).not.toHaveBeenCalled();
+    expect(wsUnauth.send).not.toHaveBeenCalled();
     const sentDismiss = JSON.parse(ws.send.mock.calls[1][0]);
     expect(sentDismiss).toEqual({
       type: "lobby_invite_dismiss",

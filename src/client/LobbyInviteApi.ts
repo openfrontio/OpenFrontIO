@@ -71,6 +71,8 @@ export type SendLobbyInviteResult = {
 export async function sendLobbyInvite(
   input: SendLobbyInviteInput,
 ): Promise<SendLobbyInviteResult> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
   try {
     await ensureServerList().catch(() => {});
     const token = await getPlayToken();
@@ -78,6 +80,7 @@ export async function sendLobbyInvite(
       input.lobbyId,
     );
     const requestInit: RequestInit = {
+      signal: controller.signal,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -121,6 +124,8 @@ export async function sendLobbyInvite(
   } catch (err) {
     console.error("sendLobbyInvite failed:", err);
     return { ok: false };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -239,9 +244,22 @@ export async function fetchLobbyInvites(
           throw new Error("Not JSON");
         }
         const data = await res.json();
+        const baseServerTime =
+          typeof data?.serverTime === "number" &&
+          Number.isFinite(data.serverTime)
+            ? data.serverTime
+            : Date.now();
+        const normalizeInvites = (invites: LobbyInvite[]) =>
+          invites.map((inv) => ({
+            ...inv,
+            expiresAt: Date.now() + Math.max(0, inv.expiresAt - baseServerTime),
+          }));
         const parsed = LobbyInvitesResponseSchema.safeParse(data);
         if (parsed.success) {
-          return parsed.data;
+          return {
+            invites: normalizeInvites(parsed.data.invites),
+            serverTime: Date.now(),
+          };
         }
         if (Array.isArray(data?.invites)) {
           const validatedInvites: LobbyInvite[] = [];
@@ -253,12 +271,8 @@ export async function fetchLobbyInvites(
             validatedInvites.push(itemParsed.data);
           }
           return {
-            invites: validatedInvites,
-            serverTime:
-              typeof data.serverTime === "number" &&
-              Number.isFinite(data.serverTime)
-                ? data.serverTime
-                : Date.now(),
+            invites: normalizeInvites(validatedInvites),
+            serverTime: Date.now(),
           };
         }
         throw new Error("Invalid payload");

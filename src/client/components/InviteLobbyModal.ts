@@ -188,6 +188,7 @@ export class InviteLobbyModal extends BaseModal {
         abortController.signal,
       );
       if (
+        abortController.signal.aborted ||
         memberIds === false ||
         seq <= this.appliedMemberRefreshSeq ||
         this.lobbyId !== lobbyId

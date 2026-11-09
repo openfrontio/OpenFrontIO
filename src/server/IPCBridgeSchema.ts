@@ -95,6 +95,7 @@ const WorkerLobbyInviteDismissSchema = z.object({
   inviteId: z.string(),
   dismissedAt: z.number().optional(),
   targetPublicId: z.string().optional(),
+  isExplicit: z.boolean().optional(),
 });
 
 export const WorkerMessageSchema = z.discriminatedUnion("type", [
@@ -151,6 +152,7 @@ const MasterLobbyInviteDismissBroadcastSchema = z.object({
   inviteId: z.string(),
   dismissedAt: z.number().optional(),
   targetPublicId: z.string().optional(),
+  isExplicit: z.boolean().optional(),
 });
 
 const MasterWorkerExitedSchema = z.object({
