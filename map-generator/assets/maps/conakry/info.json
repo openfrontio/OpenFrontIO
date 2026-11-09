@@ -3,6 +3,8 @@
   "id": "Conakry",
   "name": "Conakry",
   "translation_key": "map.conakry",
+  "author": "Patrick Plays Badly",
+  "description": "A very unique landmass created by two unrelated natural features; the islands and the stretch of highlands out to them. I always thought it looked like phoenix.",
   "categories": ["africa"],
   "location": { "lat": 9.6, "lon": -13.6 },
   "author": "Patrick Plays Badly",
