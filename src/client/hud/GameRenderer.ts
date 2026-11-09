@@ -242,6 +242,7 @@ export function createRenderer(
     console.error("player panel not found");
   }
   playerPanel.g = game;
+  playerPanel.transformHandler = transformHandler;
   playerPanel.initEventBus(eventBus);
   playerPanel.emojiTable = emojiTable;
   playerPanel.uiState = uiState;
