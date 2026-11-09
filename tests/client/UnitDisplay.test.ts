@@ -59,9 +59,21 @@ function makeDisplay(
  * pointer has to be faked for the touch case.
  */
 async function withCoarsePointer(run: () => void | Promise<void>) {
+  await withMediaQueries((query) => query.includes("pointer: coarse"), run);
+}
+
+/** A screen narrower than lg, where the bar is a column on the right edge. */
+async function withSideBar(run: () => void | Promise<void>) {
+  await withMediaQueries((query) => !query.includes("min-width: 64rem"), run);
+}
+
+async function withMediaQueries(
+  matches: (query: string) => boolean,
+  run: () => void | Promise<void>,
+) {
   const original = window.matchMedia;
   window.matchMedia = ((query: string) => ({
-    matches: query.includes("pointer: coarse"),
+    matches: matches(query),
     media: query,
     onchange: null,
     addEventListener: () => {},
@@ -86,7 +98,7 @@ function dispatchTouch(target: EventTarget, type: string, identifier: number) {
 }
 
 describe("mobile UnitDisplay layout", () => {
-  test("keeps the quick-build items in one horizontally scrollable row", async () => {
+  test("is a vertically scrolling column below lg and a row from lg up", async () => {
     const { display } = makeDisplay();
     try {
       await display.updateComplete;
@@ -94,37 +106,26 @@ describe("mobile UnitDisplay layout", () => {
       const scroller = display.querySelector(".unit-display-scroll");
       const grid = scroller?.querySelector<HTMLElement>(".unit-display-grid");
       expect(scroller).not.toBeNull();
-      expect(scroller?.classList.contains("touch-pan-x")).toBe(true);
+      expect(scroller?.classList.contains("overflow-y-auto")).toBe(true);
+      expect(scroller?.classList.contains("touch-pan-y")).toBe(true);
       expect(scroller?.classList.contains("lg:overflow-visible")).toBe(true);
-      expect(grid?.classList.contains("max-lg:landscape:grid-flow-col")).toBe(
-        true,
-      );
-      expect(
-        grid?.classList.contains("max-lg:landscape:auto-cols-[47px]"),
-      ).toBe(true);
-      expect(grid?.classList.contains("max-[360px]:grid-flow-col")).toBe(true);
-      expect(grid?.classList.contains("max-[360px]:auto-cols-[44px]")).toBe(
-        true,
-      );
+      expect(grid?.classList.contains("grid-cols-1")).toBe(true);
+      expect(grid?.classList.contains("lg:grid-flow-col")).toBe(true);
+      expect(grid?.classList.contains("lg:grid-cols-none")).toBe(true);
+      expect(grid?.classList.contains("lg:auto-cols-max")).toBe(true);
       expect(grid?.children).toHaveLength(10);
-      expect(grid?.style.getPropertyValue("--unit-display-columns")).toBe("10");
     } finally {
       display.remove();
     }
   });
 
-  test("portrait grid uses only the visible build buttons", async () => {
+  test("shows only the enabled build buttons", async () => {
     const { display } = makeDisplay(null, [UnitType.City]);
     try {
       await display.updateComplete;
 
       const grid = display.querySelector<HTMLElement>(".unit-display-grid");
       expect(grid?.children).toHaveLength(BuildMenus.types.length - 1);
-      expect(grid?.style.getPropertyValue("--unit-display-columns")).toBe(
-        String(BuildMenus.types.length - 1),
-      );
-      expect(grid?.classList.contains("lg:grid-cols-none")).toBe(true);
-      expect(grid?.classList.contains("lg:auto-cols-max")).toBe(true);
     } finally {
       display.remove();
     }
@@ -138,7 +139,6 @@ describe("mobile UnitDisplay layout", () => {
       const grid = display.querySelector<HTMLElement>(".unit-display-grid");
       expect(display.classList.contains("hidden")).toBe(false);
       expect(grid?.children).toHaveLength(1);
-      expect(grid?.style.getPropertyValue("--unit-display-columns")).toBe("1");
     } finally {
       display.remove();
     }
@@ -1035,7 +1035,7 @@ describe("mobile UnitDisplay layout", () => {
     }
   });
 
-  test("fades the edge that still hides actions", async () => {
+  test("fades the end of the row that still hides actions", async () => {
     const { display } = makeDisplay();
     try {
       await display.updateComplete;
@@ -1059,8 +1059,8 @@ describe("mobile UnitDisplay layout", () => {
       scroller.dispatchEvent(new Event("scroll"));
       await display.updateComplete;
 
-      expect(root.classList.contains("unit-display-more-right")).toBe(true);
-      expect(root.classList.contains("unit-display-more-left")).toBe(false);
+      expect(root.classList.contains("unit-display-more-end")).toBe(true);
+      expect(root.classList.contains("unit-display-more-start")).toBe(false);
 
       Object.defineProperty(scroller, "scrollLeft", {
         value: 300,
@@ -1069,8 +1069,8 @@ describe("mobile UnitDisplay layout", () => {
       scroller.dispatchEvent(new Event("scroll"));
       await display.updateComplete;
 
-      expect(root.classList.contains("unit-display-more-right")).toBe(false);
-      expect(root.classList.contains("unit-display-more-left")).toBe(true);
+      expect(root.classList.contains("unit-display-more-end")).toBe(false);
+      expect(root.classList.contains("unit-display-more-start")).toBe(true);
     } finally {
       display.remove();
     }
@@ -1096,8 +1096,8 @@ describe("mobile UnitDisplay layout", () => {
       scroller.dispatchEvent(new Event("scroll"));
       await display.updateComplete;
 
-      expect(root.classList.contains("unit-display-more-right")).toBe(false);
-      expect(root.classList.contains("unit-display-more-left")).toBe(false);
+      expect(root.classList.contains("unit-display-more-end")).toBe(false);
+      expect(root.classList.contains("unit-display-more-start")).toBe(false);
     } finally {
       display.remove();
     }
@@ -1122,5 +1122,104 @@ describe("mobile UnitDisplay layout", () => {
     } finally {
       display.remove();
     }
+  });
+});
+
+describe("UnitDisplay as a side column below lg", () => {
+  test("places the tooltip left of the item, centred on it", async () => {
+    await withSideBar(async () => {
+      const { display } = makeDisplay();
+      try {
+        await display.updateComplete;
+        const root = display.querySelector(".unit-display-root") as HTMLElement;
+        const cityItem = display.querySelector(".unit-display-grid")
+          ?.firstElementChild as HTMLElement;
+        root.getBoundingClientRect = () =>
+          ({ left: 340, top: 200, width: 50, height: 340 }) as DOMRect;
+        cityItem.getBoundingClientRect = () =>
+          ({ left: 343, top: 240, width: 44, height: 32 }) as DOMRect;
+        cityItem.dispatchEvent(new MouseEvent("mouseenter"));
+        await display.updateComplete;
+
+        const tooltip = display.querySelector(
+          ".unit-display-tooltip",
+        ) as HTMLElement;
+        // 6px left of the item and at its middle, in the bar's coordinates;
+        // the transform pulls the box fully left and half up from there.
+        expect(tooltip.style.left).toBe("-3px");
+        expect(tooltip.style.top).toBe("56px");
+        expect(tooltip.classList.contains("-translate-x-full")).toBe(true);
+        expect(tooltip.classList.contains("-translate-y-1/2")).toBe(true);
+      } finally {
+        display.remove();
+      }
+    });
+  });
+
+  test("keeps the tooltip on the screen vertically", async () => {
+    await withSideBar(async () => {
+      const { display } = makeDisplay();
+      try {
+        await display.updateComplete;
+        const root = display.querySelector(".unit-display-root") as HTMLElement;
+        const cityItem = display.querySelector(".unit-display-grid")
+          ?.firstElementChild as HTMLElement;
+        root.getBoundingClientRect = () =>
+          ({ left: 340, top: 10, width: 50, height: 340 }) as DOMRect;
+        cityItem.getBoundingClientRect = () =>
+          ({ left: 343, top: 12, width: 44, height: 32 }) as DOMRect;
+        cityItem.dispatchEvent(new MouseEvent("mouseenter"));
+        await display.updateComplete;
+
+        const tooltip = display.querySelector(
+          ".unit-display-tooltip",
+        ) as HTMLElement;
+        // Centred on the item (y 28) it would start at y -32, off the top.
+        tooltip.getBoundingClientRect = () =>
+          ({ left: 200, top: -32, width: 130, height: 120 }) as DOMRect;
+        display.requestUpdate();
+        await display.updateComplete;
+
+        // Pushed down to the 8px margin: top 8, so its centre is at y 68,
+        // which is 58 in the bar's coordinates.
+        expect(parseFloat(tooltip.style.top)).toBe(58);
+      } finally {
+        display.remove();
+      }
+    });
+  });
+
+  test("fades the end of the column that still hides actions", async () => {
+    await withSideBar(async () => {
+      const { display } = makeDisplay();
+      try {
+        await display.updateComplete;
+        const root = display.querySelector(".unit-display-root") as HTMLElement;
+        const scroller = display.querySelector(
+          ".unit-display-scroll",
+        ) as HTMLElement;
+        const set = (name: string, value: number) =>
+          Object.defineProperty(scroller, name, { value, configurable: true });
+        set("scrollHeight", 340);
+        set("clientHeight", 280);
+        set("scrollTop", 0);
+        // The row's measures must not count in the column.
+        set("scrollWidth", 50);
+        set("clientWidth", 50);
+
+        scroller.dispatchEvent(new Event("scroll"));
+        await display.updateComplete;
+        expect(root.classList.contains("unit-display-more-end")).toBe(true);
+        expect(root.classList.contains("unit-display-more-start")).toBe(false);
+
+        set("scrollTop", 60);
+        scroller.dispatchEvent(new Event("scroll"));
+        await display.updateComplete;
+        expect(root.classList.contains("unit-display-more-end")).toBe(false);
+        expect(root.classList.contains("unit-display-more-start")).toBe(true);
+      } finally {
+        display.remove();
+      }
+    });
   });
 });
