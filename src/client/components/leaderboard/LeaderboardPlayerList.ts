@@ -4,15 +4,26 @@ import {
   RankedLeaderboardEntry,
   RankedLeaderboardResponse,
 } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
-import { fetchPlayerLeaderboard, getUserMe } from "../../Api";
+import {
+  fetchFfaRankLeaderboard,
+  fetchPlayerLeaderboard,
+  getUserMe,
+} from "../../Api";
 import { loadModal } from "../../LazyModals";
 import { isRealAccount } from "../../ProgressionAccount";
 import { translateText } from "../../Utils";
 import "../ffaRating/FfaTierBadge";
 import { formatSeasonDate, seasonTiming } from "../ffaRating/FfaSeason";
-import { formatRating } from "../ffaRating/FfaTier";
+import {
+  FFA_TIER_BASES,
+  FFA_TIER_NAME_KEYS,
+  FfaTierBase,
+  formatRating,
+  parseFfaTier,
+} from "../ffaRating/FfaTier";
 import "../ffaRating/OfstatsCredit";
 import { isPrestigedOrLegend, levelBadgeSlot } from "../LevelBadgeSlot";
 import "../PlayerName";
@@ -41,6 +52,18 @@ interface LadderState {
   userEntry: LadderRow | null;
   hasMore: boolean;
 }
+
+/** One FFA rank's loaded rows, and the next page to ask for. */
+interface RankLadderState extends LadderState {
+  nextPage: number;
+}
+
+const emptyRankLadder = (): RankLadderState => ({
+  entries: [],
+  userEntry: null,
+  hasMore: true,
+  nextPage: 1,
+});
 
 // The ranked types with a player ladder. Clan wars rates the clan, not its
 // players, so it has none.
@@ -103,14 +126,40 @@ export class LeaderboardPlayerList extends LitElement {
     RankedLeaderboardResponse["ffaSeason"]
   > | null = null;
 
+  // The selected rank tab on the FFA board, and each rank's rows so far.
+  @state() private ffaRank: FfaTierBase | null = null;
+  @state() private ffaRankLadders: Partial<
+    Record<FfaTierBase, RankLadderState>
+  > = {};
+  @state() private ffaRanksLoading: ReadonlySet<FfaTierBase> = new Set();
+  private ffaOwnRank: FfaTierBase | null = null;
+  // Bumped by a full reload, so an answer from before it is dropped.
+  private ffaRankGeneration = 0;
+
   @query(".scroll-container") private scrollContainer?: HTMLElement;
 
+  // The FFA board is split by rank once the API serves ratings.
+  private get ffaRankActive(): boolean {
+    return (
+      this.rankedType === RankedType.FreeForAll &&
+      this.ffaRatingServed &&
+      this.ffaRank !== null
+    );
+  }
+
+  private get activeLadder(): LadderState {
+    if (this.ffaRankActive) {
+      return this.ffaRankLadders[this.ffaRank!] ?? emptyRankLadder();
+    }
+    return this.ladders[this.rankedType];
+  }
+
   private get playerData(): LadderRow[] {
-    return this.ladders[this.rankedType].entries;
+    return this.activeLadder.entries;
   }
 
   private get currentUserEntry(): LadderRow | null {
-    return this.ladders[this.rankedType].userEntry;
+    return this.activeLadder.userEntry;
   }
 
   // The FFA tab shows ratings (badge, rating ± uncertainty, OFstats credit)
@@ -132,7 +181,7 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   private get playerHasMore(): boolean {
-    return this.ladders[this.rankedType].hasMore;
+    return this.activeLadder.hasMore;
   }
 
   private mapLadders(
@@ -176,11 +225,20 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   public async loadPlayerLeaderboard(reset = false) {
+    if (!reset && this.ffaRankActive) {
+      await this.loadFfaRankPage(this.ffaRank!);
+      return;
+    }
+
     if (reset) {
       this.currentPage = 1;
       this.loadMoreError = null;
       this.ladders = emptyLadders();
       this.showStickyUser = false;
+      this.ffaRank = null;
+      this.ffaRankLadders = {};
+      this.ffaRanksLoading = new Set();
+      this.ffaRankGeneration++;
     } else if (!this.playerHasMore) {
       return;
     }
@@ -223,6 +281,9 @@ export class LeaderboardPlayerList extends LitElement {
         // Guests are never rated, though the API answers {calibrationGames: 0}
         // for them too, so only a real account gets the row.
         const ffa = userMe ? userMe.player.leaderboard?.ffa : undefined;
+        this.ffaOwnRank = ffa?.tier
+          ? (parseFfaTier(ffa.tier)?.base ?? null)
+          : null;
         this.ffaCalibration =
           userMe &&
           ffa?.calibrationGames !== undefined &&
@@ -296,6 +357,13 @@ export class LeaderboardPlayerList extends LitElement {
         this.currentPage++;
       }
 
+      if (reset && this.ffaRatingServed) {
+        // The overall board's first row is in the highest rank with players.
+        const topTier = nextLadders[RankedType.FreeForAll].entries[0]?.tier;
+        const topRank = topTier ? parseFfaTier(topTier)?.base : undefined;
+        this.selectFfaRank(this.ffaOwnRank ?? topRank ?? "grandmaster");
+      }
+
       this.hasLoadedPlayers = true;
       this.scheduleStickyVisibilityCheck();
       this.schedulePlayerFillCheck();
@@ -313,6 +381,73 @@ export class LeaderboardPlayerList extends LitElement {
         this.isLoadingMore = false;
       }
     }
+  }
+
+  private selectFfaRank(rank: FfaTierBase) {
+    if (rank === this.ffaRank) return;
+    this.ffaRank = rank;
+    this.loadMoreError = null;
+    this.showStickyUser = false;
+    if (this.scrollContainer) this.scrollContainer.scrollTop = 0;
+    if (this.ffaRankLadders[rank] === undefined) {
+      void this.loadFfaRankPage(rank);
+    }
+    this.scheduleStickyVisibilityCheck();
+    this.schedulePlayerFillCheck();
+  }
+
+  private async loadFfaRankPage(rank: FfaTierBase) {
+    const ladder = this.ffaRankLadders[rank] ?? emptyRankLadder();
+    if (!ladder.hasMore || this.ffaRanksLoading.has(rank)) return;
+
+    const generation = this.ffaRankGeneration;
+    const isNextPage = ladder.nextPage > 1;
+    this.ffaRanksLoading = new Set([...this.ffaRanksLoading, rank]);
+    this.loadMoreError = null;
+    if (isNextPage) this.isLoadingMore = true;
+
+    const result = await fetchFfaRankLeaderboard(rank, ladder.nextPage);
+
+    if (generation !== this.ffaRankGeneration) return;
+    const loading = new Set(this.ffaRanksLoading);
+    loading.delete(rank);
+    this.ffaRanksLoading = loading;
+    if (isNextPage) this.isLoadingMore = false;
+
+    if (result === false) {
+      if (rank === this.ffaRank) {
+        this.loadMoreError = translateText("leaderboard_modal.error");
+      }
+      return;
+    }
+
+    if (result === "reached_limit") {
+      this.ffaRankLadders = {
+        ...this.ffaRankLadders,
+        [rank]: { ...ladder, hasMore: false },
+      };
+      return;
+    }
+
+    const rows = result.players.map(toPlayerEntry);
+    const existingIds = new Set(ladder.entries.map((row) => row.playerId));
+    this.ffaRankLadders = {
+      ...this.ffaRankLadders,
+      [rank]: {
+        entries: [
+          ...ladder.entries,
+          ...rows.filter((row) => !existingIds.has(row.playerId)),
+        ],
+        userEntry:
+          ladder.userEntry ??
+          rows.find((row) => row.playerId === this.currentUserId) ??
+          null,
+        hasMore: rows.length >= this.playerPageSize,
+        nextPage: ladder.nextPage + 1,
+      },
+    };
+    this.scheduleStickyVisibilityCheck();
+    this.schedulePlayerFillCheck();
   }
 
   public handleTabActivated() {
@@ -714,6 +849,64 @@ export class LeaderboardPlayerList extends LitElement {
   // rows carry no tier) shows the plain Elo number, exactly as before. On a
   // phone the badge sits above the number, so the column stays narrow enough
   // to show without scrolling sideways.
+  // One emblem per rank, lowest on the left. Names don't fit on a phone, so
+  // there the selected rank is named on its own line underneath.
+  private renderRankTabs() {
+    const emblem = (rank: FfaTierBase, sizeClass: string) => html`
+      <img
+        src=${assetUrl(`images/ffa-tiers/compact/${rank}.svg`)}
+        alt=""
+        class=${sizeClass}
+      />
+    `;
+    const selected = this.ffaRank!;
+    return html`
+      <div class="shrink-0 px-2 sm:px-3 pb-2">
+        <div
+          role="tablist"
+          aria-label=${translateText("ffa_rating.rank_tabs")}
+          class="grid grid-cols-8 gap-0.5 sm:gap-1"
+        >
+          ${FFA_TIER_BASES.map((rank) => {
+            const name = translateText(FFA_TIER_NAME_KEYS[rank]);
+            const active = rank === selected;
+            return html`
+              <button
+                type="button"
+                role="tab"
+                data-rank=${rank}
+                aria-selected=${active ? "true" : "false"}
+                aria-label=${name}
+                title=${name}
+                class="flex flex-col items-center justify-center gap-1 min-w-0 py-1.5 sm:py-2 rounded-lg border transition-colors ${
+                  active
+                    ? "border-blue-400 bg-blue-500/25 text-white"
+                    : "border-white/10 bg-white/5 text-white/50 opacity-70 hover:opacity-100 hover:bg-white/10"
+                }"
+                @click=${() => this.selectFfaRank(rank)}
+              >
+                ${emblem(rank, "w-5 h-5 sm:w-7 sm:h-7")}
+                <span
+                  class="hidden sm:block w-full truncate text-center text-[10px] font-bold"
+                  >${name}</span
+                >
+              </button>
+            `;
+          })}
+        </div>
+        <div class="sm:hidden flex items-center gap-2 pt-2 px-1">
+          ${emblem(selected, "w-5 h-5")}
+          <span class="text-sm font-bold uppercase tracking-wider text-white"
+            >${translateText(FFA_TIER_NAME_KEYS[selected])}</span
+          >
+          <span class="ml-auto text-xs text-white/50"
+            >${translateText("ffa_rating.rank_top_100")}</span
+          >
+        </div>
+      </div>
+    `;
+  }
+
   private renderRatingCell(row: LadderRow, strong: boolean): TemplateResult {
     const weight = strong ? "font-bold" : "font-medium";
     if (!this.ffaRatingLive || row.tier === undefined) {
@@ -763,6 +956,7 @@ export class LeaderboardPlayerList extends LitElement {
 
     return html`
       <tr
+        data-player-id=${player.playerId}
         data-current-user=${isCurrentUser ? "true" : "false"}
         class="border-b border-white/5 hover:bg-white/[0.07] transition-colors group ${
           isCurrentUser ? "bg-blue-500/15" : ""
@@ -812,7 +1006,9 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   private renderPlayerFooter() {
-    if (this.isLoadingMore) {
+    const rankLoading =
+      this.ffaRankActive && this.ffaRanksLoading.has(this.ffaRank!);
+    if (this.isLoadingMore || rankLoading) {
       return html`
         <div class="flex items-center justify-center py-4 text-white/50">
           <div
@@ -835,6 +1031,18 @@ export class LeaderboardPlayerList extends LitElement {
             ${translateText("leaderboard_modal.try_again")}
           </button>
         </div>
+      `;
+    }
+
+    if (
+      this.ffaRankActive &&
+      this.playerData.length === 0 &&
+      !this.playerHasMore
+    ) {
+      return html`
+        <p class="py-12 text-center text-sm text-white/40">
+          ${translateText("ffa_rating.rank_empty")}
+        </p>
       `;
     }
 
@@ -937,7 +1145,8 @@ export class LeaderboardPlayerList extends LitElement {
     if (
       this.hasLoadedPlayers &&
       this.playerData.length === 0 &&
-      !pinnedCalibration
+      !pinnedCalibration &&
+      !this.ffaRankActive
     )
       return this.renderNoData();
 
@@ -961,6 +1170,7 @@ export class LeaderboardPlayerList extends LitElement {
           }"
         >
           ${ratingLive ? this.renderSeasonLabel() : nothing}
+          ${this.ffaRankActive ? this.renderRankTabs() : nothing}
           <div
             class="scroll-container ${
               ratingLive ? "flex-1 min-h-0" : "h-full"

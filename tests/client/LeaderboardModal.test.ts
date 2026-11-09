@@ -70,6 +70,7 @@ vi.mock("../../src/client/Api", async () => {
       }
       return res.json();
     }),
+    fetchFfaRankLeaderboard: vi.fn(async () => ({ players: [] })),
     // Mirrors the real fetchTribeLeaderboard: page 1, plus page 2 only when
     // page 1 came back exactly full.
     fetchTribeLeaderboard: vi.fn(async () => {
@@ -709,6 +710,14 @@ describe("LeaderboardModal", () => {
       vi.mocked(getUserMe).mockResolvedValueOnce(me as never);
     };
 
+    /** What the selected rank tab answers on its next load. */
+    const rankOnce = async (players: unknown[]) => {
+      const { fetchFfaRankLeaderboard } = await import("../../src/client/Api");
+      vi.mocked(fetchFfaRankLeaderboard).mockResolvedValueOnce({
+        players,
+      } as never);
+    };
+
     const ffaTabLabel = () =>
       (
         modal as unknown as {
@@ -755,6 +764,7 @@ describe("LeaderboardModal", () => {
           ffa: [rated(1, "p4", 2012.6, "Diamond II")],
         }),
       );
+      await rankOnce([rated(1, "p4", 2012.6, "Diamond II")]);
       await getPlayerList()!.loadPlayerLeaderboard(true);
       await getPlayerList()!.updateComplete;
       expect(modal.querySelectorAll("ffa-tier-badge")).toHaveLength(0); // 1v1 tab
@@ -785,6 +795,10 @@ describe("LeaderboardModal", () => {
           ],
         }),
       );
+      await rankOnce([
+        rated(1, "p4", 2012.6, "Diamond II"),
+        entry(2, "p5", 1850.7),
+      ]);
       await getPlayerList()!.loadPlayerLeaderboard(true);
       await showLadder("playersFfa");
       expect(modal.querySelectorAll("[data-ffa-rating-cell]")).toHaveLength(1);
@@ -819,6 +833,7 @@ describe("LeaderboardModal", () => {
           ffa: [rated(1, "p4", 2012.6, "Diamond II")],
         }),
       );
+      await rankOnce([rated(1, "p4", 2012.6, "Diamond II")]);
       await getPlayerList()!.loadPlayerLeaderboard(true);
       await showLadder("playersFfa");
       const cols = modal.querySelectorAll<HTMLElement>(
