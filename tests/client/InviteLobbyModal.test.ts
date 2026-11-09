@@ -331,12 +331,14 @@ describe("InviteLobbyModal", () => {
     });
     await modal.updateComplete;
 
+    let firstSignal: AbortSignal | undefined;
     let resolveFirst!: (value: string[] | false) => void;
-    apiMocks.fetchLobbyMemberPublicIds.mockReturnValueOnce(
-      new Promise<string[] | false>((resolve) => {
+    apiMocks.fetchLobbyMemberPublicIds.mockImplementationOnce((_id, signal) => {
+      firstSignal = signal;
+      return new Promise<string[] | false>((resolve) => {
         resolveFirst = resolve;
-      }),
-    );
+      });
+    });
 
     const initialCalls = apiMocks.fetchLobbyMemberPublicIds.mock.calls.length;
     modal.updateClients([{ clientID: "c1", username: "Alice", clanTag: null }]);
@@ -367,6 +369,7 @@ describe("InviteLobbyModal", () => {
       expect(apiMocks.fetchLobbyMemberPublicIds).toHaveBeenCalledTimes(
         initialCalls + 2,
       );
+      expect(firstSignal?.aborted).toBe(true);
 
       resolveFirst(false);
       await Promise.resolve();
@@ -378,6 +381,7 @@ describe("InviteLobbyModal", () => {
       expect(apiMocks.fetchLobbyMemberPublicIds).toHaveBeenCalledTimes(
         initialCalls + 2,
       );
+      expect(firstSignal?.aborted).toBe(true);
 
       resolveSecond(["f1"]);
       await Promise.resolve();

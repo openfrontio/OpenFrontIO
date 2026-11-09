@@ -126,7 +126,7 @@ const ClanMembersLookupSchema = z.object({
 async function fetchCallerClanMemberIds(
   caller: VerifiedCallerIdentity,
   token: string,
-): Promise<Set<string>> {
+): Promise<Set<string> | null> {
   const clanMemberIds = new Set<string>();
   for (const tag of caller.clanTags) {
     let page = 1;
@@ -142,9 +142,9 @@ async function fetchCallerClanMemberIds(
             },
           },
         );
-        if (!res.ok) break;
+        if (!res.ok) return null;
         const parsed = ClanMembersLookupSchema.safeParse(await res.json());
-        if (!parsed.success) break;
+        if (!parsed.success) return null;
         const list = parsed.data.results ?? parsed.data.members ?? [];
         for (const m of list) {
           if (m.publicId) {
@@ -157,7 +157,7 @@ async function fetchCallerClanMemberIds(
         }
         page += 1;
       } catch {
-        break;
+        return null;
       }
     }
   }
@@ -910,6 +910,11 @@ export function registerLobbyInviteRoutes(
     let clanMemberIds: Set<string> | null = null;
     if (nonFriendNonCallerIds.length > 0 && caller.clanTags.length > 0) {
       clanMemberIds = await fetchCallerClanMemberIds(caller, token);
+      if (clanMemberIds === null) {
+        return res
+          .status(502)
+          .json({ error: "Failed to resolve clan membership" });
+      }
     }
 
     const eligibleMemberPublicIds: string[] = [];
