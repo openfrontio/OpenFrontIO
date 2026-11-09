@@ -17,6 +17,18 @@ Licensed under ODbL
 [Natural Earth](https://www.naturalearthdata.com/)  
 Public Domain
 
+### ETOPO 2022
+
+NOAA National Centers for Environmental Information. 2022: ETOPO 2022 15 Arc-Second Global Relief Model. NOAA National Centers for Environmental Information.  
+[https://doi.org/10.25921/fd45-gt74](https://doi.org/10.25921/fd45-gt74)  
+Public Domain (U.S. Government work). Used for the Canada map elevation.
+
+### GSHHG
+
+Wessel, P., and W. H. F. Smith, A Global Self-consistent, Hierarchical, High-resolution Geography Database, _J. Geophys. Res._, 101, 8741-8743, 1996.  
+[https://www.soest.hawaii.edu/pwessel/gshhg/](https://www.soest.hawaii.edu/pwessel/gshhg/)  
+Licensed under [LGPL-3.0](https://www.gnu.org/licenses/lgpl-3.0.html). Used for the Canada map shorelines and lakes.
+
 ### Bedmap3 Antarctica Dataset
 
 Pritchard, H.D., Fretwell, P.T., Fremand, A.C. et al. Bedmap3 updated ice bed, surface and thickness gridded datasets for Antarctica. _Sci Data_ 12, 109 (2025).  
@@ -82,6 +94,12 @@ Skull and brain normal human diagram.
 Creative Commons Attribution 2.5 License 2006
 File:Skull and brain normal human.svg
 
+[https://commons.wikimedia.org/wiki/File:Nesterov-Pavlov.jpg](https://commons.wikimedia.org/wiki/File:Nesterov-Pavlov.jpg)
+Mikhail Nesterov (1862–1942)
+Portrait of Ivan Pavlov 1935
+Public Domain
+File:Nesterov-Pavlov.jpg
+
 ### Strait Of Malacca Map
 
 [https://commons.wikimedia.org/wiki/User:Sadalmelik#/media/File:Sumatra_Topography.png](https://commons.wikimedia.org/wiki/File:Sumatra_Topography.png#/media/File:Sumatra_Topography.png)
@@ -130,6 +148,15 @@ Licensed under ODbL
 Elevation: [Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) by Mapzen on AWS Open Data.
 GMTED2010 and SRTM terrain data courtesy of the [U.S. Geological Survey](https://www.usgs.gov/)  
 [Public Domain](https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits)
+
+### Türkiye Map
+
+NOAA National Centers for Environmental Information. 2022: ETOPO 2022 15 Arc-Second Global Relief Model.
+[https://doi.org/10.25921/fd45-gt74](https://doi.org/10.25921/fd45-gt74)  
+[Public Domain](https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem:etopo_2022)
+
+Borders and lakes: [Natural Earth](https://www.naturalearthdata.com/)  
+Public Domain
 
 ### Ottoman Empire Map
 
