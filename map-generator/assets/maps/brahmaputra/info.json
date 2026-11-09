@@ -4,6 +4,9 @@
   "name": "Brahmaputra",
   "translation_key": "map.brahmaputra",
   "categories": ["asia", "new"],
+  "location": { "lat": 26.5, "lon": 92.5 },
+  "author": "novc",
+  "description": "The Brahmaputra splits Assam in two. North bank against south bank, with Majuli and the sandbar islands in between. You can cross the river by boat almost anywhere, so the whole bank is the front line.",
   "special_team_count": 2,
   "themes": ["asia"],
   "teamGameSpawnAreas": {

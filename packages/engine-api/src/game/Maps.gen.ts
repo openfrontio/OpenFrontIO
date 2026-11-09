@@ -511,6 +511,9 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 37,
     specialTeamCount: 2,
     themes: ["asia"],
+    author: "novc",
+    descriptionKey: "map_description.brahmaputra",
+    location: { lat: 26.5, lon: 92.5 },
   },
   {
     id: "BrainRot",
