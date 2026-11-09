@@ -17,6 +17,18 @@ Licensed under ODbL
 [Natural Earth](https://www.naturalearthdata.com/)  
 Public Domain
 
+### ETOPO 2022
+
+NOAA National Centers for Environmental Information. 2022: ETOPO 2022 15 Arc-Second Global Relief Model. NOAA National Centers for Environmental Information.  
+[https://doi.org/10.25921/fd45-gt74](https://doi.org/10.25921/fd45-gt74)  
+Public Domain (U.S. Government work). Used for the Canada map elevation.
+
+### GSHHG
+
+Wessel, P., and W. H. F. Smith, A Global Self-consistent, Hierarchical, High-resolution Geography Database, _J. Geophys. Res._, 101, 8741-8743, 1996.  
+[https://www.soest.hawaii.edu/pwessel/gshhg/](https://www.soest.hawaii.edu/pwessel/gshhg/)  
+Licensed under [LGPL-3.0](https://www.gnu.org/licenses/lgpl-3.0.html). Used for the Canada map shorelines and lakes.
+
 ### Bedmap3 Antarctica Dataset
 
 Pritchard, H.D., Fretwell, P.T., Fremand, A.C. et al. Bedmap3 updated ice bed, surface and thickness gridded datasets for Antarctica. _Sci Data_ 12, 109 (2025).  
