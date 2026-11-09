@@ -11,7 +11,10 @@ import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationA
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { TransportShipExecution } from "@openfront/engine/execution/TransportShipExecution";
-import { Game, Player } from "@openfront/engine/game/Game";
+import type { BoatRoute } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { Game, Player, Unit } from "@openfront/engine/game/Game";
+import { canBuildTransportShip } from "@openfront/engine/game/TransportShipUtils";
+import { SpatialQuery } from "@openfront/engine/pathfinding/spatial/SpatialQuery";
 import { createGame, L, W } from "./core/pathfinding/_fixtures";
 import { setup } from "./util/Setup";
 
@@ -324,7 +327,7 @@ describe("Nation boat routes on open water", () => {
     );
     const warshipAt = (x: number, y: number) => {
       const tile = game.ref(x, y);
-      navy.buildUnit(UnitType.Warship, tile, { patrolTile: tile });
+      return navy.buildUnit(UnitType.Warship, tile, { patrolTile: tile });
     };
     const landings = () =>
       vi
@@ -333,7 +336,7 @@ describe("Nation boat routes on open water", () => {
         .filter((e) => e instanceof TransportShipExecution)
         .map((e) => e["ref"] as number);
     vi.spyOn(game, "addExecution");
-    return { game, enemy, behavior, warshipAt, landings };
+    return { game, nation, enemy, behavior, warshipAt, landings };
   }
 
   // A 3-tile hop off a peninsula across a 4-tile strait; the enemy coast is only 30 tiles long
@@ -401,5 +404,60 @@ describe("Nation boat routes on open water", () => {
     expect(behavior.sendAttack(enemy)).toBe(true);
     const [landing] = landings();
     expect(game.x(landing)).toBeLessThanOrEqual(20);
+  });
+
+  it("Medium doesn't pathfind a launch when a warship blocks every one", async () => {
+    const { enemy, behavior, warshipAt } = setupSea(
+      Difficulty.Medium,
+      200,
+      30,
+      strait,
+      14,
+    );
+    warshipAt(16, 12);
+    const launches = vi.spyOn(SpatialQuery.prototype, "closestShoreByWater");
+    expect(behavior.sendAttack(enemy)).toBe(false);
+    expect(launches).not.toHaveBeenCalled();
+    launches.mockRestore();
+  });
+
+  // Skipping the launch must never turn a clear route into a blocked one
+  it("Medium only skips launches that would all be blocked", async () => {
+    const { game, nation, behavior, warshipAt } = setupSea(
+      Difficulty.Medium,
+      400,
+      60,
+      sea,
+      52,
+    );
+    const ai = behavior as unknown as {
+      everyLaunchBlocked(landing: number, warships: Unit[]): boolean;
+      hostileWarships(): Unit[];
+      sail(launch: number, landing: number, warships: Unit[]): BoatRoute;
+    };
+    const landings = [5, 100, 200, 300].map((x) => game.ref(x, 52));
+    let skipped = 0;
+    let pathfound = 0;
+    for (let x = 0; x < 400; x += 25) {
+      for (let y = 8; y < 52; y += 6) {
+        if (game.isLand(game.ref(x, y))) continue;
+        const warship = warshipAt(x, y);
+        const warships = ai.hostileWarships();
+        for (const landing of landings) {
+          if (!ai.everyLaunchBlocked(landing, warships)) {
+            pathfound++;
+            continue;
+          }
+          skipped++;
+          const launch = canBuildTransportShip(game, nation, landing);
+          if (launch === false) continue;
+          expect(ai.sail(launch, landing, warships).blocker).not.toBeNull();
+        }
+        warship.delete(false);
+      }
+    }
+    // Both kinds of placement were tried
+    expect(skipped).toBeGreaterThan(20);
+    expect(pathfound).toBeGreaterThan(20);
   });
 });
