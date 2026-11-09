@@ -401,6 +401,7 @@ export abstract class AiAttackBehavior {
 
   // The launch follows from the landing: our shore closest to it by water
   private routeTo(landing: TileRef, warships: Unit[]): BoatRoute | null {
+    if (this.everyLaunchBlocked(landing, warships)) return null;
     const launch = canBuildTransportShip(this.game, this.player, landing);
     if (launch === false) return null;
     return { landing, ...this.sail(launch, landing, warships) };
@@ -459,6 +460,13 @@ export abstract class AiAttackBehavior {
       picked.push(tile);
     }
     return picked.slice(1);
+  }
+
+  // Whether a warship blocks the boat to landing from every shore we could launch from, so
+  // the launch needn't be pathfound. Only for those that read nothing of a blocked route but
+  // that it's blocked: to them it's as good as no route at all.
+  protected everyLaunchBlocked(_landing: TileRef, _warships: Unit[]): boolean {
+    return false;
   }
 
   protected hostileWarships(): Unit[] {
