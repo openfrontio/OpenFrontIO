@@ -59,6 +59,11 @@ vi.mock("../../src/server/PollingLoop", () => ({
   startPolling: vi.fn(),
 }));
 
+// The Box's land tiles: its public lobbies reach 210 players.
+vi.mock("../../src/server/MapLandTiles", () => ({
+  getMapLandTiles: async () => 4_194_304,
+}));
+
 const mockLogger = harnessLogger();
 
 const CREATOR = "11111111-1111-4111-8111-111111111111";
@@ -316,6 +321,78 @@ describe("GameServer listing", () => {
       expect(res.statusCode).toBe(409);
       expect(res.body).toEqual({ error: "listing_host_cheats_enabled" });
       expect(game.isListed()).toBe(false);
+    });
+  });
+
+  describe("app.post('/api/game/:id/listing') player cap", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    async function list(
+      maxPlayers: number,
+      config: Record<string, unknown> = {},
+    ) {
+      let routeHandler!: (req: any, res: any) => Promise<any>;
+      const game = makeGame("test-cap", CREATOR, config);
+      registerListingRoute({
+        app: {
+          post(path: string, handler: any) {
+            if (path === "/api/game/:id/listing") routeHandler = handler;
+          },
+        } as any,
+        gm: { game: () => game } as any,
+        lobbyService: {
+          creatorHasListedLobby: () => false,
+          hostedLobbyCount: () => 0,
+        } as any,
+        log: mockLogger as any,
+      });
+      vi.spyOn(jwtModule, "verifyClientToken").mockResolvedValue({
+        type: "success",
+        persistentId: CREATOR,
+        claims: null,
+      });
+      vi.spyOn(ServerEnv, "env").mockReturnValue(GameEnv.Dev);
+      const res: any = {
+        statusCode: 200,
+        body: undefined,
+        status(code: number) {
+          this.statusCode = code;
+          return this;
+        },
+        json(data: unknown) {
+          this.body = data;
+          return this;
+        },
+      };
+      await routeHandler(
+        {
+          headers: { authorization: "Bearer test-token" },
+          params: { id: "test-cap" },
+          body: { listed: true, maxPlayers },
+        },
+        res,
+      );
+      return { game, res };
+    }
+
+    it("allows caps above 100 up to the map's public lobby size", async () => {
+      const { game, res } = await list(210);
+      expect(res.statusCode).toBe(200);
+      expect(game.gameInfo().gameConfig?.maxPlayers).toBe(210);
+    });
+
+    it("rejects caps above the map's public lobby size", async () => {
+      const { game, res } = await list(211);
+      expect(res.statusCode).toBe(409);
+      expect(res.body).toEqual({ error: "listing_max_players_too_high" });
+      expect(game.isListed()).toBe(false);
+    });
+
+    it("uses the compact size on compact maps", async () => {
+      const { res } = await list(100, { gameMapSize: GameMapSize.Compact });
+      expect(res.body).toEqual({ error: "listing_max_players_too_high" });
     });
   });
 });

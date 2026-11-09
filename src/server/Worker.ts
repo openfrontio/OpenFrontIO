@@ -1,4 +1,4 @@
-import { GameMode } from "@openfront/engine-api/game/GameTypes";
+import { GameMapSize, GameMode } from "@openfront/engine-api/game/GameTypes";
 import {
   ID,
   isValidGameID,
@@ -14,7 +14,7 @@ import {
   HOSTED_LOBBY_AUTO_START_MS,
   LevelBadge,
   MAX_HOSTED_LOBBIES,
-  MAX_HOSTED_LOBBY_PLAYERS,
+  hostedLobbyMaxPlayers,
   MIN_HOSTED_LOBBY_AUTO_START_MS,
   MIN_HOSTED_LOBBY_PLAYERS,
   ServerErrorMessage,
@@ -53,6 +53,7 @@ import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
 import { levelBadgeForPlayer } from "./LevelBadge";
 import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
 import { logger } from "./Logger";
+import { getMapLandTiles } from "./MapLandTiles";
 import { registerPlayerProfileRoute } from "./PlayerProfileRoute";
 import { resolveVerifiedJoin } from "./Privilege";
 
@@ -192,12 +193,7 @@ export function registerListingRoute(opts: {
             .min(MIN_HOSTED_LOBBY_AUTO_START_MS)
             .max(HOSTED_LOBBY_AUTO_START_MS)
             .optional(),
-          maxPlayers: z
-            .number()
-            .int()
-            .min(MIN_HOSTED_LOBBY_PLAYERS)
-            .max(MAX_HOSTED_LOBBY_PLAYERS)
-            .optional(),
+          maxPlayers: z.number().int().min(MIN_HOSTED_LOBBY_PLAYERS).optional(),
         })
         .safeParse(req.body);
       if (!parsed.success) {
@@ -225,6 +221,20 @@ export function registerListingRoute(opts: {
       }
 
       if (listed) {
+        // The cap's ceiling follows the map, like public lobby sizes do.
+        if (
+          maxPlayers !== undefined &&
+          maxPlayers >
+            hostedLobbyMaxPlayers(
+              await getMapLandTiles(game.gameConfig.gameMap),
+              game.gameConfig.gameMapSize === GameMapSize.Compact,
+            )
+        ) {
+          return res
+            .status(409)
+            .json({ error: "listing_max_players_too_high" });
+        }
+
         const preError = getListingEligibilityError(game, maxPlayers);
         if (preError !== null) {
           return res.status(409).json({ error: preError });

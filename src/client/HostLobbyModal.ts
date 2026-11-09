@@ -15,8 +15,10 @@ import { GameEnv } from "@openfront/shared/configuration/Env";
 import { EventBus } from "@openfront/shared/EventBus";
 import {
   ClientInfo,
+  hostedLobbyMaxPlayers,
   LOBBY_QUEUE_CUTOFF_MS,
   LobbyInfoEvent,
+  MIN_HOSTED_LOBBY_PLAYERS,
 } from "@openfront/shared/WireSchemas";
 import { html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
@@ -76,6 +78,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private selectedDifficulty: Difficulty = Difficulty.Easy;
   @state() private nations: number = 0;
   @state() private defaultNationCount: number = 0;
+  // The selected map's land tiles, which set how big a listed lobby can be.
+  @state() private mapLandTiles: number | undefined = undefined;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
 
@@ -874,6 +878,11 @@ export class HostLobbyModal extends BaseModal {
                 .playerTeams=${
                   this.gameMode === GameMode.Team ? this.teamCount : undefined
                 }
+                .maxAllowedPlayers=${
+                  this.mapLandTiles !== undefined
+                    ? hostedLobbyMaxPlayers(this.mapLandTiles, this.compactMap)
+                    : MIN_HOSTED_LOBBY_PLAYERS
+                }
                 @cancel=${() => (this.showListLobbyDialog = false)}
                 @confirm=${(e: CustomEvent<ListLobbyOptions>) => {
                   this.showListLobbyDialog = false;
@@ -1088,6 +1097,7 @@ export class HostLobbyModal extends BaseModal {
     this.selectedDifficulty = Difficulty.Easy;
     this.nations = 0;
     this.defaultNationCount = 0;
+    this.mapLandTiles = undefined;
     this.gameMode = GameMode.FFA;
     this.teamCount = 2;
     this.bots = 400;
@@ -1717,6 +1727,8 @@ export class HostLobbyModal extends BaseModal {
       key = "private_lobby.listing_full";
     } else if (serverError === "listing_max_players_too_low") {
       key = "private_lobby.listing_max_players_too_low";
+    } else if (serverError === "listing_max_players_too_high") {
+      key = "private_lobby.listing_max_players_too_high";
     }
     showToast(translateText(key), "red", 3000);
   }
@@ -2064,6 +2076,7 @@ export class HostLobbyModal extends BaseModal {
       // Only update if the map hasn't changed
       if (this.selectedMap === currentMap) {
         this.defaultNationCount = manifest.nations.length;
+        this.mapLandTiles = manifest.map.num_land_tiles;
         this.nations = this.compactMap
           ? Math.max(0, Math.floor(manifest.nations.length * 0.25))
           : manifest.nations.length;
