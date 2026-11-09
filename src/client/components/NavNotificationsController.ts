@@ -311,14 +311,26 @@ class NavNotificationsStore {
       type: "lobby_invite" | "lobby_invite_dismiss";
       invite?: LobbyInvite;
       inviteId?: string;
+      serverTime?: number;
     }>;
     const detail = customEvent?.detail;
     if (!detail) return;
     if (detail.type === "lobby_invite" && detail.invite) {
-      const inv = detail.invite;
-      if (this.currentPublicId && inv.targetPublicId !== this.currentPublicId) {
+      const rawInv = detail.invite;
+      if (
+        this.currentPublicId &&
+        rawInv.targetPublicId !== this.currentPublicId
+      ) {
         return;
       }
+      const inv: LobbyInvite = {
+        ...rawInv,
+        expiresAt:
+          typeof detail.serverTime === "number" &&
+          Number.isFinite(detail.serverTime)
+            ? Date.now() + Math.max(0, rawInv.expiresAt - detail.serverTime)
+            : rawInv.expiresAt,
+      };
       if (inv.expiresAt <= this.serverNow()) return;
       const dismissedCreatedAt = this.dismissedInviteCreatedAt.get(inv.id);
       if (

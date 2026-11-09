@@ -441,7 +441,7 @@ export class InviteLobbyModal extends BaseModal {
           <div
             class="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white/70 shrink-0"
           >
-            ${(username ?? publicId).charAt(0).toUpperCase()}
+            ${[...(username ?? publicId)][0]?.toUpperCase() ?? ""}
           </div>
           <span class="truncate text-sm font-medium text-white">
             ${

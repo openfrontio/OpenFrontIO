@@ -368,8 +368,12 @@ describe("LobbyInviteService", () => {
       claims: {} as any,
     });
 
-    vi.spyOn(ServerEnv, "jwtIssuer").mockReturnValue("https://api.example.com");
-    vi.spyOn(ServerEnv, "apiKey").mockReturnValue("test-api-key");
+    const jwtSpy = vi
+      .spyOn(ServerEnv, "jwtIssuer")
+      .mockReturnValue("https://api.example.com");
+    const apiKeySpy = vi
+      .spyOn(ServerEnv, "apiKey")
+      .mockReturnValue("test-api-key");
 
     let onEligibilityCheck: (() => void) | undefined;
     const fetchSpy = vi
@@ -503,6 +507,8 @@ describe("LobbyInviteService", () => {
       });
       expect(raceDeniedRes.statusCode).toBe(403);
     } finally {
+      jwtSpy.mockRestore();
+      apiKeySpy.mockRestore();
       fetchSpy.mockRestore();
       LobbyInviteService.instance.reset();
     }
@@ -665,6 +671,13 @@ describe("LobbyInviteService", () => {
   });
 
   it("returns 502 from /api/lobby/members when clan lookup fails or receives invalid data", async () => {
+    const jwtSpy = vi
+      .spyOn(ServerEnv, "jwtIssuer")
+      .mockReturnValue("https://api.example.com");
+    const apiKeySpy = vi
+      .spyOn(ServerEnv, "apiKey")
+      .mockReturnValue("test-api-key");
+
     vi.mocked(verifyClientToken).mockResolvedValue({
       type: "success",
       persistentId: "pid1",
@@ -762,11 +775,20 @@ describe("LobbyInviteService", () => {
       const partialPageFailRes = await callMembers();
       expect(partialPageFailRes.statusCode).toBe(502);
     } finally {
+      jwtSpy.mockRestore();
+      apiKeySpy.mockRestore();
       fetchSpy.mockRestore();
     }
   });
 
   it("stops fetching clan roster pages as soon as target is found and returns 502 on upstream pagination failure", async () => {
+    const jwtSpy = vi
+      .spyOn(ServerEnv, "jwtIssuer")
+      .mockReturnValue("https://api.example.com");
+    const apiKeySpy = vi
+      .spyOn(ServerEnv, "apiKey")
+      .mockReturnValue("test-api-key");
+
     vi.mocked(verifyClientToken).mockResolvedValue({
       type: "success",
       persistentId: "pid1",
@@ -906,6 +928,8 @@ describe("LobbyInviteService", () => {
         "Target is not an eligible friend or clan member",
       );
     } finally {
+      jwtSpy.mockRestore();
+      apiKeySpy.mockRestore();
       fetchSpy.mockRestore();
       LobbyInviteService.instance.reset();
     }

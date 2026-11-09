@@ -240,9 +240,18 @@ export class PublicLobbySocket {
           if (payload.type === "lobby_invite") {
             const parsed = LobbyInviteSchema.safeParse(payload.invite);
             if (parsed.success) {
+              const serverTime =
+                typeof payload.serverTime === "number" &&
+                Number.isFinite(payload.serverTime)
+                  ? payload.serverTime
+                  : undefined;
               window.dispatchEvent(
                 new CustomEvent("lobby-invite-received", {
-                  detail: { type: "lobby_invite", invite: parsed.data },
+                  detail: {
+                    type: "lobby_invite",
+                    invite: parsed.data,
+                    serverTime,
+                  },
                 }),
               );
             }

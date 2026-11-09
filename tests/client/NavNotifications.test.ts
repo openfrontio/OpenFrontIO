@@ -406,5 +406,35 @@ describe("nav notifications", () => {
     await flush();
 
     expect(bell.controller.lobbyInvites()).toEqual([]);
+
+    // 3. Receiving a lobby_invite with serverTime normalizes expiresAt
+    const localNow = Date.now();
+    const serverSkewedInvite = {
+      id: "ws_invite_skewed",
+      lobbyId: "lob_ws",
+      senderPublicId: "sender.pub",
+      senderUsername: "Sender",
+      targetPublicId: "target.pub",
+      gameMode: "Team",
+      map: "World",
+      createdAt: 100_000,
+      expiresAt: 130_000,
+    };
+    window.dispatchEvent(
+      new CustomEvent("lobby-invite-received", {
+        detail: {
+          type: "lobby_invite",
+          invite: serverSkewedInvite,
+          serverTime: 100_000,
+        },
+      }),
+    );
+    await flush();
+
+    const stored = bell.controller.lobbyInvites();
+    expect(stored).toHaveLength(1);
+    expect(stored[0].id).toBe("ws_invite_skewed");
+    expect(stored[0].expiresAt).toBeGreaterThanOrEqual(localNow + 29_000);
+    expect(stored[0].expiresAt).toBeLessThanOrEqual(localNow + 31_000);
   });
 });

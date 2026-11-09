@@ -688,6 +688,7 @@ export class WorkerLobbyService {
   }
 
   private registerAuthenticatedLobbySocket(ws: WebSocket, publicId: string) {
+    this.unregisterAuthenticatedLobbySocket(ws);
     this.publicIdBySocket.set(ws, publicId);
     let sockets = this.lobbySocketsByPublicId.get(publicId);
     if (!sockets) {
@@ -700,7 +701,13 @@ export class WorkerLobbyService {
       LobbyInviteService.instance.getInvitesForUser(publicId);
     for (const invite of activeInvites) {
       try {
-        ws.send(JSON.stringify({ type: "lobby_invite", invite }));
+        ws.send(
+          JSON.stringify({
+            type: "lobby_invite",
+            invite,
+            serverTime: Date.now(),
+          }),
+        );
       } catch {
         // ignore send error
       }
@@ -724,7 +731,11 @@ export class WorkerLobbyService {
   private pushLobbyInvite(invite: LobbyInvite) {
     const sockets = this.lobbySocketsByPublicId.get(invite.targetPublicId);
     if (!sockets || sockets.size === 0) return;
-    const payload = JSON.stringify({ type: "lobby_invite", invite });
+    const payload = JSON.stringify({
+      type: "lobby_invite",
+      invite,
+      serverTime: Date.now(),
+    });
     for (const ws of sockets) {
       if (ws.readyState === WebSocket.OPEN) {
         try {

@@ -133,6 +133,7 @@ describe("WorkerLobbyService.connectedClients", () => {
     expect(sentData).toEqual({
       type: "lobby_invite",
       invite: sampleInvite,
+      serverTime: expect.any(Number),
     });
 
     // Broadcast dismissal
@@ -192,5 +193,21 @@ describe("WorkerLobbyService.connectedClients", () => {
     // 3. Auth with missing or non-string token
     (ws as any).emit("message", JSON.stringify({ type: "auth", token: 123 }));
     expect(ws.terminate).toHaveBeenCalledTimes(3);
+  });
+
+  it("removes socket from previous public ID when re-authenticating with new public ID", () => {
+    const ws = connectClient("/w0/lobbies?platform=web");
+    (service as any).registerAuthenticatedLobbySocket(ws, "user.one");
+    expect(
+      (service as any).lobbySocketsByPublicId.get("user.one")?.has(ws),
+    ).toBe(true);
+
+    (service as any).registerAuthenticatedLobbySocket(ws, "user.two");
+    expect(
+      (service as any).lobbySocketsByPublicId.get("user.one"),
+    ).toBeUndefined();
+    expect(
+      (service as any).lobbySocketsByPublicId.get("user.two")?.has(ws),
+    ).toBe(true);
   });
 });

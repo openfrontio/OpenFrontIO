@@ -1253,12 +1253,14 @@ describe("PublicLobbySocket token and stop handling", () => {
       data: JSON.stringify({
         type: "lobby_invite",
         invite: validInvite,
+        serverTime: 1500,
       }),
     });
     expect(dispatchSpy).toHaveBeenCalledTimes(1);
     expect((dispatchSpy.mock.calls[0][0] as CustomEvent).detail).toEqual({
       type: "lobby_invite",
       invite: validInvite,
+      serverTime: 1500,
     });
     dispatchSpy.mockClear();
 
