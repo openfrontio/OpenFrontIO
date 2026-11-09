@@ -44,8 +44,18 @@ import {
 import { flattenedEmojiTable } from "@openfront/engine-api/Schemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import { actionButton } from "../../../../src/client/components/ui/ActionButton";
+import { ShowPlayerChatEvent } from "../../../../src/client/hud/layers/ChatModal";
+import { ShowPlayerEmojiMenuEvent } from "../../../../src/client/hud/layers/EmojiTable";
 import { PlayerPanel } from "../../../../src/client/hud/layers/PlayerPanel";
-import { MouseUpEvent } from "../../../../src/client/InputHandler";
+import {
+  CloseViewEvent,
+  ContextMenuEvent,
+  MouseUpEvent,
+  ShowBuildMenuEvent,
+  ShowChatMenuEvent,
+  ShowEmojiMenuEvent,
+  ShowPlayerPanelEvent,
+} from "../../../../src/client/InputHandler";
 import {
   SendEmbargoIntentEvent,
   SendEmojiIntentEvent,
@@ -300,6 +310,193 @@ describe("PlayerPanel - openSendGoldModal suppressNextHide", () => {
     expect(panel.isVisible).toBe(true);
 
     eventBus.emit(new MouseUpEvent(10, 20));
+    expect(panel.isVisible).toBe(false);
+  });
+
+  test("show() resets suppressNextHide and send modal state after openSendGoldModal", () => {
+    const panel = new PlayerPanel();
+    (panel as any).requestUpdate = vi.fn();
+    (panel as any).g = makeGame();
+    const eventBus = new EventBus();
+    panel.initEventBus(eventBus);
+    panel.init();
+
+    panel.openSendGoldModal(actions, 7, other);
+    panel.hide();
+
+    panel.show(actions, 7);
+    expect(panel.isVisible).toBe(true);
+    expect((panel as any).sendMode).toBe("none");
+    expect((panel as any).sendTarget).toBeNull();
+
+    eventBus.emit(new MouseUpEvent(10, 20));
+    expect(panel.isVisible).toBe(false);
+  });
+});
+
+describe("PlayerPanel - ShowPlayerPanelEvent keybind", () => {
+  const TILE = 7;
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  function setupKeybind({
+    isPlayer = true,
+    isSpectator = false,
+    inSpawnPhase = false,
+    isValidCoord = true,
+    panelVisible = false,
+  } = {}) {
+    const bus = new EventBus();
+    const target = {
+      isPlayer: () => isPlayer,
+    } as unknown as PlayerView;
+    const actions = {
+      canAttack: true,
+      buildableUnits: [],
+      canSendEmojiAllPlayers: true,
+      interaction: { canSendAllianceRequest: true },
+    };
+    const myPlayer = {
+      actions: vi.fn(async () => actions),
+    };
+    const game = {
+      isSpectator: () => isSpectator,
+      inSpawnPhase: () => inSpawnPhase,
+      myPlayer: () => myPlayer,
+      isValidCoord: () => isValidCoord,
+      ref: () => TILE,
+      owner: () => target,
+      config: () => ({
+        gameConfig: () => ({ gameType: GameType.Public }),
+        isReplay: () => false,
+      }),
+      gameOver: () => false,
+    };
+    const transformHandler = {
+      screenToWorldCoordinates: vi.fn(() => ({ x: 3, y: 4 })),
+    };
+    const panel = new PlayerPanel();
+    (panel as any).requestUpdate = vi.fn();
+    panel.g = game as any;
+    panel.transformHandler = transformHandler as any;
+    panel.initEventBus(bus);
+    panel.isVisible = panelVisible;
+    return { bus, game, actions, myPlayer, transformHandler, panel };
+  }
+
+  test("opens the player panel for the player under the cursor and closes other views", async () => {
+    const { bus, actions, transformHandler, panel } = setupKeybind();
+    const showSpy = vi.spyOn(panel, "show");
+    let closedViews = 0;
+    bus.on(CloseViewEvent, () => closedViews++);
+
+    bus.emit(new ShowPlayerPanelEvent(50, 60));
+    await flush();
+
+    expect(transformHandler.screenToWorldCoordinates).toHaveBeenCalledWith(
+      50,
+      60,
+    );
+    expect(closedViews).toBe(1);
+    expect(showSpy).toHaveBeenCalledExactlyOnceWith(actions, TILE);
+    expect(panel.isVisible).toBe(true);
+  });
+
+  test("closes the player panel when it is already visible, even before the first mousemove", async () => {
+    const { bus, myPlayer, panel } = setupKeybind({ panelVisible: true });
+    const hideSpy = vi.spyOn(panel, "hide");
+    const showSpy = vi.spyOn(panel, "show");
+
+    bus.emit(new ShowPlayerPanelEvent(null, null));
+    await flush();
+
+    expect(hideSpy).toHaveBeenCalledOnce();
+    expect(showSpy).not.toHaveBeenCalled();
+    expect(myPlayer.actions).not.toHaveBeenCalled();
+    expect(panel.isVisible).toBe(false);
+  });
+
+  test("opens the read-only player panel directly for spectators", async () => {
+    const { bus, myPlayer, panel } = setupKeybind({ isSpectator: true });
+    const showSpy = vi.spyOn(panel, "show");
+
+    bus.emit(new ShowPlayerPanelEvent(50, 60));
+    await flush();
+
+    expect(myPlayer.actions).not.toHaveBeenCalled();
+    expect(showSpy).toHaveBeenCalledExactlyOnceWith(
+      {
+        canAttack: false,
+        buildableUnits: [],
+        canSendEmojiAllPlayers: false,
+      },
+      TILE,
+    );
+    expect(panel.isVisible).toBe(true);
+  });
+
+  test.each([
+    ["during the spawn phase", { inSpawnPhase: true }, 50, 60],
+    ["over unowned territory", { isPlayer: false }, 50, 60],
+    ["at an invalid cursor position", { isValidCoord: false }, 50, 60],
+    ["before the first mousemove", {}, null, null],
+  ])("does not open the player panel %s", async (_, opts, x, y) => {
+    const { bus, panel } = setupKeybind(opts);
+    const showSpy = vi.spyOn(panel, "show");
+
+    bus.emit(new ShowPlayerPanelEvent(x, y));
+    await flush();
+
+    expect(showSpy).not.toHaveBeenCalled();
+    expect(panel.isVisible).toBe(false);
+  });
+
+  test.each([
+    ["CloseViewEvent", () => new CloseViewEvent()],
+    ["MouseUpEvent", () => new MouseUpEvent(10, 20)],
+    ["ContextMenuEvent", () => new ContextMenuEvent(10, 20)],
+    ["ShowBuildMenuEvent", () => new ShowBuildMenuEvent(10, 20)],
+    ["ShowEmojiMenuEvent", () => new ShowEmojiMenuEvent(10, 20)],
+    ["ShowChatMenuEvent", () => new ShowChatMenuEvent(10, 20)],
+    ["ShowPlayerChatEvent", () => new ShowPlayerChatEvent(other)],
+    ["ShowPlayerEmojiMenuEvent", () => new ShowPlayerEmojiMenuEvent(other)],
+  ])(
+    "drops a pending player panel open when %s fires before actions resolve",
+    async (_, makeEvent) => {
+      const { bus, panel } = setupKeybind();
+      const showSpy = vi.spyOn(panel, "show");
+
+      bus.emit(new ShowPlayerPanelEvent(50, 60));
+      bus.emit(makeEvent());
+      await flush();
+
+      expect(showSpy).not.toHaveBeenCalled();
+      expect(panel.isVisible).toBe(false);
+    },
+  );
+
+  test("a second press before actions resolve cancels the pending open", async () => {
+    const { bus, myPlayer, panel } = setupKeybind();
+    const showSpy = vi.spyOn(panel, "show");
+
+    bus.emit(new ShowPlayerPanelEvent(50, 60));
+    bus.emit(new ShowPlayerPanelEvent(50, 60));
+    await flush();
+
+    expect(myPlayer.actions).toHaveBeenCalledOnce();
+    expect(showSpy).not.toHaveBeenCalled();
+    expect(panel.isVisible).toBe(false);
+  });
+
+  test("does not open the player panel if the tile changes owner before actions resolve", async () => {
+    const { bus, game, panel } = setupKeybind();
+    const showSpy = vi.spyOn(panel, "show");
+    const newOwner = { isPlayer: () => true } as unknown as PlayerView;
+
+    bus.emit(new ShowPlayerPanelEvent(50, 60));
+    game.owner = () => newOwner;
+    await flush();
+
+    expect(showSpy).not.toHaveBeenCalled();
     expect(panel.isVisible).toBe(false);
   });
 });

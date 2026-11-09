@@ -1583,6 +1583,11 @@
     "name": "Grande Comore"
   },
   {
+    "code": "Greater London",
+    "continent": "Europe",
+    "name": "Greater London"
+  },
+  {
     "code": "gr",
     "continent": "Europe",
     "name": "Greece"
@@ -2311,6 +2316,11 @@
     "code": "Lithuanian SSR",
     "continent": "Europe",
     "name": "Lithuanian SSR"
+  },
+  {
+    "code": "gb-lnd",
+    "continent": "Europe",
+    "name": "London"
   },
   {
     "code": "Los Altos",
