@@ -689,16 +689,7 @@ export function buildTree(s: RenderSettings, d: RenderSettings): DebugNode[] {
         "traitorColorG",
         "traitorColorB",
         d.rangeCircle,
-        "Traitor Flash Color",
-      ),
-      slider(
-        s.rangeCircle,
-        "flashHz",
-        d.rangeCircle,
-        0.5,
-        6,
-        0.25,
-        "Flash Rate (Hz)",
+        "Traitor Color",
       ),
     ]),
 
