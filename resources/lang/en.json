@@ -1591,6 +1591,7 @@
     "betweentwoseas": "Between Two Seas",
     "blacksea": "Black Sea",
     "bosphorusstraits": "Bosphorus Straits",
+    "brahmaputra": "Brahmaputra",
     "brainrot": "Brain Rot",
     "branchingpaths": "Branching Paths",
     "britannia": "Britannia",
@@ -1671,6 +1672,7 @@
     "ommatrypta": "Ommatrypta",
     "onion": "Onion",
     "pangaea": "Pangaea",
+    "paris": "Paris",
     "passage": "Passage",
     "pluto": "Pluto",
     "pulicatlake": "Pulicat Lake",
@@ -1709,7 +1711,8 @@
     "worldinverted": "World Inverted",
     "yangtzeriver": "Yangtze River",
     "yellowsea": "Yellow Sea",
-    "yenisei": "Yenisei"
+    "yenisei": "Yenisei",
+    "zealandia": "Zealandia"
   },
   "map_categories": {
     "africa": "Africa",
@@ -1762,6 +1765,7 @@
     "balkhash": "A lake in southeastern Kazakhstan with no outlet to the ocean. Lake Balkhash is currently the largest lake in Central Asia and 15th-largest in the world. Water in the western part of the lake is freshwater, whereas the eastern side is brackish to salty. This lake is shrinking due to diversion and extraction of water, and could suffer a fate like that of the Aral Sea.",
     "baltics": "The northeastern region of Europe containing the countries of Estonia, Latvia, and Lithuania on the eastern shores of the Baltic Sea. Previously under Russian imperial and Soviet rule, the 3 states have been independent since 1991.",
     "beringsea": "This map is made up of 2 large landmasses, the Russian Far East and the U.S. state of Alaska, both of very similar size. During the Ice Age, lower sea levels exposed Beringia, a land bridge which played a major role in human migration into the Americas 15,000 to 20,000 years ago.",
+    "brahmaputra": "The Brahmaputra splits Assam in two. North bank against south bank, with Majuli and the sandbar islands in between. You can cross the river by boat almost anywhere, so the whole bank is the front line.",
     "canaryislands": "An archipelago in the Atlantic Ocean, off the coast of Africa and an overseas territory of Spain. The archipelago is made up of 7 major islands, from West to East: El Hierro, La Palma, La Gomera, Tenerife, Gran Canaria, Fuerteventura and Lanzarote.",
     "capeofgoodhope": "A headland located in the larger Cape Peninsula, itself located in South Africa, near the legislative capital city of Cape Town. Once a significant port and waypoint for sailors traveling from Europe to Asia, the opening of the Suez Canal in 1869 provided a much shorter route, making the long trip around Africa inefficient.",
     "caribbean": "Stretching from Florida and the Yucatan peninsula, the Greater Antilles in the north and the Lesser Antilles to the south, to the northern coast of South America. The Caribbean is home to 13 sovereign states and various European dependencies. This is a very heavy naval map - become a pirate or be pirated.",
