@@ -15,5 +15,6 @@ describe("listedMaps", () => {
 
   test("keeps every map that isn't hidden", () => {
     expect(listedMaps).toEqual(maps.filter((m) => m.hidden !== true));
+    expect(listedMaps.length).toBe(maps.length - 1);
   });
 });
