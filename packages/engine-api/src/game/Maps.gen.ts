@@ -132,6 +132,7 @@ export enum GameMapType {
   Tourney3 = "Tourney 4 Teams", // map-generator/assets/maps/tourney3/info.json
   Tourney4 = "Tourney 8 Teams", // map-generator/assets/maps/tourney4/info.json
   TradersDream = "Traders Dream", // map-generator/assets/maps/tradersdream/info.json
+  Turkiye = "Turkiye", // map-generator/assets/maps/turkiye/info.json
   Tutorial = "Tutorial", // map-generator/assets/maps/tutorial/info.json
   TwoLakes = "Two Lakes", // map-generator/assets/maps/twolakes/info.json
   UnitedStates = "United States", // map-generator/assets/maps/unitedstates/info.json
@@ -2422,6 +2423,13 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 2,
     author: "FloPinguin",
     descriptionKey: "map_description.tradersdream",
+  },
+  {
+    id: "Turkiye",
+    type: GameMapType.Turkiye,
+    translationKey: "map.turkiye",
+    categories: ["countries", "europe", "asia"],
+    defaultNationCount: 30,
   },
   {
     id: "Tutorial",

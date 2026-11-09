@@ -143,6 +143,15 @@ Elevation: [Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) by Mapz
 GMTED2010 and SRTM terrain data courtesy of the [U.S. Geological Survey](https://www.usgs.gov/)  
 [Public Domain](https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits)
 
+### Türkiye Map
+
+NOAA National Centers for Environmental Information. 2022: ETOPO 2022 15 Arc-Second Global Relief Model.
+[https://doi.org/10.25921/fd45-gt74](https://doi.org/10.25921/fd45-gt74)  
+[Public Domain](https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ngdc.mgg.dem:etopo_2022)
+
+Borders and lakes: [Natural Earth](https://www.naturalearthdata.com/)  
+Public Domain
+
 ## FFA Rating
 
 ### OFstats
