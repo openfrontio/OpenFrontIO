@@ -1,4 +1,5 @@
 import { CloseCode } from "@openfront/shared/CloseCodes";
+import { LobbyInviteSchema } from "@openfront/shared/LobbyInviteSchemas";
 import { PublicGames } from "@openfront/shared/WireSchemas";
 import { decodeLobbyMessage } from "@openfront/shared/ZbinWire";
 import { ClientEnv, NoServerError } from "src/client/ClientEnv";
@@ -52,7 +53,7 @@ export class PublicLobbySocket {
   private generation = 0;
   // Latest full snapshot, used as the base for applying counts-only deltas.
   private lastFull: PublicGames | null = null;
-  private tokenParam = "";
+  private token: string | null = null;
 
   private readonly reconnectDelay: number;
   private readonly maxWsAttempts: number;
@@ -139,7 +140,7 @@ export class PublicLobbySocket {
         .catch(() => null),
     ]);
     if (generation !== this.generation) return;
-    this.tokenParam = token ? `&token=${encodeURIComponent(token)}` : "";
+    this.token = token ?? null;
     if (listStatus === "outdated") this.fireUpdateAvailable();
     // Get config to determine number of workers, then pick a random one.
     // With no list and nothing injected there is no server to ask (a static
@@ -160,6 +161,7 @@ export class PublicLobbySocket {
     this.stopped = true;
     this.generation++;
     this.lastFull = null;
+    this.token = null;
     this.disconnectWebSocket();
   }
 
@@ -178,7 +180,7 @@ export class PublicLobbySocket {
       // the desktop app://openfront origin), not window.location.host.
       // ?platform= is only for the server's per-platform lobby gauge: the
       // lobby socket has no join message to carry it in.
-      const wsUrl = `${ClientEnv.serverWsBase()}${this.workerPath}/lobbies?platform=${clientPlatform()}${this.tokenParam}`;
+      const wsUrl = `${ClientEnv.serverWsBase()}${this.workerPath}/lobbies?platform=${clientPlatform()}`;
 
       const ws = new WebSocket(wsUrl);
       this.ws = ws;
@@ -221,20 +223,44 @@ export class PublicLobbySocket {
       clearTimeout(this.wsReconnectTimeout);
       this.wsReconnectTimeout = null;
     }
+    if (this.token && this.ws && this.ws.readyState === WebSocket.OPEN) {
+      try {
+        this.ws.send(JSON.stringify({ type: "auth", token: this.token }));
+      } catch (err) {
+        console.warn("Failed to send lobby socket auth frame:", err);
+      }
+    }
   }
 
   private handleMessage(event: MessageEvent) {
     if (typeof event.data === "string") {
       try {
         const payload = JSON.parse(event.data);
-        if (
-          payload &&
-          (payload.type === "lobby_invite" ||
-            payload.type === "lobby_invite_dismiss")
-        ) {
-          window.dispatchEvent(
-            new CustomEvent("lobby-invite-received", { detail: payload }),
-          );
+        if (payload && typeof payload === "object") {
+          if (payload.type === "lobby_invite") {
+            const parsed = LobbyInviteSchema.safeParse(payload.invite);
+            if (parsed.success) {
+              window.dispatchEvent(
+                new CustomEvent("lobby-invite-received", {
+                  detail: { type: "lobby_invite", invite: parsed.data },
+                }),
+              );
+            }
+          } else if (payload.type === "lobby_invite_dismiss") {
+            if (
+              typeof payload.inviteId === "string" &&
+              payload.inviteId.length > 0
+            ) {
+              window.dispatchEvent(
+                new CustomEvent("lobby-invite-received", {
+                  detail: {
+                    type: "lobby_invite_dismiss",
+                    inviteId: payload.inviteId,
+                  },
+                }),
+              );
+            }
+          }
         }
       } catch (error) {
         console.error("Error parsing lobby invite message:", error);

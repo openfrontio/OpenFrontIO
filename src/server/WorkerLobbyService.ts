@@ -1,3 +1,4 @@
+import { GameMode } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig } from "@openfront/engine-api/Schemas";
 import { isAdminRole } from "@openfront/shared/ApiSchemas";
 import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
@@ -386,7 +387,8 @@ export class WorkerLobbyService {
     const localGame = this.gm.game(gameID);
     if (localGame !== null) {
       if (
-        localGame.isPublic() ||
+        (localGame.isPublic() &&
+          localGame.gameConfig.gameMode !== GameMode.Team) ||
         localGame.phase() !== GamePhase.Lobby ||
         localGame.hasStarted()
       ) {
@@ -395,7 +397,7 @@ export class WorkerLobbyService {
       return localGame.visibleMemberPublicIds(persistentId, publicId);
     }
     const meta = this.getLobbyMeta(gameID);
-    if (meta?.isPublic) {
+    if (meta?.isPublic && meta.gameMode !== "Team") {
       return [];
     }
     return meta?.memberPublicIds ?? [];
@@ -597,31 +599,6 @@ export class WorkerLobbyService {
       (ws: WebSocket, request?: http.IncomingMessage) => {
         this.lobbyClients.set(ws, lobbyClientPlatform(request?.url));
 
-        const queryIndex = request?.url?.indexOf("?");
-        if (queryIndex !== undefined && queryIndex !== -1) {
-          const searchParams = new URLSearchParams(
-            request!.url!.substring(queryIndex),
-          );
-          const token = searchParams.get("token");
-          if (token) {
-            void verifyClientToken(token)
-              .then(async (auth) => {
-                if (
-                  auth.type !== "success" ||
-                  ws.readyState !== WebSocket.OPEN
-                ) {
-                  return;
-                }
-                const caller = await defaultResolveCaller(token);
-                if (!caller || ws.readyState !== WebSocket.OPEN) {
-                  return;
-                }
-                this.registerAuthenticatedLobbySocket(ws, caller.publicId);
-              })
-              .catch(() => {});
-          }
-        }
-
         // Prime the new client with the most recent snapshot — otherwise it
         // would only see counts-only deltas (which it can't apply without a
         // base) until the next structural change.
@@ -636,7 +613,46 @@ export class WorkerLobbyService {
             } satisfies PublicLobbyMessage),
           );
         }
-        ws.on("message", () => {
+        ws.on("message", (data: WebSocket.RawData) => {
+          try {
+            const text =
+              typeof data === "string"
+                ? data
+                : data instanceof Buffer
+                  ? data.toString("utf8")
+                  : Array.isArray(data)
+                    ? Buffer.concat(data).toString("utf8")
+                    : data instanceof ArrayBuffer
+                      ? Buffer.from(data).toString("utf8")
+                      : "";
+            const msg = JSON.parse(text);
+            if (
+              msg &&
+              typeof msg === "object" &&
+              msg.type === "auth" &&
+              typeof msg.token === "string" &&
+              msg.token.length > 0
+            ) {
+              void verifyClientToken(msg.token)
+                .then(async (auth) => {
+                  if (
+                    auth.type !== "success" ||
+                    ws.readyState !== WebSocket.OPEN
+                  ) {
+                    return;
+                  }
+                  const caller = await defaultResolveCaller(msg.token);
+                  if (!caller || ws.readyState !== WebSocket.OPEN) {
+                    return;
+                  }
+                  this.registerAuthenticatedLobbySocket(ws, caller.publicId);
+                })
+                .catch(() => {});
+              return;
+            }
+          } catch {
+            // Malformed frame or unexpected payload
+          }
           ws.terminate();
         });
         ws.on("close", () => {

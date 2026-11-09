@@ -1851,7 +1851,7 @@ export class GameServer {
     persistentId: string,
     publicId?: string,
   ): string[] {
-    if (this.isPublic()) {
+    if (this.isPublic() && this.gameConfig.gameMode !== GameMode.Team) {
       return [];
     }
     let viewerClient: Client | undefined;

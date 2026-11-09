@@ -312,7 +312,7 @@ export class MasterLobbyService {
    */
   public getLobbyMemberPublicIds(gameID: string): string[] {
     const meta = this.getLobbyMeta(gameID);
-    if (meta?.isPublic) {
+    if (meta?.isPublic && meta.gameMode !== "Team") {
       return [];
     }
     return meta?.memberPublicIds ?? [];

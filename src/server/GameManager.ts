@@ -92,7 +92,8 @@ export class GameManager {
     for (const [id, game] of this.games.entries()) {
       if (game.phase() === GamePhase.Lobby && !game.hasStarted()) {
         const memberPublicIds =
-          game.isPublic() || game.gameConfig.anonymizeNames
+          (game.isPublic() && game.gameConfig.gameMode !== GameMode.Team) ||
+          game.gameConfig.anonymizeNames
             ? undefined
             : [
                 ...new Set(

@@ -1039,4 +1039,110 @@ describe("LobbyInviteService", () => {
       LobbyInviteService.instance.reset();
     }
   });
+
+  it("prunes targetPublicIdByInviteId when invite and dismissal leave memory", () => {
+    const now = 1_000_000;
+    vi.setSystemTime(now);
+    const service = LobbyInviteService.instance;
+    const invite = service.createInvite({
+      lobbyId: "lob_prune",
+      senderPublicId: "sender_p",
+      targetPublicId: "target_p",
+      gameMode: "Team",
+      map: "World",
+    })!;
+
+    expect(service.getInviteTarget(invite.id)).toBe("target_p");
+
+    // Advance time past expiry
+    vi.setSystemTime(now + 31_000);
+    service.pruneExpired();
+
+    // Invite expired and no dismissal tombstone exists: target is pruned
+    expect(service.getInviteTarget(invite.id)).toBeUndefined();
+  });
+
+  it("refetches caller identity once on eligibility miss before rejecting", async () => {
+    const postHandlers = new Map<
+      string,
+      (req: any, res: any) => Promise<any>
+    >();
+    const mockApp = {
+      get() {},
+      post(path: string, handler: (req: any, res: any) => Promise<any>) {
+        postHandlers.set(path, handler);
+      },
+    };
+
+    let fetchCount = 0;
+    const resolveCallerMock = vi.fn(async () => {
+      fetchCount++;
+      if (fetchCount === 1) {
+        // Initial cached/stale caller has no friends
+        return {
+          publicId: "caller.pub",
+          username: "Caller",
+          friends: [],
+          clanTags: [],
+          fromCache: true,
+        };
+      }
+      // Fresh caller has added target as friend
+      return {
+        publicId: "caller.pub",
+        username: "Caller",
+        friends: ["new_friend.pub"],
+        clanTags: [],
+      };
+    });
+
+    vi.mocked(verifyClientToken).mockResolvedValue({
+      type: "success",
+      persistentId: "pid_caller",
+      claims: {} as any,
+    });
+
+    registerLobbyInviteRoutes(mockApp as any, {
+      isLobbyActive: () => true,
+      isPlayerInLobby: () => true,
+      getLobbyMeta: () => ({
+        gameMode: "Team",
+        map: "World",
+        isPublic: false,
+      }),
+      resolveCaller: resolveCallerMock,
+    });
+
+    const inviteHandler = postHandlers.get("/api/lobby/invite")!;
+    const res: any = {
+      statusCode: 200,
+      body: undefined,
+      status(c: number) {
+        this.statusCode = c;
+        return this;
+      },
+      json(d: unknown) {
+        this.body = d;
+        return this;
+      },
+    };
+
+    try {
+      await inviteHandler(
+        {
+          headers: { authorization: "Bearer token" },
+          body: { lobbyId: "lob_refetch", targetPublicId: "new_friend.pub" },
+        },
+        res,
+      );
+
+      // Initial check missed, caller refetched fresh, second check passed!
+      expect(resolveCallerMock).toHaveBeenCalledTimes(2);
+      expect(res.statusCode).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(res.body.invite.targetPublicId).toBe("new_friend.pub");
+    } finally {
+      LobbyInviteService.instance.reset();
+    }
+  });
 });

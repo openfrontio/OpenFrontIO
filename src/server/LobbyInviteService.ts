@@ -16,6 +16,7 @@ export type VerifiedCallerIdentity = {
   username: string | null;
   friends: string[];
   clanTags: string[];
+  fromCache?: boolean;
 };
 
 export type LobbyInviteRouteOptions = {
@@ -81,7 +82,7 @@ export async function defaultResolveCaller(
     if (cached.expiresAt > now) {
       callerCache.delete(token);
       callerCache.set(token, cached);
-      return cached.caller;
+      return { ...cached.caller, fromCache: true };
     }
     callerCache.delete(token);
   }
@@ -801,6 +802,11 @@ export class LobbyInviteService {
         this.logicalKeyByInviteId.delete(id);
       }
     }
+    for (const id of this.targetPublicIdByInviteId.keys()) {
+      if (!this.invites.has(id) && !this.dismissedAtByInviteId.has(id)) {
+        this.targetPublicIdByInviteId.delete(id);
+      }
+    }
   }
 
   /**
@@ -878,7 +884,7 @@ export function registerLobbyInviteRoutes(
       return res.status(400).json({ error: z.prettifyError(parsed.error) });
     }
 
-    const caller = await resolveCaller(token, auth.persistentId);
+    let caller = await resolveCaller(token, auth.persistentId);
     if (!caller) {
       return res.status(401).json({ error: "Unable to verify caller" });
     }
@@ -927,6 +933,24 @@ export function registerLobbyInviteRoutes(
       return res
         .status(502)
         .json({ error: "Failed to verify clan membership" });
+    }
+    if (!eligible && caller.fromCache) {
+      callerCache.delete(token);
+      const freshCaller = await resolveCaller(token, auth.persistentId);
+      if (freshCaller) {
+        caller = freshCaller;
+        try {
+          eligible = await isTargetEligible(
+            caller,
+            parsed.data.targetPublicId,
+            token,
+          );
+        } catch {
+          return res
+            .status(502)
+            .json({ error: "Failed to verify clan membership" });
+        }
+      }
     }
     if (!eligible) {
       return res

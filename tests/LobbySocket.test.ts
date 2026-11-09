@@ -672,6 +672,11 @@ describe("PublicLobbySocket.start with no server known", () => {
     mocks.showInGameAlert.mockClear();
     mocks.ensureServerList.mockReset();
     mocks.ensureServerList.mockResolvedValue("fallback");
+    vi.stubGlobal("location", {
+      hostname: "openfront.io",
+      protocol: "https:",
+      host: "openfront.io",
+    });
     ClientEnv.reset();
     (window as any).BOOTSTRAP_CONFIG = {
       gameEnv: "prod",
@@ -682,6 +687,7 @@ describe("PublicLobbySocket.start with no server known", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     vi.restoreAllMocks();
     ClientEnv.reset();
     delete (window as any).BOOTSTRAP_CONFIG;
@@ -1109,18 +1115,38 @@ describe("PublicLobbySocket token and stop handling", () => {
   const dialed: string[] = [];
   class RecordingWebSocket {
     static OPEN = 1;
-    readyState = 0;
+    static lastInstance: RecordingWebSocket | null = null;
+    readyState = 1;
     binaryType = "";
+    handlers = new Map<string, Array<(...args: any[]) => void>>();
+    sent: string[] = [];
     constructor(public url: string) {
       dialed.push(url);
+      RecordingWebSocket.lastInstance = this;
     }
-    addEventListener() {}
+    addEventListener(event: string, handler: (...args: any[]) => void) {
+      let list = this.handlers.get(event);
+      if (!list) {
+        list = [];
+        this.handlers.set(event, list);
+      }
+      list.push(handler);
+    }
+    send(data: string) {
+      this.sent.push(data);
+    }
+    simulateOpen() {
+      for (const h of this.handlers.get("open") ?? []) {
+        h();
+      }
+    }
     close() {}
   }
 
   beforeEach(() => {
     vi.useFakeTimers();
     dialed.length = 0;
+    RecordingWebSocket.lastInstance = null;
     mocks.ensureServerList.mockReset();
     mocks.ensureServerList.mockResolvedValue("api");
     vi.stubGlobal("WebSocket", RecordingWebSocket);
@@ -1149,24 +1175,31 @@ describe("PublicLobbySocket token and stop handling", () => {
     delete (window as any).BOOTSTRAP_CONFIG;
   });
 
-  it("appends encoded token when getToken returns a token", async () => {
+  it("sends auth text frame on open when getToken returns a token without putting token in upgrade url", async () => {
     const getToken = vi.fn(async () => "test_token_123");
     const socket = new PublicLobbySocket(vi.fn(), { getToken });
 
     await socket.start();
 
     expect(dialed).toHaveLength(1);
-    expect(dialed[0]).toContain("&token=test_token_123");
+    expect(dialed[0]).not.toContain("token=");
+    expect(RecordingWebSocket.lastInstance).not.toBeNull();
+    RecordingWebSocket.lastInstance!.simulateOpen();
+    expect(RecordingWebSocket.lastInstance!.sent).toEqual([
+      JSON.stringify({ type: "auth", token: "test_token_123" }),
+    ]);
     socket.stop();
   });
 
-  it("clears token when getToken returns null or throws", async () => {
+  it("does not send auth frame when getToken returns null or throws", async () => {
     // 1. Returns null
     const getTokenNull = vi.fn(async () => null);
     const socket1 = new PublicLobbySocket(vi.fn(), { getToken: getTokenNull });
     await socket1.start();
     expect(dialed).toHaveLength(1);
-    expect(dialed[0]).not.toContain("&token=");
+    expect(dialed[0]).not.toContain("token=");
+    RecordingWebSocket.lastInstance!.simulateOpen();
+    expect(RecordingWebSocket.lastInstance!.sent).toEqual([]);
     socket1.stop();
     dialed.length = 0;
 
@@ -1179,7 +1212,9 @@ describe("PublicLobbySocket token and stop handling", () => {
     });
     await expect(socket2.start()).resolves.toBeUndefined();
     expect(dialed).toHaveLength(1);
-    expect(dialed[0]).not.toContain("&token=");
+    expect(dialed[0]).not.toContain("token=");
+    RecordingWebSocket.lastInstance!.simulateOpen();
+    expect(RecordingWebSocket.lastInstance!.sent).toEqual([]);
     socket2.stop();
     dialed.length = 0;
 
@@ -1192,8 +1227,72 @@ describe("PublicLobbySocket token and stop handling", () => {
     });
     await socket3.start();
     expect(dialed).toHaveLength(1);
-    expect(dialed[0]).not.toContain("&token=");
+    expect(dialed[0]).not.toContain("token=");
+    RecordingWebSocket.lastInstance!.simulateOpen();
+    expect(RecordingWebSocket.lastInstance!.sent).toEqual([]);
     socket3.stop();
+  });
+
+  it("validates incoming lobby_invite frames with LobbyInviteSchema and drops invalid frames", () => {
+    const { socket } = makeSocket();
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent");
+
+    // 1. Valid lobby_invite
+    const validInvite = {
+      id: "inv_val_1",
+      lobbyId: "lob_val",
+      senderPublicId: "sender.pub",
+      senderUsername: "Sender",
+      targetPublicId: "target.pub",
+      gameMode: "Team",
+      map: "World",
+      createdAt: 1000,
+      expiresAt: 31000,
+    };
+    (socket as any).handleMessage({
+      data: JSON.stringify({
+        type: "lobby_invite",
+        invite: validInvite,
+      }),
+    });
+    expect(dispatchSpy).toHaveBeenCalledTimes(1);
+    expect((dispatchSpy.mock.calls[0][0] as CustomEvent).detail).toEqual({
+      type: "lobby_invite",
+      invite: validInvite,
+    });
+    dispatchSpy.mockClear();
+
+    // 2. Malformed lobby_invite (missing targetPublicId, etc.) is dropped
+    (socket as any).handleMessage({
+      data: JSON.stringify({
+        type: "lobby_invite",
+        invite: { id: "bad_inv" },
+      }),
+    });
+    expect(dispatchSpy).not.toHaveBeenCalled();
+
+    // 3. Valid lobby_invite_dismiss
+    (socket as any).handleMessage({
+      data: JSON.stringify({
+        type: "lobby_invite_dismiss",
+        inviteId: "inv_val_1",
+      }),
+    });
+    expect(dispatchSpy).toHaveBeenCalledTimes(1);
+    expect((dispatchSpy.mock.calls[0][0] as CustomEvent).detail).toEqual({
+      type: "lobby_invite_dismiss",
+      inviteId: "inv_val_1",
+    });
+    dispatchSpy.mockClear();
+
+    // 4. Malformed lobby_invite_dismiss (non-string inviteId) is dropped
+    (socket as any).handleMessage({
+      data: JSON.stringify({
+        type: "lobby_invite_dismiss",
+        inviteId: 12345,
+      }),
+    });
+    expect(dispatchSpy).not.toHaveBeenCalled();
   });
 
   it("aborts connection and does not dial when stop() is called while getToken is resolving", async () => {
