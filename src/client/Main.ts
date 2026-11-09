@@ -151,6 +151,7 @@ import {
   showSteamSkinDrop,
   steamSkinDropWhenClean,
   steamSkinDropStringsReady,
+  unseenSteamSkinDrop,
 } from "./SteamSkinDrop";
 import type { SteamSkinDropModal } from "./SteamSkinDropModal";
 import type { StoreModal } from "./Store";
@@ -165,9 +166,9 @@ import {
   type TurnstileToken,
 } from "./TurnstileToken";
 // Before the first userMeResponse, for the modals that load after it.
-import "./UserMeBroadcast";
 import { classicReplayHref } from "./replay/ReplayEntry";
 import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
+import { userMeGeneration } from "./UserMeBroadcast";
 // The UsernameInput class is used as a type; retain this for registration.
 // oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./UsernameInput";
@@ -956,10 +957,18 @@ class Client {
         );
         // The catalog is read only for a drop that could actually show, so
         // every other player skips the request. The page is checked again once
-        // it lands: a join can start during the fetch.
+        // it lands: a join can start during the fetch, and a newer profile
+        // (a lost session, another account) makes this one stale.
+        const dropGeneration = userMeGeneration();
+        const homepageStillThisProfile = () =>
+          homepageIsClean() && userMeGeneration() === dropGeneration;
         const { steamSkinDrop, cleanHomepage } = await steamSkinDropWhenClean(
-          userMeResponse.steamSkinDrop,
-          homepageIsClean,
+          publicId,
+          unseenSteamSkinDrop(
+            userMeResponse.steamSkinDrop,
+            userMeResponse.noticesSeen ?? [],
+          ),
+          homepageStillThisProfile,
           fetchCosmetics,
           (cosmetics) => resolveCosmetics(cosmetics, userMeResponse, null),
         );
@@ -1057,7 +1066,7 @@ class Client {
                   document.querySelector<SteamSkinDropModal>(
                     "steam-skin-drop-modal",
                   ),
-                homepageIsClean,
+                homepageStillThisProfile,
               ),
             equipCosmetic: (resolved) =>
               this.userSettings.setSelectedPatternName(

@@ -13,15 +13,20 @@ import {
   steamSkinDropShown,
   steamSkinDropStringsReady,
   STEAM_SKIN_DROP_KEYS,
+  unseenSteamSkinDrop,
 } from "../../src/client/SteamSkinDrop";
 
-function resolved(key: string): ResolvedCosmetic {
+function resolved(
+  key: string,
+  overrides: Partial<ResolvedCosmetic> = {},
+): ResolvedCosmetic {
   return {
     type: key.startsWith("skin:") ? "skin" : "pattern",
     cosmetic: null,
     colorPalette: null,
-    relationship: "blocked",
+    relationship: "owned",
     key,
+    ...overrides,
   };
 }
 
@@ -29,7 +34,9 @@ const catalog = [
   resolved("pattern:default"),
   resolved("skin:mountain"),
   resolved("pattern:camo"),
-  resolved("pattern:camo:crimson"),
+  resolved("pattern:camo:crimson", {
+    colorPalette: { name: "crimson" } as ResolvedCosmetic["colorPalette"],
+  }),
 ];
 
 describe("findSteamSkinDrop", () => {
@@ -71,6 +78,29 @@ describe("findSteamSkinDrop", () => {
     ).toBeNull();
   });
 
+  it("returns null until the player owns the item", () => {
+    expect(
+      findSteamSkinDrop(
+        { type: "skin", name: "mountain", colorPalette: null, notice: "n" },
+        [resolved("skin:mountain", { relationship: "purchasable" })],
+      ),
+    ).toBeNull();
+  });
+
+  it("returns null for a palette with no definition", () => {
+    expect(
+      findSteamSkinDrop(
+        {
+          type: "pattern",
+          name: "camo",
+          colorPalette: "crimson",
+          notice: "n",
+        },
+        [resolved("pattern:camo:crimson")],
+      ),
+    ).toBeNull();
+  });
+
   it("returns null for no drop", () => {
     expect(findSteamSkinDrop(null, catalog)).toBeNull();
     expect(findSteamSkinDrop(undefined, catalog)).toBeNull();
@@ -105,14 +135,34 @@ describe("steamSkinDropDueThisLaunch", () => {
   beforeEach(resetSteamSkinDropForTest);
 
   it("due until shown, then not due for that notice", () => {
-    expect(steamSkinDropDueThisLaunch("steam_skin:a")).toBe(true);
-    steamSkinDropShown("steam_skin:a");
-    expect(steamSkinDropDueThisLaunch("steam_skin:a")).toBe(false);
+    expect(steamSkinDropDueThisLaunch("me", "steam_skin:a")).toBe(true);
+    steamSkinDropShown("me", "steam_skin:a");
+    expect(steamSkinDropDueThisLaunch("me", "steam_skin:a")).toBe(false);
   });
 
   it("a different notice is still due", () => {
-    steamSkinDropShown("steam_skin:a");
-    expect(steamSkinDropDueThisLaunch("steam_skin:b")).toBe(true);
+    steamSkinDropShown("me", "steam_skin:a");
+    expect(steamSkinDropDueThisLaunch("me", "steam_skin:b")).toBe(true);
+  });
+
+  it("another account is still due the same notice", () => {
+    steamSkinDropShown("me", "steam_skin:a");
+    expect(steamSkinDropDueThisLaunch("other", "steam_skin:a")).toBe(true);
+  });
+});
+
+describe("unseenSteamSkinDrop", () => {
+  const drop = {
+    type: "skin" as const,
+    name: "mountain",
+    colorPalette: null,
+    notice: "steam_skin:a",
+  };
+
+  it("keeps an unseen drop and drops a seen one", () => {
+    expect(unseenSteamSkinDrop(drop, ["other"])).toBe(drop);
+    expect(unseenSteamSkinDrop(drop, ["steam_skin:a"])).toBeNull();
+    expect(unseenSteamSkinDrop(null, [])).toBeNull();
   });
 });
 

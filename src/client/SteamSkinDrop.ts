@@ -22,7 +22,9 @@ export const STEAM_SKIN_DROP_KEYS = {
 
 /**
  * The catalog entry for this month's drop, or null when the API names nothing
- * or the catalog (loaded separately) does not carry it.
+ * or the catalog (loaded separately) cannot back it up: the item is missing,
+ * the player does not own it yet, or its palette has no definition (equipping
+ * that would save the base pattern). Null marks nothing seen, so it is owed.
  */
 export function findSteamSkinDrop(
   drop: SteamSkinDrop | null | undefined,
@@ -35,21 +37,36 @@ export function findSteamSkinDrop(
       : drop.colorPalette === null
         ? `pattern:${drop.name}`
         : `pattern:${drop.name}:${drop.colorPalette}`;
-  return cosmetics.find((c) => c.key === key) ?? null;
+  const found = cosmetics.find((c) => c.key === key);
+  if (found?.relationship !== "owned") return null;
+  if (drop.colorPalette !== null && found.colorPalette === null) return null;
+  return found;
+}
+
+/** The drop, unless the response already lists its notice as seen. */
+export function unseenSteamSkinDrop(
+  drop: SteamSkinDrop | null | undefined,
+  noticesSeen: string[],
+): SteamSkinDrop | null {
+  return drop && !noticesSeen.includes(drop.notice) ? drop : null;
 }
 
 // /users/@me is re-read several times per launch and the seen POST is fire
 // and forget, so a re-read can still carry a notice the player just closed.
-// One showing per notice per launch; a launch that never showed it still owes
-// it, because nothing was marked seen.
+// One showing per account per notice per launch (a portal sign-in can switch
+// account mid-launch); a launch that never showed it still owes it, because
+// nothing was marked seen.
 const shownThisLaunch = new Set<string>();
 
-export function steamSkinDropDueThisLaunch(notice: string): boolean {
-  return !shownThisLaunch.has(notice);
+export function steamSkinDropDueThisLaunch(
+  publicId: string,
+  notice: string,
+): boolean {
+  return !shownThisLaunch.has(`${publicId}:${notice}`);
 }
 
-export function steamSkinDropShown(notice: string): void {
-  shownThisLaunch.add(notice);
+export function steamSkinDropShown(publicId: string, notice: string): void {
+  shownThisLaunch.add(`${publicId}:${notice}`);
 }
 
 export function resetSteamSkinDropForTest(): void {
@@ -120,6 +137,7 @@ export async function showSteamSkinDrop(
  * popup's own chunk loads after this, so `showSteamSkinDrop` checks again.
  */
 export async function steamSkinDropWhenClean(
+  publicId: string,
   drop: SteamSkinDrop | null | undefined,
   homepageIsClean: () => boolean,
   fetchCatalog: () => Promise<Cosmetics | null>,
@@ -129,7 +147,9 @@ export async function steamSkinDropWhenClean(
   cleanHomepage: boolean;
 }> {
   const due =
-    drop && homepageIsClean() && steamSkinDropDueThisLaunch(drop.notice);
+    drop &&
+    homepageIsClean() &&
+    steamSkinDropDueThisLaunch(publicId, drop.notice);
   const steamSkinDrop = due
     ? await steamSkinDropFor(drop, fetchCatalog, resolve)
     : null;

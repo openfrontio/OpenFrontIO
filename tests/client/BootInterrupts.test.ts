@@ -1489,7 +1489,7 @@ describe("steam-skin-drop", () => {
     const running = runBootInterrupt("steam-skin-drop", dropContext, base);
     await Promise.resolve();
     expect(events).toEqual(["open skin:mountain"]);
-    expect(steamSkinDropDueThisLaunch(NOTICE)).toBe(false);
+    expect(steamSkinDropDueThisLaunch(ME, NOTICE)).toBe(false);
     answer("dismiss");
     await running;
     expect(events).toEqual(["open skin:mountain", `seen ${NOTICE}`]);

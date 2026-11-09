@@ -56,6 +56,16 @@ describe("SteamSkinDropModal", () => {
     await Promise.resolve();
     await Promise.resolve();
   };
+  it.each(["join-lobby", "session-cleared"])(
+    "%s abandons the open popup",
+    async (event) => {
+      document.dispatchEvent(new CustomEvent(event));
+      await flush();
+      expect(settled).toEqual(["abandoned"]);
+      expect(modal.querySelector("[data-steam-skin-drop]")).toBeNull();
+    },
+  );
+
   const buttonWithText = (text: string) =>
     [...document.body.querySelectorAll("button")].find(
       (b) => b.textContent?.trim() === text,

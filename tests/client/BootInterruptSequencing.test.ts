@@ -233,6 +233,7 @@ describe("the Steam skin drop in the boot sequence", () => {
       rewardsOpened: 0,
     };
     const { steamSkinDrop, cleanHomepage } = await steamSkinDropWhenClean(
+      "me",
       drop,
       homepageIsClean,
       fetchCatalog,

@@ -768,7 +768,7 @@ async function runInterrupt(
     case "steam-skin-drop": {
       const drop = context.steamSkinDrop;
       if (drop === null) return;
-      steamSkinDropShown(drop.notice);
+      steamSkinDropShown(context.publicId, drop.notice);
       const answer = await ports.openSteamSkinDrop(drop.resolved);
       if (answer === "abandoned") return;
       ports.markNoticeSeen(drop.notice);
