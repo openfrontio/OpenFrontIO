@@ -343,12 +343,55 @@ describe("FFA rank tabs", () => {
       expect(fetchFfaRankPosition).not.toHaveBeenCalled();
     });
 
-    it("only asks once", async () => {
+    it("asks once per load, not per page", async () => {
       signedIn(rated);
+      vi.mocked(fetchFfaRankLeaderboard).mockResolvedValue(
+        fullPage("p1") as never,
+      );
       await open();
-      await list.loadPlayerLeaderboard(true);
+      await list.loadPlayerLeaderboard();
       await settle();
       expect(fetchFfaRankPosition).toHaveBeenCalledTimes(1);
+    });
+
+    it("fetches a fresh position after a full reload", async () => {
+      signedIn(rated);
+      vi.mocked(fetchFfaRankPosition).mockResolvedValue(4812);
+      await open();
+      vi.mocked(fetchFfaRankPosition).mockResolvedValue(3100);
+      await list.loadPlayerLeaderboard(true);
+      await settle();
+      expect(fetchFfaRankPosition).toHaveBeenCalledTimes(2);
+      const text = (await pinned())?.textContent;
+      expect(text).toContain("3100");
+      expect(text).not.toContain("4812");
+    });
+
+    it("drops the old position when a reload finds none", async () => {
+      signedIn(rated);
+      vi.mocked(fetchFfaRankPosition).mockResolvedValue(4812);
+      await open();
+      vi.mocked(fetchFfaRankPosition).mockResolvedValue(null);
+      await list.loadPlayerLeaderboard(true);
+      await settle();
+      expect(await pinned()).toBeNull();
+    });
+
+    it("ignores a position that arrives after a reload", async () => {
+      signedIn(rated);
+      let finish: (value: number) => void = () => {};
+      vi.mocked(fetchFfaRankPosition).mockReturnValueOnce(
+        new Promise<number>((resolve) => (finish = resolve)) as never,
+      );
+      await open();
+      vi.mocked(fetchFfaRankPosition).mockResolvedValue(3100);
+      await list.loadPlayerLeaderboard(true);
+      await settle();
+      finish(9999);
+      await settle();
+      const text = (await pinned())?.textContent;
+      expect(text).toContain("3100");
+      expect(text).not.toContain("9999");
     });
   });
 

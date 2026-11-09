@@ -142,6 +142,8 @@ export class LeaderboardPlayerList extends LitElement {
   // The signed-in player's row with their exact position, for when they aren't
   // in the loaded rows of their own rank.
   @state() private ffaPositionRow: LadderRow | null = null;
+  // The signed-in player's rated row, the base for ffaPositionRow.
+  private ffaOwnRow: LadderRow | null = null;
   // Bumped by a full reload, so an answer from before it is dropped.
   private ffaRankGeneration = 0;
 
@@ -259,6 +261,7 @@ export class LeaderboardPlayerList extends LitElement {
       this.ffaRankLadders = {};
       this.ffaRanksLoading = new Set();
       this.ffaRanksFailed = new Set();
+      this.ffaPositionRow = null;
       this.ffaRankGeneration++;
       if (this.ffaRankPagePending) {
         this.ffaRankPagePending = false;
@@ -298,6 +301,7 @@ export class LeaderboardPlayerList extends LitElement {
       // A fresh load replaces it: between seasons the API sends none.
       this.ffaSeason = result.ffaSeason ?? (reset ? null : this.ffaSeason);
 
+      const userJustLoaded = !this.currentUserIdLoaded;
       if (!this.currentUserIdLoaded) {
         this.currentUserIdLoaded = true;
         const userMe = await getUserMe();
@@ -322,6 +326,7 @@ export class LeaderboardPlayerList extends LitElement {
                 wins: ffa.wins ?? 0,
               }
             : null;
+        this.ffaOwnRow = null;
         if (
           userMe &&
           ffa?.tier !== undefined &&
@@ -330,7 +335,7 @@ export class LeaderboardPlayerList extends LitElement {
         ) {
           const games = ffa.games ?? 0;
           const wins = ffa.wins ?? 0;
-          void this.loadFfaPosition({
+          this.ffaOwnRow = {
             rank: 0,
             playerId: userMe.player.publicId,
             accountUsername: userMe.player.username ?? null,
@@ -341,7 +346,7 @@ export class LeaderboardPlayerList extends LitElement {
             winRate: games ? wins / games : 0,
             uncertainty: ffa.uncertainty,
             tier: ffa.tier,
-          });
+          };
         }
         this.ffaHidden =
           userMe &&
@@ -362,6 +367,10 @@ export class LeaderboardPlayerList extends LitElement {
                 tier: ffa.tier,
               }
             : null;
+      }
+
+      if ((reset || userJustLoaded) && this.ffaOwnRow !== null) {
+        void this.loadFfaPosition(this.ffaOwnRow);
       }
 
       // One page carries a slice of every ladder, so fold them all in — even
@@ -430,8 +439,9 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   private async loadFfaPosition(row: LadderRow) {
+    const generation = this.ffaRankGeneration;
     const position = await fetchFfaRankPosition();
-    if (position === null) return;
+    if (position === null || generation !== this.ffaRankGeneration) return;
     this.ffaPositionRow = { ...row, rank: position };
     this.scheduleStickyVisibilityCheck();
   }
