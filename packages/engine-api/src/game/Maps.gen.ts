@@ -26,6 +26,7 @@ export enum GameMapType {
   BetweenTwoSeas = "Between Two Seas", // map-generator/assets/maps/betweentwoseas/info.json
   BlackSea = "Black Sea", // map-generator/assets/maps/blacksea/info.json
   BosphorusStraits = "Bosphorus Straits", // map-generator/assets/maps/bosphorusstraits/info.json
+  Brahmaputra = "Brahmaputra", // map-generator/assets/maps/brahmaputra/info.json
   BrainRot = "Brain Rot", // map-generator/assets/maps/brainrot/info.json
   BranchingPaths = "Branching Paths", // map-generator/assets/maps/branchingpaths/info.json
   Britannia = "Britannia", // map-generator/assets/maps/britannia/info.json
@@ -80,6 +81,7 @@ export enum GameMapType {
   Lemnos = "Lemnos", // map-generator/assets/maps/lemnos/info.json
   Levant = "Levant", // map-generator/assets/maps/levant/info.json
   Lisbon = "Lisbon", // map-generator/assets/maps/lisbon/info.json
+  London = "London", // map-generator/assets/maps/london/info.json
   LosAngeles = "Los Angeles", // map-generator/assets/maps/losangeles/info.json
   Luna = "Luna", // map-generator/assets/maps/luna/info.json
   Madagascar = "Madagascar", // map-generator/assets/maps/madagascar/info.json
@@ -102,6 +104,7 @@ export enum GameMapType {
   Ommatrypta = "Ommatrypta", // map-generator/assets/maps/ommatrypta/info.json
   Onion = "Onion", // map-generator/assets/maps/onion/info.json
   Pangaea = "Pangaea", // map-generator/assets/maps/pangaea/info.json
+  Paris = "Paris", // map-generator/assets/maps/paris/info.json
   Passage = "Passage", // map-generator/assets/maps/passage/info.json
   Pluto = "Pluto", // map-generator/assets/maps/pluto/info.json
   PulicatLake = "Pulicat Lake", // map-generator/assets/maps/pulicatlake/info.json
@@ -141,6 +144,7 @@ export enum GameMapType {
   YangtzeRiver = "Yangtze River", // map-generator/assets/maps/yangtzeriver/info.json
   YellowSea = "Yellow Sea", // map-generator/assets/maps/yellowsea/info.json
   Yenisei = "Yenisei", // map-generator/assets/maps/yenisei/info.json
+  Zealandia = "Zealandia", // map-generator/assets/maps/zealandia/info.json
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -502,6 +506,18 @@ export const maps: readonly MapInfo[] = [
     themes: ["europe", "asia"],
     author: "TsProphet94",
     location: { lat: 41.1, lon: 29 },
+  },
+  {
+    id: "Brahmaputra",
+    type: GameMapType.Brahmaputra,
+    translationKey: "map.brahmaputra",
+    categories: ["asia", "new"],
+    defaultNationCount: 37,
+    specialTeamCount: 2,
+    themes: ["asia"],
+    author: "novc",
+    descriptionKey: "map_description.brahmaputra",
+    location: { lat: 26.5, lon: 92.5 },
   },
   {
     id: "BrainRot",
@@ -1582,6 +1598,17 @@ export const maps: readonly MapInfo[] = [
     location: { lat: 38.7, lon: -9.1 },
   },
   {
+    id: "London",
+    type: GameMapType.London,
+    translationKey: "map.london",
+    categories: ["new", "europe"],
+    defaultNationCount: 32,
+    themes: ["europe"],
+    author: "Tristar",
+    descriptionKey: "map_description.london",
+    location: { lat: 51.3, lon: 0 },
+  },
+  {
     id: "LosAngeles",
     type: GameMapType.LosAngeles,
     translationKey: "map.losangeles",
@@ -1956,6 +1983,66 @@ export const maps: readonly MapInfo[] = [
     categories: ["fictional"],
     defaultNationCount: 29,
     author: "MRH",
+  },
+  {
+    id: "Paris",
+    type: GameMapType.Paris,
+    translationKey: "map.paris",
+    categories: ["europe", "new"],
+    defaultNationCount: 60,
+    themes: ["europe"],
+    customTribes: [
+      { name: "Bonne-Nouvelle" },
+      { name: "Croulebarbe" },
+      { name: "Enfants-Rouges" },
+      { name: "Europe" },
+      { name: "Folie-Méricourt" },
+      { name: "Gaillon" },
+      { name: "Gare d'Austerlitz" },
+      { name: "Mail" },
+      { name: "Monnaie" },
+      { name: "Necker" },
+      { name: "Porte-Saint-Martin" },
+      { name: "Quinze-Vingts" },
+      { name: "Saint-Georges" },
+      { name: "Saint-Merri" },
+      { name: "Saint-Thomas-d'Aquin" },
+      { name: "Saint-Victor" },
+      { name: "Saint-Vincent-de-Paul" },
+      { name: "Sainte-Avoye" },
+      { name: "Sainte-Marguerite" },
+      { name: "Vivienne" },
+      { name: "Tour Eiffel" },
+      { name: "Louvre" },
+      { name: "Notre-Dame" },
+      { name: "Sacré-Cœur" },
+      { name: "Bastille" },
+      { name: "Pigalle" },
+      { name: "Châtelet" },
+      { name: "République" },
+      { name: "Nation" },
+      { name: "Trocadéro" },
+      { name: "Arc de Triomphe" },
+      { name: "Panthéon" },
+      { name: "Gare du Nord" },
+      { name: "Gare de Lyon" },
+      { name: "Oberkampf" },
+      { name: "Canal Saint-Martin" },
+      { name: "Butte-aux-Cailles" },
+      { name: "Le Marais" },
+      { name: "Buttes-Chaumont" },
+      { name: "Bercy Village" },
+      { name: "Place d'Italie" },
+      { name: "Denfert-Rochereau" },
+      { name: "Porte Maillot" },
+      { name: "Stalingrad" },
+      { name: "Ménilmontant" },
+      { name: "Barbès" },
+      { name: "Alésia" },
+      { name: "Beaugrenelle" },
+      { name: "Porte de Versailles" },
+      { name: "Parc Monceau" },
+    ],
   },
   {
     id: "Passage",
@@ -2397,5 +2484,12 @@ export const maps: readonly MapInfo[] = [
     themes: ["asia"],
     author: "Duwibi",
     location: { lat: 68.5, lon: 86.5 },
+  },
+  {
+    id: "Zealandia",
+    type: GameMapType.Zealandia,
+    translationKey: "map.zealandia",
+    categories: ["oceania"],
+    defaultNationCount: 27,
   },
 ];
