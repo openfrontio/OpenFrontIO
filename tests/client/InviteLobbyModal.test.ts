@@ -429,4 +429,58 @@ describe("InviteLobbyModal", () => {
       vi.useRealTimers();
     }
   });
+
+  it("filters friends strictly by username/publicId and clan groups by substring match", async () => {
+    apiMocks.fetchFriends.mockResolvedValueOnce({
+      results: [
+        { publicId: "p_alice", username: "Alice", createdAt: "2026-01-01" },
+        { publicId: "p_zack", username: "Zack", createdAt: "2026-01-01" },
+      ],
+      total: 2,
+      page: 1,
+    });
+    apiMocks.fetchClanMembers.mockResolvedValueOnce({
+      results: [{ publicId: "p_gus", username: "Gus", role: "member" }],
+      total: 1,
+      page: 1,
+    });
+
+    modal.open({
+      lobbyId: "lobby_search",
+      clients: [],
+    });
+    await modal.updateComplete;
+    await new Promise((r) => setTimeout(r, 0));
+    await modal.updateComplete;
+
+    expect(modal.textContent).toContain("Alice");
+    expect(modal.textContent).toContain("Zack");
+    expect(modal.textContent).toContain("Gus");
+
+    // "friends" does not match Zack or Gus (no hardcoded "friends" fallback)
+    (modal as any).searchQuery = "friends";
+    await modal.updateComplete;
+    expect(modal.textContent).not.toContain("Zack");
+    expect(modal.textContent).not.toContain("Gus");
+
+    // Case-insensitive substring match on clan tag/name ("war" matches [DEV] is false, but if clan tag is DEV, let's test DEV vs DV)
+    // The default clan in beforeEach is DEV / Developers
+    // "dev" is a substring of tag DEV and name Developers
+    (modal as any).searchQuery = "dev";
+    await modal.updateComplete;
+    expect(modal.textContent).toContain("Gus");
+
+    // "dv" is a fuzzy subsequence of DEV/Developers, but NOT a substring
+    // Gus's username ("Gus") and publicId ("p_gus") also do not contain "dv"
+    (modal as any).searchQuery = "dv";
+    await modal.updateComplete;
+    expect(modal.textContent).not.toContain("Gus");
+
+    // Zack matches by username
+    (modal as any).searchQuery = "zack";
+    await modal.updateComplete;
+    expect(modal.textContent).toContain("Zack");
+    expect(modal.textContent).not.toContain("Alice");
+    expect(modal.textContent).not.toContain("Gus");
+  });
 });

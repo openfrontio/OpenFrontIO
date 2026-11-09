@@ -484,18 +484,19 @@ export class InviteLobbyModal extends BaseModal {
    */
   protected renderBody(): TemplateResult {
     const query = this.searchQuery.trim();
+    const lowerQuery = query.toLowerCase();
+    const matchesGroup = (value: string) =>
+      lowerQuery.length > 0 && value.toLowerCase().includes(lowerQuery);
 
     const filteredFriends = this.friends.filter(
       (f) =>
-        fuzzyMatch(query, f.username ?? "") ||
-        fuzzyMatch(query, f.publicId) ||
-        fuzzyMatch(query, "friends"),
+        fuzzyMatch(query, f.username ?? "") || fuzzyMatch(query, f.publicId),
     );
 
     const filteredClans = this.clanGroups
       .map((group) => {
-        const matchesTag = fuzzyMatch(query, group.tag);
-        const matchesName = fuzzyMatch(query, group.name);
+        const matchesTag = matchesGroup(group.tag);
+        const matchesName = matchesGroup(group.name);
         const members = group.members.filter(
           (m) =>
             matchesTag ||
