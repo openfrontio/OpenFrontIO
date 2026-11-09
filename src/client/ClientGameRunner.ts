@@ -882,6 +882,7 @@ async function createClientGame(
       lobbyConfig.playerRole,
       view,
       mapLayerController,
+      lobbyConfig.gameStartInfo.visibleAt,
     );
 
     const metrics = new GameMetrics(lobbyConfig.gameID, clientID);

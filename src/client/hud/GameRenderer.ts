@@ -58,6 +58,7 @@ export function createRenderer(
   playerRole: string | null,
   view: MapRenderer,
   mapLayerController?: MapLayerController,
+  visibleAt?: number,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, inputEl);
   const userSettings = new UserSettings();
@@ -199,6 +200,7 @@ export function createRenderer(
   settingsModal.gameConfig = game.config().gameConfig();
   settingsModal.mapNationCount = game.mapNationCount();
   settingsModal.game = game;
+  settingsModal.visibleAt = visibleAt;
 
   // The in-game settings instance needs the bus so the Audio sliders reach
   // SoundManager, which caches its volumes at construction, and UIState so the
