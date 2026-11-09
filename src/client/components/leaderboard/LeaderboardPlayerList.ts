@@ -133,6 +133,11 @@ export class LeaderboardPlayerList extends LitElement {
     Record<FfaTierBase, RankLadderState>
   > = {};
   @state() private ffaRanksLoading: ReadonlySet<FfaTierBase> = new Set();
+  // Kept per rank: a rank can fail in the background while another ladder is
+  // open, and that ladder must not show its retry.
+  @state() private ffaRanksFailed: ReadonlySet<FfaTierBase> = new Set();
+  // A rank's next page owns isLoadingMore, so a reload can release it.
+  private ffaRankPagePending = false;
   private ffaOwnRank: FfaTierBase | null = null;
   // The signed-in player's row with their exact position, for when they aren't
   // in the loaded rows of their own rank.
@@ -187,6 +192,12 @@ export class LeaderboardPlayerList extends LitElement {
         (row) => row.tier !== undefined,
       )
     );
+  }
+
+  private get hasLoadMoreError(): boolean {
+    return this.ffaRankActive
+      ? this.ffaRanksFailed.has(this.ffaRank!)
+      : this.loadMoreError !== null;
   }
 
   private get playerHasMore(): boolean {
@@ -247,7 +258,12 @@ export class LeaderboardPlayerList extends LitElement {
       this.ffaRank = null;
       this.ffaRankLadders = {};
       this.ffaRanksLoading = new Set();
+      this.ffaRanksFailed = new Set();
       this.ffaRankGeneration++;
+      if (this.ffaRankPagePending) {
+        this.ffaRankPagePending = false;
+        this.isLoadingMore = false;
+      }
     } else if (!this.playerHasMore) {
       return;
     }
@@ -423,7 +439,6 @@ export class LeaderboardPlayerList extends LitElement {
   private selectFfaRank(rank: FfaTierBase) {
     if (rank === this.ffaRank) return;
     this.ffaRank = rank;
-    this.loadMoreError = null;
     this.showStickyUser = false;
     if (this.scrollContainer) this.scrollContainer.scrollTop = 0;
     if (this.ffaRankLadders[rank] === undefined) {
@@ -433,6 +448,33 @@ export class LeaderboardPlayerList extends LitElement {
     this.schedulePlayerFillCheck();
   }
 
+  private setFfaRankFailed(rank: FfaTierBase, failed: boolean) {
+    const next = new Set(this.ffaRanksFailed);
+    if (failed) next.add(rank);
+    else next.delete(rank);
+    this.ffaRanksFailed = next;
+  }
+
+  private handleRankTabKey(event: KeyboardEvent, rank: FfaTierBase) {
+    const count = FFA_TIER_BASES.length;
+    const index = FFA_TIER_BASES.indexOf(rank);
+    const nextIndex = {
+      ArrowRight: (index + 1) % count,
+      ArrowLeft: (index - 1 + count) % count,
+      Home: 0,
+      End: count - 1,
+    }[event.key];
+    if (nextIndex === undefined) return;
+    event.preventDefault();
+    const next = FFA_TIER_BASES[nextIndex];
+    this.selectFfaRank(next);
+    void this.updateComplete.then(() =>
+      this.querySelector<HTMLElement>(
+        `[role="tab"][data-rank="${next}"]`,
+      )?.focus(),
+    );
+  }
+
   private async loadFfaRankPage(rank: FfaTierBase) {
     const ladder = this.ffaRankLadders[rank] ?? emptyRankLadder();
     if (!ladder.hasMore || this.ffaRanksLoading.has(rank)) return;
@@ -440,8 +482,11 @@ export class LeaderboardPlayerList extends LitElement {
     const generation = this.ffaRankGeneration;
     const isNextPage = ladder.nextPage > 1;
     this.ffaRanksLoading = new Set([...this.ffaRanksLoading, rank]);
-    this.loadMoreError = null;
-    if (isNextPage) this.isLoadingMore = true;
+    this.setFfaRankFailed(rank, false);
+    if (isNextPage) {
+      this.isLoadingMore = true;
+      this.ffaRankPagePending = true;
+    }
 
     const result = await fetchFfaRankLeaderboard(rank, ladder.nextPage);
 
@@ -449,12 +494,13 @@ export class LeaderboardPlayerList extends LitElement {
     const loading = new Set(this.ffaRanksLoading);
     loading.delete(rank);
     this.ffaRanksLoading = loading;
-    if (isNextPage) this.isLoadingMore = false;
+    if (isNextPage) {
+      this.isLoadingMore = false;
+      this.ffaRankPagePending = false;
+    }
 
     if (result === false) {
-      if (rank === this.ffaRank) {
-        this.loadMoreError = translateText("leaderboard_modal.error");
-      }
+      this.setFfaRankFailed(rank, true);
       return;
     }
 
@@ -552,7 +598,7 @@ export class LeaderboardPlayerList extends LitElement {
 
   private maybeLoadMorePlayers() {
     if (this.isLoading || this.isLoadingMore) return;
-    if (!this.playerHasMore || this.error || this.loadMoreError) return;
+    if (!this.playerHasMore || this.error || this.hasLoadMoreError) return;
     if (!this.scrollContainer || !this.isVisible()) return;
 
     const threshold = 64 * 3;
@@ -569,7 +615,7 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   private schedulePlayerFillCheck() {
-    if (!this.playerHasMore || this.error || this.loadMoreError) return;
+    if (!this.playerHasMore || this.error || this.hasLoadMoreError) return;
     void this.updateComplete.then(() => this.maybeLoadMorePlayers());
   }
 
@@ -883,11 +929,6 @@ export class LeaderboardPlayerList extends LitElement {
     `;
   }
 
-  // The rating column. On a live FFA board a rated row shows its tier badge
-  // and "rating ± uncertainty"; every other ladder (and an FFA board whose
-  // rows carry no tier) shows the plain Elo number, exactly as before. On a
-  // phone the badge sits above the number, so the column stays narrow enough
-  // to show without scrolling sideways.
   // One emblem per rank, lowest on the left. Names don't fit on a phone, so
   // there the selected rank is named on its own line underneath.
   private renderRankTabs() {
@@ -915,6 +956,7 @@ export class LeaderboardPlayerList extends LitElement {
                 role="tab"
                 data-rank=${rank}
                 aria-selected=${active ? "true" : "false"}
+                tabindex=${active ? 0 : -1}
                 aria-label=${name}
                 title=${name}
                 class="flex flex-col items-center justify-center gap-1 min-w-0 py-1.5 sm:py-2 rounded-lg border transition-colors ${
@@ -923,6 +965,8 @@ export class LeaderboardPlayerList extends LitElement {
                     : "border-white/10 bg-white/5 text-white/50 opacity-70 hover:opacity-100 hover:bg-white/10"
                 }"
                 @click=${() => this.selectFfaRank(rank)}
+                @keydown=${(event: KeyboardEvent) =>
+                  this.handleRankTabKey(event, rank)}
               >
                 ${emblem(rank, "w-5 h-5 sm:w-7 sm:h-7")}
                 <span
@@ -946,6 +990,11 @@ export class LeaderboardPlayerList extends LitElement {
     `;
   }
 
+  // The rating column. On a live FFA board a rated row shows its tier badge
+  // and "rating ± uncertainty"; every other ladder (and an FFA board whose
+  // rows carry no tier) shows the plain Elo number, exactly as before. On a
+  // phone the badge sits above the number, so the column stays narrow enough
+  // to show without scrolling sideways.
   private renderRatingCell(row: LadderRow, strong: boolean): TemplateResult {
     const weight = strong ? "font-bold" : "font-medium";
     if (!this.ffaRatingLive || row.tier === undefined) {
@@ -1060,7 +1109,7 @@ export class LeaderboardPlayerList extends LitElement {
       `;
     }
 
-    if (this.loadMoreError) {
+    if (this.hasLoadMoreError) {
       return html`
         <div class="flex items-center justify-center py-4">
           <button

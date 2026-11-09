@@ -352,6 +352,102 @@ describe("FFA rank tabs", () => {
     });
   });
 
+  it("still reloads when a rank's next page is in flight", async () => {
+    vi.mocked(fetchFfaRankLeaderboard).mockResolvedValue(
+      fullPage("p1") as never,
+    );
+    await open();
+    let finish: (value: unknown) => void = () => {};
+    vi.mocked(fetchFfaRankLeaderboard).mockReturnValueOnce(
+      new Promise((resolve) => (finish = resolve)) as never,
+    );
+    void list.loadPlayerLeaderboard();
+    await settle();
+
+    vi.mocked(fetchFfaRankLeaderboard).mockResolvedValue(
+      fullPage("fresh") as never,
+    );
+    await list.loadPlayerLeaderboard(true);
+    await settle();
+    expect(fetchPlayerLeaderboard).toHaveBeenCalledTimes(2);
+    expect(shownIds()).toContain("fresh-0");
+
+    finish(players("stale"));
+    await settle();
+    expect(shownIds()).not.toContain("stale");
+
+    vi.mocked(fetchFfaRankLeaderboard).mockClear();
+    await list.loadPlayerLeaderboard();
+    await settle();
+    expect(fetchFfaRankLeaderboard).toHaveBeenCalledWith("diamond", 2);
+  });
+
+  describe("a rank that fails while another ladder is open", () => {
+    beforeEach(() => {
+      vi.mocked(fetchFfaRankLeaderboard).mockResolvedValue(false as never);
+    });
+
+    it("shows no retry on that other ladder", async () => {
+      await open(RankedType.OneVOne);
+      expect(list.textContent).not.toContain("leaderboard_modal.try_again");
+    });
+
+    it("offers the retry when you open the FFA tab", async () => {
+      await open(RankedType.OneVOne);
+      list.rankedType =
+        RankedType.FreeForAll as LeaderboardPlayerList["rankedType"];
+      await settle();
+      expect(list.textContent).toContain("leaderboard_modal.try_again");
+    });
+  });
+
+  describe("keyboard", () => {
+    const press = async (rank: string, key: string) => {
+      tab(rank).dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }),
+      );
+      await settle();
+    };
+
+    it("makes only the selected rank a tab stop", async () => {
+      await open();
+      expect(tabs().map((t) => t.tabIndex)).toEqual([
+        -1, -1, -1, -1, -1, 0, -1, -1,
+      ]);
+    });
+
+    it("moves to the next rank with the right arrow, and focuses it", async () => {
+      await open();
+      await press("diamond", "ArrowRight");
+      expect(selectedTab()?.dataset.rank).toBe("master");
+      expect(document.activeElement).toBe(tab("master"));
+    });
+
+    it("moves to the previous rank with the left arrow", async () => {
+      await open();
+      await press("diamond", "ArrowLeft");
+      expect(selectedTab()?.dataset.rank).toBe("platinum");
+    });
+
+    it("wraps at both ends", async () => {
+      await open();
+      await press("diamond", "End");
+      expect(selectedTab()?.dataset.rank).toBe("grandmaster");
+      await press("grandmaster", "ArrowRight");
+      expect(selectedTab()?.dataset.rank).toBe("iron");
+      await press("iron", "ArrowLeft");
+      expect(selectedTab()?.dataset.rank).toBe("grandmaster");
+      await press("grandmaster", "Home");
+      expect(selectedTab()?.dataset.rank).toBe("iron");
+    });
+
+    it("leaves other keys alone", async () => {
+      await open();
+      await press("diamond", "a");
+      expect(selectedTab()?.dataset.rank).toBe("diamond");
+    });
+  });
+
   it("ignores a slow answer after the board was reloaded", async () => {
     await open();
     let finish: (value: unknown) => void = () => {};
