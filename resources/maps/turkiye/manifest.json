@@ -1,5 +1,5 @@
 {
-  "categories": ["countries", "europe", "asia"],
+  "categories": ["countries", "europe", "asia", "new"],
   "display_name": "Türkiye",
   "id": "Turkiye",
   "map": {
@@ -170,5 +170,6 @@
       "name": "Hakkari"
     }
   ],
+  "themes": ["europe", "asia"],
   "translation_key": "map.turkiye"
 }

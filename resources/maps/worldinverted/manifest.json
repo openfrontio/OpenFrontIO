@@ -1424,5 +1424,6 @@
       "name": "Emerald"
     }
   ],
+  "themes": ["under_ocean"],
   "translation_key": "map.worldinverted"
 }
