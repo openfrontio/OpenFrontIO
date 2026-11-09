@@ -78,6 +78,33 @@ export class MapDetails extends LitElement {
     return this;
   }
 
+  private isHovered = false;
+  private isFocused = false;
+
+  private onPointerEnter = () => {
+    this.isHovered = true;
+    this.clampTooltip();
+  };
+
+  private onPointerLeave = () => {
+    this.isHovered = false;
+    if (!this.isFocused) {
+      this.resetTooltip();
+    }
+  };
+
+  private onFocusIn = () => {
+    this.isFocused = true;
+    this.clampTooltip();
+  };
+
+  private onFocusOut = () => {
+    this.isFocused = false;
+    if (!this.isHovered) {
+      this.resetTooltip();
+    }
+  };
+
   private clampTooltip = () => {
     const tooltip = this.querySelector<HTMLElement>('[role="tooltip"]');
     if (!tooltip) return;
@@ -115,7 +142,7 @@ export class MapDetails extends LitElement {
     }
 
     if (shift !== 0) {
-      tooltip.style.transform = `translateX(calc(-50% + ${shift}px))`;
+      tooltip.style.transform = `translateX(${shift}px)`;
     }
   };
 
@@ -133,10 +160,10 @@ export class MapDetails extends LitElement {
       class="group/map-details pointer-events-none absolute inset-x-3 top-3 z-10 flex p-1.5"
       @click=${(event: Event) => event.stopPropagation()}
       @keydown=${(event: Event) => event.stopPropagation()}
-      @pointerenter=${this.clampTooltip}
-      @pointerleave=${this.resetTooltip}
-      @focusin=${this.clampTooltip}
-      @focusout=${this.resetTooltip}
+      @pointerenter=${this.onPointerEnter}
+      @pointerleave=${this.onPointerLeave}
+      @focusin=${this.onFocusIn}
+      @focusout=${this.onFocusOut}
     >
       <button
         type="button"

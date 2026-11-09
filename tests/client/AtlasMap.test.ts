@@ -303,9 +303,26 @@ describe("<map-details>", () => {
     });
 
     group.dispatchEvent(new PointerEvent("pointerenter"));
-    expect(tooltip.style.transform).toBe("translateX(calc(-50% + -58px))");
+    expect(tooltip.style.transform).toBe("translateX(-58px)");
 
+    // Focusing in while hovered keeps clamp
+    group.dispatchEvent(new FocusEvent("focusin"));
+    expect(tooltip.style.transform).toBe("translateX(-58px)");
+
+    // Leaving pointer while still focused retains clamp
     group.dispatchEvent(new PointerEvent("pointerleave"));
+    expect(tooltip.style.transform).toBe("translateX(-58px)");
+
+    // Blurring when pointer has left clears clamp
+    group.dispatchEvent(new FocusEvent("focusout"));
+    expect(tooltip.style.transform).toBe("");
+
+    // Focusing in again applies clamp
+    group.dispatchEvent(new FocusEvent("focusin"));
+    expect(tooltip.style.transform).toBe("translateX(-58px)");
+
+    // Blurring clears clamp
+    group.dispatchEvent(new FocusEvent("focusout"));
     expect(tooltip.style.transform).toBe("");
 
     container.remove();
