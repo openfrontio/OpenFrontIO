@@ -13,8 +13,11 @@ export async function readMapLandTiles(map: GameMapType): Promise<number> {
   if (cached !== undefined) return cached;
 
   const raw = (await readMapFile(map, "manifest.json")).toString("utf8");
-  const tiles = (JSON.parse(raw) as { map: { num_land_tiles: number } }).map
-    .num_land_tiles;
+  const tiles = (JSON.parse(raw) as { map?: { num_land_tiles?: unknown } }).map
+    ?.num_land_tiles;
+  if (typeof tiles !== "number" || !Number.isFinite(tiles) || tiles < 0) {
+    throw new Error(`Invalid num_land_tiles in ${map} manifest: ${tiles}`);
+  }
   landTilesCache.set(map, tiles);
   return tiles;
 }

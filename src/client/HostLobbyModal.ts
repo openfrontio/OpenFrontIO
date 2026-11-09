@@ -471,7 +471,12 @@ export class HostLobbyModal extends BaseModal {
       // The cap's ceiling comes from the map's size, so retry a manifest
       // that failed to load rather than offer a cap the server rejects.
       if (this.selectedMapLandTiles() === undefined) {
+        const lobbyId = this.lobbyId;
         await this.loadNationCount();
+        // The host may have closed the modal or left the lobby meanwhile;
+        // the dialog portals to <body>, so it must not open over the next
+        // page.
+        if (!this.isModalOpen || this.lobbyId !== lobbyId) return;
         if (this.selectedMapLandTiles() === undefined) {
           this.showListingError();
           return;

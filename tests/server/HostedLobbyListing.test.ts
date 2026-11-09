@@ -331,7 +331,7 @@ describe("GameServer listing", () => {
     });
 
     async function list(
-      maxPlayers: number,
+      maxPlayers: number | undefined,
       config: Record<string, unknown> = {},
     ) {
       let routeHandler!: (req: any, res: any) => Promise<any>;
@@ -404,6 +404,30 @@ describe("GameServer listing", () => {
       } finally {
         landTiles.read = read;
       }
+    });
+
+    it("checks the lobby's existing cap when the request omits one", async () => {
+      const { game, res } = await list(undefined, { maxPlayers: 300 });
+      expect(res.body).toEqual({ error: "listing_max_players_too_high" });
+      expect(game.isListed()).toBe(false);
+    });
+
+    it("rejects when the map changed while its size was read", () => {
+      const game = makeGame("test-map-change", CREATOR, {
+        gameMap: GameMapType.World,
+      });
+      expect(
+        getListingEligibilityError(game, 50, {
+          map: GameMapType.TheBox,
+          landTiles: 4_194_304,
+        }),
+      ).toBe("listing_failed");
+      expect(
+        getListingEligibilityError(game, 50, {
+          map: GameMapType.World,
+          landTiles: 4_194_304,
+        }),
+      ).toBeNull();
     });
 
     it("uses the compact size on compact maps", async () => {
