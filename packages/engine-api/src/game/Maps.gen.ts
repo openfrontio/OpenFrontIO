@@ -2065,7 +2065,7 @@ export const maps: readonly MapInfo[] = [
     id: "OttomanEmpire",
     type: GameMapType.OttomanEmpire,
     translationKey: "map.ottomanempire",
-    categories: ["europe", "asia", "africa", "new"],
+    categories: ["europe", "asia", "africa", "countries", "new"],
     defaultNationCount: 46,
     themes: ["europe", "asia", "africa"],
     location: { lat: 39, lon: 29 },
