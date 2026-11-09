@@ -10,7 +10,7 @@ import { BuildMenu } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
 import { EmojiTable } from "./EmojiTable";
 import { PlayerActionHandler } from "./PlayerActionHandler";
-import { PlayerPanel } from "./PlayerPanel";
+import { emptyPlayerActions, PlayerPanel } from "./PlayerPanel";
 import {
   CloseRadialMenuEvent,
   RadialMenu,
@@ -31,14 +31,6 @@ import {
   DoDonateGoldEvent,
   DoDonateTroopsEvent,
 } from "../../InputHandler";
-
-function emptyPlayerActions(): PlayerActions {
-  return {
-    canAttack: false,
-    buildableUnits: [],
-    canSendEmojiAllPlayers: false,
-  };
-}
 
 export class MainRadialMenu implements Controller {
   private radialMenu: RadialMenu;

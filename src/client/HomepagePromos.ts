@@ -2,6 +2,7 @@ import { LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import {
   creativeAttributes,
+  findEscapedAds,
   findStrayAdFrames,
   trackAdCreatives,
 } from "./AdForensics";
@@ -61,6 +62,7 @@ export class HomepagePromos extends LitElement {
   private railDestroy: Promise<void> | null = null;
   private railDestroyCount = 0;
   private strayFrameScan: ReturnType<typeof setInterval> | null = null;
+  private escapedAdScan: ReturnType<typeof setInterval> | null = null;
   private reportedStrayFrames = new WeakSet<Element>();
 
   // The header ad ("flex" leaderboard, GumGum via Playwire) renders in a
@@ -93,6 +95,8 @@ export class HomepagePromos extends LitElement {
     this.topAdMutation = new MutationObserver(() => {
       if (this.findTopAd() !== this.topAdEl) this.syncTopAd();
       if (this.bottomRailDestroyedAt !== null) this.destroyStrayBottomRail();
+      // Here as well as on the scan, so one is gone before it is painted.
+      this.removeEscapedAds();
     });
     // subtree: the banner is nested inside a wrapper (#pw-oop-flex_container),
     // so watching body's direct children alone misses it.
@@ -100,6 +104,12 @@ export class HomepagePromos extends LitElement {
       childList: true,
       subtree: true,
     });
+    // On its own timer, from the spawn phase on: the observer sees new
+    // elements, not an existing one that takes the class later.
+    this.escapedAdScan ??= setInterval(
+      () => this.removeEscapedAds(),
+      STRAY_FRAME_SCAN_MS,
+    );
     this.syncTopAd();
   }
 
@@ -110,6 +120,8 @@ export class HomepagePromos extends LitElement {
     document.removeEventListener("leave-lobby", this.onLeaveLobby);
     this.topAdMutation?.disconnect();
     this.stopStrayFrameScan();
+    if (this.escapedAdScan !== null) clearInterval(this.escapedAdScan);
+    this.escapedAdScan = null;
     this.topAdStyle?.disconnect();
     this.topAdResize?.disconnect();
     document.documentElement.style.removeProperty("--top-ad-height");
@@ -384,25 +396,47 @@ export class HomepagePromos extends LitElement {
     this.strayFrameScan = null;
   }
 
-  // Reported, not removed: the match is a heuristic, and taking down
-  // something that is not an ad would break the page for the player.
+  // From the spawn phase on: an escaped ad is never one that belongs there.
+  private removeEscapedAds(): void {
+    if (!menuChromeIsTornDown()) return;
+    for (const { root, attributes } of findEscapedAds()) {
+      root.remove();
+      this.reportAdFrame(attributes, "removed");
+    }
+  }
+
+  // Reported, not removed: outside the confirmed escapes the match is a
+  // heuristic, and some stray frames may be formats sold on purpose.
   private reportStrayAdFrames(): void {
     if (this.bottomRailDestroyedAt === null || !menuChromeIsTornDown()) {
       this.stopStrayFrameScan();
       return;
     }
+    // First, so an escaped ad is reported once, as removed, not as stray.
+    this.removeEscapedAds();
     for (const { root, attributes } of findStrayAdFrames()) {
       if (this.reportedStrayFrames.has(root)) continue;
       this.reportedStrayFrames.add(root);
-      reportEvent("ad_frame_in_game", {
-        gameID: this.lobby?.gameID ?? "",
-        lobbySource: this.lobby?.source ?? "",
-        secondsAfterDestroy: String(
-          Math.round((performance.now() - this.bottomRailDestroyedAt) / 1000),
-        ),
-        ...attributes,
-      });
+      this.reportAdFrame(attributes, "reported");
     }
+  }
+
+  private reportAdFrame(
+    attributes: Record<string, string>,
+    action: "removed" | "reported",
+  ): void {
+    const destroyedAt = this.bottomRailDestroyedAt;
+    reportEvent("ad_frame_in_game", {
+      gameID: this.lobby?.gameID ?? "",
+      lobbySource: this.lobby?.source ?? "",
+      // Empty during the spawn phase, before the rail is destroyed.
+      secondsAfterDestroy:
+        destroyedAt === null
+          ? ""
+          : String(Math.round((performance.now() - destroyedAt) / 1000)),
+      ...attributes,
+      action,
+    });
   }
 
   private loadGutterAds(): void {
