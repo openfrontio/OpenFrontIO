@@ -416,9 +416,12 @@ describe("Nation boat routes on open water", () => {
     );
     warshipAt(16, 12);
     const launches = vi.spyOn(SpatialQuery.prototype, "closestShoreByWater");
-    expect(behavior.sendAttack(enemy)).toBe(false);
-    expect(launches).not.toHaveBeenCalled();
-    launches.mockRestore();
+    try {
+      expect(behavior.sendAttack(enemy)).toBe(false);
+      expect(launches).not.toHaveBeenCalled();
+    } finally {
+      launches.mockRestore();
+    }
   });
 
   // Skipping the launch must never turn a clear route into a blocked one
