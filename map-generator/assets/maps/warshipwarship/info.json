@@ -1,10 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "name": "Warship Warship",
   "id": "WarshipWarship",
   "translation_key": "map.warshipwarship",
-  "multiplayer_frequency": 3,
-  "team_frequency": 6,
   "categories": ["arcade"],
+  "author": "crunchybbb",
+  "description": "Two massive warship-shaped islands. The map is inspired by a meme created by the Openfront Youtuber Ultimus_Rex when he says the catchphrase 'Warship Warship' when deploying them",
   "nations": [
     {
       "coordinates": [750, 680],

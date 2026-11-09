@@ -1,5 +1,5 @@
+import { PoolConfig } from "@openfront/engine-api/Schemas";
 import { describe, expect, it } from "vitest";
-import { PoolConfig } from "../../src/core/Schemas";
 import { poolIndexFor, poolTargetFor } from "../../src/server/PoolRouting";
 
 const SIBLINGS = ["aaaa1111", "bbbb2222", "cccc3333", "dddd4444"];

@@ -8,14 +8,14 @@
  * it). "Copy catalog JSON" puts a paste-ready entry on the clipboard.
  */
 
-import type GUI from "lil-gui";
-import type { Controller } from "lil-gui";
 import {
   EFFECT_TYPES,
   type EffectAttributesFor,
   type EffectType,
   NUKE_EXPLOSION_TYPES,
-} from "../../../../core/CosmeticSchemas";
+} from "@openfront/shared/CosmeticSchemas";
+import type GUI from "lil-gui";
+import type { Controller } from "lil-gui";
 import {
   catalogSnippet,
   defaultSlotState,

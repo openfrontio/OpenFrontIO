@@ -30,10 +30,12 @@ export function usernameText(
   // sides. The separator itself must be real text, not padding or margin — a
   // caller's hover:underline is painted per text run, so a box gap splits it.
   return html`<span
-    ><span class=${baseClass}>${base}</span>${discriminator === null
-      ? nothing
-      : html`&nbsp;<span class="text-white/40 font-normal"
-            >#${discriminator}</span
-          >`}</span
+    ><span class=${baseClass}>${base}</span>${
+      discriminator === null
+        ? nothing
+        : html`&nbsp;<span class="text-white/40 font-normal"
+              >#${discriminator}</span
+            >`
+    }</span
   >`;
 }

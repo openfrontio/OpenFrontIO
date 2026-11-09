@@ -1,9 +1,13 @@
+import {
+  MessageType,
+  PlayerType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/shared/EventBus";
 import { SoundEffectController } from "../../../src/client/controllers/SoundEffectController";
 import { PlaySoundEffectEvent } from "../../../src/client/sound/Sounds";
 import { SendSpawnIntentEvent } from "../../../src/client/Transport";
-import { EventBus } from "../../../src/core/EventBus";
-import { MessageType, PlayerType, UnitType } from "../../../src/core/game/Game";
-import { GameUpdateType } from "../../../src/core/game/GameUpdates";
 
 describe("SoundEffectController", () => {
   let eventBus: EventBus;

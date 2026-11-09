@@ -1,11 +1,7 @@
-import { PlayerType, UnitType } from "../../../../core/game/Game";
+import { PlayerType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import type { ColumnId, StatsTableKind } from "../../../StatsConstants";
-import {
-  formatPercentage,
-  renderNumber,
-  renderTroops,
-  translateText,
-} from "../../../Utils";
+import { formatPercentage, translateText } from "../../../Utils";
 import type { GameView, PlayerView } from "../../../view";
 import {
   allianceIcon,
@@ -26,11 +22,7 @@ import {
 } from "../../HotbarIcons";
 import { goldRateTracker } from "./GoldRateTracker";
 
-export {
-  COLUMN_IDS,
-  DEFAULT_STATS_COLUMNS,
-  type ColumnId,
-} from "../../../StatsConstants";
+export { type ColumnId } from "../../../StatsConstants";
 
 export type ColumnHeaderVisual =
   | {

@@ -2,7 +2,7 @@
  * Gold-per-minute benchmark of a full nation game.
  *
  * Spawns every nation from the world map manifest at Impossible difficulty
- * with the real production Config (real attack logic, nukes, trade routing —
+ * with the real production EngineConfig (real attack logic, nukes, trade routing —
  * not the TestConfig stubs) and lets the real NationExecutions play the game:
  * expanding, warring, and building their own ports, factories and cities.
  * Nothing is scripted; every port and train line exists because a nation
@@ -22,22 +22,21 @@
  * PseudoRandom seeded from the fixed game ID and nation names, so runs are
  * deterministic.
  */
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { Config } from "../src/core/configuration/Config";
-import { NationExecution } from "../src/core/execution/NationExecution";
-import { RecomputeRailClusterExecution } from "../src/core/execution/RecomputeRailClusterExecution";
 import {
   Cell,
   Difficulty,
-  Game,
   Nation,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
+import { NationExecution } from "@openfront/engine/execution/NationExecution";
+import { RecomputeRailClusterExecution } from "@openfront/engine/execution/RecomputeRailClusterExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { setup } from "./util/Setup";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -153,7 +152,7 @@ async function runNationGame(minutes: number): Promise<{
     { difficulty: Difficulty.Impossible },
     [],
     undefined,
-    Config,
+    EngineConfig,
     false, // keep the spawn phase open so nations can place themselves
     nations,
   );

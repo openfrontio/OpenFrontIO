@@ -49,7 +49,7 @@ vi.mock("../../src/client/Auth", () => ({
   googleLogin: vi.fn(),
   linkGoogle: vi.fn(),
   logOut: vi.fn(),
-  reauthAfterCrazyGamesChange: vi.fn(),
+  reauthAfterPortalChange: vi.fn(),
   sendMagicLink: vi.fn(),
 }));
 
@@ -69,6 +69,7 @@ vi.mock("src/client/ClientEnv", () => ({
     workerPath: vi.fn(() => "w0"),
     // The profile header's copy-link button builds its URL from this; the web
     // answer is the document itself (see deriveShareBase).
+    shareOrigin: vi.fn(() => window.location.origin),
     shareBase: vi.fn(
       () => `${window.location.origin}${window.location.pathname}`,
     ),
@@ -270,5 +271,11 @@ describe("Account Games stats navigation", () => {
     expect(window.location.hash).toBe("#modal=account&tab=games");
 
     expect(fetchPublicPlayerGames).toHaveBeenCalledOnce();
+  });
+
+  it("renders date headers with pointer-events-none so action buttons are clickable", () => {
+    const historyView = modal.querySelector("player-game-history-view");
+    const dayHeader = historyView?.querySelector("h3")?.parentElement;
+    expect(dayHeader?.className).toContain("pointer-events-none");
   });
 });

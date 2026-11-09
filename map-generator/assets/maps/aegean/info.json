@@ -1,9 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Aegean",
   "name": "Aegean",
   "translation_key": "map.aegean",
   "categories": ["europe", "asia"],
-  "multiplayer_frequency": 6,
+  "location": { "lat": 38, "lon": 25.3 },
+  "author": "Tristar",
+  "description": "The sea between Greece and Anatolia with a large number of islands in between, the origin of the term archipelago. Return back in time to Ancient Greece, fight against Trojans and Spartans, and most importantly, beware the island players!",
   "special_team_count": 2,
   "nations": [
     {

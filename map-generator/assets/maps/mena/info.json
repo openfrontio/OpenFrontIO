@@ -1,10 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Mena",
   "name": "Mena",
   "display_name": "MENA",
   "translation_key": "map.mena",
   "categories": ["asia", "africa"],
-  "multiplayer_frequency": 6,
+  "location": { "lat": 27, "lon": 18 },
+  "author": "evanpelle",
   "nations": [
     {
       "coordinates": [257, 82],

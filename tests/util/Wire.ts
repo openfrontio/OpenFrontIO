@@ -1,5 +1,5 @@
 // Helpers for tests that drive the game WebSocket, which carries zbin binary
-// frames rather than JSON (see src/core/ZbinWire.ts).
+// frames rather than JSON (see packages/shared/src/ZbinWire.ts).
 
 import {
   Difficulty,
@@ -7,20 +7,20 @@ import {
   GameMapType,
   GameMode,
   GameType,
-} from "../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
 import {
   ClientMessage,
-  GameConfig,
   PublicLobbyMessage,
   PublicLobbyMessageSchema,
   ServerMessage,
   ServerMessageSchema,
-} from "../../src/core/Schemas";
+} from "@openfront/shared/WireSchemas";
 import {
   encodeClientMessage,
   encodeLobbyMessage,
-} from "../../src/core/ZbinWire";
-import { ZbContext } from "../../zbin";
+} from "@openfront/shared/ZbinWire";
+import { ZbContext } from "@openfront/zbin";
 
 // A frame as a client would put it on the wire. Tests hand these to the
 // server's "message" listener.

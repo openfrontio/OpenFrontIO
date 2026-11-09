@@ -1,7 +1,7 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { EventBus } from "@openfront/shared/EventBus";
 import { Howl } from "howler";
-import { assetUrl } from "../../core/AssetUrls";
-import { EventBus } from "../../core/EventBus";
-import { AudioMixer, PlayableCategory } from "./AudioMixer";
+import { AudioMixer, PlayableCategory, streamsMusic } from "./AudioMixer";
 import {
   AmbienceTrack,
   ambienceUrls,
@@ -13,12 +13,28 @@ import {
 const AMBIENCE_FADE_MS = 500;
 
 /**
- * The audio a running game owns: the looping gameplay track and the structure
+ * The gameplay playlist. A game starts on a random track and plays the rest
+ * in order, round and round, so short games do not always hear the same one.
+ */
+const GAMEPLAY_TRACKS = [
+  "sounds/music/gameplay.mp3",
+  "sounds/music/gameplay-2.mp3",
+  "sounds/music/gameplay-3.mp3",
+];
+
+/**
+ * The audio a running game owns: the gameplay playlist and the structure
  * ambience. Cue playback, channel volumes and the concurrency budgets all live
  * in AudioMixer, which outlives any one game.
  */
 export class SoundManager {
   private backgroundMusic: Howl | null = null;
+  /** The game wants music playing, whether or not it is audible right now. */
+  private wantsMusic = false;
+  /** play() has been called, so it must not be called a second time. */
+  private musicStarted = false;
+  /** Index into GAMEPLAY_TRACKS of the track backgroundMusic holds. */
+  private track = Math.floor(Math.random() * GAMEPLAY_TRACKS.length);
   private ambienceTracks = new Map<AmbienceTrack, Howl>();
   private currentAmbience: AmbienceTrack | null = null;
   private fadingOut = new Set<Howl>();
@@ -31,22 +47,7 @@ export class SoundManager {
     private readonly eventBus: EventBus,
     private readonly mixer: AudioMixer,
   ) {
-    this.safely("initialize background music", () => {
-      // One track that keeps looping — including through the victory and
-      // defeat cues — so a game never hard-cuts to silence, per the sound
-      // designer's note. The menu theme (MenuMusic.ts) covers the home page.
-      this.backgroundMusic = new Howl({
-        src: [assetUrl("sounds/music/gameplay.mp3")],
-        loop: true,
-        volume: 0,
-        // Stream it. Howler's default Web Audio path XHRs the whole file and
-        // decodes it to PCM before the first note, and this track is 4.6 MB,
-        // so play() queued behind tens of seconds of silence at game start on
-        // a slow connection. Cues and ambience stay on Web Audio.
-        html5: true,
-      });
-      this.mixer.register(this.backgroundMusic, "music");
-    });
+    this.buildBackgroundMusic();
 
     this.onPlaySoundEffect = (e) => this.mixer.play(e.effect);
     this.onSetAmbience = (e) => this.setAmbience(e.track, e.gain);
@@ -57,7 +58,86 @@ export class SoundManager {
     // the mixer cannot stomp a fade in progress. Re-target on every change.
     this.stopFollowingVolume = this.mixer.onChange((category) => {
       if (category === "ambience") this.retargetAmbience();
+      if (category === "music") this.startMusicIfAudible();
     });
+  }
+
+  /**
+   * Builds the Howl for the current gameplay track. The playlist keeps going —
+   * including through the victory and defeat cues — so a game never hard-cuts
+   * to silence, per the sound designer's note. Only one track is built at a
+   * time: on the Web Audio path a loaded track is held as ~75 MB of PCM. The
+   * menu theme (MenuMusic.ts) covers the home page.
+   */
+  private buildBackgroundMusic(): void {
+    this.safely("initialize background music", () => {
+      const music = new Howl({
+        src: [assetUrl(GAMEPLAY_TRACKS[this.track])],
+        volume: 0,
+        // Stream it. Howler's default Web Audio path XHRs the whole file and
+        // decodes it to PCM before the first note, and each track is ~4.5 MB,
+        // so play() queued behind tens of seconds of silence at game start on
+        // a slow connection. Cues and ambience stay on Web Audio.
+        //
+        // A browser with locked media-element volume is the exception: the
+        // streamed track cannot be turned down or muted there at all, and Web
+        // Audio is the only path with a working gain. Cues are unaffected
+        // because they are already Web Audio.
+        html5: streamsMusic(),
+        // Never, on any platform. This runs in the constructor, before anyone
+        // knows whether the player has music on, and Howler's default would
+        // start fetching right here: the whole 4.6 MB buffered on a media
+        // element, or decoded to ~74 MB of PCM on a volume-locked browser
+        // (209 s of 44.1 kHz stereo). The web defaults every channel to silence
+        // until the player opts in, so that is mostly spent on players who hear
+        // nothing.
+        //
+        // startMusicIfAudible does the one fetch, once the channel is
+        // audible. It also means a rebuild after a failed load cannot retry
+        // on a loop, the way AudioMixer's discarded cues cannot.
+        preload: false,
+      });
+      this.backgroundMusic = music;
+      // Bound without an id, like AudioMixer's: Howler emits loaderror with a
+      // null id for everything but a media-element error, and an id-bound
+      // listener would be dead code for the cases that matter.
+      music.once("loaderror", () => this.replaceMusic(music, false));
+      music.once("end", () => this.replaceMusic(music, true));
+      // Nothing is playing after a rejected play(), so let a later change try
+      // again rather than latching the track off for the rest of the game.
+      music.on("playerror", () => {
+        this.musicStarted = false;
+      });
+      this.mixer.register(music, "music");
+    });
+  }
+
+  /**
+   * Swaps in a fresh Howl: the next track once one ends (`advance`), or the
+   * same track again after a load that failed.
+   *
+   * A finished track is unloaded rather than kept for the next time round,
+   * so the Web Audio path holds one decoded track, not the whole playlist.
+   *
+   * The dead one cannot simply be retried: the play() that was queued behind
+   * the failed load is still sitting in Howler's queue, so a later successful
+   * load would drain that one as well as the one the retry asks for, and the
+   * track would play over itself. Replacing it drops the queue with it.
+   *
+   * Deliberate rather than giving up: a blip on the CDN should not mean a
+   * silent game, and the retry only costs a fetch when the player's own
+   * volume change asks for one.
+   */
+  private replaceMusic(old: Howl, advance: boolean): void {
+    if (this.backgroundMusic !== old) return;
+    this.mixer.unregister(old);
+    this.safely("unload background music", () => old.unload());
+    this.backgroundMusic = null;
+    this.musicStarted = false;
+    if (advance) this.track = (this.track + 1) % GAMEPLAY_TRACKS.length;
+    this.buildBackgroundMusic();
+    // Not after a failure: a file that keeps failing would retry in a loop.
+    if (advance) this.startMusicIfAudible();
   }
 
   dispose(): void {
@@ -90,14 +170,53 @@ export class SoundManager {
   }
 
   public playBackgroundMusic(): void {
-    this.safely("play background music", () => {
-      if (this.backgroundMusic !== null && !this.backgroundMusic.playing()) {
-        this.backgroundMusic.play();
-      }
-    });
+    this.wantsMusic = true;
+    this.startMusicIfAudible();
+  }
+
+  /**
+   * Starts the track, loading it first if it is not loaded yet.
+   *
+   * Gated on the channel being audible because on the Web Audio path used for
+   * locked media volume, loading means holding the whole track decoded, and the
+   * web defaults every channel to silence until the player opts in -- so a
+   * player who never turns music on would otherwise pay the download and decode
+   * for something they never hear. Called again whenever the music channel
+   * changes, so turning the slider up mid-game still starts it.
+   *
+   * isAudible, not volumeFor: the question is whether the player has the
+   * channel on at all, not whether it happens to be ducked this instant.
+   * Starting a track because the window regained focus would be wrong.
+   */
+  private startMusicIfAudible(): void {
+    const music = this.backgroundMusic;
+    if (music === null || !this.wantsMusic || this.musicStarted) return;
+    if (!this.mixer.isAudible("music")) return;
+    // Latched before play(), not after, and in preference to playing(): this
+    // runs on every tick of a slider drag, and a Howl still loading reports
+    // playing() === false while play() queues another sound each time. Those
+    // all start when the load lands, so the track would play over itself
+    // once per tick of the drag that started it.
+    this.musicStarted = true;
+    try {
+      // Howler's play() queues behind a load but does not start one, so an
+      // unloaded Howl would sit there silently forever without this.
+      if (music.state() === "unloaded") music.load();
+      music.play();
+    } catch (err) {
+      // Not safely(), which would leave the latch set on a throw: nothing
+      // started, so a later change should be free to try again.
+      this.musicStarted = false;
+      console.warn("SoundManager: failed to play background music", err);
+    }
   }
 
   public stopBackgroundMusic(): void {
+    // Both cleared so a later volume change does not read a stale intent and
+    // start the track again through startMusicIfAudible, while a later
+    // playBackgroundMusic() still can.
+    this.wantsMusic = false;
+    this.musicStarted = false;
     this.safely("stop background music", () => this.backgroundMusic?.stop());
   }
 

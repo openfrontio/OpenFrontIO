@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { ColumnPicker } from "../src/client/hud/layers/ColumnPicker";
 import { columnsFor } from "../src/client/hud/layers/lib/StatsColumns";
 import type { ColumnId } from "../src/client/StatsConstants";
@@ -32,10 +33,10 @@ describe("ColumnPicker", () => {
       selection = (event as CustomEvent<ColumnId[]>).detail;
     });
     // Registry order: index 0 is clan, 1 is playerType, 2 is tiles, 3 is gold.
-    (popup?.querySelectorAll("input")[3] as HTMLInputElement).click();
+    (popup!.querySelectorAll("input")[3] as HTMLInputElement).click();
     expect(selection).toEqual(["tiles", "gold"]);
 
-    (popup?.querySelectorAll("input")[0] as HTMLInputElement).click();
+    (popup!.querySelectorAll("input")[0] as HTMLInputElement).click();
     expect(selection).toEqual(["clan", "tiles"]);
 
     sidebar.remove();

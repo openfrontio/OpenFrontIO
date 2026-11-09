@@ -83,7 +83,7 @@ export class TurnstileError extends Error {
 }
 
 /** The code to show for any failure, Turnstile's own or otherwise. */
-export function turnstileErrorCode(error: unknown): string {
+function turnstileErrorCode(error: unknown): string {
   return error instanceof TurnstileError ? error.code : "unknown";
 }
 
@@ -93,12 +93,20 @@ export function turnstileErrorCode(error: unknown): string {
  * Exactly one of resolve/reject happens, and the widget is always removed
  * afterwards: a widget that outlived its challenge would be the same widget
  * the next call renders over, which is how two challenges end up in flight.
+ *
+ * Each widget gets its own host element inside `container`. Turnstile rejects
+ * a render into an element that already holds a widget ("Turnstile has already
+ * been rendered in this container"), and the execute() that follows lands on
+ * the old widget, so the new callbacks never fire and the join times out. That
+ * happened whenever two requests overlapped (on portals every join requests a
+ * fresh token while the boot prefetch may still be running), and for good once
+ * Turnstile stopped recognising a widget's id ("Nothing to remove found").
  */
 export function requestTurnstileToken(
   turnstile: TurnstileApi,
   options: {
     sitekey: string;
-    container: string | HTMLElement;
+    container: HTMLElement;
     timeoutMs?: number;
     now?: () => number;
   },
@@ -112,6 +120,9 @@ export function requestTurnstileToken(
     let settled = false;
     let timer: ReturnType<typeof setTimeout> | undefined = undefined;
 
+    const host = document.createElement("div");
+    options.container.appendChild(host);
+
     // Turnstile can still call back after we are done with the widget (a late
     // error after a timeout, say). Removing once and settling once means such
     // a call cannot double-resolve, and cannot throw by removing a widget id
@@ -124,6 +135,9 @@ export function requestTurnstileToken(
       } catch (error) {
         console.error("Turnstile: failed to remove widget", error);
       }
+      // Takes the widget's iframe with it even when Turnstile has lost track
+      // of the id.
+      host.remove();
     };
 
     const settle = (finish: () => void) => {
@@ -139,7 +153,7 @@ export function requestTurnstileToken(
     const fail = (error: unknown) => settle(() => reject(error));
 
     try {
-      widgetId = turnstile.render(options.container, {
+      widgetId = turnstile.render(host, {
         sitekey: options.sitekey,
         size: "normal",
         appearance: "interaction-only",
@@ -150,6 +164,7 @@ export function requestTurnstileToken(
           fail(new TurnstileError(errorCode ?? "unknown")),
       });
     } catch (error) {
+      host.remove();
       fail(error);
       return;
     }
@@ -193,7 +208,7 @@ export async function resolveTurnstileToken(deps: {
   /** The boot-time prefetch, or null when there is none to reuse. */
   prefetch: Promise<TurnstileToken> | null;
   requestFresh: () => Promise<TurnstileToken>;
-  /** CrazyGames always wants a token minted for this join. */
+  /** Portals always want a token minted for this join. */
   forceFresh?: boolean;
   /** Shows the error modal. Called at most once, for the final failure. */
   onError: (code: string) => void;

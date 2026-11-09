@@ -1,9 +1,12 @@
-import { ANON_WORDS, anonWordName } from "../core/AnonNames";
-import { isTemporaryUsername, type UserMeResponse } from "../core/ApiSchemas";
 import {
   RENDERABLE_NAME_CHAR_RE,
   RENDERABLE_NAME_HAS_ALNUM_RE,
-} from "../core/Schemas";
+} from "@openfront/engine-api/Schemas";
+import { ANON_WORDS, anonWordName } from "@openfront/shared/AnonNames";
+import {
+  isTemporaryUsername,
+  type UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 import {
   ACCOUNT_NAME_CHAR_RE,
   MAX_ACCOUNT_USERNAME_LENGTH,
@@ -11,7 +14,7 @@ import {
   MIN_ACCOUNT_USERNAME_LENGTH,
   MIN_USERNAME_LENGTH,
   validateAccountUsername,
-} from "../core/validations/username";
+} from "./validations/username";
 
 // What name a player plays under, resolved in one place.
 //

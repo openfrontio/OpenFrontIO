@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
-import "../../src/client/components/InventoryLoadoutBar";
 import type {
   InventoryLoadoutBar,
   InventoryLoadoutEntry,
 } from "../../src/client/components/InventoryLoadoutBar";
+import "../../src/client/components/InventoryLoadoutBar";
+import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 
 const cosmetic = (type: ResolvedCosmetic["type"], key: string) =>
   ({

@@ -1,4 +1,4 @@
-import { PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
 
 describe("PlayerInfo", () => {
   describe("clanTag from explicit clanTag parameter", () => {

@@ -32,7 +32,7 @@ import { layoutString } from "./name-pass/TextLayout";
 import type { BMChar, ParsedAtlas } from "./name-pass/Types";
 import { CHAR_RANGE, MAX_CHARS } from "./name-pass/Types";
 
-import { assetUrl } from "src/core/AssetUrls";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import fragSrc from "../shaders/structure-level/structure-level.frag.glsl?raw";
 import vertSrc from "../shaders/structure-level/structure-level.vert.glsl?raw";
 
@@ -208,7 +208,7 @@ export class StructureLevelPass {
     };
 
     // Compile shaders
-    this.program = createProgram(gl, vertSrc, fragSrc);
+    this.program = createProgram(gl, vertSrc, fragSrc, "StructureLevelPass");
 
     // Texture unit bindings
     gl.useProgram(this.program);

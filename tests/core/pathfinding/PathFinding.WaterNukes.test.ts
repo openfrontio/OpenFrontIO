@@ -1,9 +1,9 @@
+import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
+import { Game } from "@openfront/engine/game/Game";
+import { AbstractGraphBuilder } from "@openfront/engine/pathfinding/algorithms/AbstractGraph";
+import { ConnectedComponents } from "@openfront/engine/pathfinding/algorithms/ConnectedComponents";
+import { PathFinding } from "@openfront/engine/pathfinding/PathFinder";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { Game } from "../../../src/core/game/Game";
-import { GameMap, TileRef } from "../../../src/core/game/GameMap";
-import { AbstractGraphBuilder } from "../../../src/core/pathfinding/algorithms/AbstractGraph";
-import { ConnectedComponents } from "../../../src/core/pathfinding/algorithms/ConnectedComponents";
-import { PathFinding } from "../../../src/core/pathfinding/PathFinder";
 import { setup } from "../../util/Setup";
 
 /**
@@ -701,5 +701,29 @@ describe("world map pathfinding across water-nuke rebuilds", () => {
     const path = PathFinding.Water(game).findPath(oceanA, target);
     expect(path).not.toBeNull();
     expect(path![path!.length - 1]).toBe(target);
+  });
+
+  it("incremental rebuild numbers edges like a full rebuild", () => {
+    // A restored game routes on a full rebuild, the live game on the
+    // incremental one: A* tie-breaks follow edge order, so it must match.
+    const target = findCoastalLand();
+    nukeCircle(game, game.x(target), game.y(target), 12);
+    tickUntilRebuild(game);
+
+    type Graph = NonNullable<ReturnType<Game["miniWaterGraph"]>>;
+    const edgeList = (graph: Graph) =>
+      graph
+        .getAllEdges()
+        .map(
+          (e) =>
+            `${e.id}:${graph.getNode(e.nodeA)!.tile}-${graph.getNode(e.nodeB)!.tile}:${e.cost}`,
+        );
+    const nodeEdgeOrder = (graph: Graph) =>
+      graph.getAllNodes().map((n) => graph.getNodeEdges(n.id).map((e) => e.id));
+
+    const incremental = game.miniWaterGraph()!;
+    const full = new AbstractGraphBuilder(game.miniMap()).build();
+    expect(edgeList(incremental)).toEqual(edgeList(full));
+    expect(nodeEdgeOrder(incremental)).toEqual(nodeEdgeOrder(full));
   });
 });

@@ -53,7 +53,12 @@ export class LightmapPass {
     this.falloutLightPass = falloutLightPass;
 
     // Blur program
-    this.blurProg = createProgram(gl, fullscreenVertSrc, blurFragSrc);
+    this.blurProg = createProgram(
+      gl,
+      fullscreenVertSrc,
+      blurFragSrc,
+      "LightmapPass",
+    );
     this.uBlurDir = gl.getUniformLocation(this.blurProg, "uDir")!;
     gl.useProgram(this.blurProg);
     gl.uniform1i(gl.getUniformLocation(this.blurProg, "uTex"), 0);

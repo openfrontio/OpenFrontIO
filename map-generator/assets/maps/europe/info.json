@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Europe",
   "name": "Europe",
   "translation_key": "map.europe",
   "categories": ["featured", "continental", "europe"],
-  "multiplayer_frequency": 7,
+  "location": { "lat": 50.5, "lon": 16 },
+  "author": "APuddle210",
   "featured_rank": 2,
   "nations": [
     {

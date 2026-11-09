@@ -1,5 +1,9 @@
-import { GameMapType, UnitType } from "../../core/game/Game";
-import { GameConfig } from "../../core/Schemas";
+import {
+  GameMapType,
+  listedMaps,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
 
 /**
  * Maps a slider value (0-400) to the nations config value.
@@ -124,9 +128,7 @@ export function getNationsForCompactMap(
 }
 
 export function getRandomMapType(): GameMapType {
-  const maps = Object.values(GameMapType);
-  const randIdx = Math.floor(Math.random() * maps.length);
-  return maps[randIdx] as GameMapType;
+  return listedMaps[Math.floor(Math.random() * listedMaps.length)].type;
 }
 
 export function getUpdatedDisabledUnits(

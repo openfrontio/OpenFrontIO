@@ -19,8 +19,8 @@ vi.mock("../../src/client/SteamSDK", () => ({
   steamSDK: { isOnSteam: () => false, getPersonaName: vi.fn(async () => null) },
 }));
 
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { UsernameInput } from "../../src/client/UsernameInput";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 // A subscriber whose bare name isn't usable yet: entitled, but never set (or
 // server-renamed to TEMPORARY####).

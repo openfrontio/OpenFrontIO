@@ -1,10 +1,15 @@
+import {
+  giftSubscriptionOf,
+  paidSubscriptionOf,
+  UserMeResponse,
+  UserSubscription,
+} from "@openfront/shared/ApiSchemas";
+import { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { Cosmetics } from "../core/CosmeticSchemas";
 import { renderFreePlayPerks } from "./components/FreePlayPerks";
 import "./components/SubscriptionPanel";
-import { fetchCosmetics } from "./Cosmetics";
+import { fetchCosmetics, subscriptionTier } from "./Cosmetics";
 import { ProfileMenuModal } from "./ProfileMenuModal";
 import { translateText } from "./Utils";
 
@@ -22,8 +27,23 @@ export class SubscriptionModal extends ProfileMenuModal {
   @state() private cosmetics: Cosmetics | null = null;
 
   protected renderSignedIn(userMe: UserMeResponse): TemplateResult {
-    const sub = userMe.player.subscription;
-    if (!sub) {
+    const pastDue = userMe.player.pastDueSubscription;
+    // A past_due subscription renders on the same panel, which branches on
+    // its status to offer only the billing portal. The server sends it only
+    // for Stripe, and a renewal that failed has no period worth showing.
+    const paid: UserSubscription | null =
+      paidSubscriptionOf(userMe.player) ??
+      (pastDue
+        ? {
+            tier: pastDue.tier,
+            status: "past_due",
+            currentPeriodEnd: null,
+            cancelAtPeriodEnd: false,
+            provider: "stripe",
+          }
+        : null);
+    const gift = giftSubscriptionOf(userMe.player);
+    if (!paid && !gift) {
       return html`
         <div class="p-6">
           <div
@@ -33,7 +53,11 @@ export class SubscriptionModal extends ProfileMenuModal {
               ${translateText("subscription_modal.none")}
             </p>
             <div class="w-full text-left rounded-lg bg-white/5 px-4 py-3">
-              ${renderFreePlayPerks("free_play.free_heading")}
+              ${
+                userMe.steamLicence
+                  ? renderFreePlayPerks("free_play.licence_heading", true)
+                  : renderFreePlayPerks("free_play.free_heading")
+              }
             </div>
             <o-button
               variant="primary"
@@ -48,14 +72,20 @@ export class SubscriptionModal extends ProfileMenuModal {
         </div>
       `;
     }
+    const stacked = paid !== null && gift !== null;
+    const panel = (sub: UserSubscription, role: "paid" | "gift") => html`
+      <subscription-panel
+        .sub=${sub}
+        .cosmetic=${subscriptionTier(this.cosmetics, sub.tier)}
+        .steamLicence=${userMe.steamLicence}
+        .stacked=${stacked ? role : null}
+        @request-close=${() => this.close()}
+      ></subscription-panel>
+    `;
     return html`
       <div class="custom-scrollbar mr-1">
-        <div class="p-6">
-          <subscription-panel
-            .sub=${sub}
-            .cosmetic=${this.cosmetics?.subscriptions?.[sub.tier] ?? null}
-            @request-close=${() => this.close()}
-          ></subscription-panel>
+        <div class="p-6 flex flex-col gap-4">
+          ${paid ? panel(paid, "paid") : ""} ${gift ? panel(gift, "gift") : ""}
         </div>
       </div>
     `;

@@ -1,13 +1,13 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { assetUrl } from "../core/AssetUrls";
-import { translateText } from "./Utils";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   collectGraphicsDiagnostics,
   GraphicsDiagnostics,
 } from "./utilities/Diagnostic";
+import { translateText } from "./Utils";
 const infoIcon = assetUrl("images/InfoIcon.svg");
 
 @customElement("troubleshooting-modal")
@@ -120,23 +120,25 @@ export class TroubleshootingModal extends BaseModal {
         ${this.section(
           translateText("troubleshooting.power"),
           html`
-            ${this.diagnostics!.power.unavailable
-              ? this.row(
-                  translateText("troubleshooting.battery"),
-                  translateText("troubleshooting.unavailable"),
-                )
-              : html`
-                  ${this.row(
-                    translateText("troubleshooting.charging"),
-                    this.diagnostics!.power.charging
-                      ? translateText("troubleshooting.yes")
-                      : translateText("troubleshooting.no"),
-                  )}
-                  ${this.row(
-                    translateText("troubleshooting.battery_level"),
-                    this.diagnostics!.power.level,
-                  )}
-                `}
+            ${
+              this.diagnostics!.power.unavailable
+                ? this.row(
+                    translateText("troubleshooting.battery"),
+                    translateText("troubleshooting.unavailable"),
+                  )
+                : html`
+                    ${this.row(
+                      translateText("troubleshooting.charging"),
+                      this.diagnostics!.power.charging
+                        ? translateText("troubleshooting.yes")
+                        : translateText("troubleshooting.no"),
+                    )}
+                    ${this.row(
+                      translateText("troubleshooting.battery_level"),
+                      this.diagnostics!.power.level,
+                    )}
+                  `
+            }
             ${this.infoTip(translateText("troubleshooting.power_saving_tip"))}
           `,
         )}
@@ -147,11 +149,11 @@ export class TroubleshootingModal extends BaseModal {
   private infoTip(text: string, warning?: boolean): unknown {
     return html`
       <div
-        class="mt-2 ${warning
-          ? "bg-orange-500/10"
-          : "bg-white/10"} flex gap-2 text-white py-1 px-3 rounded-sm  border-1 ${warning
-          ? "border-orange-400"
-          : "border-white/40"}"
+        class="mt-2 ${
+          warning ? "bg-orange-500/10" : "bg-white/10"
+        } flex gap-2 text-white py-1 px-3 rounded-sm  border-1 ${
+          warning ? "border-orange-400" : "border-white/40"
+        }"
       >
         <img src="${infoIcon}" class="w-4" />
         ${text}
@@ -162,7 +164,7 @@ export class TroubleshootingModal extends BaseModal {
   protected onOpen(): void {
     if (!this.initialized) {
       this.initialized = true;
-      this.loadDiagnostics();
+      void this.loadDiagnostics();
     }
   }
 
@@ -217,11 +219,13 @@ export class TroubleshootingModal extends BaseModal {
   public close(): void {
     // Override BaseModal.close() to navigate back to Help (this modal is
     // opened from inside HelpModal), not to page-play like other inline modals.
+    // Main's game-start sweep closes it unopened; that must not reopen Help.
+    const wasOpen = this.isOpen();
     this.unregisterEscapeHandler();
     this.onClose();
     if (this.inline) {
       this.style.pointerEvents = "none";
-      window.showPage?.("page-help");
+      if (wasOpen) window.showPage?.("page-help");
     } else {
       this.modalEl?.close();
     }

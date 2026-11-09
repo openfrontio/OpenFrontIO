@@ -1,16 +1,16 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import fs from "fs";
 import type { LitElement } from "lit";
 import path from "path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "../../src/client/InventoryModal";
-import type { InventoryModal } from "../../src/client/InventoryModal";
-import { modalRouter } from "../../src/client/ModalRouter";
-import { initNavigation } from "../../src/client/Navigation";
 import { DesktopNavBar } from "../../src/client/components/DesktopNavBar";
 import { MobileNavBar } from "../../src/client/components/MobileNavBar";
 import { PlayPage } from "../../src/client/components/PlayPage";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import type { Cosmetics } from "../../src/core/CosmeticSchemas";
+import type { InventoryModal } from "../../src/client/InventoryModal";
+import { modalRouter } from "../../src/client/ModalRouter";
+import { initNavigation } from "../../src/client/Navigation";
 
 if (!("ResizeObserver" in globalThis)) {
   class ResizeObserverStub {

@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "additionalNations": [
     {
       "coordinates": [1085, 1363],
@@ -105,8 +106,9 @@
   "name": "Vietnam",
   "translation_key": "map.vietnam",
   "categories": ["countries", "asia"],
-  "multiplayer_frequency": 4,
-  "team_frequency": 8,
+  "location": { "lat": 17, "lon": 106.5 },
+  "author": "crunchybbb",
+  "description": "Vietnam is a country in Southeast Asia located on the eastern edge of the Indochinese Peninsula. It was divided into North and South during the Vietnam war. The skinny shape of the country makes for a fun little linearly-expanding map.",
   "special_team_count": 2,
   "nations": [
     {

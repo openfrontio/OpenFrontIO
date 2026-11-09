@@ -1,7 +1,7 @@
+import { ReservedClanTagsResponseSchema } from "@openfront/shared/ClanApiSchemas";
+import { CosmeticsSchema } from "@openfront/shared/CosmeticSchemas";
 import { base64url } from "jose";
 import { Logger } from "winston";
-import { ReservedClanTagsResponseSchema } from "../core/ClanApiSchemas";
-import { CosmeticsSchema } from "../core/CosmeticSchemas";
 import { startPolling } from "./PollingLoop";
 import {
   FailOpenPrivilegeChecker,

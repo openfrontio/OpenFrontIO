@@ -90,20 +90,19 @@
   "id": "Crimea",
   "map": {
     "height": 1316,
-    "num_land_tiles": 958125,
+    "num_land_tiles": 957870,
     "width": 2040
   },
   "map16x": {
     "height": 329,
-    "num_land_tiles": 57850,
+    "num_land_tiles": 57836,
     "width": 510
   },
   "map4x": {
     "height": 658,
-    "num_land_tiles": 236482,
+    "num_land_tiles": 236425,
     "width": 1020
   },
-  "multiplayer_frequency": 4,
   "name": "Crimea",
   "nations": [
     {

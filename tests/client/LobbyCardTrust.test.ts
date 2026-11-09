@@ -1,8 +1,9 @@
+import { GameMapType, GameMode } from "@openfront/engine-api/game/GameTypes";
+import type { GameConfig } from "@openfront/engine-api/Schemas";
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import type { PublicGameInfo } from "@openfront/shared/WireSchemas";
 import { render } from "lit";
 import { describe, expect, it, vi } from "vitest";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import { GameMapType, GameMode } from "../../src/core/game/Game";
-import type { GameConfig, PublicGameInfo } from "../../src/core/Schemas";
 
 vi.mock("../../src/client/TerrainMapFileLoader", () => ({
   terrainMapFileLoader: {

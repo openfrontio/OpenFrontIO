@@ -1,5 +1,5 @@
-import { assetUrl } from "../../core/AssetUrls";
-import { AllPlayers, Nukes } from "../../core/game/Game";
+import { AllPlayers, Nukes } from "@openfront/engine-api/game/GameTypes";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { GameView, PlayerView } from "../view";
 const allianceRequestBlackIcon = assetUrl(
   "images/AllianceRequestBlackIcon.svg",
@@ -155,11 +155,10 @@ export function getPlayerIcons(
         hasActiveNukes = true;
 
         const detonationDst = nuke.targetTile();
-        if (
-          myPlayer &&
-          detonationDst &&
-          game.owner(detonationDst).id() === myPlayer.id()
-        ) {
+        // owner() of unowned land need not have id(): the replay viewer's
+        // TerraNullius stand-in only has isPlayer().
+        const owner = detonationDst ? game.owner(detonationDst) : undefined;
+        if (myPlayer && owner?.isPlayer() && owner.id() === myPlayer.id()) {
           isMyPlayerTarget = true;
           break;
         }

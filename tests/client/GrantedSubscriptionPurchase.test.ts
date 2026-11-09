@@ -38,6 +38,10 @@ vi.mock("../../src/client/Payments", async (importOriginal) => ({
   startPurchase: vi.fn(async () => ({ outcome: "redirecting" })),
 }));
 
+import type {
+  Cosmetics,
+  Subscription,
+} from "@openfront/shared/CosmeticSchemas";
 import {
   changeSubscriptionTier,
   getUserMe,
@@ -55,7 +59,6 @@ import {
 } from "../../src/client/InGameModal";
 import { startPurchase } from "../../src/client/Payments";
 import { translateText } from "../../src/client/Utils";
-import type { Cosmetics, Subscription } from "../../src/core/CosmeticSchemas";
 
 const startPurchaseMock = startPurchase as unknown as ReturnType<typeof vi.fn>;
 const alertMock = showInGameAlert as unknown as ReturnType<typeof vi.fn>;
@@ -246,7 +249,7 @@ describe("purchaseCosmetic: a granted subscriber reaches checkout", () => {
     // Asserted, not assumed: without it this test also passes on the broken
     // build, where the same click is refused before any dialog is shown.
     expect(confirmMock).toHaveBeenCalledWith(
-      "store.confirm_subscribe_over_grant",
+      "store.confirm_subscribe_over_grant_carried",
       expect.anything(),
     );
     expect(startPurchaseMock).not.toHaveBeenCalled();
@@ -316,7 +319,7 @@ describe("purchaseCosmetic: the confirm a granted subscriber is shown", () => {
     expect(shown).not.toBe("store.confirm_upgrade");
     expect(shown).not.toBe("store.confirm_downgrade");
     expect(shown).not.toBe("store.confirm_tier_change_steam");
-    expect(shown).toBe("store.confirm_subscribe_over_grant");
+    expect(shown).toBe("store.confirm_subscribe_over_grant_carried");
     // Something the player can regret: infra expires the grant outright in
     // the same transaction as the paid insert.
     expect(confirmMock.mock.calls[0][1]).toMatchObject({
@@ -326,7 +329,7 @@ describe("purchaseCosmetic: the confirm a granted subscriber is shown", () => {
     });
   });
 
-  it("names the free days that are about to be forfeited", async () => {
+  it("names the free days that move the next payment, on the web too", async () => {
     signedInWith({
       tier: "gold",
       provider: null,
@@ -336,8 +339,55 @@ describe("purchaseCosmetic: the confirm a granted subscriber is shown", () => {
     await purchaseCosmetic(tier("gold", 5), "dollar");
 
     const [key, params] = confirmCall();
-    expect(key).toBe("store.confirm_subscribe_over_grant");
+    expect(key).toBe("store.confirm_subscribe_over_grant_carried");
     expect(params).toMatchObject({ days: 12 });
+  });
+
+  it("says a higher-tier grant keeps running beside the new subscription", async () => {
+    const end = new Date(Date.now() + 12 * DAY_MS);
+    signedInWith({ tier: "platinum", provider: null, currentPeriodEnd: end });
+
+    await purchaseCosmetic(tier("gold", 5), "dollar");
+
+    const call = translateTextMock.mock.calls.find(
+      (args: unknown[]) => args[0] === "store.confirm_subscribe_beside_grant",
+    );
+    expect(call?.[1]).toMatchObject({
+      tier: "Gold",
+      giftTier: "Platinum",
+      date: end.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }),
+    });
+    expect(startPurchaseMock).toHaveBeenCalled();
+  });
+
+  it("drops the date for an open-ended higher-tier grant", async () => {
+    signedInWith({ tier: "platinum", provider: null, currentPeriodEnd: null });
+
+    await purchaseCosmetic(tier("gold", 5), "dollar");
+
+    expect(confirmMock).toHaveBeenCalledWith(
+      "store.confirm_subscribe_beside_grant_no_date",
+      expect.anything(),
+    );
+  });
+
+  it("does not promise to keep a higher grant whose end has passed", async () => {
+    signedInWith({
+      tier: "platinum",
+      provider: null,
+      currentPeriodEnd: new Date(Date.now() - DAY_MS),
+    });
+
+    await purchaseCosmetic(tier("gold", 5), "dollar");
+
+    expect(confirmMock).toHaveBeenCalledWith(
+      "store.confirm_subscribe_over_grant_no_days",
+      expect.anything(),
+    );
   });
 
   it("says 1 day, not 0, on the last day of the grant", async () => {
@@ -389,6 +439,77 @@ describe("purchaseCosmetic: the confirm a granted subscriber is shown", () => {
     await purchaseCosmetic(tier("gold", 5), "dollar");
 
     expect(confirmCall()[0]).toBe("store.confirm_subscribe_over_grant_no_days");
+  });
+});
+
+describe("purchaseCosmetic: a granted subscriber in the Steam build", () => {
+  beforeEach(() => {
+    (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      steam: {},
+    };
+  });
+  afterEach(() => {
+    delete (window as unknown as { openfrontDesktop?: unknown })
+      .openfrontDesktop;
+  });
+
+  it("promises the free days are added to the end, not forfeited", async () => {
+    signedInWith({
+      tier: "gold",
+      provider: null,
+      currentPeriodEnd: new Date(Date.now() + 12 * DAY_MS),
+    });
+
+    await purchaseCosmetic(tier("gold", 5), "dollar");
+
+    const [key, params] = confirmCall();
+    expect(key).toBe("store.confirm_subscribe_over_grant_carried");
+    expect(params).toMatchObject({ days: 12 });
+  });
+
+  it("still uses the no-days copy for an open-ended grant, which has nothing to carry", async () => {
+    signedInWith({ tier: "gold", provider: null, currentPeriodEnd: null });
+
+    await purchaseCosmetic(tier("gold", 5), "dollar");
+
+    expect(confirmCall()[0]).toBe("store.confirm_subscribe_over_grant_no_days");
+  });
+});
+
+describe("purchaseCosmetic: a paid subscriber with a grant beside it", () => {
+  function signedInStacked() {
+    const row = (tier: string, provider: string | null) => ({
+      tier,
+      status: "active",
+      cancelAtPeriodEnd: false,
+      currentPeriodEnd: new Date(Date.now() + 12 * DAY_MS),
+      provider,
+    });
+    getUserMeMock.mockResolvedValue({
+      player: {
+        subscription: row("platinum", null),
+        subscriptions: [row("platinum", null), row("gold", "stripe")],
+      },
+    });
+  }
+
+  it("changes tier from the paid row, not the grant", async () => {
+    signedInStacked();
+    changeTierMock.mockResolvedValue(true);
+
+    await purchaseCosmetic(tier("platinum", 10), "dollar");
+
+    expect(changeTierMock).toHaveBeenCalledWith("platinum");
+    expect(startPurchaseMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses the tier they pay for", async () => {
+    signedInStacked();
+
+    await purchaseCosmetic(tier("gold", 5), "dollar");
+
+    expect(alertMock).toHaveBeenCalledWith("store.already_subscribed");
+    expect(startPurchaseMock).not.toHaveBeenCalled();
   });
 });
 
@@ -475,7 +596,10 @@ describe("resolveCosmetics: the granted tier is for sale, not owned", () => {
   }
 
   it("marks a granted tier purchasable so the store renders a buy button", () => {
-    const user = userMe({ tier: "gold", status: "active", provider: null });
+    // infra sends a `subscription:<tier>` flare for every row held.
+    const user = userMe({ tier: "gold", status: "active", provider: null }, [
+      "subscription:gold",
+    ]);
     expect(relationshipOf(user, "subscription:gold")).toBe("purchasable");
   });
 
@@ -489,6 +613,21 @@ describe("resolveCosmetics: the granted tier is for sale, not owned", () => {
     expect(relationshipOf(user, "subscription:gold")).toBe("owned");
   });
 
+  it("marks the paid tier owned when a higher grant is the effective row", () => {
+    const user = {
+      player: {
+        subscription: { tier: "platinum", status: "active", provider: null },
+        subscriptions: [
+          { tier: "platinum", status: "active", provider: null },
+          { tier: "gold", status: "active", provider: "stripe" },
+        ],
+        flares: ["subscription:platinum", "subscription:gold"],
+      },
+    };
+    expect(relationshipOf(user, "subscription:gold")).toBe("owned");
+    expect(relationshipOf(user, "subscription:platinum")).toBe("purchasable");
+  });
+
   it("leaves a flare-granted tier owned even while a grant is running", () => {
     // A flare is a permanent unlock, not a month; there is nothing to sell.
     const user = userMe({ tier: "gold", status: "active", provider: null }, [
@@ -497,18 +636,15 @@ describe("resolveCosmetics: the granted tier is for sale, not owned", () => {
     expect(relationshipOf(user, "subscription:platinum")).toBe("owned");
   });
 
-  it("keeps a granted tier we cannot price owned, so its card does not vanish", () => {
-    // Demoting a grant to "purchasable" is only safe while the tier HAS a
-    // Stripe product to price the button from. Without one it would fall to
-    // "blocked", and the subscriptions tab lists purchasable and owned only —
-    // so the card would disappear entirely, which is worse than the dead
-    // "Subscribed" box. OPE-441 is the real fix for the product gate.
+  it("offers a listed granted tier for sale even without a Stripe product", () => {
+    // A tier sold only on Steam has no Stripe listing. It is still on this
+    // rail's storefront, so the grant is demoted like any other.
     const unpriced = {
       patterns: {},
       flags: {},
       colorPalettes: {},
       subscriptions: {
-        gold: { name: "gold", priceMonthly: 5, product: null },
+        gold: { name: "gold", priceMonthly: 499, product: null },
       },
     } as unknown as Cosmetics;
     const user = userMe({ tier: "gold", status: "active", provider: null });
@@ -517,7 +653,7 @@ describe("resolveCosmetics: the granted tier is for sale, not owned", () => {
       (item) => item.key === "subscription:gold",
     );
 
-    expect(gold?.relationship).toBe("owned");
+    expect(gold?.relationship).toBe("purchasable");
   });
 });
 
@@ -535,23 +671,27 @@ describe("the granted-purchase confirm strings read correctly", () => {
   const render = (key: string, params: Record<string, unknown>) =>
     new IntlMessageFormat(store[key], "en").format(params) as string;
 
-  it("agrees in number when a single day is left", () => {
+  it("agrees in number in the carry-over copy", () => {
     expect(
-      render("confirm_subscribe_over_grant", { tier: "Gold", days: 1 }),
-    ).toContain("the 1 day left on it is not refunded");
-  });
-
-  it("agrees in number for more than one day", () => {
+      render("confirm_subscribe_over_grant_carried", { tier: "Gold", days: 1 }),
+    ).toContain(
+      "You've still got 1 free day, so your next payment moves 1 day later.",
+    );
     expect(
-      render("confirm_subscribe_over_grant", { tier: "Gold", days: 28 }),
-    ).toContain("the 28 days left on it are not refunded");
+      render("confirm_subscribe_over_grant_carried", {
+        tier: "Gold",
+        days: 28,
+      }),
+    ).toContain(
+      "You've still got 28 free days, so your next payment moves 28 days later.",
+    );
   });
 
   it("never calls a grant a month: an admin comp is open-ended", () => {
     // Only the Steam ownership grant is a fixed month. `currentPeriodEnd`
     // being set does not make a grant one, so neither string may say so.
     expect(
-      render("confirm_subscribe_over_grant", { tier: "Gold", days: 3 }),
+      render("confirm_subscribe_over_grant_carried", { tier: "Gold", days: 3 }),
     ).not.toContain("free month");
     expect(
       render("confirm_subscribe_over_grant_no_days", { tier: "Gold" }),

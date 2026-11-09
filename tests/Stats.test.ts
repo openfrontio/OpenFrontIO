@@ -1,18 +1,17 @@
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { Stats } from "../src/core/game/Stats";
-import { StatsImpl } from "../src/core/game/StatsImpl";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   ATTACK_INDEX_MAX_RECV,
   ATTACK_INDEX_RECV,
   PlayerStats,
-} from "../src/core/StatsSchemas";
-import { replacer } from "../src/core/Util";
+} from "@openfront/engine-api/StatsSchemas";
+import { Game, Player } from "@openfront/engine/game/Game";
+import { Stats } from "@openfront/engine/game/Stats";
+import { StatsImpl } from "@openfront/engine/game/StatsImpl";
+import { replacer } from "@openfront/shared/SharedUtil";
 import { setup } from "./util/Setup";
 
 let stats: Stats;
@@ -321,5 +320,15 @@ describe("Stats", () => {
     expect(game.stats().getPlayerStats(player1)?.finalTiles).toBe(
       BigInt(tiles),
     );
+  });
+
+  test("migrateClientID moves stats from old to new client ID", () => {
+    stats.attack(player1, player2, 10);
+    const p1Stats = stats.stats().client1;
+    expect(p1Stats).toBeDefined();
+
+    stats.migrateClientID("client1", "new_client1");
+    expect(stats.stats().client1).toBeUndefined();
+    expect(stats.stats().new_client1).toBe(p1Stats);
   });
 });

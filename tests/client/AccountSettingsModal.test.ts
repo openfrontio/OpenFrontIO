@@ -1,8 +1,8 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../../src/client/AccountSettingsModal";
 import type { AccountSettingsModal } from "../../src/client/AccountSettingsModal";
 import { getIdentityTokenAudiences, getUserMe } from "../../src/client/Api";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),

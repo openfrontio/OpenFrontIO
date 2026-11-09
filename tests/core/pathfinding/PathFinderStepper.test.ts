@@ -1,6 +1,6 @@
+import { PathFinderStepper } from "@openfront/engine/pathfinding/PathFinderStepper";
+import { PathFinder, PathStatus } from "@openfront/engine/pathfinding/types";
 import { describe, expect, it } from "vitest";
-import { PathFinderStepper } from "../../../src/core/pathfinding/PathFinderStepper";
-import { PathFinder, PathStatus } from "../../../src/core/pathfinding/types";
 
 describe("PathFinderStepper", () => {
   function createMockFinder(

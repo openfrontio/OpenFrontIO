@@ -1,15 +1,15 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { purchaseCosmetic } from "../../src/client/Cosmetics";
-import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
-import "../../src/client/components/EffectsGrid";
-import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import {
   EFFECT_TYPES,
   NUKE_EXPLOSION_TYPES,
   type Cosmetics,
-} from "../../src/core/CosmeticSchemas";
-import { EFFECTS_KEY, UserSettings } from "../../src/core/game/UserSettings";
+} from "@openfront/shared/CosmeticSchemas";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
+import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
+import { purchaseCosmetic } from "../../src/client/Cosmetics";
+import "../../src/client/components/EffectsGrid";
+import { EFFECTS_KEY, UserSettings } from "../../src/client/UserSettings";
 
 vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
@@ -300,7 +300,7 @@ describe("EffectsGrid", () => {
       await card.updateComplete;
       card.querySelector<HTMLButtonElement>("[data-cosmetic-main]")!.click();
 
-      expect((onMessage.mock.lastCall?.[0] as CustomEvent).detail.message).toBe(
+      expect((onMessage.mock.lastCall![0] as CustomEvent).detail.message).toBe(
         "Selected Localized Wake",
       );
 

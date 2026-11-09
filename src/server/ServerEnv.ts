@@ -1,9 +1,13 @@
+import { GameID } from "@openfront/engine-api/Schemas";
+import { simpleHash } from "@openfront/engine-lib/Util";
+import {
+  ClusterConfig,
+  InstanceLetterSchema,
+} from "@openfront/shared/ClusterConfig";
+import { GameEnv, parseGameEnv } from "@openfront/shared/configuration/Env";
+import { generateGameID } from "@openfront/shared/SharedUtil";
 import { JWK } from "jose";
 import { z } from "zod";
-import { ClusterConfig, InstanceLetterSchema } from "../core/ClusterConfig";
-import { GameEnv, parseGameEnv } from "../core/configuration/Config";
-import { GameID } from "../core/Schemas";
-import { generateGameID, simpleHash } from "../core/Util";
 
 const JwksSchema = z.object({
   keys: z
@@ -115,7 +119,12 @@ export class ServerEnv {
     if (ServerEnv.publicKey) return ServerEnv.publicKey;
     const jwksUrl = ServerEnv.jwtIssuer() + "/.well-known/jwks.json";
     console.log(`Fetching JWKS from ${jwksUrl}`);
-    const response = await fetch(jwksUrl);
+    // A redirect would forward x-api-key to the new origin; the JWKS
+    // endpoint never redirects, so refuse to follow one.
+    const response = await fetch(jwksUrl, {
+      headers: { "x-api-key": ServerEnv.apiKey() },
+      redirect: "error",
+    });
     if (!response.ok) {
       const body = await response.text();
       throw new Error(`JWKS fetch failed: ${response.status} ${body}`);

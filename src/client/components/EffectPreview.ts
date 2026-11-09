@@ -1,3 +1,9 @@
+import {
+  Effect,
+  NukeExplosionAttributes,
+  StructuresEffectAttributes,
+  TrailEffectAttributes,
+} from "@openfront/shared/CosmeticSchemas";
 import { colord } from "colord";
 import {
   html,
@@ -8,12 +14,6 @@ import {
   TemplateResult,
 } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import {
-  Effect,
-  NukeExplosionAttributes,
-  StructuresEffectAttributes,
-  TrailEffectAttributes,
-} from "../../core/CosmeticSchemas";
 
 // ---------------------------------------------------------------------------
 // Scene previews — a tiny slice of the map, in tile units, drawn the way the

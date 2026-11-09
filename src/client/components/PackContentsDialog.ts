@@ -1,3 +1,4 @@
+import { CosmeticPack } from "@openfront/shared/CosmeticSchemas";
 import {
   html,
   LitElement,
@@ -6,7 +7,6 @@ import {
   TemplateResult,
 } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { CosmeticPack } from "../../core/CosmeticSchemas";
 import { ResolvedCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CosmeticCard";
@@ -113,39 +113,47 @@ export class PackContentsDialog extends LitElement {
         <h2 class="mb-1 pr-8 text-lg font-bold text-white">
           ${pack.displayName}
         </h2>
-        ${pack.description
-          ? html`<p class="mb-4 text-sm text-white/60">${pack.description}</p>`
-          : html`<div class="mb-4"></div>`}
-        ${items.length === 0
-          ? html`<p class="py-6 text-center text-sm text-white/50">
-              ${translateText("store.pack_no_items")}
-            </p>`
-          : html`<div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              ${items.map(
-                (item) =>
-                  html`<div
-                    data-pack-contents-item=${item.key}
-                    class="flex min-w-0 flex-col items-center gap-1"
-                  >
-                    <cosmetic-card
-                      class="block w-full"
-                      .resolved=${item}
-                      .onActivate=${(r: ResolvedCosmetic) =>
-                        this.openPreview(r)}
-                    ></cosmetic-card>
-                    <span
-                      data-pack-contents-type
-                      class="text-[10px] font-bold uppercase tracking-wider text-white/50"
-                      >${cosmeticTypeLabel(item)}</span
+        ${
+          pack.description
+            ? html`<p class="mb-4 text-sm text-white/60">
+                ${pack.description}
+              </p>`
+            : html`<div class="mb-4"></div>`
+        }
+        ${
+          items.length === 0
+            ? html`<p class="py-6 text-center text-sm text-white/50">
+                ${translateText("store.pack_no_items")}
+              </p>`
+            : html`<div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                ${items.map(
+                  (item) =>
+                    html`<div
+                      data-pack-contents-item=${item.key}
+                      class="flex min-w-0 flex-col items-center gap-1"
                     >
-                  </div>`,
-              )}
-            </div>`}
-        ${this.actionContent !== nothing
-          ? html`<div data-pack-contents-action class="mx-auto mt-4 max-w-xs">
-              ${this.actionContent}
-            </div>`
-          : nothing}
+                      <cosmetic-card
+                        class="block w-full"
+                        .resolved=${item}
+                        .onActivate=${(r: ResolvedCosmetic) =>
+                          this.openPreview(r)}
+                      ></cosmetic-card>
+                      <span
+                        data-pack-contents-type
+                        class="text-[10px] font-bold uppercase tracking-wider text-white/50"
+                        >${cosmeticTypeLabel(item)}</span
+                      >
+                    </div>`,
+                )}
+              </div>`
+        }
+        ${
+          this.actionContent !== nothing
+            ? html`<div data-pack-contents-action class="mx-auto mt-4 max-w-xs">
+                ${this.actionContent}
+              </div>`
+            : nothing
+        }
       </div>
     </div>`;
   }

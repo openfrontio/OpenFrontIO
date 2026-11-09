@@ -182,48 +182,55 @@ export class ClanDonateDialog extends LitElement {
         data-currency=${type}
         ?disabled=${this.submitting}
         @click=${() => this.selectCurrency(type)}
-        class="relative flex-1 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border transition-all ${selected
-          ? selectedClasses
-          : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white"} disabled:opacity-50 disabled:pointer-events-none"
+        class="relative flex-1 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border transition-all ${
+          selected
+            ? selectedClasses
+            : "bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white"
+        } disabled:opacity-50 disabled:pointer-events-none"
       >
-        ${selected
-          ? html`<span
-              data-check
-              class="absolute top-1.5 right-1.5 w-4 h-4 rounded-full ${type ===
-              "hard"
-                ? "bg-green-400"
-                : "bg-amber-400"} text-black flex items-center justify-center"
-            >
-              <svg
-                class="w-3 h-3"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="3"
-                aria-hidden="true"
+        ${
+          selected
+            ? html`<span
+                data-check
+                class="absolute top-1.5 right-1.5 w-4 h-4 rounded-full ${
+                  type === "hard" ? "bg-green-400" : "bg-amber-400"
+                } text-black flex items-center justify-center"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </span>`
-          : ""}
+                <svg
+                  class="w-3 h-3"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  aria-hidden="true"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </span>`
+            : ""
+        }
         <span
           class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider"
         >
-          ${type === "hard"
-            ? html`<plutonium-icon .size=${14}></plutonium-icon>`
-            : html`<cap-icon .size=${16}></cap-icon>`}
+          ${
+            type === "hard"
+              ? html`<plutonium-icon .size=${14}></plutonium-icon>`
+              : html`<cap-icon .size=${16}></cap-icon>`
+          }
           ${this.currencyLabel(type)}
         </span>
         <span class="text-[11px] text-white/50">
-          ${balance === null
-            ? "…"
-            : translateText("clan_modal.donate_your_balance", {
-                balance,
-              })}
+          ${
+            balance === null
+              ? "…"
+              : translateText("clan_modal.donate_your_balance", {
+                  balance,
+                })
+          }
         </span>
       </button>
     `;
@@ -243,9 +250,9 @@ export class ClanDonateDialog extends LitElement {
         }}
       >
         <div
-          class="relative mx-4 w-full max-w-md p-6 rounded-2xl border ${isHard
-            ? "border-red-500/50"
-            : "border-amber-500/50"} bg-surface shadow-2xl"
+          class="relative mx-4 w-full max-w-md p-6 rounded-2xl border ${
+            isHard ? "border-red-500/50" : "border-amber-500/50"
+          } bg-surface shadow-2xl"
         >
           <h2 class="text-lg font-bold text-white mb-1">
             ${translateText("clan_modal.donate_title", { tag: this.clanTag })}
@@ -278,25 +285,31 @@ export class ClanDonateDialog extends LitElement {
             }}
             class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm disabled:opacity-50"
           />
-          ${error
-            ? html`<p class="text-red-400 text-xs mt-2" role="alert">
-                ${error}
-              </p>`
-            : ""}
+          ${
+            error
+              ? html`<p class="text-red-400 text-xs mt-2" role="alert">
+                  ${error}
+                </p>`
+              : ""
+          }
 
           <div
-            class="mt-4 rounded-xl border p-3 text-xs ${isHard
-              ? "border-red-500/40 bg-red-500/10 text-red-300"
-              : "border-amber-500/30 bg-amber-500/10 text-amber-300"}"
+            class="mt-4 rounded-xl border p-3 text-xs ${
+              isHard
+                ? "border-red-500/40 bg-red-500/10 text-red-300"
+                : "border-amber-500/30 bg-amber-500/10 text-amber-300"
+            }"
           >
             <p class="font-bold">
               ${translateText("clan_modal.donate_irreversible")}
             </p>
-            ${isHard
-              ? html`<p class="mt-1">
-                  ${translateText("clan_modal.donate_irreversible_hard")}
-                </p>`
-              : ""}
+            ${
+              isHard
+                ? html`<p class="mt-1">
+                    ${translateText("clan_modal.donate_irreversible_hard")}
+                  </p>`
+                : ""
+            }
           </div>
 
           <div class="flex gap-3 mt-5">
@@ -313,9 +326,11 @@ export class ClanDonateDialog extends LitElement {
               data-action="donate"
               @click=${() => void this.submit()}
               ?disabled=${!canSubmit}
-              class="flex-1 px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl text-white transition-all disabled:opacity-50 disabled:pointer-events-none border-0 ${isHard
-                ? "bg-red-600 hover:bg-red-700"
-                : "bg-amber-600 hover:bg-amber-700"}"
+              class="flex-1 px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl text-white transition-all disabled:opacity-50 disabled:pointer-events-none border-0 ${
+                isHard
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-amber-600 hover:bg-amber-700"
+              }"
             >
               ${translateText(
                 this.submitting

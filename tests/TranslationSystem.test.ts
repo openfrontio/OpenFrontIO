@@ -1,7 +1,16 @@
 import fs from "fs";
 import IntlMessageFormat from "intl-messageformat";
+import {
+  type CallExpression,
+  type Expression,
+  type Node,
+  type ObjectProperty,
+  type PropertyKey,
+  type StringLiteral,
+  type TemplateLiteral,
+} from "oxc-parser";
 import path from "path";
-import ts from "typescript";
+import { forEachChild, isStringLiteral, parseSource } from "./util/sourceAst";
 
 const PROJECT_ROOT = path.join(__dirname, "..");
 const LANGUAGE_DIR = path.join(PROJECT_ROOT, "resources", "lang");
@@ -65,6 +74,9 @@ type ScanResult = {
   referencedStaticKeys: Set<string>;
   dynamicPrefixes: Set<string>;
 };
+
+/** A template literal without substitutions. */
+type PlainTemplateLiteral = TemplateLiteral & { expressions: [] };
 
 function flattenKeys(obj: Record<string, unknown>, prefix = ""): string[] {
   const keys: string[] = [];
@@ -193,49 +205,67 @@ function prefixToRegex(prefix: string): RegExp {
   return new RegExp(`^${escapeRegex(prefix)}.+$`);
 }
 
-function isTranslateTextCall(node: ts.CallExpression): boolean {
-  if (ts.isIdentifier(node.expression)) {
-    return node.expression.text === "translateText";
+function isTranslateTextCall(node: CallExpression): boolean {
+  const callee = node.callee;
+  if (callee.type === "Identifier") {
+    return callee.name === "translateText";
   }
-  if (ts.isPropertyAccessExpression(node.expression)) {
-    return node.expression.name.text === "translateText";
+  // A computed member expression (`obj["translateText"]`) is not a plain
+  // property access, so it does not count.
+  if (
+    callee.type === "MemberExpression" &&
+    callee.computed === false &&
+    callee.property.type === "Identifier"
+  ) {
+    return callee.property.name === "translateText";
   }
   return false;
 }
 
-function isStringLiteralLike(
-  node: ts.Node,
-): node is ts.StringLiteral | ts.NoSubstitutionTemplateLiteral {
-  return ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node);
+function isTemplateLiteral(node: Node): node is PlainTemplateLiteral {
+  return node.type === "TemplateLiteral" && node.expressions.length === 0;
 }
 
-function getPlusOperands(expr: ts.Expression): ts.Expression[] {
-  if (
-    ts.isBinaryExpression(expr) &&
-    expr.operatorToken.kind === ts.SyntaxKind.PlusToken
-  ) {
+/**
+ * A string literal, or a template literal without substitutions: both stand
+ * in for a translation key.
+ */
+function isStringLiteralLike(
+  node: Node,
+): node is StringLiteral | PlainTemplateLiteral {
+  return isStringLiteral(node) || isTemplateLiteral(node);
+}
+
+/** The text of a string literal, or of a template literal without substitutions. */
+function stringLiteralText(node: StringLiteral | PlainTemplateLiteral): string {
+  if (node.type === "Literal") return node.value;
+  return node.quasis[0].value.cooked ?? node.quasis[0].value.raw;
+}
+
+function getPlusOperands(expr: Expression): Expression[] {
+  if (expr.type === "BinaryExpression" && expr.operator === "+") {
     return [...getPlusOperands(expr.left), ...getPlusOperands(expr.right)];
   }
   return [expr];
 }
 
-function getStaticStringFromPlus(expr: ts.Expression): string | null {
+function getStaticStringFromPlus(expr: Expression): string | null {
   const parts = getPlusOperands(expr);
   let value = "";
   for (const part of parts) {
     if (!isStringLiteralLike(part)) return null;
-    value += part.text;
+    value += stringLiteralText(part);
   }
   return value;
 }
 
-function getDynamicPrefixFromPlus(expr: ts.Expression): string | null {
+function getDynamicPrefixFromPlus(expr: Expression): string | null {
   const parts = getPlusOperands(expr);
   if (parts.length === 0) return null;
   const first = parts[0];
   if (!isStringLiteralLike(first)) return null;
   if (parts.every((part) => isStringLiteralLike(part))) return null;
-  return first.text || null;
+  return stringLiteralText(first) || null;
 }
 
 function extractDataI18nKeys(content: string): Set<string> {
@@ -273,37 +303,45 @@ function isPotentialTranslationKey(
   return rootKeys.has(root);
 }
 
-function isKeyNamedProperty(name: ts.PropertyName): boolean {
-  if (ts.isIdentifier(name)) return /key$/i.test(name.text);
-  if (ts.isStringLiteral(name) || ts.isNoSubstitutionTemplateLiteral(name)) {
-    return /key$/i.test(name.text);
+function isKeyNamedProperty(name: PropertyKey): boolean {
+  if (name.type === "Identifier") return /key$/i.test(name.name);
+  if (isStringLiteral(name)) return /key$/i.test(name.value);
+  if (isTemplateLiteral(name)) {
+    return /key$/i.test(stringLiteralText(name));
   }
   return false;
 }
 
+/**
+ * A property assignment (`{ key: value }`) whose name ends in "key".
+ * Shorthand properties, methods and accessors are separate node kinds and
+ * do not count, and a computed name (`{ [key]: value }`) is not a name at
+ * all.
+ */
+function isKeyNamedPropertyAssignment(node: ObjectProperty): boolean {
+  if (node.kind !== "init" || node.shorthand || node.method || node.computed) {
+    return false;
+  }
+  return isKeyNamedProperty(node.key);
+}
+
 function collectFromExpression(
-  expression: ts.Expression,
+  expression: Expression,
   result: ScanResult,
   rootKeys: Set<string>,
   enKeySet: Set<string>,
   allowBareRoot = false,
 ): void {
   if (isStringLiteralLike(expression)) {
-    if (
-      isPotentialTranslationKey(
-        expression.text,
-        rootKeys,
-        enKeySet,
-        allowBareRoot,
-      )
-    ) {
-      result.referencedStaticKeys.add(expression.text);
+    const text = stringLiteralText(expression);
+    if (isPotentialTranslationKey(text, rootKeys, enKeySet, allowBareRoot)) {
+      result.referencedStaticKeys.add(text);
     }
     return;
   }
 
-  if (ts.isTemplateExpression(expression)) {
-    const prefix = expression.head.text;
+  if (expression.type === "TemplateLiteral") {
+    const prefix = expression.quasis[0].value.cooked ?? "";
     if (
       prefix.length > 0 &&
       /[._]$/.test(prefix) &&
@@ -314,10 +352,7 @@ function collectFromExpression(
     return;
   }
 
-  if (
-    ts.isBinaryExpression(expression) &&
-    expression.operatorToken.kind === ts.SyntaxKind.PlusToken
-  ) {
+  if (expression.type === "BinaryExpression" && expression.operator === "+") {
     const staticValue = getStaticStringFromPlus(expression);
     if (staticValue !== null) {
       if (isPotentialTranslationKey(staticValue, rootKeys, enKeySet)) {
@@ -337,7 +372,7 @@ function collectFromExpression(
     return;
   }
 
-  if (ts.isParenthesizedExpression(expression)) {
+  if (expression.type === "ParenthesizedExpression") {
     collectFromExpression(
       expression.expression,
       result,
@@ -348,16 +383,16 @@ function collectFromExpression(
     return;
   }
 
-  if (ts.isConditionalExpression(expression)) {
+  if (expression.type === "ConditionalExpression") {
     collectFromExpression(
-      expression.whenTrue,
+      expression.consequent,
       result,
       rootKeys,
       enKeySet,
       allowBareRoot,
     );
     collectFromExpression(
-      expression.whenFalse,
+      expression.alternate,
       result,
       rootKeys,
       enKeySet,
@@ -373,15 +408,7 @@ function scanTsFile(
   enKeySet: Set<string>,
 ): ScanResult {
   const content = fs.readFileSync(filePath, "utf-8");
-  const sourceFile = ts.createSourceFile(
-    filePath,
-    content,
-    ts.ScriptTarget.Latest,
-    // setParentNodes: nothing in this file reads node.parent, and building the
-    // parent pointers is about 15% of the parse cost across 566 files.
-    false,
-    filePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-  );
+  const program = parseSource(filePath, content);
 
   const result: ScanResult = {
     usedKeys: new Set<string>(),
@@ -398,45 +425,55 @@ function scanTsFile(
     result.referencedStaticKeys.add(key);
   }
 
-  const visit = (node: ts.Node) => {
+  const visit = (node: Node) => {
     // Broad match: any string literal in any .ts/.tsx file that exactly
     // matches an en.json key is counted as "used". This is intentionally
     // permissive to avoid false-positive "unused" reports, but it means a
     // key appearing in an unrelated context (e.g. a log message or object
     // key that happens to share the same name) will mask a genuinely
     // unused translation key.
-    if (isStringLiteralLike(node) && enKeySet.has(node.text)) {
-      result.usedKeys.add(node.text);
+    if (isStringLiteralLike(node)) {
+      const text = stringLiteralText(node);
+      if (enKeySet.has(text)) {
+        result.usedKeys.add(text);
+      }
     }
 
-    if (ts.isCallExpression(node) && isTranslateTextCall(node)) {
+    if (node.type === "CallExpression" && isTranslateTextCall(node)) {
       const firstArg = node.arguments[0];
-      if (firstArg !== undefined) {
+      if (firstArg !== undefined && firstArg.type !== "SpreadElement") {
         collectFromExpression(firstArg, result, rootKeys, enKeySet, true);
       }
     }
 
-    if (
-      ts.isPropertyAssignment(node) &&
-      isKeyNamedProperty(node.name) &&
-      ts.isExpression(node.initializer)
-    ) {
-      collectFromExpression(node.initializer, result, rootKeys, enKeySet);
+    // Property assignments are read off the object literal they belong to:
+    // the AST also uses the "Property" type for destructuring targets, which
+    // are not property assignments.
+    if (node.type === "ObjectExpression") {
+      for (const property of node.properties) {
+        if (
+          property.type === "Property" &&
+          isKeyNamedPropertyAssignment(property)
+        ) {
+          collectFromExpression(property.value, result, rootKeys, enKeySet);
+        }
+      }
     }
 
     if (
-      ts.isVariableDeclaration(node) &&
-      ts.isIdentifier(node.name) &&
-      /key$/i.test(node.name.text) &&
-      node.initializer !== undefined
+      node.type === "VariableDeclarator" &&
+      node.id.type === "Identifier" &&
+      /key$/i.test(node.id.name) &&
+      node.init !== null &&
+      node.init !== undefined
     ) {
-      collectFromExpression(node.initializer, result, rootKeys, enKeySet);
+      collectFromExpression(node.init, result, rootKeys, enKeySet);
     }
 
-    ts.forEachChild(node, visit);
+    forEachChild(node, visit);
   };
 
-  visit(sourceFile);
+  visit(program);
 
   for (const key of dataI18nKeys) {
     if (enKeySet.has(key)) {
@@ -537,8 +574,10 @@ describe("Translation System", () => {
     const enKeySet = new Set(allKeys);
     const rootKeys = new Set(Object.keys(enJson as Record<string, unknown>));
 
-    const srcDir = path.join(PROJECT_ROOT, "src");
-    const sourceFiles = getAllFiles(srcDir, [".ts", ".tsx", ".js", ".jsx"]);
+    // The engine packages emit message keys too.
+    const sourceFiles = ["src", "packages"].flatMap((dir) =>
+      getAllFiles(path.join(PROJECT_ROOT, dir), [".ts", ".tsx", ".js", ".jsx"]),
+    );
 
     const usedKeys = new Set<string>();
     const referencedStaticKeys = new Set<string>();
@@ -640,16 +679,12 @@ describe("Translation System", () => {
     expect(missingKeys).toEqual([]);
     expect(unusedKeys).toEqual([]);
     // 60s, raised from the 30s added in #3861 (May 2026). This is starvation
-    // headroom, not a budget. Measured over 566 source files (5.0MB): ~1.7s
-    // locally, split read 0.28s / TS parse 0.68s / AST walk 0.70s, and ~4.0s
-    // under the v8 coverage CI actually runs (`npm run test:coverage`,
-    // ci.yml:47) -- down from ~5.0s before the setParentNodes change above.
-    // That 20% is the whole of what optimisation can buy: parse and walk are
-    // 82% of the cost and are inherent to reading every source file with the
-    // TypeScript compiler. What exhausted the old 30s on 1 Sept 2026 was
-    // >12x starvation from concurrent suites on one machine, which no
-    // speedup of this size survives. A timeout here reads exactly like the
-    // i18n regression this test exists to catch, and costs an investigation
-    // every time, so the margin is deliberately generous.
+    // headroom, not a budget. Measured over 566 source files (5.0MB): ~1.1s
+    // locally with oxc-parser, and ~1.3s under the v8 coverage CI actually
+    // runs (`npm run test:coverage`, ci.yml:47). What exhausted the old 30s
+    // on 1 Sept 2026 was >12x starvation from concurrent suites on one
+    // machine, which no speedup of this size survives. A timeout here reads
+    // exactly like the i18n regression this test exists to catch, and costs
+    // an investigation every time, so the margin is deliberately generous.
   }, 60000);
 });

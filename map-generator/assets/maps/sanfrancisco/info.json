@@ -1,9 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "SanFrancisco",
   "name": "San Francisco",
   "translation_key": "map.sanfrancisco",
   "categories": ["north_america"],
-  "multiplayer_frequency": 3,
+  "location": { "lat": 37.8, "lon": -122.4 },
+  "author": "Tristar",
+  "description": "The bay decides who survives. This map is built around water, San Francisco sits on the tip of a peninsula; Marin County to the north beyond the Golden Gate; the East Bay stretches along the inland shore through Oakland and Berkeley. Every tradeship goes through the middle around Treasure Island - control it or be pirated!",
   "nations": [
     {
       "coordinates": [996, 990],

@@ -1,5 +1,5 @@
+import { atan2, exp, log, pow, pow2 } from "@openfront/engine-lib/DetMath";
 import { describe, expect, it } from "vitest";
-import { atan2, exp, log, pow, pow2 } from "../../src/core/DetMath";
 
 function relErr(a: number, b: number): number {
   return b === 0 ? Math.abs(a) : Math.abs(a - b) / Math.abs(b);

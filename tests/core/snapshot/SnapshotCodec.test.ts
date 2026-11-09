@@ -1,7 +1,7 @@
 import {
   decodeSnapshotValue,
   encodeSnapshotValue,
-} from "../../../src/core/snapshot/SnapshotCodec";
+} from "@openfront/engine/snapshot/SnapshotCodec";
 
 describe("snapshot codec", () => {
   test("round-trips every supported value kind", () => {

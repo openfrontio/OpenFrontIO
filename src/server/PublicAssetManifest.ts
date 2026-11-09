@@ -1,11 +1,11 @@
-import { createHash } from "crypto";
-import fs from "fs";
-import path from "path";
 import {
   type AssetManifest,
   encodeAssetPath,
   normalizeAssetPath,
-} from "../core/AssetUrls";
+} from "@openfront/shared/AssetPaths";
+import { createHash } from "crypto";
+import fs from "fs";
+import path from "path";
 
 const HASHED_PUBLIC_ASSET_GLOBS = [
   "changelog.md",
@@ -219,7 +219,7 @@ function getDerivedPublicAssetRenderer(
   );
 }
 
-export function isDerivedPublicAsset(relativePath: string): boolean {
+function isDerivedPublicAsset(relativePath: string): boolean {
   return (
     getDerivedPublicAssetRenderer(normalizeAssetPath(relativePath)) !==
     undefined
@@ -276,7 +276,7 @@ function resolveSourceFile(relativePath: string, sourceDirs: string[]): string {
   return path.join(resolveSourceDir(relativePath, sourceDirs), relativePath);
 }
 
-export function listHashedPublicAssetPaths(sourceDirs: string[]): string[] {
+function listHashedPublicAssetPaths(sourceDirs: string[]): string[] {
   const files = new Set<string>();
   for (const sourceDir of sourceDirs) {
     if (!fs.existsSync(sourceDir)) continue;
@@ -295,7 +295,7 @@ export function listHashedPublicAssetPaths(sourceDirs: string[]): string[] {
 }
 
 // A plain walk rather than a glob: dot-directories (.well-known) are served too.
-export function listRootPublicFiles(publicDir: string): string[] {
+function listRootPublicFiles(publicDir: string): string[] {
   if (!fs.existsSync(publicDir)) return [];
   return fs
     .readdirSync(publicDir, { recursive: true, withFileTypes: true })
@@ -384,12 +384,16 @@ export function copyRootPublicFiles(publicDir: string, outDir: string): void {
   }
 }
 
-// Path -> content type for every root file, plus a "<dir>/" entry for each
-// directory with an index.html. The site Worker serves exactly what this lists,
-// from sites/<site>/v/<short>/root/<path> (update.sh uploads both).
-export type RootFilesIndex = Record<string, string>;
+// Path -> content type and content-addressed key (under game_assets/) for
+// every root file, plus a "<dir>/" entry for each directory with an
+// index.html, carrying that file's. The site Worker serves exactly what this
+// lists. update.sh uploads the hashed copies with the other hashed assets, so
+// a root file that did not change is not uploaded again, and the index itself
+// to sites/<site>/v/<short>/root-files.json.
+export type RootFile = { type: string; key: string };
+export type RootFilesIndex = Record<string, RootFile>;
 
-export const ROOT_FILES_INDEX = "root-files.json";
+const ROOT_FILES_INDEX = "root-files.json";
 
 const ROOT_FILE_TYPES: Record<string, string> = {
   "": "text/plain; charset=utf-8",
@@ -418,21 +422,37 @@ function rootFileContentType(relativePath: string): string {
 export function buildRootFilesIndex(publicDir: string): RootFilesIndex {
   const index: RootFilesIndex = {};
   for (const relativePath of listRootPublicFiles(publicDir)) {
-    const contentType = rootFileContentType(relativePath);
-    index[relativePath] = contentType;
+    const file: RootFile = {
+      type: rootFileContentType(relativePath),
+      key: normalizeAssetPath(
+        createHashedAssetUrl(
+          path.posix.join("root", relativePath),
+          createContentHash(path.join(publicDir, relativePath)),
+        ),
+      ),
+    };
+    index[relativePath] = file;
     if (path.posix.basename(relativePath) === "index.html") {
       const dir = path.posix.dirname(relativePath);
-      if (dir !== ".") index[`${dir}/`] = contentType;
+      if (dir !== ".") index[`${dir}/`] = file;
     }
   }
   return index;
 }
 
+// Writes the index and each root file's hashed copy at its key.
 export function writeRootFilesIndex(publicDir: string, outDir: string): void {
+  const index = buildRootFilesIndex(publicDir);
+  for (const [relativePath, { key }] of Object.entries(index)) {
+    if (relativePath.endsWith("/")) continue;
+    const outputPath = path.join(outDir, key);
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.copyFileSync(path.join(publicDir, relativePath), outputPath);
+  }
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(
     path.join(outDir, ROOT_FILES_INDEX),
-    `${JSON.stringify(buildRootFilesIndex(publicDir), null, 2)}\n`,
+    `${JSON.stringify(index, null, 2)}\n`,
   );
 }
 

@@ -86,6 +86,7 @@ export class FalloutLightPass {
       gl,
       fullscreenNoUvVertSrc,
       shaderSrc(falloutLightFragSrc, TILE_DEFINES),
+      "FalloutLightPass.falloutLightProg",
     );
     this.uFalloutMapSize = gl.getUniformLocation(
       this.falloutLightProg,
@@ -141,6 +142,7 @@ export class FalloutLightPass {
       gl,
       falloutCompositeVertSrc,
       falloutCompositeFragSrc,
+      "FalloutLightPass.falloutCompositeProg",
     );
     this.uFalloutCompositeCam = gl.getUniformLocation(
       this.falloutCompositeProg,

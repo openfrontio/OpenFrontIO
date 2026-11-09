@@ -1,6 +1,7 @@
+// @vitest-environment jsdom
+import type { PublicGames } from "@openfront/shared/WireSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { capturePagePin, resetPagePinForTests } from "../src/client/PagePin";
-import type { PublicGames } from "../src/core/Schemas";
 
 // OPE-255. The component stops its public-lobby socket when a game starts
 // (Main.ts calls gameModeSelector.stop()), and `start()` lived ONLY in

@@ -1,0 +1,39 @@
+{
+  "symbols": [
+    {
+      "from": "src/core/CosmeticRefs.ts",
+      "to": "src/core/CosmeticSchemas.ts",
+      "names": [
+        "CosmeticNameSchema",
+        "PatternDataSchema",
+        "ColorPaletteSchema",
+        "EFFECT_TYPES",
+        "EffectTypeSchema"
+      ]
+    },
+    {
+      "from": "src/core/CosmeticRefs.ts",
+      "to": "src/core/PatternDecoder.ts",
+      "names": ["decodePatternData"]
+    },
+    {
+      "from": "src/core/Schemas.ts",
+      "to": "src/core/WireSchemas.ts",
+      "names": [
+        "PlayerCosmetics",
+        "PlayerPattern",
+        "PlayerColor",
+        "PlayerSkin",
+        "PlayerCrown",
+        "PlayerEffect",
+        "FlagSchema",
+        "PlayerPatternSchema",
+        "PlayerColorSchema",
+        "PlayerSkinSchema",
+        "PlayerCrownSchema",
+        "PlayerEffectSchema",
+        "PlayerCosmeticsSchema"
+      ]
+    }
+  ]
+}

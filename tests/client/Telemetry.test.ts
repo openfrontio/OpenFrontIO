@@ -193,7 +193,7 @@ describe("Telemetry", () => {
     expect(beforeSend(exception([]))).not.toBeNull();
   });
 
-  it("ignores cross-origin script errors, ResizeObserver notices and bare network failures", async () => {
+  it("ignores cross-origin script errors, ResizeObserver notices, bare network failures and stackless browser refusals", async () => {
     page({ faroCollectorUrl: "https://faro.example/collect/k" });
     await initTelemetry();
     const { ignoreErrors } = initializeFaro.mock.calls[0][0] as {
@@ -212,6 +212,24 @@ describe("Telemetry", () => {
     expect(ignored("Load failed", "TypeError")).toBe(true);
     expect(
       ignored("NetworkError when attempting to fetch resource.", "TypeError"),
+    ).toBe(true);
+    expect(
+      ignored(
+        "CSSStyleSheet.replace: This method can only be called on modifiable style sheets",
+        "NotAllowedError",
+      ),
+    ).toBe(true);
+    expect(
+      ignored(
+        "NotAllowedError: This method can only be called on modifiable style sheets",
+        "NotAllowedError",
+      ),
+    ).toBe(true);
+    expect(
+      ignored(
+        "InvalidStateError: Failed to start the audio device",
+        "InvalidStateError",
+      ),
     ).toBe(true);
     expect(ignored("Script error in player_actions")).toBe(false);
     // A chunk that failed to load is ours and worth knowing about.
@@ -296,6 +314,41 @@ describe("Telemetry", () => {
     expect(beforeSend(signal("exception", outside))).toBeNull();
   });
 
+  it("sends bottom rail removals from every prod session, up to a page cap", async () => {
+    const beforeSend = await beforeSendFor();
+    const { outside } = sessionIds();
+    const event = (name: string) => ({
+      type: "event",
+      payload: { name, attributes: {} },
+      meta: { session: { id: outside } },
+    });
+
+    expect(beforeSend(event("some_other_event"))).toBeNull();
+    for (let i = 0; i < 20; i++) {
+      expect(beforeSend(event("bottom_rail_in_game"))).not.toBeNull();
+    }
+    expect(beforeSend(event("bottom_rail_in_game"))).toBeNull();
+  });
+
+  it("sends ad frame reports from 10% of prod sessions, with a cap of their own", async () => {
+    const beforeSend = await beforeSendFor();
+    const { errorsOnly, outside } = sessionIds();
+    const event = (name: string, session: string) => ({
+      type: "event",
+      payload: { name, attributes: {} },
+      meta: { session: { id: session } },
+    });
+
+    expect(beforeSend(event("ad_frame_in_game", outside))).toBeNull();
+    for (let i = 0; i < 20; i++) {
+      expect(beforeSend(event("bottom_rail_in_game", outside))).not.toBeNull();
+    }
+    for (let i = 0; i < 20; i++) {
+      expect(beforeSend(event("ad_frame_in_game", errorsOnly))).not.toBeNull();
+    }
+    expect(beforeSend(event("ad_frame_in_game", errorsOnly))).toBeNull();
+  });
+
   it("sends everything from every session on staging", async () => {
     const beforeSend = await beforeSendFor({ gameEnv: "staging" });
     expect(initializeFaro.mock.calls[0][0]).toMatchObject({
@@ -308,6 +361,13 @@ describe("Telemetry", () => {
       meta: { session: { id: outside } },
     };
     expect(beforeSend(item)).toEqual(item);
+    expect(
+      beforeSend({
+        type: "event",
+        payload: { name: "ad_frame_in_game", attributes: {} },
+        meta: { session: { id: outside } },
+      }),
+    ).not.toBeNull();
   });
 
   it("drops the user agent and brand list from the browser meta", async () => {

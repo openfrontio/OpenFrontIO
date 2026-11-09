@@ -76,6 +76,7 @@ export class BorderScatterPass {
       gl,
       borderScatterVertSrc,
       shaderSrc(borderComputeFragSrc, { ...TILE_DEFINES }),
+      "BorderScatterPass",
     );
 
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;

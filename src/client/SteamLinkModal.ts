@@ -1,6 +1,6 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { html, TemplateResult } from "lit";
 import { customElement } from "lit/decorators.js";
-import type { UserMeResponse } from "../core/ApiSchemas";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { isLoggedIn } from "./Auth";
@@ -825,11 +825,13 @@ export class SteamLinkModal extends BaseModal {
           <p class="text-red-400 text-sm text-center font-medium">
             ${translateText("steam_link_modal.conflict_warning")}
           </p>
-          ${this.redeemState === "failed"
-            ? html`<p class="text-red-400 text-sm text-center">
-                ${reasonMessage(this.failureReason, this.retryAfterSeconds)}
-              </p>`
-            : null}
+          ${
+            this.redeemState === "failed"
+              ? html`<p class="text-red-400 text-sm text-center">
+                  ${reasonMessage(this.failureReason, this.retryAfterSeconds)}
+                </p>`
+              : null
+          }
           <div class="flex gap-3">
             <button
               class="steam-link-cancel-btn ${BUTTON_BASE} bg-white/5 text-white/60 border border-white/10 hover:bg-white/10 hover:text-white/80"
@@ -841,19 +843,21 @@ export class SteamLinkModal extends BaseModal {
                 phase === "spent" ? "common.close" : "common.cancel",
               )}
             </button>
-            ${phase === "spent"
-              ? null
-              : html`<button
-                  class="steam-link-discard-btn ${BUTTON_BASE} bg-red-500/90 text-white hover:bg-red-500"
-                  ?disabled=${phase !== "ready"}
-                  @click=${() => this.handleDiscard()}
-                >
-                  ${translateText(
-                    phase === "deleting"
-                      ? "steam_link_modal.conflict_deleting"
-                      : "steam_link_modal.conflict_confirm",
-                  )}
-                </button>`}
+            ${
+              phase === "spent"
+                ? null
+                : html`<button
+                    class="steam-link-discard-btn ${BUTTON_BASE} bg-red-500/90 text-white hover:bg-red-500"
+                    ?disabled=${phase !== "ready"}
+                    @click=${() => this.handleDiscard()}
+                  >
+                    ${translateText(
+                      phase === "deleting"
+                        ? "steam_link_modal.conflict_deleting"
+                        : "steam_link_modal.conflict_confirm",
+                    )}
+                  </button>`
+            }
           </div>
         </div>
       `;
@@ -875,11 +879,13 @@ export class SteamLinkModal extends BaseModal {
               if (e.key === "Enter") this.handleCodeSubmit();
             }}
           />
-          ${this.codeError
-            ? html`<p class="text-red-400 text-sm text-center">
-                ${this.codeError}
-              </p>`
-            : null}
+          ${
+            this.codeError
+              ? html`<p class="text-red-400 text-sm text-center">
+                  ${this.codeError}
+                </p>`
+              : null
+          }
           <div class="flex gap-3">
             <button
               class="steam-link-cancel-btn ${BUTTON_BASE} bg-white/5 text-white/60 border border-white/10 hover:bg-white/10 hover:text-white/80"
@@ -935,11 +941,13 @@ export class SteamLinkModal extends BaseModal {
     return html`
       <div class="flex flex-col gap-6 p-6">
         <p class="text-white text-lg font-medium text-center">${prompt}</p>
-        ${this.redeemState === "failed"
-          ? html`<p class="text-red-400 text-sm text-center">
-              ${reasonMessage(this.failureReason, this.retryAfterSeconds)}
-            </p>`
-          : null}
+        ${
+          this.redeemState === "failed"
+            ? html`<p class="text-red-400 text-sm text-center">
+                ${reasonMessage(this.failureReason, this.retryAfterSeconds)}
+              </p>`
+            : null
+        }
         <div class="flex gap-3">
           <button
             class="steam-link-cancel-btn ${BUTTON_BASE} bg-white/5 text-white/60 border border-white/10 hover:bg-white/10 hover:text-white/80"

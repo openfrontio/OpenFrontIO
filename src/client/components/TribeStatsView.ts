@@ -1,6 +1,6 @@
+import { TribeStatsResponse } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { TribeStatsResponse } from "../../core/ApiSchemas";
 import { fetchTribeStats } from "../Api";
 import { translateText } from "../Utils";
 import { renderLoadingSpinner } from "./BaseModal";

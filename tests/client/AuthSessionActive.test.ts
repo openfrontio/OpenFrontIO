@@ -1,3 +1,5 @@
+import { TokenPayloadSchema } from "@openfront/shared/ApiSchemas";
+import { uuidToBase64url } from "@openfront/shared/Base64";
 import { base64url } from "jose";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getApiBase } from "../../src/client/ApiBase";
@@ -7,8 +9,6 @@ import {
   userAuth,
 } from "../../src/client/Auth";
 import { ClientEnv } from "../../src/client/ClientEnv";
-import { TokenPayloadSchema } from "../../src/core/ApiSchemas";
-import { uuidToBase64url } from "../../src/core/Base64";
 
 // The real Auth module, deliberately: isSessionActive reads the JWT held in
 // that module's own state, so a mocked Auth can only ever return whatever the

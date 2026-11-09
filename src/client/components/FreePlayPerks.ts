@@ -17,11 +17,21 @@ const PERK_KEYS = [
  * The ad-free line is only true in the desktop build, where Main switches ads
  * off for every session regardless of tier; a free player on the website does
  * see ads, so the same list there must not promise otherwise.
+ *
+ * A Steam licence holder keeps public lobbies and the verified name with no
+ * subscription, so their list says so rather than reading as a downgrade.
  */
-export function renderFreePlayPerks(headingKey: string): TemplateResult {
-  const keys = isDesktopShell()
-    ? [...PERK_KEYS, "free_play.ad_free_steam"]
-    : PERK_KEYS;
+export function renderFreePlayPerks(
+  headingKey: string,
+  steamLicence = false,
+): TemplateResult {
+  const keys = [
+    ...PERK_KEYS,
+    ...(steamLicence
+      ? ["free_play.licence_public_lobbies", "free_play.licence_verified_name"]
+      : []),
+    ...(isDesktopShell() ? ["free_play.ad_free_steam"] : []),
+  ];
   return html`
     <div class="flex flex-col gap-1.5">
       <div class="text-[10px] uppercase tracking-wider text-white/50">

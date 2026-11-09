@@ -1,9 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "GreatLakes",
   "name": "Great Lakes",
   "translation_key": "map.greatlakes",
   "categories": ["north_america"],
-  "multiplayer_frequency": 6,
+  "location": { "lat": 45, "lon": -84 },
+  "author": "Tristar",
+  "description": "Located between the United States and Canada, they are the largest group of freshwater lakes on Earth by total area, and the second-largest by total volume (behind Lake Baikal) with 20% of the world's surface freshwater. The Great Lakes are: Superior, Michigan, Huron, Erie, and Ontario.",
   "nations": [
     {
       "coordinates": [38, 326],

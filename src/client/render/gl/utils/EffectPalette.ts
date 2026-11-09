@@ -12,11 +12,11 @@
  * same catalog attributes the same way.
  */
 
-import { colord } from "colord";
 import type {
   StructuresEffectAttributes,
   TrailEffectAttributes,
-} from "../../../../core/CosmeticSchemas";
+} from "@openfront/shared/CosmeticSchemas";
+import { colord } from "colord";
 import { MAX_TRAIL_COLORS } from "./ColorUtils";
 
 /** Catalog attributes of every effect that renders through the effect palette. */

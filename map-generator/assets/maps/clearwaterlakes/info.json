@@ -1,9 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "ClearwaterLakes",
   "name": "Clearwater Lakes",
   "translation_key": "map.clearwaterlakes",
   "categories": ["north_america"],
-  "multiplayer_frequency": 3,
+  "location": { "lat": 56.2, "lon": -74.4 },
+  "author": "Tristar",
+  "description": "Also known by locals as Lac Wiyâshâkimî. Created by 2 asteroid impacts in northern Quebec, Canada. The east lake is 460–470M years old, corresponding to the Ordovician, while the west lake was formed 286M years ago, in the Permian. This is a fun shaped map, in the form of 2 circles each centered on the 2 lakes.",
   "nations": [
     {
       "coordinates": [671, 847],

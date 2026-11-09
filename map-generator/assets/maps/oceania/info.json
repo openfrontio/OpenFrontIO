@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Oceania",
   "name": "Oceania",
   "translation_key": "map.oceania",
   "categories": ["oceania", "continental"],
-  "multiplayer_frequency": 0,
+  "location": { "lat": -12, "lon": 160 },
+  "author": "evanpelle",
   "nations": [
     {
       "coordinates": [515, 690],

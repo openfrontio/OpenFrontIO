@@ -1,5 +1,5 @@
 /**
- * Golden-value tests for `Config.attackLogic`.
+ * Golden-value tests for `EngineConfig.attackLogic`.
  *
  * These pin the *exact* numeric output of the per-tile attack formula across a
  * grid of inputs. They exist so the formula can be refactored with confidence
@@ -10,12 +10,14 @@
  * This is a test of the formula, not of the simulation. See
  * AttackScenarios.test.ts for end-to-end numbers on real maps.
  */
-import { AttackLogicInput, Config } from "../src/core/configuration/Config";
-import { PlayerType, TerrainType } from "../src/core/game/Game";
-import { UserSettings } from "../src/core/game/UserSettings";
-import { GameConfig } from "../src/core/Schemas";
+import { PlayerType, TerrainType } from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import {
+  AttackLogicInput,
+  EngineConfig,
+} from "@openfront/engine/configuration/EngineConfig";
 
-const config = new Config({} as GameConfig, new UserSettings(), false);
+const config = new EngineConfig({} as GameConfig, false);
 
 type Defender = NonNullable<AttackLogicInput["defender"]>;
 

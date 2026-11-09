@@ -1,12 +1,11 @@
-import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
-import { NukeExecution } from "../../src/core/execution/NukeExecution";
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
+import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "../util/Setup";
 
 describe("Construction economy", () => {

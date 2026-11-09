@@ -1,8 +1,8 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { LOBBY_QUEUE_CUTOFF_MS } from "@openfront/shared/WireSchemas";
 import EventEmitter from "events";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
-import { GameType } from "../../src/core/game/Game";
-import { LOBBY_QUEUE_CUTOFF_MS } from "../../src/core/Schemas";
 import { GameServer } from "../../src/server/GameServer";
 import { InternalGameInfo } from "../../src/server/IPCBridgeSchema";
 import {

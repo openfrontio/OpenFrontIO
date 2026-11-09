@@ -15,9 +15,10 @@ export interface AdGatekeeperOptions {
   /**
    * Adblock probe. Defaults to a DOM bait check; injectable so the state
    * machine can be unit-tested without a real blocker (jsdom does no layout,
-   * so the bait always reads "blocked" there).
+   * so the bait always reads "blocked" there). Resolves null when the
+   * reading is inconclusive; that reading is dropped and the next check retries.
    */
-  probe?: () => Promise<boolean>;
+  probe?: () => Promise<boolean | null>;
 }
 
 /**
@@ -39,7 +40,7 @@ export class AdGatekeeper {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private started = false;
   private readonly pollMs: number;
-  private readonly probe: () => Promise<boolean>;
+  private readonly probe: () => Promise<boolean | null>;
 
   constructor(opts: AdGatekeeperOptions = {}) {
     this.pollMs = opts.pollMs ?? 15000;
@@ -128,6 +129,7 @@ export class AdGatekeeper {
     if (this.state === "blocked") return; // terminal — nothing left to check
     const blocked = await this.probe();
     if (!this.started) return; // stopped mid-probe; applyReading guards a late latch
+    if (blocked === null) return; // inconclusive — the next poll/focus re-checks
     this.applyReading(blocked);
   }
 
@@ -150,7 +152,11 @@ export class AdGatekeeper {
   }
 
   /** DOM bait detector: a blocker hides/collapses elements with ad-like classes. */
-  private async baitBlocked(): Promise<boolean> {
+  private async baitBlocked(): Promise<boolean | null> {
+    // No <body> yet (early probe) or an extension swapped the document out.
+    // Bait hung off <html> has no offsetParent and would read as a permanent
+    // false "blocked", so make no reading at all.
+    if (document.body === null) return null;
     const bait = document.createElement("div");
     bait.className = "adsbox ad-banner pub_300x250";
     bait.style.cssText = "position:absolute;left:-9999px;width:1px;height:1px;";

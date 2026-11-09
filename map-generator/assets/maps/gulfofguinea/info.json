@@ -1,9 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "GulfOfGuinea",
   "name": "Gulf Of Guinea",
   "translation_key": "map.gulfofguinea",
   "categories": ["africa"],
-  "multiplayer_frequency": 5,
+  "location": { "lat": 3, "lon": 3 },
+  "author": "Tristar",
+  "description": "Located in the eastern Atlantic Ocean off West and Central Africa. Its major tributaries include the Volta and Niger rivers. In the middle lies the Cameroon line of volcanoes, which created the islands of Bioko, Príncipe, São Tomé and Annobón - Do not let players in these islands pirate you!",
   "nations": [
     {
       "coordinates": [1807, 739],

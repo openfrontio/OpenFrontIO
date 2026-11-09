@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "EastAsia",
   "name": "East Asia",
   "translation_key": "map.eastasia",
   "categories": ["asia"],
-  "multiplayer_frequency": 5,
+  "location": { "lat": 43, "lon": 132 },
+  "author": "Aotumuri",
   "nations": [
     {
       "coordinates": [1157, 614],

@@ -1,9 +1,10 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Pangaea",
   "name": "Pangaea",
   "translation_key": "map.pangaea",
   "categories": ["fictional"],
-  "multiplayer_frequency": 5,
+  "author": "MRH",
   "nations": [
     {
       "coordinates": [389, 800],

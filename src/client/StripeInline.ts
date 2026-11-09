@@ -8,8 +8,8 @@ import type {
 // script tag as a side effect of being imported, which would put js.stripe.com
 // on the critical path of every page load. /pure defers it to the first
 // loadStripe() call, i.e. to the first time a priced store tile renders.
+import { GameEnv } from "@openfront/shared/configuration/Env";
 import { loadStripe } from "@stripe/stripe-js/pure";
-import { GameEnv } from "../core/configuration/Config";
 import { ClientEnv } from "./ClientEnv";
 import {
   createInlinePaymentIntent,
@@ -141,6 +141,7 @@ export type InlineConfirmResult =
  */
 export class InlineCheckoutSession {
   private clientSecret: string | null = null;
+  private pendingUpdate: Promise<void> = Promise.resolve();
 
   private constructor(
     private readonly stripe: Stripe,
@@ -206,7 +207,7 @@ export class InlineCheckoutSession {
     this.request = request;
     if (amountCents !== this.amountCents) {
       this.amountCents = amountCents;
-      this.elements.update({ amount: amountCents });
+      this.pendingUpdate = this.elements.update({ amount: amountCents });
     }
     // Always dropped, even when only the request changed: a cached intent was
     // minted for the OLD request and the server will not reprice it.
@@ -252,6 +253,7 @@ export class InlineCheckoutSession {
   private async confirmInner(options: {
     receiptEmail?: string | null;
   }): Promise<InlineConfirmResult> {
+    await this.pendingUpdate;
     const { error: submitError } = await this.elements.submit();
     if (submitError) {
       // Validation problems ("incomplete card number") carry a message meant

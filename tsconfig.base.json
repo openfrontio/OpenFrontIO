@@ -1,0 +1,25 @@
+// https://www.typescriptlang.org/tsconfig/
+// Shared by the root project and every package under packages/.
+{
+  "compilerOptions": {
+    // Language and Environment
+    "target": "ES2020",
+    // Modules
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "paths": {
+      "resources/*": ["./resources/*"]
+    },
+    // Emit
+    "sourceMap": true,
+    // Type Checking
+    "allowUnusedLabels": false,
+    "experimentalDecorators": true,
+    "resolveJsonModule": true,
+    "strictNullChecks": true,
+    "useDefineForClassFields": false,
+    "strictPropertyInitialization": false,
+    "skipLibCheck": true,
+    "types": ["vitest/globals", "node"]
+  }
+}

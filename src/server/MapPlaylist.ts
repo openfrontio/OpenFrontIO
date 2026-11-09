@@ -1,6 +1,6 @@
-import { SAM_CONSTRUCTION_TICKS } from "../core/configuration/Config";
 import {
   maps as allMaps,
+  listedMaps,
   Difficulty,
   Duos,
   GameMapSize,
@@ -13,15 +13,15 @@ import {
   RankedType,
   Trios,
   UnitType,
-} from "../core/game/Game";
-import { PseudoRandom } from "../core/PseudoRandom";
-import {
-  GameConfig,
-  ScheduledPublicGameType,
-  TeamCountConfig,
-} from "../core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig, TeamCountConfig } from "@openfront/engine-api/Schemas";
+import { SAM_CONSTRUCTION_TICKS } from "@openfront/engine-lib/configuration/Config";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { mapPlayerCounts } from "@openfront/shared/MapPlayerCounts";
+import { ScheduledPublicGameType } from "@openfront/shared/WireSchemas";
 import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
+import { MapWeights } from "./MapWeights";
 
 const log = logger.child({});
 
@@ -121,9 +121,19 @@ const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
 ];
 
 // Special games roll ffa/team per-game (see getSpecialConfig), so their
-// playlist is split in two rather than sharing one "special" queue -
-// each half can then fall back to the matching ffaFrequency/teamFrequency.
+// playlist is split in two rather than sharing one "special" queue. Both
+// halves are weighted by the map's specialWeight.
 type PlaylistKey = "ffa" | "team" | "specialFfa" | "specialTeam";
+
+// The rotation weight of a map or queue the API serves no weight for, and of
+// every map until the first fetch lands (or with no API, in dev).
+export const DEFAULT_MAP_WEIGHT = 5;
+
+const WEIGHT_KEYS = {
+  ffa: "ffaWeight",
+  team: "teamWeight",
+  special: "specialWeight",
+} as const satisfies Record<ScheduledPublicGameType, string>;
 
 export class MapPlaylist {
   private playlists: Record<PlaylistKey, GameMapType[]> = {
@@ -135,6 +145,21 @@ export class MapPlaylist {
 
   // Scheduled public games handed out so far, across all types.
   private scheduled = 0;
+
+  // Rotation weights from the API (see MapWeights.ts).
+  private weights: MapWeights = {};
+
+  // Queued playlists were built from the old weights, so drop them: a map
+  // pulled to 0 must stop appearing now, not after a full rotation.
+  public setWeights(weights: MapWeights) {
+    if (JSON.stringify(weights) === JSON.stringify(this.weights)) {
+      return;
+    }
+    this.weights = weights;
+    for (const key of Object.keys(this.playlists) as PlaylistKey[]) {
+      this.playlists[key] = [];
+    }
+  }
 
   public async gameConfig(type: ScheduledPublicGameType): Promise<GameConfig> {
     this.scheduled++;
@@ -344,7 +369,7 @@ export class MapPlaylist {
     if (appliedForced.has("isWaterNukes")) isWaterNukes = true;
     if (appliedForced.has("isDoomsdayClock")) isDoomsdayClock = true;
 
-    // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
+    // Crowded modifier: if the map's biggest player count (first number of mapPlayerCounts) is 60 or lower (small maps),
     // set player count to CROWDED_PLAYER_COUNT (or CROWDED_COMPACT_PLAYER_COUNT if compact map is also enabled)
     let crowdedMaxPlayers: number | undefined;
     if (isCrowded) {
@@ -550,6 +575,49 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
+  // A clan wars match is teamCount clans of playerCount / teamCount players
+  // each (2v2 up to four teams of 5). Small matches play the ranked 2v2 maps;
+  // bigger ones the continent maps.
+  public getClanWarsConfig(teamCount: number, playerCount: number): GameConfig {
+    const small = playerCount <= 6;
+    const maps = small
+      ? [
+          GameMapType.Australia,
+          GameMapType.Iceland,
+          GameMapType.Asia,
+          GameMapType.EuropeClassic,
+        ]
+      : [
+          GameMapType.Europe,
+          GameMapType.Asia,
+          GameMapType.Africa,
+          GameMapType.NorthAmerica,
+          GameMapType.SouthAmerica,
+          GameMapType.Australia,
+        ];
+    return {
+      donateGold: true,
+      donateTroops: true,
+      gameMap: maps[Math.floor(Math.random() * maps.length)],
+      maxPlayers: playerCount,
+      gameType: GameType.Public,
+      gameMapSize: GameMapSize.Normal,
+      difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
+      rankedType: RankedType.ClanWars,
+      infiniteGold: false,
+      infiniteTroops: false,
+      maxTimerValue: small ? 15 : 20,
+      instantBuild: false,
+      randomSpawn: false,
+      nations: "disabled",
+      gameMode: GameMode.Team,
+      playerTeams: teamCount,
+      bots: 400,
+      spawnImmunityDuration: 60 * 10,
+      disabledUnits: [],
+    } satisfies GameConfig;
+  }
+
   private getNextMap(
     type: ScheduledPublicGameType,
     mode?: GameMode,
@@ -557,7 +625,12 @@ export class MapPlaylist {
     const key = this.playlistKey(type, mode);
     const playlist = this.playlists[key];
     if (playlist.length === 0) {
-      playlist.push(...this.generateNewPlaylist(type, mode));
+      playlist.push(...this.generateNewPlaylist(type));
+    }
+    if (playlist.length === 0) {
+      // The weights zeroed every map in this queue; fall back to the default.
+      log.warn(`Map weights empty the ${key} playlist, ignoring them`);
+      playlist.push(...this.generateNewPlaylist(type, {}));
     }
     return playlist.shift()!;
   }
@@ -574,10 +647,10 @@ export class MapPlaylist {
 
   private generateNewPlaylist(
     type: ScheduledPublicGameType,
-    mode?: GameMode,
+    weights: MapWeights = this.weights,
   ): GameMapType[] {
-    const maps = this.buildMapsList(type, mode);
     const rand = new PseudoRandom(Date.now());
+    const maps = this.buildMapsList(type, weights, rand);
     const playlist: GameMapType[] = [];
 
     const numAttempts = 10000;
@@ -624,53 +697,27 @@ export class MapPlaylist {
     return false;
   }
 
+  // Each map appears floor(weight) times, plus once more with probability
+  // equal to the fraction, so a weight of 2.3 averages 2.3 copies over
+  // playlists. If every weight is below 1 the rounding can leave the list
+  // empty; the heaviest map then stands in, so the caller's all-zero fallback
+  // never puts a 0-weight map back in.
   private buildMapsList(
     type: ScheduledPublicGameType,
-    mode?: GameMode,
+    weights: MapWeights,
+    rand: PseudoRandom,
   ): GameMapType[] {
     const maps: GameMapType[] = [];
-    allMaps.forEach((mapInfo) => {
-      const map = mapInfo.type;
-      // Use per-mode frequency if set (>= 0), otherwise fall back to multiplayerFrequency.
-      let freq: number;
-      switch (type) {
-        case "ffa":
-          freq =
-            mapInfo.ffaFrequency >= 0
-              ? mapInfo.ffaFrequency
-              : mapInfo.multiplayerFrequency;
-          break;
-        case "team":
-          freq =
-            mapInfo.teamFrequency >= 0
-              ? mapInfo.teamFrequency
-              : mapInfo.multiplayerFrequency;
-          break;
-        case "special":
-          // Special games are rolled as ffa or team (see getSpecialConfig), so
-          // fall back to the matching per-mode frequency before multiplayerFrequency.
-          // The per-mode frequency only counts here when it's a deliberate positive
-          // weight - a map opted out of ffa/team entirely (frequency 0, e.g. Sol,
-          // ArchipelagoSea) should still reach special via multiplayerFrequency.
-          if (mapInfo.specialFrequency >= 0) {
-            freq = mapInfo.specialFrequency;
-          } else if (mode === GameMode.Team) {
-            freq =
-              mapInfo.teamFrequency > 0
-                ? mapInfo.teamFrequency
-                : mapInfo.multiplayerFrequency;
-          } else {
-            freq =
-              mapInfo.ffaFrequency > 0
-                ? mapInfo.ffaFrequency
-                : mapInfo.multiplayerFrequency;
-          }
-          break;
-      }
-      for (let i = 0; i < freq; i++) {
+    let heaviest: { map: GameMapType; weight: number } | undefined;
+    for (const { type: map } of listedMaps) {
+      const weight = weights[map]?.[WEIGHT_KEYS[type]] ?? DEFAULT_MAP_WEIGHT;
+      if (weight > (heaviest?.weight ?? 0)) heaviest = { map, weight };
+      const copies = Math.floor(weight) + (rand.next() < weight % 1 ? 1 : 0);
+      for (let i = 0; i < copies; i++) {
         maps.push(map);
       }
-    });
+    }
+    if (maps.length === 0 && heaviest !== undefined) maps.push(heaviest.map);
     return maps;
   }
 
@@ -753,7 +800,7 @@ export class MapPlaylist {
     playerTeams: TeamCountConfig,
   ): Promise<boolean> {
     const landTiles = await getMapLandTiles(map);
-    const [l, , s] = this.calculateMapPlayerCounts(landTiles);
+    const [l, , s] = mapPlayerCounts(landTiles);
     // Worst case: smallest tier with team mode 1.5x multiplier, capped at l
     let p = Math.min(Math.ceil(s * 1.5), l);
     // Apply compact 75% player reduction
@@ -833,7 +880,7 @@ export class MapPlaylist {
     isCompact: boolean,
   ): Promise<number | undefined> {
     const landTiles = await getMapLandTiles(map);
-    const [firstPlayerCount] = this.calculateMapPlayerCounts(landTiles);
+    const [firstPlayerCount] = mapPlayerCounts(landTiles);
     if (firstPlayerCount <= 60) {
       return isCompact ? CROWDED_COMPACT_PLAYER_COUNT : CROWDED_PLAYER_COUNT;
     }
@@ -846,7 +893,7 @@ export class MapPlaylist {
     isCompactMap?: boolean,
   ): Promise<number> {
     const landTiles = await getMapLandTiles(map);
-    const [l, m, s] = this.calculateMapPlayerCounts(landTiles);
+    const [l, m, s] = mapPlayerCounts(landTiles);
     const r = Math.random();
     const base = r < 0.3 ? l : r < 0.6 ? m : s;
     let p = Math.min(mode === GameMode.Team ? Math.ceil(base * 1.5) : base, l);
@@ -901,20 +948,5 @@ export class MapPlaylist {
         break;
     }
     return p;
-  }
-
-  /**
-   * Calculate player counts from land tiles
-   * For every 1,000,000 land tiles, take 50 players
-   * Second value is 75% of calculated value, third is 50%
-   * All values are rounded to the nearest 5
-   */
-  private calculateMapPlayerCounts(
-    landTiles: number,
-  ): [number, number, number] {
-    const roundToNearest5 = (n: number) => Math.round(n / 5) * 5;
-
-    const base = Math.max(roundToNearest5((landTiles / 1_000_000) * 50), 5);
-    return [base, roundToNearest5(base * 0.75), roundToNearest5(base * 0.5)];
   }
 }

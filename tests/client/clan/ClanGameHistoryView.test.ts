@@ -592,6 +592,9 @@ describe("ClanGameHistoryView", () => {
       const headers = el.querySelectorAll("h3");
       expect(headers).toHaveLength(1);
       expect(headers[0]?.textContent).toContain("clan_modal.history_today");
+      expect(headers[0]?.parentElement?.className).toContain(
+        "pointer-events-none",
+      );
     });
 
     it('labels yesterday under the "yesterday" key', async () => {

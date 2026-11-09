@@ -1,4 +1,5 @@
 import { showInGameAlert } from "./InGameModal";
+import { loadModal } from "./LazyModals";
 import { fetchSteamLinkConflict, type SteamConflictAccount } from "./SteamLink";
 import { translateText } from "./Utils";
 
@@ -100,6 +101,9 @@ async function offerSteamConflictDiscard(): Promise<void> {
     );
   }
 
+  // It loads on demand (see LazyModals); one that won't load is the missing
+  // modal below.
+  await loadModal("steam-link-modal").catch(() => {});
   // Structural, not the SteamLinkModal class: this module is otherwise free of
   // Lit and of the modal's own dependencies, and the same
   // small-interface-over-import convention already governs SteamLink.ts's

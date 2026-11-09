@@ -68,9 +68,16 @@ export async function hashDirectory(
 
 // Sorted before hashing so the result depends on content, not on the order the
 // filesystem happens to hand back directory entries. Paths are included so a
-// pure rename changes the hash.
-export async function hashSourceTree(dir: string): Promise<string> {
-  const files = (await walk(dir)).sort();
+// pure rename changes the hash. With `subdirs`, only those subtrees of `dir`
+// are hashed, and their paths keep the subdirectory prefix, so moving a file
+// from one subtree to another changes the hash too.
+export async function hashSourceTree(
+  dir: string,
+  subdirs: readonly string[] = [""],
+): Promise<string> {
+  const files = (await Promise.all(subdirs.map((sub) => walk(dir, sub))))
+    .flat()
+    .sort();
   const hash = createHash("sha256");
   for (const rel of files) {
     const relBytes = Buffer.from(rel, "utf8");
@@ -97,7 +104,14 @@ async function main(): Promise<void> {
     `${JSON.stringify(hashes, null, 2)}\n`,
   );
 
-  const coreVersion = await hashSourceTree(path.join(root, "src", "core"));
+  // The simulation: the engine, its API and library, and the wire codec its
+  // schemas are annotated for.
+  const coreVersion = await hashSourceTree(path.join(root, "packages"), [
+    "engine/src",
+    "engine-api/src",
+    "engine-lib/src",
+    "zbin/src",
+  ]);
   await fs.writeFile(
     path.join(staticDir, "core-version.txt"),
     `${coreVersion}\n`,

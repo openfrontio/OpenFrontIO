@@ -1,15 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import en from "../../resources/lang/en.json";
-import { crazyGamesSDK } from "../../src/client/CrazyGamesSDK";
+import {
+  Difficulty,
+  GameMapType,
+  GameMode,
+  GameType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/shared/EventBus";
+import type { GraphicsSettingsModal } from "../../src/client/components/GraphicsSettingsModal";
+import { gamePortal } from "../../src/client/GamePortal";
 import {
   SettingsModal,
   ShowSettingsModalEvent,
 } from "../../src/client/hud/layers/SettingsModal";
-import { PauseGameIntentEvent } from "../../src/client/Transport";
 import "../../src/client/UserSettingModal";
+import { PauseGameIntentEvent } from "../../src/client/Transport";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
-import { EventBus } from "../../src/core/EventBus";
+import { UserSettings } from "../../src/client/UserSettings";
 
 type TestMenu = SettingsModal & { updateComplete: Promise<unknown> };
 type TestSettings = UserSettingModal & {
@@ -36,10 +45,10 @@ describe("in-game menu opens the shared settings modal", () => {
     document.body.innerHTML = "";
     localStorage.clear();
     gameplayStop = vi
-      .spyOn(crazyGamesSDK, "gameplayStop")
+      .spyOn(gamePortal, "gameplayStop")
       .mockImplementation(async () => {});
     gameplayStart = vi
-      .spyOn(crazyGamesSDK, "gameplayStart")
+      .spyOn(gamePortal, "gameplayStart")
       .mockImplementation(async () => {});
 
     menu = document.createElement("settings-modal") as TestMenu;
@@ -158,15 +167,96 @@ describe("in-game menu opens the shared settings modal", () => {
     expect(pauses).toEqual([true]);
   });
 
-  it("offers one way into graphics, not a second advanced-graphics row", async () => {
-    // The in-game-only advanced graphics modal used to sit here as its own
-    // row, duplicating the settings modal's Graphics tab.
+  it("offers direct Graphics access alongside the shared settings", async () => {
     await openMenu();
 
     expect(menu.querySelectorAll("[data-open-settings]")).toHaveLength(1);
-    const strings = en.user_setting as Record<string, string | undefined>;
-    expect(strings.graphics_settings_label).toBeUndefined();
-    expect(menu.textContent).not.toContain("Graphics Settings");
+    expect(menu.querySelectorAll("[data-open-graphics]")).toHaveLength(1);
+  });
+
+  it("opens the graphics panel directly and preserves the pause through Escape", async () => {
+    await openMenu();
+    menu.querySelector<HTMLButtonElement>("[data-open-graphics]")!.click();
+    await settle();
+    const panel = settings.querySelector<GraphicsSettingsModal>(
+      "graphics-settings-modal",
+    )!;
+    await panel.updateComplete;
+    expect(panel.isOpen()).toBe(true);
+    expect(settings.isOpen()).toBe(false);
+    expect(menu.open).toBe(false);
+    expect(panel.querySelector("#name-scale-slider")).not.toBeNull();
+    expect(pauses).toEqual([true]);
+
+    document.body.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await Promise.resolve();
+    await settle();
+    expect(panel.isOpen()).toBe(false);
+    expect(menu.open).toBe(true);
+    expect(pauses).toEqual([true]);
+    menu.closeModal();
+    expect(pauses).toEqual([true, false]);
+  });
+
+  it("keeps layer updates live from the graphics panel", async () => {
+    settings.mapLayers = [{ id: "forest", placement: "land", alpha: 0.8 }];
+    const visibility = vi.fn();
+    settings.onLayerVisibilityChange = visibility;
+    await openMenu();
+    menu.querySelector<HTMLButtonElement>("[data-open-graphics]")!.click();
+    const panel = settings.querySelector<GraphicsSettingsModal>(
+      "graphics-settings-modal",
+    )!;
+    await panel.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    visibility.mockClear();
+    panel
+      .querySelector("#map-layer-forest-toggle")!
+      .dispatchEvent(new Event("change", { bubbles: true }));
+    expect(visibility).toHaveBeenCalledExactlyOnceWith("forest", false);
+    expect(new UserSettings().graphicsOverrides().mapLayerVisibility).toEqual({
+      forest: false,
+    });
+    panel.close();
+  });
+
+  it("returns from the panel to the shared Graphics tab before returning to the menu", async () => {
+    await openMenu();
+    openSettingsRow()!.click();
+    await settle();
+    settings.setActiveTab("graphics");
+    await settle();
+    settings
+      .querySelector<HTMLButtonElement>("[data-open-graphics-panel]")!
+      .click();
+    await settle();
+    const panel = settings.querySelector<GraphicsSettingsModal>(
+      "graphics-settings-modal",
+    )!;
+    await panel.updateComplete;
+    expect(panel.isOpen()).toBe(true);
+    expect(settings.isOpen()).toBe(false);
+    expect(menu.open).toBe(false);
+    panel.close();
+    await settle();
+    expect(settings.isOpen()).toBe(true);
+    expect(settings.activeTab).toBe("graphics");
+    expect(menu.open).toBe(false);
+    settings.close();
+    await settle();
+    expect(menu.open).toBe(true);
+    expect(pauses).toEqual([true]);
+  });
+
+  it("keeps the menu available if the shared settings instance is missing", async () => {
+    settings.remove();
+    await openMenu();
+    menu.querySelector<HTMLButtonElement>("[data-open-graphics]")!.click();
+    await menu.updateComplete;
+    expect(menu.open).toBe(true);
+    expect(pauses).toEqual([true]);
   });
 
   it("reaches the advanced graphics options through the shared modal", async () => {
@@ -177,8 +267,8 @@ describe("in-game menu opens the shared settings modal", () => {
     settings.setActiveTab("graphics");
     await settle();
     settings
-      .querySelector("#graphics-advanced-toggle")!
-      .dispatchEvent(new Event("change", { bubbles: true }));
+      .querySelector<HTMLButtonElement>("[data-open-graphics-panel]")!
+      .click();
     await settle();
 
     // A sample from each storage section the old modal wrote.
@@ -200,5 +290,69 @@ describe("in-game menu opens the shared settings modal", () => {
     expect(openSettingsRow()).not.toBeNull();
     expect(warn).toHaveBeenCalled();
     expect(pauses).toEqual([true]);
+  });
+
+  const publicFfa = {
+    gameMap: GameMapType.World,
+    gameType: GameType.Public,
+    gameMode: GameMode.FFA,
+    difficulty: Difficulty.Medium,
+    nations: "default",
+    bots: 400,
+    donateGold: false,
+    donateTroops: false,
+  } as GameConfig;
+  const modifierTags = () =>
+    [...menu.querySelectorAll("[data-modifier-tags] span")].map(
+      (tag) => tag.textContent,
+    );
+
+  it("shows the game's modifiers", async () => {
+    menu.gameConfig = {
+      ...publicFfa,
+      randomSpawn: true,
+      nations: 5,
+      publicGameModifiers: { isCrowded: true, isRandomSpawn: true },
+    };
+    menu.mapNationCount = 10;
+    await openMenu();
+
+    expect(modifierTags()).toEqual([
+      "host_modal.crowded",
+      "game_settings.random_spawn",
+      "game_settings.nations: 5",
+    ]);
+  });
+
+  it("shows the disabled units and host cheats with the modifiers", async () => {
+    menu.gameConfig = {
+      ...publicFfa,
+      gameType: GameType.Private,
+      difficulty: Difficulty.Easy,
+      disabledUnits: [UnitType.City, UnitType.MIRV],
+      hostCheats: { infiniteTroops: true, goldMultiplier: 3 },
+    };
+    await openMenu();
+
+    const texts = (selector: string) =>
+      [...menu.querySelectorAll(`[data-game-modifiers] ${selector} span`)].map(
+        (tag) => tag.textContent,
+      );
+    expect(menu.querySelector("[data-modifier-tags]")).toBeNull();
+    expect(texts("[data-disabled-units]")).toEqual([
+      "unit_type.city",
+      "unit_type.mirv",
+    ]);
+    expect(texts("[data-host-cheats]")).toEqual([
+      "game_settings.infinite_troops",
+      "game_settings.gold_multiplier: x3",
+    ]);
+  });
+
+  it("leaves the modifiers out of a game without any", async () => {
+    menu.gameConfig = publicFfa;
+    await openMenu();
+
+    expect(menu.querySelector("[data-game-modifiers]")).toBeNull();
   });
 });

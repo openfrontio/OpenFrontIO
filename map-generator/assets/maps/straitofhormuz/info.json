@@ -1,10 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "StraitOfHormuz",
   "name": "Strait of Hormuz",
   "translation_key": "map.straitofhormuz",
   "categories": ["asia"],
-  "multiplayer_frequency": 4,
-  "team_frequency": 8,
+  "location": { "lat": 26.5, "lon": 56.3 },
+  "author": "bijx",
   "special_team_count": 2,
   "nations": [
     {

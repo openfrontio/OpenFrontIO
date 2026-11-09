@@ -11,13 +11,13 @@ vi.mock("../../src/client/Utils", async (importOriginal) => ({
   translateText: vi.fn((key: string) => key),
 }));
 
+import { PaymentsCheckoutResponseSchema } from "@openfront/shared/ApiSchemas";
 import type { PaymentsCheckoutResult } from "../../src/client/Api";
 import { createPaymentsCheckout } from "../../src/client/Api";
 import {
   createInlinePaymentIntent,
   priceStringToCents,
 } from "../../src/client/Payments";
-import { PaymentsCheckoutResponseSchema } from "../../src/core/ApiSchemas";
 
 const checkoutMock = createPaymentsCheckout as unknown as ReturnType<
   typeof vi.fn

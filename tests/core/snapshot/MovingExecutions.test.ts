@@ -1,18 +1,17 @@
-import { AttackExecution } from "../../../src/core/execution/AttackExecution";
-import { BoatRetreatExecution } from "../../../src/core/execution/BoatRetreatExecution";
-import { FactoryExecution } from "../../../src/core/execution/FactoryExecution";
-import { RetreatExecution } from "../../../src/core/execution/RetreatExecution";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import { TradeShipExecution } from "../../../src/core/execution/TradeShipExecution";
-import { TransportShipExecution } from "../../../src/core/execution/TransportShipExecution";
-import { WarshipExecution } from "../../../src/core/execution/WarshipExecution";
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { BoatRetreatExecution } from "@openfront/engine/execution/BoatRetreatExecution";
+import { FactoryExecution } from "@openfront/engine/execution/FactoryExecution";
+import { RetreatExecution } from "@openfront/engine/execution/RetreatExecution";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { TradeShipExecution } from "@openfront/engine/execution/TradeShipExecution";
+import { TransportShipExecution } from "@openfront/engine/execution/TransportShipExecution";
+import { WarshipExecution } from "@openfront/engine/execution/WarshipExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "../../util/Setup";
 import { expectSnapshotRoundTrip } from "../../util/Snapshot";
 import { executeTicks } from "../../util/utils";

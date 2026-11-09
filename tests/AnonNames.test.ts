@@ -1,6 +1,6 @@
-import { ANON_WORDS, anonWordName } from "../src/core/AnonNames";
-import { UsernameSchema } from "../src/core/Schemas";
-import { MAX_USERNAME_LENGTH } from "../src/core/validations/username";
+import { UsernameSchema } from "@openfront/engine-api/Schemas";
+import { ANON_WORDS, anonWordName } from "@openfront/shared/AnonNames";
+import { MAX_USERNAME_LENGTH } from "../src/client/validations/username";
 
 describe("ANON_WORDS", () => {
   it("has 125 unique, single-word entries", () => {

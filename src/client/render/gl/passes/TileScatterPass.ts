@@ -47,7 +47,7 @@ export class TileScatterPass {
     this.mapW = mapW;
     this.mapH = mapH;
 
-    this.program = createProgram(gl, vertSrc, fragSrc);
+    this.program = createProgram(gl, vertSrc, fragSrc, "TileScatterPass");
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;
 
     this.fbo = gl.createFramebuffer()!;

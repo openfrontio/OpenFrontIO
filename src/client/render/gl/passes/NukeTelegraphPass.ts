@@ -38,7 +38,7 @@ export class NukeTelegraphPass {
   constructor(gl: WebGL2RenderingContext, settings: RenderSettings) {
     this.gl = gl;
     this.settings = settings;
-    this.program = createProgram(gl, vertSrc, fragSrc);
+    this.program = createProgram(gl, vertSrc, fragSrc, "NukeTelegraphPass");
 
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uTime = gl.getUniformLocation(this.program, "uTime")!;

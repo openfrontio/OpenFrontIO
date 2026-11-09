@@ -25,8 +25,8 @@ vi.mock("../../../../src/client/Utils", () => ({
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ReplaySpeedChangeEvent } from "../../../../src/client/InputHandler";
 import { ReplayPanel } from "../../../../src/client/hud/layers/ReplayPanel";
+import { ReplaySpeedChangeEvent } from "../../../../src/client/InputHandler";
 import { ReplaySpeedMultiplier } from "../../../../src/client/utilities/ReplaySpeedMultiplier";
 
 describe("ReplayPanel", () => {

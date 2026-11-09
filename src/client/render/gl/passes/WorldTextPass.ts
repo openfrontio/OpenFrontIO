@@ -7,7 +7,7 @@
  *  - Ghost cost label: persistent build-cost number under the ghost cursor
  */
 
-import type { Config } from "../../../../core/configuration/Config";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import type { BonusEvent, ConquestFx } from "../../types";
 import type { RenderSettings } from "../RenderSettings";
 import { renderDpr } from "../utils/Dpr";
@@ -18,8 +18,8 @@ import { buildGlyphMetricsTex } from "./name-pass/DataTextures";
 import { layoutString } from "./name-pass/TextLayout";
 import { CHAR_RANGE, MAX_CHARS } from "./name-pass/Types";
 
-import { assetUrl } from "src/core/AssetUrls";
-import { renderNumber } from "../../../Utils";
+import { renderNumber } from "@openfront/engine-lib/Format";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import fragSrc from "../shaders/world-text/world-text.frag.glsl?raw";
 import vertSrc from "../shaders/world-text/world-text.vert.glsl?raw";
 
@@ -171,7 +171,7 @@ export class WorldTextPass {
     this.base = atlas.base;
 
     // Compile shaders
-    this.program = createProgram(gl, vertSrc, fragSrc);
+    this.program = createProgram(gl, vertSrc, fragSrc, "WorldTextPass");
 
     // Texture unit bindings
     gl.useProgram(this.program);

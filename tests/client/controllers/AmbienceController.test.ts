@@ -1,7 +1,7 @@
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/shared/EventBus";
 import { AmbienceController } from "../../../src/client/controllers/AmbienceController";
 import { SetAmbienceEvent } from "../../../src/client/sound/Sounds";
-import { EventBus } from "../../../src/core/EventBus";
-import { UnitType } from "../../../src/core/game/Game";
 
 describe("AmbienceController", () => {
   let eventBus: EventBus;

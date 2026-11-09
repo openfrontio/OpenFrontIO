@@ -1,8 +1,8 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { UserMeResponse } from "../../core/ApiSchemas";
-import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { isDesktopShell } from "../DesktopShell";
+import { gamePortal } from "../GamePortal";
 import { getGamesPlayed, translateText } from "../Utils";
 
 const SHOWN_KEY = "purchaseNudgeShown";
@@ -16,7 +16,7 @@ const MIN_GAMES_PLAYED = 50;
  * It reads the `userMeResponse` document event (dispatched after login / on
  * load, `false` when logged out). Ad-free players have already purchased —
  * seeing one marks the nudge as shown, so it stays off even if they later
- * log out in this browser. CrazyGames has its own storefront and the desktop
+ * log out in this browser. Portals allow no purchases and the desktop
  * shell never shows ads, so neither sees it. Closing takes an explicit click
  * on the X (or on "Visit store"); there is no backdrop-click dismissal.
  */
@@ -34,7 +34,7 @@ export class PurchaseNudgeModal extends LitElement {
       return;
     }
     if (
-      crazyGamesSDK.isOnCrazyGames() ||
+      gamePortal.isOnGamePortal() ||
       isDesktopShell() ||
       getGamesPlayed() <= MIN_GAMES_PLAYED ||
       localStorage.getItem(SHOWN_KEY) !== null

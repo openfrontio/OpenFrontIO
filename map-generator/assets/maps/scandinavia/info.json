@@ -1,9 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Scandinavia",
   "name": "Scandinavia",
   "translation_key": "map.scandinavia",
   "categories": ["europe"],
-  "multiplayer_frequency": 7,
+  "location": { "lat": 63, "lon": 15 },
+  "author": "crunchybbb",
+  "description": "An enormous subregion located in Northern Europe. This cold, icy peninsula is home to hundreds of fjords, islands, lakes, and coastlines. The map also includes portions of the Baltics, Russia, and the Prussian coast.",
   "nations": [
     {
       "coordinates": [419, 1426],
@@ -91,7 +94,7 @@
       "flag": "ru"
     },
     {
-      "coordinates": [2007, 1727],
+      "coordinates": [2003, 1727],
       "name": "Tver",
       "flag": "ru"
     },

@@ -1,18 +1,16 @@
-import { NukeExecution } from "../../../src/core/execution/NukeExecution";
-import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import { UpgradeStructureExecution } from "../../../src/core/execution/UpgradeStructureExecution";
 import {
-  Game,
   MessageType,
-  Player,
   PlayerInfo,
   PlayerType,
-  Unit,
   UnitType,
-} from "../../../src/core/game/Game";
-import { GameID } from "../../../src/core/Schemas";
-import { NukeType } from "../../../src/core/StatsSchemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameID } from "@openfront/engine-api/Schemas";
+import { NukeType } from "@openfront/engine-api/StatsSchemas";
+import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
+import { SAMLauncherExecution } from "@openfront/engine/execution/SAMLauncherExecution";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { UpgradeStructureExecution } from "@openfront/engine/execution/UpgradeStructureExecution";
+import { Game, Player, Unit } from "@openfront/engine/game/Game";
 import { setup } from "../../util/Setup";
 import { TestConfig } from "../../util/TestConfig";
 import { constructionExecution, executeTicks } from "../../util/utils";
@@ -110,11 +108,7 @@ describe("SAM", () => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
       targetTile: game.ref(3, 1),
-      trajectory: [
-        { tile: game.ref(1, 1), targetable: true },
-        { tile: game.ref(2, 1), targetable: true },
-        { tile: game.ref(3, 1), targetable: true },
-      ],
+      trajectory: [game.ref(1, 1), game.ref(2, 1), game.ref(3, 1)],
     });
     executeTicks(game, 3);
 
@@ -126,19 +120,11 @@ describe("SAM", () => {
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
     attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
       targetTile: game.ref(3, 1),
-      trajectory: [
-        { tile: game.ref(1, 1), targetable: true },
-        { tile: game.ref(2, 1), targetable: true },
-        { tile: game.ref(3, 1), targetable: true },
-      ],
+      trajectory: [game.ref(1, 1), game.ref(2, 1), game.ref(3, 1)],
     });
     attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
       targetTile: game.ref(1, 3),
-      trajectory: [
-        { tile: game.ref(1, 1), targetable: true },
-        { tile: game.ref(1, 2), targetable: true },
-        { tile: game.ref(1, 3), targetable: true },
-      ],
+      trajectory: [game.ref(1, 1), game.ref(1, 2), game.ref(1, 3)],
     });
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(2);
 
@@ -153,11 +139,7 @@ describe("SAM", () => {
 
     attacker.buildUnit(UnitType.MIRVWarhead, game.ref(1, 1), {
       targetTile: game.ref(3, 1),
-      trajectory: [
-        { tile: game.ref(1, 1), targetable: true },
-        { tile: game.ref(2, 1), targetable: true },
-        { tile: game.ref(3, 1), targetable: true },
-      ],
+      trajectory: [game.ref(1, 1), game.ref(2, 1), game.ref(3, 1)],
     });
     executeTicks(game, 3);
 
@@ -219,11 +201,7 @@ describe("SAM", () => {
     expect(sam.isInCooldown()).toBeFalsy();
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
       targetTile: game.ref(1, 3),
-      trajectory: [
-        { tile: game.ref(1, 1), targetable: true },
-        { tile: game.ref(2, 1), targetable: true },
-        { tile: game.ref(3, 1), targetable: true },
-      ],
+      trajectory: [game.ref(1, 1), game.ref(2, 1), game.ref(3, 1)],
     });
 
     executeTicks(game, 3);
@@ -247,11 +225,7 @@ describe("SAM", () => {
     game.addExecution(new SAMLauncherExecution(defender, null, sam2));
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
       targetTile: game.ref(1, 3),
-      trajectory: [
-        { tile: game.ref(1, 1), targetable: true },
-        { tile: game.ref(1, 2), targetable: true },
-        { tile: game.ref(1, 3), targetable: true },
-      ],
+      trajectory: [game.ref(1, 1), game.ref(1, 2), game.ref(1, 3)],
     });
 
     executeTicks(game, 3);
@@ -357,11 +331,7 @@ describe("SAM", () => {
     // Distant AtomBomb landing far away (at 10, 1)
     attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
       targetTile: game.ref(10, 1),
-      trajectory: [
-        { tile: game.ref(2, 1), targetable: true },
-        { tile: game.ref(5, 3), targetable: true },
-        { tile: game.ref(10, 1), targetable: true },
-      ],
+      trajectory: [game.ref(2, 1), game.ref(5, 3), game.ref(10, 1)],
     });
 
     // Close AtomBomb targeting right on the SAM (1, 1)
@@ -370,11 +340,7 @@ describe("SAM", () => {
       game.ref(1, 2),
       {
         targetTile: game.ref(1, 1),
-        trajectory: [
-          { tile: game.ref(1, 1), targetable: true },
-          { tile: game.ref(1, 2), targetable: true },
-          { tile: game.ref(1, 1), targetable: true },
-        ],
+        trajectory: [game.ref(1, 1), game.ref(1, 2), game.ref(1, 1)],
       },
     );
 
@@ -396,20 +362,12 @@ describe("SAM", () => {
 
     const nuke1 = attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
       targetTile: game.ref(3, 1),
-      trajectory: [
-        { tile: game.ref(1, 1), targetable: true },
-        { tile: game.ref(2, 1), targetable: true },
-        { tile: game.ref(3, 1), targetable: true },
-      ],
+      trajectory: [game.ref(1, 1), game.ref(2, 1), game.ref(3, 1)],
     });
 
     const nuke2 = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
       targetTile: game.ref(1, 3),
-      trajectory: [
-        { tile: game.ref(1, 1), targetable: true },
-        { tile: game.ref(1, 2), targetable: true },
-        { tile: game.ref(1, 3), targetable: true },
-      ],
+      trajectory: [game.ref(1, 1), game.ref(1, 2), game.ref(1, 3)],
     });
 
     executeTicks(game, 3);
@@ -439,11 +397,7 @@ describe("SAM", () => {
         game.ref(1, 2 + i),
         {
           targetTile: game.ref(1, 15 + i),
-          trajectory: [
-            { tile: game.ref(1, 1), targetable: true },
-            { tile: game.ref(1, 2 + i), targetable: true },
-            { tile: game.ref(1, 15 + i), targetable: true },
-          ],
+          trajectory: [game.ref(1, 1), game.ref(1, 2 + i), game.ref(1, 15 + i)],
         },
       );
       warheads.push(warhead);
@@ -467,18 +421,18 @@ describe("SAM", () => {
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(149, 1), {
       targetTile: game.ref(17, 1),
       trajectory: [
-        { tile: game.ref(149, 1), targetable: true },
-        { tile: game.ref(137, 1), targetable: true },
-        { tile: game.ref(125, 1), targetable: true },
-        { tile: game.ref(113, 1), targetable: true },
-        { tile: game.ref(101, 1), targetable: true },
-        { tile: game.ref(89, 1), targetable: true },
-        { tile: game.ref(77, 1), targetable: true },
-        { tile: game.ref(65, 1), targetable: true },
-        { tile: game.ref(53, 1), targetable: true },
-        { tile: game.ref(41, 1), targetable: true },
-        { tile: game.ref(29, 1), targetable: true },
-        { tile: game.ref(17, 1), targetable: true },
+        game.ref(149, 1),
+        game.ref(137, 1),
+        game.ref(125, 1),
+        game.ref(113, 1),
+        game.ref(101, 1),
+        game.ref(89, 1),
+        game.ref(77, 1),
+        game.ref(65, 1),
+        game.ref(53, 1),
+        game.ref(41, 1),
+        game.ref(29, 1),
+        game.ref(17, 1),
       ],
     });
 
@@ -635,13 +589,13 @@ describe("SAM", () => {
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(97, 1), {
       targetTile: game.ref(25, 1),
       trajectory: [
-        { tile: game.ref(97, 1), targetable: true },
-        { tile: game.ref(85, 1), targetable: true },
-        { tile: game.ref(73, 1), targetable: true },
-        { tile: game.ref(61, 1), targetable: true },
-        { tile: game.ref(49, 1), targetable: true },
-        { tile: game.ref(37, 1), targetable: true },
-        { tile: game.ref(25, 1), targetable: true },
+        game.ref(97, 1),
+        game.ref(85, 1),
+        game.ref(73, 1),
+        game.ref(61, 1),
+        game.ref(49, 1),
+        game.ref(37, 1),
+        game.ref(25, 1),
       ],
     });
 

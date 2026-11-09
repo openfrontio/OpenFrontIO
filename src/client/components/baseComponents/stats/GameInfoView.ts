@@ -1,16 +1,17 @@
 import {
+  GameMode,
+  GameType,
+  type GameMapType,
+} from "@openfront/engine-api/game/GameTypes";
+import { type GameEndInfo } from "@openfront/shared/WireSchemas";
+import {
   html,
   LitElement,
+  nothing,
   type PropertyValues,
   type TemplateResult,
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { type GameEndInfo } from "../../../../core/Schemas";
-import {
-  GameMode,
-  GameType,
-  type GameMapType,
-} from "../../../../core/game/Game";
 import { fetchGameById } from "../../../Api";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "../../../Utils";
@@ -25,12 +26,22 @@ import "../ranking/PlayerRow";
 import "../ranking/RankingControls";
 import { formatAbsoluteTime } from "./GameHistoryDates";
 
+export interface GameInfoLoadedDetail {
+  gameId: string;
+  info: GameEndInfo | null;
+}
+
 /**
  * Game-stats content for the Account > Games > Stats drill-down.
  */
 @customElement("game-info-view")
 export class GameInfoView extends LitElement {
   @property({ type: String }) gameId: string | null = null;
+  // Shown right under the game summary card, once the game has loaded (the
+  // stats modal puts the player's XP there).
+  @property({ attribute: false }) afterSummary:
+    | TemplateResult
+    | typeof nothing = nothing;
 
   @state() private rankType = RankType.Lifetime;
   @state() private mapImage: string | null = null;
@@ -70,11 +81,13 @@ export class GameInfoView extends LitElement {
     if (!this.gameId) return html``;
     return html`
       <div class="w-full max-w-[800px] mx-auto">
-        ${this.isLoadingGame
-          ? this.renderLoadingAnimation()
-          : this.loadFailed
-            ? this.renderError()
-            : this.renderRanking()}
+        ${
+          this.isLoadingGame
+            ? this.renderLoadingAnimation()
+            : this.loadFailed
+              ? this.renderError()
+              : this.renderRanking()
+        }
       </div>
     `;
   }
@@ -183,17 +196,19 @@ export class GameInfoView extends LitElement {
           <div
             class="relative min-h-36 overflow-hidden border-b border-white/10 bg-deep-navy sm:min-h-44 sm:border-b-0 sm:border-r"
           >
-            ${this.mapImage
-              ? html`<img
-                  data-map-image
-                  src=${this.mapImage}
-                  alt=${mapName}
-                  draggable="false"
-                  decoding="async"
-                  @error=${() => this.handleMapImageError()}
-                  class="absolute inset-0 h-full w-full object-cover"
-                />`
-              : this.renderMapFallback()}
+            ${
+              this.mapImage
+                ? html`<img
+                    data-map-image
+                    src=${this.mapImage}
+                    alt=${mapName}
+                    draggable="false"
+                    decoding="async"
+                    @error=${() => this.handleMapImageError()}
+                    class="absolute inset-0 h-full w-full object-cover"
+                  />`
+                : this.renderMapFallback()
+            }
             <div
               class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-black/10 sm:bg-gradient-to-r sm:from-transparent sm:via-transparent sm:to-black/25"
             ></div>
@@ -249,6 +264,7 @@ export class GameInfoView extends LitElement {
           </div>
         </div>
       </div>
+      ${this.afterSummary}
     `;
   }
 
@@ -410,6 +426,17 @@ export class GameInfoView extends LitElement {
     return this.ranking.score(player, this.rankType);
   }
 
+  // Tells the host which game loaded (null: it failed to), e.g. so the stats
+  // modal can tell how long ago it ended.
+  private announceLoaded(gameId: string, info: GameEndInfo | null): void {
+    this.dispatchEvent(
+      new CustomEvent<GameInfoLoadedDetail>("game-info-loaded", {
+        detail: { gameId, info },
+        bubbles: true,
+      }),
+    );
+  }
+
   private async fetchGame(gameId: string): Promise<void> {
     const generation = ++this.loadGeneration;
     this.isLoadingGame = true;
@@ -425,10 +452,12 @@ export class GameInfoView extends LitElement {
       if (generation !== this.loadGeneration) return;
       if (!session) {
         this.loadFailed = true;
+        this.announceLoaded(gameId, null);
         return;
       }
 
       this.gameInfo = session.info;
+      this.announceLoaded(gameId, session.info);
       this.ranking = new Ranking(session);
       this.updateRanking();
       try {
@@ -441,6 +470,7 @@ export class GameInfoView extends LitElement {
       if (generation === this.loadGeneration) {
         console.warn("Failed to load game:", err);
         this.loadFailed = true;
+        this.announceLoaded(gameId, null);
       }
     } finally {
       if (generation === this.loadGeneration) {

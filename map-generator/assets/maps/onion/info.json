@@ -1,9 +1,10 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Onion",
   "name": "Onion",
   "translation_key": "map.onion",
   "categories": ["arcade"],
-  "multiplayer_frequency": 2,
+  "author": "TKTK123456",
   "nations": [
     {
       "coordinates": [51, 188],

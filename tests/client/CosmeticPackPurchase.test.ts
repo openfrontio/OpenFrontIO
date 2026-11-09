@@ -31,6 +31,7 @@ const translations = {
   "store.pack_unavailable": "gone",
   "store.purchase_failed": "failed",
   "store.purchase_success": "bought {name}",
+  "store.purchase_success_charged": "bought {name} for {amount} {currency}",
 };
 
 const starter: ResolvedCosmetic = {
@@ -108,6 +109,28 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
     expect(reloadMock).toHaveBeenCalled();
   });
 
+  it("says what was charged when the server's price differs from the shown one", async () => {
+    // A sale ended between loading the store and buying: the server charged
+    // the list price, not the 250 the card showed.
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(600));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValue({
+      ok: true,
+      data: {
+        packName: "starter",
+        currencyType: "hard",
+        amount: "500",
+        flareNames: ["pattern:camo", "flag:pirate"],
+      },
+    });
+
+    await purchaseCosmetic(starter, "hard");
+
+    expect(showInGameAlert).toHaveBeenCalledWith(
+      "bought Starter Pack for 500 plutonium",
+    );
+    expect(reloadMock).toHaveBeenCalled();
+  });
+
   it("reports the shortfall before any request when the balance is short", async () => {
     vi.mocked(getUserMe).mockResolvedValue(userWithHard(100));
 
@@ -120,6 +143,56 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
       canTopUp: true,
     });
     expect(purchaseCosmeticPack).not.toHaveBeenCalled();
+  });
+
+  it("quotes the shortfall at the list price once the pack's sale has ended", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(200));
+    const endedSale: ResolvedCosmetic = {
+      ...starter,
+      cosmetic: {
+        ...(starter.cosmetic as object),
+        priceHard: 150,
+        listPriceHard: 250,
+        promotion: {
+          id: "1",
+          name: "Flash",
+          percentOff: 40,
+          endsAt: new Date(Date.now() - 1000).toISOString(),
+        },
+      } as never,
+    };
+
+    const result = await purchaseCosmetic(endedSale, "hard");
+
+    expect(result).toEqual({
+      currency: "plutonium",
+      shortfall: 50,
+      item: "Starter Pack",
+      canTopUp: true,
+    });
+    expect(purchaseCosmeticPack).not.toHaveBeenCalled();
+  });
+
+  it("uses the sale price while the pack's sale runs", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(100));
+    const runningSale: ResolvedCosmetic = {
+      ...starter,
+      cosmetic: {
+        ...(starter.cosmetic as object),
+        priceHard: 150,
+        listPriceHard: 250,
+        promotion: {
+          id: "1",
+          name: "Flash",
+          percentOff: 40,
+          endsAt: new Date(Date.now() + 60_000).toISOString(),
+        },
+      } as never,
+    };
+
+    const result = await purchaseCosmetic(runningSale, "hard");
+
+    expect(result).toMatchObject({ shortfall: 50 });
   });
 
   it("re-reads the balance when the server rejects for insufficient funds", async () => {

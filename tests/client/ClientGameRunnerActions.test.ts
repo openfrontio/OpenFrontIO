@@ -1,7 +1,7 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/shared/EventBus";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { EventBus } from "../../src/core/EventBus";
-import { UnitType } from "../../src/core/game/Game";
-import { TileRef } from "../../src/core/game/GameMap";
 
 // ClientGameRunner's left-click handling: spawn intents during the spawn
 // phase, the lazy myPlayer lookup, attack intents, and the auto-boat
@@ -26,11 +26,9 @@ vi.mock("../../src/client/Utils", () => ({
   createCanvas: () => document.createElement("canvas"),
   homeHref: () => "/",
 }));
-vi.mock("../../src/core/game/TerrainMapLoader", () => ({
-  loadTerrainMap: vi.fn(async () => ({}) as never),
-}));
 vi.mock("../../src/client/TerrainMapFileLoader", () => ({
   terrainMapFileLoader: {},
+  loadCachedTerrainMap: vi.fn(async () => ({}) as never),
 }));
 vi.mock("../../src/client/hud/GameRenderer", () => ({
   createRenderer: vi.fn(),
@@ -65,7 +63,7 @@ vi.mock("../../src/client/view", () => ({
   GameView: class {},
   PlayerView: class {},
 }));
-vi.mock("../../src/core/worker/WorkerClient", () => ({
+vi.mock("../../src/client/WorkerClient", () => ({
   WorkerClient: class {},
 }));
 
@@ -73,11 +71,18 @@ import {
   ClientGameRunner,
   LobbyConfig,
 } from "../../src/client/ClientGameRunner";
-import { MouseUpEvent } from "../../src/client/InputHandler";
 import {
+  DoRequestAllianceEvent,
+  DoTargetPlayerEvent,
+  MouseMoveEvent,
+  MouseUpEvent,
+} from "../../src/client/InputHandler";
+import {
+  SendAllianceRequestIntentEvent,
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendSpawnIntentEvent,
+  SendTargetPlayerIntentEvent,
 } from "../../src/client/Transport";
 
 const TILE = 77 as TileRef;
@@ -252,5 +257,97 @@ describe("stop() (OPE-411)", () => {
     runner.stop();
 
     expect(input.destroy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("player actions from keybinds and panel buttons", () => {
+  const PANEL_TILE = 5 as TileRef;
+  const enemy = { id: () => "enemy1", isPlayer: () => true };
+
+  function setup(overrides: Parameters<typeof makeRunner>[0]) {
+    const made = makeRunner(overrides);
+    made.gameView.owner = (() => enemy) as never;
+    return made;
+  }
+
+  it("targets the player under the cursor (the N key)", async () => {
+    const { eventBus, myPlayer } = setup({
+      actions: { interaction: { canTarget: true } },
+    });
+    const targets: SendTargetPlayerIntentEvent[] = [];
+    eventBus.on(SendTargetPlayerIntentEvent, (e) => targets.push(e));
+
+    eventBus.emit(new MouseMoveEvent(CLICK.x, CLICK.y));
+    eventBus.emit(new DoTargetPlayerEvent());
+    await flushPromises();
+
+    expect(myPlayer.actions).toHaveBeenCalledWith(TILE);
+    expect(targets.map((e) => e.targetID)).toEqual(["enemy1"]);
+  });
+
+  it("acts on a panel button's own tile, without needing the cursor", async () => {
+    const { eventBus, myPlayer } = setup({
+      actions: { interaction: { canTarget: true } },
+    });
+    const targets: SendTargetPlayerIntentEvent[] = [];
+    eventBus.on(SendTargetPlayerIntentEvent, (e) => targets.push(e));
+
+    eventBus.emit(new DoTargetPlayerEvent(PANEL_TILE));
+    await flushPromises();
+
+    expect(myPlayer.actions).toHaveBeenCalledWith(PANEL_TILE);
+    expect(targets).toHaveLength(1);
+  });
+
+  it("doesn't target when the game says it can't", async () => {
+    const { eventBus } = setup({
+      actions: { interaction: { canTarget: false } },
+    });
+    const targets: SendTargetPlayerIntentEvent[] = [];
+    eventBus.on(SendTargetPlayerIntentEvent, (e) => targets.push(e));
+
+    eventBus.emit(new DoTargetPlayerEvent(PANEL_TILE));
+    await flushPromises();
+
+    expect(targets).toHaveLength(0);
+  });
+
+  it("requests an alliance with the panel's player", async () => {
+    const { eventBus, myPlayer } = setup({
+      actions: { interaction: { canSendAllianceRequest: true } },
+    });
+    const requests: SendAllianceRequestIntentEvent[] = [];
+    eventBus.on(SendAllianceRequestIntentEvent, (e) => requests.push(e));
+
+    eventBus.emit(new DoRequestAllianceEvent(PANEL_TILE));
+    await flushPromises();
+
+    expect(myPlayer.actions).toHaveBeenCalledWith(PANEL_TILE);
+    expect(requests).toHaveLength(1);
+    expect(requests[0].recipient).toBe(enemy);
+  });
+
+  it("drops a panel action once its tile has changed hands", async () => {
+    const { eventBus, myPlayer } = setup({
+      actions: { interaction: { canTarget: true } },
+    });
+    const targets: SendTargetPlayerIntentEvent[] = [];
+    eventBus.on(SendTargetPlayerIntentEvent, (e) => targets.push(e));
+
+    // The panel showed someone else; enemy1 owns the tile now.
+    eventBus.emit(new DoTargetPlayerEvent(PANEL_TILE, "someone-else"));
+    await flushPromises();
+
+    expect(myPlayer.actions).not.toHaveBeenCalled();
+    expect(targets).toHaveLength(0);
+  });
+
+  it("ignores panel actions during the spawn phase", async () => {
+    const { eventBus, myPlayer } = setup({ inSpawnPhase: true });
+
+    eventBus.emit(new DoTargetPlayerEvent(PANEL_TILE));
+    await flushPromises();
+
+    expect(myPlayer.actions).not.toHaveBeenCalled();
   });
 });

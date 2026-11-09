@@ -1,6 +1,6 @@
+import type { LiveStream, StreamsFeed } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamsFeed } from "../../../src/client/StreamsFeed";
-import type { LiveStream, StreamsFeed } from "../../../src/core/ApiSchemas";
 
 // Mounting behaviour of the <featured-stream> panel. The point of these tests is the
 // request cost: liveness used to be detected in the browser by constructing a real
@@ -130,6 +130,20 @@ describe("featured-stream panel", () => {
     // One mount, not one per configured channel: the API already did the liveness check.
     expect(FakePlayer.constructed).toEqual(["openfrontmasters"]);
     expect(card()).not.toBeNull();
+  });
+
+  it("embeds nothing on a compact screen", async () => {
+    const matchMedia = vi.fn((query: string) => ({
+      matches: query.includes("max-height: 800px"),
+    }));
+    vi.stubGlobal("matchMedia", matchMedia);
+    try {
+      await mount(stream("openfrontmasters"));
+      expect(FakePlayer.constructed).toEqual([]);
+      expect(card()).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("shows the panel once the player reports it is playing", async () => {

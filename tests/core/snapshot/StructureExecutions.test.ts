@@ -1,18 +1,17 @@
-import { ConstructionExecution } from "../../../src/core/execution/ConstructionExecution";
-import { DoomsdayClockExecution } from "../../../src/core/execution/DoomsdayClockExecution";
-import { MirvExecution } from "../../../src/core/execution/MIRVExecution";
-import { NukeExecution } from "../../../src/core/execution/NukeExecution";
-import { PortExecution } from "../../../src/core/execution/PortExecution";
-import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
-import { ShellExecution } from "../../../src/core/execution/ShellExecution";
-import { TrainStationExecution } from "../../../src/core/execution/TrainStationExecution";
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
+import { DoomsdayClockExecution } from "@openfront/engine/execution/DoomsdayClockExecution";
+import { MirvExecution } from "@openfront/engine/execution/MIRVExecution";
+import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
+import { PortExecution } from "@openfront/engine/execution/PortExecution";
+import { SAMLauncherExecution } from "@openfront/engine/execution/SAMLauncherExecution";
+import { ShellExecution } from "@openfront/engine/execution/ShellExecution";
+import { TrainStationExecution } from "@openfront/engine/execution/TrainStationExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "../../util/Setup";
 import { expectSnapshotRoundTrip } from "../../util/Snapshot";
 import { executeTicks } from "../../util/utils";

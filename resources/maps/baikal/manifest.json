@@ -1,6 +1,5 @@
 {
   "categories": ["asia"],
-  "ffa_frequency": 5,
   "forced_modifiers": ["isWaterNukes:50"],
   "id": "Baikal",
   "map": {

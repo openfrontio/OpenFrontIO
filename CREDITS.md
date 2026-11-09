@@ -28,6 +28,11 @@ Licensed under [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.
 License: (https://docs.sentinel-hub.com/api/latest/static/files/data/dem/resources/license/License-COPDEM-30.pdf)
 
+### AWS Terrain Tiles
+
+Elevation data from [Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (Mapzen/Tilezen), used for the Paris map.
+Source attribution: [tilezen/joerd attribution](https://github.com/tilezen/joerd/blob/master/docs/attribution.md)
+
 ### Topographic Map
 
 [New Jersey Topographic Map](https://en-gb.topographic-map.com/map-b8knh/New-Jersey/)
@@ -69,6 +74,14 @@ Licensed under [CC0 1.0.](https://creativecommons.org/publicdomain/zero/1.0/lega
 [NASA/JPL-Caltech](https://www.jpl.nasa.gov/images/pia10748-our-milky-way-gets-a-makeover-artist-concept/)
 [Public Domain](https://www.jpl.nasa.gov/jpl-image-use-policy/)
 
+### Brain Rot Map
+
+[https://en.wikipedia.org/wiki/Human_brain#/media/File:Skull_and_brain_normal_human.svg](https://en.wikipedia.org/wiki/Human_brain#/media/File:Skull_and_brain_normal_human.svg)
+Patrick J. Lynch, medical illustrator
+Skull and brain normal human diagram.
+Creative Commons Attribution 2.5 License 2006
+File:Skull and brain normal human.svg
+
 ### Strait Of Malacca Map
 
 [https://commons.wikimedia.org/wiki/User:Sadalmelik#/media/File:Sumatra_Topography.png](https://commons.wikimedia.org/wiki/File:Sumatra_Topography.png#/media/File:Sumatra_Topography.png)
@@ -109,6 +122,15 @@ Licensed under ODbL
 © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)  
 Licensed under ODbL
 
+### Brahmaputra Map
+
+River outlines and islands: © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)  
+Licensed under ODbL
+
+Elevation: [Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) by Mapzen on AWS Open Data.
+GMTED2010 and SRTM terrain data courtesy of the [U.S. Geological Survey](https://www.usgs.gov/)  
+[Public Domain](https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits)
+
 ### Ukraine Map
 
 Elevation: [Terrain Tiles on AWS](https://registry.opendata.aws/terrain-tiles/), see [attribution](https://github.com/tilezen/joerd/blob/master/docs/attribution.md)
@@ -118,6 +140,13 @@ DOC/NOAA/NESDIS/NCEI > National Centers for Environmental Information, NESDIS, N
 Produced using Copernicus data and information funded by the European Union - EU-DEM layers.
 Borders, rivers and cities: [Natural Earth](https://www.naturalearthdata.com/), Public Domain
 Lakes, reservoirs and river areas: © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), Licensed under ODbL
+
+## FFA Rating
+
+### OFstats
+
+FFA rating model by [OFstats](https://ofstats.io/leaderboard/how-it-works) (MIT, © 2026 Klaudiusz Dembler; the model's code runs in the API, not in this repository).  
+Rank emblems in `resources/images/ffa-tiers/` by [OFstats](https://ofstats.io), licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
 
 ## Icons
 

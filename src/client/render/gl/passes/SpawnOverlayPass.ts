@@ -91,6 +91,7 @@ export class SpawnOverlayPass {
       gl,
       overlayVertSrc,
       shaderSrc(spawnFragSrc, { ...TILE_DEFINES }),
+      "SpawnOverlayPass",
     );
 
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;

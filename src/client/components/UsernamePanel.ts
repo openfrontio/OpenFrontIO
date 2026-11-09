@@ -1,20 +1,20 @@
-import { html, LitElement, nothing, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
 import {
   isTemporaryUsername,
   PutUsernameResponse,
   UserMeResponse,
-} from "../../core/ApiSchemas";
-import {
-  MAX_ACCOUNT_USERNAME_LENGTH,
-  MIN_ACCOUNT_USERNAME_LENGTH,
-  validateAccountUsername,
-} from "../../core/validations/username";
+} from "@openfront/shared/ApiSchemas";
+import { html, LitElement, nothing, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { updateUsername, UpdateUsernameResult } from "../Api";
 import { showInGameAlert, showInGameConfirm } from "../InGameModal";
 import { sanitizeAccountPersona } from "../PlayerName";
 import { steamSDK } from "../SteamSDK";
 import { showToastAfterReload, translateText } from "../Utils";
+import {
+  MAX_ACCOUNT_USERNAME_LENGTH,
+  MIN_ACCOUNT_USERNAME_LENGTH,
+  validateAccountUsername,
+} from "../validations/username";
 import "./baseComponents/Button";
 import { usernameText } from "./ui/UsernameText";
 
@@ -368,15 +368,17 @@ export class UsernamePanel extends LitElement {
               >
                 ${translateText("account_modal.username_current_label")}
               </span>
-              ${this.player.username
-                ? html`<div
-                    class="text-xl font-bold text-white leading-tight break-all"
-                  >
-                    ${usernameText(this.player.username, "text-white")}
-                  </div>`
-                : html`<div class="text-sm text-white/50">
-                    ${translateText("account_modal.username_not_set")}
-                  </div>`}
+              ${
+                this.player.username
+                  ? html`<div
+                      class="text-xl font-bold text-white leading-tight break-all"
+                    >
+                      ${usernameText(this.player.username, "text-white")}
+                    </div>`
+                  : html`<div class="text-sm text-white/50">
+                      ${translateText("account_modal.username_not_set")}
+                    </div>`
+              }
             </div>
             ${this.renderCooldownPill(cooldownEnd)}
           </div>
@@ -400,10 +402,11 @@ export class UsernamePanel extends LitElement {
               placeholder=${translateText("account_modal.username_placeholder")}
               maxlength=${MAX_ACCOUNT_USERNAME_LENGTH}
               ?disabled=${locked || this.busy}
-              class="w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 transition-all font-medium hover:bg-white/10 disabled:opacity-50 disabled:hover:bg-white/5 ${this
-                .error
-                ? "border-red-500/50 focus:ring-red-500/40 focus:border-red-500/50"
-                : "border-white/10 focus:ring-malibu-blue/50 focus:border-malibu-blue/50"}"
+              class="w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 transition-all font-medium hover:bg-white/10 disabled:opacity-50 disabled:hover:bg-white/5 ${
+                this.error
+                  ? "border-red-500/50 focus:ring-red-500/40 focus:border-red-500/50"
+                  : "border-white/10 focus:ring-malibu-blue/50 focus:border-malibu-blue/50"
+              }"
             />
             <div class="flex items-start justify-between gap-3 min-h-[1.25rem]">
               <span class="text-sm text-red-400">${this.error}</span>

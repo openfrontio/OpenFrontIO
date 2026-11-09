@@ -1,16 +1,20 @@
-import { AttackExecution } from "../src/core/execution/AttackExecution";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { TileRef } from "../src/core/game/GameMap";
-import { GameUpdateType, UnitUpdate } from "../src/core/game/GameUpdates";
-import { GameID } from "../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  GameUpdateType,
+  UnitUpdate,
+} from "@openfront/engine-api/game/GameUpdates";
+import { GameID } from "@openfront/engine-api/Schemas";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { RetreatExecution } from "@openfront/engine/execution/RetreatExecution";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { TransportShipExecution } from "@openfront/engine/execution/TransportShipExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
+import { canBuildTransportShip } from "@openfront/engine/game/TransportShipUtils";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
 import { constructionExecution } from "./util/utils";
@@ -172,6 +176,20 @@ function addPlayerToGame(
   game.addPlayer(playerInfo);
   game.addExecution(new SpawnExecution(gameID, playerInfo, tile));
   return game.player(playerInfo.id);
+}
+
+// Gives `player` an unowned land tile next to `neighbor`, so the two border
+// each other and an attack between them has something to conquer.
+function giveBorderTile(neighbor: Player, player: Player) {
+  for (const tile of Array.from(neighbor.borderTiles())) {
+    for (const n of game.neighbors(tile)) {
+      if (game.isLand(n) && !game.hasOwner(n)) {
+        player.conquer(n);
+        return;
+      }
+    }
+  }
+  throw new Error("no unowned land next to the neighbor");
 }
 
 describe("Attack race condition with alliance requests", () => {
@@ -427,6 +445,7 @@ describe("Attack immunity", () => {
     playerB = addPlayerToGame(playerBInfo, game, game.ref(7, 15));
     game.executeNextTick();
     game.executeNextTick();
+    giveBorderTile(playerA, playerB);
   });
 
   test("Should not be able to attack during immunity phase", async () => {
@@ -490,13 +509,30 @@ describe("Attack immunity", () => {
     expect(playerA.units(UnitType.TransportShip)).toHaveLength(1);
   });
 
+  test("Should not notify terra nullius when sending a boat", async () => {
+    waitForImmunityToEnd();
+    const tile = Array.from({ length: game.width() * game.height() }, (_, i) =>
+      game.ref(i % game.width(), Math.floor(i / game.width())),
+    ).find(
+      (t) =>
+        game.isLand(t) &&
+        game.isShore(t) &&
+        !game.hasOwner(t) &&
+        canBuildTransportShip(game, playerA, t) !== false,
+    )!;
+    const notify = vi.spyOn(game, "displayIncomingUnit");
+    game.addExecution(new TransportShipExecution(playerA, tile, 10));
+    game.executeNextTick();
+    expect(notify).not.toHaveBeenCalled();
+  });
+
   test("Should not be able to attack nations during nation immunity phase", async () => {
     (game.config() as TestConfig).setNationSpawnImmunityDuration(
       immunityPhaseTicks,
     );
     const nationId = "nation_id";
     const nation = new PlayerInfo("nation", PlayerType.Nation, null, nationId);
-    game.addPlayer(nation);
+    giveBorderTile(playerA, game.addPlayer(nation));
     // Player A attacks the nation during nation immunity
     const attackExecution = new AttackExecution(null, playerA, nationId, null);
     game.addExecution(attackExecution);
@@ -510,7 +546,7 @@ describe("Attack immunity", () => {
     );
     const nationId = "nation_id";
     const nation = new PlayerInfo("nation", PlayerType.Nation, null, nationId);
-    game.addPlayer(nation);
+    giveBorderTile(playerA, game.addPlayer(nation));
     waitForImmunityToEnd();
     // Player A attacks the nation after immunity
     const attackExecution = new AttackExecution(null, playerA, nationId, null);
@@ -522,7 +558,7 @@ describe("Attack immunity", () => {
   test("Should be able to attack bots during immunity phase", async () => {
     const botId = "bot_id";
     const bot = new PlayerInfo("bot", PlayerType.Bot, null, botId);
-    game.addPlayer(bot);
+    giveBorderTile(playerA, game.addPlayer(bot));
     // Player A attacks the bot
     const attackExecution = new AttackExecution(null, playerA, botId, null);
     game.addExecution(attackExecution);
@@ -568,6 +604,7 @@ describe("Attack immunity", () => {
     const nation = addPlayerToGame(nationInfo, game, game.ref(15, 0));
     game.executeNextTick();
     game.executeNextTick();
+    giveBorderTile(playerA, nation);
 
     // Nation attacks playerA during PVP immunity - should succeed
     game.addExecution(new AttackExecution(null, nation, "playerA_id", null));
@@ -580,6 +617,7 @@ describe("Attack immunity", () => {
     const bot = addPlayerToGame(botInfo, game, game.ref(15, 0));
     game.executeNextTick();
     game.executeNextTick();
+    giveBorderTile(playerA, bot);
 
     // Bot attacks playerA during PVP immunity - should succeed
     game.addExecution(new AttackExecution(null, bot, "playerA_id", null));
@@ -602,9 +640,11 @@ describe("Attack immunity", () => {
       null,
       "nationB_id",
     );
-    addPlayerToGame(nationBInfo, game, game.ref(15, 15));
+    const nationB = addPlayerToGame(nationBInfo, game, game.ref(15, 15));
     game.executeNextTick();
     game.executeNextTick();
+    giveBorderTile(playerA, nationA);
+    giveBorderTile(nationA, nationB);
 
     // Nation A attacks Nation B during PVP immunity - should succeed
     game.addExecution(new AttackExecution(null, nationA, "nationB_id", null));
@@ -622,6 +662,7 @@ describe("Attack immunity", () => {
     const nation = addPlayerToGame(nationInfo, game, game.ref(15, 0));
     game.executeNextTick();
     game.executeNextTick();
+    giveBorderTile(playerA, nation);
 
     // Create alliance between nation and playerA
     const allianceRequest = nation.createAllianceRequest(playerA);
@@ -721,5 +762,183 @@ describe("Fractional attack troop duplication (#4948)", () => {
 
     expect(Number.isInteger(outgoingTroops())).toBe(true);
     expect(outgoingTroops()).toBe(100);
+  });
+});
+
+describe("Attack with nothing to conquer", () => {
+  let tGame: Game;
+  let tAttacker: Player;
+  let farPlayer: Player;
+
+  beforeEach(async () => {
+    tGame = await setup("plains", { infiniteGold: true, instantBuild: true });
+    const attackerInfo = new PlayerInfo(
+      "attacker dude",
+      PlayerType.Human,
+      null,
+      "attacker_id",
+    );
+    const farInfo = new PlayerInfo(
+      "far dude",
+      PlayerType.Human,
+      null,
+      "far_id",
+    );
+    tGame.addPlayer(attackerInfo);
+    tGame.addPlayer(farInfo);
+    tGame.addExecution(
+      new SpawnExecution(gameID, attackerInfo, tGame.ref(10, 10)),
+      new SpawnExecution(gameID, farInfo, tGame.ref(90, 90)),
+    );
+    tGame.executeNextTick();
+    tGame.executeNextTick();
+
+    tAttacker = tGame.player(attackerInfo.id);
+    farPlayer = tGame.player(farInfo.id);
+  });
+
+  function totalTroops(): number {
+    return tAttacker
+      .outgoingAttacks()
+      .reduce((sum, attack) => sum + attack.troops(), tAttacker.troops());
+  }
+
+  it("does not happen when there is no wilderness around the attacker", () => {
+    // Wall the attacker in so no terra nullius touches its border.
+    for (const tile of Array.from(tAttacker.borderTiles())) {
+      for (const n of tGame.neighbors(tile)) {
+        if (!tGame.hasOwner(n)) farPlayer.conquer(n);
+      }
+    }
+    const before = tAttacker.troops();
+
+    tGame.addExecution(
+      new AttackExecution(1000, tAttacker, tGame.terraNullius().id()),
+    );
+    tGame.executeNextTick();
+
+    expect(tAttacker.outgoingAttacks()).toHaveLength(0);
+    expect(tAttacker.troops()).toBeGreaterThanOrEqual(before);
+  });
+
+  it("does not happen against a player the attacker does not border", () => {
+    const before = tAttacker.troops();
+
+    tGame.addExecution(new AttackExecution(1000, tAttacker, farPlayer.id()));
+    tGame.executeNextTick();
+
+    expect(tAttacker.outgoingAttacks()).toHaveLength(0);
+    expect(tAttacker.troops()).toBeGreaterThanOrEqual(before);
+  });
+
+  it("cannot be spammed to build troops past maxTroops", () => {
+    // Every tick, send everything above the peak-regen point at nothing.
+    // If those troops sat out the regen step and came back, regen would never
+    // slow down near the cap.
+    for (let i = 0; i < 600; i++) {
+      const excess =
+        tAttacker.troops() - 0.42 * tGame.config().maxTroops(tAttacker);
+      if (excess > 0) {
+        tGame.addExecution(
+          new AttackExecution(excess, tAttacker, farPlayer.id()),
+        );
+      }
+      tGame.executeNextTick();
+    }
+
+    expect(totalTroops()).toBeLessThanOrEqual(
+      tGame.config().maxTroops(tAttacker),
+    );
+  });
+});
+
+describe("Attack absorbed on the tick its retreat completes", () => {
+  let rGame: Game;
+  let rAttacker: Player;
+  let rDefender: Player;
+
+  beforeEach(async () => {
+    rGame = await setup("ocean_and_land", {
+      infiniteGold: true,
+      instantBuild: true,
+    });
+    const attackerInfo = new PlayerInfo(
+      "attacker dude",
+      PlayerType.Human,
+      null,
+      "attacker_id",
+    );
+    const defenderInfo = new PlayerInfo(
+      "defender dude",
+      PlayerType.Human,
+      null,
+      "defender_id",
+    );
+    rGame.addPlayer(attackerInfo);
+    rGame.addPlayer(defenderInfo);
+    rGame.addExecution(
+      new SpawnExecution(gameID, attackerInfo, rGame.ref(0, 10)),
+      new SpawnExecution(gameID, defenderInfo, rGame.ref(0, 15)),
+    );
+    rGame.executeNextTick();
+    rGame.executeNextTick();
+    rAttacker = rGame.player(attackerInfo.id);
+    rDefender = rGame.player(defenderInfo.id);
+    while (rGame.inSpawnPhase()) rGame.executeNextTick();
+    for (let i = 0; i < immunityPhaseTicks + 1; i++) rGame.executeNextTick();
+    // Gives the defender enough land that the attack is still running when
+    // its retreat completes.
+    rGame.addExecution(
+      new AttackExecution(null, rDefender, rGame.terraNullius().id()),
+    );
+    rGame.executeNextTick();
+    while (rDefender.outgoingAttacks().length > 0) rGame.executeNextTick();
+  });
+
+  function total(player: Player): number {
+    return player
+      .outgoingAttacks()
+      .reduce((sum, attack) => sum + attack.troops(), player.troops());
+  }
+
+  // Lands the follow-up's init on the tick RetreatExecution calls
+  // executeRetreat, so the retreating attack is absorbed before its own
+  // execution sees retreated(). Returns the troops it held.
+  function absorbOnRetreatTick(followUp: () => AttackExecution): number {
+    rGame.addExecution(new AttackExecution(null, rAttacker, rDefender.id()));
+    rGame.executeNextTick();
+    const retreating = rAttacker.outgoingAttacks()[0];
+    rGame.addExecution(new RetreatExecution(rAttacker, retreating.id()));
+    for (let i = 0; i < 20; i++) rGame.executeNextTick();
+    expect(retreating.retreated()).toBe(false);
+    const absorbed = retreating.troops();
+    rGame.addExecution(followUp());
+    rGame.executeNextTick();
+    expect(retreating.retreated()).toBe(true);
+    expect(retreating.isActive()).toBe(false);
+    return absorbed;
+  }
+
+  function expectNoRefund(absorbed: number) {
+    const before = total(rAttacker);
+    rGame.executeNextTick();
+    // A duplicated refund is 75% of the absorbed troops; regen is far less.
+    expect(total(rAttacker) - before).toBeLessThan(absorbed * 0.1);
+  }
+
+  it("does not refund an attack merged into a new one", () => {
+    expectNoRefund(
+      absorbOnRetreatTick(
+        () => new AttackExecution(null, rAttacker, rDefender.id()),
+      ),
+    );
+  });
+
+  it("does not refund an attack cancelled out by the target", () => {
+    expectNoRefund(
+      absorbOnRetreatTick(
+        () => new AttackExecution(null, rDefender, rAttacker.id()),
+      ),
+    );
   });
 });

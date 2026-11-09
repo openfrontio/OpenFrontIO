@@ -1,5 +1,5 @@
+import type { TokenPayload } from "@openfront/shared/ApiSchemas";
 import { z } from "zod";
-import type { TokenPayload } from "../core/ApiSchemas";
 import { ServerEnv } from "./ServerEnv";
 
 const JoinVerifyVerdictSchema = z.discriminatedUnion("status", [
@@ -11,13 +11,32 @@ const JoinVerifyVerdictSchema = z.discriminatedUnion("status", [
   z.object({
     status: z.literal("rejected"),
     reason: z.string(),
+    errorCodes: z.array(z.string()).optional(),
+  }),
+  // The API answered, but a leg (siteverify or the name check) failed or ran
+  // past its budget. The name verdict rides along when the name check did
+  // finish.
+  z.object({
+    status: z.literal("error"),
+    reason: z.string(),
+    username: z.string().optional(),
+    clanTag: z.string().nullable().optional(),
   }),
 ]);
 
 export type JoinVerifyResponse =
   | { status: "approved"; username: string; clanTag: string | null }
-  | { status: "rejected"; reason: string }
-  | { status: "error"; reason: string };
+  | { status: "rejected"; reason: string; errorCodes?: string[] }
+  | {
+      status: "error";
+      reason: string;
+      // true when the API itself reported the failure (an expected,
+      // budgeted degradation); false when it could not be reached or
+      // answered with something unusable.
+      degraded: boolean;
+      // The API's display-ready identity, when its name check finished.
+      identity?: { username: string; clanTag: string | null };
+    };
 
 export type JoinVerifyPlan =
   | { action: "reject" } // first join with no Turnstile token
@@ -51,6 +70,20 @@ export function isSteamAuthenticated(claims: TokenPayload | null): boolean {
   return claims?.provider === "steam";
 }
 
+export type ClientAuth = "account" | "anonymous";
+
+// A guest session carries a JWT too, so a non-null claims object is not a
+// sign-in. Infra stamps provider only for a session with a persistent identity
+// behind it (discord, google, steam, email, a portal account...), except for
+// "guest", which a refreshed guest session carries; a freshly minted guest
+// session has no provider at all.
+export function clientAuth(claims: TokenPayload | null): ClientAuth {
+  const provider = claims?.provider;
+  return provider === undefined || provider === "guest"
+    ? "anonymous"
+    : "account";
+}
+
 export function planJoinVerify(args: {
   isReadmit: boolean;
   gameStarted: boolean;
@@ -78,6 +111,88 @@ export function planJoinVerify(args: {
   return { action: "verify", token: null };
 }
 
+// In-flight verifyJoin requests coalesced by (token, persistentId, username, clanTag).
+const inFlightByToken = new Map<string, Promise<JoinVerifyResponse>>();
+
+function parseJoinVerifyResponse(data: unknown): JoinVerifyResponse {
+  const parsed = JoinVerifyVerdictSchema.safeParse(data);
+  if (!parsed.success) {
+    return {
+      status: "error",
+      reason: `api-worker returned malformed response: ${parsed.error.message}`,
+      degraded: false,
+    };
+  }
+  if (parsed.data.status === "approved") {
+    return {
+      status: "approved",
+      username: parsed.data.username,
+      clanTag: parsed.data.clanTag ?? null,
+    };
+  }
+  if (parsed.data.status === "error") {
+    const { reason, username, clanTag } = parsed.data;
+    return {
+      status: "error",
+      reason,
+      degraded: true,
+      ...(username !== undefined && {
+        identity: { username, clanTag: clanTag ?? null },
+      }),
+    };
+  }
+  return parsed.data;
+}
+
+async function fetchJoinVerify(
+  ip: string,
+  token: string | null,
+  username: string,
+  clanTag: string | null,
+): Promise<Response> {
+  return fetch(`${ServerEnv.jwtIssuer()}/join_verify`, {
+    method: "POST",
+    // First sighting of a novel flagged name adds an LLM round-trip of
+    // up to ~3s server-side, so the timeout must stay at 5s or above.
+    signal: AbortSignal.timeout(5000),
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": ServerEnv.apiKey(),
+    },
+    body: JSON.stringify({ ip, token, username, clanTag }),
+  });
+}
+
+async function verifyJoinRequest(
+  ip: string,
+  turnstileToken: string | null,
+  username: string,
+  clanTag: string | null,
+): Promise<JoinVerifyResponse> {
+  try {
+    const response = await fetchJoinVerify(
+      ip,
+      turnstileToken,
+      username,
+      clanTag,
+    );
+    if (!response.ok) {
+      return {
+        status: "error",
+        reason: `api-worker returned ${response.status}`,
+        degraded: false,
+      };
+    }
+    return parseJoinVerifyResponse(await response.json());
+  } catch (e) {
+    return {
+      status: "error",
+      reason: `api-worker unavailable: ${e}`,
+      degraded: false,
+    };
+  }
+}
+
 /**
  * Verify a joining player against the API's join_verify endpoint, which runs
  * the Turnstile check and name censoring concurrently: `status` is the
@@ -95,50 +210,42 @@ export function planJoinVerify(args: {
  * Failures are never retried: a Turnstile token is single-use, so
  * re-submitting after a timeout or 5xx can redeem an already-spent token and
  * turn an API hiccup into a hard rejection of a legitimate player. Any
- * failure returns "error" and the caller fails open with the locally
- * screened name (see Censor.ts), matching the old standalone-Turnstile
- * stance.
+ * failure returns "error" and the caller fails open, matching the old
+ * standalone-Turnstile stance: with the API's screened identity when it
+ * sent one (a degraded verdict whose name check finished), otherwise with
+ * the locally screened name (see Censor.ts).
  */
 export async function verifyJoin(
   ip: string,
   turnstileToken: string | null,
   username: string,
   clanTag: string | null,
+  persistentId?: string,
 ): Promise<JoinVerifyResponse> {
-  try {
-    const response = await fetch(`${ServerEnv.jwtIssuer()}/join_verify`, {
-      method: "POST",
-      // First sighting of a novel flagged name adds an LLM round-trip of
-      // up to ~3s server-side, so the timeout must stay at 5s or above.
-      signal: AbortSignal.timeout(5000),
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ServerEnv.apiKey(),
-      },
-      body: JSON.stringify({ ip, token: turnstileToken, username, clanTag }),
+  if (turnstileToken !== null && turnstileToken.length > 0) {
+    const key = `${turnstileToken}\0${persistentId ?? ""}\0${username}\0${clanTag ?? ""}`;
+    const inFlight = inFlightByToken.get(key);
+    if (inFlight) {
+      return inFlight;
+    }
+    const promise = verifyJoinRequest(
+      ip,
+      turnstileToken,
+      username,
+      clanTag,
+    ).finally(() => {
+      inFlightByToken.delete(key);
     });
-    if (!response.ok) {
-      return {
-        status: "error",
-        reason: `api-worker returned ${response.status}`,
-      };
-    }
-    const parsed = JoinVerifyVerdictSchema.safeParse(await response.json());
-    if (!parsed.success) {
-      return {
-        status: "error",
-        reason: `api-worker returned malformed response: ${parsed.error.message}`,
-      };
-    }
-    if (parsed.data.status === "approved") {
-      return {
-        status: "approved",
-        username: parsed.data.username,
-        clanTag: parsed.data.clanTag ?? null,
-      };
-    }
-    return parsed.data;
-  } catch (e) {
-    return { status: "error", reason: `api-worker unavailable: ${e}` };
+    inFlightByToken.set(key, promise);
+    return promise;
   }
+  return verifyJoinRequest(ip, turnstileToken, username, clanTag);
+}
+
+export function _inFlightTokenCount(): number {
+  return inFlightByToken.size;
+}
+
+export function _clearInFlightTokens(): void {
+  inFlightByToken.clear();
 }

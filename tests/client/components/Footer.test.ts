@@ -1,8 +1,8 @@
 import version from "resources/version.txt?raw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../../../src/client/ClientEnv";
-import { composeGameVersion } from "../../../src/client/GameVersion";
 import { Footer } from "../../../src/client/components/Footer";
+import { composeGameVersion } from "../../../src/client/GameVersion";
 
 const SHA = "bf739f86c4e1d2a3b5c6d7e8f90123456789abcd";
 
@@ -38,8 +38,15 @@ describe("page-footer version line", () => {
     return footer;
   }
 
-  it("renders the game version on the web, with no Steam subtext", async () => {
+  it("renders no version line on the web", async () => {
     window.openfrontDesktop = undefined;
+    await mount();
+
+    expect(footer.querySelector(".footer-version")).toBeNull();
+  });
+
+  it("renders the game version alone when the shell reports no version", async () => {
+    window.openfrontDesktop = {};
     await mount();
 
     const line = footer.querySelector(".footer-version");
@@ -72,7 +79,7 @@ describe("page-footer version line", () => {
       instanceId: "test",
       gitCommit: SHA,
     };
-    window.openfrontDesktop = undefined;
+    window.openfrontDesktop = {};
     await mount();
 
     const line = footer.querySelector(".footer-version");

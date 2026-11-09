@@ -3,20 +3,19 @@
   "id": "YellowSea",
   "map": {
     "height": 1152,
-    "num_land_tiles": 1042745,
+    "num_land_tiles": 1041000,
     "width": 1500
   },
   "map16x": {
     "height": 288,
-    "num_land_tiles": 63926,
+    "num_land_tiles": 63702,
     "width": 375
   },
   "map4x": {
     "height": 576,
-    "num_land_tiles": 258545,
+    "num_land_tiles": 257963,
     "width": 750
   },
-  "multiplayer_frequency": 5,
   "name": "Yellow Sea",
   "nations": [
     {

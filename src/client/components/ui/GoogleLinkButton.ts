@@ -1,5 +1,5 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, TemplateResult } from "lit";
-import { assetUrl } from "../../../core/AssetUrls";
 import { translateText } from "../../Utils";
 
 /**

@@ -1,3 +1,4 @@
+import { Difficulty, PlayerType } from "@openfront/engine-api/game/GameTypes";
 import fs from "fs";
 import path from "path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -6,7 +7,6 @@ import {
   DIFFICULTY_TROOP_PERCENT,
   DifficultyInfo,
 } from "../../src/client/components/DifficultyInfo";
-import { Difficulty, PlayerType } from "../../src/core/game/Game";
 import { playerInfo, setup } from "../util/Setup";
 
 const DIFFICULTIES = [

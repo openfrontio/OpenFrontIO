@@ -166,7 +166,7 @@
       "name": "Dhofar"
     }
   ],
-  "categories": ["africa", "new"],
+  "categories": ["africa"],
   "id": "HornOfAfrica",
   "map": {
     "height": 1864,
@@ -183,7 +183,6 @@
     "num_land_tiles": 501259,
     "width": 1000
   },
-  "multiplayer_frequency": 5,
   "name": "Horn Of Africa",
   "nations": [
     {

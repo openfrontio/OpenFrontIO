@@ -304,16 +304,18 @@ export class DesktopStatusBar extends LitElement {
             </div>
             ${this.slotAction(source)}
           </div>
-          ${source === "update" && update?.status === "downloading"
-            ? html`<div
-                class="mt-1 h-1.5 w-full rounded-full bg-white/15 overflow-hidden"
-              >
-                <div
-                  class="h-full bg-malibu-blue transition-[width] duration-200"
-                  style="width: ${this.percent()}%"
-                ></div>
-              </div>`
-            : nothing}
+          ${
+            source === "update" && update?.status === "downloading"
+              ? html`<div
+                  class="mt-1 h-1.5 w-full rounded-full bg-white/15 overflow-hidden"
+                >
+                  <div
+                    class="h-full bg-malibu-blue transition-[width] duration-200"
+                    style="width: ${this.percent()}%"
+                  ></div>
+                </div>`
+              : nothing
+          }
         </div>
       </div>
     `;
@@ -368,14 +370,16 @@ export class DesktopStatusBar extends LitElement {
              disabled:opacity-50 disabled:cursor-not-allowed
              disabled:hover:bg-malibu-blue"
       ?disabled=${disabled}
-      title=${this.attempting
-        ? translateText("desktop_status.retrying")
-        : nothing}
+      title=${
+        this.attempting ? translateText("desktop_status.retrying") : nothing
+      }
       @click=${() => this.onRetryClick()}
     >
-      ${this.attempting
-        ? translateText("desktop_status.retrying")
-        : translateText("desktop_status.retry")}
+      ${
+        this.attempting
+          ? translateText("desktop_status.retrying")
+          : translateText("desktop_status.retry")
+      }
     </button>`;
   }
 
@@ -516,7 +520,7 @@ export class DesktopStatusBar extends LitElement {
         this.sessionAtRetry = s;
         // Main.ts owns the retry, because a successful sign-in also has to
         // refresh userMe, the nav account button and the cached profile --
-        // all of which already live there. See its crazyGamesSDK listener.
+        // all of which already live there. See its gamePortal auth listener.
         document.dispatchEvent(new CustomEvent("desktop-session-retry"));
       }}
     >

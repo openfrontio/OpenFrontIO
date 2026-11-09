@@ -1,6 +1,7 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { Winner } from "@openfront/engine-api/Schemas";
+import { PartialGameRecord } from "@openfront/shared/WireSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameType } from "../../src/core/game/Game";
-import { PartialGameRecord, Winner } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
 import {
   cid,
@@ -104,6 +105,10 @@ describe("winner vote re-tally when the electorate shrinks", () => {
     // and only the 60s prune removes them from the connected clients.
     loser.lastPing = Date.now() - 61_000;
     game.pruneStaleClients();
-    expect(archivedWinners()).toEqual([["player", WINNER]]);
+    // The one remaining voter decides alone, so the record waits on a replay
+    // (the harness's fails, and the vote stands).
+    await vi.waitFor(() =>
+      expect(archivedWinners()).toEqual([["player", WINNER]]),
+    );
   });
 });

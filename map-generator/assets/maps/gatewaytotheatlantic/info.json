@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "GatewayToTheAtlantic",
   "name": "Gateway to the Atlantic",
   "translation_key": "map.gatewaytotheatlantic",
   "categories": ["europe"],
-  "multiplayer_frequency": 5,
+  "location": { "lat": 40, "lon": -4 },
+  "author": "APuddle210",
   "nations": [
     {
       "coordinates": [2161, 420],

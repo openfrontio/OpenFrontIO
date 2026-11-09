@@ -1,10 +1,10 @@
+import { DefaultPattern } from "@openfront/shared/CosmeticSchemas";
+import { PatternDecoder } from "@openfront/shared/PatternDecoder";
+import { PlayerPattern } from "@openfront/shared/WireSchemas";
 import { Colord } from "colord";
 import { base64url } from "jose";
 import { html, LitElement, PropertyValues, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { DefaultPattern } from "../../core/CosmeticSchemas";
-import { PatternDecoder } from "../../core/PatternDecoder";
-import { PlayerPattern } from "../../core/Schemas";
 import { translateText } from "../Utils";
 
 export function renderPatternPreview(

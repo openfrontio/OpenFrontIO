@@ -1,6 +1,6 @@
-import { assetUrl } from "../../core/AssetUrls";
-import { GameEvent } from "../../core/EventBus";
-import { AudioCategory } from "../../core/game/UserSettings";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { GameEvent } from "@openfront/shared/EventBus";
+import { AudioCategory } from "../UserSettings";
 
 export type SoundEffect =
   | "ka-ching"

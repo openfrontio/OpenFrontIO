@@ -1,10 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "StraitOfGibraltar",
   "name": "Strait of Gibraltar",
   "translation_key": "map.straitofgibraltar",
   "categories": ["europe", "africa"],
-  "multiplayer_frequency": 5,
-  "team_frequency": 10,
+  "location": { "lat": 36, "lon": -5.5 },
+  "author": "evanpelle",
   "special_team_count": 2,
   "nations": [
     {

@@ -1,7 +1,6 @@
 {
   "categories": ["europe"],
   "display_name": "Archipelago Sea",
-  "ffa_frequency": 0,
   "forced_modifiers": ["isWaterNukes:50"],
   "id": "ArchipelagoSea",
   "map": {
@@ -19,7 +18,6 @@
     "num_land_tiles": 52779,
     "width": 1550
   },
-  "multiplayer_frequency": 1,
   "name": "ArchipelagoSea",
   "nations": [
     {
@@ -123,7 +121,6 @@
       "name": "Hammarsboda"
     }
   ],
-  "team_frequency": 0,
   "themes": ["europe"],
   "translation_key": "map.archipelagosea"
 }

@@ -1,9 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "UnitedStates",
   "name": "United States",
   "translation_key": "map.unitedstates",
   "categories": ["north_america", "countries"],
-  "multiplayer_frequency": 9,
+  "location": { "lat": 38.5, "lon": -97 },
+  "author": "Tristar",
+  "description": "A map of the lower 48 United States, with the states themselves and Washington D.C. as nations. Dominate the Pacific mountain chains, The Rockies, Great Plains, the Mississippi, Great Lakes and the Atlantic coast.",
   "nations": [
     {
       "coordinates": [320, 692],

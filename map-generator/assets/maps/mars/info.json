@@ -1,9 +1,10 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Mars",
   "name": "Mars",
   "translation_key": "map.mars",
   "categories": ["cosmic"],
-  "multiplayer_frequency": 3,
+  "author": "NewHappyRabbit",
   "nations": [
     {
       "coordinates": [650, 415],

@@ -7,6 +7,7 @@ import type {
   ClanMemberStats,
 } from "../../ClanApi";
 import { showToast, translateText } from "../../Utils";
+import { hasLevel, levelBadgeSlot } from "../LevelBadgeSlot";
 import { playerNameLink } from "../ui/PlayerNameLink";
 import "./ClanStatsBreakdown";
 export { renderLoadingSpinner } from "../BaseModal";
@@ -93,9 +94,11 @@ function renderPaginationButtons(
         @click=${() => onPageChange(1)}
         ?disabled=${currentPage <= 1}
         class="px-2 py-1 text-xs font-bold rounded-lg transition-all
-          ${currentPage <= 1
-          ? "text-white/20 cursor-not-allowed"
-          : "text-white/60 hover:text-white hover:bg-white/10"}"
+          ${
+          currentPage <= 1
+            ? "text-white/20 cursor-not-allowed"
+            : "text-white/60 hover:text-white hover:bg-white/10"
+        }"
       >
         &lt;&lt;
       </button>
@@ -103,9 +106,11 @@ function renderPaginationButtons(
         @click=${() => onPageChange(Math.max(1, currentPage - 1))}
         ?disabled=${currentPage <= 1}
         class="px-2 py-1 text-xs font-bold rounded-lg transition-all
-          ${currentPage <= 1
-          ? "text-white/20 cursor-not-allowed"
-          : "text-white/60 hover:text-white hover:bg-white/10"}"
+          ${
+          currentPage <= 1
+            ? "text-white/20 cursor-not-allowed"
+            : "text-white/60 hover:text-white hover:bg-white/10"
+        }"
       >
         &lt;
       </button>
@@ -116,9 +121,11 @@ function renderPaginationButtons(
         @click=${() => onPageChange(Math.min(totalPages, currentPage + 1))}
         ?disabled=${currentPage >= totalPages}
         class="px-2 py-1 text-xs font-bold rounded-lg transition-all
-          ${currentPage >= totalPages
-          ? "text-white/20 cursor-not-allowed"
-          : "text-white/60 hover:text-white hover:bg-white/10"}"
+          ${
+          currentPage >= totalPages
+            ? "text-white/20 cursor-not-allowed"
+            : "text-white/60 hover:text-white hover:bg-white/10"
+        }"
       >
         &gt;
       </button>
@@ -126,9 +133,11 @@ function renderPaginationButtons(
         @click=${() => onPageChange(totalPages)}
         ?disabled=${currentPage >= totalPages}
         class="px-2 py-1 text-xs font-bold rounded-lg transition-all
-          ${currentPage >= totalPages
-          ? "text-white/20 cursor-not-allowed"
-          : "text-white/60 hover:text-white hover:bg-white/10"}"
+          ${
+          currentPage >= totalPages
+            ? "text-white/20 cursor-not-allowed"
+            : "text-white/60 hover:text-white hover:bg-white/10"
+        }"
       >
         &gt;&gt;
       </button>
@@ -202,6 +211,7 @@ const sortOptions: { value: ClanMemberSort; labelKey: string }[] = [
   { value: "lossesRanked", labelKey: "clan_modal.sort_ranked_losses" },
   { value: "wins1v1", labelKey: "clan_modal.sort_1v1_wins" },
   { value: "losses1v1", labelKey: "clan_modal.sort_1v1_losses" },
+  { value: "eloContributed", labelKey: "clan_modal.sort_elo_contributed" },
 ];
 
 function renderOrderIcon(order: ClanMemberOrder): TemplateResult {
@@ -218,6 +228,26 @@ function renderOrderIcon(order: ClanMemberOrder): TemplateResult {
       )}
     </span>
   `;
+}
+
+// Chevron for the clan modal's styled <select>s: a real element over a
+// relative wrapper, like ui/StyledSelect. An arbitrary bg-[url(...)] class
+// can't carry it: Tailwind splits class names on whitespace, and the inline
+// SVG has spaces, so that rule is never generated.
+export function renderSelectChevron(): TemplateResult {
+  return html`<span
+    data-chevron
+    class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/60"
+    aria-hidden="true"
+  >
+    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+      <path
+        fill-rule="evenodd"
+        d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z"
+        clip-rule="evenodd"
+      />
+    </svg>
+  </span>`;
 }
 
 export function renderMemberSortControl(
@@ -238,23 +268,29 @@ export function renderMemberSortControl(
       >
         ${translateText("clan_modal.sort_by")}
       </label>
-      <select
-        @change=${(e: Event) =>
-          onSortChange((e.target as HTMLSelectElement).value as ClanMemberSort)}
-        class="flex-1 sm:flex-none h-10 pl-3 pr-8 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1rem] bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22rgba(255,255,255,0.5)%22 stroke-width=%222%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22m6 9 6 6 6-6%22/></svg>')]"
-      >
-        ${sortOptions.map(
-          (opt) => html`
-            <option
-              value=${opt.value}
-              ?selected=${opt.value === sort}
-              class="bg-neutral-900"
-            >
-              ${translateText(opt.labelKey)}
-            </option>
-          `,
-        )}
-      </select>
+      <div class="relative flex-1 sm:flex-none">
+        <select
+          aria-label=${translateText("clan_modal.sort_by")}
+          @change=${(e: Event) =>
+            onSortChange(
+              (e.target as HTMLSelectElement).value as ClanMemberSort,
+            )}
+          class="w-full h-10 appearance-none pl-3 pr-9 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
+        >
+          ${sortOptions.map(
+            (opt) => html`
+              <option
+                value=${opt.value}
+                ?selected=${opt.value === sort}
+                class="bg-neutral-900"
+              >
+                ${translateText(opt.labelKey)}
+              </option>
+            `,
+          )}
+        </select>
+        ${renderSelectChevron()}
+      </div>
       <button
         type="button"
         @click=${onOrderToggle}
@@ -295,9 +331,11 @@ export function renderMemberPagination(
             <button
               @click=${() => onPerPageChange(opt)}
               class="px-2 py-1 text-xs font-bold rounded-lg transition-all
-                ${membersPerPage === opt
-                ? "bg-malibu-blue/15 text-aquarius border border-malibu-blue/30"
-                : "text-white/40 hover:text-white/70 border border-transparent"}"
+                ${
+                membersPerPage === opt
+                  ? "bg-malibu-blue/15 text-aquarius border border-malibu-blue/30"
+                  : "text-white/40 hover:text-white/70 border border-transparent"
+              }"
             >
               ${opt}
             </button>
@@ -338,18 +376,22 @@ export function renderWLBarRow(
         aria-label="${wins} wins, ${losses} losses"
       >
         <div class="absolute inset-0 flex">
-          ${wins > 0
-            ? html`<div
-                class="bg-malibu-blue h-full"
-                style="width:${winPct}%"
-              ></div>`
-            : ""}
-          ${losses > 0
-            ? html`<div
-                class="bg-red-500 h-full"
-                style="width:${lossPct}%"
-              ></div>`
-            : ""}
+          ${
+            wins > 0
+              ? html`<div
+                  class="bg-malibu-blue h-full"
+                  style="width:${winPct}%"
+                ></div>`
+              : ""
+          }
+          ${
+            losses > 0
+              ? html`<div
+                  class="bg-red-500 h-full"
+                  style="width:${lossPct}%"
+                ></div>`
+              : ""
+          }
         </div>
         <div
           class="absolute inset-0 flex items-center justify-between px-1.5 text-[11px] font-bold text-white tabular-nums whitespace-nowrap pointer-events-none"
@@ -378,35 +420,75 @@ export function renderMemberStats(
   `;
 }
 
+/**
+ * Whether member rows in a list should keep a level-badge slot: true when any
+ * member in it has a level, so the names of members without one line up.
+ */
+export function membersHaveLevels(members: readonly ClanMember[]): boolean {
+  return members.some(hasLevel);
+}
+
+// The clan wars ELO a member has won or lost the clan, signed; nothing for a
+// member who hasn't played a rated game for it.
+function renderEloContributed(
+  elo: number | null | undefined,
+): TemplateResult | string {
+  if (elo === null || elo === undefined) return "";
+  const color =
+    elo > 0 ? "text-green-400" : elo < 0 ? "text-red-400" : "text-white/50";
+  return html`<span
+    data-elo-contributed
+    class="text-xs font-bold tabular-nums whitespace-nowrap ${color}"
+    title=${translateText("clan_modal.elo_contributed_tooltip")}
+    >${translateText("clan_modal.elo_contributed", {
+      elo: elo > 0 ? `+${elo}` : `${elo}`,
+    })}</span
+  >`;
+}
+
 // `host` raises the `view-profile` event that opens the profile modal.
+// `levelSlot` (see membersHaveLevels) keeps an empty badge-width slot in
+// front of the name of a member without a level.
 export function renderMemberRow(
   member: ClanMember,
   myPublicId: string | null,
   host: HTMLElement,
+  levelSlot = false,
 ): TemplateResult {
   const isMe = member.publicId === myPublicId;
   return html`
     <div
       class="flex flex-col py-2.5 px-3 rounded-xl border
-        ${isMe
-        ? "bg-malibu-blue/10 border-malibu-blue/20"
-        : "bg-white/5 border-white/10"}"
+        ${
+        isMe
+          ? "bg-malibu-blue/10 border-malibu-blue/20"
+          : "bg-white/5 border-white/10"
+      }"
     >
       <div class="flex items-center gap-3">
         <div
           class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0
-            ${isMe
-            ? "bg-malibu-blue/20 text-aquarius"
-            : "bg-white/10 text-white/50"}"
+            ${
+            isMe
+              ? "bg-malibu-blue/20 text-aquarius"
+              : "bg-white/10 text-white/50"
+          }"
         >
           ${renderRoleIcon(member.role)}
         </div>
         <div class="flex-1 min-w-0 flex flex-col">
           <div class="flex items-center justify-between gap-2">
-            <div class="min-w-0">
-              ${playerNameLink(host, member.username, member.publicId)}
+            <div class="min-w-0 flex items-center gap-2">
+              ${levelBadgeSlot(member, hasLevel(member), levelSlot)}
+              ${playerNameLink(
+                host,
+                member.username,
+                member.publicId,
+                "min-w-0",
+              )}
             </div>
             <div class="flex items-center gap-2 shrink-0">
+              ${renderEloContributed(member.eloContributed)}
               <span
                 class="text-white/30 text-[10px] text-right whitespace-nowrap"
                 >${translateText("clan_modal.joined_date", {
@@ -447,4 +529,27 @@ export function filterRequestsBySearch(
       r.publicId.toLowerCase().includes(q) ||
       (r.username?.toLowerCase().includes(q) ?? false),
   );
+}
+
+// "3h 12m" (or "6d 23h" from a day out) until a clan boost ends; null once
+// it has ended.
+export function formatBoostRemaining(
+  endsAt: string | null | undefined,
+  now: number = Date.now(),
+): string | null {
+  if (!endsAt) return null;
+  const ms = new Date(endsAt).getTime() - now;
+  if (!(ms > 0)) return null;
+  const totalMinutes = Math.ceil(ms / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  if (hours >= 24) {
+    return translateText("clan_modal.boost_remaining_days", {
+      days: Math.floor(hours / 24),
+      hours: hours % 24,
+    });
+  }
+  return translateText("clan_modal.boost_remaining", {
+    hours,
+    minutes: totalMinutes % 60,
+  });
 }

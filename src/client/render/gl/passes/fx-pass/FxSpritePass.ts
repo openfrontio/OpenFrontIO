@@ -6,7 +6,7 @@
  * Pre-built by generate-sprite-atlases.mjs.
  */
 
-import type { Config } from "../../../../../core/configuration/Config";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import type { ConquestFx, DeadUnitFx, RendererConfig } from "../../../types";
 import {
   STRUCTURE_TYPES,
@@ -19,8 +19,8 @@ import type { RenderSettings } from "../../RenderSettings";
 import { createProgram, shaderSrc } from "../../utils/GlUtils";
 import { nukeExplosionRadius } from "./FxSettings";
 
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import fxAtlasMeta from "resources/atlases/fx-atlas-meta.json";
-import { assetUrl } from "src/core/AssetUrls";
 
 import spriteFragSrc from "../../shaders/fx/sprite.frag.glsl?raw";
 import spriteVertSrc from "../../shaders/fx/sprite.vert.glsl?raw";
@@ -31,18 +31,18 @@ const fxAtlasUrl = assetUrl("atlases/fx-atlas.png");
 // FX type indices (atlas row)
 // ---------------------------------------------------------------------------
 
-export const FX_NUKE = 0;
-export const FX_SAM_EXPLOSION = 1;
-export const FX_BUILDING_EXPLOSION = 2;
-export const FX_UNIT_EXPLOSION = 3;
-export const FX_MINI_EXPLOSION = 4;
-export const FX_SINKING_SHIP = 5;
-export const FX_MINI_FIRE = 6;
-export const FX_MINI_SMOKE = 7;
-export const FX_MINI_BIG_SMOKE = 8;
-export const FX_MINI_SMOKE_FIRE = 9;
-export const FX_DUST = 10;
-export const FX_CONQUEST = 11;
+const FX_NUKE = 0;
+const FX_SAM_EXPLOSION = 1;
+const FX_BUILDING_EXPLOSION = 2;
+const FX_UNIT_EXPLOSION = 3;
+const FX_MINI_EXPLOSION = 4;
+const FX_SINKING_SHIP = 5;
+const FX_MINI_FIRE = 6;
+const FX_MINI_SMOKE = 7;
+const FX_MINI_BIG_SMOKE = 8;
+const FX_MINI_SMOKE_FIRE = 9;
+const FX_DUST = 10;
+const FX_CONQUEST = 11;
 const FX_TYPE_COUNT = 12;
 
 // ---------------------------------------------------------------------------
@@ -207,6 +207,7 @@ export class FxSpritePass {
       gl,
       shaderSrc(spriteVertSrc, { FX_TYPE_COUNT }),
       spriteFragSrc,
+      "FxSpritePass",
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uFxUV = gl.getUniformLocation(this.program, "uFxUV")!;
@@ -261,7 +262,7 @@ export class FxSpritePass {
 
     gl.bindVertexArray(null);
 
-    this.loadAtlas();
+    void this.loadAtlas();
   }
 
   // -------------------------------------------------------------------------

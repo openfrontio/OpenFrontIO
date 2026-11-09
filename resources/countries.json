@@ -537,6 +537,11 @@
     "name": "Bonaire"
   },
   {
+    "code": "Bophuthatswana",
+    "continent": "Africa",
+    "name": "Bophuthatswana"
+  },
+  {
     "code": "ba",
     "continent": "Europe",
     "name": "Bosnia and Herzegovina"
@@ -546,6 +551,7 @@
     "continent": "Africa",
     "name": "Botswana"
   },
+
   {
     "code": "fr-bfc",
     "continent": "Europe",
@@ -691,6 +697,16 @@
     "name": "Cantabria"
   },
   {
+    "code": "Cape Republic",
+    "continent": "Africa",
+    "name": "Cape Republic"
+  },
+  {
+    "code": "Cape Town",
+    "continent": "Africa",
+    "name": "Cape Town"
+  },
+  {
     "code": "Capybara",
     "name": "Capybara"
   },
@@ -703,6 +719,11 @@
     "code": "Carthage",
     "continent": "Africa",
     "name": "Carthage"
+  },
+  {
+    "code": "Cascadia",
+    "continent": "North America",
+    "name": "Cascadia"
   },
   {
     "code": "castille",
@@ -848,6 +869,11 @@
     "code": "Chuvashia",
     "continent": "Europe",
     "name": "Chuvashia"
+  },
+  {
+    "code": "Ciskei",
+    "continent": "Africa",
+    "name": "Ciskei"
   },
   {
     "code": "cp",
@@ -1102,6 +1128,11 @@
     "name": "Dominican Republic"
   },
   {
+    "code": "Drenthe",
+    "continent": "Europe",
+    "name": "Drenthe"
+  },
+  {
     "code": "Duchy of Courland and Semigallia",
     "continent": "Europe",
     "name": "Duchy of Courland and Semigallia"
@@ -1338,6 +1369,11 @@
     "name": "Flanders"
   },
   {
+    "code": "Flevoland",
+    "continent": "Europe",
+    "name": "Flevoland"
+  },
+  {
     "code": "Florida",
     "continent": "North America",
     "name": "Florida"
@@ -1361,6 +1397,11 @@
     "code": "fr-i",
     "continent": "Europe",
     "name": "Franche-Comté"
+  },
+  {
+    "code": "Franco-Columbians",
+    "continent": "North America",
+    "name": "Franco-Columbians"
   },
   {
     "code": "1_Franks",
@@ -1394,6 +1435,11 @@
     "code": "tf",
     "continent": "Africa",
     "name": "French Southern Territories"
+  },
+  {
+    "code": "Friesland",
+    "continent": "Europe",
+    "name": "Friesland"
   },
   {
     "code": "ga",
@@ -1439,6 +1485,16 @@
     "code": "Garifuna",
     "continent": "North America",
     "name": "Garifuna"
+  },
+  {
+    "code": "Gazankulu",
+    "continent": "Africa",
+    "name": "Gazankulu"
+  },
+  {
+    "code": "Gelderland",
+    "continent": "Europe",
+    "name": "Gelderland"
   },
   {
     "code": "ge",
@@ -1492,6 +1548,16 @@
     "name": "Golden Horde"
   },
   {
+    "code": "Good Hope",
+    "continent": "Africa",
+    "name": "Good Hope"
+  },
+  {
+    "code": "Goshen",
+    "continent": "Africa",
+    "name": "Goshen"
+  },
+  {
     "code": "fr-ges",
     "continent": "Europe",
     "name": "Grand Est"
@@ -1517,6 +1583,11 @@
     "name": "Grande Comore"
   },
   {
+    "code": "Greater London",
+    "continent": "Europe",
+    "name": "Greater London"
+  },
+  {
     "code": "gr",
     "continent": "Europe",
     "name": "Greece"
@@ -1530,6 +1601,11 @@
     "code": "gd",
     "continent": "North America",
     "name": "Grenada"
+  },
+  {
+    "code": "Groningen",
+    "continent": "Europe",
+    "name": "Groningen"
   },
   {
     "code": "gp",
@@ -1921,6 +1997,11 @@
     "name": "Khiva"
   },
   {
+    "code": "Khoisan",
+    "continent": "Africa",
+    "name": "Khoisan"
+  },
+  {
     "code": "Kingdom of Araucania and Patagonia",
     "continent": "South America",
     "name": "Kingdom of Araucania and Patagonia"
@@ -2065,6 +2146,16 @@
     "name": "Kuwait"
   },
   {
+    "code": "KwaNdebele",
+    "continent": "Africa",
+    "name": "KwaNdebele"
+  },
+  {
+    "code": "KwaZulu",
+    "continent": "Africa",
+    "name": "KwaZulu"
+  },
+  {
     "code": "kg",
     "continent": "Asia",
     "name": "Kyrgyzstan"
@@ -2144,6 +2235,11 @@
     "name": "Lebanon"
   },
   {
+    "code": "Lebowa",
+    "continent": "Africa",
+    "name": "Lebowa"
+  },
+  {
     "code": "Leinster",
     "continent": "Europe",
     "name": "Leinster"
@@ -2193,6 +2289,11 @@
     "name": "Lihyan"
   },
   {
+    "code": "Limburg",
+    "continent": "Europe",
+    "name": "Limburg"
+  },
+  {
     "code": "Lincoln",
     "continent": "North America",
     "name": "Lincoln"
@@ -2215,6 +2316,11 @@
     "code": "Lithuanian SSR",
     "continent": "Europe",
     "name": "Lithuanian SSR"
+  },
+  {
+    "code": "gb-lnd",
+    "continent": "Europe",
+    "name": "London"
   },
   {
     "code": "Los Altos",
@@ -2295,6 +2401,11 @@
     "code": "mg",
     "continent": "Africa",
     "name": "Madagascar"
+  },
+  {
+    "code": "pt-ma",
+    "continent": "Africa",
+    "name": "Madeira"
   },
   {
     "code": "Mahra Sultanate",
@@ -2601,6 +2712,11 @@
     "name": "Mozambique"
   },
   {
+    "code": "za-mp",
+    "continent": "Africa",
+    "name": "Mpumalanga"
+  },
+  {
     "code": "Mulgimaa",
     "continent": "Europe",
     "name": "Mulgimaa"
@@ -2614,6 +2730,11 @@
     "code": "es-mc",
     "continent": "Europe",
     "name": "Murcia"
+  },
+  {
+    "code": "Musqueam",
+    "continent": "North America",
+    "name": "Musqueam"
   },
   {
     "code": "mm",
@@ -2649,6 +2770,11 @@
     "code": "pa-nt",
     "continent": "North America",
     "name": "Naso Tjër Di"
+  },
+  {
+    "code": "Natalia Republic",
+    "continent": "Africa",
+    "name": "Natalia Republic"
   },
   {
     "code": "NATO",
@@ -2784,6 +2910,11 @@
     "name": "Nicaragua"
   },
   {
+    "code": "Nieuwe Republiek",
+    "continent": "Africa",
+    "name": "Nieuwe Republiek"
+  },
+  {
     "code": "ne",
     "continent": "Africa",
     "name": "Niger"
@@ -2794,6 +2925,11 @@
     "name": "Nigeria"
   },
   {
+    "code": "Nisga'a",
+    "continent": "North America",
+    "name": "Nisga'a"
+  },
+  {
     "code": "nu",
     "continent": "Oceania",
     "name": "Niue"
@@ -2802,6 +2938,16 @@
     "code": "Noarootsi",
     "continent": "Europe",
     "name": "Noarootsi"
+  },
+  {
+    "code": "North_Brabant",
+    "continent": "Europe",
+    "name": "Noord-Brabant"
+  },
+  {
+    "code": "North_Holland",
+    "continent": "Europe",
+    "name": "Noord-Holland"
   },
   {
     "code": "nf",
@@ -2894,6 +3040,11 @@
     "name": "Nova Scotia"
   },
   {
+    "code": "Nunatsiavut",
+    "continent": "North America",
+    "name": "Nunatsiavut"
+  },
+  {
     "code": "Nunavik",
     "continent": "North America",
     "name": "Nunavik"
@@ -2934,6 +3085,11 @@
     "name": "Ontario"
   },
   {
+    "code": "Orange Free State",
+    "continent": "Africa",
+    "name": "Orange Free State"
+  },
+  {
     "code": "Order Of Malta",
     "continent": "Europe",
     "name": "Sovereign Military Order of Malta"
@@ -2972,6 +3128,11 @@
     "code": "Ottoman Empire",
     "continent": "Asia",
     "name": "Ottoman Empire"
+  },
+  {
+    "code": "Overijssel",
+    "continent": "Europe",
+    "name": "Overijssel"
   },
   {
     "code": "Pahang",
@@ -3215,6 +3376,11 @@
     "code": "aus_quelan",
     "continent": "Oceania",
     "name": "Queensland"
+  },
+  {
+    "code": "QwaQwa",
+    "continent": "Africa",
+    "name": "QwaQwa"
   },
   {
     "code": "Rakhine",
@@ -4188,6 +4354,11 @@
     "name": "State of Palestine"
   },
   {
+    "code": "Stellaland",
+    "continent": "Africa",
+    "name": "Stellaland"
+  },
+  {
     "code": "1_Strathclyde",
     "continent": "Europe",
     "name": "Strathclyde"
@@ -4398,6 +4569,16 @@
     "name": "Tonga"
   },
   {
+    "code": "Transkei",
+    "continent": "Africa",
+    "name": "Transkei"
+  },
+  {
+    "code": "Transvaal",
+    "continent": "Africa",
+    "name": "Transvaal"
+  },
+  {
     "code": "Transylvania",
     "continent": "Europe",
     "name": "Transylvania"
@@ -4542,6 +4723,11 @@
     "name": "Upper Silesia"
   },
   {
+    "code": "Upper Skagit",
+    "continent": "North America",
+    "name": "Upper Skagit"
+  },
+  {
     "code": "Upper Yafa",
     "continent": "Asia",
     "name": "Upper Yafa"
@@ -4560,6 +4746,11 @@
     "code": "Utah",
     "continent": "North America",
     "name": "Utah"
+  },
+  {
+    "code": "Utrecht",
+    "continent": "Europe",
+    "name": "Utrecht"
   },
   {
     "code": "Uzbek SSR",
@@ -4582,6 +4773,11 @@
     "name": "Valencia Republic"
   },
   {
+    "code": "Vancouver",
+    "continent": "North America",
+    "name": "Vancouver"
+  },
+  {
     "code": "vu",
     "continent": "Oceania",
     "name": "Vanuatu"
@@ -4590,6 +4786,11 @@
     "code": "va",
     "continent": "Europe",
     "name": "Vatican City"
+  },
+  {
+    "code": "Venda",
+    "continent": "Africa",
+    "name": "Venda"
   },
   {
     "code": "ve",
@@ -4640,6 +4841,11 @@
     "code": "Vojvodina",
     "continent": "Europe",
     "name": "Vojvodina"
+  },
+  {
+    "code": "Voortrekker",
+    "continent": "Africa",
+    "name": "Voortrekker"
   },
   {
     "code": "Vorumaa",
@@ -4722,6 +4928,11 @@
     "name": "West Virginia"
   },
   {
+    "code": "Western Canada",
+    "continent": "North America",
+    "name": "Western Canada"
+  },
+  {
     "code": "eh",
     "continent": "Africa",
     "name": "Western Sahara"
@@ -4765,6 +4976,11 @@
     "name": "Yukon"
   },
   {
+    "code": "Yuułuʔiłʔatḥ",
+    "continent": "North America",
+    "name": "Yuułuʔiłʔatḥ"
+  },
+  {
     "code": "Zaire",
     "continent": "Africa",
     "name": "Zaire"
@@ -4785,6 +5001,11 @@
     "name": "Zayyanid Sultanate"
   },
   {
+    "code": "Zeeland",
+    "continent": "Europe",
+    "name": "Zeeland"
+  },
+  {
     "code": "Zheleznogorsk",
     "continent": "Asia",
     "name": "Zheleznogorsk"
@@ -4793,5 +5014,15 @@
     "code": "zw",
     "continent": "Africa",
     "name": "Zimbabwe"
+  },
+  {
+    "code": "South_Holland",
+    "continent": "Europe",
+    "name": "Zuid-Holland"
+  },
+  {
+    "code": "Zulu",
+    "continent": "Africa",
+    "name": "Zulu"
   }
 ]

@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import {
   commitsMatch,
   isCommitLike,
@@ -13,7 +12,8 @@ import {
   versionedPath,
   versionedPathForGame,
   versionMatches,
-} from "../../src/core/ServerList";
+} from "@openfront/shared/ServerList";
+import { describe, expect, it } from "vitest";
 
 const OWN = "bfd5563a11111111111111111111111111111111";
 const OLD = "5ccc50a722222222222222222222222222222222";
@@ -171,8 +171,8 @@ describe("pickServerForBuild", () => {
     expect(pickServerForBuild(LIST, "bfd5563a", () => 1)).toBe("e");
   });
 
-  // src/core takes no floating-point math, so the chooser hands back an
-  // integer. A caller that miscounts must still land on a server.
+  // The shared ServerList takes no floating-point math, so the chooser hands
+  // back an integer. A caller that miscounts must still land on a server.
   it("clamps an index outside the candidate range", () => {
     expect(pickServerForBuild(LIST, "bfd5563a", () => 99)).toBe("e");
     expect(pickServerForBuild(LIST, "bfd5563a", () => -1)).toBe("d");

@@ -1,11 +1,12 @@
+// @vitest-environment jsdom
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
 import { columnById } from "../src/client/hud/layers/lib/StatsColumns";
 import {
   aggregateTeamValues,
   TeamStats,
 } from "../src/client/hud/layers/TeamStats";
+import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
-import { PlayerType } from "../src/core/game/Game";
-import { UserSettings } from "../src/core/game/UserSettings";
 import { playerInfo, setup } from "./util/Setup";
 
 describe("aggregateTeamValues", () => {
@@ -125,6 +126,64 @@ describe("TeamStats", () => {
       teamStats.querySelectorAll('.stats-table-row > [role="cell"]')[1]
         ?.textContent,
     ).toContain("Red");
+
+    teamStats.remove();
+  });
+
+  it("renders clan tag team name when teamClanTag is present", async () => {
+    const players = [
+      {
+        id: () => "player-1",
+        smallID: () => 0,
+        team: () => "Team 16",
+        numTilesOwned: () => 10,
+        gold: () => 10n,
+        tradeGold: () => 0,
+        trainGold: () => 0,
+        piracyGold: () => 0,
+        goldEarned: () => 0,
+        isAlive: () => true,
+      },
+      {
+        id: () => "player-2",
+        smallID: () => 1,
+        team: () => "Team 17",
+        numTilesOwned: () => 5,
+        gold: () => 20n,
+        tradeGold: () => 0,
+        trainGold: () => 0,
+        piracyGold: () => 0,
+        goldEarned: () => 0,
+        isAlive: () => true,
+      },
+    ] as unknown as PlayerView[];
+    const game = {
+      myPlayer: () => players[0],
+      playerViews: () => players,
+      config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
+      numLandTiles: () => 100,
+      numTilesWithFallout: () => 0,
+      teamClanTag: (team: string) => {
+        if (team === "Team 16") return "AST2";
+        if (team === "Team 17") return "BRV";
+        return null;
+      },
+    } as unknown as GameView;
+    const teamStats = new TeamStats();
+    teamStats.game = game;
+    teamStats.visible = true;
+    document.body.append(teamStats);
+
+    teamStats.refresh();
+    await teamStats.updateComplete;
+
+    const rows = teamStats.querySelectorAll(".stats-table-row");
+    expect(rows).toHaveLength(2);
+    const row1Cells = rows[0].querySelectorAll('[role="cell"]');
+    const row2Cells = rows[1].querySelectorAll('[role="cell"]');
+    expect(row1Cells[1]?.textContent?.trim()).toContain("[AST2]");
+    expect(row2Cells[1]?.textContent?.trim()).toContain("[BRV]");
 
     teamStats.remove();
   });

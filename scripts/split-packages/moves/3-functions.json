@@ -1,0 +1,14 @@
+{
+  "symbols": [
+    {
+      "from": "src/client/Utils.ts",
+      "to": "src/core/Format.ts",
+      "names": ["renderNumber", "renderTroops"]
+    },
+    {
+      "from": "src/core/game/GameUpdateUtils.ts",
+      "to": "src/client/view/PlayerStateUpdate.ts",
+      "names": ["applyStateUpdate"]
+    }
+  ]
+}

@@ -11,7 +11,7 @@ vi.mock("../../src/client/Utils", () => ({
 
 import "../../src/client/SteamHandoffModal";
 import type { SteamHandoffModal } from "../../src/client/SteamHandoffModal";
-import { UserSettings } from "../../src/core/game/UserSettings";
+import { UserSettings } from "../../src/client/UserSettings";
 
 const LOBBY = "aB3xY9zQ12";
 

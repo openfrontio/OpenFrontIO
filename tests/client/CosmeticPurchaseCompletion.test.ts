@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { completeCosmeticPurchaseReturn } from "../../src/client/Cosmetics";
-import { FLAG_KEY, PATTERN_KEY } from "../../src/core/game/UserSettings";
+import { FLAG_KEY, PATTERN_KEY } from "../../src/client/UserSettings";
 
 describe("completeCosmeticPurchaseReturn", () => {
   let languageFixture: HTMLElement;

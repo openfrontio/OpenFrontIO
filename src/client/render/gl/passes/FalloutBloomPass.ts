@@ -113,6 +113,7 @@ export class FalloutBloomPass {
       gl,
       fullscreenNoUvVertSrc,
       shaderSrc(extractFragSrc, TILE_DEFINES),
+      "FalloutBloomPass.extractProg",
     );
     this.uExtractMapSize = gl.getUniformLocation(this.extractProg, "uMapSize")!;
     this.uExtractTick = gl.getUniformLocation(this.extractProg, "uTick")!;
@@ -201,13 +202,23 @@ export class FalloutBloomPass {
     gl.uniform1i(gl.getUniformLocation(this.extractProg, "uHeatTex"), 1);
 
     // --- Blur program ---
-    this.blurProg = createProgram(gl, fullscreenVertSrc, blurFragSrc);
+    this.blurProg = createProgram(
+      gl,
+      fullscreenVertSrc,
+      blurFragSrc,
+      "FalloutBloomPass.blurProg",
+    );
     this.uBlurDir = gl.getUniformLocation(this.blurProg, "uDir")!;
     gl.useProgram(this.blurProg);
     gl.uniform1i(gl.getUniformLocation(this.blurProg, "uTex"), 0);
 
     // --- Composite program (camera-projected map quad) ---
-    this.compositeProg = createProgram(gl, compositeVertSrc, compositeFragSrc);
+    this.compositeProg = createProgram(
+      gl,
+      compositeVertSrc,
+      compositeFragSrc,
+      "FalloutBloomPass.compositeProg",
+    );
     this.uCompositeCam = gl.getUniformLocation(this.compositeProg, "uCamera")!;
     this.uCompositeMapSize = gl.getUniformLocation(
       this.compositeProg,

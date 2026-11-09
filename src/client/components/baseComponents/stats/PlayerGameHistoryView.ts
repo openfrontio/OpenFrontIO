@@ -1,3 +1,11 @@
+import { GameMapType } from "@openfront/engine-api/game/GameTypes";
+import {
+  type FfaRatingGameDelta,
+  type PlayerGameModeFilter,
+  type PlayerGameTypeFilter,
+  type PublicPlayerGame,
+} from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import {
   html,
   LitElement,
@@ -5,13 +13,6 @@ import {
   type TemplateResult,
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import {
-  type PlayerGameModeFilter,
-  type PlayerGameTypeFilter,
-  type PublicPlayerGame,
-} from "../../../../core/ApiSchemas";
-import { assetUrl } from "../../../../core/AssetUrls";
-import { GameMapType } from "../../../../core/game/Game";
 import { fetchPublicPlayerGames } from "../../../Api";
 import { ClientEnv } from "../../../ClientEnv";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
@@ -24,6 +25,7 @@ import {
 } from "../../../Utils";
 import { renderLoadingSpinner } from "../../BaseModal";
 import "../../CopyButton";
+import { formatExpectedPct, formatRatingChange } from "../../ffaRating/FfaTier";
 import {
   formatAbsoluteTime,
   formatDayHeader,
@@ -159,13 +161,13 @@ export class PlayerGameHistoryView extends LitElement {
   private setTypeFilter(filter: TypeKey) {
     if (filter === this.typeFilter) return;
     this.typeFilter = filter;
-    this.reload();
+    void this.reload();
   }
 
   private setModeFilter(filter: ModeKey) {
     if (filter === this.modeFilter) return;
     this.modeFilter = filter;
-    this.reload();
+    void this.reload();
   }
 
   private async load({ append }: { append: boolean }) {
@@ -272,7 +274,7 @@ export class PlayerGameHistoryView extends LitElement {
     const url = `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
 
     try {
-      await void copyToClipboard(url);
+      await copyToClipboard(url);
       showToast(translateText("common.copied"), "green");
     } catch {
       showToast(translateText("common.failed_copy"), "red");
@@ -321,9 +323,11 @@ export class PlayerGameHistoryView extends LitElement {
               role="tab"
               aria-selected=${isActive}
               @click=${() => onSelect(tab.key)}
-              class="grow ${basis} px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${isActive
-                ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30"
-                : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"}"
+              class="grow ${basis} px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${
+                isActive
+                  ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30"
+                  : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"
+              }"
             >
               ${translateText(tab.labelKey)}
             </button>
@@ -381,7 +385,7 @@ export class PlayerGameHistoryView extends LitElement {
           (group) => html`
             <div class="space-y-3">
               <div
-                class="sticky top-0 z-10 flex items-center gap-3 px-1 py-1.5"
+                class="sticky top-0 z-10 flex items-center gap-3 px-1 py-1.5 pointer-events-none"
               >
                 <span class="h-px flex-1 bg-white/10"></span>
                 <h3
@@ -456,42 +460,48 @@ export class PlayerGameHistoryView extends LitElement {
       <div
         class="relative bg-white/5 border border-white/10 rounded-xl overflow-hidden"
       >
-        ${mapWebpPath
-          ? html`<div
-              class="relative w-full aspect-[30/15] overflow-hidden bg-surface"
-            >
-              <img
-                src=${mapWebpPath}
-                alt=${mapDisplayName ?? ""}
-                draggable="false"
-                loading="lazy"
-                decoding="async"
-                class="w-full h-full object-cover"
-              />
-              <div
-                class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"
-              ></div>
-              ${mapDisplayName
-                ? html`<div
-                    class="absolute bottom-2 left-3 text-xs font-bold text-white uppercase tracking-wider drop-shadow"
-                  >
-                    ${mapDisplayName}
-                  </div>`
-                : ""}
-              <div class="absolute top-2 left-2">
-                ${this.renderResultBadge(game)}
-              </div>
-              <div
-                class="absolute bottom-2 right-2 text-xs font-medium text-white bg-black/60 backdrop-blur-sm px-2 py-1 rounded-md whitespace-nowrap"
+        ${
+          mapWebpPath
+            ? html`<div
+                class="relative w-full aspect-[30/15] overflow-hidden bg-surface"
               >
-                ${formatAbsoluteTime(game.start)}
-              </div>
-            </div>`
-          : ""}
+                <img
+                  src=${mapWebpPath}
+                  alt=${mapDisplayName ?? ""}
+                  draggable="false"
+                  loading="lazy"
+                  decoding="async"
+                  class="w-full h-full object-cover"
+                />
+                <div
+                  class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"
+                ></div>
+                ${
+                  mapDisplayName
+                    ? html`<div
+                        class="absolute bottom-2 left-3 text-xs font-bold text-white uppercase tracking-wider drop-shadow"
+                      >
+                        ${mapDisplayName}
+                      </div>`
+                    : ""
+                }
+                <div class="absolute top-2 left-2">
+                  ${this.renderResultBadge(game)}
+                </div>
+                <div
+                  class="absolute bottom-2 right-2 text-xs font-medium text-white bg-black/60 backdrop-blur-sm px-2 py-1 rounded-md whitespace-nowrap"
+                >
+                  ${formatAbsoluteTime(game.start)}
+                </div>
+              </div>`
+            : ""
+        }
         <div
-          class=${mapWebpPath
-            ? "absolute top-2 right-2 z-[1]"
-            : "flex items-center justify-end px-4 py-3 border-b border-white/5"}
+          class=${
+            mapWebpPath
+              ? "absolute top-2 right-2 z-[1]"
+              : "flex items-center justify-end px-4 py-3 border-b border-white/5"
+          }
         >
           <div class="flex items-center gap-2 shrink-0">
             <button
@@ -567,12 +577,14 @@ export class PlayerGameHistoryView extends LitElement {
             translateText("clan_modal.history_game_type"),
             formatGameType(game),
           )}
-          ${mapWebpPath
-            ? ""
-            : this.renderField(
-                translateText("clan_modal.history_map"),
-                mapDisplayName ?? "—",
-              )}
+          ${
+            mapWebpPath
+              ? ""
+              : this.renderField(
+                  translateText("clan_modal.history_map"),
+                  mapDisplayName ?? "—",
+                )
+          }
           ${this.renderField(
             translateText("clan_modal.history_players"),
             game.totalPlayers === null ? "—" : `${game.totalPlayers}`,
@@ -581,6 +593,7 @@ export class PlayerGameHistoryView extends LitElement {
             translateText("clan_modal.history_duration"),
             renderDuration(game.durationSeconds),
           )}
+          ${game.ffaRating ? this.renderFfaRatingField(game.ffaRating) : ""}
         </div>
       </div>
     `;
@@ -595,6 +608,38 @@ export class PlayerGameHistoryView extends LitElement {
           ${label}
         </div>
         <div class="text-sm text-white truncate" title=${value}>${value}</div>
+      </div>
+    `;
+  }
+
+  // Only sent for a calibrated rated FFA seat, so the row's mode needs no check.
+  private renderFfaRatingField(r: FfaRatingGameDelta): TemplateResult {
+    const change = r.after - r.before;
+    const rounded = Math.round(change);
+    const colour =
+      rounded > 0
+        ? "text-green-400"
+        : rounded < 0
+          ? "text-red-400"
+          : "text-white/50";
+    return html`
+      <div class="min-w-0">
+        <div
+          class="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-0.5"
+        >
+          ${translateText("ffa_rating.title")}
+        </div>
+        <span
+          data-ffa-rating-change
+          class="text-sm font-bold tabular-nums ${colour}"
+          title=${`${translateText("ffa_rating.result")} ${formatRatingChange(r.deltaResult)} · ${translateText("ffa_rating.placement")} ${formatRatingChange(r.deltaPlace)}`}
+          >${formatRatingChange(change)}</span
+        >
+        <span data-ffa-rating-expected class="block text-[10px] text-white/50"
+          >${translateText("ffa_rating.expected", {
+            pct: formatExpectedPct(r.expected),
+          })}</span
+        >
       </div>
     `;
   }

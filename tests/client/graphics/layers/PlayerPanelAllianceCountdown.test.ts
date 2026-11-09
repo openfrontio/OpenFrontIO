@@ -18,6 +18,8 @@ vi.mock("lit/decorators.js", () => ({
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
   renderDuration: vi.fn(),
+}));
+vi.mock("@openfront/engine-lib/Format", () => ({
   renderNumber: vi.fn(),
   renderTroops: vi.fn(),
 }));
@@ -25,6 +27,8 @@ vi.mock("../../../../src/client/Utils", () => ({
 vi.mock("../../../../src/client/components/ui/ActionButton", () => ({
   actionButton: vi.fn((props: unknown) => props),
 }));
+
+vi.mock("../../../../src/client/components/LevelBadge", () => ({}));
 
 vi.mock("../../../../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn(),

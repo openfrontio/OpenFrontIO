@@ -30,6 +30,7 @@ const loadPlatform = async ({
 };
 
 afterEach(() => {
+  delete (window as any)?.__hasKeyboard;
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
@@ -148,8 +149,81 @@ describe("Platform", () => {
 
     expect(() => platform.isTouch).not.toThrow();
     expect(platform.isTouch).toBe(false);
+    expect(platform.hasKeyboard).toBe(false);
     expect(platform.isMobileWidth).toBe(false);
     expect(platform.isTabletWidth).toBe(false);
     expect(platform.isDesktopWidth).toBe(false);
+  });
+
+  it("detects keyboard from keydown outside text inputs on touch devices", async () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: false }));
+    const p = await loadPlatform({ userAgent: "Mozilla/5.0" });
+    const { KEYBOARD_DETECTED_EVENT } =
+      await import("../../src/client/Platform");
+    vi.spyOn(p, "isTouch", "get").mockReturnValue(true);
+    const keyboardDetected = vi.fn();
+    window.addEventListener(KEYBOARD_DETECTED_EVENT, keyboardDetected);
+
+    const input = document.createElement("input");
+    input.type = "text";
+    document.body.appendChild(input);
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    document.body.appendChild(checkbox);
+    try {
+      input.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
+      expect(p.hasKeyboard).toBe(false);
+      expect(keyboardDetected).not.toHaveBeenCalled();
+
+      checkbox.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
+      expect(p.hasKeyboard).toBe(true);
+      expect(keyboardDetected).toHaveBeenCalledOnce();
+
+      checkbox.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
+      expect(keyboardDetected).toHaveBeenCalledOnce();
+    } finally {
+      window.removeEventListener(KEYBOARD_DETECTED_EVENT, keyboardDetected);
+      input.remove();
+      checkbox.remove();
+    }
+  });
+
+  it("recognizes inputs inside shadow root using composedPath", async () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: false }));
+    const p = await loadPlatform({ userAgent: "Mozilla/5.0" });
+    vi.spyOn(p, "isTouch", "get").mockReturnValue(true);
+
+    const host = document.createElement("div");
+    const shadow = host.attachShadow({ mode: "open" });
+    const shadowInput = document.createElement("input");
+    shadowInput.type = "text";
+    shadow.appendChild(shadowInput);
+    document.body.appendChild(host);
+
+    shadowInput.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true, composed: true }),
+    );
+    expect(p.hasKeyboard).toBe(false);
+
+    const shadowCheckbox = document.createElement("input");
+    shadowCheckbox.type = "checkbox";
+    shadow.appendChild(shadowCheckbox);
+
+    shadowCheckbox.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true, composed: true }),
+    );
+    expect(p.hasKeyboard).toBe(true);
+
+    host.remove();
+  });
+
+  it("does not treat fine pointer alone as a keyboard on touch devices", async () => {
+    vi.stubGlobal("matchMedia", (q: string) => ({
+      matches: q === "(any-pointer: fine)",
+    }));
+    const p = await loadPlatform({ userAgent: "Mozilla/5.0" });
+    vi.spyOn(p, "isTouch", "get").mockReturnValue(true);
+
+    expect(p.hasKeyboard).toBe(false);
   });
 });

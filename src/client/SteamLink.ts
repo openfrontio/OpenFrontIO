@@ -1,4 +1,4 @@
-import type { UserMeResponse } from "../core/ApiSchemas";
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { getApiBase } from "./Api";
 import { getAuthHeader, logOut } from "./Auth";

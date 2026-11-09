@@ -1,6 +1,6 @@
+import { ClusterConfig } from "@openfront/shared/ClusterConfig";
 import { describe, expect, it } from "vitest";
 import { resolveGameHost } from "../../src/client/ClientEnv";
-import { ClusterConfig } from "../../src/core/ClusterConfig";
 
 // The per-game routing decision (docs/MultiServer.md, PR 5): a 10-char id's
 // leading letter names its deployment in the cluster map; everything older

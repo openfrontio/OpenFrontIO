@@ -1,9 +1,20 @@
 @import "tailwindcss";
+@import "./halloween.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover (&:hover);
 /* The Steam shell has no ad slots, so it can use the width they reserve. */
 @custom-variant desktop (&:where(.desktop-shell, .desktop-shell *));
+/* Short or narrow viewports (small laptops, phones, Poki's embedded frame): an
+   open inline page fills the screen there, without the header and footer. */
+@custom-variant compact {
+  @media (max-height: 800px) {
+    @slot;
+  }
+  @media (max-width: 1023px) {
+    @slot;
+  }
+}
 
 @theme {
   --default-ring-width: 3px;
@@ -38,6 +49,55 @@
   --shadow-lobby-card-hover: 0 0 0 2px #0084d1, 0 0 20px rgba(0, 132, 209, 0.5);
   --shadow-action-card-hover:
     0 0 0 1px #0084d1, 0 0 12px rgba(0, 132, 209, 0.35);
+}
+
+/* Match the in-game HUD surface; opacity affects the surface, not the controls. */
+.graphics-panel-surface {
+  background-color: rgb(
+    from var(--color-gray-800) r g b / calc(0.92 * var(--hud-opacity, 1))
+  );
+  border-color: rgb(from var(--color-slate-600) r g b / var(--hud-opacity, 1));
+  backdrop-filter: blur(calc(4px * var(--hud-opacity, 1)));
+  box-shadow: 0 8px 24px rgb(0 0 0 / calc(0.25 * var(--hud-opacity, 1)));
+}
+
+/* Reuse the settings controls with the compact rows of the HUD, not page cards. */
+.graphics-settings-panel
+  :is(setting-slider, setting-color, setting-select)
+  > div,
+.graphics-settings-panel setting-toggle > label,
+.graphics-settings-panel graphics-preset-tools > :is(div, button),
+.graphics-settings-panel #graphics-reset {
+  padding: 0.75rem 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.graphics-settings-panel .text-base {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.graphics-settings-panel [class~="text-white/50"] {
+  color: var(--color-slate-400);
+  font-size: 0.75rem;
+}
+
+.graphics-settings-panel graphics-advanced-settings > .text-xs {
+  color: var(--color-slate-400);
+  padding: 1rem 0 0.25rem;
+}
+
+/* Stack slider labels and tracks even on a wide screen with a narrow panel. */
+.graphics-settings-panel setting-slider > div {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.graphics-settings-panel setting-slider > div > div {
+  width: 100%;
+  margin-right: 0;
 }
 
 @layer base {
@@ -103,6 +163,24 @@ body.in-game {
   overflow: hidden;
 }
 
+body.in-game .bg-gray-800\/92:not(.game-end-timer-sidebar-flash) {
+  background-color: rgb(
+    from var(--color-gray-800) r g b / calc(0.92 * var(--hud-opacity, 1))
+  );
+}
+
+body.in-game .stats-table .bg-gray-800\/85 {
+  background-color: rgb(
+    from var(--color-gray-800) r g b / calc(0.85 * var(--hud-opacity, 1))
+  );
+}
+
+body.in-game .stats-table .bg-gray-700\/95 {
+  background-color: rgb(
+    from var(--color-gray-700) r g b / calc(0.95 * var(--hud-opacity, 1))
+  );
+}
+
 /* An inline page (store, settings, leaderboard, ...) is a modal rendered in
    the content area: lock the document so it scrolls inside the modal, and
    stack body children in a column so the content area gets the height left
@@ -166,6 +244,12 @@ body.page-open {
 }
 .hide-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari */
+}
+
+/* Main adds .game-portal to <html> on CrazyGames and Poki. A rule rather than
+   a one-off sweep, so it also hides elements that render later (lazy modals). */
+.game-portal .no-game-portal {
+  display: none !important;
 }
 
 .start-game-button {
@@ -662,6 +746,22 @@ news-button .active button::after {
   animation: newsPulse 1.5s ease-in-out infinite;
 }
 
+/* Red flash over the troop bar while the onboarding tutorial warns that
+   troops are too low. */
+.troop-bar-alert {
+  animation: troopBarAlert 0.6s ease-in-out infinite;
+}
+
+@keyframes troopBarAlert {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
 /* Pulsing ring the in-game tutorial puts around the HUD element it's describing. */
 .tutorial-highlight {
   border-radius: 0.375rem;
@@ -753,4 +853,53 @@ unit-display .tutorial-highlight::after {
 
 .remove-player-btn:hover {
   background: #ef4444;
+}
+
+.unit-display-scroll {
+  scrollbar-width: none;
+}
+
+.unit-display-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Holding a build button shows what it costs. The browser's own long press
+   menu could take the gesture over, so it is turned off here. */
+.unit-display-root {
+  -webkit-touch-callout: none;
+}
+
+/* The narrow build bar scrolls sideways. Fade the edge that still hides
+   actions, so the player can tell there is more to swipe to. The bar itself
+   keeps the gray-800 background, so the fade matches it. */
+.unit-display-root::before,
+.unit-display-root::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1.25rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+  z-index: 1;
+}
+
+.unit-display-root::before {
+  left: 0;
+  background: linear-gradient(
+    to right,
+    rgb(31 41 55 / 0.92),
+    rgb(31 41 55 / 0)
+  );
+}
+
+.unit-display-root::after {
+  right: 0;
+  background: linear-gradient(to left, rgb(31 41 55 / 0.92), rgb(31 41 55 / 0));
+}
+
+.unit-display-more-left::before,
+.unit-display-more-right::after {
+  opacity: 1;
 }

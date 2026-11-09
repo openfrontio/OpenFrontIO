@@ -1,9 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "BlackSea",
   "name": "Black Sea",
   "translation_key": "map.blacksea",
   "categories": ["europe", "asia"],
-  "multiplayer_frequency": 6,
+  "location": { "lat": 43, "lon": 35 },
+  "author": "evanpelle",
   "nations": [
     {
       "coordinates": [122, 647],

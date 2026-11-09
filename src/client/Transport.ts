@@ -1,12 +1,4 @@
-import { ClientEnv, NoServerError } from "src/client/ClientEnv";
-import { ZbContext } from "../../zbin";
-import {
-  CloseCode,
-  CloseReason,
-  isCloseReason,
-  isTerminalClose,
-} from "../core/CloseCodes";
-import { EventBus, EventConstructor, GameEvent } from "../core/EventBus";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   AllPlayers,
   GameType,
@@ -14,12 +6,26 @@ import {
   PlayerID,
   Tick,
   UnitType,
-} from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   AllPlayersStats,
-  ClientHashMessage,
   ClientID,
+  Intent,
+  Winner,
+} from "@openfront/engine-api/Schemas";
+import {
+  CloseCode,
+  CloseReason,
+  isCloseReason,
+  isTerminalClose,
+} from "@openfront/shared/CloseCodes";
+import {
+  EventBus,
+  EventConstructor,
+  GameEvent,
+} from "@openfront/shared/EventBus";
+import {
+  ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
   ClientMessage,
@@ -29,23 +35,28 @@ import {
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   ClientSpectateMessage,
-  GameConfig,
-  Intent,
   LiveStats,
   ReportReason,
   ServerMessage,
-  Winner,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
 import {
   createGameWireContext,
   decodeServerMessage,
   encodeClientMessage,
-} from "../core/ZbinWire";
+} from "@openfront/shared/ZbinWire";
+import { ZbContext } from "@openfront/zbin";
+import { ClientEnv, NoServerError } from "src/client/ClientEnv";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
-import { clientPlatform } from "./ClientPlatform";
+import { clientDevice, clientPlatform } from "./ClientPlatform";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameConfirm } from "./InGameModal";
+import {
+  SendKickPlayerIntentEvent,
+  SendSpectateEvent,
+  SendToggleGameStartTimer,
+  SendUpdateGameConfigIntentEvent,
+} from "./LobbyEvents";
 import { LocalServer } from "./LocalServer";
 import { describeSocketClose } from "./SocketClose";
 import { homeHref, translateText } from "./Utils";
@@ -85,6 +96,15 @@ export class SendAllianceExtensionIntentEvent implements GameEvent {
   constructor(public readonly recipient: PlayerView) {}
 }
 
+/**
+ * Puts a gate in front of every intent this client sends, or removes it
+ * (null). An intent the gate returns false for is dropped. The onboarding
+ * tutorial uses it to let through only what its current step asks for.
+ */
+export class SetIntentGateEvent implements GameEvent {
+  constructor(public readonly gate: ((intent: Intent) => boolean) | null) {}
+}
+
 export class SendSpawnIntentEvent implements GameEvent {
   constructor(public readonly tile: TileRef) {}
 }
@@ -94,6 +114,19 @@ export class SendAttackIntentEvent implements GameEvent {
     public readonly targetID: PlayerID | null,
     public readonly troops: number,
   ) {}
+}
+
+/**
+ * Troops for a counter-attack: the incoming attack's size, capped at what the
+ * player would send. An attack whose count is not a finite number is ignored
+ * rather than turning the whole intent into NaN.
+ */
+export function counterAttackTroops(
+  incomingTroops: number,
+  available: number,
+): number {
+  if (!Number.isFinite(incomingTroops)) return available;
+  return Math.min(incomingTroops, available);
 }
 
 export class SendBoatAttackIntentEvent implements GameEvent {
@@ -208,23 +241,6 @@ export class MoveWarshipIntentEvent implements GameEvent {
   ) {}
 }
 
-export class SendKickPlayerIntentEvent implements GameEvent {
-  constructor(public readonly target: string) {}
-}
-
-export class SendUpdateGameConfigIntentEvent implements GameEvent {
-  constructor(public readonly config: Partial<GameConfig>) {}
-}
-
-export class SendToggleGameStartTimer implements GameEvent {
-  constructor() {}
-}
-
-// Switch between playing and watching from the lobby screen.
-export class SendSpectateEvent implements GameEvent {
-  constructor(public readonly spectator: boolean) {}
-}
-
 // One-shot marker that this lobby has already sent us to a sibling, so a
 // redirect can never become a bounce.
 const poolRedirectLatch = (gameID: string) => `pool-redirect:${gameID}`;
@@ -273,6 +289,8 @@ export class Transport {
   // also the last moment a peer can send a dictionary-encoded field.
   private zbinCtx: ZbContext | null = null;
 
+  private intentGate: ((intent: Intent) => boolean) | null = null;
+
   // The bus outlives the transport (one per page, one transport per join),
   // so every subscription must be undone in leaveGame or a superseded
   // transport keeps answering the live game's events.
@@ -300,6 +318,7 @@ export class Transport {
     this.subscribe(SendBreakAllianceIntentEvent, (e) =>
       this.onBreakAllianceRequestUIEvent(e),
     );
+    this.subscribe(SetIntentGateEvent, (e) => (this.intentGate = e.gate));
     this.subscribe(SendSpawnIntentEvent, (e) => this.onSendSpawnIntentEvent(e));
     this.subscribe(SendAttackIntentEvent, (e) => this.onSendAttackIntent(e));
     this.subscribe(SendUpgradeStructureIntentEvent, (e) =>
@@ -701,6 +720,10 @@ export class Transport {
   }
 
   async joinGame() {
+    // Only the first join: the token is short-lived, and a later reconnect
+    // must not present one that has since expired.
+    const token = this.lobbyConfig.creatorToken ?? (await getPlayToken());
+    delete this.lobbyConfig.creatorToken;
     this.sendMsg({
       type: "join",
       gameID: this.lobbyConfig.gameID,
@@ -709,10 +732,11 @@ export class Transport {
       clanTag: this.lobbyConfig.playerClanTag ?? null,
       cosmetics: this.lobbyConfig.cosmetics,
       turnstileToken: this.lobbyConfig.turnstileToken,
-      token: await getPlayToken(),
+      token,
       spectator: this.lobbyConfig.spectator,
       gitCommit: ClientEnv.gitCommit(),
       platform: clientPlatform(),
+      device: clientDevice(),
     } satisfies ClientJoinMessage);
   }
 
@@ -792,6 +816,7 @@ export class Transport {
   }
 
   private onSendAttackIntent(event: SendAttackIntentEvent) {
+    if (!this.isSendableTroops("attack", event.troops)) return;
     this.sendIntent({
       type: "attack",
       targetID: event.targetID,
@@ -800,6 +825,7 @@ export class Transport {
   }
 
   private onSendBoatAttackIntent(event: SendBoatAttackIntentEvent) {
+    if (!this.isSendableTroops("boat", event.troops)) return;
     this.sendIntent({
       type: "boat",
       troops: event.troops,
@@ -994,7 +1020,20 @@ export class Transport {
     this.sendIntent({ type: "toggle_game_start_timer" });
   }
 
+  // The intent schemas take troops as a finite float >= 0, and the server
+  // kicks a client whose message fails to parse. Drop the one intent instead,
+  // and log it with a stack (console.error reaches telemetry) so the caller
+  // that produced the bad count shows up.
+  private isSendableTroops(type: Intent["type"], troops: number): boolean {
+    if (Number.isFinite(troops) && troops >= 0) return true;
+    console.error(
+      new Error(`Dropped ${type} intent with invalid troops: ${troops}`),
+    );
+    return false;
+  }
+
   private sendIntent(intent: Intent) {
+    if (this.intentGate !== null && !this.intentGate(intent)) return;
     const msg = {
       type: "intent",
       intent: intent,

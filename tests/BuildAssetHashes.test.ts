@@ -109,4 +109,24 @@ describe("hashSourceTree", () => {
 
     expect(await hashSourceTree(other)).toBe(first);
   });
+
+  it("hashes only the listed subdirectories, keeping their prefix", async () => {
+    await fs.mkdir(path.join(dir, "engine/src"), { recursive: true });
+    await fs.mkdir(path.join(dir, "api/src"), { recursive: true });
+    await fs.mkdir(path.join(dir, "other"), { recursive: true });
+    await fs.writeFile(path.join(dir, "engine/src/a.ts"), "a");
+    const first = await hashSourceTree(dir, ["engine/src", "api/src"]);
+
+    await fs.writeFile(path.join(dir, "other/b.ts"), "b");
+    expect(await hashSourceTree(dir, ["engine/src", "api/src"])).toBe(first);
+
+    // Same content moved to the other listed subtree: a different tree.
+    await fs.rename(
+      path.join(dir, "engine/src/a.ts"),
+      path.join(dir, "api/src/a.ts"),
+    );
+    expect(await hashSourceTree(dir, ["engine/src", "api/src"])).not.toBe(
+      first,
+    );
+  });
 });

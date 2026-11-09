@@ -1,6 +1,9 @@
+import type { TokenPayload } from "@openfront/shared/ApiSchemas";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { TokenPayload } from "../../src/core/ApiSchemas";
 import {
+  _clearInFlightTokens,
+  _inFlightTokenCount,
+  clientAuth,
   isSteamAuthenticated,
   planJoinVerify,
   verifyJoin,
@@ -17,6 +20,7 @@ function jsonResponse(body: unknown, status = 200) {
 describe("verifyJoin", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    _clearInFlightTokens();
   });
 
   it("returns the display-ready pair on approval and posts the identity", async () => {
@@ -79,6 +83,211 @@ describe("verifyJoin", () => {
     });
   });
 
+  it("preserves structured errorCodes on rejection", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          status: "rejected",
+          reason: "duplicate",
+          errorCodes: ["timeout-or-duplicate"],
+        }),
+      ),
+    );
+    expect(await verifyJoin("ip", "tok-dup", "xXblackxX", null)).toEqual({
+      status: "rejected",
+      reason: "duplicate",
+      errorCodes: ["timeout-or-duplicate"],
+    });
+  });
+
+  it("coalesces concurrent in-flight verifyJoin calls for the same non-null token and identity", async () => {
+    let resolveFetch: (val: unknown) => void;
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+    const fetchMock = vi.fn().mockImplementation(() => fetchPromise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const call1 = verifyJoin("ip1", "shared-tok", "User1", null);
+    const call2 = verifyJoin("ip2", "shared-tok", "User1", null);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    resolveFetch!(
+      jsonResponse({
+        status: "approved",
+        username: "User1",
+        clanTag: null,
+      }),
+    );
+
+    const [v1, v2] = await Promise.all([call1, call2]);
+    expect(v1).toEqual({
+      status: "approved",
+      username: "User1",
+      clanTag: null,
+    });
+    expect(v2).toEqual(v1);
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
+  it("dispatches a subsequent verifyJoin call after previous in-flight finishes", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        status: "approved",
+        username: "User1",
+        clanTag: null,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const first = await verifyJoin("ip1", "shared-tok", "User1", null);
+    const second = await verifyJoin("ip2", "shared-tok", "User1", null);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(first.status).toBe("approved");
+    expect(second.status).toBe("approved");
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
+  it("does not coalesce concurrent calls with the same token but different username or clanTag", async () => {
+    let resolveFetch: (val: unknown) => void;
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+    const fetchMock = vi.fn().mockImplementation(() => fetchPromise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const c1 = verifyJoin("ip1", "shared-tok", "Alice", "TAG");
+    const c2 = verifyJoin("ip2", "shared-tok", "Bob", "TAG");
+    const c3 = verifyJoin("ip3", "shared-tok", "Alice", "OTHER");
+    const c4 = verifyJoin("ip4", "shared-tok", "Alice", null);
+    const c1Retry = verifyJoin("ip5", "shared-tok", "Alice", "TAG");
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(_inFlightTokenCount()).toBe(4);
+
+    resolveFetch!(
+      jsonResponse({
+        status: "approved",
+        username: "Mocked",
+        clanTag: null,
+      }),
+    );
+
+    const [r1, r2, r3, r4, rRetry] = await Promise.all([
+      c1,
+      c2,
+      c3,
+      c4,
+      c1Retry,
+    ]);
+    expect(rRetry).toBe(r1);
+    expect([r1, r2, r3, r4].every((r) => r.status === "approved")).toBe(true);
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
+  it("does not coalesce concurrent calls with the same token and username but different persistentIds", async () => {
+    let resolveFetch: (val: unknown) => void;
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+    const fetchMock = vi.fn().mockImplementation(() => fetchPromise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const call1 = verifyJoin("ip1", "shared-tok", "User1", null, "pid-1");
+    const call2 = verifyJoin("ip2", "shared-tok", "User1", null, "pid-2");
+    const call1Dup = verifyJoin("ip3", "shared-tok", "User1", null, "pid-1");
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(_inFlightTokenCount()).toBe(2);
+
+    resolveFetch!(
+      jsonResponse({
+        status: "approved",
+        username: "User1",
+        clanTag: null,
+      }),
+    );
+
+    const [v1, v2, v1Dup] = await Promise.all([call1, call2, call1Dup]);
+    expect(v1.status).toBe("approved");
+    expect(v2.status).toBe("approved");
+    expect(v1Dup).toBe(v1);
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
+  it("treats omitted persistentId as distinct from defined persistentId", async () => {
+    let resolveFetch: (val: unknown) => void;
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+    const fetchMock = vi.fn().mockImplementation(() => fetchPromise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const call1 = verifyJoin("ip1", "shared-tok", "User1", null);
+    const call2 = verifyJoin("ip2", "shared-tok", "User1", null, "pid-1");
+    const call1Dup = verifyJoin("ip3", "shared-tok", "User1", null);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(_inFlightTokenCount()).toBe(2);
+
+    resolveFetch!(
+      jsonResponse({
+        status: "approved",
+        username: "User1",
+        clanTag: null,
+      }),
+    );
+
+    const [v1, v2, v1Dup] = await Promise.all([call1, call2, call1Dup]);
+    expect(v1.status).toBe("approved");
+    expect(v2.status).toBe("approved");
+    expect(v1Dup).toBe(v1);
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
+  it("coalesces concurrent in-flight verifyJoin calls on fetch failure and clears in-flight map", async () => {
+    let rejectFetch: (err: unknown) => void;
+    const fetchPromise = new Promise((_, reject) => {
+      rejectFetch = reject;
+    });
+    const fetchMock = vi.fn().mockImplementation(() => fetchPromise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const call1 = verifyJoin("ip1", "failing-tok", "User1", null);
+    const call2 = verifyJoin("ip2", "failing-tok", "User1", null);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(_inFlightTokenCount()).toBe(1);
+
+    rejectFetch!(new Error("network failure"));
+
+    const [v1, v2] = await Promise.all([call1, call2]);
+    expect(v1.status).toBe("error");
+    expect(v2.status).toBe("error");
+    expect(v1).toEqual(v2);
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
+  it("does not coalesce calls when token is empty string", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        status: "approved",
+        username: "User",
+        clanTag: null,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const call1 = verifyJoin("ip1", "", "User1", null);
+    const call2 = verifyJoin("ip2", "", "User2", null);
+
+    await Promise.all([call1, call2]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
   it("sends a null token for reconnects (API skips siteverify, runs the name check alone)", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
@@ -100,13 +309,74 @@ describe("verifyJoin", () => {
     expect(JSON.parse(init.body).token).toBeNull();
   });
 
+  // The API answers 200 {status:"error"} when siteverify or the name check
+  // fails or runs past its budget; the name verdict rides along when the
+  // name check finished.
+  it("passes a degraded error verdict through with the API's identity", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          status: "error",
+          reason: "turnstile timed out",
+          username: "SnugglePuppy",
+          clanTag: "COOL",
+        }),
+      ),
+    );
+    expect(await verifyJoin("ip", "tok", "xXblackxX", "CoOl")).toEqual({
+      status: "error",
+      reason: "turnstile timed out",
+      degraded: true,
+      identity: { username: "SnugglePuppy", clanTag: "COOL" },
+    });
+  });
+
+  it("normalizes an absent clanTag to null on a degraded verdict", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          status: "error",
+          reason: "turnstile failed (TimeoutError)",
+          username: "Alice",
+        }),
+      ),
+    );
+    expect(await verifyJoin("ip", "tok", "Alice", null)).toEqual({
+      status: "error",
+      reason: "turnstile failed (TimeoutError)",
+      degraded: true,
+      identity: { username: "Alice", clanTag: null },
+    });
+  });
+
+  it("returns a degraded verdict without identity when the name check did not finish", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ status: "error", reason: "name check timed out" }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await verifyJoin("ip", "tok", "Alice", null)).toEqual({
+      status: "error",
+      reason: "name check timed out",
+      degraded: true,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("returns error on a 4xx without retrying", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(jsonResponse({ message: "bad payload" }, 400));
     vi.stubGlobal("fetch", fetchMock);
 
-    expect((await verifyJoin("ip", "tok", "Alice", null)).status).toBe("error");
+    expect(await verifyJoin("ip", "tok", "Alice", null)).toMatchObject({
+      status: "error",
+      degraded: false,
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -119,7 +389,10 @@ describe("verifyJoin", () => {
       .mockResolvedValue(jsonResponse({ message: "boom" }, 500));
     vi.stubGlobal("fetch", fetchMock);
 
-    expect((await verifyJoin("ip", "tok", "Alice", null)).status).toBe("error");
+    expect(await verifyJoin("ip", "tok", "Alice", null)).toMatchObject({
+      status: "error",
+      degraded: false,
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -127,7 +400,10 @@ describe("verifyJoin", () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error("network down"));
     vi.stubGlobal("fetch", fetchMock);
 
-    expect((await verifyJoin("ip", "tok", "Alice", null)).status).toBe("error");
+    expect(await verifyJoin("ip", "tok", "Alice", null)).toMatchObject({
+      status: "error",
+      degraded: false,
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -137,7 +413,10 @@ describe("verifyJoin", () => {
       .mockResolvedValue(jsonResponse({ approved: true }));
     vi.stubGlobal("fetch", fetchMock);
 
-    expect((await verifyJoin("ip", "tok", "Alice", null)).status).toBe("error");
+    expect(await verifyJoin("ip", "tok", "Alice", null)).toMatchObject({
+      status: "error",
+      degraded: false,
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
@@ -213,6 +492,20 @@ describe("planJoinVerify", () => {
     });
   });
 
+  it("verifies a pre-start re-admit when stored identity is null (identityUnchanged is false)", () => {
+    // When a client drops between verifyJoin and joinClient, isReadmit is true
+    // but stored identity is null, resulting in identityUnchanged: false.
+    expect(
+      planJoinVerify({
+        isReadmit: true,
+        gameStarted: false,
+        turnstileToken: null,
+        identityUnchanged: false,
+        steamAuthed: false,
+      }),
+    ).toEqual({ action: "verify", token: null });
+  });
+
   it("verifies a Steam-authed first join with a null token (skips siteverify, keeps the name check)", () => {
     expect(planJoinVerify({ ...firstJoin, steamAuthed: true })).toEqual({
       action: "verify",
@@ -257,5 +550,31 @@ describe("isSteamAuthenticated", () => {
     expect(isSteamAuthenticated(claims())).toBe(false);
     expect(isSteamAuthenticated(claims("discord"))).toBe(false);
     expect(isSteamAuthenticated(null)).toBe(false);
+  });
+});
+
+describe("clientAuth", () => {
+  function claims(provider?: string): TokenPayload {
+    return {
+      jti: "j",
+      sub: "s",
+      iat: 0,
+      iss: "i",
+      aud: "openfront.io",
+      exp: 0,
+      ...(provider ? { provider } : {}),
+    } as TokenPayload;
+  }
+
+  it("is account for any persistent provider", () => {
+    for (const provider of ["discord", "google", "steam", "email", "poki"]) {
+      expect(clientAuth(claims(provider))).toBe("account");
+    }
+  });
+
+  it("is anonymous for no token, a guest session, and a token without a provider", () => {
+    expect(clientAuth(null)).toBe("anonymous");
+    expect(clientAuth(claims("guest"))).toBe("anonymous");
+    expect(clientAuth(claims())).toBe("anonymous");
   });
 });

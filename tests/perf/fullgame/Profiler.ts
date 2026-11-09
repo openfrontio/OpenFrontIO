@@ -1,5 +1,5 @@
+import { Execution, Game } from "@openfront/engine/game/Game";
 import { Session } from "node:inspector";
-import { Execution, Game } from "../../../src/core/game/Game";
 
 // ── Per-tick wall-time statistics ──
 

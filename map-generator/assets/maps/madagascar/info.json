@@ -1,10 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Madagascar",
   "name": "Madagascar",
   "translation_key": "map.madagascar",
-  "categories": ["new", "africa"],
-  "multiplayer_frequency": 5,
-  "team_frequency": 10,
+  "categories": ["africa"],
+  "location": { "lat": -19, "lon": 46.7 },
+  "author": "Tristar",
+  "description": "A unique island in the Indian Ocean off Southeast Africa. It is the World's 4th-largest island and the 2nd-largest island country. Madagascar is a biodiversity hotspot and one of the world's 17 megadiverse countries, with over 90% of its wildlife being endemic. This map is a Nuke Wars map, as it also includes a portion of mainland Africa across the Mozambique Channel; Who will win, Mozambique Team or Madagascar Team?",
   "special_team_count": 2,
   "forced_modifiers": ["isWaterNukes:50"],
   "nations": [
@@ -326,5 +328,21 @@
       "flag": "mg"
     }
   ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 2332,
+        "width": 1174,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 2332,
+        "width": 2324,
+        "x": 1173,
+        "y": 0
+      }
+    ]
+  },
   "themes": ["africa"]
 }

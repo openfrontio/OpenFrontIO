@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
 import {
   ConnectedComponents,
   LAND_MARKER,
-} from "../../../src/core/pathfinding/algorithms/ConnectedComponents";
+} from "@openfront/engine/pathfinding/algorithms/ConnectedComponents";
+import { describe, expect, it } from "vitest";
 import { createGameMap, createIslandMap, L, W } from "./_fixtures";
 
 // prettier-ignore
@@ -298,6 +298,30 @@ describe("ConnectedComponents", () => {
       wc.addWaterTiles([tile]); // double add must not double count
 
       expect(wc.getComponentSize(leftId)).toBe(11);
+    });
+
+    it("snapshots the same state whichever lookups ran since a merge", () => {
+      // prettier-ignore
+      const map = createGameMap({
+        width: 5, height: 3, grid: [
+          W, L, W, L, W,
+          W, L, W, L, W,
+          W, L, W, L, W,
+        ],
+      });
+      const wc = new ConnectedComponents(map);
+      wc.initialize();
+      // Merges 3 into 2, then 2 into 1
+      for (const t of [map.ref(3, 1), map.ref(1, 1)]) {
+        map.setWater(t);
+        wc.addWaterTiles([t]);
+      }
+      const snapshot = wc.snapshot()!;
+
+      const restored = new ConnectedComponents(map);
+      restored.restoreSnapshot(snapshot);
+      expect(restored.getComponentId(map.ref(4, 0))).toBe(1);
+      expect(restored.snapshot()).toEqual(snapshot);
     });
 
     it("matches a fresh flood fill after incremental updates", () => {

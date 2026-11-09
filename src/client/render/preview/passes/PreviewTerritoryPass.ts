@@ -8,8 +8,8 @@
  * passes and stays owned by CosmeticPreviewRenderer.
  */
 
+import { decodePatternData } from "@openfront/shared/PatternDecoder";
 import { base64url } from "jose";
-import { decodePatternData } from "../../../../core/PatternDecoder";
 import { SkinAtlasArray } from "../../gl/passes/SkinAtlasArray";
 import { TerritoryPass } from "../../gl/passes/TerritoryPass";
 import type { RenderSettings } from "../../gl/RenderSettings";

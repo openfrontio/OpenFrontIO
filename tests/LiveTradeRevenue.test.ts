@@ -1,4 +1,5 @@
-import { Game, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { Game } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
 // Live leaderboard gold-rate columns ("Ship Trade Gold/min", "Train Trade

@@ -1,4 +1,4 @@
-import { DistanceBasedBezierCurve } from "../../../src/core/utilities/Line";
+import { DistanceBasedBezierCurve } from "@openfront/engine/utilities/Line";
 
 describe("DistanceBasedBezierCurve", () => {
   test("straight curve where all four control points lie on one line", () => {

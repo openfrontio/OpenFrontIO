@@ -1,13 +1,6 @@
 {
   "categories": ["countries", "asia"],
   "id": "China",
-  "layers": [
-    {
-      "id": "label",
-      "nukeable": false,
-      "placement": "water"
-    }
-  ],
   "map": {
     "height": 2024,
     "num_land_tiles": 1570704,
@@ -23,7 +16,6 @@
     "num_land_tiles": 386972,
     "width": 1124
   },
-  "multiplayer_frequency": 8,
   "name": "China",
   "nations": [
     {

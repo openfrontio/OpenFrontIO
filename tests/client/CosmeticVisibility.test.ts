@@ -1,11 +1,11 @@
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import type { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { afterEach, describe, expect, test } from "vitest";
 import { GraphicsOverridesSchema } from "../../src/client/render/gl/GraphicsOverrides";
 import { applyGraphicsOverrides } from "../../src/client/render/gl/RenderOverrides";
 import { createRenderSettings } from "../../src/client/render/gl/RenderSettings";
+import { UserSettings } from "../../src/client/UserSettings";
 import { visibleCosmetics } from "../../src/client/view/CosmeticVisibility";
-import { GameUpdateType } from "../../src/core/game/GameUpdates";
-import { UserSettings } from "../../src/core/game/UserSettings";
-import type { PlayerCosmetics } from "../../src/core/Schemas";
 import {
   makeEmptyGu,
   makeGameView,
@@ -31,6 +31,17 @@ describe("visibleCosmetics", () => {
   test("shows everything by default", () => {
     expect(visibleCosmetics(EQUIPPED, {}, "other")).toEqual(EQUIPPED);
   });
+
+  test.each(["self", "teammate", "other"] as const)(
+    "nobody hides all cosmetics for %s without changing equipped cosmetics",
+    (owner) => {
+      const equipped = structuredClone(EQUIPPED);
+      expect(visibleCosmetics(EQUIPPED, { showFrom: "none" }, owner)).toEqual({
+        verified: true,
+      });
+      expect(EQUIPPED).toEqual(equipped);
+    },
+  );
 
   test("always shows your own cosmetics", () => {
     const hideAll = {
@@ -89,6 +100,10 @@ describe("visibleCosmetics", () => {
 
 describe("cosmetics graphics overrides", () => {
   test("schema accepts the cosmetics section and rejects bad values", () => {
+    expect(
+      GraphicsOverridesSchema.safeParse({ cosmetics: { showFrom: "none" } })
+        .success,
+    ).toBe(true);
     expect(
       GraphicsOverridesSchema.safeParse({
         cosmetics: { showFrom: "teammates", flags: false, flagOpacity: 0.5 },
@@ -161,5 +176,18 @@ describe("PlayerView cosmetics", () => {
     game.refreshPlayerCosmetics();
     expect(other.cosmetics.crown).toBeUndefined();
     expect(me.cosmetics.crown).toEqual(EQUIPPED.crown);
+
+    userSettings.setGraphicsOverrides({ cosmetics: { showFrom: "none" } });
+    game.refreshPlayerCosmetics();
+    for (const player of [me, other]) {
+      expect(player.cosmetics.crown).toBeUndefined();
+      expect(player.cosmetics.flag).toBeUndefined();
+      expect(player.equippedCosmetics).toEqual(PLAYER_COSMETICS);
+    }
+
+    userSettings.setGraphicsOverrides({});
+    game.refreshPlayerCosmetics();
+    expect(me.cosmetics).toEqual(PLAYER_COSMETICS);
+    expect(other.cosmetics).toEqual(PLAYER_COSMETICS);
   });
 });

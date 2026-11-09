@@ -22,14 +22,17 @@ export function dispatchViewProfile(host: HTMLElement, publicId: string): void {
 
 /**
  * Player identity that opens their profile on click — `<player-name>` wired to
- * dispatchViewProfile from `host`.
+ * dispatchViewProfile from `host`. `className` goes on the `<player-name>`
+ * itself, e.g. `min-w-0` so it can shrink as a flex item and the name truncate.
  */
 export function playerNameLink(
   host: HTMLElement,
   username: string | null | undefined,
   publicId: string,
+  className = "",
 ): TemplateResult {
   return html`<player-name
+    class=${className}
     .username=${username}
     .publicId=${publicId}
     .nameClass=${NAME_CLASS}

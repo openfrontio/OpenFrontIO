@@ -1,10 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "BeringSea",
   "name": "Bering Sea",
   "translation_key": "map.beringsea",
   "categories": ["asia", "north_america"],
-  "multiplayer_frequency": 5,
-  "team_frequency": 10,
+  "location": { "lat": 58, "lon": -175 },
+  "author": "Tristar",
+  "description": "This map is made up of 2 large landmasses, the Russian Far East and the U.S. state of Alaska, both of very similar size. During the Ice Age, lower sea levels exposed Beringia, a land bridge which played a major role in human migration into the Americas 15,000 to 20,000 years ago.",
   "special_team_count": 2,
   "nations": [
     {

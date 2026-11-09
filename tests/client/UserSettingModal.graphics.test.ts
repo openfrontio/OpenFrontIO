@@ -1,13 +1,16 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import "../../src/client/UserSettingModal";
+import type { GraphicsPresetTools } from "../../src/client/components/GraphicsPresetTools";
+import type { GraphicsSettingsModal } from "../../src/client/components/GraphicsSettingsModal";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
-import type { MapLayer } from "../../src/core/game/TerrainMapLoader";
 import {
   GRAPHICS_KEY,
+  MAP_LAYERS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
-} from "../../src/core/game/UserSettings";
+} from "../../src/client/UserSettings";
 
 type TestModal = UserSettingModal & {
   updateComplete: Promise<unknown>;
@@ -20,9 +23,8 @@ const LAYERS: MapLayer[] = [
 ];
 
 /**
- * Open the Graphics tab. The tuning controls folded in from the old in-game
- * graphics modal sit behind the Advanced fold; the preset tools do not, so
- * pass `advanced: false` to assert what a player sees without expanding it.
+ * Open the Graphics tab and its dedicated tuning panel. The preset tools
+ * remain on the tab, so pass `advanced: false` to test them with the panel closed.
  */
 async function mountGraphics(
   wire?: Partial<
@@ -44,9 +46,8 @@ async function mountGraphics(
   el.open({ tab: "graphics" });
   await el.updateComplete;
   if (wire?.advanced !== false) {
-    el.querySelector("#graphics-advanced-toggle")!.dispatchEvent(
-      new Event("change", { bubbles: true }),
-    );
+    el.querySelector<HTMLButtonElement>("[data-open-graphics-panel]")!.click();
+    await graphicsPanel(el).updateComplete;
   }
   await el.updateComplete;
   // The advanced body is a child component with its own update cycle, and the
@@ -54,6 +55,14 @@ async function mountGraphics(
   await el.updateComplete;
   await new Promise((resolve) => setTimeout(resolve, 0));
   return el;
+}
+
+function graphicsPanel(el: TestModal): GraphicsSettingsModal {
+  const panel = el.querySelector<GraphicsSettingsModal>(
+    "graphics-settings-modal",
+  )!;
+  expect(panel.isOpen()).toBe(true);
+  return panel;
 }
 
 function control(el: TestModal, id: string): Element {
@@ -93,12 +102,66 @@ function resetGraphicsSettings() {
   const settings = new UserSettings();
   settings.setGraphicsOverrides({});
   settings.setGraphicsPresets({});
+  settings.removeCached(MAP_LAYERS_KEY);
 }
 
-describe("Graphics tab: advanced options folded in from the in-game modal", () => {
+describe("Graphics tab: advanced options in the graphics panel", () => {
   beforeEach(resetGraphicsSettings);
 
-  it("renders every folded control", async () => {
+  it("offers everyone, my team, only me and nobody, and persists the selection", async () => {
+    const el = await mountGraphics();
+    const select = control(el, "cosmetics-show-from-select") as HTMLElement & {
+      options: { value: string }[];
+      value: string;
+    };
+    expect(select.options.map(({ value }) => value)).toEqual([
+      "everyone",
+      "teammates",
+      "self",
+      "none",
+    ]);
+    select.dispatchEvent(
+      new CustomEvent("change", { detail: { value: "none" }, bubbles: true }),
+    );
+    expect(overrides().cosmetics?.showFrom).toBe("none");
+    expect(
+      JSON.parse(localStorage.getItem(GRAPHICS_KEY)!).cosmetics.showFrom,
+    ).toBe("none");
+    el.remove();
+    const reopened = await mountGraphics();
+    expect(
+      (control(reopened, "cosmetics-show-from-select") as typeof select).value,
+    ).toBe("none");
+    expect(
+      control(reopened, "cosmetics-territorySkins-toggle").hasAttribute(
+        "disabled",
+      ),
+    ).toBe(true);
+  });
+
+  it("allows switching from nobody back to my team", async () => {
+    new UserSettings().setGraphicsOverrides({
+      cosmetics: { showFrom: "none" },
+    });
+    const el = await mountGraphics();
+    const select = control(el, "cosmetics-show-from-select") as HTMLElement & {
+      options: { value: string }[];
+      value: string;
+    };
+    expect(select.value).toBe("none");
+    expect(select.options.some(({ value }) => value === "teammates")).toBe(
+      true,
+    );
+    select.dispatchEvent(
+      new CustomEvent("change", {
+        detail: { value: "teammates" },
+        bubbles: true,
+      }),
+    );
+    expect(overrides().cosmetics?.showFrom).toBe("teammates");
+  });
+
+  it("renders every advanced control", async () => {
     const el = await mountGraphics();
     for (const id of [
       "ambient-light-slider",
@@ -144,6 +207,10 @@ describe("Graphics tab: advanced options folded in from the in-game modal", () =
 
   it("writes each option into the same settings.graphics shape the old modal used", async () => {
     const el = await mountGraphics();
+    slide(el, "hud-opacity-slider", 50);
+    expect(new UserSettings().hudOpacity()).toBe(0.5);
+    const style = document.documentElement.style;
+    expect(style.getPropertyValue("--hud-opacity")).toBe("0.5");
 
     // Lighting: both sliders are presented inverted/remapped, so the stored
     // value is not the slider value.
@@ -217,7 +284,7 @@ describe("Graphics tab: advanced options folded in from the in-game modal", () =
     expect(overrides().mapOverlay?.staleNukeColor).toBe("#aabbcc");
   });
 
-  it("flips each folded toggle away from its default", async () => {
+  it("flips each advanced toggle away from its default", async () => {
     const el = await mountGraphics();
 
     // Names are black by default, so the toggle turns player color on.
@@ -251,7 +318,7 @@ describe("Graphics tab: advanced options folded in from the in-game modal", () =
     expect(overrides().terrain?.oceanColor).toBeUndefined();
   });
 
-  it("resets every override from the Advanced fold", async () => {
+  it("resets every override from the graphics panel", async () => {
     const el = await mountGraphics();
     slide(el, "territory-alpha-slider", 0.5);
     expect(overrides()).not.toEqual({});
@@ -261,12 +328,12 @@ describe("Graphics tab: advanced options folded in from the in-game modal", () =
   });
 });
 
-describe("Graphics tab: preset tools sit outside the Advanced fold", () => {
+describe("Graphics presets: tools on the page and in the panel", () => {
   beforeEach(resetGraphicsSettings);
 
-  function typeInto(el: TestModal, id: string, value: string) {
+  function typeInto(el: ParentNode, id: string, value: string) {
     const field = el.querySelector<HTMLInputElement | HTMLTextAreaElement>(
-      `#${id}`,
+      `[id="${id}"]`,
     )!;
     field.value = value;
     field.dispatchEvent(new Event("input", { bubbles: true }));
@@ -288,25 +355,40 @@ describe("Graphics tab: preset tools sit outside the Advanced fold", () => {
 
   it("saves the current configuration under a name", async () => {
     const el = await mountGraphics();
+    const panel = graphicsPanel(el);
     slide(el, "territory-alpha-slider", 0.5);
 
-    typeInto(el, "graphics-preset-name", "Mine");
-    await el.updateComplete;
-    el.querySelector<HTMLButtonElement>("#graphics-save-preset")!.click();
+    typeInto(panel, "graphics-preset-name", "Mine");
+    await panel.querySelector<GraphicsPresetTools>("graphics-preset-tools")!
+      .updateComplete;
+    panel
+      .querySelector<HTMLButtonElement>('[id="graphics-save-preset"]')!
+      .click();
 
     expect(new UserSettings().graphicsPresets().Mine).toMatchObject({
       mapOverlay: { territoryAlpha: 0.5 },
     });
   });
 
-  it("applies an imported configuration", async () => {
-    const el = await mountGraphics({ advanced: false });
-    typeInto(el, "graphics-import-json", '{"name":{"nameScaleFactor":1.1}}');
-    await el.updateComplete;
-    el.querySelector<HTMLButtonElement>("#graphics-import-apply")!.click();
+  it.each([false, true])(
+    "applies an imported configuration (panel open: %s)",
+    async (advanced) => {
+      const el = await mountGraphics({ advanced });
+      const scope = advanced ? graphicsPanel(el) : el;
+      typeInto(
+        scope,
+        "graphics-import-json",
+        '{"name":{"nameScaleFactor":1.1}}',
+      );
+      await scope.querySelector<GraphicsPresetTools>("graphics-preset-tools")!
+        .updateComplete;
+      scope
+        .querySelector<HTMLButtonElement>('[id="graphics-import-apply"]')!
+        .click();
 
-    expect(overrides()).toEqual({ name: { nameScaleFactor: 1.1 } });
-  });
+      expect(overrides()).toEqual({ name: { nameScaleFactor: 1.1 } });
+    },
+  );
 
   it("flags an unparseable import instead of applying it", async () => {
     const el = await mountGraphics({ advanced: false });
@@ -386,7 +468,7 @@ describe("Graphics tab: live apply from the in-game instance", () => {
     visibility.length = 0;
     alphas.length = 0;
 
-    const dropdown = el.querySelector<HTMLSelectElement>(
+    const dropdown = graphicsPanel(el).querySelector<HTMLSelectElement>(
       "graphics-preset-selector select",
     )!;
     dropdown.value = "builtin:graphics_setting.preset_night";
@@ -445,6 +527,19 @@ describe("Graphics tab: live apply from the in-game instance", () => {
     expect(overrides().mapLayerAlpha).toEqual({ reef: 0.4 });
   });
 
+  it("greys out each layer's own toggle while the Map Layers switch is off", async () => {
+    const el = await mountGraphics({ mapLayers: LAYERS });
+
+    flip(el, "map-layers-toggle");
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(
+      control(el, "map-layer-forest-toggle").hasAttribute("disabled"),
+    ).toBe(true);
+    expect(el.querySelector("#map-layer-forest-alpha-slider")).toBeNull();
+  });
+
   it("re-pushes every layer to the renderer after a reset, as the old modal did", async () => {
     const visibility: [string, boolean][] = [];
     const alphas: [string, number][] = [];
@@ -472,7 +567,7 @@ describe("Graphics tab: live apply from the in-game instance", () => {
   });
 });
 
-describe("Graphics tab: layer state reaches the renderer with Advanced collapsed", () => {
+describe("Graphics tab: layer state reaches the renderer with the graphics panel closed", () => {
   beforeEach(resetGraphicsSettings);
 
   /** Everything the renderer was told, in order. */
@@ -492,7 +587,7 @@ describe("Graphics tab: layer state reaches the renderer with Advanced collapsed
 
   it("pushes an imported configuration's layer state", async () => {
     // The advanced body is the only thing that draws layer rows, and it does
-    // not exist while the fold is collapsed. Nothing else about an import
+    // not exist while the panel is closed. Nothing else about an import
     // changes, so the layers would be stored and never applied.
     const w = wire();
     const el = await mountGraphics({ ...w, advanced: false });
@@ -544,6 +639,50 @@ describe("Graphics tab: layer state reaches the renderer with Advanced collapsed
     ]);
   });
 
+  it("hides every layer from the Map Layers switch, and restores their own toggles", async () => {
+    const w = wire();
+    new UserSettings().setGraphicsOverrides({
+      mapLayerVisibility: { forest: false },
+    });
+    const el = await mountGraphics({ ...w, advanced: false });
+    w.visibility.length = 0;
+
+    flip(el, "map-layers-toggle");
+    expect(w.visibility).toEqual([
+      ["forest", false],
+      ["reef", false],
+    ]);
+    expect(new UserSettings().mapLayers()).toBe(false);
+
+    w.visibility.length = 0;
+    flip(el, "map-layers-toggle");
+    expect(w.visibility).toEqual([
+      ["forest", false],
+      ["reef", true],
+    ]);
+    expect(overrides().mapLayerVisibility).toEqual({ forest: false });
+  });
+
+  it("keeps every layer hidden when a preset is picked with the switch off", async () => {
+    // The switch is kept out of the preset overrides, so picking a look does
+    // not bring back layers the player turned off on every map.
+    const w = wire();
+    const el = await mountGraphics({ ...w, advanced: false });
+    flip(el, "map-layers-toggle");
+    w.visibility.length = 0;
+
+    const dropdown = el.querySelector<HTMLSelectElement>(
+      "graphics-preset-selector select",
+    )!;
+    dropdown.value = "builtin:graphics_setting.preset_night";
+    dropdown.dispatchEvent(new Event("change", { bubbles: true }));
+
+    expect(w.visibility).toEqual([
+      ["forest", false],
+      ["reef", false],
+    ]);
+  });
+
   it("stops pushing once the modal is torn down", async () => {
     // The in-game instance is destroyed when the match ends. A listener left
     // on globalThis would keep calling back into a dead component, holding the
@@ -586,6 +725,11 @@ describe("Graphics tab: the page instance has no game", () => {
     expect(el.querySelector("#map-layer-forest-toggle")).toBeNull();
     // Everything that is pure preference is still there.
     expect(el.querySelector("#territory-alpha-slider")).not.toBeNull();
+  });
+
+  it("shows the Map Layers switch, which applies to every map", async () => {
+    const el = await mountGraphics({ advanced: false });
+    expect(el.querySelector("#map-layers-toggle")).not.toBeNull();
   });
 
   it("shows the map-layer section once a game hands its layers over", async () => {

@@ -5,7 +5,7 @@ import type {
   LogLevel,
   TransportItem,
 } from "@grafana/faro-web-sdk";
-import { GameEnv } from "../core/configuration/Config";
+import { GameEnv } from "@openfront/shared/configuration/Env";
 import { ClientEnv } from "./ClientEnv";
 import { clientPlatform } from "./ClientPlatform";
 
@@ -36,7 +36,7 @@ import { clientPlatform } from "./ClientPlatform";
 // warnings. Prod has enough players that 1% is plenty of signal; everywhere
 // else every session reports, so a staging or dev deployment shows
 // everything at once.
-export function sessionSamplingRate(env: GameEnv): number {
+function sessionSamplingRate(env: GameEnv): number {
   return env === GameEnv.Prod ? 0.01 : 1;
 }
 
@@ -45,7 +45,7 @@ export function sessionSamplingRate(env: GameEnv): number {
 // would be its own billed session; at 10% a common error still shows up
 // hundreds of times a day. Both rates cut the same hash (isSessionSampled),
 // so the 1% sessions are among these and send their errors too.
-export function errorSamplingRate(env: GameEnv): number {
+function errorSamplingRate(env: GameEnv): number {
   return env === GameEnv.Prod ? 0.1 : 1;
 }
 
@@ -130,6 +130,14 @@ export function initTelemetry(): Promise<Faro | null> {
           /^Failed to fetch(?= \w*Error )/,
           /^Load failed(?= \w*Error )/,
           /^NetworkError when attempting to fetch resource\.(?= \w*Error )/,
+          // Stackless, so not traceable to us: Firefox refusing
+          // CSSStyleSheet.replace on a sheet it did not construct (we never
+          // call it; likely an extension), and the browser refusing to start
+          // an AudioContext (howler's unlock; the game just stays silent).
+          // Unanchored: these arrive as rejected DOMExceptions whose message
+          // carries the name ("NotAllowedError: CSSStyleSheet.replace: ...").
+          /This method can only be called on modifiable style sheets/,
+          /Failed to start the audio device/,
         ],
         beforeSend: (item) =>
           filterSignal(item, sessionSamplingRate(env), errorSamplingRate(env)),
@@ -152,6 +160,19 @@ export function initTelemetry(): Promise<Faro | null> {
 // default instrumentation forwards them all, which made them ~85% of prod
 // event volume, none of it actionable since nothing is actually blocked.
 const DROPPED_EVENTS = new Set(["securitypolicyviolation"]);
+
+// Sent from this fraction of prod sessions, whatever their sampling: a
+// bottom rail report is looked up by game ID from a player's report, and the
+// ad partner is sent our ad reports. Ad frames turn up in thousands of games
+// a day, so a tenth of sessions is enough to see each format's rate.
+const EVENT_RATES = new Map([
+  ["bottom_rail_in_game", 1],
+  ["ad_frame_in_game", 0.1],
+]);
+// These skip isRepeated, so each gets a page-wide cap of its own against an
+// ad script stuck re-adding what we remove.
+const MAX_EVENTS_PER_NAME = 20;
+const eventsSent = new Map<string, number>();
 
 /**
  * Forwards console[method] calls made from our bundle to Faro as log lines
@@ -202,6 +223,20 @@ function filterSignal(
     if (item.type === "event") {
       const name = (item.payload as { name?: unknown } | null)?.name;
       if (typeof name === "string" && DROPPED_EVENTS.has(name)) return null;
+      const eventRate =
+        typeof name === "string" ? EVENT_RATES.get(name) : undefined;
+      if (typeof name === "string" && eventRate !== undefined) {
+        const rate = Math.max(eventRate, samplingRate);
+        const sessionId = item.meta.session?.id;
+        if (rate < 1) {
+          if (sessionId === undefined) return null;
+          if (!isSessionSampled(sessionId, rate)) return null;
+        }
+        const count = eventsSent.get(name) ?? 0;
+        if (count >= MAX_EVENTS_PER_NAME) return null;
+        eventsSent.set(name, count + 1);
+        return slimBrowserMeta(scrubUrls(item));
+      }
     }
     if (item.type === "exception" && isThirdPartyException(item)) return null;
     const sessionId = item.meta.session?.id;
@@ -286,7 +321,7 @@ function slimBrowserMeta(item: TransportItem): TransportItem {
  * has initialized. So every URL that leaves the page is cut to origin +
  * path: no query, no hash.
  */
-export function stripUrl(url: string): string {
+function stripUrl(url: string): string {
   return url.split(/[?#]/, 1)[0];
 }
 
@@ -312,6 +347,7 @@ export function resetTelemetry(): void {
   faroPromise = null;
   sent.clear();
   sentTotal = 0;
+  eventsSent.clear();
 }
 
 /**
@@ -352,6 +388,17 @@ export function reportMeasurement(
   void initTelemetry().then((faro) => {
     if (faro === null) return;
     faro.api.pushMeasurement({ type, values }, { context });
+  });
+}
+
+/** A named Faro event; see EVENT_RATES for the ones sampled at their own rate. */
+export function reportEvent(
+  name: string,
+  attributes: Record<string, string>,
+): void {
+  void initTelemetry().then((faro) => {
+    if (faro === null) return;
+    faro.api.pushEvent(name, attributes);
   });
 }
 

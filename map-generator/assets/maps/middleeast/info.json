@@ -1,9 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "MiddleEast",
   "name": "Middle East",
   "translation_key": "map.middleeast",
   "categories": ["asia"],
-  "multiplayer_frequency": 8,
+  "location": { "lat": 24, "lon": 46 },
+  "author": "Tristar",
+  "description": "Fight against 20th century Emirates and Empires in the Middle East. The map covers Arabia, the Levant, the Nile, Anatolia, Iran/Persia and neighbouring regions. Deserts dominate the interior, while the Mediterranean, Red Sea, Persian Gulf and Caspian Sea surround the region. Players who control Mesopotamia have the highest chance of winning.",
   "nations": [
     {
       "coordinates": [300, 65],

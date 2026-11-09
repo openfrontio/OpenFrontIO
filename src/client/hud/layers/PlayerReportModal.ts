@@ -1,8 +1,11 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { EventBus } from "@openfront/shared/EventBus";
+import {
+  ReportReason,
+  ReportReasonSchema,
+} from "@openfront/shared/WireSchemas";
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
-import { ReportReason, ReportReasonSchema } from "../../../core/Schemas";
 import { SendPlayerReportEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { PlayerView } from "../../view";

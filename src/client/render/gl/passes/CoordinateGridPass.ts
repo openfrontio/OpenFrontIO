@@ -52,7 +52,12 @@ export class CoordinateGridPass {
 
     this.glyphTex = this.createGlyphAtlas();
 
-    this.program = createProgram(gl, overlayVertSrc, gridFragSrc);
+    this.program = createProgram(
+      gl,
+      overlayVertSrc,
+      gridFragSrc,
+      "CoordinateGridPass",
+    );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;
     this.uCellSize = gl.getUniformLocation(this.program, "uCellSize")!;

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   BUILTIN_PRESETS,
@@ -15,7 +16,7 @@ import {
   GRAPHICS_KEY,
   GRAPHICS_PRESETS_KEY,
   UserSettings,
-} from "../src/core/game/UserSettings";
+} from "../src/client/UserSettings";
 
 describe("built-in graphics presets", () => {
   it("every preset's overrides validate against the schema", () => {
@@ -66,7 +67,7 @@ describe("built-in graphics presets", () => {
 
 describe("legacy colorblind flag", () => {
   it("accessibility.colorblind stored by old clients surfaces as the colorblind palette", async () => {
-    const { UserSettings } = await import("../src/core/game/UserSettings");
+    const { UserSettings } = await import("../src/client/UserSettings");
     const userSettings = new UserSettings();
     // Old clients stored {accessibility:{colorblind:true}}; write it through
     // the settings cache in the pre-palette shape.

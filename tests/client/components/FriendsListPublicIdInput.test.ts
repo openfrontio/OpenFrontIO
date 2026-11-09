@@ -10,6 +10,18 @@ describe("extractPublicIdFromUrl", () => {
     ).toBe("95UoOPh3");
   });
 
+  it("keeps only the id from the canonical /player/<id> link", () => {
+    expect(extractPublicIdFromUrl("https://openfront.io/player/95UoOPh3")).toBe(
+      "95UoOPh3",
+    );
+    expect(
+      extractPublicIdFromUrl("https://openfront.io/player/95UoOPh3/?tab=games"),
+    ).toBe("95UoOPh3");
+    expect(
+      extractPublicIdFromUrl("http://localhost:9000/w0/player/95UoOPh3"),
+    ).toBe("95UoOPh3");
+  });
+
   it("handles https links and other hash params in any order", () => {
     expect(
       extractPublicIdFromUrl(

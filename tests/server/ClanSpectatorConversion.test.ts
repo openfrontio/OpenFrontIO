@@ -1,13 +1,13 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   Duos,
   GameMapType,
   GameMode,
   Quads,
   Trios,
-} from "../../src/core/game/Game";
-import { ServerStartGameMessage } from "../../src/core/Schemas";
-import { createGameWireContext } from "../../src/core/ZbinWire";
+} from "@openfront/engine-api/game/GameTypes";
+import { ServerStartGameMessage } from "@openfront/shared/WireSchemas";
+import { createGameWireContext } from "@openfront/shared/ZbinWire";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   cid,
   makeClient,

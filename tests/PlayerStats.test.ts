@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import {
   goldCoinIcon,
   guildIcon,
@@ -5,10 +6,10 @@ import {
   soldierIcon,
   upperLimitIcon,
 } from "../src/client/hud/HotbarIcons";
-import { PlayerStats } from "../src/client/hud/layers/PlayerStats";
 import { columnsFor } from "../src/client/hud/layers/lib/StatsColumns";
+import { PlayerStats } from "../src/client/hud/layers/PlayerStats";
+import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
-import { UserSettings } from "../src/core/game/UserSettings";
 
 function player(
   id: string,
@@ -62,10 +63,10 @@ describe("PlayerStats", () => {
 
     const content = playerStats.querySelector(".stats-table-content");
     expect(content?.classList).toContain("min-w-full");
-    // Only selected stat tracks share definite spare space. Rank, the clan
-    // column, name, and picker remain fixed and never stretch.
+    // Only selected stat tracks share definite spare space. Rank, name, and
+    // picker remain fixed and never stretch.
     expect(content?.getAttribute("style")).toContain(
-      "34px 80px 100px auto auto auto 32px",
+      "34px 100px auto auto auto 32px",
     );
 
     playerStats.remove();
@@ -107,7 +108,7 @@ describe("PlayerStats", () => {
     expect(table?.querySelector(".stats-table-header")).not.toBeNull();
     const goldHeader = playerStats.querySelectorAll(
       '.stats-table-header > [role="columnheader"]',
-    )[4];
+    )[3];
     expect(goldHeader.querySelector("img")?.getAttribute("src")).toBe(
       goldCoinIcon,
     );
@@ -190,6 +191,13 @@ describe("PlayerStats clan column", () => {
     (
       UserSettings as unknown as { cache: Map<string, string | null> }
     ).cache.clear();
+    // Off by default; these tests turn it on in the picker.
+    new UserSettings().setStatsColumns("player", [
+      "clan",
+      "tiles",
+      "gold",
+      "maxtroops",
+    ]);
   });
 
   afterEach(() => {
@@ -281,10 +289,8 @@ describe("PlayerStats clan column", () => {
     ).toEqual(["ABCDE", ""]);
   });
 
-  it("is on by default and disappears when deselected in the picker", async () => {
+  it("disappears when deselected in the picker", async () => {
     const settings = new UserSettings();
-    expect(settings.statsColumns("player")).toContain("clan");
-
     settings.setStatsColumns("player", ["tiles", "gold", "maxtroops"]);
     const playerStats = await mount([player("alice", 3, "ABCDE")]);
 

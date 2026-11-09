@@ -1,6 +1,6 @@
+import { Difficulty } from "@openfront/engine-api/game/GameTypes";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { Difficulty } from "../../core/game/Game";
 import { translateText } from "../Utils";
 
 /**
@@ -68,11 +68,13 @@ export class DifficultyInfo extends LitElement {
             troops,
           })}
         </div>
-        ${DIFFICULTIES_WITH_NOTE.has(difficulty)
-          ? html`<div class="text-white/60">
-              ${translateText(`difficulty.info_note_${key}`)}
-            </div>`
-          : nothing}
+        ${
+          DIFFICULTIES_WITH_NOTE.has(difficulty)
+            ? html`<div class="text-white/60">
+                ${translateText(`difficulty.info_note_${key}`)}
+              </div>`
+            : nothing
+        }
       </div>
     </div>`;
   }

@@ -1,5 +1,5 @@
+import { Tribe, TribeSchema } from "@openfront/engine-api/Schemas";
 import { z } from "zod";
-import { Tribe, TribeSchema } from "../core/Schemas";
 import { ServerEnv } from "./ServerEnv";
 
 // TribeSchema is loose: extra per-tribe fields the API sends pass through

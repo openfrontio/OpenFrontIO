@@ -11,6 +11,7 @@ export class SettingKeybind extends LitElement {
   @property({ type: String }) value = "";
   @property({ type: String }) display = "";
   @property({ type: Boolean }) easter = false;
+  @property({ type: Boolean }) allowModifiers = false;
 
   createRenderRoot() {
     return this;
@@ -42,9 +43,11 @@ export class SettingKeybind extends LitElement {
         <div class="flex items-center gap-3 shrink-0">
           <div
             class="relative h-12 min-w-[80px] px-4 flex items-center justify-center bg-black/60 border border-white/20 rounded-lg text-xl font-bold font-mono shadow-inner hover:border-blue-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-all cursor-pointer select-none text-white
-            ${this.listening
-              ? "border-blue-500 text-blue-400 ring-2 ring-blue-500/50"
-              : ""}"
+            ${
+              this.listening
+                ? "border-blue-500 text-blue-400 ring-2 ring-blue-500/50"
+                : ""
+            }"
             role="button"
             aria-label="${translateText("user_setting.press_a_key")}"
             tabindex="0"
@@ -57,9 +60,11 @@ export class SettingKeybind extends LitElement {
 
           <div class="flex flex-col gap-1">
             <button
-              class="text-[10px] font-bold uppercase tracking-wider bg-white/5 hover:bg-white/20 border border-white/10 px-3 py-1 rounded text-white/60 hover:text-white transition-colors ${canReset
-                ? ""
-                : "opacity-50 cursor-not-allowed pointer-events-none"}"
+              class="text-[10px] font-bold uppercase tracking-wider bg-white/5 hover:bg-white/20 border border-white/10 px-3 py-1 rounded text-white/60 hover:text-white transition-colors ${
+                canReset
+                  ? ""
+                  : "opacity-50 cursor-not-allowed pointer-events-none"
+              }"
               @click=${this.resetToDefault}
               ?disabled=${!canReset}
             >
@@ -90,18 +95,21 @@ export class SettingKeybind extends LitElement {
   private handleKeydown(e: KeyboardEvent) {
     if (!this.listening) return;
 
-    // Allow Tab and Escape to work normally (don't trap focus)
-    if (e.key === "Tab" || e.key === "Escape") {
-      if (e.key === "Escape") {
-        // Cancel listening on Escape
-        this.listening = false;
-        this.requestUpdate();
-      }
+    if (e.key === "Escape") {
+      // Cancel listening on Escape without bubbling to close parent modals
+      e.preventDefault();
+      e.stopPropagation();
+      this.listening = false;
+      this.requestUpdate();
       return;
     }
 
-    // Don't capture lone modifier keys — wait for the actual key
-    if (
+    // Allow Tab to work normally (don't trap focus)
+    if (e.key === "Tab") {
+      return;
+    }
+
+    const isModifier =
       e.code === "ShiftLeft" ||
       e.code === "ShiftRight" ||
       e.code === "ControlLeft" ||
@@ -109,16 +117,21 @@ export class SettingKeybind extends LitElement {
       e.code === "AltLeft" ||
       e.code === "AltRight" ||
       e.code === "MetaLeft" ||
-      e.code === "MetaRight"
-    ) {
+      e.code === "MetaRight";
+
+    if (isModifier && !this.allowModifiers) {
       return;
     }
 
     // Prevent default only for keys we're actually capturing
     e.preventDefault();
 
-    const code = e.shiftKey ? `Shift+${e.code}` : e.code;
-    const displayKey = e.shiftKey ? `Shift+${e.key.toUpperCase()}` : e.key;
+    const code = isModifier ? e.code : e.shiftKey ? `Shift+${e.code}` : e.code;
+    const displayKey = isModifier
+      ? e.code
+      : e.shiftKey
+        ? `Shift+${e.key.toUpperCase()}`
+        : e.key;
     const prevValue = this.value;
 
     // Temporarily set the value to the new code for validation in parent

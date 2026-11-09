@@ -35,7 +35,26 @@ DEPLOYMENT_NAME="${DEPLOYMENT_NAME:-$SUBDOMAIN}"
 CONTAINER_NAME="openfront-${ENV}-${DEPLOYMENT_NAME}"
 
 echo "Pulling ${GHCR_IMAGE} from GitHub Container Registry..."
-docker pull "${GHCR_IMAGE}"
+# --- BEGIN pull image (tested) ---
+# The images are private. GHCR_TOKEN is the deploy job's own GITHUB_TOKEN
+# (packages: read), which expires when the job ends; log out after the pull
+# so the host keeps no registry credential, and drop the token from the env
+# file, which every `docker run --env-file` below hands to a container.
+# Without a token, pull anonymously, as a hand-run update.sh against a public
+# image would.
+if [ -n "${GHCR_TOKEN:-}" ]; then
+    printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "${GHCR_USER:-openfront}" --password-stdin
+    pull_status=0
+    docker pull "${GHCR_IMAGE}" || pull_status=$?
+    docker logout ghcr.io >/dev/null || true
+    sed -i.bak -e '/^GHCR_TOKEN=/d' -e '/^GHCR_USER=/d' "$ENV_FILE" && rm -f "$ENV_FILE.bak"
+    if [ "$pull_status" -ne 0 ]; then
+        exit "$pull_status"
+    fi
+else
+    docker pull "${GHCR_IMAGE}"
+fi
+# --- END pull image (tested) ---
 
 # Upload hashed assets to R2 before swapping containers. If this fails the old
 # container keeps serving — better than a stop-then-fail outage.
@@ -155,8 +174,23 @@ if [ ! -f "$MANIFEST" ]; then
     exit 1
 fi
 
+# resources/public/ (policy pages, robots.txt, press/, .well-known/): the site
+# Worker serves these from R2 by the index the build wrote, which names each
+# file's content-addressed copy under _assets/root/.
+ROOT_FILES_INDEX="$STATIC_DIR/root-files.json"
+if ! jq -e '.["privacy-policy.html"].key and .["terms-of-service.html"].key' \
+    "$ROOT_FILES_INDEX" > /dev/null; then
+    echo "❌ The root-files index is missing or lacks the policy pages"
+    exit 1
+fi
+
 # Manifest values are like "/_assets/foo/bar.<hash>.png"; strip the leading "/".
-KEYS_JSON="$(jq '[.[] | sub("^/"; "")]' "$MANIFEST")"
+# Root-file keys are literal, so encode them per segment to match. Checked and
+# uploaded together, an unchanged root file is skipped like any hashed asset.
+KEYS_JSON="$(jq -s '
+    [(.[0][] | sub("^/"; "")),
+     (.[1][].key | split("/") | map(@uri) | join("/"))] | unique
+' "$MANIFEST" "$ROOT_FILES_INDEX")"
 TOTAL="$(echo "$KEYS_JSON" | jq 'length')"
 echo "Checking $TOTAL asset keys against $R2_ENDPOINT..."
 
@@ -367,26 +401,7 @@ else
     upload_versioned "${VERSION_PREFIX}/desktop/version.json" \
         "$DESKTOP_VERSION" "application/json" || exit 1
 
-    # resources/public/ (policy pages, robots.txt, press/, .well-known/): the
-    # site has no origin behind the Worker, so it serves these from here, by
-    # the index the build wrote. Directory entries ("press/") have no file of
-    # their own.
-    ROOT_FILES_INDEX="$STATIC_DIR/root-files.json"
-    if ! jq -e '.["privacy-policy.html"] and .["terms-of-service.html"]' \
-        "$ROOT_FILES_INDEX" > /dev/null; then
-        echo "❌ The root-files index is missing or lacks the policy pages"
-        exit 1
-    fi
-    while IFS= read -r ROOT_PATH; do
-        case "$ROOT_PATH" in
-            /* | .. | ../* | */../* | */..)
-                echo "❌ refusing unsafe path: $ROOT_PATH" >&2
-                exit 1
-                ;;
-        esac
-        upload_versioned "${VERSION_PREFIX}/root/${ROOT_PATH}" \
-            "$STATIC_DIR/$ROOT_PATH" "application/octet-stream" || exit 1
-    done < <(jq -r 'keys[] | select(endswith("/") | not)' "$ROOT_FILES_INDEX")
+    # The root files themselves went up with the hashed assets above.
     upload_versioned "${VERSION_PREFIX}/root-files.json" \
         "$ROOT_FILES_INDEX" "application/json" || exit 1
 fi

@@ -192,7 +192,7 @@ export class SAMRadiusPass {
     this.gl = gl;
     this.mapW = mapW;
     this.settings = settings;
-    this.program = createProgram(gl, vertSrc, fragSrc);
+    this.program = createProgram(gl, vertSrc, fragSrc, "SamRadiusPass");
 
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uTime = gl.getUniformLocation(this.program, "uTime")!;

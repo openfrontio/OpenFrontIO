@@ -1,9 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Levant",
   "name": "Levant",
   "translation_key": "map.levant",
   "categories": ["asia"],
-  "multiplayer_frequency": 5,
+  "location": { "lat": 34, "lon": 36.5 },
+  "author": "Tristar",
+  "description": "A map of the eastern Mediterranean, with 3 shores along the borders of the map, from Anatolia to the North; Syria, Palestine and Arabia to the East, and the Nile Delta in the South. Return back in time to the Crusades, defeat Holy kingdoms and Muslim powers in this heavily contested region. Can you win from Cyprus?",
   "nations": [
     {
       "coordinates": [722, 1683],

@@ -1,9 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "LasVegasStrip",
   "name": "Las Vegas Strip",
   "translation_key": "map.lasvegasstrip",
   "categories": ["north_america"],
-  "multiplayer_frequency": 3,
+  "location": { "lat": 36.1, "lon": -115.2 },
+  "author": "crunchybbb",
+  "description": "The Strip is the world’s premier gambling destination. Located in a city in the middle of the hot Nevadan desert, it contains dozens of casinos, resorts, and attractions. Roads and crosswalks are also featured on this long, skinny vertical map.",
   "nations": [
     {
       "coordinates": [954, 2653],

@@ -1,22 +1,23 @@
 import {
-  Ranking,
-  RankType,
-} from "../src/client/components/baseComponents/ranking/GameInfoRanking";
-import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../src/core/game/Game";
-import { AnalyticsRecord, GameConfig } from "../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
 import {
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
   GOLD_INDEX_TRAIN_OTHER,
   GOLD_INDEX_TRAIN_SELF,
   GOLD_INDEX_WAR,
-} from "../src/core/StatsSchemas";
+} from "@openfront/engine-api/StatsSchemas";
+import { AnalyticsRecord } from "@openfront/shared/WireSchemas";
+import {
+  Ranking,
+  RankType,
+} from "../src/client/components/baseComponents/ranking/GameInfoRanking";
 
 describe("Ranking class", () => {
   const mockConfig: GameConfig = {

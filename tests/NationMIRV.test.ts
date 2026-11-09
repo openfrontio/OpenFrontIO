@@ -1,6 +1,3 @@
-import { MirvExecution } from "../src/core/execution/MIRVExecution";
-import { MissileSiloExecution } from "../src/core/execution/MissileSiloExecution";
-import { NationExecution } from "../src/core/execution/NationExecution";
 import {
   Cell,
   GameMode,
@@ -8,7 +5,10 @@ import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { MirvExecution } from "@openfront/engine/execution/MIRVExecution";
+import { MissileSiloExecution } from "@openfront/engine/execution/MissileSiloExecution";
+import { NationExecution } from "@openfront/engine/execution/NationExecution";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 

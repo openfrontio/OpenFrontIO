@@ -1,4 +1,4 @@
-import { CosmeticPack, Pack } from "../../core/CosmeticSchemas";
+import { CosmeticPack, Pack } from "@openfront/shared/CosmeticSchemas";
 import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 
@@ -107,4 +107,20 @@ export function cosmeticRarityBadgeClass(resolved: ResolvedCosmetic): string {
     RARITY_BADGE_CLASSES[cosmeticRarity(resolved)] ??
     RARITY_BADGE_CLASSES.common
   );
+}
+
+/**
+ * The translation key for a cosmetic's generative-AI line, or undefined when it shows none.
+ *
+ * A declaration the artist made always shows, yes or no. A cosmetic nobody was asked about says
+ * so only where it credits an artist: the line describes the artist's work, and "unknown" under a
+ * subscription, a pack or a built-in pattern would be noise.
+ */
+export function cosmeticAiLabelKey(
+  aiDisclosed: boolean | undefined,
+  artist: string | undefined,
+): string | undefined {
+  if (aiDisclosed === true) return "cosmetics.ai_label";
+  if (aiDisclosed === false) return "cosmetics.ai_none_label";
+  return artist ? "cosmetics.ai_unknown_label" : undefined;
 }

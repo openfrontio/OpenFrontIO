@@ -1,4 +1,4 @@
-import type { UserMeResponse } from "../core/ApiSchemas";
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 
 // Steam is the primary (and, in v1, only) identity: true only when a steam
 // identity is present AND no other identity is linked. Guards the account-
@@ -11,7 +11,7 @@ export function isSteamPrimaryUser(
 }
 
 // Does this user have any linked identity at all? (Callers that also accept a
-// CrazyGames session must OR that in themselves — it lives on component state,
+// portal session must OR that in themselves — it lives on component state,
 // not on the API response.)
 //
 // Deliberately explicit presence checks rather than a `??` chain: `email` is a

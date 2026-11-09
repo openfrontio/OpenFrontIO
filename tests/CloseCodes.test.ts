@@ -1,6 +1,3 @@
-import fs from "fs";
-import path from "path";
-import { describe, expect, it } from "vitest";
 import {
   APP_REJECTION_MAX,
   APP_REJECTION_MIN,
@@ -8,7 +5,10 @@ import {
   CloseReason,
   isCloseReason,
   isTerminalClose,
-} from "../src/core/CloseCodes";
+} from "@openfront/shared/CloseCodes";
+import fs from "fs";
+import path from "path";
+import { describe, expect, it } from "vitest";
 
 const PROJECT_ROOT = path.join(__dirname, "..");
 
@@ -155,7 +155,10 @@ describe("isCloseReason", () => {
 
 it("closes sockets only through CloseCode", () => {
   const offenders: string[] = [];
-  for (const file of sourceFiles(path.join(PROJECT_ROOT, "src"))) {
+  const files = ["src", "packages"].flatMap((dir) =>
+    sourceFiles(path.join(PROJECT_ROOT, dir)),
+  );
+  for (const file of files) {
     const content = fs.readFileSync(file, "utf-8");
     for (const match of content.matchAll(/\.close\(\s*[0-9]/g)) {
       const line = content.slice(0, match.index).split("\n").length;

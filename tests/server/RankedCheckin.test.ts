@@ -1,12 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { startPolling } from "../../src/server/PollingLoop";
 import {
   RANKED_PAUSED_LOG,
   RANKED_RESUMED_LOG,
   RankedCheckinGate,
   rankedCheckinPass,
+  startRankedCheckinLoops,
   type RankedCheckinDeps,
 } from "../../src/server/RankedCheckin";
 import { mockLogger } from "../util/GameServerHarness";
+
+vi.mock("../../src/server/PollingLoop", () => ({ startPolling: vi.fn() }));
 
 // OPE-469: a draining deployment kept offering ranked matches, so players on
 // the new build were matched onto the old one, bounced on version_mismatch,
@@ -32,6 +36,7 @@ function makeDeps(
     playlist: {
       get1v1Config: vi.fn().mockReturnValue({ gameMap: "Europe" }),
       get2v2Config: vi.fn().mockReturnValue({ gameMap: "Europe" }),
+      getClanWarsConfig: vi.fn().mockReturnValue({ gameMap: "Europe" }),
     } as any,
     workerId: 0,
     log,
@@ -112,6 +117,21 @@ describe("rankedCheckinPass", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it("runs one check-in loop per ranked queue, with no FFA queue", async () => {
+    const fetchFn = okFetch({ assignment: null });
+    const deps = makeDeps(() => true, fetchFn);
+    startRankedCheckinLoops(deps);
+    const tasks = vi.mocked(startPolling).mock.calls.map(([task]) => task);
+    expect(tasks).toHaveLength(3);
+    for (const task of tasks) await task();
+    const modes = vi
+      .mocked(fetchFn)
+      .mock.calls.map(
+        ([, init]) => JSON.parse(String((init as RequestInit).body)).mode,
+      );
+    expect(modes).toEqual(["1v1", "2v2", "clanwars"]);
   });
 
   it("checks in when active", async () => {
@@ -255,6 +275,54 @@ describe("rankedCheckinPass", () => {
     const call = vi.mocked(deps.gm.createGame).mock.calls[0];
     expect(call[1]).toMatchObject({ allowedPublicIds: ["p1", "p2"] });
     expect(call[5]).toEqual([["p1"], ["p2"]]);
+  });
+
+  it("builds a clan wars game from its teams and clan tags", async () => {
+    const teams = [
+      ["a1", "a2"],
+      ["b1", "b2"],
+      ["c1", "c2"],
+    ];
+    const fetchFn = okFetch({
+      assignment: {
+        players: teams.flat(),
+        teams,
+        clanTags: ["ALLY", "BETA", "GAMA"],
+      },
+    });
+    const deps = makeDeps(() => true, fetchFn);
+    const gate = new RankedCheckinGate(deps.isActive, deps.log);
+
+    await rankedCheckinPass("clanwars", gate, deps);
+
+    const [, init] = vi.mocked(fetchFn).mock.calls[0];
+    expect(JSON.parse(String((init as RequestInit).body)).mode).toBe(
+      "clanwars",
+    );
+    expect(deps.playlist.getClanWarsConfig).toHaveBeenCalledWith(3, 6);
+    const call = vi.mocked(deps.gm.createGame).mock.calls[0];
+    expect(call[1]).toMatchObject({ allowedPublicIds: teams.flat() });
+    expect(call[5]).toEqual(teams);
+    expect(call[6]).toEqual(["ALLY", "BETA", "GAMA"]);
+  });
+
+  it("creates no clan wars game from an assignment without clan tags", async () => {
+    const fetchFn = okFetch({
+      assignment: {
+        players: ["a1", "a2", "b1", "b2"],
+        teams: [
+          ["a1", "a2"],
+          ["b1", "b2"],
+        ],
+      },
+    });
+    const deps = makeDeps(() => true, fetchFn);
+    const gate = new RankedCheckinGate(deps.isActive, deps.log);
+
+    await rankedCheckinPass("clanwars", gate, deps);
+
+    expect(deps.gm.createGame).not.toHaveBeenCalled();
+    expect(deps.log.warn).toHaveBeenCalled();
   });
 
   it("never touches games already assigned: a drained pass creates nothing", async () => {

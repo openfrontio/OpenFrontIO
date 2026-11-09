@@ -1,3 +1,4 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import {
@@ -6,13 +7,13 @@ import {
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../client/Utils";
-import { assetUrl } from "../core/AssetUrls";
-import { UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
-import { Platform } from "./Platform";
+import { KeyboardLayoutController } from "./KeyboardLayout";
+import { KEYBOARD_DETECTED_EVENT, Platform } from "./Platform";
 import { TroubleshootingModal } from "./TroubleshootingModal";
+import { UserSettings } from "./UserSettings";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {
@@ -21,6 +22,27 @@ export class HelpModal extends BaseModal {
   @state() private keybinds: Record<string, string> = this.getKeybinds();
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
   @query("#tutorial-video-player") private videoPlayer?: HTMLVideoElement;
+  private keyboardLayout = new KeyboardLayoutController(this);
+
+  private handleKeyboardDetected = () => {
+    this.requestUpdate();
+  };
+
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener(
+      KEYBOARD_DETECTED_EVENT,
+      this.handleKeyboardDetected,
+    );
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener(
+      KEYBOARD_DETECTED_EVENT,
+      this.handleKeyboardDetected,
+    );
+    super.disconnectedCallback();
+  }
 
   private getKeybinds(): Record<string, string> {
     return new UserSettings().keybinds(Platform.isMac);
@@ -28,6 +50,7 @@ export class HelpModal extends BaseModal {
 
   private getKeyLabel(code: string): string {
     if (!code) return "";
+    const layoutMap = this.keyboardLayout.map;
 
     const specialLabels: Record<string, string> = {
       ShiftLeft: "⇧ Shift",
@@ -49,7 +72,17 @@ export class HelpModal extends BaseModal {
       Comma: "<",
     };
 
+    if ((code === "Period" || code === "Comma") && layoutMap?.has(code)) {
+      return layoutMap.get(code)!.toUpperCase();
+    }
     if (specialLabels[code]) return specialLabels[code];
+    if (
+      layoutMap?.has(code) &&
+      !code.startsWith("Digit") &&
+      !code.startsWith("Numpad")
+    ) {
+      return layoutMap.get(code)!.toUpperCase();
+    }
     if (code.startsWith("Key") && code.length === 4) return code.slice(3);
     if (code.startsWith("Digit")) return code.slice(5);
     if (code.startsWith("Numpad")) return `Num ${code.slice(6)}`;
@@ -78,6 +111,7 @@ export class HelpModal extends BaseModal {
 
   protected renderBody() {
     const keybinds = this.keybinds;
+    const hideHotkeys = Platform.isTouch && !Platform.hasKeyboard;
 
     return html`
       <div
@@ -206,20 +240,23 @@ export class HelpModal extends BaseModal {
               </p>
               <button
                 id="troubleshooting-button"
-                class="hover:bg-white/5 px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)]"
+                class="w-full sm:w-fit max-w-full hover:bg-white/5 px-4 sm:px-6 py-2 text-sm sm:text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)] whitespace-normal break-words text-center"
                 data-page="page-troubleshooting"
                 @click="${this.openTroubleshooting}"
-                data-i18n="main.go_to_troubleshooting"
               >
                 <span
-                  class="relative z-10 text-2xl"
-                  data-i18n="main.go_to_troubleshooting"
-                ></span>
+                  class="relative z-10 block max-w-full leading-snug"
+                  >${translateText("main.go_to_troubleshooting")}</span
+                >
               </button>
             </div>
           </section>
           <!-- Hotkeys Section -->
-          <div class="flex items-center gap-3 mb-3">
+          <div
+            id="help-hotkeys-heading"
+            class="flex items-center gap-3 mb-3"
+            ?hidden=${hideHotkeys}
+          >
             <div class="text-blue-400">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -253,7 +290,9 @@ export class HelpModal extends BaseModal {
             ></div>
           </div>
           <section
+            id="help-hotkeys-content"
             class="bg-white/5 rounded-xl border border-white/10 overflow-hidden"
+            ?hidden=${hideHotkeys}
           >
             <div class="pt-2 pb-4 px-4 overflow-x-auto">
               <table class="w-full text-sm border-separate border-spacing-y-1">
@@ -371,6 +410,30 @@ export class HelpModal extends BaseModal {
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.action_emote")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 ps-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.quickChat)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_quick_chat")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 ps-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.emojiMenu)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_emote")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 ps-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.playerPanel)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_player_panel")}
                     </td>
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">

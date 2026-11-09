@@ -1,10 +1,12 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "BritanniaClassic",
   "name": "Britannia Classic",
   "display_name": "Britannia (Classic)",
   "translation_key": "map.britanniaclassic",
   "categories": ["europe"],
-  "multiplayer_frequency": 0,
+  "location": { "lat": 56.5, "lon": -4 },
+  "author": "Tiger McSwane",
   "nations": [
     {
       "coordinates": [960, 1258],

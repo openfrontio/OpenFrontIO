@@ -1,11 +1,11 @@
 import {
   ColoredTeams,
   Duos,
-  Game,
   GameMode,
   PlayerInfo,
   PlayerType,
-} from "../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { Game } from "@openfront/engine/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;

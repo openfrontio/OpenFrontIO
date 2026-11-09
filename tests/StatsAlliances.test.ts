@@ -1,7 +1,5 @@
-import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
-import { Game, PlayerInfo, PlayerType } from "../src/core/game/Game";
-import { StatsImpl } from "../src/core/game/StatsImpl";
-import { AllPlayersStats } from "../src/core/Schemas";
+import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { AllPlayersStats } from "@openfront/engine-api/Schemas";
 import {
   ALLIANCE_INDEX_BROKEN_BY_OTHER,
   ALLIANCE_INDEX_EXPIRED,
@@ -9,7 +7,10 @@ import {
   ALLIANCE_INDEX_HELD_TO_END,
   ALLIANCE_INDEX_LONGEST_HELD,
   PlayerStats,
-} from "../src/core/StatsSchemas";
+} from "@openfront/engine-api/StatsSchemas";
+import { AllianceRequestExecution } from "@openfront/engine/execution/alliance/AllianceRequestExecution";
+import { Game } from "@openfront/engine/game/Game";
+import { StatsImpl } from "@openfront/engine/game/StatsImpl";
 import { setup } from "./util/Setup";
 
 describe("alliance stats", () => {

@@ -1,41 +1,57 @@
-import { html, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { assetUrl } from "../core/AssetUrls";
-import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-  maps,
+  listedMaps,
   UnitType,
-} from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
-import { PlayerCosmetics, TeamCountConfig } from "../core/Schemas";
-import { generateID } from "../core/Util";
+} from "@openfront/engine-api/game/GameTypes";
+import type { SnapshotHeader } from "@openfront/engine-api/game/SnapshotHeader";
+import { TeamCountConfig } from "@openfront/engine-api/Schemas";
+import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { generateID } from "@openfront/shared/SharedUtil";
+import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
+import { html, TemplateResult } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { showToast, translateText } from "../client/Utils";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/GameConfigSettings";
+import "./components/LobbyPresetControls";
 import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
+import {
+  type LoadSavedGameDetail,
+  savedGameIdFrom,
+} from "./components/SavedGamesPanel";
 import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { gamePortal } from "./GamePortal";
 import { GameStartingModal } from "./GameStartingModal";
 import { showInGameAlert } from "./InGameModal";
+import {
+  deleteLobbyPreset,
+  LobbyPreset,
+  LobbyPresetConfig,
+  saveLobbyPreset,
+} from "./LobbyPresets";
 import { JoinLobbyEvent } from "./Main";
 import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
+import { downloadSavedGame } from "./SavedGamesApi";
+import { lastUserMeResponse } from "./UserMeBroadcast";
 import { UsernameInput } from "./UsernameInput";
+import { UserSettings } from "./UserSettings";
 import {
   getBotsForCompactMap,
   getNationsForCompactMap,
   getRandomMapType,
   getUpdatedDisabledUnits,
+  nationsConfigToSlider,
   parseBoundedFloatFromInput,
   parseBoundedIntegerFromInput,
   preventDisallowedKeys,
@@ -62,11 +78,11 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 export const START_PREPARE_DEADLINE_MS = 15_000;
 
 /**
- * Ceiling on the CrazyGames midgame ad, deliberately far above
+ * Ceiling on the portal midgame ad, deliberately far above
  * START_PREPARE_DEADLINE_MS: an ad creative routinely runs 15-30s and it has
  * to gate the start, because dispatching behind one puts gameplay — spawn
  * selection included — under a still-visible overlay. This exists only for an
- * SDK that never calls adFinished or adError at all. Off CrazyGames,
+ * SDK that never calls adFinished or adError at all. Off a portal,
  * requestMidgameAd() resolves immediately and none of this is reached.
  */
 export const MIDGAME_AD_DEADLINE_MS = 60_000;
@@ -87,11 +103,27 @@ function withDeadline<T>(
   return Promise.race([work, deadline]).finally(() => clearTimeout(timer));
 }
 
+/** A saved game that can't be started, with the message that says why. */
+class SavedGameLoadError extends Error {
+  constructor(readonly messageKey: string) {
+    super(messageKey);
+  }
+}
+
 /** What a start has to wait for before it can dispatch join-lobby. */
 type StartPreparation = {
   resolvedName: ResolvedPlayerName;
   cosmetics: PlayerCosmetics;
 };
+
+const TUTORIAL_DISABLED_UNITS: UnitType[] = [
+  UnitType.City,
+  UnitType.DefensePost,
+  UnitType.Factory,
+  UnitType.SAMLauncher,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+];
 
 const DEFAULT_OPTIONS = {
   selectedMap: GameMapType.World,
@@ -138,7 +170,7 @@ async function loadAchievementEligibleMaps(): Promise<Set<GameMapType> | null> {
     const eligible = new Set<GameMapType>();
     let hadFailure = false;
     await Promise.all(
-      maps.map(async (m) => {
+      listedMaps.map(async (m) => {
         try {
           const manifest = await terrainMapFileLoader
             .getMapData(m.type)
@@ -214,6 +246,8 @@ export class SinglePlayerModal extends BaseModal {
   // nothing visible until every await in startGame() settles, which reads as
   // a hang rather than as loading whenever the network is slow or absent.
   @state() private starting: boolean = false;
+  // A shared save opened from a `#modal=single-player&save=<id>` link.
+  @state() private sharedSaveId: string | null = null;
   // Identifies the current start attempt. Bumped on every start and on every
   // close, so an attempt that outlives its modal can tell it has been retired.
   private startAttempt: number = 0;
@@ -222,13 +256,25 @@ export class SinglePlayerModal extends BaseModal {
   private overlayAttempt: number = 0;
 
   private mapLoader = terrainMapFileLoader;
+  private userSettings = new UserSettings();
+
+  @state() private lobbyPresets: LobbyPreset[] = [];
+  @state() private selectedPresetName: string = "";
 
   connectedCallback() {
     super.connectedCallback();
+    this.lobbyPresets = this.userSettings.getLobbyPresets();
     document.addEventListener(
       "userMeResponse",
       this.handleUserMeResponse as EventListener,
     );
+    // It loads on demand (see LazyModals), usually after Main's broadcast
+    // went out.
+    const last = lastUserMeResponse();
+    if (last !== null) {
+      this.userMeResponse = last.response;
+      this.applyAchievements(last.response);
+    }
     void this.loadNationCount();
   }
 
@@ -279,7 +325,7 @@ export class SinglePlayerModal extends BaseModal {
   };
 
   private renderNotLoggedInBanner(): TemplateResult {
-    if (crazyGamesSDK.isOnCrazyGames()) {
+    if (gamePortal.isOnGamePortal()) {
       return html``;
     }
     return html`<button
@@ -322,30 +368,46 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   protected renderHeaderSlot() {
+    const signedIn = responseHasLinkedIdentity(this.userMeResponse);
     return modalHeader({
       title: translateText("main.solo") || "Solo",
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
-      rightContent: responseHasLinkedIdentity(this.userMeResponse)
-        ? html`<button
-              @click=${this.toggleAchievements}
-              class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${this
-                .showAchievements
-                ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
-                : "text-white/60"}"
-            >
-              <img
-                src=${assetUrl("images/MedalIconWhite.svg")}
-                class="w-4 h-4 opacity-80 shrink-0"
-                style="${this.showAchievements ? "" : "filter: grayscale(1);"}"
-              />
-              <span
-                class="text-xs font-bold uppercase tracking-wider whitespace-nowrap"
-                >${translateText("single_modal.toggle_achievements")}</span
-              >
-            </button>
-            ${this.showAchievements ? this.renderMedalOverview() : null}`
-        : this.renderNotLoggedInBanner(),
+      rightContent: html`<div class="flex flex-wrap items-center gap-2">
+          <lobby-preset-controls
+            .presets=${this.lobbyPresets}
+            .selectedName=${this.selectedPresetName}
+            @preset-select=${this.handlePresetSelect}
+            @preset-load=${this.handlePresetLoad}
+            @preset-save=${this.handlePresetSave}
+            @preset-delete=${this.handlePresetDelete}
+          ></lobby-preset-controls>
+          ${
+            signedIn
+              ? html`<button
+                  @click=${this.toggleAchievements}
+                  class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${
+                    this.showAchievements
+                      ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
+                      : "text-white/60"
+                  }"
+                >
+                  <img
+                    src=${assetUrl("images/MedalIconWhite.svg")}
+                    class="w-4 h-4 opacity-80 shrink-0"
+                    style="${
+                      this.showAchievements ? "" : "filter: grayscale(1);"
+                    }"
+                  />
+                  <span
+                    class="text-xs font-bold uppercase tracking-wider whitespace-nowrap"
+                    >${translateText("single_modal.toggle_achievements")}</span
+                  >
+                </button>`
+              : this.renderNotLoggedInBanner()
+          }
+        </div>
+        ${signedIn && this.showAchievements ? this.renderMedalOverview() : null}`,
     });
   }
 
@@ -483,6 +545,15 @@ export class SinglePlayerModal extends BaseModal {
         <div
           class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-6 pt-4 pb-6 mr-1 mx-auto w-full max-w-5xl"
         >
+          <saved-games-panel
+            class="block mb-6"
+            .signedIn=${responseHasLinkedIdentity(this.userMeResponse)}
+            .sharedId=${this.sharedSaveId}
+            .busy=${this.starting}
+            @load-saved-game=${this.handleLoadSavedGame}
+            @open-shared-save=${(e: CustomEvent<string>) =>
+              (this.sharedSaveId = e.detail)}
+          ></saved-games-panel>
           <game-config-settings
             class="block"
             .sectionGapClass=${"space-y-6"}
@@ -557,8 +628,9 @@ export class SinglePlayerModal extends BaseModal {
             @map-selected=${this.handleConfigMapSelected}
             @random-map-selected=${this.handleConfigRandomMapSelected}
             @difficulty-selected=${this.handleConfigDifficultySelected}
-            @doomsday-clock-speed-selected=${this
-              .handleConfigDoomsdayClockSpeedSelected}
+            @doomsday-clock-speed-selected=${
+              this.handleConfigDoomsdayClockSpeedSelected
+            }
             @game-mode-selected=${this.handleConfigGameModeSelected}
             @team-count-selected=${this.handleConfigTeamCountSelected}
             @bots-changed=${this.handleBotsChange}
@@ -569,22 +641,26 @@ export class SinglePlayerModal extends BaseModal {
         </div>
 
         <!-- Footer Action -->
-        <div class="p-6 border-t border-white/10 bg-black/20 shrink-0">
-          ${responseHasLinkedIdentity(this.userMeResponse) &&
-          this.hasOptionsChanged()
-            ? html`<div
-                class="mb-4 px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider text-center"
-              >
-                ${translateText("single_modal.options_changed_no_achievements")}
-              </div>`
-            : null}
+        <div
+          class="p-6 compact:py-3 border-t border-white/10 bg-black/20 shrink-0"
+        >
+          ${
+            responseHasLinkedIdentity(this.userMeResponse) &&
+            this.hasOptionsChanged()
+              ? html`<div
+                  class="mb-4 px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider text-center"
+                >
+                  ${translateText("single_modal.options_changed_no_achievements")}
+                </div>`
+              : null
+          }
           <o-button
             variant="primary"
             width="block"
             size="lg"
-            translationKey=${this.starting
-              ? "game_settings.starting"
-              : "game_settings.start"}
+            translationKey=${
+              this.starting ? "game_settings.starting" : "game_settings.start"
+            }
             .disable=${this.starting}
             @click=${this.startGame}
           ></o-button>
@@ -638,15 +714,69 @@ export class SinglePlayerModal extends BaseModal {
         startingModal.hide();
       }
     }
+    this.sharedSaveId = null;
     this.resetOptions();
   }
 
   /**
-   * Starts a solo game on the default settings without opening the modal,
-   * with the in-game tutorial switched back on (the play page's Tutorial
-   * card for new players).
+   * Starts the onboarding tutorial (docs/OnboardingTutorial.md) without
+   * opening the modal: the Tutorial map, with OnboardingOverlay guiding the
+   * player through spawning, attacking and boats.
    */
   public async startTutorial(): Promise<void> {
+    // The modal never opens on this path, so onOpen's prewarm never runs.
+    void prewarmCosmetics();
+    if (this.starting) return;
+    await this.launch(async ({ resolvedName, cosmetics }, usernameInput) => {
+      const gameID = generateID();
+      return {
+        gameID,
+        gameStartInfo: {
+          gameID,
+          players: [
+            {
+              clientID: generateID(),
+              username: resolvedName.name,
+              clanTag: usernameInput?.getClanTag() ?? null,
+              cosmetics,
+            },
+          ],
+          config: {
+            gameMap: GameMapType.Tutorial,
+            gameMapSize: GameMapSize.Normal,
+            gameType: GameType.Singleplayer,
+            gameMode: GameMode.FFA,
+            difficulty: Difficulty.Easy,
+            // Just the map's two positioned nations.
+            bots: 0,
+            nations: "default",
+            infiniteGold: false,
+            donateGold: false,
+            donateTroops: false,
+            infiniteTroops: false,
+            instantBuild: false,
+            randomSpawn: false,
+            disableAlliances: true,
+            // The only things built are the nation's silo, port and warship,
+            // and the atom bomb the player fires from the silo once captured;
+            // the gold is that one bomb's.
+            disabledUnits: TUTORIAL_DISABLED_UNITS,
+            startingGold: 750_000,
+            tutorial: true,
+          },
+          lobbyCreatedAt: Date.now(),
+        },
+        source: "singleplayer",
+      };
+    });
+  }
+
+  /**
+   * Starts a solo game on the default settings without opening the modal,
+   * with the in-game guide switched back on (where the onboarding
+   * tutorial's "Play a solo game" leads).
+   */
+  public async startSoloWithGuide(): Promise<void> {
     // The modal never opens on this path, so onOpen's prewarm never runs.
     // Overlap it with the manifest load below.
     void prewarmCosmetics();
@@ -663,6 +793,7 @@ export class SinglePlayerModal extends BaseModal {
     // the modal must always give the player a live Start button back, whatever
     // left the previous attempt in flight.
     this.starting = false;
+    this.selectedPresetName = "";
     this.selectedMap = DEFAULT_OPTIONS.selectedMap;
     this.selectedDifficulty = DEFAULT_OPTIONS.selectedDifficulty;
     this.gameMode = DEFAULT_OPTIONS.gameMode;
@@ -692,7 +823,12 @@ export class SinglePlayerModal extends BaseModal {
     this.overtimeStartMinutes = DEFAULT_OPTIONS.overtimeStartMinutes;
   }
 
-  protected onOpen(): void {
+  protected onOpen(args?: Record<string, unknown>): void {
+    this.lobbyPresets = this.userSettings.getLobbyPresets();
+    const save = args?.save;
+    this.sharedSaveId = typeof save === "string" ? savedGameIdFrom(save) : null;
+    // Saves made since the list last loaded (a game played in between).
+    void this.querySelector("saved-games-panel")?.refresh();
     void this.loadNationCount();
     // Spend the cosmetics round trip while the player is picking a map, not
     // after they commit. startGame() still resolves cosmetics properly; this
@@ -702,6 +838,118 @@ export class SinglePlayerModal extends BaseModal {
     // attempt. Remembering an unreachable backend is OPE-403.
     void prewarmCosmetics();
   }
+
+  private exportPresetConfig(): LobbyPresetConfig {
+    return {
+      gameMap: this.selectedMap,
+      useRandomMap: this.useRandomMap,
+      compactMap: this.compactMap,
+      difficulty: this.selectedDifficulty,
+      gameMode: this.gameMode,
+      teamCount: this.teamCount,
+      bots: this.bots,
+      nations: sliderToNationsConfig(this.nations, this.defaultNationCount),
+      infiniteGold: this.infiniteGold,
+      infiniteTroops: this.infiniteTroops,
+      instantBuild: this.instantBuild,
+      randomSpawn: this.randomSpawn,
+      maxTimer: this.maxTimer,
+      maxTimerValue: this.maxTimerValue,
+      disabledUnits: [...this.disabledUnits],
+      goldMultiplier: this.goldMultiplier,
+      goldMultiplierValue: this.goldMultiplierValue,
+      startingGold: this.startingGold,
+      startingGoldValue: this.startingGoldValue,
+      customAlliances: this.customAlliances,
+      customAllianceMinutes: this.customAllianceMinutes,
+      waterNukes: this.waterNukes,
+      doomsdayClock: this.doomsdayClock,
+      doomsdayClockSpeed: this.doomsdayClockSpeed,
+      overtime: this.overtime,
+      overtimeStartMinutes: this.overtimeStartMinutes,
+    };
+  }
+
+  private async importPresetConfig(config: LobbyPresetConfig) {
+    this.useRandomMap = config.useRandomMap ?? false;
+    this.selectedMap = this.useRandomMap ? getRandomMapType() : config.gameMap;
+    this.compactMap = config.compactMap ?? false;
+    this.selectedDifficulty = config.difficulty;
+    this.gameMode = config.gameMode;
+    this.teamCount = config.teamCount;
+    this.bots = config.bots;
+    this.infiniteGold = config.infiniteGold ?? false;
+    this.infiniteTroops = config.infiniteTroops ?? false;
+    this.instantBuild = config.instantBuild ?? false;
+    this.randomSpawn = config.randomSpawn ?? false;
+    this.maxTimer = config.maxTimer ?? false;
+    this.maxTimerValue = config.maxTimerValue;
+    this.disabledUnits = config.disabledUnits ? [...config.disabledUnits] : [];
+    this.goldMultiplier = config.goldMultiplier ?? false;
+    this.goldMultiplierValue = config.goldMultiplierValue;
+    this.startingGold = config.startingGold ?? false;
+    this.startingGoldValue = config.startingGoldValue;
+    this.customAlliances = config.customAlliances ?? false;
+    this.customAllianceMinutes = config.customAllianceMinutes;
+    this.waterNukes = config.waterNukes ?? false;
+    this.doomsdayClock = config.doomsdayClock ?? false;
+    this.doomsdayClockSpeed = config.doomsdayClockSpeed ?? "normal";
+    this.overtime = config.overtime ?? false;
+    this.overtimeStartMinutes = config.overtimeStartMinutes;
+
+    await this.loadNationCount();
+    if (config.nations !== undefined) {
+      this.nations = nationsConfigToSlider(
+        config.nations,
+        this.defaultNationCount,
+      );
+    }
+  }
+
+  private handlePresetSelect = (e: CustomEvent<string>) => {
+    this.selectedPresetName = e.detail;
+  };
+
+  private handlePresetLoad = async (e: CustomEvent<string>) => {
+    const name = e.detail;
+    const preset = this.lobbyPresets.find(
+      (p) => p.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (!preset) return;
+    await this.importPresetConfig(preset.config);
+    this.selectedPresetName = preset.name;
+    showToast(translateText("lobby_config.preset.loaded"), "green");
+  };
+
+  private handlePresetSave = (e: CustomEvent<string>) => {
+    const name = e.detail;
+    const config = this.exportPresetConfig();
+    const updated = saveLobbyPreset(name, config, this.userSettings);
+    if (!updated) {
+      showToast(translateText("lobby_config.preset.save_failed"), "red");
+      return;
+    }
+    this.lobbyPresets = updated;
+    const saved = updated.find(
+      (p) => p.name.toLowerCase() === name.trim().toLowerCase(),
+    );
+    this.selectedPresetName = saved ? saved.name : name.trim();
+    showToast(translateText("lobby_config.preset.saved"), "green");
+  };
+
+  private handlePresetDelete = (e: CustomEvent<string>) => {
+    const name = e.detail;
+    const updated = deleteLobbyPreset(name, this.userSettings);
+    if (!updated) {
+      showToast(translateText("lobby_config.preset.delete_failed"), "red");
+      return;
+    }
+    this.lobbyPresets = updated;
+    if (this.selectedPresetName.toLowerCase() === name.toLowerCase()) {
+      this.selectedPresetName = "";
+    }
+    showToast(translateText("lobby_config.preset.deleted"), "green");
+  };
 
   private handleSelectRandomMap() {
     this.useRandomMap = true;
@@ -967,6 +1215,7 @@ export class SinglePlayerModal extends BaseModal {
    * resolution here is a cost with nothing to show for it, so
    * START_PREPARE_DEADLINE_MS cuts it short rather than pinning Start at
    * "Starting…" for the rest of the session, which would take startTutorial()
+   * or startSoloWithGuide()
    * down with it on the re-entrancy guard.
    *
    * The midgame ad is deliberately not part of this — see awaitMidgameAd.
@@ -1010,7 +1259,7 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   /**
-   * The CrazyGames midgame ad, on a bound of its own.
+   * The portal midgame ad, on a bound of its own.
    *
    * Separate from resolveNameAndCosmetics because an ad is not the same kind
    * of wait. It is the player watching something, legitimately for longer than
@@ -1022,12 +1271,12 @@ export class SinglePlayerModal extends BaseModal {
    * adFinished/adError callbacks).
    *
    * Only ever called for a start that is still live — an ad shown for a game
-   * that will not start is worse than no ad. Off CrazyGames this resolves
+   * that will not start is worse than no ad. Off a portal this resolves
    * immediately.
    */
   private awaitMidgameAd(): Promise<void> {
     return withDeadline(
-      crazyGamesSDK.requestMidgameAd(),
+      gamePortal.requestMidgameAd(),
       MIDGAME_AD_DEADLINE_MS,
       () => {
         console.warn("Midgame ad never signalled completion; starting anyway");
@@ -1060,6 +1309,175 @@ export class SinglePlayerModal extends BaseModal {
       finalMaxTimerValue = Math.max(1, Math.min(120, this.maxTimerValue));
     }
 
+    await this.launch(async ({ resolvedName, cosmetics }, usernameInput) => {
+      console.log(
+        `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      );
+      const clientID = generateID();
+      const gameID = generateID();
+      return {
+        gameID: gameID,
+        gameStartInfo: {
+          gameID: gameID,
+          players: [
+            {
+              clientID,
+              username: resolvedName.name,
+              clanTag: usernameInput?.getClanTag() ?? null,
+              cosmetics,
+            },
+          ],
+          config: {
+            gameMap: this.selectedMap,
+            gameMapSize: this.compactMap
+              ? GameMapSize.Compact
+              : GameMapSize.Normal,
+            gameType: GameType.Singleplayer,
+            gameMode: this.gameMode,
+            playerTeams: this.teamCount,
+            difficulty: this.selectedDifficulty,
+            maxTimerValue: finalMaxTimerValue,
+            bots: this.bots,
+            infiniteGold: this.infiniteGold,
+            donateGold: this.gameMode === GameMode.Team,
+            donateTroops: this.gameMode === GameMode.Team,
+            infiniteTroops: this.infiniteTroops,
+            instantBuild: this.instantBuild,
+            randomSpawn: this.randomSpawn,
+            disabledUnits: this.disabledUnits.filter((unit): unit is UnitType =>
+              Object.values(UnitType).includes(unit),
+            ),
+            nations: sliderToNationsConfig(
+              this.nations,
+              this.defaultNationCount,
+            ),
+            ...(this.goldMultiplier && this.goldMultiplierValue
+              ? { goldMultiplier: this.goldMultiplierValue }
+              : {}),
+            ...(this.startingGold && this.startingGoldValue !== undefined
+              ? {
+                  startingGold: Math.round(this.startingGoldValue * 1_000_000),
+                }
+              : {}),
+            ...(this.customAlliances
+              ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
+              : {}),
+            ...(this.waterNukes ? { waterNukes: true } : {}),
+            ...(this.doomsdayClock
+              ? {
+                  doomsdayClock: {
+                    enabled: true,
+                    speed: this.doomsdayClockSpeed,
+                  },
+                }
+              : {}),
+            ...(this.overtime
+              ? {
+                  overtime: {
+                    enabled: true,
+                    startMinutes: this.overtimeStartMinutes ?? 30,
+                  },
+                }
+              : {}),
+          },
+          lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
+        },
+        source: "singleplayer",
+      };
+    });
+  }
+
+  private handleLoadSavedGame = (e: Event) => {
+    const { id, shared } = (e as CustomEvent<LoadSavedGameDetail>).detail;
+    void this.startSavedGame(id, shared);
+  };
+
+  /**
+   * Resumes a saved game, the player's own or a shared one, where it was
+   * saved. The game itself comes from the snapshot; the start only supplies
+   * who is playing it.
+   */
+  private async startSavedGame(id: string, shared: boolean) {
+    if (this.starting) return;
+    try {
+      await this.launch(async ({ resolvedName, cosmetics }, usernameInput) => {
+        const snapshot = await downloadSavedGame(id, shared);
+        if (typeof snapshot === "string") {
+          throw new SavedGameLoadError(
+            snapshot === "not_found"
+              ? "saved_games.error.not_found"
+              : "saved_games.error.download_failed",
+          );
+        }
+        // The engine reads it, on a worker of its own (this page can't load
+        // the engine).
+        const { readSnapshotHeader } = await import("./WorkerClient");
+        let header: SnapshotHeader;
+        try {
+          header = await readSnapshotHeader(snapshot);
+        } catch (err) {
+          console.warn("Saved game is not a snapshot this build reads", err);
+          throw new SavedGameLoadError("saved_games.error.unreadable");
+        }
+        const human = header.humans[0];
+        if (
+          header.gameConfig.gameType !== GameType.Singleplayer ||
+          header.humans.length !== 1
+        ) {
+          throw new SavedGameLoadError("saved_games.error.not_singleplayer");
+        }
+        console.log(
+          `Resuming saved game ${id} on ${header.gameConfig.gameMap} at tick ${header.tick}`,
+        );
+        // A fresh id: a shared save is played by many, each its own game.
+        const gameID = generateID();
+        return {
+          gameID,
+          gameStartInfo: {
+            gameID,
+            players: [
+              {
+                // The saved game's own player: the engine finds a player by
+                // the clientID its intents carry.
+                clientID: human.clientID,
+                username: resolvedName.name,
+                clanTag: usernameInput?.getClanTag() ?? null,
+                cosmetics,
+              },
+            ],
+            config: header.gameConfig,
+            lobbyCreatedAt: Date.now(),
+          },
+          snapshot,
+          source: "singleplayer",
+        };
+      });
+    } catch (err) {
+      if (!(err instanceof SavedGameLoadError)) {
+        console.error("Failed to start the saved game", err);
+      }
+      await showInGameAlert(
+        translateText(
+          err instanceof SavedGameLoadError
+            ? err.messageKey
+            : "saved_games.error.load_failed",
+        ),
+      );
+    }
+  }
+
+  /**
+   * What every solo start shares: the busy button, the starting overlay, the
+   * player's name and cosmetics, the midgame ad and the join-lobby dispatch.
+   * `build` makes the event once the name and cosmetics are known, before
+   * the ad; throwing from it abandons the start (and reaches the caller).
+   */
+  private async launch(
+    build: (
+      prepared: StartPreparation,
+      usernameInput: UsernameInput | null,
+    ) => Promise<JoinLobbyEvent>,
+  ): Promise<void> {
     // Everything past this point awaits something, some of it network-bound.
     // Hold the button in its busy state until join-lobby is away so the wait
     // reads as loading rather than as a dead click.
@@ -1076,12 +1494,6 @@ export class SinglePlayerModal extends BaseModal {
     this.overlayAttempt = attempt;
     overlay?.show();
     try {
-      console.log(
-        `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
-      );
-      const clientID = generateID();
-      const gameID = generateID();
-
       const usernameInput = document.querySelector(
         "username-input",
       ) as UsernameInput | null;
@@ -1089,8 +1501,7 @@ export class SinglePlayerModal extends BaseModal {
       // Resolved before the dispatch rather than inside it, so every wait is
       // attributable to the busy button above, and bounded so none of them
       // can outlive it.
-      const { resolvedName, cosmetics } =
-        await this.resolveNameAndCosmetics(usernameInput);
+      const prepared = await this.resolveNameAndCosmetics(usernameInput);
 
       // Retired while this was resolving — the modal was closed, and possibly
       // reopened and started again. The live attempt owns the start; this one
@@ -1111,6 +1522,11 @@ export class SinglePlayerModal extends BaseModal {
       // start.
       if (attempt !== this.startAttempt) return;
 
+      const detail = await build(prepared, usernameInput);
+
+      // Building can wait on the network (a saved game's download).
+      if (attempt !== this.startAttempt) return;
+
       await this.awaitMidgameAd();
 
       // The ad is long enough that the modal can be closed while it runs.
@@ -1118,78 +1534,7 @@ export class SinglePlayerModal extends BaseModal {
 
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
-          detail: {
-            gameID: gameID,
-            gameStartInfo: {
-              gameID: gameID,
-              players: [
-                {
-                  clientID,
-                  username: resolvedName.name,
-                  clanTag: usernameInput?.getClanTag() ?? null,
-                  cosmetics,
-                },
-              ],
-              config: {
-                gameMap: this.selectedMap,
-                gameMapSize: this.compactMap
-                  ? GameMapSize.Compact
-                  : GameMapSize.Normal,
-                gameType: GameType.Singleplayer,
-                gameMode: this.gameMode,
-                playerTeams: this.teamCount,
-                difficulty: this.selectedDifficulty,
-                maxTimerValue: finalMaxTimerValue,
-                bots: this.bots,
-                infiniteGold: this.infiniteGold,
-                donateGold: this.gameMode === GameMode.Team,
-                donateTroops: this.gameMode === GameMode.Team,
-                infiniteTroops: this.infiniteTroops,
-                instantBuild: this.instantBuild,
-                randomSpawn: this.randomSpawn,
-                disabledUnits: this.disabledUnits.filter(
-                  (unit): unit is UnitType =>
-                    Object.values(UnitType).includes(unit),
-                ),
-                nations: sliderToNationsConfig(
-                  this.nations,
-                  this.defaultNationCount,
-                ),
-                ...(this.goldMultiplier && this.goldMultiplierValue
-                  ? { goldMultiplier: this.goldMultiplierValue }
-                  : {}),
-                ...(this.startingGold && this.startingGoldValue !== undefined
-                  ? {
-                      startingGold: Math.round(
-                        this.startingGoldValue * 1_000_000,
-                      ),
-                    }
-                  : {}),
-                ...(this.customAlliances
-                  ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
-                  : {}),
-                ...(this.waterNukes ? { waterNukes: true } : {}),
-                ...(this.doomsdayClock
-                  ? {
-                      doomsdayClock: {
-                        enabled: true,
-                        speed: this.doomsdayClockSpeed,
-                      },
-                    }
-                  : {}),
-                ...(this.overtime
-                  ? {
-                      overtime: {
-                        enabled: true,
-                        startMinutes: this.overtimeStartMinutes ?? 30,
-                      },
-                    }
-                  : {}),
-              },
-              lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
-            },
-            source: "singleplayer",
-          } satisfies JoinLobbyEvent,
+          detail,
           bubbles: true,
           composed: true,
         }),

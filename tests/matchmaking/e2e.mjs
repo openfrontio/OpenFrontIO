@@ -182,8 +182,7 @@ try {
     throw err;
   }
 
-  // The game must carry the mode's config and admit exactly the matched
-  // players (allowedPublicIds).
+  // The game must carry the mode's config.
   const info = await fetchGameInfo(gameId);
   if (MODE === "2v2") {
     c.check(
@@ -200,10 +199,6 @@ try {
         info?.gameConfig?.maxPlayers === 2,
     );
   }
-  c.check(
-    `assignment allowlist has ${PLAYER_COUNT} publicIds`,
-    info?.gameConfig?.allowedPublicIds?.length === PLAYER_COUNT,
-  );
 
   try {
     await waitFor(

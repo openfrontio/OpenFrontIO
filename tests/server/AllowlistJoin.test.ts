@@ -1,5 +1,5 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameType } from "../../src/core/game/Game";
 import {
   cid,
   makeClient as harnessClient,
@@ -139,5 +139,22 @@ describe("GameServer - allowlist (allowedPublicIds)", () => {
     expect(config?.nameRevealPublicIds).toBeUndefined();
     // The server still enforces the allowlist from its own config.
     expect(game.gameConfig.allowedPublicIds).toEqual(["pub-ok"]);
+  });
+
+  it("keeps publicId lists out of gameInfo (HTTP route + lobby_info broadcast)", () => {
+    const game = harnessGame({
+      config: {
+        gameType: GameType.Private,
+        allowedPublicIds: ["pub-ok"],
+        nameRevealPublicIds: ["pub-reveal"],
+      },
+    });
+    const info = game.gameInfo();
+    expect(info.gameConfig).toBeDefined();
+    expect(info.gameConfig?.allowedPublicIds).toBeUndefined();
+    expect(info.gameConfig?.nameRevealPublicIds).toBeUndefined();
+    // The server still enforces the allowlist from its own config.
+    expect(game.gameConfig.allowedPublicIds).toEqual(["pub-ok"]);
+    expect(game.gameConfig.nameRevealPublicIds).toEqual(["pub-reveal"]);
   });
 });

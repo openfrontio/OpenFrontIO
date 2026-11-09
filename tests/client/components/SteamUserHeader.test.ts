@@ -1,6 +1,6 @@
+import type { SteamUser } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SteamUserHeader } from "../../../src/client/components/baseComponents/stats/SteamUserHeader";
-import type { SteamUser } from "../../../src/core/ApiSchemas";
 
 // Mock translateText as identity so fallback-key assertions are exact.
 vi.mock("../../../src/client/Utils", () => ({

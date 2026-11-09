@@ -49,11 +49,14 @@ describe("WorkerLobbyService.connectedClients", () => {
     connectClient("/w0/lobbies?platform=web");
     connectClient("/w0/lobbies?platform=web");
     connectClient("/w0/lobbies?platform=toaster");
+    connectClient("/w0/lobbies?platform=viverse");
     connectClient("/w0/lobbies");
     expect(Object.fromEntries(service.connectedClientsByPlatform())).toEqual({
       web: 2,
       steam: 1,
       crazygames: 0,
+      poki: 0,
+      viverse: 1,
       unknown: 2,
     });
   });

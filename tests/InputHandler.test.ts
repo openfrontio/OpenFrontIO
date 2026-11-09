@@ -1,23 +1,48 @@
+// @vitest-environment jsdom
+import {
+  UnitType,
+  MAX_UPGRADE_AMOUNT,
+} from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/shared/EventBus";
 import {
   AlternateViewEvent,
+  AttackRatioEvent,
   AutoUpgradeEvent,
   CloseViewEvent,
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
+  DoBoatAttackEvent,
+  DoDonateGoldEvent,
+  DoDonateTroopsEvent,
+  DoTargetPlayerEvent,
   DragEvent,
+  EmojiKeyEvent,
+  EmojiTableVisibleEvent,
   InputHandler,
+  MouseDownEvent,
+  MouseMoveEvent,
   MouseOverEvent,
+  MouseUpEvent,
+  RefreshGraphicsEvent,
+  ShowChatMenuEvent,
+  ShowEmojiMenuEvent,
+  ShowPlayerPanelEvent,
+  TouchGhostPlacementDragStartEvent,
+  TouchGhostPlacementEvent,
+  TouchGhostPlacementMoveEvent,
   TouchLongPressStartEvent,
+  TouchEvent,
+  ToggleStructureEvent,
   UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
   WarshipSelectionBoxCompleteEvent,
   WarshipSelectionBoxUpdateEvent,
+  ZoomEvent,
 } from "../src/client/InputHandler";
+import { Platform } from "../src/client/Platform";
 import { UIState } from "../src/client/UIState";
+import { KEYBINDS_KEY, UserSettings } from "../src/client/UserSettings";
 import { GameView, PlayerView, UnitView } from "../src/client/view";
-import { EventBus } from "../src/core/EventBus";
-import { UnitType } from "../src/core/game/Game";
-import { KEYBINDS_KEY, UserSettings } from "../src/core/game/UserSettings";
 
 class MockPointerEvent {
   button: number;
@@ -28,6 +53,8 @@ class MockPointerEvent {
   pointerId: number;
   type: string;
   pointerType: string;
+  ctrlKey: boolean;
+  shiftKey: boolean;
   preventDefault: () => void;
 
   constructor(type: string, init: any) {
@@ -39,11 +66,33 @@ class MockPointerEvent {
     this.y = init.y ?? init.clientY;
     this.pointerId = init.pointerId;
     this.pointerType = init.pointerType ?? "mouse";
+    this.ctrlKey = init.ctrlKey ?? false;
+    this.shiftKey = init.shiftKey ?? false;
     this.preventDefault = vi.fn();
   }
 }
 
 global.PointerEvent = MockPointerEvent as any;
+
+function dispatchDomPointer(
+  target: EventTarget,
+  type: "pointerdown" | "pointermove" | "pointerup" | "pointercancel",
+  x: number,
+  y: number,
+  pointerId = 1,
+): void {
+  const event = new Event(type, { bubbles: true, composed: true });
+  Object.assign(event, {
+    button: 0,
+    clientX: x,
+    clientY: y,
+    x,
+    y,
+    pointerId,
+    pointerType: "mouse",
+  });
+  target.dispatchEvent(event);
+}
 
 describe("InputHandler AutoUpgrade", () => {
   let inputHandler: InputHandler;
@@ -59,7 +108,8 @@ describe("InputHandler AutoUpgrade", () => {
     mockGameView = {
       inSpawnPhase: () => false,
       myPlayer: () => ({ isAlive: () => true }),
-    } as GameView;
+      config: () => ({ gameConfig: () => ({}) }),
+    } as unknown as GameView;
     mockCanvas = document.createElement("canvas");
     mockCanvas.width = 800;
     mockCanvas.height = 600;
@@ -308,6 +358,165 @@ describe("InputHandler AutoUpgrade", () => {
     });
   });
 
+  describe("Ctrl+left click (#4918)", () => {
+    let isMacDescriptor: PropertyDescriptor | undefined;
+
+    function setIsMac(value: boolean) {
+      Object.defineProperty(Platform, "isMac", {
+        configurable: true,
+        value,
+      });
+    }
+
+    function fireLeftPointerUp(ctrlKey: boolean) {
+      const shared = {
+        button: 0 as const,
+        pointerId: 1,
+        ctrlKey,
+      };
+      // Matching pointerdown required: onPointerUp returns early unless
+      // pointerDown is set and pointers has this pointerId.
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          ...shared,
+          clientX: 149,
+          clientY: 249,
+        }),
+      );
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          ...shared,
+          clientX: 150,
+          clientY: 250,
+        }),
+      );
+    }
+
+    beforeEach(() => {
+      isMacDescriptor = Object.getOwnPropertyDescriptor(Platform, "isMac");
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+    });
+
+    afterEach(() => {
+      if (isMacDescriptor) {
+        Object.defineProperty(Platform, "isMac", isMacDescriptor);
+      }
+    });
+
+    test("on Mac, should not emit MouseUpEvent on ctrl+left release (secondary-click)", () => {
+      setIsMac(true);
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      fireLeftPointerUp(true);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).not.toContain("MouseUpEvent");
+      expect(emittedTypes).not.toContain("ContextMenuEvent");
+      expect(emittedTypes).not.toContain("ShowBuildMenuEvent");
+    });
+
+    test("should still emit MouseUpEvent on plain left release", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      fireLeftPointerUp(false);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("MouseUpEvent");
+    });
+
+    test("Win/Linux: ctrl+left still opens the build menu when Control is held", () => {
+      setIsMac(false);
+      inputHandler["keybinds"].buildMenuModifier = "ControlLeft";
+      inputHandler["activeKeys"].add("ControlLeft");
+
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      fireLeftPointerUp(true);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("ShowBuildMenuEvent");
+      expect(emittedTypes).not.toContain("MouseUpEvent");
+    });
+
+    test("Win/Linux: Right Ctrl+left still attacks (not a dead click)", () => {
+      setIsMac(false);
+      inputHandler["keybinds"].buildMenuModifier = "ControlLeft";
+      inputHandler["activeKeys"].add("ControlRight");
+
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      fireLeftPointerUp(true);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("MouseUpEvent");
+      expect(emittedTypes).not.toContain("ShowBuildMenuEvent");
+    });
+
+    test("Mac: ctrl+left does not open build menu even if rebound to ControlLeft", () => {
+      setIsMac(true);
+      inputHandler["keybinds"].buildMenuModifier = "ControlLeft";
+      inputHandler["activeKeys"].add("ControlLeft");
+
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      fireLeftPointerUp(true);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).not.toContain("ShowBuildMenuEvent");
+      expect(emittedTypes).not.toContain("MouseUpEvent");
+    });
+
+    test("Mac: cmd+left still opens the build menu", () => {
+      setIsMac(true);
+      inputHandler["keybinds"].buildMenuModifier = "MetaLeft";
+      inputHandler["activeKeys"].add("MetaLeft");
+
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      fireLeftPointerUp(false);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("ShowBuildMenuEvent");
+      expect(emittedTypes).not.toContain("MouseUpEvent");
+    });
+
+    test("Mac: ctrl+left during spawn still emits MouseUpEvent", () => {
+      setIsMac(true);
+      mockGameView.inSpawnPhase = () => true;
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      fireLeftPointerUp(true);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("MouseUpEvent");
+    });
+
+    test("onContextMenu still opens the radial after ctrl+left", () => {
+      const mockEmit = vi.spyOn(eventBus, "emit");
+
+      const mouseEvent = new MouseEvent("contextmenu", {
+        clientX: 150,
+        clientY: 250,
+      });
+      inputHandler["onContextMenu"](mouseEvent);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).toContain("ContextMenuEvent");
+    });
+  });
+
   describe("Left-click menu with ghost structure (#4789)", () => {
     test("should emit MouseUpEvent and not ContextMenuEvent when placing a ghost structure with left-click menu enabled", () => {
       const mockEmit = vi.spyOn(eventBus, "emit");
@@ -380,6 +589,114 @@ describe("InputHandler AutoUpgrade", () => {
   });
 
   describe("Pointer Event Handling", () => {
+    test("passes a toast tap through to the game input", () => {
+      const mouseDown = vi.fn();
+      const mouseUp = vi.fn();
+      eventBus.on(MouseDownEvent, mouseDown);
+      eventBus.on(MouseUpEvent, mouseUp);
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      inputHandler.initialize();
+      const toast = document.createElement("div");
+      toast.setAttribute("data-game-input-pass-through", "");
+      document.body.appendChild(toast);
+
+      dispatchDomPointer(toast, "pointerdown", 100, 100);
+      dispatchDomPointer(toast, "pointerup", 101, 101);
+      toast.remove();
+
+      expect(mouseDown).toHaveBeenCalledOnce();
+      expect(mouseUp).toHaveBeenCalledOnce();
+    });
+
+    test("cancels game input when a toast interaction becomes a drag", () => {
+      const mouseUp = vi.fn();
+      eventBus.on(MouseUpEvent, mouseUp);
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      inputHandler.initialize();
+      const toast = document.createElement("div");
+      toast.setAttribute("data-game-input-pass-through", "");
+      document.body.appendChild(toast);
+
+      dispatchDomPointer(toast, "pointerdown", 100, 100);
+      dispatchDomPointer(toast, "pointermove", 110, 100);
+      dispatchDomPointer(toast, "pointerup", 180, 100);
+      toast.remove();
+
+      expect(inputHandler["pointerDown"]).toBe(false);
+      expect(inputHandler["pointers"].size).toBe(0);
+      expect(mouseUp).not.toHaveBeenCalled();
+    });
+
+    test("does not convert a cancelled toast gesture into a game tap", () => {
+      const mouseUp = vi.fn();
+      eventBus.on(MouseUpEvent, mouseUp);
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      inputHandler.initialize();
+      const toast = document.createElement("div");
+      toast.setAttribute("data-game-input-pass-through", "");
+      document.body.appendChild(toast);
+
+      dispatchDomPointer(toast, "pointerdown", 100, 100);
+      dispatchDomPointer(toast, "pointercancel", 101, 101);
+      toast.remove();
+
+      expect(inputHandler["pointerDown"]).toBe(false);
+      expect(inputHandler["pointers"].size).toBe(0);
+      expect(mouseUp).not.toHaveBeenCalled();
+    });
+
+    test("preserves an existing map pointer when a toast tap ends", () => {
+      const mouseUp = vi.fn();
+      eventBus.on(MouseUpEvent, mouseUp);
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      inputHandler.initialize();
+      const toast = document.createElement("div");
+      toast.setAttribute("data-game-input-pass-through", "");
+      document.body.appendChild(toast);
+
+      dispatchDomPointer(mockCanvas, "pointerdown", 20, 20, 1);
+      dispatchDomPointer(toast, "pointerdown", 100, 100, 2);
+      dispatchDomPointer(toast, "pointerup", 101, 101, 2);
+
+      expect(inputHandler["pointerDown"]).toBe(true);
+      expect(inputHandler["pointers"].size).toBe(1);
+      expect(inputHandler["pointers"].has(1)).toBe(true);
+      expect(mouseUp).not.toHaveBeenCalled();
+
+      dispatchDomPointer(window, "pointerup", 20, 20, 1);
+      toast.remove();
+
+      expect(mouseUp).toHaveBeenCalledOnce();
+    });
+
+    test("preserves an existing map pointer when a toast drag starts", () => {
+      const mouseUp = vi.fn();
+      eventBus.on(MouseUpEvent, mouseUp);
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      inputHandler.initialize();
+      const toast = document.createElement("div");
+      toast.setAttribute("data-game-input-pass-through", "");
+      document.body.appendChild(toast);
+
+      dispatchDomPointer(mockCanvas, "pointerdown", 20, 20, 1);
+      dispatchDomPointer(toast, "pointerdown", 100, 100, 2);
+      dispatchDomPointer(toast, "pointermove", 104, 100, 2);
+
+      expect(inputHandler["pointers"].size).toBe(2);
+
+      dispatchDomPointer(toast, "pointermove", 110, 100, 2);
+
+      expect(inputHandler["pointerDown"]).toBe(true);
+      expect(inputHandler["pointers"].size).toBe(1);
+      expect(inputHandler["pointers"].has(1)).toBe(true);
+      expect(inputHandler["pointers"].has(2)).toBe(false);
+
+      dispatchDomPointer(window, "pointerup", 20, 20, 1);
+      toast.remove();
+
+      expect(mouseUp).toHaveBeenCalledOnce();
+    });
+
     test("should ignore a pointerup without a matching canvas pointerdown", () => {
       const mockEmit = vi.spyOn(eventBus, "emit");
 
@@ -621,6 +938,21 @@ describe("InputHandler AutoUpgrade", () => {
   });
 
   describe("Keybinds JSON parsing", () => {
+    test("loads arrow movement and zoom fallback keys as configurable defaults", () => {
+      inputHandler.initialize();
+
+      expect((inputHandler as any).keybinds.moveUpArrow).toBe("ArrowUp");
+      expect((inputHandler as any).keybinds.moveLeftArrow).toBe("ArrowLeft");
+      expect((inputHandler as any).keybinds.moveDownArrow).toBe("ArrowDown");
+      expect((inputHandler as any).keybinds.moveRightArrow).toBe("ArrowRight");
+      expect((inputHandler as any).keybinds.zoomOutMinus).toBe("Minus");
+      expect((inputHandler as any).keybinds.zoomOutNumpad).toBe(
+        "NumpadSubtract",
+      );
+      expect((inputHandler as any).keybinds.zoomInEqual).toBe("Equal");
+      expect((inputHandler as any).keybinds.zoomInNumpad).toBe("NumpadAdd");
+    });
+
     test("parses nested object values and flattens them to strings", () => {
       const nested = {
         moveUp: { key: "moveUp", value: "KeyZ" },
@@ -719,6 +1051,34 @@ describe("InputHandler AutoUpgrade", () => {
         (call) => call[0] instanceof ConfirmGhostStructureEvent,
       );
       expect(confirmCalls).toHaveLength(0);
+    });
+  });
+
+  describe("Alt key default prevention", () => {
+    beforeEach(() => {
+      inputHandler.initialize();
+    });
+
+    test("prevents the browser's default action when leftAlt is pressed", () => {
+      const event = new KeyboardEvent("keydown", {
+        code: "AltLeft",
+        altKey: true,
+        cancelable: true,
+      });
+
+      window.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+    });
+
+    test("does not prevent the browser's default action when rightAlt is pressed", () => {
+      const event = new KeyboardEvent("keydown", {
+        code: "AltRight",
+        altKey: true,
+        cancelable: true,
+      });
+
+      window.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
     });
   });
 
@@ -1052,6 +1412,363 @@ describe("InputHandler AutoUpgrade", () => {
       expect(uiState.ghostStructure).toBe(UnitType.City);
     });
   });
+
+  describe("Player action keybinds", () => {
+    beforeEach(() => {
+      inputHandler.destroy();
+      inputHandler = new InputHandler(
+        mockGameView,
+        {
+          attackRatio: 20,
+          ghostStructure: null,
+          rocketDirectionUp: true,
+          upgradeMultiplier: 1,
+        },
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+    });
+
+    afterEach(() => {
+      new UserSettings().removeCached(KEYBINDS_KEY, false);
+    });
+
+    test("N targets the player under the cursor", () => {
+      const targets: DoTargetPlayerEvent[] = [];
+      eventBus.on(DoTargetPlayerEvent, (e) => targets.push(e));
+
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyN" }));
+
+      expect(targets).toHaveLength(1);
+      // No tile: the runner uses the one under the cursor.
+      expect(targets[0].tile).toBeUndefined();
+    });
+
+    test("J and O donate troops and gold at the last mouse position", () => {
+      const troops: DoDonateTroopsEvent[] = [];
+      const gold: DoDonateGoldEvent[] = [];
+      eventBus.on(DoDonateTroopsEvent, (e) => troops.push(e));
+      eventBus.on(DoDonateGoldEvent, (e) => gold.push(e));
+
+      window.dispatchEvent(
+        new MouseEvent("mousemove", { clientX: 50, clientY: 60 }),
+      );
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyJ" }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyO" }));
+
+      expect(troops).toEqual([expect.objectContaining({ x: 50, y: 60 })]);
+      expect(gold).toEqual([expect.objectContaining({ x: 50, y: 60 })]);
+    });
+
+    test("J and O do nothing before the first mousemove", () => {
+      const troops: DoDonateTroopsEvent[] = [];
+      const gold: DoDonateGoldEvent[] = [];
+      eventBus.on(DoDonateTroopsEvent, (e) => troops.push(e));
+      eventBus.on(DoDonateGoldEvent, (e) => gold.push(e));
+
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyJ" }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyO" }));
+
+      expect(troops).toHaveLength(0);
+      expect(gold).toHaveLength(0);
+    });
+  });
+
+  describe("Quick chat keybind", () => {
+    beforeEach(() => {
+      inputHandler.destroy();
+      inputHandler = new InputHandler(
+        mockGameView,
+        {
+          attackRatio: 20,
+          ghostStructure: null,
+          rocketDirectionUp: true,
+          upgradeMultiplier: 1,
+        },
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+    });
+
+    afterEach(() => {
+      new UserSettings().removeCached(KEYBINDS_KEY, false);
+    });
+
+    test("R opens quick chat at the last mouse position", () => {
+      const chats: ShowChatMenuEvent[] = [];
+      const refreshes: RefreshGraphicsEvent[] = [];
+      eventBus.on(ShowChatMenuEvent, (e) => chats.push(e));
+      eventBus.on(RefreshGraphicsEvent, (e) => refreshes.push(e));
+
+      window.dispatchEvent(
+        new MouseEvent("mousemove", { clientX: 50, clientY: 60 }),
+      );
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyR" }));
+
+      expect(chats).toHaveLength(1);
+      expect(chats[0].x).toBe(50);
+      expect(chats[0].y).toBe(60);
+      expect(refreshes).toHaveLength(0);
+    });
+
+    test("Alt+R resets graphics without opening quick chat", () => {
+      const chats: ShowChatMenuEvent[] = [];
+      const refreshes: RefreshGraphicsEvent[] = [];
+      eventBus.on(ShowChatMenuEvent, (e) => chats.push(e));
+      eventBus.on(RefreshGraphicsEvent, (e) => refreshes.push(e));
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyR", altKey: true }),
+      );
+
+      expect(chats).toHaveLength(0);
+      expect(refreshes).toHaveLength(1);
+    });
+
+    test("Ctrl+R and Cmd+R don't open quick chat", () => {
+      const chats: ShowChatMenuEvent[] = [];
+      eventBus.on(ShowChatMenuEvent, (e) => chats.push(e));
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyR", ctrlKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyR", metaKey: true }),
+      );
+
+      expect(chats).toHaveLength(0);
+    });
+
+    test("Shift+R resets graphics when altKey is bound to ShiftRight", () => {
+      new UserSettings().setKeybinds({
+        altKey: { value: "ShiftRight", key: "Shift" },
+      });
+
+      const chats: ShowChatMenuEvent[] = [];
+      const refreshes: RefreshGraphicsEvent[] = [];
+      eventBus.on(ShowChatMenuEvent, (e) => chats.push(e));
+      eventBus.on(RefreshGraphicsEvent, (e) => refreshes.push(e));
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyR", shiftKey: true }),
+      );
+
+      expect(chats).toHaveLength(0);
+      expect(refreshes).toHaveLength(1);
+    });
+  });
+
+  describe("Player panel keybind", () => {
+    beforeEach(() => {
+      inputHandler.destroy();
+      inputHandler = new InputHandler(
+        mockGameView,
+        {
+          attackRatio: 20,
+          ghostStructure: null,
+          rocketDirectionUp: true,
+          upgradeMultiplier: 1,
+        },
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+    });
+
+    afterEach(() => {
+      new UserSettings().removeCached(KEYBINDS_KEY, false);
+    });
+
+    test("I emits ShowPlayerPanelEvent with the last mouse position", () => {
+      const panels: ShowPlayerPanelEvent[] = [];
+      eventBus.on(ShowPlayerPanelEvent, (e) => panels.push(e));
+
+      window.dispatchEvent(
+        new MouseEvent("mousemove", { clientX: 50, clientY: 60 }),
+      );
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyI" }));
+
+      expect(panels).toEqual([expect.objectContaining({ x: 50, y: 60 })]);
+    });
+
+    test("I emits null coordinates before the first mousemove so an open panel can close", () => {
+      const panels: ShowPlayerPanelEvent[] = [];
+      eventBus.on(ShowPlayerPanelEvent, (e) => panels.push(e));
+
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyI" }));
+
+      expect(panels).toEqual([expect.objectContaining({ x: null, y: null })]);
+    });
+
+    test("Ctrl+I, Alt+I and Cmd+I don't emit ShowPlayerPanelEvent", () => {
+      const panels: ShowPlayerPanelEvent[] = [];
+      eventBus.on(ShowPlayerPanelEvent, (e) => panels.push(e));
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyI", ctrlKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyI", altKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyI", metaKey: true }),
+      );
+
+      expect(panels).toHaveLength(0);
+    });
+
+    test("Cmd+Option+I and Ctrl+Alt+I don't call preventDefault on keydown", () => {
+      const cmdOptI = new KeyboardEvent("keydown", {
+        code: "KeyI",
+        metaKey: true,
+        altKey: true,
+        cancelable: true,
+      });
+      const ctrlAltI = new KeyboardEvent("keydown", {
+        code: "KeyI",
+        ctrlKey: true,
+        altKey: true,
+        cancelable: true,
+      });
+
+      window.dispatchEvent(cmdOptI);
+      window.dispatchEvent(ctrlAltI);
+
+      expect(cmdOptI.defaultPrevented).toBe(false);
+      expect(ctrlAltI.defaultPrevented).toBe(false);
+    });
+  });
+
+  describe("Emoji menu keybind", () => {
+    beforeEach(() => {
+      inputHandler.destroy();
+      inputHandler = new InputHandler(
+        mockGameView,
+        {
+          attackRatio: 20,
+          ghostStructure: null,
+          rocketDirectionUp: true,
+          upgradeMultiplier: 1,
+        },
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+    });
+
+    afterEach(() => {
+      new UserSettings().removeCached(KEYBINDS_KEY, false);
+    });
+
+    test("F opens the emoji menu at the last mouse position", () => {
+      const emitted: ShowEmojiMenuEvent[] = [];
+      eventBus.on(ShowEmojiMenuEvent, (e) => emitted.push(e));
+
+      window.dispatchEvent(
+        new MouseEvent("mousemove", { clientX: 120, clientY: 340 }),
+      );
+      // Opens on keydown, not keyup like most keybinds.
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyF" }));
+      expect(emitted).toHaveLength(1);
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyF" }));
+
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0].x).toBe(120);
+      expect(emitted[0].y).toBe(340);
+    });
+
+    test("F closes the emoji table when it is already open", () => {
+      const opened: ShowEmojiMenuEvent[] = [];
+      const closed: CloseViewEvent[] = [];
+      eventBus.on(ShowEmojiMenuEvent, (e) => opened.push(e));
+      eventBus.on(CloseViewEvent, (e) => closed.push(e));
+      eventBus.emit(new EmojiTableVisibleEvent(true));
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyF" }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyF" }));
+
+      expect(opened).toHaveLength(0);
+      expect(closed).toHaveLength(1);
+    });
+
+    test("favorite keys pick a favorites slot instead of zooming while the table is open", () => {
+      const emojiKeys: EmojiKeyEvent[] = [];
+      eventBus.on(EmojiKeyEvent, (e) => emojiKeys.push(e));
+      eventBus.emit(new EmojiTableVisibleEvent(true));
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyQ" }));
+      expect(inputHandler["activeKeys"].has("KeyQ")).toBe(false);
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyQ" }));
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyD" }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyD" }));
+
+      expect(emojiKeys.map((e) => e.slot)).toEqual([0, 5]);
+    });
+
+    test("keys without an emoji keep their keybind while the table is open", () => {
+      const emojiKeys: EmojiKeyEvent[] = [];
+      const boatAttacks: DoBoatAttackEvent[] = [];
+      eventBus.on(EmojiKeyEvent, (e) => emojiKeys.push(e));
+      eventBus.on(DoBoatAttackEvent, (e) => boatAttacks.push(e));
+      eventBus.emit(new EmojiTableVisibleEvent(true));
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyB" }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyB" }));
+
+      expect(emojiKeys).toHaveLength(0);
+      expect(boatAttacks).toHaveLength(1);
+    });
+
+    test("camera keys are not held while the table is open", () => {
+      eventBus.emit(new EmojiTableVisibleEvent(true));
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyW" }));
+      expect(inputHandler["activeKeys"].has("KeyW")).toBe(false);
+    });
+
+    test("typing F then W quickly sends the W favorite without panning", () => {
+      const emojiKeys: EmojiKeyEvent[] = [];
+      eventBus.on(EmojiKeyEvent, (e) => emojiKeys.push(e));
+      // Stand in for the emoji table opening.
+      eventBus.on(ShowEmojiMenuEvent, () =>
+        eventBus.emit(new EmojiTableVisibleEvent(true)),
+      );
+
+      // W goes down before F comes up.
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyF" }));
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyW" }));
+      expect(inputHandler["activeKeys"].has("KeyW")).toBe(false);
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyF" }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyW" }));
+
+      expect(emojiKeys.map((e) => e.slot)).toEqual([1]);
+    });
+
+    test("opening the table stops a held camera key, and releasing it sends nothing", () => {
+      const emojiKeys: EmojiKeyEvent[] = [];
+      eventBus.on(EmojiKeyEvent, (e) => emojiKeys.push(e));
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyW" }));
+      expect(inputHandler["activeKeys"].has("KeyW")).toBe(true);
+
+      eventBus.emit(new EmojiTableVisibleEvent(true));
+      expect(inputHandler["activeKeys"].has("KeyW")).toBe(false);
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyW" }));
+
+      expect(emojiKeys).toHaveLength(0);
+    });
+
+    test("keybinds fire normally once the table closes", () => {
+      const boatAttacks: DoBoatAttackEvent[] = [];
+      eventBus.on(DoBoatAttackEvent, (e) => boatAttacks.push(e));
+      eventBus.emit(new EmojiTableVisibleEvent(true));
+      eventBus.emit(new EmojiTableVisibleEvent(false));
+
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyB" }));
+
+      expect(boatAttacks).toHaveLength(1);
+    });
+  });
 });
 
 describe("Warship box selection (Shift+drag)", () => {
@@ -1230,6 +1947,552 @@ describe("Warship box selection (Shift+drag)", () => {
     expect(mockCanvas.style.cursor).toBe("crosshair");
     window.dispatchEvent(new Event("blur"));
     expect(mockCanvas.style.cursor).toBe("");
+  });
+});
+
+describe("mobile tap-preview placement", () => {
+  let inputHandler: InputHandler;
+  let eventBus: EventBus;
+  let uiState: UIState;
+
+  beforeEach(() => {
+    eventBus = new EventBus();
+    uiState = {
+      attackRatio: 20,
+      ghostStructure: UnitType.City,
+      rocketDirectionUp: true,
+    } as UIState;
+    inputHandler = new InputHandler(
+      { inSpawnPhase: () => false } as GameView,
+      uiState,
+      document.createElement("canvas"),
+      eventBus,
+    );
+  });
+
+  afterEach(() => {
+    inputHandler.destroy();
+  });
+
+  test("touch taps are delegated to the preview controller", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    eventBus.on(TouchGhostPlacementEvent, (event) => placements.push(event));
+
+    const tap = (x: number, y: number, pointerId: number) => {
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    };
+
+    tap(100, 110, 1);
+    tap(140, 150, 2);
+
+    expect(placements).toEqual([
+      expect.objectContaining({ x: 100, y: 110 }),
+      expect.objectContaining({ x: 140, y: 150 }),
+    ]);
+  });
+
+  test("GUI build selection closes overlays and deselection clears structure highlights", () => {
+    const closeViews: CloseViewEvent[] = [];
+    const highlights: ToggleStructureEvent[] = [];
+    eventBus.on(CloseViewEvent, (event) => closeViews.push(event));
+    eventBus.on(ToggleStructureEvent, (event) => highlights.push(event));
+    uiState.ghostStructure = null;
+
+    inputHandler.setGhostStructure(UnitType.City, "GUIclick");
+    expect(closeViews).toHaveLength(1);
+    expect(highlights).toEqual([]);
+
+    inputHandler.setGhostStructure(null, "GUIclick");
+    expect(closeViews).toHaveLength(2);
+    expect(highlights).toHaveLength(1);
+    expect(highlights[0].structureTypes).toBeNull();
+  });
+
+  test("hotkey build selection updates structure highlight types", () => {
+    const highlights: ToggleStructureEvent[] = [];
+    eventBus.on(ToggleStructureEvent, (event) => highlights.push(event));
+
+    inputHandler.setGhostStructure(UnitType.SAMLauncher, "hotkey");
+
+    expect(highlights).toHaveLength(1);
+    expect(highlights[0].structureTypes).toEqual([UnitType.SAMLauncher]);
+
+    inputHandler.setGhostStructure(UnitType.Warship, "hotkey");
+    expect(highlights).toHaveLength(2);
+    expect(highlights[1].structureTypes).toEqual([UnitType.Port]);
+  });
+
+  test("touches return to the normal map action after the ghost is canceled", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    const touches: TouchEvent[] = [];
+    eventBus.on(TouchGhostPlacementEvent, (event) => {
+      placements.push(event);
+      uiState.ghostStructure = null;
+    });
+    eventBus.on(TouchEvent, (event) => touches.push(event));
+
+    const tap = (x: number, y: number, pointerId: number) => {
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    };
+
+    tap(100, 100, 1);
+    expect(placements).toHaveLength(1);
+    expect(touches).toHaveLength(0);
+
+    tap(100, 100, 2);
+    expect(touches).toHaveLength(1);
+  });
+
+  test("quick-build selection closes the radial before the next map tap", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    const touches: TouchEvent[] = [];
+    const contextMenus: ContextMenuEvent[] = [];
+    const closeViews: CloseViewEvent[] = [];
+    eventBus.on(TouchGhostPlacementEvent, (event) => placements.push(event));
+    eventBus.on(TouchEvent, (event) => touches.push(event));
+    eventBus.on(ContextMenuEvent, (event) => contextMenus.push(event));
+    eventBus.on(CloseViewEvent, (event) => closeViews.push(event));
+
+    uiState.ghostStructure = null;
+    eventBus.emit(new ContextMenuEvent(100, 100));
+    inputHandler.setGhostStructure(UnitType.City, "GUIclick");
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 200,
+        clientY: 200,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    inputHandler["onPointerUp"](
+      new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 200,
+        clientY: 200,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+    expect(closeViews).toHaveLength(1);
+    expect(contextMenus).toHaveLength(1);
+    expect(placements).toEqual([expect.objectContaining({ x: 200, y: 200 })]);
+    expect(touches).toEqual([]);
+  });
+
+  test("a pinch does not confirm the build preview", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    eventBus.on(TouchGhostPlacementEvent, (event) => placements.push(event));
+
+    const down = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    const up = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+
+    // The second finger ends the placement drag; releasing the first one
+    // must not read as a tap that confirms the preview.
+    down(100, 100, 1);
+    down(140, 140, 2);
+    up(100, 100, 1);
+    expect(placements).toEqual([]);
+
+    // The next independent tap still places.
+    down(200, 200, 3);
+    up(200, 200, 3);
+    expect(placements).toEqual([expect.objectContaining({ x: 200, y: 200 })]);
+  });
+
+  test("a pinch does not turn into a map tap", () => {
+    const touches: TouchEvent[] = [];
+    eventBus.on(TouchEvent, (event) => touches.push(event));
+    uiState.ghostStructure = null;
+
+    const down = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    const up = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+
+    down(100, 100, 1);
+    down(140, 140, 2);
+    up(100, 100, 1);
+    expect(touches).toEqual([]);
+
+    down(200, 200, 3);
+    up(200, 200, 3);
+    expect(touches).toHaveLength(1);
+  });
+
+  test("a pinch that moves does not swallow the next tap", () => {
+    const touches: TouchEvent[] = [];
+    eventBus.on(TouchEvent, (event) => touches.push(event));
+    uiState.ghostStructure = null;
+
+    const down = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    const up = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+
+    // The fingers move, so the release is a drag and never reads as a tap.
+    down(100, 100, 1);
+    down(140, 140, 2);
+    up(200, 200, 1);
+    expect(touches).toEqual([]);
+
+    // The next separate tap still acts on the map.
+    down(300, 300, 3);
+    up(300, 300, 3);
+    expect(touches).toHaveLength(1);
+  });
+
+  test("a pinch that ends with the second finger does not swallow the next placement", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    eventBus.on(TouchGhostPlacementEvent, (event) => placements.push(event));
+
+    const down = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerDown"](
+        new PointerEvent("pointerdown", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+    const up = (x: number, y: number, pointerId: number) =>
+      inputHandler["onPointerUp"](
+        new PointerEvent("pointerup", {
+          button: 0,
+          clientX: x,
+          clientY: y,
+          pointerId,
+          pointerType: "touch",
+        }),
+      );
+
+    down(100, 100, 1);
+    down(140, 140, 2);
+    up(140, 140, 2);
+    expect(placements).toEqual([]);
+
+    // The next separate tap still places the preview.
+    down(300, 300, 3);
+    up(300, 300, 3);
+    expect(placements).toEqual([expect.objectContaining({ x: 300, y: 300 })]);
+  });
+
+  test("movement starting on the preview drags it without a hold delay or map pan", () => {
+    const moves: TouchGhostPlacementMoveEvent[] = [];
+    const drags: DragEvent[] = [];
+    eventBus.on(TouchGhostPlacementDragStartEvent, (event) => {
+      event.handled = true;
+    });
+    eventBus.on(TouchGhostPlacementMoveEvent, (event) => moves.push(event));
+    eventBus.on(DragEvent, (event) => drags.push(event));
+
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    inputHandler["onPointerMove"](
+      new PointerEvent("pointermove", {
+        button: 0,
+        clientX: 104,
+        clientY: 104,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    expect(moves).toHaveLength(0);
+
+    inputHandler["onPointerMove"](
+      new PointerEvent("pointermove", {
+        button: 0,
+        clientX: 125,
+        clientY: 130,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+    expect(moves).toEqual([expect.objectContaining({ x: 125, y: 130 })]);
+
+    inputHandler["onPointerUp"](
+      new PointerEvent("pointerup", {
+        button: 0,
+        clientX: 135,
+        clientY: 142,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+    expect(moves).toEqual([
+      expect.objectContaining({ x: 125, y: 130 }),
+      expect.objectContaining({ x: 135, y: 142 }),
+    ]);
+    expect(drags).toEqual([]);
+  });
+
+  test("pointercancel does not become a placement tap or a final preview move", () => {
+    const placements: TouchGhostPlacementEvent[] = [];
+    const moves: TouchGhostPlacementMoveEvent[] = [];
+    eventBus.on(TouchGhostPlacementDragStartEvent, (event) => {
+      event.handled = true;
+    });
+    eventBus.on(TouchGhostPlacementEvent, (event) => placements.push(event));
+    eventBus.on(TouchGhostPlacementMoveEvent, (event) => moves.push(event));
+
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    inputHandler["onPointerCancel"](
+      new PointerEvent("pointercancel", {
+        button: 0,
+        clientX: 101,
+        clientY: 101,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+    expect(placements).toEqual([]);
+    expect(moves).toEqual([]);
+
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    inputHandler["onPointerMove"](
+      new PointerEvent("pointermove", {
+        button: 0,
+        clientX: 125,
+        clientY: 130,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+    expect(moves).toHaveLength(1);
+    inputHandler["onPointerCancel"](
+      new PointerEvent("pointercancel", {
+        button: 0,
+        clientX: 140,
+        clientY: 145,
+        pointerId: 2,
+        pointerType: "touch",
+      }),
+    );
+
+    expect(placements).toEqual([]);
+    expect(moves).toHaveLength(1);
+  });
+
+  test("non-touch pointer movement emits MouseMoveEvent", () => {
+    const moves: MouseMoveEvent[] = [];
+    eventBus.on(MouseMoveEvent, (event) => moves.push(event));
+    inputHandler.initialize();
+
+    const compatibilityMove = new MouseEvent("mousemove", {
+      clientX: 50,
+      clientY: 60,
+    });
+    Object.defineProperty(compatibilityMove, "movementX", { value: 5 });
+    window.dispatchEvent(compatibilityMove);
+    expect(moves).toEqual([]);
+
+    const touchPointerMove = new PointerEvent("pointermove", {
+      button: -1,
+      clientX: 60,
+      clientY: 70,
+      pointerId: 2,
+      pointerType: "touch",
+    });
+    Object.defineProperty(touchPointerMove, "movementX", { value: 5 });
+    inputHandler["onPointerMove"](touchPointerMove);
+    expect(moves).toEqual([]);
+
+    const mousePointerMove = new PointerEvent("pointermove", {
+      button: -1,
+      clientX: 70,
+      clientY: 80,
+      pointerId: 3,
+      pointerType: "mouse",
+    });
+    Object.defineProperty(mousePointerMove, "movementX", { value: 5 });
+    inputHandler["onPointerMove"](mousePointerMove);
+
+    expect(moves).toHaveLength(1);
+    expect(moves[0]).toEqual(expect.objectContaining({ x: 70, y: 80 }));
+
+    const penPointerMove = new PointerEvent("pointermove", {
+      button: -1,
+      clientX: 90,
+      clientY: 100,
+      pointerId: 4,
+      pointerType: "pen",
+    });
+    Object.defineProperty(penPointerMove, "movementX", { value: 5 });
+    inputHandler["onPointerMove"](penPointerMove);
+
+    expect(moves).toHaveLength(2);
+    expect(moves[1]).toEqual(expect.objectContaining({ x: 90, y: 100 }));
+  });
+
+  test("a touch-generated context menu does not cancel placement", () => {
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+    inputHandler["onContextMenu"](
+      new MouseEvent("contextmenu", { clientX: 100, clientY: 100 }),
+    );
+
+    expect(uiState.ghostStructure).toBe(UnitType.City);
+  });
+
+  test("a touch context menu remains available when no ghost is active", () => {
+    const contextMenus: ContextMenuEvent[] = [];
+    eventBus.on(ContextMenuEvent, (event) => contextMenus.push(event));
+    uiState.ghostStructure = null;
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+    inputHandler["onContextMenu"](
+      new MouseEvent("contextmenu", { clientX: 100, clientY: 100 }),
+    );
+
+    expect(contextMenus).toHaveLength(1);
+    expect(contextMenus[0]).toEqual(
+      expect.objectContaining({ x: 100, y: 100 }),
+    );
+  });
+
+  test("a mouse context menu still cancels placement", () => {
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 2,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: "mouse",
+      }),
+    );
+
+    inputHandler["onContextMenu"](
+      new MouseEvent("contextmenu", { clientX: 100, clientY: 100 }),
+    );
+
+    expect(uiState.ghostStructure).toBeNull();
   });
 });
 
@@ -1681,5 +2944,1015 @@ describe("InputHandler teardown (OPE-411)", () => {
       handler.destroy();
       vi.useRealTimers();
     }
+  });
+
+  describe("Shift-modified hold-to-pan and hold-to-zoom keybinds", () => {
+    let handler: InputHandler;
+    let settings: UserSettings;
+    let bus: EventBus;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      settings = new UserSettings();
+      settings.removeCached(KEYBINDS_KEY, false);
+      bus = new EventBus();
+      handler = new InputHandler(
+        {
+          inSpawnPhase: () => false,
+          myPlayer: () => ({ isAlive: () => true }),
+        } as any,
+        {
+          attackRatio: 20,
+          ghostStructure: null,
+          rocketDirectionUp: true,
+          upgradeMultiplier: 1,
+        } as any,
+        document.createElement("canvas"),
+        bus,
+      );
+    });
+
+    afterEach(() => {
+      handler.destroy();
+      vi.useRealTimers();
+    });
+
+    test("pans up when moveUp is bound to Shift+KeyW", () => {
+      settings.setKeybinds({ moveUp: "Shift+KeyW" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(10);
+      const dragCalls = emitSpy.mock.calls.filter(
+        (c: unknown[]) => c[0] instanceof DragEvent,
+      );
+      expect(dragCalls.length).toBeGreaterThan(0);
+      expect((dragCalls[0][0] as DragEvent).deltaY).toBe(handler["PAN_SPEED"]);
+
+      // Releasing KeyW stops panning
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyW", shiftKey: true }),
+      );
+      emitSpy.mockClear();
+      vi.advanceTimersByTime(10);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+    });
+
+    test("pans in all 4 directions with Shift-modified bindings", () => {
+      settings.setKeybinds({
+        moveUp: "Shift+KeyW",
+        moveDown: "Shift+KeyS",
+        moveLeft: "Shift+KeyA",
+        moveRight: "Shift+KeyD",
+      });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+
+      // Down
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyS", shiftKey: true }),
+      );
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof DragEvent &&
+            (c[0] as DragEvent).deltaY === -handler["PAN_SPEED"],
+        ),
+      ).toBe(true);
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyS", shiftKey: true }),
+      );
+      emitSpy.mockClear();
+
+      // Left
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyA", shiftKey: true }),
+      );
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof DragEvent &&
+            (c[0] as DragEvent).deltaX === handler["PAN_SPEED"],
+        ),
+      ).toBe(true);
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyA", shiftKey: true }),
+      );
+      emitSpy.mockClear();
+
+      // Right
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyD", shiftKey: true }),
+      );
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof DragEvent &&
+            (c[0] as DragEvent).deltaX === -handler["PAN_SPEED"],
+        ),
+      ).toBe(true);
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyD", shiftKey: true }),
+      );
+    });
+
+    test("pans with Shift-modified arrow bindings (moveUpArrow etc.)", () => {
+      settings.setKeybinds({
+        moveUpArrow: "Shift+ArrowUp",
+        moveDownArrow: "Shift+ArrowDown",
+        moveLeftArrow: "Shift+ArrowLeft",
+        moveRightArrow: "Shift+ArrowRight",
+      });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ArrowUp", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof DragEvent &&
+            (c[0] as DragEvent).deltaY === handler["PAN_SPEED"],
+        ),
+      ).toBe(true);
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ArrowUp", shiftKey: true }),
+      );
+    });
+
+    test("an unmodified press does NOT activate a Shift-only binding", () => {
+      settings.setKeybinds({ moveUp: "Shift+KeyW" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: false }),
+      );
+
+      vi.advanceTimersByTime(20);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+    });
+
+    test("releasing Shift while the physical key remains held stops the action", () => {
+      settings.setKeybinds({ moveUp: "Shift+KeyW" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(true);
+
+      // Release Shift while KeyW is still held
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ShiftLeft", shiftKey: false }),
+      );
+      emitSpy.mockClear();
+
+      vi.advanceTimersByTime(10);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+    });
+
+    test("pressing Shift while the physical key is already held activates the binding", () => {
+      settings.setKeybinds({ moveUp: "Shift+KeyW" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      // Press KeyW first without Shift
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: false }),
+      );
+
+      vi.advanceTimersByTime(10);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+
+      // Now press Shift while KeyW is still held
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(10);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof DragEvent &&
+            (c[0] as DragEvent).deltaY === handler["PAN_SPEED"],
+        ),
+      ).toBe(true);
+    });
+
+    test("zooms with Shift-modified zoom bindings (zoomIn, zoomOut)", () => {
+      settings.setKeybinds({
+        zoomOut: "Shift+KeyQ",
+        zoomIn: "Shift+KeyE",
+        zoomOutNumpad: "Shift+NumpadSubtract",
+        zoomInNumpad: "Shift+NumpadAdd",
+      });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyQ", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(5);
+      const zoomOutCalls = emitSpy.mock.calls.filter(
+        (c: unknown[]) =>
+          c[0] instanceof ZoomEvent &&
+          (c[0] as ZoomEvent).delta === handler["ZOOM_SPEED"],
+      );
+      expect(zoomOutCalls.length).toBeGreaterThan(0);
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyQ", shiftKey: true }),
+      );
+      emitSpy.mockClear();
+
+      // zoomOutNumpad
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          code: "NumpadSubtract",
+          shiftKey: true,
+        }),
+      );
+      vi.advanceTimersByTime(5);
+      const zoomOutNumpadCalls = emitSpy.mock.calls.filter(
+        (c: unknown[]) =>
+          c[0] instanceof ZoomEvent &&
+          (c[0] as ZoomEvent).delta === handler["ZOOM_SPEED"],
+      );
+      expect(zoomOutNumpadCalls.length).toBeGreaterThan(0);
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", {
+          code: "NumpadSubtract",
+          shiftKey: true,
+        }),
+      );
+      emitSpy.mockClear();
+
+      // Zoom in
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyE", shiftKey: true }),
+      );
+      vi.advanceTimersByTime(5);
+      const zoomInCalls = emitSpy.mock.calls.filter(
+        (c: unknown[]) =>
+          c[0] instanceof ZoomEvent &&
+          (c[0] as ZoomEvent).delta === -handler["ZOOM_SPEED"],
+      );
+      expect(zoomInCalls.length).toBeGreaterThan(0);
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyE", shiftKey: true }),
+      );
+      emitSpy.mockClear();
+
+      // zoomInNumpad
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "NumpadAdd", shiftKey: true }),
+      );
+      vi.advanceTimersByTime(5);
+      const zoomInNumpadCalls = emitSpy.mock.calls.filter(
+        (c: unknown[]) =>
+          c[0] instanceof ZoomEvent &&
+          (c[0] as ZoomEvent).delta === -handler["ZOOM_SPEED"],
+      );
+      expect(zoomInNumpadCalls.length).toBeGreaterThan(0);
+    });
+
+    test("zooms with Shift-modified alternate zoom bindings (Equal, Minus)", () => {
+      settings.setKeybinds({
+        zoomOutMinus: "Shift+Minus",
+        zoomInEqual: "Shift+Equal",
+      });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "Minus", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof ZoomEvent &&
+            (c[0] as ZoomEvent).delta === handler["ZOOM_SPEED"],
+        ),
+      ).toBe(true);
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Minus", shiftKey: true }),
+      );
+      emitSpy.mockClear();
+
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "Equal", shiftKey: true }),
+      );
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof ZoomEvent &&
+            (c[0] as ZoomEvent).delta === -handler["ZOOM_SPEED"],
+        ),
+      ).toBe(true);
+    });
+
+    test("unmodified bindings work normally and do not trigger when Shift is held", () => {
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      // Plain KeyW pans
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: false }),
+      );
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(true);
+
+      // Now press Shift (as in warship box selection mode) -> panning stops
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      emitSpy.mockClear();
+      vi.advanceTimersByTime(10);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+
+      // Release Shift -> panning resumes
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ShiftLeft", shiftKey: false }),
+      );
+      emitSpy.mockClear();
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(true);
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyW", shiftKey: false }),
+      );
+    });
+
+    test("browser zoom shortcuts (Ctrl/Cmd + Minus/Equal) do not trigger game zoom or preventDefault", () => {
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      const event = new KeyboardEvent("keydown", {
+        code: "Minus",
+        ctrlKey: true,
+      });
+      const preventSpy = vi.spyOn(event, "preventDefault");
+      window.dispatchEvent(event);
+
+      vi.advanceTimersByTime(10);
+      expect(preventSpy).not.toHaveBeenCalled();
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+      ).toBe(false);
+      expect(handler["activeKeys"].has("Minus")).toBe(false);
+    });
+
+    test("window blur clears held action state", () => {
+      settings.setKeybinds({ moveUp: "Shift+KeyW" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(true);
+
+      // Blur window
+      window.dispatchEvent(new Event("blur"));
+      emitSpy.mockClear();
+
+      vi.advanceTimersByTime(10);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+      expect(handler["activeKeys"].size).toBe(0);
+    });
+
+    test("unbound ('Null') bindings do not trigger continuous action", () => {
+      settings.setKeybinds({ moveUp: "Null" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: false }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(10);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+    });
+
+    test("a held KeyE continues to emit zoom after Control is released", () => {
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      // Hold KeyE to zoom in
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyE", shiftKey: false }),
+      );
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof ZoomEvent &&
+            (c[0] as ZoomEvent).delta === -handler["ZOOM_SPEED"],
+        ),
+      ).toBe(true);
+
+      // Press and release Control (e.g. modifier tapped or shortcuts used)
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ControlLeft", ctrlKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ControlLeft", ctrlKey: false }),
+      );
+      emitSpy.mockClear();
+
+      // KeyE is still held down, zoom should continue emitting
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof ZoomEvent &&
+            (c[0] as ZoomEvent).delta === -handler["ZOOM_SPEED"],
+        ),
+      ).toBe(true);
+      expect(handler["activeKeys"].has("KeyE")).toBe(true);
+
+      // Release KeyE
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyE", shiftKey: false }),
+      );
+      emitSpy.mockClear();
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+      ).toBe(false);
+    });
+
+    test("held browser zoom keys (Equal, Minus, NumpadAdd, NumpadSubtract) continue to emit zoom after Control is released", () => {
+      handler.initialize();
+
+      for (const code of ["Equal", "Minus", "NumpadAdd", "NumpadSubtract"]) {
+        const emitSpy = vi.spyOn(bus, "emit");
+        window.dispatchEvent(
+          new KeyboardEvent("keydown", { code, shiftKey: false }),
+        );
+        vi.advanceTimersByTime(5);
+        expect(
+          emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+        ).toBe(true);
+
+        // Press and release Control while zoom key is held
+        window.dispatchEvent(
+          new KeyboardEvent("keydown", { code: "ControlLeft", ctrlKey: true }),
+        );
+        window.dispatchEvent(
+          new KeyboardEvent("keyup", { code: "ControlLeft", ctrlKey: false }),
+        );
+        emitSpy.mockClear();
+
+        // Zoom key should remain held and emit zoom
+        vi.advanceTimersByTime(5);
+        expect(
+          emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+        ).toBe(true);
+        expect(handler["activeKeys"].has(code)).toBe(true);
+
+        // Release the zoom key
+        window.dispatchEvent(
+          new KeyboardEvent("keyup", { code, shiftKey: false }),
+        );
+        emitSpy.mockClear();
+        vi.advanceTimersByTime(5);
+        expect(
+          emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+        ).toBe(false);
+        expect(handler["activeKeys"].has(code)).toBe(false);
+      }
+    });
+
+    test("browser zoom keys pressed after modifier are cleaned up when modifier is released", () => {
+      handler.initialize();
+
+      // Press Control first
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ControlLeft", ctrlKey: true }),
+      );
+
+      // Simulate a browser zoom key getting into activeKeys (e.g. if swallowed)
+      handler["activeKeys"].add("Equal");
+      handler["activeKeys"].add("Minus");
+
+      // Release Control
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ControlLeft", ctrlKey: false }),
+      );
+
+      expect(handler["activeKeys"].has("Equal")).toBe(false);
+      expect(handler["activeKeys"].has("Minus")).toBe(false);
+    });
+
+    test("on macOS, zoom keys are cleared when Meta is released to prevent swallowed keyups from sticking", () => {
+      handler.initialize();
+
+      for (const code of [
+        "Minus",
+        "Equal",
+        "NumpadAdd",
+        "NumpadSubtract",
+        "KeyE",
+        "KeyQ",
+      ]) {
+        handler["activeKeys"].add(code);
+      }
+
+      // Release MetaLeft
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "MetaLeft", metaKey: false }),
+      );
+
+      for (const code of [
+        "Minus",
+        "Equal",
+        "NumpadAdd",
+        "NumpadSubtract",
+        "KeyE",
+        "KeyQ",
+      ]) {
+        expect(handler["activeKeys"].has(code)).toBe(false);
+      }
+    });
+
+    test("clears physical code for Shift-modified zoom binds when Meta is released", () => {
+      settings.setKeybinds({ zoomIn: "Shift+KeyE" });
+      handler.initialize();
+
+      // Hold Shift+E, then press Meta
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyE", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          code: "MetaLeft",
+          metaKey: true,
+          shiftKey: true,
+        }),
+      );
+
+      expect(handler["activeKeys"].has("KeyE")).toBe(true);
+
+      // Release Meta (keyup for KeyE was swallowed while Meta was down)
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", {
+          code: "MetaLeft",
+          metaKey: false,
+          shiftKey: true,
+        }),
+      );
+
+      // KeyE must be cleared from activeKeys so it does not stay stuck
+      expect(handler["activeKeys"].has("KeyE")).toBe(false);
+
+      // Release Shift
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ShiftLeft", shiftKey: false }),
+      );
+      expect(handler["activeKeys"].has("KeyE")).toBe(false);
+    });
+
+    test("preserves physical code for Shift-modified zoom binds held before Control", () => {
+      settings.setKeybinds({ zoomIn: "Shift+KeyE" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+
+      // Hold Shift+E before Control
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyE", shiftKey: true }),
+      );
+
+      // Press Control
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          code: "ControlLeft",
+          ctrlKey: true,
+          shiftKey: true,
+        }),
+      );
+
+      // Release Control
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", {
+          code: "ControlLeft",
+          ctrlKey: false,
+          shiftKey: true,
+        }),
+      );
+
+      // KeyE was held before Control, so it should still be in activeKeys and emit zoom
+      expect(handler["activeKeys"].has("KeyE")).toBe(true);
+      emitSpy.mockClear();
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+      ).toBe(true);
+    });
+
+    test("holding ShiftRight and pressing another key does NOT add ShiftLeft to activeKeys", () => {
+      settings.setKeybinds({ moveUp: "Shift+KeyW" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      // Press physical Right Shift
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftRight", shiftKey: true }),
+      );
+      // Press KeyW with shiftKey: true
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: true }),
+      );
+
+      // activeKeys must not contain ShiftLeft (which would trigger boxSelectWarships)
+      expect(handler["activeKeys"].has("ShiftLeft")).toBe(false);
+      expect(handler["activeKeys"].has("ShiftRight")).toBe(true);
+      expect(handler["activeKeys"].has("KeyW")).toBe(true);
+
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof DragEvent &&
+            (c[0] as DragEvent).deltaY === handler["PAN_SPEED"],
+        ),
+      ).toBe(true);
+
+      // Release ShiftRight while KeyW is held
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ShiftRight", shiftKey: false }),
+      );
+      expect(handler["activeKeys"].has("ShiftRight")).toBe(false);
+      emitSpy.mockClear();
+      vi.advanceTimersByTime(10);
+      // Shift action should stop
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+    });
+
+    test("rebuilds continuous action bindings when keybind settings change", () => {
+      handler.initialize();
+      expect(handler["keybinds"].moveUpArrow).toBe("ArrowUp");
+
+      settings.setKeybinds({ moveUpArrow: "Shift+ArrowUp" });
+      expect(handler["keybinds"].moveUpArrow).toBe("Shift+ArrowUp");
+    });
+  });
+});
+
+describe("InputHandler prevent building stacking hold", () => {
+  let handler: InputHandler;
+  let state: UIState;
+  const settings = new UserSettings();
+  const key = (type: string, code: string, init: KeyboardEventInit = {}) =>
+    window.dispatchEvent(new KeyboardEvent(type, { code, ...init }));
+
+  beforeEach(() => {
+    settings.removeCached(KEYBINDS_KEY, false);
+    state = {
+      attackRatio: 20,
+      ghostStructure: null,
+      rocketDirectionUp: true,
+      upgradeMultiplier: 1,
+    };
+    const game = {
+      inSpawnPhase: () => false,
+      myPlayer: () => ({ isAlive: () => true }),
+    } as unknown as GameView;
+    handler = new InputHandler(
+      game,
+      state,
+      document.createElement("canvas"),
+      new EventBus(),
+    );
+    handler.initialize();
+  });
+
+  afterEach(() => {
+    handler.destroy();
+    settings.removeCached(KEYBINDS_KEY, false);
+    document.body.innerHTML = "";
+  });
+
+  test("holds only until key release, blur, teardown or rebinding", () => {
+    key("keydown", "KeyH");
+    expect(state.preventStacking).toBe(true);
+    key("keyup", "KeyH");
+    expect(state.preventStacking).toBe(false);
+    key("keydown", "KeyH");
+    window.dispatchEvent(new Event("blur"));
+    expect(state.preventStacking).toBe(false);
+    key("keydown", "KeyH");
+    settings.setKeybinds({ preventStacking: "KeyV" });
+    expect(state.preventStacking).toBe(false);
+    key("keydown", "KeyH");
+    expect(state.preventStacking).toBe(false);
+    key("keydown", "KeyV");
+    expect(state.preventStacking).toBe(true);
+    handler.destroy();
+    expect(state.preventStacking).toBe(false);
+  });
+
+  test.each(["KeyH", "ShiftLeft", "ShiftRight"])(
+    "releasing %s clears Shift+H",
+    (code) => {
+      settings.setKeybinds({ preventStacking: "Shift+KeyH" });
+      key("keydown", "KeyH", { shiftKey: true });
+      expect(state.preventStacking).toBe(true);
+      key("keyup", code, { shiftKey: code === "KeyH" });
+      expect(state.preventStacking).toBe(false);
+    },
+  );
+
+  test.each(["MetaLeft", "MetaRight"])(
+    "clears on %s release when macOS swallows H keyup",
+    (code) => {
+      key("keydown", "KeyH");
+      key("keydown", code, { metaKey: true });
+      expect(state.preventStacking).toBe(true);
+      // No H keyup arrives. Focus may also move into a text field in a menu.
+      const input = document.createElement("input");
+      document.body.append(input);
+      input.dispatchEvent(new KeyboardEvent("keyup", { code, bubbles: true }));
+      expect(state.preventStacking).toBe(false);
+    },
+  );
+
+  test("typing H in a text field does not activate the hold", () => {
+    const input = document.createElement("input");
+    document.body.append(input);
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { code: "KeyH", bubbles: true }),
+    );
+    expect(state.preventStacking).not.toBe(true);
+  });
+});
+
+describe("GhostStructure Hotkeys tapping/Scrolling", () => {
+  let inputHandler: InputHandler;
+  let eventBus: EventBus;
+  let mockCanvas: HTMLCanvasElement;
+  let uiState: UIState;
+  let testSettings: UserSettings;
+  let mockGameView: GameView;
+
+  beforeEach(() => {
+    mockGameView = {
+      inSpawnPhase: () => false,
+      myPlayer: () => ({ isAlive: () => true }),
+      config: () => ({ gameConfig: () => ({}) }),
+    } as unknown as GameView;
+    testSettings = new UserSettings();
+    testSettings.removeCached(KEYBINDS_KEY, false);
+    mockCanvas = document.createElement("canvas");
+    eventBus = new EventBus();
+    uiState = {
+      attackRatio: 20,
+      ghostStructure: null,
+      rocketDirectionUp: true,
+      upgradeMultiplier: 1,
+    } as UIState;
+    inputHandler = new InputHandler(
+      mockGameView,
+      uiState,
+      mockCanvas,
+      eventBus,
+    );
+    // Intentionally non-existing keys as keybinds.
+    testSettings.setKeybinds({
+      buildAtomBomb: "F14",
+      buildScrollModifier: "F13",
+      buildCity: "F15",
+    });
+    inputHandler.initialize();
+  });
+
+  afterEach(() => {
+    inputHandler.destroy();
+  });
+
+  test("switching ghost structures via GUIclick resets the upgrade multiplier", () => {
+    inputHandler.setGhostStructure(UnitType.City, "hotkey");
+    expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.City);
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+
+    inputHandler.setGhostStructure(UnitType.City, "increase");
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(2);
+    inputHandler.setGhostStructure(UnitType.City, "increase");
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(3);
+    inputHandler.setGhostStructure(UnitType.City, "increase");
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(4);
+
+    inputHandler.setGhostStructure(UnitType.AtomBomb, "GUIclick");
+    expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.AtomBomb);
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+  });
+
+  test("repeated hotkeys wait for view sync before changing the multiplier", () => {
+    // First tap sets ghostStructure and resets multiplier to 1
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.AtomBomb);
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+
+    // Second tap: 1 -> 5
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(5);
+
+    // Third tap: 5 -> 10
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(10);
+
+    // Verify loop back to 1 after exceeding MAX_UPGRADE_AMOUNT
+    inputHandler["uiState"].upgradeMultiplier = MAX_UPGRADE_AMOUNT;
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+
+    mockGameView.updatesSinceLastTick = () => null;
+    mockGameView.isCatchingUp = () => false;
+    mockGameView.isPaused = () => false;
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+
+    mockGameView.updatesSinceLastTick = () => ({}) as any;
+    mockGameView.isCatchingUp = () => true;
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+
+    mockGameView.isCatchingUp = () => false;
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(5);
+
+    mockGameView.isPaused = () => true;
+    window.dispatchEvent(new KeyboardEvent("keyup", { code: "F14" }));
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(5);
+  });
+
+  test("wheel scroll up increases upgrade multiplier", () => {
+    uiState.ghostStructure = UnitType.City;
+    // Use the actual buildScrollModifier keybind
+    inputHandler["activeKeys"].add(
+      inputHandler["keybinds"].buildScrollModifier,
+    );
+
+    mockCanvas.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaY: -100, // Scroll up
+        altKey: false,
+      }),
+    );
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(2);
+  });
+
+  test("wheel scroll down decreases upgrade multiplier", () => {
+    uiState.ghostStructure = UnitType.City;
+    uiState.upgradeMultiplier = 5;
+    inputHandler["activeKeys"].add(
+      inputHandler["keybinds"].buildScrollModifier,
+    );
+
+    mockCanvas.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaY: 100, // Scroll down
+        altKey: false,
+      }),
+    );
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(4);
+  });
+
+  test("wheel scroll doesn't go below 1", () => {
+    uiState.ghostStructure = UnitType.City;
+    uiState.upgradeMultiplier = 1;
+    inputHandler["activeKeys"].add(
+      inputHandler["keybinds"].buildScrollModifier,
+    );
+
+    mockCanvas.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaY: 100,
+        altKey: false,
+      }),
+    );
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+  });
+
+  test("wheel scroll doesn't exceed MAX_UPGRADE_AMOUNT", () => {
+    uiState.ghostStructure = UnitType.City;
+    uiState.upgradeMultiplier = MAX_UPGRADE_AMOUNT;
+    inputHandler["activeKeys"].add(
+      inputHandler["keybinds"].buildScrollModifier,
+    );
+
+    mockCanvas.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaY: -100,
+        altKey: false,
+      }),
+    );
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(MAX_UPGRADE_AMOUNT);
+  });
+
+  test("shift + scroll wheel changes attack ratio", () => {
+    const mockEmit = vi.spyOn(eventBus, "emit");
+
+    mockCanvas.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaY: -100,
+        shiftKey: true,
+      }),
+    );
+
+    mockCanvas.dispatchEvent(
+      new WheelEvent("wheel", {
+        deltaY: 100,
+        shiftKey: true,
+      }),
+    );
+
+    const ratioEvents = mockEmit.mock.calls
+      .map((call) => call[0])
+      .filter((e) => e instanceof AttackRatioEvent) as AttackRatioEvent[];
+
+    expect(ratioEvents.length).toBe(2);
+    expect(ratioEvents[0].attackRatio).toBeGreaterThan(0);
+    expect(ratioEvents[1].attackRatio).toBeLessThan(0);
   });
 });

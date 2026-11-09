@@ -61,7 +61,12 @@ export class FxAttackRingPass {
     this.gl = gl;
     this.settings = settings;
 
-    this.program = createProgram(gl, attackRingVertSrc, attackRingFragSrc);
+    this.program = createProgram(
+      gl,
+      attackRingVertSrc,
+      attackRingFragSrc,
+      "FxAttackRingPass",
+    );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uTilesPerPx = gl.getUniformLocation(this.program, "uTilesPerPx")!;
     this.uTime = gl.getUniformLocation(this.program, "uTime")!;
