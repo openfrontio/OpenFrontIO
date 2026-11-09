@@ -2439,6 +2439,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.world10000",
     categories: ["new", "world"],
     defaultNationCount: 377,
+    hidden: true,
     layers: [
       { id: "w10kland", placement: "land", nukeable: true },
       { id: "w10kwater", placement: "water" },
