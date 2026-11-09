@@ -4,7 +4,7 @@
   "name": "Arctic",
   "translation_key": "map.arctic",
   "categories": ["europe", "north_america", "asia"],
-  "location": { "lat": 79, "lon": -60 },
+  "location": { "lat": 79, "lon": 0 },
   "author": "Tristar",
   "description": "Earth's smallest and northernmost ocean, surrounded by 3 continents. The Arctic has become a stage for national prestige, technological competition, and the idea that even the coldest places should be conquered. Fight against nuclear superpowers and win the Cold War!",
   "nations": [

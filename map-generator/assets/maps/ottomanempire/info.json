@@ -3,7 +3,8 @@
   "id": "OttomanEmpire",
   "name": "Ottoman Empire",
   "translation_key": "map.ottomanempire",
-  "categories": ["europe", "asia", "africa"],
+  "categories": ["europe", "asia", "africa", "countries", "new"],
+  "location": { "lat": 39, "lon": 29 },
   "nations": [
     {
       "coordinates": [1722, 701],
@@ -234,5 +235,6 @@
       "name": "Adana",
       "flag": "Ottoman Empire"
     }
-  ]
+  ],
+  "themes": ["europe", "asia", "africa"]
 }
