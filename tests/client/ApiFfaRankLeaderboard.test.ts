@@ -10,7 +10,10 @@ vi.mock("../../src/client/Auth", () => ({
   userAuth: vi.fn(async () => false),
 }));
 
-import { fetchFfaRankLeaderboard } from "../../src/client/Api";
+import {
+  fetchFfaRankLeaderboard,
+  fetchFfaRankPosition,
+} from "../../src/client/Api";
 
 const res = (body: unknown, ok = true, status = 200) => ({
   ok,
@@ -36,6 +39,30 @@ beforeEach(() => {
   process.env.API_DOMAIN = "api.test";
   vi.stubGlobal("fetch", vi.fn());
   vi.spyOn(console, "warn").mockImplementation(() => {});
+});
+
+describe("fetchFfaRankPosition", () => {
+  it("reads the signed-in player's position", async () => {
+    vi.mocked(fetch).mockResolvedValue(res({ position: 4812 }) as never);
+
+    expect(await fetchFfaRankPosition()).toBe(4812);
+    const url = new URL(String(vi.mocked(fetch).mock.calls[0][0]));
+    expect(url.pathname).toBe("/users/@me/ffa_rank_position");
+  });
+
+  it("is null when the board doesn't list them", async () => {
+    vi.mocked(fetch).mockResolvedValue(res({ position: null }) as never);
+
+    expect(await fetchFfaRankPosition()).toBeNull();
+  });
+
+  it("is null on an error or a malformed body", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(res({}, false, 500) as never);
+    expect(await fetchFfaRankPosition()).toBeNull();
+
+    vi.mocked(fetch).mockResolvedValueOnce(res({ position: "x" }) as never);
+    expect(await fetchFfaRankPosition()).toBeNull();
+  });
 });
 
 describe("fetchFfaRankLeaderboard", () => {

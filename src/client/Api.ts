@@ -35,6 +35,7 @@ import {
   PutUsernameResponseSchema,
   FfaRankLeaderboardResponse,
   FfaRankLeaderboardResponseSchema,
+  FfaRankPositionResponseSchema,
   RankedLeaderboardResponse,
   RankedLeaderboardResponseSchema,
   SteamFinalizeResponseSchema,
@@ -2404,6 +2405,24 @@ export async function fetchFfaRankLeaderboard(
   } catch (err) {
     console.error("fetchFfaRankLeaderboard: request failed", err);
     return false;
+  }
+}
+
+/** The signed-in player's position in their rank, or null if there's none to show. */
+export async function fetchFfaRankPosition(): Promise<number | null> {
+  try {
+    const res = await fetch(`${getApiBase()}/users/@me/ffa_rank_position`, {
+      headers: {
+        Accept: "application/json",
+        Authorization: await getAuthHeader(),
+      },
+    });
+    if (!res.ok) return null;
+    const parsed = FfaRankPositionResponseSchema.safeParse(await res.json());
+    return parsed.success ? parsed.data.position : null;
+  } catch (err) {
+    console.warn("fetchFfaRankPosition: request failed", err);
+    return null;
   }
 }
 

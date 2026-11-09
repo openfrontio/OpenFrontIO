@@ -71,6 +71,7 @@ vi.mock("../../src/client/Api", async () => {
       return res.json();
     }),
     fetchFfaRankLeaderboard: vi.fn(async () => ({ players: [] })),
+    fetchFfaRankPosition: vi.fn(async () => null),
     // Mirrors the real fetchTribeLeaderboard: page 1, plus page 2 only when
     // page 1 came back exactly full.
     fetchTribeLeaderboard: vi.fn(async () => {

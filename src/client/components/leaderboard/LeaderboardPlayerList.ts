@@ -9,6 +9,7 @@ import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import {
   fetchFfaRankLeaderboard,
+  fetchFfaRankPosition,
   fetchPlayerLeaderboard,
   getUserMe,
 } from "../../Api";
@@ -133,6 +134,9 @@ export class LeaderboardPlayerList extends LitElement {
   > = {};
   @state() private ffaRanksLoading: ReadonlySet<FfaTierBase> = new Set();
   private ffaOwnRank: FfaTierBase | null = null;
+  // The signed-in player's row with their exact position, for when they aren't
+  // in the loaded rows of their own rank.
+  @state() private ffaPositionRow: LadderRow | null = null;
   // Bumped by a full reload, so an answer from before it is dropped.
   private ffaRankGeneration = 0;
 
@@ -159,7 +163,12 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   private get currentUserEntry(): LadderRow | null {
-    return this.activeLadder.userEntry;
+    if (this.activeLadder.userEntry !== null) {
+      return this.activeLadder.userEntry;
+    }
+    return this.ffaRankActive && this.ffaRank === this.ffaOwnRank
+      ? this.ffaPositionRow
+      : null;
   }
 
   // The FFA tab shows ratings (badge, rating ± uncertainty, OFstats credit)
@@ -297,6 +306,27 @@ export class LeaderboardPlayerList extends LitElement {
                 wins: ffa.wins ?? 0,
               }
             : null;
+        if (
+          userMe &&
+          ffa?.tier !== undefined &&
+          ffa.elo !== undefined &&
+          ffa.hiddenByUncertainty !== true
+        ) {
+          const games = ffa.games ?? 0;
+          const wins = ffa.wins ?? 0;
+          void this.loadFfaPosition({
+            rank: 0,
+            playerId: userMe.player.publicId,
+            accountUsername: userMe.player.username ?? null,
+            elo: ffa.elo,
+            games,
+            wins,
+            losses: games - wins,
+            winRate: games ? wins / games : 0,
+            uncertainty: ffa.uncertainty,
+            tier: ffa.tier,
+          });
+        }
         this.ffaHidden =
           userMe &&
           ffa?.hiddenByUncertainty === true &&
@@ -381,6 +411,13 @@ export class LeaderboardPlayerList extends LitElement {
         this.isLoadingMore = false;
       }
     }
+  }
+
+  private async loadFfaPosition(row: LadderRow) {
+    const position = await fetchFfaRankPosition();
+    if (position === null) return;
+    this.ffaPositionRow = { ...row, rank: position };
+    this.scheduleStickyVisibilityCheck();
   }
 
   private selectFfaRank(rank: FfaTierBase) {
@@ -562,9 +599,11 @@ export class LeaderboardPlayerList extends LitElement {
     return html`
       <tfoot class="sticky bottom-0 z-20">
         <tr class="bg-blue-600 border-t border-blue-400/30 shadow-2xl">
-          <td class="py-3 px-4 text-center">
+          <td class="py-3 ${entry.rank >= 1000 ? "px-1" : "px-4"} text-center">
             <div
-              class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg bg-white/20 text-white"
+              class="min-w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono ${
+                entry.rank >= 1000 ? "text-xs" : "text-lg"
+              } bg-white/20 text-white"
             >
               ${entry.rank}
             </div>
@@ -900,7 +939,7 @@ export class LeaderboardPlayerList extends LitElement {
             >${translateText(FFA_TIER_NAME_KEYS[selected])}</span
           >
           <span class="ml-auto text-xs text-white/50"
-            >${translateText("ffa_rating.rank_top_100")}</span
+            >${translateText("ffa_rating.rank_top_250")}</span
           >
         </div>
       </div>

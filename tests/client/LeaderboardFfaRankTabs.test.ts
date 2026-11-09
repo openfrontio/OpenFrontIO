@@ -13,11 +13,13 @@ vi.mock("../../src/client/ProgressionAccount", () => ({
 vi.mock("../../src/client/Api", () => ({
   fetchPlayerLeaderboard: vi.fn(),
   fetchFfaRankLeaderboard: vi.fn(),
+  fetchFfaRankPosition: vi.fn(),
   getUserMe: vi.fn(async () => false),
 }));
 
 import {
   fetchFfaRankLeaderboard,
+  fetchFfaRankPosition,
   fetchPlayerLeaderboard,
   getUserMe,
 } from "../../src/client/Api";
@@ -85,6 +87,7 @@ const open = async (rankedType: RankedType = RankedType.FreeForAll) => {
 beforeEach(() => {
   document.body.innerHTML = "";
   vi.mocked(getUserMe).mockReset().mockResolvedValue(false);
+  vi.mocked(fetchFfaRankPosition).mockReset().mockResolvedValue(null);
   vi.mocked(fetchPlayerLeaderboard)
     .mockReset()
     .mockResolvedValue(overall([row(1, "top", "Diamond II")]) as never);
@@ -275,6 +278,78 @@ describe("FFA rank tabs", () => {
     await open();
     const row = list.querySelector('tr[data-current-user="true"]');
     expect(row?.getAttribute("data-player-id")).toBe("me");
+  });
+
+  describe("your position outside the loaded rows", () => {
+    const signedIn = (ffa: Record<string, unknown>) =>
+      vi.mocked(getUserMe).mockResolvedValue({
+        player: { publicId: "me", leaderboard: { ffa } },
+      } as never);
+    const rated = { tier: "Gold II", elo: 1800, games: 20, wins: 5 };
+    const pinned = async () => {
+      // jsdom has no layout: force what the scroll check decides in a browser.
+      (list as unknown as { showStickyUser: boolean }).showStickyUser = true;
+      await list.updateComplete;
+      return list.querySelector("tfoot");
+    };
+
+    it("pins your exact position on your own rank", async () => {
+      signedIn(rated);
+      vi.mocked(fetchFfaRankPosition).mockResolvedValue(4812);
+      await open();
+      expect((await pinned())?.textContent).toContain("4812");
+      expect((await pinned())?.textContent).toContain(
+        "leaderboard_modal.your_ranking",
+      );
+    });
+
+    it("isn't pinned on another rank's tab", async () => {
+      signedIn(rated);
+      vi.mocked(fetchFfaRankPosition).mockResolvedValue(4812);
+      await open();
+      tab("diamond").click();
+      await settle();
+      expect(await pinned()).toBeNull();
+    });
+
+    it("keeps your listed row's own number when you are in the loaded rows", async () => {
+      signedIn(rated);
+      vi.mocked(fetchFfaRankPosition).mockResolvedValue(4812);
+      vi.mocked(fetchFfaRankLeaderboard).mockResolvedValue(
+        players("a", "me") as never,
+      );
+      await open();
+      expect(
+        list.querySelector('tr[data-current-user="true"]')?.textContent,
+      ).toContain("2");
+      expect((await pinned())?.textContent ?? "").not.toContain("4812");
+    });
+
+    it("shows no position when the board doesn't list you", async () => {
+      signedIn(rated);
+      vi.mocked(fetchFfaRankPosition).mockResolvedValue(null);
+      await open();
+      expect(await pinned()).toBeNull();
+    });
+
+    it("doesn't ask for a player with no rating", async () => {
+      await open();
+      expect(fetchFfaRankPosition).not.toHaveBeenCalled();
+    });
+
+    it("doesn't ask for a player the ± rule hides", async () => {
+      signedIn({ ...rated, hiddenByUncertainty: true, uncertainty: 70 });
+      await open();
+      expect(fetchFfaRankPosition).not.toHaveBeenCalled();
+    });
+
+    it("only asks once", async () => {
+      signedIn(rated);
+      await open();
+      await list.loadPlayerLeaderboard(true);
+      await settle();
+      expect(fetchFfaRankPosition).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("ignores a slow answer after the board was reloaded", async () => {
