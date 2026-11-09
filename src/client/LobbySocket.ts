@@ -53,7 +53,6 @@ export class PublicLobbySocket {
   private generation = 0;
   // Latest full snapshot, used as the base for applying counts-only deltas.
   private lastFull: PublicGames | null = null;
-  private token: string | null = null;
 
   private readonly reconnectDelay: number;
   private readonly maxWsAttempts: number;
@@ -133,14 +132,10 @@ export class PublicLobbySocket {
     // forever, never reaching maxWsAttempts and never telling the player.
     this.wsAttemptCounted = false;
     const generation = this.generation;
-    const [listStatus, token] = await Promise.all([
-      refreshList ? refreshServerList() : ensureServerList(),
-      Promise.resolve()
-        .then(() => (this.getToken ? this.getToken() : null))
-        .catch(() => null),
-    ]);
+    const listStatus = await (refreshList
+      ? refreshServerList()
+      : ensureServerList());
     if (generation !== this.generation) return;
-    this.token = token ?? null;
     if (listStatus === "outdated") this.fireUpdateAvailable();
     // Get config to determine number of workers, then pick a random one.
     // With no list and nothing injected there is no server to ask (a static
@@ -161,7 +156,6 @@ export class PublicLobbySocket {
     this.stopped = true;
     this.generation++;
     this.lastFull = null;
-    this.token = null;
     this.disconnectWebSocket();
   }
 
@@ -223,13 +217,28 @@ export class PublicLobbySocket {
       clearTimeout(this.wsReconnectTimeout);
       this.wsReconnectTimeout = null;
     }
-    if (this.token && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      try {
-        this.ws.send(JSON.stringify({ type: "auth", token: this.token }));
-      } catch (err) {
-        console.warn("Failed to send lobby socket auth frame:", err);
-      }
-    }
+    const ws = this.ws;
+    if (!ws || ws.readyState !== WebSocket.OPEN || !this.getToken) return;
+    const generation = this.generation;
+    void Promise.resolve()
+      .then(() => this.getToken!())
+      .catch(() => null)
+      .then((token) => {
+        if (
+          generation !== this.generation ||
+          this.ws !== ws ||
+          ws.readyState !== WebSocket.OPEN
+        ) {
+          return;
+        }
+        if (token) {
+          try {
+            ws.send(JSON.stringify({ type: "auth", token }));
+          } catch (err) {
+            console.warn("Failed to send lobby socket auth frame:", err);
+          }
+        }
+      });
   }
 
   private handleMessage(event: MessageEvent) {

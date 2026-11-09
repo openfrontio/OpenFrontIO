@@ -1185,9 +1185,11 @@ describe("PublicLobbySocket token and stop handling", () => {
     expect(dialed[0]).not.toContain("token=");
     expect(RecordingWebSocket.lastInstance).not.toBeNull();
     RecordingWebSocket.lastInstance!.simulateOpen();
-    expect(RecordingWebSocket.lastInstance!.sent).toEqual([
-      JSON.stringify({ type: "auth", token: "test_token_123" }),
-    ]);
+    await vi.waitFor(() => {
+      expect(RecordingWebSocket.lastInstance!.sent).toEqual([
+        JSON.stringify({ type: "auth", token: "test_token_123" }),
+      ]);
+    });
     socket.stop();
   });
 
@@ -1199,6 +1201,7 @@ describe("PublicLobbySocket token and stop handling", () => {
     expect(dialed).toHaveLength(1);
     expect(dialed[0]).not.toContain("token=");
     RecordingWebSocket.lastInstance!.simulateOpen();
+    await Promise.resolve();
     expect(RecordingWebSocket.lastInstance!.sent).toEqual([]);
     socket1.stop();
     dialed.length = 0;
@@ -1214,6 +1217,7 @@ describe("PublicLobbySocket token and stop handling", () => {
     expect(dialed).toHaveLength(1);
     expect(dialed[0]).not.toContain("token=");
     RecordingWebSocket.lastInstance!.simulateOpen();
+    await Promise.resolve();
     expect(RecordingWebSocket.lastInstance!.sent).toEqual([]);
     socket2.stop();
     dialed.length = 0;
@@ -1229,6 +1233,7 @@ describe("PublicLobbySocket token and stop handling", () => {
     expect(dialed).toHaveLength(1);
     expect(dialed[0]).not.toContain("token=");
     RecordingWebSocket.lastInstance!.simulateOpen();
+    await Promise.resolve();
     expect(RecordingWebSocket.lastInstance!.sent).toEqual([]);
     socket3.stop();
   });
@@ -1297,7 +1302,7 @@ describe("PublicLobbySocket token and stop handling", () => {
     expect(dispatchSpy).not.toHaveBeenCalled();
   });
 
-  it("aborts connection and does not dial when stop() is called while getToken is resolving", async () => {
+  it("does not send auth frame when stop() is called while getToken is resolving", async () => {
     let resolveToken!: (token: string) => void;
     const tokenPromise = new Promise<string>((resolve) => {
       resolveToken = resolve;
@@ -1305,11 +1310,42 @@ describe("PublicLobbySocket token and stop handling", () => {
     const getToken = vi.fn(() => tokenPromise);
     const socket = new PublicLobbySocket(vi.fn(), { getToken });
 
-    const startPromise = socket.start();
+    await socket.start();
+    RecordingWebSocket.lastInstance!.simulateOpen();
+    await vi.waitFor(() => {
+      expect(getToken).toHaveBeenCalled();
+    });
+
     socket.stop();
     resolveToken("late_token");
-    await startPromise;
+    await vi.advanceTimersByTimeAsync(10);
 
-    expect(dialed).toHaveLength(0);
+    expect(RecordingWebSocket.lastInstance!.sent).toEqual([]);
+  });
+
+  it("fetches fresh token for each connection on open rather than reusing a stored token", async () => {
+    let counter = 1;
+    const getToken = vi.fn(async () => `token_${counter++}`);
+    const socket = new PublicLobbySocket(vi.fn(), { getToken });
+
+    await socket.start();
+    const ws1 = RecordingWebSocket.lastInstance!;
+    ws1.simulateOpen();
+    await vi.waitFor(() => {
+      expect(ws1.sent).toEqual([
+        JSON.stringify({ type: "auth", token: "token_1" }),
+      ]);
+    });
+
+    // Simulate socket reconnect
+    (socket as any).connectWebSocket();
+    const ws2 = RecordingWebSocket.lastInstance!;
+    ws2.simulateOpen();
+    await vi.waitFor(() => {
+      expect(ws2.sent).toEqual([
+        JSON.stringify({ type: "auth", token: "token_2" }),
+      ]);
+    });
+    socket.stop();
   });
 });
