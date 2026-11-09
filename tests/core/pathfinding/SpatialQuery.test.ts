@@ -235,6 +235,43 @@ describe("SpatialQuery", () => {
     });
   });
 
+  describe("closestShoreByWater memo", () => {
+    // Three specks of land in open water: ours at x=0, then x=10, the
+    // landing at x=19.
+    function buildSpecks(): { game: Game; player: Player } {
+      const width = 20;
+      const grid: string[] = new Array(width * 3).fill(W);
+      for (const x of [0, 10, 19]) grid[width + x] = L;
+      const game = createGame({ width, height: 3, grid });
+      const info = new PlayerInfo("p", PlayerType.Human, null, "p_id");
+      game.addPlayer(info);
+      const player = game.player(info.id);
+      player.conquer(game.ref(0, 1));
+      return { game, player };
+    }
+
+    it("answers again from the same territory", () => {
+      const { game, player } = buildSpecks();
+      const spatial = new SpatialQuery(game);
+      const landing = game.ref(19, 1);
+      expect(spatial.closestShoreByWater(player, landing)).toBe(game.ref(0, 1));
+      expect(spatial.closestShoreByWater(player, landing)).toBe(game.ref(0, 1));
+    });
+
+    it("forgets the answer once the player's tiles change", () => {
+      const { game, player } = buildSpecks();
+      const spatial = new SpatialQuery(game);
+      const landing = game.ref(19, 1);
+      expect(spatial.closestShoreByWater(player, landing)).toBe(game.ref(0, 1));
+      player.conquer(game.ref(10, 1));
+      expect(spatial.closestShoreByWater(player, landing)).toBe(
+        game.ref(10, 1),
+      );
+      player.relinquish(game.ref(10, 1));
+      expect(spatial.closestShoreByWater(player, landing)).toBe(game.ref(0, 1));
+    });
+  });
+
   describe("closestReachableShore", () => {
     // Target island (cols 10-24, rows 1-16) with an interior lake
     // (cols 15-20, rows 6-11) enclosed by a thick land moat, so the lake is a
