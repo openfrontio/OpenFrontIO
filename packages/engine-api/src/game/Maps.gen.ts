@@ -26,6 +26,7 @@ export enum GameMapType {
   BetweenTwoSeas = "Between Two Seas", // map-generator/assets/maps/betweentwoseas/info.json
   BlackSea = "Black Sea", // map-generator/assets/maps/blacksea/info.json
   BosphorusStraits = "Bosphorus Straits", // map-generator/assets/maps/bosphorusstraits/info.json
+  Brahmaputra = "Brahmaputra", // map-generator/assets/maps/brahmaputra/info.json
   BrainRot = "Brain Rot", // map-generator/assets/maps/brainrot/info.json
   BranchingPaths = "Branching Paths", // map-generator/assets/maps/branchingpaths/info.json
   Britannia = "Britannia", // map-generator/assets/maps/britannia/info.json
@@ -504,6 +505,18 @@ export const maps: readonly MapInfo[] = [
     themes: ["europe", "asia"],
     author: "TsProphet94",
     location: { lat: 41.1, lon: 29 },
+  },
+  {
+    id: "Brahmaputra",
+    type: GameMapType.Brahmaputra,
+    translationKey: "map.brahmaputra",
+    categories: ["asia", "new"],
+    defaultNationCount: 37,
+    specialTeamCount: 2,
+    themes: ["asia"],
+    author: "novc",
+    descriptionKey: "map_description.brahmaputra",
+    location: { lat: 26.5, lon: 92.5 },
   },
   {
     id: "BrainRot",
