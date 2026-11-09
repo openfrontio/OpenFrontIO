@@ -55,6 +55,9 @@ vi.mock("../../src/client/Utils", () => ({
     if (key === "invite_modal.clan_group") {
       return `Clan [${params?.tag}] (${params?.count})`;
     }
+    if (key === "invite_modal.cooldown") {
+      return `Invite on cooldown. Please wait ${params?.seconds}s before retrying.`;
+    }
     return map[key] ?? key;
   },
 }));

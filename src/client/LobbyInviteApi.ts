@@ -7,7 +7,7 @@ import {
 } from "@openfront/shared/LobbyInviteSchemas";
 import { getPlayToken } from "./Auth";
 import { ClientEnv } from "./ClientEnv";
-import { ensureServerList } from "./ServerList";
+import { cachedServerList, ensureServerList } from "./ServerList";
 
 /**
  * Resolves the target HTTP base and optional worker path for a lobby ID so requests reach the lobby's owning deployment, with a same-deployment master fallback when a worker prefix is not routed.
@@ -173,7 +173,40 @@ export type FetchLobbyInvitesResult = {
 };
 
 /**
- * Polls active lobby invitations for the authenticated user from the connected server deployment, returning `false` on failure.
+ * Collects known server HTTP deployment origins from the cached server list, cluster config, and own server base.
+ */
+function getTargetServerHttpBases(): string[] {
+  const bases = new Set<string>();
+  try {
+    bases.add(ClientEnv.serverHttpBase());
+  } catch {
+    // serverHttpBase may throw NoServerError before list applied on static apex
+  }
+  const list = cachedServerList();
+  if (list?.servers) {
+    for (const server of Object.values(list.servers)) {
+      if (server?.host) {
+        bases.add(`https://${server.host}`);
+      }
+    }
+  }
+  try {
+    const cluster = ClientEnv.cluster();
+    if (cluster) {
+      for (const entry of Object.values(cluster)) {
+        if (entry?.host) {
+          bases.add(`https://${entry.host}`);
+        }
+      }
+    }
+  } catch {
+    // ClientEnv.cluster() may throw when BOOTSTRAP_CONFIG is absent in unit tests
+  }
+  return Array.from(bases);
+}
+
+/**
+ * Polls active lobby invitations for the authenticated user across known server deployments, deduplicating by ID and returning `false` on complete failure.
  */
 export async function fetchLobbyInvites(
   publicId?: string,
@@ -181,54 +214,87 @@ export async function fetchLobbyInvites(
   try {
     await ensureServerList().catch(() => {});
     const token = await getPlayToken();
-    const base = ClientEnv.serverHttpBase();
-    if (!base) return false;
+    const bases = getTargetServerHttpBases();
+    if (bases.length === 0) return false;
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    try {
-      const url = new URL(`${base}/api/lobby/invites`);
-      if (publicId) {
-        url.searchParams.set("publicId", publicId);
-      }
-      const res = await fetch(url.toString(), {
-        signal: controller.signal,
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const contentType = res.headers.get("content-type");
-      if (!contentType?.includes("application/json")) {
-        throw new Error("Not JSON");
-      }
-      const data = await res.json();
-      const parsed = LobbyInvitesResponseSchema.safeParse(data);
-      if (parsed.success) {
-        return parsed.data;
-      }
-      if (Array.isArray(data?.invites)) {
-        const validatedInvites: LobbyInvite[] = [];
-        for (const item of data.invites) {
-          const itemParsed = LobbyInviteSchema.safeParse(item);
-          if (!itemParsed.success) {
-            throw new Error("Invalid invite item");
-          }
-          validatedInvites.push(itemParsed.data);
+    const fetchFromBase = async (
+      base: string,
+    ): Promise<FetchLobbyInvitesResult> => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      try {
+        const url = new URL(`${base}/api/lobby/invites`);
+        if (publicId) {
+          url.searchParams.set("publicId", publicId);
         }
-        return {
-          invites: validatedInvites,
-          serverTime:
-            typeof data.serverTime === "number" &&
-            Number.isFinite(data.serverTime)
-              ? data.serverTime
-              : Date.now(),
-        };
+        const res = await fetch(url.toString(), {
+          signal: controller.signal,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const contentType = res.headers.get("content-type");
+        if (!contentType?.includes("application/json")) {
+          throw new Error("Not JSON");
+        }
+        const data = await res.json();
+        const parsed = LobbyInvitesResponseSchema.safeParse(data);
+        if (parsed.success) {
+          return parsed.data;
+        }
+        if (Array.isArray(data?.invites)) {
+          const validatedInvites: LobbyInvite[] = [];
+          for (const item of data.invites) {
+            const itemParsed = LobbyInviteSchema.safeParse(item);
+            if (!itemParsed.success) {
+              throw new Error("Invalid invite item");
+            }
+            validatedInvites.push(itemParsed.data);
+          }
+          return {
+            invites: validatedInvites,
+            serverTime:
+              typeof data.serverTime === "number" &&
+              Number.isFinite(data.serverTime)
+                ? data.serverTime
+                : Date.now(),
+          };
+        }
+        throw new Error("Invalid payload");
+      } finally {
+        clearTimeout(timer);
       }
-      throw new Error("Invalid payload");
-    } finally {
-      clearTimeout(timer);
+    };
+
+    const settled = await Promise.allSettled(
+      bases.map((base) => fetchFromBase(base)),
+    );
+    const fulfilled = settled.filter(
+      (r): r is PromiseFulfilledResult<FetchLobbyInvitesResult> =>
+        r.status === "fulfilled",
+    );
+    if (fulfilled.length === 0) {
+      return false;
     }
+
+    const inviteMap = new Map<string, LobbyInvite>();
+    let maxServerTime = 0;
+    for (const { value } of fulfilled) {
+      if (value.serverTime > maxServerTime) {
+        maxServerTime = value.serverTime;
+      }
+      for (const invite of value.invites) {
+        if (!inviteMap.has(invite.id)) {
+          inviteMap.set(invite.id, invite);
+        }
+      }
+    }
+
+    return {
+      invites: Array.from(inviteMap.values()),
+      serverTime: maxServerTime > 0 ? maxServerTime : Date.now(),
+    };
   } catch (err) {
     console.warn("fetchLobbyInvites failed:", err);
     return false;

@@ -369,14 +369,9 @@ export class InviteLobbyModal extends BaseModal {
           this.requestUpdate();
         }, cooldownMs);
 
-        const msgKey = "invite_modal.cooldown";
-        const translated = translateText(msgKey, {
+        const message = translateText("invite_modal.cooldown", {
           seconds: String(retryAfterSeconds),
         });
-        const message =
-          translated === msgKey
-            ? `Invite on cooldown. Please wait ${retryAfterSeconds}s before retrying.`
-            : translated;
 
         window.dispatchEvent(
           new CustomEvent("show-message", {

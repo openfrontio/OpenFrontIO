@@ -22,7 +22,10 @@ const {
 });
 
 vi.mock("../../src/client/Cosmetics", () => ({ getCosmeticsHash }));
-vi.mock("../../src/client/Utils", () => ({ getGamesPlayed }));
+vi.mock("../../src/client/Utils", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, getGamesPlayed };
+});
 vi.mock("../../src/client/CrazyGamesSDK", () => ({
   crazyGamesSDK: { getUserProfile, isOnCrazyGames },
 }));

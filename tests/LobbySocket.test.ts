@@ -1104,3 +1104,86 @@ describe("PublicLobbySocket.start on a replay shell host", () => {
     socket.stop();
   });
 });
+
+describe("PublicLobbySocket token and stop handling", () => {
+  const dialed: string[] = [];
+  class RecordingWebSocket {
+    static OPEN = 1;
+    readyState = 0;
+    binaryType = "";
+    constructor(public url: string) {
+      dialed.push(url);
+    }
+    addEventListener() {}
+    close() {}
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    dialed.length = 0;
+    mocks.ensureServerList.mockReset();
+    mocks.ensureServerList.mockResolvedValue("api");
+    vi.stubGlobal("WebSocket", RecordingWebSocket);
+    vi.stubGlobal("location", {
+      hostname: "openfront.io",
+      protocol: "https:",
+      host: "openfront.io",
+    });
+    ClientEnv.reset();
+    (window as any).BOOTSTRAP_CONFIG = {
+      gameEnv: "prod",
+      numWorkers: 2,
+      turnstileSiteKey: "k",
+      jwtAudience: "openfront.io",
+      instanceId: "test",
+      serverHost: "blue.openfront.io",
+      gitCommit: "5ccc50a722222222222222222222222222222222",
+    };
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    ClientEnv.reset();
+    delete (window as any).BOOTSTRAP_CONFIG;
+  });
+
+  it("appends encoded token when getToken returns a token", async () => {
+    const getToken = vi.fn(async () => "test_token_123");
+    const socket = new PublicLobbySocket(vi.fn(), { getToken });
+
+    await socket.start();
+
+    expect(dialed).toHaveLength(1);
+    expect(dialed[0]).toContain("&token=test_token_123");
+    socket.stop();
+  });
+
+  it("clears token when getToken returns null or throws", async () => {
+    const getToken = vi.fn(async () => null);
+    const socket = new PublicLobbySocket(vi.fn(), { getToken });
+
+    await socket.start();
+
+    expect(dialed).toHaveLength(1);
+    expect(dialed[0]).not.toContain("&token=");
+    socket.stop();
+  });
+
+  it("aborts connection and does not dial when stop() is called while getToken is resolving", async () => {
+    let resolveToken!: (token: string) => void;
+    const tokenPromise = new Promise<string>((resolve) => {
+      resolveToken = resolve;
+    });
+    const getToken = vi.fn(() => tokenPromise);
+    const socket = new PublicLobbySocket(vi.fn(), { getToken });
+
+    const startPromise = socket.start();
+    socket.stop();
+    resolveToken("late_token");
+    await startPromise;
+
+    expect(dialed).toHaveLength(0);
+  });
+});

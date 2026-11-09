@@ -132,10 +132,14 @@ export class PublicLobbySocket {
     // forever, never reaching maxWsAttempts and never telling the player.
     this.wsAttemptCounted = false;
     const generation = this.generation;
-    const listStatus = await (refreshList
-      ? refreshServerList()
-      : ensureServerList());
+    const [listStatus, token] = await Promise.all([
+      refreshList ? refreshServerList() : ensureServerList(),
+      this.getToken
+        ? Promise.resolve(this.getToken()).catch(() => null)
+        : Promise.resolve(null),
+    ]);
     if (generation !== this.generation) return;
+    this.tokenParam = token ? `&token=${encodeURIComponent(token)}` : "";
     if (listStatus === "outdated") this.fireUpdateAvailable();
     // Get config to determine number of workers, then pick a random one.
     // With no list and nothing injected there is no server to ask (a static
@@ -148,16 +152,6 @@ export class PublicLobbySocket {
       if (!(e instanceof NoServerError)) throw e;
       this.handleConnectError(e, true);
       return;
-    }
-    if (this.getToken) {
-      try {
-        const token = await this.getToken();
-        if (token) {
-          this.tokenParam = `&token=${encodeURIComponent(token)}`;
-        }
-      } catch {
-        this.tokenParam = "";
-      }
     }
     this.connectWebSocket();
   }
