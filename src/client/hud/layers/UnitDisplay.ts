@@ -11,8 +11,10 @@ import { html, LitElement, nothing } from "lit";
 import { customElement } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import {
+  ConfirmGhostStructureEvent,
   InputHandler,
   ToggleStructureEvent,
+  TouchGhostPlacementMoveEvent,
   TouchGhostPlacementSelectEvent,
   highlightTypesForUnit,
   isForwardedTouchClick,
@@ -99,6 +101,17 @@ export class UnitDisplay extends LitElement implements Controller {
   private moreActionsEnd = false;
   private observedScroller: HTMLElement | null = null;
   private windowListenersAttached = false;
+  /**
+   * A touch on a build button that may become a drag onto the map. It
+   * becomes active once the finger leaves the bar: the unit is picked and
+   * its ghost follows the finger. Letting go on the map builds there; letting
+   * go back over the bar cancels.
+   */
+  private placeDrag: {
+    pointerId: number;
+    unitType: PlayerBuildableUnitType;
+    active: boolean;
+  } | null = null;
 
   createRenderRoot() {
     return this;
@@ -150,6 +163,7 @@ export class UnitDisplay extends LitElement implements Controller {
       this.handleKeyboardDetected,
     );
     document.addEventListener("pointerdown", this.handleDocumentPointerDown);
+    document.addEventListener("pointermove", this.handleDocumentPointerMove);
     document.addEventListener("pointerup", this.handleDocumentPointerUp);
     document.addEventListener(
       "pointercancel",
@@ -169,6 +183,7 @@ export class UnitDisplay extends LitElement implements Controller {
       this.handleKeyboardDetected,
     );
     document.removeEventListener("pointerdown", this.handleDocumentPointerDown);
+    document.removeEventListener("pointermove", this.handleDocumentPointerMove);
     document.removeEventListener("pointerup", this.handleDocumentPointerUp);
     document.removeEventListener(
       "pointercancel",
@@ -182,6 +197,7 @@ export class UnitDisplay extends LitElement implements Controller {
       true,
     );
     this.dismissPeek();
+    this.placeDrag = null;
     this.activeTouchIdentifiers.clear();
     this.suppressNextClick = false;
     this.suppressReleaseClick = false;
@@ -260,8 +276,80 @@ export class UnitDisplay extends LitElement implements Controller {
     this.dismissPeek();
   };
 
+  private armPlaceDrag(event: PointerEvent, unitType: PlayerBuildableUnitType) {
+    if (event.pointerType !== "touch") return;
+    this.placeDrag = { pointerId: event.pointerId, unitType, active: false };
+  }
+
+  private isOverBar(x: number, y: number): boolean {
+    const bounds =
+      this.querySelector(".unit-display-root")?.getBoundingClientRect();
+    return (
+      bounds !== undefined &&
+      x >= bounds.left &&
+      x <= bounds.right &&
+      y >= bounds.top &&
+      y <= bounds.bottom
+    );
+  }
+
+  /**
+   * The touch keeps its button as target (implicit pointer capture), so its
+   * moves arrive here even over the map, and the map's input never sees it.
+   */
+  private handleDocumentPointerMove = (event: PointerEvent) => {
+    const drag = this.placeDrag;
+    if (drag === null || drag.pointerId !== event.pointerId) return;
+    if (!drag.active) {
+      if (this.isOverBar(event.clientX, event.clientY)) return;
+      if (!this.canBuild(drag.unitType)) {
+        this.placeDrag = null;
+        return;
+      }
+      drag.active = true;
+      // A drag is not a hold: no details, and no selection on release.
+      this.dismissPeek();
+      this.inputHandler.setGhostStructure(drag.unitType, "GUIclick");
+      this.eventBus?.emit(new TouchGhostPlacementSelectEvent());
+      this.eventBus?.emit(
+        new ToggleStructureEvent(highlightTypesForUnit(drag.unitType)),
+      );
+      this.requestUpdate();
+    }
+    this.eventBus?.emit(
+      new TouchGhostPlacementMoveEvent(event.clientX, event.clientY),
+    );
+  };
+
+  /**
+   * Ends a drag from the bar: a release on the map builds where the finger
+   * is; a release over the bar, or a cancelled touch, drops the unit.
+   * Returns whether the pointer was dragging, so the hold logic skips it.
+   */
+  private finishPlaceDrag(event: PointerEvent): boolean {
+    const drag = this.placeDrag;
+    if (drag === null || drag.pointerId !== event.pointerId) return false;
+    this.placeDrag = null;
+    if (!drag.active) return false;
+    this.suppressReleaseClick = true;
+    if (
+      event.type === "pointerup" &&
+      !this.isOverBar(event.clientX, event.clientY)
+    ) {
+      this.eventBus?.emit(
+        new TouchGhostPlacementMoveEvent(event.clientX, event.clientY),
+      );
+      this.eventBus?.emit(new ConfirmGhostStructureEvent());
+    } else {
+      this.inputHandler.setGhostStructure(null, "GUIclick");
+    }
+    this.requestUpdate();
+    return true;
+  }
+
   /** Releasing anywhere ends the hold, wherever the finger ended up. */
   private handleDocumentPointerUp = (event: PointerEvent) => {
+    if (this.finishPlaceDrag(event)) return;
     if (this.peekPointerId !== event.pointerId) return;
     this.suppressReleaseClick = this.suppressNextClick;
     this.suppressNextClick = false;
@@ -274,6 +362,7 @@ export class UnitDisplay extends LitElement implements Controller {
 
   /** Pointer cancellation can precede touchend; the touch event ends the peek. */
   private handleDocumentPointerCancel = (event: PointerEvent) => {
+    if (this.finishPlaceDrag(event)) return;
     if (this.peekPointerId !== event.pointerId) return;
     this.cancelPeekTimer();
     if (
@@ -523,7 +612,7 @@ export class UnitDisplay extends LitElement implements Controller {
         @contextmenu=${(event: Event) => event.preventDefault()}
       >
         <div
-          class="unit-display-scroll overflow-x-hidden overflow-y-auto overscroll-y-contain touch-pan-y max-h-[calc(100dvh-5.5rem)] lg:overflow-visible lg:max-h-none"
+          class="unit-display-scroll overflow-x-hidden overflow-y-auto overscroll-y-contain touch-pan-y max-h-[calc(100dvh-5.5rem)] lg:overflow-visible lg:max-h-none lg:touch-none"
           @scroll=${this.onScroll}
         >
           <div
@@ -650,8 +739,10 @@ export class UnitDisplay extends LitElement implements Controller {
           this._hoveredUnitTooltip = null;
           this.requestUpdate();
         }}
-        @pointerdown=${(event: PointerEvent) =>
-          this.startPeek(event, unitType, structureKey, hotkey)}
+        @pointerdown=${(event: PointerEvent) => {
+          this.startPeek(event, unitType, structureKey, hotkey);
+          this.armPlaceDrag(event, unitType);
+        }}
       >
         <div
           class="${

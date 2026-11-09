@@ -8,8 +8,10 @@ import { describe, expect, test, vi } from "vitest";
 import type { UnitDisplay } from "../../src/client/hud/layers/UnitDisplay";
 import "../../src/client/hud/layers/UnitDisplay";
 import {
+  ConfirmGhostStructureEvent,
   FORWARDED_TOUCH_CLICK,
   ToggleStructureEvent,
+  TouchGhostPlacementMoveEvent,
   TouchGhostPlacementSelectEvent,
 } from "../../src/client/InputHandler";
 
@@ -1119,6 +1121,141 @@ describe("mobile UnitDisplay layout", () => {
         null,
         "GUIclick",
       );
+    } finally {
+      display.remove();
+    }
+  });
+});
+
+describe("dragging a build button onto the map", () => {
+  function touch(type: string, x: number, y: number) {
+    return new PointerEvent(type, {
+      button: 0,
+      clientX: x,
+      clientY: y,
+      pointerId: 7,
+      pointerType: "touch",
+      bubbles: true,
+    });
+  }
+
+  async function setup(gold = 1000n) {
+    const made = makeDisplay();
+    await made.display.updateComplete;
+    // jsdom has no layout: the bar is a column on the right edge.
+    const root = made.display.querySelector(
+      ".unit-display-root",
+    ) as HTMLElement;
+    root.getBoundingClientRect = () =>
+      ({ left: 340, right: 390, top: 200, bottom: 540 }) as DOMRect;
+    const cityItem = made.display.querySelector(".unit-display-grid")
+      ?.firstElementChild as HTMLElement;
+    const moves: TouchGhostPlacementMoveEvent[] = [];
+    const confirms: ConfirmGhostStructureEvent[] = [];
+    made.eventBus.on(TouchGhostPlacementMoveEvent, (e) => moves.push(e));
+    made.eventBus.on(ConfirmGhostStructureEvent, (e) => confirms.push(e));
+    if (gold !== 1000n) {
+      (made.display.game.myPlayer() as any).gold = () => gold;
+      (made.display as any).playerBuildables = [
+        { type: UnitType.City, cost: 500n },
+      ];
+    }
+    return { ...made, cityItem, moves, confirms };
+  }
+
+  test("picks the unit once the finger leaves the bar, and builds where it lets go", async () => {
+    const { display, inputHandler, cityItem, moves, confirms } = await setup();
+    try {
+      cityItem.dispatchEvent(touch("pointerdown", 365, 220));
+      // Still over the bar: nothing is picked yet.
+      cityItem.dispatchEvent(touch("pointermove", 350, 222));
+      expect(inputHandler.setGhostStructure).not.toHaveBeenCalled();
+
+      cityItem.dispatchEvent(touch("pointermove", 300, 230));
+      expect(inputHandler.setGhostStructure).toHaveBeenCalledWith(
+        UnitType.City,
+        "GUIclick",
+      );
+      cityItem.dispatchEvent(touch("pointermove", 200, 260));
+      cityItem.dispatchEvent(touch("pointerup", 180, 270));
+
+      expect(moves.map((m) => [m.x, m.y])).toEqual([
+        [300, 230],
+        [200, 260],
+        [180, 270],
+      ]);
+      expect(confirms).toHaveLength(1);
+      // The release's click (if the browser makes one) must not toggle the
+      // unit off again.
+      cityItem
+        .querySelector("div > div")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      expect(inputHandler.setGhostStructure).toHaveBeenCalledTimes(1);
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("letting go back over the bar cancels", async () => {
+    const { display, inputHandler, cityItem, confirms } = await setup();
+    try {
+      cityItem.dispatchEvent(touch("pointerdown", 365, 220));
+      cityItem.dispatchEvent(touch("pointermove", 300, 230));
+      cityItem.dispatchEvent(touch("pointerup", 360, 300));
+
+      expect(confirms).toHaveLength(0);
+      expect(inputHandler.setGhostStructure).toHaveBeenLastCalledWith(
+        null,
+        "GUIclick",
+      );
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("a cancelled touch drops the unit", async () => {
+    const { display, inputHandler, cityItem, confirms } = await setup();
+    try {
+      cityItem.dispatchEvent(touch("pointerdown", 365, 220));
+      cityItem.dispatchEvent(touch("pointermove", 300, 230));
+      cityItem.dispatchEvent(touch("pointercancel", 300, 230));
+
+      expect(confirms).toHaveLength(0);
+      expect(inputHandler.setGhostStructure).toHaveBeenLastCalledWith(
+        null,
+        "GUIclick",
+      );
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("a press that stays on the bar is not a drag", async () => {
+    const { display, inputHandler, cityItem, moves, confirms } = await setup();
+    try {
+      cityItem.dispatchEvent(touch("pointerdown", 365, 220));
+      cityItem.dispatchEvent(touch("pointermove", 362, 226));
+      cityItem.dispatchEvent(touch("pointerup", 362, 226));
+
+      expect(moves).toHaveLength(0);
+      expect(confirms).toHaveLength(0);
+      expect(inputHandler.setGhostStructure).not.toHaveBeenCalled();
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("a unit the player can't afford is not dragged out", async () => {
+    const { display, inputHandler, cityItem, moves, confirms } =
+      await setup(100n);
+    try {
+      cityItem.dispatchEvent(touch("pointerdown", 365, 220));
+      cityItem.dispatchEvent(touch("pointermove", 300, 230));
+      cityItem.dispatchEvent(touch("pointerup", 200, 260));
+
+      expect(moves).toHaveLength(0);
+      expect(confirms).toHaveLength(0);
+      expect(inputHandler.setGhostStructure).not.toHaveBeenCalled();
     } finally {
       display.remove();
     }
