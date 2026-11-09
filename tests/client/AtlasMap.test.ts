@@ -237,13 +237,13 @@ describe("<map-details>", () => {
       author: "Mapmaker",
       descriptionKey: "map_description.test",
     });
-    const text = el
-      .querySelector('[role="tooltip"]')
-      ?.textContent?.trim()
-      .replace(/\s+/g, " ");
+    const tooltip = el.querySelector('[role="tooltip"]');
+    const text = tooltip?.textContent?.trim().replace(/\s+/g, " ");
 
     expect(el.querySelector("button")).toBeTruthy();
     expect(text).toBe("A narrow strait. Map designer: Mapmaker");
+    expect(tooltip?.className).toContain("w-72");
+    expect(tooltip?.className).toContain("-translate-x-1/2");
   });
 
   it("shows the stats between description and author", async () => {

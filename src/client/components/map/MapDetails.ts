@@ -97,7 +97,7 @@ export class MapDetails extends LitElement {
       </button>
       <div
         role="tooltip"
-        class="pointer-events-none absolute left-0 top-10 hidden w-max max-w-full flex-col gap-1 whitespace-normal rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-left text-xs normal-case tracking-normal text-white/90 shadow-xl group-hover/map-details:flex group-focus-within/map-details:flex"
+        class="pointer-events-none absolute left-1/2 top-10 hidden w-72 sm:w-80 max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-col gap-1 whitespace-normal rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-left text-xs normal-case tracking-normal text-white/90 shadow-xl group-hover/map-details:flex group-focus-within/map-details:flex"
       >
         ${renderMapDetails(map, this.stats)}
       </div>
