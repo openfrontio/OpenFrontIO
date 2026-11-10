@@ -40,7 +40,28 @@ interface GameEvent {
   onDelete?: () => void;
   focusID?: number;
   unitView?: UnitView;
+  /** Set on a missile warning that stands for every bomb of one type from one sender. */
+  missileGroup?: InboundMissileGroup;
 }
+
+interface InboundMissileGroup {
+  senderID: number;
+  senderName: string;
+  /** Translation key for a single bomb. */
+  messageKey: string;
+  /** Translation key for two or more bombs. */
+  countKey: string;
+  units: UnitView[];
+}
+
+// Missile warnings get one line per sender and bomb type, with a count,
+// instead of one line per bomb. Maps each single-bomb key to its count key.
+const INBOUND_MISSILE_COUNT_KEYS: Readonly<Record<string, string>> = {
+  "events_display.atom_bomb_inbound": "events_display.atom_bomb_inbound_count",
+  "events_display.hydrogen_bomb_inbound":
+    "events_display.hydrogen_bomb_inbound_count",
+  "events_display.mirv_inbound": "events_display.mirv_inbound_count",
+};
 
 const TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
   MessageType.NUKE_INBOUND,
@@ -214,6 +235,9 @@ export class EventsDisplay extends LitElement implements Controller {
       // A negative age is an event from later in the game: the replay
       // viewer seeked back past it.
       const expired = age >= 80 || age < 0;
+      if (event.missileGroup) {
+        return this.keepMissileGroup(event, expired);
+      }
       const isInboundWarning =
         event.type === MessageType.NUKE_INBOUND ||
         event.type === MessageType.HYDROGEN_BOMB_INBOUND ||
@@ -245,6 +269,80 @@ export class EventsDisplay extends LitElement implements Controller {
   private addEvent(event: GameEvent) {
     this.events = [...this.events, event];
     this.requestUpdate();
+  }
+
+  // Drops bombs that landed or were shot down and refreshes the count.
+  // The line goes away once none are left, or when it expires.
+  private keepMissileGroup(event: GameEvent, expired: boolean): boolean {
+    const group = event.missileGroup!;
+    const before = group.units.length;
+    group.units = group.units.filter((unit) => unit.isActive());
+    const keep = !expired && group.units.length > 0;
+    if (!keep) {
+      event.onDelete?.();
+      return false;
+    }
+    if (group.units.length !== before) {
+      event.unitView = group.units[0];
+      event.description = this.missileGroupDescription(group);
+    }
+    return true;
+  }
+
+  private missileGroupDescription(group: InboundMissileGroup): string {
+    if (group.units.length === 1) {
+      return translateText(group.messageKey, { name: group.senderName });
+    }
+    return translateText(group.countKey, {
+      name: group.senderName,
+      count: group.units.length,
+    });
+  }
+
+  // Adds the bomb to the open line for its sender and type, or starts one.
+  private addInboundMissile(
+    unitView: UnitView,
+    messageKey: string,
+    countKey: string,
+    type: MessageType,
+  ) {
+    const sender = unitView.owner();
+    const senderID = sender.smallID();
+    const existing = this.events.find(
+      (event) =>
+        event.type === type && event.missileGroup?.senderID === senderID,
+    );
+
+    if (existing) {
+      const group = existing.missileGroup!;
+      if (!group.units.some((unit) => unit.id() === unitView.id())) {
+        group.units.push(unitView);
+      }
+      existing.description = this.missileGroupDescription(group);
+      // Each new bomb restarts the timer, so the line stays up while
+      // bombs keep coming.
+      existing.createdAt = this.game.ticks();
+      this.events = [...this.events];
+      this.requestUpdate();
+      return;
+    }
+
+    const group: InboundMissileGroup = {
+      senderID,
+      senderName: sender.displayName(),
+      messageKey,
+      countKey,
+      units: [unitView],
+    };
+    this.addEvent({
+      description: this.missileGroupDescription(group),
+      type,
+      unsafeDescription: false,
+      highlight: true,
+      createdAt: this.game.ticks(),
+      unitView,
+      missileGroup: group,
+    });
   }
 
   // The core simulation runs identically for every client and has no notion
@@ -595,6 +693,17 @@ export class EventsDisplay extends LitElement implements Controller {
     }
 
     const unitView = this.game.unit(event.unitID);
+    const countKey = INBOUND_MISSILE_COUNT_KEYS[event.message];
+    if (unitView && countKey) {
+      this.addInboundMissile(
+        unitView,
+        event.message,
+        countKey,
+        event.messageType,
+      );
+      return;
+    }
+
     let description = event.message;
     if (event.message.startsWith("events_display.") && unitView) {
       const params: Record<string, string | number> = {
