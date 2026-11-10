@@ -56,9 +56,11 @@ vi.mock("../src/client/Utils", async (importOriginal) => ({
 }));
 
 // Side-effect import registers <username-input>; vi.mock is hoisted above it.
-import { STEAM_GRANT_NOTICE_KEY } from "../src/client/SteamGrantNotices";
+import { gamePortal } from "../src/client/GamePortal";
 import "../src/client/UsernameInput";
+import { STEAM_GRANT_NOTICE_KEY } from "../src/client/SteamGrantNotices";
 import type { UsernameInput as UsernameInputEl } from "../src/client/UsernameInput";
+import { UserSettings } from "../src/client/UserSettings";
 
 function premiumUser(
   clans: { tag: string; name: string }[] = [],
@@ -125,6 +127,114 @@ beforeEach(() => {
 
 // Lets a handler's `await getUserMe()` continuation run before asserting.
 const settle = () => new Promise((r) => setTimeout(r, 0));
+
+describe("UsernameInput random name button", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it.each(["tribe", "anon"] as const)(
+    "applies and stores a %s name while preserving the clan tag",
+    async (style) => {
+      new UserSettings().setRandomNameStyle(style);
+      localStorage.setItem("username", "MyName");
+      localStorage.setItem("clanTag", "TAG");
+      const el = await mount();
+      const button = q<HTMLButtonElement>(
+        el,
+        'button[aria-label="username.random_name"]',
+      )!;
+      expect(button.querySelector('[aria-hidden="true"] svg')).not.toBeNull();
+      button.click();
+      await el.updateComplete;
+      const name = q<HTMLInputElement>(el, 'input[type="text"]')!.value;
+      expect(name).not.toBe("MyName");
+      expect(name.startsWith("Anon")).toBe(style === "anon");
+      expect(localStorage.getItem("username")).toBe(name);
+      expect(localStorage.getItem("usernameIsGenerated")).toBe("false");
+      expect(el.getClanTag()).toBe("TAG");
+      expect(el.resolvedName().name).toBe(name);
+      button.click();
+      await el.updateComplete;
+      expect(el.resolvedName().name).not.toBe(name);
+    },
+  );
+
+  it("hides the dice during verified play and restores it for custom names", async () => {
+    localStorage.setItem("useVerifiedName", "true");
+    const el = await mount();
+    await signIn(el, premiumUser());
+    expect(el.resolvedName().verified).toBe(true);
+    expect(q(el, 'button[aria-label="username.random_name"]')).toBeNull();
+    q<HTMLButtonElement>(el, CHANGE)!.click();
+    await el.updateComplete;
+    expect(el.resolvedName().verified).toBe(false);
+    expect(localStorage.getItem("useVerifiedName")).toBe("false");
+    expect(q(el, 'button[aria-label="username.random_name"]')).not.toBeNull();
+  });
+
+  it.each(["true", null])(
+    "preserves a dice choice when account details arrive with preference %s",
+    async (preference) => {
+      if (preference !== null)
+        localStorage.setItem("useVerifiedName", preference);
+      let resolveAccount!: (user: UserMeResponse) => void;
+      getUserMe.mockReturnValue(
+        new Promise((resolve) => {
+          resolveAccount = resolve;
+        }),
+      );
+      const el = await mount();
+      q<HTMLButtonElement>(
+        el,
+        'button[aria-label="username.random_name"]',
+      )!.click();
+      const chosenName = el.getUsername();
+      expect(localStorage.getItem("useVerifiedName")).toBe("false");
+
+      resolveAccount(premiumUser());
+      await settle();
+      await el.updateComplete;
+      expect(el.isVerified()).toBe(false);
+      expect(el.getUsername()).toBe(chosenName);
+    },
+  );
+
+  it.each(["dice", "typing", "restored", "unchanged"])(
+    "handles a delayed portal name after %s",
+    async (action) => {
+      vi.spyOn(gamePortal, "isOnGamePortal").mockReturnValue(true);
+      let resolvePortal!: (name: string) => void;
+      vi.spyOn(gamePortal, "getUsername").mockReturnValue(
+        new Promise((resolve) => {
+          resolvePortal = resolve;
+        }),
+      );
+      const el = await mount();
+      if (action === "dice") {
+        q<HTMLButtonElement>(
+          el,
+          'button[aria-label="username.random_name"]',
+        )!.click();
+      } else if (action === "typing" || action === "restored") {
+        const input = q<HTMLInputElement>(el, 'input[type="text"]')!;
+        const originalName = input.value;
+        input.value = "MyChosenName";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        if (action === "restored") {
+          input.value = originalName;
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      }
+      const chosenName = el.getUsername();
+      resolvePortal("PortalPlayer");
+      await settle();
+      await el.updateComplete;
+      expect(el.getUsername()).toBe(
+        action === "unchanged" ? "PortalPlayer" : chosenName,
+      );
+      expect(localStorage.getItem("username")).toBeNull();
+    },
+  );
+});
 
 describe("UsernameInput clan tag picker", () => {
   it("shows the tag placeholder and no menu until opened", async () => {
