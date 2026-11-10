@@ -35,6 +35,8 @@ import {
   PutUsernameResponseSchema,
   FfaRankLeaderboardResponse,
   FfaRankLeaderboardResponseSchema,
+  FfaAllRanksLeaderboardResponse,
+  FfaAllRanksLeaderboardResponseSchema,
   FfaRankPositionResponseSchema,
   RankedLeaderboardResponse,
   RankedLeaderboardResponseSchema,
@@ -2404,6 +2406,29 @@ export async function fetchFfaRankLeaderboard(
     return parsed.data;
   } catch (err) {
     console.error("fetchFfaRankLeaderboard: request failed", err);
+    return false;
+  }
+}
+
+/** One page of the globally ordered FFA Top 250 (five pages maximum). */
+export async function fetchFfaAllRanksLeaderboard(
+  page: number,
+): Promise<FfaAllRanksLeaderboardResponse | "reached_limit" | false> {
+  try {
+    const url = new URL(`${getApiBase()}/leaderboard/ranked/ffa/all`);
+    url.searchParams.set("page", String(page));
+    const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+    if (!res.ok) {
+      if (res.status === 400) {
+        const body = await res.json().catch(() => null);
+        if (isPageBoundsMessage(body)) return "reached_limit";
+      }
+      return false;
+    }
+    const parsed = FfaAllRanksLeaderboardResponseSchema.safeParse(await res.json());
+    return parsed.success ? parsed.data : false;
+  } catch (err) {
+    console.warn("fetchFfaAllRanksLeaderboard: request failed", err);
     return false;
   }
 }

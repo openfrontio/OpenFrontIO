@@ -65,6 +65,7 @@ describe("ffaSummaryFromMe / ffaSummaryFromProfile", () => {
         games: 40,
         wins: 5,
         peak: 1700,
+        globalPosition: 160,
       }),
     ).toEqual({
       kind: "rated",
@@ -72,6 +73,7 @@ describe("ffaSummaryFromMe / ffaSummaryFromProfile", () => {
       uncertainty: 84.7,
       tier: "Gold I",
       peak: 1700,
+      globalPosition: 160,
     });
   });
 });
@@ -112,6 +114,12 @@ describe("<ffa-rating-summary>", () => {
     });
     expect(el.querySelector("[data-ffa-rating-value]")).not.toBeNull();
     expect(el.querySelector("[data-ffa-rating-peak]")).toBeNull();
+  });
+
+  it("shows the global position beside the FFA rating", async () => {
+    await render({ kind: "rated", rating: 1612, uncertainty: 40, tier: "Gold I", globalPosition: 160 });
+    expect(el.querySelector("[data-global-ffa-position]")?.textContent).toContain("ffa_rating.global_position");
+    expect(el.querySelector("[data-global-ffa-position]")?.textContent).toContain("160");
   });
 
   it("shows Calibrating for a calibrating player", async () => {

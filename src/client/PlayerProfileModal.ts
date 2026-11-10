@@ -568,8 +568,14 @@ export class PlayerProfileModal extends BaseModal {
     this.clans = profile === false ? [] : (profile.clans ?? []);
     this.displayClanTag =
       profile === false ? null : (profile.displayClanTag ?? null);
-    this.ffaRating =
+    const ffaRating =
       profile === false ? null : ffaSummaryFromProfile(profile.ffaRating);
+    // The global position is an account-only statistic; public profiles of
+    // other players retain the existing rating/tier presentation.
+    this.ffaRating =
+      ffaRating === null || isOwnAccount(publicId)
+        ? ffaRating
+        : { ...ffaRating, globalPosition: undefined };
   }
 
   // Intentionally preserves publicId/statsTree/history cache/scroll: the page

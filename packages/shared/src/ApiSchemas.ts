@@ -699,6 +699,7 @@ export const UserMeResponseSchema = z.object({
             games: z.number().int().nonnegative().optional().catch(undefined),
             wins: z.number().int().nonnegative().optional().catch(undefined),
             peak: z.number().optional().catch(undefined),
+            globalPosition: z.number().int().positive().nullable().optional().catch(undefined),
             // True when the board's ± rule keeps this rating off the board.
             hiddenByUncertainty: z.boolean().optional().catch(undefined),
             calibrationGames: z
@@ -1255,6 +1256,8 @@ export const PublicFfaRatingSchema = z.object({
   games: z.number().int().nonnegative(),
   wins: z.number().int().nonnegative(),
   peak: z.number(),
+  // Global FFA leaderboard position; absent when the player is not listed.
+  globalPosition: z.number().int().positive().nullable().optional(),
 });
 export type PublicFfaRating = z.infer<typeof PublicFfaRatingSchema>;
 
@@ -1402,6 +1405,8 @@ export const RankedLeaderboardEntrySchema = z.object({
   // value reads as absent.
   uncertainty: z.number().optional().catch(undefined),
   tier: z.string().optional().catch(undefined),
+  // Global FFA position is only populated for the signed-in player row.
+  globalPosition: z.number().int().positive().optional().catch(undefined),
   ...RowLevelFields,
 });
 export type RankedLeaderboardEntry = z.infer<
@@ -1438,6 +1443,12 @@ export const FfaRankLeaderboardResponseSchema = z.object({
 export type FfaRankLeaderboardResponse = z.infer<
   typeof FfaRankLeaderboardResponseSchema
 >;
+
+// Globally ordered top-250 FFA view (five pages of fifty).
+export const FfaAllRanksLeaderboardResponseSchema = z.object({
+  players: RankedLeaderboardEntrySchema.array(),
+});
+export type FfaAllRanksLeaderboardResponse = z.infer<typeof FfaAllRanksLeaderboardResponseSchema>;
 
 export const FfaRankPositionResponseSchema = z.object({
   position: z.number().int().nullable(),

@@ -9,6 +9,7 @@ import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import {
   fetchFfaRankLeaderboard,
+  fetchFfaAllRanksLeaderboard,
   fetchFfaRankPosition,
   fetchPlayerLeaderboard,
   getUserMe,
@@ -36,6 +37,7 @@ import "../PlayerName";
 type LadderRow = PlayerLeaderboardEntry & {
   uncertainty?: number;
   tier?: string;
+  globalPosition?: number;
 };
 
 /** The signed-in player's FFA progress while they have no tier yet. */
@@ -96,6 +98,7 @@ const toPlayerEntry = (entry: RankedLeaderboardEntry): LadderRow => ({
   legend: entry.legend,
   uncertainty: entry.uncertainty,
   tier: entry.tier,
+  globalPosition: entry.globalPosition,
 });
 
 @customElement("leaderboard-player-list")
@@ -129,6 +132,12 @@ export class LeaderboardPlayerList extends LitElement {
 
   // The selected rank tab on the FFA board, and each rank's rows so far.
   @state() private ffaRank: FfaTierBase | null = null;
+  @state() private ffaAllRanks = false;
+  @state() private ffaAllRows: LadderRow[] = [];
+  @state() private ffaAllPage = 1;
+  @state() private ffaAllHasMore = true;
+  @state() private ffaAllLoading = false;
+  @state() private ffaAllFailed = false;
   @state() private ffaRankLadders: Partial<
     Record<FfaTierBase, RankLadderState>
   > = {};
@@ -152,11 +161,12 @@ export class LeaderboardPlayerList extends LitElement {
     return (
       this.rankedType === RankedType.FreeForAll &&
       this.ffaRatingServed &&
-      this.ffaRank !== null
+      !this.ffaAllRanks && this.ffaRank !== null
     );
   }
 
   private get activeLadder(): LadderState {
+    if (this.ffaAllRanks) return { entries: this.ffaAllRows, userEntry: null, hasMore: this.ffaAllHasMore };
     if (this.ffaRankActive) {
       return this.ffaRankLadders[this.ffaRank!] ?? emptyRankLadder();
     }
@@ -245,6 +255,10 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   public async loadPlayerLeaderboard(reset = false) {
+    if (!reset && this.ffaAllRanks) {
+      await this.loadFfaAllPage();
+      return;
+    }
     if (!reset && this.ffaRankActive) {
       await this.loadFfaRankPage(this.ffaRank!);
       return;
@@ -256,6 +270,12 @@ export class LeaderboardPlayerList extends LitElement {
       this.ladders = emptyLadders();
       this.showStickyUser = false;
       this.ffaRank = null;
+      this.ffaAllRanks = false;
+      this.ffaAllRows = [];
+      this.ffaAllPage = 1;
+      this.ffaAllHasMore = true;
+      this.ffaAllLoading = false;
+      this.ffaAllFailed = false;
       this.ffaRankLadders = {};
       this.ffaRanksLoading = new Set();
       this.ffaRanksFailed = new Set();
@@ -340,6 +360,7 @@ export class LeaderboardPlayerList extends LitElement {
             winRate: games ? wins / games : 0,
             uncertainty: ffa.uncertainty,
             tier: ffa.tier,
+            globalPosition: ffa.globalPosition ?? undefined,
           };
         }
         this.ffaHidden =
@@ -440,8 +461,38 @@ export class LeaderboardPlayerList extends LitElement {
     this.scheduleStickyVisibilityCheck();
   }
 
+  private selectAllFfaRanks() {
+    if (this.ffaAllRanks) return;
+    this.ffaAllRanks = true;
+    this.ffaRank = null;
+    this.loadMoreError = null;
+    this.ffaAllFailed = false;
+    this.showStickyUser = false;
+    if (this.scrollContainer) this.scrollContainer.scrollTop = 0;
+    if (this.ffaAllRows.length === 0) void this.loadFfaAllPage();
+  }
+
+  private async loadFfaAllPage() {
+    if (!this.ffaAllHasMore || this.ffaAllLoading || this.ffaAllPage > 5) return;
+    this.ffaAllLoading = true;
+    this.ffaAllFailed = false;
+    const page = this.ffaAllPage;
+    const result = await fetchFfaAllRanksLeaderboard(page);
+    this.ffaAllLoading = false;
+    if (result === false) { this.ffaAllFailed = true; return; }
+    if (result === "reached_limit") { this.ffaAllHasMore = false; return; }
+    const seen = new Set(this.ffaAllRows.map((row) => row.playerId));
+    const next = result.players.map(toPlayerEntry).filter((row) => !seen.has(row.playerId));
+    this.ffaAllRows = [...this.ffaAllRows, ...next];
+    this.ffaAllPage = page + 1;
+    this.ffaAllHasMore = page < 5 && result.players.length >= this.playerPageSize;
+    this.schedulePlayerFillCheck();
+  }
+
   private selectFfaRank(rank: FfaTierBase) {
-    if (rank === this.ffaRank) return;
+    if (rank === this.ffaRank && !this.ffaAllRanks) return;
+    this.ffaAllRanks = false;
+    this.ffaAllFailed = false;
     this.ffaRank = rank;
     this.showStickyUser = false;
     if (this.scrollContainer) this.scrollContainer.scrollTop = 0;
@@ -507,7 +558,14 @@ export class LeaderboardPlayerList extends LitElement {
       return;
     }
 
-    const rows = result.players.map(toPlayerEntry);
+    const rows = result.players.map((entry) => {
+      const row = toPlayerEntry(entry);
+      return row.playerId === this.currentUserId &&
+        row.globalPosition === undefined &&
+        this.ffaOwnRow?.globalPosition !== undefined
+        ? { ...row, globalPosition: this.ffaOwnRow.globalPosition }
+        : row;
+    });
     const existingIds = new Set(ladder.entries.map((row) => row.playerId));
     this.ffaRankLadders = {
       ...this.ffaRankLadders,
@@ -592,8 +650,12 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   private maybeLoadMorePlayers() {
-    if (this.isLoading || this.isLoadingMore) return;
-    if (!this.playerHasMore || this.error || this.hasLoadMoreError) return;
+    if (this.ffaAllRanks) {
+      if (this.ffaAllLoading || !this.ffaAllHasMore || this.ffaAllFailed) return;
+    } else {
+      if (this.isLoading || this.isLoadingMore) return;
+      if (!this.playerHasMore || this.error || this.hasLoadMoreError) return;
+    }
     if (!this.scrollContainer || !this.isVisible()) return;
 
     const threshold = 64 * 3;
@@ -605,7 +667,8 @@ export class LeaderboardPlayerList extends LitElement {
     if (containerHeight === 0 || scrollHeight === 0) return; // guard
 
     if (nearBottom) {
-      void this.loadPlayerLeaderboard();
+      if (this.ffaAllRanks) void this.loadFfaAllPage();
+      else void this.loadPlayerLeaderboard();
     }
   }
 
@@ -971,11 +1034,12 @@ export class LeaderboardPlayerList extends LitElement {
               </button>
             `;
           })}
+          <button type="button" role="tab" data-rank="all" aria-selected=${this.ffaAllRanks ? "true" : "false"} class="col-span-8 justify-self-center flex min-w-28 items-center justify-center rounded-lg border px-6 py-1.5 text-[10px] font-bold ${this.ffaAllRanks ? "border-blue-400 bg-blue-500/25 text-white" : "border-white/10 bg-white/5 text-white/50 hover:bg-white/10"}" @click=${() => this.selectAllFfaRanks()}>${translateText("ffa_rating.all_ranks")}</button>
         </div>
         <div class="sm:hidden flex items-center gap-2 pt-2 px-1">
-          ${emblem(selected, "w-5 h-5")}
+          ${this.ffaAllRanks ? nothing : emblem(selected, "w-5 h-5")}
           <span class="text-sm font-bold uppercase tracking-wider text-white"
-            >${translateText(FFA_TIER_NAME_KEYS[selected])}</span
+            >${this.ffaAllRanks ? translateText("ffa_rating.all_ranks") : translateText(FFA_TIER_NAME_KEYS[selected])}</span
           >
           <span class="ml-auto text-xs text-white/50"
             >${translateText("ffa_rating.rank_top_250")}</span
@@ -1020,8 +1084,9 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   private renderPlayerRow(player: LadderRow, badgeSlot: boolean) {
-    const isCurrentUser = this.currentUserEntry?.playerId === player.playerId;
+    const isCurrentUser = this.currentUserId !== null && this.currentUserId === player.playerId;
     const displayRank = player.rank;
+    const globalPosition = isCurrentUser && !this.ffaAllRanks ? player.globalPosition : undefined;
 
     const rankColor =
       {
@@ -1051,6 +1116,7 @@ export class LeaderboardPlayerList extends LitElement {
           >
             ${rankIcon}
           </div>
+          ${globalPosition === undefined ? nothing : html`<div data-global-ffa-position class="mt-1 whitespace-nowrap text-[10px] font-semibold text-sky-300">🌐 #${globalPosition}</div>`}
         </td>
         <td class="py-3 px-4">
           <div class="flex items-center gap-2">
@@ -1091,7 +1157,7 @@ export class LeaderboardPlayerList extends LitElement {
   private renderPlayerFooter() {
     // Each FFA rank tracks its own load, so a slow one can't hold up the
     // other ladders, which share isLoadingMore.
-    const loading = this.ffaRankActive
+    const loading = this.ffaAllRanks ? this.ffaAllLoading : this.ffaRankActive
       ? this.ffaRanksLoading.has(this.ffaRank!)
       : this.isLoadingMore;
     if (loading) {
@@ -1107,6 +1173,7 @@ export class LeaderboardPlayerList extends LitElement {
       `;
     }
 
+    if (this.ffaAllFailed) return html`<div class="py-4 text-center"><button class="text-xs text-red-300" @click=${() => this.loadFfaAllPage()}>${translateText("leaderboard_modal.try_again")}</button></div>`;
     if (this.hasLoadMoreError) {
       return html`
         <div class="flex items-center justify-center py-4">
@@ -1256,7 +1323,7 @@ export class LeaderboardPlayerList extends LitElement {
           }"
         >
           ${ratingLive ? this.renderSeasonLabel() : nothing}
-          ${this.ffaRankActive ? this.renderRankTabs() : nothing}
+          ${ratingLive ? this.renderRankTabs() : nothing}
           <div
             class="scroll-container ${
               ratingLive ? "flex-1 min-h-0" : "h-full"

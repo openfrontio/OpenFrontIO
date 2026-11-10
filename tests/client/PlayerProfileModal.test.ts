@@ -148,6 +148,7 @@ describe("public player profile route", () => {
         games: 40,
         wins: 5,
         peak: 1700,
+        globalPosition: 160,
       },
     });
     history.replaceState(null, "", "/#modal=profile&publicID=bob");
@@ -163,6 +164,7 @@ describe("public player profile route", () => {
         modal.querySelector("ffa-rating-summary [data-ffa-rating-value]")!
           .textContent,
       ).toContain("1613 ± 85");
+      expect(summary?.querySelector("[data-global-ffa-position]")).toBeNull();
     });
   });
 

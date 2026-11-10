@@ -22,6 +22,7 @@ export type FfaRatingSummaryData =
       uncertainty: number;
       tier: string;
       peak?: number;
+      globalPosition?: number | null;
     }
   | { kind: "calibrating"; calibrationGames: number };
 
@@ -64,6 +65,7 @@ export function ffaSummaryFromProfile(
     uncertainty: r.uncertainty,
     tier: r.tier,
     peak: r.peak,
+    globalPosition: r.globalPosition,
   };
 }
 
@@ -120,6 +122,9 @@ export class FfaRatingSummary extends LitElement {
               .calibrationGames=${rating.calibrationGames}
             ></ffa-tier-badge>`
       }
+      ${rating.kind === "rated" && rating.globalPosition != null
+        ? html`<span data-global-ffa-position class="inline-flex items-center gap-1 text-xs font-semibold tabular-nums text-sky-300"><span aria-hidden="true">🌐</span>${translateText("ffa_rating.global_position", { position: rating.globalPosition })}</span>`
+        : nothing}
       <ofstats-credit></ofstats-credit>
     </div>`;
   }

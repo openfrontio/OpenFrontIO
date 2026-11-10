@@ -986,7 +986,9 @@
       "silver": "Silver"
     },
     "tier_up": "Promoted to {tier}",
-    "title": "FFA Rating"
+    "title": "FFA Rating",
+    "global_position": "Global #{position}",
+    "all_ranks": "All Ranks"
   },
   "free_play": {
     "account": "Your account, stats, friends and cosmetics",

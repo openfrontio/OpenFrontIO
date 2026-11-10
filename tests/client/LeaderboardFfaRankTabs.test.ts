@@ -13,12 +13,14 @@ vi.mock("../../src/client/ProgressionAccount", () => ({
 vi.mock("../../src/client/Api", () => ({
   fetchPlayerLeaderboard: vi.fn(),
   fetchFfaRankLeaderboard: vi.fn(),
+  fetchFfaAllRanksLeaderboard: vi.fn(),
   fetchFfaRankPosition: vi.fn(),
   getUserMe: vi.fn(async () => false),
 }));
 
 import {
   fetchFfaRankLeaderboard,
+  fetchFfaAllRanksLeaderboard,
   fetchFfaRankPosition,
   fetchPlayerLeaderboard,
   getUserMe,
@@ -94,6 +96,7 @@ beforeEach(() => {
   vi.mocked(fetchFfaRankLeaderboard)
     .mockReset()
     .mockResolvedValue(players("a", "b") as never);
+  vi.mocked(fetchFfaAllRanksLeaderboard).mockReset().mockResolvedValue(players("global-1", "global-2") as never);
 });
 
 describe("FFA rank tabs", () => {
@@ -108,7 +111,18 @@ describe("FFA rank tabs", () => {
       "diamond",
       "master",
       "grandmaster",
+      "all",
     ]);
+  });
+
+  it("loads the globally ordered All Ranks Top 250 view", async () => {
+    await open();
+    const all = tab("all");
+    all.click();
+    await settle();
+    expect(selectedTab()?.dataset.rank).toBe("all");
+    expect(fetchFfaAllRanksLeaderboard).toHaveBeenCalledWith(1);
+    expect(shownIds()).toEqual(["global-1", "global-2"]);
   });
 
   it("names every tab for screen readers", async () => {
@@ -143,6 +157,20 @@ describe("FFA rank tabs", () => {
     expect(selectedTab()?.dataset.rank).toBe("gold");
     expect(fetchFfaRankLeaderboard).toHaveBeenCalledWith("gold", 1);
     expect(shownIds()).toEqual(["a", "b"]);
+  });
+
+  it("shows global position on the signed-in player's tier row only", async () => {
+    vi.mocked(getUserMe).mockResolvedValue({
+      player: { publicId: "me", leaderboard: { ffa: { tier: "Gold II", elo: 1800, games: 20, globalPosition: 160 } } },
+    } as never);
+    vi.mocked(fetchFfaRankLeaderboard).mockResolvedValue({
+      players: [{ ...row(12, "me", "Gold II"), globalPosition: 160 }, row(13, "other", "Gold II")],
+    } as never);
+    await open();
+    const own = list.querySelector('tr[data-player-id="me"]')!;
+    const other = list.querySelector('tr[data-player-id="other"]')!;
+    expect(own.querySelector("[data-global-ffa-position]")?.textContent).toContain("#160");
+    expect(other.querySelector("[data-global-ffa-position]")).toBeNull();
   });
 
   it("opens on the highest rank with players for anyone else", async () => {
@@ -206,7 +234,7 @@ describe("FFA rank tabs", () => {
     } as never);
     tab("grandmaster").click();
     await settle();
-    expect(tabs()).toHaveLength(8);
+    expect(tabs()).toHaveLength(9);
     expect(list.textContent).toContain("ffa_rating.rank_empty");
     expect(list.textContent).not.toContain("leaderboard_modal.no_data_yet");
   });
@@ -497,7 +525,7 @@ describe("FFA rank tabs", () => {
     it("makes only the selected rank a tab stop", async () => {
       await open();
       expect(tabs().map((t) => t.tabIndex)).toEqual([
-        -1, -1, -1, -1, -1, 0, -1, -1,
+        -1, -1, -1, -1, -1, 0, -1, -1, 0,
       ]);
     });
 

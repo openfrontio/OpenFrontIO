@@ -12,6 +12,7 @@ vi.mock("../../src/client/Auth", () => ({
 
 import {
   fetchFfaRankLeaderboard,
+  fetchFfaAllRanksLeaderboard,
   fetchFfaRankPosition,
 } from "../../src/client/Api";
 
@@ -95,5 +96,21 @@ describe("fetchFfaRankLeaderboard", () => {
     vi.mocked(fetch).mockResolvedValue(res({ players: "nope" }) as never);
 
     expect(await fetchFfaRankLeaderboard("diamond", 1)).toBe(false);
+  });
+});
+
+
+describe("fetchFfaAllRanksLeaderboard", () => {
+  it("requests the globally ordered page", async () => {
+    vi.mocked(fetch).mockResolvedValue(res({ players: [entry] }) as never);
+    expect(await fetchFfaAllRanksLeaderboard(3)).toEqual({ players: [expect.objectContaining(entry)] });
+    const url = new URL(String(vi.mocked(fetch).mock.calls[0][0]));
+    expect(url.pathname).toBe("/leaderboard/ranked/ffa/all");
+    expect(url.searchParams.get("page")).toBe("3");
+  });
+
+  it("recognizes the five-page cap", async () => {
+    vi.mocked(fetch).mockResolvedValue(res({ message: "Page must be between 1 and 5" }, false, 400) as never);
+    expect(await fetchFfaAllRanksLeaderboard(6)).toBe("reached_limit");
   });
 });
