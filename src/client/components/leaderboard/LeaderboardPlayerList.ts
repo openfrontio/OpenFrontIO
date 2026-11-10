@@ -700,7 +700,6 @@ export class LeaderboardPlayerList extends LitElement {
     if (!this.currentUserEntry || !this.showStickyUser) return nothing;
     const entry = this.currentUserEntry;
     const globalPosition = !this.ffaAllRanks ? entry.globalPosition : undefined;
-    const colspan = this.ffaRatingLive ? 6 : 5;
 
     return html`
       <tfoot class="sticky bottom-0 z-20">
@@ -729,23 +728,17 @@ export class LeaderboardPlayerList extends LitElement {
                   .nameClass=${"font-bold text-white truncate text-base hover:underline"}
                   .onNameClick=${() => this.openProfile(entry.playerId)}
                 ></player-name>
+                ${globalPosition === undefined
+                  ? nothing
+                  : html`<span
+                      data-global-ffa-position
+                      class="shrink-0 inline-flex items-center gap-1 text-sm font-semibold tabular-nums text-white"
+                      title="Global Position"
+                      ><span class="text-base leading-none" aria-hidden="true">🌍</span> #${globalPosition}</span
+                    >`}
               </div>
             </div>
           </td>
-          ${this.ffaRatingLive
-            ? html`
-                <td class="py-3 px-2 text-center">
-                  ${globalPosition === undefined
-                    ? nothing
-                    : html`<span
-                        data-global-ffa-position
-                        class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg text-sm font-extrabold font-mono bg-blue-950/90 text-sky-100 border-2 border-sky-300/60 shadow-md"
-                        title="Global Position"
-                        ><span class="text-base leading-none" aria-hidden="true">🌍</span> #${globalPosition}</span
-                      >`}
-                </td>
-              `
-            : nothing}
           <td class="py-3 px-4 text-right">
             ${this.renderRatingCell(entry, true)}
           </td>
@@ -828,9 +821,7 @@ export class LeaderboardPlayerList extends LitElement {
   // A player the board's ± rule hides has no row on it either. This one shows
   // their rating and says why, and goes once games narrow the ± (the API stops
   // sending hiddenByUncertainty).
- private renderHiddenRow(me: LadderRow) {
-    const colspan = this.ffaRatingLive ? 6 : 5; // Vagy simán beírhatod, hogy 6, ha épp live FFA-ban vagy
-
+  private renderHiddenRow(me: LadderRow) {
     return html`
       <tfoot class="sticky bottom-0 z-20">
         <tr data-ffa-hidden-row class="bg-blue-600 border-t border-blue-400/30">
@@ -856,7 +847,6 @@ export class LeaderboardPlayerList extends LitElement {
               ></player-name>
             </div>
           </td>
-          ${this.ffaRatingLive ? html`<td class="py-3 px-2"></td>` : nothing}
           <td class="py-3 px-4 text-right">
             ${this.renderRatingCell(me, true)}
           </td>
@@ -876,7 +866,7 @@ export class LeaderboardPlayerList extends LitElement {
           </td>
         </tr>
         <tr data-ffa-hidden-note class="bg-blue-700 shadow-2xl">
-          <td colspan=${colspan} class="py-2 px-4 text-xs text-blue-100">
+          <td colspan="5" class="py-2 px-4 text-xs text-blue-100">
             <!-- Below 34rem the table scrolls sideways: keep the note in view. -->
             <div class="sticky left-4 max-w-[calc(100vw-2rem)]">
               ${translateText("ffa_rating.off_board_note")}
@@ -947,58 +937,58 @@ export class LeaderboardPlayerList extends LitElement {
             ${
               timing === null || end === null
                 ? html`<span class="shrink-0 text-white/80"
-                      >${translateText("ffa_rating.season_started", {
-                        date: start,
-                      })}</span
-                    >
-                    <span
-                      aria-hidden="true"
-                      class="h-3.5 w-3.5 shrink-0 rounded-full border-2 border-aquarius bg-white"
-                    ></span>
-                    <div
-                      class="-ml-3 h-0 min-w-0 flex-1 border-t-2 border-dashed border-aquarius/50"
-                    ></div>
-                    <span class="shrink-0 text-white/70"
-                      >${translateText("ffa_rating.season_no_end_date")}</span
-                    >`
+                    >${translateText("ffa_rating.season_started", {
+                      date: start,
+                    })}</span
+                  >
+                  <span
+                    aria-hidden="true"
+                    class="h-3.5 w-3.5 shrink-0 rounded-full border-2 border-aquarius bg-white"
+                  ></span>
+                  <div
+                    class="-ml-3 h-0 min-w-0 flex-1 border-t-2 border-dashed border-aquarius/50"
+                  ></div>
+                  <span class="shrink-0 text-white/70"
+                    >${translateText("ffa_rating.season_no_end_date")}</span
+                  >`
                 : html`<span aria-hidden="true" class="shrink-0 text-white/80"
-                      >${start}</span
-                    >
+                    >${start}</span
+                  >
+                  <div
+                    aria-hidden="true"
+                    class="h-2 min-w-0 flex-1 rounded-full bg-white/10"
+                  >
                     <div
-                      aria-hidden="true"
-                      class="h-2 min-w-0 flex-1 rounded-full bg-white/10"
+                      data-ffa-season-progress
+                      class="relative h-full rounded-full ${
+                        lastDay
+                          ? "bg-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.7)]"
+                          : "bg-aquarius shadow-[0_0_10px_rgba(63,169,245,0.6)]"
+                      }"
+                      style="width: ${Math.round(timing.progress * 100)}%"
                     >
-                      <div
-                        data-ffa-season-progress
-                        class="relative h-full rounded-full ${
+                      <span
+                        class="absolute -right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 bg-white ${
                           lastDay
-                            ? "bg-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.7)]"
-                            : "bg-aquarius shadow-[0_0_10px_rgba(63,169,245,0.6)]"
+                            ? "border-orange-400 motion-safe:animate-pulse"
+                            : "border-aquarius"
                         }"
-                        style="width: ${Math.round(timing.progress * 100)}%"
-                      >
-                        <span
-                          class="absolute -right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 bg-white ${
-                            lastDay
-                              ? "border-orange-400 motion-safe:animate-pulse"
-                              : "border-aquarius"
-                          }"
-                        ></span>
-                      </div>
+                      ></span>
                     </div>
-                    ${
-                      lastDay
-                        ? html`<span class="shrink-0 text-orange-400"
-                            >${translateText(
-                              "ffa_rating.season_ends_midnight_utc",
-                            )}</span
-                          >`
-                        : html`<span
-                            aria-hidden="true"
-                            class="shrink-0 text-white/80"
-                            >${end}</span
-                          >`
-                    }`
+                  </div>
+                  ${
+                    lastDay
+                      ? html`<span class="shrink-0 text-orange-400"
+                          >${translateText(
+                            "ffa_rating.season_ends_midnight_utc",
+                          )}</span
+                        >`
+                      : html`<span
+                          aria-hidden="true"
+                          class="shrink-0 text-white/80"
+                          >${end}</span
+                        >`
+                  }`
             }
           </div>
         </section>
@@ -1167,22 +1157,16 @@ export class LeaderboardPlayerList extends LitElement {
               .nameClass=${"font-bold text-blue-300 truncate text-base hover:underline"}
               .onNameClick=${() => this.openProfile(player.playerId)}
             ></player-name>
-          </div>
-        </td>
-        ${this.ffaRatingLive
-          ? html`
-              <td class="py-3 px-2 text-center">
-                ${globalPosition === undefined
+            ${globalPosition === undefined
                   ? nothing
                   : html`<span
                       data-global-ffa-position
-                      class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg text-sm font-extrabold font-mono bg-[#071124] text-sky-200 border-2 border-sky-400/50 shadow-md"
+                      class="shrink-0 inline-flex items-center gap-1 text-sm font-semibold tabular-nums text-white"
                       title="Global Position"
                       ><span class="text-base leading-none" aria-hidden="true">🌍</span> #${globalPosition}</span
                     >`}
-              </td>
-            `
-          : nothing}
+          </div>
+        </td>
         <td class="py-3 px-4 text-right">
           ${this.renderRatingCell(player, false)}
         </td>
@@ -1386,12 +1370,7 @@ export class LeaderboardPlayerList extends LitElement {
             <table class="w-full text-sm border-collapse table-fixed">
               <colgroup>
                 <col style="width: 4rem" />
-                <col style="width: 12rem" />
-                ${
-                  ratingLive
-                    ? html`<col style="width: 10rem" />`
-                    : nothing
-                }
+                <col style="width: 16rem" />
                 ${
                   ratingLive
                     ? html`<col class="w-32 sm:w-60" />`
@@ -1410,11 +1389,6 @@ export class LeaderboardPlayerList extends LitElement {
                   <th class="py-4 px-4 text-left font-bold">
                     ${translateText("leaderboard_modal.player")}
                   </th>
-                  ${
-                    ratingLive
-                      ? html`<th class="py-4 px-2 text-center font-bold">Global Rank</th>`
-                      : nothing
-                  }
                   <th class="py-4 px-4 text-right font-bold">
                     ${translateText(
                       ratingLive

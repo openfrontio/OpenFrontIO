@@ -573,7 +573,7 @@ export class PlayerProfileModal extends BaseModal {
     // The global position is an account-only statistic; public profiles of
     // other players retain the existing rating/tier presentation.
     this.ffaRating =
-      ffaRating === null || isOwnAccount(publicId)
+      ffaRating === null || isOwnAccount(publicId) || ffaRating.kind !== "rated"
         ? ffaRating
         : { ...ffaRating, globalPosition: undefined };
   }

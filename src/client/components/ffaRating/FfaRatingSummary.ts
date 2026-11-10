@@ -46,6 +46,7 @@ export function ffaSummaryFromMe(
       uncertainty: ffa.uncertainty,
       tier: ffa.tier,
       ...(ffa.peak === undefined ? {} : { peak: ffa.peak }),
+      globalPosition: ffa.globalPosition,
     };
   }
   if (ffa.calibrationGames !== undefined) {
@@ -116,15 +117,22 @@ export class FfaRatingSummary extends LitElement {
                         rating: formatRating(rating.peak),
                       })}</span
                     >`
+              }
+              ${
+                rating.globalPosition == null
+                  ? nothing
+                  : html`<span
+                      data-global-ffa-position
+                      class="inline-flex items-center gap-1.5 text-lg font-bold tabular-nums text-white"
+                      title="Global Position"
+                      ><span class="text-xl leading-none" aria-hidden="true">🌍</span> #${rating.globalPosition}</span
+                    >`
               }`
           : html`<ffa-tier-badge
               size="md"
               .calibrationGames=${rating.calibrationGames}
             ></ffa-tier-badge>`
       }
-      ${rating.kind === "rated" && rating.globalPosition != null
-        ? html`<span data-global-ffa-position class="inline-flex items-center gap-1 text-xs font-semibold tabular-nums text-sky-300"><span aria-hidden="true">🌐</span>${translateText("ffa_rating.global_position", { position: rating.globalPosition })}</span>`
-        : nothing}
       <ofstats-credit></ofstats-credit>
     </div>`;
   }
