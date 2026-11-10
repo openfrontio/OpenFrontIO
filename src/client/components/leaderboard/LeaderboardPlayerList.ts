@@ -1007,7 +1007,7 @@ export class LeaderboardPlayerList extends LitElement {
         >
           ${FFA_TIER_BASES.map((rank) => {
             const name = translateText(FFA_TIER_NAME_KEYS[rank]);
-            const active = rank === selected;
+            const active = rank === selected && !this.ffaAllRanks;
             return html`
               <button
                 type="button"
@@ -1034,7 +1034,28 @@ export class LeaderboardPlayerList extends LitElement {
               </button>
             `;
           })}
-          <button type="button" role="tab" data-rank="all" aria-selected=${this.ffaAllRanks ? "true" : "false"} class="col-span-8 justify-self-center flex min-w-28 items-center justify-center rounded-lg border px-6 py-1.5 text-[10px] font-bold ${this.ffaAllRanks ? "border-blue-400 bg-blue-500/25 text-white" : "border-white/10 bg-white/5 text-white/50 hover:bg-white/10"}" @click=${() => this.selectAllFfaRanks()}>${translateText("ffa_rating.all_ranks")}</button>
+          <button
+            type="button"
+            role="tab"
+            data-rank="all"
+            aria-selected=${this.ffaAllRanks ? "true" : "false"}
+            tabindex=${this.ffaAllRanks ? 0 : -1}
+            aria-label=${translateText("ffa_rating.all_ranks")}
+            title=${translateText("ffa_rating.all_ranks")}
+            class="col-span-8 justify-self-center mt-1 flex flex-col items-center justify-center gap-1 w-36 py-1.5 sm:py-2 rounded-lg border transition-colors ${
+              this.ffaAllRanks
+                ? "border-blue-400 bg-blue-500/25 text-white"
+                : "border-white/10 bg-white/5 text-white/50 opacity-70 hover:opacity-100 hover:bg-white/10"
+            }"
+            @click=${() => this.selectAllFfaRanks()}
+            @keydown=${(event: KeyboardEvent) =>
+              this.handleRankTabKey(event, "all" as never)}
+          >
+            <span class="text-base sm:text-lg leading-none" aria-hidden="true">🏆</span>
+            <span class="w-full truncate text-center text-[10px] font-bold"
+              >${translateText("ffa_rating.all_ranks")}</span
+            >
+          </button>
         </div>
         <div class="sm:hidden flex items-center gap-2 pt-2 px-1">
           ${this.ffaAllRanks ? nothing : emblem(selected, "w-5 h-5")}
