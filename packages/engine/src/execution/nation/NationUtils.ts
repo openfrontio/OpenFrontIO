@@ -43,13 +43,29 @@ export function isSaveUpWithinReach(
   return missing <= incomePerMinute * horizon;
 }
 
+type Box = { min: Cell; max: Cell };
+
+// A player's border bounding box, memoised per player. Valid while the
+// player's tiles (hence border) are unchanged. Every nation samples the land
+// leader each tick for its MIRV estimate, each walking the same whole border.
+const borderBoxes = new WeakMap<Player, { tileVersion: number; box: Box }>();
+
+function borderBoundingBox(mg: Game, player: Player): Box {
+  const tileVersion = player.tileChangeVersion();
+  const cached = borderBoxes.get(player);
+  if (cached?.tileVersion === tileVersion) return cached.box;
+  const box = calculateBoundingBox(mg, player.borderTiles());
+  borderBoxes.set(player, { tileVersion, box });
+  return box;
+}
+
 export function randTerritoryTileArray(
   random: PseudoRandom,
   mg: Game,
   player: Player,
   numTiles: number,
 ): TileRef[] {
-  const boundingBox = calculateBoundingBox(mg, player.borderTiles());
+  const boundingBox = borderBoundingBox(mg, player);
   const tiles: TileRef[] = [];
   for (let i = 0; i < numTiles; i++) {
     const tile = randTerritoryTile(random, mg, player, boundingBox);
@@ -64,7 +80,7 @@ function randTerritoryTile(
   random: PseudoRandom,
   mg: Game,
   p: Player,
-  boundingBox: { min: Cell; max: Cell } | null = null,
+  boundingBox: Box | null = null,
 ): TileRef | null {
   // Prefer sampling inside the bounding box first (fast, usually good enough)
   boundingBox ??= calculateBoundingBox(mg, p.borderTiles());
