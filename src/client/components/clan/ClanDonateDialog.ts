@@ -1,7 +1,11 @@
 import { html, LitElement, render as litRender } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { getUserMe } from "../../Api";
-import { type ClanCurrencyType, donateToClan } from "../../ClanApi";
+import {
+  type ClanCurrencyType,
+  donateToClan,
+  fetchClanFundTransfers,
+} from "../../ClanApi";
 import { translateText } from "../../Utils";
 import "../CapIcon";
 import { formatCurrencyAmount } from "../CurrencyDisplay";
@@ -41,6 +45,9 @@ export class ClanDonateDialog extends LitElement {
   @state() private balances: { soft: number; hard: number } | null = null;
   @state() private submitting = false;
   @state() private serverError: string | null = null;
+  // Clan fund payouts on: the Plutonium warning says the leader can send it on
+  // to members, instead of promising it never comes back to a player.
+  @state() private payoutsEnabled = false;
 
   private idempotencyKey = newIdempotencyKey();
   private portal: HTMLDivElement | null = null;
@@ -54,6 +61,7 @@ export class ClanDonateDialog extends LitElement {
     this.portal = document.createElement("div");
     document.body.appendChild(this.portal);
     void this.loadBalances();
+    void this.loadPayoutsStatus();
   }
 
   disconnectedCallback() {
@@ -70,6 +78,13 @@ export class ClanDonateDialog extends LitElement {
     if (!this.isConnected) return;
     if (!me || !me.player.currency) return;
     this.balances = me.player.currency;
+  }
+
+  private async loadPayoutsStatus() {
+    if (!this.clanTag) return;
+    const res = await fetchClanFundTransfers(this.clanTag, { limit: 1 });
+    if (!this.isConnected || "error" in res) return;
+    this.payoutsEnabled = res.status.enabled;
   }
 
   private currencyLabel(type: ClanCurrencyType = this.currencyType): string {
@@ -301,12 +316,20 @@ export class ClanDonateDialog extends LitElement {
             }"
           >
             <p class="font-bold">
-              ${translateText("clan_modal.donate_irreversible")}
+              ${translateText(
+                isHard && this.payoutsEnabled
+                  ? "clan_modal.donate_irreversible_payouts"
+                  : "clan_modal.donate_irreversible",
+              )}
             </p>
             ${
               isHard
                 ? html`<p class="mt-1">
-                    ${translateText("clan_modal.donate_irreversible_hard")}
+                    ${translateText(
+                      this.payoutsEnabled
+                        ? "clan_modal.donate_irreversible_hard_payouts"
+                        : "clan_modal.donate_irreversible_hard",
+                    )}
                   </p>`
                 : ""
             }

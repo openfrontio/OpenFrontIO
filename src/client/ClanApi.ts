@@ -502,9 +502,13 @@ export async function disbandClan(
       method: "DELETE",
     });
     if (!res.ok) {
-      return {
-        error: "clan_modal.error_failed",
-      };
+      // While fund payouts are on, the API refuses to disband a clan whose
+      // fund still holds Plutonium.
+      const body: { code?: unknown } = await res.json().catch(() => ({}));
+      if (res.status === 400 && body.code === "fund_not_empty") {
+        return { error: "clan_modal.disband_fund_not_empty" };
+      }
+      return { error: "clan_modal.error_failed" };
     }
     return true;
   } catch {
