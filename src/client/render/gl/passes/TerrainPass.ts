@@ -29,7 +29,7 @@ import {
 
 export class TerrainPass {
   private program: WebGLProgram;
-  private tex: WebGLTexture | null = null;
+  private tex: WebGLTexture;
   private vao: WebGLVertexArrayObject;
   private uCamera: WebGLUniformLocation;
   private mapW: number;
@@ -51,7 +51,6 @@ export class TerrainPass {
     mapW: number,
     mapH: number,
     terrainColors?: TerrainColorOverrides,
-    lazy = true,
   ) {
     this.mapW = mapW;
     this.mapH = mapH;
@@ -63,28 +62,18 @@ export class TerrainPass {
       "TerrainPass",
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
+
+    this.tex = createTexture2D(gl, {
+      width: mapW,
+      height: mapH,
+      internalFormat: gl.RGBA8,
+      format: gl.RGBA,
+      type: gl.UNSIGNED_BYTE,
+      data: buildTerrainRGBA(terrainBytes, mapW, mapH, terrainColors),
+      filter: gl.NEAREST, // pixel-crisp at all zoom levels
+    });
+
     this.vao = createMapQuad(gl, mapW, mapH);
-
-    if (!lazy) {
-      this.ensureTexture(terrainBytes);
-    }
-  }
-
-  private ensureTexture(bytes?: Uint8Array): WebGLTexture {
-    if (!this.tex) {
-      const gl = this.gl;
-      const b = bytes ?? this.terrainSource();
-      this.tex = createTexture2D(gl, {
-        width: this.mapW,
-        height: this.mapH,
-        internalFormat: gl.RGBA8,
-        format: gl.RGBA,
-        type: gl.UNSIGNED_BYTE,
-        data: buildTerrainRGBA(b, this.mapW, this.mapH, this.terrainColors),
-        filter: gl.NEAREST, // pixel-crisp at all zoom levels
-      });
-    }
-    return this.tex;
   }
 
   /**
@@ -93,7 +82,6 @@ export class TerrainPass {
    */
   setTerrainColors(terrainColors?: TerrainColorOverrides): void {
     this.terrainColors = terrainColors;
-    if (!this.tex) return;
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
@@ -124,7 +112,7 @@ export class TerrainPass {
    * backing game map already reflects these conversions.
    */
   applyTerrainRects(rects: readonly TerrainRect[], bytes: Uint8Array): void {
-    if (rects.length === 0 || !this.tex) return;
+    if (rects.length === 0) return;
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
@@ -160,13 +148,12 @@ export class TerrainPass {
 
   /** Render the terrain. Call with depth test disabled, no blending. */
   draw(cameraMatrix: Float32Array): void {
-    const tex = this.ensureTexture();
     const gl = this.gl;
     gl.useProgram(this.program);
     gl.uniformMatrix3fv(this.uCamera, false, cameraMatrix);
 
     gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.bindTexture(gl.TEXTURE_2D, this.tex);
 
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -175,8 +162,7 @@ export class TerrainPass {
   dispose(): void {
     const gl = this.gl;
     gl.deleteProgram(this.program);
-    if (this.tex) gl.deleteTexture(this.tex);
-    this.tex = null;
+    gl.deleteTexture(this.tex);
     // VAO + buffer leak is acceptable on dispose (context is being destroyed)
   }
 }

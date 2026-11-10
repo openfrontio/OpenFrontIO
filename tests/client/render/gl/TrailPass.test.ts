@@ -9,6 +9,8 @@ function createTrailPass(mapW = 100, mapH = 100) {
   pass.dirtyRowMax = -1;
   pass.trailsDirty = false;
   pass.fullUploadPending = false;
+  pass.scatterRowMin = Infinity;
+  pass.scatterRowMax = -1;
   pass.liveTrailRef = null;
 
   let patchCount = 0;
@@ -112,33 +114,35 @@ describe("TrailPass upload management", () => {
     expect(pass.dirtyRowMax).toBe(-1);
   });
 
-  it("promotes to full upload when a sparse delta is followed by a large delta before flush", () => {
+  it("merges queued scatter row span into row-range upload when followed by a large delta before flush", () => {
     const { pass, mockGl } = createTrailPass();
     const trailState = new Uint16Array(100 * 100);
 
-    // Tick 1: sparse update in rows 10-20
-    pass.applyLiveDelta(trailState, 10, 20, [15, 25]);
+    // Tick 1: sparse update in rows 10-20 (tile 1050 is row 10, tile 2050 is row 20 on 100-wide map)
+    pass.applyLiveDelta(trailState, 10, 20, [1050, 2050]);
     expect(pass.scatter.count).toBe(2);
 
     // Tick 2: large delta in rows 50-60 before flush occurs
     const largeChangedTiles = new Array(8192).fill(0).map((_, i) => i + 5000);
     pass.applyLiveDelta(trailState, 50, 60, largeChangedTiles);
 
-    // Scatter is cleared and upload is promoted to full upload so rows 10-20 are preserved
+    // Scatter is cleared and row range is merged (10 to 60) without full upload
     expect(pass.scatter.clear).toHaveBeenCalled();
-    expect(pass.fullUploadPending).toBe(true);
+    expect(pass.fullUploadPending).toBe(false);
+    expect(pass.dirtyRowMin).toBe(10);
+    expect(pass.dirtyRowMax).toBe(60);
 
     pass.flushTexture();
     expect(mockGl.texSubImage2D).toHaveBeenCalledWith(
       mockGl.TEXTURE_2D,
       0,
       0,
-      0,
+      10,
       100,
-      100,
+      51,
       mockGl.RED_INTEGER,
       mockGl.UNSIGNED_SHORT,
-      trailState,
+      expect.any(Uint16Array),
     );
     expect(pass.fullUploadPending).toBe(false);
   });

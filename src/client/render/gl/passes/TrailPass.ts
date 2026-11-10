@@ -55,6 +55,10 @@ export class TrailPass {
   private dirtyRowMin = Infinity;
   private dirtyRowMax = -1;
 
+  /** Row span of currently queued scatter points to merge into row uploads on fallback. */
+  private scatterRowMin = Infinity;
+  private scatterRowMax = -1;
+
   constructor(
     gl: WebGL2RenderingContext,
     mapW: number,
@@ -120,6 +124,8 @@ export class TrailPass {
     this.dirtyRowMin = Infinity;
     this.dirtyRowMax = -1;
     this.scatter.clear();
+    this.scatterRowMin = Infinity;
+    this.scatterRowMax = -1;
   }
 
   /** Live trail delta: update live ref + accept dirty row range or tile list from TrailManager. */
@@ -146,6 +152,8 @@ export class TrailPass {
         const x = ref % this.mapW;
         const y = (ref - x) / this.mapW;
         this.scatter.push(x, y, trailState[ref]);
+        if (y < this.scatterRowMin) this.scatterRowMin = y;
+        if (y > this.scatterRowMax) this.scatterRowMax = y;
       }
       this.trailsDirty = true;
       return;
@@ -153,11 +161,15 @@ export class TrailPass {
 
     // A row or full upload supersedes any sparse scatter points.
     // If scatter points were previously queued from earlier ticks in this frame,
-    // promote to a full upload so those tiles outside the new row range are refreshed.
-    if (this.scatter.count > 0) {
-      this.fullUploadPending = true;
+    // merge their row span into the dirty row range so those rows are preserved
+    // without forcing an expensive full map texture upload.
+    if (this.scatter.count > 0 && this.scatterRowMax >= 0) {
+      this.dirtyRowMin = Math.min(this.dirtyRowMin, this.scatterRowMin);
+      this.dirtyRowMax = Math.max(this.dirtyRowMax, this.scatterRowMax);
     }
     this.scatter.clear();
+    this.scatterRowMin = Infinity;
+    this.scatterRowMax = -1;
     if (dirtyRowMax >= 0) {
       if (!this.fullUploadPending) {
         this.dirtyRowMin = Math.min(this.dirtyRowMin, dirtyRowMin);
@@ -173,6 +185,8 @@ export class TrailPass {
 
     if (this.scatter.count > 0) {
       this.scatter.flush();
+      this.scatterRowMin = Infinity;
+      this.scatterRowMax = -1;
       this.trailsDirty = false;
       return;
     }
