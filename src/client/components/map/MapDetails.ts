@@ -78,6 +78,79 @@ export class MapDetails extends LitElement {
     return this;
   }
 
+  private isHovered = false;
+  private isFocused = false;
+
+  private onPointerEnter = () => {
+    this.isHovered = true;
+    this.clampTooltip();
+  };
+
+  private onPointerLeave = () => {
+    this.isHovered = false;
+    if (!this.isFocused) {
+      this.resetTooltip();
+    }
+  };
+
+  private onFocusIn = () => {
+    this.isFocused = true;
+    this.clampTooltip();
+  };
+
+  private onFocusOut = () => {
+    this.isFocused = false;
+    if (!this.isHovered) {
+      this.resetTooltip();
+    }
+  };
+
+  private clampTooltip = () => {
+    const tooltip = this.querySelector<HTMLElement>('[role="tooltip"]');
+    if (!tooltip) return;
+    tooltip.style.transform = "";
+
+    const tooltipRect = tooltip.getBoundingClientRect();
+    if (tooltipRect.width === 0) return;
+
+    let container = this.parentElement;
+    let minLeft = 8;
+    let maxRight = window.innerWidth - 8;
+
+    while (container && container !== document.body) {
+      const style = window.getComputedStyle(container);
+      if (
+        style.overflowX === "auto" ||
+        style.overflowX === "scroll" ||
+        style.overflowX === "hidden" ||
+        style.overflowY === "auto" ||
+        style.overflowY === "scroll"
+      ) {
+        const rect = container.getBoundingClientRect();
+        minLeft = Math.max(minLeft, rect.left + 8);
+        maxRight = Math.min(maxRight, rect.right - 8);
+        break;
+      }
+      container = container.parentElement;
+    }
+
+    let shift = 0;
+    if (tooltipRect.left < minLeft) {
+      shift = minLeft - tooltipRect.left;
+    } else if (tooltipRect.right > maxRight) {
+      shift = maxRight - tooltipRect.right;
+    }
+
+    if (shift !== 0) {
+      tooltip.style.transform = `translateX(${shift}px)`;
+    }
+  };
+
+  private resetTooltip = () => {
+    const tooltip = this.querySelector<HTMLElement>('[role="tooltip"]');
+    if (tooltip) tooltip.style.transform = "";
+  };
+
   render() {
     const map = this.map;
     if (map === undefined || (!hasMapDetails(map) && !this.stats)) {
@@ -87,6 +160,10 @@ export class MapDetails extends LitElement {
       class="group/map-details pointer-events-none absolute inset-x-3 top-3 z-10 flex p-1.5"
       @click=${(event: Event) => event.stopPropagation()}
       @keydown=${(event: Event) => event.stopPropagation()}
+      @pointerenter=${this.onPointerEnter}
+      @pointerleave=${this.onPointerLeave}
+      @focusin=${this.onFocusIn}
+      @focusout=${this.onFocusOut}
     >
       <button
         type="button"
@@ -97,7 +174,7 @@ export class MapDetails extends LitElement {
       </button>
       <div
         role="tooltip"
-        class="pointer-events-none absolute left-0 top-10 hidden w-max max-w-full flex-col gap-1 whitespace-normal rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-left text-xs normal-case tracking-normal text-white/90 shadow-xl group-hover/map-details:flex group-focus-within/map-details:flex"
+        class="pointer-events-none absolute left-1/2 top-10 hidden w-72 sm:w-80 max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-col gap-1 whitespace-normal rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-left text-xs normal-case tracking-normal text-white/90 shadow-xl group-hover/map-details:flex group-focus-within/map-details:flex"
       >
         ${renderMapDetails(map, this.stats)}
       </div>
