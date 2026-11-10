@@ -272,7 +272,7 @@ export abstract class StatsTable extends LitElement {
     return html`
       <div
         class="stats-table-row grid col-span-full hover:bg-slate-600/60 ${
-          pinned ? "stats-table-pinned-row bg-gray-700/95" : ""
+          pinned ? "stats-table-pinned-row bg-white/10" : ""
         } ${row.emphasized ? "font-bold" : ""} ${
           row.onClick ? "cursor-pointer" : ""
         }"
@@ -353,7 +353,7 @@ export abstract class StatsTable extends LitElement {
     return html`
       <div class="stats-table relative mt-1 text-white text-xs lg:text-sm">
         <div
-          class="overflow-x-auto rounded-lg bg-gray-800/85"
+          class="overflow-x-auto rounded-lg bg-white/5"
           @contextmenu=${(event: Event) => event.preventDefault()}
         >
           <div
@@ -362,7 +362,7 @@ export abstract class StatsTable extends LitElement {
             role="table"
           >
             <div
-              class="stats-table-header grid col-span-full font-bold bg-gray-700/95"
+              class="stats-table-header grid col-span-full font-bold bg-white/10"
               style="grid-template-columns: subgrid; grid-column: 1 / -1;"
               role="row"
             >

@@ -154,7 +154,7 @@ export class ReplayControls extends LitElement {
     const lastTick = this.tick + (this.total - 1 - frame);
     return html`
       <div
-        class="absolute left-0 right-0 bottom-0 flex items-center gap-4 px-4 py-2 bg-gray-800/92 backdrop-blur-sm"
+        class="absolute left-0 right-0 bottom-0 flex items-center gap-4 px-4 py-2 hud-panel"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div class="relative flex-1 h-4 flex items-center">
@@ -231,9 +231,7 @@ export class ReplayControls extends LitElement {
   /** Speed menu, styled like the classic replay panel (ReplayPanel). */
   private renderSpeedMenu() {
     return html`
-      <div
-        class="absolute bottom-full right-0 mb-4 p-2 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-lg"
-      >
+      <div class="absolute bottom-full right-0 mb-4 p-2 hud-panel rounded-lg">
         <div class="mb-2 text-white" translate="no">
           ${translateText("replay_panel.replay_speed")}
         </div>

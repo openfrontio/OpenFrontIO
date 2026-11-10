@@ -304,8 +304,8 @@ export class HeadsUpMessage extends LitElement implements Controller {
                   class="fixed top-[15%] left-1/2 -translate-x-1/2 z-[799]
                             inline-flex items-center justify-center min-h-8 lg:min-h-10
                             w-fit max-w-[90vw]
-                            bg-gray-800/70 rounded-md lg:rounded-lg
-                            backdrop-blur-xs text-white text-md lg:text-xl px-3 lg:px-4 py-1
+                            hud-panel rounded-md lg:rounded-lg
+                            text-white text-md lg:text-xl px-3 lg:px-4 py-1
                             text-center break-words"
                   style="word-wrap: break-word; hyphens: auto;"
                   @contextmenu=${(e: MouseEvent) => e.preventDefault()}
