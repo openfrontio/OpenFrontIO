@@ -81,6 +81,13 @@ const TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
 
 const isTier1 = (type: MessageType): boolean => TIER_1_TYPES.has(type);
 
+// Good news about gold or troops: important, but not a warning, so it reads
+// a size smaller than the rest of the important events.
+const QUIET_TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
+  MessageType.CONQUERED_PLAYER,
+  MessageType.DONATION_RECEIVED,
+]);
+
 @customElement("events-display")
 export class EventsDisplay extends LitElement implements Controller {
   public eventBus: EventBus;
@@ -763,7 +770,7 @@ export class EventsDisplay extends LitElement implements Controller {
         <td
           class="lg:px-2 lg:py-1 p-1 text-left ${getMessageTypeClasses(
             event.type,
-          )}"
+          )} ${QUIET_TIER_1_TYPES.has(event.type) ? "text-sm lg:text-base" : ""}"
         >
           ${
             event.focusID
