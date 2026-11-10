@@ -98,9 +98,12 @@ export class TrailPass {
     this.vao = createMapQuad(gl, mapW, mapH);
   }
 
+  /** Toggle alternate view mode (hides boat trails). */
   setAltView(active: boolean): void {
     this.altView = active;
   }
+
+  /** Set the dynamic affiliation texture (friendly/embargo status). */
   setAffiliationTex(tex: WebGLTexture): void {
     this.affiliationTex = tex;
   }
@@ -149,6 +152,11 @@ export class TrailPass {
     }
 
     // A row or full upload supersedes any sparse scatter points.
+    // If scatter points were previously queued from earlier ticks in this frame,
+    // promote to a full upload so those tiles outside the new row range are refreshed.
+    if (this.scatter.count > 0) {
+      this.fullUploadPending = true;
+    }
     this.scatter.clear();
     if (dirtyRowMax >= 0) {
       if (!this.fullUploadPending) {

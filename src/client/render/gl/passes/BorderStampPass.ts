@@ -109,9 +109,11 @@ export class BorderStampPass {
   setAffiliationTex(tex: WebGLTexture): void {
     this.affiliationTex = tex;
   }
+  /** Set defense coverage mask texture (dashed coverage pattern). */
   setDefenseCoverageTex(tex: WebGLTexture): void {
     this.defenseCoverageTex = tex;
   }
+  /** Set the highlighted player's ownerID (0 = none) for dynamic border brightening. */
   setHighlightOwner(ownerID: number): void {
     this.highlightOwner = ownerID;
   }

@@ -198,6 +198,9 @@ export class Camera {
   /**
    * Return the visible world-space tile bounds [minX, minY, maxX, maxY].
    * Clamped to [0, mapW] and [0, mapH].
+   *
+   * @param margin Extra world tile margin added to viewport bounds.
+   * @param out Optional scratch object to mutate and return, avoiding allocation.
    */
   getWorldBounds(
     margin = 0,

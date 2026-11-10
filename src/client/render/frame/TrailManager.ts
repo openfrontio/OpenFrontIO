@@ -56,23 +56,28 @@ export class TrailManager {
     return this.trailState;
   }
 
+  /** Lowest row modified in the current tick. */
   get dirtyRowMin(): number {
     return this._dirtyRowMin;
   }
+  /** Highest row modified in the current tick. */
   get dirtyRowMax(): number {
     return this._dirtyRowMax;
   }
 
+  /** Modified tile refs during the current tick for sparse scatter updates. */
   get changedTiles(): readonly number[] {
     return this._changedTiles;
   }
 
+  /** Reset dirty bounds and changed tile list after flushing. */
   clearDirtyRows(): void {
     this._dirtyRowMin = Infinity;
     this._dirtyRowMax = -1;
     this._changedTiles.length = 0;
   }
 
+  /** Clear all active unit trails and reset the state buffer. */
   reset(): void {
     this.unitTrails.clear();
     this.trailState.fill(0);

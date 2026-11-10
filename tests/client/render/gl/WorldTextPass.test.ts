@@ -71,14 +71,23 @@ describe("WorldTextPass bounds culling", () => {
 
   it("scales culling extent inversely with zoom when zoomed out below 1.0", () => {
     const pass = createWorldTextPass();
-    // At zoom 0.5, world-space scale doubles, so an attack label at x: 120 extends further
+    // Set fixed device pixel ratio for deterministic calculations.
+    window.devicePixelRatio = 1;
+    // With dpr = 1, text "5000" (len 4) has halfW = 2.9 * attackScale.
+    // At zoom 1.0, attackScale = 17, halfW = 49.3. Label at x: 160 has left edge at 110.7 > maxX 100 (culled).
+    // At zoom 0.5, attackScale = 34, halfW = 98.6. Label at x: 160 has left edge at 61.4 <= maxX 100 (retained).
     pass.attackTroopLabels = [
-      { x: 120, y: 50, text: "5000", colorR: 1, colorG: 1, colorB: 1 },
+      { x: 160, y: 50, text: "5000", colorR: 1, colorG: 1, colorB: 1 },
     ];
 
     const bounds = { minX: 0, minY: 0, maxX: 100, maxY: 100 };
-    pass.tick(0.5, bounds);
 
+    // Culled at zoom 1.0
+    pass.tick(1.0, bounds);
+    expect(pass.instanceCount).toBe(0);
+
+    // Retained at zoom 0.5
+    pass.tick(0.5, bounds);
     expect(pass.instanceCount).toBe(4);
   });
 

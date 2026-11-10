@@ -706,6 +706,7 @@ export class GPURenderer {
     this.territoryPass.applyLiveDelta(tileState, changedTiles);
   }
 
+  /** Forward live trail delta (dirty rows or changed tiles) to TrailPass. */
   uploadLiveTrailDelta(
     trailState: Uint16Array,
     dirtyRowMin: number,

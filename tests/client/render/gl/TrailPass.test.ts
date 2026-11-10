@@ -111,4 +111,35 @@ describe("TrailPass upload management", () => {
     expect(mockGl.texSubImage2D).toHaveBeenCalledTimes(1);
     expect(pass.dirtyRowMax).toBe(-1);
   });
+
+  it("promotes to full upload when a sparse delta is followed by a large delta before flush", () => {
+    const { pass, mockGl } = createTrailPass();
+    const trailState = new Uint16Array(100 * 100);
+
+    // Tick 1: sparse update in rows 10-20
+    pass.applyLiveDelta(trailState, 10, 20, [15, 25]);
+    expect(pass.scatter.count).toBe(2);
+
+    // Tick 2: large delta in rows 50-60 before flush occurs
+    const largeChangedTiles = new Array(8192).fill(0).map((_, i) => i + 5000);
+    pass.applyLiveDelta(trailState, 50, 60, largeChangedTiles);
+
+    // Scatter is cleared and upload is promoted to full upload so rows 10-20 are preserved
+    expect(pass.scatter.clear).toHaveBeenCalled();
+    expect(pass.fullUploadPending).toBe(true);
+
+    pass.flushTexture();
+    expect(mockGl.texSubImage2D).toHaveBeenCalledWith(
+      mockGl.TEXTURE_2D,
+      0,
+      0,
+      0,
+      100,
+      100,
+      mockGl.RED_INTEGER,
+      mockGl.UNSIGNED_SHORT,
+      trailState,
+    );
+    expect(pass.fullUploadPending).toBe(false);
+  });
 });
