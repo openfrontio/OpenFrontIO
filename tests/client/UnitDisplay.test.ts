@@ -1190,10 +1190,11 @@ describe("dragging a build button onto the map", () => {
       cityItem.dispatchEvent(touch("pointermove", 200, 260));
       cityItem.dispatchEvent(touch("pointerup", 180, 270));
 
+      // The unit rides above the finger, so the finger doesn't hide it.
       expect(moves.map((m) => [m.x, m.y])).toEqual([
-        [300, 230],
-        [200, 260],
-        [180, 270],
+        [300, 186],
+        [200, 216],
+        [180, 226],
       ]);
       expect(confirms).toHaveLength(1);
       // Where it can't be built, the unit is dropped rather than left held.

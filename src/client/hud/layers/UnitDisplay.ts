@@ -45,6 +45,10 @@ const PEEK_HOLD_MS = 450;
 /** How long the details stay up after the browser cancels the touch itself. */
 const PEEK_GRACE_MS = 1200;
 
+// A unit dragged from the bar sits this far above the finger (about 7mm on a
+// phone), so the finger doesn't hide where it will be built.
+const DRAG_GHOST_LIFT_PX = 44;
+
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Controller {
   public game: GameView;
@@ -317,13 +321,16 @@ export class UnitDisplay extends LitElement implements Controller {
       this.requestUpdate();
     }
     this.eventBus?.emit(
-      new TouchGhostPlacementMoveEvent(event.clientX, event.clientY),
+      new TouchGhostPlacementMoveEvent(
+        event.clientX,
+        event.clientY - DRAG_GHOST_LIFT_PX,
+      ),
     );
   };
 
   /**
-   * Ends a drag from the bar: a release on the map builds where the finger
-   * is; a release over the bar, a cancelled touch, or a release where the
+   * Ends a drag from the bar: a release on the map builds where the ghost
+   * is, just above the finger; a release over the bar, a cancelled touch, or a release where the
    * unit can't be built drops the unit.
    * Returns whether the pointer was dragging, so the hold logic skips it.
    */
@@ -338,7 +345,10 @@ export class UnitDisplay extends LitElement implements Controller {
       !this.isOverBar(event.clientX, event.clientY)
     ) {
       this.eventBus?.emit(
-        new TouchGhostPlacementMoveEvent(event.clientX, event.clientY),
+        new TouchGhostPlacementMoveEvent(
+          event.clientX,
+          event.clientY - DRAG_GHOST_LIFT_PX,
+        ),
       );
       // A drop that can't build there drops the unit too.
       this.eventBus?.emit(new ConfirmGhostStructureEvent(true));
