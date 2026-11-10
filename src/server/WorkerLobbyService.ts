@@ -641,7 +641,10 @@ export class WorkerLobbyService {
                   ) {
                     return;
                   }
-                  const caller = await defaultResolveCaller(msg.token);
+                  const caller = await defaultResolveCaller(
+                    msg.token,
+                    auth.persistentId,
+                  );
                   if (!caller || ws.readyState !== WebSocket.OPEN) {
                     return;
                   }

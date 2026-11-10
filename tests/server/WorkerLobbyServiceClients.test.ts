@@ -174,6 +174,10 @@ describe("WorkerLobbyService.connectedClients", () => {
     );
 
     await vi.waitFor(() => {
+      expect(defaultResolveCaller).toHaveBeenCalledWith(
+        "valid_token",
+        "pid_123",
+      );
       expect(regSpy).toHaveBeenCalledWith(ws, "auth_user.pub");
     });
     expect(ws.terminate).not.toHaveBeenCalled();
