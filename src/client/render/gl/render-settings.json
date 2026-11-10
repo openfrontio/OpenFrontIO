@@ -309,7 +309,8 @@
     "allianceColorB": 0.1,
     "traitorColorR": 1,
     "traitorColorG": 0.2,
-    "traitorColorB": 0.2
+    "traitorColorB": 0.2,
+    "flashHz": 2
   },
   "samRadius": {
     "strokeWidth": 1.5,

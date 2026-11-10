@@ -252,7 +252,7 @@ export interface GhostPreviewData {
 /**
  * Range circle warning for a nuke preview: "breaksAlliance" (yellow)
  * breaks an alliance with a traitor or disconnected ally, which carries no
- * traitor mark; "traitor" (red) betrays an ally and marks you a
+ * traitor mark; "traitor" (flashing red) betrays an ally and marks you a
  * traitor.
  */
 export type RangeWarning = "none" | "breaksAlliance" | "traitor";

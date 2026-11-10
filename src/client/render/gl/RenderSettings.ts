@@ -372,9 +372,10 @@ export interface RenderSettings {
     allianceColorR: number; // nuke breaks an alliance, no traitor mark
     allianceColorG: number;
     allianceColorB: number;
-    traitorColorR: number; // nuke marks you a traitor
+    traitorColorR: number; // flashes between white and this — nuke marks you a traitor
     traitorColorG: number;
     traitorColorB: number;
+    flashHz: number; // traitor flash frequency
   };
   samRadius: {
     strokeWidth: number; // ring half-width in world units
