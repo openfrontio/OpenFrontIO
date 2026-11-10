@@ -1,5 +1,8 @@
 /// <reference types="vite/client" />
 
+// Percent of en.json each language translates, keyed by code (vite.config.ts).
+declare const __LANG_COVERAGE__: Record<string, number>;
+
 declare module "*.bin" {
   const binContent: string;
   export default binContent;
