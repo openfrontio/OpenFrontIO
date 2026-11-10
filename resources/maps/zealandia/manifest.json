@@ -1,5 +1,5 @@
 {
-  "categories": ["oceania"],
+  "categories": ["oceania", "new", "fictional"],
   "id": "Zealandia",
   "map": {
     "height": 1888,
@@ -151,5 +151,6 @@
       "name": "Puysegur Islands"
     }
   ],
+  "themes": ["under_ocean", "oceania"],
   "translation_key": "map.zealandia"
 }
