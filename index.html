@@ -597,13 +597,16 @@
     <onboarding-overlay></onboarding-overlay>
     <new-lobby-prompt></new-lobby-prompt>
     <game-starting-modal></game-starting-modal>
-    <!-- A solid strip behind the status bar in-game. iOS Safari blurs the
-         page under its status bar unless a fixed element with a solid
-         background touches the top edge, which it extends instead; without
-         this the map and HUD there blurred whenever the player card was
-         hidden. Zero height where there's no top inset. -->
+    <!-- Stops iOS blurring the top of the screen in-game. WebKit (iOS 26)
+         blurs the content under the status bar unless the element at the
+         top centre is a fixed, full-width bar over 10px tall with a
+         background colour; it then tints the status bar with that colour
+         instead, blended over the page background when it's translucent.
+         In a game the top centre is otherwise only the map's input overlay,
+         so the map and HUD there blurred. This one is all but transparent,
+         and above the top HUD so the HUD's backdrop blur isn't picked up. -->
     <div
-      class="hidden in-[.in-game]:block fixed top-0 inset-x-0 z-[100] h-[env(safe-area-inset-top)] bg-gray-900 pointer-events-none"
+      class="hidden in-[.in-game]:block fixed top-0 inset-x-0 z-[1100] h-[calc(env(safe-area-inset-top)+12px)] bg-neutral-800/1 pointer-events-none"
     ></div>
     <!-- Top HUD: below lg each piece is fixed on its own. From lg, where the
          leaderboard opens by default, they share one row, leaderboard | card |
