@@ -12,11 +12,9 @@ import {
   bytesToBase64,
   deserializeReplayArchive,
   downloadBlob,
-  encodeGif89a,
   EXPORT_FORMATS,
   exportFilename,
   exportMatchStatsCsv,
-  exportReplayGif,
   exportReplayJson,
   exportScreenshotPng,
   exportTimelapseWebm,
@@ -119,9 +117,6 @@ describe("ReplayExport utilities", () => {
     );
     expect(exportFilename("abCD_12", "webm")).toBe(
       "openfront-abCD_12-timelapse.webm",
-    );
-    expect(exportFilename("abCD_12", "gif")).toBe(
-      "openfront-abCD_12-timelapse.gif",
     );
     expect(exportFilename("abCD_12", "json")).toBe(
       "openfront-abCD_12-replay.json",
@@ -429,49 +424,6 @@ describe("WebM timelapse export", () => {
   });
 });
 
-describe("Animated GIF89a timelapse export", () => {
-  test("encodeGif89a produces a valid GIF89a binary with loop extension and trailer", () => {
-    const palette = new Uint8Array(256 * 3);
-    const f1 = new Uint8Array([0, 1, 1, 0, 2, 3]);
-    const f2 = new Uint8Array([1, 1, 4, 4, 2, 3]);
-    const bytes = encodeGif89a([f1, f2], 3, 2, palette, 10);
-
-    // Header "GIF89a"
-    const header = String.fromCharCode(...bytes.subarray(0, 6));
-    expect(header).toBe("GIF89a");
-    // Width = 3, Height = 2 (little endian)
-    expect(bytes[6] | (bytes[7] << 8)).toBe(3);
-    expect(bytes[8] | (bytes[9] << 8)).toBe(2);
-    // Trailer 0x3b
-    expect(bytes[bytes.length - 1]).toBe(0x3b);
-  });
-
-  test("exportReplayGif renders replay frames into an image/gif Blob", async () => {
-    const { replay, terrain } = await buildSampleReplay(15, 5);
-    const blob = await exportReplayGif(replay, inflate, terrain, {
-      maxFrames: 5,
-      maxDimension: 16,
-      delayCs: 6,
-    });
-    expect(blob.type).toBe("image/gif");
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    expect(String.fromCharCode(...bytes.subarray(0, 6))).toBe("GIF89a");
-    expect(bytes[bytes.length - 1]).toBe(0x3b);
-  });
-
-  test("aborts exportReplayGif early when signal is aborted", async () => {
-    const { replay, terrain } = await buildSampleReplay(15, 5);
-    const controller = new AbortController();
-    controller.abort();
-    await expect(
-      exportReplayGif(replay, inflate, terrain, {
-        maxFrames: 5,
-        signal: controller.signal,
-      }),
-    ).rejects.toThrow();
-  });
-});
-
 describe("Replay archive JSON export & round-trip", () => {
   test("serializes and deserializes ReplayData losslessly", async () => {
     const { replay } = await buildSampleReplay(18, 8);
@@ -664,14 +616,14 @@ describe("<replay-controls> export menu", () => {
       ...EXPORT_FORMATS,
     ]);
 
-    // Click GIF export option
-    const gifBtn = el.querySelector<HTMLButtonElement>(
-      '[data-export-format="gif"]',
+    // Click PNG export option
+    const pngBtn = el.querySelector<HTMLButtonElement>(
+      '[data-export-format="png"]',
     )!;
-    gifBtn.click();
+    pngBtn.click();
     await el.updateComplete;
 
-    expect(received).toEqual(["gif"]);
+    expect(received).toEqual(["png"]);
     // Menu closes after selecting a format
     expect(el.querySelector("[data-export-format]")).toBeNull();
   });

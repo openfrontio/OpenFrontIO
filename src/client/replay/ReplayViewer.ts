@@ -92,7 +92,6 @@ import {
   downloadBlob,
   exportFilename,
   exportMatchStatsCsv,
-  exportReplayGif,
   exportReplayJson,
   exportScreenshotPng,
   exportVideo,
@@ -205,7 +204,6 @@ export class ReplayViewer extends LitElement {
   private exportAbort: AbortController | null = null;
   private playback: ReplayPlayback | null = null;
   private appearance: ReplayAppearance | null = null;
-  private initialTerrain: Uint8Array | null = null;
   private drawNow: (() => void) | null = null;
   private view: MapRenderer | null = null;
   private camera: ReplayCamera | null = null;
@@ -456,9 +454,7 @@ export class ReplayViewer extends LitElement {
       playback.frameBuilder,
     );
     this.appearance = appearance;
-    const initialTerrain = terrainOf(map);
-    this.initialTerrain = initialTerrain;
-    const replayTerrain = new ReplayTerrain(initialTerrain);
+    const replayTerrain = new ReplayTerrain(terrainOf(map));
     const adapter = new ReplayGameView(
       appearance.palette.players,
       config,
@@ -931,16 +927,6 @@ export class ReplayViewer extends LitElement {
               if (wasPlaying) p.play();
             }
           }
-          break;
-        }
-        case "gif": {
-          const terrain =
-            this.initialTerrain ??
-            new Uint8Array(p.header.mapWidth * p.header.mapHeight);
-          blob = await exportReplayGif(p.data(), gunzipInBrowser, terrain, {
-            players: this.appearance?.palette.players ?? p.header.players,
-            signal: exportAbort.signal,
-          });
           break;
         }
         case "json":

@@ -2246,7 +2246,6 @@
     "export_cancel": "Cancel export",
     "export_csv": "Match Stats (.csv)",
     "export_failed": "Export failed",
-    "export_gif": "Animated Timelapse (.gif)",
     "export_incomplete": "Incomplete replays cannot be exported.",
     "export_json": "Replay Data (.json)",
     "export_mp4": "Full Match Video (.mp4)",
