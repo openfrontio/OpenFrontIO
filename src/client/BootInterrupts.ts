@@ -91,7 +91,11 @@ export interface BootInterruptInputs {
   steamNotice: SteamNotice | null;
   /** steamNoticeStringsReady(...), as grantStringsReady. */
   steamNoticeStringsReady: boolean;
-  /** steamSkinDropDueThisLaunch(...) for a drop the catalog resolved. */
+  /**
+   * steamSkinDropDueThisLaunch(...) for an unseen drop. Before the catalog is
+   * read this only says one is owed; nextBootInterruptResolvingSkinDrop sets
+   * it from the resolved entry.
+   */
   steamSkinDropDue: boolean;
   /** steamSkinDropStringsReady(...), as grantStringsReady. */
   steamSkinDropStringsReady: boolean;
@@ -344,6 +348,40 @@ export function nextBootInterrupt(
     return "report-thanks";
 
   return null;
+}
+
+type ResolvedSkinDrop = { notice: string; resolved: ResolvedCosmetic };
+
+/**
+ * nextBootInterrupt for a boot that may owe the Steam skin popup. The popup
+ * needs the cosmetics catalog, so it is read only when the popup would win:
+ * a notice that outranks it never waits on that request. If the drop does not
+ * resolve, or the page stops being clean while the catalog loads, the choice
+ * is made again without it.
+ */
+export async function nextBootInterruptResolvingSkinDrop(
+  inputs: BootInterruptInputs,
+  resolveDrop: () => Promise<{
+    steamSkinDrop: ResolvedSkinDrop | null;
+    cleanHomepage: boolean;
+  }>,
+): Promise<{
+  interrupt: BootInterrupt | null;
+  steamSkinDrop: ResolvedSkinDrop | null;
+}> {
+  const interrupt = nextBootInterrupt(inputs);
+  if (interrupt !== "steam-skin-drop") {
+    return { interrupt, steamSkinDrop: null };
+  }
+  const { steamSkinDrop, cleanHomepage } = await resolveDrop();
+  return {
+    interrupt: nextBootInterrupt({
+      ...inputs,
+      cleanHomepage,
+      steamSkinDropDue: steamSkinDrop !== null,
+    }),
+    steamSkinDrop,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -729,7 +767,7 @@ export interface BootInterruptContext {
   publicId: string;
   steamNotice: SteamNotice | null;
   /** The drop to announce, resolved against the catalog, or null. */
-  steamSkinDrop?: { notice: string; resolved: ResolvedCosmetic } | null;
+  steamSkinDrop?: ResolvedSkinDrop | null;
   /** paidFactsOf(...): a paid subscription beside the grant, if any. */
   paid?: PaidFacts | null;
   /** renewalPushedOf(...). */

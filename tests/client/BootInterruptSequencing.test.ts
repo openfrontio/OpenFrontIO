@@ -45,6 +45,7 @@ import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import {
   lapseShownAfterDispatch,
   nextBootInterrupt,
+  nextBootInterruptResolvingSkinDrop,
   runBootInterrupt,
   type BootInterruptPorts,
 } from "../../src/client/BootInterrupts";
@@ -52,6 +53,7 @@ import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 import { LAPSE_NOTICE_KEY } from "../../src/client/PlayerName";
 import {
   resetSteamSkinDropForTest,
+  steamSkinDropDueThisLaunch,
   steamSkinDropWhenClean,
 } from "../../src/client/SteamSkinDrop";
 import { UsernameInput } from "../../src/client/UsernameInput";
@@ -230,42 +232,53 @@ describe("the Steam skin drop in the boot sequence", () => {
     homepageIsClean: () => boolean = () => true,
     fetchCatalog: () => Promise<Cosmetics | null> = async () =>
       ({}) as Cosmetics,
+    grantEndedDue = false,
   ) {
     const calls = {
       opened: [] as ResolvedCosmetic[],
       seen: [] as string[],
       rewardsOpened: 0,
+      catalogFetches: 0,
+      alerts: 0,
     };
-    const { steamSkinDrop, cleanHomepage } = await steamSkinDropWhenClean(
-      "me",
-      drop,
-      homepageIsClean,
-      fetchCatalog,
-      () => catalog,
-    );
-    const interrupt = nextBootInterrupt({
-      cleanHomepage,
-      usernameStatus: "claimed",
-      username: "p",
-      usernameBase: "p",
-      lapseNoticeDue: false,
-      grantWelcomeDue: false,
-      grantEndedDue: false,
-      grantStringsReady: true,
-      steamNotice: null,
-      steamNoticeStringsReady: true,
-      rewardCount,
-      claimPromptDue: false,
-      claimStringsReady: true,
-      reportThanksDue: false,
-      reportThanksStringsReady: true,
-      giftEndingDue: false,
-      giftEndingStringsReady: true,
-      renewalPushedDue: false,
-      renewalPushedStringsReady: true,
-      steamSkinDropDue: steamSkinDrop !== null,
-      steamSkinDropStringsReady: true,
-    });
+    const countedFetch = () => {
+      calls.catalogFetches++;
+      return fetchCatalog();
+    };
+    const { interrupt, steamSkinDrop } =
+      await nextBootInterruptResolvingSkinDrop(
+        {
+          cleanHomepage: homepageIsClean(),
+          usernameStatus: "claimed",
+          username: "p",
+          usernameBase: "p",
+          lapseNoticeDue: false,
+          grantWelcomeDue: false,
+          grantEndedDue,
+          grantStringsReady: true,
+          steamNotice: null,
+          steamNoticeStringsReady: true,
+          rewardCount,
+          claimPromptDue: false,
+          claimStringsReady: true,
+          reportThanksDue: false,
+          reportThanksStringsReady: true,
+          giftEndingDue: false,
+          giftEndingStringsReady: true,
+          renewalPushedDue: false,
+          renewalPushedStringsReady: true,
+          steamSkinDropDue: steamSkinDropDueThisLaunch("me", drop.notice),
+          steamSkinDropStringsReady: true,
+        },
+        () =>
+          steamSkinDropWhenClean(
+            "me",
+            drop,
+            homepageIsClean,
+            countedFetch,
+            () => catalog,
+          ),
+      );
     await runBootInterrupt(
       interrupt,
       {
@@ -278,7 +291,9 @@ describe("the Steam skin drop in the boot sequence", () => {
       {
         translate: (key) => `t(${key})`,
         confirm: async () => false,
-        alert: async () => {},
+        alert: async () => {
+          calls.alerts++;
+        },
         tierName: (tier) => tier,
         navigate: () => {},
         openRewards: () => calls.rewardsOpened++,
@@ -304,6 +319,20 @@ describe("the Steam skin drop in the boot sequence", () => {
     expect(result.interrupt).toBe("steam-skin-drop");
     expect(result.opened).toEqual([entry]);
     expect(result.seen).toEqual([drop.notice]);
+  });
+
+  it("a notice that outranks the popup shows without waiting on the catalog", async () => {
+    const result = await boot([entry], 0, undefined, undefined, true);
+    expect(result.interrupt).toBe("grant-ended");
+    expect(result.catalogFetches).toBe(0);
+    expect(result.opened).toEqual([]);
+    expect(result.seen).toEqual([]);
+  });
+
+  it("fetches the catalog once when the popup is the one to show", async () => {
+    const result = await boot([entry], 1);
+    expect(result.catalogFetches).toBe(1);
+    expect(result.interrupt).toBe("steam-skin-drop");
   });
 
   it("a drop missing from the catalog does not open it, marks nothing seen, and lets the next interrupt run", async () => {

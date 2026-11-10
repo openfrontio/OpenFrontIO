@@ -41,7 +41,7 @@ import {
   giftEndingStringsReady,
   joinOwnsInFlightFlag,
   lapseShownAfterDispatch,
-  nextBootInterrupt,
+  nextBootInterruptResolvingSkinDrop,
   parseClaimPromptStore,
   renewalPushedDueThisLaunch,
   renewalPushedOf,
@@ -158,6 +158,7 @@ import { steamNoticeDue, steamNoticeStringsReady } from "./SteamNotices";
 import { steamSDK } from "./SteamSDK";
 import {
   showSteamSkinDrop,
+  steamSkinDropDueThisLaunch,
   steamSkinDropWhenClean,
   steamSkinDropStringsReady,
   unseenSteamSkinDrop,
@@ -964,65 +965,76 @@ class Client {
           isDesktopShell(),
           Date.now(),
         );
-        // The catalog is read only for a drop that could actually show, so
-        // every other player skips the request. The page is checked again once
+        // The skin popup needs the catalog, which is read only when that
+        // popup is the one to show, so every other player and every notice
+        // that outranks it skips the request. The page is checked again once
         // it lands: a join can start during the fetch, and a newer profile
         // (a lost session, another account) makes this one stale.
         const dropGeneration = userMeGeneration();
         const homepageStillThisProfile = () =>
           homepageIsClean() && userMeGeneration() === dropGeneration;
-        const { steamSkinDrop, cleanHomepage } = await steamSkinDropWhenClean(
-          publicId,
-          unseenSteamSkinDrop(
-            userMeResponse.steamSkinDrop,
-            userMeResponse.noticesSeen ?? [],
-          ),
-          homepageStillThisProfile,
-          fetchCosmetics,
-          (cosmetics) => resolveCosmetics(cosmetics, userMeResponse, null),
+        const unseenDrop = unseenSteamSkinDrop(
+          userMeResponse.steamSkinDrop,
+          userMeResponse.noticesSeen ?? [],
         );
         const paid = paidFactsOf(userMeResponse);
-        const interrupt = nextBootInterrupt({
-          cleanHomepage,
-          usernameStatus,
-          username,
-          usernameBase,
-          lapseNoticeDue: lapseShown,
-          grantWelcomeDue: steamGrantWelcomeDue(
-            grantStoreAfterDispatch,
-            userMeResponse,
-            Date.now(),
-          ),
-          grantEndedDue: steamGrantEndedDue(
-            grantStoreAfterDispatch,
-            userMeResponse,
-            Date.now(),
-          ),
-          grantStringsReady: steamGrantStringsReady(translateText),
-          giftEndingDue: giftEndingDue(
-            grantStoreAfterDispatch,
-            userMeResponse,
-            Date.now(),
-          ),
-          giftEndingStringsReady: giftEndingStringsReady(translateText),
-          renewalPushedDue: renewalPushedDueThisLaunch(userMeResponse),
-          renewalPushedStringsReady: renewalPushedStringsReady(translateText),
-          steamNotice,
-          steamNoticeStringsReady: steamNoticeStringsReady(translateText),
-          // Held rewards can't be claimed yet: on their own they'd open the
-          // popup every boot with nothing to do.
-          rewardCount: rewards.filter(isRewardClaimable).length,
-          claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
-          claimStringsReady: claimPromptStringsReady(translateText),
-          // Not every caller's response went through the schema default.
-          reportThanksDue: reportThanksDueThisLaunch(
-            userMeResponse.pendingMessages ?? [],
-            publicId,
-          ),
-          reportThanksStringsReady: reportThanksStringsReady(translateText),
-          steamSkinDropDue: steamSkinDrop !== null,
-          steamSkinDropStringsReady: steamSkinDropStringsReady(translateText),
-        });
+        const { interrupt, steamSkinDrop } =
+          await nextBootInterruptResolvingSkinDrop(
+            {
+              cleanHomepage: homepageStillThisProfile(),
+              usernameStatus,
+              username,
+              usernameBase,
+              lapseNoticeDue: lapseShown,
+              grantWelcomeDue: steamGrantWelcomeDue(
+                grantStoreAfterDispatch,
+                userMeResponse,
+                Date.now(),
+              ),
+              grantEndedDue: steamGrantEndedDue(
+                grantStoreAfterDispatch,
+                userMeResponse,
+                Date.now(),
+              ),
+              grantStringsReady: steamGrantStringsReady(translateText),
+              giftEndingDue: giftEndingDue(
+                grantStoreAfterDispatch,
+                userMeResponse,
+                Date.now(),
+              ),
+              giftEndingStringsReady: giftEndingStringsReady(translateText),
+              renewalPushedDue: renewalPushedDueThisLaunch(userMeResponse),
+              renewalPushedStringsReady:
+                renewalPushedStringsReady(translateText),
+              steamNotice,
+              steamNoticeStringsReady: steamNoticeStringsReady(translateText),
+              // Held rewards can't be claimed yet: on their own they'd open the
+              // popup every boot with nothing to do.
+              rewardCount: rewards.filter(isRewardClaimable).length,
+              claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
+              claimStringsReady: claimPromptStringsReady(translateText),
+              // Not every caller's response went through the schema default.
+              reportThanksDue: reportThanksDueThisLaunch(
+                userMeResponse.pendingMessages ?? [],
+                publicId,
+              ),
+              reportThanksStringsReady: reportThanksStringsReady(translateText),
+              steamSkinDropDue:
+                unseenDrop !== null &&
+                steamSkinDropDueThisLaunch(publicId, unseenDrop.notice),
+              steamSkinDropStringsReady:
+                steamSkinDropStringsReady(translateText),
+            },
+            () =>
+              steamSkinDropWhenClean(
+                publicId,
+                unseenDrop,
+                homepageStillThisProfile,
+                fetchCosmetics,
+                (cosmetics) =>
+                  resolveCosmetics(cosmetics, userMeResponse, null),
+              ),
+          );
         // Only the payer's welcome names a daily amount, so only it waits on
         // the catalog.
         const catalog =
