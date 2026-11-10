@@ -2475,7 +2475,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.ukraine",
     categories: ["europe", "countries", "new"],
     defaultNationCount: 33,
-    themes: ["europe"],
+    themes: ["ukraine"],
     customTribes: [
       { name: "Znamianka", coordinates: [1197, 672] },
       { name: "Berehove", coordinates: [83, 758] },
