@@ -1,10 +1,11 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Ukraine",
   "name": "Ukraine",
   "translation_key": "map.ukraine",
-  "categories": ["europe", "countries"],
-  "multiplayer_frequency": 1,
-  "themes": ["ukraine"],
+  "categories": ["europe", "countries", "new"],
+  "location": { "lat": 49, "lon": 31 },
+  "themes": ["europe"],
   "custom_tribes": [
     {
       "name": "Znamianka",

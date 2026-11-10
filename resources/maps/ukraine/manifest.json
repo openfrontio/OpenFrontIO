@@ -1,5 +1,5 @@
 {
-  "categories": ["europe", "countries"],
+  "categories": ["europe", "countries", "new"],
   "custom_tribes": [
     {
       "coordinates": [1197, 672],
@@ -409,20 +409,19 @@
   "id": "Ukraine",
   "map": {
     "height": 1408,
-    "num_land_tiles": 1322149,
+    "num_land_tiles": 1320213,
     "width": 2056
   },
   "map16x": {
     "height": 352,
-    "num_land_tiles": 77048,
+    "num_land_tiles": 76809,
     "width": 514
   },
   "map4x": {
     "height": 704,
-    "num_land_tiles": 322464,
+    "num_land_tiles": 321816,
     "width": 1028
   },
-  "multiplayer_frequency": 1,
   "name": "Ukraine",
   "nations": [
     {
@@ -591,6 +590,6 @@
       "name": "Sevastopol"
     }
   ],
-  "themes": ["ukraine"],
+  "themes": ["europe"],
   "translation_key": "map.ukraine"
 }

@@ -2473,13 +2473,9 @@ export const maps: readonly MapInfo[] = [
     id: "Ukraine",
     type: GameMapType.Ukraine,
     translationKey: "map.ukraine",
-    categories: ["europe", "countries"],
-    multiplayerFrequency: 1,
-    ffaFrequency: -1,
-    teamFrequency: -1,
-    specialFrequency: -1,
+    categories: ["europe", "countries", "new"],
     defaultNationCount: 33,
-    themes: ["ukraine"],
+    themes: ["europe"],
     customTribes: [
       { name: "Znamianka", coordinates: [1197, 672] },
       { name: "Berehove", coordinates: [83, 758] },
@@ -2583,6 +2579,7 @@ export const maps: readonly MapInfo[] = [
       { name: "Kakhovka", coordinates: [1288, 989] },
       { name: "Drohobych", coordinates: [179, 565] },
     ],
+    location: { lat: 49, lon: 31 },
   },
   {
     id: "UnitedStates",
