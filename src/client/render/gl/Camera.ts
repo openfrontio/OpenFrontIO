@@ -17,7 +17,7 @@
 
 import { renderDpr } from "./utils/Dpr";
 
-const MIN_ZOOM = 0.2;
+const DEFAULT_MIN_ZOOM = 0.2;
 const MAX_ZOOM = 20;
 const DBLCLICK_MIN_ZOOM = 0.7;
 const DBLCLICK_MAX_ZOOM = 3;
@@ -53,6 +53,16 @@ export class Camera {
       this.fitMap();
     }
     this.dirty = true;
+  }
+
+  /**
+   * Minimum zoom level. Dynamically scales down for large maps so the player
+   * can zoom out far enough to view the entire world.
+   */
+  get minZoom(): number {
+    const fitZoom =
+      Math.min(this.canvasW / this.mapW, this.canvasH / this.mapH) * 0.9;
+    return Math.min(DEFAULT_MIN_ZOOM, fitZoom);
   }
 
   /** Fit the map into the viewport (~90% fill). */
@@ -115,14 +125,14 @@ export class Camera {
 
   /** Multiply zoom by a factor (centered on current view). */
   zoomBy(factor: number): void {
-    this.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, this.zoom * factor));
+    this.zoom = Math.max(this.minZoom, Math.min(MAX_ZOOM, this.zoom * factor));
     this.clampOffset();
     this.dirty = true;
   }
 
   /** Set absolute zoom level. */
   zoomTo(level: number): void {
-    this.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, level));
+    this.zoom = Math.max(this.minZoom, Math.min(MAX_ZOOM, level));
     this.clampOffset();
     this.dirty = true;
   }
@@ -133,7 +143,7 @@ export class Camera {
    */
   zoomAtScreen(factor: number, screenX: number, screenY: number): void {
     const worldBefore = this.screenToWorld(screenX, screenY);
-    this.zoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, this.zoom * factor));
+    this.zoom = Math.max(this.minZoom, Math.min(MAX_ZOOM, this.zoom * factor));
     const worldAfter = this.screenToWorld(screenX, screenY);
     this.offsetX += worldBefore.x - worldAfter.x;
     this.offsetY += worldBefore.y - worldAfter.y;
@@ -182,6 +192,26 @@ export class Camera {
     return {
       x: (this.zoom * (worldX - this.offsetX)) / dpr + this.canvasW / (2 * dpr),
       y: (this.zoom * (worldY - this.offsetY)) / dpr + this.canvasH / (2 * dpr),
+    };
+  }
+
+  /**
+   * Return the visible world-space tile bounds [minX, minY, maxX, maxY].
+   * Clamped to [0, mapW] and [0, mapH].
+   */
+  getWorldBounds(margin = 0): {
+    minX: number;
+    minY: number;
+    maxX: number;
+    maxY: number;
+  } {
+    const halfW = this.canvasW / (2 * this.zoom) + margin;
+    const halfH = this.canvasH / (2 * this.zoom) + margin;
+    return {
+      minX: Math.max(0, Math.floor(this.offsetX - halfW)),
+      minY: Math.max(0, Math.floor(this.offsetY - halfH)),
+      maxX: Math.min(this.mapW, Math.ceil(this.offsetX + halfW)),
+      maxY: Math.min(this.mapH, Math.ceil(this.offsetY + halfH)),
     };
   }
 

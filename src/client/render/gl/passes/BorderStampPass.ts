@@ -30,6 +30,7 @@ export class BorderStampPass {
   private uEmbargoTint: WebGLUniformLocation;
   private uFriendlyTint: WebGLUniformLocation;
   private uAltView: WebGLUniformLocation;
+  private uHighlightOwner: WebGLUniformLocation;
 
   private vao: WebGLVertexArrayObject;
   private tileTex: WebGLTexture;
@@ -38,6 +39,7 @@ export class BorderStampPass {
   private defenseCoverageTex: WebGLTexture | null = null;
   private affiliationTex: WebGLTexture | null = null;
   private altView = false;
+  private highlightOwner = 0;
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -86,6 +88,10 @@ export class BorderStampPass {
     this.uEmbargoTint = gl.getUniformLocation(this.program, "uEmbargoTint")!;
     this.uFriendlyTint = gl.getUniformLocation(this.program, "uFriendlyTint")!;
     this.uAltView = gl.getUniformLocation(this.program, "uAltView")!;
+    this.uHighlightOwner = gl.getUniformLocation(
+      this.program,
+      "uHighlightOwner",
+    )!;
 
     gl.useProgram(this.program);
     gl.uniform1i(gl.getUniformLocation(this.program, "uTileTex"), 0);
@@ -106,6 +112,9 @@ export class BorderStampPass {
   setDefenseCoverageTex(tex: WebGLTexture): void {
     this.defenseCoverageTex = tex;
   }
+  setHighlightOwner(ownerID: number): void {
+    this.highlightOwner = ownerID;
+  }
 
   /** Draw borders + defense checkerboard. Blending must be enabled. */
   draw(cameraMatrix: Float32Array): void {
@@ -115,6 +124,7 @@ export class BorderStampPass {
     gl.useProgram(this.program);
     gl.uniformMatrix3fv(this.uCam, false, cameraMatrix);
     gl.uniform2f(this.uMapSize, this.mapW, this.mapH);
+    gl.uniform1ui(this.uHighlightOwner, this.highlightOwner);
     gl.uniform1f(this.uHighlightBrighten, mo.highlightBrighten);
     gl.uniform1f(this.uDefenseCheckerDarken, mo.defenseCheckerDarken);
     gl.uniform1f(this.uEmbargoTintRatio, mo.embargoTintRatio);

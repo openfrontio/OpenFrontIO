@@ -66,7 +66,8 @@ export class MapLayerPass {
       "uDestroyedMask",
     )!;
 
-    // Layer RGBA texture from the ImageBitmap.
+    // Layer RGBA texture from the ImageBitmap. Uses mipmapping for smooth
+    // downsampling and drastically reduced GPU texture cache misses when zoomed out.
     this.layerTex = createTexture2D(gl, {
       width: image.width,
       height: image.height,
@@ -74,10 +75,17 @@ export class MapLayerPass {
       format: gl.RGBA,
       type: gl.UNSIGNED_BYTE,
       data: null,
-      filter: gl.NEAREST,
+      filter: gl.LINEAR_MIPMAP_LINEAR,
     });
     gl.bindTexture(gl.TEXTURE_2D, this.layerTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(
+      gl.TEXTURE_2D,
+      gl.TEXTURE_MIN_FILTER,
+      gl.LINEAR_MIPMAP_LINEAR,
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
     // Destroyed-mask texture (R8UI, one byte per tile). Starts all-zero.
     // Non-nukeable layers never destroy tiles, so a 1x1 placeholder texture
@@ -105,9 +113,17 @@ export class MapLayerPass {
     this._visible = visible;
   }
 
+  get visible(): boolean {
+    return this._visible;
+  }
+
   /** Set the alpha multiplier for this layer (0–1). */
   setAlpha(alpha: number): void {
     this._alpha = Math.max(0, Math.min(1, alpha));
+  }
+
+  get alpha(): number {
+    return this._alpha;
   }
 
   /**
@@ -221,19 +237,26 @@ export class MapLayerPass {
       format: gl.RGBA,
       type: gl.UNSIGNED_BYTE,
       data: null,
-      filter: gl.NEAREST,
+      filter: gl.LINEAR_MIPMAP_LINEAR,
     });
     gl.bindTexture(gl.TEXTURE_2D, this.layerTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(
+      gl.TEXTURE_2D,
+      gl.TEXTURE_MIN_FILTER,
+      gl.LINEAR_MIPMAP_LINEAR,
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     // Re-upload destroyed mask.
     gl.deleteTexture(this.destroyedTex);
     this.destroyedTex = createTexture2D(gl, {
-      width: this.mapW,
-      height: this.mapH,
+      width: this.nukeable ? this.mapW : 1,
+      height: this.nukeable ? this.mapH : 1,
       internalFormat: gl.R8UI,
       format: gl.RED_INTEGER,
       type: gl.UNSIGNED_BYTE,
-      data: this.destroyedData,
+      data: this.nukeable ? this.destroyedData : new Uint8Array(1),
       filter: gl.NEAREST,
     });
   }

@@ -152,7 +152,12 @@ export class BorderComputePass {
     if (ownerID === this.highlightOwner) return;
     this.highlightOwner = ownerID;
     this.scatter.setHighlightOwner(ownerID);
-    this.globalDirty = true;
+    // On massive maps (e.g. World 10000 with 50M tiles), triggering a full
+    // 50MP FBO recomputation on mouse hover drops the frame rate to single digits.
+    // BorderStampPass handles highlight border rendering dynamically via uniform.
+    if (this.mapW * this.mapH <= 4_000_000) {
+      this.globalDirty = true;
+    }
   }
 
   /**
