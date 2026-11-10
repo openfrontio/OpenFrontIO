@@ -12,6 +12,7 @@ import {
   MouseUpEvent,
   TouchGhostPlacementDragStartEvent,
   TouchGhostPlacementEvent,
+  TouchGhostPlacementMoveEvent,
   TouchGhostPlacementSelectEvent,
   ToggleStructureEvent,
 } from "../../../src/client/InputHandler";
@@ -340,7 +341,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       ghostType: UnitType.City,
       preventStacking: false,
       ghostGeneration: c.ghostGeneration,
-      cancelOnInvalid: false,
+      endsPlacement: false,
     });
     expect(buildables).toHaveBeenNthCalledWith(1, 43, [UnitType.City], false);
     expect(buildables).toHaveBeenNthCalledWith(2, 45, [UnitType.City], false);
@@ -2219,6 +2220,28 @@ describe("BuildPreviewController touch preview", () => {
     expect(uiState.ghostStructure).toBe(UnitType.AtomBomb);
   });
 
+  test("a nuke let go from a drag launches, then the ghost is dropped", async () => {
+    const { controller, builds, uiState, eventBus } = makeController(
+      UnitType.AtomBomb,
+    );
+    const requestAnimationFrame = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockImplementation(() => 1);
+    try {
+      controller.init();
+      eventBus.emit(new TouchGhostPlacementMoveEvent(200, 200));
+      await flushBuildables();
+
+      eventBus.emit(new ConfirmGhostStructureEvent(true));
+      await flushBuildables();
+
+      expect(builds.map((event) => event.tile)).toEqual([202]);
+      expect(uiState.ghostStructure).toBeNull();
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
+
   test("keeps separate desktop confirmations queued while validation is pending", async () => {
     const { controller, builds, requests } = makeDeferredBuildablesController(
       UnitType.AtomBomb,
@@ -2340,7 +2363,7 @@ describe("BuildPreviewController touch preview", () => {
       new TouchGhostPlacementEvent(100, 100),
     );
     expect(requests).toHaveLength(1);
-    expect((controller as any).pendingConfirmations[0].cancelOnInvalid).toBe(
+    expect((controller as any).pendingConfirmations[0].endsPlacement).toBe(
       true,
     );
 
@@ -2409,7 +2432,7 @@ describe("BuildPreviewController touch preview", () => {
         new TouchGhostPlacementEvent(100, 100),
       );
       expect(requests).toHaveLength(1);
-      expect((controller as any).pendingConfirmations[0].cancelOnInvalid).toBe(
+      expect((controller as any).pendingConfirmations[0].endsPlacement).toBe(
         false,
       );
       requests[0].resolve([
@@ -2436,7 +2459,7 @@ describe("BuildPreviewController touch preview", () => {
       ghostType: UnitType.City,
       preventStacking: false,
       ghostGeneration: c.ghostGeneration,
-      cancelOnInvalid: false,
+      endsPlacement: false,
     });
     Object.assign(c.ghostUnit.buildableUnit, {
       canBuild: 101,

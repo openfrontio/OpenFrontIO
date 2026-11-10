@@ -1198,7 +1198,7 @@ describe("dragging a build button onto the map", () => {
       ]);
       expect(confirms).toHaveLength(1);
       // Where it can't be built, the unit is dropped rather than left held.
-      expect(confirms[0].cancelOnInvalid).toBe(true);
+      expect(confirms[0].endsPlacement).toBe(true);
       // The release's click (if the browser makes one) must not toggle the
       // unit off again.
       cityItem

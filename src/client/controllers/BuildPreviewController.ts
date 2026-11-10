@@ -101,7 +101,7 @@ interface PendingConfirmation {
   ghostType: PlayerBuildableUnitType;
   preventStacking: boolean;
   ghostGeneration: number;
-  cancelOnInvalid: boolean;
+  endsPlacement: boolean;
 }
 
 const EMPTY_ID_SET: ReadonlySet<number> = new Set();
@@ -338,18 +338,18 @@ export class BuildPreviewController implements Controller {
       if (this.touchPlacementMode) {
         const target = this.touchPreviewScreenPosition();
         if (target === null) {
-          if (e.cancelOnInvalid) this.removeGhostStructure();
+          if (e.endsPlacement) this.removeGhostStructure();
           return;
         }
         this.requestConfirmStructure(
           new MouseUpEvent(target.x, target.y),
-          e.cancelOnInvalid,
+          e.endsPlacement,
         );
         return;
       }
       this.requestConfirmStructure(
         new MouseUpEvent(this.mousePos.x, this.mousePos.y),
-        e.cancelOnInvalid,
+        e.endsPlacement,
       );
     });
 
@@ -1008,7 +1008,7 @@ export class BuildPreviewController implements Controller {
 
   private requestConfirmStructure(
     e: MouseUpEvent,
-    cancelOnInvalid = false,
+    endsPlacement = false,
   ): void {
     this.syncGhostState();
     if (!this.ghostUnit) return;
@@ -1018,12 +1018,12 @@ export class BuildPreviewController implements Controller {
     const position = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
     // A release just outside the map has no tile to validate or build on.
     if (!this.game.isValidCoord(position.x, position.y)) {
-      if (cancelOnInvalid) this.removeGhostStructure();
+      if (endsPlacement) this.removeGhostStructure();
       return;
     }
     const tile = this.game.ref(position.x, position.y);
     if (this.game.isImpassable && this.game.isImpassable(tile)) {
-      if (cancelOnInvalid) this.removeGhostStructure();
+      if (endsPlacement) this.removeGhostStructure();
       return;
     }
     const preventStacking = !!this.uiState.preventStacking;
@@ -1034,8 +1034,8 @@ export class BuildPreviewController implements Controller {
     ) {
       const unit = this.effectiveBuildableUnit(preventStacking);
       if (unit && this.isGhostReadyForConfirm(preventStacking)) {
-        this.createStructure(tile, preventStacking, unit);
-      } else if (cancelOnInvalid) {
+        this.createStructure(tile, preventStacking, unit, endsPlacement);
+      } else if (endsPlacement) {
         this.removeGhostStructure();
       }
       return;
@@ -1045,7 +1045,7 @@ export class BuildPreviewController implements Controller {
       ghostType,
       preventStacking,
       ghostGeneration: this.ghostGeneration,
-      cancelOnInvalid,
+      endsPlacement,
     });
     this.processPendingConfirmations();
   }
@@ -1100,7 +1100,7 @@ export class BuildPreviewController implements Controller {
           !this.isBuildableUnitReady(unit, confirmation.preventStacking)
         ) {
           this.pendingConfirmations.splice(0, batchSize);
-          if (confirmation.cancelOnInvalid) {
+          if (confirmation.endsPlacement) {
             this.removeGhostStructure();
           }
           return;
@@ -1118,6 +1118,7 @@ export class BuildPreviewController implements Controller {
             confirmation.tile,
             confirmation.preventStacking,
             unit,
+            confirmation.endsPlacement,
           );
         }
       })
@@ -1149,7 +1150,7 @@ export class BuildPreviewController implements Controller {
         pending.ghostType !== confirmation.ghostType ||
         pending.preventStacking !== confirmation.preventStacking ||
         pending.ghostGeneration !== confirmation.ghostGeneration ||
-        pending.cancelOnInvalid !== confirmation.cancelOnInvalid
+        pending.endsPlacement !== confirmation.endsPlacement
       ) {
         break;
       }
@@ -1178,6 +1179,7 @@ export class BuildPreviewController implements Controller {
     targetTile: TileRef,
     preventStacking = this.uiState.preventStacking,
     validatedUnit?: BuildableUnit,
+    endsPlacement = false,
   ) {
     const unit = this.effectiveBuildableUnit(preventStacking, validatedUnit);
     if (!unit || (unit.canBuild === false && unit.canUpgrade === false)) return;
@@ -1194,6 +1196,7 @@ export class BuildPreviewController implements Controller {
       const unitType = unit.type;
 
       if (this.shouldBlockRecentAllyNuke(targetTile, unitType)) {
+        if (endsPlacement) this.removeGhostStructure();
         return;
       }
 
@@ -1210,7 +1213,7 @@ export class BuildPreviewController implements Controller {
           isNuke ? this.uiState.upgradeMultiplier || 1 : undefined,
         ),
       );
-      if (!shouldPreserveGhostAfterBuild(unitType)) {
+      if (endsPlacement || !shouldPreserveGhostAfterBuild(unitType)) {
         this.removeGhostStructure();
       }
     } else {

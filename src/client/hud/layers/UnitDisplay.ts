@@ -330,8 +330,7 @@ export class UnitDisplay extends LitElement implements Controller {
 
   /**
    * Ends a drag from the bar: a release on the map builds where the ghost
-   * is, just above the finger; a release over the bar, a cancelled touch, or a release where the
-   * unit can't be built drops the unit.
+   * is, just above the finger. Either way the unit is dropped afterwards.
    * Returns whether the pointer was dragging, so the hold logic skips it.
    */
   private finishPlaceDrag(event: PointerEvent): boolean {
@@ -350,7 +349,8 @@ export class UnitDisplay extends LitElement implements Controller {
           event.clientY - DRAG_GHOST_LIFT_PX,
         ),
       );
-      // A drop that can't build there drops the unit too.
+      // Letting go ends the placement: the unit is dropped whether it builds
+      // there or not, nukes included.
       this.eventBus?.emit(new ConfirmGhostStructureEvent(true));
     } else {
       this.inputHandler.setGhostStructure(null, "GUIclick");
