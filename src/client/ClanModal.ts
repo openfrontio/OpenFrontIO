@@ -8,7 +8,10 @@ import "./components/clan/ClanBrowseView";
 import type { BrowseState } from "./components/clan/ClanBrowseView";
 import "./components/clan/ClanCard";
 import "./components/clan/ClanDetailView";
+import type { DonationsMode } from "./components/clan/ClanDonationsView";
 import "./components/clan/ClanDonationsView";
+import "./components/clan/ClanFundCard";
+import "./components/clan/ClanSendFundsView";
 import "./components/clan/ClanGameHistoryView";
 import type { ClanGameHistoryCache } from "./components/clan/ClanGameHistoryView";
 import "./components/clan/ClanManageView";
@@ -33,6 +36,7 @@ type View =
   | "detail"
   | "manage"
   | "transfer"
+  | "send-funds"
   | "requests"
   | "bans"
   | "my-requests";
@@ -63,6 +67,10 @@ export class ClanModal extends BaseModal {
   }
 
   @state() private view: View = "list";
+  // Mode the Donations tab opens on: "payouts" when Manage's "View full log"
+  // sent the player there, else the default. Reset whenever a detail tab is
+  // entered, so only that one navigation lands on Payouts.
+  @state() private donationsInitialMode: DonationsMode = "recent";
   @state() private loading = false;
   // No session: the map and Browse still work; My Clans asks to sign in and
   // the detail view offers sign-in instead of Join.
@@ -191,7 +199,7 @@ export class ClanModal extends BaseModal {
       return;
     }
     // Detail tabs: BaseModal already updated activeTab; renderInner reads it.
-    // No additional side effects required here.
+    this.donationsInitialMode = "recent";
   }
 
   private tagPill(tag: string) {
@@ -258,6 +266,14 @@ export class ClanModal extends BaseModal {
         title: translateText("clan_modal.transfer_leadership"),
         onBack: () => (this.view = "manage"),
         ariaLabel,
+      });
+    }
+    if (this.view === "send-funds") {
+      return modalHeader({
+        title: translateText("clan_modal.send_funds"),
+        onBack: () => (this.view = "manage"),
+        ariaLabel,
+        rightContent: clan ? this.tagPill(clan.tag) : undefined,
       });
     }
     if (this.view === "requests") {
@@ -395,6 +411,12 @@ export class ClanModal extends BaseModal {
           @navigate-detail=${() => (this.view = "detail")}
           @navigate-bans=${() => (this.view = "bans")}
           @navigate-transfer=${() => (this.view = "transfer")}
+          @navigate-send-funds=${() => (this.view = "send-funds")}
+          @navigate-payouts=${() => {
+            this.view = "detail";
+            this.setActiveTab("donations");
+            this.donationsInitialMode = "payouts";
+          }}
           @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
             this.openPlayerProfile(e.detail.publicId)}
           @clan-updated=${(e: CustomEvent<Partial<ClanInfo>>) => {
@@ -433,6 +455,19 @@ export class ClanModal extends BaseModal {
           }}
         ></clan-transfer-view>`;
       }
+      if (this.view === "send-funds") {
+        return html`<clan-send-funds-view
+          .clanTag=${this.selectedClanTag}
+          .myPublicId=${this.myPublicId}
+          @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+            this.openPlayerProfile(e.detail.publicId)}
+          @funds-sent=${() => {
+            // The fund's balance changed: the overview refetches on return.
+            this.detailCache = null;
+            this.view = "manage";
+          }}
+        ></clan-send-funds-view>`;
+      }
       if (this.view === "requests") {
         return html`<clan-requests-view
           .clanTag=${this.selectedClanTag}
@@ -463,6 +498,7 @@ export class ClanModal extends BaseModal {
       if (this.activeTab === "donations") {
         return html`<clan-donations-view
           .clanTag=${this.selectedClanTag}
+          .initialMode=${this.donationsInitialMode}
           @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
             this.openPlayerProfile(e.detail.publicId)}
         ></clan-donations-view>`;

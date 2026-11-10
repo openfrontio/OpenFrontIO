@@ -14,6 +14,10 @@ import {
   type ClanDonationPeriod,
   type ClanDonationsResponse,
   ClanDonationsResponseSchema,
+  type ClanFundRecipient,
+  ClanFundRecipientsResponseSchema,
+  type ClanFundTransfersResponse,
+  ClanFundTransfersResponseSchema,
   type ClanGameFilter,
   type ClanGamesResponse,
   ClanGamesResponseSchema,
@@ -46,6 +50,10 @@ export type {
   ClanDonationPeriod,
   ClanDonationsResponse,
   ClanDonor,
+  ClanFundRecipient,
+  ClanFundTransfer,
+  ClanFundTransfersResponse,
+  ClanFundTransferStatus,
   ClanGame,
   ClanGameFilter,
   ClanGamePlayer,
@@ -745,6 +753,122 @@ export async function donateToClan(
 }
 
 export type ClanDonationsFetchError = "forbidden" | "failed";
+
+/**
+ * Leader only: whether each listed member can receive Plutonium from the clan
+ * fund right now, and why not. One row per id, in order. `false` on any
+ * failure, so the send page can fall back to letting the server decide.
+ */
+export async function fetchClanFundRecipients(
+  tag: string,
+  publicIds: string[],
+): Promise<ClanFundRecipient[] | false> {
+  if (publicIds.length === 0) return [];
+  try {
+    const params = new URLSearchParams();
+    params.set("ids", publicIds.join(","));
+    const res = await clanFetch(
+      `/clans/${encodeURIComponent(tag)}/fund_transfers/eligibility?${params}`,
+    );
+    if (!res.ok) return false;
+    const parsed = ClanFundRecipientsResponseSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn(
+        "fetchClanFundRecipients: Zod validation failed",
+        parsed.error,
+      );
+      return false;
+    }
+    return parsed.data.results;
+  } catch {
+    return false;
+  }
+}
+
+// Refusal codes from POST /clans/:tag/fund_transfers, each with a
+// translation key.
+const SEND_FUNDS_ERRORS: Record<string, string> = {
+  transfers_disabled: "clan_modal.send_funds_error_disabled",
+  frozen: "clan_modal.send_funds_error_frozen",
+  not_leader: "clan_modal.send_funds_error_not_leader",
+  self_transfer: "clan_modal.send_funds_error_self",
+  not_member: "clan_modal.send_funds_error_not_member",
+  membership_too_recent: "clan_modal.send_funds_error_too_recent",
+  recipient_not_eligible: "clan_modal.send_funds_error_not_eligible",
+  clan_daily_limit: "clan_modal.send_funds_error_clan_limit",
+  recipient_daily_limit: "clan_modal.send_funds_error_recipient_limit",
+  insufficient_balance: "clan_modal.send_funds_error_insufficient",
+  idempotency_conflict: "clan_modal.error_failed",
+};
+
+/**
+ * The leader sends Plutonium from the clan fund to another member. Final for
+ * the clan; only staff can reverse it. `amount` is a decimal integer string
+ * (see donateToClan). The dialog reuses one `idempotencyKey` for its lifetime,
+ * so a retry after a dead request can't send twice. Errors come back as a
+ * translation key.
+ */
+export async function sendClanFunds(
+  tag: string,
+  recipient: string,
+  amount: string,
+  idempotencyKey: string,
+): Promise<true | { error: string }> {
+  let res: Response;
+  try {
+    res = await clanFetch(`/clans/${encodeURIComponent(tag)}/fund_transfers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recipient, amount, idempotencyKey }),
+    });
+  } catch {
+    return { error: "clan_modal.error_network" };
+  }
+  if (res.ok) return true;
+  if (res.status === 401) return { error: "clan_modal.sign_in_for_clans" };
+  if (res.status === 403)
+    return { error: "clan_modal.send_funds_error_not_leader" };
+  const body = (await res.json().catch(() => ({}))) as { code?: string };
+  return {
+    error:
+      (body.code && SEND_FUNDS_ERRORS[body.code]) ?? "clan_modal.error_failed",
+  };
+}
+
+/**
+ * Members-only page of the clan's fund transfers, newest first, with the
+ * status that decides whether the viewer is offered "Send". `unavailable`
+ * when the API has no such endpoint (it predates the feature).
+ */
+export async function fetchClanFundTransfers(
+  tag: string,
+  opts: { page?: number; limit?: number } = {},
+): Promise<
+  ClanFundTransfersResponse | { error: ClanDonationsFetchError | "unavailable" }
+> {
+  try {
+    const params = new URLSearchParams();
+    params.set("page", String(opts.page ?? 1));
+    params.set("limit", String(opts.limit ?? 10));
+    const res = await clanFetch(
+      `/clans/${encodeURIComponent(tag)}/fund_transfers?${params}`,
+    );
+    if (res.status === 403) return { error: "forbidden" };
+    if (res.status === 404) return { error: "unavailable" };
+    if (!res.ok) return { error: "failed" };
+    const parsed = ClanFundTransfersResponseSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn(
+        "fetchClanFundTransfers: Zod validation failed",
+        parsed.error,
+      );
+      return { error: "failed" };
+    }
+    return parsed.data;
+  } catch {
+    return { error: "failed" };
+  }
+}
 
 /**
  * Members-only page of donations made to the clan, newest first. `currencyType`

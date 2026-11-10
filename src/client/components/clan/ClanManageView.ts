@@ -16,6 +16,7 @@ import {
 } from "../../ClanApi";
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
+import "./ClanFundCard";
 import { playerNameLink } from "../ui/PlayerNameLink";
 import {
   type ClanRole,
@@ -454,6 +455,11 @@ export class ClanManageView extends LitElement {
             }
           </button>
         </div>
+
+        <clan-fund-card
+          .clanTag=${this.clanTag}
+          .myRole=${this.myRole}
+        ></clan-fund-card>
 
         <!-- Member Management -->
         <div
