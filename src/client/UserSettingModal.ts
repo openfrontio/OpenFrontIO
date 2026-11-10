@@ -2033,6 +2033,31 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleLeftClickOpensMenu}
       ></setting-toggle>
 
+      <setting-select
+        id="random-name-style-select"
+        label=${translateText("user_setting.random_name_style_label")}
+        description=${translateText("user_setting.random_name_style_desc")}
+        .options=${[
+          {
+            value: "tribe",
+            label: translateText("user_setting.random_name_tribe"),
+          },
+          {
+            value: "anon",
+            label: translateText("user_setting.random_name_anon"),
+          },
+        ]}
+        .value=${this.userSettings.randomNameStyle()}
+        @change=${(event: CustomEvent<{ value: string }>) => {
+          const value = event.detail?.value;
+          if (value === undefined) return;
+          this.userSettings.setRandomNameStyle(
+            value === "tribe" ? "tribe" : "anon",
+          );
+          this.requestUpdate();
+        }}
+      ></setting-select>
+
       <!-- 🙈 Anonymous Names -->
       <setting-toggle
         label="${translateText("user_setting.anonymous_names_label")}"
