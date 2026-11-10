@@ -1338,4 +1338,26 @@ describe("LobbyInviteService", () => {
   it("uses an expanded caller cache size to accommodate aggregate active clients", () => {
     expect(MAX_CALLER_CACHE_SIZE).toBeGreaterThanOrEqual(20_000);
   });
+
+  it("does not prune callerCache in pruneExpired on request paths, while timer prunes expired entries", () => {
+    callerCache.set("tok_expired", {
+      caller: {
+        publicId: "p_exp",
+        username: "Expired",
+        friends: [],
+        clanTags: [],
+      },
+      expiresAt: Date.now() - 1000,
+    });
+
+    // Request path pruneExpired does not scan callerCache
+    service.pruneExpired();
+    expect(callerCache.has("tok_expired")).toBe(true);
+
+    // Timer interval cleans expired entries
+    service.stopPruning();
+    service.startPruning();
+    vi.advanceTimersByTime(30_001);
+    expect(callerCache.has("tok_expired")).toBe(false);
+  });
 });

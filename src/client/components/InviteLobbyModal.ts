@@ -488,9 +488,11 @@ export class InviteLobbyModal extends BaseModal {
     const matchesGroup = (value: string) =>
       lowerQuery.length > 0 && value.toLowerCase().includes(lowerQuery);
 
+    const matchesPublicId = (publicId: string) =>
+      lowerQuery.length === 0 || publicId.toLowerCase().includes(lowerQuery);
+
     const filteredFriends = this.friends.filter(
-      (f) =>
-        fuzzyMatch(query, f.username ?? "") || fuzzyMatch(query, f.publicId),
+      (f) => fuzzyMatch(query, f.username ?? "") || matchesPublicId(f.publicId),
     );
 
     const filteredClans = this.clanGroups
@@ -502,7 +504,7 @@ export class InviteLobbyModal extends BaseModal {
             matchesTag ||
             matchesName ||
             fuzzyMatch(query, m.username ?? "") ||
-            fuzzyMatch(query, m.publicId),
+            matchesPublicId(m.publicId),
         );
         return { ...group, members };
       })

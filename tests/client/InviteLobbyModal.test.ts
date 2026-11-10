@@ -482,5 +482,29 @@ describe("InviteLobbyModal", () => {
     expect(modal.textContent).toContain("Zack");
     expect(modal.textContent).not.toContain("Alice");
     expect(modal.textContent).not.toContain("Gus");
+
+    // publicId uses case-insensitive substring match (e.g. "p_al" is a substring of "p_alice")
+    (modal as any).searchQuery = "p_al";
+    await modal.updateComplete;
+    expect(modal.textContent).toContain("Alice");
+    expect(modal.textContent).not.toContain("Zack");
+    expect(modal.textContent).not.toContain("Gus");
+
+    // "pa" is a fuzzy subsequence of "p_alice" but NOT a substring, and does not fuzzy-match "Alice"
+    (modal as any).searchQuery = "pa";
+    await modal.updateComplete;
+    expect(modal.textContent).not.toContain("Alice");
+
+    // username preserves fuzzy matching (e.g. "alc" matches "Alice")
+    (modal as any).searchQuery = "alc";
+    await modal.updateComplete;
+    expect(modal.textContent).toContain("Alice");
+
+    // Empty query preserves all friends and clan members
+    (modal as any).searchQuery = "";
+    await modal.updateComplete;
+    expect(modal.textContent).toContain("Alice");
+    expect(modal.textContent).toContain("Zack");
+    expect(modal.textContent).toContain("Gus");
   });
 });

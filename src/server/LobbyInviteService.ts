@@ -141,7 +141,6 @@ export async function defaultResolveCaller(
     clanTags: (player.clans ?? []).map((c) => c.tag),
   };
 
-  pruneCallerCache(now);
   if (safePid) {
     const existingOldToken = tokenByPersistentId.get(safePid);
     if (existingOldToken && existingOldToken !== token) {
@@ -388,8 +387,16 @@ export class LobbyInviteService {
     if (this.pruneTimer !== null) return;
     this.pruneTimer = setInterval(() => {
       this.pruneExpired();
+      pruneCallerCache();
     }, intervalMs);
     this.pruneTimer.unref?.();
+  }
+
+  stopPruning(): void {
+    if (this.pruneTimer !== null) {
+      clearInterval(this.pruneTimer);
+      this.pruneTimer = null;
+    }
   }
 
   private logicalKey(
@@ -807,11 +814,10 @@ export class LobbyInviteService {
   }
 
   /**
-   * Removes expired invites, stale dismissal tombstones, and expired caller cache entries from memory.
+   * Removes expired invites and stale dismissal tombstones from memory.
    */
   pruneExpired(): void {
     const now = Date.now();
-    pruneCallerCache(now);
     for (const [id, invite] of this.invites.entries()) {
       if (invite.expiresAt <= now) {
         this.unindexInvite(invite);
