@@ -11,6 +11,7 @@ import type { RenderSettings } from "../RenderSettings";
 import { getPaletteSize, MAX_TRAIL_COLORS } from "../utils/ColorUtils";
 import { createMapQuad, createProgram, shaderSrc } from "../utils/GlUtils";
 import { TILE_DEFINES } from "../utils/TileCodec";
+import { TileScatterPass } from "./TileScatterPass";
 
 import overlayVertSrc from "../shaders/map-overlay/overlay.vert.glsl?raw";
 import trailFragSrc from "../shaders/map-overlay/trail.frag.glsl?raw";
@@ -34,6 +35,7 @@ export class TrailPass {
   private effectTex: WebGLTexture;
   private affiliationTex: WebGLTexture | null = null;
   private altView = false;
+  private scatter: TileScatterPass;
   // Anchor animation time at construction (like NukeTelegraphPass/SamRadiusPass)
   // so the value stays small and sin()/fract() don't quantize over long sessions.
   private readonly startTime = performance.now();
@@ -68,6 +70,7 @@ export class TrailPass {
     this.trailTex = trailTex;
     this.paletteTex = paletteTex;
     this.effectTex = effectTex;
+    this.scatter = new TileScatterPass(gl, mapW, mapH, trailTex);
 
     this.program = createProgram(
       gl,
@@ -111,13 +114,25 @@ export class TrailPass {
     this.trailsDirty = true;
   }
 
-  /** Live trail delta: update live ref + accept dirty row range from TrailManager. */
+  /** Live trail delta: update live ref + accept dirty row range or tile list from TrailManager. */
   applyLiveDelta(
     trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
+    changedTiles?: readonly number[],
   ): void {
     this.liveTrailRef = trailState;
+    if (changedTiles && changedTiles.length > 0 && changedTiles.length < 8192) {
+      for (let i = 0; i < changedTiles.length; i++) {
+        const ref = changedTiles[i];
+        const x = ref % this.mapW;
+        const y = (ref - x) / this.mapW;
+        this.scatter.push(x, y, trailState[ref]);
+      }
+      this.trailsDirty = true;
+      return;
+    }
+
     if (dirtyRowMax >= 0) {
       const isFullUploadPending = this.trailsDirty && this.dirtyRowMax < 0;
       // If a full upload is already pending, don't narrow the bounds to the delta
@@ -132,6 +147,15 @@ export class TrailPass {
   /** Flush trail texture to GPU. Called once per render frame in uploadTextures. */
   flushTexture(): void {
     if (!this.trailsDirty) return;
+
+    if (this.scatter.count > 0) {
+      this.scatter.flush();
+      this.trailsDirty = false;
+      this.dirtyRowMin = Infinity;
+      this.dirtyRowMax = -1;
+      return;
+    }
+
     const src = this.liveTrailRef;
     if (src === null) return; // dirty is only ever set alongside the ref
     const gl = this.gl;
@@ -205,5 +229,6 @@ export class TrailPass {
     const gl = this.gl;
     gl.deleteProgram(this.program);
     gl.deleteVertexArray(this.vao);
+    this.scatter.dispose();
   }
 }

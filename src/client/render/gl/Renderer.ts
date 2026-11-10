@@ -548,7 +548,7 @@ export class GPURenderer {
       this.res.tileTex,
       this.paletteTex,
       this.effectTex,
-      terrainBytes,
+      this.terrainBytesTex,
       this.settings,
     );
 
@@ -709,8 +709,14 @@ export class GPURenderer {
     trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
+    changedTiles?: readonly number[],
   ): void {
-    this.trailPass.applyLiveDelta(trailState, dirtyRowMin, dirtyRowMax);
+    this.trailPass.applyLiveDelta(
+      trailState,
+      dirtyRowMin,
+      dirtyRowMax,
+      changedTiles,
+    );
   }
 
   /** Adopt this tick's spiral nukeTrail ribbons (live refs from SpiralTrails). */
@@ -1459,6 +1465,8 @@ export class GPURenderer {
         layer.nukeable ?? false,
       );
       this.mapLayerPasses.set(layer.id, pass);
+      // Free the uncompressed 200MB bitmap from CPU memory once uploaded to the GPU
+      image.close();
     }
   }
 

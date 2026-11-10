@@ -176,8 +176,14 @@ export class MapRenderer {
     trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
+    changedTiles?: readonly number[],
   ): void {
-    this.renderer?.uploadLiveTrailDelta(trailState, dirtyRowMin, dirtyRowMax);
+    this.renderer?.uploadLiveTrailDelta(
+      trailState,
+      dirtyRowMin,
+      dirtyRowMax,
+      changedTiles,
+    );
   }
   /** Upload full tile + trail state without resetting bloom (for live play). */
   uploadTileAndTrailState(
