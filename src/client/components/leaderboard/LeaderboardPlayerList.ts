@@ -699,6 +699,8 @@ export class LeaderboardPlayerList extends LitElement {
     }
     if (!this.currentUserEntry || !this.showStickyUser) return nothing;
     const entry = this.currentUserEntry;
+    const globalPosition = !this.ffaAllRanks ? entry.globalPosition : undefined;
+    const colspan = this.ffaRatingLive ? 6 : 5;
 
     return html`
       <tfoot class="sticky bottom-0 z-20">
@@ -718,10 +720,10 @@ export class LeaderboardPlayerList extends LitElement {
                 class="text-[10px] uppercase font-bold text-blue-200/80 leading-tight"
                 >${translateText("leaderboard_modal.your_ranking")}</span
               >
-              <div class="flex items-center gap-2 min-w-0">
+              <div class="flex items-center gap-2 min-w-0 mt-1">
                 ${levelBadgeSlot(entry, isPrestigedOrLegend(entry), badgeSlot)}
                 <player-name
-                  class="min-w-0"
+                  class="min-w-0 flex-1"
                   .username=${entry.accountUsername}
                   .publicId=${entry.playerId}
                   .nameClass=${"font-bold text-white truncate text-base hover:underline"}
@@ -730,6 +732,20 @@ export class LeaderboardPlayerList extends LitElement {
               </div>
             </div>
           </td>
+          ${this.ffaRatingLive
+            ? html`
+                <td class="py-3 px-2 text-center">
+                  ${globalPosition === undefined
+                    ? nothing
+                    : html`<span
+                        data-global-ffa-position
+                        class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg text-sm font-extrabold font-mono bg-blue-950/90 text-sky-100 border-2 border-sky-300/60 shadow-md"
+                        title="Global Position"
+                        ><span class="text-base leading-none" aria-hidden="true">🌍</span> #${globalPosition}</span
+                      >`}
+                </td>
+              `
+            : nothing}
           <td class="py-3 px-4 text-right">
             ${this.renderRatingCell(entry, true)}
           </td>
@@ -743,7 +759,7 @@ export class LeaderboardPlayerList extends LitElement {
               >
               <span
                 class="text-[10px] uppercase text-blue-200/80 font-bold tracking-wider"
-                >${translateText("leaderboard_modal.ratio")}</span
+                >&#x200b;${translateText("leaderboard_modal.ratio")}</span
               >
             </div>
           </td>
@@ -812,7 +828,9 @@ export class LeaderboardPlayerList extends LitElement {
   // A player the board's ± rule hides has no row on it either. This one shows
   // their rating and says why, and goes once games narrow the ± (the API stops
   // sending hiddenByUncertainty).
-  private renderHiddenRow(me: LadderRow) {
+ private renderHiddenRow(me: LadderRow) {
+    const colspan = this.ffaRatingLive ? 6 : 5; // Vagy simán beírhatod, hogy 6, ha épp live FFA-ban vagy
+
     return html`
       <tfoot class="sticky bottom-0 z-20">
         <tr data-ffa-hidden-row class="bg-blue-600 border-t border-blue-400/30">
@@ -838,6 +856,7 @@ export class LeaderboardPlayerList extends LitElement {
               ></player-name>
             </div>
           </td>
+          ${this.ffaRatingLive ? html`<td class="py-3 px-2"></td>` : nothing}
           <td class="py-3 px-4 text-right">
             ${this.renderRatingCell(me, true)}
           </td>
@@ -857,7 +876,7 @@ export class LeaderboardPlayerList extends LitElement {
           </td>
         </tr>
         <tr data-ffa-hidden-note class="bg-blue-700 shadow-2xl">
-          <td colspan="5" class="py-2 px-4 text-xs text-blue-100">
+          <td colspan=${colspan} class="py-2 px-4 text-xs text-blue-100">
             <!-- Below 34rem the table scrolls sideways: keep the note in view. -->
             <div class="sticky left-4 max-w-[calc(100vw-2rem)]">
               ${translateText("ffa_rating.off_board_note")}
@@ -1137,13 +1156,12 @@ export class LeaderboardPlayerList extends LitElement {
           >
             ${rankIcon}
           </div>
-          ${globalPosition === undefined ? nothing : html`<div data-global-ffa-position class="mt-1 whitespace-nowrap text-[10px] font-semibold text-sky-300">🌐 #${globalPosition}</div>`}
         </td>
         <td class="py-3 px-4">
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 min-w-0">
             ${levelBadgeSlot(player, isPrestigedOrLegend(player), badgeSlot)}
             <player-name
-              class="min-w-0"
+              class="min-w-0 flex-1"
               .username=${player.accountUsername}
               .publicId=${player.playerId}
               .nameClass=${"font-bold text-blue-300 truncate text-base hover:underline"}
@@ -1151,6 +1169,20 @@ export class LeaderboardPlayerList extends LitElement {
             ></player-name>
           </div>
         </td>
+        ${this.ffaRatingLive
+          ? html`
+              <td class="py-3 px-2 text-center">
+                ${globalPosition === undefined
+                  ? nothing
+                  : html`<span
+                      data-global-ffa-position
+                      class="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-lg text-sm font-extrabold font-mono bg-[#071124] text-sky-200 border-2 border-sky-400/50 shadow-md"
+                      title="Global Position"
+                      ><span class="text-base leading-none" aria-hidden="true">🌍</span> #${globalPosition}</span
+                    >`}
+              </td>
+            `
+          : nothing}
         <td class="py-3 px-4 text-right">
           ${this.renderRatingCell(player, false)}
         </td>
@@ -1357,6 +1389,11 @@ export class LeaderboardPlayerList extends LitElement {
                 <col style="width: 12rem" />
                 ${
                   ratingLive
+                    ? html`<col style="width: 10rem" />`
+                    : nothing
+                }
+                ${
+                  ratingLive
                     ? html`<col class="w-32 sm:w-60" />`
                     : html`<col style="width: 6rem" />`
                 }
@@ -1373,6 +1410,11 @@ export class LeaderboardPlayerList extends LitElement {
                   <th class="py-4 px-4 text-left font-bold">
                     ${translateText("leaderboard_modal.player")}
                   </th>
+                  ${
+                    ratingLive
+                      ? html`<th class="py-4 px-2 text-center font-bold">Global Rank</th>`
+                      : nothing
+                  }
                   <th class="py-4 px-4 text-right font-bold">
                     ${translateText(
                       ratingLive
