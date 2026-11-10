@@ -2496,7 +2496,8 @@
     "unshare": "Unshare"
   },
   "select_lang": {
-    "title": "Select Language"
+    "title": "Select Language",
+    "translated": "{percent}% translated"
   },
   "send_gold_modal": {
     "aria_slider": "Amount slider",
