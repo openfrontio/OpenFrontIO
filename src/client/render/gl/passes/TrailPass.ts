@@ -41,6 +41,7 @@ export class TrailPass {
   private readonly startTime = performance.now();
 
   private trailsDirty = false;
+  private fullUploadPending = false;
 
   /**
    * Reference to the caller-owned trail state (R16UI: 0=none, owner in bits
@@ -112,6 +113,7 @@ export class TrailPass {
   setLiveRef(trailState: Uint16Array): void {
     this.liveTrailRef = trailState;
     this.trailsDirty = true;
+    this.fullUploadPending = true;
     this.dirtyRowMin = Infinity;
     this.dirtyRowMax = -1;
     this.scatter.clear();
@@ -125,17 +127,16 @@ export class TrailPass {
     changedTiles?: readonly number[],
   ): void {
     this.liveTrailRef = trailState;
-    const isFullUploadPending = this.trailsDirty && this.dirtyRowMax < 0;
     const isRowUploadPending = this.dirtyRowMax >= 0;
 
     // Sparse scatter path only runs when no full or row upload is already pending;
-    // a pending upload already covers the full or row state.
+    // consecutive sparse deltas accumulate in the scatter queue up to the threshold.
     if (
-      !isFullUploadPending &&
+      !this.fullUploadPending &&
       !isRowUploadPending &&
       changedTiles &&
       changedTiles.length > 0 &&
-      changedTiles.length < 8192
+      this.scatter.count + changedTiles.length < 8192
     ) {
       for (let i = 0; i < changedTiles.length; i++) {
         const ref = changedTiles[i];
@@ -150,7 +151,7 @@ export class TrailPass {
     // A row or full upload supersedes any sparse scatter points.
     this.scatter.clear();
     if (dirtyRowMax >= 0) {
-      if (!isFullUploadPending) {
+      if (!this.fullUploadPending) {
         this.dirtyRowMin = Math.min(this.dirtyRowMin, dirtyRowMin);
         this.dirtyRowMax = Math.max(this.dirtyRowMax, dirtyRowMax);
       }
@@ -165,8 +166,6 @@ export class TrailPass {
     if (this.scatter.count > 0) {
       this.scatter.flush();
       this.trailsDirty = false;
-      this.dirtyRowMin = Infinity;
-      this.dirtyRowMax = -1;
       return;
     }
 
@@ -192,7 +191,7 @@ export class TrailPass {
         gl.UNSIGNED_SHORT,
         src.subarray(offset, offset + rowCount * this.mapW),
       );
-    } else {
+    } else if (this.fullUploadPending) {
       // Full upload (first tick, seek, replay, etc.)
       gl.texSubImage2D(
         gl.TEXTURE_2D,
@@ -207,6 +206,7 @@ export class TrailPass {
       );
     }
 
+    this.fullUploadPending = false;
     this.dirtyRowMin = Infinity;
     this.dirtyRowMax = -1;
     this.trailsDirty = false;

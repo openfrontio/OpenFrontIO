@@ -995,27 +995,6 @@ export class GPURenderer {
     if (rects.length === 0) return;
     this.terrainPass.applyTerrainRects(rects, bytes);
     this.railroadPass.applyTerrainRects(rects, bytes);
-    // Update the shared R8UI terrain-bytes texture used by map-layer passes.
-    if (!this.terrainBytesTex) return;
-    const gl = this.gl;
-    gl.bindTexture(gl.TEXTURE_2D, this.terrainBytesTex);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    let offset = 0;
-    for (const r of rects) {
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        r.x,
-        r.y,
-        r.w,
-        r.h,
-        gl.RED_INTEGER,
-        gl.UNSIGNED_BYTE,
-        bytes,
-        offset,
-      );
-      offset += r.w * r.h;
-    }
   }
 
   /**
