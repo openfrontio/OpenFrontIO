@@ -1954,6 +1954,61 @@ describe("BuildPreviewController touch preview", () => {
     expect((controller as any).lastGhostData.tileY).toBe(2);
   });
 
+  test.each([UnitType.Port, UnitType.Warship])(
+    "a drop that can't build %s there drops the ghost, a plain confirm keeps it",
+    async (type) => {
+      const { controller, builds, uiState, player, eventBus } =
+        makeController(type);
+      player.buildables.mockImplementation((_tile, types) =>
+        Promise.resolve(
+          types.map((unitType) => ({
+            type: unitType,
+            canBuild: false,
+            canUpgrade: false,
+            cost: 1n,
+            overlappingRailroads: [],
+            ghostRailPaths: [],
+          })),
+        ),
+      );
+      const requestAnimationFrame = vi
+        .spyOn(globalThis, "requestAnimationFrame")
+        .mockImplementation(() => 1);
+      try {
+        controller.init();
+        (controller as any).moveTouchPreview(200, 200);
+        await flushBuildables();
+
+        eventBus.emit(new ConfirmGhostStructureEvent());
+        await flushBuildables();
+        expect(uiState.ghostStructure).toBe(type);
+
+        eventBus.emit(new ConfirmGhostStructureEvent(true));
+        await flushBuildables();
+        expect(builds).toHaveLength(0);
+        expect(uiState.ghostStructure).toBeNull();
+      } finally {
+        requestAnimationFrame.mockRestore();
+      }
+    },
+  );
+
+  test("a drop that never reached the map drops the ghost", () => {
+    const { controller, uiState, eventBus } = makeController(UnitType.City);
+    const requestAnimationFrame = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockImplementation(() => 1);
+    try {
+      controller.init();
+      (controller as any).touchPlacementMode = true;
+
+      eventBus.emit(new ConfirmGhostStructureEvent(true));
+      expect(uiState.ghostStructure).toBeNull();
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
+
   test("a touch off the map leaves the preview where it was", () => {
     const { controller, player } = makeController(UnitType.City);
     (controller as any).game.isValidCoord = () => false;

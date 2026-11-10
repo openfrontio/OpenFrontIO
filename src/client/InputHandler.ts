@@ -147,7 +147,10 @@ export function highlightTypesForUnit(
   }
 }
 
-export class ConfirmGhostStructureEvent implements GameEvent {}
+export class ConfirmGhostStructureEvent implements GameEvent {
+  /** Drops the ghost when it can't be built there, instead of keeping it. */
+  constructor(public readonly cancelOnInvalid = false) {}
+}
 
 export class TouchGhostPlacementEvent implements GameEvent {
   constructor(

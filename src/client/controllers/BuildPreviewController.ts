@@ -326,16 +326,23 @@ export class BuildPreviewController implements Controller {
       e.handled =
         this.touchPreviewTile === null || this.isNearTouchPreview(e.x, e.y);
     });
-    this.eventBus.on(ConfirmGhostStructureEvent, () => {
+    this.eventBus.on(ConfirmGhostStructureEvent, (e) => {
       this.syncGhostState();
       if (this.touchPlacementMode) {
         const target = this.touchPreviewScreenPosition();
-        if (target === null) return;
-        this.requestConfirmStructure(new MouseUpEvent(target.x, target.y));
+        if (target === null) {
+          if (e.cancelOnInvalid) this.removeGhostStructure();
+          return;
+        }
+        this.requestConfirmStructure(
+          new MouseUpEvent(target.x, target.y),
+          e.cancelOnInvalid,
+        );
         return;
       }
       this.requestConfirmStructure(
         new MouseUpEvent(this.mousePos.x, this.mousePos.y),
+        e.cancelOnInvalid,
       );
     });
 
@@ -997,15 +1004,17 @@ export class BuildPreviewController implements Controller {
     this.syncGhostState();
     if (!this.ghostUnit) return;
     const ghostType = this.ghostUnit.buildableUnit.type;
-    const shouldCancelOnInvalid = cancelOnInvalid && Structures.has(ghostType);
     this.mousePos.x = e.x;
     this.mousePos.y = e.y;
     const position = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
     // A release just outside the map has no tile to validate or build on.
-    if (!this.game.isValidCoord(position.x, position.y)) return;
+    if (!this.game.isValidCoord(position.x, position.y)) {
+      if (cancelOnInvalid) this.removeGhostStructure();
+      return;
+    }
     const tile = this.game.ref(position.x, position.y);
     if (this.game.isImpassable && this.game.isImpassable(tile)) {
-      if (shouldCancelOnInvalid) this.removeGhostStructure();
+      if (cancelOnInvalid) this.removeGhostStructure();
       return;
     }
     const preventStacking = !!this.uiState.preventStacking;
@@ -1017,7 +1026,7 @@ export class BuildPreviewController implements Controller {
       const unit = this.effectiveBuildableUnit(preventStacking);
       if (unit && this.isGhostReadyForConfirm(preventStacking)) {
         this.createStructure(tile, preventStacking, unit);
-      } else if (shouldCancelOnInvalid) {
+      } else if (cancelOnInvalid) {
         this.removeGhostStructure();
       }
       return;
@@ -1027,7 +1036,7 @@ export class BuildPreviewController implements Controller {
       ghostType,
       preventStacking,
       ghostGeneration: this.ghostGeneration,
-      cancelOnInvalid: shouldCancelOnInvalid,
+      cancelOnInvalid,
     });
     this.processPendingConfirmations();
   }
@@ -1285,9 +1294,11 @@ export class BuildPreviewController implements Controller {
     if (this.touchPreviewTile !== null && this.isNearTouchPreview(e.x, e.y)) {
       const preview = this.touchPreviewScreenPosition();
       if (preview !== null) {
+        // A tap on an invalid structure drops it; nukes and boats stay.
         this.requestConfirmStructure(
           new MouseUpEvent(preview.x, preview.y),
-          true,
+          this.ghostUnit !== null &&
+            Structures.has(this.ghostUnit.buildableUnit.type),
         );
       }
       return;
