@@ -2,11 +2,10 @@ import { Duos, Quads, Trios } from "@openfront/engine-api/game/GameTypes";
 import { TeamCountConfig } from "@openfront/engine-api/Schemas";
 import {
   HOSTED_LOBBY_AUTO_START_MS,
-  MAX_HOSTED_LOBBY_PLAYERS,
   MIN_HOSTED_LOBBY_AUTO_START_MS,
   MIN_HOSTED_LOBBY_PLAYERS,
 } from "@openfront/shared/WireSchemas";
-import { html, LitElement, render as litRender, PropertyValues } from "lit";
+import { html, LitElement, render as litRender } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../Utils";
 import "./FluentSlider";
@@ -36,23 +35,15 @@ export class ListLobbyDialog extends LitElement {
   // to a full team multiple so the server's team alignment won't drop it back
   // down to or below currentPlayers.
   @property({ attribute: false }) playerTeams: TeamCountConfig | undefined;
+  // The highest cap the map allows (hostedLobbyMaxPlayers).
+  @property({ type: Number }) maxAllowedPlayers = MIN_HOSTED_LOBBY_PLAYERS;
 
   @state() private startMinutes = MAX_START_MINUTES;
-  @state() private maxPlayers = MAX_HOSTED_LOBBY_PLAYERS;
+  // Undefined until the host moves the slider: the cap then follows
+  // suggestedMaxPlayers, or the map's maximum without one.
+  @state() private maxPlayers: number | undefined;
 
   private portal: HTMLDivElement | null = null;
-
-  protected willUpdate(changed: PropertyValues<this>) {
-    if (
-      changed.has("suggestedMaxPlayers") &&
-      this.suggestedMaxPlayers !== undefined
-    ) {
-      this.maxPlayers = Math.min(
-        MAX_HOSTED_LOBBY_PLAYERS,
-        this.suggestedMaxPlayers,
-      );
-    }
-  }
 
   createRenderRoot() {
     return this;
@@ -91,12 +82,21 @@ export class ListLobbyDialog extends LitElement {
             : 1;
     const baseMin = Math.max(MIN_HOSTED_LOBBY_PLAYERS, this.currentPlayers + 1);
     const min = size > 1 ? Math.ceil(baseMin / size) * size : baseMin;
-    return Math.min(MAX_HOSTED_LOBBY_PLAYERS, min);
+    return Math.min(this.maxAllowedPlayers, min);
+  }
+
+  private selectedMaxPlayers(): number {
+    const picked =
+      this.maxPlayers ?? this.suggestedMaxPlayers ?? this.maxAllowedPlayers;
+    return Math.max(
+      Math.min(picked, this.maxAllowedPlayers),
+      this.minPlayers(),
+    );
   }
 
   private renderOverlay() {
     const minPlayers = this.minPlayers();
-    const maxPlayers = Math.max(this.maxPlayers, minPlayers);
+    const maxPlayers = this.selectedMaxPlayers();
     return html`
       <div
         class="fixed inset-0 z-[10020] flex items-center justify-center bg-black/80"
@@ -125,7 +125,7 @@ export class ListLobbyDialog extends LitElement {
             ></fluent-slider>
             <fluent-slider
               .min=${minPlayers}
-              .max=${MAX_HOSTED_LOBBY_PLAYERS}
+              .max=${this.maxAllowedPlayers}
               .step=${1}
               .value=${maxPlayers}
               labelKey="host_modal.list_lobby_max_players"
