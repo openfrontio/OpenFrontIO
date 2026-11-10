@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "./halloween.css";
+@import "./styles/hud/tokens.css";
+@import "./styles/hud/utilities.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover (&:hover);
