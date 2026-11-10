@@ -2029,6 +2029,42 @@ describe("BuildPreviewController touch preview", () => {
     expect(drawn.tileY).toBeCloseTo(2.4);
   });
 
+  test("a drag keeps the last answer until the next one, instead of flashing invalid", async () => {
+    const { controller, requests } = makeDeferredBuildablesController(
+      UnitType.City,
+    );
+    const c = controller as any;
+    const answer = (canBuild: number | false) => [
+      {
+        type: UnitType.City,
+        canBuild,
+        canUpgrade: false,
+        cost: 1n,
+        overlappingRailroads: [],
+        ghostRailPaths: [],
+      },
+    ];
+
+    c.moveTouchPreview(100, 100, true);
+    requests[0].resolve(answer(101));
+    await flushBuildables();
+    expect(c.lastGhostData.canBuild).toBe(true);
+
+    // The finger moves on before the new tile's answer is in: the ghost
+    // keeps showing the last answer rather than turning invalid.
+    c.moveTouchPreview(200, 200, true);
+    expect(c.lastGhostData.canBuild).toBe(true);
+    expect(requests[requests.length - 1].tile).toBe(202);
+
+    // It moves again; the answer for the tile it left still shows, and the
+    // ghost then asks about the tile it is on now.
+    c.moveTouchPreview(100, 100, true);
+    requests[requests.length - 1].resolve(answer(false));
+    await flushBuildables();
+    expect(c.lastGhostData.canBuild).toBe(false);
+    expect(requests[requests.length - 1].tile).toBe(101);
+  });
+
   test("a touch off the map leaves the preview where it was", () => {
     const { controller, player } = makeController(UnitType.City);
     (controller as any).game.isValidCoord = () => false;

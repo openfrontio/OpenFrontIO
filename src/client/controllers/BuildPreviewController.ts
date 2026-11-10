@@ -281,6 +281,10 @@ export class BuildPreviewController implements Controller {
   // Where in touchPreviewTile the finger was, so the ghost floats with the
   // finger as it does with the mouse rather than jumping tile to tile.
   private touchPreviewPoint: { x: number; y: number } | null = null;
+  // Whether the preview last moved by a drag rather than a tap. A drag keeps
+  // showing the last answer until the next arrives, as the mouse does; a tap
+  // shows nothing valid until its own tile is checked.
+  private touchPreviewDragged = false;
   private touchPlacementMode = false;
 
   // Buildable validation runs on the snapped tile under the cursor, but the
@@ -318,7 +322,7 @@ export class BuildPreviewController implements Controller {
       this.handleTouchPlacement(e),
     );
     this.eventBus.on(TouchGhostPlacementMoveEvent, (e) =>
-      this.moveTouchPreview(e.x, e.y),
+      this.moveTouchPreview(e.x, e.y, true),
     );
     this.eventBus.on(TouchGhostPlacementSelectEvent, () => {
       this.touchPlacementMode = true;
@@ -674,7 +678,12 @@ export class BuildPreviewController implements Controller {
     const queriedTouchPreview = this.touchPreviewTile;
     promise
       .then((b) => {
-        if (queriedTouchPreview !== this.touchPreviewTile) return;
+        if (
+          queriedTouchPreview !== this.touchPreviewTile &&
+          !this.touchPreviewDragged
+        ) {
+          return;
+        }
         if (this.ghostUnit !== ghost || seq !== this.querySeq) {
           return;
         }
@@ -1307,8 +1316,9 @@ export class BuildPreviewController implements Controller {
     this.moveTouchPreview(e.x, e.y);
   }
 
-  private moveTouchPreview(x: number, y: number): void {
+  private moveTouchPreview(x: number, y: number, dragged = false): void {
     this.touchPlacementMode = true;
+    this.touchPreviewDragged = dragged;
     if (this.syncGhostState()) return;
     if (!this.ghostUnit) {
       this.touchPlacementMode = false;
@@ -1325,7 +1335,7 @@ export class BuildPreviewController implements Controller {
       if (!this.isQueryInFlight) {
         this.lastQueriedTileRef = undefined;
       }
-      if (this.lastGhostData !== null) {
+      if (this.lastGhostData !== null && !dragged) {
         this.lastGhostData = {
           ...this.lastGhostData,
           canBuild: false,
