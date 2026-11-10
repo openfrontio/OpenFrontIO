@@ -323,7 +323,7 @@ export class ActionableEvents extends LitElement implements Controller {
         ${sorted.map(
           (event) => html`
             <div
-              class="bg-gray-800/92 backdrop-blur-sm rounded-lg shadow-lg border-l-4 border-yellow-400 p-3 lg:p-4 text-white"
+              class="bg-gray-800/92 backdrop-blur-sm rounded-lg sm:max-lg:landscape:rounded-l-none shadow-lg border-l-4 border-yellow-400 p-3 lg:p-4 text-white"
             >
               <button
                 class="text-left text-sm lg:text-base font-semibold w-full cursor-pointer ${getMessageTypeClasses(
