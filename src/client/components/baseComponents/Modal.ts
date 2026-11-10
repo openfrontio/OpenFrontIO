@@ -247,7 +247,11 @@ export class OModal extends LitElement {
       ? "graphics-panel-surface relative flex-1 min-h-0 flex flex-col text-white rounded-lg border overflow-hidden"
       : `relative flex-1 min-h-0 flex flex-col text-white bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10 overflow-hidden ${
           this.inline ? "compact:rounded-none! compact:border-0!" : ""
-        } ${this.fitContent ? "rounded-2xl border" : ""}`;
+        } ${this.fitContent ? "rounded-2xl border" : ""} ${
+          // body.page-open drops its bottom padding so the page reaches the
+          // bottom of the screen; keep the content above the home indicator.
+          this.inline ? "pb-[env(safe-area-inset-bottom)]" : ""
+        }`;
 
     return html`
       <aside

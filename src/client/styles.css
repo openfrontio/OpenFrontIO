@@ -190,6 +190,9 @@ body.page-open {
   overflow: hidden;
   flex-direction: column;
   flex-wrap: nowrap;
+  /* The page runs on to the bottom of the screen and pads its own content
+     above the home indicator (o-modal), instead of stopping short of it. */
+  padding-bottom: 0;
 }
 
 * {
