@@ -623,7 +623,7 @@ export class UnitDisplay extends LitElement implements Controller {
     // right edge of the screen, where index.html fixes the host.
     return html`
       <div
-        class="unit-display-root relative p-0.5 border-white/10 w-full lg:border-t max-lg:landscape:border-b side-bar:w-auto side-bar:border side-bar:border-r-0 side-bar:rounded-l-lg side-bar:bg-gray-800/92 side-bar:shadow-lg
+        class="unit-display-root relative p-0.5 border-white/10 w-full lg:border-t max-lg:landscape:border-b side-bar:w-auto side-bar:rounded-l-lg side-bar:hud-panel
           ${this.moreActionsStart ? "unit-display-more-start" : ""}
           ${this.moreActionsEnd ? "unit-display-more-end" : ""}"
         data-radial-click-through
@@ -893,7 +893,7 @@ export class UnitDisplay extends LitElement implements Controller {
 
     return html`
       <div
-        class="unit-display-tooltip ${peek ? "block" : "hidden pointer-fine:block"} absolute ${placement} text-gray-200 text-center w-max break-words text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
+        class="unit-display-tooltip ${peek ? "block" : "hidden pointer-fine:block"} absolute ${placement} text-gray-200 text-center w-max break-words text-xs hud-panel rounded-sm p-1 z-[100] pointer-events-none"
         style=${`left: ${left}px; top: ${top}px;`}
       >
         <div class="font-bold text-sm mb-1">

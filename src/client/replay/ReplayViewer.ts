@@ -1068,7 +1068,7 @@ export class ReplayViewer extends LitElement {
   private renderStats() {
     return html`
       <aside
-        class="absolute top-0 left-0 flex flex-col gap-2 max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-br-lg text-white max-[400px]:w-full max-[400px]:rounded-none"
+        class="absolute top-0 left-0 flex flex-col gap-2 max-h-[calc(100vh-80px)] overflow-y-auto p-2 hud-panel rounded-br-lg text-white max-[400px]:w-full max-[400px]:rounded-none"
       >
         <player-stats
           class="block min-w-0"

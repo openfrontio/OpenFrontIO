@@ -927,7 +927,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full ${
+          class="hud-panel min-[1200px]:rounded-lg sm:rounded-b-lg text-white text-lg lg:text-base w-full ${
             this.showShortcutButtons() ? "sm:w-[598px]" : "sm:w-[500px]"
           } lg:max-w-full overflow-hidden ${containerClasses}"
           @mouseenter=${this.onPanelEnter}

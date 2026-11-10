@@ -168,7 +168,7 @@ export class SpawnTimer extends LitElement implements Controller {
 
     return html`
       <div
-        class="absolute top-3.5 -translate-x-1/2 z-999 px-2 py-1 rounded bg-black/85 text-white text-xs text-center break-words pointer-events-none"
+        class="absolute top-3.5 -translate-x-1/2 z-999 px-2 py-1 rounded hud-panel text-white text-xs text-center break-words pointer-events-none"
         style="left: ${clampedLeft}; max-width: 128px"
       >
         ${translateText("spawn_timer.team_percent_tooltip", {
