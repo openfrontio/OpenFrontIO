@@ -1220,6 +1220,14 @@
     "enter": "Enter fullscreen",
     "exit": "Exit fullscreen"
   },
+  "game_health": {
+    "connection_unstable": "Connection unstable",
+    "connection_unstable_description": "Game updates are arriving late. Your connection or the server may be experiencing delays.",
+    "high_latency": "High latency",
+    "high_latency_description": "Your connection to the server is slower than usual. Your actions may take longer to arrive.",
+    "performance": "Low performance",
+    "performance_description": "Your device is struggling to keep up with the game. Try lowering your graphics settings."
+  },
   "game_info_modal": {
     "all_gold": "All gold",
     "atoms": "Atoms",
@@ -1414,7 +1422,6 @@
     "territory_sat_label": "Territory saturation"
   },
   "heads_up_message": {
-    "catching_up": "Catching up...",
     "choose_spawn": "Choose a starting location",
     "choose_spawn_spectator": "Players are choosing starting locations",
     "dont_show_again": "Don't show again",

@@ -85,6 +85,8 @@ import {
   SendTargetPlayerIntentEvent,
 } from "../../src/client/Transport";
 
+const startedRunners: ClientGameRunner[] = [];
+
 const TILE = 77 as TileRef;
 const CLICK = { x: 10, y: 20 };
 
@@ -103,6 +105,7 @@ function makeRunner(overrides: {
   };
   const gameView = {
     config: () => ({ isRandomSpawn: () => false, isReplay: () => false }),
+    isCatchingUp: () => false,
     inSpawnPhase: () => overrides.inSpawnPhase ?? false,
     myPlayer: () => null,
     isValidCoord: () => true,
@@ -139,6 +142,7 @@ function makeRunner(overrides: {
     { goToPlayer: () => false } as never,
   );
   runner.start();
+  startedRunners.push(runner);
   return { runner, eventBus, gameView, myPlayer, input };
 }
 
@@ -149,6 +153,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  startedRunners.splice(0).forEach((runner) => runner.stop());
+  document.body.innerHTML = "";
   vi.restoreAllMocks();
 });
 
