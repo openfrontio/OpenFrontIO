@@ -781,12 +781,16 @@ export class ControlPanel extends LitElement implements Controller {
                   height="14"
                   style="filter: brightness(0) invert(1);"
                 />
+                <!-- Percent centred over the troop count, in a fixed width so
+                     the slider doesn't move as the numbers grow. -->
                 <span
-                  class="text-white text-xs font-bold tabular-nums w-[4.5rem] shrink-0"
-                  >${(this.attackRatio * 100).toFixed(0)}%
-                  (${renderTroops(
-                    (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
-                  )})</span
+                  class="flex flex-col items-center w-14 shrink-0 text-white text-xs font-bold tabular-nums leading-tight"
+                  ><span>${(this.attackRatio * 100).toFixed(0)}%</span
+                  ><span
+                    >(${renderTroops(
+                      (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
+                    )})</span
+                  ></span
                 >
                 <input
                   type="range"
