@@ -282,6 +282,67 @@ describe("NewsBox", () => {
         expect(bannerOf(box)).toBeNull();
       });
 
+      it("keeps rendering when a refetch brings fewer news items", async () => {
+        // A sale not set to announce keeps the box refetching news.json.
+        vi.mocked(fetchCosmetics).mockResolvedValue(
+          catalogWith(sale("7", "Quiet Sale", 60 * MINUTE)),
+        );
+        const box = document.createElement("news-box");
+        document.body.appendChild(box);
+        await vi.waitFor(() => expect(box.textContent).toContain("Markdown"));
+        // The cycle moves on to the second item.
+        await vi.advanceTimersByTimeAsync(5_000);
+        await vi.waitFor(() => expect(box.textContent).toContain("Two"));
+
+        vi.mocked(getNews).mockResolvedValueOnce([
+          { id: "only", title: "Only one", type: "announcement" },
+        ]);
+        await vi.advanceTimersByTimeAsync(5 * MINUTE);
+
+        await vi.waitFor(() => expect(box.textContent).toContain("Only one"));
+      });
+
+      it("keeps a sale's banner when a news refetch announces nothing", async () => {
+        const announced = sale("7", "Weekend Sale", 60 * MINUTE);
+        const quiet = sale("8", "Quiet Sale", 60 * MINUTE);
+        vi.mocked(getNews).mockResolvedValueOnce(newsAnnouncing("7"));
+        vi.mocked(fetchCosmetics).mockResolvedValue(
+          catalogWith(announced, quiet),
+        );
+        const box = document.createElement("news-box");
+        document.body.appendChild(box);
+        await vi.waitFor(() => expect(bannerOf(box)).toBeTruthy());
+
+        // The quiet sale prompts a refetch, which gets news with no sale in it.
+        await vi.advanceTimersByTimeAsync(5 * MINUTE);
+
+        expect(bannerOf(box)!.textContent).toContain("Weekend Sale");
+      });
+
+      it("drops an ended sale even when the catalog object is the same", async () => {
+        const catalog = catalogWith(
+          sale("6", "Short Sale", 2_000),
+          sale("7", "Long Sale", 60 * MINUTE),
+        );
+        vi.mocked(getNews).mockResolvedValueOnce([
+          ...newsAnnouncing("6"),
+          ...newsAnnouncing("7").slice(0, 1),
+        ]);
+        vi.mocked(fetchCosmetics).mockResolvedValue(catalog);
+        const box = document.createElement("news-box");
+        document.body.appendChild(box);
+        await vi.waitFor(() =>
+          expect(bannerOf(box)!.textContent).toContain("Short Sale"),
+        );
+
+        await vi.advanceTimersByTimeAsync(3_000);
+
+        await vi.waitFor(() =>
+          expect(bannerOf(box)!.textContent).not.toContain("Short Sale"),
+        );
+        expect(bannerOf(box)!.textContent).toContain("Long Sale");
+      });
+
       it("copes with a sale ending further off than a timer can wait", async () => {
         const spy = vi.spyOn(globalThis, "setTimeout");
         vi.mocked(fetchCosmetics).mockResolvedValue(

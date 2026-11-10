@@ -854,6 +854,7 @@ export class StoreModal extends BaseModal {
     if (sales.length === 0) return "";
     return html`<sale-banner
       class="block px-3 pt-2"
+      .sales=${sales}
       .cosmetics=${this.cosmetics}
       @open-sale=${() => this.openSaleTab()}
     ></sale-banner>`;

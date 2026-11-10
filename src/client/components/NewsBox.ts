@@ -162,11 +162,15 @@ export class NewsBox extends LitElement {
       if (!this.isConnected) return;
       this.renderMarkdown = renderMarkdown;
       const platformItems = filterNewsByPlatform(news, clientPlatform());
-      this.announcedSales = new Set(
-        platformItems
+      // Added to, never replaced: a refetch that fails gets the bundled news,
+      // which announces nothing, and must not take a running sale's banner
+      // away. A sale that has ended drops out through runningSales.
+      this.announcedSales = new Set([
+        ...this.announcedSales,
+        ...platformItems
           .filter((item) => item.id.startsWith(SALE_NEWS_PREFIX))
           .map((item) => item.id.slice(SALE_NEWS_PREFIX.length)),
-      );
+      ]);
       // The sale banner says these, with a countdown.
       const allItems = platformItems.filter(
         (item) => !item.id.startsWith(SALE_NEWS_PREFIX),
@@ -179,6 +183,8 @@ export class NewsBox extends LitElement {
       } else {
         this.items = visible;
       }
+      // A refetch can bring a shorter list than the cycle has moved through.
+      if (this.activeIndex >= this.items.length) this.activeIndex = 0;
       this.startCycle();
     } catch (e) {
       console.warn(e);
@@ -226,11 +232,12 @@ export class NewsBox extends LitElement {
   render() {
     // A running sale takes the box for as long as it runs: no rotation and
     // no dismiss, so it's there every time the player looks.
-    if (runningSales(this.cosmetics, this.announcedSales).length > 0) {
+    const sales = runningSales(this.cosmetics, this.announcedSales);
+    if (sales.length > 0) {
       return html`<sale-banner
         linked
+        .sales=${sales}
         .cosmetics=${this.cosmetics}
-        .only=${this.announcedSales}
         @open-sale=${() => this.openSale()}
       ></sale-banner>`;
     }

@@ -64,12 +64,17 @@ const FLASH_ROW_CLASS =
  */
 @customElement("sale-banner")
 export class SaleBanner extends LitElement {
+  /**
+   * The sales to show, from {@link runningSales}. The parent works them out on
+   * each of its renders, so a sale that ends drops out the next time it renders
+   * even if the catalog object hasn't changed.
+   */
+  @property({ attribute: false })
+  sales: Promotion[] = [];
+
+  /** The catalog, to tell a store-wide sale from one on selected items. */
   @property({ attribute: false })
   cosmetics: Cosmetics | null = null;
-
-  /** Shows only these sales (by id); null shows every running sale. */
-  @property({ attribute: false })
-  only: ReadonlySet<string> | null = null;
 
   /** The whole banner is one button, rather than only a flash sale's line. */
   @property({ type: Boolean })
@@ -84,7 +89,7 @@ export class SaleBanner extends LitElement {
   }
 
   render() {
-    const sales = runningSales(this.cosmetics, this.only);
+    const sales = this.sales;
     if (sales.length === 0) return nothing;
     const flash = sales.find((sale) => sale.kind === "flash");
     const regular = sales.filter((sale) => sale.kind !== "flash");
