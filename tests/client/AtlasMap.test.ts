@@ -237,13 +237,13 @@ describe("<map-details>", () => {
       author: "Mapmaker",
       descriptionKey: "map_description.test",
     });
-    const text = el
-      .querySelector('[role="tooltip"]')
-      ?.textContent?.trim()
-      .replace(/\s+/g, " ");
+    const tooltip = el.querySelector('[role="tooltip"]');
+    const text = tooltip?.textContent?.trim().replace(/\s+/g, " ");
 
     expect(el.querySelector("button")).toBeTruthy();
     expect(text).toBe("A narrow strait. Map designer: Mapmaker");
+    expect(tooltip?.className).toContain("w-72");
+    expect(tooltip?.className).toContain("-translate-x-1/2");
   });
 
   it("shows the stats between description and author", async () => {
@@ -259,5 +259,98 @@ describe("<map-details>", () => {
     expect(text).toBe(
       "1748×1420 1 nation 35% land ~45 players Map designer: Mapmaker",
     );
+  });
+
+  it("clamps tooltip within scroll container bounds on hover", async () => {
+    const container = document.createElement("div");
+    container.style.overflowY = "auto";
+    container.style.position = "relative";
+    container.style.width = "400px";
+    container.style.height = "500px";
+    document.body.appendChild(container);
+
+    const el = await render({
+      ...world,
+      author: "Mapmaker",
+      descriptionKey: "map_description.test",
+    });
+    container.appendChild(el);
+
+    const group = el.querySelector<HTMLElement>(".group\\/map-details")!;
+    const tooltip = el.querySelector<HTMLElement>('[role="tooltip"]')!;
+
+    vi.spyOn(container, "getBoundingClientRect").mockReturnValue({
+      left: 0,
+      right: 400,
+      top: 0,
+      bottom: 500,
+      width: 400,
+      height: 500,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    });
+    vi.spyOn(tooltip, "getBoundingClientRect").mockReturnValue({
+      left: 150,
+      right: 450,
+      top: 50,
+      bottom: 200,
+      width: 300,
+      height: 150,
+      x: 150,
+      y: 50,
+      toJSON: () => {},
+    });
+
+    group.dispatchEvent(new PointerEvent("pointerenter"));
+    expect(tooltip.style.transform).toBe("translateX(-58px)");
+
+    // Focusing in while hovered keeps clamp
+    group.dispatchEvent(new FocusEvent("focusin"));
+    expect(tooltip.style.transform).toBe("translateX(-58px)");
+
+    // Leaving pointer while still focused retains clamp
+    group.dispatchEvent(new PointerEvent("pointerleave"));
+    expect(tooltip.style.transform).toBe("translateX(-58px)");
+
+    // Blurring when pointer has left clears clamp
+    group.dispatchEvent(new FocusEvent("focusout"));
+    expect(tooltip.style.transform).toBe("");
+
+    // Focusing in again applies clamp
+    group.dispatchEvent(new FocusEvent("focusin"));
+    expect(tooltip.style.transform).toBe("translateX(-58px)");
+
+    // Blurring clears clamp
+    group.dispatchEvent(new FocusEvent("focusout"));
+    expect(tooltip.style.transform).toBe("");
+
+    container.remove();
+  });
+
+  it("preserves centered position when tooltip fits within bounds", async () => {
+    const el = await render({
+      ...world,
+      author: "Mapmaker",
+      descriptionKey: "map_description.test",
+    });
+
+    const group = el.querySelector<HTMLElement>(".group\\/map-details")!;
+    const tooltip = el.querySelector<HTMLElement>('[role="tooltip"]')!;
+
+    vi.spyOn(tooltip, "getBoundingClientRect").mockReturnValue({
+      left: 100,
+      right: 400,
+      top: 50,
+      bottom: 200,
+      width: 300,
+      height: 150,
+      x: 100,
+      y: 50,
+      toJSON: () => {},
+    });
+
+    group.dispatchEvent(new PointerEvent("pointerenter"));
+    expect(tooltip.style.transform).toBe("");
   });
 });
