@@ -4,7 +4,8 @@
   "name": "Turkiye",
   "display_name": "Türkiye",
   "translation_key": "map.turkiye",
-  "categories": ["countries", "europe", "asia"],
+  "location": { "lat": 39, "lon": 35 },
+  "categories": ["countries", "europe", "asia", "new"],
   "nations": [
     {
       "coordinates": [439, 212],
@@ -156,5 +157,6 @@
       "flag": "tr",
       "name": "Hakkari"
     }
-  ]
+  ],
+  "themes": ["europe", "asia"]
 }

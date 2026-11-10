@@ -161,13 +161,17 @@ export class PlayerExecution implements Execution {
     // cluster appears first would falsely crown the hole as largestIndex and annex the
     // outer continent. All clusters must be evaluated so the bbox tiebreak crowns the
     // outer perimeter. Memoized traversal makes subsequent clusters O(1).
-    const { clusterSizes, clusterTileTIds, territoryAreas, maxTerritoryArea } =
-      this.floodTerritoryAreas(clusters);
-    const largestIndex = this.findLargestClusterIndex(
-      clusters,
-      boxes,
-      clusterSizes,
-    );
+    // A lone unpinched cluster is the largest by definition and the pinch pass
+    // skips it, so the areas would go unread: skip the flood, which costs the
+    // whole territory.
+    const areas =
+      clusters.length > 1 || isPinched[0] === 1
+        ? this.floodTerritoryAreas(clusters)
+        : null;
+    const largestIndex =
+      areas === null
+        ? 0
+        : this.findLargestClusterIndex(clusters, boxes, areas.clusterSizes);
     const largestCluster = clusters[largestIndex];
     if (largestCluster === undefined) throw new Error("No clusters");
 
@@ -219,9 +223,9 @@ export class PlayerExecution implements Execution {
       boxes,
       isPinched,
       clusterRemoved,
-      clusterTileTIds,
-      territoryAreas,
-      maxTerritoryArea,
+      areas?.clusterTileTIds ?? [],
+      areas?.territoryAreas ?? [0],
+      areas?.maxTerritoryArea ?? 0,
     );
   }
 
@@ -307,6 +311,11 @@ export class PlayerExecution implements Execution {
     }
   }
 
+  // Scanline fill of the 4-way component of `start` among this player's tiles
+  // not yet stamped in this pass: each popped seed fills its whole row run,
+  // then seeds one tile per run in the rows above and below. Same tiles and
+  // stamps as a per-tile DFS at a fraction of the stack traffic; this flood
+  // covers the player's whole territory, so it dominates on big maps.
   private floodComponent(
     start: TileRef,
     tGen: number,
@@ -314,24 +323,65 @@ export class PlayerExecution implements Execution {
   ): number {
     const map = this.map;
     const mySmallID = this.player.smallID();
+    const w = map.width();
+    const lastRow = (map.height() - 1) * w;
     const state = this.traversalState();
-    state.visited[start] = tGen;
-    state.stack.length = 0;
-    state.stack.push(start);
+    const visited = state.visited;
+    const stack = state.stack;
+    stack.length = 0;
+    stack.push(start);
     let size = 0;
-    while (state.stack.length > 0) {
-      const cur = state.stack.pop()!;
-      size++;
-      const numNeighbors = map.neighbors4(cur, this.nbuf);
-      for (let k = 0; k < numNeighbors; k++) {
-        const n = this.nbuf[k];
-        if (state.visited[n] < areaGen && map.ownerID(n) === mySmallID) {
-          state.visited[n] = tGen;
-          state.stack.push(n);
-        }
+    while (stack.length > 0) {
+      const seed = stack.pop()!;
+      if (visited[seed] >= areaGen) continue;
+      const rowStart = seed - (seed % w);
+      const rowEnd = rowStart + w - 1;
+      let l = seed;
+      while (
+        l > rowStart &&
+        visited[l - 1] < areaGen &&
+        map.ownerID(l - 1) === mySmallID
+      ) {
+        l--;
       }
+      let r = seed;
+      while (
+        r < rowEnd &&
+        visited[r + 1] < areaGen &&
+        map.ownerID(r + 1) === mySmallID
+      ) {
+        r++;
+      }
+      for (let t = l; t <= r; t++) visited[t] = tGen;
+      size += r - l + 1;
+      if (rowStart > 0) this.seedSpan(l - w, r - w, mySmallID, areaGen);
+      if (rowStart < lastRow) this.seedSpan(l + w, r + w, mySmallID, areaGen);
     }
     return size;
+  }
+
+  // Pushes the first tile of each unstamped run of our tiles in [from, to].
+  private seedSpan(
+    from: TileRef,
+    to: TileRef,
+    mySmallID: number,
+    areaGen: number,
+  ): void {
+    const map = this.map;
+    const state = this.traversalState();
+    const visited = state.visited;
+    const stack = state.stack;
+    let inRun = false;
+    for (let t = from; t <= to; t++) {
+      if (visited[t] < areaGen && map.ownerID(t) === mySmallID) {
+        if (!inRun) {
+          stack.push(t);
+          inRun = true;
+        }
+      } else {
+        inRun = false;
+      }
+    }
   }
 
   private floodTerritoryAreas(clusters: readonly TileRef[][]): {
