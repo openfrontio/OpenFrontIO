@@ -570,9 +570,13 @@
              above it on landscape phones, and a column fixed to the right edge
              below lg in portrait (side-bar). The blur is off there: a
              backdrop-filter would pin the fixed bar to this panel instead of
-             the screen. -->
+             the screen.
+             The panel runs on into the safe-area insets around it (home
+             indicator, notch) so its content reaches the screen edge. Only on
+             the edges it touches: left below lg, right below sm, the bottom
+             until it floats from 1200px. -->
         <div
-          class="flex flex-col pointer-events-auto bg-gray-800/92 backdrop-blur-sm side-bar:backdrop-blur-none sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none z-10"
+          class="flex flex-col pointer-events-auto bg-gray-800/92 backdrop-blur-sm side-bar:backdrop-blur-none sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none z-10 max-[1200px]:-mb-[env(safe-area-inset-bottom)] max-lg:-ml-[env(safe-area-inset-left)] max-sm:-mr-[env(safe-area-inset-right)]"
         >
           <control-panel class="w-full"></control-panel>
           <unit-display
