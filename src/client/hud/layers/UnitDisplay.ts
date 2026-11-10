@@ -747,7 +747,7 @@ export class UnitDisplay extends LitElement implements Controller {
         <div
           class="${
             this.canBuild(unitType) ? "" : "opacity-40"
-          } border border-slate-500 rounded-sm max-lg:h-8 max-lg:landscape:h-7 max-lg:min-w-11 w-full px-1 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:px-0.5 lg:justify-start landscape:px-0.5
+          } border border-slate-500 rounded-sm max-lg:h-10 max-lg:landscape:h-8.75 max-lg:min-w-10 w-full px-1 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:px-0.5 lg:justify-start landscape:px-0.5
              ${
             selected
               ? "pointer-fine:hover:bg-gray-400/10"
