@@ -82,6 +82,12 @@ export class SettingsModal extends LitElement implements Controller {
   private saveStatus: "saving" | "saved" | SavedGameError | null = null;
 
   init() {
+    // The view can also be switched by the toggle-view key and the sidebar
+    // button; keep this toggle in step.
+    this.eventBus.on(AlternateViewEvent, (event) => {
+      this.alternateView = event.alternateView;
+      this.requestUpdate();
+    });
     this.eventBus.on(ShowSettingsModalEvent, (event) => {
       this.isVisible = event.isVisible;
       this.shouldPause = event.shouldPause;
