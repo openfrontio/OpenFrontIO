@@ -597,6 +597,14 @@
     <onboarding-overlay></onboarding-overlay>
     <new-lobby-prompt></new-lobby-prompt>
     <game-starting-modal></game-starting-modal>
+    <!-- A solid strip behind the status bar in-game. iOS Safari blurs the
+         page under its status bar unless a fixed element with a solid
+         background touches the top edge, which it extends instead; without
+         this the map and HUD there blurred whenever the player card was
+         hidden. Zero height where there's no top inset. -->
+    <div
+      class="hidden in-[.in-game]:block fixed top-0 inset-x-0 z-[100] h-[env(safe-area-inset-top)] bg-gray-900 pointer-events-none"
+    ></div>
     <!-- Top HUD: below lg each piece is fixed on its own. From lg, where the
          leaderboard opens by default, they share one row, leaderboard | card |
          sidebar: the card is centered when it fits and shifts right or narrows
