@@ -80,14 +80,16 @@ export class MapLayerPass {
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
 
     // Destroyed-mask texture (R8UI, one byte per tile). Starts all-zero.
-    this.destroyedData = new Uint8Array(mapW * mapH);
+    // Non-nukeable layers never destroy tiles, so a 1x1 placeholder texture
+    // and empty array avoids wasting mapW * mapH bytes of CPU and GPU memory.
+    this.destroyedData = new Uint8Array(this.nukeable ? mapW * mapH : 0);
     this.destroyedTex = createTexture2D(gl, {
-      width: mapW,
-      height: mapH,
+      width: this.nukeable ? mapW : 1,
+      height: this.nukeable ? mapH : 1,
       internalFormat: gl.R8UI,
       format: gl.RED_INTEGER,
       type: gl.UNSIGNED_BYTE,
-      data: this.destroyedData,
+      data: this.nukeable ? this.destroyedData : new Uint8Array(1),
       filter: gl.NEAREST,
     });
 
@@ -113,6 +115,7 @@ export class MapLayerPass {
    * (destroyed by a nuke).  Only meaningful for nukeable layers.
    */
   updateDestroyedMask(data: Uint8Array): void {
+    if (!this.nukeable) return;
     if (data.length !== this.mapW * this.mapH) return;
     this.destroyedData.set(data);
     const gl = this.gl;

@@ -198,7 +198,11 @@ export class BorderComputePass {
    */
   patchTile(x: number, y: number, prevOwner: number, newOwner: number): void {
     if (this.globalDirty) return;
-    if (this.scatter.count > 2048) {
+    const maxScatter = Math.min(
+      32768,
+      Math.max(2048, Math.floor((this.mapW * this.mapH) / 1000)),
+    );
+    if (this.scatter.count > maxScatter) {
       this.globalDirty = true;
       this.scatter.clear();
       return;
