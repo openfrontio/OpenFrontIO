@@ -61,6 +61,13 @@ export class ControlPanel extends LitElement implements Controller {
 
   @state()
   private _tutorialHighlight: TutorialHighlight | null = null;
+  /**
+   * The attack ratio slider's popup is open. In portrait on phones the slider
+   * sits behind a button, since dragging it along the bottom edge swiped
+   * through iOS's home indicator to another app.
+   */
+  @state()
+  private _ratioPopupOpen = false;
   /** The onboarding tutorial's low-troops warning is up: flash the bar. */
   @state()
   private _lowTroopsAlert = false;
@@ -88,6 +95,9 @@ export class ControlPanel extends LitElement implements Controller {
       `${USER_SETTINGS_CHANGED_EVENT}:settings.attackRatio`,
       this.onAttackRatioSettingChanged,
     );
+    document.addEventListener("pointerdown", this.closeRatioPopupOutside, {
+      capture: true,
+    });
   }
 
   init() {
@@ -317,6 +327,9 @@ export class ControlPanel extends LitElement implements Controller {
       `${USER_SETTINGS_CHANGED_EVENT}:settings.attackRatio`,
       this.onAttackRatioSettingChanged,
     );
+    document.removeEventListener("pointerdown", this.closeRatioPopupOutside, {
+      capture: true,
+    });
     if (this._goldGainTimeoutId !== null) {
       clearTimeout(this._goldGainTimeoutId);
       this._goldGainTimeoutId = null;
@@ -345,6 +358,15 @@ export class ControlPanel extends LitElement implements Controller {
     this.attackRatio = new UserSettings().attackRatio();
     this.onAttackRatioChange(this.attackRatio);
     this.requestUpdate();
+  };
+
+  /** A press anywhere but the popup or its button closes the popup. */
+  private closeRatioPopupOutside = (e: Event) => {
+    if (!this._ratioPopupOpen) return;
+    const target = e.target as Element | null;
+    if (target?.closest?.("[data-ratio-popup], [data-ratio-popup-button]"))
+      return;
+    this._ratioPopupOpen = false;
   };
 
   setVisibile(visible: boolean) {
@@ -701,7 +723,9 @@ export class ControlPanel extends LitElement implements Controller {
           ${this.renderMobileTroopBar()}
         </div>
         <!-- Sword + % and troop count label -->
-        <div class="flex flex-col items-center justify-center shrink-0">
+        <div
+          class="flex flex-col items-center justify-center shrink-0 side-bar:hidden"
+        >
           <div class="flex items-center gap-0.5">
             <img
               src=${swordIcon}
@@ -717,9 +741,71 @@ export class ControlPanel extends LitElement implements Controller {
             >
           </div>
         </div>
-        <!-- Attack ratio slider -->
+        <!-- Attack ratio slider. In portrait, a button that opens it in a
+             popup instead, away from the home indicator at the bottom edge. -->
+        <button
+          type="button"
+          data-ratio-popup-button
+          aria-expanded=${this._ratioPopupOpen ? "true" : "false"}
+          class="hidden side-bar:flex flex-1 min-w-0 items-center justify-center gap-1 border rounded-md p-1 ${
+            this._ratioPopupOpen ? "border-aquarius" : "border-gray-600"
+          } ${this.tutorialHighlightClass("attack_ratio")}"
+          translate="no"
+          @click=${() => (this._ratioPopupOpen = !this._ratioPopupOpen)}
+        >
+          <img
+            src=${swordIcon}
+            alt=""
+            aria-hidden="true"
+            width="10"
+            height="10"
+            style="filter: brightness(0) invert(1);"
+          />
+          <span
+            class="text-white text-[11px] font-bold tabular-nums text-center leading-tight whitespace-pre-wrap"
+            >${this.getMobileAttackRatioLabel()}</span
+          >
+        </button>
+        ${
+          this._ratioPopupOpen
+            ? html`<div
+                data-ratio-popup
+                class="hidden side-bar:flex absolute bottom-full inset-x-2 mb-2 items-center gap-2 px-3 py-3 bg-gray-800/92 rounded-lg shadow-lg"
+                translate="no"
+              >
+                <img
+                  src=${swordIcon}
+                  alt=""
+                  aria-hidden="true"
+                  width="14"
+                  height="14"
+                  style="filter: brightness(0) invert(1);"
+                />
+                <span
+                  class="text-white text-xs font-bold tabular-nums w-[4.5rem] shrink-0"
+                  >${(this.attackRatio * 100).toFixed(0)}%
+                  (${renderTroops(
+                    (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
+                  )})</span
+                >
+                <input
+                  type="range"
+                  min="1"
+                  max="100"
+                  .value=${String(Math.round(this.attackRatio * 100))}
+                  @input=${(e: Event) => this.handleRatioSliderInput(e)}
+                  @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
+                  @click=${(e: MouseEvent) => this.handleRatioSliderClick(e)}
+                  data-radial-click-through
+                  class="flex-1 min-w-0 h-1.5 accent-aquarius cursor-pointer"
+                />
+              </div>`
+            : nothing
+        }
         <div
-          class="flex-1 min-w-0 ${this.tutorialHighlightClass("attack_ratio")}"
+          class="flex-1 min-w-0 side-bar:hidden ${this.tutorialHighlightClass(
+            "attack_ratio",
+          )}"
           translate="no"
         >
           <input
