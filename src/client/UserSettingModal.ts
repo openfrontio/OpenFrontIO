@@ -527,6 +527,16 @@ export class UserSettingModal extends BaseModal {
     this.requestUpdate();
   }
 
+  private toggleTabAttention() {
+    this.userSettings.toggleTabAttention();
+    console.log(
+      "🔔 Tab Attention:",
+      this.userSettings.tabAttention() ? "ON" : "OFF",
+    );
+
+    this.requestUpdate();
+  }
+
   /** The ratio the player is actually attacking with right now. */
   private currentAttackRatio(): number {
     return this.uiState?.attackRatio ?? this.userSettings.attackRatio();
@@ -2057,6 +2067,15 @@ export class UserSettingModal extends BaseModal {
           this.requestUpdate();
         }}
       ></setting-select>
+
+      <!-- 🔔 Tab Attention -->
+      <setting-toggle
+        label="${translateText("user_setting.tab_attention_label")}"
+        description="${translateText("user_setting.tab_attention_desc")}"
+        id="tab-attention-toggle"
+        .checked=${this.userSettings.tabAttention()}
+        @change=${this.toggleTabAttention}
+      ></setting-toggle>
 
       <!-- 🙈 Anonymous Names -->
       <setting-toggle

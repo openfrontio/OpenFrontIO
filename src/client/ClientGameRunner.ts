@@ -71,6 +71,7 @@ import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { versionedPathForMismatchedGame } from "./ServerList";
 import { audioMixer, initAudioMixer } from "./sound/AudioMixer";
 import { SoundManager } from "./sound/SoundManager";
+import { tabAttention } from "./TabAttention";
 import { reportGameError } from "./Telemetry";
 import {
   loadCachedTerrainMap,
@@ -1074,6 +1075,7 @@ export class ClientGameRunner {
       this.gameView.update(gu);
       this.webglBuilder?.update(this.gameView);
       this.renderer.tick();
+      this.updateTabAttention();
       if (gu.tickExecutionDuration !== undefined) {
         this.metrics?.recordTickExecution(gu.tickExecutionDuration);
       }
@@ -1234,7 +1236,20 @@ export class ClientGameRunner {
     void this.transport.rejoinGame(0);
   }
 
+  // Flash the tab while the player still has to pick a spawn and has switched
+  // to another tab; the flashing ends once they spawn or the phase is over.
+  private updateTabAttention(): void {
+    const needsSpawn =
+      this.gameView.inSpawnPhase() && !this.gameView.myPlayer()?.hasSpawned();
+    if (needsSpawn) {
+      tabAttention.request("spawn");
+    } else {
+      tabAttention.release();
+    }
+  }
+
   public stop() {
+    tabAttention.release();
     this.soundManager.dispose();
     this.graphicsListenerAbort?.abort();
     // Detach the input handler's window/canvas listeners and its EventBus

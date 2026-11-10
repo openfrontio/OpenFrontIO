@@ -516,6 +516,16 @@ export class UserSettings {
     return this.getBool("settings.leftClickOpensMenu", false);
   }
 
+  // Flash the tab title/icon when the game is starting or a spawn is still to be
+  // picked while the tab is in the background. On by default.
+  tabAttention() {
+    return this.getBool("settings.tabAttention", true);
+  }
+
+  toggleTabAttention() {
+    this.setBool("settings.tabAttention", !this.tabAttention());
+  }
+
   goToPlayer() {
     return this.getBool("settings.goToPlayer", true);
   }
