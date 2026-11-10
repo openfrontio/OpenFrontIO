@@ -723,6 +723,40 @@ describe("StoreModal cosmetic browser", () => {
     expect(keys()).toEqual([dots.key, saleFlag.key]);
   });
 
+  // The home screen's sale banner links to #modal=store&tab=cosmetics&sub=sale.
+  it("opens straight on the On sale tab with sub=sale", async () => {
+    const promotion = {
+      id: "1",
+      name: "Weekend Sale",
+      percentOff: 25,
+      endsAt: new Date(Date.now() + 3_600_000).toISOString(),
+    };
+    const dots: ResolvedCosmetic = {
+      ...red,
+      cosmetic: {
+        ...pattern,
+        name: "dots",
+        priceHard: 90,
+        listPriceHard: 120,
+        promotion,
+      } as never,
+      key: "pattern:dots:red",
+    };
+    resolvedCatalog = [red, blue, dots];
+    store = document.createElement("store-modal") as StoreModal;
+    store.inline = true;
+    document.body.appendChild(store);
+    await store.updateComplete;
+    store.open({ tab: "cosmetics", sub: "sale" });
+    await vi.waitFor(() =>
+      expect(store!.querySelector("cosmetic-card")).toBeTruthy(),
+    );
+    const keys = [...store.querySelectorAll<CosmeticCard>("cosmetic-card")].map(
+      (c) => c.resolved.key,
+    );
+    expect(keys).toEqual([dots.key]);
+  });
+
   it("leads On sale with the flash item, and its banner line opens it", async () => {
     const endsAt = new Date(Date.now() + 3_600_000).toISOString();
     const flashSale = {
