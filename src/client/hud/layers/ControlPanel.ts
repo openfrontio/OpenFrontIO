@@ -841,9 +841,13 @@ export class ControlPanel extends LitElement implements Controller {
           animation: gold-gain-pop 0.25s ease-out;
         }
       </style>
+      <!-- In portrait on phones the panel runs to the bottom of the screen,
+           so it's padded clear of the rounded corners there. -->
       <div
         class="relative pointer-events-auto ${
-          this._isVisible ? "relative w-full text-sm px-2 py-1" : "hidden"
+          this._isVisible
+            ? "relative w-full text-sm px-2 py-1 side-bar:px-5 side-bar:pb-[9px]"
+            : "hidden"
         }"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
