@@ -278,6 +278,9 @@ export class BuildPreviewController implements Controller {
   private resolvedGhostTile: TileRef | undefined;
   private ghostResolved = false;
   private touchPreviewTile: TileRef | null = null;
+  // Where in touchPreviewTile the finger was, so the ghost floats with the
+  // finger as it does with the mouse rather than jumping tile to tile.
+  private touchPreviewPoint: { x: number; y: number } | null = null;
   private touchPlacementMode = false;
 
   // Buildable validation runs on the snapped tile under the cursor, but the
@@ -371,10 +374,7 @@ export class BuildPreviewController implements Controller {
 
     const w =
       this.touchPlacementMode && this.touchPreviewTile !== null
-        ? {
-            x: this.game.x(this.touchPreviewTile) + 0.5,
-            y: this.game.y(this.touchPreviewTile) + 0.5,
-          }
+        ? this.touchPreviewWorld(this.touchPreviewTile)
         : this.transformHandler.screenToWorldCoordinatesFloat(
             this.mousePos.x,
             this.mousePos.y,
@@ -1314,9 +1314,11 @@ export class BuildPreviewController implements Controller {
       this.touchPlacementMode = false;
       return;
     }
-    const tile = this.transformHandler.screenToWorldCoordinates(x, y);
+    const point = this.transformHandler.screenToWorldCoordinatesFloat(x, y);
+    const tile = { x: Math.floor(point.x), y: Math.floor(point.y) };
     if (!this.game.isValidCoord(tile.x, tile.y)) return;
     const next = this.game.ref(tile.x, tile.y);
+    this.touchPreviewPoint = point;
     if (next !== this.touchPreviewTile) {
       this.ghostResolved = false;
       this.resolvedGhostTile = undefined;
@@ -1364,17 +1366,28 @@ export class BuildPreviewController implements Controller {
 
   private touchPreviewScreenPosition(): { x: number; y: number } | null {
     if (this.touchPreviewTile === null) return null;
-    const renderTile =
+    const point =
       this.lastGhostData?.snapToPlacement === true
-        ? new Cell(
-            this.lastGhostData.tileX + 0.5,
-            this.lastGhostData.tileY + 0.5,
-          )
-        : new Cell(
-            this.game.x(this.touchPreviewTile) + 0.5,
-            this.game.y(this.touchPreviewTile) + 0.5,
-          );
-    return this.transformHandler.worldToScreenCoordinates(renderTile);
+        ? {
+            x: this.lastGhostData.tileX + 0.5,
+            y: this.lastGhostData.tileY + 0.5,
+          }
+        : this.touchPreviewWorld(this.touchPreviewTile);
+    return this.transformHandler.worldToScreenCoordinates(
+      new Cell(point.x, point.y),
+    );
+  }
+
+  /** The touch point in the preview tile, or its center if it's elsewhere. */
+  private touchPreviewWorld(tile: TileRef): { x: number; y: number } {
+    const point = this.touchPreviewPoint;
+    if (
+      point !== null &&
+      this.game.ref(Math.floor(point.x), Math.floor(point.y)) === tile
+    ) {
+      return point;
+    }
+    return { x: this.game.x(tile) + 0.5, y: this.game.y(tile) + 0.5 };
   }
 
   private createGhostStructure(type: PlayerBuildableUnitType | null) {

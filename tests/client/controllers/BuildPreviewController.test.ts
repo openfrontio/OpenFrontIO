@@ -1793,6 +1793,8 @@ describe("BuildPreviewController touch preview", () => {
       {
         screenToWorldCoordinates: (x: number) =>
           x < 150 ? { x: 1, y: 1 } : { x: 2, y: 2 },
+        screenToWorldCoordinatesFloat: (x: number) =>
+          x < 150 ? { x: 1.5, y: 1.5 } : { x: 2.5, y: 2.5 },
         worldToScreenCoordinates: (cell: { x: number }) =>
           cell.x < 2 ? { x: 100, y: 100 } : { x: 200, y: 200 },
       } as any,
@@ -2007,6 +2009,24 @@ describe("BuildPreviewController touch preview", () => {
     } finally {
       requestAnimationFrame.mockRestore();
     }
+  });
+
+  test("the ghost follows the finger within its tile instead of snapping to the tile's center", async () => {
+    const { controller, view } = makeController(UnitType.City);
+    (controller as any).transformHandler.screenToWorldCoordinatesFloat =
+      () => ({
+        x: 2.2,
+        y: 2.9,
+      });
+
+    (controller as any).moveTouchPreview(200, 200);
+    await flushBuildables();
+    (controller as any).cursorLoop();
+
+    expect((controller as any).touchPreviewTile).toBe(202);
+    const drawn = view.updateGhostPreview.mock.lastCall?.[0];
+    expect(drawn.tileX).toBeCloseTo(1.7);
+    expect(drawn.tileY).toBeCloseTo(2.4);
   });
 
   test("a touch off the map leaves the preview where it was", () => {
@@ -2451,6 +2471,8 @@ describe("BuildPreviewController touch preview", () => {
       {
         screenToWorldCoordinates: (x: number) =>
           x < 150 ? { x: 1, y: 1 } : { x: 2, y: 2 },
+        screenToWorldCoordinatesFloat: (x: number) =>
+          x < 150 ? { x: 1.5, y: 1.5 } : { x: 2.5, y: 2.5 },
         worldToScreenCoordinates: () => ({ x: 100, y: 100 }),
       } as any,
       {
