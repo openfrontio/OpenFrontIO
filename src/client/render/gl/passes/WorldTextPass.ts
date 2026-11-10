@@ -379,7 +379,10 @@ export class WorldTextPass {
   // Tick — cull expired, rebuild instance buffer
   // -------------------------------------------------------------------------
 
-  tick(zoom: number): void {
+  tick(
+    zoom: number,
+    bounds?: { minX: number; minY: number; maxX: number; maxY: number },
+  ): void {
     if (
       this.active.length === 0 &&
       this.ghostCostLabel === null &&
@@ -398,10 +401,14 @@ export class WorldTextPass {
       }
     }
 
-    this.rebuildInstances(now, zoom);
+    this.rebuildInstances(now, zoom, bounds);
   }
 
-  private rebuildInstances(now: number, zoom: number): void {
+  private rebuildInstances(
+    now: number,
+    zoom: number,
+    bounds?: { minX: number; minY: number; maxX: number; maxY: number },
+  ): void {
     let count = 0;
     // canvasW in Camera is cssWidth*dpr, so `zoom` is device-px-per-world-unit.
     // Multiply screen-relative scales by dpr to keep a constant CSS-pixel size.
@@ -417,6 +424,16 @@ export class WorldTextPass {
         popup.riseSpeed > 0
           ? popup.y - (elapsed / 1000) * popup.riseSpeed
           : popup.y;
+
+      if (
+        bounds &&
+        (popup.x < bounds.minX ||
+          popup.x > bounds.maxX ||
+          riseY < bounds.minY ||
+          riseY > bounds.maxY)
+      ) {
+        continue;
+      }
 
       layoutString(
         popup.text,
@@ -454,6 +471,16 @@ export class WorldTextPass {
     const attackScale =
       (ATTACK_LABEL_SCREEN_SCALE * dpr) / Math.max(zoom, 0.0001);
     for (const label of this.attackTroopLabels) {
+      if (
+        bounds &&
+        (label.x < bounds.minX ||
+          label.x > bounds.maxX ||
+          label.y < bounds.minY ||
+          label.y > bounds.maxY)
+      ) {
+        continue;
+      }
+
       layoutString(
         label.text,
         this.glyph,
@@ -486,7 +513,14 @@ export class WorldTextPass {
     // centered on the tile (vertex shader adds the +0.5 tile-center offset).
     // Scale is divided by zoom so the chip keeps a constant on-screen size.
     const label = this.ghostCostLabel;
-    if (label) {
+    if (
+      label &&
+      (!bounds ||
+        (label.x >= bounds.minX &&
+          label.x <= bounds.maxX &&
+          label.y >= bounds.minY &&
+          label.y <= bounds.maxY))
+    ) {
       const invZoom = 1 / Math.max(zoom, 0.0001);
       const ghostScale = this.settings.ghostCost.screenScale * dpr * invZoom;
       const ghostY =

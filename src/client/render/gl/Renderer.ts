@@ -1423,7 +1423,8 @@ export class GPURenderer {
 
     // World text (attack-troop labels, popups, ghost cost) draws on top of
     // player names so attack callouts aren't hidden behind a centered name.
-    this.worldTextPass.tick(zoom);
+    const textBounds = this.camera.getWorldBounds(100);
+    this.worldTextPass.tick(zoom, textBounds);
     this.worldTextPass.draw(cam, zoom);
 
     gl.disable(gl.BLEND);
