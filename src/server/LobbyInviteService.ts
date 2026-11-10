@@ -55,16 +55,34 @@ export type LobbyInviteRouteOptions = {
 };
 
 const CALLER_CACHE_TTL_MS = 600_000; // 10 minutes, avoids frequent /users/@me round-trips for menu-sitting clients
-const MAX_CALLER_CACHE_SIZE = 2_000;
+export const MAX_CALLER_CACHE_SIZE = 20_000;
 const PRUNE_INTERVAL_MS = 30_000;
-const callerCache = new Map<
+export const callerCache = new Map<
   string,
-  { caller: VerifiedCallerIdentity; expiresAt: number }
+  { caller: VerifiedCallerIdentity; expiresAt: number; persistentId?: string }
 >();
+export const tokenByPersistentId = new Map<string, string>();
+
+export function deleteFromCallerCache(token: string): void {
+  const entry = callerCache.get(token);
+  if (
+    entry?.persistentId &&
+    tokenByPersistentId.get(entry.persistentId) === token
+  ) {
+    tokenByPersistentId.delete(entry.persistentId);
+  }
+  callerCache.delete(token);
+}
 
 function pruneCallerCache(now: number = Date.now()): void {
   for (const [key, entry] of callerCache.entries()) {
     if (entry.expiresAt <= now) {
+      if (
+        entry.persistentId &&
+        tokenByPersistentId.get(entry.persistentId) === key
+      ) {
+        tokenByPersistentId.delete(entry.persistentId);
+      }
       callerCache.delete(key);
     }
   }
@@ -75,8 +93,14 @@ function pruneCallerCache(now: number = Date.now()): void {
  */
 export async function defaultResolveCaller(
   token: string,
+  persistentId?: string,
 ): Promise<VerifiedCallerIdentity | null> {
   const now = Date.now();
+  const safePid =
+    typeof persistentId === "string" && persistentId.trim().length > 0
+      ? persistentId.trim()
+      : undefined;
+
   const cached = callerCache.get(token);
   if (cached) {
     if (cached.expiresAt > now) {
@@ -84,8 +108,21 @@ export async function defaultResolveCaller(
       callerCache.set(token, cached);
       return { ...cached.caller, fromCache: true };
     }
-    callerCache.delete(token);
+    deleteFromCallerCache(token);
+  } else if (safePid) {
+    const boundToken = tokenByPersistentId.get(safePid);
+    if (boundToken) {
+      const boundEntry = callerCache.get(boundToken);
+      if (boundEntry && boundEntry.expiresAt > now) {
+        callerCache.delete(boundToken);
+        callerCache.set(token, boundEntry);
+        tokenByPersistentId.set(safePid, token);
+        return { ...boundEntry.caller, fromCache: true };
+      }
+      deleteFromCallerCache(boundToken);
+    }
   }
+
   const me = await getUserMe(token);
   if (me.type !== "success") {
     return null;
@@ -103,13 +140,27 @@ export async function defaultResolveCaller(
     friends: player.friends ?? [],
     clanTags: (player.clans ?? []).map((c) => c.tag),
   };
+
   pruneCallerCache(now);
+  if (safePid) {
+    const existingOldToken = tokenByPersistentId.get(safePid);
+    if (existingOldToken && existingOldToken !== token) {
+      callerCache.delete(existingOldToken);
+    }
+    tokenByPersistentId.set(safePid, token);
+  }
+
   while (callerCache.size >= MAX_CALLER_CACHE_SIZE) {
     const oldestKey = callerCache.keys().next().value;
     if (oldestKey === undefined) break;
-    callerCache.delete(oldestKey);
+    deleteFromCallerCache(oldestKey);
   }
-  callerCache.set(token, { caller, expiresAt: now + CALLER_CACHE_TTL_MS });
+
+  callerCache.set(token, {
+    caller,
+    expiresAt: now + CALLER_CACHE_TTL_MS,
+    persistentId: safePid,
+  });
   return caller;
 }
 
@@ -137,34 +188,40 @@ async function fetchCallerClanMemberIds(
     let page = 1;
     const limit = 50;
     while (true) {
+      let res: Response;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
       try {
-        const res = await fetch(
+        res = await fetch(
           `${ServerEnv.jwtIssuer()}/clans/${encodeURIComponent(tag)}/members?page=${page}&limit=${limit}`,
           {
+            signal: controller.signal,
             headers: {
               authorization: `Bearer ${token}`,
               "x-api-key": ServerEnv.apiKey(),
             },
           },
         );
-        if (!res.ok) return null;
-        const parsed = ClanMembersLookupSchema.safeParse(await res.json());
-        if (!parsed.success) return null;
-        const list = parsed.data.results ?? parsed.data.members;
-        if (!list) return null;
-        for (const m of list) {
-          if (m.publicId) {
-            clanMemberIds.add(m.publicId);
-          }
-        }
-        const total = parsed.data.total ?? list.length;
-        if (list.length < limit || page * limit >= total) {
-          break;
-        }
-        page += 1;
       } catch {
         return null;
+      } finally {
+        clearTimeout(timer);
       }
+      if (!res.ok) return null;
+      const parsed = ClanMembersLookupSchema.safeParse(await res.json());
+      if (!parsed.success) return null;
+      const list = parsed.data.results ?? parsed.data.members;
+      if (!list) return null;
+      for (const m of list) {
+        if (m.publicId) {
+          clanMemberIds.add(m.publicId);
+        }
+      }
+      const total = parsed.data.total ?? list.length;
+      if (list.length < limit || page * limit >= total) {
+        break;
+      }
+      page += 1;
     }
   }
   return clanMemberIds;
@@ -823,6 +880,7 @@ export class LobbyInviteService {
     this.pendingDismissalsByInviteId.clear();
     this.targetPublicIdByInviteId.clear();
     callerCache.clear();
+    tokenByPersistentId.clear();
   }
 }
 
@@ -935,7 +993,7 @@ export function registerLobbyInviteRoutes(
         .json({ error: "Failed to verify clan membership" });
     }
     if (!eligible && caller.fromCache) {
-      callerCache.delete(token);
+      deleteFromCallerCache(token);
       const freshCaller = await resolveCaller(token, auth.persistentId);
       if (freshCaller) {
         caller = freshCaller;

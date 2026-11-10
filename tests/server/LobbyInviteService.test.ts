@@ -9,10 +9,14 @@ import {
   SendLobbyInviteInputSchema,
 } from "@openfront/shared/LobbyInviteSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { verifyClientToken } from "../../src/server/jwt";
+import { getUserMe, verifyClientToken } from "../../src/server/jwt";
 import {
+  callerCache,
+  defaultResolveCaller,
   LobbyInviteService,
+  MAX_CALLER_CACHE_SIZE,
   registerLobbyInviteRoutes,
+  tokenByPersistentId,
 } from "../../src/server/LobbyInviteService";
 import { ServerEnv } from "../../src/server/ServerEnv";
 
@@ -1288,5 +1292,50 @@ describe("LobbyInviteService", () => {
         map: "f".repeat(MAX_MAP_NAME_LENGTH + 1),
       }).success,
     ).toBe(false);
+  });
+
+  it("deduplicates token-refresh entries by persistentId in defaultResolveCaller", async () => {
+    (getUserMe as any).mockResolvedValue({
+      type: "success",
+      response: {
+        player: {
+          publicId: "pub_player_1",
+          username: "PlayerOne",
+          friends: ["friend_a"],
+          clans: [{ tag: "CLAN" }],
+        },
+        user: {},
+      },
+    });
+
+    try {
+      const first = await defaultResolveCaller("tok_old", "pid_user_1");
+      expect(getUserMe).toHaveBeenCalledTimes(1);
+      expect(first?.publicId).toBe("pub_player_1");
+      expect(callerCache.has("tok_old")).toBe(true);
+      expect(tokenByPersistentId.get("pid_user_1")).toBe("tok_old");
+
+      // Refreshed token with the same verified persistentId reuses cache and evicts old token
+      const second = await defaultResolveCaller("tok_new", "pid_user_1");
+      expect(getUserMe).toHaveBeenCalledTimes(1);
+      expect(second?.fromCache).toBe(true);
+      expect(callerCache.has("tok_old")).toBe(false);
+      expect(callerCache.has("tok_new")).toBe(true);
+      expect(tokenByPersistentId.get("pid_user_1")).toBe("tok_new");
+
+      // Anonymous / token without persistentId preserves pure token-based caching
+      await defaultResolveCaller("tok_anon_1");
+      expect(getUserMe).toHaveBeenCalledTimes(2);
+      await defaultResolveCaller("tok_anon_2");
+      expect(getUserMe).toHaveBeenCalledTimes(3);
+      expect(callerCache.has("tok_anon_1")).toBe(true);
+      expect(callerCache.has("tok_anon_2")).toBe(true);
+    } finally {
+      LobbyInviteService.instance.reset();
+    }
+  });
+
+  it("uses an expanded caller cache size to accommodate aggregate active clients", () => {
+    expect(MAX_CALLER_CACHE_SIZE).toBeGreaterThanOrEqual(20_000);
   });
 });
