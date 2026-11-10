@@ -110,7 +110,7 @@ export class PlayerModerationModal extends LitElement {
           @keydown=${this.handleKeydown}
         >
           <div
-            class="rounded-2xl bg-zinc-900 p-5 shadow-2xl ring-1 ring-zinc-800 max-h-[90vh] text-zinc-200"
+            class="hud-modal p-5 max-h-[90vh] text-zinc-200"
             @click=${(e: MouseEvent) => e.stopPropagation()}
           >
             <div class="mb-3 flex items-center justify-between relative">

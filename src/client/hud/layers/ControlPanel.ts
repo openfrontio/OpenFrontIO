@@ -773,7 +773,7 @@ export class ControlPanel extends LitElement implements Controller {
           this._ratioPopupOpen
             ? html`<div
                 data-ratio-popup
-                class="hidden side-bar:flex absolute bottom-full inset-x-2 mb-2 items-center gap-2 px-3 py-3 bg-gray-800/92 rounded-lg shadow-lg"
+                class="hidden side-bar:flex absolute bottom-full inset-x-2 mb-2 items-center gap-2 px-3 py-3 hud-modal rounded-lg"
                 translate="no"
               >
                 <img

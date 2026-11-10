@@ -443,7 +443,7 @@ export class TutorialPanel extends LitElement implements Controller {
     return html`
       <div
         dir=${textDirection()}
-        class="pointer-events-auto w-full sm:rounded-lg bg-gray-800/92 backdrop-blur-sm shadow-lg text-white text-base p-2 sm:mb-1"
+        class="pointer-events-auto w-full sm:rounded-lg hud-panel text-white text-base p-2 sm:mb-1"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div class="flex items-center justify-between gap-2 mb-1">
