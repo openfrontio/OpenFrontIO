@@ -1334,10 +1334,27 @@ export class NationAttackBehavior extends AiAttackBehavior {
       difficulty === Difficulty.Medium || direct <= 20
         ? null
         : PathFinding.Water(this.game).findPath(launch, landing);
-    const route = path ?? [launch, landing];
     const length = path?.length ?? direct;
+    return {
+      length,
+      blocker: this.blockerOn(
+        path ?? [launch, landing],
+        length,
+        path !== null,
+        warships,
+      ),
+    };
+  }
+
+  // The hostile warship that sinks a boat sailing route, length tiles long
+  private blockerOn(
+    route: TileRef[],
+    length: number,
+    pathed: boolean,
+    warships: Unit[],
+  ): Unit | null {
     // Without a path, assume the warship can fire as soon as we launch
-    const sailed = (i: number) => (path === null ? 0 : i);
+    const sailed = (i: number) => (pathed ? i : 0);
 
     const range = this.dangerRange();
     let minX = Infinity;
@@ -1371,12 +1388,47 @@ export class NationAttackBehavior extends AiAttackBehavior {
         // Shell and boat close in by at most 4 tiles a tick; 10 tiles spare for its reaction
         const ticksLeft = length - sailed(i);
         if (4 * ticksLeft >= this.game.manhattanDist(w.tile(), route[i]) - 10) {
-          return { length, blocker: w };
+          return w;
         }
         break;
       }
     }
-    return { length, blocker: null };
+    return null;
+  }
+
+  // Medium sails the straight line from launch to landing, so a blocked launch is cheap to
+  // spot. A nation blockaded in port checked each of its shores by pathfinding, for every
+  // overseas enemy on every attack decision. Hard & Impossible pathfind the crossing, and
+  // clear what blocks it, so they look for the launch.
+  protected override everyLaunchBlocked(
+    landing: TileRef,
+    warships: Unit[],
+  ): boolean {
+    if (
+      warships.length === 0 ||
+      this.game.config().gameConfig().difficulty !== Difficulty.Medium
+    ) {
+      return false;
+    }
+    const dst = targetTransportTile(this.game, this.player, landing);
+    if (dst === null) return false;
+    const component = this.game.getWaterComponent(dst);
+    if (component === null) return false;
+    // The shores closestShoreByWater launches from
+    for (const t of this.player.borderTiles()) {
+      if (
+        !this.game.isShore(t) ||
+        !this.game.isLand(t) ||
+        this.game.getWaterComponent(t) !== component
+      ) {
+        continue;
+      }
+      const direct = this.game.manhattanDist(t, dst);
+      if (this.blockerOn([t, dst], direct, false, warships) === null) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // Hard & Impossible don't sail further than this to attack someone

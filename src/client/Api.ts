@@ -33,6 +33,9 @@ import {
   PutCreatorResponseSchema,
   PutUsernameResponse,
   PutUsernameResponseSchema,
+  FfaRankLeaderboardResponse,
+  FfaRankLeaderboardResponseSchema,
+  FfaRankPositionResponseSchema,
   RankedLeaderboardResponse,
   RankedLeaderboardResponseSchema,
   SteamFinalizeResponseSchema,
@@ -2357,6 +2360,69 @@ export async function fetchPlayerLeaderboard(
   } catch (err) {
     console.error("fetchPlayerLeaderboard: request failed", err);
     return false;
+  }
+}
+
+/** One FFA rank's board. `rank` is a tier family in lower case, e.g. "diamond". */
+export async function fetchFfaRankLeaderboard(
+  rank: string,
+  page: number,
+): Promise<FfaRankLeaderboardResponse | "reached_limit" | false> {
+  try {
+    const url = new URL(
+      `${getApiBase()}/leaderboard/ranked/ffa/${encodeURIComponent(rank)}`,
+    );
+    url.searchParams.set("page", String(page));
+    const res = await fetch(url.toString(), {
+      headers: { Accept: "application/json" },
+    });
+
+    if (!res.ok) {
+      if (res.status === 400) {
+        const body = await res.json().catch(() => null);
+        if (isPageBoundsMessage(body)) {
+          return "reached_limit";
+        }
+      }
+      console.warn(
+        "fetchFfaRankLeaderboard: unexpected status",
+        res.status,
+        res.statusText,
+      );
+      return false;
+    }
+
+    const parsed = FfaRankLeaderboardResponseSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn(
+        "fetchFfaRankLeaderboard: Zod validation failed",
+        parsed.error.toString(),
+      );
+      return false;
+    }
+
+    return parsed.data;
+  } catch (err) {
+    console.error("fetchFfaRankLeaderboard: request failed", err);
+    return false;
+  }
+}
+
+/** The signed-in player's position in their rank, or null if there's none to show. */
+export async function fetchFfaRankPosition(): Promise<number | null> {
+  try {
+    const res = await fetch(`${getApiBase()}/users/@me/ffa_rank_position`, {
+      headers: {
+        Accept: "application/json",
+        Authorization: await getAuthHeader(),
+      },
+    });
+    if (!res.ok) return null;
+    const parsed = FfaRankPositionResponseSchema.safeParse(await res.json());
+    return parsed.success ? parsed.data.position : null;
+  } catch (err) {
+    console.warn("fetchFfaRankPosition: request failed", err);
+    return null;
   }
 }
 

@@ -26,10 +26,12 @@ export enum GameMapType {
   BetweenTwoSeas = "Between Two Seas", // map-generator/assets/maps/betweentwoseas/info.json
   BlackSea = "Black Sea", // map-generator/assets/maps/blacksea/info.json
   BosphorusStraits = "Bosphorus Straits", // map-generator/assets/maps/bosphorusstraits/info.json
+  Brahmaputra = "Brahmaputra", // map-generator/assets/maps/brahmaputra/info.json
   BrainRot = "Brain Rot", // map-generator/assets/maps/brainrot/info.json
   BranchingPaths = "Branching Paths", // map-generator/assets/maps/branchingpaths/info.json
   Britannia = "Britannia", // map-generator/assets/maps/britannia/info.json
   BritanniaClassic = "Britannia Classic", // map-generator/assets/maps/britanniaclassic/info.json
+  Canada = "Canada", // map-generator/assets/maps/canada/info.json
   CanaryIslands = "Canary Islands", // map-generator/assets/maps/canaryislands/info.json
   CapeCod = "Cape Cod", // map-generator/assets/maps/capecod/info.json
   CapeOfGoodHope = "Cape Of Good Hope", // map-generator/assets/maps/capeofgoodhope/info.json
@@ -102,7 +104,9 @@ export enum GameMapType {
   Oceania = "Oceania", // map-generator/assets/maps/oceania/info.json
   Ommatrypta = "Ommatrypta", // map-generator/assets/maps/ommatrypta/info.json
   Onion = "Onion", // map-generator/assets/maps/onion/info.json
+  OttomanEmpire = "Ottoman Empire", // map-generator/assets/maps/ottomanempire/info.json
   Pangaea = "Pangaea", // map-generator/assets/maps/pangaea/info.json
+  Paris = "Paris", // map-generator/assets/maps/paris/info.json
   Passage = "Passage", // map-generator/assets/maps/passage/info.json
   Pluto = "Pluto", // map-generator/assets/maps/pluto/info.json
   PulicatLake = "Pulicat Lake", // map-generator/assets/maps/pulicatlake/info.json
@@ -129,6 +133,7 @@ export enum GameMapType {
   Tourney3 = "Tourney 4 Teams", // map-generator/assets/maps/tourney3/info.json
   Tourney4 = "Tourney 8 Teams", // map-generator/assets/maps/tourney4/info.json
   TradersDream = "Traders Dream", // map-generator/assets/maps/tradersdream/info.json
+  Turkiye = "Turkiye", // map-generator/assets/maps/turkiye/info.json
   Tutorial = "Tutorial", // map-generator/assets/maps/tutorial/info.json
   TwoLakes = "Two Lakes", // map-generator/assets/maps/twolakes/info.json
   UnitedStates = "United States", // map-generator/assets/maps/unitedstates/info.json
@@ -137,10 +142,13 @@ export enum GameMapType {
   Vietnam = "Vietnam", // map-generator/assets/maps/vietnam/info.json
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
   World = "World", // map-generator/assets/maps/world/info.json
+  World10000 = "World 10000", // map-generator/assets/maps/world10000/info.json
+  World4000 = "World 4000", // map-generator/assets/maps/world4000/info.json
   WorldInverted = "World Inverted", // map-generator/assets/maps/worldinverted/info.json
   YangtzeRiver = "Yangtze River", // map-generator/assets/maps/yangtzeriver/info.json
   YellowSea = "Yellow Sea", // map-generator/assets/maps/yellowsea/info.json
   Yenisei = "Yenisei", // map-generator/assets/maps/yenisei/info.json
+  Zealandia = "Zealandia", // map-generator/assets/maps/zealandia/info.json
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -337,7 +345,7 @@ export const maps: readonly MapInfo[] = [
     themes: ["europe", "asia", "north_america"],
     author: "Tristar",
     descriptionKey: "map_description.arctic",
-    location: { lat: 79, lon: -60 },
+    location: { lat: 79, lon: 0 },
   },
   {
     id: "Asia",
@@ -504,15 +512,27 @@ export const maps: readonly MapInfo[] = [
     location: { lat: 41.1, lon: 29 },
   },
   {
+    id: "Brahmaputra",
+    type: GameMapType.Brahmaputra,
+    translationKey: "map.brahmaputra",
+    categories: ["asia", "new"],
+    defaultNationCount: 37,
+    specialTeamCount: 2,
+    themes: ["asia"],
+    author: "novc",
+    descriptionKey: "map_description.brahmaputra",
+    location: { lat: 26.5, lon: 92.5 },
+  },
+  {
     id: "BrainRot",
     type: GameMapType.BrainRot,
     translationKey: "map.brainrot",
     categories: ["arcade"],
     defaultNationCount: 43,
-    specialTeamCount: 27,
     themes: ["space", "war"],
-    layers: [{ id: "brland", placement: "land", nukeable: true }],
+    layers: [{ id: "brainland", placement: "land", nukeable: true }],
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.brainrot",
   },
   {
     id: "BranchingPaths",
@@ -542,6 +562,79 @@ export const maps: readonly MapInfo[] = [
     themes: ["europe"],
     author: "Tiger McSwane",
     location: { lat: 56.5, lon: -4 },
+  },
+  {
+    id: "Canada",
+    type: GameMapType.Canada,
+    translationKey: "map.canada",
+    categories: ["north_america", "new", "countries"],
+    defaultNationCount: 38,
+    themes: ["north_america"],
+    customTribes: [
+      { name: "Toronto", coordinates: [2538, 2415] },
+      { name: "Ottawa", coordinates: [2668, 2269] },
+      { name: "Edmonton", coordinates: [1318, 1845] },
+      { name: "Winnipeg", coordinates: [1836, 2134] },
+      { name: "Québec City", coordinates: [2806, 2136] },
+      { name: "Halifax", coordinates: [3131, 2121] },
+      { name: "Victoria", coordinates: [897, 1988] },
+      { name: "Regina", coordinates: [1575, 2078] },
+      { name: "St. John's", coordinates: [3398, 1774] },
+      { name: "Fredericton", coordinates: [2990, 2110] },
+      { name: "Charlottetown", coordinates: [3092, 2045] },
+      { name: "Whitehorse", coordinates: [921, 1221] },
+      { name: "Yellowknife", coordinates: [1425, 1384] },
+      { name: "Iqaluit", coordinates: [2529, 1250] },
+      { name: "Montréal", coordinates: [2746, 2250] },
+      { name: "Vancouver", coordinates: [924, 1959] },
+      { name: "Calgary", coordinates: [1260, 1979] },
+      { name: "Hamilton", coordinates: [2539, 2444] },
+      { name: "Oshawa", coordinates: [2569, 2399] },
+      { name: "Kitchener", coordinates: [2509, 2439] },
+      { name: "London", coordinates: [2485, 2473] },
+      { name: "Windsor", coordinates: [2420, 2525] },
+      { name: "Saskatoon", coordinates: [1519, 1983] },
+      { name: "Barrie", coordinates: [2529, 2380] },
+      { name: "Sudbury", coordinates: [2453, 2276] },
+      { name: "Abbotsford", coordinates: [946, 1983] },
+      { name: "Sarnia", coordinates: [2438, 2483] },
+      { name: "Sherbrooke", coordinates: [2811, 2232] },
+      { name: "Kelowna", coordinates: [1058, 1980] },
+      { name: "Trois-Rivières", coordinates: [2767, 2191] },
+      { name: "Kingston", coordinates: [2659, 2351] },
+      { name: "Thunder Bay", coordinates: [2125, 2217] },
+      { name: "Moncton", coordinates: [3052, 2083] },
+      { name: "Saint John", coordinates: [3027, 2147] },
+      { name: "Nanaimo", coordinates: [893, 1952] },
+      { name: "Peterborough", coordinates: [2584, 2371] },
+      { name: "Saint-Jérôme", coordinates: [2726, 2241] },
+      { name: "Red Deer", coordinates: [1288, 1924] },
+      { name: "Lethbridge", coordinates: [1282, 2068] },
+      { name: "Kamloops", coordinates: [1047, 1917] },
+      { name: "Prince George", coordinates: [1046, 1734] },
+      { name: "Medicine Hat", coordinates: [1359, 2072] },
+      { name: "Drummondville", coordinates: [2780, 2215] },
+      { name: "Saguenay", coordinates: [2780, 2063] },
+      { name: "Chilliwack", coordinates: [961, 1982] },
+      { name: "North Bay", coordinates: [2513, 2273] },
+      { name: "Shawinigan", coordinates: [2758, 2183] },
+      { name: "Cornwall", coordinates: [2711, 2289] },
+      { name: "Joliette", coordinates: [2742, 2220] },
+      { name: "Belleville", coordinates: [2623, 2367] },
+      { name: "Victoriaville", coordinates: [2796, 2199] },
+      { name: "Grande Prairie", coordinates: [1187, 1720] },
+      { name: "Penticton", coordinates: [1047, 1999] },
+      { name: "Sydney", coordinates: [3215, 2002] },
+      { name: "Orillia", coordinates: [2537, 2366] },
+      { name: "Rimouski", coordinates: [2867, 2026] },
+      { name: "Timmins", coordinates: [2416, 2171] },
+      { name: "Prince Albert", coordinates: [1561, 1936] },
+      { name: "Campbell River", coordinates: [873, 1888] },
+      { name: "Courtenay", coordinates: [873, 1908] },
+    ],
+    author: "cazlabIO",
+    descriptionKey: "map_description.canada",
+    location: { lat: 60, lon: -95 },
   },
   {
     id: "CanaryIslands",
@@ -753,6 +846,7 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 4,
     forcedModifiers: ["isWaterNukes:50"],
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.choppingblock",
   },
   {
     id: "ClearwaterLakes",
@@ -774,6 +868,7 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 2,
     themes: ["africa"],
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.conakry",
     location: { lat: 9.6, lon: -13.6 },
   },
   {
@@ -831,8 +926,9 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Dyslexdria,
     translationKey: "map.dyslexdria",
     categories: ["world", "fictional"],
-    defaultNationCount: 82,
+    defaultNationCount: 80,
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.dyslexdria",
   },
   {
     id: "EastAsia",
@@ -1355,6 +1451,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.giantworldmap",
     categories: ["world"],
     defaultNationCount: 107,
+    hidden: true,
     author: "1brucben",
   },
   {
@@ -1538,6 +1635,7 @@ export const maps: readonly MapInfo[] = [
     categories: ["arcade"],
     defaultNationCount: 26,
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.labyrinth",
   },
   {
     id: "LasVegasStrip",
@@ -1760,6 +1858,7 @@ export const maps: readonly MapInfo[] = [
     specialTeamCount: 2,
     forcedModifiers: ["isWaterNukes:50"],
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.luna",
   },
   {
     id: "Madagascar",
@@ -1873,6 +1972,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 35,
     specialTeamCount: 5,
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.morethanluck",
   },
   {
     id: "NewYorkCity",
@@ -1951,6 +2051,7 @@ export const maps: readonly MapInfo[] = [
       { id: "eyewater", placement: "water" },
     ],
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.ommatrypta",
   },
   {
     id: "Onion",
@@ -1961,12 +2062,81 @@ export const maps: readonly MapInfo[] = [
     author: "TKTK123456",
   },
   {
+    id: "OttomanEmpire",
+    type: GameMapType.OttomanEmpire,
+    translationKey: "map.ottomanempire",
+    categories: ["europe", "asia", "africa", "countries", "new"],
+    defaultNationCount: 46,
+    themes: ["europe", "asia", "africa"],
+    location: { lat: 39, lon: 29 },
+  },
+  {
     id: "Pangaea",
     type: GameMapType.Pangaea,
     translationKey: "map.pangaea",
     categories: ["fictional"],
     defaultNationCount: 29,
     author: "MRH",
+  },
+  {
+    id: "Paris",
+    type: GameMapType.Paris,
+    translationKey: "map.paris",
+    categories: ["europe", "new"],
+    defaultNationCount: 60,
+    themes: ["europe"],
+    customTribes: [
+      { name: "Bonne-Nouvelle" },
+      { name: "Croulebarbe" },
+      { name: "Enfants-Rouges" },
+      { name: "Europe" },
+      { name: "Folie-Méricourt" },
+      { name: "Gaillon" },
+      { name: "Gare d'Austerlitz" },
+      { name: "Mail" },
+      { name: "Monnaie" },
+      { name: "Necker" },
+      { name: "Porte-Saint-Martin" },
+      { name: "Quinze-Vingts" },
+      { name: "Saint-Georges" },
+      { name: "Saint-Merri" },
+      { name: "Saint-Thomas-d'Aquin" },
+      { name: "Saint-Victor" },
+      { name: "Saint-Vincent-de-Paul" },
+      { name: "Sainte-Avoye" },
+      { name: "Sainte-Marguerite" },
+      { name: "Vivienne" },
+      { name: "Tour Eiffel" },
+      { name: "Louvre" },
+      { name: "Notre-Dame" },
+      { name: "Sacré-Cœur" },
+      { name: "Bastille" },
+      { name: "Pigalle" },
+      { name: "Châtelet" },
+      { name: "République" },
+      { name: "Nation" },
+      { name: "Trocadéro" },
+      { name: "Arc de Triomphe" },
+      { name: "Panthéon" },
+      { name: "Gare du Nord" },
+      { name: "Gare de Lyon" },
+      { name: "Oberkampf" },
+      { name: "Canal Saint-Martin" },
+      { name: "Butte-aux-Cailles" },
+      { name: "Le Marais" },
+      { name: "Buttes-Chaumont" },
+      { name: "Bercy Village" },
+      { name: "Place d'Italie" },
+      { name: "Denfert-Rochereau" },
+      { name: "Porte Maillot" },
+      { name: "Stalingrad" },
+      { name: "Ménilmontant" },
+      { name: "Barbès" },
+      { name: "Alésia" },
+      { name: "Beaugrenelle" },
+      { name: "Porte de Versailles" },
+      { name: "Parc Monceau" },
+    ],
   },
   {
     id: "Passage",
@@ -2138,7 +2308,7 @@ export const maps: readonly MapInfo[] = [
     themes: ["asia"],
     author: "Tristar",
     descriptionKey: "map_description.southeastasia",
-    location: { lat: 12, lon: 118 },
+    location: { lat: 12, lon: 113 },
   },
   {
     id: "StraitOfGibraltar",
@@ -2275,6 +2445,15 @@ export const maps: readonly MapInfo[] = [
     descriptionKey: "map_description.tradersdream",
   },
   {
+    id: "Turkiye",
+    type: GameMapType.Turkiye,
+    translationKey: "map.turkiye",
+    categories: ["countries", "europe", "asia", "new"],
+    defaultNationCount: 30,
+    themes: ["europe", "asia"],
+    location: { lat: 39, lon: 35 },
+  },
+  {
     id: "Tutorial",
     type: GameMapType.Tutorial,
     translationKey: "map.tutorial",
@@ -2336,7 +2515,7 @@ export const maps: readonly MapInfo[] = [
     themes: ["asia"],
     author: "crunchybbb",
     descriptionKey: "map_description.vietnam",
-    location: { lat: 17, lon: 106.5 },
+    location: { lat: 17, lon: 107 },
   },
   {
     id: "WarshipWarship",
@@ -2352,10 +2531,43 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.World,
     translationKey: "map.world",
     categories: ["featured", "world"],
-    defaultNationCount: 72,
+    defaultNationCount: 70,
     featuredRank: 1,
     forcedModifiers: ["isCrowded:50"],
+    layers: [
+      { id: "w2kland", placement: "land", nukeable: true },
+      { id: "w2kwater", placement: "water" },
+    ],
     author: "evanpelle",
+    descriptionKey: "map_description.world",
+  },
+  {
+    id: "World10000",
+    type: GameMapType.World10000,
+    translationKey: "map.world10000",
+    categories: ["new", "world"],
+    defaultNationCount: 377,
+    layers: [
+      { id: "w10kland", placement: "land", nukeable: true },
+      { id: "w10kwater", placement: "water" },
+    ],
+    author: "Patrick Plays Badly",
+    descriptionKey: "map_description.world10000",
+  },
+  {
+    id: "World4000",
+    type: GameMapType.World4000,
+    translationKey: "map.world4000",
+    categories: ["new", "featured", "world"],
+    defaultNationCount: 111,
+    featuredRank: 1,
+    forcedModifiers: ["isCrowded:50"],
+    layers: [
+      { id: "w4kland", placement: "land", nukeable: true },
+      { id: "w4kwater", placement: "water" },
+    ],
+    author: "evanpelle",
+    descriptionKey: "map_description.world4000",
   },
   {
     id: "WorldInverted",
@@ -2363,7 +2575,9 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.worldinverted",
     categories: ["world", "fictional"],
     defaultNationCount: 93,
+    themes: ["under_ocean"],
     author: "Patrick Plays Badly",
+    descriptionKey: "map_description.worldinverted",
   },
   {
     id: "YangtzeRiver",
@@ -2395,5 +2609,14 @@ export const maps: readonly MapInfo[] = [
     themes: ["asia"],
     author: "Duwibi",
     location: { lat: 68.5, lon: 86.5 },
+  },
+  {
+    id: "Zealandia",
+    type: GameMapType.Zealandia,
+    translationKey: "map.zealandia",
+    categories: ["oceania", "new", "fictional"],
+    defaultNationCount: 27,
+    themes: ["under_ocean", "oceania"],
+    location: { lat: -28, lon: 161 },
   },
 ];

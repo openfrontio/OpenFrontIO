@@ -1445,6 +1445,17 @@ export type RankedLeaderboardResponse = z.infer<
   typeof RankedLeaderboardResponseSchema
 >;
 
+export const FfaRankLeaderboardResponseSchema = z.object({
+  players: RankedLeaderboardEntrySchema.array(),
+});
+export type FfaRankLeaderboardResponse = z.infer<
+  typeof FfaRankLeaderboardResponseSchema
+>;
+
+export const FfaRankPositionResponseSchema = z.object({
+  position: z.number().int().nullable(),
+});
+
 export const FriendEntrySchema = z.object({
   publicId: z.string(),
   // Account username (null = never set), always the other party's. Render

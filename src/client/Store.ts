@@ -6,7 +6,6 @@ import {
   CosmeticPack,
   Cosmetics,
   Product,
-  Promotion,
   Subscription,
 } from "@openfront/shared/CosmeticSchemas";
 import type { PropertyValues, TemplateResult } from "lit";
@@ -23,9 +22,10 @@ import "./components/EffectsGrid";
 import type { InlineCheckout } from "./components/InlineCheckout";
 import "./components/NotLoggedInWarning";
 import "./components/PackContentsDialog";
-import "./components/SaleCountdown";
 import { ProgressiveList } from "./components/ProgressiveList";
+import "./components/SaleCountdown";
 import { alignPurchaseRows } from "./components/PurchaseButton";
+import { runningSales, saleCoversEverything } from "./components/SaleBanner";
 import "./components/TribesPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
@@ -131,35 +131,7 @@ export function saleFirst<T extends readonly ResolvedCosmetic[]>(
   ];
 }
 
-/**
- * Whether a sale covers every priced item in the catalog, so the banner can
- * say "store-wide" rather than "selected items".
- */
-export function saleCoversEverything(
-  cosmetics: Cosmetics | null,
-  promotionId: string,
-): boolean {
-  if (cosmetics === null) return false;
-  const items: { priceHard?: number; promotion?: { id: string } }[] = [
-    ...Object.values(cosmetics.patterns ?? {}),
-    ...Object.values(cosmetics.flags ?? {}),
-    ...Object.values(cosmetics.crowns ?? {}),
-    ...Object.values(cosmetics.skins ?? {}),
-    ...Object.values(cosmetics.packs ?? {}),
-    ...Object.values(cosmetics.effects ?? {}).flatMap((byName) =>
-      Object.values(byName ?? {}),
-    ),
-  ];
-  const priced = items.filter(
-    (item) =>
-      item.priceHard !== undefined ||
-      (item as { priceSoft?: number }).priceSoft !== undefined,
-  );
-  return (
-    priced.length > 0 &&
-    priced.every((item) => item.promotion?.id === promotionId)
-  );
-}
+export { saleCoversEverything };
 
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
@@ -875,161 +847,15 @@ export class StoreModal extends BaseModal {
 
   /** One line per running sale, under the header. */
   private renderSaleBanner(): TemplateResult | string {
-    const sales = (this.cosmetics?.promotions ?? []).filter(
-      (sale) => new Date(sale.endsAt).getTime() > Date.now(),
-    );
+    const sales = runningSales(this.cosmetics);
     this.scheduleSaleEnd(sales);
     if (sales.length === 0) return "";
-    // A flash sale rides along the first sale's strip as a slim row, rather
-    // than a second strip; alone, it takes the strip itself.
-    const flash = sales.find((sale) => sale.kind === "flash");
-    const regular = sales.filter((sale) => sale.kind !== "flash");
-    if (regular.length === 0 && flash) {
-      return html`<div data-store-sale-banner class="px-3 pt-2">
-        ${this.renderFlashBannerLine(flash)}
-      </div>`;
-    }
-    return html`<div
-      data-store-sale-banner
-      class="flex flex-col gap-1.5 px-3 pt-2"
-    >
-      ${regular.map((sale, index) => {
-        const endingSoon =
-          new Date(sale.endsAt).getTime() - Date.now() < 86_400_000;
-        return html`<div
-          class="overflow-hidden rounded-lg border border-aquarius/40 bg-gradient-to-r from-deep-navy via-malibu-blue/70 to-malibu-blue shadow-[0_4px_20px_rgba(63,169,245,0.3)]"
-        >
-          <div class="flex items-center gap-3 px-3 py-2">
-            <span
-              class="shrink-0 rounded-md bg-aquarius px-2 py-0.5 text-base font-black tabular-nums text-deep-navy shadow-md shadow-black/40"
-              >${translateText("store.sale_percent_off", {
-                percent: sale.percentOff,
-              })}</span
-            >
-            <div class="flex min-w-0 flex-1 flex-col leading-tight">
-              <span
-                class="flex min-w-0 items-center gap-1.5 text-base font-black uppercase tracking-wide text-white"
-              >
-                <svg
-                  class="h-4 w-4 shrink-0"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"
-                  />
-                  <circle cx="7.5" cy="7.5" r="1.5" fill="currentColor" />
-                </svg>
-                <span class="truncate">${sale.name}</span>
-              </span>
-              <span class="truncate text-xs font-semibold text-dawn-blue"
-                >${translateText(
-                  saleCoversEverything(this.cosmetics, sale.id)
-                    ? "store.sale_store_wide"
-                    : "store.sale_selected_items",
-                  { percent: sale.percentOff },
-                )}</span
-              >
-            </div>
-            <span
-              class="flex shrink-0 items-center gap-1.5 rounded-md bg-deep-navy/60 px-2 py-1 text-xs font-bold tabular-nums ${
-                endingSoon ? "text-cyber-yellow" : "text-white"
-              }"
-              title=${new Date(sale.endsAt).toLocaleString(undefined, {
-                dateStyle: "medium",
-                timeStyle: "short",
-              })}
-            >
-              <sale-countdown .endsAt=${sale.endsAt}></sale-countdown>
-            </span>
-          </div>
-          ${index === 0 && flash ? this.renderFlashBannerRow(flash) : nothing}
-        </div>`;
-      })}
-    </div>`;
-  }
-
-  /**
-   * A flash sale as a slim row under another sale's strip: what it is and a
-   * clock to the next item. It opens the On sale tab, where that item leads.
-   */
-  private renderFlashBannerRow(sale: Promotion): TemplateResult {
-    return html`<button
-      data-store-flash-banner
-      class="flex w-full items-center gap-2 border-t border-white/15 bg-deep-navy/50 px-3 py-1.5 text-left text-xs font-bold text-white transition-colors hover:bg-deep-navy/70"
-      @click=${() => this.openSaleTab()}
-    >
-      <span class="shrink-0 uppercase tracking-wider text-aquarius"
-        >${translateText("store.flash_sale")}</span
-      >
-      <span class="min-w-0 truncate font-semibold text-dawn-blue"
-        >${translateText("store.flash_sale_row", {
-          percent: sale.percentOff,
-        })}</span
-      >
-      <span class="ml-auto flex shrink-0 items-center gap-1.5 tabular-nums">
-        <span class="hidden font-semibold text-dawn-blue sm:inline"
-          >${translateText("store.flash_next_in")}</span
-        >
-        <sale-countdown format="clock" .endsAt=${sale.endsAt}></sale-countdown>
-        <svg
-          class="h-3 w-3 text-dawn-blue"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="3"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="m9 18 6-6-6-6" />
-        </svg>
-      </span>
-    </button>`;
-  }
-
-  /**
-   * A flash sale's line in the banner: one item at a time, with a clock to
-   * the next. It opens the On sale tab, where that item leads.
-   */
-  private renderFlashBannerLine(sale: Promotion): TemplateResult {
-    return html`<button
-      data-store-flash-banner
-      class="flex w-full items-center gap-3 rounded-lg border border-aquarius/60 bg-gradient-to-r from-deep-navy via-malibu-blue/70 to-malibu-blue px-3 py-2 text-left shadow-[0_4px_20px_rgba(63,169,245,0.3)] transition-[filter] hover:brightness-110"
-      @click=${() => this.openSaleTab()}
-    >
-      <span
-        class="shrink-0 rounded-md bg-aquarius px-2 py-0.5 text-base font-black tabular-nums text-deep-navy shadow-md shadow-black/40"
-        >${translateText("store.sale_percent_off", {
-          percent: sale.percentOff,
-        })}</span
-      >
-      <span class="flex min-w-0 flex-1 flex-col leading-tight">
-        <span
-          class="flex min-w-0 items-center gap-1.5 text-base font-black uppercase tracking-wide text-white"
-        >
-          <span class="truncate">${translateText("store.flash_sale")}</span>
-        </span>
-        <span class="truncate text-xs font-semibold text-dawn-blue"
-          >${translateText("store.flash_sale_banner", {
-            percent: sale.percentOff,
-          })}</span
-        >
-      </span>
-      <span
-        class="flex shrink-0 items-center gap-1.5 rounded-md bg-deep-navy/60 px-2 py-1 text-xs font-bold tabular-nums text-white"
-      >
-        <span class="hidden sm:inline"
-          >${translateText("store.flash_next_in")}</span
-        >
-        <sale-countdown format="clock" .endsAt=${sale.endsAt}></sale-countdown>
-      </span>
-    </button>`;
+    return html`<sale-banner
+      class="block px-3 pt-2"
+      .sales=${sales}
+      .cosmetics=${this.cosmetics}
+      @open-sale=${() => this.openSaleTab()}
+    ></sale-banner>`;
   }
 
   /** Cosmetics → On sale, from the flash sale's banner line. */
@@ -1166,6 +992,9 @@ export class StoreModal extends BaseModal {
     if (this.requestedItem !== null) {
       this.cosmeticsSubTab = subTabForItem(this.requestedItem);
     }
+    // `sub=sale` (the home screen's sale banner) opens Cosmetics → On sale;
+    // groupsForTab falls back to Skins if nothing is on sale by now.
+    if (args?.sub === "sale") this.cosmeticsSubTab = "sale";
     // Prices change when a sale starts or ends, so a catalog fetched more than
     // a minute ago is refetched rather than shown with stale prices.
     if (refreshStaleCosmetics() || this.cosmetics === null) {
