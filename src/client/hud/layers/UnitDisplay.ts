@@ -96,7 +96,7 @@ export class UnitDisplay extends LitElement implements Controller {
   private _tooltipCenter: number | null = null;
   private tutorialHighlight: PlayerBuildableUnitType | null = null;
   // Whether the build bar has actions hidden off either edge. The fade on that
-  // edge tells the player there is more to swipe to.
+  // edge tells the player there is more to scroll to.
   private moreActionsStart = false;
   private moreActionsEnd = false;
   private observedScroller: HTMLElement | null = null;
@@ -448,14 +448,15 @@ export class UnitDisplay extends LitElement implements Controller {
   };
 
   /**
-   * Below lg the bar is a column on the right edge of the screen, scrolling
-   * up and down; from lg up it is a row in the bottom panel. Matches the
-   * `max-lg:` classes of the bar and of its host in index.html.
+   * Below lg in portrait the bar is a column on the right edge of the
+   * screen, scrolling up and down; everywhere else it is a row in the bottom
+   * panel. Matches the `side-bar:` variant (styles.css) used by the bar and
+   * its host in index.html.
    */
   private isSideBar(): boolean {
     return (
       typeof window.matchMedia === "function" &&
-      !window.matchMedia("(min-width: 64rem)").matches
+      window.matchMedia("(width < 64rem) and (orientation: portrait)").matches
     );
   }
 
@@ -600,23 +601,24 @@ export class UnitDisplay extends LitElement implements Controller {
     ) {
       return null;
     }
-    // Below lg the bar is a column on the right edge of the screen (the
-    // host is fixed there by index.html); from lg up it is a row in the
-    // bottom panel.
+    // A row in the bottom panel: below the control panel from lg up, above
+    // it on landscape phones (index.html orders it), spread over the panel's
+    // width there. Below lg in portrait (side-bar) it is a column on the
+    // right edge of the screen, where index.html fixes the host.
     return html`
       <div
-        class="unit-display-root relative p-0.5 border-white/10 lg:border-t lg:w-full max-lg:border max-lg:border-r-0 max-lg:rounded-l-lg max-lg:bg-gray-800/92 max-lg:shadow-lg
+        class="unit-display-root relative p-0.5 border-white/10 w-full lg:border-t max-lg:landscape:border-b side-bar:w-auto side-bar:border side-bar:border-r-0 side-bar:rounded-l-lg side-bar:bg-gray-800/92 side-bar:shadow-lg
           ${this.moreActionsStart ? "unit-display-more-start" : ""}
           ${this.moreActionsEnd ? "unit-display-more-end" : ""}"
         data-radial-click-through
         @contextmenu=${(event: Event) => event.preventDefault()}
       >
         <div
-          class="unit-display-scroll overflow-x-hidden overflow-y-auto overscroll-y-contain touch-pan-y max-h-[calc(100dvh-5.5rem)] lg:overflow-visible lg:max-h-none lg:touch-none"
+          class="unit-display-scroll overflow-x-auto overflow-y-hidden overscroll-x-contain touch-none lg:overflow-visible side-bar:overflow-x-hidden side-bar:overflow-y-auto side-bar:overscroll-y-contain side-bar:max-h-[calc(100dvh-5.5rem)]"
           @scroll=${this.onScroll}
         >
           <div
-            class="unit-display-grid grid grid-cols-1 gap-0.5 lg:grid-rows-1 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-max lg:w-fit lg:mx-auto"
+            class="unit-display-grid grid gap-0.5 grid-rows-1 grid-flow-col auto-cols-fr lg:auto-cols-max lg:w-fit lg:mx-auto side-bar:grid-rows-none side-bar:grid-flow-row side-bar:grid-cols-1"
           >
             ${this.renderUnitItem(
               cityIcon,
@@ -747,7 +749,7 @@ export class UnitDisplay extends LitElement implements Controller {
         <div
           class="${
             this.canBuild(unitType) ? "" : "opacity-40"
-          } border border-slate-500 rounded-sm max-lg:h-12 max-lg:landscape:h-10.5 max-lg:min-w-6.5 w-full px-0.5 max-lg:px-0 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:justify-start
+          } border border-slate-500 rounded-sm max-lg:landscape:h-9 side-bar:h-12 side-bar:min-w-6.5 w-full px-0.5 side-bar:px-0 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:justify-start
              ${
             selected
               ? "pointer-fine:hover:bg-gray-400/10"

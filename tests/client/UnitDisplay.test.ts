@@ -64,9 +64,14 @@ async function withCoarsePointer(run: () => void | Promise<void>) {
   await withMediaQueries((query) => query.includes("pointer: coarse"), run);
 }
 
-/** A screen narrower than lg, where the bar is a column on the right edge. */
+/** A portrait screen narrower than lg, where the bar is a column on the right edge. */
 async function withSideBar(run: () => void | Promise<void>) {
-  await withMediaQueries((query) => !query.includes("min-width: 64rem"), run);
+  await withMediaQueries(
+    (query) =>
+      query.includes("orientation: portrait") ||
+      query.includes("pointer: coarse"),
+    run,
+  );
 }
 
 async function withMediaQueries(
@@ -100,7 +105,7 @@ function dispatchTouch(target: EventTarget, type: string, identifier: number) {
 }
 
 describe("mobile UnitDisplay layout", () => {
-  test("is a vertically scrolling column below lg and a row from lg up", async () => {
+  test("is a row, and a vertically scrolling column below lg in portrait", async () => {
     const { display } = makeDisplay();
     try {
       await display.updateComplete;
@@ -108,13 +113,19 @@ describe("mobile UnitDisplay layout", () => {
       const scroller = display.querySelector(".unit-display-scroll");
       const grid = scroller?.querySelector<HTMLElement>(".unit-display-grid");
       expect(scroller).not.toBeNull();
-      expect(scroller?.classList.contains("overflow-y-auto")).toBe(true);
-      expect(scroller?.classList.contains("touch-pan-y")).toBe(true);
+      expect(scroller?.classList.contains("overflow-x-auto")).toBe(true);
+      // No touch panning: a drag from a button goes to the map, whichever
+      // way it heads.
+      expect(scroller?.classList.contains("touch-none")).toBe(true);
       expect(scroller?.classList.contains("lg:overflow-visible")).toBe(true);
-      expect(grid?.classList.contains("grid-cols-1")).toBe(true);
-      expect(grid?.classList.contains("lg:grid-flow-col")).toBe(true);
-      expect(grid?.classList.contains("lg:grid-cols-none")).toBe(true);
+      expect(scroller?.classList.contains("side-bar:overflow-y-auto")).toBe(
+        true,
+      );
+      expect(grid?.classList.contains("grid-flow-col")).toBe(true);
+      expect(grid?.classList.contains("auto-cols-fr")).toBe(true);
       expect(grid?.classList.contains("lg:auto-cols-max")).toBe(true);
+      expect(grid?.classList.contains("side-bar:grid-flow-row")).toBe(true);
+      expect(grid?.classList.contains("side-bar:grid-cols-1")).toBe(true);
       expect(grid?.children).toHaveLength(10);
     } finally {
       display.remove();
@@ -1262,7 +1273,7 @@ describe("dragging a build button onto the map", () => {
   });
 });
 
-describe("UnitDisplay as a side column below lg", () => {
+describe("UnitDisplay as a side column below lg in portrait", () => {
   test("places the tooltip left of the item, centred on it", async () => {
     await withSideBar(async () => {
       const { display } = makeDisplay();

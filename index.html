@@ -566,23 +566,25 @@
         <tutorial-panel
           class="hidden w-full order-3 sm:order-none"
         ></tutorial-panel>
-        <!-- Below lg the unit bar is fixed to the right edge as a column. The
-             blur is lg-only: a backdrop-filter would pin the fixed bar to this
-             panel instead of the screen. -->
+        <!-- The unit bar is a row below the control panel from lg up, a row
+             above it on landscape phones, and a column fixed to the right edge
+             below lg in portrait (side-bar). The blur is off there: a
+             backdrop-filter would pin the fixed bar to this panel instead of
+             the screen. -->
         <div
-          class="pointer-events-auto bg-gray-800/92 lg:backdrop-blur-sm sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none z-10"
+          class="flex flex-col pointer-events-auto bg-gray-800/92 backdrop-blur-sm side-bar:backdrop-blur-none sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none z-10"
         >
           <control-panel class="w-full"></control-panel>
           <unit-display
-            class="block lg:w-full max-lg:fixed max-lg:top-1/2 max-lg:-translate-y-1/2 max-lg:right-[env(safe-area-inset-right)]"
+            class="block w-full max-lg:landscape:order-first side-bar:w-auto side-bar:fixed side-bar:top-1/2 side-bar:-translate-y-1/2 side-bar:right-[env(safe-area-inset-right)]"
           ></unit-display>
         </div>
       </div>
 
       <!-- events+chat: <sm between attacks and control (order-2), sm+ right side, lg+ col-3.
-           sm..lg (landscape phones) they clear the unit bar on the right edge. -->
+           sm and up in portrait below lg they clear the unit bar on the right edge. -->
       <div
-        class="flex flex-col pointer-events-none items-end order-2 sm:order-none sm:flex-1 sm:max-lg:pr-13 lg:col-start-3 lg:self-end lg:justify-end"
+        class="flex flex-col pointer-events-none items-end order-2 sm:order-none sm:flex-1 sm:side-bar:pr-9 lg:col-start-3 lg:self-end lg:justify-end"
       >
         <chat-display
           class="w-full sm:w-auto pointer-events-auto"
