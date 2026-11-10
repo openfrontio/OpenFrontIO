@@ -716,7 +716,7 @@ export class ControlPanel extends LitElement implements Controller {
         </div>
         <!-- Troop bar -->
         <div
-          class="w-[40%] shrink-0 flex items-center ${this.tutorialHighlightClass(
+          class="w-[40%] shrink-0 side-bar:flex-1 side-bar:min-w-0 flex items-center ${this.tutorialHighlightClass(
             "troops",
           )}"
         >
@@ -747,7 +747,7 @@ export class ControlPanel extends LitElement implements Controller {
           type="button"
           data-ratio-popup-button
           aria-expanded=${this._ratioPopupOpen ? "true" : "false"}
-          class="hidden side-bar:flex flex-1 min-w-0 items-center justify-center gap-1 border rounded-md p-1 ${
+          class="hidden side-bar:flex w-[4.25rem] shrink-0 items-center justify-center gap-1 border rounded-md p-1 ${
             this._ratioPopupOpen ? "border-aquarius" : "border-gray-600"
           } ${this.tutorialHighlightClass("attack_ratio")}"
           translate="no"
