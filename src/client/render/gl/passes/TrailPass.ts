@@ -112,6 +112,9 @@ export class TrailPass {
   setLiveRef(trailState: Uint16Array): void {
     this.liveTrailRef = trailState;
     this.trailsDirty = true;
+    this.dirtyRowMin = Infinity;
+    this.dirtyRowMax = -1;
+    this.scatter.clear();
   }
 
   /** Live trail delta: update live ref + accept dirty row range or tile list from TrailManager. */
@@ -122,7 +125,18 @@ export class TrailPass {
     changedTiles?: readonly number[],
   ): void {
     this.liveTrailRef = trailState;
-    if (changedTiles && changedTiles.length > 0 && changedTiles.length < 8192) {
+    const isFullUploadPending = this.trailsDirty && this.dirtyRowMax < 0;
+    const isRowUploadPending = this.dirtyRowMax >= 0;
+
+    // Sparse scatter path only runs when no full or row upload is already pending;
+    // a pending upload already covers the full or row state.
+    if (
+      !isFullUploadPending &&
+      !isRowUploadPending &&
+      changedTiles &&
+      changedTiles.length > 0 &&
+      changedTiles.length < 8192
+    ) {
       for (let i = 0; i < changedTiles.length; i++) {
         const ref = changedTiles[i];
         const x = ref % this.mapW;
@@ -133,9 +147,9 @@ export class TrailPass {
       return;
     }
 
+    // A row or full upload supersedes any sparse scatter points.
+    this.scatter.clear();
     if (dirtyRowMax >= 0) {
-      const isFullUploadPending = this.trailsDirty && this.dirtyRowMax < 0;
-      // If a full upload is already pending, don't narrow the bounds to the delta
       if (!isFullUploadPending) {
         this.dirtyRowMin = Math.min(this.dirtyRowMin, dirtyRowMin);
         this.dirtyRowMax = Math.max(this.dirtyRowMax, dirtyRowMax);

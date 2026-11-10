@@ -760,7 +760,6 @@ export class NamePass {
   private hitTestNamePlate(now: number, cameraMatrix: Float32Array): number {
     const mx = this.mouseWorldX;
     const my = this.mouseWorldY;
-    if (mx < 0 || my < 0) return 0;
     const ns = this.settings.name;
     // Match the camera-scale calculation in the name shaders.
     const cameraScale = Math.hypot(cameraMatrix[0], cameraMatrix[3]);

@@ -39,7 +39,6 @@ export class TerrainPass {
   // Scratch RGBA buffer for rect sub-uploads; grown as needed and reused
   // across applyTerrainRects calls.
   private rgbaScratch = new Uint8Array(0);
-  private initialBytes: Uint8Array | null = null;
 
   constructor(
     private gl: WebGL2RenderingContext,
@@ -66,9 +65,7 @@ export class TerrainPass {
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.vao = createMapQuad(gl, mapW, mapH);
 
-    if (lazy) {
-      this.initialBytes = terrainBytes;
-    } else {
+    if (!lazy) {
       this.ensureTexture(terrainBytes);
     }
   }
@@ -76,8 +73,7 @@ export class TerrainPass {
   private ensureTexture(bytes?: Uint8Array): WebGLTexture {
     if (!this.tex) {
       const gl = this.gl;
-      const b = bytes ?? this.initialBytes ?? this.terrainSource();
-      this.initialBytes = null;
+      const b = bytes ?? this.terrainSource();
       this.tex = createTexture2D(gl, {
         width: this.mapW,
         height: this.mapH,

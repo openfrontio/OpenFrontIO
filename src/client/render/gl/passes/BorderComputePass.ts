@@ -151,11 +151,13 @@ export class BorderComputePass {
   setHighlightOwner(ownerID: number): void {
     if (ownerID === this.highlightOwner) return;
     this.highlightOwner = ownerID;
-    this.scatter.setHighlightOwner(ownerID);
+    const isLargeMap = this.mapW * this.mapH > 4_000_000;
     // On massive maps (e.g. World 10000 with 50M tiles), triggering a full
     // 50MP FBO recomputation on mouse hover drops the frame rate to single digits.
-    // BorderStampPass handles highlight border rendering dynamically via uniform.
-    if (this.mapW * this.mapH <= 4_000_000) {
+    // We pass 0 so the FBO never bakes the highlight; BorderStampPass handles
+    // highlight border rendering dynamically via uniform.
+    this.scatter.setHighlightOwner(isLargeMap ? 0 : ownerID);
+    if (!isLargeMap) {
       this.globalDirty = true;
     }
   }
@@ -245,7 +247,8 @@ export class BorderComputePass {
 
       gl.useProgram(this.program);
       gl.uniform2f(this.uMapSize, this.mapW, this.mapH);
-      gl.uniform1ui(this.uHighlightOwner, this.highlightOwner);
+      const isLargeMap = this.mapW * this.mapH > 4_000_000;
+      gl.uniform1ui(this.uHighlightOwner, isLargeMap ? 0 : this.highlightOwner);
       gl.uniform1i(this.uHighlightThicken, Math.floor(mo.highlightThicken));
 
       gl.activeTexture(gl.TEXTURE0);

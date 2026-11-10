@@ -199,7 +199,10 @@ export class Camera {
    * Return the visible world-space tile bounds [minX, minY, maxX, maxY].
    * Clamped to [0, mapW] and [0, mapH].
    */
-  getWorldBounds(margin = 0): {
+  getWorldBounds(
+    margin = 0,
+    out?: { minX: number; minY: number; maxX: number; maxY: number },
+  ): {
     minX: number;
     minY: number;
     maxX: number;
@@ -207,12 +210,18 @@ export class Camera {
   } {
     const halfW = this.canvasW / (2 * this.zoom) + margin;
     const halfH = this.canvasH / (2 * this.zoom) + margin;
-    return {
-      minX: Math.max(0, Math.floor(this.offsetX - halfW)),
-      minY: Math.max(0, Math.floor(this.offsetY - halfH)),
-      maxX: Math.min(this.mapW, Math.ceil(this.offsetX + halfW)),
-      maxY: Math.min(this.mapH, Math.ceil(this.offsetY + halfH)),
-    };
+    const minX = Math.max(0, Math.floor(this.offsetX - halfW));
+    const minY = Math.max(0, Math.floor(this.offsetY - halfH));
+    const maxX = Math.min(this.mapW, Math.ceil(this.offsetX + halfW));
+    const maxY = Math.min(this.mapH, Math.ceil(this.offsetY + halfH));
+    if (out) {
+      out.minX = minX;
+      out.minY = minY;
+      out.maxX = maxX;
+      out.maxY = maxY;
+      return out;
+    }
+    return { minX, minY, maxX, maxY };
   }
 
   private clampOffset(): void {

@@ -210,6 +210,7 @@ export class GPURenderer {
   /** Reusable scratch buffer of {x,y,r,g,b} for the selection-box pass. */
   private readonly selectionBoxEntries: import("./passes/SelectionBoxPass").SelectionEntry[] =
     [];
+  private readonly textBoundsScratch = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -1341,18 +1342,6 @@ export class GPURenderer {
     );
   }
 
-  private hasFullLayerCoverage(): boolean {
-    if (this.altView) return false;
-    let hasLand = false;
-    let hasWater = false;
-    for (const pass of this.mapLayerPasses.values()) {
-      if (!pass.visible || pass.alpha < 0.99) continue;
-      if (pass.placement === 0) hasLand = true;
-      if (pass.placement === 1) hasWater = true;
-    }
-    return hasLand && hasWater;
-  }
-
   private drawBaseLayer(cam: Float32Array): void {
     const gl = this.gl;
     const pe = this.settings.passEnabled;
@@ -1362,10 +1351,7 @@ export class GPURenderer {
     gl.clearColor(bgR / 255, bgG / 255, bgB / 255, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.BLEND);
-    // When full layer coverage is present (both land and water passes are
-    // visible and opaque), the terrain pass is 100% overdrawn. Skipping it
-    // saves a redundant 50-megapixel raster pass per frame on giant maps.
-    if (pe.terrain && !this.hasFullLayerCoverage()) {
+    if (pe.terrain) {
       this.terrainPass.draw(cam);
     }
     gl.enable(gl.BLEND);
@@ -1423,7 +1409,7 @@ export class GPURenderer {
 
     // World text (attack-troop labels, popups, ghost cost) draws on top of
     // player names so attack callouts aren't hidden behind a centered name.
-    const textBounds = this.camera.getWorldBounds(100);
+    const textBounds = this.camera.getWorldBounds(100, this.textBoundsScratch);
     this.worldTextPass.tick(zoom, textBounds);
     this.worldTextPass.draw(cam, zoom);
 
@@ -1466,8 +1452,6 @@ export class GPURenderer {
         layer.nukeable ?? false,
       );
       this.mapLayerPasses.set(layer.id, pass);
-      // Free the uncompressed 200MB bitmap from CPU memory once uploaded to the GPU
-      image.close();
     }
   }
 

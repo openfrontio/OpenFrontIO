@@ -75,7 +75,7 @@ export class MapLayerPass {
       format: gl.RGBA,
       type: gl.UNSIGNED_BYTE,
       data: null,
-      filter: gl.LINEAR_MIPMAP_LINEAR,
+      filter: gl.LINEAR,
     });
     gl.bindTexture(gl.TEXTURE_2D, this.layerTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
@@ -238,7 +238,7 @@ export class MapLayerPass {
       format: gl.RGBA,
       type: gl.UNSIGNED_BYTE,
       data: null,
-      filter: gl.LINEAR_MIPMAP_LINEAR,
+      filter: gl.LINEAR,
     });
     gl.bindTexture(gl.TEXTURE_2D, this.layerTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
