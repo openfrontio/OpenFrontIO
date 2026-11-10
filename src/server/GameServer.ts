@@ -346,7 +346,7 @@ export class GameServer {
       undefined,
       this.gatekeeper,
     );
-    if (opts.startsAt !== undefined) {
+    if (opts.startsAt !== undefined && this.isPublic()) {
       this.visibleAt = Date.now();
     }
   }
@@ -882,7 +882,9 @@ export class GameServer {
   public setStartsAt(startsAt: number) {
     this.startsAt = startsAt;
     // Record when the lobby first became visible to players, used to measure lobby fill time.
-    this.visibleAt ??= Date.now();
+    if (this.isPublic()) {
+      this.visibleAt ??= Date.now();
+    }
   }
 
   public numClients(): number {
@@ -1709,6 +1711,10 @@ export class GameServer {
     return this.listing.isListed();
   }
 
+  public getVisibleAt(): number | undefined {
+    return this.visibleAt;
+  }
+
   /** Who joined, and the account behind each one.
    *
    *  The public game record is PII-stripped, so a clientID can only be tied back
@@ -1742,6 +1748,7 @@ export class GameServer {
     // Only on the transition: relisting must not change the cap players
     // joined under.
     if (listed && !wasListed) {
+      this.visibleAt ??= Date.now();
       const raw = options.maxPlayers ?? this.gameConfig.maxPlayers;
       if (raw !== undefined) {
         const max =
