@@ -16,9 +16,9 @@
     var(--shadow-hud-modal);
 }
 
-/* Uppercase labels: trim the line box to the capitals, so a flex row centres
-   the letters and not the space kept for descenders. Browsers without
-   text-box keep the normal line box. */
+/* Uppercase labels and numbers: trim the line box to the capitals, so a flex
+   row centres the letters and not the space kept for descenders. Browsers
+   without text-box keep the normal line box. */
 @utility hud-caps {
   @supports (text-box: trim-both cap alphabetic) {
     text-box: trim-both cap alphabetic;
