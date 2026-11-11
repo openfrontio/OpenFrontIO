@@ -13,6 +13,7 @@ import { getTranslatedPlayerTeamLabel, translateText } from "../../Utils";
 import type { GameView } from "../../view";
 import { keepPressKeysFromGame } from "../HudKeys";
 import { HUD_ICON_BUTTON } from "../HudModal";
+import { gameIdButton } from "./GameIdButton";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import "./PlayerStats";
 import type { PlayerStats } from "./PlayerStats";
@@ -31,8 +32,6 @@ const BAR =
   "flex flex-wrap items-center gap-1 max-lg:max-w-[calc(100vw-12.5rem)]";
 const BAR_BUTTON = `${HUD_ICON_BUTTON} aria-pressed:bg-aquarius/20 aria-pressed:text-white aria-pressed:inset-ring aria-pressed:inset-ring-aquarius/55`;
 const BAR_ICON_SIZE = 20;
-const GAME_ID =
-  "ms-auto self-start px-2 text-[11px] leading-6 tabular-nums text-white/70 select-all";
 const YOUR_TEAM = "mt-1 flex items-center gap-1.5 px-1 text-[13px]";
 const TEAM_SWATCH = "size-2.5 shrink-0 rounded-xs bg-(--color)";
 
@@ -140,6 +139,7 @@ export class GameLeftSidebar extends LitElement implements Controller {
     const players = translateText("help_modal.icon_alt_player_leaderboard");
     const teams = translateText("help_modal.icon_alt_team_leaderboard");
     const view = translateText("user_setting.toggle_view_desc");
+    const gameId = isTableShown ? (this.game?.gameID() ?? "") : "";
     return html`
       <aside
         class="${PANEL} ${isTableShown ? PANEL_OPEN : ""} ${
@@ -207,15 +207,7 @@ export class GameLeftSidebar extends LitElement implements Controller {
           >
             <of-icon name="terrain" size=${BAR_ICON_SIZE}></of-icon>
           </button>
-          ${
-            isTableShown
-              ? html`<span
-                  class=${GAME_ID}
-                  title=${translateText("help_modal.game_id_tooltip")}
-                  >${this.game?.gameID() ?? ""}</span
-                >`
-              : null
-          }
+          ${gameId ? gameIdButton(gameId) : null}
         </div>
         ${
           this.isPlayerTeamLabelVisible
