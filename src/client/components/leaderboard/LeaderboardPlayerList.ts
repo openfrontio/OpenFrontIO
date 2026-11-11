@@ -1410,8 +1410,7 @@ export class LeaderboardPlayerList extends LitElement {
       this.playerData.length === 0 &&
       !pinnedCalibration &&
       !this.ffaRankActive &&
-      (!this.ffaAllActive ||
-        (this.ffaAllRows.length === 0 && !this.ffaAllLoading))
+      !this.ffaAllActive
     )
       return this.renderNoData();
 

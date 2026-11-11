@@ -126,10 +126,13 @@ export class FfaRatingSummary extends LitElement {
                       data-global-ffa-position
                       class="inline-flex items-center gap-1.5 text-lg font-bold tabular-nums text-white"
                       title=${translateText("ffa_rating.global_position", { position: rating.globalPosition })}
+                      ><span class="sr-only"
+                        >${translateText("ffa_rating.global_position", { position: rating.globalPosition })}</span
                       ><span class="text-xl leading-none" aria-hidden="true"
                         >🌍</span
-                      >
-                      #${rating.globalPosition}</span
+                      ><span aria-hidden="true"
+                        >#${rating.globalPosition}</span
+                      ></span
                     >`
               }`
           : html`<ffa-tier-badge
