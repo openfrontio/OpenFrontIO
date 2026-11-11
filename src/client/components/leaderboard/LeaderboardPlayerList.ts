@@ -215,6 +215,7 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   private get hasLoadMoreError(): boolean {
+    if (this.ffaAllActive) return this.ffaAllFailed;
     return this.ffaRankActive
       ? this.ffaRanksFailed.has(this.ffaRank!)
       : this.loadMoreError !== null;
@@ -1397,7 +1398,8 @@ export class LeaderboardPlayerList extends LitElement {
       this.hasLoadedPlayers &&
       this.playerData.length === 0 &&
       !pinnedCalibration &&
-      !this.ffaRankActive
+      !this.ffaRankActive &&
+      !this.ffaAllActive
     )
       return this.renderNoData();
 
