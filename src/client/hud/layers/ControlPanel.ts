@@ -94,7 +94,10 @@ const RATIO_BUTTON_STATE = {
   closed: "border-white/15 pointer-fine:hover:bg-white/10 active:bg-white/15",
   open: "border-aquarius bg-malibu-blue/25",
 } as const;
-const RATIO_POPUP = "bottom-full inset-x-2 mb-2 gap-2 p-3 hud-modal rounded-lg";
+// Below sm the panel is full width and the popup would run under the unit
+// column at the right edge: it stops 8px before the 30px column.
+const RATIO_POPUP =
+  "bottom-full inset-x-2 mb-2 gap-2 p-3 hud-modal rounded-lg max-sm:side-bar:end-9.5";
 // Above the grid, not in it. The sentence wraps: some languages run long.
 const HINT =
   "mb-1 flex items-start gap-1.5 rounded-sm px-1.5 py-1 text-xs font-medium";
