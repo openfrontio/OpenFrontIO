@@ -4,11 +4,7 @@ import { type StatsRow, StatsTable } from "../../components/StatsTable";
 import type { ColumnId } from "../../StatsConstants";
 import { getTranslatedPlayerTeamLabel } from "../../Utils";
 import type { GameView, PlayerView } from "../../view";
-import {
-  type ColumnDef,
-  type ValueGetter,
-  recordGoldRates,
-} from "./lib/StatsColumns";
+import type { ColumnDef, ValueGetter } from "./lib/StatsColumns";
 
 export function aggregateTeamValues(
   players: readonly PlayerView[],
@@ -26,9 +22,6 @@ export function aggregateTeamValues(
 
   for (const player of players) {
     if (!player.isAlive()) continue;
-    // Keep the gold-rate tracker fed even when only the team table renders,
-    // otherwise its rate columns read back 0.
-    recordGoldRates(player, game);
     for (const column of totalled) {
       values.set(
         column.id,

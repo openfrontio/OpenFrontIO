@@ -6,8 +6,16 @@ import {
   soldierIcon,
   upperLimitIcon,
 } from "../src/client/hud/HotbarIcons";
-import { columnsFor } from "../src/client/hud/layers/lib/StatsColumns";
+import { goldRateTracker } from "../src/client/hud/layers/lib/GoldRateTracker";
+import {
+  columnById,
+  columnsFor,
+} from "../src/client/hud/layers/lib/StatsColumns";
 import { PlayerStats } from "../src/client/hud/layers/PlayerStats";
+import {
+  aggregateTeamValues,
+  TeamStats,
+} from "../src/client/hud/layers/TeamStats";
 import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
 
@@ -363,5 +371,127 @@ describe("TeamStats clan column", () => {
     // it has nothing to match.
     settings.setStatsColumns("team", ["clan", "gold"]);
     expect(columnsFor("team").map((column) => column.id)).not.toContain("clan");
+  });
+});
+
+describe("gold rate history", () => {
+  // Each refresh is one second of game time in which every player earns 100.
+  let ticks = 0;
+  let earned = 0;
+
+  function earner(id: string, smallID: number, alive = true): PlayerView {
+    return {
+      id: () => id,
+      smallID: () => smallID,
+      name: () => id,
+      clanTag: () => null,
+      team: () => "Blue",
+      numTilesOwned: () => 1,
+      gold: () => 0n,
+      goldEarned: () => earned,
+      tradeGold: () => 0,
+      trainGold: () => 0,
+      piracyGold: () => 0,
+      isAlive: () => alive,
+      isOnSameTeam: () => false,
+    } as unknown as PlayerView;
+  }
+
+  function fakeGame(players: PlayerView[]): GameView {
+    return {
+      myPlayer: () => players[0],
+      playerViews: () => players,
+      ticks: () => ticks,
+    } as unknown as GameView;
+  }
+
+  function mount(game: GameView): PlayerStats {
+    const playerStats = new PlayerStats();
+    playerStats.game = game;
+    document.body.append(playerStats);
+    return playerStats;
+  }
+
+  function playSeconds(table: PlayerStats, seconds: number) {
+    for (let i = 0; i < seconds; i++) {
+      ticks += 10;
+      earned += 100;
+      table.refresh();
+    }
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+    new UserSettings().setStatsColumns("player", ["goldIncomePerMin"]);
+    new UserSettings().setStatsColumns("team", ["goldIncomePerMin"]);
+    goldRateTracker.resetAll();
+    ticks = 0;
+    earned = 0;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = "";
+  });
+
+  it("shows the right rate the moment a table closed for a minute opens", async () => {
+    const playerStats = mount(fakeGame([earner("me", 1)]));
+
+    playSeconds(playerStats, 60);
+    playerStats.visible = true;
+    playSeconds(playerStats, 1);
+    await playerStats.updateComplete;
+
+    const cells = playerStats.querySelectorAll(
+      '.stats-table-row > [role="cell"]',
+    );
+    expect(cells[2].textContent?.trim()).toBe("6.00K");
+  });
+
+  it("feeds the team totals while the player table is closed", () => {
+    const players = [earner("me", 1)];
+    const game = fakeGame(players);
+    const playerStats = mount(game);
+
+    playSeconds(playerStats, 60);
+
+    expect(
+      aggregateTeamValues(players, [columnById("goldIncomePerMin")], game).get(
+        "goldIncomePerMin",
+      ),
+    ).toBe(6000);
+  });
+
+  it("adds one sample per living player per refresh, whichever tables are open", () => {
+    const game = fakeGame([earner("me", 1), earner("ally", 2)]);
+    const playerStats = mount(game);
+    playerStats.visible = true;
+    const teamStats = new TeamStats();
+    teamStats.game = game;
+    teamStats.visible = true;
+    document.body.append(teamStats);
+    const record = vi.spyOn(goldRateTracker, "record");
+
+    // One refresh of both tables, as the sidebar does every second.
+    playerStats.refresh();
+    teamStats.refresh();
+
+    expect(record.mock.calls.map(([smallID]) => smallID)).toEqual([1, 2]);
+  });
+
+  it("forgets a player who died", () => {
+    const playerStats = mount(
+      fakeGame([earner("me", 1), earner("dead", 2, false)]),
+    );
+    const record = vi.spyOn(goldRateTracker, "record");
+    const forget = vi.spyOn(goldRateTracker, "forget");
+
+    playerStats.refresh();
+
+    expect(forget).toHaveBeenCalledWith(2);
+    expect(record.mock.calls.map(([smallID]) => smallID)).toEqual([1]);
   });
 });
