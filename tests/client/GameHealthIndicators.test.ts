@@ -7,14 +7,21 @@ vi.mock("../../src/client/Utils", () => ({
 
 describe("GameHealthIndicators", () => {
   let element: GameHealthIndicators;
+  let playerInfo: HTMLElement;
 
   beforeEach(async () => {
+    playerInfo = document.createElement("player-info-overlay");
+    document.body.appendChild(playerInfo);
     element = new GameHealthIndicators();
     document.body.appendChild(element);
     await element.updateComplete;
   });
 
-  afterEach(() => element.remove());
+  afterEach(() => {
+    element.remove();
+    playerInfo.remove();
+    vi.restoreAllMocks();
+  });
 
   const button = (key: string) =>
     element.shadowRoot!.querySelector<HTMLButtonElement>(
@@ -108,5 +115,51 @@ describe("GameHealthIndicators", () => {
     await element.updateComplete;
     await warn();
     expect(tooltip()).toBeNull();
+  });
+
+  it("reserves room above the player card for active warnings and tooltips", async () => {
+    vi.spyOn(element, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(572, 8, 136, 44),
+    );
+    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe("");
+    await warn();
+    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe(
+      "60px",
+    );
+
+    button("highLatency").click();
+    await element.updateComplete;
+    vi.spyOn(tooltip()!, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(498, 58, 284, 72),
+    );
+    window.dispatchEvent(new Event("resize"));
+    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe(
+      "138px",
+    );
+
+    button("highLatency").click();
+    await element.updateComplete;
+    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe(
+      "60px",
+    );
+    element.clear();
+    await element.updateComplete;
+    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe("");
+  });
+
+  it("updates the reserved space on resize and removes it on game teardown", async () => {
+    const bounds = vi.spyOn(element, "getBoundingClientRect");
+    bounds.mockReturnValue(new DOMRect(127, 8, 136, 44));
+    await warn();
+    bounds.mockReturnValue(new DOMRect(127, 34, 136, 44));
+    window.dispatchEvent(new Event("resize"));
+    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe(
+      "86px",
+    );
+
+    element.remove();
+    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe("");
+    window.dispatchEvent(new Event("resize"));
+    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe("");
   });
 });

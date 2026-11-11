@@ -63,7 +63,9 @@ export class GameHealth {
             // several completed windows before displaying the warning.
             this.lowFrameMs += Math.min(this.frameWindowMs, 1000);
             this.lowFrameRate = this.lowFrameMs >= 3000;
-          } else if (fps >= 35) {
+          } else if (!this.lowFrameRate || fps >= 35) {
+            // An incomplete streak must stay continuously below 30 FPS.
+            // Only an active warning uses the 35 FPS recovery threshold.
             this.lowFrameMs = 0;
             this.lowFrameRate = false;
           }

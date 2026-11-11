@@ -201,6 +201,42 @@ describe("GameHealth", () => {
     expect(health.update(now, healthy).performance).toBe(false);
   });
 
+  it("does not accumulate intermittent low-FPS windows into a sustained warning", () => {
+    const health = createHealth();
+    let now = 0;
+    for (let dip = 0; dip < 3; dip++) {
+      now = frames(health, now, 1000, 50);
+      expect(health.update(now, healthy).performance).toBe(false);
+      now = frames(health, now, 1000, 31.25);
+      expect(health.update(now, healthy).performance).toBe(false);
+    }
+  });
+
+  it("accepts RTT after a moderate-FPS window interrupts an incomplete low-FPS streak", () => {
+    const health = createHealth();
+    baseline(health, 40);
+    let now = frames(health, 4000, 1000, 50);
+    now = frames(health, now, 1000, 31.25);
+    now = frames(health, now, 500, 31.25);
+    health.recordRoundTrip(300, now);
+    expect(health.update(now, healthy).highLatency).toBe(true);
+  });
+
+  it.each([35, 40])(
+    "keeps an active warning through 30–34 FPS and clears at %i FPS",
+    (recoveryFps) => {
+      const health = createHealth();
+      let now = frames(health, 0, 3000, 50);
+      expect(health.update(now, healthy).performance).toBe(true);
+      for (const fps of [30, 32, 34]) {
+        now = frames(health, now, 1200, 1000 / fps);
+        expect(health.update(now, healthy).performance).toBe(true);
+      }
+      now = frames(health, now, 1500, 1000 / recoveryFps);
+      expect(health.update(now, healthy).performance).toBe(false);
+    },
+  );
+
   it("keeps network warnings disabled for local games while diagnosing performance", () => {
     const health = createHealth();
     baseline(health, 40);

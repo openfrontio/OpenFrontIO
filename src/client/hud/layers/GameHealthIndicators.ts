@@ -24,6 +24,43 @@ export class GameHealthIndicators extends LitElement {
   @state()
   private tooltip: Warning | null = null;
   private pinned: Warning | null = null;
+  private playerInfo: HTMLElement | null = null;
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    this.playerInfo = document.querySelector("player-info-overlay");
+    window.addEventListener("resize", this.reservePlayerInfoSpace);
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    window.removeEventListener("resize", this.reservePlayerInfoSpace);
+    this.playerInfo?.style.removeProperty("--game-health-offset");
+    this.playerInfo = null;
+  }
+
+  protected updated(): void {
+    this.reservePlayerInfoSpace();
+  }
+
+  // Keep the top-center player card below the icons and any open tooltip.
+  // Only measure when warning state, tooltip or viewport size changes.
+  private reservePlayerInfoSpace = (): void => {
+    if (!this.playerInfo) return;
+    if (!Object.values(this.status).some(Boolean)) {
+      this.playerInfo.style.removeProperty("--game-health-offset");
+      return;
+    }
+    const tooltip = this.renderRoot.querySelector('[role="tooltip"]');
+    const bottom = Math.max(
+      this.getBoundingClientRect().bottom,
+      tooltip?.getBoundingClientRect().bottom ?? 0,
+    );
+    this.playerInfo.style.setProperty(
+      "--game-health-offset",
+      `${Math.ceil(bottom) + 8}px`,
+    );
+  };
 
   static styles = css`
     :host {
