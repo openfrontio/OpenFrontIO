@@ -20,6 +20,8 @@ vi.mock("../../../../src/client/Utils", () => ({
   getGamesPlayed: vi.fn(() => 10),
   isInIframe: vi.fn(() => false),
   homeHref: vi.fn(() => "/"),
+  renderDuration: (s: number) => `${s}s`,
+  formatPercentage: (v: number) => `${v * 100}%`,
   TUTORIAL_VIDEO_URL: "https://example.com/tutorial",
 }));
 
@@ -312,10 +314,15 @@ function makeGame(
     myPlayer: () => ({
       isAlive: () => opts.alive ?? false,
       hasSpawned: () => true,
+      numTilesOwned: () => 100,
       team: () => "Red",
       clientID: () => "me",
     }),
     inSpawnPhase: () => false,
+    elapsedGameSeconds: () => 600,
+    numLandTiles: () => 1000,
+    numTilesWithFallout: () => 0,
+    playerViews: () => [],
     updatesSinceLastTick: () => {
       if (!ended || delivered) return {};
       delivered = true;
