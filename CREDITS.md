@@ -149,6 +149,16 @@ Elevation: [Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) by Mapz
 GMTED2010 and SRTM terrain data courtesy of the [U.S. Geological Survey](https://www.usgs.gov/)  
 [Public Domain](https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits)
 
+### Ukraine Map
+
+Elevation: [Terrain Tiles on AWS](https://registry.opendata.aws/terrain-tiles/), see [attribution](https://github.com/tilezen/joerd/blob/master/docs/attribution.md)
+SRTM data courtesy of the U.S. Geological Survey
+GMTED2010 data courtesy of the U.S. Geological Survey
+DOC/NOAA/NESDIS/NCEI > National Centers for Environmental Information, NESDIS, NOAA, U.S. Department of Commerce
+Produced using Copernicus data and information funded by the European Union - EU-DEM layers.
+Borders, rivers and cities: [Natural Earth](https://www.naturalearthdata.com/), Public Domain
+Lakes, reservoirs and river areas: © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), Licensed under ODbL
+
 ### Türkiye Map
 
 NOAA National Centers for Environmental Information. 2022: ETOPO 2022 15 Arc-Second Global Relief Model.
