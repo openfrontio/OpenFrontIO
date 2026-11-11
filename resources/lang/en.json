@@ -3012,7 +3012,6 @@
     "nuke_alliance_safety_duration": "{count, plural, one {1 tick (0.1s)} other {{count} ticks ({seconds}s)}}",
     "nuke_alliance_safety_label": "Ally friendly-fire safety",
     "off": "Off",
-    "on": "On",
     "open_settings_desc": "Gameplay, graphics, audio and keybind settings",
     "open_settings_label": "Settings",
     "pause_game": "Pause",

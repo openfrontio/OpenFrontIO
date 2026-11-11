@@ -1,6 +1,5 @@
 import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig } from "@openfront/engine-api/Schemas";
-import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
@@ -8,6 +7,7 @@ import { gamePortal } from "src/client/GamePortal";
 import { PauseGameIntentEvent } from "src/client/Transport";
 import { responseHasLinkedIdentity } from "../../AccountIdentity";
 import { ClientEnv } from "../../ClientEnv";
+import "../../components/OfIcon";
 import { Controller } from "../../Controller";
 import {
   AlternateViewEvent,
@@ -25,9 +25,16 @@ import {
 } from "../../utilities/LobbySettingsSummary";
 import { getMapName, homeHref, translateText } from "../../Utils";
 import type { GameView } from "../../view/GameView";
-const exitIcon = assetUrl("images/ExitIconWhite.svg");
-const settingsIcon = assetUrl("images/SettingIconWhite.svg");
-const treeIcon = assetUrl("images/TreeIconWhite.svg");
+import { HUD_LABEL, hudModalHeader, hudSwitch } from "../HudModal";
+
+const ROW_BASE =
+  "flex min-h-12 w-full items-center gap-3 rounded-lg px-2 py-1 text-start " +
+  "transition-colors disabled:opacity-60 disabled:hover:bg-transparent " +
+  "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-aquarius";
+const ROW = `${ROW_BASE} text-white hover:bg-white/6 active:bg-white/10`;
+// Exit has its own colours instead of red added to ROW: between two text-* (or
+// hover:bg-*) classes on one element the stylesheet's order wins, not ours.
+const EXIT_ROW = `${ROW_BASE} text-red-400 hover:bg-red-500/15 active:bg-red-500/25`;
 
 export class ShowSettingsModalEvent {
   constructor(
@@ -249,32 +256,23 @@ export class SettingsModal extends LitElement implements Controller {
         : translateText(`saved_games.save_status.${status}`);
     return html`
       <button
-        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors disabled:opacity-60"
+        class=${ROW}
         data-save-game
         ?disabled=${status === "saving"}
         @click="${this.onSaveButtonClick}"
       >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path
-            d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
-          />
-          <path d="M17 21v-8H7v8M7 3v5h8" />
-        </svg>
-        <div class="flex-1">
-          <div class="font-medium">
+        <of-icon name="save" size="20" class="text-white/70"></of-icon>
+        <div class="flex min-w-0 flex-1 flex-col">
+          <div class="text-sm font-semibold">
             ${translateText("saved_games.save_label")}
           </div>
-          <div class="text-sm text-slate-400" data-save-status>${desc}</div>
+          <div
+            class="text-xs text-white/55"
+            data-save-status
+            aria-live="polite"
+          >
+            ${desc}
+          </div>
         </div>
       </button>
     `;
@@ -289,21 +287,19 @@ export class SettingsModal extends LitElement implements Controller {
     const c = this.gameConfig;
     if (c === null) return null;
     const settings = notableLobbySettings(c, this.mapNationCount);
-    const disabledUnits = disabledUnitsBox(c, "mx-3 mt-2");
-    const hostCheats = hostCheatsBox(c, "mx-3 mt-2");
+    const disabledUnits = disabledUnitsBox(c, "mx-2 mt-2");
+    const hostCheats = hostCheatsBox(c, "mx-2 mt-2");
     if (settings.length === 0 && disabledUnits === null && hostCheats === null)
       return null;
     return html`
-      <div class="border-t border-slate-600 pt-3 mt-4" data-game-modifiers>
-        <div
-          class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider"
-        >
+      <div class="mt-2 border-t border-white/10 pt-2" data-game-modifiers>
+        <div class="px-2 py-1 ${HUD_LABEL}">
           ${translateText("user_setting.modifiers")}
         </div>
         ${
           settings.length > 0
             ? html`<div
-                class="flex flex-wrap gap-1 px-3 pt-1 uppercase"
+                class="flex flex-wrap gap-1 px-2 pt-1 uppercase"
                 data-modifier-tags
               >
                 ${settings.map(
@@ -327,124 +323,124 @@ export class SettingsModal extends LitElement implements Controller {
 
     return html`
       <div
-        class="modal-overlay fixed inset-0 bg-black/60 backdrop-blur-xs z-2000 flex items-center justify-center p-4"
+        class="modal-overlay fixed inset-0 z-2000 flex items-center justify-center bg-black/60 p-3 backdrop-blur-xs"
         @contextmenu=${(e: Event) => e.preventDefault()}
       >
         <div
-          class="bg-slate-800 border border-slate-600 rounded-lg max-w-md w-full max-h-[80vh] overflow-y-auto"
+          class="hud-modal flex max-h-[86dvh] w-full max-w-[420px] flex-col overflow-hidden text-white animate-hud-rise motion-reduce:animate-none"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="settings-menu-title"
         >
-          <div
-            class="flex items-center justify-between p-4 border-b border-slate-600"
-          >
-            <div class="flex items-center gap-2">
-              <img
-                src=${settingsIcon}
-                alt=""
-                width="24"
-                height="24"
-                class="align-middle"
-              />
-              <h2 class="text-xl font-semibold text-white">
-                ${translateText("user_setting.game_menu_title")}
-              </h2>
-            </div>
-            <button
-              class="text-slate-400 hover:text-white text-2xl font-bold leading-none"
-              @click=${this.closeModal}
-            >
-              ×
-            </button>
-          </div>
+          ${hudModalHeader({
+            title: translateText("user_setting.game_menu_title"),
+            titleId: "settings-menu-title",
+            onClose: () => this.closeModal(),
+          })}
 
-          <div class="p-4 flex flex-col gap-3">
+          <div class="flex flex-col overflow-y-auto p-3">
             ${this.renderSaveRow()}
 
             <button
               type="button"
               data-open-graphics
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              class=${ROW}
               @click=${this.onOpenGraphicsButtonClick}
             >
-              <img src=${settingsIcon} alt="" width="20" height="20" />
-              <span class="font-medium">
-                ${translateText("user_setting.tab_graphics")}
-              </span>
+              <of-icon
+                name="graphics"
+                size="20"
+                class="text-white/70"
+              ></of-icon>
+              <div class="flex min-w-0 flex-1 flex-col">
+                <div class="text-sm font-semibold">
+                  ${translateText("user_setting.tab_graphics")}
+                </div>
+              </div>
+              <of-icon
+                name="chevron-right"
+                size="16"
+                class="text-white/55 rtl:-scale-x-100"
+              ></of-icon>
             </button>
 
             <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              class=${ROW}
               data-open-settings
               @click="${this.onOpenSettingsButtonClick}"
             >
-              <img src=${settingsIcon} alt="" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
+              <of-icon
+                name="settings"
+                size="20"
+                class="text-white/70"
+              ></of-icon>
+              <div class="flex min-w-0 flex-1 flex-col">
+                <div class="text-sm font-semibold">
                   ${translateText("user_setting.open_settings_label")}
                 </div>
-                <div class="text-sm text-slate-400">
+                <div class="text-xs text-white/55">
                   ${translateText("user_setting.open_settings_desc")}
                 </div>
               </div>
+              <of-icon
+                name="chevron-right"
+                size="16"
+                class="text-white/55 rtl:-scale-x-100"
+              ></of-icon>
             </button>
 
             <button
-              class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
+              class=${ROW}
+              role="switch"
+              aria-checked=${this.alternateView}
+              data-toggle-terrain
               @click="${this.onTerrainButtonClick}"
             >
-              <img src=${treeIcon} alt="" width="20" height="20" />
-              <div class="flex-1">
-                <div class="font-medium">
+              <of-icon name="terrain" size="20" class="text-white/70"></of-icon>
+              <div class="flex min-w-0 flex-1 flex-col">
+                <div class="text-sm font-semibold">
                   ${translateText("user_setting.toggle_terrain")}
                 </div>
-                <div class="text-sm text-slate-400">
+                <div class="text-xs text-white/55">
                   ${translateText("user_setting.toggle_view_desc")}
                 </div>
               </div>
-              <div class="text-sm text-slate-400">
-                ${
-                  this.alternateView
-                    ? translateText("user_setting.on")
-                    : translateText("user_setting.off")
-                }
-              </div>
+              ${hudSwitch(this.alternateView)}
             </button>
 
             ${this.renderModifiers()}
 
-            <div class="border-t border-slate-600 pt-3 mt-4">
-              <div
-                class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider"
-              >
+            <div class="mt-2 border-t border-white/10 pt-2">
+              <div class="px-2 py-1 ${HUD_LABEL}">
                 ${translateText("user_setting.development_only")}
               </div>
 
-              <button
-                class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
-                @click="${this.onRenderDebugGuiButtonClick}"
-              >
-                <img src=${settingsIcon} alt="" width="20" height="20" />
-                <div class="flex-1">
-                  <div class="font-medium">
+              <button class=${ROW} @click="${this.onRenderDebugGuiButtonClick}">
+                <of-icon name="debug" size="20" class="text-white/70"></of-icon>
+                <div class="flex min-w-0 flex-1 flex-col">
+                  <div class="text-sm font-semibold">
                     ${translateText("user_setting.render_debug_gui")}
                   </div>
-                  <div class="text-sm text-slate-400">
+                  <div class="text-xs text-white/55">
                     ${translateText("user_setting.render_debug_gui_desc")}
                   </div>
                 </div>
+                <of-icon
+                  name="chevron-right"
+                  size="16"
+                  class="text-white/55 rtl:-scale-x-100"
+                ></of-icon>
               </button>
             </div>
 
-            <div class="border-t border-slate-600 pt-3 mt-4">
-              <button
-                class="flex gap-3 items-center w-full text-left p-3 hover:bg-red-600/20 rounded-sm text-red-400 transition-colors"
-                @click="${this.onExitButtonClick}"
-              >
-                <img src=${exitIcon} alt="" width="20" height="20" />
-                <div class="flex-1">
-                  <div class="font-medium">
+            <div class="mt-2 border-t border-white/10 pt-2">
+              <button class=${EXIT_ROW} @click="${this.onExitButtonClick}">
+                <of-icon name="exit" size="20"></of-icon>
+                <div class="flex min-w-0 flex-1 flex-col">
+                  <div class="text-sm font-semibold">
                     ${translateText("user_setting.exit_game_label")}
                   </div>
-                  <div class="text-sm text-slate-400">
+                  <div class="text-xs text-white/55">
                     ${translateText("user_setting.exit_game_info")}
                   </div>
                 </div>
