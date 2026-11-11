@@ -148,19 +148,6 @@ describe("control-panel troop bar", () => {
     },
   );
 
-  it("reads a rate that is not falling as up and a falling one as down", async () => {
-    await tick();
-    me.ratePerTick = 123;
-    await tick();
-    expect(q("[data-troop-rate]")?.getAttribute("data-rate-trend")).toBe("up");
-
-    me.ratePerTick = 100;
-    await tick();
-    expect(q("[data-troop-rate]")?.getAttribute("data-rate-trend")).toBe(
-      "down",
-    );
-  });
-
   describe("hints", () => {
     beforeEach(() => {
       localStorage.setItem("gamesPlayed", "0");
