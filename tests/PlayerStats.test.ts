@@ -69,9 +69,9 @@ describe("PlayerStats", () => {
     const content = playerStats.querySelector(".stats-table-content");
     expect(content?.classList).toContain("min-w-full");
     // Only selected stat tracks share definite spare space. Rank, name, and
-    // picker remain fixed and never stretch.
+    // picker never stretch; the picker's track only grows to a scrollbar.
     expect(content?.getAttribute("style")).toContain(
-      "30px var(--stats-name, 100px) auto auto auto 32px",
+      "30px var(--stats-name, 100px) auto auto auto minmax(32px, max-content)",
     );
 
     playerStats.remove();
@@ -641,7 +641,7 @@ describe("PlayerStats clan column", () => {
     // rank | clan | player | picker — no stat track, so nothing to sort on.
     expect(
       playerStats.querySelector(".stats-table-content")?.getAttribute("style"),
-    ).toContain("30px 80px var(--stats-name, 100px) 32px");
+    ).toContain("30px 80px var(--stats-name, 100px) minmax(32px, max-content)");
     expect(
       [
         ...playerStats.querySelectorAll(".stats-table-scroll .stats-table-row"),

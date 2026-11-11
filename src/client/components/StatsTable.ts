@@ -437,6 +437,9 @@ export abstract class StatsTable extends LitElement {
             );
           },
         )}
+        <!-- The list's scrollbar lands on this cell: the browser counts the
+        bar's width as the cell's margin and the picker track grows to fit
+        it, so the bar never covers the last column. -->
         <div class=${DIVIDER_CLASS} aria-hidden="true"></div>
       </div>
     `;
@@ -484,12 +487,7 @@ export abstract class StatsTable extends LitElement {
     // spare width supplied by a wider sibling; fixed tracks never stretch.
     const gridTemplate = `${columns
       .map((column) => column.width)
-      .join(" ")} ${PICKER_TRACK}`;
-    // Five rows, or four above the copy of yours.
-    const scrollHeight =
-      pinnedRow === null
-        ? "max-h-[7.5rem] md:max-h-[8.125rem]"
-        : "max-h-[6rem] md:max-h-[6.5rem]";
+      .join(" ")} minmax(${PICKER_TRACK}, max-content)`;
 
     return html`
       <div class="stats-table ${TABLE}">
@@ -545,7 +543,7 @@ export abstract class StatsTable extends LitElement {
             </div>
 
             <div
-              class="stats-table-scroll ${scrollHeight} grid col-span-full overflow-y-scroll overflow-x-hidden overscroll-contain ${SCROLLBAR}"
+              class="stats-table-scroll stats-rows grid col-span-full overflow-y-scroll overflow-x-hidden overscroll-contain ${SCROLLBAR}"
               style="grid-template-columns: subgrid; grid-column: 1 / -1;"
               role="rowgroup"
               @scroll=${this.onScroll}
