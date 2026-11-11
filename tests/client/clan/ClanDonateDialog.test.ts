@@ -125,6 +125,22 @@ describe("clan-donate-dialog", () => {
     expect(text).not.toContain("donate_irreversible_hard_payouts");
   });
 
+  it("uses wording true either way while the payouts status is unknown", async () => {
+    dialog.remove();
+    fetchClanFundTransfers.mockResolvedValue({ error: "failed" });
+    dialog = document.createElement("clan-donate-dialog") as ClanDonateDialog;
+    dialog.clanTag = "TST";
+    document.body.appendChild(dialog);
+    await flush(dialog);
+    currencyButton("hard").click();
+    await flush(dialog);
+    const text = document.body.textContent ?? "";
+    expect(text).toContain("clan_modal.donate_irreversible_payouts");
+    expect(text).toContain("clan_modal.donate_irreversible_hard_neutral");
+    expect(text).not.toContain("clan_modal.donate_irreversible_hard_payouts");
+    expect(text).not.toMatch(/donate_irreversible_hard(?!_)/);
+  });
+
   it("says the leader can send Plutonium on once clan fund payouts are on", async () => {
     dialog.remove();
     fetchClanFundTransfers.mockResolvedValue({

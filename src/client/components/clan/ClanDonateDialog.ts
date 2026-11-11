@@ -45,9 +45,12 @@ export class ClanDonateDialog extends LitElement {
   @state() private balances: { soft: number; hard: number } | null = null;
   @state() private submitting = false;
   @state() private serverError: string | null = null;
-  // Clan fund payouts on: the Plutonium warning says the leader can send it on
-  // to members, instead of promising it never comes back to a player.
-  @state() private payoutsEnabled = false;
+  // Whether clan fund payouts are on. "on": the Plutonium warning says the
+  // leader can send it on to members. "off" (feature absent): the original
+  // "never comes back to you" wording. "unknown" (still loading, or the check
+  // failed): wording that is true either way, since the donor may submit
+  // before the status arrives.
+  @state() private payouts: "unknown" | "on" | "off" = "unknown";
 
   private idempotencyKey = newIdempotencyKey();
   private portal: HTMLDivElement | null = null;
@@ -83,8 +86,13 @@ export class ClanDonateDialog extends LitElement {
   private async loadPayoutsStatus() {
     if (!this.clanTag) return;
     const res = await fetchClanFundTransfers(this.clanTag, { limit: 1 });
-    if (!this.isConnected || "error" in res) return;
-    this.payoutsEnabled = res.status.enabled;
+    if (!this.isConnected) return;
+    if ("error" in res) {
+      // 404: an API without clan fund transfers. Anything else: unknown.
+      if (res.error === "unavailable") this.payouts = "off";
+      return;
+    }
+    this.payouts = res.status.enabled ? "on" : "off";
   }
 
   private currencyLabel(type: ClanCurrencyType = this.currencyType): string {
@@ -317,7 +325,7 @@ export class ClanDonateDialog extends LitElement {
           >
             <p class="font-bold">
               ${translateText(
-                isHard && this.payoutsEnabled
+                isHard && this.payouts !== "off"
                   ? "clan_modal.donate_irreversible_payouts"
                   : "clan_modal.donate_irreversible",
               )}
@@ -326,9 +334,11 @@ export class ClanDonateDialog extends LitElement {
               isHard
                 ? html`<p class="mt-1">
                     ${translateText(
-                      this.payoutsEnabled
-                        ? "clan_modal.donate_irreversible_hard_payouts"
-                        : "clan_modal.donate_irreversible_hard",
+                      {
+                        on: "clan_modal.donate_irreversible_hard_payouts",
+                        off: "clan_modal.donate_irreversible_hard",
+                        unknown: "clan_modal.donate_irreversible_hard_neutral",
+                      }[this.payouts],
                     )}
                   </p>`
                 : ""

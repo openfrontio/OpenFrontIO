@@ -278,8 +278,12 @@ describe("Send Plutonium page", () => {
         eligibleAt: new Date(Date.now() + 2.5 * 86_400_000).toISOString(),
       }),
     ],
+    statusResponse: ClanFundTransfersResponse | { error: string } = page(
+      [],
+      status(),
+    ),
   ) {
-    fetchTransfers.mockResolvedValue(page([], status()));
+    fetchTransfers.mockResolvedValue(statusResponse);
     fetchRecipients.mockResolvedValue(eligibility);
     define("clan-send-funds-view", ClanSendFundsView);
     const el = document.createElement(
@@ -373,6 +377,34 @@ describe("Send Plutonium page", () => {
     expect(send).toHaveBeenCalledTimes(1);
     expect(send.mock.calls[0].slice(0, 3)).toEqual(["TST", "member-2", "300"]);
     expect(sent).toHaveBeenCalledTimes(1);
+  });
+
+  it("can't send until the clan fund status loads, and offers a retry", async () => {
+    const el = await mount(undefined, { error: "failed" });
+    pick(el, "member-2");
+    typeAmount(el, "10");
+    await flushAsync(el);
+    expect(el.querySelector("[data-status-failed]")?.textContent).toContain(
+      "clan_modal.clan_fund_load_failed",
+    );
+    expect(sendButton(el).disabled).toBe(true);
+
+    fetchTransfers.mockResolvedValue(page([], status()));
+    el.querySelector<HTMLButtonElement>("[data-action=retry-status]")!.click();
+    await flushAsync(el);
+    expect(el.querySelector("[data-status-failed]")).toBeNull();
+    expect(sendButton(el).disabled).toBe(false);
+  });
+
+  it("can't send when the status says this leader can't", async () => {
+    for (const s of [status({ canSend: false }), status({ enabled: false })]) {
+      const el = await mount(undefined, page([], s));
+      pick(el, "member-2");
+      typeAmount(el, "10");
+      await flushAsync(el);
+      expect(sendButton(el).disabled).toBe(true);
+      el.remove();
+    }
   });
 
   it("falls back to letting the server decide when eligibility fails", async () => {

@@ -65,6 +65,8 @@ export class ClanSendFundsView extends LitElement {
   @property() myPublicId: string | null = null;
 
   @state() private status: ClanFundTransferStatus | null = null;
+  // The status request failed: nothing can be sent until a retry loads it.
+  @state() private statusFailed = false;
   @state() private members: ClanMember[] = [];
   @state() private eligibility = new Map<string, ClanFundRecipient>();
   @state() private membersTotal = 0;
@@ -95,8 +97,13 @@ export class ClanSendFundsView extends LitElement {
   }
 
   private async loadStatus() {
+    this.statusFailed = false;
     const res = await fetchClanFundTransfers(this.clanTag, { limit: 1 });
-    if (!this.isConnected || "error" in res) return;
+    if (!this.isConnected) return;
+    if ("error" in res) {
+      this.statusFailed = true;
+      return;
+    }
     this.status = res.status;
   }
 
@@ -194,7 +201,11 @@ export class ClanSendFundsView extends LitElement {
       this.recipient !== null &&
       this.parsedAmount() !== null &&
       this.amountError() === null &&
-      (this.status === null || sendBlockedReason(this.status) === null)
+      // Only once the API has said this leader can send right now.
+      this.status !== null &&
+      this.status.enabled &&
+      this.status.canSend &&
+      sendBlockedReason(this.status) === null
     );
   }
 
@@ -244,6 +255,27 @@ export class ClanSendFundsView extends LitElement {
     return html`
       <div class="space-y-6">
         ${status ? this.renderSummary(status) : ""}
+        ${
+          this.statusFailed
+            ? html`<div
+                data-status-failed
+                role="alert"
+                class="flex items-center justify-between gap-3 bg-red-500/10 rounded-xl border border-red-500/30 p-3 text-red-300 text-sm"
+              >
+                <span
+                  >${translateText("clan_modal.clan_fund_load_failed")}</span
+                >
+                <button
+                  type="button"
+                  data-action="retry-status"
+                  @click=${() => void this.loadStatus()}
+                  class="shrink-0 px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/10"
+                >
+                  ${translateText("clan_modal.retry")}
+                </button>
+              </div>`
+            : ""
+        }
         ${
           blocked
             ? html`<div

@@ -462,8 +462,10 @@ export class ClanModal extends BaseModal {
           @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
             this.openPlayerProfile(e.detail.publicId)}
           @funds-sent=${() => {
-            // The fund's balance changed: the overview refetches on return.
+            // The fund's balance changed: the overview refetches on return,
+            // and My Clans reads balances from the cached user.
             this.detailCache = null;
+            invalidateUserMe();
             this.view = "manage";
           }}
         ></clan-send-funds-view>`;
