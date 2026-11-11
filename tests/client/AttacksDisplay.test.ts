@@ -188,16 +188,20 @@ describe("attacks-display", () => {
     expect(rows()).toHaveLength(0);
   });
 
-  it("lists my attacks before attacks on me", async () => {
+  it("lists attacks on me first, then boats coming at me, then mine", async () => {
     await setUp({
       incoming: [attack(ENEMY, ME, "in-1")],
-      outgoing: [attack(ME, ENEMY, "out-1")],
+      outgoing: [attack(ME, ENEMY, "out-1"), attack(ME, 0, "land-1")],
+      myBoats: [boat(7, player(ME))],
+      boatsAtMe: [boat(8, player(RAIDER))],
     });
 
-    expect(rows().map((r) => r.getAttribute("data-attack-dir"))).toEqual([
-      "out",
-      "in",
-    ]);
+    expect(
+      rows().map(
+        (r) =>
+          `${r.getAttribute("data-attack-dir")} ${r.getAttribute("data-attack-kind")}`,
+      ),
+    ).toEqual(["in attack", "in boat", "out attack", "out land", "out boat"]);
   });
 
   it("retaliates with the smaller of their troops and my share of mine", async () => {
