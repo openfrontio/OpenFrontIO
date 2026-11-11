@@ -4,11 +4,11 @@ import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { ClientID } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
-import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
+import { repeat } from "lit/directives/repeat.js";
 import { Controller } from "../../Controller";
 import { AttackRatioEvent, isForwardedClick } from "../../InputHandler";
 import { UIState } from "../../UIState";
@@ -16,10 +16,102 @@ import { USER_SETTINGS_CHANGED_EVENT, UserSettings } from "../../UserSettings";
 import { getGamesPlayed, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
-import { goldCoinIcon, soldierIcon } from "../HotbarIcons";
+import "../../components/OfIcon";
+import { TICKS_PER_SECOND, ticksToSeconds } from "../GameTicks";
 import { OnboardingLowTroopsEvent } from "../Onboarding";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
-const swordIcon = assetUrl("images/SwordIcon.svg");
+
+// Look. Sizes, colours, radii and spacing of each part live here, so a
+// change of look is one edit. The templates below only hold structure.
+// In portrait on phones the panel runs to the bottom of the screen, so it's
+// padded clear of the rounded corners there.
+const PANEL =
+  "relative w-full px-2 py-1 text-sm side-bar:px-5 side-bar:pb-[9px] lg:p-2";
+// Below lg one row: gold, troop bar, ratio label, slider. In portrait the
+// label and slider give way to the ratio button. From lg two rows, the rate
+// chip over the ratio label in the first column. That column's 6.5rem is
+// RATE's width: keep the two equal.
+const GRID =
+  "grid grid-cols-[auto_minmax(0,8fr)_auto_minmax(0,5fr)] items-center gap-x-2 side-bar:grid-cols-[auto_minmax(0,1fr)_auto] lg:grid-cols-[6.5rem_minmax(0,1fr)_auto] lg:gap-y-1";
+const CHIP = "flex h-6 items-center rounded-sm font-bold tabular-nums";
+const BAR_TEXT_SHADOW = "drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]";
+// The well is darker than the panel on purpose: it keeps the white numbers
+// readable over a bright map when the HUD is see-through.
+const TRACK = "rounded-sm border bg-black/40";
+const TRACK_BORDER = {
+  calm: "border-transparent",
+  alert: "border-red-500",
+} as const;
+const TROOP_FILL = "bg-malibu-blue";
+const TROOPS_OUT = "bg-sky-300";
+const TROOPS = `gap-1 ps-1.5 text-xs font-bold text-white lg:text-base ${BAR_TEXT_SHADOW}`;
+const MAX_TROOPS =
+  "me-0.5 h-5 gap-1 rounded-xs bg-black/50 px-1 text-[11px] font-bold text-white lg:px-1.5 lg:text-[13px]";
+// Inside the bar below lg; from lg a chip in the grid's empty first column.
+const RATE = `ms-1.5 text-[11px] transition-colors duration-700 ${BAR_TEXT_SHADOW} lg:absolute lg:inset-y-0 lg:end-full lg:me-2 lg:w-[6.5rem] lg:justify-center lg:text-[13px] lg:drop-shadow-none`;
+const RATE_TREND = {
+  up: "text-green-400 lg:bg-green-400/12",
+  down: "text-orange-400 lg:bg-orange-400/14",
+} as const;
+// As wide as its widest amount (999.9M), so the bar does not move as gold
+// comes in.
+const GOLD =
+  "gap-1 bg-cyber-yellow/8 px-1.5 text-xs text-cyber-yellow min-w-18.5 lg:min-w-[5.5rem] lg:gap-1.5 lg:px-2 lg:text-sm";
+// Just above the panel's edge, from the chip's start edge. On landscape phones
+// the unit bar is the row above the panel, so the pops go beside the chip,
+// toward the map. The pops share one grid cell.
+const GOLD_POPS =
+  "bottom-full start-1 mb-2 lg:start-1.5 lg:mb-3 justify-items-start sm:max-lg:landscape:top-0.5 sm:max-lg:landscape:bottom-auto sm:max-lg:landscape:start-auto sm:max-lg:landscape:end-full sm:max-lg:landscape:mb-0 sm:max-lg:landscape:me-4 sm:max-lg:landscape:justify-items-end";
+// It grows from the side it is pinned to, and each newer pop lifts it a row
+// (rank 0 is the newest, 3 the one a fourth gain pushed out). The rim keeps
+// it readable on any terrain.
+const GOLD_POP =
+  "group col-start-1 row-start-1 origin-left sm:max-lg:landscape:origin-right whitespace-nowrap text-[15px] leading-4.5 font-extrabold tabular-nums text-green-400 text-shadow-hud-rim animate-gold-pop motion-reduce:animate-gold-pop-fade transition-transform duration-220 ease-out motion-reduce:transition-none data-[rank=1]:-translate-y-4.5 data-[rank=2]:-translate-y-9 data-[rank=3]:-translate-y-13.5";
+// Older pops fade a little and a pushed-out one fades fast. Below lg only the
+// newest shows: there one pop already covers the row above the chip. A merge
+// bumps the amount.
+const GOLD_POP_AMOUNT =
+  "inline-block origin-[inherit] transition-opacity duration-220 group-data-[rank=1]:opacity-78 group-data-[rank=2]:opacity-56 group-data-[rank=3]:opacity-0 group-data-[rank=3]:duration-150 max-lg:group-data-[rank=1]:opacity-0 max-lg:group-data-[rank=2]:opacity-0 data-bump:animate-gold-pop-bump motion-reduce:data-bump:animate-none";
+// The percentage over the troops it sends below lg, both on one line from lg.
+const RATIO =
+  "gap-1 whitespace-nowrap font-bold tabular-nums text-white lg:ps-2";
+const RATIO_PERCENT = "text-xs leading-3.5 lg:text-[13px] lg:hud-caps";
+const RATIO_TROOPS =
+  "text-[11px] leading-3.5 text-white/70 lg:text-xs lg:hud-caps";
+// The track is inset by half the thumb (1rem, hud-range), so its fill and
+// marks end under the thumb's centre.
+const SLIDER = "h-7 lg:h-5";
+const SLIDER_TRACK = "inset-x-2 h-1 rounded-full bg-white/15";
+const SLIDER_FILL = "rounded-full bg-aquarius";
+const SLIDER_MARK = "h-2 w-0.5 rounded-full bg-white/30";
+// Portrait only. The button shows the ratio and opens the slider in a popup
+// above the panel: dragged along the bottom edge, it swiped through iOS's home
+// indicator to another app. The button looks like a unit tile, open like the
+// picked one; the popup is read and acted on over the map, so it is opaque.
+const RATIO_BUTTON =
+  "w-[4.25rem] justify-center gap-1 rounded-sm border p-1 font-bold tabular-nums text-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aquarius";
+const RATIO_BUTTON_STATE = {
+  closed: "border-white/15 pointer-fine:hover:bg-white/10 active:bg-white/15",
+  open: "border-aquarius bg-malibu-blue/25",
+} as const;
+// Below sm the panel is full width and the popup would run under the unit
+// column at the right edge: it stops 8px before the 30px column.
+const RATIO_POPUP =
+  "bottom-full inset-x-2 mb-2 gap-2 p-3 hud-modal rounded-lg max-sm:side-bar:end-9.5";
+// Above the grid, not in it. The sentence wraps: some languages run long.
+const HINT =
+  "mb-1 flex items-start gap-1.5 rounded-sm px-1.5 py-1 text-xs font-medium";
+const HINT_TONE = {
+  warning: "bg-orange-400/10 text-orange-300",
+  info: "bg-blue-400/10 text-blue-300",
+} as const;
+
+// Gains this close together (a conquest and its bonus, several in one tick)
+// add up in one pop.
+const GOLD_POP_MERGE_MS = 90;
+const GOLD_POP_MAX = 3;
+
+type GoldPop = { id: number; amount: bigint; merges: number };
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Controller {
@@ -53,11 +145,14 @@ export class ControlPanel extends LitElement implements Controller {
   @state()
   private _attackingTroops: number = 0;
 
+  /** The gold gains on screen, oldest first. */
   @state()
-  private _goldGain: bigint | null = null;
+  private _goldPops: GoldPop[] = [];
+  /** The pop a fourth gain pushed out, fading until its animation ends. */
   @state()
-  private _goldGainPulseId: number = 0;
-  private _goldGainTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  private _goldPopOut: GoldPop | null = null;
+  private _goldPopSeq = 0;
+  private _lastGoldGainAt = -Infinity;
 
   @state()
   private _tutorialHighlight: TutorialHighlight | null = null;
@@ -72,9 +167,11 @@ export class ControlPanel extends LitElement implements Controller {
   @state()
   private _lowTroopsAlert = false;
 
-  private _troopRateIsIncreasing: boolean = true;
+  /** The trend the rate chip shows, and the ticks in a row against it. */
+  private _rateTrendUp = true;
+  private _rateTrendStreak = 0;
 
-  private _lastTroopIncreaseRate: number;
+  private _lastTroopIncreaseRate: number | undefined;
 
   // Border detection cache
   private _nearbyPlayerIDs: Set<number> = new Set();
@@ -83,7 +180,10 @@ export class ControlPanel extends LitElement implements Controller {
   // Track last attack tick per target player (for 15-second threshold)
   private _lastAttackTickByTarget: Map<number, number> = new Map();
   private static readonly BORDER_REFRESH_INTERVAL = 10; // recompute every 1s
-  private static readonly ATTACK_THRESHOLD_TICKS = 15 * 10; // 15 seconds
+  private static readonly ATTACK_THRESHOLD_TICKS = 15 * TICKS_PER_SECOND;
+  // The rate wobbles from tick to tick as troops leave and land changes hands;
+  // three ticks (0.3 s) tell a real turn from a wobble.
+  private static readonly RATE_TREND_TICKS = 3;
 
   connectedCallback() {
     super.connectedCallback();
@@ -151,7 +251,7 @@ export class ControlPanel extends LitElement implements Controller {
       .outgoingAttacks()
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
-    this.troopRate = config.troopIncreaseRate(player) * 10;
+    this.troopRate = config.troopIncreaseRate(player) * TICKS_PER_SECOND;
 
     const helpEnabled = new UserSettings().helpMessages();
 
@@ -203,19 +303,44 @@ export class ControlPanel extends LitElement implements Controller {
     this.requestUpdate();
   }
 
-  // Last-wins: when multiple gold events arrive in one tick, the pip shows
-  // only the most recent amount (not a sum) — each gain restarts the pulse.
   private addGoldGain(amount: bigint) {
-    this._goldGain = amount;
-    this._goldGainPulseId++;
-    if (this._goldGainTimeoutId !== null) {
-      clearTimeout(this._goldGainTimeoutId);
+    const now = performance.now();
+    const newest = this._goldPops[this._goldPops.length - 1];
+    if (newest && now - this._lastGoldGainAt < GOLD_POP_MERGE_MS) {
+      // The merged pop keeps its animation; its amount bumps.
+      this._goldPops = [
+        ...this._goldPops.slice(0, -1),
+        {
+          ...newest,
+          amount: newest.amount + amount,
+          merges: newest.merges + 1,
+        },
+      ];
+    } else {
+      const pops = [
+        ...this._goldPops,
+        { id: ++this._goldPopSeq, amount, merges: 0 },
+      ];
+      // The oldest fades out instead of vanishing. One still fading from the
+      // last push goes at once.
+      if (pops.length > GOLD_POP_MAX) this._goldPopOut = pops.shift()!;
+      this._goldPops = pops;
     }
-    this._goldGainTimeoutId = setTimeout(() => {
-      this._goldGain = null;
-      this._goldGainTimeoutId = null;
-      this.requestUpdate();
-    }, 2000);
+    this._lastGoldGainAt = now;
+  }
+
+  // A pop's animation is its whole life (two seconds): it goes when the
+  // animation ends, so no timer has to match it.
+  private endGoldPop(e: Event, id: number) {
+    // The amount's bump ends too, and bubbles up here.
+    if (e.target !== e.currentTarget) return;
+    if (this._goldPopOut?.id === id) this._goldPopOut = null;
+    else this._goldPops = this._goldPops.filter((p) => p.id !== id);
+  }
+
+  private clearGoldGain() {
+    this._goldPops = [];
+    this._goldPopOut = null;
   }
 
   private trackOutgoingAttacks(player: PlayerView) {
@@ -295,7 +420,7 @@ export class ControlPanel extends LitElement implements Controller {
       if (!other.isPlayer() || !other.isAlive()) continue;
 
       const lastAttackTick = this._lastAttackTickByTarget.get(nearbyID) ?? -1;
-      const secondsSinceAttack = (currentTick - lastAttackTick) / 10;
+      const secondsSinceAttack = ticksToSeconds(currentTick - lastAttackTick);
       const hasNotAttackedRecently =
         lastAttackTick < 0 || secondsSinceAttack > 15;
 
@@ -330,19 +455,27 @@ export class ControlPanel extends LitElement implements Controller {
     document.removeEventListener("pointerdown", this.closeRatioPopupOutside, {
       capture: true,
     });
-    if (this._goldGainTimeoutId !== null) {
-      clearTimeout(this._goldGainTimeoutId);
-      this._goldGainTimeoutId = null;
-    }
+    this.clearGoldGain();
   }
 
   private updateTroopIncrease() {
     const player = this.game?.myPlayer();
     if (player === null) return;
     const troopIncreaseRate = this.game.config().troopIncreaseRate(player);
-    this._troopRateIsIncreasing =
-      troopIncreaseRate >= this._lastTroopIncreaseRate;
+    const last = this._lastTroopIncreaseRate;
     this._lastTroopIncreaseRate = troopIncreaseRate;
+    // The first tick has nothing to compare with: it keeps the colour shown.
+    if (last === undefined) return;
+
+    // Follow a turn only once it has held, so the colour does not flicker. A
+    // rate that holds still counts as rising, as it always has.
+    const up = troopIncreaseRate >= last;
+    if (up === this._rateTrendUp) {
+      this._rateTrendStreak = 0;
+    } else if (++this._rateTrendStreak >= ControlPanel.RATE_TREND_TICKS) {
+      this._rateTrendUp = up;
+      this._rateTrendStreak = 0;
+    }
   }
 
   onAttackRatioChange(newRatio: number) {
@@ -371,6 +504,9 @@ export class ControlPanel extends LitElement implements Controller {
 
   setVisibile(visible: boolean) {
     this._isVisible = visible;
+    // A dead player's panel hides while a pop may still be up, and a hidden
+    // pop's animation stops without ending.
+    if (!visible) this.clearGoldGain();
     this.requestUpdate();
   }
 
@@ -394,7 +530,12 @@ export class ControlPanel extends LitElement implements Controller {
     if (!isForwardedClick(e)) return;
     const input = e.currentTarget as HTMLInputElement | null;
     if (!input) return;
-    const rect = input.getBoundingClientRect();
+    // The thumb's centre only travels the track, which stops half a thumb
+    // short of each end of the input, so the tap is read over the track (the
+    // one beside this input: the popup has its own).
+    const track = input.parentElement?.querySelector("[data-ratio-track]");
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
     if (rect.width === 0) return;
     const min = Number(input.min);
     const max = Number(input.max);
@@ -421,130 +562,70 @@ export class ControlPanel extends LitElement implements Controller {
     return { greenPercent, orangePercent };
   }
 
-  private renderMobileTroopBar() {
+  private renderTroopBar() {
+    // Troops above a shrunken cap drain away: the rate is then below zero.
+    const sign = this.troopRate < 0 ? "−" : "+";
+    const rate = `${sign}${renderTroops(Math.abs(this.troopRate))}/s`;
     const { greenPercent, orangePercent } = this.calculateTroopBar();
+    const trend = this._rateTrendUp ? "up" : "down";
     return html`
       <div
-        class="w-full h-6 border ${
-          this._lowTroopsAlert ? "border-red-500" : "border-gray-600"
-        } rounded-md bg-gray-900/60 overflow-hidden relative"
+        data-troop-bar
+        ?data-alert=${this._lowTroopsAlert}
+        ?data-attacking=${this._attackingTroops > 0}
+        class="relative h-6 min-w-0 lg:col-start-2 lg:row-start-1 ${this.tutorialHighlightClass(
+          "troops",
+        )}"
       >
-        <div class="relative h-full">
+        <div
+          class="absolute inset-0 overflow-hidden ${TRACK} ${
+            this._lowTroopsAlert ? TRACK_BORDER.alert : TRACK_BORDER.calm
+          }"
+        >
           <div
-            class="absolute inset-y-0 left-0 w-full origin-left bg-malibu-blue transition-transform duration-200 ease-out"
+            class="absolute inset-y-0 left-0 w-full origin-left transition-transform duration-200 ease-out ${TROOP_FILL}"
             style="transform: scaleX(${greenPercent / 100});"
           ></div>
           <div
-            class="absolute inset-y-0 left-0 w-full origin-left bg-aquarius transition-transform duration-200 ease-out"
+            class="absolute inset-y-0 left-0 w-full origin-left transition-transform duration-200 ease-out ${TROOPS_OUT}"
             style="transform: translateX(${greenPercent}%) scaleX(${
               orangePercent / 100
             });"
           ></div>
+          ${
+            this._lowTroopsAlert
+              ? html`<div
+                  class="troop-bar-alert absolute inset-0 bg-red-600"
+                ></div>`
+              : nothing
+          }
         </div>
-        ${
-          this._lowTroopsAlert
-            ? html`<div
-                class="troop-bar-alert absolute inset-0 bg-red-600"
-              ></div>`
-            : nothing
-        }
+        <!-- One line that clips: when the three do not fit, the max wraps out
+             of sight first, then the rate; the count always stays. From lg
+             the rate leaves the line for the chip column. -->
         <div
-          class="absolute inset-0 flex items-center justify-between px-1.5 text-xs font-bold leading-none pointer-events-none"
+          class="relative flex h-6 flex-wrap content-start items-center overflow-hidden lg:flex-nowrap lg:overflow-visible"
           translate="no"
         >
-          <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-            >${renderTroops(this._troops)}</span
-          >
-          <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-            >${renderTroops(this._maxTroops)}</span
-          >
-        </div>
-        <div
-          class="absolute inset-0 flex items-center justify-center pointer-events-none"
-          translate="no"
-        >
-          <div
-            class="flex items-center gap-0.5 px-1 ${this.tutorialHighlightClass(
+          <span data-troops class="flex h-6 shrink-0 items-center ${TROOPS}">
+            <of-icon name="troops" size="14" class="max-lg:hidden"></of-icon>
+            <span class="hud-caps">${renderTroops(this._troops)}</span>
+          </span>
+          <span
+            data-troop-rate
+            data-rate-trend=${trend}
+            class="shrink-0 ${CHIP} ${RATE} ${RATE_TREND[trend]} ${this.tutorialHighlightClass(
               "troop_rate",
             )}"
           >
-            <img
-              src=${soldierIcon}
-              alt=""
-              aria-hidden="true"
-              width="12"
-              height="12"
-              class="brightness-0 invert drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-            />
-            <span
-              class="text-[10px] font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${
-                this._troopRateIsIncreasing
-                  ? "text-green-400"
-                  : "text-orange-400"
-              }"
-              >+${renderTroops(this.troopRate)}/s</span
-            >
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  private renderDesktopTroopBar() {
-    const { greenPercent, orangePercent } = this.calculateTroopBar();
-    return html`
-      <div
-        class="w-full h-6 border ${
-          this._lowTroopsAlert ? "border-red-500" : "border-gray-600"
-        } rounded-md bg-gray-900/60 overflow-hidden relative"
-      >
-        <div class="relative h-full">
-          <div
-            class="absolute inset-y-0 left-0 w-full origin-left bg-malibu-blue transition-transform duration-200 ease-out"
-            style="transform: scaleX(${greenPercent / 100});"
-          ></div>
-          <div
-            class="absolute inset-y-0 left-0 w-full origin-left bg-aquarius transition-transform duration-200 ease-out"
-            style="transform: translateX(${greenPercent}%) scaleX(${
-              orangePercent / 100
-            });"
-          ></div>
-        </div>
-        ${
-          this._lowTroopsAlert
-            ? html`<div
-                class="troop-bar-alert absolute inset-0 bg-red-600"
-              ></div>`
-            : nothing
-        }
-        <div
-          class="absolute inset-0 flex items-center text-lg font-bold leading-none pointer-events-none"
-          translate="no"
-        >
-          <span class="flex-1 flex justify-end h-full items-center pr-0.5">
-            <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-              >${renderTroops(this._troops)}</span
-            >
+            <span class="lg:hud-caps">${rate}</span>
           </span>
           <span
-            class="h-full flex items-center px-0.5 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-            >/</span
+            data-max-troops
+            class="ms-auto flex shrink-0 items-center ${MAX_TROOPS}"
           >
-          <span
-            class="flex-1 flex justify-start h-full items-center pl-0.5 gap-0.5"
-          >
-            <span
-              class="text-white tabular-nums w-[3.5rem] drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-              >${renderTroops(this._maxTroops)}</span
-            >
-            <img
-              src=${soldierIcon}
-              alt=""
-              aria-hidden="true"
-              width="22"
-              height="22"
-              class="shrink-0 brightness-0 invert drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ml-1.5"
-            />
+            <of-icon name="max" size="10" class="max-lg:hidden"></of-icon>
+            <span class="hud-caps">${renderTroops(this._maxTroops)}</span>
           </span>
         </div>
       </div>
@@ -557,275 +638,209 @@ export class ControlPanel extends LitElement implements Controller {
 
   private renderNotification() {
     if (!this._notification) return html``;
-    const isWarning = this._notification.type === "warning";
+    const { type, message } = this._notification;
     return html`
-      <div
-        class="flex items-center gap-1.5 px-1.5 py-1 rounded-md border text-xs font-medium mb-1 ${
-          isWarning
-            ? "border-orange-400/60 bg-orange-400/10 text-orange-300"
-            : "border-blue-400/60 bg-blue-400/10 text-blue-300"
-        }"
-      >
-        <span class="shrink-0">${isWarning ? "⚠" : "ℹ"}</span>
-        <span>${translateText(this._notification.message)}</span>
+      <div data-hint=${type} class="${HINT} ${HINT_TONE[type]}">
+        <of-icon name=${type} size="14" class="mt-px shrink-0"></of-icon>
+        <span>${translateText(message)}</span>
       </div>
     `;
   }
 
-  private renderDesktop() {
-    return html`
-      ${this.renderNotification()}
-      <!-- Row 1: troop rate | troop bar | gold -->
-      <div class="flex gap-1.5 items-center mb-1">
-        <!-- Troop rate -->
-        <div
-          class="flex items-center gap-1 shrink-0 border rounded-md font-bold text-sm py-0.5 px-1 w-[5.5rem] ${this.tutorialHighlightClass(
-            "troop_rate",
-          )} ${
-            this._troopRateIsIncreasing
-              ? "border-green-400"
-              : "border-orange-400"
-          }"
-          translate="no"
-        >
-          <img
-            src=${soldierIcon}
-            alt=""
-            aria-hidden="true"
-            width="13"
-            height="13"
-            class="shrink-0"
-            style="filter: ${
-              this._troopRateIsIncreasing
-                ? "brightness(0) saturate(100%) invert(74%) sepia(44%) saturate(500%) hue-rotate(83deg) brightness(103%)"
-                : "brightness(0) saturate(100%) invert(65%) sepia(60%) saturate(600%) hue-rotate(330deg) brightness(105%)"
-            }"
-          />
-          <span
-            class="text-sm font-bold tabular-nums ${
-              this._troopRateIsIncreasing ? "text-green-400" : "text-orange-400"
-            }"
-            >+${renderTroops(this.troopRate)}/s</span
-          >
-        </div>
-        <!-- Troop bar -->
-        <div class="flex-1 ${this.tutorialHighlightClass("troops")}">
-          ${this.renderDesktopTroopBar()}
-        </div>
-        <!-- Gold -->
-        <div
-          class="flex items-center gap-1 shrink-0 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm py-0.5 px-1 min-w-[4.5rem] relative ${this.tutorialHighlightClass(
-            "gold",
-          )}"
-          translate="no"
-        >
-          ${
-            this._goldGain !== null
-              ? keyed(
-                  this._goldGainPulseId,
-                  html`<span
-                    class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-sm font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
-                    >+${renderNumber(this._goldGain)}</span
-                  >`,
-                )
-              : ""
-          }
-          <img src=${goldCoinIcon} width="13" height="13" class="shrink-0" />
-          <span class="tabular-nums">${renderNumber(this._gold)}</span>
-        </div>
-      </div>
-      <!-- Row 2: attack ratio | slider -->
-      <div
-        class="flex items-center gap-1.5 ${this.tutorialHighlightClass(
-          "attack_ratio",
-        )}"
-        translate="no"
-      >
-        <div
-          class="flex items-center gap-1 shrink-0 border border-gray-600 rounded-md px-1 py-0.5 text-sm font-bold text-white cursor-pointer w-[8rem]"
-        >
-          <img
-            src=${swordIcon}
-            alt=""
-            aria-hidden="true"
-            width="12"
-            height="12"
-            style="filter: brightness(0) invert(1);"
-          />
-          <span
-            >${(this.attackRatio * 100).toFixed(0)}%
-            (${renderTroops(
-              (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
-            )})</span
-          >
-        </div>
-        <input
-          type="range"
-          min="1"
-          max="100"
-          .value=${String(Math.round(this.attackRatio * 100))}
-          @input=${(e: Event) => this.handleRatioSliderInput(e)}
-          @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
-          @click=${(e: MouseEvent) => this.handleRatioSliderClick(e)}
-          data-radial-click-through
-          class="flex-1 h-1.5 accent-aquarius cursor-pointer"
-        />
-      </div>
-    `;
-  }
-
-  private getMobileAttackRatioLabel(): string {
+  private attackRatioLabel(): string {
     const percent = (this.attackRatio * 100).toFixed(0);
     const troops = renderTroops(
       (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
     );
-    const translated = translateText("control_panel.attack_ratio", {
-      percent,
+    // Keep a translation only if it shows the percent (a missing one comes
+    // back as its key). Look for a marker in the percent's place: the number
+    // itself can also turn up in the troop count.
+    const marker = "\u0000";
+    const showsPercent = translateText("control_panel.attack_ratio", {
+      percent: marker,
       troops,
-    });
-    return translated !== "control_panel.attack_ratio" &&
-      translated.includes(percent)
-      ? translated
-      : `${percent}%\n(${troops})`;
+    }).includes(marker);
+    return showsPercent
+      ? translateText("control_panel.attack_ratio", { percent, troops })
+      : `${percent}%\n${troops}`;
   }
 
-  private renderMobile() {
+  private renderGold() {
+    const live = this._goldPops;
+    const out = this._goldPopOut;
     return html`
-      ${this.renderNotification()}
-      <div class="flex gap-2 items-center">
-        <!-- Gold -->
-        <div
-          class="flex items-center justify-center p-1 gap-0.5 border rounded-md border-yellow-400 font-bold text-yellow-400 text-xs w-1/5 shrink-0 relative ${this.tutorialHighlightClass(
-            "gold",
-          )}"
-          translate="no"
+      <span
+        data-gold
+        class="relative shrink-0 lg:col-start-3 lg:row-start-1 ${CHIP} ${GOLD} ${this.tutorialHighlightClass(
+          "gold",
+        )}"
+        translate="no"
+      >
+        <span
+          data-gold-pops
+          class="pointer-events-none absolute grid ${GOLD_POPS}"
         >
-          ${
-            this._goldGain !== null
-              ? keyed(
-                  this._goldGainPulseId,
-                  html`<span
-                    class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-xs font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
-                    >+${renderNumber(this._goldGain)}</span
-                  >`,
-                )
-              : ""
-          }
-          <img src=${goldCoinIcon} width="13" height="13" />
-          <span class="px-0.5">${renderNumber(this._gold)}</span>
-        </div>
-        <!-- Troop bar -->
-        <div
-          class="w-[40%] shrink-0 side-bar:flex-1 side-bar:min-w-0 flex items-center ${this.tutorialHighlightClass(
-            "troops",
-          )}"
-        >
-          ${this.renderMobileTroopBar()}
-        </div>
-        <!-- Sword + % and troop count label -->
-        <div
-          class="flex flex-col items-center justify-center shrink-0 side-bar:hidden"
-        >
-          <div class="flex items-center gap-0.5">
-            <img
-              src=${swordIcon}
-              alt=""
-              aria-hidden="true"
-              width="10"
-              height="10"
-              style="filter: brightness(0) invert(1);"
-            />
-            <span
-              class="text-white text-[11px] font-bold tabular-nums text-center leading-tight whitespace-pre-wrap"
-              >${this.getMobileAttackRatioLabel()}</span
-            >
-          </div>
-        </div>
-        <!-- Attack ratio slider. In portrait, a button that opens it in a
-             popup instead, away from the home indicator at the bottom edge. -->
-        <button
-          type="button"
-          data-ratio-popup-button
-          aria-expanded=${this._ratioPopupOpen ? "true" : "false"}
-          aria-label=${translateText("control_panel.attack_ratio_button", {
-            percent: (this.attackRatio * 100).toFixed(0),
-          })}
-          class="hidden side-bar:flex w-[4.25rem] shrink-0 items-center justify-center gap-1 border rounded-md p-1 ${
-            this._ratioPopupOpen ? "border-aquarius" : "border-gray-600"
-          } ${this.tutorialHighlightClass("attack_ratio")}"
-          translate="no"
-          @click=${() => (this._ratioPopupOpen = !this._ratioPopupOpen)}
-        >
-          <img
-            src=${swordIcon}
-            alt=""
-            aria-hidden="true"
-            width="10"
-            height="10"
-            style="filter: brightness(0) invert(1);"
-          />
-          <span
-            class="text-white text-[11px] font-bold tabular-nums text-center leading-tight whitespace-pre-wrap"
-            >${this.getMobileAttackRatioLabel()}</span
-          >
-        </button>
+          ${repeat(
+            out ? [out, ...live] : live,
+            (p) => p.id,
+            (p) =>
+              html`<span
+                data-gold-pop
+                data-rank=${
+                  p === out ? GOLD_POP_MAX : live.length - 1 - live.indexOf(p)
+                }
+                class=${GOLD_POP}
+                aria-hidden="true"
+                @animationend=${(e: Event) => this.endGoldPop(e, p.id)}
+                @animationcancel=${(e: Event) => this.endGoldPop(e, p.id)}
+                >${
+                  // A merge draws the amount again, so its bump plays again.
+                  keyed(
+                    p.merges,
+                    html`<span
+                      ?data-bump=${p.merges > 0}
+                      class=${GOLD_POP_AMOUNT}
+                      >+${renderNumber(p.amount)}</span
+                    >`,
+                  )
+                }</span
+              >`,
+          )}
+        </span>
+        <of-icon name="gold" size="14"></of-icon>
+        <span class="ms-auto hud-caps">${renderNumber(this._gold)}</span>
+      </span>
+    `;
+  }
+
+  private renderRatioLabel() {
+    return html`
+      <span
+        data-attack-ratio-label
+        class="flex items-center side-bar:hidden lg:col-start-1 lg:row-start-2 ${RATIO}"
+        translate="no"
+      >
+        ${this.renderRatioText()}
+      </span>
+    `;
+  }
+
+  private renderRatioText() {
+    // A translation without a line break lands whole on the first line.
+    const [percent, ...troops] = this.attackRatioLabel().split("\n");
+    return html`
+      <of-icon name="sword" size="12"></of-icon>
+      <span
+        class="flex flex-col items-end lg:flex-row lg:items-center lg:gap-1"
+      >
+        <span class=${RATIO_PERCENT}>${percent}</span>
         ${
-          this._ratioPopupOpen
-            ? html`<div
-                data-ratio-popup
-                class="hidden side-bar:flex absolute bottom-full inset-x-2 mb-2 items-center gap-2 px-3 py-3 hud-modal rounded-lg"
-                translate="no"
-              >
-                <img
-                  src=${swordIcon}
-                  alt=""
-                  aria-hidden="true"
-                  width="14"
-                  height="14"
-                  style="filter: brightness(0) invert(1);"
-                />
-                <!-- Percent centred over the troop count, in a fixed width so
-                     the slider doesn't move as the numbers grow. -->
-                <span
-                  class="flex flex-col items-center w-14 shrink-0 text-white text-xs font-bold tabular-nums leading-tight"
-                  ><span>${(this.attackRatio * 100).toFixed(0)}%</span
-                  ><span
-                    >(${renderTroops(
-                      (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
-                    )})</span
-                  ></span
-                >
-                <input
-                  type="range"
-                  min="1"
-                  max="100"
-                  .value=${String(Math.round(this.attackRatio * 100))}
-                  @input=${(e: Event) => this.handleRatioSliderInput(e)}
-                  @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
-                  @click=${(e: MouseEvent) => this.handleRatioSliderClick(e)}
-                  data-radial-click-through
-                  class="flex-1 min-w-0 h-1.5 accent-aquarius cursor-pointer"
-                />
-              </div>`
+          troops.length > 0
+            ? html`<span class=${RATIO_TROOPS}>${troops.join(" ")}</span>`
             : nothing
         }
-        <div
-          class="flex-1 min-w-0 side-bar:hidden ${this.tutorialHighlightClass(
-            "attack_ratio",
-          )}"
-          translate="no"
+      </span>
+    `;
+  }
+
+  private renderRatioSlider() {
+    return html`
+      <div
+        class="relative min-w-0 side-bar:hidden lg:col-span-2 lg:col-start-2 lg:row-start-2 ${SLIDER} ${this.tutorialHighlightClass(
+          "attack_ratio",
+        )}"
+        translate="no"
+      >
+        ${this.renderRatioRange()}
+      </div>
+    `;
+  }
+
+  /** The track, its fill and marks, and the input that draws the thumb. */
+  private renderRatioRange() {
+    const percent = Math.round(this.attackRatio * 100);
+    return html`
+      <div
+        data-ratio-track
+        class="pointer-events-none absolute top-1/2 -translate-y-1/2 ${SLIDER_TRACK}"
+        style="--ratio: ${(percent - 1) / 99}"
+        aria-hidden="true"
+      >
+        <div class="h-full w-[calc(var(--ratio)*100%)] ${SLIDER_FILL}"></div>
+        <!-- 25, 50, 75 and 100 on the slider's 1 to 100 scale. -->
+        ${[
+          "start-[24.24%]",
+          "start-[49.49%]",
+          "start-[74.75%]",
+          "start-full",
+        ].map(
+          (at) =>
+            html`<i
+              class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 ${at} ${SLIDER_MARK}"
+            ></i>`,
+        )}
+      </div>
+      <input
+        type="range"
+        min="1"
+        max="100"
+        .value=${String(percent)}
+        aria-label=${translateText("user_setting.attack_ratio_label")}
+        aria-valuetext="${percent}%"
+        @input=${(e: Event) => this.handleRatioSliderInput(e)}
+        @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
+        @click=${(e: MouseEvent) => this.handleRatioSliderClick(e)}
+        data-radial-click-through
+        class="hud-range absolute inset-0 h-full w-full cursor-pointer rounded-sm"
+      />
+    `;
+  }
+
+  private renderRatioButton() {
+    return html`
+      <button
+        type="button"
+        data-ratio-popup-button
+        aria-expanded=${this._ratioPopupOpen ? "true" : "false"}
+        aria-label=${translateText("control_panel.attack_ratio_button", {
+          percent: (this.attackRatio * 100).toFixed(0),
+        })}
+        class="hidden items-center side-bar:flex ${RATIO_BUTTON} ${
+          RATIO_BUTTON_STATE[this._ratioPopupOpen ? "open" : "closed"]
+        } ${this.tutorialHighlightClass("attack_ratio")}"
+        translate="no"
+        @click=${() => (this._ratioPopupOpen = !this._ratioPopupOpen)}
+      >
+        ${this.renderRatioText()}
+      </button>
+    `;
+  }
+
+  private renderRatioPopup() {
+    if (!this._ratioPopupOpen) return nothing;
+    return html`
+      <div
+        data-ratio-popup
+        class="absolute hidden items-center side-bar:flex ${RATIO_POPUP}"
+        translate="no"
+      >
+        <of-icon name="sword" size="14"></of-icon>
+        <!-- Percent centred over the troop count, in a fixed width so the
+             slider doesn't move as the numbers grow. -->
+        <span
+          class="flex w-14 shrink-0 flex-col items-center font-bold tabular-nums text-white"
         >
-          <input
-            type="range"
-            min="1"
-            max="100"
-            .value=${String(Math.round(this.attackRatio * 100))}
-            @input=${(e: Event) => this.handleRatioSliderInput(e)}
-            @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
-            @click=${(e: MouseEvent) => this.handleRatioSliderClick(e)}
-            data-radial-click-through
-            class="w-full h-1.5 accent-aquarius cursor-pointer"
-          />
+          <span class=${RATIO_PERCENT}
+            >${(this.attackRatio * 100).toFixed(0)}%</span
+          >
+          <span class=${RATIO_TROOPS}
+            >${renderTroops(
+              (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
+            )}</span
+          >
+        </span>
+        <div class="relative min-w-0 flex-1 ${SLIDER}">
+          ${this.renderRatioRange()}
         </div>
       </div>
     `;
@@ -833,33 +848,18 @@ export class ControlPanel extends LitElement implements Controller {
 
   render() {
     return html`
-      <style>
-        @keyframes gold-gain-pop {
-          0% {
-            transform: translateY(4px);
-            opacity: 0;
-          }
-          100% {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-        .gold-gain-pop {
-          animation: gold-gain-pop 0.25s ease-out;
-        }
-      </style>
-      <!-- In portrait on phones the panel runs to the bottom of the screen,
-           so it's padded clear of the rounded corners there. -->
       <div
-        class="relative pointer-events-auto ${
-          this._isVisible
-            ? "relative w-full text-sm px-2 py-1 side-bar:px-5 side-bar:pb-[9px]"
-            : "hidden"
-        }"
+        data-control-panel
+        class="pointer-events-auto ${this._isVisible ? PANEL : "hidden"}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
-        <div class="lg:hidden">${this.renderMobile()}</div>
-        <div class="hidden lg:block">${this.renderDesktop()}</div>
+        ${this.renderNotification()}
+        <div class=${GRID}>
+          ${this.renderGold()} ${this.renderTroopBar()}
+          ${this.renderRatioLabel()} ${this.renderRatioButton()}
+          ${this.renderRatioSlider()}
+        </div>
+        ${this.renderRatioPopup()}
       </div>
     `;
   }

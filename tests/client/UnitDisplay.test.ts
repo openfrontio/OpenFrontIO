@@ -174,11 +174,12 @@ describe("mobile UnitDisplay layout", () => {
     try {
       await display.updateComplete;
       const cityButton = display.querySelector(".unit-display-grid > * > div");
+      const classes = [...(cityButton?.classList ?? [])];
 
-      expect(cityButton?.classList.contains("hover:bg-gray-800")).toBe(false);
-      expect(
-        cityButton?.classList.contains("pointer-fine:hover:bg-gray-800"),
-      ).toBe(true);
+      expect(classes.some((c) => c.startsWith("hover:"))).toBe(false);
+      expect(classes.some((c) => c.startsWith("pointer-fine:hover:"))).toBe(
+        true,
+      );
     } finally {
       display.remove();
     }
@@ -1389,5 +1390,336 @@ describe("UnitDisplay as a side column below lg in portrait", () => {
         display.remove();
       }
     });
+  });
+});
+
+describe("UnitDisplay tiles", () => {
+  test("each tile is named after its unit and says whether it is armed", async () => {
+    const { display } = makeDisplay(UnitType.Port);
+    try {
+      await display.updateComplete;
+
+      const tiles = display.querySelectorAll('[role="button"]');
+      expect(tiles).toHaveLength(BuildMenus.types.length);
+      expect(tiles[0].getAttribute("aria-label")).toBe("unit_type.city");
+      const pressed = [...tiles].filter(
+        (tile) => tile.getAttribute("aria-pressed") === "true",
+      );
+      expect(pressed).toHaveLength(1);
+      expect(pressed[0].closest("[data-unit]")?.getAttribute("data-unit")).toBe(
+        "port",
+      );
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("a unit that costs more than my gold is marked and a click does not pick it", async () => {
+    const { display, inputHandler } = makeDisplay();
+    try {
+      (display as any).playerBuildables = [
+        { type: UnitType.City, cost: 1001n },
+      ];
+      display.requestUpdate();
+      await display.updateComplete;
+
+      const city = display.querySelector<HTMLElement>(
+        '[data-unit="city"] > [role="button"]',
+      );
+      const factory = display.querySelector(
+        '[data-unit="factory"] > [role="button"]',
+      );
+      expect(city?.getAttribute("aria-disabled")).toBe("true");
+      expect(factory?.getAttribute("aria-disabled")).toBe("false");
+
+      city?.click();
+      expect(inputHandler.setGhostStructure).not.toHaveBeenCalled();
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("shows a unit's price once the worker has sent it", async () => {
+    const { display } = makeDisplay();
+    try {
+      await display.updateComplete;
+      const price = () =>
+        display.querySelector('[data-unit="city"] [data-unit-price]');
+      // Unknown until the worker answers, but the line is already there.
+      expect(price()).not.toBeNull();
+      expect(price()?.textContent).toBe("");
+
+      (display as any).playerBuildables = [
+        { type: UnitType.City, cost: 1000n },
+      ];
+      display.requestUpdate();
+      await display.updateComplete;
+      expect(price()?.textContent).toBe("1.00K");
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("a tile's description reads its price", async () => {
+    const { display } = makeDisplay();
+    try {
+      (display as any).playerBuildables = [
+        { type: UnitType.City, cost: 1000n },
+      ];
+      display.requestUpdate();
+      await display.updateComplete;
+
+      const city = display.querySelector(
+        '[data-unit="city"] > [role="button"]',
+      );
+      const description = document.getElementById(
+        city?.getAttribute("aria-describedby") ?? "",
+      );
+      expect(description?.textContent).toBe("1.00K");
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("shows a count for buildings and warships, none for bombs", async () => {
+    const { display } = makeDisplay();
+    try {
+      // With a port and a silo, so no tile shows a lock in place of its count.
+      (display.game.myPlayer() as any).units = () => [{}];
+      display.requestUpdate();
+      await display.updateComplete;
+
+      expect(
+        display.querySelector('[data-unit="city"] [data-unit-count]'),
+      ).not.toBeNull();
+      expect(
+        display.querySelector('[data-unit="warship"] [data-unit-count]'),
+      ).not.toBeNull();
+      expect(
+        display.querySelector('[data-unit="atom_bomb"] [data-unit-count]'),
+      ).toBeNull();
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("the grid holds only the tiles, and each tile comes first in its item", async () => {
+    const { display } = makeDisplay(null, [UnitType.Factory]);
+    try {
+      await display.updateComplete;
+
+      const items = [
+        ...(display.querySelector(".unit-display-grid")?.children ?? []),
+      ];
+      expect(items).toHaveLength(BuildMenus.types.length - 1);
+      for (const item of items) {
+        expect(item.firstElementChild?.getAttribute("role")).toBe("button");
+      }
+    } finally {
+      display.remove();
+    }
+  });
+});
+
+describe("why a unit cannot be built", () => {
+  /** Gives my player the gold and the buildings a test asks for. */
+  function own(display: UnitDisplay, gold: bigint, owned: UnitType[] = []) {
+    const player = display.game.myPlayer() as any;
+    player.gold = vi.fn(() => gold);
+    player.units = vi.fn((unitType: UnitType) =>
+      owned.includes(unitType) ? [{}] : [],
+    );
+    (display as any).playerBuildables = [
+      { type: UnitType.City, cost: 1000n },
+      { type: UnitType.Warship, cost: 500n },
+      { type: UnitType.AtomBomb, cost: 750n },
+    ];
+    display.requestUpdate();
+    return player;
+  }
+
+  const tile = (display: UnitDisplay, unit: string) =>
+    display.querySelector<HTMLElement>(
+      `[data-unit="${unit}"] > [role="button"]`,
+    );
+
+  test("canBuild is true exactly when the unit is ready, and answers as before", () => {
+    const { display } = makeDisplay(null, [UnitType.Factory]);
+    try {
+      const cases: [bigint, UnitType[], UnitType, boolean][] = [
+        [1000n, [], UnitType.City, true],
+        [999n, [], UnitType.City, false],
+        [1000n, [], UnitType.AtomBomb, false],
+        [1000n, [UnitType.MissileSilo], UnitType.AtomBomb, true],
+        [1000n, [], UnitType.Warship, false],
+        [1000n, [UnitType.Port], UnitType.Warship, true],
+        [1000n, [], UnitType.Factory, false],
+      ];
+      for (const [gold, owned, unitType, buildable] of cases) {
+        own(display, gold, owned);
+        const ud = display as any;
+        expect(ud.canBuild(unitType)).toBe(buildable);
+        expect(ud.buildState(unitType) === "ready").toBe(buildable);
+      }
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("a missing silo or port locks a unit even with the gold for it", async () => {
+    const { display } = makeDisplay();
+    try {
+      own(display, 999n);
+      await display.updateComplete;
+      expect(tile(display, "city")?.dataset.buildState).toBe("poor");
+      expect(tile(display, "atom_bomb")?.dataset.buildState).toBe("locked");
+      expect(tile(display, "warship")?.dataset.buildState).toBe("locked");
+
+      own(display, 1000n);
+      await display.updateComplete;
+      expect(tile(display, "city")?.dataset.buildState).toBe("ready");
+      expect(tile(display, "atom_bomb")?.dataset.buildState).toBe("locked");
+
+      own(display, 1000n, [UnitType.MissileSilo, UnitType.Port]);
+      await display.updateComplete;
+      expect(tile(display, "atom_bomb")?.dataset.buildState).toBe("ready");
+      expect(tile(display, "warship")?.dataset.buildState).toBe("ready");
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("a tile that cannot be picked is disabled and its name says why", async () => {
+    const { display } = makeDisplay();
+    try {
+      own(display, 999n);
+      await display.updateComplete;
+
+      const city = tile(display, "city");
+      expect(city?.getAttribute("aria-disabled")).toBe("true");
+      expect(city?.getAttribute("aria-label")).toBe(
+        "unit_type.city, build_menu.not_enough_money",
+      );
+      const bomb = tile(display, "atom_bomb");
+      expect(bomb?.getAttribute("aria-disabled")).toBe("true");
+      expect(bomb?.getAttribute("aria-label")).toBe(
+        "unit_type.atom_bomb, build_menu.requires",
+      );
+      const post = tile(display, "defense_post");
+      expect(post?.getAttribute("aria-disabled")).toBe("false");
+      expect(post?.getAttribute("aria-label")).toBe("unit_type.defense_post");
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("a locked tile shows a lock in place of its count", async () => {
+    const { display } = makeDisplay();
+    try {
+      own(display, 999n);
+      await display.updateComplete;
+
+      const warship = display.querySelector('[data-unit="warship"]');
+      expect(warship?.querySelector("[data-unit-lock]")).not.toBeNull();
+      expect(warship?.querySelector("[data-unit-count]")).toBeNull();
+      expect(
+        display.querySelector('[data-unit="atom_bomb"] [data-unit-lock]'),
+      ).not.toBeNull();
+      const city = display.querySelector('[data-unit="city"]');
+      expect(city?.querySelector("[data-unit-lock]")).toBeNull();
+      expect(city?.querySelector("[data-unit-count]")).not.toBeNull();
+
+      own(display, 1000n, [UnitType.Port]);
+      await display.updateComplete;
+      expect(warship?.querySelector("[data-unit-lock]")).toBeNull();
+      expect(warship?.querySelector("[data-unit-count]")).not.toBeNull();
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("the details say why a unit cannot be picked", async () => {
+    const { display } = makeDisplay();
+    try {
+      own(display, 999n);
+      await display.updateComplete;
+      const details = async (unit: string) => {
+        display
+          .querySelector(`[data-unit="${unit}"]`)
+          ?.dispatchEvent(new MouseEvent("mouseenter"));
+        await display.updateComplete;
+        return display.querySelector(".unit-display-tooltip")?.textContent;
+      };
+
+      expect(await details("city")).toContain("build_menu.not_enough_money");
+      expect(await details("city")).not.toContain("build_menu.requires");
+      expect(await details("atom_bomb")).toContain("build_menu.requires");
+      expect(await details("atom_bomb")).not.toContain(
+        "build_menu.not_enough_money",
+      );
+      const ready = await details("defense_post");
+      expect(ready).not.toContain("build_menu.not_enough_money");
+      expect(ready).not.toContain("build_menu.requires");
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("a disabled unit has no tile and cannot be built", async () => {
+    const { display } = makeDisplay(null, [UnitType.AtomBomb]);
+    try {
+      own(display, 1000n, [UnitType.MissileSilo]);
+      await display.updateComplete;
+
+      expect(display.querySelector('[data-unit="atom_bomb"]')).toBeNull();
+      expect((display as any).canBuild(UnitType.AtomBomb)).toBe(false);
+      expect(tile(display, "hydrogen_bomb")?.dataset.buildState).toBe("ready");
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("the armed unit stays pressed when I can no longer afford it, and a click puts it down", async () => {
+    const { display, inputHandler } = makeDisplay(UnitType.City);
+    try {
+      own(display, 999n);
+      await display.updateComplete;
+
+      const city = tile(display, "city");
+      expect(city?.dataset.buildState).toBe("poor");
+      expect(city?.getAttribute("aria-pressed")).toBe("true");
+      // Still enabled: a click on it puts it down.
+      expect(city?.getAttribute("aria-disabled")).toBe("false");
+
+      city?.click();
+      expect(inputHandler.setGhostStructure).toHaveBeenCalledWith(
+        null,
+        "GUIclick",
+      );
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("one render reads my gold once and my buildings once each", async () => {
+    const { display } = makeDisplay();
+    try {
+      const player = own(display, 999n);
+      await display.updateComplete;
+      // With the details open too, which say why for the hovered unit.
+      display
+        .querySelector('[data-unit="atom_bomb"]')
+        ?.dispatchEvent(new MouseEvent("mouseenter"));
+      await display.updateComplete;
+      player.gold.mockClear();
+      player.units.mockClear();
+
+      display.requestUpdate();
+      await display.updateComplete;
+      expect(player.gold).toHaveBeenCalledTimes(1);
+      expect(player.units).toHaveBeenCalledTimes(2);
+    } finally {
+      display.remove();
+    }
   });
 });

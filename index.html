@@ -562,16 +562,17 @@
         class="contents sm:flex sm:flex-col sm:pointer-events-none w-full sm:w-[500px] lg:col-start-2 sm:z-10"
       >
         <attacks-display
-          class="w-full pointer-events-auto order-1 sm:order-none"
+          class="w-full pointer-events-auto order-1 sm:order-none max-sm:side-bar:pe-8"
         ></attacks-display>
         <tutorial-panel
-          class="hidden w-full order-3 sm:order-none"
+          class="hidden w-full order-3 sm:order-none max-sm:side-bar:pe-8"
         ></tutorial-panel>
         <!-- The unit bar is a row below the control panel from lg up, a row
              above it on landscape phones, and a column fixed to the right edge
              below lg in portrait (side-bar). The blur is off there: a
              backdrop-filter would pin the fixed bar to this panel instead of
-             the screen.
+             the screen. The control panel blurs itself instead, as the bar
+             is not inside it.
              The panel runs on into the safe-area insets around it (home
              indicator, notch) so its content reaches the screen edge. Only on
              the edges it touches: left below lg (right instead on landscape
@@ -579,7 +580,9 @@
         <div
           class="flex flex-col pointer-events-auto hud-panel side-bar:backdrop-blur-none sm:rounded-tr-lg sm:max-lg:landscape:rounded-tr-none sm:max-lg:landscape:rounded-tl-lg lg:rounded-t-lg min-[1200px]:rounded-lg order-3 sm:order-none z-10 max-[1200px]:-mb-[env(safe-area-inset-bottom)] max-lg:-ml-[env(safe-area-inset-left)] sm:max-lg:landscape:ml-0 max-sm:-mr-[env(safe-area-inset-right)] sm:max-lg:landscape:-mr-[env(safe-area-inset-right)]"
         >
-          <control-panel class="w-full"></control-panel>
+          <control-panel
+            class="w-full side-bar:backdrop-blur-hud"
+          ></control-panel>
           <unit-display
             class="block w-full max-lg:landscape:order-first side-bar:w-auto side-bar:fixed side-bar:top-1/2 side-bar:-translate-y-1/2 side-bar:right-[env(safe-area-inset-right)]"
           ></unit-display>

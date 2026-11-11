@@ -9,6 +9,8 @@ import { renderNumber } from "@openfront/engine-lib/Format";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, nothing } from "lit";
 import { customElement } from "lit/decorators.js";
+import "../../components/OfIcon";
+import type { OfIconName } from "../../components/OfIcon";
 import { Controller } from "../../Controller";
 import {
   ConfirmGhostStructureEvent,
@@ -25,20 +27,64 @@ import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
 import { resolveKeybindLabel, translateText } from "../../Utils";
 import { GameView } from "../../view";
-import {
-  atomBombIcon,
-  cityIcon,
-  defensePostIcon,
-  factoryIcon,
-  goldCoinIcon,
-  hydrogenBombIcon,
-  mirvIcon,
-  missileSiloIcon,
-  portIcon,
-  samLauncherIcon,
-  warshipIcon,
-} from "../HotbarIcons";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
+
+/** Why a unit can or cannot be picked: no gold for it, or something it needs is missing. */
+type BuildState = "ready" | "poor" | "locked";
+
+/** What picking a unit depends on, read once per render. */
+interface BuildNeeds {
+  gold: Gold;
+  hasSilo: boolean;
+  hasPort: boolean;
+}
+
+// Look. Sizes, colours, radii and spacing of each part live here, so a
+// change of look is one edit. The templates below only hold structure.
+const ITEM = "gap-0.5";
+// The border is a real one: the tutorial highlight in styles.css recolours it.
+// From lg every tile is 44px wide, so the prices above them line up.
+// The column's scroller gets 100dvh - 5.5rem and ten tiles need ten heights
+// plus nine 2px gaps (1.125rem), so on short screens the tiles shrink, down
+// to 36px, instead of scrolling. From 590px tall they stay 48px.
+const TILE =
+  "relative flex w-full items-center justify-center rounded-sm border text-white cursor-pointer transition-colors h-6.5 lg:w-11 max-lg:landscape:h-7.5 side-bar:h-[clamp(2.25rem,calc((100dvh-6.625rem)/10),3rem)] side-bar:min-w-6.5";
+// The armed unit (picked, waiting for a spot on the map) is filled blue.
+const TILE_SELECTION = {
+  idle: "border-white/15 pointer-fine:hover:bg-white/10 active:bg-white/15",
+  selected:
+    "border-aquarius bg-malibu-blue/25 pointer-fine:hover:bg-malibu-blue/35",
+} as const;
+// A unit you cannot build dims its icon, count and price but keeps its
+// tile's edge, so at the start of a game the bar does not look switched off.
+// A locked one (no silo for a bomb, no port for a warship) dims further.
+const ICON_STATE: Record<BuildState, string> = {
+  ready: "",
+  poor: "opacity-50",
+  locked: "opacity-30",
+};
+const PRICE_STATE: Record<BuildState, string> = {
+  ready: "text-cyber-yellow/80",
+  poor: "text-red-400",
+  locked: "text-white/30",
+};
+// In place of the count from lg; below lg, where no count is shown, a badge
+// in the tile's bottom end corner. The lock is narrower than it is tall, so
+// end-px leaves as much room beside it as below it.
+const LOCK = "absolute bottom-0.5 end-px text-white/60 lg:static lg:ms-0.5";
+const REASON_STATE: Record<Exclude<BuildState, "ready">, string> = {
+  poor: "text-red-400",
+  locked: "text-white/55",
+};
+// Drawn above the tile with order-first; it keeps its height while empty so
+// the row does not jump when the costs arrive. No room for it in the column.
+const PRICE =
+  "order-first h-2.5 text-[10px] font-semibold leading-[10px] tabular-nums side-bar:hidden";
+// In the corner, out of the tile's flow, so it does not push the icon aside.
+const HOTKEY =
+  "absolute top-0.5 start-0.5 max-w-full truncate text-[10px] leading-none text-white/45";
+const COUNT = "hidden lg:inline text-xs leading-none tabular-nums hud-caps";
+const COUNT_EMPTY = "text-white/45";
 
 /** How long a build button has to be held before it shows its details (cost etc.) */
 const PEEK_HOLD_MS = 450;
@@ -549,25 +595,48 @@ export class UnitDisplay extends LitElement implements Controller {
     return 0n;
   }
 
-  private canBuild(item: UnitType): boolean {
-    if (this.game?.config().isUnitDisabled(item)) return false;
+  // gold() makes a new BigInt and units() filters on every call, so a render
+  // reads them once here instead of once per tile.
+  private buildNeeds(): BuildNeeds {
     const player = this.game?.myPlayer();
+    return {
+      gold: player?.gold() ?? 0n,
+      hasSilo: (player?.units(UnitType.MissileSilo).length ?? 0) > 0,
+      hasPort: (player?.units(UnitType.Port).length ?? 0) > 0,
+    };
+  }
+
+  // A missing silo or port wins over missing gold: more gold would not help.
+  private buildState(item: UnitType, needs = this.buildNeeds()): BuildState {
+    if (this.game?.config().isUnitDisabled(item)) return "locked";
     switch (item) {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
       case UnitType.MIRV:
-        return (
-          this.cost(item) <= (player?.gold() ?? 0n) &&
-          (player?.units(UnitType.MissileSilo).length ?? 0) > 0
-        );
+        if (!needs.hasSilo) return "locked";
+        break;
       case UnitType.Warship:
-        return (
-          this.cost(item) <= (player?.gold() ?? 0n) &&
-          (player?.units(UnitType.Port).length ?? 0) > 0
-        );
-      default:
-        return this.cost(item) <= (player?.gold() ?? 0n);
+        if (!needs.hasPort) return "locked";
+        break;
     }
+    return this.cost(item) <= needs.gold ? "ready" : "poor";
+  }
+
+  private canBuild(item: UnitType): boolean {
+    return this.buildState(item) === "ready";
+  }
+
+  /** Why a drawn unit cannot be picked. A unit the game disables has no tile. */
+  private unbuildableReason(
+    item: UnitType,
+    state: Exclude<BuildState, "ready">,
+  ): string {
+    if (state === "poor") return translateText("build_menu.not_enough_money");
+    return translateText("build_menu.requires", {
+      unit: translateText(
+        item === UnitType.Warship ? "unit_type.port" : "unit_type.missile_silo",
+      ),
+    });
   }
 
   private isUnitDisplayed(unitType: PlayerBuildableUnitType): boolean {
@@ -617,13 +686,14 @@ export class UnitDisplay extends LitElement implements Controller {
     ) {
       return null;
     }
+    const needs = this.buildNeeds();
     // A row in the bottom panel: below the control panel from lg up, above
     // it on landscape phones (index.html orders it), spread over the panel's
     // width there. Below lg in portrait (side-bar) it is a column on the
     // right edge of the screen, where index.html fixes the host.
     return html`
       <div
-        class="unit-display-root relative p-0.5 border-white/10 w-full lg:border-t max-lg:landscape:border-b side-bar:w-auto side-bar:rounded-l-lg side-bar:hud-panel
+        class="unit-display-root relative p-1 w-full lg:px-2 lg:pb-2 lg:pt-0 side-bar:p-0.5 side-bar:w-auto side-bar:rounded-l-lg side-bar:hud-panel
           ${this.moreActionsStart ? "unit-display-more-start" : ""}
           ${this.moreActionsEnd ? "unit-display-more-end" : ""}"
         data-radial-click-through
@@ -634,81 +704,91 @@ export class UnitDisplay extends LitElement implements Controller {
           @scroll=${this.onScroll}
         >
           <div
-            class="unit-display-grid grid gap-0.5 grid-rows-1 grid-flow-col auto-cols-fr lg:auto-cols-max lg:w-fit lg:mx-auto side-bar:grid-rows-none side-bar:grid-flow-row side-bar:grid-cols-1"
+            class="unit-display-grid grid gap-0.5 lg:gap-1 grid-rows-1 grid-flow-col auto-cols-fr lg:auto-cols-max lg:w-fit lg:mx-auto side-bar:grid-rows-none side-bar:grid-flow-row side-bar:grid-cols-1"
           >
             ${this.renderUnitItem(
-              cityIcon,
+              "city",
               this._cities,
               UnitType.City,
               "city",
               this.getHotkey("buildCity", "Digit1"),
+              needs,
             )}
             ${this.renderUnitItem(
-              factoryIcon,
+              "factory",
               this._factories,
               UnitType.Factory,
               "factory",
               this.getHotkey("buildFactory", "Digit2"),
+              needs,
             )}
             ${this.renderUnitItem(
-              portIcon,
+              "port",
               this._port,
               UnitType.Port,
               "port",
               this.getHotkey("buildPort", "Digit3"),
+              needs,
             )}
             ${this.renderUnitItem(
-              defensePostIcon,
+              "shield",
               this._defensePost,
               UnitType.DefensePost,
               "defense_post",
               this.getHotkey("buildDefensePost", "Digit4"),
+              needs,
             )}
             ${this.renderUnitItem(
-              missileSiloIcon,
+              "missile-silo",
               this._missileSilo,
               UnitType.MissileSilo,
               "missile_silo",
               this.getHotkey("buildMissileSilo", "Digit5"),
+              needs,
             )}
             ${this.renderUnitItem(
-              samLauncherIcon,
+              "sam-launcher",
               this._samLauncher,
               UnitType.SAMLauncher,
               "sam_launcher",
               this.getHotkey("buildSamLauncher", "Digit6"),
+              needs,
             )}
             ${this.renderUnitItem(
-              warshipIcon,
+              "warship",
               this._warships,
               UnitType.Warship,
               "warship",
               this.getHotkey("buildWarship", "Digit7"),
+              needs,
             )}
             ${this.renderUnitItem(
-              atomBombIcon,
+              "atom-bomb",
               null,
               UnitType.AtomBomb,
               "atom_bomb",
               this.getHotkey("buildAtomBomb", "Digit8"),
+              needs,
             )}
             ${this.renderUnitItem(
-              hydrogenBombIcon,
+              "hydrogen-bomb",
               null,
               UnitType.HydrogenBomb,
               "hydrogen_bomb",
               this.getHotkey("buildHydrogenBomb", "Digit9"),
+              needs,
             )}
             ${this.renderUnitItem(
-              mirvIcon,
+              "mirv",
               null,
               UnitType.MIRV,
               "mirv",
               this.getHotkey("buildMIRV", "Digit0"),
+              needs,
             )}
           </div>
         </div>
-        ${this.renderUnitTooltip()}
+        ${this.renderUnitTooltip(needs)}
       </div>
     `;
   }
@@ -725,16 +805,22 @@ export class UnitDisplay extends LitElement implements Controller {
   }
 
   private renderUnitItem(
-    icon: string,
+    icon: OfIconName,
     number: number | null,
     unitType: PlayerBuildableUnitType,
     structureKey: string,
     hotkey: string,
+    needs: BuildNeeds,
   ) {
     if (!this.isUnitDisplayed(unitType)) {
       return html``;
     }
     const selected = this.uiState.ghostStructure === unitType;
+    const state = this.buildState(unitType, needs);
+    const name = translateText("unit_type." + structureKey);
+    const highlighted = this.tutorialHighlight === unitType;
+    const cost = this.cost(unitType);
+    const priceId = `unit-price-${structureKey}`;
     const displayHotkey = hotkey
       .replace("Digit", "")
       .replace("Key", "")
@@ -742,7 +828,8 @@ export class UnitDisplay extends LitElement implements Controller {
 
     return html`
       <div
-        class="flex flex-col items-center relative"
+        class="flex flex-col items-center relative ${ITEM}"
+        data-unit=${structureKey}
         @mouseenter=${(event: MouseEvent) => {
           const item = event.currentTarget as HTMLElement;
           this._hoveredUnitTooltip = {
@@ -763,99 +850,133 @@ export class UnitDisplay extends LitElement implements Controller {
         }}
       >
         <div
-          class="${
-            this.canBuild(unitType) ? "" : "opacity-40"
-          } border border-slate-500 rounded-sm max-lg:landscape:h-7.5 side-bar:h-12 side-bar:min-w-6.5 w-full px-0.5 side-bar:px-0 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:justify-start
-             ${
-            selected
-              ? "pointer-fine:hover:bg-gray-400/10"
-              : "pointer-fine:hover:bg-gray-800"
+          class="${TILE} ${TILE_SELECTION[selected ? "selected" : "idle"]} ${
+            highlighted ? "tutorial-highlight" : ""
+          }"
+          role="button"
+          aria-label=${
+            state === "ready"
+              ? name
+              : `${name}, ${this.unbuildableReason(unitType, state)}`
           }
-             rounded-sm text-white ${selected ? "bg-slate-400/20" : ""}
-             ${this.tutorialHighlight === unitType ? "tutorial-highlight" : ""}"
-          @click=${(event: Event) => {
-            const item = (event.currentTarget as HTMLElement).closest(
-              ".unit-display-grid > div",
-            );
-            const fromTouch = this.isTouchClick(event, item);
-            // A press that turned into a peek shows the details instead of
-            // selecting the unit
-            if (this.suppressNextClick || this.suppressReleaseClick) {
-              this.suppressNextClick = false;
-              this.suppressReleaseClick = false;
-              return;
-            }
-            if (selected) {
-              this.inputHandler.setGhostStructure(null, "GUIclick");
-            } else if (this.canBuild(unitType)) {
-              this.inputHandler.setGhostStructure(unitType, "GUIclick");
-              if (fromTouch) {
-                this.eventBus?.emit(new TouchGhostPlacementSelectEvent());
-                this.eventBus?.emit(
-                  new ToggleStructureEvent(highlightTypesForUnit(unitType)),
-                );
-              }
-            } else {
-              const selectedGhost = this.uiState.ghostStructure;
-              this.eventBus?.emit(
-                new ToggleStructureEvent(
-                  selectedGhost === null
-                    ? null
-                    : highlightTypesForUnit(selectedGhost),
-                ),
-              );
-            }
-            this.requestUpdate();
-          }}
-          @pointerenter=${(event: PointerEvent) => {
-            if (event.pointerType === "touch") return;
-            this.eventBus?.emit(
-              new ToggleStructureEvent(highlightTypesForUnit(unitType)),
-            );
-          }}
-          @pointerleave=${(event: PointerEvent) => {
-            if (event.pointerType === "touch") return;
-            const selectedGhost = this.uiState.ghostStructure;
-            this.eventBus?.emit(
-              new ToggleStructureEvent(
-                selectedGhost === null
-                  ? null
-                  : highlightTypesForUnit(selectedGhost),
-              ),
-            );
-          }}
+          aria-pressed=${selected}
+          aria-describedby=${priceId}
+          aria-disabled=${!selected && state !== "ready"}
+          data-build-state=${state}
+          @click=${(event: Event) =>
+            this.onUnitClick(event, unitType, selected)}
+          @pointerenter=${(event: PointerEvent) =>
+            this.onUnitPointerEnter(event, unitType)}
+          @pointerleave=${(event: PointerEvent) =>
+            this.onUnitPointerLeave(event)}
         >
           ${
             hotkey
-              ? html`<div
-                  class="unit-display-hotkey ml-0.5 text-[10px] relative -top-1 text-gray-400"
-                >
+              ? html`<div class="unit-display-hotkey ${HOTKEY}">
                   ${displayHotkey}
                 </div>`
               : nothing
           }
-          <div
-            class="flex flex-col items-center gap-0 pt-0.5 lg:flex-row lg:gap-0.5"
-          >
-            <img
-              src=${icon}
-              alt=${translateText("unit_type." + structureKey)}
-              class="align-middle size-6 lg:size-5 max-lg:landscape:size-5"
-            />
+          <div class="flex items-center gap-0.5 ${ICON_STATE[state]}">
+            <of-icon
+              name=${icon}
+              size="20"
+              class="side-bar:scale-120"
+            ></of-icon>
             ${
-              number !== null
-                ? html`<span class="hidden lg:inline text-xs leading-none"
+              number !== null && state !== "locked"
+                ? html`<span
+                    data-unit-count
+                    class="${COUNT} ${number === 0 ? COUNT_EMPTY : ""}"
                     >${renderNumber(number)}</span
                   >`
                 : null
             }
           </div>
+          ${
+            state === "locked"
+              ? html`<of-icon
+                  name="lock"
+                  size="10"
+                  data-unit-lock
+                  class=${LOCK}
+                ></of-icon>`
+              : nothing
+          }
         </div>
+        <!-- Hidden so it is not read twice: the tile reads it as its
+             description. -->
+        <span
+          id=${priceId}
+          data-unit-price
+          aria-hidden="true"
+          class="${PRICE} ${PRICE_STATE[state]} ${
+            highlighted ? "invisible" : ""
+          }"
+          >${cost > 0n ? renderNumber(cost) : ""}</span
+        >
       </div>
     `;
   }
 
-  private renderUnitTooltip() {
+  private onUnitClick(
+    event: Event,
+    unitType: PlayerBuildableUnitType,
+    selected: boolean,
+  ) {
+    const item = (event.currentTarget as HTMLElement).closest(
+      ".unit-display-grid > div",
+    );
+    const fromTouch = this.isTouchClick(event, item);
+    // A press that turned into a peek shows the details instead of
+    // selecting the unit
+    if (this.suppressNextClick || this.suppressReleaseClick) {
+      this.suppressNextClick = false;
+      this.suppressReleaseClick = false;
+      return;
+    }
+    if (selected) {
+      this.inputHandler.setGhostStructure(null, "GUIclick");
+    } else if (this.canBuild(unitType)) {
+      this.inputHandler.setGhostStructure(unitType, "GUIclick");
+      if (fromTouch) {
+        this.eventBus?.emit(new TouchGhostPlacementSelectEvent());
+        this.eventBus?.emit(
+          new ToggleStructureEvent(highlightTypesForUnit(unitType)),
+        );
+      }
+    } else {
+      const selectedGhost = this.uiState.ghostStructure;
+      this.eventBus?.emit(
+        new ToggleStructureEvent(
+          selectedGhost === null ? null : highlightTypesForUnit(selectedGhost),
+        ),
+      );
+    }
+    this.requestUpdate();
+  }
+
+  private onUnitPointerEnter(
+    event: PointerEvent,
+    unitType: PlayerBuildableUnitType,
+  ) {
+    if (event.pointerType === "touch") return;
+    this.eventBus?.emit(
+      new ToggleStructureEvent(highlightTypesForUnit(unitType)),
+    );
+  }
+
+  private onUnitPointerLeave(event: PointerEvent) {
+    if (event.pointerType === "touch") return;
+    const selectedGhost = this.uiState.ghostStructure;
+    this.eventBus?.emit(
+      new ToggleStructureEvent(
+        selectedGhost === null ? null : highlightTypesForUnit(selectedGhost),
+      ),
+    );
+  }
+
+  private renderUnitTooltip(needs: BuildNeeds) {
     // A peek wins over a hover: it is the one the player asked for by
     // holding the button.
     const peek = this._peekedUnitTooltip;
@@ -863,6 +984,7 @@ export class UnitDisplay extends LitElement implements Controller {
     if (!tooltip) return nothing;
     // The item can go away (a unit gets disabled) while it is hovered.
     if (!tooltip.element.isConnected) return nothing;
+    const state = this.buildState(tooltip.unitType, needs);
     const displayHotkey = tooltip.hotkey
       .replace("Digit", "")
       .replace("Key", "")
@@ -893,10 +1015,10 @@ export class UnitDisplay extends LitElement implements Controller {
 
     return html`
       <div
-        class="unit-display-tooltip ${peek ? "block" : "hidden pointer-fine:block"} absolute ${placement} text-gray-200 text-center w-max break-words text-xs hud-panel rounded-sm p-1 z-[100] pointer-events-none"
+        class="unit-display-tooltip ${peek ? "block" : "hidden pointer-fine:block"} absolute ${placement} text-white/70 text-center w-max break-words text-xs hud-modal rounded-md p-2 z-[100] pointer-events-none"
         style=${`left: ${left}px; top: ${top}px;`}
       >
-        <div class="font-bold text-sm mb-1">
+        <div class="font-bold text-sm text-white mb-1">
           ${translateText("unit_type." + tooltip.structureKey)}${
             tooltip.hotkey ? ` [${displayHotkey}]` : ""
           }
@@ -913,9 +1035,16 @@ export class UnitDisplay extends LitElement implements Controller {
               </div>`
             : null
         }
+        ${
+          state === "ready"
+            ? nothing
+            : html`<div class="mb-0.5 ${REASON_STATE[state]}">
+                ${this.unbuildableReason(tooltip.unitType, state)}
+              </div>`
+        }
         <div class="flex items-center justify-center gap-1">
-          <img src=${goldCoinIcon} width="13" height="13" />
-          <span class="text-yellow-300"
+          <of-icon name="gold" size="13"></of-icon>
+          <span class="text-cyber-yellow"
             >${renderNumber(this.cost(tooltip.unitType))}</span
           >
         </div>

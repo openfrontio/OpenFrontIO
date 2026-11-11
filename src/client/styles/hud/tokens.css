@@ -17,6 +17,12 @@
     0 1px 2px rgb(0 0 0 / calc(0.35 * var(--hud-opacity, 1)));
   --shadow-hud-modal: 0 12px 32px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.35);
 
+  /* A 1px dark rim and a short drop, for text drawn straight on the map. */
+  --text-shadow-hud-rim:
+    0 1px 0 rgb(0 0 0 / 0.9), 1px 0 0 rgb(0 0 0 / 0.55),
+    -1px 0 0 rgb(0 0 0 / 0.55), 0 -1px 0 rgb(0 0 0 / 0.45),
+    0 2px 3px rgb(0 0 0 / 0.55);
+
   /* Same radius as backdrop-blur-sm, which the panels used, and like it the
      blur stays at any HUD opacity: at 0% a panel is clear glass, so its text
      stays readable over the map. */
@@ -29,6 +35,54 @@
     from {
       opacity: 0;
       transform: translateY(8px);
+    }
+  }
+
+  /* A gold gain popping up from the gold chip, for two seconds: in with a
+     small overshoot by 165 ms, settled by 270 ms, then up and out over the
+     last 420 ms. The animation is the pop's whole life: ControlPanel removes
+     the pop when it ends. */
+  --animate-gold-pop: gold-pop 2s both;
+  @keyframes gold-pop {
+    0% {
+      opacity: 0;
+      transform: translateY(6px) scale(0.6);
+      animation-timing-function: cubic-bezier(0.2, 0.9, 0.3, 1);
+    }
+    8.25% {
+      opacity: 1;
+      transform: translateY(-2px) scale(1.08);
+      animation-timing-function: cubic-bezier(0.3, 0, 0.3, 1);
+    }
+    13.5% {
+      transform: none;
+    }
+    79% {
+      opacity: 1;
+      transform: none;
+      animation-timing-function: cubic-bezier(0.55, 0, 0.75, 0.2);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+  }
+  /* The same two seconds without movement, for reduced motion. */
+  --animate-gold-pop-fade: gold-pop-fade 2s both;
+  @keyframes gold-pop-fade {
+    79% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  /* A merged gain bumps the pop's amount. */
+  --animate-gold-pop-bump: gold-pop-bump 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  @keyframes gold-pop-bump {
+    from {
+      transform: scale(1.2);
+      color: var(--color-green-200);
     }
   }
 
