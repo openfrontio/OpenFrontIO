@@ -1515,7 +1515,7 @@
     "ui_events_quickchat": "Quick Chat - You can see sent and received chat messages here. Send a message to a player by clicking the Quick Chat icon in their Info menu.",
     "ui_gold": "Gold - The amount of gold you have and the rate at which you gain it.",
     "ui_leaderboard": "Leaderboard",
-    "ui_leaderboard_desc": "Shows the top players of the game and their names, % owned land, gold and troops. Using Show All shows all players in the game. If you don't want to see the leaderboard, click Hide.",
+    "ui_leaderboard_desc": "Shows every player still in the game, ranked by owned land, with your own row always in view. Click a column's header to sort by it, click a player to go to them, and use the gear button to choose which columns are shown.",
     "ui_options": "Options",
     "ui_options_desc": "The following elements can be found inside:",
     "ui_playeroverlay": "Player info overlay",
