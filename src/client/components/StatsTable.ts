@@ -2,6 +2,7 @@ import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import "../hud/layers/ColumnPicker";
+import "./OfIcon";
 import {
   type ColumnAlignment,
   type ColumnDef,
@@ -47,6 +48,39 @@ const ALIGNMENT_CLASS: Record<ColumnAlignment, string> = {
 const CELL_CLASS = "h-6 md:h-8 lg:h-9 min-w-0 px-1 flex items-center";
 const DIVIDER_CLASS = "border-l border-l-slate-600/40";
 const HEADER_DIVIDER_CLASS = "border-l border-l-slate-500";
+const HEADER_ICON_SIZE = 18;
+
+/** A column's header icon (with its superscript) or text, `size` px tall. */
+export function renderColumnVisual(column: ColumnDef, size: number) {
+  const visual = column.headerVisual;
+  if (visual === undefined) {
+    return html`<span>${translateText(column.labelKey)}</span>`;
+  }
+  if (visual.kind === "text") {
+    return html`<span>${translateText(visual.text)}</span>`;
+  }
+  const superscript = visual.superscript;
+  return html`<span class="inline-flex items-start">
+    <of-icon
+      class=${visual.color ?? nothing}
+      name=${visual.icon}
+      size=${size}
+    ></of-icon>
+    ${
+      superscript === undefined
+        ? nothing
+        : "icon" in superscript
+          ? html`<of-icon
+              class="-ms-0.5"
+              name=${superscript.icon}
+              size=${size - 5}
+            ></of-icon>`
+          : html`<span class="text-[0.6rem] ms-0.5 self-center leading-none"
+              >${translateText(superscript.text)}</span
+            >`
+    }
+  </span>`;
+}
 
 export abstract class StatsTable extends LitElement {
   public game: GameView | null = null;
@@ -173,42 +207,9 @@ export abstract class StatsTable extends LitElement {
     this.requestUpdate();
   }
 
-  private renderHeaderVisual(column: ColumnDef, label: string) {
-    const visual = column.headerVisual;
-    if (visual === undefined) return html`<span>${label}</span>`;
-    if (visual.kind === "text") {
-      return html`<span>${translateText(visual.text)}</span>`;
-    }
-    return html`<span class="inline-flex items-start">
-      <img
-        class="size-[1.1rem] object-contain ${
-          visual.white === true ? "brightness-0 invert" : ""
-        }"
-        src=${visual.src}
-        alt=""
-        aria-hidden="true"
-      />${
-        visual.superscript
-          ? "src" in visual.superscript
-            ? html`<img
-                class="size-[0.825rem] object-contain -ml-0.5 ${
-                  visual.superscript.white === true ? "brightness-0 invert" : ""
-                }"
-                src=${visual.superscript.src}
-                alt=""
-                aria-hidden="true"
-              />`
-            : html`<span class="text-[0.6rem] ml-0.5 self-center leading-none"
-                >${translateText(visual.superscript.text)}</span
-              >`
-          : nothing
-      }
-    </span>`;
-  }
-
   private renderHeaderCell(column: ColumnDef, index: number) {
     const label = translateText(column.labelKey);
-    const visual = this.renderHeaderVisual(column, label);
+    const visual = renderColumnVisual(column, HEADER_ICON_SIZE);
     const sorted = this.sortKey === column.id;
     return html`
       <div
