@@ -495,6 +495,53 @@ describe("PlayerStats rows", () => {
     expect(emit.mock.calls[0][0]).toBeInstanceOf(GoToPlayerEvent);
     expect(emit.mock.calls[0][0].player).toBe(bob);
   });
+
+  it("names the table, counts every row and gives each drawn row its rank", async () => {
+    const players = Array.from({ length: 300 }, (_, i) =>
+      player(`p${i + 1}`, 300 - i),
+    );
+    const playerStats = await mount(players, null);
+    const table = playerStats.querySelector('[role="table"]');
+    const header = playerStats.querySelector(".stats-table-header");
+    // Each drawn row's index, and its rank plus one for the header row.
+    const indexes = () =>
+      rows(playerStats).map((row) => [
+        Number(row.getAttribute("aria-rowindex")),
+        Number(cell(row, "rank")?.textContent) + 1,
+      ]);
+
+    expect(table?.getAttribute("aria-label")).toBe("leaderboard.players_table");
+    expect(table?.getAttribute("aria-rowcount")).toBe("301");
+    expect(header?.getAttribute("aria-rowindex")).toBe("1");
+    expect(rows(playerStats)).toHaveLength(12);
+    expect(rows(playerStats)[0].getAttribute("aria-rowindex")).toBe("2");
+    for (const [index, rank] of indexes()) expect(index).toBe(rank);
+
+    const scroller = playerStats.querySelector(
+      ".stats-table-scroll",
+    ) as HTMLElement;
+    scroller.scrollTop = 2400;
+    scroller.dispatchEvent(new Event("scroll"));
+    await playerStats.updateComplete;
+    expect(indexes()[0]).toEqual([98, 98]);
+    for (const [index, rank] of indexes()) expect(index).toBe(rank);
+  });
+
+  it("names the headers that are not sort buttons", async () => {
+    const playerStats = await mount([player("alice", 1)], null);
+    const header = (id: ColumnId) =>
+      playerStats.querySelector(`[role="columnheader"][data-column="${id}"]`);
+
+    expect(header("rank")?.getAttribute("aria-label")).toBe("leaderboard.rank");
+    expect(header("player")?.getAttribute("aria-label")).toBe(
+      "leaderboard.player",
+    );
+    // A sortable header is named by its button.
+    expect(header("tiles")?.hasAttribute("aria-label")).toBe(false);
+    expect(
+      header("tiles")?.querySelector("button")?.getAttribute("aria-label"),
+    ).toBe("leaderboard.owned");
+  });
 });
 
 describe("PlayerStats clan column", () => {

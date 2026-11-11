@@ -164,6 +164,38 @@ describe("TeamStats", () => {
     document.body.innerHTML = "";
   });
 
+  it("is named apart from the player table", async () => {
+    const players = [
+      {
+        id: () => "blue-player",
+        smallID: () => 0,
+        team: () => "Blue",
+        numTilesOwned: () => 10,
+        gold: () => 10n,
+        isAlive: () => true,
+      },
+    ] as unknown as PlayerView[];
+    const teamStats = new TeamStats();
+    teamStats.game = {
+      myPlayer: () => null,
+      playerViews: () => players,
+      config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
+      numLandTiles: () => 100,
+      numTilesWithFallout: () => 0,
+    } as unknown as GameView;
+    teamStats.visible = true;
+    document.body.append(teamStats);
+    teamStats.refresh();
+    await teamStats.updateComplete;
+
+    const table = teamStats.querySelector('[role="table"]');
+    expect(table?.getAttribute("aria-label")).toBe("leaderboard.teams_table");
+    expect(table?.getAttribute("aria-rowcount")).toBe("2");
+
+    teamStats.remove();
+  });
+
   it("renders clan tag team name when teamClanTag is present", async () => {
     const players = [
       {
