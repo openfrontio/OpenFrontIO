@@ -3,7 +3,8 @@
   "id": "Zealandia",
   "name": "Zealandia",
   "translation_key": "map.zealandia",
-  "categories": ["oceania"],
+  "location": { "lat": -28, "lon": 161 },
+  "categories": ["oceania", "new", "fictional"],
   "nations": [
     {
       "coordinates": [378, 1075],
@@ -137,5 +138,6 @@
       "name": "Puysegur Islands",
       "flag": "nz"
     }
-  ]
+  ],
+  "themes": ["under_ocean", "oceania"]
 }

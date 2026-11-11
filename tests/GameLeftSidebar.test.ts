@@ -4,6 +4,7 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { GameLeftSidebar } from "../src/client/hud/layers/GameLeftSidebar";
 import type { PlayerStats } from "../src/client/hud/layers/PlayerStats";
 import type { TeamStats } from "../src/client/hud/layers/TeamStats";
+import { AlternateViewEvent } from "../src/client/InputHandler";
 import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
 
@@ -141,6 +142,34 @@ describe("GameLeftSidebar", () => {
     expect(sidebar.querySelector("team-stats")?.className).not.toContain(
       "lg:flex-initial",
     );
+
+    sidebar.remove();
+  });
+
+  it("toggles the alternate view and follows it when space switches it", async () => {
+    const eventBus = new EventBus();
+    const seen: boolean[] = [];
+    eventBus.on(AlternateViewEvent, (e) => seen.push(e.alternateView));
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = eventBus;
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+
+    const button = () =>
+      sidebar.querySelector<HTMLElement>("[aria-pressed]") as HTMLElement;
+    button().click();
+    await sidebar.updateComplete;
+    expect(seen).toEqual([true]);
+    expect(button().getAttribute("aria-pressed")).toBe("true");
+
+    // Releasing space turns it off from outside the button.
+    eventBus.emit(new AlternateViewEvent(false));
+    await sidebar.updateComplete;
+    expect(button().getAttribute("aria-pressed")).toBe("false");
+    button().click();
+    expect(seen).toEqual([true, false, true]);
 
     sidebar.remove();
   });

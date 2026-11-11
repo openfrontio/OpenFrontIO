@@ -114,6 +114,10 @@ export function apiMockFactory() {
 export function utilsMockFactory() {
   return {
     translateText: vi.fn((key: string) => key),
+    // The clan map frame's strings (ClanMapView) and text direction.
+    translationTemplates: vi.fn(() => ({ claim_land: "Claim land" })),
+    isRTL: vi.fn(() => false),
+    getCurrentLanguage: vi.fn(() => "en"),
     showToast: vi.fn(),
     // Used by the game-history rows; identity formatting keeps assertions
     // readable without pulling in the real duration/map lookups.

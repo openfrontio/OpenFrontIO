@@ -47,6 +47,8 @@ export class LanguageModal extends BaseModal {
           ${this.languageList.map((lang) => {
             const isActive = this.currentLang === lang.code;
             const isDebug = lang.code === "debug";
+            // English and debug have no entry.
+            const coverage: number | undefined = __LANG_COVERAGE__[lang.code];
 
             let buttonClasses =
               "relative group rounded-xl border transition-all duration-200 flex items-center p-3 gap-3 w-full cursor-pointer";
@@ -84,6 +86,16 @@ export class LanguageModal extends BaseModal {
                     class="text-xs text-white/40 uppercase tracking-widest group-hover:text-white/60 transition-colors whitespace-normal break-words w-full text-left"
                     >${lang.en}</span
                   >
+                  ${
+                    coverage === undefined
+                      ? ""
+                      : html`<span
+                          class="text-xs text-white/40 group-hover:text-white/60 transition-colors"
+                          >${translateText("select_lang.translated", {
+                            percent: coverage,
+                          })}</span
+                        >`
+                  }
                 </div>
 
                 ${

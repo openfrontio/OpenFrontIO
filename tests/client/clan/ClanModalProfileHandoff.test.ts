@@ -260,17 +260,17 @@ describe("ClanModal — player-profile handoff", () => {
 
   it("mounts the map only while open on the Map tab", async () => {
     stubGameEnv("dev");
-    // Closed: nothing is framed, so the map page isn't polling in the background.
-    expect(modal.querySelector("clan-map-view")).toBeNull();
+    // The map is a full-screen page on <body>. Closed: nothing is framed, so the map page isn't polling in the background.
+    expect(document.querySelector("clan-map-view")).toBeNull();
 
     modal.open({ tab: "map" });
     await flushAsync(modal);
     expect(getElState(modal, "activeTab")).toBe("map");
-    expect(modal.querySelector("clan-map-view")).not.toBeNull();
+    expect(document.querySelector("clan-map-view")).not.toBeNull();
 
     modal.close();
     await flushAsync(modal);
-    expect(modal.querySelector("clan-map-view")).toBeNull();
+    expect(document.querySelector("clan-map-view")).toBeNull();
     expect(getElState(modal, "activeTab")).toBe("my-clans");
   });
 

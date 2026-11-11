@@ -13,6 +13,7 @@ import {
   PatternDataSchema,
 } from "./CosmeticSchemas";
 import type { GameEvent } from "./EventBus";
+import { mapPlayerCounts } from "./MapPlayerCounts";
 
 import {
   AllPlayersStatsSchema,
@@ -173,7 +174,17 @@ export const MIN_HOSTED_LOBBY_AUTO_START_MS = 60 * 1000;
 
 export const MIN_HOSTED_LOBBY_PLAYERS = 10;
 
-export const MAX_HOSTED_LOBBY_PLAYERS = 100;
+// The most players a host may cap a listed lobby at: the biggest public lobby
+// the map gets (a quarter of that on a compact map, as MapPlaylist does), but
+// never below MIN_HOSTED_LOBBY_PLAYERS so every map can be listed.
+export function hostedLobbyMaxPlayers(
+  landTiles: number,
+  isCompact: boolean,
+): number {
+  const [largest] = mapPlayerCounts(landTiles);
+  const max = isCompact ? Math.floor(largest * 0.25) : largest;
+  return Math.max(MIN_HOSTED_LOBBY_PLAYERS, max);
+}
 
 // A listed lobby this close to its auto-start can no longer be queued, so a
 // host can't pay for a queue spot the lobby starts before it reaches.

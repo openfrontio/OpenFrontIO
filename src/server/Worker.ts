@@ -1,4 +1,8 @@
-import { GameMode } from "@openfront/engine-api/game/GameTypes";
+import {
+  GameMapSize,
+  GameMapType,
+  GameMode,
+} from "@openfront/engine-api/game/GameTypes";
 import {
   ID,
   isValidGameID,
@@ -14,7 +18,7 @@ import {
   HOSTED_LOBBY_AUTO_START_MS,
   LevelBadge,
   MAX_HOSTED_LOBBIES,
-  MAX_HOSTED_LOBBY_PLAYERS,
+  hostedLobbyMaxPlayers,
   MIN_HOSTED_LOBBY_AUTO_START_MS,
   MIN_HOSTED_LOBBY_PLAYERS,
   ServerErrorMessage,
@@ -53,6 +57,7 @@ import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
 import { levelBadgeForPlayer } from "./LevelBadge";
 import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
 import { logger } from "./Logger";
+import { readMapLandTiles } from "./MapLandTiles";
 import { registerPlayerProfileRoute } from "./PlayerProfileRoute";
 import { resolveVerifiedJoin } from "./Privilege";
 
@@ -192,12 +197,7 @@ export function registerListingRoute(opts: {
             .min(MIN_HOSTED_LOBBY_AUTO_START_MS)
             .max(HOSTED_LOBBY_AUTO_START_MS)
             .optional(),
-          maxPlayers: z
-            .number()
-            .int()
-            .min(MIN_HOSTED_LOBBY_PLAYERS)
-            .max(MAX_HOSTED_LOBBY_PLAYERS)
-            .optional(),
+          maxPlayers: z.number().int().min(MIN_HOSTED_LOBBY_PLAYERS).optional(),
         })
         .safeParse(req.body);
       if (!parsed.success) {
@@ -225,7 +225,18 @@ export function registerListingRoute(opts: {
       }
 
       if (listed) {
-        const preError = getListingEligibilityError(game, maxPlayers);
+        // The cap's ceiling follows the map, like public lobby sizes do.
+        // Without the map's size there is no ceiling to check against, so
+        // refuse rather than guess.
+        const preMapSize = await readListingMapSize(game, log);
+        if (preMapSize === null) {
+          return res.status(503).json({ error: "listing_failed" });
+        }
+        const preError = getListingEligibilityError(
+          game,
+          maxPlayers,
+          preMapSize,
+        );
         if (preError !== null) {
           return res.status(409).json({ error: preError });
         }
@@ -249,8 +260,14 @@ export function registerListingRoute(opts: {
         }
 
         // Re-verify after the async entitlement check to close the race window
-        // where the host could alter lobby settings (e.g. enable host cheats).
-        const raceError = getListingEligibilityError(game, maxPlayers);
+        // where the host could alter lobby settings (e.g. enable host cheats,
+        // or switch to a smaller map). Nothing awaits between this check and
+        // setListed.
+        const mapSize = await readListingMapSize(game, log);
+        if (mapSize === null) {
+          return res.status(503).json({ error: "listing_failed" });
+        }
+        const raceError = getListingEligibilityError(game, maxPlayers, mapSize);
         if (raceError !== null) {
           return res.status(409).json({ error: raceError });
         }
@@ -1078,11 +1095,37 @@ function getClientIp(req: http.IncomingMessage): string {
   return req.socket.remoteAddress ?? "unknown";
 }
 
+// A lobby's map and its land tiles, read together so a later check can tell
+// whether the map changed since.
+export interface ListingMapSize {
+  map: GameMapType;
+  landTiles: number;
+}
+
+// Null (logged) if the map's manifest can't be read.
+async function readListingMapSize(
+  game: GameServer,
+  log: typeof logger,
+): Promise<ListingMapSize | null> {
+  const map = game.gameConfig.gameMap;
+  try {
+    return { map, landTiles: await readMapLandTiles(map) };
+  } catch (error) {
+    log.error(`listing rejected, map size unavailable: ${error}`, {
+      gameID: game.id,
+      map,
+    });
+    return null;
+  }
+}
+
 // Checks mutable lobby settings that make a lobby ineligible for public listing.
 // Evaluated before and after the async subscription check to prevent TOCTOU races.
+// With mapSize, the cap must also fit the map (hostedLobbyMaxPlayers).
 export function getListingEligibilityError(
   game: GameServer,
   maxPlayers?: number,
+  mapSize?: ListingMapSize,
 ): string | null {
   if (game.isPublic() || game.hasStarted()) {
     return "Game cannot be listed";
@@ -1102,6 +1145,19 @@ export function getListingEligibilityError(
         : cap;
     if (effectiveCap <= game.numPlayers()) {
       return "listing_max_players_too_low";
+    }
+    if (mapSize !== undefined) {
+      // The map changed while its size was being read.
+      if (mapSize.map !== game.gameConfig.gameMap) {
+        return "listing_failed";
+      }
+      const ceiling = hostedLobbyMaxPlayers(
+        mapSize.landTiles,
+        game.gameConfig.gameMapSize === GameMapSize.Compact,
+      );
+      if (effectiveCap > ceiling) {
+        return "listing_max_players_too_high";
+      }
     }
   }
   return null;
