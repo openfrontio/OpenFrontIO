@@ -15,6 +15,7 @@ import {
   SettingsModal,
   ShowSettingsModalEvent,
 } from "../../src/client/hud/layers/SettingsModal";
+import { AlternateViewEvent } from "../../src/client/InputHandler";
 import "../../src/client/UserSettingModal";
 import { PauseGameIntentEvent } from "../../src/client/Transport";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
@@ -290,6 +291,46 @@ describe("in-game menu opens the shared settings modal", () => {
     expect(openSettingsRow()).not.toBeNull();
     expect(warn).toHaveBeenCalled();
     expect(pauses).toEqual([true]);
+  });
+
+  it("toggles the terrain view with a switch that shows its state", async () => {
+    const views: boolean[] = [];
+    eventBus.on(AlternateViewEvent, (e) => views.push(e.alternateView));
+    await openMenu();
+    const terrain = () =>
+      menu.querySelector<HTMLButtonElement>("[data-toggle-terrain]")!;
+    expect(terrain().getAttribute("role")).toBe("switch");
+    expect(terrain().getAttribute("aria-checked")).toBe("false");
+
+    terrain().click();
+    await settle();
+    expect(views).toEqual([true]);
+    expect(terrain().getAttribute("aria-checked")).toBe("true");
+
+    terrain().click();
+    await settle();
+    expect(views).toEqual([true, false]);
+    expect(terrain().getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("is a dialog named by its title", async () => {
+    await openMenu();
+    const dialog = menu.querySelector('[role="dialog"]')!;
+    const title = document.getElementById(
+      dialog.getAttribute("aria-labelledby")!,
+    );
+    expect(title?.textContent?.trim()).toBe("user_setting.game_menu_title");
+  });
+
+  it("closes from the header's close button and releases the pause", async () => {
+    await openMenu();
+    menu
+      .querySelector<HTMLButtonElement>('[aria-label="common.close"]')!
+      .click();
+    await settle();
+
+    expect(menu.open).toBe(false);
+    expect(pauses).toEqual([true, false]);
   });
 
   const publicFfa = {
