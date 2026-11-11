@@ -2197,7 +2197,12 @@ export async function createLobby(): Promise<{
   // behaved before the list existed, and the signal that moves such a tab
   // off a deployment on its way out is the lobby feed's commit compare and
   // drain flag, not this.
-  if ((await ensureServerList()) === "outdated") {
+  if (
+    typeof window !== "undefined" &&
+    window.location.hostname !== "localhost" &&
+    window.location.hostname !== "127.0.0.1" &&
+    (await ensureServerList()) === "outdated"
+  ) {
     throw new Error(
       "createLobby: this build has no server; a newer version is available",
     );
@@ -2417,7 +2422,9 @@ export async function fetchFfaAllRanksLeaderboard(
   try {
     const url = new URL(`${getApiBase()}/leaderboard/ranked/ffa/all`);
     url.searchParams.set("page", String(page));
-    const res = await fetch(url.toString(), { headers: { Accept: "application/json" } });
+    const res = await fetch(url.toString(), {
+      headers: { Accept: "application/json" },
+    });
     if (!res.ok) {
       if (res.status === 400) {
         const body = await res.json().catch(() => null);
@@ -2425,7 +2432,9 @@ export async function fetchFfaAllRanksLeaderboard(
       }
       return false;
     }
-    const parsed = FfaAllRanksLeaderboardResponseSchema.safeParse(await res.json());
+    const parsed = FfaAllRanksLeaderboardResponseSchema.safeParse(
+      await res.json(),
+    );
     return parsed.success ? parsed.data : false;
   } catch (err) {
     console.warn("fetchFfaAllRanksLeaderboard: request failed", err);
