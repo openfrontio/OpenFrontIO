@@ -47,7 +47,9 @@ type RowState = "me" | "mate" | "other";
 
 // The table has no surface of its own: it sits on the panel. Scrollbars keep
 // a fixed colour so they still show over the map at 0% HUD opacity.
-const TABLE = "relative mt-1 text-xs md:text-[13px] text-white";
+// Names get more room on large windows, where it costs nothing.
+const TABLE =
+  "relative mt-1 text-xs md:text-[13px] text-white 2xl:[--stats-name:10rem]";
 const SCROLLBAR =
   "[scrollbar-width:thin] [scrollbar-color:rgb(255_255_255_/_0.35)_transparent]";
 const HEADER = "h-5.5 md:h-6 lg:h-6.5 border-b border-white/15 font-bold";
@@ -55,7 +57,7 @@ const HEADER_CELL = "min-w-0 whitespace-nowrap";
 // What a header cell holds; for a sortable column it is the sort button, so
 // the whole cell takes the click.
 const HEADER_BOX = "flex h-full w-full items-center gap-0.5";
-const HEADER_PADDING = "px-1";
+const HEADER_PADDING = "px-0.75";
 const SORT_BUTTON =
   "group cursor-pointer pointer-fine:hover:text-white focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-aquarius";
 const HEADER_TONE = { sorted: "text-white", other: "text-white/70" } as const;
@@ -103,7 +105,9 @@ const ROW_HOVER: Record<RowState, string> = {
 };
 // Your row is also marked on its start edge.
 const ME_EDGE = "border-s-2 border-aquarius";
-const CELL = "flex min-w-0 items-center px-1 tabular-nums";
+// 3px a side, as in the header: the default columns then fit in the panel's
+// width of before.
+const CELL = "flex min-w-0 items-center px-0.75 tabular-nums";
 const ALIGNMENT_CLASS: Record<ColumnAlignment, string> = {
   start: "justify-start text-start",
   center: "justify-center text-center",
@@ -128,6 +132,12 @@ const ZERO_TONE = "text-white/40";
 // Faint rules between columns, so none read as merged.
 const DIVIDER_CLASS = "border-s border-white/8";
 const HEADER_DIVIDER_CLASS = "border-s border-white/12";
+// A row nobody sees, holding each column's widest texts one per line: the
+// browser sizes every shared track from real glyphs. Bold like your row, with
+// the cells' padding and rules.
+const SIZER = "grid col-span-full h-0 overflow-hidden invisible";
+const SIZER_CELL =
+  "flex flex-col px-0.75 font-bold tabular-nums whitespace-nowrap";
 
 // An icon with a mark ("/m", the limit sign) is one box: the mark sits on
 // the icon's baseline. "/m" has a slot of its own fixed width, so the four
@@ -516,6 +526,22 @@ export abstract class StatsTable extends LitElement {
                   @columns-changed=${this.onColumnsChanged}
                 ></column-picker>
               </div>
+            </div>
+
+            <div
+              class=${SIZER}
+              style="grid-template-columns: subgrid; grid-column: 1 / -1;"
+              aria-hidden="true"
+              data-sizer
+            >
+              ${columns.map(
+                (column, index) =>
+                  html`<div
+                    class="${SIZER_CELL} ${index > 0 ? DIVIDER_CLASS : ""}"
+                  >
+                    ${column.widest().map((text) => html`<span>${text}</span>`)}
+                  </div>`,
+              )}
             </div>
 
             <div
