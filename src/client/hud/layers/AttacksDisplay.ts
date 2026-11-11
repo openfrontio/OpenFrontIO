@@ -408,12 +408,14 @@ export class AttacksDisplay extends LitElement implements Controller {
       return html``;
     }
 
+    // Attacks on me first: the list shows three rows before it scrolls, and
+    // those are the ones that need an answer.
     const rows = [
+      ...this.incomingAttackRows(),
+      ...this.incomingBoatRows(),
       ...this.outgoingAttackRows(),
       ...this.landAttackRows(),
       ...this.outgoingBoatRows(),
-      ...this.incomingAttackRows(),
-      ...this.incomingBoatRows(),
     ];
     if (rows.length === 0) {
       return html``;
