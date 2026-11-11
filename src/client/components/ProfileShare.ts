@@ -50,8 +50,8 @@ const BUTTON_SOLID = `${BUTTON_BASE} border-white/20 bg-zinc-900/85 shadow-lg ba
 // trackpad), never on touch, and not at all under reduced motion.
 //
 // The ring is an element of its own, never a pseudo-element on the button:
-// the menu's trigger takes its classes from the host, and WinModal's
-// .win-action::after is already its hover light streak.
+// the menu's trigger takes its classes from the host, which may use the
+// button's pseudo-elements itself.
 const RING_HOLD_MS = 80;
 const RING_FADE_MS = 320;
 const RING_MS = RING_HOLD_MS + RING_FADE_MS;
@@ -269,9 +269,9 @@ export class ProfileShare extends LitElement {
   // Ring
   // ---------------------------------------------------------------------------
 
-  // In the row the ring is inside its button. The menu's trigger clips its
-  // own content (.win-action is overflow: hidden), so there the ring is
-  // beside it, in the wrapper, which is exactly the trigger's size.
+  // In the row the ring is inside its button. The menu's trigger takes its
+  // classes from the host and may clip its own content, so there the ring
+  // is beside it, in the wrapper, which is exactly the trigger's size.
   private ringOf(button: HTMLElement): HTMLElement | null {
     return (
       button.querySelector<HTMLElement>("[data-share-ring]") ??

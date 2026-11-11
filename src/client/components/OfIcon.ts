@@ -26,6 +26,7 @@ export const OF_ICONS = {
   share: { file: "ShareIconWhite.svg" },
   land: { file: "ClaimIcon.svg" },
   leaderboard: { file: "LeaderboardIconSolidWhite.svg" },
+  team: { file: "TeamIconSolidWhite.svg" },
   gold: { file: "GoldCoinIcon.svg", multicolor: true },
   troops: { file: "SoldierIcon.svg" },
   traitor: { file: "TraitorIcon.svg" },
