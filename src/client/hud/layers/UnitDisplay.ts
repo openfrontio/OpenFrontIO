@@ -29,8 +29,15 @@ import { resolveKeybindLabel, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 
-/** Whether a tile's unit can be picked right now. */
-type TileState = "ready" | "unbuildable";
+/** Why a unit can or cannot be picked: no gold for it, or something it needs is missing. */
+type BuildState = "ready" | "poor" | "locked";
+
+/** What picking a unit depends on, read once per render. */
+interface BuildNeeds {
+  gold: Gold;
+  hasSilo: boolean;
+  hasPort: boolean;
+}
 
 // Look. Sizes, colours, radii and spacing of each part live here, so a
 // change of look is one edit. The templates below only hold structure.
@@ -47,13 +54,24 @@ const TILE_SELECTION = {
 } as const;
 // A unit you cannot build dims its icon, count and price but keeps its
 // tile's edge, so at the start of a game the bar does not look switched off.
-const ICON_STATE: Record<TileState, string> = {
+// A locked one (no silo for a bomb, no port for a warship) dims further.
+const ICON_STATE: Record<BuildState, string> = {
   ready: "",
-  unbuildable: "opacity-40",
+  poor: "opacity-50",
+  locked: "opacity-30",
 };
-const PRICE_STATE: Record<TileState, string> = {
+const PRICE_STATE: Record<BuildState, string> = {
   ready: "text-cyber-yellow/80",
-  unbuildable: "text-white/40",
+  poor: "text-red-400",
+  locked: "text-white/30",
+};
+// In place of the count from lg; below lg, where no count is shown, a badge
+// in the tile's bottom end corner. The lock is narrower than it is tall, so
+// end-px leaves as much room beside it as below it.
+const LOCK = "absolute bottom-0.5 end-px text-white/60 lg:static lg:ms-0.5";
+const REASON_STATE: Record<Exclude<BuildState, "ready">, string> = {
+  poor: "text-red-400",
+  locked: "text-white/55",
 };
 // Drawn above the tile with order-first; it keeps its height while empty so
 // the row does not jump when the costs arrive. No room for it in the column.
@@ -574,25 +592,48 @@ export class UnitDisplay extends LitElement implements Controller {
     return 0n;
   }
 
-  private canBuild(item: UnitType): boolean {
-    if (this.game?.config().isUnitDisabled(item)) return false;
+  // gold() makes a new BigInt and units() filters on every call, so a render
+  // reads them once here instead of once per tile.
+  private buildNeeds(): BuildNeeds {
     const player = this.game?.myPlayer();
+    return {
+      gold: player?.gold() ?? 0n,
+      hasSilo: (player?.units(UnitType.MissileSilo).length ?? 0) > 0,
+      hasPort: (player?.units(UnitType.Port).length ?? 0) > 0,
+    };
+  }
+
+  // A missing silo or port wins over missing gold: more gold would not help.
+  private buildState(item: UnitType, needs = this.buildNeeds()): BuildState {
+    if (this.game?.config().isUnitDisabled(item)) return "locked";
     switch (item) {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
       case UnitType.MIRV:
-        return (
-          this.cost(item) <= (player?.gold() ?? 0n) &&
-          (player?.units(UnitType.MissileSilo).length ?? 0) > 0
-        );
+        if (!needs.hasSilo) return "locked";
+        break;
       case UnitType.Warship:
-        return (
-          this.cost(item) <= (player?.gold() ?? 0n) &&
-          (player?.units(UnitType.Port).length ?? 0) > 0
-        );
-      default:
-        return this.cost(item) <= (player?.gold() ?? 0n);
+        if (!needs.hasPort) return "locked";
+        break;
     }
+    return this.cost(item) <= needs.gold ? "ready" : "poor";
+  }
+
+  private canBuild(item: UnitType): boolean {
+    return this.buildState(item) === "ready";
+  }
+
+  /** Why a drawn unit cannot be picked. A unit the game disables has no tile. */
+  private unbuildableReason(
+    item: UnitType,
+    state: Exclude<BuildState, "ready">,
+  ): string {
+    if (state === "poor") return translateText("build_menu.not_enough_money");
+    return translateText("build_menu.requires", {
+      unit: translateText(
+        item === UnitType.Warship ? "unit_type.port" : "unit_type.missile_silo",
+      ),
+    });
   }
 
   private isUnitDisplayed(unitType: PlayerBuildableUnitType): boolean {
@@ -642,6 +683,7 @@ export class UnitDisplay extends LitElement implements Controller {
     ) {
       return null;
     }
+    const needs = this.buildNeeds();
     // A row in the bottom panel: below the control panel from lg up, above
     // it on landscape phones (index.html orders it), spread over the panel's
     // width there. Below lg in portrait (side-bar) it is a column on the
@@ -667,6 +709,7 @@ export class UnitDisplay extends LitElement implements Controller {
               UnitType.City,
               "city",
               this.getHotkey("buildCity", "Digit1"),
+              needs,
             )}
             ${this.renderUnitItem(
               "factory",
@@ -674,6 +717,7 @@ export class UnitDisplay extends LitElement implements Controller {
               UnitType.Factory,
               "factory",
               this.getHotkey("buildFactory", "Digit2"),
+              needs,
             )}
             ${this.renderUnitItem(
               "port",
@@ -681,6 +725,7 @@ export class UnitDisplay extends LitElement implements Controller {
               UnitType.Port,
               "port",
               this.getHotkey("buildPort", "Digit3"),
+              needs,
             )}
             ${this.renderUnitItem(
               "shield",
@@ -688,6 +733,7 @@ export class UnitDisplay extends LitElement implements Controller {
               UnitType.DefensePost,
               "defense_post",
               this.getHotkey("buildDefensePost", "Digit4"),
+              needs,
             )}
             ${this.renderUnitItem(
               "missile-silo",
@@ -695,6 +741,7 @@ export class UnitDisplay extends LitElement implements Controller {
               UnitType.MissileSilo,
               "missile_silo",
               this.getHotkey("buildMissileSilo", "Digit5"),
+              needs,
             )}
             ${this.renderUnitItem(
               "sam-launcher",
@@ -702,6 +749,7 @@ export class UnitDisplay extends LitElement implements Controller {
               UnitType.SAMLauncher,
               "sam_launcher",
               this.getHotkey("buildSamLauncher", "Digit6"),
+              needs,
             )}
             ${this.renderUnitItem(
               "warship",
@@ -709,6 +757,7 @@ export class UnitDisplay extends LitElement implements Controller {
               UnitType.Warship,
               "warship",
               this.getHotkey("buildWarship", "Digit7"),
+              needs,
             )}
             ${this.renderUnitItem(
               "atom-bomb",
@@ -716,6 +765,7 @@ export class UnitDisplay extends LitElement implements Controller {
               UnitType.AtomBomb,
               "atom_bomb",
               this.getHotkey("buildAtomBomb", "Digit8"),
+              needs,
             )}
             ${this.renderUnitItem(
               "hydrogen-bomb",
@@ -723,6 +773,7 @@ export class UnitDisplay extends LitElement implements Controller {
               UnitType.HydrogenBomb,
               "hydrogen_bomb",
               this.getHotkey("buildHydrogenBomb", "Digit9"),
+              needs,
             )}
             ${this.renderUnitItem(
               "mirv",
@@ -730,10 +781,11 @@ export class UnitDisplay extends LitElement implements Controller {
               UnitType.MIRV,
               "mirv",
               this.getHotkey("buildMIRV", "Digit0"),
+              needs,
             )}
           </div>
         </div>
-        ${this.renderUnitTooltip()}
+        ${this.renderUnitTooltip(needs)}
       </div>
     `;
   }
@@ -755,12 +807,14 @@ export class UnitDisplay extends LitElement implements Controller {
     unitType: PlayerBuildableUnitType,
     structureKey: string,
     hotkey: string,
+    needs: BuildNeeds,
   ) {
     if (!this.isUnitDisplayed(unitType)) {
       return html``;
     }
     const selected = this.uiState.ghostStructure === unitType;
-    const state: TileState = this.canBuild(unitType) ? "ready" : "unbuildable";
+    const state = this.buildState(unitType, needs);
+    const name = translateText("unit_type." + structureKey);
     const highlighted = this.tutorialHighlight === unitType;
     const cost = this.cost(unitType);
     const priceId = `unit-price-${structureKey}`;
@@ -797,10 +851,15 @@ export class UnitDisplay extends LitElement implements Controller {
             highlighted ? "tutorial-highlight" : ""
           }"
           role="button"
-          aria-label=${translateText("unit_type." + structureKey)}
+          aria-label=${
+            state === "ready"
+              ? name
+              : `${name}, ${this.unbuildableReason(unitType, state)}`
+          }
           aria-pressed=${selected}
           aria-describedby=${priceId}
-          aria-disabled=${state !== "ready"}
+          aria-disabled=${!selected && state !== "ready"}
+          data-build-state=${state}
           @click=${(event: Event) =>
             this.onUnitClick(event, unitType, selected)}
           @pointerenter=${(event: PointerEvent) =>
@@ -822,7 +881,7 @@ export class UnitDisplay extends LitElement implements Controller {
               class="side-bar:scale-120"
             ></of-icon>
             ${
-              number !== null
+              number !== null && state !== "locked"
                 ? html`<span
                     data-unit-count
                     class="${COUNT} ${number === 0 ? COUNT_EMPTY : ""}"
@@ -831,6 +890,16 @@ export class UnitDisplay extends LitElement implements Controller {
                 : null
             }
           </div>
+          ${
+            state === "locked"
+              ? html`<of-icon
+                  name="lock"
+                  size="10"
+                  data-unit-lock
+                  class=${LOCK}
+                ></of-icon>`
+              : nothing
+          }
         </div>
         <!-- Hidden so it is not read twice: the tile reads it as its
              description. -->
@@ -904,7 +973,7 @@ export class UnitDisplay extends LitElement implements Controller {
     );
   }
 
-  private renderUnitTooltip() {
+  private renderUnitTooltip(needs: BuildNeeds) {
     // A peek wins over a hover: it is the one the player asked for by
     // holding the button.
     const peek = this._peekedUnitTooltip;
@@ -912,6 +981,7 @@ export class UnitDisplay extends LitElement implements Controller {
     if (!tooltip) return nothing;
     // The item can go away (a unit gets disabled) while it is hovered.
     if (!tooltip.element.isConnected) return nothing;
+    const state = this.buildState(tooltip.unitType, needs);
     const displayHotkey = tooltip.hotkey
       .replace("Digit", "")
       .replace("Key", "")
@@ -961,6 +1031,13 @@ export class UnitDisplay extends LitElement implements Controller {
                 ⇧ ${translateText("build_menu.warship_shift_hint")}
               </div>`
             : null
+        }
+        ${
+          state === "ready"
+            ? nothing
+            : html`<div class="mb-0.5 ${REASON_STATE[state]}">
+                ${this.unbuildableReason(tooltip.unitType, state)}
+              </div>`
         }
         <div class="flex items-center justify-center gap-1">
           <of-icon name="gold" size="13"></of-icon>
