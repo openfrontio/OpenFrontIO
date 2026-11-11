@@ -70,6 +70,13 @@ const SLIDER = "h-7 lg:h-5";
 const SLIDER_TRACK = "inset-x-2 h-1 rounded-full bg-white/15";
 const SLIDER_FILL = "rounded-full bg-aquarius";
 const SLIDER_MARK = "h-2 w-0.5 rounded-full bg-white/30";
+// Above the grid, not in it. The sentence wraps: some languages run long.
+const HINT =
+  "mb-1 flex items-start gap-1.5 rounded-sm px-1.5 py-1 text-xs font-medium";
+const HINT_TONE = {
+  warning: "bg-orange-400/10 text-orange-300",
+  info: "bg-blue-400/10 text-blue-300",
+} as const;
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Controller {
@@ -531,17 +538,11 @@ export class ControlPanel extends LitElement implements Controller {
 
   private renderNotification() {
     if (!this._notification) return html``;
-    const isWarning = this._notification.type === "warning";
+    const { type, message } = this._notification;
     return html`
-      <div
-        class="flex items-center gap-1.5 px-1.5 py-1 rounded-md border text-xs font-medium mb-1 ${
-          isWarning
-            ? "border-orange-400/60 bg-orange-400/10 text-orange-300"
-            : "border-blue-400/60 bg-blue-400/10 text-blue-300"
-        }"
-      >
-        <span class="shrink-0">${isWarning ? "⚠" : "ℹ"}</span>
-        <span>${translateText(this._notification.message)}</span>
+      <div data-hint=${type} class="${HINT} ${HINT_TONE[type]}">
+        <of-icon name=${type} size="14" class="mt-px shrink-0"></of-icon>
+        <span>${translateText(message)}</span>
       </div>
     `;
   }

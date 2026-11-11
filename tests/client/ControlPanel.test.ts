@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 // Side-effect import: the @customElement decorator registers <control-panel>
 // when the module is evaluated, and a type-only reference would not evaluate it.
+import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
 import { EventBus } from "@openfront/shared/EventBus";
 import type { ControlPanel } from "../../src/client/hud/layers/ControlPanel";
 import "../../src/client/hud/layers/ControlPanel";
@@ -38,12 +39,22 @@ describe("control-panel troop bar", () => {
     new UserSettings().setAttackRatio(0.2);
 
     me = { troops: 500_000, gold: 1000n, attacking: [], ratePerTick: 123 };
+    // The one neighbour, an ally who betrayed someone: what the hints read.
+    const traitor = {
+      isPlayer: () => true,
+      isAlive: () => true,
+      isTraitor: () => true,
+      isDisconnected: () => false,
+    };
     const player = {
       isAlive: () => true,
       id: () => "me",
+      smallID: () => 1,
       troops: () => me.troops,
       gold: () => me.gold,
       outgoingAttacks: () => me.attacking.map((troops) => ({ troops })),
+      borderTiles: async () => ({ borderTiles: [0] }),
+      isAlliedWith: () => true,
     };
     panel = document.createElement("control-panel") as ControlPanel;
     panel.uiState = { attackRatio: 0 } as UIState;
@@ -53,9 +64,17 @@ describe("control-panel troop bar", () => {
       ticks: () => 0,
       updatesSinceLastTick: () => null,
       myPlayer: () => player,
+      neighbors: () => [1],
+      ownerID: () => 2,
+      playerBySmallID: () => traitor,
       config: () => ({
         maxTroops: () => 1_000_000,
         troopIncreaseRate: () => me.ratePerTick,
+        gameConfig: () => ({
+          gameMode: GameMode.FFA,
+          gameType: GameType.Singleplayer,
+        }),
+        donateTroops: () => false,
       }),
     } as unknown as GameView;
     document.body.appendChild(panel);
@@ -140,5 +159,53 @@ describe("control-panel troop bar", () => {
     expect(q("[data-troop-rate]")?.getAttribute("data-rate-trend")).toBe(
       "down",
     );
+  });
+
+  describe("hints", () => {
+    beforeEach(() => {
+      localStorage.setItem("gamesPlayed", "0");
+    });
+
+    it("warns a new player low on troops, with the warning icon", async () => {
+      me.troops = 5_000;
+      await tick();
+
+      const hint = q("[data-hint]");
+      expect(hint?.getAttribute("data-hint")).toBe("warning");
+      expect(hint?.querySelector('of-icon[name="warning"]')).not.toBeNull();
+      // The icon is drawn, not a character in the sentence.
+      expect(hint?.textContent?.trim()).toBe(
+        "control_panel.low_troops_warning",
+      );
+    });
+
+    it("tells a new player next to an allied traitor, with the info icon", async () => {
+      // The neighbours are looked up every tenth tick.
+      for (let i = 0; i < 10; i++) await tick();
+      await tick();
+
+      const hint = q("[data-hint]");
+      expect(hint?.getAttribute("data-hint")).toBe("info");
+      expect(hint?.querySelector('of-icon[name="info"]')).not.toBeNull();
+      expect(hint?.textContent?.trim()).toBe(
+        "control_panel.traitor_neighbor_info",
+      );
+    });
+
+    it("shows no hint to a player with 20 games", async () => {
+      localStorage.setItem("gamesPlayed", "20");
+      me.troops = 5_000;
+      await tick();
+
+      expect(q("[data-hint]")).toBeNull();
+    });
+
+    it("shows no hint when help messages are off", async () => {
+      new UserSettings().toggleHelpMessages();
+      me.troops = 5_000;
+      await tick();
+
+      expect(q("[data-hint]")).toBeNull();
+    });
   });
 });
