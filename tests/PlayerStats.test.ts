@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { PlayerType } from "@openfront/engine-api/game/GameTypes";
+import type { EventBus } from "@openfront/shared/EventBus";
 import { goldRateTracker } from "../src/client/hud/layers/lib/GoldRateTracker";
 import {
   type ColumnId,
@@ -11,6 +12,7 @@ import {
   aggregateTeamValues,
   TeamStats,
 } from "../src/client/hud/layers/TeamStats";
+import { GoToPlayerEvent } from "../src/client/TransformHandler";
 import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
 
@@ -133,7 +135,7 @@ describe("PlayerStats", () => {
     playerStats.remove();
   });
 
-  it("centers headers and discrete counts and draws the troop icons", async () => {
+  it("aligns each column as the registry says", async () => {
     new UserSettings().setStatsColumns("player", [
       "troops",
       "maxtroops",
@@ -156,27 +158,35 @@ describe("PlayerStats", () => {
     playerStats.refresh();
     await playerStats.updateComplete;
 
-    const headers = playerStats.querySelectorAll(
-      '.stats-table-header > [role="columnheader"]',
-    );
-    const countCell = playerStats.querySelector(
-      '.stats-table-row > [role="cell"]:nth-child(5)',
-    );
-    const troopIcons = headers[2].querySelectorAll("of-icon");
-    const maxTroopIcons = headers[3].querySelectorAll("of-icon");
-    expect(headers[1].classList).toContain("justify-center");
-    expect(headers[2].classList).toContain("justify-center");
-    expect(headers[3].classList).toContain("justify-center");
-    expect(headers[4].classList).toContain("justify-center");
-    expect([...troopIcons].map((icon) => icon.getAttribute("name"))).toEqual([
-      "troops",
-    ]);
+    const header = (id: ColumnId) =>
+      playerStats.querySelector(
+        `.stats-table-header > [role="columnheader"][data-column="${id}"]`,
+      );
+    const iconNames = (id: ColumnId) =>
+      [...(header(id)?.querySelectorAll("of-icon") ?? [])]
+        .map((icon) => icon.getAttribute("name"))
+        .filter((name) => name !== "chevron-right");
+    // Amounts end-aligned, unit counts centred, headers and cells alike,
+    // except where a header has its own alignment.
+    expect(header("troops")?.getAttribute("data-align")).toBe("end");
+    expect(header("maxtroops")?.getAttribute("data-align")).toBe("center");
+    expect(header("player")?.getAttribute("data-align")).toBe("center");
+    expect(
+      playerStats
+        .querySelector(
+          '.stats-table-row > [role="cell"][data-column="maxtroops"]',
+        )
+        ?.getAttribute("data-align"),
+    ).toBe("end");
+    expect(header("cities")?.getAttribute("data-align")).toBe("center");
+    expect(
+      playerStats
+        .querySelector('.stats-table-row > [role="cell"][data-column="cities"]')
+        ?.getAttribute("data-align"),
+    ).toBe("center");
+    expect(iconNames("troops")).toEqual(["troops"]);
     // Max troops header reads as a troop icon raised to the upper-limit icon.
-    expect([...maxTroopIcons].map((icon) => icon.getAttribute("name"))).toEqual(
-      ["troops", "max"],
-    );
-    expect(countCell?.classList).toContain("justify-center");
-    expect(countCell?.classList).toContain("text-center");
+    expect(iconNames("maxtroops")).toEqual(["troops", "max"]);
 
     playerStats.remove();
   });
@@ -300,6 +310,139 @@ describe("PlayerStats default sort", () => {
   });
 });
 
+describe("PlayerStats rows", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  async function mount(
+    players: PlayerView[],
+    me: PlayerView | null,
+  ): Promise<PlayerStats> {
+    const game = {
+      myPlayer: () => me,
+      playerViews: () => players,
+      config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
+      numLandTiles: () => 100,
+      numTilesWithFallout: () => 0,
+    } as unknown as GameView;
+    const playerStats = new PlayerStats();
+    playerStats.game = game;
+    playerStats.visible = true;
+    document.body.append(playerStats);
+    playerStats.refresh();
+    await playerStats.updateComplete;
+    return playerStats;
+  }
+
+  function rows(playerStats: PlayerStats) {
+    return [
+      ...playerStats.querySelectorAll(".stats-table-scroll .stats-table-row"),
+    ];
+  }
+
+  function cell(row: Element, id: ColumnId) {
+    return row.querySelector(`[role="cell"][data-column="${id}"]`);
+  }
+
+  it("sorts by a header's column, descending first, then ascending", async () => {
+    const playerStats = await mount(
+      [
+        { ...player("alice", 90), gold: () => 10n } as unknown as PlayerView,
+        { ...player("bob", 10), gold: () => 50n } as unknown as PlayerView,
+        { ...player("carol", 50), gold: () => 90n } as unknown as PlayerView,
+      ],
+      null,
+    );
+    const goldHeader = playerStats.querySelector(
+      '[role="columnheader"][data-column="gold"]',
+    );
+    const names = () =>
+      rows(playerStats).map((row) => cell(row, "player")?.textContent?.trim());
+
+    goldHeader?.querySelector("button")?.click();
+    await playerStats.updateComplete;
+    expect(goldHeader?.getAttribute("aria-sort")).toBe("descending");
+    expect(names()).toEqual(["carol", "bob", "alice"]);
+
+    goldHeader?.querySelector("button")?.click();
+    await playerStats.updateComplete;
+    expect(goldHeader?.getAttribute("aria-sort")).toBe("ascending");
+    expect(names()).toEqual(["alice", "bob", "carol"]);
+  });
+
+  it("marks your row and your teammates' rows", async () => {
+    const me = player("me", 90);
+    const mate = {
+      ...player("mate", 50),
+      isOnSameTeam: (other: PlayerView) => other === me,
+    } as unknown as PlayerView;
+    const stranger = player("stranger", 10);
+    const playerStats = await mount([me, mate, stranger], me);
+
+    expect(
+      rows(playerStats).map((row) => [
+        row.hasAttribute("data-me"),
+        row.hasAttribute("data-mate"),
+      ]),
+    ).toEqual([
+      [true, false],
+      [false, true],
+      [false, false],
+    ]);
+  });
+
+  it("marks zeros, but not the Type column's Player", async () => {
+    new UserSettings().setStatsColumns("player", ["playerType", "tiles"]);
+    const human = {
+      ...player("human", 0),
+      type: () => PlayerType.Human,
+    } as unknown as PlayerView;
+    const playerStats = await mount([human], null);
+
+    const [row] = rows(playerStats);
+    expect(cell(row, "tiles")?.hasAttribute("data-zero")).toBe(true);
+    expect(cell(row, "playerType")?.textContent?.trim()).toBe(
+      "player_type.player",
+    );
+    expect(cell(row, "playerType")?.hasAttribute("data-zero")).toBe(false);
+    expect(cell(row, "rank")?.hasAttribute("data-zero")).toBe(false);
+  });
+
+  it("gives a name its full text and its own direction, and keeps translators off the row", async () => {
+    const long = "Abcdefghijklmnopqrstuvwxyz Abcdefghijklm";
+    const playerStats = await mount([player(long, 3)], null);
+
+    const [row] = rows(playerStats);
+    const name = cell(row, "player")?.querySelector("span");
+    expect(name?.getAttribute("title")).toBe(long);
+    expect(name?.getAttribute("dir")).toBe("auto");
+    expect(row.getAttribute("translate")).toBe("no");
+  });
+
+  it("goes to a player when their row is clicked", async () => {
+    const alice = player("alice", 90);
+    const bob = player("bob", 10);
+    const playerStats = await mount([alice, bob], null);
+    const emit = vi.fn();
+    playerStats.eventBus = { emit } as unknown as EventBus;
+
+    (rows(playerStats)[1] as HTMLElement).click();
+
+    expect(emit).toHaveBeenCalledTimes(1);
+    expect(emit.mock.calls[0][0]).toBeInstanceOf(GoToPlayerEvent);
+    expect(emit.mock.calls[0][0].player).toBe(bob);
+  });
+});
+
 describe("PlayerStats clan column", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -352,12 +495,16 @@ describe("PlayerStats clan column", () => {
   it("headers the clan column with the guild icon and reserves a fixed track", async () => {
     const playerStats = await mount([player("alice", 3, "ABCDE")]);
 
-    const headers = playerStats.querySelectorAll(
-      '.stats-table-header > [role="columnheader"]',
-    );
-    expect(headers[1].querySelector('of-icon[name="clan"]')).not.toBeNull();
-    expect(headers[1].getAttribute("title")).toBe("leaderboard.clan");
-    expect(headers[2].querySelector('of-icon[name="player"]')).not.toBeNull();
+    const header = (id: ColumnId) =>
+      playerStats.querySelector(
+        `.stats-table-header > [role="columnheader"][data-column="${id}"]`,
+      );
+    expect(
+      header("clan")?.querySelector('of-icon[name="clan"]'),
+    ).not.toBeNull();
+    expect(
+      header("player")?.querySelector('of-icon[name="player"]'),
+    ).not.toBeNull();
     expect(
       playerStats.querySelector(".stats-table-content")?.getAttribute("style"),
     ).toContain("34px 80px 100px");
@@ -367,7 +514,7 @@ describe("PlayerStats clan column", () => {
     const playerStats = await mount([player("alice", 3, "ABCDE")]);
 
     const hasRule = (nodes: Element[]) =>
-      nodes.map((node) => node.className.includes("border-l"));
+      nodes.map((node) => node.hasAttribute("data-rule"));
     // rank | clan | player | tiles | gold | maxtroops (+ the ⚙️ track).
     expect(
       hasRule([
@@ -383,7 +530,7 @@ describe("PlayerStats clan column", () => {
     ).toEqual([false, true, true, true, true, true]);
   });
 
-  it("leaves an empty cell for clanless players", async () => {
+  it("shows a dash for clanless players", async () => {
     const playerStats = await mount([
       player("alice", 3, "ABCDE"),
       player("bob", 2),
@@ -393,11 +540,17 @@ describe("PlayerStats clan column", () => {
       ".stats-table-scroll .stats-table-row",
     );
     expect(rows.length).toBe(2);
-    expect(
-      [...rows].map((row) =>
-        row.querySelectorAll('[role="cell"]')[1].textContent?.trim(),
-      ),
-    ).toEqual(["ABCDE", ""]);
+    const clanCells = [...rows].map(
+      (row) => row.querySelectorAll('[role="cell"]')[1],
+    );
+    expect(clanCells.map((cell) => cell.textContent?.trim())).toEqual([
+      "ABCDE",
+      "–",
+    ]);
+    expect(clanCells.map((cell) => cell.hasAttribute("data-zero"))).toEqual([
+      false,
+      true,
+    ]);
   });
 
   it("disappears when deselected in the picker", async () => {
@@ -410,8 +563,8 @@ describe("PlayerStats clan column", () => {
         ...playerStats.querySelectorAll(
           '.stats-table-header > [role="columnheader"]',
         ),
-      ].map((header) => header.getAttribute("title")),
-    ).not.toContain("leaderboard.clan");
+      ].map((header) => header.getAttribute("data-column")),
+    ).toEqual(["rank", "player", "tiles", "gold", "maxtroops", null]);
     expect(
       playerStats.querySelector(".stats-table-content")?.getAttribute("style"),
     ).toContain("34px 100px");
