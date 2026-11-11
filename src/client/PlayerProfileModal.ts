@@ -60,6 +60,7 @@ export class PlayerProfileModal extends BaseModal {
   @state() private clans: NonNullable<PlayerProfile["clans"]> = [];
   @state() private displayClanTag: string | null = null;
   @state() private rawFfaRating: FfaRatingSummaryData | null = null;
+  @state() private keepGlobalPosition = false;
   // Level / XP, when progression is on and the player has any.
   @state() private progress: PublicProgress | null = null;
   @state() private loading = false;
@@ -86,7 +87,11 @@ export class PlayerProfileModal extends BaseModal {
   // other players retain the existing rating/tier presentation.
   private get ffaRating(): FfaRatingSummaryData | null {
     if (this.rawFfaRating === null) return null;
-    if (isOwnAccount(this.publicId) || this.rawFfaRating.kind !== "rated") {
+    if (
+      this.keepGlobalPosition ||
+      isOwnAccount(this.publicId) ||
+      this.rawFfaRating.kind !== "rated"
+    ) {
       return this.rawFfaRating;
     }
     return { ...this.rawFfaRating, globalPosition: undefined };
@@ -515,6 +520,7 @@ export class PlayerProfileModal extends BaseModal {
     // helpers re-set it right after open() so back() routes home; the
     // return-from-stats path above skips this and keeps the origin intact.
     this.openedFrom = null;
+    this.keepGlobalPosition = false;
     // A new opening: the profile card plays its flourish again.
     // Counted across every profile modal, so no two openings share a key.
     this.openCount = ++profileOpenings;
@@ -638,6 +644,12 @@ export class PlayerProfileModal extends BaseModal {
 
   public openFromLeaderboard(publicId: string): void {
     this.open({ publicID: publicId });
+    this.openedFrom = "leaderboard";
+  }
+
+  public openFromAllRanks(publicId: string): void {
+    this.open({ publicID: publicId });
+    this.keepGlobalPosition = true;
     this.openedFrom = "leaderboard";
   }
 

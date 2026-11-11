@@ -618,12 +618,20 @@ export class LeaderboardPlayerList extends LitElement {
   // the leaderboard (its loaded pages survive the close).
   private openProfile(publicId: string) {
     loadModal("player-profile-modal").then(
-      () =>
-        document
-          .querySelector<
-            HTMLElement & { openFromLeaderboard(publicId: string): void }
-          >("player-profile-modal")
-          ?.openFromLeaderboard(publicId),
+      () => {
+        const modal = document.querySelector<
+          HTMLElement & {
+            openFromLeaderboard(publicId: string): void;
+            openFromAllRanks(publicId: string): void;
+          }
+        >("player-profile-modal");
+        if (!modal) return;
+        if (this.ffaAllRanks) {
+          modal.openFromAllRanks(publicId);
+        } else {
+          modal.openFromLeaderboard(publicId);
+        }
+      },
       (err) => console.error("player-profile-modal failed to load:", err),
     );
   }
