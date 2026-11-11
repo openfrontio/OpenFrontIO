@@ -300,6 +300,8 @@ export class LangSelector extends LitElement {
       "steam-wishlist-button",
       "streaming-now",
       "tutorial-panel",
+      // Re-sends its strings to the clan map frame.
+      "clan-map-view",
     ];
 
     document.title = this.translateText("main.title") ?? document.title;

@@ -2,7 +2,12 @@ import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { getAudience } from "../../Api";
 import { userAuth } from "../../Auth";
-import { isRTL, translateText, translationTemplates } from "../../Utils";
+import {
+  getCurrentLanguage,
+  isRTL,
+  translateText,
+  translationTemplates,
+} from "../../Utils";
 
 // The clan territory map is a page served by infra (`clanmap.<audience>`),
 // framed here. Contract (infra docs/clanmap-client-handoff.md): the page posts
@@ -27,6 +32,8 @@ export class ClanMapView extends LitElement {
   // (`?full=1`, map edge to edge with the sidebar floating over it).
   @property({ type: Boolean }) full = false;
   @state() private loading = true;
+  // The page has asked for its strings (clanmap:ready), so it's listening.
+  private pageReady = false;
 
   createRenderRoot() {
     return this;
@@ -51,15 +58,8 @@ export class ClanMapView extends LitElement {
       return;
     }
     if (ev.data?.type !== "clanmap:ready") return;
-    // Explicit target origin — never "*".
-    this.frame.contentWindow?.postMessage(
-      {
-        type: "clanmap:lang",
-        rtl: isRTL(),
-        strings: translationTemplates("clan_map."),
-      },
-      origin,
-    );
+    this.pageReady = true;
+    this.sendLanguage();
     const auth = await userAuth();
     if (!auth) return;
     // The frame may have been torn down while the token was refreshing.
@@ -68,6 +68,27 @@ export class ClanMapView extends LitElement {
     // Explicit target origin — never "*".
     target.postMessage({ type: "clanmap:auth", jwt: auth.jwt }, origin);
   };
+
+  // The page's text in the player's language. Sent on every clanmap:ready,
+  // and again when the language changes while the map is open: LangSelector
+  // re-renders this component (it's in its list), and the page skips a
+  // message it already has.
+  private sendLanguage(): void {
+    // Explicit target origin — never "*".
+    this.frame?.contentWindow?.postMessage(
+      {
+        type: "clanmap:lang",
+        lang: getCurrentLanguage(),
+        rtl: isRTL(),
+        strings: translationTemplates("clan_map."),
+      },
+      clanMapOrigin(),
+    );
+  }
+
+  protected updated(): void {
+    if (this.pageReady) this.sendLanguage();
+  }
 
   render() {
     // The page sizes its canvas to the frame and re-fits on resize; the host

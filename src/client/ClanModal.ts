@@ -115,6 +115,10 @@ export class ClanModal extends BaseModal {
   private openedFromProfile: string | null = null;
   private openedFromProfileOrigin: ProfileOrigin | null = null;
   private previousListTab: ListTab = "my-clans";
+  // Where the map page's Back goes: the last list tab other than the map.
+  // Never the map itself, or a clan opened from the map would leave Back
+  // pointing at the page it's on, and the player stuck there.
+  private mapReturnTab: "my-clans" | "browse" = "my-clans";
   // Set when the open clan was picked from the browser's boosted block, so a
   // join from its detail page is attributed to the block.
   private joinSource: "boosted" | undefined = undefined;
@@ -185,6 +189,7 @@ export class ClanModal extends BaseModal {
       this.selectedClanTag = "";
       this.detailCache = null;
       this.gameHistoryCache = null;
+      if (tab === "my-clans" || tab === "browse") this.mapReturnTab = tab;
       if (tab === "my-clans") {
         void this.loadMyClans();
       }
@@ -319,6 +324,7 @@ export class ClanModal extends BaseModal {
     this.openedFromProfileOrigin = null;
     this.activeTab = "my-clans";
     this.previousListTab = "my-clans";
+    this.mapReturnTab = "my-clans";
     this.view = "list";
     this.selectedClan = null;
     this.selectedClanTag = "";
@@ -623,6 +629,9 @@ export class ClanModal extends BaseModal {
     `;
   }
 
+  // z-[9999]: just under the toasts and dialogs that use z-[10000]
+  // (MarketingConsentToast, PurchaseNudgeModal, WebGLGate), so one that
+  // appears while the map is open shows on top of it rather than behind.
   // The clan map is its own full-screen page over the game: the map edge to
   // edge (its sidebar floats over it) and a way back to the clan lists. It's
   // rendered into its own element on <body>, because a `fixed` element
@@ -662,7 +671,7 @@ export class ClanModal extends BaseModal {
   private renderMapPage() {
     return html`<div
       data-clan-map-page
-      class="fixed inset-0 z-[10000] bg-[#3c3c3c]"
+      class="fixed inset-0 z-[9999] bg-[#3c3c3c]"
     >
       <clan-map-view full class="block w-full h-full"></clan-map-view>
       <button
@@ -670,7 +679,7 @@ export class ClanModal extends BaseModal {
         type="button"
         class="absolute top-3 left-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-[#151a21]/90 border border-white/10 backdrop-blur text-white text-sm font-bold uppercase tracking-wider hover:bg-[#1b212a] cursor-pointer"
         aria-label=${translateText("clan_modal.map_back")}
-        @click=${() => this.setActiveTab(this.previousListTab)}
+        @click=${() => this.setActiveTab(this.mapReturnTab)}
       >
         <span aria-hidden="true">←</span>${translateText("clan_modal.title")}
       </button>

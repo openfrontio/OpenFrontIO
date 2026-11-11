@@ -101,11 +101,41 @@ describe("ClanMapView", () => {
       1,
       {
         type: "clanmap:lang",
+        lang: "en",
         rtl: false,
         strings: { claim_land: "Claim land" },
       },
       MAP_ORIGIN,
     );
+  });
+
+  it("sends the language again when it changes while the map is open", async () => {
+    ready();
+    await flushAsync();
+    postMessage.mockClear();
+    asMock(translationTemplates).mockReturnValueOnce({
+      claim_land: "Revendiquer",
+    });
+
+    // LangSelector asks every translated component to re-render.
+    view.requestUpdate();
+    await flushAsync(view);
+
+    expect(postMessage).toHaveBeenCalledWith(
+      {
+        type: "clanmap:lang",
+        lang: "en",
+        rtl: false,
+        strings: { claim_land: "Revendiquer" },
+      },
+      MAP_ORIGIN,
+    );
+  });
+
+  it("sends nothing on a re-render before the page has said it's ready", async () => {
+    view.requestUpdate();
+    await flushAsync(view);
+    expect(postMessage).not.toHaveBeenCalled();
   });
 
   it("sends a signed-out viewer the text but no JWT", async () => {
