@@ -1,9 +1,9 @@
 import { GameMode, type Team } from "@openfront/engine-api/game/GameTypes";
-import { assetUrl } from "@openfront/shared/AssetUrls";
 import type { EventBus } from "@openfront/shared/EventBus";
 import { Colord } from "colord";
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import "../../components/OfIcon";
 import { isCompactViewport } from "../../CompactViewport";
 import type { Controller } from "../../Controller";
 import { AlternateViewEvent } from "../../InputHandler";
@@ -11,19 +11,30 @@ import { Platform } from "../../Platform";
 import { themeProvider } from "../../theme/ThemeProvider";
 import { getTranslatedPlayerTeamLabel, translateText } from "../../Utils";
 import type { GameView } from "../../view";
+import { keepPressKeysFromGame } from "../HudKeys";
+import { HUD_ICON_BUTTON } from "../HudModal";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import "./PlayerStats";
 import type { PlayerStats } from "./PlayerStats";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
 import "./TeamStats";
 import type { TeamStats } from "./TeamStats";
-const playerStatsRegularIcon = assetUrl(
-  "images/LeaderboardIconRegularWhite.svg",
-);
-const playerStatsSolidIcon = assetUrl("images/LeaderboardIconSolidWhite.svg");
-const teamStatsRegularIcon = assetUrl("images/TeamIconRegularWhite.svg");
-const teamStatsSolidIcon = assetUrl("images/TeamIconSolidWhite.svg");
-const alternateViewIcon = assetUrl("images/TreeIconWhite.svg");
+
+// Look. Sizes, colours, radii and spacing of each part live here, so a
+// change of look is one edit. The templates below only hold structure.
+const PANEL =
+  "max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:z-900 lg:pointer-events-auto flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-1 hud-panel rounded-br-lg text-white transition-[margin-top] duration-300";
+const PANEL_OPEN = "max-[400px]:w-full max-[400px]:rounded-none";
+// Below lg the timer bar is fixed over the top end of the panel, so the bar
+// wraps before it instead of running under it.
+const BAR =
+  "flex flex-wrap items-center gap-1 max-lg:max-w-[calc(100vw-12.5rem)]";
+const BAR_BUTTON = `${HUD_ICON_BUTTON} aria-pressed:bg-aquarius/20 aria-pressed:text-white aria-pressed:inset-ring aria-pressed:inset-ring-aquarius/55`;
+const BAR_ICON_SIZE = 20;
+const GAME_ID =
+  "ms-auto self-start px-2 text-[11px] leading-6 tabular-nums text-white/70 select-all";
+const YOUR_TEAM = "mt-1 flex items-center gap-1.5 px-1 text-[13px]";
+const TEAM_SWATCH = "size-2.5 shrink-0 rounded-xs bg-(--color)";
 
 @customElement("game-left-sidebar")
 export class GameLeftSidebar extends LitElement implements Controller {
@@ -125,106 +136,81 @@ export class GameLeftSidebar extends LitElement implements Controller {
   }
 
   render() {
+    const isTableShown = this.isPlayerStatsShown || this.isTeamStatsShown;
+    const players = translateText("help_modal.icon_alt_player_leaderboard");
+    const teams = translateText("help_modal.icon_alt_team_leaderboard");
+    const view = translateText("user_setting.toggle_view_desc");
     return html`
       <aside
-        class=${`max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:z-900 lg:pointer-events-auto flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 hud-panel rounded-br-lg ${this.isPlayerStatsShown || this.isTeamStatsShown ? "max-[400px]:w-full max-[400px]:rounded-none" : ""} transition-all duration-300 ease-out transform ${
-          this.isVisible ? "translate-x-0" : "hidden"
-        }`}
+        class="${PANEL} ${isTableShown ? PANEL_OPEN : ""} ${
+          this.isVisible ? "" : "hidden"
+        }"
         style="margin-top: ${this.barOffset}px;"
       >
-        <div class="flex items-center gap-4 xl:gap-6 text-white">
-          <div
-            class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
+        <div class=${BAR}>
+          <button
+            type="button"
+            class=${BAR_BUTTON}
+            data-sidebar-button="players"
+            aria-pressed=${this.isPlayerStatsShown ? "true" : "false"}
+            aria-label=${players}
+            title=${players}
+            @mousedown=${(e: MouseEvent) => e.preventDefault()}
             @click=${this.togglePlayerStats}
-            role="button"
-            tabindex="0"
-            @keydown=${(e: KeyboardEvent) => {
-              if (e.key === "Enter" || e.key === " " || e.code === "Space") {
-                e.preventDefault();
-                this.togglePlayerStats();
-              }
-            }}
+            @keydown=${keepPressKeysFromGame}
+            @keyup=${keepPressKeysFromGame}
           >
-            <img
-              src=${
-                this.isPlayerStatsShown
-                  ? playerStatsSolidIcon
-                  : playerStatsRegularIcon
-              }
-              alt=${
-                translateText("help_modal.icon_alt_player_leaderboard") ||
-                "Player Leaderboard Icon"
-              }
-              width="20"
-              height="20"
-            />
-          </div>
+            <of-icon
+              name=${this.isPlayerStatsShown ? "leaderboard" : "leaderboard-outline"}
+              size=${BAR_ICON_SIZE}
+            ></of-icon>
+          </button>
           ${
             this.isTeamGame
               ? html`
-                  <div
-                    class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
+                  <button
+                    type="button"
+                    class=${BAR_BUTTON}
+                    data-sidebar-button="teams"
+                    aria-pressed=${this.isTeamStatsShown ? "true" : "false"}
+                    aria-label=${teams}
+                    title=${teams}
+                    @mousedown=${(e: MouseEvent) => e.preventDefault()}
                     @click=${this.toggleTeamStats}
-                    role="button"
-                    tabindex="0"
-                    @keydown=${(e: KeyboardEvent) => {
-                      if (
-                        e.key === "Enter" ||
-                        e.key === " " ||
-                        e.code === "Space"
-                      ) {
-                        e.preventDefault();
-                        this.toggleTeamStats();
-                      }
-                    }}
+                    @keydown=${keepPressKeysFromGame}
+                    @keyup=${keepPressKeysFromGame}
                   >
-                    <img
-                      src=${
-                        this.isTeamStatsShown
-                          ? teamStatsSolidIcon
-                          : teamStatsRegularIcon
-                      }
-                      alt=${
-                        translateText("help_modal.icon_alt_team_leaderboard") ||
-                        "Team Leaderboard Icon"
-                      }
-                      width="20"
-                      height="20"
-                    />
-                  </div>
+                    <of-icon
+                      name=${this.isTeamStatsShown ? "team" : "team-outline"}
+                      size=${BAR_ICON_SIZE}
+                    ></of-icon>
+                  </button>
                 `
               : null
           }
-          <div
-            class="cursor-pointer p-0.5 hover:bg-gray-600 border rounded-md transition-colors ${
-              this.alternateView
-                ? "bg-gray-500 border-white"
-                : "bg-gray-700/50 border-slate-500"
-            }"
-            @click=${this.toggleAlternateView}
-            role="button"
-            tabindex="0"
+          <button
+            type="button"
+            class=${BAR_BUTTON}
+            data-sidebar-button="view"
             aria-pressed=${this.alternateView ? "true" : "false"}
-            title=${translateText("user_setting.toggle_view_desc")}
+            aria-label=${view}
+            title=${view}
+            @mousedown=${(e: MouseEvent) => e.preventDefault()}
+            @click=${this.toggleAlternateView}
             @keydown=${(e: KeyboardEvent) => {
+              if (e.key === "Enter") e.stopPropagation();
+            }}
+            @keyup=${(e: KeyboardEvent) => {
               // Not space: that's the hold-to-view key, handled globally.
-              if (e.key === "Enter") {
-                e.preventDefault();
-                this.toggleAlternateView();
-              }
+              if (e.code === "Space") e.preventDefault();
             }}
           >
-            <img
-              src=${alternateViewIcon}
-              alt=${translateText("user_setting.toggle_view_desc")}
-              width="20"
-              height="20"
-            />
-          </div>
+            <of-icon name="terrain" size=${BAR_ICON_SIZE}></of-icon>
+          </button>
           ${
-            this.isPlayerStatsShown || this.isTeamStatsShown
+            isTableShown
               ? html`<span
-                  class="ml-auto text-[10px] text-slate-500 select-all leading-none self-start"
+                  class=${GAME_ID}
                   title=${translateText("help_modal.game_id_tooltip")}
                   >${this.game?.gameID() ?? ""}</span
                 >`
@@ -235,19 +221,18 @@ export class GameLeftSidebar extends LitElement implements Controller {
           this.isPlayerTeamLabelVisible
             ? html`
                 <div
-                  class="flex items-center w-full text-white mt-2"
+                  class=${YOUR_TEAM}
+                  style="--color: ${this.playerColor.toRgbString()}"
+                  data-your-team
                   @contextmenu=${(e: Event) => e.preventDefault()}
                 >
                   ${translateText("help_modal.ui_your_team")}
-                  <span
-                    style="--color: ${this.playerColor.toRgbString()}"
-                    class="text-(--color)"
-                  >
-                    &nbsp;${getTranslatedPlayerTeamLabel(
+                  <span class=${TEAM_SWATCH}></span>
+                  <span class="text-(--color)">
+                    ${getTranslatedPlayerTeamLabel(
                       this.playerTeam,
                       this.game?.teamClanTag(this.playerTeam),
                     )}
-                    &#10687;
                   </span>
                 </div>
               `
