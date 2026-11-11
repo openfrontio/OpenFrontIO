@@ -15,7 +15,6 @@ import { GameEnv } from "@openfront/shared/configuration/Env";
 import { EventBus } from "@openfront/shared/EventBus";
 import {
   ClientInfo,
-  hostedLobbyMaxPlayers,
   LOBBY_QUEUE_CUTOFF_MS,
   LobbyInfoEvent,
 } from "@openfront/shared/WireSchemas";
@@ -77,11 +76,6 @@ export class HostLobbyModal extends BaseModal {
   @state() private selectedDifficulty: Difficulty = Difficulty.Easy;
   @state() private nations: number = 0;
   @state() private defaultNationCount: number = 0;
-  // A map's land tiles, which set how big a listed lobby can be. Tagged with
-  // the map so a previous map's size is never used for the selected one.
-  @state() private mapLandTiles:
-    | { map: GameMapType; tiles: number }
-    | undefined = undefined;
   @state() private gameMode: GameMode = GameMode.FFA;
   @state() private teamCount: TeamCountConfig = 2;
 
@@ -347,7 +341,7 @@ export class HostLobbyModal extends BaseModal {
             ? "bg-malibu-blue text-white"
             : "text-white/50 hover:text-white"
         }"
-        @click=${() => void this.handleVisibilitySelect(isPublic)}
+        @click=${() => this.handleVisibilitySelect(isPublic)}
       >
         ${translateText(labelKey)}
       </button>
@@ -449,13 +443,7 @@ export class HostLobbyModal extends BaseModal {
     >`;
   }
 
-  private selectedMapLandTiles(): number | undefined {
-    return this.mapLandTiles?.map === this.selectedMap
-      ? this.mapLandTiles.tiles
-      : undefined;
-  }
-
-  private async handleVisibilitySelect(isPublic: boolean) {
+  private handleVisibilitySelect(isPublic: boolean) {
     if (
       this.listingRequestInFlight ||
       isPublic === this.publiclyListed ||
@@ -468,20 +456,6 @@ export class HostLobbyModal extends BaseModal {
       return;
     }
     if (isPublic) {
-      // The cap's ceiling comes from the map's size, so retry a manifest
-      // that failed to load rather than offer a cap the server rejects.
-      if (this.selectedMapLandTiles() === undefined) {
-        const lobbyId = this.lobbyId;
-        await this.loadNationCount();
-        // The host may have closed the modal or left the lobby meanwhile;
-        // the dialog portals to <body>, so it must not open over the next
-        // page.
-        if (!this.isModalOpen || this.lobbyId !== lobbyId) return;
-        if (this.selectedMapLandTiles() === undefined) {
-          this.showListingError();
-          return;
-        }
-      }
       // Listing needs the host's start time and player cap first.
       this.showListLobbyDialog = true;
       return;
@@ -900,10 +874,6 @@ export class HostLobbyModal extends BaseModal {
                 .playerTeams=${
                   this.gameMode === GameMode.Team ? this.teamCount : undefined
                 }
-                .maxAllowedPlayers=${hostedLobbyMaxPlayers(
-                  this.selectedMapLandTiles() ?? 0,
-                  this.compactMap,
-                )}
                 @cancel=${() => (this.showListLobbyDialog = false)}
                 @confirm=${(e: CustomEvent<ListLobbyOptions>) => {
                   this.showListLobbyDialog = false;
@@ -1118,7 +1088,6 @@ export class HostLobbyModal extends BaseModal {
     this.selectedDifficulty = Difficulty.Easy;
     this.nations = 0;
     this.defaultNationCount = 0;
-    this.mapLandTiles = undefined;
     this.gameMode = GameMode.FFA;
     this.teamCount = 2;
     this.bots = 400;
@@ -1748,8 +1717,6 @@ export class HostLobbyModal extends BaseModal {
       key = "private_lobby.listing_full";
     } else if (serverError === "listing_max_players_too_low") {
       key = "private_lobby.listing_max_players_too_low";
-    } else if (serverError === "listing_max_players_too_high") {
-      key = "private_lobby.listing_max_players_too_high";
     }
     showToast(translateText(key), "red", 3000);
   }
@@ -2097,10 +2064,6 @@ export class HostLobbyModal extends BaseModal {
       // Only update if the map hasn't changed
       if (this.selectedMap === currentMap) {
         this.defaultNationCount = manifest.nations.length;
-        this.mapLandTiles = {
-          map: currentMap,
-          tiles: manifest.map.num_land_tiles,
-        };
         this.nations = this.compactMap
           ? Math.max(0, Math.floor(manifest.nations.length * 0.25))
           : manifest.nations.length;
