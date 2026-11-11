@@ -9,6 +9,8 @@ import { renderNumber } from "@openfront/engine-lib/Format";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, nothing } from "lit";
 import { customElement } from "lit/decorators.js";
+import "../../components/OfIcon";
+import type { OfIconName } from "../../components/OfIcon";
 import { Controller } from "../../Controller";
 import {
   InputHandler,
@@ -23,20 +25,43 @@ import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
 import { resolveKeybindLabel, translateText } from "../../Utils";
 import { GameView } from "../../view";
-import {
-  atomBombIcon,
-  cityIcon,
-  defensePostIcon,
-  factoryIcon,
-  goldCoinIcon,
-  hydrogenBombIcon,
-  mirvIcon,
-  missileSiloIcon,
-  portIcon,
-  samLauncherIcon,
-  warshipIcon,
-} from "../HotbarIcons";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
+
+/** Whether a tile's unit can be picked right now. */
+type TileState = "ready" | "unbuildable";
+
+// Look. Sizes, colours, radii and spacing of each part live here, so a
+// change of look is one edit. The templates below only hold structure.
+const ITEM = "gap-0.5";
+// The border is a real one: the tutorial highlight in styles.css recolours it.
+// From lg every tile is 44px wide, so the prices above them line up.
+const TILE =
+  "relative flex w-full items-center justify-center rounded-sm border text-white cursor-pointer transition-colors h-6.5 lg:w-11 max-lg:landscape:h-7.5 side-bar:h-12 side-bar:min-w-6.5";
+// The armed unit (picked, waiting for a spot on the map) is filled blue.
+const TILE_SELECTION = {
+  idle: "border-white/15 pointer-fine:hover:bg-white/10 active:bg-white/15",
+  selected:
+    "border-aquarius bg-malibu-blue/25 pointer-fine:hover:bg-malibu-blue/35",
+} as const;
+// A unit you cannot build dims its icon, count and price but keeps its
+// tile's edge, so at the start of a game the bar does not look switched off.
+const ICON_STATE: Record<TileState, string> = {
+  ready: "",
+  unbuildable: "opacity-40",
+};
+const PRICE_STATE: Record<TileState, string> = {
+  ready: "text-cyber-yellow/80",
+  unbuildable: "text-white/40",
+};
+// Drawn above the tile with order-first; it keeps its height while empty so
+// the row does not jump when the costs arrive. No room for it in the column.
+const PRICE =
+  "order-first h-2.5 text-[10px] font-semibold leading-[10px] tabular-nums side-bar:hidden";
+// In the corner, out of the tile's flow, so it does not push the icon aside.
+const HOTKEY =
+  "absolute top-0.5 start-0.5 max-w-full truncate text-[10px] leading-none text-white/45";
+const COUNT = "hidden lg:inline text-xs leading-none tabular-nums hud-caps";
+const COUNT_EMPTY = "text-white/45";
 
 /** How long a build button has to be held before it shows its details (cost etc.) */
 const PEEK_HOLD_MS = 450;
@@ -518,7 +543,7 @@ export class UnitDisplay extends LitElement implements Controller {
     // right edge of the screen, where index.html fixes the host.
     return html`
       <div
-        class="unit-display-root relative p-0.5 border-white/10 w-full lg:border-t max-lg:landscape:border-b side-bar:w-auto side-bar:rounded-l-lg side-bar:hud-panel
+        class="unit-display-root relative p-1 w-full lg:px-2 lg:pb-2 lg:pt-0 side-bar:p-0.5 side-bar:w-auto side-bar:rounded-l-lg side-bar:hud-panel
           ${this.moreActionsStart ? "unit-display-more-start" : ""}
           ${this.moreActionsEnd ? "unit-display-more-end" : ""}"
         data-radial-click-through
@@ -529,73 +554,73 @@ export class UnitDisplay extends LitElement implements Controller {
           @scroll=${this.onScroll}
         >
           <div
-            class="unit-display-grid grid gap-0.5 grid-rows-1 grid-flow-col auto-cols-fr lg:auto-cols-max lg:w-fit lg:mx-auto side-bar:grid-rows-none side-bar:grid-flow-row side-bar:grid-cols-1"
+            class="unit-display-grid grid gap-0.5 lg:gap-1 grid-rows-1 grid-flow-col auto-cols-fr lg:auto-cols-max lg:w-fit lg:mx-auto side-bar:grid-rows-none side-bar:grid-flow-row side-bar:grid-cols-1"
           >
             ${this.renderUnitItem(
-              cityIcon,
+              "city",
               this._cities,
               UnitType.City,
               "city",
               this.getHotkey("buildCity", "Digit1"),
             )}
             ${this.renderUnitItem(
-              factoryIcon,
+              "factory",
               this._factories,
               UnitType.Factory,
               "factory",
               this.getHotkey("buildFactory", "Digit2"),
             )}
             ${this.renderUnitItem(
-              portIcon,
+              "port",
               this._port,
               UnitType.Port,
               "port",
               this.getHotkey("buildPort", "Digit3"),
             )}
             ${this.renderUnitItem(
-              defensePostIcon,
+              "shield",
               this._defensePost,
               UnitType.DefensePost,
               "defense_post",
               this.getHotkey("buildDefensePost", "Digit4"),
             )}
             ${this.renderUnitItem(
-              missileSiloIcon,
+              "missile-silo",
               this._missileSilo,
               UnitType.MissileSilo,
               "missile_silo",
               this.getHotkey("buildMissileSilo", "Digit5"),
             )}
             ${this.renderUnitItem(
-              samLauncherIcon,
+              "sam-launcher",
               this._samLauncher,
               UnitType.SAMLauncher,
               "sam_launcher",
               this.getHotkey("buildSamLauncher", "Digit6"),
             )}
             ${this.renderUnitItem(
-              warshipIcon,
+              "warship",
               this._warships,
               UnitType.Warship,
               "warship",
               this.getHotkey("buildWarship", "Digit7"),
             )}
             ${this.renderUnitItem(
-              atomBombIcon,
+              "atom-bomb",
               null,
               UnitType.AtomBomb,
               "atom_bomb",
               this.getHotkey("buildAtomBomb", "Digit8"),
             )}
             ${this.renderUnitItem(
-              hydrogenBombIcon,
+              "hydrogen-bomb",
               null,
               UnitType.HydrogenBomb,
               "hydrogen_bomb",
               this.getHotkey("buildHydrogenBomb", "Digit9"),
             )}
             ${this.renderUnitItem(
-              mirvIcon,
+              "mirv",
               null,
               UnitType.MIRV,
               "mirv",
@@ -620,7 +645,7 @@ export class UnitDisplay extends LitElement implements Controller {
   }
 
   private renderUnitItem(
-    icon: string,
+    icon: OfIconName,
     number: number | null,
     unitType: PlayerBuildableUnitType,
     structureKey: string,
@@ -630,6 +655,10 @@ export class UnitDisplay extends LitElement implements Controller {
       return html``;
     }
     const selected = this.uiState.ghostStructure === unitType;
+    const state: TileState = this.canBuild(unitType) ? "ready" : "unbuildable";
+    const highlighted = this.tutorialHighlight === unitType;
+    const cost = this.cost(unitType);
+    const priceId = `unit-price-${structureKey}`;
     const displayHotkey = hotkey
       .replace("Digit", "")
       .replace("Key", "")
@@ -637,7 +666,8 @@ export class UnitDisplay extends LitElement implements Controller {
 
     return html`
       <div
-        class="flex flex-col items-center relative"
+        class="flex flex-col items-center relative ${ITEM}"
+        data-unit=${structureKey}
         @mouseenter=${(event: MouseEvent) => {
           const item = event.currentTarget as HTMLElement;
           this._hoveredUnitTooltip = {
@@ -656,16 +686,14 @@ export class UnitDisplay extends LitElement implements Controller {
           this.startPeek(event, unitType, structureKey, hotkey)}
       >
         <div
-          class="${
-            this.canBuild(unitType) ? "" : "opacity-40"
-          } border border-slate-500 rounded-sm max-lg:landscape:h-7.5 side-bar:h-12 side-bar:min-w-6.5 w-full px-0.5 side-bar:px-0 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:justify-start
-             ${
-            selected
-              ? "pointer-fine:hover:bg-gray-400/10"
-              : "pointer-fine:hover:bg-gray-800"
-          }
-             rounded-sm text-white ${selected ? "bg-slate-400/20" : ""}
-             ${this.tutorialHighlight === unitType ? "tutorial-highlight" : ""}"
+          class="${TILE} ${TILE_SELECTION[selected ? "selected" : "idle"]} ${
+            highlighted ? "tutorial-highlight" : ""
+          }"
+          role="button"
+          aria-label=${translateText("unit_type." + structureKey)}
+          aria-pressed=${selected}
+          aria-describedby=${priceId}
+          aria-disabled=${state !== "ready"}
           @click=${(event: Event) =>
             this.onUnitClick(event, unitType, selected)}
           @pointerenter=${(event: PointerEvent) =>
@@ -675,30 +703,39 @@ export class UnitDisplay extends LitElement implements Controller {
         >
           ${
             hotkey
-              ? html`<div
-                  class="unit-display-hotkey ml-0.5 text-[10px] relative -top-1 text-gray-400"
-                >
+              ? html`<div class="unit-display-hotkey ${HOTKEY}">
                   ${displayHotkey}
                 </div>`
               : nothing
           }
-          <div
-            class="flex flex-col items-center gap-0 pt-0.5 lg:flex-row lg:gap-0.5"
-          >
-            <img
-              src=${icon}
-              alt=${translateText("unit_type." + structureKey)}
-              class="align-middle size-6 lg:size-5 max-lg:landscape:size-5"
-            />
+          <div class="flex items-center gap-0.5 ${ICON_STATE[state]}">
+            <of-icon
+              name=${icon}
+              size="20"
+              class="side-bar:scale-120"
+            ></of-icon>
             ${
               number !== null
-                ? html`<span class="hidden lg:inline text-xs leading-none"
+                ? html`<span
+                    data-unit-count
+                    class="${COUNT} ${number === 0 ? COUNT_EMPTY : ""}"
                     >${renderNumber(number)}</span
                   >`
                 : null
             }
           </div>
         </div>
+        <!-- Hidden so it is not read twice: the tile reads it as its
+             description. -->
+        <span
+          id=${priceId}
+          data-unit-price
+          aria-hidden="true"
+          class="${PRICE} ${PRICE_STATE[state]} ${
+            highlighted ? "invisible" : ""
+          }"
+          >${cost > 0n ? renderNumber(cost) : ""}</span
+        >
       </div>
     `;
   }
@@ -798,10 +835,10 @@ export class UnitDisplay extends LitElement implements Controller {
 
     return html`
       <div
-        class="unit-display-tooltip ${peek ? "block" : "hidden pointer-fine:block"} absolute ${placement} text-gray-200 text-center w-max break-words text-xs hud-panel rounded-sm p-1 z-[100] pointer-events-none"
+        class="unit-display-tooltip ${peek ? "block" : "hidden pointer-fine:block"} absolute ${placement} text-white/70 text-center w-max break-words text-xs hud-modal rounded-md p-2 z-[100] pointer-events-none"
         style=${`left: ${left}px; top: ${top}px;`}
       >
-        <div class="font-bold text-sm mb-1">
+        <div class="font-bold text-sm text-white mb-1">
           ${translateText("unit_type." + tooltip.structureKey)}${
             tooltip.hotkey ? ` [${displayHotkey}]` : ""
           }
@@ -819,8 +856,8 @@ export class UnitDisplay extends LitElement implements Controller {
             : null
         }
         <div class="flex items-center justify-center gap-1">
-          <img src=${goldCoinIcon} width="13" height="13" />
-          <span class="text-yellow-300"
+          <of-icon name="gold" size="13"></of-icon>
+          <span class="text-cyber-yellow"
             >${renderNumber(this.cost(tooltip.unitType))}</span
           >
         </div>
