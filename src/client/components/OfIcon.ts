@@ -27,6 +27,8 @@ export const OF_ICONS = {
   land: { file: "ClaimIcon.svg" },
   leaderboard: { file: "LeaderboardIconSolidWhite.svg" },
   team: { file: "TeamIconSolidWhite.svg" },
+  clan: { file: "GuildIconWhite.svg" },
+  player: { file: "ProfileIcon.svg" },
   gold: { file: "GoldCoinIcon.svg", multicolor: true },
   troops: { file: "SoldierIcon.svg" },
   traitor: { file: "TraitorIcon.svg" },
