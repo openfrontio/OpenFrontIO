@@ -108,6 +108,27 @@ describe("TabAttention", () => {
     expect(iconHref()).toBe(ORIGINAL_HREF);
   });
 
+  it("does not restart the two-minute limit on repeated requests", () => {
+    setHidden(true);
+    attention.request("spawn");
+    vi.advanceTimersByTime(2 * 60 * 1000 + 500);
+    expect(document.title).toBe("OpenFront");
+    // A game tick asks again; it must stay stopped.
+    attention.request("spawn");
+    vi.advanceTimersByTime(5000);
+    expect(document.title).toBe("OpenFront");
+    expect(iconHref()).toBe(ORIGINAL_HREF);
+  });
+
+  it("allows a new two-minute period after the need is released", () => {
+    setHidden(true);
+    attention.request("spawn");
+    vi.advanceTimersByTime(2 * 60 * 1000 + 500);
+    attention.release();
+    attention.request("spawn");
+    expect(document.title).toBe("tab_attention.pick_spawn");
+  });
+
   it("does nothing when the setting is off", () => {
     enabled = false;
     setHidden(true);

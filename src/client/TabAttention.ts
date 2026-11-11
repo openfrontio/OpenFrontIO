@@ -36,6 +36,9 @@ export class TabAttention {
   private originalIconHref: string | null = null;
   private originalIconType: string | null = null;
   private listening = false;
+  // Set when the two-minute limit ran out. Requests are ignored until the
+  // need is released, so repeated requests can't restart the limit.
+  private expired = false;
   // Starts as the SVG; swapped for a PNG once it has been rendered, since not
   // every browser draws SVG favicons from data URIs reliably.
   private alertIconHref = ALERT_ICON_SVG_HREF;
@@ -54,6 +57,7 @@ export class TabAttention {
       this.release();
       return;
     }
+    if (this.expired) return;
     if (this.kind === null) this.startedAt = Date.now();
     this.kind = kind;
     this.listen();
@@ -63,6 +67,7 @@ export class TabAttention {
 
   /** The player no longer needs to be alerted. Safe to call repeatedly. */
   release(): void {
+    this.expired = false;
     if (this.kind === null) return;
     this.kind = null;
     this.sync();
@@ -76,9 +81,9 @@ export class TabAttention {
   }
 
   private readonly sync = (): void => {
-    const expired =
-      this.kind !== null && Date.now() - this.startedAt > MAX_FLASH_MS;
-    if (expired) this.kind = null;
+    if (this.kind !== null && Date.now() - this.startedAt > MAX_FLASH_MS) {
+      this.expire();
+    }
     if (this.kind !== null && !this.isEnabled()) this.kind = null;
     const shouldFlash = this.kind !== null && document.hidden;
     if (shouldFlash) {
@@ -107,13 +112,23 @@ export class TabAttention {
   }
 
   private readonly flash = (): void => {
-    if (Date.now() - this.startedAt > MAX_FLASH_MS || !this.isEnabled()) {
+    if (Date.now() - this.startedAt > MAX_FLASH_MS) {
+      this.expire();
+      this.stopFlashing();
+      return;
+    }
+    if (!this.isEnabled()) {
       this.kind = null;
       this.stopFlashing();
       return;
     }
     this.apply(!this.alertShown);
   };
+
+  private expire(): void {
+    this.kind = null;
+    this.expired = true;
+  }
 
   private apply(alert: boolean): void {
     this.alertShown = alert;
@@ -170,6 +185,5 @@ export class TabAttention {
   }
 }
 
-export const tabAttention = new TabAttention(() =>
-  new UserSettings().tabAttention(),
-);
+const userSettings = new UserSettings();
+export const tabAttention = new TabAttention(() => userSettings.tabAttention());

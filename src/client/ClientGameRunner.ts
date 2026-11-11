@@ -313,6 +313,8 @@ export function joinLobby(
           console.error("error creating client game", e);
 
           currentGameRunner = null;
+          // The game never started, so stop any "starting" tab flash.
+          tabAttention.release();
 
           const startingModal = document.querySelector(
             "game-starting-modal",
@@ -455,6 +457,8 @@ export function joinLobby(
         currentGameRunner.stop();
         currentGameRunner = null;
       } else {
+        // Left during prestart, before a runner exists to release the flash.
+        tabAttention.release();
         transport.leaveGame();
       }
       return true;
@@ -1239,12 +1243,23 @@ export class ClientGameRunner {
   // Flash the tab while the player still has to pick a spawn and has switched
   // to another tab; the flashing ends once they spawn or the phase is over.
   private updateTabAttention(): void {
-    const needsSpawn =
-      this.gameView.inSpawnPhase() && !this.gameView.myPlayer()?.hasSpawned();
-    if (needsSpawn) {
-      tabAttention.request("spawn");
-    } else {
+    const config = this.gameView.config();
+    const canPickSpawn =
+      this.gameView.inSpawnPhase() &&
+      !config.isRandomSpawn() &&
+      !config.isReplay() &&
+      !config.isIntentionalSpectator();
+    if (!canPickSpawn) {
       tabAttention.release();
+      return;
+    }
+    const me = this.gameView.myPlayer();
+    // Before the player shows up in the view, leave any "starting" flash alone.
+    if (me === null) return;
+    if (me.hasSpawned()) {
+      tabAttention.release();
+    } else {
+      tabAttention.request("spawn");
     }
   }
 
