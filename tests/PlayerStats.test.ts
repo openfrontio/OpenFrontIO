@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
 import {
   goldCoinIcon,
   guildIcon,
@@ -8,6 +9,7 @@ import {
 } from "../src/client/hud/HotbarIcons";
 import { goldRateTracker } from "../src/client/hud/layers/lib/GoldRateTracker";
 import {
+  type ColumnId,
   columnById,
   columnsFor,
 } from "../src/client/hud/layers/lib/StatsColumns";
@@ -190,6 +192,124 @@ describe("PlayerStats", () => {
     expect(countCell?.classList).toContain("text-center");
 
     playerStats.remove();
+  });
+});
+
+describe("PlayerStats default sort", () => {
+  // Land, gold and type each put the three players in a different order.
+  const players = [
+    typed("alice", PlayerType.Human, 90, 10),
+    typed("bob", PlayerType.Bot, 10, 50),
+    typed("carol", PlayerType.Nation, 50, 90),
+  ];
+
+  beforeEach(() => {
+    localStorage.clear();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  function typed(
+    id: string,
+    type: PlayerType,
+    tiles: number,
+    gold: number,
+  ): PlayerView {
+    return {
+      ...player(id, tiles),
+      type: () => type,
+      gold: () => BigInt(gold),
+    } as unknown as PlayerView;
+  }
+
+  async function mount(): Promise<PlayerStats> {
+    const game = {
+      myPlayer: () => null,
+      playerViews: () => players,
+      config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
+      numLandTiles: () => 100,
+      numTilesWithFallout: () => 0,
+    } as unknown as GameView;
+    const playerStats = new PlayerStats();
+    playerStats.game = game;
+    playerStats.visible = true;
+    document.body.append(playerStats);
+    playerStats.refresh();
+    await playerStats.updateComplete;
+    return playerStats;
+  }
+
+  async function showColumns(playerStats: PlayerStats, ids: ColumnId[]) {
+    new UserSettings().setStatsColumns("player", ids);
+    playerStats.refresh();
+    await playerStats.updateComplete;
+  }
+
+  function sortButton(playerStats: PlayerStats, labelKey: string) {
+    return playerStats.querySelector<HTMLButtonElement>(
+      `.stats-table-header button[aria-label="${labelKey}"]`,
+    );
+  }
+
+  function ariaSort(playerStats: PlayerStats, labelKey: string) {
+    return sortButton(playerStats, labelKey)
+      ?.closest('[role="columnheader"]')
+      ?.getAttribute("aria-sort");
+  }
+
+  function names(playerStats: PlayerStats) {
+    return [
+      ...playerStats.querySelectorAll(".stats-table-scroll .stats-table-row"),
+    ].map((row) =>
+      row.querySelectorAll('[role="cell"]')[1].textContent?.trim(),
+    );
+  }
+
+  it("opens sorted by land when the Type column is shown", async () => {
+    new UserSettings().setStatsColumns("player", [
+      "playerType",
+      "tiles",
+      "gold",
+    ]);
+    const playerStats = await mount();
+
+    expect(ariaSort(playerStats, "leaderboard.owned")).toBe("descending");
+    expect(ariaSort(playerStats, "leaderboard.playerType")).toBe("none");
+    expect(names(playerStats)).toEqual(["alice", "carol", "bob"]);
+  });
+
+  it("falls back to land, then to a column other than Type, then to Type", async () => {
+    new UserSettings().setStatsColumns("player", [
+      "playerType",
+      "tiles",
+      "gold",
+    ]);
+    const playerStats = await mount();
+    sortButton(playerStats, "leaderboard.gold")?.click();
+    await playerStats.updateComplete;
+    expect(names(playerStats)).toEqual(["carol", "bob", "alice"]);
+
+    // The sorted column is hidden: back to land.
+    await showColumns(playerStats, ["playerType", "tiles"]);
+    expect(ariaSort(playerStats, "leaderboard.owned")).toBe("descending");
+    expect(names(playerStats)).toEqual(["alice", "carol", "bob"]);
+
+    // No land: the first sortable column that is not Type.
+    await showColumns(playerStats, ["playerType", "gold"]);
+    expect(ariaSort(playerStats, "leaderboard.gold")).toBe("descending");
+    expect(ariaSort(playerStats, "leaderboard.playerType")).toBe("none");
+    expect(names(playerStats)).toEqual(["carol", "bob", "alice"]);
+
+    // Type alone is still sorted by Type.
+    await showColumns(playerStats, ["playerType"]);
+    expect(ariaSort(playerStats, "leaderboard.playerType")).toBe("descending");
+    expect(names(playerStats)).toEqual(["bob", "carol", "alice"]);
   });
 });
 
