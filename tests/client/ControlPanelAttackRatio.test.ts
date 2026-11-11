@@ -55,7 +55,7 @@ describe("control-panel attack ratio", () => {
     expect(uiState.attackRatio).toBeCloseTo(0.2);
   });
 
-  it("renders the calculated troop count alongside percentage in mobile view", async () => {
+  it("shows the percentage and the troops it sends", async () => {
     panel.game = {
       inSpawnPhase: () => false,
       myPlayer: () => ({ isAlive: () => true, troops: () => 100_000 }),
@@ -64,15 +64,16 @@ describe("control-panel attack ratio", () => {
     panel.setVisibile(true);
     await (panel as any).updateComplete;
 
-    const mobileContainer = panel.querySelector(".lg\\:hidden");
-    expect(mobileContainer?.textContent).toContain("20%\n(2.00K)");
-    expect(mobileContainer?.textContent).not.toContain(
-      "control_panel.attack_ratio",
-    );
-    const sliderContainer = mobileContainer?.querySelector(
-      'input[type="range"]',
-    )?.parentElement;
-    expect(sliderContainer?.className).toContain("min-w-0");
+    const label = panel.querySelector("[data-attack-ratio-label]");
+    expect(label?.textContent).toContain("20%\n(2.00K)");
+    expect(label?.textContent).not.toContain("control_panel.attack_ratio");
+  });
+
+  it("has one slider", async () => {
+    panel.setVisibile(true);
+    await (panel as any).updateComplete;
+
+    expect(panel.querySelectorAll('input[type="range"]')).toHaveLength(1);
   });
 
   it("uses the translated string when it interpolates percent", async () => {
@@ -91,8 +92,8 @@ describe("control-panel attack ratio", () => {
     panel.setVisibile(true);
     await (panel as any).updateComplete;
 
-    const mobileContainer = panel.querySelector(".lg\\:hidden");
-    expect(mobileContainer?.textContent).toContain("50% (5.00K)");
+    const label = panel.querySelector("[data-attack-ratio-label]");
+    expect(label?.textContent).toContain("50% (5.00K)");
 
     langSelector.remove();
   });
@@ -113,9 +114,9 @@ describe("control-panel attack ratio", () => {
     panel.setVisibile(true);
     await (panel as any).updateComplete;
 
-    const mobileContainer = panel.querySelector(".lg\\:hidden");
-    expect(mobileContainer?.textContent).toContain("50%\n(5.00K)");
-    expect(mobileContainer?.textContent).not.toContain("Rapporto di Attacco");
+    const label = panel.querySelector("[data-attack-ratio-label]");
+    expect(label?.textContent).toContain("50%\n(5.00K)");
+    expect(label?.textContent).not.toContain("Rapporto di Attacco");
 
     langSelector.remove();
   });
