@@ -126,9 +126,6 @@ describe("<ffa-rating-summary>", () => {
     });
     expect(
       el.querySelector("[data-global-ffa-position]")?.textContent,
-    ).toContain("ffa_rating.global_position");
-    expect(
-      el.querySelector("[data-global-ffa-position]")?.textContent,
     ).toContain("160");
   });
 

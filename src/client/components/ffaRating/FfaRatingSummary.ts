@@ -125,7 +125,7 @@ export class FfaRatingSummary extends LitElement {
                   : html`<span
                       data-global-ffa-position
                       class="inline-flex items-center gap-1.5 text-lg font-bold tabular-nums text-white"
-                      title="Global Position"
+                      title=${translateText("ffa_rating.global_position")}
                       ><span class="text-xl leading-none" aria-hidden="true"
                         >🌍</span
                       >
