@@ -85,6 +85,13 @@ const RATIO_BUTTON_STATE = {
   open: "border-aquarius bg-malibu-blue/25",
 } as const;
 const RATIO_POPUP = "bottom-full inset-x-2 mb-2 gap-2 p-3 hud-modal rounded-lg";
+// Above the grid, not in it. The sentence wraps: some languages run long.
+const HINT =
+  "mb-1 flex items-start gap-1.5 rounded-sm px-1.5 py-1 text-xs font-medium";
+const HINT_TONE = {
+  warning: "bg-orange-400/10 text-orange-300",
+  info: "bg-blue-400/10 text-blue-300",
+} as const;
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Controller {
@@ -569,17 +576,11 @@ export class ControlPanel extends LitElement implements Controller {
 
   private renderNotification() {
     if (!this._notification) return html``;
-    const isWarning = this._notification.type === "warning";
+    const { type, message } = this._notification;
     return html`
-      <div
-        class="flex items-center gap-1.5 px-1.5 py-1 rounded-md border text-xs font-medium mb-1 ${
-          isWarning
-            ? "border-orange-400/60 bg-orange-400/10 text-orange-300"
-            : "border-blue-400/60 bg-blue-400/10 text-blue-300"
-        }"
-      >
-        <span class="shrink-0">${isWarning ? "⚠" : "ℹ"}</span>
-        <span>${translateText(this._notification.message)}</span>
+      <div data-hint=${type} class="${HINT} ${HINT_TONE[type]}">
+        <of-icon name=${type} size="14" class="mt-px shrink-0"></of-icon>
+        <span>${translateText(message)}</span>
       </div>
     `;
   }
