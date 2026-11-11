@@ -50,8 +50,11 @@ const min = (...xs: bigint[]) => xs.reduce((a, b) => (a < b ? a : b));
  * reason on their row (from GET /fund_transfers/eligibility; if that fails the
  * server's own checks still apply on send). The amount has quick picks and a
  * Max of min(fund, clan's limit left today, the member's limit left today).
- * Sending asks for confirmation first, and Enter never submits. One
- * idempotency key per visit to the page, so a retry can't send twice.
+ * Sending asks for confirmation first, and Enter never submits. The page keeps
+ * one idempotency key until a send is confirmed, so a retry can't send twice:
+ * a repeat of a send that went through is replayed, and a changed one is
+ * refused as a conflict, which starts a new key. Any failed send reloads the
+ * fund, the limits and the member page, so Max stays honest.
  *
  * Emits `funds-sent` (bubbling) after a successful send.
  */
@@ -71,11 +74,13 @@ export class ClanSendFundsView extends LitElement {
   @state() private eligibility = new Map<string, ClanFundRecipient>();
   @state() private membersTotal = 0;
   // The member list failed to load: show an error with Retry, not "no
-  // members" or a stale page.
-  // The member request that failed (its page and search), so Retry repeats
-  // exactly that one rather than the last page that loaded.
+  // members" or a stale page. Holds the request that failed (its page and
+  // search), so Retry repeats exactly that one rather than the last page that
+  // loaded. Cleared when any newer request starts, so an old Retry can't
+  // replace a newer search's results.
   @state() private membersFailed: { page: number; search: string } | null =
     null;
+  @state() private membersLoading = false;
   @state() private memberPage = 1;
   @state() private memberSearch = "";
   @state() private loading = true;
@@ -115,6 +120,8 @@ export class ClanSendFundsView extends LitElement {
 
   private async loadMembers(page: number, search = this.memberSearch) {
     const seq = ++this.loadSeq;
+    this.membersFailed = null;
+    this.membersLoading = true;
     const res = await fetchClanMembers(
       this.clanTag,
       page,
@@ -127,16 +134,19 @@ export class ClanSendFundsView extends LitElement {
     if (!res) {
       this.membersFailed = { page, search };
       this.members = [];
+      this.membersLoading = false;
       this.loading = false;
       return;
     }
     const members = res.results.filter((m) => m.publicId !== this.myPublicId);
-    const eligibility = await fetchClanFundRecipients(
-      this.clanTag,
-      members.map((m) => m.publicId),
-    );
+    // Ask about the picked member too when they're off this page, so their
+    // limit stays current after a reload.
+    const ids = members.map((m) => m.publicId);
+    if (this.recipient && !ids.includes(this.recipient.publicId)) {
+      ids.push(this.recipient.publicId);
+    }
+    const eligibility = await fetchClanFundRecipients(this.clanTag, ids);
     if (seq !== this.loadSeq) return;
-    this.membersFailed = null;
     this.members = members;
     this.membersTotal = res.total;
     this.memberPage = res.page;
@@ -148,6 +158,7 @@ export class ClanSendFundsView extends LitElement {
       : undefined;
     if (picked && !next.has(picked.publicId)) next.set(picked.publicId, picked);
     this.eligibility = next;
+    this.membersLoading = false;
     this.loading = false;
   }
 
@@ -246,6 +257,14 @@ export class ClanSendFundsView extends LitElement {
       );
       if (result !== true) {
         this.serverError = translateText(result.error);
+        // The earlier send under this key is confirmed and about to show in
+        // the reloaded numbers, so the next send is a new one.
+        if (result.outcome === "earlier_send") {
+          this.idempotencyKey = newIdempotencyKey();
+        }
+        // Whatever happened, the fund and limits on screen may be stale.
+        void this.loadStatus();
+        void this.loadMembers(this.memberPage);
         return;
       }
       showToast(
@@ -312,9 +331,11 @@ export class ClanSendFundsView extends LitElement {
                     },
                   )
                 : this.members.length === 0
-                  ? html`<p class="text-white/40 text-sm text-center py-4">
-                      ${translateText("clan_modal.send_funds_no_members")}
-                    </p>`
+                  ? this.membersLoading
+                    ? renderLoadingSpinner()
+                    : html`<p class="text-white/40 text-sm text-center py-4">
+                        ${translateText("clan_modal.send_funds_no_members")}
+                      </p>`
                   : this.members.map((m) => this.renderMember(m))
             }
           </div>

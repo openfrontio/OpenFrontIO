@@ -802,22 +802,35 @@ const SEND_FUNDS_ERRORS: Record<string, string> = {
   clan_daily_limit: "clan_modal.send_funds_error_clan_limit",
   recipient_daily_limit: "clan_modal.send_funds_error_recipient_limit",
   insufficient_balance: "clan_modal.send_funds_error_insufficient",
-  idempotency_conflict: "clan_modal.error_failed",
 };
+
+/**
+ * Why a send failed, as far as the client can tell:
+ * - `refused`: the server answered and stored nothing.
+ * - `unknown`: no answer (network error or 5xx). The send may have gone
+ *   through; repeating it with the same key is safe.
+ * - `earlier_send`: the key was already used for a different member or
+ *   amount, so an earlier send from this page went through.
+ */
+export type SendClanFundsOutcome = "refused" | "unknown" | "earlier_send";
 
 /**
  * The leader sends Plutonium from the clan fund to another member. Final for
  * the clan; only staff can reverse it. `amount` is a decimal integer string
- * (see donateToClan). The dialog reuses one `idempotencyKey` for its lifetime,
- * so a retry after a dead request can't send twice. Errors come back as a
- * translation key.
+ * (see donateToClan). The page reuses one `idempotencyKey` until a send is
+ * confirmed, so a retry after a dead request can't send twice. Errors come
+ * back as a translation key and an outcome.
  */
 export async function sendClanFunds(
   tag: string,
   recipient: string,
   amount: string,
   idempotencyKey: string,
-): Promise<true | { error: string }> {
+): Promise<true | { error: string; outcome: SendClanFundsOutcome }> {
+  const unknown = {
+    error: "clan_modal.send_funds_error_unknown",
+    outcome: "unknown",
+  } as const;
   let res: Response;
   try {
     res = await clanFetch(`/clans/${encodeURIComponent(tag)}/fund_transfers`, {
@@ -826,16 +839,28 @@ export async function sendClanFunds(
       body: JSON.stringify({ recipient, amount, idempotencyKey }),
     });
   } catch {
-    return { error: "clan_modal.error_network" };
+    return unknown;
   }
   if (res.ok) return true;
-  if (res.status === 401) return { error: "clan_modal.sign_in_for_clans" };
+  if (res.status >= 500) return unknown;
+  if (res.status === 401)
+    return { error: "clan_modal.sign_in_for_clans", outcome: "refused" };
   if (res.status === 403)
-    return { error: "clan_modal.send_funds_error_not_leader" };
+    return {
+      error: "clan_modal.send_funds_error_not_leader",
+      outcome: "refused",
+    };
   const body = (await res.json().catch(() => ({}))) as { code?: string };
+  if (body.code === "idempotency_conflict") {
+    return {
+      error: "clan_modal.send_funds_error_earlier_send",
+      outcome: "earlier_send",
+    };
+  }
   return {
     error:
       (body.code && SEND_FUNDS_ERRORS[body.code]) ?? "clan_modal.error_failed",
+    outcome: "refused",
   };
 }
 

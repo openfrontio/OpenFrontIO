@@ -23,7 +23,7 @@ const CAP_RELOAD_MAX_BACKOFF_MS = 5 * 60_000;
  * Plutonium balance, how much of today's sending limit is used, the last few
  * payouts and a link to the full log every member can see. The leader gets the
  * Send button; officers see the card read-only. A notice explains when sending
- * is blocked (paused by staff, daily limit reached, empty fund).
+ * is blocked (switched off, paused by staff, daily limit reached, empty fund).
  *
  * Renders nothing until the API reports the feature on (or the clan already
  * has payouts), so it stays out of the way against an older API.
@@ -131,7 +131,7 @@ export class ClanFundCard extends LitElement {
     const sent = BigInt(status.clanSentToday);
     const usedPct =
       cap > 0n ? Math.min(100, Number((sent * 1000n) / cap) / 10) : 0;
-    const blocked = status.enabled ? sendBlockedReason(status) : null;
+    const blocked = sendBlockedReason(status);
     const isLeader = this.myRole === "leader";
 
     return html`

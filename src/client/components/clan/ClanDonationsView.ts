@@ -121,11 +121,12 @@ export class ClanDonationsView extends LitElement {
     super.connectedCallback();
     this.mode = this.initialMode;
     // Opened straight on Payouts (from Manage): the link only exists when the
-    // feature is on, so offer the tab without waiting for the probe.
+    // feature is on, so offer the tab without waiting for the probe, and skip
+    // the probe: load() fetches the same log and status.
     if (this.mode === "payouts") this.payoutsAvailable = true;
     if (this.clanTag) {
       void this.load();
-      void this.probePayouts();
+      if (this.mode !== "payouts") void this.probePayouts();
     }
   }
 

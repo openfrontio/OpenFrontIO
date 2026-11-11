@@ -20,11 +20,13 @@ export function clanLeftToday(status: ClanFundTransferStatus): bigint {
 }
 
 // Why the leader can't send right now, as a translated sentence, or null.
-// Order matters: a frozen fund says so even when it is also empty.
+// Order matters: sending switched off says so first, then a frozen fund (even
+// when it is also empty).
 export function sendBlockedReason(
   status: ClanFundTransferStatus,
   now: number = Date.now(),
 ): string | null {
+  if (!status.enabled) return translateText("clan_modal.clan_fund_sending_off");
   if (status.frozen) return translateText("clan_modal.clan_fund_frozen");
   if (BigInt(status.hardBalance) <= 0n) {
     return translateText("clan_modal.clan_fund_empty");
@@ -71,6 +73,23 @@ function renderPlayer(
       >`;
 }
 
+// Stands in for {name} while translating, so the player's link can go where
+// the translation puts the name rather than always at the end.
+const NAME_SLOT = "name";
+
+function renderWithPlayer(
+  text: string,
+  player: TemplateResult,
+): TemplateResult {
+  const at = text.indexOf(NAME_SLOT);
+  if (at < 0) return html`<span>${text}</span>${player}`;
+  const before = text.slice(0, at).trim();
+  const after = text.slice(at + NAME_SLOT.length).trim();
+  return html`${before ? html`<span>${before}</span>` : ""}${player}${
+    after ? html`<span>${after}</span>` : ""
+  }`;
+}
+
 /**
  * One payout log row. A send reads "Sender → Recipient" with the amount going
  * out of the fund; a reversed send keeps its row, struck through with a
@@ -92,8 +111,10 @@ export function renderPayoutRow(
           <div
             class="flex flex-wrap items-center gap-1.5 text-sm text-white/70"
           >
-            <span>${translateText("clan_modal.payout_reversal")}</span>
-            ${renderPlayer(host, t.recipient, t.recipientUsername)}
+            ${renderWithPlayer(
+              translateText("clan_modal.payout_reversal", { name: NAME_SLOT }),
+              renderPlayer(host, t.recipient, t.recipientUsername),
+            )}
           </div>
           <span class="text-white/30 text-[10px] whitespace-nowrap">
             ${formatAbsoluteTime(t.createdAt)}${

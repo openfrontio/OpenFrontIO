@@ -68,6 +68,7 @@ import {
 import { ClanDonationsView } from "../../../src/client/components/clan/ClanDonationsView";
 import { ClanFundCard } from "../../../src/client/components/clan/ClanFundCard";
 import { ClanSendFundsView } from "../../../src/client/components/clan/ClanSendFundsView";
+import { translateText } from "../../../src/client/Utils";
 
 const fetchTransfers = fetchClanFundTransfers as ReturnType<typeof vi.fn>;
 const fetchRecipients = fetchClanFundRecipients as ReturnType<typeof vi.fn>;
@@ -192,6 +193,38 @@ describe("Payouts log (Donations tab)", () => {
     expect(rows[1].querySelector(".line-through")).not.toBeNull();
   });
 
+  it("opening straight on Payouts asks for the log once, not twice", async () => {
+    fetchTransfers.mockResolvedValue(page([transfer()]));
+    await mount("payouts");
+    expect(fetchTransfers).toHaveBeenCalledTimes(1);
+  });
+
+  it("puts the player's name where the translation's {name} is", async () => {
+    vi.mocked(translateText).mockImplementation(
+      (key: string, params?: Record<string, unknown>) =>
+        key === "clan_modal.payout_reversal"
+          ? `Staff took back ${String(params?.name)} (reversed)`
+          : key,
+    );
+    fetchTransfers.mockResolvedValue(
+      page([
+        transfer({
+          id: "42",
+          kind: "reversal",
+          sender: null,
+          senderUsername: null,
+          reversesId: "41",
+        }),
+      ]),
+    );
+    const el = await mount("payouts");
+    const text = el
+      .querySelector('[data-kind="reversal"]')!
+      .textContent!.replace(/\s+/g, " ");
+    expect(text).toMatch(/Staff took back bob.*\(reversed\)/);
+    vi.mocked(translateText).mockImplementation((key: string) => key);
+  });
+
   it("shows a banner while staff have paused the fund", async () => {
     fetchTransfers.mockResolvedValue(
       page([transfer()], status({ frozen: true, canSend: false })),
@@ -253,6 +286,20 @@ describe("Clan fund card (Manage)", () => {
     );
     expect(el.querySelector("[data-fund-notice]")?.textContent).toContain(
       "clan_modal.clan_fund_cap_reached",
+    );
+    expect(
+      el.querySelector<HTMLButtonElement>("[data-action=open-send-funds]")!
+        .disabled,
+    ).toBe(true);
+  });
+
+  it("says why Send is disabled when sending is switched off but past payouts show the card", async () => {
+    const el = await mount(
+      "leader",
+      status({ enabled: false, canSend: false }),
+    );
+    expect(el.querySelector("[data-fund-notice]")?.textContent).toContain(
+      "clan_modal.clan_fund_sending_off",
     );
     expect(
       el.querySelector<HTMLButtonElement>("[data-action=open-send-funds]")!
@@ -532,6 +579,133 @@ describe("Send Plutonium page", () => {
     expect(
       el.querySelector<HTMLInputElement>("#clan-send-funds-amount")!.value,
     ).toBe("1600");
+  });
+
+  async function confirmSend(el: Element, member: string, amount: string) {
+    pick(el, member);
+    typeAmount(el, amount);
+    await flushAsync(el);
+    sendButton(el).click();
+    await flushAsync(el);
+    el.querySelector("confirm-dialog")!.dispatchEvent(
+      new CustomEvent("confirm"),
+    );
+    await flushAsync(el);
+    await flushAsync(el);
+  }
+
+  it("after a refusal, reloads the fund and the member's limit so Max follows them", async () => {
+    const el = await mount();
+    send.mockResolvedValueOnce({
+      error: "clan_modal.send_funds_error_recipient_limit",
+      outcome: "refused",
+    });
+    fetchTransfers.mockClear();
+    vi.mocked(fetchClanMembers).mockClear();
+    fetchTransfers.mockResolvedValue(
+      page([], status({ clanSentToday: "1500" })),
+    );
+    fetchRecipients.mockResolvedValue([
+      recipient("member-2", { leftToday: "100" }),
+    ]);
+    await confirmSend(el, "member-2", "500");
+
+    expect(el.textContent).toContain(
+      "clan_modal.send_funds_error_recipient_limit",
+    );
+    // 500 is now over the member's reloaded limit.
+    expect(el.textContent).toContain("clan_modal.send_funds_over_max");
+    expect(fetchTransfers).toHaveBeenCalledTimes(1);
+    expect(fetchClanMembers).toHaveBeenCalledTimes(1);
+    el.querySelector<HTMLButtonElement>("[data-quick=max]")!.click();
+    await flushAsync(el);
+    expect(
+      el.querySelector<HTMLInputElement>("#clan-send-funds-amount")!.value,
+    ).toBe("100");
+  });
+
+  it("a conflict says an earlier send went through and starts a new key", async () => {
+    const el = await mount();
+    send.mockResolvedValueOnce({
+      error: "clan_modal.send_funds_error_earlier_send",
+      outcome: "earlier_send",
+    });
+    await confirmSend(el, "member-2", "500");
+    expect(el.querySelector("[role=alert]")?.textContent).toContain(
+      "clan_modal.send_funds_error_earlier_send",
+    );
+    // The fund and limits reload.
+    expect(fetchTransfers).toHaveBeenCalledTimes(2);
+
+    await confirmSend(el, "member-2", "400");
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[1][3]).not.toBe(send.mock.calls[0][3]);
+  });
+
+  it("keeps the key when it can't tell whether a send went through", async () => {
+    const el = await mount();
+    send.mockResolvedValueOnce({
+      error: "clan_modal.send_funds_error_unknown",
+      outcome: "unknown",
+    });
+    await confirmSend(el, "member-2", "500");
+    expect(el.querySelector("[role=alert]")?.textContent).toContain(
+      "clan_modal.send_funds_error_unknown",
+    );
+    await confirmSend(el, "member-2", "500");
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[1][3]).toBe(send.mock.calls[0][3]);
+  });
+
+  it("asks for the picked member's limit when they're off the reloaded page", async () => {
+    const el = await mount();
+    pick(el, "member-2");
+    await flushAsync(el);
+    vi.mocked(fetchClanMembers).mockResolvedValueOnce({
+      results: [
+        {
+          role: "member",
+          joinedAt: "2024-01-01T00:00:00.000Z",
+          publicId: "member-3",
+          username: "newbie.0002",
+        },
+      ],
+      total: 1,
+      page: 1,
+      limit: 10,
+    });
+    fetchRecipients.mockClear();
+    await (
+      el as unknown as { loadMembers(p: number, s: string): Promise<void> }
+    ).loadMembers(1, "newbie");
+    expect(fetchRecipients).toHaveBeenCalledWith("TST", [
+      "member-3",
+      "member-2",
+    ]);
+  });
+
+  it("a newer search hides an older search's Retry", async () => {
+    const members = vi.mocked(fetchClanMembers);
+    const el = await mount();
+    const internals = el as unknown as {
+      loadMembers(p: number, s?: string): Promise<void>;
+    };
+    members.mockResolvedValueOnce(false);
+    await internals.loadMembers(1, "old");
+    await flushAsync(el);
+    expect(el.querySelector('[data-load-error="members"]')).not.toBeNull();
+
+    // A newer search is still loading: the old Retry must be gone.
+    let finish: (
+      v: Awaited<ReturnType<typeof fetchClanMembers>>,
+    ) => void = () => {};
+    members.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const newer = internals.loadMembers(1, "new");
+    await flushAsync(el);
+    expect(el.querySelector('[data-load-error="members"]')).toBeNull();
+
+    finish({ results: [], total: 0, page: 1, limit: 10 });
+    await newer;
   });
 
   it("falls back to letting the server decide when eligibility fails", async () => {
