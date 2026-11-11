@@ -143,9 +143,11 @@ export class ControlPanel extends LitElement implements Controller {
   @state()
   private _lowTroopsAlert = false;
 
-  private _troopRateIsIncreasing: boolean = true;
+  /** The trend the rate chip shows, and the ticks in a row against it. */
+  private _rateTrendUp = true;
+  private _rateTrendStreak = 0;
 
-  private _lastTroopIncreaseRate: number;
+  private _lastTroopIncreaseRate: number | undefined;
 
   // Border detection cache
   private _nearbyPlayerIDs: Set<number> = new Set();
@@ -155,6 +157,9 @@ export class ControlPanel extends LitElement implements Controller {
   private _lastAttackTickByTarget: Map<number, number> = new Map();
   private static readonly BORDER_REFRESH_INTERVAL = 10; // recompute every 1s
   private static readonly ATTACK_THRESHOLD_TICKS = 15 * TICKS_PER_SECOND;
+  // The rate wobbles from tick to tick as troops leave and land changes hands;
+  // three ticks (0.3 s) tell a real turn from a wobble.
+  private static readonly RATE_TREND_TICKS = 3;
 
   connectedCallback() {
     super.connectedCallback();
@@ -411,9 +416,20 @@ export class ControlPanel extends LitElement implements Controller {
     const player = this.game?.myPlayer();
     if (player === null) return;
     const troopIncreaseRate = this.game.config().troopIncreaseRate(player);
-    this._troopRateIsIncreasing =
-      troopIncreaseRate >= this._lastTroopIncreaseRate;
+    const last = this._lastTroopIncreaseRate;
     this._lastTroopIncreaseRate = troopIncreaseRate;
+    // The first tick has nothing to compare with: it keeps the colour shown.
+    if (last === undefined) return;
+
+    // Follow a turn only once it has held, so the colour does not flicker. A
+    // rate that holds still counts as rising, as it always has.
+    const up = troopIncreaseRate >= last;
+    if (up === this._rateTrendUp) {
+      this._rateTrendStreak = 0;
+    } else if (++this._rateTrendStreak >= ControlPanel.RATE_TREND_TICKS) {
+      this._rateTrendUp = up;
+      this._rateTrendStreak = 0;
+    }
   }
 
   onAttackRatioChange(newRatio: number) {
@@ -505,7 +521,7 @@ export class ControlPanel extends LitElement implements Controller {
     const sign = this.troopRate < 0 ? "−" : "+";
     const rate = `${sign}${renderTroops(Math.abs(this.troopRate))}/s`;
     const { greenPercent, orangePercent } = this.calculateTroopBar();
-    const trend = this._troopRateIsIncreasing ? "up" : "down";
+    const trend = this._rateTrendUp ? "up" : "down";
     return html`
       <div
         data-troop-bar
