@@ -129,7 +129,17 @@ const ZERO_TONE = "text-white/40";
 const DIVIDER_CLASS = "border-s border-white/8";
 const HEADER_DIVIDER_CLASS = "border-s border-white/12";
 
-/** A column's header icon (with its superscript) or text, `size` px tall. */
+// An icon with a mark ("/m", the limit sign) is one box: the mark sits on
+// the icon's baseline. "/m" has a slot of its own fixed width, so the four
+// per-minute headers have the same width and line up. With no line height
+// the text does not make the box taller than the icon, which stays centred
+// like the other headers' icons. The limit sign tucks into the icon's corner
+// as before, so max troops stays as narrow as its values.
+const MARKED_VISUAL = "inline-flex items-baseline gap-0.5";
+const MARK = "w-3.5 text-[11px] font-bold leading-0 text-white/55";
+const MARK_ICON = "-ms-1 text-white/55";
+
+/** A column's header icon (with its mark) or text, `size` px tall. */
 export function renderColumnVisual(column: ColumnDef, size: number) {
   const visual = column.headerVisual;
   if (visual === undefined) {
@@ -139,7 +149,7 @@ export function renderColumnVisual(column: ColumnDef, size: number) {
     return html`<span>${translateText(visual.text)}</span>`;
   }
   const superscript = visual.superscript;
-  return html`<span class="inline-flex items-start">
+  return html`<span class=${MARKED_VISUAL}>
     <of-icon
       class=${visual.color ?? nothing}
       name=${visual.icon}
@@ -150,13 +160,11 @@ export function renderColumnVisual(column: ColumnDef, size: number) {
         ? nothing
         : "icon" in superscript
           ? html`<of-icon
-              class="-ms-0.5"
+              class=${MARK_ICON}
               name=${superscript.icon}
               size=${size - 5}
             ></of-icon>`
-          : html`<span class="text-[0.6rem] ms-0.5 self-center leading-none"
-              >${translateText(superscript.text)}</span
-            >`
+          : html`<span class=${MARK}>${translateText(superscript.text)}</span>`
     }
   </span>`;
 }
