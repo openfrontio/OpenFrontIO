@@ -104,9 +104,14 @@ describe("createRenderer", () => {
     expect(emojiTable.isVisible).toBe(true);
   });
 
-  it("cleans up window resize listener on dispose", () => {
+  it("cleans up the resize listener and canvas observer on dispose", () => {
+    const observer = { disconnect: vi.fn() };
     const renderer = new GameRenderer(
-      { updateCanvasBoundingRect: vi.fn(), centerAll: vi.fn() } as any,
+      {
+        updateCanvasBoundingRect: vi.fn(),
+        centerAll: vi.fn(),
+        observeCanvasSize: () => observer,
+      } as any,
       {} as any,
       [],
       {} as any,
@@ -120,5 +125,6 @@ describe("createRenderer", () => {
     expect(resizeListener).toEqual(expect.any(Function));
     renderer.dispose();
     expect(removeSpy).toHaveBeenCalledWith("resize", resizeListener);
+    expect(observer.disconnect).toHaveBeenCalled();
   });
 });
