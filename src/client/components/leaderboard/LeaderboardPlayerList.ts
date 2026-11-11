@@ -484,7 +484,9 @@ export class LeaderboardPlayerList extends LitElement {
     this.ffaAllLoading = true;
     this.ffaAllFailed = false;
     const page = this.ffaAllPage;
+    const gen = this.ffaRankGeneration;
     const result = await fetchFfaAllRanksLeaderboard(page);
+    if (gen !== this.ffaRankGeneration) return;
     this.ffaAllLoading = false;
     if (result === false) {
       this.ffaAllFailed = true;
@@ -526,9 +528,10 @@ export class LeaderboardPlayerList extends LitElement {
     this.ffaRanksFailed = next;
   }
 
-  private handleRankTabKey(event: KeyboardEvent, rank: FfaTierBase) {
-    const count = FFA_TIER_BASES.length;
-    const index = FFA_TIER_BASES.indexOf(rank);
+  private handleRankTabKey(event: KeyboardEvent, rank: FfaTierBase | "all") {
+    const tabs: readonly (FfaTierBase | "all")[] = [...FFA_TIER_BASES, "all"];
+    const count = tabs.length;
+    const index = tabs.indexOf(rank);
     const nextIndex = {
       ArrowRight: (index + 1) % count,
       ArrowLeft: (index - 1 + count) % count,
@@ -537,8 +540,12 @@ export class LeaderboardPlayerList extends LitElement {
     }[event.key];
     if (nextIndex === undefined) return;
     event.preventDefault();
-    const next = FFA_TIER_BASES[nextIndex];
-    this.selectFfaRank(next);
+    const next = tabs[nextIndex];
+    if (next === "all") {
+      this.selectAllFfaRanks();
+    } else {
+      this.selectFfaRank(next);
+    }
     void this.updateComplete.then(() =>
       this.querySelector<HTMLElement>(
         `[role="tab"][data-rank="${next}"]`,
