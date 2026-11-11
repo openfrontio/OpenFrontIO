@@ -42,6 +42,11 @@ const FALLBACK_VIEWPORT_HEIGHT_PX = 180;
 const OVERSCAN_ROWS = 4;
 // Trailing chrome track holding the ⚙️ menu, not a column of data.
 const PICKER_TRACK = "32px";
+// What a screen reader calls each table.
+const TABLE_NAME: Record<StatsTableKind, string> = {
+  player: "leaderboard.players_table",
+  team: "leaderboard.teams_table",
+};
 
 type RowState = "me" | "mate" | "other";
 
@@ -327,6 +332,7 @@ export abstract class StatsTable extends LitElement {
         }"
         role="columnheader"
         title=${label}
+        aria-label=${column.isOrderable ? nothing : label}
         data-column=${column.id}
         data-align=${align}
         ?data-rule=${index > 0}
@@ -422,6 +428,7 @@ export abstract class StatsTable extends LitElement {
         }"
         style="grid-template-columns: subgrid; grid-column: 1 / -1;"
         role="row"
+        aria-rowindex=${position + 1}
         translate="no"
         ?data-me=${state === "me"}
         ?data-mate=${state === "mate"}
@@ -503,11 +510,14 @@ export abstract class StatsTable extends LitElement {
             class="stats-table-content grid w-max min-w-full"
             style="grid-template-columns: ${gridTemplate};"
             role="table"
+            aria-label=${translateText(TABLE_NAME[this.tableKind])}
+            aria-rowcount=${this.rows.length + 1}
           >
             <div
               class="stats-table-header grid col-span-full ${HEADER}"
               style="grid-template-columns: subgrid; grid-column: 1 / -1;"
               role="row"
+              aria-rowindex="1"
             >
               ${repeat(
                 columns,
