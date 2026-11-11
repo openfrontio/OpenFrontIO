@@ -747,6 +747,9 @@ export class ControlPanel extends LitElement implements Controller {
           type="button"
           data-ratio-popup-button
           aria-expanded=${this._ratioPopupOpen ? "true" : "false"}
+          aria-label=${translateText("control_panel.attack_ratio_button", {
+            percent: (this.attackRatio * 100).toFixed(0),
+          })}
           class="hidden side-bar:flex w-[4.25rem] shrink-0 items-center justify-center gap-1 border rounded-md p-1 ${
             this._ratioPopupOpen ? "border-aquarius" : "border-gray-600"
           } ${this.tutorialHighlightClass("attack_ratio")}"

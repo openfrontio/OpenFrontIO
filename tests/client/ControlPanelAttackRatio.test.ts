@@ -194,6 +194,11 @@ describe("control-panel attack ratio", () => {
     it("opens the slider from the button and closes it again", async () => {
       const button = await show();
       expect(button.textContent).toContain("20%\n(2.00K)");
+      // The numbers alone don't say what the button is for.
+      // (Tests have no translations loaded: translateText returns the key.)
+      expect(button.getAttribute("aria-label")).toBe(
+        "control_panel.attack_ratio_button",
+      );
       expect(popup()).toBeNull();
 
       button.click();
