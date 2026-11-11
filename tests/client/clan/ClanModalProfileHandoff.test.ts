@@ -274,16 +274,16 @@ describe("ClanModal — player-profile handoff", () => {
     expect(getElState(modal, "activeTab")).toBe("my-clans");
   });
 
-  it("offers a Donations tab on the clan detail", async () => {
-    modal.open({ clan: "AAA" });
-    await waitForSubComponent(modal, "clan-detail-view");
-
-    const tabs = (
-      modal as unknown as { modalConfig(): { tabs: { key: string }[] } }
-    )
+  const tabKeys = () =>
+    (modal as unknown as { modalConfig(): { tabs: { key: string }[] } })
       .modalConfig()
       .tabs.map((t) => t.key);
-    expect(tabs).toEqual([
+
+  it("offers Donations, and Map activity to the clan's members", async () => {
+    // A member of TST (getUserMe).
+    modal.open({ clan: "TST" });
+    await waitForSubComponent(modal, "clan-detail-view");
+    expect(tabKeys()).toEqual([
       "overview",
       "members",
       "game-history",
@@ -292,27 +292,40 @@ describe("ClanModal — player-profile handoff", () => {
     ]);
   });
 
-  it("returns a profile opened from Map activity to that tab", async () => {
+  it("hides Map activity from players outside the clan", async () => {
     modal.open({ clan: "AAA" });
+    await waitForSubComponent(modal, "clan-detail-view");
+    expect(tabKeys()).toEqual([
+      "overview",
+      "members",
+      "game-history",
+      "donations",
+    ]);
+  });
+
+  it("returns a profile opened from Map activity to that tab", async () => {
+    modal.open({ clan: "TST" });
     await waitForSubComponent(modal, "clan-detail-view");
     modal.setActiveTab("map-activity");
     const view = await waitForSubComponent(modal, "clan-map-activity-view");
-    expect(getElState(view, "clanTag")).toBe("AAA");
+    expect(getElState(view, "clanTag")).toBe("TST");
 
     dispatchViewProfile("player-P", "clan-map-activity-view");
     await flushAsync(modal);
     modal.returnFromPlayerProfile();
     await flushAsync(modal);
 
-    expect(getElState(modal, "selectedClanTag")).toBe("AAA");
+    expect(getElState(modal, "selectedClanTag")).toBe("TST");
     expect(getElState(modal, "activeTab")).toBe("map-activity");
   });
 
   it("opens the map framed on a Map activity row, and its Back returns to the tab", async () => {
-    modal.open({ clan: "AAA" });
+    modal.open({ clan: "TST" });
     await waitForSubComponent(modal, "clan-detail-view");
     modal.setActiveTab("map-activity");
     const view = await waitForSubComponent(modal, "clan-map-activity-view");
+    const header = getElState(modal, "selectedClan") as { name: string };
+    expect(header?.name).toBeTruthy();
 
     view.dispatchEvent(
       new CustomEvent("view-on-map", {
@@ -332,11 +345,15 @@ describe("ClanModal — player-profile handoff", () => {
     document.querySelector<HTMLButtonElement>("[data-clan-map-back]")!.click();
     await flushAsync(modal);
 
-    expect(getElState(modal, "selectedClanTag")).toBe("AAA");
+    expect(getElState(modal, "selectedClanTag")).toBe("TST");
     expect(getElState(modal, "activeTab")).toBe("map-activity");
     expect(document.querySelector("[data-clan-map-page]")).toBeNull();
     // The clan's own Back then goes to the clan list, not the map again.
     expect(getElState(modal, "previousListTab")).toBe("my-clans");
+    // The header still has the clan's name and treasury.
+    expect(
+      (getElState(modal, "selectedClan") as { name: string } | null)?.name,
+    ).toBe(header.name);
   });
 
   it("returns a donor's profile to the clan's Donations tab", async () => {

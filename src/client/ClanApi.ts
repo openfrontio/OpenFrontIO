@@ -913,7 +913,7 @@ export async function buyClanBoost(
   }
 }
 
-export type ClanMapActivityFetchError = "forbidden" | "failed";
+export type ClanMapActivityFetchError = "signed_out" | "forbidden" | "failed";
 
 /**
  * Members-only log of the clan's map activity, newest first: claims,
@@ -932,6 +932,7 @@ export async function fetchClanMapActivity(
     const res = await clanFetch(
       `/clans/${encodeURIComponent(tag)}/map-activity?${params}`,
     );
+    if (res.status === 401) return { error: "signed_out" };
     if (res.status === 403) return { error: "forbidden" };
     if (!res.ok) return { error: "failed" };
     const parsed = MapActivityPageSchema.safeParse(await res.json());
@@ -957,6 +958,7 @@ export async function fetchClanMapActivityMembers(
     const res = await clanFetch(
       `/clans/${encodeURIComponent(tag)}/map-activity/members?period=${period}`,
     );
+    if (res.status === 401) return { error: "signed_out" };
     if (res.status === 403) return { error: "forbidden" };
     if (!res.ok) return { error: "failed" };
     const parsed = MapActivityMembersSchema.safeParse(await res.json());

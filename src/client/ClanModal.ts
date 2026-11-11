@@ -1,7 +1,7 @@
 import { html, nothing, render, type PropertyValues } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getUserMe, invalidateUserMe } from "./Api";
-import { type ClanInfo, type ClanMember } from "./ClanApi";
+import { fetchClanDetail, type ClanInfo, type ClanMember } from "./ClanApi";
 import { BaseModal } from "./components/BaseModal";
 import "./components/clan/ClanBansView";
 import "./components/clan/ClanBrowseView";
@@ -130,6 +130,11 @@ export class ClanModal extends BaseModal {
   // activity tab the map's Back returns to.
   private mapAt: MapActivityAt | null = null;
   private mapReturnClan: string | null = null;
+  // That clan's header details, restored when the map's Back returns.
+  private mapReturnDetail: {
+    clan: ClanInfo | null;
+    myRole: ClanRole | null;
+  } | null = null;
   // Set when the open clan was picked from the browser's boosted block, so a
   // join from its detail page is attributed to the block.
   private joinSource: "boosted" | undefined = undefined;
@@ -168,13 +173,35 @@ export class ClanModal extends BaseModal {
                 key: "donations",
                 label: translateText("clan_modal.tab_donations"),
               },
-              {
-                key: "map-activity",
-                label: translateText("clan_modal.tab_map_activity"),
-              },
+              // Members only: anyone else would only ever see a
+              // members-only notice there.
+              ...(this.isMemberOfSelected()
+                ? [
+                    {
+                      key: "map-activity",
+                      label: translateText("clan_modal.tab_map_activity"),
+                    },
+                  ]
+                : []),
             ]
           : [],
     };
+  }
+
+  private isMemberOfSelected(): boolean {
+    return (
+      this.myClanRoles.has(this.selectedClanTag) ||
+      (this.myRole !== null && this.selectedClan?.tag === this.selectedClanTag)
+    );
+  }
+
+  // The header's name and treasury for a clan shown without its Overview
+  // having loaded them.
+  private async reloadSelectedClan(tag: string): Promise<void> {
+    const clan = await fetchClanDetail(tag);
+    if (clan && this.selectedClanTag === tag && !this.selectedClan) {
+      this.selectedClan = clan;
+    }
   }
 
   protected renderHeaderSlot() {
@@ -208,6 +235,7 @@ export class ClanModal extends BaseModal {
         this.mapReturnTab = tab;
         this.mapAt = null;
         this.mapReturnClan = null;
+        this.mapReturnDetail = null;
       }
       if (tab === "my-clans") {
         void this.loadMyClans();
@@ -346,6 +374,7 @@ export class ClanModal extends BaseModal {
     this.mapReturnTab = "my-clans";
     this.mapAt = null;
     this.mapReturnClan = null;
+    this.mapReturnDetail = null;
     this.view = "list";
     this.selectedClan = null;
     this.selectedClanTag = "";
@@ -724,6 +753,9 @@ export class ClanModal extends BaseModal {
   // when given. The map's Back then returns to that tab.
   private openMapAt(at: MapActivityAt | null): void {
     const tag = this.selectedClanTag;
+    // The header's name and treasury come from these, and nothing on the
+    // Map activity tab reloads them, so they come back with the player.
+    this.mapReturnDetail = { clan: this.selectedClan, myRole: this.myRole };
     this.view = "list";
     this.selectedClan = null;
     this.selectedClanTag = "";
@@ -737,12 +769,20 @@ export class ClanModal extends BaseModal {
 
   private leaveMap(): void {
     const clan = this.mapReturnClan;
+    const detail = this.mapReturnDetail;
     this.mapAt = null;
     this.mapReturnClan = null;
+    this.mapReturnDetail = null;
     if (clan) {
       // Not open({ clan, tab }): that checks the tab against the list
       // view's tabs, which don't include the clan's Map activity.
       this.openDetail(clan);
+      if (detail?.clan?.tag === clan) {
+        this.selectedClan = detail.clan;
+        this.myRole = detail.myRole;
+      } else {
+        void this.reloadSelectedClan(clan);
+      }
       // openDetail remembered "map" as where the clan's Back goes; it
       // should go back to the list the clan was opened from instead.
       this.previousListTab = this.mapReturnTab;

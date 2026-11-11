@@ -302,6 +302,7 @@ export class LangSelector extends LitElement {
       "tutorial-panel",
       // Re-sends its strings to the clan map frame.
       "clan-map-view",
+      "clan-map-activity-view",
     ];
 
     document.title = this.translateText("main.title") ?? document.title;

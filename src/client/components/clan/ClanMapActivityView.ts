@@ -11,10 +11,9 @@ import {
   type MapActivityPeriod,
   type MapActivityPlayer,
 } from "../../ClanApi";
-import { translateText } from "../../Utils";
+import { getCurrentLanguage, translateText } from "../../Utils";
 import "../CurrencyDisplay";
 import {
-  formatAbsoluteTime,
   formatDayHeader,
   groupByDay,
 } from "../baseComponents/stats/GameHistoryDates";
@@ -23,7 +22,43 @@ import { renderLoadingSpinner, renderRoleIcon } from "./ClanShared";
 
 type Mode = "recent" | "members";
 type MemberSort = "active" | "claimed" | "caps" | "ships";
-type LoadState = "ok" | "failed" | "forbidden";
+type LoadState = "ok" | "failed" | "forbidden" | "signed_out";
+
+// One Recent filter's loaded pages, kept while the tab is open so switching
+// filters or modes doesn't refetch or drop what Load more added.
+interface RecentEntry {
+  page: MapActivityPage;
+  events: MapActivityEvent[];
+  nextBefore: string | null;
+}
+
+// Marks where an element goes in a translated string (see `withSlots`).
+// Private-use characters, so no translation contains them.
+const SLOT_OPEN = "";
+const SLOT_CLOSE = "";
+const SLOT_RE = /(\w+)/;
+
+function sameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+// Times and dates in the game's language, not the browser's.
+function formatTime(d: Date): string {
+  return d.toLocaleTimeString(getCurrentLanguage(), {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+function formatDate(d: Date): string {
+  return d.toLocaleDateString(getCurrentLanguage());
+}
+function formatCount(n: number): string {
+  return new Intl.NumberFormat(getCurrentLanguage()).format(n);
+}
 
 interface Tab<K extends string> {
   key: K;
@@ -82,21 +117,61 @@ export class ClanMapActivityView extends LitElement {
   @state() private members: MapActivityMember[] = [];
   @state() private loading = false;
   @state() private loadState: LoadState = "ok";
+  // Bumped whenever what's shown changes, so a response for something no
+  // longer shown is dropped.
   private asyncGeneration = 0;
+  private recentCache = new Map<MapActivityFilter, RecentEntry>();
+  private membersCache = new Map<MapActivityPeriod, MapActivityMember[]>();
 
   connectedCallback() {
     super.connectedCallback();
-    if (this.clanTag) void this.load();
+    if (this.clanTag) this.show();
+  }
+
+  protected willUpdate(changed: Map<PropertyKey, unknown>) {
+    // Reused for another clan: nothing cached belongs to it.
+    if (changed.has("clanTag") && changed.get("clanTag") && this.clanTag) {
+      this.recentCache.clear();
+      this.membersCache.clear();
+      this.show();
+    }
+  }
+
+  // Shows the current mode / filter / period: from the cache when it was
+  // loaded before (unless `refetch`), otherwise fetched. Anything in flight
+  // for what was shown before, a Load more included, is abandoned.
+  private show(refetch = false) {
+    this.asyncGeneration++;
+    this.loadingMore = false;
+    this.loadMoreFailed = false;
+    this.loadState = "ok";
+    if (this.mode === "members") {
+      const cached = refetch ? undefined : this.membersCache.get(this.period);
+      if (cached) {
+        this.loading = false;
+        this.members = cached;
+        return;
+      }
+    } else {
+      const cached = refetch ? undefined : this.recentCache.get(this.filter);
+      if (cached) {
+        this.loading = false;
+        this.page = cached.page;
+        this.events = cached.events;
+        this.nextBefore = cached.nextBefore;
+        return;
+      }
+    }
+    void this.load();
   }
 
   private async load() {
     if (!this.clanTag) return;
-    const gen = ++this.asyncGeneration;
+    const gen = this.asyncGeneration;
     this.loading = true;
-    this.loadState = "ok";
-    this.loadMoreFailed = false;
     if (this.mode === "members") {
-      const res = await fetchClanMapActivityMembers(this.clanTag, this.period);
+      const period = this.period;
+      const res = await fetchClanMapActivityMembers(this.clanTag, period);
       if (gen !== this.asyncGeneration) return;
       this.loading = false;
       if ("error" in res) {
@@ -104,12 +179,12 @@ export class ClanMapActivityView extends LitElement {
         this.members = [];
         return;
       }
+      this.membersCache.set(period, res.members);
       this.members = res.members;
       return;
     }
-    const res = await fetchClanMapActivity(this.clanTag, {
-      filter: this.filter,
-    });
+    const filter = this.filter;
+    const res = await fetchClanMapActivity(this.clanTag, { filter });
     if (gen !== this.asyncGeneration) return;
     this.loading = false;
     if ("error" in res) {
@@ -119,20 +194,28 @@ export class ClanMapActivityView extends LitElement {
       this.nextBefore = null;
       return;
     }
+    this.recentCache.set(filter, {
+      page: res,
+      events: res.events,
+      nextBefore: res.nextBefore,
+    });
     this.page = res;
     this.events = res.events;
     this.nextBefore = res.nextBefore;
   }
 
   private async loadMore() {
-    if (!this.nextBefore || this.loadingMore) return;
+    if (!this.nextBefore || this.loadingMore || !this.page) return;
     const gen = this.asyncGeneration;
+    const filter = this.filter;
+    const page = this.page;
     this.loadingMore = true;
     this.loadMoreFailed = false;
     const res = await fetchClanMapActivity(this.clanTag, {
-      filter: this.filter,
+      filter,
       before: this.nextBefore,
     });
+    // A switch since then has already cleared loadingMore.
     if (gen !== this.asyncGeneration) return;
     this.loadingMore = false;
     if ("error" in res) {
@@ -141,24 +224,54 @@ export class ClanMapActivityView extends LitElement {
     }
     this.events = [...this.events, ...res.events];
     this.nextBefore = res.nextBefore;
+    this.recentCache.set(filter, {
+      page,
+      events: this.events,
+      nextBefore: this.nextBefore,
+    });
   }
 
   private setMode(mode: Mode) {
     if (mode === this.mode) return;
     this.mode = mode;
-    void this.load();
+    this.show();
   }
 
   private setFilter(filter: MapActivityFilter) {
     if (filter === this.filter) return;
     this.filter = filter;
-    void this.load();
+    this.show();
   }
 
   private setPeriod(period: MapActivityPeriod) {
     if (period === this.period) return;
     this.period = period;
-    void this.load();
+    this.show();
+  }
+
+  // A translated string with elements in it: each `slots` entry fills the
+  // `{name}` placeholder of the same name, so translators can put the
+  // player's or clan's name anywhere in the sentence.
+  private withSlots(
+    key: string,
+    params: Record<string, string | number>,
+    slots: Record<string, TemplateResult>,
+  ): TemplateResult {
+    const marked: Record<string, string | number> = { ...params };
+    for (const name of Object.keys(slots)) {
+      marked[name] = `${SLOT_OPEN}${name}${SLOT_CLOSE}`;
+    }
+    const parts = translateText(key, marked).split(SLOT_RE);
+    // split() with a capture group alternates text and slot names. A
+    // translation that left a slot out still shows it, first, rather than
+    // losing who did it.
+    const used = new Set(parts.filter((_, i) => i % 2));
+    const missing = Object.keys(slots).filter((name) => !used.has(name));
+    return html`${missing.map((name) => slots[name])}${parts.map((part, i) => {
+      if (i % 2) return slots[part] ?? nothing;
+      const text = part.trim();
+      return text ? html`<span class="text-white/70">${text}</span>` : nothing;
+    })}`;
   }
 
   private viewOnMap(at: MapActivityAt | null) {
@@ -258,10 +371,13 @@ export class ClanMapActivityView extends LitElement {
     if (this.loadState === "forbidden") {
       return this.renderMessage("clan_modal.map_activity_members_only");
     }
+    if (this.loadState === "signed_out") {
+      return this.renderMessage("clan_modal.map_activity_signed_out");
+    }
     if (this.loadState === "failed") {
       return this.renderMessage("clan_modal.map_activity_unavailable", {
         labelKey: "leaderboard_modal.try_again",
-        onClick: () => void this.load(),
+        onClick: () => this.show(true),
       });
     }
     return null;
@@ -352,7 +468,7 @@ export class ClanMapActivityView extends LitElement {
       )}
       ${box(
         "clan_modal.map_activity_ships_at_sea",
-        String(s.shipsAtSea),
+        formatCount(s.shipsAtSea),
         "ships",
       )}
     </div>`;
@@ -398,7 +514,14 @@ export class ClanMapActivityView extends LitElement {
         >${translateText("clan_modal.map_activity_deleted_player")}</span
       >`;
     }
-    return playerNameLink(this, player.username, player.id);
+    // Above a row's stretched "view on map" button (see renderEvent), which
+    // the rest of the row lets clicks through to.
+    return playerNameLink(
+      this,
+      player.username,
+      player.id,
+      "relative pointer-events-auto",
+    );
   }
 
   private clan(clan: MapActivityClan): TemplateResult {
@@ -436,10 +559,11 @@ export class ClanMapActivityView extends LitElement {
     let at: MapActivityAt | null = null;
     switch (e.kind) {
       case "claimed": {
-        headline = html`${this.name(e.player)}
-          <span class="text-white/70"
-            >${t("clan_modal.map_activity_claimed", { count: e.pixels })}</span
-          >`;
+        headline = this.withSlots(
+          "clan_modal.map_activity_claimed",
+          { count: e.pixels },
+          { name: this.name(e.player) },
+        );
         if (e.neutral) {
           details.push(
             t("clan_modal.map_activity_neutral", { count: e.neutral }),
@@ -461,16 +585,13 @@ export class ClanMapActivityView extends LitElement {
         break;
       }
       case "unclaimed":
-        headline = html`${this.name(e.player)}
-          <span class="text-white/70"
-            >${t("clan_modal.map_activity_unclaimed", {
-              count: e.pixels,
-            })}</span
-          >`;
+        headline = this.withSlots(
+          "clan_modal.map_activity_unclaimed",
+          { count: e.pixels },
+          { name: this.name(e.player) },
+        );
         details.push(
-          t("clan_modal.map_activity_refunded", {
-            troops: e.refundTroops.toLocaleString(),
-          }),
+          t("clan_modal.map_activity_refunded", { troops: e.refundTroops }),
         );
         right = this.value(
           t("clan_modal.map_activity_px_loss", { count: e.pixels }),
@@ -479,49 +600,49 @@ export class ClanMapActivityView extends LitElement {
         at = { x: e.x, y: e.y };
         break;
       case "bought_troops":
-        headline = html`${this.name(e.player)}
-          <span class="text-white/70"
-            >${t("clan_modal.map_activity_bought", { troops: e.troops.toLocaleString() })}</span
-          >`;
+        headline = this.withSlots(
+          "clan_modal.map_activity_bought",
+          { troops: e.troops },
+          { name: this.name(e.player) },
+        );
         right = html`<currency-display
           class="shrink-0"
           .soft=${e.caps}
         ></currency-display>`;
         break;
-      case "ship_sailing":
-        headline = html`${this.name(e.player)}
-          <span class="text-white/70"
-            >${t("clan_modal.map_activity_ship_sent", {
-              x: e.toX,
-              y: e.toY,
-            })}</span
-          >`;
+      case "ship_sailing": {
+        headline = this.withSlots(
+          "clan_modal.map_activity_ship_sent",
+          { x: e.toX, y: e.toY },
+          { name: this.name(e.player) },
+        );
+        const lands = new Date(e.arrivesAt);
         details = [
-          t("clan_modal.map_activity_ship_lands", {
-            time: formatAbsoluteTime(e.arrivesAt),
-          }),
-          t("clan_modal.map_activity_troops_aboard", {
-            troops: e.troops.toLocaleString(),
-          }),
+          sameDay(lands, new Date())
+            ? t("clan_modal.map_activity_ship_lands", {
+                time: formatTime(lands),
+              })
+            : t("clan_modal.map_activity_ship_lands_date", {
+                date: formatDate(lands),
+                time: formatTime(lands),
+              }),
+          t("clan_modal.map_activity_troops_aboard", { troops: e.troops }),
         ];
         right = html`<span class="shrink-0 text-xs font-bold text-white/60"
           >${t("clan_modal.map_activity_view")}</span
         >`;
         at = { x: e.toX, y: e.toY };
         break;
+      }
       case "ship_landed":
-        headline = html`${this.name(e.player)}
-          <span class="text-white/70"
-            >${t("clan_modal.map_activity_ship_landed", {
-              x: e.toX,
-              y: e.toY,
-            })}</span
-          >`;
+        headline = this.withSlots(
+          "clan_modal.map_activity_ship_landed",
+          { x: e.toX, y: e.toY },
+          { name: this.name(e.player) },
+        );
         details = [
           t(`clan_modal.map_activity_outcome_${e.outcome}`),
-          t("clan_modal.map_activity_troops_aboard", {
-            troops: e.troops.toLocaleString(),
-          }),
+          t("clan_modal.map_activity_troops_aboard", { troops: e.troops }),
         ];
         right =
           e.outcome === "captured"
@@ -533,10 +654,11 @@ export class ClanMapActivityView extends LitElement {
         at = { x: e.toX, y: e.toY };
         break;
       case "lost":
-        headline = html`${this.clan(e.clan)}
-          <span class="text-white/70"
-            >${t("clan_modal.map_activity_lost", { count: e.pixels })}</span
-          >`;
+        headline = this.withSlots(
+          "clan_modal.map_activity_lost",
+          { count: e.pixels },
+          { clan: this.clan(e.clan) },
+        );
         if (e.player.id) {
           details.push(
             t("clan_modal.map_activity_by", {
@@ -551,10 +673,11 @@ export class ClanMapActivityView extends LitElement {
         at = { x: e.x, y: e.y };
         break;
       case "siege":
-        headline = html`${this.clan(e.clan)}
-          <span class="text-white/70"
-            >${t("clan_modal.map_activity_siege", { count: e.pixels })}</span
-          >`;
+        headline = this.withSlots(
+          "clan_modal.map_activity_siege",
+          { count: e.pixels },
+          { clan: this.clan(e.clan) },
+        );
         right = this.value(
           t("clan_modal.map_activity_px_loss", { count: e.pixels }),
           "loss",
@@ -562,43 +685,49 @@ export class ClanMapActivityView extends LitElement {
         at = { x: e.x, y: e.y };
         break;
     }
-    const time = e.kind === "ship_sailing" ? null : formatAbsoluteTime(e.at);
+    // The day divider above already says which day: just the time.
+    const time = e.kind === "ship_sailing" ? null : formatTime(new Date(e.at));
     const sub = [time, ...details].filter(Boolean).join(" · ");
-    const body = html`<div class="flex-1 min-w-0 flex flex-col">
-        <div class="text-sm min-w-0 flex flex-wrap items-baseline gap-x-1">
-          ${headline}
-        </div>
-        <span class="text-white/30 text-[10px]">${sub}</span>
-      </div>
-      ${right}`;
     const rowClass =
-      "w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border bg-white/5 border-white/10 text-left";
+      "relative w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border bg-white/5 border-white/10 text-left";
+    const body = (interactive: boolean) =>
+      html`<div
+          class="flex-1 min-w-0 flex flex-col ${
+            interactive ? "pointer-events-none" : ""
+          }"
+        >
+          <div class="text-sm min-w-0 flex flex-wrap items-baseline gap-x-1">
+            ${headline}
+          </div>
+          <span class="text-white/30 text-[10px]">${sub}</span>
+        </div>
+        <span class="contents ${interactive ? "pointer-events-none" : ""}"
+          >${right}</span
+        >`;
     if (!at) {
-      return html`<div data-kind=${e.kind} class=${rowClass}>${body}</div>`;
+      return html`<div data-kind=${e.kind} class=${rowClass}>
+        ${body(false)}
+      </div>`;
     }
     const target = at;
+    // The whole row opens the map: a real button stretched under the row's
+    // content (which lets clicks through), so the player's name stays a
+    // button of its own rather than one nested inside another.
     return html`<div
       data-kind=${e.kind}
-      role="button"
-      tabindex="0"
-      aria-label=${t("clan_modal.map_activity_view_at", {
-        x: target.x,
-        y: target.y,
-      })}
-      @click=${(ev: Event) => {
-        // A click on the player's name opens their profile instead.
-        if ((ev.target as HTMLElement).closest("player-name")) return;
-        this.viewOnMap(target);
-      }}
-      @keydown=${(ev: KeyboardEvent) => {
-        if (ev.key === "Enter" || ev.key === " ") {
-          ev.preventDefault();
-          this.viewOnMap(target);
-        }
-      }}
-      class="${rowClass} cursor-pointer hover:bg-white/[0.08] transition-colors"
+      class="${rowClass} hover:bg-white/[0.08] transition-colors"
     >
-      ${body}
+      <button
+        type="button"
+        data-view-on-map
+        aria-label=${t("clan_modal.map_activity_view_at", {
+          x: target.x,
+          y: target.y,
+        })}
+        @click=${() => this.viewOnMap(target)}
+        class="absolute inset-0 rounded-xl cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-malibu-blue"
+      ></button>
+      ${body(true)}
     </div>`;
   }
 
@@ -687,6 +816,17 @@ export class ClanMapActivityView extends LitElement {
     </div>`;
   }
 
+  // "Active today at 14:30", or just the date for an earlier day.
+  private activeAt(d: Date): string {
+    return sameDay(d, new Date())
+      ? translateText("clan_modal.map_activity_active_today", {
+          time: formatTime(d),
+        })
+      : translateText("clan_modal.map_activity_active_date", {
+          date: formatDate(d),
+        });
+  }
+
   private renderMember(m: MapActivityMember): TemplateResult {
     const t = translateText;
     const caps = BigInt(m.caps);
@@ -704,7 +844,7 @@ export class ClanMapActivityView extends LitElement {
       parts.push(
         html`<span class="text-orange-400"
           >${t("clan_modal.map_activity_stat_caps", {
-            caps: caps.toLocaleString(),
+            caps: Number(caps),
           })}</span
         >`,
       );
@@ -740,13 +880,7 @@ export class ClanMapActivityView extends LitElement {
           }
         </div>
         <span class="shrink-0 text-[10px] text-white/30"
-          >${
-            m.lastActiveAt
-              ? t("clan_modal.map_activity_active", {
-                  time: formatAbsoluteTime(m.lastActiveAt),
-                })
-              : "—"
-          }</span
+          >${m.lastActiveAt ? this.activeAt(new Date(m.lastActiveAt)) : "—"}</span
         >
       </div>
       <div class="text-xs text-white/60 mt-1 flex flex-wrap gap-x-1">

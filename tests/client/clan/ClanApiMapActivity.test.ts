@@ -129,7 +129,9 @@ describe("fetchClanMapActivity", () => {
     expect(url.searchParams.get("before")).toBe("2026-11-10T22:10:00.000Z");
   });
 
-  it("is forbidden on 403, failed on other errors or a bad body", async () => {
+  it("is signed out on 401, forbidden on 403, failed on other errors or a bad body", async () => {
+    stubFetch(401, {});
+    expect(await fetchClanMapActivity("OF")).toEqual({ error: "signed_out" });
     stubFetch(403, {});
     expect(await fetchClanMapActivity("OF")).toEqual({ error: "forbidden" });
     stubFetch(500, {});
@@ -182,7 +184,11 @@ describe("fetchClanMapActivityMembers", () => {
     ).toBe("30d");
   });
 
-  it("is forbidden on 403 and failed otherwise", async () => {
+  it("is signed out on 401, forbidden on 403 and failed otherwise", async () => {
+    stubFetch(401, {});
+    expect(await fetchClanMapActivityMembers("OF")).toEqual({
+      error: "signed_out",
+    });
     stubFetch(403, {});
     expect(await fetchClanMapActivityMembers("OF")).toEqual({
       error: "forbidden",

@@ -99,7 +99,7 @@ export class ClanMapView extends LitElement {
     if (this.at) params.set("at", `${this.at.x},${this.at.y}`);
     const q = params.toString();
     // `,` reads better unescaped and is safe in a query value.
-    return q ? `/?${q.replace("%2C", ",")}` : "/";
+    return q ? `/?${q.replace(/%2C/g, ",")}` : "/";
   }
 
   render() {

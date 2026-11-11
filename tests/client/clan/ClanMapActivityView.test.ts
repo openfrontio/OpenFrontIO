@@ -184,19 +184,49 @@ describe("ClanMapActivityView", () => {
     ).not.toBeNull();
   });
 
-  it("formats troop counts with digit grouping", async () => {
+  it("passes counts as numbers, so the translation pluralises and formats them", async () => {
     await mount();
     expect(translateText).toHaveBeenCalledWith(
       "clan_modal.map_activity_bought",
-      { troops: (50000).toLocaleString() },
+      expect.objectContaining({ troops: 50000 }),
     );
     expect(translateText).toHaveBeenCalledWith(
       "clan_modal.map_activity_troops_aboard",
-      { troops: (3000).toLocaleString() },
+      { troops: 3000 },
+    );
+    expect(translateText).toHaveBeenCalledWith(
+      "clan_modal.map_activity_refunded",
+      { troops: 2000 },
     );
   });
 
-  it("opens the map at a row's pixel, but a name click opens the profile", async () => {
+  it("puts the player or clan in the sentence through a {name} / {clan} slot", async () => {
+    const el = await mount();
+    const call = asMock(translateText).mock.calls.find(
+      ([key]) => key === "clan_modal.map_activity_claimed",
+    )!;
+    expect(call[1]).toEqual({ count: 12, name: expect.any(String) });
+    expect(
+      asMock(translateText).mock.calls.find(
+        ([key]) => key === "clan_modal.map_activity_siege",
+      )![1],
+    ).toEqual({ count: 32, clan: expect.any(String) });
+    // The mock translation drops the slot; the name is still shown.
+    expect(el.querySelector("[data-kind=claimed] player-name")).not.toBeNull();
+  });
+
+  it("shows only the time under a day divider, without repeating the day", async () => {
+    const el = await mount();
+    expect(el.textContent).not.toContain("history_today_at");
+    expect(el.textContent).not.toContain("history_date_at");
+    // A boat landing today: "Lands at …", no "Today" in the middle.
+    expect(translateText).toHaveBeenCalledWith(
+      "clan_modal.map_activity_ship_lands",
+      { time: expect.any(String) },
+    );
+  });
+
+  it("opens the map from a row's own button, and the name stays a separate button", async () => {
     const el = await mount();
     const at: unknown[] = [];
     const profiles: string[] = [];
@@ -206,12 +236,23 @@ describe("ClanMapActivityView", () => {
     el.addEventListener("view-profile", (e) =>
       profiles.push((e as CustomEvent<{ publicId: string }>).detail.publicId),
     );
-    el.querySelector<HTMLElement>("[data-kind=claimed]")!.click();
-    el.querySelector<HTMLElement>("[data-kind=ship_sailing]")!.click();
+    const view = (kind: string) =>
+      el.querySelector<HTMLButtonElement>(
+        `[data-kind=${kind}] button[data-view-on-map]`,
+      )!;
+    view("claimed").click();
+    view("ship_sailing").click();
     expect(at).toEqual([
       { x: 2380, y: 1150 },
       { x: 1012, y: 620 },
     ]);
+    // A real button, so Enter and Space work natively, with a label.
+    expect(view("claimed").getAttribute("aria-label")).toBe(
+      "clan_modal.map_activity_view_at",
+    );
+    // No button inside a button: the name sits beside the row's button.
+    expect(el.querySelector("[data-view-on-map] player-name")).toBeNull();
+    expect(el.querySelector("[role=button]")).toBeNull();
     el.querySelector<HTMLButtonElement>(
       "[data-kind=claimed] player-name button",
     )!.click();
@@ -219,8 +260,76 @@ describe("ClanMapActivityView", () => {
     expect(at).toHaveLength(2);
     // Troop purchases have no place on the map.
     expect(
-      el.querySelector("[data-kind=bought_troops]")!.getAttribute("role"),
+      el.querySelector("[data-kind=bought_troops] [data-view-on-map]"),
     ).toBeNull();
+  });
+
+  it("a Load more cut short by switching filter doesn't leave Load more disabled", async () => {
+    asMock(fetchClanMapActivity).mockResolvedValueOnce(
+      pageOf([allKinds[0]], { nextBefore: "2026-11-01T00:00:00.000Z" }),
+    );
+    const el = await mount();
+    let finish!: (v: MapActivityPage) => void;
+    asMock(fetchClanMapActivity).mockReturnValueOnce(
+      new Promise<MapActivityPage>((r) => (finish = r)),
+    );
+    el.querySelector<HTMLButtonElement>("[data-load-more]")!.click();
+    await flushAsync(el);
+    expect(
+      el.querySelector<HTMLButtonElement>("[data-load-more]")!.disabled,
+    ).toBe(true);
+    // Switch away mid-load, then back.
+    asMock(fetchClanMapActivity).mockResolvedValueOnce(pageOf([allKinds[4]]));
+    tab(el, "filter", "lost").click();
+    await flushAsync(el);
+    finish(pageOf([allKinds[5]], { atSea: [] }));
+    await flushAsync(el);
+    // (Were All refetched, it would still have more pages.)
+    asMock(fetchClanMapActivity).mockResolvedValue(
+      pageOf([allKinds[0]], { nextBefore: "2026-11-01T00:00:00.000Z" }),
+    );
+    tab(el, "filter", "all").click();
+    await flushAsync(el);
+    const more = el.querySelector<HTMLButtonElement>("[data-load-more]")!;
+    expect(more.disabled).toBe(false);
+    // The abandoned page wasn't appended.
+    expect(el.querySelector("[data-kind=siege]")).toBeNull();
+  });
+
+  it("keeps each filter's loaded pages, so switching back doesn't refetch", async () => {
+    asMock(fetchClanMapActivity).mockResolvedValueOnce(
+      pageOf([allKinds[0]], { nextBefore: "2026-11-01T00:00:00.000Z" }),
+    );
+    const el = await mount();
+    asMock(fetchClanMapActivity).mockResolvedValueOnce(
+      pageOf([allKinds[5]], { atSea: [] }),
+    );
+    el.querySelector<HTMLButtonElement>("[data-load-more]")!.click();
+    await flushAsync(el);
+    asMock(fetchClanMapActivity).mockResolvedValueOnce(pageOf([allKinds[4]]));
+    tab(el, "filter", "lost").click();
+    await flushAsync(el);
+    tab(el, "mode", "members").click();
+    await flushAsync(el);
+    tab(el, "mode", "recent").click();
+    await flushAsync(el);
+    tab(el, "filter", "all").click();
+    await flushAsync(el);
+    // First page, Load more, Lost: nothing again for switching back.
+    expect(fetchClanMapActivity).toHaveBeenCalledTimes(3);
+    expect(el.querySelector("[data-kind=claimed]")).not.toBeNull();
+    expect(el.querySelector("[data-kind=siege]")).not.toBeNull();
+  });
+
+  it("asks a signed-out player to sign in, with no retry", async () => {
+    asMock(fetchClanMapActivity).mockResolvedValueOnce({
+      error: "signed_out",
+    });
+    const el = await mount();
+    expect(
+      el.querySelector("[data-state='clan_modal.map_activity_signed_out']"),
+    ).not.toBeNull();
+    expect(el.querySelector("[data-state] button")).toBeNull();
   });
 
   it("refetches for a filter, and hides the ships at sea under Lost", async () => {
@@ -362,6 +471,29 @@ describe("ClanMapActivityView", () => {
       period.dispatchEvent(new Event("change"));
       await flushAsync(el);
       expect(fetchClanMapActivityMembers).toHaveBeenLastCalledWith("OF", "30d");
+      // Back to 7 days: already loaded.
+      period.value = "7d";
+      period.dispatchEvent(new Event("change"));
+      await flushAsync(el);
+      expect(fetchClanMapActivityMembers).toHaveBeenCalledTimes(2);
+    });
+
+    it("says 'today at' for activity today, and just the date before that", async () => {
+      await openMembers();
+      const keys = asMock(translateText).mock.calls.map(([key]) => key);
+      expect(keys).not.toContain("clan_modal.map_activity_active");
+      expect(keys).toContain("clan_modal.map_activity_active_date");
+      asMock(fetchClanMapActivityMembers).mockResolvedValue({
+        period: "7d",
+        members: [member({ lastActiveAt: new Date().toISOString() })],
+      });
+      const el = await mount();
+      tab(el, "mode", "members").click();
+      await flushAsync(el);
+      expect(translateText).toHaveBeenCalledWith(
+        "clan_modal.map_activity_active_today",
+        { time: expect.any(String) },
+      );
     });
 
     it("says when no one was active", async () => {
