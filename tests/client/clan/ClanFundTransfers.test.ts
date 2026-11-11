@@ -279,6 +279,45 @@ describe("Clan fund card (Manage)", () => {
     expect(sendBtn().disabled).toBe(false);
   });
 
+  type CapInternals = {
+    capTimer: unknown;
+    capRetries: number;
+    load(waitingForReset?: boolean): Promise<void>;
+    nextBackoff(): number;
+    clearCapTimer(): void;
+  };
+
+  it("backs off, up to 5 minutes, while the reset time is past but the limit is still used", async () => {
+    const used = status({
+      clanSentToday: "5000",
+      capResetsAt: new Date(Date.now() - 60_000).toISOString(),
+    });
+    const el = (await mount("leader", used)) as unknown as CapInternals;
+    expect(el.capRetries).toBe(1);
+    await el.load(true);
+    await el.load(true);
+    expect(el.capRetries).toBe(3);
+    el.clearCapTimer();
+
+    el.capRetries = 0;
+    const delays = Array.from({ length: 12 }, () => el.nextBackoff());
+    expect(delays.slice(0, 4)).toEqual([1_000, 2_000, 4_000, 8_000]);
+    expect(Math.max(...delays)).toBe(300_000);
+  });
+
+  it("retries a failed reload while waiting for the reset, but not a failed first load", async () => {
+    const el = (await mount("leader")) as unknown as CapInternals;
+    fetchTransfers.mockResolvedValue({ error: "failed" });
+
+    await el.load(false);
+    expect(el.capTimer).toBeNull();
+
+    await el.load(true);
+    expect(el.capTimer).not.toBeNull();
+    expect(el.capRetries).toBe(1);
+    el.clearCapTimer();
+  });
+
   it("doesn't schedule a reload when there's allowance left", async () => {
     const el = await mount("leader");
     expect((el as unknown as { capTimer: unknown }).capTimer).toBeNull();
@@ -446,6 +485,36 @@ describe("Send Plutonium page", () => {
     await flushAsync(el);
     expect(el.querySelector('[data-load-error="members"]')).toBeNull();
     expect(el.querySelectorAll("[data-member]")).toHaveLength(2);
+  });
+
+  it("Retry repeats the failed page and search, not the last page that loaded", async () => {
+    const members = vi.mocked(fetchClanMembers);
+    const el = await mount();
+    const internals = el as unknown as {
+      loadMembers(p: number, s?: string): Promise<void>;
+    };
+    // Page 2 of the unfiltered list loads…
+    members.mockResolvedValueOnce({
+      results: [],
+      total: 25,
+      page: 2,
+      limit: 10,
+    });
+    await internals.loadMembers(2);
+    // …then a new search (page 1) fails.
+    members.mockResolvedValueOnce(false);
+    await internals.loadMembers(1, "bob");
+    await flushAsync(el);
+
+    members.mockClear();
+    el.querySelector<HTMLButtonElement>(
+      '[data-load-error="members"] [data-action=retry]',
+    )!.click();
+    await flushAsync(el);
+    expect(members).toHaveBeenCalledTimes(1);
+    const [, page, , , , search] = members.mock.calls[0];
+    expect(page).toBe(1);
+    expect(search).toBe("bob");
   });
 
   it("keeps the picked member's limit after the list reloads", async () => {

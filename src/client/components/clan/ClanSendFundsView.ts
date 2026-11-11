@@ -72,7 +72,10 @@ export class ClanSendFundsView extends LitElement {
   @state() private membersTotal = 0;
   // The member list failed to load: show an error with Retry, not "no
   // members" or a stale page.
-  @state() private membersFailed = false;
+  // The member request that failed (its page and search), so Retry repeats
+  // exactly that one rather than the last page that loaded.
+  @state() private membersFailed: { page: number; search: string } | null =
+    null;
   @state() private memberPage = 1;
   @state() private memberSearch = "";
   @state() private loading = true;
@@ -122,7 +125,7 @@ export class ClanSendFundsView extends LitElement {
     );
     if (seq !== this.loadSeq) return;
     if (!res) {
-      this.membersFailed = true;
+      this.membersFailed = { page, search };
       this.members = [];
       this.loading = false;
       return;
@@ -133,7 +136,7 @@ export class ClanSendFundsView extends LitElement {
       members.map((m) => m.publicId),
     );
     if (seq !== this.loadSeq) return;
-    this.membersFailed = false;
+    this.membersFailed = null;
     this.members = members;
     this.membersTotal = res.total;
     this.memberPage = res.page;
@@ -302,7 +305,11 @@ export class ClanSendFundsView extends LitElement {
                 ? this.renderLoadError(
                     "members",
                     "clan_modal.send_funds_members_failed",
-                    () => void this.loadMembers(this.memberPage),
+                    () => {
+                      const failed = this.membersFailed;
+                      if (failed)
+                        void this.loadMembers(failed.page, failed.search);
+                    },
                   )
                 : this.members.length === 0
                   ? html`<p class="text-white/40 text-sm text-center py-4">

@@ -16,6 +16,7 @@ import {
 import type { ClanRole } from "./ClanShared";
 
 const RECENT_PAYOUTS = 3;
+const CAP_RELOAD_MAX_BACKOFF_MS = 5 * 60_000;
 
 /**
  * The "Clan fund" card on the Manage page (leader and officers): the fund's
@@ -45,6 +46,11 @@ export class ClanFundCard extends LitElement {
   // Reloads the card when the rolling 24h limit frees up, so a leader who
   // stays on Manage isn't left with a disabled Send button.
   private capTimer: ReturnType<typeof setTimeout> | null = null;
+  // Back-to-back reloads that found the limit still used with its reset time
+  // already past (browser clock ahead of the API's), or that failed. Each one
+  // doubles the wait, so a skewed clock or a down API can't cause a request
+  // every second.
+  private capRetries = 0;
 
   connectedCallback() {
     super.connectedCallback();
@@ -61,12 +67,25 @@ export class ClanFundCard extends LitElement {
     this.capTimer = null;
   }
 
-  private async load() {
+  // 1s, 2s, 4s… up to 5 minutes.
+  private nextBackoff(): number {
+    const ms = 1_000 * (1 << Math.min(this.capRetries, 9));
+    this.capRetries++;
+    return Math.min(ms, CAP_RELOAD_MAX_BACKOFF_MS);
+  }
+
+  // `waitingForReset`: this load was the timer's, so a failure retries
+  // instead of leaving Send disabled.
+  private async load(waitingForReset = false) {
     if (!this.clanTag) return;
     const res = await fetchClanFundTransfers(this.clanTag, {
       limit: RECENT_PAYOUTS,
     });
-    if (!this.isConnected || "error" in res) return;
+    if (!this.isConnected) return;
+    if ("error" in res) {
+      if (waitingForReset) this.setCapTimer(this.nextBackoff());
+      return;
+    }
     this.status = res.status;
     this.recent = res.results;
     this.visible = res.status.enabled || res.total > 0;
@@ -75,15 +94,27 @@ export class ClanFundCard extends LitElement {
 
   private scheduleCapReload(status: ClanFundTransferStatus) {
     this.clearCapTimer();
-    if (!status.enabled || !status.capResetsAt) return;
-    if (clanLeftToday(status) > 0n) return;
+    if (!status.enabled || !status.capResetsAt || clanLeftToday(status) > 0n) {
+      this.capRetries = 0;
+      return;
+    }
     const wait = new Date(status.capResetsAt).getTime() - Date.now();
+    if (wait <= 0) {
+      // Already past by our clock but the API still counts it: back off.
+      this.setCapTimer(this.nextBackoff());
+      return;
+    }
+    this.capRetries = 0;
     // A second's grace so the API's window has moved on too; never more than
     // a day, so a bad timestamp can't overflow setTimeout.
-    const delay = Math.min(Math.max(wait, 0) + 1_000, 24 * 3_600_000);
+    this.setCapTimer(Math.min(wait + 1_000, 24 * 3_600_000));
+  }
+
+  private setCapTimer(delay: number) {
+    this.clearCapTimer();
     this.capTimer = setTimeout(() => {
       this.capTimer = null;
-      void this.load();
+      void this.load(true);
     }, delay);
   }
 
