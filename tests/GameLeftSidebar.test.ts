@@ -512,6 +512,100 @@ describe("GameLeftSidebar", () => {
     sidebar.remove();
   });
 
+  it("shows the game ID while a table is open and copies it on a click", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+
+    const gameId = () =>
+      sidebar.querySelector<HTMLButtonElement>("[data-game-id]");
+    expect(gameId()).toBeNull();
+    sidebar
+      .querySelector<HTMLElement>('[data-sidebar-button="players"]')
+      ?.click();
+    await sidebar.updateComplete;
+    const button = gameId() as HTMLButtonElement;
+    expect(button.getAttribute("aria-label")).toBe(
+      `${translateText("help_modal.game_id_tooltip")} test-game`,
+    );
+
+    button.click();
+    await Promise.resolve();
+    expect(writeText).toHaveBeenCalledWith("test-game");
+    expect(button.hasAttribute("data-copied")).toBe(true);
+    // A screen reader hears it too: the button itself does not change.
+    const status = sidebar.querySelector("[data-game-id-status]");
+    expect(status?.getAttribute("role")).toBe("status");
+    expect(status?.textContent).toBe(translateText("common.copied"));
+
+    // "Copied!" is shown by an animation; its end puts the ID back.
+    button.lastElementChild?.dispatchEvent(
+      new Event("animationend", { bubbles: true }),
+    );
+    expect(button.hasAttribute("data-copied")).toBe(false);
+    expect(status?.textContent).toBe("");
+
+    sidebar.remove();
+    delete (navigator as { clipboard?: unknown }).clipboard;
+  });
+
+  it("selects the game ID when the clipboard refuses it", async () => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+    });
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+    sidebar
+      .querySelector<HTMLElement>('[data-sidebar-button="players"]')
+      ?.click();
+    await sidebar.updateComplete;
+
+    const button = sidebar.querySelector("[data-game-id]") as HTMLElement;
+    button.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(button.hasAttribute("data-copied")).toBe(false);
+    expect(getSelection()?.toString()).toBe("test-game");
+
+    sidebar.remove();
+    delete (navigator as { clipboard?: unknown }).clipboard;
+  });
+
+  it("leaves the game ID as it is when there is no clipboard", async () => {
+    expect(navigator.clipboard).toBeUndefined();
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+    sidebar
+      .querySelector<HTMLElement>('[data-sidebar-button="players"]')
+      ?.click();
+    await sidebar.updateComplete;
+
+    const button = sidebar.querySelector("[data-game-id]") as HTMLElement;
+    expect(() => button.click()).not.toThrow();
+    await Promise.resolve();
+    expect(button.hasAttribute("data-copied")).toBe(false);
+
+    sidebar.remove();
+  });
+
   it("shows your team during the spawn phase of a team game", async () => {
     let spawning = true;
     const sidebar = new GameLeftSidebar();
