@@ -59,7 +59,7 @@ export class PlayerProfileModal extends BaseModal {
   @state() private statsTree: PlayerStatsTree | null = null;
   @state() private clans: NonNullable<PlayerProfile["clans"]> = [];
   @state() private displayClanTag: string | null = null;
-  @state() private ffaRating: FfaRatingSummaryData | null = null;
+  @state() private rawFfaRating: FfaRatingSummaryData | null = null;
   // Level / XP, when progression is on and the player has any.
   @state() private progress: PublicProgress | null = null;
   @state() private loading = false;
@@ -81,6 +81,16 @@ export class PlayerProfileModal extends BaseModal {
   private wantsProgressionTab = false;
   // Counts fresh openings, to key the profile card's once-per-open flourish.
   private openCount = 0;
+
+  // The global position is an account-only statistic; public profiles of
+  // other players retain the existing rating/tier presentation.
+  private get ffaRating(): FfaRatingSummaryData | null {
+    if (this.rawFfaRating === null) return null;
+    if (isOwnAccount(this.publicId) || this.rawFfaRating.kind !== "rated") {
+      return this.rawFfaRating;
+    }
+    return { ...this.rawFfaRating, globalPosition: undefined };
+  }
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -513,7 +523,7 @@ export class PlayerProfileModal extends BaseModal {
     this.statsTree = null;
     this.clans = [];
     this.displayClanTag = null;
-    this.ffaRating = null;
+    this.rawFfaRating = null;
     this.progress = null;
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
@@ -568,14 +578,8 @@ export class PlayerProfileModal extends BaseModal {
     this.clans = profile === false ? [] : (profile.clans ?? []);
     this.displayClanTag =
       profile === false ? null : (profile.displayClanTag ?? null);
-    const ffaRating =
+    this.rawFfaRating =
       profile === false ? null : ffaSummaryFromProfile(profile.ffaRating);
-    // The global position is an account-only statistic; public profiles of
-    // other players retain the existing rating/tier presentation.
-    this.ffaRating =
-      ffaRating === null || isOwnAccount(publicId) || ffaRating.kind !== "rated"
-        ? ffaRating
-        : { ...ffaRating, globalPosition: undefined };
   }
 
   // Intentionally preserves publicId/statsTree/history cache/scroll: the page
