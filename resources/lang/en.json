@@ -575,6 +575,7 @@
     "send_funds_error_self": "You can't send clan funds to yourself.",
     "send_funds_error_too_recent": "This member joined the clan too recently to receive Plutonium.",
     "send_funds_max": "Max",
+    "send_funds_members_failed": "Couldn't load members.",
     "send_funds_no_members": "No members found.",
     "send_funds_over_max": "The most you can send right now is {amount}.",
     "send_funds_pick_member": "Choose a member",

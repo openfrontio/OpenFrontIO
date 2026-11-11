@@ -70,6 +70,9 @@ export class ClanSendFundsView extends LitElement {
   @state() private members: ClanMember[] = [];
   @state() private eligibility = new Map<string, ClanFundRecipient>();
   @state() private membersTotal = 0;
+  // The member list failed to load: show an error with Retry, not "no
+  // members" or a stale page.
+  @state() private membersFailed = false;
   @state() private memberPage = 1;
   @state() private memberSearch = "";
   @state() private loading = true;
@@ -119,6 +122,8 @@ export class ClanSendFundsView extends LitElement {
     );
     if (seq !== this.loadSeq) return;
     if (!res) {
+      this.membersFailed = true;
+      this.members = [];
       this.loading = false;
       return;
     }
@@ -128,10 +133,18 @@ export class ClanSendFundsView extends LitElement {
       members.map((m) => m.publicId),
     );
     if (seq !== this.loadSeq) return;
+    this.membersFailed = false;
     this.members = members;
     this.membersTotal = res.total;
     this.memberPage = res.page;
-    this.eligibility = new Map((eligibility || []).map((e) => [e.publicId, e]));
+    const next = new Map((eligibility || []).map((e) => [e.publicId, e]));
+    // Keep the picked member's eligibility when they're off this page or
+    // search, so Max still respects their own limit left today.
+    const picked = this.recipient
+      ? this.eligibility.get(this.recipient.publicId)
+      : undefined;
+    if (picked && !next.has(picked.publicId)) next.set(picked.publicId, picked);
+    this.eligibility = next;
     this.loading = false;
   }
 
@@ -257,23 +270,11 @@ export class ClanSendFundsView extends LitElement {
         ${status ? this.renderSummary(status) : ""}
         ${
           this.statusFailed
-            ? html`<div
-                data-status-failed
-                role="alert"
-                class="flex items-center justify-between gap-3 bg-red-500/10 rounded-xl border border-red-500/30 p-3 text-red-300 text-sm"
-              >
-                <span
-                  >${translateText("clan_modal.clan_fund_load_failed")}</span
-                >
-                <button
-                  type="button"
-                  data-action="retry-status"
-                  @click=${() => void this.loadStatus()}
-                  class="shrink-0 px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/10"
-                >
-                  ${translateText("clan_modal.retry")}
-                </button>
-              </div>`
+            ? this.renderLoadError(
+                "status",
+                "clan_modal.clan_fund_load_failed",
+                () => void this.loadStatus(),
+              )
             : ""
         }
         ${
@@ -297,11 +298,17 @@ export class ClanSendFundsView extends LitElement {
           )}
           <div role="radiogroup" class="space-y-2">
             ${
-              this.members.length === 0
-                ? html`<p class="text-white/40 text-sm text-center py-4">
-                    ${translateText("clan_modal.send_funds_no_members")}
-                  </p>`
-                : this.members.map((m) => this.renderMember(m))
+              this.membersFailed
+                ? this.renderLoadError(
+                    "members",
+                    "clan_modal.send_funds_members_failed",
+                    () => void this.loadMembers(this.memberPage),
+                  )
+                : this.members.length === 0
+                  ? html`<p class="text-white/40 text-sm text-center py-4">
+                      ${translateText("clan_modal.send_funds_no_members")}
+                    </p>`
+                  : this.members.map((m) => this.renderMember(m))
             }
           </div>
           ${
@@ -343,6 +350,29 @@ export class ClanSendFundsView extends LitElement {
       </div>
       ${this.renderConfirm()}
     `;
+  }
+
+  // A red "couldn't load" box with Retry. `which` names it for tests.
+  private renderLoadError(
+    which: "status" | "members",
+    messageKey: string,
+    retry: () => void,
+  ): TemplateResult {
+    return html`<div
+      data-load-error=${which}
+      role="alert"
+      class="flex items-center justify-between gap-3 bg-red-500/10 rounded-xl border border-red-500/30 p-3 text-red-300 text-sm"
+    >
+      <span>${translateText(messageKey)}</span>
+      <button
+        type="button"
+        data-action="retry"
+        @click=${retry}
+        class="shrink-0 px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/10"
+      >
+        ${translateText("clan_modal.retry")}
+      </button>
+    </div>`;
   }
 
   private sendLabel(): string {

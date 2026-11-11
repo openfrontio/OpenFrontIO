@@ -8,6 +8,7 @@ import {
 import { translateText } from "../../Utils";
 import "../PlutoniumIcon";
 import {
+  clanLeftToday,
   formatPlutonium,
   renderPayoutRow,
   sendBlockedReason,
@@ -41,9 +42,23 @@ export class ClanFundCard extends LitElement {
   @state() private recent: ClanFundTransfer[] = [];
   @state() private visible = false;
 
+  // Reloads the card when the rolling 24h limit frees up, so a leader who
+  // stays on Manage isn't left with a disabled Send button.
+  private capTimer: ReturnType<typeof setTimeout> | null = null;
+
   connectedCallback() {
     super.connectedCallback();
     void this.load();
+  }
+
+  disconnectedCallback() {
+    this.clearCapTimer();
+    super.disconnectedCallback();
+  }
+
+  private clearCapTimer() {
+    if (this.capTimer) clearTimeout(this.capTimer);
+    this.capTimer = null;
   }
 
   private async load() {
@@ -55,6 +70,21 @@ export class ClanFundCard extends LitElement {
     this.status = res.status;
     this.recent = res.results;
     this.visible = res.status.enabled || res.total > 0;
+    this.scheduleCapReload(res.status);
+  }
+
+  private scheduleCapReload(status: ClanFundTransferStatus) {
+    this.clearCapTimer();
+    if (!status.enabled || !status.capResetsAt) return;
+    if (clanLeftToday(status) > 0n) return;
+    const wait = new Date(status.capResetsAt).getTime() - Date.now();
+    // A second's grace so the API's window has moved on too; never more than
+    // a day, so a bad timestamp can't overflow setTimeout.
+    const delay = Math.min(Math.max(wait, 0) + 1_000, 24 * 3_600_000);
+    this.capTimer = setTimeout(() => {
+      this.capTimer = null;
+      void this.load();
+    }, delay);
   }
 
   private emit(name: string) {

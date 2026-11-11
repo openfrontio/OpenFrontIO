@@ -62,6 +62,7 @@ import type {
 import {
   fetchClanFundRecipients,
   fetchClanFundTransfers,
+  fetchClanMembers,
   sendClanFunds,
 } from "../../../src/client/ClanApi";
 import { ClanDonationsView } from "../../../src/client/components/clan/ClanDonationsView";
@@ -259,6 +260,30 @@ describe("Clan fund card (Manage)", () => {
     ).toBe(true);
   });
 
+  it("reloads when the daily limit frees up, re-enabling Send", async () => {
+    const el = await mount(
+      "leader",
+      status({
+        clanSentToday: "5000",
+        // Already passed: the card reloads after its one-second grace.
+        capResetsAt: new Date(Date.now() - 1_000).toISOString(),
+      }),
+    );
+    const sendBtn = () =>
+      el.querySelector<HTMLButtonElement>("[data-action=open-send-funds]")!;
+    expect(sendBtn().disabled).toBe(true);
+
+    fetchTransfers.mockResolvedValue(page([transfer()], status()));
+    await new Promise((r) => setTimeout(r, 1_100));
+    await flushAsync(el);
+    expect(sendBtn().disabled).toBe(false);
+  });
+
+  it("doesn't schedule a reload when there's allowance left", async () => {
+    const el = await mount("leader");
+    expect((el as unknown as { capTimer: unknown }).capTimer).toBeNull();
+  });
+
   it("links to the full log", async () => {
     const el = await mount("officer");
     const navigated = vi.fn();
@@ -384,15 +409,17 @@ describe("Send Plutonium page", () => {
     pick(el, "member-2");
     typeAmount(el, "10");
     await flushAsync(el);
-    expect(el.querySelector("[data-status-failed]")?.textContent).toContain(
-      "clan_modal.clan_fund_load_failed",
-    );
+    expect(
+      el.querySelector('[data-load-error="status"]')?.textContent,
+    ).toContain("clan_modal.clan_fund_load_failed");
     expect(sendButton(el).disabled).toBe(true);
 
     fetchTransfers.mockResolvedValue(page([], status()));
-    el.querySelector<HTMLButtonElement>("[data-action=retry-status]")!.click();
+    el.querySelector<HTMLButtonElement>(
+      '[data-load-error="status"] [data-action=retry]',
+    )!.click();
     await flushAsync(el);
-    expect(el.querySelector("[data-status-failed]")).toBeNull();
+    expect(el.querySelector('[data-load-error="status"]')).toBeNull();
     expect(sendButton(el).disabled).toBe(false);
   });
 
@@ -405,6 +432,37 @@ describe("Send Plutonium page", () => {
       expect(sendButton(el).disabled).toBe(true);
       el.remove();
     }
+  });
+
+  it("shows a member-load failure with Retry instead of 'no members'", async () => {
+    vi.mocked(fetchClanMembers).mockResolvedValueOnce(false);
+    const el = await mount();
+    const box = el.querySelector('[data-load-error="members"]');
+    expect(box?.textContent).toContain("clan_modal.send_funds_members_failed");
+    expect(el.textContent).not.toContain("clan_modal.send_funds_no_members");
+
+    box!.querySelector<HTMLButtonElement>("[data-action=retry]")!.click();
+    await flushAsync(el);
+    await flushAsync(el);
+    expect(el.querySelector('[data-load-error="members"]')).toBeNull();
+    expect(el.querySelectorAll("[data-member]")).toHaveLength(2);
+  });
+
+  it("keeps the picked member's limit after the list reloads", async () => {
+    const el = await mount();
+    pick(el, "member-2");
+    await flushAsync(el);
+    // A search whose eligibility no longer includes the picked member.
+    fetchRecipients.mockResolvedValueOnce([recipient("member-3")]);
+    await (
+      el as unknown as { loadMembers(p: number, s: string): Promise<void> }
+    ).loadMembers(1, "new");
+    await flushAsync(el);
+    el.querySelector<HTMLButtonElement>("[data-quick=max]")!.click();
+    await flushAsync(el);
+    expect(
+      el.querySelector<HTMLInputElement>("#clan-send-funds-amount")!.value,
+    ).toBe("1600");
   });
 
   it("falls back to letting the server decide when eligibility fails", async () => {
