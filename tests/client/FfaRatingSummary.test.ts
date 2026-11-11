@@ -124,9 +124,19 @@ describe("<ffa-rating-summary>", () => {
       tier: "Gold I",
       globalPosition: 160,
     });
-    expect(
-      el.querySelector("[data-global-ffa-position]")?.textContent,
-    ).toContain("160");
+    const container = el.querySelector("[data-global-ffa-position]");
+    expect(container).not.toBeNull();
+
+    // Verify the screen-reader accessible label is present
+    expect(container!.querySelector(".sr-only")!.textContent).toContain(
+      'ffa_rating.global_position:{"position":160}',
+    );
+
+    // Verify the visible position number is rendered separately
+    const visibleNumberSpan = container!.querySelector(
+      "span[aria-hidden='true']:last-child",
+    );
+    expect(visibleNumberSpan!.textContent).toContain("#160");
   });
 
   it("shows Calibrating for a calibrating player", async () => {
