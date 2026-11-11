@@ -392,4 +392,45 @@ describe("ChatModal", () => {
     expect(sent).toHaveLength(1);
     expect(sent[0].quickChatKey).toBe("help.troops");
   });
+
+  it("closes from the header's close button without sending", async () => {
+    (
+      modal.querySelector('button[aria-label="Close"]') as HTMLButtonElement
+    ).click();
+    await modal.updateComplete;
+    expect(modal.isOpen).toBe(false);
+    expect(sent).toHaveLength(0);
+  });
+
+  it("closes on a click on the backdrop, not on one inside the panel", async () => {
+    const dialog = modal.querySelector('[role="dialog"]') as HTMLElement;
+    dialog.click();
+    await modal.updateComplete;
+    expect(modal.isOpen).toBe(true);
+
+    (dialog.parentElement as HTMLElement).click();
+    await modal.updateComplete;
+    expect(modal.isOpen).toBe(false);
+  });
+
+  it("names the recipient in the header", () => {
+    const dialog = modal.querySelector('[role="dialog"]')!;
+    const title = modal.querySelector(
+      `#${dialog.getAttribute("aria-labelledby")}`,
+    )!;
+    expect(title.textContent?.trim()).toBe("Quick Chat");
+    expect(title.parentElement!.textContent).toContain("Bob");
+  });
+
+  it("does not offer the all phrases switch while picking a player", async () => {
+    modal.openWithSelection("attack", "focus", me, bob);
+    await modal.updateComplete;
+    expect(allPhrasesSwitch()).toBeNull();
+
+    (
+      modal.querySelector('button[aria-label="Back"]') as HTMLButtonElement
+    ).click();
+    await modal.updateComplete;
+    expect(allPhrasesSwitch()).not.toBeNull();
+  });
 });
