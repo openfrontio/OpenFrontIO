@@ -1062,7 +1062,8 @@
     "favorites_hint_touch": "Drag emojis here to keep them handy",
     "gestures": "Gestures",
     "ranks": "Ranks",
-    "things": "Things"
+    "things": "Things",
+    "title": "Emojis"
   },
   "error_modal": {
     "connection_error": "Connection error!",

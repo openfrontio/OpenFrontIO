@@ -2,7 +2,7 @@ import { AllPlayers } from "@openfront/engine-api/game/GameTypes";
 import { Emoji, flattenedEmojiTable } from "@openfront/engine-api/Schemas";
 import { TerraNulliusImpl } from "@openfront/engine-lib/game/TerraNulliusImpl";
 import { EventBus, GameEvent } from "@openfront/shared/EventBus";
-import { LitElement, html } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   EmojiSection,
@@ -23,6 +23,7 @@ import { SendEmojiIntentEvent } from "../../Transport";
 import { UserSettings } from "../../UserSettings";
 import { translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
+import { HUD_LABEL, hudModalHeader } from "../HudModal";
 
 /** Opens the emoji table aimed at a specific player. */
 export class ShowPlayerEmojiMenuEvent implements GameEvent {
@@ -40,7 +41,8 @@ export class EmojiTable extends LitElement {
   @state() private favorites: (Emoji | null)[] = [];
   @state() private dragOverSlot: number | null = null;
   /** The emoji being dragged, and its favorites slot if it came from one. */
-  private dragged: { emoji: Emoji; fromSlot: number | null } | null = null;
+  @state() private dragged: { emoji: Emoji; fromSlot: number | null } | null =
+    null;
 
   initEventBus(eventBus: EventBus) {
     this.eventBus = eventBus;
@@ -99,10 +101,7 @@ export class EmojiTable extends LitElement {
   private onEmojiClicked: (emoji: string) => void = () => {};
 
   private handleBackdropClick = (e: MouseEvent) => {
-    const panelContent = this.querySelector(
-      'div[class*="bg-zinc-900"]',
-    ) as HTMLElement;
-    if (panelContent && !panelContent.contains(e.target as Node)) {
+    if (e.target === e.currentTarget) {
       this.hideTable();
     }
   };
@@ -114,29 +113,24 @@ export class EmojiTable extends LitElement {
 
     return html`
       <div
-        class="fixed inset-0 bg-black/15 backdrop-brightness-110 flex items-start sm:items-center justify-center z-10002 pt-4 sm:pt-0"
+        class="fixed inset-0 z-10002 flex items-start justify-center bg-black/15 pt-4 backdrop-brightness-110 sm:items-center sm:pt-0"
         @click=${this.handleBackdropClick}
         @dragover=${this.dragOverElsewhere}
         @drop=${this.dropElsewhere}
       >
-        <div class="relative">
-          <!-- Close button -->
-          <button
-            class="absolute -top-3 -right-3 w-7 h-7 flex items-center justify-center
-                    bg-zinc-700 hover:bg-red-500 text-white rounded-full shadow-sm transition-colors z-10004"
-            @click=${this.hideTable}
-          >
-            ✕
-          </button>
-
-          <div
-            class="bg-zinc-900/95 p-3 rounded-xl z-10003 shadow-2xl shadow-black/50 ring-1 ring-white/10
-                   max-w-[calc(100vw-32px)] max-h-[calc(100vh-60px)] overflow-y-auto
-                   flex flex-col gap-3"
-            @contextmenu=${(e: MouseEvent) => e.preventDefault()}
-            @wheel=${(e: WheelEvent) => e.stopPropagation()}
-            @click=${(e: MouseEvent) => e.stopPropagation()}
-          >
+        <div
+          role="dialog"
+          aria-labelledby="emoji-table-title"
+          class="hud-modal flex max-h-[calc(100dvh-48px)] max-w-[calc(100vw-24px)] flex-col overflow-hidden text-white animate-hud-rise motion-reduce:animate-none"
+          @contextmenu=${(e: MouseEvent) => e.preventDefault()}
+          @wheel=${(e: WheelEvent) => e.stopPropagation()}
+        >
+          ${hudModalHeader({
+            title: translateText("emoji_table.title"),
+            titleId: "emoji-table-title",
+            onClose: () => this.hideTable(),
+          })}
+          <div class="flex flex-col gap-3 overflow-y-auto p-4">
             ${this.renderFavorites()}
             ${emojiSections
               .filter((s) => !s.columns)
@@ -158,25 +152,41 @@ export class EmojiTable extends LitElement {
   private renderFavorites() {
     const empty = this.favorites.every((e) => e === null);
     const showKeys = !Platform.isTouch;
+    const hint = translateText(
+      showKeys
+        ? "emoji_table.favorites_hint"
+        : "emoji_table.favorites_hint_touch",
+    );
     return html`
       <section class="hidden sm:block">
-        <h3
-          class="mb-1 text-center text-[11px] font-semibold uppercase tracking-wider text-zinc-400"
-        >
+        <h3 class="mb-1 ${HUD_LABEL}">
           ${translateText("emoji_table.favorites")}
         </h3>
-        <div class="flex justify-center gap-1">
+        <div class="group flex gap-2" ?data-dragging=${this.dragged !== null}>
           ${this.favorites.map((emoji, slot) => {
-            let look = "border border-dashed border-zinc-600";
-            if (emoji) look = "cursor-pointer bg-white/5 hover:bg-white/10";
-            if (this.dragOverSlot === slot) look += " bg-white/20";
+            let look = "bg-white/6 ring-1 ring-white/12 text-white/30";
+            if (emoji) {
+              look =
+                "cursor-pointer bg-white/10 ring-1 ring-white/20 hover:bg-white/15";
+            }
+            // The drag mark is more specific than plain utilities, so the slot
+            // under the pointer leaves it out to show its own look.
+            if (this.dragOverSlot === slot) {
+              look = "bg-malibu-blue/30 ring-2 ring-aquarius";
+            } else {
+              look +=
+                " group-data-dragging:bg-malibu-blue/15 group-data-dragging:ring-aquarius/60";
+            }
             return html`
               <button
-                class="relative flex items-center justify-center size-16 rounded-lg text-5xl transition-colors ${look}"
+                class="relative flex size-14 items-center justify-center rounded-lg text-3xl ring-inset transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aquarius ${look}"
                 draggable=${emoji ? "true" : "false"}
                 title=${
-                  emoji ? translateText("emoji_table.favorite_remove_hint") : ""
+                  emoji
+                    ? translateText("emoji_table.favorite_remove_hint")
+                    : hint
                 }
+                aria-label=${emoji ? nothing : hint}
                 @click=${() => emoji && this.onEmojiClicked(emoji)}
                 @dragstart=${(e: DragEvent) =>
                   emoji && this.startDrag(e, emoji, slot)}
@@ -185,11 +195,18 @@ export class EmojiTable extends LitElement {
                 @dragleave=${() => (this.dragOverSlot = null)}
                 @drop=${(e: DragEvent) => this.drop(e, slot)}
               >
-                ${emoji ?? ""}
+                <!-- Raised to leave room for the key label. Like the label, it
+                     ignores the pointer, or dragging over it would fire a
+                     dragleave on the slot. -->
+                <span
+                  class="pointer-events-none ${showKeys ? "-translate-y-2.5" : ""}"
+                >
+                  ${emoji ?? html`<of-icon name="plus" size="18"></of-icon>`}
+                </span>
                 ${
                   showKeys
                     ? html`<span
-                        class="pointer-events-none absolute top-0.5 left-1.5 text-xs leading-tight font-mono text-zinc-400"
+                        class="pointer-events-none absolute bottom-1 start-1/2 -translate-x-1/2 rtl:translate-x-1/2 rounded-sm bg-white/10 px-1 text-[11px] font-bold uppercase leading-4 text-white/70"
                         translate="no"
                         >${favoriteKeyLabel(slot)}</span
                       >`
@@ -199,17 +216,7 @@ export class EmojiTable extends LitElement {
             `;
           })}
         </div>
-        ${
-          empty
-            ? html`<p class="mt-1 text-center text-xs text-zinc-500">
-                ${translateText(
-                  showKeys
-                    ? "emoji_table.favorites_hint"
-                    : "emoji_table.favorites_hint_touch",
-                )}
-              </p>`
-            : null
-        }
+        ${empty ? html`<p class="mt-2 text-xs text-white/55">${hint}</p>` : null}
       </section>
     `;
   }
@@ -272,17 +279,14 @@ export class EmojiTable extends LitElement {
     if (section.columns === 3) grid = "grid-cols-[repeat(3,auto)]";
     return html`
       <section>
-        <h3
-          class="mb-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400"
-        >
-          ${translateText(section.title)}
-        </h3>
+        <h3 class="mb-1 ${HUD_LABEL}">${translateText(section.title)}</h3>
         <div class="grid ${grid} gap-1">
           ${section.emojis.map(
             (emoji) => html`
               <button
                 class="flex items-center justify-center cursor-pointer size-12 sm:size-14 rounded-lg
-                       text-3xl sm:text-4xl hover:bg-white/10 active:bg-white/20 transition-colors"
+                       text-3xl sm:text-4xl hover:bg-white/10 active:bg-white/20 transition-colors
+                       focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aquarius"
                 draggable="true"
                 @click=${() => this.onEmojiClicked(emoji)}
                 @dragstart=${(e: DragEvent) => this.startDrag(e, emoji, null)}
@@ -298,6 +302,10 @@ export class EmojiTable extends LitElement {
   }
 
   hideTable() {
+    // Closing mid-drag removes the dragged button, so its dragend may never
+    // come.
+    this.dragged = null;
+    this.dragOverSlot = null;
     this.isVisible = false;
     this.eventBus?.emit(new EmojiTableVisibleEvent(false));
     this.requestUpdate();
