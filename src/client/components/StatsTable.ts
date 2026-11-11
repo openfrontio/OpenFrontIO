@@ -144,13 +144,18 @@ export abstract class StatsTable extends LitElement {
 
     const columns = this.visibleColumns();
     // Only orderable columns have a number to sort on. When none is visible
-    // the rows keep the order buildRows produced.
+    // the rows keep the order buildRows produced. Without a choice, sort by
+    // land; Type comes first in the registry but is a poor default.
     const orderable = columns.filter((column) => column.isOrderable);
     if (
       orderable.length > 0 &&
       !orderable.some((column) => column.id === this.sortKey)
     ) {
-      this.sortKey = orderable[0].id;
+      this.sortKey = (
+        orderable.find((column) => column.id === "tiles") ??
+        orderable.find((column) => column.id !== "playerType") ??
+        orderable[0]
+      ).id;
       this.sortOrder = "desc";
     }
 
