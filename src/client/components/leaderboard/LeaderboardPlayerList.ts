@@ -264,7 +264,7 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   public async loadPlayerLeaderboard(reset = false) {
-    if (!reset && this.ffaAllRanks) {
+    if (!reset && this.ffaAllActive) {
       await this.loadFfaAllPage();
       return;
     }
