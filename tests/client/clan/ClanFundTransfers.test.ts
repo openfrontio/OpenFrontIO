@@ -750,6 +750,68 @@ describe("Send Plutonium page", () => {
     expect(send.mock.calls[2][3]).not.toBe(send.mock.calls[0][3]);
   });
 
+  it("reopening the page while a send is still out reuses its key", async () => {
+    let finishFirst!: (r: true) => void;
+    send.mockImplementationOnce(
+      () => new Promise<true>((resolve) => (finishFirst = resolve)),
+    );
+    const first = await mount();
+    await confirmSend(first, "member-2", "500");
+    // The leader leaves before the answer comes back.
+    first.remove();
+
+    const second = await mount();
+    send.mockResolvedValueOnce({
+      error: "clan_modal.send_funds_error_unknown",
+      outcome: "unknown",
+    });
+    await confirmSend(second, "member-2", "500");
+    expect(send.mock.calls[1][3]).toBe(send.mock.calls[0][3]);
+
+    // The first send's late answer settles that key, so the next send is new.
+    finishFirst(true);
+    await flushAsync(second);
+    second.remove();
+    const third = await mount();
+    await confirmSend(third, "member-2", "500");
+    expect(send.mock.calls[2][3]).not.toBe(send.mock.calls[0][3]);
+  });
+
+  it("a late answer for an old key leaves a newer unknown send's key alone", async () => {
+    let finishFirst!: (r: true) => void;
+    send.mockImplementationOnce(
+      () => new Promise<true>((resolve) => (finishFirst = resolve)),
+    );
+    const first = await mount();
+    await confirmSend(first, "member-2", "500");
+    first.remove();
+
+    // Reopened: the same send, refused as a conflict (the first went
+    // through), then a new send whose result is lost.
+    const second = await mount();
+    send
+      .mockResolvedValueOnce({
+        error: "clan_modal.send_funds_error_earlier_send",
+        outcome: "earlier_send",
+      })
+      .mockResolvedValueOnce({
+        error: "clan_modal.send_funds_error_unknown",
+        outcome: "unknown",
+      });
+    await confirmSend(second, "member-2", "500");
+    await confirmSend(second, "member-2", "400");
+    const lostKey = send.mock.calls[2][3];
+    expect(lostKey).not.toBe(send.mock.calls[0][3]);
+
+    // The first send's answer arrives late: it mustn't drop the lost one.
+    finishFirst(true);
+    await flushAsync(second);
+    second.remove();
+    const third = await mount();
+    await confirmSend(third, "member-2", "400");
+    expect(send.mock.calls[3][3]).toBe(lostKey);
+  });
+
   it("unpicks a member who can no longer receive after a reload", async () => {
     const el = await mount();
     send.mockResolvedValueOnce({

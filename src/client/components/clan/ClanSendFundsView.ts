@@ -41,11 +41,18 @@ function newIdempotencyKey(): string {
 
 const min = (...xs: bigint[]) => xs.reduce((a, b) => (a < b ? a : b));
 
-// Per clan: the key of a send whose result never came back. It outlives the
-// page, so leaving and reopening Send Plutonium reuses it: an identical retry
-// replays the send instead of paying twice, and a changed one is refused as a
-// conflict. Cleared once a later answer settles what happened.
+// Per clan: the key of a send that is still out or whose result never came
+// back. It's stored before the request goes out and outlives the page, so
+// leaving and reopening Send Plutonium reuses it: an identical retry replays
+// the send instead of paying twice, and a changed one is refused as a
+// conflict. Cleared once an answer settles what happened, but only while it
+// is still that key, so a late answer can't drop a newer send's.
 const unresolvedSendKeys = new Map<string, string>();
+function settleSendKey(clanTag: string, key: string) {
+  if (unresolvedSendKeys.get(clanTag) === key) {
+    unresolvedSendKeys.delete(clanTag);
+  }
+}
 
 /**
  * Full page (Manage → Clan fund → Send Plutonium) where the leader sends
@@ -59,8 +66,9 @@ const unresolvedSendKeys = new Map<string, string>();
  * Sending asks for confirmation first, and Enter never submits. The page keeps
  * one idempotency key until a send is confirmed, so a retry can't send twice:
  * a repeat of a send that went through is replayed, and a changed one is
- * refused as a conflict, which starts a new key. When a send's result is
- * unknown, its key is kept for the clan even after the page closes. Any
+ * refused as a conflict, which starts a new key. While a send is out, or its
+ * result is unknown, its key is kept for the clan even after the page
+ * closes. Any
  * failed send reloads the fund, the limits and the member page, so Max stays
  * honest; until the fund reloads, nothing can be sent.
  *
@@ -278,20 +286,26 @@ export class ClanSendFundsView extends LitElement {
     if (!this.canSend() || amount === null || recipient === null) return;
     this.submitting = true;
     this.serverError = null;
+    const clanTag = this.clanTag;
+    const key = this.idempotencyKey;
+    // Kept before the request goes out, in case the leader leaves before
+    // the answer comes back.
+    unresolvedSendKeys.set(clanTag, key);
     try {
       const result = await sendClanFunds(
-        this.clanTag,
+        clanTag,
         recipient.publicId,
         amount.toString(),
-        this.idempotencyKey,
+        key,
       );
+      // An unknown outcome keeps the key; any other answer settles it.
+      if (result === true || result.outcome !== "unknown") {
+        settleSendKey(clanTag, key);
+      }
+      // The page closed while the send was out: nothing to show.
+      if (!this.isConnected) return;
       if (result !== true) {
         this.serverError = translateText(result.error);
-        if (result.outcome === "unknown") {
-          unresolvedSendKeys.set(this.clanTag, this.idempotencyKey);
-        } else {
-          unresolvedSendKeys.delete(this.clanTag);
-        }
         // The earlier send under this key is confirmed and about to show in
         // the reloaded numbers, so the next send is a new one.
         if (result.outcome === "earlier_send") {
@@ -302,7 +316,6 @@ export class ClanSendFundsView extends LitElement {
         void this.loadMembers(this.memberPage);
         return;
       }
-      unresolvedSendKeys.delete(this.clanTag);
       showToast(
         translateText("clan_modal.send_funds_success", {
           amount: formatPlutonium(amount),
