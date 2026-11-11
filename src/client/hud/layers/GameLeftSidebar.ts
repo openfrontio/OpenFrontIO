@@ -28,9 +28,11 @@ import type { TeamStats } from "./TeamStats";
 // change of look is one edit. The templates below only hold structure.
 const PANEL =
   "max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:z-900 lg:pointer-events-auto flex flex-col mt-(--bar-offset) max-h-[calc(100vh-80px)] overflow-y-auto p-1 hud-panel rounded-br-lg text-white transition-[margin-top] duration-300 motion-reduce:transition-none";
-// Below lg the open panel also starts under the warning icons at the top.
+// In portrait below lg the unit bar is a 30px column on the right edge: the
+// open panel stops 10px before it, and a wide table scrolls sideways inside.
+// Below lg it also starts under the warning icons at the top.
 const PANEL_OPEN =
-  "max-[400px]:w-full max-[400px]:rounded-none max-lg:mt-[calc(var(--bar-offset)+var(--game-health-offset,0px))] max-lg:max-h-[calc(100vh-80px-var(--game-health-offset,0px))]";
+  "side-bar:max-w-[calc(100vw-2.5rem-env(safe-area-inset-right))] max-lg:mt-[calc(var(--bar-offset)+var(--game-health-offset,0px))] max-lg:max-h-[calc(100vh-80px-var(--game-health-offset,0px))]";
 // Below lg the timer bar is fixed over the top end of the panel, so the bar
 // wraps before it instead of running under it.
 const BAR =
