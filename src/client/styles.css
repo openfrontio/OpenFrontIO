@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "./halloween.css";
+@import "./styles/hud/tokens.css";
+@import "./styles/hud/utilities.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover (&:hover);
@@ -57,12 +59,10 @@
 
 /* Match the in-game HUD surface; opacity affects the surface, not the controls. */
 .graphics-panel-surface {
-  background-color: rgb(
-    from var(--color-gray-800) r g b / calc(0.92 * var(--hud-opacity, 1))
-  );
-  border-color: rgb(from var(--color-slate-600) r g b / var(--hud-opacity, 1));
-  backdrop-filter: blur(calc(4px * var(--hud-opacity, 1)));
-  box-shadow: 0 8px 24px rgb(0 0 0 / calc(0.25 * var(--hud-opacity, 1)));
+  background-color: var(--color-hud-panel);
+  border-color: var(--color-hud-line);
+  backdrop-filter: blur(var(--backdrop-blur-hud));
+  box-shadow: var(--shadow-hud-panel);
 }
 
 /* Reuse the settings controls with the compact rows of the HUD, not page cards. */
@@ -165,24 +165,6 @@ body {
 body.in-game {
   height: 100%;
   overflow: hidden;
-}
-
-body.in-game .bg-gray-800\/92:not(.game-end-timer-sidebar-flash) {
-  background-color: rgb(
-    from var(--color-gray-800) r g b / calc(0.92 * var(--hud-opacity, 1))
-  );
-}
-
-body.in-game .stats-table .bg-gray-800\/85 {
-  background-color: rgb(
-    from var(--color-gray-800) r g b / calc(0.85 * var(--hud-opacity, 1))
-  );
-}
-
-body.in-game .stats-table .bg-gray-700\/95 {
-  background-color: rgb(
-    from var(--color-gray-700) r g b / calc(0.95 * var(--hud-opacity, 1))
-  );
 }
 
 /* An inline page (store, settings, leaderboard, ...) is a modal rendered in
@@ -908,10 +890,11 @@ unit-display .tutorial-highlight::after {
 }
 
 /* A build bar that doesn't fit scrolls. Fade the end that still hides
-   actions, so the player can tell there is more to scroll to. The bar itself
-   keeps the gray-800 background, so the fade matches it. Below lg in portrait
-   the bar is a column on the right edge (fades top and bottom); everywhere
-   else it is a row (fades left and right). */
+   actions, so the player can tell there is more to scroll to. The fade uses
+   the full navy rather than the panel colour, so it still shows at 0% HUD
+   opacity, when the bar is clear and its scrollbar hidden. Below lg in
+   portrait the bar is a column on the right edge (fades top and bottom);
+   everywhere else it is a row (fades left and right). */
 .unit-display-root::before,
 .unit-display-root::after {
   content: "";
@@ -927,11 +910,7 @@ unit-display .tutorial-highlight::after {
   right: 0;
   top: 0;
   height: 1.25rem;
-  background: linear-gradient(
-    to bottom,
-    rgb(31 41 55 / 0.92),
-    rgb(31 41 55 / 0)
-  );
+  background: linear-gradient(to bottom, var(--color-surface), transparent);
 }
 
 .unit-display-root::after {
@@ -939,7 +918,7 @@ unit-display .tutorial-highlight::after {
   right: 0;
   bottom: 0;
   height: 1.25rem;
-  background: linear-gradient(to top, rgb(31 41 55 / 0.92), rgb(31 41 55 / 0));
+  background: linear-gradient(to top, var(--color-surface), transparent);
 }
 
 @media (width >= 64rem), (orientation: landscape) {
@@ -953,20 +932,12 @@ unit-display .tutorial-highlight::after {
 
   .unit-display-root::before {
     right: auto;
-    background: linear-gradient(
-      to right,
-      rgb(31 41 55 / 0.92),
-      rgb(31 41 55 / 0)
-    );
+    background: linear-gradient(to right, var(--color-surface), transparent);
   }
 
   .unit-display-root::after {
     left: auto;
-    background: linear-gradient(
-      to left,
-      rgb(31 41 55 / 0.92),
-      rgb(31 41 55 / 0)
-    );
+    background: linear-gradient(to left, var(--color-surface), transparent);
   }
 }
 

@@ -8,7 +8,7 @@ import { showInGameConfirm } from "../../InGameModal";
 import { SendKickPlayerIntentEvent } from "../../LobbyEvents";
 import { translateText } from "../../Utils";
 import { PlayerView } from "../../view";
-const kickIcon = assetUrl("images/ExitIconWhite.svg");
+import { HUD_ICON_BUTTON } from "../HudModal";
 const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
 
 @customElement("player-moderation-modal")
@@ -97,7 +97,7 @@ export class PlayerModerationModal extends LitElement {
     return html`
       <div class="absolute inset-0 z-1200 flex items-center justify-center p-4">
         <div
-          class="absolute inset-0 bg-black/60 rounded-2xl"
+          class="absolute inset-0 bg-black/60 rounded-hud-modal"
           @click=${() => this.closeModal()}
         ></div>
 
@@ -110,7 +110,7 @@ export class PlayerModerationModal extends LitElement {
           @keydown=${this.handleKeydown}
         >
           <div
-            class="rounded-2xl bg-zinc-900 p-5 shadow-2xl ring-1 ring-zinc-800 max-h-[90vh] text-zinc-200"
+            class="hud-modal p-5 max-h-[90vh] text-zinc-200"
             @click=${(e: MouseEvent) => e.stopPropagation()}
           >
             <div class="mb-3 flex items-center justify-between relative">
@@ -132,11 +132,11 @@ export class PlayerModerationModal extends LitElement {
               <button
                 type="button"
                 @click=${() => this.closeModal()}
-                class="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow-sm hover:bg-red-500 transition-colors focus-visible:ring-2 focus-visible:ring-white/30 focus:outline-hidden"
+                class=${HUD_ICON_BUTTON}
                 aria-label=${translateText("common.close")}
                 title=${translateText("common.close")}
               >
-                ✕
+                <of-icon name="close" size="16"></of-icon>
               </button>
             </div>
 
@@ -154,8 +154,7 @@ export class PlayerModerationModal extends LitElement {
             <div class="grid auto-cols-fr grid-flow-col gap-1">
               ${actionButton({
                 onClick: this.handleKickClick,
-                icon: kickIcon,
-                iconAlt: "Kick",
+                icon: "exit",
                 title: kickTitle,
                 label: kickTitle,
                 type: "red",

@@ -1,4 +1,6 @@
 import { html, TemplateResult } from "lit";
+import "../OfIcon";
+import type { OfIconName } from "../OfIcon";
 
 export type ButtonVariant =
   | "normal"
@@ -10,33 +12,32 @@ export type ButtonVariant =
 export interface ActionButtonProps {
   onClick: (e: MouseEvent) => void;
   type?: ButtonVariant;
-  icon: string;
-  iconAlt: string;
+  icon: OfIconName;
   title: string;
   label: string;
   disabled?: boolean;
 }
 
-const ICON_SIZE =
-  "h-5 w-5 shrink-0 transition-transform group-hover:scale-110 text-zinc-400";
 const TEXT_SIZE =
-  "text-base sm:text-[14px] leading-5 font-semibold tracking-tight";
+  "text-xs sm:text-[13px] leading-4 font-semibold tracking-tight text-balance";
 
 const getButtonStyles = () => {
   const btnBase =
-    "group w-full min-w-[50px] select-none flex flex-col items-center justify-center " +
-    "gap-1 rounded-lg py-1.5 border border-white/10 bg-white/4 shadow-xs " +
+    "group w-full min-w-[50px] min-h-14 select-none flex flex-col items-center justify-center " +
+    "gap-1 rounded-lg px-2 py-1.5 text-center border border-white/10 bg-white/6 shadow-xs " +
     "transition-all duration-150 " +
-    "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/20 " +
-    "active:translate-y-[1px]";
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aquarius " +
+    // A disabled button (on cooldown, already reported) is dimmed and does
+    // not react to the pointer.
+    "enabled:active:translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-50";
 
   return {
-    normal: `${btnBase} text-white/90 hover:bg-white/10 hover:text-white`,
-    red: `${btnBase} text-red-400 hover:bg-red-500/10 hover:text-red-300 focus-visible:ring-red-400/30`,
-    green: `${btnBase} text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 focus-visible:ring-emerald-400/30`,
-    yellow: `${btnBase} text-[#f59e0b] hover:bg-[#f59e0b]/10 hover:text-[#fbbf24] focus-visible:ring-[#f59e0b]/30`,
-    indigo: `${btnBase} text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 focus-visible:ring-indigo-400/30`,
-    sky: `${btnBase} text-[#38bdf8] hover:bg-[#38bdf8]/10 hover:text-[#0ea5e9] focus-visible:ring-[#38bdf8]/30`,
+    normal: `${btnBase} text-white/90 enabled:hover:bg-white/10 enabled:hover:text-white`,
+    red: `${btnBase} text-red-400 enabled:hover:bg-red-500/10 enabled:hover:text-red-300`,
+    green: `${btnBase} text-emerald-400 enabled:hover:bg-emerald-500/10 enabled:hover:text-emerald-300`,
+    yellow: `${btnBase} text-[#f59e0b] enabled:hover:bg-[#f59e0b]/10 enabled:hover:text-[#fbbf24]`,
+    indigo: `${btnBase} text-indigo-400 enabled:hover:bg-indigo-500/10 enabled:hover:text-indigo-300`,
+    sky: `${btnBase} text-[#38bdf8] enabled:hover:bg-[#38bdf8]/10 enabled:hover:text-[#0ea5e9]`,
   };
 };
 
@@ -45,7 +46,6 @@ export const actionButton = (props: ActionButtonProps): TemplateResult => {
     onClick,
     type = "normal",
     icon,
-    iconAlt,
     title,
     label,
     disabled = false,
@@ -62,7 +62,11 @@ export const actionButton = (props: ActionButtonProps): TemplateResult => {
       aria-label="${title}"
       ?disabled=${disabled}
     >
-      <img src=${icon} alt=${iconAlt} aria-hidden="true" class="${ICON_SIZE}" />
+      <of-icon
+        name=${icon}
+        size="20"
+        class="transition-transform group-enabled:group-hover:scale-110"
+      ></of-icon>
       <span class="${TEXT_SIZE}">${label}</span>
     </button>
   `;

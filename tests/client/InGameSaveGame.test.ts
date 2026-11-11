@@ -141,6 +141,26 @@ describe("in-game menu: save game", () => {
     expect(api.uploadSavedGame).not.toHaveBeenCalled();
   });
 
+  it("cannot be pressed again while the save is in progress", async () => {
+    let finish!: (result: { id: string }) => void;
+    api.uploadSavedGame.mockReturnValue(
+      new Promise((resolve) => (finish = resolve)),
+    );
+    await open(fakeGame().game);
+
+    saveRow()!.click();
+    await vi.waitFor(() => expect(api.uploadSavedGame).toHaveBeenCalled());
+    await menu.updateComplete;
+    expect(saveRow()!.disabled).toBe(true);
+    expect(status()).toBe("saved_games.save_status.saving");
+
+    finish({ id: "x" });
+    await vi.waitFor(() =>
+      expect(status()).toBe("saved_games.save_status.saved"),
+    );
+    expect(saveRow()!.disabled).toBe(false);
+  });
+
   it("starts the next opening without the last save's outcome", async () => {
     api.uploadSavedGame.mockResolvedValue({ id: "x" });
     const { game } = fakeGame();

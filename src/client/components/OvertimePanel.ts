@@ -116,7 +116,7 @@ export class OvertimePanel extends LitElement {
         : "bg-green-400";
 
     const panel =
-      "w-fit flex flex-col gap-1.5 py-2 px-4 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-l-lg text-white text-sm";
+      "w-fit flex flex-col gap-1.5 py-2 px-4 hud-panel rounded-l-lg text-white text-sm";
 
     return html`
       <div class="${panel}">

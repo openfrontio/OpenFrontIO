@@ -1062,7 +1062,8 @@
     "favorites_hint_touch": "Drag emojis here to keep them handy",
     "gestures": "Gestures",
     "ranks": "Ranks",
-    "things": "Things"
+    "things": "Things",
+    "title": "Emojis"
   },
   "error_modal": {
     "connection_error": "Connection error!",
@@ -2211,6 +2212,7 @@
     "betrayals": "Betrayals",
     "break_alliance": "Break Alliance",
     "chat": "Chat",
+    "cooldown": "{action} (on cooldown)",
     "cosmetic_get_label": "{name} (Get it in the store)",
     "cosmetics": "Equipped",
     "emotes": "Emojis",
@@ -3196,7 +3198,6 @@
     "nuke_alliance_safety_duration": "{count, plural, one {1 tick (0.1s)} other {{count} ticks ({seconds}s)}}",
     "nuke_alliance_safety_label": "Ally friendly-fire safety",
     "off": "Off",
-    "on": "On",
     "open_settings_desc": "Gameplay, graphics, audio and keybind settings",
     "open_settings_label": "Settings",
     "pause_game": "Pause",
@@ -3309,6 +3310,12 @@
     "requeue": "Play Again",
     "share": "Share",
     "spectate": "Spectate",
+    "stat_land": "Land owned",
+    "stat_rank": "Rank",
+    "stat_rank_value": "#{rank}/{players}",
+    "stat_team_land": "Your team's land",
+    "stat_team_rank": "Rank in your team",
+    "stat_time": "Time played",
     "support_openfront": "Support OpenFront!",
     "territory_pattern": "Purchase a territory skin to go ad-free!",
     "you_won": "You Won!",

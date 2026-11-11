@@ -841,7 +841,7 @@ export class GameXpPanel extends LitElement {
       data-xp-state=${stateName}
       data-xp-revealing=${revealing ? "true" : nothing}
       style=${style ?? nothing}
-      class="relative mb-4 rounded-lg bg-black/30 p-3 text-left text-white ${
+      class="relative mb-4 rounded-lg bg-white/6 p-3 text-left text-white ${
         revealing ? "cursor-pointer" : ""
       }"
       aria-live="polite"

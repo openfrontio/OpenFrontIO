@@ -86,6 +86,29 @@ describe("PlayerPanel - alliance countdown keeps updating after local player dea
     expect((panel as any).requestUpdate).toHaveBeenCalledTimes(2);
   });
 
+  test("tick() counts the alliance down in whole seconds and clears it once expired", async () => {
+    let expiresAt = 705;
+    const myPlayer = {
+      isAlive: () => true,
+      actions: () =>
+        Promise.resolve({ interaction: { allianceInfo: { expiresAt } } }),
+    } as unknown as PlayerView;
+    (panel as any).g = {
+      owner: () => null,
+      myPlayer: () => myPlayer,
+      ticks: () => 100,
+    };
+
+    // 605 ticks left is 60.5 seconds, shown as 60.
+    await (panel as any).tick();
+    expect((panel as any).allianceExpirySeconds).toBe(60);
+
+    expiresAt = 100;
+    await (panel as any).tick();
+    expect((panel as any).allianceExpirySeconds).toBeNull();
+    expect((panel as any).allianceExpiryText).toBeNull();
+  });
+
   test("tick() does not repaint when the panel is hidden", async () => {
     (panel as any).g = makeGame(() => true);
     (panel as any).isVisible = false;

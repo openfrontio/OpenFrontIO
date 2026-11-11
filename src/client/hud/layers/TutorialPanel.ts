@@ -16,6 +16,7 @@ import { UserSettings } from "../../UserSettings";
 import { resolveKeybindLabel, textDirection, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
+import { HUD_ICON_BUTTON } from "../HudModal";
 import {
   TutorialContext,
   TutorialHighlight,
@@ -440,44 +441,92 @@ export class TutorialPanel extends LitElement implements Controller {
 
   render() {
     if (!this.active) return nothing;
+    // One DOM, two layouts, CSS only: a wrapping row where progress and step
+    // take full rows. Below sm the actions and the close share a wrapper put
+    // right after the title (-order-1) that wraps as one piece, end-aligned;
+    // the counter is hidden there (the progress line's aria-valuetext keeps
+    // it). From sm the wrapper is `contents`: the close rejoins the header
+    // after the counter (sm:order-first) and the actions become the footer row
+    // (sm:order-last). The step stays before the actions in the DOM, so they
+    // are read after the text they act on.
     return html`
       <div
         dir=${textDirection()}
-        class="pointer-events-auto w-full sm:rounded-lg bg-gray-800/92 backdrop-blur-sm shadow-lg text-white text-base p-2 sm:mb-1"
+        class="hud-panel pointer-events-auto flex w-full flex-wrap items-center gap-2 p-2 text-sm text-white sm:mb-1 sm:rounded-xl"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
-        <div class="flex items-center justify-between gap-2 mb-1">
-          <span
-            class="font-bold text-cyber-yellow uppercase tracking-wide text-sm"
-            >${translateText("tutorial.title")}</span
-          >
-          <span class="flex items-center gap-2 text-sm text-gray-300">
-            ${this.confirmingClose ? nothing : this.renderHeaderActions()}
-            ${
-              this.ctx && !this.progress.finished()
-                ? translateText("tutorial.step_counter", {
-                    current: this.progress.position(this.ctx),
-                    total: this.progress.total(this.ctx),
-                  })
-                : nothing
-            }
-            <button
-              class="text-gray-400 hover:text-white text-base leading-none px-1"
-              title=${translateText("tutorial.close")}
-              aria-label=${translateText("tutorial.close")}
-              @click=${() => (this.confirmingClose = !this.confirmingClose)}
-            >
-              ✕
-            </button>
-          </span>
-        </div>
+        <span
+          class="hud-caps order-first flex min-h-8 items-center ps-2 text-[11px] font-bold uppercase tracking-[0.12em] text-cyber-yellow"
+          >${translateText("tutorial.title")}</span
+        >
+        <span
+          class="hidden text-xs tabular-nums text-white/70 sm:order-first sm:ms-auto sm:block"
+        >
+          ${
+            this.ctx && !this.progress.finished()
+              ? this.counterText(this.ctx)
+              : nothing
+          }
+        </span>
+        ${this.ctx ? this.renderProgress(this.ctx) : nothing}
         ${this.confirmingClose ? this.renderCloseChoice() : this.renderStep()}
+        <div class="-order-1 ms-auto flex items-center gap-2 sm:contents">
+          ${this.confirmingClose ? nothing : this.renderActions()}
+          <button
+            class="${HUD_ICON_BUTTON} sm:order-first"
+            title=${translateText("tutorial.close")}
+            aria-label=${translateText("tutorial.close")}
+            aria-expanded=${this.confirmingClose}
+            @click=${() => (this.confirmingClose = !this.confirmingClose)}
+          >
+            <of-icon name="close" size="16"></of-icon>
+          </button>
+        </div>
       </div>
     `;
   }
 
-  /** Got it / Go to / Skip live in the header row to keep the panel short. */
-  private renderHeaderActions() {
+  /** "Step 2 of 22"; once finished, the last step rather than one past it. */
+  private counterText(ctx: TutorialContext): string {
+    const total = this.progress.total(ctx);
+    return translateText("tutorial.step_counter", {
+      current: Math.min(this.progress.position(ctx), total),
+      total,
+    });
+  }
+
+  private renderProgress(ctx: TutorialContext) {
+    const total = this.progress.total(ctx);
+    // Once finished, position() is one past the last step, so the line fills.
+    const completed =
+      this.progress.position(ctx) - 1 + (this.progress.stepDone() ? 1 : 0);
+    return html`
+      <div
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax=${total}
+        aria-valuenow=${completed}
+        aria-valuetext=${this.counterText(ctx)}
+        aria-label=${translateText("tutorial.title")}
+        class="h-0.5 basis-full overflow-hidden rounded-full bg-white/10"
+      >
+        <div
+          class="h-full bg-cyber-yellow transition-[width] duration-500 motion-reduce:transition-none"
+          style="width: ${(completed / total) * 100}%"
+        ></div>
+      </div>
+    `;
+  }
+
+  /**
+   * Skip / Got it / Go to, while the step is live. One set of buttons in two
+   * places (see render()): below sm they sit in the header line just before
+   * the close, so the phone card stays a row shorter and doesn't push the
+   * events column above it under the leaderboard; when that line is too
+   * narrow they move to a line of their own together with the close. From sm
+   * up they are a footer row under the step, Skip on the start side.
+   */
+  private renderActions() {
     const step = this.progress.current();
     if (
       step === null ||
@@ -487,46 +536,48 @@ export class TutorialPanel extends LitElement implements Controller {
       return nothing;
     const goTo = this.goToTarget();
     return html`
-      ${
-        step.manual
-          ? html`<button
-              class="rounded bg-malibu-blue hover:bg-aquarius px-2 py-0.5 font-semibold text-white"
-              @click=${() => this.progress.acknowledge()}
-            >
-              ${translateText("tutorial.got_it")}
-            </button>`
-          : nothing
-      }
-      ${
-        goTo
-          ? html`<button
-              class="rounded bg-malibu-blue hover:bg-aquarius px-2 py-0.5 font-semibold text-white"
-              @click=${() => this.eventBus.emit(new GoToPlayerEvent(goTo))}
-            >
-              ${translateText("tutorial.go_to")}
-            </button>`
-          : nothing
-      }
-      <button
-        class="text-gray-400 hover:text-white underline"
-        @click=${() => this.progress.skip()}
-      >
-        ${translateText("tutorial.skip")}
-      </button>
+      <div class="flex items-center gap-2 sm:order-last sm:basis-full">
+        <button
+          class="h-8 rounded-lg sm:me-auto px-2 text-xs font-bold uppercase tracking-widest text-white/70 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aquarius"
+          @click=${() => this.progress.skip()}
+        >
+          ${translateText("tutorial.skip")}
+        </button>
+        ${
+          step.manual
+            ? html`<button
+                class="h-8 rounded-lg bg-malibu-blue px-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-aquarius focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aquarius"
+                @click=${() => this.progress.acknowledge()}
+              >
+                ${translateText("tutorial.got_it")}
+              </button>`
+            : nothing
+        }
+        ${
+          goTo
+            ? html`<button
+                class="h-8 rounded-lg bg-malibu-blue px-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-aquarius focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aquarius"
+                @click=${() => this.eventBus.emit(new GoToPlayerEvent(goTo))}
+              >
+                ${translateText("tutorial.go_to")}
+              </button>`
+            : nothing
+        }
+      </div>
     `;
   }
 
   private renderCloseChoice() {
     return html`
-      <div class="flex flex-col gap-1.5">
+      <div class="flex basis-full flex-col gap-2">
         <button
-          class="rounded-md border border-gray-500 hover:bg-gray-700 px-2 py-1"
+          class="h-9 rounded-lg bg-white/6 px-3 text-sm font-semibold ring-1 ring-inset ring-white/15 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aquarius"
           @click=${() => this.setActive(false)}
         >
           ${translateText("tutorial.hide_for_game")}
         </button>
         <button
-          class="rounded-md border border-gray-500 hover:bg-gray-700 px-2 py-1"
+          class="h-9 rounded-lg bg-white/6 px-3 text-sm font-semibold ring-1 ring-inset ring-white/15 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aquarius"
           @click=${() => this.dismissForever()}
         >
           ${translateText("tutorial.never_show")}
@@ -537,17 +588,22 @@ export class TutorialPanel extends LitElement implements Controller {
 
   private renderStep() {
     if (this.completeTicks !== null) {
-      return html`<p>${translateText("tutorial.complete")}</p>`;
+      return html`<p class="basis-full px-2">
+        ${translateText("tutorial.complete")}
+      </p>`;
     }
     const step = this.progress.current();
     if (step === null) return nothing;
     const done = this.progress.stepDone();
     return html`
-      <p class="flex gap-1.5 ${done ? "text-green-400" : ""}">
+      <p
+        class="flex basis-full gap-1.5 px-2 ${done ? "text-emerald-400" : ""}"
+        ?data-step-done=${done}
+      >
         ${
-          step.bullets && !done
-            ? nothing
-            : html`<span class="shrink-0">${done ? "✓" : "•"}</span>`
+          done
+            ? html`<of-icon name="check" size="16" class="mt-0.5"></of-icon>`
+            : nothing
         }
         ${
           step.bullets
