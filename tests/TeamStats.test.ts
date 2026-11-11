@@ -130,6 +130,40 @@ describe("TeamStats", () => {
     teamStats.remove();
   });
 
+  it("marks your team's row, and none for a spectator", async () => {
+    const players = ["Blue", "Red"].map((team, i) => ({
+      id: () => `${team}-player`,
+      smallID: () => i,
+      team: () => team,
+      numTilesOwned: () => 10 - i,
+      gold: () => 10n,
+      isAlive: () => true,
+    })) as unknown as PlayerView[];
+    const mount = async (me: PlayerView | null) => {
+      const teamStats = new TeamStats();
+      teamStats.game = {
+        myPlayer: () => me,
+        playerViews: () => players,
+        config: () => ({ maxTroops: () => 100 }),
+        ticks: () => 600,
+        numLandTiles: () => 100,
+        numTilesWithFallout: () => 0,
+      } as unknown as GameView;
+      teamStats.visible = true;
+      document.body.append(teamStats);
+      teamStats.refresh();
+      await teamStats.updateComplete;
+      return [...teamStats.querySelectorAll(".stats-table-row")].map((row) =>
+        row.hasAttribute("data-me"),
+      );
+    };
+
+    expect(await mount(players[1])).toEqual([false, true]);
+    expect(await mount(null)).toEqual([false, false]);
+
+    document.body.innerHTML = "";
+  });
+
   it("renders clan tag team name when teamClanTag is present", async () => {
     const players = [
       {

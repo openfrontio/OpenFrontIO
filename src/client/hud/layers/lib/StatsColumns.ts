@@ -42,6 +42,8 @@ export interface ColumnDef {
   /** Grid track: a fixed width, or "auto" to share the row's spare width. */
   readonly width: string;
   readonly align: ColumnAlignment;
+  /** The header's own alignment, when it reads better than `align`'s. */
+  readonly headerAlign?: ColumnAlignment;
   /** Tables this column appears on. */
   readonly kinds: readonly StatsTableKind[];
   /** Offered in the ⚙️ menu; non-hideable columns always render. */
@@ -115,6 +117,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     headerVisual: { kind: "icon", icon: "player" },
     width: "100px",
     align: "start",
+    headerAlign: "center",
     kinds: ["player"],
     isHideable: false,
     cell: (row) => row.name,
@@ -162,6 +165,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     headerVisual: { kind: "icon", icon: "team" },
     width: "100px",
     align: "start",
+    headerAlign: "center",
     kinds: ["team"],
     isHideable: false,
     cell: (row) => row.name,
@@ -180,6 +184,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "gold",
     labelKey: "leaderboard.gold",
     headerVisual: { kind: "icon", icon: "gold" },
+    headerAlign: "center",
     // Gold is a bigint, but game values remain safely below Number.MAX_SAFE_INTEGER.
     value: (player) => Number(player.gold()),
     cell: (row) => renderNumber(row.value),
@@ -242,6 +247,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
       ...troopHeaderVisual,
       superscript: { icon: "max" },
     },
+    headerAlign: "center",
     value: (player, game) => game.config().maxTroops(player),
     cell: (row) => renderTroops(row.value),
   }),
