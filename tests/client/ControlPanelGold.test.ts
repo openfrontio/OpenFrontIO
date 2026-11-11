@@ -22,6 +22,12 @@ describe("control-panel gold gains", () => {
     await panel.updateComplete;
   };
   const pop = () => panel.querySelector("[data-gold-pop]");
+  const allPops = () => [...panel.querySelectorAll("[data-gold-pop]")];
+  // Each pop's text and rank, oldest first.
+  const pops = () =>
+    allPops().map((p) => [p.textContent?.trim(), p.getAttribute("data-rank")]);
+  const popOf = (text: string) =>
+    allPops().find((p) => p.textContent?.trim() === text) ?? null;
   // jsdom runs no CSS animation: end the pop's by hand.
   const endAnimation = async (el: Element | null) => {
     el?.dispatchEvent(new Event("animationend", { bubbles: true }));
@@ -133,23 +139,103 @@ describe("control-panel gold gains", () => {
     expect(pop()).toBeNull();
   });
 
-  it("replaces the pop with a newer gain, which keeps its whole animation", async () => {
-    await tick(bonus(25_000));
-    const first = pop();
-    await tick(bonus(300));
+  it("adds up gains in the same tick in one pop", async () => {
+    await tick({
+      [GameUpdateType.BonusEvent]: [
+        { player: "me", gold: 100, troops: 0, tile: 0 },
+        { player: "me", gold: 200, troops: 0, tile: 0 },
+      ],
+    });
 
-    expect(panel.querySelectorAll("[data-gold-pop]")).toHaveLength(1);
-    expect(pop()?.textContent?.trim()).toBe("+300");
-    // The replaced pop's animation stops as it leaves the page.
-    first?.dispatchEvent(new Event("animationcancel"));
-    await panel.updateComplete;
-    expect(pop()).not.toBeNull();
-    await endAnimation(pop());
-    expect(pop()).toBeNull();
+    expect(pops()).toEqual([["+300", "0"]]);
   });
 
-  it("drops the pop when my player dies", async () => {
+  it("adds up a gain 89 ms after the last one, and pops one 90 ms after it", async () => {
+    await tick(bonus(100));
+    await vi.advanceTimersByTimeAsync(89);
+    await tick(bonus(200));
+    expect(pops()).toEqual([["+300", "0"]]);
+
+    await vi.advanceTimersByTimeAsync(90);
+    await tick(bonus(50));
+    expect(pops()).toEqual([
+      ["+300", "1"],
+      ["+50", "0"],
+    ]);
+  });
+
+  it("bumps the amount of the newest pop on a merge, without a new entrance", async () => {
+    await tick(bonus(100));
+    const first = pop()!;
+    expect(first.querySelector("[data-bump]")).toBeNull();
+
+    await vi.advanceTimersByTimeAsync(50);
+    await tick(bonus(200));
+    expect(pop()).toBe(first);
+    const bumped = first.querySelector("[data-bump]");
+    expect(bumped).not.toBeNull();
+
+    // Each merge plays the bump again.
+    await vi.advanceTimersByTimeAsync(50);
+    await tick(bonus(1));
+    expect(pops()).toEqual([["+301", "0"]]);
+    expect(first.querySelector("[data-bump]")).not.toBe(bumped);
+
+    // The bump ending does not end the pop.
+    await endAnimation(first.querySelector("[data-bump]"));
+    expect(pop()).toBe(first);
+  });
+
+  it("keeps three pops; a fourth pushes the oldest out, which fades until its animation ends", async () => {
+    for (const gold of [1, 2, 3, 4]) {
+      await tick(bonus(gold));
+      await vi.advanceTimersByTimeAsync(200);
+    }
+    expect(pops()).toEqual([
+      ["+1", "3"],
+      ["+2", "2"],
+      ["+3", "1"],
+      ["+4", "0"],
+    ]);
+
+    await endAnimation(popOf("+1"));
+    expect(pops()).toEqual([
+      ["+2", "2"],
+      ["+3", "1"],
+      ["+4", "0"],
+    ]);
+
+    // One still fading goes at once when the next is pushed out.
+    await tick(bonus(5));
+    await vi.advanceTimersByTimeAsync(200);
+    await tick(bonus(6));
+    expect(pops()).toEqual([
+      ["+3", "3"],
+      ["+4", "2"],
+      ["+5", "1"],
+      ["+6", "0"],
+    ]);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("takes each pop away when its own animation ends", async () => {
+    for (const gold of [1, 2, 3]) {
+      await tick(bonus(gold));
+      await vi.advanceTimersByTimeAsync(200);
+    }
+
+    await endAnimation(popOf("+2"));
+
+    expect(pops()).toEqual([
+      ["+1", "1"],
+      ["+3", "0"],
+    ]);
+  });
+
+  it("drops the pops when my player dies", async () => {
     await tick(bonus(25_000));
+    await vi.advanceTimersByTimeAsync(200);
+    await tick(bonus(300));
 
     alive = false;
     await tick();
@@ -159,6 +245,8 @@ describe("control-panel gold gains", () => {
 
   it("shows no old pop when the panel is removed and put back", async () => {
     await tick(bonus(25_000));
+    await vi.advanceTimersByTimeAsync(200);
+    await tick(bonus(300));
 
     panel.remove();
     document.body.appendChild(panel);

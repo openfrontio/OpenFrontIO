@@ -77,6 +77,14 @@
       opacity: 0;
     }
   }
+  /* A merged gain bumps the pop's amount. */
+  --animate-gold-pop-bump: gold-pop-bump 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  @keyframes gold-pop-bump {
+    from {
+      transform: scale(1.2);
+      color: var(--color-green-200);
+    }
+  }
 
   /* Pulses a red glow around a traitor's player panel, over hud-modal's own
      shadow, which the box-shadow would otherwise replace. */
