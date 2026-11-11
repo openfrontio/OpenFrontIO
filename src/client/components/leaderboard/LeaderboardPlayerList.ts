@@ -166,8 +166,12 @@ export class LeaderboardPlayerList extends LitElement {
     );
   }
 
+  private get ffaAllActive(): boolean {
+    return this.rankedType === RankedType.FreeForAll && this.ffaAllRanks;
+  }
+
   private get activeLadder(): LadderState {
-    if (this.rankedType === RankedType.FreeForAll && this.ffaAllRanks)
+    if (this.ffaAllActive)
       return {
         entries: this.ffaAllRows,
         userEntry: null,
@@ -247,8 +251,10 @@ export class LeaderboardPlayerList extends LitElement {
       this.dispatchEvent(new CustomEvent("ffa-rating-live", { bubbles: true }));
     }
     if (changed.has("rankedType")) {
-      // The ladders are separate lists sharing one scroll container: show the
-      // newly selected one from its top rather than the other one's offset.
+      if (this.rankedType !== RankedType.FreeForAll) {
+        this.ffaAllRanks = false;
+      }
+      // The ladders are separate lists sharing one scroll container...
       if (this.scrollContainer) this.scrollContainer.scrollTop = 0;
       this.scheduleStickyVisibilityCheck();
       this.schedulePlayerFillCheck();
@@ -626,7 +632,7 @@ export class LeaderboardPlayerList extends LitElement {
           }
         >("player-profile-modal");
         if (!modal) return;
-        if (this.ffaAllRanks) {
+        if (this.ffaAllActive) {
           modal.openFromAllRanks(publicId);
         } else {
           modal.openFromLeaderboard(publicId);
@@ -681,7 +687,7 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   private maybeLoadMorePlayers() {
-    if (this.ffaAllRanks) {
+    if (this.ffaAllActive) {
       if (this.ffaAllLoading || !this.ffaAllHasMore || this.ffaAllFailed)
         return;
     } else {
@@ -699,7 +705,7 @@ export class LeaderboardPlayerList extends LitElement {
     if (containerHeight === 0 || scrollHeight === 0) return; // guard
 
     if (nearBottom) {
-      if (this.ffaAllRanks) void this.loadFfaAllPage();
+      if (this.ffaAllActive) void this.loadFfaAllPage();
       else void this.loadPlayerLeaderboard();
     }
   }
@@ -731,7 +737,9 @@ export class LeaderboardPlayerList extends LitElement {
     }
     if (!this.currentUserEntry || !this.showStickyUser) return nothing;
     const entry = this.currentUserEntry;
-    const globalPosition = !this.ffaAllRanks ? entry.globalPosition : undefined;
+    const globalPosition = !this.ffaAllActive
+      ? entry.globalPosition
+      : undefined;
 
     return html`
       <tfoot class="sticky bottom-0 z-20">
@@ -1240,7 +1248,7 @@ export class LeaderboardPlayerList extends LitElement {
   private renderPlayerFooter() {
     // Each FFA rank tracks its own load, so a slow one can't hold up the
     // other ladders, which share isLoadingMore.
-    const loading = this.ffaAllRanks
+    const loading = this.ffaAllActive
       ? this.ffaAllLoading
       : this.ffaRankActive
         ? this.ffaRanksLoading.has(this.ffaRank!)
@@ -1258,7 +1266,7 @@ export class LeaderboardPlayerList extends LitElement {
       `;
     }
 
-    if (this.ffaAllRanks && this.ffaAllFailed)
+    if (this.ffaAllActive && this.ffaAllFailed)
       return html`<div class="py-4 text-center">
         <button
           class="text-xs text-red-300"
