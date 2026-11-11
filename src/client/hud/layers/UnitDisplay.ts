@@ -88,13 +88,15 @@ export class UnitDisplay extends LitElement implements Controller {
   private peekPointerId: number | null = null;
   private peekTouchIdentifier: number | null = null;
   private activeTouchIdentifiers = new Set<number>();
-  // Where the tooltip is centred, in the bar's own coordinates.
+  // Where the tooltip is centred along the bar, in the bar's own coordinates:
+  // x for the bottom row, y for the side column. Kept for the clamp after the
+  // render, since the tooltip cannot be measured before it exists.
   private _tooltipCenter: number | null = null;
   private tutorialHighlight: PlayerBuildableUnitType | null = null;
   // Whether the build bar has actions hidden off either edge. The fade on that
-  // edge tells the player there is more to swipe to.
-  private moreActionsLeft = false;
-  private moreActionsRight = false;
+  // edge tells the player there is more to scroll to.
+  private moreActionsStart = false;
+  private moreActionsEnd = false;
   private observedScroller: HTMLElement | null = null;
   private windowListenersAttached = false;
 
@@ -357,16 +359,31 @@ export class UnitDisplay extends LitElement implements Controller {
   };
 
   /**
-   * Track which edge of the build bar still hides actions, so the fade can
-   * point at it. The bar only scrolls where it does not fit, so on a wide
-   * screen neither side is marked.
+   * Below lg in portrait the bar is a column on the right edge of the
+   * screen, scrolling up and down; everywhere else it is a row in the bottom
+   * panel. Matches the `side-bar:` variant (styles.css) used by the bar and
+   * its host in index.html.
+   */
+  private isSideBar(): boolean {
+    return (
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(width < 64rem) and (orientation: portrait)").matches
+    );
+  }
+
+  /**
+   * Track which end of the build bar still hides actions, so the fade can
+   * point at it. The bar only scrolls where it does not fit, so on a big
+   * screen neither end is marked.
    */
   private measureScrollState() {
     const scroller = this.getScroller();
     if (!scroller) return;
-    this.moreActionsLeft = scroller.scrollLeft > 1;
-    this.moreActionsRight =
-      scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1;
+    const [scrolled, visible, total] = this.isSideBar()
+      ? [scroller.scrollTop, scroller.clientHeight, scroller.scrollHeight]
+      : [scroller.scrollLeft, scroller.clientWidth, scroller.scrollWidth];
+    this.moreActionsStart = scrolled > 1;
+    this.moreActionsEnd = scrolled + visible < total - 1;
   }
 
   private getScroller(): HTMLElement | null {
@@ -388,8 +405,9 @@ export class UnitDisplay extends LitElement implements Controller {
   }
 
   /**
-   * Keep the tooltip on the mobile screen: next to the left or right edge it would
-   * otherwise hang off.
+   * Keep the tooltip on the mobile screen: next to an edge it would
+   * otherwise hang off. The bottom row clamps it sideways, the side column
+   * up and down.
    */
   private clampTooltipToViewport() {
     const tooltip = this.querySelector<HTMLElement>(".unit-display-tooltip");
@@ -398,6 +416,14 @@ export class UnitDisplay extends LitElement implements Controller {
     const rootBounds = root.getBoundingClientRect();
     const tooltipBounds = tooltip.getBoundingClientRect();
     const margin = 8;
+    if (this.isSideBar()) {
+      let top = rootBounds.top + this._tooltipCenter - tooltipBounds.height / 2;
+      const maxTop = window.innerHeight - margin - tooltipBounds.height;
+      if (top > maxTop) top = maxTop;
+      if (top < margin) top = margin;
+      tooltip.style.top = `${top - rootBounds.top + tooltipBounds.height / 2}px`;
+      return;
+    }
     // The tooltip is centred on the item, so its left edge sits half its
     // width to the left of that centre.
     let left = rootBounds.left + this._tooltipCenter - tooltipBounds.width / 2;
@@ -486,21 +512,24 @@ export class UnitDisplay extends LitElement implements Controller {
     ) {
       return null;
     }
+    // A row in the bottom panel: below the control panel from lg up, above
+    // it on landscape phones (index.html orders it), spread over the panel's
+    // width there. Below lg in portrait (side-bar) it is a column on the
+    // right edge of the screen, where index.html fixes the host.
     return html`
       <div
-        class="unit-display-root relative border-t border-white/10 p-0.5 w-full
-          ${this.moreActionsLeft ? "unit-display-more-left" : ""}
-          ${this.moreActionsRight ? "unit-display-more-right" : ""}"
+        class="unit-display-root relative p-0.5 border-white/10 w-full lg:border-t max-lg:landscape:border-b side-bar:w-auto side-bar:border side-bar:border-r-0 side-bar:rounded-l-lg side-bar:bg-gray-800/92 side-bar:shadow-lg
+          ${this.moreActionsStart ? "unit-display-more-start" : ""}
+          ${this.moreActionsEnd ? "unit-display-more-end" : ""}"
         data-radial-click-through
         @contextmenu=${(event: Event) => event.preventDefault()}
       >
         <div
-          class="unit-display-scroll w-full overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x lg:overflow-visible"
+          class="unit-display-scroll overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x lg:overflow-visible side-bar:overflow-x-hidden side-bar:overflow-y-auto side-bar:overscroll-y-contain side-bar:touch-pan-y side-bar:max-h-[calc(100dvh-5.5rem)]"
           @scroll=${this.onScroll}
         >
           <div
-            class="unit-display-grid grid grid-cols-[repeat(var(--unit-display-columns),minmax(0,1fr))] gap-0.5 w-full mx-auto lg:grid-rows-1 lg:grid-flow-col lg:grid-cols-none lg:auto-cols-max lg:w-fit max-lg:landscape:grid-rows-1 max-lg:landscape:grid-flow-col max-lg:landscape:grid-cols-none max-lg:landscape:auto-cols-[47px] max-lg:landscape:w-max max-[360px]:grid-cols-none max-[360px]:grid-flow-col max-[360px]:auto-cols-[44px] max-[360px]:w-max"
-            style=${`--unit-display-columns: ${this.enabledUnitCount}`}
+            class="unit-display-grid grid gap-0.5 grid-rows-1 grid-flow-col auto-cols-fr lg:auto-cols-max lg:w-fit lg:mx-auto side-bar:grid-rows-none side-bar:grid-flow-row side-bar:grid-cols-1"
           >
             ${this.renderUnitItem(
               cityIcon,
@@ -629,7 +658,7 @@ export class UnitDisplay extends LitElement implements Controller {
         <div
           class="${
             this.canBuild(unitType) ? "" : "opacity-40"
-          } border border-slate-500 rounded-sm max-lg:h-7.5 w-full px-1 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:px-0.5 lg:justify-start landscape:px-0.5
+          } border border-slate-500 rounded-sm max-lg:landscape:h-7.5 side-bar:h-12 side-bar:min-w-6.5 w-full px-0.5 side-bar:px-0 pb-0.5 flex items-center justify-center gap-0.5 cursor-pointer lg:justify-start
              ${
             selected
               ? "pointer-fine:hover:bg-gray-400/10"
@@ -699,7 +728,7 @@ export class UnitDisplay extends LitElement implements Controller {
               : nothing
           }
           <div
-            class="flex flex-col items-center gap-0 pt-0.5 lg:flex-row lg:gap-0.5 max-lg:landscape:flex-row max-lg:landscape:gap-0.5"
+            class="flex flex-col items-center gap-0 pt-0.5 lg:flex-row lg:gap-0.5"
           >
             <img
               src=${icon}
@@ -736,16 +765,28 @@ export class UnitDisplay extends LitElement implements Controller {
     const root = this.querySelector<HTMLElement>(".unit-display-root");
     const itemBounds = tooltip.element.getBoundingClientRect();
     const rootBounds = root?.getBoundingClientRect();
-    const left =
-      itemBounds.left + itemBounds.width / 2 - (rootBounds?.left ?? 0);
-    const top = itemBounds.top - (rootBounds?.top ?? 0) - 4;
-    // Kept for the clamp after the render: the tooltip cannot be measured
-    // before it exists.
-    this._tooltipCenter = left;
+    const sideBar = this.isSideBar();
+    let left: number;
+    let top: number;
+    let placement: string;
+    if (sideBar) {
+      // Left of the item, centred on it, so it doesn't cover the bar.
+      left = itemBounds.left - (rootBounds?.left ?? 0) - 6;
+      top = itemBounds.top + itemBounds.height / 2 - (rootBounds?.top ?? 0);
+      placement =
+        "-translate-x-full -translate-y-1/2 max-w-[min(16rem,100vw_-_5rem)]";
+      this._tooltipCenter = top;
+    } else {
+      left = itemBounds.left + itemBounds.width / 2 - (rootBounds?.left ?? 0);
+      top = itemBounds.top - (rootBounds?.top ?? 0) - 4;
+      placement =
+        "-translate-x-1/2 -translate-y-full max-w-[min(100%_-_1rem,100vw_-_1rem)]";
+      this._tooltipCenter = left;
+    }
 
     return html`
       <div
-        class="unit-display-tooltip ${peek ? "block" : "hidden pointer-fine:block"} absolute -translate-x-1/2 -translate-y-full text-gray-200 text-center w-max max-w-[min(100%_-_1rem,100vw_-_1rem)] break-words text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
+        class="unit-display-tooltip ${peek ? "block" : "hidden pointer-fine:block"} absolute ${placement} text-gray-200 text-center w-max break-words text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
         style=${`left: ${left}px; top: ${top}px;`}
       >
         <div class="font-bold text-sm mb-1">

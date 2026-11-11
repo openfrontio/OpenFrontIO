@@ -16,6 +16,10 @@
   }
 }
 
+/* Phones and small tablets held upright, where the unit bar is a column on the
+   right edge. UnitDisplay.isSideBar() asks the same query. */
+@custom-variant side-bar (@media (width < 64rem) and (orientation: portrait));
+
 @theme {
   --default-ring-width: 3px;
   --default-ring-color: var(--color-malibu-blue);
@@ -810,6 +814,34 @@ unit-display .tutorial-highlight::after {
   }
 }
 
+/* Below lg in portrait the hotbar is a column on the right edge: the arrow
+   points at the button from its left. */
+@media (width < 64rem) and (orientation: portrait) {
+  unit-display .tutorial-highlight {
+    transform-origin: right center;
+  }
+
+  unit-display .tutorial-highlight::after {
+    content: "▶";
+    bottom: auto;
+    left: auto;
+    top: 50%;
+    right: calc(100% + 3px);
+    animation-name: tutorialArrowBobSide;
+  }
+}
+
+@keyframes tutorialArrowBobSide {
+  0%,
+  100% {
+    transform: translate(0, -50%);
+  }
+
+  50% {
+    transform: translate(-5px, -50%);
+  }
+}
+
 @keyframes tutorialHighlight {
   0%,
   100% {
@@ -875,16 +907,15 @@ unit-display .tutorial-highlight::after {
   -webkit-touch-callout: none;
 }
 
-/* The narrow build bar scrolls sideways. Fade the edge that still hides
-   actions, so the player can tell there is more to swipe to. The bar itself
-   keeps the gray-800 background, so the fade matches it. */
+/* A build bar that doesn't fit scrolls. Fade the end that still hides
+   actions, so the player can tell there is more to scroll to. The bar itself
+   keeps the gray-800 background, so the fade matches it. Below lg in portrait
+   the bar is a column on the right edge (fades top and bottom); everywhere
+   else it is a row (fades left and right). */
 .unit-display-root::before,
 .unit-display-root::after {
   content: "";
   position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 1.25rem;
   pointer-events: none;
   opacity: 0;
   transition: opacity 150ms ease-out;
@@ -893,19 +924,53 @@ unit-display .tutorial-highlight::after {
 
 .unit-display-root::before {
   left: 0;
+  right: 0;
+  top: 0;
+  height: 1.25rem;
   background: linear-gradient(
-    to right,
+    to bottom,
     rgb(31 41 55 / 0.92),
     rgb(31 41 55 / 0)
   );
 }
 
 .unit-display-root::after {
+  left: 0;
   right: 0;
-  background: linear-gradient(to left, rgb(31 41 55 / 0.92), rgb(31 41 55 / 0));
+  bottom: 0;
+  height: 1.25rem;
+  background: linear-gradient(to top, rgb(31 41 55 / 0.92), rgb(31 41 55 / 0));
 }
 
-.unit-display-more-left::before,
-.unit-display-more-right::after {
+@media (width >= 64rem), (orientation: landscape) {
+  .unit-display-root::before,
+  .unit-display-root::after {
+    top: 0;
+    bottom: 0;
+    width: 1.25rem;
+    height: auto;
+  }
+
+  .unit-display-root::before {
+    right: auto;
+    background: linear-gradient(
+      to right,
+      rgb(31 41 55 / 0.92),
+      rgb(31 41 55 / 0)
+    );
+  }
+
+  .unit-display-root::after {
+    left: auto;
+    background: linear-gradient(
+      to left,
+      rgb(31 41 55 / 0.92),
+      rgb(31 41 55 / 0)
+    );
+  }
+}
+
+.unit-display-more-start::before,
+.unit-display-more-end::after {
   opacity: 1;
 }
