@@ -9,6 +9,11 @@
     <title data-i18n="main.title">OpenFront (ALPHA)</title>
     <link rel="manifest" href="<%- manifestHref %>" />
     <link rel="icon" type="image/svg+xml" href="<%- faviconHref %>" />
+    <!-- iOS takes its home-screen icon from here before the manifest. Without it
+         it picks the manifest's "any" icon and fills its transparent rounded
+         corners with white; iOS rounds the corners itself, so use the
+         full-bleed one. -->
+    <link rel="apple-touch-icon" href="<%- appleTouchIconHref %>" />
 
     <!-- Preload styles -->
     <style>
