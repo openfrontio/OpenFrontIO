@@ -14,6 +14,7 @@ import {
   HOSTED_LOBBY_AUTO_START_MS,
   LobbyLabelSchema,
   MAX_HOSTED_LOBBIES,
+  MAX_HOSTED_LOBBY_PLAYERS,
 } from "@openfront/shared/WireSchemas";
 import EventEmitter from "events";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -252,6 +253,18 @@ describe("GameServer listing", () => {
       expect(getListingEligibilityError(game, 2)).toBe(
         "listing_max_players_too_low",
       );
+    });
+
+    it("rejects a stored cap above the listing maximum when the request omits one", () => {
+      const game = makeGame("big-game", CREATOR, {
+        maxPlayers: MAX_HOSTED_LOBBY_PLAYERS + 1,
+      });
+      expect(getListingEligibilityError(game)).toBe(
+        "listing_max_players_too_high",
+      );
+      expect(
+        getListingEligibilityError(game, MAX_HOSTED_LOBBY_PLAYERS),
+      ).toBeNull();
     });
   });
 
