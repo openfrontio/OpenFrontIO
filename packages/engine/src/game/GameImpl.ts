@@ -560,10 +560,9 @@ export class GameImpl implements Game {
 
   private addViewResync(): void {
     const map = this._map as GameMapImpl;
-    const terrainEdited = new Set(map.editedTerrainTiles());
     const numTiles = map.width() * map.height();
     for (let tile = 0; tile < numTiles; tile++) {
-      if (map.tileState(tile) !== 0 || terrainEdited.has(tile)) {
+      if (map.tileState(tile) !== 0 || map.isTerrainEdited(tile)) {
         this.recordTileUpdate(tile);
       }
     }
