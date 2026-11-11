@@ -751,7 +751,7 @@ export class LeaderboardPlayerList extends LitElement {
                     : html`<span
                         data-global-ffa-position
                         class="shrink-0 inline-flex items-center gap-1 text-sm font-semibold tabular-nums text-white"
-                        title=${translateText("ffa_rating.global_position")}
+                        title=${translateText("ffa_rating.global_position", { position: globalPosition })}
                         ><span class="text-base leading-none" aria-hidden="true"
                           >🌍</span
                         >
@@ -1189,7 +1189,7 @@ export class LeaderboardPlayerList extends LitElement {
                 : html`<span
                     data-global-ffa-position
                     class="shrink-0 inline-flex items-center gap-1 text-sm font-semibold tabular-nums text-white"
-                    title=${translateText("ffa_rating.global_position")}
+                    title=${translateText("ffa_rating.global_position", { position: globalPosition })}
                     ><span class="text-base leading-none" aria-hidden="true"
                       >🌍</span
                     >
