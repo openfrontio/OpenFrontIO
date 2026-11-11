@@ -248,9 +248,10 @@ export class OModal extends LitElement {
       : `relative flex-1 min-h-0 flex flex-col text-white bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10 overflow-hidden ${
           this.inline ? "compact:rounded-none! compact:border-0!" : ""
         } ${this.fitContent ? "rounded-2xl border" : ""} ${
-          // body.page-open drops its bottom padding so the page reaches the
-          // bottom of the screen; keep the content above the home indicator.
-          this.inline ? "pb-[env(safe-area-inset-bottom)]" : ""
+          // On compact screens body.page-open drops its bottom padding so the
+          // page reaches the bottom of the screen; keep the content above the
+          // home indicator.
+          this.inline ? "compact:pb-[env(safe-area-inset-bottom)]" : ""
         }`;
 
     return html`
@@ -301,7 +302,11 @@ export class OModal extends LitElement {
                 ? html`<button
                     type="button"
                     aria-label=${translateText("common.scroll_to_top")}
-                    class="absolute bottom-4 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/80 border border-white/20 text-white shadow-lg backdrop-blur-md transition-all hover:bg-white/20 active:scale-95 cursor-pointer"
+                    class="absolute bottom-4 ${
+                      this.inline
+                        ? "compact:bottom-[calc(1rem+env(safe-area-inset-bottom))]"
+                        : ""
+                    } right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/80 border border-white/20 text-white shadow-lg backdrop-blur-md transition-all hover:bg-white/20 active:scale-95 cursor-pointer"
                     @click=${this.scrollToTop}
                   >
                     <svg
