@@ -773,57 +773,12 @@ export class UnitDisplay extends LitElement implements Controller {
           }
              rounded-sm text-white ${selected ? "bg-slate-400/20" : ""}
              ${this.tutorialHighlight === unitType ? "tutorial-highlight" : ""}"
-          @click=${(event: Event) => {
-            const item = (event.currentTarget as HTMLElement).closest(
-              ".unit-display-grid > div",
-            );
-            const fromTouch = this.isTouchClick(event, item);
-            // A press that turned into a peek shows the details instead of
-            // selecting the unit
-            if (this.suppressNextClick || this.suppressReleaseClick) {
-              this.suppressNextClick = false;
-              this.suppressReleaseClick = false;
-              return;
-            }
-            if (selected) {
-              this.inputHandler.setGhostStructure(null, "GUIclick");
-            } else if (this.canBuild(unitType)) {
-              this.inputHandler.setGhostStructure(unitType, "GUIclick");
-              if (fromTouch) {
-                this.eventBus?.emit(new TouchGhostPlacementSelectEvent());
-                this.eventBus?.emit(
-                  new ToggleStructureEvent(highlightTypesForUnit(unitType)),
-                );
-              }
-            } else {
-              const selectedGhost = this.uiState.ghostStructure;
-              this.eventBus?.emit(
-                new ToggleStructureEvent(
-                  selectedGhost === null
-                    ? null
-                    : highlightTypesForUnit(selectedGhost),
-                ),
-              );
-            }
-            this.requestUpdate();
-          }}
-          @pointerenter=${(event: PointerEvent) => {
-            if (event.pointerType === "touch") return;
-            this.eventBus?.emit(
-              new ToggleStructureEvent(highlightTypesForUnit(unitType)),
-            );
-          }}
-          @pointerleave=${(event: PointerEvent) => {
-            if (event.pointerType === "touch") return;
-            const selectedGhost = this.uiState.ghostStructure;
-            this.eventBus?.emit(
-              new ToggleStructureEvent(
-                selectedGhost === null
-                  ? null
-                  : highlightTypesForUnit(selectedGhost),
-              ),
-            );
-          }}
+          @click=${(event: Event) =>
+            this.onUnitClick(event, unitType, selected)}
+          @pointerenter=${(event: PointerEvent) =>
+            this.onUnitPointerEnter(event, unitType)}
+          @pointerleave=${(event: PointerEvent) =>
+            this.onUnitPointerLeave(event)}
         >
           ${
             hotkey
@@ -853,6 +808,63 @@ export class UnitDisplay extends LitElement implements Controller {
         </div>
       </div>
     `;
+  }
+
+  private onUnitClick(
+    event: Event,
+    unitType: PlayerBuildableUnitType,
+    selected: boolean,
+  ) {
+    const item = (event.currentTarget as HTMLElement).closest(
+      ".unit-display-grid > div",
+    );
+    const fromTouch = this.isTouchClick(event, item);
+    // A press that turned into a peek shows the details instead of
+    // selecting the unit
+    if (this.suppressNextClick || this.suppressReleaseClick) {
+      this.suppressNextClick = false;
+      this.suppressReleaseClick = false;
+      return;
+    }
+    if (selected) {
+      this.inputHandler.setGhostStructure(null, "GUIclick");
+    } else if (this.canBuild(unitType)) {
+      this.inputHandler.setGhostStructure(unitType, "GUIclick");
+      if (fromTouch) {
+        this.eventBus?.emit(new TouchGhostPlacementSelectEvent());
+        this.eventBus?.emit(
+          new ToggleStructureEvent(highlightTypesForUnit(unitType)),
+        );
+      }
+    } else {
+      const selectedGhost = this.uiState.ghostStructure;
+      this.eventBus?.emit(
+        new ToggleStructureEvent(
+          selectedGhost === null ? null : highlightTypesForUnit(selectedGhost),
+        ),
+      );
+    }
+    this.requestUpdate();
+  }
+
+  private onUnitPointerEnter(
+    event: PointerEvent,
+    unitType: PlayerBuildableUnitType,
+  ) {
+    if (event.pointerType === "touch") return;
+    this.eventBus?.emit(
+      new ToggleStructureEvent(highlightTypesForUnit(unitType)),
+    );
+  }
+
+  private onUnitPointerLeave(event: PointerEvent) {
+    if (event.pointerType === "touch") return;
+    const selectedGhost = this.uiState.ghostStructure;
+    this.eventBus?.emit(
+      new ToggleStructureEvent(
+        selectedGhost === null ? null : highlightTypesForUnit(selectedGhost),
+      ),
+    );
   }
 
   private renderUnitTooltip() {
