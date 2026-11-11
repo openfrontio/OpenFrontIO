@@ -631,6 +631,7 @@ export class LeaderboardPlayerList extends LitElement {
   // Same handoff as the clan views: the profile modal's back button reopens
   // the leaderboard (its loaded pages survive the close).
   private openProfile(publicId: string) {
+    const isAllRanks = this.ffaAllActive;
     loadModal("player-profile-modal").then(
       () => {
         const modal = document.querySelector<
@@ -640,7 +641,7 @@ export class LeaderboardPlayerList extends LitElement {
           }
         >("player-profile-modal");
         if (!modal) return;
-        if (this.ffaAllActive) {
+        if (isAllRanks) {
           modal.openFromAllRanks(publicId);
         } else {
           modal.openFromLeaderboard(publicId);
@@ -1409,7 +1410,8 @@ export class LeaderboardPlayerList extends LitElement {
       this.playerData.length === 0 &&
       !pinnedCalibration &&
       !this.ffaRankActive &&
-      !this.ffaAllActive
+      (!this.ffaAllActive ||
+        (this.ffaAllRows.length === 0 && !this.ffaAllLoading))
     )
       return this.renderNoData();
 
