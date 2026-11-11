@@ -101,7 +101,7 @@ interface PendingConfirmation {
   ghostType: PlayerBuildableUnitType;
   preventStacking: boolean;
   ghostGeneration: number;
-  cancelOnInvalid: boolean;
+  endsPlacement: boolean;
 }
 
 const EMPTY_ID_SET: ReadonlySet<number> = new Set();
@@ -278,6 +278,13 @@ export class BuildPreviewController implements Controller {
   private resolvedGhostTile: TileRef | undefined;
   private ghostResolved = false;
   private touchPreviewTile: TileRef | null = null;
+  // Where in touchPreviewTile the finger was, so the ghost floats with the
+  // finger as it does with the mouse rather than jumping tile to tile.
+  private touchPreviewPoint: { x: number; y: number } | null = null;
+  // Whether the preview last moved by a drag rather than a tap. A drag keeps
+  // showing the last answer until the next arrives, as the mouse does; a tap
+  // shows nothing valid until its own tile is checked.
+  private touchPreviewDragged = false;
   private touchPlacementMode = false;
 
   // Buildable validation runs on the snapped tile under the cursor, but the
@@ -315,7 +322,7 @@ export class BuildPreviewController implements Controller {
       this.handleTouchPlacement(e),
     );
     this.eventBus.on(TouchGhostPlacementMoveEvent, (e) =>
-      this.moveTouchPreview(e.x, e.y),
+      this.moveTouchPreview(e.x, e.y, true),
     );
     this.eventBus.on(TouchGhostPlacementSelectEvent, () => {
       this.touchPlacementMode = true;
@@ -326,16 +333,23 @@ export class BuildPreviewController implements Controller {
       e.handled =
         this.touchPreviewTile === null || this.isNearTouchPreview(e.x, e.y);
     });
-    this.eventBus.on(ConfirmGhostStructureEvent, () => {
+    this.eventBus.on(ConfirmGhostStructureEvent, (e) => {
       this.syncGhostState();
       if (this.touchPlacementMode) {
         const target = this.touchPreviewScreenPosition();
-        if (target === null) return;
-        this.requestConfirmStructure(new MouseUpEvent(target.x, target.y));
+        if (target === null) {
+          if (e.endsPlacement) this.removeGhostStructure();
+          return;
+        }
+        this.requestConfirmStructure(
+          new MouseUpEvent(target.x, target.y),
+          e.endsPlacement,
+        );
         return;
       }
       this.requestConfirmStructure(
         new MouseUpEvent(this.mousePos.x, this.mousePos.y),
+        e.endsPlacement,
       );
     });
 
@@ -364,10 +378,7 @@ export class BuildPreviewController implements Controller {
 
     const w =
       this.touchPlacementMode && this.touchPreviewTile !== null
-        ? {
-            x: this.game.x(this.touchPreviewTile) + 0.5,
-            y: this.game.y(this.touchPreviewTile) + 0.5,
-          }
+        ? this.touchPreviewWorld(this.touchPreviewTile)
         : this.transformHandler.screenToWorldCoordinatesFloat(
             this.mousePos.x,
             this.mousePos.y,
@@ -667,7 +678,12 @@ export class BuildPreviewController implements Controller {
     const queriedTouchPreview = this.touchPreviewTile;
     promise
       .then((b) => {
-        if (queriedTouchPreview !== this.touchPreviewTile) return;
+        if (
+          queriedTouchPreview !== this.touchPreviewTile &&
+          !this.touchPreviewDragged
+        ) {
+          return;
+        }
         if (this.ghostUnit !== ghost || seq !== this.querySeq) {
           return;
         }
@@ -992,20 +1008,22 @@ export class BuildPreviewController implements Controller {
 
   private requestConfirmStructure(
     e: MouseUpEvent,
-    cancelOnInvalid = false,
+    endsPlacement = false,
   ): void {
     this.syncGhostState();
     if (!this.ghostUnit) return;
     const ghostType = this.ghostUnit.buildableUnit.type;
-    const shouldCancelOnInvalid = cancelOnInvalid && Structures.has(ghostType);
     this.mousePos.x = e.x;
     this.mousePos.y = e.y;
     const position = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
     // A release just outside the map has no tile to validate or build on.
-    if (!this.game.isValidCoord(position.x, position.y)) return;
+    if (!this.game.isValidCoord(position.x, position.y)) {
+      if (endsPlacement) this.removeGhostStructure();
+      return;
+    }
     const tile = this.game.ref(position.x, position.y);
     if (this.game.isImpassable && this.game.isImpassable(tile)) {
-      if (shouldCancelOnInvalid) this.removeGhostStructure();
+      if (endsPlacement) this.removeGhostStructure();
       return;
     }
     const preventStacking = !!this.uiState.preventStacking;
@@ -1016,8 +1034,8 @@ export class BuildPreviewController implements Controller {
     ) {
       const unit = this.effectiveBuildableUnit(preventStacking);
       if (unit && this.isGhostReadyForConfirm(preventStacking)) {
-        this.createStructure(tile, preventStacking, unit);
-      } else if (shouldCancelOnInvalid) {
+        this.createStructure(tile, preventStacking, unit, endsPlacement);
+      } else if (endsPlacement) {
         this.removeGhostStructure();
       }
       return;
@@ -1027,7 +1045,7 @@ export class BuildPreviewController implements Controller {
       ghostType,
       preventStacking,
       ghostGeneration: this.ghostGeneration,
-      cancelOnInvalid: shouldCancelOnInvalid,
+      endsPlacement,
     });
     this.processPendingConfirmations();
   }
@@ -1082,7 +1100,7 @@ export class BuildPreviewController implements Controller {
           !this.isBuildableUnitReady(unit, confirmation.preventStacking)
         ) {
           this.pendingConfirmations.splice(0, batchSize);
-          if (confirmation.cancelOnInvalid) {
+          if (confirmation.endsPlacement) {
             this.removeGhostStructure();
           }
           return;
@@ -1100,6 +1118,7 @@ export class BuildPreviewController implements Controller {
             confirmation.tile,
             confirmation.preventStacking,
             unit,
+            confirmation.endsPlacement,
           );
         }
       })
@@ -1131,7 +1150,7 @@ export class BuildPreviewController implements Controller {
         pending.ghostType !== confirmation.ghostType ||
         pending.preventStacking !== confirmation.preventStacking ||
         pending.ghostGeneration !== confirmation.ghostGeneration ||
-        pending.cancelOnInvalid !== confirmation.cancelOnInvalid
+        pending.endsPlacement !== confirmation.endsPlacement
       ) {
         break;
       }
@@ -1160,6 +1179,7 @@ export class BuildPreviewController implements Controller {
     targetTile: TileRef,
     preventStacking = this.uiState.preventStacking,
     validatedUnit?: BuildableUnit,
+    endsPlacement = false,
   ) {
     const unit = this.effectiveBuildableUnit(preventStacking, validatedUnit);
     if (!unit || (unit.canBuild === false && unit.canUpgrade === false)) return;
@@ -1176,6 +1196,7 @@ export class BuildPreviewController implements Controller {
       const unitType = unit.type;
 
       if (this.shouldBlockRecentAllyNuke(targetTile, unitType)) {
+        if (endsPlacement) this.removeGhostStructure();
         return;
       }
 
@@ -1192,7 +1213,7 @@ export class BuildPreviewController implements Controller {
           isNuke ? this.uiState.upgradeMultiplier || 1 : undefined,
         ),
       );
-      if (!shouldPreserveGhostAfterBuild(unitType)) {
+      if (endsPlacement || !shouldPreserveGhostAfterBuild(unitType)) {
         this.removeGhostStructure();
       }
     } else {
@@ -1285,9 +1306,11 @@ export class BuildPreviewController implements Controller {
     if (this.touchPreviewTile !== null && this.isNearTouchPreview(e.x, e.y)) {
       const preview = this.touchPreviewScreenPosition();
       if (preview !== null) {
+        // A tap on an invalid structure drops it; nukes and boats stay.
         this.requestConfirmStructure(
           new MouseUpEvent(preview.x, preview.y),
-          true,
+          this.ghostUnit !== null &&
+            Structures.has(this.ghostUnit.buildableUnit.type),
         );
       }
       return;
@@ -1296,23 +1319,26 @@ export class BuildPreviewController implements Controller {
     this.moveTouchPreview(e.x, e.y);
   }
 
-  private moveTouchPreview(x: number, y: number): void {
+  private moveTouchPreview(x: number, y: number, dragged = false): void {
     this.touchPlacementMode = true;
+    this.touchPreviewDragged = dragged;
     if (this.syncGhostState()) return;
     if (!this.ghostUnit) {
       this.touchPlacementMode = false;
       return;
     }
-    const tile = this.transformHandler.screenToWorldCoordinates(x, y);
+    const point = this.transformHandler.screenToWorldCoordinatesFloat(x, y);
+    const tile = { x: Math.floor(point.x), y: Math.floor(point.y) };
     if (!this.game.isValidCoord(tile.x, tile.y)) return;
     const next = this.game.ref(tile.x, tile.y);
+    this.touchPreviewPoint = point;
     if (next !== this.touchPreviewTile) {
       this.ghostResolved = false;
       this.resolvedGhostTile = undefined;
       if (!this.isQueryInFlight) {
         this.lastQueriedTileRef = undefined;
       }
-      if (this.lastGhostData !== null) {
+      if (this.lastGhostData !== null && !dragged) {
         this.lastGhostData = {
           ...this.lastGhostData,
           canBuild: false,
@@ -1353,17 +1379,28 @@ export class BuildPreviewController implements Controller {
 
   private touchPreviewScreenPosition(): { x: number; y: number } | null {
     if (this.touchPreviewTile === null) return null;
-    const renderTile =
+    const point =
       this.lastGhostData?.snapToPlacement === true
-        ? new Cell(
-            this.lastGhostData.tileX + 0.5,
-            this.lastGhostData.tileY + 0.5,
-          )
-        : new Cell(
-            this.game.x(this.touchPreviewTile) + 0.5,
-            this.game.y(this.touchPreviewTile) + 0.5,
-          );
-    return this.transformHandler.worldToScreenCoordinates(renderTile);
+        ? {
+            x: this.lastGhostData.tileX + 0.5,
+            y: this.lastGhostData.tileY + 0.5,
+          }
+        : this.touchPreviewWorld(this.touchPreviewTile);
+    return this.transformHandler.worldToScreenCoordinates(
+      new Cell(point.x, point.y),
+    );
+  }
+
+  /** The touch point in the preview tile, or its center if it's elsewhere. */
+  private touchPreviewWorld(tile: TileRef): { x: number; y: number } {
+    const point = this.touchPreviewPoint;
+    if (
+      point !== null &&
+      this.game.ref(Math.floor(point.x), Math.floor(point.y)) === tile
+    ) {
+      return point;
+    }
+    return { x: this.game.x(tile) + 0.5, y: this.game.y(tile) + 0.5 };
   }
 
   private createGhostStructure(type: PlayerBuildableUnitType | null) {
