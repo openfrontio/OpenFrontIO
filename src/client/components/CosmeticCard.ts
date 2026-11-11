@@ -251,6 +251,9 @@ export class CosmeticCard extends LitElement {
   state: CosmeticCardState = "idle";
 
   @property({ type: Boolean })
+  isNew = false;
+
+  @property({ type: Boolean })
   showSwatches = true;
 
   @property({ type: Boolean })
@@ -541,6 +544,13 @@ export class CosmeticCard extends LitElement {
       ?data-cosmetic-flash=${isFlash}
       class="relative flex h-full flex-col items-center overflow-visible rounded-xl border transition-all duration-200 ease-out hover:-translate-y-1 ${shellClass}"
     >
+      ${this.isNew
+        ? html`<span
+            data-cosmetic-new-badge
+            class="pointer-events-none absolute -top-2.5 -right-2 z-[6] rounded-full bg-gradient-to-r from-amber-500 to-rose-500 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-white shadow-md shadow-rose-950/60 ring-1 ring-amber-300/80"
+            >${translateText("store.badge_new")}</span
+          >`
+        : nothing}
       ${
         isFlash
           ? html`<span data-cosmetic-flash-ring aria-hidden="true"></span>`

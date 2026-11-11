@@ -79,6 +79,21 @@ const green: ResolvedCosmetic = {
   key: "pattern:stripes:green",
 };
 
+const capsSkin: ResolvedCosmetic = {
+  type: "pattern",
+  cosmetic: {
+    name: "dots",
+    pattern: "AAAAAA",
+    product: null,
+    priceSoft: 300,
+    rarity: "uncommon",
+    affiliateCode: null,
+  } as never,
+  colorPalette: null,
+  relationship: "purchasable",
+  key: "pattern:dots",
+};
+
 const flag: ResolvedCosmetic = {
   type: "flag",
   cosmetic: {
@@ -280,7 +295,9 @@ async function clickHardPurchase(modal: StoreModal) {
     .dispatchEvent(new CustomEvent("confirm"));
 }
 
-async function openStoreOnCosmetic(tab: "patterns" | "flags" | "crowns") {
+async function openStoreOnCosmetic(
+  tab: "patterns" | "new" | "flags" | "crowns",
+) {
   store = document.createElement("store-modal") as StoreModal;
   store.inline = true;
   document.body.appendChild(store);
@@ -334,7 +351,17 @@ describe("StoreModal cosmetic browser", () => {
     const settings = new UserSettings();
     settings.removeCached(PATTERN_KEY);
     settings.removeCached(EFFECTS_KEY);
-    resolvedCatalog = [red, blue, green, flag, wake, atom, hydro, hydroAlt];
+    resolvedCatalog = [
+      red,
+      blue,
+      green,
+      capsSkin,
+      flag,
+      wake,
+      atom,
+      hydro,
+      hydroAlt,
+    ];
     vi.mocked(fetchCosmetics).mockReset();
     vi.mocked(fetchCosmetics).mockResolvedValue({} as Cosmetics);
     vi.mocked(resolveCosmetics).mockReset();
@@ -1052,6 +1079,123 @@ describe("StoreModal cosmetic browser", () => {
 
     expect(modal.querySelector("[data-store-product]")).toBeNull();
     expect(modal.querySelector("purchase-button")).toBeNull();
+  });
+
+  it("filters skins in real time when searching", async () => {
+    const modal = await openStoreOnCosmetic("patterns");
+    expect(card(modal, red.key)).toBeTruthy();
+
+    const searchInput = modal.querySelector<HTMLInputElement>(
+      "[data-store-search]",
+    )!;
+    searchInput.value = "stripes";
+    searchInput.dispatchEvent(new Event("input"));
+    await modal.updateComplete;
+
+    expect(card(modal, red.key)).toBeTruthy();
+
+    searchInput.value = "nonexistent_skin_name";
+    searchInput.dispatchEvent(new Event("input"));
+    await modal.updateComplete;
+
+    expect(card(modal, red.key)).toBeFalsy();
+    expect(modal.querySelector("[data-store-empty-search]")).toBeTruthy();
+
+    const clearBtn = modal.querySelector<HTMLButtonElement>(
+      "[data-store-clear-search-btn]",
+    )!;
+    clearBtn.click();
+    await modal.updateComplete;
+
+    expect(card(modal, red.key)).toBeTruthy();
+    expect(modal.querySelector("[data-store-empty-search]")).toBeNull();
+  });
+
+  it("displays the new releases tab and badges newly released skins without banner", async () => {
+    const modal = await openStoreOnCosmetic("new");
+    expect(modal.querySelector("[data-store-new-releases-banner]")).toBeNull();
+
+    const newCard = card(modal, red.key);
+    expect(newCard).toBeTruthy();
+    expect(newCard?.isNew).toBe(true);
+    expect(newCard?.querySelector("[data-cosmetic-new-badge]")).toBeTruthy();
+  });
+
+  it("filters skins by currency (Caps vs Plutonium) and resets filters", async () => {
+    const modal = await openStoreOnCosmetic("patterns");
+    expect(card(modal, red.key)).toBeTruthy();
+    expect(card(modal, capsSkin.key)).toBeTruthy();
+
+    const currencySelect = modal.querySelector<HTMLSelectElement>(
+      "[data-store-currency-filter] select",
+    )!;
+
+    // Filter to Caps only
+    currencySelect.value = "caps";
+    currencySelect.dispatchEvent(new Event("change"));
+    await modal.updateComplete;
+
+    expect(card(modal, capsSkin.key)).toBeTruthy();
+    expect(card(modal, red.key)).toBeFalsy();
+    expect(modal.querySelector("[data-store-reset-filters]")).toBeTruthy();
+
+    // Filter to Plutonium only
+    currencySelect.value = "plutonium";
+    currencySelect.dispatchEvent(new Event("change"));
+    await modal.updateComplete;
+
+    expect(card(modal, red.key)).toBeTruthy();
+    expect(card(modal, capsSkin.key)).toBeFalsy();
+
+    // Reset filters
+    const resetBtn = modal.querySelector<HTMLButtonElement>(
+      "[data-store-reset-filters]",
+    )!;
+    resetBtn.click();
+    await modal.updateComplete;
+
+    expect(card(modal, red.key)).toBeTruthy();
+    expect(card(modal, capsSkin.key)).toBeTruthy();
+    expect(currencySelect.value).toBe("all");
+  });
+
+  it("sorts skins by newest, oldest, and price", async () => {
+    const modal = await openStoreOnCosmetic("patterns");
+    const sortSelect = modal.querySelector<HTMLSelectElement>(
+      "[data-store-sort] select",
+    )!;
+
+    // Sort price: low to high (capsSkin: 300 caps vs red: 120 plutonium = 3000 effective)
+    sortSelect.value = "price_asc";
+    sortSelect.dispatchEvent(new Event("change"));
+    await modal.updateComplete;
+
+    let cards = [...modal.querySelectorAll<CosmeticCard>("cosmetic-card")];
+    expect(cards[0].resolved.key).toBe(capsSkin.key);
+
+    // Sort price: high to low
+    sortSelect.value = "price_desc";
+    sortSelect.dispatchEvent(new Event("change"));
+    await modal.updateComplete;
+
+    cards = [...modal.querySelectorAll<CosmeticCard>("cosmetic-card")];
+    expect(cards[0].resolved.key).toBe(red.key);
+
+    // Sort newest to oldest (capsSkin was added last, so newest first)
+    sortSelect.value = "newest";
+    sortSelect.dispatchEvent(new Event("change"));
+    await modal.updateComplete;
+
+    cards = [...modal.querySelectorAll<CosmeticCard>("cosmetic-card")];
+    expect(cards[0].resolved.key).toBe(capsSkin.key);
+
+    // Sort oldest to newest
+    sortSelect.value = "oldest";
+    sortSelect.dispatchEvent(new Event("change"));
+    await modal.updateComplete;
+
+    cards = [...modal.querySelectorAll<CosmeticCard>("cosmetic-card")];
+    expect(cards[0].resolved.key).toBe(red.key);
   });
 
   it("focuses effect and nuke-subtype purchases without changing effect settings", async () => {
