@@ -147,7 +147,13 @@ export function highlightTypesForUnit(
   }
 }
 
-export class ConfirmGhostStructureEvent implements GameEvent {}
+export class ConfirmGhostStructureEvent implements GameEvent {
+  /**
+   * Drops the ghost afterwards whether it built or not, instead of keeping
+   * it when it can't build there or when it's a nuke kept for another launch.
+   */
+  constructor(public readonly endsPlacement = false) {}
+}
 
 export class TouchGhostPlacementEvent implements GameEvent {
   constructor(

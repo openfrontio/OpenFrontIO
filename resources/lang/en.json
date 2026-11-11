@@ -903,6 +903,7 @@
     "allied_afk_neighbor_info": "You can attack disconnected players even if you are allied with them.",
     "army_limit_warning": "You're near your army limit! Consider sending troops to teammates.",
     "attack_ratio": "{percent}%\n({troops})",
+    "attack_ratio_button": "Attack ratio: {percent}%",
     "low_troops_warning": "You are very low on troops - You should always keep some troops for defense.",
     "teammate_afk_neighbor_info": "You can attack disconnected teammates.",
     "traitor_neighbor_info": "You can betray traitors without becoming a traitor yourself."
@@ -1953,6 +1954,7 @@
     "turkiye": "Türkiye",
     "tutorial": "Tutorial",
     "twolakes": "Two Lakes",
+    "ukraine": "Ukraine",
     "unitedstates": "United States",
     "vancouverisland": "Vancouver Island",
     "venice": "Venice",
