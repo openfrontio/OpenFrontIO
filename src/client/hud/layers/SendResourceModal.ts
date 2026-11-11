@@ -10,6 +10,7 @@ import {
 import { UIState } from "../../UIState";
 import { translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
+import { HUD_ICON_BUTTON } from "../HudModal";
 
 @customElement("send-resource-modal")
 export class SendResourceModal extends LitElement {
@@ -253,11 +254,11 @@ export class SendResourceModal extends LitElement {
         <button
           type="button"
           @click=${() => this.closeModal()}
-          class="absolute -top-3 -right-3 flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow-sm hover:bg-red-500 transition-colors focus-visible:ring-2 focus-visible:ring-white/30 focus:outline-hidden"
+          class=${HUD_ICON_BUTTON}
           aria-label=${this.i18n.closeLabel()}
           title=${this.i18n.closeLabel()}
         >
-          ✕
+          <of-icon name="close" size="16"></of-icon>
         </button>
       </div>
     `;
@@ -545,7 +546,7 @@ export class SendResourceModal extends LitElement {
     return html`
       <div class="absolute inset-0 z-1100 flex items-center justify-center p-4">
         <div
-          class="absolute inset-0 bg-black/60 rounded-2xl"
+          class="absolute inset-0 bg-black/60 rounded-hud-modal"
           @click=${() => this.closeModal()}
         ></div>
 

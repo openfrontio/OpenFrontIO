@@ -15,6 +15,7 @@
  * of stopping.
  */
 
+import { TICKS_PER_SECOND } from "../hud/GameTicks";
 import type { FrameData } from "../render/types";
 import { ReplayReader } from "./codec/decode/ReplayReader";
 import type {
@@ -26,8 +27,7 @@ import type {
 } from "./codec/ReplayTypes";
 import { ReplayFrameBuilder, type ReplayRules } from "./ReplayFrameBuilder";
 
-/** Game ticks per second at 1x (Config turnIntervalMs = 100). */
-export const TICKS_PER_SECOND = 10;
+export { TICKS_PER_SECOND };
 /** Forward jumps up to this many frames play through instead of seeking. */
 export const STEP_LIMIT = 30;
 

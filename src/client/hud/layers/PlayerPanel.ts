@@ -22,6 +22,7 @@ import Countries from "resources/countries.json" with { type: "json" };
 import { fetchLobbyListed, getUserMe } from "../../Api";
 import "../../components/EquippedCosmeticsRow";
 import "../../components/LevelBadge";
+import type { OfIconName } from "../../components/OfIcon";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
 import { Controller } from "../../Controller";
@@ -50,23 +51,13 @@ import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
 import { renderDuration, showToast, translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
+import { ticksToSeconds } from "../GameTicks";
+import { HUD_ICON_BUTTON } from "../HudModal";
 import { ChatModal, ShowPlayerChatEvent } from "./ChatModal";
 import { EmojiTable, ShowPlayerEmojiMenuEvent } from "./EmojiTable";
 import "./PlayerModerationModal";
 import "./PlayerReportModal";
 import "./SendResourceModal";
-const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
-const chatIcon = assetUrl("images/ChatIconWhite.svg");
-const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
-const donateTroopIcon = assetUrl("images/DonateTroopIconWhite.svg");
-const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
-const reportIcon = assetUrl("images/SirenIconWhite.svg");
-const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
-const stopTradingIcon = assetUrl("images/StopIconWhite.svg");
-const targetIcon = assetUrl("images/TargetIconWhite.svg");
-const startTradingIcon = assetUrl("images/TradingIconWhite.svg");
-const traitorIcon = assetUrl("images/TraitorIconLightRed.svg");
-const breakAllianceIcon = assetUrl("images/TraitorIconWhite.svg");
 
 export function emptyPlayerActions(): PlayerActions {
   return {
@@ -259,7 +250,10 @@ export class PlayerPanel extends LitElement implements Controller {
         if (this.actions?.interaction?.allianceInfo?.expiresAt !== undefined) {
           const expiresAt = this.actions.interaction.allianceInfo.expiresAt;
           const remainingTicks = expiresAt - this.g.ticks();
-          const remainingSeconds = Math.max(0, Math.floor(remainingTicks / 10)); // 10 ticks per second
+          const remainingSeconds = Math.max(
+            0,
+            Math.floor(ticksToSeconds(remainingTicks)),
+          );
 
           if (remainingTicks > 0) {
             this.allianceExpirySeconds = remainingSeconds;
@@ -506,33 +500,36 @@ export class PlayerPanel extends LitElement implements Controller {
     this.eventBus.emit(new SwapRocketDirectionEvent(next));
   }
 
-  private identityChipProps(type: PlayerType) {
+  private identityChipProps(type: PlayerType): {
+    labelKey: string;
+    classes: string;
+    icon?: OfIconName;
+  } {
     switch (type) {
       case PlayerType.Nation:
         return {
           labelKey: "player_type.nation",
           classes: "border-indigo-400/25 bg-indigo-500/10 text-indigo-200",
-          icon: "🏛️",
+          icon: "nation",
         };
       case PlayerType.Bot:
         return {
           labelKey: "player_type.bot",
           classes: "border-purple-400/25 bg-purple-500/10 text-purple-200",
-          icon: "⚔️",
+          icon: "tribe",
         };
       case PlayerType.Human:
       default:
         return {
           labelKey: "player_type.player",
           classes: "border-zinc-400/20 bg-zinc-500/5 text-zinc-300",
-          icon: "👤",
         };
     }
   }
 
   private getRelationClass(relation: Relation): string {
     const base =
-      "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 " +
+      "inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-0.5 " +
       "shadow-[inset_0_0_8px_rgba(255,255,255,0.04)]";
 
     switch (relation) {
@@ -573,7 +570,7 @@ export class PlayerPanel extends LitElement implements Controller {
   private getTraitorRemainingSeconds(player: PlayerView): number | null {
     const ticksLeft = player.getTraitorRemainingTicks();
     if (!player.isTraitor() || ticksLeft <= 0) return null;
-    return Math.ceil(ticksLeft / 10); // 10 ticks = 1 second
+    return Math.ceil(ticksToSeconds(ticksLeft));
   }
 
   private renderTraitorBadge(other: PlayerView) {
@@ -589,12 +586,12 @@ export class PlayerPanel extends LitElement implements Controller {
     return html`
       <div class="mt-1" role="status" aria-live="polite" aria-atomic="true">
         <span
-          class="inline-flex items-center gap-2 rounded-full border border-red-400/30
+          class="inline-flex items-center gap-2 rounded-sm border border-red-400/30
             bg-red-500/10 px-2.5 py-0.5 text-sm font-semibold text-red-200
             shadow-[inset_0_0_8px_rgba(239,68,68,0.12)]"
           title=${translateText("player_panel.traitor")}
         >
-          <img src=${traitorIcon} alt="" aria-hidden="true" class="size-4.5" />
+          <of-icon name="traitor" size="12"></of-icon>
           <span class="tracking-tight"
             >${translateText("player_panel.traitor")}</span
           >
@@ -631,14 +628,13 @@ export class PlayerPanel extends LitElement implements Controller {
     const moderationTitle = translateText("player_panel.moderation");
 
     return html`
-      <ui-divider></ui-divider>
+      <ui-divider color="bg-white/10"></ui-divider>
       <div class="grid auto-cols-fr grid-flow-col gap-1">
         ${
           canReport
             ? actionButton({
                 onClick: (e: MouseEvent) => this.openReport(e, other),
-                icon: reportIcon,
-                iconAlt: "Report",
+                icon: "report",
                 title: reportTitle,
                 label: reportTitle,
                 type: "red",
@@ -650,8 +646,7 @@ export class PlayerPanel extends LitElement implements Controller {
           canModerate
             ? actionButton({
                 onClick: (e: MouseEvent) => this.openModeration(e, other),
-                icon: shieldIcon,
-                iconAlt: "Moderation",
+                icon: "shield",
                 title: moderationTitle,
                 label: moderationTitle,
                 type: "red",
@@ -739,7 +734,7 @@ export class PlayerPanel extends LitElement implements Controller {
               : ""
           }
           <h2
-            class="min-w-0 text-xl font-bold tracking-[-0.01em] text-zinc-50 truncate"
+            class="min-w-0 text-lg font-bold truncate"
             title=${other.displayName()}
           >
             ${other.displayName()}
@@ -748,20 +743,30 @@ export class PlayerPanel extends LitElement implements Controller {
         ${
           chip
             ? html`<span
-                class=${`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-semibold ${chip.classes}`}
+                class=${`inline-flex h-6 items-center gap-1 rounded-sm border px-2 text-xs font-semibold ${chip.classes}`}
                 role="status"
                 aria-label=${translateText(chip.labelKey)}
                 title=${translateText(chip.labelKey)}
               >
-                <span aria-hidden="true" class="leading-none"
-                  >${chip.icon}</span
-                >
+                ${
+                  chip.icon
+                    ? html`<of-icon name=${chip.icon} size="12"></of-icon>`
+                    : ""
+                }
                 <span class="tracking-tight"
                   >${translateText(chip.labelKey)}</span
                 >
               </span>`
             : html``
         }
+        <button
+          @click=${this.handleClose}
+          class=${HUD_ICON_BUTTON}
+          aria-label=${translateText("common.close") || "Close"}
+          title=${translateText("common.close") || "Close"}
+        >
+          <of-icon name="close" size="16"></of-icon>
+        </button>
       </div>
       ${this.renderTraitorBadge(other)}
       ${this.renderRelationPillIfNation(other, my)}
@@ -770,29 +775,23 @@ export class PlayerPanel extends LitElement implements Controller {
 
   private renderResources(other: PlayerView) {
     return html`
-      <div class="mb-1 flex justify-between gap-2">
-        <div
-          class="inline-flex items-center gap-1.5 rounded-lg bg-white/4 px-3 py-1.5 shrink-0
-                    text-white w-35"
-        >
-          <span class="mr-0.5">💰</span>
-          <span translate="no" class="tabular-nums w-[5ch] font-semibold">
+      <div class="grid grid-cols-2 gap-2">
+        <div class="flex h-9 items-center gap-2 rounded-lg bg-white/6 px-3">
+          <of-icon name="gold" size="16"></of-icon>
+          <span translate="no" class="tabular-nums font-semibold">
             ${renderNumber(other.gold() || 0)}
           </span>
-          <span class="text-zinc-200 whitespace-nowrap">
+          <span class="min-w-0 truncate text-white/70">
             ${translateText("player_panel.gold")}</span
           >
         </div>
 
-        <div
-          class="inline-flex items-center gap-1.5 rounded-lg bg-white/4 px-3 py-1.5
-                    text-white w-35 shrink-0"
-        >
-          <span class="mr-0.5">🛡️</span>
-          <span translate="no" class="tabular-nums w-[5ch] font-semibold">
+        <div class="flex h-9 items-center gap-2 rounded-lg bg-white/6 px-3">
+          <of-icon name="troops" size="16" class="text-aquarius"></of-icon>
+          <span translate="no" class="tabular-nums font-semibold">
             ${renderTroops(other.troops() || 0)}
           </span>
-          <span class="text-zinc-200 whitespace-nowrap">
+          <span class="min-w-0 truncate text-white/70">
             ${translateText("player_panel.troops")}</span
           >
         </div>
@@ -802,9 +801,9 @@ export class PlayerPanel extends LitElement implements Controller {
 
   private renderRocketDirectionToggle() {
     return html`
-      <ui-divider></ui-divider>
+      <ui-divider color="bg-white/10"></ui-divider>
       <button
-        class="flex w-full items-center justify-between rounded-xl bg-white/5 px-3 py-2 text-left text-white hover:bg-white/8 active:scale-[0.995] transition"
+        class="flex w-full items-center justify-between rounded-lg bg-white/6 px-3 py-2 text-start text-white hover:bg-white/10 active:scale-[0.995] transition"
         @click=${(e: Event) => this.handleToggleRocketDirection(e)}
       >
         <div class="flex flex-col">
@@ -819,7 +818,7 @@ export class PlayerPanel extends LitElement implements Controller {
             }
           </span>
         </div>
-        <span class="text-lg" aria-hidden="true">🔀</span>
+        <of-icon name="swap" size="16" class="text-white/70"></of-icon>
       </button>
     `;
   }
@@ -831,10 +830,12 @@ export class PlayerPanel extends LitElement implements Controller {
         <div
           class="flex items-center gap-2 text-[15px] font-medium text-zinc-100 leading-snug"
         >
-          <span aria-hidden="true">⚠️</span>
+          <span class="grid size-5 place-items-center">
+            <of-icon name="traitor" size="16" class="text-white/70"></of-icon>
+          </span>
           <span>${translateText("player_panel.betrayals")}</span>
         </div>
-        <div class="text-right text-[14px] font-semibold text-zinc-200">
+        <div class="text-end text-[14px] font-bold tabular-nums">
           ${other.betrayals()}
         </div>
       </div>
@@ -844,7 +845,9 @@ export class PlayerPanel extends LitElement implements Controller {
         <div
           class="flex items-center gap-2 text-[15px] font-medium text-zinc-100 leading-snug"
         >
-          <span aria-hidden="true">⚓</span>
+          <span class="grid size-5 place-items-center">
+            <of-icon name="trade" size="16" class="text-white/70"></of-icon>
+          </span>
           <span>${translateText("player_panel.trading")}</span>
         </div>
         <div
@@ -876,7 +879,7 @@ export class PlayerPanel extends LitElement implements Controller {
       const expiresAt = expiryByAlly.get(ally.id());
       if (expiresAt === undefined) return null;
       const remainingTicks = expiresAt - this.g.ticks();
-      return Math.max(0, Math.floor(remainingTicks / 10)); // 10 ticks per second
+      return Math.max(0, Math.floor(ticksToSeconds(remainingTicks)));
     };
 
     // Soonest-expiring alliances first; ties (and no-expiry allies) by name.
@@ -899,18 +902,16 @@ export class PlayerPanel extends LitElement implements Controller {
           </div>
           <span
             aria-labelledby="alliances-title"
-            class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-[10px]
+            class="inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-sm
                  text-[12px] text-zinc-100 bg-white/10 border border-white/20"
           >
             ${allies.length}
           </span>
         </div>
 
-        <div
-          class="rounded-lg bg-zinc-800/70 ring-1 ring-zinc-700/60 w-full min-w-0"
-        >
+        <div class="rounded-lg bg-white/6 w-full min-w-0">
           <ul
-            class="max-h-48 overflow-y-auto p-2
+            class="max-h-48 overflow-y-auto p-1
                  flex flex-wrap gap-1.5
                  scrollbar-thin scrollbar-thumb-zinc-600 hover:scrollbar-thumb-zinc-500 scrollbar-track-zinc-800"
             role="list"
@@ -925,10 +926,10 @@ export class PlayerPanel extends LitElement implements Controller {
                 : alliesSorted.map((p) => {
                     const remainingSeconds = remainingSecondsFor(p);
                     return html`<li
-                      class="max-w-full inline-flex items-center gap-1.5
-                           rounded-md border border-white/10 bg-white/5
-                           px-2.5 py-1 text-[14px] text-zinc-100
-                           hover:bg-white/8 active:scale-[0.99] transition"
+                      class="max-w-full inline-flex h-7 items-center gap-1.5
+                           rounded-sm border border-white/10 bg-white/6
+                           px-2 text-[14px] text-zinc-100
+                           hover:bg-white/10 active:scale-[0.99] transition"
                       title=${p.displayName()}
                     >
                       <span class="truncate">${p.displayName()}</span>
@@ -960,7 +961,7 @@ export class PlayerPanel extends LitElement implements Controller {
         </div>
         <div class="text-right font-semibold">
           <span
-            class="inline-flex items-center rounded-full px-2 py-0.5 text-[14px] font-bold ${this.getExpiryColorClass(
+            class="inline-flex items-center text-[14px] font-bold ${this.getExpiryColorClass(
               this.allianceExpirySeconds,
             )}"
             >${this.allianceExpiryText}</span
@@ -989,8 +990,7 @@ export class PlayerPanel extends LitElement implements Controller {
         <div class="grid auto-cols-fr grid-flow-col gap-1">
           ${actionButton({
             onClick: (e: MouseEvent) => this.handleChat(e, my, other),
-            icon: chatIcon,
-            iconAlt: "Chat",
+            icon: "chat",
             title: translateText("player_panel.chat"),
             label: translateText("player_panel.chat"),
           })}
@@ -999,8 +999,7 @@ export class PlayerPanel extends LitElement implements Controller {
               ? actionButton({
                   onClick: (e: MouseEvent) =>
                     this.handleEmojiClick(e, my, other),
-                  icon: emojiIcon,
-                  iconAlt: "Emoji",
+                  icon: "emoji",
                   title: translateText("player_panel.emotes"),
                   label: translateText("player_panel.emotes"),
                   type: "normal",
@@ -1011,8 +1010,7 @@ export class PlayerPanel extends LitElement implements Controller {
             canTarget
               ? actionButton({
                   onClick: (e: MouseEvent) => this.handleTargetClick(e, other),
-                  icon: targetIcon,
-                  iconAlt: "Target",
+                  icon: "target",
                   title: translateText("player_panel.target"),
                   label: translateText("player_panel.target"),
                   type: "normal",
@@ -1024,8 +1022,7 @@ export class PlayerPanel extends LitElement implements Controller {
               ? actionButton({
                   onClick: (e: MouseEvent) =>
                     this.handleDonateTroopClick(e, my, other),
-                  icon: donateTroopIcon,
-                  iconAlt: "Troops",
+                  icon: "donate-troops",
                   title: translateText("player_panel.send_troops"),
                   label: translateText("player_panel.troops"),
                   type: "normal",
@@ -1037,8 +1034,7 @@ export class PlayerPanel extends LitElement implements Controller {
               ? actionButton({
                   onClick: (e: MouseEvent) =>
                     this.handleDonateGoldClick(e, my, other),
-                  icon: donateGoldIcon,
-                  iconAlt: "Gold",
+                  icon: "donate-gold",
                   title: translateText("player_panel.send_gold"),
                   label: translateText("player_panel.gold"),
                   type: "normal",
@@ -1046,7 +1042,7 @@ export class PlayerPanel extends LitElement implements Controller {
               : ""
           }
         </div>
-        <ui-divider></ui-divider>
+        <ui-divider color="bg-white/10"></ui-divider>
         ${
           other === my
             ? html``
@@ -1057,8 +1053,7 @@ export class PlayerPanel extends LitElement implements Controller {
                       ? actionButton({
                           onClick: (e: MouseEvent) =>
                             this.handleEmbargoClick(e, my, other),
-                          icon: stopTradingIcon,
-                          iconAlt: "Stop Trading",
+                          icon: "embargo",
                           title: translateText("player_panel.stop_trade"),
                           label: translateText("player_panel.stop_trade"),
                           type: "yellow",
@@ -1066,8 +1061,7 @@ export class PlayerPanel extends LitElement implements Controller {
                       : actionButton({
                           onClick: (e: MouseEvent) =>
                             this.handleStopEmbargoClick(e, my, other),
-                          icon: startTradingIcon,
-                          iconAlt: "Start Trading",
+                          icon: "trade",
                           title: translateText("player_panel.start_trade"),
                           label: translateText("player_panel.start_trade"),
                           type: "green",
@@ -1078,8 +1072,7 @@ export class PlayerPanel extends LitElement implements Controller {
                       ? actionButton({
                           onClick: (e: MouseEvent) =>
                             this.handleBreakAllianceClick(e, my, other),
-                          icon: breakAllianceIcon,
-                          iconAlt: "Break Alliance",
+                          icon: "break-alliance",
                           title: translateText("player_panel.break_alliance"),
                           label: translateText("player_panel.break_alliance"),
                           type: "red",
@@ -1091,8 +1084,7 @@ export class PlayerPanel extends LitElement implements Controller {
                       ? actionButton({
                           onClick: (e: MouseEvent) =>
                             this.handleAllianceClick(e, my, other),
-                          icon: allianceIcon,
-                          iconAlt: "Alliance",
+                          icon: "alliance",
                           title: translateText("player_panel.send_alliance"),
                           label: translateText("player_panel.send_alliance"),
                           type: "indigo",
@@ -1107,28 +1099,30 @@ export class PlayerPanel extends LitElement implements Controller {
             ? html`<div class="grid auto-cols-fr grid-flow-col gap-1">
                 ${actionButton({
                   onClick: (e: MouseEvent) => this.onStopTradingEnemiesClick(e),
-                  icon: stopTradingIcon,
-                  iconAlt: "Stop Trading With Enemies",
+                  icon: !this.actions?.canEmbargoAll ? "hourglass" : "embargo",
                   title: !this.actions?.canEmbargoAll
-                    ? `${translateText("player_panel.stop_trade_enemies")} - ${translateText("cooldown")}`
+                    ? translateText("player_panel.cooldown", {
+                        action: translateText(
+                          "player_panel.stop_trade_enemies",
+                        ),
+                      })
                     : translateText("player_panel.stop_trade_enemies"),
-                  label: !this.actions?.canEmbargoAll
-                    ? `${translateText("player_panel.stop_trade_enemies")} ⏳`
-                    : translateText("player_panel.stop_trade_enemies"),
+                  label: translateText("player_panel.stop_trade_enemies"),
                   type: "yellow",
                   disabled: !this.actions?.canEmbargoAll,
                 })}
                 ${actionButton({
                   onClick: (e: MouseEvent) =>
                     this.onStartTradingEnemiesClick(e),
-                  icon: startTradingIcon,
-                  iconAlt: "Start Trading With Enemies",
+                  icon: !this.actions?.canEmbargoAll ? "hourglass" : "trade",
                   title: !this.actions?.canEmbargoAll
-                    ? `${translateText("player_panel.start_trade_enemies")} - ${translateText("cooldown")}`
+                    ? translateText("player_panel.cooldown", {
+                        action: translateText(
+                          "player_panel.start_trade_enemies",
+                        ),
+                      })
                     : translateText("player_panel.start_trade_enemies"),
-                  label: !this.actions?.canEmbargoAll
-                    ? `${translateText("player_panel.start_trade_enemies")} ⏳`
-                    : translateText("player_panel.start_trade_enemies"),
+                  label: translateText("player_panel.start_trade_enemies"),
                   type: "green",
                   disabled: !this.actions?.canEmbargoAll,
                 })}
@@ -1161,33 +1155,6 @@ export class PlayerPanel extends LitElement implements Controller {
     const myTroopsNum = Number(viewer.troops());
 
     return html`
-      <style>
-        /* Soft glowing ring animation for traitors */
-        .traitor-ring {
-          border-radius: 1rem;
-          box-shadow:
-            0 0 0 2px rgba(239, 68, 68, 0.34),
-            0 0 12px 4px rgba(239, 68, 68, 0.22),
-            inset 0 0 14px rgba(239, 68, 68, 0.13);
-          animation: glowPulse 2.4s ease-in-out infinite;
-        }
-        @keyframes glowPulse {
-          0%,
-          100% {
-            box-shadow:
-              0 0 0 2px rgba(239, 68, 68, 0.22),
-              0 0 8px 2px rgba(239, 68, 68, 0.15),
-              inset 0 0 8px rgba(239, 68, 68, 0.07);
-          }
-          50% {
-            box-shadow:
-              0 0 0 4px rgba(239, 68, 68, 0.38),
-              0 0 18px 6px rgba(239, 68, 68, 0.26),
-              inset 0 0 18px rgba(239, 68, 68, 0.15);
-          }
-        }
-      </style>
-
       <div
         class="fixed inset-0 z-10001 flex items-center justify-center overflow-auto
                bg-black/15 backdrop-brightness-110 pointer-events-auto"
@@ -1196,143 +1163,120 @@ export class PlayerPanel extends LitElement implements Controller {
         @click=${() => this.hide()}
       >
         <div
-          class="pointer-events-auto max-h-[90vh] min-w-75 max-w-100 px-4 py-2"
+          role="dialog"
+          aria-label=${other.displayName()}
+          class=${`hud-modal relative w-[min(344px,calc(100vw-24px))] text-white motion-reduce:animate-none ${
+            other.isTraitor()
+              ? "animate-traitor-glow outline-2 outline-red-500/40"
+              : "animate-hud-rise"
+          }`}
           @click=${(e: MouseEvent) => e.stopPropagation()}
         >
-          <div class="relative">
-            <div
-              class="absolute inset-2 -z-10 rounded-2xl bg-black/25 backdrop-blur-[2px]"
-            ></div>
-            <div
-              class=${`relative w-full bg-zinc-900/95 rounded-2xl text-zinc-100 shadow-2xl shadow-black/50
-                 ${other.isTraitor() ? "traitor-ring" : "ring-1 ring-white/5"}`}
-            >
-              <div class="overflow-visible">
-                <div
-                  class="overflow-auto [-webkit-overflow-scrolling:touch] resize-y max-h-[calc(100vh-120px-env(safe-area-inset-bottom))]"
-                >
-                  <div class="sticky top-0 z-20 flex justify-end p-2">
-                    <button
-                      @click=${this.handleClose}
-                      class="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-zinc-700 text-white shadow-sm hover:bg-red-500 transition-colors"
-                      aria-label=${translateText("common.close") || "Close"}
-                      title=${translateText("common.close") || "Close"}
-                    >
-                      ✕
-                    </button>
-                  </div>
+          <div
+            class="overflow-auto [-webkit-overflow-scrolling:touch] resize-y max-h-[calc(100dvh-120px-env(safe-area-inset-bottom))] rounded-[inherit]"
+          >
+            <div class="flex flex-col gap-2 p-3 text-sm">
+              <!-- Identity (flag, name, type, traitor, relation) -->
+              <div class="mb-1">${this.renderIdentityRow(other, viewer)}</div>
 
-                  <div
-                    class="p-6 flex flex-col gap-2 font-sans antialiased text-[14.5px] leading-relaxed"
-                  >
-                    <!-- Identity (flag, name, type, traitor, relation) -->
-                    <div class="mb-1">
-                      ${this.renderIdentityRow(other, viewer)}
-                    </div>
+              <!-- Cosmetics the player has equipped -->
+              <equipped-cosmetics-row
+                .cosmetics=${other.cosmetics}
+              ></equipped-cosmetics-row>
 
-                    <!-- Cosmetics the player has equipped -->
-                    <equipped-cosmetics-row
-                      .cosmetics=${other.cosmetics}
-                    ></equipped-cosmetics-row>
+              ${
+                this.sendTarget && !isSpectator
+                  ? html`
+                      <send-resource-modal
+                        .open=${this.sendMode !== "none"}
+                        .mode=${this.sendMode}
+                        .total=${
+                          this.sendMode === "troops" ? myTroopsNum : myGoldNum
+                        }
+                        .uiState=${this.uiState}
+                        .myPlayer=${viewer}
+                        .target=${this.sendTarget}
+                        .gameView=${this.g}
+                        .eventBus=${this.eventBus}
+                        .format=${
+                          this.sendMode === "troops"
+                            ? renderTroops
+                            : renderNumber
+                        }
+                        @confirm=${this.confirmSend}
+                        @close=${this.closeSend}
+                      ></send-resource-modal>
+                    `
+                  : ""
+              }
+              ${
+                this.moderationTarget
+                  ? html`
+                      <player-moderation-modal
+                        .open=${true}
+                        .myPlayer=${viewer}
+                        .target=${this.moderationTarget}
+                        .eventBus=${this.eventBus}
+                        .isAdmin=${this.isAdminRole}
+                        .alreadyKicked=${this.kickedPlayerIDs.has(
+                          String(this.moderationTarget.id()),
+                        )}
+                        @close=${this.closeModeration}
+                        @kicked=${this.handleModerationKicked}
+                      ></player-moderation-modal>
+                    `
+                  : ""
+              }
+              ${
+                this.reportTarget
+                  ? html`
+                      <player-report-modal
+                        .open=${true}
+                        .target=${this.reportTarget}
+                        .eventBus=${this.eventBus}
+                        @close=${this.closeReport}
+                      ></player-report-modal>
+                    `
+                  : ""
+              }
 
-                    ${
-                      this.sendTarget && !isSpectator
-                        ? html`
-                            <send-resource-modal
-                              .open=${this.sendMode !== "none"}
-                              .mode=${this.sendMode}
-                              .total=${
-                                this.sendMode === "troops"
-                                  ? myTroopsNum
-                                  : myGoldNum
-                              }
-                              .uiState=${this.uiState}
-                              .myPlayer=${viewer}
-                              .target=${this.sendTarget}
-                              .gameView=${this.g}
-                              .eventBus=${this.eventBus}
-                              .format=${
-                                this.sendMode === "troops"
-                                  ? renderTroops
-                                  : renderNumber
-                              }
-                              @confirm=${this.confirmSend}
-                              @close=${this.closeSend}
-                            ></send-resource-modal>
-                          `
-                        : ""
-                    }
-                    ${
-                      this.moderationTarget
-                        ? html`
-                            <player-moderation-modal
-                              .open=${true}
-                              .myPlayer=${viewer}
-                              .target=${this.moderationTarget}
-                              .eventBus=${this.eventBus}
-                              .isAdmin=${this.isAdminRole}
-                              .alreadyKicked=${this.kickedPlayerIDs.has(
-                                String(this.moderationTarget.id()),
-                              )}
-                              @close=${this.closeModeration}
-                              @kicked=${this.handleModerationKicked}
-                            ></player-moderation-modal>
-                          `
-                        : ""
-                    }
-                    ${
-                      this.reportTarget
-                        ? html`
-                            <player-report-modal
-                              .open=${true}
-                              .target=${this.reportTarget}
-                              .eventBus=${this.eventBus}
-                              @close=${this.closeReport}
-                            ></player-report-modal>
-                          `
-                        : ""
-                    }
+              <ui-divider color="bg-white/10"></ui-divider>
 
-                    <ui-divider></ui-divider>
+              <!-- Resources -->
+              ${this.renderResources(other)}
 
-                    <!-- Resources -->
-                    ${this.renderResources(other)}
+              <!-- Rocket direction toggle -->
+              ${
+                other === viewer && !isSpectator
+                  ? this.renderRocketDirectionToggle()
+                  : ""
+              }
 
-                    <!-- Rocket direction toggle -->
-                    ${
-                      other === viewer && !isSpectator
-                        ? this.renderRocketDirectionToggle()
-                        : ""
-                    }
+              <ui-divider color="bg-white/10"></ui-divider>
 
-                    <ui-divider></ui-divider>
+              <!-- Stats: betrayals / trading -->
+              ${this.renderStats(other, viewer)}
 
-                    <!-- Stats: betrayals / trading -->
-                    ${this.renderStats(other, viewer)}
+              <ui-divider color="bg-white/10"></ui-divider>
 
-                    <ui-divider></ui-divider>
+              <!-- Alliances list -->
+              ${this.renderAlliances(other)}
 
-                    <!-- Alliances list -->
-                    ${this.renderAlliances(other)}
-
-                    <!-- Alliance time remaining -->
-                    ${this.renderAllianceExpiry()}
-                    ${
-                      !isSpectator
-                        ? html`
-                            <ui-divider></ui-divider>
-                            <!-- Actions -->
-                            ${this.renderActions(viewer, other)}
-                          `
-                        : my
-                          ? // Dead (or not yet spawned) players still get to
-                            // report and, as host/admin, moderate.
-                            this.renderModeration(my, other, this.isAdminRole)
-                          : ""
-                    }
-                  </div>
-                </div>
-              </div>
+              <!-- Alliance time remaining -->
+              ${this.renderAllianceExpiry()}
+              ${
+                !isSpectator
+                  ? html`
+                      <ui-divider color="bg-white/10"></ui-divider>
+                      <!-- Actions -->
+                      ${this.renderActions(viewer, other)}
+                    `
+                  : my
+                    ? // Dead (or not yet spawned) players still get to
+                      // report and, as host/admin, moderate.
+                      this.renderModeration(my, other, this.isAdminRole)
+                    : ""
+              }
             </div>
           </div>
         </div>
