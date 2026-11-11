@@ -1,12 +1,5 @@
 // @vitest-environment jsdom
 import { PlayerType } from "@openfront/engine-api/game/GameTypes";
-import {
-  goldCoinIcon,
-  guildIcon,
-  profileIcon,
-  soldierIcon,
-  upperLimitIcon,
-} from "../src/client/hud/HotbarIcons";
 import { goldRateTracker } from "../src/client/hud/layers/lib/GoldRateTracker";
 import {
   type ColumnId,
@@ -119,9 +112,7 @@ describe("PlayerStats", () => {
     const goldHeader = playerStats.querySelectorAll(
       '.stats-table-header > [role="columnheader"]',
     )[3];
-    expect(goldHeader.querySelector("img")?.getAttribute("src")).toBe(
-      goldCoinIcon,
-    );
+    expect(goldHeader.querySelector('of-icon[name="gold"]')).not.toBeNull();
     expect(goldHeader.querySelector("button")?.getAttribute("aria-label")).toBe(
       "leaderboard.gold",
     );
@@ -142,7 +133,7 @@ describe("PlayerStats", () => {
     playerStats.remove();
   });
 
-  it("centers headers and discrete counts and renders white troop icons", async () => {
+  it("centers headers and discrete counts and draws the troop icons", async () => {
     new UserSettings().setStatsColumns("player", [
       "troops",
       "maxtroops",
@@ -171,23 +162,19 @@ describe("PlayerStats", () => {
     const countCell = playerStats.querySelector(
       '.stats-table-row > [role="cell"]:nth-child(5)',
     );
-    const troopIcon = headers[2].querySelector("img");
-    const maxTroopIcons = headers[3].querySelectorAll("img");
+    const troopIcons = headers[2].querySelectorAll("of-icon");
+    const maxTroopIcons = headers[3].querySelectorAll("of-icon");
     expect(headers[1].classList).toContain("justify-center");
     expect(headers[2].classList).toContain("justify-center");
     expect(headers[3].classList).toContain("justify-center");
     expect(headers[4].classList).toContain("justify-center");
-    expect(troopIcon?.getAttribute("src")).toBe(soldierIcon);
-    expect(troopIcon?.classList).toContain("brightness-0");
-    expect(troopIcon?.classList).toContain("invert");
+    expect([...troopIcons].map((icon) => icon.getAttribute("name"))).toEqual([
+      "troops",
+    ]);
     // Max troops header reads as a troop icon raised to the upper-limit icon.
-    expect(maxTroopIcons.length).toBe(2);
-    expect(maxTroopIcons[0].getAttribute("src")).toBe(soldierIcon);
-    expect(maxTroopIcons[0].classList).toContain("brightness-0");
-    expect(maxTroopIcons[0].classList).toContain("invert");
-    expect(maxTroopIcons[1].getAttribute("src")).toBe(upperLimitIcon);
-    expect(maxTroopIcons[1].classList).toContain("brightness-0");
-    expect(maxTroopIcons[1].classList).toContain("invert");
+    expect([...maxTroopIcons].map((icon) => icon.getAttribute("name"))).toEqual(
+      ["troops", "max"],
+    );
     expect(countCell?.classList).toContain("justify-center");
     expect(countCell?.classList).toContain("text-center");
 
@@ -368,13 +355,9 @@ describe("PlayerStats clan column", () => {
     const headers = playerStats.querySelectorAll(
       '.stats-table-header > [role="columnheader"]',
     );
-    expect(headers[1].querySelector("img")?.getAttribute("src")).toBe(
-      guildIcon,
-    );
+    expect(headers[1].querySelector('of-icon[name="clan"]')).not.toBeNull();
     expect(headers[1].getAttribute("title")).toBe("leaderboard.clan");
-    expect(headers[2].querySelector("img")?.getAttribute("src")).toBe(
-      profileIcon,
-    );
+    expect(headers[2].querySelector('of-icon[name="player"]')).not.toBeNull();
     expect(
       playerStats.querySelector(".stats-table-content")?.getAttribute("style"),
     ).toContain("34px 80px 100px");
