@@ -251,9 +251,6 @@ export class LeaderboardPlayerList extends LitElement {
       this.dispatchEvent(new CustomEvent("ffa-rating-live", { bubbles: true }));
     }
     if (changed.has("rankedType")) {
-      if (this.rankedType !== RankedType.FreeForAll) {
-        this.ffaAllRanks = false;
-      }
       // The ladders are separate lists sharing one scroll container...
       if (this.scrollContainer) this.scrollContainer.scrollTop = 0;
       this.scheduleStickyVisibilityCheck();
