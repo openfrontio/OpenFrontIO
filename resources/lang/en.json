@@ -724,6 +724,7 @@
     "map_activity_ship_sent": "{name} sent a boat to {x}, {y}",
     "map_activity_ships_at_sea": "Boats at sea",
     "map_activity_siege": "{clan} annexed {count, plural, one {# pixel} other {# pixels}} in a siege",
+    "map_activity_siege_won": "Annexed {count, plural, one {# pixel} other {# pixels}} from {clan} in a siege",
     "map_activity_signed_out": "Sign in to see your clan's map activity.",
     "map_activity_sort_active": "Last active",
     "map_activity_sort_by": "Sort by",

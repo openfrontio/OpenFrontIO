@@ -684,6 +684,18 @@ export class ClanMapActivityView extends LitElement {
         );
         at = { x: e.x, y: e.y };
         break;
+      case "siege_won":
+        headline = this.withSlots(
+          "clan_modal.map_activity_siege_won",
+          { count: e.pixels },
+          { clan: this.clan(e.clan) },
+        );
+        right = this.value(
+          t("clan_modal.map_activity_px_gain", { count: e.pixels }),
+          "gain",
+        );
+        at = { x: e.x, y: e.y };
+        break;
     }
     // The day divider above already says which day: just the time.
     const time = e.kind === "ship_sailing" ? null : formatTime(new Date(e.at));

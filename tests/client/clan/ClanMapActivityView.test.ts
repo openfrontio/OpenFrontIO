@@ -94,6 +94,14 @@ const allKinds: MapActivityEvent[] = [
     x: 3,
     y: 4,
   },
+  {
+    kind: "siege_won",
+    at: now,
+    clan: { tag: "LUX", color: 0x5b4be0 },
+    pixels: 9,
+    x: 5,
+    y: 6,
+  },
 ];
 
 const pageOf = (
@@ -166,9 +174,19 @@ describe("ClanMapActivityView", () => {
       "ship_landed",
       "lost",
       "siege",
+      "siege_won",
     ]) {
       expect(el.querySelector(`[data-kind=${kind}]`), kind).not.toBeNull();
     }
+    // A siege the clan won: the clan it took from, as a gain, on the map.
+    const won = el.querySelector("[data-kind=siege_won]")!;
+    expect(won.textContent).toContain("LUX");
+    expect(won.textContent).toContain("clan_modal.map_activity_px_gain");
+    expect(won.querySelector("[data-view-on-map]")).not.toBeNull();
+    expect(translateText).toHaveBeenCalledWith(
+      "clan_modal.map_activity_siege_won",
+      { count: 9, clan: expect.any(String) },
+    );
     expect(el.textContent).toContain("clan_modal.map_activity_claimed");
     expect(el.textContent).toContain("clan_modal.map_activity_siege");
     // Deleted player and deleted clan get labels, not links.

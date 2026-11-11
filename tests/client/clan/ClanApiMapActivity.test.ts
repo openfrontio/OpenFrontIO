@@ -100,6 +100,14 @@ const page = {
       x: 3,
       y: 4,
     },
+    {
+      kind: "siege_won",
+      at: "2026-11-10T22:10:00.000Z",
+      clan: { tag: "LUX", color: 6514417 },
+      pixels: 9,
+      x: 5,
+      y: 6,
+    },
   ],
   nextBefore: "2026-11-10T22:10:00.000Z",
 };

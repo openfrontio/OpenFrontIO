@@ -469,6 +469,16 @@ export const MapActivityEventSchema = z.discriminatedUnion("kind", [
     x: z.number(),
     y: z.number(),
   }),
+  // A siege ring of ours annexed another clan's pixels.
+  z.object({
+    kind: z.literal("siege_won"),
+    at: z.iso.datetime(),
+    // The clan the pixels were taken from.
+    clan: MapActivityClanSchema,
+    pixels: z.number(),
+    x: z.number(),
+    y: z.number(),
+  }),
 ]);
 export type MapActivityEvent = z.infer<typeof MapActivityEventSchema>;
 
