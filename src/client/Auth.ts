@@ -497,35 +497,6 @@ async function refreshJwt(): Promise<void> {
 }
 
 async function doRefreshJwt(): Promise<void> {
-  if (getAudience() === "localhost") {
-    const hashMatch = window.location.hash.match(/(?:^|[&#])dev_jwt=([^&]+)/);
-    if (hashMatch) {
-      localStorage.setItem("dev_jwt", decodeURIComponent(hashMatch[1]));
-      history.replaceState(
-        null,
-        "",
-        window.location.pathname + window.location.search,
-      );
-    }
-    const devJwt = localStorage.getItem("dev_jwt");
-    if (devJwt) {
-      try {
-        const payload = decodeJwt(devJwt);
-        if (
-          typeof payload.exp === "number" &&
-          payload.exp * 1000 > Date.now() + 3 * 60 * 1000
-        ) {
-          __expiresAt = payload.exp * 1000;
-          __jwt = devJwt;
-          updateUserSettingsForJwt(devJwt);
-          return;
-        }
-        console.warn("dev_jwt in localStorage is expired");
-      } catch (e) {
-        console.warn("Invalid dev_jwt in localStorage", e);
-      }
-    }
-  }
   if (steamSDK.isOnSteam()) {
     const result = await steamSDK.getTicket();
     if (result.ok) {

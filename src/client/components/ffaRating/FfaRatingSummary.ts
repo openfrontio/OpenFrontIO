@@ -119,6 +119,7 @@ export class FfaRatingSummary extends LitElement {
                     >`
               }
               ${
+                rating.globalPosition === undefined ||
                 rating.globalPosition === null
                   ? nothing
                   : html`<span
