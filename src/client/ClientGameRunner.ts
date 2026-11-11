@@ -154,6 +154,9 @@ export function joinLobby(
   const transport = new Transport(lobbyConfig, eventBus);
 
   let currentGameRunner: ClientGameRunner | null = null;
+  // Set once this lobby has been left. A load that was still pending can reject
+  // after a newer lobby has requested tab attention, and must not clear it.
+  let lobbyStopped = false;
 
   const onconnect = async () => {
     // Drop the tag if the ownership check failed; the server re-checks anyway.
@@ -313,8 +316,9 @@ export function joinLobby(
           console.error("error creating client game", e);
 
           currentGameRunner = null;
-          // The game never started, so stop any "starting" tab flash.
-          tabAttention.release();
+          // The game never started, so stop any "starting" tab flash, unless
+          // this lobby was already left (a newer lobby may own the flash now).
+          if (!lobbyStopped) tabAttention.release();
 
           const startingModal = document.querySelector(
             "game-starting-modal",
@@ -453,12 +457,15 @@ export function joinLobby(
         return false;
       }
       console.log("leaving game");
+      const alreadyStopped = lobbyStopped;
+      lobbyStopped = true;
       if (currentGameRunner) {
         currentGameRunner.stop();
         currentGameRunner = null;
       } else {
         // Left during prestart, before a runner exists to release the flash.
-        tabAttention.release();
+        // A repeated stop must not clear a newer lobby's flash.
+        if (!alreadyStopped) tabAttention.release();
         transport.leaveGame();
       }
       return true;
