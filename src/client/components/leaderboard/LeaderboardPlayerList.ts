@@ -167,7 +167,7 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   private get activeLadder(): LadderState {
-    if (this.ffaAllRanks)
+    if (this.rankedType === RankedType.FreeForAll && this.ffaAllRanks)
       return {
         entries: this.ffaAllRows,
         userEntry: null,
@@ -433,7 +433,7 @@ export class LeaderboardPlayerList extends LitElement {
         this.currentPage++;
       }
 
-      if (this.ffaRank === null && this.ffaRatingServed) {
+      if (this.ffaRank === null && !this.ffaAllRanks && this.ffaRatingServed) {
         // The overall board's first row is in the highest rank with players.
         const topTier = nextLadders[RankedType.FreeForAll].entries[0]?.tier;
         const topRank = topTier ? parseFfaTier(topTier)?.base : undefined;
@@ -1258,7 +1258,7 @@ export class LeaderboardPlayerList extends LitElement {
       `;
     }
 
-    if (this.ffaAllFailed)
+    if (this.ffaAllRanks && this.ffaAllFailed)
       return html`<div class="py-4 text-center">
         <button
           class="text-xs text-red-300"
