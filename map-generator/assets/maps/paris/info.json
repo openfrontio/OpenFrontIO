@@ -3,6 +3,9 @@
   "id": "Paris",
   "name": "Paris",
   "translation_key": "map.paris",
+  "location": { "lat": 48.9, "lon": 2.35 },
+  "author": "eauchs",
+  "description": "Paris began as Lutetia, a Roman town around the Île de la Cité, and in 1860 swallowed its suburbs to become today's 20 arrondissements. Here the Seine, the canals and the big avenues are water, about as fast as Paris traffic anyway. Take Montmartre, or Belleville, which is actually higher. The tourists never noticed.",
   "categories": ["europe", "new"],
   "nations": [
     {
