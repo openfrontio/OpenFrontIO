@@ -174,7 +174,10 @@ export class LeaderboardPlayerList extends LitElement {
     if (this.ffaAllActive)
       return {
         entries: this.ffaAllRows,
-        userEntry: null,
+        userEntry:
+          this.ffaOwnRow !== null && this.ffaOwnRow.globalPosition !== undefined
+            ? { ...this.ffaOwnRow, rank: this.ffaOwnRow.globalPosition }
+            : null,
         hasMore: this.ffaAllHasMore,
       };
     if (this.ffaRankActive) {
