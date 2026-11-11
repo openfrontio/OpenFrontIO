@@ -29,14 +29,17 @@ interface PlacedRow {
   position: number;
 }
 
+/**
+ * What the list draws: a row, or a spacer `spacer` px tall standing for the
+ * rows from index `from` that have no DOM.
+ */
+type ListItem = { spacer: number; from: number } | { placed: PlacedRow };
+
 // Fallbacks cover the first render before measurement and jsdom (tests),
 // which reports zero element sizes.
 const FALLBACK_ROW_HEIGHT_PX = 24;
 const FALLBACK_VIEWPORT_HEIGHT_PX = 180;
 const OVERSCAN_ROWS = 4;
-// The pinned row only renders separately when the viewer sits below the
-// always-visible top ranks of the scroll window.
-const PINNED_VISIBLE_THRESHOLD = 4;
 // Trailing chrome track holding the ⚙️ menu, not a column of data.
 const PICKER_TRACK = "32px";
 
@@ -91,15 +94,19 @@ const CHEVRON_STATE = {
 // puts them on the row's middle.
 const ROW = "h-6 md:h-7 pb-px not-last:border-b not-last:border-white/5";
 // Your row and your teammates' are bold, not told apart by colour alone.
+// Your row stays in the list and is held at its top or bottom edge when it
+// is out of view. Its blue band lies over the panel's navy, which fades with
+// the HUD opacity like the panel: the rows passing under it are hidden, or
+// blurred like the map below full opacity, so no text shows through yours.
 const ROW_STATE: Record<RowState, string> = {
-  me: "bg-malibu-blue/25 font-bold text-white",
+  me: "sticky top-0 bottom-0 z-1 bg-hud-panel bg-linear-to-r from-malibu-blue/25 to-malibu-blue/25 backdrop-blur-hud font-bold text-white",
   mate: "font-bold text-white",
   other: "",
 };
 // Only rows with a click get a hover, and only for a mouse: after a tap it
 // would stay lit.
 const ROW_HOVER: Record<RowState, string> = {
-  me: "pointer-fine:hover:bg-malibu-blue/35",
+  me: "pointer-fine:hover:from-malibu-blue/35 pointer-fine:hover:to-malibu-blue/35",
   mate: "pointer-fine:hover:bg-white/6",
   other: "pointer-fine:hover:bg-white/6",
 };
@@ -401,7 +408,6 @@ export abstract class StatsTable extends LitElement {
     game: GameView,
     columns: readonly ColumnDef[],
     { row, position }: PlacedRow,
-    pinned = false,
   ) {
     const state: RowState = row.pinned
       ? "me"
@@ -411,9 +417,7 @@ export abstract class StatsTable extends LitElement {
     // translate="no": a page translator must not rewrite player names.
     return html`
       <div
-        class="stats-table-row ${
-          pinned ? "stats-table-pinned-row" : ""
-        } grid col-span-full ${ROW} ${ROW_STATE[state]} ${
+        class="stats-table-row grid col-span-full ${ROW} ${ROW_STATE[state]} ${
           row.onClick ? `cursor-pointer ${ROW_HOVER[state]}` : ""
         }"
         style="grid-template-columns: subgrid; grid-column: 1 / -1;"
@@ -450,15 +454,6 @@ export abstract class StatsTable extends LitElement {
     if (!this.visible || game === null) return html``;
 
     const columns = this.visibleColumns();
-    const pinnedIndex = this.rows.findIndex((row) => row.pinned);
-    const pinnedRow: PlacedRow | null =
-      pinnedIndex > PINNED_VISIBLE_THRESHOLD
-        ? { row: this.rows[pinnedIndex], position: pinnedIndex + 1 }
-        : null;
-    const listRows =
-      pinnedRow === null
-        ? this.rows
-        : this.rows.filter((_, index) => index !== pinnedIndex);
     // Virtualize: only rows near the scroll viewport get DOM; spacers keep
     // the scrollbar geometry for the rest. Positions stay list-wide.
     const firstIndex = Math.max(
@@ -466,23 +461,32 @@ export abstract class StatsTable extends LitElement {
       Math.floor(this.scrollOffsetPx / this.rowHeightPx) - OVERSCAN_ROWS,
     );
     const lastIndex = Math.min(
-      listRows.length,
+      this.rows.length,
       Math.ceil(
         (this.scrollOffsetPx + this.viewportHeightPx) / this.rowHeightPx,
       ) + OVERSCAN_ROWS,
     );
-    const scrollableRows: PlacedRow[] = listRows
-      .slice(firstIndex, lastIndex)
-      .map((row, sliceIndex) => {
-        const index = firstIndex + sliceIndex;
-        return {
-          row,
-          position:
-            pinnedRow !== null && index >= pinnedIndex ? index + 2 : index + 1,
-        };
-      });
-    const topSpacerPx = firstIndex * this.rowHeightPx;
-    const bottomSpacerPx = (listRows.length - lastIndex) * this.rowHeightPx;
+    // Your row is drawn wherever it is, so that it can be held at the edge;
+    // the spacer it falls in is split around it. Those spacers change while
+    // the list scrolls, so the list keeps no scroll anchor: the browser must
+    // not answer them by moving the scroll position.
+    const myIndex = this.rows.findIndex((row) => row.pinned);
+    const items: ListItem[] = [];
+    let next = 0; // the first row not yet in items
+    const spaceTo = (index: number) => {
+      if (index > next) {
+        items.push({ spacer: (index - next) * this.rowHeightPx, from: next });
+      }
+    };
+    const place = (index: number) => {
+      spaceTo(index);
+      items.push({ placed: { row: this.rows[index], position: index + 1 } });
+      next = index + 1;
+    };
+    if (myIndex >= 0 && myIndex < firstIndex) place(myIndex);
+    for (let index = firstIndex; index < lastIndex; index++) place(index);
+    if (myIndex >= lastIndex) place(myIndex);
+    spaceTo(this.rows.length);
     // "auto" tracks stay content-sized intrinsically, then split only the
     // spare width supplied by a wider sibling; fixed tracks never stretch.
     const gridTemplate = `${columns
@@ -543,41 +547,27 @@ export abstract class StatsTable extends LitElement {
             </div>
 
             <div
-              class="stats-table-scroll stats-rows grid col-span-full overflow-y-scroll overflow-x-hidden overscroll-contain ${SCROLLBAR}"
+              class="stats-table-scroll stats-rows grid col-span-full overflow-y-scroll overflow-x-hidden overscroll-contain [overflow-anchor:none] ${SCROLLBAR}"
               style="grid-template-columns: subgrid; grid-column: 1 / -1;"
               role="rowgroup"
               @scroll=${this.onScroll}
             >
-              ${
-                topSpacerPx > 0
-                  ? html`<div
-                      class="stats-table-spacer col-span-full"
-                      style="height: ${topSpacerPx}px"
-                      aria-hidden="true"
-                    ></div>`
-                  : nothing
-              }
               ${repeat(
-                scrollableRows,
-                (placed) => placed.row.key,
-                (placed) => this.renderRow(game, columns, placed),
+                items,
+                (item) =>
+                  "spacer" in item
+                    ? `spacer-${item.from}`
+                    : `row-${item.placed.row.key}`,
+                (item) =>
+                  "spacer" in item
+                    ? html`<div
+                        class="stats-table-spacer col-span-full"
+                        style="height: ${item.spacer}px"
+                        aria-hidden="true"
+                      ></div>`
+                    : this.renderRow(game, columns, item.placed),
               )}
-              ${
-                bottomSpacerPx > 0
-                  ? html`<div
-                      class="stats-table-spacer col-span-full"
-                      style="height: ${bottomSpacerPx}px"
-                      aria-hidden="true"
-                    ></div>`
-                  : nothing
-              }
             </div>
-
-            ${
-              pinnedRow === null
-                ? nothing
-                : this.renderRow(game, columns, pinnedRow, true)
-            }
           </div>
         </div>
       </div>

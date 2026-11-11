@@ -77,7 +77,7 @@ describe("PlayerStats", () => {
     playerStats.remove();
   });
 
-  it("keeps every player available without leaving a gap for the pinned row", async () => {
+  it("keeps every player in the list, yours at its own rank", async () => {
     const players = [
       player("one", 70),
       player("two", 60),
@@ -104,7 +104,6 @@ describe("PlayerStats", () => {
     await playerStats.updateComplete;
 
     const scrollable = playerStats.querySelector(".stats-table-scroll");
-    const pinned = playerStats.querySelector(".stats-table-pinned-row");
     const table = playerStats.querySelector(".stats-table");
     const picker = playerStats.querySelector("column-picker");
     expect(playerStats.querySelectorAll(".stats-table-row")).toHaveLength(7);
@@ -119,13 +118,27 @@ describe("PlayerStats", () => {
       "leaderboard.gold",
     );
     expect(scrollable).not.toBeNull();
-    expect(pinned?.textContent).toContain("me");
-    expect(scrollable?.contains(pinned)).toBe(false);
-    expect(
-      [...(scrollable?.querySelectorAll(".stats-table-row") ?? [])].map(
-        (row) => row.textContent?.trim().split(/\s+/)[0],
-      ),
-    ).toEqual(["1", "2", "3", "4", "5", "6"]);
+    const rows = [...(scrollable?.querySelectorAll(".stats-table-row") ?? [])];
+    expect(rows.map((row) => row.textContent?.trim().split(/\s+/)[0])).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+    ]);
+    expect(rows.map((row) => row.hasAttribute("data-me"))).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+    ]);
+    expect(rows[6].textContent).toContain("me");
+    expect(playerStats.querySelector(".stats-table-pinned-row")).toBeNull();
     expect(
       [...playerStats.querySelectorAll("button")].some((button) =>
         ["+", "-"].includes(button.textContent?.trim() ?? ""),
