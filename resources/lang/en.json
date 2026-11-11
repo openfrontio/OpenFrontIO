@@ -1246,6 +1246,8 @@
     "atom_bomb_inbound": "{name} - atom bomb inbound",
     "atom_bomb_inbound_count": "{name} - {count, plural, other {# atom bombs}} inbound",
     "attack_cancelled_retreat": "Attack cancelled, {troops} soldiers killed during retreat",
+    "attack_incoming": "Incoming",
+    "attack_outgoing": "Outgoing",
     "attack_request": "{name} requests you attack {target}",
     "betrayal_debuff_ends": "{time} seconds left until betrayal debuff ends",
     "betrayal_description": "You broke your alliance with {name}, making you a TRAITOR ({malusPercent}% defense debuff for {durationText})",
