@@ -2212,6 +2212,7 @@
     "betrayals": "Betrayals",
     "break_alliance": "Break Alliance",
     "chat": "Chat",
+    "cooldown": "{action} (on cooldown)",
     "cosmetic_get_label": "{name} (Get it in the store)",
     "cosmetics": "Equipped",
     "emotes": "Emojis",
