@@ -88,10 +88,32 @@ describe("GameServer listing", () => {
   it("is unlisted by default and toggles via setListed", () => {
     const game = makeGame();
     expect(game.isListed()).toBe(false);
+    expect(game.getVisibleAt()).toBeUndefined();
+
     game.setListed(true);
     expect(game.isListed()).toBe(true);
+    const visibleAt = game.getVisibleAt();
+    expect(visibleAt).toBeTypeOf("number");
+
     game.setListed(false);
     expect(game.isListed()).toBe(false);
+    expect(game.getVisibleAt()).toBe(visibleAt);
+  });
+
+  it("does not stamp visibleAt when private game countdown starts", () => {
+    const game = makeGame();
+    expect(game.getVisibleAt()).toBeUndefined();
+    game.setStartsAt(Date.now() + 5000);
+    expect(game.getVisibleAt()).toBeUndefined();
+  });
+
+  it("stamps visibleAt when public game countdown starts", () => {
+    const game = makeGame("public-game", CREATOR, {
+      gameType: GameType.Public,
+    });
+    expect(game.getVisibleAt()).toBeUndefined();
+    game.setStartsAt(Date.now() + 5000);
+    expect(game.getVisibleAt()).toBeTypeOf("number");
   });
 
   it("cannot be listed through update_game_config", () => {

@@ -6,6 +6,7 @@ import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { isCompactViewport } from "../../CompactViewport";
 import type { Controller } from "../../Controller";
+import { AlternateViewEvent } from "../../InputHandler";
 import { Platform } from "../../Platform";
 import { themeProvider } from "../../theme/ThemeProvider";
 import { getTranslatedPlayerTeamLabel, translateText } from "../../Utils";
@@ -22,6 +23,7 @@ const playerStatsRegularIcon = assetUrl(
 const playerStatsSolidIcon = assetUrl("images/LeaderboardIconSolidWhite.svg");
 const teamStatsRegularIcon = assetUrl("images/TeamIconRegularWhite.svg");
 const teamStatsSolidIcon = assetUrl("images/TeamIconSolidWhite.svg");
+const alternateViewIcon = assetUrl("images/TreeIconWhite.svg");
 
 @customElement("game-left-sidebar")
 export class GameLeftSidebar extends LitElement implements Controller {
@@ -39,6 +41,8 @@ export class GameLeftSidebar extends LitElement implements Controller {
   private spawnBarVisible = false;
   @state()
   private immunityBarVisible = false;
+  @state()
+  private alternateView = false;
 
   private playerColor: Colord = new Colord("#FFFFFF");
   @property({ attribute: false }) public game: GameView | null = null;
@@ -58,6 +62,11 @@ export class GameLeftSidebar extends LitElement implements Controller {
     });
     this.eventBus?.on(ImmunityBarVisibleEvent, (e) => {
       this.immunityBarVisible = e.visible;
+    });
+    // Holding the toggle-view key (space) or the settings toggle also switch
+    // the view; keep the button in step with whichever did it last.
+    this.eventBus?.on(AlternateViewEvent, (e) => {
+      this.alternateView = e.alternateView;
     });
     if (this.isTeamGame) {
       this.isPlayerTeamLabelVisible = true;
@@ -105,6 +114,10 @@ export class GameLeftSidebar extends LitElement implements Controller {
 
   private toggleTeamStats(): void {
     this.isTeamStatsShown = !this.isTeamStatsShown;
+  }
+
+  private toggleAlternateView(): void {
+    this.eventBus?.emit(new AlternateViewEvent(!this.alternateView));
   }
 
   private get isTeamGame(): boolean {
@@ -182,6 +195,32 @@ export class GameLeftSidebar extends LitElement implements Controller {
                 `
               : null
           }
+          <div
+            class="cursor-pointer p-0.5 hover:bg-gray-600 border rounded-md transition-colors ${
+              this.alternateView
+                ? "bg-gray-500 border-white"
+                : "bg-gray-700/50 border-slate-500"
+            }"
+            @click=${this.toggleAlternateView}
+            role="button"
+            tabindex="0"
+            aria-pressed=${this.alternateView ? "true" : "false"}
+            title=${translateText("user_setting.toggle_view_desc")}
+            @keydown=${(e: KeyboardEvent) => {
+              // Not space: that's the hold-to-view key, handled globally.
+              if (e.key === "Enter") {
+                e.preventDefault();
+                this.toggleAlternateView();
+              }
+            }}
+          >
+            <img
+              src=${alternateViewIcon}
+              alt=${translateText("user_setting.toggle_view_desc")}
+              width="20"
+              height="20"
+            />
+          </div>
           ${
             this.isPlayerStatsShown || this.isTeamStatsShown
               ? html`<span

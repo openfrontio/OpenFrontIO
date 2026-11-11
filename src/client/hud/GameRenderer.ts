@@ -404,6 +404,8 @@ export class GameRenderer {
     private performanceOverlay: PerformanceOverlay,
   ) {}
 
+  private canvasSizeObserver: ResizeObserver | null = null;
+
   private onResize = () => {
     this.transformHandler.updateCanvasBoundingRect();
   };
@@ -416,6 +418,7 @@ export class GameRenderer {
     this.layers.forEach((l) => l.init?.());
 
     window.addEventListener("resize", this.onResize);
+    this.canvasSizeObserver = this.transformHandler.observeCanvasSize();
 
     //show whole map on startup
     this.transformHandler.centerAll(0.9);
@@ -423,6 +426,8 @@ export class GameRenderer {
 
   dispose() {
     window.removeEventListener("resize", this.onResize);
+    this.canvasSizeObserver?.disconnect();
+    this.canvasSizeObserver = null;
   }
 
   tick() {
