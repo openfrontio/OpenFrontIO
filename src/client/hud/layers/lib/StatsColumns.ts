@@ -1,25 +1,9 @@
 import { PlayerType, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
+import type { OfIconName } from "../../../components/OfIcon";
 import type { ColumnId, StatsTableKind } from "../../../StatsConstants";
 import { formatPercentage, translateText } from "../../../Utils";
 import type { GameView, PlayerView } from "../../../view";
-import {
-  allianceIcon,
-  cityIcon,
-  claimIcon,
-  factoryIcon,
-  goldCoinIcon,
-  guildIcon,
-  missileSiloIcon,
-  portIcon,
-  profileIcon,
-  samLauncherIcon,
-  soldierIcon,
-  teamIcon,
-  traitorIcon,
-  upperLimitIcon,
-  warshipIcon,
-} from "../../HotbarIcons";
 import { goldRateTracker } from "./GoldRateTracker";
 
 export { type ColumnId } from "../../../StatsConstants";
@@ -27,11 +11,12 @@ export { type ColumnId } from "../../../StatsConstants";
 export type ColumnHeaderVisual =
   | {
       readonly kind: "icon";
-      readonly src: string;
-      readonly white?: true;
+      readonly icon: OfIconName;
+      /** Text colour class for icons whose colour carries meaning. */
+      readonly color?: string;
       /** Small icon or text rendered as a superscript on the main icon. */
       readonly superscript?:
-        | { readonly src: string; readonly white?: true }
+        | { readonly icon: OfIconName }
         | { readonly text: string };
     }
   // Text is a translation key ("leaderboard.type") or a literal symbol
@@ -86,12 +71,12 @@ function unitColumn(
   id: ColumnId,
   labelKey: string,
   unitType: UnitType,
-  icon: string,
+  icon: OfIconName,
 ): ColumnDef {
   return defineColumn({
     id,
     labelKey,
-    headerVisual: { kind: "icon", src: icon },
+    headerVisual: { kind: "icon", icon },
     align: "center",
     value: (player) => player.totalUnitLevels(unitType),
     cell: (row) => renderNumber(row.value),
@@ -100,8 +85,7 @@ function unitColumn(
 
 const troopHeaderVisual = {
   kind: "icon",
-  src: soldierIcon,
-  white: true,
+  icon: "troops",
 } as const satisfies ColumnHeaderVisual;
 
 // This registry is the source of truth for column IDs and display order.
@@ -118,7 +102,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
   defineColumn({
     id: "clan",
     labelKey: "leaderboard.clan",
-    headerVisual: { kind: "icon", src: guildIcon },
+    headerVisual: { kind: "icon", icon: "clan" },
     // Fits "WWWWW" — the widest 5-character tag — in the row font.
     width: "80px",
     align: "center",
@@ -128,7 +112,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
   defineColumn({
     id: "player",
     labelKey: "leaderboard.player",
-    headerVisual: { kind: "icon", src: profileIcon },
+    headerVisual: { kind: "icon", icon: "player" },
     width: "100px",
     align: "start",
     kinds: ["player"],
@@ -175,7 +159,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
   defineColumn({
     id: "team",
     labelKey: "leaderboard.team",
-    headerVisual: { kind: "icon", src: teamIcon },
+    headerVisual: { kind: "icon", icon: "team" },
     width: "100px",
     align: "start",
     kinds: ["team"],
@@ -185,7 +169,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
   defineColumn({
     id: "tiles",
     labelKey: "leaderboard.owned",
-    headerVisual: { kind: "icon", src: claimIcon, white: true },
+    headerVisual: { kind: "icon", icon: "land" },
     value: (player) => player.numTilesOwned(),
     cell: (row, game) => {
       const validTiles = game.numLandTiles() - game.numTilesWithFallout();
@@ -195,7 +179,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
   defineColumn({
     id: "gold",
     labelKey: "leaderboard.gold",
-    headerVisual: { kind: "icon", src: goldCoinIcon },
+    headerVisual: { kind: "icon", icon: "gold" },
     // Gold is a bigint, but game values remain safely below Number.MAX_SAFE_INTEGER.
     value: (player) => Number(player.gold()),
     cell: (row) => renderNumber(row.value),
@@ -205,7 +189,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     labelKey: "leaderboard.goldIncomePerMin",
     headerVisual: {
       kind: "icon",
-      src: goldCoinIcon,
+      icon: "gold",
       superscript: { text: "/m" },
     },
     value: (player) => goldRateTracker.goldIncomePerMin(player.smallID()),
@@ -216,7 +200,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     labelKey: "leaderboard.shipTradeGoldPerMin",
     headerVisual: {
       kind: "icon",
-      src: portIcon,
+      icon: "port",
       superscript: { text: "/m" },
     },
     value: (player) => goldRateTracker.shipTradeGoldPerMin(player.smallID()),
@@ -227,7 +211,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     labelKey: "leaderboard.piracyGoldPerMin",
     headerVisual: {
       kind: "icon",
-      src: warshipIcon,
+      icon: "warship",
       superscript: { text: "/m" },
     },
     value: (player) => goldRateTracker.piracyGoldPerMin(player.smallID()),
@@ -238,7 +222,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     labelKey: "leaderboard.trainTradeGoldPerMin",
     headerVisual: {
       kind: "icon",
-      src: factoryIcon,
+      icon: "factory",
       superscript: { text: "/m" },
     },
     value: (player) => goldRateTracker.trainTradeGoldPerMin(player.smallID()),
@@ -256,31 +240,26 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     labelKey: "leaderboard.maxtroops",
     headerVisual: {
       ...troopHeaderVisual,
-      superscript: { src: upperLimitIcon, white: true },
+      superscript: { icon: "max" },
     },
     value: (player, game) => game.config().maxTroops(player),
     cell: (row) => renderTroops(row.value),
   }),
-  unitColumn("cities", "leaderboard.cities", UnitType.City, cityIcon),
-  unitColumn("ports", "leaderboard.ports", UnitType.Port, portIcon),
-  unitColumn(
-    "factories",
-    "leaderboard.factories",
-    UnitType.Factory,
-    factoryIcon,
-  ),
+  unitColumn("cities", "leaderboard.cities", UnitType.City, "city"),
+  unitColumn("ports", "leaderboard.ports", UnitType.Port, "port"),
+  unitColumn("factories", "leaderboard.factories", UnitType.Factory, "factory"),
   unitColumn(
     "silos",
     "leaderboard.launchers",
     UnitType.MissileSilo,
-    missileSiloIcon,
+    "missile-silo",
   ),
-  unitColumn("sams", "leaderboard.sams", UnitType.SAMLauncher, samLauncherIcon),
-  unitColumn("warships", "leaderboard.warships", UnitType.Warship, warshipIcon),
+  unitColumn("sams", "leaderboard.sams", UnitType.SAMLauncher, "sam-launcher"),
+  unitColumn("warships", "leaderboard.warships", UnitType.Warship, "warship"),
   defineColumn({
     id: "allies",
     labelKey: "leaderboard.allies",
-    headerVisual: { kind: "icon", src: allianceIcon },
+    headerVisual: { kind: "icon", icon: "alliance", color: "text-green-400" },
     align: "center",
     value: (player) => player.allies().length,
     cell: (row) => renderNumber(row.value),
@@ -288,7 +267,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
   defineColumn({
     id: "betrayals",
     labelKey: "leaderboard.betrayals",
-    headerVisual: { kind: "icon", src: traitorIcon },
+    headerVisual: { kind: "icon", icon: "traitor", color: "text-red-400" },
     align: "center",
     value: (player) => player.betrayals(),
     cell: (row) => renderNumber(row.value),
