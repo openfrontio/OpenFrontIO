@@ -795,6 +795,8 @@ const SEND_FUNDS_ERRORS: Record<string, string> = {
   transfers_disabled: "clan_modal.send_funds_error_disabled",
   frozen: "clan_modal.send_funds_error_frozen",
   not_leader: "clan_modal.send_funds_error_not_leader",
+  leader_too_recent: "clan_modal.send_funds_error_leader_too_recent",
+  sender_not_eligible: "clan_modal.send_funds_error_sender_not_eligible",
   self_transfer: "clan_modal.send_funds_error_self",
   not_member: "clan_modal.send_funds_error_not_member",
   membership_too_recent: "clan_modal.send_funds_error_too_recent",
@@ -806,9 +808,12 @@ const SEND_FUNDS_ERRORS: Record<string, string> = {
 
 /**
  * Why a send failed, as far as the client can tell:
- * - `refused`: the server answered and stored nothing.
- * - `unknown`: no answer (network error or 5xx). The send may have gone
- *   through; repeating it with the same key is safe.
+ * - `refused`: the server refused it with one of its send rules (a 400 with
+ *   a code from SEND_FUNDS_ERRORS), so nothing was stored.
+ * - `unknown`: anything else, which says nothing about an earlier send under
+ *   the same key: no answer, a 5xx, a 401 (signed out), a 403, a 429 or a 400
+ *   without a known code. The send may have gone through; repeating it with
+ *   the same key is safe.
  * - `earlier_send`: the key was already used for a different member or
  *   amount, so an earlier send from this page went through.
  */
@@ -843,12 +848,19 @@ export async function sendClanFunds(
   }
   if (res.ok) return true;
   if (res.status >= 500) return unknown;
+  // These say who may send, not whether an earlier send went through, so
+  // they keep the key (outcome unknown) while still saying what's wrong.
   if (res.status === 401)
-    return { error: "clan_modal.sign_in_for_clans", outcome: "refused" };
+    return { error: "clan_modal.sign_in_for_clans", outcome: "unknown" };
   if (res.status === 403)
     return {
       error: "clan_modal.send_funds_error_not_leader",
-      outcome: "refused",
+      outcome: "unknown",
+    };
+  if (res.status === 429)
+    return {
+      error: "clan_modal.send_funds_error_rate_limited",
+      outcome: "unknown",
     };
   const body = (await res.json().catch(() => ({}))) as { code?: string };
   if (body.code === "idempotency_conflict") {
@@ -857,11 +869,11 @@ export async function sendClanFunds(
       outcome: "earlier_send",
     };
   }
-  return {
-    error:
-      (body.code && SEND_FUNDS_ERRORS[body.code]) ?? "clan_modal.error_failed",
-    outcome: "refused",
-  };
+  const refusal = body.code ? SEND_FUNDS_ERRORS[body.code] : undefined;
+  if (res.status === 400 && refusal) {
+    return { error: refusal, outcome: "refused" };
+  }
+  return { ...unknown, error: "clan_modal.error_failed" };
 }
 
 /**

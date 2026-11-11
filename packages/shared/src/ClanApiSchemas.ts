@@ -378,8 +378,13 @@ export const ClanFundTransferStatusSchema = z.object({
   enabled: z.boolean(),
   // Staff have frozen this clan's sends.
   frozen: z.boolean(),
-  // The viewer may send right now (leader, enabled, not frozen).
+  // Staff's reason for the freeze; sent to the leader and officers only.
+  frozenReason: z.string().nullable().default(null),
+  // The viewer may send right now (leader, enabled, not frozen, and has led
+  // the clan long enough).
   canSend: z.boolean(),
+  // For a leader who took over too recently: when they may first send.
+  leaderEligibleAt: z.iso.datetime().nullable().default(null),
   // Decimal bigint strings.
   hardBalance: z.string(),
   clanDailyCap: z.string(),

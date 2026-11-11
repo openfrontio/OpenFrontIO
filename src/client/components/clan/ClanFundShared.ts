@@ -21,13 +21,27 @@ export function clanLeftToday(status: ClanFundTransferStatus): bigint {
 
 // Why the leader can't send right now, as a translated sentence, or null.
 // Order matters: sending switched off says so first, then a frozen fund (even
-// when it is also empty).
+// when it is also empty), then a new leader's wait.
 export function sendBlockedReason(
   status: ClanFundTransferStatus,
   now: number = Date.now(),
 ): string | null {
   if (!status.enabled) return translateText("clan_modal.clan_fund_sending_off");
-  if (status.frozen) return translateText("clan_modal.clan_fund_frozen");
+  if (status.frozen) {
+    return status.frozenReason
+      ? translateText("clan_modal.clan_fund_frozen_reason", {
+          reason: status.frozenReason,
+        })
+      : translateText("clan_modal.clan_fund_frozen");
+  }
+  if (
+    status.leaderEligibleAt &&
+    new Date(status.leaderEligibleAt).getTime() > now
+  ) {
+    return translateText("clan_modal.clan_fund_leader_wait", {
+      date: formatAbsoluteTime(status.leaderEligibleAt),
+    });
+  }
   if (BigInt(status.hardBalance) <= 0n) {
     return translateText("clan_modal.clan_fund_empty");
   }
@@ -50,8 +64,8 @@ export function renderPlutoniumAmount(
   opts: { struck?: boolean } = {},
 ): TemplateResult {
   return html`<span
-    class="inline-flex items-center gap-1 text-sm font-bold tabular-nums text-white/70 ${
-      opts.struck ? "line-through text-white/30" : ""
+    class="inline-flex items-center gap-1 text-sm font-bold tabular-nums ${
+      opts.struck ? "line-through text-white/30" : "text-white/70"
     }"
     ><plutonium-icon .size=${14}></plutonium-icon>${sign}${formatPlutonium(
       amount,
@@ -74,8 +88,9 @@ function renderPlayer(
 }
 
 // Stands in for {name} while translating, so the player's link can go where
-// the translation puts the name rather than always at the end.
-const NAME_SLOT = "name";
+// the translation puts the name rather than always at the end. Wrapped in
+// U+0001, which can't appear in real text, so it only matches the placeholder.
+const NAME_SLOT = "\u0001name\u0001";
 
 function renderWithPlayer(
   text: string,

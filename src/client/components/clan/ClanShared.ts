@@ -15,6 +15,16 @@ export { showToast };
 
 export type ClanRole = "leader" | "officer" | "member";
 
+// Idempotency key for a clan money request (donate, boost, send). UUID when
+// available; crypto.randomUUID is undefined outside secure contexts (e.g. dev
+// over plain http on a LAN address), so fall back to random hex of the same
+// shape. Either way 8–64 chars, as the API requires.
+export function newIdempotencyKey(): string {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export function defaultOrderForSort(sort: ClanMemberSort): ClanMemberOrder {
   return sort === "default" ? "asc" : "desc";
 }

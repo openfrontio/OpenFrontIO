@@ -67,6 +67,18 @@ export class ClanModal extends BaseModal {
   }
 
   @state() private view: View = "list";
+
+  protected willUpdate(changed?: PropertyValues): void {
+    super.willUpdate();
+    // Leaving the send page, however it went: a send may have moved money
+    // even when the page showed an error (a lost answer, or an earlier send
+    // that turned out to have gone through), so the overview's treasury and
+    // My Clans' balances (read from the cached user) are refetched.
+    if (changed?.get("view") === "send-funds" && this.view !== "send-funds") {
+      this.detailCache = null;
+      invalidateUserMe();
+    }
+  }
   // Mode the Donations tab opens on: "payouts" when Manage's "View full log"
   // sent the player there, else the default. Reset whenever a detail tab is
   // entered, so only that one navigation lands on Payouts.
@@ -467,13 +479,7 @@ export class ClanModal extends BaseModal {
           .myPublicId=${this.myPublicId}
           @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
             this.openPlayerProfile(e.detail.publicId)}
-          @funds-sent=${() => {
-            // The fund's balance changed: the overview refetches on return,
-            // and My Clans reads balances from the cached user.
-            this.detailCache = null;
-            invalidateUserMe();
-            this.view = "manage";
-          }}
+          @funds-sent=${() => (this.view = "manage")}
         ></clan-send-funds-view>`;
       }
       if (this.view === "requests") {

@@ -80,7 +80,9 @@ function status(
   return {
     enabled: true,
     frozen: false,
+    frozenReason: null,
     canSend: true,
+    leaderEligibleAt: null,
     hardBalance: "5000",
     clanDailyCap: "5000",
     clanSentToday: "1000",
@@ -225,6 +227,43 @@ describe("Payouts log (Donations tab)", () => {
     vi.mocked(translateText).mockImplementation((key: string) => key);
   });
 
+  it("strikes a reversed send's amount in one colour", async () => {
+    fetchTransfers.mockResolvedValue(
+      page([transfer({ reversedAt: new Date().toISOString() })]),
+    );
+    const el = await mount("payouts");
+    const amount = el.querySelector('[data-kind="transfer"] .line-through')!;
+    expect(amount.classList.contains("text-white/30")).toBe(true);
+    expect(amount.classList.contains("text-white/70")).toBe(false);
+  });
+
+  it("places the name by its placeholder, not by the word 'name'", async () => {
+    vi.mocked(translateText).mockImplementation(
+      (key: string, params?: Record<string, unknown>) =>
+        key === "clan_modal.payout_reversal"
+          ? `Staff reversed a payout (the name stays private) to ${String(params?.name)}`
+          : key,
+    );
+    fetchTransfers.mockResolvedValue(
+      page([
+        transfer({
+          id: "42",
+          kind: "reversal",
+          sender: null,
+          senderUsername: null,
+          reversesId: "41",
+        }),
+      ]),
+    );
+    const el = await mount("payouts");
+    const text = el
+      .querySelector('[data-kind="reversal"]')!
+      .textContent!.replace(/\s+/g, " ")
+      .trim();
+    expect(text).toMatch(/the name stays private\) to bob/);
+    vi.mocked(translateText).mockImplementation((key: string) => key);
+  });
+
   it("shows a banner while staff have paused the fund", async () => {
     fetchTransfers.mockResolvedValue(
       page([transfer()], status({ frozen: true, canSend: false })),
@@ -300,6 +339,38 @@ describe("Clan fund card (Manage)", () => {
     );
     expect(el.querySelector("[data-fund-notice]")?.textContent).toContain(
       "clan_modal.clan_fund_sending_off",
+    );
+    expect(
+      el.querySelector<HTMLButtonElement>("[data-action=open-send-funds]")!
+        .disabled,
+    ).toBe(true);
+  });
+
+  it("shows staff's reason for a freeze", async () => {
+    vi.mocked(translateText).mockImplementation(
+      (key: string, params?: Record<string, unknown>) =>
+        params?.reason ? `${key}: ${String(params.reason)}` : key,
+    );
+    const el = await mount(
+      "leader",
+      status({ frozen: true, frozenReason: "under review", canSend: false }),
+    );
+    expect(el.querySelector("[data-fund-notice]")?.textContent).toContain(
+      "clan_modal.clan_fund_frozen_reason: under review",
+    );
+    vi.mocked(translateText).mockImplementation((key: string) => key);
+  });
+
+  it("tells a new leader when they can send", async () => {
+    const el = await mount(
+      "leader",
+      status({
+        canSend: false,
+        leaderEligibleAt: new Date(Date.now() + 3 * 86_400_000).toISOString(),
+      }),
+    );
+    expect(el.querySelector("[data-fund-notice]")?.textContent).toContain(
+      "clan_modal.clan_fund_leader_wait",
     );
     expect(
       el.querySelector<HTMLButtonElement>("[data-action=open-send-funds]")!
@@ -622,6 +693,24 @@ describe("Send Plutonium page", () => {
     expect(
       el.querySelector<HTMLInputElement>("#clan-send-funds-amount")!.value,
     ).toBe("100");
+  });
+
+  it("can't send again while the fund is reloading after a refusal", async () => {
+    const el = await mount();
+    send.mockResolvedValueOnce({
+      error: "clan_modal.send_funds_error_insufficient",
+      outcome: "refused",
+    });
+    // The reload hangs, so the refused numbers are still on screen.
+    let finish: (v: unknown) => void = () => {};
+    fetchTransfers.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    await confirmSend(el, "member-2", "500");
+    expect(sendButton(el).disabled).toBe(true);
+
+    finish(page([], status({ hardBalance: "5000" })));
+    await flushAsync(el);
+    await flushAsync(el);
+    expect(sendButton(el).disabled).toBe(false);
   });
 
   it("a conflict says an earlier send went through and starts a new key", async () => {

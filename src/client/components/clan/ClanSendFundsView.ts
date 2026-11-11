@@ -23,6 +23,7 @@ import {
   renderLoadingSpinner,
   renderMemberSearchInput,
   renderRoleIcon,
+  newIdempotencyKey,
   renderServerPagination,
   showToast,
   translateClanRole,
@@ -30,14 +31,6 @@ import {
 
 const QUICK_AMOUNTS = [100n, 500n, 1000n];
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-// UUID when available; crypto.randomUUID is undefined outside secure contexts,
-// so fall back to random hex of the same shape (8–64 chars, as the API wants).
-function newIdempotencyKey(): string {
-  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 const min = (...xs: bigint[]) => xs.reduce((a, b) => (a < b ? a : b));
 
@@ -84,6 +77,10 @@ export class ClanSendFundsView extends LitElement {
   @property() myPublicId: string | null = null;
 
   @state() private status: ClanFundTransferStatus | null = null;
+  // A reload of the status is out (after a failed send): the numbers on
+  // screen may be the ones the server just refused, so nothing can be sent
+  // until it lands.
+  @state() private statusReloading = false;
   // The status request failed: nothing can be sent until a retry loads it.
   @state() private statusFailed = false;
   @state() private members: ClanMember[] = [];
@@ -127,7 +124,9 @@ export class ClanSendFundsView extends LitElement {
 
   private async loadStatus() {
     this.statusFailed = false;
+    this.statusReloading = true;
     const res = await fetchClanFundTransfers(this.clanTag, { limit: 1 });
+    this.statusReloading = false;
     if (!this.isConnected) return;
     if ("error" in res) {
       // The old numbers may be what the server just refused: drop them, so
@@ -262,6 +261,7 @@ export class ClanSendFundsView extends LitElement {
   private canSend(): boolean {
     return (
       !this.submitting &&
+      !this.statusReloading &&
       this.recipient !== null &&
       this.selectable(this.recipient) &&
       this.parsedAmount() !== null &&
@@ -298,7 +298,9 @@ export class ClanSendFundsView extends LitElement {
         amount.toString(),
         key,
       );
-      // An unknown outcome keeps the key; any other answer settles it.
+      // Only an answer that says what happened settles the key: success, a
+      // conflict (the earlier send went through) or a refusal. An unknown
+      // outcome, including a 401, 403 or 429, keeps it.
       if (result === true || result.outcome !== "unknown") {
         settleSendKey(clanTag, key);
       }

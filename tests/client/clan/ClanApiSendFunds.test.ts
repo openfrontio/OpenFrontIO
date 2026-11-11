@@ -69,15 +69,46 @@ describe("sendClanFunds", () => {
       error: "clan_modal.send_funds_error_recipient_limit",
       outcome: "refused",
     });
-    mockFetch(() => res(400, { code: "something_new" }));
+    mockFetch(() => res(400, { code: "leader_too_recent" }));
     expect(await sendIt()).toEqual({
-      error: "clan_modal.error_failed",
+      error: "clan_modal.send_funds_error_leader_too_recent",
       outcome: "refused",
+    });
+    mockFetch(() => res(400, { code: "sender_not_eligible" }));
+    expect(await sendIt()).toEqual({
+      error: "clan_modal.send_funds_error_sender_not_eligible",
+      outcome: "refused",
+    });
+  });
+
+  // These don't say whether an earlier send under the key went through, so
+  // the key must be kept (outcome unknown): settling it here would let a
+  // fresh key pay the same member twice.
+  it("keeps the key on answers that say nothing about an earlier send", async () => {
+    mockFetch(() => res(401, {}));
+    expect(await sendIt()).toEqual({
+      error: "clan_modal.sign_in_for_clans",
+      outcome: "unknown",
     });
     mockFetch(() => res(403, {}));
     expect(await sendIt()).toEqual({
       error: "clan_modal.send_funds_error_not_leader",
-      outcome: "refused",
+      outcome: "unknown",
+    });
+    mockFetch(() => res(429, {}));
+    expect(await sendIt()).toEqual({
+      error: "clan_modal.send_funds_error_rate_limited",
+      outcome: "unknown",
+    });
+    // A code this client doesn't know, or a 400 without one.
+    mockFetch(() => res(400, { code: "something_new" }));
+    expect(await sendIt()).toEqual({
+      error: "clan_modal.error_failed",
+      outcome: "unknown",
+    });
+    mockFetch(() => res(400, {}));
+    expect((await sendIt()) as { outcome: string }).toMatchObject({
+      outcome: "unknown",
     });
   });
 });
