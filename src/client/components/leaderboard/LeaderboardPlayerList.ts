@@ -293,6 +293,7 @@ export class LeaderboardPlayerList extends LitElement {
       this.ffaRanksLoading = new Set();
       this.ffaRanksFailed = new Set();
       this.ffaPositionRow = null;
+      this.currentUserIdLoaded = false;
       this.ffaRankGeneration++;
     } else if (!this.playerHasMore) {
       return;

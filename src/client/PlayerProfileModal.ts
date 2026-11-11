@@ -48,7 +48,7 @@ export { playerProfileUrl };
 let profileOpenings = 0;
 
 /** Where a profile was opened from, i.e. where its Back button leads. */
-export type ProfileOrigin = "clan" | "leaderboard" | "account";
+export type ProfileOrigin = "clan" | "leaderboard" | "all-ranks" | "account";
 
 @customElement("player-profile-modal")
 export class PlayerProfileModal extends BaseModal {
@@ -288,8 +288,10 @@ export class PlayerProfileModal extends BaseModal {
   // change this player's role or member count.
   public returnFromClan(publicId: string, origin: ProfileOrigin | null): void {
     this.open({ publicID: publicId, tab: "clans" });
-    // open() cleared openedFrom; put this profile's own origin back.
     this.openedFrom = origin;
+    if (origin === "all-ranks") {
+      this.keepGlobalPosition = true;
+    }
   }
 
   private renderGames() {
@@ -650,7 +652,7 @@ export class PlayerProfileModal extends BaseModal {
   public openFromAllRanks(publicId: string): void {
     this.open({ publicID: publicId });
     this.keepGlobalPosition = true;
-    this.openedFrom = "leaderboard";
+    this.openedFrom = "all-ranks";
   }
 
   public openFromAccount(publicId: string): void {
@@ -667,7 +669,7 @@ export class PlayerProfileModal extends BaseModal {
           "clan-modal",
         )
         ?.returnFromPlayerProfile();
-    } else if (openedFrom === "leaderboard") {
+    } else if (openedFrom === "leaderboard" || openedFrom === "all-ranks") {
       document
         .querySelector<HTMLElement & { open(): void }>("leaderboard-modal")
         ?.open();
