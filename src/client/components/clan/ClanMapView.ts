@@ -2,7 +2,7 @@ import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { getAudience } from "../../Api";
 import { userAuth } from "../../Auth";
-import { translateText } from "../../Utils";
+import { isRTL, translateText, translationTemplates } from "../../Utils";
 
 // The clan territory map is a page served by infra (`clanmap.<audience>`),
 // framed here. Contract (infra docs/clanmap-client-handoff.md): the page posts
@@ -10,7 +10,9 @@ import { translateText } from "../../Utils";
 // 401; the parent answers with `clanmap:auth` carrying the current JWT. A
 // viewer without an account gets no reply and the map stays read-only. It
 // posts `clanmap:loaded` once its first terrain + ownership load settles; a
-// spinner covers the frame until then.
+// spinner covers the frame until then. The page's text comes from here too:
+// every `clan_map.*` string in the player's language (English for missing
+// ones), sent as `clanmap:lang` on each `clanmap:ready`, signed in or not.
 export function clanMapOrigin(): string {
   const aud = getAudience();
   return aud === "localhost"
@@ -49,6 +51,15 @@ export class ClanMapView extends LitElement {
       return;
     }
     if (ev.data?.type !== "clanmap:ready") return;
+    // Explicit target origin — never "*".
+    this.frame.contentWindow?.postMessage(
+      {
+        type: "clanmap:lang",
+        rtl: isRTL(),
+        strings: translationTemplates("clan_map."),
+      },
+      origin,
+    );
     const auth = await userAuth();
     if (!auth) return;
     // The frame may have been torn down while the token was refreshing.

@@ -14,6 +14,7 @@ vi.mock("../../../src/client/Utils", () => utilsMockFactory());
 
 import { getAudience } from "../../../src/client/Api";
 import { userAuth } from "../../../src/client/Auth";
+import { translationTemplates } from "../../../src/client/Utils";
 import {
   ClanMapView,
   clanMapOrigin,
@@ -91,12 +92,25 @@ describe("ClanMapView", () => {
     );
   });
 
-  it("stays silent for a signed-out viewer", async () => {
+  it("sends the page its text in the player's language, before the JWT", async () => {
+    ready();
+    await flushAsync();
+
+    expect(translationTemplates).toHaveBeenCalledWith("clan_map.");
+    expect(postMessage).toHaveBeenNthCalledWith(
+      1,
+      { type: "clanmap:lang", rtl: false, strings: { claim_land: "Claim land" } },
+      MAP_ORIGIN,
+    );
+  });
+
+  it("sends a signed-out viewer the text but no JWT", async () => {
     asMock(userAuth).mockResolvedValueOnce(false);
     ready();
     await flushAsync();
 
-    expect(postMessage).not.toHaveBeenCalled();
+    expect(postMessage).toHaveBeenCalledTimes(1);
+    expect(postMessage.mock.calls[0][0].type).toBe("clanmap:lang");
   });
 
   it("ignores messages from another origin", async () => {
