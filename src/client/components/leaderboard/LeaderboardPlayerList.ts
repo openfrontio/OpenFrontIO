@@ -529,30 +529,9 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   private handleRankTabKey(event: KeyboardEvent, rank: FfaTierBase | "all") {
-    if (rank === "all") {
-      // If someone is on the "all" tab and uses arrow keys, handle or return safely
-      if (event.key === "ArrowLeft" || event.key === "End") {
-        event.preventDefault();
-        this.selectFfaRank(FFA_TIER_BASES[FFA_TIER_BASES.length - 1]);
-        void this.updateComplete.then(() =>
-          this.querySelector<HTMLElement>(
-            `[role="tab"][data-rank="${FFA_TIER_BASES[FFA_TIER_BASES.length - 1]}"]`,
-          )?.focus(),
-        );
-      } else if (event.key === "ArrowRight" || event.key === "Home") {
-        event.preventDefault();
-        this.selectFfaRank(FFA_TIER_BASES[0]);
-        void this.updateComplete.then(() =>
-          this.querySelector<HTMLElement>(
-            `[role="tab"][data-rank="${FFA_TIER_BASES[0]}"]`,
-          )?.focus(),
-        );
-      }
-      return;
-    }
-
-    const count = FFA_TIER_BASES.length;
-    const index = FFA_TIER_BASES.indexOf(rank);
+    const tabs = [...FFA_TIER_BASES, "all"] as const;
+    const count = tabs.length;
+    const index = tabs.indexOf(rank);
     const nextIndex = {
       ArrowRight: (index + 1) % count,
       ArrowLeft: (index - 1 + count) % count,
@@ -561,8 +540,12 @@ export class LeaderboardPlayerList extends LitElement {
     }[event.key];
     if (nextIndex === undefined) return;
     event.preventDefault();
-    const next = FFA_TIER_BASES[nextIndex];
-    this.selectFfaRank(next);
+    const next = tabs[nextIndex];
+    if (next === "all") {
+      this.selectAllFfaRanks();
+    } else {
+      this.selectFfaRank(next);
+    }
     void this.updateComplete.then(() =>
       this.querySelector<HTMLElement>(
         `[role="tab"][data-rank="${next}"]`,

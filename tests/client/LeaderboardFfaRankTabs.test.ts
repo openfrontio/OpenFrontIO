@@ -557,12 +557,12 @@ describe("FFA rank tabs", () => {
     it("wraps at both ends", async () => {
       await open();
       await press("diamond", "End");
-      expect(selectedTab()?.dataset.rank).toBe("grandmaster");
-      await press("grandmaster", "ArrowRight");
+      expect(selectedTab()?.dataset.rank).toBe("all");
+      await press("all", "ArrowRight");
       expect(selectedTab()?.dataset.rank).toBe("iron");
       await press("iron", "ArrowLeft");
-      expect(selectedTab()?.dataset.rank).toBe("grandmaster");
-      await press("grandmaster", "Home");
+      expect(selectedTab()?.dataset.rank).toBe("all");
+      await press("all", "Home");
       expect(selectedTab()?.dataset.rank).toBe("iron");
     });
 
