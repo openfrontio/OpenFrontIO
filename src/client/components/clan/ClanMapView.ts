@@ -1,5 +1,5 @@
 import { html, LitElement } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import { getAudience } from "../../Api";
 import { userAuth } from "../../Auth";
 import { translateText } from "../../Utils";
@@ -21,6 +21,9 @@ export function clanMapOrigin(): string {
 @customElement("clan-map-view")
 export class ClanMapView extends LitElement {
   @query("iframe") private frame?: HTMLIFrameElement;
+  // The full-screen clan map page: asks the page for its full layout
+  // (`?full=1`, map edge to edge with the sidebar floating over it).
+  @property({ type: Boolean }) full = false;
   @state() private loading = true;
 
   createRenderRoot() {
@@ -61,18 +64,18 @@ export class ClanMapView extends LitElement {
     // page's Fullscreen button appear.
     return html`<div class="relative w-full h-full">
       <iframe
-        src=${clanMapOrigin() + "/"}
+        src=${clanMapOrigin() + (this.full ? "/?full=1" : "/")}
         title=${translateText("clan_modal.map_frame_title")}
         allow="fullscreen"
         allowfullscreen
-        class="block w-full h-full border-0 bg-[#0e1116]"
+        class="block w-full h-full border-0 bg-[#3c3c3c]"
       ></iframe>
       ${
         this.loading
           ? html`<div
               role="status"
               aria-label=${translateText("clan_modal.map_loading")}
-              class="absolute inset-0 flex items-center justify-center bg-[#0e1116]"
+              class="absolute inset-0 flex items-center justify-center bg-[#3c3c3c]"
             >
               <div
                 class="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin"

@@ -89,7 +89,7 @@ describe("ClanModal — signed out", () => {
 
     expect(modal.isOpen()).toBe(true);
     expect(getElState(modal, "activeTab")).toBe("map");
-    expect(modal.querySelector("clan-map-view")).not.toBeNull();
+    expect(document.querySelector("clan-map-view")).not.toBeNull();
     // The map is still in alpha, and its tab says so.
     const shell = modal.querySelector("o-modal") as unknown as {
       tabs: { key: string; label: string }[];
@@ -97,6 +97,30 @@ describe("ClanModal — signed out", () => {
     expect(shell.tabs.find((t) => t.key === "map")?.label).toBe(
       "clan_modal.tab_map_alpha",
     );
+  });
+
+  it("opens the map as a full-screen page with a way back to the clans", async () => {
+    modal.open({ tab: "map" });
+    await flushAsync(modal);
+
+    // On <body>, fixed over the whole viewport: inside the modal a fixed
+    // element would be positioned against the modal's box.
+    const page = document.querySelector<HTMLElement>("[data-clan-map-page]")!;
+    expect(page).not.toBeNull();
+    expect(page.parentElement?.parentElement).toBe(document.body);
+    expect(page.className).toContain("fixed");
+    expect(page.className).toContain("inset-0");
+    const view = page.querySelector("clan-map-view") as unknown as {
+      full: boolean;
+    };
+    expect(view.full).toBe(true);
+
+    page.querySelector<HTMLButtonElement>("[data-clan-map-back]")!.click();
+    await flushAsync(modal);
+
+    expect(modal.isOpen()).toBe(true);
+    expect(getElState(modal, "activeTab")).toBe("my-clans");
+    expect(document.querySelector("[data-clan-map-page]")).toBeNull();
   });
 
   it("lets a signed-out viewer browse clans", async () => {

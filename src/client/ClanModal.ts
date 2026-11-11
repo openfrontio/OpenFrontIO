@@ -1,4 +1,4 @@
-import { html } from "lit";
+import { html, nothing, render, type PropertyValues } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { type ClanInfo, type ClanMember } from "./ClanApi";
@@ -601,9 +601,8 @@ export class ClanModal extends BaseModal {
     // List view (map / my clans / browse) — header + tabs are rendered by o-modal
     if (this.activeTab === "map") {
       // Mounted only while open: the page polls its API while framed.
-      return this.isModalOpen
-        ? html`<clan-map-view class="block h-full"></clan-map-view>`
-        : html``;
+      // The map itself is a full-screen page on <body> (syncMapPage).
+      return html``;
     }
     return html`
       ${
@@ -622,6 +621,60 @@ export class ClanModal extends BaseModal {
             ></clan-browse-view>`
       }
     `;
+  }
+
+  // The clan map is its own full-screen page over the game: the map edge to
+  // edge (its sidebar floats over it) and a way back to the clan lists. It's
+  // rendered into its own element on <body>, because a `fixed` element
+  // inside the modal is positioned against the modal's box, not the screen.
+  private mapPage: HTMLDivElement | null = null;
+
+  protected updated(changed: PropertyValues): void {
+    super.updated(changed);
+    this.syncMapPage();
+  }
+
+  disconnectedCallback(): void {
+    this.removeMapPage();
+    super.disconnectedCallback();
+  }
+
+  private syncMapPage(): void {
+    // Mounted only while open: the page polls its API while framed.
+    if (!this.isModalOpen || !this.onListView || this.activeTab !== "map") {
+      this.removeMapPage();
+      return;
+    }
+    if (!this.mapPage) {
+      this.mapPage = document.createElement("div");
+      document.body.appendChild(this.mapPage);
+    }
+    render(this.renderMapPage(), this.mapPage);
+  }
+
+  private removeMapPage(): void {
+    if (!this.mapPage) return;
+    render(nothing, this.mapPage);
+    this.mapPage.remove();
+    this.mapPage = null;
+  }
+
+  private renderMapPage() {
+    return html`<div
+      data-clan-map-page
+      class="fixed inset-0 z-[10000] bg-[#3c3c3c]"
+    >
+      <clan-map-view full class="block w-full h-full"></clan-map-view>
+      <button
+        data-clan-map-back
+        type="button"
+        class="absolute top-3 left-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-[#151a21]/90 border border-white/10 backdrop-blur text-white text-sm font-bold uppercase tracking-wider hover:bg-[#1b212a] cursor-pointer"
+        aria-label=${translateText("clan_modal.map_back")}
+        @click=${() => this.setActiveTab(this.previousListTab)}
+      >
+        <span aria-hidden="true">←</span>${translateText("clan_modal.title")}
+      </button>
+    </div>`;
   }
 
   private openDetail(tag: string, source?: "boosted") {

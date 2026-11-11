@@ -72,6 +72,14 @@ describe("ClanMapView", () => {
     expect(frame.hasAttribute("sandbox")).toBe(false);
   });
 
+  it("asks the page for its full-screen layout when full", async () => {
+    view.full = true;
+    await flushAsync(view);
+    expect(view.querySelector("iframe")!.getAttribute("src")).toBe(
+      `${MAP_ORIGIN}/?full=1`,
+    );
+  });
+
   it("answers clanmap:ready with the JWT, targeted at the map origin", async () => {
     ready();
     await flushAsync();
