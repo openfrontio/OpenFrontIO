@@ -1,6 +1,7 @@
 import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
+import { COLUMN_MEANING } from "../hud/layers/ColumnTooltip";
 import "./OfIcon";
 import {
   type ColumnAlignment,
@@ -211,6 +212,14 @@ export abstract class StatsTable extends LitElement {
   @state()
   private scrollOffsetPx = 0;
 
+  /** The header whose tooltip shows, and whether it is the mouse's. */
+  @state()
+  private tip: {
+    column: ColumnDef;
+    anchor: HTMLElement;
+    hint: boolean;
+  } | null = null;
+
   private rowHeightPx = FALLBACK_ROW_HEIGHT_PX;
   private viewportHeightPx = FALLBACK_VIEWPORT_HEIGHT_PX;
 
@@ -219,6 +228,8 @@ export abstract class StatsTable extends LitElement {
   }
 
   willUpdate(changed: Map<string, unknown>) {
+    // A hidden table takes its headers, and so their tooltip, with it.
+    if (changed.has("visible") && !this.visible) this.tip = null;
     if (changed.has("visible") && this.visible) {
       // The scroll container is recreated at scroll offset 0 when the table
       // was hidden, so the remembered offset would misplace the window.
@@ -272,6 +283,14 @@ export abstract class StatsTable extends LitElement {
       this.sortOrder = "desc";
     }
     this.updateStats();
+  }
+
+  private tooltipId() {
+    return `${this.tableKind}-column-tooltip`;
+  }
+
+  private hideTip(column: ColumnDef) {
+    if (this.tip?.column.id === column.id) this.tip = null;
   }
 
   // The browser's own menu never opens on the table. On the header row a
@@ -342,7 +361,6 @@ export abstract class StatsTable extends LitElement {
           index > 0 ? HEADER_DIVIDER_CLASS : ""
         }"
         role="columnheader"
-        title=${label}
         aria-label=${column.isOrderable ? nothing : label}
         data-column=${column.id}
         data-align=${align}
@@ -356,6 +374,15 @@ export abstract class StatsTable extends LitElement {
               : "none"
             : nothing
         }
+        @pointerenter=${(event: PointerEvent) => {
+          // A mouse only: on a touch screen a tap sorts.
+          if (event.pointerType === "mouse") {
+            const anchor = event.currentTarget as HTMLElement;
+            this.tip = { column, anchor, hint: true };
+          }
+        }}
+        @pointerleave=${() => this.hideTip(column)}
+        @contextmenu=${() => this.hideTip(column)}
       >
         ${
           column.isOrderable
@@ -363,7 +390,21 @@ export abstract class StatsTable extends LitElement {
                 type="button"
                 class="${box} ${place.button} ${SORT_BUTTON}"
                 aria-label=${label}
+                aria-describedby=${
+                  this.tip?.column.id === column.id &&
+                  COLUMN_MEANING[column.id] !== undefined
+                    ? this.tooltipId()
+                    : nothing
+                }
                 @click=${() => this.setSort(column.id)}
+                @focus=${(event: FocusEvent) => {
+                  // The keyboard's: a click focuses the button too.
+                  const anchor = event.currentTarget as HTMLElement;
+                  if (anchor.matches(":focus-visible")) {
+                    this.tip = { column, anchor, hint: false };
+                  }
+                }}
+                @blur=${() => this.hideTip(column)}
               >
                 ${visual}
                 <of-icon
@@ -578,6 +619,12 @@ export abstract class StatsTable extends LitElement {
             </div>
           </div>
         </div>
+        <column-tooltip
+          .column=${this.tip?.column ?? null}
+          .anchor=${this.tip?.anchor ?? null}
+          .hint=${this.tip?.hint ?? false}
+          .tooltipId=${this.tooltipId()}
+        ></column-tooltip>
       </div>
     `;
   }

@@ -573,6 +573,107 @@ describe("PlayerStats rows", () => {
   });
 });
 
+describe("PlayerStats header tooltips", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  async function mount(): Promise<PlayerStats> {
+    const alice = player("alice", 3);
+    const game = {
+      myPlayer: () => alice,
+      playerViews: () => [alice],
+      config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
+      numLandTiles: () => 100,
+      numTilesWithFallout: () => 0,
+    } as unknown as GameView;
+    const playerStats = new PlayerStats();
+    playerStats.game = game;
+    playerStats.visible = true;
+    document.body.append(playerStats);
+    playerStats.refresh();
+    await playerStats.updateComplete;
+    return playerStats;
+  }
+
+  function header(playerStats: PlayerStats, id: ColumnId) {
+    return playerStats.querySelector(
+      `[role="columnheader"][data-column="${id}"]`,
+    ) as HTMLElement;
+  }
+
+  const tips = () => document.querySelectorAll('[role="tooltip"]');
+
+  async function pointer(
+    playerStats: PlayerStats,
+    target: HTMLElement,
+    type: "pointerenter" | "pointerleave",
+    pointerType: string,
+  ) {
+    target.dispatchEvent(new PointerEvent(type, { pointerType }));
+    await playerStats.updateComplete;
+  }
+
+  it("shows a header's tooltip with the right-click hint for a mouse, never for a touch", async () => {
+    const playerStats = await mount();
+    const owned = header(playerStats, "tiles");
+
+    await pointer(playerStats, owned, "pointerenter", "touch");
+    expect(tips()).toHaveLength(0);
+
+    await pointer(playerStats, owned, "pointerenter", "mouse");
+    expect(tips()).toHaveLength(1);
+    expect(tips()[0].textContent).toContain("leaderboard.owned");
+    expect(tips()[0].textContent).toContain("leaderboard.columns_hint");
+
+    await pointer(playerStats, owned, "pointerleave", "mouse");
+    expect(tips()).toHaveLength(0);
+  });
+
+  it("shows it without the hint on keyboard focus, and links it to the header", async () => {
+    const playerStats = await mount();
+    const button = header(playerStats, "tiles").querySelector("button")!;
+    // jsdom matches :focus-visible only once the focus event is over; a
+    // browser already does during it, for the keyboard.
+    vi.spyOn(button, "matches").mockImplementation(
+      (selector) => selector === ":focus-visible",
+    );
+
+    button.focus();
+    await playerStats.updateComplete;
+    expect(tips()).toHaveLength(1);
+    expect(tips()[0].textContent).not.toContain("leaderboard.columns_hint");
+    const describedBy = button.getAttribute("aria-describedby");
+    expect(describedBy).not.toBeNull();
+    expect(document.getElementById(describedBy!)?.getAttribute("role")).toBe(
+      "tooltip",
+    );
+
+    button.blur();
+    await playerStats.updateComplete;
+    expect(tips()).toHaveLength(0);
+    expect(button.hasAttribute("aria-describedby")).toBe(false);
+  });
+
+  it("leaves no native title on the headers", async () => {
+    const playerStats = await mount();
+
+    const headers = playerStats.querySelectorAll('[role="columnheader"]');
+    expect(headers.length).toBeGreaterThan(0);
+    for (const cell of headers) {
+      expect(cell.hasAttribute("title")).toBe(false);
+    }
+  });
+});
+
 describe("PlayerStats clan column", () => {
   beforeEach(() => {
     localStorage.clear();
