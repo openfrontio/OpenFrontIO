@@ -313,7 +313,11 @@ export class UnitDisplay extends LitElement implements Controller {
       drag.active = true;
       // A drag is not a hold: no details, and no selection on release.
       this.dismissPeek();
-      this.inputHandler.setGhostStructure(drag.unitType, "GUIclick");
+      // Picking the unit that's already held would raise its upgrade
+      // multiplier, as a second click does.
+      if (this.uiState.ghostStructure !== drag.unitType) {
+        this.inputHandler.setGhostStructure(drag.unitType, "GUIclick");
+      }
       this.eventBus?.emit(new TouchGhostPlacementSelectEvent());
       this.eventBus?.emit(
         new ToggleStructureEvent(highlightTypesForUnit(drag.unitType)),

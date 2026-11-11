@@ -1329,7 +1329,17 @@ export class BuildPreviewController implements Controller {
     }
     const point = this.transformHandler.screenToWorldCoordinatesFloat(x, y);
     const tile = { x: Math.floor(point.x), y: Math.floor(point.y) };
-    if (!this.game.isValidCoord(tile.x, tile.y)) return;
+    if (!this.game.isValidCoord(tile.x, tile.y)) {
+      // A drag past the map's edge leaves no tile under the ghost: hide it,
+      // so letting go there drops the unit instead of building on the last
+      // tile it crossed.
+      if (dragged && this.touchPreviewTile !== null) {
+        this.touchPreviewTile = null;
+        this.touchPreviewPoint = null;
+        this.renderGhost();
+      }
+      return;
+    }
     const next = this.game.ref(tile.x, tile.y);
     this.touchPreviewPoint = point;
     if (next !== this.touchPreviewTile) {

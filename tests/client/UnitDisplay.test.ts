@@ -1210,6 +1210,23 @@ describe("dragging a build button onto the map", () => {
     }
   });
 
+  test("dragging the unit that's already held keeps it as it was", async () => {
+    const { display, inputHandler, cityItem, confirms } = await setup();
+    try {
+      display.uiState.ghostStructure = UnitType.City;
+      cityItem.dispatchEvent(touch("pointerdown", 365, 220));
+      cityItem.dispatchEvent(touch("pointermove", 300, 230));
+      cityItem.dispatchEvent(touch("pointerup", 200, 260));
+
+      // Picking it again would raise its upgrade multiplier.
+      expect(inputHandler.setGhostStructure).not.toHaveBeenCalled();
+      expect(display.uiState.ghostStructure).toBe(UnitType.City);
+      expect(confirms).toHaveLength(1);
+    } finally {
+      display.remove();
+    }
+  });
+
   test("letting go back over the bar cancels", async () => {
     const { display, inputHandler, cityItem, confirms } = await setup();
     try {

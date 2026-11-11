@@ -1996,6 +1996,36 @@ describe("BuildPreviewController touch preview", () => {
     },
   );
 
+  test("a drag that leaves the map hides the ghost, and letting go there drops it", async () => {
+    const { controller, builds, uiState, eventBus, view } = makeController(
+      UnitType.City,
+    );
+    (controller as any).game.isValidCoord = (x: number) => x < 5;
+    (controller as any).transformHandler.screenToWorldCoordinatesFloat = (
+      x: number,
+    ) => (x < 500 ? { x: 2.5, y: 2.5 } : { x: 9.5, y: 2.5 });
+    const requestAnimationFrame = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockImplementation(() => 1);
+    try {
+      controller.init();
+      eventBus.emit(new TouchGhostPlacementMoveEvent(200, 200));
+      await flushBuildables();
+      expect((controller as any).touchPreviewTile).toBe(202);
+
+      eventBus.emit(new TouchGhostPlacementMoveEvent(900, 200));
+      expect((controller as any).touchPreviewTile).toBeNull();
+      expect(view.updateGhostPreview).toHaveBeenLastCalledWith(null);
+
+      eventBus.emit(new ConfirmGhostStructureEvent(true));
+      await flushBuildables();
+      expect(builds).toHaveLength(0);
+      expect(uiState.ghostStructure).toBeNull();
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
+
   test("a drop that never reached the map drops the ghost", () => {
     const { controller, uiState, eventBus } = makeController(UnitType.City);
     const requestAnimationFrame = vi
