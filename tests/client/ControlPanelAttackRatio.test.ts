@@ -175,4 +175,60 @@ describe("control-panel attack ratio", () => {
     expect(Number(slider.value)).toBe(20);
     expect(uiState.attackRatio).toBeCloseTo(0.2, 2);
   });
+  // In portrait on phones the slider is behind a button: dragged along the
+  // bottom edge it swiped through iOS's home indicator to another app.
+  describe("portrait popup", () => {
+    const show = async () => {
+      panel.game = {
+        inSpawnPhase: () => false,
+        myPlayer: () => ({ isAlive: () => true, troops: () => 100_000 }),
+      } as unknown as GameView;
+      panel.setVisibile(true);
+      await (panel as any).updateComplete;
+      return panel.querySelector(
+        "[data-ratio-popup-button]",
+      ) as HTMLButtonElement;
+    };
+    const popup = () => panel.querySelector("[data-ratio-popup]");
+
+    it("opens the slider from the button and closes it again", async () => {
+      const button = await show();
+      expect(button.textContent).toContain("20%\n(2.00K)");
+      expect(popup()).toBeNull();
+
+      button.click();
+      await (panel as any).updateComplete;
+      expect(button.getAttribute("aria-expanded")).toBe("true");
+      const slider = popup()?.querySelector(
+        'input[type="range"]',
+      ) as HTMLInputElement;
+      expect(slider.value).toBe("20");
+
+      slider.value = "65";
+      slider.dispatchEvent(new Event("input", { bubbles: true }));
+      await (panel as any).updateComplete;
+      expect(uiState.attackRatio).toBeCloseTo(0.65, 2);
+      expect(button.textContent).toContain("65%\n(6.50K)");
+
+      button.click();
+      await (panel as any).updateComplete;
+      expect(popup()).toBeNull();
+    });
+
+    it("closes on a press outside it, not inside it", async () => {
+      const button = await show();
+      button.click();
+      await (panel as any).updateComplete;
+
+      popup()!
+        .querySelector("input")!
+        .dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      await (panel as any).updateComplete;
+      expect(popup()).not.toBeNull();
+
+      document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      await (panel as any).updateComplete;
+      expect(popup()).toBeNull();
+    });
+  });
 });
