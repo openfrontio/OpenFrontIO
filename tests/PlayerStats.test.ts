@@ -71,7 +71,7 @@ describe("PlayerStats", () => {
     // Only selected stat tracks share definite spare space. Rank, name, and
     // picker remain fixed and never stretch.
     expect(content?.getAttribute("style")).toContain(
-      "34px 100px auto auto auto 32px",
+      "30px var(--stats-name, 100px) auto auto auto 32px",
     );
 
     playerStats.remove();
@@ -187,6 +187,47 @@ describe("PlayerStats", () => {
     expect(iconNames("troops")).toEqual(["troops"]);
     // Max troops header reads as a troop icon raised to the upper-limit icon.
     expect(iconNames("maxtroops")).toEqual(["troops", "max"]);
+
+    playerStats.remove();
+  });
+
+  it("sizes every shared track from a hidden row of its widest texts", async () => {
+    new UserSettings().setStatsColumns("player", ["playerType", "gold"]);
+    const me = {
+      ...player("me", 3),
+      type: () => PlayerType.Human,
+    } as unknown as PlayerView;
+    const game = {
+      myPlayer: () => me,
+      playerViews: () => [me],
+      config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
+      numLandTiles: () => 100,
+      numTilesWithFallout: () => 0,
+    } as unknown as GameView;
+    const playerStats = new PlayerStats();
+    playerStats.game = game;
+    playerStats.visible = true;
+    document.body.append(playerStats);
+
+    playerStats.refresh();
+    await playerStats.updateComplete;
+
+    const sizer = playerStats.querySelector("[data-sizer]");
+    expect(sizer?.getAttribute("aria-hidden")).toBe("true");
+    // rank | player | Type | gold: one cell each, texts one per line.
+    const texts = [...(sizer?.children ?? [])].map((cell) =>
+      [...cell.querySelectorAll("span")].map((span) => span.textContent),
+    );
+    expect(texts).toEqual([
+      [],
+      [],
+      ["player_type.player", "player_type.nation", "player_type.bot"],
+      ["88.8M"],
+    ]);
+    // It is not a row of the table.
+    expect(sizer?.closest('[role="row"], [role="rowgroup"]')).toBeNull();
+    expect(sizer?.querySelector('[role="cell"]')).toBeNull();
 
     playerStats.remove();
   });
@@ -507,7 +548,7 @@ describe("PlayerStats clan column", () => {
     ).not.toBeNull();
     expect(
       playerStats.querySelector(".stats-table-content")?.getAttribute("style"),
-    ).toContain("34px 80px 100px");
+    ).toContain("30px 80px var(--stats-name, 100px)");
   });
 
   it("rules off every column but the first, so none read as merged", async () => {
@@ -567,7 +608,7 @@ describe("PlayerStats clan column", () => {
     ).toEqual(["rank", "player", "tiles", "gold", "maxtroops", null]);
     expect(
       playerStats.querySelector(".stats-table-content")?.getAttribute("style"),
-    ).toContain("34px 100px");
+    ).toContain("30px var(--stats-name, 100px)");
     expect(playerStats.textContent).not.toContain("ABCDE");
   });
 
@@ -600,7 +641,7 @@ describe("PlayerStats clan column", () => {
     // rank | clan | player | picker — no stat track, so nothing to sort on.
     expect(
       playerStats.querySelector(".stats-table-content")?.getAttribute("style"),
-    ).toContain("34px 80px 100px 32px");
+    ).toContain("30px 80px var(--stats-name, 100px) 32px");
     expect(
       [
         ...playerStats.querySelectorAll(".stats-table-scroll .stats-table-row"),

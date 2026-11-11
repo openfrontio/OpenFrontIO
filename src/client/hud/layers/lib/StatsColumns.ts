@@ -41,6 +41,12 @@ export interface ColumnDef {
   readonly headerVisual?: ColumnHeaderVisual;
   /** Grid track: a fixed width, or "auto" to share the row's spare width. */
   readonly width: string;
+  /**
+   * Texts as wide as anything this column shows. A hidden row of them sizes
+   * the track, so widths hold while values change and rows scroll. Empty
+   * for a fixed track.
+   */
+  readonly widest: () => readonly string[];
   readonly align: ColumnAlignment;
   /** The header's own alignment, when it reads better than `align`'s. */
   readonly headerAlign?: ColumnAlignment;
@@ -61,6 +67,7 @@ type ColumnInput = Pick<ColumnDef, "id" | "labelKey" | "cell"> &
 function defineColumn(input: ColumnInput): ColumnDef {
   return {
     width: "auto",
+    widest: () => ["88.8M"],
     align: "end",
     kinds: ["player", "team"],
     isHideable: true,
@@ -79,6 +86,7 @@ function unitColumn(
     id,
     labelKey,
     headerVisual: { kind: "icon", icon },
+    widest: () => ["888"],
     align: "center",
     value: (player) => player.totalUnitLevels(unitType),
     cell: (row) => renderNumber(row.value),
@@ -96,7 +104,9 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "rank",
     labelKey: "leaderboard.rank",
     headerVisual: { kind: "text", text: "#" },
-    width: "34px",
+    // Three-digit ranks at 11px, with the cell's padding.
+    width: "30px",
+    widest: () => [],
     align: "center",
     isHideable: false,
     cell: (row) => String(row.position),
@@ -107,6 +117,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     headerVisual: { kind: "icon", icon: "clan" },
     // Fits "WWWWW" — the widest 5-character tag — in the row font.
     width: "80px",
+    widest: () => [],
     align: "center",
     kinds: ["player"],
     cell: (row) => row.clanTag ?? "",
@@ -115,7 +126,9 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "player",
     labelKey: "leaderboard.player",
     headerVisual: { kind: "icon", icon: "player" },
-    width: "100px",
+    // The table widens it on large windows (--stats-name).
+    width: "var(--stats-name, 100px)",
+    widest: () => [],
     align: "start",
     headerAlign: "center",
     kinds: ["player"],
@@ -129,6 +142,11 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     // Player-table only: a team has no single type, and aggregating the
     // per-player type codes would be meaningless.
     kinds: ["player"],
+    widest: () => [
+      translateText("player_type.player"),
+      translateText("player_type.nation"),
+      translateText("player_type.bot"),
+    ],
     // Shared track: the cell reads row.value, so this column needs a value
     // getter — and the registry ties "auto" width to having one.
     align: "center",
@@ -163,7 +181,8 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "team",
     labelKey: "leaderboard.team",
     headerVisual: { kind: "icon", icon: "team" },
-    width: "100px",
+    width: "var(--stats-name, 100px)",
+    widest: () => [],
     align: "start",
     headerAlign: "center",
     kinds: ["team"],
@@ -174,6 +193,8 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "tiles",
     labelKey: "leaderboard.owned",
     headerVisual: { kind: "icon", icon: "land" },
+    // A full 100.0% only shows once the game is over.
+    widest: () => ["99.9%"],
     value: (player) => player.numTilesOwned(),
     cell: (row, game) => {
       const validTiles = game.numLandTiles() - game.numTilesWithFallout();
@@ -266,6 +287,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "allies",
     labelKey: "leaderboard.allies",
     headerVisual: { kind: "icon", icon: "alliance", color: "text-green-400" },
+    widest: () => ["88"],
     align: "center",
     value: (player) => player.allies().length,
     cell: (row) => renderNumber(row.value),
@@ -274,6 +296,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "betrayals",
     labelKey: "leaderboard.betrayals",
     headerVisual: { kind: "icon", icon: "traitor", color: "text-red-400" },
+    widest: () => ["88"],
     align: "center",
     value: (player) => player.betrayals(),
     cell: (row) => renderNumber(row.value),

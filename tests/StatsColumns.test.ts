@@ -73,6 +73,8 @@ describe("Stats column registry", () => {
   it("gives identity columns a fixed track and stat columns a shared one", () => {
     for (const def of COLUMN_DEFS) {
       expect(def.width === "auto").toBe(def.isOrderable);
+      // A shared track is sized from its widest text; a fixed one needs none.
+      expect(def.widest().length > 0).toBe(def.width === "auto");
     }
   });
 
