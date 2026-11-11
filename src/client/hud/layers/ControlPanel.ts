@@ -16,10 +16,48 @@ import { USER_SETTINGS_CHANGED_EVENT, UserSettings } from "../../UserSettings";
 import { getGamesPlayed, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
-import { goldCoinIcon, soldierIcon } from "../HotbarIcons";
+import "../../components/OfIcon";
+import { TICKS_PER_SECOND, ticksToSeconds } from "../GameTicks";
+import { goldCoinIcon } from "../HotbarIcons";
 import { OnboardingLowTroopsEvent } from "../Onboarding";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 const swordIcon = assetUrl("images/SwordIcon.svg");
+
+// Look. Sizes, colours, radii and spacing of each part live here, so a
+// change of look is one edit. The templates below only hold structure.
+const PANEL = "relative w-full px-2 py-1 text-sm lg:p-2";
+// Below lg one row: gold, troop bar, ratio label, slider. From lg two rows,
+// the rate chip over the ratio label in the first column. That column's 8rem
+// is RATE's width: keep the two equal.
+const GRID =
+  "grid grid-cols-[auto_minmax(0,8fr)_auto_minmax(0,5fr)] items-center gap-x-2 lg:grid-cols-[8rem_minmax(0,1fr)_auto] lg:gap-y-1";
+const CHIP = "flex h-6 items-center rounded-sm font-bold tabular-nums";
+const BAR_TEXT_SHADOW = "drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]";
+// The well is darker than the panel on purpose: it keeps the white numbers
+// readable over a bright map when the HUD is see-through.
+const TRACK = "rounded-sm border bg-black/40";
+const TRACK_BORDER = {
+  calm: "border-transparent",
+  alert: "border-red-500",
+} as const;
+const TROOP_FILL = "bg-malibu-blue";
+const TROOPS_OUT = "bg-sky-300";
+const TROOPS = `gap-1 ps-1.5 text-xs font-bold text-white lg:text-base ${BAR_TEXT_SHADOW}`;
+const MAX_TROOPS =
+  "me-0.5 h-5 gap-1 rounded-xs bg-black/50 px-1 text-[11px] font-bold text-white lg:px-1.5 lg:text-[13px]";
+// Inside the bar below lg; from lg a chip in the grid's empty first column.
+const RATE = `ms-1.5 text-[11px] transition-colors duration-700 ${BAR_TEXT_SHADOW} lg:absolute lg:inset-y-0 lg:end-full lg:me-2 lg:w-[8rem] lg:justify-center lg:text-[13px] lg:drop-shadow-none`;
+const RATE_TREND = {
+  up: "text-green-400 lg:bg-green-400/12",
+  down: "text-orange-400 lg:bg-orange-400/14",
+} as const;
+const GOLD =
+  "justify-center gap-0.5 rounded-md border border-yellow-400 p-1 text-xs font-bold text-yellow-400 min-w-16 lg:justify-start lg:gap-1 lg:px-1 lg:py-0.5 lg:text-sm lg:min-w-[4.5rem]";
+const GOLD_POP =
+  "absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-xs lg:text-sm font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]";
+const RATIO =
+  "justify-center gap-0.5 font-bold tabular-nums text-white lg:justify-start lg:gap-1 lg:rounded-md lg:border lg:border-gray-600 lg:px-1 lg:py-0.5 lg:text-sm";
+const SLIDER = "h-1.5 accent-aquarius";
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Controller {
@@ -76,7 +114,7 @@ export class ControlPanel extends LitElement implements Controller {
   // Track last attack tick per target player (for 15-second threshold)
   private _lastAttackTickByTarget: Map<number, number> = new Map();
   private static readonly BORDER_REFRESH_INTERVAL = 10; // recompute every 1s
-  private static readonly ATTACK_THRESHOLD_TICKS = 15 * 10; // 15 seconds
+  private static readonly ATTACK_THRESHOLD_TICKS = 15 * TICKS_PER_SECOND;
 
   connectedCallback() {
     super.connectedCallback();
@@ -141,7 +179,7 @@ export class ControlPanel extends LitElement implements Controller {
       .outgoingAttacks()
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
-    this.troopRate = config.troopIncreaseRate(player) * 10;
+    this.troopRate = config.troopIncreaseRate(player) * TICKS_PER_SECOND;
 
     const helpEnabled = new UserSettings().helpMessages();
 
@@ -285,7 +323,7 @@ export class ControlPanel extends LitElement implements Controller {
       if (!other.isPlayer() || !other.isAlive()) continue;
 
       const lastAttackTick = this._lastAttackTickByTarget.get(nearbyID) ?? -1;
-      const secondsSinceAttack = (currentTick - lastAttackTick) / 10;
+      const secondsSinceAttack = ticksToSeconds(currentTick - lastAttackTick);
       const hasNotAttackedRecently =
         lastAttackTick < 0 || secondsSinceAttack > 15;
 
@@ -399,130 +437,70 @@ export class ControlPanel extends LitElement implements Controller {
     return { greenPercent, orangePercent };
   }
 
-  private renderMobileTroopBar() {
+  private renderTroopBar() {
+    // Troops above a shrunken cap drain away: the rate is then below zero.
+    const sign = this.troopRate < 0 ? "−" : "+";
+    const rate = `${sign}${renderTroops(Math.abs(this.troopRate))}/s`;
     const { greenPercent, orangePercent } = this.calculateTroopBar();
+    const trend = this._troopRateIsIncreasing ? "up" : "down";
     return html`
       <div
-        class="w-full h-6 border ${
-          this._lowTroopsAlert ? "border-red-500" : "border-gray-600"
-        } rounded-md bg-gray-900/60 overflow-hidden relative"
+        data-troop-bar
+        ?data-alert=${this._lowTroopsAlert}
+        ?data-attacking=${this._attackingTroops > 0}
+        class="relative h-6 min-w-0 lg:col-start-2 lg:row-start-1 ${this.tutorialHighlightClass(
+          "troops",
+        )}"
       >
-        <div class="relative h-full">
+        <div
+          class="absolute inset-0 overflow-hidden ${TRACK} ${
+            this._lowTroopsAlert ? TRACK_BORDER.alert : TRACK_BORDER.calm
+          }"
+        >
           <div
-            class="absolute inset-y-0 left-0 w-full origin-left bg-malibu-blue transition-transform duration-200 ease-out"
+            class="absolute inset-y-0 left-0 w-full origin-left transition-transform duration-200 ease-out ${TROOP_FILL}"
             style="transform: scaleX(${greenPercent / 100});"
           ></div>
           <div
-            class="absolute inset-y-0 left-0 w-full origin-left bg-aquarius transition-transform duration-200 ease-out"
+            class="absolute inset-y-0 left-0 w-full origin-left transition-transform duration-200 ease-out ${TROOPS_OUT}"
             style="transform: translateX(${greenPercent}%) scaleX(${
               orangePercent / 100
             });"
           ></div>
+          ${
+            this._lowTroopsAlert
+              ? html`<div
+                  class="troop-bar-alert absolute inset-0 bg-red-600"
+                ></div>`
+              : nothing
+          }
         </div>
-        ${
-          this._lowTroopsAlert
-            ? html`<div
-                class="troop-bar-alert absolute inset-0 bg-red-600"
-              ></div>`
-            : nothing
-        }
+        <!-- One line that clips: when the three do not fit, the max wraps out
+             of sight first, then the rate; the count always stays. From lg
+             the rate leaves the line for the chip column. -->
         <div
-          class="absolute inset-0 flex items-center justify-between px-1.5 text-xs font-bold leading-none pointer-events-none"
+          class="relative flex h-6 flex-wrap content-start items-center overflow-hidden lg:flex-nowrap lg:overflow-visible"
           translate="no"
         >
-          <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-            >${renderTroops(this._troops)}</span
-          >
-          <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-            >${renderTroops(this._maxTroops)}</span
-          >
-        </div>
-        <div
-          class="absolute inset-0 flex items-center justify-center pointer-events-none"
-          translate="no"
-        >
-          <div
-            class="flex items-center gap-0.5 px-1 ${this.tutorialHighlightClass(
+          <span data-troops class="flex h-6 shrink-0 items-center ${TROOPS}">
+            <of-icon name="troops" size="14" class="max-lg:hidden"></of-icon>
+            <span class="hud-caps">${renderTroops(this._troops)}</span>
+          </span>
+          <span
+            data-troop-rate
+            data-rate-trend=${trend}
+            class="shrink-0 ${CHIP} ${RATE} ${RATE_TREND[trend]} ${this.tutorialHighlightClass(
               "troop_rate",
             )}"
           >
-            <img
-              src=${soldierIcon}
-              alt=""
-              aria-hidden="true"
-              width="12"
-              height="12"
-              class="brightness-0 invert drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-            />
-            <span
-              class="text-[10px] font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ${
-                this._troopRateIsIncreasing
-                  ? "text-green-400"
-                  : "text-orange-400"
-              }"
-              >+${renderTroops(this.troopRate)}/s</span
-            >
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  private renderDesktopTroopBar() {
-    const { greenPercent, orangePercent } = this.calculateTroopBar();
-    return html`
-      <div
-        class="w-full h-6 border ${
-          this._lowTroopsAlert ? "border-red-500" : "border-gray-600"
-        } rounded-md bg-gray-900/60 overflow-hidden relative"
-      >
-        <div class="relative h-full">
-          <div
-            class="absolute inset-y-0 left-0 w-full origin-left bg-malibu-blue transition-transform duration-200 ease-out"
-            style="transform: scaleX(${greenPercent / 100});"
-          ></div>
-          <div
-            class="absolute inset-y-0 left-0 w-full origin-left bg-aquarius transition-transform duration-200 ease-out"
-            style="transform: translateX(${greenPercent}%) scaleX(${
-              orangePercent / 100
-            });"
-          ></div>
-        </div>
-        ${
-          this._lowTroopsAlert
-            ? html`<div
-                class="troop-bar-alert absolute inset-0 bg-red-600"
-              ></div>`
-            : nothing
-        }
-        <div
-          class="absolute inset-0 flex items-center text-lg font-bold leading-none pointer-events-none"
-          translate="no"
-        >
-          <span class="flex-1 flex justify-end h-full items-center pr-0.5">
-            <span class="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-              >${renderTroops(this._troops)}</span
-            >
+            <span class="lg:hud-caps">${rate}</span>
           </span>
           <span
-            class="h-full flex items-center px-0.5 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-            >/</span
+            data-max-troops
+            class="ms-auto flex shrink-0 items-center ${MAX_TROOPS}"
           >
-          <span
-            class="flex-1 flex justify-start h-full items-center pl-0.5 gap-0.5"
-          >
-            <span
-              class="text-white tabular-nums w-[3.5rem] drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
-              >${renderTroops(this._maxTroops)}</span
-            >
-            <img
-              src=${soldierIcon}
-              alt=""
-              aria-hidden="true"
-              width="22"
-              height="22"
-              class="shrink-0 brightness-0 invert drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] ml-1.5"
-            />
+            <of-icon name="max" size="10" class="max-lg:hidden"></of-icon>
+            <span class="hud-caps">${renderTroops(this._maxTroops)}</span>
           </span>
         </div>
       </div>
@@ -550,108 +528,6 @@ export class ControlPanel extends LitElement implements Controller {
     `;
   }
 
-  private renderDesktop() {
-    return html`
-      ${this.renderNotification()}
-      <!-- Row 1: troop rate | troop bar | gold -->
-      <div class="flex gap-1.5 items-center mb-1">
-        <!-- Troop rate -->
-        <div
-          class="flex items-center gap-1 shrink-0 border rounded-md font-bold text-sm py-0.5 px-1 w-[5.5rem] ${this.tutorialHighlightClass(
-            "troop_rate",
-          )} ${
-            this._troopRateIsIncreasing
-              ? "border-green-400"
-              : "border-orange-400"
-          }"
-          translate="no"
-        >
-          <img
-            src=${soldierIcon}
-            alt=""
-            aria-hidden="true"
-            width="13"
-            height="13"
-            class="shrink-0"
-            style="filter: ${
-              this._troopRateIsIncreasing
-                ? "brightness(0) saturate(100%) invert(74%) sepia(44%) saturate(500%) hue-rotate(83deg) brightness(103%)"
-                : "brightness(0) saturate(100%) invert(65%) sepia(60%) saturate(600%) hue-rotate(330deg) brightness(105%)"
-            }"
-          />
-          <span
-            class="text-sm font-bold tabular-nums ${
-              this._troopRateIsIncreasing ? "text-green-400" : "text-orange-400"
-            }"
-            >+${renderTroops(this.troopRate)}/s</span
-          >
-        </div>
-        <!-- Troop bar -->
-        <div class="flex-1 ${this.tutorialHighlightClass("troops")}">
-          ${this.renderDesktopTroopBar()}
-        </div>
-        <!-- Gold -->
-        <div
-          class="flex items-center gap-1 shrink-0 border rounded-md border-yellow-400 font-bold text-yellow-400 text-sm py-0.5 px-1 min-w-[4.5rem] relative ${this.tutorialHighlightClass(
-            "gold",
-          )}"
-          translate="no"
-        >
-          ${
-            this._goldGain !== null
-              ? keyed(
-                  this._goldGainPulseId,
-                  html`<span
-                    class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-sm font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
-                    >+${renderNumber(this._goldGain)}</span
-                  >`,
-                )
-              : ""
-          }
-          <img src=${goldCoinIcon} width="13" height="13" class="shrink-0" />
-          <span class="tabular-nums">${renderNumber(this._gold)}</span>
-        </div>
-      </div>
-      <!-- Row 2: attack ratio | slider -->
-      <div
-        class="flex items-center gap-1.5 ${this.tutorialHighlightClass(
-          "attack_ratio",
-        )}"
-        translate="no"
-      >
-        <div
-          class="flex items-center gap-1 shrink-0 border border-gray-600 rounded-md px-1 py-0.5 text-sm font-bold text-white cursor-pointer w-[8rem]"
-        >
-          <img
-            src=${swordIcon}
-            alt=""
-            aria-hidden="true"
-            width="12"
-            height="12"
-            style="filter: brightness(0) invert(1);"
-          />
-          <span
-            >${(this.attackRatio * 100).toFixed(0)}%
-            (${renderTroops(
-              (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
-            )})</span
-          >
-        </div>
-        <input
-          type="range"
-          min="1"
-          max="100"
-          .value=${String(Math.round(this.attackRatio * 100))}
-          @input=${(e: Event) => this.handleRatioSliderInput(e)}
-          @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
-          @click=${(e: MouseEvent) => this.handleRatioSliderClick(e)}
-          data-radial-click-through
-          class="flex-1 h-1.5 accent-aquarius cursor-pointer"
-        />
-      </div>
-    `;
-  }
-
   private getMobileAttackRatioLabel(): string {
     const percent = (this.attackRatio * 100).toFixed(0);
     const troops = renderTroops(
@@ -667,73 +543,82 @@ export class ControlPanel extends LitElement implements Controller {
       : `${percent}%\n(${troops})`;
   }
 
-  private renderMobile() {
+  private renderGold() {
     return html`
-      ${this.renderNotification()}
-      <div class="flex gap-2 items-center">
-        <!-- Gold -->
-        <div
-          class="flex items-center justify-center p-1 gap-0.5 border rounded-md border-yellow-400 font-bold text-yellow-400 text-xs w-1/5 shrink-0 relative ${this.tutorialHighlightClass(
-            "gold",
-          )}"
-          translate="no"
+      <span
+        data-gold
+        class="relative flex shrink-0 items-center lg:col-start-3 lg:row-start-1 ${GOLD} ${this.tutorialHighlightClass(
+          "gold",
+        )}"
+        translate="no"
+      >
+        ${
+          this._goldGain !== null
+            ? keyed(
+                this._goldGainPulseId,
+                html`<span class="gold-gain-pop ${GOLD_POP}"
+                  >+${renderNumber(this._goldGain)}</span
+                >`,
+              )
+            : ""
+        }
+        <img src=${goldCoinIcon} width="13" height="13" class="shrink-0" />
+        <span class="px-0.5 tabular-nums lg:px-0"
+          >${renderNumber(this._gold)}</span
         >
-          ${
-            this._goldGain !== null
-              ? keyed(
-                  this._goldGainPulseId,
-                  html`<span
-                    class="gold-gain-pop absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-xs font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]"
-                    >+${renderNumber(this._goldGain)}</span
-                  >`,
-                )
-              : ""
-          }
-          <img src=${goldCoinIcon} width="13" height="13" />
-          <span class="px-0.5">${renderNumber(this._gold)}</span>
-        </div>
-        <!-- Troop bar -->
-        <div
-          class="w-[40%] shrink-0 flex items-center ${this.tutorialHighlightClass(
-            "troops",
-          )}"
+      </span>
+    `;
+  }
+
+  private renderRatioLabel() {
+    return html`
+      <span
+        data-attack-ratio-label
+        class="flex items-center lg:col-start-1 lg:row-start-2 ${RATIO}"
+        translate="no"
+      >
+        <img
+          src=${swordIcon}
+          alt=""
+          aria-hidden="true"
+          width="12"
+          height="12"
+          class="size-2.5 lg:size-3"
+          style="filter: brightness(0) invert(1);"
+        />
+        <span
+          class="text-center text-[11px] leading-tight whitespace-pre-wrap lg:hidden"
+          >${this.getMobileAttackRatioLabel()}</span
         >
-          ${this.renderMobileTroopBar()}
-        </div>
-        <!-- Sword + % and troop count label -->
-        <div class="flex flex-col items-center justify-center shrink-0">
-          <div class="flex items-center gap-0.5">
-            <img
-              src=${swordIcon}
-              alt=""
-              aria-hidden="true"
-              width="10"
-              height="10"
-              style="filter: brightness(0) invert(1);"
-            />
-            <span
-              class="text-white text-[11px] font-bold tabular-nums text-center leading-tight whitespace-pre-wrap"
-              >${this.getMobileAttackRatioLabel()}</span
-            >
-          </div>
-        </div>
-        <!-- Attack ratio slider -->
-        <div
-          class="flex-1 min-w-0 ${this.tutorialHighlightClass("attack_ratio")}"
-          translate="no"
+        <span class="hidden lg:inline"
+          >${(this.attackRatio * 100).toFixed(0)}%
+          (${renderTroops(
+            (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
+          )})</span
         >
-          <input
-            type="range"
-            min="1"
-            max="100"
-            .value=${String(Math.round(this.attackRatio * 100))}
-            @input=${(e: Event) => this.handleRatioSliderInput(e)}
-            @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
-            @click=${(e: MouseEvent) => this.handleRatioSliderClick(e)}
-            data-radial-click-through
-            class="w-full h-1.5 accent-aquarius cursor-pointer"
-          />
-        </div>
+      </span>
+    `;
+  }
+
+  private renderRatioSlider() {
+    return html`
+      <div
+        class="flex min-w-0 items-center lg:col-span-2 lg:col-start-2 lg:row-start-2 ${this.tutorialHighlightClass(
+          "attack_ratio",
+        )}"
+        translate="no"
+      >
+        <input
+          type="range"
+          min="1"
+          max="100"
+          .value=${String(Math.round(this.attackRatio * 100))}
+          @input=${(e: Event) => this.handleRatioSliderInput(e)}
+          @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
+          @click=${(e: MouseEvent) => this.handleRatioSliderClick(e)}
+          data-radial-click-through
+          class="w-full cursor-pointer ${SLIDER}"
+        />
       </div>
     `;
   }
@@ -756,13 +641,15 @@ export class ControlPanel extends LitElement implements Controller {
         }
       </style>
       <div
-        class="relative pointer-events-auto ${
-          this._isVisible ? "relative w-full text-sm px-2 py-1" : "hidden"
-        }"
+        data-control-panel
+        class="pointer-events-auto ${this._isVisible ? PANEL : "hidden"}"
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
-        <div class="lg:hidden">${this.renderMobile()}</div>
-        <div class="hidden lg:block">${this.renderDesktop()}</div>
+        ${this.renderNotification()}
+        <div class=${GRID}>
+          ${this.renderGold()} ${this.renderTroopBar()}
+          ${this.renderRatioLabel()} ${this.renderRatioSlider()}
+        </div>
       </div>
     `;
   }
