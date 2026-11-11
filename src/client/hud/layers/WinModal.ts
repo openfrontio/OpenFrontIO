@@ -2,22 +2,26 @@ import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import type { AllPlayersStats, Winner } from "@openfront/engine-api/Schemas";
 import type { GameXpEligible, Progress } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { Pattern } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   DESKTOP_TUTORIAL_VIDEO_URL,
+  formatPercentage,
   getGamesPlayed,
   getTranslatedPlayerTeamLabel,
   homeHref,
   isInIframe,
+  renderDuration,
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
 import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
+import "../../components/OfIcon";
 import {
   ffaRatingGameOf,
   type FfaRatingGame,
@@ -25,6 +29,7 @@ import {
 } from "../../components/ffaRating/FfaRatingEligibility";
 import type { GameXpPanelState } from "../../components/GameXpPanel";
 import type { LegendCeremony } from "../../components/LegendCeremony";
+import type { OfIconName } from "../../components/OfIcon";
 import "../../components/ProfileShare";
 import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
@@ -67,6 +72,8 @@ import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
 import { shareGame } from "../../utilities/ShareGame";
 import { GameView } from "../../view";
+import { endScreenStats, type EndScreenStats } from "../EndScreenStats";
+import { HUD_BUTTON_MAIN, HUD_BUTTON_QUIET } from "../HudModal";
 
 type LegendCeremonyModule = typeof import("../../components/LegendCeremony");
 
@@ -106,23 +113,36 @@ function loadFfaRatingPanel(): Promise<unknown> {
   return import("../../components/ffaRating/FfaRatingPanel");
 }
 
-const iconShare = html`<svg
-  xmlns="http://www.w3.org/2000/svg"
-  viewBox="0 0 24 24"
-  fill="none"
-  stroke="currentColor"
-  stroke-width="2"
-  stroke-linecap="round"
-  stroke-linejoin="round"
-  class="w-5 h-5"
-  aria-hidden="true"
->
-  <circle cx="18" cy="5" r="3" />
-  <circle cx="6" cy="12" r="3" />
-  <circle cx="18" cy="19" r="3" />
-  <line x1="8.6" y1="10.5" x2="15.4" y2="6.5" />
-  <line x1="8.6" y1="13.5" x2="15.4" y2="17.5" />
-</svg>`;
+// The glyphs proprietary/fonts/OpenFront.ttf has. A title with any other
+// character falls back to the UI font as a whole, never letter by letter.
+const DISPLAY_FONT_GLYPHS = /^[ !"$%&'()+,\-.0-9=?@A-Z[\]a-z]*$/;
+
+// The font has no accented letters, so "gagné" is drawn as "gagne"; the
+// no-break spaces French puts before "!" and "?" become plain ones.
+function foldForDisplayFont(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[\u00A0\u202F]/g, " ");
+}
+
+// In OpenFront.ttf "!" and "?" are as tall as the capitals but sit lower, by
+// 80 and 33 units of 1000, so each is raised by that much to line up. A
+// translate, not `top`: layout rounds `top` to whole pixels, the text is not.
+const RAISED_GLYPHS: Record<string, string> = {
+  "!": "inline-block -translate-y-[0.08em]",
+  "?": "inline-block -translate-y-[0.033em]",
+};
+
+function raisePunctuation(text: string): (string | TemplateResult)[] {
+  return text
+    .split(/([!?])/)
+    .map((part) =>
+      part in RAISED_GLYPHS
+        ? html`<span class=${RAISED_GLYPHS[part]}>${part}</span>`
+        : part,
+    );
+}
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Controller {
@@ -191,6 +211,15 @@ export class WinModal extends LitElement implements Controller {
     import("../../components/LegendCeremony");
 
   private _title: string;
+  // A fixed headline ("You Won!"), as opposed to a title with a name in it:
+  // only a headline may be drawn in the pixel font.
+  private titleIsHeadline = false;
+
+  // Time, land and rank, worked out when the screen opens. A player who died
+  // keeps the figures from their death when the game ends later.
+  @state()
+  private stats: EndScreenStats | null = null;
+  private statsAtDeath: EndScreenStats | null = null;
 
   private rand = Math.random();
 
@@ -204,84 +233,100 @@ export class WinModal extends LitElement implements Controller {
   }
 
   render() {
+    // No scrim: the map stays visible and clickable around the dialog.
     return html`
       <div
         class="${
           this.isVisible
-            ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-4 md:p-6 shrink-0 rounded-lg z-[10010] shadow-2xl backdrop-blur-xs text-white w-[min(90vw,700px)] max-w-[90%] max-h-[90dvh] overflow-hidden flex flex-col"
+            ? "pointer-events-none fixed inset-0 z-[10010] grid place-items-center p-3"
             : "hidden"
         }"
       >
-        <h2 class="m-0 mb-4 text-[26px] text-center text-white shrink-0">
-          ${this._title || ""}
-        </h2>
-        <div class="min-h-0 flex-1 overflow-y-auto pr-0.5">
-          <game-xp-panel
-            .view=${this.xpView}
-            .onScreen=${this.isVisible}
-            @xp-reveal-settled=${(e: CustomEvent<GameXpPanelState>) =>
-              (this.xpSettled = e.detail)}
-            .gameType=${this.game?.config().gameConfig().gameType ?? null}
-            @xp-legend=${this.onXpLegend}
-          ></game-xp-panel>
-          ${
-            this.ffaRating === null
-              ? nothing
-              : html`<ffa-rating-panel
-                  class="mt-3 block"
-                  .gameId=${this.ffaRating.gameId}
-                  .lobbyHumans=${this.ffaRating.lobbyHumans}
-                ></ffa-rating-panel>`
-          }
-          ${this.innerHtml()}
-        </div>
-        <!-- Leaving is the quieter action, on the left; staying in the game
-             is the main one, on the right. Sharing a milestone sits between
-             them, or on its own row above where three don't fit. -->
-        <div class="mt-4 flex flex-wrap justify-between gap-2.5 shrink-0">
-          ${this.actionButton(
-            "quiet",
-            translateText("win_modal.exit"),
-            () => this._handleExit(),
-            "exit",
-          )}
-          ${this.renderShare()}
-          ${
-            this.requeueMode !== null
-              ? this.actionButton(
-                  "main",
-                  translateText("win_modal.requeue"),
-                  () => this._handleRequeue(),
-                  "requeue",
-                )
-              : null
-          }
-          ${this.actionButton(
-            "main",
-            this.game?.myPlayer()?.isAlive()
-              ? translateText("win_modal.keep")
-              : translateText("win_modal.spectate"),
-            () => this.hide(),
-            "keep",
-          )}
-          ${
-            this.game?.resumedFromSave?.()
-              ? null
-              : html`<button
-                  type="button"
-                  data-win-action="share"
-                  class="win-action win-action-main win-action-icon"
-                  title=${translateText("win_modal.share")}
-                  aria-label=${translateText("win_modal.share")}
-                  @click=${this._handleShare}
-                >
-                  <span class="relative flex items-center justify-center"
-                    >${iconShare}</span
+        <div
+          role="dialog"
+          aria-labelledby="win-modal-title"
+          class="hud-modal pointer-events-auto flex max-h-[calc(100dvh-24px)] w-[min(640px,100%)] flex-col overflow-hidden text-white animate-hud-rise motion-reduce:animate-none"
+        >
+          <div class="px-3 pt-6 pb-4 text-center">
+            <div class="flex items-center gap-4">
+              <span
+                aria-hidden="true"
+                class="h-px min-w-0 flex-1 bg-linear-to-r from-transparent to-white/20"
+              ></span>
+              ${this.renderTitle()}
+              <span
+                aria-hidden="true"
+                class="h-px min-w-0 flex-1 bg-linear-to-l from-transparent to-white/20"
+              ></span>
+            </div>
+            ${this.renderStats()}
+          </div>
+          <div class="min-h-0 flex-1 overflow-y-auto px-3">
+            <game-xp-panel
+              .view=${this.xpView}
+              .onScreen=${this.isVisible}
+              @xp-reveal-settled=${(e: CustomEvent<GameXpPanelState>) =>
+                (this.xpSettled = e.detail)}
+              .gameType=${this.game?.config().gameConfig().gameType ?? null}
+              @xp-legend=${this.onXpLegend}
+            ></game-xp-panel>
+            ${
+              this.ffaRating === null
+                ? nothing
+                : html`<ffa-rating-panel
+                    class="mt-3 block"
+                    .gameId=${this.ffaRating.gameId}
+                    .lobbyHumans=${this.ffaRating.lobbyHumans}
+                  ></ffa-rating-panel>`
+            }
+            ${this.innerHtml()}
+          </div>
+          <!-- Leaving is the quieter action, on the left; staying in the game
+               is the main one, on the right. Sharing a milestone sits between
+               them, or on its own row above where three don't fit. -->
+          <div class="@container flex flex-wrap gap-2 p-3">
+            ${this.actionButton(
+              "quiet",
+              translateText("win_modal.exit"),
+              () => this._handleExit(),
+              "exit",
+            )}
+            ${this.renderShare()}
+            ${
+              this.requeueMode !== null
+                ? this.actionButton(
+                    "main",
+                    translateText("win_modal.requeue"),
+                    () => this._handleRequeue(),
+                    "requeue",
+                  )
+                : null
+            }
+            ${this.actionButton(
+              "main",
+              this.game?.myPlayer()?.isAlive()
+                ? translateText("win_modal.keep")
+                : translateText("win_modal.spectate"),
+              () => this.hide(),
+              "keep",
+            )}
+            ${
+              this.game?.resumedFromSave?.()
+                ? null
+                : html`<button
+                    type="button"
+                    data-win-action="share"
+                    data-win-tone="quiet"
+                    class="${HUD_BUTTON_QUIET} w-12 shrink-0 px-0"
+                    title=${translateText("win_modal.share")}
+                    aria-label=${translateText("win_modal.share")}
+                    @click=${this._handleShare}
                   >
-                </button>`
-          }
+                    <of-icon name="share" size="20"></of-icon>
+                  </button>`
+            }
+          </div>
         </div>
-        ${this.renderActionStyles()}
       </div>
       <legend-ceremony
         @legend-ceremony-closed=${this.onLegendCeremonyClosed}
@@ -342,10 +387,15 @@ export class WinModal extends LitElement implements Controller {
     this.querySelector<HTMLElement>('[data-win-action="keep"]')?.focus();
   };
 
-  // The modal's own buttons, textured like the store's tiles and buy buttons:
-  // a tinted gradient with a coloured border, and on hover they lift, glow
-  // and a light streak sweeps across. "main" is the blue action (keep playing,
-  // play again); "quiet" is leaving.
+  private setTitle(title: string, headline: boolean): void {
+    this._title = title;
+    this.titleIsHeadline = headline;
+  }
+
+  // "main" is the blue action (keep playing, play again); "quiet" is leaving.
+  // min-w-28 makes long labels (German, Russian) wrap the row rather than
+  // crush the buttons. In a narrow dialog (phones) a main action takes a full
+  // row under the others, so its label stays on one line.
   private actionButton(
     tone: "main" | "quiet",
     label: string,
@@ -355,11 +405,112 @@ export class WinModal extends LitElement implements Controller {
     return html`<button
       type="button"
       data-win-action=${action}
-      class="win-action win-action-${tone} flex-1"
+      data-win-tone=${tone}
+      class="${
+        tone === "main"
+          ? `${HUD_BUTTON_MAIN} @max-md:order-last @max-md:basis-full`
+          : HUD_BUTTON_QUIET
+      } min-w-28 flex-1"
       @click=${onClick}
     >
-      <span class="relative">${label}</span>
+      ${label}
     </button>`;
+  }
+
+  // A fixed headline is drawn in the game's pixel font when the font has
+  // every letter of it. A title with a name in it never is: a name can be in
+  // any script, and uppercase would rewrite it.
+  private renderTitle(): TemplateResult {
+    const title = this._title ?? "";
+    const folded = this.titleIsHeadline ? foldForDisplayFont(title) : null;
+    // The text to draw in the pixel font, or null for the UI font.
+    const displayText =
+      folded !== null && DISPLAY_FONT_GLYPHS.test(folded) ? folded : null;
+    const display = displayText !== null;
+    return html`<h2
+      id="win-modal-title"
+      data-title-font=${display ? "display" : "ui"}
+      class="m-0 min-w-0 text-balance break-words ${
+        display
+          ? "hud-caps font-display uppercase leading-none tracking-wide text-[clamp(1.875rem,9vw,3.5rem)]"
+          : "text-2xl font-extrabold leading-tight"
+      } ${this.isWin ? "text-cyber-yellow" : "text-white/90"}"
+    >
+      ${
+        displayText === null
+          ? title
+          : displayText !== title
+            ? html`<span aria-hidden="true"
+                  >${raisePunctuation(displayText)}</span
+                ><span class="sr-only">${title}</span>`
+            : raisePunctuation(title)
+      }
+    </h2>`;
+  }
+
+  private renderStats(): TemplateResult | typeof nothing {
+    const stats = this.stats;
+    if (stats === null) return nothing;
+    return html`<ul
+      data-win-stats
+      class="m-0 mt-4 flex list-none flex-wrap justify-center gap-2 p-0 text-sm font-bold tabular-nums text-white/70"
+    >
+      ${this.statChip(
+        "time",
+        "hourglass",
+        translateText("win_modal.stat_time"),
+        renderDuration(stats.seconds),
+      )}
+      ${
+        stats.landShare === null
+          ? nothing
+          : this.statChip(
+              "land",
+              "land",
+              translateText(
+                stats.team ? "win_modal.stat_team_land" : "win_modal.stat_land",
+              ),
+              formatPercentage(stats.landShare),
+            )
+      }
+      ${
+        stats.rank === null
+          ? nothing
+          : this.statChip(
+              "rank",
+              // The team icon says the rank is among teammates.
+              stats.team ? "team" : "leaderboard",
+              translateText(
+                stats.team ? "win_modal.stat_team_rank" : "win_modal.stat_rank",
+              ),
+              translateText("win_modal.stat_rank_value", {
+                rank: stats.rank,
+                players: stats.players,
+              }),
+            )
+      }
+    </ul>`;
+  }
+
+  private statChip(
+    stat: string,
+    icon: OfIconName,
+    label: string,
+    value: string,
+  ): TemplateResult {
+    return html`<li
+      data-win-stat=${stat}
+      title=${label}
+      class="inline-flex items-center gap-2 rounded-sm bg-white/6 px-3 py-1"
+    >
+      <of-icon
+        name=${icon}
+        size="16"
+        class=${this.isWin ? "text-cyber-yellow/75" : "text-white/55"}
+      ></of-icon>
+      <span class="sr-only">${label}</span>
+      <span>${value}</span>
+    </li>`;
   }
 
   // Sharing a milestone or becoming a Legend, once the reveal has shown it.
@@ -386,150 +537,15 @@ export class WinModal extends LitElement implements Controller {
       .label=${momentShareLabel(moment)}
       .url=${url}
       .text=${momentShareText(moment)}
-      triggerClass="win-action win-action-quiet w-full"
+      triggerClass="${HUD_BUTTON_QUIET} w-full"
     ></profile-share>`;
   }
 
-  private renderActionStyles(): TemplateResult {
-    return html`<style>
-      .win-action {
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-height: 3rem;
-        padding: 0.75rem 1rem;
-        border-radius: 0.75rem;
-        border: 1px solid;
-        color: #fff;
-        font-weight: 700;
-        font-size: 1.0625rem;
-        line-height: 1.25;
-        letter-spacing: 0.02em;
-        cursor: pointer;
-        transition:
-          transform 200ms ease-out,
-          box-shadow 200ms ease-out,
-          border-color 200ms ease-out,
-          background 200ms ease-out;
-      }
-      /* The light streak, parked off the left edge until hover. */
-      .win-action::after {
-        content: "";
-        position: absolute;
-        top: -20%;
-        bottom: -20%;
-        left: -60%;
-        width: 40%;
-        transform: skewX(-20deg);
-        background: linear-gradient(
-          90deg,
-          transparent,
-          rgba(255, 255, 255, 0.28),
-          transparent
-        );
-        pointer-events: none;
-      }
-      /* The streak sweeps across on the way in only; leaving, it snaps back
-         out of sight rather than sweeping back across the button. */
-      .win-action:hover::after,
-      .win-action:focus-visible::after {
-        left: 130%;
-        transition: left 550ms ease-out;
-      }
-      .win-action:hover,
-      .win-action:focus-visible {
-        transform: translateY(-2px);
-      }
-      .win-action:active {
-        transform: translateY(0) scale(0.98);
-      }
-      .win-action:focus-visible {
-        outline: 2px solid #3fa9f5;
-        outline-offset: 2px;
-      }
-      .win-action-main {
-        background: linear-gradient(
-          to top,
-          rgba(0, 132, 209, 0.95) 0%,
-          rgba(0, 101, 170, 0.8) 100%
-        );
-        border-color: rgba(63, 169, 245, 0.55);
-      }
-      .win-action-main:hover,
-      .win-action-main:focus-visible {
-        background: linear-gradient(
-          to top,
-          rgba(29, 150, 230, 1) 0%,
-          rgba(0, 120, 200, 0.9) 100%
-        );
-        border-color: rgba(125, 200, 255, 0.9);
-        box-shadow: 0 0 20px rgba(63, 169, 245, 0.55);
-      }
-      .win-action-quiet {
-        background: linear-gradient(
-          to top,
-          rgba(80, 80, 80, 0.55) 0%,
-          rgba(15, 15, 20, 0.85) 100%
-        );
-        border-color: rgba(255, 255, 255, 0.15);
-      }
-      .win-action-quiet:hover,
-      .win-action-quiet:focus-visible {
-        background: linear-gradient(
-          to top,
-          rgba(110, 110, 120, 0.6) 0%,
-          rgba(25, 25, 32, 0.9) 100%
-        );
-        border-color: rgba(255, 255, 255, 0.35);
-        box-shadow: 0 0 14px rgba(255, 255, 255, 0.25);
-      }
-      .win-action-icon {
-        padding: 0;
-        width: 3rem;
-        aspect-ratio: 1 / 1;
-        flex-shrink: 0;
-      }
-      /* The share menu's flash ring sits in the trigger's wrapper so it isn't
-         clipped by .win-action's overflow:hidden. When the button translates up
-         on hover/focus, keep the ring centered around it. */
-      [data-share-ring] {
-        transition:
-          top 200ms ease-out,
-          bottom 200ms ease-out;
-      }
-      .win-action:hover ~ [data-share-ring],
-      .win-action:focus-visible ~ [data-share-ring] {
-        top: -6px;
-        bottom: -2px;
-      }
-      .win-action:active ~ [data-share-ring] {
-        top: -4px;
-        bottom: -4px;
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .win-action,
-        .win-action::after,
-        [data-share-ring] {
-          transition: none;
-        }
-        .win-action:hover,
-        .win-action:focus-visible,
-        .win-action:active {
-          transform: none;
-        }
-        .win-action:hover ~ [data-share-ring],
-        .win-action:focus-visible ~ [data-share-ring],
-        .win-action:active ~ [data-share-ring] {
-          top: -4px;
-          bottom: -4px;
-        }
-      }
-    </style>`;
-  }
-
   innerHtml() {
+    // Poki doesn't allow promoting other platforms (see SteamWishlist), and
+    // an outbound Discord link is the same kind of thing.
+    if (gamePortal.name() === "poki") return nothing;
+
     // The Steam desktop build has nothing to wishlist — fall through to the
     // other promos so the box is never empty.
     const canWishlist = !steamSDK.isOnSteam();
@@ -552,22 +568,21 @@ export class WinModal extends LitElement implements Controller {
 
   renderYoutubeTutorial() {
     return html`
-      <div class="text-center mb-6 bg-black/30 p-2.5 rounded-sm">
-        <h3 class="text-xl font-semibold text-white mb-3">
+      <div data-win-promo="youtube" class="rounded-lg bg-white/6 p-3">
+        <h3 class="mb-2 text-base font-bold text-white">
           ${translateText("win_modal.youtube_tutorial")}
         </h3>
-        <!-- 56.25% = 9:16 -->
-        <div class="relative w-full pb-[56.25%]">
+        <div class="relative aspect-video overflow-hidden rounded-sm bg-black">
           ${
             Platform.isElectron
               ? html`<video
-                  class="absolute top-0 left-0 w-full h-full rounded-sm"
+                  class="absolute inset-0 size-full"
                   src="${this.isVisible ? DESKTOP_TUTORIAL_VIDEO_URL : ""}"
                   controls
                   preload="metadata"
                 ></video>`
               : html`<iframe
-                  class="absolute top-0 left-0 w-full h-full rounded-sm"
+                  class="absolute inset-0 size-full"
                   src="${this.isVisible ? TUTORIAL_VIDEO_URL : ""}"
                   title="YouTube video player"
                   frameborder="0"
@@ -582,14 +597,14 @@ export class WinModal extends LitElement implements Controller {
 
   renderPatternButton() {
     return html`
-      <div class="text-center mb-6 bg-black/30 p-2.5 rounded-sm">
-        <h3 class="text-xl font-semibold text-white mb-3">
+      <div data-win-promo="patterns" class="rounded-lg bg-white/6 p-3">
+        <h3 class="mb-2 text-base font-bold text-white">
           ${translateText("win_modal.support_openfront")}
         </h3>
         ${
           isDesktopShell()
             ? null
-            : html`<p class="text-white mb-3">
+            : html`<p class="mb-3 text-sm text-white/70">
                 ${translateText("win_modal.territory_pattern")}
               </p>`
         }
@@ -651,32 +666,49 @@ export class WinModal extends LitElement implements Controller {
 
   steamWishlist(): TemplateResult {
     return html`
-      <div class="text-center mb-6 bg-black/30 p-2.5 rounded-sm">
-        <h3 class="text-xl font-semibold text-white mb-3">
+      <div data-win-promo="steam" class="rounded-lg bg-white/6 p-3">
+        <h3 class="mb-2 text-base font-bold text-white">
           ${translateText("steam_wishlist.buy_on_steam")}
         </h3>
-        <steam-wishlist
-          campaign="win_modal"
-          .active=${this.isVisible}
-        ></steam-wishlist>
+        <div class="overflow-hidden rounded-sm">
+          <steam-wishlist
+            campaign="win_modal"
+            .active=${this.isVisible}
+          ></steam-wishlist>
+        </div>
       </div>
     `;
   }
 
   discordDisplay(): TemplateResult {
     return html`
-      <div class="text-center mb-6 bg-black/30 p-2.5 rounded-sm">
-        <h3 class="text-xl font-semibold text-white mb-3">
-          ${translateText("win_modal.join_discord")}
-        </h3>
-        <p class="text-white mb-3">
-          ${translateText("win_modal.discord_description")}
-        </p>
+      <div
+        data-win-promo="discord"
+        class="flex flex-wrap items-center gap-3 rounded-lg bg-white/6 p-3"
+      >
+        <span
+          class="grid size-10 shrink-0 place-items-center rounded-xl bg-[#5865F2]"
+        >
+          <img
+            src=${assetUrl("images/DiscordLogo.svg")}
+            alt=""
+            width="22"
+            height="22"
+          />
+        </span>
+        <div class="flex min-w-0 flex-[1_1_14rem] flex-col">
+          <h3 class="m-0 text-sm font-bold text-white">
+            ${translateText("win_modal.join_discord")}
+          </h3>
+          <p class="m-0 text-xs text-white/70">
+            ${translateText("win_modal.discord_description")}
+          </p>
+        </div>
         <a
           href="https://discord.com/invite/openfront"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-block px-6 py-3 bg-indigo-600 text-white rounded-sm font-semibold transition-all duration-200 hover:bg-indigo-700 hover:-translate-y-px no-underline"
+          class="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg bg-[#5865F2] px-4 text-sm font-bold uppercase tracking-widest text-white no-underline transition-colors hover:bg-[#4752C4] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aquarius max-sm:basis-full"
         >
           ${translateText("win_modal.join_server")}
         </a>
@@ -691,6 +723,7 @@ export class WinModal extends LitElement implements Controller {
     this.requeueMode = requeueModeForRankedType(
       this.game.config().gameConfig().rankedType,
     );
+    this.stats = this.statsAtDeath ?? endScreenStats(this.game);
     this.isVisible = true;
     this.requestUpdate();
     try {
@@ -1059,7 +1092,10 @@ export class WinModal extends LitElement implements Controller {
       myPlayer.hasSpawned()
     ) {
       this.hasShownDeathModal = true;
-      this._title = translateText("win_modal.died");
+      this.setTitle(translateText("win_modal.died"), true);
+      // A player who won and kept playing dies to a plain screen, not a gold one.
+      this.isWin = false;
+      this.statsAtDeath = endScreenStats(this.game);
       this.eventBus.emit(new PlaySoundEffectEvent("defeat"));
       void this.updateXp(false);
       void this.show();
@@ -1080,20 +1116,23 @@ export class WinModal extends LitElement implements Controller {
         // spawn): the game ends with no winner. Still vote the result to the
         // server so the record is archived winnerless (never ranked).
         vote(undefined, wu.allPlayersStats);
-        this._title = translateText("win_modal.match_cancelled");
+        this.setTitle(translateText("win_modal.match_cancelled"), false);
         this.isWin = false;
         history.replaceState(null, "", `${window.location.pathname}?replay`);
         void this.show();
       } else if (wu.winner[0] === "team") {
         vote(wu.winner, wu.allPlayersStats);
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
-          this._title = translateText("win_modal.your_team");
+          this.setTitle(translateText("win_modal.your_team"), true);
           this.isWin = true;
           void gamePortal.happytime();
         } else {
-          this._title = translateText("win_modal.other_team", {
-            team: getTranslatedPlayerTeamLabel(wu.winner[1]),
-          });
+          this.setTitle(
+            translateText("win_modal.other_team", {
+              team: getTranslatedPlayerTeamLabel(wu.winner[1]),
+            }),
+            false,
+          );
           this.isWin = false;
         }
         this.playEndOfGameSound();
@@ -1101,9 +1140,10 @@ export class WinModal extends LitElement implements Controller {
         void this.show();
       } else if (wu.winner[0] === "nation") {
         vote(wu.winner, wu.allPlayersStats);
-        this._title = translateText("win_modal.nation_won", {
-          nation: wu.winner[1],
-        });
+        this.setTitle(
+          translateText("win_modal.nation_won", { nation: wu.winner[1] }),
+          false,
+        );
         this.isWin = false;
         this.playEndOfGameSound();
         void this.show();
@@ -1118,13 +1158,16 @@ export class WinModal extends LitElement implements Controller {
           winnerClient !== null &&
           winnerClient === this.game.myPlayer()?.clientID()
         ) {
-          this._title = translateText("win_modal.you_won");
+          this.setTitle(translateText("win_modal.you_won"), true);
           this.isWin = true;
           void gamePortal.happytime();
         } else {
-          this._title = translateText("win_modal.other_won", {
-            player: winner.displayName(),
-          });
+          this.setTitle(
+            translateText("win_modal.other_won", {
+              player: winner.displayName(),
+            }),
+            false,
+          );
           this.isWin = false;
         }
         this.playEndOfGameSound();
