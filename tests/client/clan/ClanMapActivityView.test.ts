@@ -10,6 +10,7 @@ import {
 vi.mock("../../../src/client/Api", () => apiMockFactory());
 vi.mock("../../../src/client/Auth", () => authMockFactory());
 vi.mock("../../../src/client/Utils", () => utilsMockFactory());
+import { translateText } from "../../../src/client/Utils";
 vi.mock("../../../src/client/ClanApi", () => ({
   fetchClanMapActivity: vi.fn(),
   fetchClanMapActivityMembers: vi.fn(),
@@ -181,6 +182,18 @@ describe("ClanMapActivityView", () => {
     expect(
       el.querySelector("[data-kind=bought_troops] currency-display"),
     ).not.toBeNull();
+  });
+
+  it("formats troop counts with digit grouping", async () => {
+    await mount();
+    expect(translateText).toHaveBeenCalledWith(
+      "clan_modal.map_activity_bought",
+      { troops: (50000).toLocaleString() },
+    );
+    expect(translateText).toHaveBeenCalledWith(
+      "clan_modal.map_activity_troops_aboard",
+      { troops: (3000).toLocaleString() },
+    );
   });
 
   it("opens the map at a row's pixel, but a name click opens the profile", async () => {

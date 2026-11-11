@@ -468,7 +468,9 @@ export class ClanMapActivityView extends LitElement {
             })}</span
           >`;
         details.push(
-          t("clan_modal.map_activity_refunded", { troops: e.refundTroops }),
+          t("clan_modal.map_activity_refunded", {
+            troops: e.refundTroops.toLocaleString(),
+          }),
         );
         right = this.value(
           t("clan_modal.map_activity_px_loss", { count: e.pixels }),
@@ -479,7 +481,7 @@ export class ClanMapActivityView extends LitElement {
       case "bought_troops":
         headline = html`${this.name(e.player)}
           <span class="text-white/70"
-            >${t("clan_modal.map_activity_bought", { troops: e.troops })}</span
+            >${t("clan_modal.map_activity_bought", { troops: e.troops.toLocaleString() })}</span
           >`;
         right = html`<currency-display
           class="shrink-0"
@@ -498,7 +500,9 @@ export class ClanMapActivityView extends LitElement {
           t("clan_modal.map_activity_ship_lands", {
             time: formatAbsoluteTime(e.arrivesAt),
           }),
-          t("clan_modal.map_activity_troops_aboard", { troops: e.troops }),
+          t("clan_modal.map_activity_troops_aboard", {
+            troops: e.troops.toLocaleString(),
+          }),
         ];
         right = html`<span class="shrink-0 text-xs font-bold text-white/60"
           >${t("clan_modal.map_activity_view")}</span
@@ -515,7 +519,9 @@ export class ClanMapActivityView extends LitElement {
           >`;
         details = [
           t(`clan_modal.map_activity_outcome_${e.outcome}`),
-          t("clan_modal.map_activity_troops_aboard", { troops: e.troops }),
+          t("clan_modal.map_activity_troops_aboard", {
+            troops: e.troops.toLocaleString(),
+          }),
         ];
         right =
           e.outcome === "captured"
