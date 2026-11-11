@@ -4,7 +4,6 @@ import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { ClientID } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
-import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
@@ -21,16 +20,15 @@ import { TICKS_PER_SECOND, ticksToSeconds } from "../GameTicks";
 import { goldCoinIcon } from "../HotbarIcons";
 import { OnboardingLowTroopsEvent } from "../Onboarding";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
-const swordIcon = assetUrl("images/SwordIcon.svg");
 
 // Look. Sizes, colours, radii and spacing of each part live here, so a
 // change of look is one edit. The templates below only hold structure.
 const PANEL = "relative w-full px-2 py-1 text-sm lg:p-2";
 // Below lg one row: gold, troop bar, ratio label, slider. From lg two rows,
-// the rate chip over the ratio label in the first column. That column's 8rem
-// is RATE's width: keep the two equal.
+// the rate chip over the ratio label in the first column. That column's
+// 6.5rem is RATE's width: keep the two equal.
 const GRID =
-  "grid grid-cols-[auto_minmax(0,8fr)_auto_minmax(0,5fr)] items-center gap-x-2 lg:grid-cols-[8rem_minmax(0,1fr)_auto] lg:gap-y-1";
+  "grid grid-cols-[auto_minmax(0,8fr)_auto_minmax(0,5fr)] items-center gap-x-2 lg:grid-cols-[6.5rem_minmax(0,1fr)_auto] lg:gap-y-1";
 const CHIP = "flex h-6 items-center rounded-sm font-bold tabular-nums";
 const BAR_TEXT_SHADOW = "drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]";
 // The well is darker than the panel on purpose: it keeps the white numbers
@@ -46,7 +44,7 @@ const TROOPS = `gap-1 ps-1.5 text-xs font-bold text-white lg:text-base ${BAR_TEX
 const MAX_TROOPS =
   "me-0.5 h-5 gap-1 rounded-xs bg-black/50 px-1 text-[11px] font-bold text-white lg:px-1.5 lg:text-[13px]";
 // Inside the bar below lg; from lg a chip in the grid's empty first column.
-const RATE = `ms-1.5 text-[11px] transition-colors duration-700 ${BAR_TEXT_SHADOW} lg:absolute lg:inset-y-0 lg:end-full lg:me-2 lg:w-[8rem] lg:justify-center lg:text-[13px] lg:drop-shadow-none`;
+const RATE = `ms-1.5 text-[11px] transition-colors duration-700 ${BAR_TEXT_SHADOW} lg:absolute lg:inset-y-0 lg:end-full lg:me-2 lg:w-[6.5rem] lg:justify-center lg:text-[13px] lg:drop-shadow-none`;
 const RATE_TREND = {
   up: "text-green-400 lg:bg-green-400/12",
   down: "text-orange-400 lg:bg-orange-400/14",
@@ -55,9 +53,18 @@ const GOLD =
   "justify-center gap-0.5 rounded-md border border-yellow-400 p-1 text-xs font-bold text-yellow-400 min-w-16 lg:justify-start lg:gap-1 lg:px-1 lg:py-0.5 lg:text-sm lg:min-w-[4.5rem]";
 const GOLD_POP =
   "absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-xs lg:text-sm font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]";
+// The percentage over the troops it sends below lg, both on one line from lg.
 const RATIO =
-  "justify-center gap-0.5 font-bold tabular-nums text-white lg:justify-start lg:gap-1 lg:rounded-md lg:border lg:border-gray-600 lg:px-1 lg:py-0.5 lg:text-sm";
-const SLIDER = "h-1.5 accent-aquarius";
+  "gap-1 whitespace-nowrap font-bold tabular-nums text-white lg:ps-2";
+const RATIO_PERCENT = "text-xs leading-3.5 lg:text-[13px] lg:hud-caps";
+const RATIO_TROOPS =
+  "text-[11px] leading-3.5 text-white/70 lg:text-xs lg:hud-caps";
+// The track is inset by half the thumb (1rem, hud-range), so its fill and
+// marks end under the thumb's centre.
+const SLIDER = "h-7 lg:h-5";
+const SLIDER_TRACK = "inset-x-2 h-1 rounded-full bg-white/15";
+const SLIDER_FILL = "rounded-full bg-aquarius";
+const SLIDER_MARK = "h-2 w-0.5 rounded-full bg-white/30";
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Controller {
@@ -410,7 +417,11 @@ export class ControlPanel extends LitElement implements Controller {
     if (!isForwardedClick(e)) return;
     const input = e.currentTarget as HTMLInputElement | null;
     if (!input) return;
-    const rect = input.getBoundingClientRect();
+    // The thumb's centre only travels the track, which stops half a thumb
+    // short of each end of the input, so the tap is read over the track.
+    const track = this.querySelector("[data-ratio-track]");
+    if (!track) return;
+    const rect = track.getBoundingClientRect();
     if (rect.width === 0) return;
     const min = Number(input.min);
     const max = Number(input.max);
@@ -528,19 +539,22 @@ export class ControlPanel extends LitElement implements Controller {
     `;
   }
 
-  private getMobileAttackRatioLabel(): string {
+  private attackRatioLabel(): string {
     const percent = (this.attackRatio * 100).toFixed(0);
     const troops = renderTroops(
       (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
     );
-    const translated = translateText("control_panel.attack_ratio", {
-      percent,
+    // Keep a translation only if it shows the percent (a missing one comes
+    // back as its key). Look for a marker in the percent's place: the number
+    // itself can also turn up in the troop count.
+    const marker = "\u0000";
+    const showsPercent = translateText("control_panel.attack_ratio", {
+      percent: marker,
       troops,
-    });
-    return translated !== "control_panel.attack_ratio" &&
-      translated.includes(percent)
-      ? translated
-      : `${percent}%\n(${troops})`;
+    }).includes(marker);
+    return showsPercent
+      ? translateText("control_panel.attack_ratio", { percent, troops })
+      : `${percent}%\n${troops}`;
   }
 
   private renderGold() {
@@ -571,53 +585,70 @@ export class ControlPanel extends LitElement implements Controller {
   }
 
   private renderRatioLabel() {
+    // A translation without a line break lands whole on the first line.
+    const [percent, ...troops] = this.attackRatioLabel().split("\n");
     return html`
       <span
         data-attack-ratio-label
         class="flex items-center lg:col-start-1 lg:row-start-2 ${RATIO}"
         translate="no"
       >
-        <img
-          src=${swordIcon}
-          alt=""
-          aria-hidden="true"
-          width="12"
-          height="12"
-          class="size-2.5 lg:size-3"
-          style="filter: brightness(0) invert(1);"
-        />
+        <of-icon name="sword" size="12"></of-icon>
         <span
-          class="text-center text-[11px] leading-tight whitespace-pre-wrap lg:hidden"
-          >${this.getMobileAttackRatioLabel()}</span
+          class="flex flex-col items-end lg:flex-row lg:items-center lg:gap-1"
         >
-        <span class="hidden lg:inline"
-          >${(this.attackRatio * 100).toFixed(0)}%
-          (${renderTroops(
-            (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
-          )})</span
-        >
+          <span class=${RATIO_PERCENT}>${percent}</span>
+          ${
+            troops.length > 0
+              ? html`<span class=${RATIO_TROOPS}>${troops.join(" ")}</span>`
+              : nothing
+          }
+        </span>
       </span>
     `;
   }
 
   private renderRatioSlider() {
+    const percent = Math.round(this.attackRatio * 100);
     return html`
       <div
-        class="flex min-w-0 items-center lg:col-span-2 lg:col-start-2 lg:row-start-2 ${this.tutorialHighlightClass(
+        class="relative min-w-0 lg:col-span-2 lg:col-start-2 lg:row-start-2 ${SLIDER} ${this.tutorialHighlightClass(
           "attack_ratio",
         )}"
+        style="--ratio: ${(percent - 1) / 99}"
         translate="no"
       >
+        <div
+          data-ratio-track
+          class="pointer-events-none absolute top-1/2 -translate-y-1/2 ${SLIDER_TRACK}"
+          aria-hidden="true"
+        >
+          <div class="h-full w-[calc(var(--ratio)*100%)] ${SLIDER_FILL}"></div>
+          <!-- 25, 50, 75 and 100 on the slider's 1 to 100 scale. -->
+          ${[
+            "start-[24.24%]",
+            "start-[49.49%]",
+            "start-[74.75%]",
+            "start-full",
+          ].map(
+            (at) =>
+              html`<i
+                class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 ${at} ${SLIDER_MARK}"
+              ></i>`,
+          )}
+        </div>
         <input
           type="range"
           min="1"
           max="100"
-          .value=${String(Math.round(this.attackRatio * 100))}
+          .value=${String(percent)}
+          aria-label=${translateText("user_setting.attack_ratio_label")}
+          aria-valuetext="${percent}%"
           @input=${(e: Event) => this.handleRatioSliderInput(e)}
           @pointerup=${(e: Event) => this.handleRatioSliderPointerUp(e)}
           @click=${(e: MouseEvent) => this.handleRatioSliderClick(e)}
           data-radial-click-through
-          class="w-full cursor-pointer ${SLIDER}"
+          class="hud-range absolute inset-0 h-full w-full cursor-pointer rounded-sm"
         />
       </div>
     `;

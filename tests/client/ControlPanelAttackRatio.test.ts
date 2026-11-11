@@ -65,7 +65,9 @@ describe("control-panel attack ratio", () => {
     await (panel as any).updateComplete;
 
     const label = panel.querySelector("[data-attack-ratio-label]");
-    expect(label?.textContent).toContain("20%\n(2.00K)");
+    expect(label?.textContent).toContain("20%");
+    expect(label?.textContent).toContain("2.00K");
+    expect(label?.textContent).not.toContain("(");
     expect(label?.textContent).not.toContain("control_panel.attack_ratio");
   });
 
@@ -74,6 +76,25 @@ describe("control-panel attack ratio", () => {
     await (panel as any).updateComplete;
 
     expect(panel.querySelectorAll('input[type="range"]')).toHaveLength(1);
+  });
+
+  it("names the slider and reads its value as a percentage", async () => {
+    panel.setVisibile(true);
+    await (panel as any).updateComplete;
+
+    const slider = panel.querySelector(
+      'input[type="range"]',
+    ) as HTMLInputElement;
+    expect(slider.getAttribute("aria-label")).toBe(
+      "user_setting.attack_ratio_label",
+    );
+    expect(slider.getAttribute("aria-valuetext")).toBe("20%");
+
+    slider.value = "65";
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
+    await (panel as any).updateComplete;
+
+    expect(slider.getAttribute("aria-valuetext")).toBe("65%");
   });
 
   it("uses the translated string when it interpolates percent", async () => {
@@ -115,8 +136,33 @@ describe("control-panel attack ratio", () => {
     await (panel as any).updateComplete;
 
     const label = panel.querySelector("[data-attack-ratio-label]");
-    expect(label?.textContent).toContain("50%\n(5.00K)");
+    expect(label?.textContent).toContain("50%");
+    expect(label?.textContent).toContain("5.00K");
     expect(label?.textContent).not.toContain("Rapporto di Attacco");
+
+    langSelector.remove();
+  });
+
+  it("falls back when only the troop count matches the percent", async () => {
+    const langSelector = document.createElement("lang-selector") as any;
+    langSelector.translations = {
+      "control_panel.attack_ratio": "Send {troops} troops",
+    };
+    document.body.appendChild(langSelector);
+
+    // 20% of 100K troops is 20.0K: "20" is in the translation, the percent is not.
+    panel.game = {
+      inSpawnPhase: () => false,
+      myPlayer: () => ({ isAlive: () => true, troops: () => 1_000_000 }),
+    } as unknown as GameView;
+
+    panel.setVisibile(true);
+    await (panel as any).updateComplete;
+
+    const label = panel.querySelector("[data-attack-ratio-label]");
+    expect(label?.textContent).toContain("20%");
+    expect(label?.textContent).toContain("20.0K");
+    expect(label?.textContent).not.toContain("Send");
 
     langSelector.remove();
   });
@@ -144,15 +190,26 @@ describe("control-panel attack ratio", () => {
       'input[type="range"]',
     ) as HTMLInputElement;
     expect(slider.hasAttribute("data-radial-click-through")).toBe(true);
-    slider.getBoundingClientRect = () => ({ left: 0, width: 100 }) as DOMRect;
+    // The thumb's centre travels the track: 8 to 92 on a 100 px slider.
+    const track = panel.querySelector("[data-ratio-track]") as HTMLElement;
+    track.getBoundingClientRect = () => ({ left: 8, width: 84 }) as DOMRect;
 
     // A forwarded tap is the click the radial menu's overlay sends down.
-    const forwarded = new MouseEvent("click", { bubbles: true, clientX: 50 });
-    (forwarded as unknown as Record<string, unknown>)[FORWARDED_CLICK] = true;
-    slider.dispatchEvent(forwarded);
+    const tap = (clientX: number) => {
+      const forwarded = new MouseEvent("click", { bubbles: true, clientX });
+      (forwarded as unknown as Record<string, unknown>)[FORWARDED_CLICK] = true;
+      slider.dispatchEvent(forwarded);
+      return Number(slider.value);
+    };
 
-    expect(Number(slider.value)).toBe(51);
+    expect(tap(50)).toBe(51);
     expect(uiState.attackRatio).toBeCloseTo(0.51, 2);
+    // A tap on the thumb at either end keeps it there.
+    expect(tap(8)).toBe(1);
+    expect(tap(92)).toBe(100);
+    // Past the thumb, at the slider's very edge, is still the end.
+    expect(tap(2)).toBe(1);
+    expect(tap(98)).toBe(100);
   });
 
   it("leaves a real slider press to the browser", async () => {
