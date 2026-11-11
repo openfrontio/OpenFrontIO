@@ -1263,7 +1263,13 @@ export const PublicFfaRatingSchema = z.object({
   wins: z.number().int().nonnegative(),
   peak: z.number(),
   // Global FFA leaderboard position; absent when the player is not listed.
-  globalPosition: z.number().int().positive().nullable().optional(),
+  globalPosition: z
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .optional()
+    .catch(undefined),
 });
 export type PublicFfaRating = z.infer<typeof PublicFfaRatingSchema>;
 
