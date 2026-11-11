@@ -14,11 +14,11 @@ vi.mock("../../../src/client/Utils", () => utilsMockFactory());
 
 import { getAudience } from "../../../src/client/Api";
 import { userAuth } from "../../../src/client/Auth";
-import { translationTemplates } from "../../../src/client/Utils";
 import {
   ClanMapView,
   clanMapOrigin,
 } from "../../../src/client/components/clan/ClanMapView";
+import { translationTemplates } from "../../../src/client/Utils";
 
 const asMock = (fn: unknown) => fn as ReturnType<typeof vi.fn>;
 const MAP_ORIGIN = "https://clanmap.openfront.dev";
@@ -99,7 +99,11 @@ describe("ClanMapView", () => {
     expect(translationTemplates).toHaveBeenCalledWith("clan_map.");
     expect(postMessage).toHaveBeenNthCalledWith(
       1,
-      { type: "clanmap:lang", rtl: false, strings: { claim_land: "Claim land" } },
+      {
+        type: "clanmap:lang",
+        rtl: false,
+        strings: { claim_land: "Claim land" },
+      },
       MAP_ORIGIN,
     );
   });
