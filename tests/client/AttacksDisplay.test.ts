@@ -311,16 +311,51 @@ describe("attacks-display", () => {
     expect(cancel.title).toBe("common.cancel");
   });
 
-  it("marks a retreating row and says so", async () => {
+  it("marks a retreating row with a named hourglass and no button", async () => {
     await setUp({
       incoming: [attack(ENEMY, ME, "in-1", 1000, true)],
-      outgoing: [attack(ME, ENEMY, "out-1")],
+      outgoing: [
+        attack(ME, ENEMY, "out-1", 1000, true),
+        attack(ME, 0, "land-1", 1000, true),
+        attack(ME, RAIDER, "out-2"),
+      ],
+      myBoats: [boat(7, player(ME), { retreating: true })],
     });
 
-    const retreating = row("in", "attack");
-    expect(retreating.hasAttribute("data-retreating")).toBe(true);
-    expect(retreating.textContent).toContain("events_display.retreating");
-    expect(row("out", "attack").hasAttribute("data-retreating")).toBe(false);
+    const retreating = rows().filter((r) => r.hasAttribute("data-retreating"));
+    expect(
+      retreating
+        .map(
+          (r) =>
+            `${r.getAttribute("data-attack-dir")}/${r.getAttribute("data-attack-kind")}`,
+        )
+        .sort(),
+    ).toEqual(["in/attack", "out/attack", "out/boat", "out/land"]);
+    for (const r of retreating) {
+      const mark = r.querySelector('[data-attack-state="retreating"]');
+      expect(mark?.getAttribute("role")).toBe("img");
+      expect(mark?.getAttribute("aria-label")).toBe(
+        "events_display.retreating",
+      );
+      expect(mark?.getAttribute("title")).toBe("events_display.retreating");
+      expect(action(r, "retaliate")).toBeNull();
+      expect(action(r, "cancel")).toBeNull();
+    }
+
+    const going = rows().find((r) => !r.hasAttribute("data-retreating"))!;
+    expect(going.querySelector("[data-attack-state]")).toBeNull();
+    expect(action(going, "cancel")).not.toBeNull();
+  });
+
+  it("hides the retreating word from screen readers, which read the hourglass", async () => {
+    await setUp({ outgoing: [attack(ME, ENEMY, "out-1", 1000, true)] });
+
+    const r = row("out", "attack");
+    expect(r.textContent?.split("events_display.retreating")).toHaveLength(2);
+    const word = [...r.querySelectorAll("span")].find(
+      (s) => s.textContent?.trim() === "events_display.retreating",
+    );
+    expect(word?.getAttribute("aria-hidden")).toBe("true");
   });
 
   it("keeps the rows from the browser's translator", async () => {
