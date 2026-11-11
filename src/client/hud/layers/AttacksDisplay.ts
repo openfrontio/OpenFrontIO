@@ -47,7 +47,12 @@ const ROW_TONE = { in: "text-red-400", out: "text-aquarius" } as const;
 const FOCUS =
   "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-aquarius";
 const GO_TO = `relative flex h-full min-w-0 flex-1 items-center gap-1.5 rounded-s-md ps-1.5 pe-1 text-start pointer-fine:hover:bg-white/5 ${FOCUS}`;
-const ICON_SIZE = { lead: 14, retaliate: 13, cancel: 12 } as const;
+const ICON_SIZE = {
+  lead: 14,
+  retaliate: 13,
+  cancel: 12,
+  retreating: 13,
+} as const;
 const BOAT_ICON = "size-4.5 shrink-0";
 const TROOPS = "shrink-0 font-bold tabular-nums";
 const NAME = "min-w-0 truncate";
@@ -60,9 +65,14 @@ const ETA = "ms-auto shrink-0 text-[11px] tabular-nums text-white/55";
 const END_BUTTON = `relative me-0.5 grid size-5.5 shrink-0 place-items-center rounded-sm ${FOCUS}`;
 const RETALIATE = "bg-red-500/20 text-white hover:bg-red-500/40";
 const CANCEL = "text-white/55 hover:bg-white/10 hover:text-white";
-// At most half the row, so the troops beside it are never covered.
-const RETREATING =
-  "relative max-w-1/2 shrink truncate pe-1.5 text-[11px] text-white/55";
+// A retreating row is dimmed and ends in an hourglass. The word shows only
+// where the row has room for it (not on portrait phones), and at most half
+// the row, so the troops beside it are never covered.
+const RETREATING_ROW = "opacity-55";
+const RETREATING_WORD =
+  "relative hidden max-w-1/2 shrink truncate text-[11px] text-white/55 @[14rem]:block";
+const RETREATING_MARK =
+  "relative me-0.5 grid size-5.5 shrink-0 place-items-center text-white/70";
 
 /** One line of the list: an attack or a boat, mine or coming at me. */
 interface AttackRow {
@@ -335,9 +345,19 @@ export class AttacksDisplay extends LitElement implements Controller {
   private renderRow(row: AttackRow) {
     let end: TemplateResult | typeof nothing = nothing;
     if (row.retreating) {
-      end = html`<span class=${RETREATING}
-        >(${translateText("events_display.retreating")}...)</span
-      >`;
+      const label = translateText("events_display.retreating");
+      end = html`<span aria-hidden="true" class=${RETREATING_WORD}
+          >${label}</span
+        >
+        <span
+          data-attack-state="retreating"
+          role="img"
+          aria-label=${label}
+          title=${label}
+          class=${RETREATING_MARK}
+        >
+          <of-icon name="hourglass" size=${ICON_SIZE.retreating}></of-icon>
+        </span>`;
     } else if (row.onRetaliate) {
       const label = translateText("user_setting.retaliate_attack");
       end = html`<button
@@ -379,7 +399,7 @@ export class AttacksDisplay extends LitElement implements Controller {
         }
         <button
           data-attack-action="goto"
-          class=${GO_TO}
+          class="${GO_TO} ${row.retreating ? RETREATING_ROW : ""}"
           ?disabled=${!row.onGoTo}
           @click=${row.onGoTo}
         >
