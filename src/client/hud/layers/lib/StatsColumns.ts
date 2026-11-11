@@ -300,24 +300,27 @@ export function columnsFor(kind: StatsTableKind): readonly ColumnDef[] {
 }
 
 /**
- * Feed the gold-rate tracker with a player's current cumulative values.
- * Must be called at least once per player per refresh by every table kind
- * (player rows and team aggregation) — the rate columns read back from it.
+ * Feed the gold-rate tracker with every living player's cumulative values and
+ * drop the history of the dead. Call once per refresh: the rate columns of
+ * both tables read back from it.
  */
-export function recordGoldRates(player: PlayerView, game: GameView): void {
-  // Extra calls per tick (e.g. player + team tables) just append
-  // near-identical samples; rates compare first vs last sample, so
-  // duplicates don't skew the result.
-  goldRateTracker.record(
-    player.smallID(),
-    {
-      income: player.goldEarned(),
-      trade: player.tradeGold(),
-      train: player.trainGold(),
-      piracy: player.piracyGold(),
-    },
-    game.ticks(),
-  );
+export function recordGoldRates(game: GameView): void {
+  for (const player of game.playerViews()) {
+    if (!player.isAlive()) {
+      goldRateTracker.forget(player.smallID());
+      continue;
+    }
+    goldRateTracker.record(
+      player.smallID(),
+      {
+        income: player.goldEarned(),
+        trade: player.tradeGold(),
+        train: player.trainGold(),
+        piracy: player.piracyGold(),
+      },
+      game.ticks(),
+    );
+  }
 }
 
 export function columnValues(
@@ -325,8 +328,6 @@ export function columnValues(
   game: GameView,
   columns: readonly ColumnDef[],
 ): ReadonlyMap<ColumnId, number> {
-  recordGoldRates(player, game);
-
   const values = new Map<ColumnId, number>();
   for (const column of columns) {
     if (column.value === undefined) continue;
