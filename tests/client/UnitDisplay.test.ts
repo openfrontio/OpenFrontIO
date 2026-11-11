@@ -174,11 +174,12 @@ describe("mobile UnitDisplay layout", () => {
     try {
       await display.updateComplete;
       const cityButton = display.querySelector(".unit-display-grid > * > div");
+      const classes = [...(cityButton?.classList ?? [])];
 
-      expect(cityButton?.classList.contains("hover:bg-gray-800")).toBe(false);
-      expect(
-        cityButton?.classList.contains("pointer-fine:hover:bg-gray-800"),
-      ).toBe(true);
+      expect(classes.some((c) => c.startsWith("hover:"))).toBe(false);
+      expect(classes.some((c) => c.startsWith("pointer-fine:hover:"))).toBe(
+        true,
+      );
     } finally {
       display.remove();
     }
@@ -1389,5 +1390,130 @@ describe("UnitDisplay as a side column below lg in portrait", () => {
         display.remove();
       }
     });
+  });
+});
+
+describe("UnitDisplay tiles", () => {
+  test("each tile is named after its unit and says whether it is armed", async () => {
+    const { display } = makeDisplay(UnitType.Port);
+    try {
+      await display.updateComplete;
+
+      const tiles = display.querySelectorAll('[role="button"]');
+      expect(tiles).toHaveLength(BuildMenus.types.length);
+      expect(tiles[0].getAttribute("aria-label")).toBe("unit_type.city");
+      const pressed = [...tiles].filter(
+        (tile) => tile.getAttribute("aria-pressed") === "true",
+      );
+      expect(pressed).toHaveLength(1);
+      expect(pressed[0].closest("[data-unit]")?.getAttribute("data-unit")).toBe(
+        "port",
+      );
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("a unit that costs more than my gold is marked and a click does not pick it", async () => {
+    const { display, inputHandler } = makeDisplay();
+    try {
+      (display as any).playerBuildables = [
+        { type: UnitType.City, cost: 1001n },
+      ];
+      display.requestUpdate();
+      await display.updateComplete;
+
+      const city = display.querySelector<HTMLElement>(
+        '[data-unit="city"] > [role="button"]',
+      );
+      const factory = display.querySelector(
+        '[data-unit="factory"] > [role="button"]',
+      );
+      expect(city?.getAttribute("aria-disabled")).toBe("true");
+      expect(factory?.getAttribute("aria-disabled")).toBe("false");
+
+      city?.click();
+      expect(inputHandler.setGhostStructure).not.toHaveBeenCalled();
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("shows a unit's price once the worker has sent it", async () => {
+    const { display } = makeDisplay();
+    try {
+      await display.updateComplete;
+      const price = () =>
+        display.querySelector('[data-unit="city"] [data-unit-price]');
+      // Unknown until the worker answers, but the line is already there.
+      expect(price()).not.toBeNull();
+      expect(price()?.textContent).toBe("");
+
+      (display as any).playerBuildables = [
+        { type: UnitType.City, cost: 1000n },
+      ];
+      display.requestUpdate();
+      await display.updateComplete;
+      expect(price()?.textContent).toBe("1.00K");
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("a tile's description reads its price", async () => {
+    const { display } = makeDisplay();
+    try {
+      (display as any).playerBuildables = [
+        { type: UnitType.City, cost: 1000n },
+      ];
+      display.requestUpdate();
+      await display.updateComplete;
+
+      const city = display.querySelector(
+        '[data-unit="city"] > [role="button"]',
+      );
+      const description = document.getElementById(
+        city?.getAttribute("aria-describedby") ?? "",
+      );
+      expect(description?.textContent).toBe("1.00K");
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("shows a count for buildings and warships, none for bombs", async () => {
+    const { display } = makeDisplay();
+    try {
+      await display.updateComplete;
+
+      expect(
+        display.querySelector('[data-unit="city"] [data-unit-count]'),
+      ).not.toBeNull();
+      expect(
+        display.querySelector('[data-unit="warship"] [data-unit-count]'),
+      ).not.toBeNull();
+      expect(
+        display.querySelector('[data-unit="atom_bomb"] [data-unit-count]'),
+      ).toBeNull();
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("the grid holds only the tiles, and each tile comes first in its item", async () => {
+    const { display } = makeDisplay(null, [UnitType.Factory]);
+    try {
+      await display.updateComplete;
+
+      const items = [
+        ...(display.querySelector(".unit-display-grid")?.children ?? []),
+      ];
+      expect(items).toHaveLength(BuildMenus.types.length - 1);
+      for (const item of items) {
+        expect(item.firstElementChild?.getAttribute("role")).toBe("button");
+      }
+    } finally {
+      display.remove();
+    }
   });
 });
