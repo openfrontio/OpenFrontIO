@@ -25,6 +25,47 @@
   }
 }
 
+/* The attack ratio slider. The input keeps the keyboard, the pointer and the
+   screen reader; only its thumb is drawn, over a track of our own. The
+   browser's track is as tall as the thumb, so the thumb sits in the middle of
+   the input: on a taller track Chrome draws it at the top. */
+@utility hud-range {
+  --hud-thumb: 1rem;
+  appearance: none;
+  background: transparent;
+
+  &::-webkit-slider-runnable-track {
+    height: var(--hud-thumb);
+    background: transparent;
+  }
+  &::-moz-range-track {
+    height: var(--hud-thumb);
+    background: transparent;
+  }
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: var(--hud-thumb);
+    height: var(--hud-thumb);
+    border: 2px solid var(--color-malibu-blue);
+    border-radius: 9999px;
+    background: white;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+  }
+  &::-moz-range-thumb {
+    box-sizing: border-box;
+    width: var(--hud-thumb);
+    height: var(--hud-thumb);
+    border: 2px solid var(--color-malibu-blue);
+    border-radius: 9999px;
+    background: white;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-aquarius);
+    outline-offset: 2px;
+  }
+}
+
 @layer components {
   of-icon {
     display: inline-flex;
