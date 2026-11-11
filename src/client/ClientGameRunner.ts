@@ -309,6 +309,12 @@ export function joinLobby(
         terrainMapFileLoader,
       )
         .then((r) => {
+          if (lobbyStopped) {
+            // The lobby was left while this was loading. Dispose the runner
+            // without starting it, and leave any newer lobby's flash alone.
+            r.stop(false);
+            return;
+          }
           currentGameRunner = r;
           r.start();
         })
@@ -1270,8 +1276,8 @@ export class ClientGameRunner {
     }
   }
 
-  public stop() {
-    tabAttention.release();
+  public stop(releaseTabAttention: boolean = true) {
+    if (releaseTabAttention) tabAttention.release();
     this.soundManager.dispose();
     this.graphicsListenerAbort?.abort();
     // Detach the input handler's window/canvas listeners and its EventBus

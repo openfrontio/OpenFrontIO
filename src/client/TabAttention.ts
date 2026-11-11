@@ -38,6 +38,7 @@ export class TabAttention {
   private listening = false;
   // Set when the two-minute limit ran out. Requests are ignored until the
   // need is released, so repeated requests can't restart the limit.
+  // startedAt is when the current flashing run began (not when it was requested).
   private expired = false;
   // Starts as the SVG; swapped for a PNG once it has been rendered, since not
   // every browser draws SVG favicons from data URIs reliably.
@@ -58,7 +59,6 @@ export class TabAttention {
       return;
     }
     if (this.expired) return;
-    if (this.kind === null) this.startedAt = Date.now();
     this.kind = kind;
     this.listen();
     this.preparePngIcon();
@@ -81,7 +81,9 @@ export class TabAttention {
   }
 
   private readonly sync = (): void => {
-    if (this.kind !== null && Date.now() - this.startedAt > MAX_FLASH_MS) {
+    // The limit only counts time spent actually flashing in a hidden tab, so a
+    // long wait in a visible tab doesn't use it up.
+    if (this.timer !== null && Date.now() - this.startedAt > MAX_FLASH_MS) {
       this.expire();
     }
     if (this.kind !== null && !this.isEnabled()) this.kind = null;
@@ -95,6 +97,7 @@ export class TabAttention {
 
   private startFlashing(): void {
     if (this.timer !== null) return;
+    this.startedAt = Date.now();
     this.originalTitle = document.title;
     const link = this.iconLink();
     this.originalIconHref = link?.getAttribute("href") ?? null;

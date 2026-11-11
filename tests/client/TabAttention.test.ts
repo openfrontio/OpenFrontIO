@@ -120,6 +120,19 @@ describe("TabAttention", () => {
     expect(iconHref()).toBe(ORIGINAL_HREF);
   });
 
+  it("does not use up the limit while the tab is visible", () => {
+    attention.request("spawn");
+    // Waiting in a visible tab for longer than the limit, with game ticks.
+    for (let i = 0; i < 5; i++) {
+      vi.advanceTimersByTime(60 * 1000);
+      attention.request("spawn");
+    }
+    setHidden(true);
+    expect(document.title).toBe("tab_attention.pick_spawn");
+    vi.advanceTimersByTime(2 * 60 * 1000 + 500);
+    expect(document.title).toBe("OpenFront");
+  });
+
   it("allows a new two-minute period after the need is released", () => {
     setHidden(true);
     attention.request("spawn");
