@@ -44,8 +44,11 @@ interface BuildNeeds {
 const ITEM = "gap-0.5";
 // The border is a real one: the tutorial highlight in styles.css recolours it.
 // From lg every tile is 44px wide, so the prices above them line up.
+// The column's scroller gets 100dvh - 5.5rem and ten tiles need ten heights
+// plus nine 2px gaps (1.125rem), so on short screens the tiles shrink, down
+// to 36px, instead of scrolling. From 590px tall they stay 48px.
 const TILE =
-  "relative flex w-full items-center justify-center rounded-sm border text-white cursor-pointer transition-colors h-6.5 lg:w-11 max-lg:landscape:h-7.5 side-bar:h-12 side-bar:min-w-6.5";
+  "relative flex w-full items-center justify-center rounded-sm border text-white cursor-pointer transition-colors h-6.5 lg:w-11 max-lg:landscape:h-7.5 side-bar:h-[clamp(2.25rem,calc((100dvh-6.625rem)/10),3rem)] side-bar:min-w-6.5";
 // The armed unit (picked, waiting for a spot on the map) is filled blue.
 const TILE_SELECTION = {
   idle: "border-white/15 pointer-fine:hover:bg-white/10 active:bg-white/15",
