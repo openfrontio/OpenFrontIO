@@ -379,3 +379,137 @@ export const ClanDonationLeaderboardResponseSchema = z.object({
 export type ClanDonationLeaderboardResponse = z.infer<
   typeof ClanDonationLeaderboardResponseSchema
 >;
+
+// ---- Clan map activity (GET /clans/:tag/map-activity and /members): what
+// the clan's members did on the clan territory map, and what it lost. Members
+// only. The map is served by the API; this is the clan page's log of it.
+
+// A player on the map: public ID and display username, both null when the
+// account has since been deleted.
+export const MapActivityPlayerSchema = z.object({
+  id: z.string().nullable(),
+  username: z.string().nullable(),
+});
+export type MapActivityPlayer = z.infer<typeof MapActivityPlayerSchema>;
+
+// Another clan on the map; tag null when it has since been deleted. color is
+// 0xRRGGBB, null when unknown.
+export const MapActivityClanSchema = z.object({
+  tag: z.string().nullable(),
+  color: z.number().nullable(),
+});
+export type MapActivityClan = z.infer<typeof MapActivityClanSchema>;
+
+const ShipSailingSchema = z.object({
+  kind: z.literal("ship_sailing"),
+  at: z.iso.datetime(),
+  player: MapActivityPlayerSchema,
+  troops: z.number(),
+  toX: z.number(),
+  toY: z.number(),
+  arrivesAt: z.iso.datetime(),
+});
+
+export const MapActivityEventSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("claimed"),
+    at: z.iso.datetime(),
+    player: MapActivityPlayerSchema,
+    pixels: z.number(),
+    neutral: z.number(),
+    takenFrom: z
+      .object({ clan: MapActivityClanSchema, pixels: z.number() })
+      .array(),
+    x: z.number(),
+    y: z.number(),
+  }),
+  z.object({
+    kind: z.literal("unclaimed"),
+    at: z.iso.datetime(),
+    player: MapActivityPlayerSchema,
+    pixels: z.number(),
+    refundTroops: z.number(),
+    x: z.number(),
+    y: z.number(),
+  }),
+  z.object({
+    kind: z.literal("bought_troops"),
+    at: z.iso.datetime(),
+    player: MapActivityPlayerSchema,
+    troops: z.number(),
+    // Caps spent, a bigint as a decimal string.
+    caps: z.string(),
+  }),
+  ShipSailingSchema,
+  z.object({
+    kind: z.literal("ship_landed"),
+    at: z.iso.datetime(),
+    player: MapActivityPlayerSchema,
+    troops: z.number(),
+    toX: z.number(),
+    toY: z.number(),
+    outcome: z.enum(["captured", "repelled", "returned"]),
+  }),
+  z.object({
+    kind: z.literal("lost"),
+    at: z.iso.datetime(),
+    clan: MapActivityClanSchema,
+    // The attacking player.
+    player: MapActivityPlayerSchema,
+    pixels: z.number(),
+    x: z.number(),
+    y: z.number(),
+  }),
+  z.object({
+    kind: z.literal("siege"),
+    at: z.iso.datetime(),
+    // The annexing clan.
+    clan: MapActivityClanSchema,
+    pixels: z.number(),
+    x: z.number(),
+    y: z.number(),
+  }),
+]);
+export type MapActivityEvent = z.infer<typeof MapActivityEventSchema>;
+
+export const MapActivityFilterSchema = z.enum(["all", "ours", "lost"]);
+export type MapActivityFilter = z.infer<typeof MapActivityFilterSchema>;
+
+export const MapActivityPageSchema = z.object({
+  // The last 24 hours; the same on every page.
+  summary: z.object({
+    gained: z.number(),
+    lost: z.number(),
+    shipsAtSea: z.number(),
+    nextLandingAt: z.iso.datetime().nullable(),
+  }),
+  // Ships at sea now; only on the first page.
+  atSea: ShipSailingSchema.array(),
+  // Newest first.
+  events: MapActivityEventSchema.array(),
+  // Pass as `before` for the next page; null when there is none.
+  nextBefore: z.iso.datetime().nullable(),
+});
+export type MapActivityPage = z.infer<typeof MapActivityPageSchema>;
+
+export const MapActivityPeriodSchema = z.enum(["24h", "7d", "30d"]);
+export type MapActivityPeriod = z.infer<typeof MapActivityPeriodSchema>;
+
+export const MapActivityMemberSchema = z.object({
+  player: MapActivityPlayerSchema,
+  // null when the player has since left the clan.
+  role: z.enum(["leader", "officer", "member"]).nullable(),
+  claimed: z.number(),
+  // Caps spent on troops, a bigint as a decimal string.
+  caps: z.string(),
+  shipsSent: z.number(),
+  shipsLanded: z.number(),
+  lastActiveAt: z.iso.datetime().nullable(),
+});
+export type MapActivityMember = z.infer<typeof MapActivityMemberSchema>;
+
+export const MapActivityMembersSchema = z.object({
+  period: MapActivityPeriodSchema,
+  members: MapActivityMemberSchema.array(),
+});
+export type MapActivityMembers = z.infer<typeof MapActivityMembersSchema>;

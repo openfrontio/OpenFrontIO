@@ -12,6 +12,8 @@ import "./components/clan/ClanDonationsView";
 import "./components/clan/ClanGameHistoryView";
 import type { ClanGameHistoryCache } from "./components/clan/ClanGameHistoryView";
 import "./components/clan/ClanManageView";
+import "./components/clan/ClanMapActivityView";
+import type { MapActivityAt } from "./components/clan/ClanMapActivityView";
 import "./components/clan/ClanMapView";
 import "./components/clan/ClanMyRequestsView";
 import "./components/clan/ClanRequestsView";
@@ -45,7 +47,11 @@ type ListTab = (typeof LIST_TABS)[number];
 
 // Detail tabs a player profile can be opened from and returned to. Overview
 // has no member links of its own, so it falls back to Members.
-type DetailReturnTab = "members" | "game-history" | "donations";
+type DetailReturnTab =
+  | "members"
+  | "game-history"
+  | "donations"
+  | "map-activity";
 
 function isListTab(key: string): key is ListTab {
   return (LIST_TABS as readonly string[]).includes(key);
@@ -119,6 +125,11 @@ export class ClanModal extends BaseModal {
   // Never the map itself, or a clan opened from the map would leave Back
   // pointing at the page it's on, and the player stuck there.
   private mapReturnTab: "my-clans" | "browse" = "my-clans";
+  // Set when a clan's Map activity tab opened the map ("View on map", or
+  // "Open map" with no place): the pixel to frame, and the clan whose Map
+  // activity tab the map's Back returns to.
+  private mapAt: MapActivityAt | null = null;
+  private mapReturnClan: string | null = null;
   // Set when the open clan was picked from the browser's boosted block, so a
   // join from its detail page is attributed to the block.
   private joinSource: "boosted" | undefined = undefined;
@@ -157,6 +168,10 @@ export class ClanModal extends BaseModal {
                 key: "donations",
                 label: translateText("clan_modal.tab_donations"),
               },
+              {
+                key: "map-activity",
+                label: translateText("clan_modal.tab_map_activity"),
+              },
             ]
           : [],
     };
@@ -189,7 +204,11 @@ export class ClanModal extends BaseModal {
       this.selectedClanTag = "";
       this.detailCache = null;
       this.gameHistoryCache = null;
-      if (tab === "my-clans" || tab === "browse") this.mapReturnTab = tab;
+      if (tab === "my-clans" || tab === "browse") {
+        this.mapReturnTab = tab;
+        this.mapAt = null;
+        this.mapReturnClan = null;
+      }
       if (tab === "my-clans") {
         void this.loadMyClans();
       }
@@ -325,6 +344,8 @@ export class ClanModal extends BaseModal {
     this.activeTab = "my-clans";
     this.previousListTab = "my-clans";
     this.mapReturnTab = "my-clans";
+    this.mapAt = null;
+    this.mapReturnClan = null;
     this.view = "list";
     this.selectedClan = null;
     this.selectedClanTag = "";
@@ -466,6 +487,15 @@ export class ClanModal extends BaseModal {
         ></clan-bans-view>`;
       }
       // Default: detail view — dispatched by the active detail tab
+      if (this.activeTab === "map-activity") {
+        return html`<clan-map-activity-view
+          .clanTag=${this.selectedClanTag}
+          @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+            this.openPlayerProfile(e.detail.publicId)}
+          @view-on-map=${(e: CustomEvent<MapActivityAt | null>) =>
+            this.openMapAt(e.detail)}
+        ></clan-map-activity-view>`;
+      }
       if (this.activeTab === "donations") {
         return html`<clan-donations-view
           .clanTag=${this.selectedClanTag}
@@ -673,17 +703,53 @@ export class ClanModal extends BaseModal {
       data-clan-map-page
       class="fixed inset-0 z-[9999] bg-[#3c3c3c]"
     >
-      <clan-map-view full class="block w-full h-full"></clan-map-view>
+      <clan-map-view
+        full
+        .at=${this.mapAt}
+        class="block w-full h-full"
+      ></clan-map-view>
       <button
         data-clan-map-back
         type="button"
         class="absolute top-3 left-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-[#151a21]/90 border border-white/10 backdrop-blur text-white text-sm font-bold uppercase tracking-wider hover:bg-[#1b212a] cursor-pointer"
         aria-label=${translateText("clan_modal.map_back")}
-        @click=${() => this.setActiveTab(this.mapReturnTab)}
+        @click=${() => this.leaveMap()}
       >
         <span aria-hidden="true">←</span>${translateText("clan_modal.title")}
       </button>
     </div>`;
+  }
+
+  // The clan's Map activity tab opens the full-screen map, framed on `at`
+  // when given. The map's Back then returns to that tab.
+  private openMapAt(at: MapActivityAt | null): void {
+    const tag = this.selectedClanTag;
+    this.view = "list";
+    this.selectedClan = null;
+    this.selectedClanTag = "";
+    modalRouter.syncArgs("clan", { clan: null, tag: null });
+    this.setActiveTab("map");
+    // After setActiveTab: entering a list tab clears these.
+    this.mapAt = at;
+    this.mapReturnClan = tag || null;
+    this.requestUpdate();
+  }
+
+  private leaveMap(): void {
+    const clan = this.mapReturnClan;
+    this.mapAt = null;
+    this.mapReturnClan = null;
+    if (clan) {
+      // Not open({ clan, tab }): that checks the tab against the list
+      // view's tabs, which don't include the clan's Map activity.
+      this.openDetail(clan);
+      // openDetail remembered "map" as where the clan's Back goes; it
+      // should go back to the list the clan was opened from instead.
+      this.previousListTab = this.mapReturnTab;
+      this.setActiveTab("map-activity");
+      return;
+    }
+    this.setActiveTab(this.mapReturnTab);
   }
 
   private openDetail(tag: string, source?: "boosted") {
@@ -733,7 +799,9 @@ export class ClanModal extends BaseModal {
     // Route the profile modal's Back button to whichever tab opened it. Only
     // the game-history tab needs its scroll position preserved on return.
     this.profileOpenedFromTab =
-      this.activeTab === "game-history" || this.activeTab === "donations"
+      this.activeTab === "game-history" ||
+      this.activeTab === "donations" ||
+      this.activeTab === "map-activity"
         ? this.activeTab
         : "members";
     if (this.profileOpenedFromTab === "game-history") {

@@ -27,6 +27,12 @@ import {
   ClanRequestsResponseSchema,
   DiscordInviteResponseSchema,
   JoinClanResponseSchema,
+  type MapActivityFilter,
+  type MapActivityMembers,
+  MapActivityMembersSchema,
+  type MapActivityPage,
+  MapActivityPageSchema,
+  type MapActivityPeriod,
 } from "@openfront/shared/ClanApiSchemas";
 import { getApiBase, getUserMe } from "./Api";
 import { getAuthHeader } from "./Auth";
@@ -58,6 +64,14 @@ export type {
   ClanMemberStats,
   ClanMemberWL,
   ClanRequestsResponse,
+  MapActivityClan,
+  MapActivityEvent,
+  MapActivityFilter,
+  MapActivityMember,
+  MapActivityMembers,
+  MapActivityPage,
+  MapActivityPeriod,
+  MapActivityPlayer,
 } from "@openfront/shared/ClanApiSchemas";
 
 async function clanFetch(
@@ -896,5 +910,65 @@ export async function buyClanBoost(
     return { endsAt: parsed.data.endsAt };
   } catch {
     return { error: "clan_modal.error_network" };
+  }
+}
+
+export type ClanMapActivityFetchError = "forbidden" | "failed";
+
+/**
+ * Members-only log of the clan's map activity, newest first: claims,
+ * unclaims, troop purchases, ships and land lost. `before` is the previous
+ * page's `nextBefore`; omitted for the first page (the only one with the
+ * ships at sea).
+ */
+export async function fetchClanMapActivity(
+  tag: string,
+  opts: { before?: string | null; filter?: MapActivityFilter } = {},
+): Promise<MapActivityPage | { error: ClanMapActivityFetchError }> {
+  try {
+    const params = new URLSearchParams();
+    params.set("filter", opts.filter ?? "all");
+    if (opts.before) params.set("before", opts.before);
+    const res = await clanFetch(
+      `/clans/${encodeURIComponent(tag)}/map-activity?${params}`,
+    );
+    if (res.status === 403) return { error: "forbidden" };
+    if (!res.ok) return { error: "failed" };
+    const parsed = MapActivityPageSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn("fetchClanMapActivity: Zod validation failed", parsed.error);
+      return { error: "failed" };
+    }
+    return parsed.data;
+  } catch {
+    return { error: "failed" };
+  }
+}
+
+/**
+ * Members-only per-member totals of map activity over the last 24 hours, 7
+ * or 30 days, plus the clan's leaders and officers with none.
+ */
+export async function fetchClanMapActivityMembers(
+  tag: string,
+  period: MapActivityPeriod = "7d",
+): Promise<MapActivityMembers | { error: ClanMapActivityFetchError }> {
+  try {
+    const res = await clanFetch(
+      `/clans/${encodeURIComponent(tag)}/map-activity/members?period=${period}`,
+    );
+    if (res.status === 403) return { error: "forbidden" };
+    if (!res.ok) return { error: "failed" };
+    const parsed = MapActivityMembersSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn(
+        "fetchClanMapActivityMembers: Zod validation failed",
+        parsed.error,
+      );
+      return { error: "failed" };
+    }
+    return parsed.data;
+  } catch {
+    return { error: "failed" };
   }
 }

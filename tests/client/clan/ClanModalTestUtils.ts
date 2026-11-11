@@ -52,6 +52,16 @@ export function clanApiMockFactory() {
       page: 1,
       limit: 10,
     })),
+    fetchClanMapActivity: vi.fn(async () => ({
+      summary: { gained: 0, lost: 0, shipsAtSea: 0, nextLandingAt: null },
+      atSea: [],
+      events: [],
+      nextBefore: null,
+    })),
+    fetchClanMapActivityMembers: vi.fn(async () => ({
+      period: "7d",
+      members: [],
+    })),
     fetchClanRequests: vi.fn(async () => ({
       results: [],
       total: 0,

@@ -31,6 +31,9 @@ export class ClanMapView extends LitElement {
   // The full-screen clan map page: asks the page for its full layout
   // (`?full=1`, map edge to edge with the sidebar floating over it).
   @property({ type: Boolean }) full = false;
+  // Open framed on this map pixel (the clan's Map activity "view on map")
+  // instead of the player's own territory: `?at=x,y`.
+  @property({ attribute: false }) at: { x: number; y: number } | null = null;
   @state() private loading = true;
   // The page has asked for its strings (clanmap:ready), so it's listening.
   private pageReady = false;
@@ -90,13 +93,22 @@ export class ClanMapView extends LitElement {
     if (this.pageReady) this.sendLanguage();
   }
 
+  private query(): string {
+    const params = new URLSearchParams();
+    if (this.full) params.set("full", "1");
+    if (this.at) params.set("at", `${this.at.x},${this.at.y}`);
+    const q = params.toString();
+    // `,` reads better unescaped and is safe in a query value.
+    return q ? `/?${q.replace("%2C", ",")}` : "/";
+  }
+
   render() {
     // The page sizes its canvas to the frame and re-fits on resize; the host
     // gives the frame its height. `allow="fullscreen"` is what makes the
     // page's Fullscreen button appear.
     return html`<div class="relative w-full h-full">
       <iframe
-        src=${clanMapOrigin() + (this.full ? "/?full=1" : "/")}
+        src=${clanMapOrigin() + this.query()}
         title=${translateText("clan_modal.map_frame_title")}
         allow="fullscreen"
         allowfullscreen

@@ -283,7 +283,60 @@ describe("ClanModal — player-profile handoff", () => {
     )
       .modalConfig()
       .tabs.map((t) => t.key);
-    expect(tabs).toEqual(["overview", "members", "game-history", "donations"]);
+    expect(tabs).toEqual([
+      "overview",
+      "members",
+      "game-history",
+      "donations",
+      "map-activity",
+    ]);
+  });
+
+  it("returns a profile opened from Map activity to that tab", async () => {
+    modal.open({ clan: "AAA" });
+    await waitForSubComponent(modal, "clan-detail-view");
+    modal.setActiveTab("map-activity");
+    const view = await waitForSubComponent(modal, "clan-map-activity-view");
+    expect(getElState(view, "clanTag")).toBe("AAA");
+
+    dispatchViewProfile("player-P", "clan-map-activity-view");
+    await flushAsync(modal);
+    modal.returnFromPlayerProfile();
+    await flushAsync(modal);
+
+    expect(getElState(modal, "selectedClanTag")).toBe("AAA");
+    expect(getElState(modal, "activeTab")).toBe("map-activity");
+  });
+
+  it("opens the map framed on a Map activity row, and its Back returns to the tab", async () => {
+    modal.open({ clan: "AAA" });
+    await waitForSubComponent(modal, "clan-detail-view");
+    modal.setActiveTab("map-activity");
+    const view = await waitForSubComponent(modal, "clan-map-activity-view");
+
+    view.dispatchEvent(
+      new CustomEvent("view-on-map", {
+        detail: { x: 2380, y: 1150 },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await flushAsync(modal);
+
+    expect(getElState(modal, "activeTab")).toBe("map");
+    const map = document.querySelector(
+      "[data-clan-map-page] clan-map-view",
+    ) as unknown as { at: { x: number; y: number } | null };
+    expect(map.at).toEqual({ x: 2380, y: 1150 });
+
+    document.querySelector<HTMLButtonElement>("[data-clan-map-back]")!.click();
+    await flushAsync(modal);
+
+    expect(getElState(modal, "selectedClanTag")).toBe("AAA");
+    expect(getElState(modal, "activeTab")).toBe("map-activity");
+    expect(document.querySelector("[data-clan-map-page]")).toBeNull();
+    // The clan's own Back then goes to the clan list, not the map again.
+    expect(getElState(modal, "previousListTab")).toBe("my-clans");
   });
 
   it("returns a donor's profile to the clan's Donations tab", async () => {
