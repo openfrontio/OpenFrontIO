@@ -5,7 +5,7 @@ import type { ColumnPicker } from "../src/client/hud/layers/ColumnPicker";
 import { GameLeftSidebar } from "../src/client/hud/layers/GameLeftSidebar";
 import type { PlayerStats } from "../src/client/hud/layers/PlayerStats";
 import type { TeamStats } from "../src/client/hud/layers/TeamStats";
-import { AlternateViewEvent } from "../src/client/InputHandler";
+import { AlternateViewEvent, InputHandler } from "../src/client/InputHandler";
 import { UserSettings } from "../src/client/UserSettings";
 import {
   getTranslatedPlayerTeamLabel,
@@ -287,7 +287,7 @@ describe("GameLeftSidebar", () => {
     teamSidebar.remove();
   });
 
-  it("switches the alternate view on Enter, and leaves Space to the game", async () => {
+  it("presses the alternate view button with Enter and Space, and keeps both from the game", async () => {
     const eventBus = new EventBus();
     const views: boolean[] = [];
     eventBus.on(AlternateViewEvent, (e) => views.push(e.alternateView));
@@ -304,14 +304,51 @@ describe("GameLeftSidebar", () => {
 
     pressKey(button, "Enter");
     expect(views).toEqual([true]);
-    expect(keys.seen).toEqual(["keyup Enter"]);
-
-    keys.seen.length = 0;
     pressKey(button, " ");
-    expect(views).toEqual([true]);
-    expect(keys.seen).toEqual(["keydown Space", "keyup Space"]);
+    expect(views).toEqual([true, false]);
+    expect(keys.seen).toEqual([]);
 
     keys.stop();
+    sidebar.remove();
+  });
+
+  it("follows Space held anywhere but on the button", async () => {
+    const eventBus = new EventBus();
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = eventBus;
+    document.body.append(sidebar);
+    sidebar.init();
+    const input = new InputHandler(
+      sidebar.game,
+      {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+        upgradeMultiplier: 1,
+      },
+      document.createElement("canvas"),
+      eventBus,
+    );
+    input.initialize();
+    await sidebar.updateComplete;
+    const button = () =>
+      sidebar.querySelector<HTMLElement>(
+        '[data-sidebar-button="view"]',
+      ) as HTMLElement;
+
+    const space = (type: "keydown" | "keyup") =>
+      document.body.dispatchEvent(
+        new KeyboardEvent(type, { key: " ", code: "Space", bubbles: true }),
+      );
+    space("keydown");
+    await sidebar.updateComplete;
+    expect(button().getAttribute("aria-pressed")).toBe("true");
+    space("keyup");
+    await sidebar.updateComplete;
+    expect(button().getAttribute("aria-pressed")).toBe("false");
+
+    input.destroy();
     sidebar.remove();
   });
 

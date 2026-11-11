@@ -1,6 +1,7 @@
 import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
+import { keepPressKeysFromGame } from "../hud/HudKeys";
 import { COLUMN_MEANING } from "../hud/layers/ColumnTooltip";
 import "./OfIcon";
 import {
@@ -396,9 +397,14 @@ export abstract class StatsTable extends LitElement {
                     ? this.tooltipId()
                     : nothing
                 }
+                @mousedown=${(event: MouseEvent) => {
+                  // Focus stays where it was, so Space still holds the
+                  // alternate view after a click on a header.
+                  event.preventDefault();
+                }}
                 @click=${() => this.setSort(column.id)}
                 @focus=${(event: FocusEvent) => {
-                  // The keyboard's: a click focuses the button too.
+                  // The keyboard's only.
                   const anchor = event.currentTarget as HTMLElement;
                   if (anchor.matches(":focus-visible")) {
                     this.tip = { column, anchor, hint: false };
@@ -554,7 +560,11 @@ export abstract class StatsTable extends LitElement {
       .join(" ")} minmax(0px, max-content)`;
 
     return html`
-      <div class="stats-table ${TABLE}">
+      <div
+        class="stats-table ${TABLE}"
+        @keydown=${keepPressKeysFromGame}
+        @keyup=${keepPressKeysFromGame}
+      >
         <div
           class="overflow-x-auto ${SCROLLBAR}"
           @contextmenu=${this.onContextMenu}

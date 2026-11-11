@@ -432,6 +432,53 @@ describe("PlayerStats rows", () => {
     expect(names()).toEqual(["alice", "bob", "carol"]);
   });
 
+  it("keeps Space and Enter on a sort header from the game, and lets other keys through", async () => {
+    const playerStats = await mount([player("alice", 3)], null);
+    const button = playerStats.querySelector(
+      '[role="columnheader"][data-column="gold"] button',
+    ) as HTMLElement;
+    const seen: string[] = [];
+    const listener = (e: KeyboardEvent) => seen.push(`${e.type} ${e.code}`);
+    window.addEventListener("keydown", listener);
+    window.addEventListener("keyup", listener);
+
+    for (const [key, code] of [
+      [" ", "Space"],
+      ["Enter", "Enter"],
+      ["w", "KeyW"],
+    ]) {
+      for (const type of ["keydown", "keyup"]) {
+        const event = new KeyboardEvent(type, {
+          key,
+          code,
+          bubbles: true,
+          cancelable: true,
+        });
+        button.dispatchEvent(event);
+        // Not cancelled, so the browser still presses the button.
+        expect(event.defaultPrevented).toBe(false);
+      }
+    }
+    expect(seen).toEqual(["keydown KeyW", "keyup KeyW"]);
+
+    window.removeEventListener("keydown", listener);
+    window.removeEventListener("keyup", listener);
+  });
+
+  it("leaves focus where it was when a header is pressed with the mouse", async () => {
+    const playerStats = await mount([player("alice", 3)], null);
+    const button = playerStats.querySelector(
+      '[role="columnheader"][data-column="gold"] button',
+    ) as HTMLElement;
+
+    const press = new MouseEvent("mousedown", {
+      bubbles: true,
+      cancelable: true,
+    });
+    button.dispatchEvent(press);
+    expect(press.defaultPrevented).toBe(true);
+  });
+
   it("marks your row and your teammates' rows", async () => {
     const me = player("me", 90);
     const mate = {

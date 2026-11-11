@@ -209,13 +209,8 @@ export class GameLeftSidebar extends LitElement implements Controller {
             title=${view}
             @mousedown=${(e: MouseEvent) => e.preventDefault()}
             @click=${this.toggleAlternateView}
-            @keydown=${(e: KeyboardEvent) => {
-              if (e.key === "Enter") e.stopPropagation();
-            }}
-            @keyup=${(e: KeyboardEvent) => {
-              // Not space: that's the hold-to-view key, handled globally.
-              if (e.code === "Space") e.preventDefault();
-            }}
+            @keydown=${keepPressKeysFromGame}
+            @keyup=${keepPressKeysFromGame}
           >
             <of-icon name="terrain" size=${BAR_ICON_SIZE}></of-icon>
           </button>
