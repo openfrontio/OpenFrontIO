@@ -288,6 +288,7 @@ export class PlayerProfileModal extends BaseModal {
   // change this player's role or member count.
   public returnFromClan(publicId: string, origin: ProfileOrigin | null): void {
     this.open({ publicID: publicId, tab: "clans" });
+    // open() cleared openedFrom; put this profile's own origin back.
     this.openedFrom = origin;
     if (origin === "all-ranks") {
       this.keepGlobalPosition = true;

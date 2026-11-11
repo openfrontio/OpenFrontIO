@@ -255,7 +255,8 @@ export class LeaderboardPlayerList extends LitElement {
       this.dispatchEvent(new CustomEvent("ffa-rating-live", { bubbles: true }));
     }
     if (changed.has("rankedType")) {
-      // The ladders are separate lists sharing one scroll container...
+      // The ladders are separate lists sharing one scroll container: show the
+      // newly selected one from its top rather than the other one's offset.
       if (this.scrollContainer) this.scrollContainer.scrollTop = 0;
       this.scheduleStickyVisibilityCheck();
       this.schedulePlayerFillCheck();
