@@ -699,7 +699,13 @@ export const UserMeResponseSchema = z.object({
             games: z.number().int().nonnegative().optional().catch(undefined),
             wins: z.number().int().nonnegative().optional().catch(undefined),
             peak: z.number().optional().catch(undefined),
-            globalPosition: z.number().int().positive().nullable().optional().catch(undefined),
+            globalPosition: z
+              .number()
+              .int()
+              .positive()
+              .nullable()
+              .optional()
+              .catch(undefined),
             // True when the board's ± rule keeps this rating off the board.
             hiddenByUncertainty: z.boolean().optional().catch(undefined),
             calibrationGames: z
@@ -1448,7 +1454,9 @@ export type FfaRankLeaderboardResponse = z.infer<
 export const FfaAllRanksLeaderboardResponseSchema = z.object({
   players: RankedLeaderboardEntrySchema.array(),
 });
-export type FfaAllRanksLeaderboardResponse = z.infer<typeof FfaAllRanksLeaderboardResponseSchema>;
+export type FfaAllRanksLeaderboardResponse = z.infer<
+  typeof FfaAllRanksLeaderboardResponseSchema
+>;
 
 export const FfaRankPositionResponseSchema = z.object({
   position: z.number().int().nullable(),

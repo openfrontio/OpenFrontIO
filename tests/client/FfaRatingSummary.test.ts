@@ -117,9 +117,19 @@ describe("<ffa-rating-summary>", () => {
   });
 
   it("shows the global position beside the FFA rating", async () => {
-    await render({ kind: "rated", rating: 1612, uncertainty: 40, tier: "Gold I", globalPosition: 160 });
-    expect(el.querySelector("[data-global-ffa-position]")?.textContent).toContain("ffa_rating.global_position");
-    expect(el.querySelector("[data-global-ffa-position]")?.textContent).toContain("160");
+    await render({
+      kind: "rated",
+      rating: 1612,
+      uncertainty: 40,
+      tier: "Gold I",
+      globalPosition: 160,
+    });
+    expect(
+      el.querySelector("[data-global-ffa-position]")?.textContent,
+    ).toContain("ffa_rating.global_position");
+    expect(
+      el.querySelector("[data-global-ffa-position]")?.textContent,
+    ).toContain("160");
   });
 
   it("shows Calibrating for a calibrating player", async () => {

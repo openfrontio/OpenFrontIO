@@ -119,13 +119,16 @@ export class FfaRatingSummary extends LitElement {
                     >`
               }
               ${
-                rating.globalPosition == null
+                rating.globalPosition === null
                   ? nothing
                   : html`<span
                       data-global-ffa-position
                       class="inline-flex items-center gap-1.5 text-lg font-bold tabular-nums text-white"
                       title="Global Position"
-                      ><span class="text-xl leading-none" aria-hidden="true">🌍</span> #${rating.globalPosition}</span
+                      ><span class="text-xl leading-none" aria-hidden="true"
+                        >🌍</span
+                      >
+                      #${rating.globalPosition}</span
                     >`
               }`
           : html`<ffa-tier-badge

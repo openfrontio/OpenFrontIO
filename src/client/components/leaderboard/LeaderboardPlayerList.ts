@@ -161,12 +161,18 @@ export class LeaderboardPlayerList extends LitElement {
     return (
       this.rankedType === RankedType.FreeForAll &&
       this.ffaRatingServed &&
-      !this.ffaAllRanks && this.ffaRank !== null
+      !this.ffaAllRanks &&
+      this.ffaRank !== null
     );
   }
 
   private get activeLadder(): LadderState {
-    if (this.ffaAllRanks) return { entries: this.ffaAllRows, userEntry: null, hasMore: this.ffaAllHasMore };
+    if (this.ffaAllRanks)
+      return {
+        entries: this.ffaAllRows,
+        userEntry: null,
+        hasMore: this.ffaAllHasMore,
+      };
     if (this.ffaRankActive) {
       return this.ffaRankLadders[this.ffaRank!] ?? emptyRankLadder();
     }
@@ -473,19 +479,29 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   private async loadFfaAllPage() {
-    if (!this.ffaAllHasMore || this.ffaAllLoading || this.ffaAllPage > 5) return;
+    if (!this.ffaAllHasMore || this.ffaAllLoading || this.ffaAllPage > 5)
+      return;
     this.ffaAllLoading = true;
     this.ffaAllFailed = false;
     const page = this.ffaAllPage;
     const result = await fetchFfaAllRanksLeaderboard(page);
     this.ffaAllLoading = false;
-    if (result === false) { this.ffaAllFailed = true; return; }
-    if (result === "reached_limit") { this.ffaAllHasMore = false; return; }
+    if (result === false) {
+      this.ffaAllFailed = true;
+      return;
+    }
+    if (result === "reached_limit") {
+      this.ffaAllHasMore = false;
+      return;
+    }
     const seen = new Set(this.ffaAllRows.map((row) => row.playerId));
-    const next = result.players.map(toPlayerEntry).filter((row) => !seen.has(row.playerId));
+    const next = result.players
+      .map(toPlayerEntry)
+      .filter((row) => !seen.has(row.playerId));
     this.ffaAllRows = [...this.ffaAllRows, ...next];
     this.ffaAllPage = page + 1;
-    this.ffaAllHasMore = page < 5 && result.players.length >= this.playerPageSize;
+    this.ffaAllHasMore =
+      page < 5 && result.players.length >= this.playerPageSize;
     this.schedulePlayerFillCheck();
   }
 
@@ -651,7 +667,8 @@ export class LeaderboardPlayerList extends LitElement {
 
   private maybeLoadMorePlayers() {
     if (this.ffaAllRanks) {
-      if (this.ffaAllLoading || !this.ffaAllHasMore || this.ffaAllFailed) return;
+      if (this.ffaAllLoading || !this.ffaAllHasMore || this.ffaAllFailed)
+        return;
     } else {
       if (this.isLoading || this.isLoadingMore) return;
       if (!this.playerHasMore || this.error || this.hasLoadMoreError) return;
@@ -728,14 +745,19 @@ export class LeaderboardPlayerList extends LitElement {
                   .nameClass=${"font-bold text-white truncate text-base hover:underline"}
                   .onNameClick=${() => this.openProfile(entry.playerId)}
                 ></player-name>
-                ${globalPosition === undefined
-                  ? nothing
-                  : html`<span
-                      data-global-ffa-position
-                      class="shrink-0 inline-flex items-center gap-1 text-sm font-semibold tabular-nums text-white"
-                      title="Global Position"
-                      ><span class="text-base leading-none" aria-hidden="true">🌍</span> #${globalPosition}</span
-                    >`}
+                ${
+                  globalPosition === undefined
+                    ? nothing
+                    : html`<span
+                        data-global-ffa-position
+                        class="shrink-0 inline-flex items-center gap-1 text-sm font-semibold tabular-nums text-white"
+                        title="Global Position"
+                        ><span class="text-base leading-none" aria-hidden="true"
+                          >🌍</span
+                        >
+                        #${globalPosition}</span
+                      >`
+                }
               </div>
             </div>
           </td>
@@ -937,58 +959,58 @@ export class LeaderboardPlayerList extends LitElement {
             ${
               timing === null || end === null
                 ? html`<span class="shrink-0 text-white/80"
-                    >${translateText("ffa_rating.season_started", {
-                      date: start,
-                    })}</span
-                  >
-                  <span
-                    aria-hidden="true"
-                    class="h-3.5 w-3.5 shrink-0 rounded-full border-2 border-aquarius bg-white"
-                  ></span>
-                  <div
-                    class="-ml-3 h-0 min-w-0 flex-1 border-t-2 border-dashed border-aquarius/50"
-                  ></div>
-                  <span class="shrink-0 text-white/70"
-                    >${translateText("ffa_rating.season_no_end_date")}</span
-                  >`
-                : html`<span aria-hidden="true" class="shrink-0 text-white/80"
-                    >${start}</span
-                  >
-                  <div
-                    aria-hidden="true"
-                    class="h-2 min-w-0 flex-1 rounded-full bg-white/10"
-                  >
-                    <div
-                      data-ffa-season-progress
-                      class="relative h-full rounded-full ${
-                        lastDay
-                          ? "bg-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.7)]"
-                          : "bg-aquarius shadow-[0_0_10px_rgba(63,169,245,0.6)]"
-                      }"
-                      style="width: ${Math.round(timing.progress * 100)}%"
+                      >${translateText("ffa_rating.season_started", {
+                        date: start,
+                      })}</span
                     >
-                      <span
-                        class="absolute -right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 bg-white ${
+                    <span
+                      aria-hidden="true"
+                      class="h-3.5 w-3.5 shrink-0 rounded-full border-2 border-aquarius bg-white"
+                    ></span>
+                    <div
+                      class="-ml-3 h-0 min-w-0 flex-1 border-t-2 border-dashed border-aquarius/50"
+                    ></div>
+                    <span class="shrink-0 text-white/70"
+                      >${translateText("ffa_rating.season_no_end_date")}</span
+                    >`
+                : html`<span aria-hidden="true" class="shrink-0 text-white/80"
+                      >${start}</span
+                    >
+                    <div
+                      aria-hidden="true"
+                      class="h-2 min-w-0 flex-1 rounded-full bg-white/10"
+                    >
+                      <div
+                        data-ffa-season-progress
+                        class="relative h-full rounded-full ${
                           lastDay
-                            ? "border-orange-400 motion-safe:animate-pulse"
-                            : "border-aquarius"
+                            ? "bg-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.7)]"
+                            : "bg-aquarius shadow-[0_0_10px_rgba(63,169,245,0.6)]"
                         }"
-                      ></span>
+                        style="width: ${Math.round(timing.progress * 100)}%"
+                      >
+                        <span
+                          class="absolute -right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 bg-white ${
+                            lastDay
+                              ? "border-orange-400 motion-safe:animate-pulse"
+                              : "border-aquarius"
+                          }"
+                        ></span>
+                      </div>
                     </div>
-                  </div>
-                  ${
-                    lastDay
-                      ? html`<span class="shrink-0 text-orange-400"
-                          >${translateText(
-                            "ffa_rating.season_ends_midnight_utc",
-                          )}</span
-                        >`
-                      : html`<span
-                          aria-hidden="true"
-                          class="shrink-0 text-white/80"
-                          >${end}</span
-                        >`
-                  }`
+                    ${
+                      lastDay
+                        ? html`<span class="shrink-0 text-orange-400"
+                            >${translateText(
+                              "ffa_rating.season_ends_midnight_utc",
+                            )}</span
+                          >`
+                        : html`<span
+                            aria-hidden="true"
+                            class="shrink-0 text-white/80"
+                            >${end}</span
+                          >`
+                    }`
             }
           </div>
         </section>
@@ -1060,7 +1082,9 @@ export class LeaderboardPlayerList extends LitElement {
             @keydown=${(event: KeyboardEvent) =>
               this.handleRankTabKey(event, "all" as never)}
           >
-            <span class="text-base sm:text-lg leading-none" aria-hidden="true">🏆</span>
+            <span class="text-base sm:text-lg leading-none" aria-hidden="true"
+              >🏆</span
+            >
             <span class="w-full truncate text-center text-[10px] font-bold"
               >${translateText("ffa_rating.all_ranks")}</span
             >
@@ -1114,9 +1138,11 @@ export class LeaderboardPlayerList extends LitElement {
   }
 
   private renderPlayerRow(player: LadderRow, badgeSlot: boolean) {
-    const isCurrentUser = this.currentUserId !== null && this.currentUserId === player.playerId;
+    const isCurrentUser =
+      this.currentUserId !== null && this.currentUserId === player.playerId;
     const displayRank = player.rank;
-    const globalPosition = isCurrentUser && !this.ffaAllRanks ? player.globalPosition : undefined;
+    const globalPosition =
+      isCurrentUser && !this.ffaAllRanks ? player.globalPosition : undefined;
 
     const rankColor =
       {
@@ -1157,14 +1183,19 @@ export class LeaderboardPlayerList extends LitElement {
               .nameClass=${"font-bold text-blue-300 truncate text-base hover:underline"}
               .onNameClick=${() => this.openProfile(player.playerId)}
             ></player-name>
-            ${globalPosition === undefined
-                  ? nothing
-                  : html`<span
-                      data-global-ffa-position
-                      class="shrink-0 inline-flex items-center gap-1 text-sm font-semibold tabular-nums text-white"
-                      title="Global Position"
-                      ><span class="text-base leading-none" aria-hidden="true">🌍</span> #${globalPosition}</span
-                    >`}
+            ${
+              globalPosition === undefined
+                ? nothing
+                : html`<span
+                    data-global-ffa-position
+                    class="shrink-0 inline-flex items-center gap-1 text-sm font-semibold tabular-nums text-white"
+                    title="Global Position"
+                    ><span class="text-base leading-none" aria-hidden="true"
+                      >🌍</span
+                    >
+                    #${globalPosition}</span
+                  >`
+            }
           </div>
         </td>
         <td class="py-3 px-4 text-right">
@@ -1194,9 +1225,11 @@ export class LeaderboardPlayerList extends LitElement {
   private renderPlayerFooter() {
     // Each FFA rank tracks its own load, so a slow one can't hold up the
     // other ladders, which share isLoadingMore.
-    const loading = this.ffaAllRanks ? this.ffaAllLoading : this.ffaRankActive
-      ? this.ffaRanksLoading.has(this.ffaRank!)
-      : this.isLoadingMore;
+    const loading = this.ffaAllRanks
+      ? this.ffaAllLoading
+      : this.ffaRankActive
+        ? this.ffaRanksLoading.has(this.ffaRank!)
+        : this.isLoadingMore;
     if (loading) {
       return html`
         <div class="flex items-center justify-center py-4 text-white/50">
@@ -1210,7 +1243,15 @@ export class LeaderboardPlayerList extends LitElement {
       `;
     }
 
-    if (this.ffaAllFailed) return html`<div class="py-4 text-center"><button class="text-xs text-red-300" @click=${() => this.loadFfaAllPage()}>${translateText("leaderboard_modal.try_again")}</button></div>`;
+    if (this.ffaAllFailed)
+      return html`<div class="py-4 text-center">
+        <button
+          class="text-xs text-red-300"
+          @click=${() => this.loadFfaAllPage()}
+        >
+          ${translateText("leaderboard_modal.try_again")}
+        </button>
+      </div>`;
     if (this.hasLoadMoreError) {
       return html`
         <div class="flex items-center justify-center py-4">

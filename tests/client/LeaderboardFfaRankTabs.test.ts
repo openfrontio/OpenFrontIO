@@ -96,7 +96,9 @@ beforeEach(() => {
   vi.mocked(fetchFfaRankLeaderboard)
     .mockReset()
     .mockResolvedValue(players("a", "b") as never);
-  vi.mocked(fetchFfaAllRanksLeaderboard).mockReset().mockResolvedValue(players("global-1", "global-2") as never);
+  vi.mocked(fetchFfaAllRanksLeaderboard)
+    .mockReset()
+    .mockResolvedValue(players("global-1", "global-2") as never);
 });
 
 describe("FFA rank tabs", () => {
@@ -161,15 +163,25 @@ describe("FFA rank tabs", () => {
 
   it("shows global position on the signed-in player's tier row only", async () => {
     vi.mocked(getUserMe).mockResolvedValue({
-      player: { publicId: "me", leaderboard: { ffa: { tier: "Gold II", elo: 1800, games: 20, globalPosition: 160 } } },
+      player: {
+        publicId: "me",
+        leaderboard: {
+          ffa: { tier: "Gold II", elo: 1800, games: 20, globalPosition: 160 },
+        },
+      },
     } as never);
     vi.mocked(fetchFfaRankLeaderboard).mockResolvedValue({
-      players: [{ ...row(12, "me", "Gold II"), globalPosition: 160 }, row(13, "other", "Gold II")],
+      players: [
+        { ...row(12, "me", "Gold II"), globalPosition: 160 },
+        row(13, "other", "Gold II"),
+      ],
     } as never);
     await open();
     const own = list.querySelector('tr[data-player-id="me"]')!;
     const other = list.querySelector('tr[data-player-id="other"]')!;
-    expect(own.querySelector("[data-global-ffa-position]")?.textContent).toContain("#160");
+    expect(
+      own.querySelector("[data-global-ffa-position]")?.textContent,
+    ).toContain("#160");
     expect(other.querySelector("[data-global-ffa-position]")).toBeNull();
   });
 
