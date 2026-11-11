@@ -954,10 +954,12 @@
     "open_on_twitch": "Open {channel} on Twitch"
   },
   "ffa_rating": {
+    "all_ranks": "All Ranks",
     "calibrating": "Calibrating {n}/10",
     "calibration_complete": "Calibration complete",
     "credit": "Rating by OFstats",
     "expected": "Expected win: {pct}%",
+    "global_position": "Global #{position}",
     "off_board_note": "You're off the board while your ± is above 60. Play a few games to get back on.",
     "peak": "Peak {rating}",
     "pending": "Calculating rating…",
@@ -986,9 +988,7 @@
       "silver": "Silver"
     },
     "tier_up": "Promoted to {tier}",
-    "title": "FFA Rating",
-    "global_position": "Global #{position}",
-    "all_ranks": "All Ranks"
+    "title": "FFA Rating"
   },
   "free_play": {
     "account": "Your account, stats, friends and cosmetics",

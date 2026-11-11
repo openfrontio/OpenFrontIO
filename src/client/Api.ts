@@ -2177,32 +2177,7 @@ export async function createLobby(): Promise<{
   lobby: GameInfo;
   creatorToken: string;
 }> {
-  // A new game needs a server that takes new games on this build: ask the
-  // API (multi-server v2), falling back to the page's own server. When the
-  // list says nothing runs this build any more, creating against the page's
-  // own (by then stale) host would at best mint a lobby on a server that is
-  // going away, so stop here instead. By the time Create is clicked the
-  // lobby socket has almost always raised the "update available" prompt
-  // already; a Create that gets there first fails like any other failed
-  // request, and the caller's own failure path (re-enabling the button,
-  // clearing the share link) runs as usual.
-  //
-  // "outdated" is by construction a page that names no server of its own
-  // (docs/MultiServer.md, OPE-430): there the list is the only thing that
-  // knows where a server is, and it says there is none for this build. A
-  // page a game server rendered answers "fallback" whatever the list says
-  // about its own host, and creating against that host is right — it is
-  // running this build, because it served this page, and it is where this
-  // tab's lobby list and its session already live. That is how Create
-  // behaved before the list existed, and the signal that moves such a tab
-  // off a deployment on its way out is the lobby feed's commit compare and
-  // drain flag, not this.
-  if (
-    typeof window !== "undefined" &&
-    window.location.hostname !== "localhost" &&
-    window.location.hostname !== "127.0.0.1" &&
-    (await ensureServerList()) === "outdated"
-  ) {
+  if ((await ensureServerList()) === "outdated") {
     throw new Error(
       "createLobby: this build has no server; a newer version is available",
     );

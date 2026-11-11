@@ -1070,7 +1070,7 @@ export class LeaderboardPlayerList extends LitElement {
             role="tab"
             data-rank="all"
             aria-selected=${this.ffaAllRanks ? "true" : "false"}
-            tabindex=${this.ffaAllRanks ? 0 : -1}
+            tabindex="0"
             aria-label=${translateText("ffa_rating.all_ranks")}
             title=${translateText("ffa_rating.all_ranks")}
             class="col-span-8 justify-self-center mt-1 flex flex-col items-center justify-center gap-1 w-36 py-1.5 sm:py-2 rounded-lg border transition-colors ${
