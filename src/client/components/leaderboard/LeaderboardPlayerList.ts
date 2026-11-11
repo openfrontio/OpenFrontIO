@@ -482,7 +482,11 @@ export class LeaderboardPlayerList extends LitElement {
     this.ffaAllFailed = false;
     this.showStickyUser = false;
     if (this.scrollContainer) this.scrollContainer.scrollTop = 0;
-    if (this.ffaAllRows.length === 0) void this.loadFfaAllPage();
+    if (this.ffaAllRows.length === 0) {
+      void this.loadFfaAllPage();
+    } else {
+      this.scheduleStickyVisibilityCheck();
+    }
   }
 
   private async loadFfaAllPage() {
@@ -511,6 +515,7 @@ export class LeaderboardPlayerList extends LitElement {
     this.ffaAllPage = page + 1;
     this.ffaAllHasMore =
       page < 5 && result.players.length >= this.playerPageSize;
+    this.scheduleStickyVisibilityCheck();
     this.schedulePlayerFillCheck();
   }
 
