@@ -6,6 +6,10 @@ import type { PlayerStats } from "../src/client/hud/layers/PlayerStats";
 import type { TeamStats } from "../src/client/hud/layers/TeamStats";
 import { AlternateViewEvent } from "../src/client/InputHandler";
 import { UserSettings } from "../src/client/UserSettings";
+import {
+  getTranslatedPlayerTeamLabel,
+  translateText,
+} from "../src/client/Utils";
 import type { GameView, PlayerView } from "../src/client/view";
 
 function ffaGame(): GameView {
@@ -38,6 +42,57 @@ function ffaGame(): GameView {
     numTilesWithFallout: () => 0,
     playerViews: () => [player],
   } as unknown as GameView;
+}
+
+function teamGame(inSpawnPhase: () => boolean): GameView {
+  const game = ffaGame();
+  const player = {
+    ...game.myPlayer(),
+    team: () => "Red",
+    isOnSameTeam: () => true,
+  } as unknown as PlayerView;
+  return {
+    ...game,
+    config: () => ({
+      gameConfig: () => ({ gameMode: GameMode.Team }),
+      maxTroops: () => 1_000,
+    }),
+    inSpawnPhase,
+    myPlayer: () => player,
+    playerViews: () => [player],
+    teamClanTag: () => null,
+  } as unknown as GameView;
+}
+
+// What a browser does with a key on a focused button: Enter presses it on
+// keydown, Space on keyup, unless the page cancelled that event.
+function pressKey(button: HTMLElement, key: "Enter" | " "): void {
+  const code = key === " " ? "Space" : "Enter";
+  for (const type of ["keydown", "keyup"] as const) {
+    const event = new KeyboardEvent(type, {
+      key,
+      code,
+      bubbles: true,
+      cancelable: true,
+    });
+    button.dispatchEvent(event);
+    const presses = key === "Enter" ? type === "keydown" : type === "keyup";
+    if (presses && !event.defaultPrevented) button.click();
+  }
+}
+
+function keysOnWindow(): { seen: string[]; stop: () => void } {
+  const seen: string[] = [];
+  const listener = (e: KeyboardEvent) => seen.push(`${e.type} ${e.code}`);
+  window.addEventListener("keydown", listener);
+  window.addEventListener("keyup", listener);
+  return {
+    seen,
+    stop: () => {
+      window.removeEventListener("keydown", listener);
+      window.removeEventListener("keyup", listener);
+    },
+  };
 }
 
 describe("GameLeftSidebar", () => {
@@ -80,7 +135,9 @@ describe("GameLeftSidebar", () => {
     sidebar.init();
     await sidebar.updateComplete;
 
-    (sidebar.querySelector('[role="button"]') as HTMLElement).click();
+    (
+      sidebar.querySelector('[data-sidebar-button="players"]') as HTMLElement
+    ).click();
     await sidebar.updateComplete;
 
     const playerStats = sidebar.querySelector("player-stats") as PlayerStats;
@@ -111,12 +168,16 @@ describe("GameLeftSidebar", () => {
     expect(aside().style.marginTop).toBe("");
     expect(aside().style.getPropertyValue("--bar-offset")).toBe("0px");
 
-    (sidebar.querySelector('[role="button"]') as HTMLElement).click();
+    (
+      sidebar.querySelector('[data-sidebar-button="players"]') as HTMLElement
+    ).click();
     await sidebar.updateComplete;
     expect(aside().classList).toContain(offsetMargin);
     expect(aside().classList).toContain(offsetHeight);
 
-    (sidebar.querySelector('[role="button"]') as HTMLElement).click();
+    (
+      sidebar.querySelector('[data-sidebar-button="players"]') as HTMLElement
+    ).click();
     await sidebar.updateComplete;
     expect(aside().classList).not.toContain(offsetMargin);
     expect(aside().classList).not.toContain(offsetHeight);
@@ -131,7 +192,9 @@ describe("GameLeftSidebar", () => {
     sidebar.init();
     await sidebar.updateComplete;
 
-    const btn = sidebar.querySelector('[role="button"]') as HTMLElement;
+    const btn = sidebar.querySelector(
+      "button[data-sidebar-button]",
+    ) as HTMLElement;
     const mousedown = new MouseEvent("mousedown", { cancelable: true });
     btn.dispatchEvent(mousedown);
     expect(mousedown.defaultPrevented).toBe(true);
@@ -157,7 +220,9 @@ describe("GameLeftSidebar", () => {
     sidebar.init();
     await sidebar.updateComplete;
 
-    const buttons = sidebar.querySelectorAll<HTMLElement>('[role="button"]');
+    const buttons = sidebar.querySelectorAll<HTMLElement>(
+      "button[data-sidebar-button]",
+    );
     const [playerBtn, teamBtn] = [buttons[0], buttons[1]];
     playerBtn.focus();
     expect(document.activeElement).toBe(playerBtn);
@@ -165,6 +230,42 @@ describe("GameLeftSidebar", () => {
     teamBtn.dispatchEvent(new MouseEvent("mousedown", { cancelable: true }));
     expect(document.activeElement).not.toBe(playerBtn);
     expect(document.activeElement).not.toBe(teamBtn);
+    sidebar.remove();
+  });
+
+  it("leaves no focus on a leaderboard control after a mouse click on the alternate view button", async () => {
+    const eventBus = new EventBus();
+    const views: boolean[] = [];
+    eventBus.on(AlternateViewEvent, (e) => views.push(e.alternateView));
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = eventBus;
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+
+    const playerBtn = sidebar.querySelector<HTMLElement>(
+      '[data-sidebar-button="players"]',
+    ) as HTMLElement;
+    const viewBtn = sidebar.querySelector<HTMLElement>(
+      '[data-sidebar-button="view"]',
+    ) as HTMLElement;
+    playerBtn.focus();
+    const mousedown = new MouseEvent("mousedown", { cancelable: true });
+    viewBtn.dispatchEvent(mousedown);
+    expect(mousedown.defaultPrevented).toBe(true);
+    expect(document.activeElement).not.toBe(playerBtn);
+
+    viewBtn.focus();
+    viewBtn.dispatchEvent(new MouseEvent("click", { detail: 1 }));
+    expect(document.activeElement).not.toBe(viewBtn);
+    expect(views).toEqual([true]);
+
+    // A keyboard press (detail 0) leaves focus where it is.
+    viewBtn.focus();
+    viewBtn.dispatchEvent(new MouseEvent("click", { detail: 0 }));
+    expect(document.activeElement).toBe(viewBtn);
+    expect(views).toEqual([true, false]);
     sidebar.remove();
   });
 
@@ -186,7 +287,9 @@ describe("GameLeftSidebar", () => {
     const windowKeydown = vi.fn();
     window.addEventListener("keydown", windowKeydown);
 
-    const buttons = sidebar.querySelectorAll<HTMLElement>('[role="button"]');
+    const buttons = sidebar.querySelectorAll<HTMLElement>(
+      "button[data-sidebar-button]",
+    );
     buttons[0].dispatchEvent(
       new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true }),
     );
@@ -262,7 +365,9 @@ describe("GameLeftSidebar", () => {
     await sidebar.updateComplete;
 
     const button = () =>
-      sidebar.querySelector<HTMLElement>("[aria-pressed]") as HTMLElement;
+      sidebar.querySelector<HTMLElement>(
+        '[data-sidebar-button="view"]',
+      ) as HTMLElement;
     button().click();
     await sidebar.updateComplete;
     expect(seen).toEqual([true]);
@@ -274,6 +379,159 @@ describe("GameLeftSidebar", () => {
     expect(button().getAttribute("aria-pressed")).toBe("false");
     button().click();
     expect(seen).toEqual([true, false, true]);
+
+    sidebar.remove();
+  });
+
+  it("draws its toggles as buttons with a name and a pressed state", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+
+    const toggle = (name: string) =>
+      sidebar.querySelector<HTMLButtonElement>(
+        `[data-sidebar-button="${name}"]`,
+      );
+    expect(toggle("teams")).toBeNull();
+    for (const [name, key] of [
+      ["players", "help_modal.icon_alt_player_leaderboard"],
+      ["view", "user_setting.toggle_view_desc"],
+    ]) {
+      const button = toggle(name);
+      expect(button?.tagName).toBe("BUTTON");
+      expect(button?.type).toBe("button");
+      expect(button?.getAttribute("aria-label")).toBe(translateText(key));
+      expect(button?.title).toBe(translateText(key));
+      expect(button?.getAttribute("aria-pressed")).toBe("false");
+      // A mouse press leaves no focus on it, so Space stays the game's.
+      const press = new MouseEvent("mousedown", {
+        bubbles: true,
+        cancelable: true,
+      });
+      button?.dispatchEvent(press);
+      expect(press.defaultPrevented).toBe(true);
+    }
+
+    toggle("players")?.click();
+    await sidebar.updateComplete;
+    expect(toggle("players")?.getAttribute("aria-pressed")).toBe("true");
+
+    sidebar.remove();
+
+    const teamSidebar = new GameLeftSidebar();
+    teamSidebar.game = teamGame(() => true);
+    teamSidebar.eventBus = new EventBus();
+    document.body.append(teamSidebar);
+    teamSidebar.init();
+    await teamSidebar.updateComplete;
+
+    const teams = teamSidebar.querySelector<HTMLButtonElement>(
+      '[data-sidebar-button="teams"]',
+    );
+    expect(teams?.getAttribute("aria-label")).toBe(
+      translateText("help_modal.icon_alt_team_leaderboard"),
+    );
+    expect(teams?.title).toBe(
+      translateText("help_modal.icon_alt_team_leaderboard"),
+    );
+    expect(teams?.getAttribute("aria-pressed")).toBe("false");
+
+    teamSidebar.remove();
+  });
+
+  it("switches the alternate view on Enter, and leaves Space to the game", async () => {
+    const eventBus = new EventBus();
+    const views: boolean[] = [];
+    eventBus.on(AlternateViewEvent, (e) => views.push(e.alternateView));
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = eventBus;
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+    const button = sidebar.querySelector<HTMLElement>(
+      '[data-sidebar-button="view"]',
+    ) as HTMLElement;
+    const keys = keysOnWindow();
+
+    pressKey(button, "Enter");
+    expect(views).toEqual([true]);
+    expect(keys.seen).toEqual(["keyup Enter"]);
+
+    keys.seen.length = 0;
+    pressKey(button, " ");
+    expect(views).toEqual([true]);
+    expect(keys.seen).toEqual(["keydown Space", "keyup Space"]);
+
+    keys.stop();
+    sidebar.remove();
+  });
+
+  it("keeps Space and Enter on the leaderboard button from the game", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+    const button = sidebar.querySelector<HTMLElement>(
+      '[data-sidebar-button="players"]',
+    ) as HTMLElement;
+    const keys = keysOnWindow();
+
+    pressKey(button, "Enter");
+    await sidebar.updateComplete;
+    expect(button.getAttribute("aria-pressed")).toBe("true");
+    pressKey(button, " ");
+    await sidebar.updateComplete;
+    expect(button.getAttribute("aria-pressed")).toBe("false");
+    expect(keys.seen).toEqual([]);
+
+    // A Space that went down on the map and comes up here is the game's
+    // hold: the release ends the alternate view, so it goes through.
+    button.dispatchEvent(
+      new KeyboardEvent("keyup", { key: " ", code: "Space", bubbles: true }),
+    );
+    expect(keys.seen).toEqual(["keyup Space"]);
+
+    // So is a Space that comes up here after focus left with the last one
+    // still down: that release never came, and this one is not its.
+    button.dispatchEvent(
+      new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true }),
+    );
+    button.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    button.dispatchEvent(
+      new KeyboardEvent("keyup", { key: " ", code: "Space", bubbles: true }),
+    );
+    expect(keys.seen).toEqual(["keyup Space", "keyup Space"]);
+
+    keys.stop();
+    sidebar.remove();
+  });
+
+  it("shows your team during the spawn phase of a team game", async () => {
+    let spawning = true;
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = teamGame(() => spawning);
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    sidebar.tick();
+    await sidebar.updateComplete;
+
+    const line = () => sidebar.querySelector("[data-your-team]");
+    expect(line()?.textContent).toContain(
+      translateText("help_modal.ui_your_team"),
+    );
+    expect(line()?.textContent).toContain(getTranslatedPlayerTeamLabel("Red"));
+
+    spawning = false;
+    sidebar.tick();
+    await sidebar.updateComplete;
+    expect(line()).toBeNull();
 
     sidebar.remove();
   });
