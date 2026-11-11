@@ -99,6 +99,33 @@ describe("EmojiTable event bus wiring", () => {
 
     expect(table.isVisible).toBe(false);
   });
+
+  it("closes on a click on the backdrop, not on one inside the dialog", async () => {
+    tileOwner = myPlayer;
+    eventBus.emit(new ShowEmojiMenuEvent(3, 4));
+    await table.updateComplete;
+    const dialog = table.querySelector('[role="dialog"]')!;
+
+    // The heading of the first emoji section, after the favorites.
+    dialog.querySelectorAll("section")[1].querySelector("h3")!.click();
+    expect(table.isVisible).toBe(true);
+
+    (dialog.parentElement as HTMLElement).click();
+    expect(table.isVisible).toBe(false);
+  });
+
+  it("names the dialog by its title", async () => {
+    tileOwner = myPlayer;
+    eventBus.emit(new ShowEmojiMenuEvent(3, 4));
+    await table.updateComplete;
+
+    const dialog = table.querySelector('[role="dialog"]')!;
+    const title = document.getElementById(
+      dialog.getAttribute("aria-labelledby")!,
+    );
+    expect(title!.textContent!.trim()).toBe("emoji_table.title");
+  });
+
   it("ignores ShowEmojiMenuEvent while already open to preserve original target", async () => {
     tileOwner = otherPlayer;
     eventBus.emit(new ShowEmojiMenuEvent(3, 4));
@@ -169,6 +196,12 @@ describe("EmojiTable event bus wiring", () => {
       [...table.querySelectorAll(".grid button")].find(
         (b) => b.textContent!.trim() === emoji,
       )!;
+
+    // Whether the slots are marked as drop targets.
+    async function marked() {
+      await table.updateComplete;
+      return table.querySelector("[data-dragging]") !== null;
+    }
 
     it("hides the key labels on touch-only devices", async () => {
       const realMatchMedia = window.matchMedia;
@@ -244,6 +277,48 @@ describe("EmojiTable event bus wiring", () => {
       drag(groupButton("💀"), "dragend");
 
       expect(new UserSettings().favoriteEmojis().every((e) => !e)).toBe(true);
+    });
+
+    it("marks the slots from dragstart until a cancelled drag ends", async () => {
+      new UserSettings().setFavoriteEmojis(["👍"]);
+      await open();
+      expect(await marked()).toBe(false);
+
+      drag(slots()[0], "dragstart");
+      expect(await marked()).toBe(true);
+
+      drag(slots()[0], "dragend");
+      expect(await marked()).toBe(false);
+    });
+
+    it("clears the mark when the emoji is dropped on a slot", async () => {
+      await open();
+      drag(groupButton("💀"), "dragstart");
+      drag(slots()[2], "dragover");
+      drag(slots()[2], "drop");
+
+      expect(await marked()).toBe(false);
+    });
+
+    it("clears the mark when a favorite is dropped off the slots", async () => {
+      new UserSettings().setFavoriteEmojis(["👍"]);
+      await open();
+      drag(slots()[0], "dragstart");
+      drag(groupButton("💀"), "dragover");
+      drag(groupButton("💀"), "drop");
+
+      expect(await marked()).toBe(false);
+    });
+
+    it("clears the mark when the table closes during a drag", async () => {
+      await open();
+      drag(groupButton("💀"), "dragstart");
+      expect(await marked()).toBe(true);
+
+      eventBus.emit(new CloseViewEvent());
+      await open();
+
+      expect(await marked()).toBe(false);
     });
   });
 
