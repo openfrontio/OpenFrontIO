@@ -8,6 +8,7 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
+import { repeat } from "lit/directives/repeat.js";
 import { Controller } from "../../Controller";
 import { AttackRatioEvent, isForwardedClick } from "../../InputHandler";
 import { UIState } from "../../UIState";
@@ -53,11 +54,20 @@ const RATE_TREND = {
 const GOLD =
   "gap-1 bg-cyber-yellow/8 px-1.5 text-xs text-cyber-yellow min-w-18.5 lg:min-w-[5.5rem] lg:gap-1.5 lg:px-2 lg:text-sm";
 // Just above the panel's edge, from the chip's start edge. On landscape phones
-// the unit bar is the row above the panel, so the pop goes beside the chip,
-// toward the map. It grows from the side it is pinned to. The rim keeps it
-// readable on any terrain.
+// the unit bar is the row above the panel, so the pops go beside the chip,
+// toward the map. The pops share one grid cell.
+const GOLD_POPS =
+  "bottom-full start-1 mb-2 lg:start-1.5 lg:mb-3 justify-items-start sm:max-lg:landscape:top-0.5 sm:max-lg:landscape:bottom-auto sm:max-lg:landscape:start-auto sm:max-lg:landscape:end-full sm:max-lg:landscape:mb-0 sm:max-lg:landscape:me-4 sm:max-lg:landscape:justify-items-end";
+// It grows from the side it is pinned to, and each newer pop lifts it a row
+// (rank 0 is the newest, 3 the one a fourth gain pushed out). The rim keeps
+// it readable on any terrain.
 const GOLD_POP =
-  "bottom-full start-1 mb-2 lg:start-1.5 lg:mb-3 origin-left sm:max-lg:landscape:top-0.5 sm:max-lg:landscape:bottom-auto sm:max-lg:landscape:start-auto sm:max-lg:landscape:end-full sm:max-lg:landscape:mb-0 sm:max-lg:landscape:me-4 sm:max-lg:landscape:origin-right whitespace-nowrap text-[15px] leading-4.5 font-extrabold tabular-nums text-green-400 text-shadow-hud-rim animate-gold-pop motion-reduce:animate-gold-pop-fade";
+  "group col-start-1 row-start-1 origin-left sm:max-lg:landscape:origin-right whitespace-nowrap text-[15px] leading-4.5 font-extrabold tabular-nums text-green-400 text-shadow-hud-rim animate-gold-pop motion-reduce:animate-gold-pop-fade transition-transform duration-220 ease-out motion-reduce:transition-none data-[rank=1]:-translate-y-4.5 data-[rank=2]:-translate-y-9 data-[rank=3]:-translate-y-13.5";
+// Older pops fade a little and a pushed-out one fades fast. Below lg only the
+// newest shows: there one pop already covers the row above the chip. A merge
+// bumps the amount.
+const GOLD_POP_AMOUNT =
+  "inline-block origin-[inherit] transition-opacity duration-220 group-data-[rank=1]:opacity-78 group-data-[rank=2]:opacity-56 group-data-[rank=3]:opacity-0 group-data-[rank=3]:duration-150 max-lg:group-data-[rank=1]:opacity-0 max-lg:group-data-[rank=2]:opacity-0 data-bump:animate-gold-pop-bump motion-reduce:data-bump:animate-none";
 // The percentage over the troops it sends below lg, both on one line from lg.
 const RATIO =
   "gap-1 whitespace-nowrap font-bold tabular-nums text-white lg:ps-2";
@@ -77,6 +87,13 @@ const HINT_TONE = {
   warning: "bg-orange-400/10 text-orange-300",
   info: "bg-blue-400/10 text-blue-300",
 } as const;
+
+// Gains this close together (a conquest and its bonus, several in one tick)
+// add up in one pop.
+const GOLD_POP_MERGE_MS = 90;
+const GOLD_POP_MAX = 3;
+
+type GoldPop = { id: number; amount: bigint; merges: number };
 
 @customElement("control-panel")
 export class ControlPanel extends LitElement implements Controller {
@@ -110,10 +127,14 @@ export class ControlPanel extends LitElement implements Controller {
   @state()
   private _attackingTroops: number = 0;
 
+  /** The gold gains on screen, oldest first. */
   @state()
-  private _goldGain: bigint | null = null;
+  private _goldPops: GoldPop[] = [];
+  /** The pop a fourth gain pushed out, fading until its animation ends. */
   @state()
-  private _goldGainPulseId: number = 0;
+  private _goldPopOut: GoldPop | null = null;
+  private _goldPopSeq = 0;
+  private _lastGoldGainAt = -Infinity;
 
   @state()
   private _tutorialHighlight: TutorialHighlight | null = null;
@@ -254,22 +275,44 @@ export class ControlPanel extends LitElement implements Controller {
     this.requestUpdate();
   }
 
-  // Last-wins: when multiple gold events arrive in one tick, the pip shows
-  // only the most recent amount (not a sum) — each gain restarts the pulse.
   private addGoldGain(amount: bigint) {
-    this._goldGain = amount;
-    this._goldGainPulseId++;
+    const now = performance.now();
+    const newest = this._goldPops[this._goldPops.length - 1];
+    if (newest && now - this._lastGoldGainAt < GOLD_POP_MERGE_MS) {
+      // The merged pop keeps its animation; its amount bumps.
+      this._goldPops = [
+        ...this._goldPops.slice(0, -1),
+        {
+          ...newest,
+          amount: newest.amount + amount,
+          merges: newest.merges + 1,
+        },
+      ];
+    } else {
+      const pops = [
+        ...this._goldPops,
+        { id: ++this._goldPopSeq, amount, merges: 0 },
+      ];
+      // The oldest fades out instead of vanishing. One still fading from the
+      // last push goes at once.
+      if (pops.length > GOLD_POP_MAX) this._goldPopOut = pops.shift()!;
+      this._goldPops = pops;
+    }
+    this._lastGoldGainAt = now;
   }
 
-  // The pop's animation is its whole life (two seconds): it goes when the
+  // A pop's animation is its whole life (two seconds): it goes when the
   // animation ends, so no timer has to match it.
-  private endGoldGain(pulseId: number) {
-    // A pop replaced by a newer gain can still report the end of its own.
-    if (pulseId === this._goldGainPulseId) this._goldGain = null;
+  private endGoldPop(e: Event, id: number) {
+    // The amount's bump ends too, and bubbles up here.
+    if (e.target !== e.currentTarget) return;
+    if (this._goldPopOut?.id === id) this._goldPopOut = null;
+    else this._goldPops = this._goldPops.filter((p) => p.id !== id);
   }
 
   private clearGoldGain() {
-    this._goldGain = null;
+    this._goldPops = [];
+    this._goldPopOut = null;
   }
 
   private trackOutgoingAttacks(player: PlayerView) {
@@ -582,7 +625,8 @@ export class ControlPanel extends LitElement implements Controller {
   }
 
   private renderGold() {
-    const pulseId = this._goldGainPulseId;
+    const live = this._goldPops;
+    const out = this._goldPopOut;
     return html`
       <span
         data-gold
@@ -591,21 +635,37 @@ export class ControlPanel extends LitElement implements Controller {
         )}"
         translate="no"
       >
-        ${
-          this._goldGain !== null
-            ? keyed(
-                pulseId,
-                html`<span
-                  data-gold-pop
-                  class="pointer-events-none absolute ${GOLD_POP}"
-                  aria-hidden="true"
-                  @animationend=${() => this.endGoldGain(pulseId)}
-                  @animationcancel=${() => this.endGoldGain(pulseId)}
-                  >+${renderNumber(this._goldGain)}</span
-                >`,
-              )
-            : nothing
-        }
+        <span
+          data-gold-pops
+          class="pointer-events-none absolute grid ${GOLD_POPS}"
+        >
+          ${repeat(
+            out ? [out, ...live] : live,
+            (p) => p.id,
+            (p) =>
+              html`<span
+                data-gold-pop
+                data-rank=${
+                  p === out ? GOLD_POP_MAX : live.length - 1 - live.indexOf(p)
+                }
+                class=${GOLD_POP}
+                aria-hidden="true"
+                @animationend=${(e: Event) => this.endGoldPop(e, p.id)}
+                @animationcancel=${(e: Event) => this.endGoldPop(e, p.id)}
+                >${
+                  // A merge draws the amount again, so its bump plays again.
+                  keyed(
+                    p.merges,
+                    html`<span
+                      ?data-bump=${p.merges > 0}
+                      class=${GOLD_POP_AMOUNT}
+                      >+${renderNumber(p.amount)}</span
+                    >`,
+                  )
+                }</span
+              >`,
+          )}
+        </span>
         <of-icon name="gold" size="14"></of-icon>
         <span class="ms-auto hud-caps">${renderNumber(this._gold)}</span>
       </span>
