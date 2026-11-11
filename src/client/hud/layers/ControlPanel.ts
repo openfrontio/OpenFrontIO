@@ -21,7 +21,6 @@ import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import "../../components/OfIcon";
 import { TICKS_PER_SECOND, ticksToSeconds } from "../GameTicks";
-import { goldCoinIcon } from "../HotbarIcons";
 import { OnboardingLowTroopsEvent } from "../Onboarding";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 // Safari before 17 has no popovers; the gold gain pop falls back to sitting
@@ -64,10 +63,19 @@ const RATE_TREND = {
   up: "text-green-400 lg:bg-green-400/12",
   down: "text-orange-400 lg:bg-orange-400/14",
 } as const;
+// As wide as its widest amount (999.9M), so the bar does not move as gold
+// comes in.
 const GOLD =
-  "justify-center gap-0.5 rounded-md border border-yellow-400 p-1 text-xs font-bold text-yellow-400 min-w-16 lg:justify-start lg:gap-1 lg:px-1 lg:py-0.5 lg:text-sm lg:min-w-[4.5rem]";
+  "gap-1 bg-cyber-yellow/8 px-1.5 text-xs text-cyber-yellow min-w-18.5 lg:min-w-[5.5rem] lg:gap-1.5 lg:px-2 lg:text-sm";
+// Just above the panel's edge, from the chip's start edge. On landscape phones
+// the unit bar is the row above the panel, so the pop goes beside the chip,
+// toward the map. It grows from the side it is pinned to. The rim keeps it
+// readable on any terrain.
+// The top-layer box the pop is drawn in, laid over the chip.
+const GOLD_POP_LAYER =
+  "fixed inset-auto m-0 p-0 border-0 bg-transparent overflow-visible pointer-events-none";
 const GOLD_POP =
-  "absolute -top-5 right-[5px] min-[1015px]:right-[9px] text-green-400 text-xs lg:text-sm font-extrabold tabular-nums whitespace-nowrap pointer-events-none drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]";
+  "bottom-full start-1 mb-2 lg:start-1.5 lg:mb-3 origin-left sm:max-lg:landscape:top-0.5 sm:max-lg:landscape:bottom-auto sm:max-lg:landscape:start-auto sm:max-lg:landscape:end-full sm:max-lg:landscape:mb-0 sm:max-lg:landscape:me-4 sm:max-lg:landscape:origin-right whitespace-nowrap text-[15px] leading-4.5 font-extrabold tabular-nums text-green-400 text-shadow-hud-rim animate-gold-pop motion-reduce:animate-gold-pop-fade";
 // The percentage over the troops it sends below lg, both on one line from lg.
 const RATIO =
   "gap-1 whitespace-nowrap font-bold tabular-nums text-white lg:ps-2";
@@ -128,7 +136,6 @@ export class ControlPanel extends LitElement implements Controller {
   private _goldGain: bigint | null = null;
   @state()
   private _goldGainPulseId: number = 0;
-  private _goldGainTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   @state()
   private _tutorialHighlight: TutorialHighlight | null = null;
@@ -307,32 +314,41 @@ export class ControlPanel extends LitElement implements Controller {
   private addGoldGain(amount: bigint) {
     this._goldGain = amount;
     this._goldGainPulseId++;
-    if (this._goldGainTimeoutId !== null) {
-      clearTimeout(this._goldGainTimeoutId);
-    }
-    this._goldGainTimeoutId = setTimeout(() => {
-      this._goldGain = null;
-      this._goldGainTimeoutId = null;
-      this.requestUpdate();
-    }, 2000);
+  }
+
+  // The pop's animation is its whole life (two seconds): it goes when the
+  // animation ends, so no timer has to match it.
+  private endGoldGain(pulseId: number) {
+    // A pop replaced by a newer gain can still report the end of its own.
+    if (pulseId === this._goldGainPulseId) this._goldGain = null;
+  }
+
+  private clearGoldGain() {
+    this._goldGain = null;
   }
 
   // A popover, so it's drawn in the top layer: the events display and the
   // tutorial panel sit above this panel (so the portrait unit bar doesn't
-  // cover them) and would otherwise hide it. `updated` pins it to the gold
-  // box's top-right corner, and the span keeps its old offsets from there.
+  // cover them) and would otherwise hide it. `updated` lays it over the gold
+  // chip, so the pop's offsets work from the chip as they would inside it.
   private renderGoldGainPop() {
-    if (this._goldGain === null) return "";
-    const pop = html`<span class="gold-gain-pop ${GOLD_POP}"
+    if (this._goldGain === null) return nothing;
+    const pulseId = this._goldGainPulseId;
+    const pop = html`<span
+      data-gold-pop
+      class="pointer-events-none absolute ${GOLD_POP}"
+      aria-hidden="true"
+      @animationend=${() => this.endGoldGain(pulseId)}
+      @animationcancel=${() => this.endGoldGain(pulseId)}
       >+${renderNumber(this._goldGain)}</span
     >`;
     return keyed(
-      this._goldGainPulseId,
+      pulseId,
       supportsPopover
         ? html`<div
             popover="manual"
-            data-gold-gain-pop
-            class="fixed inset-auto size-0 m-0 p-0 border-0 bg-transparent overflow-visible pointer-events-none"
+            data-gold-pop-layer
+            class=${GOLD_POP_LAYER}
           >
             ${pop}
           </div>`
@@ -341,19 +357,18 @@ export class ControlPanel extends LitElement implements Controller {
   }
 
   updated() {
-    for (const pop of this.querySelectorAll<HTMLElement>(
-      "[data-gold-gain-pop]",
-    )) {
-      if (pop.matches(":popover-open")) continue;
-      const goldBox = pop.parentElement!;
-      const box = goldBox.getBoundingClientRect();
-      // Not laid out: the panel is hidden.
-      if (box.width === 0) continue;
-      // Inside the border, where the span's absolute offsets used to start.
-      pop.style.left = `${box.right - goldBox.clientLeft}px`;
-      pop.style.top = `${box.top + goldBox.clientTop}px`;
-      pop.showPopover();
-    }
+    const layer = this.querySelector<HTMLElement>("[data-gold-pop-layer]");
+    if (layer === null) return;
+    const chip = layer.parentElement!;
+    const box = chip.getBoundingClientRect();
+    // Not laid out: the panel is hidden.
+    if (box.width === 0) return;
+    // The chip's padding box, where the pop's absolute offsets start.
+    layer.style.left = `${box.left + chip.clientLeft}px`;
+    layer.style.top = `${box.top + chip.clientTop}px`;
+    layer.style.width = `${chip.clientWidth}px`;
+    layer.style.height = `${chip.clientHeight}px`;
+    if (!layer.matches(":popover-open")) layer.showPopover();
   }
 
   private trackOutgoingAttacks(player: PlayerView) {
@@ -477,10 +492,7 @@ export class ControlPanel extends LitElement implements Controller {
     document.removeEventListener("pointerdown", this.closeRatioPopupOutside, {
       capture: true,
     });
-    if (this._goldGainTimeoutId !== null) {
-      clearTimeout(this._goldGainTimeoutId);
-      this._goldGainTimeoutId = null;
-    }
+    this.clearGoldGain();
   }
 
   private updateTroopIncrease() {
@@ -518,6 +530,9 @@ export class ControlPanel extends LitElement implements Controller {
 
   setVisibile(visible: boolean) {
     this._isVisible = visible;
+    // A dead player's panel hides while a pop may still be up, and a hidden
+    // pop's animation stops without ending.
+    if (!visible) this.clearGoldGain();
     this.requestUpdate();
   }
 
@@ -528,14 +543,10 @@ export class ControlPanel extends LitElement implements Controller {
   dispose(): void {
     this.initGeneration++;
     this.unsubscribeBus();
-    if (this._goldGainTimeoutId !== null) {
-      clearTimeout(this._goldGainTimeoutId);
-      this._goldGainTimeoutId = null;
-    }
+    this.clearGoldGain();
     this._nearbyPlayerIDs.clear();
     this._lastAttackTickByTarget.clear();
     this._notification = null;
-    this._goldGain = null;
     this._tutorialHighlight = null;
     this._lowTroopsAlert = false;
     this._ratioPopupOpen = false;
@@ -711,16 +722,14 @@ export class ControlPanel extends LitElement implements Controller {
     return html`
       <span
         data-gold
-        class="relative flex shrink-0 items-center lg:col-start-3 lg:row-start-1 ${GOLD} ${this.tutorialHighlightClass(
+        class="relative shrink-0 lg:col-start-3 lg:row-start-1 ${CHIP} ${GOLD} ${this.tutorialHighlightClass(
           "gold",
         )}"
         translate="no"
       >
         ${this.renderGoldGainPop()}
-        <img src=${goldCoinIcon} width="13" height="13" class="shrink-0" />
-        <span class="px-0.5 tabular-nums lg:px-0"
-          >${renderNumber(this._gold)}</span
-        >
+        <of-icon name="gold" size="14"></of-icon>
+        <span class="ms-auto hud-caps">${renderNumber(this._gold)}</span>
       </span>
     `;
   }
@@ -860,21 +869,6 @@ export class ControlPanel extends LitElement implements Controller {
 
   render() {
     return html`
-      <style>
-        @keyframes gold-gain-pop {
-          0% {
-            transform: translateY(4px);
-            opacity: 0;
-          }
-          100% {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-        .gold-gain-pop {
-          animation: gold-gain-pop 0.25s ease-out;
-        }
-      </style>
       <div
         data-control-panel
         class="pointer-events-auto ${this._isVisible ? PANEL : "hidden"}"
