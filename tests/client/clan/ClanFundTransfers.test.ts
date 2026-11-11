@@ -727,4 +727,94 @@ describe("Send Plutonium page", () => {
       "clan_modal.send_funds_error_not_eligible",
     );
   });
+
+  it("reopening the page after an unknown send reuses its key until a send settles it", async () => {
+    send.mockResolvedValueOnce({
+      error: "clan_modal.send_funds_error_unknown",
+      outcome: "unknown",
+    });
+    const first = await mount();
+    await confirmSend(first, "member-2", "500");
+    first.remove();
+
+    // The leader leaves and comes back: the same send replays, not repeats.
+    const second = await mount();
+    await confirmSend(second, "member-2", "500");
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[1][3]).toBe(send.mock.calls[0][3]);
+    second.remove();
+
+    // That one went through, so the next visit is a new send.
+    const third = await mount();
+    await confirmSend(third, "member-2", "500");
+    expect(send.mock.calls[2][3]).not.toBe(send.mock.calls[0][3]);
+  });
+
+  it("unpicks a member who can no longer receive after a reload", async () => {
+    const el = await mount();
+    send.mockResolvedValueOnce({
+      error: "clan_modal.send_funds_error_not_eligible",
+      outcome: "refused",
+    });
+    fetchRecipients.mockResolvedValue([
+      recipient("member-2", { eligible: false, reason: "too_recent" }),
+    ]);
+    await confirmSend(el, "member-2", "10");
+    expect(el.querySelector("[aria-checked=true]")).toBeNull();
+    expect(el.querySelector('[data-member="member-2"]')!.textContent).toContain(
+      "clan_modal.send_funds_reason_too_recent",
+    );
+    expect(sendButton(el).disabled).toBe(true);
+  });
+
+  it("can't send again when the fund fails to reload after a refusal", async () => {
+    const el = await mount();
+    send.mockResolvedValueOnce({
+      error: "clan_modal.send_funds_error_clan_limit",
+      outcome: "refused",
+    });
+    fetchTransfers.mockResolvedValue({ error: "failed" });
+    await confirmSend(el, "member-2", "10");
+    expect(el.querySelector('[data-load-error="status"]')).not.toBeNull();
+    expect(sendButton(el).disabled).toBe(true);
+  });
+
+  it("shows a neighbouring page instead of a page that holds only the leader", async () => {
+    const members = vi.mocked(fetchClanMembers);
+    const el = await mount();
+    const leader = {
+      role: "leader" as const,
+      joinedAt: "2024-01-01T00:00:00.000Z",
+      publicId: "test-player",
+      username: "me",
+    };
+    const others = Array.from({ length: 10 }, (_, i) => ({
+      role: "member" as const,
+      joinedAt: "2024-01-01T00:00:00.000Z",
+      publicId: `m-${i}`,
+      username: `m${i}.0001`,
+    }));
+    members.mockClear();
+    members
+      .mockResolvedValueOnce({
+        results: [leader],
+        total: 11,
+        page: 2,
+        limit: 10,
+      })
+      .mockResolvedValueOnce({
+        results: others,
+        total: 11,
+        page: 1,
+        limit: 10,
+      });
+    await (
+      el as unknown as { loadMembers(p: number): Promise<void> }
+    ).loadMembers(2);
+    await flushAsync(el);
+    await flushAsync(el);
+    expect(members.mock.calls.map((c) => c[1])).toEqual([2, 1]);
+    expect(el.querySelectorAll("[data-member]")).toHaveLength(10);
+    expect(el.textContent).not.toContain("clan_modal.send_funds_no_members");
+  });
 });

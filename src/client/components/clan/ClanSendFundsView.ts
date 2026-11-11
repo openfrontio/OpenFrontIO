@@ -41,6 +41,12 @@ function newIdempotencyKey(): string {
 
 const min = (...xs: bigint[]) => xs.reduce((a, b) => (a < b ? a : b));
 
+// Per clan: the key of a send whose result never came back. It outlives the
+// page, so leaving and reopening Send Plutonium reuses it: an identical retry
+// replays the send instead of paying twice, and a changed one is refused as a
+// conflict. Cleared once a later answer settles what happened.
+const unresolvedSendKeys = new Map<string, string>();
+
 /**
  * Full page (Manage → Clan fund → Send Plutonium) where the leader sends
  * Plutonium from the clan fund to a member. Built like the leadership
@@ -53,8 +59,10 @@ const min = (...xs: bigint[]) => xs.reduce((a, b) => (a < b ? a : b));
  * Sending asks for confirmation first, and Enter never submits. The page keeps
  * one idempotency key until a send is confirmed, so a retry can't send twice:
  * a repeat of a send that went through is replayed, and a changed one is
- * refused as a conflict, which starts a new key. Any failed send reloads the
- * fund, the limits and the member page, so Max stays honest.
+ * refused as a conflict, which starts a new key. When a send's result is
+ * unknown, its key is kept for the clan even after the page closes. Any
+ * failed send reloads the fund, the limits and the member page, so Max stays
+ * honest; until the fund reloads, nothing can be sent.
  *
  * Emits `funds-sent` (bubbling) after a successful send.
  */
@@ -91,12 +99,14 @@ export class ClanSendFundsView extends LitElement {
   @state() private serverError: string | null = null;
 
   private readonly membersPerPage = 10;
-  private idempotencyKey = newIdempotencyKey();
+  private idempotencyKey = "";
   private searchDebounce: ReturnType<typeof setTimeout> | null = null;
   private loadSeq = 0;
 
   connectedCallback() {
     super.connectedCallback();
+    this.idempotencyKey =
+      unresolvedSendKeys.get(this.clanTag) ?? newIdempotencyKey();
     void this.loadStatus();
     void this.loadMembers(1);
   }
@@ -112,6 +122,9 @@ export class ClanSendFundsView extends LitElement {
     const res = await fetchClanFundTransfers(this.clanTag, { limit: 1 });
     if (!this.isConnected) return;
     if ("error" in res) {
+      // The old numbers may be what the server just refused: drop them, so
+      // nothing can be sent until a reload succeeds.
+      this.status = null;
       this.statusFailed = true;
       return;
     }
@@ -139,6 +152,18 @@ export class ClanSendFundsView extends LitElement {
       return;
     }
     const members = res.results.filter((m) => m.publicId !== this.myPublicId);
+    // The leader counts toward the server's pages but isn't listed. Today
+    // they always sort onto page 1, but if a page ever holds only them, show
+    // a neighbouring page rather than an empty one.
+    if (members.length === 0 && res.results.length > 0) {
+      const pages = Math.ceil(res.total / this.membersPerPage);
+      const next =
+        res.page < pages ? res.page + 1 : res.page > 1 ? res.page - 1 : null;
+      if (next !== null) {
+        void this.loadMembers(next, search);
+        return;
+      }
+    }
     // Ask about the picked member too when they're off this page, so their
     // limit stays current after a reload.
     const ids = members.map((m) => m.publicId);
@@ -158,6 +183,10 @@ export class ClanSendFundsView extends LitElement {
       : undefined;
     if (picked && !next.has(picked.publicId)) next.set(picked.publicId, picked);
     this.eligibility = next;
+    // The picked member can't receive any more: unpick them. Their row now
+    // shows why.
+    if (this.recipient && next.get(this.recipient.publicId)?.eligible === false)
+      this.recipient = null;
     this.membersLoading = false;
     this.loading = false;
   }
@@ -226,6 +255,7 @@ export class ClanSendFundsView extends LitElement {
     return (
       !this.submitting &&
       this.recipient !== null &&
+      this.selectable(this.recipient) &&
       this.parsedAmount() !== null &&
       this.amountError() === null &&
       // Only once the API has said this leader can send right now.
@@ -257,6 +287,11 @@ export class ClanSendFundsView extends LitElement {
       );
       if (result !== true) {
         this.serverError = translateText(result.error);
+        if (result.outcome === "unknown") {
+          unresolvedSendKeys.set(this.clanTag, this.idempotencyKey);
+        } else {
+          unresolvedSendKeys.delete(this.clanTag);
+        }
         // The earlier send under this key is confirmed and about to show in
         // the reloaded numbers, so the next send is a new one.
         if (result.outcome === "earlier_send") {
@@ -267,6 +302,7 @@ export class ClanSendFundsView extends LitElement {
         void this.loadMembers(this.memberPage);
         return;
       }
+      unresolvedSendKeys.delete(this.clanTag);
       showToast(
         translateText("clan_modal.send_funds_success", {
           amount: formatPlutonium(amount),
