@@ -335,6 +335,34 @@ describe("ColumnPicker", () => {
     expect(menu()).toBeNull();
   });
 
+  it("closes when a press on the sheet's scrim ends, and keeps the press from the map", async () => {
+    const picker = await mount();
+    const scrim = () => document.body.querySelector("[data-column-scrim]");
+    const send = (event: Event) => {
+      scrim()?.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    const options = { bubbles: true, cancelable: true };
+    picker.toggleAt(0, 0);
+    await picker.updateComplete;
+
+    // Still there for the release, which would otherwise land on the map.
+    expect(send(new PointerEvent("pointerdown", options))).toBe(true);
+    await picker.updateComplete;
+    expect(menu()).not.toBeNull();
+    send(new MouseEvent("click", options));
+    await picker.updateComplete;
+    expect(menu()).toBeNull();
+    expect(scrim()).toBeNull();
+
+    // A right-click ends with the context menu, which the map would open.
+    picker.toggleAt(0, 0);
+    await picker.updateComplete;
+    expect(send(new MouseEvent("contextmenu", options))).toBe(true);
+    await picker.updateComplete;
+    expect(menu()).toBeNull();
+  });
+
   it("leaves nothing focused when it was opened with nothing focused", async () => {
     const picker = await mount();
     picker.toggleAt(0, 0);

@@ -20,9 +20,13 @@ import { columnsFor, type ColumnDef } from "./lib/StatsColumns";
 
 // Opaque, as every HUD surface that is read. Above the replay viewer (z 9000),
 // which also opens it, and under the game's modals (9998 and up). Placed by
-// `--menu-x` and `--menu-y`, set once it is drawn and its size is known.
+// `--menu-x` and `--menu-y`, set once it is drawn and its size is known. On a
+// phone it is a sheet along the bottom edge instead, over a scrim.
 const MENU =
-  "fixed left-(--menu-x) top-(--menu-y) z-9500 hud-modal rounded-xl p-1 flex flex-col w-max max-w-[calc(100vw-1rem)] max-h-[calc(100dvh-1rem)] text-white whitespace-nowrap animate-hud-rise motion-reduce:animate-none";
+  "fixed left-(--menu-x) top-(--menu-y) z-9500 hud-modal rounded-xl p-1 flex flex-col w-max max-w-[calc(100vw-1rem)] max-h-[calc(100dvh-1rem)] text-white whitespace-nowrap animate-hud-rise motion-reduce:animate-none hud-sheet:inset-x-0 hud-sheet:top-auto hud-sheet:bottom-0 hud-sheet:w-auto hud-sheet:max-w-none hud-sheet:max-h-[85dvh] hud-sheet:rounded-b-none hud-sheet:pb-[calc(0.25rem+env(safe-area-inset-bottom))]";
+// Under the sheet, over the map: a press there closes the sheet and goes no
+// further.
+const SCRIM = "fixed inset-0 z-9500 hidden bg-black/50 hud-sheet:block";
 const HEAD = "flex shrink-0 items-center gap-2 ps-2";
 const BODY = "min-h-0 overflow-y-auto overscroll-contain";
 const SECTION = "not-first:mt-1 not-first:border-t not-first:border-white/12";
@@ -30,22 +34,33 @@ const SECTION_TITLE =
   "px-2 pt-2 pb-1 text-[11px] font-bold uppercase tracking-[0.12em] text-aquarius";
 // Two columns as wide as their items. A group alone spreads its items across
 // both, two to a line; two groups side by side take a column each.
-const GRID = "grid grid-cols-[repeat(2,minmax(0,auto))] gap-x-1";
-const GROUP = "flex min-w-0 flex-col";
-const WIDE_GROUP = "col-span-2 grid grid-cols-subgrid";
+// In a sheet, where names wrap, the columns share its width evenly but none
+// narrows below its longest word: when two cannot, they go one under the
+// other. On a phone held sideways the sheet is wide and short: there the
+// groups flow in three columns across it.
+const GRID =
+  "grid grid-cols-[repeat(2,minmax(0,auto))] gap-x-1 hud-sheet:flex hud-sheet:flex-wrap hud-sheet:landscape:block hud-sheet:landscape:columns-3";
+const GROUP =
+  "flex min-w-0 flex-col hud-sheet:grow hud-sheet:basis-0 hud-sheet:min-w-min hud-sheet:landscape:break-inside-avoid";
+const WIDE_GROUP =
+  "col-span-2 grid grid-cols-subgrid hud-sheet:flex hud-sheet:w-full hud-sheet:flex-wrap hud-sheet:gap-x-1 hud-sheet:[&>label]:grow hud-sheet:[&>label]:basis-0 hud-sheet:[&>label]:min-w-min hud-sheet:landscape:break-inside-avoid";
 // Quieter than a section's title: it only sorts the list.
 const GROUP_TITLE =
-  "col-span-full px-2 pt-1.5 pb-0.5 text-[11px] leading-4 font-semibold uppercase tracking-[0.08em] text-white/45";
+  "col-span-full px-2 pt-1.5 pb-0.5 text-[11px] leading-4 font-semibold uppercase tracking-[0.08em] text-white/45 hud-sheet:w-full";
 // The whole line is the checkbox's label; the box itself is only for the
-// keyboard and screen readers, so the line shows its focus.
+// keyboard and screen readers, so the line shows its focus. Taller in a
+// sheet, for a thumb, and as tall as its name when that wraps; a little
+// shorter on a phone on its side, so the list fits its height.
 const ITEM =
-  "flex h-7 cursor-pointer items-center gap-2 rounded-lg px-2 text-[13px] text-white/70 transition-colors hover:bg-white/10 active:bg-white/15 has-checked:text-white has-disabled:cursor-default has-disabled:opacity-60 has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 has-focus-visible:outline-aquarius";
+  "flex h-7 cursor-pointer items-center gap-2 rounded-lg px-2 text-[13px] text-white/70 transition-colors hover:bg-white/10 active:bg-white/15 has-checked:text-white has-disabled:cursor-default has-disabled:opacity-60 has-focus-visible:outline-2 has-focus-visible:-outline-offset-2 has-focus-visible:outline-aquarius hud-sheet:h-auto hud-sheet:min-h-9 hud-sheet:py-1 hud-sheet:landscape:min-h-8";
 // As wide as the widest visual (an icon with "/m"). Icons sit at its end, so
 // each is as far from its name as the others and every name starts on the
 // same line.
 const VISUAL = "flex w-8 shrink-0 items-center justify-end";
 const VISUAL_SIZE = 16;
-const NAME = "min-w-0 flex-1 truncate";
+// Truncated in the popover, where the title gives the whole name; a sheet
+// has no pointer to hover with, so its names wrap.
+const NAME = "min-w-0 flex-1 truncate hud-sheet:whitespace-normal";
 const CHECK = "ms-2 shrink-0 text-aquarius invisible peer-checked:visible";
 // The least room the menu leaves to each edge of the window: half the
 // `1rem` its width and height are capped by.
@@ -355,6 +370,21 @@ export class ColumnPicker extends LitElement {
     const close = translateText("common.close");
     litRender(
       html`
+        <!--
+          Closed once the press ends, not as it starts: gone any sooner, the
+          release and a right-click's context menu would land on the map.
+          Until then the press keeps focus in the menu.
+        -->
+        <div
+          class=${SCRIM}
+          data-column-scrim
+          @pointerdown=${(e: PointerEvent) => e.preventDefault()}
+          @click=${() => this.close()}
+          @contextmenu=${(e: MouseEvent) => {
+            e.preventDefault();
+            this.close();
+          }}
+        ></div>
         <div
           class="column-picker-popover ${MENU}"
           role="dialog"
@@ -386,7 +416,7 @@ export class ColumnPicker extends LitElement {
       `,
       this.portal,
     );
-    const box = this.portal.firstElementChild as HTMLElement;
+    const box = this.portal.lastElementChild as HTMLElement;
     this.place(box, anchor);
     this.menuResize?.observe(box);
   }
