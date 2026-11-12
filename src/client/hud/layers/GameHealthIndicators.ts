@@ -24,6 +24,7 @@ export class GameHealthIndicators extends LitElement {
   @state()
   private tooltip: Warning | null = null;
   private pinned: Warning | null = null;
+  private spaceDownOnControl = false;
   private topHudPanels: HTMLElement[] = [];
 
   connectedCallback(): void {
@@ -38,6 +39,7 @@ export class GameHealthIndicators extends LitElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.spaceDownOnControl = false;
     window.removeEventListener("resize", this.reserveTopHudSpace);
     for (const panel of this.topHudPanels) {
       panel.style.removeProperty("--game-health-offset");
@@ -130,6 +132,7 @@ export class GameHealthIndicators extends LitElement {
   `;
 
   public clear(): void {
+    this.spaceDownOnControl = false;
     this.status = {
       highLatency: false,
       connectionUnstable: false,
@@ -185,8 +188,12 @@ export class GameHealthIndicators extends LitElement {
               }
               @mouseenter=${() => this.show(warning)}
               @mouseleave=${() => this.hide()}
-              @focus=${() => this.show(warning)}
+              @focus=${() => {
+                this.spaceDownOnControl = false;
+                this.show(warning);
+              }}
               @blur=${() => {
+                this.spaceDownOnControl = false;
                 this.pinned = null;
                 this.tooltip = null;
               }}
@@ -200,6 +207,12 @@ export class GameHealthIndicators extends LitElement {
                 ) {
                   event.stopPropagation();
                 }
+                if (
+                  (event.key === " " || event.code === "Space") &&
+                  !event.repeat
+                ) {
+                  this.spaceDownOnControl = true;
+                }
                 if (event.key === "Escape") {
                   this.pinned = null;
                   this.tooltip = null;
@@ -207,7 +220,9 @@ export class GameHealthIndicators extends LitElement {
               }}
               @keyup=${(event: KeyboardEvent) => {
                 if (event.key === " " || event.code === "Space") {
-                  event.stopPropagation();
+                  // A map-origin hold must reach the game when released here.
+                  if (this.spaceDownOnControl) event.stopPropagation();
+                  this.spaceDownOnControl = false;
                 }
               }}
             >

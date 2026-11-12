@@ -117,6 +117,115 @@ describe("health warning keyboard activation over a build preview", () => {
     expect(uiState.ghostStructure).toBe(UnitType.City);
   });
 
+  it.each([false, true])(
+    "releases a map-origin Space hold after focus moves to a warning (repeat=%s)",
+    (repeat) => {
+      const view = vi.fn<(event: AlternateViewEvent) => void>();
+      eventBus.on(AlternateViewEvent, view);
+      window.dispatchEvent(keydown("Space", " "));
+      button().focus();
+      button().click();
+      if (repeat)
+        button().dispatchEvent(
+          new KeyboardEvent("keydown", {
+            key: " ",
+            code: "Space",
+            repeat: true,
+            bubbles: true,
+            composed: true,
+            cancelable: true,
+          }),
+        );
+      button().dispatchEvent(
+        new KeyboardEvent("keyup", {
+          key: " ",
+          code: "Space",
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+        }),
+      );
+      expect(view.mock.calls.map(([event]) => event.alternateView)).toEqual([
+        true,
+        false,
+      ]);
+    },
+  );
+
+  it("forgets a control-origin Space hold after the warning loses focus", () => {
+    const view = vi.fn<(event: AlternateViewEvent) => void>();
+    eventBus.on(AlternateViewEvent, view);
+    button().focus();
+    button().dispatchEvent(keydown("Space", " "));
+    button().blur();
+    window.dispatchEvent(keydown("Space", " "));
+    button().focus();
+    button().dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: " ",
+        code: "Space",
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
+    expect(view.mock.calls.map(([event]) => event.alternateView)).toEqual([
+      true,
+      false,
+    ]);
+  });
+
+  it("forgets a control-origin hold when its focused warning resolves", async () => {
+    const view = vi.fn<(event: AlternateViewEvent) => void>();
+    eventBus.on(AlternateViewEvent, view);
+    const oldControl = button();
+    oldControl.focus();
+    oldControl.dispatchEvent(keydown("Space", " "));
+    const blur = vi.fn();
+    oldControl.addEventListener("blur", blur);
+    element.status = {
+      highLatency: false,
+      connectionUnstable: false,
+      performance: false,
+    };
+    await element.updateComplete;
+    expect(oldControl.isConnected).toBe(false);
+    // Resolving a warning removes its button without firing blur, so the
+    // following focus must discard any old control-origin key ownership.
+    expect(blur).not.toHaveBeenCalled();
+    window.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: " ",
+        code: "Space",
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    view.mockClear();
+
+    window.dispatchEvent(keydown("Space", " "));
+    element.status = {
+      highLatency: true,
+      connectionUnstable: false,
+      performance: false,
+    };
+    await element.updateComplete;
+    button().focus();
+    button().dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: " ",
+        code: "Space",
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
+    expect(view.mock.calls.map(([event]) => event.alternateView)).toEqual([
+      true,
+      false,
+    ]);
+  });
+
   it("preserves Space map-view shortcuts outside warning controls", () => {
     const view = vi.fn<(event: AlternateViewEvent) => void>();
     eventBus.on(AlternateViewEvent, view);
