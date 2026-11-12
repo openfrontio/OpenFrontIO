@@ -78,6 +78,11 @@ export class RowMoves {
     return moves;
   }
 
+  /** Drops the moves noted: the rows move some other way this time. */
+  drop() {
+    this.moves = new Map();
+  }
+
   /** The order from before means nothing for the next one. */
   forget() {
     this.index = new Map();

@@ -1098,6 +1098,407 @@ describe("PlayerStats neighbours", () => {
   });
 });
 
+describe("PlayerStats eliminated rows", () => {
+  // Each animation the table asks for, and how to end it.
+  let folds: { keyframes: Keyframe; finish: () => void }[];
+  let ticks: number;
+
+  beforeEach(() => {
+    localStorage.clear();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+    folds = [];
+    ticks = 600;
+    Element.prototype.animate = function (keyframes: Keyframe) {
+      let finish = () => {};
+      const finished = new Promise<void>((resolve) => (finish = resolve));
+      folds.push({ keyframes, finish });
+      return { finished } as unknown as Animation;
+    } as typeof Element.prototype.animate;
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+    delete (Element.prototype as Partial<Element>).animate;
+    vi.unstubAllGlobals();
+  });
+
+  async function mount(players: PlayerView[]): Promise<PlayerStats> {
+    const game = {
+      myPlayer: () => null,
+      playerViews: () => players,
+      config: () => ({ maxTroops: () => 100 }),
+      ticks: () => ticks,
+      inSpawnPhase: () => false,
+      ticksSinceStart: () => ticks,
+      numLandTiles: () => 100,
+      numTilesWithFallout: () => 0,
+    } as unknown as GameView;
+    const playerStats = new PlayerStats();
+    playerStats.game = game;
+    playerStats.visible = true;
+    document.body.append(playerStats);
+    playerStats.refresh();
+    await playerStats.updateComplete;
+    return playerStats;
+  }
+
+  // The rows a player reads: name and rank, leaving rows left out.
+  function ranks(playerStats: PlayerStats) {
+    return [
+      ...playerStats.querySelectorAll(
+        ".stats-table-scroll .stats-table-row:not([data-leaving])",
+      ),
+    ].map((row) => [
+      row.querySelector('[data-column="player"]')?.textContent?.trim(),
+      row.querySelector('[data-column="rank"]')?.textContent?.trim(),
+    ]);
+  }
+
+  async function eliminate(
+    playerStats: PlayerStats,
+    players: PlayerView[],
+    ...ids: string[]
+  ) {
+    for (const id of ids) {
+      players.splice(
+        players.findIndex((player) => player.id() === id),
+        1,
+      );
+    }
+    playerStats.refresh();
+    await playerStats.updateComplete;
+  }
+
+  it("folds a row in view away, outside the count, and forgets it once closed", async () => {
+    const players = [
+      player("alice", 90),
+      player("bob", 50),
+      player("carol", 10),
+    ];
+    const playerStats = await mount(players);
+    await eliminate(playerStats, players, "bob");
+
+    const leaving = playerStats.querySelectorAll("[data-leaving]");
+    expect(leaving).toHaveLength(1);
+    expect(leaving[0].getAttribute("aria-hidden")).toBe("true");
+    expect(leaving[0].hasAttribute("aria-rowindex")).toBe(false);
+    // Its rank already belongs to the row below.
+    expect(
+      leaving[0].querySelector('[data-column="rank"]')?.textContent?.trim(),
+    ).toBe("");
+    expect(
+      leaving[0].previousElementSibling?.querySelector('[data-column="player"]')
+        ?.textContent,
+    ).toContain("alice");
+    expect(
+      playerStats
+        .querySelector('[role="table"]')
+        ?.getAttribute("aria-rowcount"),
+    ).toBe("3");
+    // The ranks below it change at once.
+    expect(ranks(playerStats)).toEqual([
+      ["alice", "1"],
+      ["carol", "2"],
+    ]);
+    expect(folds).toHaveLength(1);
+    // Its padding and rule close too, or it would stop short of closed.
+    expect(folds[0].keyframes).toEqual({
+      height: "0px",
+      paddingBottom: "0px",
+      borderBottomWidth: "0px",
+      opacity: 0,
+    });
+
+    folds[0].finish();
+    await Promise.resolve();
+    await playerStats.updateComplete;
+    expect(playerStats.querySelector("[data-leaving]")).toBeNull();
+    expect(ranks(playerStats)).toEqual([
+      ["alice", "1"],
+      ["carol", "2"],
+    ]);
+  });
+
+  it("folds two rows that go in the same refresh, each at its place", async () => {
+    const players = ["a", "b", "c", "d", "e"].map((id, i) =>
+      player(id, 50 - i),
+    );
+    const playerStats = await mount(players);
+    await eliminate(playerStats, players, "b", "d");
+
+    const names = [
+      ...playerStats.querySelectorAll(".stats-table-scroll .stats-table-row"),
+    ].map((row) => [
+      row.querySelector('[data-column="player"]')?.textContent?.trim(),
+      row.hasAttribute("data-leaving"),
+    ]);
+    expect(names).toEqual([
+      ["a", false],
+      ["b", true],
+      ["c", false],
+      ["d", true],
+      ["e", false],
+    ]);
+    expect(folds).toHaveLength(2);
+  });
+
+  it("folds the last rows of the list in the order they had", async () => {
+    const players = ["a", "b", "c", "d", "e"].map((id, i) =>
+      player(id, 50 - i),
+    );
+    const playerStats = await mount(players);
+    await eliminate(playerStats, players, "b", "d", "e");
+
+    const names = [
+      ...playerStats.querySelectorAll(".stats-table-scroll .stats-table-row"),
+    ].map((row) => [
+      row.querySelector('[data-column="player"]')?.textContent?.trim(),
+      row.hasAttribute("data-leaving"),
+    ]);
+    expect(names).toEqual([
+      ["a", false],
+      ["b", true],
+      ["c", false],
+      ["d", true],
+      ["e", true],
+    ]);
+  });
+
+  it("drops the rows at once when the clock jumped ahead, as on a replay seek", async () => {
+    const players = ["a", "b", "c", "d", "e"].map((id, i) =>
+      player(id, 50 - i),
+    );
+    const playerStats = await mount(players);
+
+    // Ten minutes on: they went long ago, not now.
+    ticks += 6000;
+    await eliminate(playerStats, players, "b", "d");
+
+    expect(playerStats.querySelector("[data-leaving]")).toBeNull();
+    expect(folds).toHaveLength(0);
+  });
+
+  it("folds in a replay played 32 times faster, and drops the rows when it seeks", async () => {
+    const players = ["a", "b", "c", "d", "e"].map((id, i) =>
+      player(id, 50 - i),
+    );
+    const playerStats = await mount(players);
+    playerStats.speed = 32;
+
+    // One second on is 32 seconds of play.
+    ticks += 320;
+    await eliminate(playerStats, players, "b");
+    expect(playerStats.querySelector('[data-leaving="b"]')).not.toBeNull();
+    expect(folds).toHaveLength(1);
+
+    // Sought twenty minutes on.
+    ticks += 12_000;
+    await eliminate(playerStats, players, "d");
+    expect(playerStats.querySelector("[data-leaving]")).toBeNull();
+    expect(folds).toHaveLength(1);
+  });
+
+  it("drops the rows after a replay seek shorter than a jump at 32x", async () => {
+    const players = ["a", "b", "c", "d", "e"].map((id, i) =>
+      player(id, 50 - i),
+    );
+    const playerStats = await mount(players);
+    playerStats.speed = 32;
+
+    // Sought ten minutes on: less than a jump at this speed, but the viewer
+    // says it sought.
+    playerStats.seeked();
+    ticks += 6000;
+    await eliminate(playerStats, players, "b");
+    expect(playerStats.querySelector("[data-leaving]")).toBeNull();
+    expect(folds).toHaveLength(0);
+  });
+
+  it("glides none of the rows the fold moves up", async () => {
+    const players = ["a", "b", "c", "d", "e"].map((id, i) =>
+      player(id, 50 - i),
+    );
+    const playerStats = await mount(players);
+    await eliminate(playerStats, players, "b");
+
+    expect(folds).toHaveLength(1);
+    expect(folds[0].keyframes).toMatchObject({ height: "0px", opacity: 0 });
+  });
+
+  it("shows no mark or troop gauge on a leaving row", async () => {
+    new UserSettings().setStatsColumns("player", ["tiles", "troops"]);
+    const players = [
+      player("alice", 90),
+      { ...player("bob", 50), isTraitor: () => true } as unknown as PlayerView,
+      player("carol", 10),
+    ];
+    const playerStats = await mount(players);
+    expect(playerStats.querySelector("[data-mark]")).not.toBeNull();
+    await eliminate(playerStats, players, "bob");
+
+    const leaving = playerStats.querySelector("[data-leaving]");
+    expect(leaving?.querySelector("[data-mark]")).toBeNull();
+    expect(leaving?.querySelector("[data-gauge]")).toBeNull();
+    expect(playerStats.querySelectorAll("[data-gauge]")).toHaveLength(2);
+  });
+
+  it("folds a row in place while the rows hold their order under a mouse", async () => {
+    let carolLand = 10;
+    const players = [
+      player("alice", 90),
+      player("bob", 50),
+      {
+        ...player("carol", 10),
+        numTilesOwned: () => carolLand,
+      } as unknown as PlayerView,
+    ];
+    const playerStats = await mount(players);
+    playerStats
+      .querySelector(".stats-table-scroll")
+      ?.dispatchEvent(
+        new PointerEvent("pointerenter", { pointerType: "mouse" }),
+      );
+    // Carol takes the lead, but the rows stay where they are drawn.
+    carolLand = 100;
+    await eliminate(playerStats, players, "bob");
+
+    const names = [
+      ...playerStats.querySelectorAll(".stats-table-scroll .stats-table-row"),
+    ].map((row) => [
+      row.querySelector('[data-column="player"]')?.textContent?.trim(),
+      row.hasAttribute("data-leaving"),
+    ]);
+    expect(names).toEqual([
+      ["alice", false],
+      ["bob", true],
+      ["carol", false],
+    ]);
+    expect(folds).toHaveLength(1);
+  });
+
+  it("forgets a row whose place is no longer drawn, and glides again after it", async () => {
+    const land = new Map<string, number>();
+    const players = Array.from({ length: 60 }, (_, i) => {
+      land.set(`p${i}`, 1000 - i);
+      return {
+        ...player(`p${i}`, 0),
+        numTilesOwned: () => land.get(`p${i}`) ?? 0,
+      } as unknown as PlayerView;
+    });
+    const playerStats = await mount(players);
+    // Rows 31 to 38 show, and the list is drawn from row 27 on.
+    const list = playerStats.querySelector<HTMLElement>(".stats-table-scroll")!;
+    list.scrollTop = 30 * 24;
+    list.dispatchEvent(new Event("scroll"));
+    await playerStats.updateComplete;
+
+    // Five rows go above the view and one in it: its place moves up, out of
+    // the rows drawn.
+    await eliminate(playerStats, players, "p0", "p1", "p2", "p3", "p4", "p30");
+    expect(playerStats.querySelector("[data-leaving]")).toBeNull();
+    expect(folds).toHaveLength(0);
+
+    // An overtake in view a second later glides as usual.
+    land.set("p38", 1000 - 36.5);
+    ticks += 10;
+    playerStats.refresh();
+    await playerStats.updateComplete;
+    expect(folds.map(({ keyframes }) => keyframes)).toEqual([
+      [{ transform: "translateY(24px)" }, { transform: "none" }],
+      [{ transform: "translateY(-24px)" }, { transform: "none" }],
+    ]);
+  });
+
+  it("lets a fold end when the table refreshes again before it has", async () => {
+    const players = [
+      player("alice", 90),
+      player("bob", 50),
+      player("carol", 10),
+    ];
+    const playerStats = await mount(players);
+    const list = playerStats.querySelector(".stats-table-scroll")!;
+    list.dispatchEvent(
+      new PointerEvent("pointerenter", { pointerType: "mouse" }),
+    );
+    await eliminate(playerStats, players, "bob");
+    const closing = playerStats.querySelector("[data-leaving]");
+    expect(closing).not.toBeNull();
+
+    // The mouse leaves the list, which sorts it again, while bob's row closes.
+    list.dispatchEvent(
+      new PointerEvent("pointerleave", { pointerType: "mouse" }),
+    );
+    await playerStats.updateComplete;
+    expect(playerStats.querySelector("[data-leaving]")).toBe(closing);
+    expect(folds.filter(({ keyframes }) => "height" in keyframes)).toHaveLength(
+      1,
+    );
+
+    folds[0].finish();
+    await Promise.resolve();
+    await playerStats.updateComplete;
+    expect(playerStats.querySelector("[data-leaving]")).toBeNull();
+  });
+
+  it("drops a closing row when another row goes before it has closed", async () => {
+    const players = ["a", "b", "c", "d"].map((id, i) => player(id, 50 - i));
+    const playerStats = await mount(players);
+    await eliminate(playerStats, players, "b");
+    // The place b closes at no longer holds once a is gone too.
+    await eliminate(playerStats, players, "a");
+
+    const names = [
+      ...playerStats.querySelectorAll(".stats-table-scroll .stats-table-row"),
+    ].map((row) => [
+      row.querySelector('[data-column="player"]')?.textContent?.trim(),
+      row.hasAttribute("data-leaving"),
+    ]);
+    expect(names).toEqual([
+      ["a", true],
+      ["c", false],
+      ["d", false],
+    ]);
+  });
+
+  it("keeps nothing for a row outside the view, drawn or not", async () => {
+    const players = Array.from({ length: 300 }, (_, i) =>
+      player(`p${i + 1}`, 300 - i),
+    );
+    const playerStats = await mount(players);
+    // p11 is drawn under the view (jsdom: 7.5 rows in view, 12 drawn).
+    await eliminate(playerStats, players, "p11", "p200");
+
+    expect(playerStats.querySelector("[data-leaving]")).toBeNull();
+    // The rows drawn under p11 may glide up; none folds.
+    expect(folds.filter(({ keyframes }) => "height" in keyframes)).toHaveLength(
+      0,
+    );
+  });
+
+  it("drops the row at once under reduced motion, or with a new sort", async () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true }));
+    const players = [
+      player("alice", 90),
+      player("bob", 50),
+      player("carol", 10),
+    ];
+    const playerStats = await mount(players);
+    await eliminate(playerStats, players, "bob");
+    expect(playerStats.querySelector("[data-leaving]")).toBeNull();
+
+    vi.unstubAllGlobals();
+    players.splice(0, 1);
+    playerStats
+      .querySelector<HTMLButtonElement>('[data-column="gold"] button')
+      ?.click();
+    await playerStats.updateComplete;
+    expect(playerStats.querySelector("[data-leaving]")).toBeNull();
+    expect(folds).toHaveLength(0);
+  });
+});
+
 describe("PlayerStats header tooltips", () => {
   beforeEach(() => {
     localStorage.clear();
