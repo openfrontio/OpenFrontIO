@@ -3,9 +3,15 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { PortExecution } from "@openfront/engine/execution/PortExecution";
+import {
+  PortExecution,
+  WeightedPort,
+} from "@openfront/engine/execution/PortExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
+
+const totalWeight = (ports: WeightedPort[]) =>
+  ports.reduce((sum, p) => sum + p.weight, 0);
 
 let game: Game;
 let player: Player;
@@ -46,7 +52,7 @@ describe("PortExecution", () => {
 
     const ports = execution.tradingPorts();
 
-    expect(ports.length).toBe(3);
+    expect(totalWeight(ports)).toBe(3);
   });
 
   test("Trade ship proximity bonus", () => {
@@ -68,7 +74,7 @@ describe("PortExecution", () => {
 
     const ports = execution.tradingPorts();
 
-    expect(ports.length).toBe(2);
+    expect(totalWeight(ports)).toBe(2);
   });
 
   test("Trade ship short range debuff", () => {
@@ -91,7 +97,47 @@ describe("PortExecution", () => {
 
     const ports = execution.tradingPorts();
 
-    expect(ports.length).toBe(1);
+    expect(totalWeight(ports)).toBe(1);
+  });
+
+  test("Very high level ports are weighted without expanding a list", () => {
+    game.config().proximityBonusPortsNb = () => 10;
+    game.config().tradeShipShortRangeDebuff = () => 0;
+
+    player.conquer(game.ref(7, 10));
+    const port = player.buildUnit(UnitType.Port, game.ref(7, 10), {});
+    const execution = new PortExecution(port);
+    execution.init(game, 0);
+
+    other.conquer(game.ref(0, 0));
+    const otherPort = other.buildUnit(UnitType.Port, game.ref(0, 0), {});
+    vi.spyOn(otherPort, "level").mockReturnValue(1_000_000);
+
+    const ports = execution.tradingPorts();
+    expect(ports).toEqual([{ port: otherPort, weight: 2_000_000 }]);
+    expect(execution.pickTradingPort(ports)).toBe(otherPort);
+  });
+
+  test("pickTradingPort honours weights and skips empty lists", () => {
+    player.conquer(game.ref(7, 10));
+    const port = player.buildUnit(UnitType.Port, game.ref(7, 10), {});
+    const execution = new PortExecution(port);
+    execution.init(game, 0);
+
+    expect(execution.pickTradingPort([])).toBeNull();
+
+    other.conquer(game.ref(0, 0));
+    const a = other.buildUnit(UnitType.Port, game.ref(0, 0), {});
+    const picks = new Set<unknown>();
+    for (let i = 0; i < 50; i++) {
+      picks.add(
+        execution.pickTradingPort([
+          { port: a, weight: 0 },
+          { port, weight: 5 },
+        ]),
+      );
+    }
+    expect([...picks]).toEqual([port]);
   });
 
   test("shouldSpawnTradeShip recomputes spawn rate per level with updated rejection count", () => {

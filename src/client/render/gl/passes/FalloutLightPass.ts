@@ -208,6 +208,8 @@ export class FalloutLightPass {
     targetH: number,
     tick: number,
   ): void {
+    if (!this.heatManager.isHeatActive) return;
+
     const gl = this.gl;
     const dn = this.settings.lighting;
     const fb = this.settings.falloutBloom;

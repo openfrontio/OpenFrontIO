@@ -23,6 +23,48 @@ function makeHandler() {
 }
 
 describe("TransformHandler", () => {
+  it("re-measures the canvas when it resizes, without a window resize", () => {
+    let notify: ResizeObserverCallback = () => {};
+    const observed: Element[] = [];
+    const disconnect = vi.fn();
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(callback: ResizeObserverCallback) {
+          notify = callback;
+        }
+        observe(el: Element) {
+          observed.push(el);
+        }
+        disconnect = disconnect;
+      },
+    );
+    try {
+      const canvas = document.createElement("div");
+      let rect = { left: 0, top: 0, width: 390, height: 844 };
+      canvas.getBoundingClientRect = () => rect as DOMRect;
+      const handler = new TransformHandler(
+        { width: () => 400, height: () => 400 } as unknown as GameView,
+        new EventBus(),
+        canvas,
+      );
+      const observer = handler.observeCanvasSize();
+      expect(observed).toEqual([canvas]);
+
+      // An iPhone rotated to landscape: the canvas changes size.
+      rect = { left: 0, top: 0, width: 844, height: 390 };
+      notify([], observer);
+      expect(handler.boundingRect()).toMatchObject({ width: 844, height: 390 });
+
+      // Panning up now goes until the map's bottom edge reaches mid-screen.
+      handler.override(0, 0, 1);
+      handler.onMove({ deltaX: 0, deltaY: -100000 } as any);
+      expect(handler.screenToWorldCoordinatesFloat(422, 195).y).toBe(400);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("starts with the default camera and no pending changes", () => {
     const { handler } = makeHandler();
     expect(handler.scale).toBe(1.8);

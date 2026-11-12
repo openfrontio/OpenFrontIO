@@ -203,7 +203,6 @@ export class RadialMenu implements Controller {
       .style("height", "100vh")
       .on("click", (event: MouseEvent) => {
         this.hideRadialMenu();
-        this.eventBus.emit(new CloseRadialMenuEvent());
         forwardClickToLayerBelow(event, this.lastPointerType);
         this.lastPointerType = null;
       })
@@ -216,7 +215,6 @@ export class RadialMenu implements Controller {
       .on("contextmenu", (e) => {
         e.preventDefault();
         this.hideRadialMenu();
-        this.eventBus.emit(new CloseRadialMenuEvent());
       });
 
     // Calculate the total svg size needed for all potential nested menus
@@ -977,6 +975,9 @@ export class RadialMenu implements Controller {
 
     this.lastHideTime = Date.now();
     window.removeEventListener("resize", this.handleResize);
+    // Every way the menu closes (an action, the backdrop, Escape) goes
+    // through here, so the player info panel opened with it closes too.
+    this.eventBus.emit(new CloseRadialMenuEvent());
   }
 
   private handleCenterButtonClick() {

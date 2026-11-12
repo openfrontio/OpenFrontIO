@@ -38,6 +38,10 @@ export class OModal extends LitElement {
   @property({ type: Boolean })
   public sidePanel = false;
 
+  /** A short notice: a card as tall as its content, even on small screens. */
+  @property({ type: Boolean })
+  public fitContent = false;
+
   @property({ type: Array })
   public tabs: OModalTab[] = [];
 
@@ -225,9 +229,11 @@ export class OModal extends LitElement {
       ? "relative flex flex-col w-full h-full m-0 max-w-full max-h-none shadow-none"
       : this.sidePanel
         ? "relative flex flex-col w-full h-full max-w-[400px] min-w-0"
-        : `relative flex flex-col w-full h-full lg:w-[90%] lg:h-auto lg:min-w-[400px] lg:max-w-[900px] lg:m-8 lg:rounded-lg lg:max-h-[calc(100vh-4rem)] ${
-            this.alwaysMaximized ? "h-auto" : ""
-          }`;
+        : this.fitContent
+          ? "relative flex flex-col w-[calc(100%-2rem)] max-h-[calc(100%-2rem)]"
+          : `relative flex flex-col w-full h-full lg:w-[90%] lg:h-auto lg:min-w-[400px] lg:max-w-[900px] lg:m-8 lg:rounded-lg lg:max-h-[calc(100vh-4rem)] ${
+              this.alwaysMaximized ? "h-auto" : ""
+            }`;
     const wrapperStyle =
       !this.inline && this.maxWidth ? `max-width: ${this.maxWidth};` : "";
 
@@ -241,6 +247,11 @@ export class OModal extends LitElement {
       ? "graphics-panel-surface relative flex-1 min-h-0 flex flex-col text-white rounded-lg border overflow-hidden"
       : `relative flex-1 min-h-0 flex flex-col text-white bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10 overflow-hidden ${
           this.inline ? "compact:rounded-none! compact:border-0!" : ""
+        } ${this.fitContent ? "rounded-2xl border" : ""} ${
+          // On compact screens body.page-open drops its bottom padding so the
+          // page reaches the bottom of the screen; keep the content above the
+          // home indicator.
+          this.inline ? "compact:pb-[env(safe-area-inset-bottom)]" : ""
         }`;
 
     return html`
@@ -291,7 +302,11 @@ export class OModal extends LitElement {
                 ? html`<button
                     type="button"
                     aria-label=${translateText("common.scroll_to_top")}
-                    class="absolute bottom-4 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/80 border border-white/20 text-white shadow-lg backdrop-blur-md transition-all hover:bg-white/20 active:scale-95 cursor-pointer"
+                    class="absolute bottom-4 ${
+                      this.inline
+                        ? "compact:bottom-[calc(1rem+env(safe-area-inset-bottom))]"
+                        : ""
+                    } right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/80 border border-white/20 text-white shadow-lg backdrop-blur-md transition-all hover:bg-white/20 active:scale-95 cursor-pointer"
                     @click=${this.scrollToTop}
                   >
                     <svg

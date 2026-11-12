@@ -173,7 +173,7 @@ export const MIN_HOSTED_LOBBY_AUTO_START_MS = 60 * 1000;
 
 export const MIN_HOSTED_LOBBY_PLAYERS = 10;
 
-export const MAX_HOSTED_LOBBY_PLAYERS = 100;
+export const MAX_HOSTED_LOBBY_PLAYERS = 500;
 
 // A listed lobby this close to its auto-start can no longer be queued, so a
 // host can't pay for a queue spot the lobby starts before it reaches.

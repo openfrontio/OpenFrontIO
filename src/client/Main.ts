@@ -20,6 +20,7 @@ import { renderNavVersion } from "src/client/GameVersion";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
+import { wasAdmitted } from "./AdmittedLobbies";
 import {
   getUserMe,
   invalidateUserMe,
@@ -37,10 +38,14 @@ import {
   CLAIM_PROMPT_KEY,
   claimPromptDue,
   claimPromptStringsReady,
+  giftEndingStringsReady,
   joinOwnsInFlightFlag,
   lapseShownAfterDispatch,
   nextBootInterrupt,
   parseClaimPromptStore,
+  renewalPushedDueThisLaunch,
+  renewalPushedOf,
+  renewalPushedStringsReady,
   reportThanksDueThisLaunch,
   reportThanksStringsReady,
   runBootInterrupt,
@@ -49,8 +54,10 @@ import {
 import type { JoinLobbyResult } from "./ClientGameRunner";
 import {
   broadcastFreshUserMe,
+  fetchCosmetics,
   getPlayerCosmeticsRefs,
   handlePurchaseReturn,
+  subscriptionTier,
   translateCosmetic,
 } from "./Cosmetics";
 import {
@@ -63,6 +70,7 @@ import {
   desktopUpdate,
   getDesktopUpdateState,
   isDesktopShell,
+  isSteamShell,
   type DesktopUpdateState,
 } from "./DesktopShell";
 import "./FeaturedStream";
@@ -118,6 +126,7 @@ import {
 } from "./PresenceGroup";
 import { fetchMyGameXp, fetchProgressionConfig } from "./ProgressionApi";
 import { startProvisionalProgress } from "./ProvisionalProgress";
+import { consumeRequeueUrl } from "./RequeueUrl";
 import type { RewardsModal } from "./RewardsModal";
 import {
   ensureServerList,
@@ -127,6 +136,8 @@ import {
 } from "./ServerList";
 import type { SinglePlayerModal } from "./SinglePlayerModal";
 import {
+  giftEndingDue,
+  paidFactsOf,
   parseSteamGrantStore,
   recordSteamGrant,
   STEAM_GRANT_NOTICE_KEY,
@@ -552,14 +563,16 @@ class Client {
     startServerListPolling();
 
     // Prefetch turnstile token so it is available when the user joins a lobby.
-    // Desktop (Steam) has no Turnstile script and is server-side exempt, so
-    // skip it — otherwise getTurnstileToken() throws "Failed to load Turnstile
-    // script" after its load wait. Also skip on the versioned replay shells:
-    // the replay host may not be on the Turnstile site key's domain allowlist,
-    // so rendering the widget there just fails — and replays never
-    // send a token anyway (see getTurnstileToken below).
+    // Steam has no Turnstile script and is server-side exempt (a
+    // provider="steam" JWT, see planJoinVerify), so skip it — otherwise
+    // getTurnstileToken() throws "Failed to load Turnstile script" after its
+    // load wait. Not every shell: the Android app has no Steam session, so the
+    // server wants a token from it like any browser. Also skip on the
+    // versioned replay shells: the replay host may not be on the Turnstile
+    // site key's domain allowlist, so rendering the widget there just fails —
+    // and replays never send a token anyway (see getTurnstileToken below).
     const turnstilePrefetch =
-      isDesktopShell() || isReplayShellHost(window.location.hostname)
+      isSteamShell() || isReplayShellHost(window.location.hostname)
         ? null
         : getTurnstileToken();
     // A prefetch that fails is not an error anyone has asked about yet: the
@@ -941,46 +954,77 @@ class Client {
         );
         const steamNotice = steamNoticeDue(
           userMeResponse,
-          isDesktopShell(),
+          isSteamShell(),
           Date.now(),
         );
+        const paid = paidFactsOf(userMeResponse);
+        const interrupt = nextBootInterrupt({
+          cleanHomepage,
+          usernameStatus,
+          username,
+          usernameBase,
+          lapseNoticeDue: lapseShown,
+          grantWelcomeDue: steamGrantWelcomeDue(
+            grantStoreAfterDispatch,
+            userMeResponse,
+            Date.now(),
+          ),
+          grantEndedDue: steamGrantEndedDue(
+            grantStoreAfterDispatch,
+            userMeResponse,
+            Date.now(),
+          ),
+          grantStringsReady: steamGrantStringsReady(translateText),
+          giftEndingDue: giftEndingDue(
+            grantStoreAfterDispatch,
+            userMeResponse,
+            Date.now(),
+          ),
+          giftEndingStringsReady: giftEndingStringsReady(translateText),
+          renewalPushedDue: renewalPushedDueThisLaunch(userMeResponse),
+          renewalPushedStringsReady: renewalPushedStringsReady(translateText),
+          steamNotice,
+          steamNoticeStringsReady: steamNoticeStringsReady(translateText),
+          // Held rewards can't be claimed yet: on their own they'd open the
+          // popup every boot with nothing to do.
+          rewardCount: rewards.filter(isRewardClaimable).length,
+          claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
+          claimStringsReady: claimPromptStringsReady(translateText),
+          // Not every caller's response went through the schema default.
+          reportThanksDue: reportThanksDueThisLaunch(
+            userMeResponse.pendingMessages ?? [],
+            publicId,
+          ),
+          reportThanksStringsReady: reportThanksStringsReady(translateText),
+        });
+        // Only the payer's welcome names a daily amount, so only it waits on
+        // the catalog.
+        const catalog =
+          interrupt === "grant-welcome" && paid !== null
+            ? await fetchCosmetics()
+            : null;
+        // A join or a deep link can land while the catalog loads.
+        if (
+          interrupt === "grant-welcome" &&
+          paid !== null &&
+          !bootInterruptsAllowed(
+            window.location,
+            isDesktopShell(),
+            { joinInFlight: this.joinInFlight, lobbyHandle: this.lobbyHandle },
+            getDesktopUpdateState(),
+          )
+        ) {
+          return;
+        }
         await runBootInterrupt(
-          nextBootInterrupt({
-            cleanHomepage,
-            usernameStatus,
-            username,
-            usernameBase,
-            lapseNoticeDue: lapseShown,
-            grantWelcomeDue: steamGrantWelcomeDue(
-              grantStoreAfterDispatch,
-              userMeResponse,
-              Date.now(),
-            ),
-            grantEndedDue: steamGrantEndedDue(
-              grantStoreAfterDispatch,
-              userMeResponse,
-              Date.now(),
-            ),
-            grantStringsReady: steamGrantStringsReady(translateText),
-            steamNotice,
-            steamNoticeStringsReady: steamNoticeStringsReady(translateText),
-            // Held rewards can't be claimed yet: on their own they'd open the
-            // popup every boot with nothing to do.
-            rewardCount: rewards.filter(isRewardClaimable).length,
-            claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
-            claimStringsReady: claimPromptStringsReady(translateText),
-            // Not every caller's response went through the schema default.
-            reportThanksDue: reportThanksDueThisLaunch(
-              userMeResponse.pendingMessages ?? [],
-              publicId,
-            ),
-            reportThanksStringsReady: reportThanksStringsReady(translateText),
-          }),
+          interrupt,
           {
             claimStore,
             grantStore: grantStoreAfterDispatch,
             publicId,
             steamNotice,
+            paid,
+            renewalPushed: renewalPushedOf(userMeResponse),
           },
           {
             translate: translateText,
@@ -996,6 +1040,8 @@ class Client {
               await showInGameAlert(body, { heading });
             },
             tierName: (tier) => translateCosmetic("subscriptions", tier),
+            dailyPlutonium: (tier) =>
+              subscriptionTier(catalog, tier)?.dailyHardCurrency ?? null,
             navigate: (hash) => {
               window.location.hash = hash;
             },
@@ -1630,7 +1676,9 @@ class Client {
       document.dispatchEvent(new CustomEvent("start-solo-guide"));
     }
 
-    const requeueMode = this.consumeRequeueUrl();
+    const requeueMode = consumeRequeueUrl(window.location, (url) =>
+      history.replaceState(null, "", url),
+    );
     if (requeueMode !== null) {
       document.dispatchEvent(
         new CustomEvent("open-matchmaking", {
@@ -1677,29 +1725,6 @@ class Client {
     return true;
   }
 
-  // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2,
-  // "/?requeue=ffa" = FFA, "/?requeue=clanwars" = clan wars), or null when
-  // the URL has no requeue param.
-  private consumeRequeueUrl(): MatchmakingMode | null {
-    const searchParams = new URLSearchParams(window.location.search);
-    if (!searchParams.has("requeue")) {
-      return null;
-    }
-    const param = searchParams.get("requeue");
-    const mode =
-      param === "2v2" || param === "ffa" || param === "clanwars"
-        ? param
-        : "1v1";
-
-    searchParams.delete("requeue");
-    const newUrl =
-      window.location.pathname +
-      (searchParams.toString() ? `?${searchParams.toString()}` : "") +
-      window.location.hash;
-    history.replaceState(null, "", newUrl);
-    return mode;
-  }
-
   private desktopUpdateState: DesktopUpdateState | null = null;
 
   // See the call site in handleUrl. True when a navigation was issued.
@@ -1744,12 +1769,13 @@ class Client {
    * do.
    */
   private blockedJoin(lobby: JoinLobbyEvent): boolean {
-    const desktop = isDesktopShell();
+    // The update half applies in every shell; the session half is the Steam
+    // sign-in, which only the Steam shell has.
     if (
       !shouldBlockJoin(
         lobby,
-        desktop ? this.desktopUpdateState : null,
-        desktop ? getDesktopSessionState() : null,
+        isDesktopShell() ? this.desktopUpdateState : null,
+        isSteamShell() ? getDesktopSessionState() : null,
       )
     ) {
       return false;
@@ -2321,11 +2347,13 @@ class Client {
   ): Promise<string | null> {
     if (
       ClientEnv.env() === GameEnv.Dev ||
-      isDesktopShell() ||
+      isSteamShell() ||
       // Single-player and replays: no server to verify a token against (and
       // on the CDN replay shells Turnstile cannot load at all). Shared with
       // the desktop gate so the exemption has one definition.
-      !joinIsGateable(lobby)
+      !joinIsGateable(lobby) ||
+      // Rejoining a game the server already let this tab into.
+      wasAdmitted(lobby.gameID)
     ) {
       return null;
     }
@@ -2409,6 +2437,6 @@ async function getTurnstileToken(): Promise<TurnstileToken> {
   // lives in TurnstileToken.ts.
   return requestTurnstileToken(turnstile, {
     sitekey: ClientEnv.turnstileSiteKey(),
-    container: "#turnstile-container",
+    container: document.getElementById("turnstile-container") ?? document.body,
   });
 }

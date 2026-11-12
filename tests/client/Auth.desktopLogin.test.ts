@@ -100,6 +100,7 @@ describe("provider login on the desktop shell", () => {
   beforeEach(() => {
     showLinkGate = vi.fn(async () => undefined);
     (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
+      steam: {},
       showLinkGate,
     };
     location = stubLocation(DESKTOP_HREF);
@@ -229,6 +230,7 @@ describe("provider login on the desktop shell", () => {
   describe("on a shell without showLinkGate", () => {
     beforeEach(() => {
       (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
+        steam: {},
         linkGate: {},
       };
     });
@@ -251,6 +253,39 @@ describe("provider login on the desktop shell", () => {
       expect(location.href).toBe(DESKTOP_HREF);
       expect(fetchMock).not.toHaveBeenCalled();
     });
+  });
+});
+
+// The Android shell serves the game at the site's own origin, so the web
+// redirect works there; its bridge has no Steam and no link gate. It must log
+// in the web way, not dead-end on the Steam shell's update prompt.
+describe("provider login on a shell without Steam (Android)", () => {
+  let location: { href: string };
+
+  beforeEach(() => {
+    (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
+      shell: { version: "1.0.0", api: 7, platform: "android" },
+      update: {},
+    };
+    location = stubLocation(WEB_HREF);
+  });
+
+  it("discordLogin navigates to the API's Discord login, with no update prompt", () => {
+    discordLogin();
+
+    expect(showInGameAlert).not.toHaveBeenCalled();
+    expect(location.href).toBe(
+      `https://api.openfront.dev/auth/login/discord?redirect_uri=${encodeURIComponent(WEB_HREF)}`,
+    );
+  });
+
+  it("googleLogin navigates to the API's Google login, with no update prompt", () => {
+    googleLogin();
+
+    expect(showInGameAlert).not.toHaveBeenCalled();
+    expect(location.href).toBe(
+      `https://api.openfront.dev/auth/login/google?redirect_uri=${encodeURIComponent(WEB_HREF)}`,
+    );
   });
 });
 

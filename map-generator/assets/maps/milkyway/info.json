@@ -6,6 +6,7 @@
   "translation_key": "map.milkyway",
   "categories": ["cosmic"],
   "author": "Tristar",
+  "description": "Our Milky Way. Instead of land and oceans, you get dense star clusters floating in a mostly empty void. Our home galaxy is called the Milky Way, for its appearance as a faint, milky-white band of light stretching across the night sky, which ancient observers compared to spilled or flowing milk. It's a spiral galaxy with a disk of 100-400 billion stars spanning more than 100,000 light-years. The supermassive black hole at the galaxy's center, Sagittarius A*, has a mass about 4 million times that of the Sun.",
   "nations": [
     {
       "coordinates": [869, 886],

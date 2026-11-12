@@ -246,6 +246,7 @@ export class LangSelector extends LitElement {
 
   private applyTranslation() {
     const components = [
+      "banned-modal",
       "single-player-modal",
       "host-lobby-modal",
       "map-picker",
@@ -276,7 +277,7 @@ export class LangSelector extends LitElement {
       "cosmetic-preview",
       "difficulty-info",
       "map-details",
-      "earth-map",
+      "atlas-map",
       "inventory-loadout-bar",
       "purchase-button",
       "custom-currency-card",
@@ -299,6 +300,8 @@ export class LangSelector extends LitElement {
       "steam-wishlist-button",
       "streaming-now",
       "tutorial-panel",
+      // Re-sends its strings to the clan map frame.
+      "clan-map-view",
     ];
 
     document.title = this.translateText("main.title") ?? document.title;

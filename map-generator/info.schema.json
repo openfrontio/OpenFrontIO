@@ -120,7 +120,8 @@
           "funny",
           "scary",
           "weird",
-          "vs"
+          "vs",
+          "ukraine"
         ]
       }
     },
@@ -311,7 +312,7 @@
       "minLength": 1
     },
     "location": {
-      "description": "Where the map lies on Earth, for the map picker's Earth view.",
+      "description": "Where the map lies on Earth, for the map picker's Atlas tab.",
       "type": "object",
       "properties": {
         "lat": {

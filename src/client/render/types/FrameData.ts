@@ -54,6 +54,7 @@ export interface FrameData {
    */
   readonly trailDirtyRowMin: number;
   readonly trailDirtyRowMax: number;
+  readonly changedTrailTiles?: readonly number[];
 
   /**
    * Live spiral nukeTrail ribbons (helix polylines from SpiralTrails) —

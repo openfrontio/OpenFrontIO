@@ -21,12 +21,14 @@ import {
 // DesktopShell.ts imports nothing, so this cannot introduce an import cycle
 // (verified with madge: 58 cycles before and after, none involving it).
 import { isDesktopShell } from "./DesktopShell";
+import type { RandomNameStyle } from "./PlayerName";
 
 export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
   return {
     toggleView: "Space",
     preventStacking: "KeyH",
     coordinateGrid: "KeyM",
+    performanceOverlay: "Shift+KeyD",
     buildCity: "Digit1",
     buildFactory: "Digit2",
     buildPort: "Digit3",
@@ -49,6 +51,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     donateGold: "KeyO",
     emojiMenu: "KeyF",
     quickChat: "KeyR",
+    playerPanel: "KeyI",
     swapDirection: "KeyU",
     zoomOut: "KeyQ",
     zoomIn: "KeyE",
@@ -81,14 +84,22 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
 
 // Actions that may share a key. Reset graphics only fires with its modifier
 // (altKey) held, and quick chat only without one.
-const SHARED_KEY_ACTIONS: ReadonlyArray<readonly [string, string]> = [
+const SHARED_KEY_ACTIONS: ReadonlyArray<readonly [string, string, string?]> = [
   ["quickChat", "resetGfx"],
+  // Allow only the intended physical modifier pairs to share a key.
+  ["buildScrollModifier", "emojiMenuModifier", "Alt"],
+  ["altKey", "emojiMenuModifier", "Alt"],
+  ["buildScrollModifier", "altKey", "Alt"],
+  ["boxSelectWarships", "shiftKey", "Shift"],
 ];
 
 /** Whether actions `a` and `b` may be bound to the same key. */
-export function keysMayBeShared(a: string, b: string): boolean {
+export function keysMayBeShared(a: string, b: string, key?: string): boolean {
   return SHARED_KEY_ACTIONS.some(
-    ([x, y]) => (a === x && b === y) || (a === y && b === x),
+    ([x, y, keyPrefix]) =>
+      ((a === x && b === y) || (a === y && b === x)) &&
+      (!keyPrefix ||
+        [`${keyPrefix}Left`, `${keyPrefix}Right`].includes(key ?? "")),
   );
 }
 
@@ -450,6 +461,16 @@ export class UserSettings {
     return this.getBool("settings.anonymousNames", false);
   }
 
+  randomNameStyle(): RandomNameStyle {
+    return this.getCached("settings.randomNameStyle") === "tribe"
+      ? "tribe"
+      : "anon";
+  }
+
+  setRandomNameStyle(style: RandomNameStyle): void {
+    this.setCached("settings.randomNameStyle", style);
+  }
+
   lobbyIdVisibility() {
     return this.getBool("settings.lobbyIdVisibility", true);
   }
@@ -531,7 +552,8 @@ export class UserSettings {
     this.setBool("settings.emojis", !this.emojis());
   }
 
-  // Performance overlay specifically needs a direct setter for Shift-D
+  // The performance overlay's close button needs a direct setter to persist
+  // visibility.
   setPerformanceOverlay(value: boolean) {
     this.setBool(PERFORMANCE_OVERLAY_KEY, value);
   }

@@ -147,7 +147,13 @@ export function highlightTypesForUnit(
   }
 }
 
-export class ConfirmGhostStructureEvent implements GameEvent {}
+export class ConfirmGhostStructureEvent implements GameEvent {
+  /**
+   * Drops the ghost afterwards whether it built or not, instead of keeping
+   * it when it can't build there or when it's a nuke kept for another launch.
+   */
+  constructor(public readonly endsPlacement = false) {}
+}
 
 export class TouchGhostPlacementEvent implements GameEvent {
   constructor(
@@ -230,6 +236,14 @@ export class ShowChatMenuEvent implements GameEvent {
   constructor(
     public readonly x: number,
     public readonly y: number,
+  ) {}
+}
+
+/** Toggles the player info panel for the player at screen position (x, y). */
+export class ShowPlayerPanelEvent implements GameEvent {
+  constructor(
+    public readonly x: number | null,
+    public readonly y: number | null,
   ) {}
 }
 
@@ -566,6 +580,15 @@ export class InputHandler {
         !e.altKey && !e.ctrlKey && !e.metaKey && !this.resetGfxModifierHeld(e),
     );
     this.addKeybindAndEvent(
+      this.keybinds.playerPanel,
+      () => {
+        this.eventBus.emit(
+          new ShowPlayerPanelEvent(this.lastMouseX, this.lastMouseY),
+        );
+      },
+      (e: KeyboardEvent) => !e.altKey && !e.ctrlKey && !e.metaKey,
+    );
+    this.addKeybindAndEvent(
       this.keybinds.pauseGame,
       () => {
         this.eventBus.emit(new TogglePauseIntentEvent());
@@ -598,7 +621,7 @@ export class InputHandler {
       const nextDirection = !this.uiState.rocketDirectionUp;
       this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
     });
-    this.addKeybindAndEvent("Shift+KeyD", () => {
+    this.addKeybindAndEvent(this.keybinds.performanceOverlay, () => {
       this.eventBus.emit(new TogglePerformanceOverlayEvent());
     });
     this.addKeybindAndEvent(this.keybinds.toggleView, () => {
@@ -968,7 +991,10 @@ export class InputHandler {
           ) ||
           continuousBindings.some((k) => this.keybindMatchesEvent(e, k));
 
-        if (isConfiguredKeybind && !isBrowserZoomCombo) {
+        const isDevToolsCombo =
+          (e.metaKey || e.ctrlKey) && e.altKey && e.code === "KeyI";
+
+        if (isConfiguredKeybind && !isBrowserZoomCombo && !isDevToolsCombo) {
           e.preventDefault();
         }
 
@@ -1636,6 +1662,15 @@ export class InputHandler {
       this.uiState.ghostStructure === ghostStructure &&
       ghostStructure !== null
     ) {
+      if (
+        source === "hotkey" &&
+        (this.gameView.updatesSinceLastTick?.() === null ||
+          this.gameView.isCatchingUp?.() ||
+          this.gameView.isPaused?.())
+      ) {
+        return;
+      }
+
       const currentMultiplier = this.uiState.upgradeMultiplier ?? 1;
       switch (source) {
         case "GUIclick":

@@ -103,8 +103,13 @@ export async function renderHtmlContent(
         : JSON.stringify(ServerEnv.faroCollectorUrl()),
     manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
     faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
+    appleTouchIconHref: buildAssetUrl(
+      "icons/icon512_maskable.png",
+      assetManifest,
+      cdnBase,
+    ),
     gameplayScreenshotUrl: buildAssetUrl(
-      "images/GameplayScreenshot.png",
+      "images/KeyArt.jpg",
       assetManifest,
       cdnBase,
     ),
