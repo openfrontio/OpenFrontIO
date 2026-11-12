@@ -174,6 +174,22 @@ describe("ReplayGameAdapter", () => {
     expect(adapter.numTilesWithFallout()).toBe(12);
   });
 
+  test("counts the ticks since the spawn phase ended, as GameView does", () => {
+    const startTick = 5;
+    adapter.startTick = () => startTick;
+    try {
+      adapter.update(reader.seek(2), EMPTY, 0, true);
+      expect(adapter.ticksSinceStart()).toBe(0);
+
+      const frame = reader.seek(119);
+      adapter.update(frame, EMPTY, 0, false);
+      expect(adapter.ticksSinceStart()).toBe(frame.tick - startTick);
+      expect(adapter.ticksSinceStart()).toBeGreaterThan(0);
+    } finally {
+      adapter.startTick = () => null;
+    }
+  });
+
   test("a player's name location is where the frame placed it", () => {
     const frame = reader.seek(119);
     const [playerID, placed] = [...frame.names].find(([, n]) => n.size > 0)!;

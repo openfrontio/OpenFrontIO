@@ -16,7 +16,12 @@ import { prefersReducedMotion } from "../utilities/ReducedMotion";
 import { translateText } from "../Utils";
 import type { GameView } from "../view";
 import type { OfIconName } from "./OfIcon";
-import { RefreshClock } from "./StatsTableHistory";
+import {
+  RankTrends,
+  RefreshClock,
+  RowMoves,
+  type Trend,
+} from "./StatsTableHistory";
 
 /** What a player is to you, shown after their name. */
 export type RowMark = "attack" | "traitor" | "ally" | "embargo" | "offline";
@@ -88,6 +93,10 @@ const HOLD_STILL_MS = 3000;
 // (a tab that slept; a replay says when it seeks): the rows did not move
 // there, they are there.
 const CLOCK_JUMP_TICKS = 30 * TICKS_PER_SECOND;
+const TREND_LABEL: Record<Trend, string> = {
+  up: "leaderboard.trend_up",
+  down: "leaderboard.trend_down",
+};
 // What each table is called, by a screen reader and in the column menu.
 export const TABLE_NAME: Record<StatsTableKind, string> = {
   player: "leaderboard.players_table",
@@ -285,6 +294,14 @@ const GAUGE_FILL: Record<GaugeLevel, string> = {
 const SIZER = "grid col-span-full h-0 overflow-hidden invisible";
 const SIZER_CELL =
   "flex flex-col px-0.75 font-bold tabular-nums whitespace-nowrap";
+// A small triangle before the rank; its shape and its colour both tell the
+// direction. The rank beside it never shrinks: three digits and the mark
+// take some of the cell's padding rather than lose a digit.
+const TREND = "me-px h-1 w-1.25 shrink-0 [&+span]:shrink-0";
+const TREND_SHAPE: Record<Trend, string> = {
+  up: "bg-green-400 [clip-path:polygon(50%_0,100%_100%,0_100%)]",
+  down: "bg-red-400 [clip-path:polygon(0_0,100%_0,50%_100%)]",
+};
 
 // An icon with a mark ("/m", the limit sign) is one box: the mark sits on
 // the icon's baseline. "/m" has a slot of its own fixed width, so the four
@@ -384,11 +401,12 @@ export abstract class StatsTable extends LitElement {
   private rowHeightPx = FALLBACK_ROW_HEIGHT_PX;
   private viewportHeightPx = FALLBACK_VIEWPORT_HEIGHT_PX;
 
+  // What the table keeps from one refresh to the next: whether the list
+  // follows on from the last one, the rows that changed place since, for
+  // updated() to glide, and each row's rank over the last 30 seconds.
   private readonly clock = new RefreshClock(CLOCK_JUMP_TICKS);
-  // Each row's index at the last refresh, and the rows that changed place
-  // since, for updated() to glide.
-  private lastIndex = new Map<string, number>();
-  private moves = new Map<string, { from: number; to: number }>();
+  private readonly moves = new RowMoves();
+  private readonly trends = new RankTrends();
   // The glides still running. A row keeps its element when the list is put
   // in another order, and would carry its glide there.
   private readonly glides = new Set<Animation>();
@@ -408,8 +426,8 @@ export abstract class StatsTable extends LitElement {
     if (tip && !this.visibleColumns().some((c) => c.id === tip.column.id)) {
       this.tip = null;
     }
-    // Opened again, it has no order of before to glide from.
-    if (changed.has("visible") && !this.visible) this.lastIndex.clear();
+    // Opened again, it has nothing of before to compare its list with.
+    if (changed.has("visible") && !this.visible) this.clock.forget();
     // A list removed from under the pointer gets no pointerleave.
     if (changed.has("visible") && !this.visible) this.pointerMovedAt = null;
     if (changed.has("visible") && this.visible) {
@@ -443,9 +461,8 @@ export abstract class StatsTable extends LitElement {
   // neighbours snap when they are held at an edge: they are not where their
   // index puts them.
   private glideMovedRows(scroller: HTMLElement) {
-    const moves = this.moves;
+    const moves = this.moves.take();
     if (moves.size === 0) return;
-    this.moves = new Map();
     if (!("animate" in scroller) || prefersReducedMotion()) return;
     const moved = [
       ...scroller.querySelectorAll<HTMLElement>(".stats-table-row"),
@@ -523,7 +540,7 @@ export abstract class StatsTable extends LitElement {
    * not follow on, however short the jump.
    */
   seeked() {
-    this.lastIndex.clear();
+    this.clock.forget();
   }
 
   /**
@@ -669,7 +686,22 @@ export abstract class StatsTable extends LitElement {
           );
     const placed = sorted.map((row, index) => ({ row, position: index + 1 }));
     this.rows = holdOrder ? this.inDrawnOrder(placed) : placed;
-    this.noteMoves(this.game);
+    // Asked once: the glides and the trend marks compare this list with the
+    // last refresh's, unless it does not follow on from it.
+    const followsOn = this.clock.next(
+      `${sortKey} ${this.sortOrder}`,
+      this.game.ticks(),
+      this.speed,
+    );
+    if (!followsOn) {
+      // The rows are about to be drawn in an order the glides know nothing
+      // of.
+      this.stopGlides();
+      this.moves.forget();
+      this.trends.forget();
+    }
+    this.moves.note(this.rows.map(({ row }) => row.key));
+    this.noteTrends(this.game);
     this.requestUpdate();
   }
 
@@ -697,26 +729,20 @@ export abstract class StatsTable extends LitElement {
     return { from, to, edge };
   }
 
-  // Notes the rows whose index changed since the last refresh. None when the
-  // list does not follow on from it: the old order means nothing then.
-  private noteMoves(game: GameView) {
-    const comparable = this.clock.next(
-      `${this.sortKey} ${this.sortOrder}`,
-      game.ticks(),
-      this.speed,
+  // Marks the rows whose rank moved over the last 30 seconds and held. The
+  // ranks are the real ones, also while the rows hold their order.
+  private noteTrends(game: GameView) {
+    this.trends.note(
+      new Map(this.rows.map(({ row, position }) => [row.key, position])),
+      game,
     );
-    const index = new Map<string, number>();
-    this.moves = new Map();
-    // The rows are about to be drawn in an order the glides know nothing of.
-    if (!comparable) this.stopGlides();
-    this.rows.forEach(({ row }, to) => {
-      index.set(row.key, to);
-      const from = this.lastIndex.get(row.key);
-      if (comparable && from !== undefined && from !== to) {
-        this.moves.set(row.key, { from, to });
-      }
-    });
-    this.lastIndex = index;
+  }
+
+  /** The trend marks of the drawn rows. */
+  private shownTrends(items: readonly ListItem[]): ReadonlyMap<string, Trend> {
+    return this.trends.shown(
+      items.flatMap((item) => ("placed" in item ? [item.placed.row.key] : [])),
+    );
   }
 
   private renderHeaderCell(column: ColumnDef, index: number) {
@@ -810,6 +836,7 @@ export abstract class StatsTable extends LitElement {
     color: string | undefined,
     alive: StatsRow["alive"],
     troopFill: number | undefined,
+    trend: Trend | undefined,
     marks: readonly RowMark[] = [],
   ) {
     // A player without a clan shows a dash. Zeros recede, but not the Type
@@ -848,6 +875,7 @@ export abstract class StatsTable extends LitElement {
             : nothing
         }
         ${gauge ? renderGauge(troopFill) : nothing}
+        ${column.id === "rank" ? this.renderTrend(trend) : nothing}
         <span
           class="min-w-0 truncate"
           dir=${isName ? "auto" : nothing}
@@ -884,12 +912,25 @@ export abstract class StatsTable extends LitElement {
     ></span>`;
   }
 
+  private renderTrend(trend: Trend | undefined) {
+    if (trend === undefined) return nothing;
+    const label = translateText(TREND_LABEL[trend]);
+    return html`<span
+      class="${TREND} ${TREND_SHAPE[trend]}"
+      role="img"
+      aria-label=${label}
+      title=${label}
+      data-trend=${trend}
+    ></span>`;
+  }
+
   private renderRow(
     game: GameView,
     columns: readonly ColumnDef[],
     { row, position }: PlacedRow,
     index: number,
     block: HeldBlock,
+    trend: Trend | undefined,
   ) {
     const state: RowState = row.pinned
       ? "me"
@@ -953,6 +994,7 @@ export abstract class StatsTable extends LitElement {
               row.color,
               row.alive,
               column.id === gaugeColumn ? row.troopFill : undefined,
+              trend,
               column.id === "player" ? row.marks : undefined,
             );
           },
@@ -1005,6 +1047,7 @@ export abstract class StatsTable extends LitElement {
       if (index >= lastIndex) place(index);
     }
     spaceTo(this.rows.length);
+    const trends = this.shownTrends(items);
     // "auto" tracks stay content-sized intrinsically, then split only the
     // spare width supplied by a wider sibling; fixed tracks never stretch.
     // The empty last track only grows to a scrollbar.
@@ -1086,6 +1129,7 @@ export abstract class StatsTable extends LitElement {
                         item.placed,
                         item.index,
                         block,
+                        trends.get(item.placed.row.key),
                       ),
               )}
             </div>

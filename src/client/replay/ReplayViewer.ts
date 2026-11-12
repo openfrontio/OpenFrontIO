@@ -476,6 +476,7 @@ export class ReplayViewer extends LitElement {
     this.adapter = adapter;
     const showEmojis = () => userSettings.emojis();
     adapter.showEmojis = showEmojis;
+    adapter.startTick = () => header.spawnPhaseEnd?.startTick ?? null;
     playback.frameBuilder.showEmojis = showEmojis;
 
     await this.updateComplete;
