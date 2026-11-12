@@ -8,6 +8,7 @@ import {
   type ColumnId,
 } from "../src/client/hud/layers/lib/StatsColumns";
 import { UserSettings } from "../src/client/UserSettings";
+import { translateText } from "../src/client/Utils";
 
 // The menu only ever lists hideable columns; rank and player always render.
 const hideable = columnsFor("player").filter((column) => column.isHideable);
@@ -425,6 +426,22 @@ describe("ColumnPicker", () => {
     expect((menu() as HTMLElement).style.getPropertyValue("--menu-y")).toBe(
       "76px",
     );
+  });
+
+  it("shows the game ID in its footer only when given one", async () => {
+    const picker = await mount();
+    const footer = () => menu()?.querySelector("[data-menu-game-id]");
+    picker.toggleAt(0, 0);
+    await picker.updateComplete;
+    expect(footer()).toBeNull();
+    picker.close();
+
+    picker.gameId = "abc123";
+    picker.toggleAt(0, 0);
+    await picker.updateComplete;
+    expect(
+      footer()?.querySelector("[data-game-id]")?.getAttribute("aria-label"),
+    ).toBe(`${translateText("help_modal.game_id_tooltip")} abc123`);
   });
 
   it("takes its menu away when it is removed", async () => {

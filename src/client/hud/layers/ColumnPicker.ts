@@ -13,6 +13,7 @@ import { UserSettings } from "../../UserSettings";
 import { translateText } from "../../Utils";
 import { keepPressKeysFromGame } from "../HudKeys";
 import { HUD_ICON_BUTTON, HUD_LABEL } from "../HudModal";
+import { gameIdButton } from "./GameIdButton";
 import { columnsFor, type ColumnDef } from "./lib/StatsColumns";
 
 // Look. Sizes, colours, radii and spacing of each part live here, so a
@@ -62,6 +63,9 @@ const VISUAL_SIZE = 16;
 // has no pointer to hover with, so its names wrap.
 const NAME = "min-w-0 flex-1 truncate hud-sheet:whitespace-normal";
 const CHECK = "ms-2 shrink-0 text-aquarius invisible peer-checked:visible";
+const FOOT =
+  "mt-1 flex shrink-0 items-center gap-2 border-t border-white/12 pt-1 ps-2";
+const FOOT_LABEL = "text-[11px] text-white/55";
 // The least room the menu leaves to each edge of the window: half the
 // `1rem` its width and height are capped by.
 const EDGE = 8;
@@ -112,6 +116,9 @@ type Anchor = HTMLElement | { x: number; y: number };
 @customElement("column-picker")
 export class ColumnPicker extends LitElement {
   @property({ attribute: false }) tables: readonly StatsTableKind[] = [];
+  /** Shown in the footer when not empty: the host's bar hides its own copy on
+   *  portrait phones. */
+  @property({ attribute: false }) gameId = "";
 
   @state() private open = false;
   private anchor: Anchor | null = null;
@@ -412,6 +419,18 @@ export class ColumnPicker extends LitElement {
           <div class=${BODY}>
             ${this.tables.map((kind) => this.renderSection(kind))}
           </div>
+          ${
+            this.gameId
+              ? html`
+                  <div class=${FOOT} data-menu-game-id>
+                    <span class=${FOOT_LABEL} aria-hidden="true">
+                      ${translateText("help_modal.game_id_tooltip")}
+                    </span>
+                    ${gameIdButton(this.gameId)}
+                  </div>
+                `
+              : nothing
+          }
         </div>
       `,
       this.portal,

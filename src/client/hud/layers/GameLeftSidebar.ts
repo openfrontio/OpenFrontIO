@@ -137,6 +137,20 @@ export class GameLeftSidebar extends LitElement implements Controller {
     if (!this.isTeamStatsShown) this.columnPicker?.close();
   }
 
+  // The column menu, about to open. It shows the game ID in its footer only
+  // while the bar's copy is hidden, so one is drawn at a time.
+  private columnMenu(): ColumnPicker | undefined {
+    const picker = this.columnPicker;
+    if (picker) {
+      const inBar = this.querySelector<HTMLElement>("[data-game-id]");
+      picker.gameId =
+        inBar !== null && inBar.offsetParent === null
+          ? (this.game?.gameID() ?? "")
+          : "";
+    }
+    return picker;
+  }
+
   private toggleAlternateView(): void {
     this.eventBus?.emit(new AlternateViewEvent(!this.alternateView));
   }
@@ -217,7 +231,9 @@ export class GameLeftSidebar extends LitElement implements Controller {
           >
             <of-icon name="terrain" size=${BAR_ICON_SIZE}></of-icon>
           </button>
-          ${gameId ? gameIdButton(gameId) : null}
+          <!-- On portrait phones the timer bar covers it: the column menu
+               shows it in its footer there instead. -->
+          ${gameId ? gameIdButton(gameId, "max-sm:side-bar:hidden") : null}
           ${
             isTableShown
               ? html`
@@ -231,7 +247,7 @@ export class GameLeftSidebar extends LitElement implements Controller {
                     title=${columns}
                     @mousedown=${(e: MouseEvent) => e.preventDefault()}
                     @click=${(e: MouseEvent) =>
-                      this.columnPicker?.openFrom(
+                      this.columnMenu()?.openFrom(
                         e.currentTarget as HTMLElement,
                       )}
                     @keydown=${keepPressKeysFromGame}
@@ -267,7 +283,7 @@ export class GameLeftSidebar extends LitElement implements Controller {
         <div
           class="flex flex-col gap-2 min-w-0 w-full"
           @columns-menu=${(e: CustomEvent<{ x: number; y: number }>) =>
-            this.columnPicker?.toggleAt(e.detail.x, e.detail.y)}
+            this.columnMenu()?.toggleAt(e.detail.x, e.detail.y)}
           @columns-changed=${() => {
             this.playerStats?.refresh();
             this.teamStats?.refresh();

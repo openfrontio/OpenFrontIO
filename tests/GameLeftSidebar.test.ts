@@ -559,6 +559,43 @@ describe("GameLeftSidebar", () => {
     sidebar.remove();
   });
 
+  it("puts the game ID in the column menu only while the bar's is hidden", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+    sidebar
+      .querySelector<HTMLElement>('[data-sidebar-button="players"]')
+      ?.click();
+    await sidebar.updateComplete;
+    const columns = sidebar.querySelector<HTMLElement>(
+      '[data-sidebar-button="columns"]',
+    );
+    const picker = sidebar.querySelector("column-picker") as ColumnPicker;
+    const footer = () => document.body.querySelector("[data-menu-game-id]");
+
+    // jsdom lays nothing out, so the bar's copy reads as not displayed, as
+    // it is on a portrait phone.
+    columns?.click();
+    await picker.updateComplete;
+    expect(footer()?.querySelector("[data-game-id]")?.textContent).toContain(
+      "test-game",
+    );
+    columns?.click();
+    await picker.updateComplete;
+
+    const inBar = sidebar.querySelector("[data-game-id]") as HTMLElement;
+    Object.defineProperty(inBar, "offsetParent", { value: sidebar });
+    columns?.click();
+    await picker.updateComplete;
+    expect(document.body.querySelector("[data-column-menu]")).not.toBeNull();
+    expect(footer()).toBeNull();
+
+    sidebar.remove();
+  });
+
   it("shows your team during the spawn phase of a team game", async () => {
     let spawning = true;
     const sidebar = new GameLeftSidebar();
