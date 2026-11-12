@@ -134,7 +134,12 @@ export class GameHealth {
     const struggling =
       context.catchingUp || this.lowFrameRate || this.lowFrameMs > 0;
     // Include the final interval before recovery, even if no update ran in it.
-    if (struggling || this.struggling) this.lastTroubledAt = nowMs;
+    if (struggling || this.struggling) {
+      this.lastTroubledAt = nowMs;
+      // Recovery must wait for a new uncontaminated RTT, rather than
+      // reviving the latency warning from before the client struggled.
+      this.latencySpike = false;
+    }
     this.struggling = struggling;
     this.state.performance =
       this.lowFrameRate ||

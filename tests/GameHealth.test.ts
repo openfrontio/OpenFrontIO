@@ -144,6 +144,37 @@ describe("GameHealth", () => {
     expect(health.update(6000, healthy).highLatency).toBe(true);
   });
 
+  it("requires a fresh RTT before showing latency again after catch-up", () => {
+    const health = createHealth();
+    baseline(health, 40);
+    health.recordRoundTrip(300, 4000);
+    expect(health.update(4000, healthy).highLatency).toBe(true);
+    expect(
+      health.update(4100, { ...healthy, catchingUp: true }).highLatency,
+    ).toBe(false);
+    expect(health.update(4200, healthy).highLatency).toBe(false);
+    health.recordRoundTrip(300, 5000);
+    expect(health.update(5000, healthy).highLatency).toBe(true);
+    expect(health.update(15000, healthy).highLatency).toBe(false);
+  });
+
+  it("requires a fresh RTT before showing latency again after low-FPS recovery", () => {
+    const health = createHealth();
+    baseline(health, 40);
+    health.recordRoundTrip(300, 4000);
+    expect(health.update(4000, healthy).highLatency).toBe(true);
+    let now = frames(health, 4000, 3000, 50);
+    expect(health.update(now, healthy).performance).toBe(true);
+    expect(health.update(now, healthy).highLatency).toBe(false);
+    now = frames(health, now, 1000, 25);
+    expect(health.update(now, healthy).performance).toBe(false);
+    expect(health.update(now, healthy).highLatency).toBe(false);
+    now = frames(health, now, 500, 25);
+    health.recordRoundTrip(300, now);
+    expect(health.update(now, healthy).highLatency).toBe(true);
+    expect(health.update(now + 10000, healthy).highLatency).toBe(false);
+  });
+
   it("rejects pings sent during the final interval before visibility resumes", () => {
     const health = createHealth();
     baseline(health, 40);

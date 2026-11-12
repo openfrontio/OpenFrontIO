@@ -9,12 +9,18 @@ describe("GameHealthIndicators", () => {
   let element: GameHealthIndicators;
   let playerInfo: HTMLElement;
   let sidebar: HTMLElement;
+  let rightHud: HTMLElement;
 
   beforeEach(async () => {
     playerInfo = document.createElement("player-info-overlay");
     document.body.appendChild(playerInfo);
     sidebar = document.createElement("game-left-sidebar");
     document.body.appendChild(sidebar);
+    rightHud = document.createElement("div");
+    rightHud.id = "game-right-hud";
+    rightHud.innerHTML =
+      "<game-right-sidebar><doomsday-clock-panel></doomsday-clock-panel><overtime-panel></overtime-panel></game-right-sidebar><replay-panel></replay-panel>";
+    document.body.appendChild(rightHud);
     element = new GameHealthIndicators();
     document.body.appendChild(element);
     await element.updateComplete;
@@ -24,6 +30,7 @@ describe("GameHealthIndicators", () => {
     element.remove();
     playerInfo.remove();
     sidebar.remove();
+    rightHud.remove();
     vi.restoreAllMocks();
   });
 
@@ -35,7 +42,7 @@ describe("GameHealthIndicators", () => {
     element.shadowRoot!.querySelector<HTMLElement>('[role="tooltip"]');
 
   function expectOffsets(value: string): void {
-    for (const panel of [playerInfo, sidebar]) {
+    for (const panel of [playerInfo, sidebar, rightHud]) {
       expect(panel.style.getPropertyValue("--game-health-offset")).toBe(value);
     }
   }
@@ -127,7 +134,7 @@ describe("GameHealthIndicators", () => {
     expect(tooltip()).toBeNull();
   });
 
-  it("reserves room above the player card and sidebar for warnings and tooltips", async () => {
+  it("reserves room above the player card, sidebar and mode panels for warnings and tooltips", async () => {
     vi.spyOn(element, "getBoundingClientRect").mockReturnValue(
       new DOMRect(572, 8, 136, 44),
     );

@@ -30,7 +30,7 @@ export class GameHealthIndicators extends LitElement {
     super.connectedCallback();
     this.topHudPanels = Array.from(
       document.querySelectorAll<HTMLElement>(
-        "player-info-overlay, game-left-sidebar",
+        "player-info-overlay, game-left-sidebar, #game-right-hud",
       ),
     );
     window.addEventListener("resize", this.reserveTopHudSpace);
@@ -49,7 +49,7 @@ export class GameHealthIndicators extends LitElement {
     this.reserveTopHudSpace();
   }
 
-  // Keep the player card and expanded narrow-screen sidebar below warnings.
+  // Keep player cards, leaderboards and timer/mode readouts below warnings.
   // Only measure when warning state, tooltip or viewport size changes.
   private reserveTopHudSpace = (): void => {
     if (this.topHudPanels.length === 0) return;
@@ -83,12 +83,6 @@ export class GameHealthIndicators extends LitElement {
       font:
         13px/1.4 system-ui,
         sans-serif;
-    }
-    @media (max-width: 640px) {
-      :host {
-        /* The timer controls span the top center on narrow phones. */
-        top: calc(env(safe-area-inset-top, 0px) + 48px);
-      }
     }
     .warnings {
       display: flex;
@@ -198,6 +192,9 @@ export class GameHealthIndicators extends LitElement {
               }}
               @click=${() => this.toggle(warning)}
               @keydown=${(event: KeyboardEvent) => {
+                // Keep native button activation without confirming a build
+                // preview through the game's window-level Enter handler.
+                if (event.key === "Enter") event.stopPropagation();
                 if (event.key === "Escape") {
                   this.pinned = null;
                   this.tooltip = null;
