@@ -417,6 +417,89 @@ describe("LeaderboardModal", () => {
         modal.querySelector("leaderboard-player-list table tfoot"),
       ).toBeNull();
     });
+
+    it("correctly toggles pinned row visibility without boundary oscillation", async () => {
+      const { getUserMe } = await import("../../src/client/Api");
+      (getUserMe as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        player: { publicId: "player-1" },
+      });
+
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [
+            {
+              rank: 1,
+              elo: 1200,
+              wins: 6,
+              losses: 4,
+              total: 10,
+              public_id: "player-1",
+              accountUsername: "alpha.4821",
+            },
+          ],
+          "2v2": [],
+        }),
+      );
+
+      const playerList = getPlayerList()!;
+      await playerList.loadPlayerLeaderboard(true);
+      await playerList.updateComplete;
+
+      vi.spyOn(playerList as any, "isVisible").mockReturnValue(true);
+
+      const container = modal.querySelector(".scroll-container") as HTMLElement;
+      vi.spyOn(container, "getBoundingClientRect").mockReturnValue({
+        top: 100,
+        bottom: 500,
+        height: 400,
+        left: 0,
+        right: 400,
+        width: 400,
+      } as DOMRect);
+      Object.defineProperty(container, "clientHeight", {
+        value: 400,
+        configurable: true,
+      });
+
+      const thead = container.querySelector("thead")!;
+      vi.spyOn(thead, "getBoundingClientRect").mockReturnValue({
+        top: 100,
+        bottom: 148,
+        height: 48,
+        left: 0,
+        right: 400,
+        width: 400,
+      } as DOMRect);
+
+      const row = container.querySelector(
+        '[data-current-user="true"]',
+      ) as HTMLElement;
+
+      const check = (top: number, bottom: number) => {
+        vi.spyOn(row, "getBoundingClientRect").mockReturnValue({
+          top,
+          bottom,
+          height: bottom - top,
+          left: 0,
+          right: 400,
+          width: 400,
+        } as DOMRect);
+        (playerList as any).updateStickyVisibility();
+        return playerList.showStickyUser;
+      };
+
+      // 1. Visible in viewport -> pinned row hidden
+      expect(check(200, 260)).toBe(false);
+
+      // 2. Scrolled above thead -> pinned row shown
+      expect(check(80, 140)).toBe(true);
+
+      // 3. Scrolled below container -> pinned row shown
+      expect(check(520, 580)).toBe(true);
+
+      // 4. At the bottom edge of the table -> pinned row hidden without oscillating
+      expect(check(440, 500)).toBe(false);
+    });
   });
 
   describe("Player Pagination", () => {
