@@ -3,6 +3,7 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GameHealthIndicators } from "../../src/client/hud/layers/GameHealthIndicators";
 import {
+  AlternateViewEvent,
   ConfirmGhostStructureEvent,
   InputHandler,
 } from "../../src/client/InputHandler";
@@ -87,6 +88,52 @@ describe("health warning keyboard activation over a build preview", () => {
       expect(tooltip()).toBeNull();
     },
   );
+
+  it("keeps both Space events for native warning activation without changing map view", async () => {
+    const view = vi.fn<(event: AlternateViewEvent) => void>();
+    eventBus.on(AlternateViewEvent, view);
+    const control = button();
+    control.focus();
+    for (const type of ["keydown", "keyup"]) {
+      const event = new KeyboardEvent(type, {
+        key: " ",
+        code: "Space",
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      control.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+      expect(view).not.toHaveBeenCalled();
+    }
+    // jsdom does not synthesize the native click on Space release.
+    control.click();
+    control.dispatchEvent(new Event("mouseleave"));
+    await element.updateComplete;
+    expect(tooltip()?.textContent).toContain(
+      "game_health.high_latency_description",
+    );
+    expect(confirm).not.toHaveBeenCalled();
+    expect(uiState.ghostStructure).toBe(UnitType.City);
+  });
+
+  it("preserves Space map-view shortcuts outside warning controls", () => {
+    const view = vi.fn<(event: AlternateViewEvent) => void>();
+    eventBus.on(AlternateViewEvent, view);
+    window.dispatchEvent(keydown("Space", " "));
+    window.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        key: " ",
+        code: "Space",
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    expect(view.mock.calls.map(([event]) => event.alternateView)).toEqual([
+      true,
+      false,
+    ]);
+  });
 
   it("still confirms the build preview with Enter outside the warning", () => {
     window.dispatchEvent(keydown("Enter", "Enter"));

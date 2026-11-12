@@ -192,12 +192,22 @@ export class GameHealthIndicators extends LitElement {
               }}
               @click=${() => this.toggle(warning)}
               @keydown=${(event: KeyboardEvent) => {
-                // Keep native button activation without confirming a build
-                // preview through the game's window-level Enter handler.
-                if (event.key === "Enter") event.stopPropagation();
+                // Keep native button activation local to this control.
+                if (
+                  event.key === "Enter" ||
+                  event.key === " " ||
+                  event.code === "Space"
+                ) {
+                  event.stopPropagation();
+                }
                 if (event.key === "Escape") {
                   this.pinned = null;
                   this.tooltip = null;
+                }
+              }}
+              @keyup=${(event: KeyboardEvent) => {
+                if (event.key === " " || event.code === "Space") {
+                  event.stopPropagation();
                 }
               }}
             >
