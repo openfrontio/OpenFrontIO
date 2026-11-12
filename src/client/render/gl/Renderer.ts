@@ -210,6 +210,7 @@ export class GPURenderer {
   /** Reusable scratch buffer of {x,y,r,g,b} for the selection-box pass. */
   private readonly selectionBoxEntries: import("./passes/SelectionBoxPass").SelectionEntry[] =
     [];
+  private readonly textBoundsScratch = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -548,7 +549,7 @@ export class GPURenderer {
       this.res.tileTex,
       this.paletteTex,
       this.effectTex,
-      terrainBytes,
+      this.terrainBytesTex,
       this.settings,
     );
 
@@ -705,12 +706,19 @@ export class GPURenderer {
     this.territoryPass.applyLiveDelta(tileState, changedTiles);
   }
 
+  /** Forward live trail delta (dirty rows or changed tiles) to TrailPass. */
   uploadLiveTrailDelta(
     trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
+    changedTiles?: readonly number[],
   ): void {
-    this.trailPass.applyLiveDelta(trailState, dirtyRowMin, dirtyRowMax);
+    this.trailPass.applyLiveDelta(
+      trailState,
+      dirtyRowMin,
+      dirtyRowMax,
+      changedTiles,
+    );
   }
 
   /** Adopt this tick's spiral nukeTrail ribbons (live refs from SpiralTrails). */
@@ -988,27 +996,6 @@ export class GPURenderer {
     if (rects.length === 0) return;
     this.terrainPass.applyTerrainRects(rects, bytes);
     this.railroadPass.applyTerrainRects(rects, bytes);
-    // Update the shared R8UI terrain-bytes texture used by map-layer passes.
-    if (!this.terrainBytesTex) return;
-    const gl = this.gl;
-    gl.bindTexture(gl.TEXTURE_2D, this.terrainBytesTex);
-    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    let offset = 0;
-    for (const r of rects) {
-      gl.texSubImage2D(
-        gl.TEXTURE_2D,
-        0,
-        r.x,
-        r.y,
-        r.w,
-        r.h,
-        gl.RED_INTEGER,
-        gl.UNSIGNED_BYTE,
-        bytes,
-        offset,
-      );
-      offset += r.w * r.h;
-    }
   }
 
   /**
@@ -1116,6 +1103,7 @@ export class GPURenderer {
 
   setHighlightOwner(ownerID: number): void {
     this.borderPass.setHighlightOwner(ownerID);
+    this.borderStampPass.setHighlightOwner(ownerID);
     this.territoryPass.setHighlightOwner(ownerID);
     this.namePass.setHighlightOwner(ownerID);
     this.structurePass.setHighlightOwner(ownerID);
@@ -1343,7 +1331,9 @@ export class GPURenderer {
     gl.clearColor(bgR / 255, bgG / 255, bgB / 255, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.BLEND);
-    if (pe.terrain) this.terrainPass.draw(cam);
+    if (pe.terrain) {
+      this.terrainPass.draw(cam);
+    }
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     // Map layers sit between terrain and territory. Alt view hides the land
@@ -1399,7 +1389,8 @@ export class GPURenderer {
 
     // World text (attack-troop labels, popups, ghost cost) draws on top of
     // player names so attack callouts aren't hidden behind a centered name.
-    this.worldTextPass.tick(zoom);
+    const textBounds = this.camera.getWorldBounds(100, this.textBoundsScratch);
+    this.worldTextPass.tick(zoom, textBounds);
     this.worldTextPass.draw(cam, zoom);
 
     gl.disable(gl.BLEND);

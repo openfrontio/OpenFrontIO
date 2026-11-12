@@ -208,9 +208,11 @@
       };
       // Set here rather than from the bundle so the first paint already has the
       // desktop layout. The shell's preload defines openfrontDesktop before
-      // any page script runs. ?desktop-layout previews it outside prod.
+      // any page script runs. Steam only (isSteamShell): the Android app
+      // defines it too, and lays out the way the site does in a mobile browser.
+      // ?desktop-layout previews it outside prod.
       if (
-        window.openfrontDesktop ||
+        (window.openfrontDesktop && window.openfrontDesktop.steam) ||
         (window.BOOTSTRAP_CONFIG.gameEnv !== "prod" &&
           new URLSearchParams(location.search).has("desktop-layout"))
       ) {
@@ -637,6 +639,8 @@
         class="lg:col-start-2 lg:min-w-0"
       ></player-info-overlay>
       <div
+        id="game-right-hud"
+        style="margin-top: var(--game-health-offset, 0px)"
         class="flex flex-col items-end gap-2 max-lg:fixed max-lg:top-0 max-lg:right-0 max-lg:z-1000 lg:col-start-3 lg:justify-self-end lg:pointer-events-auto"
       >
         <game-right-sidebar></game-right-sidebar>
