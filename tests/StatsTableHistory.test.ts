@@ -56,6 +56,20 @@ describe("RowMoves", () => {
     expect(moves.take().size).toBe(0);
   });
 
+  it("drops the moves noted, and keeps the order for the next refresh", () => {
+    const moves = new RowMoves();
+    moves.note(["a", "b", "c"]);
+    moves.note(["b", "a", "c"]);
+    moves.drop();
+    expect(moves.take().size).toBe(0);
+
+    moves.note(["b", "c", "a"]);
+    expect([...moves.take()]).toEqual([
+      ["c", { from: 2, to: 1 }],
+      ["a", { from: 1, to: 2 }],
+    ]);
+  });
+
   it("gives no moves after it forgot the order", () => {
     const moves = new RowMoves();
     moves.note(["a", "b", "c"]);
