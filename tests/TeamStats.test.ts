@@ -107,12 +107,11 @@ describe("TeamStats", () => {
     await teamStats.updateComplete;
 
     const table = teamStats.querySelector(".stats-table");
-    const picker = teamStats.querySelector("column-picker");
     const rowCells = teamStats.querySelectorAll(
       '.stats-table-row > [role="cell"]',
     );
     expect(teamStats.children).toHaveLength(1);
-    expect(picker?.closest(".stats-table")).toBe(table);
+    expect(table?.querySelector("column-picker")).toBeNull();
     expect(table?.querySelector(".stats-table-header")).not.toBeNull();
     expect(rowCells[0]?.textContent?.trim()).toBe("1");
     expect(rowCells[1]?.textContent?.trim()).toContain("Blue");

@@ -22,6 +22,10 @@ import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { MapLayerController } from "../controllers/MapLayerController";
 import { ViewModeController } from "../controllers/ViewModeController";
+import { keepPressKeysFromGame } from "../hud/HudKeys";
+import { HUD_ICON_BUTTON } from "../hud/HudModal";
+import "../hud/layers/ColumnPicker";
+import type { ColumnPicker } from "../hud/layers/ColumnPicker";
 import "../hud/layers/EventsDisplay";
 import type { EventsDisplay } from "../hud/layers/EventsDisplay";
 import "../hud/layers/PlayerInfoOverlay";
@@ -52,6 +56,7 @@ import {
   type PlayerState,
   type PlayerStatusData,
 } from "../render/types";
+import type { StatsTableKind } from "../StatsConstants";
 import {
   loadCachedTerrainMap,
   terrainMapFileLoader,
@@ -99,6 +104,9 @@ import { replayStore } from "./ReplayStore";
 import { ReplayTerrain } from "./ReplayTerrain";
 
 const WHEEL_ZOOM = 1.0015;
+// The viewer draws the player table only. One array, so that its column
+// menu is not drawn again on every frame.
+const STATS_TABLES: readonly StatsTableKind[] = ["player"];
 
 /** Render settings with the viewer's graphics overrides applied. */
 function renderSettings(userSettings: UserSettings) {
@@ -1066,10 +1074,34 @@ export class ReplayViewer extends LitElement {
 
   /** The game's leaderboard, in the same panel as in game (GameLeftSidebar). */
   private renderStats() {
+    const columns = translateText("leaderboard.configure_columns");
+    const picker = () => this.querySelector<ColumnPicker>("column-picker");
     return html`
       <aside
         class="absolute top-0 left-0 flex flex-col gap-2 max-h-[calc(100vh-80px)] overflow-y-auto p-2 hud-panel rounded-br-lg text-white max-[400px]:w-full max-[400px]:rounded-none"
+        @columns-menu=${(e: CustomEvent<{ x: number; y: number }>) =>
+          picker()?.toggleAt(e.detail.x, e.detail.y)}
+        @columns-changed=${() =>
+          this.querySelector<PlayerStats>("player-stats")?.refresh()}
       >
+        <div class="flex justify-end">
+          <button
+            type="button"
+            class="${HUD_ICON_BUTTON} aria-expanded:bg-white/15 aria-expanded:text-white"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-label=${columns}
+            title=${columns}
+            @mousedown=${(e: MouseEvent) => e.preventDefault()}
+            @click=${(e: MouseEvent) =>
+              picker()?.openFrom(e.currentTarget as HTMLElement)}
+            @keydown=${keepPressKeysFromGame}
+            @keyup=${keepPressKeysFromGame}
+          >
+            <of-icon name="columns" size="20"></of-icon>
+          </button>
+        </div>
+        <column-picker class="hidden" .tables=${STATS_TABLES}></column-picker>
         <player-stats
           class="block min-w-0"
           .game=${this.adapter?.asGameView() ?? null}

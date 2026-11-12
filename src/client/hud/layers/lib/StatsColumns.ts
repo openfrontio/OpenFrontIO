@@ -39,6 +39,8 @@ export interface ColumnDef {
   /** Tooltip copy, and the header text when there is no headerVisual. */
   readonly labelKey: string;
   readonly headerVisual?: ColumnHeaderVisual;
+  /** The column menu's icon, for a column whose header is a word. */
+  readonly menuIcon?: OfIconName;
   /** Grid track: a fixed width, or "auto" to share the row's spare width. */
   readonly width: string;
   /**
@@ -126,8 +128,10 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "player",
     labelKey: "leaderboard.player",
     headerVisual: { kind: "icon", icon: "player" },
-    // The table widens it on large windows (--stats-name).
-    width: "var(--stats-name, 100px)",
+    // The table widens it on large windows (--stats-name). It gives up the
+    // room a host leaves at the table's end (--stats-end-track), so the
+    // table keeps its width.
+    width: "calc(var(--stats-name, 100px) - var(--stats-end-track, 0px))",
     widest: () => [],
     align: "start",
     headerAlign: "center",
@@ -139,6 +143,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "playerType",
     labelKey: "leaderboard.playerType",
     headerVisual: { kind: "text", text: "leaderboard.type" },
+    menuIcon: "player-type",
     // Player-table only: a team has no single type, and aggregating the
     // per-player type codes would be meaningless.
     kinds: ["player"],
@@ -181,7 +186,9 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "team",
     labelKey: "leaderboard.team",
     headerVisual: { kind: "icon", icon: "team" },
-    width: "var(--stats-name, 100px)",
+    // Gives up the room a host leaves at the table's end (--stats-end-track),
+    // so the table keeps its width.
+    width: "calc(var(--stats-name, 100px) - var(--stats-end-track, 0px))",
     widest: () => [],
     align: "start",
     headerAlign: "center",

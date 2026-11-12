@@ -1,7 +1,8 @@
 import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
-import "../hud/layers/ColumnPicker";
+import { keepPressKeysFromGame } from "../hud/HudKeys";
+import { COLUMN_MEANING } from "../hud/layers/ColumnTooltip";
 import "./OfIcon";
 import {
   type ColumnAlignment,
@@ -40,10 +41,8 @@ type ListItem = { spacer: number; from: number } | { placed: PlacedRow };
 const FALLBACK_ROW_HEIGHT_PX = 24;
 const FALLBACK_VIEWPORT_HEIGHT_PX = 180;
 const OVERSCAN_ROWS = 4;
-// Trailing chrome track holding the ⚙️ menu, not a column of data.
-const PICKER_TRACK = "32px";
-// What a screen reader calls each table.
-const TABLE_NAME: Record<StatsTableKind, string> = {
+// What each table is called, by a screen reader and in the column menu.
+export const TABLE_NAME: Record<StatsTableKind, string> = {
   player: "leaderboard.players_table",
   team: "leaderboard.teams_table",
 };
@@ -195,6 +194,8 @@ export abstract class StatsTable extends LitElement {
   public game: GameView | null = null;
 
   @property({ type: Boolean }) visible = false;
+  // Caps the list at five rows, so a second table fits under it.
+  @property({ type: Boolean }) short = false;
 
   protected abstract readonly tableKind: StatsTableKind;
   protected abstract buildRows(
@@ -214,6 +215,14 @@ export abstract class StatsTable extends LitElement {
   @state()
   private scrollOffsetPx = 0;
 
+  /** The header whose tooltip shows, and whether it is the mouse's. */
+  @state()
+  private tip: {
+    column: ColumnDef;
+    anchor: HTMLElement;
+    hint: boolean;
+  } | null = null;
+
   private rowHeightPx = FALLBACK_ROW_HEIGHT_PX;
   private viewportHeightPx = FALLBACK_VIEWPORT_HEIGHT_PX;
 
@@ -222,6 +231,8 @@ export abstract class StatsTable extends LitElement {
   }
 
   willUpdate(changed: Map<string, unknown>) {
+    // A hidden table takes its headers, and so their tooltip, with it.
+    if (changed.has("visible") && !this.visible) this.tip = null;
     if (changed.has("visible") && this.visible) {
       // The scroll container is recreated at scroll offset 0 when the table
       // was hidden, so the remembered offset would misplace the window.
@@ -258,7 +269,7 @@ export abstract class StatsTable extends LitElement {
 
   /**
    * Columns this render shows: every non-hideable column plus the hideable
-   * ones the ⚙️ menu has selected, in registry order.
+   * ones the column menu has selected, in registry order.
    */
   private visibleColumns(): readonly ColumnDef[] {
     const selected = this.userSettings.statsColumns(this.tableKind);
@@ -277,9 +288,31 @@ export abstract class StatsTable extends LitElement {
     this.updateStats();
   }
 
-  private onColumnsChanged(event: CustomEvent<ColumnId[]>) {
-    this.userSettings.setStatsColumns(this.tableKind, event.detail);
-    this.updateStats();
+  private tooltipId() {
+    return `${this.tableKind}-column-tooltip`;
+  }
+
+  private hideTip(column: ColumnDef) {
+    if (this.tip?.column.id === column.id) this.tip = null;
+  }
+
+  // The browser's own menu never opens on the table. On the header row a
+  // right-click asks the host for the column menu, at the pointer.
+  private onContextMenu(event: MouseEvent) {
+    event.preventDefault();
+    const target = event.target;
+    if (
+      !(target instanceof Element) ||
+      !target.closest(".stats-table-header")
+    ) {
+      return;
+    }
+    this.dispatchEvent(
+      new CustomEvent<{ x: number; y: number }>("columns-menu", {
+        detail: { x: event.clientX, y: event.clientY },
+        bubbles: true,
+      }),
+    );
   }
 
   private updateStats() {
@@ -331,7 +364,6 @@ export abstract class StatsTable extends LitElement {
           index > 0 ? HEADER_DIVIDER_CLASS : ""
         }"
         role="columnheader"
-        title=${label}
         aria-label=${column.isOrderable ? nothing : label}
         data-column=${column.id}
         data-align=${align}
@@ -345,6 +377,15 @@ export abstract class StatsTable extends LitElement {
               : "none"
             : nothing
         }
+        @pointerenter=${(event: PointerEvent) => {
+          // A mouse only: on a touch screen a tap sorts.
+          if (event.pointerType === "mouse") {
+            const anchor = event.currentTarget as HTMLElement;
+            this.tip = { column, anchor, hint: true };
+          }
+        }}
+        @pointerleave=${() => this.hideTip(column)}
+        @contextmenu=${() => this.hideTip(column)}
       >
         ${
           column.isOrderable
@@ -352,7 +393,26 @@ export abstract class StatsTable extends LitElement {
                 type="button"
                 class="${box} ${place.button} ${SORT_BUTTON}"
                 aria-label=${label}
+                aria-describedby=${
+                  this.tip?.column.id === column.id &&
+                  COLUMN_MEANING[column.id] !== undefined
+                    ? this.tooltipId()
+                    : nothing
+                }
+                @mousedown=${(event: MouseEvent) => {
+                  // Focus stays where it was, so Space still holds the
+                  // alternate view after a click on a header.
+                  event.preventDefault();
+                }}
                 @click=${() => this.setSort(column.id)}
+                @focus=${(event: FocusEvent) => {
+                  // The keyboard's only.
+                  const anchor = event.currentTarget as HTMLElement;
+                  if (anchor.matches(":focus-visible")) {
+                    this.tip = { column, anchor, hint: false };
+                  }
+                }}
+                @blur=${() => this.hideTip(column)}
               >
                 ${visual}
                 <of-icon
@@ -449,9 +509,9 @@ export abstract class StatsTable extends LitElement {
           },
         )}
         <!-- The list's scrollbar lands on this cell: the browser counts the
-        bar's width as the cell's margin and the picker track grows to fit
-        it, so the bar never covers the last column. -->
-        <div class=${DIVIDER_CLASS} aria-hidden="true"></div>
+        bar's width as the cell's margin and the end track grows to fit it,
+        so the bar never covers the last column. -->
+        <div aria-hidden="true"></div>
       </div>
     `;
   }
@@ -496,15 +556,22 @@ export abstract class StatsTable extends LitElement {
     spaceTo(this.rows.length);
     // "auto" tracks stay content-sized intrinsically, then split only the
     // spare width supplied by a wider sibling; fixed tracks never stretch.
-    const gridTemplate = `${columns
-      .map((column) => column.width)
-      .join(" ")} minmax(${PICKER_TRACK}, max-content)`;
+    // The empty last track is room the host can leave for a button over the
+    // end of the header row; it only grows to a scrollbar.
+    const gridTemplate = [
+      ...columns.map((column) => column.width),
+      "minmax(var(--stats-end-track, 0px), max-content)",
+    ].join(" ");
 
     return html`
-      <div class="stats-table ${TABLE}">
+      <div
+        class="stats-table ${TABLE}"
+        @keydown=${keepPressKeysFromGame}
+        @keyup=${keepPressKeysFromGame}
+      >
         <div
           class="overflow-x-auto ${SCROLLBAR}"
-          @contextmenu=${(event: Event) => event.preventDefault()}
+          @contextmenu=${this.onContextMenu}
         >
           <div
             class="stats-table-content grid w-max min-w-full"
@@ -524,20 +591,6 @@ export abstract class StatsTable extends LitElement {
                 (column) => column.id,
                 (column, index) => this.renderHeaderCell(column, index),
               )}
-              <div
-                class="${HEADER_CELL} flex items-center justify-center ${HEADER_DIVIDER_CLASS}"
-                role="columnheader"
-                data-rule
-              >
-                <column-picker
-                  class="inline-flex"
-                  .columns=${columnsFor(this.tableKind).filter(
-                    (column) => column.isHideable,
-                  )}
-                  .selected=${this.userSettings.statsColumns(this.tableKind)}
-                  @columns-changed=${this.onColumnsChanged}
-                ></column-picker>
-              </div>
             </div>
 
             <div
@@ -557,7 +610,7 @@ export abstract class StatsTable extends LitElement {
             </div>
 
             <div
-              class="stats-table-scroll stats-rows grid col-span-full overflow-y-scroll overflow-x-hidden overscroll-contain [overflow-anchor:none] ${SCROLLBAR}"
+              class="stats-table-scroll stats-rows grid col-span-full overflow-y-scroll overflow-x-hidden overscroll-contain [overflow-anchor:none] ${SCROLLBAR} ${this.short ? "[--stats-max-rows:5]" : ""}"
               style="grid-template-columns: subgrid; grid-column: 1 / -1;"
               role="rowgroup"
               @scroll=${this.onScroll}
@@ -580,6 +633,12 @@ export abstract class StatsTable extends LitElement {
             </div>
           </div>
         </div>
+        <column-tooltip
+          .column=${this.tip?.column ?? null}
+          .anchor=${this.tip?.anchor ?? null}
+          .hint=${this.tip?.hint ?? false}
+          .tooltipId=${this.tooltipId()}
+        ></column-tooltip>
       </div>
     `;
   }

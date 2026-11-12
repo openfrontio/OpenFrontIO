@@ -86,6 +86,19 @@
     }
   }
 
+  /* "Copied!" in place of the game ID for 1.4 s: in by 170 ms, held, then
+     out. The button drops its copied mark when the animation ends. */
+  --animate-hud-copied: hud-copied 1.4s ease-out both;
+  @keyframes hud-copied {
+    12%,
+    88% {
+      opacity: 1;
+    }
+  }
+  /* The same 1.4 s without the fades, for reduced motion: the label swaps
+     in and out, and the animation still ends. */
+  --animate-hud-copied-swap: hud-copied 1.4s steps(1, jump-start) both;
+
   /* Pulses a red glow around a traitor's player panel, over hud-modal's own
      shadow, which the box-shadow would otherwise replace. */
   --animate-traitor-glow: traitor-glow 2.4s ease-in-out infinite;
