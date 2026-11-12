@@ -26,6 +26,7 @@ import type {
 } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import type { Config } from "@openfront/engine-lib/configuration/Config";
+import { type Colord, colord } from "colord";
 import { OWNER_MASK } from "../render/gl/utils/TileCodec";
 import type {
   NameEntry,
@@ -130,6 +131,10 @@ class ReplayPlayerView {
   }
   flag(): string | undefined {
     return this.info.flag;
+  }
+  /** The fill the map draws (from ReplayPalette); grey without a palette. */
+  territoryColor(): Colord {
+    return colord(this.info.color ?? "#808080");
   }
   /** Where the player's name is drawn, once it has been placed. */
   nameLocation(): { x: number; y: number; size: number } | undefined {

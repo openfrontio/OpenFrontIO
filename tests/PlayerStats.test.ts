@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { PlayerType } from "@openfront/engine-api/game/GameTypes";
 import type { EventBus } from "@openfront/shared/EventBus";
+import { colord } from "colord";
 import { goldRateTracker } from "../src/client/hud/layers/lib/GoldRateTracker";
 import {
   type ColumnId,
@@ -37,6 +38,7 @@ function player(
     totalUnitLevels: () => tiles,
     isAlive: () => true,
     isOnSameTeam: () => false,
+    territoryColor: () => colord("#4a90d9"),
   } as unknown as PlayerView;
 }
 
@@ -71,7 +73,7 @@ describe("PlayerStats", () => {
     // Only selected stat tracks share definite spare space. Rank and name
     // never stretch; the empty last track only grows to a scrollbar.
     expect(content?.getAttribute("style")).toContain(
-      "grid-template-columns: 30px calc(var(--stats-name, 100px) - var(--stats-end-track, 0px)) auto auto auto minmax(var(--stats-end-track, 0px), max-content);",
+      "grid-template-columns: 30px calc(var(--stats-name, 100px) + var(--stats-chip, 0.75rem) - var(--stats-end-track, 0px)) auto auto auto minmax(var(--stats-end-track, 0px), max-content);",
     );
 
     playerStats.remove();
@@ -522,10 +524,34 @@ describe("PlayerStats rows", () => {
     const playerStats = await mount([player(long, 3)], null);
 
     const [row] = rows(playerStats);
-    const name = cell(row, "player")?.querySelector("span");
+    const name = cell(row, "player")?.querySelector("span[title]");
     expect(name?.getAttribute("title")).toBe(long);
     expect(name?.getAttribute("dir")).toBe("auto");
     expect(row.getAttribute("translate")).toBe("no");
+  });
+
+  it("shows each player's colour before their name", async () => {
+    const red = {
+      ...player("red", 90),
+      territoryColor: () => colord("#d94a4a"),
+    } as unknown as PlayerView;
+    const green = {
+      ...player("green", 10),
+      territoryColor: () => colord("#4ad94a"),
+    } as unknown as PlayerView;
+    const playerStats = await mount([red, green], null);
+
+    const chips = rows(playerStats).map((row) => {
+      const name = cell(row, "player");
+      const chip = name?.querySelector("[data-chip]");
+      // Before the name, and silent: the name says who it is.
+      expect(name?.firstElementChild).toBe(chip);
+      expect(chip?.getAttribute("aria-hidden")).toBe("true");
+      return colord((chip as HTMLElement).style.background).toHex();
+    });
+    expect(chips).toEqual(["#d94a4a", "#4ad94a"]);
+    // Only the name has one.
+    expect(playerStats.querySelectorAll("[data-chip]")).toHaveLength(2);
   });
 
   it("goes to a player when their row is clicked", async () => {
@@ -786,7 +812,7 @@ describe("PlayerStats clan column", () => {
     expect(
       playerStats.querySelector(".stats-table-content")?.getAttribute("style"),
     ).toContain(
-      "30px 80px calc(var(--stats-name, 100px) - var(--stats-end-track, 0px))",
+      "30px 80px calc(var(--stats-name, 100px) + var(--stats-chip, 0.75rem) - var(--stats-end-track, 0px))",
     );
   });
 
@@ -848,7 +874,7 @@ describe("PlayerStats clan column", () => {
     expect(
       playerStats.querySelector(".stats-table-content")?.getAttribute("style"),
     ).toContain(
-      "30px calc(var(--stats-name, 100px) - var(--stats-end-track, 0px))",
+      "30px calc(var(--stats-name, 100px) + var(--stats-chip, 0.75rem) - var(--stats-end-track, 0px))",
     );
     expect(playerStats.textContent).not.toContain("ABCDE");
   });
@@ -883,7 +909,7 @@ describe("PlayerStats clan column", () => {
     expect(
       playerStats.querySelector(".stats-table-content")?.getAttribute("style"),
     ).toContain(
-      "grid-template-columns: 30px 80px calc(var(--stats-name, 100px) - var(--stats-end-track, 0px)) minmax(var(--stats-end-track, 0px), max-content);",
+      "grid-template-columns: 30px 80px calc(var(--stats-name, 100px) + var(--stats-chip, 0.75rem) - var(--stats-end-track, 0px)) minmax(var(--stats-end-track, 0px), max-content);",
     );
     expect(
       [
@@ -934,6 +960,7 @@ describe("gold rate history", () => {
       piracyGold: () => 0,
       isAlive: () => alive,
       isOnSameTeam: () => false,
+      territoryColor: () => colord("#4a90d9"),
     } as unknown as PlayerView;
   }
 

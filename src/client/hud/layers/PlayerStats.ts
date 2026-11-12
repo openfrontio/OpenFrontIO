@@ -35,6 +35,7 @@ export class PlayerStats extends StatsTable {
         key: player.id(),
         name: player.name(),
         clanTag: player.clanTag(),
+        color: player.territoryColor().toRgbString(),
         values: columnValues(player, game, columns),
         emphasized:
           myPlayer !== null &&

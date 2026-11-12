@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { GameMode } from "@openfront/engine-api/game/GameTypes";
 import { EventBus } from "@openfront/shared/EventBus";
+import { colord } from "colord";
 import type { ColumnPicker } from "../src/client/hud/layers/ColumnPicker";
 import { GameLeftSidebar } from "../src/client/hud/layers/GameLeftSidebar";
 import type { PlayerStats } from "../src/client/hud/layers/PlayerStats";
@@ -30,6 +31,7 @@ function ffaGame(): GameView {
     isAlive: () => true,
     isOnSameTeam: () => false,
     team: () => null,
+    territoryColor: () => colord("#4a90d9"),
   } as unknown as PlayerView;
   return {
     config: () => ({

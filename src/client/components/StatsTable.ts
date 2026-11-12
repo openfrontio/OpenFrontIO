@@ -18,6 +18,8 @@ export interface StatsRow {
   key: string;
   name: string;
   clanTag?: string | null;
+  /** The colour shown by the name, as a CSS colour. */
+  color?: string;
   values: ReadonlyMap<ColumnId, number>;
   emphasized?: boolean;
   pinned?: boolean;
@@ -54,9 +56,10 @@ type RowState = "me" | "mate" | "other";
 
 // The table has no surface of its own: it sits on the panel. Scrollbars keep
 // a fixed colour so they still show over the map at 0% HUD opacity.
-// Names get more room on large windows, where it costs nothing.
+// Names get more room on large windows, where it costs nothing. The narrowest
+// phones drop the colour chips and their room.
 const TABLE =
-  "relative mt-1 text-xs md:text-[13px] text-white 2xl:[--stats-name:10rem]";
+  "relative mt-1 text-xs md:text-[13px] text-white 2xl:[--stats-name:10rem] max-[360px]:[--stats-chip:0px]";
 const SCROLLBAR =
   "[scrollbar-width:thin] [scrollbar-color:rgb(255_255_255_/_0.35)_transparent]";
 const HEADER = "h-5.5 md:h-6 lg:h-6.5 border-b border-white/15 font-bold";
@@ -132,6 +135,10 @@ const CELL_SIZE: Partial<Record<ColumnId, string>> = {
 };
 // In other players' rows; yours and your teammates' are white throughout.
 const NAME_TONE = "font-medium text-white";
+// The player's colour before the name. The dark hairline keeps a pale colour
+// apart from the map when the panel is see-through.
+const CHIP =
+  "me-1 size-2 shrink-0 rounded-xs inset-ring inset-ring-black/40 max-[360px]:hidden";
 const CELL_TONE: Partial<Record<ColumnId, string>> = {
   rank: "text-white/55",
   player: NAME_TONE,
@@ -435,6 +442,7 @@ export abstract class StatsTable extends LitElement {
     text: string,
     value: number,
     state: RowState,
+    color: string | undefined,
   ) {
     // A player without a clan shows a dash. Zeros recede, but not the Type
     // column's: there 0 reads "Player".
@@ -460,6 +468,16 @@ export abstract class StatsTable extends LitElement {
         ?data-rule=${index > 0}
         ?data-zero=${zero}
       >
+        ${
+          isName && color !== undefined
+            ? html`<span
+                class=${CHIP}
+                style="background: ${color}"
+                aria-hidden="true"
+                data-chip
+              ></span>`
+            : nothing
+        }
         <span
           class="min-w-0 truncate"
           dir=${isName ? "auto" : nothing}
@@ -505,6 +523,7 @@ export abstract class StatsTable extends LitElement {
               column.cell({ ...row, position, value }, game),
               value,
               state,
+              row.color,
             );
           },
         )}

@@ -128,10 +128,12 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "player",
     labelKey: "leaderboard.player",
     headerVisual: { kind: "icon", icon: "player" },
-    // The table widens it on large windows (--stats-name). It gives up the
-    // room a host leaves at the table's end (--stats-end-track), so the
+    // The table widens it on large windows (--stats-name) and adds the
+    // colour chip's room (--stats-chip), so names keep theirs. It gives up
+    // the room a host leaves at the table's end (--stats-end-track), so the
     // table keeps its width.
-    width: "calc(var(--stats-name, 100px) - var(--stats-end-track, 0px))",
+    width:
+      "calc(var(--stats-name, 100px) + var(--stats-chip, 0.75rem) - var(--stats-end-track, 0px))",
     widest: () => [],
     align: "start",
     headerAlign: "center",
