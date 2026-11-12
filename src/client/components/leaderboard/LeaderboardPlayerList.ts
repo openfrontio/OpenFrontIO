@@ -1053,9 +1053,13 @@ export class LeaderboardPlayerList extends LitElement {
   // One emblem per rank, lowest on the left. Names don't fit on a phone, so
   // there the selected rank is named on its own line underneath.
   private renderRankTabs() {
-    const emblem = (rank: FfaTierBase, sizeClass: string) => html`
+    const emblem = (rank: FfaTierBase | "all", sizeClass: string) => html`
       <img
-        src=${assetUrl(`images/ffa-tiers/compact/${rank}.svg`)}
+        src=${assetUrl(
+          rank === "all"
+            ? "images/ffa-tiers/ofm-trophy.png"
+            : `images/ffa-tiers/compact/${rank}.svg`,
+        )}
         alt=""
         class=${sizeClass}
       />
@@ -1105,7 +1109,7 @@ export class LeaderboardPlayerList extends LitElement {
             tabindex="0"
             aria-label=${translateText("ffa_rating.all_ranks")}
             title=${translateText("ffa_rating.all_ranks")}
-            class="col-span-8 justify-self-center mt-1 flex flex-col items-center justify-center gap-1 w-36 py-1.5 sm:py-2 rounded-lg border transition-colors ${
+            class="col-span-8 justify-self-center mt-1 flex flex-col items-center justify-center gap-1 w-[calc((100%_-_14px)/8)] sm:w-[calc((100%_-_28px)/8)] py-1.5 sm:py-2 rounded-lg border transition-colors ${
               this.ffaAllRanks
                 ? "border-blue-400 bg-blue-500/25 text-white"
                 : "border-white/10 bg-white/5 text-white/50 opacity-70 hover:opacity-100 hover:bg-white/10"
@@ -1114,9 +1118,7 @@ export class LeaderboardPlayerList extends LitElement {
             @keydown=${(event: KeyboardEvent) =>
               this.handleRankTabKey(event, "all" as never)}
           >
-            <span class="text-base sm:text-lg leading-none" aria-hidden="true"
-              >🏆</span
-            >
+            ${emblem("all", "w-5 h-5 sm:w-7 sm:h-7 object-contain")}
             <span class="w-full truncate text-center text-[10px] font-bold"
               >${translateText("ffa_rating.all_ranks")}</span
             >
