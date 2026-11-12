@@ -2,7 +2,7 @@ import { PlayerType, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import type { OfIconName } from "../../../components/OfIcon";
 import type { ColumnId, StatsTableKind } from "../../../StatsConstants";
-import { formatPercentage, translateText } from "../../../Utils";
+import { translateText } from "../../../Utils";
 import type { GameView, PlayerView } from "../../../view";
 import { goldRateTracker } from "./GoldRateTracker";
 
@@ -208,7 +208,10 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     value: (player) => player.numTilesOwned(),
     cell: (row, game) => {
       const validTiles = game.numLandTiles() - game.numTilesWithFallout();
-      return formatPercentage(validTiles > 0 ? row.value / validTiles : 0);
+      const percent = validTiles > 0 ? (row.value / validTiles) * 100 : 0;
+      // Late in a big game most players hold under 1%: two decimals tell
+      // them apart. From 9.995% they would round to a wider "10.00%".
+      return `${percent.toFixed(percent < 9.995 ? 2 : 1)}%`;
     },
   }),
   defineColumn({
