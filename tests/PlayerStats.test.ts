@@ -1487,3 +1487,305 @@ describe("troop gauge", () => {
     expect(await gauges(teamStats)).toEqual([]);
   });
 });
+
+describe("PlayerStats glide", () => {
+  // Land by player, and the game's clock: a refresh is one second later.
+  const land = new Map<string, number>();
+  let ticks = 600;
+  const cancel = vi.fn();
+  const animate = vi.fn(() => ({
+    finished: new Promise<void>(() => {}),
+    cancel,
+  }));
+
+  function owner(id: string): PlayerView {
+    return {
+      ...player(id, 0),
+      numTilesOwned: () => land.get(id) ?? 0,
+      // The reverse of land, so a sort by gold turns the list over.
+      gold: () => BigInt(1000 - (land.get(id) ?? 0)),
+    } as unknown as PlayerView;
+  }
+
+  async function mount(lands: number[], me?: string): Promise<PlayerStats> {
+    const players = lands.map((tiles, i) => {
+      land.set(`p${i + 1}`, tiles);
+      return owner(`p${i + 1}`);
+    });
+    const game = {
+      myPlayer: () => players.find((player) => player.id() === me) ?? null,
+      playerViews: () => players,
+      config: () => ({ maxTroops: () => 100 }),
+      ticks: () => ticks,
+      numLandTiles: () => 1000,
+      numTilesWithFallout: () => 0,
+    } as unknown as GameView;
+    const playerStats = new PlayerStats();
+    playerStats.game = game;
+    playerStats.visible = true;
+    document.body.append(playerStats);
+    playerStats.refresh();
+    await playerStats.updateComplete;
+    return playerStats;
+  }
+
+  async function refreshWith(
+    playerStats: PlayerStats,
+    lands: Record<string, number>,
+  ) {
+    for (const [id, tiles] of Object.entries(lands)) land.set(id, tiles);
+    ticks += 10;
+    playerStats.refresh();
+    await playerStats.updateComplete;
+  }
+
+  // Each row asked to glide: its player and where it starts from.
+  function glides() {
+    return animate.mock.calls.map((call, i) => {
+      const row = animate.mock.contexts[i] as HTMLElement;
+      const [keyframes] = call as unknown as [Keyframe[]];
+      return [
+        row.querySelector('[data-column="player"]')?.textContent?.trim(),
+        keyframes[0].transform,
+      ];
+    });
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+    land.clear();
+    ticks = 600;
+    animate.mockClear();
+    cancel.mockClear();
+    Object.defineProperty(Element.prototype, "animate", {
+      value: animate,
+      configurable: true,
+      writable: true,
+    });
+  });
+
+  afterEach(() => {
+    delete (Element.prototype as { animate?: unknown }).animate;
+    vi.unstubAllGlobals();
+    document.body.innerHTML = "";
+  });
+
+  it("glides the two rows of an overtake by one row each, the climber on top", async () => {
+    const playerStats = await mount([50, 40, 30, 20, 10]);
+
+    await refreshWith(playerStats, { p3: 45 });
+
+    expect(glides()).toEqual([
+      ["p3", "translateY(24px)"],
+      ["p2", "translateY(-24px)"],
+    ]);
+    const climber = animate.mock.contexts[0] as HTMLElement;
+    expect(climber.hasAttribute("data-climbing")).toBe(true);
+  });
+
+  it("snaps when ten rows change place at once", async () => {
+    const playerStats = await mount([
+      120, 110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10,
+    ]);
+
+    // The first ten turn over.
+    await refreshWith(
+      playerStats,
+      Object.fromEntries(
+        Array.from({ length: 10 }, (_, i) => [`p${i + 1}`, 30 + i * 10]),
+      ),
+    );
+
+    expect(animate).not.toHaveBeenCalled();
+  });
+
+  it("glides an overtake in view while rows drawn below the view trade places", async () => {
+    // The list shows rows 1 to 8 and draws four more below them.
+    const playerStats = await mount([
+      140, 130, 120, 110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10,
+    ]);
+
+    // p3 passes p2 in view; rows 9 to 12, out of view, trade places.
+    await refreshWith(playerStats, { p3: 135, p9: 45, p11: 25 });
+
+    expect(glides()).toEqual([
+      ["p3", "translateY(24px)"],
+      ["p2", "translateY(-24px)"],
+      ["p10", "translateY(24px)"],
+      ["p9", "translateY(-24px)"],
+      ["p12", "translateY(24px)"],
+      ["p11", "translateY(-24px)"],
+    ]);
+  });
+
+  it("snaps on a sort click", async () => {
+    const playerStats = await mount([50, 40, 30, 20, 10]);
+
+    playerStats
+      .querySelector<HTMLElement>(
+        '[role="columnheader"][data-column="gold"] button',
+      )
+      ?.click();
+    await playerStats.updateComplete;
+
+    expect(animate).not.toHaveBeenCalled();
+  });
+
+  it("keeps a row's climbing mark until its latest glide ends", async () => {
+    const ends: (() => void)[] = [];
+    for (let i = 0; i < 4; i++) {
+      animate.mockImplementationOnce(() => ({
+        finished: new Promise<void>((resolve) => ends.push(resolve)),
+        cancel,
+      }));
+    }
+    const playerStats = await mount([50, 40, 30, 20, 10]);
+    const climbing = () =>
+      [...playerStats.querySelectorAll("[data-climbing]")].map((row) =>
+        row.querySelector('[data-column="player"]')?.textContent?.trim(),
+      );
+
+    // p3 passes p2, and p2 passes it back before those glides have ended.
+    await refreshWith(playerStats, { p3: 45 });
+    expect(climbing()).toEqual(["p3"]);
+    await refreshWith(playerStats, { p2: 47 });
+    expect(climbing()).toEqual(["p2"]);
+
+    ends[0]();
+    ends[1]();
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(climbing()).toEqual(["p2"]);
+
+    ends[2]();
+    ends[3]();
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(climbing()).toEqual([]);
+  });
+
+  it("stops the glides still running on a sort click", async () => {
+    const playerStats = await mount([50, 40, 30, 20, 10]);
+    await refreshWith(playerStats, { p3: 45 });
+    expect(animate).toHaveBeenCalledTimes(2);
+    expect(cancel).not.toHaveBeenCalled();
+
+    playerStats
+      .querySelector<HTMLElement>(
+        '[role="columnheader"][data-column="gold"] button',
+      )
+      ?.click();
+    await playerStats.updateComplete;
+
+    expect(cancel).toHaveBeenCalledTimes(2);
+    expect(animate).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves the glides running when the next refresh keeps the sort", async () => {
+    const playerStats = await mount([50, 40, 30, 20, 10]);
+    await refreshWith(playerStats, { p3: 45 });
+    await refreshWith(playerStats, { p5: 25 });
+
+    expect(animate).toHaveBeenCalledTimes(4);
+    expect(cancel).not.toHaveBeenCalled();
+  });
+
+  it("snaps when the clock goes back, as on a replay seek", async () => {
+    const playerStats = await mount([50, 40, 30, 20, 10]);
+
+    ticks -= 100;
+    await refreshWith(playerStats, { p3: 45 });
+
+    expect(animate).not.toHaveBeenCalled();
+  });
+
+  it("snaps when the clock jumps ahead, as on a replay seek", async () => {
+    const playerStats = await mount([50, 40, 30, 20, 10]);
+
+    // Five minutes later: the rows are where they are, they did not move.
+    ticks += 3000;
+    await refreshWith(playerStats, { p3: 45 });
+
+    expect(animate).not.toHaveBeenCalled();
+  });
+
+  it("glides in a replay played 32 times faster, and snaps when it seeks", async () => {
+    const playerStats = await mount([50, 40, 30, 20, 10]);
+    playerStats.speed = 32;
+
+    // One second on is 32 seconds of play.
+    ticks += 310;
+    await refreshWith(playerStats, { p3: 45 });
+    expect(glides()).toEqual([
+      ["p3", "translateY(24px)"],
+      ["p2", "translateY(-24px)"],
+    ]);
+
+    // Sought twenty minutes on.
+    animate.mockClear();
+    ticks += 12_000;
+    await refreshWith(playerStats, { p2: 47 });
+    expect(animate).not.toHaveBeenCalled();
+  });
+
+  it("snaps after a replay seek shorter than a jump at 32x, then glides again", async () => {
+    const playerStats = await mount([50, 40, 30, 20, 10]);
+    playerStats.speed = 32;
+
+    // Sought ten minutes on: less than a jump at this speed, but the viewer
+    // says it sought.
+    playerStats.seeked();
+    ticks += 5990;
+    await refreshWith(playerStats, { p3: 45 });
+    expect(animate).not.toHaveBeenCalled();
+
+    // Playing on from there.
+    ticks += 310;
+    await refreshWith(playerStats, { p2: 47 });
+    expect(glides()).toEqual([
+      ["p2", "translateY(24px)"],
+      ["p3", "translateY(-24px)"],
+    ]);
+  });
+
+  it("snaps on the first refresh after the table opens again", async () => {
+    const playerStats = await mount([50, 40, 30, 20, 10]);
+    playerStats.visible = false;
+    await playerStats.updateComplete;
+
+    land.set("p3", 45);
+    playerStats.visible = true;
+    await playerStats.updateComplete;
+    await refreshWith(playerStats, {});
+
+    expect(animate).not.toHaveBeenCalled();
+  });
+
+  it("snaps your neighbours while they are held at the edge with you", async () => {
+    // You rank 10th of 12 and the list shows eight rows: ranks 9 to 11 are
+    // held at its bottom.
+    const playerStats = await mount(
+      [120, 110, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10],
+      "p10",
+    );
+    expect(playerStats.querySelectorAll("[data-near]")).toHaveLength(2);
+
+    // Your neighbours trade places around you.
+    await refreshWith(playerStats, { p9: 25, p11: 35 });
+
+    expect(playerStats.querySelector("[data-gap]")).not.toBeNull();
+    expect(animate).not.toHaveBeenCalled();
+  });
+
+  it("does not move under reduced motion", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query.includes("reduce"),
+    }));
+    const playerStats = await mount([50, 40, 30, 20, 10]);
+
+    await refreshWith(playerStats, { p3: 45 });
+
+    expect(animate).not.toHaveBeenCalled();
+  });
+});
