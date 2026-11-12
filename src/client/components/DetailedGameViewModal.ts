@@ -8,6 +8,7 @@ import { getDesktopSessionState } from "../Auth";
 import {
   getDesktopUpdateState,
   isDesktopShell,
+  isSteamShell,
   type DesktopSessionState,
   type DesktopUpdateState,
 } from "../DesktopShell";
@@ -214,13 +215,12 @@ export class DetailedGameViewModal extends BaseModal {
     // went out.
     const last = lastUserMeResponse();
     if (last !== null) this.applyUserMe(last.response);
-    if (isDesktopShell()) {
-      // Seed BOTH from their current values -- this modal mounts well after
-      // the update bridge's synchronous replay has already been dispatched
-      // and lost, so without the seed its join() gate sees null (OPE-396).
-      this.desktopUpdateState = getDesktopUpdateState();
-      this.desktopSessionState = getDesktopSessionState();
-    }
+    // Seed BOTH from their current values -- this modal mounts well after
+    // the update bridge's synchronous replay has already been dispatched and
+    // lost, so without the seed its join() gate sees null (OPE-396). The
+    // session is the Steam sign-in, so only Steam seeds it.
+    if (isDesktopShell()) this.desktopUpdateState = getDesktopUpdateState();
+    if (isSteamShell()) this.desktopSessionState = getDesktopSessionState();
     document.addEventListener(
       "desktop-session-state",
       this.onDesktopSessionState,

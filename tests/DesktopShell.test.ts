@@ -6,8 +6,44 @@ import {
   desktopQuit,
   desktopSteamLocale,
   desktopVersion,
+  isDesktopShell,
+  isSteamShell,
   requestDesktopQuit,
 } from "../src/client/DesktopShell";
+
+describe("isDesktopShell / isSteamShell", () => {
+  afterEach(() => {
+    window.openfrontDesktop = undefined;
+  });
+
+  it("are both false on the web, with no bridge present", () => {
+    window.openfrontDesktop = undefined;
+    expect(isDesktopShell()).toBe(false);
+    expect(isSteamShell()).toBe(false);
+  });
+
+  // The Steam preload exposes `steam` whether or not Steam itself is running,
+  // so on the Steam build the two predicates always agree.
+  it("are both true in the Steam shell", () => {
+    window.openfrontDesktop = {
+      steam: {},
+      shell: { version: "0.2.0", api: 7 },
+    };
+    expect(isDesktopShell()).toBe(true);
+    expect(isSteamShell()).toBe(true);
+  });
+
+  // The Android shell's bridge carries the shell and updater, but no Steam.
+  it("is a desktop shell but not a Steam shell on Android", () => {
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      shell: { version: "1.0.0", api: 7, platform: "android" },
+      version: () => Promise.resolve("1.0.0"),
+      update: {},
+    };
+    expect(isDesktopShell()).toBe(true);
+    expect(isSteamShell()).toBe(false);
+  });
+});
 
 describe("composeVersionDisplay", () => {
   it("appends the Steam shell version as subtext", () => {

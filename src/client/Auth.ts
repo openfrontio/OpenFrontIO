@@ -6,7 +6,7 @@ import { z } from "zod";
 import { getApiBase, getAudience } from "./Api";
 import { ClientEnv } from "./ClientEnv";
 import type { DesktopSessionState, SessionFailureKind } from "./DesktopShell";
-import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
+import { desktopLinkGate, isSteamShell } from "./DesktopShell";
 import { gamePortal, type GamePortalName } from "./GamePortal";
 import { showInGameAlert } from "./InGameModal";
 import type { SteamTicketResult } from "./SteamSDK";
@@ -65,9 +65,10 @@ function setSessionState(state: DesktopSessionState): void {
 // server refuses that as `steam_has_progress`, and the website says so);
 // that is the same rule the first-launch gate lives under.
 //
-// Returns true whenever this is the desktop shell at all -- the caller must
-// not build the redirect there under any circumstances -- and false only on
-// the web, where the redirect is the right thing.
+// Returns true whenever this is the Steam shell at all -- the caller must
+// not build the redirect there under any circumstances -- and false on the
+// web and in the Android shell, which is served at the site's own origin, so
+// the redirect comes back to it as it does in a browser.
 //
 // A shell that exists but has no callable showLinkGate is a real case, not a
 // hypothetical: this client updates at runtime while the shell ships in the
@@ -86,7 +87,7 @@ function startDesktopLinkFlow(): boolean {
     });
     return true;
   }
-  if (isDesktopShell()) {
+  if (isSteamShell()) {
     void showInGameAlert(
       translateText("account_modal.desktop_login_needs_update"),
     );
@@ -148,7 +149,7 @@ function desktopWebAccountSettingsUrl(): string {
 // the same button runs the real OAuth flow. The player signs in there with the
 // account they use here; the copy on the button says as much.
 export async function linkGoogle(): Promise<boolean> {
-  if (isDesktopShell()) {
+  if (isSteamShell()) {
     // Routed to the system browser by the shell's window-open policy
     // (openfront-desktop's navigationPolicy.ts), like every https link.
     window.open(

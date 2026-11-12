@@ -363,7 +363,7 @@ describe("Steam login", () => {
   });
 
   it("restores a session after offline startup and a failed Retry, without reloading", async () => {
-    window.openfrontDesktop = {};
+    window.openfrontDesktop = { steam: {} };
     vi.spyOn(steamSDK, "isOnSteam").mockReturnValue(true);
     const getTicket = vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
       ok: true,
