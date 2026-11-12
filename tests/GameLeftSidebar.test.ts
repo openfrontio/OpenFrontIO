@@ -963,6 +963,48 @@ describe("GameLeftSidebar", () => {
     sidebar.remove();
   });
 
+  it("gives the column menu the game ID for its footer, however it is opened", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+    sidebar
+      .querySelector<HTMLElement>('[data-sidebar-button="players"]')
+      ?.click();
+    await sidebar.updateComplete;
+    const columns = sidebar.querySelector<HTMLElement>(
+      '[data-sidebar-button="columns"]',
+    );
+    const picker = sidebar.querySelector("column-picker") as ColumnPicker;
+    const footer = () => document.body.querySelector("[data-menu-game-id]");
+
+    // Both copies are in the page: which one shows is the stylesheet's call,
+    // so it holds when the screen turns with the menu open.
+    columns?.click();
+    await picker.updateComplete;
+    expect(footer()?.querySelector("[data-game-id]")?.textContent).toContain(
+      "test-game",
+    );
+    columns?.click();
+    await picker.updateComplete;
+    expect(footer()).toBeNull();
+
+    sidebar.querySelector("player-stats")?.dispatchEvent(
+      new CustomEvent("columns-menu", {
+        bubbles: true,
+        detail: { x: 10, y: 10 },
+      }),
+    );
+    await picker.updateComplete;
+    expect(footer()?.querySelector("[data-game-id]")?.textContent).toContain(
+      "test-game",
+    );
+
+    sidebar.remove();
+  });
+
   it("shows your team during the spawn phase of a team game", async () => {
     let spawning = true;
     const sidebar = new GameLeftSidebar();

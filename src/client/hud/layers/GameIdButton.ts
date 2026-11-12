@@ -18,11 +18,11 @@ const COPIED =
  *  as long as its animation runs, so the button holds no state of its own.
  *  The line after it says the same to a screen reader, which sees no change
  *  in the button. */
-export function gameIdButton(id: string): TemplateResult {
+export function gameIdButton(id: string, className = ""): TemplateResult {
   return html`
     <button
       type="button"
-      class=${BUTTON}
+      class="${BUTTON} ${className}"
       data-game-id
       translate="no"
       title=${translateText("common.click_to_copy")}
