@@ -1,6 +1,7 @@
 import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
+import { TICKS_PER_SECOND } from "../hud/GameTicks";
 import { keepPressKeysFromGame } from "../hud/HudKeys";
 import { COLUMN_MEANING } from "../hud/layers/ColumnTooltip";
 import "./OfIcon";
@@ -11,9 +12,11 @@ import {
 } from "../hud/layers/lib/StatsColumns";
 import { type ColumnId, type StatsTableKind } from "../StatsConstants";
 import { UserSettings } from "../UserSettings";
+import { prefersReducedMotion } from "../utilities/ReducedMotion";
 import { translateText } from "../Utils";
 import type { GameView } from "../view";
 import type { OfIconName } from "./OfIcon";
+import { RefreshClock } from "./StatsTableHistory";
 
 /** What a player is to you, shown after their name. */
 export type RowMark = "attack" | "traitor" | "ally" | "embargo" | "offline";
@@ -63,6 +66,19 @@ interface HeldBlock {
 const FALLBACK_ROW_HEIGHT_PX = 24;
 const FALLBACK_VIEWPORT_HEIGHT_PX = 180;
 const OVERSCAN_ROWS = 4;
+// Rows glide to a new rank. More rows in view than this changing place in
+// one refresh is a reshuffle (early in a game most rows trade places every
+// second): they snap. A row from further away glides the last few rows.
+const GLIDE_MAX_ROWS = 4;
+const GLIDE_MAX_DISTANCE = 3;
+const GLIDE: KeyframeAnimationOptions = {
+  duration: 220,
+  easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+};
+// A longer gap between two refreshes, at normal speed, is a jump of the clock
+// (a tab that slept; a replay says when it seeks): the rows did not move
+// there, they are there.
+const CLOCK_JUMP_TICKS = 30 * TICKS_PER_SECOND;
 // What each table is called, by a screen reader and in the column menu.
 export const TABLE_NAME: Record<StatsTableKind, string> = {
   player: "leaderboard.players_table",
@@ -134,6 +150,10 @@ const ROW_STATE: Record<RowState, string> = {
   mate: "font-bold text-white",
   other: "",
 };
+// A row that climbs is drawn over the rows it passes while it glides, but
+// under your row and the rows held with it (HOLD), which keep their z.
+const CLIMBING = "data-climbing:z-1 data-climbing:bg-hud-panel";
+const HELD_CLIMBING = "data-climbing:bg-hud-panel";
 // Only rows with a click get a hover, and only for a mouse: after a tap it
 // would stay lit.
 const ROW_HOVER: Record<RowState, string> = {
@@ -146,7 +166,7 @@ const ME_EDGE = "border-s-2 border-aquarius";
 // When you rank below the rows the list shows, the rows either side of
 // yours are held at the edge with it. Each row of that block sticks at its
 // own place in it, so held they rest one against the other, in order.
-const HOLD = "sticky z-1";
+const HOLD = "sticky z-2";
 const HOLD_TOP = [
   "top-0",
   "top-(--stats-row)",
@@ -315,6 +335,9 @@ function renderGauge(fill: number) {
 
 export abstract class StatsTable extends LitElement {
   public game: GameView | null = null;
+  // How many times faster than normal the game plays: a replay's playback
+  // speed. The table refreshes once a second whatever the speed.
+  public speed = 1;
 
   @property({ type: Boolean }) visible = false;
   // Caps the list at five rows, so a second table fits under it.
@@ -349,6 +372,18 @@ export abstract class StatsTable extends LitElement {
   private rowHeightPx = FALLBACK_ROW_HEIGHT_PX;
   private viewportHeightPx = FALLBACK_VIEWPORT_HEIGHT_PX;
 
+  private readonly clock = new RefreshClock(CLOCK_JUMP_TICKS);
+  // Each row's index at the last refresh, and the rows that changed place
+  // since, for updated() to glide.
+  private lastIndex = new Map<string, number>();
+  private moves = new Map<string, { from: number; to: number }>();
+  // The glides still running. A row keeps its element when the list is put
+  // in another order, and would carry its glide there.
+  private readonly glides = new Set<Animation>();
+  // Each row's latest glide: an older one that ends leaves the row's
+  // climbing mark to it.
+  private readonly latestGlide = new WeakMap<Element, Animation>();
+
   createRenderRoot() {
     return this;
   }
@@ -361,6 +396,8 @@ export abstract class StatsTable extends LitElement {
     if (tip && !this.visibleColumns().some((c) => c.id === tip.column.id)) {
       this.tip = null;
     }
+    // Opened again, it has no order of before to glide from.
+    if (changed.has("visible") && !this.visible) this.lastIndex.clear();
     if (changed.has("visible") && this.visible) {
       // The scroll container is recreated at scroll offset 0 when the table
       // was hidden, so the remembered offset would misplace the window.
@@ -385,6 +422,77 @@ export abstract class StatsTable extends LitElement {
       changed = true;
     }
     if (changed) this.requestUpdate();
+    this.glideMovedRows(scroller);
+  }
+
+  // Rows that changed place glide from where they were. Your row and its
+  // neighbours snap when they are held at an edge: they are not where their
+  // index puts them.
+  private glideMovedRows(scroller: HTMLElement) {
+    const moves = this.moves;
+    if (moves.size === 0) return;
+    this.moves = new Map();
+    if (!("animate" in scroller) || prefersReducedMotion()) return;
+    const moved = [
+      ...scroller.querySelectorAll<HTMLElement>(".stats-table-row"),
+    ].flatMap((row) => {
+      const move = moves.get(row.dataset.key ?? "");
+      return move === undefined ? [] : [{ row, ...move }];
+    });
+    // Counted in view, with the row partly above it: the rows drawn beyond
+    // it trade places all game long, unseen.
+    const top = this.scrollOffsetPx - this.rowHeightPx;
+    const bottom = this.scrollOffsetPx + this.viewportHeightPx;
+    const seen = moved.filter(({ to }) => {
+      const at = to * this.rowHeightPx;
+      return at >= top && at < bottom;
+    });
+    if (seen.length > GLIDE_MAX_ROWS) return;
+    const held =
+      this.heldBlock(this.rows.findIndex((row) => row.pinned)).edge !== null;
+    for (const { row, from, to } of moved) {
+      if (
+        (row.hasAttribute("data-me") || row.hasAttribute("data-near")) &&
+        (held || this.outOfView(from) || this.outOfView(to))
+      ) {
+        continue;
+      }
+      const rows = Math.max(
+        -GLIDE_MAX_DISTANCE,
+        Math.min(GLIDE_MAX_DISTANCE, from - to),
+      );
+      const glide = row.animate(
+        [
+          { transform: `translateY(${rows * this.rowHeightPx}px)` },
+          { transform: "none" },
+        ],
+        GLIDE,
+      );
+      row.toggleAttribute("data-climbing", to < from);
+      this.glides.add(glide);
+      this.latestGlide.set(row, glide);
+      // Ended or stopped: a stopped glide rejects.
+      const done = () => {
+        this.glides.delete(glide);
+        if (this.latestGlide.get(row) === glide) {
+          row.removeAttribute("data-climbing");
+        }
+      };
+      void glide.finished.then(done, done);
+    }
+  }
+
+  private stopGlides() {
+    for (const glide of this.glides) glide.cancel();
+    this.glides.clear();
+  }
+
+  private outOfView(index: number) {
+    const top = index * this.rowHeightPx;
+    return (
+      top < this.scrollOffsetPx ||
+      top + this.rowHeightPx > this.scrollOffsetPx + this.viewportHeightPx
+    );
   }
 
   private onScroll(event: Event) {
@@ -393,6 +501,14 @@ export abstract class StatsTable extends LitElement {
 
   refresh() {
     if (this.visible) this.updateStats();
+  }
+
+  /**
+   * The game jumped to another tick (a replay seek): the next refresh does
+   * not follow on, however short the jump.
+   */
+  seeked() {
+    this.lastIndex.clear();
   }
 
   /**
@@ -502,6 +618,7 @@ export abstract class StatsTable extends LitElement {
               direction *
               ((a.values.get(sortKey) ?? 0) - (b.values.get(sortKey) ?? 0)),
           );
+    this.noteMoves(this.game);
     this.requestUpdate();
   }
 
@@ -527,6 +644,28 @@ export abstract class StatsTable extends LitElement {
       edge = "bottom";
     }
     return { from, to, edge };
+  }
+
+  // Notes the rows whose index changed since the last refresh. None when the
+  // list does not follow on from it: the old order means nothing then.
+  private noteMoves(game: GameView) {
+    const comparable = this.clock.next(
+      `${this.sortKey} ${this.sortOrder}`,
+      game.ticks(),
+      this.speed,
+    );
+    const index = new Map<string, number>();
+    this.moves = new Map();
+    // The rows are about to be drawn in an order the glides know nothing of.
+    if (!comparable) this.stopGlides();
+    this.rows.forEach((row, to) => {
+      index.set(row.key, to);
+      const from = this.lastIndex.get(row.key);
+      if (comparable && from !== undefined && from !== to) {
+        this.moves.set(row.key, { from, to });
+      }
+    });
+    this.lastIndex = index;
   }
 
   private renderHeaderCell(column: ColumnDef, index: number) {
@@ -725,7 +864,9 @@ export abstract class StatsTable extends LitElement {
     // fit it, so the bar never covers the last column.
     return html`
       <div
-        class="stats-table-row grid col-span-full ${ROW} ${ROW_STATE[state]} ${
+        class="stats-table-row grid col-span-full ${ROW} ${
+          held ? HELD_CLIMBING : CLIMBING
+        } ${ROW_STATE[state]} ${
           held
             ? `${HOLD} ${HOLD_TOP[index - block.from]} ${
                 HOLD_BOTTOM[block.to - 1 - index]
@@ -740,6 +881,7 @@ export abstract class StatsTable extends LitElement {
         role="row"
         aria-rowindex=${position + 1}
         translate="no"
+        data-key=${row.key}
         ?data-me=${state === "me"}
         ?data-mate=${state === "mate"}
         ?data-near=${near}
