@@ -1,4 +1,10 @@
-import { html, LitElement, nothing, render as litRender } from "lit";
+import {
+  html,
+  LitElement,
+  nothing,
+  render as litRender,
+  type PropertyValues,
+} from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import "../../components/OfIcon";
@@ -83,8 +89,9 @@ type Anchor = HTMLElement | { x: number; y: number };
 /**
  * The menu that chooses which stat columns each table shows, one section per
  * table in `tables`. It draws nothing in place: the host opens it from its
- * own button or from a right-click on a table's header. A tick is stored
- * here, then `columns-changed` tells the host to refresh its tables.
+ * own button, which it marks `data-column-menu-button`, or from a right-click
+ * on a table's header. A tick is stored here, then `columns-changed` tells
+ * the host to refresh its tables.
  */
 @customElement("column-picker")
 export class ColumnPicker extends LitElement {
@@ -92,6 +99,17 @@ export class ColumnPicker extends LitElement {
 
   @state() private open = false;
   private anchor: Anchor | null = null;
+  // The host's button, lit and read as expanded while the menu is up,
+  // whether it or a header opened it.
+  private menuButton: HTMLElement | null = null;
+  private returnFocus: HTMLElement | null = null;
+  // The header row `returnFocus` is in, if any: unticking its column in the
+  // menu takes that header away.
+  private returnRow: Element | null = null;
+  // A press on a header just closed the menu. Until it is released it may
+  // still bring a context menu (a Ctrl+click on a Mac, a long press), which
+  // must not open the menu again.
+  private closedByHeaderPress = false;
   private portal: HTMLDivElement | null = null;
   private readonly userSettings = new UserSettings();
 
@@ -99,17 +117,48 @@ export class ColumnPicker extends LitElement {
     return this; // light DOM for Tailwind
   }
 
-  private onDocumentClick = (e: MouseEvent) => {
+  // Listened to on the press, and in the capture phase: the menu goes as the
+  // map or anything else is touched, whatever their own handlers stop.
+  private onDocumentPointerDown = (e: PointerEvent) => {
+    this.closedByHeaderPress = false;
     const target = e.target as Node;
-    // The button the menu came from toggles it itself.
-    const opener = this.anchor instanceof HTMLElement ? this.anchor : null;
-    if (
-      this.open &&
-      !this.portal?.contains(target) &&
-      !opener?.contains(target)
-    ) {
+    if (!this.open || this.portal?.contains(target)) return;
+    // The menu's button and a right-click on a header toggle it themselves,
+    // wherever it was opened from.
+    const pressed = target instanceof Element ? target : null;
+    if (pressed?.closest("[data-column-menu-button]")) return;
+    const onHeader =
+      pressed !== null && pressed.closest(".stats-table-header") !== null;
+    if (e.button === 2 && onHeader) {
+      // The header would take focus, and the menu would close on losing it
+      // before the right-click could.
+      e.preventDefault();
+      return;
+    }
+    this.closedByHeaderPress = onHeader;
+    this.close();
+  };
+
+  // Once the press is over, a context menu is no longer its own: the keyboard
+  // can ask for one.
+  private onDocumentPointerUp = () => {
+    this.closedByHeaderPress = false;
+  };
+
+  // Tab out of the menu closes it. A press on its padding or a name focuses
+  // the box itself (it has tabindex -1), so that never counts as leaving.
+  private onFocusOut = (e: FocusEvent) => {
+    const next = e.relatedTarget;
+    if (this.open && !(next instanceof Node && this.portal?.contains(next))) {
       this.close();
     }
+  };
+
+  private onKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== "Escape") return;
+    // The game would also take it: it drops a building being placed.
+    e.stopPropagation();
+    this.closeAndReturnFocus();
   };
 
   private onViewportChange = (event: Event) => {
@@ -124,13 +173,25 @@ export class ColumnPicker extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    document.addEventListener("click", this.onDocumentClick);
+    document.addEventListener("pointerdown", this.onDocumentPointerDown, true);
+    document.addEventListener("pointerup", this.onDocumentPointerUp, true);
+    document.addEventListener("pointercancel", this.onDocumentPointerUp, true);
     window.addEventListener("resize", this.onViewportChange);
     window.addEventListener("scroll", this.onViewportChange, true);
   }
 
   disconnectedCallback() {
-    document.removeEventListener("click", this.onDocumentClick);
+    document.removeEventListener(
+      "pointerdown",
+      this.onDocumentPointerDown,
+      true,
+    );
+    document.removeEventListener("pointerup", this.onDocumentPointerUp, true);
+    document.removeEventListener(
+      "pointercancel",
+      this.onDocumentPointerUp,
+      true,
+    );
     window.removeEventListener("resize", this.onViewportChange);
     window.removeEventListener("scroll", this.onViewportChange, true);
     // Closed, not only taken down: put back, it must open on the first press.
@@ -139,37 +200,87 @@ export class ColumnPicker extends LitElement {
     super.disconnectedCallback();
   }
 
-  protected updated() {
+  protected updated(changed: PropertyValues) {
     this.renderPortal();
+    if (changed.has("open") && this.open) {
+      // A keyboard user starts on the first box. After a mouse press the menu
+      // itself takes focus: Escape and Tab work from there, and Space stays
+      // the game's, where a focused box would take it as a tick.
+      this.portal
+        ?.querySelector<HTMLElement>(
+          this.returnFocus !== null ? "input:enabled" : "[data-column-menu]",
+        )
+        ?.focus();
+    }
   }
 
   /** Opens the menu under `button`, or closes it when it is open. */
   openFrom(button: HTMLElement) {
     if (this.open) {
-      this.close();
+      this.closeAndReturnFocus();
       return;
     }
-    button.setAttribute("aria-expanded", "true");
-    this.anchor = button;
-    this.open = true;
+    this.show(button, button);
   }
 
-  /** Opens the menu at a point of the window, or closes it when it is open. */
-  toggleAt(x: number, y: number) {
+  /** Opens the menu at a point of the window, or closes it when it is open.
+   *  `header` is the header cell it was asked on, if any. */
+  toggleAt(x: number, y: number, header: Element | null = null) {
+    if (this.closedByHeaderPress) {
+      this.closedByHeaderPress = false;
+      return;
+    }
     if (this.open) {
       this.close();
       return;
     }
-    this.anchor = { x, y };
+    this.show({ x, y }, header);
+  }
+
+  private show(anchor: Anchor, opener: Element | null) {
+    // Focus comes back only to a keyboard user's control: the button the
+    // menu opens from, or the header the menu was asked for on. After a mouse
+    // press nothing keeps it, wherever the keyboard left its focus (another
+    // header included), so the game's keys work at once.
+    const focused = document.activeElement;
+    this.returnFocus =
+      focused instanceof HTMLElement &&
+      focused.matches(":focus-visible") &&
+      opener !== null &&
+      opener.contains(focused)
+        ? focused
+        : null;
+    this.returnRow = this.returnFocus?.closest(".stats-table-header") ?? null;
+    this.anchor = anchor;
+    this.menuButton = (
+      this.getRootNode() as ParentNode
+    ).querySelector<HTMLElement>("[data-column-menu-button]");
+    this.menuButton?.setAttribute("aria-expanded", "true");
     this.open = true;
   }
 
   close() {
-    if (this.anchor instanceof HTMLElement) {
-      this.anchor.setAttribute("aria-expanded", "false");
-    }
+    this.menuButton?.setAttribute("aria-expanded", "false");
+    this.menuButton = null;
     this.anchor = null;
+    this.returnFocus = null;
+    this.returnRow = null;
     this.open = false;
+  }
+
+  private closeAndReturnFocus() {
+    const returnFocus = this.focusToReturn();
+    this.close();
+    returnFocus?.focus();
+  }
+
+  // The keyboard's control, or when its column was unticked meanwhile, the
+  // first button of its header row, else the host's menu button.
+  private focusToReturn(): HTMLElement | null {
+    const kept = this.returnFocus;
+    if (kept === null || kept.isConnected) return kept;
+    const row = this.returnRow?.isConnected ? this.returnRow : null;
+    return row?.querySelector<HTMLElement>("button") ?? this.menuButton;
   }
 
   private toggle(kind: StatsTableKind, id: ColumnId) {
@@ -254,7 +365,17 @@ export class ColumnPicker extends LitElement {
           class="peer sr-only"
           .checked=${checked}
           ?disabled=${checked && selected.length === 1}
-          @change=${() => this.toggle(kind, column.id)}
+          @change=${(e: Event) => {
+            this.toggle(kind, column.id);
+            // A mouse press on a line leaves focus on its box, where Space
+            // would tick it again and never reach the game: the menu takes
+            // focus back. A keyboard user stays on the box.
+            if (!(e.target as HTMLElement).matches(":focus-visible")) {
+              this.portal
+                ?.querySelector<HTMLElement>("[data-column-menu]")
+                ?.focus();
+            }
+          }}
         />
         <span class=${VISUAL} aria-hidden="true">
           ${
@@ -312,7 +433,10 @@ export class ColumnPicker extends LitElement {
           style="top: ${top}px; left: ${left}px; max-height: ${maxHeight}px;"
           role="dialog"
           aria-label=${title}
+          tabindex="-1"
           data-column-menu
+          @keydown=${this.onKeyDown}
+          @focusout=${this.onFocusOut}
         >
           <div class=${HEAD}>
             <span class="${HUD_LABEL} hud-caps">${title}</span>
@@ -324,7 +448,7 @@ export class ColumnPicker extends LitElement {
               @mousedown=${(e: MouseEvent) => e.preventDefault()}
               @keydown=${keepPressKeysFromGame}
               @keyup=${keepPressKeysFromGame}
-              @click=${() => this.close()}
+              @click=${() => this.closeAndReturnFocus()}
             >
               <of-icon name="close" size="14"></of-icon>
             </button>

@@ -246,6 +246,7 @@ export class GameLeftSidebar extends LitElement implements Controller {
                     type="button"
                     class=${MENU_BUTTON}
                     data-sidebar-button="columns"
+                    data-column-menu-button
                     aria-haspopup="dialog"
                     aria-expanded="false"
                     aria-label=${columns}
@@ -287,8 +288,14 @@ export class GameLeftSidebar extends LitElement implements Controller {
         }
         <div
           class="flex flex-col gap-2 min-w-0 w-full"
-          @columns-menu=${(e: CustomEvent<{ x: number; y: number }>) =>
-            this.columnPicker?.toggleAt(e.detail.x, e.detail.y)}
+          @columns-menu=${(
+            e: CustomEvent<{ x: number; y: number; header: Element | null }>,
+          ) =>
+            this.columnPicker?.toggleAt(
+              e.detail.x,
+              e.detail.y,
+              e.detail.header,
+            )}
           @columns-changed=${() => {
             this.playerStats?.refresh();
             this.teamStats?.refresh();
