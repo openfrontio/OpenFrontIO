@@ -24,31 +24,39 @@ export class GameHealthIndicators extends LitElement {
   @state()
   private tooltip: Warning | null = null;
   private pinned: Warning | null = null;
-  private playerInfo: HTMLElement | null = null;
+  private topHudPanels: HTMLElement[] = [];
 
   connectedCallback(): void {
     super.connectedCallback();
-    this.playerInfo = document.querySelector("player-info-overlay");
-    window.addEventListener("resize", this.reservePlayerInfoSpace);
+    this.topHudPanels = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        "player-info-overlay, game-left-sidebar",
+      ),
+    );
+    window.addEventListener("resize", this.reserveTopHudSpace);
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    window.removeEventListener("resize", this.reservePlayerInfoSpace);
-    this.playerInfo?.style.removeProperty("--game-health-offset");
-    this.playerInfo = null;
+    window.removeEventListener("resize", this.reserveTopHudSpace);
+    for (const panel of this.topHudPanels) {
+      panel.style.removeProperty("--game-health-offset");
+    }
+    this.topHudPanels = [];
   }
 
   protected updated(): void {
-    this.reservePlayerInfoSpace();
+    this.reserveTopHudSpace();
   }
 
-  // Keep the top-center player card below the icons and any open tooltip.
+  // Keep the player card and expanded narrow-screen sidebar below warnings.
   // Only measure when warning state, tooltip or viewport size changes.
-  private reservePlayerInfoSpace = (): void => {
-    if (!this.playerInfo) return;
+  private reserveTopHudSpace = (): void => {
+    if (this.topHudPanels.length === 0) return;
     if (!Object.values(this.status).some(Boolean)) {
-      this.playerInfo.style.removeProperty("--game-health-offset");
+      for (const panel of this.topHudPanels) {
+        panel.style.removeProperty("--game-health-offset");
+      }
       return;
     }
     const tooltip = this.renderRoot.querySelector('[role="tooltip"]');
@@ -56,10 +64,12 @@ export class GameHealthIndicators extends LitElement {
       this.getBoundingClientRect().bottom,
       tooltip?.getBoundingClientRect().bottom ?? 0,
     );
-    this.playerInfo.style.setProperty(
-      "--game-health-offset",
-      `${Math.ceil(bottom) + 8}px`,
-    );
+    for (const panel of this.topHudPanels) {
+      panel.style.setProperty(
+        "--game-health-offset",
+        `${Math.ceil(bottom) + 8}px`,
+      );
+    }
   };
 
   static styles = css`
@@ -73,6 +83,12 @@ export class GameHealthIndicators extends LitElement {
       font:
         13px/1.4 system-ui,
         sans-serif;
+    }
+    @media (max-width: 400px) {
+      :host {
+        /* The timer controls span the top center on narrow phones. */
+        top: calc(env(safe-area-inset-top, 0px) + 48px);
+      }
     }
     .warnings {
       display: flex;

@@ -95,6 +95,34 @@ describe("GameLeftSidebar", () => {
     sidebar.remove();
   });
 
+  it("reserves warning space only for expanded sidebars on narrow screens", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    document.body.append(sidebar);
+    await sidebar.updateComplete;
+
+    const aside = () => sidebar.querySelector("aside")!;
+    const offsetMargin =
+      "max-[400px]:mt-[calc(var(--bar-offset)+var(--game-health-offset,0px))]";
+    const offsetHeight =
+      "max-[400px]:max-h-[calc(100vh-80px-var(--game-health-offset,0px))]";
+    expect(aside().classList).not.toContain(offsetMargin);
+    expect(aside().classList).not.toContain(offsetHeight);
+    expect(aside().style.marginTop).toBe("");
+    expect(aside().style.getPropertyValue("--bar-offset")).toBe("0px");
+
+    (sidebar.querySelector('[role="button"]') as HTMLElement).click();
+    await sidebar.updateComplete;
+    expect(aside().classList).toContain(offsetMargin);
+    expect(aside().classList).toContain(offsetHeight);
+
+    (sidebar.querySelector('[role="button"]') as HTMLElement).click();
+    await sidebar.updateComplete;
+    expect(aside().classList).not.toContain(offsetMargin);
+    expect(aside().classList).not.toContain(offsetHeight);
+    sidebar.remove();
+  });
+
   it.each([
     { viewport: "a large screen", compact: false, shown: true },
     {

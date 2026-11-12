@@ -8,10 +8,13 @@ vi.mock("../../src/client/Utils", () => ({
 describe("GameHealthIndicators", () => {
   let element: GameHealthIndicators;
   let playerInfo: HTMLElement;
+  let sidebar: HTMLElement;
 
   beforeEach(async () => {
     playerInfo = document.createElement("player-info-overlay");
     document.body.appendChild(playerInfo);
+    sidebar = document.createElement("game-left-sidebar");
+    document.body.appendChild(sidebar);
     element = new GameHealthIndicators();
     document.body.appendChild(element);
     await element.updateComplete;
@@ -20,6 +23,7 @@ describe("GameHealthIndicators", () => {
   afterEach(() => {
     element.remove();
     playerInfo.remove();
+    sidebar.remove();
     vi.restoreAllMocks();
   });
 
@@ -29,6 +33,12 @@ describe("GameHealthIndicators", () => {
     )!;
   const tooltip = () =>
     element.shadowRoot!.querySelector<HTMLElement>('[role="tooltip"]');
+
+  function expectOffsets(value: string): void {
+    for (const panel of [playerInfo, sidebar]) {
+      expect(panel.style.getPropertyValue("--game-health-offset")).toBe(value);
+    }
+  }
 
   async function warn() {
     element.status = {
@@ -117,15 +127,13 @@ describe("GameHealthIndicators", () => {
     expect(tooltip()).toBeNull();
   });
 
-  it("reserves room above the player card for active warnings and tooltips", async () => {
+  it("reserves room above the player card and sidebar for warnings and tooltips", async () => {
     vi.spyOn(element, "getBoundingClientRect").mockReturnValue(
       new DOMRect(572, 8, 136, 44),
     );
-    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe("");
+    expectOffsets("");
     await warn();
-    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe(
-      "60px",
-    );
+    expectOffsets("60px");
 
     button("highLatency").click();
     await element.updateComplete;
@@ -133,18 +141,25 @@ describe("GameHealthIndicators", () => {
       new DOMRect(498, 58, 284, 72),
     );
     window.dispatchEvent(new Event("resize"));
-    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe(
-      "138px",
-    );
+    expectOffsets("138px");
 
     button("highLatency").click();
     await element.updateComplete;
-    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe(
-      "60px",
-    );
+    expectOffsets("60px");
     element.clear();
     await element.updateComplete;
-    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe("");
+    expectOffsets("");
+  });
+
+  it("reserves sidebar space even without a player card", async () => {
+    element.remove();
+    playerInfo.remove();
+    document.body.appendChild(element);
+    vi.spyOn(element, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(127, 8, 136, 44),
+    );
+    await warn();
+    expect(sidebar.style.getPropertyValue("--game-health-offset")).toBe("60px");
   });
 
   it("updates the reserved space on resize and removes it on game teardown", async () => {
@@ -153,13 +168,11 @@ describe("GameHealthIndicators", () => {
     await warn();
     bounds.mockReturnValue(new DOMRect(127, 34, 136, 44));
     window.dispatchEvent(new Event("resize"));
-    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe(
-      "86px",
-    );
+    expectOffsets("86px");
 
     element.remove();
-    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe("");
+    expectOffsets("");
     window.dispatchEvent(new Event("resize"));
-    expect(playerInfo.style.getPropertyValue("--game-health-offset")).toBe("");
+    expectOffsets("");
   });
 });
