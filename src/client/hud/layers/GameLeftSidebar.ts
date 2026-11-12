@@ -413,6 +413,7 @@ export class GameLeftSidebar extends LitElement implements Controller {
             .game=${this.game}
             .eventBus=${this.eventBus}
             .visible=${this.isPlayerStatsShown}
+            .short=${this.isTeamStatsShown && this.isTeamGame}
           ></player-stats>
           <team-stats
             class=${

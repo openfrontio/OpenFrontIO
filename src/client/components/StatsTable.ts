@@ -194,6 +194,8 @@ export abstract class StatsTable extends LitElement {
   public game: GameView | null = null;
 
   @property({ type: Boolean }) visible = false;
+  // Caps the list at five rows, so a second table fits under it.
+  @property({ type: Boolean }) short = false;
 
   protected abstract readonly tableKind: StatsTableKind;
   protected abstract buildRows(
@@ -608,7 +610,7 @@ export abstract class StatsTable extends LitElement {
             </div>
 
             <div
-              class="stats-table-scroll stats-rows grid col-span-full overflow-y-scroll overflow-x-hidden overscroll-contain [overflow-anchor:none] ${SCROLLBAR}"
+              class="stats-table-scroll stats-rows grid col-span-full overflow-y-scroll overflow-x-hidden overscroll-contain [overflow-anchor:none] ${SCROLLBAR} ${this.short ? "[--stats-max-rows:5]" : ""}"
               style="grid-template-columns: subgrid; grid-column: 1 / -1;"
               role="rowgroup"
               @scroll=${this.onScroll}

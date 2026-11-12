@@ -654,6 +654,31 @@ describe("GameLeftSidebar", () => {
     sidebar.remove();
   });
 
+  it("keeps the player table short only while the team table is open", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = teamGame(() => false);
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+    const playerStats = sidebar.querySelector("player-stats") as PlayerStats;
+    const press = async (name: string) => {
+      sidebar
+        .querySelector<HTMLElement>(`[data-sidebar-button="${name}"]`)
+        ?.click();
+      await sidebar.updateComplete;
+    };
+
+    await press("players");
+    expect(playerStats.short).toBe(false);
+    await press("teams");
+    expect(playerStats.short).toBe(true);
+    await press("teams");
+    expect(playerStats.short).toBe(false);
+
+    sidebar.remove();
+  });
+
   it("shows your team during the spawn phase of a team game", async () => {
     let spawning = true;
     const sidebar = new GameLeftSidebar();
