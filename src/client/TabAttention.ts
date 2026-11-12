@@ -36,10 +36,11 @@ export class TabAttention {
   private originalIconHref: string | null = null;
   private originalIconType: string | null = null;
   private listening = false;
-  // Set when the two-minute limit ran out. Requests are ignored until the
-  // need is released, so repeated requests can't restart the limit.
-  // startedAt is when the current flashing run began (not when it was requested).
-  private expired = false;
+  // The kind whose two-minute limit ran out. Requests for that kind are ignored
+  // until the need is released, so repeated requests can't restart the limit.
+  // A different kind (e.g. "spawn" after "starting" timed out) is a new need and
+  // gets its own run. startedAt is when the current flashing run began.
+  private expiredKind: TabAttentionKind | null = null;
   // Starts as the SVG; swapped for a PNG once it has been rendered, since not
   // every browser draws SVG favicons from data URIs reliably.
   private alertIconHref = ALERT_ICON_SVG_HREF;
@@ -58,7 +59,7 @@ export class TabAttention {
       this.release();
       return;
     }
-    if (this.expired) return;
+    if (kind === this.expiredKind) return;
     this.kind = kind;
     this.listen();
     this.preparePngIcon();
@@ -67,7 +68,7 @@ export class TabAttention {
 
   /** The player no longer needs to be alerted. Safe to call repeatedly. */
   release(): void {
-    this.expired = false;
+    this.expiredKind = null;
     if (this.kind === null) return;
     this.kind = null;
     this.sync();
@@ -129,8 +130,8 @@ export class TabAttention {
   };
 
   private expire(): void {
+    if (this.kind !== null) this.expiredKind = this.kind;
     this.kind = null;
-    this.expired = true;
   }
 
   private apply(alert: boolean): void {

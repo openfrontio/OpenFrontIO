@@ -133,6 +133,23 @@ describe("TabAttention", () => {
     expect(document.title).toBe("OpenFront");
   });
 
+  it("still flashes for a spawn request after the starting flash timed out", () => {
+    setHidden(true);
+    attention.request("starting");
+    vi.advanceTimersByTime(2 * 60 * 1000 + 500);
+    expect(document.title).toBe("OpenFront");
+
+    // Same kind stays ignored (no restart from repeated requests)...
+    attention.request("starting");
+    expect(document.title).toBe("OpenFront");
+
+    // ...but a different need gets its own two minutes.
+    attention.request("spawn");
+    expect(document.title).toBe("tab_attention.pick_spawn");
+    vi.advanceTimersByTime(2 * 60 * 1000 + 500);
+    expect(document.title).toBe("OpenFront");
+  });
+
   it("allows a new two-minute period after the need is released", () => {
     setHidden(true);
     attention.request("spawn");

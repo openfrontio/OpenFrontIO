@@ -140,9 +140,18 @@ export function joinLobby(
   // Mutable clientID state — assigned by server (multiplayer) or derived from gameStartInfo (singleplayer)
   let clientID: ClientID | undefined;
 
+  // True once this lobby's own prestart resolved: Main only requests the
+  // "starting" tab flash after that, so only then is there a flash to release.
+  let prestarted = false;
   let resolvePrestart: () => void;
   let resolveJoin: () => void;
-  const prestartPromise = new Promise<void>((r) => (resolvePrestart = r));
+  const prestartPromise = new Promise<void>(
+    (r) =>
+      (resolvePrestart = () => {
+        prestarted = true;
+        r();
+      }),
+  );
   const joinPromise = new Promise<void>((r) => (resolveJoin = r));
 
   console.log(`joining lobby: gameID: ${lobbyConfig.gameID}`);
@@ -469,9 +478,10 @@ export function joinLobby(
         currentGameRunner.stop();
         currentGameRunner = null;
       } else {
-        // Left during prestart, before a runner exists to release the flash.
-        // A repeated stop must not clear a newer lobby's flash.
-        if (!alreadyStopped) tabAttention.release();
+        // Left after prestart but before a runner exists to release the flash.
+        // A lobby that never reached prestart (e.g. a superseded join) or was
+        // already stopped must not clear a newer lobby's flash.
+        if (prestarted && !alreadyStopped) tabAttention.release();
         transport.leaveGame();
       }
       return true;
