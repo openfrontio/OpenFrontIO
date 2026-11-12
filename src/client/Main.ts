@@ -70,6 +70,7 @@ import {
   desktopUpdate,
   getDesktopUpdateState,
   isDesktopShell,
+  isSteamShell,
   type DesktopUpdateState,
 } from "./DesktopShell";
 import "./FeaturedStream";
@@ -562,14 +563,16 @@ class Client {
     startServerListPolling();
 
     // Prefetch turnstile token so it is available when the user joins a lobby.
-    // Desktop (Steam) has no Turnstile script and is server-side exempt, so
-    // skip it — otherwise getTurnstileToken() throws "Failed to load Turnstile
-    // script" after its load wait. Also skip on the versioned replay shells:
-    // the replay host may not be on the Turnstile site key's domain allowlist,
-    // so rendering the widget there just fails — and replays never
-    // send a token anyway (see getTurnstileToken below).
+    // Steam has no Turnstile script and is server-side exempt (a
+    // provider="steam" JWT, see planJoinVerify), so skip it — otherwise
+    // getTurnstileToken() throws "Failed to load Turnstile script" after its
+    // load wait. Not every shell: the Android app has no Steam session, so the
+    // server wants a token from it like any browser. Also skip on the
+    // versioned replay shells: the replay host may not be on the Turnstile
+    // site key's domain allowlist, so rendering the widget there just fails —
+    // and replays never send a token anyway (see getTurnstileToken below).
     const turnstilePrefetch =
-      isDesktopShell() || isReplayShellHost(window.location.hostname)
+      isSteamShell() || isReplayShellHost(window.location.hostname)
         ? null
         : getTurnstileToken();
     // A prefetch that fails is not an error anyone has asked about yet: the
@@ -951,7 +954,7 @@ class Client {
         );
         const steamNotice = steamNoticeDue(
           userMeResponse,
-          isDesktopShell(),
+          isSteamShell(),
           Date.now(),
         );
         const paid = paidFactsOf(userMeResponse);
@@ -1766,12 +1769,13 @@ class Client {
    * do.
    */
   private blockedJoin(lobby: JoinLobbyEvent): boolean {
-    const desktop = isDesktopShell();
+    // The update half applies in every shell; the session half is the Steam
+    // sign-in, which only the Steam shell has.
     if (
       !shouldBlockJoin(
         lobby,
-        desktop ? this.desktopUpdateState : null,
-        desktop ? getDesktopSessionState() : null,
+        isDesktopShell() ? this.desktopUpdateState : null,
+        isSteamShell() ? getDesktopSessionState() : null,
       )
     ) {
       return false;
@@ -2343,7 +2347,7 @@ class Client {
   ): Promise<string | null> {
     if (
       ClientEnv.env() === GameEnv.Dev ||
-      isDesktopShell() ||
+      isSteamShell() ||
       // Single-player and replays: no server to verify a token against (and
       // on the CDN replay shells Turnstile cannot load at all). Shared with
       // the desktop gate so the exemption has one definition.
