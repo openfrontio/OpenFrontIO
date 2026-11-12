@@ -97,6 +97,7 @@ describe("TeamStats", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -147,6 +148,7 @@ describe("TeamStats", () => {
         playerViews: () => players,
         config: () => ({ maxTroops: () => 100 }),
         ticks: () => 600,
+        inSpawnPhase: () => false,
         numLandTiles: () => 100,
         numTilesWithFallout: () => 0,
       } as unknown as GameView;
@@ -182,6 +184,7 @@ describe("TeamStats", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -217,6 +220,7 @@ describe("TeamStats", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -283,6 +287,7 @@ describe("TeamStats", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
       teamClanTag: (team: string) => {

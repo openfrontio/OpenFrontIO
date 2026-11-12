@@ -290,6 +290,8 @@ export class ReplayGameView {
   focus: ReplayPlayerView | null = null;
   /** Whether emojis are shown (the "emojis" user setting). */
   showEmojis: () => boolean = () => true;
+  /** The tick play started at (the header's spawnPhaseEnd), once known. */
+  startTick: () => number | null = () => null;
   /** Events since the HUD last asked, by GameUpdateType. */
   private readonly pending = new Map<number, unknown[]>();
 
@@ -394,6 +396,11 @@ export class ReplayGameView {
   }
   inSpawnPhase(): boolean {
     return this.spawnPhase;
+  }
+  ticksSinceStart(): number {
+    const start = this.startTick();
+    if (this.spawnPhase || start === null) return 0;
+    return Math.max(0, this.ticks() - start);
   }
   unit(id: number): ReplayUnitView | undefined {
     const state = this.frame?.units.get(id);

@@ -36,6 +36,7 @@ function gameWith(players: PlayerView[], me: PlayerView | null): GameView {
     playerViews: () => players,
     config: () => ({ maxTroops: () => 100 }),
     ticks: () => 600,
+    inSpawnPhase: () => false,
     numLandTiles: () => 100,
     numTilesWithFallout: () => 0,
   } as unknown as GameView;
