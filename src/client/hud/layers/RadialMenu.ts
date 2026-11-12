@@ -97,6 +97,9 @@ export class RadialMenu implements Controller {
   private tooltipStyleElement: HTMLStyleElement | null = null;
   private isVisible: boolean = false;
   private lastPointerType: string | null = null;
+  // Whether a press has started on the menu since it opened. See
+  // ignoreClicksFromBeforeShow.
+  private pressedSinceShown: boolean = false;
 
   private currentLevel: number = 0; // Current menu level (0 = main menu, 1 = submenu, etc.)
   private menuStack: MenuElement[][] = []; // Stack to track menu navigation history
@@ -216,6 +219,7 @@ export class RadialMenu implements Controller {
         e.preventDefault();
         this.hideRadialMenu();
       });
+    this.ignoreClicksFromBeforeShow(this.menuElement.node()!);
 
     // Calculate the total svg size needed for all potential nested menus
     const totalSize =
@@ -285,6 +289,34 @@ export class RadialMenu implements Controller {
       .attr("x", -this.centerButtonIconSize / 2)
       .attr("y", -this.centerButtonIconSize / 2)
       .style("pointer-events", "none");
+  }
+
+  /**
+   * A touch tap on the map opens the menu on pointerup, once the async action
+   * lookup returns, but the browser sends that tap's click only afterwards.
+   * When the menu is up by then, the click lands on it: on the backdrop it
+   * closes the menu straight away, and on an item it picks it, such as
+   * opening the build menu. A click is only a tap on the menu if its press
+   * started there, so drop the others before any of the menu's own handlers
+   * see them.
+   */
+  private ignoreClicksFromBeforeShow(overlay: HTMLDivElement) {
+    overlay.addEventListener(
+      "pointerdown",
+      () => {
+        this.pressedSinceShown = true;
+      },
+      true,
+    );
+    overlay.addEventListener(
+      "click",
+      (event) => {
+        if (this.pressedSinceShown) return;
+        event.stopImmediatePropagation();
+        event.preventDefault();
+      },
+      true,
+    );
   }
 
   private createTooltipElement() {
@@ -947,6 +979,7 @@ export class RadialMenu implements Controller {
     this.clampAndSetMenuPositionForLevel(this.currentLevel);
 
     this.isVisible = true;
+    this.pressedSinceShown = false;
 
     this.renderMenuItems(this.currentMenuItems, this.currentLevel);
     this.onCenterButtonHover(true);
