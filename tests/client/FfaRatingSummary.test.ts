@@ -65,7 +65,6 @@ describe("ffaSummaryFromMe / ffaSummaryFromProfile", () => {
         games: 40,
         wins: 5,
         peak: 1700,
-        globalPosition: 160,
       }),
     ).toEqual({
       kind: "rated",
@@ -73,7 +72,6 @@ describe("ffaSummaryFromMe / ffaSummaryFromProfile", () => {
       uncertainty: 84.7,
       tier: "Gold I",
       peak: 1700,
-      globalPosition: 160,
     });
   });
 });

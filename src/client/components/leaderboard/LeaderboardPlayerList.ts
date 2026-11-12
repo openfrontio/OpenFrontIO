@@ -98,7 +98,6 @@ const toPlayerEntry = (entry: RankedLeaderboardEntry): LadderRow => ({
   legend: entry.legend,
   uncertainty: entry.uncertainty,
   tier: entry.tier,
-  globalPosition: entry.globalPosition,
 });
 
 @customElement("leaderboard-player-list")
@@ -149,6 +148,8 @@ export class LeaderboardPlayerList extends LitElement {
   // The signed-in player's row with their exact position, for when they aren't
   // in the loaded rows of their own rank.
   @state() private ffaPositionRow: LadderRow | null = null;
+  // The signed-in player's global FFA position, from the rank-position call.
+  @state() private ffaGlobalPosition: number | undefined = undefined;
   // The signed-in player's rated row, the base for ffaPositionRow.
   private ffaOwnRow: LadderRow | null = null;
   // Bumped by a full reload, so an answer from before it is dropped.
@@ -175,8 +176,12 @@ export class LeaderboardPlayerList extends LitElement {
       return {
         entries: this.ffaAllRows,
         userEntry:
-          this.ffaOwnRow !== null && this.ffaOwnRow.globalPosition !== undefined
-            ? { ...this.ffaOwnRow, rank: this.ffaOwnRow.globalPosition }
+          this.ffaOwnRow !== null && this.ffaGlobalPosition !== undefined
+            ? {
+                ...this.ffaOwnRow,
+                rank: this.ffaGlobalPosition,
+                globalPosition: this.ffaGlobalPosition,
+              }
             : null,
         hasMore: this.ffaAllHasMore,
       };
@@ -294,6 +299,7 @@ export class LeaderboardPlayerList extends LitElement {
       this.ffaRanksLoading = new Set();
       this.ffaRanksFailed = new Set();
       this.ffaPositionRow = null;
+      this.ffaGlobalPosition = undefined;
       this.currentUserIdLoaded = false;
       this.ffaRankGeneration++;
     } else if (!this.playerHasMore) {
@@ -375,7 +381,6 @@ export class LeaderboardPlayerList extends LitElement {
             winRate: games ? wins / games : 0,
             uncertainty: ffa.uncertainty,
             tier: ffa.tier,
-            globalPosition: ffa.globalPosition ?? undefined,
           };
         }
         this.ffaHidden =
@@ -470,9 +475,12 @@ export class LeaderboardPlayerList extends LitElement {
 
   private async loadFfaPosition(row: LadderRow) {
     const generation = this.ffaRankGeneration;
-    const position = await fetchFfaRankPosition();
-    if (position === null || generation !== this.ffaRankGeneration) return;
-    this.ffaPositionRow = { ...row, rank: position };
+    const result = await fetchFfaRankPosition();
+    if (result === null || generation !== this.ffaRankGeneration) return;
+    this.ffaGlobalPosition = result.globalPosition ?? undefined;
+    if (result.position !== null) {
+      this.ffaPositionRow = { ...row, rank: result.position };
+    }
     this.scheduleStickyVisibilityCheck();
   }
 
@@ -595,14 +603,7 @@ export class LeaderboardPlayerList extends LitElement {
       return;
     }
 
-    const rows = result.players.map((entry) => {
-      const row = toPlayerEntry(entry);
-      return row.playerId === this.currentUserId &&
-        row.globalPosition === undefined &&
-        this.ffaOwnRow?.globalPosition !== undefined
-        ? { ...row, globalPosition: this.ffaOwnRow.globalPosition }
-        : row;
-    });
+    const rows = result.players.map(toPlayerEntry);
     const existingIds = new Set(ladder.entries.map((row) => row.playerId));
     this.ffaRankLadders = {
       ...this.ffaRankLadders,
@@ -631,21 +632,15 @@ export class LeaderboardPlayerList extends LitElement {
   // Same handoff as the clan views: the profile modal's back button reopens
   // the leaderboard (its loaded pages survive the close).
   private openProfile(publicId: string) {
-    const isAllRanks = this.ffaAllActive;
     loadModal("player-profile-modal").then(
       () => {
         const modal = document.querySelector<
           HTMLElement & {
             openFromLeaderboard(publicId: string): void;
-            openFromAllRanks(publicId: string): void;
           }
         >("player-profile-modal");
         if (!modal) return;
-        if (isAllRanks) {
-          modal.openFromAllRanks(publicId);
-        } else {
-          modal.openFromLeaderboard(publicId);
-        }
+        modal.openFromLeaderboard(publicId);
       },
       (err) => console.error("player-profile-modal failed to load:", err),
     );
@@ -747,7 +742,7 @@ export class LeaderboardPlayerList extends LitElement {
     if (!this.currentUserEntry || !this.showStickyUser) return nothing;
     const entry = this.currentUserEntry;
     const globalPosition = !this.ffaAllActive
-      ? entry.globalPosition
+      ? this.ffaGlobalPosition
       : undefined;
 
     return html`
@@ -1057,7 +1052,7 @@ export class LeaderboardPlayerList extends LitElement {
       <img
         src=${assetUrl(
           rank === "all"
-            ? "images/ofm-trophy.png"
+            ? "images/ofm-trophy-56.png"
             : `images/ffa-tiers/compact/${rank}.svg`,
         )}
         alt=""
@@ -1106,7 +1101,7 @@ export class LeaderboardPlayerList extends LitElement {
             role="tab"
             data-rank="all"
             aria-selected=${this.ffaAllRanks ? "true" : "false"}
-            tabindex="0"
+            tabindex=${this.ffaAllRanks ? 0 : -1}
             aria-label=${translateText("ffa_rating.all_ranks")}
             title=${translateText("ffa_rating.all_ranks")}
             class="col-span-8 justify-self-center mt-1 flex flex-col items-center justify-center gap-1 w-[calc((100%_-_14px)/8)] sm:w-[calc((100%_-_28px)/8)] py-1.5 sm:py-2 rounded-lg border transition-colors ${
@@ -1176,7 +1171,7 @@ export class LeaderboardPlayerList extends LitElement {
       this.currentUserId !== null && this.currentUserId === player.playerId;
     const displayRank = player.rank;
     const globalPosition =
-      isCurrentUser && !this.ffaAllRanks ? player.globalPosition : undefined;
+      isCurrentUser && !this.ffaAllRanks ? this.ffaGlobalPosition : undefined;
 
     const rankColor =
       {

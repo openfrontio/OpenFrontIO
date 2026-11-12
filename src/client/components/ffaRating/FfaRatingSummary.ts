@@ -46,7 +46,6 @@ export function ffaSummaryFromMe(
       uncertainty: ffa.uncertainty,
       tier: ffa.tier,
       ...(ffa.peak === undefined ? {} : { peak: ffa.peak }),
-      globalPosition: ffa.globalPosition,
     };
   }
   if (ffa.calibrationGames !== undefined) {
@@ -66,7 +65,6 @@ export function ffaSummaryFromProfile(
     uncertainty: r.uncertainty,
     tier: r.tier,
     peak: r.peak,
-    globalPosition: r.globalPosition,
   };
 }
 

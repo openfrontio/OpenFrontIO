@@ -2437,8 +2437,11 @@ export async function fetchFfaAllRanksLeaderboard(
   }
 }
 
-/** The signed-in player's position in their rank, or null if there's none to show. */
-export async function fetchFfaRankPosition(): Promise<number | null> {
+/** The signed-in player's rank position and global position; null if the request fails. */
+export async function fetchFfaRankPosition(): Promise<{
+  position: number | null;
+  globalPosition: number | null;
+} | null> {
   try {
     const res = await fetch(`${getApiBase()}/users/@me/ffa_rank_position`, {
       headers: {
@@ -2448,7 +2451,11 @@ export async function fetchFfaRankPosition(): Promise<number | null> {
     });
     if (!res.ok) return null;
     const parsed = FfaRankPositionResponseSchema.safeParse(await res.json());
-    return parsed.success ? parsed.data.position : null;
+    if (!parsed.success) return null;
+    return {
+      position: parsed.data.position,
+      globalPosition: parsed.data.globalPosition ?? null,
+    };
   } catch (err) {
     console.warn("fetchFfaRankPosition: request failed", err);
     return null;

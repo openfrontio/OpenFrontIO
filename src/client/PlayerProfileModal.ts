@@ -48,7 +48,7 @@ export { playerProfileUrl };
 let profileOpenings = 0;
 
 /** Where a profile was opened from, i.e. where its Back button leads. */
-export type ProfileOrigin = "clan" | "leaderboard" | "all-ranks" | "account";
+export type ProfileOrigin = "clan" | "leaderboard" | "account";
 
 @customElement("player-profile-modal")
 export class PlayerProfileModal extends BaseModal {
@@ -59,8 +59,7 @@ export class PlayerProfileModal extends BaseModal {
   @state() private statsTree: PlayerStatsTree | null = null;
   @state() private clans: NonNullable<PlayerProfile["clans"]> = [];
   @state() private displayClanTag: string | null = null;
-  @state() private rawFfaRating: FfaRatingSummaryData | null = null;
-  @state() private keepGlobalPosition = false;
+  @state() private ffaRating: FfaRatingSummaryData | null = null;
   // Level / XP, when progression is on and the player has any.
   @state() private progress: PublicProgress | null = null;
   @state() private loading = false;
@@ -82,20 +81,6 @@ export class PlayerProfileModal extends BaseModal {
   private wantsProgressionTab = false;
   // Counts fresh openings, to key the profile card's once-per-open flourish.
   private openCount = 0;
-
-  // The global position is an account-only statistic; public profiles of
-  // other players retain the existing rating/tier presentation.
-  private get ffaRating(): FfaRatingSummaryData | null {
-    if (this.rawFfaRating === null) return null;
-    if (
-      this.keepGlobalPosition ||
-      isOwnAccount(this.publicId) ||
-      this.rawFfaRating.kind !== "rated"
-    ) {
-      return this.rawFfaRating;
-    }
-    return { ...this.rawFfaRating, globalPosition: undefined };
-  }
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -290,9 +275,6 @@ export class PlayerProfileModal extends BaseModal {
     this.open({ publicID: publicId, tab: "clans" });
     // open() cleared openedFrom; put this profile's own origin back.
     this.openedFrom = origin;
-    if (origin === "all-ranks") {
-      this.keepGlobalPosition = true;
-    }
   }
 
   private renderGames() {
@@ -523,7 +505,6 @@ export class PlayerProfileModal extends BaseModal {
     // helpers re-set it right after open() so back() routes home; the
     // return-from-stats path above skips this and keeps the origin intact.
     this.openedFrom = null;
-    this.keepGlobalPosition = false;
     // A new opening: the profile card plays its flourish again.
     // Counted across every profile modal, so no two openings share a key.
     this.openCount = ++profileOpenings;
@@ -532,7 +513,7 @@ export class PlayerProfileModal extends BaseModal {
     this.statsTree = null;
     this.clans = [];
     this.displayClanTag = null;
-    this.rawFfaRating = null;
+    this.ffaRating = null;
     this.progress = null;
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
@@ -587,7 +568,7 @@ export class PlayerProfileModal extends BaseModal {
     this.clans = profile === false ? [] : (profile.clans ?? []);
     this.displayClanTag =
       profile === false ? null : (profile.displayClanTag ?? null);
-    this.rawFfaRating =
+    this.ffaRating =
       profile === false ? null : ffaSummaryFromProfile(profile.ffaRating);
   }
 
@@ -650,12 +631,6 @@ export class PlayerProfileModal extends BaseModal {
     this.openedFrom = "leaderboard";
   }
 
-  public openFromAllRanks(publicId: string): void {
-    this.open({ publicID: publicId });
-    this.keepGlobalPosition = true;
-    this.openedFrom = "all-ranks";
-  }
-
   public openFromAccount(publicId: string): void {
     this.open({ publicID: publicId });
     this.openedFrom = "account";
@@ -670,7 +645,7 @@ export class PlayerProfileModal extends BaseModal {
           "clan-modal",
         )
         ?.returnFromPlayerProfile();
-    } else if (openedFrom === "leaderboard" || openedFrom === "all-ranks") {
+    } else if (openedFrom === "leaderboard") {
       document
         .querySelector<HTMLElement & { open(): void }>("leaderboard-modal")
         ?.open();

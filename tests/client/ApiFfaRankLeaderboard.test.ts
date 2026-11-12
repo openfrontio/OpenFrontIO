@@ -44,17 +44,43 @@ beforeEach(() => {
 
 describe("fetchFfaRankPosition", () => {
   it("reads the signed-in player's position", async () => {
-    vi.mocked(fetch).mockResolvedValue(res({ position: 4812 }) as never);
+    vi.mocked(fetch).mockResolvedValue(
+      res({ position: 4812, globalPosition: 160 }) as never,
+    );
 
-    expect(await fetchFfaRankPosition()).toBe(4812);
+    expect(await fetchFfaRankPosition()).toEqual({
+      position: 4812,
+      globalPosition: 160,
+    });
     const url = new URL(String(vi.mocked(fetch).mock.calls[0][0]));
     expect(url.pathname).toBe("/users/@me/ffa_rank_position");
   });
 
-  it("is null when the board doesn't list them", async () => {
-    vi.mocked(fetch).mockResolvedValue(res({ position: null }) as never);
+  it("has no numbers when the board doesn't list them", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      res({ position: null, globalPosition: null }) as never,
+    );
 
-    expect(await fetchFfaRankPosition()).toBeNull();
+    expect(await fetchFfaRankPosition()).toEqual({
+      position: null,
+      globalPosition: null,
+    });
+  });
+
+  it("reads a missing or malformed global position as none", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(res({ position: 7 }) as never);
+    expect(await fetchFfaRankPosition()).toEqual({
+      position: 7,
+      globalPosition: null,
+    });
+
+    vi.mocked(fetch).mockResolvedValueOnce(
+      res({ position: 7, globalPosition: "x" }) as never,
+    );
+    expect(await fetchFfaRankPosition()).toEqual({
+      position: 7,
+      globalPosition: null,
+    });
   });
 
   it("is null on an error or a malformed body", async () => {
