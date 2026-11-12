@@ -18,6 +18,9 @@ const STRAY_FRAME_SCAN_MS = 1000;
 // creative, which would push an open page (locked to the viewport) out of
 // view, so it is destroyed instead of given room.
 const MAX_DOCKED_AD_HEIGHT = 120;
+// A normal unit can measure tall for a moment as it docks, before its frame
+// shrinks to the leaderboard.
+const OVERSIZE_SETTLE_MS = 1000;
 
 type DestroyUnitsResult = "resolved" | "rejected" | "unavailable";
 
@@ -83,6 +86,7 @@ export class HomepagePromos extends LitElement {
   private topAdMutation: MutationObserver | null = null;
   private reservedFlexHeight: number = 0;
   private oversizedTopAd: HTMLElement | null = null;
+  private oversizeCheck: ReturnType<typeof setTimeout> | null = null;
 
   createRenderRoot() {
     return this;
@@ -129,6 +133,8 @@ export class HomepagePromos extends LitElement {
     this.escapedAdScan = null;
     this.topAdStyle?.disconnect();
     this.topAdResize?.disconnect();
+    if (this.oversizeCheck !== null) clearTimeout(this.oversizeCheck);
+    this.oversizeCheck = null;
     document.documentElement.style.removeProperty("--top-ad-height");
     document.documentElement.style.removeProperty("--top-ad-pad");
     document
@@ -173,17 +179,13 @@ export class HomepagePromos extends LitElement {
     if (this.topAdEl) {
       const rect = this.topAdEl.getBoundingClientRect();
       const style = getComputedStyle(this.topAdEl);
-      unitVisible = style.display !== "none" && rect.height >= 30;
+      unitVisible =
+        this.topAdEl !== this.oversizedTopAd &&
+        style.display !== "none" &&
+        rect.height >= 30;
       if (unitVisible && style.position === "fixed") {
-        // Only make room while the banner is actually docked at the viewport
-        // top — not while parked offscreen.
-        if (rect.top < window.innerHeight / 4) {
-          dockedHeight = Math.ceil(Math.max(0, rect.bottom));
-        }
-        if (dockedHeight > MAX_DOCKED_AD_HEIGHT) {
-          this.destroyOversizedTopAd(this.topAdEl, dockedHeight);
-          dockedHeight = 0;
-        }
+        dockedHeight = this.dockedHeight(this.topAdEl);
+        if (dockedHeight > MAX_DOCKED_AD_HEIGHT) this.checkOversizedTopAd();
       } else if (unitVisible) {
         inlineHeight = Math.ceil(rect.height);
       }
@@ -222,22 +224,45 @@ export class HomepagePromos extends LitElement {
     this.setHtmlVar("--top-ad-pad", pad);
   }
 
+  private dockedHeight(el: HTMLElement): number {
+    const rect = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
+    if (style.display === "none" || style.position !== "fixed") return 0;
+    // Only make room while the banner is actually docked at the viewport
+    // top — not while parked offscreen.
+    if (rect.top >= window.innerHeight / 4) return 0;
+    return Math.ceil(Math.max(0, rect.bottom));
+  }
+
+  private checkOversizedTopAd(): void {
+    if (this.oversizeCheck !== null) return;
+    const el = this.topAdEl;
+    this.oversizeCheck = setTimeout(() => {
+      this.oversizeCheck = null;
+      if (el === null || el !== this.topAdEl) return;
+      const height = this.dockedHeight(el);
+      if (height > MAX_DOCKED_AD_HEIGHT) this.destroyOversizedTopAd(el, height);
+    }, OVERSIZE_SETTLE_MS);
+  }
+
   private destroyOversizedTopAd(el: HTMLElement, height: number): void {
-    if (this.oversizedTopAd === el) return;
     this.oversizedTopAd = el;
-    // Until the destroy lands; visibility keeps its box, so the measurement
-    // above is unchanged and nothing reflows.
     el.style.visibility = "hidden";
     reportEvent("top_ad_oversized", {
       height: String(height),
       pageOpen: String(document.body.classList.contains("page-open")),
       ...creativeAttributes(el, "flex"),
     });
-    if (typeof window.ramp?.destroyUnits !== "function") return;
+    this.updateTopAdHeight();
+    // destroyUnits can throw synchronously or reject; neither may escape.
     Promise.resolve()
-      .then(() => window.ramp.destroyUnits("pw-oop-flex"))
+      .then(() => window.ramp?.destroyUnits?.("pw-oop-flex"))
       .catch((e: unknown) => {
         console.warn("error destroying oversized header ad", e);
+      })
+      .finally(() => {
+        // Still here once the destroy settled: nothing else will remove it.
+        if (document.getElementById("pw-oop-flex") === el) el.remove();
       });
   }
 
