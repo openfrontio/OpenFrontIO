@@ -1288,11 +1288,13 @@ export class ClientGameRunner {
     // disposals around it.
     this.input.destroy();
     this.disposeRenderer?.();
+    // Terminate the worker even if the runner never started (a lobby left while
+    // it was loading), otherwise nothing else would ever stop it. Idempotent.
+    this.worker.cleanup();
     if (!this.isActive) return;
 
     this.isActive = false;
     this.metrics?.stop();
-    this.worker.cleanup();
     this.transport.leaveGame();
     if (this.connectionCheckInterval) {
       clearInterval(this.connectionCheckInterval);
