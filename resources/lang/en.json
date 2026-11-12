@@ -2463,7 +2463,7 @@
     "listing_full": "The public lobby list is full. Please try again later.",
     "listing_host_cheats_enabled": "Disable host cheats to list your lobby publicly.",
     "listing_limit_reached": "You already have a publicly listed lobby.",
-    "listing_max_players_too_high": "Max players is too high for this map.",
+    "listing_max_players_too_high": "Max players is too high to list this lobby publicly.",
     "listing_max_players_too_low": "Max players must be higher than the number of players already in the lobby.",
     "listing_requires_subscription": "A Warlord or Sovereign subscription is required to list a lobby publicly.",
     "listing_whitelist_enabled": "Disable the join whitelist to list your lobby publicly.",
