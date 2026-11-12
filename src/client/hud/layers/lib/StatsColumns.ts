@@ -188,9 +188,10 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "team",
     labelKey: "leaderboard.team",
     headerVisual: { kind: "icon", icon: "team" },
-    // Gives up the room a host leaves at the table's end (--stats-end-track),
-    // so the table keeps its width.
-    width: "calc(var(--stats-name, 100px) - var(--stats-end-track, 0px))",
+    // As wide as the player track, so the panel keeps its width whichever
+    // tables are open; the players alive count takes its room from the name.
+    width:
+      "calc(var(--stats-name, 100px) + var(--stats-chip, 0.75rem) - var(--stats-end-track, 0px))",
     widest: () => [],
     align: "start",
     headerAlign: "center",

@@ -20,6 +20,8 @@ export interface StatsRow {
   clanTag?: string | null;
   /** The colour shown by the name, as a CSS colour. */
   color?: string;
+  /** For a team: how many of its players are alive, out of how many. */
+  alive?: { count: number; total: number };
   values: ReadonlyMap<ColumnId, number>;
   emphasized?: boolean;
   pinned?: boolean;
@@ -135,10 +137,13 @@ const CELL_SIZE: Partial<Record<ColumnId, string>> = {
 };
 // In other players' rows; yours and your teammates' are white throughout.
 const NAME_TONE = "font-medium text-white";
-// The player's colour before the name. The dark hairline keeps a pale colour
-// apart from the map when the panel is see-through.
+// The player's or team's colour before the name. The dark hairline keeps a
+// pale colour apart from the map when the panel is see-through.
 const CHIP =
   "me-1 size-2 shrink-0 rounded-xs inset-ring inset-ring-black/40 max-[360px]:hidden";
+// A team's players alive after its name, quieter than the name.
+const ALIVE = "ms-auto shrink-0 ps-1 text-[11px]";
+const ALIVE_TONE = "text-white/55";
 const CELL_TONE: Partial<Record<ColumnId, string>> = {
   rank: "text-white/55",
   player: NAME_TONE,
@@ -443,6 +448,7 @@ export abstract class StatsTable extends LitElement {
     value: number,
     state: RowState,
     color: string | undefined,
+    alive: StatsRow["alive"],
   ) {
     // A player without a clan shows a dash. Zeros recede, but not the Type
     // column's: there 0 reads "Player".
@@ -484,8 +490,21 @@ export abstract class StatsTable extends LitElement {
           title=${isName ? text : nothing}
           >${noClan ? "–" : text}</span
         >
+        ${isName && alive !== undefined ? this.renderAlive(alive) : nothing}
       </div>
     `;
+  }
+
+  // Named for screen readers and on hover; on screen the numbers are enough.
+  private renderAlive({ count, total }: NonNullable<StatsRow["alive"]>) {
+    const label = translateText("leaderboard.players_alive");
+    return html`<span
+      class="${ALIVE} ${count === 0 ? ZERO_TONE : ALIVE_TONE}"
+      title="${label} ${count}/${total}"
+      data-alive
+      ?data-zero=${count === 0}
+      ><span class="sr-only">${label} </span>${count}/${total}</span
+    >`;
   }
 
   private renderRow(
@@ -524,6 +543,7 @@ export abstract class StatsTable extends LitElement {
               value,
               state,
               row.color,
+              row.alive,
             );
           },
         )}
