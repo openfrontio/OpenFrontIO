@@ -497,9 +497,10 @@ describe("PlayerStats rows", () => {
 
   it("asks for the column menu on a right-click in the header, not in a row", async () => {
     const playerStats = await mount([player("alice", 90)], null);
-    const asked: { x: number; y: number }[] = [];
+    type Asked = { x: number; y: number; header: Element | null };
+    const asked: Asked[] = [];
     playerStats.addEventListener("columns-menu", (event) =>
-      asked.push((event as CustomEvent<{ x: number; y: number }>).detail),
+      asked.push((event as CustomEvent<Asked>).detail),
     );
     const rightClick = (target: Element) => {
       const event = new MouseEvent("contextmenu", {
@@ -518,7 +519,15 @@ describe("PlayerStats rows", () => {
       ) as Element,
     );
     expect(onHeader.defaultPrevented).toBe(true);
-    expect(asked).toEqual([{ x: 120, y: 40 }]);
+    expect(asked).toEqual([
+      {
+        x: 120,
+        y: 40,
+        header: playerStats.querySelector(
+          '[role="columnheader"][data-column="gold"]',
+        ),
+      },
+    ]);
 
     const onRow = rightClick(rows(playerStats)[0]);
     expect(onRow.defaultPrevented).toBe(true);

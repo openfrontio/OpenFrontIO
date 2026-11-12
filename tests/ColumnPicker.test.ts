@@ -249,6 +249,7 @@ describe("ColumnPicker", () => {
   it("is closed when it is taken off the page, and opens again on the first press", async () => {
     const picker = await mount();
     const button = document.createElement("button");
+    button.toggleAttribute("data-column-menu-button", true);
     holder.appendChild(button);
     picker.openFrom(button);
     await picker.updateComplete;
@@ -274,6 +275,7 @@ describe("ColumnPicker", () => {
     expect(menu()).toBeNull();
 
     const button = document.createElement("button");
+    button.toggleAttribute("data-column-menu-button", true);
     holder.appendChild(button);
     picker.openFrom(button);
     await picker.updateComplete;
@@ -285,18 +287,334 @@ describe("ColumnPicker", () => {
     expect(button.getAttribute("aria-expanded")).toBe("false");
   });
 
-  it("closes on a click outside, but not on a click inside", async () => {
+  it("lights its host's button while it is open, also from a header", async () => {
+    const picker = await mount();
+    const button = document.createElement("button");
+    button.toggleAttribute("data-column-menu-button", true);
+    holder.appendChild(button);
+
+    picker.toggleAt(10, 10);
+    await picker.updateComplete;
+    expect(menu()).not.toBeNull();
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    picker.toggleAt(10, 10);
+    await picker.updateComplete;
+    expect(menu()).toBeNull();
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("moves focus to its first box when the keyboard opens it", async () => {
+    const picker = await mount();
+    const button = document.createElement("button");
+    holder.appendChild(button);
+    button.focus();
+    const matches = button.matches.bind(button);
+    vi.spyOn(button, "matches").mockImplementation(
+      (selector) => selector === ":focus-visible" || matches(selector),
+    );
+    picker.openFrom(button);
+    await picker.updateComplete;
+
+    expect(document.activeElement).toBe(boxes("player")[0]);
+  });
+
+  it("focuses the menu itself, not a box, when the mouse opens it", async () => {
+    // On a box, Space would tick a column and never reach the game, which
+    // holds the alternate view with it.
     const picker = await mount();
     picker.toggleAt(0, 0);
     await picker.updateComplete;
 
-    boxes("player")[0].click();
+    expect(document.activeElement).toBe(menu());
+    const onWindow: string[] = [];
+    const listen = (e: KeyboardEvent) => onWindow.push(`${e.type} ${e.code}`);
+    window.addEventListener("keydown", listen);
+    window.addEventListener("keyup", listen);
+    try {
+      for (const type of ["keydown", "keyup"]) {
+        document.activeElement?.dispatchEvent(
+          new KeyboardEvent(type, { key: " ", code: "Space", bubbles: true }),
+        );
+      }
+    } finally {
+      window.removeEventListener("keydown", listen);
+      window.removeEventListener("keyup", listen);
+    }
+    expect(onWindow).toEqual(["keydown Space", "keyup Space"]);
+  });
+
+  it("takes a mouse open as one, wherever the keyboard left its focus", async () => {
+    const picker = await mount();
+    // The keyboard's focus is on another control of the bar.
+    const toggle = document.createElement("button");
+    const button = document.createElement("button");
+    holder.append(toggle, button);
+    toggle.focus();
+    const matches = toggle.matches.bind(toggle);
+    vi.spyOn(toggle, "matches").mockImplementation(
+      (selector) => selector === ":focus-visible" || matches(selector),
+    );
+
+    // A click on the menu's button, then a right-click on a header.
+    picker.openFrom(button);
+    await picker.updateComplete;
+    expect(document.activeElement).toBe(menu());
+    picker.openFrom(button);
+    await picker.updateComplete;
+    picker.toggleAt(10, 10);
+    await picker.updateComplete;
+    expect(document.activeElement).toBe(menu());
+
+    // Escape gives focus to nothing: it was not the keyboard's menu.
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await picker.updateComplete;
+    expect(menu()).toBeNull();
+    expect(document.activeElement).not.toBe(toggle);
+  });
+
+  it("opens on its first box from the context menu key on a sort header", async () => {
+    const picker = await mount();
+    const header = document.createElement("div");
+    header.className = "stats-table-header";
+    const sort = document.createElement("button");
+    header.append(sort);
+    holder.append(header);
+    sort.focus();
+    const matches = sort.matches.bind(sort);
+    vi.spyOn(sort, "matches").mockImplementation(
+      (selector) => selector === ":focus-visible" || matches(selector),
+    );
+
+    picker.toggleAt(10, 10, header);
+    await picker.updateComplete;
+
+    expect(document.activeElement).toBe(boxes("player")[0]);
+  });
+
+  it("takes a right-click on one header as the mouse's while the keyboard is on another", async () => {
+    const picker = await mount();
+    const row = document.createElement("div");
+    row.className = "stats-table-header";
+    const [focusedHeader, clickedHeader] = [0, 1].map(() => {
+      const cell = document.createElement("div");
+      cell.setAttribute("role", "columnheader");
+      cell.append(document.createElement("button"));
+      row.append(cell);
+      return cell;
+    });
+    holder.append(row);
+    const sort = focusedHeader.querySelector("button")!;
+    sort.focus();
+    const matches = sort.matches.bind(sort);
+    vi.spyOn(sort, "matches").mockImplementation(
+      (selector) => selector === ":focus-visible" || matches(selector),
+    );
+
+    picker.toggleAt(10, 10, clickedHeader);
+    await picker.updateComplete;
+    expect(document.activeElement).toBe(menu());
+
+    // Not the keyboard's menu: Escape leaves focus where the menu put it.
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await picker.updateComplete;
+    expect(menu()).toBeNull();
+    expect(document.activeElement).not.toBe(sort);
+  });
+
+  it("gives focus back to the menu after a tick with the mouse, and leaves a keyboard user on the box", async () => {
+    const picker = await mount();
+    picker.toggleAt(0, 0);
+    await picker.updateComplete;
+    const cities = () =>
+      boxes("player").find(
+        (box) => box.closest("label")?.dataset.column === "cities",
+      ) as HTMLInputElement;
+
+    // A press on a line focuses its box, as browsers do, and ticks it.
+    cities().focus();
+    cities().click();
+    await picker.updateComplete;
+    expect(new UserSettings().statsColumns("player")).toContain("cities");
+    expect(document.activeElement).toBe(menu());
+    expect(menu()).not.toBeNull();
+
+    // Reached with the keyboard, the box keeps focus for the next key.
+    const box = cities();
+    const matches = box.matches.bind(box);
+    vi.spyOn(box, "matches").mockImplementation(
+      (selector) => selector === ":focus-visible" || matches(selector),
+    );
+    box.focus();
+    box.click();
+    await picker.updateComplete;
+    expect(new UserSettings().statsColumns("player")).not.toContain("cities");
+    expect(document.activeElement).toBe(box);
+  });
+
+  it("closes on Escape, gives focus back to its button and keeps the key from the game", async () => {
+    const picker = await mount();
+    const button = document.createElement("button");
+    button.toggleAttribute("data-column-menu-button", true);
+    holder.appendChild(button);
+    button.focus();
+    // Reached with the keyboard. jsdom guesses :focus-visible from the events
+    // it has seen, so it is told.
+    const matches = button.matches.bind(button);
+    vi.spyOn(button, "matches").mockImplementation(
+      (selector) => selector === ":focus-visible" || matches(selector),
+    );
+    picker.openFrom(button);
+    await picker.updateComplete;
+    const onWindow: string[] = [];
+    const listen = (e: KeyboardEvent) => onWindow.push(e.key);
+    window.addEventListener("keydown", listen);
+
+    try {
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+      await picker.updateComplete;
+    } finally {
+      window.removeEventListener("keydown", listen);
+    }
+
+    expect(menu()).toBeNull();
+    expect(document.activeElement).toBe(button);
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(onWindow).toEqual([]);
+
+    // Its close button does the same.
+    picker.openFrom(button);
+    await picker.updateComplete;
+    menu()
+      ?.querySelector<HTMLButtonElement>('button[aria-label="common.close"]')
+      ?.click();
+    await picker.updateComplete;
+    expect(menu()).toBeNull();
+    expect(document.activeElement).toBe(button);
+  });
+
+  it("closes when focus leaves it, without taking focus back", async () => {
+    const picker = await mount();
+    const button = document.createElement("button");
+    const elsewhere = document.createElement("button");
+    holder.append(button, elsewhere);
+    button.focus();
+    picker.openFrom(button);
+    await picker.updateComplete;
+
+    elsewhere.focus();
+    await picker.updateComplete;
+
+    expect(menu()).toBeNull();
+    expect(document.activeElement).toBe(elsewhere);
+  });
+
+  it("closes on a press outside, but not inside, on its button or on a right-click on a header", async () => {
+    const picker = await mount();
+    const button = document.createElement("button");
+    button.toggleAttribute("data-column-menu-button", true);
+    const header = document.createElement("div");
+    header.className = "stats-table-header";
+    holder.append(button, header);
+    const press = (target: Element, button = 0) => {
+      const event = new PointerEvent("pointerdown", {
+        button,
+        bubbles: true,
+        cancelable: true,
+      });
+      target.dispatchEvent(event);
+      return event;
+    };
+    picker.openFrom(button);
+    await picker.updateComplete;
+
+    press(boxes("player")[0]);
+    press(button);
+    // The header's right-click toggles the menu itself, and must not take
+    // focus on the way.
+    expect(press(header, 2).defaultPrevented).toBe(true);
     await picker.updateComplete;
     expect(menu()).not.toBeNull();
 
-    holder.click();
+    press(holder);
     await picker.updateComplete;
     expect(menu()).toBeNull();
+
+    // A Ctrl+click on a Mac is a left press that still brings the context
+    // menu: the press closes the menu and the context menu leaves it closed.
+    picker.toggleAt(0, 0);
+    await picker.updateComplete;
+    press(header);
+    picker.toggleAt(0, 0);
+    await picker.updateComplete;
+    expect(menu()).toBeNull();
+    // The next right-click opens it as usual.
+    press(header, 2);
+    picker.toggleAt(0, 0);
+    await picker.updateComplete;
+    expect(menu()).not.toBeNull();
+
+    // A plain click on a header closes it too. Once that press is over, a
+    // context menu asked for with the keyboard opens it.
+    press(header);
+    header.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+    await picker.updateComplete;
+    expect(menu()).toBeNull();
+    picker.toggleAt(0, 0);
+    await picker.updateComplete;
+    expect(menu()).not.toBeNull();
+  });
+
+  it("closes on one press of its button when a right-click on a header opened it", async () => {
+    const picker = await mount();
+    const button = document.createElement("button");
+    button.toggleAttribute("data-column-menu-button", true);
+    button.addEventListener("click", () => picker.openFrom(button));
+    holder.append(button);
+    picker.toggleAt(10, 10);
+    await picker.updateComplete;
+
+    button.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, cancelable: true }),
+    );
+    button.click();
+    await picker.updateComplete;
+
+    expect(menu()).toBeNull();
+  });
+
+  it("leaves nothing focused when it was opened with nothing focused", async () => {
+    const picker = await mount();
+    picker.toggleAt(0, 0);
+    await picker.updateComplete;
+    expect(document.activeElement).toBe(menu());
+
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await picker.updateComplete;
+
+    expect(menu()).toBeNull();
+    expect(document.activeElement).toBe(document.body);
+
+    // Nor does a button a mouse press left focused get it back.
+    const button = document.createElement("button");
+    holder.appendChild(button);
+    button.focus();
+    picker.openFrom(button);
+    await picker.updateComplete;
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await picker.updateComplete;
+
+    expect(menu()).toBeNull();
+    expect(document.activeElement).toBe(document.body);
   });
 
   it("takes its menu away when it is removed", async () => {

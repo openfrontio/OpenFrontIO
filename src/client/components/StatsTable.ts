@@ -275,7 +275,9 @@ export abstract class StatsTable extends LitElement {
   }
 
   // The browser's own menu never opens on the table. On the header row a
-  // right-click asks the host for the column menu, at the pointer.
+  // right-click asks the host for the column menu, at the pointer. The header
+  // cell it was asked on tells the menu whether it is the keyboard's: the
+  // context menu key fires on the focused header, a mouse wherever it is.
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
     const target = event.target;
@@ -286,10 +288,17 @@ export abstract class StatsTable extends LitElement {
       return;
     }
     this.dispatchEvent(
-      new CustomEvent<{ x: number; y: number }>("columns-menu", {
-        detail: { x: event.clientX, y: event.clientY },
-        bubbles: true,
-      }),
+      new CustomEvent<{ x: number; y: number; header: Element | null }>(
+        "columns-menu",
+        {
+          detail: {
+            x: event.clientX,
+            y: event.clientY,
+            header: target.closest('[role="columnheader"]'),
+          },
+          bubbles: true,
+        },
+      ),
     );
   }
 

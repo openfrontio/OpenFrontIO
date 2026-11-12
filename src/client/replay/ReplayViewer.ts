@@ -1272,8 +1272,9 @@ export class ReplayViewer extends LitElement {
     return html`
       <aside
         class="absolute top-0 left-0 flex flex-col gap-2 max-h-[calc(100vh-80px)] overflow-y-auto p-2 hud-panel rounded-br-lg text-white max-[400px]:w-full max-[400px]:rounded-none"
-        @columns-menu=${(e: CustomEvent<{ x: number; y: number }>) =>
-          picker()?.toggleAt(e.detail.x, e.detail.y)}
+        @columns-menu=${(
+          e: CustomEvent<{ x: number; y: number; header: Element | null }>,
+        ) => picker()?.toggleAt(e.detail.x, e.detail.y, e.detail.header)}
         @columns-changed=${() =>
           this.querySelector<PlayerStats>("player-stats")?.refresh()}
       >
@@ -1281,6 +1282,7 @@ export class ReplayViewer extends LitElement {
           <button
             type="button"
             class="${HUD_ICON_BUTTON} aria-expanded:bg-white/15 aria-expanded:text-white"
+            data-column-menu-button
             aria-haspopup="dialog"
             aria-expanded="false"
             aria-label=${columns}
