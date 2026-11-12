@@ -156,6 +156,8 @@ export class HomepagePromos extends LitElement {
       this.topAdResize = null;
       this.topAdStyle?.disconnect();
       this.topAdStyle = null;
+      if (this.oversizeCheck !== null) clearTimeout(this.oversizeCheck);
+      this.oversizeCheck = null;
       this.topAdEl = el;
       if (el) {
         this.topAdResize = new ResizeObserver(() => this.updateTopAdHeight());

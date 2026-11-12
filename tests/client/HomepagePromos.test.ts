@@ -612,6 +612,17 @@ describe("HomepagePromos docked header ad", () => {
     expect(ramp.destroyUnits).not.toHaveBeenCalled();
   });
 
+  it("checks a skin that replaces the unit while a check is pending", async () => {
+    const { ramp } = stubRamp();
+    const first = dockFlex(350);
+    await vi.advanceTimersByTimeAsync(500);
+    first.remove();
+    dockFlex(280);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(ramp.destroyUnits).toHaveBeenCalledExactlyOnceWith("pw-oop-flex");
+  });
+
   it("removes a skin its destroy left on the page", async () => {
     const { ramp } = stubRamp();
     ramp.destroyUnits.mockRejectedValue(new Error("unknown unit"));
