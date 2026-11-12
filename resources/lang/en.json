@@ -1677,6 +1677,8 @@
     "team": "Team",
     "teams_table": "Teams",
     "trainTradeGoldPerMin": "Train Trade Gold/min",
+    "trend_down": "Fell in the last 30 seconds",
+    "trend_up": "Climbed in the last 30 seconds",
     "troops": "Troops",
     "type": "Type",
     "warships": "Warships"

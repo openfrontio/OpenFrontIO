@@ -62,6 +62,7 @@ describe("PlayerStats", () => {
       playerViews: () => [me],
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -99,6 +100,7 @@ describe("PlayerStats", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -166,6 +168,7 @@ describe("PlayerStats", () => {
       playerViews: () => [me],
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -221,6 +224,7 @@ describe("PlayerStats", () => {
       playerViews: () => [me],
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -290,6 +294,7 @@ describe("PlayerStats default sort", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -391,6 +396,7 @@ describe("PlayerStats rows", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -909,6 +915,7 @@ describe("PlayerStats neighbours", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -1024,6 +1031,7 @@ describe("PlayerStats header tooltips", () => {
       playerViews: () => [alice],
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -1131,6 +1139,7 @@ describe("PlayerStats clan column", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -1333,6 +1342,7 @@ describe("gold rate history", () => {
       myPlayer: () => players[0],
       playerViews: () => players,
       ticks: () => ticks,
+      inSpawnPhase: () => false,
     } as unknown as GameView;
   }
 
@@ -1449,6 +1459,7 @@ describe("troop gauge", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => 600,
+      inSpawnPhase: () => false,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -1539,6 +1550,7 @@ describe("PlayerStats glide", () => {
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
       ticks: () => ticks,
+      inSpawnPhase: () => false,
       numLandTiles: () => 1000,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;
@@ -1722,5 +1734,203 @@ describe("PlayerStats glide", () => {
     await refreshWith(playerStats, { p3: 45 });
 
     expect(animate).not.toHaveBeenCalled();
+  });
+});
+
+describe("PlayerStats trend marks", () => {
+  // Ten players ranked by land, p1 first. Each refresh is one second.
+  let ticks = 0;
+  let spawnPhase = false;
+  let land: Map<string, number>;
+
+  function landPlayer(id: string): PlayerView {
+    return {
+      ...player(id, 0),
+      numTilesOwned: () => land.get(id) ?? 0,
+    } as unknown as PlayerView;
+  }
+
+  async function mount(): Promise<PlayerStats> {
+    const players = Array.from({ length: 10 }, (_, i) =>
+      landPlayer(`p${i + 1}`),
+    );
+    const game = {
+      myPlayer: () => null,
+      playerViews: () => players,
+      config: () => ({ maxTroops: () => 100 }),
+      ticks: () => ticks,
+      inSpawnPhase: () => spawnPhase,
+      numLandTiles: () => 1000,
+      numTilesWithFallout: () => 0,
+    } as unknown as GameView;
+    const playerStats = new PlayerStats();
+    playerStats.game = game;
+    playerStats.visible = true;
+    document.body.append(playerStats);
+    await playerStats.updateComplete;
+    return playerStats;
+  }
+
+  async function play(playerStats: PlayerStats, seconds: number) {
+    for (let i = 0; i < seconds; i++) {
+      ticks += 10;
+      playerStats.refresh();
+    }
+    await playerStats.updateComplete;
+  }
+
+  // p<a> and p<b> trade places.
+  function swap(a: number, b: number) {
+    const landA = land.get(`p${a}`)!;
+    land.set(`p${a}`, land.get(`p${b}`)!);
+    land.set(`p${b}`, landA);
+  }
+
+  function marks(playerStats: PlayerStats) {
+    return [...playerStats.querySelectorAll("[data-trend]")].map((mark) => [
+      mark
+        .closest(".stats-table-row")
+        ?.querySelector('[data-column="player"]')
+        ?.textContent?.trim(),
+      mark.getAttribute("data-trend"),
+    ]);
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+    ticks = 0;
+    spawnPhase = false;
+    land = new Map(
+      Array.from({ length: 10 }, (_, i) => [`p${i + 1}`, 100 - i * 10]),
+    );
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("marks a row that climbed and stayed up, and the row it passed", async () => {
+    const playerStats = await mount();
+    await play(playerStats, 60);
+
+    swap(4, 5);
+    await play(playerStats, 4);
+    // Four refreshes at the new ranks are not enough.
+    expect(marks(playerStats)).toEqual([]);
+
+    await play(playerStats, 1);
+    expect(marks(playerStats)).toEqual([
+      ["p5", "up"],
+      ["p4", "down"],
+    ]);
+    const mark = playerStats.querySelector('[data-trend="up"]');
+    expect(mark?.getAttribute("role")).toBe("img");
+    expect(mark?.getAttribute("aria-label")).toBe("leaderboard.trend_up");
+    expect(
+      playerStats
+        .querySelector('[data-trend="down"]')
+        ?.getAttribute("aria-label"),
+    ).toBe("leaderboard.trend_down");
+  });
+
+  it("marks the real moves while the rows hold their order under a mouse", async () => {
+    const playerStats = await mount();
+    await play(playerStats, 60);
+
+    playerStats
+      .querySelector(".stats-table-scroll")
+      ?.dispatchEvent(
+        new PointerEvent("pointerenter", { pointerType: "mouse" }),
+      );
+    swap(4, 5);
+    await play(playerStats, 5);
+
+    // Drawn where they were, marked for where they rank.
+    expect(marks(playerStats)).toEqual([
+      ["p4", "down"],
+      ["p5", "up"],
+    ]);
+  });
+
+  it("does not mark a row that went back to where it was", async () => {
+    const playerStats = await mount();
+    await play(playerStats, 60);
+
+    swap(7, 8);
+    await play(playerStats, 2);
+    swap(7, 8);
+    await play(playerStats, 5);
+
+    expect(marks(playerStats)).toEqual([]);
+  });
+
+  it("marks nothing in the spawn phase or in the minute after it", async () => {
+    spawnPhase = true;
+    const playerStats = await mount();
+    await play(playerStats, 10);
+    spawnPhase = false;
+    await play(playerStats, 35);
+
+    swap(4, 5);
+    // The move has held for 25 seconds, but play started 59 seconds ago.
+    await play(playerStats, 25);
+    expect(marks(playerStats)).toEqual([]);
+
+    await play(playerStats, 1);
+    expect(marks(playerStats)).toEqual([
+      ["p5", "up"],
+      ["p4", "down"],
+    ]);
+  });
+
+  it("marks nothing in the 30 seconds after the table opens", async () => {
+    const playerStats = await mount();
+    await play(playerStats, 60);
+    playerStats.visible = false;
+    await play(playerStats, 10);
+    playerStats.visible = true;
+    await playerStats.updateComplete;
+    swap(4, 5);
+
+    await play(playerStats, 29);
+    expect(marks(playerStats)).toEqual([]);
+
+    await play(playerStats, 1);
+    expect(marks(playerStats)).toEqual([
+      ["p5", "up"],
+      ["p4", "down"],
+    ]);
+  });
+
+  it("marks nothing when most of the rows moved", async () => {
+    const playerStats = await mount();
+    await play(playerStats, 60);
+
+    swap(1, 10);
+    swap(2, 9);
+    swap(3, 8);
+    await play(playerStats, 30);
+    // Six rows of ten moved: a reshuffle.
+    expect(marks(playerStats)).toEqual([]);
+  });
+
+  it("drops the marks on a sort click", async () => {
+    const playerStats = await mount();
+    await play(playerStats, 60);
+    swap(4, 5);
+    await play(playerStats, 30);
+    expect(marks(playerStats)).toHaveLength(2);
+
+    playerStats
+      .querySelector('[role="columnheader"][data-column="gold"] button')
+      ?.dispatchEvent(new MouseEvent("click"));
+    await playerStats.updateComplete;
+    expect(marks(playerStats)).toEqual([]);
+
+    await play(playerStats, 29);
+    expect(marks(playerStats)).toEqual([]);
   });
 });
