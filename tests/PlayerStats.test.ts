@@ -775,6 +775,113 @@ describe("PlayerStats rows", () => {
       header("tiles")?.querySelector("button")?.getAttribute("aria-label"),
     ).toBe("leaderboard.owned");
   });
+
+  describe("under the pointer", () => {
+    const land = new Map<string, number>();
+    const alive = new Set<string>();
+
+    function changing(name: string, tiles: number) {
+      land.set(name, tiles);
+      alive.add(name);
+      return {
+        ...player(name, tiles),
+        numTilesOwned: () => land.get(name),
+        isAlive: () => alive.has(name),
+      } as unknown as PlayerView;
+    }
+
+    const names = (playerStats: PlayerStats) =>
+      rows(playerStats).map((row) => cell(row, "player")?.textContent?.trim());
+    const ranks = (playerStats: PlayerStats) =>
+      rows(playerStats).map((row) => cell(row, "rank")?.textContent?.trim());
+
+    async function point(
+      playerStats: PlayerStats,
+      type: "pointerenter" | "pointerleave",
+      pointerType: string,
+    ) {
+      playerStats
+        .querySelector(".stats-table-scroll")
+        ?.dispatchEvent(new PointerEvent(type, { pointerType }));
+      await playerStats.updateComplete;
+    }
+
+    async function refresh(playerStats: PlayerStats) {
+      playerStats.refresh();
+      await playerStats.updateComplete;
+    }
+
+    it("keeps the rows in place under a mouse, with their new ranks, and sorts them when it leaves", async () => {
+      const players = [
+        changing("alice", 90),
+        changing("bob", 50),
+        changing("carol", 10),
+      ];
+      const playerStats = await mount(players, null);
+
+      await point(playerStats, "pointerenter", "mouse");
+      land.set("alice", 5);
+      land.set("carol", 100);
+      players.push(changing("dave", 200));
+      alive.delete("bob");
+      await refresh(playerStats);
+      // Newcomers go to the end, the dead leave.
+      expect(names(playerStats)).toEqual(["alice", "carol", "dave"]);
+      expect(ranks(playerStats)).toEqual(["3", "2", "1"]);
+
+      await point(playerStats, "pointerleave", "mouse");
+      expect(names(playerStats)).toEqual(["dave", "carol", "alice"]);
+      expect(ranks(playerStats)).toEqual(["1", "2", "3"]);
+    });
+
+    it("does not hold them for a touch", async () => {
+      const playerStats = await mount(
+        [changing("alice", 90), changing("bob", 50)],
+        null,
+      );
+
+      await point(playerStats, "pointerenter", "touch");
+      land.set("bob", 100);
+      await refresh(playerStats);
+      expect(names(playerStats)).toEqual(["bob", "alice"]);
+    });
+
+    it("sorts at once when a header is clicked", async () => {
+      const playerStats = await mount(
+        [
+          { ...changing("alice", 90), gold: () => 10n } as PlayerView,
+          { ...changing("bob", 50), gold: () => 90n } as PlayerView,
+        ],
+        null,
+      );
+
+      await point(playerStats, "pointerenter", "mouse");
+      playerStats
+        .querySelector<HTMLElement>(
+          '[role="columnheader"][data-column="gold"] button',
+        )
+        ?.click();
+      await playerStats.updateComplete;
+      expect(names(playerStats)).toEqual(["bob", "alice"]);
+      expect(ranks(playerStats)).toEqual(["1", "2"]);
+    });
+
+    it("lets go when the table is hidden under the pointer", async () => {
+      const playerStats = await mount(
+        [changing("alice", 90), changing("bob", 50)],
+        null,
+      );
+
+      await point(playerStats, "pointerenter", "mouse");
+      playerStats.visible = false;
+      await playerStats.updateComplete;
+      land.set("bob", 100);
+      playerStats.visible = true;
+      await playerStats.updateComplete;
+      await refresh(playerStats);
+      expect(names(playerStats)).toEqual(["bob", "alice"]);
+    });
+  });
 });
 
 describe("PlayerStats neighbours", () => {
@@ -1532,6 +1639,26 @@ describe("PlayerStats glide", () => {
       ["p9", "translateY(-24px)"],
       ["p12", "translateY(24px)"],
       ["p11", "translateY(-24px)"],
+    ]);
+  });
+
+  it("glides the rows held under a mouse to their places when it leaves", async () => {
+    const playerStats = await mount([50, 40, 30, 20, 10]);
+    const list = playerStats.querySelector(".stats-table-scroll");
+
+    list?.dispatchEvent(
+      new PointerEvent("pointerenter", { pointerType: "mouse" }),
+    );
+    await refreshWith(playerStats, { p3: 45 });
+    expect(animate).not.toHaveBeenCalled();
+
+    list?.dispatchEvent(
+      new PointerEvent("pointerleave", { pointerType: "mouse" }),
+    );
+    await playerStats.updateComplete;
+    expect(glides()).toEqual([
+      ["p3", "translateY(24px)"],
+      ["p2", "translateY(-24px)"],
     ]);
   });
 
