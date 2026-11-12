@@ -590,14 +590,18 @@ export abstract class StatsTable extends LitElement {
     // "auto" tracks stay content-sized intrinsically, then split only the
     // spare width supplied by a wider sibling; fixed tracks never stretch.
     // The empty last track only grows to a scrollbar.
-    const gridTemplate = `${columns
-      .map((column) => column.width)
-      .join(" ")} minmax(0px, max-content)`;
+    const gridTemplate = [
+      ...columns.map((column) => column.width),
+      "minmax(0px, max-content)",
+    ].join(" ");
 
     return html`
       <div class="stats-table ${TABLE}">
+        <!-- The room a host leaves at the table's end for a button over the
+             header row (--stats-end-track) is kept outside the sideways
+             scroll: it stays at the visible end, over no column. -->
         <div
-          class="overflow-x-auto ${SCROLLBAR}"
+          class="overflow-x-auto me-(--stats-end-track) ${SCROLLBAR}"
           @contextmenu=${this.onContextMenu}
         >
           <div
