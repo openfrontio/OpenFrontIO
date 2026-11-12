@@ -235,7 +235,9 @@ export class GameLeftSidebar extends LitElement implements Controller {
           >
             <of-icon name="terrain" size=${BAR_ICON_SIZE}></of-icon>
           </button>
-          ${gameId ? gameIdButton(gameId) : null}
+          <!-- On portrait phones the timer bar covers it: the column menu
+               shows it in its footer there instead. -->
+          ${gameId ? gameIdButton(gameId, "max-sm:side-bar:hidden") : null}
           ${
             isTableShown
               ? html`
@@ -314,7 +316,11 @@ export class GameLeftSidebar extends LitElement implements Controller {
             .visible=${this.isTeamStatsShown && this.isTeamGame}
           ></team-stats>
           <!-- Its menu is drawn under <body>; it takes no room here. -->
-          <column-picker class="hidden" .tables=${tables}></column-picker>
+          <column-picker
+            class="hidden"
+            .tables=${tables}
+            .gameId=${gameId}
+          ></column-picker>
         </div>
         <slot></slot>
       </aside>
