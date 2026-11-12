@@ -122,19 +122,22 @@ describe("StatsTable virtualization", () => {
 
     const scroller = el.querySelector(".stats-table-scroll")!;
     const mine = scroller.querySelector("[data-me]");
+    const above = scroller.querySelector("[data-near]");
     expect(mine?.textContent).toContain("me");
     expect(scrollRows(el)).toEqual([
       ...Array.from({ length: 12 }, (_, i) => `${i + 1}`),
+      "299",
       "300",
     ]);
-    // Rows 13 to 299 have no DOM: one spacer between the window and yours,
-    // none after it.
+    // Rows 13 to 298 have no DOM: one spacer between the window and yours
+    // with the row above it, none after them.
     const spacers = scroller.querySelectorAll(".stats-table-spacer");
     expect(spacers).toHaveLength(1);
     expect(spacers[0].getAttribute("style")).toContain(
-      `height: ${(299 - 12) * 24}px`,
+      `height: ${(298 - 12) * 24}px`,
     );
-    expect(spacers[0].nextElementSibling).toBe(mine);
+    expect(spacers[0].nextElementSibling).toBe(above);
+    expect(above?.nextElementSibling).toBe(mine);
     expect(mine?.nextElementSibling).toBeNull();
 
     el.remove();
