@@ -25,6 +25,7 @@ describe("ColumnPicker", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     document.body.innerHTML = "";
   });
 
@@ -347,6 +348,55 @@ describe("ColumnPicker", () => {
 
     expect(menu()).toBeNull();
     expect(document.activeElement).toBe(document.body);
+  });
+
+  it("stays 8px inside the window, and opens above its anchor when there is no room below", async () => {
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(1440);
+    vi.spyOn(window, "innerHeight", "get").mockReturnValue(900);
+    let height = 400;
+    const button = document.createElement("button");
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        if (this === button) return new DOMRect(12, 40, 32, 32);
+        return this.matches("[data-column-menu]")
+          ? new DOMRect(0, 0, 300, height)
+          : new DOMRect();
+      },
+    );
+    const picker = await mount();
+    holder.appendChild(button);
+    const openAt = async (x: number, y: number) => {
+      picker.close();
+      await picker.updateComplete;
+      picker.toggleAt(x, y);
+      await picker.updateComplete;
+      const box = menu() as HTMLElement;
+      return [
+        box.style.getPropertyValue("--menu-x"),
+        box.style.getPropertyValue("--menu-y"),
+      ];
+    };
+
+    // Room on every side: at the pointer.
+    expect(await openAt(200, 100)).toEqual(["200px", "100px"]);
+    // Past the right edge: moved in. 1440 - 8 - 300.
+    expect(await openAt(1400, 100)).toEqual(["1132px", "100px"]);
+    // No room below: above the pointer. 850 - 400.
+    expect(await openAt(200, 850)).toEqual(["200px", "450px"]);
+    // Room on neither side: as low as it fits. 900 - 8 - 600.
+    height = 600;
+    expect(await openAt(200, 500)).toEqual(["200px", "292px"]);
+    // Under a button: start edges lined up, 4px below it.
+    picker.close();
+    await picker.updateComplete;
+    picker.openFrom(button);
+    await picker.updateComplete;
+    expect((menu() as HTMLElement).style.getPropertyValue("--menu-x")).toBe(
+      "12px",
+    );
+    expect((menu() as HTMLElement).style.getPropertyValue("--menu-y")).toBe(
+      "76px",
+    );
   });
 
   it("takes its menu away when it is removed", async () => {

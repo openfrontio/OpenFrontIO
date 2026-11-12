@@ -19,9 +19,10 @@ import { columnsFor, type ColumnDef } from "./lib/StatsColumns";
 // change of look is one edit. The templates below only hold structure.
 
 // Opaque, as every HUD surface that is read. Above the replay viewer (z 9000),
-// which also opens it, and under the game's modals (9998 and up).
+// which also opens it, and under the game's modals (9998 and up). Placed by
+// `--menu-x` and `--menu-y`, set once it is drawn and its size is known.
 const MENU =
-  "fixed z-9500 hud-modal rounded-xl p-1 flex flex-col w-max max-w-[calc(100vw-1rem)] text-white whitespace-nowrap animate-hud-rise motion-reduce:animate-none";
+  "fixed left-(--menu-x) top-(--menu-y) z-9500 hud-modal rounded-xl p-1 flex flex-col w-max max-w-[calc(100vw-1rem)] max-h-[calc(100dvh-1rem)] text-white whitespace-nowrap animate-hud-rise motion-reduce:animate-none";
 const HEAD = "flex shrink-0 items-center gap-2 ps-2";
 const BODY = "min-h-0 overflow-y-auto overscroll-contain";
 const SECTION = "not-first:mt-1 not-first:border-t not-first:border-white/12";
@@ -46,6 +47,9 @@ const VISUAL = "flex w-8 shrink-0 items-center justify-end";
 const VISUAL_SIZE = 16;
 const NAME = "min-w-0 flex-1 truncate";
 const CHECK = "ms-2 shrink-0 text-aquarius invisible peer-checked:visible";
+// The least room the menu leaves to each edge of the window: half the
+// `1rem` its width and height are capped by.
+const EDGE = 8;
 
 interface MenuGroup {
   readonly title: string;
@@ -98,6 +102,16 @@ export class ColumnPicker extends LitElement {
   private anchor: Anchor | null = null;
   private returnFocus: HTMLElement | null = null;
   private portal: HTMLDivElement | null = null;
+  // The icons inside draw a moment after the menu, and change its size: it
+  // is placed again then. Not in jsdom, which has no ResizeObserver.
+  private readonly menuResize =
+    typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(([entry]) => {
+          if (this.anchor !== null) {
+            this.place(entry.target as HTMLElement, this.anchor);
+          }
+        });
   private readonly userSettings = new UserSettings();
 
   createRenderRoot() {
@@ -337,31 +351,12 @@ export class ColumnPicker extends LitElement {
       document.body.appendChild(this.portal);
     }
 
-    // Under a button its start edges line up with the button's: both hosts
-    // keep their button near the window's left edge, and the menu is wider
-    // than the room left of it. A right-click opens it at the pointer.
-    let top: number;
-    let left: number;
-    if (anchor instanceof HTMLElement) {
-      const rect = anchor.getBoundingClientRect();
-      top = rect.bottom + 4;
-      left = rect.left;
-    } else {
-      top = anchor.y;
-      left = anchor.x;
-    }
-    const maxHeight = Math.max(
-      80,
-      Math.min(window.innerHeight * 0.4, window.innerHeight - top - 8),
-    );
-
     const title = translateText("leaderboard.configure_columns");
     const close = translateText("common.close");
     litRender(
       html`
         <div
           class="column-picker-popover ${MENU}"
-          style="top: ${top}px; left: ${left}px; max-height: ${maxHeight}px;"
           role="dialog"
           aria-label=${title}
           tabindex="-1"
@@ -391,9 +386,39 @@ export class ColumnPicker extends LitElement {
       `,
       this.portal,
     );
+    const box = this.portal.firstElementChild as HTMLElement;
+    this.place(box, anchor);
+    this.menuResize?.observe(box);
+  }
+
+  // From its measured size, once drawn: under its anchor, or above it when it
+  // fits there and not below, then held 8px inside every edge. Under a button
+  // the start edges line up: both hosts keep theirs near the window's left
+  // edge. A right-click opens it at the pointer.
+  private place(box: HTMLElement, anchor: Anchor) {
+    const { width, height } = box.getBoundingClientRect();
+    let x: number;
+    let below: number;
+    let above: number;
+    if (anchor instanceof HTMLElement) {
+      const rect = anchor.getBoundingClientRect();
+      x = rect.left;
+      below = rect.bottom + 4;
+      above = rect.top - 4 - height;
+    } else {
+      x = anchor.x;
+      below = anchor.y;
+      above = anchor.y - height;
+    }
+    const maxX = window.innerWidth - EDGE - width;
+    const maxY = window.innerHeight - EDGE - height;
+    const y = below > maxY && above >= EDGE ? above : below;
+    box.style.setProperty("--menu-x", `${Math.max(EDGE, Math.min(x, maxX))}px`);
+    box.style.setProperty("--menu-y", `${Math.max(EDGE, Math.min(y, maxY))}px`);
   }
 
   private removePortal() {
+    this.menuResize?.disconnect();
     this.portal?.remove();
     this.portal = null;
   }
