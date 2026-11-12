@@ -27,6 +27,7 @@ function ffaGame(): GameView {
     trainGold: () => 0,
     piracyGold: () => 0,
     goldEarned: () => 0,
+    troops: () => 500,
     totalUnitLevels: () => 0,
     isAlive: () => true,
     isOnSameTeam: () => false,

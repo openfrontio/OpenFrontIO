@@ -31,6 +31,8 @@ export interface StatsRow {
   pinned?: boolean;
   /** At most two, most urgent first. */
   marks?: readonly RowMark[];
+  /** How full the player's troops are, 0 to 1: draws the troop gauge. */
+  troopFill?: number;
   onClick?: () => void;
 }
 
@@ -58,6 +60,10 @@ export const TABLE_NAME: Record<StatsTableKind, string> = {
 };
 
 type RowState = "me" | "mate" | "other";
+type GaugeLevel = "ok" | "high" | "full";
+// The troop gauge warns from these shares of a player's max troops.
+const GAUGE_HIGH = 0.8;
+const GAUGE_FULL = 0.95;
 
 // Look. Sizes, colours, radii and spacing of each part live here, so a
 // change of look is one edit. The templates below only hold structure.
@@ -194,6 +200,18 @@ const ROW_MARK_SIZE = 11;
 // Faint rules between columns, so none read as merged.
 const DIVIDER_CLASS = "border-s border-white/8";
 const HEADER_DIVIDER_CLASS = "border-s border-white/12";
+// How full a player's troops are: a line under the number in the Troops
+// column (in Max Troops when Troops is hidden), in the bottom bar's troop
+// blue, amber then red near the player's max. A pixel lower in the shorter
+// phone rows, so it clears the digits there too. Left out below 360px, where
+// the table is at its most crowded.
+const GAUGE =
+  "absolute inset-x-0.75 bottom-px md:bottom-0.5 h-[3px] overflow-hidden rounded-full bg-black/40 max-[360px]:hidden";
+const GAUGE_FILL: Record<GaugeLevel, string> = {
+  ok: "bg-malibu-blue",
+  high: "bg-amber-400",
+  full: "bg-red-500",
+};
 // A row nobody sees, holding each column's widest texts one per line: the
 // browser sizes every shared track from real glyphs. Bold like your row, with
 // the cells' padding and rules.
@@ -239,6 +257,22 @@ export function renderColumnVisual(column: ColumnDef, size: number) {
           : html`<span class=${MARK}>${translateText(superscript.text)}</span>`
     }
   </span>`;
+}
+
+function renderGauge(fill: number) {
+  const level: GaugeLevel =
+    fill >= GAUGE_FULL ? "full" : fill >= GAUGE_HIGH ? "high" : "ok";
+  return html`<div
+    class=${GAUGE}
+    aria-hidden="true"
+    data-gauge
+    data-gauge-level=${level}
+  >
+    <div
+      class="h-full ${GAUGE_FILL[level]}"
+      style="width: ${fill * 100}%"
+    ></div>
+  </div>`;
 }
 
 export abstract class StatsTable extends LitElement {
@@ -488,6 +522,7 @@ export abstract class StatsTable extends LitElement {
     state: RowState,
     color: string | undefined,
     alive: StatsRow["alive"],
+    troopFill: number | undefined,
     marks: readonly RowMark[] = [],
   ) {
     // A player without a clan shows a dash. Zeros recede, but not the Type
@@ -501,9 +536,10 @@ export abstract class StatsTable extends LitElement {
     // Names may be right-to-left: dir="auto" reads them so while they stay
     // at the start of their column, and the title gives a cut name in full.
     const isName = column.id === "player" || column.id === "team";
+    const gauge = troopFill !== undefined;
     return html`
       <div
-        class="stats-table-cell ${CELL} ${ALIGNMENT_CLASS[column.align]} ${
+        class="stats-table-cell ${CELL} ${gauge ? "relative" : ""} ${ALIGNMENT_CLASS[column.align]} ${
           CELL_SIZE[column.id] ?? ""
         } ${tone} ${index > 0 ? DIVIDER_CLASS : ""} ${
           index === 0 && state === "me" ? ME_EDGE : ""
@@ -524,6 +560,7 @@ export abstract class StatsTable extends LitElement {
               ></span>`
             : nothing
         }
+        ${gauge ? renderGauge(troopFill) : nothing}
         <span
           class="min-w-0 truncate"
           dir=${isName ? "auto" : nothing}
@@ -570,6 +607,11 @@ export abstract class StatsTable extends LitElement {
       : row.emphasized
         ? "mate"
         : "other";
+    const gaugeColumn: ColumnId = columns.some(
+      (column) => column.id === "troops",
+    )
+      ? "troops"
+      : "maxtroops";
     // translate="no": a page translator must not rewrite player names.
     return html`
       <div
@@ -597,6 +639,7 @@ export abstract class StatsTable extends LitElement {
               state,
               row.color,
               row.alive,
+              column.id === gaugeColumn ? row.troopFill : undefined,
               column.id === "player" ? row.marks : undefined,
             );
           },

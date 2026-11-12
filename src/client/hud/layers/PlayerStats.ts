@@ -9,6 +9,7 @@ import { GoToPlayerEvent } from "../../TransformHandler";
 import type { GameView, PlayerView } from "../../view";
 import {
   type ColumnDef,
+  type ColumnId,
   columnValues,
   recordGoldRates,
 } from "./lib/StatsColumns";
@@ -37,27 +38,47 @@ export class PlayerStats extends StatsTable {
         .filter((attack) => !attack.retreating)
         .map((attack) => attack.attackerID),
     );
+    // The gauge is drawn in a troop column, so only when one is shown.
+    const gauge = columns.some(
+      (column) => column.id === "troops" || column.id === "maxtroops",
+    );
 
     return game
       .playerViews()
       .filter((player) => player.isAlive())
-      .map((player) => ({
-        key: player.id(),
-        name: player.name(),
-        clanTag: player.clanTag(),
-        color: player.territoryColor().toRgbString(),
-        values: columnValues(player, game, columns),
-        emphasized:
-          myPlayer !== null &&
-          (player === myPlayer || player.isOnSameTeam(myPlayer)),
-        pinned: player === myPlayer,
-        marks: this.marks(player, myPlayer, attackers),
-        onClick: () => {
-          if (this.eventBus !== null) {
-            this.eventBus.emit(new GoToPlayerEvent(player));
-          }
-        },
-      }));
+      .map((player) => {
+        const values = columnValues(player, game, columns);
+        return {
+          key: player.id(),
+          name: player.name(),
+          clanTag: player.clanTag(),
+          color: player.territoryColor().toRgbString(),
+          values,
+          emphasized:
+            myPlayer !== null &&
+            (player === myPlayer || player.isOnSameTeam(myPlayer)),
+          pinned: player === myPlayer,
+          marks: this.marks(player, myPlayer, attackers),
+          troopFill: gauge ? this.troopFill(player, game, values) : undefined,
+          onClick: () => {
+            if (this.eventBus !== null) {
+              this.eventBus.emit(new GoToPlayerEvent(player));
+            }
+          },
+        };
+      });
+  }
+
+  // How full the player's troops are. The troop columns already read one or
+  // both numbers; only a missing one is read again.
+  private troopFill(
+    player: PlayerView,
+    game: GameView,
+    values: ReadonlyMap<ColumnId, number>,
+  ): number {
+    const troops = values.get("troops") ?? player.troops();
+    const max = values.get("maxtroops") ?? game.config().maxTroops(player);
+    return Math.min(1, troops / Math.max(max, 1));
   }
 
   /** What a player is to you, most urgent first, two at most. */

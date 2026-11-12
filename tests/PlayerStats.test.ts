@@ -1198,3 +1198,90 @@ describe("gold rate history", () => {
     expect(record.mock.calls.map(([smallID]) => smallID)).toEqual([1]);
   });
 });
+
+describe("troop gauge", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  // Troops equal land in these players, and everyone's max is 100.
+  async function mount<T extends PlayerStats | TeamStats>(
+    table: T,
+    players: PlayerView[],
+  ): Promise<T> {
+    table.game = {
+      myPlayer: () => players[0],
+      playerViews: () => players,
+      config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
+      numLandTiles: () => 100,
+      numTilesWithFallout: () => 0,
+    } as unknown as GameView;
+    table.visible = true;
+    document.body.append(table);
+    table.refresh();
+    await table.updateComplete;
+    return table;
+  }
+
+  async function gauges(table: PlayerStats | TeamStats) {
+    table.refresh();
+    await table.updateComplete;
+    return [...table.querySelectorAll("[data-gauge]")].map((gauge) => [
+      gauge.closest('[role="cell"]')?.getAttribute("data-column"),
+      gauge.getAttribute("data-gauge-level"),
+    ]);
+  }
+
+  it("is drawn in Troops when shown, in Max Troops otherwise, nowhere without both", async () => {
+    const settings = new UserSettings();
+    settings.setStatsColumns("player", ["tiles", "troops", "maxtroops"]);
+    const playerStats = await mount(new PlayerStats(), [player("me", 50)]);
+
+    expect(await gauges(playerStats)).toEqual([["troops", "ok"]]);
+    expect(
+      playerStats.querySelector("[data-gauge]")?.getAttribute("aria-hidden"),
+    ).toBe("true");
+
+    settings.setStatsColumns("player", ["tiles", "maxtroops"]);
+    expect(await gauges(playerStats)).toEqual([["maxtroops", "ok"]]);
+
+    settings.setStatsColumns("player", ["tiles", "gold"]);
+    expect(await gauges(playerStats)).toEqual([]);
+  });
+
+  it("warns from 80% of a player's max and is full from 95%", async () => {
+    new UserSettings().setStatsColumns("player", ["troops"]);
+    const playerStats = await mount(
+      new PlayerStats(),
+      [50, 79, 80, 94, 95, 120].map((troops) => player(`p${troops}`, troops)),
+    );
+
+    // Sorted by troops, most first.
+    expect((await gauges(playerStats)).map(([, level]) => level)).toEqual([
+      "full",
+      "full",
+      "high",
+      "high",
+      "ok",
+      "ok",
+    ]);
+  });
+
+  it("is never drawn on the team table", async () => {
+    new UserSettings().setStatsColumns("team", ["troops", "maxtroops"]);
+    const teamStats = await mount(new TeamStats(), [
+      { ...player("blue", 90), team: () => "Blue" } as unknown as PlayerView,
+    ]);
+
+    expect(teamStats.querySelectorAll(".stats-table-row")).toHaveLength(1);
+    expect(await gauges(teamStats)).toEqual([]);
+  });
+});
