@@ -22,6 +22,11 @@ function player(id: string, tiles: number): PlayerView {
     isAlive: () => true,
     isOnSameTeam: () => false,
     territoryColor: () => colord("#4a90d9"),
+    incomingAttacks: () => [],
+    isTraitor: () => false,
+    isAlliedWith: () => false,
+    hasEmbargoAgainst: () => false,
+    isDisconnected: () => false,
   } as unknown as PlayerView;
 }
 
