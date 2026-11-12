@@ -39,6 +39,11 @@ function player(
     isAlive: () => true,
     isOnSameTeam: () => false,
     territoryColor: () => colord("#4a90d9"),
+    incomingAttacks: () => [],
+    isTraitor: () => false,
+    isAlliedWith: () => false,
+    hasEmbargoAgainst: () => false,
+    isDisconnected: () => false,
   } as unknown as PlayerView;
 }
 
@@ -554,6 +559,132 @@ describe("PlayerStats rows", () => {
     expect(playerStats.querySelectorAll("[data-chip]")).toHaveLength(2);
   });
 
+  // What follows each row's name, in order.
+  function marks(playerStats: PlayerStats) {
+    return rows(playerStats).map((row) =>
+      [...(cell(row, "player")?.querySelectorAll("[data-mark]") ?? [])].map(
+        (mark) => mark.getAttribute("data-mark"),
+      ),
+    );
+  }
+
+  function attack(attackerID: number, retreating = false) {
+    return { attackerID, targetID: 1, troops: 100, id: "a", retreating };
+  }
+
+  it("marks who attacks you, betrayed, is allied, embargoes you or left", async () => {
+    const me = {
+      ...player("me", 90),
+      smallID: () => 1,
+      // Never on your own row.
+      isTraitor: () => true,
+      isDisconnected: () => true,
+      incomingAttacks: () => [attack(2)],
+    } as unknown as PlayerView;
+    const players = [
+      me,
+      { ...player("attacker", 80), smallID: () => 2 },
+      { ...player("traitor", 70), isTraitor: () => true },
+      {
+        ...player("ally", 60),
+        isAlliedWith: (other: PlayerView) => other === me,
+      },
+      {
+        ...player("embargo", 50),
+        hasEmbargoAgainst: (other: PlayerView) => other === me,
+      },
+      { ...player("offline", 40), isDisconnected: () => true },
+      player("quiet", 30),
+    ] as unknown as PlayerView[];
+    const playerStats = await mount(players, me);
+
+    expect(marks(playerStats)).toEqual([
+      [],
+      ["attack"],
+      ["traitor"],
+      ["ally"],
+      ["embargo"],
+      ["offline"],
+      [],
+    ]);
+    const label = {
+      attack: "leaderboard.mark_attacking_you",
+      traitor: "leaderboard.mark_traitor",
+      ally: "leaderboard.mark_ally",
+      embargo: "leaderboard.mark_embargo",
+      offline: "leaderboard.mark_disconnected",
+    };
+    for (const mark of playerStats.querySelectorAll("[data-mark]")) {
+      const key = label[mark.getAttribute("data-mark") as keyof typeof label];
+      expect(mark.getAttribute("role")).toBe("img");
+      expect(mark.getAttribute("aria-label")).toBe(key);
+      expect(mark.getAttribute("title")).toBe(key);
+    }
+  });
+
+  it("does not count a retreating attack", async () => {
+    const me = {
+      ...player("me", 90),
+      smallID: () => 1,
+      incomingAttacks: () => [attack(2, true)],
+    } as unknown as PlayerView;
+    const attacker = {
+      ...player("attacker", 80),
+      smallID: () => 2,
+    } as unknown as PlayerView;
+    const playerStats = await mount([me, attacker], me);
+
+    expect(marks(playerStats)).toEqual([[], []]);
+  });
+
+  it("shows the two most urgent marks, and an embargo only from someone not allied", async () => {
+    const me = {
+      ...player("me", 90),
+      smallID: () => 1,
+      incomingAttacks: () => [attack(2)],
+    } as unknown as PlayerView;
+    const players = [
+      me,
+      {
+        ...player("everything", 80),
+        smallID: () => 2,
+        isTraitor: () => true,
+        isDisconnected: () => true,
+      },
+      {
+        ...player("friendly", 70),
+        isAlliedWith: () => true,
+        hasEmbargoAgainst: () => true,
+        isDisconnected: () => true,
+      },
+    ] as unknown as PlayerView[];
+    const playerStats = await mount(players, me);
+
+    expect(marks(playerStats)).toEqual([
+      [],
+      ["attack", "traitor"],
+      ["ally", "offline"],
+    ]);
+  });
+
+  it("shows a spectator only traitors and the disconnected", async () => {
+    const players = [
+      {
+        ...player("traitor", 80),
+        isTraitor: () => true,
+        isAlliedWith: () => true,
+      },
+      {
+        ...player("offline", 70),
+        hasEmbargoAgainst: () => true,
+        isDisconnected: () => true,
+      },
+    ] as unknown as PlayerView[];
+    const playerStats = await mount(players, null);
+
+    expect(marks(playerStats)).toEqual([["traitor"], ["offline"]]);
+  });
+
   it("goes to a player when their row is clicked", async () => {
     const alice = player("alice", 90);
     const bob = player("bob", 10);
@@ -961,6 +1092,11 @@ describe("gold rate history", () => {
       isAlive: () => alive,
       isOnSameTeam: () => false,
       territoryColor: () => colord("#4a90d9"),
+      incomingAttacks: () => [],
+      isTraitor: () => false,
+      isAlliedWith: () => false,
+      hasEmbargoAgainst: () => false,
+      isDisconnected: () => false,
     } as unknown as PlayerView;
   }
 

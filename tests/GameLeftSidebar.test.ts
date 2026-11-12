@@ -32,6 +32,7 @@ function ffaGame(): GameView {
     isOnSameTeam: () => false,
     team: () => null,
     territoryColor: () => colord("#4a90d9"),
+    incomingAttacks: () => [],
   } as unknown as PlayerView;
   return {
     config: () => ({

@@ -13,6 +13,10 @@ import { type ColumnId, type StatsTableKind } from "../StatsConstants";
 import { UserSettings } from "../UserSettings";
 import { translateText } from "../Utils";
 import type { GameView } from "../view";
+import type { OfIconName } from "./OfIcon";
+
+/** What a player is to you, shown after their name. */
+export type RowMark = "attack" | "traitor" | "ally" | "embargo" | "offline";
 
 export interface StatsRow {
   key: string;
@@ -25,6 +29,8 @@ export interface StatsRow {
   values: ReadonlyMap<ColumnId, number>;
   emphasized?: boolean;
   pinned?: boolean;
+  /** At most two, most urgent first. */
+  marks?: readonly RowMark[];
   onClick?: () => void;
 }
 
@@ -152,6 +158,39 @@ const CELL_TONE: Partial<Record<ColumnId, string>> = {
 const VALUE_TONE = "text-white/70";
 // Zeros, and the dash of a player without a clan, recede in every row.
 const ZERO_TONE = "text-white/40";
+// The marks after a name. The name gives way to them, so they always show.
+const ROW_MARK: Record<
+  RowMark,
+  { icon: OfIconName; tone: string; label: string }
+> = {
+  attack: {
+    icon: "sword",
+    tone: "text-red-400",
+    label: "leaderboard.mark_attacking_you",
+  },
+  traitor: {
+    icon: "traitor",
+    tone: "text-orange-400",
+    label: "leaderboard.mark_traitor",
+  },
+  ally: {
+    icon: "alliance",
+    tone: "text-green-400",
+    label: "leaderboard.mark_ally",
+  },
+  embargo: {
+    icon: "embargo",
+    tone: "text-amber-400",
+    label: "leaderboard.mark_embargo",
+  },
+  offline: {
+    icon: "disconnected",
+    tone: "text-white/50",
+    label: "leaderboard.mark_disconnected",
+  },
+};
+const ROW_MARK_BOX = "ms-1 flex shrink-0";
+const ROW_MARK_SIZE = 11;
 // Faint rules between columns, so none read as merged.
 const DIVIDER_CLASS = "border-s border-white/8";
 const HEADER_DIVIDER_CLASS = "border-s border-white/12";
@@ -449,6 +488,7 @@ export abstract class StatsTable extends LitElement {
     state: RowState,
     color: string | undefined,
     alive: StatsRow["alive"],
+    marks: readonly RowMark[] = [],
   ) {
     // A player without a clan shows a dash. Zeros recede, but not the Type
     // column's: there 0 reads "Player".
@@ -489,7 +529,7 @@ export abstract class StatsTable extends LitElement {
           dir=${isName ? "auto" : nothing}
           title=${isName ? text : nothing}
           >${noClan ? "–" : text}</span
-        >
+        >${marks.map((mark) => this.renderMark(mark))}
         ${isName && alive !== undefined ? this.renderAlive(alive) : nothing}
       </div>
     `;
@@ -505,6 +545,19 @@ export abstract class StatsTable extends LitElement {
       ?data-zero=${count === 0}
       ><span class="sr-only">${label} </span>${count}/${total}</span
     >`;
+  }
+
+  private renderMark(mark: RowMark) {
+    const { icon, tone, label } = ROW_MARK[mark];
+    const name = translateText(label);
+    return html`<span
+      class="${ROW_MARK_BOX} ${tone}"
+      role="img"
+      aria-label=${name}
+      title=${name}
+      data-mark=${mark}
+      ><of-icon name=${icon} size=${ROW_MARK_SIZE}></of-icon
+    ></span>`;
   }
 
   private renderRow(
@@ -544,6 +597,7 @@ export abstract class StatsTable extends LitElement {
               state,
               row.color,
               row.alive,
+              column.id === "player" ? row.marks : undefined,
             );
           },
         )}
