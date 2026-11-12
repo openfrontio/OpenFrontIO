@@ -602,6 +602,17 @@ describe("HomepagePromos docked header ad", () => {
     );
   });
 
+  it("leaves a tall legacy #adBanner alone", async () => {
+    const { ramp } = stubRamp();
+    const banner = dockFlex(280);
+    banner.id = "adBanner";
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(banner.style.visibility).toBe("");
+    expect(ramp.destroyUnits).not.toHaveBeenCalled();
+    banner.remove();
+  });
+
   it("leaves a docked skin alone on the homepage", async () => {
     const { ramp } = stubRamp();
     document.body.classList.remove("page-open");

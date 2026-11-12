@@ -200,7 +200,11 @@ export class HomepagePromos extends LitElement {
         rect.height >= 30;
       if (unitVisible && style.position === "fixed") {
         dockedHeight = this.dockedHeight(this.topAdEl);
-        if (dockedHeight > MAX_DOCKED_AD_HEIGHT && pageIsOpen()) {
+        if (
+          dockedHeight > MAX_DOCKED_AD_HEIGHT &&
+          pageIsOpen() &&
+          this.topAdEl.id === "pw-oop-flex"
+        ) {
           this.checkOversizedTopAd();
         }
       } else if (unitVisible) {
