@@ -16,11 +16,15 @@ const STILL_VISIBLE_CHECK_MS = 2000;
 const STRAY_FRAME_SCAN_MS = 1000;
 // A docked flex unit is a 90px leaderboard. Taller is a skin/takeover
 // creative, which would push an open page (locked to the viewport) out of
-// view, so it is destroyed instead of given room.
+// view, so while a page is open it is destroyed instead of given room. Not on
+// the homepage: it scrolls, and the destroy would drop the container's height
+// lock mid-scroll.
 const MAX_DOCKED_AD_HEIGHT = 120;
 // A normal unit can measure tall for a moment as it docks, before its frame
 // shrinks to the leaderboard.
 const OVERSIZE_SETTLE_MS = 1000;
+
+const pageIsOpen = () => document.body.classList.contains("page-open");
 
 type DestroyUnitsResult = "resolved" | "rejected" | "unavailable";
 
@@ -84,6 +88,7 @@ export class HomepagePromos extends LitElement {
   private topAdResize: ResizeObserver | null = null;
   private topAdStyle: MutationObserver | null = null;
   private topAdMutation: MutationObserver | null = null;
+  private bodyClass: MutationObserver | null = null;
   private reservedFlexHeight: number = 0;
   private oversizedTopAd: HTMLElement | null = null;
   private oversizeCheck: ReturnType<typeof setTimeout> | null = null;
@@ -113,6 +118,13 @@ export class HomepagePromos extends LitElement {
       childList: true,
       subtree: true,
     });
+    // Opening a page over an already docked unit moves it by stylesheet only,
+    // which the unit's own observers don't see.
+    this.bodyClass = new MutationObserver(() => this.updateTopAdHeight());
+    this.bodyClass.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
     // On its own timer, from the spawn phase on: the observer sees new
     // elements, not an existing one that takes the class later.
     this.escapedAdScan ??= setInterval(
@@ -128,6 +140,7 @@ export class HomepagePromos extends LitElement {
     document.removeEventListener("join-lobby", this.onJoinLobby);
     document.removeEventListener("leave-lobby", this.onLeaveLobby);
     this.topAdMutation?.disconnect();
+    this.bodyClass?.disconnect();
     this.stopStrayFrameScan();
     if (this.escapedAdScan !== null) clearInterval(this.escapedAdScan);
     this.escapedAdScan = null;
@@ -187,7 +200,9 @@ export class HomepagePromos extends LitElement {
         rect.height >= 30;
       if (unitVisible && style.position === "fixed") {
         dockedHeight = this.dockedHeight(this.topAdEl);
-        if (dockedHeight > MAX_DOCKED_AD_HEIGHT) this.checkOversizedTopAd();
+        if (dockedHeight > MAX_DOCKED_AD_HEIGHT && pageIsOpen()) {
+          this.checkOversizedTopAd();
+        }
       } else if (unitVisible) {
         inlineHeight = Math.ceil(rect.height);
       }
@@ -243,7 +258,9 @@ export class HomepagePromos extends LitElement {
       this.oversizeCheck = null;
       if (el === null || el !== this.topAdEl) return;
       const height = this.dockedHeight(el);
-      if (height > MAX_DOCKED_AD_HEIGHT) this.destroyOversizedTopAd(el, height);
+      if (height > MAX_DOCKED_AD_HEIGHT && pageIsOpen()) {
+        this.destroyOversizedTopAd(el, height);
+      }
     }, OVERSIZE_SETTLE_MS);
   }
 
@@ -252,7 +269,6 @@ export class HomepagePromos extends LitElement {
     el.style.visibility = "hidden";
     reportEvent("top_ad_oversized", {
       height: String(height),
-      pageOpen: String(document.body.classList.contains("page-open")),
       ...creativeAttributes(el, "flex"),
     });
     this.updateTopAdHeight();
