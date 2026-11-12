@@ -39,6 +39,8 @@ export interface ColumnDef {
   /** Tooltip copy, and the header text when there is no headerVisual. */
   readonly labelKey: string;
   readonly headerVisual?: ColumnHeaderVisual;
+  /** The column menu's icon, for a column whose header is a word. */
+  readonly menuIcon?: OfIconName;
   /** Grid track: a fixed width, or "auto" to share the row's spare width. */
   readonly width: string;
   /**
@@ -139,6 +141,7 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "playerType",
     labelKey: "leaderboard.playerType",
     headerVisual: { kind: "text", text: "leaderboard.type" },
+    menuIcon: "player-type",
     // Player-table only: a team has no single type, and aggregating the
     // per-player type codes would be meaningless.
     kinds: ["player"],

@@ -32,6 +32,7 @@ export const OF_ICONS = {
   columns: { file: "ColumnsIconWhite.svg" },
   clan: { file: "GuildIconWhite.svg" },
   player: { file: "ProfileIcon.svg" },
+  "player-type": { file: "PlayerTypeIconWhite.svg" },
   gold: { file: "GoldCoinIcon.svg", multicolor: true },
   troops: { file: "SoldierIcon.svg" },
   traitor: { file: "TraitorIcon.svg" },
