@@ -397,6 +397,36 @@ describe("Clan fund card (Manage)", () => {
     expect(sendBtn().disabled).toBe(false);
   });
 
+  it("explains a leader's disabled Send when the API still says no after their wait, and reloads", async () => {
+    const el = await mount(
+      "leader",
+      status({
+        canSend: false,
+        // Past by the browser's clock, still ahead by the server's.
+        leaderEligibleAt: new Date(Date.now() - 1_000).toISOString(),
+      }),
+    );
+    const sendBtn = () =>
+      el.querySelector<HTMLButtonElement>("[data-action=open-send-funds]")!;
+    expect(sendBtn().disabled).toBe(true);
+    expect(el.querySelector("[data-fund-notice]")?.textContent).toContain(
+      "clan_modal.clan_fund_cant_send",
+    );
+
+    // The card reloads (backing off from one second) until the API agrees.
+    fetchTransfers.mockResolvedValue(page([transfer()], status()));
+    await new Promise((r) => setTimeout(r, 1_100));
+    await flushAsync(el);
+    expect(sendBtn().disabled).toBe(false);
+    expect(el.querySelector("[data-fund-notice]")).toBeNull();
+  });
+
+  it("gives officers no 'can't send' notice", async () => {
+    const el = await mount("officer", status({ canSend: false }));
+    expect(el.querySelector("[data-fund-notice]")).toBeNull();
+    expect((el as unknown as { capTimer: unknown }).capTimer).toBeNull();
+  });
+
   type CapInternals = {
     capTimer: unknown;
     capRetries: number;
@@ -967,5 +997,69 @@ describe("Send Plutonium page", () => {
     expect(members.mock.calls.map((c) => c[1])).toEqual([2, 1]);
     expect(el.querySelectorAll("[data-member]")).toHaveLength(10);
     expect(el.textContent).not.toContain("clan_modal.send_funds_no_members");
+  });
+
+  it("only the newest fund reload counts when a Retry overlaps it", async () => {
+    const el = await mount();
+    const internals = el as unknown as { loadStatus(): Promise<void> };
+    let finishOld!: (r: { error: string }) => void;
+    fetchTransfers
+      .mockReturnValueOnce(new Promise((r) => (finishOld = r)))
+      .mockResolvedValueOnce(page([], status()));
+    const old = internals.loadStatus();
+    await internals.loadStatus();
+    // The older request fails after the newer one loaded.
+    finishOld({ error: "failed" });
+    await old;
+    await flushAsync(el);
+    expect(el.querySelector('[data-load-error="status"]')).toBeNull();
+    pick(el, "member-2");
+    typeAmount(el, "10");
+    await flushAsync(el);
+    expect(sendButton(el).disabled).toBe(false);
+  });
+
+  it("warns, with Retry, when members' limits fail to load", async () => {
+    const el = await mount(false);
+    expect(
+      el.querySelector('[data-load-error="limits"]')?.textContent,
+    ).toContain("clan_modal.send_funds_limits_failed");
+
+    fetchRecipients.mockResolvedValue([recipient("member-2")]);
+    el.querySelector<HTMLButtonElement>(
+      '[data-load-error="limits"] [data-action=retry]',
+    )!.click();
+    await flushAsync(el);
+    await flushAsync(el);
+    expect(el.querySelector('[data-load-error="limits"]')).toBeNull();
+  });
+
+  it("keeps an unknown send's key in sessionStorage, so a browser reload reuses it", async () => {
+    sessionStorage.setItem("clanFundSendKey:RLD", "key-from-before-reload");
+    // Sets up the API mocks; this page is for another clan.
+    (await mount()).remove();
+    const el = document.createElement(
+      "clan-send-funds-view",
+    ) as ClanSendFundsView;
+    el.clanTag = "RLD";
+    el.myPublicId = "test-player";
+    document.body.appendChild(el);
+    await flushAsync(el);
+    await flushAsync(el);
+    send.mockResolvedValueOnce({
+      error: "clan_modal.send_funds_error_unknown",
+      outcome: "unknown",
+    });
+    await confirmSend(el, "member-2", "500");
+    expect(send.mock.calls[send.mock.calls.length - 1][3]).toBe(
+      "key-from-before-reload",
+    );
+    expect(sessionStorage.getItem("clanFundSendKey:RLD")).toBe(
+      "key-from-before-reload",
+    );
+
+    // Settled: the stored key goes.
+    await confirmSend(el, "member-2", "500");
+    expect(sessionStorage.getItem("clanFundSendKey:RLD")).toBeNull();
   });
 });

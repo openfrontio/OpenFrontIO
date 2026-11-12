@@ -10,6 +10,7 @@ import "../PlutoniumIcon";
 import {
   clanLeftToday,
   formatPlutonium,
+  leaderSendBlockedReason,
   renderPayoutRow,
   sendBlockedReason,
 } from "./ClanFundShared";
@@ -43,11 +44,13 @@ export class ClanFundCard extends LitElement {
   @state() private recent: ClanFundTransfer[] = [];
   @state() private visible = false;
 
-  // Reloads the card when the rolling 24h limit frees up, so a leader who
-  // stays on Manage isn't left with a disabled Send button.
+  // Reloads the card when the rolling 24h limit frees up or a new leader's
+  // wait ends, so a leader who stays on Manage isn't left with a disabled
+  // Send button.
   private capTimer: ReturnType<typeof setTimeout> | null = null;
-  // Back-to-back reloads that found the limit still used with its reset time
-  // already past (browser clock ahead of the API's), or that failed. Each one
+  // Back-to-back reloads that found sending still blocked with the time it
+  // should end already past (browser clock ahead of the API's), or that
+  // failed. Each one
   // doubles the wait, so a skewed clock or a down API can't cause a request
   // every second.
   private capRetries = 0;
@@ -92,13 +95,33 @@ export class ClanFundCard extends LitElement {
     this.scheduleCapReload(res.status);
   }
 
+  // When sending should open up again: the daily limit's reset, and for the
+  // leader, the end of a new leader's wait while the API still says no.
+  private reloadTimes(status: ClanFundTransferStatus): number[] {
+    if (!status.enabled) return [];
+    const times: number[] = [];
+    if (status.capResetsAt && clanLeftToday(status) <= 0n) {
+      times.push(new Date(status.capResetsAt).getTime());
+    }
+    if (
+      this.myRole === "leader" &&
+      !status.canSend &&
+      !status.frozen &&
+      status.leaderEligibleAt
+    ) {
+      times.push(new Date(status.leaderEligibleAt).getTime());
+    }
+    return times.filter((t) => !Number.isNaN(t));
+  }
+
   private scheduleCapReload(status: ClanFundTransferStatus) {
     this.clearCapTimer();
-    if (!status.enabled || !status.capResetsAt || clanLeftToday(status) > 0n) {
+    const times = this.reloadTimes(status);
+    if (times.length === 0) {
       this.capRetries = 0;
       return;
     }
-    const wait = new Date(status.capResetsAt).getTime() - Date.now();
+    const wait = Math.min(...times) - Date.now();
     if (wait <= 0) {
       // Already past by our clock but the API still counts it: back off.
       this.setCapTimer(this.nextBackoff());
@@ -131,8 +154,10 @@ export class ClanFundCard extends LitElement {
     const sent = BigInt(status.clanSentToday);
     const usedPct =
       cap > 0n ? Math.min(100, Number((sent * 1000n) / cap) / 10) : 0;
-    const blocked = sendBlockedReason(status);
     const isLeader = this.myRole === "leader";
+    const blocked = isLeader
+      ? leaderSendBlockedReason(status)
+      : sendBlockedReason(status);
 
     return html`
       <div

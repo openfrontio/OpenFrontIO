@@ -16,7 +16,7 @@ import { playerNameLink } from "../ui/PlayerNameLink";
 import {
   clanLeftToday,
   formatPlutonium,
-  sendBlockedReason,
+  leaderSendBlockedReason,
 } from "./ClanFundShared";
 import {
   formatClanDate,
@@ -40,7 +40,38 @@ const min = (...xs: bigint[]) => xs.reduce((a, b) => (a < b ? a : b));
 // the send instead of paying twice, and a changed one is refused as a
 // conflict. Cleared once an answer settles what happened, but only while it
 // is still that key, so a late answer can't drop a newer send's.
-const unresolvedSendKeys = new Map<string, string>();
+//
+// Kept in sessionStorage so a browser reload in the same tab reuses it too;
+// the in-memory map covers browsers where storage is blocked.
+const SEND_KEY_STORAGE_PREFIX = "clanFundSendKey:";
+const unresolvedSendKeysMemory = new Map<string, string>();
+const unresolvedSendKeys = {
+  get(clanTag: string): string | undefined {
+    try {
+      const stored = sessionStorage.getItem(SEND_KEY_STORAGE_PREFIX + clanTag);
+      if (stored) return stored;
+    } catch {
+      // Storage blocked: fall back to memory.
+    }
+    return unresolvedSendKeysMemory.get(clanTag);
+  },
+  set(clanTag: string, key: string) {
+    unresolvedSendKeysMemory.set(clanTag, key);
+    try {
+      sessionStorage.setItem(SEND_KEY_STORAGE_PREFIX + clanTag, key);
+    } catch {
+      // Storage blocked: memory still covers this page load.
+    }
+  },
+  delete(clanTag: string) {
+    unresolvedSendKeysMemory.delete(clanTag);
+    try {
+      sessionStorage.removeItem(SEND_KEY_STORAGE_PREFIX + clanTag);
+    } catch {
+      // Storage blocked: nothing stored there.
+    }
+  },
+};
 function settleSendKey(clanTag: string, key: string) {
   if (unresolvedSendKeys.get(clanTag) === key) {
     unresolvedSendKeys.delete(clanTag);
@@ -81,6 +112,9 @@ export class ClanSendFundsView extends LitElement {
   // screen may be the ones the server just refused, so nothing can be sent
   // until it lands.
   @state() private statusReloading = false;
+  // The members' limits (eligibility) didn't load for the page on screen, so
+  // rows aren't marked and Max may be out of date. The server still checks.
+  @state() private limitsFailed = false;
   // The status request failed: nothing can be sent until a retry loads it.
   @state() private statusFailed = false;
   @state() private members: ClanMember[] = [];
@@ -107,6 +141,7 @@ export class ClanSendFundsView extends LitElement {
   private idempotencyKey = "";
   private searchDebounce: ReturnType<typeof setTimeout> | null = null;
   private loadSeq = 0;
+  private statusSeq = 0;
 
   connectedCallback() {
     super.connectedCallback();
@@ -123,9 +158,13 @@ export class ClanSendFundsView extends LitElement {
   }
 
   private async loadStatus() {
+    const seq = ++this.statusSeq;
     this.statusFailed = false;
     this.statusReloading = true;
     const res = await fetchClanFundTransfers(this.clanTag, { limit: 1 });
+    // A newer reload started (a Retry during the reload after a failed
+    // send): only its answer counts.
+    if (seq !== this.statusSeq) return;
     this.statusReloading = false;
     if (!this.isConnected) return;
     if ("error" in res) {
@@ -182,6 +221,7 @@ export class ClanSendFundsView extends LitElement {
     this.members = members;
     this.membersTotal = res.total;
     this.memberPage = res.page;
+    this.limitsFailed = eligibility === false && ids.length > 0;
     const next = new Map((eligibility || []).map((e) => [e.publicId, e]));
     // Keep the picked member's eligibility when they're off this page or
     // search, so Max still respects their own limit left today.
@@ -270,7 +310,7 @@ export class ClanSendFundsView extends LitElement {
       this.status !== null &&
       this.status.enabled &&
       this.status.canSend &&
-      sendBlockedReason(this.status) === null
+      leaderSendBlockedReason(this.status) === null
     );
   }
 
@@ -336,7 +376,7 @@ export class ClanSendFundsView extends LitElement {
   render() {
     if (this.loading) return renderLoadingSpinner();
     const status = this.status;
-    const blocked = status ? sendBlockedReason(status) : null;
+    const blocked = status ? leaderSendBlockedReason(status) : null;
     const totalPages = Math.ceil(this.membersTotal / this.membersPerPage);
     return html`
       <div class="space-y-6">
@@ -369,6 +409,15 @@ export class ClanSendFundsView extends LitElement {
             (e) => this.onSearchInput(e),
             this.memberSearch,
           )}
+          ${
+            this.limitsFailed && !this.membersFailed
+              ? this.renderLoadError(
+                  "limits",
+                  "clan_modal.send_funds_limits_failed",
+                  () => void this.loadMembers(this.memberPage),
+                )
+              : ""
+          }
           <div role="radiogroup" class="space-y-2">
             ${
               this.membersFailed
@@ -433,13 +482,13 @@ export class ClanSendFundsView extends LitElement {
 
   // A red "couldn't load" box with Retry. `which` names it for tests.
   private renderLoadError(
-    which: "status" | "members",
+    which: "status" | "members" | "limits",
     messageKey: string,
     retry: () => void,
   ): TemplateResult {
     return html`<div
       data-load-error=${which}
-      role="alert"
+      role=${which === "limits" ? "status" : "alert"}
       class="flex items-center justify-between gap-3 bg-red-500/10 rounded-xl border border-red-500/30 p-3 text-red-300 text-sm"
     >
       <span>${translateText(messageKey)}</span>

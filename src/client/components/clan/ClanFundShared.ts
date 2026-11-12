@@ -56,6 +56,19 @@ export function sendBlockedReason(
   return null;
 }
 
+// What the leader sees: the reason above, or a general one when the API says
+// they can't send but none of the reasons above applies by our clock (say the
+// browser's clock is past a new leader's wait and the server's isn't yet).
+export function leaderSendBlockedReason(
+  status: ClanFundTransferStatus,
+  now: number = Date.now(),
+): string | null {
+  return (
+    sendBlockedReason(status, now) ??
+    (status.canSend ? null : translateText("clan_modal.clan_fund_cant_send"))
+  );
+}
+
 // Plutonium amount with the icon, in neutral text: payouts are money leaving
 // the fund, so they must not read like the green donations coming in.
 export function renderPlutoniumAmount(

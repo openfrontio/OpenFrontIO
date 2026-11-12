@@ -68,13 +68,13 @@ export class ClanModal extends BaseModal {
 
   @state() private view: View = "list";
 
-  protected willUpdate(changed?: PropertyValues): void {
-    super.willUpdate();
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     // Leaving the send page, however it went: a send may have moved money
     // even when the page showed an error (a lost answer, or an earlier send
     // that turned out to have gone through), so the overview's treasury and
     // My Clans' balances (read from the cached user) are refetched.
-    if (changed?.get("view") === "send-funds" && this.view !== "send-funds") {
+    if (changed.get("view") === "send-funds" && this.view !== "send-funds") {
       this.detailCache = null;
       invalidateUserMe();
     }
