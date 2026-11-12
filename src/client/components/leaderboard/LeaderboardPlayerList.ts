@@ -1057,7 +1057,7 @@ export class LeaderboardPlayerList extends LitElement {
       <img
         src=${assetUrl(
           rank === "all"
-            ? "images/ffa-tiers/ofm-trophy.png"
+            ? "images/ofm-trophy.png"
             : `images/ffa-tiers/compact/${rank}.svg`,
         )}
         alt=""
