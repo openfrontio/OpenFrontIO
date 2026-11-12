@@ -29,6 +29,7 @@ export const OF_ICONS = {
   team: { file: "TeamIconSolidWhite.svg" },
   "leaderboard-outline": { file: "LeaderboardIconRegularWhite.svg" },
   "team-outline": { file: "TeamIconRegularWhite.svg" },
+  columns: { file: "ColumnsIconWhite.svg" },
   clan: { file: "GuildIconWhite.svg" },
   player: { file: "ProfileIcon.svg" },
   gold: { file: "GoldCoinIcon.svg", multicolor: true },
