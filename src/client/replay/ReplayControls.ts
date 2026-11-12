@@ -163,6 +163,7 @@ export class ReplayControls extends LitElement {
   }
 
   private openMenu(): void {
+    if (this.exporting) return;
     this.speedMenuOpen = false;
     this.exportMenuOpen = false;
     this.emit("replay-menu");
@@ -259,6 +260,7 @@ export class ReplayControls extends LitElement {
             settingsIcon,
             translateText("user_setting.game_menu_title"),
             () => this.openMenu(),
+            this.exporting,
           )}
           ${
             this.showFullscreen

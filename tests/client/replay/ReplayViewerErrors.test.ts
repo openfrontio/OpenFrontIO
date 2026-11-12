@@ -546,3 +546,42 @@ test("Escape key does not prevent default when not exporting", () => {
 
   expect(escEvent.defaultPrevented).toBe(false);
 });
+
+test("Escape key does not abort export while settings menu is open", () => {
+  const element = new ReplayViewer();
+  const v = element as unknown as {
+    exporting: boolean;
+    exportAbort: AbortController | null;
+    cancelExport(): void;
+    onKey(e: KeyboardEvent): void;
+  };
+  v.exporting = true;
+  const abortController = new AbortController();
+  v.exportAbort = abortController;
+
+  const menu = document.createElement("settings-modal") as SettingsModal;
+  element.appendChild(menu);
+  menu.openModal();
+
+  const escEvent = new KeyboardEvent("keydown", {
+    key: "Escape",
+    cancelable: true,
+  });
+  v.onKey(escEvent);
+
+  expect(abortController.signal.aborted).toBe(false);
+  expect(v.exportAbort).toBe(abortController);
+});
+
+test("openMenu does nothing while exporting", () => {
+  const element = new ReplayViewer();
+  const v = element as unknown as {
+    exporting: boolean;
+    openMenu(): void;
+    hudBus: { emit: ReturnType<typeof vi.fn> };
+  };
+  v.exporting = true;
+  v.hudBus = { emit: vi.fn() };
+  v.openMenu();
+  expect(v.hudBus.emit).not.toHaveBeenCalled();
+});

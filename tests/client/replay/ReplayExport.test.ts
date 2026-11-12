@@ -486,6 +486,8 @@ describe("Match telemetry CSV export", () => {
     expect(lines).toHaveLength(7);
     // Alice's name has comma and quotes -> properly CSV-quoted
     expect(lines[1]).toContain('"Alice, ""The Great"""');
+    // Troop counts are divided by 10 to match game display (1500 internal -> 150 displayed)
+    expect(lines[1]).toContain(",true,12,150,250,300,");
     // Frame 0 (tick 1): Alice has 2 active units (City + Port)
     expect(lines[1].endsWith(",2")).toBe(true);
     // Frame 19 (tick 20, after tick 15 update): Port deactivated -> Alice has 1 active unit, BobBot isAlive = false
@@ -532,8 +534,8 @@ describe("Match telemetry CSV export", () => {
     expect(csv).toContain(",'=SUM(1+1),");
     expect(csv).toContain(",'-negative_name,");
     // Boolean and numbers must not have single quotes added
-    expect(csv).toContain(",true,12,1500,250,");
-    expect(csv).toContain(",true,8,800,100,");
+    expect(csv).toContain(",true,12,150,250,");
+    expect(csv).toContain(",true,8,80,100,");
   });
 
   test("aborts buildMatchStatsCsv early when signal is aborted", async () => {
@@ -571,15 +573,22 @@ describe("<replay-controls> export menu", () => {
     expect(playBtn.disabled).toBe(true);
     expect(speedBtn.disabled).toBe(true);
 
+    const settingsBtn = buttons.find((b) =>
+      b.querySelector("img")?.getAttribute("src")?.includes("SettingIconWhite"),
+    );
+    expect(settingsBtn?.disabled).toBe(true);
+
     let emitted = false;
     el.addEventListener("replay-toggle-play", () => (emitted = true));
     el.addEventListener("replay-seek", () => (emitted = true));
     el.addEventListener("replay-speed", () => (emitted = true));
+    el.addEventListener("replay-menu", () => (emitted = true));
 
     timeline.value = "10";
     timeline.dispatchEvent(new Event("input"));
     playBtn.click();
     speedBtn.click();
+    settingsBtn?.click();
 
     expect(emitted).toBe(false);
   });

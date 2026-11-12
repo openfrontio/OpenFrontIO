@@ -526,7 +526,7 @@ export async function buildMatchStatsCsv(
         csvCell(info?.team ?? ""),
         state.isAlive,
         state.tilesOwned,
-        Math.round(state.troops),
+        Math.round(state.troops / 10),
         Math.round(state.gold),
         Math.round(state.goldEarned),
         Math.round(state.tradeGold),

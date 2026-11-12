@@ -666,7 +666,7 @@ export class ReplayViewer extends LitElement {
     // playback pauses while it's open.
     new ViewModeController(this.hudBus, view).init();
     this.hudBus.on(PauseGameIntentEvent, (e) => {
-      if (this.exporting) return;
+      if (this.exporting && !e.paused) return;
       if (e.paused) this.playback?.pause();
       else this.playback?.play();
     });
@@ -744,6 +744,11 @@ export class ReplayViewer extends LitElement {
   // ---- Input ----
 
   private onKey(e: KeyboardEvent): void {
+    // The settings or continue modal paused playback, so keys wait until it closes. So
+    // do the game settings it opens: their sliders take the arrow keys.
+    if (this.continueModalOpen || this.settingsOpen()) {
+      return;
+    }
     if (e.key === "Escape" && this.exporting) {
       e.preventDefault();
       this.cancelExport();
@@ -751,11 +756,6 @@ export class ReplayViewer extends LitElement {
     }
     const p = this.playback;
     if (p === null || this.status !== "ready" || this.exporting) return;
-    // The settings or continue modal paused playback, so keys wait until it closes. So
-    // do the game settings it opens: their sliders take the arrow keys.
-    if (this.continueModalOpen || this.settingsOpen()) {
-      return;
-    }
     // The timeline keeps focus after a click, so it doesn't count as typing.
     // Its own arrow-key steps are prevented below so a key seeks once. Any
     // other input keeps its keys.
@@ -852,6 +852,7 @@ export class ReplayViewer extends LitElement {
   }
 
   private openMenu(): void {
+    if (this.exporting) return;
     this.hudBus.emit(
       new ShowSettingsModalEvent(
         true,
@@ -933,7 +934,13 @@ export class ReplayViewer extends LitElement {
             if (!this.abort.signal.aborted) {
               await p.seek(savedFrame);
               this.drawNow?.();
-              if (wasPlaying) p.play();
+              if (
+                wasPlaying &&
+                !this.settingsOpen() &&
+                !this.continueModalOpen
+              ) {
+                p.play();
+              }
             }
           }
           break;
