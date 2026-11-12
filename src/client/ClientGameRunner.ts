@@ -31,8 +31,10 @@ import { reloadForUpdate, translateText } from "../client/Utils";
 import { rememberAdmitted } from "./AdmittedLobbies";
 import { MapLayerController } from "./controllers/MapLayerController";
 import { isDesktopShell } from "./DesktopShell";
+import { GameHealth } from "./GameHealth";
 import { GameMetrics } from "./GameMetrics";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
+import { GameHealthIndicators } from "./hud/layers/GameHealthIndicators";
 import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
 import { OnboardingOverlay } from "./hud/layers/OnboardingOverlay";
 import { UnitDisplay } from "./hud/layers/UnitDisplay";
@@ -885,6 +887,7 @@ async function createClientGame(
     );
 
     const metrics = new GameMetrics(lobbyConfig.gameID, clientID);
+    const health = new GameHealth();
     const { builder: webglBuilder, stopFrameLoop } = mountWebGLFrameLoop(
       gameMap,
       view,
@@ -893,7 +896,10 @@ async function createClientGame(
       gameRenderer.transformHandler,
       gameView,
       eventBus,
-      (nowMs) => metrics.recordFrame(nowMs),
+      (nowMs) => {
+        metrics.recordFrame(nowMs);
+        health.recordFrame(nowMs);
+      },
     );
 
     // Releases all WebGL/DOM resources this game created. Without it, stopping
@@ -949,6 +955,7 @@ async function createClientGame(
       graphicsListenerAbort,
       disposeRenderer,
       metrics,
+      health,
     );
   } catch (err) {
     soundManager.dispose();
@@ -973,6 +980,29 @@ export class ClientGameRunner {
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
+  private healthTimer: ReturnType<typeof setInterval> | null = null;
+  private healthPaused = false;
+  private healthIndicators: GameHealthIndicators | null = null;
+
+  private updateHealth = (): void => {
+    const status = this.health.update(performance.now(), {
+      catchingUp:
+        !this.gameView.config().isReplay() && this.gameView.isCatchingUp(),
+      paused: this.healthPaused,
+      hidden: document.hidden,
+      networkEnabled:
+        !this.transport.isLocal && !this.gameView.config().isReplay(),
+      active: this.isActive && !this.awaitingStart,
+    });
+    const indicators = this.healthIndicators;
+    if (
+      indicators &&
+      (indicators.status.highLatency !== status.highLatency ||
+        indicators.status.connectionUnstable !== status.connectionUnstable ||
+        indicators.status.performance !== status.performance)
+    )
+      indicators.status = { ...status };
+  };
 
   constructor(
     private lobby: LobbyConfig,
@@ -989,6 +1019,7 @@ export class ClientGameRunner {
     private graphicsListenerAbort: AbortController | null = null,
     private disposeRenderer: (() => void) | null = null,
     private metrics: GameMetrics | null = null,
+    private health: GameHealth = new GameHealth(),
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -1015,6 +1046,13 @@ export class ClientGameRunner {
     this.isActive = true;
     this.lastMessageTime = Date.now();
     this.metrics?.start();
+    this.health.reset(performance.now());
+    this.healthPaused = false;
+    this.healthIndicators = new GameHealthIndicators();
+    document.body.append(this.healthIndicators);
+    this.healthTimer = setInterval(this.updateHealth, 250);
+    document.addEventListener("visibilitychange", this.updateHealth);
+    this.updateHealth();
     setTimeout(() => {
       this.connectionCheckInterval = setInterval(
         () => this.onConnectionCheck(),
@@ -1072,6 +1110,11 @@ export class ClientGameRunner {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
       this.gameView.update(gu);
+      const pauseUpdates = gu.updates[GameUpdateType.GamePaused];
+      if (pauseUpdates?.length) {
+        this.healthPaused = pauseUpdates[pauseUpdates.length - 1].paused;
+      }
+      this.updateHealth();
       this.webglBuilder?.update(this.gameView);
       this.renderer.tick();
       if (gu.tickExecutionDuration !== undefined) {
@@ -1090,6 +1133,7 @@ export class ClientGameRunner {
     const onconnect = () => {
       console.log("Connected to game server!");
       this.awaitingStart = true;
+      this.updateHealth();
       void this.transport.rejoinGame(this.turnsSeen);
     };
 
@@ -1099,6 +1143,8 @@ export class ClientGameRunner {
       if (message.type === "start") {
         console.log("starting game! in client game runner");
         this.awaitingStart = false;
+        this.health.recordTurn(performance.now());
+        this.updateHealth();
 
         if (this.gameView.config().isRandomSpawn()) {
           const goToPlayer = () => {
@@ -1173,9 +1219,12 @@ export class ClientGameRunner {
         );
       }
       if (message.type === "pong") {
-        this.metrics?.recordRoundTrip(
-          Math.floor(performance.now()) - message.sentAt,
-        );
+        const now = performance.now();
+        const roundTrip = Math.floor(now) - message.sentAt;
+        this.metrics?.recordRoundTrip(roundTrip);
+        this.updateHealth();
+        this.health.recordRoundTrip(roundTrip, now);
+        this.updateHealth();
       }
       if (message.type === "new_lobby") {
         // The host reused this private lobby: surface the successor id so the
@@ -1184,6 +1233,7 @@ export class ClientGameRunner {
         this.eventBus.emit(new NewLobbyEvent(message.gameID));
       }
       if (message.type === "turn") {
+        this.health.recordTurn(performance.now());
         if (
           !this.gameView.inSpawnPhase() &&
           !hasGoneToPlayer &&
@@ -1235,6 +1285,12 @@ export class ClientGameRunner {
   }
 
   public stop() {
+    if (this.healthTimer !== null) clearInterval(this.healthTimer);
+    this.healthTimer = null;
+    document.removeEventListener("visibilitychange", this.updateHealth);
+    this.healthIndicators?.remove();
+    this.healthIndicators = null;
+    this.health.reset(performance.now());
     this.soundManager.dispose();
     this.graphicsListenerAbort?.abort();
     // Detach the input handler's window/canvas listeners and its EventBus
