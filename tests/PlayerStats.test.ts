@@ -48,7 +48,7 @@ describe("PlayerStats", () => {
     ).cache.clear();
   });
 
-  it("locks rank, name, and picker while stat columns share spare width", async () => {
+  it("locks rank and name while stat columns share the spare width", async () => {
     const me = player("me", 3);
     const game = {
       myPlayer: () => me,
@@ -68,10 +68,10 @@ describe("PlayerStats", () => {
 
     const content = playerStats.querySelector(".stats-table-content");
     expect(content?.classList).toContain("min-w-full");
-    // Only selected stat tracks share definite spare space. Rank, name, and
-    // picker never stretch; the picker's track only grows to a scrollbar.
+    // Only selected stat tracks share definite spare space. Rank and name
+    // never stretch; the empty last track only grows to a scrollbar.
     expect(content?.getAttribute("style")).toContain(
-      "30px var(--stats-name, 100px) auto auto auto minmax(32px, max-content)",
+      "grid-template-columns: 30px var(--stats-name, 100px) auto auto auto minmax(0px, max-content);",
     );
 
     playerStats.remove();
@@ -105,10 +105,9 @@ describe("PlayerStats", () => {
 
     const scrollable = playerStats.querySelector(".stats-table-scroll");
     const table = playerStats.querySelector(".stats-table");
-    const picker = playerStats.querySelector("column-picker");
     expect(playerStats.querySelectorAll(".stats-table-row")).toHaveLength(7);
     expect(playerStats.children).toHaveLength(1);
-    expect(picker?.closest(".stats-table")).toBe(table);
+    expect(table?.querySelector("column-picker")).toBeNull();
     expect(table?.querySelector(".stats-table-header")).not.toBeNull();
     const goldHeader = playerStats.querySelectorAll(
       '.stats-table-header > [role="columnheader"]',
@@ -496,6 +495,36 @@ describe("PlayerStats rows", () => {
     expect(emit.mock.calls[0][0].player).toBe(bob);
   });
 
+  it("asks for the column menu on a right-click in the header, not in a row", async () => {
+    const playerStats = await mount([player("alice", 90)], null);
+    const asked: { x: number; y: number }[] = [];
+    playerStats.addEventListener("columns-menu", (event) =>
+      asked.push((event as CustomEvent<{ x: number; y: number }>).detail),
+    );
+    const rightClick = (target: Element) => {
+      const event = new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 120,
+        clientY: 40,
+      });
+      target.dispatchEvent(event);
+      return event;
+    };
+
+    const onHeader = rightClick(
+      playerStats.querySelector(
+        '[role="columnheader"][data-column="gold"] of-icon',
+      ) as Element,
+    );
+    expect(onHeader.defaultPrevented).toBe(true);
+    expect(asked).toEqual([{ x: 120, y: 40 }]);
+
+    const onRow = rightClick(rows(playerStats)[0]);
+    expect(onRow.defaultPrevented).toBe(true);
+    expect(asked).toHaveLength(1);
+  });
+
   it("names the table, counts every row and gives each drawn row its rank", async () => {
     const players = Array.from({ length: 300 }, (_, i) =>
       player(`p${i + 1}`, 300 - i),
@@ -616,14 +645,14 @@ describe("PlayerStats clan column", () => {
 
     const hasRule = (nodes: Element[]) =>
       nodes.map((node) => node.hasAttribute("data-rule"));
-    // rank | clan | player | tiles | gold | maxtroops (+ the ⚙️ track).
+    // rank | clan | player | tiles | gold | maxtroops.
     expect(
       hasRule([
         ...playerStats.querySelectorAll(
           '.stats-table-header > [role="columnheader"]',
         ),
       ]),
-    ).toEqual([false, true, true, true, true, true, true]);
+    ).toEqual([false, true, true, true, true, true]);
     expect(
       hasRule([
         ...playerStats.querySelectorAll('.stats-table-row > [role="cell"]'),
@@ -665,7 +694,7 @@ describe("PlayerStats clan column", () => {
           '.stats-table-header > [role="columnheader"]',
         ),
       ].map((header) => header.getAttribute("data-column")),
-    ).toEqual(["rank", "player", "tiles", "gold", "maxtroops", null]);
+    ).toEqual(["rank", "player", "tiles", "gold", "maxtroops"]);
     expect(
       playerStats.querySelector(".stats-table-content")?.getAttribute("style"),
     ).toContain("30px var(--stats-name, 100px)");
@@ -698,10 +727,12 @@ describe("PlayerStats clan column", () => {
       player("bob", 90, "BBB"),
     ]);
 
-    // rank | clan | player | picker — no stat track, so nothing to sort on.
+    // rank | clan | player — no stat track, so nothing to sort on.
     expect(
       playerStats.querySelector(".stats-table-content")?.getAttribute("style"),
-    ).toContain("30px 80px var(--stats-name, 100px) minmax(32px, max-content)");
+    ).toContain(
+      "grid-template-columns: 30px 80px var(--stats-name, 100px) minmax(0px, max-content);",
+    );
     expect(
       [
         ...playerStats.querySelectorAll(".stats-table-scroll .stats-table-row"),

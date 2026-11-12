@@ -8,11 +8,14 @@ import { isCompactViewport } from "../../CompactViewport";
 import type { Controller } from "../../Controller";
 import { AlternateViewEvent } from "../../InputHandler";
 import { Platform } from "../../Platform";
+import type { StatsTableKind } from "../../StatsConstants";
 import { themeProvider } from "../../theme/ThemeProvider";
 import { getTranslatedPlayerTeamLabel, translateText } from "../../Utils";
 import type { GameView } from "../../view";
 import { keepPressKeysFromGame } from "../HudKeys";
 import { HUD_ICON_BUTTON } from "../HudModal";
+import type { ColumnPicker } from "./ColumnPicker";
+import "./ColumnPicker";
 import { gameIdButton } from "./GameIdButton";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import "./PlayerStats";
@@ -31,6 +34,8 @@ const PANEL_OPEN = "max-[400px]:w-full max-[400px]:rounded-none";
 const BAR =
   "flex flex-wrap items-center gap-1 max-lg:max-w-[calc(100vw-12.5rem)]";
 const BAR_BUTTON = `${HUD_ICON_BUTTON} aria-pressed:bg-aquarius/20 aria-pressed:text-white aria-pressed:inset-ring aria-pressed:inset-ring-aquarius/55`;
+// Lit while the column menu it opens is up.
+const MENU_BUTTON = `${HUD_ICON_BUTTON} aria-expanded:bg-white/15 aria-expanded:text-white`;
 const BAR_ICON_SIZE = 20;
 const YOUR_TEAM = "mt-1 flex items-center gap-1.5 px-1 text-[13px]";
 const TEAM_SWATCH = "size-2.5 shrink-0 rounded-xs bg-(--color)";
@@ -59,6 +64,7 @@ export class GameLeftSidebar extends LitElement implements Controller {
   @property({ attribute: false }) public eventBus: EventBus | null = null;
   @query("player-stats") private playerStats?: PlayerStats;
   @query("team-stats") private teamStats?: TeamStats;
+  @query("column-picker") private columnPicker?: ColumnPicker;
   private showPlayerStatsAfterSpawn = false;
 
   createRenderRoot() {
@@ -120,10 +126,12 @@ export class GameLeftSidebar extends LitElement implements Controller {
 
   private togglePlayerStats(): void {
     this.isPlayerStatsShown = !this.isPlayerStatsShown;
+    if (!this.isPlayerStatsShown) this.columnPicker?.close();
   }
 
   private toggleTeamStats(): void {
     this.isTeamStatsShown = !this.isTeamStatsShown;
+    if (!this.isTeamStatsShown) this.columnPicker?.close();
   }
 
   private toggleAlternateView(): void {
@@ -140,6 +148,10 @@ export class GameLeftSidebar extends LitElement implements Controller {
     const teams = translateText("help_modal.icon_alt_team_leaderboard");
     const view = translateText("user_setting.toggle_view_desc");
     const gameId = isTableShown ? (this.game?.gameID() ?? "") : "";
+    const columns = translateText("leaderboard.configure_columns");
+    const tables: StatsTableKind[] = [];
+    if (this.isPlayerStatsShown) tables.push("player");
+    if (this.isTeamStatsShown && this.isTeamGame) tables.push("team");
     return html`
       <aside
         class="${PANEL} ${isTableShown ? PANEL_OPEN : ""} ${
@@ -208,6 +220,30 @@ export class GameLeftSidebar extends LitElement implements Controller {
             <of-icon name="terrain" size=${BAR_ICON_SIZE}></of-icon>
           </button>
           ${gameId ? gameIdButton(gameId) : null}
+          ${
+            isTableShown
+              ? html`
+                  <button
+                    type="button"
+                    class=${MENU_BUTTON}
+                    data-sidebar-button="columns"
+                    aria-haspopup="dialog"
+                    aria-expanded="false"
+                    aria-label=${columns}
+                    title=${columns}
+                    @mousedown=${(e: MouseEvent) => e.preventDefault()}
+                    @click=${(e: MouseEvent) =>
+                      this.columnPicker?.openFrom(
+                        e.currentTarget as HTMLElement,
+                      )}
+                    @keydown=${keepPressKeysFromGame}
+                    @keyup=${keepPressKeysFromGame}
+                  >
+                    <of-icon name="columns" size=${BAR_ICON_SIZE}></of-icon>
+                  </button>
+                `
+              : null
+          }
         </div>
         ${
           this.isPlayerTeamLabelVisible
@@ -230,7 +266,15 @@ export class GameLeftSidebar extends LitElement implements Controller {
               `
             : null
         }
-        <div class="flex flex-col gap-2 min-w-0 w-full">
+        <div
+          class="flex flex-col gap-2 min-w-0 w-full"
+          @columns-menu=${(e: CustomEvent<{ x: number; y: number }>) =>
+            this.columnPicker?.toggleAt(e.detail.x, e.detail.y)}
+          @columns-changed=${() => {
+            this.playerStats?.refresh();
+            this.teamStats?.refresh();
+          }}
+        >
           <player-stats
             class=${this.isPlayerStatsShown ? "block min-w-0" : "hidden"}
             .game=${this.game}
@@ -246,6 +290,8 @@ export class GameLeftSidebar extends LitElement implements Controller {
             .game=${this.game}
             .visible=${this.isTeamStatsShown && this.isTeamGame}
           ></team-stats>
+          <!-- Its menu is drawn under <body>; it takes no room here. -->
+          <column-picker class="hidden" .tables=${tables}></column-picker>
         </div>
         <slot></slot>
       </aside>

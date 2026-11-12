@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { GameMode } from "@openfront/engine-api/game/GameTypes";
 import { EventBus } from "@openfront/shared/EventBus";
+import type { ColumnPicker } from "../src/client/hud/layers/ColumnPicker";
 import { GameLeftSidebar } from "../src/client/hud/layers/GameLeftSidebar";
 import type { PlayerStats } from "../src/client/hud/layers/PlayerStats";
 import type { TeamStats } from "../src/client/hud/layers/TeamStats";
@@ -25,6 +26,7 @@ function ffaGame(): GameView {
     trainGold: () => 0,
     piracyGold: () => 0,
     goldEarned: () => 0,
+    totalUnitLevels: () => 0,
     isAlive: () => true,
     isOnSameTeam: () => false,
     team: () => null,
@@ -394,6 +396,125 @@ describe("GameLeftSidebar", () => {
     expect(() => button.click()).not.toThrow();
     await Promise.resolve();
     expect(button.hasAttribute("data-copied")).toBe(false);
+
+    sidebar.remove();
+  });
+
+  it("offers the column menu while a table is open, one section per table", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = teamGame(() => false);
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+
+    const button = (name: string) =>
+      sidebar.querySelector<HTMLButtonElement>(
+        `[data-sidebar-button="${name}"]`,
+      );
+    const sections = () =>
+      [...document.body.querySelectorAll("[data-column-section]")].map(
+        (section) => section.getAttribute("data-column-section"),
+      );
+    expect(button("columns")).toBeNull();
+
+    button("players")?.click();
+    await sidebar.updateComplete;
+    const columns = button("columns");
+    expect(columns?.getAttribute("aria-label")).toBe(
+      translateText("leaderboard.configure_columns"),
+    );
+    expect(columns?.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(columns?.getAttribute("aria-expanded")).toBe("false");
+
+    const picker = sidebar.querySelector("column-picker") as ColumnPicker;
+    columns?.click();
+    await picker.updateComplete;
+    expect(columns?.getAttribute("aria-expanded")).toBe("true");
+    expect(sections()).toEqual(["player"]);
+
+    // A press on another button of the bar closes it, like any press outside.
+    button("teams")?.click();
+    await sidebar.updateComplete;
+    await picker.updateComplete;
+    expect(columns?.getAttribute("aria-expanded")).toBe("false");
+    expect(sections()).toEqual([]);
+
+    columns?.click();
+    await picker.updateComplete;
+    expect(sections()).toEqual(["player", "team"]);
+
+    columns?.click();
+    await picker.updateComplete;
+    expect(columns?.getAttribute("aria-expanded")).toBe("false");
+    expect(sections()).toEqual([]);
+
+    sidebar.remove();
+  });
+
+  it("shows a column ticked in the menu at once, in that table only", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+    sidebar
+      .querySelector<HTMLElement>('[data-sidebar-button="players"]')
+      ?.click();
+    await sidebar.updateComplete;
+    sidebar.tick();
+    sidebar
+      .querySelector<HTMLElement>('[data-sidebar-button="columns"]')
+      ?.click();
+    const picker = sidebar.querySelector("column-picker") as ColumnPicker;
+    await picker.updateComplete;
+
+    const playerStats = sidebar.querySelector("player-stats") as PlayerStats;
+    const header = () =>
+      playerStats.querySelector('[role="columnheader"][data-column="cities"]');
+    expect(header()).toBeNull();
+    const cities = [
+      ...document.body.querySelectorAll<HTMLInputElement>(
+        '[data-column-section="player"] input[type="checkbox"]',
+      ),
+    ].find(
+      (box) =>
+        box.closest("label")?.textContent?.trim() === "leaderboard.cities",
+    );
+    cities?.click();
+    await playerStats.updateComplete;
+
+    expect(new UserSettings().statsColumns("player")).toContain("cities");
+    expect(new UserSettings().statsColumns("team")).not.toContain("cities");
+    expect(header()).not.toBeNull();
+
+    sidebar.remove();
+  });
+
+  it("closes the column menu with the table it was opened for", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+    const players = sidebar.querySelector<HTMLElement>(
+      '[data-sidebar-button="players"]',
+    );
+    players?.click();
+    await sidebar.updateComplete;
+    sidebar
+      .querySelector<HTMLElement>('[data-sidebar-button="columns"]')
+      ?.click();
+    const picker = sidebar.querySelector("column-picker") as ColumnPicker;
+    await picker.updateComplete;
+    expect(document.body.querySelector("[data-column-menu]")).not.toBeNull();
+
+    players?.click();
+    await sidebar.updateComplete;
+    await picker.updateComplete;
+    expect(document.body.querySelector("[data-column-menu]")).toBeNull();
 
     sidebar.remove();
   });

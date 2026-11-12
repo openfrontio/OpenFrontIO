@@ -1,7 +1,6 @@
 import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
-import "../hud/layers/ColumnPicker";
 import "./OfIcon";
 import {
   type ColumnAlignment,
@@ -40,10 +39,8 @@ type ListItem = { spacer: number; from: number } | { placed: PlacedRow };
 const FALLBACK_ROW_HEIGHT_PX = 24;
 const FALLBACK_VIEWPORT_HEIGHT_PX = 180;
 const OVERSCAN_ROWS = 4;
-// Trailing chrome track holding the ⚙️ menu, not a column of data.
-const PICKER_TRACK = "32px";
-// What a screen reader calls each table.
-const TABLE_NAME: Record<StatsTableKind, string> = {
+// What each table is called, by a screen reader and in the column menu.
+export const TABLE_NAME: Record<StatsTableKind, string> = {
   player: "leaderboard.players_table",
   team: "leaderboard.teams_table",
 };
@@ -258,7 +255,7 @@ export abstract class StatsTable extends LitElement {
 
   /**
    * Columns this render shows: every non-hideable column plus the hideable
-   * ones the ⚙️ menu has selected, in registry order.
+   * ones the column menu has selected, in registry order.
    */
   private visibleColumns(): readonly ColumnDef[] {
     const selected = this.userSettings.statsColumns(this.tableKind);
@@ -277,9 +274,23 @@ export abstract class StatsTable extends LitElement {
     this.updateStats();
   }
 
-  private onColumnsChanged(event: CustomEvent<ColumnId[]>) {
-    this.userSettings.setStatsColumns(this.tableKind, event.detail);
-    this.updateStats();
+  // The browser's own menu never opens on the table. On the header row a
+  // right-click asks the host for the column menu, at the pointer.
+  private onContextMenu(event: MouseEvent) {
+    event.preventDefault();
+    const target = event.target;
+    if (
+      !(target instanceof Element) ||
+      !target.closest(".stats-table-header")
+    ) {
+      return;
+    }
+    this.dispatchEvent(
+      new CustomEvent<{ x: number; y: number }>("columns-menu", {
+        detail: { x: event.clientX, y: event.clientY },
+        bubbles: true,
+      }),
+    );
   }
 
   private updateStats() {
@@ -449,9 +460,9 @@ export abstract class StatsTable extends LitElement {
           },
         )}
         <!-- The list's scrollbar lands on this cell: the browser counts the
-        bar's width as the cell's margin and the picker track grows to fit
-        it, so the bar never covers the last column. -->
-        <div class=${DIVIDER_CLASS} aria-hidden="true"></div>
+        bar's width as the cell's margin and the end track grows to fit it,
+        so the bar never covers the last column. -->
+        <div aria-hidden="true"></div>
       </div>
     `;
   }
@@ -496,15 +507,16 @@ export abstract class StatsTable extends LitElement {
     spaceTo(this.rows.length);
     // "auto" tracks stay content-sized intrinsically, then split only the
     // spare width supplied by a wider sibling; fixed tracks never stretch.
+    // The empty last track only grows to a scrollbar.
     const gridTemplate = `${columns
       .map((column) => column.width)
-      .join(" ")} minmax(${PICKER_TRACK}, max-content)`;
+      .join(" ")} minmax(0px, max-content)`;
 
     return html`
       <div class="stats-table ${TABLE}">
         <div
           class="overflow-x-auto ${SCROLLBAR}"
-          @contextmenu=${(event: Event) => event.preventDefault()}
+          @contextmenu=${this.onContextMenu}
         >
           <div
             class="stats-table-content grid w-max min-w-full"
@@ -524,20 +536,6 @@ export abstract class StatsTable extends LitElement {
                 (column) => column.id,
                 (column, index) => this.renderHeaderCell(column, index),
               )}
-              <div
-                class="${HEADER_CELL} flex items-center justify-center ${HEADER_DIVIDER_CLASS}"
-                role="columnheader"
-                data-rule
-              >
-                <column-picker
-                  class="inline-flex"
-                  .columns=${columnsFor(this.tableKind).filter(
-                    (column) => column.isHideable,
-                  )}
-                  .selected=${this.userSettings.statsColumns(this.tableKind)}
-                  @columns-changed=${this.onColumnsChanged}
-                ></column-picker>
-              </div>
             </div>
 
             <div
