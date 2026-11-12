@@ -52,7 +52,7 @@ export interface ColumnDef {
   readonly headerAlign?: ColumnAlignment;
   /** Tables this column appears on. */
   readonly kinds: readonly StatsTableKind[];
-  /** Offered in the ⚙️ menu; non-hideable columns always render. */
+  /** Offered in the column menu; non-hideable columns always render. */
   readonly isHideable: boolean;
   /** Header is a sort button. True exactly when `value` is set. */
   readonly isOrderable: boolean;
