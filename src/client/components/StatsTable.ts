@@ -554,10 +554,12 @@ export abstract class StatsTable extends LitElement {
     spaceTo(this.rows.length);
     // "auto" tracks stay content-sized intrinsically, then split only the
     // spare width supplied by a wider sibling; fixed tracks never stretch.
-    // The empty last track only grows to a scrollbar.
-    const gridTemplate = `${columns
-      .map((column) => column.width)
-      .join(" ")} minmax(0px, max-content)`;
+    // The empty last track is room the host can leave for a button over the
+    // end of the header row; it only grows to a scrollbar.
+    const gridTemplate = [
+      ...columns.map((column) => column.width),
+      "minmax(var(--stats-end-track, 0px), max-content)",
+    ].join(" ");
 
     return html`
       <div

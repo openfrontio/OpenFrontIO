@@ -27,7 +27,7 @@ import type { TeamStats } from "./TeamStats";
 // Look. Sizes, colours, radii and spacing of each part live here, so a
 // change of look is one edit. The templates below only hold structure.
 const PANEL =
-  "max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:z-900 lg:pointer-events-auto flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-1 hud-panel rounded-br-lg text-white transition-[margin-top] duration-300";
+  "max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:z-900 lg:pointer-events-auto flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-1 hud-panel rounded-br-lg text-white transition-[margin-top] duration-300 max-[360px]:[--stats-end-track:2rem]";
 // In portrait below lg the unit bar is a 30px column on the right edge: the
 // open panel stops 10px before it, and a wide table scrolls sideways inside.
 const PANEL_OPEN =
@@ -39,6 +39,15 @@ const BAR =
 const BAR_BUTTON = `${HUD_ICON_BUTTON} aria-pressed:bg-aquarius/20 aria-pressed:text-white aria-pressed:inset-ring aria-pressed:inset-ring-aquarius/55`;
 // Lit while the column menu it opens is up.
 const MENU_BUTTON = `${HUD_ICON_BUTTON} aria-expanded:bg-white/15 aria-expanded:text-white`;
+// Below 360px a team game's four buttons would wrap the bar, so the customize
+// button sits at the end of the first header row instead, in the room the
+// tables leave with --stats-end-track. Lower while the "Your team" line shows.
+const MENU_BUTTON_NARROW =
+  "max-[360px]:absolute max-[360px]:end-1 max-[360px]:z-1 max-[360px]:h-5.5";
+const MENU_BUTTON_TOP = {
+  bar: "max-[360px]:top-10",
+  yourTeam: "max-[360px]:top-[63.5px]",
+} as const;
 const BAR_ICON_SIZE = 20;
 const YOUR_TEAM = "mt-1 flex items-center gap-1.5 px-1 text-[13px]";
 const TEAM_SWATCH = "size-2.5 shrink-0 rounded-xs bg-(--color)";
@@ -239,7 +248,11 @@ export class GameLeftSidebar extends LitElement implements Controller {
               ? html`
                   <button
                     type="button"
-                    class=${MENU_BUTTON}
+                    class="${MENU_BUTTON} ${MENU_BUTTON_NARROW} ${
+                      MENU_BUTTON_TOP[
+                        this.isPlayerTeamLabelVisible ? "yourTeam" : "bar"
+                      ]
+                    }"
                     data-sidebar-button="columns"
                     aria-haspopup="dialog"
                     aria-expanded="false"

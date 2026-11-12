@@ -128,8 +128,10 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "player",
     labelKey: "leaderboard.player",
     headerVisual: { kind: "icon", icon: "player" },
-    // The table widens it on large windows (--stats-name).
-    width: "var(--stats-name, 100px)",
+    // The table widens it on large windows (--stats-name). It gives up the
+    // room a host leaves at the table's end (--stats-end-track), so the
+    // table keeps its width.
+    width: "calc(var(--stats-name, 100px) - var(--stats-end-track, 0px))",
     widest: () => [],
     align: "start",
     headerAlign: "center",
@@ -184,7 +186,9 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "team",
     labelKey: "leaderboard.team",
     headerVisual: { kind: "icon", icon: "team" },
-    width: "var(--stats-name, 100px)",
+    // Gives up the room a host leaves at the table's end (--stats-end-track),
+    // so the table keeps its width.
+    width: "calc(var(--stats-name, 100px) - var(--stats-end-track, 0px))",
     widest: () => [],
     align: "start",
     headerAlign: "center",
