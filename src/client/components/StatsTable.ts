@@ -2,6 +2,7 @@ import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import "../hud/layers/ColumnPicker";
+import "./OfIcon";
 import {
   type ColumnAlignment,
   type ColumnDef,
@@ -28,25 +29,167 @@ interface PlacedRow {
   position: number;
 }
 
+/**
+ * What the list draws: a row, or a spacer `spacer` px tall standing for the
+ * rows from index `from` that have no DOM.
+ */
+type ListItem = { spacer: number; from: number } | { placed: PlacedRow };
+
 // Fallbacks cover the first render before measurement and jsdom (tests),
 // which reports zero element sizes.
 const FALLBACK_ROW_HEIGHT_PX = 24;
 const FALLBACK_VIEWPORT_HEIGHT_PX = 180;
 const OVERSCAN_ROWS = 4;
-// The pinned row only renders separately when the viewer sits below the
-// always-visible top ranks of the scroll window.
-const PINNED_VISIBLE_THRESHOLD = 4;
 // Trailing chrome track holding the ⚙️ menu, not a column of data.
 const PICKER_TRACK = "32px";
-
-const ALIGNMENT_CLASS: Record<ColumnAlignment, string> = {
-  start: "justify-start text-left",
-  center: "justify-center text-center",
-  end: "justify-end text-right",
+// What a screen reader calls each table.
+const TABLE_NAME: Record<StatsTableKind, string> = {
+  player: "leaderboard.players_table",
+  team: "leaderboard.teams_table",
 };
-const CELL_CLASS = "h-6 md:h-8 lg:h-9 min-w-0 px-1 flex items-center";
-const DIVIDER_CLASS = "border-l border-l-slate-600/40";
-const HEADER_DIVIDER_CLASS = "border-l border-l-slate-500";
+
+type RowState = "me" | "mate" | "other";
+
+// Look. Sizes, colours, radii and spacing of each part live here, so a
+// change of look is one edit. The templates below only hold structure.
+
+// The table has no surface of its own: it sits on the panel. Scrollbars keep
+// a fixed colour so they still show over the map at 0% HUD opacity.
+// Names get more room on large windows, where it costs nothing.
+const TABLE =
+  "relative mt-1 text-xs md:text-[13px] text-white 2xl:[--stats-name:10rem]";
+const SCROLLBAR =
+  "[scrollbar-width:thin] [scrollbar-color:rgb(255_255_255_/_0.35)_transparent]";
+const HEADER = "h-5.5 md:h-6 lg:h-6.5 border-b border-white/15 font-bold";
+const HEADER_CELL = "min-w-0 whitespace-nowrap";
+// What a header cell holds; for a sortable column it is the sort button, so
+// the whole cell takes the click.
+const HEADER_BOX = "flex h-full w-full items-center gap-0.5";
+const HEADER_PADDING = "px-0.75";
+const SORT_BUTTON =
+  "group cursor-pointer pointer-fine:hover:text-white focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-aquarius";
+const HEADER_TONE = { sorted: "text-white", other: "text-white/70" } as const;
+const HEADER_ICON_SIZE = 15;
+// Always drawn, so a header keeps its width when it becomes the sorted one.
+// Down for descending, which is what a first click gives.
+const CHEVRON =
+  "shrink-0 transition-transform duration-200 motion-reduce:transition-none";
+// Where the chevron sits, so the header's icon or text lines up with the
+// values below. Before an end-aligned visual, so both end on the same edge.
+// Out of the flow at the cell's end for a centred one, with its width as
+// padding on both sides, so the visual stays on the column's centre.
+const CHEVRON_PLACE: Record<
+  ColumnAlignment,
+  { button: string; chevron: string }
+> = {
+  start: { button: HEADER_PADDING, chevron: "" },
+  center: {
+    button: "relative px-2.5",
+    chevron: "absolute end-0 top-1/2 -translate-y-1/2",
+  },
+  end: { button: HEADER_PADDING, chevron: "order-first" },
+};
+const CHEVRON_STATE = {
+  none: "rotate-90 opacity-0 pointer-fine:group-hover:opacity-60",
+  desc: "rotate-90 text-aquarius",
+  asc: "-rotate-90 text-aquarius",
+} as const;
+// Rows are 24px, 28px from 768px wide, the line under a row included. The
+// font draws its glyphs low in their line box: one pixel less at the bottom
+// puts them on the row's middle.
+const ROW = "h-6 md:h-7 pb-px not-last:border-b not-last:border-white/5";
+// Your row and your teammates' are bold, not told apart by colour alone.
+// Your row stays in the list and is held at its top or bottom edge when it
+// is out of view. Its blue band lies over the panel's navy, which fades with
+// the HUD opacity like the panel: the rows passing under it are hidden, or
+// blurred like the map below full opacity, so no text shows through yours.
+const ROW_STATE: Record<RowState, string> = {
+  me: "sticky top-0 bottom-0 z-1 bg-hud-panel bg-linear-to-r from-malibu-blue/25 to-malibu-blue/25 backdrop-blur-hud font-bold text-white",
+  mate: "font-bold text-white",
+  other: "",
+};
+// Only rows with a click get a hover, and only for a mouse: after a tap it
+// would stay lit.
+const ROW_HOVER: Record<RowState, string> = {
+  me: "pointer-fine:hover:from-malibu-blue/35 pointer-fine:hover:to-malibu-blue/35",
+  mate: "pointer-fine:hover:bg-white/6",
+  other: "pointer-fine:hover:bg-white/6",
+};
+// Your row is also marked on its start edge.
+const ME_EDGE = "border-s-2 border-aquarius";
+// 3px a side, as in the header: the default columns then fit in the panel's
+// width of before.
+const CELL = "flex min-w-0 items-center px-0.75 tabular-nums";
+const ALIGNMENT_CLASS: Record<ColumnAlignment, string> = {
+  start: "justify-start text-start",
+  center: "justify-center text-center",
+  end: "justify-end text-end",
+};
+// Names a step larger and ranks a step smaller than the numbers.
+const CELL_SIZE: Partial<Record<ColumnId, string>> = {
+  rank: "text-[11px] md:text-xs",
+  player: "md:text-sm",
+  team: "md:text-sm",
+};
+// In other players' rows; yours and your teammates' are white throughout.
+const NAME_TONE = "font-medium text-white";
+const CELL_TONE: Partial<Record<ColumnId, string>> = {
+  rank: "text-white/55",
+  player: NAME_TONE,
+  team: NAME_TONE,
+};
+const VALUE_TONE = "text-white/70";
+// Zeros, and the dash of a player without a clan, recede in every row.
+const ZERO_TONE = "text-white/40";
+// Faint rules between columns, so none read as merged.
+const DIVIDER_CLASS = "border-s border-white/8";
+const HEADER_DIVIDER_CLASS = "border-s border-white/12";
+// A row nobody sees, holding each column's widest texts one per line: the
+// browser sizes every shared track from real glyphs. Bold like your row, with
+// the cells' padding and rules.
+const SIZER = "grid col-span-full h-0 overflow-hidden invisible";
+const SIZER_CELL =
+  "flex flex-col px-0.75 font-bold tabular-nums whitespace-nowrap";
+
+// An icon with a mark ("/m", the limit sign) is one box: the mark sits on
+// the icon's baseline. "/m" has a slot of its own fixed width, so the four
+// per-minute headers have the same width and line up. With no line height
+// the text does not make the box taller than the icon, which stays centred
+// like the other headers' icons. The limit sign tucks into the icon's corner
+// as before, so max troops stays as narrow as its values.
+const MARKED_VISUAL = "inline-flex items-baseline gap-0.5";
+const MARK = "w-3.5 text-[11px] font-bold leading-0 text-white/55";
+const MARK_ICON = "-ms-1 text-white/55";
+
+/** A column's header icon (with its mark) or text, `size` px tall. */
+export function renderColumnVisual(column: ColumnDef, size: number) {
+  const visual = column.headerVisual;
+  if (visual === undefined) {
+    return html`<span>${translateText(column.labelKey)}</span>`;
+  }
+  if (visual.kind === "text") {
+    return html`<span>${translateText(visual.text)}</span>`;
+  }
+  const superscript = visual.superscript;
+  return html`<span class=${MARKED_VISUAL}>
+    <of-icon
+      class=${visual.color ?? nothing}
+      name=${visual.icon}
+      size=${size}
+    ></of-icon>
+    ${
+      superscript === undefined
+        ? nothing
+        : "icon" in superscript
+          ? html`<of-icon
+              class=${MARK_ICON}
+              name=${superscript.icon}
+              size=${size - 5}
+            ></of-icon>`
+          : html`<span class=${MARK}>${translateText(superscript.text)}</span>`
+    }
+  </span>`;
+}
 
 export abstract class StatsTable extends LitElement {
   public game: GameView | null = null;
@@ -144,13 +287,18 @@ export abstract class StatsTable extends LitElement {
 
     const columns = this.visibleColumns();
     // Only orderable columns have a number to sort on. When none is visible
-    // the rows keep the order buildRows produced.
+    // the rows keep the order buildRows produced. Without a choice, sort by
+    // land; Type comes first in the registry but is a poor default.
     const orderable = columns.filter((column) => column.isOrderable);
     if (
       orderable.length > 0 &&
       !orderable.some((column) => column.id === this.sortKey)
     ) {
-      this.sortKey = orderable[0].id;
+      this.sortKey = (
+        orderable.find((column) => column.id === "tiles") ??
+        orderable.find((column) => column.id !== "playerType") ??
+        orderable[0]
+      ).id;
       this.sortOrder = "desc";
     }
 
@@ -168,50 +316,26 @@ export abstract class StatsTable extends LitElement {
     this.requestUpdate();
   }
 
-  private renderHeaderVisual(column: ColumnDef, label: string) {
-    const visual = column.headerVisual;
-    if (visual === undefined) return html`<span>${label}</span>`;
-    if (visual.kind === "text") {
-      return html`<span>${translateText(visual.text)}</span>`;
-    }
-    return html`<span class="inline-flex items-start">
-      <img
-        class="size-[1.1rem] object-contain ${
-          visual.white === true ? "brightness-0 invert" : ""
-        }"
-        src=${visual.src}
-        alt=""
-        aria-hidden="true"
-      />${
-        visual.superscript
-          ? "src" in visual.superscript
-            ? html`<img
-                class="size-[0.825rem] object-contain -ml-0.5 ${
-                  visual.superscript.white === true ? "brightness-0 invert" : ""
-                }"
-                src=${visual.superscript.src}
-                alt=""
-                aria-hidden="true"
-              />`
-            : html`<span class="text-[0.6rem] ml-0.5 self-center leading-none"
-                >${translateText(visual.superscript.text)}</span
-              >`
-          : nothing
-      }
-    </span>`;
-  }
-
   private renderHeaderCell(column: ColumnDef, index: number) {
     const label = translateText(column.labelKey);
-    const visual = this.renderHeaderVisual(column, label);
+    const visual = renderColumnVisual(column, HEADER_ICON_SIZE);
     const sorted = this.sortKey === column.id;
+    const align = column.headerAlign ?? column.align;
+    const box = `${HEADER_BOX} ${ALIGNMENT_CLASS[align]} ${
+      HEADER_TONE[sorted ? "sorted" : "other"]
+    }`;
+    const place = CHEVRON_PLACE[align];
     return html`
       <div
-        class="stats-table-header-cell ${CELL_CLASS} justify-center text-center whitespace-nowrap border-b border-b-slate-500 ${
+        class="stats-table-header-cell ${HEADER_CELL} ${
           index > 0 ? HEADER_DIVIDER_CLASS : ""
         }"
         role="columnheader"
         title=${label}
+        aria-label=${column.isOrderable ? nothing : label}
+        data-column=${column.id}
+        data-align=${align}
+        ?data-rule=${index > 0}
         aria-sort=${
           column.isOrderable
             ? sorted
@@ -225,20 +349,21 @@ export abstract class StatsTable extends LitElement {
         ${
           column.isOrderable
             ? html`<button
-                class="inline-flex items-center justify-center gap-1 hover:text-sky-200 transition-colors"
+                type="button"
+                class="${box} ${place.button} ${SORT_BUTTON}"
                 aria-label=${label}
                 @click=${() => this.setSort(column.id)}
               >
                 ${visual}
-                ${
-                  sorted
-                    ? html`<span class="text-sky-300" aria-hidden="true"
-                        >${this.sortOrder === "asc" ? "↑" : "↓"}</span
-                      >`
-                    : nothing
-                }
+                <of-icon
+                  class="${CHEVRON} ${place.chevron} ${
+                    CHEVRON_STATE[sorted ? this.sortOrder : "none"]
+                  }"
+                  name="chevron-right"
+                  size="10"
+                ></of-icon>
               </button>`
-            : visual
+            : html`<span class="${box} ${HEADER_PADDING}">${visual}</span>`
         }
       </div>
     `;
@@ -248,16 +373,39 @@ export abstract class StatsTable extends LitElement {
     column: ColumnDef,
     index: number,
     text: string,
-    borderClass: string,
+    value: number,
+    state: RowState,
   ) {
+    // A player without a clan shows a dash. Zeros recede, but not the Type
+    // column's: there 0 reads "Player".
+    const noClan = column.id === "clan" && text === "";
+    const zero =
+      noClan ||
+      (column.value !== undefined && column.id !== "playerType" && value === 0);
+    let tone = state === "other" ? (CELL_TONE[column.id] ?? VALUE_TONE) : "";
+    if (zero) tone = ZERO_TONE;
+    // Names may be right-to-left: dir="auto" reads them so while they stay
+    // at the start of their column, and the title gives a cut name in full.
+    const isName = column.id === "player" || column.id === "team";
     return html`
       <div
-        class="stats-table-cell ${CELL_CLASS} ${
-          ALIGNMENT_CLASS[column.align]
-        } tabular-nums ${index > 0 ? DIVIDER_CLASS : ""} ${borderClass}"
+        class="stats-table-cell ${CELL} ${ALIGNMENT_CLASS[column.align]} ${
+          CELL_SIZE[column.id] ?? ""
+        } ${tone} ${index > 0 ? DIVIDER_CLASS : ""} ${
+          index === 0 && state === "me" ? ME_EDGE : ""
+        }"
         role="cell"
+        data-column=${column.id}
+        data-align=${column.align}
+        ?data-rule=${index > 0}
+        ?data-zero=${zero}
       >
-        <span class="block w-full truncate">${text}</span>
+        <span
+          class="min-w-0 truncate"
+          dir=${isName ? "auto" : nothing}
+          title=${isName ? text : nothing}
+          >${noClan ? "–" : text}</span
+        >
       </div>
     `;
   }
@@ -266,38 +414,44 @@ export abstract class StatsTable extends LitElement {
     game: GameView,
     columns: readonly ColumnDef[],
     { row, position }: PlacedRow,
-    borderClass: string,
-    pinned = false,
   ) {
+    const state: RowState = row.pinned
+      ? "me"
+      : row.emphasized
+        ? "mate"
+        : "other";
+    // translate="no": a page translator must not rewrite player names.
     return html`
       <div
-        class="stats-table-row grid col-span-full hover:bg-slate-600/60 ${
-          pinned ? "stats-table-pinned-row bg-white/10" : ""
-        } ${row.emphasized ? "font-bold" : ""} ${
-          row.onClick ? "cursor-pointer" : ""
+        class="stats-table-row grid col-span-full ${ROW} ${ROW_STATE[state]} ${
+          row.onClick ? `cursor-pointer ${ROW_HOVER[state]}` : ""
         }"
         style="grid-template-columns: subgrid; grid-column: 1 / -1;"
         role="row"
+        aria-rowindex=${position + 1}
+        translate="no"
+        ?data-me=${state === "me"}
+        ?data-mate=${state === "mate"}
         @click=${row.onClick ?? nothing}
       >
         ${repeat(
           columns,
           (column) => column.id,
-          (column, index) =>
-            this.renderCell(
+          (column, index) => {
+            const value = row.values.get(column.id) ?? 0;
+            return this.renderCell(
               column,
               index,
-              column.cell(
-                { ...row, position, value: row.values.get(column.id) ?? 0 },
-                game,
-              ),
-              borderClass,
-            ),
+              column.cell({ ...row, position, value }, game),
+              value,
+              state,
+            );
+          },
         )}
-        <div
-          class="h-6 md:h-8 lg:h-9 ${DIVIDER_CLASS} ${borderClass}"
-          aria-hidden="true"
-        ></div>
+        <!-- The list's scrollbar lands on this cell: the browser counts the
+        bar's width as the cell's margin and the picker track grows to fit
+        it, so the bar never covers the last column. -->
+        <div class=${DIVIDER_CLASS} aria-hidden="true"></div>
       </div>
     `;
   }
@@ -307,15 +461,6 @@ export abstract class StatsTable extends LitElement {
     if (!this.visible || game === null) return html``;
 
     const columns = this.visibleColumns();
-    const pinnedIndex = this.rows.findIndex((row) => row.pinned);
-    const pinnedRow: PlacedRow | null =
-      pinnedIndex > PINNED_VISIBLE_THRESHOLD
-        ? { row: this.rows[pinnedIndex], position: pinnedIndex + 1 }
-        : null;
-    const listRows =
-      pinnedRow === null
-        ? this.rows
-        : this.rows.filter((_, index) => index !== pinnedIndex);
     // Virtualize: only rows near the scroll viewport get DOM; spacers keep
     // the scrollbar geometry for the rest. Positions stay list-wide.
     const firstIndex = Math.max(
@@ -323,48 +468,56 @@ export abstract class StatsTable extends LitElement {
       Math.floor(this.scrollOffsetPx / this.rowHeightPx) - OVERSCAN_ROWS,
     );
     const lastIndex = Math.min(
-      listRows.length,
+      this.rows.length,
       Math.ceil(
         (this.scrollOffsetPx + this.viewportHeightPx) / this.rowHeightPx,
       ) + OVERSCAN_ROWS,
     );
-    const scrollableRows: PlacedRow[] = listRows
-      .slice(firstIndex, lastIndex)
-      .map((row, sliceIndex) => {
-        const index = firstIndex + sliceIndex;
-        return {
-          row,
-          position:
-            pinnedRow !== null && index >= pinnedIndex ? index + 2 : index + 1,
-        };
-      });
-    const topSpacerPx = firstIndex * this.rowHeightPx;
-    const bottomSpacerPx = (listRows.length - lastIndex) * this.rowHeightPx;
+    // Your row is drawn wherever it is, so that it can be held at the edge;
+    // the spacer it falls in is split around it. Those spacers change while
+    // the list scrolls, so the list keeps no scroll anchor: the browser must
+    // not answer them by moving the scroll position.
+    const myIndex = this.rows.findIndex((row) => row.pinned);
+    const items: ListItem[] = [];
+    let next = 0; // the first row not yet in items
+    const spaceTo = (index: number) => {
+      if (index > next) {
+        items.push({ spacer: (index - next) * this.rowHeightPx, from: next });
+      }
+    };
+    const place = (index: number) => {
+      spaceTo(index);
+      items.push({ placed: { row: this.rows[index], position: index + 1 } });
+      next = index + 1;
+    };
+    if (myIndex >= 0 && myIndex < firstIndex) place(myIndex);
+    for (let index = firstIndex; index < lastIndex; index++) place(index);
+    if (myIndex >= lastIndex) place(myIndex);
+    spaceTo(this.rows.length);
     // "auto" tracks stay content-sized intrinsically, then split only the
     // spare width supplied by a wider sibling; fixed tracks never stretch.
     const gridTemplate = `${columns
       .map((column) => column.width)
-      .join(" ")} ${PICKER_TRACK}`;
-    const scrollHeight =
-      pinnedRow === null
-        ? "max-h-[7.5rem] md:max-h-[10rem] lg:max-h-[11.25rem]"
-        : "max-h-[6rem] md:max-h-[8rem] lg:max-h-[9rem]";
+      .join(" ")} minmax(${PICKER_TRACK}, max-content)`;
 
     return html`
-      <div class="stats-table relative mt-1 text-white text-xs lg:text-sm">
+      <div class="stats-table ${TABLE}">
         <div
-          class="overflow-x-auto rounded-lg bg-white/5"
+          class="overflow-x-auto ${SCROLLBAR}"
           @contextmenu=${(event: Event) => event.preventDefault()}
         >
           <div
             class="stats-table-content grid w-max min-w-full"
             style="grid-template-columns: ${gridTemplate};"
             role="table"
+            aria-label=${translateText(TABLE_NAME[this.tableKind])}
+            aria-rowcount=${this.rows.length + 1}
           >
             <div
-              class="stats-table-header grid col-span-full font-bold bg-white/10"
+              class="stats-table-header grid col-span-full ${HEADER}"
               style="grid-template-columns: subgrid; grid-column: 1 / -1;"
               role="row"
+              aria-rowindex="1"
             >
               ${repeat(
                 columns,
@@ -372,8 +525,9 @@ export abstract class StatsTable extends LitElement {
                 (column, index) => this.renderHeaderCell(column, index),
               )}
               <div
-                class="${CELL_CLASS} justify-center border-b border-b-slate-500 ${HEADER_DIVIDER_CLASS}"
+                class="${HEADER_CELL} flex items-center justify-center ${HEADER_DIVIDER_CLASS}"
                 role="columnheader"
+                data-rule
               >
                 <column-picker
                   class="inline-flex"
@@ -387,51 +541,43 @@ export abstract class StatsTable extends LitElement {
             </div>
 
             <div
-              class="stats-table-scroll ${scrollHeight} grid col-span-full overflow-y-scroll overflow-x-hidden"
+              class=${SIZER}
+              style="grid-template-columns: subgrid; grid-column: 1 / -1;"
+              aria-hidden="true"
+              data-sizer
+            >
+              ${columns.map(
+                (column, index) =>
+                  html`<div
+                    class="${SIZER_CELL} ${index > 0 ? DIVIDER_CLASS : ""}"
+                  >
+                    ${column.widest().map((text) => html`<span>${text}</span>`)}
+                  </div>`,
+              )}
+            </div>
+
+            <div
+              class="stats-table-scroll stats-rows grid col-span-full overflow-y-scroll overflow-x-hidden overscroll-contain [overflow-anchor:none] ${SCROLLBAR}"
               style="grid-template-columns: subgrid; grid-column: 1 / -1;"
               role="rowgroup"
               @scroll=${this.onScroll}
             >
-              ${
-                topSpacerPx > 0
-                  ? html`<div
-                      class="stats-table-spacer col-span-full"
-                      style="height: ${topSpacerPx}px"
-                      aria-hidden="true"
-                    ></div>`
-                  : nothing
-              }
               ${repeat(
-                scrollableRows,
-                (placed) => placed.row.key,
-                (placed, index) =>
-                  this.renderRow(
-                    game,
-                    columns,
-                    placed,
-                    index < scrollableRows.length - 1 ||
-                      pinnedRow !== null ||
-                      bottomSpacerPx > 0
-                      ? "border-b border-b-slate-500"
-                      : "",
-                  ),
+                items,
+                (item) =>
+                  "spacer" in item
+                    ? `spacer-${item.from}`
+                    : `row-${item.placed.row.key}`,
+                (item) =>
+                  "spacer" in item
+                    ? html`<div
+                        class="stats-table-spacer col-span-full"
+                        style="height: ${item.spacer}px"
+                        aria-hidden="true"
+                      ></div>`
+                    : this.renderRow(game, columns, item.placed),
               )}
-              ${
-                bottomSpacerPx > 0
-                  ? html`<div
-                      class="stats-table-spacer col-span-full"
-                      style="height: ${bottomSpacerPx}px"
-                      aria-hidden="true"
-                    ></div>`
-                  : nothing
-              }
             </div>
-
-            ${
-              pinnedRow === null
-                ? nothing
-                : this.renderRow(game, columns, pinnedRow, "", true)
-            }
           </div>
         </div>
       </div>
