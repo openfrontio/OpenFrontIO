@@ -45,6 +45,13 @@ export interface StatsRow {
 interface PlacedRow {
   row: StatsRow;
   position: number;
+  leaving?: boolean;
+}
+
+/** An eliminated player's row closing at index `at` of the new list. */
+interface LeavingRow {
+  placed: PlacedRow;
+  at: number;
 }
 
 /**
@@ -406,6 +413,11 @@ export abstract class StatsTable extends LitElement {
   private lastSort = "";
   private lastTick = 0;
   private moves = new Map<string, { from: number; to: number }>();
+  // Eliminated players' rows that close before they go, the rows already
+  // closing, and the sort of the list on screen (null while it is hidden).
+  private leaving: LeavingRow[] = [];
+  private readonly folding = new WeakSet<Element>();
+  private drawnSort: string | null = null;
 
   createRenderRoot() {
     return this;
@@ -413,7 +425,10 @@ export abstract class StatsTable extends LitElement {
 
   willUpdate(changed: Map<string, unknown>) {
     // A hidden table takes its headers, and so their tooltip, with it.
-    if (changed.has("visible") && !this.visible) this.tip = null;
+    if (changed.has("visible") && !this.visible) {
+      this.tip = null;
+      this.forgetLeavingRows();
+    }
     // Opened again, it has no order of before to glide from.
     if (changed.has("visible") && !this.visible) this.lastIndex.clear();
     // A list removed from under the pointer gets no pointerleave.
@@ -430,7 +445,7 @@ export abstract class StatsTable extends LitElement {
   updated() {
     const scroller = this.querySelector(".stats-table-scroll");
     if (!(scroller instanceof HTMLElement)) return;
-    const row = scroller.querySelector(".stats-table-row");
+    const row = scroller.querySelector(".stats-table-row:not([data-leaving])");
     const rowHeight = row instanceof HTMLElement ? row.offsetHeight : 0;
     const viewportHeight = scroller.clientHeight;
     let changed = false;
@@ -442,6 +457,7 @@ export abstract class StatsTable extends LitElement {
       this.viewportHeightPx = viewportHeight;
       changed = true;
     }
+    this.foldLeavingRows(scroller);
     if (changed) this.requestUpdate();
     this.glideMovedRows(scroller);
   }
@@ -610,6 +626,7 @@ export abstract class StatsTable extends LitElement {
     const sortKey = this.sortKey;
     const rows = this.buildRows(this.game, columns);
     const direction = this.sortOrder === "asc" ? 1 : -1;
+    const before = this.rows;
     const sorted =
       orderable.length === 0 || sortKey === null
         ? rows
@@ -622,6 +639,9 @@ export abstract class StatsTable extends LitElement {
     this.rows = holdOrder ? this.inDrawnOrder(placed) : placed;
     this.noteMoves(this.game);
     this.noteTrends(this.game);
+    this.leaving = this.findLeavingRows(before, `${sortKey}:${this.sortOrder}`);
+    // A fold already moves the rows under it: none glides as well.
+    if (this.leaving.length > 0) this.moves.clear();
     this.requestUpdate();
   }
 
@@ -738,6 +758,95 @@ export abstract class StatsTable extends LitElement {
     );
     const marked = keys.filter((key) => this.trends.has(key)).length;
     return marked * 2 > keys.length ? new Map() : this.trends;
+  }
+
+  /**
+   * The rows of `before` that are gone from the list and were in view: they
+   * close in place instead of vanishing. None when the list was not on
+   * screen or was sorted differently, or under reduced motion.
+   */
+  private findLeavingRows(
+    before: readonly PlacedRow[],
+    sort: string,
+  ): LeavingRow[] {
+    const sameList = this.drawnSort === sort;
+    this.drawnSort = sort;
+    if (
+      !sameList ||
+      prefersReducedMotion() ||
+      typeof Element.prototype.animate !== "function"
+    ) {
+      return [];
+    }
+    const kept = new Set(this.rows.map(({ row }) => row.key));
+    const firstInView = Math.floor(this.scrollOffsetPx / this.rowHeightPx);
+    const endOfView =
+      (this.scrollOffsetPx + this.viewportHeightPx) / this.rowHeightPx;
+    const leaving: LeavingRow[] = [];
+    let gone = 0; // rows gone above this one
+    before.forEach(({ row, position }, index) => {
+      if (kept.has(row.key)) return;
+      if (index >= firstInView && index < endOfView) {
+        // Gone, the row shows who it was and nothing about them now.
+        leaving.push({
+          placed: {
+            row: {
+              ...row,
+              marks: undefined,
+              troopFill: undefined,
+              onClick: undefined,
+            },
+            position,
+            leaving: true,
+          },
+          at: index - gone,
+        });
+      }
+      gone++;
+    });
+    return leaving;
+  }
+
+  /** Puts each leaving row back at its place, when that place is drawn. */
+  private placeLeavingRows(items: ListItem[]) {
+    const indexOf = (item: ListItem) =>
+      "placed" in item && !item.placed.leaving ? item.index : -1;
+    for (const { placed, at } of this.leaving) {
+      const next = items.findIndex((item) => indexOf(item) === at);
+      const previous = items.findIndex((item) => indexOf(item) === at - 1);
+      if (next >= 0) items.splice(next, 0, { placed, index: at });
+      else if (previous >= 0) {
+        items.splice(previous + 1, 0, { placed, index: at });
+      }
+    }
+  }
+
+  /** Closes each leaving row once; when it has closed it is forgotten. */
+  private foldLeavingRows(scroller: HTMLElement) {
+    for (const row of scroller.querySelectorAll<HTMLElement>(
+      "[data-leaving]",
+    )) {
+      if (this.folding.has(row)) continue;
+      this.folding.add(row);
+      const key = row.dataset.leaving;
+      const forget = () => {
+        this.leaving = this.leaving.filter(
+          ({ placed }) => placed.row.key !== key,
+        );
+        this.requestUpdate();
+      };
+      row
+        .animate(
+          { height: "0px", opacity: 0 },
+          { duration: 220, easing: "ease-in", fill: "forwards" },
+        )
+        .finished.then(forget, forget);
+    }
+  }
+
+  private forgetLeavingRows() {
+    this.leaving = [];
+    this.drawnSort = null;
   }
 
   private renderHeaderCell(column: ColumnDef, index: number) {
@@ -920,7 +1029,7 @@ export abstract class StatsTable extends LitElement {
   private renderRow(
     game: GameView,
     columns: readonly ColumnDef[],
-    { row, position }: PlacedRow,
+    { row, position, leaving = false }: PlacedRow,
     index: number,
     block: HeldBlock,
     trend: Trend | undefined,
@@ -935,14 +1044,16 @@ export abstract class StatsTable extends LitElement {
     )
       ? "troops"
       : "maxtroops";
-    const held = index >= block.from && index < block.to;
+    // A leaving row is out of the list: never held, nor one of your
+    // neighbours.
+    const held = !leaving && index >= block.from && index < block.to;
     const near = held && !row.pinned;
     const nearHeld = near && block.edge !== null;
     // Held with neighbours, the block's open side gets the gap: under it at
     // the top, over it at the bottom.
     const outer = block.edge === "bottom" ? block.from : block.to - 1;
     const gap =
-      block.to - block.from > 1 && index === outer ? block.edge : null;
+      held && block.to - block.from > 1 && index === outer ? block.edge : null;
     // translate="no": a page translator must not rewrite player names.
     return html`
       <div
@@ -958,10 +1069,12 @@ export abstract class StatsTable extends LitElement {
           row.onClick
             ? `cursor-pointer ${nearHeld ? NEAR_HELD_HOVER : ROW_HOVER[state]}`
             : ""
-        }"
+        } ${leaving ? "overflow-hidden" : ""}"
         style="grid-template-columns: subgrid; grid-column: 1 / -1;"
         role="row"
-        aria-rowindex=${position + 1}
+        aria-rowindex=${leaving ? nothing : position + 1}
+        aria-hidden=${leaving ? "true" : nothing}
+        data-leaving=${leaving ? row.key : nothing}
         translate="no"
         data-key=${row.key}
         ?data-me=${state === "me"}
@@ -978,7 +1091,11 @@ export abstract class StatsTable extends LitElement {
             return this.renderCell(
               column,
               index,
-              column.cell({ ...row, position, value }, game),
+              // Its rank is taken by the row below already: a leaving row
+              // shows none, so no two rows read the same number.
+              leaving && column.id === "rank"
+                ? ""
+                : column.cell({ ...row, position, value }, game),
               value,
               state,
               row.color,
@@ -1041,6 +1158,7 @@ export abstract class StatsTable extends LitElement {
     }
     spaceTo(this.rows.length);
     const trends = this.shownTrends(items);
+    this.placeLeavingRows(items);
     // "auto" tracks stay content-sized intrinsically, then split only the
     // spare width supplied by a wider sibling; fixed tracks never stretch.
     // The empty last track is room the host can leave for a button over the
@@ -1123,7 +1241,9 @@ export abstract class StatsTable extends LitElement {
                         item.placed,
                         item.index,
                         block,
-                        trends.get(item.placed.row.key),
+                        item.placed.leaving
+                          ? undefined
+                          : trends.get(item.placed.row.key),
                       ),
               )}
             </div>
