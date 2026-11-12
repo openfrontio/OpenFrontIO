@@ -167,6 +167,14 @@ export class LeaderboardPlayerList extends LitElement {
     );
   }
 
+  // Shown beside your own row on the FFA tier ladder only: not on 1v1/2v2,
+  // and not on All Ranks, where the row's number already is the position.
+  private get ownFfaGlobalPosition(): number | undefined {
+    return this.rankedType === RankedType.FreeForAll && !this.ffaAllRanks
+      ? this.ffaGlobalPosition
+      : undefined;
+  }
+
   private get ffaAllActive(): boolean {
     return this.rankedType === RankedType.FreeForAll && this.ffaAllRanks;
   }
@@ -741,9 +749,7 @@ export class LeaderboardPlayerList extends LitElement {
     }
     if (!this.currentUserEntry || !this.showStickyUser) return nothing;
     const entry = this.currentUserEntry;
-    const globalPosition = !this.ffaAllActive
-      ? this.ffaGlobalPosition
-      : undefined;
+    const globalPosition = this.ownFfaGlobalPosition;
 
     return html`
       <tfoot class="sticky bottom-0 z-20">
@@ -1052,7 +1058,7 @@ export class LeaderboardPlayerList extends LitElement {
       <img
         src=${assetUrl(
           rank === "all"
-            ? "images/ofm-trophy-56.png"
+            ? "images/ofm-trophy.png"
             : `images/ffa-tiers/compact/${rank}.svg`,
         )}
         alt=""
@@ -1170,8 +1176,9 @@ export class LeaderboardPlayerList extends LitElement {
     const isCurrentUser =
       this.currentUserId !== null && this.currentUserId === player.playerId;
     const displayRank = player.rank;
-    const globalPosition =
-      isCurrentUser && !this.ffaAllRanks ? this.ffaGlobalPosition : undefined;
+    const globalPosition = isCurrentUser
+      ? this.ownFfaGlobalPosition
+      : undefined;
 
     const rankColor =
       {
