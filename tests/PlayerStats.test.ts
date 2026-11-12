@@ -777,6 +777,127 @@ describe("PlayerStats rows", () => {
   });
 });
 
+describe("PlayerStats neighbours", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = "";
+  });
+
+  // 300 players, yours at `myRank`. jsdom measures nothing, so the list
+  // falls back to 24px rows in 180px: it shows seven rows or more.
+  async function mount(myRank: number): Promise<PlayerStats> {
+    const players = Array.from({ length: 300 }, (_, i) =>
+      player(i + 1 === myRank ? "me" : `p${i + 1}`, 300 - i),
+    );
+    const me = players[myRank - 1];
+    const game = {
+      myPlayer: () => me,
+      playerViews: () => players,
+      config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
+      numLandTiles: () => 100,
+      numTilesWithFallout: () => 0,
+    } as unknown as GameView;
+    const playerStats = new PlayerStats();
+    playerStats.game = game;
+    playerStats.visible = true;
+    document.body.append(playerStats);
+    playerStats.refresh();
+    await playerStats.updateComplete;
+    return playerStats;
+  }
+
+  function rows(playerStats: PlayerStats) {
+    return [
+      ...playerStats.querySelectorAll(".stats-table-scroll .stats-table-row"),
+    ];
+  }
+
+  function rank(row: Element) {
+    return row
+      .querySelector('[role="cell"][data-column="rank"]')
+      ?.textContent?.trim();
+  }
+
+  async function scrollTo(playerStats: PlayerStats, top: number) {
+    const scroller = playerStats.querySelector<HTMLElement>(
+      ".stats-table-scroll",
+    )!;
+    scroller.scrollTop = top;
+    scroller.dispatchEvent(new Event("scroll"));
+    await playerStats.updateComplete;
+  }
+
+  it("holds the rows either side of yours with it, the outer one marking the gap", async () => {
+    const playerStats = await mount(200);
+    const drawn = rows(playerStats);
+    const near = drawn.filter((row) => row.hasAttribute("data-near"));
+
+    expect(drawn.slice(-3).map(rank)).toEqual(["199", "200", "201"]);
+    expect(drawn[drawn.length - 2].hasAttribute("data-me")).toBe(true);
+    expect(near.map(rank)).toEqual(["199", "201"]);
+    expect(
+      drawn.filter((row) => row.hasAttribute("data-gap")).map(rank),
+    ).toEqual(["199"]);
+  });
+
+  it("draws each row once and no gap when scrolled to your rank", async () => {
+    const playerStats = await mount(200);
+    await scrollTo(playerStats, 195 * 24);
+    const ranks = rows(playerStats).map(rank);
+
+    expect(ranks).toEqual([...new Set(ranks)]);
+    expect(ranks).toContain("199");
+    expect(ranks).toContain("201");
+    expect(playerStats.querySelector("[data-gap]")).toBeNull();
+    expect(playerStats.querySelectorAll("[data-near]")).toHaveLength(2);
+  });
+
+  it("holds the block first, the gap under it, when scrolled past it", async () => {
+    const playerStats = await mount(200);
+    await scrollTo(playerStats, 250 * 24);
+    const drawn = rows(playerStats);
+
+    expect(drawn.slice(0, 3).map(rank)).toEqual(["199", "200", "201"]);
+    expect(
+      drawn.filter((row) => row.hasAttribute("data-gap")).map(rank),
+    ).toEqual(["201"]);
+  });
+
+  it("holds no neighbours when you rank within the list", async () => {
+    const playerStats = await mount(3);
+
+    expect(playerStats.querySelector("[data-me]")).not.toBeNull();
+    expect(playerStats.querySelector("[data-near]")).toBeNull();
+    expect(playerStats.querySelector("[data-gap]")).toBeNull();
+  });
+
+  it("holds only the row above yours on a list of fewer than seven rows", async () => {
+    // Five 24px rows.
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(24);
+    vi.spyOn(Element.prototype, "clientHeight", "get").mockReturnValue(120);
+    const playerStats = await mount(200);
+    await playerStats.updateComplete;
+    const drawn = rows(playerStats);
+
+    expect(drawn.slice(-2).map(rank)).toEqual(["199", "200"]);
+    expect(drawn.map(rank)).not.toContain("201");
+    expect(
+      drawn.filter((row) => row.hasAttribute("data-near")).map(rank),
+    ).toEqual(["199"]);
+    expect(
+      drawn.filter((row) => row.hasAttribute("data-gap")).map(rank),
+    ).toEqual(["199"]);
+  });
+});
+
 describe("PlayerStats header tooltips", () => {
   beforeEach(() => {
     localStorage.clear();

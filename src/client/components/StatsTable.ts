@@ -48,6 +48,16 @@ interface PlacedRow {
  */
 type ListItem = { spacer: number; from: number } | { placed: PlacedRow };
 
+/**
+ * Your row and the rows held with it: the list's indexes from `from` to
+ * before `to`, and the edge they rest on while their place is out of view.
+ */
+interface HeldBlock {
+  from: number;
+  to: number;
+  edge: "top" | "bottom" | null;
+}
+
 // Fallbacks cover the first render before measurement and jsdom (tests),
 // which reports zero element sizes.
 const FALLBACK_ROW_HEIGHT_PX = 24;
@@ -120,7 +130,7 @@ const ROW = "h-6 md:h-7 pb-px not-last:border-b not-last:border-white/5";
 // the HUD opacity like the panel: the rows passing under it are hidden, or
 // blurred like the map below full opacity, so no text shows through yours.
 const ROW_STATE: Record<RowState, string> = {
-  me: "sticky top-0 bottom-0 z-1 bg-hud-panel bg-linear-to-r from-malibu-blue/25 to-malibu-blue/25 backdrop-blur-hud font-bold text-white",
+  me: "bg-hud-panel bg-linear-to-r from-malibu-blue/25 to-malibu-blue/25 backdrop-blur-hud font-bold text-white",
   mate: "font-bold text-white",
   other: "",
 };
@@ -133,6 +143,32 @@ const ROW_HOVER: Record<RowState, string> = {
 };
 // Your row is also marked on its start edge.
 const ME_EDGE = "border-s-2 border-aquarius";
+// When you rank below the rows the list shows, the rows either side of
+// yours are held at the edge with it. Each row of that block sticks at its
+// own place in it, so held they rest one against the other, in order.
+const HOLD = "sticky z-1";
+const HOLD_TOP = [
+  "top-0",
+  "top-(--stats-row)",
+  "top-[calc(2*var(--stats-row))]",
+];
+const HOLD_BOTTOM = [
+  "bottom-0",
+  "bottom-(--stats-row)",
+  "bottom-[calc(2*var(--stats-row))]",
+];
+// Held, your neighbours hide the rows passing under them as yours does. The
+// hover lies over that fill instead of replacing it.
+const NEAR_HELD = "bg-hud-panel backdrop-blur-hud";
+const NEAR_HELD_HOVER =
+  "pointer-fine:hover:bg-linear-to-r pointer-fine:hover:from-white/6 pointer-fine:hover:to-white/6";
+// A dashed line on the held block's open side stands for the ranks between
+// it and the rows in view. Drawn apart from the row's own rule.
+const GAP: Record<"top" | "bottom", string> = {
+  bottom:
+    "before:absolute before:inset-x-1 before:top-0 before:border-t before:border-dashed before:border-white/30",
+  top: "after:absolute after:inset-x-1 after:bottom-0 after:border-b after:border-dashed after:border-white/30",
+};
 // 3px a side, as in the header: the default columns then fit in the panel's
 // width of before.
 const CELL = "flex min-w-0 items-center px-0.75 tabular-nums";
@@ -434,6 +470,30 @@ export abstract class StatsTable extends LitElement {
     this.requestUpdate();
   }
 
+  /**
+   * Your row, and when you rank below the rows the list shows, the row above
+   * it and, on a list of seven rows or more, the row below. Empty when no
+   * row is yours.
+   */
+  private heldBlock(myIndex: number): HeldBlock {
+    if (myIndex < 0) return { from: 0, to: 0, edge: null };
+    const shown = Math.round(this.viewportHeightPx / this.rowHeightPx);
+    const below = myIndex >= shown;
+    const from = below ? myIndex - 1 : myIndex;
+    const to =
+      below && shown >= 7
+        ? Math.min(myIndex + 2, this.rows.length)
+        : myIndex + 1;
+    const top = from * this.rowHeightPx;
+    const bottom = to * this.rowHeightPx;
+    let edge: HeldBlock["edge"] = null;
+    if (top < this.scrollOffsetPx) edge = "top";
+    else if (bottom > this.scrollOffsetPx + this.viewportHeightPx) {
+      edge = "bottom";
+    }
+    return { from, to, edge };
+  }
+
   private renderHeaderCell(column: ColumnDef, index: number) {
     const label = translateText(column.labelKey);
     const visual = renderColumnVisual(column, HEADER_ICON_SIZE);
@@ -601,6 +661,7 @@ export abstract class StatsTable extends LitElement {
     game: GameView,
     columns: readonly ColumnDef[],
     { row, position }: PlacedRow,
+    block: HeldBlock,
   ) {
     const state: RowState = row.pinned
       ? "me"
@@ -612,11 +673,28 @@ export abstract class StatsTable extends LitElement {
     )
       ? "troops"
       : "maxtroops";
+    const index = position - 1;
+    const held = index >= block.from && index < block.to;
+    const near = held && !row.pinned;
+    const nearHeld = near && block.edge !== null;
+    // Held with neighbours, the block's open side gets the gap: under it at
+    // the top, over it at the bottom.
+    const outer = block.edge === "bottom" ? block.from : block.to - 1;
+    const gap =
+      block.to - block.from > 1 && index === outer ? block.edge : null;
     // translate="no": a page translator must not rewrite player names.
     return html`
       <div
         class="stats-table-row grid col-span-full ${ROW} ${ROW_STATE[state]} ${
-          row.onClick ? `cursor-pointer ${ROW_HOVER[state]}` : ""
+          held
+            ? `${HOLD} ${HOLD_TOP[index - block.from]} ${
+                HOLD_BOTTOM[block.to - 1 - index]
+              }`
+            : ""
+        } ${nearHeld ? NEAR_HELD : ""} ${gap === null ? "" : GAP[gap]} ${
+          row.onClick
+            ? `cursor-pointer ${nearHeld ? NEAR_HELD_HOVER : ROW_HOVER[state]}`
+            : ""
         }"
         style="grid-template-columns: subgrid; grid-column: 1 / -1;"
         role="row"
@@ -624,6 +702,8 @@ export abstract class StatsTable extends LitElement {
         translate="no"
         ?data-me=${state === "me"}
         ?data-mate=${state === "mate"}
+        ?data-near=${near}
+        ?data-gap=${gap !== null}
         @click=${row.onClick ?? nothing}
       >
         ${repeat(
@@ -669,11 +749,12 @@ export abstract class StatsTable extends LitElement {
         (this.scrollOffsetPx + this.viewportHeightPx) / this.rowHeightPx,
       ) + OVERSCAN_ROWS,
     );
-    // Your row is drawn wherever it is, so that it can be held at the edge;
-    // the spacer it falls in is split around it. Those spacers change while
-    // the list scrolls, so the list keeps no scroll anchor: the browser must
-    // not answer them by moving the scroll position.
-    const myIndex = this.rows.findIndex((row) => row.pinned);
+    // Your row and those held with it are drawn wherever they are, so that
+    // they can be held at the edge; the spacer they fall in is split around
+    // them. Those spacers change while the list scrolls, so the list keeps
+    // no scroll anchor: the browser must not answer them by moving the
+    // scroll position.
+    const block = this.heldBlock(this.rows.findIndex((row) => row.pinned));
     const items: ListItem[] = [];
     let next = 0; // the first row not yet in items
     const spaceTo = (index: number) => {
@@ -686,9 +767,13 @@ export abstract class StatsTable extends LitElement {
       items.push({ placed: { row: this.rows[index], position: index + 1 } });
       next = index + 1;
     };
-    if (myIndex >= 0 && myIndex < firstIndex) place(myIndex);
+    for (let index = block.from; index < block.to; index++) {
+      if (index < firstIndex) place(index);
+    }
     for (let index = firstIndex; index < lastIndex; index++) place(index);
-    if (myIndex >= lastIndex) place(myIndex);
+    for (let index = block.from; index < block.to; index++) {
+      if (index >= lastIndex) place(index);
+    }
     spaceTo(this.rows.length);
     // "auto" tracks stay content-sized intrinsically, then split only the
     // spare width supplied by a wider sibling; fixed tracks never stretch.
@@ -764,7 +849,7 @@ export abstract class StatsTable extends LitElement {
                         style="height: ${item.spacer}px"
                         aria-hidden="true"
                       ></div>`
-                    : this.renderRow(game, columns, item.placed),
+                    : this.renderRow(game, columns, item.placed, block),
               )}
             </div>
           </div>
