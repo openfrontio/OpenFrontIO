@@ -20,7 +20,10 @@ import {
   loadMapFiles,
   mapFilesTransfer,
 } from "@openfront/shared/GameMapLoader";
-import { decompressGameRecord, generateID } from "@openfront/shared/SharedUtil";
+import {
+  decompressGameRecord,
+  generateSingleplayerGameID,
+} from "@openfront/shared/SharedUtil";
 import type {
   GameRecord,
   WireGameStartInfo,
@@ -228,7 +231,7 @@ export async function extractSnapshotInWorker(
       chosenPlayerID,
       localClientID,
       difficulty,
-      newGameID: generateID(),
+      newGameID: generateSingleplayerGameID(),
     };
     worker.postMessage(request, mapFilesTransfer(mapFiles));
   });
