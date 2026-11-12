@@ -10,6 +10,7 @@ import { AlternateViewEvent } from "../../InputHandler";
 import { Platform } from "../../Platform";
 import type { StatsTableKind } from "../../StatsConstants";
 import { themeProvider } from "../../theme/ThemeProvider";
+import { prefersReducedMotion } from "../../utilities/ReducedMotion";
 import { getTranslatedPlayerTeamLabel, translateText } from "../../Utils";
 import type { GameView } from "../../view";
 import { keepPressKeysFromGame } from "../HudKeys";
@@ -49,8 +50,32 @@ const MENU_BUTTON_TOP = {
   yourTeam: "max-[360px]:top-[63.5px]",
 } as const;
 const BAR_ICON_SIZE = 20;
-const YOUR_TEAM = "mt-1 flex items-center gap-1.5 px-1 text-[13px]";
+// As wide as its text, so the panel can tell its closed size (closedBox).
+const YOUR_TEAM = "mt-1 flex items-center gap-1.5 self-start px-1 text-[13px]";
 const TEAM_SWATCH = "size-2.5 shrink-0 rounded-xs bg-(--color)";
+// The panel grows out of its bar when a table opens and shrinks back into it
+// when the last one closes, keeping its rounded-br-lg corner.
+const OPENING: KeyframeAnimationOptions = {
+  duration: 220,
+  easing: "cubic-bezier(0.2, 0, 0, 1)",
+};
+const CLOSING: KeyframeAnimationOptions = {
+  duration: 180,
+  easing: "cubic-bezier(0.4, 0, 1, 1)",
+};
+const PANEL_CORNER = "round 0 0 0.5rem 0";
+// What the panel holds once its tables are closed.
+const CLOSED_CONTENT =
+  '[data-sidebar-button="players"], [data-sidebar-button="teams"], [data-sidebar-button="view"], [data-your-team]';
+
+type Box = Pick<DOMRect, "top" | "right" | "bottom" | "left">;
+
+// A clip-path that shows only `box` of a panel drawn at `panel`.
+function clipTo(panel: Box, box: Box): string {
+  return `inset(${box.top - panel.top}px ${panel.right - box.right}px ${
+    panel.bottom - box.bottom
+  }px ${box.left - panel.left}px ${PANEL_CORNER})`;
+}
 
 @customElement("game-left-sidebar")
 export class GameLeftSidebar extends LitElement implements Controller {
@@ -77,7 +102,9 @@ export class GameLeftSidebar extends LitElement implements Controller {
   @query("player-stats") private playerStats?: PlayerStats;
   @query("team-stats") private teamStats?: TeamStats;
   @query("column-picker") private columnPicker?: ColumnPicker;
+  @query("aside") private aside?: HTMLElement;
   private showPlayerStatsAfterSpawn = false;
+  private closing: Animation | null = null;
 
   createRenderRoot() {
     return this;
@@ -121,7 +148,7 @@ export class GameLeftSidebar extends LitElement implements Controller {
 
     if (this.showPlayerStatsAfterSpawn && !this.game.inSpawnPhase()) {
       this.showPlayerStatsAfterSpawn = false;
-      this.isPlayerStatsShown = true;
+      void this.setShown(true, this.isTeamStatsShown);
     }
 
     if (!this.game.inSpawnPhase() && this.isPlayerTeamLabelVisible) {
@@ -136,14 +163,93 @@ export class GameLeftSidebar extends LitElement implements Controller {
     return (this.spawnBarVisible ? 7 : 0) + (this.immunityBarVisible ? 7 : 0);
   }
 
+  // While the panel closes its tables count as closed already, so a press on
+  // either toggle opens it again.
   private togglePlayerStats(): void {
-    this.isPlayerStatsShown = !this.isPlayerStatsShown;
-    if (!this.isPlayerStatsShown) this.columnPicker?.close();
+    const open = this.closing === null;
+    void this.setShown(
+      !(open && this.isPlayerStatsShown),
+      open && this.isTeamStatsShown,
+    );
   }
 
   private toggleTeamStats(): void {
-    this.isTeamStatsShown = !this.isTeamStatsShown;
-    if (!this.isTeamStatsShown) this.columnPicker?.close();
+    const open = this.closing === null;
+    void this.setShown(
+      open && this.isPlayerStatsShown,
+      !(open && this.isTeamStatsShown),
+    );
+  }
+
+  private async setShown(players: boolean, teams: boolean): Promise<void> {
+    if (
+      (this.isPlayerStatsShown && !players) ||
+      (this.isTeamStatsShown && !teams)
+    ) {
+      this.columnPicker?.close();
+    }
+    // Played back, the closing takes the panel back to open from where it is.
+    this.closing?.reverse();
+    this.closing = null;
+    const wasOpen = this.isPlayerStatsShown || this.isTeamStatsShown;
+    const aside = this.aside;
+    if (
+      wasOpen === (players || teams) ||
+      !aside ||
+      !("animate" in aside) ||
+      prefersReducedMotion()
+    ) {
+      this.isPlayerStatsShown = players;
+      this.isTeamStatsShown = teams;
+      return;
+    }
+
+    if (!wasOpen) {
+      const closed = aside.getBoundingClientRect();
+      this.isPlayerStatsShown = players;
+      this.isTeamStatsShown = teams;
+      await this.updateComplete;
+      const open = aside.getBoundingClientRect();
+      aside.animate(
+        [{ clipPath: clipTo(open, closed) }, { clipPath: clipTo(open, open) }],
+        OPENING,
+      );
+      return;
+    }
+
+    const open = aside.getBoundingClientRect();
+    const closing = aside.animate(
+      [
+        { clipPath: clipTo(open, open) },
+        { clipPath: clipTo(open, this.closedBox(aside, open)) },
+      ],
+      CLOSING,
+    );
+    this.closing = closing;
+    await closing.finished;
+    // A press while it closed played it back: the panel stays open.
+    if (this.closing !== closing) return;
+    this.closing = null;
+    this.isPlayerStatsShown = players;
+    this.isTeamStatsShown = teams;
+  }
+
+  // The box the panel will have once closed: what it keeps, in its padding.
+  private closedBox(aside: HTMLElement, open: Box): Box {
+    let right = open.left;
+    let bottom = open.top;
+    for (const kept of aside.querySelectorAll(CLOSED_CONTENT)) {
+      const box = kept.getBoundingClientRect();
+      right = Math.max(right, box.right);
+      bottom = Math.max(bottom, box.bottom);
+    }
+    const style = getComputedStyle(aside);
+    return {
+      top: open.top,
+      left: open.left,
+      right: right + parseFloat(style.paddingRight),
+      bottom: bottom + parseFloat(style.paddingBottom),
+    };
   }
 
   // The column menu, about to open. It shows the game ID in its footer only

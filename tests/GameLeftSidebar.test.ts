@@ -596,6 +596,64 @@ describe("GameLeftSidebar", () => {
     sidebar.remove();
   });
 
+  it("opens and closes the leaderboard from its button, also while it closes", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+    const button = sidebar.querySelector(
+      '[data-sidebar-button="players"]',
+    ) as HTMLElement;
+    const playerStats = sidebar.querySelector("player-stats") as PlayerStats;
+    const press = async () => {
+      button.click();
+      await sidebar.updateComplete;
+    };
+
+    // Without motion (as here, where nothing can animate) it flips at once.
+    await press();
+    expect(playerStats.visible).toBe(true);
+    await press();
+    expect(playerStats.visible).toBe(false);
+    expect(button.getAttribute("aria-pressed")).toBe("false");
+
+    // With motion, the tables stay until the closing has finished.
+    const animations: { finish: () => void; reverse: () => void }[] = [];
+    const aside = sidebar.querySelector("aside") as HTMLElement;
+    Object.assign(aside, {
+      animate: () => {
+        let finish = () => {};
+        const finished = new Promise<void>((resolve) => (finish = resolve));
+        const animation = { finished, finish, reverse: vi.fn(finish) };
+        animations.push(animation);
+        return animation;
+      },
+    });
+    await press();
+    expect(playerStats.visible).toBe(true);
+    await press();
+    expect(playerStats.visible).toBe(true);
+    animations[1].finish();
+    await Promise.resolve();
+    await sidebar.updateComplete;
+    expect(playerStats.visible).toBe(false);
+
+    // A press while it closes keeps it open.
+    await press();
+    await press();
+    await press();
+    expect(animations[3].reverse).toHaveBeenCalled();
+    for (const animation of animations) animation.finish();
+    await Promise.resolve();
+    await sidebar.updateComplete;
+    expect(playerStats.visible).toBe(true);
+    expect(button.getAttribute("aria-pressed")).toBe("true");
+
+    sidebar.remove();
+  });
+
   it("shows your team during the spawn phase of a team game", async () => {
     let spawning = true;
     const sidebar = new GameLeftSidebar();
