@@ -84,7 +84,7 @@ export class GameHealthIndicators extends LitElement {
         13px/1.4 system-ui,
         sans-serif;
     }
-    @media (max-width: 400px) {
+    @media (max-width: 640px) {
       :host {
         /* The timer controls span the top center on narrow phones. */
         top: calc(env(safe-area-inset-top, 0px) + 48px);

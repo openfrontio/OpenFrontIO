@@ -103,9 +103,9 @@ describe("GameLeftSidebar", () => {
 
     const aside = () => sidebar.querySelector("aside")!;
     const offsetMargin =
-      "max-[400px]:mt-[calc(var(--bar-offset)+var(--game-health-offset,0px))]";
+      "max-lg:mt-[calc(var(--bar-offset)+var(--game-health-offset,0px))]";
     const offsetHeight =
-      "max-[400px]:max-h-[calc(100vh-80px-var(--game-health-offset,0px))]";
+      "max-lg:max-h-[calc(100vh-80px-var(--game-health-offset,0px))]";
     expect(aside().classList).not.toContain(offsetMargin);
     expect(aside().classList).not.toContain(offsetHeight);
     expect(aside().style.marginTop).toBe("");
