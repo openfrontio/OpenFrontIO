@@ -11,30 +11,24 @@ vi.mock("../../src/server/Logger", () => ({
   logger: { child: () => ({ error: vi.fn() }) },
 }));
 
-const { getMapLandTiles, readMapLandTiles } =
-  await import("../../src/server/MapLandTiles");
+const { getMapLandTiles } = await import("../../src/server/MapLandTiles");
 
-describe("MapLandTiles", () => {
-  it("rejects a manifest without a valid land tile count", async () => {
+describe("getMapLandTiles", () => {
+  it("falls back to 1M tiles without a valid land tile count", async () => {
     for (const map of [
       {},
       { num_land_tiles: "1000" },
       { num_land_tiles: -1 },
     ]) {
       manifest.json = JSON.stringify({ map });
-      await expect(readMapLandTiles(GameMapType.Oceania)).rejects.toThrow();
+      expect(await getMapLandTiles(GameMapType.Oceania)).toBe(1_000_000);
     }
-  });
-
-  it("falls back to 1M tiles only in getMapLandTiles", async () => {
-    manifest.json = "{}";
-    expect(await getMapLandTiles(GameMapType.Oceania)).toBe(1_000_000);
   });
 
   it("reads and caches a valid count", async () => {
     manifest.json = JSON.stringify({ map: { num_land_tiles: 4_194_304 } });
-    expect(await readMapLandTiles(GameMapType.TheBox)).toBe(4_194_304);
+    expect(await getMapLandTiles(GameMapType.TheBox)).toBe(4_194_304);
     manifest.json = "{}";
-    expect(await readMapLandTiles(GameMapType.TheBox)).toBe(4_194_304);
+    expect(await getMapLandTiles(GameMapType.TheBox)).toBe(4_194_304);
   });
 });

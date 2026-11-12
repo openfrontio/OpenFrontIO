@@ -1,7 +1,7 @@
 import { Duos, Quads, Trios } from "@openfront/engine-api/game/GameTypes";
 import { TeamCountConfig } from "@openfront/engine-api/Schemas";
 import {
-  hostedLobbyMaxPlayers,
+  MAX_HOSTED_LOBBY_PLAYERS,
   MIN_HOSTED_LOBBY_PLAYERS,
 } from "@openfront/shared/WireSchemas";
 import { describe, expect, it } from "vitest";
@@ -17,11 +17,8 @@ function dialog(
   const el = document.createElement("list-lobby-dialog") as ListLobbyDialog;
   el.currentPlayers = currentPlayers;
   el.playerTeams = playerTeams;
-  el.maxAllowedPlayers = MAX_ALLOWED;
   return el;
 }
-
-const MAX_ALLOWED = 100;
 
 const minPlayers = (el: ListLobbyDialog): number =>
   (el as unknown as { minPlayers(): number }).minPlayers();
@@ -37,7 +34,9 @@ describe("ListLobbyDialog player cap", () => {
   });
 
   it("stays within the maximum", () => {
-    expect(minPlayers(dialog(MAX_ALLOWED + 5))).toBe(MAX_ALLOWED);
+    expect(minPlayers(dialog(MAX_HOSTED_LOBBY_PLAYERS + 5))).toBe(
+      MAX_HOSTED_LOBBY_PLAYERS,
+    );
   });
 
   it("rounds up to the next full team multiple for preset team sizes", () => {
@@ -63,7 +62,7 @@ describe("ListLobbyDialog player cap", () => {
 
 describe("ListLobbyDialog suggested cap", () => {
   const cap = (el: ListLobbyDialog): number =>
-    (el as unknown as { selectedMaxPlayers(): number }).selectedMaxPlayers();
+    (el as unknown as { maxPlayers: number }).maxPlayers;
 
   async function suggested(value: number | undefined) {
     const el = dialog(1);
@@ -79,30 +78,9 @@ describe("ListLobbyDialog suggested cap", () => {
   });
 
   it("starts at the maximum without one, or when it is above the maximum", async () => {
-    expect(cap(await suggested(undefined))).toBe(MAX_ALLOWED);
-    expect(cap(await suggested(500))).toBe(MAX_ALLOWED);
-  });
-
-  it("allows past 100 on maps whose public lobbies do", async () => {
-    const el = await suggested(undefined);
-    el.maxAllowedPlayers = 210;
-    expect(cap(el)).toBe(210);
-  });
-});
-
-describe("hostedLobbyMaxPlayers", () => {
-  it("matches the biggest public lobby for the map", () => {
-    // The Box: 4,194,304 land tiles, whose public lobbies reach 210.
-    expect(hostedLobbyMaxPlayers(4_194_304, false)).toBe(210);
-    expect(hostedLobbyMaxPlayers(1_000_000, false)).toBe(50);
-  });
-
-  it("takes a quarter on compact maps", () => {
-    expect(hostedLobbyMaxPlayers(4_194_304, true)).toBe(52);
-  });
-
-  it("never drops below the minimum listing cap", () => {
-    expect(hostedLobbyMaxPlayers(10_000, false)).toBe(MIN_HOSTED_LOBBY_PLAYERS);
-    expect(hostedLobbyMaxPlayers(400_000, true)).toBe(MIN_HOSTED_LOBBY_PLAYERS);
+    expect(cap(await suggested(undefined))).toBe(MAX_HOSTED_LOBBY_PLAYERS);
+    expect(cap(await suggested(MAX_HOSTED_LOBBY_PLAYERS + 100))).toBe(
+      MAX_HOSTED_LOBBY_PLAYERS,
+    );
   });
 });
