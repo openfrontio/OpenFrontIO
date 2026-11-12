@@ -540,6 +540,8 @@ export class GameView implements GameLike {
     f.railroadDirty = this.railroadCache.railroadDirty;
     f.trailDirtyRowMin = this.trailManager.dirtyRowMin;
     f.trailDirtyRowMax = this.trailManager.dirtyRowMax;
+    // References TrailManager's live array; must be read before the next tick clears it.
+    f.changedTrailTiles = this.trailManager.changedTiles;
 
     f.playerStatus = computePlayerStatus(this._playerStates, this._unitStates, {
       localPlayerSmallID: this._myPlayer?.smallID() ?? 0,

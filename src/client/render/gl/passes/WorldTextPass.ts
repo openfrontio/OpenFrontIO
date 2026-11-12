@@ -379,7 +379,10 @@ export class WorldTextPass {
   // Tick — cull expired, rebuild instance buffer
   // -------------------------------------------------------------------------
 
-  tick(zoom: number): void {
+  tick(
+    zoom: number,
+    bounds?: { minX: number; minY: number; maxX: number; maxY: number },
+  ): void {
     if (
       this.active.length === 0 &&
       this.ghostCostLabel === null &&
@@ -398,10 +401,14 @@ export class WorldTextPass {
       }
     }
 
-    this.rebuildInstances(now, zoom);
+    this.rebuildInstances(now, zoom, bounds);
   }
 
-  private rebuildInstances(now: number, zoom: number): void {
+  private rebuildInstances(
+    now: number,
+    zoom: number,
+    bounds?: { minX: number; minY: number; maxX: number; maxY: number },
+  ): void {
     let count = 0;
     // canvasW in Camera is cssWidth*dpr, so `zoom` is device-px-per-world-unit.
     // Multiply screen-relative scales by dpr to keep a constant CSS-pixel size.
@@ -417,6 +424,19 @@ export class WorldTextPass {
         popup.riseSpeed > 0
           ? popup.y - (elapsed / 1000) * popup.riseSpeed
           : popup.y;
+
+      if (bounds) {
+        const halfW = (popup.text.length * 0.6 + 0.5) * popup.scale;
+        const halfH = popup.scale;
+        if (
+          popup.x + halfW < bounds.minX ||
+          popup.x - halfW > bounds.maxX ||
+          riseY + halfH < bounds.minY ||
+          riseY - halfH > bounds.maxY
+        ) {
+          continue;
+        }
+      }
 
       layoutString(
         popup.text,
@@ -454,6 +474,19 @@ export class WorldTextPass {
     const attackScale =
       (ATTACK_LABEL_SCREEN_SCALE * dpr) / Math.max(zoom, 0.0001);
     for (const label of this.attackTroopLabels) {
+      if (bounds) {
+        const halfW = (label.text.length * 0.6 + 0.5) * attackScale;
+        const halfH = attackScale;
+        if (
+          label.x + halfW < bounds.minX ||
+          label.x - halfW > bounds.maxX ||
+          label.y + halfH < bounds.minY ||
+          label.y - halfH > bounds.maxY
+        ) {
+          continue;
+        }
+      }
+
       layoutString(
         label.text,
         this.glyph,
@@ -491,61 +524,73 @@ export class WorldTextPass {
       const ghostScale = this.settings.ghostCost.screenScale * dpr * invZoom;
       const ghostY =
         label.y + this.settings.ghostCost.screenYOffset * dpr * invZoom;
+      const halfW =
+        (Math.max(label.text.length, label.topText?.length ?? 0) * 0.6 + 0.5) *
+        ghostScale;
+      const halfH = ghostScale;
 
-      if (label.topText) {
-        const topY = label.y - 30 * dpr * invZoom;
-        layoutString(
-          label.topText,
-          this.glyph,
-          this.kernTable,
-          this.charCodes,
-          this.cursors,
-        );
-        const len = Math.min(label.topText.length, MAX_CHARS);
-        for (let i = 0; i < len; i++) {
-          if (this.charCodes[i] === 0) continue;
-          if (count >= this.maxInstances) this.growBuffer();
+      if (
+        !bounds ||
+        (label.x + halfW >= bounds.minX &&
+          label.x - halfW <= bounds.maxX &&
+          ghostY + halfH >= bounds.minY &&
+          ghostY - halfH <= bounds.maxY)
+      ) {
+        if (label.topText) {
+          const topY = label.y - 30 * dpr * invZoom;
+          layoutString(
+            label.topText,
+            this.glyph,
+            this.kernTable,
+            this.charCodes,
+            this.cursors,
+          );
+          const len = Math.min(label.topText.length, MAX_CHARS);
+          for (let i = 0; i < len; i++) {
+            if (this.charCodes[i] === 0) continue;
+            if (count >= this.maxInstances) this.growBuffer();
 
-          const off = count * FLOATS_PER_INSTANCE;
-          this.instanceData[off + 0] = label.x;
-          this.instanceData[off + 1] = topY;
-          this.instanceData[off + 2] = this.cursors[i];
-          this.instanceData[off + 3] = this.charCodes[i];
-          this.instanceData[off + 4] = 1;
-          this.instanceData[off + 5] = label.colorR;
-          this.instanceData[off + 6] = label.colorG;
-          this.instanceData[off + 7] = label.colorB;
-          this.instanceData[off + 8] = ghostScale;
-          this.instanceData[off + 9] = GHOST_COST_OUTLINE_WIDTH;
-          count++;
+            const off = count * FLOATS_PER_INSTANCE;
+            this.instanceData[off + 0] = label.x;
+            this.instanceData[off + 1] = topY;
+            this.instanceData[off + 2] = this.cursors[i];
+            this.instanceData[off + 3] = this.charCodes[i];
+            this.instanceData[off + 4] = 1;
+            this.instanceData[off + 5] = label.colorR;
+            this.instanceData[off + 6] = label.colorG;
+            this.instanceData[off + 7] = label.colorB;
+            this.instanceData[off + 8] = ghostScale;
+            this.instanceData[off + 9] = GHOST_COST_OUTLINE_WIDTH;
+            count++;
+          }
         }
-      }
 
-      if (label.text) {
-        layoutString(
-          label.text,
-          this.glyph,
-          this.kernTable,
-          this.charCodes,
-          this.cursors,
-        );
-        const len = Math.min(label.text.length, MAX_CHARS);
-        for (let i = 0; i < len; i++) {
-          if (this.charCodes[i] === 0) continue;
-          if (count >= this.maxInstances) this.growBuffer();
+        if (label.text) {
+          layoutString(
+            label.text,
+            this.glyph,
+            this.kernTable,
+            this.charCodes,
+            this.cursors,
+          );
+          const len = Math.min(label.text.length, MAX_CHARS);
+          for (let i = 0; i < len; i++) {
+            if (this.charCodes[i] === 0) continue;
+            if (count >= this.maxInstances) this.growBuffer();
 
-          const off = count * FLOATS_PER_INSTANCE;
-          this.instanceData[off + 0] = label.x;
-          this.instanceData[off + 1] = ghostY;
-          this.instanceData[off + 2] = this.cursors[i];
-          this.instanceData[off + 3] = this.charCodes[i];
-          this.instanceData[off + 4] = 1;
-          this.instanceData[off + 5] = label.colorR;
-          this.instanceData[off + 6] = label.colorG;
-          this.instanceData[off + 7] = label.colorB;
-          this.instanceData[off + 8] = ghostScale;
-          this.instanceData[off + 9] = GHOST_COST_OUTLINE_WIDTH;
-          count++;
+            const off = count * FLOATS_PER_INSTANCE;
+            this.instanceData[off + 0] = label.x;
+            this.instanceData[off + 1] = ghostY;
+            this.instanceData[off + 2] = this.cursors[i];
+            this.instanceData[off + 3] = this.charCodes[i];
+            this.instanceData[off + 4] = 1;
+            this.instanceData[off + 5] = label.colorR;
+            this.instanceData[off + 6] = label.colorG;
+            this.instanceData[off + 7] = label.colorB;
+            this.instanceData[off + 8] = ghostScale;
+            this.instanceData[off + 9] = GHOST_COST_OUTLINE_WIDTH;
+            count++;
+          }
         }
       }
     }
