@@ -475,7 +475,7 @@ describe("LeaderboardModal", () => {
         '[data-current-user="true"]',
       ) as HTMLElement;
 
-      const check = (top: number, bottom: number) => {
+      const check = async (top: number, bottom: number) => {
         vi.spyOn(row, "getBoundingClientRect").mockReturnValue({
           top,
           bottom,
@@ -485,20 +485,35 @@ describe("LeaderboardModal", () => {
           width: 400,
         } as DOMRect);
         (playerList as any).updateStickyVisibility();
+        await playerList.updateComplete;
+        const tfoot = container.querySelector("tfoot");
+        if (tfoot) {
+          vi.spyOn(tfoot, "getBoundingClientRect").mockReturnValue({
+            top: 436,
+            bottom: 500,
+            height: 64,
+            left: 0,
+            right: 400,
+            width: 400,
+          } as DOMRect);
+        }
         return playerList.showStickyUser;
       };
 
       // 1. Visible in viewport -> pinned row hidden
-      expect(check(200, 260)).toBe(false);
+      expect(await check(200, 260)).toBe(false);
 
-      // 2. Scrolled above thead -> pinned row shown
-      expect(check(80, 140)).toBe(true);
+      // 2. Under the sticky thead (100-148) -> pinned row shown (old code failed this)
+      expect(await check(110, 140)).toBe(true);
 
-      // 3. Scrolled below container -> pinned row shown
-      expect(check(520, 580)).toBe(true);
+      // 3. Behind the sticky tfoot (436-500) -> stays shown without oscillating (old code failed this)
+      expect(await check(455, 495)).toBe(true);
+      (playerList as any).updateStickyVisibility();
+      await playerList.updateComplete;
+      expect(playerList.showStickyUser).toBe(true);
 
-      // 4. At the bottom edge of the table -> pinned row hidden without oscillating
-      expect(check(440, 500)).toBe(false);
+      // 4. Scrolled into clear space above tfoot -> pinned row hides
+      expect(await check(350, 410)).toBe(false);
     });
   });
 
