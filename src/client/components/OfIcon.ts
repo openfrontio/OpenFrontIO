@@ -38,6 +38,7 @@ export const OF_ICONS = {
   traitor: { file: "TraitorIcon.svg" },
   trade: { file: "TradingIconWhite.svg" },
   embargo: { file: "StopIconWhite.svg" },
+  disconnected: { file: "DisconnectedIcon.svg" },
   alliance: { file: "AllianceIconWhite.svg" },
   "break-alliance": { file: "TraitorIconWhite.svg" },
   chat: { file: "ChatIconWhite.svg" },

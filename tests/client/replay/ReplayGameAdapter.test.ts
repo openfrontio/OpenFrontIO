@@ -203,6 +203,10 @@ describe("ReplayGameAdapter", () => {
       expect(table.querySelectorAll(".stats-table-row").length).toBeGreaterThan(
         0,
       );
+      // Each with the player's colour by the name.
+      expect(table.querySelectorAll("[data-chip]").length).toBe(
+        table.querySelectorAll(".stats-table-row").length,
+      );
     } finally {
       table.remove();
     }

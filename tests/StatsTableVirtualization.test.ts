@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { colord } from "colord";
 import { PlayerStats } from "../src/client/hud/layers/PlayerStats";
 import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
@@ -20,6 +21,12 @@ function player(id: string, tiles: number): PlayerView {
     totalUnitLevels: () => tiles,
     isAlive: () => true,
     isOnSameTeam: () => false,
+    territoryColor: () => colord("#4a90d9"),
+    incomingAttacks: () => [],
+    isTraitor: () => false,
+    isAlliedWith: () => false,
+    hasEmbargoAgainst: () => false,
+    isDisconnected: () => false,
   } as unknown as PlayerView;
 }
 
@@ -29,6 +36,7 @@ function gameWith(players: PlayerView[], me: PlayerView | null): GameView {
     playerViews: () => players,
     config: () => ({ maxTroops: () => 100 }),
     ticks: () => 600,
+    inSpawnPhase: () => false,
     numLandTiles: () => 100,
     numTilesWithFallout: () => 0,
   } as unknown as GameView;
@@ -115,19 +123,22 @@ describe("StatsTable virtualization", () => {
 
     const scroller = el.querySelector(".stats-table-scroll")!;
     const mine = scroller.querySelector("[data-me]");
+    const above = scroller.querySelector("[data-near]");
     expect(mine?.textContent).toContain("me");
     expect(scrollRows(el)).toEqual([
       ...Array.from({ length: 12 }, (_, i) => `${i + 1}`),
+      "299",
       "300",
     ]);
-    // Rows 13 to 299 have no DOM: one spacer between the window and yours,
-    // none after it.
+    // Rows 13 to 298 have no DOM: one spacer between the window and yours
+    // with the row above it, none after them.
     const spacers = scroller.querySelectorAll(".stats-table-spacer");
     expect(spacers).toHaveLength(1);
     expect(spacers[0].getAttribute("style")).toContain(
-      `height: ${(299 - 12) * 24}px`,
+      `height: ${(298 - 12) * 24}px`,
     );
-    expect(spacers[0].nextElementSibling).toBe(mine);
+    expect(spacers[0].nextElementSibling).toBe(above);
+    expect(above?.nextElementSibling).toBe(mine);
     expect(mine?.nextElementSibling).toBeNull();
 
     el.remove();
