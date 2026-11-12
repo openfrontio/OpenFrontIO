@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { colord } from "colord";
 import { PlayerStats } from "../src/client/hud/layers/PlayerStats";
 import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
@@ -20,6 +21,7 @@ function player(id: string, tiles: number): PlayerView {
     totalUnitLevels: () => tiles,
     isAlive: () => true,
     isOnSameTeam: () => false,
+    territoryColor: () => colord("#4a90d9"),
   } as unknown as PlayerView;
 }
 
