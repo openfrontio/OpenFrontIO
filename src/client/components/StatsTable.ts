@@ -11,6 +11,7 @@ import {
 } from "../hud/layers/lib/StatsColumns";
 import { type ColumnId, type StatsTableKind } from "../StatsConstants";
 import { UserSettings } from "../UserSettings";
+import { prefersReducedMotion } from "../utilities/ReducedMotion";
 import { translateText } from "../Utils";
 import type { GameView } from "../view";
 import type { OfIconName } from "./OfIcon";
@@ -63,6 +64,15 @@ interface HeldBlock {
 const FALLBACK_ROW_HEIGHT_PX = 24;
 const FALLBACK_VIEWPORT_HEIGHT_PX = 180;
 const OVERSCAN_ROWS = 4;
+// Rows glide to a new rank. More rows in view than this changing place in
+// one refresh is a reshuffle (early in a game most rows trade places every
+// second): they snap. A row from further away glides the last few rows.
+const GLIDE_MAX_ROWS = 4;
+const GLIDE_MAX_DISTANCE = 3;
+const GLIDE: KeyframeAnimationOptions = {
+  duration: 220,
+  easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+};
 // What each table is called, by a screen reader and in the column menu.
 export const TABLE_NAME: Record<StatsTableKind, string> = {
   player: "leaderboard.players_table",
@@ -134,6 +144,10 @@ const ROW_STATE: Record<RowState, string> = {
   mate: "font-bold text-white",
   other: "",
 };
+// A row that climbs is drawn over the rows it passes while it glides, but
+// under your row and the rows held with it (HOLD), which keep their z.
+const CLIMBING = "data-climbing:z-1 data-climbing:bg-hud-panel";
+const HELD_CLIMBING = "data-climbing:bg-hud-panel";
 // Only rows with a click get a hover, and only for a mouse: after a tap it
 // would stay lit.
 const ROW_HOVER: Record<RowState, string> = {
@@ -146,7 +160,7 @@ const ME_EDGE = "border-s-2 border-aquarius";
 // When you rank below the rows the list shows, the rows either side of
 // yours are held at the edge with it. Each row of that block sticks at its
 // own place in it, so held they rest one against the other, in order.
-const HOLD = "sticky z-1";
+const HOLD = "sticky z-2";
 const HOLD_TOP = [
   "top-0",
   "top-(--stats-row)",
@@ -347,6 +361,13 @@ export abstract class StatsTable extends LitElement {
   private rowHeightPx = FALLBACK_ROW_HEIGHT_PX;
   private viewportHeightPx = FALLBACK_VIEWPORT_HEIGHT_PX;
 
+  // Each row's index at the last refresh, with the sort and the tick it was
+  // taken at, and the rows that changed place since, for updated() to glide.
+  private lastIndex = new Map<string, number>();
+  private lastSort = "";
+  private lastTick = 0;
+  private moves = new Map<string, { from: number; to: number }>();
+
   createRenderRoot() {
     return this;
   }
@@ -354,6 +375,8 @@ export abstract class StatsTable extends LitElement {
   willUpdate(changed: Map<string, unknown>) {
     // A hidden table takes its headers, and so their tooltip, with it.
     if (changed.has("visible") && !this.visible) this.tip = null;
+    // Opened again, it has no order of before to glide from.
+    if (changed.has("visible") && !this.visible) this.lastIndex.clear();
     if (changed.has("visible") && this.visible) {
       // The scroll container is recreated at scroll offset 0 when the table
       // was hidden, so the remembered offset would misplace the window.
@@ -378,6 +401,65 @@ export abstract class StatsTable extends LitElement {
       changed = true;
     }
     if (changed) this.requestUpdate();
+    this.glideMovedRows(scroller);
+  }
+
+  // Rows that changed place glide from where they were. Your row and its
+  // neighbours snap when they are held at an edge: they are not where their
+  // index puts them.
+  private glideMovedRows(scroller: HTMLElement) {
+    const moves = this.moves;
+    if (moves.size === 0) return;
+    this.moves = new Map();
+    if (!("animate" in scroller) || prefersReducedMotion()) return;
+    const moved = [
+      ...scroller.querySelectorAll<HTMLElement>(".stats-table-row"),
+    ].flatMap((row) => {
+      const move = moves.get(row.dataset.key ?? "");
+      return move === undefined ? [] : [{ row, ...move }];
+    });
+    // Counted in view, with the row partly above it: the rows drawn beyond
+    // it trade places all game long, unseen.
+    const top = this.scrollOffsetPx - this.rowHeightPx;
+    const bottom = this.scrollOffsetPx + this.viewportHeightPx;
+    const seen = moved.filter(({ to }) => {
+      const at = to * this.rowHeightPx;
+      return at >= top && at < bottom;
+    });
+    if (seen.length > GLIDE_MAX_ROWS) return;
+    const held =
+      this.heldBlock(this.rows.findIndex((row) => row.pinned)).edge !== null;
+    for (const { row, from, to } of moved) {
+      if (
+        (row.hasAttribute("data-me") || row.hasAttribute("data-near")) &&
+        (held || this.outOfView(from) || this.outOfView(to))
+      ) {
+        continue;
+      }
+      const rows = Math.max(
+        -GLIDE_MAX_DISTANCE,
+        Math.min(GLIDE_MAX_DISTANCE, from - to),
+      );
+      const glide = row.animate(
+        [
+          { transform: `translateY(${rows * this.rowHeightPx}px)` },
+          { transform: "none" },
+        ],
+        GLIDE,
+      );
+      if (to < from) {
+        row.toggleAttribute("data-climbing", true);
+        void glide.finished.then(() => row.removeAttribute("data-climbing"));
+      }
+    }
+  }
+
+  private outOfView(index: number) {
+    const top = index * this.rowHeightPx;
+    return (
+      top < this.scrollOffsetPx ||
+      top + this.rowHeightPx > this.scrollOffsetPx + this.viewportHeightPx
+    );
   }
 
   private onScroll(event: Event) {
@@ -467,6 +549,7 @@ export abstract class StatsTable extends LitElement {
               direction *
               ((a.values.get(sortKey) ?? 0) - (b.values.get(sortKey) ?? 0)),
           );
+    this.noteMoves(this.game);
     this.requestUpdate();
   }
 
@@ -492,6 +575,27 @@ export abstract class StatsTable extends LitElement {
       edge = "bottom";
     }
     return { from, to, edge };
+  }
+
+  // Notes the rows whose index changed since the last refresh. None when the
+  // sort changed, or when the clock went back (a replay seek): the old order
+  // means nothing then.
+  private noteMoves(game: GameView) {
+    const sort = `${this.sortKey} ${this.sortOrder}`;
+    const tick = game.ticks();
+    const comparable = sort === this.lastSort && tick >= this.lastTick;
+    const index = new Map<string, number>();
+    this.moves = new Map();
+    this.rows.forEach((row, to) => {
+      index.set(row.key, to);
+      const from = this.lastIndex.get(row.key);
+      if (comparable && from !== undefined && from !== to) {
+        this.moves.set(row.key, { from, to });
+      }
+    });
+    this.lastIndex = index;
+    this.lastSort = sort;
+    this.lastTick = tick;
   }
 
   private renderHeaderCell(column: ColumnDef, index: number) {
@@ -685,7 +789,9 @@ export abstract class StatsTable extends LitElement {
     // translate="no": a page translator must not rewrite player names.
     return html`
       <div
-        class="stats-table-row grid col-span-full ${ROW} ${ROW_STATE[state]} ${
+        class="stats-table-row grid col-span-full ${ROW} ${
+          held ? HELD_CLIMBING : CLIMBING
+        } ${ROW_STATE[state]} ${
           held
             ? `${HOLD} ${HOLD_TOP[index - block.from]} ${
                 HOLD_BOTTOM[block.to - 1 - index]
@@ -700,6 +806,7 @@ export abstract class StatsTable extends LitElement {
         role="row"
         aria-rowindex=${position + 1}
         translate="no"
+        data-key=${row.key}
         ?data-me=${state === "me"}
         ?data-mate=${state === "mate"}
         ?data-near=${near}
