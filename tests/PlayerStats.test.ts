@@ -71,7 +71,7 @@ describe("PlayerStats", () => {
     // Only selected stat tracks share definite spare space. Rank and name
     // never stretch; the empty last track only grows to a scrollbar.
     expect(content?.getAttribute("style")).toContain(
-      "grid-template-columns: 30px var(--stats-name, 100px) auto auto auto minmax(0px, max-content);",
+      "grid-template-columns: 30px calc(var(--stats-name, 100px) - var(--stats-end-track, 0px)) auto auto auto minmax(0px, max-content);",
     );
 
     playerStats.remove();
@@ -855,7 +855,9 @@ describe("PlayerStats clan column", () => {
     ).not.toBeNull();
     expect(
       playerStats.querySelector(".stats-table-content")?.getAttribute("style"),
-    ).toContain("30px 80px var(--stats-name, 100px)");
+    ).toContain(
+      "30px 80px calc(var(--stats-name, 100px) - var(--stats-end-track, 0px))",
+    );
   });
 
   it("rules off every column but the first, so none read as merged", async () => {
@@ -915,7 +917,9 @@ describe("PlayerStats clan column", () => {
     ).toEqual(["rank", "player", "tiles", "gold", "maxtroops"]);
     expect(
       playerStats.querySelector(".stats-table-content")?.getAttribute("style"),
-    ).toContain("30px var(--stats-name, 100px)");
+    ).toContain(
+      "30px calc(var(--stats-name, 100px) - var(--stats-end-track, 0px))",
+    );
     expect(playerStats.textContent).not.toContain("ABCDE");
   });
 
@@ -949,7 +953,7 @@ describe("PlayerStats clan column", () => {
     expect(
       playerStats.querySelector(".stats-table-content")?.getAttribute("style"),
     ).toContain(
-      "grid-template-columns: 30px 80px var(--stats-name, 100px) minmax(0px, max-content);",
+      "grid-template-columns: 30px 80px calc(var(--stats-name, 100px) - var(--stats-end-track, 0px)) minmax(0px, max-content);",
     );
     expect(
       [
