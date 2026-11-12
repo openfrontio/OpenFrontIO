@@ -14,6 +14,10 @@ const BOTTOM_RAIL_ID = "pw-oop-bottom_rail";
 const GAM_IFRAME_PREFIX = "google_ads_iframe_";
 const STILL_VISIBLE_CHECK_MS = 2000;
 const STRAY_FRAME_SCAN_MS = 1000;
+// A docked flex unit is a 90px leaderboard. Taller is a skin/takeover
+// creative, which would push an open page (locked to the viewport) out of
+// view, so it is destroyed instead of given room.
+const MAX_DOCKED_AD_HEIGHT = 120;
 
 type DestroyUnitsResult = "resolved" | "rejected" | "unavailable";
 
@@ -78,6 +82,7 @@ export class HomepagePromos extends LitElement {
   private topAdStyle: MutationObserver | null = null;
   private topAdMutation: MutationObserver | null = null;
   private reservedFlexHeight: number = 0;
+  private oversizedTopAd: HTMLElement | null = null;
 
   createRenderRoot() {
     return this;
@@ -175,6 +180,10 @@ export class HomepagePromos extends LitElement {
         if (rect.top < window.innerHeight / 4) {
           dockedHeight = Math.ceil(Math.max(0, rect.bottom));
         }
+        if (dockedHeight > MAX_DOCKED_AD_HEIGHT) {
+          this.destroyOversizedTopAd(this.topAdEl, dockedHeight);
+          dockedHeight = 0;
+        }
       } else if (unitVisible) {
         inlineHeight = Math.ceil(rect.height);
       }
@@ -211,6 +220,25 @@ export class HomepagePromos extends LitElement {
     const pad = this.reservedFlexHeight > 0 ? 0 : dockedHeight;
     this.setHtmlVar("--top-ad-height", dockedHeight);
     this.setHtmlVar("--top-ad-pad", pad);
+  }
+
+  private destroyOversizedTopAd(el: HTMLElement, height: number): void {
+    if (this.oversizedTopAd === el) return;
+    this.oversizedTopAd = el;
+    // Until the destroy lands; visibility keeps its box, so the measurement
+    // above is unchanged and nothing reflows.
+    el.style.visibility = "hidden";
+    reportEvent("top_ad_oversized", {
+      height: String(height),
+      pageOpen: String(document.body.classList.contains("page-open")),
+      ...creativeAttributes(el, "flex"),
+    });
+    if (typeof window.ramp?.destroyUnits !== "function") return;
+    Promise.resolve()
+      .then(() => window.ramp.destroyUnits("pw-oop-flex"))
+      .catch((e: unknown) => {
+        console.warn("error destroying oversized header ad", e);
+      });
   }
 
   private setHtmlVar(name: string, px: number): void {

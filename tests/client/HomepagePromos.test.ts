@@ -541,3 +541,58 @@ describe("HomepagePromos ad frames over the game", () => {
     expect(reportEvent).not.toHaveBeenCalled();
   });
 });
+
+describe("HomepagePromos docked header ad", () => {
+  // jsdom has no ResizeObserver; the tests drive the unit through style
+  // changes instead.
+  globalThis.ResizeObserver ??= class {
+    observe() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+
+  function dockFlex(height: number): HTMLElement {
+    const flex = document.createElement("div");
+    flex.id = "pw-oop-flex";
+    flex.style.position = "fixed";
+    flex.getBoundingClientRect = () => new DOMRect(0, 0, 1280, height);
+    return document.body.appendChild(flex);
+  }
+
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+  const topAdHeight = () =>
+    document.documentElement.style.getPropertyValue("--top-ad-height");
+
+  beforeEach(() => {
+    vi.mocked(reportEvent).mockClear();
+  });
+
+  afterEach(() => {
+    document.getElementById("pw-oop-flex")?.remove();
+  });
+
+  it("makes room for a docked leaderboard", async () => {
+    const { ramp } = stubRamp();
+    const flex = dockFlex(90);
+    await settle();
+
+    expect(topAdHeight()).toBe("90px");
+    expect(flex.style.visibility).toBe("");
+    expect(ramp.destroyUnits).not.toHaveBeenCalled();
+  });
+
+  it("destroys a docked skin instead of pushing the page under it", async () => {
+    const { ramp } = stubRamp();
+    const flex = dockFlex(280);
+    await settle();
+    flex.style.top = "0px";
+    await settle();
+
+    expect(topAdHeight()).toBe("");
+    expect(flex.style.visibility).toBe("hidden");
+    expect(ramp.destroyUnits).toHaveBeenCalledExactlyOnceWith("pw-oop-flex");
+    expect(reportEvent).toHaveBeenCalledExactlyOnceWith(
+      "top_ad_oversized",
+      expect.objectContaining({ height: "280" }),
+    );
+  });
+});
