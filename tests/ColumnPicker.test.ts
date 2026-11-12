@@ -237,18 +237,116 @@ describe("ColumnPicker", () => {
     expect(button.getAttribute("aria-expanded")).toBe("false");
   });
 
-  it("closes on a click outside, but not on a click inside", async () => {
+  it("moves focus to its first box when it opens", async () => {
     const picker = await mount();
     picker.toggleAt(0, 0);
     await picker.updateComplete;
 
-    boxes("player")[0].click();
+    expect(document.activeElement).toBe(boxes("player")[0]);
+  });
+
+  it("closes on Escape, gives focus back to its button and keeps the key from the game", async () => {
+    const picker = await mount();
+    const button = document.createElement("button");
+    holder.appendChild(button);
+    button.focus();
+    // Reached with the keyboard. jsdom guesses :focus-visible from the events
+    // it has seen, so it is told.
+    const matches = button.matches.bind(button);
+    vi.spyOn(button, "matches").mockImplementation(
+      (selector) => selector === ":focus-visible" || matches(selector),
+    );
+    picker.openFrom(button);
+    await picker.updateComplete;
+    const onWindow: string[] = [];
+    const listen = (e: KeyboardEvent) => onWindow.push(e.key);
+    window.addEventListener("keydown", listen);
+
+    try {
+      document.activeElement?.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+      await picker.updateComplete;
+    } finally {
+      window.removeEventListener("keydown", listen);
+    }
+
+    expect(menu()).toBeNull();
+    expect(document.activeElement).toBe(button);
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(onWindow).toEqual([]);
+
+    // Its close button does the same.
+    picker.openFrom(button);
+    await picker.updateComplete;
+    menu()
+      ?.querySelector<HTMLButtonElement>('button[aria-label="common.close"]')
+      ?.click();
+    await picker.updateComplete;
+    expect(menu()).toBeNull();
+    expect(document.activeElement).toBe(button);
+  });
+
+  it("closes when focus leaves it, without taking focus back", async () => {
+    const picker = await mount();
+    const button = document.createElement("button");
+    const elsewhere = document.createElement("button");
+    holder.append(button, elsewhere);
+    button.focus();
+    picker.openFrom(button);
+    await picker.updateComplete;
+
+    elsewhere.focus();
+    await picker.updateComplete;
+
+    expect(menu()).toBeNull();
+    expect(document.activeElement).toBe(elsewhere);
+  });
+
+  it("closes on a press outside, but not inside, on its button or on a right-click on a header", async () => {
+    const picker = await mount();
+    const button = document.createElement("button");
+    const header = document.createElement("div");
+    header.className = "stats-table-header";
+    holder.append(button, header);
+    const press = (target: Element, button = 0) => {
+      const event = new PointerEvent("pointerdown", {
+        button,
+        bubbles: true,
+        cancelable: true,
+      });
+      target.dispatchEvent(event);
+      return event;
+    };
+    picker.openFrom(button);
+    await picker.updateComplete;
+
+    press(boxes("player")[0]);
+    press(button);
+    // The header's right-click toggles the menu itself, and must not take
+    // focus on the way.
+    expect(press(header, 2).defaultPrevented).toBe(true);
     await picker.updateComplete;
     expect(menu()).not.toBeNull();
 
-    holder.click();
+    press(holder);
     await picker.updateComplete;
     expect(menu()).toBeNull();
+  });
+
+  it("leaves nothing focused when it was opened with nothing focused", async () => {
+    const picker = await mount();
+    picker.toggleAt(0, 0);
+    await picker.updateComplete;
+    expect(document.activeElement).toBe(boxes("player")[0]);
+
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await picker.updateComplete;
+
+    expect(menu()).toBeNull();
+    expect(document.activeElement).toBe(document.body);
   });
 
   it("takes its menu away when it is removed", async () => {

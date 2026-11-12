@@ -434,6 +434,9 @@ describe("GameLeftSidebar", () => {
     expect(sections()).toEqual(["player"]);
 
     // A press on another button of the bar closes it, like any press outside.
+    button("teams")?.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true }),
+    );
     button("teams")?.click();
     await sidebar.updateComplete;
     await picker.updateComplete;
