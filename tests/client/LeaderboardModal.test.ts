@@ -514,6 +514,12 @@ describe("LeaderboardModal", () => {
 
       // 4. Scrolled into clear space above tfoot -> pinned row hides
       expect(await check(350, 410)).toBe(false);
+
+      // 5. Subpixel rounding at max scroll -> stays hidden (within 1px tolerance)
+      expect(await check(440.5, 500.5)).toBe(false);
+
+      // 6. Mostly cut off at the bottom edge (2px sliver) -> pinned row shows
+      expect(await check(498, 558)).toBe(true);
     });
   });
 

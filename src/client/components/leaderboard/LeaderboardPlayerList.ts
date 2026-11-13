@@ -585,7 +585,8 @@ export class LeaderboardPlayerList extends LitElement {
       ? tfoot.getBoundingClientRect().top
       : containerRect.top + this.scrollContainer.clientHeight;
 
-    const isVisible = rowRect.bottom > topBound && rowRect.top < bottomBound;
+    const isVisible =
+      rowRect.top >= topBound - 1 && rowRect.bottom <= bottomBound + 1;
     this.showStickyUser = !isVisible;
   }
 
