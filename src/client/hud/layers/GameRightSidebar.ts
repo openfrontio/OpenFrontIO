@@ -207,7 +207,7 @@ export class GameRightSidebar extends LitElement implements Controller {
       (this.spawnBarVisible ? 7 : 0) + (this.immunityBarVisible ? 7 : 0);
     const parent = this.parentElement as HTMLElement;
     if (parent) {
-      parent.style.marginTop = `${offset}px`;
+      parent.style.marginTop = `calc(${offset}px + var(--game-health-offset, 0px))`;
     }
   }
 

@@ -41,6 +41,14 @@ describe("RadialMenu overlay click-through", () => {
     return { eventBus, radialMenu, overlay };
   }
 
+  // A tap on the menu starts with a press on it; the menu ignores clicks
+  // whose press started before it opened.
+  function press(target: Element) {
+    target.dispatchEvent(
+      new PointerEvent("pointerdown", { pointerType: "touch", bubbles: true }),
+    );
+  }
+
   function makeBuildBarButton() {
     const layer = document.createElement("div");
     layer.setAttribute("data-radial-click-through", "");
@@ -57,6 +65,7 @@ describe("RadialMenu overlay click-through", () => {
     const { button, clicks } = makeBuildBarButton();
     stubElementFromPoint(button);
 
+    press(overlay);
     overlay.dispatchEvent(
       new MouseEvent("click", { bubbles: true, clientX: 10, clientY: 20 }),
     );
@@ -100,6 +109,7 @@ describe("RadialMenu overlay click-through", () => {
     stubElementFromPoint(button);
 
     const svg = overlay.querySelector("svg") as SVGElement;
+    press(svg);
     svg.dispatchEvent(
       new MouseEvent("click", { bubbles: true, clientX: 10, clientY: 20 }),
     );
@@ -189,9 +199,74 @@ describe("RadialMenu overlay click-through", () => {
     openMenu(radialMenu, overlay);
     const closes = countCloseEvents(eventBus);
 
+    press(overlay);
     overlay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
     expect(closes).toHaveLength(1);
+  });
+
+  // A touch tap on the map opens the menu on pointerup, and that tap's click
+  // arrives after the menu is up. It must not close the menu or pick an item.
+  function showMenu(radialMenu: RadialMenu) {
+    vi.spyOn(radialMenu as any, "resetMenu").mockImplementation(() => {});
+    vi.spyOn(radialMenu as any, "renderMenuItems").mockImplementation(() => {});
+    vi.spyOn(radialMenu as any, "onCenterButtonHover").mockImplementation(
+      () => {},
+    );
+    radialMenu.showRadialMenu(10, 20);
+  }
+
+  test("stays open when the tap that opened it clicks the backdrop", () => {
+    const { eventBus, radialMenu, overlay } = makeMenu();
+    const { button, clicks } = makeBuildBarButton();
+    stubElementFromPoint(button);
+    showMenu(radialMenu);
+    const closes = countCloseEvents(eventBus);
+
+    overlay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(radialMenu.isMenuVisible()).toBe(true);
+    expect(closes).toHaveLength(0);
+    expect(clicks).toHaveLength(0);
+  });
+
+  test("does not pick an item with the tap that opened it", () => {
+    const { radialMenu, overlay } = makeMenu();
+    showMenu(radialMenu);
+    const svg = overlay.querySelector("svg") as SVGElement;
+    const item = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "path",
+    ) as SVGPathElement;
+    const picks: MouseEvent[] = [];
+    item.addEventListener("click", (event) => {
+      event.stopPropagation();
+      picks.push(event);
+    });
+    svg.appendChild(item);
+
+    item.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(picks).toHaveLength(0);
+
+    press(item);
+    item.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(picks).toHaveLength(1);
+  });
+
+  test("forgets a press from before it was last opened", () => {
+    const { eventBus, radialMenu, overlay } = makeMenu();
+    stubElementFromPoint(null);
+    showMenu(radialMenu);
+    press(overlay);
+    radialMenu.hideRadialMenu();
+    // Let the reopen cooldown pass.
+    (radialMenu as any).lastHideTime = 0;
+    showMenu(radialMenu);
+    const closes = countCloseEvents(eventBus);
+
+    overlay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(closes).toHaveLength(0);
   });
 
   test("does not announce a close when it was already hidden", () => {

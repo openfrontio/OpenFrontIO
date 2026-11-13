@@ -1289,6 +1289,14 @@
     "enter": "Enter fullscreen",
     "exit": "Exit fullscreen"
   },
+  "game_health": {
+    "connection_unstable": "Connection unstable",
+    "connection_unstable_description": "Game updates are arriving late. Your connection or the server may be experiencing delays.",
+    "high_latency": "High latency",
+    "high_latency_description": "Your connection to the server is slower than usual. Your actions may take longer to arrive.",
+    "performance": "Low performance",
+    "performance_description": "Your device is struggling to keep up with the game. Try lowering your graphics settings."
+  },
   "game_info_modal": {
     "all_gold": "All gold",
     "atoms": "Atoms",
@@ -1483,7 +1491,6 @@
     "territory_sat_label": "Territory saturation"
   },
   "heads_up_message": {
-    "catching_up": "Catching up...",
     "choose_spawn": "Choose a starting location",
     "choose_spawn_spectator": "Players are choosing starting locations",
     "dont_show_again": "Don't show again",
@@ -2456,7 +2463,7 @@
     "listing_full": "The public lobby list is full. Please try again later.",
     "listing_host_cheats_enabled": "Disable host cheats to list your lobby publicly.",
     "listing_limit_reached": "You already have a publicly listed lobby.",
-    "listing_max_players_too_high": "Max players is too high for this map.",
+    "listing_max_players_too_high": "Max players is too high to list this lobby publicly.",
     "listing_max_players_too_low": "Max players must be higher than the number of players already in the lobby.",
     "listing_requires_subscription": "A Warlord or Sovereign subscription is required to list a lobby publicly.",
     "listing_whitelist_enabled": "Disable the join whitelist to list your lobby publicly.",

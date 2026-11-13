@@ -4,6 +4,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import type { GameConfig } from "@openfront/engine-api/Schemas";
 import type { AnalyticsRecord } from "@openfront/shared/WireSchemas";
@@ -34,6 +35,7 @@ import { fetchGameById } from "../../src/client/Api";
 import { formatAbsoluteTime } from "../../src/client/components/baseComponents/stats/GameHistoryDates";
 import { GameInfoView } from "../../src/client/components/baseComponents/stats/GameInfoView";
 import { LangSelector } from "../../src/client/LangSelector";
+import { formatGameType } from "../../src/client/utilities/LobbySettingsSummary";
 
 const config: GameConfig = {
   gameMap: GameMapType.Montreal,
@@ -344,5 +346,195 @@ describe("GameInfoView", () => {
 
     expect(view.textContent).toContain(GameMapType.Europe);
     expect(view.textContent).not.toContain(GameMapType.Montreal);
+  });
+
+  it("renders Hosted visibility badge for a private game with visibleAt", async () => {
+    const session = makeSession("hosted-game", GameMapType.Montreal);
+    session.info.config.gameType = GameType.Private;
+    session.info.visibleAt = 12345;
+    fetchMock.mockResolvedValue(session);
+    view = mountView("hosted-game");
+
+    await waitForRender(view, () => {
+      expect(view!.textContent).toContain("detailed_view.source_hosted");
+      expect(view!.textContent).not.toContain(
+        "account_modal.games_type_private",
+      );
+    });
+  });
+
+  it("renders Private visibility badge for a private game without visibleAt", async () => {
+    const session = makeSession("private-game", GameMapType.Montreal);
+    session.info.config.gameType = GameType.Private;
+    session.info.visibleAt = undefined;
+    fetchMock.mockResolvedValue(session);
+    view = mountView("private-game");
+
+    await waitForRender(view, () => {
+      expect(view!.textContent).toContain("account_modal.games_type_private");
+      expect(view!.textContent).not.toContain("detailed_view.source_hosted");
+    });
+  });
+
+  it("renders Public visibility badge for a public game", async () => {
+    const session = makeSession("public-game", GameMapType.Montreal);
+    session.info.config.gameType = GameType.Public;
+    fetchMock.mockResolvedValue(session);
+    view = mountView("public-game");
+
+    await waitForRender(view, () => {
+      expect(view!.textContent).toContain("account_modal.games_type_public");
+    });
+  });
+
+  it("renders Singleplayer visibility badge for a singleplayer game", async () => {
+    const session = makeSession("singleplayer-game", GameMapType.Montreal);
+    session.info.config.gameType = GameType.Singleplayer;
+    fetchMock.mockResolvedValue(session);
+    view = mountView("singleplayer-game");
+
+    await waitForRender(view, () => {
+      expect(view!.textContent).toContain(
+        "account_modal.games_type_singleplayer",
+      );
+    });
+  });
+
+  it("uses formatGameType for the mode badge", async () => {
+    const session = makeSession("mode-game", GameMapType.Montreal);
+    session.info.config.gameMode = GameMode.Team;
+    session.info.config.playerTeams = 4;
+    fetchMock.mockResolvedValue(session);
+    view = mountView("mode-game");
+
+    await waitForRender(view, () => {
+      expect(view!.textContent).toContain(formatGameType(session.info.config));
+    });
+  });
+
+  it("renders Hosted visibility badge for a private game when visibleAt is 0", async () => {
+    const session = makeSession("hosted-zero-game", GameMapType.Montreal);
+    session.info.config.gameType = GameType.Private;
+    session.info.visibleAt = 0;
+    fetchMock.mockResolvedValue(session);
+    view = mountView("hosted-zero-game");
+
+    await waitForRender(view, () => {
+      expect(view!.textContent).toContain("detailed_view.source_hosted");
+      expect(view!.textContent).not.toContain(
+        "account_modal.games_type_private",
+      );
+    });
+  });
+
+  it("renders notable lobby settings and disabled units when present", async () => {
+    const session = makeSession("modifiers-game", GameMapType.Montreal);
+    session.info.config.infiniteGold = true;
+    session.info.config.disabledUnits = [UnitType.AtomBomb];
+    fetchMock.mockResolvedValue(session);
+    view = mountView("modifiers-game");
+
+    await waitForRender(view, () => {
+      expect(view!.querySelector("[data-game-modifiers]")).not.toBeNull();
+      const disabledEl = view!.querySelector("[data-disabled-units]");
+      expect(disabledEl).not.toBeNull();
+      expect(disabledEl!.classList.contains("mt-3")).toBe(true);
+      expect(view!.textContent).toContain("game_settings.infinite_gold");
+      expect(view!.textContent).toContain("unit_type.atom_bomb");
+    });
+  });
+
+  it("renders disabled units without mt-3 when there are no notable settings", async () => {
+    const session = makeSession("disabled-only-game", GameMapType.Montreal);
+    session.info.config.bots = 400;
+    session.info.config.nations = 0;
+    session.info.config.disabledUnits = [UnitType.AtomBomb];
+    fetchMock.mockResolvedValue(session);
+    view = mountView("disabled-only-game");
+
+    await waitForRender(view, () => {
+      expect(view!.querySelector("[data-game-modifiers]")).not.toBeNull();
+      const disabledEl = view!.querySelector("[data-disabled-units]");
+      expect(disabledEl).not.toBeNull();
+      expect(disabledEl!.classList.contains("mt-3")).toBe(false);
+      expect(view!.textContent).toContain("unit_type.atom_bomb");
+    });
+  });
+
+  it("renders only notable settings when disabledUnits is empty", async () => {
+    const session = makeSession("settings-only-game", GameMapType.Montreal);
+    session.info.config.infiniteGold = true;
+    session.info.config.disabledUnits = [];
+    fetchMock.mockResolvedValue(session);
+    view = mountView("settings-only-game");
+
+    await waitForRender(view, () => {
+      expect(view!.querySelector("[data-game-modifiers]")).not.toBeNull();
+      expect(view!.querySelector("[data-disabled-units]")).toBeNull();
+      expect(view!.textContent).toContain("game_settings.infinite_gold");
+    });
+  });
+
+  it("renders host cheats alongside settings and disabled units when present", async () => {
+    const session = makeSession("cheats-game", GameMapType.Montreal);
+    session.info.config.infiniteGold = true;
+    session.info.config.disabledUnits = [UnitType.AtomBomb];
+    session.info.config.hostCheats = { infiniteTroops: true };
+    fetchMock.mockResolvedValue(session);
+    view = mountView("cheats-game");
+
+    await waitForRender(view, () => {
+      expect(view!.querySelector("[data-game-modifiers]")).not.toBeNull();
+      const cheatsEl = view!.querySelector("[data-host-cheats]");
+      expect(cheatsEl).not.toBeNull();
+      expect(cheatsEl!.classList.contains("mt-3")).toBe(true);
+      expect(view!.textContent).toContain("game_settings.infinite_troops");
+    });
+  });
+
+  it("renders modifiers container when host cheats are the only modifier", async () => {
+    const session = makeSession("cheats-only-game", GameMapType.Montreal);
+    session.info.config.bots = 400;
+    session.info.config.nations = 0;
+    session.info.config.disabledUnits = [];
+    session.info.config.hostCheats = { infiniteGold: true };
+    fetchMock.mockResolvedValue(session);
+    view = mountView("cheats-only-game");
+
+    await waitForRender(view, () => {
+      expect(view!.querySelector("[data-game-modifiers]")).not.toBeNull();
+      const cheatsEl = view!.querySelector("[data-host-cheats]");
+      expect(cheatsEl).not.toBeNull();
+      expect(cheatsEl!.classList.contains("mt-3")).toBe(false);
+      expect(view!.querySelector("[data-disabled-units]")).toBeNull();
+      expect(view!.querySelector("[data-modifier-tags]")).toBeNull();
+      expect(view!.textContent).toContain("game_settings.infinite_gold");
+    });
+  });
+
+  it("does not render modifiers container when there are none", async () => {
+    const session = makeSession("clean-game", GameMapType.Montreal);
+    session.info.config.bots = 400;
+    session.info.config.nations = 0;
+    session.info.config.disabledUnits = [];
+    fetchMock.mockResolvedValue(session);
+    view = mountView("clean-game");
+
+    await waitForRender(view, () => {
+      expect(view!.querySelector("[data-game-modifiers]")).toBeNull();
+    });
+  });
+
+  it("does not render modifiers container when disabledUnits is undefined and settings are default", async () => {
+    const session = makeSession("undefined-disabled", GameMapType.Montreal);
+    session.info.config.bots = 400;
+    session.info.config.nations = 0;
+    session.info.config.disabledUnits = undefined;
+    fetchMock.mockResolvedValue(session);
+    view = mountView("undefined-disabled");
+
+    await waitForRender(view, () => {
+      expect(view!.querySelector("[data-game-modifiers]")).toBeNull();
+    });
   });
 });

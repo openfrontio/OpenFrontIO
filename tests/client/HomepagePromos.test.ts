@@ -541,3 +541,140 @@ describe("HomepagePromos ad frames over the game", () => {
     expect(reportEvent).not.toHaveBeenCalled();
   });
 });
+
+describe("HomepagePromos docked header ad", () => {
+  // jsdom has no ResizeObserver; the tests drive the unit through style
+  // changes instead.
+  globalThis.ResizeObserver ??= class {
+    observe() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+
+  function dockFlex(height: number): HTMLElement {
+    const flex = document.createElement("div");
+    flex.id = "pw-oop-flex";
+    flex.style.position = "fixed";
+    resize(flex, height);
+    return document.body.appendChild(flex);
+  }
+
+  function resize(flex: HTMLElement, height: number): void {
+    flex.getBoundingClientRect = () => new DOMRect(0, 0, 1280, height);
+  }
+
+  const topAdHeight = () =>
+    document.documentElement.style.getPropertyValue("--top-ad-height");
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.mocked(reportEvent).mockClear();
+    document.body.classList.add("page-open");
+  });
+
+  afterEach(() => {
+    document.getElementById("pw-oop-flex")?.remove();
+    document.body.classList.remove("page-open");
+    vi.useRealTimers();
+  });
+
+  it("makes room for a docked leaderboard", async () => {
+    const { ramp } = stubRamp();
+    const flex = dockFlex(90);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(topAdHeight()).toBe("90px");
+    expect(flex.style.visibility).toBe("");
+    expect(ramp.destroyUnits).not.toHaveBeenCalled();
+  });
+
+  it("destroys a skin that stays docked tall instead of pushing the page under it", async () => {
+    const { ramp } = stubRamp();
+    const flex = dockFlex(280);
+    await vi.advanceTimersByTimeAsync(1000);
+    flex.style.top = "0px";
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(topAdHeight()).toBe("");
+    expect(ramp.destroyUnits).toHaveBeenCalledExactlyOnceWith("pw-oop-flex");
+    expect(reportEvent).toHaveBeenCalledExactlyOnceWith(
+      "top_ad_oversized",
+      expect.objectContaining({ height: "280" }),
+    );
+  });
+
+  it("leaves a tall legacy #adBanner alone", async () => {
+    const { ramp } = stubRamp();
+    const banner = dockFlex(280);
+    banner.id = "adBanner";
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(banner.style.visibility).toBe("");
+    expect(ramp.destroyUnits).not.toHaveBeenCalled();
+    banner.remove();
+  });
+
+  it("leaves a docked skin alone on the homepage", async () => {
+    const { ramp } = stubRamp();
+    document.body.classList.remove("page-open");
+    const flex = dockFlex(280);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(flex.isConnected).toBe(true);
+    expect(topAdHeight()).toBe("280px");
+    expect(ramp.destroyUnits).not.toHaveBeenCalled();
+  });
+
+  it("destroys a docked skin once a page opens over it", async () => {
+    const { ramp } = stubRamp();
+    document.body.classList.remove("page-open");
+    dockFlex(280);
+    await vi.advanceTimersByTimeAsync(1000);
+    document.body.classList.add("page-open");
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(ramp.destroyUnits).toHaveBeenCalledExactlyOnceWith("pw-oop-flex");
+  });
+
+  it("keeps a skin whose page closes while it settles", async () => {
+    const { ramp } = stubRamp();
+    dockFlex(280);
+    await vi.advanceTimersByTimeAsync(500);
+    document.body.classList.remove("page-open");
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(ramp.destroyUnits).not.toHaveBeenCalled();
+  });
+
+  it("keeps a leaderboard that measures tall for a moment as it docks", async () => {
+    const { ramp } = stubRamp();
+    const flex = dockFlex(350);
+    await vi.advanceTimersByTimeAsync(0);
+    resize(flex, 90);
+    flex.style.top = "0px";
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(topAdHeight()).toBe("90px");
+    expect(ramp.destroyUnits).not.toHaveBeenCalled();
+  });
+
+  it("checks a skin that replaces the unit while a check is pending", async () => {
+    const { ramp } = stubRamp();
+    const first = dockFlex(350);
+    await vi.advanceTimersByTimeAsync(500);
+    first.remove();
+    dockFlex(280);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(ramp.destroyUnits).toHaveBeenCalledExactlyOnceWith("pw-oop-flex");
+  });
+
+  it("removes a skin its destroy left on the page", async () => {
+    const { ramp } = stubRamp();
+    ramp.destroyUnits.mockRejectedValue(new Error("unknown unit"));
+    const flex = dockFlex(280);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(flex.isConnected).toBe(false);
+    expect(topAdHeight()).toBe("");
+  });
+});

@@ -224,13 +224,26 @@ export function generateID(): GameID {
 // minted) and private-lobby unguessability; worker routing hashes the full
 // id, extracting the worker index from entropy that must exist anyway.
 // generateID() stays 8 chars for the ids that never leave one server or one
-// client: client ids, singleplayer games, worker message ids.
+// client: client ids and worker message ids.
 export function generateGameID(instanceLetter: string): GameID {
   const nanoid = customAlphabet(
     "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ",
     9,
   );
   return instanceLetter + nanoid();
+}
+
+// Singleplayer game id: 9 random chars. Singleplayer games are archived under
+// their id too, in the same keyspace as multiplayer games, and far outnumber
+// them, so 8 chars collided with an existing game about once a week. The
+// length also tells them apart: the API only archives a singleplayer game
+// whose id is shorter than a multiplayer id's 10 (8 from older clients).
+export function generateSingleplayerGameID(): GameID {
+  const nanoid = customAlphabet(
+    "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ",
+    9,
+  );
+  return nanoid();
 }
 
 export function createRandomName(
