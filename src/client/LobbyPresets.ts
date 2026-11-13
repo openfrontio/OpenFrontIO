@@ -4,7 +4,7 @@ import {
   GameMode,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { TeamCountConfigSchema } from "@openfront/engine-api/Schemas";
+import { MAX_BOTS, TeamCountConfigSchema } from "@openfront/engine-api/Schemas";
 import { DOOMSDAY_CLOCK_SPEEDS } from "@openfront/engine-lib/game/DoomsdayClock";
 import { z } from "zod";
 import type { UserSettings } from "./UserSettings";
@@ -19,7 +19,7 @@ export const LobbyPresetConfigSchema = z.object({
   difficulty: z.enum(Difficulty),
   gameMode: z.enum(GameMode),
   teamCount: TeamCountConfigSchema,
-  bots: z.number().int().min(0).max(1000),
+  bots: z.number().int().min(0).max(MAX_BOTS),
   nations: z
     .union([
       z.number().int().min(0).max(400),
