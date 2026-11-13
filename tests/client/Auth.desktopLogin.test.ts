@@ -121,7 +121,7 @@ describe("provider login on the desktop shell", () => {
   });
 
   it("googleLogin opens the shell's link flow and never builds an app:// redirect", () => {
-    googleLogin();
+    void googleLogin();
 
     expect(showLinkGate).toHaveBeenCalledTimes(1);
     expect(location.href).toBe(DESKTOP_HREF);
@@ -247,7 +247,7 @@ describe("provider login on the desktop shell", () => {
     });
 
     it("googleLogin shows the update prompt and never navigates", () => {
-      googleLogin();
+      void googleLogin();
 
       expect(showInGameAlert).toHaveBeenCalledTimes(1);
       expect(location.href).toBe(DESKTOP_HREF);
@@ -257,8 +257,9 @@ describe("provider login on the desktop shell", () => {
 });
 
 // The Android shell serves the game at the site's own origin, so the web
-// redirect works there; its bridge has no Steam and no link gate. It must log
-// in the web way, not dead-end on the Steam shell's update prompt.
+// redirect works there for Discord; its bridge has no Steam and no link gate.
+// Google refuses its redirect inside a WebView, though, so a shell too old to
+// have the native Google sheet (this one) is told to update instead.
 describe("provider login on a shell without Steam (Android)", () => {
   let location: { href: string };
 
@@ -279,13 +280,47 @@ describe("provider login on a shell without Steam (Android)", () => {
     );
   });
 
-  it("googleLogin navigates to the API's Google login, with no update prompt", () => {
-    googleLogin();
+  it("googleLogin without the native sheet shows the update prompt and never navigates", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("must not be called"));
 
-    expect(showInGameAlert).not.toHaveBeenCalled();
-    expect(location.href).toBe(
-      `https://api.openfront.dev/auth/login/google?redirect_uri=${encodeURIComponent(WEB_HREF)}`,
+    await googleLogin();
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(showInGameAlert).mock.calls[0][0]).toContain(
+      "google_sign_in_needs_update",
     );
+    expect(location.href).toBe(WEB_HREF);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("linkGoogle without the native sheet shows the update prompt and never navigates", async () => {
+    const jwt = sessionJwt();
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.endsWith("/auth/refresh")) {
+          return new Response(JSON.stringify({ jwt, expiresIn: 900 }), {
+            status: 200,
+          });
+        }
+        throw new Error(`unexpected fetch ${url}`);
+      });
+
+    await expect(linkGoogle()).resolves.toBe(true);
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(showInGameAlert).mock.calls[0][0]).toContain(
+      "google_sign_in_needs_update",
+    );
+    expect(location.href).toBe(WEB_HREF);
+    expect(
+      fetchMock.mock.calls.some(([input]) =>
+        String(input).includes("/auth/link/google"),
+      ),
+    ).toBe(false);
   });
 });
 
@@ -305,7 +340,7 @@ describe("provider login on the web", () => {
   });
 
   it("googleLogin navigates to the API's Google login with the page as redirect_uri", () => {
-    googleLogin();
+    void googleLogin();
 
     expect(location.href).toBe(
       `https://api.openfront.dev/auth/login/google?redirect_uri=${encodeURIComponent(WEB_HREF)}`,
@@ -357,5 +392,230 @@ describe("provider login on the web", () => {
     await expect(linkGoogle()).resolves.toBe(false);
 
     expect(location.href).toBe(WEB_HREF);
+  });
+});
+
+// Google in the Android app on a shell that has the native sheet
+// (window.openfrontDesktop.google.signIn). Both buttons take an ID token from
+// it and post that to the API instead of the redirect Google refuses inside a
+// WebView.
+describe("Google with the Android shell's native sheet", () => {
+  const API = "https://api.openfront.dev";
+  let location: {
+    href: string;
+    hash: string;
+    reload: ReturnType<typeof vi.fn>;
+  };
+  let signIn: ReturnType<typeof vi.fn>;
+
+  function alertKey(): string {
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    return vi.mocked(showInGameAlert).mock.calls[0][0];
+  }
+
+  // Answers /auth/refresh with a session (linking needs one) and `endpoint`
+  // with `response`; anything else fails the test.
+  function mockApi(endpoint: string, response: () => Response) {
+    const jwt = sessionJwt();
+    return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url === `${API}/auth/refresh`) {
+        return new Response(JSON.stringify({ jwt, expiresIn: 900 }), {
+          status: 200,
+        });
+      }
+      if (url === `${API}${endpoint}`) return response();
+      throw new Error(`unexpected fetch ${url}`);
+    });
+  }
+
+  function json(status: number, body: unknown): Response {
+    return new Response(JSON.stringify(body), { status });
+  }
+
+  beforeEach(() => {
+    // stubLocation's, plus the reload both successes end in.
+    location = { href: WEB_HREF, hash: "#modal=account", reload: vi.fn() };
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: location,
+    });
+    signIn = vi.fn();
+    (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
+      shell: { version: "1.0.0", api: 7, platform: "android" },
+      update: {},
+      google: { signIn },
+    };
+  });
+
+  describe("googleLogin", () => {
+    it("posts the sheet's ID token to /auth/google and reloads into the session", async () => {
+      signIn.mockResolvedValue({ status: "ok", idToken: "id-token" });
+      const fetchMock = mockApi("/auth/google", () =>
+        json(200, { jwt: sessionJwt(), expiresIn: 900 }),
+      );
+
+      await googleLogin();
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe(`${API}/auth/google`);
+      expect(init?.method).toBe("POST");
+      expect(JSON.parse(String(init?.body))).toEqual({ idToken: "id-token" });
+      // The refresh cookie it sets is what the reloaded page signs in with.
+      expect(init?.credentials).toBe("include");
+      expect(location.reload).toHaveBeenCalledTimes(1);
+      expect(location.href).toBe(WEB_HREF);
+      expect(showInGameAlert).not.toHaveBeenCalled();
+    });
+
+    it("says nothing when the player dismisses the sheet", async () => {
+      signIn.mockResolvedValue({ status: "cancelled" });
+      const fetchMock = vi.spyOn(globalThis, "fetch");
+
+      await googleLogin();
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(showInGameAlert).not.toHaveBeenCalled();
+      expect(location.reload).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["no_account", "google_sign_in_no_account"],
+      ["unavailable", "google_sign_in_unavailable"],
+      ["failed", "google_sign_in_failed"],
+    ])("explains the sheet's %s error", async (code, key) => {
+      signIn.mockResolvedValue({ status: "error", code });
+      const fetchMock = vi.spyOn(globalThis, "fetch");
+
+      await googleLogin();
+
+      expect(alertKey()).toContain(key);
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(location.reload).not.toHaveBeenCalled();
+    });
+
+    it("tells the player to sign in their usual way and link Google on email_exists", async () => {
+      signIn.mockResolvedValue({ status: "ok", idToken: "id-token" });
+      mockApi("/auth/google", () => json(409, { reason: "email_exists" }));
+      vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await googleLogin();
+
+      expect(alertKey()).toContain("login_email_exists");
+      expect(location.reload).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["a 400", () => json(400, { error: "Bad Request" })],
+      ["a 401", () => json(401, { error: "Unauthorized" })],
+      ["a 500", () => json(500, { error: "Internal" })],
+      ["a 409 with another reason", () => json(409, { reason: "other" })],
+    ])("shows the generic failure for %s", async (_label, response) => {
+      signIn.mockResolvedValue({ status: "ok", idToken: "id-token" });
+      mockApi("/auth/google", response);
+      vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await googleLogin();
+
+      expect(alertKey()).toContain("google_sign_in_failed");
+      expect(location.reload).not.toHaveBeenCalled();
+    });
+
+    it("shows the generic failure when the request never completes", async () => {
+      signIn.mockResolvedValue({ status: "ok", idToken: "id-token" });
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      await googleLogin();
+
+      expect(alertKey()).toContain("google_sign_in_failed");
+      expect(location.reload).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("linkGoogle", () => {
+    it("posts the sheet's ID token with the session and returns through link=google", async () => {
+      signIn.mockResolvedValue({ status: "ok", idToken: "id-token" });
+      const fetchMock = mockApi("/auth/google/link", () =>
+        json(200, { linked: true }),
+      );
+      const replaceState = vi
+        .spyOn(history, "replaceState")
+        .mockImplementation(() => {});
+
+      await expect(linkGoogle()).resolves.toBe(true);
+
+      const linkCall = fetchMock.mock.calls.find(
+        ([input]) => String(input) === `${API}/auth/google/link`,
+      );
+      expect(linkCall).toBeDefined();
+      const init = linkCall![1];
+      expect(init?.method).toBe("POST");
+      expect(new Headers(init?.headers).get("Authorization")).toMatch(
+        /^Bearer /,
+      );
+      expect(JSON.parse(String(init?.body))).toEqual({ idToken: "id-token" });
+      // The same `link=google` the web flow's callback returns with, which
+      // consumeLinkResult announces once the page is back.
+      expect(replaceState).toHaveBeenCalledWith(
+        null,
+        "",
+        "#modal=account&link=google",
+      );
+      expect(location.reload).toHaveBeenCalledTimes(1);
+      expect(location.href).toBe(WEB_HREF);
+      expect(showInGameAlert).not.toHaveBeenCalled();
+    });
+
+    it("says the Google account belongs to another player on already_linked", async () => {
+      signIn.mockResolvedValue({ status: "ok", idToken: "id-token" });
+      mockApi("/auth/google/link", () =>
+        json(409, { reason: "already_linked" }),
+      );
+      vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await expect(linkGoogle()).resolves.toBe(true);
+
+      expect(alertKey()).toContain("link_google_already_linked");
+      expect(location.reload).not.toHaveBeenCalled();
+    });
+
+    it("shows the generic link failure for any other refusal", async () => {
+      signIn.mockResolvedValue({ status: "ok", idToken: "id-token" });
+      mockApi("/auth/google/link", () => json(401, { error: "Unauthorized" }));
+      vi.spyOn(console, "error").mockImplementation(() => {});
+
+      await expect(linkGoogle()).resolves.toBe(true);
+
+      expect(alertKey()).toContain("link_google_error");
+      expect(location.reload).not.toHaveBeenCalled();
+    });
+
+    it("says nothing when the player dismisses the sheet", async () => {
+      signIn.mockResolvedValue({ status: "cancelled" });
+      const fetchMock = mockApi("/auth/google/link", () =>
+        json(200, { linked: true }),
+      );
+
+      await expect(linkGoogle()).resolves.toBe(true);
+
+      expect(
+        fetchMock.mock.calls.some(([input]) =>
+          String(input).includes("/auth/google/link"),
+        ),
+      ).toBe(false);
+      expect(showInGameAlert).not.toHaveBeenCalled();
+    });
+
+    // The caller answers false with "couldn't start Google linking"; the
+    // sheet must not open for a player with no account to link it to.
+    it("returns false without opening the sheet when logged out", async () => {
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"));
+
+      await expect(linkGoogle()).resolves.toBe(false);
+
+      expect(signIn).not.toHaveBeenCalled();
+    });
   });
 });
