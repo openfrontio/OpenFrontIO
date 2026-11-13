@@ -2,12 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getUserMe = vi.fn();
 const donateToClan = vi.fn();
+const fetchClanFundTransfers = vi.fn();
 
 vi.mock("../../../src/client/Api", () => ({
   getUserMe: (...args: unknown[]) => getUserMe(...args),
 }));
 vi.mock("../../../src/client/ClanApi", () => ({
   donateToClan: (...args: unknown[]) => donateToClan(...args),
+  fetchClanFundTransfers: (...args: unknown[]) =>
+    fetchClanFundTransfers(...args),
 }));
 vi.mock("../../../src/client/Utils", () => ({
   translateText: vi.fn(
@@ -51,6 +54,7 @@ describe("clan-donate-dialog", () => {
       player: { publicId: "me", currency: { soft: 1000, hard: 25 } },
     });
     donateToClan.mockReset();
+    fetchClanFundTransfers.mockResolvedValue({ error: "unavailable" });
     dialog = document.createElement("clan-donate-dialog") as ClanDonateDialog;
     dialog.clanTag = "TST";
     document.body.appendChild(dialog);
@@ -111,6 +115,60 @@ describe("clan-donate-dialog", () => {
     expect(document.body.textContent).toContain(
       "clan_modal.donate_irreversible_hard",
     );
+  });
+
+  it("keeps the never-returned wording while clan fund payouts are off", async () => {
+    currencyButton("hard").click();
+    await flush(dialog);
+    const text = document.body.textContent ?? "";
+    expect(text).not.toContain("donate_irreversible_payouts");
+    expect(text).not.toContain("donate_irreversible_hard_payouts");
+  });
+
+  it("uses wording true either way while the payouts status is unknown", async () => {
+    dialog.remove();
+    fetchClanFundTransfers.mockResolvedValue({ error: "failed" });
+    dialog = document.createElement("clan-donate-dialog") as ClanDonateDialog;
+    dialog.clanTag = "TST";
+    document.body.appendChild(dialog);
+    await flush(dialog);
+    currencyButton("hard").click();
+    await flush(dialog);
+    const text = document.body.textContent ?? "";
+    expect(text).toContain("clan_modal.donate_irreversible_payouts");
+    expect(text).toContain("clan_modal.donate_irreversible_hard_neutral");
+    expect(text).not.toContain("clan_modal.donate_irreversible_hard_payouts");
+    expect(text).not.toMatch(/donate_irreversible_hard(?!_)/);
+  });
+
+  it("says the leader can send Plutonium on once clan fund payouts are on", async () => {
+    dialog.remove();
+    fetchClanFundTransfers.mockResolvedValue({
+      results: [],
+      total: 0,
+      page: 1,
+      limit: 1,
+      status: { enabled: true },
+    });
+    dialog = document.createElement("clan-donate-dialog") as ClanDonateDialog;
+    dialog.clanTag = "TST";
+    document.body.appendChild(dialog);
+    await flush(dialog);
+    expect(fetchClanFundTransfers).toHaveBeenCalledWith("TST", { limit: 1 });
+
+    // Caps can't be paid out, so the soft wording is unchanged.
+    expect(document.body.textContent).toContain(
+      "clan_modal.donate_irreversible",
+    );
+    expect(document.body.textContent).not.toContain(
+      "donate_irreversible_payouts",
+    );
+
+    currencyButton("hard").click();
+    await flush(dialog);
+    const text = document.body.textContent ?? "";
+    expect(text).toContain("clan_modal.donate_irreversible_payouts");
+    expect(text).toContain("clan_modal.donate_irreversible_hard_payouts");
   });
 
   it("disables Donate until a valid amount is entered", async () => {
