@@ -60,6 +60,10 @@ export class TabAttention {
       return;
     }
     if (kind === this.expiredKind) return;
+    // A different need gets its own full run, rather than inheriting whatever
+    // is left of the previous kind's limit (which could be a second or less).
+    // The same kind keeps its deadline so repeated requests can't extend it.
+    if (kind !== this.kind) this.startedAt = Date.now();
     this.kind = kind;
     this.listen();
     this.preparePngIcon();

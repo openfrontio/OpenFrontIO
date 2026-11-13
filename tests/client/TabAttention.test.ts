@@ -150,6 +150,38 @@ describe("TabAttention", () => {
     expect(document.title).toBe("OpenFront");
   });
 
+  it("gives a different kind its own two minutes when it replaces a run that is nearly over", () => {
+    setHidden(true);
+    attention.request("starting");
+    vi.advanceTimersByTime(119 * 1000);
+
+    // The game starts a second before the starting run would have ended.
+    attention.request("spawn");
+    // Well past the old deadline, spawn must still be flashing...
+    vi.advanceTimersByTime(30 * 1000);
+    const titles = new Set<string>();
+    for (let i = 0; i < 4; i++) {
+      titles.add(document.title);
+      vi.advanceTimersByTime(250);
+    }
+    expect(titles.has("tab_attention.pick_spawn")).toBe(true);
+
+    // ...and it still ends after its own two minutes.
+    vi.advanceTimersByTime(2 * 60 * 1000);
+    expect(document.title).toBe("OpenFront");
+    expect(iconHref()).toBe(ORIGINAL_HREF);
+  });
+
+  it("keeps the deadline when the same kind is requested again", () => {
+    setHidden(true);
+    attention.request("spawn");
+    vi.advanceTimersByTime(119 * 1000);
+    attention.request("spawn");
+    vi.advanceTimersByTime(2 * 1000);
+    expect(document.title).toBe("OpenFront");
+    expect(iconHref()).toBe(ORIGINAL_HREF);
+  });
+
   it("allows a new two-minute period after the need is released", () => {
     setHidden(true);
     attention.request("spawn");
