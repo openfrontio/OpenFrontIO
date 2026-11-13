@@ -9,6 +9,11 @@
     <title data-i18n="main.title">OpenFront (ALPHA)</title>
     <link rel="manifest" href="<%- manifestHref %>" />
     <link rel="icon" type="image/svg+xml" href="<%- faviconHref %>" />
+    <!-- iOS takes its home-screen icon from here before the manifest. Without it
+         it picks the manifest's "any" icon and fills its transparent rounded
+         corners with white; iOS rounds the corners itself, so use the
+         full-bleed one. -->
+    <link rel="apple-touch-icon" href="<%- appleTouchIconHref %>" />
 
     <!-- Preload styles -->
     <style>
@@ -203,9 +208,11 @@
       };
       // Set here rather than from the bundle so the first paint already has the
       // desktop layout. The shell's preload defines openfrontDesktop before
-      // any page script runs. ?desktop-layout previews it outside prod.
+      // any page script runs. Steam only (isSteamShell): the Android app
+      // defines it too, and lays out the way the site does in a mobile browser.
+      // ?desktop-layout previews it outside prod.
       if (
-        window.openfrontDesktop ||
+        (window.openfrontDesktop && window.openfrontDesktop.steam) ||
         (window.BOOTSTRAP_CONFIG.gameEnv !== "prod" &&
           new URLSearchParams(location.search).has("desktop-layout"))
       ) {
@@ -406,9 +413,10 @@
       data-i18n-aria-label="main.menu"
     ></mobile-nav-bar>
 
-    <!-- MAIN CONTENT AREA -->
+    <!-- MAIN CONTENT AREA (shrink-0 while a page is open: ad creatives inject
+         in-flow siblings into <body>, which would squeeze the page otherwise) -->
     <div
-      class="in-[.in-game]:hidden flex-1 basis-full min-w-0 min-h-dvh in-[.page-open]:min-h-0 in-[.page-open]:overflow-hidden relative pt-[var(--top-ad-pad,0px)] in-[.page-open]:pt-[var(--top-ad-height,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
+      class="in-[.in-game]:hidden flex-1 basis-full min-w-0 min-h-dvh in-[.page-open]:min-h-0 in-[.page-open]:shrink-0 in-[.page-open]:overflow-hidden relative pt-[var(--top-ad-pad,0px)] in-[.page-open]:pt-[var(--top-ad-height,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
     >
       <!-- Desktop Top Bar (sticky so it stays visible while the page scrolls,
            offset below the header ad when one is showing; static while an
@@ -542,9 +550,10 @@
     <!-- Game components -->
     <div id="app"></div>
 
-    <!-- Bottom HUD: <sm=column, sm..lg=2col (HUD left | events right), lg+=3col grid centered -->
+    <!-- Bottom HUD: <sm=column, sm..lg=2col (HUD left | events right; flipped on
+         landscape phones so the events are on the left), lg+=3col grid centered -->
     <div
-      class="fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:flex-row sm:items-end lg:grid lg:grid-cols-[1fr_500px_1fr] lg:items-end min-[1200px]:px-4"
+      class="fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:flex-row sm:max-lg:landscape:flex-row-reverse sm:items-end lg:grid lg:grid-cols-[1fr_500px_1fr] lg:items-end min-[1200px]:px-4"
       style="
         padding-bottom: env(safe-area-inset-bottom);
         padding-left: env(safe-area-inset-left);
@@ -561,17 +570,31 @@
         <tutorial-panel
           class="hidden w-full order-3 sm:order-none"
         ></tutorial-panel>
+        <!-- The unit bar is a row below the control panel from lg up, a row
+             above it on landscape phones, and a column fixed to the right edge
+             below lg in portrait (side-bar). The blur is off there: a
+             backdrop-filter would pin the fixed bar to this panel instead of
+             the screen.
+             The panel runs on into the safe-area insets around it (home
+             indicator, notch) so its content reaches the screen edge. Only on
+             the edges it touches: left below lg (right instead on landscape
+             phones), right below sm, the bottom until it floats from 1200px. -->
         <div
-          class="pointer-events-auto bg-gray-800/92 backdrop-blur-sm sm:rounded-tr-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none z-10"
+          class="flex flex-col pointer-events-auto bg-gray-800/92 backdrop-blur-sm side-bar:backdrop-blur-none sm:rounded-tr-lg sm:max-lg:landscape:rounded-tr-none sm:max-lg:landscape:rounded-tl-lg lg:rounded-t-lg min-[1200px]:rounded-lg shadow-lg order-3 sm:order-none z-10 max-[1200px]:-mb-[env(safe-area-inset-bottom)] max-lg:-ml-[env(safe-area-inset-left)] sm:max-lg:landscape:ml-0 max-sm:-mr-[env(safe-area-inset-right)] sm:max-lg:landscape:-mr-[env(safe-area-inset-right)]"
         >
           <control-panel class="w-full"></control-panel>
-          <unit-display class="block w-full"></unit-display>
+          <unit-display
+            class="block w-full max-lg:landscape:order-first side-bar:w-auto side-bar:fixed side-bar:top-1/2 side-bar:-translate-y-1/2 side-bar:right-[env(safe-area-inset-right)]"
+          ></unit-display>
         </div>
       </div>
 
-      <!-- events+chat: <sm between attacks and control (order-2), sm+ right side, lg+ col-3 -->
+      <!-- events+chat: <sm between attacks and control (order-2), sm+ right side, lg+ col-3.
+           sm and up in portrait below lg they clear the unit bar on the right edge.
+           On landscape phones they're on the left, run into the safe-area insets
+           like the control panel. -->
       <div
-        class="flex flex-col pointer-events-none items-end order-2 sm:order-none sm:flex-1 lg:col-start-3 lg:self-end lg:justify-end"
+        class="flex flex-col pointer-events-none items-end order-2 sm:order-none sm:flex-1 sm:side-bar:pr-9 sm:max-lg:landscape:items-start sm:max-lg:landscape:-ml-[env(safe-area-inset-left)] sm:max-lg:landscape:-mb-[env(safe-area-inset-bottom)] lg:col-start-3 lg:self-end lg:justify-end"
       >
         <chat-display
           class="w-full sm:w-auto pointer-events-auto"
@@ -592,6 +615,17 @@
     <onboarding-overlay></onboarding-overlay>
     <new-lobby-prompt></new-lobby-prompt>
     <game-starting-modal></game-starting-modal>
+    <!-- Stops iOS blurring the top of the screen in-game. WebKit (iOS 26)
+         blurs the content under the status bar unless the element at the
+         top centre is a fixed, full-width bar over 10px tall with a
+         background colour; it then tints the status bar with that colour
+         instead, blended over the page background when it's translucent.
+         In a game the top centre is otherwise only the map's input overlay,
+         so the map and HUD there blurred. This one is all but transparent,
+         and above the top HUD so the HUD's backdrop blur isn't picked up. -->
+    <div
+      class="hidden in-[.in-game]:block fixed top-0 inset-x-0 z-[1100] h-[calc(env(safe-area-inset-top)+12px)] bg-neutral-800/1 pointer-events-none"
+    ></div>
     <!-- Top HUD: below lg each piece is fixed on its own. From lg, where the
          leaderboard opens by default, they share one row, leaderboard | card |
          sidebar: the card is centered when it fits and shifts right or narrows
@@ -606,6 +640,8 @@
         class="lg:col-start-2 lg:min-w-0"
       ></player-info-overlay>
       <div
+        id="game-right-hud"
+        style="margin-top: var(--game-health-offset, 0px)"
         class="flex flex-col items-end gap-2 max-lg:fixed max-lg:top-0 max-lg:right-0 max-lg:z-1000 lg:col-start-3 lg:justify-self-end lg:pointer-events-auto"
       >
         <game-right-sidebar></game-right-sidebar>

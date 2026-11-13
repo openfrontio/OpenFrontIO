@@ -1,4 +1,4 @@
-import { html, LitElement, TemplateResult } from "lit";
+import { html, LitElement, type PropertyValues, TemplateResult } from "lit";
 import { property, query, state } from "lit/decorators.js";
 import { modalRouter } from "../ModalRouter";
 import "./baseComponents/Modal";
@@ -127,7 +127,8 @@ export abstract class BaseModal extends LitElement {
     return this;
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     // Default the active tab so the highlight is correct on first render,
     // before open() runs (matters for inline modals rendered on page mount).
     const tabs = this.modalConfig().tabs ?? [];

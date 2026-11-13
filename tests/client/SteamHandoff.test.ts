@@ -53,7 +53,7 @@ describe("steamHandoffMode", () => {
   });
 
   it("never hands off from inside the desktop shell", () => {
-    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {};
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = { steam: {} };
     expect(steamHandoffMode(settings("steam", true), "")).toBe("none");
   });
 

@@ -225,6 +225,7 @@ export class PlayerExecution implements Execution {
       clusterRemoved,
       areas?.clusterTileTIds ?? [],
       areas?.territoryAreas ?? [0],
+      areas?.territoryFallout ?? [false],
       areas?.maxTerritoryArea ?? 0,
     );
   }
@@ -272,6 +273,7 @@ export class PlayerExecution implements Execution {
     clusterRemoved: Uint8Array,
     clusterTileTIds: Int32Array[],
     territoryAreas: number[],
+    territoryFallout: boolean[],
     maxTerritoryArea: number,
   ): void {
     this.clusterTerritoryIds = null;
@@ -294,6 +296,7 @@ export class PlayerExecution implements Execution {
           maxTerritoryArea,
           clusterTileTIds[i],
           territoryAreas,
+          territoryFallout,
         );
       }
     } finally {
@@ -320,6 +323,8 @@ export class PlayerExecution implements Execution {
     start: TileRef,
     tGen: number,
     areaGen: number,
+    tId: number,
+    territoryFallout: boolean[],
   ): number {
     const map = this.map;
     const mySmallID = this.player.smallID();
@@ -330,6 +335,7 @@ export class PlayerExecution implements Execution {
     const stack = state.stack;
     stack.length = 0;
     stack.push(start);
+    let metFallout = false;
     let size = 0;
     while (stack.length > 0) {
       const seed = stack.pop()!;
@@ -354,24 +360,38 @@ export class PlayerExecution implements Execution {
       }
       for (let t = l; t <= r; t++) visited[t] = tGen;
       size += r - l + 1;
-      if (rowStart > 0) this.seedSpan(l - w, r - w, mySmallID, areaGen);
-      if (rowStart < lastRow) this.seedSpan(l + w, r + w, mySmallID, areaGen);
+      // Only unowned land carries fallout, so the run's ends and the rows
+      // seeded below cover every neighbor that can.
+      metFallout ||=
+        (l > rowStart && map.hasFallout(l - 1)) ||
+        (r < rowEnd && map.hasFallout(r + 1));
+      if (rowStart > 0) {
+        metFallout =
+          this.seedSpan(l - w, r - w, mySmallID, areaGen) || metFallout;
+      }
+      if (rowStart < lastRow) {
+        metFallout =
+          this.seedSpan(l + w, r + w, mySmallID, areaGen) || metFallout;
+      }
     }
+    territoryFallout[tId] = metFallout;
     return size;
   }
 
   // Pushes the first tile of each unstamped run of our tiles in [from, to].
+  // Returns whether any of the other tiles has fallout.
   private seedSpan(
     from: TileRef,
     to: TileRef,
     mySmallID: number,
     areaGen: number,
-  ): void {
+  ): boolean {
     const map = this.map;
     const state = this.traversalState();
     const visited = state.visited;
     const stack = state.stack;
     let inRun = false;
+    let metFallout = false;
     for (let t = from; t <= to; t++) {
       if (visited[t] < areaGen && map.ownerID(t) === mySmallID) {
         if (!inRun) {
@@ -380,14 +400,17 @@ export class PlayerExecution implements Execution {
         }
       } else {
         inRun = false;
+        metFallout ||= map.hasFallout(t);
       }
     }
+    return metFallout;
   }
 
   private floodTerritoryAreas(clusters: readonly TileRef[][]): {
     clusterSizes: Int32Array;
     clusterTileTIds: Int32Array[];
     territoryAreas: number[];
+    territoryFallout: boolean[];
     maxTerritoryArea: number;
   } {
     const map = this.map;
@@ -395,6 +418,7 @@ export class PlayerExecution implements Execution {
     const clusterSizes = new Int32Array(clusters.length);
     const clusterTileTIds = new Array<Int32Array>(clusters.length);
     const territoryAreas = [0];
+    const territoryFallout = [false];
     let maxTerritoryArea = 0;
     const state = this.traversalState();
     const areaGen = this.bumpGenerations(clusters.length * 4 + 16);
@@ -419,14 +443,26 @@ export class PlayerExecution implements Execution {
         tileTIds[j] = tId;
         const tGen = areaGen + tId - 1;
         while (state.gen < tGen && state.gen >= areaGen) this.bumpGeneration();
-        const size = this.floodComponent(t, tGen, areaGen);
+        const size = this.floodComponent(
+          t,
+          tGen,
+          areaGen,
+          tId,
+          territoryFallout,
+        );
         territoryAreas[tId] = size;
         if (size > maxCluster) maxCluster = size;
       }
       clusterSizes[i] = maxCluster;
       if (maxCluster > maxTerritoryArea) maxTerritoryArea = maxCluster;
     }
-    return { clusterSizes, clusterTileTIds, territoryAreas, maxTerritoryArea };
+    return {
+      clusterSizes,
+      clusterTileTIds,
+      territoryAreas,
+      territoryFallout,
+      maxTerritoryArea,
+    };
   }
 
   private findLargestClusterIndex(
@@ -494,6 +530,7 @@ export class PlayerExecution implements Execution {
     maxTerritoryArea: number,
     tileTIds?: Int32Array,
     territoryAreas?: readonly number[],
+    territoryFallout?: readonly boolean[],
   ): void {
     if (!this.player.isAlive()) return;
     const map = this.map;
@@ -503,9 +540,15 @@ export class PlayerExecution implements Execution {
     const visited = state.visited;
     for (let j = 0; j < cluster.length; j++) {
       if (!this.player.isAlive()) break;
-      if (tileTIds && territoryAreas) {
+      if (tileTIds && territoryAreas && territoryFallout) {
         const tId = tileTIds[j];
-        if (tId !== 0 && territoryAreas[tId] >= maxTerritoryArea) {
+        // The tile's component now lies within its territory, which this
+        // pass only shrinks (owned tiles never carry fallout), so a
+        // territory clear of fallout has no candidate in it.
+        if (
+          tId !== 0 &&
+          (territoryAreas[tId] >= maxTerritoryArea || !territoryFallout[tId])
+        ) {
           continue;
         }
       }
@@ -657,24 +700,46 @@ export class PlayerExecution implements Execution {
     if (start === undefined || map.ownerID(start) !== myOwner) {
       return;
     }
-    visited[start] = floodGen;
-    stack.push(start);
     clusterTerritoryIds[startIdx] = territoryId;
-
+    // Scanline fill of the 8-way component: a row run's diagonal neighbors
+    // reach one tile past each end in the rows above and below.
+    const clusterIndexMap = state.clusterIndexMap;
+    const w = map.width();
+    const lastRow = (map.height() - 1) * w;
+    stack.push(start);
     while (stack.length > 0) {
-      const tile = stack.pop()!;
-      const numNeighbors = map.neighbors8(tile, this.nbuf8);
-      for (let nIdx = 0; nIdx < numNeighbors; nIdx++) {
-        const n = this.nbuf8[nIdx];
-        if (visited[n] === floodGen) continue;
-        if (map.ownerID(n) === myOwner) {
-          visited[n] = floodGen;
-          stack.push(n);
-          const cIdxPlusOne = state.clusterIndexMap[n];
-          if (cIdxPlusOne > 0) {
-            clusterTerritoryIds[cIdxPlusOne - 1] = territoryId;
-          }
+      const seed = stack.pop()!;
+      if (visited[seed] >= floodGen) continue;
+      const rowStart = seed - (seed % w);
+      const rowEnd = rowStart + w - 1;
+      let l = seed;
+      while (
+        l > rowStart &&
+        visited[l - 1] < floodGen &&
+        map.ownerID(l - 1) === myOwner
+      ) {
+        l--;
+      }
+      let r = seed;
+      while (
+        r < rowEnd &&
+        visited[r + 1] < floodGen &&
+        map.ownerID(r + 1) === myOwner
+      ) {
+        r++;
+      }
+      for (let t = l; t <= r; t++) {
+        visited[t] = floodGen;
+        const cIdxPlusOne = clusterIndexMap[t];
+        if (cIdxPlusOne > 0) {
+          clusterTerritoryIds[cIdxPlusOne - 1] = territoryId;
         }
+      }
+      const from = l > rowStart ? l - 1 : l;
+      const to = r < rowEnd ? r + 1 : r;
+      if (rowStart > 0) this.seedSpan(from - w, to - w, myOwner, floodGen);
+      if (rowStart < lastRow) {
+        this.seedSpan(from + w, to + w, myOwner, floodGen);
       }
     }
   }

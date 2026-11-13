@@ -60,6 +60,12 @@ const IGNORED_UNUSED_KEY_PATTERNS: RegExp[] = [
   // out of resources/lang/*.json and emits per-language files next to that
   // page. They live here so Crowdin picks them up like any other string.
   /^desktop_gate\./,
+  // The clan map page. It's served by the API (infra repo) inside a frame,
+  // so there is no translateText() call here either: ClanMapView sends every
+  // clan_map.* template to the frame (translationTemplates), which formats
+  // them itself. They live here so Crowdin picks them up like any other
+  // string.
+  /^clan_map\./,
 ];
 
 type NestedTranslations = Record<string, unknown>;

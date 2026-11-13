@@ -46,7 +46,7 @@ describe("page-footer version line", () => {
   });
 
   it("renders the game version alone when the shell reports no version", async () => {
-    window.openfrontDesktop = {};
+    window.openfrontDesktop = { steam: {} };
     await mount();
 
     const line = footer.querySelector(".footer-version");
@@ -55,6 +55,7 @@ describe("page-footer version line", () => {
 
   it("appends the shell version inside the desktop shell", async () => {
     window.openfrontDesktop = {
+      steam: {},
       version: () => Promise.resolve("0.2.0"),
     };
     await mount();
@@ -79,7 +80,7 @@ describe("page-footer version line", () => {
       instanceId: "test",
       gitCommit: SHA,
     };
-    window.openfrontDesktop = {};
+    window.openfrontDesktop = { steam: {} };
     await mount();
 
     const line = footer.querySelector(".footer-version");
@@ -90,6 +91,7 @@ describe("page-footer version line", () => {
   // the game version alone rather than render a broken label.
   it("falls back to the game version when the bridge rejects", async () => {
     window.openfrontDesktop = {
+      steam: {},
       version: () => Promise.reject(new Error("boom")),
     };
     await mount();

@@ -24,7 +24,7 @@ function reachability(reachable: boolean) {
 
 beforeEach(() => {
   vi.resetAllMocks();
-  window.openfrontDesktop = {};
+  window.openfrontDesktop = { steam: {} };
   vi.mocked(getDesktopSessionState).mockReturnValue({
     status: "signed-out",
     reason: "network",

@@ -11,6 +11,7 @@ import type { RenderSettings } from "../RenderSettings";
 import { getPaletteSize, MAX_TRAIL_COLORS } from "../utils/ColorUtils";
 import { createMapQuad, createProgram, shaderSrc } from "../utils/GlUtils";
 import { TILE_DEFINES } from "../utils/TileCodec";
+import { TileScatterPass } from "./TileScatterPass";
 
 import overlayVertSrc from "../shaders/map-overlay/overlay.vert.glsl?raw";
 import trailFragSrc from "../shaders/map-overlay/trail.frag.glsl?raw";
@@ -34,11 +35,13 @@ export class TrailPass {
   private effectTex: WebGLTexture;
   private affiliationTex: WebGLTexture | null = null;
   private altView = false;
+  private scatter: TileScatterPass;
   // Anchor animation time at construction (like NukeTelegraphPass/SamRadiusPass)
   // so the value stays small and sin()/fract() don't quantize over long sessions.
   private readonly startTime = performance.now();
 
   private trailsDirty = false;
+  private fullUploadPending = false;
 
   /**
    * Reference to the caller-owned trail state (R16UI: 0=none, owner in bits
@@ -51,6 +54,10 @@ export class TrailPass {
   /** Dirty row range for partial trail upload. Infinity/-1 = full upload. */
   private dirtyRowMin = Infinity;
   private dirtyRowMax = -1;
+
+  /** Row span of currently queued scatter points to merge into row uploads on fallback. */
+  private scatterRowMin = Infinity;
+  private scatterRowMax = -1;
 
   constructor(
     gl: WebGL2RenderingContext,
@@ -68,6 +75,7 @@ export class TrailPass {
     this.trailTex = trailTex;
     this.paletteTex = paletteTex;
     this.effectTex = effectTex;
+    this.scatter = new TileScatterPass(gl, mapW, mapH, trailTex);
 
     this.program = createProgram(
       gl,
@@ -94,9 +102,12 @@ export class TrailPass {
     this.vao = createMapQuad(gl, mapW, mapH);
   }
 
+  /** Toggle alternate view mode (hides boat trails). */
   setAltView(active: boolean): void {
     this.altView = active;
   }
+
+  /** Set the dynamic affiliation texture (friendly/embargo status). */
   setAffiliationTex(tex: WebGLTexture): void {
     this.affiliationTex = tex;
   }
@@ -109,19 +120,58 @@ export class TrailPass {
   setLiveRef(trailState: Uint16Array): void {
     this.liveTrailRef = trailState;
     this.trailsDirty = true;
+    this.fullUploadPending = true;
+    this.dirtyRowMin = Infinity;
+    this.dirtyRowMax = -1;
+    this.scatter.clear();
+    this.scatterRowMin = Infinity;
+    this.scatterRowMax = -1;
   }
 
-  /** Live trail delta: update live ref + accept dirty row range from TrailManager. */
+  /** Live trail delta: update live ref + accept dirty row range or tile list from TrailManager. */
   applyLiveDelta(
     trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
+    changedTiles?: readonly number[],
   ): void {
     this.liveTrailRef = trailState;
+    const isRowUploadPending = this.dirtyRowMax >= 0;
+
+    // Sparse scatter path only runs when no full or row upload is already pending;
+    // consecutive sparse deltas accumulate in the scatter queue up to the threshold.
+    if (
+      !this.fullUploadPending &&
+      !isRowUploadPending &&
+      changedTiles &&
+      changedTiles.length > 0 &&
+      this.scatter.count + changedTiles.length < 8192
+    ) {
+      for (let i = 0; i < changedTiles.length; i++) {
+        const ref = changedTiles[i];
+        const x = ref % this.mapW;
+        const y = (ref - x) / this.mapW;
+        this.scatter.push(x, y, trailState[ref]);
+        if (y < this.scatterRowMin) this.scatterRowMin = y;
+        if (y > this.scatterRowMax) this.scatterRowMax = y;
+      }
+      this.trailsDirty = true;
+      return;
+    }
+
+    // A row or full upload supersedes any sparse scatter points.
+    // If scatter points were previously queued from earlier ticks in this frame,
+    // merge their row span into the dirty row range so those rows are preserved
+    // without forcing an expensive full map texture upload.
+    if (this.scatter.count > 0 && this.scatterRowMax >= 0) {
+      this.dirtyRowMin = Math.min(this.dirtyRowMin, this.scatterRowMin);
+      this.dirtyRowMax = Math.max(this.dirtyRowMax, this.scatterRowMax);
+    }
+    this.scatter.clear();
+    this.scatterRowMin = Infinity;
+    this.scatterRowMax = -1;
     if (dirtyRowMax >= 0) {
-      const isFullUploadPending = this.trailsDirty && this.dirtyRowMax < 0;
-      // If a full upload is already pending, don't narrow the bounds to the delta
-      if (!isFullUploadPending) {
+      if (!this.fullUploadPending) {
         this.dirtyRowMin = Math.min(this.dirtyRowMin, dirtyRowMin);
         this.dirtyRowMax = Math.max(this.dirtyRowMax, dirtyRowMax);
       }
@@ -132,6 +182,15 @@ export class TrailPass {
   /** Flush trail texture to GPU. Called once per render frame in uploadTextures. */
   flushTexture(): void {
     if (!this.trailsDirty) return;
+
+    if (this.scatter.count > 0) {
+      this.scatter.flush();
+      this.scatterRowMin = Infinity;
+      this.scatterRowMax = -1;
+      this.trailsDirty = false;
+      return;
+    }
+
     const src = this.liveTrailRef;
     if (src === null) return; // dirty is only ever set alongside the ref
     const gl = this.gl;
@@ -154,7 +213,7 @@ export class TrailPass {
         gl.UNSIGNED_SHORT,
         src.subarray(offset, offset + rowCount * this.mapW),
       );
-    } else {
+    } else if (this.fullUploadPending) {
       // Full upload (first tick, seek, replay, etc.)
       gl.texSubImage2D(
         gl.TEXTURE_2D,
@@ -169,6 +228,7 @@ export class TrailPass {
       );
     }
 
+    this.fullUploadPending = false;
     this.dirtyRowMin = Infinity;
     this.dirtyRowMax = -1;
     this.trailsDirty = false;
@@ -205,5 +265,6 @@ export class TrailPass {
     const gl = this.gl;
     gl.deleteProgram(this.program);
     gl.deleteVertexArray(this.vao);
+    this.scatter.dispose();
   }
 }
