@@ -289,7 +289,7 @@ export const GameConfigSchema = z.object({
       select: (v) => (typeof v === "number" ? 0 : 1),
     },
   ),
-  bots: zb.uint({ max: 400 }),
+  bots: zb.uint({ max: 1000 }),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),

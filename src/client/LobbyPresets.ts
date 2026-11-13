@@ -19,7 +19,7 @@ export const LobbyPresetConfigSchema = z.object({
   difficulty: z.enum(Difficulty),
   gameMode: z.enum(GameMode),
   teamCount: TeamCountConfigSchema,
-  bots: z.number().int().min(0).max(400),
+  bots: z.number().int().min(0).max(1000),
   nations: z
     .union([
       z.number().int().min(0).max(400),

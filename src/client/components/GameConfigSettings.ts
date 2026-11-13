@@ -586,13 +586,20 @@ export class GameConfigSettings extends LitElement {
               >
                 <fluent-slider
                   min="0"
-                  max="400"
+                  max="1000"
                   step="1"
                   .value=${settings.options.bots.value}
                   labelKey=${settings.options.bots.labelKey}
                   disabledKey=${settings.options.bots.disabledKey}
                   @value-changed=${this.handleBotsChanged}
                 ></fluent-slider>
+                ${
+                  settings.options.bots.value > 400
+                    ? html`<p class="mt-2 text-xs text-amber-300 text-center">
+                        ${translateText("game_settings.bots_high_warning")}
+                      </p>`
+                    : nothing
+                }
               </div>
 
               ${

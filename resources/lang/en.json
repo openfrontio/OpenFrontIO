@@ -1336,6 +1336,7 @@
   },
   "game_settings": {
     "bots": "Tribes: ",
+    "bots_high_warning": "High tribe counts (>400) may cause lag on lower-end devices.",
     "compact_map": "Compact Map",
     "custom_alliances": "Alliance Duration",
     "disable_units": "Disable Units",
