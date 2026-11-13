@@ -25,6 +25,8 @@ vi.mock("../../../src/client/ClanApi", () => ({
     page: 1,
     limit: 10,
   })),
+  // An API without clan fund transfers: the Transfers tab stays hidden.
+  fetchClanFundTransfers: vi.fn(async () => ({ error: "unavailable" })),
 }));
 
 // ─── Imports under test ──────────────────────────────────────────────────────
