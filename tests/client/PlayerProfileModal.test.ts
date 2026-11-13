@@ -148,7 +148,6 @@ describe("public player profile route", () => {
         games: 40,
         wins: 5,
         peak: 1700,
-        globalPosition: 160,
       },
     });
     history.replaceState(null, "", "/#modal=profile&publicID=bob");
