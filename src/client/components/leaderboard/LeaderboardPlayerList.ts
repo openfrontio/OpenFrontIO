@@ -807,7 +807,7 @@ export class LeaderboardPlayerList extends LitElement {
               >
               <span
                 class="text-[10px] uppercase text-blue-200/80 font-bold tracking-wider"
-                >&#x200b;${translateText("leaderboard_modal.ratio")}</span
+                >${translateText("leaderboard_modal.ratio")}</span
               >
             </div>
           </td>
@@ -1117,7 +1117,7 @@ export class LeaderboardPlayerList extends LitElement {
             }"
             @click=${() => this.selectAllFfaRanks()}
             @keydown=${(event: KeyboardEvent) =>
-              this.handleRankTabKey(event, "all" as never)}
+              this.handleRankTabKey(event, "all")}
           >
             ${emblem("all", "w-5 h-5 sm:w-7 sm:h-7 object-contain")}
             <span class="w-full truncate text-center text-[10px] font-bold"
@@ -1438,7 +1438,11 @@ export class LeaderboardPlayerList extends LitElement {
           }"
         >
           ${ratingLive ? this.renderSeasonLabel() : nothing}
-          ${ratingLive ? this.renderRankTabs() : nothing}
+          ${
+            ratingLive && (this.ffaRank !== null || this.ffaAllRanks)
+              ? this.renderRankTabs()
+              : nothing
+          }
           <div
             class="scroll-container ${
               ratingLive ? "flex-1 min-h-0" : "h-full"
@@ -1448,7 +1452,7 @@ export class LeaderboardPlayerList extends LitElement {
             <table class="w-full text-sm border-collapse table-fixed">
               <colgroup>
                 <col style="width: 4rem" />
-                <col style="width: 16rem" />
+                <col style="width: ${ratingLive ? "16rem" : "12rem"}" />
                 ${
                   ratingLive
                     ? html`<col class="w-32 sm:w-60" />`
