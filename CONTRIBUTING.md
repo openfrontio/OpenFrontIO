@@ -138,6 +138,15 @@ All new features and bug fixes should include relevant tests. We use **Vitest**.
    - Include screenshots for UI changes.
    - Describe what testing you've performed.
    - Be responsive to feedback and requested changes.
+4. **Comment `/ready`** when the PR is ready for review (see below).
+
+### Getting Your PR Reviewed
+
+Maintainers review PRs from the `ready-for-review` queue. A PR without that label is treated as still in progress, so it won't be reviewed until you add it:
+
+1. When your PR is complete and CI passes, comment `/ready` on it. This adds the `ready-for-review` label. Draft PRs can't be marked ready: click **Ready for review** on the PR first, then comment `/ready`.
+2. If a maintainer requests changes, the label is removed automatically. Push your fixes, reply to the review comments, then comment `/ready` again. Pushing new commits does **not** put the PR back in the queue on its own.
+3. Converting the PR back to a draft also removes the label. Comment `/unready` to remove it yourself.
 
 ### PR Checklist
 
@@ -149,6 +158,7 @@ Before submitting, ensure you have:
 - [ ] Added/Updated tests in the `tests/` directory.
 - [ ] Verified that `npm test` passes.
 - [ ] Provided your Discord username in the PR description for communication.
+- [ ] Commented `/ready` once the PR is ready for review.
 
 ## Communication
 
