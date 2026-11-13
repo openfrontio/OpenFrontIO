@@ -3,7 +3,7 @@
   "id": "Paris",
   "name": "Paris",
   "translation_key": "map.paris",
-  "categories": ["europe", "new"],
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [1702, 321],
