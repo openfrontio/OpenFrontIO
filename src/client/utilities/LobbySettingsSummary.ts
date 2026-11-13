@@ -308,7 +308,7 @@ export function hostCheatsList(c: GameConfig): string[] {
     cheats.push(translateText("game_settings.infinite_gold"));
   if (hc.infiniteTroops)
     cheats.push(translateText("game_settings.infinite_troops"));
-  if (hc.goldMultiplier && hc.goldMultiplier !== 1)
+  if (hc.goldMultiplier && hc.goldMultiplier !== (c.goldMultiplier ?? 1))
     cheats.push(
       `${translateText("game_settings.gold_multiplier")}: x${hc.goldMultiplier}`,
     );
