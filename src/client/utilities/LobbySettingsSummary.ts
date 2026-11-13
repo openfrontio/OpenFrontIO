@@ -124,13 +124,13 @@ export function notableLobbySettings(
       label: translateText("private_lobby.game_length"),
       value: renderDuration(c.maxTimerValue * 60),
     });
-  if (c.winThresholdTenths)
+  if (c.winThresholdTenths && c.winThresholdTenths !== 800)
     items.push({
       label: translateText("game_settings.win_threshold"),
       value: `${c.winThresholdTenths / 10}%`,
     });
   if (
-    c.spawnImmunityDuration &&
+    typeof c.spawnImmunityDuration === "number" &&
     Math.round(c.spawnImmunityDuration / 10) !== 5
   ) {
     items.push({
@@ -143,7 +143,7 @@ export function notableLobbySettings(
       label: translateText("private_lobby.starting_gold"),
       value: millions(c.startingGold),
     });
-  if (c.goldMultiplier)
+  if (c.goldMultiplier && c.goldMultiplier !== 1)
     items.push({
       label: translateText("game_settings.gold_multiplier"),
       value: `x${c.goldMultiplier}`,
@@ -308,7 +308,7 @@ export function hostCheatsList(c: GameConfig): string[] {
     cheats.push(translateText("game_settings.infinite_gold"));
   if (hc.infiniteTroops)
     cheats.push(translateText("game_settings.infinite_troops"));
-  if (hc.goldMultiplier)
+  if (hc.goldMultiplier && hc.goldMultiplier !== 1)
     cheats.push(
       `${translateText("game_settings.gold_multiplier")}: x${hc.goldMultiplier}`,
     );
