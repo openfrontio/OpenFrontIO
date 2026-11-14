@@ -2,12 +2,49 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   composeVersionDisplay,
+  desktopGoogleSignIn,
   desktopLinkGate,
   desktopQuit,
   desktopSteamLocale,
   desktopVersion,
+  isDesktopShell,
+  isSteamShell,
   requestDesktopQuit,
 } from "../src/client/DesktopShell";
+
+describe("isDesktopShell / isSteamShell", () => {
+  afterEach(() => {
+    window.openfrontDesktop = undefined;
+  });
+
+  it("are both false on the web, with no bridge present", () => {
+    window.openfrontDesktop = undefined;
+    expect(isDesktopShell()).toBe(false);
+    expect(isSteamShell()).toBe(false);
+  });
+
+  // The Steam preload exposes `steam` whether or not Steam itself is running,
+  // so on the Steam build the two predicates always agree.
+  it("are both true in the Steam shell", () => {
+    window.openfrontDesktop = {
+      steam: {},
+      shell: { version: "0.2.0", api: 7 },
+    };
+    expect(isDesktopShell()).toBe(true);
+    expect(isSteamShell()).toBe(true);
+  });
+
+  // The Android shell's bridge carries the shell and updater, but no Steam.
+  it("is a desktop shell but not a Steam shell on Android", () => {
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      shell: { version: "1.0.0", api: 7, platform: "android" },
+      version: () => Promise.resolve("1.0.0"),
+      update: {},
+    };
+    expect(isDesktopShell()).toBe(true);
+    expect(isSteamShell()).toBe(false);
+  });
+});
 
 describe("composeVersionDisplay", () => {
   it("appends the Steam shell version as subtext", () => {
@@ -108,6 +145,103 @@ describe("desktopLinkGate", () => {
     expect(gate).not.toBeNull();
     await gate!.showLinkGate();
     expect(showLinkGate).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The Android shell's native Google sheet. Detected on the function actually
+// called, and whatever it hands back is checked: the shell is another repo on
+// another release schedule, so a malformed or newer answer is a failure, never
+// a crash or an unchecked token.
+describe("desktopGoogleSignIn", () => {
+  afterEach(() => {
+    window.openfrontDesktop = undefined;
+  });
+
+  it("is null in the browser, with no bridge present", () => {
+    window.openfrontDesktop = undefined;
+    expect(desktopGoogleSignIn()).toBeNull();
+  });
+
+  it("is null on a shell without google.signIn", () => {
+    window.openfrontDesktop = { shell: { platform: "android" }, update: {} };
+    expect(desktopGoogleSignIn()).toBeNull();
+    window.openfrontDesktop = { google: {} };
+    expect(desktopGoogleSignIn()).toBeNull();
+    window.openfrontDesktop = { google: { signIn: true } };
+    expect(desktopGoogleSignIn()).toBeNull();
+  });
+
+  it("calls signIn on the bridge object and passes a token through", async () => {
+    const google = {
+      signIn: vi.fn(async function (this: unknown) {
+        expect(this).toBe(google);
+        return { status: "ok", idToken: "id-token" };
+      }),
+    };
+    window.openfrontDesktop = { google };
+    const signIn = desktopGoogleSignIn();
+    expect(signIn).not.toBeNull();
+    await expect(signIn!()).resolves.toEqual({
+      status: "ok",
+      idToken: "id-token",
+    });
+    expect(google.signIn).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [{ status: "cancelled" }, { status: "cancelled" }],
+    [
+      { status: "error", code: "no_account" },
+      { status: "error", code: "no_account" },
+    ],
+    [
+      { status: "error", code: "unavailable" },
+      { status: "error", code: "unavailable" },
+    ],
+    [
+      { status: "error", code: "failed" },
+      { status: "error", code: "failed" },
+    ],
+  ])("passes %j through", async (raw, expected) => {
+    window.openfrontDesktop = { google: { signIn: async () => raw } };
+    await expect(desktopGoogleSignIn()!()).resolves.toEqual(expected);
+  });
+
+  it.each([
+    ["an unknown error code", { status: "error", code: "something_new" }],
+    ["ok without a token", { status: "ok" }],
+    ["ok with an empty token", { status: "ok", idToken: "" }],
+    ["ok with a non-string token", { status: "ok", idToken: 42 }],
+    ["an unknown status", { status: "maybe" }],
+    ["null", null],
+    ["a string", "ok"],
+  ])("answers failed for %s", async (_label, raw) => {
+    window.openfrontDesktop = { google: { signIn: async () => raw } };
+    await expect(desktopGoogleSignIn()!()).resolves.toEqual({
+      status: "error",
+      code: "failed",
+    });
+  });
+
+  it("answers failed when signIn rejects or throws", async () => {
+    window.openfrontDesktop = {
+      google: { signIn: () => Promise.reject(new Error("ipc")) },
+    };
+    await expect(desktopGoogleSignIn()!()).resolves.toEqual({
+      status: "error",
+      code: "failed",
+    });
+    window.openfrontDesktop = {
+      google: {
+        signIn: () => {
+          throw new Error("sync");
+        },
+      },
+    };
+    await expect(desktopGoogleSignIn()!()).resolves.toEqual({
+      status: "error",
+      code: "failed",
+    });
   });
 });
 

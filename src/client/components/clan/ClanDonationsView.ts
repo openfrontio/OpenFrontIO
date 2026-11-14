@@ -5,17 +5,21 @@ import {
   type ClanDonation,
   type ClanDonationPeriod,
   type ClanDonor,
+  type ClanFundTransfer,
+  type ClanFundTransferStatus,
   fetchClanDonationLeaderboard,
   fetchClanDonations,
+  fetchClanFundTransfers,
 } from "../../ClanApi";
 import { translateText } from "../../Utils";
 import "../CurrencyDisplay";
 import { formatAbsoluteTime } from "../baseComponents/stats/GameHistoryDates";
 import { playerNameLink } from "../ui/PlayerNameLink";
+import { renderPayoutRow } from "./ClanFundShared";
 import { renderLoadingSpinner, renderMemberPagination } from "./ClanShared";
 
 type CurrencyFilter = ClanCurrencyType | "all";
-type DonationsMode = "recent" | "top";
+export type DonationsMode = "recent" | "top" | "payouts";
 
 interface Tab<K extends string> {
   key: K;
@@ -26,6 +30,7 @@ interface Tab<K extends string> {
 const MODE_TABS: Tab<DonationsMode>[] = [
   { key: "recent", labelKey: "clan_modal.donations_recent" },
   { key: "top", labelKey: "clan_modal.donations_top" },
+  { key: "payouts", labelKey: "clan_modal.donations_payouts" },
 ];
 
 const FILTER_TABS: Tab<CurrencyFilter>[] = [
@@ -76,6 +81,12 @@ const PODIUM: Record<number, { icon: string; badge: string; row: string }> = {
  * from Overview, so re-entering it always shows fresh data. Rows link to the
  * donor's profile via `view-profile` (see PlayerNameLink); a donor whose
  * account was deleted renders as a fixed label instead.
+ *
+ * Payouts is the clan fund log every member can read: Plutonium the leader
+ * sent to members, and staff reversals. Its tab appears only once the API
+ * reports the feature enabled (or the clan already has payouts). Sending
+ * itself lives on Manage (clan-fund-card), not here. `initialMode` opens the
+ * view on a given mode, which Manage's "View full log" link uses.
  */
 @customElement("clan-donations-view")
 export class ClanDonationsView extends LitElement {
@@ -84,10 +95,16 @@ export class ClanDonationsView extends LitElement {
   }
 
   @property() clanTag = "";
+  @property() initialMode: DonationsMode = "recent";
 
   @state() private mode: DonationsMode = "recent";
   @state() private donations: ClanDonation[] = [];
   @state() private donors: ClanDonor[] = [];
+  @state() private payouts: ClanFundTransfer[] = [];
+  @state() private payoutStatus: ClanFundTransferStatus | null = null;
+  // The Payouts tab is offered: the API has the feature turned on, or the
+  // clan already has a log to show.
+  @state() private payoutsAvailable = false;
   @state() private total = 0;
   @state() private page = 1;
   @state() private perPage = 10;
@@ -102,7 +119,25 @@ export class ClanDonationsView extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    if (this.clanTag) void this.load();
+    this.mode = this.initialMode;
+    // Opened straight on Payouts (from Manage): the link only exists when the
+    // feature is on, so offer the tab without waiting for the probe, and skip
+    // the probe: load() fetches the same log and status.
+    if (this.mode === "payouts") this.payoutsAvailable = true;
+    if (this.clanTag) {
+      void this.load();
+      if (this.mode !== "payouts") void this.probePayouts();
+    }
+  }
+
+  // Whether to offer the Payouts tab. An API without the endpoint (404) or a
+  // failed request just leaves it hidden.
+  private async probePayouts() {
+    const res = await fetchClanFundTransfers(this.clanTag, { limit: 1 });
+    if (!this.isConnected || "error" in res) return;
+    this.payoutStatus = res.status;
+    this.payoutsAvailable =
+      this.payoutsAvailable || res.status.enabled || res.total > 0;
   }
 
   private async load() {
@@ -110,7 +145,22 @@ export class ClanDonationsView extends LitElement {
     const gen = ++this.asyncGeneration;
     this.loading = true;
     this.loadState = "ok";
-    if (this.mode === "top") {
+    if (this.mode === "payouts") {
+      const res = await fetchClanFundTransfers(this.clanTag, {
+        page: this.page,
+        limit: this.perPage,
+      });
+      if (gen !== this.asyncGeneration) return;
+      if ("error" in res) {
+        this.applyResult(
+          { error: res.error === "forbidden" ? "forbidden" : "failed" },
+          () => {},
+        );
+        return;
+      }
+      this.payoutStatus = res.status;
+      this.applyResult(res, (rows) => (this.payouts = rows));
+    } else if (this.mode === "top") {
       const res = await fetchClanDonationLeaderboard(this.clanTag, {
         // setMode moves the filter off "all" before a Top donors load.
         currencyType: this.filter === "hard" ? "hard" : "soft",
@@ -141,6 +191,7 @@ export class ClanDonationsView extends LitElement {
     this.loading = false;
     this.donations = [];
     this.donors = [];
+    this.payouts = [];
     if ("error" in res) {
       this.loadState = res.error;
       this.total = 0;
@@ -198,13 +249,42 @@ export class ClanDonationsView extends LitElement {
       `;
     }
     const top = this.mode === "top";
+    const modeTabs = this.payoutsAvailable
+      ? MODE_TABS
+      : MODE_TABS.filter((t) => t.key !== "payouts");
     return html`<div class="space-y-3">
       ${this.renderTabs(
-        MODE_TABS,
+        modeTabs,
         this.mode,
         (mode) => this.setMode(mode),
         "mode",
       )}
+      ${
+        this.mode === "payouts"
+          ? this.renderPayoutsHeader()
+          : this.renderFilters(top)
+      }
+      ${this.renderBody()}
+    </div>`;
+  }
+
+  private renderPayoutsHeader(): TemplateResult {
+    if (this.payoutStatus?.frozen) {
+      return html`<div
+        role="status"
+        data-payouts-frozen
+        class="bg-amber-500/10 rounded-xl border border-amber-500/20 p-3 text-amber-300 text-xs"
+      >
+        ${translateText("clan_modal.clan_fund_frozen")}
+      </div>`;
+    }
+    return html`<p class="text-white/40 text-xs">
+      ${translateText("clan_modal.payouts_explainer")}
+    </p>`;
+  }
+
+  private renderFilters(top: boolean): TemplateResult {
+    return html`
       <div class="flex flex-wrap items-center justify-between gap-2">
         ${this.renderTabs(
           top ? FILTER_TABS.filter((t) => t.key !== "all") : FILTER_TABS,
@@ -225,8 +305,7 @@ export class ClanDonationsView extends LitElement {
             : null
         }
       </div>
-      ${this.renderBody()}
-    </div>`;
+    `;
   }
 
   private renderTabs<K extends string>(
@@ -292,16 +371,24 @@ export class ClanDonationsView extends LitElement {
       `;
     }
     const top = this.mode === "top";
-    if ((top ? this.donors : this.donations).length === 0) {
+    const rows =
+      this.mode === "payouts"
+        ? this.payouts
+        : top
+          ? this.donors
+          : this.donations;
+    if (rows.length === 0) {
       return html`
         <div
           class="bg-white/5 rounded-xl border border-white/10 p-8 text-center"
         >
           <p class="text-white/40 text-sm">
             ${translateText(
-              top
-                ? "clan_modal.donations_top_empty"
-                : "clan_modal.donations_empty",
+              this.mode === "payouts"
+                ? "clan_modal.payouts_empty"
+                : top
+                  ? "clan_modal.donations_top_empty"
+                  : "clan_modal.donations_empty",
             )}
           </p>
         </div>
@@ -310,9 +397,11 @@ export class ClanDonationsView extends LitElement {
     return html`
       <div class="space-y-2">
         ${
-          top
-            ? this.donors.map((d) => this.renderDonorRow(d))
-            : this.donations.map((d) => this.renderRow(d))
+          this.mode === "payouts"
+            ? this.payouts.map((t) => renderPayoutRow(this, t))
+            : top
+              ? this.donors.map((d) => this.renderDonorRow(d))
+              : this.donations.map((d) => this.renderRow(d))
         }
       </div>
       ${renderMemberPagination(

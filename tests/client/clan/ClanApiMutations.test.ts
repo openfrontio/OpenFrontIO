@@ -267,6 +267,14 @@ describe("disbandClan", () => {
     expect(result).toEqual({ error: "clan_modal.error_failed" });
   });
 
+  it("explains when the clan fund still holds Plutonium", async () => {
+    mockFetch(() =>
+      failRes(400, { code: "fund_not_empty", hardBalance: "250" }),
+    );
+    const result = await disbandClan("TEST");
+    expect(result).toEqual({ error: "clan_modal.disband_fund_not_empty" });
+  });
+
   it("returns network error on fetch failure", async () => {
     vi.stubGlobal(
       "fetch",

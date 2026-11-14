@@ -1,13 +1,14 @@
 import { GameMapType } from "@openfront/engine-api/game/GameTypes";
 import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { PublicGameInfo, PublicGames } from "@openfront/shared/WireSchemas";
-import { html, nothing, TemplateResult } from "lit";
+import { html, nothing, type PropertyValues, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { getDesktopSessionState } from "../Auth";
 import {
   getDesktopUpdateState,
   isDesktopShell,
+  isSteamShell,
   type DesktopSessionState,
   type DesktopUpdateState,
 } from "../DesktopShell";
@@ -214,13 +215,12 @@ export class DetailedGameViewModal extends BaseModal {
     // went out.
     const last = lastUserMeResponse();
     if (last !== null) this.applyUserMe(last.response);
-    if (isDesktopShell()) {
-      // Seed BOTH from their current values -- this modal mounts well after
-      // the update bridge's synchronous replay has already been dispatched
-      // and lost, so without the seed its join() gate sees null (OPE-396).
-      this.desktopUpdateState = getDesktopUpdateState();
-      this.desktopSessionState = getDesktopSessionState();
-    }
+    // Seed BOTH from their current values -- this modal mounts well after
+    // the update bridge's synchronous replay has already been dispatched and
+    // lost, so without the seed its join() gate sees null (OPE-396). The
+    // session is the Steam sign-in, so only Steam seeds it.
+    if (isDesktopShell()) this.desktopUpdateState = getDesktopUpdateState();
+    if (isSteamShell()) this.desktopSessionState = getDesktopSessionState();
     document.addEventListener(
       "desktop-session-state",
       this.onDesktopSessionState,
@@ -280,8 +280,8 @@ export class DetailedGameViewModal extends BaseModal {
     return Array.from(this.querySelectorAll<HTMLElement>("[data-lobby-slot]"));
   }
 
-  protected override willUpdate(): void {
-    super.willUpdate();
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     this.slotTops = new Map(
       this.slotElements().map((el) => [
         el.dataset.lobbySlot ?? "",

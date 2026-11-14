@@ -4,16 +4,56 @@ import {
   GameMode,
   GameType,
 } from "@openfront/engine-api/game/GameTypes";
-import { GameConfig } from "@openfront/engine-api/Schemas";
-import { html, TemplateResult } from "lit";
-import { renderDuration, translateText } from "../../client/Utils";
+import type { GameConfig } from "@openfront/engine-api/Schemas";
+import { html, type TemplateResult } from "lit";
+import { formatGameType as formatGameTypeBase } from "../components/baseComponents/stats/GameTypeLabels";
+import { renderDuration, translateText } from "../Utils";
 
 // The homepage lobby card's modifier pill, one size down: a lobby can run a
 // dozen settings and they all have to fit beside the preview.
 export const LOBBY_SETTING_TAG =
   "rounded bg-malibu-blue px-1.5 py-0.5 text-[11px] font-bold tracking-widest text-white";
 
-const DISABLED_UNIT_KEYS: Record<string, string> = {
+export const FLAT_SETTING_TAG =
+  "rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/70";
+
+export const MODE_BADGE_CLASS =
+  "border-[#38bdf8]/25 bg-[#38bdf8]/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-[#38bdf8]";
+export const VISIBILITY_BADGE_CLASS =
+  "border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white/45";
+
+/** Formats a game's visibility label (e.g. Public, Private, Hosted, Singleplayer). */
+export function formatGameVisibility(
+  gameType?: GameType,
+  visibleAt?: number,
+): string {
+  switch (gameType) {
+    case GameType.Public:
+      return translateText("account_modal.games_type_public");
+    case GameType.Private:
+      return visibleAt !== undefined
+        ? translateText("detailed_view.source_hosted")
+        : translateText("account_modal.games_type_private");
+    case GameType.Singleplayer:
+      return translateText("account_modal.games_type_singleplayer");
+    default:
+      return translateText("game_info_modal.unknown_game_type");
+  }
+}
+
+/** Formats a game mode label from a GameConfig. */
+export function formatGameType(game: GameConfig): string {
+  return formatGameTypeBase({
+    mode: game.gameMode,
+    playerTeams:
+      game.playerTeams !== undefined && game.playerTeams !== null
+        ? String(game.playerTeams)
+        : undefined,
+    rankedType: game.rankedType,
+  });
+}
+
+export const DISABLED_UNIT_KEYS: Record<string, string> = {
   City: "unit_type.city",
   Port: "unit_type.port",
   "Defense Post": "unit_type.defense_post",
@@ -203,42 +243,66 @@ export function lobbySettingTagText(setting: {
     : `${label}: ${setting.value}`;
 }
 
-/** The units the lobby turned off, as a red box; null when none are. */
-export function disabledUnitsBox(
-  c: GameConfig,
+function renderModifierSection(
+  isUnits: boolean,
+  items: string[],
   className: string,
-): TemplateResult | null {
-  if (!c.disabledUnits?.length) return null;
-  return html`
-    <div
-      data-disabled-units
-      class="${className} p-3 bg-red-500/10 border border-red-500/20 rounded-lg"
-    >
-      <div
-        class="text-xs font-bold text-red-400 uppercase tracking-widest mb-2"
-      >
-        ${translateText("private_lobby.disabled_units")}
-      </div>
-      <div class="flex flex-wrap gap-2">
-        ${c.disabledUnits.map((unit) => {
-          const key = DISABLED_UNIT_KEYS[unit];
-          return html`<span
-            class="px-2 py-1 bg-red-500/20 text-red-200 text-xs rounded font-bold border border-red-500/30"
-            >${key ? translateText(key) : unit}</span
-          >`;
-        })}
-      </div>
+  flat: boolean,
+): TemplateResult {
+  const boxCls = flat
+    ? className
+    : `${className} p-3 rounded-lg border ${
+        isUnits
+          ? "bg-red-500/10 border-red-500/20"
+          : "bg-yellow-500/10 border-yellow-500/20"
+      }`.trim();
+  const titleCls = flat
+    ? `mb-1 text-[10px] ${isUnits ? "text-red-400/80" : "text-yellow-400/80"}`
+    : `mb-2 text-xs ${isUnits ? "text-red-400" : "text-yellow-400"}`;
+  const pillCls = flat
+    ? `rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+        isUnits
+          ? "border-red-500/25 bg-red-500/10 text-red-300"
+          : "border-yellow-500/25 bg-yellow-500/10 text-yellow-300"
+      }`
+    : `px-2 py-1 text-xs rounded font-bold border ${
+        isUnits
+          ? "bg-red-500/20 text-red-200 border-red-500/30"
+          : "bg-yellow-500/20 text-yellow-200 border-yellow-500/30"
+      }`;
+  const inner = html`
+    <div class="font-bold uppercase tracking-widest ${titleCls}">
+      ${translateText(
+        isUnits ? "private_lobby.disabled_units" : "private_lobby.host_cheats",
+      )}
+    </div>
+    <div class="flex flex-wrap ${flat ? "gap-1.5" : "gap-2"}">
+      ${items.map((item) => html`<span class=${pillCls}>${item}</span>`)}
     </div>
   `;
+  return isUnits
+    ? html`<div data-disabled-units class=${boxCls}>${inner}</div>`
+    : html`<div data-host-cheats class=${boxCls}>${inner}</div>`;
 }
 
-/** The lobby host's cheats, as a yellow box; null when there are none. */
-export function hostCheatsBox(
+/** The units the lobby turned off; null when none are. */
+export function disabledUnitsBox(
   c: GameConfig,
-  className: string,
+  className = "",
+  variant: "boxed" | "flat" = "boxed",
 ): TemplateResult | null {
+  if (!c.disabledUnits?.length) return null;
+  const items = c.disabledUnits.map((u) => {
+    const key = DISABLED_UNIT_KEYS[u];
+    return key ? translateText(key) : u;
+  });
+  return renderModifierSection(true, items, className, variant === "flat");
+}
+
+/** Extracts host cheats as translated display strings. */
+export function hostCheatsList(c: GameConfig): string[] {
   const hc = c.hostCheats;
-  if (!hc) return null;
+  if (!hc) return [];
   const cheats: string[] = [];
   if (hc.infiniteGold)
     cheats.push(translateText("game_settings.infinite_gold"));
@@ -252,26 +316,16 @@ export function hostCheatsBox(
     cheats.push(
       `${translateText("private_lobby.starting_gold")}: ${millions(hc.startingGold)}`,
     );
+  return cheats;
+}
+
+/** The lobby host's cheats; null when there are none. */
+export function hostCheatsBox(
+  c: GameConfig,
+  className = "",
+  variant: "boxed" | "flat" = "boxed",
+): TemplateResult | null {
+  const cheats = hostCheatsList(c);
   if (cheats.length === 0) return null;
-  return html`
-    <div
-      data-host-cheats
-      class="${className} p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg"
-    >
-      <div
-        class="text-xs font-bold text-yellow-400 uppercase tracking-widest mb-2"
-      >
-        ${translateText("private_lobby.host_cheats")}
-      </div>
-      <div class="flex flex-wrap gap-2">
-        ${cheats.map(
-          (cheat) =>
-            html`<span
-              class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
-              >${cheat}</span
-            >`,
-        )}
-      </div>
-    </div>
-  `;
+  return renderModifierSection(false, cheats, className, variant === "flat");
 }

@@ -52,6 +52,9 @@ export function clanApiMockFactory() {
       page: 1,
       limit: 10,
     })),
+    // An API without clan fund transfers: the Transfers tab stays hidden.
+    fetchClanFundTransfers: vi.fn(async () => ({ error: "unavailable" })),
+    fetchClanFundRecipients: vi.fn(async () => false),
     fetchClanRequests: vi.fn(async () => ({
       results: [],
       total: 0,

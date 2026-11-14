@@ -208,9 +208,11 @@
       };
       // Set here rather than from the bundle so the first paint already has the
       // desktop layout. The shell's preload defines openfrontDesktop before
-      // any page script runs. ?desktop-layout previews it outside prod.
+      // any page script runs. Steam only (isSteamShell): the Android app
+      // defines it too, and lays out the way the site does in a mobile browser.
+      // ?desktop-layout previews it outside prod.
       if (
-        window.openfrontDesktop ||
+        (window.openfrontDesktop && window.openfrontDesktop.steam) ||
         (window.BOOTSTRAP_CONFIG.gameEnv !== "prod" &&
           new URLSearchParams(location.search).has("desktop-layout"))
       ) {
@@ -411,9 +413,10 @@
       data-i18n-aria-label="main.menu"
     ></mobile-nav-bar>
 
-    <!-- MAIN CONTENT AREA -->
+    <!-- MAIN CONTENT AREA (shrink-0 while a page is open: ad creatives inject
+         in-flow siblings into <body>, which would squeeze the page otherwise) -->
     <div
-      class="in-[.in-game]:hidden flex-1 basis-full min-w-0 min-h-dvh in-[.page-open]:min-h-0 in-[.page-open]:overflow-hidden relative pt-[var(--top-ad-pad,0px)] in-[.page-open]:pt-[var(--top-ad-height,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
+      class="in-[.in-game]:hidden flex-1 basis-full min-w-0 min-h-dvh in-[.page-open]:min-h-0 in-[.page-open]:shrink-0 in-[.page-open]:overflow-hidden relative pt-[var(--top-ad-pad,0px)] in-[.page-open]:pt-[var(--top-ad-height,0px)] transition-[margin] duration-500 ease-out will-change-[margin-left] flex flex-col"
     >
       <!-- Desktop Top Bar (sticky so it stays visible while the page scrolls,
            offset below the header ad when one is showing; static while an
@@ -637,6 +640,8 @@
         class="lg:col-start-2 lg:min-w-0"
       ></player-info-overlay>
       <div
+        id="game-right-hud"
+        style="margin-top: var(--game-health-offset, 0px)"
         class="flex flex-col items-end gap-2 max-lg:fixed max-lg:top-0 max-lg:right-0 max-lg:z-1000 lg:col-start-3 lg:justify-self-end lg:pointer-events-auto"
       >
         <game-right-sidebar></game-right-sidebar>

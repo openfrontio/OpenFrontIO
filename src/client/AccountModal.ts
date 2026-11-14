@@ -45,7 +45,7 @@ import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
-import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
+import { desktopLinkGate, isSteamShell } from "./DesktopShell";
 import { gamePortal, type PortalUser } from "./GamePortal";
 import "./GameStatsModal";
 import { showInGameAlert } from "./InGameModal";
@@ -862,7 +862,7 @@ export class AccountModal extends BaseModal {
       this.handleLinkGoogle,
       // The shell sends the player to the website for this (see linkGoogle
       // in Auth.ts); the caption has to say so.
-      isDesktopShell()
+      isSteamShell()
         ? "account_modal.link_google_on_web"
         : "account_modal.link_google",
     );
@@ -880,7 +880,7 @@ export class AccountModal extends BaseModal {
   // Not shown inside the desktop shell: a shell player already holds this
   // identity through the native Steam ticket.
   private renderSteamLink(): TemplateResult {
-    if (isDesktopShell()) return html``;
+    if (isSteamShell()) return html``;
     const steam = this.userMeResponse?.user?.steam;
     if (steam) {
       // The attached account is NAMED, not merely reported as linked: a wrong
@@ -1012,14 +1012,15 @@ export class AccountModal extends BaseModal {
   }
 
   private renderLoginOptions() {
-    // On the desktop shell both provider buttons open the shell's browser
+    // In the Steam shell both provider buttons open the shell's browser
     // link flow rather than an in-place OAuth redirect (see discordLogin /
     // googleLogin in Auth.ts), and the captions say so. Keyed on the shell
     // itself, not on the link-flow bridge: Auth.ts never builds the redirect
-    // on ANY desktop shell (a shell too old to expose showLinkGate gets an
+    // on ANY Steam shell (a shell too old to expose showLinkGate gets an
     // update prompt instead), so the web caption would be wrong on every one
-    // of them.
-    const viaBrowser = isDesktopShell();
+    // of them. The Android shell keeps the web captions: Google signs in
+    // there in place, through the shell's native sheet.
+    const viaBrowser = isSteamShell();
     return html`
       <div class="flex items-center justify-center p-6 min-h-full">
         <div
@@ -1196,7 +1197,7 @@ export class AccountModal extends BaseModal {
   }
 
   private handleGoogleLogin() {
-    googleLogin();
+    void googleLogin();
   }
 
   private handleSteamLogin() {

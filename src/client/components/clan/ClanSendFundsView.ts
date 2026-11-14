@@ -1,0 +1,743 @@
+import { html, LitElement, type TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import {
+  type ClanFundRecipient,
+  type ClanFundTransferStatus,
+  type ClanMember,
+  fetchClanFundRecipients,
+  fetchClanFundTransfers,
+  fetchClanMembers,
+  sendClanFunds,
+} from "../../ClanApi";
+import { translateText } from "../../Utils";
+import "../ConfirmDialog";
+import "../PlutoniumIcon";
+import { playerNameLink } from "../ui/PlayerNameLink";
+import {
+  clanLeftToday,
+  formatPlutonium,
+  leaderSendBlockedReason,
+} from "./ClanFundShared";
+import {
+  formatClanDate,
+  renderLoadingSpinner,
+  renderMemberSearchInput,
+  renderRoleIcon,
+  newIdempotencyKey,
+  renderServerPagination,
+  showToast,
+  translateClanRole,
+} from "./ClanShared";
+
+const QUICK_AMOUNTS = [100n, 500n, 1000n];
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const min = (...xs: bigint[]) => xs.reduce((a, b) => (a < b ? a : b));
+
+// Per clan: the key of a send that is still out or whose result never came
+// back. It's stored before the request goes out and outlives the page, so
+// leaving and reopening Send Plutonium reuses it: an identical retry replays
+// the send instead of paying twice, and a changed one is refused as a
+// conflict. Cleared once an answer settles what happened, but only while it
+// is still that key, so a late answer can't drop a newer send's.
+//
+// Kept in sessionStorage so a browser reload in the same tab reuses it too;
+// the in-memory map covers browsers where storage is blocked.
+const SEND_KEY_STORAGE_PREFIX = "clanFundSendKey:";
+const unresolvedSendKeysMemory = new Map<string, string>();
+const unresolvedSendKeys = {
+  get(clanTag: string): string | undefined {
+    try {
+      const stored = sessionStorage.getItem(SEND_KEY_STORAGE_PREFIX + clanTag);
+      if (stored) return stored;
+    } catch {
+      // Storage blocked: fall back to memory.
+    }
+    return unresolvedSendKeysMemory.get(clanTag);
+  },
+  set(clanTag: string, key: string) {
+    unresolvedSendKeysMemory.set(clanTag, key);
+    try {
+      sessionStorage.setItem(SEND_KEY_STORAGE_PREFIX + clanTag, key);
+    } catch {
+      // Storage blocked: memory still covers this page load.
+    }
+  },
+  delete(clanTag: string) {
+    unresolvedSendKeysMemory.delete(clanTag);
+    try {
+      sessionStorage.removeItem(SEND_KEY_STORAGE_PREFIX + clanTag);
+    } catch {
+      // Storage blocked: nothing stored there.
+    }
+  },
+};
+function settleSendKey(clanTag: string, key: string) {
+  if (unresolvedSendKeys.get(clanTag) === key) {
+    unresolvedSendKeys.delete(clanTag);
+  }
+}
+
+/**
+ * Full page (Manage → Clan fund → Send Plutonium) where the leader sends
+ * Plutonium from the clan fund to a member. Built like the leadership
+ * transfer page: a searchable, paged member list, then the action.
+ *
+ * Members who can't receive right now are dimmed and unselectable with the
+ * reason on their row (from GET /fund_transfers/eligibility; if that fails the
+ * server's own checks still apply on send). The amount has quick picks and a
+ * Max of min(fund, clan's limit left today, the member's limit left today).
+ * Sending asks for confirmation first, and Enter never submits. The page keeps
+ * one idempotency key until a send is confirmed, so a retry can't send twice:
+ * a repeat of a send that went through is replayed, and a changed one is
+ * refused as a conflict, which starts a new key. While a send is out, or its
+ * result is unknown, its key is kept for the clan even after the page
+ * closes. Any
+ * failed send reloads the fund, the limits and the member page, so Max stays
+ * honest; until the fund reloads, nothing can be sent.
+ *
+ * Emits `funds-sent` (bubbling) after a successful send.
+ */
+@customElement("clan-send-funds-view")
+export class ClanSendFundsView extends LitElement {
+  createRenderRoot() {
+    return this;
+  }
+
+  @property() clanTag = "";
+  @property() myPublicId: string | null = null;
+
+  @state() private status: ClanFundTransferStatus | null = null;
+  // A reload of the status is out (after a failed send): the numbers on
+  // screen may be the ones the server just refused, so nothing can be sent
+  // until it lands.
+  @state() private statusReloading = false;
+  // The members' limits (eligibility) didn't load for the page on screen, so
+  // rows aren't marked and Max may be out of date. The server still checks.
+  @state() private limitsFailed = false;
+  // The status request failed: nothing can be sent until a retry loads it.
+  @state() private statusFailed = false;
+  @state() private members: ClanMember[] = [];
+  @state() private eligibility = new Map<string, ClanFundRecipient>();
+  @state() private membersTotal = 0;
+  // The member list failed to load: show an error with Retry, not "no
+  // members" or a stale page. Holds the request that failed (its page and
+  // search), so Retry repeats exactly that one rather than the last page that
+  // loaded. Cleared when any newer request starts, so an old Retry can't
+  // replace a newer search's results.
+  @state() private membersFailed: { page: number; search: string } | null =
+    null;
+  @state() private membersLoading = false;
+  @state() private memberPage = 1;
+  @state() private memberSearch = "";
+  @state() private loading = true;
+  @state() private recipient: ClanMember | null = null;
+  @state() private amountInput = "";
+  @state() private confirming = false;
+  @state() private submitting = false;
+  @state() private serverError: string | null = null;
+
+  private readonly membersPerPage = 10;
+  private idempotencyKey = "";
+  private searchDebounce: ReturnType<typeof setTimeout> | null = null;
+  private loadSeq = 0;
+  private statusSeq = 0;
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.idempotencyKey =
+      unresolvedSendKeys.get(this.clanTag) ?? newIdempotencyKey();
+    void this.loadStatus();
+    void this.loadMembers(1);
+  }
+
+  disconnectedCallback() {
+    if (this.searchDebounce) clearTimeout(this.searchDebounce);
+    this.loadSeq++;
+    super.disconnectedCallback();
+  }
+
+  private async loadStatus() {
+    const seq = ++this.statusSeq;
+    this.statusFailed = false;
+    this.statusReloading = true;
+    const res = await fetchClanFundTransfers(this.clanTag, { limit: 1 });
+    // A newer reload started (a Retry during the reload after a failed
+    // send): only its answer counts.
+    if (seq !== this.statusSeq) return;
+    this.statusReloading = false;
+    if (!this.isConnected) return;
+    if ("error" in res) {
+      // The old numbers may be what the server just refused: drop them, so
+      // nothing can be sent until a reload succeeds.
+      this.status = null;
+      this.statusFailed = true;
+      return;
+    }
+    this.status = res.status;
+  }
+
+  private async loadMembers(page: number, search = this.memberSearch) {
+    const seq = ++this.loadSeq;
+    this.membersFailed = null;
+    this.membersLoading = true;
+    const res = await fetchClanMembers(
+      this.clanTag,
+      page,
+      this.membersPerPage,
+      "default",
+      undefined,
+      search || undefined,
+    );
+    if (seq !== this.loadSeq) return;
+    if (!res) {
+      this.membersFailed = { page, search };
+      this.members = [];
+      this.membersLoading = false;
+      this.loading = false;
+      return;
+    }
+    const members = res.results.filter((m) => m.publicId !== this.myPublicId);
+    // The leader counts toward the server's pages but isn't listed. Today
+    // they always sort onto page 1, but if a page ever holds only them, show
+    // a neighbouring page rather than an empty one.
+    if (members.length === 0 && res.results.length > 0) {
+      const pages = Math.ceil(res.total / this.membersPerPage);
+      const next =
+        res.page < pages ? res.page + 1 : res.page > 1 ? res.page - 1 : null;
+      if (next !== null) {
+        void this.loadMembers(next, search);
+        return;
+      }
+    }
+    // Ask about the picked member too when they're off this page, so their
+    // limit stays current after a reload.
+    const ids = members.map((m) => m.publicId);
+    if (this.recipient && !ids.includes(this.recipient.publicId)) {
+      ids.push(this.recipient.publicId);
+    }
+    const eligibility = await fetchClanFundRecipients(this.clanTag, ids);
+    if (seq !== this.loadSeq) return;
+    this.members = members;
+    this.membersTotal = res.total;
+    this.memberPage = res.page;
+    this.limitsFailed = eligibility === false && ids.length > 0;
+    const next = new Map((eligibility || []).map((e) => [e.publicId, e]));
+    // Keep the picked member's eligibility when they're off this page or
+    // search, so Max still respects their own limit left today.
+    const picked = this.recipient
+      ? this.eligibility.get(this.recipient.publicId)
+      : undefined;
+    if (picked && !next.has(picked.publicId)) next.set(picked.publicId, picked);
+    this.eligibility = next;
+    // The picked member can't receive any more: unpick them. Their row now
+    // shows why.
+    if (this.recipient && next.get(this.recipient.publicId)?.eligible === false)
+      this.recipient = null;
+    this.membersLoading = false;
+    this.loading = false;
+  }
+
+  private onSearchInput(e: Event) {
+    const search = (e.target as HTMLInputElement).value.trim();
+    if (search === this.memberSearch) return;
+    this.memberSearch = search;
+    if (this.searchDebounce) clearTimeout(this.searchDebounce);
+    this.searchDebounce = setTimeout(() => {
+      this.searchDebounce = null;
+      void this.loadMembers(1, search);
+    }, 200);
+  }
+
+  private memberName(m: ClanMember): string {
+    return m.username ?? m.publicId;
+  }
+
+  // Null when unknown (eligibility didn't load): the server decides.
+  private eligibilityOf(m: ClanMember): ClanFundRecipient | null {
+    return this.eligibility.get(m.publicId) ?? null;
+  }
+
+  private selectable(m: ClanMember): boolean {
+    return this.eligibilityOf(m)?.eligible ?? true;
+  }
+
+  // The most the leader can send to the picked member right now.
+  private maxAmount(): bigint | null {
+    if (!this.status) return null;
+    const limits = [
+      BigInt(this.status.hardBalance),
+      clanLeftToday(this.status),
+    ];
+    const e = this.recipient ? this.eligibilityOf(this.recipient) : null;
+    limits.push(
+      e ? BigInt(e.leftToday) : BigInt(this.status.recipientDailyCap),
+    );
+    const m = min(...limits);
+    return m > 0n ? m : 0n;
+  }
+
+  private parsedAmount(): bigint | null {
+    const raw = this.amountInput.trim();
+    if (!/^\d+$/.test(raw)) return null;
+    const amount = BigInt(raw);
+    return amount > 0n ? amount : null;
+  }
+
+  private amountError(): string | null {
+    if (this.amountInput.trim() === "") return null;
+    const amount = this.parsedAmount();
+    if (amount === null)
+      return translateText("clan_modal.donate_invalid_amount");
+    const max = this.maxAmount();
+    if (max !== null && amount > max) {
+      return translateText("clan_modal.send_funds_over_max", {
+        amount: formatPlutonium(max),
+      });
+    }
+    return null;
+  }
+
+  private canSend(): boolean {
+    return (
+      !this.submitting &&
+      !this.statusReloading &&
+      this.recipient !== null &&
+      this.selectable(this.recipient) &&
+      this.parsedAmount() !== null &&
+      this.amountError() === null &&
+      // Only once the API has said this leader can send right now.
+      this.status !== null &&
+      this.status.enabled &&
+      this.status.canSend &&
+      leaderSendBlockedReason(this.status) === null
+    );
+  }
+
+  private pick(m: ClanMember) {
+    if (this.submitting || !this.selectable(m)) return;
+    this.recipient = m;
+    this.serverError = null;
+  }
+
+  private async send() {
+    const amount = this.parsedAmount();
+    const recipient = this.recipient;
+    if (!this.canSend() || amount === null || recipient === null) return;
+    this.submitting = true;
+    this.serverError = null;
+    const clanTag = this.clanTag;
+    const key = this.idempotencyKey;
+    // Kept before the request goes out, in case the leader leaves before
+    // the answer comes back.
+    unresolvedSendKeys.set(clanTag, key);
+    try {
+      const result = await sendClanFunds(
+        clanTag,
+        recipient.publicId,
+        amount.toString(),
+        key,
+      );
+      // Only an answer that says what happened settles the key: success, a
+      // conflict (the earlier send went through) or a refusal. An unknown
+      // outcome, including a 401, 403 or 429, keeps it.
+      if (result === true || result.outcome !== "unknown") {
+        settleSendKey(clanTag, key);
+      }
+      // The page closed while the send was out: nothing to show.
+      if (!this.isConnected) return;
+      if (result !== true) {
+        this.serverError = translateText(result.error);
+        // The earlier send under this key is confirmed and about to show in
+        // the reloaded numbers, so the next send is a new one.
+        if (result.outcome === "earlier_send") {
+          this.idempotencyKey = newIdempotencyKey();
+        }
+        // Whatever happened, the fund and limits on screen may be stale.
+        void this.loadStatus();
+        void this.loadMembers(this.memberPage);
+        return;
+      }
+      showToast(
+        translateText("clan_modal.send_funds_success", {
+          amount: formatPlutonium(amount),
+          name: this.memberName(recipient),
+        }),
+        "green",
+      );
+      this.dispatchEvent(
+        new CustomEvent("funds-sent", { bubbles: true, composed: true }),
+      );
+    } finally {
+      this.submitting = false;
+    }
+  }
+
+  render() {
+    if (this.loading) return renderLoadingSpinner();
+    const status = this.status;
+    const blocked = status ? leaderSendBlockedReason(status) : null;
+    const totalPages = Math.ceil(this.membersTotal / this.membersPerPage);
+    return html`
+      <div class="space-y-6">
+        ${status ? this.renderSummary(status) : ""}
+        ${
+          this.statusFailed
+            ? this.renderLoadError(
+                "status",
+                "clan_modal.clan_fund_load_failed",
+                () => void this.loadStatus(),
+              )
+            : ""
+        }
+        ${
+          blocked
+            ? html`<div
+                role="status"
+                class="bg-amber-500/10 rounded-xl border border-amber-500/20 p-3 text-amber-300 text-sm"
+              >
+                ${blocked}
+              </div>`
+            : ""
+        }
+
+        <div class="space-y-3">
+          <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider">
+            ${translateText("clan_modal.send_funds_step_member")}
+          </h3>
+          ${renderMemberSearchInput(
+            (e) => this.onSearchInput(e),
+            this.memberSearch,
+          )}
+          ${
+            this.limitsFailed && !this.membersFailed
+              ? this.renderLoadError(
+                  "limits",
+                  "clan_modal.send_funds_limits_failed",
+                  () => void this.loadMembers(this.memberPage),
+                )
+              : ""
+          }
+          <div role="radiogroup" class="space-y-2">
+            ${
+              this.membersFailed
+                ? this.renderLoadError(
+                    "members",
+                    "clan_modal.send_funds_members_failed",
+                    () => {
+                      const failed = this.membersFailed;
+                      if (failed)
+                        void this.loadMembers(failed.page, failed.search);
+                    },
+                  )
+                : this.members.length === 0
+                  ? this.membersLoading
+                    ? renderLoadingSpinner()
+                    : html`<p class="text-white/40 text-sm text-center py-4">
+                        ${translateText("clan_modal.send_funds_no_members")}
+                      </p>`
+                  : this.members.map((m) => this.renderMember(m))
+            }
+          </div>
+          ${
+            totalPages > 1
+              ? renderServerPagination(this.memberPage, totalPages, (p) =>
+                  this.loadMembers(p),
+                )
+              : ""
+          }
+        </div>
+
+        ${this.renderAmount()}
+
+        <div
+          class="bg-red-500/10 rounded-xl border border-red-500/30 p-4 text-red-300 text-sm"
+        >
+          ${translateText("clan_modal.send_funds_warning", {
+            tag: this.clanTag,
+          })}
+        </div>
+
+        ${
+          this.serverError
+            ? html`<p class="text-red-400 text-sm" role="alert">
+                ${this.serverError}
+              </p>`
+            : ""
+        }
+
+        <button
+          type="button"
+          data-action="send"
+          ?disabled=${!this.canSend()}
+          @click=${() => (this.confirming = true)}
+          class="w-full px-6 py-3 text-sm font-bold text-white uppercase tracking-wider rounded-xl transition-all border bg-red-600 hover:bg-red-700 border-white/5 disabled:bg-white/5 disabled:border-white/10 disabled:text-white/30 disabled:pointer-events-none"
+        >
+          ${this.sendLabel()}
+        </button>
+      </div>
+      ${this.renderConfirm()}
+    `;
+  }
+
+  // A red "couldn't load" box with Retry. `which` names it for tests.
+  private renderLoadError(
+    which: "status" | "members" | "limits",
+    messageKey: string,
+    retry: () => void,
+  ): TemplateResult {
+    return html`<div
+      data-load-error=${which}
+      role=${which === "limits" ? "status" : "alert"}
+      class="flex items-center justify-between gap-3 bg-red-500/10 rounded-xl border border-red-500/30 p-3 text-red-300 text-sm"
+    >
+      <span>${translateText(messageKey)}</span>
+      <button
+        type="button"
+        data-action="retry"
+        @click=${retry}
+        class="shrink-0 px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/10"
+      >
+        ${translateText("clan_modal.retry")}
+      </button>
+    </div>`;
+  }
+
+  private sendLabel(): string {
+    if (this.submitting)
+      return translateText("clan_modal.send_funds_submitting");
+    const amount = this.parsedAmount();
+    if (!this.recipient)
+      return translateText("clan_modal.send_funds_pick_member");
+    if (amount === null)
+      return translateText("clan_modal.send_funds_enter_amount");
+    return translateText("clan_modal.send_funds_send_to", {
+      amount: formatPlutonium(amount),
+      name: this.memberName(this.recipient),
+    });
+  }
+
+  private renderSummary(status: ClanFundTransferStatus): TemplateResult {
+    const stat = (label: string, value: string, attr: string) => html`
+      <div
+        class="flex-1 min-w-[120px] bg-white/5 rounded-xl border border-white/10 p-3"
+      >
+        <div
+          class="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1"
+        >
+          ${label}
+        </div>
+        <div
+          data-summary=${attr}
+          class="flex items-center gap-1.5 text-white font-bold tabular-nums"
+        >
+          <plutonium-icon .size=${14}></plutonium-icon>${value}
+        </div>
+      </div>
+    `;
+    return html`<div class="flex flex-wrap gap-2">
+      ${stat(
+        translateText("clan_modal.send_funds_stat_fund"),
+        formatPlutonium(status.hardBalance),
+        "fund",
+      )}
+      ${stat(
+        translateText("clan_modal.send_funds_stat_clan_left"),
+        formatPlutonium(clanLeftToday(status)),
+        "clan-left",
+      )}
+      ${stat(
+        translateText("clan_modal.send_funds_stat_member_max"),
+        formatPlutonium(status.recipientDailyCap),
+        "member-max",
+      )}
+    </div>`;
+  }
+
+  private reasonText(e: ClanFundRecipient): string | null {
+    switch (e.reason) {
+      case "too_recent": {
+        const ms = e.eligibleAt
+          ? new Date(e.eligibleAt).getTime() - Date.now()
+          : 0;
+        return translateText("clan_modal.send_funds_reason_too_recent", {
+          days: Math.max(1, Math.ceil(ms / DAY_MS)),
+        });
+      }
+      case "recipient_cap":
+        return translateText("clan_modal.send_funds_reason_cap");
+      case "not_eligible":
+      case "self":
+      case "not_member":
+        return translateText("clan_modal.send_funds_reason_not_eligible");
+      default:
+        return null;
+    }
+  }
+
+  private renderMember(m: ClanMember): TemplateResult {
+    const e = this.eligibilityOf(m);
+    const selectable = this.selectable(m);
+    const selected = this.recipient?.publicId === m.publicId;
+    const reason = e ? this.reasonText(e) : null;
+    return html`
+      <div
+        data-member=${m.publicId}
+        ?data-ineligible=${!selectable}
+        class="relative w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border transition-all text-left ${
+          selected
+            ? "bg-white/10 border-white/30"
+            : selectable
+              ? "bg-white/5 border-white/10 hover:bg-white/10"
+              : "bg-white/[0.02] border-white/5 opacity-50"
+        }"
+      >
+        <button
+          type="button"
+          role="radio"
+          aria-checked=${selected}
+          aria-disabled=${!selectable}
+          aria-labelledby=${`send-target-${m.publicId}`}
+          ?disabled=${!selectable || this.submitting}
+          @click=${() => this.pick(m)}
+          class="absolute inset-0 w-full h-full rounded-xl focus:outline-none focus:ring-2 focus:ring-white/30 ${
+            selectable ? "cursor-pointer" : "cursor-not-allowed"
+          }"
+        ></button>
+        <div
+          class="relative pointer-events-none w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/50 text-xs font-bold shrink-0"
+        >
+          ${renderRoleIcon(m.role)}
+        </div>
+        <div
+          id=${`send-target-${m.publicId}`}
+          class="relative pointer-events-none flex-1 min-w-0 flex flex-col"
+        >
+          <span class="pointer-events-auto inline-flex max-w-full min-w-0">
+            ${playerNameLink(this, m.username, m.publicId)}
+          </span>
+          <span
+            class="text-[10px] ${reason ? "text-amber-300/80" : "text-white/30"}"
+            >${
+              reason ??
+              translateText("clan_modal.joined_date", {
+                date: formatClanDate(m.joinedAt),
+              })
+            }</span
+          >
+        </div>
+        <span
+          class="relative pointer-events-none text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${
+            m.role === "officer"
+              ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+              : "bg-white/10 text-white/40 border border-white/10"
+          }"
+          >${translateClanRole(m.role)}</span
+        >
+        ${
+          selected
+            ? html`<svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="relative pointer-events-none w-5 h-5 text-white shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>`
+            : ""
+        }
+      </div>
+    `;
+  }
+
+  private renderAmount(): TemplateResult {
+    const max = this.maxAmount();
+    const error = this.amountError();
+    const quick = (amount: bigint, label: string, attr: string) =>
+      html`<button
+        type="button"
+        data-quick=${attr}
+        ?disabled=${this.submitting || max === null || amount <= 0n || amount > max}
+        @click=${() => {
+          this.amountInput = amount.toString();
+          this.serverError = null;
+        }}
+        class="px-3 py-1.5 text-xs font-bold uppercase tracking-wider rounded-lg bg-white/5 border border-white/10 text-white/70 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-30 disabled:pointer-events-none"
+      >
+        ${label}
+      </button>`;
+    return html`
+      <div class="space-y-3">
+        <h3 class="text-sm font-bold text-white/60 uppercase tracking-wider">
+          <label for="clan-send-funds-amount"
+            >${translateText("clan_modal.send_funds_step_amount")}</label
+          >
+        </h3>
+        <div class="relative">
+          <plutonium-icon
+            class="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+            .size=${18}
+          ></plutonium-icon>
+          <input
+            id="clan-send-funds-amount"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            placeholder="0"
+            .value=${this.amountInput}
+            ?disabled=${this.submitting}
+            @input=${(e: Event) => {
+              this.amountInput = (e.target as HTMLInputElement).value;
+              this.serverError = null;
+            }}
+            class="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-lg font-bold tabular-nums placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-50"
+          />
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap gap-1.5">
+            ${QUICK_AMOUNTS.map((a) => quick(a, formatPlutonium(a), a.toString()))}
+            ${quick(max ?? 0n, translateText("clan_modal.send_funds_max"), "max")}
+          </div>
+          ${
+            this.recipient && max !== null
+              ? html`<span data-amount-hint class="text-xs text-white/40"
+                  >${translateText("clan_modal.send_funds_amount_hint", {
+                    amount: formatPlutonium(max),
+                    name: this.memberName(this.recipient),
+                  })}</span
+                >`
+              : ""
+          }
+        </div>
+        ${error ? html`<p class="text-red-400 text-xs" role="alert">${error}</p>` : ""}
+      </div>
+    `;
+  }
+
+  private renderConfirm() {
+    const amount = this.parsedAmount();
+    if (!this.confirming || !this.recipient || amount === null) return "";
+    return html`<confirm-dialog
+      .message=${translateText("clan_modal.send_funds_confirm_message", {
+        amount: formatPlutonium(amount),
+        name: this.memberName(this.recipient),
+        tag: this.clanTag,
+      })}
+      variant="warning"
+      .confirmText=${translateText("clan_modal.send_funds_confirm")}
+      ?disabled=${this.submitting}
+      @confirm=${() => {
+        this.confirming = false;
+        void this.send();
+      }}
+      @cancel=${() => (this.confirming = false)}
+    ></confirm-dialog>`;
+  }
+}

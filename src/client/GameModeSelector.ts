@@ -18,6 +18,7 @@ import {
 import {
   getDesktopUpdateState,
   isDesktopShell,
+  isSteamShell,
   multiplayerAllowed,
   multiplayerAllowedForSession,
   type DesktopSessionState,
@@ -405,15 +406,13 @@ export class GameModeSelector extends LitElement {
     // play-page renders this after Main may already have broadcast.
     const last = lastUserMeResponse();
     if (last !== null) this.applyUserMe(last.response);
-    if (isDesktopShell()) {
-      // Seed BOTH from their current values. This element is rendered by
-      // <play-page> on a Lit microtask, so it cannot exist yet when the status
-      // bar dispatches the update bridge's synchronous replay -- without the
-      // seed the update half of the gate stays null and silently never
-      // applies (OPE-396).
-      this.desktopUpdateState = getDesktopUpdateState();
-      this.desktopSessionState = getDesktopSessionState();
-    }
+    // Seed BOTH from their current values. This element is rendered by
+    // <play-page> on a Lit microtask, so it cannot exist yet when the status
+    // bar dispatches the update bridge's synchronous replay -- without the
+    // seed the update half of the gate stays null and silently never applies
+    // (OPE-396). The session is the Steam sign-in, so only Steam seeds it.
+    if (isDesktopShell()) this.desktopUpdateState = getDesktopUpdateState();
+    if (isSteamShell()) this.desktopSessionState = getDesktopSessionState();
     // After the session seed above: a shell that already knows it has no
     // session must not open a feed it will close on the next tick.
     this.start();

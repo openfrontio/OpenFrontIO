@@ -147,6 +147,7 @@ export class RailroadPass {
   private localRailColor: [number, number, number] = [0.75, 0.75, 0.75];
   /** Hovered territory's owner (0 = none) — shows that player's railroad effect. */
   private hoverOwner = 0;
+  private ownsTerrainTex = true;
 
   /** Wall-clock start, for uTime (seconds) — matches TrailPass so the
    *  railroad effect animates at the same pace as the trail effects. */
@@ -159,7 +160,7 @@ export class RailroadPass {
     tileTex: WebGLTexture,
     paletteTex: WebGLTexture,
     effectTex: WebGLTexture,
-    terrainBytes: Uint8Array,
+    terrainBytesOrTex: Uint8Array | WebGLTexture,
     settings: RenderSettings,
   ) {
     this.mapW = mapW;
@@ -216,16 +217,22 @@ export class RailroadPass {
     gl.uniform1i(gl.getUniformLocation(this.program, "uEffect"), 5);
     gl.uniform1f(this.uGhostOwnerID, 0);
 
-    // R8UI terrain texture (static, uploaded once for bridge detection)
-    this.terrainTex = createTexture2D(gl, {
-      width: mapW,
-      height: mapH,
-      internalFormat: gl.R8UI,
-      format: gl.RED_INTEGER,
-      type: gl.UNSIGNED_BYTE,
-      data: terrainBytes,
-      filter: gl.NEAREST,
-    });
+    // R8UI terrain texture (static, uploaded once for bridge detection; reuses shared texture if provided)
+    if (terrainBytesOrTex instanceof WebGLTexture) {
+      this.terrainTex = terrainBytesOrTex;
+      this.ownsTerrainTex = false;
+    } else {
+      this.terrainTex = createTexture2D(gl, {
+        width: mapW,
+        height: mapH,
+        internalFormat: gl.R8UI,
+        format: gl.RED_INTEGER,
+        type: gl.UNSIGNED_BYTE,
+        data: terrainBytesOrTex,
+        filter: gl.NEAREST,
+      });
+      this.ownsTerrainTex = true;
+    }
 
     // R8UI railroad texture (null data = zero-initialized per the WebGL spec)
     this.railroadTex = createTexture2D(gl, {
@@ -526,7 +533,7 @@ export class RailroadPass {
     gl.deleteProgram(this.program);
     gl.deleteTexture(this.railroadTex);
     gl.deleteTexture(this.ghostRailTex);
-    gl.deleteTexture(this.terrainTex);
+    if (this.ownsTerrainTex) gl.deleteTexture(this.terrainTex);
     // Don't delete tileTex, paletteTex, or effectTex — shared with other passes
   }
 }

@@ -12,7 +12,10 @@ import { TeamCountConfig } from "@openfront/engine-api/Schemas";
 import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
 import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
-import { generateID } from "@openfront/shared/SharedUtil";
+import {
+  generateID,
+  generateSingleplayerGameID,
+} from "@openfront/shared/SharedUtil";
 import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
@@ -728,7 +731,7 @@ export class SinglePlayerModal extends BaseModal {
     void prewarmCosmetics();
     if (this.starting) return;
     await this.launch(async ({ resolvedName, cosmetics }, usernameInput) => {
-      const gameID = generateID();
+      const gameID = generateSingleplayerGameID();
       return {
         gameID,
         gameStartInfo: {
@@ -1314,7 +1317,7 @@ export class SinglePlayerModal extends BaseModal {
         `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
       );
       const clientID = generateID();
-      const gameID = generateID();
+      const gameID = generateSingleplayerGameID();
       return {
         gameID: gameID,
         gameStartInfo: {
@@ -1430,7 +1433,7 @@ export class SinglePlayerModal extends BaseModal {
           `Resuming saved game ${id} on ${header.gameConfig.gameMap} at tick ${header.tick}`,
         );
         // A fresh id: a shared save is played by many, each its own game.
-        const gameID = generateID();
+        const gameID = generateSingleplayerGameID();
         return {
           gameID,
           gameStartInfo: {
