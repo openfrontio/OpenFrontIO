@@ -146,6 +146,13 @@ export function initNavigation() {
           const isOnPageContent = target.classList.contains("page-content");
 
           if (isOnMain || isOnPageContent) {
+            if (
+              document.querySelector(
+                "[data-notifications-trigger][aria-expanded='true']",
+              ) !== null
+            ) {
+              return;
+            }
             // Find the open modal and call its close() method instead of showPage directly
             // This ensures proper cleanup (like websocket disconnection)
             const openModal = document.querySelector(
