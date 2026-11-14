@@ -14,9 +14,16 @@ import {
 import { Logger } from "winston";
 import WebSocket from "ws";
 import { Client } from "./Client";
-import { GamePhase, GameServer, JoinResult } from "./GameServer";
+import {
+  GamePhase,
+  GameServer,
+  hashPersistentID,
+  JoinResult,
+} from "./GameServer";
 import { Gatekeeper, noopGatekeeper } from "./Gatekeeper";
+import { OpenLobbyMeta } from "./IPCBridgeSchema";
 import { ClientAuth, clientAuth } from "./JoinVerify";
+import { LobbyInviteService } from "./LobbyInviteService";
 
 export interface ClientSegmentCount {
   platform: Client["platform"];
@@ -51,6 +58,65 @@ export class GameManager {
     return Array.from(this.games.values()).filter(
       (g) => g.phase() === GamePhase.Lobby && !g.isPublic() && g.isListed(),
     );
+  }
+
+  /**
+   * Returns a map of open lobby game IDs on this worker to their connected member identifiers (`hashedCreatorID`, hashed persistentID, and `publicId`).
+   */
+  public openLobbyMembers(): Record<string, string[]> {
+    const out: Record<string, string[]> = {};
+    for (const [id, game] of this.games.entries()) {
+      if (game.phase() === GamePhase.Lobby && !game.hasStarted()) {
+        const members = new Set<string>();
+        const creatorId = game.hashedCreatorID();
+        if (creatorId !== undefined) {
+          members.add(creatorId);
+        }
+        for (const client of game.activeClients()) {
+          members.add(hashPersistentID(client.persistentID));
+          if (client.publicId) {
+            members.add(client.publicId);
+          }
+        }
+        out[id] = [...members];
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Returns a map of open lobby game IDs on this worker to their authoritative mode, map, and join allowlist.
+   */
+  public openLobbyMeta(): Record<string, OpenLobbyMeta> {
+    const out: Record<string, OpenLobbyMeta> = {};
+    for (const [id, game] of this.games.entries()) {
+      if (game.phase() === GamePhase.Lobby && !game.hasStarted()) {
+        const memberPublicIds =
+          (game.isPublic() && game.gameConfig.gameMode !== GameMode.Team) ||
+          game.gameConfig.anonymizeNames
+            ? undefined
+            : [
+                ...new Set(
+                  game
+                    .activeClients()
+                    .map((c) => c.publicId)
+                    .filter((pid): pid is string => Boolean(pid)),
+                ),
+              ];
+        out[id] = {
+          gameMode: game.gameConfig.gameMode,
+          map: game.gameConfig.gameMap,
+          allowedPublicIds:
+            game.gameConfig.allowedPublicIds &&
+            game.gameConfig.allowedPublicIds.length > 0
+              ? [...game.gameConfig.allowedPublicIds]
+              : undefined,
+          memberPublicIds,
+          isPublic: game.isPublic(),
+        };
+      }
+    }
+    return out;
   }
 
   joinClient(client: Client, gameID: GameID): JoinResult | "not_found" {
@@ -179,6 +245,8 @@ export class GameManager {
       const phase = game.phase();
       if (phase === GamePhase.Lobby) {
         game.maybeAutoStartListed();
+      } else {
+        LobbyInviteService.instance.removeInvitesForLobby(id);
       }
       if (phase === GamePhase.Active) {
         // A matchmade game missing a player at the start deadline is

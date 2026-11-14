@@ -15,10 +15,15 @@ import {
   sendCheckin,
 } from "./ClusterCheckin";
 import { getDescriptor } from "./DesktopRelease";
+import { gameApiCors } from "./GameApiCors";
 import {
   coordinatorUrl,
   LobbyCoordinatorClient,
 } from "./LobbyCoordinatorClient";
+import {
+  LobbyInviteService,
+  registerLobbyInviteRoutes,
+} from "./LobbyInviteService";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
 import { fetchMapWeights, MAP_WEIGHTS_POLL_MS } from "./MapWeights";
@@ -322,7 +327,39 @@ export async function startMaster() {
       playlist.setWeights(await fetchMapWeights());
     }, MAP_WEIGHTS_POLL_MS);
   }
+  LobbyInviteService.instance.setBroadcasters(
+    (invite) => lobbyService?.broadcastLobbyInvite(invite),
+    (inviteId, dismissedAt) => {
+      const targetPublicId =
+        LobbyInviteService.instance.getInviteTarget(inviteId);
+      lobbyService?.broadcastLobbyInviteDismiss(
+        inviteId,
+        dismissedAt,
+        targetPublicId,
+        true,
+      );
+    },
+  );
 }
+
+app.use("/api", gameApiCors);
+
+registerLobbyInviteRoutes(app, {
+  isLobbyActive: (lobbyId) =>
+    lobbyService ? lobbyService.isLobbyOpen(lobbyId) : true,
+  isPlayerInLobby: (lobbyId, persistentId, publicId) =>
+    lobbyService
+      ? lobbyService.isPlayerInLobby(lobbyId, persistentId, publicId)
+      : false,
+  getLobbyMeta: (lobbyId) =>
+    lobbyService ? lobbyService.getLobbyMeta(lobbyId) : null,
+  isTargetAllowedInLobby: (lobbyId, targetPublicId, targetRole) =>
+    lobbyService
+      ? lobbyService.isTargetAllowedInLobby(lobbyId, targetPublicId, targetRole)
+      : true,
+  getLobbyMemberPublicIds: (lobbyId) =>
+    lobbyService ? lobbyService.getLobbyMemberPublicIds(lobbyId) : [],
+});
 
 app.get("/api/health", (_req, res) => {
   const ready = lobbyService?.isHealthy() ?? false;

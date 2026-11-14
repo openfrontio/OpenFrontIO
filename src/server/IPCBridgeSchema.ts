@@ -1,4 +1,5 @@
 import { GameConfigSchema } from "@openfront/engine-api/Schemas";
+import { LobbyInviteSchema } from "@openfront/shared/LobbyInviteSchemas";
 import {
   PublicGameInfoSchema,
   PublicGameTypeSchema,
@@ -15,8 +16,27 @@ export type MasterLobbiesBroadcast = z.infer<
 
 export type MasterUpdateGame = z.infer<typeof MasterUpdateGameSchema>;
 export type MasterCreateGame = z.infer<typeof MasterCreateGameSchema>;
+export type WorkerLobbyInvite = z.infer<typeof WorkerLobbyInviteSchema>;
+export type WorkerLobbyInviteDismiss = z.infer<
+  typeof WorkerLobbyInviteDismissSchema
+>;
+export type MasterLobbyInviteBroadcast = z.infer<
+  typeof MasterLobbyInviteBroadcastSchema
+>;
+export type MasterLobbyInviteDismissBroadcast = z.infer<
+  typeof MasterLobbyInviteDismissBroadcastSchema
+>;
+export type OpenLobbyMeta = z.infer<typeof OpenLobbyMetaSchema>;
 export type WorkerMessage = z.infer<typeof WorkerMessageSchema>;
 export type MasterMessage = z.infer<typeof MasterMessageSchema>;
+
+export const OpenLobbyMetaSchema = z.object({
+  gameMode: z.string().optional(),
+  map: z.string().optional(),
+  allowedPublicIds: z.array(z.string()).optional(),
+  memberPublicIds: z.array(z.string()).optional(),
+  isPublic: z.boolean().optional(),
+});
 
 // Master/worker-internal lobby info: PublicGameInfo plus the hashed creator
 // ID (hosted lobbies only) used for the one-listed-lobby-per-creator check,
@@ -54,6 +74,10 @@ const WorkerLobbyListSchema = z.object({
   // when a draining server is empty. Optional for a worker build that
   // predates it; absent counts as zero.
   liveGames: z.number().int().min(0).optional(),
+  // Map of open lobby gameID (public or private) to connected member IDs
+  // (publicId and persistentID) on this worker.
+  openLobbies: z.record(z.string(), z.array(z.string())).optional(),
+  openLobbyMeta: z.record(z.string(), OpenLobbyMetaSchema).optional(),
 });
 
 const WorkerReadySchema = z.object({
@@ -61,9 +85,24 @@ const WorkerReadySchema = z.object({
   workerId: z.number(),
 });
 
+const WorkerLobbyInviteSchema = z.object({
+  type: z.literal("lobbyInvite"),
+  invite: LobbyInviteSchema,
+});
+
+const WorkerLobbyInviteDismissSchema = z.object({
+  type: z.literal("lobbyInviteDismiss"),
+  inviteId: z.string(),
+  dismissedAt: z.number().optional(),
+  targetPublicId: z.string().optional(),
+  isExplicit: z.boolean().optional(),
+});
+
 export const WorkerMessageSchema = z.discriminatedUnion("type", [
   WorkerLobbyListSchema,
   WorkerReadySchema,
+  WorkerLobbyInviteSchema,
+  WorkerLobbyInviteDismissSchema,
 ]);
 
 // --- Master Messages ---
@@ -90,6 +129,9 @@ const MasterLobbiesBroadcastSchema = z.object({
   // deployment learn to reload (see PublicLobbyFullSchema.active). Optional
   // only for old fixtures; the master always sends it, absent means active.
   active: z.boolean().optional(),
+  // Aggregated map of open lobby gameID -> member IDs across all workers.
+  openLobbies: z.record(z.string(), z.array(z.string())).optional(),
+  openLobbyMeta: z.record(z.string(), OpenLobbyMetaSchema).optional(),
 });
 
 // Master sends a message to worker to schedule a new public game/lobby.
@@ -100,8 +142,30 @@ const MasterCreateGameSchema = z.object({
   publicGameType: PublicGameTypeSchema,
 });
 
+const MasterLobbyInviteBroadcastSchema = z.object({
+  type: z.literal("lobbyInviteBroadcast"),
+  invite: LobbyInviteSchema,
+});
+
+const MasterLobbyInviteDismissBroadcastSchema = z.object({
+  type: z.literal("lobbyInviteDismissBroadcast"),
+  inviteId: z.string(),
+  dismissedAt: z.number().optional(),
+  targetPublicId: z.string().optional(),
+  isExplicit: z.boolean().optional(),
+});
+
+const MasterWorkerExitedSchema = z.object({
+  type: z.literal("workerExited"),
+  workerId: z.number(),
+  exitedAt: z.number().optional(),
+});
+
 export const MasterMessageSchema = z.discriminatedUnion("type", [
   MasterLobbiesBroadcastSchema,
   MasterCreateGameSchema,
   MasterUpdateGameSchema,
+  MasterLobbyInviteBroadcastSchema,
+  MasterLobbyInviteDismissBroadcastSchema,
+  MasterWorkerExitedSchema,
 ]);

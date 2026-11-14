@@ -182,6 +182,13 @@ export function resetServerList(): void {
 }
 
 /**
+ * Returns the cached ServerList if loaded.
+ */
+export function cachedServerList(): ServerList | null {
+  return cached?.list ?? null;
+}
+
+/**
  * The site whose list this page reads. Lists are keyed by the hostname
  * players load the page from, so branch previews, main, nightly and prod
  * never share one. Decided by the shell, not by whether serverHost is
