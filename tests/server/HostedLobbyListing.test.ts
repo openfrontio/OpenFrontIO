@@ -14,6 +14,7 @@ import {
   HOSTED_LOBBY_AUTO_START_MS,
   LobbyLabelSchema,
   MAX_HOSTED_LOBBIES,
+  MAX_HOSTED_LOBBY_PLAYERS,
 } from "@openfront/shared/WireSchemas";
 import EventEmitter from "events";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -82,10 +83,32 @@ describe("GameServer listing", () => {
   it("is unlisted by default and toggles via setListed", () => {
     const game = makeGame();
     expect(game.isListed()).toBe(false);
+    expect(game.getVisibleAt()).toBeUndefined();
+
     game.setListed(true);
     expect(game.isListed()).toBe(true);
+    const visibleAt = game.getVisibleAt();
+    expect(visibleAt).toBeTypeOf("number");
+
     game.setListed(false);
     expect(game.isListed()).toBe(false);
+    expect(game.getVisibleAt()).toBe(visibleAt);
+  });
+
+  it("does not stamp visibleAt when private game countdown starts", () => {
+    const game = makeGame();
+    expect(game.getVisibleAt()).toBeUndefined();
+    game.setStartsAt(Date.now() + 5000);
+    expect(game.getVisibleAt()).toBeUndefined();
+  });
+
+  it("stamps visibleAt when public game countdown starts", () => {
+    const game = makeGame("public-game", CREATOR, {
+      gameType: GameType.Public,
+    });
+    expect(game.getVisibleAt()).toBeUndefined();
+    game.setStartsAt(Date.now() + 5000);
+    expect(game.getVisibleAt()).toBeTypeOf("number");
   });
 
   it("cannot be listed through update_game_config", () => {
@@ -230,6 +253,18 @@ describe("GameServer listing", () => {
       expect(getListingEligibilityError(game, 2)).toBe(
         "listing_max_players_too_low",
       );
+    });
+
+    it("rejects a stored cap above the listing maximum when the request omits one", () => {
+      const game = makeGame("big-game", CREATOR, {
+        maxPlayers: MAX_HOSTED_LOBBY_PLAYERS + 1,
+      });
+      expect(getListingEligibilityError(game)).toBe(
+        "listing_max_players_too_high",
+      );
+      expect(
+        getListingEligibilityError(game, MAX_HOSTED_LOBBY_PLAYERS),
+      ).toBeNull();
     });
   });
 

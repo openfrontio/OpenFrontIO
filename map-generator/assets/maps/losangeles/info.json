@@ -4,9 +4,9 @@
   "name": "Los Angeles",
   "translation_key": "map.losangeles",
   "categories": ["north_america"],
-  "location": { "lat": 34.05, "lon": -118.25 },
   "author": "Patrick Plays Badly",
-  "description": "This California megacity is known for its abundance of roads, suburban sprawl, and traffic jams. It is the first map to contain roads that are rendered as “rivers.” The interstates, freeways, and signed boulevards carve up the map into chunks, providing for some interesting gameplay.",
+  "description": "What's LA without its roads? No, really??",
+  "location": { "lat": 34.05, "lon": -118.25 },
   "nations": [
     {
       "coordinates": [700, 30],

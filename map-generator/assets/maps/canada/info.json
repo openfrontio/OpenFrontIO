@@ -1,0 +1,426 @@
+{
+  "$schema": "../../../info.schema.json",
+  "id": "Canada",
+  "name": "Canada",
+  "translation_key": "map.canada",
+  "categories": ["north_america", "countries"],
+  "location": {
+    "lat": 60,
+    "lon": -95
+  },
+  "author": "cazlabIO",
+  "description": "Canada from the Great Lakes to Ellesmere Island, with Alaska, Greenland and the United States as impassable terrain.",
+  "themes": ["north_america"],
+  "nations": [
+    {
+      "coordinates": [897, 1997],
+      "name": "British Columbia",
+      "flag": "britishcolumbia"
+    },
+    {
+      "coordinates": [1317, 1857],
+      "name": "Alberta",
+      "flag": "alberta"
+    },
+    {
+      "coordinates": [1575, 2090],
+      "name": "Saskatchewan",
+      "flag": "saskatchewan"
+    },
+    {
+      "coordinates": [1833, 2148],
+      "name": "Manitoba",
+      "flag": "manitoba"
+    },
+    {
+      "coordinates": [2550, 2415],
+      "name": "Ontario",
+      "flag": "ontario"
+    },
+    {
+      "coordinates": [2805, 2148],
+      "name": "Quebec",
+      "flag": "Quebec"
+    },
+    {
+      "coordinates": [2990, 2122],
+      "name": "New Brunswick",
+      "flag": "newbrunswick"
+    },
+    {
+      "coordinates": [3131, 2133],
+      "name": "Nova Scotia",
+      "flag": "novascotia"
+    },
+    {
+      "coordinates": [3104, 2045],
+      "name": "Prince Edward Island",
+      "flag": "princeedwardisland"
+    },
+    {
+      "coordinates": [3397, 1762],
+      "name": "Newfoundland and Labrador",
+      "flag": "newfoundlandandlabrador"
+    },
+    {
+      "coordinates": [921, 1233],
+      "name": "Yukon",
+      "flag": "Yukon"
+    },
+    {
+      "coordinates": [1436, 1389],
+      "name": "Northwest Territories",
+      "flag": "northwestterritories"
+    },
+    {
+      "coordinates": [2529, 1261],
+      "name": "Nunavut",
+      "flag": "Nunavut"
+    },
+    {
+      "coordinates": [2668, 2281],
+      "name": "Canada",
+      "flag": "ca"
+    },
+    {
+      "coordinates": [1516, 1798],
+      "name": "Métis",
+      "flag": "Metis"
+    },
+    {
+      "coordinates": [762, 1615],
+      "name": "Haida",
+      "flag": "haida_flag"
+    },
+    {
+      "coordinates": [1186, 915],
+      "name": "Inuvialuit"
+    },
+    {
+      "coordinates": [2655, 1539],
+      "name": "Nunavik"
+    },
+    {
+      "coordinates": [2869, 1526],
+      "name": "Nunatsiavut"
+    },
+    {
+      "coordinates": [2429, 1868],
+      "name": "Cree"
+    },
+    {
+      "coordinates": [2896, 1903],
+      "name": "Innu"
+    },
+    {
+      "coordinates": [3207, 1993],
+      "name": "Mi'kmaq"
+    },
+    {
+      "coordinates": [2530, 2457],
+      "name": "Haudenosaunee"
+    },
+    {
+      "coordinates": [2325, 2299],
+      "name": "Anishinaabe"
+    },
+    {
+      "coordinates": [1262, 1355],
+      "name": "Dene"
+    },
+    {
+      "coordinates": [1285, 2020],
+      "name": "Blackfoot"
+    },
+    {
+      "coordinates": [1137, 942],
+      "name": "Gwich'in"
+    },
+    {
+      "coordinates": [956, 1293],
+      "name": "Tlingit"
+    },
+    {
+      "coordinates": [897, 1582],
+      "name": "Nisga'a"
+    },
+    {
+      "coordinates": [1022, 1830],
+      "name": "Secwepemc"
+    },
+    {
+      "coordinates": [832, 1920],
+      "name": "Nuu-chah-nulth"
+    },
+    {
+      "coordinates": [831, 1830],
+      "name": "Kwakwaka'wakw"
+    },
+    {
+      "coordinates": [2974, 2121],
+      "name": "Wolastoqiyik"
+    },
+    {
+      "coordinates": [2739, 2138],
+      "name": "Atikamekw"
+    },
+    {
+      "coordinates": [1968, 1970],
+      "name": "Oji-Cree"
+    },
+    {
+      "coordinates": [1231, 1963],
+      "name": "Nakoda"
+    },
+    {
+      "coordinates": [1719, 1086],
+      "name": "Kitikmeot Inuit"
+    },
+    {
+      "coordinates": [1983, 1439],
+      "name": "Kivalliq Inuit"
+    }
+  ],
+  "custom_tribes": [
+    {
+      "name": "Toronto",
+      "coordinates": [2538, 2415]
+    },
+    {
+      "name": "Ottawa",
+      "coordinates": [2668, 2269]
+    },
+    {
+      "name": "Edmonton",
+      "coordinates": [1318, 1845]
+    },
+    {
+      "name": "Winnipeg",
+      "coordinates": [1836, 2134]
+    },
+    {
+      "name": "Québec City",
+      "coordinates": [2806, 2136]
+    },
+    {
+      "name": "Halifax",
+      "coordinates": [3131, 2121]
+    },
+    {
+      "name": "Victoria",
+      "coordinates": [897, 1988]
+    },
+    {
+      "name": "Regina",
+      "coordinates": [1575, 2078]
+    },
+    {
+      "name": "St. John's",
+      "coordinates": [3398, 1774]
+    },
+    {
+      "name": "Fredericton",
+      "coordinates": [2990, 2110]
+    },
+    {
+      "name": "Charlottetown",
+      "coordinates": [3092, 2045]
+    },
+    {
+      "name": "Whitehorse",
+      "coordinates": [921, 1221]
+    },
+    {
+      "name": "Yellowknife",
+      "coordinates": [1425, 1384]
+    },
+    {
+      "name": "Iqaluit",
+      "coordinates": [2529, 1250]
+    },
+    {
+      "name": "Montréal",
+      "coordinates": [2746, 2250]
+    },
+    {
+      "name": "Vancouver",
+      "coordinates": [924, 1959]
+    },
+    {
+      "name": "Calgary",
+      "coordinates": [1260, 1979]
+    },
+    {
+      "name": "Hamilton",
+      "coordinates": [2539, 2444]
+    },
+    {
+      "name": "Oshawa",
+      "coordinates": [2569, 2399]
+    },
+    {
+      "name": "Kitchener",
+      "coordinates": [2509, 2439]
+    },
+    {
+      "name": "London",
+      "coordinates": [2485, 2473]
+    },
+    {
+      "name": "Windsor",
+      "coordinates": [2420, 2525]
+    },
+    {
+      "name": "Saskatoon",
+      "coordinates": [1519, 1983]
+    },
+    {
+      "name": "Barrie",
+      "coordinates": [2529, 2380]
+    },
+    {
+      "name": "Sudbury",
+      "coordinates": [2453, 2276]
+    },
+    {
+      "name": "Abbotsford",
+      "coordinates": [946, 1983]
+    },
+    {
+      "name": "Sarnia",
+      "coordinates": [2438, 2483]
+    },
+    {
+      "name": "Sherbrooke",
+      "coordinates": [2811, 2232]
+    },
+    {
+      "name": "Kelowna",
+      "coordinates": [1058, 1980]
+    },
+    {
+      "name": "Trois-Rivières",
+      "coordinates": [2767, 2191]
+    },
+    {
+      "name": "Kingston",
+      "coordinates": [2659, 2351]
+    },
+    {
+      "name": "Thunder Bay",
+      "coordinates": [2125, 2217]
+    },
+    {
+      "name": "Moncton",
+      "coordinates": [3052, 2083]
+    },
+    {
+      "name": "Saint John",
+      "coordinates": [3027, 2147]
+    },
+    {
+      "name": "Nanaimo",
+      "coordinates": [893, 1952]
+    },
+    {
+      "name": "Peterborough",
+      "coordinates": [2584, 2371]
+    },
+    {
+      "name": "Saint-Jérôme",
+      "coordinates": [2726, 2241]
+    },
+    {
+      "name": "Red Deer",
+      "coordinates": [1288, 1924]
+    },
+    {
+      "name": "Lethbridge",
+      "coordinates": [1282, 2068]
+    },
+    {
+      "name": "Kamloops",
+      "coordinates": [1047, 1917]
+    },
+    {
+      "name": "Prince George",
+      "coordinates": [1046, 1734]
+    },
+    {
+      "name": "Medicine Hat",
+      "coordinates": [1359, 2072]
+    },
+    {
+      "name": "Drummondville",
+      "coordinates": [2780, 2215]
+    },
+    {
+      "name": "Saguenay",
+      "coordinates": [2780, 2063]
+    },
+    {
+      "name": "Chilliwack",
+      "coordinates": [961, 1982]
+    },
+    {
+      "name": "North Bay",
+      "coordinates": [2513, 2273]
+    },
+    {
+      "name": "Shawinigan",
+      "coordinates": [2758, 2183]
+    },
+    {
+      "name": "Cornwall",
+      "coordinates": [2711, 2289]
+    },
+    {
+      "name": "Joliette",
+      "coordinates": [2742, 2220]
+    },
+    {
+      "name": "Belleville",
+      "coordinates": [2623, 2367]
+    },
+    {
+      "name": "Victoriaville",
+      "coordinates": [2796, 2199]
+    },
+    {
+      "name": "Grande Prairie",
+      "coordinates": [1187, 1720]
+    },
+    {
+      "name": "Penticton",
+      "coordinates": [1047, 1999]
+    },
+    {
+      "name": "Sydney",
+      "coordinates": [3215, 2002]
+    },
+    {
+      "name": "Orillia",
+      "coordinates": [2537, 2366]
+    },
+    {
+      "name": "Rimouski",
+      "coordinates": [2867, 2026]
+    },
+    {
+      "name": "Timmins",
+      "coordinates": [2416, 2171]
+    },
+    {
+      "name": "Prince Albert",
+      "coordinates": [1561, 1936]
+    },
+    {
+      "name": "Campbell River",
+      "coordinates": [873, 1888]
+    },
+    {
+      "name": "Courtenay",
+      "coordinates": [873, 1908]
+    }
+  ]
+}

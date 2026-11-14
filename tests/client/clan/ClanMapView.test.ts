@@ -18,6 +18,7 @@ import {
   ClanMapView,
   clanMapOrigin,
 } from "../../../src/client/components/clan/ClanMapView";
+import { translationTemplates } from "../../../src/client/Utils";
 
 const asMock = (fn: unknown) => fn as ReturnType<typeof vi.fn>;
 const MAP_ORIGIN = "https://clanmap.openfront.dev";
@@ -72,6 +73,14 @@ describe("ClanMapView", () => {
     expect(frame.hasAttribute("sandbox")).toBe(false);
   });
 
+  it("asks the page for its full-screen layout when full", async () => {
+    view.full = true;
+    await flushAsync(view);
+    expect(view.querySelector("iframe")!.getAttribute("src")).toBe(
+      `${MAP_ORIGIN}/?full=1`,
+    );
+  });
+
   it("answers clanmap:ready with the JWT, targeted at the map origin", async () => {
     ready();
     await flushAsync();
@@ -83,12 +92,59 @@ describe("ClanMapView", () => {
     );
   });
 
-  it("stays silent for a signed-out viewer", async () => {
+  it("sends the page its text in the player's language, before the JWT", async () => {
+    ready();
+    await flushAsync();
+
+    expect(translationTemplates).toHaveBeenCalledWith("clan_map.");
+    expect(postMessage).toHaveBeenNthCalledWith(
+      1,
+      {
+        type: "clanmap:lang",
+        lang: "en",
+        rtl: false,
+        strings: { claim_land: "Claim land" },
+      },
+      MAP_ORIGIN,
+    );
+  });
+
+  it("sends the language again when it changes while the map is open", async () => {
+    ready();
+    await flushAsync();
+    postMessage.mockClear();
+    asMock(translationTemplates).mockReturnValueOnce({
+      claim_land: "Revendiquer",
+    });
+
+    // LangSelector asks every translated component to re-render.
+    view.requestUpdate();
+    await flushAsync(view);
+
+    expect(postMessage).toHaveBeenCalledWith(
+      {
+        type: "clanmap:lang",
+        lang: "en",
+        rtl: false,
+        strings: { claim_land: "Revendiquer" },
+      },
+      MAP_ORIGIN,
+    );
+  });
+
+  it("sends nothing on a re-render before the page has said it's ready", async () => {
+    view.requestUpdate();
+    await flushAsync(view);
+    expect(postMessage).not.toHaveBeenCalled();
+  });
+
+  it("sends a signed-out viewer the text but no JWT", async () => {
     asMock(userAuth).mockResolvedValueOnce(false);
     ready();
     await flushAsync();
 
-    expect(postMessage).not.toHaveBeenCalled();
+    expect(postMessage).toHaveBeenCalledTimes(1);
+    expect(postMessage.mock.calls[0][0].type).toBe("clanmap:lang");
   });
 
   it("ignores messages from another origin", async () => {

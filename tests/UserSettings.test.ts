@@ -28,6 +28,26 @@ function resetUserSettingsState() {
   statics.playerId = null;
 }
 
+describe("UserSettings random name style", () => {
+  beforeEach(resetUserSettingsState);
+
+  it("defaults to Anon, including for an unknown stored style", () => {
+    expect(new UserSettings().randomNameStyle()).toBe("anon");
+    resetUserSettingsState();
+    localStorage.setItem("settings.randomNameStyle", "unknown");
+    expect(new UserSettings().randomNameStyle()).toBe("anon");
+  });
+
+  it("persists both choices across settings instances", () => {
+    const settings = new UserSettings();
+    for (const style of ["tribe", "anon"] as const) {
+      settings.setRandomNameStyle(style);
+      expect(new UserSettings().randomNameStyle()).toBe(style);
+      expect(localStorage.getItem("settings.randomNameStyle")).toBe(style);
+    }
+  });
+});
+
 describe("UserSettings effect selection", () => {
   beforeEach(resetUserSettingsState);
 
@@ -595,6 +615,7 @@ describe("getDefaultKeybinds", () => {
     expect(keybinds.selectAllWarships).toBe("KeyX");
     expect(keybinds.emojiMenu).toBe("KeyF");
     expect(keybinds.quickChat).toBe("KeyR");
+    expect(keybinds.playerPanel).toBe("KeyI");
     expect(keybinds.targetPlayer).toBe("KeyN");
     expect(keybinds.buildMenuModifier).toBe("ControlLeft");
     expect(keybinds.moveUpArrow).toBe("ArrowUp");

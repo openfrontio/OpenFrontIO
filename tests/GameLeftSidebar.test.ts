@@ -4,6 +4,7 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { GameLeftSidebar } from "../src/client/hud/layers/GameLeftSidebar";
 import type { PlayerStats } from "../src/client/hud/layers/PlayerStats";
 import type { TeamStats } from "../src/client/hud/layers/TeamStats";
+import { AlternateViewEvent } from "../src/client/InputHandler";
 import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
 
@@ -94,6 +95,34 @@ describe("GameLeftSidebar", () => {
     sidebar.remove();
   });
 
+  it("reserves warning space only for expanded sidebars on narrow screens", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    document.body.append(sidebar);
+    await sidebar.updateComplete;
+
+    const aside = () => sidebar.querySelector("aside")!;
+    const offsetMargin =
+      "max-lg:mt-[calc(var(--bar-offset)+var(--game-health-offset,0px))]";
+    const offsetHeight =
+      "max-lg:max-h-[calc(100vh-80px-var(--game-health-offset,0px))]";
+    expect(aside().classList).not.toContain(offsetMargin);
+    expect(aside().classList).not.toContain(offsetHeight);
+    expect(aside().style.marginTop).toBe("");
+    expect(aside().style.getPropertyValue("--bar-offset")).toBe("0px");
+
+    (sidebar.querySelector('[role="button"]') as HTMLElement).click();
+    await sidebar.updateComplete;
+    expect(aside().classList).toContain(offsetMargin);
+    expect(aside().classList).toContain(offsetHeight);
+
+    (sidebar.querySelector('[role="button"]') as HTMLElement).click();
+    await sidebar.updateComplete;
+    expect(aside().classList).not.toContain(offsetMargin);
+    expect(aside().classList).not.toContain(offsetHeight);
+    sidebar.remove();
+  });
+
   it.each([
     { viewport: "a large screen", compact: false, shown: true },
     {
@@ -141,6 +170,34 @@ describe("GameLeftSidebar", () => {
     expect(sidebar.querySelector("team-stats")?.className).not.toContain(
       "lg:flex-initial",
     );
+
+    sidebar.remove();
+  });
+
+  it("toggles the alternate view and follows it when space switches it", async () => {
+    const eventBus = new EventBus();
+    const seen: boolean[] = [];
+    eventBus.on(AlternateViewEvent, (e) => seen.push(e.alternateView));
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = eventBus;
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+
+    const button = () =>
+      sidebar.querySelector<HTMLElement>("[aria-pressed]") as HTMLElement;
+    button().click();
+    await sidebar.updateComplete;
+    expect(seen).toEqual([true]);
+    expect(button().getAttribute("aria-pressed")).toBe("true");
+
+    // Releasing space turns it off from outside the button.
+    eventBus.emit(new AlternateViewEvent(false));
+    await sidebar.updateComplete;
+    expect(button().getAttribute("aria-pressed")).toBe("false");
+    button().click();
+    expect(seen).toEqual([true, false, true]);
 
     sidebar.remove();
   });

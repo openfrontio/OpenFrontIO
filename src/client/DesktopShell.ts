@@ -1,15 +1,38 @@
 // The Electron desktop (Steam) shell exposes this global via a contextBridge
-// preload script — see openfront-desktop's src/preload/preload.ts. Its mere
-// presence is a reliable signal we're running inside that shell, since only
-// the desktop build's preload script ever sets it.
+// preload script — see openfront-desktop's src/preload/preload.ts. The Android
+// app defines it too, from its own shell script. Its mere presence is a
+// reliable signal we're running inside one of those shells, since nothing
+// else ever sets it; isSteamShell() below says which.
 declare global {
   interface Window {
     openfrontDesktop?: unknown;
   }
 }
 
+// True inside ANY native app shell: the Electron (Steam) shell, and the
+// Android app, which defines the same global with a smaller surface (no
+// `steam`, `linkGate`, `presence`, `invite`, `display` or `quit`). Use it for
+// what every shell shares -- no ads, the shell's own updater, a document the
+// shell serves -- and isSteamShell() below for anything that goes through
+// Steam.
 export function isDesktopShell(): boolean {
   return typeof window !== "undefined" && window.openfrontDesktop !== undefined;
+}
+
+/**
+ * True inside the Steam (Electron) shell only.
+ *
+ * The Steam preload exposes the `steam` namespace unconditionally, whether or
+ * not a Steam client is running, so on Steam this is exactly isDesktopShell().
+ * The Android shell has no `steam` key, which is what tells the two apart: it
+ * signs in, pays and shows presence the way the web does, not through Steam.
+ *
+ * The same test SteamSDK.isOnSteam() and Payments' steamBridge() make.
+ */
+export function isSteamShell(): boolean {
+  if (typeof window === "undefined") return false;
+  const desktop = window.openfrontDesktop as { steam?: unknown } | undefined;
+  return desktop?.steam !== undefined;
 }
 
 // The shell's own version, distinct from the game version this client was
@@ -374,8 +397,8 @@ export interface DesktopSessionState {
  *
  * So every signed-out reason gates, including the ones the player cannot fix.
  *
- * A null state means no desktop shell -- the web build -- where a logged-out
- * player passes Turnstile normally and must not be gated.
+ * A null state means no Steam shell -- the web build, or the Android shell --
+ * where a logged-out player passes Turnstile normally and must not be gated.
  */
 export function multiplayerAllowedForSession(
   state: DesktopSessionState | null,

@@ -3,7 +3,7 @@
   "id": "Mexico",
   "name": "Mexico",
   "translation_key": "map.mexico",
-  "categories": ["north_america", "new", "countries"],
+  "categories": ["north_america", "countries"],
   "location": { "lat": 23, "lon": -102 },
   "author": "crunchybbb",
   "description": "A country located in the southern part of North America, sandwiched between the Pacific and the Gulf of Mexico. The country is primarily mountainous, with hot deserts in the north and wet jungles in the south.",

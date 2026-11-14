@@ -1717,6 +1717,8 @@ export class HostLobbyModal extends BaseModal {
       key = "private_lobby.listing_full";
     } else if (serverError === "listing_max_players_too_low") {
       key = "private_lobby.listing_max_players_too_low";
+    } else if (serverError === "listing_max_players_too_high") {
+      key = "private_lobby.listing_max_players_too_high";
     }
     showToast(translateText(key), "red", 3000);
   }

@@ -1,10 +1,6 @@
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import {
-  desktopQuit,
-  isDesktopShell,
-  requestDesktopQuit,
-} from "../DesktopShell";
+import { desktopQuit, isSteamShell, requestDesktopQuit } from "../DesktopShell";
 import { translateText } from "../Utils";
 
 export type WebGLGateStatus = "software" | "unsupported" | "limited";
@@ -106,7 +102,7 @@ export class WebGLGate extends LitElement {
   }
 
   render() {
-    if (this.status !== "limited" && isDesktopShell()) {
+    if (this.status !== "limited" && isSteamShell()) {
       return this.renderDesktop();
     }
     const limited = this.status === "limited";
