@@ -172,6 +172,11 @@ export class MapRenderer {
   ): void {
     this.renderer?.uploadLiveDelta(tileState, changedTiles);
   }
+  /** Drain all territory drip buckets immediately (used for offline exports and snapshot draws). */
+  flushTileDrip(): void {
+    this.renderer?.flushTileDrip();
+  }
+
   /** Forward live trail delta (dirty rows or changed tiles) to the GPU renderer. */
   uploadLiveTrailDelta(
     trailState: Uint16Array,

@@ -65,7 +65,7 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../UserSettings";
-import { translateText } from "../Utils";
+import { showToast, translateText } from "../Utils";
 import { gunzipInBrowser } from "./BrowserGzip";
 import type {
   ReplayAppend,
@@ -88,6 +88,15 @@ import { ReplayAppearance } from "./ReplayAppearance";
 import { CameraGestures, ReplayCamera } from "./ReplayCamera";
 import { formatGameTime, timelineFrames } from "./ReplayControls";
 import { classicReplayHref, versionedViewerUrl } from "./ReplayEntry";
+import {
+  downloadBlob,
+  exportFilename,
+  exportMatchStatsCsv,
+  exportReplayJson,
+  exportScreenshotPng,
+  exportVideo,
+  type ReplayExportFormat,
+} from "./ReplayExport";
 import { ReplayGameView } from "./ReplayGameAdapter";
 import { ReplayNukedLayers } from "./ReplayNukedLayers";
 import type { ReplayPalette } from "./ReplayPalette";
@@ -147,6 +156,8 @@ export class ReplayViewer extends LitElement {
   @state() private classicFallback = false;
   /** True while the game is still being processed. */
   @state() private growing = false;
+  /** True if processing stopped early without completing the whole game. */
+  private partial = false;
   /** Length of the whole game in frames, known before processing ends. */
   @state() private gameLength: number | null = null;
   /**
@@ -189,7 +200,11 @@ export class ReplayViewer extends LitElement {
   @state() private tick = 0;
   @state() private playing = false;
   @state() private speed = 1;
+  @state() private exporting = false;
+  private exportAbort: AbortController | null = null;
   private playback: ReplayPlayback | null = null;
+  private appearance: ReplayAppearance | null = null;
+  private drawNow: (() => void) | null = null;
   private view: MapRenderer | null = null;
   private camera: ReplayCamera | null = null;
   private gestures: CameraGestures | null = null;
@@ -213,6 +228,7 @@ export class ReplayViewer extends LitElement {
     this.continueAbortController?.abort();
     this.continueAbortController = null;
     this.abort.abort();
+    this.cancelExport();
     this.processing?.cancel();
     if (this.rafId !== null) cancelAnimationFrame(this.rafId);
     if (this.hudTimer !== null) clearInterval(this.hudTimer);
@@ -226,6 +242,7 @@ export class ReplayViewer extends LitElement {
    * redirected to that build's versioned shell.
    */
   private async open(): Promise<void> {
+    this.partial = false;
     const stored = await replayStore.get(this.gameID);
     if (this.abort.signal.aborted) return;
     if (stored !== undefined) {
@@ -341,6 +358,7 @@ export class ReplayViewer extends LitElement {
         return;
       }
       this.growing = false;
+      this.partial = true;
       this.playback.live = false;
       this.stoppedEarly = message;
     });
@@ -435,6 +453,7 @@ export class ReplayViewer extends LitElement {
       userSettings,
       playback.frameBuilder,
     );
+    this.appearance = appearance;
     const replayTerrain = new ReplayTerrain(terrainOf(map));
     const adapter = new ReplayGameView(
       appearance.palette.players,
@@ -510,12 +529,19 @@ export class ReplayViewer extends LitElement {
     if (this.abort.signal.aborted) return;
 
     let last: number | null = null;
+    this.drawNow = () => {
+      view.flushTileDrip();
+      view.setCameraState(camera.x, camera.y, camera.zoom * renderDpr());
+      draw(performance.now());
+    };
     const loop = (now: number) => {
       camera.step(last === null ? 0 : now - last);
       last = now;
-      playback.tick(now);
-      view.setCameraState(camera.x, camera.y, camera.zoom * renderDpr());
-      draw(now);
+      if (!this.exporting) {
+        playback.tick(now);
+        view.setCameraState(camera.x, camera.y, camera.zoom * renderDpr());
+        draw(now);
+      }
       this.rafId = requestAnimationFrame(loop);
     };
     this.rafId = requestAnimationFrame(loop);
@@ -640,6 +666,7 @@ export class ReplayViewer extends LitElement {
     // playback pauses while it's open.
     new ViewModeController(this.hudBus, view).init();
     this.hudBus.on(PauseGameIntentEvent, (e) => {
+      if (this.exporting && !e.paused) return;
       if (e.paused) this.playback?.pause();
       else this.playback?.play();
     });
@@ -717,13 +744,18 @@ export class ReplayViewer extends LitElement {
   // ---- Input ----
 
   private onKey(e: KeyboardEvent): void {
-    const p = this.playback;
-    if (p === null || this.status !== "ready") return;
     // The settings or continue modal paused playback, so keys wait until it closes. So
     // do the game settings it opens: their sliders take the arrow keys.
     if (this.continueModalOpen || this.settingsOpen()) {
       return;
     }
+    if (e.key === "Escape" && this.exporting) {
+      e.preventDefault();
+      this.cancelExport();
+      return;
+    }
+    const p = this.playback;
+    if (p === null || this.status !== "ready" || this.exporting) return;
     // The timeline keeps focus after a click, so it doesn't count as typing.
     // Its own arrow-key steps are prevented below so a key seeks once. Any
     // other input keeps its keys.
@@ -761,6 +793,7 @@ export class ReplayViewer extends LitElement {
   }
 
   private onPointerDown(e: PointerEvent): void {
+    if (this.exporting) return;
     const el = e.currentTarget as HTMLElement;
     el.setPointerCapture(e.pointerId);
     const rect = el.getBoundingClientRect();
@@ -772,6 +805,7 @@ export class ReplayViewer extends LitElement {
   }
 
   private onPointerMove(e: PointerEvent): void {
+    if (this.exporting) return;
     const g = this.gestures;
     if (this.status === "ready" && g?.active === false) {
       this.hudBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
@@ -792,6 +826,7 @@ export class ReplayViewer extends LitElement {
 
   private onWheel(e: WheelEvent): void {
     e.preventDefault();
+    if (this.exporting) return;
     const el = e.currentTarget as HTMLElement;
     const rect = el.getBoundingClientRect();
     this.camera?.zoomAt(
@@ -804,18 +839,20 @@ export class ReplayViewer extends LitElement {
   }
 
   private onDoubleClick(e: MouseEvent): void {
+    if (this.exporting) return;
     const el = e.currentTarget as HTMLElement;
     this.camera?.fit(el.clientWidth, el.clientHeight);
   }
 
   private togglePlay(): void {
     const p = this.playback;
-    if (p === null) return;
+    if (p === null || this.exporting) return;
     if (p.playing) p.pause();
     else p.play();
   }
 
   private openMenu(): void {
+    if (this.exporting) return;
     this.hudBus.emit(
       new ShowSettingsModalEvent(
         true,
@@ -825,7 +862,120 @@ export class ReplayViewer extends LitElement {
     );
   }
 
+  private cancelExport(): void {
+    if (this.exportAbort !== null) {
+      this.exportAbort.abort();
+      this.exportAbort = null;
+    }
+  }
+
+  private async exportReplay(format: ReplayExportFormat): Promise<void> {
+    const p = this.playback;
+    if (p === null || this.exporting) return;
+    if (this.growing || this.partial) {
+      showToast(translateText("replay_viewer.export_incomplete"), "red");
+      return;
+    }
+    this.exporting = true;
+    const exportAbort = new AbortController();
+    this.exportAbort = exportAbort;
+    const onParentAbort = () => exportAbort.abort();
+    this.abort.signal.addEventListener("abort", onParentAbort, { once: true });
+
+    if (format === "mp4" || format === "webm") {
+      showToast(
+        translateText("replay_viewer.export_tab_warning"),
+        "green",
+        5000,
+      );
+    }
+
+    const savedTick = this.tick;
+    try {
+      let blob: Blob;
+      let extOverride: string | undefined;
+      switch (format) {
+        case "png": {
+          const canvas = this.querySelector<HTMLCanvasElement>("canvas");
+          if (canvas === null) throw new Error("missing replay canvas");
+          blob = await exportScreenshotPng(canvas, () => this.drawNow?.());
+          break;
+        }
+        case "mp4":
+        case "webm": {
+          const canvas = this.querySelector<HTMLCanvasElement>("canvas");
+          if (canvas === null) throw new Error("missing replay canvas");
+          const wasPlaying = p.playing;
+          const savedFrame = Math.max(0, p.frame);
+          p.pause();
+          try {
+            const isFull = format === "mp4";
+            const res = await exportVideo({
+              canvas,
+              totalFrames: p.totalFrames,
+              maxFrames: isFull ? null : 120,
+              fps: isFull ? TICKS_PER_SECOND : 30,
+              preferredFormat: isFull ? "mp4" : "webm",
+              signal: exportAbort.signal,
+              seekAndDraw: async (frame) => {
+                await p.seek(frame);
+                if (p.frame !== frame) {
+                  throw new Error(
+                    `failed to seek to frame ${frame} (at ${p.frame})`,
+                  );
+                }
+                this.view?.flushTileDrip();
+                this.drawNow?.();
+              },
+            });
+            blob = res.blob;
+            extOverride = res.ext;
+          } finally {
+            if (!this.abort.signal.aborted) {
+              await p.seek(savedFrame);
+              this.drawNow?.();
+              if (
+                wasPlaying &&
+                !this.settingsOpen() &&
+                !this.continueModalOpen
+              ) {
+                p.play();
+              }
+            }
+          }
+          break;
+        }
+        case "json":
+          blob = await exportReplayJson(this.gameID, p.data());
+          break;
+        case "csv":
+          blob = await exportMatchStatsCsv(p.data(), gunzipInBrowser, {
+            players: this.appearance?.palette.players ?? p.header.players,
+            signal: exportAbort.signal,
+          });
+          break;
+      }
+      if (!this.abort.signal.aborted && !exportAbort.signal.aborted) {
+        downloadBlob(
+          blob,
+          exportFilename(this.gameID, format, savedTick, extOverride),
+        );
+      }
+    } catch (err) {
+      if (this.abort.signal.aborted || exportAbort.signal.aborted) return;
+      console.error("replay viewer: export failed:", err);
+      showToast(translateText("replay_viewer.export_failed"), "red");
+    } finally {
+      this.abort.signal.removeEventListener("abort", onParentAbort);
+      if (this.exportAbort === exportAbort) {
+        this.exportAbort = null;
+      }
+      this.exporting = false;
+    }
+  }
+
   private openContinueModal(): void {
+    if (this.exporting) return;
     const p = this.playback;
     if (p !== null && p.playing) {
       p.pause();
@@ -985,12 +1135,20 @@ export class ReplayViewer extends LitElement {
                 .total=${timelineFrames(loaded, this.gameLength, this.growing)}
                 .playing=${this.playing}
                 .speed=${this.speed}
-                .canContinue=${true}
+                .exporting=${this.exporting}
+                .canContinue=${!this.exporting}
                 @replay-toggle-play=${() => this.togglePlay()}
-                @replay-seek=${(e: CustomEvent<number>) =>
-                  void this.playback?.seek(e.detail)}
-                @replay-speed=${(e: CustomEvent<number>) =>
-                  this.playback?.setSpeed(e.detail)}
+                @replay-seek=${(e: CustomEvent<number>) => {
+                  if (this.exporting) return;
+                  void this.playback?.seek(e.detail);
+                }}
+                @replay-speed=${(e: CustomEvent<number>) => {
+                  if (this.exporting) return;
+                  this.playback?.setSpeed(e.detail);
+                }}
+                @replay-export=${(e: CustomEvent<ReplayExportFormat>) =>
+                  void this.exportReplay(e.detail)}
+                @replay-cancel-export=${() => this.cancelExport()}
                 @replay-menu=${() => this.openMenu()}
                 @replay-continue=${() => this.openContinueModal()}
               ></replay-controls>`
