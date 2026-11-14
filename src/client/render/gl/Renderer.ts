@@ -957,7 +957,7 @@ export class GPURenderer {
     const posts: { x: number; y: number; ownerID: number }[] = [];
     const w = this.mapW;
     for (const u of units.values()) {
-      if (u.unitType === "Defense Post" && !u.underConstruction) {
+      if (u.unitType === "Defense Post" && !u.underConstruction && u.isActive) {
         posts.push({
           x: u.pos % w,
           y: (u.pos - (u.pos % w)) / w,
