@@ -3253,6 +3253,8 @@
     "build_menu_modifier_desc": "Hold this key while clicking to open the build menu.",
     "build_mirv": "Build MIRV",
     "build_missile_silo": "Build Missile Silo",
+    "build_multiplier_cycle_desc": "Pressing a build hotkey repeatedly cycles the build multiplier (x1 → x5 → x10...)",
+    "build_multiplier_cycle_label": "Cycle Build Multiplier on Hotkey",
     "build_port": "Build Port",
     "build_sam_launcher": "Build SAM Launcher",
     "build_scroll_modifier": "Build Scroll Modifier",

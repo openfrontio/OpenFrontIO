@@ -452,13 +452,25 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
+  /**
+   * Toggles the snap build preview setting.
+   */
   private toggleSnapBuildPreview() {
     this.userSettings.toggleSnapBuildPreview();
-
     console.log(
       "🧲 Snap build preview:",
       this.userSettings.snapBuildPreview() ? "ON" : "OFF",
     );
+  }
+
+  /**
+   * Toggles the build multiplier cycle setting and resets the active multiplier when disabled.
+   */
+  private toggleBuildMultiplierCycle() {
+    this.userSettings.toggleBuildMultiplierCycle();
+    if (!this.userSettings.buildMultiplierCycle() && this.uiState) {
+      this.uiState.upgradeMultiplier = 1;
+    }
   }
 
   private toggleAnonymousNames() {
@@ -2022,6 +2034,17 @@ export class UserSettingModal extends BaseModal {
         id="snap-build-preview-toggle"
         .checked=${this.userSettings.snapBuildPreview()}
         @change=${this.toggleSnapBuildPreview}
+      ></setting-toggle>
+
+      <!-- 🔢 Build Multiplier Cycle -->
+      <setting-toggle
+        label="${translateText("user_setting.build_multiplier_cycle_label")}"
+        description="${translateText(
+          "user_setting.build_multiplier_cycle_desc",
+        )}"
+        id="build-multiplier-cycle-toggle"
+        .checked=${this.userSettings.buildMultiplierCycle()}
+        @change=${this.toggleBuildMultiplierCycle}
       ></setting-toggle>
 
       <!-- 🖱️ Left Click Menu -->
