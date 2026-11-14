@@ -112,6 +112,7 @@ export enum GameMapType {
   PulicatLake = "Pulicat Lake", // map-generator/assets/maps/pulicatlake/info.json
   QingChina = "Qing China", // map-generator/assets/maps/qingchina/info.json
   RioDeJaneiro = "Rio de Janeiro", // map-generator/assets/maps/riodejaneiro/info.json
+  RockyMountains = "Rocky Mountains", // map-generator/assets/maps/rockymountains/info.json
   Russia = "Russia", // map-generator/assets/maps/russia/info.json
   SanFrancisco = "San Francisco", // map-generator/assets/maps/sanfrancisco/info.json
   Scandinavia = "Scandinavia", // map-generator/assets/maps/scandinavia/info.json
@@ -1696,9 +1697,10 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.LosAngeles,
     translationKey: "map.losangeles",
     categories: ["north_america"],
-    defaultNationCount: 39,
+    defaultNationCount: 40,
     themes: ["north_america"],
     customTribes: [
+      { name: "Azusa", coordinates: [1976, 526] },
       { name: "El Monte", coordinates: [1734, 682] },
       { name: "Alhambra", coordinates: [1485, 646] },
       { name: "Monterey Park", coordinates: [1487, 721] },
@@ -1748,6 +1750,7 @@ export const maps: readonly MapInfo[] = [
       { name: "Gardena", coordinates: [1171, 1067] },
       { name: "Lawndale", coordinates: [1076, 1049] },
       { name: "Culver City", coordinates: [945, 783] },
+      { name: "Diamond Bar", coordinates: [2043, 903] },
       { name: "Baldwin Hills", coordinates: [1029, 830] },
       { name: "Studio City", coordinates: [1022, 564] },
       { name: "Laurel Canyon", coordinates: [925, 609] },
@@ -1830,9 +1833,7 @@ export const maps: readonly MapInfo[] = [
       { name: "Citrus", coordinates: [1956, 609] },
       { name: "Charter Oak", coordinates: [2027, 642] },
       { name: "Glendora", coordinates: [2002, 559] },
-      { name: "Pomona", coordinates: [2046, 725] },
       { name: "Villa Park", coordinates: [2049, 1193] },
-      { name: "Newport Beach", coordinates: [1958, 1563] },
       { name: "Westmont", coordinates: [1179, 957] },
       { name: "Willowbrook", coordinates: [1313, 995] },
       { name: "West Rancho Dominguez", coordinates: [1241, 1040] },
@@ -2187,6 +2188,17 @@ export const maps: readonly MapInfo[] = [
     themes: ["south_america"],
     author: "Renan Scarpin",
     location: { lat: -22.9, lon: -43.2 },
+  },
+  {
+    id: "RockyMountains",
+    type: GameMapType.RockyMountains,
+    translationKey: "map.rockymountains",
+    categories: ["north_america", "new"],
+    defaultNationCount: 48,
+    themes: ["western", "north_america"],
+    author: "crunchybbb",
+    descriptionKey: "map_description.rockymountains",
+    location: { lat: 44, lon: -111 },
   },
   {
     id: "Russia",
