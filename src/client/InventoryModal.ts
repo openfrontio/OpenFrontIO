@@ -5,9 +5,7 @@ import {
   Effect,
   Flag,
   isNukeExplosionEffect,
-  Skin,
 } from "@openfront/shared/CosmeticSchemas";
-import { PlayerPattern } from "@openfront/shared/WireSchemas";
 import type { TemplateResult } from "lit";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
@@ -37,7 +35,7 @@ import {
   groupCosmeticVariants,
   resolveCosmetics,
   ResolvedCosmetic,
-  resolvedToPlayerPattern,
+  selectedPatternNameFor,
 } from "./Cosmetics";
 import {
   CROWN_KEY,
@@ -799,17 +797,13 @@ export class InventoryModal extends BaseModal {
 
   private selectCosmetic(resolved: ResolvedCosmetic) {
     if (resolved.type === "pattern") {
-      this.selectPattern(resolvedToPlayerPattern(resolved), resolved);
+      this.selectPattern(resolved);
     } else if (resolved.type === "skin") {
-      this.selectSkin((resolved.cosmetic as Skin | null)?.name ?? null);
+      this.userSettings.setSelectedPatternName(
+        selectedPatternNameFor(resolved),
+      );
       this.showSelectedPopup(resolved);
     }
-  }
-
-  private selectSkin(skinName: string | null) {
-    this.userSettings.setSelectedPatternName(
-      skinName === null ? undefined : `skin:${skinName}`,
-    );
   }
 
   private selectCrown(resolved: ResolvedCosmetic) {
@@ -824,19 +818,8 @@ export class InventoryModal extends BaseModal {
     this.showSelectedPopup(resolved);
   }
 
-  private selectPattern(
-    pattern: PlayerPattern | null,
-    resolved: ResolvedCosmetic,
-  ) {
-    if (pattern === null) {
-      this.userSettings.setSelectedPatternName(undefined);
-    } else {
-      const name =
-        pattern.colorPalette?.name === undefined
-          ? pattern.name
-          : `${pattern.name}:${pattern.colorPalette.name}`;
-      this.userSettings.setSelectedPatternName(`pattern:${name}`);
-    }
+  private selectPattern(resolved: ResolvedCosmetic) {
+    this.userSettings.setSelectedPatternName(selectedPatternNameFor(resolved));
     this.showSelectedPopup(resolved);
   }
 

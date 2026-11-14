@@ -41,7 +41,7 @@ import {
   giftEndingStringsReady,
   joinOwnsInFlightFlag,
   lapseShownAfterDispatch,
-  nextBootInterrupt,
+  nextBootInterruptResolvingSkinDrop,
   parseClaimPromptStore,
   renewalPushedDueThisLaunch,
   renewalPushedOf,
@@ -57,6 +57,8 @@ import {
   fetchCosmetics,
   getPlayerCosmeticsRefs,
   handlePurchaseReturn,
+  resolveCosmetics,
+  selectedPatternNameFor,
   subscriptionTier,
   translateCosmetic,
 } from "./Cosmetics";
@@ -155,6 +157,14 @@ import {
 import type { SteamLinkModal } from "./SteamLinkModal";
 import { steamNoticeDue, steamNoticeStringsReady } from "./SteamNotices";
 import { steamSDK } from "./SteamSDK";
+import {
+  showSteamSkinDrop,
+  steamSkinDropDueThisLaunch,
+  steamSkinDropWhenClean,
+  steamSkinDropStringsReady,
+  unseenSteamSkinDrop,
+} from "./SteamSkinDrop";
+import type { SteamSkinDropModal } from "./SteamSkinDropModal";
 import type { StoreModal } from "./Store";
 import { initTelemetry } from "./Telemetry";
 import type { TokenLoginModal } from "./TokenLoginModal";
@@ -167,9 +177,9 @@ import {
   type TurnstileToken,
 } from "./TurnstileToken";
 // Before the first userMeResponse, for the modals that load after it.
-import "./UserMeBroadcast";
 import { classicReplayHref } from "./replay/ReplayEntry";
 import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
+import { userMeGeneration } from "./UserMeBroadcast";
 // The UsernameInput class is used as a type; retain this for registration.
 // oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./UsernameInput";
@@ -937,12 +947,13 @@ class Client {
         // still sees a pristine URL — the join only rewrites it once
         // lobbyHandle.join resolves — so without it the confirm opens on top
         // of a game that is starting.
-        const cleanHomepage = bootInterruptsAllowed(
-          window.location,
-          isDesktopShell(),
-          { joinInFlight: this.joinInFlight, lobbyHandle: this.lobbyHandle },
-          getDesktopUpdateState(),
-        );
+        const homepageIsClean = () =>
+          bootInterruptsAllowed(
+            window.location,
+            isDesktopShell(),
+            { joinInFlight: this.joinInFlight, lobbyHandle: this.lobbyHandle },
+            getDesktopUpdateState(),
+          );
 
         // One interrupt per boot, chosen by the ordering in BootInterrupts —
         // not by which branch happens to be written first here.
@@ -957,46 +968,76 @@ class Client {
           isSteamShell(),
           Date.now(),
         );
+        // The skin popup needs the catalog, which is read only when that
+        // popup is the one to show, so every other player and every notice
+        // that outranks it skips the request. The page is checked again once
+        // it lands: a join can start during the fetch, and a newer profile
+        // (a lost session, another account) makes this one stale.
+        const dropGeneration = userMeGeneration();
+        const homepageStillThisProfile = () =>
+          homepageIsClean() && userMeGeneration() === dropGeneration;
+        const unseenDrop = unseenSteamSkinDrop(
+          userMeResponse.steamSkinDrop,
+          userMeResponse.noticesSeen ?? [],
+        );
         const paid = paidFactsOf(userMeResponse);
-        const interrupt = nextBootInterrupt({
-          cleanHomepage,
-          usernameStatus,
-          username,
-          usernameBase,
-          lapseNoticeDue: lapseShown,
-          grantWelcomeDue: steamGrantWelcomeDue(
-            grantStoreAfterDispatch,
-            userMeResponse,
-            Date.now(),
-          ),
-          grantEndedDue: steamGrantEndedDue(
-            grantStoreAfterDispatch,
-            userMeResponse,
-            Date.now(),
-          ),
-          grantStringsReady: steamGrantStringsReady(translateText),
-          giftEndingDue: giftEndingDue(
-            grantStoreAfterDispatch,
-            userMeResponse,
-            Date.now(),
-          ),
-          giftEndingStringsReady: giftEndingStringsReady(translateText),
-          renewalPushedDue: renewalPushedDueThisLaunch(userMeResponse),
-          renewalPushedStringsReady: renewalPushedStringsReady(translateText),
-          steamNotice,
-          steamNoticeStringsReady: steamNoticeStringsReady(translateText),
-          // Held rewards can't be claimed yet: on their own they'd open the
-          // popup every boot with nothing to do.
-          rewardCount: rewards.filter(isRewardClaimable).length,
-          claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
-          claimStringsReady: claimPromptStringsReady(translateText),
-          // Not every caller's response went through the schema default.
-          reportThanksDue: reportThanksDueThisLaunch(
-            userMeResponse.pendingMessages ?? [],
-            publicId,
-          ),
-          reportThanksStringsReady: reportThanksStringsReady(translateText),
-        });
+        const { interrupt, steamSkinDrop } =
+          await nextBootInterruptResolvingSkinDrop(
+            {
+              cleanHomepage: homepageStillThisProfile(),
+              usernameStatus,
+              username,
+              usernameBase,
+              lapseNoticeDue: lapseShown,
+              grantWelcomeDue: steamGrantWelcomeDue(
+                grantStoreAfterDispatch,
+                userMeResponse,
+                Date.now(),
+              ),
+              grantEndedDue: steamGrantEndedDue(
+                grantStoreAfterDispatch,
+                userMeResponse,
+                Date.now(),
+              ),
+              grantStringsReady: steamGrantStringsReady(translateText),
+              giftEndingDue: giftEndingDue(
+                grantStoreAfterDispatch,
+                userMeResponse,
+                Date.now(),
+              ),
+              giftEndingStringsReady: giftEndingStringsReady(translateText),
+              renewalPushedDue: renewalPushedDueThisLaunch(userMeResponse),
+              renewalPushedStringsReady:
+                renewalPushedStringsReady(translateText),
+              steamNotice,
+              steamNoticeStringsReady: steamNoticeStringsReady(translateText),
+              // Held rewards can't be claimed yet: on their own they'd open the
+              // popup every boot with nothing to do.
+              rewardCount: rewards.filter(isRewardClaimable).length,
+              claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
+              claimStringsReady: claimPromptStringsReady(translateText),
+              // Not every caller's response went through the schema default.
+              reportThanksDue: reportThanksDueThisLaunch(
+                userMeResponse.pendingMessages ?? [],
+                publicId,
+              ),
+              reportThanksStringsReady: reportThanksStringsReady(translateText),
+              steamSkinDropDue:
+                unseenDrop !== null &&
+                steamSkinDropDueThisLaunch(publicId, unseenDrop.notice),
+              steamSkinDropStringsReady:
+                steamSkinDropStringsReady(translateText),
+            },
+            () =>
+              steamSkinDropWhenClean(
+                publicId,
+                unseenDrop,
+                homepageStillThisProfile,
+                fetchCosmetics,
+                (cosmetics) =>
+                  resolveCosmetics(cosmetics, userMeResponse, null),
+              ),
+          );
         // Only the payer's welcome names a daily amount, so only it waits on
         // the catalog.
         const catalog =
@@ -1023,6 +1064,7 @@ class Client {
             grantStore: grantStoreAfterDispatch,
             publicId,
             steamNotice,
+            steamSkinDrop,
             paid,
             renewalPushed: renewalPushedOf(userMeResponse),
           },
@@ -1073,6 +1115,20 @@ class Client {
               ),
             markNoticeSeen: (notice) => void markNoticeSeen(notice),
             markMessageSeen: (kind) => void markMessageSeen(kind),
+            openSteamSkinDrop: (resolved) =>
+              showSteamSkinDrop(
+                resolved,
+                () => loadModal("steam-skin-drop-modal"),
+                () =>
+                  document.querySelector<SteamSkinDropModal>(
+                    "steam-skin-drop-modal",
+                  ),
+                homepageStillThisProfile,
+              ),
+            equipCosmetic: (resolved) =>
+              this.userSettings.setSelectedPatternName(
+                selectedPatternNameFor(resolved),
+              ),
             now: () => Date.now(),
           },
         );
@@ -1832,6 +1888,12 @@ class Client {
     // handle being assigned) and by handleLeaveLobby, which runs its reset
     // above its own lobbyHandle guard precisely because this window exists.
     this.joinInFlight = true;
+    // Lazy, so the tag is a plain element until its chunk has loaded.
+    if (customElements.get("steam-skin-drop-modal")) {
+      document
+        .querySelector<SteamSkinDropModal>("steam-skin-drop-modal")
+        ?.abandon();
+    }
 
     console.log(`joining lobby ${lobby.gameID}`);
     // Entering a lobby. Singleplayer, public lobbies and replays know their

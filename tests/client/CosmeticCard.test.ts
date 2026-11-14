@@ -495,6 +495,85 @@ describe("CosmeticCard", () => {
     expect(badgeZ).toBeLessThan(ruleZ("data-cosmetic-sparkle"));
   });
 
+  describe("Steam exclusive badge", () => {
+    const BADGE = "[data-cosmetic-steam-exclusive]";
+    const skin = (steamExclusive?: boolean): ResolvedCosmetic => ({
+      type: "skin",
+      cosmetic: {
+        name: "moon",
+        url: "/skins/moon.png",
+        product: null,
+        rarity: "epic",
+        ...(steamExclusive === undefined ? {} : { steamExclusive }),
+      } as never,
+      colorPalette: null,
+      relationship: "owned",
+      key: "skin:moon",
+    });
+    const pattern = (palette: "red" | "blue"): ResolvedCosmetic => ({
+      ...red,
+      cosmetic: {
+        ...(red.cosmetic as object),
+        colorPalettes: [
+          { name: "red", isArchived: false, steamExclusive: true },
+          { name: "blue", isArchived: false },
+        ],
+      } as never,
+      colorPalette: (palette === "red" ? red : blue).colorPalette,
+      key: `pattern:stripes:${palette}`,
+    });
+
+    async function show(resolved: ResolvedCosmetic) {
+      installTranslations();
+      await createCard();
+      card!.resolved = resolved;
+      await card!.updateComplete;
+    }
+
+    it("shows the badge on a skin marked steamExclusive", async () => {
+      await show(skin(true));
+      expect(card!.querySelector(BADGE)).toBeTruthy();
+    });
+
+    it("hides it on an unmarked skin", async () => {
+      await show(skin());
+      expect(card!.querySelector(BADGE)).toBeNull();
+    });
+
+    it("shows it only on the granted palette of a pattern", async () => {
+      await show(pattern("red"));
+      expect(card!.querySelector(BADGE)).toBeTruthy();
+      card!.resolved = pattern("blue");
+      await card!.updateComplete;
+      expect(card!.querySelector(BADGE)).toBeNull();
+    });
+
+    it("is a band across the artwork's top-right corner, like a sale", async () => {
+      await show(skin(true));
+      const corner = card!.querySelector<HTMLElement>(BADGE)!;
+      expect(corner.className).toContain("right-0");
+      expect(corner.className).toContain("top-0");
+      expect(corner.className).toContain("overflow-hidden");
+      expect(corner.className).toContain("pointer-events-none");
+      const band = corner.querySelector<HTMLElement>("span")!;
+      expect(band.className).toContain("rotate-45");
+      expect(band.className).toContain("truncate");
+      expect(band.textContent).toBe("cosmetics.steam_exclusive");
+    });
+
+    it("stays in the corner when the skin is equipped", async () => {
+      await show(skin(true));
+      card!.state = "equipped";
+      await card!.updateComplete;
+      expect(
+        card!.querySelector("[data-cosmetic-equipped='true']"),
+      ).toBeTruthy();
+      const corner = card!.querySelector<HTMLElement>(BADGE)!;
+      expect(corner.className).toContain("top-0");
+      expect(corner.className).not.toContain("bottom-");
+    });
+  });
+
   describe("subscription perks tooltip", () => {
     const tier = (requiresSteamLicence: boolean): ResolvedCosmetic => ({
       type: "subscription",

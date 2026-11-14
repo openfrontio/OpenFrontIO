@@ -9,6 +9,7 @@ import {
   cosmeticDisplayName,
   cosmeticRarity,
   cosmeticSelectionLabel,
+  isSteamExclusive,
 } from "./CosmeticPresentation";
 import "./CosmeticPreview";
 import "./CosmeticPreviewBubble";
@@ -504,7 +505,7 @@ export class CosmeticCard extends LitElement {
     // below it rather than over the text. The artwork clips inside its own box
     // so the info tooltip can still overflow the card.
     const content = html`
-      <div class="relative w-full flex-1 ${previewShape}">
+      <div class="@container relative w-full flex-1 ${previewShape}">
         <div
           class="flex h-full w-full items-center justify-center overflow-hidden rounded-lg bg-white/5 p-2"
         >
@@ -521,6 +522,19 @@ export class CosmeticCard extends LitElement {
                 class="absolute bottom-1 left-1 z-[4] rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow-lg shadow-emerald-950/60 ring-1 ring-emerald-200/70"
                 >✓ ${translateText("inventory.equipped")}</span
               >`
+            : nothing
+        }
+        ${
+          isSteamExclusive(active)
+            ? html`<span
+                data-cosmetic-steam-exclusive
+                class="pointer-events-none absolute right-0 top-0 z-[5] h-20 w-20 overflow-hidden rounded-tr-lg @min-[140px]:h-28 @min-[140px]:w-28"
+              >
+                <span
+                  class="absolute -right-[21px] top-[27px] w-[110px] rotate-45 truncate bg-aquarius px-[10px] py-px text-center text-[9px] font-black uppercase leading-[12px] tracking-normal text-deep-navy shadow-[0_2px_6px_rgba(0,0,0,0.5)] @min-[140px]:-right-[26px] @min-[140px]:top-[35px] @min-[140px]:w-[140px] @min-[140px]:px-[18px] @min-[140px]:text-[11px] @min-[140px]:leading-4"
+                  >${translateText("cosmetics.steam_exclusive")}</span
+                >
+              </span>`
             : nothing
         }
       </div>

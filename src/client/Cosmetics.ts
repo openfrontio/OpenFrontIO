@@ -1562,6 +1562,27 @@ export function resolvedToPlayerPattern(
   };
 }
 
+/**
+ * The name the player's selected-cosmetic setting stores for `resolved`:
+ * `skin:<name>`, `pattern:<name>` or `pattern:<name>:<palette>`. Undefined for
+ * the default pattern and for anything that is not a skin or pattern, which
+ * clears the setting.
+ */
+export function selectedPatternNameFor(
+  resolved: ResolvedCosmetic,
+): string | undefined {
+  if (resolved.type === "skin") {
+    const name = resolved.cosmetic?.name;
+    return name === undefined ? undefined : `skin:${name}`;
+  }
+  const pattern = resolvedToPlayerPattern(resolved);
+  if (pattern === null) return undefined;
+  const palette = pattern.colorPalette?.name;
+  return palette === undefined
+    ? `pattern:${pattern.name}`
+    : `pattern:${pattern.name}:${palette}`;
+}
+
 // `verified` is passed in rather than looked up: the caller has already
 // resolved what name the player is joining under (see resolvePlayerName), and
 // the badge has to agree with that exact decision. Reading it back out of the

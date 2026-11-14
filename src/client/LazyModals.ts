@@ -30,6 +30,7 @@ const modules: Record<string, () => Promise<unknown>> = {
   "single-player-modal": () => import("./SinglePlayerModal"),
   "steam-handoff-modal": () => import("./SteamHandoffModal"),
   "steam-link-modal": () => import("./SteamLinkModal"),
+  "steam-skin-drop-modal": () => import("./SteamSkinDropModal"),
   "store-modal": () => import("./Store"),
   "subscription-modal": () => import("./SubscriptionModal"),
   "token-login": () => import("./TokenLoginModal"),

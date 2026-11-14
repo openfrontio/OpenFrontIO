@@ -1005,6 +1005,7 @@
     "rare": "Rare",
     "search": "Search...",
     "soft": "Caps",
+    "steam_exclusive": "Steam exclusive",
     "type_crown": "Crown",
     "type_effect": "{type} Effect",
     "type_flag": "Flag",
@@ -2919,6 +2920,15 @@
     "plus_welcome_body": "Your copy of OpenFront includes a month of Steam Plus: 10 plutonium a day and 250 a month.",
     "plus_welcome_heading": "A month of Steam Plus",
     "plus_welcome_until": "Your Steam Plus month runs until {date}."
+  },
+  "steam_skin_drop": {
+    "claim": "Claim",
+    "claim_equip": "Claim & equip",
+    "close": "Close",
+    "message": "This month's Steam exclusive skin has just dropped, claim here and check it out now.",
+    "preview_back": "Back",
+    "preview_confirm": "Preview",
+    "preview_prompt": "Preview this skin?"
   },
   "steam_user_header": {
     "avatar_alt": "Steam avatar",

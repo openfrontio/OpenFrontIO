@@ -391,6 +391,8 @@ describe("the steam-notice boot interrupt", () => {
       claimStringsReady: true,
       reportThanksDue: false,
       reportThanksStringsReady: true,
+      steamSkinDropDue: false,
+      steamSkinDropStringsReady: true,
       giftEndingDue: false,
       giftEndingStringsReady: true,
       renewalPushedDue: false,
@@ -454,6 +456,8 @@ describe("the steam-notice boot interrupt", () => {
       updateSteamGrant: (update) => calls.grantStored.push(update(grantStore)),
       markNoticeSeen: (notice) => calls.seen.push(notice),
       markMessageSeen: () => {},
+      openSteamSkinDrop: async () => "dismiss",
+      equipCosmetic: () => {},
       now: () => NOW,
     };
     return { base, calls };
@@ -478,7 +482,13 @@ describe("the steam-notice boot interrupt", () => {
     base.alert = () => new Promise<void>((resolve) => (dismiss = resolve));
     const running = runBootInterrupt(
       "steam-notice",
-      { claimStore: {}, grantStore, publicId: ME, steamNotice: intro },
+      {
+        claimStore: {},
+        grantStore,
+        publicId: ME,
+        steamNotice: intro,
+        steamSkinDrop: null,
+      },
       base,
     );
     await Promise.resolve();
@@ -494,7 +504,13 @@ describe("the steam-notice boot interrupt", () => {
     const { base, calls } = ports();
     await runBootInterrupt(
       "steam-notice",
-      { claimStore: {}, grantStore, publicId: ME, steamNotice: intro },
+      {
+        claimStore: {},
+        grantStore,
+        publicId: ME,
+        steamNotice: intro,
+        steamSkinDrop: null,
+      },
       base,
     );
     expect(calls.seen).toEqual([STEAM_LICENCE_INTRO_NOTICE]);
@@ -532,6 +548,7 @@ describe("the steam-notice boot interrupt", () => {
           notice: STEAM_PLUS_WELCOME_NOTICE,
           grantEnd: new Date(GRANT_END),
         },
+        steamSkinDrop: null,
       },
       base,
     );
@@ -557,6 +574,7 @@ describe("the steam-notice boot interrupt", () => {
           notice: "steam_plus_conversion:42",
           fromTierName: "vanguard",
         },
+        steamSkinDrop: null,
       },
       base,
     );

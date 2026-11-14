@@ -20,6 +20,7 @@ import {
   type RenewalPushedBy,
   type UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
+import type { ResolvedCosmetic } from "./Cosmetics";
 import type { DesktopUpdateState } from "./DesktopShell";
 import { lapseNoticeDue } from "./PlayerName";
 import {
@@ -37,6 +38,7 @@ import {
   steamNoticeShown,
   type SteamNotice,
 } from "./SteamNotices";
+import { steamSkinDropShown, type SteamSkinDropAnswer } from "./SteamSkinDrop";
 
 /** Every boot-time interrupt, in the order they win. */
 export type BootInterrupt =
@@ -48,6 +50,7 @@ export type BootInterrupt =
   | "lapse-notice"
   | "grant-ended"
   | "gift-ending"
+  | "steam-skin-drop"
   | "rewards"
   | "report-thanks";
 
@@ -88,6 +91,14 @@ export interface BootInterruptInputs {
   steamNotice: SteamNotice | null;
   /** steamNoticeStringsReady(...), as grantStringsReady. */
   steamNoticeStringsReady: boolean;
+  /**
+   * steamSkinDropDueThisLaunch(...) for an unseen drop. Before the catalog is
+   * read this only says one is owed; nextBootInterruptResolvingSkinDrop sets
+   * it from the resolved entry.
+   */
+  steamSkinDropDue: boolean;
+  /** steamSkinDropStringsReady(...), as grantStringsReady. */
+  steamSkinDropStringsReady: boolean;
   /**
    * How many of the account's unclaimed rewards can be claimed now
    * (isRewardClaimable): held ones don't count, since on their own they'd
@@ -275,7 +286,10 @@ function entitled(status: string | undefined): boolean {
  *    are about to be charged. Marks itself shown when the lapse notice covers
  *    it, so a former grant holder with a reserved name hears it once.
  *    `gift-ending` follows it: a running grant ends within three days.
- * 7. `rewards` — money already in the account. Nothing is at risk and it
+ * 7. `steam-skin-drop` — this month's Steam exclusive skin has dropped and
+ *    the owner has not been told. Nothing is at risk, but it is time-limited
+ *    news the player wants, so it ranks above the rewards popup.
+ * 8. `rewards` — money already in the account. Nothing is at risk and it
  *    survives to the next load unchanged, so it always yields.
  *
  * 1 and 4 are mutually exclusive by state (a TEMPORARY#### rename IS a name),
@@ -323,6 +337,9 @@ export function nextBootInterrupt(
   if (inputs.giftEndingDue && inputs.giftEndingStringsReady)
     return "gift-ending";
 
+  if (inputs.steamSkinDropDue && inputs.steamSkinDropStringsReady)
+    return "steam-skin-drop";
+
   if (inputs.rewardCount > 0) return "rewards";
 
   // Last: a thank-you has nothing riding on it and keeps on the server until a
@@ -331,6 +348,40 @@ export function nextBootInterrupt(
     return "report-thanks";
 
   return null;
+}
+
+type ResolvedSkinDrop = { notice: string; resolved: ResolvedCosmetic };
+
+/**
+ * nextBootInterrupt for a boot that may owe the Steam skin popup. The popup
+ * needs the cosmetics catalog, so it is read only when the popup would win:
+ * a notice that outranks it never waits on that request. If the drop does not
+ * resolve, or the page stops being clean while the catalog loads, the choice
+ * is made again without it.
+ */
+export async function nextBootInterruptResolvingSkinDrop(
+  inputs: BootInterruptInputs,
+  resolveDrop: () => Promise<{
+    steamSkinDrop: ResolvedSkinDrop | null;
+    cleanHomepage: boolean;
+  }>,
+): Promise<{
+  interrupt: BootInterrupt | null;
+  steamSkinDrop: ResolvedSkinDrop | null;
+}> {
+  const interrupt = nextBootInterrupt(inputs);
+  if (interrupt !== "steam-skin-drop") {
+    return { interrupt, steamSkinDrop: null };
+  }
+  const { steamSkinDrop, cleanHomepage } = await resolveDrop();
+  return {
+    interrupt: nextBootInterrupt({
+      ...inputs,
+      cleanHomepage,
+      steamSkinDropDue: steamSkinDrop !== null,
+    }),
+    steamSkinDrop,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -685,6 +736,10 @@ export interface BootInterruptPorts {
   alert(body: string, heading: string): Promise<void>;
   /** The display name of a subscription tier id (translateCosmetic). */
   tierName(tier: string): string;
+  /** Opens the Steam skin popup; resolves with what the player chose. */
+  openSteamSkinDrop(resolved: ResolvedCosmetic): Promise<SteamSkinDropAnswer>;
+  /** Equips a cosmetic the player owns. */
+  equipCosmetic(resolved: ResolvedCosmetic): void;
   /** A tier's daily plutonium from the loaded catalog, or null if unknown. */
   dailyPlutonium?(tier: string): number | null;
   /** Sets window.location.hash. */
@@ -711,6 +766,8 @@ export interface BootInterruptContext {
   grantStore: SteamGrantStore;
   publicId: string;
   steamNotice: SteamNotice | null;
+  /** The drop to announce, resolved against the catalog, or null. */
+  steamSkinDrop?: ResolvedSkinDrop | null;
   /** paidFactsOf(...): a paid subscription beside the grant, if any. */
   paid?: PaidFacts | null;
   /** renewalPushedOf(...). */
@@ -754,6 +811,8 @@ export async function runBootInterrupt(
     ...ports,
     confirm: (...args) => whileDialogOpen(() => ports.confirm(...args)),
     alert: (...args) => whileDialogOpen(() => ports.alert(...args)),
+    openSteamSkinDrop: (...args) =>
+      whileDialogOpen(() => ports.openSteamSkinDrop(...args)),
   });
 }
 
@@ -962,6 +1021,17 @@ async function runInterrupt(
           forShownGrant(grant, context.publicId, steamGrantWelcomed),
         );
       }
+      return;
+    }
+    case "steam-skin-drop": {
+      const drop = context.steamSkinDrop;
+      if (!drop) return;
+      steamSkinDropShown(context.publicId, drop.notice);
+      const answer = await ports.openSteamSkinDrop(drop.resolved);
+      if (answer === "abandoned") return;
+      ports.markNoticeSeen(drop.notice);
+      if (answer === "claim") ports.navigate("modal=inventory");
+      else if (answer === "equip") ports.equipCosmetic(drop.resolved);
       return;
     }
     case "lapse-notice":
