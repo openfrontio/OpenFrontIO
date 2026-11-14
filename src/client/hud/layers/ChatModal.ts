@@ -329,7 +329,7 @@ export class ChatModal extends LitElement {
         </span>
       </div>
       <input
-        class="px-2 py-1.5 rounded-md bg-zinc-800 ring-1 ring-white/10 text-sm outline-none focus:ring-white/30"
+        class="px-2 py-1.5 rounded-md bg-zinc-800 text-white ring-1 ring-white/10 text-sm outline-none focus:ring-white/30"
         type="text"
         placeholder=${translateText("chat.search")}
         .value=${this.search}

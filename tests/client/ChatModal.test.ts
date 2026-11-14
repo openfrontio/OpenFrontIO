@@ -253,6 +253,14 @@ describe("ChatModal", () => {
     expect(modal.isOpen).toBe(false);
   });
 
+  it("uses light text in the dark player search field", async () => {
+    modal.openWithSelection("attack", "focus", me, bob);
+    await modal.updateComplete;
+
+    const search = modal.querySelector("input");
+    expect(search?.classList.contains("text-white")).toBe(true);
+  });
+
   it("filters the players by search and sends the top match on Enter", async () => {
     modal.openWithSelection("attack", "focus", me, bob);
     await modal.updateComplete;
