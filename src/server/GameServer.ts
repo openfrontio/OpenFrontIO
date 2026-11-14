@@ -93,6 +93,8 @@ import {
 // to play and missed it; after this they are taken to have come to watch.
 const LATE_JOIN_GRACE_MS = 5_000;
 
+const HASH_RETENTION_TURNS = 32;
+
 export type JoinResult =
   | "joined"
   | "kicked"
@@ -819,7 +821,18 @@ export class GameServer {
         break;
       }
       case "hash": {
-        client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
+        if (
+          clientMsg.turnNumber >= 0 &&
+          clientMsg.turnNumber <= this.turns.length + HASH_RETENTION_TURNS
+        ) {
+          client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
+          const oldestUseful = this.turns.length - HASH_RETENTION_TURNS;
+          for (const turn of client.hashes.keys()) {
+            if (turn < oldestUseful) {
+              client.hashes.delete(turn);
+            }
+          }
+        }
         break;
       }
       case "spectate": {
