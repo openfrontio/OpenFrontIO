@@ -221,4 +221,88 @@ describe("TabAttention", () => {
     attention.request("spawn");
     expect(document.title).toBe("tab_attention.pick_spawn");
   });
+
+  describe("ownership", () => {
+    const lobbyA = {};
+    const lobbyB = {};
+
+    it("lets the owner release its own flash", () => {
+      setHidden(true);
+      attention.request("starting", lobbyA);
+      expect(document.title).toBe("tab_attention.starting");
+      attention.release(lobbyA);
+      expect(document.title).toBe("OpenFront");
+      expect(iconHref()).toBe(ORIGINAL_HREF);
+    });
+
+    it("ignores a release from an owner that never asked (a superseded lobby)", () => {
+      setHidden(true);
+      attention.request("starting", lobbyB);
+      attention.release(lobbyA);
+      expect(document.title).toBe("tab_attention.starting");
+      vi.advanceTimersByTime(250);
+      expect(document.title).toBe("OpenFront");
+      vi.advanceTimersByTime(250);
+      expect(document.title).toBe("tab_attention.starting");
+    });
+
+    it("ignores a release from an owner that a newer owner has replaced", () => {
+      setHidden(true);
+      attention.request("starting", lobbyA);
+      attention.request("starting", lobbyB);
+      attention.release(lobbyA);
+      expect(document.title).toBe("tab_attention.starting");
+      attention.release(lobbyB);
+      expect(document.title).toBe("OpenFront");
+    });
+
+    it("still releases when no owner is given (setting switched off)", () => {
+      setHidden(true);
+      attention.request("starting", lobbyA);
+      attention.release();
+      expect(document.title).toBe("OpenFront");
+    });
+
+    it("gives a new owner a fresh run after the previous owner timed out", () => {
+      setHidden(true);
+      attention.request("spawn", lobbyA);
+      vi.advanceTimersByTime(2 * 60 * 1000 + 500);
+      expect(document.title).toBe("OpenFront");
+      // Same kind, but a different lobby: its own need, its own two minutes.
+      attention.request("spawn", lobbyB);
+      expect(document.title).toBe("tab_attention.pick_spawn");
+    });
+
+    it("keeps an owner's expiry from restarting on repeated requests", () => {
+      setHidden(true);
+      attention.request("spawn", lobbyA);
+      vi.advanceTimersByTime(2 * 60 * 1000 + 500);
+      attention.request("spawn", lobbyA);
+      expect(document.title).toBe("OpenFront");
+    });
+
+    it("lets the owner release an expired need so it can ask again", () => {
+      setHidden(true);
+      attention.request("spawn", lobbyA);
+      vi.advanceTimersByTime(2 * 60 * 1000 + 500);
+      attention.release(lobbyA);
+      attention.request("spawn", lobbyA);
+      expect(document.title).toBe("tab_attention.pick_spawn");
+    });
+
+    it("regression: a stale join released after the current lobby asked keeps the flash running", () => {
+      setHidden(true);
+      // Lobby B is current and has asked; stale lobby A (which never asked) is
+      // stopped afterwards, as Main does for a superseded join.
+      attention.request("starting", lobbyB);
+      attention.release(lobbyA);
+      attention.release(lobbyA);
+      const titles = new Set<string>();
+      for (let i = 0; i < 4; i++) {
+        titles.add(document.title);
+        vi.advanceTimersByTime(250);
+      }
+      expect(titles).toEqual(new Set(["tab_attention.starting", "OpenFront"]));
+    });
+  });
 });
