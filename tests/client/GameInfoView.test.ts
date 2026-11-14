@@ -537,4 +537,34 @@ describe("GameInfoView", () => {
       expect(view!.querySelector("[data-game-modifiers]")).toBeNull();
     });
   });
+
+  it("hides the default gold multiplier and win threshold", async () => {
+    const session = makeSession("defaults-game", GameMapType.Montreal);
+    session.info.config.bots = 400;
+    session.info.config.nations = 0;
+    session.info.config.goldMultiplier = 1;
+    session.info.config.winThresholdTenths = 800;
+    fetchMock.mockResolvedValue(session);
+    view = mountView("defaults-game");
+
+    await waitForRender(view, () => {
+      expect(view!.querySelector("[data-game-summary]")).not.toBeNull();
+      expect(view!.querySelector("[data-game-modifiers]")).toBeNull();
+    });
+  });
+
+  it("shows a PvP immunity of 0 as 0s", async () => {
+    const session = makeSession("no-immunity-game", GameMapType.Montreal);
+    session.info.config.bots = 400;
+    session.info.config.nations = 0;
+    session.info.config.spawnImmunityDuration = 0;
+    fetchMock.mockResolvedValue(session);
+    view = mountView("no-immunity-game");
+
+    await waitForRender(view, () => {
+      expect(
+        view!.querySelector("[data-modifier-tags]")?.textContent?.trim(),
+      ).toBe("private_lobby.pvp_immunity: 0common.duration_second_short");
+    });
+  });
 });
