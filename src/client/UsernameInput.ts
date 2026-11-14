@@ -212,14 +212,12 @@ export class UsernameInput extends LitElement {
     // Before anything can write a username: this reads the absence of one as
     // "this profile is new", and loadStoredUsername destroys that evidence.
     resolveVerifiedDefaultCohort(this.onGamePortal);
-    // Account state for the verified-name toggle. Same document-level pattern
-    // as AccountModal; Main dispatches this after auth resolves and on
-    // portal sign-in.
-    document.addEventListener("userMeResponse", (event: Event) => {
-      this.userMe = (event as CustomEvent).detail as UserMeResponse | false;
-      this.applyVerifiedPreference();
-    });
   }
+
+  private onUserMeResponse = (event: Event) => {
+    this.userMe = (event as CustomEvent).detail as UserMeResponse | false;
+    this.applyVerifiedPreference();
+  };
 
   // The clans this player belongs to, for the tag picker. Empty when signed
   // out or when an older API omits the field.
@@ -631,6 +629,7 @@ export class UsernameInput extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    document.addEventListener("userMeResponse", this.onUserMeResponse);
     document.addEventListener("pointerdown", this.handleDocumentPointerDown, {
       capture: true,
     });
@@ -737,6 +736,7 @@ export class UsernameInput extends LitElement {
   }
 
   disconnectedCallback() {
+    document.removeEventListener("userMeResponse", this.onUserMeResponse);
     document.removeEventListener(
       "pointerdown",
       this.handleDocumentPointerDown,
