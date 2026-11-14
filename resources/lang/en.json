@@ -3076,6 +3076,10 @@
     "none": "You don't have an active subscription.",
     "title": "Your Subscription"
   },
+  "tab_attention": {
+    "pick_spawn": "Choose your spawn!",
+    "starting": "Game starting!"
+  },
   "team_colors": {
     "blue": "Blue",
     "bot": "Tribes",
@@ -3380,6 +3384,8 @@
     "steam_lobby_links_label": "Open Lobby Links in Steam",
     "swap_direction": "Swap Rocket Direction",
     "swap_direction_desc": "Toggle rocket launch direction (up/down).",
+    "tab_attention_desc": "Flash the tab title and icon when the game is starting or you still need to pick a spawn while this tab is in the background.",
+    "tab_attention_label": "Flash Tab When Game Starts",
     "tab_audio": "Audio",
     "tab_display": "Display",
     "tab_gameplay": "Gameplay",

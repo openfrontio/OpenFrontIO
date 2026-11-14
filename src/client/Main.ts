@@ -170,6 +170,7 @@ import {
 import "./UserMeBroadcast";
 import { classicReplayHref } from "./replay/ReplayEntry";
 import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
+import { tabAttention } from "./TabAttention";
 // The UsernameInput class is used as a type; retain this for registration.
 // oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./UsernameInput";
@@ -1961,7 +1962,11 @@ class Client {
       void showInGameAlert(translateText("error_modal.game_client_failed"));
       return;
     }
+    // This join's tab-flash owner: a join that gets superseded can then only
+    // ever release its own flash, never the newer join's.
+    const attentionOwner = {};
     const newLobbyHandle = joinLobby(this.eventBus, {
+      tabAttentionOwner: attentionOwner,
       gameID: lobby.gameID,
       cosmetics: await getPlayerCosmeticsRefs({
         verified: resolvedName.verified,
@@ -2005,6 +2010,9 @@ class Client {
       // through the wait (e.g. the featured-stream panel) hide at this point instead of on join.
       this.menuTornDown = true;
       document.dispatchEvent(new CustomEvent("game-starting"));
+      // Flash the tab if the player has switched away while waiting; the game
+      // runner takes over (and stops it) once the spawn phase is under way.
+      tabAttention.request("starting", attentionOwner);
       // Earliest point the lobby is provably closed: the server has stopped
       // broadcasting lobby_info and refuses new seats, so the shell must stop
       // advertising this as joinable even though terrain is still loading.

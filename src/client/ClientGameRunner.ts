@@ -73,6 +73,7 @@ import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { versionedPathForMismatchedGame } from "./ServerList";
 import { audioMixer, initAudioMixer } from "./sound/AudioMixer";
 import { SoundManager } from "./sound/SoundManager";
+import { tabAttention, type TabAttentionOwner } from "./TabAttention";
 import { reportGameError } from "./Telemetry";
 import {
   loadCachedTerrainMap,
@@ -126,6 +127,10 @@ export interface LobbyConfig {
   // Host only: the play token the lobby was created under, used for the
   // first join so the host joins as the creator (see createLobby).
   creatorToken?: string;
+  // Who owns this lobby's tab flash. Main passes the same token to
+  // tabAttention.request("starting"), so leaving this lobby only ever clears
+  // its own flash, never a newer lobby's.
+  tabAttentionOwner?: TabAttentionOwner;
 }
 
 export interface JoinLobbyResult {
@@ -141,6 +146,9 @@ export function joinLobby(
   // Mutable clientID state — assigned by server (multiplayer) or derived from gameStartInfo (singleplayer)
   let clientID: ClientID | undefined;
 
+  // Tab-flash ownership for this lobby; see LobbyConfig.tabAttentionOwner.
+  const attentionOwner: TabAttentionOwner = lobbyConfig.tabAttentionOwner ?? {};
+  lobbyConfig.tabAttentionOwner = attentionOwner;
   let resolvePrestart: () => void;
   let resolveJoin: () => void;
   const prestartPromise = new Promise<void>((r) => (resolvePrestart = r));
@@ -155,6 +163,9 @@ export function joinLobby(
   const transport = new Transport(lobbyConfig, eventBus);
 
   let currentGameRunner: ClientGameRunner | null = null;
+  // Set once this lobby has been left, so a load that was still pending
+  // doesn't start a runner for it.
+  let lobbyStopped = false;
 
   const onconnect = async () => {
     // Drop the tag if the ownership check failed; the server re-checks anyway.
@@ -307,6 +318,12 @@ export function joinLobby(
         terrainMapFileLoader,
       )
         .then((r) => {
+          if (lobbyStopped) {
+            // The lobby was left while this was loading. Dispose the runner
+            // without starting it; its release only touches this lobby's flash.
+            r.stop();
+            return;
+          }
           currentGameRunner = r;
           r.start();
         })
@@ -314,6 +331,8 @@ export function joinLobby(
           console.error("error creating client game", e);
 
           currentGameRunner = null;
+          // The game never started, so stop this lobby's "starting" tab flash.
+          tabAttention.release(attentionOwner);
 
           const startingModal = document.querySelector(
             "game-starting-modal",
@@ -452,10 +471,14 @@ export function joinLobby(
         return false;
       }
       console.log("leaving game");
+      lobbyStopped = true;
       if (currentGameRunner) {
         currentGameRunner.stop();
         currentGameRunner = null;
       } else {
+        // No runner yet to release the flash. Only this lobby's own flash is
+        // cleared: a no-op if it never asked, or if a newer lobby has since.
+        tabAttention.release(attentionOwner);
         transport.leaveGame();
       }
       return true;
@@ -1118,6 +1141,7 @@ export class ClientGameRunner {
       this.updateHealth();
       this.webglBuilder?.update(this.gameView);
       this.renderer.tick();
+      this.updateTabAttention();
       if (gu.tickExecutionDuration !== undefined) {
         this.metrics?.recordTickExecution(gu.tickExecutionDuration);
       }
@@ -1285,7 +1309,38 @@ export class ClientGameRunner {
     void this.transport.rejoinGame(0);
   }
 
+  // Flash the tab while the player still has to pick a spawn and has switched
+  // to another tab; the flashing ends once they spawn or the phase is over.
+  private updateTabAttention(): void {
+    const config = this.gameView.config();
+    const canPickSpawn =
+      this.gameView.inSpawnPhase() &&
+      !config.isRandomSpawn() &&
+      !config.isReplay() &&
+      !config.isIntentionalSpectator();
+    const owner = this.attentionOwner();
+    if (!canPickSpawn) {
+      tabAttention.release(owner);
+      return;
+    }
+    const me = this.gameView.myPlayer();
+    // Before the player shows up in the view, leave any "starting" flash alone.
+    if (me === null) return;
+    if (me.hasSpawned()) {
+      tabAttention.release(owner);
+    } else {
+      tabAttention.request("spawn", owner);
+    }
+  }
+
+  // The lobby's own token (set by joinLobby), so this runner only ever starts
+  // or clears its own lobby's flash.
+  private attentionOwner(): TabAttentionOwner {
+    return (this.lobby.tabAttentionOwner ??= {});
+  }
+
   public stop() {
+    tabAttention.release(this.attentionOwner());
     if (this.healthTimer !== null) clearInterval(this.healthTimer);
     this.healthTimer = null;
     document.removeEventListener("visibilitychange", this.updateHealth);
@@ -1302,11 +1357,13 @@ export class ClientGameRunner {
     // disposals around it.
     this.input.destroy();
     this.disposeRenderer?.();
+    // Terminate the worker even if the runner never started (a lobby left while
+    // it was loading), otherwise nothing else would ever stop it. Idempotent.
+    this.worker.cleanup();
     if (!this.isActive) return;
 
     this.isActive = false;
     this.metrics?.stop();
-    this.worker.cleanup();
     this.transport.leaveGame();
     if (this.connectionCheckInterval) {
       clearInterval(this.connectionCheckInterval);
