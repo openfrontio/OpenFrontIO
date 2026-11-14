@@ -1439,8 +1439,25 @@ export type FfaRankLeaderboardResponse = z.infer<
   typeof FfaRankLeaderboardResponseSchema
 >;
 
+// Globally ordered top-250 FFA view (five pages of fifty).
+export const FfaAllRanksLeaderboardResponseSchema = z.object({
+  players: RankedLeaderboardEntrySchema.array(),
+});
+export type FfaAllRanksLeaderboardResponse = z.infer<
+  typeof FfaAllRanksLeaderboardResponseSchema
+>;
+
 export const FfaRankPositionResponseSchema = z.object({
   position: z.number().int().nullable(),
+  // Global FFA position; null for unlisted players and for up to 15 minutes
+  // after a deploy, absent on an older API.
+  globalPosition: z
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .optional()
+    .catch(undefined),
 });
 
 export const FriendEntrySchema = z.object({

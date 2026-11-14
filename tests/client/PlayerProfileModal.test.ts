@@ -163,6 +163,7 @@ describe("public player profile route", () => {
         modal.querySelector("ffa-rating-summary [data-ffa-rating-value]")!
           .textContent,
       ).toContain("1613 ± 85");
+      expect(summary?.querySelector("[data-global-ffa-position]")).toBeNull();
     });
   });
 

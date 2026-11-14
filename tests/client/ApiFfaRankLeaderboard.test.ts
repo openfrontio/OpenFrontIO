@@ -12,6 +12,7 @@ vi.mock("../../src/client/Auth", () => ({
 
 import {
   fetchFfaRankLeaderboard,
+  fetchFfaAllRanksLeaderboard,
   fetchFfaRankPosition,
 } from "../../src/client/Api";
 
@@ -43,17 +44,43 @@ beforeEach(() => {
 
 describe("fetchFfaRankPosition", () => {
   it("reads the signed-in player's position", async () => {
-    vi.mocked(fetch).mockResolvedValue(res({ position: 4812 }) as never);
+    vi.mocked(fetch).mockResolvedValue(
+      res({ position: 4812, globalPosition: 160 }) as never,
+    );
 
-    expect(await fetchFfaRankPosition()).toBe(4812);
+    expect(await fetchFfaRankPosition()).toEqual({
+      position: 4812,
+      globalPosition: 160,
+    });
     const url = new URL(String(vi.mocked(fetch).mock.calls[0][0]));
     expect(url.pathname).toBe("/users/@me/ffa_rank_position");
   });
 
-  it("is null when the board doesn't list them", async () => {
-    vi.mocked(fetch).mockResolvedValue(res({ position: null }) as never);
+  it("has no numbers when the board doesn't list them", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      res({ position: null, globalPosition: null }) as never,
+    );
 
-    expect(await fetchFfaRankPosition()).toBeNull();
+    expect(await fetchFfaRankPosition()).toEqual({
+      position: null,
+      globalPosition: null,
+    });
+  });
+
+  it("reads a missing or malformed global position as none", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(res({ position: 7 }) as never);
+    expect(await fetchFfaRankPosition()).toEqual({
+      position: 7,
+      globalPosition: null,
+    });
+
+    vi.mocked(fetch).mockResolvedValueOnce(
+      res({ position: 7, globalPosition: "x" }) as never,
+    );
+    expect(await fetchFfaRankPosition()).toEqual({
+      position: 7,
+      globalPosition: null,
+    });
   });
 
   it("is null on an error or a malformed body", async () => {
@@ -95,5 +122,24 @@ describe("fetchFfaRankLeaderboard", () => {
     vi.mocked(fetch).mockResolvedValue(res({ players: "nope" }) as never);
 
     expect(await fetchFfaRankLeaderboard("diamond", 1)).toBe(false);
+  });
+});
+
+describe("fetchFfaAllRanksLeaderboard", () => {
+  it("requests the globally ordered page", async () => {
+    vi.mocked(fetch).mockResolvedValue(res({ players: [entry] }) as never);
+    expect(await fetchFfaAllRanksLeaderboard(3)).toEqual({
+      players: [expect.objectContaining(entry)],
+    });
+    const url = new URL(String(vi.mocked(fetch).mock.calls[0][0]));
+    expect(url.pathname).toBe("/leaderboard/ranked/ffa/all");
+    expect(url.searchParams.get("page")).toBe("3");
+  });
+
+  it("recognizes the five-page cap", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      res({ message: "Page must be between 1 and 5" }, false, 400) as never,
+    );
+    expect(await fetchFfaAllRanksLeaderboard(6)).toBe("reached_limit");
   });
 });
