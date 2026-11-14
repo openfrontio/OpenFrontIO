@@ -51,6 +51,8 @@ export class LangSelector extends LitElement {
       "language-selected",
       this.handleLanguageSelected as EventListener,
     );
+    window.removeEventListener("keydown", this.onKeyDown);
+    window.removeEventListener("keyup", this.onKeyUp);
   }
 
   private handleLanguageSelected = (e: CustomEvent) => {
@@ -59,13 +61,17 @@ export class LangSelector extends LitElement {
     }
   };
 
+  private onKeyDown = (e: KeyboardEvent) => {
+    if (e.key?.toLowerCase() === "t") this.debugKeyPressed = true;
+  };
+
+  private onKeyUp = (e: KeyboardEvent) => {
+    if (e.key?.toLowerCase() === "t") this.debugKeyPressed = false;
+  };
+
   private setupDebugKey() {
-    window.addEventListener("keydown", (e) => {
-      if (e.key?.toLowerCase() === "t") this.debugKeyPressed = true;
-    });
-    window.addEventListener("keyup", (e) => {
-      if (e.key?.toLowerCase() === "t") this.debugKeyPressed = false;
-    });
+    window.addEventListener("keydown", this.onKeyDown);
+    window.addEventListener("keyup", this.onKeyUp);
   }
 
   private getClosestSupportedLang(lang: string): string {
