@@ -255,6 +255,8 @@ export const PoolConfigSchema = z
   });
 export type PoolConfig = z.infer<typeof PoolConfigSchema>;
 
+export const MAX_BOTS = 1000;
+
 export const GameConfigSchema = z.object({
   gameMap: z.enum(GameMapType),
   difficulty: z.enum(Difficulty),
@@ -289,7 +291,7 @@ export const GameConfigSchema = z.object({
       select: (v) => (typeof v === "number" ? 0 : 1),
     },
   ),
-  bots: zb.uint({ max: 400 }),
+  bots: zb.uint({ max: MAX_BOTS }),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
