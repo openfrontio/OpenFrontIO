@@ -3,7 +3,7 @@
   "id": "Canada",
   "name": "Canada",
   "translation_key": "map.canada",
-  "categories": ["north_america", "countries"],
+  "categories": ["north_america", "new", "countries"],
   "location": {
     "lat": 60,
     "lon": -95

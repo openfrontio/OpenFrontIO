@@ -1314,6 +1314,7 @@ export class ClientGameRunner {
     void this.transport.rejoinGame(0);
   }
 
+<<<<<<< HEAD
   // Flash the tab while the player still has to pick a spawn and has switched
   // to another tab; the flashing ends once they spawn or the phase is over.
   private updateTabAttention(): void {
@@ -1339,12 +1340,15 @@ export class ClientGameRunner {
 
   public stop(releaseTabAttention: boolean = true) {
     if (releaseTabAttention) tabAttention.release();
+=======
+  public stop() {
     if (this.healthTimer !== null) clearInterval(this.healthTimer);
     this.healthTimer = null;
     document.removeEventListener("visibilitychange", this.updateHealth);
     this.healthIndicators?.remove();
     this.healthIndicators = null;
     this.health.reset(performance.now());
+>>>>>>> upstream/main
     this.soundManager.dispose();
     this.graphicsListenerAbort?.abort();
     // Detach the input handler's window/canvas listeners and its EventBus

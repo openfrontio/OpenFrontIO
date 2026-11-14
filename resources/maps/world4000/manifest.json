@@ -1,5 +1,5 @@
 {
-  "categories": ["featured", "world"],
+  "categories": ["new", "featured", "world"],
   "featured_rank": 1,
   "forced_modifiers": ["isCrowded:50"],
   "id": "World4000",

@@ -3,7 +3,7 @@
   "id": "World4000",
   "name": "World 4000",
   "translation_key": "map.world4000",
-  "categories": ["featured", "world"],
+  "categories": ["new", "featured", "world"],
   "author": "evanpelle",
   "description": "Rebuild by Patrick Plays Badly. This is an overhaul of Giant World. Did you know Giant World was originally a test map? It was too laggy for public play. When first released some major water ways were still missing. Oops!",
   "forced_modifiers": ["isCrowded:50"],

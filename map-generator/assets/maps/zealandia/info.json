@@ -4,7 +4,7 @@
   "name": "Zealandia",
   "translation_key": "map.zealandia",
   "location": { "lat": -28, "lon": 161 },
-  "categories": ["oceania", "fictional"],
+  "categories": ["oceania", "new", "fictional"],
   "nations": [
     {
       "coordinates": [378, 1075],
