@@ -117,7 +117,9 @@ describe("mobile UnitDisplay layout", () => {
       // No touch panning: a drag from a button goes to the map, whichever
       // way it heads.
       expect(scroller?.classList.contains("touch-none")).toBe(true);
-      expect(scroller?.classList.contains("lg:overflow-visible")).toBe(true);
+      // Allow horizontal scrolling on lg+ too so large late-game unit counts
+      // stay contained inside the 500px HUD panel instead of overflowing it.
+      expect(scroller?.classList.contains("lg:overflow-visible")).toBe(false);
       expect(scroller?.classList.contains("side-bar:overflow-y-auto")).toBe(
         true,
       );

@@ -630,7 +630,7 @@ export class UnitDisplay extends LitElement implements Controller {
         @contextmenu=${(event: Event) => event.preventDefault()}
       >
         <div
-          class="unit-display-scroll overflow-x-auto overflow-y-hidden overscroll-x-contain touch-none lg:overflow-visible side-bar:overflow-x-hidden side-bar:overflow-y-auto side-bar:overscroll-y-contain side-bar:max-h-[calc(100dvh-5.5rem)]"
+          class="unit-display-scroll overflow-x-auto overflow-y-hidden overscroll-x-contain touch-none side-bar:overflow-x-hidden side-bar:overflow-y-auto side-bar:overscroll-y-contain side-bar:max-h-[calc(100dvh-5.5rem)]"
           @scroll=${this.onScroll}
         >
           <div
