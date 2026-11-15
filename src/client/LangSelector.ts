@@ -130,14 +130,17 @@ export class LangSelector extends LitElement {
     const savedLang = localStorage.getItem("lang");
     const userLang = this.getClosestSupportedLang(savedLang ?? browserLocale);
 
-    const [defaultTranslations, translations] = await Promise.all([
-      this.loadLanguage("en"),
-      this.loadLanguage(userLang),
-    ]);
-
-    this.defaultTranslations = defaultTranslations;
-    this.translations = translations;
+    // Populate the bundled English fallback synchronously so components
+    // rendering before a non-English locale finishes fetching never flash raw keys.
+    const bundledEn = this.languageCache.get("en") ?? flattenTranslations(en);
+    this.languageCache.set("en", bundledEn);
+    this.defaultTranslations = bundledEn;
     this.currentLang = userLang;
+
+    const translations =
+      userLang === "en" ? bundledEn : await this.loadLanguage(userLang);
+
+    this.translations = translations;
 
     await this.loadLanguageList();
     this.applyTranslation();
@@ -272,6 +275,7 @@ export class LangSelector extends LitElement {
       "o-button",
       "inventory-modal",
       "store-modal",
+      "sale-countdown",
       "cosmetic-card",
       "cosmetic-info",
       "cosmetic-preview",
