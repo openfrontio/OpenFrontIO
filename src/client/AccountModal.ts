@@ -1018,7 +1018,8 @@ export class AccountModal extends BaseModal {
     // itself, not on the link-flow bridge: Auth.ts never builds the redirect
     // on ANY Steam shell (a shell too old to expose showLinkGate gets an
     // update prompt instead), so the web caption would be wrong on every one
-    // of them. The Android shell signs in as the web does.
+    // of them. The Android shell keeps the web captions: Google signs in
+    // there in place, through the shell's native sheet.
     const viaBrowser = isSteamShell();
     return html`
       <div class="flex items-center justify-center p-6 min-h-full">
@@ -1196,7 +1197,7 @@ export class AccountModal extends BaseModal {
   }
 
   private handleGoogleLogin() {
-    googleLogin();
+    void googleLogin();
   }
 
   private handleSteamLogin() {

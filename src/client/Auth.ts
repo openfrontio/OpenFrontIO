@@ -5,8 +5,17 @@ import { UserSettings } from "src/client/UserSettings";
 import { z } from "zod";
 import { getApiBase, getAudience } from "./Api";
 import { ClientEnv } from "./ClientEnv";
-import type { DesktopSessionState, SessionFailureKind } from "./DesktopShell";
-import { desktopLinkGate, isSteamShell } from "./DesktopShell";
+import type {
+  DesktopSessionState,
+  GoogleSignInResult,
+  SessionFailureKind,
+} from "./DesktopShell";
+import {
+  desktopGoogleSignIn,
+  desktopLinkGate,
+  isDesktopShell,
+  isSteamShell,
+} from "./DesktopShell";
 import { gamePortal, type GamePortalName } from "./GamePortal";
 import { showInGameAlert } from "./InGameModal";
 import type { SteamTicketResult } from "./SteamSDK";
@@ -102,10 +111,80 @@ export function discordLogin() {
   window.location.href = `${getApiBase()}/auth/login/discord?redirect_uri=${redirectUri}`;
 }
 
-export function googleLogin() {
+export async function googleLogin(): Promise<void> {
   if (startDesktopLinkFlow()) return;
+  // Past the Steam shell, so this is the Android app.
+  if (isDesktopShell()) {
+    const idToken = await androidGoogleIdToken();
+    if (idToken !== null) await googleIdTokenLogin(idToken);
+    return;
+  }
   const redirectUri = encodeURIComponent(window.location.href);
   window.location.href = `${getApiBase()}/auth/login/google?redirect_uri=${redirectUri}`;
+}
+
+const GOOGLE_SIGN_IN_ERROR_KEYS: Record<
+  Extract<GoogleSignInResult, { status: "error" }>["code"],
+  string
+> = {
+  no_account: "account_modal.google_sign_in_no_account",
+  unavailable: "account_modal.google_sign_in_unavailable",
+  failed: "account_modal.google_sign_in_failed",
+};
+
+// Google refuses its web OAuth redirect inside a WebView, so in the Android
+// app both Google buttons get their ID token from the shell's native sheet.
+// Resolves to null once the player has been told why there is none; a
+// dismissed sheet needs no telling.
+//
+// A shell without the sheet is ordinary, not hypothetical: this client updates
+// at runtime while the shell updates through the Play Store. Sending it to the
+// redirect would only show Google's error page, so it is told to update.
+async function androidGoogleIdToken(): Promise<string | null> {
+  const signIn = desktopGoogleSignIn();
+  if (signIn === null) {
+    void showInGameAlert(
+      translateText("account_modal.google_sign_in_needs_update"),
+    );
+    return null;
+  }
+  const result = await signIn();
+  if (result.status === "ok") return result.idToken;
+  if (result.status === "error") {
+    void showInGameAlert(translateText(GOOGLE_SIGN_IN_ERROR_KEYS[result.code]));
+  }
+  return null;
+}
+
+async function googleIdTokenLogin(idToken: string): Promise<void> {
+  try {
+    const response = await fetch(`${getApiBase()}/auth/google`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken }),
+      credentials: "include",
+    });
+    if (response.ok) {
+      // The response set the refresh cookie, so the page now boots signed in
+      // exactly as it does on return from the web redirect (and as the
+      // magic-link login does after its exchange).
+      window.location.reload();
+      return;
+    }
+    console.error("Google sign-in failed", response.status);
+    const body = await response.json().catch(() => null);
+    void showInGameAlert(
+      translateText(
+        response.status === 409 &&
+          (body as { reason?: unknown } | null)?.reason === "email_exists"
+          ? "account_modal.login_email_exists"
+          : "account_modal.google_sign_in_failed",
+      ),
+    );
+  } catch (e) {
+    console.warn("Google sign-in failed", e);
+    void showInGameAlert(translateText("account_modal.google_sign_in_failed"));
+  }
 }
 
 // "Sign in through Steam" (OPE-115). The web-only way into an account whose
@@ -148,6 +227,9 @@ function desktopWebAccountSettingsUrl(): string {
 // the shell opens the website's account settings in the browser instead, where
 // the same button runs the real OAuth flow. The player signs in there with the
 // account they use here; the copy on the button says as much.
+//
+// The Android app links with the native sheet instead (see
+// androidGoogleIdToken), and reports the outcome itself.
 export async function linkGoogle(): Promise<boolean> {
   if (isSteamShell()) {
     // Routed to the system browser by the shell's window-open policy
@@ -161,6 +243,11 @@ export async function linkGoogle(): Promise<boolean> {
   }
   const authHeader = await getAuthHeader();
   if (authHeader === "") return false;
+  if (isDesktopShell()) {
+    const idToken = await androidGoogleIdToken();
+    if (idToken !== null) await linkGoogleIdToken(authHeader, idToken);
+    return true;
+  }
   const redirectUri = encodeURIComponent(window.location.href);
   try {
     const response = await fetch(
@@ -181,6 +268,46 @@ export async function linkGoogle(): Promise<boolean> {
   } catch (e) {
     console.warn("Failed to start Google link", e);
     return false;
+  }
+}
+
+async function linkGoogleIdToken(
+  authHeader: string,
+  idToken: string,
+): Promise<void> {
+  try {
+    const response = await fetch(`${getApiBase()}/auth/google/link`, {
+      method: "POST",
+      headers: {
+        Authorization: authHeader,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ idToken }),
+    });
+    if (response.ok) {
+      // Come back the way the web link flow does: a fresh page carrying
+      // `link=google`, which consumeLinkResult announces. Every surface then
+      // renders the linked account, including those that only read
+      // /users/@me when they open.
+      const params = new URLSearchParams(window.location.hash.slice(1));
+      params.set("link", "google");
+      history.replaceState(null, "", `#${params}`);
+      window.location.reload();
+      return;
+    }
+    console.error("Google link failed", response.status);
+    const body = await response.json().catch(() => null);
+    void showInGameAlert(
+      translateText(
+        response.status === 409 &&
+          (body as { reason?: unknown } | null)?.reason === "already_linked"
+          ? "account_modal.link_google_already_linked"
+          : "account_modal.link_google_error",
+      ),
+    );
+  } catch (e) {
+    console.warn("Google link failed", e);
+    void showInGameAlert(translateText("account_modal.link_google_error"));
   }
 }
 

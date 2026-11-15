@@ -442,6 +442,60 @@ export function desktopLinkGate(): DesktopLinkGateBridge | null {
     : null;
 }
 
+export type GoogleSignInResult =
+  | { status: "ok"; idToken: string }
+  | { status: "cancelled" } // the player dismissed the sheet
+  | { status: "error"; code: "no_account" | "unavailable" | "failed" };
+
+/**
+ * The Android shell's native Google sign-in sheet, or null where there is none:
+ * the web, the Steam shell, and an Android shell older than the bridge.
+ *
+ * Google refuses its web OAuth redirect inside a WebView, so this is the only
+ * way the Android app can get a Google ID token for the API to verify.
+ *
+ * The returned function never rejects. Whatever the shell hands back is
+ * checked rather than trusted, like the other bridges here: a throw, a
+ * malformed result or an error code this client does not know (a newer shell)
+ * all become `failed`.
+ */
+export function desktopGoogleSignIn():
+  | (() => Promise<GoogleSignInResult>)
+  | null {
+  if (typeof window === "undefined") return null;
+  const google = (
+    window.openfrontDesktop as { google?: { signIn?: unknown } } | undefined
+  )?.google;
+  const signIn = google?.signIn;
+  if (typeof signIn !== "function") return null;
+  return async () => {
+    try {
+      const result = (await signIn.call(google)) as {
+        status?: unknown;
+        idToken?: unknown;
+        code?: unknown;
+      } | null;
+      if (
+        result?.status === "ok" &&
+        typeof result.idToken === "string" &&
+        result.idToken !== ""
+      ) {
+        return { status: "ok", idToken: result.idToken };
+      }
+      if (result?.status === "cancelled") return { status: "cancelled" };
+      if (
+        result?.status === "error" &&
+        (result.code === "no_account" || result.code === "unavailable")
+      ) {
+        return { status: "error", code: result.code };
+      }
+    } catch {
+      // Treated as a failure below, like a malformed result.
+    }
+    return { status: "error", code: "failed" };
+  };
+}
+
 /**
  * The shell's in-app exit (OPE-402).
  *
