@@ -89,4 +89,39 @@ describe("LangSelector language loading", () => {
     // The array value is dropped, not flattened.
     expect(warn).toHaveBeenCalledWith("Unknown type", "object", [1, 2]);
   });
+
+  it("populates defaultTranslations synchronously before async locale fetch resolves", async () => {
+    let resolveFetch!: (value: unknown) => void;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise((resolve) => {
+            resolveFetch = resolve;
+          }),
+      ),
+    );
+    localStorage.setItem("lang", "fr");
+    const selector = new LangSelector();
+    const initPromise = (
+      selector as unknown as { initializeLanguage(): Promise<void> }
+    ).initializeLanguage();
+
+    // Before the network fetch for fr.json resolves, English fallback is already live.
+    expect(selector.currentLang).toBe("fr");
+    expect(
+      selector.translateText("store.sale_percent_off", { percent: 25 }),
+    ).toBe("-25%");
+
+    resolveFetch({
+      ok: true,
+      json: async () => ({ store: { sale_percent_off: "-{percent}% FR" } }),
+    });
+    await initPromise;
+    localStorage.removeItem("lang");
+
+    expect(
+      selector.translateText("store.sale_percent_off", { percent: 25 }),
+    ).toBe("-25% FR");
+  });
 });
