@@ -24,11 +24,13 @@ import {
   RankedLeaderboardEntrySchema,
   RankedLeaderboardResponseSchema,
   RewardSchema,
+  TokenPayloadSchema,
   TribeLeaderboardResponseSchema,
   TribeNameSchema,
   TribeStatsResponseSchema,
   UserMeResponseSchema,
 } from "@openfront/shared/ApiSchemas";
+import { uuidToBase64url } from "@openfront/shared/Base64";
 
 describe("UserMeResponseSchema ban", () => {
   const ban = UserMeResponseSchema.shape.ban;
@@ -1861,5 +1863,163 @@ describe("FFA rating fields", () => {
         deltaPlace: 3.1,
       }).tierAfter,
     ).toBe("Platinum III");
+  });
+});
+
+describe("ApiSchemas validate and safeParse (compiled in-place)", () => {
+  describe("TokenPayloadSchema", () => {
+    const testUuid = "123e4567-e89b-12d3-a456-426614174000";
+    const validPayload = {
+      jti: "jwt-id-123",
+      sub: uuidToBase64url(testUuid),
+      iat: 1700000000,
+      iss: "auth.openfront.io",
+      aud: "openfront.io",
+      exp: 1700003600,
+      role: "admin",
+    };
+    const invalidPayload = {
+      jti: 123,
+      sub: "not-a-valid-base64url-uuid",
+      iat: "invalid",
+    };
+
+    it(".validate(validPayload) returns true", () => {
+      expect(TokenPayloadSchema.validate(validPayload)).toBe(true);
+    });
+
+    it(".validate(invalidPayload) returns false", () => {
+      expect(TokenPayloadSchema.validate(invalidPayload)).toBe(false);
+      expect(TokenPayloadSchema.validate({})).toBe(false);
+      expect(TokenPayloadSchema.validate(null)).toBe(false);
+      expect(TokenPayloadSchema.validate(undefined)).toBe(false);
+    });
+
+    it(".safeParse(validPayload) succeeds and equals expected data", () => {
+      const result = TokenPayloadSchema.safeParse(validPayload);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.error).toBeUndefined();
+        expect(result.data.jti).toBe("jwt-id-123");
+        expect(result.data.sub).toBe(testUuid);
+        expect(result.data.iat).toBe(1700000000);
+        expect(result.data.iss).toBe("auth.openfront.io");
+        expect(result.data.aud).toBe("openfront.io");
+        expect(result.data.exp).toBe(1700003600);
+        expect(result.data.role).toBe("admin");
+      }
+    });
+
+    it(".safeParse(invalidPayload) fails with success: false", () => {
+      const result = TokenPayloadSchema.safeParse(invalidPayload);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBeDefined();
+        expect(result.data).toBeUndefined();
+      }
+      expect(TokenPayloadSchema.safeParse({}).success).toBe(false);
+      expect(TokenPayloadSchema.safeParse(null).success).toBe(false);
+      expect(TokenPayloadSchema.safeParse(undefined).success).toBe(false);
+    });
+  });
+
+  describe("PlayerProfileSchema", () => {
+    const validPayload = {
+      createdAt: "2024-01-15T12:00:00.000Z",
+      username: "player.1234",
+      stats: {},
+    };
+    const invalidPayload = {
+      createdAt: "not-an-iso-date",
+      stats: "invalid",
+    };
+
+    it(".validate(validPayload) returns true", () => {
+      expect(PlayerProfileSchema.validate(validPayload)).toBe(true);
+    });
+
+    it(".validate(invalidPayload) returns false", () => {
+      expect(PlayerProfileSchema.validate(invalidPayload)).toBe(false);
+      expect(PlayerProfileSchema.validate({})).toBe(false);
+      expect(PlayerProfileSchema.validate(null)).toBe(false);
+      expect(PlayerProfileSchema.validate(undefined)).toBe(false);
+    });
+
+    it(".safeParse(validPayload) succeeds and equals expected data", () => {
+      const result = PlayerProfileSchema.safeParse(validPayload);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.error).toBeUndefined();
+        expect(result.data.createdAt).toBe("2024-01-15T12:00:00.000Z");
+        expect(result.data.username).toBe("player.1234");
+        expect(result.data.stats).toEqual({});
+      }
+    });
+
+    it(".safeParse(invalidPayload) fails with success: false", () => {
+      const result = PlayerProfileSchema.safeParse(invalidPayload);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBeDefined();
+        expect(result.data).toBeUndefined();
+      }
+      expect(PlayerProfileSchema.safeParse({}).success).toBe(false);
+      expect(PlayerProfileSchema.safeParse(null).success).toBe(false);
+      expect(PlayerProfileSchema.safeParse(undefined).success).toBe(false);
+    });
+  });
+
+  describe("UserMeResponseSchema", () => {
+    const validPayload = {
+      user: {},
+      player: {
+        publicId: "player-123",
+        adfree: false,
+        canCreatePublicLobbies: true,
+        achievements: {
+          singleplayerMap: [],
+        },
+        friends: ["friend-456"],
+        subscription: null,
+      },
+    };
+    const invalidPayload = {
+      user: "invalid-user",
+      player: {
+        publicId: 12345,
+      },
+    };
+
+    it(".validate(validPayload) returns true", () => {
+      expect(UserMeResponseSchema.validate(validPayload)).toBe(true);
+    });
+
+    it(".validate(invalidPayload) returns false", () => {
+      expect(UserMeResponseSchema.validate(invalidPayload)).toBe(false);
+      expect(UserMeResponseSchema.validate({})).toBe(false);
+      expect(UserMeResponseSchema.validate(null)).toBe(false);
+      expect(UserMeResponseSchema.validate(undefined)).toBe(false);
+    });
+
+    it(".safeParse(validPayload) succeeds and equals expected data", () => {
+      const result = UserMeResponseSchema.safeParse(validPayload);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.error).toBeUndefined();
+        expect(result.data).toMatchObject(validPayload);
+      }
+    });
+
+    it(".safeParse(invalidPayload) fails with success: false", () => {
+      const result = UserMeResponseSchema.safeParse(invalidPayload);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toBeDefined();
+        expect(result.data).toBeUndefined();
+      }
+      expect(UserMeResponseSchema.safeParse({}).success).toBe(false);
+      expect(UserMeResponseSchema.safeParse(null).success).toBe(false);
+      expect(UserMeResponseSchema.safeParse(undefined).success).toBe(false);
+    });
   });
 });

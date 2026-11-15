@@ -804,7 +804,7 @@ function untaggedUnionCodec(
         return;
       }
       for (let i = 0; i < options.length; i++) {
-        if (options[i].safeParse(v).success) {
+        if (options[i].validate(v)) {
           w.uint(i);
           codecs[i].enc(w, v, ctx);
           return;
@@ -1137,6 +1137,19 @@ export function stamped<
 
 export function context(): ZbContext {
   return new ZbContext();
+}
+
+/**
+ * JIT-compiles a zb schema root so its `.safeParse()` and `.parseBytes()`
+ * validation runs through Zod's compiled evaluation path while preserving
+ * its binary encoding methods.
+ */
+export function compile<S extends z.ZodType>(schema: ZbSchema<S>): ZbSchema<S> {
+  const codec = explicit.get(schema);
+  if (!codec) {
+    throw schemaError("$", "zb.compile requires a registered zb schema root");
+  }
+  return attach(z.compile(schema), codec);
 }
 
 export type infer<S extends z.ZodType> = z.infer<S>;

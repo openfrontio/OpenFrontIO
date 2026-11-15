@@ -250,7 +250,7 @@ export function registerAdminBotRoutes(opts: {
   // Validate game id format and that this worker owns it. Returns false and
   // sends the error response when the id is bad/misrouted.
   const ownsGame = (id: string, res: Response): boolean => {
-    if (!ID.safeParse(id).success) {
+    if (!ID.validate(id)) {
       res.status(400).json({ error: "Invalid game ID" });
       return false;
     }
