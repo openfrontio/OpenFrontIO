@@ -24,37 +24,35 @@ export const RefreshResponseSchema = z.object({
 });
 export type RefreshResponse = z.infer<typeof RefreshResponseSchema>;
 
-export const TokenPayloadSchema = z.compile(
-  z.object({
-    jti: z.string(),
-    sub: z
-      .string()
-      .refine(
-        (val) => {
-          const uuid = base64urlToUuid(val);
-          return !!uuid;
-        },
-        {
-          message: "Invalid base64-encoded UUID",
-        },
-      )
-      .transform((val) => {
+export const TokenPayloadSchema = z.object({
+  jti: z.string(),
+  sub: z
+    .string()
+    .refine(
+      (val) => {
         const uuid = base64urlToUuid(val);
-        if (!uuid) throw new Error("Invalid base64 UUID");
-        return uuid;
-      }),
-    iat: z.number(),
-    iss: z.string(),
-    aud: z.string(),
-    exp: z.number(),
-    role: z
-      .enum(["root", "admin", "mod", "flagged", "banned"])
-      // In case new roles are added in the future.
-      .or(z.string())
-      .optional(),
-    provider: z.string().optional(),
-  }),
-);
+        return !!uuid;
+      },
+      {
+        message: "Invalid base64-encoded UUID",
+      },
+    )
+    .transform((val) => {
+      const uuid = base64urlToUuid(val);
+      if (!uuid) throw new Error("Invalid base64 UUID");
+      return uuid;
+    }),
+  iat: z.number(),
+  iss: z.string(),
+  aud: z.string(),
+  exp: z.number(),
+  role: z
+    .enum(["root", "admin", "mod", "flagged", "banned"])
+    // In case new roles are added in the future.
+    .or(z.string())
+    .optional(),
+  provider: z.string().optional(),
+});
 export type TokenPayload = z.infer<typeof TokenPayloadSchema>;
 
 export const ADMIN_ROLES = ["admin", "root"] as const;
@@ -408,65 +406,63 @@ export type TrackFlare = z.infer<typeof TrackFlareSchema>;
 // No auth, cacheable. Everything past the curve came later, so it is optional
 // and tolerant: an older API (or one malformed entry) still parses, and the
 // confirmation falls back to what it showed before.
-export const ProgressionConfigSchema = z.compile(
-  z.object({
-    version: z.number(),
-    maxLevel: z.number(),
-    maxPrestige: z.number(),
-    levels: z.array(
-      z.object({
-        level: z.number(),
-        xpToNext: z.number(),
-        cumulativeXp: z.number(),
-        // Paid on reaching this level, every prestige run.
-        caps: z.number().optional().catch(undefined),
-        plutonium: z.number().optional().catch(undefined),
-      }),
-    ),
-    // The revision of the API's XP formula (computeXp). The client carries a
-    // copy of one revision, for the provisional figure shown at death, and
-    // shows none when this is absent or names another revision.
-    formula: z.number().optional().catch(undefined),
-    // Whether the API scores only multiplayer games whose end-of-game vote
-    // agreed on the stats (true in production).
-    requireStatsAgreed: z.boolean().optional().catch(undefined),
-    // Whether the API scores singleplayer games, which never carry that vote
-    // (at the singleplayer rate and daily cap). The API always sends true; a
-    // malformed value reads as absent, and the client takes that as no.
-    scoresSingleplayer: z.boolean().optional().catch(undefined),
-    // The rules that formula runs on. Absent from older APIs; a malformed block
-    // only loses the provisional figure, never the level curve.
-    xp: XpRulesSchema.optional().catch(undefined),
-    // The rules behind each level's amounts.
-    levelRewards: z
-      .object({
-        capsBands: z.array(
-          z.object({
-            fromLevel: z.number(),
-            toLevel: z.number(),
-            caps: z.number(),
-          }),
-        ),
-        plutonium: z.object({
+export const ProgressionConfigSchema = z.object({
+  version: z.number(),
+  maxLevel: z.number(),
+  maxPrestige: z.number(),
+  levels: z.array(
+    z.object({
+      level: z.number(),
+      xpToNext: z.number(),
+      cumulativeXp: z.number(),
+      // Paid on reaching this level, every prestige run.
+      caps: z.number().optional().catch(undefined),
+      plutonium: z.number().optional().catch(undefined),
+    }),
+  ),
+  // The revision of the API's XP formula (computeXp). The client carries a
+  // copy of one revision, for the provisional figure shown at death, and
+  // shows none when this is absent or names another revision.
+  formula: z.number().optional().catch(undefined),
+  // Whether the API scores only multiplayer games whose end-of-game vote
+  // agreed on the stats (true in production).
+  requireStatsAgreed: z.boolean().optional().catch(undefined),
+  // Whether the API scores singleplayer games, which never carry that vote
+  // (at the singleplayer rate and daily cap). The API always sends true; a
+  // malformed value reads as absent, and the client takes that as no.
+  scoresSingleplayer: z.boolean().optional().catch(undefined),
+  // The rules that formula runs on. Absent from older APIs; a malformed block
+  // only loses the provisional figure, never the level curve.
+  xp: XpRulesSchema.optional().catch(undefined),
+  // The rules behind each level's amounts.
+  levelRewards: z
+    .object({
+      capsBands: z.array(
+        z.object({
           fromLevel: z.number(),
-          everyLevels: z.number(),
-          amount: z.number(),
+          toLevel: z.number(),
+          caps: z.number(),
         }),
-      })
-      .optional()
-      .catch(undefined),
-    // The Caps every prestige grants.
-    prestige: z.object({ caps: z.number() }).optional().catch(undefined),
-    // In track order. An entry that doesn't parse is dropped, not the list.
-    flares: z
-      .array(TrackFlareSchema.nullable().catch(null))
-      .optional()
-      .catch(undefined)
-      .transform((flares) =>
-        (flares ?? []).filter((f): f is TrackFlare => f !== null),
       ),
-  }),
-);
+      plutonium: z.object({
+        fromLevel: z.number(),
+        everyLevels: z.number(),
+        amount: z.number(),
+      }),
+    })
+    .optional()
+    .catch(undefined),
+  // The Caps every prestige grants.
+  prestige: z.object({ caps: z.number() }).optional().catch(undefined),
+  // In track order. An entry that doesn't parse is dropped, not the list.
+  flares: z
+    .array(TrackFlareSchema.nullable().catch(null))
+    .optional()
+    .catch(undefined)
+    .transform((flares) =>
+      (flares ?? []).filter((f): f is TrackFlare => f !== null),
+    ),
+});
 export type ProgressionConfig = z.infer<typeof ProgressionConfigSchema>;
 
 const CurrencyBalancesSchema = z.object({
@@ -602,220 +598,215 @@ const UserSubscriptionSchema = z.object({
   renewalPushedBy: z.string().nullable().optional(),
 });
 
-export const UserMeResponseSchema = z.compile(
-  z.object({
-    user: z.object({
-      discord: DiscordUserSchema.optional(),
-      google: GoogleUserSchema.optional(),
-      email: z.string().optional(),
-      steam: SteamUserSchema.optional(),
-    }),
-    // The caller's active account ban, shown to them (localized client-side), or
-    // null. `category` is a server enum but kept as a string here so an
-    // unrecognised value degrades gracefully. Optional so an older API that
-    // predates the field is treated as "no ban".
-    ban: z
-      .object({
-        category: z.string(),
-        reason: z.string().nullable(),
-        expiresAt: z.iso.datetime().nullable(),
-      })
-      .nullable()
-      .optional(),
-    // Owns OpenFront on Steam. A licence is not a subscription: it confers
-    // custom lobbies and the verified name with `subscription` null, so a
-    // licence holder with no subscription has not lapsed.
-    steamLicence: z.boolean().optional().default(false),
-    // ISO date the player's Steam account first owned the base game, or null
-    // when unknown.
-    steamLicenceSince: z.string().nullable().optional().default(null),
-    // Notice keys this player has dismissed (POST /users/@me/notices).
-    noticesSeen: z.array(z.string()).optional().default([]),
-    // Server-raised messages due for this player and not yet shown
-    // (POST /users/@me/messages/seen once shown), e.g. "report_thanks".
-    pendingMessages: z.array(z.string()).optional().default([]),
-    // The player's most recent automatic tier conversion, if any.
-    tierConversion: z
-      .object({
-        id: z.string(),
-        fromTierName: z.string(),
-        toTierName: z.string(),
-        convertedAt: z.string(),
-      })
-      .nullable()
-      .optional(),
-    player: z.object({
-      publicId: z.string(),
-      adfree: z.boolean(),
-      // Ranked play limits are gone; the API still sends this and a later
-      // release drops it. Nothing reads it.
-      unlimitedRanked: z.boolean().optional(),
-      // True when the player may list a custom lobby publicly. The API decides
-      // which subscriptions, grants and Steam licences confer this.
-      canCreatePublicLobbies: z.boolean(),
-      // Account trust as computed by the API. "untrusted" means new, unlinked or
-      // banned, never an accusation. null when the API's computation failed;
-      // absent on an API that predates the field. Both read as untrusted.
-      trustTier: z.enum(["untrusted", "trusted"]).nullable().optional(),
-      // Account username (custom-usernames). All optional so responses from an
-      // API without the feature still parse; absent means the same as never set.
-      // `username` is the server-resolved DISPLAY form — the bare base for an
-      // entitled claim holder, otherwise "base.suffix". Render it as-is; never
-      // assemble base + discriminator client-side. The discriminator is exactly
-      // 4 digits and may have leading zeros — keep it a string.
-      username: z.string().nullable().optional(),
-      usernameBase: z.string().nullable().optional(),
-      usernameDiscriminator: z.string().nullable().optional(),
-      usernameStatus: UsernameStatusSchema.optional(),
-      // Only non-null in `claimed`: when the exclusive right to the bare name
-      // becomes takeable by another subscriber. A past date means "at risk",
-      // not "lost" — it stays set until the name is actually taken.
-      usernameClaimExpiresAt: z.iso.datetime().nullable().optional(),
-      // When the player may next self-rename. May be in the past — past or
-      // null both mean a rename is allowed.
-      nextUsernameChangeAt: z.iso.datetime().nullable().optional(),
-      flares: z.string().array().optional(),
-      achievements: z.object({
-        singleplayerMap: z.array(SingleplayerMapAchievementSchema),
-        // Optional with a default rather than required: prod and staging deploy
-        // on separate schedules, and a client that hard-failed against a server
-        // without this field would take out the whole account panel.
-        player: z.array(PlayerAchievementSchema).optional().default([]),
-      }),
-      leaderboard: z
-        .object({
-          oneVone: z
-            .object({
-              elo: z.number().optional(),
-            })
-            .optional(),
-          twoVtwo: z
-            .object({
-              elo: z.number().optional(),
-            })
-            .optional(),
-          ffa: z
-            .object({
-              elo: z.number().optional(),
-              // Absent until the API serves the FFA rating (FFA_RATING=live); a
-              // malformed value reads as absent.
-              uncertainty: z.number().optional().catch(undefined),
-              tier: z.string().optional().catch(undefined),
-              games: z.number().int().nonnegative().optional().catch(undefined),
-              wins: z.number().int().nonnegative().optional().catch(undefined),
-              peak: z.number().optional().catch(undefined),
-              // True when the board's ± rule keeps this rating off the board.
-              hiddenByUncertainty: z.boolean().optional().catch(undefined),
-              calibrationGames: z
-                .number()
-                .int()
-                .min(0)
-                .max(10)
-                .optional()
-                .catch(undefined),
-            })
-            .optional(),
-        })
-        .optional(),
-      currency: CurrencyBalancesSchema.optional(),
-      // Unclaimed rewards — NOT included in `currency` balances until claimed.
-      rewards: RewardSchema.array().optional(),
-      // Level / XP. Absent when progression is off (or on an API that predates
-      // it): every level UI hides itself then. Optional rather than defaulted,
-      // so "absent" never renders as "level 1, 0 XP". A malformed object also
-      // reads as absent: drift in this cosmetic field must never fail the whole
-      // /users/@me parse, which would make the player look signed out.
-      progress: ProgressSchema.optional().catch(undefined),
-      // "Hide my level": true when the player opted out of showing their level
-      // to others. They still earn XP and see their own level; the game server
-      // then leaves the badge off their lobby roster entry. Optional so an older
-      // API without the setting still parses — absent reads as shown, and the
-      // account settings hide the Privacy card. A malformed value reads as
-      // hidden: the server parses this response at join, so a bad value must
-      // never fail the parse and reject the join, and when the setting can't be
-      // read the private answer is the safe one.
-      levelHidden: z.boolean().optional().catch(true),
-      // "Show my profile in search engines" turned off: the public profile page
-      // (openfront.io/player/<publicId>) is served noindex. It still opens for
-      // anyone with the link, and link previews are unchanged. Optional so an
-      // older API without the setting still parses — absent hides the row in
-      // account settings. A malformed value reads as hidden, like levelHidden.
-      searchHidden: z.boolean().optional().catch(true),
-      clans: z
-        .array(
-          z.object({
-            tag: RequiredClanTagSchema,
-            name: z.string(),
-            role: z.enum(["leader", "officer", "member"]),
-            joinedAt: z.iso.datetime(),
-            memberCount: z.number().int().min(1),
-            // Clan currency — see ClanInfoSchema in ClanApiSchemas.ts for the
-            // format. Decimal bigint strings; optional for older responses.
-            softBalance: z.string().optional(),
-            hardBalance: z.string().optional(),
-          }),
-        )
-        .optional(),
-      clanRequests: z
-        .array(
-          z.object({
-            tag: RequiredClanTagSchema,
-            name: z.string(),
-            createdAt: z.iso.datetime(),
-          }),
-        )
-        .optional(),
-      friends: z.array(z.string()),
-      subscription: UserSubscriptionSchema.nullable(),
-      // Every entitled row, highest tier first: at most one paid and one grant.
-      // `subscription` is the first of them. Absent on an older server, and a
-      // malformed list reads as absent too, which falls back to `subscription`
-      // alone (see `subscriptionsOf`) rather than failing the whole parse.
-      subscriptions: z
-        .array(UserSubscriptionSchema)
-        .optional()
-        .catch(undefined),
-      // A Stripe subscription whose renewal failed and is still being retried,
-      // sent whenever no PAID row is entitled (a grant may still be running).
-      // It entitles nothing, which is why it is not `subscription`: every
-      // caller reads that as "subscribed".
-      // It exists so the account can say the payment failed and offer the
-      // billing portal. Optional so an older API without the field still parses.
-      pastDueSubscription: z.object({ tier: z.string() }).nullable().optional(),
-      // Marketing-email consent state (client-driven consent). `consented` is the
-      // player's current decision; `hasEmail` is whether a verified contact email
-      // exists to subscribe. Optional so an older API without the field is treated
-      // as "no consent UI".
-      marketingConsent: z
-        .object({
-          consented: z.enum(["approved", "denied", "no_response"]),
-          hasEmail: z.boolean(),
-        })
-        .optional(),
-      // The caller's ACTIVE creator-support binding (Creator Code programme), or
-      // null if unbound. Shown regardless of the creator's current status —
-      // suspending a creator doesn't un-bind their existing supporters, only
-      // blocks *new* bindings (enforced server-side at PUT /users/@me/creator).
-      // `sinceAt` is when the binding started; `canChangeAt` is null once the
-      // 7-day change cooldown has elapsed, so the client can tell "still bound,
-      // cooldown over" from "still bound, cooldown running" without hardcoding
-      // the cooldown length itself. `creator: null` does NOT by itself mean a
-      // new bind is unthrottled — a cooldown can still be running from a recent
-      // unbind; only PUT's own 429 reveals that.
-      // .optional() exists ONLY so an older API without the field is tolerated
-      // (the UI renders nothing then).
-      creator: z
-        .object({
-          code: z.string(),
-          displayName: z.string(),
-          sinceAt: z.iso.datetime(),
-          canChangeAt: z.iso.datetime().nullable(),
-        })
-        .nullable()
-        .optional(),
-    }),
+export const UserMeResponseSchema = z.object({
+  user: z.object({
+    discord: DiscordUserSchema.optional(),
+    google: GoogleUserSchema.optional(),
+    email: z.string().optional(),
+    steam: SteamUserSchema.optional(),
   }),
-);
+  // The caller's active account ban, shown to them (localized client-side), or
+  // null. `category` is a server enum but kept as a string here so an
+  // unrecognised value degrades gracefully. Optional so an older API that
+  // predates the field is treated as "no ban".
+  ban: z
+    .object({
+      category: z.string(),
+      reason: z.string().nullable(),
+      expiresAt: z.iso.datetime().nullable(),
+    })
+    .nullable()
+    .optional(),
+  // Owns OpenFront on Steam. A licence is not a subscription: it confers
+  // custom lobbies and the verified name with `subscription` null, so a
+  // licence holder with no subscription has not lapsed.
+  steamLicence: z.boolean().optional().default(false),
+  // ISO date the player's Steam account first owned the base game, or null
+  // when unknown.
+  steamLicenceSince: z.string().nullable().optional().default(null),
+  // Notice keys this player has dismissed (POST /users/@me/notices).
+  noticesSeen: z.array(z.string()).optional().default([]),
+  // Server-raised messages due for this player and not yet shown
+  // (POST /users/@me/messages/seen once shown), e.g. "report_thanks".
+  pendingMessages: z.array(z.string()).optional().default([]),
+  // The player's most recent automatic tier conversion, if any.
+  tierConversion: z
+    .object({
+      id: z.string(),
+      fromTierName: z.string(),
+      toTierName: z.string(),
+      convertedAt: z.string(),
+    })
+    .nullable()
+    .optional(),
+  player: z.object({
+    publicId: z.string(),
+    adfree: z.boolean(),
+    // Ranked play limits are gone; the API still sends this and a later
+    // release drops it. Nothing reads it.
+    unlimitedRanked: z.boolean().optional(),
+    // True when the player may list a custom lobby publicly. The API decides
+    // which subscriptions, grants and Steam licences confer this.
+    canCreatePublicLobbies: z.boolean(),
+    // Account trust as computed by the API. "untrusted" means new, unlinked or
+    // banned, never an accusation. null when the API's computation failed;
+    // absent on an API that predates the field. Both read as untrusted.
+    trustTier: z.enum(["untrusted", "trusted"]).nullable().optional(),
+    // Account username (custom-usernames). All optional so responses from an
+    // API without the feature still parse; absent means the same as never set.
+    // `username` is the server-resolved DISPLAY form — the bare base for an
+    // entitled claim holder, otherwise "base.suffix". Render it as-is; never
+    // assemble base + discriminator client-side. The discriminator is exactly
+    // 4 digits and may have leading zeros — keep it a string.
+    username: z.string().nullable().optional(),
+    usernameBase: z.string().nullable().optional(),
+    usernameDiscriminator: z.string().nullable().optional(),
+    usernameStatus: UsernameStatusSchema.optional(),
+    // Only non-null in `claimed`: when the exclusive right to the bare name
+    // becomes takeable by another subscriber. A past date means "at risk",
+    // not "lost" — it stays set until the name is actually taken.
+    usernameClaimExpiresAt: z.iso.datetime().nullable().optional(),
+    // When the player may next self-rename. May be in the past — past or
+    // null both mean a rename is allowed.
+    nextUsernameChangeAt: z.iso.datetime().nullable().optional(),
+    flares: z.string().array().optional(),
+    achievements: z.object({
+      singleplayerMap: z.array(SingleplayerMapAchievementSchema),
+      // Optional with a default rather than required: prod and staging deploy
+      // on separate schedules, and a client that hard-failed against a server
+      // without this field would take out the whole account panel.
+      player: z.array(PlayerAchievementSchema).optional().default([]),
+    }),
+    leaderboard: z
+      .object({
+        oneVone: z
+          .object({
+            elo: z.number().optional(),
+          })
+          .optional(),
+        twoVtwo: z
+          .object({
+            elo: z.number().optional(),
+          })
+          .optional(),
+        ffa: z
+          .object({
+            elo: z.number().optional(),
+            // Absent until the API serves the FFA rating (FFA_RATING=live); a
+            // malformed value reads as absent.
+            uncertainty: z.number().optional().catch(undefined),
+            tier: z.string().optional().catch(undefined),
+            games: z.number().int().nonnegative().optional().catch(undefined),
+            wins: z.number().int().nonnegative().optional().catch(undefined),
+            peak: z.number().optional().catch(undefined),
+            // True when the board's ± rule keeps this rating off the board.
+            hiddenByUncertainty: z.boolean().optional().catch(undefined),
+            calibrationGames: z
+              .number()
+              .int()
+              .min(0)
+              .max(10)
+              .optional()
+              .catch(undefined),
+          })
+          .optional(),
+      })
+      .optional(),
+    currency: CurrencyBalancesSchema.optional(),
+    // Unclaimed rewards — NOT included in `currency` balances until claimed.
+    rewards: RewardSchema.array().optional(),
+    // Level / XP. Absent when progression is off (or on an API that predates
+    // it): every level UI hides itself then. Optional rather than defaulted,
+    // so "absent" never renders as "level 1, 0 XP". A malformed object also
+    // reads as absent: drift in this cosmetic field must never fail the whole
+    // /users/@me parse, which would make the player look signed out.
+    progress: ProgressSchema.optional().catch(undefined),
+    // "Hide my level": true when the player opted out of showing their level
+    // to others. They still earn XP and see their own level; the game server
+    // then leaves the badge off their lobby roster entry. Optional so an older
+    // API without the setting still parses — absent reads as shown, and the
+    // account settings hide the Privacy card. A malformed value reads as
+    // hidden: the server parses this response at join, so a bad value must
+    // never fail the parse and reject the join, and when the setting can't be
+    // read the private answer is the safe one.
+    levelHidden: z.boolean().optional().catch(true),
+    // "Show my profile in search engines" turned off: the public profile page
+    // (openfront.io/player/<publicId>) is served noindex. It still opens for
+    // anyone with the link, and link previews are unchanged. Optional so an
+    // older API without the setting still parses — absent hides the row in
+    // account settings. A malformed value reads as hidden, like levelHidden.
+    searchHidden: z.boolean().optional().catch(true),
+    clans: z
+      .array(
+        z.object({
+          tag: RequiredClanTagSchema,
+          name: z.string(),
+          role: z.enum(["leader", "officer", "member"]),
+          joinedAt: z.iso.datetime(),
+          memberCount: z.number().int().min(1),
+          // Clan currency — see ClanInfoSchema in ClanApiSchemas.ts for the
+          // format. Decimal bigint strings; optional for older responses.
+          softBalance: z.string().optional(),
+          hardBalance: z.string().optional(),
+        }),
+      )
+      .optional(),
+    clanRequests: z
+      .array(
+        z.object({
+          tag: RequiredClanTagSchema,
+          name: z.string(),
+          createdAt: z.iso.datetime(),
+        }),
+      )
+      .optional(),
+    friends: z.array(z.string()),
+    subscription: UserSubscriptionSchema.nullable(),
+    // Every entitled row, highest tier first: at most one paid and one grant.
+    // `subscription` is the first of them. Absent on an older server, and a
+    // malformed list reads as absent too, which falls back to `subscription`
+    // alone (see `subscriptionsOf`) rather than failing the whole parse.
+    subscriptions: z.array(UserSubscriptionSchema).optional().catch(undefined),
+    // A Stripe subscription whose renewal failed and is still being retried,
+    // sent whenever no PAID row is entitled (a grant may still be running).
+    // It entitles nothing, which is why it is not `subscription`: every
+    // caller reads that as "subscribed".
+    // It exists so the account can say the payment failed and offer the
+    // billing portal. Optional so an older API without the field still parses.
+    pastDueSubscription: z.object({ tier: z.string() }).nullable().optional(),
+    // Marketing-email consent state (client-driven consent). `consented` is the
+    // player's current decision; `hasEmail` is whether a verified contact email
+    // exists to subscribe. Optional so an older API without the field is treated
+    // as "no consent UI".
+    marketingConsent: z
+      .object({
+        consented: z.enum(["approved", "denied", "no_response"]),
+        hasEmail: z.boolean(),
+      })
+      .optional(),
+    // The caller's ACTIVE creator-support binding (Creator Code programme), or
+    // null if unbound. Shown regardless of the creator's current status —
+    // suspending a creator doesn't un-bind their existing supporters, only
+    // blocks *new* bindings (enforced server-side at PUT /users/@me/creator).
+    // `sinceAt` is when the binding started; `canChangeAt` is null once the
+    // 7-day change cooldown has elapsed, so the client can tell "still bound,
+    // cooldown over" from "still bound, cooldown running" without hardcoding
+    // the cooldown length itself. `creator: null` does NOT by itself mean a
+    // new bind is unthrottled — a cooldown can still be running from a recent
+    // unbind; only PUT's own 429 reveals that.
+    // .optional() exists ONLY so an older API without the field is tolerated
+    // (the UI renders nothing then).
+    creator: z
+      .object({
+        code: z.string(),
+        displayName: z.string(),
+        sinceAt: z.iso.datetime(),
+        canChangeAt: z.iso.datetime().nullable(),
+      })
+      .nullable()
+      .optional(),
+  }),
+});
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
 
 // PUT /users/@me/level_visibility and /users/@me/search_visibility { hidden }
@@ -1267,44 +1258,42 @@ export const PublicFfaRatingSchema = z.object({
 });
 export type PublicFfaRating = z.infer<typeof PublicFfaRatingSchema>;
 
-export const PlayerProfileSchema = z.compile(
-  z.object({
-    createdAt: z.iso.datetime(),
-    user: DiscordUserSchema.optional(),
-    // Account username, pre-rendered by the server (bare base or "base.suffix").
-    // null = the player never set one. Render `username ?? publicId`; never
-    // parse it — compare players by publicId only. Optional so responses from
-    // an API without the field still parse.
-    username: z.string().nullable().optional(),
-    stats: PlayerStatsTreeSchema,
-    // Clans this player belongs to, tag-ordered. Optional so responses from an
-    // API without the field still parse (→ no clans shown).
-    clans: z
-      .array(
-        z.object({
-          tag: RequiredClanTagSchema,
-          name: z.string(),
-          role: z.enum(["leader", "officer", "member"]),
-          joinedAt: z.iso.datetime(),
-          memberCount: z.number().int().min(1),
-          // Clan currency — see ClanInfoSchema in ClanApiSchemas.ts for the
-          // format. Decimal bigint strings; optional for older responses.
-          softBalance: z.string().optional(),
-          hardBalance: z.string().optional(),
-        }),
-      )
-      .optional(),
-    // The tag to show beside the player's name: the one from their latest game
-    // played under a clan they still belong to. null when none of their recent
-    // games has one. Optional so responses from an API without the field still
-    // parse (→ no tag shown).
-    displayClanTag: z.string().nullable().optional(),
-    // null = unrated (calibrating or never played FFA).
-    // Absent until the API serves the FFA rating (FFA_RATING=live); a malformed
-    // value reads as absent.
-    ffaRating: PublicFfaRatingSchema.nullable().optional().catch(undefined),
-  }),
-);
+export const PlayerProfileSchema = z.object({
+  createdAt: z.iso.datetime(),
+  user: DiscordUserSchema.optional(),
+  // Account username, pre-rendered by the server (bare base or "base.suffix").
+  // null = the player never set one. Render `username ?? publicId`; never
+  // parse it — compare players by publicId only. Optional so responses from
+  // an API without the field still parse.
+  username: z.string().nullable().optional(),
+  stats: PlayerStatsTreeSchema,
+  // Clans this player belongs to, tag-ordered. Optional so responses from an
+  // API without the field still parse (→ no clans shown).
+  clans: z
+    .array(
+      z.object({
+        tag: RequiredClanTagSchema,
+        name: z.string(),
+        role: z.enum(["leader", "officer", "member"]),
+        joinedAt: z.iso.datetime(),
+        memberCount: z.number().int().min(1),
+        // Clan currency — see ClanInfoSchema in ClanApiSchemas.ts for the
+        // format. Decimal bigint strings; optional for older responses.
+        softBalance: z.string().optional(),
+        hardBalance: z.string().optional(),
+      }),
+    )
+    .optional(),
+  // The tag to show beside the player's name: the one from their latest game
+  // played under a clan they still belong to. null when none of their recent
+  // games has one. Optional so responses from an API without the field still
+  // parse (→ no tag shown).
+  displayClanTag: z.string().nullable().optional(),
+  // null = unrated (calibrating or never played FFA).
+  // Absent until the API serves the FFA rating (FFA_RATING=live); a malformed
+  // value reads as absent.
+  ffaRating: PublicFfaRatingSchema.nullable().optional().catch(undefined),
+});
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
 
 // Mode buckets for GET /public/player/:publicId/games — mirrors the clan
@@ -1362,15 +1351,13 @@ export const PublicPlayerGameSchema = z.object({
 });
 export type PublicPlayerGame = z.infer<typeof PublicPlayerGameSchema>;
 
-export const PublicPlayerGamesResponseSchema = z.compile(
-  z.object({
-    results: PublicPlayerGameSchema.array(),
-    // Opaque continuation token. Round-trip verbatim as the `cursor` query
-    // parameter to fetch the next page; never construct or parse it. `null`
-    // means the server has no more rows to serve.
-    nextCursor: z.string().nullable(),
-  }),
-);
+export const PublicPlayerGamesResponseSchema = z.object({
+  results: PublicPlayerGameSchema.array(),
+  // Opaque continuation token. Round-trip verbatim as the `cursor` query
+  // parameter to fetch the next page; never construct or parse it. `null`
+  // means the server has no more rows to serve.
+  nextCursor: z.string().nullable(),
+});
 export type PublicPlayerGamesResponse = z.infer<
   typeof PublicPlayerGamesResponseSchema
 >;
@@ -1421,28 +1408,26 @@ export type RankedLeaderboardEntry = z.infer<
   typeof RankedLeaderboardEntrySchema
 >;
 
-export const RankedLeaderboardResponseSchema = z.compile(
-  z.object({
-    [RankedType.OneVOne]: RankedLeaderboardEntrySchema.array(),
-    // Each ranked type is its own ladder, ranked independently: a player can
-    // appear on both with a different elo and rank. Defaulted because an API
-    // deployment that predates the 2v2 ladder omits the key entirely.
-    [RankedType.TwoVTwo]: RankedLeaderboardEntrySchema.array().default([]),
-    // Defaulted for the same reason: older APIs have no FFA ladder.
-    [RankedType.FreeForAll]: RankedLeaderboardEntrySchema.array().default([]),
-    // The season today falls in, for the FFA board's label. Absent before the
-    // first season and until the API serves the rating; malformed reads as absent.
-    ffaSeason: z
-      .object({
-        number: z.number().int().positive(),
-        startDate: z.iso.date(),
-        // Null until the next season is scheduled; absent on an older API.
-        endDate: z.iso.date().nullable().optional(),
-      })
-      .optional()
-      .catch(undefined),
-  }),
-);
+export const RankedLeaderboardResponseSchema = z.object({
+  [RankedType.OneVOne]: RankedLeaderboardEntrySchema.array(),
+  // Each ranked type is its own ladder, ranked independently: a player can
+  // appear on both with a different elo and rank. Defaulted because an API
+  // deployment that predates the 2v2 ladder omits the key entirely.
+  [RankedType.TwoVTwo]: RankedLeaderboardEntrySchema.array().default([]),
+  // Defaulted for the same reason: older APIs have no FFA ladder.
+  [RankedType.FreeForAll]: RankedLeaderboardEntrySchema.array().default([]),
+  // The season today falls in, for the FFA board's label. Absent before the
+  // first season and until the API serves the rating; malformed reads as absent.
+  ffaSeason: z
+    .object({
+      number: z.number().int().positive(),
+      startDate: z.iso.date(),
+      // Null until the next season is scheduled; absent on an older API.
+      endDate: z.iso.date().nullable().optional(),
+    })
+    .optional()
+    .catch(undefined),
+});
 export type RankedLeaderboardResponse = z.infer<
   typeof RankedLeaderboardResponseSchema
 >;
@@ -1602,31 +1587,26 @@ export type PaymentsHandoff = z.infer<typeof PaymentsHandoffSchema>;
 //
 // `clientSecret` defaults to null rather than being required so responses from
 // an API deployed before the inline flow still parse.
-export const PaymentsCheckoutResponseSchema = z.compile(
-  z
-    .object({
-      orderId: z.string().nullable(),
-      provider: PaymentsProviderSchema,
-      kind: PaymentsKindSchema,
-      handoff: PaymentsHandoffSchema,
-      redirectUrl: z.string().nullable(),
-      clientSecret: z.string().nullable().default(null),
-      expiresAt: z.string().nullable(),
-    })
-    // A "redirect" with nowhere to redirect to is not a response we can act on;
-    // rejecting it here keeps every caller from having to re-check. Same for a
-    // "client_secret" without a secret.
-    .refine(
-      (body) => body.handoff !== "redirect" || body.redirectUrl !== null,
-      {
-        message: "handoff 'redirect' requires a redirectUrl",
-      },
-    )
-    .refine(
-      (body) => body.handoff !== "client_secret" || body.clientSecret !== null,
-      { message: "handoff 'client_secret' requires a clientSecret" },
-    ),
-);
+export const PaymentsCheckoutResponseSchema = z
+  .object({
+    orderId: z.string().nullable(),
+    provider: PaymentsProviderSchema,
+    kind: PaymentsKindSchema,
+    handoff: PaymentsHandoffSchema,
+    redirectUrl: z.string().nullable(),
+    clientSecret: z.string().nullable().default(null),
+    expiresAt: z.string().nullable(),
+  })
+  // A "redirect" with nowhere to redirect to is not a response we can act on;
+  // rejecting it here keeps every caller from having to re-check. Same for a
+  // "client_secret" without a secret.
+  .refine((body) => body.handoff !== "redirect" || body.redirectUrl !== null, {
+    message: "handoff 'redirect' requires a redirectUrl",
+  })
+  .refine(
+    (body) => body.handoff !== "client_secret" || body.clientSecret !== null,
+    { message: "handoff 'client_secret' requires a clientSecret" },
+  );
 export type PaymentsCheckoutResponse = z.infer<
   typeof PaymentsCheckoutResponseSchema
 >;
