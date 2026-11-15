@@ -30,6 +30,7 @@ export class LangSelector extends LitElement {
   private debugKeyPressed: boolean = false;
   private languageMetadata: LanguageMetadata[] = metadata;
   private languageCache = new Map<string, Record<string, string>>();
+  private langRequestVersion = 0;
 
   createRenderRoot() {
     return this;
@@ -126,23 +127,27 @@ export class LangSelector extends LitElement {
     // just how the DEFAULT is picked -- see defaultLocale, and note it is
     // consulted afresh each launch rather than persisted, so a player who
     // changes their Steam language sees the game follow.
+    const requestVersion = ++this.langRequestVersion;
     const browserLocale = this.defaultLocale();
     const savedLang = localStorage.getItem("lang");
     const userLang = this.getClosestSupportedLang(savedLang ?? browserLocale);
 
     // Populate the bundled English fallback synchronously so components
     // rendering before a non-English locale finishes fetching never flash raw keys.
+    // Keep currentLang at "en" until translations arrive so listeners like
+    // UsernameInput re-validate once the target locale is actually loaded.
     const bundledEn = this.languageCache.get("en") ?? flattenTranslations(en);
     this.languageCache.set("en", bundledEn);
     this.defaultTranslations = bundledEn;
-    this.currentLang = userLang;
 
     const translations =
       userLang === "en" ? bundledEn : await this.loadLanguage(userLang);
 
-    this.translations = translations;
-
     await this.loadLanguageList();
+    if (requestVersion !== this.langRequestVersion) return;
+
+    this.translations = translations;
+    this.currentLang = userLang;
     this.applyTranslation();
   }
 
@@ -241,8 +246,11 @@ export class LangSelector extends LitElement {
   }
 
   private async changeLanguage(lang: string) {
+    const requestVersion = ++this.langRequestVersion;
     localStorage.setItem("lang", lang);
-    this.translations = await this.loadLanguage(lang);
+    const translations = await this.loadLanguage(lang);
+    if (requestVersion !== this.langRequestVersion) return;
+    this.translations = translations;
     this.currentLang = lang;
     this.applyTranslation();
   }
