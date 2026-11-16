@@ -1813,6 +1813,11 @@ describe("StoreModal on the Play rail", () => {
       expect.any(Object),
     );
 
+    // The catalog's dollar price shows nowhere, on the card or in its preview.
+    expect(card(modal, playPack.key)!.textContent).toContain("1,000");
+    expect(modal.querySelector("[data-pack-price]")).toBeNull();
+    expect(modal.textContent).not.toContain("$5");
+
     // Not returned by Play, and not on Play at all.
     expect(card(modal, otherPack.key)).toBeUndefined();
     expect(card(modal, webOnlyPack.key)).toBeUndefined();
@@ -1829,6 +1834,25 @@ describe("StoreModal on the Play rail", () => {
     expect(
       modal.querySelector("[data-store-play-unavailable]")?.textContent,
     ).toContain("store.play_unavailable");
+  });
+
+  it("asks Play again when the store reopens after it could not price the packs", async () => {
+    const play = installPlay({ status: "error", code: "unavailable" });
+    const modal = await openPacks();
+    expect(modal.querySelector("[data-store-play-unavailable]")).toBeTruthy();
+    modal.close();
+
+    // The catalog itself is still fresh.
+    play.products.mockResolvedValue({
+      status: "ok",
+      products: [{ productId: "plutonium_1000", formattedPrice: "€5,49" }],
+    });
+    modal.open({ tab: "packs" });
+    await vi.waitFor(() =>
+      expect(purchaseButton(modal, playPack.key).dollarPrice).toBe("€5,49"),
+    );
+    expect(play.products).toHaveBeenCalledTimes(2);
+    expect(modal.querySelector("[data-store-play-unavailable]")).toBeNull();
   });
 
   it("sells nothing for real money in an Android app without the bridge", async () => {

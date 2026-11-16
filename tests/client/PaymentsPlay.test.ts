@@ -202,7 +202,7 @@ describe("startPlayPurchase", () => {
     });
   });
 
-  it("posts the earlier purchase on already_owned, then says it is processing", async () => {
+  it("posts the earlier purchase on already_owned, and completes once it settles", async () => {
     const play = installPlay();
     play.purchase.mockResolvedValue({ status: "error", code: "already_owned" });
     play.unconsumed.mockResolvedValue({
@@ -211,13 +211,65 @@ describe("startPlayPurchase", () => {
     });
     finalizeMock.mockResolvedValue({ ok: true, status: "settled" });
 
-    expect(await startPlayPurchase("p1")).toEqual({
-      outcome: "pending",
-      message: "store.play_earlier_purchase_pending",
-    });
+    expect(await startPlayPurchase("p1")).toEqual({ outcome: "completed" });
     expect(finalizeMock).toHaveBeenCalledWith("tok-old");
     expect(refresh).toHaveBeenCalledTimes(1);
   });
+
+  it.each<[string, FinalizeGooglePurchaseResult[], unknown]>([
+    [
+      "is still processing",
+      [{ ok: true, status: "pending" }],
+      { outcome: "pending", message: "store.play_earlier_purchase_pending" },
+    ],
+    [
+      "could not be decided yet",
+      [{ ok: false, code: "retry_later" }],
+      { outcome: "pending", message: "store.play_earlier_purchase_pending" },
+    ],
+    [
+      "belongs to another account",
+      [{ ok: false, code: "refused", reason: "wrong_account" }],
+      { outcome: "error", message: "store.play_wrong_account" },
+    ],
+    [
+      "belongs to another account, beside one that settled",
+      [
+        { ok: true, status: "settled" },
+        { ok: false, code: "refused", reason: "wrong_account" },
+      ],
+      { outcome: "error", message: "store.play_wrong_account" },
+    ],
+    [
+      "is refused",
+      [{ ok: false, code: "refused", reason: "not_purchased" }],
+      { outcome: "error", message: "store.play_purchase_refused" },
+    ],
+    [
+      "is rejected outright",
+      [{ ok: false, code: "failed" }],
+      { outcome: "error", message: "store.play_purchase_refused" },
+    ],
+  ])(
+    "on already_owned, says so when the earlier purchase %s",
+    async (_label, results, expected) => {
+      const play = installPlay();
+      play.purchase.mockResolvedValue({
+        status: "error",
+        code: "already_owned",
+      });
+      play.unconsumed.mockResolvedValue({
+        status: "ok",
+        purchaseTokens: results.map((_, i) => `tok-old-${i}`),
+      });
+      for (const result of results) finalizeMock.mockResolvedValueOnce(result);
+
+      expect(await startPlayPurchase("p1")).toMatchObject(
+        expected as Record<string, unknown>,
+      );
+      expect(finalizeMock).toHaveBeenCalledTimes(results.length);
+    },
+  );
 
   it.each([
     ["unavailable", "store.play_unavailable"],
@@ -291,14 +343,14 @@ describe("startPlayPurchase", () => {
 
 describe("drainPlayPurchases", () => {
   it("does nothing on the web", async () => {
-    await drainPlayPurchases();
+    await drainPlayPurchases("pub-1");
     expect(finalizeMock).not.toHaveBeenCalled();
   });
 
   it("does nothing when Play cannot list purchases", async () => {
     const play = installPlay();
     play.unconsumed.mockResolvedValue({ status: "error", code: "failed" });
-    await drainPlayPurchases();
+    await drainPlayPurchases("pub-1");
     expect(finalizeMock).not.toHaveBeenCalled();
   });
 
@@ -316,7 +368,7 @@ describe("drainPlayPurchases", () => {
     let calls = 0;
     finalizeMock.mockImplementation(() => holds[calls++].promise);
 
-    const drain = drainPlayPurchases();
+    const drain = drainPlayPurchases("pub-1");
     await vi.waitFor(() => expect(finalizeMock).toHaveBeenCalledTimes(1));
     holds[0].resolve({ ok: false, code: "refused", reason: "wrong_account" });
     await vi.waitFor(() => expect(finalizeMock).toHaveBeenCalledTimes(2));
@@ -333,7 +385,7 @@ describe("drainPlayPurchases", () => {
     const play = installPlay();
     play.unconsumed.mockResolvedValue({ status: "ok", purchaseTokens: ["t1"] });
     finalizeMock.mockResolvedValue({ ok: true, status: "pending" });
-    await drainPlayPurchases();
+    await drainPlayPurchases("pub-1");
     expect(refresh).not.toHaveBeenCalled();
   });
 
@@ -348,7 +400,7 @@ describe("drainPlayPurchases", () => {
       finalizeMock
         .mockResolvedValueOnce({ ok: true, status: "settled" })
         .mockResolvedValueOnce({ ok: false, code });
-      await drainPlayPurchases();
+      await drainPlayPurchases("pub-1");
       expect(finalizeMock.mock.calls.map(([t]) => t)).toEqual(["t1", "t2"]);
       expect(refresh).toHaveBeenCalledTimes(1);
     },
@@ -363,41 +415,60 @@ describe("drainPlayPurchases", () => {
     finalizeMock
       .mockResolvedValueOnce({ ok: false, code: "retry_later" })
       .mockResolvedValueOnce({ ok: true, status: "settled" });
-    await drainPlayPurchases();
+    await drainPlayPurchases("pub-1");
     expect(finalizeMock).toHaveBeenCalledTimes(2);
   });
 
-  it("joins a drain already running rather than starting a second", async () => {
+  it("joins a drain already running for the same account rather than starting a second", async () => {
     const play = installPlay();
     const held = deferred<unknown>();
     play.unconsumed.mockReturnValueOnce(held.promise);
 
-    const first = drainPlayPurchases();
-    const second = drainPlayPurchases();
-    expect(second).toBe(first);
+    const first = drainPlayPurchases("pub-1");
+    const second = drainPlayPurchases("pub-1");
     held.resolve({ status: "ok", purchaseTokens: ["t1"] });
     finalizeMock.mockResolvedValue({ ok: true, status: "settled" });
-    await first;
+    await Promise.all([first, second]);
     expect(play.unconsumed).toHaveBeenCalledTimes(1);
     expect(finalizeMock).toHaveBeenCalledTimes(1);
 
     // A drain after it finished runs again.
     play.unconsumed.mockResolvedValue({ status: "ok", purchaseTokens: [] });
-    await drainPlayPurchases();
+    await drainPlayPurchases("pub-1");
     expect(play.unconsumed).toHaveBeenCalledTimes(2);
   });
 
-  it("stands down while a purchase is running", async () => {
+  it("runs a fresh pass after the running one for another account", async () => {
+    const play = installPlay();
+    const held = deferred<unknown>();
+    play.unconsumed.mockReturnValueOnce(held.promise);
+    play.unconsumed.mockResolvedValue({ status: "ok", purchaseTokens: ["t2"] });
+    finalizeMock.mockResolvedValue({ ok: true, status: "settled" });
+
+    const first = drainPlayPurchases("pub-1");
+    await vi.waitFor(() => expect(play.unconsumed).toHaveBeenCalledTimes(1));
+    const second = drainPlayPurchases("pub-2");
+    // Requests for the account already queued join its pass.
+    const third = drainPlayPurchases("pub-2");
+    expect(play.unconsumed).toHaveBeenCalledTimes(1);
+
+    held.resolve({ status: "ok", purchaseTokens: ["t1"] });
+    await Promise.all([first, second, third]);
+    expect(play.unconsumed).toHaveBeenCalledTimes(2);
+    expect(finalizeMock.mock.calls.map(([t]) => t)).toEqual(["t1", "t2"]);
+  });
+
+  it("waits for a running purchase, then drains", async () => {
     const play = installPlay();
     const held = deferred<unknown>();
     play.purchase.mockReturnValueOnce(held.promise);
-    finalizeMock.mockResolvedValue({ ok: true, status: "settled" });
 
     const purchase = startPlayPurchase("p1");
-    await drainPlayPurchases();
+    await drainPlayPurchases("pub-1");
     expect(play.unconsumed).not.toHaveBeenCalled();
     held.resolve({ status: "cancelled" });
     await purchase;
+    await vi.waitFor(() => expect(play.unconsumed).toHaveBeenCalledTimes(1));
   });
 });
 
@@ -461,6 +532,22 @@ describe("watchPlayPurchases", () => {
     userMe({ player: { publicId: "pub-2" } });
     await settle();
     expect(play.unconsumed).toHaveBeenCalledTimes(2);
+  });
+
+  it("drains again for an account signed in during a drain", async () => {
+    const play = installPlay();
+    const held = deferred<unknown>();
+    play.unconsumed.mockReturnValueOnce(held.promise);
+    watchPlayPurchases();
+
+    userMe({ player: { publicId: "pub-1" } });
+    await settle();
+    userMe({ player: { publicId: "pub-2" } });
+    await settle();
+    expect(play.unconsumed).toHaveBeenCalledTimes(1);
+
+    held.resolve({ status: "ok", purchaseTokens: [] });
+    await vi.waitFor(() => expect(play.unconsumed).toHaveBeenCalledTimes(2));
   });
 
   it("drains when the app comes back to the foreground, once logged in", async () => {

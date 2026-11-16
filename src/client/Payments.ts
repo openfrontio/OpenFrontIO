@@ -627,9 +627,28 @@ export async function fetchPlayPrices(
   return new Map(result.products.map((p) => [p.productId, p.formattedPrice]));
 }
 
-// A purchase posts its own token, so the drain stands down while one runs.
+// A purchase posts its own token, so a drain asked for while one runs waits
+// for it to finish.
 let playPurchaseInFlight = false;
-let playDrain: Promise<void> | null = null;
+let playDrainAfterPurchase: string | null = null;
+
+/**
+ * What one drain pass found. The bridge does not say which product a token is
+ * for, so it covers every purchase the pass posted.
+ */
+interface PlayDrainResult {
+  settled: boolean;
+  // Why the server will never credit a token it was posted (its reason, or
+  // "failed" for a request it rejected outright).
+  refused: string[];
+}
+
+// The newest pass, and the account it drains for.
+interface PlayDrainPass {
+  account: string;
+  result: Promise<PlayDrainResult>;
+}
+let playDrain: PlayDrainPass | null = null;
 
 /**
  * Buys one Play product. `productId` is the pack's googleProductId.
@@ -665,13 +684,22 @@ export async function startPlayPurchase(
         case "busy":
           return { outcome: "cancelled", quiet: true };
         // An earlier purchase of this product was never consumed, so the
-        // server has not credited it yet. Posting it is what credits it.
-        case "already_owned":
-          await joinPlayDrain();
+        // server has not credited it yet. Posting it is what credits it. A
+        // refusal is told first: it never resolves by itself.
+        case "already_owned": {
+          const drained = await joinPlayDrain(userMe.player.publicId);
+          if (drained.refused.includes("wrong_account")) {
+            return error(translateText("store.play_wrong_account"));
+          }
+          if (drained.refused.length > 0) {
+            return error(translateText("store.play_purchase_refused"));
+          }
+          if (drained.settled) return { outcome: "completed" };
           return {
             outcome: "pending",
             message: translateText("store.play_earlier_purchase_pending"),
           };
+        }
         case "unavailable":
           return error(translateText("store.play_unavailable"));
         case "failed":
@@ -711,46 +739,72 @@ export async function startPlayPurchase(
     }
   } finally {
     playPurchaseInFlight = false;
+    drainAfterPurchase();
   }
 }
 
+/** Runs the drain asked for while the purchase ran, if one was. */
+function drainAfterPurchase(): void {
+  const queued = playDrainAfterPurchase;
+  playDrainAfterPurchase = null;
+  if (queued !== null) void drainPlayPurchases(queued);
+}
+
 /**
- * Posts every purchase Play reports as not yet consumed, one at a time:
- * purchases the app closed before posting, ones the server could not credit
- * yet, and pending ones that have since completed. Silent; refreshes the
- * account if anything settled. Joins a drain already running rather than
- * starting a second one.
+ * Posts every purchase Play reports as not yet consumed, one at a time, as
+ * `account` (the player's public id): purchases the app closed before
+ * posting, ones the server could not credit yet, and pending ones that have
+ * since completed. Silent; refreshes the account if anything settled. Joins
+ * a pass already running for the same account rather than starting a second.
  */
-export function drainPlayPurchases(): Promise<void> {
-  if (playPurchaseInFlight) return Promise.resolve();
-  return joinPlayDrain();
+export function drainPlayPurchases(account: string): Promise<void> {
+  if (playPurchaseInFlight) {
+    playDrainAfterPurchase = account;
+    return Promise.resolve();
+  }
+  return joinPlayDrain(account).then(() => undefined);
 }
 
-function joinPlayDrain(): Promise<void> {
-  playDrain ??= runPlayDrain().finally(() => {
-    playDrain = null;
-  });
-  return playDrain;
+function joinPlayDrain(account: string): Promise<PlayDrainResult> {
+  if (playDrain?.account === account) return playDrain.result;
+  // The server checks each purchase against the account posting it, so a
+  // pass for another account cannot answer for this one: a fresh pass runs
+  // once it ends. One pass at a time either way.
+  const previous = playDrain?.result ?? Promise.resolve();
+  const pass: PlayDrainPass = {
+    account,
+    result: previous.then(runPlayDrain, runPlayDrain).finally(() => {
+      if (playDrain === pass) playDrain = null;
+    }),
+  };
+  playDrain = pass;
+  return pass.result;
 }
 
-async function runPlayDrain(): Promise<void> {
+async function runPlayDrain(): Promise<PlayDrainResult> {
+  const drained: PlayDrainResult = { settled: false, refused: [] };
   const billing = desktopPlayBilling();
-  if (billing === null) return;
+  if (billing === null) return drained;
   const unconsumed = await billing.unconsumed();
-  if (unconsumed.status !== "ok") return;
-  let settled = false;
+  if (unconsumed.status !== "ok") return drained;
   for (const token of unconsumed.purchaseTokens) {
     const finalized = await finalizeGooglePurchase(token);
-    if (finalized.ok && finalized.status === "settled") settled = true;
+    if (finalized.ok) {
+      if (finalized.status === "settled") drained.settled = true;
+      continue;
+    }
+    if (finalized.code === "refused") drained.refused.push(finalized.reason);
+    if (finalized.code === "failed") drained.refused.push("failed");
     // Every further post would meet the same answer.
     if (
-      !finalized.ok &&
-      (finalized.code === "rate_limited" || finalized.code === "unauthorized")
+      finalized.code === "rate_limited" ||
+      finalized.code === "unauthorized"
     ) {
       break;
     }
   }
-  if (settled) await refreshAccount();
+  if (drained.settled) await refreshAccount();
+  return drained;
 }
 
 /**
@@ -768,11 +822,11 @@ export function watchPlayPurchases(): void {
     // to drain again.
     if (publicId === drainedFor) return;
     drainedFor = publicId;
-    if (publicId !== null) void drainPlayPurchases();
+    if (publicId !== null) void drainPlayPurchases(publicId);
   });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && drainedFor !== null) {
-      void drainPlayPurchases();
+      void drainPlayPurchases(drainedFor);
     }
   });
 }

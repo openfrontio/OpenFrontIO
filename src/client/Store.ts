@@ -1165,8 +1165,13 @@ export class StoreModal extends BaseModal {
     // groupsForTab falls back to Skins if nothing is on sale by now.
     if (args?.sub === "sale") this.cosmeticsSubTab = "sale";
     // Prices change when a sale starts or ends, so a catalog fetched more than
-    // a minute ago is refetched rather than shown with stale prices.
-    if (refreshStaleCosmetics() || this.cosmetics === null) {
+    // a minute ago is refetched rather than shown with stale prices. In the
+    // Android app, Play is asked again if it could not price the packs.
+    if (
+      refreshStaleCosmetics() ||
+      this.cosmetics === null ||
+      (sellsOnlyThroughPlay() && this.playPrices === null)
+    ) {
       await this.loadCatalog();
     }
     this.selectVisible(this.groupsForTab(this.activeTab));

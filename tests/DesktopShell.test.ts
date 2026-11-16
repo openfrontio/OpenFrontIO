@@ -282,18 +282,17 @@ describe("desktopPlayBilling", () => {
 
   it("calls the methods on the bridge object", async () => {
     const playBilling = install();
-    playBilling.purchase.mockImplementation(async function (this: unknown) {
-      expect(this).toBe(playBilling);
-      return { status: "cancelled" };
-    });
-    await desktopPlayBilling()!.purchase({
-      productId: "pack_1",
-      accountId: "pub-1",
-    });
+    expect(
+      await desktopPlayBilling()!.purchase({
+        productId: "pack_1",
+        accountId: "pub-1",
+      }),
+    ).toEqual({ status: "cancelled" });
     expect(playBilling.purchase).toHaveBeenCalledWith({
       productId: "pack_1",
       accountId: "pub-1",
     });
+    expect(playBilling.purchase.mock.contexts[0]).toBe(playBilling);
   });
 
   it("keeps only well-formed products", async () => {
