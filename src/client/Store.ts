@@ -1,5 +1,9 @@
 import {
   paidSubscriptionOf,
+  StorePlacement,
+  StorePlacementSubTab,
+  StorePlacementTab,
+  StorePlacementTabSchema,
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import {
@@ -13,6 +17,7 @@ import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
+import type { CosmeticCard } from "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
 import { isPreviewableCosmetic } from "./components/CosmeticPreviewBubble";
 import "./components/CosmeticPreviewModal";
@@ -47,6 +52,7 @@ import {
   priceStringToCents,
   reportPendingSteamAuthorizations,
 } from "./Payments";
+import { StoreTracker } from "./StoreTracking";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { translateText } from "./Utils";
 
@@ -61,17 +67,22 @@ function formatUsdCents(cents: number): string {
   return usdFormatter.format(cents / 100);
 }
 
-type StoreTab =
-  | "cosmetics"
-  | "bundles"
-  | "effects"
-  | "packs"
-  | "subscriptions"
-  | "tribes";
+// The store's tabs are the placement schema's: a tab the store analytics API
+// would reject cannot be added here without failing typecheck.
+type StoreTab = StorePlacementTab;
+
+function isStoreTab(key: string): key is StoreTab {
+  return (StorePlacementTabSchema.options as readonly string[]).includes(key);
+}
 
 // "sale" lists every discounted skin, flag, crown, effect and bundle; its tab
 // shows only while a sale covers one of them.
-const COSMETICS_SUB_TABS = ["sale", "patterns", "flags", "crowns"] as const;
+const COSMETICS_SUB_TABS = [
+  "sale",
+  "patterns",
+  "flags",
+  "crowns",
+] as const satisfies readonly StorePlacementSubTab[];
 type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
 
 /** Sub-tab holding the catalog item a store deep link points at. */
@@ -173,7 +184,7 @@ export class StoreModal extends BaseModal {
         { key: "cosmetics", label: translateText("store.cosmetics") },
         { key: "effects", label: translateText("store.effects") },
         { key: "tribes", label: translateText("store.tribes") },
-      ],
+      ] satisfies { key: StoreTab; label: string }[],
     };
   }
 
@@ -198,6 +209,8 @@ export class StoreModal extends BaseModal {
       this.onOpenCosmeticPreview,
     );
     this.rowObserver?.disconnect();
+    this.tracker?.dispose();
+    this.tracker = null;
     if (this.alignFrame !== null) cancelAnimationFrame(this.alignFrame);
     this.alignFrame = null;
     super.disconnectedCallback();
@@ -205,6 +218,7 @@ export class StoreModal extends BaseModal {
 
   protected updated(changed: PropertyValues) {
     super.updated(changed);
+    this.observeProducts();
     // The cards are nested components, so their purchase buttons only exist
     // (and only have positions) after their own updates commit — a frame later.
     alignPurchaseRows(this);
@@ -222,6 +236,13 @@ export class StoreModal extends BaseModal {
 
   private onOpenCosmeticPreview = (event: Event) => {
     const customEvent = event as CustomEvent<ResolvedCosmetic>;
+    const target = event.target as Element | null;
+    // A preview from inside a bundle's contents is not a click on a store
+    // card: the item has no card on that tab, and counting it would also hide
+    // a real click on the item's own card later in the visit.
+    if (!target?.closest?.("pack-contents-dialog")) {
+      this.trackClick(customEvent.detail, target);
+    }
     this.previewingCosmetic = customEvent.detail;
     this.requestUpdate();
   };
@@ -384,9 +405,72 @@ export class StoreModal extends BaseModal {
   // Activating a bundle also opens its contents: the card only has room to
   // tile a few items, so the dialog is where each one is shown with its name.
   private activate(resolved: ResolvedCosmetic): void {
+    this.trackClick(resolved, this.productFor(resolved));
     if (resolved.type === "cosmeticPack") this.openedPack = resolved;
     if (isPreviewableCosmetic(resolved)) this.previewingCosmetic = resolved;
     this.inspect(resolved);
+  }
+
+  // Store analytics. The tracker is made on the first open and kept.
+  private tracker: StoreTracker | null = null;
+
+  /**
+   * Where a card sits in the store; purchases are placed the same way.
+   * Undefined only before a tab is active: no placement is sent then.
+   */
+  private placementFor(el: Element): StorePlacement | undefined {
+    if (el.closest("[data-store-flash]")) return { kind: "flash" };
+    if (this.affiliateCode) return { kind: "affiliate" };
+    const tab = this.activeTab;
+    if (!isStoreTab(tab)) return undefined;
+    if (tab === "cosmetics") {
+      return { kind: "tab", tab, subTab: this.cosmeticsSubTab };
+    }
+    return { kind: "tab", tab };
+  }
+
+  // Cards are tracked under their item key; the tracker folds a pattern's
+  // palette keys into the pattern card's key (`pattern:<name>`), so
+  // data-cosmetic-key stays the palette key the store selects by.
+  private observeProducts(): void {
+    if (this.tracker === null || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+    // One prune per update, not one per card.
+    this.tracker.releaseDetached();
+    for (const el of this.querySelectorAll<HTMLElement>(
+      "[data-store-product][data-cosmetic-key]",
+    )) {
+      const key = el.dataset.cosmeticKey;
+      const placement = this.placementFor(el);
+      if (key && placement) this.tracker.observe(el, key, placement);
+    }
+  }
+
+  /** The tile showing this item, or one of its variants. */
+  private productFor(resolved: ResolvedCosmetic): Element | null {
+    for (const el of this.querySelectorAll<HTMLElement>(
+      "[data-store-product][data-cosmetic-key]",
+    )) {
+      const card = el as Partial<CosmeticCard>;
+      if (
+        el.dataset.cosmeticKey === resolved.key ||
+        card.resolved?.key === resolved.key ||
+        card.variants?.some((variant) => variant.key === resolved.key)
+      ) {
+        return el;
+      }
+    }
+    return null;
+  }
+
+  private trackClick(resolved: ResolvedCosmetic, el: Element | null): void {
+    try {
+      const placement = this.placementFor(el ?? this);
+      if (placement) this.tracker?.click(resolved.key, placement);
+    } catch {
+      // Analytics must never break the click.
+    }
   }
 
   private closePack(): void {
@@ -554,8 +638,18 @@ export class StoreModal extends BaseModal {
       isPurchasable && priced ? currentPrice(priced, "hard") : undefined;
     const priceSoft =
       isPurchasable && priced ? currentPrice(priced, "soft") : undefined;
+    // Resolved when clicked, from the card holding the button, so a purchase
+    // from the flash hero is placed as flash.
+    // Analytics must never break a purchase: a throw means no placement.
+    const placement = (): StorePlacement | undefined => {
+      try {
+        return this.placementFor(this.productFor(resolved) ?? this);
+      } catch {
+        return undefined;
+      }
+    };
     const purchase = (method: "dollar" | "hard" | "soft") =>
-      purchaseCosmetic(resolved, method);
+      purchaseCosmetic(resolved, method, placement());
     // Currency packs check out inline (wallet button / in-page card form)
     // when the display price parses; anything else — including subscriptions,
     // which are recurring and not a PaymentIntent — keeps the redirect flow,
@@ -573,6 +667,7 @@ export class StoreModal extends BaseModal {
             },
             amountCents,
             successMessageKey: "store.currency_pack_purchase_success",
+            placement,
           }
         : null;
     // Reserved currency lines are assigned per visual row by
@@ -979,6 +1074,8 @@ export class StoreModal extends BaseModal {
   }
 
   protected async onOpen(args?: Record<string, unknown>) {
+    this.tracker ??= new StoreTracker();
+    this.tracker.beginPageView();
     // Drain any Steam overlay approval parked before this UI existed. The
     // main process's "something arrived" nudge is contentless, so one that
     // fired with no window listening is heard by nobody and sits parked until
@@ -1009,6 +1106,7 @@ export class StoreModal extends BaseModal {
   }
 
   protected onClose(): void {
+    this.tracker?.flush();
     if (this.saleEndTimer !== null) clearTimeout(this.saleEndTimer);
     this.saleEndTimer = null;
     if (this.saleRetryTimer !== null) clearTimeout(this.saleRetryTimer);

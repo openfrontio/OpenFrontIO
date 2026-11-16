@@ -1,6 +1,7 @@
 import type { Cosmetics, Effect } from "@openfront/shared/CosmeticSchemas";
 import { nothing, type LitElement } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ClientEnv } from "../../src/client/ClientEnv";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
 import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
@@ -15,7 +16,9 @@ import {
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../src/client/Cosmetics";
+import { initNavigation } from "../../src/client/Navigation";
 import { saleCoversEverything, type StoreModal } from "../../src/client/Store";
+import type { StoreTracker } from "../../src/client/StoreTracking";
 import {
   EFFECTS_KEY,
   PATTERN_KEY,
@@ -926,9 +929,31 @@ describe("StoreModal cosmetic browser", () => {
     await clickHardPurchase(modal);
 
     await vi.waitFor(() =>
-      expect(purchaseCosmetic).toHaveBeenCalledWith(blue, "hard"),
+      expect(purchaseCosmetic).toHaveBeenCalledWith(
+        blue,
+        "hard",
+        expect.objectContaining({ kind: "tab", tab: "cosmetics" }),
+      ),
     );
     expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
+  });
+
+  it("still purchases, without a placement, when resolving it throws", async () => {
+    const modal = await openStoreOnCosmetic("patterns");
+    vi.spyOn(
+      modal as unknown as { placementFor(el: Element): unknown },
+      "placementFor",
+    ).mockImplementation(() => {
+      throw new Error("boom");
+    });
+
+    await focusCard(modal, blue.key);
+    await activateVariant(modal, blue.key);
+    await clickHardPurchase(modal);
+
+    await vi.waitFor(() =>
+      expect(purchaseCosmetic).toHaveBeenCalledWith(blue, "hard", undefined),
+    );
   });
 
   it("confirms the exact variant and price that initiated checkout", async () => {
@@ -945,7 +970,11 @@ describe("StoreModal cosmetic browser", () => {
       .dispatchEvent(new CustomEvent("confirm"));
 
     await vi.waitFor(() =>
-      expect(purchaseCosmetic).toHaveBeenCalledWith(red, "hard"),
+      expect(purchaseCosmetic).toHaveBeenCalledWith(
+        red,
+        "hard",
+        expect.any(Object),
+      ),
     );
     expect(
       (
@@ -954,7 +983,12 @@ describe("StoreModal cosmetic browser", () => {
         }
       ).priceHard,
     ).toBe(120);
-    expect(purchaseCosmetic).not.toHaveBeenCalledWith(blue, "hard");
+    expect(purchaseCosmetic).not.toHaveBeenCalledWith(
+      blue,
+      "hard",
+      expect.anything(),
+    );
+    expect(purchaseCosmetic).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
   });
 
@@ -1078,7 +1112,11 @@ describe("StoreModal cosmetic browser", () => {
 
     expect(hydroCard.state).toBe("focused");
     await purchaseButton(modal, hydro.key).onPurchaseHard!();
-    expect(purchaseCosmetic).toHaveBeenCalledWith(hydro, "hard");
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      hydro,
+      "hard",
+      expect.any(Object),
+    );
     expect(localStorage.getItem(EFFECTS_KEY)).toBeNull();
   });
 
@@ -1256,7 +1294,11 @@ describe("StoreModal cosmetic browser", () => {
 
     await purchaseButton(modal, pack.key).onPurchaseDollar!();
 
-    expect(purchaseCosmetic).toHaveBeenCalledWith(pack, "dollar");
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      pack,
+      "dollar",
+      expect.any(Object),
+    );
   });
 
   it("keeps each currency on its own line across mixed-payment cards", async () => {
@@ -1313,7 +1355,11 @@ describe("StoreModal cosmetic browser", () => {
     expect(button.product).toBeNull();
     expect(button.dollarPrice).toBe("$4.99");
     await button.onPurchaseDollar!();
-    expect(purchaseCosmetic).toHaveBeenCalledWith(steamPlus, "dollar");
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      steamPlus,
+      "dollar",
+      expect.any(Object),
+    );
   });
 
   it("widens a lone subscription card and enlarges its preview", async () => {
@@ -1380,6 +1426,7 @@ describe("StoreModal cosmetic browser", () => {
     expect(purchaseCosmetic).toHaveBeenCalledWith(
       platinumSubscription,
       "dollar",
+      expect.any(Object),
     );
   });
 
@@ -1424,6 +1471,7 @@ describe("StoreModal cosmetic browser", () => {
     expect(purchaseCosmetic).toHaveBeenCalledWith(
       { ...goldSubscription, relationship: "purchasable" },
       "dollar",
+      expect.any(Object),
     );
   });
 
@@ -1444,7 +1492,11 @@ describe("StoreModal cosmetic browser", () => {
     ).toContain("inventory.selected_cosmetic_variant, Aurora");
 
     await clickHardPurchase(modal);
-    expect(purchaseCosmetic).toHaveBeenCalledWith(starterBundle, "hard");
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      starterBundle,
+      "hard",
+      expect.any(Object),
+    );
   });
 
   it("opens a contents dialog naming each bundle item when a bundle is activated", async () => {
@@ -1490,7 +1542,11 @@ describe("StoreModal cosmetic browser", () => {
       .querySelector("confirm-dialog")!
       .dispatchEvent(new CustomEvent("confirm"));
     await vi.waitFor(() =>
-      expect(purchaseCosmetic).toHaveBeenCalledWith(starterBundle, "hard"),
+      expect(purchaseCosmetic).toHaveBeenCalledWith(
+        starterBundle,
+        "hard",
+        expect.any(Object),
+      ),
     );
 
     dialog
@@ -1567,7 +1623,11 @@ describe("StoreModal cosmetic browser", () => {
     ).toBeTruthy();
 
     await purchaseButton(modal, affiliatePattern.key).onPurchaseHard!();
-    expect(purchaseCosmetic).toHaveBeenCalledWith(affiliatePattern, "hard");
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      affiliatePattern,
+      "hard",
+      expect.any(Object),
+    );
   });
 });
 
@@ -1652,5 +1712,299 @@ describe("StoreModal on the Steam rail", () => {
 
     await vi.waitFor(() => expect(seen).toContain("store.purchase_pending"));
     window.removeEventListener("show-message", onToast);
+  });
+});
+
+describe("store analytics", () => {
+  Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
+
+  type Entry = {
+    target: Element;
+    isIntersecting: boolean;
+    intersectionRatio: number;
+  };
+  class FakeIO {
+    static instances: FakeIO[] = [];
+    observed = new Set<Element>();
+    constructor(public cb: (entries: Entry[]) => void) {
+      FakeIO.instances.push(this);
+    }
+    observe(el: Element) {
+      this.observed.add(el);
+    }
+    unobserve(el: Element) {
+      this.observed.delete(el);
+    }
+    disconnect() {
+      this.observed.clear();
+    }
+  }
+  // Report a card as shown (or hidden) to whichever observer watches it.
+  function setVisible(el: Element, isIntersecting: boolean) {
+    for (const io of FakeIO.instances) {
+      if (io.observed.has(el)) {
+        io.cb([
+          {
+            target: el,
+            isIntersecting,
+            intersectionRatio: isIntersecting ? 1 : 0,
+          },
+        ]);
+      }
+    }
+  }
+
+  let fetchSpy: ReturnType<typeof vi.fn>;
+  function sent() {
+    return fetchSpy.mock.calls
+      .filter(([url]) => String(url).endsWith("/store/events"))
+      .flatMap(([, init]) => JSON.parse(init.body).events);
+  }
+
+  beforeEach(() => {
+    FakeIO.instances = [];
+    (window as unknown as { BOOTSTRAP_CONFIG: unknown }).BOOTSTRAP_CONFIG = {
+      gameEnv: "dev",
+      numWorkers: 1,
+      turnstileSiteKey: "x",
+      jwtAudience: "localhost",
+      instanceId: "test",
+      gitCommit: "test",
+    };
+    ClientEnv.reset();
+    vi.stubGlobal("IntersectionObserver", FakeIO);
+    fetchSpy = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchSpy);
+    localStorage.clear();
+    const settings = new UserSettings();
+    settings.removeCached(PATTERN_KEY);
+    settings.removeCached(EFFECTS_KEY);
+    resolvedCatalog = [
+      red,
+      blue,
+      green,
+      flag,
+      wake,
+      atom,
+      pack,
+      goldSubscription,
+      platinumSubscription,
+      starterBundle,
+    ];
+    vi.mocked(fetchCosmetics).mockReset();
+    vi.mocked(fetchCosmetics).mockResolvedValue({} as Cosmetics);
+    vi.mocked(resolveCosmetics).mockReset();
+    vi.mocked(resolveCosmetics).mockImplementation(
+      (_cosmetics, _userMeResponse, affiliateCode) =>
+        affiliateCode
+          ? resolvedCatalog.filter(
+              (item) =>
+                item.cosmetic !== null &&
+                "affiliateCode" in item.cosmetic &&
+                item.cosmetic.affiliateCode === affiliateCode,
+            )
+          : resolvedCatalog,
+    );
+    vi.mocked(purchaseCosmetic).mockReset();
+  });
+
+  afterEach(() => {
+    store?.remove();
+    store = undefined;
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    delete (window as unknown as { BOOTSTRAP_CONFIG?: unknown })
+      .BOOTSTRAP_CONFIG;
+    ClientEnv.reset();
+    localStorage.clear();
+  });
+
+  function placementOf(modal: StoreModal, el: Element) {
+    return (
+      modal as unknown as { placementFor(el: Element): unknown }
+    ).placementFor(el);
+  }
+
+  function keysOf(modal: StoreModal): string[] {
+    return [...modal.querySelectorAll<HTMLElement>("[data-store-product]")].map(
+      (el) => el.dataset.cosmeticKey ?? "",
+    );
+  }
+
+  it("gives every product tile a cosmetic key on every tab", async () => {
+    for (const tab of ["packs", "subscriptions", "bundles"] as const) {
+      const modal = await openStoreOnTab(tab);
+      const keys = keysOf(modal);
+      expect(keys.length).toBeGreaterThan(0);
+      expect(keys.every((key) => key !== "")).toBe(true);
+      modal.remove();
+      store = undefined;
+    }
+    const cosmetics = await openStoreOnCosmetic("patterns");
+    expect(keysOf(cosmetics).length).toBeGreaterThan(0);
+    expect(keysOf(cosmetics).every((key) => key !== "")).toBe(true);
+    cosmetics.remove();
+    store = undefined;
+
+    const { store: effects } = await openEffectsStore();
+    expect(keysOf(effects)).toContain(wake.key);
+    expect(keysOf(effects).every((key) => key !== "")).toBe(true);
+  });
+
+  it("places a card by tab, sub-tab, flash hero or affiliate mode", async () => {
+    const modal = await openStoreOnCosmetic("flags");
+    const el = product(modal, flag.key)!;
+    expect(placementOf(modal, el)).toEqual({
+      kind: "tab",
+      tab: "cosmetics",
+      subTab: "flags",
+    });
+
+    const hero = document.createElement("section");
+    hero.setAttribute("data-store-flash", "");
+    const inner = document.createElement("div");
+    hero.appendChild(inner);
+    expect(placementOf(modal, inner)).toEqual({ kind: "flash" });
+
+    modal.setActiveTab("packs");
+    await modal.updateComplete;
+    expect(placementOf(modal, el)).toEqual({ kind: "tab", tab: "packs" });
+
+    (modal as unknown as { affiliateCode: string }).affiliateCode = "creator";
+    expect(placementOf(modal, el)).toEqual({ kind: "affiliate" });
+  });
+
+  it("records a click with the card's placement when it is activated", async () => {
+    const modal = await openStoreOnCosmetic("flags");
+    await focusCard(modal, flag.key);
+    (modal as unknown as { tracker: { flush(): void } }).tracker.flush();
+    expect(sent()).toEqual([
+      {
+        type: "click",
+        item: flag.key,
+        placement: { kind: "tab", tab: "cosmetics", subTab: "flags" },
+      },
+    ]);
+  });
+
+  it("does not count a preview from inside a bundle's contents as a click", async () => {
+    const modal = await openStoreOnCosmetic("flags");
+    const dialog = document.createElement("pack-contents-dialog");
+    modal.appendChild(dialog);
+    dialog.dispatchEvent(
+      new CustomEvent("open-cosmetic-preview", {
+        detail: flag,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    dialog.remove();
+    const tracker = (modal as unknown as { tracker: { flush(): void } })
+      .tracker;
+    tracker.flush();
+    expect(sent()).toEqual([]);
+    await focusCard(modal, flag.key);
+    tracker.flush();
+    expect(sent()).toEqual([
+      {
+        type: "click",
+        item: flag.key,
+        placement: { kind: "tab", tab: "cosmetics", subTab: "flags" },
+      },
+    ]);
+  });
+
+  it("flushes queued events when the store closes", async () => {
+    const modal = await openStoreOnCosmetic("flags");
+    await focusCard(modal, flag.key);
+    expect(sent()).toEqual([]);
+    modal.close();
+    expect(sent()).toHaveLength(1);
+  });
+
+  it("records an impression after a second in view, and again after a reopen", async () => {
+    initNavigation();
+    const modal = await openStoreOnCosmetic("flags");
+    modal.classList.add("page-content");
+    const el = product(modal, flag.key)!;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+    setVisible(el, true);
+    vi.advanceTimersByTime(1000);
+    modal.close();
+    expect(modal.classList.contains("hidden")).toBe(true);
+    expect(sent()).toEqual([
+      {
+        type: "impression",
+        item: flag.key,
+        placement: { kind: "tab", tab: "cosmetics", subTab: "flags" },
+      },
+    ]);
+
+    // Closing hides the store with display: none, so the browser reports the
+    // card as not intersecting, then intersecting again on reopen.
+    setVisible(el, false);
+    modal.open({ tab: "cosmetics" });
+    await modal.updateComplete;
+    setVisible(el, true);
+    vi.advanceTimersByTime(1000);
+    modal.close();
+    expect(sent().filter((e) => e.type === "impression")).toHaveLength(2);
+  });
+
+  it("follows a reused card element to its new item", async () => {
+    resolvedCatalog = [red, flag];
+    const modal = await openStoreOnCosmetic("patterns");
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const first = modal.querySelector<HTMLElement>("[data-store-product]")!;
+    expect(first.dataset.cosmeticKey).toBe(red.key);
+    setVisible(first, true);
+    vi.advanceTimersByTime(1000);
+
+    first.dataset.cosmeticKey = flag.key;
+    (modal as unknown as { requestUpdate(): void }).requestUpdate();
+    await modal.updateComplete;
+    setVisible(first, true);
+    vi.advanceTimersByTime(1000);
+    modal.close();
+    expect(
+      sent()
+        .filter((e) => e.type === "impression")
+        .map((e) => e.item),
+    ).toEqual(["pattern:stripes", flag.key]);
+  });
+
+  it("records a palette click and impression under the pattern card", async () => {
+    const modal = await openStoreOnCosmetic("patterns");
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    setVisible(product(modal, red.key)!, true);
+    vi.advanceTimersByTime(1000);
+    await activateVariant(modal, blue.key);
+    await focusCard(modal, blue.key);
+    modal.close();
+    expect(sent().map((e) => [e.type, e.item])).toEqual([
+      ["impression", "pattern:stripes"],
+      ["click", "pattern:stripes"],
+    ]);
+  });
+
+  it("prunes detached cards once per store update, not once per card", async () => {
+    const modal = await openStoreOnTab("subscriptions");
+    expect(keysOf(modal).length).toBeGreaterThan(1);
+    const tracker = (modal as unknown as { tracker: StoreTracker }).tracker;
+    const release = vi.spyOn(tracker, "releaseDetached");
+    const observe = vi.spyOn(tracker, "observe");
+    (modal as unknown as { requestUpdate(): void }).requestUpdate();
+    await modal.updateComplete;
+    expect(observe.mock.calls.length).toBeGreaterThan(1);
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+
+  it("watches the effect tiles the grid renders after the store does", async () => {
+    const { store: modal } = await openEffectsStore();
+    const el = product(modal, wake.key)!;
+    await vi.waitFor(() =>
+      expect(FakeIO.instances.some((io) => io.observed.has(el))).toBe(true),
+    );
   });
 });

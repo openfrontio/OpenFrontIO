@@ -1660,3 +1660,54 @@ export type SavedGame = z.infer<typeof SavedGameSchema>;
 export const SavedGamesListResponseSchema = z.object({
   savedGames: SavedGameSchema.array(),
 });
+
+// Store analytics. A deliberate copy of the schema in the infra API's
+// src/api/lib/StoreTracking.ts: keep the two identical. A new placement kind
+// is deployed to the API before any client sends it.
+// The store's tabs and cosmetics sub-tabs. The client's StoreTab and
+// CosmeticsSubTab types are derived from these, so a tab the API would reject
+// fails typecheck instead of a request.
+export const StorePlacementTabSchema = z.enum([
+  "cosmetics",
+  "bundles",
+  "effects",
+  "packs",
+  "subscriptions",
+  "tribes",
+]);
+export type StorePlacementTab = z.infer<typeof StorePlacementTabSchema>;
+export const StorePlacementSubTabSchema = z.enum([
+  "sale",
+  "patterns",
+  "flags",
+  "crowns",
+]);
+export type StorePlacementSubTab = z.infer<typeof StorePlacementSubTabSchema>;
+
+export const StorePlacementSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("tab"),
+    tab: StorePlacementTabSchema,
+    subTab: StorePlacementSubTabSchema.optional(),
+  }),
+  z.object({ kind: z.literal("flash") }),
+  z.object({ kind: z.literal("affiliate") }),
+  z.object({ kind: z.literal("post_game") }),
+]);
+export type StorePlacement = z.infer<typeof StorePlacementSchema>;
+
+export const StoreEventsBodySchema = z.object({
+  platform: z.enum(["web", "steam", "crazygames"]),
+  events: z
+    .array(
+      z.object({
+        type: z.enum(["impression", "click"]),
+        item: z.string().min(1).max(120),
+        placement: StorePlacementSchema,
+      }),
+    )
+    .min(1)
+    // The API's limit per request; StoreTracker splits its queue to fit.
+    .max(50),
+});
+export type StoreEventsBody = z.infer<typeof StoreEventsBodySchema>;

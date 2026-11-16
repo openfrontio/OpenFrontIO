@@ -1,4 +1,8 @@
-import type { NewsItem, StreamsFeed } from "@openfront/shared/ApiSchemas";
+import type {
+  NewsItem,
+  StorePlacement,
+  StreamsFeed,
+} from "@openfront/shared/ApiSchemas";
 import {
   ClaimAllRewardsResponse,
   ClaimAllRewardsResponseSchema,
@@ -1322,6 +1326,7 @@ export async function purchaseWithCurrency(
   cosmeticName: string,
   currencyType: "hard" | "soft",
   colorPaletteName?: string,
+  placement?: StorePlacement,
 ): Promise<PurchaseWithCurrencyResult> {
   try {
     const response = await fetch(`${getApiBase()}/shop/purchase`, {
@@ -1335,6 +1340,7 @@ export async function purchaseWithCurrency(
         cosmeticName,
         currencyType,
         colorPaletteName,
+        ...(placement ? { placement } : {}),
       }),
     });
     if (response.status === 401) {
@@ -1416,6 +1422,7 @@ const PACK_UNAVAILABLE_REASONS = [
 // Any error means no debit and no grants.
 export async function purchaseCosmeticPack(
   packName: string,
+  placement?: StorePlacement,
 ): Promise<PurchaseCosmeticPackResult> {
   try {
     const response = await fetch(`${getApiBase()}/shop/purchase/pack`, {
@@ -1424,7 +1431,7 @@ export async function purchaseCosmeticPack(
         "Content-Type": "application/json",
         Authorization: await getAuthHeader(),
       },
-      body: JSON.stringify({ packName }),
+      body: JSON.stringify({ packName, ...(placement ? { placement } : {}) }),
     });
     if (response.status === 401) {
       await logOut();
@@ -1587,7 +1594,11 @@ export type PaymentsCheckoutRequest = (
   | { kind: "currency_pack"; packName: string }
   | { kind: "custom_currency"; hardAmount: number }
   | { kind: "subscription_tier"; tierName: string }
-) & { provider: PaymentsProvider; handoffs?: PaymentsHandoff[] };
+) & {
+  provider: PaymentsProvider;
+  handoffs?: PaymentsHandoff[];
+  placement?: StorePlacement;
+};
 
 export type PaymentsCheckoutResult =
   | { ok: true; data: PaymentsCheckoutResponse }
