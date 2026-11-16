@@ -119,7 +119,7 @@ export class GameLeftSidebar extends LitElement implements Controller {
   private handleLeaderboardMouseDown = (e: MouseEvent): void => {
     e.preventDefault();
     const active = document.activeElement;
-    if (active instanceof HTMLElement && this.contains(active)) {
+    if (active instanceof HTMLElement) {
       active.blur();
     }
   };
