@@ -123,6 +123,25 @@ describe("GameLeftSidebar", () => {
     sidebar.remove();
   });
 
+  it("does not retain focus on mouse click so Space does not re-toggle the leaderboard", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+
+    const btn = sidebar.querySelector('[role="button"]') as HTMLElement;
+    const mousedown = new MouseEvent("mousedown", { cancelable: true });
+    btn.dispatchEvent(mousedown);
+    expect(mousedown.defaultPrevented).toBe(true);
+
+    btn.focus();
+    btn.dispatchEvent(new MouseEvent("click", { detail: 1 }));
+    expect(document.activeElement).not.toBe(btn);
+    sidebar.remove();
+  });
+
   it.each([
     { viewport: "a large screen", compact: false, shown: true },
     {

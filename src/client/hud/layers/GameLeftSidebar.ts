@@ -135,7 +135,11 @@ export class GameLeftSidebar extends LitElement implements Controller {
         <div class="flex items-center gap-4 xl:gap-6 text-white">
           <div
             class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
-            @click=${this.togglePlayerStats}
+            @mousedown=${(e: MouseEvent) => e.preventDefault()}
+            @click=${(e: MouseEvent) => {
+              if (e.detail > 0) (e.currentTarget as HTMLElement).blur();
+              this.togglePlayerStats();
+            }}
             role="button"
             tabindex="0"
             @keydown=${(e: KeyboardEvent) => {
@@ -164,7 +168,11 @@ export class GameLeftSidebar extends LitElement implements Controller {
               ? html`
                   <div
                     class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
-                    @click=${this.toggleTeamStats}
+                    @mousedown=${(e: MouseEvent) => e.preventDefault()}
+                    @click=${(e: MouseEvent) => {
+                      if (e.detail > 0) (e.currentTarget as HTMLElement).blur();
+                      this.toggleTeamStats();
+                    }}
                     role="button"
                     tabindex="0"
                     @keydown=${(e: KeyboardEvent) => {
