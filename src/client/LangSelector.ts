@@ -283,6 +283,7 @@ export class LangSelector extends LitElement {
       "o-button",
       "inventory-modal",
       "store-modal",
+      "sale-banner",
       "sale-countdown",
       "cosmetic-card",
       "cosmetic-info",
