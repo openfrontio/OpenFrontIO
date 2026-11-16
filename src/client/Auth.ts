@@ -410,6 +410,17 @@ export async function getAuthHeader(): Promise<string> {
   return `Bearer ${jwt}`;
 }
 
+// The cached bearer header, read synchronously: never refreshes, never logs and
+// never signs out. "" when there is no cached JWT or it is within 30 seconds of
+// expiry. For fire-and-forget callers (analytics) that must not wait. The
+// margin is smaller than userAuth's 3-minute refresh window because nothing
+// refreshes for these callers: the server checks the token anyway, and one
+// that has just expired only reads as signed out.
+export function peekAuthHeader(): string {
+  if (!__jwt || Date.now() >= __expiresAt - 30 * 1000) return "";
+  return `Bearer ${__jwt}`;
+}
+
 export async function logOut(allSessions: boolean = false): Promise<boolean> {
   try {
     const response = await fetch(
