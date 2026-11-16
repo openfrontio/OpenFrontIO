@@ -1887,6 +1887,29 @@ describe("store analytics", () => {
     ]);
   });
 
+  it("does not count a preview from inside a bundle's contents as a click", async () => {
+    const modal = await openStoreOnCosmetic("flags");
+    const dialog = document.createElement("pack-contents-dialog");
+    modal.appendChild(dialog);
+    dialog.dispatchEvent(
+      new CustomEvent("open-cosmetic-preview", {
+        detail: flag,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    dialog.remove();
+    await focusCard(modal, flag.key);
+    (modal as unknown as { tracker: { flush(): void } }).tracker.flush();
+    expect(sent()).toEqual([
+      {
+        type: "click",
+        item: flag.key,
+        placement: { kind: "tab", tab: "cosmetics", subTab: "flags" },
+      },
+    ]);
+  });
+
   it("flushes queued events when the store closes", async () => {
     const modal = await openStoreOnCosmetic("flags");
     await focusCard(modal, flag.key);

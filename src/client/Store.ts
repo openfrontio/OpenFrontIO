@@ -236,7 +236,13 @@ export class StoreModal extends BaseModal {
 
   private onOpenCosmeticPreview = (event: Event) => {
     const customEvent = event as CustomEvent<ResolvedCosmetic>;
-    this.trackClick(customEvent.detail, event.target as Element | null);
+    const target = event.target as Element | null;
+    // A preview from inside a bundle's contents is not a click on a store
+    // card: the item has no card on that tab, and counting it would also hide
+    // a real click on the item's own card later in the visit.
+    if (!target?.closest?.("pack-contents-dialog")) {
+      this.trackClick(customEvent.detail, target);
+    }
     this.previewingCosmetic = customEvent.detail;
     this.requestUpdate();
   };
@@ -632,8 +638,8 @@ export class StoreModal extends BaseModal {
       isPurchasable && priced ? currentPrice(priced, "hard") : undefined;
     const priceSoft =
       isPurchasable && priced ? currentPrice(priced, "soft") : undefined;
-    // Resolved when clicked, from the card holding the button: the same item
-    // can sit in the flash row and in its tab.
+    // Resolved when clicked, from the card holding the button, so a purchase
+    // from the flash hero is placed as flash.
     // Analytics must never break a purchase: a throw means no placement.
     const placement = (): StorePlacement | undefined => {
       try {
