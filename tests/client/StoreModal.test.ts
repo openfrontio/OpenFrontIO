@@ -1718,7 +1718,11 @@ describe("StoreModal on the Steam rail", () => {
 describe("store analytics", () => {
   Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
 
-  type Entry = { target: Element; isIntersecting: boolean };
+  type Entry = {
+    target: Element;
+    isIntersecting: boolean;
+    intersectionRatio: number;
+  };
   class FakeIO {
     static instances: FakeIO[] = [];
     observed = new Set<Element>();
@@ -1738,7 +1742,15 @@ describe("store analytics", () => {
   // Report a card as shown (or hidden) to whichever observer watches it.
   function setVisible(el: Element, isIntersecting: boolean) {
     for (const io of FakeIO.instances) {
-      if (io.observed.has(el)) io.cb([{ target: el, isIntersecting }]);
+      if (io.observed.has(el)) {
+        io.cb([
+          {
+            target: el,
+            isIntersecting,
+            intersectionRatio: isIntersecting ? 1 : 0,
+          },
+        ]);
+      }
     }
   }
 

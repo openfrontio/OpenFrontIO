@@ -15,7 +15,11 @@ import {
   StoreTracker,
 } from "../../src/client/StoreTracking";
 
-type Entry = { target: Element; isIntersecting: boolean };
+type Entry = {
+  target: Element;
+  isIntersecting: boolean;
+  intersectionRatio: number;
+};
 
 class FakeIO {
   static last: FakeIO;
@@ -35,8 +39,12 @@ class FakeIO {
   disconnect() {
     this.observed.clear();
   }
-  trigger(el: Element, isIntersecting: boolean) {
-    this.cb([{ target: el, isIntersecting }]);
+  trigger(
+    el: Element,
+    isIntersecting: boolean,
+    intersectionRatio = isIntersecting ? 1 : 0,
+  ) {
+    this.cb([{ target: el, isIntersecting, intersectionRatio }]);
   }
 }
 
@@ -237,6 +245,60 @@ describe("StoreTracker", () => {
       configurable: true,
     });
     expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("no impression while less than half the card is in view", () => {
+    const el = mount();
+    tracker.observe(el, "flag:a", placement);
+    FakeIO.last.trigger(el, true, 0.3);
+    vi.advanceTimersByTime(2000);
+    tracker.flush();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("a drop below half the card cancels the pending impression", () => {
+    const el = mount();
+    tracker.observe(el, "flag:a", placement);
+    FakeIO.last.trigger(el, true, 0.6);
+    vi.advanceTimersByTime(500);
+    FakeIO.last.trigger(el, true, 0.1);
+    vi.advanceTimersByTime(2000);
+    tracker.flush();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("hiding the tab cancels a pending impression; coming back needs a fresh second", () => {
+    const setVisibility = (value: string) => {
+      Object.defineProperty(document, "visibilityState", {
+        value,
+        configurable: true,
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    };
+    try {
+      const el = mount();
+      tracker.observe(el, "flag:a", placement);
+      FakeIO.last.trigger(el, true);
+      vi.advanceTimersByTime(100);
+      setVisibility("hidden");
+      vi.advanceTimersByTime(5000);
+      tracker.flush();
+      expect(send).not.toHaveBeenCalled();
+      setVisibility("visible");
+      vi.advanceTimersByTime(999);
+      tracker.flush();
+      expect(send).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      tracker.flush();
+      expect(send.mock.calls[0][0].events).toEqual([
+        { type: "impression", item: "flag:a", placement },
+      ]);
+    } finally {
+      Object.defineProperty(document, "visibilityState", {
+        value: "visible",
+        configurable: true,
+      });
+    }
   });
 
   it("no send when empty", () => {

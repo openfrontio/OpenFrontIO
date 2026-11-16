@@ -13,6 +13,8 @@ import { isSteamShell } from "./DesktopShell";
 // is hidden or closed.
 
 const IMPRESSION_MS = 1000;
+// Share of a card that must be in view for its second to count.
+const IMPRESSION_RATIO = 0.5;
 const FLUSH_MS = 30_000;
 const MAX_BATCH = 200;
 // The API's limit on an item key (StoreEventsBodySchema): one longer key
@@ -68,6 +70,8 @@ interface Watched {
   item: string;
   placement: StorePlacement;
   timer: ReturnType<typeof setTimeout> | null;
+  // At least IMPRESSION_RATIO of the card is in view, as last reported.
+  visible: boolean;
 }
 
 export class StoreTracker {
@@ -87,8 +91,18 @@ export class StoreTracker {
   }
 
   private readonly onPageHide = () => this.flush();
+  // Intersection is geometric and ignores whether the tab is in front, so a
+  // hidden tab stops every pending impression; coming back needs a fresh
+  // second of view.
   private readonly onVisibility = () => {
-    if (document.visibilityState === "hidden") this.flush();
+    if (document.visibilityState === "hidden") {
+      for (const w of this.watched.values()) this.stopTimer(w);
+      this.flush();
+      return;
+    }
+    for (const w of this.watched.values()) {
+      if (w.visible) this.startTimer(w);
+    }
   };
 
   beginPageView(): void {
@@ -109,15 +123,15 @@ export class StoreTracker {
     }
     this.observer ??= new IntersectionObserver(
       (entries) => this.onEntries(entries),
-      { threshold: 0.5 },
+      { threshold: IMPRESSION_RATIO },
     );
     if (known !== undefined) {
       // Lit reuses a card element for another item when the list changes.
       // Watch it afresh so the impression is for what it shows now.
-      if (known.timer !== null) clearTimeout(known.timer);
+      this.stopTimer(known);
       this.observer.unobserve(el);
     }
-    this.watched.set(el, { item, placement, timer: null });
+    this.watched.set(el, { item, placement, timer: null, visible: false });
     this.observer.observe(el);
   }
 
@@ -137,22 +151,35 @@ export class StoreTracker {
     for (const entry of entries) {
       const w = this.watched.get(entry.target);
       if (w === undefined) continue;
-      if (w.timer !== null) {
-        clearTimeout(w.timer);
-        w.timer = null;
+      this.stopTimer(w);
+      // The observer also reports crossings back below the threshold, still
+      // intersecting, so the ratio decides, not isIntersecting alone.
+      w.visible =
+        entry.isIntersecting && entry.intersectionRatio >= IMPRESSION_RATIO;
+      if (w.visible && document.visibilityState !== "hidden") {
+        this.startTimer(w);
       }
-      if (!entry.isIntersecting) continue;
-      w.timer = setTimeout(() => {
-        w.timer = null;
-        if (this.seenImpressions.has(w.item)) return;
-        this.seenImpressions.add(w.item);
-        this.enqueue({
-          type: "impression",
-          item: w.item,
-          placement: w.placement,
-        });
-      }, IMPRESSION_MS);
     }
+  }
+
+  private startTimer(w: Watched): void {
+    this.stopTimer(w);
+    w.timer = setTimeout(() => {
+      w.timer = null;
+      if (this.seenImpressions.has(w.item)) return;
+      this.seenImpressions.add(w.item);
+      this.enqueue({
+        type: "impression",
+        item: w.item,
+        placement: w.placement,
+      });
+    }, IMPRESSION_MS);
+  }
+
+  private stopTimer(w: Watched): void {
+    if (w.timer === null) return;
+    clearTimeout(w.timer);
+    w.timer = null;
   }
 
   click(key: string, placement: StorePlacement): void {
