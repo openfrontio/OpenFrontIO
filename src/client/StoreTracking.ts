@@ -17,8 +17,9 @@ const IMPRESSION_MS = 1000;
 const IMPRESSION_RATIO = 0.5;
 const FLUSH_MS = 30_000;
 // The API takes at most 50 events a request (StoreEventsBodySchema). A full
-// batch is about 5.5 KB. Browsers cap all in-flight keepalive bodies at 64 KiB
-// together, so a pagehide flush past about 580 queued events loses the later
+// batch is about 5.5 KB with typical keys, 11 KB at the 120-character cap.
+// Browsers cap all in-flight keepalive bodies at 64 KiB together, so a
+// pagehide flush of several hundred queued events would lose the later
 // batches. Per-visit dedupe and the 30 s flush keep the queue far below.
 const MAX_BATCH = 50;
 // The API's limit on an item key (StoreEventsBodySchema): one longer key
