@@ -1,4 +1,7 @@
-import type { PaymentsProvider } from "@openfront/shared/ApiSchemas";
+import type {
+  PaymentsProvider,
+  StorePlacement,
+} from "@openfront/shared/ApiSchemas";
 import {
   createPaymentsCheckout,
   finalizeSteamOrder,
@@ -301,10 +304,14 @@ async function awaitSteamAuthorization(
 // The purchase flow.
 
 /** What to buy. The rail is chosen by {@link paymentsProvider}, not here. */
-export type PurchaseRequest =
+export type PurchaseRequest = (
   | { kind: "currency_pack"; packName: string }
   | { kind: "custom_currency"; hardAmount: number }
-  | { kind: "subscription_tier"; tierName: string };
+  | { kind: "subscription_tier"; tierName: string }
+) & {
+  /** Where in the store it was bought (store analytics); omitted when unknown. */
+  placement?: StorePlacement;
+};
 
 export type PurchaseOutcome =
   // Navigation to the rail has been triggered; the page is going away.

@@ -2,6 +2,7 @@ import {
   giftSubscriptionOf,
   isGrantedSubscription,
   paidSubscriptionOf,
+  type StorePlacement,
   subscriptionsOf,
   UserMeResponse,
   UserSubscription,
@@ -392,6 +393,7 @@ async function promptManageBilling(message: string): Promise<void> {
 export async function purchaseCosmetic(
   resolved: ResolvedCosmetic,
   method: PaymentMethod,
+  placement?: StorePlacement,
 ): Promise<PurchaseResult> {
   if (!resolved.cosmetic) return;
   const c = resolved.cosmetic;
@@ -540,7 +542,7 @@ export async function purchaseCosmetic(
   }
 
   if (resolved.type === "cosmeticPack") {
-    return purchasePack(c as CosmeticPack, method);
+    return purchasePack(c as CosmeticPack, method, placement);
   }
 
   if (method === "dollar") {
@@ -552,8 +554,8 @@ export async function purchaseCosmetic(
       const isPack = resolved.type === "pack";
       const outcome = await startPurchase(
         isPack
-          ? { kind: "currency_pack", packName: c.name }
-          : { kind: "subscription_tier", tierName: c.name },
+          ? { kind: "currency_pack", packName: c.name, placement }
+          : { kind: "subscription_tier", tierName: c.name, placement },
       );
       if (outcome.outcome === "completed") {
         // Not just invalidateUserMe(): that clears the cache and nothing more.
@@ -670,6 +672,7 @@ export async function purchaseCosmetic(
     c.name,
     method,
     colorPaletteName,
+    placement,
   );
   if (!result.ok) {
     switch (result.code) {
@@ -768,6 +771,7 @@ function purchaseSuccessMessage(
 async function purchasePack(
   pack: CosmeticPack,
   method: PaymentMethod,
+  placement?: StorePlacement,
 ): Promise<PurchaseResult> {
   if (method !== "hard") {
     console.error("purchaseCosmetic: packs are only sold for hard currency");
@@ -797,7 +801,7 @@ async function purchasePack(
     return insufficient(balance);
   }
 
-  const result = await purchaseCosmeticPack(pack.name);
+  const result = await purchaseCosmeticPack(pack.name, placement);
   if (result.ok) {
     const charged = Number(result.data.amount);
     await showInGameAlert(

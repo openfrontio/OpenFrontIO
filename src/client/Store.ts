@@ -612,8 +612,12 @@ export class StoreModal extends BaseModal {
       isPurchasable && priced ? currentPrice(priced, "hard") : undefined;
     const priceSoft =
       isPurchasable && priced ? currentPrice(priced, "soft") : undefined;
+    // Resolved when clicked, from the card holding the button: the same item
+    // can sit in the flash row and in its tab.
+    const placement = () =>
+      this.placementFor(this.productFor(resolved) ?? this);
     const purchase = (method: "dollar" | "hard" | "soft") =>
-      purchaseCosmetic(resolved, method);
+      purchaseCosmetic(resolved, method, placement());
     // Currency packs check out inline (wallet button / in-page card form)
     // when the display price parses; anything else — including subscriptions,
     // which are recurring and not a PaymentIntent — keeps the redirect flow,
@@ -631,6 +635,7 @@ export class StoreModal extends BaseModal {
             },
             amountCents,
             successMessageKey: "store.currency_pack_purchase_success",
+            placement,
           }
         : null;
     // Reserved currency lines are assigned per visual row by

@@ -928,7 +928,11 @@ describe("StoreModal cosmetic browser", () => {
     await clickHardPurchase(modal);
 
     await vi.waitFor(() =>
-      expect(purchaseCosmetic).toHaveBeenCalledWith(blue, "hard"),
+      expect(purchaseCosmetic).toHaveBeenCalledWith(
+        blue,
+        "hard",
+        expect.objectContaining({ kind: "tab", tab: "cosmetics" }),
+      ),
     );
     expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
   });
@@ -947,7 +951,11 @@ describe("StoreModal cosmetic browser", () => {
       .dispatchEvent(new CustomEvent("confirm"));
 
     await vi.waitFor(() =>
-      expect(purchaseCosmetic).toHaveBeenCalledWith(red, "hard"),
+      expect(purchaseCosmetic).toHaveBeenCalledWith(
+        red,
+        "hard",
+        expect.any(Object),
+      ),
     );
     expect(
       (
@@ -1080,7 +1088,11 @@ describe("StoreModal cosmetic browser", () => {
 
     expect(hydroCard.state).toBe("focused");
     await purchaseButton(modal, hydro.key).onPurchaseHard!();
-    expect(purchaseCosmetic).toHaveBeenCalledWith(hydro, "hard");
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      hydro,
+      "hard",
+      expect.any(Object),
+    );
     expect(localStorage.getItem(EFFECTS_KEY)).toBeNull();
   });
 
@@ -1258,7 +1270,11 @@ describe("StoreModal cosmetic browser", () => {
 
     await purchaseButton(modal, pack.key).onPurchaseDollar!();
 
-    expect(purchaseCosmetic).toHaveBeenCalledWith(pack, "dollar");
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      pack,
+      "dollar",
+      expect.any(Object),
+    );
   });
 
   it("keeps each currency on its own line across mixed-payment cards", async () => {
@@ -1315,7 +1331,11 @@ describe("StoreModal cosmetic browser", () => {
     expect(button.product).toBeNull();
     expect(button.dollarPrice).toBe("$4.99");
     await button.onPurchaseDollar!();
-    expect(purchaseCosmetic).toHaveBeenCalledWith(steamPlus, "dollar");
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      steamPlus,
+      "dollar",
+      expect.any(Object),
+    );
   });
 
   it("widens a lone subscription card and enlarges its preview", async () => {
@@ -1382,6 +1402,7 @@ describe("StoreModal cosmetic browser", () => {
     expect(purchaseCosmetic).toHaveBeenCalledWith(
       platinumSubscription,
       "dollar",
+      expect.any(Object),
     );
   });
 
@@ -1426,6 +1447,7 @@ describe("StoreModal cosmetic browser", () => {
     expect(purchaseCosmetic).toHaveBeenCalledWith(
       { ...goldSubscription, relationship: "purchasable" },
       "dollar",
+      expect.any(Object),
     );
   });
 
@@ -1446,7 +1468,11 @@ describe("StoreModal cosmetic browser", () => {
     ).toContain("inventory.selected_cosmetic_variant, Aurora");
 
     await clickHardPurchase(modal);
-    expect(purchaseCosmetic).toHaveBeenCalledWith(starterBundle, "hard");
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      starterBundle,
+      "hard",
+      expect.any(Object),
+    );
   });
 
   it("opens a contents dialog naming each bundle item when a bundle is activated", async () => {
@@ -1492,7 +1518,11 @@ describe("StoreModal cosmetic browser", () => {
       .querySelector("confirm-dialog")!
       .dispatchEvent(new CustomEvent("confirm"));
     await vi.waitFor(() =>
-      expect(purchaseCosmetic).toHaveBeenCalledWith(starterBundle, "hard"),
+      expect(purchaseCosmetic).toHaveBeenCalledWith(
+        starterBundle,
+        "hard",
+        expect.any(Object),
+      ),
     );
 
     dialog
@@ -1569,7 +1599,11 @@ describe("StoreModal cosmetic browser", () => {
     ).toBeTruthy();
 
     await purchaseButton(modal, affiliatePattern.key).onPurchaseHard!();
-    expect(purchaseCosmetic).toHaveBeenCalledWith(affiliatePattern, "hard");
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      affiliatePattern,
+      "hard",
+      expect.any(Object),
+    );
   });
 });
 
