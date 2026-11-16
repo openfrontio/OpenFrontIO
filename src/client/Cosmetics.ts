@@ -44,6 +44,8 @@ import {
   classifyPurchaseReturn,
   paymentsProvider,
   purchaseOutcomeMessage,
+  sellsOnlyThroughPlay,
+  startPlayPurchase,
   startPurchase,
 } from "./Payments";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
@@ -402,6 +404,9 @@ export async function purchaseCosmetic(
   const colorPaletteName = resolved.colorPalette?.name;
 
   if (resolved.type === "subscription") {
+    // The Android app sells no subscription (Play is its only way to pay) and
+    // never offers one; nothing here may start a checkout or a tier change.
+    if (sellsOnlyThroughPlay()) return;
     const sub = c as Subscription;
     const userMe = await getUserMe();
     // The paid row decides: a grant beside it is not something to change
@@ -555,11 +560,15 @@ export async function purchaseCosmetic(
     // and gating on it is what made those unbuyable.
     if (resolved.type === "pack" || resolved.type === "subscription") {
       const isPack = resolved.type === "pack";
-      const outcome = await startPurchase(
-        isPack
-          ? { kind: "currency_pack", packName: c.name, placement }
-          : { kind: "subscription_tier", tierName: c.name, placement },
-      );
+      // In the Android app a currency pack is a Play product instead.
+      const outcome =
+        isPack && paymentsProvider() === "google"
+          ? await startPlayPurchase((c as Pack).googleProductId)
+          : await startPurchase(
+              isPack
+                ? { kind: "currency_pack", packName: c.name, placement }
+                : { kind: "subscription_tier", tierName: c.name, placement },
+            );
       if (outcome.outcome === "completed") {
         // Not just invalidateUserMe(): that clears the cache and nothing more.
         // On the overlay path the page never navigates, so an open StoreModal

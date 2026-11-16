@@ -11,6 +11,7 @@ import {
   ClaimRewardResponseSchema,
   GetMyTribeNamesResponse,
   GetMyTribeNamesResponseSchema,
+  GoogleFinalizeResponseSchema,
   IdentityTokenAudiencesResponseSchema,
   IdentityTokenResponse,
   IdentityTokenResponseSchema,
@@ -1934,6 +1935,78 @@ export async function finalizeSteamOrder(
   } catch (e) {
     console.error("finalizeSteamOrder: request failed", e);
     return { ok: false, code: "failed" };
+  }
+}
+
+export type FinalizeGooglePurchaseResult =
+  // "settled": credited. "pending": Play has not taken the money yet; the
+  // server credits it when the purchase completes.
+  | { ok: true; status: "settled" | "pending" }
+  // 409: the server will never credit this purchase. `reason` is the server's.
+  | { ok: false; code: "refused"; reason: string }
+  | { ok: false; code: "rate_limited" }
+  | { ok: false; code: "unauthorized" }
+  // The server could not decide (5xx, Google unreachable, network error, an
+  // unreadable answer). Nothing was lost: the purchase stays unconsumed and
+  // posting it again is the retry.
+  | { ok: false; code: "retry_later" }
+  // 400 / 403 and any other answer.
+  | { ok: false; code: "failed" };
+
+// POST /payments/google/finalize — credits a Google Play purchase. The server
+// consumes the purchase once it is credited, so posting the same token again
+// is always safe. Never log the token.
+export async function finalizeGooglePurchase(
+  purchaseToken: string,
+): Promise<FinalizeGooglePurchaseResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/payments/google/finalize`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ purchaseToken }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "unauthorized" };
+    }
+    if (response.status === 409) {
+      const body: unknown = await response.json().catch(() => null);
+      const reason =
+        typeof body === "object" &&
+        body !== null &&
+        "reason" in body &&
+        typeof body.reason === "string"
+          ? body.reason
+          : "unknown";
+      return { ok: false, code: "refused", reason };
+    }
+    if (response.status === 429) {
+      return { ok: false, code: "rate_limited" };
+    }
+    if (!response.ok) {
+      console.error("finalizeGooglePurchase: request failed", response.status);
+      return {
+        ok: false,
+        code: response.status >= 500 ? "retry_later" : "failed",
+      };
+    }
+    const parsed = GoogleFinalizeResponseSchema.safeParse(
+      await response.json(),
+    );
+    if (!parsed.success) {
+      console.error(
+        "finalizeGooglePurchase: Zod validation failed",
+        z.prettifyError(parsed.error),
+      );
+      return { ok: false, code: "retry_later" };
+    }
+    return { ok: true, status: parsed.data.status };
+  } catch (e) {
+    console.error("finalizeGooglePurchase: request failed", e);
+    return { ok: false, code: "retry_later" };
   }
 }
 

@@ -9,6 +9,7 @@ import {
 import {
   CosmeticPack,
   Cosmetics,
+  Pack,
   Product,
   Subscription,
 } from "@openfront/shared/CosmeticSchemas";
@@ -49,8 +50,10 @@ import {
 } from "./Cosmetics";
 import { matchesStoreItem } from "./EquippedCosmetics";
 import {
+  fetchPlayPrices,
   priceStringToCents,
   reportPendingSteamAuthorizations,
+  sellsOnlyThroughPlay,
 } from "./Payments";
 import { StoreTracker } from "./StoreTracking";
 import { lastUserMeResponse } from "./UserMeBroadcast";
@@ -144,10 +147,22 @@ export function saleFirst<T extends readonly ResolvedCosmetic[]>(
 
 export { saleCoversEverything };
 
+/** The Play products the catalog's currency packs are sold as. */
+function playProductIds(cosmetics: Cosmetics | null): string[] {
+  return Object.values(cosmetics?.currencyPacks ?? {}).flatMap((pack) =>
+    pack.currency === "hard" && pack.googleProductId !== undefined
+      ? [pack.googleProductId]
+      : [],
+  );
+}
+
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
   protected routerName = "store";
   private cosmetics: Cosmetics | null = null;
+  // In the Android app: Play's price for each product it sells, by product id.
+  // Null when Play could not be asked, which lists no pack for real money.
+  private playPrices: ReadonlyMap<string, string> | null = null;
   private affiliateCode: string | null = null;
   private userMeResponse: UserMeResponse | false = false;
   // `userMeResponse` starts at `false`, which is also what "no session" looks
@@ -294,7 +309,37 @@ export class StoreModal extends BaseModal {
       this.cosmetics,
       this.userMeResponse,
       this.affiliateCode,
-    ).filter((resolved) => resolved.relationship === "purchasable");
+    ).filter(
+      (resolved) =>
+        resolved.relationship === "purchasable" && this.sellable(resolved),
+    );
+  }
+
+  /**
+   * In the Android app Play is the only way to pay, so a currency pack is
+   * listed only at a price Play gave (or when it is bought with in-game
+   * currency) and no subscription is sold. Everything else is unaffected.
+   */
+  private sellable(resolved: ResolvedCosmetic): boolean {
+    if (!sellsOnlyThroughPlay()) return true;
+    if (resolved.type === "subscription") return false;
+    if (resolved.type !== "pack") return true;
+    const pack = resolved.cosmetic as Pack;
+    return (
+      this.playPrice(resolved) !== null ||
+      currentPrice(pack, "hard") !== undefined ||
+      currentPrice(pack, "soft") !== undefined
+    );
+  }
+
+  /** Play's price for a currency pack, or null when Play does not sell it. */
+  private playPrice(resolved: ResolvedCosmetic): string | null {
+    if (resolved.type !== "pack") return null;
+    const pack = resolved.cosmetic as Pack;
+    if (pack.currency !== "hard" || pack.googleProductId === undefined) {
+      return null;
+    }
+    return this.playPrices?.get(pack.googleProductId) ?? null;
   }
 
   private cosmeticsGroups(
@@ -389,7 +434,8 @@ export class StoreModal extends BaseModal {
         .filter(
           (resolved) =>
             resolved.type === "subscription" &&
-            (resolved.relationship === "purchasable" ||
+            ((resolved.relationship === "purchasable" &&
+              this.sellable(resolved)) ||
               resolved.relationship === "owned"),
         )
         .map((resolved) => [resolved]);
@@ -617,20 +663,29 @@ export class StoreModal extends BaseModal {
       rarity?: string;
     } | null;
     const isPurchasable = resolved.relationship === "purchasable";
+    // In the Android app the only real-money price is Play's own, in the
+    // player's currency, and the only real-money button is a Play purchase.
+    const playOnly = sellsOnlyThroughPlay();
+    const playPrice = isPurchasable ? this.playPrice(resolved) : null;
     // Only packs and subscriptions still check out in USD; cosmetics are
     // currency-only (their catalog product is always null now, but a cached
     // cosmetics.json may still carry one — never render a dollar button).
     const product =
       isPurchasable &&
+      !playOnly &&
       (resolved.type === "pack" || resolved.type === "subscription")
         ? (priced?.product ?? null)
         : null;
     // A tier with no Stripe listing (sold only on Steam) has no `product`;
     // its price is the tier's own, in cents.
     const subscriptionDollarPrice =
-      isPurchasable && resolved.type === "subscription" && product === null
+      isPurchasable &&
+      !playOnly &&
+      resolved.type === "subscription" &&
+      product === null
         ? formatUsdCents((resolved.cosmetic as Subscription).priceMonthly)
         : "";
+    const dollarPrice = playPrice ?? subscriptionDollarPrice;
     // The price as the server charges it now: once the item's own sale has
     // ended that is its list price, whatever the catalog in hand says.
     const saleEnded = priced !== null && saleHasEnded(priced);
@@ -674,7 +729,7 @@ export class StoreModal extends BaseModal {
     // alignPurchaseRows() once the grid has laid out.
     return html`<purchase-button
       .product=${product}
-      .dollarPrice=${subscriptionDollarPrice}
+      .dollarPrice=${dollarPrice}
       .inlineCheckout=${inlineCheckout}
       .priceHard=${priceHard ?? null}
       .priceSoft=${priceSoft ?? null}
@@ -701,9 +756,7 @@ export class StoreModal extends BaseModal {
           : ""
       }
       .onPurchaseDollar=${
-        product || subscriptionDollarPrice
-          ? () => purchase("dollar")
-          : undefined
+        product || dollarPrice ? () => purchase("dollar") : undefined
       }
       .onPurchaseHard=${
         priceHard !== undefined ? () => purchase("hard") : undefined
@@ -884,12 +937,24 @@ export class StoreModal extends BaseModal {
     // The custom-amount card is always purchasable (priced inline server-side,
     // no catalog entry), and follows the fixed packs at the end of the grid.
     // On BOTH rails: the Steam rail sells custom amounts since OPE-337, so
-    // there is no longer a rail on which this card is a dead button.
+    // there is no longer a rail on which this card is a dead button. Not in
+    // the Android app, though, where Play sells only its fixed packs; there a
+    // Play that could not price them says so instead.
+    const playOnly = sellsOnlyThroughPlay();
     return this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_packs",
-      trailingContent: html`<custom-currency-card
-        class="block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48"
-      ></custom-currency-card>`,
+      trailingContent: !playOnly
+        ? html`<custom-currency-card
+            class="block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48"
+          ></custom-currency-card>`
+        : this.cosmetics !== null && this.playPrices === null
+          ? html`<div
+              data-store-play-unavailable
+              class="w-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40"
+            >
+              ${translateText("store.play_unavailable")}
+            </div>`
+          : undefined,
       gridClass:
         "flex flex-wrap items-stretch justify-center content-start gap-4 p-4 sm:p-8",
       cardClass: "block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48",
@@ -992,8 +1057,15 @@ export class StoreModal extends BaseModal {
   private async loadCatalog(): Promise<Cosmetics | null> {
     const request = ++this.catalogRequest;
     const fresh = await fetchCosmetics();
-    if (request === this.catalogRequest)
+    // In the Android app, Play prices the packs it sells, in the player's
+    // own currency.
+    const playPrices = sellsOnlyThroughPlay()
+      ? await fetchPlayPrices(playProductIds(fresh ?? this.cosmetics))
+      : null;
+    if (request === this.catalogRequest) {
       this.cosmetics = fresh ?? this.cosmetics;
+      this.playPrices = playPrices;
+    }
     return fresh;
   }
 

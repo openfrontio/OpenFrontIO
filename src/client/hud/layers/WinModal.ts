@@ -63,7 +63,6 @@ import {
 } from "../../ProvisionalXpAtDeath";
 import { requeueModeForRankedType } from "../../RequeueUrl";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
-import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
 import { shareGame } from "../../utilities/ShareGame";
 import { GameView } from "../../view";
@@ -530,9 +529,10 @@ export class WinModal extends LitElement implements Controller {
   }
 
   innerHtml() {
-    // The Steam desktop build has nothing to wishlist — fall through to the
-    // other promos so the box is never empty.
-    const canWishlist = !steamSDK.isOnSteam();
+    // The Steam desktop build has nothing to wishlist, and the Android app
+    // must not send the player to another store — fall through to the other
+    // promos so the box is never empty.
+    const canWishlist = !isDesktopShell();
 
     if (isInIframe()) {
       return canWishlist ? this.steamWishlist() : this.discordDisplay();
