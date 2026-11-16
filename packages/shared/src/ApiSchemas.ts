@@ -1707,6 +1707,7 @@ export const StoreEventsBodySchema = z.object({
       }),
     )
     .min(1)
-    .max(200),
+    // The API's limit per request; StoreTracker splits its queue to fit.
+    .max(50),
 });
 export type StoreEventsBody = z.infer<typeof StoreEventsBodySchema>;

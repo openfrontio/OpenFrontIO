@@ -1,6 +1,9 @@
 import { base64url } from "jose";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { StoreEventsBody } from "../../packages/shared/src/ApiSchemas";
+import {
+  StoreEventsBodySchema,
+  type StoreEventsBody,
+} from "../../packages/shared/src/ApiSchemas";
 import { uuidToBase64url } from "../../packages/shared/src/Base64";
 import { getApiBase } from "../../src/client/ApiBase";
 import {
@@ -217,12 +220,15 @@ describe("StoreTracker", () => {
     });
   });
 
-  it("splits batches over 200", () => {
-    for (let i = 0; i < 450; i++) tracker.click(`flag:${i}`, placement);
+  it("splits batches over 50, the API's limit", () => {
+    for (let i = 0; i < 120; i++) tracker.click(`flag:${i}`, placement);
     tracker.flush();
     expect(send.mock.calls.map((c) => c[0].events.length)).toEqual([
-      200, 200, 50,
+      50, 50, 20,
     ]);
+    for (const [body] of send.mock.calls) {
+      expect(StoreEventsBodySchema.safeParse(body).success).toBe(true);
+    }
   });
 
   it("flushes once on pagehide", () => {
