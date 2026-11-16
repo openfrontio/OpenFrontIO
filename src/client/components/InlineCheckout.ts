@@ -33,7 +33,7 @@ export interface InlineCheckoutConfig {
   amountCents: number;
   successMessageKey: string;
   /** Resolved when the purchase is made, not when the tile renders. */
-  placement?: () => StorePlacement;
+  placement?: () => StorePlacement | undefined;
 }
 
 /**
@@ -55,7 +55,7 @@ export interface InlineCheckoutConfig {
 export class InlineCheckout extends LitElement {
   @property({ type: Object }) request: PurchaseRequest | null = null;
   /** Seeds Stripe's payment sheet; the server prices the real intent. */
-  @property({ type: Function }) placement?: () => StorePlacement;
+  @property({ type: Function }) placement?: () => StorePlacement | undefined;
   @property({ type: Number }) amountCents = 0;
   /** Display price, e.g. "$4.99". Labels the price and pay buttons. */
   @property({ type: String }) priceLabel = "";
@@ -162,7 +162,12 @@ export class InlineCheckout extends LitElement {
   /** The request with the store placement as of now (store analytics). */
   private requestWithPlacement(): PurchaseRequest | null {
     if (this.request === null) return null;
-    const placement = this.placement?.();
+    let placement: StorePlacement | undefined;
+    try {
+      placement = this.placement?.();
+    } catch {
+      // Analytics must never break a purchase.
+    }
     return placement ? { ...this.request, placement } : this.request;
   }
 

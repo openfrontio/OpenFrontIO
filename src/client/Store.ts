@@ -444,7 +444,11 @@ export class StoreModal extends BaseModal {
   }
 
   private trackClick(resolved: ResolvedCosmetic, el: Element | null): void {
-    this.tracker?.click(resolved.key, this.placementFor(el ?? this));
+    try {
+      this.tracker?.click(resolved.key, this.placementFor(el ?? this));
+    } catch {
+      // Analytics must never break the click.
+    }
   }
 
   private closePack(): void {
@@ -614,8 +618,14 @@ export class StoreModal extends BaseModal {
       isPurchasable && priced ? currentPrice(priced, "soft") : undefined;
     // Resolved when clicked, from the card holding the button: the same item
     // can sit in the flash row and in its tab.
-    const placement = () =>
-      this.placementFor(this.productFor(resolved) ?? this);
+    // Analytics must never break a purchase: a throw means no placement.
+    const placement = (): StorePlacement | undefined => {
+      try {
+        return this.placementFor(this.productFor(resolved) ?? this);
+      } catch {
+        return undefined;
+      }
+    };
     const purchase = (method: "dollar" | "hard" | "soft") =>
       purchaseCosmetic(resolved, method, placement());
     // Currency packs check out inline (wallet button / in-page card form)

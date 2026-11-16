@@ -937,6 +937,24 @@ describe("StoreModal cosmetic browser", () => {
     expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
   });
 
+  it("still purchases, without a placement, when resolving it throws", async () => {
+    const modal = await openStoreOnCosmetic("patterns");
+    vi.spyOn(
+      modal as unknown as { placementFor(el: Element): unknown },
+      "placementFor",
+    ).mockImplementation(() => {
+      throw new Error("boom");
+    });
+
+    await focusCard(modal, blue.key);
+    await activateVariant(modal, blue.key);
+    await clickHardPurchase(modal);
+
+    await vi.waitFor(() =>
+      expect(purchaseCosmetic).toHaveBeenCalledWith(blue, "hard", undefined),
+    );
+  });
+
   it("confirms the exact variant and price that initiated checkout", async () => {
     const modal = await openStoreOnCosmetic("patterns");
     const initialPurchaseButton = purchaseButton(modal, red.key);
@@ -964,7 +982,12 @@ describe("StoreModal cosmetic browser", () => {
         }
       ).priceHard,
     ).toBe(120);
-    expect(purchaseCosmetic).not.toHaveBeenCalledWith(blue, "hard");
+    expect(purchaseCosmetic).not.toHaveBeenCalledWith(
+      blue,
+      "hard",
+      expect.anything(),
+    );
+    expect(purchaseCosmetic).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
   });
 

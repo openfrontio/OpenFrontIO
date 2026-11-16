@@ -304,6 +304,7 @@ function grantedDaysRemaining(sub: UserSubscription): number | null {
 async function purchaseOverGrant(
   sub: Subscription,
   gift: UserSubscription,
+  placement?: StorePlacement,
 ): Promise<void> {
   const targetName = translateCosmetic("subscriptions", sub.name);
   const giftTier = subscriptionTier(await fetchCosmetics(), gift.tier);
@@ -347,6 +348,7 @@ async function purchaseOverGrant(
   const outcome = await startPurchase({
     kind: "subscription_tier",
     tierName: sub.name,
+    placement,
   });
   if (outcome.outcome === "completed") await broadcastFreshUserMe();
   if (outcome.outcome === "error" && outcome.refetchCatalog) {
@@ -429,7 +431,7 @@ export async function purchaseCosmetic(
       // there is — Steam inside the shell, Stripe on the web. Both are
       // admitted.
       if (paidSub === null) {
-        return purchaseOverGrant(sub, currentSub);
+        return purchaseOverGrant(sub, currentSub, placement);
       }
 
       if (currentSub.tier === sub.name) {
@@ -507,6 +509,7 @@ export async function purchaseCosmetic(
         const outcome = await startPurchase({
           kind: "subscription_tier",
           tierName: sub.name,
+          placement,
         });
         if (outcome.outcome === "completed") await broadcastFreshUserMe();
         if (outcome.outcome === "error" && outcome.refetchCatalog) {
