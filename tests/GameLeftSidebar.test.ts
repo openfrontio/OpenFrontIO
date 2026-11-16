@@ -142,6 +142,32 @@ describe("GameLeftSidebar", () => {
     sidebar.remove();
   });
 
+  it("clears focus from a previously focused leaderboard control on mousedown", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = {
+      ...ffaGame(),
+      teamClanTag: () => null,
+      config: () => ({
+        gameConfig: () => ({ gameMode: GameMode.Team }),
+        maxTroops: () => 1_000,
+      }),
+    } as unknown as GameView;
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+
+    const buttons = sidebar.querySelectorAll<HTMLElement>('[role="button"]');
+    const [playerBtn, teamBtn] = [buttons[0], buttons[1]];
+    playerBtn.focus();
+    expect(document.activeElement).toBe(playerBtn);
+
+    teamBtn.dispatchEvent(new MouseEvent("mousedown", { cancelable: true }));
+    expect(document.activeElement).not.toBe(playerBtn);
+    expect(document.activeElement).not.toBe(teamBtn);
+    sidebar.remove();
+  });
+
   it.each([
     { viewport: "a large screen", compact: false, shown: true },
     {
