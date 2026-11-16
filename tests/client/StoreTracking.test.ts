@@ -1,6 +1,15 @@
+import { base64url } from "jose";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StoreEventsBody } from "../../packages/shared/src/ApiSchemas";
-import { StoreTracker } from "../../src/client/StoreTracking";
+import { uuidToBase64url } from "../../packages/shared/src/Base64";
+import { getApiBase } from "../../src/client/ApiBase";
+import {
+  clearLocalSession,
+  peekAuthHeader,
+  userAuth,
+} from "../../src/client/Auth";
+import { ClientEnv } from "../../src/client/ClientEnv";
+import { sendStoreEvents, StoreTracker } from "../../src/client/StoreTracking";
 
 type Entry = { target: Element; isIntersecting: boolean };
 
@@ -155,5 +164,101 @@ describe("StoreTracker", () => {
     tracker.flush();
     vi.advanceTimersByTime(60_000);
     expect(send).not.toHaveBeenCalled();
+  });
+});
+
+function jwt(): string {
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    jti: "j",
+    sub: uuidToBase64url("123e4567-e89b-12d3-a456-426614174000"),
+    iat: now,
+    iss: getApiBase(),
+    aud: "localhost",
+    exp: now + 3600,
+  };
+  return [
+    base64url.encode(JSON.stringify({ alg: "HS256", typ: "JWT" })),
+    base64url.encode(JSON.stringify(payload)),
+    base64url.encode("sig"),
+  ].join(".");
+}
+
+describe("sendStoreEvents and peekAuthHeader", () => {
+  const body: StoreEventsBody = {
+    platform: "web",
+    events: [{ type: "click", item: "flag:a", placement }],
+  };
+
+  beforeEach(() => {
+    localStorage.clear();
+    (window as unknown as { BOOTSTRAP_CONFIG: unknown }).BOOTSTRAP_CONFIG = {
+      gameEnv: "dev",
+      numWorkers: 1,
+      turnstileSiteKey: "x",
+      jwtAudience: "localhost",
+      instanceId: "test",
+      gitCommit: "test",
+    };
+    ClientEnv.reset();
+  });
+  afterEach(() => {
+    clearLocalSession();
+    vi.unstubAllGlobals();
+    delete (window as unknown as { BOOTSTRAP_CONFIG?: unknown })
+      .BOOTSTRAP_CONFIG;
+    ClientEnv.reset();
+    localStorage.clear();
+  });
+
+  it("calls fetch synchronously, keepalive, without Authorization when signed out", () => {
+    const fetchMock = vi.fn(async () => ({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(peekAuthHeader()).toBe("");
+    sendStoreEvents(body);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe(`${getApiBase()}/store/events`);
+    expect(init.keepalive).toBe(true);
+    expect(init.method).toBe("POST");
+    expect(
+      (init.headers as Record<string, string>).Authorization,
+    ).toBeUndefined();
+    expect(JSON.parse(init.body as string)).toEqual(body);
+  });
+
+  it("sends the cached token and makes no refresh call", async () => {
+    const token = jwt();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        status: 200,
+        json: async () => ({ jwt: token, expiresIn: 3600 }),
+      })),
+    );
+    await userAuth();
+    const fetchMock = vi.fn(async () => ({ ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+    expect(peekAuthHeader()).toBe(`Bearer ${token}`);
+    sendStoreEvents(body);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const init = (
+      fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    )[1];
+    expect((init.headers as Record<string, string>).Authorization).toBe(
+      `Bearer ${token}`,
+    );
+  });
+
+  it("swallows a rejected fetch", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.reject(new Error("offline"))),
+    );
+    expect(() => sendStoreEvents(body)).not.toThrow();
+    await Promise.resolve();
   });
 });

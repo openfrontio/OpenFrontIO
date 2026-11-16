@@ -3,7 +3,7 @@ import type {
   StorePlacement,
 } from "@openfront/shared/ApiSchemas";
 import { getApiBase } from "./ApiBase";
-import { getAuthHeader } from "./Auth";
+import { peekAuthHeader } from "./Auth";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { isSteamShell } from "./DesktopShell";
 
@@ -27,22 +27,24 @@ export function storePlatform(): StoreEventsBody["platform"] {
 // Fire and forget. keepalive lets the request outlive the page on pagehide.
 // Errors are swallowed and nothing about the body or player is logged.
 export function sendStoreEvents(body: StoreEventsBody): void {
-  void (async () => {
-    try {
-      const auth = await getAuthHeader();
-      await fetch(`${getApiBase()}/store/events`, {
-        method: "POST",
-        keepalive: true,
-        headers: {
-          "Content-Type": "application/json",
-          ...(auth.startsWith("Bearer ") ? { Authorization: auth } : {}),
-        },
-        body: JSON.stringify(body),
-      });
-    } catch {
+  try {
+    // Read the cached token synchronously: analytics never triggers a refresh,
+    // and fetch must be issued in this tick so it survives pagehide.
+    const auth = peekAuthHeader();
+    fetch(`${getApiBase()}/store/events`, {
+      method: "POST",
+      keepalive: true,
+      headers: {
+        "Content-Type": "application/json",
+        ...(auth !== "" ? { Authorization: auth } : {}),
+      },
+      body: JSON.stringify(body),
+    }).catch(() => {
       // Analytics never surfaces an error.
-    }
-  })();
+    });
+  } catch {
+    // Analytics never surfaces an error.
+  }
 }
 
 export interface StoreTrackerDeps {
