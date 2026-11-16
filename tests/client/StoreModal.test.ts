@@ -1,6 +1,7 @@
 import type { Cosmetics, Effect } from "@openfront/shared/CosmeticSchemas";
 import { nothing, type LitElement } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ClientEnv } from "../../src/client/ClientEnv";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
 import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
@@ -1652,5 +1653,231 @@ describe("StoreModal on the Steam rail", () => {
 
     await vi.waitFor(() => expect(seen).toContain("store.purchase_pending"));
     window.removeEventListener("show-message", onToast);
+  });
+});
+
+describe("store analytics", () => {
+  Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
+
+  type Entry = { target: Element; isIntersecting: boolean };
+  class FakeIO {
+    static instances: FakeIO[] = [];
+    observed = new Set<Element>();
+    constructor(public cb: (entries: Entry[]) => void) {
+      FakeIO.instances.push(this);
+    }
+    observe(el: Element) {
+      this.observed.add(el);
+    }
+    unobserve(el: Element) {
+      this.observed.delete(el);
+    }
+    disconnect() {
+      this.observed.clear();
+    }
+  }
+  // Report a card as shown (or hidden) to whichever observer watches it.
+  function setVisible(el: Element, isIntersecting: boolean) {
+    for (const io of FakeIO.instances) {
+      if (io.observed.has(el)) io.cb([{ target: el, isIntersecting }]);
+    }
+  }
+
+  let fetchSpy: ReturnType<typeof vi.fn>;
+  function sent() {
+    return fetchSpy.mock.calls
+      .filter(([url]) => String(url).endsWith("/store/events"))
+      .flatMap(([, init]) => JSON.parse(init.body).events);
+  }
+
+  beforeEach(() => {
+    FakeIO.instances = [];
+    (window as unknown as { BOOTSTRAP_CONFIG: unknown }).BOOTSTRAP_CONFIG = {
+      gameEnv: "dev",
+      numWorkers: 1,
+      turnstileSiteKey: "x",
+      jwtAudience: "localhost",
+      instanceId: "test",
+      gitCommit: "test",
+    };
+    ClientEnv.reset();
+    vi.stubGlobal("IntersectionObserver", FakeIO);
+    fetchSpy = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchSpy);
+    localStorage.clear();
+    const settings = new UserSettings();
+    settings.removeCached(PATTERN_KEY);
+    settings.removeCached(EFFECTS_KEY);
+    resolvedCatalog = [
+      red,
+      blue,
+      green,
+      flag,
+      wake,
+      atom,
+      pack,
+      goldSubscription,
+      platinumSubscription,
+      starterBundle,
+    ];
+    vi.mocked(fetchCosmetics).mockReset();
+    vi.mocked(fetchCosmetics).mockResolvedValue({} as Cosmetics);
+    vi.mocked(resolveCosmetics).mockReset();
+    vi.mocked(resolveCosmetics).mockImplementation(
+      (_cosmetics, _userMeResponse, affiliateCode) =>
+        affiliateCode
+          ? resolvedCatalog.filter(
+              (item) =>
+                item.cosmetic !== null &&
+                "affiliateCode" in item.cosmetic &&
+                item.cosmetic.affiliateCode === affiliateCode,
+            )
+          : resolvedCatalog,
+    );
+    vi.mocked(purchaseCosmetic).mockReset();
+  });
+
+  afterEach(() => {
+    store?.remove();
+    store = undefined;
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    delete (window as unknown as { BOOTSTRAP_CONFIG?: unknown })
+      .BOOTSTRAP_CONFIG;
+    ClientEnv.reset();
+    localStorage.clear();
+  });
+
+  function placementOf(modal: StoreModal, el: Element) {
+    return (
+      modal as unknown as { placementFor(el: Element): unknown }
+    ).placementFor(el);
+  }
+
+  function keysOf(modal: StoreModal): string[] {
+    return [...modal.querySelectorAll<HTMLElement>("[data-store-product]")].map(
+      (el) => el.dataset.cosmeticKey ?? "",
+    );
+  }
+
+  it("gives every product tile a cosmetic key on every tab", async () => {
+    for (const tab of ["packs", "subscriptions", "bundles"] as const) {
+      const modal = await openStoreOnTab(tab);
+      const keys = keysOf(modal);
+      expect(keys.length).toBeGreaterThan(0);
+      expect(keys.every((key) => key !== "")).toBe(true);
+      modal.remove();
+      store = undefined;
+    }
+    const cosmetics = await openStoreOnCosmetic("patterns");
+    expect(keysOf(cosmetics).length).toBeGreaterThan(0);
+    expect(keysOf(cosmetics).every((key) => key !== "")).toBe(true);
+    cosmetics.remove();
+    store = undefined;
+
+    const { store: effects } = await openEffectsStore();
+    expect(keysOf(effects)).toContain(wake.key);
+    expect(keysOf(effects).every((key) => key !== "")).toBe(true);
+  });
+
+  it("places a card by tab, sub-tab, flash hero or affiliate mode", async () => {
+    const modal = await openStoreOnCosmetic("flags");
+    const el = product(modal, flag.key)!;
+    expect(placementOf(modal, el)).toEqual({
+      kind: "tab",
+      tab: "cosmetics",
+      subTab: "flags",
+    });
+
+    const hero = document.createElement("section");
+    hero.setAttribute("data-store-flash", "");
+    const inner = document.createElement("div");
+    hero.appendChild(inner);
+    expect(placementOf(modal, inner)).toEqual({ kind: "flash" });
+
+    modal.setActiveTab("packs");
+    await modal.updateComplete;
+    expect(placementOf(modal, el)).toEqual({ kind: "tab", tab: "packs" });
+
+    (modal as unknown as { affiliateCode: string }).affiliateCode = "creator";
+    expect(placementOf(modal, el)).toEqual({ kind: "affiliate" });
+  });
+
+  it("records a click with the card's placement when it is activated", async () => {
+    const modal = await openStoreOnCosmetic("flags");
+    await focusCard(modal, flag.key);
+    (modal as unknown as { tracker: { flush(): void } }).tracker.flush();
+    expect(sent()).toEqual([
+      {
+        type: "click",
+        item: flag.key,
+        placement: { kind: "tab", tab: "cosmetics", subTab: "flags" },
+      },
+    ]);
+  });
+
+  it("flushes queued events when the store closes", async () => {
+    const modal = await openStoreOnCosmetic("flags");
+    await focusCard(modal, flag.key);
+    expect(sent()).toEqual([]);
+    modal.close();
+    expect(sent()).toHaveLength(1);
+  });
+
+  it("records an impression after a second in view, and again after a reopen", async () => {
+    const modal = await openStoreOnCosmetic("flags");
+    const el = product(modal, flag.key)!;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+    setVisible(el, true);
+    vi.advanceTimersByTime(1000);
+    modal.close();
+    expect(sent()).toEqual([
+      {
+        type: "impression",
+        item: flag.key,
+        placement: { kind: "tab", tab: "cosmetics", subTab: "flags" },
+      },
+    ]);
+
+    // Closing hides the store with display: none, so the browser reports the
+    // card as not intersecting, then intersecting again on reopen.
+    setVisible(el, false);
+    modal.open({ tab: "cosmetics" });
+    await modal.updateComplete;
+    setVisible(el, true);
+    vi.advanceTimersByTime(1000);
+    modal.close();
+    expect(sent().filter((e) => e.type === "impression")).toHaveLength(2);
+  });
+
+  it("follows a reused card element to its new item", async () => {
+    resolvedCatalog = [red, flag];
+    const modal = await openStoreOnCosmetic("patterns");
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const first = modal.querySelector<HTMLElement>("[data-store-product]")!;
+    expect(first.dataset.cosmeticKey).toBe(red.key);
+    setVisible(first, true);
+    vi.advanceTimersByTime(1000);
+
+    first.dataset.cosmeticKey = flag.key;
+    (modal as unknown as { requestUpdate(): void }).requestUpdate();
+    await modal.updateComplete;
+    setVisible(first, true);
+    vi.advanceTimersByTime(1000);
+    modal.close();
+    expect(
+      sent()
+        .filter((e) => e.type === "impression")
+        .map((e) => e.item),
+    ).toEqual([red.key, flag.key]);
+  });
+
+  it("watches the effect tiles the grid renders after the store does", async () => {
+    const { store: modal } = await openEffectsStore();
+    const el = product(modal, wake.key)!;
+    await vi.waitFor(() =>
+      expect(FakeIO.instances.some((io) => io.observed.has(el))).toBe(true),
+    );
   });
 });

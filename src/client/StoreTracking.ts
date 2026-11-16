@@ -84,11 +84,24 @@ export class StoreTracker {
   }
 
   observe(el: Element, item: string, placement: StorePlacement): void {
-    if (this.watched.has(el)) return;
+    const known = this.watched.get(el);
+    if (
+      known !== undefined &&
+      known.item === item &&
+      JSON.stringify(known.placement) === JSON.stringify(placement)
+    ) {
+      return;
+    }
     this.observer ??= new IntersectionObserver(
       (entries) => this.onEntries(entries),
       { threshold: 0.5 },
     );
+    if (known !== undefined) {
+      // Lit reuses a card element for another item when the list changes.
+      // Watch it afresh so the impression is for what it shows now.
+      if (known.timer !== null) clearTimeout(known.timer);
+      this.observer.unobserve(el);
+    }
     this.watched.set(el, { item, placement, timer: null });
     this.observer.observe(el);
   }

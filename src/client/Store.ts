@@ -1,5 +1,6 @@
 import {
   paidSubscriptionOf,
+  StorePlacement,
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import {
@@ -13,6 +14,7 @@ import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
+import type { CosmeticCard } from "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
 import { isPreviewableCosmetic } from "./components/CosmeticPreviewBubble";
 import "./components/CosmeticPreviewModal";
@@ -47,6 +49,7 @@ import {
   priceStringToCents,
   reportPendingSteamAuthorizations,
 } from "./Payments";
+import { StoreTracker } from "./StoreTracking";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { translateText } from "./Utils";
 
@@ -198,6 +201,8 @@ export class StoreModal extends BaseModal {
       this.onOpenCosmeticPreview,
     );
     this.rowObserver?.disconnect();
+    this.tracker?.dispose();
+    this.tracker = null;
     if (this.alignFrame !== null) cancelAnimationFrame(this.alignFrame);
     this.alignFrame = null;
     super.disconnectedCallback();
@@ -205,6 +210,7 @@ export class StoreModal extends BaseModal {
 
   protected updated(changed: PropertyValues) {
     super.updated(changed);
+    this.observeProducts();
     // The cards are nested components, so their purchase buttons only exist
     // (and only have positions) after their own updates commit — a frame later.
     alignPurchaseRows(this);
@@ -222,6 +228,7 @@ export class StoreModal extends BaseModal {
 
   private onOpenCosmeticPreview = (event: Event) => {
     const customEvent = event as CustomEvent<ResolvedCosmetic>;
+    this.trackClick(customEvent.detail, event.target as Element | null);
     this.previewingCosmetic = customEvent.detail;
     this.requestUpdate();
   };
@@ -384,9 +391,60 @@ export class StoreModal extends BaseModal {
   // Activating a bundle also opens its contents: the card only has room to
   // tile a few items, so the dialog is where each one is shown with its name.
   private activate(resolved: ResolvedCosmetic): void {
+    this.trackClick(resolved, this.productFor(resolved));
     if (resolved.type === "cosmeticPack") this.openedPack = resolved;
     if (isPreviewableCosmetic(resolved)) this.previewingCosmetic = resolved;
     this.inspect(resolved);
+  }
+
+  // Store analytics. The tracker is made on the first open and kept.
+  private tracker: StoreTracker | null = null;
+
+  /** Where a card sits in the store; purchases are placed the same way. */
+  private placementFor(el: Element): StorePlacement {
+    if (el.closest("[data-store-flash]")) return { kind: "flash" };
+    if (this.affiliateCode) return { kind: "affiliate" };
+    const tab = this.activeTab as Extract<
+      StorePlacement,
+      { kind: "tab" }
+    >["tab"];
+    if (tab === "cosmetics") {
+      return { kind: "tab", tab, subTab: this.cosmeticsSubTab };
+    }
+    return { kind: "tab", tab };
+  }
+
+  private observeProducts(): void {
+    if (this.tracker === null || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+    for (const el of this.querySelectorAll<HTMLElement>(
+      "[data-store-product][data-cosmetic-key]",
+    )) {
+      const key = el.dataset.cosmeticKey;
+      if (key) this.tracker.observe(el, key, this.placementFor(el));
+    }
+  }
+
+  /** The tile showing this item, or one of its variants. */
+  private productFor(resolved: ResolvedCosmetic): Element | null {
+    for (const el of this.querySelectorAll<HTMLElement>(
+      "[data-store-product][data-cosmetic-key]",
+    )) {
+      const card = el as Partial<CosmeticCard>;
+      if (
+        el.dataset.cosmeticKey === resolved.key ||
+        card.resolved?.key === resolved.key ||
+        card.variants?.some((variant) => variant.key === resolved.key)
+      ) {
+        return el;
+      }
+    }
+    return null;
+  }
+
+  private trackClick(resolved: ResolvedCosmetic, el: Element | null): void {
+    this.tracker?.click(resolved.key, this.placementFor(el ?? this));
   }
 
   private closePack(): void {
@@ -979,6 +1037,8 @@ export class StoreModal extends BaseModal {
   }
 
   protected async onOpen(args?: Record<string, unknown>) {
+    this.tracker ??= new StoreTracker();
+    this.tracker.beginPageView();
     // Drain any Steam overlay approval parked before this UI existed. The
     // main process's "something arrived" nudge is contentless, so one that
     // fired with no window listening is heard by nobody and sits parked until
@@ -1009,6 +1069,7 @@ export class StoreModal extends BaseModal {
   }
 
   protected onClose(): void {
+    this.tracker?.flush();
     if (this.saleEndTimer !== null) clearTimeout(this.saleEndTimer);
     this.saleEndTimer = null;
     if (this.saleRetryTimer !== null) clearTimeout(this.saleRetryTimer);

@@ -71,6 +71,20 @@ describe("StoreTracker", () => {
     });
   });
 
+  it("watches a reused element afresh when it shows another item", () => {
+    const el = document.createElement("div");
+    tracker.observe(el, "flag:a", placement);
+    FakeIO.last.trigger(el, true);
+    vi.advanceTimersByTime(500);
+    tracker.observe(el, "flag:b", placement);
+    FakeIO.last.trigger(el, true);
+    vi.advanceTimersByTime(1000);
+    tracker.flush();
+    expect(send.mock.calls[0][0].events).toEqual([
+      { type: "impression", item: "flag:b", placement },
+    ]);
+  });
+
   it("no impression when the card leaves before 1s", () => {
     const el = document.createElement("div");
     tracker.observe(el, "flag:a", placement);
