@@ -1,6 +1,9 @@
 import {
   paidSubscriptionOf,
   StorePlacement,
+  StorePlacementSubTab,
+  StorePlacementTab,
+  StorePlacementTabSchema,
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import {
@@ -64,17 +67,22 @@ function formatUsdCents(cents: number): string {
   return usdFormatter.format(cents / 100);
 }
 
-type StoreTab =
-  | "cosmetics"
-  | "bundles"
-  | "effects"
-  | "packs"
-  | "subscriptions"
-  | "tribes";
+// The store's tabs are the placement schema's: a tab the store analytics API
+// would reject cannot be added here without failing typecheck.
+type StoreTab = StorePlacementTab;
+
+function isStoreTab(key: string): key is StoreTab {
+  return (StorePlacementTabSchema.options as readonly string[]).includes(key);
+}
 
 // "sale" lists every discounted skin, flag, crown, effect and bundle; its tab
 // shows only while a sale covers one of them.
-const COSMETICS_SUB_TABS = ["sale", "patterns", "flags", "crowns"] as const;
+const COSMETICS_SUB_TABS = [
+  "sale",
+  "patterns",
+  "flags",
+  "crowns",
+] as const satisfies readonly StorePlacementSubTab[];
 type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
 
 /** Sub-tab holding the catalog item a store deep link points at. */
@@ -176,7 +184,7 @@ export class StoreModal extends BaseModal {
         { key: "cosmetics", label: translateText("store.cosmetics") },
         { key: "effects", label: translateText("store.effects") },
         { key: "tribes", label: translateText("store.tribes") },
-      ],
+      ] satisfies { key: StoreTab; label: string }[],
     };
   }
 
@@ -400,29 +408,36 @@ export class StoreModal extends BaseModal {
   // Store analytics. The tracker is made on the first open and kept.
   private tracker: StoreTracker | null = null;
 
-  /** Where a card sits in the store; purchases are placed the same way. */
-  private placementFor(el: Element): StorePlacement {
+  /**
+   * Where a card sits in the store; purchases are placed the same way.
+   * Undefined only before a tab is active: no placement is sent then.
+   */
+  private placementFor(el: Element): StorePlacement | undefined {
     if (el.closest("[data-store-flash]")) return { kind: "flash" };
     if (this.affiliateCode) return { kind: "affiliate" };
-    const tab = this.activeTab as Extract<
-      StorePlacement,
-      { kind: "tab" }
-    >["tab"];
+    const tab = this.activeTab;
+    if (!isStoreTab(tab)) return undefined;
     if (tab === "cosmetics") {
       return { kind: "tab", tab, subTab: this.cosmeticsSubTab };
     }
     return { kind: "tab", tab };
   }
 
+  // Cards are tracked under their item key; the tracker folds a pattern's
+  // palette keys into the pattern card's key (`pattern:<name>`), so
+  // data-cosmetic-key stays the palette key the store selects by.
   private observeProducts(): void {
     if (this.tracker === null || typeof IntersectionObserver === "undefined") {
       return;
     }
+    // One prune per update, not one per card.
+    this.tracker.releaseDetached();
     for (const el of this.querySelectorAll<HTMLElement>(
       "[data-store-product][data-cosmetic-key]",
     )) {
       const key = el.dataset.cosmeticKey;
-      if (key) this.tracker.observe(el, key, this.placementFor(el));
+      const placement = this.placementFor(el);
+      if (key && placement) this.tracker.observe(el, key, placement);
     }
   }
 
@@ -445,7 +460,8 @@ export class StoreModal extends BaseModal {
 
   private trackClick(resolved: ResolvedCosmetic, el: Element | null): void {
     try {
-      this.tracker?.click(resolved.key, this.placementFor(el ?? this));
+      const placement = this.placementFor(el ?? this);
+      if (placement) this.tracker?.click(resolved.key, placement);
     } catch {
       // Analytics must never break the click.
     }

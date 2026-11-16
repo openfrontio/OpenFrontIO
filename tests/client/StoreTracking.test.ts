@@ -9,7 +9,11 @@ import {
   userAuth,
 } from "../../src/client/Auth";
 import { ClientEnv } from "../../src/client/ClientEnv";
-import { sendStoreEvents, StoreTracker } from "../../src/client/StoreTracking";
+import {
+  sendStoreEvents,
+  storeItemKey,
+  StoreTracker,
+} from "../../src/client/StoreTracking";
 
 type Entry = { target: Element; isIntersecting: boolean };
 
@@ -96,11 +100,54 @@ describe("StoreTracker", () => {
     tracker.observe(gone, "flag:a", placement);
     FakeIO.last.trigger(gone, true);
     gone.remove();
-    tracker.observe(mount(), "flag:b", placement);
+    tracker.releaseDetached();
     expect(FakeIO.last.observed.has(gone)).toBe(false);
     vi.advanceTimersByTime(2000);
     tracker.flush();
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it("observe() leaves pruning to one releaseDetached() per pass", () => {
+    // Pruning inside every observe() walked every watched card per card: O(n²)
+    // for each store update.
+    const gone = mount();
+    tracker.observe(gone, "flag:a", placement);
+    gone.remove();
+    tracker.observe(mount(), "flag:b", placement);
+    expect(FakeIO.last.observed.has(gone)).toBe(true);
+    tracker.releaseDetached();
+    expect(FakeIO.last.observed.has(gone)).toBe(false);
+  });
+
+  it("tracks a pattern palette under its pattern card", () => {
+    const el = mount();
+    tracker.observe(el, "pattern:stripes:red", placement);
+    FakeIO.last.trigger(el, true);
+    vi.advanceTimersByTime(1000);
+    tracker.click("pattern:stripes:blue", placement);
+    tracker.click("pattern:stripes", placement);
+    tracker.flush();
+    expect(send.mock.calls[0][0].events).toEqual([
+      { type: "impression", item: "pattern:stripes", placement },
+      { type: "click", item: "pattern:stripes", placement },
+    ]);
+  });
+
+  it("drops an event whose item key is over 120 characters, keeping the rest", () => {
+    const long = `flag:${"x".repeat(116)}`;
+    expect(long.length).toBe(121);
+    const el = mount();
+    tracker.observe(el, long, placement);
+    FakeIO.last.trigger(el, true);
+    vi.advanceTimersByTime(1000);
+    tracker.click(long, placement);
+    tracker.click(`flag:${"x".repeat(115)}`, placement);
+    tracker.click("flag:a", placement);
+    tracker.flush();
+    expect(send.mock.calls[0][0].events.map((e) => e.item)).toEqual([
+      `flag:${"x".repeat(115)}`,
+      "flag:a",
+    ]);
   });
 
   it("no impression when the card leaves before 1s", () => {
@@ -196,6 +243,18 @@ describe("StoreTracker", () => {
     tracker.flush();
     vi.advanceTimersByTime(60_000);
     expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe("storeItemKey", () => {
+  it.each([
+    ["pattern:stripes:red", "pattern:stripes"],
+    ["pattern:stripes", "pattern:stripes"],
+    ["pattern:default", "pattern:default"],
+    ["effect:nukeTrail:blue", "effect:nukeTrail:blue"],
+    ["skin:mtn", "skin:mtn"],
+  ])("%s -> %s", (key, base) => {
+    expect(storeItemKey(key)).toBe(base);
   });
 });
 

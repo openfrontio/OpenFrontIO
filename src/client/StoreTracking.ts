@@ -15,8 +15,21 @@ import { isSteamShell } from "./DesktopShell";
 const IMPRESSION_MS = 1000;
 const FLUSH_MS = 30_000;
 const MAX_BATCH = 200;
+// The API's limit on an item key (StoreEventsBodySchema): one longer key
+// would 400 its whole batch, so it is dropped here instead.
+const MAX_ITEM_KEY = 120;
 
 type StoreEvent = StoreEventsBody["events"][number];
+
+// The key a store item is tracked under. The card is the unit shown and
+// scored, so a pattern is always `pattern:<name>`: a palette variant
+// (`pattern:<name>:<palette>`) folds into it. Every other key is already a
+// card's key. The API folds palette keys the same way.
+export function storeItemKey(key: string): string {
+  if (!key.startsWith("pattern:")) return key;
+  const [, name] = key.split(":");
+  return `pattern:${name}`;
+}
 
 export function storePlatform(): StoreEventsBody["platform"] {
   if (isSteamShell()) return "steam";
@@ -83,8 +96,9 @@ export class StoreTracker {
     this.seenClicks.clear();
   }
 
-  observe(el: Element, item: string, placement: StorePlacement): void {
-    this.releaseDetached();
+  // Call releaseDetached() once per pass over the cards, not per card.
+  observe(el: Element, key: string, placement: StorePlacement): void {
+    const item = storeItemKey(key);
     const known = this.watched.get(el);
     if (
       known !== undefined &&
@@ -109,7 +123,8 @@ export class StoreTracker {
 
   // Lit replaces cards when a tab or list changes. Stop watching the ones it
   // dropped so a long session does not keep them, and their timers, alive.
-  private releaseDetached(): void {
+  // One walk of the watched cards: the caller runs it once per update.
+  releaseDetached(): void {
     for (const [el, w] of this.watched) {
       if (el.isConnected) continue;
       if (w.timer !== null) clearTimeout(w.timer);
@@ -131,7 +146,7 @@ export class StoreTracker {
         w.timer = null;
         if (this.seenImpressions.has(w.item)) return;
         this.seenImpressions.add(w.item);
-        this.queue.push({
+        this.enqueue({
           type: "impression",
           item: w.item,
           placement: w.placement,
@@ -140,10 +155,16 @@ export class StoreTracker {
     }
   }
 
-  click(item: string, placement: StorePlacement): void {
+  click(key: string, placement: StorePlacement): void {
+    const item = storeItemKey(key);
     if (this.seenClicks.has(item)) return;
     this.seenClicks.add(item);
-    this.queue.push({ type: "click", item, placement });
+    this.enqueue({ type: "click", item, placement });
+  }
+
+  private enqueue(event: StoreEvent): void {
+    if (event.item.length > MAX_ITEM_KEY) return;
+    this.queue.push(event);
   }
 
   flush(): void {

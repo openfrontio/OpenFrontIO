@@ -1664,18 +1664,31 @@ export const SavedGamesListResponseSchema = z.object({
 // Store analytics. A deliberate copy of the schema in the infra API's
 // src/api/lib/StoreTracking.ts: keep the two identical. A new placement kind
 // is deployed to the API before any client sends it.
+// The store's tabs and cosmetics sub-tabs. The client's StoreTab and
+// CosmeticsSubTab types are derived from these, so a tab the API would reject
+// fails typecheck instead of a request.
+export const StorePlacementTabSchema = z.enum([
+  "cosmetics",
+  "bundles",
+  "effects",
+  "packs",
+  "subscriptions",
+  "tribes",
+]);
+export type StorePlacementTab = z.infer<typeof StorePlacementTabSchema>;
+export const StorePlacementSubTabSchema = z.enum([
+  "sale",
+  "patterns",
+  "flags",
+  "crowns",
+]);
+export type StorePlacementSubTab = z.infer<typeof StorePlacementSubTabSchema>;
+
 export const StorePlacementSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("tab"),
-    tab: z.enum([
-      "cosmetics",
-      "bundles",
-      "effects",
-      "packs",
-      "subscriptions",
-      "tribes",
-    ]),
-    subTab: z.enum(["sale", "patterns", "flags", "crowns"]).optional(),
+    tab: StorePlacementTabSchema,
+    subTab: StorePlacementSubTabSchema.optional(),
   }),
   z.object({ kind: z.literal("flash") }),
   z.object({ kind: z.literal("affiliate") }),

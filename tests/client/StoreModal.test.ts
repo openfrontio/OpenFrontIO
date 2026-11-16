@@ -18,6 +18,7 @@ import {
 } from "../../src/client/Cosmetics";
 import { initNavigation } from "../../src/client/Navigation";
 import { saleCoversEverything, type StoreModal } from "../../src/client/Store";
+import type { StoreTracker } from "../../src/client/StoreTracking";
 import {
   EFFECTS_KEY,
   PATTERN_KEY,
@@ -1931,7 +1932,33 @@ describe("store analytics", () => {
       sent()
         .filter((e) => e.type === "impression")
         .map((e) => e.item),
-    ).toEqual([red.key, flag.key]);
+    ).toEqual(["pattern:stripes", flag.key]);
+  });
+
+  it("records a palette click and impression under the pattern card", async () => {
+    const modal = await openStoreOnCosmetic("patterns");
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    setVisible(product(modal, red.key)!, true);
+    vi.advanceTimersByTime(1000);
+    await activateVariant(modal, blue.key);
+    await focusCard(modal, blue.key);
+    modal.close();
+    expect(sent().map((e) => [e.type, e.item])).toEqual([
+      ["impression", "pattern:stripes"],
+      ["click", "pattern:stripes"],
+    ]);
+  });
+
+  it("prunes detached cards once per store update, not once per card", async () => {
+    const modal = await openStoreOnTab("subscriptions");
+    expect(keysOf(modal).length).toBeGreaterThan(1);
+    const tracker = (modal as unknown as { tracker: StoreTracker }).tracker;
+    const release = vi.spyOn(tracker, "releaseDetached");
+    const observe = vi.spyOn(tracker, "observe");
+    (modal as unknown as { requestUpdate(): void }).requestUpdate();
+    await modal.updateComplete;
+    expect(observe.mock.calls.length).toBeGreaterThan(1);
+    expect(release).toHaveBeenCalledTimes(1);
   });
 
   it("watches the effect tiles the grid renders after the store does", async () => {
