@@ -406,6 +406,27 @@ describe("sendStoreEvents and peekAuthHeader", () => {
     );
   });
 
+  it("keeps the token until 30 seconds before it expires", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const token = jwt();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({
+          status: 200,
+          json: async () => ({ jwt: token, expiresIn: 3600 }),
+        })),
+      );
+      await userAuth();
+      vi.advanceTimersByTime((3600 - 120) * 1000);
+      expect(peekAuthHeader()).toBe(`Bearer ${token}`);
+      vi.advanceTimersByTime(100 * 1000);
+      expect(peekAuthHeader()).toBe("");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("swallows a rejected fetch", async () => {
     vi.stubGlobal(
       "fetch",

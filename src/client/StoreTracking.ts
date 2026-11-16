@@ -16,6 +16,9 @@ const IMPRESSION_MS = 1000;
 // Share of a card that must be in view for its second to count.
 const IMPRESSION_RATIO = 0.5;
 const FLUSH_MS = 30_000;
+// A full batch is about 22 KB. Browsers cap all in-flight keepalive bodies at
+// 64 KiB together, so a pagehide flush past about 580 queued events loses the
+// later batches. Per-visit dedupe and the 30 s flush keep the queue far below.
 const MAX_BATCH = 200;
 // The API's limit on an item key (StoreEventsBodySchema): one longer key
 // would 400 its whole batch, so it is dropped here instead.
