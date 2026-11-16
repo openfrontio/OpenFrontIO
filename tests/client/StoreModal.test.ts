@@ -1899,8 +1899,12 @@ describe("store analytics", () => {
       }),
     );
     dialog.remove();
+    const tracker = (modal as unknown as { tracker: { flush(): void } })
+      .tracker;
+    tracker.flush();
+    expect(sent()).toEqual([]);
     await focusCard(modal, flag.key);
-    (modal as unknown as { tracker: { flush(): void } }).tracker.flush();
+    tracker.flush();
     expect(sent()).toEqual([
       {
         type: "click",
