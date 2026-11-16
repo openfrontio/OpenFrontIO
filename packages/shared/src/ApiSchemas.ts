@@ -1660,3 +1660,40 @@ export type SavedGame = z.infer<typeof SavedGameSchema>;
 export const SavedGamesListResponseSchema = z.object({
   savedGames: SavedGameSchema.array(),
 });
+
+// Store analytics. A deliberate copy of the schema in the infra API's
+// src/api/lib/StoreTracking.ts: keep the two identical. A new placement kind
+// is deployed to the API before any client sends it.
+export const StorePlacementSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("tab"),
+    tab: z.enum([
+      "cosmetics",
+      "bundles",
+      "effects",
+      "packs",
+      "subscriptions",
+      "tribes",
+    ]),
+    subTab: z.enum(["sale", "patterns", "flags", "crowns"]).optional(),
+  }),
+  z.object({ kind: z.literal("flash") }),
+  z.object({ kind: z.literal("affiliate") }),
+  z.object({ kind: z.literal("post_game") }),
+]);
+export type StorePlacement = z.infer<typeof StorePlacementSchema>;
+
+export const StoreEventsBodySchema = z.object({
+  platform: z.enum(["web", "steam", "crazygames"]),
+  events: z
+    .array(
+      z.object({
+        type: z.enum(["impression", "click"]),
+        item: z.string().min(1).max(120),
+        placement: StorePlacementSchema,
+      }),
+    )
+    .min(1)
+    .max(200),
+});
+export type StoreEventsBody = z.infer<typeof StoreEventsBodySchema>;

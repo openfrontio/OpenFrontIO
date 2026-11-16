@@ -1,0 +1,144 @@
+import type {
+  StoreEventsBody,
+  StorePlacement,
+} from "@openfront/shared/ApiSchemas";
+import { getApiBase } from "./ApiBase";
+import { getAuthHeader } from "./Auth";
+import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { isSteamShell } from "./DesktopShell";
+
+// Store analytics. An impression is a card at least half visible for a full
+// second, counted once per item per page view; a click is counted once per
+// item per page view. Events are batched and sent every 30 s and when the page
+// is hidden or closed.
+
+const IMPRESSION_MS = 1000;
+const FLUSH_MS = 30_000;
+const MAX_BATCH = 200;
+
+type StoreEvent = StoreEventsBody["events"][number];
+
+export function storePlatform(): StoreEventsBody["platform"] {
+  if (isSteamShell()) return "steam";
+  if (crazyGamesSDK.isOnCrazyGames()) return "crazygames";
+  return "web";
+}
+
+// Fire and forget. keepalive lets the request outlive the page on pagehide.
+// Errors are swallowed and nothing about the body or player is logged.
+export function sendStoreEvents(body: StoreEventsBody): void {
+  void (async () => {
+    try {
+      const auth = await getAuthHeader();
+      await fetch(`${getApiBase()}/store/events`, {
+        method: "POST",
+        keepalive: true,
+        headers: {
+          "Content-Type": "application/json",
+          ...(auth.startsWith("Bearer ") ? { Authorization: auth } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+    } catch {
+      // Analytics never surfaces an error.
+    }
+  })();
+}
+
+export interface StoreTrackerDeps {
+  send?: (body: StoreEventsBody) => void;
+}
+
+interface Watched {
+  item: string;
+  placement: StorePlacement;
+  timer: ReturnType<typeof setTimeout> | null;
+}
+
+export class StoreTracker {
+  private readonly send: (body: StoreEventsBody) => void;
+  private readonly interval: ReturnType<typeof setInterval>;
+  private observer: IntersectionObserver | null = null;
+  private readonly watched = new Map<Element, Watched>();
+  private queue: StoreEvent[] = [];
+  private seenImpressions = new Set<string>();
+  private seenClicks = new Set<string>();
+
+  constructor(deps: StoreTrackerDeps = {}) {
+    this.send = deps.send ?? sendStoreEvents;
+    this.interval = setInterval(() => this.flush(), FLUSH_MS);
+    window.addEventListener("pagehide", this.onPageHide);
+    document.addEventListener("visibilitychange", this.onVisibility);
+  }
+
+  private readonly onPageHide = () => this.flush();
+  private readonly onVisibility = () => {
+    if (document.visibilityState === "hidden") this.flush();
+  };
+
+  beginPageView(): void {
+    this.seenImpressions.clear();
+    this.seenClicks.clear();
+  }
+
+  observe(el: Element, item: string, placement: StorePlacement): void {
+    if (this.watched.has(el)) return;
+    this.observer ??= new IntersectionObserver(
+      (entries) => this.onEntries(entries),
+      { threshold: 0.5 },
+    );
+    this.watched.set(el, { item, placement, timer: null });
+    this.observer.observe(el);
+  }
+
+  private onEntries(entries: IntersectionObserverEntry[]): void {
+    for (const entry of entries) {
+      const w = this.watched.get(entry.target);
+      if (w === undefined) continue;
+      if (w.timer !== null) {
+        clearTimeout(w.timer);
+        w.timer = null;
+      }
+      if (!entry.isIntersecting) continue;
+      w.timer = setTimeout(() => {
+        w.timer = null;
+        if (this.seenImpressions.has(w.item)) return;
+        this.seenImpressions.add(w.item);
+        this.queue.push({
+          type: "impression",
+          item: w.item,
+          placement: w.placement,
+        });
+      }, IMPRESSION_MS);
+    }
+  }
+
+  click(item: string, placement: StorePlacement): void {
+    if (this.seenClicks.has(item)) return;
+    this.seenClicks.add(item);
+    this.queue.push({ type: "click", item, placement });
+  }
+
+  flush(): void {
+    if (this.queue.length === 0) return;
+    const events = this.queue;
+    this.queue = [];
+    const platform = storePlatform();
+    for (let i = 0; i < events.length; i += MAX_BATCH) {
+      this.send({ platform, events: events.slice(i, i + MAX_BATCH) });
+    }
+  }
+
+  dispose(): void {
+    this.flush();
+    clearInterval(this.interval);
+    window.removeEventListener("pagehide", this.onPageHide);
+    document.removeEventListener("visibilitychange", this.onVisibility);
+    for (const w of this.watched.values()) {
+      if (w.timer !== null) clearTimeout(w.timer);
+    }
+    this.watched.clear();
+    this.observer?.disconnect();
+    this.observer = null;
+  }
+}
