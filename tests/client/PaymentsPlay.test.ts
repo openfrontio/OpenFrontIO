@@ -233,12 +233,25 @@ describe("startPlayPurchase", () => {
       { outcome: "error", message: "store.play_wrong_account" },
     ],
     [
-      "belongs to another account, beside one that settled",
+      "is one of several, and only another settled",
+      [
+        { ok: true, status: "pending" },
+        { ok: true, status: "settled" },
+      ],
+      { outcome: "pending", message: "store.play_earlier_purchase_pending" },
+    ],
+    [
+      "is one of several, and only another was refused",
       [
         { ok: true, status: "settled" },
         { ok: false, code: "refused", reason: "wrong_account" },
       ],
-      { outcome: "error", message: "store.play_wrong_account" },
+      { outcome: "pending", message: "store.play_earlier_purchase_pending" },
+    ],
+    [
+      "met the rate limit",
+      [{ ok: false, code: "rate_limited" }],
+      { outcome: "pending", message: "store.play_earlier_purchase_pending" },
     ],
     [
       "is refused",
@@ -248,6 +261,14 @@ describe("startPlayPurchase", () => {
     [
       "is rejected outright",
       [{ ok: false, code: "failed" }],
+      { outcome: "error", message: "store.play_purchase_refused" },
+    ],
+    [
+      "and every other one are refused",
+      [
+        { ok: false, code: "refused", reason: "wrong_account" },
+        { ok: false, code: "refused", reason: "not_purchased" },
+      ],
       { outcome: "error", message: "store.play_purchase_refused" },
     ],
   ])(

@@ -633,20 +633,16 @@ let playPurchaseInFlight = false;
 let playDrainAfterPurchase: string | null = null;
 
 /**
- * What one drain pass found. The bridge does not say which product a token is
- * for, so it covers every purchase the pass posted.
+ * The server's answer to one token a drain pass posted. "pending" includes a
+ * purchase it could not decide yet; "refused" one it will never credit. The
+ * bridge does not say which product a token is for.
  */
-interface PlayDrainResult {
-  settled: boolean;
-  // Why the server will never credit a token it was posted (its reason, or
-  // "failed" for a request it rejected outright).
-  refused: string[];
-}
+type PlayDrainAnswer = "settled" | "pending" | "wrong_account" | "refused";
 
-// The newest pass, and the account it drains for.
+// The newest pass, the account it drains for, and its answers in order.
 interface PlayDrainPass {
   account: string;
-  result: Promise<PlayDrainResult>;
+  result: Promise<PlayDrainAnswer[]>;
 }
 let playDrain: PlayDrainPass | null = null;
 
@@ -684,17 +680,20 @@ export async function startPlayPurchase(
         case "busy":
           return { outcome: "cancelled", quiet: true };
         // An earlier purchase of this product was never consumed, so the
-        // server has not credited it yet. Posting it is what credits it. A
-        // refusal is told first: it never resolves by itself.
+        // server has not credited it yet. Posting it is what credits it.
+        // With no product ids to tell them apart, only an answer every
+        // unconsumed purchase got is about this one.
         case "already_owned": {
-          const drained = await joinPlayDrain(userMe.player.publicId);
-          if (drained.refused.includes("wrong_account")) {
+          const answers = await joinPlayDrain(userMe.player.publicId);
+          const all = (...allowed: PlayDrainAnswer[]) =>
+            answers.length > 0 && answers.every((a) => allowed.includes(a));
+          if (all("settled")) return { outcome: "completed" };
+          if (all("wrong_account")) {
             return error(translateText("store.play_wrong_account"));
           }
-          if (drained.refused.length > 0) {
+          if (all("wrong_account", "refused")) {
             return error(translateText("store.play_purchase_refused"));
           }
-          if (drained.settled) return { outcome: "completed" };
           return {
             outcome: "pending",
             message: translateText("store.play_earlier_purchase_pending"),
@@ -765,7 +764,7 @@ export function drainPlayPurchases(account: string): Promise<void> {
   return joinPlayDrain(account).then(() => undefined);
 }
 
-function joinPlayDrain(account: string): Promise<PlayDrainResult> {
+function joinPlayDrain(account: string): Promise<PlayDrainAnswer[]> {
   if (playDrain?.account === account) return playDrain.result;
   // The server checks each purchase against the account posting it, so a
   // pass for another account cannot answer for this one: a fresh pass runs
@@ -781,20 +780,25 @@ function joinPlayDrain(account: string): Promise<PlayDrainResult> {
   return pass.result;
 }
 
-async function runPlayDrain(): Promise<PlayDrainResult> {
-  const drained: PlayDrainResult = { settled: false, refused: [] };
+async function runPlayDrain(): Promise<PlayDrainAnswer[]> {
+  const answers: PlayDrainAnswer[] = [];
   const billing = desktopPlayBilling();
-  if (billing === null) return drained;
+  if (billing === null) return answers;
   const unconsumed = await billing.unconsumed();
-  if (unconsumed.status !== "ok") return drained;
+  if (unconsumed.status !== "ok") return answers;
   for (const token of unconsumed.purchaseTokens) {
     const finalized = await finalizeGooglePurchase(token);
     if (finalized.ok) {
-      if (finalized.status === "settled") drained.settled = true;
+      answers.push(finalized.status);
       continue;
     }
-    if (finalized.code === "refused") drained.refused.push(finalized.reason);
-    if (finalized.code === "failed") drained.refused.push("failed");
+    if (finalized.code === "refused") {
+      answers.push(
+        finalized.reason === "wrong_account" ? "wrong_account" : "refused",
+      );
+      continue;
+    }
+    answers.push(finalized.code === "failed" ? "refused" : "pending");
     // Every further post would meet the same answer.
     if (
       finalized.code === "rate_limited" ||
@@ -803,8 +807,8 @@ async function runPlayDrain(): Promise<PlayDrainResult> {
       break;
     }
   }
-  if (drained.settled) await refreshAccount();
-  return drained;
+  if (answers.includes("settled")) await refreshAccount();
+  return answers;
 }
 
 /**
