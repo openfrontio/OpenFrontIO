@@ -36,6 +36,12 @@ class FakeIO {
   }
 }
 
+function mount(): HTMLElement {
+  const el = document.createElement("div");
+  document.body.appendChild(el);
+  return el;
+}
+
 const placement = { kind: "tab", tab: "cosmetics" } as const;
 
 describe("StoreTracker", () => {
@@ -55,7 +61,7 @@ describe("StoreTracker", () => {
   });
 
   it("queues an impression after 1s at 50% visibility", () => {
-    const el = document.createElement("div");
+    const el = mount();
     tracker.observe(el, "flag:a", placement);
     expect(FakeIO.last.opts.threshold).toBe(0.5);
     FakeIO.last.trigger(el, true);
@@ -72,7 +78,7 @@ describe("StoreTracker", () => {
   });
 
   it("watches a reused element afresh when it shows another item", () => {
-    const el = document.createElement("div");
+    const el = mount();
     tracker.observe(el, "flag:a", placement);
     FakeIO.last.trigger(el, true);
     vi.advanceTimersByTime(500);
@@ -85,8 +91,20 @@ describe("StoreTracker", () => {
     ]);
   });
 
+  it("releases a detached card, and its pending impression never queues", () => {
+    const gone = mount();
+    tracker.observe(gone, "flag:a", placement);
+    FakeIO.last.trigger(gone, true);
+    gone.remove();
+    tracker.observe(mount(), "flag:b", placement);
+    expect(FakeIO.last.observed.has(gone)).toBe(false);
+    vi.advanceTimersByTime(2000);
+    tracker.flush();
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it("no impression when the card leaves before 1s", () => {
-    const el = document.createElement("div");
+    const el = mount();
     tracker.observe(el, "flag:a", placement);
     FakeIO.last.trigger(el, true);
     vi.advanceTimersByTime(500);
@@ -97,7 +115,7 @@ describe("StoreTracker", () => {
   });
 
   it("dedupes within a page view", () => {
-    const el = document.createElement("div");
+    const el = mount();
     tracker.observe(el, "flag:a", placement);
     for (let i = 0; i < 2; i++) {
       FakeIO.last.trigger(el, true);
@@ -109,7 +127,7 @@ describe("StoreTracker", () => {
   });
 
   it("counts again after reset", () => {
-    const el = document.createElement("div");
+    const el = mount();
     tracker.observe(el, "flag:a", placement);
     FakeIO.last.trigger(el, true);
     vi.advanceTimersByTime(1000);

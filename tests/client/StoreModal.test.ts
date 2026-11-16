@@ -16,6 +16,7 @@ import {
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../src/client/Cosmetics";
+import { initNavigation } from "../../src/client/Navigation";
 import { saleCoversEverything, type StoreModal } from "../../src/client/Store";
 import {
   EFFECTS_KEY,
@@ -1825,13 +1826,16 @@ describe("store analytics", () => {
   });
 
   it("records an impression after a second in view, and again after a reopen", async () => {
+    initNavigation();
     const modal = await openStoreOnCosmetic("flags");
+    modal.classList.add("page-content");
     const el = product(modal, flag.key)!;
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
 
     setVisible(el, true);
     vi.advanceTimersByTime(1000);
     modal.close();
+    expect(modal.classList.contains("hidden")).toBe(true);
     expect(sent()).toEqual([
       {
         type: "impression",

@@ -84,6 +84,7 @@ export class StoreTracker {
   }
 
   observe(el: Element, item: string, placement: StorePlacement): void {
+    this.releaseDetached();
     const known = this.watched.get(el);
     if (
       known !== undefined &&
@@ -104,6 +105,17 @@ export class StoreTracker {
     }
     this.watched.set(el, { item, placement, timer: null });
     this.observer.observe(el);
+  }
+
+  // Lit replaces cards when a tab or list changes. Stop watching the ones it
+  // dropped so a long session does not keep them, and their timers, alive.
+  private releaseDetached(): void {
+    for (const [el, w] of this.watched) {
+      if (el.isConnected) continue;
+      if (w.timer !== null) clearTimeout(w.timer);
+      this.observer?.unobserve(el);
+      this.watched.delete(el);
+    }
   }
 
   private onEntries(entries: IntersectionObserverEntry[]): void {
