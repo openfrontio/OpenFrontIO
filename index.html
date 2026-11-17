@@ -567,8 +567,11 @@
         <attacks-display
           class="w-full pointer-events-auto order-1 sm:order-none"
         ></attacks-display>
+        <!-- Above the control panel's stacking context: in portrait below lg
+             the unit bar inside it is fixed to the right edge and would
+             otherwise cover the panel's close button on phones. -->
         <tutorial-panel
-          class="hidden w-full order-3 sm:order-none"
+          class="hidden w-full order-3 sm:order-none z-20"
         ></tutorial-panel>
         <!-- The unit bar is a row below the control panel from lg up, a row
              above it on landscape phones, and a column fixed to the right edge
