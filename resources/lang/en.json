@@ -2559,7 +2559,9 @@
     "tracker_conquests": "Conquests",
     "tracker_best_elo": "Best Elo",
     "tracker_ffa_peak_rating": "FFA peak",
-    "winner": "Winner"
+    "winner": "Winner",
+    "territory": "Territory",
+    "members_alive": "Alive"
   },
   "progression": {
     "awaiting_end": "XP is awarded when the game ends.",
