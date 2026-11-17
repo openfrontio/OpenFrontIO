@@ -7,6 +7,7 @@ import {
   createPaymentsCheckout,
   finalizeGooglePurchase,
   finalizeSteamOrder,
+  type FinalizeGooglePurchaseResult,
   getUserMe,
   invalidateUserMe,
   type PaymentsCheckoutRequest,
@@ -747,6 +748,10 @@ async function buyOnPlay(
   }
 
   const finalized = await finalizeGooglePurchase(purchase.purchaseToken);
+  // Not awaited: the purchase answers now, and the follow-up runs on its own.
+  if (mayStillSettle(finalized)) {
+    void followUpPlayPurchase(purchase.purchaseToken);
+  }
   if (finalized.ok) {
     return finalized.status === "settled"
       ? { outcome: "completed" }
@@ -775,6 +780,38 @@ async function buyOnPlay(
         outcome: "pending",
         message: translateText("store.play_purchase_retry"),
       };
+  }
+}
+
+/**
+ * How long to wait before each further post of a purchase's token, after its
+ * own post could not credit it yet. The server can credit it moments later
+ * (Google's notification, or its own retry) and consumes it then, so no drain
+ * ever sees it again: posting it again is how the client learns it settled.
+ * Only a few: finalize is rate limited per IP.
+ */
+const PLAY_FOLLOW_UP_DELAYS_MS = [3_000, 10_000, 30_000];
+
+/**
+ * An answer a later post of the same token may turn into "settled". Not
+ * `unauthorized`: that logged the player out, and signing in again drains.
+ */
+function mayStillSettle(finalized: FinalizeGooglePurchaseResult): boolean {
+  return finalized.ok
+    ? finalized.status === "pending"
+    : finalized.code === "retry_later" || finalized.code === "rate_limited";
+}
+
+/** Re-posts the token a few times; refreshes the account once it settles. */
+async function followUpPlayPurchase(token: string): Promise<void> {
+  for (const delay of PLAY_FOLLOW_UP_DELAYS_MS) {
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    const finalized = await finalizeGooglePurchase(token);
+    if (finalized.ok && finalized.status === "settled") {
+      await refreshAccount();
+      return;
+    }
+    if (!mayStillSettle(finalized)) return;
   }
 }
 
