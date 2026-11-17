@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/client/Utils", async (orig) => ({
   ...(await orig<typeof import("../../src/client/Utils")>()),
@@ -29,8 +29,13 @@ async function renderModal(state: Record<string, unknown>) {
 }
 
 describe("WinModal card section", () => {
+  // Past the first three games, so the tutorial doesn't take the promo box.
+  beforeEach(() => {
+    localStorage.setItem("gamesPlayed", "10");
+  });
   afterEach(() => {
     document.body.innerHTML = "";
+    localStorage.removeItem("gamesPlayed");
   });
 
   it("eliminated by a human shows label and killer card above XP panel", async () => {
@@ -48,6 +53,24 @@ describe("WinModal card section", () => {
           : "xp",
     );
     expect(order).toEqual(["h2", "card", "xp"]);
+  });
+
+  it("loadout takes the skins turn on an eliminated-by card", async () => {
+    const modal = await renderModal({
+      endCardMode: "eliminatedBy",
+      endCardView: defaultPlayerCardView("Volt", "UN"),
+      rand: 0.9,
+      loadout: [
+        {
+          type: "taunt",
+          item: { name: "salute", rarity: "epic", product: null },
+          state: "buy",
+          priceSoft: 800,
+        },
+      ],
+    });
+    expect(modal.querySelector("loadout-row")).not.toBeNull();
+    expect(modal.querySelector("[data-win-cosmetic-promo]")).toBeNull();
   });
 
   it("no card shows today's screen", async () => {

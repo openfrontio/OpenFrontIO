@@ -43,10 +43,10 @@ import {
   resolveCosmetics,
 } from "../../Cosmetics";
 import { isDesktopShell } from "../../DesktopShell";
+import { gamePortal } from "../../GamePortal";
 import "../../components/ProfileShare";
 import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
-import { gamePortal } from "../../GamePortal";
 import { lobbyPublicGameType } from "../../LobbyPublicGameType";
 import { lobbyLevelBadge } from "../../LobbyRosterLevels";
 import type { MatchmakingMode } from "../../Matchmaking";
@@ -86,6 +86,7 @@ import {
   type EndScreenCard,
   winnerCard,
 } from "./EndScreenCard";
+import { type LoadoutItem, loadoutItems, promoChoice } from "./LoadoutRow";
 
 type LegendCeremonyModule = typeof import("../../components/LegendCeremony");
 
@@ -177,6 +178,9 @@ export class WinModal extends LitElement implements Controller {
   private tauntsMutedRead = false;
   @state()
   private endCardTerritoryColor: string | null = null;
+  // "Get {name}'s look": what the killer's card offers this viewer.
+  @state()
+  private loadout: LoadoutItem[] = [];
   private nemesisAbort: AbortController | null = null;
 
   // The queue to rejoin from "Play Again"; null when the game has none (an
@@ -593,19 +597,32 @@ export class WinModal extends LitElement implements Controller {
     // promos so the box is never empty.
     const canWishlist = !isDesktopShell();
 
-    if (isInIframe()) {
-      return canWishlist ? this.steamWishlist() : this.discordDisplay();
-    }
-
-    if (!this.isWin && getGamesPlayed() < 3) {
-      return this.renderYoutubeTutorial();
-    }
-    if (this.rand < 0.25 && canWishlist) {
-      return this.steamWishlist();
-    } else if (this.rand < 0.5) {
-      return this.discordDisplay();
-    } else {
-      return this.renderPatternButton();
+    // The store-skins turn goes to "Get {name}'s look" on an eliminated-by
+    // card with something to buy (promoChoice).
+    switch (
+      promoChoice({
+        isWin: this.isWin,
+        gamesPlayed: getGamesPlayed(),
+        inIframe: isInIframe(),
+        canWishlist,
+        rand: this.rand,
+        hasLoadout: this.loadout.some((i) => i.state === "buy"),
+        eliminatedByCard: this.endCardMode === "eliminatedBy",
+      })
+    ) {
+      case "steam":
+        return this.steamWishlist();
+      case "discord":
+        return this.discordDisplay();
+      case "tutorial":
+        return this.renderYoutubeTutorial();
+      case "loadout":
+        return html`<loadout-row
+          .ownerName=${this.endCardView?.username ?? ""}
+          .items=${this.loadout}
+        ></loadout-row>`;
+      default:
+        return this.renderPatternButton();
     }
   }
 
@@ -778,6 +795,7 @@ export class WinModal extends LitElement implements Controller {
     this.nemesis = null;
     this.endCardView = null;
     this.endCardClan = null;
+    this.loadout = [];
     const myID = this.game.myPlayer()?.clientID() ?? null;
     this.canEditCard = myID !== null && this.hasCard(myID);
     if (card.kind === "none") {
@@ -814,6 +832,7 @@ export class WinModal extends LitElement implements Controller {
     this.endCardMode = card.kind;
     void this.readTauntsMuted();
     if (card.kind === "eliminatedBy") {
+      void this.loadLoadout(view);
       const publicId = this.game.playerCardOf(card.clientID).card?.publicId;
       if (publicId !== undefined) void this.loadNemesis(publicId);
     }
@@ -825,6 +844,16 @@ export class WinModal extends LitElement implements Controller {
     const past = await fetchNemesisCount(publicId, abort.signal);
     if (abort.signal.aborted || past === null) return;
     this.nemesis = nemesisLine(past);
+  }
+
+  private async loadLoadout(view: PlayerCardView): Promise<void> {
+    const me = await getUserMe();
+    if (this.endCardView !== view) return;
+    this.loadout = loadoutItems(
+      view,
+      getCachedCosmetics(),
+      me === false ? [] : (me.player.flares ?? []),
+    );
   }
 
   private async readTauntsMuted(): Promise<void> {

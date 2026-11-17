@@ -3505,6 +3505,13 @@
     "nemesis_short": "Nemesis ×{n}",
     "edit_card": "Edit my card",
     "mute_taunts": "Mute taunts",
-    "unmute_taunts": "Unmute taunts"
+    "unmute_taunts": "Unmute taunts",
+    "get_look": "Get {name}'s look",
+    "get_look_items": "{n} items",
+    "loadout_type_playerCard": "Player card",
+    "loadout_type_cardTracker": "Tracker",
+    "loadout_type_cardBackground": "Background",
+    "loadout_type_cardTitle": "Title",
+    "loadout_type_taunt": "Taunt"
   }
 }
