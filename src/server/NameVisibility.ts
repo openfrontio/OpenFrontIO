@@ -167,6 +167,8 @@ export class NameVisibility {
           clanTag: revealClanTags ? real.players[i].clanTag : null,
           friends: undefined,
           cosmetics: seesReal ? p.cosmetics : undefined,
+          // The card names the player as surely as their name does.
+          card: seesReal ? p.card : undefined,
         };
       }),
     };
