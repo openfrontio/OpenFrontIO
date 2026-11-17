@@ -18,7 +18,13 @@ if (!customElements.get("win-modal")) {
 async function renderModal(state: Record<string, unknown>) {
   const modal = document.createElement("win-modal") as unknown as WinModal &
     Record<string, unknown>;
-  Object.assign(modal, { isVisible: true, _title: "You died", ...state });
+  Object.assign(modal, {
+    isVisible: true,
+    _title: "You died",
+    // The store-skins turn, so no random Steam or Discord promo.
+    rand: 0.9,
+    ...state,
+  });
   document.body.appendChild(modal as unknown as Node);
   await modal.updateComplete;
   const section = modal.querySelector("end-card-section") as unknown as {
