@@ -1,5 +1,6 @@
 import { base64url } from "jose";
 import { z } from "zod/v4";
+import { TrackerStatSchema } from "./CardTrackers";
 import { decodePatternData } from "./PatternDecoder";
 import { PlayerPattern } from "./WireSchemas";
 
@@ -105,6 +106,20 @@ export const PromotionSchema = z.object({
 });
 export type Promotion = z.infer<typeof PromotionSchema>;
 
+// Store rarities, plus "oneofone" for a bespoke 1 of 1 card item. Loose: an
+// unknown rarity still parses (it renders as common).
+export const RaritySchema = z
+  .enum(["common", "uncommon", "rare", "epic", "legendary", "oneofone"])
+  .or(z.string());
+
+// Where an earned cosmetic comes from (a season's free track, a quest, an Elo
+// tier…), shown in place of a price. `label` is the API's display text.
+export const UnlockSourceSchema = z.object({
+  kind: z.string(),
+  label: z.string(),
+});
+export type UnlockSource = z.infer<typeof UnlockSourceSchema>;
+
 const CosmeticSchema = z.object({
   name: CosmeticNameSchema,
   affiliateCode: z.string().nullable().optional(),
@@ -119,9 +134,7 @@ const CosmeticSchema = z.object({
   // actually answered: the catalogue omits the field for everything nobody was asked about, so
   // absent means "unknown", never "no". Shown beside the artist credit in <cosmetic-info>.
   aiDisclosed: z.boolean().optional(),
-  rarity: z
-    .enum(["common", "uncommon", "rare", "epic", "legendary"])
-    .or(z.string()),
+  rarity: RaritySchema,
 });
 
 export const PatternSchema = CosmeticSchema.extend({
@@ -138,6 +151,53 @@ export const PatternSchema = CosmeticSchema.extend({
 export const FlagSchema = CosmeticSchema.extend({
   url: z.string(),
 });
+
+// The player card itself: owning one puts a card on the end screens.
+export const PlayerCardItemSchema = CosmeticSchema.extend({
+  description: z.string().optional(),
+});
+
+// One stat a card can show; the cosmetic's name is the stat.
+export const CardTrackerSchema = CosmeticSchema.extend({
+  stat: TrackerStatSchema,
+});
+
+// Animated background settings. Opaque until the animated-backgrounds work
+// gives them a schema; a static background has none.
+export const CardBackgroundAnimationSchema = z.unknown();
+
+export const CardBackgroundSchema = CosmeticSchema.extend({
+  // The 2800×400 base image.
+  url: z.string(),
+  animation: CardBackgroundAnimationSchema.optional(),
+  unlockSource: UnlockSourceSchema.optional(),
+});
+
+export const CardTitleSchema = CosmeticSchema.extend({
+  text: z.string(),
+  accent: z.string().optional(),
+  unlockSource: UnlockSourceSchema.optional(),
+});
+
+export const TauntSchema = CosmeticSchema.extend({
+  tauntKind: z.enum(["icon", "card"]),
+  // Which built-in animation plays (TAUNT_PRESETS on the client).
+  preset: z.string(),
+  url: z.string().optional(),
+  unlockSource: UnlockSourceSchema.optional(),
+});
+
+export type PlayerCardItem = z.infer<typeof PlayerCardItemSchema>;
+export type CardTracker = z.infer<typeof CardTrackerSchema>;
+export type CardBackground = z.infer<typeof CardBackgroundSchema>;
+export type CardTitle = z.infer<typeof CardTitleSchema>;
+export type Taunt = z.infer<typeof TauntSchema>;
+
+// Whether the player owns the card. The one check the game server and the
+// client both use.
+export function ownsPlayerCard(flares: readonly string[]): boolean {
+  return flares.some((f) => f.startsWith("playerCard:"));
+}
 
 export const CrownSchema = CosmeticSchema.extend({
   url: z.string(),
@@ -494,7 +554,18 @@ export const PackSchema = CosmeticSchema.extend({
 // not sold on its own — the pack is rendered from its items, never gated on
 // the item's own price.
 export const CosmeticPackItemSchema = z.object({
-  type: z.enum(["pattern", "flag", "skin", "crown", "effect"]),
+  type: z.enum([
+    "pattern",
+    "flag",
+    "skin",
+    "crown",
+    "effect",
+    "playerCard",
+    "cardTracker",
+    "cardBackground",
+    "cardTitle",
+    "taunt",
+  ]),
   name: CosmeticNameSchema,
   colorPalette: z.string().optional(),
 });
@@ -511,9 +582,7 @@ export const CosmeticPackSchema = z.object({
   // Present only while a sale covers the pack; priceHard is then the sale price.
   listPriceHard: z.number().optional(),
   promotion: PromotionSchema.optional(),
-  rarity: z
-    .enum(["common", "uncommon", "rare", "epic", "legendary"])
-    .or(z.string()),
+  rarity: RaritySchema,
   items: CosmeticPackItemSchema.array(),
 });
 
@@ -560,6 +629,13 @@ export const CosmeticsSchema = z.object({
       railroad: lenientRecord(RailroadEffectSchema).optional(),
     })
     .optional(),
+  // Player card cosmetics. Lenient like effects: one entry this client can't
+  // read is dropped alone.
+  playerCards: lenientRecord(PlayerCardItemSchema).optional(),
+  cardTrackers: lenientRecord(CardTrackerSchema).optional(),
+  cardBackgrounds: lenientRecord(CardBackgroundSchema).optional(),
+  cardTitles: lenientRecord(CardTitleSchema).optional(),
+  taunts: lenientRecord(TauntSchema).optional(),
   currencyPacks: z.record(z.string(), PackSchema).optional(),
   // Cosmetic packs keyed by slug. Lenient so a pack whose items use a type
   // this client doesn't know is dropped alone, not the whole catalog.
