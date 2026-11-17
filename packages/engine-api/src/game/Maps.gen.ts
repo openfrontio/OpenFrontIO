@@ -142,6 +142,7 @@ export enum GameMapType {
   Venice = "Venice", // map-generator/assets/maps/venice/info.json
   Vietnam = "Vietnam", // map-generator/assets/maps/vietnam/info.json
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
+  WhiteSea = "White Sea", // map-generator/assets/maps/whitesea/info.json
   World = "World", // map-generator/assets/maps/world/info.json
   World10000 = "World 10000", // map-generator/assets/maps/world10000/info.json
   World4000 = "World 4000", // map-generator/assets/maps/world4000/info.json
@@ -2638,6 +2639,17 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 10,
     author: "crunchybbb",
     descriptionKey: "map_description.warshipwarship",
+  },
+  {
+    id: "WhiteSea",
+    type: GameMapType.WhiteSea,
+    translationKey: "map.whitesea",
+    categories: ["europe", "new"],
+    defaultNationCount: 34,
+    themes: ["europe"],
+    author: "Tristar",
+    descriptionKey: "map_description.whitesea",
+    location: { lat: 65.3, lon: 37.3 },
   },
   {
     id: "World",

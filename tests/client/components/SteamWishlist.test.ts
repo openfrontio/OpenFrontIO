@@ -56,4 +56,24 @@ describe("steam-wishlist", () => {
       }
     },
   );
+
+  // The Steam app has nothing to wishlist, and the Android app must not send
+  // the player to another store.
+  it.each([
+    ["steam-wishlist", { steam: {} }],
+    ["steam-wishlist-button", { steam: {} }],
+    ["steam-wishlist", { shell: { platform: "android" } }],
+    ["steam-wishlist-button", { shell: { platform: "android" } }],
+  ])("%s renders nothing inside %j", async (tag, shell) => {
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = shell;
+    const el = document.createElement(tag) as SteamWishlist;
+    document.body.appendChild(el);
+    try {
+      await el.updateComplete;
+      expect(el.querySelector("iframe, a")).toBeNull();
+    } finally {
+      el.remove();
+      delete (window as { openfrontDesktop?: unknown }).openfrontDesktop;
+    }
+  });
 });

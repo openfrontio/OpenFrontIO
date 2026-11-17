@@ -5,11 +5,12 @@ import {
   UserSubscription,
 } from "@openfront/shared/ApiSchemas";
 import { Cosmetics } from "@openfront/shared/CosmeticSchemas";
-import { html, TemplateResult } from "lit";
+import { html, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderFreePlayPerks } from "./components/FreePlayPerks";
 import "./components/SubscriptionPanel";
 import { fetchCosmetics, subscriptionTier } from "./Cosmetics";
+import { sellsOnlyThroughPlay } from "./Payments";
 import { ProfileMenuModal } from "./ProfileMenuModal";
 import { translateText } from "./Utils";
 
@@ -59,15 +60,20 @@ export class SubscriptionModal extends ProfileMenuModal {
                   : renderFreePlayPerks("free_play.free_heading")
               }
             </div>
-            <o-button
-              variant="primary"
-              size="md"
-              translationKey="subscription_modal.browse"
-              @click=${() => {
-                this.close();
-                window.location.hash = "modal=store&tab=subscriptions";
-              }}
-            ></o-button>
+            ${
+              // The Android app sells no subscription.
+              sellsOnlyThroughPlay()
+                ? nothing
+                : html`<o-button
+                    variant="primary"
+                    size="md"
+                    translationKey="subscription_modal.browse"
+                    @click=${() => {
+                      this.close();
+                      window.location.hash = "modal=store&tab=subscriptions";
+                    }}
+                  ></o-button>`
+            }
           </div>
         </div>
       `;

@@ -12,6 +12,7 @@ import { PlayerPattern } from "@openfront/shared/WireSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ResolvedCosmetic } from "../Cosmetics";
+import { sellsOnlyThroughPlay } from "../Payments";
 import { translateText } from "../Utils";
 import "./CapIcon";
 import { cosmeticDisplayName } from "./CosmeticPresentation";
@@ -178,7 +179,8 @@ export class CosmeticPreview extends LitElement {
           >${translateText(currencyKey)}</span
         >
         ${
-          pack.product?.price
+          // The Android app shows Play's price on the buy button instead.
+          pack.product?.price && !sellsOnlyThroughPlay()
             ? html`<span
                 data-pack-price
                 class="pt-0.5 text-sm font-bold leading-none text-blue-300"
