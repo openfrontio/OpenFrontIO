@@ -60,6 +60,13 @@ export class ClanFundCard extends LitElement {
     void this.load();
   }
 
+  // The host is a custom element, so it's inline by default, and the Manage
+  // page's space-y gap (a bottom margin) doesn't apply to it. A block host
+  // spaces the card like its neighbours; a hidden one leaves no empty gap.
+  protected willUpdate(): void {
+    this.style.display = this.visible && this.status ? "block" : "none";
+  }
+
   disconnectedCallback() {
     this.clearCapTimer();
     super.disconnectedCallback();
