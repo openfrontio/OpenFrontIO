@@ -153,6 +153,7 @@ export class GameLeftSidebar extends LitElement implements Controller {
             @keydown=${(e: KeyboardEvent) => {
               if (e.key === "Enter" || e.key === " " || e.code === "Space") {
                 e.preventDefault();
+                e.stopPropagation();
                 this.togglePlayerStats();
               }
             }}
@@ -190,6 +191,7 @@ export class GameLeftSidebar extends LitElement implements Controller {
                         e.code === "Space"
                       ) {
                         e.preventDefault();
+                        e.stopPropagation();
                         this.toggleTeamStats();
                       }
                     }}

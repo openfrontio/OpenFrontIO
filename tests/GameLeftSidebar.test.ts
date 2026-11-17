@@ -168,6 +168,37 @@ describe("GameLeftSidebar", () => {
     sidebar.remove();
   });
 
+  it("stops Enter/Space keydown from bubbling to window on leaderboard toggles", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = {
+      ...ffaGame(),
+      teamClanTag: () => null,
+      config: () => ({
+        gameConfig: () => ({ gameMode: GameMode.Team }),
+        maxTroops: () => 1_000,
+      }),
+    } as unknown as GameView;
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+
+    const windowKeydown = vi.fn();
+    window.addEventListener("keydown", windowKeydown);
+
+    const buttons = sidebar.querySelectorAll<HTMLElement>('[role="button"]');
+    buttons[0].dispatchEvent(
+      new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true }),
+    );
+    buttons[1].dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+    );
+
+    expect(windowKeydown).not.toHaveBeenCalled();
+    window.removeEventListener("keydown", windowKeydown);
+    sidebar.remove();
+  });
+
   it.each([
     { viewport: "a large screen", compact: false, shown: true },
     {
