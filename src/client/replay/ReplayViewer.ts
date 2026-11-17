@@ -59,6 +59,8 @@ import {
 import type { TransformHandler } from "../TransformHandler";
 import { GoToPlayerEvent } from "../TransformHandler";
 import { PauseGameIntentEvent } from "../Transport";
+// Defines #game-settings before start() wires its map layers.
+import "../UserSettingModal";
 import type { UserSettingModal } from "../UserSettingModal";
 import {
   GRAPHICS_KEY,
