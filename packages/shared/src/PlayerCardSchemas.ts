@@ -32,6 +32,31 @@ export const PlayerCardRefsSchema = z.object({
 });
 export type PlayerCardRefs = z.infer<typeof PlayerCardRefsSchema>;
 
+// The card as GET /users/@me sends it, read into PlayerCardRefs: an empty
+// slot is null there, and a tracker stat this client doesn't know (a newer
+// API) is dropped alone rather than failing the whole card.
+export const UserMeCardSchema = z
+  .object({
+    background: CosmeticNameSchema.nullish(),
+    title: CosmeticNameSchema.nullish(),
+    taunt: CosmeticNameSchema.nullish(),
+    trackers: z.array(z.unknown()),
+  })
+  .transform((c): PlayerCardRefs => {
+    const out: PlayerCardRefs = {
+      trackers: c.trackers
+        .flatMap((t) => {
+          const parsed = CardTrackerValueSchema.safeParse(t);
+          return parsed.success ? [parsed.data] : [];
+        })
+        .slice(0, MAX_CARD_TRACKERS),
+    };
+    if (c.background != null) out.background = c.background;
+    if (c.title != null) out.title = c.title;
+    if (c.taunt != null) out.taunt = c.taunt;
+    return out;
+  });
+
 // The card as the game server sends it with each player: the loadout checked
 // against what the player owns, plus their public profile id so a player they
 // eliminate can look up the nemesis count. Never sent to a viewer the

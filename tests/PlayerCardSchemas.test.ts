@@ -208,6 +208,59 @@ describe("@me card fields", () => {
     expect(parsed.player.tauntsMuted).toBe(true);
   });
 
+  // The exact shape infra's GET /users/@me sends (lib/card/PlayerCardLoadout
+  // cardForMe): empty slots are null, not absent.
+  it("parses the API's card with null slots", () => {
+    const parsed = UserMeResponseSchema.parse(
+      userMe({
+        card: {
+          background: "bg_pacific",
+          title: null,
+          taunt: null,
+          trackers: [{ stat: "wins", value: 312 }],
+        },
+      }),
+    );
+    expect(parsed.player.card).toEqual({
+      background: "bg_pacific",
+      trackers: [{ stat: "wins", value: 312 }],
+    });
+  });
+
+  it("an owner's empty loadout parses", () => {
+    const parsed = UserMeResponseSchema.parse(
+      userMe({
+        card: { background: null, title: null, taunt: null, trackers: [] },
+      }),
+    );
+    expect(parsed.player.card).toEqual({ trackers: [] });
+  });
+
+  it("a tracker stat this client doesn't know is dropped alone", () => {
+    const parsed = UserMeResponseSchema.parse(
+      userMe({
+        card: {
+          background: null,
+          title: "warmonger",
+          taunt: null,
+          trackers: [
+            { stat: "future_stat", value: 9 },
+            { stat: "wins", value: 3 },
+          ],
+        },
+      }),
+    );
+    expect(parsed.player.card).toEqual({
+      title: "warmonger",
+      trackers: [{ stat: "wins", value: 3 }],
+    });
+  });
+
+  it("no card (null) stays null", () => {
+    const parsed = UserMeResponseSchema.parse(userMe({ card: null }));
+    expect(parsed.player.card).toBeNull();
+  });
+
   it("a malformed card reads as absent, not a failed parse", () => {
     const parsed = UserMeResponseSchema.parse(
       userMe({ card: { trackers: "nope" } }),

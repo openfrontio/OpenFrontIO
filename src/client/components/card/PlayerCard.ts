@@ -309,6 +309,9 @@ function ensurePlayerCardStyles(): void {
   stylesInjected = true;
   const style = document.createElement("style");
   style.textContent = `
+    /* A block, so the ResizeObserver sees its width (an inline host reads 0
+       and the phone layout never turns on). */
+    player-card { display: block; }
     .player-card[data-card-rarity="common"] { border-color: rgba(255,255,255,0.15); }
     .player-card[data-card-rarity="uncommon"] { border-color: rgba(74,222,128,0.45); }
     .player-card[data-card-rarity="rare"] { border-color: rgba(96,165,250,0.5); }

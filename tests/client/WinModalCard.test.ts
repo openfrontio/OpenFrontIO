@@ -6,6 +6,16 @@ vi.mock("../../src/client/Utils", async (orig) => ({
     params ? `${key}:${JSON.stringify(params)}` : key,
 }));
 
+const catalogue = vi.hoisted(() => ({
+  cached: null as unknown,
+  fetched: null as unknown,
+}));
+vi.mock("../../src/client/Cosmetics", async (orig) => ({
+  ...(await orig<typeof import("../../src/client/Cosmetics")>()),
+  getCachedCosmetics: () => catalogue.cached,
+  fetchCosmetics: async () => catalogue.fetched,
+}));
+
 import { defaultPlayerCardView } from "../../src/client/components/card/PlayerCardModel";
 import { WinModal } from "../../src/client/hud/layers/WinModal";
 
@@ -77,6 +87,73 @@ describe("WinModal card section", () => {
     });
     expect(modal.querySelector("loadout-row")).not.toBeNull();
     expect(modal.querySelector("[data-win-cosmetic-promo]")).toBeNull();
+  });
+
+  it("fetches the catalogue when it isn't cached, then shows the items", async () => {
+    catalogue.cached = null;
+    catalogue.fetched = {
+      patterns: {},
+      flags: {},
+      cardBackgrounds: {
+        bg_pacific: {
+          product: null,
+          rarity: "epic",
+          name: "bg_pacific",
+          url: "/bg.webp",
+        },
+      },
+    };
+    const modal = (await renderModal({})) as unknown as {
+      game: unknown;
+      setEndCard(choose: () => unknown): void;
+      endCardView: { background: { name: string } | null } | null;
+      updateComplete: Promise<unknown>;
+    };
+    modal.game = {
+      myPlayer: () => null,
+      gameID: () => "g1",
+      config: () => ({ gameConfig: () => ({}) }),
+      resumedFromSave: () => false,
+      playerByClientID: () => ({
+        name: () => "Volt",
+        clanTag: () => null,
+        territoryColor: () => ({ toHex: () => "#123456" }),
+      }),
+      playerCardOf: () => ({
+        card: { background: "bg_pacific", trackers: [] },
+        flag: undefined,
+      }),
+    };
+    modal.setEndCard(() => ({ kind: "winner", clientID: "KILLER01" }));
+    expect(modal.endCardView?.background).toBeNull();
+    await new Promise((r) => setTimeout(r, 0));
+    await modal.updateComplete;
+    expect(modal.endCardView?.background?.name).toBe("bg_pacific");
+    catalogue.fetched = null;
+  });
+
+  it("a failure choosing the card leaves today's screen", async () => {
+    const modal = (await renderModal({
+      endCardMode: "eliminatedBy",
+      endCardView: defaultPlayerCardView("Volt", "UN"),
+    })) as unknown as {
+      game: unknown;
+      setEndCard(choose: () => unknown): void;
+      endCardMode: string;
+    };
+    // A game without the card lookups (an older view, a test double).
+    modal.game = {
+      myPlayer: () => null,
+      gameID: () => "g1",
+      config: () => ({ gameConfig: () => ({}) }),
+      resumedFromSave: () => false,
+    };
+    expect(() =>
+      modal.setEndCard(() => {
+        throw new TypeError("playerCardOf is not a function");
+      }),
+    ).not.toThrow();
+    expect(modal.endCardMode).toBe("none");
   });
 
   it("no card shows today's screen", async () => {

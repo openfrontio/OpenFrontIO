@@ -39,5 +39,16 @@ export function cardItemName(type: CardItemType, item: CardItem): string {
   if (type === "playerCard") return translateText("player_card.the_card");
   const key = `player_card.items.${item.name}`;
   const text = translateText(key);
-  return text === key ? item.name : text;
+  return text === key ? readableName(item.name) : text;
+}
+
+// "bg_neon_grid" → "Neon Grid": the name as words, for an item with no
+// translation yet.
+function readableName(name: string): string {
+  return name
+    .replace(/^bg_/, "")
+    .split("_")
+    .filter((w) => w.length > 0)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(" ");
 }

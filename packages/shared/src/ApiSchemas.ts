@@ -16,7 +16,7 @@ import {
   LEVEL_BADGE_MAX_LEVEL,
   LEVEL_BADGE_MAX_PRESTIGE,
 } from "./LevelBadgeWire";
-import { PlayerCardRefsSchema } from "./PlayerCardSchemas";
+import { UserMeCardSchema } from "./PlayerCardSchemas";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
@@ -725,7 +725,7 @@ export const UserMeResponseSchema = z.object({
     // The player card loadout. Null without the card; a malformed one reads
     // as absent (the game server parses this at join, so it must never fail
     // the whole parse).
-    card: PlayerCardRefsSchema.nullable().optional().catch(undefined),
+    card: UserMeCardSchema.nullable().optional().catch(undefined),
     // "Mute taunts": turns off every card taunt for this player.
     tauntsMuted: z.boolean().optional().catch(undefined),
     // "Hide my level": true when the player opted out of showing their level

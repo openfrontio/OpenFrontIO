@@ -226,6 +226,11 @@ describe("<player-card>", () => {
     expect(card.querySelector("[data-card-trackers-inline]")).not.toBeNull();
   });
 
+  it("the host is a block, so its width can be measured for the phone layout", async () => {
+    await render(VOLT);
+    expect(getComputedStyle(card).display).toBe("block");
+  });
+
   it("no badge: no level badge or level line", async () => {
     await render(defaultPlayerCardView("Volt", null));
     expect(card.querySelector("level-badge")).toBeNull();

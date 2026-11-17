@@ -6,7 +6,7 @@ import type {
   Winner,
 } from "@openfront/engine-api/Schemas";
 import type { GameXpEligible, Progress } from "@openfront/shared/ApiSchemas";
-import { Pattern } from "@openfront/shared/CosmeticSchemas";
+import type { Cosmetics, Pattern } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
@@ -182,6 +182,8 @@ export class WinModal extends LitElement implements Controller {
   @state()
   private loadout: LoadoutItem[] = [];
   private nemesisAbort: AbortController | null = null;
+  private lastEndCard: EndScreenCard | null = null;
+  private endCardCosmetics: Cosmetics | null = null;
 
   // The queue to rejoin from "Play Again"; null when the game has none (an
   // unranked game, or a ranked FFA game, which has no queue any more).
@@ -785,11 +787,46 @@ export class WinModal extends LitElement implements Controller {
         badge: lobbyLevelBadge(this.game.gameID(), clientID) ?? null,
         card,
       },
-      getCachedCosmetics(),
+      this.cardCatalogue(),
     );
   }
 
-  private setEndCard(card: EndScreenCard): void {
+  // The card is a decoration: whatever goes wrong choosing or building it,
+  // the end screen shows as it would without one.
+  private setEndCard(choose: () => EndScreenCard): void {
+    try {
+      const card = choose();
+      this.lastEndCard = card;
+      this.applyEndCard(card);
+      // A game joined before the store's catalogue arrived (a direct link, an
+      // iframe, a failed fetch) has none cached: fetch it and show the items.
+      if (card.kind !== "none" && this.cardCatalogue() === null) {
+        void fetchCosmetics()
+          .then((fetched) => {
+            if (fetched === null || this.lastEndCard !== card) return;
+            this.endCardCosmetics = fetched;
+            this.applyEndCard(card);
+          })
+          .catch(() => {});
+      }
+    } catch (error) {
+      console.warn("End-screen card left off:", error);
+      this.nemesisAbort?.abort();
+      this.nemesisAbort = null;
+      this.endCardMode = "none";
+      this.endCardView = null;
+      this.endCardClan = null;
+      this.nemesis = null;
+      this.loadout = [];
+    }
+  }
+
+  // The catalogue the card's items resolve through.
+  private cardCatalogue(): Cosmetics | null {
+    return this.endCardCosmetics ?? getCachedCosmetics();
+  }
+
+  private applyEndCard(card: EndScreenCard): void {
     this.nemesisAbort?.abort();
     this.nemesisAbort = null;
     this.nemesis = null;
@@ -851,7 +888,7 @@ export class WinModal extends LitElement implements Controller {
     if (this.endCardView !== view) return;
     this.loadout = loadoutItems(
       view,
-      getCachedCosmetics(),
+      this.cardCatalogue(),
       me === false ? [] : (me.player.flares ?? []),
     );
   }
@@ -1249,7 +1286,7 @@ export class WinModal extends LitElement implements Controller {
     ) {
       this.hasShownDeathModal = true;
       this._title = translateText("win_modal.died");
-      this.setEndCard(
+      this.setEndCard(() =>
         eliminatedByCard(myPlayer, this.cardGame(), this.hasCard),
       );
       this.eventBus.emit(new PlaySoundEffectEvent("defeat"));
@@ -1274,12 +1311,15 @@ export class WinModal extends LitElement implements Controller {
         vote(undefined, wu.allPlayersStats);
         this._title = translateText("win_modal.match_cancelled");
         this.isWin = false;
-        this.setEndCard({ kind: "none" });
+        this.setEndCard(() => ({ kind: "none" }));
         history.replaceState(null, "", `${window.location.pathname}?replay`);
         void this.show();
       } else if (wu.winner[0] === "team") {
         vote(wu.winner, wu.allPlayersStats);
-        this.setEndCard(winnerCard(wu.winner, this.cardGame(), this.hasCard));
+        const teamWinner = wu.winner;
+        this.setEndCard(() =>
+          winnerCard(teamWinner, this.cardGame(), this.hasCard),
+        );
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
           this.isWin = true;
@@ -1299,7 +1339,7 @@ export class WinModal extends LitElement implements Controller {
           nation: wu.winner[1],
         });
         this.isWin = false;
-        this.setEndCard({ kind: "none" });
+        this.setEndCard(() => ({ kind: "none" }));
         this.playEndOfGameSound();
         void this.show();
       } else {
@@ -1308,7 +1348,7 @@ export class WinModal extends LitElement implements Controller {
         const winnerClient = winner.clientID();
         if (winnerClient !== null) {
           vote(["player", winnerClient], wu.allPlayersStats);
-          this.setEndCard(
+          this.setEndCard(() =>
             winnerCard(["player", winnerClient], this.cardGame(), this.hasCard),
           );
         }
