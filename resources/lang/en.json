@@ -2552,6 +2552,15 @@
   "profile_card": {
     "lifetime_xp": "Lifetime XP"
   },
+  "player_card": {
+    "tracker_wins": "Wins",
+    "tracker_games_played": "Games",
+    "tracker_nukes_launched": "Nukes",
+    "tracker_conquests": "Conquests",
+    "tracker_best_elo": "Best Elo",
+    "tracker_ffa_peak_rating": "FFA peak",
+    "winner": "Winner"
+  },
   "progression": {
     "awaiting_end": "XP is awarded when the game ends.",
     "bonus_line": "+{percent}% XP ({source})",
