@@ -2,6 +2,10 @@
   "categories": ["north_america"],
   "custom_tribes": [
     {
+      "coordinates": [1976, 526],
+      "name": "Azusa"
+    },
+    {
       "coordinates": [1734, 682],
       "name": "El Monte"
     },
@@ -196,6 +200,10 @@
     {
       "coordinates": [945, 783],
       "name": "Culver City"
+    },
+    {
+      "coordinates": [2043, 903],
+      "name": "Diamond Bar"
     },
     {
       "coordinates": [1029, 830],
@@ -526,16 +534,8 @@
       "name": "Glendora"
     },
     {
-      "coordinates": [2046, 725],
-      "name": "Pomona"
-    },
-    {
       "coordinates": [2049, 1193],
       "name": "Villa Park"
-    },
-    {
-      "coordinates": [1958, 1563],
-      "name": "Newport Beach"
     },
     {
       "coordinates": [1179, 957],
@@ -588,19 +588,19 @@
   ],
   "id": "LosAngeles",
   "map": {
-    "height": 2268,
-    "num_land_tiles": 2310584,
-    "width": 2052
+    "height": 2276,
+    "num_land_tiles": 2474924,
+    "width": 2152
   },
   "map16x": {
-    "height": 567,
-    "num_land_tiles": 137549,
-    "width": 513
+    "height": 569,
+    "num_land_tiles": 147396,
+    "width": 538
   },
   "map4x": {
-    "height": 1134,
-    "num_land_tiles": 568000,
-    "width": 1026
+    "height": 1138,
+    "num_land_tiles": 608475,
+    "width": 1076
   },
   "name": "Los Angeles",
   "nations": [
@@ -625,22 +625,22 @@
       "name": "Anaheim"
     },
     {
-      "coordinates": [2009, 858],
+      "coordinates": [2018, 762],
       "flag": "California",
       "name": "Walnut"
     },
     {
-      "coordinates": [2002, 1364],
+      "coordinates": [1982, 1348],
       "flag": "California",
       "name": "Santa Ana"
     },
     {
-      "coordinates": [1762, 1473],
+      "coordinates": [1738, 1454],
       "flag": "California",
       "name": "Huntington Beach"
     },
     {
-      "coordinates": [1382, 1270],
+      "coordinates": [1392, 1254],
       "flag": "California",
       "name": "Long Beach"
     },
@@ -678,11 +678,6 @@
       "coordinates": [1059, 674],
       "flag": "California",
       "name": "Hollywood"
-    },
-    {
-      "coordinates": [2043, 903],
-      "flag": "California",
-      "name": "Diamond Bar"
     },
     {
       "coordinates": [1284, 748],
@@ -725,7 +720,7 @@
       "name": "Bardsdale"
     },
     {
-      "coordinates": [750, 2100],
+      "coordinates": [952, 2073],
       "flag": "California",
       "name": "Santa Catalina"
     },
@@ -755,7 +750,7 @@
       "name": "Buena Park"
     },
     {
-      "coordinates": [1918, 1473],
+      "coordinates": [1877, 1455],
       "flag": "California",
       "name": "Costa Mesa"
     },
@@ -780,16 +775,6 @@
       "name": "San Pedro"
     },
     {
-      "coordinates": [1975, 514],
-      "flag": "California",
-      "name": "Azusa"
-    },
-    {
-      "coordinates": [1608, 1306],
-      "flag": "California",
-      "name": "Seal Beach"
-    },
-    {
       "coordinates": [231, 303],
       "flag": "California",
       "name": "Simi Valley"
@@ -798,6 +783,26 @@
       "coordinates": [490, 214],
       "flag": "California",
       "name": "Chatsworth"
+    },
+    {
+      "coordinates": [663, 343],
+      "flag": "California",
+      "name": "Northridge"
+    },
+    {
+      "coordinates": [2141, 716],
+      "flag": "California",
+      "name": "Pomona"
+    },
+    {
+      "coordinates": [2133, 1454],
+      "flag": "California",
+      "name": "Irvine"
+    },
+    {
+      "coordinates": [2039, 1603],
+      "flag": "California",
+      "name": "Newport Beach"
     }
   ],
   "themes": ["north_america"],
