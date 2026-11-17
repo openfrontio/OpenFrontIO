@@ -4,6 +4,7 @@ import {
   PublicProgress,
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
+import "./components/card/MyCardTab";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
@@ -23,32 +24,33 @@ import {
   sendMagicLink,
   steamLogin,
 } from "./Auth";
+import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
-import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
+import { BaseModal } from "./components/BaseModal";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import "./components/baseComponents/stats/SteamUserHeader";
-import { BaseModal } from "./components/BaseModal";
+import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
 import "./components/CopyButton";
 import "./components/CreatorCodePanel";
-import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
+import { ffaSummaryFromMe } from "./components/ffaRating/FfaRatingSummary";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
-import { ffaSummaryFromMe } from "./components/ffaRating/FfaRatingSummary";
-import "./components/FriendsList";
 import type { PrestigeFlow } from "./components/PrestigeFlow";
+import "./components/FriendsList";
+import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import "./components/ProfileCard";
 import "./components/ProfileProgression";
 import "./components/RewardsPanel";
-import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
 import { desktopLinkGate, isSteamShell } from "./DesktopShell";
 import { gamePortal, type PortalUser } from "./GamePortal";
-import "./GameStatsModal";
 import { showInGameAlert } from "./InGameModal";
+import "./GameStatsModal";
+import { whenModalLoaded } from "./LazyModals";
 import { consumeLinkResult } from "./LinkResult";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
 import "./PlayerProfileModal";
@@ -233,6 +235,7 @@ export class AccountModal extends BaseModal {
     return {
       tabs: [
         { key: "account", label: translateText("account_modal.tab_account") },
+        { key: "card", label: translateText("account_modal.tab_my_card") },
         { key: "stats", label: translateText("account_modal.tab_stats") },
         { key: "games", label: translateText("account_modal.tab_games") },
         // Where the player profile has it, after Games. Only for a player
@@ -285,6 +288,8 @@ export class AccountModal extends BaseModal {
 
   private renderTab(tab: string): TemplateResult {
     switch (tab) {
+      case "card":
+        return this.renderMyCardTab();
       case "stats":
         return this.renderStatsTab();
       case "games":
@@ -336,6 +341,22 @@ export class AccountModal extends BaseModal {
 
   public returnToFriends(): void {
     this.open({ tab: "friends" });
+  }
+
+  // The player card customiser (components/card/MyCardTab.ts). It reads the
+  // catalogue itself; the flag slot opens the inventory's flags.
+  private renderMyCardTab(): TemplateResult {
+    return html`<my-card-tab
+      .userMe=${this.userMeResponse}
+      @change-flag=${() =>
+        whenModalLoaded("inventory-modal", () =>
+          (
+            document.querySelector("inventory-modal") as unknown as {
+              open(args: Record<string, unknown>): void;
+            } | null
+          )?.open({ tab: "flags" }),
+        )}
+    ></my-card-tab>`;
   }
 
   private renderAccountTab(): TemplateResult {

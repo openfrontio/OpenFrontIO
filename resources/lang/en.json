@@ -176,7 +176,8 @@
     "username_temporary_prompt": "Your username was taken by another player. Choose a new one now? The rename is free.",
     "username_temporary_prompt_confirm": "Choose a name",
     "username_title": "Username",
-    "viverse_account": "VIVERSE account"
+    "viverse_account": "VIVERSE account",
+    "tab_my_card": "My Card"
   },
   "account_settings_modal": {
     "title": "Account Settings"
@@ -2561,7 +2562,26 @@
     "tracker_ffa_peak_rating": "FFA peak",
     "winner": "Winner",
     "territory": "Territory",
-    "members_alive": "Alive"
+    "members_alive": "Alive",
+    "the_card": "Player card"
+  },
+  "my_card": {
+    "slot_background": "Background",
+    "slot_flag": "Flag",
+    "slot_title": "Title",
+    "slot_trackers": "Trackers",
+    "slot_taunt": "Taunt",
+    "reset": "Reset",
+    "owned": "Owned",
+    "equipped": "Equipped",
+    "not_available": "Not available",
+    "get_card": "Get the player card to show it on end screens",
+    "needs_card": "Get the player card to equip items",
+    "earned_note": "Earned items show how to unlock them and can't be bought.",
+    "staff_note": "All card art is made by staff.",
+    "save_failed": "Couldn't save your card. Try again.",
+    "flag_note": "Your card shows the flag you play with.",
+    "change_flag": "Change flag"
   },
   "progression": {
     "awaiting_end": "XP is awarded when the game ends.",

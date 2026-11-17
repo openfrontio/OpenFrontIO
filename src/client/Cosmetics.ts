@@ -38,6 +38,12 @@ import {
   purchaseCosmeticPack,
   purchaseWithCurrency,
 } from "./Api";
+import {
+  cardItemName,
+  type CardItem,
+  type CardItemType,
+  isCardItemType,
+} from "./components/card/CardItems";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import {
@@ -643,6 +649,8 @@ export async function purchaseCosmetic(
     let itemName: string;
     if (resolved.type === "flag") {
       itemName = translateCosmetic("flags", c.name);
+    } else if (isCardItemType(resolved.type)) {
+      itemName = cardItemName(resolved.type, c as CardItem);
     } else if (resolved.type === "crown") {
       itemName = translateCosmetic("crowns", c.name);
     } else {
@@ -678,7 +686,8 @@ export async function purchaseCosmetic(
     | "skin"
     | "flag"
     | "crown"
-    | "effect";
+    | "effect"
+    | CardItemType;
   const result = await purchaseWithCurrency(
     cosmeticType,
     c.name,
@@ -1311,7 +1320,8 @@ export type ResolvedCosmetic = {
     | "effect"
     | "pack"
     | "cosmeticPack"
-    | "subscription";
+    | "subscription"
+    | CardItemType;
   cosmetic:
     | Pattern
     | Skin
@@ -1321,6 +1331,7 @@ export type ResolvedCosmetic = {
     | Pack
     | CosmeticPack
     | Subscription
+    | CardItem
     | null;
   colorPalette: ColorPalette | null;
   relationship: "owned" | "purchasable" | "blocked";

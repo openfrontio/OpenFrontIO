@@ -279,6 +279,20 @@ describe("AccountModal — Progression tab", () => {
     expect(fetchPublicPlayerProgressMock).not.toHaveBeenCalled();
   });
 
+  it("adds the My Card tab right after Account", async () => {
+    modal.open();
+    await settle(() => {
+      expect(tabText()).toContain("account_modal.tab_my_card");
+    });
+    const text = tabText();
+    expect(text.indexOf("account_modal.tab_account")).toBeLessThan(
+      text.indexOf("account_modal.tab_my_card"),
+    );
+    expect(text.indexOf("account_modal.tab_my_card")).toBeLessThan(
+      text.indexOf("account_modal.tab_stats"),
+    );
+  });
+
   it("has no tab for a player without a level (progression off)", async () => {
     me = userMe(undefined);
     modal.open({ tab: "progression" });
