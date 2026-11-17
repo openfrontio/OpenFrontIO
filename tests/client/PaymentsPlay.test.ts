@@ -261,6 +261,39 @@ describe("startPlayPurchase", () => {
     },
   );
 
+  // already_owned refreshes Play's cache, so a drain that read the list
+  // before it cannot decide whether to buy again.
+  it("on already_owned, reads the list again after a drain already running", async () => {
+    const play = installPlay();
+    const held = deferred<unknown>();
+    play.unconsumed.mockReturnValueOnce(held.promise);
+    play.unconsumed.mockResolvedValue({
+      status: "ok",
+      purchaseTokens: ["tok-old"],
+    });
+    play.purchase.mockResolvedValueOnce({
+      status: "error",
+      code: "already_owned",
+    });
+    finalizeMock.mockResolvedValue({ ok: true, status: "pending" });
+
+    const drain = drainPlayPurchases("pub-1");
+    await vi.waitFor(() => expect(play.unconsumed).toHaveBeenCalledTimes(1));
+    const purchase = startPlayPurchase("p1");
+    await vi.waitFor(() => expect(play.purchase).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 0));
+    held.resolve({ status: "ok", purchaseTokens: [] });
+    await drain;
+
+    expect(await purchase).toEqual({
+      outcome: "pending",
+      message: "store.play_earlier_purchase_pending",
+    });
+    expect(play.unconsumed).toHaveBeenCalledTimes(2);
+    expect(play.purchase).toHaveBeenCalledTimes(1);
+    expect(finalizeMock.mock.calls.map(([t]) => t)).toEqual(["tok-old"]);
+  });
+
   it("buys again only once, and asks the player to wait if Play still says already_owned", async () => {
     const play = installPlay();
     play.purchase.mockResolvedValue({ status: "error", code: "already_owned" });

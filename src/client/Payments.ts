@@ -712,9 +712,11 @@ async function buyOnPlay(
       // credits), means the product is free again, so Play's advice is to
       // buy it again. Once: a second already_owned is not drained again.
       // A list Play could not give says neither, so it is not bought again.
+      // The list is read afresh, after the error: a pass already running read
+      // it before Play refreshed its cache.
       case "already_owned": {
         if (retried) return error(translateText("store.play_rebuy_too_soon"));
-        const answers = await joinPlayDrain(request.accountId);
+        const answers = await startPlayDrain(request.accountId);
         if (answers === null) {
           return {
             outcome: "pending",
@@ -801,8 +803,12 @@ export function drainPlayPurchases(account: string): Promise<void> {
 function joinPlayDrain(account: string): Promise<PlayDrainAnswer[] | null> {
   if (playDrain?.account === account) return playDrain.result;
   // The server checks each purchase against the account posting it, so a
-  // pass for another account cannot answer for this one: a fresh pass runs
-  // once it ends. One pass at a time either way.
+  // pass for another account cannot answer for this one.
+  return startPlayDrain(account);
+}
+
+/** A new pass, run once the running one (if any) ends: one at a time. */
+function startPlayDrain(account: string): Promise<PlayDrainAnswer[] | null> {
   const previous = playDrain?.result ?? Promise.resolve();
   const pass: PlayDrainPass = {
     account,
