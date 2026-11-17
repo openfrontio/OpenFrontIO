@@ -265,6 +265,7 @@ export class EffectsGrid extends LitElement {
     if (this.mode === "purchase") {
       return html`<cosmetic-card
         data-store-product
+        data-cosmetic-key=${r.key}
         class="block h-full min-w-0"
         .resolved=${r}
         state=${r.key === this.focusedKey ? "focused" : "idle"}
