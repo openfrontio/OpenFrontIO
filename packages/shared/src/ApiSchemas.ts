@@ -1644,6 +1644,13 @@ export const SteamFinalizeResponseSchema = z.object({
 });
 export type SteamFinalizeResponse = z.infer<typeof SteamFinalizeResponseSchema>;
 
+// POST /payments/google/finalize — credits a Google Play purchase. A 200 is
+// "settled" (credited) or "pending" (Play has not taken the money yet; the
+// purchase is credited when it completes). A refusal is a 409, not a 200.
+export const GoogleFinalizeResponseSchema = z.object({
+  status: z.enum(["settled", "pending"]),
+});
+
 // A saved singleplayer game (/users/@me/saved_games, /public/saved_games).
 // The bytes are fetched separately from its `/data` route.
 export const SavedGameSchema = z.object({

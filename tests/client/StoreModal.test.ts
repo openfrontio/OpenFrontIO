@@ -1715,6 +1715,169 @@ describe("StoreModal on the Steam rail", () => {
   });
 });
 
+// The Android app: Google Play is its only way to pay. Packs are listed at
+// Play's own price, and nothing else real-money is offered.
+describe("StoreModal on the Play rail", () => {
+  Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
+
+  const playPack: ResolvedCosmetic = {
+    ...pack,
+    cosmetic: {
+      ...(pack.cosmetic as object),
+      googleProductId: "plutonium_1000",
+    } as never,
+  };
+  const otherPack: ResolvedCosmetic = {
+    ...pack,
+    cosmetic: {
+      ...(pack.cosmetic as object),
+      name: "plutonium_big",
+      googleProductId: "plutonium_5000",
+    } as never,
+    key: "pack:plutonium_big",
+  };
+  const webOnlyPack: ResolvedCosmetic = {
+    ...pack,
+    cosmetic: { ...(pack.cosmetic as object), name: "web_only" } as never,
+    key: "pack:web_only",
+  };
+
+  function installPlay(products: unknown) {
+    const playBilling = {
+      products: vi.fn(async () => products),
+      purchase: vi.fn(async () => ({ status: "cancelled" })),
+      unconsumed: vi.fn(async () => ({ status: "ok", purchaseTokens: [] })),
+    };
+    (window as any).openfrontDesktop = {
+      shell: { platform: "android" },
+      playBilling,
+    };
+    return playBilling;
+  }
+
+  async function openPacks() {
+    store = document.createElement("store-modal") as StoreModal;
+    store.inline = true;
+    document.body.appendChild(store);
+    await store.updateComplete;
+    store.open({ tab: "packs" });
+    await vi.waitFor(() =>
+      expect(
+        store!.querySelector("cosmetic-card, [data-store-play-unavailable]"),
+      ).toBeTruthy(),
+    );
+    return store;
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    resolvedCatalog = [playPack, otherPack, webOnlyPack];
+    vi.mocked(fetchCosmetics).mockReset();
+    vi.mocked(fetchCosmetics).mockResolvedValue({
+      currencyPacks: Object.fromEntries(
+        resolvedCatalog.map((r) => [r.cosmetic!.name, r.cosmetic]),
+      ),
+    } as unknown as Cosmetics);
+    vi.mocked(resolveCosmetics).mockReset();
+    vi.mocked(resolveCosmetics).mockImplementation(() => resolvedCatalog);
+    vi.mocked(purchaseCosmetic).mockReset();
+    vi.mocked(purchaseCosmetic).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    store?.remove();
+    store = undefined;
+    delete (window as any).openfrontDesktop;
+    localStorage.clear();
+  });
+
+  it("lists only the packs Play returned, at Play's price, with no Stripe checkout", async () => {
+    const play = installPlay({
+      status: "ok",
+      products: [{ productId: "plutonium_1000", formattedPrice: "€5,49" }],
+    });
+    const modal = await openPacks();
+
+    expect(play.products).toHaveBeenCalledWith([
+      "plutonium_1000",
+      "plutonium_5000",
+    ]);
+    const button = purchaseButton(modal, playPack.key);
+    expect(button.dollarPrice).toBe("€5,49");
+    expect(button.product).toBeNull();
+    expect(button.inlineCheckout).toBeNull();
+    await button.onPurchaseDollar!();
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      playPack,
+      "dollar",
+      expect.any(Object),
+    );
+
+    // The catalog's dollar price shows nowhere, on the card or in its preview.
+    expect(card(modal, playPack.key)!.textContent).toContain("1,000");
+    expect(modal.querySelector("[data-pack-price]")).toBeNull();
+    expect(modal.textContent).not.toContain("$5");
+
+    // Not returned by Play, and not on Play at all.
+    expect(card(modal, otherPack.key)).toBeUndefined();
+    expect(card(modal, webOnlyPack.key)).toBeUndefined();
+    expect(modal.querySelector("custom-currency-card")).toBeNull();
+    expect(modal.querySelector("[data-store-play-unavailable]")).toBeNull();
+  });
+
+  it("lists no pack and says so when Play cannot price them", async () => {
+    installPlay({ status: "error", code: "unavailable" });
+    const modal = await openPacks();
+
+    expect(modal.querySelector("cosmetic-card")).toBeNull();
+    expect(modal.querySelector("custom-currency-card")).toBeNull();
+    expect(
+      modal.querySelector("[data-store-play-unavailable]")?.textContent,
+    ).toContain("store.play_unavailable");
+  });
+
+  it("asks Play again when the store reopens after it could not price the packs", async () => {
+    const play = installPlay({ status: "error", code: "unavailable" });
+    const modal = await openPacks();
+    expect(modal.querySelector("[data-store-play-unavailable]")).toBeTruthy();
+    modal.close();
+
+    // The catalog itself is still fresh.
+    play.products.mockResolvedValue({
+      status: "ok",
+      products: [{ productId: "plutonium_1000", formattedPrice: "€5,49" }],
+    });
+    modal.open({ tab: "packs" });
+    await vi.waitFor(() =>
+      expect(purchaseButton(modal, playPack.key).dollarPrice).toBe("€5,49"),
+    );
+    expect(play.products).toHaveBeenCalledTimes(2);
+    expect(modal.querySelector("[data-store-play-unavailable]")).toBeNull();
+  });
+
+  it("sells nothing for real money in an Android app without the bridge", async () => {
+    (window as any).openfrontDesktop = { shell: { platform: "android" } };
+    const modal = await openPacks();
+
+    expect(modal.querySelector("cosmetic-card")).toBeNull();
+    expect(modal.querySelector("custom-currency-card")).toBeNull();
+    expect(modal.querySelector("[data-store-play-unavailable]")).toBeTruthy();
+  });
+
+  it("sells no subscription, but still shows the one the player holds", async () => {
+    installPlay({ status: "ok", products: [] });
+    resolvedCatalog = [goldSubscription, platinumSubscription];
+    const modal = await openStoreOnTab("subscriptions");
+    await modal.onUserMe({
+      player: { subscription: { tier: "gold" } },
+    } as never);
+    await modal.updateComplete;
+
+    expect(card(modal, goldSubscription.key)).toBeTruthy();
+    expect(card(modal, platinumSubscription.key)).toBeUndefined();
+  });
+});
+
 describe("store analytics", () => {
   Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
 

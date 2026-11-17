@@ -141,6 +141,83 @@ describe("subscription-panel", () => {
     });
   });
 
+  // Google Play is the Android app's only way to pay, and nothing in it may
+  // point the player elsewhere to pay or manage billing. A subscription held
+  // from elsewhere is still shown, with none of its controls or its price.
+  describe.each([
+    ["with the Play billing bridge", true],
+    ["without the Play billing bridge", false],
+  ])("inside the Android app %s", (_label, bridge) => {
+    beforeEach(() => {
+      (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+        shell: { platform: "android" },
+        ...(bridge
+          ? {
+              playBilling: {
+                products: async () => ({ status: "ok", products: [] }),
+                purchase: async () => ({ status: "cancelled" }),
+                unconsumed: async () => ({ status: "ok", purchaseTokens: [] }),
+              },
+            }
+          : {}),
+      };
+    });
+
+    afterEach(() => {
+      delete (window as unknown as { openfrontDesktop?: unknown })
+        .openfrontDesktop;
+    });
+
+    const keys = () =>
+      Array.from(el.querySelectorAll("o-button")).map((b) =>
+        b.getAttribute("translationKey"),
+      );
+    const priced = {
+      name: "plutonium",
+      description: "desc",
+      dailyHardCurrency: 10,
+      hardCurrencySignupBonus: 100,
+      product: { productId: "p", priceId: "pp", price: "$4.99" },
+    } as never;
+
+    it.each([
+      ["an active subscription", sub({ provider: "stripe" })],
+      [
+        "a subscription winding down",
+        sub({ provider: "stripe", cancelAtPeriodEnd: true }),
+      ],
+      [
+        "a past-due subscription",
+        sub({ provider: "stripe", status: "past_due", currentPeriodEnd: null }),
+      ],
+      ["a Steam subscription", sub({ provider: "steam" })],
+    ])("shows %s with no billing control", async (_s, held) => {
+      el.sub = held;
+      el.cosmetic = priced;
+      el.requestUpdate();
+      await el.updateComplete;
+
+      expect(text()).toContain("plutonium");
+      expect(keys()).toEqual([]);
+      expect(el.querySelector("a")).toBeNull();
+      expect(text()).not.toContain("$4.99");
+      expect(text()).not.toContain("manage_subscription_on_web");
+      expect(text()).not.toContain("account_modal.cancel_subscription");
+    });
+
+    it("drops the price and controls from the stacked paid tile", async () => {
+      el.sub = sub({ provider: "stripe" });
+      el.cosmetic = priced;
+      el.stacked = "paid";
+      await el.updateComplete;
+
+      expect(text()).toContain("account_modal.sub_next_payment");
+      expect(text()).not.toContain("sub_price_monthly");
+      expect(text()).not.toContain("account_modal.cancel_subscription");
+      expect(keys()).toEqual([]);
+    });
+  });
+
   // The renewal bounced. Stripe is still retrying, and the portal is where
   // the card gets fixed, so it is the only thing on offer.
   describe("past_due", () => {

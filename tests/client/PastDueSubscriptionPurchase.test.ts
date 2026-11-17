@@ -21,7 +21,8 @@ vi.mock("../../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn(async () => true),
 }));
 
-vi.mock("../../src/client/DesktopShell", () => ({
+vi.mock("../../src/client/DesktopShell", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/DesktopShell")>()),
   isDesktopShell: vi.fn(() => false),
 }));
 
@@ -81,6 +82,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  delete (window as { openfrontDesktop?: unknown }).openfrontDesktop;
 });
 
 describe("purchaseCosmetic: a past_due subscriber is sent to billing", () => {
@@ -123,6 +125,8 @@ describe("purchaseCosmetic: a past_due subscriber is sent to billing", () => {
 
   it("does not link out to billing from the desktop build", async () => {
     desktopMock.mockReturnValue(true);
+    // The Steam build. The Android app sells no subscription at all.
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = { steam: {} };
 
     await purchaseCosmetic(SOVEREIGN, "dollar");
 

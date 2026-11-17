@@ -479,6 +479,9 @@ export const PackSchema = CosmeticSchema.extend({
   currency: z.enum(["hard", "soft"]),
   amount: z.number().int().positive(),
   bonusAmount: z.number().int().nonnegative(),
+  // The Google Play product this pack is sold as in the Android app. Only
+  // hard-currency packs sold on Play carry one; the app lists no other pack.
+  googleProductId: z.string().optional(),
 });
 
 // One member of a cosmetic pack: a reference to a cosmetic elsewhere in the
