@@ -475,11 +475,24 @@ export class ReplayViewer extends LitElement {
       "game-settings",
     ) as UserSettingModal | null;
     if (gameSettings !== null) {
-      gameSettings.mapLayers = terrain.layers ?? [];
-      gameSettings.onLayerVisibilityChange = (id, visible) =>
+      const layers = terrain.layers ?? [];
+      const onVisibility = (id: string, visible: boolean) =>
         view.setLayerVisible(id, visible);
-      gameSettings.onLayerAlphaChange = (id, alpha) =>
+      const onAlpha = (id: string, alpha: number) =>
         view.setLayerAlpha(id, alpha);
+      gameSettings.mapLayers = layers;
+      gameSettings.onLayerVisibilityChange = onVisibility;
+      gameSettings.onLayerAlphaChange = onAlpha;
+      // On close, undo only what this viewer set (a game may have replaced it).
+      this.abort.signal.addEventListener("abort", () => {
+        if (gameSettings.mapLayers === layers) gameSettings.mapLayers = [];
+        if (gameSettings.onLayerVisibilityChange === onVisibility) {
+          gameSettings.onLayerVisibilityChange = null;
+        }
+        if (gameSettings.onLayerAlphaChange === onAlpha) {
+          gameSettings.onLayerAlphaChange = null;
+        }
+      });
     }
     appearance.attach(view);
     this.view = view;
