@@ -3,6 +3,7 @@ import { nothing, type LitElement } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../../src/client/ClientEnv";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
+import type { CurrencyDisplay } from "../../src/client/components/CurrencyDisplay";
 import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
 import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
 import {
@@ -1862,6 +1863,35 @@ describe("StoreModal on the Play rail", () => {
     expect(modal.querySelector("cosmetic-card")).toBeNull();
     expect(modal.querySelector("custom-currency-card")).toBeNull();
     expect(modal.querySelector("[data-store-play-unavailable]")).toBeTruthy();
+  });
+
+  // A purchase updates the balance by sending the account afresh, and every
+  // account the store receives also reloads the catalog, which asks Play for
+  // prices again. The header must not wait on Play.
+  it("shows a new balance while Play is still pricing the packs", async () => {
+    const play = installPlay({
+      status: "ok",
+      products: [{ productId: "plutonium_1000", formattedPrice: "€5,49" }],
+    });
+    const modal = await openPacks();
+    const account = (hard: number) =>
+      ({
+        player: { publicId: "p", flares: [], currency: { hard, soft: 0 } },
+      }) as never;
+    const balance = () =>
+      modal.querySelector<CurrencyDisplay>("currency-display")?.hard;
+    await modal.onUserMe(account(100));
+    await modal.updateComplete;
+    expect(balance()).toBe(100);
+
+    const asked = play.products.mock.calls.length;
+    play.products.mockReturnValue(new Promise(() => {}));
+    void modal.onUserMe(account(1_100));
+    await vi.waitFor(() =>
+      expect(play.products).toHaveBeenCalledTimes(asked + 1),
+    );
+    await modal.updateComplete;
+    expect(balance()).toBe(1_100);
   });
 
   it("sells no subscription, but still shows the one the player holds", async () => {
