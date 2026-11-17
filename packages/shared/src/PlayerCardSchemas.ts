@@ -51,9 +51,9 @@ export const UserMeCardSchema = z
         })
         .slice(0, MAX_CARD_TRACKERS),
     };
-    if (c.background != null) out.background = c.background;
-    if (c.title != null) out.title = c.title;
-    if (c.taunt != null) out.taunt = c.taunt;
+    if (c.background) out.background = c.background;
+    if (c.title) out.title = c.title;
+    if (c.taunt) out.taunt = c.taunt;
     return out;
   });
 
