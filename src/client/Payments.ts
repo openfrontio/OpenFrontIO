@@ -643,10 +643,11 @@ let playDrainAfterPurchase: string | null = null;
  */
 type PlayDrainAnswer = "settled" | "pending" | "wrong_account" | "refused";
 
-// The newest pass, the account it drains for, and its answers in order.
+// The newest pass, the account it drains for, and its answers in order (null
+// when Play could not list the unconsumed purchases).
 interface PlayDrainPass {
   account: string;
-  result: Promise<PlayDrainAnswer[]>;
+  result: Promise<PlayDrainAnswer[] | null>;
 }
 let playDrain: PlayDrainPass | null = null;
 
@@ -710,9 +711,16 @@ async function buyOnPlay(
       // left unconsumed, or every one settled (the server consumes what it
       // credits), means the product is free again, so Play's advice is to
       // buy it again. Once: a second already_owned is not drained again.
+      // A list Play could not give says neither, so it is not bought again.
       case "already_owned": {
         if (retried) return error(translateText("store.play_rebuy_too_soon"));
         const answers = await joinPlayDrain(request.accountId);
+        if (answers === null) {
+          return {
+            outcome: "pending",
+            message: translateText("store.play_earlier_purchase_pending"),
+          };
+        }
         const all = (...allowed: PlayDrainAnswer[]) =>
           answers.length > 0 && answers.every((a) => allowed.includes(a));
         if (all("wrong_account")) {
@@ -790,7 +798,7 @@ export function drainPlayPurchases(account: string): Promise<void> {
   return joinPlayDrain(account).then(() => undefined);
 }
 
-function joinPlayDrain(account: string): Promise<PlayDrainAnswer[]> {
+function joinPlayDrain(account: string): Promise<PlayDrainAnswer[] | null> {
   if (playDrain?.account === account) return playDrain.result;
   // The server checks each purchase against the account posting it, so a
   // pass for another account cannot answer for this one: a fresh pass runs
@@ -806,12 +814,12 @@ function joinPlayDrain(account: string): Promise<PlayDrainAnswer[]> {
   return pass.result;
 }
 
-async function runPlayDrain(): Promise<PlayDrainAnswer[]> {
+async function runPlayDrain(): Promise<PlayDrainAnswer[] | null> {
   const answers: PlayDrainAnswer[] = [];
   const billing = desktopPlayBilling();
-  if (billing === null) return answers;
+  if (billing === null) return null;
   const unconsumed = await billing.unconsumed();
-  if (unconsumed.status !== "ok") return answers;
+  if (unconsumed.status !== "ok") return null;
   for (const token of unconsumed.purchaseTokens) {
     const finalized = await finalizeGooglePurchase(token);
     if (finalized.ok) {

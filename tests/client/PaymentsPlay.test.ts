@@ -242,6 +242,25 @@ describe("startPlayPurchase", () => {
     expect(finalizeMock.mock.calls.map(([t]) => t)).toEqual(["tok-new"]);
   });
 
+  it.each(["unavailable", "failed"])(
+    "does not buy again on already_owned when Play cannot list purchases (%s)",
+    async (code) => {
+      const play = installPlay();
+      play.purchase.mockResolvedValue({
+        status: "error",
+        code: "already_owned",
+      });
+      play.unconsumed.mockResolvedValue({ status: "error", code });
+
+      expect(await startPlayPurchase("p1")).toEqual({
+        outcome: "pending",
+        message: "store.play_earlier_purchase_pending",
+      });
+      expect(play.purchase).toHaveBeenCalledTimes(1);
+      expect(finalizeMock).not.toHaveBeenCalled();
+    },
+  );
+
   it("buys again only once, and asks the player to wait if Play still says already_owned", async () => {
     const play = installPlay();
     play.purchase.mockResolvedValue({ status: "error", code: "already_owned" });
