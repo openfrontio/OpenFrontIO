@@ -298,6 +298,23 @@ describe("Clan fund card (Manage)", () => {
     expect(el.querySelectorAll("[data-transfer-id]")).toHaveLength(1);
   });
 
+  // Manage spaces its cards with space-y (a bottom margin), which an inline
+  // custom element ignores, so the card's host must be a block.
+  it("is a block while shown, so Manage's spacing applies, and takes no space when hidden", async () => {
+    const shown = await mount("leader");
+    expect(shown.style.display).toBe("block");
+    document.body.innerHTML = "";
+
+    fetchTransfers.mockResolvedValue({ error: "unavailable" });
+    define("clan-fund-card", ClanFundCard);
+    const hidden = document.createElement("clan-fund-card") as ClanFundCard;
+    hidden.clanTag = "TST";
+    hidden.myRole = "leader";
+    document.body.appendChild(hidden);
+    await flushAsync(hidden);
+    expect(hidden.style.display).toBe("none");
+  });
+
   it("gives the leader Send, and officers a note instead", async () => {
     const leader = await mount("leader");
     const sendBtn = leader.querySelector<HTMLButtonElement>(
