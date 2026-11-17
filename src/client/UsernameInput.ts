@@ -156,6 +156,9 @@ export class UsernameInput extends LitElement {
   // grace value itself only changes on account events, which a sitting client
   // never receives.
   private claimGraceTimer: ReturnType<typeof setTimeout> | null = null;
+  // The reminder the player closed, as its lapseNoticeMarker. Session-only and
+  // keyed on the phase, so it returns next launch or when the name goes at risk.
+  @state() private claimGraceDismissed: string | null = null;
 
   // Clans aren't supported on portals — hide the tag input and never submit one.
   private readonly onGamePortal = gamePortal.isOnGamePortal();
@@ -851,7 +854,9 @@ export class UsernameInput extends LitElement {
            countdown the player cannot recover once it lapses. Hiding the
            second behind the first put the time-critical one last. -->
       ${
-        this.validationError || this.clanTagOwnershipError || this.claimGrace
+        this.validationError ||
+        this.clanTagOwnershipError ||
+        this.claimGraceVisible()
           ? html`<div
               class="absolute top-full left-0 z-50 w-full sm:w-auto sm:max-w-[calc((100%-1rem)*2/3)] lg:group-has-[.streaming-live]/strip:max-w-full mt-1 flex flex-col gap-1 items-start"
             >
@@ -883,17 +888,37 @@ export class UsernameInput extends LitElement {
   // stacks under any validation error rather than replacing it — a player
   // mid-edit on an invalid name is exactly who still needs to know their
   // reserved name is expiring. Positioning lives on the shared wrapper.
+  private claimGraceVisible(): boolean {
+    const grace = this.claimGrace;
+    return (
+      grace !== null && lapseNoticeMarker(grace) !== this.claimGraceDismissed
+    );
+  }
+
   private renderClaimGrace() {
     const grace = this.claimGrace;
-    if (grace === null) return null;
+    if (grace === null || !this.claimGraceVisible()) return null;
     return html`<div
       id="username-claim-grace"
-      class="w-full sm:w-auto px-3 py-2 text-sm font-medium border border-amber-500/40 rounded-lg bg-amber-950/90 text-amber-200 backdrop-blur-md shadow-lg"
+      class="flex items-start gap-2 w-full sm:w-auto px-3 py-2 text-sm font-medium border border-amber-500/40 rounded-lg bg-amber-950/90 text-amber-200 backdrop-blur-md shadow-lg"
     >
-      ${translateText(
-        grace.atRisk ? "username.claim_at_risk" : "username.claim_reserved",
-        { name: grace.name, date: formatClaimDate(grace.expiresAt) },
-      )}
+      <span class="flex-1">
+        ${translateText(
+          grace.atRisk ? "username.claim_at_risk" : "username.claim_reserved",
+          { name: grace.name, date: formatClaimDate(grace.expiresAt) },
+        )}
+      </span>
+      <button
+        type="button"
+        id="username-claim-grace-close"
+        class="shrink-0 px-1 leading-none text-amber-200/70 hover:text-amber-100 cursor-pointer"
+        aria-label=${translateText("common.close")}
+        @click=${() => {
+          this.claimGraceDismissed = lapseNoticeMarker(grace);
+        }}
+      >
+        ✕
+      </button>
     </div>`;
   }
 
