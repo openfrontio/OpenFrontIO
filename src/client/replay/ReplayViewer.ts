@@ -470,6 +470,17 @@ export class ReplayViewer extends LitElement {
       terrainMapFileLoader,
       this.abort.signal,
     ).init();
+    // The game settings' layer controls, wired like GameRenderer does.
+    const gameSettings = document.getElementById(
+      "game-settings",
+    ) as UserSettingModal | null;
+    if (gameSettings !== null) {
+      gameSettings.mapLayers = terrain.layers ?? [];
+      gameSettings.onLayerVisibilityChange = (id, visible) =>
+        view.setLayerVisible(id, visible);
+      gameSettings.onLayerAlphaChange = (id, alpha) =>
+        view.setLayerAlpha(id, alpha);
+    }
     appearance.attach(view);
     this.view = view;
     this.addAppendedPlayers = () => appearance.addAppended(adapter);
