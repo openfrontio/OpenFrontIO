@@ -567,8 +567,10 @@
         <attacks-display
           class="w-full pointer-events-auto order-1 sm:order-none"
         ></attacks-display>
+        <!-- Full width below sm: in portrait it clears the unit bar fixed to
+             the right edge, which would otherwise cover its close button. -->
         <tutorial-panel
-          class="hidden w-full order-3 sm:order-none"
+          class="hidden w-full order-3 sm:order-none max-sm:side-bar:pr-11"
         ></tutorial-panel>
         <!-- The unit bar is a row below the control panel from lg up, a row
              above it on landscape phones, and a column fixed to the right edge
