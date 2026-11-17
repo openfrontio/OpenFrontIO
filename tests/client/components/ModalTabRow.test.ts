@@ -262,6 +262,22 @@ describe("o-modal backdrop click", () => {
     expect(modal.isModalOpen).toBe(true);
   });
 
+  it("does not close when a drag starts on the backdrop and ends inside the modal", async () => {
+    const modal = document.createElement("o-modal") as OModal;
+    document.body.appendChild(modal);
+    modal.open();
+    await modal.updateComplete;
+
+    const backdrop = modal.shadowRoot!.querySelector<HTMLElement>("aside")!;
+    const inner = backdrop.querySelector<HTMLElement>("div")!;
+    backdrop.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    inner.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    backdrop.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await modal.updateComplete;
+
+    expect(modal.isModalOpen).toBe(true);
+  });
+
   it("closes when mousedown and click both happen on the backdrop", async () => {
     const modal = document.createElement("o-modal") as OModal;
     document.body.appendChild(modal);
@@ -270,6 +286,7 @@ describe("o-modal backdrop click", () => {
 
     const backdrop = modal.shadowRoot!.querySelector<HTMLElement>("aside")!;
     backdrop.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    backdrop.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
     backdrop.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await modal.updateComplete;
 

@@ -56,6 +56,7 @@ export class OModal extends LitElement {
   private scrollingToTop = false;
   private lastScrollTop = 0;
   private backdropMouseDown = false;
+  private backdropMouseUp: boolean | null = null;
 
   public onClose?: () => void;
 
@@ -74,12 +75,23 @@ export class OModal extends LitElement {
 
   private handleBackdropMouseDown = (e: MouseEvent): void => {
     this.backdropMouseDown = e.target === e.currentTarget;
+    this.backdropMouseUp = null;
+  };
+
+  private handleBackdropMouseUp = (e: MouseEvent): void => {
+    this.backdropMouseUp = e.target === e.currentTarget;
   };
 
   private handleBackdropClick = (e: MouseEvent): void => {
     const startedOnBackdrop = this.backdropMouseDown;
+    const endedOnBackdrop = this.backdropMouseUp;
     this.backdropMouseDown = false;
-    if (startedOnBackdrop && e.target === e.currentTarget) {
+    this.backdropMouseUp = null;
+    if (
+      startedOnBackdrop &&
+      endedOnBackdrop !== false &&
+      e.target === e.currentTarget
+    ) {
       this.close();
     }
   };
@@ -87,6 +99,7 @@ export class OModal extends LitElement {
   public open() {
     if (!this.isModalOpen) {
       this.backdropMouseDown = false;
+      this.backdropMouseUp = null;
       if (!this.inline) {
         OModal.openCount = OModal.openCount + 1;
         if (OModal.openCount === 1) document.body.style.overflow = "hidden";
@@ -272,6 +285,7 @@ export class OModal extends LitElement {
       <aside
         class="${backdropClass}"
         @mousedown=${this.inline ? null : this.handleBackdropMouseDown}
+        @mouseup=${this.inline ? null : this.handleBackdropMouseUp}
         @click=${this.inline ? null : this.handleBackdropClick}
       >
         <div
