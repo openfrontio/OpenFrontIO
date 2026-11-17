@@ -21,17 +21,18 @@ import {
 } from "../../../client/Utils";
 import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
 import "../../components/CosmeticCard";
+import { saveTauntsMuted } from "../../CardLoadoutApi";
 import {
   buildPlayerCardView,
   type PlayerCardView,
 } from "../../components/card/PlayerCardModel";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
+import "./EndCardSection";
 import {
   ffaRatingGameOf,
   type FfaRatingGame,
   viewerHasFfaRating,
 } from "../../components/ffaRating/FfaRatingEligibility";
-import "./EndCardSection";
 import type { GameXpPanelState } from "../../components/GameXpPanel";
 import type { LegendCeremony } from "../../components/LegendCeremony";
 import { Controller } from "../../Controller";
@@ -42,10 +43,10 @@ import {
   resolveCosmetics,
 } from "../../Cosmetics";
 import { isDesktopShell } from "../../DesktopShell";
-import { gamePortal } from "../../GamePortal";
 import "../../components/ProfileShare";
 import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
+import { gamePortal } from "../../GamePortal";
 import { lobbyPublicGameType } from "../../LobbyPublicGameType";
 import { lobbyLevelBadge } from "../../LobbyRosterLevels";
 import type { MatchmakingMode } from "../../Matchmaking";
@@ -169,6 +170,13 @@ export class WinModal extends LitElement implements Controller {
   // Whether the viewer owns the card: "Edit my card" under a winner card.
   @state()
   private canEditCard = false;
+  // "Mute taunts": from /users/@me for a signed-in player (saved there when
+  // changed); for a guest, just for this screen.
+  @state()
+  private tauntsMuted = false;
+  private tauntsMutedRead = false;
+  @state()
+  private endCardTerritoryColor: string | null = null;
   private nemesisAbort: AbortController | null = null;
 
   // The queue to rejoin from "Play Again"; null when the game has none (an
@@ -256,7 +264,15 @@ export class WinModal extends LitElement implements Controller {
             .clan=${this.endCardClan}
             .nemesis=${this.nemesis}
             .canEdit=${this.canEditCard}
+            .tauntsMuted=${this.tauntsMuted}
+            .showKey=${
+              this.endCardMode === "none"
+                ? null
+                : `${this.game?.gameID() ?? ""}:${this.endCardMode}`
+            }
+            .territoryColor=${this.endCardTerritoryColor}
             @edit-card=${this.onEditCard}
+            @toggle-taunts=${this.onToggleTaunts}
           ></end-card-section>
           <game-xp-panel
             .view=${this.xpView}
@@ -792,7 +808,11 @@ export class WinModal extends LitElement implements Controller {
       return;
     }
     this.endCardView = view;
+    this.endCardTerritoryColor =
+      this.game.playerByClientID(card.clientID)?.territoryColor().toHex() ??
+      null;
     this.endCardMode = card.kind;
+    void this.readTauntsMuted();
     if (card.kind === "eliminatedBy") {
       const publicId = this.game.playerCardOf(card.clientID).card?.publicId;
       if (publicId !== undefined) void this.loadNemesis(publicId);
@@ -806,6 +826,18 @@ export class WinModal extends LitElement implements Controller {
     if (abort.signal.aborted || past === null) return;
     this.nemesis = nemesisLine(past);
   }
+
+  private async readTauntsMuted(): Promise<void> {
+    if (this.tauntsMutedRead) return;
+    this.tauntsMutedRead = true;
+    const me = await getUserMe();
+    if (me !== false) this.tauntsMuted = me.player.tauntsMuted ?? false;
+  }
+
+  private onToggleTaunts = (): void => {
+    this.tauntsMuted = !this.tauntsMuted;
+    void saveTauntsMuted(this.tauntsMuted);
+  };
 
   // The finished game is left for the Account page's My Card tab.
   private onEditCard = (): void => {

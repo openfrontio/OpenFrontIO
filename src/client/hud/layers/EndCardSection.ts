@@ -28,6 +28,11 @@ export class EndCardSection extends LitElement {
   @property({ attribute: false }) clan: EndCardClan | null = null;
   @property({ attribute: false }) nemesis: { count: number } | null = null;
   @property({ type: Boolean }) canEdit = false;
+  // The viewer's "Mute taunts" and the showing the card's taunt plays for.
+  @property({ type: Boolean }) tauntsMuted = false;
+  @property({ type: String }) showKey: string | null = null;
+  // The card owner's territory colour, for a territory-sweep taunt.
+  @property({ type: String }) territoryColor: string | null = null;
 
   createRenderRoot() {
     return this;
@@ -83,9 +88,40 @@ export class EndCardSection extends LitElement {
                 >`
               : nothing
           }
+          <button
+            type="button"
+            data-end-card-mute
+            class="grid h-7 w-7 place-items-center rounded-md bg-white/10 text-sm text-white/80 hover:bg-white/20"
+            aria-label=${translateText(
+              this.tauntsMuted
+                ? "win_modal.unmute_taunts"
+                : "win_modal.mute_taunts",
+            )}
+            title=${translateText(
+              this.tauntsMuted
+                ? "win_modal.unmute_taunts"
+                : "win_modal.mute_taunts",
+            )}
+            @click=${() =>
+              this.dispatchEvent(
+                new CustomEvent("toggle-taunts", {
+                  bubbles: true,
+                  composed: true,
+                }),
+              )}
+          >
+            ${this.tauntsMuted ? "🔇" : "🔈"}
+          </button>
         </div>
       </div>
-      <player-card .view=${this.view} size="end" animated></player-card>
+      <player-card
+        .view=${this.view}
+        size="end"
+        animated
+        .showKey=${this.showKey}
+        .tauntsMuted=${this.tauntsMuted}
+        .territoryColor=${this.territoryColor}
+      ></player-card>
       ${
         !eliminated && this.canEdit
           ? html`<div class="mt-1 text-right">

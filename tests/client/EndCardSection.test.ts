@@ -70,6 +70,33 @@ describe("<end-card-section>", () => {
     expect(seen).toHaveBeenCalledTimes(1);
   });
 
+  it("mute button toggles taunts and reaches the card", async () => {
+    await render({ mode: "eliminatedBy", view: VIEW, showKey: "g1:dead" });
+    const card = q("player-card") as unknown as {
+      tauntsMuted: boolean;
+      showKey: string | null;
+    };
+    expect(card.showKey).toBe("g1:dead");
+    expect(card.tauntsMuted).toBe(false);
+    const mute = q("[data-end-card-mute]") as HTMLButtonElement;
+    expect(mute.getAttribute("aria-label")).toBe("win_modal.mute_taunts");
+    const seen = vi.fn();
+    el.addEventListener("toggle-taunts", seen);
+    mute.click();
+    expect(seen).toHaveBeenCalledTimes(1);
+    el.tauntsMuted = true;
+    await el.updateComplete;
+    expect(card.tauntsMuted).toBe(true);
+    expect(
+      (q("[data-end-card-mute]") as HTMLElement).getAttribute("aria-label"),
+    ).toBe("win_modal.unmute_taunts");
+  });
+
+  it("the mute button shows on the winner screen too", async () => {
+    await render({ mode: "winner", view: VIEW });
+    expect(q("[data-end-card-mute]")).not.toBeNull();
+  });
+
   it("clan win shows the clan card", async () => {
     await render({
       mode: "clan",

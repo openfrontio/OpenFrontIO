@@ -3503,6 +3503,8 @@
     "eliminated_by": "Eliminated by",
     "nemesis": "Your nemesis · {n} times this week",
     "nemesis_short": "Nemesis ×{n}",
-    "edit_card": "Edit my card"
+    "edit_card": "Edit my card",
+    "mute_taunts": "Mute taunts",
+    "unmute_taunts": "Unmute taunts"
   }
 }
