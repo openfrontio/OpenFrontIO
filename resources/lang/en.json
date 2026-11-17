@@ -177,7 +177,9 @@
     "username_temporary_prompt_confirm": "Choose a name",
     "username_title": "Username",
     "viverse_account": "VIVERSE account",
-    "tab_my_card": "My Card"
+    "tab_my_card": "My Card",
+    "edit_card": "Edit card",
+    "get_card": "Get your player card"
   },
   "account_settings_modal": {
     "title": "Account Settings"

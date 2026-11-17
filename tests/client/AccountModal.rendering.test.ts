@@ -125,6 +125,62 @@ describe("AccountModal — rendering", () => {
     await modal.updateComplete;
   }
 
+  describe("the player card header", () => {
+    function withCard(owns: boolean): UserMeResponse {
+      const me = makeUserMe({ email: "a@b.c" });
+      me.player.username = "iamlewis";
+      me.player.flares = owns ? ["playerCard:standard"] : [];
+      me.player.progress = {
+        level: 80,
+        prestige: 2,
+        legend: false,
+        xp: 204,
+        xpInLevel: 204,
+        xpForNext: 690,
+      } as unknown as UserMeResponse["player"]["progress"];
+      me.player.card = owns ? { trackers: [] } : null;
+      return me;
+    }
+
+    it("account tab header is the player card for owners", async () => {
+      await setLoggedInUser(withCard(true));
+      expect(
+        modal.querySelector("[data-account-card-header] player-card"),
+      ).toBeTruthy();
+      expect(
+        modal.querySelector("[data-account-card-header] [data-xp-bar]"),
+      ).toBeTruthy();
+      expect(modal.querySelector("[data-account-edit-card]")).toBeTruthy();
+    });
+
+    it("non-owners keep the profile card header and a get-card link", async () => {
+      await setLoggedInUser(withCard(false));
+      expect(modal.querySelector("player-card")).toBeNull();
+      expect(modal.querySelector("profile-card")).toBeTruthy();
+      expect(modal.querySelector("[data-account-get-card]")).toBeTruthy();
+    });
+
+    it("edit card switches tab", async () => {
+      await setLoggedInUser(withCard(true));
+      const seen: unknown[] = [];
+      const open = vi
+        .spyOn(modal as unknown as { open(a?: unknown): void }, "open")
+        .mockImplementation((a?: unknown) => {
+          seen.push(a);
+        });
+      (modal.querySelector("[data-account-edit-card]") as HTMLElement).click();
+      expect(seen).toEqual([{ tab: "card" }]);
+      open.mockRestore();
+    });
+
+    it("connected accounts and the creator panel sit side by side", async () => {
+      await setLoggedInUser(withCard(true));
+      const panels = modal.querySelector("[data-account-panels]");
+      expect(panels).toBeTruthy();
+      expect(panels!.querySelector("creator-code-panel")).toBeTruthy();
+    });
+  });
+
   it("shows the Steam account (no link/login CTAs) for a Steam-primary user", async () => {
     const userMe = makeUserMe({
       steam: {

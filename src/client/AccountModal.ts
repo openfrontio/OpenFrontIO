@@ -4,9 +4,14 @@ import {
   PublicProgress,
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
-import "./components/card/MyCardTab";
 import { assetUrl } from "@openfront/shared/AssetUrls";
+import {
+  type Cosmetics,
+  ownsPlayerCard,
+} from "@openfront/shared/CosmeticSchemas";
 import { html, nothing, PropertyValues, TemplateResult } from "lit";
+import "./components/card/MyCardTab";
+import "./components/card/PlayerCard";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import {
@@ -25,36 +30,40 @@ import {
   steamLogin,
 } from "./Auth";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
+import { BaseModal } from "./components/BaseModal";
+import { buildPlayerCardView } from "./components/card/PlayerCardModel";
+import { xpBarTemplate } from "./components/card/ProfileIdentity";
+import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
-import { BaseModal } from "./components/BaseModal";
+import { ffaSummaryFromMe } from "./components/ffaRating/FfaRatingSummary";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import "./components/baseComponents/stats/SteamUserHeader";
-import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
+import type { PrestigeFlow } from "./components/PrestigeFlow";
 import "./components/CopyButton";
 import "./components/CreatorCodePanel";
-import { ffaSummaryFromMe } from "./components/ffaRating/FfaRatingSummary";
+import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
-import type { PrestigeFlow } from "./components/PrestigeFlow";
+import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import "./components/FriendsList";
-import type { RewardsChangedDetail } from "./components/RewardsPanel";
+import { modalHeader } from "./components/ui/ModalHeader";
 import "./components/ProfileCard";
 import "./components/ProfileProgression";
 import "./components/RewardsPanel";
-import { googleLinkButton } from "./components/ui/GoogleLinkButton";
-import { modalHeader } from "./components/ui/ModalHeader";
 import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
+import { fetchCosmetics } from "./Cosmetics";
 import { desktopLinkGate, isSteamShell } from "./DesktopShell";
 import { gamePortal, type PortalUser } from "./GamePortal";
 import { showInGameAlert } from "./InGameModal";
-import "./GameStatsModal";
 import { whenModalLoaded } from "./LazyModals";
+import "./GameStatsModal";
 import { consumeLinkResult } from "./LinkResult";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
-import "./PlayerProfileModal";
 import { loadPlayerProgress } from "./PlayerProgress";
+import "./PlayerProfileModal";
+import { levelFraction } from "./Progression";
 import {
   PROVISIONAL_PROGRESS_CHANGED,
   provisionalProgress,
@@ -365,33 +374,125 @@ export class AccountModal extends BaseModal {
     }
     return html`
       <div class="flex flex-col gap-6">
-        ${this.renderProfileCard("compact")}
-        <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-          <div class="flex flex-col items-center gap-4">
-            <div
-              class="text-xs text-white/40 uppercase tracking-widest font-bold border-b border-white/5 pb-2 px-8"
-            >
-              ${translateText("account_modal.connected_as")}
+        ${this.renderAccountHeader()}
+        <div
+          data-account-panels
+          class="grid gap-6 md:grid-cols-2 md:items-start"
+        >
+          <div class="flex flex-col gap-6">
+            <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+              <div class="flex flex-col items-center gap-4">
+                <div
+                  class="text-xs text-white/40 uppercase tracking-widest font-bold border-b border-white/5 pb-2 px-8"
+                >
+                  ${translateText("account_modal.connected_as")}
+                </div>
+                <div class="flex items-center gap-8 justify-center flex-wrap">
+                  <discord-user-header
+                    .data=${this.userMeResponse?.user?.discord ?? null}
+                  ></discord-user-header>
+                  ${
+                    this.userMeResponse?.user?.steam
+                      ? html`<steam-user-header
+                          .data=${this.userMeResponse.user.steam}
+                        ></steam-user-header>`
+                      : null
+                  }
+                  ${this.renderLoggedInAs()}
+                </div>
+              </div>
             </div>
-            <div class="flex items-center gap-8 justify-center flex-wrap">
-              <discord-user-header
-                .data=${this.userMeResponse?.user?.discord ?? null}
-              ></discord-user-header>
-              ${
-                this.userMeResponse?.user?.steam
-                  ? html`<steam-user-header
-                      .data=${this.userMeResponse.user.steam}
-                    ></steam-user-header>`
-                  : null
-              }
-              ${this.renderLoggedInAs()}
-            </div>
+            ${this.renderRewardsPanel()} ${this.renderDesktopLinkGateAction()}
           </div>
+          ${this.renderCreatorCodePanel()}
         </div>
-        ${this.renderRewardsPanel()} ${this.renderCreatorCodePanel()}
-        ${this.renderDesktopLinkGateAction()}
       </div>
     `;
+  }
+
+  // The page reads as the player's profile: their card for a card owner, with
+  // the XP bar under it and "Edit card"; otherwise the profile card as before,
+  // with a way to the card.
+  // The catalogue the card header resolves the equipped items from, read
+  // once per modal (the store's cache makes it cheap).
+  private cardCosmetics: Cosmetics | null = null;
+  private cardCosmeticsRequested = false;
+  private headerCosmetics(): Cosmetics | null {
+    if (!this.cardCosmeticsRequested) {
+      this.cardCosmeticsRequested = true;
+      void fetchCosmetics()
+        .then((c) => {
+          this.cardCosmetics = c;
+          this.requestUpdate();
+        })
+        .catch(() => {});
+    }
+    return this.cardCosmetics;
+  }
+
+  private renderAccountHeader(): TemplateResult | typeof nothing {
+    const player = this.userMeResponse?.player;
+    if (!player || !ownsPlayerCard(player.flares ?? [])) {
+      return html`<div class="flex flex-col gap-1.5">
+        ${this.renderProfileCard("compact")}
+        <button
+          type="button"
+          data-account-get-card
+          class="self-end text-xs font-bold text-sky-300 hover:underline"
+          @click=${() => this.open({ tab: "card" })}
+        >
+          ${translateText("account_modal.get_card")}
+        </button>
+      </div>`;
+    }
+    const progress = player.progress;
+    const view = buildPlayerCardView(
+      {
+        username: player.username ?? player.publicId ?? "",
+        clanTag: this.displayClanTag,
+        badge: progress
+          ? {
+              level: progress.level,
+              prestige: progress.prestige,
+              legend: progress.legend,
+            }
+          : null,
+        card: player.card ?? null,
+      },
+      this.headerCosmetics(),
+    );
+    const bar =
+      progress?.xpInLevel !== undefined && progress.xpForNext !== undefined
+        ? html`<div class="flex items-center gap-3 text-xs font-bold">
+            <span class="shrink-0 uppercase text-white/60"
+              >${translateText("progression.level", {
+                level: progress.level,
+              })}</span
+            >
+            ${xpBarTemplate(
+              progress.legend
+                ? 1
+                : levelFraction(progress.xpInLevel, progress.xpForNext),
+              true,
+            )}
+            <span class="shrink-0 tabular-nums text-white/60"
+              >${progress.xpInLevel.toLocaleString()} /
+              ${progress.xpForNext.toLocaleString()} XP</span
+            >
+          </div>`
+        : nothing;
+    return html`<div data-account-card-header class="flex flex-col gap-2">
+      <button
+        type="button"
+        data-account-edit-card
+        class="self-end text-xs font-bold text-sky-300 hover:underline"
+        @click=${() => this.open({ tab: "card" })}
+      >
+        ${translateText("account_modal.edit_card")}
+      </button>
+      <player-card size="account" .view=${view}></player-card>
+      ${bar}
+    </div>`;
   }
 
   // Re-entry to the desktop shell's account-linking gate shown at first

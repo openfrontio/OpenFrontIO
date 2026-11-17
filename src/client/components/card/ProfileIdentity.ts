@@ -48,6 +48,38 @@ export function levelLineTemplate(
   </div>`;
 }
 
+// Segments the XP bar is drawn in, as on the end-of-game screen.
+const BAR_SEGMENTS = 10;
+
+// The segmented XP bar. `fill` is 0–1.
+export function xpBarTemplate(fill: number, compact: boolean): TemplateResult {
+  return html`<div
+    data-xp-bar
+    class="relative w-full overflow-hidden rounded-sm bg-white/15 ${
+      compact ? "h-2" : "h-3"
+    }"
+    role="progressbar"
+    aria-valuemin="0"
+    aria-valuemax="100"
+    aria-valuenow=${Math.round(fill * 100)}
+  >
+    <div
+      data-xp-bar-fill
+      class="h-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.6)]"
+      style="width: ${fill * 100}%"
+    ></div>
+    ${Array.from(
+      { length: BAR_SEGMENTS - 1 },
+      (_, i) =>
+        html`<span
+          aria-hidden="true"
+          class="absolute top-0 h-full w-[2px] -translate-x-1/2 bg-[#0b1424]"
+          style="left: ${((i + 1) * 100) / BAR_SEGMENTS}%"
+        ></span>`,
+    )}
+  </div>`;
+}
+
 export function clanTemplate(
   clanTag: string | null,
   compact: boolean,

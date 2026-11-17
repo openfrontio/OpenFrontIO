@@ -16,6 +16,7 @@ import {
   clanTemplate,
   levelLineTemplate,
   nameTemplate,
+  xpBarTemplate,
 } from "./card/ProfileIdentity";
 import type { FfaRatingSummaryData } from "./ffaRating/FfaRatingSummary";
 import { levelBadgeAccent } from "./LevelBadge";
@@ -47,9 +48,6 @@ export interface ProfileCardProgress {
   // At level 100 with ranks left: the Prestige button shows on your own card.
   canPrestige?: boolean;
 }
-
-// Segments the XP bar is drawn in, as on the end-of-game screen.
-const BAR_SEGMENTS = 10;
 
 // The pulses' bands, as wide as their brightest part reaches past the ring.
 const BLUE_BAND = 90;
@@ -229,31 +227,7 @@ export class ProfileCard extends LitElement {
   }
 
   private renderBar(fill: number): TemplateResult {
-    return html`<div
-      data-xp-bar
-      class="relative w-full overflow-hidden rounded-sm bg-white/15 ${
-        this.compact ? "h-2" : "h-3"
-      }"
-      role="progressbar"
-      aria-valuemin="0"
-      aria-valuemax="100"
-      aria-valuenow=${Math.round(fill * 100)}
-    >
-      <div
-        data-xp-bar-fill
-        class="h-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.6)]"
-        style="width: ${fill * 100}%"
-      ></div>
-      ${Array.from(
-        { length: BAR_SEGMENTS - 1 },
-        (_, i) =>
-          html`<span
-            aria-hidden="true"
-            class="absolute top-0 h-full w-[2px] -translate-x-1/2 bg-[#0b1424]"
-            style="left: ${((i + 1) * 100) / BAR_SEGMENTS}%"
-          ></span>`,
-      )}
-    </div>`;
+    return xpBarTemplate(fill, this.compact);
   }
 
   // The XP bar, with the lifetime XP on the left under it (full only) and
