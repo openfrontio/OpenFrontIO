@@ -3477,6 +3477,10 @@
     "territory_pattern": "Purchase a territory skin to go ad-free!",
     "you_won": "You Won!",
     "your_team": "Your team won!",
-    "youtube_tutorial": "Need some help?"
+    "youtube_tutorial": "Need some help?",
+    "eliminated_by": "Eliminated by",
+    "nemesis": "Your nemesis · {n} times this week",
+    "nemesis_short": "Nemesis ×{n}",
+    "edit_card": "Edit my card"
   }
 }
