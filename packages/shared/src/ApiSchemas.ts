@@ -1695,6 +1695,8 @@ export const StorePlacementSubTabSchema = z.enum([
   "patterns",
   "flags",
   "crowns",
+  // Player card items.
+  "card",
 ]);
 export type StorePlacementSubTab = z.infer<typeof StorePlacementSubTabSchema>;
 
