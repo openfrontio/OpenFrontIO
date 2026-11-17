@@ -3,13 +3,6 @@ import { translateText } from "./Utils";
 
 export type TabAttentionKind = "starting" | "spawn";
 
-/**
- * Identifies who asked for attention (one per lobby). Only the current owner
- * can release it, so a lobby that was left, or superseded by a newer one, can
- * never clear the flash the newer lobby is showing.
- */
-export type TabAttentionOwner = object;
-
 // Two full blinks per second: alert<->normal flips every 250 ms (500 ms per cycle).
 const FLASH_INTERVAL_MS = 250;
 // A safety net: if the game never reaches (or never leaves) the spawn phase,
@@ -36,9 +29,6 @@ const ALERT_ICON_SVG_HREF =
  */
 export class TabAttention {
   private kind: TabAttentionKind | null = null;
-  // Who holds the current request. Kept after a timeout so the owner can still
-  // release the expired need, and replaced when another owner asks.
-  private owner: TabAttentionOwner | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private startedAt = 0;
   private alertShown = false;
@@ -63,23 +53,11 @@ export class TabAttention {
    */
   constructor(private readonly isEnabled: () => boolean = () => true) {}
 
-  /**
-   * Ask for the player's attention. Safe to call repeatedly. A request from a
-   * different owner takes over: it is a new need, so it never inherits the
-   * previous owner's kind, deadline or expiry.
-   */
-  request(
-    kind: TabAttentionKind,
-    owner: TabAttentionOwner | null = null,
-  ): void {
+  /** Ask for the player's attention. Safe to call repeatedly. */
+  request(kind: TabAttentionKind): void {
     if (!this.isEnabled()) {
       this.release();
       return;
-    }
-    if (owner !== this.owner) {
-      this.owner = owner;
-      this.expiredKind = null;
-      this.kind = null;
     }
     if (kind === this.expiredKind) return;
     // A different need gets its own full run, rather than inheriting whatever
@@ -92,15 +70,9 @@ export class TabAttention {
     this.sync();
   }
 
-  /**
-   * The player no longer needs to be alerted. Safe to call repeatedly. With an
-   * owner, this only acts if that owner still holds the request; without one it
-   * always releases (used when the setting is turned off).
-   */
-  release(owner?: TabAttentionOwner): void {
-    if (owner !== undefined && owner !== this.owner) return;
+  /** The player no longer needs to be alerted. Safe to call repeatedly. */
+  release(): void {
     this.expiredKind = null;
-    this.owner = null;
     if (this.kind === null) return;
     this.kind = null;
     this.sync();

@@ -2068,15 +2068,6 @@ export class UserSettingModal extends BaseModal {
         }}
       ></setting-select>
 
-      <!-- 🔔 Tab Attention -->
-      <setting-toggle
-        label="${translateText("user_setting.tab_attention_label")}"
-        description="${translateText("user_setting.tab_attention_desc")}"
-        id="tab-attention-toggle"
-        .checked=${this.userSettings.tabAttention()}
-        @change=${this.toggleTabAttention}
-      ></setting-toggle>
-
       <!-- 🙈 Anonymous Names -->
       <setting-toggle
         label="${translateText("user_setting.anonymous_names_label")}"
@@ -2102,6 +2093,15 @@ export class UserSettingModal extends BaseModal {
         id="lobby-start-alerts-toggle"
         .checked=${this.userSettings.lobbyStartAlerts()}
         @change=${this.toggleLobbyStartAlerts}
+      ></setting-toggle>
+
+      <!-- 🔔 Tab Attention -->
+      <setting-toggle
+        label="${translateText("user_setting.tab_attention_label")}"
+        description="${translateText("user_setting.tab_attention_desc")}"
+        id="tab-attention-toggle"
+        .checked=${this.userSettings.tabAttention()}
+        @change=${this.toggleTabAttention}
       ></setting-toggle>
 
       <!-- 🎬 New replay viewer (on by default) -->

@@ -73,7 +73,7 @@ import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { versionedPathForMismatchedGame } from "./ServerList";
 import { audioMixer, initAudioMixer } from "./sound/AudioMixer";
 import { SoundManager } from "./sound/SoundManager";
-import { tabAttention, type TabAttentionOwner } from "./TabAttention";
+import { tabAttention } from "./TabAttention";
 import { reportGameError } from "./Telemetry";
 import {
   loadCachedTerrainMap,
@@ -127,10 +127,6 @@ export interface LobbyConfig {
   // Host only: the play token the lobby was created under, used for the
   // first join so the host joins as the creator (see createLobby).
   creatorToken?: string;
-  // Who owns this lobby's tab flash. Main passes the same token to
-  // tabAttention.request("starting"), so leaving this lobby only ever clears
-  // its own flash, never a newer lobby's.
-  tabAttentionOwner?: TabAttentionOwner;
 }
 
 export interface JoinLobbyResult {
@@ -146,9 +142,6 @@ export function joinLobby(
   // Mutable clientID state — assigned by server (multiplayer) or derived from gameStartInfo (singleplayer)
   let clientID: ClientID | undefined;
 
-  // Tab-flash ownership for this lobby; see LobbyConfig.tabAttentionOwner.
-  const attentionOwner: TabAttentionOwner = lobbyConfig.tabAttentionOwner ?? {};
-  lobbyConfig.tabAttentionOwner = attentionOwner;
   let resolvePrestart: () => void;
   let resolveJoin: () => void;
   const prestartPromise = new Promise<void>((r) => (resolvePrestart = r));
@@ -166,6 +159,10 @@ export function joinLobby(
   // Set once this lobby has been left, so a load that was still pending
   // doesn't start a runner for it.
   let lobbyStopped = false;
+  // Set once the game starts prestarting. Main only asks for the "starting"
+  // tab flash from that point, so a handle that never got here has nothing to
+  // release (e.g. a join that was superseded while it waited for its token).
+  let prestarted = false;
 
   const onconnect = async () => {
     // Drop the tag if the ownership check failed; the server re-checks anyway.
@@ -287,10 +284,12 @@ export function joinLobby(
         `lobby: game prestarting: ${JSON.stringify(message, replacer)}`,
       );
       void requestTerrainLoad(message.gameMap, message.gameMapSize);
+      prestarted = true;
       resolvePrestart();
     }
     if (message.type === "start") {
       // Trigger prestart for singleplayer games
+      prestarted = true;
       resolvePrestart();
       // Everything in the start message EXCEPT the group token. This log is
       // the whole message verbatim and players paste it into bug reports;
@@ -320,8 +319,9 @@ export function joinLobby(
         .then((r) => {
           if (lobbyStopped) {
             // The lobby was left while this was loading. Dispose the runner
-            // without starting it; its release only touches this lobby's flash.
-            r.stop();
+            // without starting it, and leave the tab flash alone: it may
+            // belong to a newer lobby by now.
+            r.stop(false);
             return;
           }
           currentGameRunner = r;
@@ -331,8 +331,9 @@ export function joinLobby(
           console.error("error creating client game", e);
 
           currentGameRunner = null;
-          // The game never started, so stop this lobby's "starting" tab flash.
-          tabAttention.release(attentionOwner);
+          // The game never started, so stop the "starting" tab flash, unless
+          // the lobby was already left and the flash may be a newer lobby's.
+          if (!lobbyStopped) tabAttention.release();
 
           const startingModal = document.querySelector(
             "game-starting-modal",
@@ -476,9 +477,9 @@ export function joinLobby(
         currentGameRunner.stop();
         currentGameRunner = null;
       } else {
-        // No runner yet to release the flash. Only this lobby's own flash is
-        // cleared: a no-op if it never asked, or if a newer lobby has since.
-        tabAttention.release(attentionOwner);
+        // No runner yet to release the flash. Only release if this lobby got
+        // as far as asking for one; a handle that never prestarted has none.
+        if (prestarted) tabAttention.release();
         transport.leaveGame();
       }
       return true;
@@ -1318,29 +1319,24 @@ export class ClientGameRunner {
       !config.isRandomSpawn() &&
       !config.isReplay() &&
       !config.isIntentionalSpectator();
-    const owner = this.attentionOwner();
     if (!canPickSpawn) {
-      tabAttention.release(owner);
+      tabAttention.release();
       return;
     }
     const me = this.gameView.myPlayer();
     // Before the player shows up in the view, leave any "starting" flash alone.
     if (me === null) return;
     if (me.hasSpawned()) {
-      tabAttention.release(owner);
+      tabAttention.release();
     } else {
-      tabAttention.request("spawn", owner);
+      tabAttention.request("spawn");
     }
   }
 
-  // The lobby's own token (set by joinLobby), so this runner only ever starts
-  // or clears its own lobby's flash.
-  private attentionOwner(): TabAttentionOwner {
-    return (this.lobby.tabAttentionOwner ??= {});
-  }
-
-  public stop() {
-    tabAttention.release(this.attentionOwner());
+  // releaseTabAttention is false when disposing a runner for a lobby that was
+  // already left: its flash (if any) isn't this runner's to clear anymore.
+  public stop(releaseTabAttention: boolean = true) {
+    if (releaseTabAttention) tabAttention.release();
     if (this.healthTimer !== null) clearInterval(this.healthTimer);
     this.healthTimer = null;
     document.removeEventListener("visibilitychange", this.updateHealth);
