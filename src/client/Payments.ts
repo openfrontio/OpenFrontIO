@@ -12,7 +12,11 @@ import {
   type PaymentsCheckoutRequest,
   type PaymentsCheckoutResult,
 } from "./Api";
-import { desktopPlayBilling, isDesktopShell } from "./DesktopShell";
+import {
+  desktopPlayBilling,
+  isDesktopShell,
+  type PlayBilling,
+} from "./DesktopShell";
 import { showToast, translateText } from "./Utils";
 
 export type { PaymentsProvider };
@@ -667,78 +671,100 @@ export async function startPlayPurchase(
     const userMe = await getUserMe();
     if (userMe === false) return error(translateText("store.login_required"));
 
-    const purchase = await billing.purchase({
-      productId,
-      accountId: userMe.player.publicId,
-    });
-    if (purchase.status === "cancelled") {
-      return { outcome: "cancelled", quiet: true };
-    }
-    if (purchase.status === "error") {
-      switch (purchase.code) {
-        // Play is already showing a purchase.
-        case "busy":
-          return { outcome: "cancelled", quiet: true };
-        // An earlier purchase of this product was never consumed, so the
-        // server has not credited it yet. Posting it is what credits it.
-        // With no product ids to tell them apart, only an answer every
-        // unconsumed purchase got is about this one.
-        case "already_owned": {
-          const answers = await joinPlayDrain(userMe.player.publicId);
-          const all = (...allowed: PlayDrainAnswer[]) =>
-            answers.length > 0 && answers.every((a) => allowed.includes(a));
-          if (all("settled")) return { outcome: "completed" };
-          if (all("wrong_account")) {
-            return error(translateText("store.play_wrong_account"));
-          }
-          if (all("wrong_account", "refused")) {
-            return error(translateText("store.play_purchase_refused"));
-          }
-          return {
-            outcome: "pending",
-            message: translateText("store.play_earlier_purchase_pending"),
-          };
-        }
-        case "unavailable":
-          return error(translateText("store.play_unavailable"));
-        case "failed":
-          return error(translateText("store.purchase_failed"));
-      }
-    }
-
-    const finalized = await finalizeGooglePurchase(purchase.purchaseToken);
-    if (finalized.ok) {
-      return finalized.status === "settled"
-        ? { outcome: "completed" }
-        : {
-            outcome: "pending",
-            message: translateText("store.play_purchase_pending"),
-          };
-    }
-    switch (finalized.code) {
-      case "refused":
-        return error(
-          translateText(
-            finalized.reason === "wrong_account"
-              ? "store.play_wrong_account"
-              : "store.play_purchase_refused",
-          ),
-        );
-      case "failed":
-        return error(translateText("store.play_purchase_refused"));
-      // Nothing is lost: the purchase stays unconsumed and the next drain
-      // posts it again.
-      case "rate_limited":
-      case "unauthorized":
-      case "retry_later":
-        return {
-          outcome: "pending",
-          message: translateText("store.play_purchase_retry"),
-        };
-    }
+    return await buyOnPlay(
+      billing,
+      { productId, accountId: userMe.player.publicId },
+      false,
+    );
   } finally {
     playPurchaseInFlight = false;
     drainAfterPurchase();
+  }
+}
+
+/**
+ * Opens Play's dialog and settles what it returns. `retried` marks the second
+ * dialog an already_owned answer can open; it never opens a third.
+ */
+async function buyOnPlay(
+  billing: PlayBilling,
+  request: Parameters<PlayBilling["purchase"]>[0],
+  retried: boolean,
+): Promise<PurchaseOutcome> {
+  const purchase = await billing.purchase(request);
+  if (purchase.status === "cancelled") {
+    return { outcome: "cancelled", quiet: true };
+  }
+  if (purchase.status === "error") {
+    switch (purchase.code) {
+      // Play is already showing a purchase.
+      case "busy":
+        return { outcome: "cancelled", quiet: true };
+      // An earlier purchase of this product was never consumed, so the
+      // server has not credited it yet. Posting it is what credits it.
+      // With no product ids to tell them apart, only an answer every
+      // unconsumed purchase got is about this one.
+      //
+      // Or Play's cache is stale: it can still list a purchase the server
+      // has just consumed, and this error is what refreshes it. Nothing
+      // left unconsumed, or every one settled (the server consumes what it
+      // credits), means the product is free again, so Play's advice is to
+      // buy it again. Once: a second already_owned is not drained again.
+      case "already_owned": {
+        if (retried) return error(translateText("store.play_rebuy_too_soon"));
+        const answers = await joinPlayDrain(request.accountId);
+        const all = (...allowed: PlayDrainAnswer[]) =>
+          answers.length > 0 && answers.every((a) => allowed.includes(a));
+        if (all("wrong_account")) {
+          return error(translateText("store.play_wrong_account"));
+        }
+        if (all("wrong_account", "refused")) {
+          return error(translateText("store.play_purchase_refused"));
+        }
+        if (answers.length === 0 || all("settled")) {
+          return buyOnPlay(billing, request, true);
+        }
+        return {
+          outcome: "pending",
+          message: translateText("store.play_earlier_purchase_pending"),
+        };
+      }
+      case "unavailable":
+        return error(translateText("store.play_unavailable"));
+      case "failed":
+        return error(translateText("store.purchase_failed"));
+    }
+  }
+
+  const finalized = await finalizeGooglePurchase(purchase.purchaseToken);
+  if (finalized.ok) {
+    return finalized.status === "settled"
+      ? { outcome: "completed" }
+      : {
+          outcome: "pending",
+          message: translateText("store.play_purchase_pending"),
+        };
+  }
+  switch (finalized.code) {
+    case "refused":
+      return error(
+        translateText(
+          finalized.reason === "wrong_account"
+            ? "store.play_wrong_account"
+            : "store.play_purchase_refused",
+        ),
+      );
+    case "failed":
+      return error(translateText("store.play_purchase_refused"));
+    // Nothing is lost: the purchase stays unconsumed and the next drain
+    // posts it again.
+    case "rate_limited":
+    case "unauthorized":
+    case "retry_later":
+      return {
+        outcome: "pending",
+        message: translateText("store.play_purchase_retry"),
+      };
   }
 }
 

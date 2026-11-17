@@ -202,9 +202,12 @@ describe("startPlayPurchase", () => {
     });
   });
 
-  it("posts the earlier purchase on already_owned, and completes once it settles", async () => {
+  it("posts the earlier purchase on already_owned, then buys again once it settles", async () => {
     const play = installPlay();
-    play.purchase.mockResolvedValue({ status: "error", code: "already_owned" });
+    play.purchase.mockResolvedValueOnce({
+      status: "error",
+      code: "already_owned",
+    });
     play.unconsumed.mockResolvedValue({
       status: "ok",
       purchaseTokens: ["tok-old"],
@@ -212,8 +215,94 @@ describe("startPlayPurchase", () => {
     finalizeMock.mockResolvedValue({ ok: true, status: "settled" });
 
     expect(await startPlayPurchase("p1")).toEqual({ outcome: "completed" });
-    expect(finalizeMock).toHaveBeenCalledWith("tok-old");
+    expect(play.purchase).toHaveBeenCalledTimes(2);
+    expect(play.purchase).toHaveBeenNthCalledWith(2, {
+      productId: "p1",
+      accountId: "pub-1",
+    });
+    expect(finalizeMock.mock.calls.map(([t]) => t)).toEqual([
+      "tok-old",
+      "tok-new",
+    ]);
     expect(refresh).toHaveBeenCalledTimes(1);
+  });
+
+  // Play's cache can still list a purchase the server has just consumed.
+  it("buys again on already_owned when nothing is unconsumed", async () => {
+    const play = installPlay();
+    play.purchase.mockResolvedValueOnce({
+      status: "error",
+      code: "already_owned",
+    });
+    finalizeMock.mockResolvedValue({ ok: true, status: "settled" });
+
+    expect(await startPlayPurchase("p1")).toEqual({ outcome: "completed" });
+    expect(play.purchase).toHaveBeenCalledTimes(2);
+    expect(play.unconsumed).toHaveBeenCalledTimes(1);
+    expect(finalizeMock.mock.calls.map(([t]) => t)).toEqual(["tok-new"]);
+  });
+
+  it("buys again only once, and asks the player to wait if Play still says already_owned", async () => {
+    const play = installPlay();
+    play.purchase.mockResolvedValue({ status: "error", code: "already_owned" });
+
+    expect(await startPlayPurchase("p1")).toMatchObject({
+      outcome: "error",
+      message: "store.play_rebuy_too_soon",
+    });
+    expect(play.purchase).toHaveBeenCalledTimes(2);
+    expect(play.unconsumed).toHaveBeenCalledTimes(1);
+    expect(finalizeMock).not.toHaveBeenCalled();
+  });
+
+  it.each<[unknown, unknown]>([
+    [{ status: "cancelled" }, { outcome: "cancelled", quiet: true }],
+    [
+      { status: "error", code: "busy" },
+      { outcome: "cancelled", quiet: true },
+    ],
+    [
+      { status: "error", code: "unavailable" },
+      { outcome: "error", message: "store.play_unavailable" },
+    ],
+    [
+      { status: "error", code: "failed" },
+      { outcome: "error", message: "store.purchase_failed" },
+    ],
+  ])("settles a second purchase %j like a first", async (second, expected) => {
+    const play = installPlay();
+    play.purchase
+      .mockResolvedValueOnce({ status: "error", code: "already_owned" })
+      .mockResolvedValueOnce(second);
+
+    expect(await startPlayPurchase("p1")).toMatchObject(
+      expected as Record<string, unknown>,
+    );
+    expect(finalizeMock).not.toHaveBeenCalled();
+  });
+
+  it("holds the purchase lock while it buys again", async () => {
+    const play = installPlay();
+    const held = deferred<unknown>();
+    play.purchase
+      .mockResolvedValueOnce({ status: "error", code: "already_owned" })
+      .mockReturnValueOnce(held.promise);
+    finalizeMock.mockResolvedValue({ ok: true, status: "settled" });
+
+    const first = startPlayPurchase("p1");
+    await vi.waitFor(() => expect(play.purchase).toHaveBeenCalledTimes(2));
+    expect(await startPlayPurchase("p2")).toEqual({
+      outcome: "cancelled",
+      quiet: true,
+    });
+    await drainPlayPurchases("pub-1");
+    expect(play.unconsumed).toHaveBeenCalledTimes(1);
+
+    held.resolve({ status: "ok", purchaseToken: "tok-new" });
+    expect(await first).toEqual({ outcome: "completed" });
+    expect(play.purchase).toHaveBeenCalledTimes(2);
+    // The drain asked for meanwhile runs once the purchase is done.
+    await vi.waitFor(() => expect(play.unconsumed).toHaveBeenCalledTimes(2));
   });
 
   it.each<[string, FinalizeGooglePurchaseResult[], unknown]>([
@@ -272,7 +361,7 @@ describe("startPlayPurchase", () => {
       { outcome: "error", message: "store.play_purchase_refused" },
     ],
   ])(
-    "on already_owned, says so when the earlier purchase %s",
+    "on already_owned, says so without buying again when the earlier purchase %s",
     async (_label, results, expected) => {
       const play = installPlay();
       play.purchase.mockResolvedValue({
@@ -289,6 +378,7 @@ describe("startPlayPurchase", () => {
         expected as Record<string, unknown>,
       );
       expect(finalizeMock).toHaveBeenCalledTimes(results.length);
+      expect(play.purchase).toHaveBeenCalledTimes(1);
     },
   );
 

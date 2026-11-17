@@ -3000,6 +3000,7 @@
     "play_purchase_pending": "Your purchase is pending. Your Plutonium will be added once Google Play completes the payment.",
     "play_purchase_refused": "We couldn't complete this purchase.",
     "play_purchase_retry": "Your purchase is safe. Your Plutonium will be added automatically the next time you open the game.",
+    "play_rebuy_too_soon": "Your last purchase is still finishing. Please try again in a minute.",
     "play_unavailable": "Google Play purchases aren't available right now. Please try again later.",
     "play_wrong_account": "This purchase was made for a different OpenFront account. Sign in to that account to receive it.",
     "plutonium_amount": "Plutonium amount",
