@@ -59,6 +59,8 @@ import {
 import type { TransformHandler } from "../TransformHandler";
 import { GoToPlayerEvent } from "../TransformHandler";
 import { PauseGameIntentEvent } from "../Transport";
+// Defines #game-settings before start() wires its map layers.
+import "../UserSettingModal";
 import type { UserSettingModal } from "../UserSettingModal";
 import {
   GRAPHICS_KEY,
@@ -470,6 +472,30 @@ export class ReplayViewer extends LitElement {
       terrainMapFileLoader,
       this.abort.signal,
     ).init();
+    // The game settings' layer controls, wired like GameRenderer does.
+    const gameSettings = document.getElementById(
+      "game-settings",
+    ) as UserSettingModal | null;
+    if (gameSettings !== null) {
+      const layers = terrain.layers ?? [];
+      const onVisibility = (id: string, visible: boolean) =>
+        view.setLayerVisible(id, visible);
+      const onAlpha = (id: string, alpha: number) =>
+        view.setLayerAlpha(id, alpha);
+      gameSettings.mapLayers = layers;
+      gameSettings.onLayerVisibilityChange = onVisibility;
+      gameSettings.onLayerAlphaChange = onAlpha;
+      // On close, undo only what this viewer set (a game may have replaced it).
+      this.abort.signal.addEventListener("abort", () => {
+        if (gameSettings.mapLayers === layers) gameSettings.mapLayers = [];
+        if (gameSettings.onLayerVisibilityChange === onVisibility) {
+          gameSettings.onLayerVisibilityChange = null;
+        }
+        if (gameSettings.onLayerAlphaChange === onAlpha) {
+          gameSettings.onLayerAlphaChange = null;
+        }
+      });
+    }
     appearance.attach(view);
     this.view = view;
     this.addAppendedPlayers = () => appearance.addAppended(adapter);

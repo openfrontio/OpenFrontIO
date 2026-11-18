@@ -112,13 +112,14 @@ export class UserSettingModal extends BaseModal {
 
   // ---- Graphics: the running game's map layers ----
   //
-  // Also set on the in-game instance by GameRenderer. Every other graphics
-  // option is stored under one settings key that ClientGameRunner watches, so
-  // a running game follows it with no reference here; map layers are the
-  // exception. Their control set comes from the current map, and the renderer
-  // does not re-read their visibility or alpha from settings after startup —
-  // so the layer rows exist only where a game hands them over, and every
-  // change to the graphics key re-pushes them through these callbacks.
+  // Also set on the in-game instance by GameRenderer and the replay viewer.
+  // Every other graphics option is stored under one settings key that
+  // ClientGameRunner watches, so a running game follows it with no reference
+  // here; map layers are the exception. Their control set comes from the
+  // current map, and the renderer does not re-read their visibility or alpha
+  // from settings after startup — so the layer rows exist only where a game
+  // hands them over, and every change to the graphics key re-pushes them
+  // through these callbacks.
 
   /** Map layers for the current game. Empty on the page instance. */
   public mapLayers: MapLayer[] = [];
