@@ -289,6 +289,8 @@ export class StoreModal extends BaseModal {
   private rowObserver: ResizeObserver | null = null;
   /** Fires when the soonest running sale ends, to refetch its prices. */
   private saleEndTimer: ReturnType<typeof setTimeout> | null = null;
+  /** When saleEndTimer is due. */
+  private saleEndAt = 0;
   /** Fires when the soonest new item stops being new, to drop its badge. */
   private newEndTimer: ReturnType<typeof setTimeout> | null = null;
   /** When newEndTimer is due. */
@@ -1096,6 +1098,9 @@ export class StoreModal extends BaseModal {
    * the open store. Rescheduled on every render; cleared on close.
    */
   private scheduleSaleEnd(sales: readonly { endsAt: string }[]): void {
+    // A redraw after the sale ended, before its timer ran, sees no running
+    // sale; cancelling the timer then would lose the refetch.
+    if (this.saleEndTimer !== null && this.saleEndAt <= Date.now()) return;
     if (this.saleEndTimer !== null) clearTimeout(this.saleEndTimer);
     this.saleEndTimer = null;
     if (sales.length === 0 || !this.isModalOpen) return;
@@ -1103,6 +1108,7 @@ export class StoreModal extends BaseModal {
     // setTimeout overflows past ~24.8 days; a later end is rescheduled by a
     // later render.
     const delay = Math.min(Math.max(nextEnd - Date.now(), 0), 2 ** 31 - 1);
+    this.saleEndAt = Date.now() + delay;
     this.saleEndTimer = setTimeout(() => {
       this.saleEndTimer = null;
       void this.refetchAfterSaleEnd(0);

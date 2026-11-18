@@ -615,6 +615,40 @@ describe("StoreModal cosmetic browser", () => {
     }
   });
 
+  it("still refetches when the store redraws after a sale ends, before its timer runs", async () => {
+    const running = {
+      patterns: {},
+      flags: {},
+      promotions: [
+        {
+          id: "1",
+          name: "Flash",
+          percentOff: 10,
+          endsAt: new Date(Date.now() + 60_000).toISOString(),
+        },
+      ],
+    } as unknown as Cosmetics;
+    vi.mocked(fetchCosmetics).mockResolvedValue(running);
+    const modal = await openStoreOnCosmetic("patterns");
+    vi.useFakeTimers({ now: Date.now() });
+    try {
+      // Arms the sale-end timer on the fake clock.
+      modal.requestUpdate();
+      await modal.updateComplete;
+      vi.setSystemTime(Date.now() + 61_000);
+      modal.requestUpdate();
+      await modal.updateComplete;
+      vi.mocked(fetchCosmetics).mockClear();
+      vi.mocked(fetchCosmetics).mockResolvedValue({
+        promotions: [],
+      } as unknown as Cosmetics);
+      vi.runOnlyPendingTimers();
+      expect(fetchCosmetics).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("refetches on reopen when the kept catalog still has an ended sale", async () => {
     const ended = {
       patterns: {},
@@ -1116,8 +1150,18 @@ describe("StoreModal cosmetic browser", () => {
           modal as unknown as { selectVisible(groups: unknown): void },
           "selectVisible",
         );
+        const cardsDone = () =>
+          Promise.all(
+            [...modal.querySelectorAll<CosmeticCard>("cosmetic-card")].map(
+              (c) => c.updateComplete,
+            ),
+          );
+        await cardsDone();
+        expect(modal.querySelector("[data-cosmetic-new]")).toBeTruthy();
         vi.advanceTimersByTime(61_000);
         await modal.updateComplete;
+        await cardsDone();
+        expect(modal.querySelector("[data-cosmetic-new]")).toBeNull();
         expect(select).not.toHaveBeenCalled();
       } finally {
         vi.useRealTimers();
