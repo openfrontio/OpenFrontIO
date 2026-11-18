@@ -1721,7 +1721,7 @@ export const maps: readonly MapInfo[] = [
       { name: "Highland Park", coordinates: [1375, 617] },
       { name: "Echo Park", coordinates: [1211, 662] },
       { name: "Koreatown", coordinates: [1174, 699] },
-      { name: "DTLA", coordinates: [1281, 736] },
+      { name: "Skid Row", coordinates: [1281, 736] },
       { name: "Vernon", coordinates: [1281, 834] },
       { name: "Huntington Park", coordinates: [1317, 871] },
       { name: "South Gate", coordinates: [1311, 927] },
