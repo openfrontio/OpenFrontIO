@@ -2166,7 +2166,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.qingchina",
     categories: ["asia", "countries"],
     defaultNationCount: 32,
-    themes: ["asia"],
+    themes: ["china"],
     author: "crunchybbb",
     descriptionKey: "map_description.qingchina",
     location: { lat: 40, lon: 98 },
