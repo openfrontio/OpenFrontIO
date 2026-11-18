@@ -833,7 +833,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.china",
     categories: ["countries", "asia"],
     defaultNationCount: 34,
-    themes: ["asia"],
+    themes: ["china"],
     author: "crunchybbb",
     descriptionKey: "map_description.china",
     location: { lat: 33, lon: 105 },
@@ -2576,6 +2576,7 @@ export const maps: readonly MapInfo[] = [
       { name: "Kakhovka", coordinates: [1288, 989] },
       { name: "Drohobych", coordinates: [179, 565] },
     ],
+    author: "n1cksyy, Tristar",
     location: { lat: 49, lon: 31 },
   },
   {

@@ -6,6 +6,7 @@
   "categories": ["europe", "countries", "new"],
   "location": { "lat": 49, "lon": 31 },
   "themes": ["ukraine"],
+  "author": "n1cksyy, Tristar",
   "custom_tribes": [
     {
       "name": "Znamianka",
