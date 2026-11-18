@@ -574,9 +574,19 @@ export class LeaderboardPlayerList extends LitElement {
 
     const containerRect = this.scrollContainer.getBoundingClientRect();
     const rowRect = currentRow.getBoundingClientRect();
+    const thead = this.scrollContainer.querySelector("thead");
+    const topBound = thead
+      ? thead.getBoundingClientRect().bottom
+      : containerRect.top;
+    const tfoot = this.showStickyUser
+      ? this.scrollContainer.querySelector("tfoot")
+      : null;
+    const bottomBound = tfoot
+      ? tfoot.getBoundingClientRect().top
+      : containerRect.top + this.scrollContainer.clientHeight;
+
     const isVisible =
-      rowRect.top >= containerRect.top &&
-      rowRect.bottom <= containerRect.bottom;
+      rowRect.top >= topBound - 1 && rowRect.bottom <= bottomBound + 1;
     this.showStickyUser = !isVisible;
   }
 
