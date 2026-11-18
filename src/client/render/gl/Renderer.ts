@@ -706,6 +706,11 @@ export class GPURenderer {
     this.territoryPass.applyLiveDelta(tileState, changedTiles);
   }
 
+  /** Drain all territory drip buckets to the GPU immediately. */
+  flushTileDrip(): void {
+    this.territoryPass.flushAllDripBuckets();
+  }
+
   /** Forward live trail delta (dirty rows or changed tiles) to TrailPass. */
   uploadLiveTrailDelta(
     trailState: Uint16Array,
