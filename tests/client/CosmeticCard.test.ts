@@ -580,4 +580,56 @@ describe("CosmeticCard", () => {
     await card!.updateComplete;
     expect(preview().size).toBe("detail");
   });
+
+  describe("New badge", () => {
+    async function createWith(
+      cosmetic: Record<string, unknown>,
+      relationship: ResolvedCosmetic["relationship"] = "purchasable",
+    ) {
+      card = document.createElement("cosmetic-card") as CosmeticCard;
+      card.resolved = {
+        ...red,
+        relationship,
+        cosmetic: { ...(red.cosmetic as object), ...cosmetic } as never,
+      };
+      document.body.appendChild(card);
+      await card.updateComplete;
+      return card;
+    }
+    const inAWeek = () => new Date(Date.now() + 7 * 86_400_000).toISOString();
+
+    it("marks a new item the player can buy", async () => {
+      const c = await createWith({ priceHard: 100, newUntil: inAWeek() });
+      expect(c.querySelector("[data-cosmetic-new]")?.textContent?.trim()).toBe(
+        "store.new_badge",
+      );
+    });
+
+    it("doesn't mark an owned item or one no longer new", async () => {
+      let c = await createWith({ newUntil: inAWeek() }, "owned");
+      expect(c.querySelector("[data-cosmetic-new]")).toBeNull();
+      c.remove();
+      c = await createWith({
+        priceHard: 100,
+        newUntil: new Date(Date.now() - 1000).toISOString(),
+      });
+      expect(c.querySelector("[data-cosmetic-new]")).toBeNull();
+    });
+
+    it("shows beside a sale ribbon", async () => {
+      const c = await createWith({
+        priceHard: 75,
+        listPriceHard: 100,
+        promotion: {
+          id: "1",
+          name: "Sale",
+          percentOff: 25,
+          endsAt: inAWeek(),
+        },
+        newUntil: inAWeek(),
+      });
+      expect(c.querySelector("[data-cosmetic-new]")).toBeTruthy();
+      expect(c.querySelector("[data-cosmetic-sale]")).toBeTruthy();
+    });
+  });
 });

@@ -2975,6 +2975,8 @@
     "insufficient_currency_title": "Insufficient {currency}",
     "login_required": "You must be logged in to purchase with currency.",
     "manage_billing": "Manage billing",
+    "new_badge": "New",
+    "new_tab": "New",
     "no_affiliate_items": "No affiliate items available. Check back later for new items.",
     "no_bundles": "No bundles available. Check back later for new items.",
     "no_crowns": "No crowns available. Check back later for new items.",

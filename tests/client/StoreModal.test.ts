@@ -879,6 +879,127 @@ describe("StoreModal cosmetic browser", () => {
     expect(modal.querySelector('[data-store-subtab="patterns"]')).toBeTruthy();
   });
 
+  describe("New tab", () => {
+    const soon = () => new Date(Date.now() + 3 * 86_400_000).toISOString();
+    const later = () => new Date(Date.now() + 10 * 86_400_000).toISOString();
+    const withNew = (
+      resolved: ResolvedCosmetic,
+      newUntil: string,
+      key = resolved.key,
+    ): ResolvedCosmetic => ({
+      ...resolved,
+      cosmetic: { ...(resolved.cosmetic as object), newUntil } as never,
+      key,
+    });
+    const keys = (modal: StoreModal) =>
+      [...modal.querySelectorAll<CosmeticCard>("cosmetic-card")].map(
+        (c) => c.resolved.key,
+      );
+
+    it("lists new cosmetics, effects and bundles, newest first", async () => {
+      const newFlag = withNew(flag, soon());
+      const newTrail = withNew(trail("comet"), later());
+      const newBundle = withNew(starterBundle, soon());
+      resolvedCatalog = [red, blue, newFlag, newTrail, newBundle];
+      const modal = await openStoreOnCosmetic("patterns");
+
+      const newTab = modal.querySelector<HTMLButtonElement>(
+        '[data-store-subtab="new"]',
+      )!;
+      expect(newTab.textContent).toContain("store.new_tab");
+      // New comes first in the sub-tab bar.
+      expect(
+        modal
+          .querySelector("[data-store-subtab]")!
+          .getAttribute("data-store-subtab"),
+      ).toBe("new");
+      newTab.click();
+      await modal.updateComplete;
+      expect(keys(modal)[0]).toBe(newTrail.key);
+      expect(new Set(keys(modal))).toEqual(
+        new Set([newTrail.key, newFlag.key, newBundle.key]),
+      );
+      expect(
+        (
+          modal as unknown as { placementFor(el: Element): unknown }
+        ).placementFor(product(modal, newFlag.key)!),
+      ).toEqual({
+        kind: "tab",
+        tab: "cosmetics",
+        subTab: "new",
+      });
+    });
+
+    it("hides the New tab when nothing is new", async () => {
+      resolvedCatalog = [
+        red,
+        withNew(flag, new Date(Date.now() - 1000).toISOString()),
+      ];
+      const modal = await openStoreOnCosmetic("patterns");
+      expect(modal.querySelector('[data-store-subtab="new"]')).toBeNull();
+    });
+
+    it("leaves out a new item the player already owns", async () => {
+      resolvedCatalog = [
+        { ...withNew(flag, soon()), relationship: "owned" },
+        withNew(red, soon(), "pattern:fresh:red"),
+      ];
+      const modal = await openStoreOnCosmetic("patterns");
+      modal
+        .querySelector<HTMLButtonElement>('[data-store-subtab="new"]')!
+        .click();
+      await modal.updateComplete;
+      expect(keys(modal)).toEqual(["pattern:fresh:red"]);
+    });
+
+    it("drops the badges, and the New tab, when the items stop being new", async () => {
+      const until = new Date(Date.now() + 60_000).toISOString();
+      const fresh = withNew(red, until, "pattern:fresh:red");
+      (fresh.cosmetic as { name: string }).name = "fresh";
+      resolvedCatalog = [red, fresh, withNew(flag, until)];
+      const modal = await openStoreOnCosmetic("patterns");
+      modal
+        .querySelector<HTMLButtonElement>('[data-store-subtab="new"]')!
+        .click();
+      await modal.updateComplete;
+      expect(new Set(keys(modal))).toEqual(new Set([flag.key, fresh.key]));
+      expect(modal.querySelectorAll("[data-cosmetic-new]")).toHaveLength(2);
+
+      vi.useFakeTimers({ now: Date.now() });
+      try {
+        // Reschedules the store's new-item timer on the fake clock.
+        modal.requestUpdate();
+        await modal.updateComplete;
+        vi.advanceTimersByTime(61_000);
+        await modal.updateComplete;
+        expect(modal.querySelector('[data-store-subtab="new"]')).toBeNull();
+        expect(keys(modal)).toEqual([red.key, fresh.key]);
+        await Promise.all(
+          [...modal.querySelectorAll<CosmeticCard>("cosmetic-card")].map(
+            (c) => c.updateComplete,
+          ),
+        );
+        expect(modal.querySelector("[data-cosmetic-new]")).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("opens straight on the New tab with sub=new", async () => {
+      const newFlag = withNew(flag, soon());
+      resolvedCatalog = [red, newFlag];
+      store = document.createElement("store-modal") as StoreModal;
+      store.inline = true;
+      document.body.appendChild(store);
+      await store.updateComplete;
+      store.open({ tab: "cosmetics", sub: "new" });
+      await vi.waitFor(() =>
+        expect(store!.querySelector("cosmetic-card")).toBeTruthy(),
+      );
+      expect(keys(store)).toEqual([newFlag.key]);
+    });
+  });
+
   it("tells a store-wide sale from one on selected items", () => {
     const promotion = { id: "s", name: "Sale", percentOff: 20, endsAt: "" };
     const catalog = (secondOnSale: boolean) =>

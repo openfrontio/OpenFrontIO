@@ -36,6 +36,7 @@ import "./components/TribesPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   activeSale,
+  isNew,
   currentPrice,
   fetchCosmetics,
   invalidateCosmetics,
@@ -78,9 +79,10 @@ function isStoreTab(key: string): key is StoreTab {
   return (StorePlacementTabSchema.options as readonly string[]).includes(key);
 }
 
-// "sale" lists every discounted skin, flag, crown, effect and bundle; its tab
-// shows only while a sale covers one of them.
+// "new" and "sale" list every new or discounted skin, flag, crown, effect and
+// bundle; each tab shows only while something is new or on sale.
 const COSMETICS_SUB_TABS = [
+  "new",
   "sale",
   "patterns",
   "flags",
@@ -130,6 +132,29 @@ function flashGroup<T extends readonly ResolvedCosmetic[]>(
 /** Whether a running sale discounts any variant in a card's group. */
 function groupOnSale(group: readonly ResolvedCosmetic[]): boolean {
   return group.some((resolved) => activeSale(resolved.cosmetic) !== null);
+}
+
+/** Whether any variant in a card's group is new to the store. */
+function groupIsNew(group: readonly ResolvedCosmetic[]): boolean {
+  return group.some((resolved) => isNew(resolved.cosmetic));
+}
+
+/** When a card's group stops being new: its latest variant's newUntil. */
+function groupNewUntil(group: readonly ResolvedCosmetic[]): number {
+  return Math.max(
+    ...group.map((resolved) => {
+      const until = (resolved.cosmetic as { newUntil?: string } | null)
+        ?.newUntil;
+      return until === undefined ? 0 : new Date(until).getTime();
+    }),
+  );
+}
+
+/** The most recently added first: the one that stays new longest. */
+function newestFirst<T extends readonly ResolvedCosmetic[]>(
+  groups: readonly T[],
+): T[] {
+  return [...groups].sort((a, b) => groupNewUntil(b) - groupNewUntil(a));
 }
 
 /** The flash item, then the rest on sale, then everything else. */
@@ -264,6 +289,8 @@ export class StoreModal extends BaseModal {
   private rowObserver: ResizeObserver | null = null;
   /** Fires when the soonest running sale ends, to refetch its prices. */
   private saleEndTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Fires when the soonest new item stops being new, to drop its badge. */
+  private newEndTimer: ReturnType<typeof setTimeout> | null = null;
   /** Retries that refetch while the API's cached catalog still has the sale. */
   private saleRetryTimer: ReturnType<typeof setTimeout> | null = null;
   /** Bumped on close, so a sale-end refetch still in flight then is dropped. */
@@ -359,19 +386,20 @@ export class StoreModal extends BaseModal {
     const crowns = items
       .filter((resolved) => resolved.type === "crown")
       .map((r) => [r]);
-    if (tab === "sale") {
-      // A sale (a flash sale's pick included) can land on an effect or a
-      // bundle too, and those live on other tabs; list them here as well so
-      // the banner's "On sale" always leads to the item.
+    if (tab === "sale" || tab === "new") {
+      // A sale (a flash sale's pick included) or a new item can be an effect
+      // or a bundle too, and those live on other tabs; list them here as well
+      // so the banner's "On sale" always leads to the item.
       const others = items
         .filter(
           (resolved) =>
             resolved.type === "effect" || resolved.type === "cosmeticPack",
         )
         .map((r) => [r]);
-      return saleFirst(
-        [...skins, ...flags, ...crowns, ...others].filter(groupOnSale),
-      );
+      const all = [...skins, ...flags, ...crowns, ...others];
+      return tab === "sale"
+        ? saleFirst(all.filter(groupOnSale))
+        : newestFirst(all.filter(groupIsNew));
     }
     return saleFirst(
       tab === "flags" ? flags : tab === "crowns" ? crowns : skins,
@@ -392,10 +420,11 @@ export class StoreModal extends BaseModal {
       );
     }
     if (tab === "cosmetics") {
-      // The sale ended (or the catalog dropped it) while its tab was open.
+      // The sale ended, the last item stopped being new, or the catalog
+      // dropped it, while its tab was open.
       if (
-        this.cosmeticsSubTab === "sale" &&
-        this.cosmeticsGroups("sale").length === 0
+        (this.cosmeticsSubTab === "sale" || this.cosmeticsSubTab === "new") &&
+        this.cosmeticsGroups(this.cosmeticsSubTab).length === 0
       ) {
         this.cosmeticsSubTab = "patterns";
       }
@@ -556,10 +585,16 @@ export class StoreModal extends BaseModal {
     this.requestUpdate();
   }
 
-  /** The sub-tabs to show: "On sale" only while something is discounted. */
+  /**
+   * The sub-tabs to show: "New" only while something is new, "On sale" only
+   * while something is discounted.
+   */
   private visibleCosmeticsSubTabs(): CosmeticsSubTab[] {
+    const hasNew = this.cosmeticsGroups("new").length > 0;
     const hasSale = this.cosmeticsGroups("sale").length > 0;
-    return COSMETICS_SUB_TABS.filter((tab) => tab !== "sale" || hasSale);
+    return COSMETICS_SUB_TABS.filter(
+      (tab) => (tab !== "new" || hasNew) && (tab !== "sale" || hasSale),
+    );
   }
 
   private setCosmeticsSubTab(tab: CosmeticsSubTab): void {
@@ -844,7 +879,13 @@ export class StoreModal extends BaseModal {
                     aria-hidden="true"
                   ></span>`
                 : nothing
-            }${translateText(tab === "sale" ? "store.on_sale" : `store.${tab}`)}
+            }${translateText(
+              tab === "sale"
+                ? "store.on_sale"
+                : tab === "new"
+                  ? "store.new_tab"
+                  : `store.${tab}`,
+            )}
           </button>`;
         })}
       </div>
@@ -1011,6 +1052,7 @@ export class StoreModal extends BaseModal {
   private renderSaleBanner(): TemplateResult | string {
     const sales = runningSales(this.cosmetics);
     this.scheduleSaleEnd(sales);
+    this.scheduleNewEnd();
     if (sales.length === 0) return "";
     return html`<sale-banner
       class="block px-3 pt-2"
@@ -1046,6 +1088,36 @@ export class StoreModal extends BaseModal {
     this.saleEndTimer = setTimeout(() => {
       this.saleEndTimer = null;
       void this.refetchAfterSaleEnd(0);
+    }, delay);
+  }
+
+  /**
+   * When the soonest new item stops being new, drop its badge, and the New
+   * tab with its last item. No refetch: the catalog's newUntil already says
+   * when. Rescheduled on every render; cleared on close.
+   */
+  private scheduleNewEnd(): void {
+    if (this.newEndTimer !== null) clearTimeout(this.newEndTimer);
+    this.newEndTimer = null;
+    if (!this.isModalOpen) return;
+    const now = Date.now();
+    const ends = this.resolvedPurchasables().flatMap((resolved) => {
+      const until = (resolved.cosmetic as { newUntil?: string } | null)
+        ?.newUntil;
+      const at = until === undefined ? NaN : new Date(until).getTime();
+      return at > now ? [at] : [];
+    });
+    if (ends.length === 0) return;
+    // setTimeout overflows past ~24.8 days; newUntil is at most 14 days out.
+    const delay = Math.min(Math.min(...ends) - now, 2 ** 31 - 1);
+    this.newEndTimer = setTimeout(() => {
+      this.newEndTimer = null;
+      this.selectVisible(this.groupsForTab(this.activeTab));
+      // The cards' own properties haven't changed, so ask them to redraw.
+      for (const card of this.querySelectorAll<CosmeticCard>("cosmetic-card")) {
+        card.requestUpdate();
+      }
+      this.requestUpdate();
     }, delay);
   }
 
@@ -1163,9 +1235,12 @@ export class StoreModal extends BaseModal {
     if (this.requestedItem !== null) {
       this.cosmeticsSubTab = subTabForItem(this.requestedItem);
     }
-    // `sub=sale` (the home screen's sale banner) opens Cosmetics → On sale;
-    // groupsForTab falls back to Skins if nothing is on sale by now.
-    if (args?.sub === "sale") this.cosmeticsSubTab = "sale";
+    // `sub=sale` (the home screen's sale banner) opens Cosmetics → On sale,
+    // `sub=new` Cosmetics → New; groupsForTab falls back to Skins if nothing
+    // is on sale or new by now.
+    if (args?.sub === "sale" || args?.sub === "new") {
+      this.cosmeticsSubTab = args.sub;
+    }
     // Prices change when a sale starts or ends, so a catalog fetched more than
     // a minute ago is refetched rather than shown with stale prices. In the
     // Android app, Play is asked again if it could not price the packs.
@@ -1188,6 +1263,8 @@ export class StoreModal extends BaseModal {
     this.tracker?.flush();
     if (this.saleEndTimer !== null) clearTimeout(this.saleEndTimer);
     this.saleEndTimer = null;
+    if (this.newEndTimer !== null) clearTimeout(this.newEndTimer);
+    this.newEndTimer = null;
     if (this.saleRetryTimer !== null) clearTimeout(this.saleRetryTimer);
     this.saleRetryTimer = null;
     this.saleRefetchGeneration++;

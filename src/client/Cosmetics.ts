@@ -955,6 +955,16 @@ export function invalidateCosmetics(): void {
 }
 
 /**
+ * Whether a catalog item is new to the store: the API sends `newUntil` while
+ * it is (added in the last 14 days). Judged against the clock, since the
+ * catalog is cached and an item can stop being new while the store is open.
+ */
+export function isNew(cosmetic: unknown, now: number = Date.now()): boolean {
+  const newUntil = (cosmetic as { newUntil?: string } | null)?.newUntil;
+  return newUntil !== undefined && new Date(newUntil).getTime() > now;
+}
+
+/**
  * The running sale that discounts a catalog item, or null: it names a
  * promotion that hasn't ended, and a list price above its price in at least
  * one currency.

@@ -1,7 +1,12 @@
 import { Subscription } from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { activeSale, ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
+import {
+  activeSale,
+  isNew,
+  ResolvedCosmetic,
+  translateCosmetic,
+} from "../Cosmetics";
 import { isDesktopShell } from "../DesktopShell";
 import { sellsOnlyThroughPlay } from "../Payments";
 import { translateText } from "../Utils";
@@ -449,6 +454,22 @@ export class CosmeticCard extends LitElement {
     </span>`;
   }
 
+  /**
+   * "New" on an item added to the store in the last 14 days, while the player
+   * can buy it. Bottom-left of the artwork: the equipped badge's corner, which
+   * a buyable item never has; lifted above a flash sale's timer.
+   */
+  private renderNewBadge(active: ResolvedCosmetic) {
+    if (active.relationship !== "purchasable") return nothing;
+    if (!isNew(active.cosmetic)) return nothing;
+    const bottom = this.flashSale(active) !== null ? "bottom-12" : "bottom-1";
+    return html`<span
+      data-cosmetic-new
+      class="pointer-events-none absolute left-1 ${bottom} z-[4] rounded-full bg-malibu-blue px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-deep-navy shadow-lg shadow-deep-navy/60"
+      >${translateText("store.new_badge")}</span
+    >`;
+  }
+
   /** A flash sale's item: the time left, fading up from the artwork's foot. */
   private renderFlashTimer(active: ResolvedCosmetic) {
     const sale = this.flashSale(active);
@@ -519,6 +540,7 @@ export class CosmeticCard extends LitElement {
           ></cosmetic-preview>
         </div>
         ${this.renderSaleRibbon(active)} ${this.renderFlashTimer(active)}
+        ${this.renderNewBadge(active)}
         ${
           isEquipped
             ? html`<span
