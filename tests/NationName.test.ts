@@ -1,4 +1,5 @@
 import fs from "fs";
+import { MAX_CHARS } from "../src/client/render/gl/passes/name-pass/Types";
 
 type Nation = {
   name?: string;
@@ -9,7 +10,7 @@ type Manifest = {
 };
 
 describe("Map manifests: nation name constraints", () => {
-  test("All nations' names must be ≤ 27 printable Extended-ASCII characters", () => {
+  test(`All nations' names must be ≤ ${MAX_CHARS} printable Extended-ASCII characters`, () => {
     const manifestPaths = fs.globSync("resources/maps/**/manifest.json");
 
     expect(manifestPaths.length).toBeGreaterThan(0);
@@ -29,9 +30,9 @@ describe("Map manifests: nation name constraints", () => {
             );
             return;
           }
-          if (name.length > 27) {
+          if (name.length > MAX_CHARS) {
             violations.push(
-              `${manifestPath} -> nations[${idx}].name "${name}" has length ${name.length} (> 27)`,
+              `${manifestPath} -> nations[${idx}].name "${name}" has length ${name.length} (> ${MAX_CHARS})`,
             );
             return;
           }
