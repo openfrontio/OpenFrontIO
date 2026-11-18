@@ -262,6 +262,10 @@ export class CosmeticCard extends LitElement {
   @property({ type: Boolean })
   interactive = true;
 
+  /** The store's "New" badge; off everywhere else (e.g. the post-game offer). */
+  @property({ type: Boolean })
+  showNewBadge = false;
+
   @property({ type: String })
   previewSize: "card" | "detail" = "card";
 
@@ -460,6 +464,7 @@ export class CosmeticCard extends LitElement {
    * a buyable item never has; lifted above a flash sale's timer.
    */
   private renderNewBadge(active: ResolvedCosmetic) {
+    if (!this.showNewBadge) return nothing;
     if (active.relationship !== "purchasable") return nothing;
     if (!isNew(active.cosmetic)) return nothing;
     const bottom = this.flashSale(active) !== null ? "bottom-12" : "bottom-1";

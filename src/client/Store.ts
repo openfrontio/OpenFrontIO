@@ -37,6 +37,7 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import {
   activeSale,
   isNew,
+  newUntilMs,
   currentPrice,
   fetchCosmetics,
   invalidateCosmetics,
@@ -142,11 +143,7 @@ function groupIsNew(group: readonly ResolvedCosmetic[]): boolean {
 /** When a card's group stops being new: its latest variant's newUntil. */
 function groupNewUntil(group: readonly ResolvedCosmetic[]): number {
   return Math.max(
-    ...group.map((resolved) => {
-      const until = (resolved.cosmetic as { newUntil?: string } | null)
-        ?.newUntil;
-      return until === undefined ? 0 : new Date(until).getTime();
-    }),
+    ...group.map((resolved) => newUntilMs(resolved.cosmetic) ?? 0),
   );
 }
 
@@ -667,6 +664,7 @@ export class StoreModal extends BaseModal {
         data-cosmetic-key=${group[0].key}
         class=${cardClass}
         previewSize=${previewSize}
+        showNewBadge
         .resolved=${group[0]}
         .variants=${
           group.length > 1 ||
@@ -1102,10 +1100,8 @@ export class StoreModal extends BaseModal {
     if (!this.isModalOpen) return;
     const now = Date.now();
     const ends = this.resolvedPurchasables().flatMap((resolved) => {
-      const until = (resolved.cosmetic as { newUntil?: string } | null)
-        ?.newUntil;
-      const at = until === undefined ? NaN : new Date(until).getTime();
-      return at > now ? [at] : [];
+      const at = newUntilMs(resolved.cosmetic);
+      return at !== null && at > now ? [at] : [];
     });
     if (ends.length === 0) return;
     // setTimeout overflows past ~24.8 days; newUntil is at most 14 days out.

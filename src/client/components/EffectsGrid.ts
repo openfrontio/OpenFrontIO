@@ -267,6 +267,7 @@ export class EffectsGrid extends LitElement {
         data-store-product
         data-cosmetic-key=${r.key}
         class="block h-full min-w-0"
+        showNewBadge
         .resolved=${r}
         state=${r.key === this.focusedKey ? "focused" : "idle"}
         .onActivate=${() => this.onPurchaseFocus?.(r)}

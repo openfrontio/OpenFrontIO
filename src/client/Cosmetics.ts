@@ -960,8 +960,14 @@ export function invalidateCosmetics(): void {
  * catalog is cached and an item can stop being new while the store is open.
  */
 export function isNew(cosmetic: unknown, now: number = Date.now()): boolean {
+  const until = newUntilMs(cosmetic);
+  return until !== null && until > now;
+}
+
+/** When a catalog item stops being new (ms), or null if it has no newUntil. */
+export function newUntilMs(cosmetic: unknown): number | null {
   const newUntil = (cosmetic as { newUntil?: string } | null)?.newUntil;
-  return newUntil !== undefined && new Date(newUntil).getTime() > now;
+  return newUntil === undefined ? null : new Date(newUntil).getTime();
 }
 
 /**

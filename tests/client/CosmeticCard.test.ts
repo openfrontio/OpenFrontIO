@@ -585,8 +585,10 @@ describe("CosmeticCard", () => {
     async function createWith(
       cosmetic: Record<string, unknown>,
       relationship: ResolvedCosmetic["relationship"] = "purchasable",
+      showNewBadge = true,
     ) {
       card = document.createElement("cosmetic-card") as CosmeticCard;
+      card.showNewBadge = showNewBadge;
       card.resolved = {
         ...red,
         relationship,
@@ -603,6 +605,15 @@ describe("CosmeticCard", () => {
       expect(c.querySelector("[data-cosmetic-new]")?.textContent?.trim()).toBe(
         "store.new_badge",
       );
+    });
+
+    it("shows only where the store asks for it (not the post-game offer)", async () => {
+      const c = await createWith(
+        { priceHard: 100, newUntil: inAWeek() },
+        "purchasable",
+        false,
+      );
+      expect(c.querySelector("[data-cosmetic-new]")).toBeNull();
     });
 
     it("doesn't mark an owned item or one no longer new", async () => {
