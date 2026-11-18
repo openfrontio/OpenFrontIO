@@ -528,7 +528,7 @@ class Client {
     // The canonical profile link, `/player/<id>` (see playerProfileUrl).
     modalRouter.registerPath("profile", playerProfileRouteArgs);
     modalRouter.register("help", { tag: "help-modal", pageId: "page-help" });
-    modalRouter.register("news", { tag: "news-modal", pageId: "page-news" });
+    modalRouter.register("news", { tag: "news-modal" });
     modalRouter.register("language", {
       tag: "language-modal",
       pageId: "page-language",
@@ -1178,7 +1178,15 @@ class Client {
         .catch(() => undefined);
     });
 
+    let lastHandledHref: string | null = null;
+
     const onHashUpdate = () => {
+      if (lastHandledHref === window.location.href) {
+        lastHandledHref = null;
+        return;
+      }
+      lastHandledHref = null;
+
       if (this.replayViewerID !== null) {
         this.leaveReplayViewer();
         return;
@@ -1208,6 +1216,10 @@ class Client {
       // syncing in/out; we don't need to tear down the lobby state for them.
       if (modalRouter.isHashRouted()) {
         modalRouter.routeFromHash();
+        return;
+      }
+      if (modalRouter.closeCurrent()) {
+        lastHandledHref = window.location.href;
         return;
       }
 
