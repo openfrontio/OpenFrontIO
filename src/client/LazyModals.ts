@@ -20,6 +20,7 @@ const modules: Record<string, () => Promise<unknown>> = {
   "help-modal": () => import("./HelpModal"),
   "host-lobby-modal": () => import("./HostLobbyModal"),
   "inventory-modal": () => import("./InventoryModal"),
+  "invite-lobby-modal": () => import("./components/InviteLobbyModal"),
   "join-lobby-modal": () => import("./JoinLobbyModal"),
   "leaderboard-modal": () => import("./LeaderboardModal"),
   "matchmaking-modal": () => import("./Matchmaking"),

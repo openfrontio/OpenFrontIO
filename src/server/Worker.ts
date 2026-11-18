@@ -57,6 +57,10 @@ import { registerPlayerProfileRoute } from "./PlayerProfileRoute";
 import { resolveVerifiedJoin } from "./Privilege";
 
 import { loadGatekeeper } from "./Gatekeeper";
+import {
+  LobbyInviteService,
+  registerLobbyInviteRoutes,
+} from "./LobbyInviteService";
 import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
@@ -472,6 +476,7 @@ export async function startWorker() {
     // idempotency) and broadcasts it to everyone still connected. Done after
     // creation so a failed creation never broadcasts a dead id.
     previousGame?.setSuccessorLobby(id);
+    lobbyService.reportLobbies();
 
     // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
     const clientIP = req.ip || req.socket.remoteAddress || "unknown";
@@ -576,6 +581,41 @@ export async function startWorker() {
   registerPlayerProfileRoute({ app, log, baseDir: __dirname });
 
   registerAdminBotRoutes({ app, gm, workerId, log });
+
+  LobbyInviteService.instance.setBroadcasters(
+    (invite) => {
+      lobbyService.sendLobbyInvite(invite);
+    },
+    (inviteId, dismissedAt) => {
+      const targetPublicId =
+        LobbyInviteService.instance.getInviteTarget(inviteId);
+      lobbyService.sendLobbyInviteDismiss(
+        inviteId,
+        dismissedAt,
+        targetPublicId,
+        true,
+      );
+    },
+    (inviteId, dismissedAt, targetPublicId) => {
+      lobbyService.sendLobbyInviteDismiss(
+        inviteId,
+        dismissedAt,
+        targetPublicId,
+        true,
+      );
+    },
+  );
+
+  registerLobbyInviteRoutes(app, {
+    isLobbyActive: (gameId) => lobbyService.isLobbyOpen(gameId),
+    isPlayerInLobby: (gameId, persistentId, publicId) =>
+      lobbyService.isPlayerInLobby(gameId, persistentId, publicId),
+    getLobbyMeta: (gameId) => lobbyService.getLobbyMeta(gameId),
+    isTargetAllowedInLobby: (gameId, targetPublicId, targetRole) =>
+      lobbyService.isTargetAllowedInLobby(gameId, targetPublicId, targetRole),
+    getLobbyMemberPublicIds: (gameId, persistentId, publicId) =>
+      lobbyService.getLobbyMemberPublicIds(gameId, persistentId, publicId),
+  });
 
   // WebSocket handling
   wss.on("connection", (ws: WebSocket, req) => {
@@ -829,6 +869,7 @@ export async function startWorker() {
             verifySkipped ? undefined : { username, clanTag },
           )
         ) {
+          lobbyService.reportLobbies();
           return;
         }
 
@@ -870,9 +911,9 @@ export async function startWorker() {
           if (isSocketClosed(ws)) {
             return;
           }
-          flares = result.response.player.flares;
+          flares = result.response.player.flares ?? [];
           publicId = result.response.player.publicId;
-          friends = result.response.player.friends;
+          friends = result.response.player.friends ?? [];
           ownedClanTags = result.response.player.clans?.map((c) => c.tag) ?? [];
           accountUsername = result.response.player;
           trusted = result.response.player.trustTier === "trusted";
@@ -970,6 +1011,9 @@ export async function startWorker() {
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);
+        if (joinResult === "joined") {
+          lobbyService.reportLobbies();
+        }
         if (joinResult !== "joined" && joinResult !== "redirected") {
           admissionGuard.rollback();
         }

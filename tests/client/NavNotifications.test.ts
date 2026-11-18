@@ -22,7 +22,10 @@ const {
 });
 
 vi.mock("../../src/client/Cosmetics", () => ({ getCosmeticsHash }));
-vi.mock("../../src/client/Utils", () => ({ getGamesPlayed }));
+vi.mock("../../src/client/Utils", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, getGamesPlayed };
+});
 vi.mock("../../src/client/CrazyGamesSDK", () => ({
   crazyGamesSDK: { getUserProfile, isOnCrazyGames },
 }));
@@ -360,5 +363,78 @@ describe("nav notifications", () => {
     expect(bell.controller.showHelpDot()).toBe(false); // store still pending
     bell.controller.onStoreClick();
     expect(bell.controller.showHelpDot()).toBe(true);
+  });
+
+  it("updates lobby invites in real-time from lobby-invite-received events", async () => {
+    const bell = host();
+    await flush();
+
+    const sampleInvite = {
+      id: "ws_invite_1",
+      lobbyId: "ws_lobby_1",
+      senderPublicId: "sender_ws",
+      senderUsername: "SenderWS",
+      targetPublicId: "target_ws",
+      gameMode: "Team",
+      map: "World",
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 30_000,
+    };
+
+    // 1. Receiving a lobby_invite event pushes it to bell controller
+    window.dispatchEvent(
+      new CustomEvent("lobby-invite-received", {
+        detail: {
+          type: "lobby_invite",
+          invite: sampleInvite,
+        },
+      }),
+    );
+    await flush();
+
+    expect(bell.controller.lobbyInvites()).toEqual([sampleInvite]);
+
+    // 2. Receiving a lobby_invite_dismiss event removes it from bell controller
+    window.dispatchEvent(
+      new CustomEvent("lobby-invite-received", {
+        detail: {
+          type: "lobby_invite_dismiss",
+          inviteId: "ws_invite_1",
+        },
+      }),
+    );
+    await flush();
+
+    expect(bell.controller.lobbyInvites()).toEqual([]);
+
+    // 3. Receiving a lobby_invite with serverTime normalizes expiresAt
+    const localNow = Date.now();
+    const serverSkewedInvite = {
+      id: "ws_invite_skewed",
+      lobbyId: "lob_ws",
+      senderPublicId: "sender.pub",
+      senderUsername: "Sender",
+      targetPublicId: "target.pub",
+      gameMode: "Team",
+      map: "World",
+      createdAt: 100_000,
+      expiresAt: 130_000,
+    };
+    window.dispatchEvent(
+      new CustomEvent("lobby-invite-received", {
+        detail: {
+          type: "lobby_invite",
+          invite: serverSkewedInvite,
+          serverTime: 100_000,
+        },
+      }),
+    );
+    await flush();
+
+    const stored = bell.controller.lobbyInvites();
+    expect(stored).toHaveLength(1);
+    expect(stored[0].id).toBe("ws_invite_skewed");
+    expect(stored[0].expiresAt).toBeGreaterThanOrEqual(localNow + 29_000);
+    expect(stored[0].expiresAt).toBeLessThanOrEqual(localNow + 31_000);
   });
 });

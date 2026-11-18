@@ -4,7 +4,7 @@ import { PublicGameInfo, PublicGames } from "@openfront/shared/WireSchemas";
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { getDesktopSessionState } from "./Auth";
+import { getDesktopSessionState, getPlayToken } from "./Auth";
 import "./components/IOSAddToHomeScreenBanner";
 import {
   canJoinTrustedLobby,
@@ -333,6 +333,7 @@ export class GameModeSelector extends LitElement {
   private lobbySocket = new PublicLobbySocket(
     (lobbies) => this.handleLobbiesUpdate(lobbies),
     {
+      getToken: () => getPlayToken(),
       onUpdateAvailable: () => this.handleUpdateAvailable(),
       onGaveUp: () => {
         // Nothing is loading any more, and cards from a feed that has died

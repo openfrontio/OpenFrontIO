@@ -236,7 +236,8 @@ export function friendsLookup(
       publicIdToClientID.set(c.publicId, c.clientID);
   }
   return (client: Client) => {
-    const friendClientIDs = client.friends
+    const friends = client.friends ?? [];
+    const friendClientIDs = friends
       .map((pid) => publicIdToClientID.get(pid))
       .filter((id): id is ClientID => id !== undefined);
     return friendClientIDs.length > 0 ? friendClientIDs : undefined;

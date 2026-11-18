@@ -1279,7 +1279,10 @@ export class GameServer {
     const allowed = this.gameConfig.allowedPublicIds;
     if (allowed === undefined || allowed.length === 0) return true;
     if (isAdminRole(client.role)) return true;
-    return client.publicId !== undefined && allowed.includes(client.publicId);
+    return (
+      client.publicId !== undefined &&
+      this.isPublicIdAllowed(client.publicId, client.role)
+    );
   }
 
   // Trusted-only lobbies (GameConfig.trusted) admit only accounts the API
@@ -1832,6 +1835,50 @@ export class GameServer {
   // that rejects every joiner).
   public hasJoinWhitelist(): boolean {
     return (this.gameConfig.allowedPublicIds?.length ?? 0) > 0;
+  }
+
+  /**
+   * Returns whether a player with `publicId` (and optional `role`) is permitted by this lobby's join allowlist.
+   */
+  public isPublicIdAllowed(publicId: string, role?: string | null): boolean {
+    const allowed = this.gameConfig.allowedPublicIds;
+    if (allowed === undefined || allowed.length === 0) return true;
+    if (isAdminRole(role)) return true;
+    return allowed.includes(publicId);
+  }
+
+  /**
+   * Returns the connected lobby members' `publicId`s visible to the caller identified by `persistentId` or `publicId`, respecting `anonymizeNames` rules.
+   */
+  public visibleMemberPublicIds(
+    persistentId: string,
+    publicId?: string,
+  ): string[] {
+    if (this.isPublic() && this.gameConfig.gameMode !== GameMode.Team) {
+      return [];
+    }
+    let viewerClient: Client | undefined;
+    for (const client of this.activeClients()) {
+      if (
+        client.persistentID === persistentId ||
+        (publicId !== undefined &&
+          publicId.length > 0 &&
+          client.publicId === publicId)
+      ) {
+        viewerClient = client;
+        break;
+      }
+    }
+    const ids = new Set<string>();
+    for (const client of this.activeClients()) {
+      if (
+        client.publicId &&
+        this.names.seesRealBeyondTeam(viewerClient?.clientID, client.clientID)
+      ) {
+        ids.add(client.publicId);
+      }
+    }
+    return [...ids];
   }
 
   // Whether any host-only cheat is actually granted. A lobby with host

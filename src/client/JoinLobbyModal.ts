@@ -9,7 +9,7 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
 } from "@openfront/shared/WireSchemas";
-import { html, TemplateResult } from "lit";
+import { html, nothing, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import {
@@ -139,9 +139,23 @@ export class JoinLobbyModal extends BaseModal {
       this.gameConfig.gameMode !== GameMode.Team;
     const canShare = this.gameConfig !== null && !isPublicFfa;
     const copy = canShare
-      ? html`<copy-button .lobbyId=${this.currentLobbyId}></copy-button>`
+      ? html`<copy-button
+          class="shrink-0"
+          .lobbyId=${this.currentLobbyId}
+        ></copy-button>`
       : undefined;
-    const invite = canShare ? inviteFriendsButton() : undefined;
+    const capturedLobbyId = this.currentLobbyId;
+    const invite =
+      canShare && capturedLobbyId
+        ? inviteFriendsButton({
+            lobbyId: capturedLobbyId,
+            gameMode: this.gameConfig?.gameMode,
+            map: this.gameConfig?.gameMap,
+            clients: this.players,
+            isStillInLobby: () =>
+              this.isOpen() && this.currentLobbyId === capturedLobbyId,
+          })
+        : nothing;
     return modalHeader({
       // titleContent (not title) so the bell can sit at the right edge of the
       // title row via ml-auto, next to the copy/invite cluster.
@@ -151,9 +165,11 @@ export class JoinLobbyModal extends BaseModal {
         ${this.gameStartAlert.renderBell()}`,
       onBack: () => this.closeAndLeave(),
       ariaLabel: translateText("common.close"),
-      rightContent: invite
-        ? html`<div class="flex items-center gap-2">${copy}${invite}</div>`
-        : copy,
+      rightContent: canShare
+        ? html`<div class="flex items-center gap-2 shrink-0">
+            ${copy}${invite}
+          </div>`
+        : undefined,
     });
   }
 
@@ -635,11 +651,19 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   public confirmBeforeClose(): boolean | Promise<boolean> {
+    const inviteModal = document.querySelector<BaseModal>("invite-lobby-modal");
+    if (typeof inviteModal?.isOpen === "function" && inviteModal.isOpen()) {
+      return false;
+    }
     if (!this.currentLobbyId) return true;
     return this.confirmClose(translateText("host_modal.leave_confirmation"));
   }
 
   protected onClose(): void {
+    const inviteModal = document.querySelector<BaseModal>("invite-lobby-modal");
+    if (typeof inviteModal?.close === "function") {
+      inviteModal.close();
+    }
     this.hostedLobbySocket.stop();
     this.hostedLobbies = [];
     this.hostedLobbiesLoaded = false;
@@ -787,6 +811,19 @@ export class JoinLobbyModal extends BaseModal {
 
   private updateFromLobby(lobby: GameInfo | PublicGameInfo) {
     this.players = "clients" in lobby ? (lobby.clients ?? []) : [];
+    const inviteModal = document.querySelector<
+      HTMLElement & {
+        isOpen?: () => boolean;
+        updateClients?: (clients: ClientInfo[], lobbyId?: string) => void;
+      }
+    >("invite-lobby-modal");
+    if (
+      typeof inviteModal?.updateClients === "function" &&
+      typeof inviteModal?.isOpen === "function" &&
+      inviteModal.isOpen()
+    ) {
+      inviteModal.updateClients(this.players, this.currentLobbyId);
+    }
     if ("serverTime" in lobby && typeof lobby.serverTime === "number") {
       this.serverTimeOffset = calculateServerTimeOffset(lobby.serverTime);
     }

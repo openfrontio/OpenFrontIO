@@ -1,6 +1,10 @@
+import { maps } from "@openfront/engine-api/game/GameTypes";
+import type { LobbyInvite } from "@openfront/shared/LobbyInviteSchemas";
 import { html, LitElement, nothing, render, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { desktopQuit, requestDesktopQuit } from "../DesktopShell";
+import { whenModalLoaded } from "../LazyModals";
+import type { JoinLobbyEvent } from "../Main";
 import { closeMobileSidebar } from "../Navigation";
 import { getCurrentLanguage, translateText } from "../Utils";
 import { NavNotificationsController } from "./NavNotificationsController";
@@ -35,6 +39,7 @@ export class NavUtilityIcons extends LitElement {
   private _notifications = new NavNotificationsController(this);
   private notificationsPanel: HTMLDivElement | null = null;
   private readonly notificationsPanelId = `nav-notifications-${++nextNotificationsPanelId}`;
+  private pendingAcceptedInviteId: string | null = null;
 
   createRenderRoot() {
     return this;
@@ -230,6 +235,107 @@ export class NavUtilityIcons extends LitElement {
     window.location.hash = "modal=news";
   };
 
+  private acceptLobbyInvite = async (invite: LobbyInvite): Promise<void> => {
+    const visibleModal = document.querySelector(
+      ".page-content:not(.hidden)",
+    ) as
+      | (HTMLElement & {
+          isOpen?: () => boolean;
+          confirmBeforeClose?: () => Promise<boolean>;
+        })
+      | null;
+    if (
+      visibleModal &&
+      typeof visibleModal.isOpen === "function" &&
+      visibleModal.isOpen() &&
+      typeof visibleModal.confirmBeforeClose === "function" &&
+      !(await visibleModal.confirmBeforeClose())
+    ) {
+      return;
+    }
+
+    this.pendingAcceptedInviteId = invite.id;
+    const pageAtAccept = window.currentPageId;
+    this.closeNotifications();
+    closeMobileSidebar();
+    if (document.querySelector("join-lobby-modal") !== null) {
+      whenModalLoaded("join-lobby-modal", () => {
+        if (
+          this.pendingAcceptedInviteId !== invite.id ||
+          document.body.classList.contains("in-game") ||
+          window.currentPageId !== pageAtAccept
+        ) {
+          return;
+        }
+        this.pendingAcceptedInviteId = null;
+        this._notifications.dismissLobbyInvite(invite.id);
+        window.showPage?.("page-join-lobby");
+        (
+          document.querySelector("join-lobby-modal") as
+            | (HTMLElement & {
+                open?: (args?: Record<string, unknown>) => void;
+              })
+            | null
+        )?.open?.({
+          lobbyId: invite.lobbyId,
+          source: "private",
+        });
+      });
+      return;
+    }
+    this.pendingAcceptedInviteId = null;
+    this._notifications.dismissLobbyInvite(invite.id);
+    document.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: {
+          gameID: invite.lobbyId,
+          source: "private",
+        } as JoinLobbyEvent,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  };
+
+  private dismissLobbyInvite = (inviteId: string): void => {
+    this._notifications.dismissLobbyInvite(inviteId);
+  };
+
+  private formatInviteCountdown(invite: LobbyInvite): string {
+    const remaining =
+      typeof this._notifications.inviteRemainingSeconds === "function"
+        ? this._notifications.inviteRemainingSeconds(invite)
+        : Math.max(1, Math.ceil((invite.expiresAt - Date.now()) / 1000));
+    return translateText("notifications.invite_countdown", {
+      seconds: remaining,
+    });
+  }
+
+  private formatInviteMode(gameMode: string | undefined): string {
+    if (!gameMode) {
+      return translateText("notifications.private_lobby");
+    }
+    const normalized = gameMode.trim().toLowerCase();
+    if (normalized === "free for all" || normalized === "ffa") {
+      return translateText("game_mode.ffa");
+    }
+    if (normalized === "team" || normalized === "teams") {
+      return translateText("game_mode.teams");
+    }
+    return translateText(`game_mode.${normalized.replace(/\s+/g, "_")}`);
+  }
+
+  private formatInviteMap(mapName: string | undefined): string | null {
+    if (!mapName) return null;
+    const matched = maps.find(
+      (m) => m.type === mapName || m.id.toLowerCase() === mapName.toLowerCase(),
+    );
+    const key =
+      matched?.translationKey ??
+      `map.${(matched?.id ?? mapName).toLowerCase().replace(/[\s.]+/g, "")}`;
+    return translateText(key);
+  }
+
   private formatRequestDate(iso: string): string {
     return new Date(iso).toLocaleDateString(
       getCurrentLanguage(),
@@ -239,6 +345,7 @@ export class NavUtilityIcons extends LitElement {
 
   private renderNotificationsMenu(): TemplateResult {
     const friendRequests = this._notifications.friendRequests();
+    const lobbyInvites = this._notifications.lobbyInvites();
     const hasNewVersion = this._notifications.hasNewVersion();
     return html`
       <div
@@ -252,6 +359,81 @@ export class NavUtilityIcons extends LitElement {
           ${translateText("notifications.title")}
         </div>
         <div class="max-h-[min(28rem,calc(100vh-8rem))] overflow-y-auto">
+          ${lobbyInvites.map((invite) => {
+            const localizedMap = this.formatInviteMap(invite.map);
+            return html`
+              <div
+                class="w-full px-4 py-3 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border-b border-white/10"
+              >
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0 flex-1">
+                    <div
+                      class="flex items-center gap-1.5 text-xs text-blue-300 font-semibold"
+                    >
+                      <svg
+                        class="w-3.5 h-3.5 shrink-0"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+                        />
+                      </svg>
+                      <span
+                        >${translateText("notifications.lobby_invite")}</span
+                      >
+                      <span
+                        class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-200"
+                      >
+                        ${this.formatInviteCountdown(invite)}
+                      </span>
+                    </div>
+                    <div class="mt-1 text-sm font-bold text-white truncate">
+                      ${
+                        invite.senderUsername
+                          ? usernameText(
+                              invite.senderUsername,
+                              "text-white font-bold",
+                            )
+                          : invite.senderPublicId
+                      }
+                    </div>
+                    <div class="text-xs text-white/60">
+                      ${this.formatInviteMode(invite.gameMode)}
+                      ${localizedMap ? ` • ${localizedMap}` : ""}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    @click=${() => this.dismissLobbyInvite(invite.id)}
+                    class="text-white/40 hover:text-white p-1 rounded transition-colors cursor-pointer"
+                    aria-label=${translateText("common.dismiss")}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div class="mt-2.5 flex items-center gap-2">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    @click=${() => this.acceptLobbyInvite(invite)}
+                    class="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-colors shadow-sm cursor-pointer"
+                  >
+                    ${translateText("notifications.join_lobby")}
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    @click=${() => this.dismissLobbyInvite(invite.id)}
+                    class="px-3 py-1.5 bg-white/10 hover:bg-white/15 text-white/70 hover:text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                  >
+                    ${translateText("common.dismiss")}
+                  </button>
+                </div>
+              </div>
+            `;
+          })}
           ${
             hasNewVersion
               ? html`
@@ -327,7 +509,9 @@ export class NavUtilityIcons extends LitElement {
             `,
           )}
           ${
-            !hasNewVersion && friendRequests.length === 0
+            !hasNewVersion &&
+            friendRequests.length === 0 &&
+            lobbyInvites.length === 0
               ? html`
                   <p class="px-4 py-6 text-center text-sm text-white/50">
                     ${translateText("notifications.empty")}

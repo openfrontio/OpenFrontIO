@@ -1,5 +1,11 @@
+import { GameMode } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig } from "@openfront/engine-api/Schemas";
+import { isAdminRole } from "@openfront/shared/ApiSchemas";
 import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
+import {
+  LOBBY_INVITE_TTL_MS,
+  LobbyInvite,
+} from "@openfront/shared/LobbyInviteSchemas";
 import {
   ClientPlatform,
   ClientPlatformSchema,
@@ -11,13 +17,17 @@ import { encodeLobbyMessage } from "@openfront/shared/ZbinWire";
 import http from "http";
 import { WebSocket, WebSocketServer } from "ws";
 import { GameManager } from "./GameManager";
+import { GamePhase, hashPersistentID } from "./GameServer";
 import {
   InternalGameInfo,
   InternalPublicGames,
   MasterMessageSchema,
+  OpenLobbyMeta,
   WorkerLobbyList,
-  WorkerReady,
+  WorkerMessage,
 } from "./IPCBridgeSchema";
+import { verifyClientToken } from "./jwt";
+import { defaultResolveCaller, LobbyInviteService } from "./LobbyInviteService";
 import { logger } from "./Logger";
 import { ServerEnv } from "./ServerEnv";
 
@@ -42,6 +52,8 @@ export class WorkerLobbyService {
   // upgrade URL's ?platform= (see LobbySocket.ts), for the per-platform gauge.
   private readonly lobbyClients: Map<WebSocket, ClientPlatform | "unknown"> =
     new Map();
+  private readonly lobbySocketsByPublicId = new Map<string, Set<WebSocket>>();
+  private readonly publicIdBySocket = new Map<WebSocket, string>();
   // Most recent snapshot from master, serialized on demand for new
   // connections so they don't have to wait for the next broadcast.
   private lastPublicGames: InternalPublicGames | null = null;
@@ -57,6 +69,11 @@ export class WorkerLobbyService {
   // ranked check-in loop so a draining server stops offering matches too
   // (RankedCheckin.ts, OPE-469).
   private deploymentActive = true;
+  private lastOpenLobbies: Record<string, string[]> | null = null;
+  private lastOpenLobbyMeta: Record<string, OpenLobbyMeta> | null = null;
+  private readonly seenOpenLobbies = new Map<string, number>();
+  private readonly workerExitedAt = new Map<number, number>();
+  private workerId?: number;
 
   constructor(
     private readonly server: http.Server,
@@ -132,6 +149,30 @@ export class WorkerLobbyService {
           this.lastFullGameIds = null;
         }
         this.lastPublicGames = msg.publicGames;
+        if (msg.openLobbies !== undefined) {
+          this.lastOpenLobbies = msg.openLobbies;
+          const now = Date.now();
+          for (const gameID of Object.keys(msg.openLobbies)) {
+            this.seenOpenLobbies.delete(gameID);
+            this.seenOpenLobbies.set(gameID, now);
+          }
+          for (const [gameID, seenAt] of this.seenOpenLobbies.entries()) {
+            if (
+              !Object.prototype.hasOwnProperty.call(msg.openLobbies, gameID) &&
+              now - seenAt > LOBBY_INVITE_TTL_MS * 2
+            ) {
+              this.seenOpenLobbies.delete(gameID);
+            }
+          }
+          while (this.seenOpenLobbies.size > 2_000) {
+            const oldestKey = this.seenOpenLobbies.keys().next().value;
+            if (oldestKey === undefined) break;
+            this.seenOpenLobbies.delete(oldestKey);
+          }
+        }
+        if (msg.openLobbyMeta !== undefined) {
+          this.lastOpenLobbyMeta = msg.openLobbyMeta;
+        }
         // Forward message to all clients
         this.broadcastLobbiesToClients(msg.publicGames);
         // Update master with my lobby info
@@ -166,14 +207,244 @@ export class WorkerLobbyService {
         game.setStartsAt(msg.startsAt);
         break;
       }
+      case "lobbyInviteBroadcast":
+        if (LobbyInviteService.instance.addExternalInvite(msg.invite)) {
+          this.pushLobbyInvite(msg.invite);
+        }
+        break;
+      case "lobbyInviteDismissBroadcast": {
+        const resolvedId = LobbyInviteService.instance.dismissExternalInvite(
+          msg.inviteId,
+          msg.dismissedAt,
+          msg.targetPublicId,
+          msg.isExplicit,
+        );
+        const inviteIdToPush =
+          typeof resolvedId === "string" ? resolvedId : msg.inviteId;
+        this.pushLobbyInviteDismiss(inviteIdToPush, msg.targetPublicId);
+        break;
+      }
+      case "workerExited": {
+        const exitedAt = msg.exitedAt ?? Date.now();
+        this.workerExitedAt.set(msg.workerId, exitedAt);
+        if (this.lastOpenLobbies !== null) {
+          for (const gameID of Object.keys(this.lastOpenLobbies)) {
+            if (ServerEnv.workerIndex(gameID) === msg.workerId) {
+              delete this.lastOpenLobbies[gameID];
+            }
+          }
+        }
+        if (this.lastOpenLobbyMeta !== null) {
+          for (const gameID of Object.keys(this.lastOpenLobbyMeta)) {
+            if (ServerEnv.workerIndex(gameID) === msg.workerId) {
+              delete this.lastOpenLobbyMeta[gameID];
+            }
+          }
+        }
+        LobbyInviteService.instance.removeInvitesForWorker(msg.workerId);
+        break;
+      }
     }
   }
 
+  /**
+   * Notifies the master that this worker is ready to accept lobby scheduling and broadcasts.
+   */
   sendReady(workerId: number) {
+    this.workerId = workerId;
     this.sendToMaster({ type: "workerReady", workerId });
   }
 
-  private sendToMaster(msg: WorkerReady | WorkerLobbyList) {
+  /**
+   * Forwards a newly created or refreshed lobby invite to the master for cross-worker distribution.
+   */
+  sendLobbyInvite(invite: LobbyInvite) {
+    this.sendToMaster({ type: "lobbyInvite", invite });
+    this.pushLobbyInvite(invite);
+  }
+
+  /**
+   * Forwards a lobby invite dismissal to the master for cross-worker synchronization.
+   */
+  sendLobbyInviteDismiss(
+    inviteId: string,
+    dismissedAt?: number,
+    targetPublicId?: string,
+    isExplicit?: boolean,
+  ) {
+    this.sendToMaster({
+      type: "lobbyInviteDismiss",
+      inviteId,
+      dismissedAt,
+      targetPublicId,
+      isExplicit,
+    });
+    this.pushLobbyInviteDismiss(inviteId, targetPublicId);
+  }
+
+  /**
+   * Immediately reports this worker's current open lobbies and membership to the master.
+   */
+  public reportLobbies(): void {
+    this.sendMyLobbiesToMaster();
+  }
+
+  /**
+   * Returns whether `gameID` is an open lobby on this worker or in the latest cluster snapshot from master.
+   */
+  public isLobbyOpen(gameID: string): boolean {
+    const localGame = this.gm.game(gameID);
+    if (localGame !== null) {
+      return localGame.phase() === GamePhase.Lobby && !localGame.hasStarted();
+    }
+    const ownerWorkerId = ServerEnv.workerIndex(gameID);
+    if (this.workerId !== undefined && ownerWorkerId === this.workerId) {
+      return false;
+    }
+    const exitedAt = this.workerExitedAt.get(ownerWorkerId);
+    if (this.lastOpenLobbies !== null) {
+      if (Object.prototype.hasOwnProperty.call(this.lastOpenLobbies, gameID)) {
+        return true;
+      }
+      if (this.seenOpenLobbies.has(gameID)) {
+        return false;
+      }
+      // A newly created lobby on another worker may not have arrived in the
+      // master's snapshot yet; keep it eligible while an active invite created
+      // after the owning worker's last exit exists for it.
+      return LobbyInviteService.instance.hasActiveInviteForLobby(
+        gameID,
+        exitedAt,
+      );
+    }
+    if (exitedAt !== undefined) {
+      return LobbyInviteService.instance.hasActiveInviteForLobby(
+        gameID,
+        exitedAt,
+      );
+    }
+    return true;
+  }
+
+  /**
+   * Returns authoritative metadata (mode, map, join allowlist) for `gameID` if known.
+   */
+  public getLobbyMeta(gameID: string): OpenLobbyMeta | null {
+    const localGame = this.gm.game(gameID);
+    if (localGame !== null) {
+      if (localGame.phase() !== GamePhase.Lobby || localGame.hasStarted()) {
+        return null;
+      }
+      const memberPublicIds = localGame.gameConfig.anonymizeNames
+        ? []
+        : localGame
+            .activeClients()
+            .map((c) => c.publicId)
+            .filter(
+              (id): id is string => typeof id === "string" && id.length > 0,
+            );
+      return {
+        gameMode: localGame.gameConfig.gameMode,
+        map: localGame.gameConfig.gameMap,
+        allowedPublicIds: localGame.gameConfig.allowedPublicIds,
+        memberPublicIds,
+        isPublic: localGame.isPublic(),
+      };
+    }
+    return this.lastOpenLobbyMeta?.[gameID] ?? null;
+  }
+
+  /**
+   * Returns whether `targetPublicId` is permitted to join `gameID` under its allowlist.
+   */
+  public isTargetAllowedInLobby(
+    gameID: string,
+    targetPublicId: string,
+    targetRole?: string | null,
+  ): boolean {
+    if (isAdminRole(targetRole)) {
+      return true;
+    }
+    const localGame = this.gm.game(gameID);
+    if (localGame !== null) {
+      return localGame.isPublicIdAllowed(targetPublicId, targetRole);
+    }
+    const allowed = this.lastOpenLobbyMeta?.[gameID]?.allowedPublicIds;
+    if (!allowed || allowed.length === 0) {
+      return true;
+    }
+    return allowed.includes(targetPublicId);
+  }
+
+  /**
+   * Returns the member `publicId`s visible to the caller in the open lobby `gameID`.
+   */
+  public getLobbyMemberPublicIds(
+    gameID: string,
+    persistentId: string,
+    publicId?: string,
+  ): string[] {
+    const localGame = this.gm.game(gameID);
+    if (localGame !== null) {
+      if (
+        (localGame.isPublic() &&
+          localGame.gameConfig.gameMode !== GameMode.Team) ||
+        localGame.phase() !== GamePhase.Lobby ||
+        localGame.hasStarted()
+      ) {
+        return [];
+      }
+      return localGame.visibleMemberPublicIds(persistentId, publicId);
+    }
+    const meta = this.getLobbyMeta(gameID);
+    if (meta?.isPublic && meta.gameMode !== "Team") {
+      return [];
+    }
+    return meta?.memberPublicIds ?? [];
+  }
+
+  /**
+   * Returns whether the given player (`persistentId` or `publicId`) is a member of the open lobby `gameID`.
+   */
+  public isPlayerInLobby(
+    gameID: string,
+    persistentId: string,
+    publicId: string,
+  ): boolean {
+    const localGame = this.gm.game(gameID);
+    if (localGame !== null) {
+      if (localGame.phase() !== GamePhase.Lobby || localGame.hasStarted()) {
+        return false;
+      }
+      if (localGame.isCreator(persistentId)) {
+        return true;
+      }
+      return localGame
+        .activeClients()
+        .some(
+          (c) =>
+            c.persistentID === persistentId ||
+            (c.publicId !== undefined && c.publicId === publicId),
+        );
+    }
+    if (
+      this.workerId !== undefined &&
+      ServerEnv.workerIndex(gameID) === this.workerId
+    ) {
+      return false;
+    }
+    const members = this.lastOpenLobbies?.[gameID];
+    if (!members) {
+      return false;
+    }
+    const hashedPersistentId = hashPersistentID(persistentId);
+    return (
+      members.includes(hashedPersistentId) ||
+      (publicId ? members.includes(publicId) : false)
+    );
+  }
+
+  private sendToMaster(msg: WorkerMessage) {
     process.send?.(msg);
   }
 
@@ -231,6 +502,8 @@ export class WorkerLobbyService {
       type: "lobbyList",
       lobbies: [...publicLobbies, ...hostedLobbies],
       liveGames: this.gm.activeGames(),
+      openLobbies: this.gm.openLobbyMembers?.(),
+      openLobbyMeta: this.gm.openLobbyMeta?.(),
     } satisfies WorkerLobbyList);
   }
 
@@ -325,6 +598,7 @@ export class WorkerLobbyService {
       "connection",
       (ws: WebSocket, request?: http.IncomingMessage) => {
         this.lobbyClients.set(ws, lobbyClientPlatform(request?.url));
+
         // Prime the new client with the most recent snapshot — otherwise it
         // would only see counts-only deltas (which it can't apply without a
         // base) until the next structural change.
@@ -339,11 +613,54 @@ export class WorkerLobbyService {
             } satisfies PublicLobbyMessage),
           );
         }
-        ws.on("message", () => {
+        ws.on("message", (data: WebSocket.RawData) => {
+          try {
+            const text =
+              typeof data === "string"
+                ? data
+                : data instanceof Buffer
+                  ? data.toString("utf8")
+                  : Array.isArray(data)
+                    ? Buffer.concat(data).toString("utf8")
+                    : data instanceof ArrayBuffer
+                      ? Buffer.from(data).toString("utf8")
+                      : "";
+            const msg = JSON.parse(text);
+            if (
+              msg &&
+              typeof msg === "object" &&
+              msg.type === "auth" &&
+              typeof msg.token === "string" &&
+              msg.token.length > 0
+            ) {
+              void verifyClientToken(msg.token)
+                .then(async (auth) => {
+                  if (
+                    auth.type !== "success" ||
+                    ws.readyState !== WebSocket.OPEN
+                  ) {
+                    return;
+                  }
+                  const caller = await defaultResolveCaller(
+                    msg.token,
+                    auth.persistentId,
+                  );
+                  if (!caller || ws.readyState !== WebSocket.OPEN) {
+                    return;
+                  }
+                  this.registerAuthenticatedLobbySocket(ws, caller.publicId);
+                })
+                .catch(() => {});
+              return;
+            }
+          } catch {
+            // Malformed frame or unexpected payload
+          }
           ws.terminate();
         });
         ws.on("close", () => {
           this.lobbyClients.delete(ws);
+          this.unregisterAuthenticatedLobbySocket(ws);
         });
 
         ws.on("error", (error) => {
@@ -357,6 +674,7 @@ export class WorkerLobbyService {
             this.log.error(`Lobbies WebSocket error:`, error);
           }
           this.lobbyClients.delete(ws);
+          this.unregisterAuthenticatedLobbySocket(ws);
           try {
             if (
               ws.readyState === WebSocket.OPEN ||
@@ -370,6 +688,89 @@ export class WorkerLobbyService {
         });
       },
     );
+  }
+
+  private registerAuthenticatedLobbySocket(ws: WebSocket, publicId: string) {
+    this.unregisterAuthenticatedLobbySocket(ws);
+    this.publicIdBySocket.set(ws, publicId);
+    let sockets = this.lobbySocketsByPublicId.get(publicId);
+    if (!sockets) {
+      sockets = new Set();
+      this.lobbySocketsByPublicId.set(publicId, sockets);
+    }
+    sockets.add(ws);
+
+    const activeInvites =
+      LobbyInviteService.instance.getInvitesForUser(publicId);
+    for (const invite of activeInvites) {
+      try {
+        ws.send(
+          JSON.stringify({
+            type: "lobby_invite",
+            invite,
+            serverTime: Date.now(),
+          }),
+        );
+      } catch {
+        // ignore send error
+      }
+    }
+  }
+
+  private unregisterAuthenticatedLobbySocket(ws: WebSocket) {
+    const publicId = this.publicIdBySocket.get(ws);
+    if (publicId) {
+      this.publicIdBySocket.delete(ws);
+      const sockets = this.lobbySocketsByPublicId.get(publicId);
+      if (sockets) {
+        sockets.delete(ws);
+        if (sockets.size === 0) {
+          this.lobbySocketsByPublicId.delete(publicId);
+        }
+      }
+    }
+  }
+
+  private pushLobbyInvite(invite: LobbyInvite) {
+    const sockets = this.lobbySocketsByPublicId.get(invite.targetPublicId);
+    if (!sockets || sockets.size === 0) return;
+    const payload = JSON.stringify({
+      type: "lobby_invite",
+      invite,
+      serverTime: Date.now(),
+    });
+    for (const ws of sockets) {
+      if (ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(payload);
+        } catch (err) {
+          this.log.warn("Failed to push lobby invite over WebSocket", { err });
+        }
+      }
+    }
+  }
+
+  private pushLobbyInviteDismiss(inviteId: string, targetPublicId?: string) {
+    const payload = JSON.stringify({ type: "lobby_invite_dismiss", inviteId });
+    const resolvedTarget =
+      targetPublicId ?? LobbyInviteService.instance.getInviteTarget(inviteId);
+    if (resolvedTarget) {
+      const sockets = this.lobbySocketsByPublicId.get(resolvedTarget);
+      if (sockets) {
+        for (const ws of sockets) {
+          if (ws.readyState === WebSocket.OPEN) {
+            try {
+              ws.send(payload);
+            } catch (err) {
+              this.log.warn(
+                "Failed to push lobby invite dismissal over WebSocket",
+                { err },
+              );
+            }
+          }
+        }
+      }
+    }
   }
 
   private broadcastLobbiesToClients(publicGames: InternalPublicGames) {

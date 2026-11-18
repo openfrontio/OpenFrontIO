@@ -1,4 +1,5 @@
 import { CloseCode } from "@openfront/shared/CloseCodes";
+import { LobbyInviteSchema } from "@openfront/shared/LobbyInviteSchemas";
 import { PublicGames } from "@openfront/shared/WireSchemas";
 import { decodeLobbyMessage } from "@openfront/shared/ZbinWire";
 import { ClientEnv, NoServerError } from "src/client/ClientEnv";
@@ -17,6 +18,7 @@ interface LobbySocketOptions {
   reconnectDelay?: number;
   maxWsAttempts?: number;
   pollIntervalMs?: number;
+  getToken?: () => Promise<string | null> | string | null;
   // Fired at most once, when the server advertises a different build commit
   // than this bundle — i.e. a new version deployed while this tab was open.
   onUpdateAvailable?: () => void;
@@ -54,6 +56,7 @@ export class PublicLobbySocket {
 
   private readonly reconnectDelay: number;
   private readonly maxWsAttempts: number;
+  private readonly getToken?: () => Promise<string | null> | string | null;
   private readonly onUpdateAvailable?: () => void;
   private readonly onGaveUp?: () => void;
   private updateAvailableFired = false;
@@ -64,6 +67,7 @@ export class PublicLobbySocket {
   ) {
     this.reconnectDelay = options?.reconnectDelay ?? 3000;
     this.maxWsAttempts = options?.maxWsAttempts ?? 3;
+    this.getToken = options?.getToken;
     this.onUpdateAvailable = options?.onUpdateAvailable;
     this.onGaveUp = options?.onGaveUp;
   }
@@ -213,9 +217,74 @@ export class PublicLobbySocket {
       clearTimeout(this.wsReconnectTimeout);
       this.wsReconnectTimeout = null;
     }
+    const ws = this.ws;
+    if (!ws || ws.readyState !== WebSocket.OPEN || !this.getToken) return;
+    const generation = this.generation;
+    void Promise.resolve()
+      .then(() => this.getToken!())
+      .catch(() => null)
+      .then((token) => {
+        if (
+          generation !== this.generation ||
+          this.ws !== ws ||
+          ws.readyState !== WebSocket.OPEN
+        ) {
+          return;
+        }
+        if (token) {
+          try {
+            ws.send(JSON.stringify({ type: "auth", token }));
+          } catch (err) {
+            console.warn("Failed to send lobby socket auth frame:", err);
+          }
+        }
+      });
   }
 
   private handleMessage(event: MessageEvent) {
+    if (typeof event.data === "string") {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload && typeof payload === "object") {
+          if (payload.type === "lobby_invite") {
+            const parsed = LobbyInviteSchema.safeParse(payload.invite);
+            if (parsed.success) {
+              const serverTime =
+                typeof payload.serverTime === "number" &&
+                Number.isFinite(payload.serverTime)
+                  ? payload.serverTime
+                  : undefined;
+              window.dispatchEvent(
+                new CustomEvent("lobby-invite-received", {
+                  detail: {
+                    type: "lobby_invite",
+                    invite: parsed.data,
+                    serverTime,
+                  },
+                }),
+              );
+            }
+          } else if (payload.type === "lobby_invite_dismiss") {
+            if (
+              typeof payload.inviteId === "string" &&
+              payload.inviteId.length > 0
+            ) {
+              window.dispatchEvent(
+                new CustomEvent("lobby-invite-received", {
+                  detail: {
+                    type: "lobby_invite_dismiss",
+                    inviteId: payload.inviteId,
+                  },
+                }),
+              );
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing lobby invite message:", error);
+      }
+      return;
+    }
     try {
       const message = decodeLobbyMessage(
         new Uint8Array(event.data as ArrayBuffer),
