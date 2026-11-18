@@ -964,10 +964,15 @@ export function isNew(cosmetic: unknown, now: number = Date.now()): boolean {
   return until !== null && until > now;
 }
 
-/** When a catalog item stops being new (ms), or null if it has no newUntil. */
+/**
+ * When a catalog item stops being new (ms), or null if it has no newUntil or
+ * an unparseable one.
+ */
 export function newUntilMs(cosmetic: unknown): number | null {
   const newUntil = (cosmetic as { newUntil?: string } | null)?.newUntil;
-  return newUntil === undefined ? null : new Date(newUntil).getTime();
+  if (newUntil === undefined) return null;
+  const ms = new Date(newUntil).getTime();
+  return Number.isFinite(ms) ? ms : null;
 }
 
 /**

@@ -2,7 +2,11 @@ import { html } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 import "../../src/client/components/CosmeticCard";
-import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
+import {
+  isNew,
+  newUntilMs,
+  type ResolvedCosmetic,
+} from "../../src/client/Cosmetics";
 
 const translations = {
   "cosmetics.adfree": "ad-free for life!",
@@ -629,6 +633,11 @@ describe("CosmeticCard", () => {
         newUntil: new Date(Date.now() - 1000).toISOString(),
       });
       expect(c.querySelector("[data-cosmetic-new]")).toBeNull();
+    });
+
+    it("reads an unparseable newUntil as not new", () => {
+      expect(newUntilMs({ newUntil: "soon" })).toBeNull();
+      expect(isNew({ newUntil: "soon" })).toBe(false);
     });
 
     it("shows beside a sale ribbon", async () => {

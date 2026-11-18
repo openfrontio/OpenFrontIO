@@ -249,6 +249,9 @@ export class StoreModal extends BaseModal {
     this.tracker = null;
     if (this.alignFrame !== null) cancelAnimationFrame(this.alignFrame);
     this.alignFrame = null;
+    // A store removed while open never gets onClose; don't let a days-long
+    // timeout hold on to it.
+    this.clearNewEnd();
     super.disconnectedCallback();
   }
 
@@ -296,6 +299,8 @@ export class StoreModal extends BaseModal {
   private saleRefetchGeneration = 0;
   /** Bumped by every catalog fetch, so only the newest one's answer is kept. */
   private catalogRequest = 0;
+  /** Catalog fetches in flight. */
+  private catalogLoads = 0;
   private alignFrame: number | null = null;
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
@@ -420,10 +425,12 @@ export class StoreModal extends BaseModal {
     }
     if (tab === "cosmetics") {
       // The sale ended, the last item stopped being new, or the catalog
-      // dropped it, while its tab was open. Not before the catalog loads:
-      // a `sub=new` or `sub=sale` link opens the store before it arrives.
+      // dropped it, while its tab was open. Not while a catalog is loading:
+      // a `sub=new` or `sub=sale` link opens the store before it arrives,
+      // and a refreshed catalog may have what the cached one lacked.
       if (
         this.cosmetics !== null &&
+        this.catalogLoads === 0 &&
         (this.cosmeticsSubTab === "sale" || this.cosmeticsSubTab === "new") &&
         this.cosmeticsGroups(this.cosmeticsSubTab).length === 0
       ) {
@@ -1106,19 +1113,23 @@ export class StoreModal extends BaseModal {
    */
   private scheduleNewEnd(): void {
     const now = Date.now();
-    // A render between the deadline and the timer firing would otherwise
-    // cancel the refresh and leave the expired items on screen.
-    if (this.newEndTimer !== null && this.newEndAt <= now) return;
-    if (this.newEndTimer !== null) clearTimeout(this.newEndTimer);
-    this.newEndTimer = null;
+    // Something on screen has already stopped being new: the deadline passed
+    // before its timer ran (or the clock jumped), or before the first render.
+    const overdue =
+      (this.newEndTimer !== null && this.newEndAt <= now) ||
+      (this.activeTab === "cosmetics" &&
+        this.cosmeticsSubTab === "new" &&
+        this.affiliateCode === null &&
+        this.visibleGroups.some((group) => !groupIsNew(group)));
+    this.clearNewEnd();
     if (!this.isModalOpen) return;
     const ends = this.resolvedPurchasables().flatMap((resolved) => {
       const at = newUntilMs(resolved.cosmetic);
       return at !== null && at > now ? [at] : [];
     });
-    if (ends.length === 0) return;
+    if (!overdue && ends.length === 0) return;
     // setTimeout overflows past ~24.8 days; newUntil is at most 14 days out.
-    const delay = Math.min(Math.min(...ends) - now, 2 ** 31 - 1);
+    const delay = overdue ? 0 : Math.min(Math.min(...ends) - now, 2 ** 31 - 1);
     this.newEndAt = now + delay;
     this.newEndTimer = setTimeout(() => {
       this.newEndTimer = null;
@@ -1131,6 +1142,11 @@ export class StoreModal extends BaseModal {
     }, delay);
   }
 
+  private clearNewEnd(): void {
+    if (this.newEndTimer !== null) clearTimeout(this.newEndTimer);
+    this.newEndTimer = null;
+  }
+
   /**
    * Fetches the catalog and shows it, unless a newer fetch started meanwhile
    * (sign-in, reopening, a sale ending): an older answer landing last would
@@ -1140,6 +1156,15 @@ export class StoreModal extends BaseModal {
    */
   private async loadCatalog(): Promise<Cosmetics | null> {
     const request = ++this.catalogRequest;
+    this.catalogLoads++;
+    try {
+      return await this.fetchCatalog(request);
+    } finally {
+      this.catalogLoads--;
+    }
+  }
+
+  private async fetchCatalog(request: number): Promise<Cosmetics | null> {
     const fresh = await fetchCosmetics();
     // In the Android app, Play prices the packs it sells, in the player's
     // own currency.
@@ -1273,8 +1298,7 @@ export class StoreModal extends BaseModal {
     this.tracker?.flush();
     if (this.saleEndTimer !== null) clearTimeout(this.saleEndTimer);
     this.saleEndTimer = null;
-    if (this.newEndTimer !== null) clearTimeout(this.newEndTimer);
-    this.newEndTimer = null;
+    this.clearNewEnd();
     if (this.saleRetryTimer !== null) clearTimeout(this.saleRetryTimer);
     this.saleRetryTimer = null;
     this.saleRefetchGeneration++;

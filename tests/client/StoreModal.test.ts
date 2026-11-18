@@ -1036,7 +1036,8 @@ describe("StoreModal cosmetic browser", () => {
       expect(modal.querySelector("pack-contents-dialog")).toBeTruthy();
     });
 
-    it("still drops expired items when the store redraws before the timer fires", async () => {
+    /** Opens the New tab on one flag that stops being new in a minute. */
+    async function openNewTabExpiringSoon() {
       const until = new Date(Date.now() + 60_000).toISOString();
       resolvedCatalog = [red, withNew(flag, until)];
       const modal = await openStoreOnCosmetic("patterns");
@@ -1045,23 +1046,78 @@ describe("StoreModal cosmetic browser", () => {
         .click();
       await modal.updateComplete;
       expect(keys(modal)).toEqual([flag.key]);
+      return modal;
+    }
+    const newEndTimer = (modal: StoreModal) =>
+      (modal as unknown as { newEndTimer: unknown }).newEndTimer;
 
+    it("drops expired items at once when the clock passes the deadline before the timer fires", async () => {
+      const modal = await openNewTabExpiringSoon();
       vi.useFakeTimers({ now: Date.now() });
       try {
+        // Arms the timer on the fake clock, a minute out.
         modal.requestUpdate();
         await modal.updateComplete;
-        // The deadline passes, but the timer hasn't run yet when a redraw
-        // comes in.
+        // The clock jumps past the deadline; the timer is still a minute
+        // away when a redraw comes in.
         vi.setSystemTime(Date.now() + 61_000);
         modal.requestUpdate();
         await modal.updateComplete;
-        vi.runOnlyPendingTimers();
+        vi.advanceTimersByTime(1);
         await modal.updateComplete;
         expect(modal.querySelector('[data-store-subtab="new"]')).toBeNull();
         expect(keys(modal)).toEqual([red.key]);
       } finally {
         vi.useRealTimers();
       }
+    });
+
+    it("drops expired items on a redraw with no timer armed", async () => {
+      const modal = await openNewTabExpiringSoon();
+      vi.useFakeTimers({ now: Date.now() });
+      try {
+        (modal as unknown as { clearNewEnd(): void }).clearNewEnd();
+        vi.setSystemTime(Date.now() + 61_000);
+        modal.requestUpdate();
+        await modal.updateComplete;
+        vi.advanceTimersByTime(1);
+        await modal.updateComplete;
+        expect(keys(modal)).toEqual([red.key]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("clears the New timer when the store is removed while open", async () => {
+      const modal = await openNewTabExpiringSoon();
+      modal.requestUpdate();
+      await modal.updateComplete;
+      expect(newEndTimer(modal)).not.toBeNull();
+      modal.remove();
+      expect(newEndTimer(modal)).toBeNull();
+    });
+
+    it("keeps sub=new while a stale catalog refreshes", async () => {
+      // The cached catalog has nothing new; the refreshed one does.
+      const cached = {} as Cosmetics;
+      const refreshed = {} as Cosmetics;
+      const newFlag = withNew(flag, soon());
+      vi.mocked(resolveCosmetics).mockImplementation((cosmetics) =>
+        cosmetics === refreshed ? [red, newFlag] : [red],
+      );
+      vi.mocked(fetchCosmetics).mockResolvedValueOnce(cached);
+      const modal = await openStoreOnCosmetic("patterns");
+      modal.close();
+
+      vi.mocked(refreshStaleCosmetics).mockReturnValueOnce(true);
+      let deliver!: (catalog: Cosmetics) => void;
+      vi.mocked(fetchCosmetics).mockReturnValueOnce(
+        new Promise((resolve) => (deliver = resolve)),
+      );
+      modal.open({ tab: "cosmetics", sub: "new" });
+      await modal.updateComplete;
+      deliver(refreshed);
+      await vi.waitFor(() => expect(keys(modal)).toEqual([newFlag.key]));
     });
   });
 
