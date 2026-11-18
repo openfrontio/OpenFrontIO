@@ -1,4 +1,8 @@
-import type { NewsItem, StreamsFeed } from "@openfront/shared/ApiSchemas";
+import type {
+  NewsItem,
+  StorePlacement,
+  StreamsFeed,
+} from "@openfront/shared/ApiSchemas";
 import {
   ClaimAllRewardsResponse,
   ClaimAllRewardsResponseSchema,
@@ -7,6 +11,7 @@ import {
   ClaimRewardResponseSchema,
   GetMyTribeNamesResponse,
   GetMyTribeNamesResponseSchema,
+  GoogleFinalizeResponseSchema,
   IdentityTokenAudiencesResponseSchema,
   IdentityTokenResponse,
   IdentityTokenResponseSchema,
@@ -33,6 +38,9 @@ import {
   PutCreatorResponseSchema,
   PutUsernameResponse,
   PutUsernameResponseSchema,
+  FfaRankLeaderboardResponse,
+  FfaRankLeaderboardResponseSchema,
+  FfaRankPositionResponseSchema,
   RankedLeaderboardResponse,
   RankedLeaderboardResponseSchema,
   SteamFinalizeResponseSchema,
@@ -1319,6 +1327,7 @@ export async function purchaseWithCurrency(
   cosmeticName: string,
   currencyType: "hard" | "soft",
   colorPaletteName?: string,
+  placement?: StorePlacement,
 ): Promise<PurchaseWithCurrencyResult> {
   try {
     const response = await fetch(`${getApiBase()}/shop/purchase`, {
@@ -1332,6 +1341,7 @@ export async function purchaseWithCurrency(
         cosmeticName,
         currencyType,
         colorPaletteName,
+        ...(placement ? { placement } : {}),
       }),
     });
     if (response.status === 401) {
@@ -1413,6 +1423,7 @@ const PACK_UNAVAILABLE_REASONS = [
 // Any error means no debit and no grants.
 export async function purchaseCosmeticPack(
   packName: string,
+  placement?: StorePlacement,
 ): Promise<PurchaseCosmeticPackResult> {
   try {
     const response = await fetch(`${getApiBase()}/shop/purchase/pack`, {
@@ -1421,7 +1432,7 @@ export async function purchaseCosmeticPack(
         "Content-Type": "application/json",
         Authorization: await getAuthHeader(),
       },
-      body: JSON.stringify({ packName }),
+      body: JSON.stringify({ packName, ...(placement ? { placement } : {}) }),
     });
     if (response.status === 401) {
       await logOut();
@@ -1584,7 +1595,11 @@ export type PaymentsCheckoutRequest = (
   | { kind: "currency_pack"; packName: string }
   | { kind: "custom_currency"; hardAmount: number }
   | { kind: "subscription_tier"; tierName: string }
-) & { provider: PaymentsProvider; handoffs?: PaymentsHandoff[] };
+) & {
+  provider: PaymentsProvider;
+  handoffs?: PaymentsHandoff[];
+  placement?: StorePlacement;
+};
 
 export type PaymentsCheckoutResult =
   | { ok: true; data: PaymentsCheckoutResponse }
@@ -1920,6 +1935,78 @@ export async function finalizeSteamOrder(
   } catch (e) {
     console.error("finalizeSteamOrder: request failed", e);
     return { ok: false, code: "failed" };
+  }
+}
+
+export type FinalizeGooglePurchaseResult =
+  // "settled": credited. "pending": Play has not taken the money yet; the
+  // server credits it when the purchase completes.
+  | { ok: true; status: "settled" | "pending" }
+  // 409: the server will never credit this purchase. `reason` is the server's.
+  | { ok: false; code: "refused"; reason: string }
+  | { ok: false; code: "rate_limited" }
+  | { ok: false; code: "unauthorized" }
+  // The server could not decide (5xx, Google unreachable, network error, an
+  // unreadable answer). Nothing was lost: the purchase stays unconsumed and
+  // posting it again is the retry.
+  | { ok: false; code: "retry_later" }
+  // 400 / 403 and any other answer.
+  | { ok: false; code: "failed" };
+
+// POST /payments/google/finalize — credits a Google Play purchase. The server
+// consumes the purchase once it is credited, so posting the same token again
+// is always safe. Never log the token.
+export async function finalizeGooglePurchase(
+  purchaseToken: string,
+): Promise<FinalizeGooglePurchaseResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/payments/google/finalize`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ purchaseToken }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "unauthorized" };
+    }
+    if (response.status === 409) {
+      const body: unknown = await response.json().catch(() => null);
+      const reason =
+        typeof body === "object" &&
+        body !== null &&
+        "reason" in body &&
+        typeof body.reason === "string"
+          ? body.reason
+          : "unknown";
+      return { ok: false, code: "refused", reason };
+    }
+    if (response.status === 429) {
+      return { ok: false, code: "rate_limited" };
+    }
+    if (!response.ok) {
+      console.error("finalizeGooglePurchase: request failed", response.status);
+      return {
+        ok: false,
+        code: response.status >= 500 ? "retry_later" : "failed",
+      };
+    }
+    const parsed = GoogleFinalizeResponseSchema.safeParse(
+      await response.json(),
+    );
+    if (!parsed.success) {
+      console.error(
+        "finalizeGooglePurchase: Zod validation failed",
+        z.prettifyError(parsed.error),
+      );
+      return { ok: false, code: "retry_later" };
+    }
+    return { ok: true, status: parsed.data.status };
+  } catch (e) {
+    console.error("finalizeGooglePurchase: request failed", e);
+    return { ok: false, code: "retry_later" };
   }
 }
 
@@ -2357,6 +2444,69 @@ export async function fetchPlayerLeaderboard(
   } catch (err) {
     console.error("fetchPlayerLeaderboard: request failed", err);
     return false;
+  }
+}
+
+/** One FFA rank's board. `rank` is a tier family in lower case, e.g. "diamond". */
+export async function fetchFfaRankLeaderboard(
+  rank: string,
+  page: number,
+): Promise<FfaRankLeaderboardResponse | "reached_limit" | false> {
+  try {
+    const url = new URL(
+      `${getApiBase()}/leaderboard/ranked/ffa/${encodeURIComponent(rank)}`,
+    );
+    url.searchParams.set("page", String(page));
+    const res = await fetch(url.toString(), {
+      headers: { Accept: "application/json" },
+    });
+
+    if (!res.ok) {
+      if (res.status === 400) {
+        const body = await res.json().catch(() => null);
+        if (isPageBoundsMessage(body)) {
+          return "reached_limit";
+        }
+      }
+      console.warn(
+        "fetchFfaRankLeaderboard: unexpected status",
+        res.status,
+        res.statusText,
+      );
+      return false;
+    }
+
+    const parsed = FfaRankLeaderboardResponseSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn(
+        "fetchFfaRankLeaderboard: Zod validation failed",
+        parsed.error.toString(),
+      );
+      return false;
+    }
+
+    return parsed.data;
+  } catch (err) {
+    console.error("fetchFfaRankLeaderboard: request failed", err);
+    return false;
+  }
+}
+
+/** The signed-in player's position in their rank, or null if there's none to show. */
+export async function fetchFfaRankPosition(): Promise<number | null> {
+  try {
+    const res = await fetch(`${getApiBase()}/users/@me/ffa_rank_position`, {
+      headers: {
+        Accept: "application/json",
+        Authorization: await getAuthHeader(),
+      },
+    });
+    if (!res.ok) return null;
+    const parsed = FfaRankPositionResponseSchema.safeParse(await res.json());
+    return parsed.success ? parsed.data.position : null;
+  } catch (err) {
+    console.warn("fetchFfaRankPosition: request failed", err);
+    return null;
   }
 }
 

@@ -1010,14 +1010,17 @@ behind a load balancer, else `<subdomain>.<domain>`; the version is the
 | `sites/<site>/v/<short>/desktop/release.json` | `RenderDesktopDescriptor.ts`                   |
 | `sites/<site>/v/<short>/desktop/version.json` | `RenderDesktopDescriptor.ts --version-pointer` |
 | `sites/<site>/v/<short>/root-files.json`      | the build (`writeRootFilesIndex`)              |
-| `sites/<site>/v/<short>/root/<path>`          | copied from `static/`, one per index entry     |
 
 Everything in `resources/public/` (the policy pages, `robots.txt`, `ads.txt`,
 `press/`, and Apple Pay's `.well-known/` file) is served verbatim at the site
 root. The site Worker has no origin behind it, so it serves these from R2:
-`root-files.json` maps each path to its content type (plus a `"<dir>/"` entry
-for a directory with an `index.html`), and the Worker serves exactly what it
-lists. To publish a new root file, add it to `resources/public/`.
+`root-files.json` maps each path to its content type and a content-addressed
+key, `_assets/root/<dir>/<name>.<hash><ext>` (plus a `"<dir>/"` entry for a
+directory with an `index.html`, carrying that file's key), and the Worker
+serves exactly what it lists. The build writes a copy of each file at its key,
+and `update.sh` checks and uploads those with the other hashed assets, so only
+a root file whose bytes changed is uploaded again. To publish a new root file,
+add it to `resources/public/`.
 
 Both renderers run inside the freshly built image with the live container's
 env file, exactly as the replay shell already does, so what is published is

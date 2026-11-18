@@ -222,6 +222,24 @@ export class DefenseCoveragePass {
   draw(): void {
     if (!this.fullDirty && this.dirtyList.length === 0) return;
 
+    // When there are no defense posts on the map, coverage is always all-zero.
+    // Avoid scissored block clears, texture binds, and FBO overhead every tick.
+    if (this.count === 0) {
+      if (this.fullDirty) {
+        const gl = this.gl;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
+        gl.viewport(0, 0, this.mapW, this.mapH);
+        gl.disable(gl.SCISSOR_TEST);
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        this.fullDirty = false;
+      }
+      for (const b of this.dirtyList) this.dirtyBlock[b] = 0;
+      this.dirtyList.length = 0;
+      return;
+    }
+
     const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
     gl.viewport(0, 0, this.mapW, this.mapH);

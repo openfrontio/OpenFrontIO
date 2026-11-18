@@ -2,6 +2,11 @@ import { Emoji, flattenedEmojiTable } from "@openfront/engine-api/Schemas";
 import { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { PlayerPattern } from "@openfront/shared/WireSchemas";
 import {
+  LOBBY_PRESETS_KEY,
+  LobbyPreset,
+  parseLobbyPresetsJson,
+} from "./LobbyPresets";
+import {
   GraphicsOverrides,
   GraphicsOverridesSchema,
   GraphicsPresets,
@@ -16,12 +21,14 @@ import {
 // DesktopShell.ts imports nothing, so this cannot introduce an import cycle
 // (verified with madge: 58 cycles before and after, none involving it).
 import { isDesktopShell } from "./DesktopShell";
+import type { RandomNameStyle } from "./PlayerName";
 
 export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
   return {
     toggleView: "Space",
     preventStacking: "KeyH",
     coordinateGrid: "KeyM",
+    performanceOverlay: "Shift+KeyD",
     buildCity: "Digit1",
     buildFactory: "Digit2",
     buildPort: "Digit3",
@@ -40,8 +47,11 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     requestAlliance: "KeyK",
     breakAlliance: "KeyL",
     targetPlayer: "KeyN",
+    donateTroops: "KeyJ",
+    donateGold: "KeyO",
     emojiMenu: "KeyF",
     quickChat: "KeyR",
+    playerPanel: "KeyI",
     swapDirection: "KeyU",
     zoomOut: "KeyQ",
     zoomIn: "KeyE",
@@ -74,14 +84,22 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
 
 // Actions that may share a key. Reset graphics only fires with its modifier
 // (altKey) held, and quick chat only without one.
-const SHARED_KEY_ACTIONS: ReadonlyArray<readonly [string, string]> = [
+const SHARED_KEY_ACTIONS: ReadonlyArray<readonly [string, string, string?]> = [
   ["quickChat", "resetGfx"],
+  // Allow only the intended physical modifier pairs to share a key.
+  ["buildScrollModifier", "emojiMenuModifier", "Alt"],
+  ["altKey", "emojiMenuModifier", "Alt"],
+  ["buildScrollModifier", "altKey", "Alt"],
+  ["boxSelectWarships", "shiftKey", "Shift"],
 ];
 
 /** Whether actions `a` and `b` may be bound to the same key. */
-export function keysMayBeShared(a: string, b: string): boolean {
+export function keysMayBeShared(a: string, b: string, key?: string): boolean {
   return SHARED_KEY_ACTIONS.some(
-    ([x, y]) => (a === x && b === y) || (a === y && b === x),
+    ([x, y, keyPrefix]) =>
+      ((a === x && b === y) || (a === y && b === x)) &&
+      (!keyPrefix ||
+        [`${keyPrefix}Left`, `${keyPrefix}Right`].includes(key ?? "")),
   );
 }
 
@@ -443,6 +461,16 @@ export class UserSettings {
     return this.getBool("settings.anonymousNames", false);
   }
 
+  randomNameStyle(): RandomNameStyle {
+    return this.getCached("settings.randomNameStyle") === "tribe"
+      ? "tribe"
+      : "anon";
+  }
+
+  setRandomNameStyle(style: RandomNameStyle): void {
+    this.setCached("settings.randomNameStyle", style);
+  }
+
   lobbyIdVisibility() {
     return this.getBool("settings.lobbyIdVisibility", true);
   }
@@ -488,6 +516,16 @@ export class UserSettings {
     return this.getBool("settings.leftClickOpensMenu", false);
   }
 
+  // Flash the tab title/icon when the game is starting or a spawn is still to be
+  // picked while the tab is in the background. On by default.
+  tabAttention() {
+    return this.getBool("settings.tabAttention", true);
+  }
+
+  toggleTabAttention() {
+    this.setBool("settings.tabAttention", !this.tabAttention());
+  }
+
   goToPlayer() {
     return this.getBool("settings.goToPlayer", true);
   }
@@ -524,7 +562,8 @@ export class UserSettings {
     this.setBool("settings.emojis", !this.emojis());
   }
 
-  // Performance overlay specifically needs a direct setter for Shift-D
+  // The performance overlay's close button needs a direct setter to persist
+  // visibility.
   setPerformanceOverlay(value: boolean) {
     this.setBool(PERFORMANCE_OVERLAY_KEY, value);
   }
@@ -1156,6 +1195,56 @@ export class UserSettings {
   // preset UI — used to run the legacy-overrides migration exactly once.
   hasGraphicsPresets(): boolean {
     return this.getString(GRAPHICS_PRESETS_KEY, "") !== "";
+  }
+
+  /**
+   * Retrieves and parses the player's saved lobby configuration presets directly from storage.
+   * Returns an empty array if storage access fails, key is unset, or validation fails.
+   */
+  getLobbyPresets(): LobbyPreset[] {
+    try {
+      const storageKey = this.storageKey(LOBBY_PRESETS_KEY);
+      const raw = localStorage.getItem(storageKey);
+      UserSettings.cache.set(storageKey, raw);
+      return parseLobbyPresetsJson(raw);
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Retrieves the raw stored JSON array of lobby presets, without schema validation.
+   * Preserves unknown fields and entries that fail current validation.
+   * Returns an empty array if storage access fails, key is unset, or the stored JSON is not an array.
+   */
+  getRawLobbyPresets(): unknown[] {
+    try {
+      const storageKey = this.storageKey(LOBBY_PRESETS_KEY);
+      const raw = localStorage.getItem(storageKey);
+      UserSettings.cache.set(storageKey, raw);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Persists the given array of lobby presets to storage. Clears the key if empty.
+   * Returns true on successful write, or false if storage access fails.
+   */
+  setLobbyPresets(presets: readonly unknown[]): boolean {
+    try {
+      if (presets.length === 0) {
+        this.removeCached(LOBBY_PRESETS_KEY);
+      } else {
+        this.setString(LOBBY_PRESETS_KEY, JSON.stringify(presets));
+      }
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // In case localStorage was manually edited to be invalid, return an empty object

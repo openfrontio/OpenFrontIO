@@ -44,6 +44,7 @@ export class TrailManager {
 
   private _dirtyRowMin = Infinity;
   private _dirtyRowMax = -1;
+  private readonly _changedTiles: number[] = [];
 
   constructor(mapW: number, mapH: number) {
     this.mapW = mapW;
@@ -55,24 +56,35 @@ export class TrailManager {
     return this.trailState;
   }
 
+  /** Lowest row modified in the current tick. */
   get dirtyRowMin(): number {
     return this._dirtyRowMin;
   }
+  /** Highest row modified in the current tick. */
   get dirtyRowMax(): number {
     return this._dirtyRowMax;
   }
 
+  /** Modified tile refs during the current tick for sparse scatter updates. */
+  get changedTiles(): readonly number[] {
+    return this._changedTiles;
+  }
+
+  /** Reset dirty bounds and changed tile list after flushing. */
   clearDirtyRows(): void {
     this._dirtyRowMin = Infinity;
     this._dirtyRowMax = -1;
+    this._changedTiles.length = 0;
   }
 
+  /** Clear all active unit trails and reset the state buffer. */
   reset(): void {
     this.unitTrails.clear();
     this.trailState.fill(0);
     this.trailCounts.fill(0);
     this._dirtyRowMin = Infinity;
     this._dirtyRowMax = -1;
+    this._changedTiles.length = 0;
   }
 
   /**
@@ -129,7 +141,9 @@ export class TrailManager {
   }
 
   private stamp(ref: number, value: number): void {
+    if (this.trailState[ref] === value) return;
     this.trailState[ref] = value;
+    this._changedTiles.push(ref);
     const row = (ref / this.mapW) | 0;
     if (row < this._dirtyRowMin) this._dirtyRowMin = row;
     if (row > this._dirtyRowMax) this._dirtyRowMax = row;

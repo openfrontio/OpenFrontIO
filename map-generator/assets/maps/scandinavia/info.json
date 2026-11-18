@@ -6,6 +6,7 @@
   "categories": ["europe"],
   "location": { "lat": 63, "lon": 15 },
   "author": "crunchybbb",
+  "description": "An enormous subregion located in Northern Europe. This cold, icy peninsula is home to hundreds of fjords, islands, lakes, and coastlines. The map also includes portions of the Baltics, Russia, and the Prussian coast.",
   "nations": [
     {
       "coordinates": [419, 1426],

@@ -23,15 +23,9 @@ type AdmiralFn = {
   s?: string;
 };
 
-interface GoogleTag {
-  cmd: Array<() => void>;
-  pubads?: () => { setTargeting: (key: string, value: string) => void };
-}
-
 declare global {
   interface Window {
     admiral?: AdmiralFn;
-    googletag?: GoogleTag;
   }
 }
 

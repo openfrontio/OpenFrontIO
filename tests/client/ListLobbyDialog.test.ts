@@ -79,6 +79,8 @@ describe("ListLobbyDialog suggested cap", () => {
 
   it("starts at the maximum without one, or when it is above the maximum", async () => {
     expect(cap(await suggested(undefined))).toBe(MAX_HOSTED_LOBBY_PLAYERS);
-    expect(cap(await suggested(500))).toBe(MAX_HOSTED_LOBBY_PLAYERS);
+    expect(cap(await suggested(MAX_HOSTED_LOBBY_PLAYERS + 100))).toBe(
+      MAX_HOSTED_LOBBY_PLAYERS,
+    );
   });
 });

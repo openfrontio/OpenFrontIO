@@ -229,6 +229,11 @@ export class GameView implements GameLike {
     return this.lastUpdate?.updates ?? null;
   }
 
+  public isPaused(): boolean {
+    const pauses = this.lastUpdate?.updates[GameUpdateType.GamePaused];
+    return pauses?.[pauses.length - 1]?.paused ?? false;
+  }
+
   public motionPlans(): ReadonlyMap<number, GridMotionPlan> {
     return this.motion.gridPlans();
   }
@@ -535,6 +540,8 @@ export class GameView implements GameLike {
     f.railroadDirty = this.railroadCache.railroadDirty;
     f.trailDirtyRowMin = this.trailManager.dirtyRowMin;
     f.trailDirtyRowMax = this.trailManager.dirtyRowMax;
+    // References TrailManager's live array; must be read before the next tick clears it.
+    f.changedTrailTiles = this.trailManager.changedTiles;
 
     f.playerStatus = computePlayerStatus(this._playerStates, this._unitStates, {
       localPlayerSmallID: this._myPlayer?.smallID() ?? 0,

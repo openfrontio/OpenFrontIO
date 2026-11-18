@@ -1,5 +1,5 @@
 import { crazyGamesSDK } from "./CrazyGamesSDK";
-import { pokiSDK } from "./PokiSDK";
+import { pokiSDK } from "./poki/PokiSDK";
 import { viverseSDK } from "./ViverseSDK";
 
 /** A signed-in portal account. VIVERSE gives us no avatar. */

@@ -4,7 +4,7 @@ import { customElement, state } from "lit/decorators.js";
 import {
   composeVersionDisplay,
   desktopVersion,
-  isDesktopShell,
+  isSteamShell,
 } from "../DesktopShell";
 import { currentGameVersion } from "../GameVersion";
 import "./SteamWishlistButton";
@@ -114,7 +114,7 @@ export class Footer extends LitElement {
                version included, lives down here where a player can quote it
                in a bug report. -->
           ${
-            isDesktopShell()
+            isSteamShell()
               ? html`<div
                   class="footer-version text-xs mt-1 lg:mt-2 text-center px-4"
                 >

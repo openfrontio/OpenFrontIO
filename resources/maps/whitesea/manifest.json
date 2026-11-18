@@ -1,0 +1,341 @@
+{
+  "additionalNations": [
+    {
+      "coordinates": [173, 284],
+      "flag": "ru",
+      "name": "Vayda-Guba"
+    },
+    {
+      "coordinates": [467, 791],
+      "flag": "ru",
+      "name": "Revda"
+    },
+    {
+      "coordinates": [159, 944],
+      "flag": "ru",
+      "name": "Kovdor"
+    },
+    {
+      "coordinates": [225, 418],
+      "flag": "ru",
+      "name": "Zaozyorsk"
+    },
+    {
+      "coordinates": [501, 765],
+      "flag": "ru",
+      "name": "Lovozero"
+    },
+    {
+      "coordinates": [359, 1295],
+      "flag": "ru",
+      "name": "Chupa"
+    },
+    {
+      "coordinates": [184, 1441],
+      "flag": "ru",
+      "name": "Pyaozerskiy"
+    },
+    {
+      "coordinates": [601, 1641],
+      "flag": "ru",
+      "name": "Rabocheostrovsk"
+    },
+    {
+      "coordinates": [323, 1680],
+      "flag": "ru",
+      "name": "Yushkozero"
+    },
+    {
+      "coordinates": [362, 1706],
+      "flag": "ru",
+      "name": "Borovoy"
+    },
+    {
+      "coordinates": [568, 1932],
+      "flag": "ru",
+      "name": "Nadvoitsy"
+    },
+    {
+      "coordinates": [320, 1893],
+      "flag": "ru",
+      "name": "Ledmozero"
+    },
+    {
+      "coordinates": [256, 1969],
+      "flag": "ru",
+      "name": "Muyezerskiy"
+    },
+    {
+      "coordinates": [1757, 1266],
+      "flag": "ru",
+      "name": "Kimzha"
+    },
+    {
+      "coordinates": [1860, 1153],
+      "flag": "ru",
+      "name": "Moseveyo"
+    },
+    {
+      "coordinates": [1661, 984],
+      "flag": "ru",
+      "name": "Nes"
+    },
+    {
+      "coordinates": [1517, 711],
+      "flag": "ru",
+      "name": "Kiya"
+    },
+    {
+      "coordinates": [1861, 888],
+      "flag": "ru",
+      "name": "Oma"
+    },
+    {
+      "coordinates": [1915, 860],
+      "flag": "ru",
+      "name": "Snopa"
+    },
+    {
+      "coordinates": [1960, 769],
+      "flag": "ru",
+      "name": "Belushye"
+    },
+    {
+      "coordinates": [1925, 1885],
+      "flag": "ru",
+      "name": "Verkola"
+    },
+    {
+      "coordinates": [333, 542],
+      "flag": "ru",
+      "name": "Kola"
+    },
+    {
+      "coordinates": [1615, 1629],
+      "flag": "ru",
+      "name": "Golubino"
+    },
+    {
+      "coordinates": [1534, 1898],
+      "flag": "ru",
+      "name": "Brin-Navolok"
+    },
+    {
+      "coordinates": [1303, 1907],
+      "flag": "ru",
+      "name": "Kodino"
+    },
+    {
+      "coordinates": [1179, 1099],
+      "flag": "ru",
+      "name": "Sosnovka"
+    },
+    {
+      "coordinates": [786, 1193],
+      "flag": "ru",
+      "name": "Varzuga"
+    },
+    {
+      "coordinates": [836, 613],
+      "flag": "ru",
+      "name": "Kharlovka"
+    },
+    {
+      "coordinates": [712, 1610],
+      "flag": "ru",
+      "name": "Solovetsky"
+    }
+  ],
+  "categories": ["europe", "new"],
+  "id": "WhiteSea",
+  "map": {
+    "height": 2000,
+    "num_land_tiles": 2277985,
+    "width": 2000
+  },
+  "map16x": {
+    "height": 500,
+    "num_land_tiles": 135389,
+    "width": 500
+  },
+  "map4x": {
+    "height": 1000,
+    "num_land_tiles": 560318,
+    "width": 1000
+  },
+  "name": "White Sea",
+  "nations": [
+    {
+      "coordinates": [301, 530],
+      "flag": "ru",
+      "name": "Murmansk"
+    },
+    {
+      "coordinates": [1916, 175],
+      "flag": "ru",
+      "name": "Kolguyev Island"
+    },
+    {
+      "coordinates": [1517, 636],
+      "flag": "ru",
+      "name": "Shoyna"
+    },
+    {
+      "coordinates": [1341, 1636],
+      "flag": "ru",
+      "name": "Arkhangelsk"
+    },
+    {
+      "coordinates": [605, 1764],
+      "flag": "ru",
+      "name": "Belomorsk"
+    },
+    {
+      "coordinates": [1231, 1685],
+      "flag": "ru",
+      "name": "Severodvinsk"
+    },
+    {
+      "coordinates": [569, 1974],
+      "flag": "ru",
+      "name": "Segezha"
+    },
+    {
+      "coordinates": [385, 928],
+      "flag": "ru",
+      "name": "Apatity"
+    },
+    {
+      "coordinates": [1072, 1867],
+      "flag": "ru",
+      "name": "Onega"
+    },
+    {
+      "coordinates": [555, 1652],
+      "flag": "ru",
+      "name": "Kem"
+    },
+    {
+      "coordinates": [185, 1616],
+      "flag": "ru",
+      "name": "Kalevala"
+    },
+    {
+      "coordinates": [152, 1774],
+      "flag": "ru",
+      "name": "Kostomuksha"
+    },
+    {
+      "coordinates": [507, 1151],
+      "flag": "ru",
+      "name": "Umba"
+    },
+    {
+      "coordinates": [297, 1057],
+      "flag": "ru",
+      "name": "Kandalaksha"
+    },
+    {
+      "coordinates": [987, 702],
+      "flag": "ru",
+      "name": "Ostrovnoy"
+    },
+    {
+      "coordinates": [42, 158],
+      "flag": "no",
+      "name": "Vardø"
+    },
+    {
+      "coordinates": [310, 839],
+      "flag": "ru",
+      "name": "Monchegorsk"
+    },
+    {
+      "coordinates": [344, 776],
+      "flag": "ru",
+      "name": "Olenegorsk"
+    },
+    {
+      "coordinates": [387, 1350],
+      "flag": "ru",
+      "name": "Louhi"
+    },
+    {
+      "coordinates": [25, 1152],
+      "flag": "ru",
+      "name": "Alakurtti"
+    },
+    {
+      "coordinates": [1630, 1179],
+      "flag": "ru",
+      "name": "Kamenka"
+    },
+    {
+      "coordinates": [1668, 1170],
+      "flag": "ru",
+      "name": "Mezen"
+    },
+    {
+      "coordinates": [1903, 1389],
+      "flag": "ru",
+      "name": "Leshukonskoye"
+    },
+    {
+      "coordinates": [1632, 1567],
+      "flag": "ru",
+      "name": "Pinega"
+    },
+    {
+      "coordinates": [1870, 1785],
+      "flag": "ru",
+      "name": "Karpogory"
+    },
+    {
+      "coordinates": [1407, 1697],
+      "flag": "ru",
+      "name": "Novodvinsk"
+    },
+    {
+      "coordinates": [1473, 1755],
+      "flag": "ru",
+      "name": "Kholmogorsky"
+    },
+    {
+      "coordinates": [1074, 999],
+      "flag": "ru",
+      "name": "Kanevka"
+    },
+    {
+      "coordinates": [54, 457],
+      "flag": "ru",
+      "name": "Zapolyarny"
+    },
+    {
+      "coordinates": [324, 484],
+      "flag": "ru",
+      "name": "Polyarny"
+    },
+    {
+      "coordinates": [353, 494],
+      "flag": "ru",
+      "name": "Severomorsk"
+    },
+    {
+      "coordinates": [279, 1141],
+      "flag": "ru",
+      "name": "Zelenoborsky"
+    },
+    {
+      "coordinates": [144, 408],
+      "flag": "ru",
+      "name": "Pechenga"
+    },
+    {
+      "coordinates": [440, 876],
+      "flag": "ru",
+      "name": "Kirovsk"
+    }
+  ],
+  "themes": ["europe"],
+  "translation_key": "map.whitesea"
+}

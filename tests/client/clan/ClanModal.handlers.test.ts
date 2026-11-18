@@ -300,6 +300,51 @@ describe("ClanModal — handlers", () => {
     });
   });
 
+  describe("after a clan fund send", () => {
+    it("returns to Manage and clears the cached user so My Clans refetches balances", async () => {
+      const { invalidateUserMe } = await import("../../../src/client/Api");
+      vi.mocked(invalidateUserMe).mockClear();
+      setState(modal, "selectedClan" as keyof ClanModal, makeClan() as never);
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "myRole" as keyof ClanModal, "leader" as never);
+      setState(modal, "view" as keyof ClanModal, "send-funds" as never);
+      const sendView = await waitForSubComponent(modal, "clan-send-funds-view");
+
+      sendView.dispatchEvent(
+        new CustomEvent("funds-sent", { bubbles: true, composed: true }),
+      );
+      await flushAsync(modal);
+
+      expect(invalidateUserMe).toHaveBeenCalled();
+      expect((modal as unknown as { view: string }).view).toBe("manage");
+    });
+
+    // An unknown or earlier-send result may have moved money too, and the
+    // page then shows an error instead of emitting funds-sent.
+    it("clears the cached clan and user however the send page is left", async () => {
+      const { invalidateUserMe } = await import("../../../src/client/Api");
+      setState(modal, "selectedClan" as keyof ClanModal, makeClan() as never);
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "myRole" as keyof ClanModal, "leader" as never);
+      setState(modal, "view" as keyof ClanModal, "send-funds" as never);
+      await waitForSubComponent(modal, "clan-send-funds-view");
+      const stale = { tag: "TST", stale: true };
+      setState(modal, "detailCache" as keyof ClanModal, stale as never);
+      vi.mocked(invalidateUserMe).mockClear();
+
+      // Left for the list (e.g. the modal closed). Going back to Manage
+      // already refetches, since Manage reports the clan when it loads.
+      setState(modal, "view" as keyof ClanModal, "list" as never);
+      await flushAsync(modal);
+
+      expect(invalidateUserMe).toHaveBeenCalledTimes(1);
+      // Dropped (and possibly refetched), never the pre-send copy.
+      expect(
+        (modal as unknown as { detailCache: unknown }).detailCache,
+      ).not.toBe(stale);
+    });
+  });
+
   describe("handleUnban", () => {
     it("removes ban from list and decrements total on success", async () => {
       const { unbanClanMember, fetchClanBans } =

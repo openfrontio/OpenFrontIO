@@ -48,7 +48,7 @@ export function registerGamePreviewRoute(opts: {
   const fetchPublicGameInfo = async (
     gameID: string,
   ): Promise<ExternalGameInfo | null> => {
-    if (!gameIDSchema.safeParse(gameID).success) return null;
+    if (!gameIDSchema.validate(gameID)) return null;
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 1500);

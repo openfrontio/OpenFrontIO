@@ -5,6 +5,7 @@
   "translation_key": "map.worldinverted",
   "categories": ["world", "fictional"],
   "author": "Patrick Plays Badly",
+  "description": "A design based on an inverted world elevation map. For fun; sea levels have been raised in the North. Otherwise almost everything else has come from adjusting the natural data. Nations are based on ship wrecks and geographic features.",
   "nations": [
     {
       "name": "Titan Submersible",
@@ -1411,5 +1412,6 @@
       "name": "Reykjanes Delta",
       "flag": ""
     }
-  ]
+  ],
+  "themes": ["under_ocean"]
 }

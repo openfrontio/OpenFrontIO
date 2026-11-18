@@ -1,5 +1,9 @@
 import {
+  giftSubscriptionOf,
   isGrantedSubscription,
+  paidSubscriptionOf,
+  type StorePlacement,
+  subscriptionsOf,
   UserMeResponse,
   UserSubscription,
 } from "@openfront/shared/ApiSchemas";
@@ -40,6 +44,8 @@ import {
   classifyPurchaseReturn,
   paymentsProvider,
   purchaseOutcomeMessage,
+  sellsOnlyThroughPlay,
+  startPlayPurchase,
   startPurchase,
 } from "./Payments";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
@@ -269,10 +275,7 @@ function debtMessage(debt: number): string {
  * the same reason: "0 days" reads as a bug, and a row the sweeper has not got
  * to yet is not worth quoting.
  *
- * Rounded UP, so the figure never claims they forfeit LESS than they do — the
- * safe side for a warning about something irreversible. It also gets the case
- * that would look most like a bug right: two hours into a 30-day grant, floor
- * would say "29 days".
+ * Rounded UP: two hours into a 30-day grant, floor would say "29 days".
  */
 function grantedDaysRemaining(sub: UserSubscription): number | null {
   const end = sub.currentPeriodEnd;
@@ -283,40 +286,57 @@ function grantedDaysRemaining(sub: UserSubscription): number | null {
 }
 
 /**
- * A granted player starting a PAID subscription — any tier, including the one
- * their grant already gives them.
+ * A granted player with no paid subscription starting one — any tier,
+ * including the one their grant already gives them.
  *
  * The confirm is not the tier-change copy. That copy promises Stripe proration
  * ("charged the prorated difference", "credit for the unused portion"), and
- * none of it is true here: infra expires every granted row in the same
- * transaction as the paid insert (`expireGrantsForPaidReplacement`,
- * SteamAgreements.ts), so the paid period starts at settle. What happens to
- * the unused free days depends on the rail, and the copy must match infra:
- * on Steam they are added to the end (`steam:extend_agreement` pushes the
- * next charge back), on Stripe they are simply gone. An open-ended grant has
- * no days to carry on either rail.
+ * none of it is true here: the first month is charged at checkout. What
+ * happens to the grant must match infra, and is the same on both rails:
+ *
+ * - A grant whose tier ranks above the one bought (by monthly price) keeps
+ *   running beside the paid subscription until its own end.
+ * - Otherwise the grant is replaced, and its unused days move the paid
+ *   subscription's next payment later. An open-ended grant has no days to
+ *   carry; it simply ends.
  *
  * The purchase itself is the ordinary first-purchase flow: same startPurchase,
  * same success string, same profile refresh. Only the confirm differs.
  */
 async function purchaseOverGrant(
   sub: Subscription,
-  currentSub: UserSubscription,
+  gift: UserSubscription,
+  placement?: StorePlacement,
 ): Promise<void> {
   const targetName = translateCosmetic("subscriptions", sub.name);
-  const days = grantedDaysRemaining(currentSub);
+  const giftTier = subscriptionTier(await fetchCosmetics(), gift.tier);
+  const days = grantedDaysRemaining(gift);
+  const keepsGift =
+    giftTier !== null &&
+    giftTier.priceMonthly > sub.priceMonthly &&
+    (!gift.currentPeriodEnd || days !== null);
   // Every key passed as a literal so the en.json sync test can see them.
   const confirmed = await showInGameConfirm(
-    days === null
-      ? translateText("store.confirm_subscribe_over_grant_no_days", {
-          tier: targetName,
-        })
-      : paymentsProvider() === "steam"
-        ? translateText("store.confirm_subscribe_over_grant_carried", {
+    keepsGift
+      ? gift.currentPeriodEnd
+        ? translateText("store.confirm_subscribe_beside_grant", {
             tier: targetName,
-            days,
+            giftTier: translateCosmetic("subscriptions", gift.tier),
+            date: gift.currentPeriodEnd.toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            }),
           })
-        : translateText("store.confirm_subscribe_over_grant", {
+        : translateText("store.confirm_subscribe_beside_grant_no_date", {
+            tier: targetName,
+            giftTier: translateCosmetic("subscriptions", gift.tier),
+          })
+      : days === null
+        ? translateText("store.confirm_subscribe_over_grant_no_days", {
+            tier: targetName,
+          })
+        : translateText("store.confirm_subscribe_over_grant_carried", {
             tier: targetName,
             days,
           }),
@@ -330,6 +350,7 @@ async function purchaseOverGrant(
   const outcome = await startPurchase({
     kind: "subscription_tier",
     tierName: sub.name,
+    placement,
   });
   if (outcome.outcome === "completed") await broadcastFreshUserMe();
   if (outcome.outcome === "error" && outcome.refetchCatalog) {
@@ -376,16 +397,23 @@ async function promptManageBilling(message: string): Promise<void> {
 export async function purchaseCosmetic(
   resolved: ResolvedCosmetic,
   method: PaymentMethod,
+  placement?: StorePlacement,
 ): Promise<PurchaseResult> {
   if (!resolved.cosmetic) return;
   const c = resolved.cosmetic;
   const colorPaletteName = resolved.colorPalette?.name;
 
   if (resolved.type === "subscription") {
+    // The Android app sells no subscription (Play is its only way to pay) and
+    // never offers one; nothing here may start a checkout or a tier change.
+    if (sellsOnlyThroughPlay()) return;
     const sub = c as Subscription;
     const userMe = await getUserMe();
-    const currentSub =
-      userMe === false ? null : (userMe.player.subscription ?? null);
+    // The paid row decides: a grant beside it is not something to change
+    // tier from.
+    const paidSub = userMe === false ? null : paidSubscriptionOf(userMe.player);
+    const giftSub = userMe === false ? null : giftSubscriptionOf(userMe.player);
+    const currentSub = paidSub ?? giftSub;
 
     if (currentSub) {
       // OPE-440, and BEFORE every branch below it, including the
@@ -407,8 +435,8 @@ export async function purchaseCosmetic(
       // device, and startPurchase's paymentsProvider() is the only answer
       // there is — Steam inside the shell, Stripe on the web. Both are
       // admitted.
-      if (isGrantedSubscription(currentSub)) {
-        return purchaseOverGrant(sub, currentSub);
+      if (paidSub === null) {
+        return purchaseOverGrant(sub, currentSub, placement);
       }
 
       if (currentSub.tier === sub.name) {
@@ -486,6 +514,7 @@ export async function purchaseCosmetic(
         const outcome = await startPurchase({
           kind: "subscription_tier",
           tierName: sub.name,
+          placement,
         });
         if (outcome.outcome === "completed") await broadcastFreshUserMe();
         if (outcome.outcome === "error" && outcome.refetchCatalog) {
@@ -521,7 +550,7 @@ export async function purchaseCosmetic(
   }
 
   if (resolved.type === "cosmeticPack") {
-    return purchasePack(c as CosmeticPack, method);
+    return purchasePack(c as CosmeticPack, method, placement);
   }
 
   if (method === "dollar") {
@@ -531,11 +560,15 @@ export async function purchaseCosmetic(
     // and gating on it is what made those unbuyable.
     if (resolved.type === "pack" || resolved.type === "subscription") {
       const isPack = resolved.type === "pack";
-      const outcome = await startPurchase(
-        isPack
-          ? { kind: "currency_pack", packName: c.name }
-          : { kind: "subscription_tier", tierName: c.name },
-      );
+      // In the Android app a currency pack is a Play product instead.
+      const outcome =
+        isPack && paymentsProvider() === "google"
+          ? await startPlayPurchase((c as Pack).googleProductId)
+          : await startPurchase(
+              isPack
+                ? { kind: "currency_pack", packName: c.name, placement }
+                : { kind: "subscription_tier", tierName: c.name, placement },
+            );
       if (outcome.outcome === "completed") {
         // Not just invalidateUserMe(): that clears the cache and nothing more.
         // On the overlay path the page never navigates, so an open StoreModal
@@ -651,6 +684,7 @@ export async function purchaseCosmetic(
     c.name,
     method,
     colorPaletteName,
+    placement,
   );
   if (!result.ok) {
     switch (result.code) {
@@ -749,6 +783,7 @@ function purchaseSuccessMessage(
 async function purchasePack(
   pack: CosmeticPack,
   method: PaymentMethod,
+  placement?: StorePlacement,
 ): Promise<PurchaseResult> {
   if (method !== "hard") {
     console.error("purchaseCosmetic: packs are only sold for hard currency");
@@ -778,7 +813,7 @@ async function purchasePack(
     return insufficient(balance);
   }
 
-  const result = await purchaseCosmeticPack(pack.name);
+  const result = await purchaseCosmeticPack(pack.name, placement);
   if (result.ok) {
     const charged = Number(result.data.amount);
     await showInGameAlert(
@@ -1442,10 +1477,12 @@ export function resolveCosmetics(
   // Subscriptions
   const flares =
     userMeResponse === false ? [] : (userMeResponse.player.flares ?? []);
+  // A grant beside a paid subscription leaves the paid tier as the one owned.
   const currentSub =
     userMeResponse === false
       ? null
-      : (userMeResponse.player.subscription ?? null);
+      : (paidSubscriptionOf(userMeResponse.player) ??
+        giftSubscriptionOf(userMeResponse.player));
   const currentSubTier = currentSub?.tier ?? null;
   // OPE-440. A grant is free access nobody is billing, not something the
   // player bought, and the tier it confers is the one they are likeliest to
@@ -1458,6 +1495,13 @@ export function resolveCosmetics(
   // A flare is untouched by this: it is a permanent unlock, not a month, and
   // there is genuinely nothing to sell someone who holds one.
   const grantIsCurrent = isGrantedSubscription(currentSub);
+  // infra adds a `subscription:<tier>` flare for every row held, gift rows
+  // included, so for a held tier the flare says nothing the rows don't.
+  const heldTiers = new Set(
+    userMeResponse === false
+      ? []
+      : subscriptionsOf(userMeResponse.player).map((s) => s.tier),
+  );
   for (const [subKey, sub] of Object.entries(cosmetics.subscriptions ?? {})) {
     const key = `subscription:${subKey}`;
     // `subscriptions` is this rail's storefront, so every tier in it is for
@@ -1466,7 +1510,9 @@ export function resolveCosmetics(
     // (see currency packs above). If a rail cannot sell it, checkout says so.
     const isCurrentTier = subKey === currentSubTier;
     const demoteGrant = grantIsCurrent && isCurrentTier;
-    const isCurrent = flares.includes(key) || (isCurrentTier && !demoteGrant);
+    const isCurrent =
+      (flares.includes(key) && !heldTiers.has(subKey)) ||
+      (isCurrentTier && !demoteGrant);
     const rel: ResolvedCosmetic["relationship"] = isCurrent
       ? "owned"
       : "purchasable";

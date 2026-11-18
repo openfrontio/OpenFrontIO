@@ -24,7 +24,8 @@ import { ServerEnv } from "./ServerEnv";
 // Games already assigned or running are untouched by this: the gate only
 // decides whether to make a NEW offer.
 
-export type RankedMode = "1v1" | "2v2" | "ffa" | "clanwars";
+export const RANKED_MODES = ["1v1", "2v2", "clanwars"] as const;
+export type RankedMode = (typeof RANKED_MODES)[number];
 
 // How long a single check-in may hang before we abort and come round again.
 // The endpoint is a long poll, so a request pending for most of this is the
@@ -225,23 +226,11 @@ export async function rankedCheckinPass(
         return;
       }
       const baseConfig =
-        mode === "ffa"
-          ? playlist.getFfaConfig()
-          : mode === "2v2"
-            ? playlist.get2v2Config()
-            : playlist.get1v1Config();
+        mode === "2v2" ? playlist.get2v2Config() : playlist.get1v1Config();
       const game = gm.createGame(
         gameId,
         parsed.success
-          ? {
-              ...baseConfig,
-              allowedPublicIds: parsed.data.players,
-              // An FFA match is 4 to 10 players: size the lobby to this one
-              // so it starts as soon as they are all in.
-              ...(mode === "ffa"
-                ? { maxPlayers: parsed.data.players.length }
-                : {}),
-            }
+          ? { ...baseConfig, allowedPublicIds: parsed.data.players }
           : baseConfig,
         undefined,
         Date.now() + MATCH_START_DEADLINE_MS,
@@ -302,7 +291,7 @@ function createClanWarsGame(
  */
 export function startRankedCheckinLoops(deps: RankedCheckinDeps): void {
   const gate = new RankedCheckinGate(deps.isActive, deps.log);
-  for (const mode of ["1v1", "2v2", "ffa", "clanwars"] as const) {
+  for (const mode of RANKED_MODES) {
     startPolling(
       async () => rankedCheckinPass(mode, gate, deps),
       CHECKIN_INTERVAL_MS + Math.random() * CHECKIN_JITTER_MS,

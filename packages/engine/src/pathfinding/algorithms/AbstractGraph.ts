@@ -577,21 +577,13 @@ export class AbstractGraphBuilder {
     minY: number,
     maxY: number,
   ): Map<number, number> {
-    const fromX = this.map.x(from);
-    const fromY = this.map.y(from);
-
-    // Create a map of tile positions to node IDs for fast lookup
     const tileToNodeId = new Map<TileRef, number>();
-    let maxManhattanDist = 0;
-
     for (const node of targetNodes) {
       tileToNodeId.set(node.tile, node.id);
-      const dx = Math.abs(node.x - fromX);
-      const dy = Math.abs(node.y - fromY);
-      maxManhattanDist = Math.max(maxManhattanDist, dx + dy);
     }
 
-    const maxDistance = maxManhattanDist * 4; // Allow path deviation
+    // The bounds check limits the search; a river can wind far inside a cluster
+    const maxDistance = this.clusterSize * this.clusterSize;
     const reachable = new Map<number, number>();
     let foundCount = 0;
 

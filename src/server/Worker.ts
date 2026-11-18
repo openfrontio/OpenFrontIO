@@ -1103,6 +1103,9 @@ export function getListingEligibilityError(
     if (effectiveCap <= game.numPlayers()) {
       return "listing_max_players_too_low";
     }
+    if (effectiveCap > MAX_HOSTED_LOBBY_PLAYERS) {
+      return "listing_max_players_too_high";
+    }
   }
   return null;
 }

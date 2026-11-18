@@ -6,6 +6,7 @@
   "categories": ["asia"],
   "location": { "lat": 37, "lon": 122.5 },
   "author": "crunchybbb",
+  "description": "The Yellow Sea is a sea located between the Korean peninsula and the east coast of China. It opens into the East China Sea to the south and derives its name from the yellow silt washed into it by the Yellow River. The two peninsulas jutting out into the sea contribute to its unique shape and appearance.",
   "nations": [
     {
       "coordinates": [1350, 575],

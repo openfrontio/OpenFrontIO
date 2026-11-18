@@ -1,7 +1,7 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import { isDesktopShell } from "../DesktopShell";
 import { gamePortal } from "../GamePortal";
-import { steamSDK } from "../SteamSDK";
 import { translateText } from "../Utils";
 
 const STEAM_APP_ID = "3560670";
@@ -108,8 +108,10 @@ export class SteamWishlist extends LitElement {
   // (index.html), and an iframe whose color scheme differs from its
   // document's gets an opaque white backdrop, a white strip under the card.
   render() {
-    // Poki doesn't allow promoting other platforms.
-    if (steamSDK.isOnSteam() || gamePortal.name() === "poki") return nothing;
+    // Poki doesn't allow promoting other platforms, and neither app shell
+    // shows it: the Steam app has nothing to wishlist, and the Android app
+    // must not send the player to another store.
+    if (isDesktopShell() || gamePortal.name() === "poki") return nothing;
 
     const frameWidth = Math.min(
       WIDGET_WIDTH,

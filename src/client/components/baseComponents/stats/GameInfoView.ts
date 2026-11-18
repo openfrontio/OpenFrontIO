@@ -1,9 +1,9 @@
-import {
-  GameMode,
+import type {
+  GameMapType,
   GameType,
-  type GameMapType,
 } from "@openfront/engine-api/game/GameTypes";
-import { type GameEndInfo } from "@openfront/shared/WireSchemas";
+import type { GameConfig } from "@openfront/engine-api/Schemas";
+import type { GameEndInfo } from "@openfront/shared/WireSchemas";
 import {
   html,
   LitElement,
@@ -14,6 +14,17 @@ import {
 import { customElement, property, state } from "lit/decorators.js";
 import { fetchGameById } from "../../../Api";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
+import {
+  disabledUnitsBox,
+  FLAT_SETTING_TAG,
+  formatGameType,
+  formatGameVisibility,
+  hostCheatsBox,
+  lobbySettingTagText,
+  MODE_BADGE_CLASS,
+  notableLobbySettings,
+  VISIBILITY_BADGE_CLASS,
+} from "../../../utilities/LobbySettingsSummary";
 import { getMapName, renderDuration, translateText } from "../../../Utils";
 import { renderLoadingSpinner } from "../../BaseModal";
 import {
@@ -215,28 +226,22 @@ export class GameInfoView extends LitElement {
           </div>
           <div class="flex min-w-0 flex-col justify-between p-4 sm:p-5">
             <div>
-              <div class="mb-2 flex flex-wrap items-center gap-2">
-                <span
-                  class="rounded-md border border-malibu-blue/25 bg-malibu-blue/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-aquarius"
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h2
+                  class="min-w-0 truncate text-xl font-bold tracking-wide text-white sm:text-2xl"
+                  title=${mapName}
                 >
-                  ${translateText(
-                    info.config.gameMode === GameMode.Team
-                      ? "game_mode.teams"
-                      : "game_mode.ffa",
-                  )}
-                </span>
-                <span
-                  class="rounded-md border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-white/45"
-                >
-                  ${this.gameTypeLabel(info.config.gameType)}
-                </span>
+                  ${mapName}
+                </h2>
+                <div class="flex shrink-0 flex-wrap items-center gap-2">
+                  <span class="rounded-md border ${MODE_BADGE_CLASS}">
+                    ${formatGameType(info.config)}
+                  </span>
+                  <span class="rounded-md border ${VISIBILITY_BADGE_CLASS}">
+                    ${this.gameTypeLabel(info.config.gameType, info.visibleAt)}
+                  </span>
+                </div>
               </div>
-              <h2
-                class="truncate text-xl font-bold tracking-wide text-white sm:text-2xl"
-                title=${mapName}
-              >
-                ${mapName}
-              </h2>
               <div
                 data-game-date
                 class="mt-2 flex items-center gap-1.5 text-xs font-medium tabular-nums text-white/50"
@@ -263,8 +268,56 @@ export class GameInfoView extends LitElement {
             </div>
           </div>
         </div>
+        ${this.renderModifiers(info.config)}
       </div>
       ${this.afterSummary}
+    `;
+  }
+
+  private renderModifiers(config: GameConfig): TemplateResult | typeof nothing {
+    const settings = notableLobbySettings(config, null);
+    const hasSettings = settings.length > 0;
+    const disabledUnits = disabledUnitsBox(
+      config,
+      hasSettings ? "mt-3" : "",
+      "flat",
+    );
+    const hostCheats = hostCheatsBox(
+      config,
+      hasSettings || disabledUnits !== null ? "mt-3" : "",
+      "flat",
+    );
+    if (
+      settings.length === 0 &&
+      disabledUnits === null &&
+      hostCheats === null
+    ) {
+      return nothing;
+    }
+
+    return html`
+      <div
+        data-game-modifiers
+        class="border-t border-white/10 bg-black/15 p-4 sm:p-5"
+      >
+        ${this.renderSettingsTags(settings)} ${disabledUnits ?? nothing}
+        ${hostCheats ?? nothing}
+      </div>
+    `;
+  }
+
+  private renderSettingsTags(
+    settings: ReturnType<typeof notableLobbySettings>,
+  ): TemplateResult | typeof nothing {
+    if (settings.length === 0) return nothing;
+    return html`
+      <div class="flex flex-wrap gap-1.5" data-modifier-tags>
+        ${settings.map(
+          (s) => html`
+            <span class=${FLAT_SETTING_TAG}>${lobbySettingTagText(s)}</span>
+          `,
+        )}
+      </div>
     `;
   }
 
@@ -316,17 +369,8 @@ export class GameInfoView extends LitElement {
     this.mapImage = null;
   }
 
-  private gameTypeLabel(gameType: GameType): string {
-    switch (gameType) {
-      case GameType.Public:
-        return translateText("account_modal.games_type_public");
-      case GameType.Private:
-        return translateText("account_modal.games_type_private");
-      case GameType.Singleplayer:
-        return translateText("account_modal.games_type_singleplayer");
-      default:
-        return translateText("game_info_modal.unknown_game_type");
-    }
+  private gameTypeLabel(gameType?: GameType, visibleAt?: number): string {
+    return formatGameVisibility(gameType, visibleAt);
   }
 
   private renderSummaryTable() {
