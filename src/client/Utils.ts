@@ -285,9 +285,9 @@ export function renderDuration(totalSeconds: number): string {
   if (seconds > 0 || parts.length === 0)
     parts.push(`${seconds}${translateText("common.duration_second_short")}`);
   if (!isRTL()) return parts.join(" ");
-  // Isolate each value/unit pair and the full duration so neighboring RTL
-  // labels cannot reorder numbers, even inside an LTR menu or sentence.
-  return `\u2067${parts.map((part) => `\u2067${part}\u2069`).join(" ")}\u2069`;
+  // Isolate the full duration from its surrounding text without splitting
+  // English fallback units into separate RTL runs.
+  return `\u2067${parts.join(" ")}\u2069`;
 }
 
 export async function copyToClipboard(
