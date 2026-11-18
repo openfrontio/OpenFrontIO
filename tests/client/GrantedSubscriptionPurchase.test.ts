@@ -203,6 +203,20 @@ describe("purchaseCosmetic: a granted subscriber reaches checkout", () => {
     expect(alertMock).not.toHaveBeenCalledWith("store.already_subscribed");
   });
 
+  it("carries the store placement into the checkout request", async () => {
+    signedInWith({ tier: "gold", provider: null });
+
+    await purchaseCosmetic(tier("platinum", 10), "dollar", {
+      kind: "flash",
+    });
+
+    expect(startPurchaseMock).toHaveBeenCalledWith({
+      kind: "subscription_tier",
+      tierName: "platinum",
+      placement: { kind: "flash" },
+    });
+  });
+
   it("buys a different tier through checkout, never change-tier", async () => {
     // change-tier is a 400 for a grant ("Cannot change tier of a granted
     // subscription"), which the client surfaced as "Couldn't update your
