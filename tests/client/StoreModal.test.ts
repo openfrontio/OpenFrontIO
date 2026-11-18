@@ -1002,7 +1002,8 @@ describe("StoreModal cosmetic browser", () => {
 
       vi.useFakeTimers({ now: Date.now() });
       try {
-        // Reschedules the store's new-item timer on the fake clock.
+        // Drop the real timer; the redraw re-arms it on the fake clock.
+        (modal as unknown as { clearNewEnd(): void }).clearNewEnd();
         modal.requestUpdate();
         await modal.updateComplete;
         vi.advanceTimersByTime(61_000);
@@ -1145,6 +1146,8 @@ describe("StoreModal cosmetic browser", () => {
       const { store: modal } = await openEffectsStore();
       vi.useFakeTimers({ now: Date.now() });
       try {
+        // Drop the real timer; the redraw re-arms it on the fake clock.
+        (modal as unknown as { clearNewEnd(): void }).clearNewEnd();
         modal.requestUpdate();
         await modal.updateComplete;
         const select = vi.spyOn(
@@ -1210,8 +1213,32 @@ describe("StoreModal cosmetic browser", () => {
       );
       modal.open({ tab: "cosmetics", sub: "new" });
       await modal.updateComplete;
+      // While it waits, the bar still shows New as the selected tab, and the
+      // empty grid says nothing is new rather than "No skins".
+      expect(
+        modal
+          .querySelector("[data-store-subtab].border-malibu-blue")
+          ?.getAttribute("data-store-subtab"),
+      ).toBe("new");
+      expect(modal.textContent).toContain("store.no_new_items");
+      expect(modal.textContent).not.toContain("store.no_skins");
       deliver(refreshed);
       await vi.waitFor(() => expect(keys(modal)).toEqual([newFlag.key]));
+    });
+
+    it("keeps its New timer, and its resolved catalog, across redraws", async () => {
+      const modal = await openNewTabExpiringSoon();
+      modal.requestUpdate();
+      await modal.updateComplete;
+      const armed = newEndTimer(modal);
+      expect(armed).not.toBeNull();
+      vi.mocked(resolveCosmetics).mockClear();
+      modal.requestUpdate();
+      await modal.updateComplete;
+      modal.requestUpdate();
+      await modal.updateComplete;
+      expect(newEndTimer(modal)).toBe(armed);
+      expect(resolveCosmetics).not.toHaveBeenCalled();
     });
   });
 

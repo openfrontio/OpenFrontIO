@@ -151,7 +151,10 @@ function groupNewUntil(group: readonly ResolvedCosmetic[]): number {
 function newestFirst<T extends readonly ResolvedCosmetic[]>(
   groups: readonly T[],
 ): T[] {
-  return [...groups].sort((a, b) => groupNewUntil(b) - groupNewUntil(a));
+  return groups
+    .map((group) => ({ group, until: groupNewUntil(group) }))
+    .sort((a, b) => b.until - a.until)
+    .map(({ group }) => group);
 }
 
 /** The flash item, then the rest on sale, then everything else. */
@@ -339,7 +342,33 @@ export class StoreModal extends BaseModal {
     });
   }
 
+  /**
+   * Everything the player can buy here. Cached on its inputs: a render reads
+   * it several times (sub-tabs, grid, New timer), and none of it depends on
+   * the clock (cards judge sales and New against it themselves).
+   */
   private resolvedPurchasables(): ResolvedCosmetic[] {
+    const inputs = [
+      this.cosmetics,
+      this.userMeResponse,
+      this.affiliateCode,
+      this.playPrices,
+    ] as const;
+    const cached = this.purchasablesCache;
+    if (cached && cached.inputs.every((input, i) => input === inputs[i])) {
+      return cached.items;
+    }
+    const items = this.resolvePurchasables();
+    this.purchasablesCache = { inputs, items };
+    return items;
+  }
+
+  private purchasablesCache: {
+    inputs: readonly unknown[];
+    items: ResolvedCosmetic[];
+  } | null = null;
+
+  private resolvePurchasables(): ResolvedCosmetic[] {
     return resolveCosmetics(
       this.cosmetics,
       this.userMeResponse,
@@ -395,7 +424,8 @@ export class StoreModal extends BaseModal {
     if (tab === "sale" || tab === "new") {
       // A sale (a flash sale's pick included) or a new item can be an effect
       // or a bundle too, and those live on other tabs; list them here as well
-      // so the banner's "On sale" always leads to the item.
+      // so On sale and New each lead to every such item (the banner's "On
+      // sale" link included).
       const others = items
         .filter(
           (resolved) =>
@@ -606,7 +636,11 @@ export class StoreModal extends BaseModal {
     const hasNew = this.cosmeticsGroups("new").length > 0;
     const hasSale = this.cosmeticsGroups("sale").length > 0;
     return COSMETICS_SUB_TABS.filter(
-      (tab) => (tab !== "new" || hasNew) && (tab !== "sale" || hasSale),
+      (tab) =>
+        // The selected one stays while groupsForTab holds it for a pending
+        // catalog fetch, so the bar still shows where the player is.
+        tab === this.cosmeticsSubTab ||
+        ((tab !== "new" || hasNew) && (tab !== "sale" || hasSale)),
     );
   }
 
@@ -870,7 +904,11 @@ export class StoreModal extends BaseModal {
         ? "store.no_flags"
         : this.cosmeticsSubTab === "crowns"
           ? "store.no_crowns"
-          : "store.no_skins";
+          : this.cosmeticsSubTab === "new"
+            ? "store.no_new_items"
+            : this.cosmeticsSubTab === "sale"
+              ? "store.no_sale_items"
+              : "store.no_skins";
     return html`
       <div
         class="flex flex-nowrap items-center gap-6 overflow-x-auto border-b border-white/10 px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>button:first-of-type]:ms-auto [&>button:last-of-type]:me-auto"
@@ -1134,15 +1172,29 @@ export class StoreModal extends BaseModal {
         this.cosmeticsSubTab === "new" &&
         this.affiliateCode === null &&
         this.visibleGroups.some((group) => !groupIsNew(group)));
-    this.clearNewEnd();
-    if (!this.isModalOpen) return;
+    if (!this.isModalOpen) {
+      this.clearNewEnd();
+      return;
+    }
     const ends = this.resolvedPurchasables().flatMap((resolved) => {
       const at = newUntilMs(resolved.cosmetic);
       return at !== null && at > now ? [at] : [];
     });
-    if (!overdue && ends.length === 0) return;
+    if (!overdue && ends.length === 0) {
+      this.clearNewEnd();
+      return;
+    }
     // setTimeout overflows past ~24.8 days; newUntil is at most 14 days out.
     const delay = overdue ? 0 : Math.min(Math.min(...ends) - now, 2 ** 31 - 1);
+    // Most redraws don't move the deadline: keep the timer already set.
+    if (
+      !overdue &&
+      this.newEndTimer !== null &&
+      this.newEndAt === now + delay
+    ) {
+      return;
+    }
+    this.clearNewEnd();
     this.newEndAt = now + delay;
     this.newEndTimer = setTimeout(() => {
       this.newEndTimer = null;
