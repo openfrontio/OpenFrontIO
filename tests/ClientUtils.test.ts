@@ -128,6 +128,33 @@ describe("renderDuration", () => {
     expect(renderDuration(-10)).toBe("0s");
     expect(renderDuration(-0.1)).toBe("0s");
   });
+
+  it.each(["fa", "fa-IR", "ar", "he"])(
+    "keeps RTL duration values attached to their units in %s",
+    (lang) => {
+      const selector = document.querySelector("lang-selector") as LangSelector;
+      selector.currentLang = lang;
+      selector.translations = {
+        "common.duration_hour_short": "ساعت",
+        "common.duration_minute_short": "دقیقه",
+        "common.duration_second_short": "ثانیه",
+      };
+      expect(renderDuration(118)).toBe(
+        "\u2067\u20671دقیقه\u2069 \u206758ثانیه\u2069\u2069",
+      );
+      expect(renderDuration(3723)).toBe(
+        "\u2067\u20671ساعت\u2069 \u20672دقیقه\u2069 \u20673ثانیه\u2069\u2069",
+      );
+      for (const seconds of [-10, 0, 0.5]) {
+        expect(renderDuration(seconds)).toBe("\u2067\u20670ثانیه\u2069\u2069");
+      }
+      expect(renderDuration(60)).toBe("\u2067\u20671دقیقه\u2069\u2069");
+      selector.translations = {};
+      expect(renderDuration(118)).toBe(
+        "\u2067\u20671min\u2069 \u206758s\u2069\u2069",
+      );
+    },
+  );
 });
 
 describe("renderTroops", () => {
