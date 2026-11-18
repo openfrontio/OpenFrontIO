@@ -80,6 +80,10 @@ vi.mock("../../src/client/BootInterrupts", () => ({
     return false;
   },
   nextBootInterrupt: () => null,
+  nextBootInterruptResolvingSkinDrop: async () => ({
+    interrupt: null,
+    steamSkinDrop: null,
+  }),
   parseClaimPromptStore: () => ({}),
   runBootInterrupt: async () => {},
 }));

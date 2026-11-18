@@ -41,13 +41,21 @@ vi.mock("../../src/client/SteamSDK", () => ({
 }));
 
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import {
   lapseShownAfterDispatch,
   nextBootInterrupt,
+  nextBootInterruptResolvingSkinDrop,
   runBootInterrupt,
   type BootInterruptPorts,
 } from "../../src/client/BootInterrupts";
+import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 import { LAPSE_NOTICE_KEY } from "../../src/client/PlayerName";
+import {
+  resetSteamSkinDropForTest,
+  steamSkinDropDueThisLaunch,
+  steamSkinDropWhenClean,
+} from "../../src/client/SteamSkinDrop";
 import { UsernameInput } from "../../src/client/UsernameInput";
 
 // Lapsed, still inside the grace window, and holding unclaimed rewards — the
@@ -102,6 +110,8 @@ describe("boot sequencing against a real <username-input>", () => {
       updateSteamGrant: () => {},
       markNoticeSeen: () => {},
       markMessageSeen: () => {},
+      openSteamSkinDrop: async () => "dismiss",
+      equipCosmetic: () => {},
       now: () => Date.now(),
     };
     const player = userMe.player;
@@ -121,6 +131,8 @@ describe("boot sequencing against a real <username-input>", () => {
       claimStringsReady: true,
       reportThanksDue: false,
       reportThanksStringsReady: true,
+      steamSkinDropDue: false,
+      steamSkinDropStringsReady: true,
       giftEndingDue: false,
       giftEndingStringsReady: true,
       renewalPushedDue: false,
@@ -128,7 +140,13 @@ describe("boot sequencing against a real <username-input>", () => {
     });
     await runBootInterrupt(
       interrupt,
-      { claimStore: {}, grantStore: {}, publicId: "p", steamNotice: null },
+      {
+        claimStore: {},
+        grantStore: {},
+        publicId: "p",
+        steamNotice: null,
+        steamSkinDrop: null,
+      },
       ports,
     );
     return { interrupt, ...calls };
@@ -189,5 +207,157 @@ describe("boot sequencing against a real <username-input>", () => {
     expect(showInGameAlert).not.toHaveBeenCalled();
     expect(result.interrupt).toBe("rewards");
     expect(result.rewardsOpened).toBe(1);
+  });
+});
+
+describe("the Steam skin drop in the boot sequence", () => {
+  const drop = {
+    type: "skin" as const,
+    name: "mountain",
+    colorPalette: null,
+    notice: "steam_skin:mountain",
+  };
+  const entry = {
+    type: "skin",
+    cosmetic: null,
+    colorPalette: null,
+    relationship: "owned",
+    key: "skin:mountain",
+  } as ResolvedCosmetic;
+
+  // Main's wiring, reduced: the same helper and the same ordering call.
+  async function boot(
+    catalog: ResolvedCosmetic[],
+    rewardCount: number,
+    homepageIsClean: () => boolean = () => true,
+    fetchCatalog: () => Promise<Cosmetics | null> = async () =>
+      ({}) as Cosmetics,
+    grantEndedDue = false,
+  ) {
+    const calls = {
+      opened: [] as ResolvedCosmetic[],
+      seen: [] as string[],
+      rewardsOpened: 0,
+      catalogFetches: 0,
+      alerts: 0,
+    };
+    const countedFetch = () => {
+      calls.catalogFetches++;
+      return fetchCatalog();
+    };
+    const { interrupt, steamSkinDrop } =
+      await nextBootInterruptResolvingSkinDrop(
+        {
+          cleanHomepage: homepageIsClean(),
+          usernameStatus: "claimed",
+          username: "p",
+          usernameBase: "p",
+          lapseNoticeDue: false,
+          grantWelcomeDue: false,
+          grantEndedDue,
+          grantStringsReady: true,
+          steamNotice: null,
+          steamNoticeStringsReady: true,
+          rewardCount,
+          claimPromptDue: false,
+          claimStringsReady: true,
+          reportThanksDue: false,
+          reportThanksStringsReady: true,
+          giftEndingDue: false,
+          giftEndingStringsReady: true,
+          renewalPushedDue: false,
+          renewalPushedStringsReady: true,
+          steamSkinDropDue: steamSkinDropDueThisLaunch("me", drop.notice),
+          steamSkinDropStringsReady: true,
+        },
+        () =>
+          steamSkinDropWhenClean(
+            "me",
+            drop,
+            homepageIsClean,
+            countedFetch,
+            () => catalog,
+          ),
+      );
+    await runBootInterrupt(
+      interrupt,
+      {
+        claimStore: {},
+        grantStore: {},
+        publicId: "p",
+        steamNotice: null,
+        steamSkinDrop,
+      },
+      {
+        translate: (key) => `t(${key})`,
+        confirm: async () => false,
+        alert: async () => {
+          calls.alerts++;
+        },
+        tierName: (tier) => tier,
+        navigate: () => {},
+        openRewards: () => calls.rewardsOpened++,
+        storeClaimPrompt: () => {},
+        updateSteamGrant: () => {},
+        markNoticeSeen: (notice) => calls.seen.push(notice),
+        markMessageSeen: () => {},
+        openSteamSkinDrop: async (resolved) => {
+          calls.opened.push(resolved);
+          return "dismiss";
+        },
+        equipCosmetic: () => {},
+        now: () => Date.now(),
+      },
+    );
+    return { interrupt, ...calls };
+  }
+
+  beforeEach(resetSteamSkinDropForTest);
+
+  it("a due drop opens the popup on a clean homepage", async () => {
+    const result = await boot([entry], 0);
+    expect(result.interrupt).toBe("steam-skin-drop");
+    expect(result.opened).toEqual([entry]);
+    expect(result.seen).toEqual([drop.notice]);
+  });
+
+  it("a notice that outranks the popup shows without waiting on the catalog", async () => {
+    const result = await boot([entry], 0, undefined, undefined, true);
+    expect(result.interrupt).toBe("grant-ended");
+    expect(result.catalogFetches).toBe(0);
+    expect(result.opened).toEqual([]);
+    expect(result.seen).toEqual([]);
+  });
+
+  it("fetches the catalog once when the popup is the one to show", async () => {
+    const result = await boot([entry], 1);
+    expect(result.catalogFetches).toBe(1);
+    expect(result.interrupt).toBe("steam-skin-drop");
+  });
+
+  it("a drop missing from the catalog does not open it, marks nothing seen, and lets the next interrupt run", async () => {
+    const result = await boot([], 1);
+    expect(result.opened).toEqual([]);
+    expect(result.seen).toEqual([]);
+    expect(result.interrupt).toBe("rewards");
+    expect(result.rewardsOpened).toBe(1);
+  });
+
+  it("a join starting during the catalog fetch means no popup, nothing marked seen", async () => {
+    let clean = true;
+    let land: (c: Cosmetics) => void = () => {};
+    const fetchCatalog = () =>
+      new Promise<Cosmetics | null>((resolve) => {
+        land = resolve;
+      });
+    const booting = boot([entry], 1, () => clean, fetchCatalog);
+    // The player clicks Join while the catalog is still on the wire.
+    clean = false;
+    land({} as Cosmetics);
+    const result = await booting;
+    expect(result.interrupt).toBeNull();
+    expect(result.opened).toEqual([]);
+    expect(result.seen).toEqual([]);
+    expect(result.rewardsOpened).toBe(0);
   });
 });

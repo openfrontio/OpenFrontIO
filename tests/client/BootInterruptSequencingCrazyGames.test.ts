@@ -103,6 +103,8 @@ describe("boot sequencing on CrazyGames", () => {
       updateSteamGrant: () => {},
       markNoticeSeen: () => {},
       markMessageSeen: () => {},
+      openSteamSkinDrop: async () => "dismiss",
+      equipCosmetic: () => {},
       now: () => Date.now(),
     };
     const player = userMe.player;
@@ -122,6 +124,8 @@ describe("boot sequencing on CrazyGames", () => {
       claimStringsReady: true,
       reportThanksDue: false,
       reportThanksStringsReady: true,
+      steamSkinDropDue: false,
+      steamSkinDropStringsReady: true,
       giftEndingDue: false,
       giftEndingStringsReady: true,
       renewalPushedDue: false,
@@ -129,7 +133,13 @@ describe("boot sequencing on CrazyGames", () => {
     });
     await runBootInterrupt(
       interrupt,
-      { claimStore: {}, grantStore: {}, publicId: "p", steamNotice: null },
+      {
+        claimStore: {},
+        grantStore: {},
+        publicId: "p",
+        steamNotice: null,
+        steamSkinDrop: null,
+      },
       ports,
     );
     return { interrupt, ...calls };

@@ -53,6 +53,26 @@ export function cosmeticSelectionLabel(resolved: ResolvedCosmetic): string {
 }
 
 /**
+ * Granted to Steam owners rather than sold: the skin carries the flag, or a
+ * pattern carries it on the palette this one is shown in.
+ */
+export function isSteamExclusive(resolved: ResolvedCosmetic): boolean {
+  const cosmetic = resolved.cosmetic as {
+    steamExclusive?: boolean;
+    colorPalettes?: { name: string; steamExclusive?: boolean }[];
+  } | null;
+  if (cosmetic === null) return false;
+  if (cosmetic.steamExclusive === true) return true;
+  const palette = resolved.colorPalette?.name;
+  if (palette === undefined) return false;
+  return (
+    cosmetic.colorPalettes?.some(
+      (entry) => entry.name === palette && entry.steamExclusive === true,
+    ) ?? false
+  );
+}
+
+/**
  * What kind of cosmetic this is, as shown to players ("Skin", "Flag",
  * "Boat Trail Effect", …). Patterns are "Skins" throughout the store.
  */

@@ -122,6 +122,8 @@ const CosmeticSchema = z.object({
   rarity: z
     .enum(["common", "uncommon", "rare", "epic", "legendary"])
     .or(z.string()),
+  // Granted to Steam owners rather than sold.
+  steamExclusive: z.boolean().optional(),
 });
 
 export const PatternSchema = CosmeticSchema.extend({
@@ -130,6 +132,7 @@ export const PatternSchema = CosmeticSchema.extend({
     .object({
       name: z.string(),
       isArchived: z.boolean(),
+      steamExclusive: z.boolean().optional(),
     })
     .array()
     .optional(),
