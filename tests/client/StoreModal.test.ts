@@ -1092,9 +1092,58 @@ describe("StoreModal cosmetic browser", () => {
       const modal = await openNewTabExpiringSoon();
       modal.requestUpdate();
       await modal.updateComplete;
-      expect(newEndTimer(modal)).not.toBeNull();
-      modal.remove();
+      const armed = newEndTimer(modal);
+      expect(armed).not.toBeNull();
+      const clear = vi.spyOn(globalThis, "clearTimeout");
+      try {
+        modal.remove();
+        expect(clear).toHaveBeenCalledWith(armed);
+      } finally {
+        clear.mockRestore();
+      }
       expect(newEndTimer(modal)).toBeNull();
+    });
+
+    it("leaves the Effects tab's selection alone when an effect stops being new", async () => {
+      const until = new Date(Date.now() + 60_000).toISOString();
+      resolvedCatalog = [red, withNew(trail("comet"), until), atom];
+      const { store: modal } = await openEffectsStore();
+      vi.useFakeTimers({ now: Date.now() });
+      try {
+        modal.requestUpdate();
+        await modal.updateComplete;
+        const select = vi.spyOn(
+          modal as unknown as { selectVisible(groups: unknown): void },
+          "selectVisible",
+        );
+        vi.advanceTimersByTime(61_000);
+        await modal.updateComplete;
+        expect(select).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("falls back to Skins when the latest fetch finds nothing new, even with an older one pending", async () => {
+      const modal = await openStoreOnCosmetic("patterns");
+      modal.close();
+      // A sale-end refetch from before still hangs…
+      vi.mocked(fetchCosmetics).mockReturnValueOnce(new Promise(() => {}));
+      void (
+        modal as unknown as { loadCatalog(): Promise<unknown> }
+      ).loadCatalog();
+      // …and the reopen's own fetch finds nothing new.
+      vi.mocked(refreshStaleCosmetics).mockReturnValueOnce(true);
+      vi.mocked(fetchCosmetics).mockResolvedValueOnce({} as Cosmetics);
+      modal.open({ tab: "cosmetics", sub: "new" });
+      await vi.waitFor(() =>
+        expect(
+          modal
+            .querySelector("[data-store-subtab].border-malibu-blue")
+            ?.getAttribute("data-store-subtab"),
+        ).toBe("patterns"),
+      );
+      await vi.waitFor(() => expect(keys(modal)[0]).toBe(red.key));
     });
 
     it("keeps sub=new while a stale catalog refreshes", async () => {

@@ -299,8 +299,8 @@ export class StoreModal extends BaseModal {
   private saleRefetchGeneration = 0;
   /** Bumped by every catalog fetch, so only the newest one's answer is kept. */
   private catalogRequest = 0;
-  /** Catalog fetches in flight. */
-  private catalogLoads = 0;
+  /** The latest catalogRequest that has finished, whatever it got. */
+  private settledCatalogRequest = 0;
   private alignFrame: number | null = null;
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
@@ -424,19 +424,22 @@ export class StoreModal extends BaseModal {
       );
     }
     if (tab === "cosmetics") {
+      const groups = this.cosmeticsGroups(this.cosmeticsSubTab);
       // The sale ended, the last item stopped being new, or the catalog
-      // dropped it, while its tab was open. Not while a catalog is loading:
-      // a `sub=new` or `sub=sale` link opens the store before it arrives,
-      // and a refreshed catalog may have what the cached one lacked.
+      // dropped it, while its tab was open. Not while the latest catalog
+      // fetch is pending: a `sub=new` or `sub=sale` link opens the store
+      // before it arrives, and a refreshed catalog may have what the cached
+      // one lacked.
       if (
-        this.cosmetics !== null &&
-        this.catalogLoads === 0 &&
+        groups.length === 0 &&
         (this.cosmeticsSubTab === "sale" || this.cosmeticsSubTab === "new") &&
-        this.cosmeticsGroups(this.cosmeticsSubTab).length === 0
+        this.cosmetics !== null &&
+        this.settledCatalogRequest === this.catalogRequest
       ) {
         this.cosmeticsSubTab = "patterns";
+        return this.cosmeticsGroups("patterns");
       }
-      return this.cosmeticsGroups(this.cosmeticsSubTab);
+      return groups;
     }
     if (tab === "effects") {
       return this.resolvedPurchasables()
@@ -1133,7 +1136,11 @@ export class StoreModal extends BaseModal {
     this.newEndAt = now + delay;
     this.newEndTimer = setTimeout(() => {
       this.newEndTimer = null;
-      this.selectVisible(this.groupsForTab(this.activeTab));
+      // Only Cosmetics → New changes which cards it lists; other tabs (an
+      // Effects category, say) keep their own selection and just redraw.
+      if (this.activeTab === "cosmetics" && this.affiliateCode === null) {
+        this.selectVisible(this.groupsForTab(this.activeTab));
+      }
       // The cards' own properties haven't changed, so ask them to redraw.
       for (const card of this.querySelectorAll<CosmeticCard>("cosmetic-card")) {
         card.requestUpdate();
@@ -1156,11 +1163,11 @@ export class StoreModal extends BaseModal {
    */
   private async loadCatalog(): Promise<Cosmetics | null> {
     const request = ++this.catalogRequest;
-    this.catalogLoads++;
     try {
       return await this.fetchCatalog(request);
     } finally {
-      this.catalogLoads--;
+      // An older fetch landing after a newer one started settles nothing.
+      if (request === this.catalogRequest) this.settledCatalogRequest = request;
     }
   }
 
