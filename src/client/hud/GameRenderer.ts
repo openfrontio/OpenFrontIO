@@ -430,6 +430,13 @@ export class GameRenderer {
     window.removeEventListener("resize", this.onResize);
     this.canvasSizeObserver?.disconnect();
     this.canvasSizeObserver = null;
+    for (const layer of this.layers) {
+      try {
+        layer.dispose?.();
+      } catch (e) {
+        console.error("Failed to dispose HUD layer:", e);
+      }
+    }
   }
 
   tick() {

@@ -55,6 +55,19 @@ export class AttacksDisplay extends LitElement implements Controller {
 
   init() {}
 
+  dispose(): void {
+    this.incomingBoatIDs.clear();
+    this.spriteDataURLCache.clear();
+    this.incomingAttacks = [];
+    this.outgoingAttacks = [];
+    this.outgoingLandAttacks = [];
+    this.outgoingBoats = [];
+    this.incomingBoats = [];
+    this.active = false;
+    this._isVisible = false;
+    this.requestUpdate();
+  }
+
   tick() {
     this.active = true;
 

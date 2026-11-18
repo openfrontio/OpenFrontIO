@@ -169,6 +169,7 @@ export function joinLobby(
     if (lobbyConfig.clanTagCheck !== undefined) {
       lobbyConfig.playerClanTag = await lobbyConfig.clanTagCheck;
     }
+    if (lobbyStopped) return;
     // Always send join - server will detect reconnection via persistentID
     console.log(`Joining game lobby ${lobbyConfig.gameID}`);
     void transport.joinGame();
@@ -315,19 +316,22 @@ export function joinLobby(
         userSettings,
         terrainLoad,
         terrainMapFileLoader,
+        () => lobbyStopped,
       )
         .then((r) => {
           if (lobbyStopped) {
             // The lobby was left while this was loading. Dispose the runner
             // without starting it, and leave the tab flash alone: it may
             // belong to a newer lobby by now.
-            r.stop(false);
+            r?.stop(false);
             return;
           }
+          if (!r) return;
           currentGameRunner = r;
           r.start();
         })
         .catch((e) => {
+          if (lobbyStopped) return;
           console.error("error creating client game", e);
 
           currentGameRunner = null;
@@ -699,7 +703,8 @@ async function createClientGame(
   userSettings: UserSettings,
   terrainLoad: Promise<TerrainMapData> | null,
   mapLoader: GameMapLoader,
-): Promise<ClientGameRunner> {
+  isStopped?: () => boolean,
+): Promise<ClientGameRunner | undefined> {
   if (lobbyConfig.gameStartInfo === undefined) {
     throw new Error("missing gameStartInfo");
   }
@@ -719,6 +724,7 @@ async function createClientGame(
       lobbyConfig.gameStartInfo.config.gameMapSize,
     );
   }
+  if (isStopped?.()) return;
   // Kick off the font-atlas fetch so it overlaps with worker init; the
   // render passes need it parsed before createWebGLView runs.
   const atlasDataLoad = preloadAtlasData();
@@ -727,8 +733,23 @@ async function createClientGame(
     clientID,
     lobbyConfig.snapshot,
   );
-  await worker.initialize();
-  await atlasDataLoad;
+  try {
+    await worker.initialize();
+    if (isStopped?.()) {
+      void atlasDataLoad.catch(() => {});
+      worker.cleanup();
+      return;
+    }
+    await atlasDataLoad;
+  } catch (e) {
+    void atlasDataLoad.catch(() => {});
+    worker.cleanup();
+    throw e;
+  }
+  if (isStopped?.()) {
+    worker.cleanup();
+    return;
+  }
   const gameView = new GameView(
     worker,
     config,

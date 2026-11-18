@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // GameRenderer only uses GameStartingModal as a type, so importing it there
 // never registers the custom element; register it here.
 import { EventBus } from "@openfront/shared/EventBus";
+import type { Controller } from "../../../src/client/Controller";
 import "../../../src/client/GameStartingModal";
 import {
   createRenderer,
@@ -139,5 +140,58 @@ describe("createRenderer", () => {
     renderer.dispose();
     expect(removeSpy).toHaveBeenCalledWith("resize", resizeListener);
     expect(observer.disconnect).toHaveBeenCalled();
+  });
+
+  it("calls dispose() on all layers that implement it when renderer is disposed", () => {
+    const layerWithDispose1: Controller = { dispose: vi.fn() };
+    const layerWithDispose2: Controller = {
+      init: vi.fn(),
+      tick: vi.fn(),
+      dispose: vi.fn(),
+    };
+    const layerWithoutDispose: Controller = { tick: vi.fn() };
+
+    const renderer = new GameRenderer(
+      {
+        updateCanvasBoundingRect: vi.fn(),
+        centerAll: vi.fn(),
+        observeCanvasSize: () => ({ disconnect: vi.fn() }),
+      } as never,
+      {} as never,
+      [layerWithDispose1, layerWithDispose2, layerWithoutDispose],
+      {} as never,
+    );
+
+    renderer.dispose();
+
+    expect(layerWithDispose1.dispose).toHaveBeenCalledTimes(1);
+    expect(layerWithDispose2.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it("continues disposing remaining layers if one layer's dispose() throws", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const throwingLayer: Controller = {
+      dispose: vi.fn(() => {
+        throw new Error("boom");
+      }),
+    };
+    const healthyLayer: Controller = { dispose: vi.fn() };
+
+    const renderer = new GameRenderer(
+      {
+        updateCanvasBoundingRect: vi.fn(),
+        centerAll: vi.fn(),
+        observeCanvasSize: () => ({ disconnect: vi.fn() }),
+      } as never,
+      {} as never,
+      [throwingLayer, healthyLayer],
+      {} as never,
+    );
+
+    expect(() => renderer.dispose()).not.toThrow();
+    expect(throwingLayer.dispose).toHaveBeenCalledTimes(1);
+    expect(healthyLayer.dispose).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    errorSpy.mockRestore();
   });
 });

@@ -561,7 +561,7 @@
     <!-- Bottom HUD: <sm=column, sm..lg=2col (HUD left | events right; flipped on
          landscape phones so the events are on the left), lg+=3col grid centered -->
     <div
-      class="fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:flex-row sm:max-lg:landscape:flex-row-reverse sm:items-end lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-end min-[1200px]:px-4"
+      class="[body:not(.in-game)_&]:hidden! fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:flex-row sm:max-lg:landscape:flex-row-reverse sm:items-end lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-end min-[1200px]:px-4"
       style="
         padding-bottom: env(safe-area-inset-bottom);
         padding-left: env(safe-area-inset-left);
@@ -643,7 +643,7 @@
          sidebar: the card is centered when it fits and shifts right or narrows
          to clear the open leaderboard instead of covering it. -->
     <div
-      class="contents lg:fixed lg:top-0 lg:inset-x-0 lg:z-1000 lg:grid lg:grid-cols-[minmax(max-content,1fr)_minmax(0,max-content)_minmax(max-content,1fr)] lg:items-start lg:pointer-events-none"
+      class="[body:not(.in-game)_&]:hidden! contents lg:fixed lg:top-0 lg:inset-x-0 lg:z-1000 lg:grid lg:grid-cols-[minmax(max-content,1fr)_minmax(0,max-content)_minmax(max-content,1fr)] lg:items-start lg:pointer-events-none"
     >
       <game-left-sidebar
         class="lg:col-start-1 lg:justify-self-start"

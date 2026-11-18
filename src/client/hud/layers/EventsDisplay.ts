@@ -170,11 +170,25 @@ export class EventsDisplay extends LitElement implements Controller {
     this.events = [];
   }
 
+  private onAllianceRequestSentConfirmationBound =
+    this.onAllianceRequestSentConfirmation.bind(this);
+
   init() {
     this.eventBus.on(
       SendAllianceRequestIntentEvent,
-      this.onAllianceRequestSentConfirmation.bind(this),
+      this.onAllianceRequestSentConfirmationBound,
     );
+  }
+
+  dispose(): void {
+    this.eventBus?.off(
+      SendAllianceRequestIntentEvent,
+      this.onAllianceRequestSentConfirmationBound,
+    );
+    this.events = [];
+    this.active = false;
+    this._isVisible = false;
+    this.requestUpdate();
   }
 
   private onAllianceRequestSentConfirmation(e: SendAllianceRequestIntentEvent) {
