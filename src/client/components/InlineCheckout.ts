@@ -1,3 +1,4 @@
+import type { StorePlacement } from "@openfront/shared/ApiSchemas";
 import type {
   StripeExpressCheckoutElement,
   StripeExpressCheckoutElementConfirmEvent,
@@ -31,6 +32,8 @@ export interface InlineCheckoutConfig {
   /** Seeds Stripe's payment sheet; the server prices the real intent. */
   amountCents: number;
   successMessageKey: string;
+  /** Resolved when the purchase is made, not when the tile renders. */
+  placement?: () => StorePlacement | undefined;
 }
 
 /**
@@ -52,6 +55,7 @@ export interface InlineCheckoutConfig {
 export class InlineCheckout extends LitElement {
   @property({ type: Object }) request: PurchaseRequest | null = null;
   /** Seeds Stripe's payment sheet; the server prices the real intent. */
+  @property({ type: Function }) placement?: () => StorePlacement | undefined;
   @property({ type: Number }) amountCents = 0;
   /** Display price, e.g. "$4.99". Labels the price and pay buttons. */
   @property({ type: String }) priceLabel = "";
@@ -109,7 +113,7 @@ export class InlineCheckout extends LitElement {
       return Promise.resolve(null);
     }
     this.sessionPromise ??= InlineCheckoutSession.create(
-      this.request,
+      this.requestWithPlacement()!,
       this.amountCents,
     )
       .then((session) => {
@@ -147,11 +151,24 @@ export class InlineCheckout extends LitElement {
   private syncedKey: string | null = null;
 
   private syncSession(): void {
-    if (this.session === null || this.request === null) return;
-    const key = JSON.stringify([this.request, this.amountCents]);
+    const request = this.requestWithPlacement();
+    if (this.session === null || request === null) return;
+    const key = JSON.stringify([request, this.amountCents]);
     if (key === this.syncedKey) return;
     this.syncedKey = key;
-    this.session.update(this.request, this.amountCents);
+    this.session.update(request, this.amountCents);
+  }
+
+  /** The request with the store placement as of now (store analytics). */
+  private requestWithPlacement(): PurchaseRequest | null {
+    if (this.request === null) return null;
+    let placement: StorePlacement | undefined;
+    try {
+      placement = this.placement?.();
+    } catch {
+      // Analytics must never break a purchase.
+    }
+    return placement ? { ...this.request, placement } : this.request;
   }
 
   protected firstUpdated() {
@@ -227,6 +244,8 @@ export class InlineCheckout extends LitElement {
       // The wallet sheet's email field (present when the account has none)
       // arrives on the confirm event; ride it on the intent so the webhook
       // can attach it to the account.
+      // The tile may have moved (flash, tab) since the session was made.
+      this.syncSession();
       const result = await this.session.confirm({
         receiptEmail: event.billingDetails?.email ?? null,
       });
@@ -323,6 +342,8 @@ export class InlineCheckout extends LitElement {
     this.confirming = true;
     this.modalError = null;
     try {
+      // The tile may have moved (flash, tab) since the session was made.
+      this.syncSession();
       const result = await this.session.confirm({
         receiptEmail: this.emailRequired ? this.emailValue.trim() : null,
       });

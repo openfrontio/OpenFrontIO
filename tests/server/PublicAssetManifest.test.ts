@@ -449,6 +449,8 @@ describe("PublicAssetManifest", () => {
     expect(
       index[".well-known/apple-developer-merchantid-domain-association"].type,
     ).toBe("text/plain; charset=utf-8");
+    // Android only accepts the App Links file served as JSON.
+    expect(index[".well-known/assetlinks.json"].type).toBe("application/json");
     expect(index["press/"]).toEqual(index["press/index.html"]);
   });
 

@@ -1912,6 +1912,11 @@
     "name": "Kansas"
   },
   {
+    "code": "Karelians",
+    "continent": "Europe",
+    "name": "Karelians"
+  },
+  {
     "code": "Karelo-Finnish SSR",
     "continent": "Europe",
     "name": "Karelo-Finnish SSR"
@@ -3038,6 +3043,11 @@
     "code": "novascotia",
     "continent": "North America",
     "name": "Nova Scotia"
+  },
+  {
+    "code": "Novgorod Republic",
+    "continent": "Europe",
+    "name": "Novgorod Republic"
   },
   {
     "code": "Nunatsiavut",
@@ -4597,6 +4607,11 @@
     "code": "Trucial States",
     "continent": "Asia",
     "name": "Trucial States"
+  },
+  {
+    "code": "Tsardom of Russia",
+    "continent": "Europe",
+    "name": "Tsardom of Russia"
   },
   {
     "code": "Tucuman",

@@ -340,6 +340,7 @@ describe("purchaseCosmetic when the wallet is in debt", () => {
       "pirate",
       "hard",
       undefined,
+      undefined,
     );
     expect(showInGameAlert).toHaveBeenCalledWith("bought pirate");
     expect(invalidateUserMe).toHaveBeenCalled();

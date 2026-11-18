@@ -115,7 +115,7 @@ import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import { capturePagePin } from "./PagePin";
-import { setPurchaseAccountRefresh } from "./Payments";
+import { setPurchaseAccountRefresh, watchPlayPurchases } from "./Payments";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import { updatePortalNavButton } from "./PortalAccountButton";
 import { shouldStartPortalTutorial } from "./PortalTutorial";
@@ -824,6 +824,8 @@ class Client {
       refreshUserMe: broadcastFreshUserMe,
     });
     setPurchaseAccountRefresh(broadcastFreshUserMe);
+    // Before the first userMeResponse below, which starts the first drain.
+    watchPlayPurchases();
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       if (gamePortal.isOnGamePortal()) {
