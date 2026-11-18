@@ -1,5 +1,6 @@
 import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
 import {
+  clientAuth,
   isRewardClaimable,
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
@@ -32,6 +33,7 @@ import {
   reauthAfterPortalChange,
   retrySteamSignIn,
   userAuth,
+  type UserAuth,
 } from "./Auth";
 import {
   bootInterruptsAllowed,
@@ -158,6 +160,11 @@ import { steamSDK } from "./SteamSDK";
 import type { StoreModal } from "./Store";
 import { initTelemetry } from "./Telemetry";
 import type { TokenLoginModal } from "./TokenLoginModal";
+import {
+  clearTurnstilePass,
+  hasValidTurnstilePass,
+  recordTurnstilePass,
+} from "./TurnstilePass";
 import {
   requestTurnstileToken,
   resolveTurnstileToken,
@@ -2173,16 +2180,42 @@ class Client {
 
       const turnstileToken = await this.getTurnstileToken(
         lobby,
+        auth,
         joinAbort.signal,
       );
       if (joinAbort.signal.aborted) return;
 
       if (this.mostRecentJoinEvent !== event.timeStamp) return;
 
+      const passPersistentId =
+        auth !== false &&
+        clientAuth(auth.claims) === "account" &&
+        ClientEnv.env() !== GameEnv.Dev &&
+        !isSteamShell() &&
+        joinIsGateable(lobby) &&
+        !wasAdmitted(lobby.gameID)
+          ? auth.claims.sub
+          : null;
+
       const newLobbyHandle = joinLobby(this.eventBus, {
         gameID: lobby.gameID,
         cosmetics,
         turnstileToken,
+        ...(passPersistentId !== null
+          ? {
+              onTurnstileTokenAdmitted: () =>
+                recordTurnstilePass(passPersistentId),
+              refreshTurnstileToken: (signal?: AbortSignal) => {
+                clearTurnstilePass(passPersistentId);
+                return resolveTurnstileToken({
+                  prefetch: null,
+                  requestFresh: getTurnstileToken,
+                  signal,
+                  forceFresh: true,
+                });
+              },
+            }
+          : {}),
         playerName: resolvedName.name,
         playerClanTag: this.usernameInput?.getClanTag() ?? null,
         clanTagCheck: this.usernameInput?.getClanCheck(),
@@ -2619,6 +2652,7 @@ class Client {
 
   private async getTurnstileToken(
     lobby: JoinLobbyEvent,
+    auth: UserAuth,
     signal?: AbortSignal,
   ): Promise<string | null> {
     if (signal?.aborted) return null;
@@ -2631,6 +2665,14 @@ class Client {
       !joinIsGateable(lobby) ||
       // Rejoining a game the server already let this tab into.
       wasAdmitted(lobby.gameID)
+    ) {
+      return null;
+    }
+
+    if (
+      auth !== false &&
+      clientAuth(auth.claims) === "account" &&
+      hasValidTurnstilePass(auth.claims.sub)
     ) {
       return null;
     }

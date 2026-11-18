@@ -131,6 +131,12 @@ export interface LobbyConfig {
   // Host only: the play token the lobby was created under, used for the
   // first join so the host joins as the creator (see createLobby).
   creatorToken?: string;
+  // Optional fallback to mint a fresh Turnstile token when an initial
+  // turnstileToken: null join is rejected for missing/failed Turnstile.
+  refreshTurnstileToken?: (signal: AbortSignal) => Promise<string | null>;
+  // Notified at most once per joinLobby session when the server admits the
+  // player while lobbyConfig.turnstileToken is non-empty.
+  onTurnstileTokenAdmitted?: () => void;
 }
 
 export interface JoinLobbyResult {
@@ -167,6 +173,17 @@ export function joinLobby(
   // tab flash from that point, so a handle that never got here has nothing to
   // release (e.g. a join that was superseded while it waited for its token).
   let prestarted = false;
+  let turnstileTokenAdmittedNotified = false;
+  const notifyTurnstileTokenAdmitted = () => {
+    if (
+      !turnstileTokenAdmittedNotified &&
+      typeof lobbyConfig.turnstileToken === "string" &&
+      lobbyConfig.turnstileToken.length > 0
+    ) {
+      turnstileTokenAdmittedNotified = true;
+      lobbyConfig.onTurnstileTokenAdmitted?.();
+    }
+  };
 
   const onconnect = async () => {
     // Drop the tag if the ownership check failed; the server re-checks anyway.
@@ -244,6 +261,7 @@ export function joinLobby(
       // Server tells us our assigned clientID
       clientID = message.myClientID;
       rememberAdmitted(message.lobby.gameID);
+      notifyTurnstileTokenAdmitted();
       eventBus.emit(new LobbyInfoEvent(message.lobby, message.myClientID));
       // Kept past game start for the in-game level badges.
       rememberLobbyRoster(
@@ -309,6 +327,7 @@ export function joinLobby(
       // Server tells us our assigned clientID (also sent on start for late joins)
       clientID = message.myClientID;
       rememberAdmitted(lobbyConfig.gameID);
+      notifyTurnstileTokenAdmitted();
       resolveJoin();
       // For multiplayer games, GameStartInfo is not known until game starts.
       lobbyConfig.gameStartInfo = message.gameStartInfo;
