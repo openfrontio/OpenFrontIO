@@ -998,6 +998,71 @@ describe("StoreModal cosmetic browser", () => {
       );
       expect(keys(store)).toEqual([newFlag.key]);
     });
+
+    it("keeps sub=new while the catalog is still loading", async () => {
+      const newFlag = withNew(flag, soon());
+      resolvedCatalog = [red, newFlag];
+      // Like the real resolver: no catalog yet, nothing to list.
+      vi.mocked(resolveCosmetics).mockImplementation((cosmetics) =>
+        cosmetics === null ? [] : resolvedCatalog,
+      );
+      let deliver!: (catalog: Cosmetics) => void;
+      vi.mocked(fetchCosmetics).mockReturnValueOnce(
+        new Promise((resolve) => (deliver = resolve)),
+      );
+      store = document.createElement("store-modal") as StoreModal;
+      store.inline = true;
+      document.body.appendChild(store);
+      await store.updateComplete;
+      store.open({ tab: "cosmetics", sub: "new" });
+      await store.updateComplete;
+      deliver({} as Cosmetics);
+      await vi.waitFor(() =>
+        expect(store!.querySelector("cosmetic-card")).toBeTruthy(),
+      );
+      expect(keys(store)).toEqual([newFlag.key]);
+    });
+
+    it("shows a bundle's contents from the New tab", async () => {
+      const newBundle = withNew(starterBundle, soon());
+      resolvedCatalog = [red, newBundle];
+      const modal = await openStoreOnCosmetic("patterns");
+      modal
+        .querySelector<HTMLButtonElement>('[data-store-subtab="new"]')!
+        .click();
+      await modal.updateComplete;
+      card(modal, newBundle.key)!.onActivate!(newBundle);
+      await modal.updateComplete;
+      expect(modal.querySelector("pack-contents-dialog")).toBeTruthy();
+    });
+
+    it("still drops expired items when the store redraws before the timer fires", async () => {
+      const until = new Date(Date.now() + 60_000).toISOString();
+      resolvedCatalog = [red, withNew(flag, until)];
+      const modal = await openStoreOnCosmetic("patterns");
+      modal
+        .querySelector<HTMLButtonElement>('[data-store-subtab="new"]')!
+        .click();
+      await modal.updateComplete;
+      expect(keys(modal)).toEqual([flag.key]);
+
+      vi.useFakeTimers({ now: Date.now() });
+      try {
+        modal.requestUpdate();
+        await modal.updateComplete;
+        // The deadline passes, but the timer hasn't run yet when a redraw
+        // comes in.
+        vi.setSystemTime(Date.now() + 61_000);
+        modal.requestUpdate();
+        await modal.updateComplete;
+        vi.runOnlyPendingTimers();
+        await modal.updateComplete;
+        expect(modal.querySelector('[data-store-subtab="new"]')).toBeNull();
+        expect(keys(modal)).toEqual([red.key]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   it("tells a store-wide sale from one on selected items", () => {

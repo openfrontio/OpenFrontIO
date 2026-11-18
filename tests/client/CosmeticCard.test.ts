@@ -11,6 +11,7 @@ const translations = {
   "cosmetics.usd_value": "Value: {usd}",
   "cosmetics.verified_name": "Verified username",
   "cosmetics.verified_name_info": "Reserved username",
+  "store.new_badge": "New",
   "territory_patterns.pattern.stripes": "Ocean Stripes",
   "territory_patterns.color_palette.red": "Crimson",
 };
@@ -585,10 +586,11 @@ describe("CosmeticCard", () => {
     async function createWith(
       cosmetic: Record<string, unknown>,
       relationship: ResolvedCosmetic["relationship"] = "purchasable",
-      showNewBadge = true,
+      // null leaves the property at its default.
+      showNewBadge: boolean | null = true,
     ) {
       card = document.createElement("cosmetic-card") as CosmeticCard;
-      card.showNewBadge = showNewBadge;
+      if (showNewBadge !== null) card.showNewBadge = showNewBadge;
       card.resolved = {
         ...red,
         relationship,
@@ -601,9 +603,10 @@ describe("CosmeticCard", () => {
     const inAWeek = () => new Date(Date.now() + 7 * 86_400_000).toISOString();
 
     it("marks a new item the player can buy", async () => {
+      installTranslations();
       const c = await createWith({ priceHard: 100, newUntil: inAWeek() });
       expect(c.querySelector("[data-cosmetic-new]")?.textContent?.trim()).toBe(
-        "store.new_badge",
+        "New",
       );
     });
 
@@ -611,7 +614,8 @@ describe("CosmeticCard", () => {
       const c = await createWith(
         { priceHard: 100, newUntil: inAWeek() },
         "purchasable",
-        false,
+        // Left unset: off is the default.
+        null,
       );
       expect(c.querySelector("[data-cosmetic-new]")).toBeNull();
     });

@@ -288,6 +288,8 @@ export class StoreModal extends BaseModal {
   private saleEndTimer: ReturnType<typeof setTimeout> | null = null;
   /** Fires when the soonest new item stops being new, to drop its badge. */
   private newEndTimer: ReturnType<typeof setTimeout> | null = null;
+  /** When newEndTimer is due. */
+  private newEndAt = 0;
   /** Retries that refetch while the API's cached catalog still has the sale. */
   private saleRetryTimer: ReturnType<typeof setTimeout> | null = null;
   /** Bumped on close, so a sale-end refetch still in flight then is dropped. */
@@ -418,8 +420,10 @@ export class StoreModal extends BaseModal {
     }
     if (tab === "cosmetics") {
       // The sale ended, the last item stopped being new, or the catalog
-      // dropped it, while its tab was open.
+      // dropped it, while its tab was open. Not before the catalog loads:
+      // a `sub=new` or `sub=sale` link opens the store before it arrives.
       if (
+        this.cosmetics !== null &&
         (this.cosmeticsSubTab === "sale" || this.cosmeticsSubTab === "new") &&
         this.cosmeticsGroups(this.cosmeticsSubTab).length === 0
       ) {
@@ -904,6 +908,7 @@ export class StoreModal extends BaseModal {
               emptyTranslationKey: emptyKey,
             })
       }
+      ${this.renderPackDialog()}
     `;
   }
 
@@ -1007,18 +1012,23 @@ export class StoreModal extends BaseModal {
   private renderBundleGrid(): TemplateResult {
     return html`${this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_bundles",
-    })}${
-      this.openedPack && !this.previewingCosmetic
-        ? // The dialog is portaled above the modal's stacking context, so a
-          // preview opened from one of its items would render underneath it.
-          // Yield to the preview; the dialog comes back when it closes.
-          html`<pack-contents-dialog
-            .pack=${this.openedPack}
-            .actionContent=${this.renderCardAction(this.openedPack, false)}
-            @close=${() => this.closePack()}
-          ></pack-contents-dialog>`
-        : ""
-    }`;
+    })}${this.renderPackDialog()}`;
+  }
+
+  /**
+   * The contents of the bundle a player opened, from Bundles or from
+   * Cosmetics → New / On sale, which list bundles too.
+   */
+  private renderPackDialog(): TemplateResult | string {
+    // The dialog is portaled above the modal's stacking context, so a preview
+    // opened from one of its items would render underneath it. Yield to the
+    // preview; the dialog comes back when it closes.
+    if (!this.openedPack || this.previewingCosmetic) return "";
+    return html`<pack-contents-dialog
+      .pack=${this.openedPack}
+      .actionContent=${this.renderCardAction(this.openedPack, false)}
+      @close=${() => this.closePack()}
+    ></pack-contents-dialog>`;
   }
 
   private renderSubscriptionGrid(): TemplateResult {
@@ -1095,10 +1105,13 @@ export class StoreModal extends BaseModal {
    * when. Rescheduled on every render; cleared on close.
    */
   private scheduleNewEnd(): void {
+    const now = Date.now();
+    // A render between the deadline and the timer firing would otherwise
+    // cancel the refresh and leave the expired items on screen.
+    if (this.newEndTimer !== null && this.newEndAt <= now) return;
     if (this.newEndTimer !== null) clearTimeout(this.newEndTimer);
     this.newEndTimer = null;
     if (!this.isModalOpen) return;
-    const now = Date.now();
     const ends = this.resolvedPurchasables().flatMap((resolved) => {
       const at = newUntilMs(resolved.cosmetic);
       return at !== null && at > now ? [at] : [];
@@ -1106,6 +1119,7 @@ export class StoreModal extends BaseModal {
     if (ends.length === 0) return;
     // setTimeout overflows past ~24.8 days; newUntil is at most 14 days out.
     const delay = Math.min(Math.min(...ends) - now, 2 ** 31 - 1);
+    this.newEndAt = now + delay;
     this.newEndTimer = setTimeout(() => {
       this.newEndTimer = null;
       this.selectVisible(this.groupsForTab(this.activeTab));
