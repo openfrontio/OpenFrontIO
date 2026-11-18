@@ -642,7 +642,8 @@ describe("StoreModal cosmetic browser", () => {
       vi.mocked(fetchCosmetics).mockResolvedValue({
         promotions: [],
       } as unknown as Cosmetics);
-      vi.runOnlyPendingTimers();
+      // Not the old timeout's minute: at once.
+      vi.advanceTimersByTime(1);
       expect(fetchCosmetics).toHaveBeenCalled();
     } finally {
       vi.useRealTimers();

@@ -1098,17 +1098,21 @@ export class StoreModal extends BaseModal {
    * the open store. Rescheduled on every render; cleared on close.
    */
   private scheduleSaleEnd(sales: readonly { endsAt: string }[]): void {
-    // A redraw after the sale ended, before its timer ran, sees no running
-    // sale; cancelling the timer then would lose the refetch.
-    if (this.saleEndTimer !== null && this.saleEndAt <= Date.now()) return;
+    const now = Date.now();
+    // A redraw after the sale ended, before its timer ran (or after the
+    // clock jumped), sees no running sale: refetch now rather than lose it.
+    const overdue = this.saleEndTimer !== null && this.saleEndAt <= now;
     if (this.saleEndTimer !== null) clearTimeout(this.saleEndTimer);
     this.saleEndTimer = null;
-    if (sales.length === 0 || !this.isModalOpen) return;
-    const nextEnd = Math.min(...sales.map((s) => new Date(s.endsAt).getTime()));
+    if (!this.isModalOpen) return;
+    if (!overdue && sales.length === 0) return;
+    const nextEnd = overdue
+      ? now
+      : Math.min(...sales.map((s) => new Date(s.endsAt).getTime()));
+    this.saleEndAt = nextEnd;
     // setTimeout overflows past ~24.8 days; a later end is rescheduled by a
     // later render.
-    const delay = Math.min(Math.max(nextEnd - Date.now(), 0), 2 ** 31 - 1);
-    this.saleEndAt = Date.now() + delay;
+    const delay = Math.min(Math.max(nextEnd - now, 0), 2 ** 31 - 1);
     this.saleEndTimer = setTimeout(() => {
       this.saleEndTimer = null;
       void this.refetchAfterSaleEnd(0);
