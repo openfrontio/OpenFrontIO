@@ -38,7 +38,7 @@ const EN_JSON_META_KEYS = new Set([
   "all",
   "favorites",
   "random",
-  "earth",
+  "atlas",
 ]);
 
 /** Get an en.json section. */

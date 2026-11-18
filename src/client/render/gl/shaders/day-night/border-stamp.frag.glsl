@@ -9,6 +9,7 @@ uniform sampler2D uDefenseCoverageTex; // R8 — 1.0 = defended by same-owner po
 uniform sampler2D uAffiliation;   // 256×2 RGBA8 — affiliation colors (row 0 = border)
 uniform vec2 uMapSize;
 uniform int uAltView;
+uniform uint uHighlightOwner;
 uniform float uHighlightBrighten;
 uniform float uDefenseCheckerDarken;
 uniform float uEmbargoTintRatio;
@@ -33,7 +34,7 @@ void main() {
   float relation = borderData.a;        // 0.0=neutral, ~0.5=friendly, ~1.0=embargo
 
   bool isBorder = borderType > 0.25;
-  bool isHighlightBorder = borderType > 0.75;
+  bool isHighlightBorder = borderType > 0.75 || (uHighlightOwner != 0u && owner == uHighlightOwner);
 
   // --- Border stamp: full-brightness border color ---
   if (isBorder && owner != 0u) {

@@ -1,0 +1,37 @@
+name: 💬 PR Review Instructions
+
+on:
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  comment:
+    name: Explain /ready
+    if: github.event.pull_request.user.type != 'Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Post review instructions
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const body = `Thanks for the PR, @${pr.user.login}!
+
+            **When it's ready for a maintainer to review, comment \`/ready\`.** That adds the \`ready-for-review\` label, which is how we find PRs waiting on us. Until then we assume you're still working on it.
+
+            - Draft PRs can't be marked ready. Click **Ready for review** on the PR first, then comment \`/ready\`.
+            - If we request changes, the label comes off. Push your fixes, then comment \`/ready\` again so we know to take another look. Pushing alone doesn't put it back in the queue.
+            - Comment \`/unready\` to take it out of the queue yourself.
+
+            See [CONTRIBUTING.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CONTRIBUTING.md#getting-your-pr-reviewed) for the full process.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body,
+            });

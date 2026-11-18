@@ -461,7 +461,6 @@
     "leave_clan": "Sair do clã",
     "left_clan": "Você saiu do clã.",
     "manage_clan": "Gerenciar",
-    "map_coming_soon": "Em Breve",
     "map_frame_title": "Mapa do território do clã",
     "member_banned": "Jogador banido.",
     "member_count": "{count, plural, one {# membro} other {# membros}}",
@@ -535,12 +534,13 @@
     "status": "Estáticas",
     "tab_donations": "Doações",
     "tab_game_history": "Histórico de Jogo",
-    "tab_map": "Mapa",
     "tab_overview": "Visão geral",
     "title": "Clãs",
     "transfer_leadership": "Transferir liderança",
     "transfer_warning": "Isso vai fazer que o membro selecionado será promovido como o novo líder. Essa ação não pode ser desfeita.",
-    "unban": "Desbanir"
+    "unban": "Desbanir",
+    "map_coming_soon": "Em Breve",
+    "tab_map": "Mapa"
   },
   "close_reason": {
     "account_lookup_failed": "Sua conta não pôde ser pesquisada. Por favor, tente novamente.",

@@ -77,7 +77,11 @@ let stripePromise: Promise<Stripe | null> | null = null;
 function getStripe(): Promise<Stripe | null> {
   const key = stripePublishableKey();
   if (key === null) return Promise.resolve(null);
-  stripePromise ??= loadStripe(key).catch((e: unknown) => {
+  // The assistant is the "stripe" pill Stripe.js pins to the bottom-right
+  // corner with a test key, i.e. on every dev and alpha page.
+  stripePromise ??= loadStripe(key, {
+    developerTools: { assistant: { enabled: false } },
+  }).catch((e: unknown) => {
     console.warn("getStripe: Stripe.js failed to load", e);
     stripePromise = null;
     return null;

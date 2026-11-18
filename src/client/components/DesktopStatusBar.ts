@@ -6,6 +6,7 @@ import {
   desktopLinkGate,
   desktopUpdate,
   isDesktopShell,
+  isSteamShell,
   multiplayerAllowedForSession,
   publishDesktopUpdateState,
   type DesktopSessionState,
@@ -217,7 +218,7 @@ export class DesktopStatusBar extends LitElement {
 
     // Seed from the current value: Auth publishes its first transition during
     // startup, quite possibly before this element upgrades.
-    if (isDesktopShell()) this.sessionState = getDesktopSessionState();
+    if (isSteamShell()) this.sessionState = getDesktopSessionState();
     document.addEventListener("desktop-session-state", this.onSessionState);
     document.addEventListener("join-lobby", this.onJoinLobby);
     document.addEventListener("leave-lobby", this.onLeaveLobby);

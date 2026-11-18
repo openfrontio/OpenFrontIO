@@ -6,6 +6,7 @@
   "categories": ["north_america"],
   "location": { "lat": 25, "lon": -90 },
   "author": "LounNight",
+  "description": "The 9th largest body of water and the largest gulf on Earth, bordered by the United States to the north, Mexico to the west, and Cuba in the southeast. Land surrounds the entire map, as such there is no part of the gulf that doesn't have tradeships passing through it, use this to your advantage.",
   "nations": [
     {
       "coordinates": [2639, 1752],

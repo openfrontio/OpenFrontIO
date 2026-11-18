@@ -12,12 +12,12 @@ import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { translateText } from "../../Utils";
-import "./EarthMap";
+import "./AtlasMap";
 import "./MapDisplay";
 import { getFavoriteMaps, starIcon, toggleFavoriteMap } from "./MapFavorites";
 const randomMap = assetUrl("images/RandomMap.webp");
 
-type MapTab = "featured" | "all" | "earth" | "favorites";
+type MapTab = "featured" | "all" | "atlas" | "favorites";
 
 // Featured grid order: ranked maps first (1 = first), unranked alphabetical.
 const featuredMaps: MapInfo[] = listedMaps
@@ -263,21 +263,21 @@ export class MapPicker extends LitElement {
     </div>`;
   }
 
-  private renderEarthTab() {
-    return html`<earth-map
+  private renderAtlasTab() {
+    return html`<atlas-map
       class="block"
       .selectedMap=${this.selectedMap}
       .useRandomMap=${this.useRandomMap}
       .onSelectMap=${(map: GameMapType) => this.handleMapSelection(map)}
-    ></earth-map>`;
+    ></atlas-map>`;
   }
 
   private renderActiveTab() {
     switch (this.activeTab) {
       case "all":
         return this.renderAllTab();
-      case "earth":
-        return this.renderEarthTab();
+      case "atlas":
+        return this.renderAtlasTab();
       case "favorites":
         return this.renderFavoritesTab();
       default:
@@ -350,7 +350,7 @@ export class MapPicker extends LitElement {
                       translateText("map.featured"),
                     )}
                     ${this.renderTabButton("all", translateText("map.all"))}
-                    ${this.renderTabButton("earth", translateText("map.earth"))}
+                    ${this.renderTabButton("atlas", translateText("map.atlas"))}
                     ${this.renderTabButton(
                       "favorites",
                       translateText("map.favorites"),

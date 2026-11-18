@@ -6,6 +6,7 @@
   "categories": ["north_america"],
   "location": { "lat": 13, "lon": -86.5 },
   "author": "Tristar",
+  "description": "A subregion of North America, bordering Mexico to the north and Colombia to the south. Once home to ancient civilizations such as the Maya, it is now made up of 7 countries: Belize, Costa Rica, El Salvador, Guatemala, Honduras, Nicaragua, and Panama. In the middle lies an extremely important waterway, the Panama Canal, connecting the Atlantic to the Pacific - use it to your advantage.",
   "nations": [
     {
       "coordinates": [518, 141],

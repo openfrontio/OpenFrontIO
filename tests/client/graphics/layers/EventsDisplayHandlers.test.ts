@@ -353,6 +353,156 @@ describe("EventsDisplay handlers", () => {
     });
   });
 
+  describe("grouped missile warnings", () => {
+    let now: number;
+    let units: Record<number, { active: boolean; owner: unknown }>;
+
+    const unitView = (id: number) => ({
+      id: () => id,
+      isActive: () => units[id].active,
+      owner: () => units[id].owner,
+      troops: () => 5000,
+    });
+
+    const launch = (
+      unitID: number,
+      owner: unknown = stranger,
+      message = "events_display.atom_bomb_inbound",
+      messageType = MessageType.NUKE_INBOUND,
+    ) => {
+      units[unitID] = { active: true, owner };
+      ed.onUnitIncomingEvent({
+        type: GameUpdateType.UnitIncoming,
+        unitID,
+        message,
+        messageType,
+        playerID: 1,
+      } as never);
+    };
+
+    const descriptions = () => events().map((event) => event.description);
+
+    beforeEach(() => {
+      now = 0;
+      units = {};
+      game.ticks = () => now;
+      game.unit = (id: number) => (units[id] ? unitView(id) : undefined);
+    });
+
+    it("shows one line with a count for bombs from the same sender", () => {
+      launch(10);
+      launch(11);
+      launch(12);
+
+      expect(descriptions()).toEqual([
+        'events_display.atom_bomb_inbound_count {"name":"Stranger","count":3}',
+      ]);
+    });
+
+    it("keeps different senders on separate lines", () => {
+      launch(10, stranger);
+      launch(11, friend);
+
+      expect(descriptions()).toEqual([
+        'events_display.atom_bomb_inbound {"name":"Stranger"}',
+        'events_display.atom_bomb_inbound {"name":"Friend"}',
+      ]);
+    });
+
+    it("keeps different bomb types on separate lines", () => {
+      launch(10);
+      launch(
+        11,
+        stranger,
+        "events_display.hydrogen_bomb_inbound",
+        MessageType.HYDROGEN_BOMB_INBOUND,
+      );
+      launch(
+        12,
+        stranger,
+        "events_display.mirv_inbound",
+        MessageType.MIRV_INBOUND,
+      );
+
+      expect(events().map((event) => event.type)).toEqual([
+        MessageType.NUKE_INBOUND,
+        MessageType.HYDROGEN_BOMB_INBOUND,
+        MessageType.MIRV_INBOUND,
+      ]);
+    });
+
+    it("lowers the count as bombs land or get shot down", () => {
+      launch(10);
+      launch(11);
+      launch(12);
+
+      units[10].active = false;
+      ed.tick();
+      expect(descriptions()).toEqual([
+        'events_display.atom_bomb_inbound_count {"name":"Stranger","count":2}',
+      ]);
+
+      units[11].active = false;
+      ed.tick();
+      expect(descriptions()).toEqual([
+        'events_display.atom_bomb_inbound {"name":"Stranger"}',
+      ]);
+    });
+
+    it("removes the line once every bomb is gone", () => {
+      launch(10);
+      launch(11);
+
+      units[10].active = false;
+      units[11].active = false;
+      ed.tick();
+
+      expect(events()).toHaveLength(0);
+    });
+
+    it("restarts the timer when another bomb joins the line", () => {
+      launch(10);
+      now = 60;
+      launch(11);
+      now = 100;
+      ed.tick();
+
+      expect(descriptions()).toEqual([
+        'events_display.atom_bomb_inbound_count {"name":"Stranger","count":2}',
+      ]);
+
+      now = 140;
+      ed.tick();
+      expect(events()).toHaveLength(0);
+    });
+
+    it("counts the same bomb only once", () => {
+      launch(10);
+      launch(10);
+
+      expect(descriptions()).toEqual([
+        'events_display.atom_bomb_inbound {"name":"Stranger"}',
+      ]);
+    });
+
+    it("still shows one line per naval invasion", () => {
+      launch(
+        10,
+        stranger,
+        "events_display.naval_invasion_inbound",
+        MessageType.NAVAL_INVASION_INBOUND,
+      );
+      launch(
+        11,
+        stranger,
+        "events_display.naval_invasion_inbound",
+        MessageType.NAVAL_INVASION_INBOUND,
+      );
+
+      expect(events()).toHaveLength(2);
+    });
+  });
+
   describe("onDisplayMessageEvent", () => {
     it("translates unit names in event parameters", () => {
       ed.onDisplayMessageEvent({

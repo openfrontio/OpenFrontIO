@@ -1,5 +1,11 @@
 import { LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
+import {
+  creativeAttributes,
+  findEscapedAds,
+  findStrayAdFrames,
+  trackAdCreatives,
+} from "./AdForensics";
 import { adGatekeeper } from "./AdGatekeeper";
 import { menuChromeIsTornDown } from "./MenuChrome";
 import { reportEvent } from "./Telemetry";
@@ -7,6 +13,18 @@ import { reportEvent } from "./Telemetry";
 const BOTTOM_RAIL_ID = "pw-oop-bottom_rail";
 const GAM_IFRAME_PREFIX = "google_ads_iframe_";
 const STILL_VISIBLE_CHECK_MS = 2000;
+const STRAY_FRAME_SCAN_MS = 1000;
+// A docked flex unit is a 90px leaderboard. Taller is a skin/takeover
+// creative, which would push an open page (locked to the viewport) out of
+// view, so while a page is open it is destroyed instead of given room. Not on
+// the homepage: it scrolls, and the destroy would drop the container's height
+// lock mid-scroll.
+const MAX_DOCKED_AD_HEIGHT = 120;
+// A normal unit can measure tall for a moment as it docks, before its frame
+// shrinks to the leaderboard.
+const OVERSIZE_SETTLE_MS = 1000;
+
+const pageIsOpen = () => document.body.classList.contains("page-open");
 
 type DestroyUnitsResult = "resolved" | "rejected" | "unavailable";
 
@@ -54,6 +72,9 @@ export class HomepagePromos extends LitElement {
   private bottomRailDestroyedAt: number | null = null;
   private railDestroy: Promise<void> | null = null;
   private railDestroyCount = 0;
+  private strayFrameScan: ReturnType<typeof setInterval> | null = null;
+  private escapedAdScan: ReturnType<typeof setInterval> | null = null;
+  private reportedStrayFrames = new WeakSet<Element>();
 
   // The header ad ("flex" leaderboard, GumGum via Playwire) renders in a
   // #pw-oop-flex element that ramp.js nests inside a #pw-oop-flex_container
@@ -67,7 +88,10 @@ export class HomepagePromos extends LitElement {
   private topAdResize: ResizeObserver | null = null;
   private topAdStyle: MutationObserver | null = null;
   private topAdMutation: MutationObserver | null = null;
+  private bodyClass: MutationObserver | null = null;
   private reservedFlexHeight: number = 0;
+  private oversizedTopAd: HTMLElement | null = null;
+  private oversizeCheck: ReturnType<typeof setTimeout> | null = null;
 
   createRenderRoot() {
     return this;
@@ -75,6 +99,7 @@ export class HomepagePromos extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    trackAdCreatives();
     document.addEventListener("userMeResponse", this.onUserMeResponse);
     document.addEventListener("join-lobby", this.onJoinLobby);
     document.addEventListener("leave-lobby", this.onLeaveLobby);
@@ -84,6 +109,8 @@ export class HomepagePromos extends LitElement {
     this.topAdMutation = new MutationObserver(() => {
       if (this.findTopAd() !== this.topAdEl) this.syncTopAd();
       if (this.bottomRailDestroyedAt !== null) this.destroyStrayBottomRail();
+      // Here as well as on the scan, so one is gone before it is painted.
+      this.removeEscapedAds();
     });
     // subtree: the banner is nested inside a wrapper (#pw-oop-flex_container),
     // so watching body's direct children alone misses it.
@@ -91,6 +118,19 @@ export class HomepagePromos extends LitElement {
       childList: true,
       subtree: true,
     });
+    // Opening a page over an already docked unit moves it by stylesheet only,
+    // which the unit's own observers don't see.
+    this.bodyClass = new MutationObserver(() => this.updateTopAdHeight());
+    this.bodyClass.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    // On its own timer, from the spawn phase on: the observer sees new
+    // elements, not an existing one that takes the class later.
+    this.escapedAdScan ??= setInterval(
+      () => this.removeEscapedAds(),
+      STRAY_FRAME_SCAN_MS,
+    );
     this.syncTopAd();
   }
 
@@ -100,8 +140,14 @@ export class HomepagePromos extends LitElement {
     document.removeEventListener("join-lobby", this.onJoinLobby);
     document.removeEventListener("leave-lobby", this.onLeaveLobby);
     this.topAdMutation?.disconnect();
+    this.bodyClass?.disconnect();
+    this.stopStrayFrameScan();
+    if (this.escapedAdScan !== null) clearInterval(this.escapedAdScan);
+    this.escapedAdScan = null;
     this.topAdStyle?.disconnect();
     this.topAdResize?.disconnect();
+    if (this.oversizeCheck !== null) clearTimeout(this.oversizeCheck);
+    this.oversizeCheck = null;
     document.documentElement.style.removeProperty("--top-ad-height");
     document.documentElement.style.removeProperty("--top-ad-pad");
     document
@@ -123,6 +169,8 @@ export class HomepagePromos extends LitElement {
       this.topAdResize = null;
       this.topAdStyle?.disconnect();
       this.topAdStyle = null;
+      if (this.oversizeCheck !== null) clearTimeout(this.oversizeCheck);
+      this.oversizeCheck = null;
       this.topAdEl = el;
       if (el) {
         this.topAdResize = new ResizeObserver(() => this.updateTopAdHeight());
@@ -146,12 +194,18 @@ export class HomepagePromos extends LitElement {
     if (this.topAdEl) {
       const rect = this.topAdEl.getBoundingClientRect();
       const style = getComputedStyle(this.topAdEl);
-      unitVisible = style.display !== "none" && rect.height >= 30;
+      unitVisible =
+        this.topAdEl !== this.oversizedTopAd &&
+        style.display !== "none" &&
+        rect.height >= 30;
       if (unitVisible && style.position === "fixed") {
-        // Only make room while the banner is actually docked at the viewport
-        // top — not while parked offscreen.
-        if (rect.top < window.innerHeight / 4) {
-          dockedHeight = Math.ceil(Math.max(0, rect.bottom));
+        dockedHeight = this.dockedHeight(this.topAdEl);
+        if (
+          dockedHeight > MAX_DOCKED_AD_HEIGHT &&
+          pageIsOpen() &&
+          this.topAdEl.id === "pw-oop-flex"
+        ) {
+          this.checkOversizedTopAd();
         }
       } else if (unitVisible) {
         inlineHeight = Math.ceil(rect.height);
@@ -189,6 +243,49 @@ export class HomepagePromos extends LitElement {
     const pad = this.reservedFlexHeight > 0 ? 0 : dockedHeight;
     this.setHtmlVar("--top-ad-height", dockedHeight);
     this.setHtmlVar("--top-ad-pad", pad);
+  }
+
+  private dockedHeight(el: HTMLElement): number {
+    const rect = el.getBoundingClientRect();
+    const style = getComputedStyle(el);
+    if (style.display === "none" || style.position !== "fixed") return 0;
+    // Only make room while the banner is actually docked at the viewport
+    // top — not while parked offscreen.
+    if (rect.top >= window.innerHeight / 4) return 0;
+    return Math.ceil(Math.max(0, rect.bottom));
+  }
+
+  private checkOversizedTopAd(): void {
+    if (this.oversizeCheck !== null) return;
+    const el = this.topAdEl;
+    this.oversizeCheck = setTimeout(() => {
+      this.oversizeCheck = null;
+      if (el === null || el !== this.topAdEl) return;
+      const height = this.dockedHeight(el);
+      if (height > MAX_DOCKED_AD_HEIGHT && pageIsOpen()) {
+        this.destroyOversizedTopAd(el, height);
+      }
+    }, OVERSIZE_SETTLE_MS);
+  }
+
+  private destroyOversizedTopAd(el: HTMLElement, height: number): void {
+    this.oversizedTopAd = el;
+    el.style.visibility = "hidden";
+    reportEvent("top_ad_oversized", {
+      height: String(height),
+      ...creativeAttributes(el, "flex"),
+    });
+    this.updateTopAdHeight();
+    // destroyUnits can throw synchronously or reject; neither may escape.
+    Promise.resolve()
+      .then(() => window.ramp?.destroyUnits?.("pw-oop-flex"))
+      .catch((e: unknown) => {
+        console.warn("error destroying oversized header ad", e);
+      })
+      .finally(() => {
+        // Still here once the destroy settled: nothing else will remove it.
+        if (document.getElementById("pw-oop-flex") === el) el.remove();
+      });
   }
 
   private setHtmlVar(name: string, px: number): void {
@@ -269,6 +366,7 @@ export class HomepagePromos extends LitElement {
     if (!this.bottomRailActive) return;
     this.bottomRailActive = false;
     this.bottomRailDestroyedAt = performance.now();
+    this.startStrayFrameScan();
     this.railDestroyCount++;
     this.railDestroy = this.destroyBottomRailUnit().then(() => {
       this.railDestroy = null;
@@ -311,6 +409,8 @@ export class HomepagePromos extends LitElement {
         rail
           .querySelector(`iframe[id^="${GAM_IFRAME_PREFIX}"]`)
           ?.id.slice(GAM_IFRAME_PREFIX.length) ?? "",
+      // Read before the destroy, which takes the slot and its creative away.
+      ...creativeAttributes(rail, "bottom_rail"),
     };
     console.log(
       `Bottom rail ad still on the page ${seconds}s after it was destroyed; destroying it again`,
@@ -349,9 +449,68 @@ export class HomepagePromos extends LitElement {
         reportEvent("bottom_rail_in_game", {
           ...details,
           adSlot: creative.id.slice(GAM_IFRAME_PREFIX.length),
+          ...creativeAttributes(creative, "bottom_rail"),
           outcome: "still_visible",
         });
       }, STILL_VISIBLE_CHECK_MS);
+    });
+  }
+
+  // Polled rather than driven by the body observer: a frame can appear
+  // through a style change alone, and watching every attribute in a game
+  // costs more than a scan.
+  private startStrayFrameScan(): void {
+    this.strayFrameScan ??= setInterval(
+      () => this.reportStrayAdFrames(),
+      STRAY_FRAME_SCAN_MS,
+    );
+  }
+
+  private stopStrayFrameScan(): void {
+    if (this.strayFrameScan !== null) clearInterval(this.strayFrameScan);
+    this.strayFrameScan = null;
+  }
+
+  // From the spawn phase on: an escaped ad is never one that belongs there.
+  private removeEscapedAds(): void {
+    if (!menuChromeIsTornDown()) return;
+    for (const { root, attributes } of findEscapedAds()) {
+      root.remove();
+      this.reportAdFrame(attributes, "removed");
+    }
+  }
+
+  // Reported, not removed: outside the confirmed escapes the match is a
+  // heuristic, and some stray frames may be formats sold on purpose.
+  private reportStrayAdFrames(): void {
+    if (this.bottomRailDestroyedAt === null || !menuChromeIsTornDown()) {
+      this.stopStrayFrameScan();
+      return;
+    }
+    // First, so an escaped ad is reported once, as removed, not as stray.
+    this.removeEscapedAds();
+    for (const { root, attributes } of findStrayAdFrames()) {
+      if (this.reportedStrayFrames.has(root)) continue;
+      this.reportedStrayFrames.add(root);
+      this.reportAdFrame(attributes, "reported");
+    }
+  }
+
+  private reportAdFrame(
+    attributes: Record<string, string>,
+    action: "removed" | "reported",
+  ): void {
+    const destroyedAt = this.bottomRailDestroyedAt;
+    reportEvent("ad_frame_in_game", {
+      gameID: this.lobby?.gameID ?? "",
+      lobbySource: this.lobby?.source ?? "",
+      // Empty during the spawn phase, before the rail is destroyed.
+      secondsAfterDestroy:
+        destroyedAt === null
+          ? ""
+          : String(Math.round((performance.now() - destroyedAt) / 1000)),
+      ...attributes,
+      action,
     });
   }
 

@@ -60,6 +60,18 @@ export class TransformHandler {
     this._boundingRect = this.canvas.getBoundingClientRect();
   }
 
+  /**
+   * Re-measures the canvas whenever its size changes. The window's resize
+   * event isn't enough: on an iPhone rotation it can fire before layout, which
+   * left the old orientation's size and stopped panning short of the map's
+   * edge in landscape.
+   */
+  public observeCanvasSize(): ResizeObserver {
+    const observer = new ResizeObserver(() => this.updateCanvasBoundingRect());
+    observer.observe(this.canvas);
+    return observer;
+  }
+
   boundingRect(): DOMRect {
     return this._boundingRect;
   }

@@ -8,6 +8,7 @@ import {
   GameRenderer,
 } from "../../../src/client/hud/GameRenderer";
 import type { EmojiTable } from "../../../src/client/hud/layers/EmojiTable";
+import type { SettingsModal } from "../../../src/client/hud/layers/SettingsModal";
 import type { WinModal } from "../../../src/client/hud/layers/WinModal";
 import { ShowEmojiMenuEvent } from "../../../src/client/InputHandler";
 import type { MapRenderer } from "../../../src/client/render/gl";
@@ -87,10 +88,22 @@ describe("createRenderer", () => {
     const view = {} as MapRenderer;
     const inputEl = document.createElement("div");
 
-    const renderer = createRenderer(inputEl, game, eventBus, null, view);
+    const renderer = createRenderer(
+      inputEl,
+      game,
+      eventBus,
+      null,
+      view,
+      undefined,
+      12345,
+    );
 
     expect(renderer).toBeInstanceOf(GameRenderer);
     expect(renderer.transformHandler).toBeDefined();
+
+    // Settings modal wiring (fed by the shared bus, game view, and visibleAt).
+    const settingsModal = elements.get("settings-modal") as SettingsModal;
+    expect(settingsModal.visibleAt).toBe(12345);
 
     // Win modal wiring (fed by the shared bus and game view).
     const winModal = elements.get("win-modal") as WinModal;
@@ -104,9 +117,14 @@ describe("createRenderer", () => {
     expect(emojiTable.isVisible).toBe(true);
   });
 
-  it("cleans up window resize listener on dispose", () => {
+  it("cleans up the resize listener and canvas observer on dispose", () => {
+    const observer = { disconnect: vi.fn() };
     const renderer = new GameRenderer(
-      { updateCanvasBoundingRect: vi.fn(), centerAll: vi.fn() } as any,
+      {
+        updateCanvasBoundingRect: vi.fn(),
+        centerAll: vi.fn(),
+        observeCanvasSize: () => observer,
+      } as any,
       {} as any,
       [],
       {} as any,
@@ -120,5 +138,6 @@ describe("createRenderer", () => {
     expect(resizeListener).toEqual(expect.any(Function));
     renderer.dispose();
     expect(removeSpy).toHaveBeenCalledWith("resize", resizeListener);
+    expect(observer.disconnect).toHaveBeenCalled();
   });
 });

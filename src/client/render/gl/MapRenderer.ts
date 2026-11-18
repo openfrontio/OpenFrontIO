@@ -172,12 +172,19 @@ export class MapRenderer {
   ): void {
     this.renderer?.uploadLiveDelta(tileState, changedTiles);
   }
+  /** Forward live trail delta (dirty rows or changed tiles) to the GPU renderer. */
   uploadLiveTrailDelta(
     trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
+    changedTiles?: readonly number[],
   ): void {
-    this.renderer?.uploadLiveTrailDelta(trailState, dirtyRowMin, dirtyRowMax);
+    this.renderer?.uploadLiveTrailDelta(
+      trailState,
+      dirtyRowMin,
+      dirtyRowMax,
+      changedTiles,
+    );
   }
   /** Upload full tile + trail state without resetting bloom (for live play). */
   uploadTileAndTrailState(

@@ -23,6 +23,7 @@ import {
   paymentsProvider,
   purchaseOutcomeMessage,
   reportPendingSteamAuthorizations,
+  sellsOnlyThroughPlay,
   setPurchaseAccountRefresh,
   startPurchase,
   STEAM_OVERLAY_TIMEOUT_MS,
@@ -181,9 +182,28 @@ describe("paymentsProvider", () => {
     expect(paymentsProvider()).toBe("steam");
   });
 
-  it("is stripe inside a desktop shell with no Steam bridge", () => {
+  // Any other shell is the Android app, which must never reach Stripe.
+  it("is google inside the Android app with the Play billing bridge", () => {
     installShell({ steam: false });
-    expect(paymentsProvider()).toBe("stripe");
+    (window as any).openfrontDesktop.playBilling = {
+      products: async () => ({ status: "ok", products: [] }),
+      purchase: async () => ({ status: "cancelled" }),
+      unconsumed: async () => ({ status: "ok", purchaseTokens: [] }),
+    };
+    expect(paymentsProvider()).toBe("google");
+    expect(sellsOnlyThroughPlay()).toBe(true);
+  });
+
+  it("is none, never stripe, inside the Android app without the bridge", () => {
+    installShell({ steam: false });
+    expect(paymentsProvider()).toBe("none");
+    expect(sellsOnlyThroughPlay()).toBe(true);
+  });
+
+  it("sells through Play nowhere else", () => {
+    expect(sellsOnlyThroughPlay()).toBe(false);
+    installShell();
+    expect(sellsOnlyThroughPlay()).toBe(false);
   });
 });
 

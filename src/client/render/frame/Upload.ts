@@ -29,6 +29,7 @@ export interface FrameUploadTarget {
     trailState: Uint16Array,
     dirtyRowMin: number,
     dirtyRowMax: number,
+    changedTiles?: readonly number[],
   ): void;
   updateSpiralRibbons(ribbons: readonly SpiralRibbon[]): void;
   uploadRailroadState(data: Uint8Array): void;
@@ -73,6 +74,7 @@ export function uploadFrameData(
         frame.trailState,
         frame.trailDirtyRowMin,
         frame.trailDirtyRowMax,
+        frame.changedTrailTiles,
       );
     }
   } else {

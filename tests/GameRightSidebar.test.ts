@@ -2,6 +2,8 @@
 import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { EventBus } from "@openfront/shared/EventBus";
 import { GameRightSidebar } from "../src/client/hud/layers/GameRightSidebar";
+import { ImmunityBarVisibleEvent } from "../src/client/hud/layers/ImmunityTimer";
+import { SpawnBarVisibleEvent } from "../src/client/hud/layers/SpawnTimer";
 import { SendWinnerEvent } from "../src/client/Transport";
 import type { GameView } from "../src/client/view";
 
@@ -79,6 +81,27 @@ function createSidebar(overrides: Partial<TimerState> = {}) {
 }
 
 describe("GameRightSidebar end timer warnings", () => {
+  it("preserves warning clearance as spawn and immunity bars change", () => {
+    const { sidebar, eventBus } = createSidebar();
+    const parent = document.createElement("div");
+    parent.style.setProperty("--game-health-offset", "137px");
+    document.body.append(parent);
+    parent.append(sidebar);
+    eventBus.emit(new SpawnBarVisibleEvent(true));
+    expect(parent.style.marginTop).toBe(
+      "calc(7px + var(--game-health-offset, 0px))",
+    );
+    eventBus.emit(new ImmunityBarVisibleEvent(true));
+    expect(parent.style.marginTop).toBe(
+      "calc(14px + var(--game-health-offset, 0px))",
+    );
+    eventBus.emit(new SpawnBarVisibleEvent(false));
+    eventBus.emit(new ImmunityBarVisibleEvent(false));
+    expect(parent.style.marginTop).toBe(
+      "calc(0px + var(--game-health-offset, 0px))",
+    );
+    expect(parent.style.getPropertyValue("--game-health-offset")).toBe("137px");
+  });
   beforeEach(() => {
     toasts = [];
     window.addEventListener("show-message", captureToast);

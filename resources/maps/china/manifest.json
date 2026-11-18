@@ -1,13 +1,6 @@
 {
   "categories": ["countries", "asia"],
   "id": "China",
-  "layers": [
-    {
-      "id": "label",
-      "nukeable": false,
-      "placement": "water"
-    }
-  ],
   "map": {
     "height": 2024,
     "num_land_tiles": 1570704,
@@ -196,6 +189,6 @@
       "name": "Ningxia"
     }
   ],
-  "themes": ["asia"],
+  "themes": ["china"],
   "translation_key": "map.china"
 }

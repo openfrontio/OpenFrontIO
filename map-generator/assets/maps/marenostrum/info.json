@@ -6,6 +6,7 @@
   "categories": ["europe", "asia", "africa"],
   "location": { "lat": 36.5, "lon": 17 },
   "author": "Tristar",
+  "description": "The OpenFront map of the Mediterranean Sea. After defeating Carthage, Rome turned the Mediterranean into Mare Nostrum, which means “our sea” in Latin, and controlled its shores for centuries. Can you become the new Roman Empire?",
   "nations": [
     {
       "coordinates": [141, 574],

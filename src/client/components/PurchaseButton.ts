@@ -403,6 +403,7 @@ export class PurchaseButton extends LitElement {
         .request=${this.inlineCheckout.request}
         .amountCents=${this.inlineCheckout.amountCents}
         .successMessageKey=${this.inlineCheckout.successMessageKey}
+        .placement=${this.inlineCheckout.placement}
         .priceLabel=${price}
         .onFallback=${this.onPurchaseDollar}
       ></inline-checkout>`;

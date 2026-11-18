@@ -6,6 +6,7 @@
   "categories": ["asia"],
   "location": { "lat": 46.3, "lon": 74.5 },
   "author": "Tristar",
+  "description": "A lake in southeastern Kazakhstan with no outlet to the ocean. Lake Balkhash is currently the largest lake in Central Asia and 15th-largest in the world. Water in the western part of the lake is freshwater, whereas the eastern side is brackish to salty. This lake is shrinking due to diversion and extraction of water, and could suffer a fate like that of the Aral Sea.",
   "nations": [
     {
       "coordinates": [979, 101],

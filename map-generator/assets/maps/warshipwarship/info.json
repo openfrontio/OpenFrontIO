@@ -5,6 +5,7 @@
   "translation_key": "map.warshipwarship",
   "categories": ["arcade"],
   "author": "crunchybbb",
+  "description": "Two massive warship-shaped islands. The map is inspired by a meme created by the Openfront Youtuber Ultimus_Rex when he says the catchphrase 'Warship Warship' when deploying them",
   "nations": [
     {
       "coordinates": [750, 680],

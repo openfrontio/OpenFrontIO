@@ -192,7 +192,7 @@ const mapPickerShape = {
       lon: z.number().min(-180).max(180),
     })
     .optional()
-    .describe("Where the map lies on Earth, for the map picker's Earth view."),
+    .describe("Where the map lies on Earth, for the map picker's Atlas tab."),
 };
 
 const featuredRankRule = [

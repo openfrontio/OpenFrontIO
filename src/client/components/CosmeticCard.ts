@@ -3,6 +3,7 @@ import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { activeSale, ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
 import { isDesktopShell } from "../DesktopShell";
+import { sellsOnlyThroughPlay } from "../Payments";
 import { translateText } from "../Utils";
 import "./CosmeticInfo";
 import {
@@ -493,8 +494,12 @@ export class CosmeticCard extends LitElement {
       aiDisclosed?: boolean;
       priceHard?: number;
     } | null;
+    // Not in the Android app, where Play prices Plutonium in the player's own
+    // currency and no dollar figure may appear.
     const usdValue =
-      priced?.priceHard !== undefined ? priced.priceHard / 20 : undefined;
+      priced?.priceHard !== undefined && !sellsOnlyThroughPlay()
+        ? priced.priceHard / 20
+        : undefined;
     // A subscription lists its perks as text, which wraps to more lines than a
     // square box holds once cards are phone-width — let it take the height it
     // needs rather than clipping the last perk.

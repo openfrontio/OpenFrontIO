@@ -9,7 +9,7 @@ const { onCrazyGames, onPoki, onViverse } = vi.hoisted(() => ({
 vi.mock("../../src/client/CrazyGamesSDK", () => ({
   crazyGamesSDK: { isOnCrazyGames: () => onCrazyGames.value },
 }));
-vi.mock("../../src/client/PokiSDK", () => ({
+vi.mock("../../src/client/poki/PokiSDK", () => ({
   pokiSDK: { isOnPoki: () => onPoki.value },
 }));
 vi.mock("../../src/client/ViverseSDK", () => ({
@@ -52,9 +52,20 @@ describe("clientPlatform", () => {
     expect(clientPlatform()).toBe("viverse");
   });
 
-  it("is steam inside the desktop shell, even without a Steam bridge", () => {
-    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {};
+  // The Steam preload exposes `steam` whether or not Steam itself is running.
+  it("is steam inside the Steam shell, even when Steam is not running", () => {
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      steam: {},
+    };
     onCrazyGames.value = true;
     expect(clientPlatform()).toBe("steam");
+  });
+
+  // The Android shell's bridge has no `steam` key.
+  it("is not steam inside a shell without a Steam bridge", () => {
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      shell: { version: "1.0.0", api: 7, platform: "android" },
+    };
+    expect(clientPlatform()).toBe("web");
   });
 });

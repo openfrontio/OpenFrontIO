@@ -604,6 +604,28 @@ export const translateText = (
 export const hasOwnTranslation = (key: string): boolean =>
   getCachedLangSelector()?.translations?.[key] !== undefined;
 
+/**
+ * The raw message templates of every key under `prefix`, in the player's
+ * language over English, keyed without the prefix and not formatted. For a
+ * page that formats its own text from them: the clan map frame, which is
+ * served by the API and gets its strings over postMessage.
+ */
+export const translationTemplates = (
+  prefix: string,
+): Record<string, string> => {
+  const langSelector = getCachedLangSelector();
+  const out: Record<string, string> = {};
+  for (const source of [
+    langSelector?.defaultTranslations,
+    langSelector?.translations,
+  ]) {
+    for (const key in source ?? {}) {
+      if (key.startsWith(prefix)) out[key.slice(prefix.length)] = source![key];
+    }
+  }
+  return out;
+};
+
 export interface HasClanTag {
   clanTag?: string | null | (() => string | null);
 }

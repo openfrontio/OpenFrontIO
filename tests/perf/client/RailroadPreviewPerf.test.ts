@@ -58,7 +58,7 @@ function makePreview(): GhostPreviewData {
     ownerID: 1,
     upgradeTargetTile: null,
     rangeRadius: 110,
-    rangeWarning: false,
+    rangeWarning: "none",
   };
 }
 

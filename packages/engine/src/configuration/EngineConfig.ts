@@ -1,5 +1,6 @@
 import {
   Difficulty,
+  GameType,
   Gold,
   PlayerInfo,
   PlayerType,
@@ -132,6 +133,14 @@ export class EngineConfig extends Config {
     return 7;
   }
 
+  setDifficulty(difficulty: Difficulty): void {
+    this._gameConfig = { ...this._gameConfig, difficulty };
+  }
+
+  setGameType(gameType: GameType): void {
+    this._gameConfig = { ...this._gameConfig, gameType };
+  }
+
   falloutDefenseModifier(falloutRatio: number): number {
     // falloutRatio is between 0 and 1
     // So defense modifier is between [5, 2.5]
@@ -210,9 +219,8 @@ export class EngineConfig extends Config {
   }
 
   trainSpawnRate(numPlayerFactories: number, numTrainUnits: number): number {
-    // hyperbolic decay, midpoint at 10 factories
-    // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    const rate = (numPlayerFactories + 10) * 15;
+    // Hyperbolic decay with the midpoint at 20 levels, scaled so 1 level keeps the old midpoint-10 rate.
+    const rate = ((numPlayerFactories + 20) * 165) / 21;
     const boost = this.smallEconomySpawnBoost(numPlayerFactories);
     return Math.max(
       1,

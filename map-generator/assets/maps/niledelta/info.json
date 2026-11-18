@@ -6,6 +6,7 @@
   "categories": ["africa"],
   "location": { "lat": 30.8, "lon": 31 },
   "author": "gabigabogabu",
+  "description": "The delta that gave every delta its name: Greek writers saw the letter Δ in its shape. In ancient times the Nile reached the sea through seven branches; today only two remain, Rosetta and Damietta. Nations sit at real cities, from Alexandria to Memphis, the first capital of united Egypt.",
   "nations": [
     {
       "coordinates": [305, 414],

@@ -245,8 +245,7 @@ describe("Keybinds tab on touch devices", () => {
 
   it("shows keybinds tab when a key is pressed while open on touch", async () => {
     vi.spyOn(Platform, "isTouch", "get").mockReturnValue(true);
-    let hasKbd = false;
-    vi.spyOn(Platform, "hasKeyboard", "get").mockImplementation(() => hasKbd);
+    delete (window as any).__hasKeyboard;
     const el = await mount();
     el.open();
     await flush(el);
@@ -257,7 +256,6 @@ describe("Keybinds tab on touch devices", () => {
         'button[role="tab"][data-key="keybinds"]',
       ),
     ).toBeNull();
-    hasKbd = true;
     window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
     await flush(el);
     await oModal?.updateComplete;

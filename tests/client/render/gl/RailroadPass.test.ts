@@ -44,7 +44,7 @@ function preview(
     ownerID: 1,
     upgradeTargetTile: null,
     rangeRadius: 0,
-    rangeWarning: false,
+    rangeWarning: "none",
   };
 }
 

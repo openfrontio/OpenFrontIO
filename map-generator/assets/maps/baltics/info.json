@@ -6,6 +6,7 @@
   "categories": ["europe"],
   "location": { "lat": 57, "lon": 24.5 },
   "author": "Tristar",
+  "description": "The northeastern region of Europe containing the countries of Estonia, Latvia, and Lithuania on the eastern shores of the Baltic Sea. Previously under Russian imperial and Soviet rule, the 3 states have been independent since 1991.",
   "nations": [
     {
       "coordinates": [10, 220],

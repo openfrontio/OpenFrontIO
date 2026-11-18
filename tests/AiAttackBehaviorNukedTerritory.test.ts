@@ -328,6 +328,12 @@ describe("NationAttackBehavior - nuked territory early-out", () => {
         Difficulty.Impossible,
         { withEnemy: true, nationTroops: 5_000_000, enemyTroops: 4_000_000 },
       );
+      // Cities lift the nation's max troops above its army
+      for (const tile of Array.from(nation.tiles()).slice(0, 4)) {
+        const city = nation.buildUnit(UnitType.City, tile, {});
+        for (let i = 0; i < 4; i++) city.increaseLevel();
+      }
+      expect(nation.troops()).toBeLessThan(game.config().maxTroops(nation));
       // Starting troops (Impossible nation / infinite-troops human baseline)
       // are added on top of the requested amounts, so read the real totals
       // back rather than assuming the opts values.

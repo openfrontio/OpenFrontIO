@@ -4,6 +4,7 @@ import {
   AllPlayers,
   BuildableUnit,
   Cell,
+  Difficulty,
   EmojiMessage,
   GameUpdates,
   Gold,
@@ -39,7 +40,11 @@ import {
   UnitLike,
   UnitPredicate,
 } from "@openfront/engine-api/game/ReadViews";
-import { AllPlayersStats, ClientID } from "@openfront/engine-api/Schemas";
+import {
+  AllPlayersStats,
+  ClientID,
+  GameID,
+} from "@openfront/engine-api/Schemas";
 import { MotionPlanRecord } from "@openfront/engine-lib/game/MotionPlans";
 import type { EngineConfig } from "../configuration/EngineConfig";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
@@ -310,6 +315,7 @@ export interface Player extends PlayerLike {
   // Basic Info
   smallID(): number;
   info(): PlayerInfo;
+  setPlayerInfo(info: PlayerInfo): void;
   name(): string;
   displayName(): string;
   clanTag(): string | null;
@@ -605,6 +611,13 @@ export interface Game extends GameLike {
   ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
+  executions(): Execution[];
+  removeExecution(exec: Execution): void;
+  takeoverPlayer(player: Player | PlayerID, localClientID: ClientID): void;
+  convertHumanToNation(player: Player | PlayerID, gameID: GameID): Execution;
+  clearHumanPlayer(player: Player | PlayerID): void;
+  clearOtherHumans(keptPlayer: Player | PlayerID): void;
+  applySingleplayerConfig(difficulty?: Difficulty): void;
   displayMessage(
     message: string,
     type: MessageType,

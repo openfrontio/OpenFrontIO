@@ -141,6 +141,83 @@ describe("subscription-panel", () => {
     });
   });
 
+  // Google Play is the Android app's only way to pay, and nothing in it may
+  // point the player elsewhere to pay or manage billing. A subscription held
+  // from elsewhere is still shown, with none of its controls or its price.
+  describe.each([
+    ["with the Play billing bridge", true],
+    ["without the Play billing bridge", false],
+  ])("inside the Android app %s", (_label, bridge) => {
+    beforeEach(() => {
+      (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+        shell: { platform: "android" },
+        ...(bridge
+          ? {
+              playBilling: {
+                products: async () => ({ status: "ok", products: [] }),
+                purchase: async () => ({ status: "cancelled" }),
+                unconsumed: async () => ({ status: "ok", purchaseTokens: [] }),
+              },
+            }
+          : {}),
+      };
+    });
+
+    afterEach(() => {
+      delete (window as unknown as { openfrontDesktop?: unknown })
+        .openfrontDesktop;
+    });
+
+    const keys = () =>
+      Array.from(el.querySelectorAll("o-button")).map((b) =>
+        b.getAttribute("translationKey"),
+      );
+    const priced = {
+      name: "plutonium",
+      description: "desc",
+      dailyHardCurrency: 10,
+      hardCurrencySignupBonus: 100,
+      product: { productId: "p", priceId: "pp", price: "$4.99" },
+    } as never;
+
+    it.each([
+      ["an active subscription", sub({ provider: "stripe" })],
+      [
+        "a subscription winding down",
+        sub({ provider: "stripe", cancelAtPeriodEnd: true }),
+      ],
+      [
+        "a past-due subscription",
+        sub({ provider: "stripe", status: "past_due", currentPeriodEnd: null }),
+      ],
+      ["a Steam subscription", sub({ provider: "steam" })],
+    ])("shows %s with no billing control", async (_s, held) => {
+      el.sub = held;
+      el.cosmetic = priced;
+      el.requestUpdate();
+      await el.updateComplete;
+
+      expect(text()).toContain("plutonium");
+      expect(keys()).toEqual([]);
+      expect(el.querySelector("a")).toBeNull();
+      expect(text()).not.toContain("$4.99");
+      expect(text()).not.toContain("manage_subscription_on_web");
+      expect(text()).not.toContain("account_modal.cancel_subscription");
+    });
+
+    it("drops the price and controls from the stacked paid tile", async () => {
+      el.sub = sub({ provider: "stripe" });
+      el.cosmetic = priced;
+      el.stacked = "paid";
+      await el.updateComplete;
+
+      expect(text()).toContain("account_modal.sub_next_payment");
+      expect(text()).not.toContain("sub_price_monthly");
+      expect(text()).not.toContain("account_modal.cancel_subscription");
+      expect(keys()).toEqual([]);
+    });
+  });
+
   // The renewal bounced. Stripe is still retrying, and the portal is where
   // the card gets fixed, so it is the only thing on offer.
   describe("past_due", () => {
@@ -598,6 +675,86 @@ describe("subscription-panel", () => {
       } finally {
         window.open = original;
       }
+    });
+  });
+
+  describe("a renewal moved by a free month", () => {
+    for (const by of ["dlc", "base", "gift"]) {
+      it(`says why the next payment moved (${by})`, async () => {
+        el.sub = sub({ provider: "stripe", renewalPushedBy: by });
+        await el.updateComplete;
+        expect(text()).toContain(
+          `account_modal.sub_next_payment_pushed_${by} ${PERIOD_END_TEXT}`,
+        );
+        expect(text()).not.toContain("account_modal.sub_renews_on");
+      });
+    }
+
+    it("still says when it cancels", async () => {
+      el.sub = sub({
+        provider: "stripe",
+        renewalPushedBy: "dlc",
+        cancelAtPeriodEnd: true,
+      });
+      await el.updateComplete;
+      expect(text()).toContain("account_modal.sub_status_canceling_on");
+    });
+  });
+
+  describe("beside another subscription", () => {
+    const cosmetic = (daily: number, price: string | null) =>
+      ({
+        name: "plutonium",
+        description: "desc",
+        dailyHardCurrency: daily,
+        hardCurrencySignupBonus: 100,
+        product: price ? { productId: "p", priceId: "pp", price } : null,
+      }) as never;
+
+    it("draws the paid tile with its next payment, price and controls", async () => {
+      el.sub = sub({ provider: "stripe" });
+      el.cosmetic = cosmetic(10, "$4.99");
+      el.stacked = "paid";
+      await el.updateComplete;
+      expect(text()).toContain(
+        `plutonium · account_modal.sub_next_payment ${PERIOD_END_TEXT} · account_modal.sub_price_monthly $4.99`,
+      );
+      expect(text()).toContain("account_modal.cancel_subscription");
+      expect(text()).not.toContain("desc");
+    });
+
+    it("drops the price it does not have", async () => {
+      el.sub = sub({ provider: "stripe" });
+      el.cosmetic = cosmetic(10, null);
+      el.stacked = "paid";
+      await el.updateComplete;
+      expect(text()).not.toContain("sub_price_monthly");
+    });
+
+    it("draws the gift tile with its source, end and daily plutonium, and no Cancel", async () => {
+      el.sub = sub({ provider: null, grantSource: "steam" });
+      el.cosmetic = cosmetic(25, "$9.99");
+      el.stacked = "gift";
+      await el.updateComplete;
+      expect(text()).toContain(
+        `account_modal.sub_gift_from_steam plutonium · account_modal.sub_gift_ends ${PERIOD_END_TEXT} · account_modal.sub_gift_daily 25`,
+      );
+      expect(text()).not.toContain("account_modal.cancel_subscription");
+      expect(text()).not.toContain("account_modal.sub_granted_from_purchase");
+    });
+
+    it("does not credit Steam for an admin comp", async () => {
+      el.sub = sub({
+        provider: null,
+        grantSource: "admin",
+        currentPeriodEnd: null,
+      });
+      el.cosmetic = null;
+      el.stacked = "gift";
+      await el.updateComplete;
+      expect(text()).toContain("account_modal.sub_gift_free plutonium");
+      expect(text()).not.toContain("sub_gift_from_steam");
+      expect(text()).not.toContain("sub_gift_ends");
     });
   });
 });

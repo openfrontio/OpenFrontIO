@@ -66,7 +66,8 @@ export class OButton extends LitElement {
       case "md":
         return "py-3 px-4 text-base lg:text-lg";
       case "lg":
-        return "py-4 px-6 text-lg lg:text-xl";
+        // Short frames (portals, small laptops) can't spare a 60px footer button.
+        return "py-4 px-6 text-lg lg:text-xl compact:py-2.5 compact:text-base";
     }
   }
 

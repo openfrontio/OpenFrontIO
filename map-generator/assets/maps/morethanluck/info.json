@@ -5,6 +5,7 @@
   "translation_key": "map.morethanluck",
   "categories": ["arcade"],
   "author": "Patrick Plays Badly",
+  "description": "A clover with randomized nations based on the most common leaked pin-codes. Even so, the winner is almost always based on More Than Luck.",
   "special_team_count": 5,
 
   "nations": [

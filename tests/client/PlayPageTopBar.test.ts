@@ -73,4 +73,28 @@ describe("play-page mobile top bar", () => {
       expect(rightSlot()).toEqual(["nav-utility-icons", "nav-account-menu"]);
     });
   });
+
+  describe("top strip layout", () => {
+    beforeEach(mount);
+
+    it("marks the top strip as group/strip for descendant streaming-live overrides", () => {
+      const strip = el.querySelector(".group\\/strip");
+      expect(strip).not.toBeNull();
+      expect(strip?.className).toContain(
+        "lg:has-[.streaming-live]:grid-cols-[2fr_1fr]",
+      );
+
+      const streamingNow = strip!.querySelector("streaming-now");
+      expect(streamingNow).not.toBeNull();
+      expect(strip!.matches(":has(.streaming-live)")).toBe(false);
+
+      streamingNow!.classList.add("streaming-live");
+      expect(strip!.matches(":has(.streaming-live)")).toBe(true);
+      expect(
+        el.querySelector(
+          ":where(.group\\/strip):has(.streaming-live) username-input",
+        ),
+      ).not.toBeNull();
+    });
+  });
 });
