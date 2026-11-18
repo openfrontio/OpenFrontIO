@@ -123,6 +123,82 @@ describe("GameLeftSidebar", () => {
     sidebar.remove();
   });
 
+  it("does not retain focus on mouse click so Space does not re-toggle the leaderboard", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = ffaGame();
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+
+    const btn = sidebar.querySelector('[role="button"]') as HTMLElement;
+    const mousedown = new MouseEvent("mousedown", { cancelable: true });
+    btn.dispatchEvent(mousedown);
+    expect(mousedown.defaultPrevented).toBe(true);
+
+    btn.focus();
+    btn.dispatchEvent(new MouseEvent("click", { detail: 1 }));
+    expect(document.activeElement).not.toBe(btn);
+    sidebar.remove();
+  });
+
+  it("clears focus from a previously focused leaderboard control on mousedown", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = {
+      ...ffaGame(),
+      teamClanTag: () => null,
+      config: () => ({
+        gameConfig: () => ({ gameMode: GameMode.Team }),
+        maxTroops: () => 1_000,
+      }),
+    } as unknown as GameView;
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+
+    const buttons = sidebar.querySelectorAll<HTMLElement>('[role="button"]');
+    const [playerBtn, teamBtn] = [buttons[0], buttons[1]];
+    playerBtn.focus();
+    expect(document.activeElement).toBe(playerBtn);
+
+    teamBtn.dispatchEvent(new MouseEvent("mousedown", { cancelable: true }));
+    expect(document.activeElement).not.toBe(playerBtn);
+    expect(document.activeElement).not.toBe(teamBtn);
+    sidebar.remove();
+  });
+
+  it("stops Enter/Space keydown from bubbling to window on leaderboard toggles", async () => {
+    const sidebar = new GameLeftSidebar();
+    sidebar.game = {
+      ...ffaGame(),
+      teamClanTag: () => null,
+      config: () => ({
+        gameConfig: () => ({ gameMode: GameMode.Team }),
+        maxTroops: () => 1_000,
+      }),
+    } as unknown as GameView;
+    sidebar.eventBus = new EventBus();
+    document.body.append(sidebar);
+    sidebar.init();
+    await sidebar.updateComplete;
+
+    const windowKeydown = vi.fn();
+    window.addEventListener("keydown", windowKeydown);
+
+    const buttons = sidebar.querySelectorAll<HTMLElement>('[role="button"]');
+    buttons[0].dispatchEvent(
+      new KeyboardEvent("keydown", { key: " ", code: "Space", bubbles: true }),
+    );
+    buttons[1].dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true }),
+    );
+
+    expect(windowKeydown).not.toHaveBeenCalled();
+    window.removeEventListener("keydown", windowKeydown);
+    sidebar.remove();
+  });
+
   it.each([
     { viewport: "a large screen", compact: false, shown: true },
     {
