@@ -1,8 +1,17 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
+}));
+const heldBack = vi.hoisted(() => ({ taunts: false, titles: false }));
+vi.mock("../../src/client/components/card/HeldBack", () => ({
+  get CARD_TAUNTS_ENABLED() {
+    return heldBack.taunts;
+  },
+  get CARD_TITLES_ENABLED() {
+    return heldBack.titles;
+  },
 }));
 
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
@@ -14,6 +23,14 @@ import {
   formatTracker,
   type PlayerCardView,
 } from "../../src/client/components/card/PlayerCardModel";
+
+// Taunts and titles are held back (HeldBack.ts). The tests below exercise
+// the code behind them with both switched on; the "held back" block turns
+// them off again.
+beforeEach(() => {
+  heldBack.taunts = true;
+  heldBack.titles = true;
+});
 
 if (!customElements.get("player-card")) {
   customElements.define("player-card", PlayerCard);
@@ -151,6 +168,36 @@ describe("<player-card>", () => {
     return card;
   }
   const text = (sel: string) => card.querySelector(sel)?.textContent ?? "";
+
+  it("taunts held back: a saved taunt shows nothing and never plays", async () => {
+    heldBack.taunts = false;
+    const seen = vi.fn();
+    document.addEventListener("card-taunt-played", seen);
+    await render(VOLT, { showKey: "g1:end" });
+    expect(card.querySelector("[data-card-taunt-icon]")).toBeNull();
+    await render(
+      {
+        ...VOLT,
+        taunt: { name: "nuke_flash", tauntKind: "card", preset: "nuke_flash" },
+      },
+      { showKey: "g2:end" },
+    );
+    document.removeEventListener("card-taunt-played", seen);
+    expect(card.querySelector("[data-card-taunt-overlay]")).toBeNull();
+    expect(seen).not.toHaveBeenCalled();
+  });
+
+  it("titles held back: a saved title is not shown", async () => {
+    heldBack.titles = false;
+    await render(VOLT);
+    expect(card.querySelector("[data-card-title]")).toBeNull();
+    expect(card.textContent).not.toContain("Warmonger");
+  });
+
+  it("taunts switched on: the saved taunt's icon shows", async () => {
+    await render(VOLT);
+    expect(card.querySelector("[data-card-taunt-icon]")).not.toBeNull();
+  });
 
   it("renders badge, flag, clan tag, name, level line, title and three trackers", async () => {
     await render(VOLT);

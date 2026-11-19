@@ -20,11 +20,13 @@ import { translateText } from "../../Utils";
 import "../CosmeticCard";
 import "../PurchaseButton";
 import { type CardItem, type CardItemType, cardItemName } from "./CardItems";
+import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";
 import "./PlayerCard";
 import { buildPlayerCardView } from "./PlayerCardModel";
 
 // The Account page's My Card tab: a live preview of the player's card, then
-// one grid per slot (background, flag, title, trackers, taunt). An owned item
+// one grid per slot (background, flag, trackers; title and taunt only while
+// switched on in HeldBack.ts). An owned item
 // equips with a click and saves at once (rolled back if the save fails); a
 // paid one shows its price in Plutonium and/or caps and buys through the
 // store's own purchase flow; an earned one shows how to unlock it. Without
@@ -32,7 +34,16 @@ import { buildPlayerCardView } from "./PlayerCardModel";
 // offers the card itself.
 
 type Slot = "background" | "flag" | "title" | "trackers" | "taunt";
-const SLOTS: Slot[] = ["background", "flag", "title", "trackers", "taunt"];
+const ALL_SLOTS: Slot[] = ["background", "flag", "title", "trackers", "taunt"];
+
+// The slots on offer: held-back items get none (a saved one stays saved).
+function slots(): Slot[] {
+  return ALL_SLOTS.filter(
+    (s) =>
+      (s !== "taunt" || CARD_TAUNTS_ENABLED) &&
+      (s !== "title" || CARD_TITLES_ENABLED),
+  );
+}
 
 type ItemState = "equipped" | "owned" | "buy" | "locked";
 
@@ -344,7 +355,7 @@ export class MyCardTab extends LitElement {
       ${this.renderGetCard()}
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap gap-2">
-          ${SLOTS.map(
+          ${slots().map(
             (s) =>
               html`<button
                 type="button"

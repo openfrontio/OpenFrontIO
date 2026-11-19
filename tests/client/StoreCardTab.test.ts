@@ -1,8 +1,17 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
+}));
+const heldBack = vi.hoisted(() => ({ taunts: false, titles: false }));
+vi.mock("../../src/client/components/card/HeldBack", () => ({
+  get CARD_TAUNTS_ENABLED() {
+    return heldBack.taunts;
+  },
+  get CARD_TITLES_ENABLED() {
+    return heldBack.titles;
+  },
 }));
 vi.mock("../../src/client/Cosmetics", () => ({
   purchaseCosmetic: vi.fn(),
@@ -11,6 +20,14 @@ vi.mock("../../src/client/Cosmetics", () => ({
 import { StorePlacementSubTabSchema } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { CardStoreGrid } from "../../src/client/components/card/CardStoreGrid";
+
+// Taunts and titles are held back (HeldBack.ts). The tests below exercise
+// the code behind them with both switched on; the "held back" block turns
+// them off again.
+beforeEach(() => {
+  heldBack.taunts = true;
+  heldBack.titles = true;
+});
 
 if (!customElements.get("card-store-grid")) {
   customElements.define("card-store-grid", CardStoreGrid);
@@ -40,6 +57,7 @@ const COSMETICS = {
   },
   cardTitles: {
     warmonger: { ...item, name: "warmonger", text: "Warmonger" },
+    veteran: { ...item, name: "veteran", text: "Veteran", priceSoft: 500 },
   },
   taunts: {
     salute: {
@@ -72,6 +90,25 @@ describe("<card-store-grid>", () => {
         "[data-card-store-item]",
       ),
     ].map((e) => e.getAttribute("data-card-store-item"));
+
+  it("titles held back: no title items", async () => {
+    heldBack.titles = false;
+    await render();
+    expect(keys().filter((k) => k!.startsWith("cardTitle:"))).toEqual([]);
+    expect(keys()).toContain("cardTracker:wins");
+  });
+
+  it("titles switched on: a sold title is listed", async () => {
+    await render();
+    expect(keys()).toContain("cardTitle:veteran");
+  });
+
+  it("taunts held back: no taunt items", async () => {
+    heldBack.taunts = false;
+    await render();
+    expect(keys().filter((k) => k!.startsWith("taunt:"))).toEqual([]);
+    expect(keys()).toContain("cardTracker:wins");
+  });
 
   it("card sub-tab lists paid card items only", async () => {
     await render();

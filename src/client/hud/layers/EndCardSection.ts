@@ -3,6 +3,7 @@ import { customElement, property } from "lit/decorators.js";
 import "../../components/card/ClanWinCard";
 import type { ClanWinMember } from "../../components/card/ClanWinCard";
 import "../../components/card/PlayerCard";
+import { CARD_TAUNTS_ENABLED } from "../../components/card/HeldBack";
 import type { PlayerCardView } from "../../components/card/PlayerCardModel";
 import { translateText } from "../../Utils";
 
@@ -88,30 +89,34 @@ export class EndCardSection extends LitElement {
                 >`
               : nothing
           }
-          <button
-            type="button"
-            data-end-card-mute
-            class="grid h-7 w-7 place-items-center rounded-md bg-white/10 text-sm text-white/80 hover:bg-white/20"
-            aria-label=${translateText(
-              this.tauntsMuted
-                ? "win_modal.unmute_taunts"
-                : "win_modal.mute_taunts",
-            )}
-            title=${translateText(
-              this.tauntsMuted
-                ? "win_modal.unmute_taunts"
-                : "win_modal.mute_taunts",
-            )}
-            @click=${() =>
-              this.dispatchEvent(
-                new CustomEvent("toggle-taunts", {
-                  bubbles: true,
-                  composed: true,
-                }),
-              )}
-          >
-            ${this.tauntsMuted ? "🔇" : "🔈"}
-          </button>
+          ${
+            CARD_TAUNTS_ENABLED
+              ? html`<button
+                  type="button"
+                  data-end-card-mute
+                  class="grid h-7 w-7 place-items-center rounded-md bg-white/10 text-sm text-white/80 hover:bg-white/20"
+                  aria-label=${translateText(
+                    this.tauntsMuted
+                      ? "win_modal.unmute_taunts"
+                      : "win_modal.mute_taunts",
+                  )}
+                  title=${translateText(
+                    this.tauntsMuted
+                      ? "win_modal.unmute_taunts"
+                      : "win_modal.mute_taunts",
+                  )}
+                  @click=${() =>
+                    this.dispatchEvent(
+                      new CustomEvent("toggle-taunts", {
+                        bubbles: true,
+                        composed: true,
+                      }),
+                    )}
+                >
+                  ${this.tauntsMuted ? "🔇" : "🔈"}
+                </button>`
+              : nothing
+          }
         </div>
       </div>
       <player-card

@@ -4,6 +4,11 @@ vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
 }));
+// Taunts are held back (HeldBack.ts); these tests cover the code behind them.
+vi.mock("../../src/client/components/card/HeldBack", () => ({
+  CARD_TAUNTS_ENABLED: true,
+  CARD_TITLES_ENABLED: true,
+}));
 const motion = vi.hoisted(() => ({ reduced: false }));
 vi.mock("../../src/client/utilities/ReducedMotion", () => ({
   prefersReducedMotion: () => motion.reduced,
