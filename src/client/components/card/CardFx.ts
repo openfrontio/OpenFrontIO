@@ -39,7 +39,8 @@ export function shimmerBandX(t: number, layer: FxLayer): number {
   return -0.3 + 1.6 * fract(t / p);
 }
 
-// Drift: how far the doubled layer has moved left, in card widths, [0, 1).
+// Drift: how far the doubled layer has moved left, in widths of the art as
+// drawn (one card width when the card shows the whole art), [0, 1).
 export function driftOffset(t: number, layer: FxLayer): number {
   const p = layer.period ?? FX_DEFAULTS.driftPeriod;
   return fract(t / p);
@@ -186,6 +187,8 @@ interface MountedLayer {
 const FILL =
   "position:absolute;inset:0;width:100%;height:100%;pointer-events:none;";
 const COVER = "object-fit:cover;object-position:center;";
+// Background art is 2800 × 400.
+const ART_ASPECT = 7;
 const BAND =
   "linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,0.85),rgba(255,255,255,0))";
 
@@ -271,16 +274,30 @@ export class CardFx {
         wrap.style.opacity = "0";
         break;
       case "drift": {
-        // The layer twice, side by side, slid left one card width per period.
+        // The layer twice, side by side, slid left one art width per period.
+        // The copies sit in a box the art's own 7:1 shape, sized and centred
+        // like `cover` (so it lines up with the base), and are never cropped
+        // themselves: cropped copies would leave a seam where they meet.
         wrap.style.opacity = String(strength);
+        wrap.style.setProperty("container-type", "size");
+        const box = document.createElement("div");
+        box.dataset.cardFxArt = "";
+        const w = `max(100cqw, ${ART_ASPECT * 100}cqh)`;
+        const h = `max(100cqh, ${100 / ART_ASPECT}cqw)`;
+        box.setAttribute(
+          "style",
+          `position:absolute;width:${w};height:${h};` +
+            `left:calc((100cqw - ${w}) / 2);top:calc((100cqh - ${h}) / 2);`,
+        );
         move = document.createElement("div");
         move.setAttribute(
           "style",
           "position:absolute;top:0;left:0;height:100%;width:200%;display:flex;will-change:transform;",
         );
-        const half = `height:100%;width:50%;flex:none;${COVER}`;
+        const half = "height:100%;width:50%;flex:none;";
         move.append(this.image(layer.src, half), this.image(layer.src, half));
-        wrap.appendChild(move);
+        box.appendChild(move);
+        wrap.appendChild(box);
         break;
       }
       case "shimmer": {

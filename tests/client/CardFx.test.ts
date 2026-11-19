@@ -189,6 +189,21 @@ describe("<card-background> effect layers", () => {
     );
   });
 
+  it("drift tiles whole copies of the art, so the loop has no seam", async () => {
+    const el = await mount(NEON);
+    loadBase(el);
+    await el.updateComplete;
+    const drift = el.querySelector<HTMLElement>("[data-card-fx-layer=drift]")!;
+    // The strip sits in a box the art's own shape (cropped like the base),
+    // and each copy fills its half uncropped.
+    const box = drift.querySelector<HTMLElement>("[data-card-fx-art]");
+    expect(box).not.toBeNull();
+    const strip = box!.querySelector<HTMLElement>("[data-card-fx-move]")!;
+    const copies = [...strip.querySelectorAll<HTMLImageElement>("img")];
+    expect(copies).toHaveLength(2);
+    for (const img of copies) expect(img.style.objectFit).not.toBe("cover");
+  });
+
   it("drops every layer when one fails, keeping the base", async () => {
     const el = await mount(STORM);
     loadBase(el);
