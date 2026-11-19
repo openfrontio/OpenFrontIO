@@ -3,6 +3,7 @@ import quickChatData from "resources/QuickChat.json";
 import { z } from "zod";
 import {
   AllPlayers,
+  CustomGameMap,
   Difficulty,
   Duos,
   GameMapSize,
@@ -262,7 +263,8 @@ export type PoolConfig = z.infer<typeof PoolConfigSchema>;
 
 export const GameConfigSchema = z.compile(
   z.object({
-    gameMap: z.enum(GameMapType),
+    // Custom goes last, so the stock maps keep their zbin enum indices.
+    gameMap: z.enum({ ...GameMapType, Custom: CustomGameMap }),
     difficulty: z.enum(Difficulty),
     donateGold: z.boolean(), // Configures donations to humans only
     donateTroops: z.boolean(), // Configures donations to humans only
@@ -355,6 +357,9 @@ export const GameConfigSchema = z.compile(
 // player cap: nullable so the host can lift it (null clears, undefined leaves
 // it alone), and at least 2 so a lobby can't be capped down to the host alone.
 export const GameConfigPatchSchema = GameConfigSchema.partial().extend({
+  // Stock maps only: a Custom map's files come with a scenario start, which a
+  // lobby can't carry yet.
+  gameMap: z.enum(GameMapType).optional(),
   maxPlayers: zb.uint({ min: 2, max: 1000 }).nullable().optional(),
 });
 export type GameConfigPatch = z.infer<typeof GameConfigPatchSchema>;
