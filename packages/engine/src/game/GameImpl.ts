@@ -328,6 +328,10 @@ export class GameImpl implements Game {
     this.recordTerrainChanges(this._waterManager.endTerrainEdit());
   }
 
+  downscaleMiniMap(): GameMap {
+    return this._waterManager.downscaleMiniMap();
+  }
+
   rebuildWaterGraph(): void {
     this._waterManager.rebuildWaterGraph();
   }

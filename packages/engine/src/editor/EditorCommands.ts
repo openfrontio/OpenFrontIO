@@ -14,7 +14,11 @@ import { Game, Player, Unit } from "../game/Game";
  * same game methods play uses, so it makes the usual updates. Checks the
  * whole command first and throws, having changed nothing, if it can't apply.
  */
-export function applyEditorCommand(game: Game, command: EditorCommand): void {
+export function applyEditorCommand(
+  game: Game,
+  // GameRunner handles export and finalize, which need more than the game.
+  command: Exclude<EditorCommand, { type: "export_terrain" | "finalize" }>,
+): void {
   switch (command.type) {
     case "add_nation": {
       // Removed nations keep their player (see removeNation), and with it

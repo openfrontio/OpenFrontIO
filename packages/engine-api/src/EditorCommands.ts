@@ -83,7 +83,7 @@ export const MAX_TERRAIN_BATCH = 1 << 20;
  * repairs the shoreline, water depth and minimap around them. A tile that
  * changes between water, land and impassable loses its owner and its units
  * first. The ocean bit waits for `end_terrain_edit`, the water graph for
- * the rebuild before test play and export.
+ * the rebuild before test play.
  */
 export const SetTerrainCommandSchema = z.object({
   type: z.literal("set_terrain"),
@@ -99,6 +99,25 @@ export const EndTerrainEditCommandSchema = z.object({
   type: z.literal("end_terrain_edit"),
 });
 
+/**
+ * Runs the full terrain pass and writes the terrain out as map files, which
+ * the result carries (docs/ScenarioEditor.md, "Finalising for export"). It
+ * changes nothing else, so editing can carry on.
+ */
+export const ExportTerrainCommandSchema = z.object({
+  type: z.literal("export_terrain"),
+});
+
+/**
+ * Makes the game ready to play: AI for every nation, executions for the
+ * structures and the running game, spawn phase over. Sent to a second
+ * engine started on the exported map files, which is then snapshotted and
+ * discarded; it can't be undone.
+ */
+export const FinalizeCommandSchema = z.object({
+  type: z.literal("finalize"),
+});
+
 export const EditorCommandSchema = z.discriminatedUnion("type", [
   AddNationCommandSchema,
   RemoveNationCommandSchema,
@@ -108,5 +127,7 @@ export const EditorCommandSchema = z.discriminatedUnion("type", [
   RemoveStructureCommandSchema,
   SetTerrainCommandSchema,
   EndTerrainEditCommandSchema,
+  ExportTerrainCommandSchema,
+  FinalizeCommandSchema,
 ]);
 export type EditorCommand = z.infer<typeof EditorCommandSchema>;

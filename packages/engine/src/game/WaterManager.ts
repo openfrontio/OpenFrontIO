@@ -1,4 +1,5 @@
 import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
+import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
 import {
   snapshotType,
   zBytes,
@@ -395,12 +396,35 @@ export class WaterManager {
   }
 
   /**
+   * The map generator's map16x: the minimap downscaled by the minimap's
+   * rule and derived, with no small islands removed, as the generator makes
+   * it from map4x. For the scenario editor's export, after endTerrainEdit()
+   * has derived the minimap.
+   */
+  downscaleMiniMap(): GameMap {
+    const mini = this.miniMap;
+    const w = mini.width() >> 1;
+    const h = mini.height() >> 1;
+    const terrain = new Uint8Array(w * h);
+    let land = 0;
+    for (let y = 0, t = 0; y < h; y++) {
+      for (let x = 0; x < w; x++, t++) {
+        terrain[t] = miniAuthored(mini, x, y);
+        if (terrainKind(terrain[t]) === 1) land++;
+      }
+    }
+    const map = new GameMapImpl(w, h, terrain, land);
+    this.deriveTerrain(map, mini, null);
+    return map;
+  }
+
+  /**
    * Labels the water components and builds the water graph afresh, as game
    * load does, after terrain edits: an edit can split a body of water,
    * which the water nukes' incremental updates never have to handle. The
-   * scenario editor runs this before test play and export rather than at
-   * each stroke's end: on the largest map it costs about as much as the
-   * game's load (docs/ScenarioEditor.md, "Terrain").
+   * scenario editor runs this before test play rather than at each
+   * stroke's end: on the largest map it costs about as much as the game's
+   * load (docs/ScenarioEditor.md, "Terrain").
    */
   rebuildWaterGraph(): void {
     DebugSpan.start("WaterManager:rebuildWaterGraphFully");
