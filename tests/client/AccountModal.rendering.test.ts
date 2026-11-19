@@ -150,6 +150,11 @@ describe("AccountModal — rendering", () => {
       expect(
         modal.querySelector("[data-account-card-header] [data-xp-bar]"),
       ).toBeTruthy();
+      // The header is one of the cards that animates.
+      const card = modal.querySelector(
+        "[data-account-card-header] player-card",
+      ) as unknown as { animated: boolean };
+      expect(card.animated).toBe(true);
       expect(modal.querySelector("[data-account-edit-card]")).toBeTruthy();
     });
 

@@ -1,7 +1,10 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import {
   type FlickerRate,
   type FxLayer,
   FX_DEFAULTS,
+  type LayerAnimation,
+  LayerAnimationSchema,
 } from "@openfront/shared/CardBackgroundAnimation";
 
 // Effect layers for animated card backgrounds: the effect maths (pure, so
@@ -120,4 +123,283 @@ export function flickerOn(t: number, flashes: Flash[], length: number): boolean 
     if (local < f.start + f.duration) return true;
   }
   return false;
+}
+
+// ---- The controller. ----
+
+// Average frame time above this for SLOW_WINDOW_MS stops every animated card
+// for the rest of the session.
+const SLOW_FRAME_MS = 25;
+const SLOW_WINDOW_MS = 2000;
+// The flicker schedule repeats after this many seconds.
+const FLICKER_LOOP_S = 600;
+
+let sessionStopped = false;
+const live = new Set<CardFx>();
+
+// Whether slow frames stopped animation for this session.
+export function cardFxStopped(): boolean {
+  return sessionStopped;
+}
+
+// Tests only: forget a slow-frame stop.
+export function resetCardFxSession(): void {
+  sessionStopped = false;
+}
+
+function stopSession(): void {
+  sessionStopped = true;
+  for (const fx of [...live]) fx.destroy();
+}
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof matchMedia === "function" &&
+    matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+// The effect layers a card should play, or null for a still image: not an
+// animated surface, reduced motion, a mask (no shader yet), an animation
+// this client can't read, or the session stopped for slow frames.
+export function playableAnimation(
+  animated: boolean,
+  animation: unknown,
+): LayerAnimation | null {
+  if (!animated || animation === undefined || animation === null) return null;
+  if (sessionStopped || prefersReducedMotion()) return null;
+  const parsed = LayerAnimationSchema.safeParse(animation);
+  return parsed.success ? parsed.data : null;
+}
+
+interface MountedLayer {
+  layer: FxLayer;
+  // The element whose opacity or transform moves.
+  move: HTMLElement;
+  flashes: Flash[];
+}
+
+const FILL =
+  "position:absolute;inset:0;width:100%;height:100%;pointer-events:none;";
+const COVER = "object-fit:cover;object-position:center;";
+const BAND =
+  "linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,0.85),rgba(255,255,255,0))";
+
+// Mounts a background's effect layers into `container` (over the base image)
+// and moves them while `host` is on screen and the tab is visible. Call
+// start() once the base image has loaded; destroy() when the card goes.
+export class CardFx {
+  private mounted: MountedLayer[] = [];
+  private pending = 0;
+  private ready = false;
+  private destroyed = false;
+  private onScreen = true;
+  private observer: IntersectionObserver | null = null;
+  private raf: number | null = null;
+  private last: number | null = null;
+  private t = 0;
+  private windowMs = 0;
+  private windowFrames = 0;
+
+  constructor(
+    private readonly host: Element,
+    private readonly container: HTMLElement,
+    private readonly animation: LayerAnimation,
+    // The background's id: seeds flicker so it looks the same everywhere.
+    private readonly seed: string,
+  ) {}
+
+  start(): void {
+    if (this.destroyed || sessionStopped || this.mounted.length > 0) return;
+    live.add(this);
+    this.container.style.visibility = "hidden";
+    for (const layer of this.animation.layers) {
+      this.container.appendChild(this.mountLayer(layer));
+    }
+    if (typeof IntersectionObserver === "function") {
+      this.onScreen = false;
+      this.observer = new IntersectionObserver((entries) => {
+        const entry = entries[entries.length - 1];
+        if (entry !== undefined) this.onScreen = entry.isIntersecting;
+        this.update();
+      });
+      this.observer.observe(this.host);
+    }
+    document.addEventListener("visibilitychange", this.update);
+  }
+
+  destroy(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    live.delete(this);
+    this.update();
+    this.observer?.disconnect();
+    this.observer = null;
+    document.removeEventListener("visibilitychange", this.update);
+    this.container.replaceChildren();
+    this.container.style.visibility = "";
+    this.mounted = [];
+  }
+
+  private image(src: string, style: string): HTMLImageElement {
+    const img = document.createElement("img");
+    img.dataset.cardFxImg = "";
+    img.alt = "";
+    img.decoding = "async";
+    img.setAttribute("style", style);
+    this.pending++;
+    img.addEventListener("load", this.onLayerLoad, { once: true });
+    img.addEventListener("error", this.onLayerError, { once: true });
+    img.src = assetUrl(src);
+    return img;
+  }
+
+  private mountLayer(layer: FxLayer): HTMLElement {
+    const strength = layer.strength ?? FX_DEFAULTS.strength;
+    const wrap = document.createElement("div");
+    wrap.dataset.cardFxLayer = layer.effect;
+    wrap.setAttribute("style", `${FILL}overflow:hidden;`);
+    let move: HTMLElement = wrap;
+    switch (layer.effect) {
+      case "pulse":
+      case "flicker":
+        wrap.appendChild(this.image(layer.src, FILL + COVER));
+        wrap.style.opacity = "0";
+        break;
+      case "drift": {
+        // The layer twice, side by side, slid left one card width per period.
+        wrap.style.opacity = String(strength);
+        move = document.createElement("div");
+        move.setAttribute(
+          "style",
+          "position:absolute;top:0;left:0;height:100%;width:200%;display:flex;will-change:transform;",
+        );
+        const half = `height:100%;width:50%;flex:none;${COVER}`;
+        move.append(this.image(layer.src, half), this.image(layer.src, half));
+        wrap.appendChild(move);
+        break;
+      }
+      case "shimmer": {
+        // The layer is a static mask; a soft band moves underneath it, so
+        // the band shows only where the layer has pixels.
+        const url = `url("${assetUrl(layer.src)}")`;
+        for (const prefix of ["", "-webkit-"]) {
+          wrap.style.setProperty(`${prefix}mask-image`, url);
+          wrap.style.setProperty(`${prefix}mask-size`, "cover");
+          wrap.style.setProperty(`${prefix}mask-position`, "center");
+          wrap.style.setProperty(`${prefix}mask-repeat`, "no-repeat");
+        }
+        // Hidden: only tells us whether the layer loaded.
+        wrap.appendChild(this.image(layer.src, "display:none;"));
+        move = document.createElement("div");
+        move.setAttribute(
+          "style",
+          `position:absolute;top:-50%;left:0;height:200%;width:${
+            SHIMMER_BAND_WIDTH * 100
+          }%;opacity:${strength};will-change:transform;background:${BAND};`,
+        );
+        wrap.appendChild(move);
+        break;
+      }
+    }
+    move.dataset.cardFxMove = "";
+    this.mounted.push({
+      layer,
+      move,
+      flashes:
+        layer.effect === "flicker"
+          ? flickerSchedule(
+              this.seed,
+              layer.rate ?? FX_DEFAULTS.rate,
+              FLICKER_LOOP_S,
+            )
+          : [],
+    });
+    return wrap;
+  }
+
+  private onLayerLoad = (): void => {
+    if (this.destroyed) return;
+    this.pending--;
+    if (this.pending > 0) return;
+    this.ready = true;
+    this.apply();
+    this.container.style.visibility = "";
+    this.update();
+  };
+
+  // Any layer failing leaves the card on its base image.
+  private onLayerError = (): void => {
+    this.destroy();
+  };
+
+  private update = (): void => {
+    const run =
+      this.ready &&
+      !this.destroyed &&
+      !sessionStopped &&
+      this.onScreen &&
+      !document.hidden;
+    if (run && this.raf === null) {
+      this.raf = requestAnimationFrame(this.tick);
+    } else if (!run && this.raf !== null) {
+      cancelAnimationFrame(this.raf);
+      this.raf = null;
+      // A pause isn't a slow frame: timing and the frame window restart.
+      this.last = null;
+      this.windowMs = 0;
+      this.windowFrames = 0;
+    }
+  };
+
+  private tick = (now: number): void => {
+    this.raf = null;
+    if (this.last !== null) {
+      const dt = now - this.last;
+      this.t += dt / 1000;
+      this.windowMs += dt;
+      this.windowFrames++;
+      if (this.windowMs >= SLOW_WINDOW_MS) {
+        if (this.windowMs / this.windowFrames > SLOW_FRAME_MS) {
+          stopSession();
+          return;
+        }
+        this.windowMs = 0;
+        this.windowFrames = 0;
+      }
+    }
+    this.last = now;
+    this.apply();
+    this.update();
+  };
+
+  private apply(): void {
+    const t = this.t;
+    for (const { layer, move, flashes } of this.mounted) {
+      const strength = layer.strength ?? FX_DEFAULTS.strength;
+      switch (layer.effect) {
+        case "pulse":
+          move.style.opacity = pulseOpacity(t, layer).toFixed(3);
+          break;
+        case "flicker":
+          move.style.opacity = flickerOn(t, flashes, FLICKER_LOOP_S)
+            ? String(strength)
+            : "0";
+          break;
+        case "drift": {
+          // The strip is two card widths, so 50% of it is one card.
+          const x = -driftOffset(t, layer) * 50;
+          move.style.transform = `translateX(${x.toFixed(3)}%)`;
+          break;
+        }
+        case "shimmer": {
+          // translateX(%) is of the band's own width.
+          const x = (shimmerBandX(t, layer) / SHIMMER_BAND_WIDTH) * 100;
+          const angle = layer.angle ?? FX_DEFAULTS.angle;
+          move.style.transform = `translateX(${x.toFixed(2)}%) rotate(${angle}deg)`;
+          break;
+        }
+      }
+    }
+  }
 }

@@ -96,6 +96,15 @@ describe("<card-store-grid>", () => {
     expect(bg?.getAttribute("size")).toBe("thumb");
   });
 
+  it("store tiles stay still", async () => {
+    await render();
+    const cards = (grid as unknown as Element).querySelectorAll("player-card");
+    expect(cards.length).toBeGreaterThan(0);
+    for (const card of cards) {
+      expect((card as unknown as { animated: boolean }).animated).toBe(false);
+    }
+  });
+
   it("owned items show Owned, not a price", async () => {
     await render(["taunt:salute"]);
     const salute = (grid as unknown as Element).querySelector(
