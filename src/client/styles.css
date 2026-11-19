@@ -194,6 +194,13 @@ body.page-open {
   overflow: hidden;
   flex-direction: column;
   flex-wrap: nowrap;
+  /* Stated here, not inherited from `body`: Playwire's site stylesheet
+     (config.playwire.com/.../styles.css, loaded by ramp.js) sets
+     `body { padding-bottom: 105px }` to keep its bottom rail off the
+     scrolling homepage's footer. The open page is sized to the body's
+     content box, so that padding would leave a dead strip under the page
+     (and under the footer). This selector outranks Playwire's. */
+  padding-bottom: env(safe-area-inset-bottom);
   /* Where the page fills the screen (no footer under it), it runs on to the
      bottom and pads its own content above the home indicator (o-modal),
      instead of stopping short of it. */
