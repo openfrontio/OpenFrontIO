@@ -39,7 +39,7 @@ const VIEW: PlayerCardView = {
   trackers: [
     { stat: "wins", value: 1204 },
     { stat: "best_elo", value: 1840 },
-    { stat: "games", value: 38912 } as never,
+    { stat: "games_played", value: 38912 },
   ],
   taunt: { name: "salute", tauntKind: "icon", preset: "salute" },
 };

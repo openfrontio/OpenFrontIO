@@ -195,7 +195,7 @@ export class EquippedCosmeticsRow extends LitElement {
       value: number | null,
     ) => {
       if (item === undefined) return;
-      const earned = "unlockSource" in item && item.unlockSource != null;
+      const earned = "unlockSource" in item && item.unlockSource !== undefined;
       const sold = (item.priceHard ?? 0) > 0 || (item.priceSoft ?? 0) > 0;
       tiles.push({
         type,

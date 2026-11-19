@@ -1,5 +1,4 @@
-import { GameMode } from "@openfront/engine-api/game/GameTypes";
-import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig } from "@openfront/engine-api/Schemas";
 import { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { PlayerCard } from "@openfront/shared/PlayerCardSchemas";
