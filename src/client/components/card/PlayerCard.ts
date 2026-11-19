@@ -30,8 +30,11 @@ import {
 //   size "thumb"    160 × 64 store / customiser preview: the background only
 //   size "panel"    the in-game player panel: one strip, 28 px badge, then
 //                   flag, clan tag and name over a small prestige · level
-//                   line, then short trackers (value over label). Always still (never animated) and never a title or
-//                   taunt: it sits beside a running game.
+//                   line, then short trackers (value over label). The level
+//                   line is never cut: when the row is tight the tracker
+//                   labels truncate, then the name. Always still (never
+//                   animated) and never a title or taunt: it sits beside a
+//                   running game.
 //
 // Below 400 px wide (`narrow`, set from the strip's own width) the trackers
 // move under the name as one line with short numbers.
@@ -262,8 +265,8 @@ export class PlayerCard extends LitElement {
                 .size=${28}
               ></level-badge>`
         }
-        <div class="min-w-0 flex-1">
-          <div class="flex min-w-0 items-center gap-1.5">
+        <div class="min-w-fit flex-1">
+          <div class="flex w-0 min-w-full items-center gap-1.5">
             ${
               view.flag === undefined
                 ? nothing
@@ -281,7 +284,7 @@ export class PlayerCard extends LitElement {
             badge === null
               ? nothing
               : html`<div
-                  class="truncate [&_[data-profile-level-line]]:truncate [&_[data-profile-level-line]]:text-[11px] [&_[data-profile-level-line]]:tracking-normal"
+                  class="whitespace-nowrap [&_[data-profile-level-line]]:text-[11px] [&_[data-profile-level-line]]:tracking-normal"
                 >
                   ${levelLineTemplate(badge, true)}
                 </div>`
@@ -292,13 +295,13 @@ export class PlayerCard extends LitElement {
             ? nothing
             : html`<div
                 data-card-trackers-inline
-                class="flex shrink-0 items-stretch"
+                class="flex min-w-0 items-stretch"
               >
                 ${view.trackers.map(
                   (t, i) =>
                     html`<div
                       data-card-tracker=${t.stat}
-                      class="flex max-w-[4.5rem] flex-col items-center justify-center px-1 ${
+                      class="flex min-w-0 max-w-[4.5rem] flex-col items-center justify-center px-1 ${
                         i > 0 ? "border-l border-white/15" : ""
                       }"
                     >

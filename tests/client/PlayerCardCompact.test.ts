@@ -93,16 +93,44 @@ describe("player card: compact panel layout", () => {
 
   it("keeps the name in view at panel width: level under the name, labels truncate", async () => {
     const el = await mount(VIEW);
-    // Name and level share one shrinkable column, so three trackers can't
-    // squeeze the name to nothing (as a ~320px panel row did).
+    // Name and level share one column that takes the free width, so three
+    // trackers can't squeeze the name to nothing (as a ~320px panel row did).
     const name = el.querySelector("[data-profile-name]")!;
     const level = el.querySelector("[data-profile-level-line]")!;
     const column = name.closest(".flex-1")!;
-    expect(column.className).toContain("min-w-0");
     expect(column.contains(level)).toBe(true);
+    expect(name.className).toContain("truncate");
     for (const t of el.querySelectorAll("[data-card-tracker]")) {
       expect(t.className).toContain("max-w-");
       expect(t.lastElementChild!.className).toContain("truncate");
+    }
+  });
+
+  it("never truncates the level line: the trackers give way first", async () => {
+    const el = await mount(VIEW);
+    const level = el.querySelector<HTMLElement>("[data-profile-level-line]")!;
+    // Measured in a real browser: at 1366 and 390 the panel's row is too
+    // narrow for name, level and three trackers, and the level line was cut
+    // to "PRESTIGE 3 · LEV…". Two lines still, nothing wraps.
+    const wrapper = level.parentElement!;
+    expect(wrapper.className).not.toMatch(/(^|\s)truncate(\s|$)/);
+    expect(wrapper.className).not.toContain(
+      "[&_[data-profile-level-line]]:truncate",
+    );
+    expect(wrapper.className).toContain("whitespace-nowrap");
+    // The column is at least as wide as the level line...
+    const column = el.querySelector("[data-profile-name]")!.closest(".flex-1")!;
+    expect(column.className).toContain("min-w-fit");
+    // ...the name row doesn't set that width (it still truncates)...
+    const nameRow = el.querySelector("[data-profile-name]")!.parentElement!;
+    expect(nameRow.className).toContain("w-0");
+    expect(nameRow.className).toContain("min-w-full");
+    // ...and the trackers shrink instead, their labels truncating.
+    const trackers = el.querySelector("[data-card-trackers-inline]")!;
+    expect(trackers.className).not.toContain("shrink-0");
+    expect(trackers.className).toContain("min-w-0");
+    for (const t of el.querySelectorAll("[data-card-tracker]")) {
+      expect(t.className).toContain("min-w-0");
     }
   });
 
