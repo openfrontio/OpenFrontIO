@@ -12,7 +12,13 @@ import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { ifDefined } from "lit/directives/if-defined.js";
+import {
+  cardBackgroundUrl,
+  stillBackdropLayers,
+} from "../../components/card/StillCardBackdrop";
 import { Controller } from "../../Controller";
+import { fetchCosmetics, getCachedCosmetics } from "../../Cosmetics";
 import {
   ContextMenuEvent,
   DoBoatAttackEvent,
@@ -45,6 +51,7 @@ import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 import "./RelationSmiley";
 import { SpawnBarVisibleEvent } from "./SpawnTimer";
+import { visiblePlayerCard } from "./VisiblePlayerCard";
 const soldierIconAquarius = assetUrl("images/SoldierIconAquarius.svg");
 const allianceIcon = assetUrl("images/AllianceIcon.svg");
 const traitorIcon = assetUrl("images/TraitorIcon.svg");
@@ -619,9 +626,19 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     }
 
     const keybinds = this.userSettings.keybinds(Platform.isMac);
+    const backdrop = this.cardBackdropFor(player);
 
     return html`
-      <div class="flex items-start gap-1 lg:gap-2 p-1 lg:p-1.5">
+      <div
+        class="flex items-start gap-1 lg:gap-2 p-1 lg:p-1.5${
+          backdrop === undefined
+            ? ""
+            : " sm:[background-image:var(--card-backdrop)] bg-cover bg-center"
+        }"
+        style=${ifDefined(
+          backdrop === undefined ? undefined : `--card-backdrop: ${backdrop}`,
+        )}
+      >
         ${
           myPlayer && this.showShortcutButtons()
             ? html`<div class="flex flex-col gap-1 self-center shrink-0">
@@ -758,6 +775,37 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         }
       </div>
     `;
+  }
+
+  // A card owner's background as CSS layers (shade over the art) for the info
+  // row, or undefined. Shown only from 640px (the sm: class above), where the
+  // overlay is a fixed-width panel and the row crops the centre band of the
+  // 2800×400 art; a phone's full-width strip shows today's plain panel. Still
+  // only: no effect layers here, beside a running game.
+  private cardBackdropFor(player: PlayerView): string | undefined {
+    const visible = visiblePlayerCard(
+      this.game,
+      player,
+      this.userSettings.anonymousNames(),
+    );
+    if (visible?.card.background === undefined) return undefined;
+    const cosmetics = getCachedCosmetics();
+    if (cosmetics === null) {
+      // Not loaded yet: shown from the next render once it is.
+      this.requestCosmetics();
+      return undefined;
+    }
+    const url = cardBackgroundUrl(visible.card.background, cosmetics);
+    return url === null ? undefined : stillBackdropLayers(url);
+  }
+
+  private cosmeticsRequested = false;
+  private requestCosmetics(): void {
+    if (this.cosmeticsRequested) return;
+    this.cosmeticsRequested = true;
+    void fetchCosmetics().then((c) => {
+      if (c !== null) this.requestUpdate();
+    });
   }
 
   // Right side: what I can do to the player, each with its keybind. Request

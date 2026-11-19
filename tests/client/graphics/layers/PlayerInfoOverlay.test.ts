@@ -89,6 +89,8 @@ describe("PlayerInfoOverlay", () => {
     cosmetics: {},
     id: () => "bob",
     smallID: () => 2,
+    // No card: a human the server sent none for.
+    clientID: () => null,
   };
 
   const makeGame = (myPlayer: unknown, isReplay = false) => ({

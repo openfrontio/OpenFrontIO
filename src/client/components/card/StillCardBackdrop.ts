@@ -21,13 +21,19 @@ export function cardBackgroundUrl(
 export const STILL_BACKDROP_SHADE =
   "linear-gradient(90deg, rgba(8,15,30,0.88) 0%, rgba(8,15,30,0.72) 60%, rgba(8,15,30,0.6) 100%)";
 
+// The CSS background layers: the shade over the art.
+export function stillBackdropLayers(url: string): string {
+  // Quoted, so a stray quote, backslash or newline can't end the url().
+  const src = assetUrl(url).replace(/["\\\n\r]/g, (c) => `\\${c}`);
+  return `${STILL_BACKDROP_SHADE}, url("${src}")`;
+}
+
 // Inline CSS for an element whose own background becomes the art: cropped like
 // `cover` to the centre band of the 2800×400 image, under the shade. Being a
 // background, it changes nothing about the element's size or children.
 export function stillBackdropStyle(url: string): string {
-  const src = assetUrl(url).replace(/["\\\n\r]/g, (c) => `\\${c}`);
   return (
-    `background-image: ${STILL_BACKDROP_SHADE}, url("${src}");` +
+    `background-image: ${stillBackdropLayers(url)};` +
     " background-size: cover; background-position: center;"
   );
 }
