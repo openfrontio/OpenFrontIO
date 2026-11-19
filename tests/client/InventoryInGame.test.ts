@@ -544,8 +544,7 @@ describe("Inventory In game tab", () => {
       await open("crowns");
       expect(modal.querySelector("[data-loadout-edited]")).not.toBeNull();
       expect(
-        modal.querySelector<HTMLSelectElement>("[data-loadout-select]")!
-          .selectedOptions[0].textContent,
+        modal.querySelector("[data-loadout-edited]")!.textContent,
       ).toContain("inventory.loadout_edited");
       modal.querySelector<HTMLButtonElement>("[data-loadout-update]")!.click();
       await settle(modal);

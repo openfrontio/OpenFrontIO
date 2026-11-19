@@ -76,13 +76,7 @@ export class InventoryLoadoutSelect extends LitElement {
                 value=${name}
                 ?selected=${name === active}
               >
-                ${
-                  name === active && this.edited
-                    ? translateText("inventory.loadout_edited", {
-                        name: this.label(name),
-                      })
-                    : this.label(name)
-                }
+                ${this.label(name)}
               </option>`,
           )}
         </select>
@@ -101,7 +95,9 @@ export class InventoryLoadoutSelect extends LitElement {
       </div>
       ${
         active !== "" && this.edited
-          ? html`<span data-loadout-edited class="sr-only"
+          ? html`<span
+              data-loadout-edited
+              class="px-1 text-xs font-semibold text-amber-200"
               >${translateText("inventory.loadout_edited", {
                 name: this.label(active),
               })}</span
