@@ -1004,7 +1004,7 @@ describe("InventoryModal", () => {
     expect(modal.querySelector("[data-inventory-empty]")).toBeNull();
   }, 30_000);
 
-  it("adds numbered loadout slots that mirror what's equipped", async () => {
+  it("adds numbered loadout slots that save only through Update", async () => {
     await showTab(modal, "crowns");
     expect(loadoutSlots(modal)).toEqual([]);
     await activateCard(modal, "crown:owned_crown");
@@ -1015,13 +1015,24 @@ describe("InventoryModal", () => {
     const settings = new UserSettings();
     expect(settings.getLoadout("01")?.crown).toBe("owned_crown");
 
-    // No Save step: equipping writes straight into the active slot.
+    // Equipping changes the look, not the slot: it shows as edited.
     await showTab(modal, "flags");
     await activateCard(modal, "flag:owned_flag");
     expect(settings.getLoadout("01")).toMatchObject({
       crown: "owned_crown",
+      flag: null,
+    });
+    expect(modal.querySelector("[data-loadout-edited]")).not.toBeNull();
+    loadoutMenu(modal)
+      .querySelector<HTMLButtonElement>("[data-loadout-update]")!
+      .click();
+    await modal.updateComplete;
+    await loadoutMenu(modal).updateComplete;
+    expect(settings.getLoadout("01")).toMatchObject({
+      crown: "owned_crown",
       flag: "flag:owned_flag",
     });
+    expect(modal.querySelector("[data-loadout-edited]")).toBeNull();
   }, 30_000);
 
   it("switches between slots, equipping each one's set", async () => {
@@ -1037,6 +1048,10 @@ describe("InventoryModal", () => {
     await showTab(modal, "crowns");
     modal
       .querySelector<HTMLButtonElement>("[data-inventory-use-default]")!
+      .click();
+    await modal.updateComplete;
+    loadoutMenu(modal)
+      .querySelector<HTMLButtonElement>("[data-loadout-update]")!
       .click();
     await modal.updateComplete;
 

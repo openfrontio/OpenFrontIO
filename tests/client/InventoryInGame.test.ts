@@ -551,10 +551,13 @@ describe("Inventory In game tab", () => {
     it("shows <name> · edited with Update when the look differs", async () => {
       const settings = new UserSettings();
       settings.addLoadout(); // 01, active, nothing equipped
-      settings.setActiveLoadout(null);
-      settings.setSelectedCrownName("gold_crown"); // not mirrored into 01
-      settings.setActiveLoadout("01");
       await open("crowns");
+      expect(modal.querySelector("[data-loadout-edited]")).toBeNull();
+      // Equipping from the grid changes the look, not the loadout.
+      await setFilter(modal, "owned");
+      await clickTile(modal, "crown:gold_crown");
+      expect(new UserSettings().getSelectedCrownName()).toBe("gold_crown");
+      expect(new UserSettings().getLoadout("01")?.crown).toBeNull();
       expect(modal.querySelector("[data-loadout-edited]")).not.toBeNull();
       expect(
         modal.querySelector("[data-loadout-edited]")!.textContent,
@@ -810,7 +813,9 @@ describe("Inventory In game tab", () => {
       expect(purchaseCosmetic).toHaveBeenCalledTimes(1);
 
       modal
-        .querySelector<HTMLButtonElement>("inventory-buy-dialog [data-buy-close]")!
+        .querySelector<HTMLButtonElement>(
+          "inventory-buy-dialog [data-buy-close]",
+        )!
         .click();
       await settle(modal);
       expect(modal.querySelector("inventory-buy-dialog")).toBeNull();

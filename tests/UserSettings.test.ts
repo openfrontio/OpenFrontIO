@@ -214,20 +214,38 @@ describe("UserSettings cosmetic loadouts", () => {
     expect(s.getLoadouts()).toHaveLength(MAX_LOADOUTS);
   });
 
-  it("mirrors later equip changes into the active slot", () => {
+  it("equip changes change the look only, never the active slot", () => {
     const s = new UserSettings();
-    s.addLoadout();
+    s.addLoadout(); // 01: nothing equipped, active
+    s.setSelectedPatternName("pattern:stripes:red");
     s.setSelectedCrownName("owned_crown");
-    expect(s.getLoadout("01")?.crown).toBe("owned_crown");
     s.setFlag("flag:owned_flag");
     s.setSelectedEffectName("transportShipTrail", "spectrum");
     expect(s.getLoadout("01")).toMatchObject({
-      crown: "owned_crown",
-      flag: "flag:owned_flag",
-      effects: { transportShipTrail: "spectrum" },
+      pattern: null,
+      crown: null,
+      flag: null,
+      effects: {},
     });
+    expect(s.getActiveLoadout()).toBe("01");
+    // Saving is an explicit step.
+    s.saveLoadout("01");
     s.clearFlag(true);
-    expect(s.getLoadout("01")?.flag).toBeNull();
+    expect(s.getLoadout("01")?.flag).toBe("flag:owned_flag");
+  });
+
+  it("keeps an unsaved look across a reload, and the slot as it was saved", () => {
+    const s = new UserSettings();
+    s.addLoadout();
+    s.setSelectedCrownName("owned_crown");
+    // A reload starts from storage, not the in-memory cache.
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+    const reloaded = new UserSettings();
+    expect(reloaded.getSelectedCrownName()).toBe("owned_crown");
+    expect(reloaded.getActiveLoadout()).toBe("01");
+    expect(reloaded.getLoadout("01")?.crown).toBeNull();
   });
 
   it("leaves saved slots alone when none is active", () => {
@@ -243,8 +261,6 @@ describe("UserSettings cosmetic loadouts", () => {
     const s = new UserSettings();
     equipSample(s);
     s.addLoadout(); // 01 holds the sample
-    // Step off 01 first: while it is active it mirrors the undressing below.
-    s.setActiveLoadout(null);
     s.unequipAll();
     s.addLoadout(); // 02 holds nothing
 
@@ -254,7 +270,7 @@ describe("UserSettings cosmetic loadouts", () => {
     expect(s.getFlag()).toBe("flag:owned_flag");
     expect(s.getSelectedCrownName()).toBe("owned_crown");
     expect(s.getSelectedEffects()).toEqual({ transportShipTrail: "spectrum" });
-    // 02 was active while 01 was applied; it must not have absorbed the change.
+    // 02 was active while 01 was applied; it must not have taken the change.
     expect(s.getLoadout("02")).toMatchObject({ crown: null, flag: null });
 
     expect(s.applyLoadout("02")).toBe(true);
@@ -297,7 +313,7 @@ describe("UserSettings cosmetic loadouts", () => {
     expect(s.getLoadout("01")?.crown).toBeNull();
   });
 
-  it("unequipAll clears every slot and empties the active loadout with it", () => {
+  it("unequipAll clears every slot and leaves the active loadout as saved", () => {
     const s = new UserSettings();
     equipSample(s);
     s.addLoadout();
@@ -307,10 +323,10 @@ describe("UserSettings cosmetic loadouts", () => {
     expect(s.getSelectedCrownName()).toBeNull();
     expect(s.getSelectedEffects()).toEqual({});
     expect(s.getLoadout("01")).toMatchObject({
-      pattern: null,
-      flag: null,
-      crown: null,
-      effects: {},
+      pattern: "pattern:stripes:red",
+      flag: "flag:owned_flag",
+      crown: "owned_crown",
+      effects: { transportShipTrail: "spectrum" },
     });
   });
 
