@@ -39,6 +39,48 @@ export function shimmerBandX(t: number, layer: FxLayer): number {
   return -0.3 + 1.6 * fract(t / p);
 }
 
+// Steeper than this the band would lie almost flat and its sideways reach
+// grows without bound; the renderer draws it at this angle at most.
+export const SHIMMER_MAX_ANGLE = 80;
+
+// Shimmer, rotated: where the band's centre is and how long the band is,
+// each as (a x card width + b x card height), so CSS container units can
+// place it without measuring the card. Upright, the left edge runs from 30%
+// off the left to 30% off the right as shimmerBandX says; tilted, the travel
+// widens by the band's extra sideways reach inside the card's height, so it
+// starts and ends wholly off the card. Its length is width + height, at
+// least the card's diagonal, so its ends never show.
+export function shimmerBand(
+  t: number,
+  layer: FxLayer,
+): {
+  centreW: number;
+  centreH: number;
+  lengthW: number;
+  lengthH: number;
+  angle: number;
+} {
+  const angle = Math.max(
+    -SHIMMER_MAX_ANGLE,
+    Math.min(SHIMMER_MAX_ANGLE, layer.angle ?? FX_DEFAULTS.angle),
+  );
+  const a = (Math.abs(angle) * Math.PI) / 180;
+  const half = SHIMMER_BAND_WIDTH / 2;
+  // Extra reach beyond the upright band, in card widths and card heights.
+  const extraW = half * (1 / Math.cos(a) - 1);
+  const extraH = 0.5 * Math.tan(a);
+  const f = fract(t / (layer.period ?? FX_DEFAULTS.period));
+  const startW = -0.3 + half - extraW;
+  const endW = 1.3 + half + extraW;
+  return {
+    centreW: startW + f * (endW - startW),
+    centreH: -extraH + f * 2 * extraH,
+    lengthW: 1,
+    lengthH: 1,
+    angle,
+  };
+}
+
 // Drift: how far the doubled layer has moved left, in widths of the art as
 // drawn (one card width when the card shows the whole art), [0, 1).
 export function driftOffset(t: number, layer: FxLayer): number {
@@ -136,8 +178,10 @@ export function flickerOn(
 // for the rest of the session.
 const SLOW_FRAME_MS = 25;
 const SLOW_WINDOW_MS = 2000;
-// A single frame longer than this is a stall, not a slow device.
-const STALL_MS = 250;
+// A frame counts for at most this long: one long stall (a chunk loading, a
+// GC pause) can't stop the session alone, but a device that keeps stalling,
+// or runs under 10 fps, still averages over SLOW_FRAME_MS.
+const MAX_COUNTED_FRAME_MS = 100;
 // The flicker schedule repeats after this many seconds.
 const FLICKER_LOOP_S = 600;
 
@@ -159,11 +203,34 @@ function stopSession(): void {
   for (const fx of [...live]) fx.destroy();
 }
 
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
+
 function prefersReducedMotion(): boolean {
-  return (
-    typeof matchMedia === "function" &&
-    matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
+  return typeof matchMedia === "function" && matchMedia(REDUCED_MOTION).matches;
+}
+
+const motionSubscribers = new Set<() => void>();
+let motionQuery: MediaQueryList | null = null;
+const onMotionChange = (): void => {
+  for (const cb of [...motionSubscribers]) cb();
+};
+
+// Calls `cb` whenever the reduced-motion setting changes. Returns the
+// unsubscribe.
+export function onReducedMotionChange(cb: () => void): () => void {
+  if (typeof matchMedia !== "function") return () => {};
+  motionSubscribers.add(cb);
+  if (motionQuery === null) {
+    motionQuery = matchMedia(REDUCED_MOTION);
+    motionQuery.addEventListener("change", onMotionChange);
+  }
+  return () => {
+    motionSubscribers.delete(cb);
+    if (motionSubscribers.size === 0 && motionQuery !== null) {
+      motionQuery.removeEventListener("change", onMotionChange);
+      motionQuery = null;
+    }
+  };
 }
 
 // The effect layers a card should play, or null for a still image: not an
@@ -233,7 +300,8 @@ export class CardFx {
         if (entry !== undefined) this.onScreen = entry.isIntersecting;
         this.update();
       });
-      this.observer.observe(this.host);
+      // The container: the <card-background> host itself has no box.
+      this.observer.observe(this.container);
     }
     document.addEventListener("visibilitychange", this.update);
   }
@@ -323,12 +391,14 @@ export class CardFx {
         // the card stays on its base rather than showing an empty band.
         const check = this.image(layer.src, "display:none;", "anonymous");
         wrap.appendChild(check);
+        // Sized and moved in container units (see shimmerBand).
+        wrap.style.setProperty("container-type", "size");
         move = document.createElement("div");
         move.setAttribute(
           "style",
-          `position:absolute;top:-50%;left:0;height:200%;width:${
-            SHIMMER_BAND_WIDTH * 100
-          }%;opacity:${strength};will-change:transform;background:${BAND};`,
+          "position:absolute;left:0;top:calc(50cqh - (100cqw + 100cqh) / 2);" +
+            `height:calc(100cqw + 100cqh);width:${SHIMMER_BAND_WIDTH * 100}cqw;` +
+            `opacity:${strength};will-change:transform;background:${BAND};`,
         );
         wrap.appendChild(move);
         break;
@@ -398,15 +468,8 @@ export class CardFx {
     if (this.last !== null) {
       const dt = now - this.last;
       this.t += dt / 1000;
-      if (dt > STALL_MS) {
-        // One stall (a chunk loading, a GC pause) isn't a slow device: the
-        // frame window starts again.
-        this.windowMs = 0;
-        this.windowFrames = 0;
-      } else {
-        this.windowMs += dt;
-        this.windowFrames++;
-      }
+      this.windowMs += Math.min(dt, MAX_COUNTED_FRAME_MS);
+      this.windowFrames++;
       if (this.windowMs >= SLOW_WINDOW_MS) {
         if (this.windowMs / this.windowFrames > SLOW_FRAME_MS) {
           stopSession();
@@ -441,10 +504,11 @@ export class CardFx {
           break;
         }
         case "shimmer": {
-          // translateX(%) is of the band's own width.
-          const x = (shimmerBandX(t, layer) / SHIMMER_BAND_WIDTH) * 100;
-          const angle = layer.angle ?? FX_DEFAULTS.angle;
-          move.style.transform = `translateX(${x.toFixed(2)}%) rotate(${angle}deg)`;
+          // The band's left edge sits half a band left of its centre.
+          const b = shimmerBand(t, layer);
+          const w = ((b.centreW - SHIMMER_BAND_WIDTH / 2) * 100).toFixed(2);
+          const h = (b.centreH * 100).toFixed(2);
+          move.style.transform = `translateX(calc(${w}cqw + ${h}cqh)) rotate(${b.angle}deg)`;
           break;
         }
       }

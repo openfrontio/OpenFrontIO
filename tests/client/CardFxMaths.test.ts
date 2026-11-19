@@ -6,6 +6,7 @@ import {
   flickerSchedule,
   pulseOpacity,
   SHIMMER_BAND_WIDTH,
+  shimmerBand,
   shimmerBandX,
 } from "../../src/client/components/card/CardFx";
 
@@ -42,6 +43,48 @@ describe("shimmerBandX", () => {
 
   it("is 18% of the card wide", () => {
     expect(SHIMMER_BAND_WIDTH).toBe(0.18);
+  });
+});
+
+describe("shimmerBand (rotated)", () => {
+  // A 2.6:1 card, band at 45°: the steep, narrow case.
+  const W = 2.6;
+  const H = 1;
+  const layer: FxLayer = {
+    src: "/a.png",
+    effect: "shimmer",
+    period: 4,
+    angle: 45,
+  };
+  const at = (t: number) => {
+    const b = shimmerBand(t, layer);
+    return { ...b, centre: b.centreW * W + b.centreH * H };
+  };
+  // How far the rotated band reaches sideways from its centre line within
+  // the card's height.
+  const reach = (angleDeg: number) => {
+    const a = (Math.abs(angleDeg) * Math.PI) / 180;
+    return (SHIMMER_BAND_WIDTH * W) / (2 * Math.cos(a)) + (H / 2) * Math.tan(a);
+  };
+
+  it("starts wholly off the left and ends wholly off the right", () => {
+    const start = at(0);
+    expect(start.centre + reach(45)).toBeLessThanOrEqual(0);
+    const end = at(3.9999);
+    expect(end.centre - reach(45)).toBeGreaterThanOrEqual(W - 1e-3);
+  });
+
+  it("is long enough to span the card's diagonal", () => {
+    const { lengthW, lengthH } = at(1);
+    expect(lengthW * W + lengthH * H).toBeGreaterThanOrEqual(Math.hypot(W, H));
+  });
+
+  it("matches the spec's travel when upright", () => {
+    const upright = { ...layer, angle: 0 };
+    const b = shimmerBand(0, upright);
+    // Left edge 30% off the left.
+    expect(b.centreW - SHIMMER_BAND_WIDTH / 2).toBeCloseTo(-0.3);
+    expect(b.centreH).toBeCloseTo(0);
   });
 });
 

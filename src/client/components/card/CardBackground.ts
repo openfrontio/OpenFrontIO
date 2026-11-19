@@ -1,7 +1,7 @@
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { CardFx, playableAnimation } from "./CardFx";
+import { CardFx, onReducedMotionChange, playableAnimation } from "./CardFx";
 import type { PlayerCardView } from "./PlayerCardModel";
 
 // A player card's background: the 2800×400 master, cropped like
@@ -25,8 +25,9 @@ export class CardBackground extends LitElement {
   @state() private loadedUrl: string | null = null;
 
   private fx: CardFx | null = null;
-  // What the running fx was made for: name, url.
+  // What the running fx was made for: name, url and animation.
   private fxKey: string | null = null;
+  private unsubscribeMotion: (() => void) | null = null;
 
   createRenderRoot() {
     return this;
@@ -34,11 +35,15 @@ export class CardBackground extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    // Reduced motion turned on stops this card; turned off, it starts again.
+    this.unsubscribeMotion ??= onReducedMotionChange(() => this.syncFx());
     if (this.hasUpdated) this.syncFx();
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.unsubscribeMotion?.();
+    this.unsubscribeMotion = null;
     this.stopFx();
   }
 
@@ -66,7 +71,10 @@ export class CardBackground extends LitElement {
       bg !== null && this.isConnected
         ? playableAnimation(this.animated, bg.animation)
         : null;
-    const key = bg === null ? null : `${bg.name}\n${bg.url}`;
+    const key =
+      bg === null
+        ? null
+        : `${bg.name}\n${bg.url}\n${JSON.stringify(bg.animation)}`;
     if (
       animation === null ||
       bg === null ||

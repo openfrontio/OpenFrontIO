@@ -51,6 +51,12 @@ let rafCallbacks: Map<number, FrameRequestCallback>;
 let nextRaf: number;
 let reducedMotion: boolean;
 let observers: FakeObserver[];
+let motionListeners: Set<() => void>;
+
+function setReducedMotion(on: boolean) {
+  reducedMotion = on;
+  for (const l of [...motionListeners]) l();
+}
 
 class FakeObserver {
   observed: Element[] = [];
@@ -96,11 +102,18 @@ beforeEach(() => {
     rafCallbacks.delete(id);
   });
   vi.stubGlobal("IntersectionObserver", FakeObserver);
+  motionListeners = new Set();
   vi.stubGlobal("matchMedia", (query: string) => ({
-    matches: query.includes("reduce") && reducedMotion,
+    get matches() {
+      return query.includes("reduce") && reducedMotion;
+    },
     media: query,
-    addEventListener() {},
-    removeEventListener() {},
+    addEventListener(_: string, l: () => void) {
+      motionListeners.add(l);
+    },
+    removeEventListener(_: string, l: () => void) {
+      motionListeners.delete(l);
+    },
   }));
   setHidden(false);
 });
@@ -225,7 +238,8 @@ describe("<card-background> effect layers", () => {
     // Not reported on screen yet.
     expect(rafCallbacks.size).toBe(0);
     observers[0].report(true);
-    expect(observers[0].observed).toContain(el);
+    // The container, not the zero-size <card-background> host.
+    expect(observers[0].observed).toEqual([el.querySelector("[data-card-fx]")]);
     expect(rafCallbacks.size).toBe(1);
   });
 
@@ -292,6 +306,34 @@ describe("<card-background> effect layers", () => {
     expect(layerEls(next)).toHaveLength(0);
   });
 
+  it("stops a ~40 ms device that also hitches over 250 ms every 1.2 s", async () => {
+    const el = await mount(NEON);
+    loadBase(el);
+    await el.updateComplete;
+    loadLayers(el);
+    observers[0].report(true);
+    let now = 0;
+    frame(now);
+    for (let i = 0; i < 400 && !cardFxStopped(); i++) {
+      now += i % 30 === 29 ? 300 : 40;
+      frame(now);
+    }
+    expect(cardFxStopped()).toBe(true);
+    expect(layerEls(el)).toHaveLength(0);
+  });
+
+  it("stops a device under 4 fps", async () => {
+    const el = await mount(NEON);
+    loadBase(el);
+    await el.updateComplete;
+    loadLayers(el);
+    observers[0].report(true);
+    for (let now = 0; now <= 60_000 && !cardFxStopped(); now += 300) {
+      frame(now);
+    }
+    expect(cardFxStopped()).toBe(true);
+  });
+
   it("one long stall doesn't stop the session", async () => {
     const el = await mount(NEON);
     loadBase(el);
@@ -338,6 +380,42 @@ describe("<card-background> effect layers", () => {
     loadBase(el);
     await el.updateComplete;
     expect(layerImgs(el)[0].crossOrigin).toBe("anonymous");
+  });
+
+  it("follows reduced motion turning on and off", async () => {
+    const el = await mount(NEON);
+    loadBase(el);
+    await el.updateComplete;
+    loadLayers(el);
+    observers[0].report(true);
+    expect(rafCallbacks.size).toBe(1);
+    setReducedMotion(true);
+    await el.updateComplete;
+    expect(layerEls(el)).toHaveLength(0);
+    expect(rafCallbacks.size).toBe(0);
+    setReducedMotion(false);
+    await el.updateComplete;
+    expect(layerEls(el)).toHaveLength(2);
+    el.remove();
+    expect(motionListeners.size).toBe(0);
+  });
+
+  it("restarts when the animation changes under the same name and url", async () => {
+    const el = await mount(NEON);
+    loadBase(el);
+    await el.updateComplete;
+    expect(layerEls(el)).toHaveLength(2);
+    el.background = {
+      ...NEON,
+      animation: {
+        kind: "layers",
+        layers: [{ src: "/fx-shimmer.png", effect: "shimmer" }],
+      },
+    };
+    await el.updateComplete;
+    expect([...layerEls(el)].map((l) => l.dataset.cardFxLayer)).toEqual([
+      "shimmer",
+    ]);
   });
 
   it("keeps going at a normal frame rate", async () => {
