@@ -26,7 +26,12 @@ import {
   buildPlayerCardView,
   type PlayerCardView,
 } from "../../components/card/PlayerCardModel";
-import { savedLooks } from "../../components/card/SavedLooks";
+import {
+  endScreenLookRows,
+  type LookRow,
+  onSavedLooksChanged,
+  savedLooks,
+} from "../../components/card/SavedLooks";
 import "./EndCardSection";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
 import {
@@ -78,6 +83,7 @@ import {
 import { requeueModeForRankedType } from "../../RequeueUrl";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { SendWinnerEvent } from "../../Transport";
+import { UserSettings } from "../../UserSettings";
 import { shareGame } from "../../utilities/ShareGame";
 import { GameView } from "../../view";
 import type { EndCardClan, EndCardMode } from "./EndCardSection";
@@ -182,6 +188,16 @@ export class WinModal extends LitElement implements Controller {
   // "Get {name}'s look": what the killer's card offers this viewer.
   @state()
   private loadout: LoadoutItem[] = [];
+  // While the killer's row is still loading, saved looks wait, so the
+  // killer's saved look never shows on its own and then jumps.
+  @state()
+  private loadoutPending = false;
+  // What the viewer owns, read when the screen shows: saved looks are
+  // filtered against it, not what they owned when saving. Null until read.
+  @state()
+  private viewerFlares: readonly string[] | null = null;
+  private unsubscribeLooks: (() => void) | null = null;
+  private userSettings = new UserSettings();
   private nemesisAbort: AbortController | null = null;
   private lastEndCard: EndScreenCard | null = null;
   private endCardCosmetics: Cosmetics | null = null;
@@ -618,14 +634,32 @@ export class WinModal extends LitElement implements Controller {
   private renderSavedLooks() {
     try {
       const gameID = this.game?.gameID();
-      if (gameID === undefined) return nothing;
+      const flares = this.viewerFlares;
+      if (gameID === undefined || flares === null || this.loadoutPending) {
+        return nothing;
+      }
       const card = this.lastEndCard;
-      const killer =
+      const killer: LookRow | null =
         card?.kind === "eliminatedBy" && this.promo() === "loadout"
-          ? card.clientID
+          ? {
+              clientID: card.clientID,
+              name: this.endCardView?.username ?? "",
+              items: this.loadout,
+            }
           : null;
-      return savedLooks(gameID)
-        .filter((look) => look.clientID !== killer)
+      // As visiblePlayerCard: while the viewer anonymises names, no one
+      // else's look by their real name.
+      const me = this.game.myPlayer()?.clientID() ?? null;
+      const anonymous = this.userSettings.anonymousNames();
+      const saved = savedLooks(gameID).filter(
+        (look) =>
+          look.clientID !== killer?.clientID &&
+          (!anonymous || look.clientID === me),
+      );
+      // The killer's row goes first so the saved rows don't repeat its
+      // items (or the player card); it renders in the promo box.
+      return endScreenLookRows(killer ? [killer, ...saved] : saved, flares)
+        .filter((row) => row.clientID !== killer?.clientID)
         .map(
           (look) =>
             html`<loadout-row
@@ -863,6 +897,7 @@ export class WinModal extends LitElement implements Controller {
     this.endCardView = null;
     this.endCardClan = null;
     this.loadout = [];
+    this.loadoutPending = false;
     const myID = this.game.myPlayer()?.clientID() ?? null;
     this.canEditCard = myID !== null && this.hasCard(myID);
     if (card.kind === "none") {
@@ -914,13 +949,27 @@ export class WinModal extends LitElement implements Controller {
   }
 
   private async loadLoadout(view: PlayerCardView): Promise<void> {
-    const me = await getUserMe();
-    if (this.endCardView !== view) return;
-    this.loadout = loadoutItems(
-      view,
-      this.cardCatalogue(),
-      me === false ? [] : (me.player.flares ?? []),
-    );
+    this.loadoutPending = true;
+    try {
+      const me = await getUserMe();
+      if (this.endCardView !== view) return;
+      this.loadout = loadoutItems(
+        view,
+        this.cardCatalogue(),
+        me === false ? [] : (me.player.flares ?? []),
+      );
+    } finally {
+      if (this.endCardView === view) this.loadoutPending = false;
+    }
+  }
+
+  private async loadViewerFlares(): Promise<void> {
+    try {
+      const me = await getUserMe();
+      this.viewerFlares = me === false ? [] : (me.player.flares ?? []);
+    } catch {
+      this.viewerFlares = [];
+    }
   }
 
   private async readTauntsMuted(): Promise<void> {
@@ -948,6 +997,7 @@ export class WinModal extends LitElement implements Controller {
       this.game.config().gameConfig().rankedType,
     );
     this.isVisible = true;
+    void this.loadViewerFlares();
     this.requestUpdate();
     try {
       await this.loadPatternContent();
@@ -965,6 +1015,7 @@ export class WinModal extends LitElement implements Controller {
 
   connectedCallback(): void {
     super.connectedCallback();
+    this.unsubscribeLooks ??= onSavedLooksChanged(() => this.requestUpdate());
     if (this.xpPollAborted) {
       this.xpPollAborted = false;
       void this.updateXp(true);
@@ -973,6 +1024,8 @@ export class WinModal extends LitElement implements Controller {
 
   disconnectedCallback(): void {
     this.xpAbort?.abort();
+    this.unsubscribeLooks?.();
+    this.unsubscribeLooks = null;
     super.disconnectedCallback();
   }
 

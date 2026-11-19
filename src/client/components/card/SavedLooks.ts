@@ -20,6 +20,7 @@ export const MAX_SAVED_LOOKS = 3;
 
 let lookGameID: GameID | null = null;
 let looks: SavedLook[] = [];
+const listeners = new Set<() => void>();
 
 function forGame(gameID: GameID): SavedLook[] {
   if (gameID !== lookGameID) {
@@ -29,16 +30,29 @@ function forGame(gameID: GameID): SavedLook[] {
   return looks;
 }
 
+function changed(): void {
+  for (const listener of listeners) listener();
+}
+
+// Calls `listener` whenever a look is saved, removed or cleared (the end
+// screen re-renders). Returns the unsubscribe.
+export function onSavedLooksChanged(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
 // Newest first, one per player, at most MAX_SAVED_LOOKS. A look with nothing
 // left to get isn't kept.
 export function saveLook(gameID: GameID, look: SavedLook): void {
   const rest = forGame(gameID).filter((l) => l.clientID !== look.clientID);
   looks =
     look.items.length === 0 ? rest : [look, ...rest].slice(0, MAX_SAVED_LOOKS);
+  changed();
 }
 
 export function unsaveLook(gameID: GameID, clientID: ClientID): void {
   looks = forGame(gameID).filter((l) => l.clientID !== clientID);
+  changed();
 }
 
 export function isLookSaved(gameID: GameID, clientID: ClientID): boolean {
@@ -52,6 +66,7 @@ export function savedLooks(gameID: GameID): readonly SavedLook[] {
 export function clearSavedLooks(): void {
   lookGameID = null;
   looks = [];
+  changed();
 }
 
 // One "Get {name}'s look" row on the end screen.

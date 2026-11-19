@@ -40,6 +40,8 @@ interface ShownPrices {
  * sale has ended, the list price alone. Read at render, as a look saved
  * mid-game is shown minutes later.
  */
+// TODO(merge): shownPrice — switch to W1's ShownPrice.ts when the branches
+// merge.
 export function shownPrices(entry: LoadoutItem): ShownPrices {
   const item = entry.item as Parameters<typeof currentPrice>[0];
   const ended = saleHasEnded(item);

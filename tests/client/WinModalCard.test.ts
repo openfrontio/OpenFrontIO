@@ -22,6 +22,7 @@ import {
   saveLook,
 } from "../../src/client/components/card/SavedLooks";
 import { WinModal } from "../../src/client/hud/layers/WinModal";
+import { UserSettings } from "../../src/client/UserSettings";
 
 if (!customElements.get("win-modal")) {
   customElements.define("win-modal", WinModal);
@@ -190,14 +191,20 @@ describe("WinModal card section", () => {
 });
 
 // Looks saved from the player panel this game, as "Get {name}'s look" rows on
-// the end screen: after the killer's row, never twice for the same player.
+// the end screen: after the killer's row, filtered against what the viewer
+// owns now, never twice for the same player or item.
 describe("WinModal saved looks", () => {
-  const ITEM = {
+  const bg = (name: string) => ({
     type: "cardBackground",
-    item: { name: "bg_pacific", rarity: "epic", product: null },
+    item: { name, rarity: "epic", product: null },
     state: "buy",
     priceHard: 400,
-  };
+  });
+  const look = (clientID: string, name: string, items: unknown[]) => ({
+    clientID,
+    name,
+    items: items as never,
+  });
   const KILLER_ITEM = {
     type: "taunt",
     item: { name: "salute", rarity: "epic", product: null },
@@ -210,32 +217,42 @@ describe("WinModal saved looks", () => {
     myPlayer: () => null,
     resumedFromSave: () => false,
   };
+  // What the viewer owns, read when the screen shows.
+  const base = { game, viewerFlares: [] as string[] };
   const owners = (modal: HTMLElement) =>
     [...modal.querySelectorAll("loadout-row")].map(
       (r) => (r as unknown as { ownerName: string }).ownerName,
     );
+  const items = (modal: HTMLElement, owner: string) =>
+    (
+      [...modal.querySelectorAll("loadout-row")].find(
+        (r) => (r as unknown as { ownerName: string }).ownerName === owner,
+      ) as unknown as { items: { item: { name: string } }[] }
+    ).items.map((i) => i.item.name);
 
   beforeEach(() => {
     localStorage.setItem("gamesPlayed", "10");
     clearSavedLooks();
+    vi.spyOn(UserSettings.prototype, "anonymousNames").mockReturnValue(false);
   });
   afterEach(() => {
     document.body.innerHTML = "";
     localStorage.removeItem("gamesPlayed");
     clearSavedLooks();
+    vi.restoreAllMocks();
   });
 
   it("shows each saved look on a game-over screen, newest first", async () => {
-    saveLook("g1", { clientID: "a", name: "Ada", items: [ITEM as never] });
-    saveLook("g1", { clientID: "b", name: "Bo", items: [ITEM as never] });
-    const modal = await renderModal({ game, endCardMode: "none" });
+    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
+    saveLook("g1", look("b", "Bo", [bg("bg_b")]));
+    const modal = await renderModal({ ...base, endCardMode: "none" });
     expect(owners(modal)).toEqual(["Bo", "Ada"]);
   });
 
   it("shows them on the win screen too", async () => {
-    saveLook("g1", { clientID: "a", name: "Ada", items: [ITEM as never] });
+    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
     const modal = await renderModal({
-      game,
+      ...base,
       isWin: true,
       endCardMode: "winner",
       endCardView: defaultPlayerCardView("Me", "UN"),
@@ -243,15 +260,22 @@ describe("WinModal saved looks", () => {
     expect(owners(modal)).toEqual(["Ada"]);
   });
 
-  it("the killer's row comes first, and their saved look isn't repeated", async () => {
-    saveLook("g1", { clientID: "a", name: "Ada", items: [ITEM as never] });
-    saveLook("g1", {
-      clientID: "killer",
-      name: "Volt",
-      items: [ITEM as never],
-    });
+  it("shows them under a clan-win card", async () => {
+    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
     const modal = await renderModal({
-      game,
+      ...base,
+      endCardMode: "clan",
+      endCardClan: { clanTag: "UN", members: [], territoryPct: 40 },
+      lastEndCard: { kind: "clan", clanTag: "UN", team: "Red" },
+    });
+    expect(owners(modal)).toEqual(["Ada"]);
+  });
+
+  it("the killer's row comes first, and their saved look isn't repeated", async () => {
+    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
+    saveLook("g1", look("killer", "Volt", [bg("bg_k")]));
+    const modal = await renderModal({
+      ...base,
       endCardMode: "eliminatedBy",
       endCardView: defaultPlayerCardView("Volt", "UN"),
       lastEndCard: { kind: "eliminatedBy", clientID: "killer" },
@@ -261,13 +285,9 @@ describe("WinModal saved looks", () => {
   });
 
   it("a saved killer's look still shows when the killer's row doesn't", async () => {
-    saveLook("g1", {
-      clientID: "killer",
-      name: "Volt",
-      items: [ITEM as never],
-    });
+    saveLook("g1", look("killer", "Volt", [bg("bg_k")]));
     const modal = await renderModal({
-      game,
+      ...base,
       endCardMode: "eliminatedBy",
       endCardView: defaultPlayerCardView("Volt", "UN"),
       lastEndCard: { kind: "eliminatedBy", clientID: "killer" },
@@ -276,9 +296,70 @@ describe("WinModal saved looks", () => {
     expect(owners(modal)).toEqual(["Volt"]);
   });
 
-  it("another game's looks never show", async () => {
-    saveLook("g0", { clientID: "a", name: "Ada", items: [ITEM as never] });
+  it("waits for the killer's row, so the killer's look never shows alone first", async () => {
+    saveLook("g1", look("killer", "Volt", [bg("bg_k")]));
+    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
+    const modal = (await renderModal({
+      ...base,
+      endCardMode: "eliminatedBy",
+      endCardView: defaultPlayerCardView("Volt", "UN"),
+      lastEndCard: { kind: "eliminatedBy", clientID: "killer" },
+      loadout: [],
+      loadoutPending: true,
+    })) as HTMLElement & Record<string, unknown>;
+    expect(owners(modal)).toEqual([]);
+    modal.loadout = [KILLER_ITEM];
+    modal.loadoutPending = false;
+    await (modal as unknown as { updateComplete: Promise<unknown> })
+      .updateComplete;
+    expect(owners(modal)).toEqual(["Volt", "Ada"]);
+  });
+
+  it("waits for what the viewer owns", async () => {
+    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
     const modal = await renderModal({ game, endCardMode: "none" });
+    expect(owners(modal)).toEqual([]);
+  });
+
+  it("drops items bought after the look was saved, and emptied rows", async () => {
+    saveLook("g1", look("a", "Ada", [bg("bg_a"), bg("bg_a2")]));
+    saveLook("g1", look("b", "Bo", [bg("bg_b")]));
+    const modal = await renderModal({
+      ...base,
+      viewerFlares: ["cardBackground:bg_a", "cardBackground:bg_b"],
+      endCardMode: "none",
+    });
+    expect(owners(modal)).toEqual(["Ada"]);
+    expect(items(modal, "Ada")).toEqual(["bg_a2"]);
+  });
+
+  it("the same item is offered once, in the earlier row", async () => {
+    saveLook("g1", look("a", "Ada", [bg("bg_x"), bg("bg_a")]));
+    saveLook("g1", look("b", "Bo", [bg("bg_x"), bg("bg_b")]));
+    const modal = await renderModal({ ...base, endCardMode: "none" });
+    expect(items(modal, "Bo")).toEqual(["bg_x", "bg_b"]);
+    expect(items(modal, "Ada")).toEqual(["bg_a"]);
+  });
+
+  it("not by real name while the viewer anonymises names", async () => {
+    vi.spyOn(UserSettings.prototype, "anonymousNames").mockReturnValue(true);
+    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
+    const modal = await renderModal({ ...base, endCardMode: "none" });
+    expect(owners(modal)).toEqual([]);
+  });
+
+  it("re-renders when a look is saved or removed", async () => {
+    const modal = await renderModal({ ...base, endCardMode: "none" });
+    expect(owners(modal)).toEqual([]);
+    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
+    await (modal as unknown as { updateComplete: Promise<unknown> })
+      .updateComplete;
+    expect(owners(modal)).toEqual(["Ada"]);
+  });
+
+  it("another game's looks never show", async () => {
+    saveLook("g0", look("a", "Ada", [bg("bg_a")]));
+    const modal = await renderModal({ ...base, endCardMode: "none" });
     expect(owners(modal)).toEqual([]);
   });
 });
