@@ -325,6 +325,9 @@ export interface Player extends PlayerLike {
   isPlayer(): this is Player;
   toString(): string;
   isLobbyCreator(): boolean;
+  /** A scenario nation a human may be assigned (docs/ScenarioEditor.md). */
+  playable(): boolean;
+  setPlayable(playable: boolean): void;
 
   // State & Properties
   isAlive(): boolean;
@@ -364,6 +367,8 @@ export interface Player extends PlayerLike {
 
   // Resources & Troops
   gold(): Gold;
+  /** Sets gold outright, as starting gold is: not counted as income. */
+  setGold(gold: Gold): void;
   addGold(toAdd: Gold, tile?: TileRef): void;
   removeGold(toRemove: Gold): Gold;
 
@@ -563,6 +568,7 @@ export interface Game extends GameLike {
   endSpawnPhase(): void;
   queueViewResync(): void;
   executeNextTick(): GameUpdates;
+  drainPendingUpdates(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;
   recordMotionPlan(record: MotionPlanRecord): void;
   drainPackedMotionPlans(): Uint32Array | null;
@@ -645,6 +651,10 @@ export interface Game extends GameLike {
 
   // Nations
   nations(): Nation[];
+  // Scenario editor (docs/ScenarioEditor.md)
+  addNation(info: PlayerInfo): Player;
+  removeNation(nation: Player): void;
+  setNationInfo(nation: Player, info: PlayerInfo): void;
 
   numTilesWithFallout(): number;
   stats(): Stats;

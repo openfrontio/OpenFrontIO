@@ -1,0 +1,142 @@
+import type { EditorCommand } from "@openfront/engine-api/EditorCommands";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import {
+  PlayerID,
+  PlayerInfo,
+  PlayerType,
+  Structures,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { Game, Player, Unit } from "../game/Game";
+
+/**
+ * Applies one scenario editor command (docs/ScenarioEditor.md) through the
+ * same game methods play uses, so it makes the usual updates. Checks the
+ * whole command first and throws, having changed nothing, if it can't apply.
+ */
+export function applyEditorCommand(game: Game, command: EditorCommand): void {
+  switch (command.type) {
+    case "add_nation": {
+      // Removed nations keep their player (see removeNation), and with it
+      // their id: a view would take a new nation under it for the old one.
+      if (game.allPlayers().some((p) => p.id() === command.id)) {
+        throw new Error(`player ${command.id} already exists`);
+      }
+      game.addNation(
+        new PlayerInfo(
+          command.name,
+          PlayerType.Nation,
+          null,
+          command.id,
+          false,
+          null,
+          [],
+          null,
+          command.flag,
+        ),
+      );
+      return;
+    }
+    case "remove_nation":
+      game.removeNation(nation(game, command.id));
+      return;
+    case "set_nation": {
+      const n = nation(game, command.id);
+      if (command.name !== undefined || command.flag !== undefined) {
+        const info = n.info();
+        game.setNationInfo(
+          n,
+          new PlayerInfo(
+            command.name ?? info.name,
+            info.playerType,
+            info.clientID,
+            info.id,
+            info.isLobbyCreator,
+            info.clanTag,
+            info.friends,
+            info.teamIndex,
+            command.flag !== undefined ? command.flag : info.nationFlag,
+          ),
+        );
+      }
+      if (command.troops !== undefined) n.setTroops(command.troops);
+      if (command.gold !== undefined) n.setGold(BigInt(command.gold));
+      if (command.playable !== undefined) n.setPlayable(command.playable);
+      return;
+    }
+    case "set_owner": {
+      const owner = command.owner === null ? null : nation(game, command.owner);
+      for (const tile of command.tiles) {
+        checkTile(game, tile);
+        if (owner !== null && (!game.isLand(tile) || game.isImpassable(tile))) {
+          throw new Error(`tile ${tile} can't be owned`);
+        }
+      }
+      for (const tile of command.tiles) {
+        const previous = game.owner(tile);
+        if (previous === (owner ?? game.terraNullius())) continue;
+        if (owner !== null) owner.conquer(tile);
+        else (previous as Player).relinquish(tile);
+      }
+      // A structure stands only on its nation's land, as it would in play.
+      for (const unit of game.units(Structures.types)) {
+        if (game.owner(unit.tile()) !== unit.owner()) unit.delete(false);
+      }
+      return;
+    }
+    case "place_structure": {
+      const n = nation(game, command.nation);
+      checkTile(game, command.tile);
+      if (game.owner(command.tile) !== n) {
+        throw new Error(`tile ${command.tile} is not ${command.nation}'s`);
+      }
+      if (command.unit === UnitType.Port && !game.isShore(command.tile)) {
+        throw new Error(`a port needs a shore tile, ${command.tile} is not`);
+      }
+      if (game.config().isUnitDisabled(command.unit)) {
+        throw new Error(`${command.unit} is disabled in this game`);
+      }
+      if (command.level > 1 && !game.unitInfo(command.unit).upgradable) {
+        throw new Error(`${command.unit} has no levels`);
+      }
+      if (structureAt(game, command.tile) !== undefined) {
+        throw new Error(`tile ${command.tile} already has a structure`);
+      }
+      // Built as play builds it, but free: the author sets gold separately.
+      const gold = n.gold();
+      const unit = n.buildUnit(command.unit, command.tile, {});
+      for (let level = 1; level < command.level; level++) {
+        unit.increaseLevel();
+      }
+      n.setGold(gold);
+      return;
+    }
+    case "remove_structure": {
+      checkTile(game, command.tile);
+      const unit = structureAt(game, command.tile);
+      if (unit === undefined) {
+        throw new Error(`tile ${command.tile} has no structure`);
+      }
+      unit.delete(false);
+      return;
+    }
+  }
+}
+
+function nation(game: Game, id: PlayerID): Player {
+  const player = game.hasPlayer(id) ? game.player(id) : undefined;
+  if (player?.type() !== PlayerType.Nation) {
+    throw new Error(`no nation ${id}`);
+  }
+  return player;
+}
+
+function checkTile(game: Game, tile: TileRef): void {
+  if (!game.isValidRef(tile)) {
+    throw new Error(`tile ${tile} is not on the map`);
+  }
+}
+
+function structureAt(game: Game, tile: TileRef): Unit | undefined {
+  return game.nearbyUnits(tile, 0, Structures.types, undefined, true)[0]?.unit;
+}

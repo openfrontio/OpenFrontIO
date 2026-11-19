@@ -4,6 +4,7 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import {
   AttackClusteredPositionsResultMessage,
+  EditorCommandResultMessage,
   ExtractSnapshotErrorMessage,
   ExtractSnapshotResultMessage,
   HumanDisconnectsResultMessage,
@@ -35,6 +36,8 @@ const ctx: Worker = self as any;
 // handed over (connect).
 let out: Pick<MessagePort, "postMessage"> = ctx;
 let gameRunner: Promise<GameRunner> | null = null;
+// Set by init: only the scenario editor's engine takes editor commands.
+let editor = false;
 // Yield threshold; not a backlog cap. Used to avoid monopolizing the worker task
 // and flooding the main thread with messages during catch-up.
 const MAX_TICKS_BEFORE_YIELD = 4;
@@ -173,6 +176,7 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
       message.port.onmessage = onMessage;
       break;
     case "init":
+      editor = message.editor === true;
       try {
         gameRunner = (
           message.snapshot !== undefined
@@ -193,6 +197,7 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
                 message.clientID,
                 message.map,
                 gameUpdate,
+                editor,
               )
         ).then(
           (gr) => {
@@ -506,6 +511,34 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
           error: error instanceof Error ? error.message : String(error),
         } as ExtractSnapshotErrorMessage);
       }
+      break;
+    }
+    case "editor_command": {
+      let error: string | undefined;
+      if (!editor || !gameRunner) {
+        error = "this engine is not in editor mode";
+      } else {
+        try {
+          const gr = await gameRunner;
+          const gameUpdates: GameUpdateViewData[] = [];
+          tickUpdateSink = (gu) => {
+            if ("updates" in gu) gameUpdates.push(gu);
+          };
+          try {
+            gr.applyEditorCommand(message.command);
+          } finally {
+            tickUpdateSink = null;
+          }
+          sendGameUpdateBatch(gameUpdates);
+        } catch (e) {
+          error = e instanceof Error ? e.message : String(e);
+        }
+      }
+      sendMessage({
+        type: "editor_command_result",
+        id: message.id,
+        ...(error !== undefined ? { error } : {}),
+      } as EditorCommandResultMessage);
       break;
     }
     default:
