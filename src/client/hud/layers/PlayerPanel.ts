@@ -11,15 +11,18 @@ import { Emoji, flattenedEmojiTable } from "@openfront/engine-api/Schemas";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import {
   type LevelBadge,
   packLevelBadge,
 } from "@openfront/shared/LevelBadgeWire";
+import type { PlayerCard } from "@openfront/shared/PlayerCardSchemas";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
 import { fetchLobbyListed, getUserMe } from "../../Api";
+import { CardCatalogueRequest } from "../../components/card/CardCatalogueRequest";
 import "../../components/card/PlayerCard";
 import {
   buildPlayerCardView,
@@ -716,29 +719,59 @@ export class PlayerPanel extends LitElement implements Controller {
     if (visible === undefined) return null;
     const cosmetics = getCachedCosmetics();
     if (cosmetics === null) {
-      this.requestCardCatalogue();
+      this.cardCatalogueRequest.request();
       return null;
     }
-    return buildPlayerCardView(
-      {
-        username: other.name(),
-        clanTag: other.clanTag(),
-        flag: visible.flag,
-        badge: this.levelBadgeFor(other) ?? null,
-        card: visible.card,
-      },
+    const input = {
+      username: other.name(),
+      clanTag: other.clanTag(),
+      flag: visible.flag,
+      badge: this.levelBadgeFor(other) ?? null,
+      card: visible.card,
+    };
+    // The panel re-renders every tick and asks twice per render: hand back the
+    // same view while nothing it is built from changed, so <player-card>,
+    // its background and the cosmetics row don't re-render with it.
+    const key = JSON.stringify([
+      input.username,
+      input.clanTag,
+      input.flag,
+      input.badge,
+    ]);
+    const cached = this.cardViews.get(visible.clientID);
+    if (
+      cached !== undefined &&
+      cached.card === visible.card &&
+      cached.cosmetics === cosmetics &&
+      cached.key === key
+    ) {
+      return cached.view;
+    }
+    const view = buildPlayerCardView(input, cosmetics);
+    this.cardViews.set(visible.clientID, {
+      card: visible.card,
       cosmetics,
-    );
+      key,
+      view,
+    });
+    return view;
   }
 
-  private cardCatalogueRequested = false;
-  private requestCardCatalogue(): void {
-    if (this.cardCatalogueRequested) return;
-    this.cardCatalogueRequested = true;
-    void fetchCosmetics().then((c) => {
-      if (c !== null) this.requestUpdate();
-    });
-  }
+  // Each player's last card view and what it was built from.
+  private readonly cardViews = new Map<
+    string,
+    {
+      card: PlayerCard;
+      cosmetics: Cosmetics;
+      key: string;
+      view: PlayerCardView;
+    }
+  >();
+  // A failed fetch is tried again by a later render.
+  private readonly cardCatalogueRequest = new CardCatalogueRequest(
+    () => fetchCosmetics(),
+    () => this.requestUpdate(),
+  );
 
   // The cosmetics the player has equipped, plus their card's paid items.
   private renderCosmeticsRow(other: PlayerView) {

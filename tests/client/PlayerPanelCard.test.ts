@@ -34,11 +34,20 @@ vi.mock("../../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn(),
   showInGameAlert: vi.fn(),
 }));
-const catalogue = vi.hoisted(() => ({ cached: null as unknown }));
+const catalogue = vi.hoisted(() => ({
+  cached: null as unknown,
+  fetched: undefined as unknown,
+  fetches: 0,
+}));
 vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   getCachedCosmetics: () => catalogue.cached,
-  fetchCosmetics: async () => catalogue.cached,
+  fetchCosmetics: async () => {
+    catalogue.fetches++;
+    return catalogue.fetched === undefined
+      ? catalogue.cached
+      : catalogue.fetched;
+  },
 }));
 
 import { PlayerType } from "@openfront/engine-api/game/GameTypes";
@@ -113,6 +122,8 @@ describe("player panel: the compact card", () => {
       UserSettings as unknown as { cache: Map<string, string | null> }
     ).cache.clear();
     catalogue.cached = COSMETICS;
+    catalogue.fetched = undefined;
+    catalogue.fetches = 0;
     rememberLobbyRoster("game-1", [
       {
         clientID: "vet",
@@ -211,5 +222,44 @@ describe("player panel: the compact card", () => {
     const out = flatten((panel as any).renderCosmeticsRow(player("vet")));
     expect(out).toContain("<equipped-cosmetics-row");
     expect(out).not.toContain('"username"');
+  });
+
+  it("a failed catalogue fetch is retried on a later render", async () => {
+    catalogue.cached = null;
+    catalogue.fetched = null;
+    row(player("vet"));
+    row(player("vet"));
+    expect(catalogue.fetches).toBe(1);
+    await new Promise((r) => setTimeout(r, 0));
+    row(player("vet"));
+    expect(catalogue.fetches).toBe(1);
+    // Not straight away: CATALOGUE_RETRY_MS after the failure.
+    const now = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(now + 31_000);
+    row(player("vet"));
+    expect(catalogue.fetches).toBe(2);
+  });
+
+  it("reuses one view per player while nothing changed (no per-tick re-render)", () => {
+    const vet = player("vet");
+    const first = (panel as any).cardViewFor(vet);
+    expect(first).not.toBeNull();
+    // Every render asks twice (identity row and cosmetics row), every tick.
+    expect((panel as any).cardViewFor(vet)).toBe(first);
+    expect((panel as any).cardViewFor(player("vet"))).toBe(first);
+    // A new catalogue, or a new card, builds a new view.
+    catalogue.cached = { ...COSMETICS };
+    const second = (panel as any).cardViewFor(vet);
+    expect(second).not.toBe(first);
+    expect(second).toEqual(first);
+    cards = { ...cards, vet: { ...CARD, background: undefined } };
+    expect((panel as any).cardViewFor(vet).background).toBeNull();
+  });
+
+  it("the cache never outlives a withheld card", () => {
+    const vet = player("vet");
+    expect((panel as any).cardViewFor(vet)).not.toBeNull();
+    cards = {};
+    expect((panel as any).cardViewFor(vet)).toBeNull();
   });
 });

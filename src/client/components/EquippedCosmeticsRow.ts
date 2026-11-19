@@ -297,7 +297,7 @@ export class EquippedCosmeticsRow extends LitElement {
         ${
           tile.buyable
             ? html`<span
-                class="absolute bottom-0 right-0 rounded-tl bg-malibu-blue px-1 text-[10px] font-black leading-tight text-white"
+                class="absolute bottom-0 right-0 rounded-tl bg-malibu-blue px-1 text-[11px] font-black leading-tight text-white"
                 aria-hidden="true"
                 >+</span
               >`

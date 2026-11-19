@@ -190,6 +190,16 @@ describe("equipped-cosmetics-row: card items", () => {
     expect(el.hasAttribute("hidden")).toBe(false);
   });
 
+  it("the buy mark on a card tile is at least 11px", async () => {
+    const el = await renderCardRow([]);
+    const mark = tile(el, "cardBackground:bg_pacific")!.querySelector(
+      "span[aria-hidden='true'].absolute",
+    )!;
+    expect(mark.textContent).toBe("+");
+    expect(mark.className).not.toContain("text-[10px]");
+    expect(mark.className).toMatch(/text-\[(1[1-9]|[2-9]\d)px\]|text-xs/);
+  });
+
   it("links an unowned paid item to it in the Store, in a new tab", async () => {
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     const el = await renderCardRow(["playerCard:standard"]);

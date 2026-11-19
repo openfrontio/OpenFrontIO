@@ -4,8 +4,10 @@ import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import type { ClientInfo } from "@openfront/shared/WireSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../../src/client/components/LobbyPlayerView";
+import { resetCardBackdropLoadsForTests } from "../../src/client/components/card/StillCardBackdrop";
 import type { LobbyTeamView } from "../../src/client/components/LobbyPlayerView";
 import { UserSettings } from "../../src/client/UserSettings";
+import { installFakeImage } from "../util/FakeImage";
 
 // The lobby name tag shows a card owner's equipped background, still, under a
 // dark gradient. The name comes from the server-stamped roster entry
@@ -19,11 +21,15 @@ vi.mock("../../src/client/Api", () => ({ getUserMe }));
 const catalogue = vi.hoisted(() => ({
   cached: null as Cosmetics | null,
   fetched: null as Cosmetics | null,
+  fetches: 0,
 }));
 vi.mock("../../src/client/Cosmetics", async (orig) => ({
   ...(await orig<typeof import("../../src/client/Cosmetics")>()),
   getCachedCosmetics: () => catalogue.cached,
-  fetchCosmetics: async () => catalogue.fetched,
+  fetchCosmetics: async () => {
+    catalogue.fetches++;
+    return catalogue.fetched;
+  },
 }));
 
 const COSMETICS = {
@@ -77,11 +83,90 @@ describe("lobby name tag: card background", () => {
   beforeEach(() => {
     catalogue.cached = COSMETICS;
     catalogue.fetched = COSMETICS;
+    catalogue.fetches = 0;
+    resetCardBackdropLoadsForTests();
+    installFakeImage((src) => src.includes("broken"));
     vi.spyOn(UserSettings.prototype, "anonymousNames").mockReturnValue(false);
   });
   afterEach(() => {
     document.body.innerHTML = "";
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("an image that fails to load leaves today's tag exactly", async () => {
+    catalogue.cached = {
+      ...COSMETICS,
+      cardBackgrounds: {
+        bg_broken: {
+          name: "bg_broken",
+          url: "/cosmetics/broken.webp",
+          rarity: "epic",
+          product: null,
+        },
+      },
+    } as unknown as Cosmetics;
+    const view = await mount([
+      client("carded", { cardBackground: "bg_broken" }),
+    ]);
+    expect(tagOf(view, "carded").hasAttribute("style")).toBe(false);
+  });
+
+  it("shows nothing until the image has loaded", async () => {
+    const view = document.createElement("lobby-player-view") as LobbyTeamView;
+    view.gameMode = GameMode.FFA;
+    view.clients = [client("carded", { cardBackground: "bg_pacific" })];
+    document.body.append(view);
+    await view.updateComplete;
+    expect(tagOf(view, "carded").hasAttribute("style")).toBe(false);
+    await new Promise((r) => setTimeout(r, 0));
+    await view.updateComplete;
+    expect(tagOf(view, "carded").getAttribute("style")).toContain(
+      "bg_pacific.webp",
+    );
+  });
+
+  it("a failed catalogue fetch is retried on a later roster update", async () => {
+    catalogue.cached = null;
+    catalogue.fetched = null;
+    const view = await mount([
+      client("carded", { cardBackground: "bg_pacific" }),
+    ]);
+    expect(catalogue.fetches).toBe(1);
+    expect(tagOf(view, "carded").hasAttribute("style")).toBe(false);
+    catalogue.fetched = COSMETICS;
+    view.clients = [...view.clients, client("plain2")];
+    await view.updateComplete;
+    expect(catalogue.fetches).toBe(1);
+    // Not straight away: CATALOGUE_RETRY_MS after the failure.
+    const now = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(now + 31_000);
+    view.clients = [...view.clients, client("plain")];
+    await view.updateComplete;
+    await new Promise((r) => setTimeout(r, 0));
+    await view.updateComplete;
+    await new Promise((r) => setTimeout(r, 0));
+    await view.updateComplete;
+    expect(catalogue.fetches).toBe(2);
+    expect(tagOf(view, "carded").getAttribute("style")).toContain(
+      "bg_pacific.webp",
+    );
+  });
+
+  it("the current player's carded tag keeps a blue tint over the art", async () => {
+    const view = await mount(
+      [
+        client("me", { cardBackground: "bg_pacific" }),
+        client("other", { cardBackground: "bg_pacific" }),
+      ],
+      { currentClientID: "me" },
+    );
+    const mine = tagOf(view, "me");
+    expect(mine.classList.contains("current-player")).toBe(true);
+    expect(mine.getAttribute("style")).toContain("rgba(14,165,233,");
+    expect(tagOf(view, "other").getAttribute("style")).not.toContain(
+      "rgba(14,165,233,",
+    );
   });
 
   it("shows the background image under a dark gradient", async () => {

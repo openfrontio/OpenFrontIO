@@ -43,17 +43,31 @@ vi.mock("../../src/client/hud/PlayerIcons", () => ({
   getFirstPlacePlayer: vi.fn(() => null),
   getPlayerIcons: vi.fn(() => []),
 }));
-const catalogue = vi.hoisted(() => ({ cached: null as unknown }));
+const catalogue = vi.hoisted(() => ({
+  cached: null as unknown,
+  fetched: undefined as unknown,
+  fetches: 0,
+}));
 vi.mock("../../src/client/Cosmetics", () => ({
   getCachedCosmetics: () => catalogue.cached,
-  fetchCosmetics: async () => catalogue.cached,
+  fetchCosmetics: async () => {
+    catalogue.fetches++;
+    return catalogue.fetched === undefined
+      ? catalogue.cached
+      : catalogue.fetched;
+  },
 }));
 
 import { PlayerType } from "@openfront/engine-api/game/GameTypes";
 import type { PlayerCard } from "@openfront/shared/PlayerCardSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  loadedCardBackgroundUrl,
+  resetCardBackdropLoadsForTests,
+} from "../../src/client/components/card/StillCardBackdrop";
 import { PlayerInfoOverlay } from "../../src/client/hud/layers/PlayerInfoOverlay";
 import { UserSettings } from "../../src/client/UserSettings";
+import { installFakeImage } from "../util/FakeImage";
 
 function flatten(node: unknown): string {
   if (node === null || node === undefined) return "";
@@ -102,10 +116,10 @@ function hoveredPlayer(type: PlayerType, clientID: string | null = "bob") {
   };
 }
 
-function show(
+function makeOverlay(
   hovered: ReturnType<typeof hoveredPlayer>,
   cards: Record<string, PlayerCard | undefined>,
-): string {
+): PlayerInfoOverlay {
   const overlay = new PlayerInfoOverlay();
   overlay.eventBus = { on: vi.fn() } as never;
   overlay.transform = {
@@ -129,18 +143,82 @@ function show(
     playerCardOf: (id: string) => ({ card: cards[id], flag: undefined }),
   } as never;
   overlay.maybeShow(10, 10);
-  return flatten(overlay.render());
+  return overlay;
 }
+
+function show(
+  hovered: ReturnType<typeof hoveredPlayer>,
+  cards: Record<string, PlayerCard | undefined>,
+): string {
+  return flatten(makeOverlay(hovered, cards).render());
+}
+
+const settle = () => new Promise((r) => setTimeout(r, 0));
 
 // The info row: the first element inside the panel.
 const BACKDROP_CLASS = "sm:[background-image:var(--card-backdrop)]";
 
 describe("player summary: card background", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     catalogue.cached = COSMETICS;
+    catalogue.fetched = undefined;
+    catalogue.fetches = 0;
+    resetCardBackdropLoadsForTests();
+    installFakeImage((src) => src.includes("broken"));
+    // Most tests start with the art already loaded.
+    loadedCardBackgroundUrl("bg_pacific", COSMETICS as never, () => {});
+    await settle();
     vi.spyOn(UserSettings.prototype, "anonymousNames").mockReturnValue(false);
   });
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("before the art has loaded: no backdrop; after: shown", async () => {
+    resetCardBackdropLoadsForTests();
+    const overlay = makeOverlay(hoveredPlayer(PlayerType.Human), { bob: CARD });
+    expect(flatten(overlay.render())).not.toContain("--card-backdrop");
+    await settle();
+    expect(flatten(overlay.render())).toContain("--card-backdrop");
+  });
+
+  it("art that fails to load: today's row, for good", async () => {
+    const broken = {
+      ...COSMETICS,
+      cardBackgrounds: {
+        bg_pacific: {
+          ...COSMETICS.cardBackgrounds.bg_pacific,
+          url: "/broken.webp",
+        },
+      },
+    };
+    catalogue.cached = broken;
+    const overlay = makeOverlay(hoveredPlayer(PlayerType.Human), { bob: CARD });
+    const before = flatten(overlay.render());
+    await settle();
+    const after = flatten(overlay.render());
+    expect(after).not.toContain("--card-backdrop");
+    expect(after).toBe(before);
+    expect(after).toBe(show(hoveredPlayer(PlayerType.Human), {}));
+  });
+
+  it("a failed catalogue fetch is retried on a later render", async () => {
+    catalogue.cached = null;
+    catalogue.fetched = null;
+    const overlay = makeOverlay(hoveredPlayer(PlayerType.Human), { bob: CARD });
+    overlay.render();
+    overlay.render();
+    expect(catalogue.fetches).toBe(1);
+    await settle();
+    overlay.render();
+    expect(catalogue.fetches).toBe(1);
+    // Not straight away: CATALOGUE_RETRY_MS after the failure.
+    const now = Date.now();
+    vi.spyOn(Date, "now").mockReturnValue(now + 31_000);
+    overlay.render();
+    expect(catalogue.fetches).toBe(2);
+  });
 
   it("a card owner's background sits behind the row, centre band, under a gradient", () => {
     const out = show(hoveredPlayer(PlayerType.Human), { bob: CARD });

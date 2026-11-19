@@ -13,8 +13,9 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
+import { CardCatalogueRequest } from "../../components/card/CardCatalogueRequest";
 import {
-  cardBackgroundUrl,
+  loadedCardBackgroundUrl,
   stillBackdropLayers,
 } from "../../components/card/StillCardBackdrop";
 import { Controller } from "../../Controller";
@@ -795,17 +796,23 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       this.requestCosmetics();
       return undefined;
     }
-    const url = cardBackgroundUrl(visible.card.background, cosmetics);
+    // Only once the image has loaded; a broken one leaves today's row.
+    const url = loadedCardBackgroundUrl(
+      visible.card.background,
+      cosmetics,
+      this.onArtLoaded,
+    );
     return url === null ? undefined : stillBackdropLayers(url);
   }
 
-  private cosmeticsRequested = false;
+  private readonly onArtLoaded = () => this.requestUpdate();
+  // A failed fetch is tried again by a later render.
+  private readonly catalogueRequest = new CardCatalogueRequest(
+    () => fetchCosmetics(),
+    () => this.requestUpdate(),
+  );
   private requestCosmetics(): void {
-    if (this.cosmeticsRequested) return;
-    this.cosmeticsRequested = true;
-    void fetchCosmetics().then((c) => {
-      if (c !== null) this.requestUpdate();
-    });
+    this.catalogueRequest.request();
   }
 
   // Right side: what I can do to the player, each with its keybind. Request

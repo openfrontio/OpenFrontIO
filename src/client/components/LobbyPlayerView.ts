@@ -35,8 +35,9 @@ import {
   resolveTeamClanTag,
   translateText,
 } from "../Utils";
+import { CardCatalogueRequest } from "./card/CardCatalogueRequest";
 import {
-  cardBackgroundUrl,
+  loadedCardBackgroundUrl,
   stillBackdropStyle,
 } from "./card/StillCardBackdrop";
 import "./LevelBadge";
@@ -91,7 +92,14 @@ export class LobbyTeamView extends LitElement {
   // The catalogue, to resolve a stamped card background's image. Null until
   // loaded; tags show without a background until then.
   @state() private _cosmetics: Cosmetics | null = getCachedCosmetics();
-  private _cosmeticsRequested = false;
+  private _catalogueRequest = new CardCatalogueRequest(
+    () => fetchCosmetics(),
+    (cosmetics) => {
+      this._cosmetics = cosmetics;
+    },
+  );
+  // Re-render once a tag's background image has loaded.
+  private readonly _onArtLoaded = () => this.requestUpdate();
 
   // Spectators are in the lobby roster (flagged) but hold no seat and never
   // reach the simulation — so the count header, the team preview and both
@@ -120,13 +128,10 @@ export class LobbyTeamView extends LitElement {
     if (
       changedProperties.has("clients") &&
       this._cosmetics === null &&
-      !this._cosmeticsRequested &&
       this.clients.some((c) => c.cardBackground !== undefined)
     ) {
-      this._cosmeticsRequested = true;
-      void fetchCosmetics().then((cosmetics) => {
-        if (cosmetics !== null) this._cosmetics = cosmetics;
-      });
+      // A failed fetch is tried again on a later roster update.
+      this._catalogueRequest.request();
     }
     if (
       changedProperties.has("clients") ||
@@ -680,8 +685,18 @@ export class LobbyTeamView extends LitElement {
     if (this.userSettings.anonymousNames() && !this.isCurrentPlayer(client)) {
       return undefined;
     }
-    const url = cardBackgroundUrl(client.cardBackground, this._cosmetics);
-    return url === null ? undefined : stillBackdropStyle(url);
+    // Only once the image has loaded: a CSS background can't report a broken
+    // one, which would leave the shade over nothing instead of today's fill.
+    const url = loadedCardBackgroundUrl(
+      client.cardBackground,
+      this._cosmetics,
+      this._onArtLoaded,
+    );
+    // The current player's tag is marked by its blue fill, which the art
+    // would hide: it goes on top as a tint instead.
+    return url === null
+      ? undefined
+      : stillBackdropStyle(url, this.isCurrentPlayer(client));
   }
 
   // Blue check for players on their server-validated account name. Withheld
