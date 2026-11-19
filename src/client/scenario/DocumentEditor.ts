@@ -277,22 +277,24 @@ export class DocumentEditor {
         // A port needs a shore, which an edit beside it can take away. The
         // engine checks after each set_terrain, so the document writes the
         // terrain in the same batches sendTerrain sends, checking after each.
+        // Undo writes the batches back last first, so it passes through the
+        // same terrain the edit did, where every port it keeps had a shore.
+        const undoTerrain: Edit[] = [];
         for (let i = 0; i < tiles.length; i += MAX_TERRAIN_BATCH) {
-          for (const t of tiles.slice(i, i + MAX_TERRAIN_BATCH)) {
-            doc.terrain[t] = terrain.get(t)!;
-          }
-          lost.push(
-            ...this.removeStructures(
-              (s) => s.type === UnitType.Port && !isShore(doc, s.tile),
-            ),
+          const batch = tiles.slice(i, i + MAX_TERRAIN_BATCH);
+          for (const t of batch) doc.terrain[t] = terrain.get(t)!;
+          const ports = this.removeStructures(
+            (s) => s.type === UnitType.Port && !isShore(doc, s.tile),
           );
+          for (const port of ports) lost.push(port);
+          undoTerrain.unshift({
+            type: "set_terrain",
+            tiles: batch,
+            terrain: previous.slice(i, i + MAX_TERRAIN_BATCH),
+          });
         }
         sendTerrain(tiles, [...terrain.values()], this.send);
-        return [
-          { type: "set_terrain", tiles, terrain: previous },
-          ...this.ownerEdits(before),
-          ...lost,
-        ];
+        return [...undoTerrain, ...this.ownerEdits(before), ...lost];
       }
     }
   }

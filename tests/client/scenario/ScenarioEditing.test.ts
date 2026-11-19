@@ -496,7 +496,7 @@ test("a defense post is the one structure without levels, as the document checks
   ).toEqual([UnitType.DefensePost]);
 });
 
-test("a port that loses its shore in one batch of a write goes, in the engine and the document", async () => {
+test("a port that loses its shore in one batch of a write goes, and undo keeps the ports the write kept", async () => {
   // Over one batch of tiles, all land but one water tile beside the port.
   const w = 1104;
   const doc = newScenarioDocument("Ports", w, 1000);
@@ -532,6 +532,22 @@ test("a port that loses its shore in one batch of a write goes, in the engine an
   expect(structures()).toEqual([]);
 
   editor.undo();
+  expect(doc.structures).toHaveLength(1);
+  expect(structures()).toEqual(doc.structures);
+
+  // The other way round, the port keeps a shore throughout: the first batch
+  // digs water below it, the second fills the water above. So does undo,
+  // which writes the second batch back first.
+  editor.apply({
+    type: "set_terrain",
+    tiles: [at(10, 12), ...filler, at(10, 10)],
+    terrain: [WATER, ...filler.map(() => land(2)), land(2)],
+  });
+  editor.commit();
+  expect(doc.structures).toHaveLength(1);
+  editor.undo();
+  expect(doc.terrain[at(10, 10)]).toBe(WATER);
+  expect(doc.terrain[at(10, 12)]).toBe(land(2));
   expect(doc.structures).toHaveLength(1);
   expect(structures()).toEqual(doc.structures);
 }, 60_000);
