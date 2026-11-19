@@ -12,7 +12,8 @@ import "./PlayerCard";
 import { buildPlayerCardView } from "./PlayerCardModel";
 
 // The store's Card sub-tab: every player card item that is sold, the card
-// itself first, then trackers, backgrounds, titles and taunts. Earned items
+// itself first, then trackers and backgrounds (titles and taunts too, once
+// switched back on in HeldBack.ts). Earned items
 // aren't listed (they're never sold). Prices in Plutonium and/or caps,
 // bought through the store's purchase flow.
 

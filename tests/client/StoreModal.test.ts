@@ -1053,6 +1053,50 @@ describe("StoreModal cosmetic browser", () => {
     expect(card(modal, flag.key)?.state).toBe("focused");
   });
 
+  it("hides the Card sub-tab when only held-back taunts and titles are sold", async () => {
+    const item = { product: null, rarity: "rare" };
+    const heldBackOnly = {
+      patterns: {},
+      flags: {},
+      cardTitles: {
+        veteran: { ...item, name: "veteran", text: "Veteran", priceSoft: 500 },
+      },
+      taunts: {
+        salute: {
+          ...item,
+          name: "salute",
+          tauntKind: "icon",
+          preset: "salute",
+          priceSoft: 800,
+        },
+      },
+    };
+    vi.mocked(fetchCosmetics).mockResolvedValue(
+      heldBackOnly as unknown as Cosmetics,
+    );
+    const modal = await openStoreOnCosmetic("patterns");
+    expect(modal.querySelector("[data-store-subtab='card']")).toBeNull();
+
+    store?.remove();
+    vi.mocked(fetchCosmetics).mockResolvedValue({
+      ...heldBackOnly,
+      cardBackgrounds: {
+        bg_frontline: {
+          ...item,
+          name: "bg_frontline",
+          url: "/bg.webp",
+          priceHard: 240,
+        },
+      },
+    } as unknown as Cosmetics);
+    const withBackground = await openStoreOnCosmetic("patterns");
+    await vi.waitFor(() =>
+      expect(
+        withBackground.querySelector("[data-store-subtab='card']"),
+      ).not.toBeNull(),
+    );
+  });
+
   it("styles cosmetic sub-tabs like the modal's own tab bar", async () => {
     const modal = await openStoreOnCosmetic("patterns");
     const subTab = [

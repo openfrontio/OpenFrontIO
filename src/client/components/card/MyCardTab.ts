@@ -25,7 +25,8 @@ import "./PlayerCard";
 import { buildPlayerCardView } from "./PlayerCardModel";
 
 // The Account page's My Card tab: a live preview of the player's card, then
-// one grid per slot (background, flag, title, trackers, taunt). An owned item
+// one grid per slot (background, flag, trackers; title and taunt only while
+// switched on in HeldBack.ts). An owned item
 // equips with a click and saves at once (rolled back if the save fails); a
 // paid one shows its price in Plutonium and/or caps and buys through the
 // store's own purchase flow; an earned one shows how to unlock it. Without
