@@ -194,6 +194,15 @@ function disc(
   return tiles;
 }
 
+/** The `w` x `h` tiles whose top-left corner is (x, y). */
+function rect(map: GameMap, x: number, y: number, w: number, h = w): TileRef[] {
+  const tiles: TileRef[] = [];
+  for (let dy = 0; dy < h; dy++) {
+    for (let dx = 0; dx < w; dx++) tiles.push(map.ref(x + dx, y + dy));
+  }
+  return tiles;
+}
+
 /** Counts the bytes that differ, ignoring the bits in `ignore`. */
 function differences(a: Uint8Array, b: Uint8Array, ignore = 0): number {
   expect(a.length).toBe(b.length);
@@ -456,6 +465,60 @@ describe("set_terrain and end_terrain_edit", () => {
     game.rebuildWaterGraph();
     expect(game.isOcean(left)).toBe(true);
     expect(game.getWaterComponent(left)).toBe(game.getWaterComponent(right));
+  });
+
+  test("of two water bodies the same size, the ocean is the one the generator scans first", async () => {
+    // The generator scans columns, not rows: lake A, at the smaller x,
+    // comes first though lake B is higher up. Both maps follow the rule.
+    for (const order of ["A first", "B first"]) {
+      const e = await testMapEditor("plains");
+      const game = e.runner.game;
+      const lakeA = rect(game, 20, 60, 6);
+      const lakeB = rect(game, 60, 20, 6);
+      const lakes = order === "A first" ? [lakeA, lakeB] : [lakeB, lakeA];
+      for (const lake of lakes) {
+        e.apply(
+          setTerrain(
+            lake,
+            lake.map(() => 0),
+          ),
+        );
+      }
+      e.apply({ type: "end_terrain_edit" });
+      expect(lakeA.every((t) => game.isOcean(t))).toBe(true);
+      expect(lakeB.some((t) => game.isOcean(t))).toBe(false);
+      const mini = game.miniMap();
+      expect(mini.isOcean(mini.ref(11, 31))).toBe(true);
+      expect(mini.isOcean(mini.ref(31, 11))).toBe(false);
+      expect(mini.isWater(mini.ref(31, 11))).toBe(true);
+    }
+  });
+
+  test("a map with no water left has no ocean", async () => {
+    const e = await testMapEditor("plains");
+    const game = e.runner.game;
+    const before = e.terrain();
+    const miniBefore = e.miniTerrain();
+    const lake = rect(game, 40, 40, 10);
+    e.apply(
+      setTerrain(
+        lake,
+        lake.map(() => 0),
+      ),
+    );
+    e.apply({ type: "end_terrain_edit" });
+    expect(game.isOcean(lake[0])).toBe(true);
+
+    e.apply(
+      setTerrain(
+        lake,
+        lake.map((t) => authored(before[t])),
+      ),
+    );
+    e.apply({ type: "end_terrain_edit" });
+    expect(differences(e.terrain(), before)).toBe(0);
+    expect(differences(e.miniTerrain(), miniBefore)).toBe(0);
+    expect(differences(e.client, before)).toBe(0);
   });
 
   describe("rejects bad commands and changes nothing", () => {
