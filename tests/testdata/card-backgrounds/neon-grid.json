@@ -1,0 +1,23 @@
+{
+  "name": "bg_neon_grid",
+  "product": null,
+  "rarity": "epic",
+  "url": "/cosmetics/card-backgrounds/bg_neon-grid.webp",
+  "animation": {
+    "kind": "layers",
+    "layers": [
+      {
+        "src": "/cosmetics/card-backgrounds/bg_neon-grid_fx-pulse.png",
+        "effect": "pulse",
+        "period": 2.4,
+        "min": 0.25,
+        "max": 1
+      },
+      {
+        "src": "/cosmetics/card-backgrounds/bg_neon-grid_fx-drift.png",
+        "effect": "drift",
+        "period": 60
+      }
+    ]
+  }
+}

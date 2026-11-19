@@ -1,5 +1,6 @@
 import { base64url } from "jose";
 import { z } from "zod/v4";
+import { CardBackgroundAnimationSchema } from "./CardBackgroundAnimation";
 import { TrackerStatSchema } from "./CardTrackers";
 import { decodePatternData } from "./PatternDecoder";
 import { PlayerPattern } from "./WireSchemas";
@@ -162,14 +163,13 @@ export const CardTrackerSchema = CosmeticSchema.extend({
   stat: TrackerStatSchema,
 });
 
-// Animated background settings. Opaque until the animated-backgrounds work
-// gives them a schema; a static background has none.
-export const CardBackgroundAnimationSchema = z.unknown();
-
 export const CardBackgroundSchema = CosmeticSchema.extend({
   // The 2800×400 base image.
   url: z.string(),
-  animation: CardBackgroundAnimationSchema.optional(),
+  // How it animates; a static background has none. Lenient: an animation
+  // that fails validation is dropped, so that background shows still and
+  // the rest of the catalogue is unaffected.
+  animation: CardBackgroundAnimationSchema.optional().catch(undefined),
   unlockSource: UnlockSourceSchema.optional(),
 });
 
