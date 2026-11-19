@@ -9,6 +9,7 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   CustomGameMap,
   GameMapSize,
+  PlayerInfo,
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
@@ -253,6 +254,64 @@ describe("editor commands", () => {
     });
     expect(game.units(UnitType.Port).map((u) => u.tile())).toEqual([e.shore]);
     expect(game.ticks()).toBe(0);
+  });
+
+  test("a structure placed at a level is loaded, and a SAM at full range", async () => {
+    const e = await editor();
+    const game = e.runner.game;
+    e.apply(ADD_FRANCE);
+    e.apply({ type: "set_owner", tiles: e.land, owner: "FRANCE01" });
+    e.apply({
+      type: "place_structure",
+      unit: UnitType.SAMLauncher,
+      tile: e.land[20],
+      nation: "FRANCE01",
+      level: 3,
+    });
+    e.apply({
+      type: "place_structure",
+      unit: UnitType.MissileSilo,
+      tile: e.land[40],
+      nation: "FRANCE01",
+      level: 2,
+    });
+    const [sam] = game.units(UnitType.SAMLauncher);
+    expect(sam.level()).toBe(3);
+    expect(game.config().dynamicSamRange(sam, game.ticks())).toBe(
+      game.config().samRange(3),
+    );
+    const [silo] = game.units(UnitType.MissileSilo);
+    expect(silo.level()).toBe(2);
+    expect(silo.missileTimerQueue()).toEqual([]);
+    expect(sam.missileTimerQueue()).toEqual([]);
+  });
+
+  test("add_nation refuses once tiles can't store another owner id", async () => {
+    const e = await editor();
+    const game = e.runner.game;
+    // Small ids run 1 to 0xfff; removed nations keep theirs.
+    for (let i = 1; i < 0xfff; i++) {
+      game.addNation(
+        new PlayerInfo(
+          `N${i}`,
+          PlayerType.Nation,
+          null,
+          `NATION${String(i).padStart(4, "0")}`,
+          false,
+          null,
+          [],
+          null,
+          null,
+        ),
+      );
+    }
+    e.apply(ADD_FRANCE); // takes 0xfff, the last
+    expect(game.player("FRANCE01").smallID()).toBe(0xfff);
+    e.apply({ type: "remove_nation", id: "FRANCE01" });
+    expect(() =>
+      e.runner.applyEditorCommand({ ...ADD_FRANCE, id: "SPAIN001" }),
+    ).toThrow(/no player ids left/);
+    expect(game.hasPlayer("SPAIN001")).toBe(false);
   });
 
   test("remove_structure deletes the structure on the tile", async () => {

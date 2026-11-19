@@ -22,6 +22,11 @@ export function applyEditorCommand(game: Game, command: EditorCommand): void {
       if (game.allPlayers().some((p) => p.id() === command.id)) {
         throw new Error(`player ${command.id} already exists`);
       }
+      // Small ids start at 1 and are never reused (removed nations keep
+      // theirs), and a tile stores its owner's in 12 bits.
+      if (game.allPlayers().length >= MAX_SMALL_ID) {
+        throw new Error(`no player ids left (the limit is ${MAX_SMALL_ID})`);
+      }
       game.addNation(
         new PlayerInfo(
           command.name,
@@ -105,9 +110,7 @@ export function applyEditorCommand(game: Game, command: EditorCommand): void {
       // Built as play builds it, but free: the author sets gold separately.
       const gold = n.gold();
       const unit = n.buildUnit(command.unit, command.tile, {});
-      for (let level = 1; level < command.level; level++) {
-        unit.increaseLevel();
-      }
+      if (command.level > 1) unit.placeAtLevel(command.level);
       n.setGold(gold);
       return;
     }
@@ -122,6 +125,9 @@ export function applyEditorCommand(game: Game, command: EditorCommand): void {
     }
   }
 }
+
+// GameMapImpl's PLAYER_ID_MASK: the largest owner id a tile can store.
+const MAX_SMALL_ID = 0xfff;
 
 function nation(game: Game, id: PlayerID): Player {
   const player = game.hasPlayer(id) ? game.player(id) : undefined;

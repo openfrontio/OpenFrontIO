@@ -296,6 +296,11 @@ export interface Unit extends UnitLike {
   level(): number;
   increaseLevel(): void;
   decreaseLevel(destroyer?: Player): void;
+  /**
+   * Scenario editor: the structure as if built at this level, not upgraded
+   * to it: loaded, and a SAM at its full range at once.
+   */
+  placeAtLevel(level: number): void;
 }
 
 export interface Embargo {

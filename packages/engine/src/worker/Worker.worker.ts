@@ -179,26 +179,32 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
       editor = message.editor === true;
       try {
         gameRunner = (
-          message.snapshot !== undefined
-            ? createGameRunnerFromSnapshot(
-                message.gameStartInfo,
-                message.snapshot,
-                message.clientID,
-                message.map,
-                gameUpdate,
-              ).then((gr) => {
-                // The page's view starts empty, so the first tick carries
-                // the state the snapshot restored.
-                gr.game.queueViewResync();
-                return gr;
-              })
-            : createGameRunner(
-                message.gameStartInfo,
-                message.clientID,
-                message.map,
-                gameUpdate,
-                editor,
+          editor && message.snapshot !== undefined
+            ? // The editing engine is built by replaying the document
+              // (docs/ScenarioEditor.md), never restored from a snapshot.
+              Promise.reject<GameRunner>(
+                new Error("an editor engine can't start from a snapshot"),
               )
+            : message.snapshot !== undefined
+              ? createGameRunnerFromSnapshot(
+                  message.gameStartInfo,
+                  message.snapshot,
+                  message.clientID,
+                  message.map,
+                  gameUpdate,
+                ).then((gr) => {
+                  // The page's view starts empty, so the first tick carries
+                  // the state the snapshot restored.
+                  gr.game.queueViewResync();
+                  return gr;
+                })
+              : createGameRunner(
+                  message.gameStartInfo,
+                  message.clientID,
+                  message.map,
+                  gameUpdate,
+                  editor,
+                )
         ).then(
           (gr) => {
             sendMessage({
@@ -226,6 +232,11 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
       break;
 
     case "turn":
+      // The editing engine never ticks.
+      if (editor) {
+        console.warn("an editor engine doesn't take turns");
+        break;
+      }
       if (!gameRunner) {
         throw new Error("Game runner not initialized");
       }
@@ -241,6 +252,15 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
       break;
 
     case "run_turns": {
+      if (editor) {
+        sendMessage({
+          type: "run_turns_result",
+          id: message.id,
+          gameUpdates: [],
+          error: { errMsg: "an editor engine doesn't take turns" },
+        } as RunTurnsResultMessage);
+        break;
+      }
       if (!gameRunner) {
         throw new Error("Game runner not initialized");
       }

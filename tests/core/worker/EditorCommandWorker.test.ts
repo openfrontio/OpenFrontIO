@@ -11,7 +11,9 @@ import {
 import type {
   EditorCommandResultMessage,
   GameUpdateBatchMessage,
+  InitErrorMessage,
   MainThreadMessage,
+  RunTurnsResultMessage,
   WorkerMessage,
 } from "@openfront/engine-api/worker/WorkerMessages";
 import { loadMapFiles } from "@openfront/shared/GameMapLoader";
@@ -50,8 +52,8 @@ async function send<T extends WorkerMessage>(
   return found!;
 }
 
-async function init(editor: boolean): Promise<void> {
-  const gameStartInfo = {
+function editorGameStart() {
+  return {
     ...scriptedGameStart({
       gameMap: CustomGameMap,
       gameMapSize: GameMapSize.Normal,
@@ -60,11 +62,19 @@ async function init(editor: boolean): Promise<void> {
     }),
     players: [],
   };
-  const map = await loadMapFiles(
+}
+
+function mapFiles() {
+  return loadMapFiles(
     new TestDataMapLoader("half_land_half_ocean"),
     CustomGameMap,
     GameMapSize.Normal,
   );
+}
+
+async function init(editor: boolean): Promise<void> {
+  const gameStartInfo = editorGameStart();
+  const map = await mapFiles();
   await send(
     {
       type: "init",
@@ -123,4 +133,48 @@ test("an editor game rejects a bad command with the reason", async () => {
   );
   expect(result.error).toMatch(/no nation NOBODY01/);
   expect(posted().map((m) => m.type)).toEqual(["editor_command_result"]);
+});
+
+test("an editor game takes no turns", async () => {
+  await init(true);
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    self.dispatchEvent(
+      new MessageEvent("message", {
+        data: { type: "turn", turn: { turnNumber: 0, intents: [] } },
+      }),
+    );
+    await vi.waitFor(() =>
+      expect(warn).toHaveBeenCalledWith("an editor engine doesn't take turns"),
+    );
+  } finally {
+    warn.mockRestore();
+  }
+  const result = await send<RunTurnsResultMessage>(
+    {
+      type: "run_turns",
+      id: "run1",
+      turns: [{ turnNumber: 0, intents: [] }],
+    },
+    "run_turns_result",
+  );
+  expect(result.error?.errMsg).toMatch(/doesn't take turns/);
+  expect(result.gameUpdates).toEqual([]);
+  expect(posted().map((m) => m.type)).toEqual(["run_turns_result"]);
+});
+
+test("an editor game can't start from a snapshot", async () => {
+  const result = await send<InitErrorMessage>(
+    {
+      type: "init",
+      id: "init-snapshot",
+      gameStartInfo: editorGameStart(),
+      clientID: undefined,
+      map: await mapFiles(),
+      snapshot: new Uint8Array(),
+      editor: true,
+    },
+    "init_error",
+  );
+  expect(result.error).toMatch(/can't start from a snapshot/);
 });
