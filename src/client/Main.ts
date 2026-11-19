@@ -170,6 +170,7 @@ import {
 import "./UserMeBroadcast";
 import { classicReplayHref } from "./replay/ReplayEntry";
 import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
+import { isScenarioEditorHash } from "./scenario/ScenarioEditorRoute";
 import { tabAttention } from "./TabAttention";
 // The UsernameInput class is used as a type; retain this for registration.
 // oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
@@ -331,6 +332,8 @@ class Client {
   private lobbyHandle: JoinLobbyResult | null = null;
   /** The game the replay viewer is showing, once it has replaced the menu. */
   private replayViewerID: string | null = null;
+  private scenarioEditorOpen = false;
+  private scenarioEditor: HTMLElement | null = null;
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
@@ -623,9 +626,9 @@ class Client {
 
     window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
-      if (this.replayViewerID !== null) {
-        // Leaving the replay viewer always navigates, so the same applies:
-        // nothing else clears the in-game signal it set.
+      if (this.replayViewerID !== null || this.scenarioEditorOpen) {
+        // Leaving the replay viewer or the scenario editor always navigates,
+        // so the same applies: nothing else clears the in-game signal it set.
         setInGameSignal(false);
       }
       if (this.lobbyHandle !== null) {
@@ -1197,6 +1200,10 @@ class Client {
         this.leaveReplayViewer();
         return;
       }
+      if (this.scenarioEditorOpen) {
+        this.leaveScenarioEditor();
+        return;
+      }
       // Checked before the join modal is closed below: closing it resets
       // the URL, which would drop the hash before handleUrl reads it.
       const replayViewerID = parseReplayViewerHash(window.location.hash);
@@ -1216,6 +1223,11 @@ class Client {
           return;
         }
         void this.openReplayViewer(replayViewerID);
+        return;
+      }
+      // As with the replay viewer, not over a game.
+      if (isScenarioEditorHash(window.location.hash) && !this.gameUnderway()) {
+        void this.openScenarioEditor();
         return;
       }
       // Router-managed hash changes (#modal=...) are handled by the router
@@ -1259,6 +1271,10 @@ class Client {
 
       if (this.replayViewerID !== null) {
         this.leaveReplayViewer();
+        return;
+      }
+      if (this.scenarioEditorOpen) {
+        this.leaveScenarioEditor();
         return;
       }
       if (this.currentUrl !== null && this.lobbyHandle !== null) {
@@ -1413,27 +1429,39 @@ class Client {
       this.replayViewerID = null;
       return;
     }
+    this.takeOverPage();
+    const viewer = new ReplayViewer();
+    viewer.gameID = gameID;
+    document.body.appendChild(viewer);
+  }
+
+  /**
+   * Clear the menu for a screen that replaces it (the replay viewer, the
+   * scenario editor), keeping that screen's hash in the URL.
+   */
+  private takeOverPage(): void {
     // The same teardown as starting a game: the featured stream, ads and
     // menu music stop, and the menu's modals close.
     const hash = window.location.hash;
     // Set first, as at game prestart: a menu-audio import that finishes
-    // later must not start the menu theme under the viewer.
+    // later must not start the menu theme under the new screen.
     this.menuTornDown = true;
     document.dispatchEvent(new CustomEvent("game-starting"));
-    // A lobby modal may be open (a #join hash switched to a replay): close it
-    // the way a game start does, without leaving a lobby it never joined.
+    // A lobby modal may be open (a #join hash switched to this screen's):
+    // close it the way a game start does, without leaving a lobby it never
+    // joined.
     this.loadedHostModal()?.disarmLeaveOnClose();
     this.loadedJoinModal()?.disarmLeaveOnClose();
     this.loadedHostModal()?.closeWithoutLeaving();
     this.loadedJoinModal()?.closeWithoutLeaving();
     this.closeMenu();
     // close() keeps a lobby's bottom rail for the spawn phase, which the
-    // viewer never reaches.
+    // new screen never reaches.
     (
       document.querySelector("homepage-promos") as HomepagePromos | null
     )?.destroyBottomRail?.();
-    // Closing a modal the router opened clears the hash. Put the viewer's
-    // back, so a reload opens the replay again.
+    // Closing a modal the router opened clears the hash. Put the new screen's
+    // back, so a reload opens it again.
     if (window.location.hash !== hash) {
       history.replaceState(
         history.state,
@@ -1442,9 +1470,41 @@ class Client {
       );
     }
     setInGameSignal(true);
-    const viewer = new ReplayViewer();
-    viewer.gameID = gameID;
-    document.body.appendChild(viewer);
+  }
+
+  /**
+   * Replace the menu with the scenario editor (loaded on demand). Leaving it
+   * reloads the page, like leaving a game.
+   */
+  private async openScenarioEditor(): Promise<void> {
+    if (this.scenarioEditorOpen) return;
+    this.scenarioEditorOpen = true;
+    let editor: HTMLElement | null = null;
+    try {
+      const { ScenarioEditor } = await import("./scenario/ScenarioEditor");
+      editor = new ScenarioEditor();
+    } catch (err) {
+      console.error("scenario editor failed to load:", err);
+    }
+    // The chunk didn't load, or a join started while it did.
+    if (editor === null || this.gameUnderway()) {
+      this.scenarioEditorOpen = false;
+      return;
+    }
+    this.takeOverPage();
+    this.scenarioEditor = editor;
+    document.body.appendChild(editor);
+  }
+
+  /** The URL changed under the editor: as leaveReplayViewer. */
+  private leaveScenarioEditor(): void {
+    const hash = window.location.hash;
+    if (isScenarioEditorHash(hash)) return;
+    if (parseReplayViewerHash(hash) !== null) {
+      window.location.reload();
+    } else {
+      window.location.href = homeHref();
+    }
   }
 
   /**
@@ -1512,6 +1572,10 @@ class Client {
     if (replayViewerID !== null) {
       await this.openReplayViewer(replayViewerID);
       return;
+    }
+    if (isScenarioEditorHash(hash)) {
+      await this.openScenarioEditor();
+      if (this.scenarioEditorOpen) return;
     }
 
     // The `/c/<code>` share-link path is stashed (and stripped) by
@@ -1890,6 +1954,20 @@ class Client {
       this.replayViewerID = null;
       document.querySelector("replay-viewer")?.remove();
       if (parseReplayViewerHash(window.location.hash) !== null) {
+        history.replaceState(
+          null,
+          "",
+          window.location.pathname + window.location.search,
+        );
+      }
+    }
+
+    if (this.scenarioEditorOpen) {
+      console.log("joining lobby, tearing down scenario editor");
+      this.scenarioEditorOpen = false;
+      this.scenarioEditor?.remove();
+      this.scenarioEditor = null;
+      if (isScenarioEditorHash(window.location.hash)) {
         history.replaceState(
           null,
           "",
