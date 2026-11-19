@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { LoadoutItem } from "../../src/client/components/card/LoadoutItems";
 import {
   clearSavedLooks,
+  endScreenLookRows,
   isLookSaved,
   MAX_SAVED_LOOKS,
   savedLooks,
@@ -69,5 +70,92 @@ describe("saved looks", () => {
     saveLook("g1", look("a"));
     clearSavedLooks();
     expect(savedLooks("g1")).toEqual([]);
+  });
+});
+
+// The end screen's look rows: the killer's row (when it shows) then the saved
+// looks, filtered against what the viewer owns now.
+describe("endScreenLookRows", () => {
+  const item = (
+    type: LoadoutItem["type"],
+    name: string,
+    state: LoadoutItem["state"] = "buy",
+  ): LoadoutItem => ({
+    type,
+    item: { name, rarity: "epic", product: null } as never,
+    state,
+    priceHard: state === "buy" ? 400 : undefined,
+  });
+  const CARD = item("playerCard", "standard");
+  const row = (clientID: string, items: LoadoutItem[]) => ({
+    clientID,
+    name: `name-${clientID}`,
+    items,
+  });
+  const keys = (rows: ReturnType<typeof endScreenLookRows>) =>
+    rows.map((r) => [
+      r.clientID,
+      r.items.map((i) => `${i.type}:${i.item.name}`),
+    ]);
+
+  it("drops items bought after the look was saved", () => {
+    const rows = endScreenLookRows(
+      [row("a", [item("cardBackground", "bg_a"), item("cardTracker", "wins")])],
+      ["cardBackground:bg_a"],
+    );
+    expect(keys(rows)).toEqual([["a", ["cardTracker:wins"]]]);
+  });
+
+  it("skips a row left with nothing to buy", () => {
+    const rows = endScreenLookRows(
+      [
+        row("a", [
+          item("cardBackground", "bg_a"),
+          item("cardTitle", "t", "earned"),
+        ]),
+        row("b", [item("cardBackground", "bg_b")]),
+      ],
+      ["cardBackground:bg_a"],
+    );
+    expect(keys(rows)).toEqual([["b", ["cardBackground:bg_b"]]]);
+  });
+
+  it("offers the player card in the first row only", () => {
+    const rows = endScreenLookRows(
+      [
+        row("killer", [CARD, item("cardBackground", "bg_k")]),
+        row("a", [CARD, item("cardBackground", "bg_a")]),
+      ],
+      [],
+    );
+    expect(keys(rows)).toEqual([
+      ["killer", ["playerCard:standard", "cardBackground:bg_k"]],
+      ["a", ["cardBackground:bg_a"]],
+    ]);
+  });
+
+  it("the first row shown gets the card when an earlier one is skipped", () => {
+    const rows = endScreenLookRows(
+      [row("a", [CARD]), row("b", [CARD, item("cardBackground", "bg_b")])],
+      ["playerCard:standard"],
+    );
+    expect(keys(rows)).toEqual([["b", ["cardBackground:bg_b"]]]);
+  });
+
+  it("no item in two rows at once", () => {
+    const rows = endScreenLookRows(
+      [
+        row("a", [item("cardBackground", "bg_x"), item("cardTracker", "wins")]),
+        row("b", [
+          item("cardBackground", "bg_x"),
+          item("cardTracker", "games"),
+        ]),
+      ],
+      [],
+    );
+    expect(keys(rows)).toEqual([
+      ["a", ["cardBackground:bg_x", "cardTracker:wins"]],
+      ["b", ["cardTracker:games"]],
+    ]);
   });
 });

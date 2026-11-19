@@ -1,4 +1,5 @@
 import type { ClientID, GameID } from "@openfront/engine-api/Schemas";
+import { ownsPlayerCard } from "@openfront/shared/CosmeticSchemas";
 import type { LoadoutItem } from "./LoadoutItems";
 
 // Looks the viewer saved from the player panel ("Get the look") to buy on the
@@ -51,4 +52,41 @@ export function savedLooks(gameID: GameID): readonly SavedLook[] {
 export function clearSavedLooks(): void {
   lookGameID = null;
   looks = [];
+}
+
+// One "Get {name}'s look" row on the end screen.
+export interface LookRow {
+  clientID: ClientID;
+  name: string;
+  items: LoadoutItem[];
+}
+
+const itemKey = (i: LoadoutItem) => `${i.type}:${i.item.name}`;
+
+/**
+ * The end screen's rows, in order (the killer's row, when it shows, then the
+ * saved looks), filtered against what the viewer owns now rather than when
+ * the look was saved. The player card is offered in the first row shown only,
+ * no item shows in two rows, and a row left with nothing to buy is dropped
+ * (an earned item alone doesn't keep it).
+ */
+export function endScreenLookRows(
+  rows: readonly LookRow[],
+  flares: readonly string[],
+): LookRow[] {
+  const owned = new Set(flares);
+  const ownsCard = ownsPlayerCard(flares);
+  const offered = new Set<string>();
+  const out: LookRow[] = [];
+  for (const row of rows) {
+    const items = row.items.filter((i) => {
+      const key = itemKey(i);
+      if (owned.has(key) || offered.has(key)) return false;
+      return i.type !== "playerCard" || (!ownsCard && out.length === 0);
+    });
+    if (!items.some((i) => i.state === "buy")) continue;
+    for (const i of items) offered.add(itemKey(i));
+    out.push({ ...row, items });
+  }
+  return out;
 }
