@@ -5,7 +5,7 @@ import { prefersReducedMotion } from "../../utilities/ReducedMotion";
 import { translateText } from "../../Utils";
 import { levelBadgeAccent } from "../LevelBadge";
 import "./CardBackground";
-import { CARD_TAUNTS_ENABLED } from "./HeldBack";
+import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";
 import { formatTracker, type PlayerCardView } from "./PlayerCardModel";
 import {
   clanTemplate,
@@ -286,7 +286,7 @@ export class PlayerCard extends LitElement {
           </div>
           ${view.badge === null ? nothing : levelLineTemplate(view.badge, true)}
           ${
-            view.title === null
+            view.title === null || !CARD_TITLES_ENABLED
               ? nothing
               : html`<div
                   data-card-title

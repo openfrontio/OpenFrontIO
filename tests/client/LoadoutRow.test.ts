@@ -102,6 +102,17 @@ const VOLT: PlayerCardView = buildPlayerCardView(
 );
 
 describe("loadoutItems", () => {
+  it("titles held back: the killer's title is never offered", () => {
+    heldBack.titles = false;
+    const items = loadoutItems(VOLT, COSMETICS, [
+      "playerCard:standard",
+      "cardBackground:bg_frontline",
+      "taunt:salute",
+    ]);
+    expect(items.map((i) => i.type)).not.toContain("cardTitle");
+    expect(items.map((i) => i.type)).toContain("cardTracker");
+  });
+
   it("taunts held back: the killer's taunt is never offered", () => {
     heldBack.taunts = false;
     const items = loadoutItems(VOLT, COSMETICS, [

@@ -57,6 +57,7 @@ const COSMETICS = {
   },
   cardTitles: {
     warmonger: { ...item, name: "warmonger", text: "Warmonger" },
+    veteran: { ...item, name: "veteran", text: "Veteran", priceSoft: 500 },
   },
   taunts: {
     salute: {
@@ -89,6 +90,18 @@ describe("<card-store-grid>", () => {
         "[data-card-store-item]",
       ),
     ].map((e) => e.getAttribute("data-card-store-item"));
+
+  it("titles held back: no title items", async () => {
+    heldBack.titles = false;
+    await render();
+    expect(keys().filter((k) => k!.startsWith("cardTitle:"))).toEqual([]);
+    expect(keys()).toContain("cardTracker:wins");
+  });
+
+  it("titles switched on: a sold title is listed", async () => {
+    await render();
+    expect(keys()).toContain("cardTitle:veteran");
+  });
 
   it("taunts held back: no taunt items", async () => {
     heldBack.taunts = false;

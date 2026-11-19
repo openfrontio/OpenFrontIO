@@ -187,6 +187,13 @@ describe("<player-card>", () => {
     expect(seen).not.toHaveBeenCalled();
   });
 
+  it("titles held back: a saved title is not shown", async () => {
+    heldBack.titles = false;
+    await render(VOLT);
+    expect(card.querySelector("[data-card-title]")).toBeNull();
+    expect(card.textContent).not.toContain("Warmonger");
+  });
+
   it("taunts switched on: the saved taunt's icon shows", async () => {
     await render(VOLT);
     expect(card.querySelector("[data-card-taunt-icon]")).not.toBeNull();

@@ -149,6 +149,29 @@ describe("<my-card-tab>", () => {
     );
   });
 
+  it("titles held back: no Title slot, even with a title saved", async () => {
+    heldBack.titles = false;
+    await render(userMe(OWNER, { ...SAVED, title: "warmonger" }));
+    expect(q("[data-my-card-slot='title']")).toBeNull();
+    expect(q("[data-my-card-slot='trackers']")).not.toBeNull();
+  });
+
+  it("titles held back: saving sends the saved title back unchanged", async () => {
+    heldBack.titles = false;
+    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    await render(userMe(OWNER, { ...SAVED, title: "warmonger" }));
+    tile("cardBackground:bg_pacific").click();
+    await settle();
+    expect(api.save).toHaveBeenCalledWith(
+      expect.objectContaining({ background: "bg_pacific", title: "warmonger" }),
+    );
+  });
+
+  it("titles switched on: the Title slot shows", async () => {
+    await render(userMe(OWNER, SAVED));
+    expect(q("[data-my-card-slot='title']")).not.toBeNull();
+  });
+
   it("taunts switched on: the Taunt slot shows", async () => {
     await render(userMe(OWNER, SAVED));
     expect(q("[data-my-card-slot='taunt']")).not.toBeNull();

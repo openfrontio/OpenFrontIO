@@ -20,7 +20,7 @@ import { translateText } from "../../Utils";
 import "../CosmeticCard";
 import "../PurchaseButton";
 import { type CardItem, type CardItemType, cardItemName } from "./CardItems";
-import { CARD_TAUNTS_ENABLED } from "./HeldBack";
+import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";
 import "./PlayerCard";
 import { buildPlayerCardView } from "./PlayerCardModel";
 
@@ -37,7 +37,11 @@ const ALL_SLOTS: Slot[] = ["background", "flag", "title", "trackers", "taunt"];
 
 // The slots on offer: held-back items get none (a saved one stays saved).
 function slots(): Slot[] {
-  return ALL_SLOTS.filter((s) => s !== "taunt" || CARD_TAUNTS_ENABLED);
+  return ALL_SLOTS.filter(
+    (s) =>
+      (s !== "taunt" || CARD_TAUNTS_ENABLED) &&
+      (s !== "title" || CARD_TITLES_ENABLED),
+  );
 }
 
 type ItemState = "equipped" | "owned" | "buy" | "locked";
