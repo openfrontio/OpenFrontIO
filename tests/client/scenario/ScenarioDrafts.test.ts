@@ -88,3 +88,21 @@ test("a damaged draft fails to load", async () => {
   backend.docs.get("a")!.ownership = [0, 1];
   await expect(store.load("a")).rejects.toThrow(/don't cover/);
 });
+
+test("a draft's listing and document come from the same moment", async () => {
+  const backend = memoryBackend();
+  let open!: () => void;
+  const opened = new Promise<void>((resolve) => (open = resolve));
+  const store = new ScenarioDrafts(async () => {
+    await opened;
+    return backend;
+  });
+  const doc = newScenarioDocument("First", 100, 100);
+  const saved = store.save("a", doc);
+  // Edited while the database is still opening.
+  doc.meta.name = "Second";
+  open();
+  await saved;
+  expect((await store.list())[0].name).toBe("First");
+  expect((await store.load("a"))!.meta.name).toBe("First");
+});

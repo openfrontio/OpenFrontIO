@@ -35,8 +35,10 @@ export class ScenarioDrafts {
   ) {}
 
   async save(id: string, doc: ScenarioDocument): Promise<void> {
-    const info = { id, name: doc.meta.name, savedAt: this.now() };
-    await (await this.backend()).put(info, serializeScenarioDocument(doc));
+    // Taken before the first await, so later edits can't split the two.
+    const stored = serializeScenarioDocument(doc);
+    const info = { id, name: stored.meta.name, savedAt: this.now() };
+    await (await this.backend()).put(info, stored);
   }
 
   /** The draft, or undefined if there is none. Throws if it is invalid. */

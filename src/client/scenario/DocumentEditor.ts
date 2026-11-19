@@ -7,7 +7,10 @@
  * two stay alike.
  */
 
-import { SetNationCommandSchema } from "@openfront/engine-api/EditorCommands";
+import {
+  MAX_TERRAIN_BATCH,
+  SetNationCommandSchema,
+} from "@openfront/engine-api/EditorCommands";
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import {
   addStructure,
@@ -271,13 +274,19 @@ export class DocumentEditor {
           doc.owners[t] = 0;
         }
         const lost = this.removeStructures((s) => kindChanged.has(s.tile));
-        for (const [t, value] of terrain) doc.terrain[t] = value;
-        // A port needs a shore, which an edit beside it can take away.
-        lost.push(
-          ...this.removeStructures(
-            (s) => s.type === UnitType.Port && !isShore(doc, s.tile),
-          ),
-        );
+        // A port needs a shore, which an edit beside it can take away. The
+        // engine checks after each set_terrain, so the document writes the
+        // terrain in the same batches sendTerrain sends, checking after each.
+        for (let i = 0; i < tiles.length; i += MAX_TERRAIN_BATCH) {
+          for (const t of tiles.slice(i, i + MAX_TERRAIN_BATCH)) {
+            doc.terrain[t] = terrain.get(t)!;
+          }
+          lost.push(
+            ...this.removeStructures(
+              (s) => s.type === UnitType.Port && !isShore(doc, s.tile),
+            ),
+          );
+        }
         sendTerrain(tiles, [...terrain.values()], this.send);
         return [
           { type: "set_terrain", tiles, terrain: previous },

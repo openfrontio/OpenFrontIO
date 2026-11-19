@@ -40,7 +40,7 @@ export function land(elevation: number): number {
 }
 
 export function isAuthoredTerrain(b: number): boolean {
-  return b === WATER || (b >= 0x80 && b <= IMPASSABLE);
+  return Number.isInteger(b) && (b === WATER || (b >= 0x80 && b <= IMPASSABLE));
 }
 
 /** Land a nation can own: not water and not impassable. */
@@ -184,10 +184,17 @@ function decode(stored: StoredScenarioDocument): ScenarioDocument {
     terrain,
     nations: stored.nations.map((n) => ({ ...n })),
     owners,
-    structures: [],
+    structures: stored.structures
+      .map((s) => ({ ...s }))
+      .sort((a, b) => a.tile - b.tile),
     config: stored.config,
   };
-  for (const s of stored.structures) addStructure(doc, { ...s });
+  doc.structures.forEach((s, i) => {
+    if (i > 0 && doc.structures[i - 1].tile === s.tile) {
+      throw new Error(`tile ${s.tile} already has a structure`);
+    }
+    checkStructure(doc, s);
+  });
   return doc;
 }
 
@@ -297,14 +304,14 @@ export function isShore(doc: ScenarioDocument, tile: number): boolean {
   );
 }
 
-/** Throws unless the structure could be placed in the document as it is. */
+/**
+ * Throws unless the structure could stand in the document as it is, other
+ * structures aside.
+ */
 function checkStructure(doc: ScenarioDocument, s: ScenarioStructure): void {
   checkTile(doc, s.tile);
   if (doc.owners[s.tile] !== nationIndex(doc, s.nation) + 1) {
     throw new Error(`tile ${s.tile} is not ${s.nation}'s`);
-  }
-  if (structureAt(doc, s.tile) !== undefined) {
-    throw new Error(`tile ${s.tile} already has a structure`);
   }
   if (s.type === UnitType.Port && !isShore(doc, s.tile)) {
     throw new Error(`a port needs a shore tile, ${s.tile} is not`);
@@ -326,6 +333,9 @@ export function addStructure(
   doc: ScenarioDocument,
   s: ScenarioStructure,
 ): void {
+  if (structureAt(doc, s.tile) !== undefined) {
+    throw new Error(`tile ${s.tile} already has a structure`);
+  }
   checkStructure(doc, s);
   const i = doc.structures.findIndex((other) => other.tile > s.tile);
   doc.structures.splice(i === -1 ? doc.structures.length : i, 0, s);

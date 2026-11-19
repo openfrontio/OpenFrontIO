@@ -440,6 +440,7 @@ test("an edit that can't apply changes nothing", () => {
     { type: "remove_nation", id: "NOBODY01" },
     { type: "set_nation", id: "EASTNAT1", name: "" },
     { type: "set_terrain", tiles: [0], terrain: [0x40] },
+    { type: "set_terrain", tiles: [0], terrain: [128.5] },
     {
       type: "place_structure",
       structure: {
@@ -494,3 +495,43 @@ test("a defense post is the one structure without levels, as the document checks
     Structures.types.filter((t) => !runner.game.unitInfo(t).upgradable),
   ).toEqual([UnitType.DefensePost]);
 });
+
+test("a port that loses its shore in one batch of a write goes, in the engine and the document", async () => {
+  // Over one batch of tiles, all land but one water tile beside the port.
+  const w = 1104;
+  const doc = newScenarioDocument("Ports", w, 1000);
+  doc.terrain.fill(land(2));
+  const at = (x: number, y: number) => y * w + x;
+  const port = at(10, 11);
+  doc.terrain[at(10, 10)] = WATER;
+  doc.nations.push(nation("PORTNAT1"));
+  doc.owners[port] = 1;
+  doc.structures.push({
+    type: UnitType.Port,
+    tile: port,
+    nation: "PORTNAT1",
+    level: 1,
+  });
+  const e = await replayed(doc);
+  const editor = new DocumentEditor(doc, e.send);
+  // The first batch fills the port's water; the second digs new water
+  // beside it, which comes too late for the port.
+  const filler = Array.from(
+    { length: MAX_TERRAIN_BATCH - 1 },
+    (_, i) => at(0, 20) + i,
+  );
+  const tiles = [at(10, 10), ...filler, at(10, 12)];
+  editor.apply({
+    type: "set_terrain",
+    tiles,
+    terrain: [land(2), ...filler.map(() => land(2)), WATER],
+  });
+  editor.commit();
+  const structures = () => engineState(e.runner).structures;
+  expect(doc.structures).toEqual([]);
+  expect(structures()).toEqual([]);
+
+  editor.undo();
+  expect(doc.structures).toHaveLength(1);
+  expect(structures()).toEqual(doc.structures);
+}, 60_000);
