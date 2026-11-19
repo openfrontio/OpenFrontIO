@@ -1,4 +1,4 @@
-import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
+import { GameMode, GameType, maps } from "@openfront/engine-api/game/GameTypes";
 import { GAME_ID_REGEX, GameConfig } from "@openfront/engine-api/Schemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
@@ -24,6 +24,7 @@ import {
 import { getApiBase } from "./Api";
 import { BaseModal } from "./components/BaseModal";
 import { GameStartAlertController } from "./components/GameStartAlertController";
+import { hasMapDetails, renderMapDetails } from "./components/map/MapDetails";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { gamePortal } from "./GamePortal";
@@ -720,6 +721,8 @@ export class JoinLobbyModal extends BaseModal {
           >${lobbySettingTagText(s)}</span
         >`,
     );
+    const mapInfo = maps.find((m) => m.type === c.gameMap);
+    const showDetails = hasMapDetails(mapInfo);
 
     // object-contain, not object-cover: the preview is here to be studied
     // while waiting, so a wide or tall map must show whole rather than cropped
@@ -736,7 +739,7 @@ export class JoinLobbyModal extends BaseModal {
         <div
           data-test-map-preview
           class="flex items-center justify-center w-full ${
-            tags.length > 0 ? "sm:w-3/5" : ""
+            tags.length > 0 || showDetails ? "sm:w-3/5" : ""
           } shrink-0 rounded-lg border border-white/10 bg-black/20 overflow-hidden"
         >
           <img
@@ -750,12 +753,28 @@ export class JoinLobbyModal extends BaseModal {
           />
         </div>
         ${
-          tags.length > 0
-            ? html`<div
-                data-test-lobby-settings
-                class="flex flex-wrap content-start gap-1 min-w-0 flex-1 uppercase"
-              >
-                ${tags}
+          tags.length > 0 || showDetails
+            ? html`<div class="flex flex-col gap-3 min-w-0 flex-1">
+                ${
+                  tags.length > 0
+                    ? html`<div
+                        data-test-lobby-settings
+                        class="flex flex-wrap content-start gap-1 uppercase"
+                      >
+                        ${tags}
+                      </div>`
+                    : html``
+                }
+                ${
+                  showDetails
+                    ? html`<div
+                        data-test-map-details
+                        class="flex flex-col gap-1 text-xs text-white/80"
+                      >
+                        ${renderMapDetails(mapInfo)}
+                      </div>`
+                    : html``
+                }
               </div>`
             : html``
         }

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const portal = vi.hoisted(() => ({
-  name: vi.fn((): "crazygames" | "poki" | null => null),
+  name: vi.fn((): "crazygames" | "poki" | "viverse" | null => null),
   getUserToken: vi.fn(async (): Promise<string | null> => null),
 }));
 
@@ -48,7 +48,7 @@ describe("portal login", () => {
     ClientEnv.reset();
   });
 
-  it.each(["poki", "crazygames"] as const)(
+  it.each(["poki", "crazygames", "viverse"] as const)(
     "exchanges a signed-in %s token at its endpoint",
     async (name) => {
       portal.name.mockReturnValue(name);
@@ -63,12 +63,15 @@ describe("portal login", () => {
     },
   );
 
-  it("falls back to the guest refresh when no portal user is signed in", async () => {
-    portal.name.mockReturnValue("poki");
-    await userAuth();
-    expect(fetchMock).toHaveBeenCalledOnce();
-    expect(fetchMock.mock.calls[0][0]).toBe(
-      "https://api.openfront.dev/auth/refresh",
-    );
-  });
+  it.each(["poki", "crazygames", "viverse"] as const)(
+    "falls back to the guest refresh when no %s user is signed in",
+    async (name) => {
+      portal.name.mockReturnValue(name);
+      await userAuth();
+      expect(fetchMock).toHaveBeenCalledOnce();
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        "https://api.openfront.dev/auth/refresh",
+      );
+    },
+  );
 });

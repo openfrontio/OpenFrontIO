@@ -1,5 +1,6 @@
 {
   "categories": ["world"],
+  "hidden": true,
   "id": "GiantWorldMap",
   "map": {
     "height": 1948,

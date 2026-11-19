@@ -4,6 +4,7 @@
   "name": "Svalmel",
   "translation_key": "map.svalmel",
   "categories": ["fictional", "europe", "north_america"],
+  "author": "Duwibi",
   "nations": [
     {
       "coordinates": [900, 850],

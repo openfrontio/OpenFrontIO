@@ -16,6 +16,10 @@
   }
 }
 
+/* Phones and small tablets held upright, where the unit bar is a column on the
+   right edge. UnitDisplay.isSideBar() asks the same query. */
+@custom-variant side-bar (@media (width < 64rem) and (orientation: portrait));
+
 @theme {
   --default-ring-width: 3px;
   --default-ring-color: var(--color-malibu-blue);
@@ -49,6 +53,55 @@
   --shadow-lobby-card-hover: 0 0 0 2px #0084d1, 0 0 20px rgba(0, 132, 209, 0.5);
   --shadow-action-card-hover:
     0 0 0 1px #0084d1, 0 0 12px rgba(0, 132, 209, 0.35);
+}
+
+/* Match the in-game HUD surface; opacity affects the surface, not the controls. */
+.graphics-panel-surface {
+  background-color: rgb(
+    from var(--color-gray-800) r g b / calc(0.92 * var(--hud-opacity, 1))
+  );
+  border-color: rgb(from var(--color-slate-600) r g b / var(--hud-opacity, 1));
+  backdrop-filter: blur(calc(4px * var(--hud-opacity, 1)));
+  box-shadow: 0 8px 24px rgb(0 0 0 / calc(0.25 * var(--hud-opacity, 1)));
+}
+
+/* Reuse the settings controls with the compact rows of the HUD, not page cards. */
+.graphics-settings-panel
+  :is(setting-slider, setting-color, setting-select)
+  > div,
+.graphics-settings-panel setting-toggle > label,
+.graphics-settings-panel graphics-preset-tools > :is(div, button),
+.graphics-settings-panel #graphics-reset {
+  padding: 0.75rem 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.graphics-settings-panel .text-base {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.graphics-settings-panel [class~="text-white/50"] {
+  color: var(--color-slate-400);
+  font-size: 0.75rem;
+}
+
+.graphics-settings-panel graphics-advanced-settings > .text-xs {
+  color: var(--color-slate-400);
+  padding: 1rem 0 0.25rem;
+}
+
+/* Stack slider labels and tracks even on a wide screen with a narrow panel. */
+.graphics-settings-panel setting-slider > div {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.graphics-settings-panel setting-slider > div > div {
+  width: 100%;
+  margin-right: 0;
 }
 
 @layer base {
@@ -141,6 +194,12 @@ body.page-open {
   overflow: hidden;
   flex-direction: column;
   flex-wrap: nowrap;
+  /* Where the page fills the screen (no footer under it), it runs on to the
+     bottom and pads its own content above the home indicator (o-modal),
+     instead of stopping short of it. */
+  @variant compact {
+    padding-bottom: 0;
+  }
 }
 
 * {
@@ -697,6 +756,22 @@ news-button .active button::after {
   animation: newsPulse 1.5s ease-in-out infinite;
 }
 
+/* Red flash over the troop bar while the onboarding tutorial warns that
+   troops are too low. */
+.troop-bar-alert {
+  animation: troopBarAlert 0.6s ease-in-out infinite;
+}
+
+@keyframes troopBarAlert {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
 /* Pulsing ring the in-game tutorial puts around the HUD element it's describing. */
 .tutorial-highlight {
   border-radius: 0.375rem;
@@ -736,6 +811,34 @@ unit-display .tutorial-highlight::after {
 
   50% {
     transform: translate(-50%, -5px);
+  }
+}
+
+/* Below lg in portrait the hotbar is a column on the right edge: the arrow
+   points at the button from its left. */
+@media (width < 64rem) and (orientation: portrait) {
+  unit-display .tutorial-highlight {
+    transform-origin: right center;
+  }
+
+  unit-display .tutorial-highlight::after {
+    content: "▶";
+    bottom: auto;
+    left: auto;
+    top: 50%;
+    right: calc(100% + 3px);
+    animation-name: tutorialArrowBobSide;
+  }
+}
+
+@keyframes tutorialArrowBobSide {
+  0%,
+  100% {
+    transform: translate(0, -50%);
+  }
+
+  50% {
+    transform: translate(-5px, -50%);
   }
 }
 
@@ -788,4 +891,86 @@ unit-display .tutorial-highlight::after {
 
 .remove-player-btn:hover {
   background: #ef4444;
+}
+
+.unit-display-scroll {
+  scrollbar-width: none;
+}
+
+.unit-display-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Holding a build button shows what it costs. The browser's own long press
+   menu could take the gesture over, so it is turned off here. */
+.unit-display-root {
+  -webkit-touch-callout: none;
+}
+
+/* A build bar that doesn't fit scrolls. Fade the end that still hides
+   actions, so the player can tell there is more to scroll to. The bar itself
+   keeps the gray-800 background, so the fade matches it. Below lg in portrait
+   the bar is a column on the right edge (fades top and bottom); everywhere
+   else it is a row (fades left and right). */
+.unit-display-root::before,
+.unit-display-root::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+  z-index: 1;
+}
+
+.unit-display-root::before {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1.25rem;
+  background: linear-gradient(
+    to bottom,
+    rgb(31 41 55 / 0.92),
+    rgb(31 41 55 / 0)
+  );
+}
+
+.unit-display-root::after {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1.25rem;
+  background: linear-gradient(to top, rgb(31 41 55 / 0.92), rgb(31 41 55 / 0));
+}
+
+@media (width >= 64rem), (orientation: landscape) {
+  .unit-display-root::before,
+  .unit-display-root::after {
+    top: 0;
+    bottom: 0;
+    width: 1.25rem;
+    height: auto;
+  }
+
+  .unit-display-root::before {
+    right: auto;
+    background: linear-gradient(
+      to right,
+      rgb(31 41 55 / 0.92),
+      rgb(31 41 55 / 0)
+    );
+  }
+
+  .unit-display-root::after {
+    left: auto;
+    background: linear-gradient(
+      to left,
+      rgb(31 41 55 / 0.92),
+      rgb(31 41 55 / 0)
+    );
+  }
+}
+
+.unit-display-more-start::before,
+.unit-display-more-end::after {
+  opacity: 1;
 }

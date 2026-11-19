@@ -5,7 +5,6 @@ import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { getDesktopSessionState } from "./Auth";
-import "./components/IOSAddToHomeScreenBanner";
 import {
   canJoinTrustedLobby,
   lobbyCard,
@@ -18,6 +17,7 @@ import {
 import {
   getDesktopUpdateState,
   isDesktopShell,
+  isSteamShell,
   multiplayerAllowed,
   multiplayerAllowedForSession,
   type DesktopSessionState,
@@ -405,15 +405,13 @@ export class GameModeSelector extends LitElement {
     // play-page renders this after Main may already have broadcast.
     const last = lastUserMeResponse();
     if (last !== null) this.applyUserMe(last.response);
-    if (isDesktopShell()) {
-      // Seed BOTH from their current values. This element is rendered by
-      // <play-page> on a Lit microtask, so it cannot exist yet when the status
-      // bar dispatches the update bridge's synchronous replay -- without the
-      // seed the update half of the gate stays null and silently never
-      // applies (OPE-396).
-      this.desktopUpdateState = getDesktopUpdateState();
-      this.desktopSessionState = getDesktopSessionState();
-    }
+    // Seed BOTH from their current values. This element is rendered by
+    // <play-page> on a Lit microtask, so it cannot exist yet when the status
+    // bar dispatches the update bridge's synchronous replay -- without the
+    // seed the update half of the gate stays null and silently never applies
+    // (OPE-396). The session is the Steam sign-in, so only Steam seeds it.
+    if (isDesktopShell()) this.desktopUpdateState = getDesktopUpdateState();
+    if (isSteamShell()) this.desktopSessionState = getDesktopSessionState();
     // After the session seed above: a shell that already knows it has no
     // session must not open a feed it will close on the next tick.
     this.start();
@@ -651,9 +649,6 @@ export class GameModeSelector extends LitElement {
     const ffa = this.lobbies?.games?.["ffa"]?.[0];
     const teams = this.lobbies?.games?.["team"]?.[0];
     const special = this.lobbies?.games?.["special"]?.[0];
-    // The hero slot holds the spinner, then the FFA card; loaded without one
-    // it goes and the upcoming column takes the whole row.
-    const heroSlot = this.lobbies === null || ffa !== undefined;
     // A lone secondary card takes both of the column's card rows.
     const cardRows =
       teams && special
@@ -667,19 +662,12 @@ export class GameModeSelector extends LitElement {
     // reading-flow keeps focus order following the rows (Chromium only).
     // On compact screens (styles.css) Solo/Tutorial sit under the hero card only,
     // and the lobby column runs down beside them, so its two cards get that height.
-    // There the grid also pulls up over the gap after the banner's row when it's empty.
     return html`
       <div
-        class="flex flex-col gap-4 sm:compact:gap-3 sm:compact:has-[>ios-add-to-home-screen-banner:empty]:-mt-3 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_min(24rem,40vh)_auto_auto] sm:compact:grid-rows-[auto_minmax(min(24rem,40vh),auto)_3.5rem_auto] desktop:sm:grid-rows-[auto_40vh_auto_auto] sm:[reading-flow:grid-rows]"
+        class="flex flex-col gap-4 sm:compact:gap-3 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[min(24rem,40vh)_auto_auto] sm:compact:grid-rows-[minmax(min(24rem,40vh),auto)_3.5rem_auto] desktop:sm:grid-rows-[40vh_auto_auto] sm:[reading-flow:grid-rows]"
       >
-        <ios-add-to-home-screen-banner
-          class="no-game-portal [&:empty]:hidden sm:col-span-2 sm:row-start-1"
-        ></ios-add-to-home-screen-banner>
-
         <div
-          class="flex gap-4 sm:compact:gap-3 h-14 sm:col-span-2 sm:row-start-3 ${
-            heroSlot ? "sm:compact:col-span-1!" : ""
-          }"
+          class="flex gap-4 sm:compact:gap-3 h-14 sm:col-span-2 sm:row-start-2 sm:compact:col-span-1!"
         >
           <div class="flex-[2]">
             ${this.renderSmallActionCard(
@@ -701,7 +689,7 @@ export class GameModeSelector extends LitElement {
           }
         </div>
         <div
-          class="grid grid-cols-3 gap-4 sm:compact:gap-3 h-14 sm:col-span-2 sm:row-start-4"
+          class="grid grid-cols-3 gap-4 sm:compact:gap-3 h-14 sm:col-span-2 sm:row-start-3"
         >
           ${this.renderSmallActionCard(
             translateText("main.create"),
@@ -739,36 +727,31 @@ export class GameModeSelector extends LitElement {
           )}
         </div>
 
-        ${
-          heroSlot
-            ? html`<div class="min-w-0 sm:col-start-1 sm:row-start-2">
-                ${
-                  ffa
-                    ? this.renderLobbyCard(
-                        ffa,
-                        getGameModeLabel(ffa.gameConfig!),
-                      )
-                    : this.offlineForLobbies()
-                      ? this.renderLobbiesUnavailable()
-                      : html`<div
-                          class="flex items-center justify-center h-44 sm:h-full"
-                        >
-                          <span
-                            class="size-24 rounded-full border-[6px] border-blue-500/30 border-t-blue-500 animate-spin"
-                          ></span>
-                        </div>`
-                }
-              </div>`
-            : nothing
-        }
+        <div class="min-w-0 sm:col-start-1 sm:row-start-1">
+          ${
+            ffa?.gameConfig
+              ? this.renderLobbyCard(ffa, getGameModeLabel(ffa.gameConfig))
+              : this.offlineForLobbies()
+                ? this.renderLobbiesUnavailable()
+                : this.lobbies === null
+                  ? html`<div
+                      class="flex items-center justify-center h-44 sm:h-full"
+                      role="status"
+                      aria-label=${translateText("common.loading")}
+                    >
+                      <span
+                        class="size-24 rounded-full border-[6px] border-blue-500/30 border-t-blue-500 animate-spin"
+                      ></span>
+                    </div>`
+                  : html`<div
+                      class="h-44 sm:h-full rounded-2xl bg-surface"
+                    ></div>`
+          }
+        </div>
 
         <!-- Always rendered: the heading is the only way into the lobby browser. -->
         <section
-          class="flex flex-col gap-4 sm:compact:gap-3 min-w-0 sm:grid sm:grid-rows-[auto_1fr_1fr] sm:row-start-2 sm:min-h-0 sm:[reading-flow:grid-rows] ${
-            heroSlot
-              ? "sm:col-start-2 sm:compact:row-end-4 sm:compact:grid-rows-[auto_minmax(7.5rem,1fr)_minmax(7.5rem,1fr)]"
-              : "sm:col-start-1 sm:col-span-2"
-          }"
+          class="flex flex-col gap-4 sm:compact:gap-3 min-w-0 sm:grid sm:grid-rows-[auto_1fr_1fr] sm:row-start-1 sm:min-h-0 sm:[reading-flow:grid-rows] sm:col-start-2 sm:compact:row-end-3 sm:compact:grid-rows-[auto_minmax(7.5rem,1fr)_minmax(7.5rem,1fr)]"
         >
           ${
             teams

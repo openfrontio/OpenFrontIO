@@ -66,7 +66,9 @@ export class MapLayerPass {
       "uDestroyedMask",
     )!;
 
-    // Layer RGBA texture from the ImageBitmap.
+    // Layer RGBA texture from the ImageBitmap. Uses mipmapping for smooth
+    // downsampling and drastically reduced GPU texture cache misses when zoomed out.
+    // Mag filter is kept at NEAREST to preserve crisp pixels when zoomed in.
     this.layerTex = createTexture2D(gl, {
       width: image.width,
       height: image.height,
@@ -78,16 +80,26 @@ export class MapLayerPass {
     });
     gl.bindTexture(gl.TEXTURE_2D, this.layerTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, 4);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(
+      gl.TEXTURE_2D,
+      gl.TEXTURE_MIN_FILTER,
+      gl.LINEAR_MIPMAP_LINEAR,
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
     // Destroyed-mask texture (R8UI, one byte per tile). Starts all-zero.
-    this.destroyedData = new Uint8Array(mapW * mapH);
+    // Non-nukeable layers never destroy tiles, so a 1x1 placeholder texture
+    // and empty array avoids wasting mapW * mapH bytes of CPU and GPU memory.
+    this.destroyedData = new Uint8Array(this.nukeable ? mapW * mapH : 0);
     this.destroyedTex = createTexture2D(gl, {
-      width: mapW,
-      height: mapH,
+      width: this.nukeable ? mapW : 1,
+      height: this.nukeable ? mapH : 1,
       internalFormat: gl.R8UI,
       format: gl.RED_INTEGER,
       type: gl.UNSIGNED_BYTE,
-      data: this.destroyedData,
+      data: this.nukeable ? this.destroyedData : new Uint8Array(1),
       filter: gl.NEAREST,
     });
 
@@ -113,6 +125,7 @@ export class MapLayerPass {
    * (destroyed by a nuke).  Only meaningful for nukeable layers.
    */
   updateDestroyedMask(data: Uint8Array): void {
+    if (!this.nukeable) return;
     if (data.length !== this.mapW * this.mapH) return;
     this.destroyedData.set(data);
     const gl = this.gl;
@@ -222,15 +235,23 @@ export class MapLayerPass {
     });
     gl.bindTexture(gl.TEXTURE_2D, this.layerTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, 4);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(
+      gl.TEXTURE_2D,
+      gl.TEXTURE_MIN_FILTER,
+      gl.LINEAR_MIPMAP_LINEAR,
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     // Re-upload destroyed mask.
     gl.deleteTexture(this.destroyedTex);
     this.destroyedTex = createTexture2D(gl, {
-      width: this.mapW,
-      height: this.mapH,
+      width: this.nukeable ? this.mapW : 1,
+      height: this.nukeable ? this.mapH : 1,
       internalFormat: gl.R8UI,
       format: gl.RED_INTEGER,
       type: gl.UNSIGNED_BYTE,
-      data: this.destroyedData,
+      data: this.nukeable ? this.destroyedData : new Uint8Array(1),
       filter: gl.NEAREST,
     });
   }

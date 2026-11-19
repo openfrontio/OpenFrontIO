@@ -4,6 +4,9 @@
   "name": "Mississippi River",
   "translation_key": "map.mississippiriver",
   "categories": ["north_america"],
+  "location": { "lat": 33, "lon": -91 },
+  "author": "Tristar",
+  "description": "An extreme vertical and long map. It follows the river around Memphis and the lower Mississippi towns. Made as a 'sequel' to the Amazon River map, you must boat down/up the river in order to expand.",
   "nations": [
     {
       "coordinates": [390, 269],

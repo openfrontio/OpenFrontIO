@@ -5,6 +5,8 @@
   "display_name": "Didier (France)",
   "translation_key": "map.didierfrance",
   "categories": ["arcade"],
+  "author": "FloPinguin",
+  "description": "France reshaped into Didier, French YouTuber Fuze's mascot. Made for his OpenFront videos. Basically France, but with eyes, hands and feet.",
   "nations": [
     {
       "coordinates": [120, 680],

@@ -1,15 +1,38 @@
 // The Electron desktop (Steam) shell exposes this global via a contextBridge
-// preload script — see openfront-desktop's src/preload/preload.ts. Its mere
-// presence is a reliable signal we're running inside that shell, since only
-// the desktop build's preload script ever sets it.
+// preload script — see openfront-desktop's src/preload/preload.ts. The Android
+// app defines it too, from its own shell script. Its mere presence is a
+// reliable signal we're running inside one of those shells, since nothing
+// else ever sets it; isSteamShell() below says which.
 declare global {
   interface Window {
     openfrontDesktop?: unknown;
   }
 }
 
+// True inside ANY native app shell: the Electron (Steam) shell, and the
+// Android app, which defines the same global with a smaller surface (no
+// `steam`, `linkGate`, `presence`, `invite`, `display` or `quit`). Use it for
+// what every shell shares -- no ads, the shell's own updater, a document the
+// shell serves -- and isSteamShell() below for anything that goes through
+// Steam.
 export function isDesktopShell(): boolean {
   return typeof window !== "undefined" && window.openfrontDesktop !== undefined;
+}
+
+/**
+ * True inside the Steam (Electron) shell only.
+ *
+ * The Steam preload exposes the `steam` namespace unconditionally, whether or
+ * not a Steam client is running, so on Steam this is exactly isDesktopShell().
+ * The Android shell has no `steam` key, which is what tells the two apart: it
+ * signs in, pays and shows presence the way the web does, not through Steam.
+ *
+ * The same test SteamSDK.isOnSteam() and Payments' steamBridge() make.
+ */
+export function isSteamShell(): boolean {
+  if (typeof window === "undefined") return false;
+  const desktop = window.openfrontDesktop as { steam?: unknown } | undefined;
+  return desktop?.steam !== undefined;
 }
 
 // The shell's own version, distinct from the game version this client was
@@ -374,8 +397,8 @@ export interface DesktopSessionState {
  *
  * So every signed-out reason gates, including the ones the player cannot fix.
  *
- * A null state means no desktop shell -- the web build -- where a logged-out
- * player passes Turnstile normally and must not be gated.
+ * A null state means no Steam shell -- the web build, or the Android shell --
+ * where a logged-out player passes Turnstile normally and must not be gated.
  */
 export function multiplayerAllowedForSession(
   state: DesktopSessionState | null,
@@ -417,6 +440,207 @@ export function desktopLinkGate(): DesktopLinkGateBridge | null {
   return typeof desktop?.showLinkGate === "function"
     ? (desktop as DesktopLinkGateBridge)
     : null;
+}
+
+export type GoogleSignInResult =
+  | { status: "ok"; idToken: string }
+  | { status: "cancelled" } // the player dismissed the sheet
+  | { status: "error"; code: "no_account" | "unavailable" | "failed" };
+
+/**
+ * The Android shell's native Google sign-in sheet, or null where there is none:
+ * the web, the Steam shell, and an Android shell older than the bridge.
+ *
+ * Google refuses its web OAuth redirect inside a WebView, so this is the only
+ * way the Android app can get a Google ID token for the API to verify.
+ *
+ * The returned function never rejects. Whatever the shell hands back is
+ * checked rather than trusted, like the other bridges here: a throw, a
+ * malformed result or an error code this client does not know (a newer shell)
+ * all become `failed`.
+ */
+export function desktopGoogleSignIn():
+  | (() => Promise<GoogleSignInResult>)
+  | null {
+  if (typeof window === "undefined") return null;
+  const google = (
+    window.openfrontDesktop as { google?: { signIn?: unknown } } | undefined
+  )?.google;
+  const signIn = google?.signIn;
+  if (typeof signIn !== "function") return null;
+  return async () => {
+    try {
+      const result = (await signIn.call(google)) as {
+        status?: unknown;
+        idToken?: unknown;
+        code?: unknown;
+      } | null;
+      if (
+        result?.status === "ok" &&
+        typeof result.idToken === "string" &&
+        result.idToken !== ""
+      ) {
+        return { status: "ok", idToken: result.idToken };
+      }
+      if (result?.status === "cancelled") return { status: "cancelled" };
+      if (
+        result?.status === "error" &&
+        (result.code === "no_account" || result.code === "unavailable")
+      ) {
+        return { status: "error", code: result.code };
+      }
+    } catch {
+      // Treated as a failure below, like a malformed result.
+    }
+    return { status: "error", code: "failed" };
+  };
+}
+
+export interface PlayProduct {
+  productId: string;
+  /** Play's formatted local price, e.g. "€1,99". Shown as is. */
+  formattedPrice: string;
+}
+
+export type PlayProductsResult =
+  | { status: "ok"; products: PlayProduct[] } // ids Play did not return are absent
+  | { status: "error"; code: "unavailable" | "failed" };
+
+export type PlayPurchaseResult =
+  // Purchased or pending: either way the token goes to the server, which decides.
+  | { status: "ok"; purchaseToken: string }
+  | { status: "cancelled" }
+  | {
+      status: "error";
+      code: "already_owned" | "unavailable" | "busy" | "failed";
+    };
+
+export type PlayUnconsumedResult =
+  // Purchases Play reports as PURCHASED that the server has not consumed yet.
+  | { status: "ok"; purchaseTokens: string[] }
+  | { status: "error"; code: "unavailable" | "failed" };
+
+export interface PlayBilling {
+  products(productIds: string[]): Promise<PlayProductsResult>;
+  // `accountId` is the player's PUBLIC id; Play stores it on the purchase so
+  // the server can check the purchase belongs to the account crediting it.
+  purchase(opts: {
+    productId: string;
+    accountId: string;
+  }): Promise<PlayPurchaseResult>;
+  unconsumed(): Promise<PlayUnconsumedResult>;
+}
+
+const PLAY_FAILED = { status: "error", code: "failed" } as const;
+
+/**
+ * The Android app's Play billing bridge, or null where there is none: the web,
+ * the Steam shell, and an Android app older than the bridge.
+ *
+ * Found by its methods, like desktopLinkGate(). The returned methods never
+ * reject, and whatever the shell hands back is checked rather than trusted,
+ * like desktopGoogleSignIn(): a throw, a malformed result or an error code
+ * this client does not know (a newer shell) all become `failed`.
+ */
+export function desktopPlayBilling(): PlayBilling | null {
+  if (typeof window === "undefined") return null;
+  const billing = (
+    window.openfrontDesktop as { playBilling?: unknown } | undefined
+  )?.playBilling as
+    | { products?: unknown; purchase?: unknown; unconsumed?: unknown }
+    | undefined;
+  const products = billing?.products;
+  const purchase = billing?.purchase;
+  const unconsumed = billing?.unconsumed;
+  if (
+    typeof products !== "function" ||
+    typeof purchase !== "function" ||
+    typeof unconsumed !== "function"
+  ) {
+    return null;
+  }
+  return {
+    async products(productIds) {
+      try {
+        const result = (await products.call(billing, productIds)) as {
+          status?: unknown;
+          products?: unknown;
+          code?: unknown;
+        } | null;
+        if (result?.status === "ok" && Array.isArray(result.products)) {
+          return {
+            status: "ok",
+            products: (result.products as unknown[]).filter(
+              (p): p is PlayProduct =>
+                typeof p === "object" &&
+                p !== null &&
+                typeof (p as PlayProduct).productId === "string" &&
+                (p as PlayProduct).productId !== "" &&
+                typeof (p as PlayProduct).formattedPrice === "string" &&
+                (p as PlayProduct).formattedPrice !== "",
+            ),
+          };
+        }
+        if (result?.status === "error" && result.code === "unavailable") {
+          return { status: "error", code: "unavailable" };
+        }
+      } catch {
+        // Treated as a failure below, like a malformed result.
+      }
+      return PLAY_FAILED;
+    },
+    async purchase(opts) {
+      try {
+        const result = (await purchase.call(billing, opts)) as {
+          status?: unknown;
+          purchaseToken?: unknown;
+          code?: unknown;
+        } | null;
+        if (
+          result?.status === "ok" &&
+          typeof result.purchaseToken === "string" &&
+          result.purchaseToken !== ""
+        ) {
+          return { status: "ok", purchaseToken: result.purchaseToken };
+        }
+        if (result?.status === "cancelled") return { status: "cancelled" };
+        if (
+          result?.status === "error" &&
+          (result.code === "already_owned" ||
+            result.code === "unavailable" ||
+            result.code === "busy")
+        ) {
+          return { status: "error", code: result.code };
+        }
+      } catch {
+        // Treated as a failure below, like a malformed result.
+      }
+      return PLAY_FAILED;
+    },
+    async unconsumed() {
+      try {
+        const result = (await unconsumed.call(billing)) as {
+          status?: unknown;
+          purchaseTokens?: unknown;
+          code?: unknown;
+        } | null;
+        if (result?.status === "ok" && Array.isArray(result.purchaseTokens)) {
+          return {
+            status: "ok",
+            purchaseTokens: (result.purchaseTokens as unknown[]).filter(
+              (t): t is string => typeof t === "string" && t !== "",
+            ),
+          };
+        }
+        if (result?.status === "error" && result.code === "unavailable") {
+          return { status: "error", code: "unavailable" };
+        }
+      } catch {
+        // Treated as a failure below, like a malformed result.
+      }
+      return PLAY_FAILED;
+    },
+  };
 }
 
 /**

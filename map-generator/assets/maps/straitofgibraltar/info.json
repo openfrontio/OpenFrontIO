@@ -4,6 +4,8 @@
   "name": "Strait of Gibraltar",
   "translation_key": "map.straitofgibraltar",
   "categories": ["europe", "africa"],
+  "location": { "lat": 36, "lon": -5.5 },
+  "author": "evanpelle",
   "special_team_count": 2,
   "nations": [
     {

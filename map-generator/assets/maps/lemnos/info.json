@@ -4,6 +4,8 @@
   "name": "Lemnos",
   "translation_key": "map.lemnos",
   "categories": ["europe"],
+  "location": { "lat": 39.9, "lon": 25.2 },
+  "author": "bijx",
   "nations": [
     {
       "coordinates": [550, 317],

@@ -1,5 +1,5 @@
 import { getDesktopSessionState } from "./Auth";
-import { isDesktopShell, type SessionFailureKind } from "./DesktopShell";
+import { isSteamShell, type SessionFailureKind } from "./DesktopShell";
 import {
   backendReachable,
   retryServerList,
@@ -65,12 +65,12 @@ function worthAutoRetrying(): boolean {
  *
  * The manual `desktop-session-retry` listener is registered on EVERY boot,
  * desktop or web. The status bar dispatches that event and nothing else
- * listens for it, so gating it behind `isDesktopShell()` would leave the
+ * listens for it, so gating it behind `isSteamShell()` would leave the
  * event with no handler at all on a web boot.
  *
  * Only the automatic triggers — `online` and `backend-reachability` — are
- * desktop-only, because only the desktop shell has a Steam session to
- * recover.
+ * Steam-only, because only the Steam shell has a Steam session to recover.
+ * The Android shell signs in the way the web does.
  *
  * @param signIn Re-runs Steam sign-in and refreshes the profile.
  * @returns A cleanup function that removes every listener registered here.
@@ -98,7 +98,7 @@ export function subscribeDesktopSessionRecovery(
   const onRetry = () => void retry(true);
   document.addEventListener("desktop-session-retry", onRetry);
 
-  if (!isDesktopShell()) {
+  if (!isSteamShell()) {
     return () => {
       document.removeEventListener("desktop-session-retry", onRetry);
     };

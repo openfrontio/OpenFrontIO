@@ -34,7 +34,7 @@ uniform sampler2D uHeatTex;
 out vec4 fragColor;
 
 float hash3(vec3 p) {
-  return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453);
+  return fract(sin(dot(mod(p, 6.2831853), vec3(127.1, 311.7, 74.7))) * 43758.5453);
 }
 float vnoise3(vec3 p) {
   vec3 i = floor(p);
@@ -91,14 +91,15 @@ void main() {
 
   // Particle dots — sharper per-tile flicker gated by a stochastic hash.
   // (Relocated here from BorderStampPass; this is fallout-domain logic.)
-  float h1 = fract(sin(float(tc.x) * 12.9898 + float(tc.y) * 78.233) * 43758.5453);
-  float h2 = fract(sin(float(tc.x) * 63.7 + float(tc.y) * 157.3) * 23421.631);
+  vec2 tcMod = mod(vec2(tc), 6.2831853);
+  float h1 = fract(sin(tcMod.x * 12.9898 + tcMod.y * 78.233) * 43758.5453);
+  float h2 = fract(sin(tcMod.x * 63.7 + tcMod.y * 157.3) * 23421.631);
   float pThresh = (owner == 0u) ? uParticleThresholdUnowned : uParticleThresholdOwned;
   if (h2 > pThresh) {
     // Per-tile rate variation breaks the global rhythm so tiles don't all
     // pulse at the same frequency. h1 spans [0,1] → rate spans 0.4×–1.6× base.
     float tileRate = uParticleFlickerSpeed * (0.4 + h1 * 1.2);
-    float flick = max(0.0, sin(uTick * tileRate + h1 * 12.0) * 0.8 + 0.2);
+    float flick = max(0.0, sin(mod(uTick * tileRate, 6.2831853) + h1 * 12.0) * 0.8 + 0.2);
     flick *= flick;
     // Dampen when fresh (high heat); ramp to full as heat decays.
     flick *= mix(uParticleFreshScale, 1.0, 1.0 - heat);

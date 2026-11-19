@@ -2,7 +2,7 @@ import { AllPlayersStats, ClientID } from "../Schemas";
 
 import { TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
-import { maps, type MapInfo } from "./Maps.gen";
+import { GameMapType, maps, type MapInfo } from "./Maps.gen";
 
 function isEnumValue<T extends Record<string, string | number>>(
   enumObj: T,
@@ -121,6 +121,18 @@ export {
 } from "./Maps.gen";
 
 /**
+ * The map of a game whose map files came with its start (a scenario's own
+ * terrain) rather than from resources/maps. It is not a stock map: it is not
+ * in `GameMapType` or `maps`, so nothing lists, picks or fetches it, and the
+ * engine accepts any files for it. A snapshot still refuses to restore onto
+ * files other than the ones it was taken on.
+ */
+export const CustomGameMap = "Custom" as const;
+
+/** A game's map: a stock map, or `CustomGameMap`. */
+export type GameMapId = GameMapType | typeof CustomGameMap;
+
+/**
  * The maps players can pick or be dealt: everything but `hidden` ones (the
  * tutorial map), which only code that names them starts.
  */
@@ -146,12 +158,6 @@ export enum RankedType {
   FreeForAll = "ffa",
   ClanWars = "clanwars",
 }
-
-// Ranked FFA lobby size. The API's matcher assigns between these many players
-// and only rates a game whose roster is in this range, so a match that ends
-// up with fewer is cancelled before it starts.
-export const RANKED_FFA_MIN_PLAYERS = 4;
-export const RANKED_FFA_MAX_PLAYERS = 10;
 
 export const isGameMode = (value: unknown): value is GameMode =>
   isEnumValue(GameMode, value);

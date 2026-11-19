@@ -507,6 +507,12 @@ function getCachedLangSelector(): LangSelector | null {
   return found;
 }
 
+/** The locale selected in OpenFront's language picker, with a safe UI fallback. */
+export const getCurrentLanguage = (): string => {
+  const lang = getCachedLangSelector()?.currentLang ?? "en";
+  return lang === "debug" ? "en" : lang;
+};
+
 /** Language codes whose script reads right-to-left (resources/lang/metadata.json). */
 const RTL_LANGUAGES = new Set(["ar", "fa", "he"]);
 
@@ -597,6 +603,28 @@ export const translateText = (
  */
 export const hasOwnTranslation = (key: string): boolean =>
   getCachedLangSelector()?.translations?.[key] !== undefined;
+
+/**
+ * The raw message templates of every key under `prefix`, in the player's
+ * language over English, keyed without the prefix and not formatted. For a
+ * page that formats its own text from them: the clan map frame, which is
+ * served by the API and gets its strings over postMessage.
+ */
+export const translationTemplates = (
+  prefix: string,
+): Record<string, string> => {
+  const langSelector = getCachedLangSelector();
+  const out: Record<string, string> = {};
+  for (const source of [
+    langSelector?.defaultTranslations,
+    langSelector?.translations,
+  ]) {
+    for (const key in source ?? {}) {
+      if (key.startsWith(prefix)) out[key.slice(prefix.length)] = source![key];
+    }
+  }
+  return out;
+};
 
 export interface HasClanTag {
   clanTag?: string | null | (() => string | null);

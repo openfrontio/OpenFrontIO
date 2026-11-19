@@ -32,6 +32,7 @@ vi.mock("../../src/client/ClientEnv", () => ({
 }));
 vi.mock("../../src/client/Auth", () => ({
   getPlayToken: async () => "8f1d2c3e-4b5a-4c6d-8e7f-90a1b2c3d4e5",
+  getPersistentID: () => "8f1d2c3e-4b5a-4c6d-8e7f-90a1b2c3d4e5",
 }));
 vi.mock("../../src/client/LocalServer", () => ({
   LocalServer: class {},
@@ -106,6 +107,7 @@ import {
   joinLobby,
   LobbyConfig,
 } from "../../src/client/ClientGameRunner";
+import type { GameHealthIndicators } from "../../src/client/hud/layers/GameHealthIndicators";
 import { loadCachedTerrainMap } from "../../src/client/TerrainMapFileLoader";
 import { SendHashEvent } from "../../src/client/Transport";
 import { reloadForUpdate } from "../../src/client/Utils";
@@ -124,11 +126,13 @@ function makeLobbyConfig(withStartInfo: boolean): LobbyConfig {
   } as unknown as LobbyConfig;
 }
 
+const startedRunners: ClientGameRunner[] = [];
+
 // Builds a runner around fully mocked collaborators, starts it, and returns
 // the callbacks start() handed to the transport and the worker.
 function makeStartedRunner(
   withStartInfo: boolean,
-  opts: { isLocal?: boolean; metrics?: object } = {},
+  opts: { isLocal?: boolean; isReplay?: boolean; metrics?: object } = {},
 ) {
   const eventBus = new EventBus();
   const emitSpy = vi.spyOn(eventBus, "emit");
@@ -147,7 +151,11 @@ function makeStartedRunner(
     transformHandler: { screenToWorldCoordinates: vi.fn() },
   };
   const gameView = {
-    config: () => ({ isRandomSpawn: () => false, isReplay: () => false }),
+    config: () => ({
+      isRandomSpawn: () => false,
+      isReplay: () => opts.isReplay ?? false,
+    }),
+    isCatchingUp: vi.fn(() => false),
     inSpawnPhase: () => false,
     myPlayer: () => null,
     update: vi.fn(),
@@ -172,6 +180,7 @@ function makeStartedRunner(
     (opts.metrics ?? null) as never,
   );
   runner.start();
+  startedRunners.push(runner);
 
   const workerCallback = worker.start.mock.calls[0][0] as (gu: unknown) => void;
   const onmessage = transport.updateCallback.mock.calls[0][1] as (
@@ -199,6 +208,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  startedRunners.splice(0).forEach((runner) => runner.stop());
+  vi.useRealTimers();
   document.body.innerHTML = "";
   vi.restoreAllMocks();
   vi.clearAllMocks();
@@ -389,6 +400,165 @@ describe("ClientGameRunner in-game messages", () => {
     expect(() => workerCallback({ errMsg: "boom" })).toThrow(
       "missing gameStartInfo",
     );
+  });
+});
+
+describe("ClientGameRunner health diagnostics", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(document, "hidden", "get").mockReturnValue(false);
+  });
+
+  const indicators = () =>
+    document.querySelector<GameHealthIndicators>("game-health-indicators")!;
+  const startMessage = { type: "start", turns: [] };
+  const turnMessage = { type: "turn", turn: { turnNumber: 0, intents: [] } };
+
+  it("detects a stalled connection without worker updates, then clears on a turn", async () => {
+    const { runner, onmessage } = makeStartedRunner(true, { isLocal: false });
+    const hud = indicators();
+    expect(hud).not.toBeNull();
+    vi.advanceTimersByTime(1000);
+    expect(hud.status.connectionUnstable).toBe(false);
+
+    onmessage(startMessage);
+    vi.advanceTimersByTime(499);
+    expect(hud.status.connectionUnstable).toBe(false);
+    vi.advanceTimersByTime(1);
+    expect(hud.status.connectionUnstable).toBe(true);
+    await hud.updateComplete;
+    expect(hud.shadowRoot?.querySelectorAll("button")).toHaveLength(1);
+
+    onmessage(turnMessage);
+    vi.advanceTimersByTime(250);
+    expect(hud.status.connectionUnstable).toBe(false);
+    await hud.updateComplete;
+    expect(hud.shadowRoot?.querySelectorAll("button")).toHaveLength(0);
+
+    runner.stop();
+    expect(indicators()).toBeNull();
+    vi.advanceTimersByTime(1000);
+    expect(indicators()).toBeNull();
+  });
+
+  it.each([
+    { isLocal: true, isReplay: false },
+    { isLocal: false, isReplay: true },
+  ])(
+    "suppresses network warnings for $isLocal local / $isReplay replay",
+    (opts) => {
+      const { onmessage } = makeStartedRunner(true, opts);
+      onmessage(startMessage);
+      vi.advanceTimersByTime(1000);
+      expect(indicators().status.connectionUnstable).toBe(false);
+      expect(indicators().status.highLatency).toBe(false);
+    },
+  );
+
+  it("clears on reconnect and gives the new start a fresh turn deadline", () => {
+    const { onmessage, transport } = makeStartedRunner(true, {
+      isLocal: false,
+    });
+    onmessage(startMessage);
+    vi.advanceTimersByTime(500);
+    expect(indicators().status.connectionUnstable).toBe(true);
+    const onconnect = transport.updateCallback.mock.calls[0][0] as () => void;
+    onconnect();
+    expect(indicators().status.connectionUnstable).toBe(false);
+    vi.advanceTimersByTime(1000);
+    expect(indicators().status.connectionUnstable).toBe(false);
+    onmessage(startMessage);
+    vi.advanceTimersByTime(250);
+    expect(indicators().status.connectionUnstable).toBe(false);
+    vi.advanceTimersByTime(250);
+    expect(indicators().status.connectionUnstable).toBe(true);
+  });
+
+  it("suppresses a deliberate pause and resets the deadline when play resumes", () => {
+    const { onmessage, workerCallback } = makeStartedRunner(true, {
+      isLocal: false,
+    });
+    onmessage(startMessage);
+    const pause = (paused: boolean) =>
+      workerCallback({
+        updates: {
+          [GameUpdateType.Hash]: [],
+          [GameUpdateType.GamePaused]: [
+            { type: GameUpdateType.GamePaused, paused },
+          ],
+        },
+      });
+    pause(true);
+    vi.advanceTimersByTime(1500);
+    expect(indicators().status.connectionUnstable).toBe(false);
+    pause(false);
+    vi.advanceTimersByTime(250);
+    expect(indicators().status.connectionUnstable).toBe(false);
+    vi.advanceTimersByTime(250);
+    expect(indicators().status.connectionUnstable).toBe(true);
+  });
+
+  it("sends measured pong RTT to telemetry and displays a spike against match baseline", () => {
+    const metrics = {
+      start: vi.fn(),
+      stop: vi.fn(),
+      recordRoundTrip: vi.fn(),
+    };
+    const { onmessage } = makeStartedRunner(true, { isLocal: false, metrics });
+    onmessage(startMessage);
+    const pong = (rtt: number) =>
+      onmessage({
+        type: "pong",
+        sentAt: Math.floor(performance.now()) - rtt,
+      });
+    for (let sample = 0; sample < 3; sample++) {
+      vi.advanceTimersByTime(1000);
+      pong(40);
+    }
+    expect(indicators().status.highLatency).toBe(false);
+    vi.advanceTimersByTime(1000);
+    pong(200);
+    expect(metrics.recordRoundTrip).toHaveBeenLastCalledWith(200);
+    expect(indicators().status.highLatency).toBe(true);
+    vi.advanceTimersByTime(1000);
+    pong(40);
+    expect(indicators().status.highLatency).toBe(false);
+  });
+
+  it("reports sustained catch-up as performance trouble in a local game", async () => {
+    const { onmessage, gameView } = makeStartedRunner(true, { isLocal: true });
+    onmessage(startMessage);
+    gameView.isCatchingUp.mockReturnValue(true);
+    vi.advanceTimersByTime(1000);
+    expect(indicators().status.performance).toBe(false);
+    vi.advanceTimersByTime(250);
+    expect(indicators().status.performance).toBe(true);
+    expect(indicators().status.highLatency).toBe(false);
+    expect(indicators().status.connectionUnstable).toBe(false);
+    await indicators().updateComplete;
+    expect(
+      indicators().shadowRoot?.querySelector("[data-warning=performance]"),
+    ).not.toBeNull();
+    gameView.isCatchingUp.mockReturnValue(false);
+    vi.advanceTimersByTime(250);
+    expect(indicators().status.performance).toBe(false);
+  });
+
+  it("hides warnings while backgrounded and starts a fresh deadline on return", () => {
+    const hidden = vi.spyOn(document, "hidden", "get");
+    const { onmessage } = makeStartedRunner(true, { isLocal: false });
+    onmessage(startMessage);
+    vi.advanceTimersByTime(500);
+    expect(indicators().status.connectionUnstable).toBe(true);
+    hidden.mockReturnValue(true);
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(indicators().status.connectionUnstable).toBe(false);
+    vi.advanceTimersByTime(1000);
+    hidden.mockReturnValue(false);
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(indicators().status.connectionUnstable).toBe(false);
+    vi.advanceTimersByTime(500);
+    expect(indicators().status.connectionUnstable).toBe(true);
   });
 });
 

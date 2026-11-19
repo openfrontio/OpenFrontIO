@@ -111,3 +111,53 @@ describe("HeadsUpMessage toast gestures", () => {
     ).toBe("translate3d(0px, 0px, 0)");
   });
 });
+
+describe("HeadsUpMessage spawn message", () => {
+  const spawningGame = (tutorial: boolean) => ({
+    updatesSinceLastTick: () => null,
+    ticks: () => 0,
+    inSpawnPhase: () => true,
+    isSpawnImmunityActive: () => false,
+    isCatchingUp: () => false,
+    elapsedGameSeconds: () => 0,
+    config: () => ({
+      numSpawnPhaseTurns: () => 100,
+      hasExtendedSpawnImmunity: () => false,
+      isReplay: () => false,
+      isIntentionalSpectator: () => false,
+      isRandomSpawn: () => false,
+      overtimeConfig: () => ({ enabled: false, startMinutes: 0 }),
+      gameConfig: () => ({ tutorial }),
+    }),
+  });
+
+  it.each([
+    [false, true],
+    [true, false],
+  ])("in the tutorial: %s, shows it: %s", async (tutorial, shown) => {
+    const element = new HeadsUpMessage();
+    element.game = spawningGame(tutorial) as never;
+    element.tick();
+    document.body.appendChild(element);
+    await element.updateComplete;
+    expect(element.textContent?.includes("heads_up_message.choose_spawn")).toBe(
+      shown,
+    );
+    element.remove();
+  });
+
+  it("leaves catch-up warnings to the health icons instead of showing a banner", async () => {
+    const element = new HeadsUpMessage();
+    element.game = {
+      ...spawningGame(false),
+      inSpawnPhase: () => false,
+      isCatchingUp: () => true,
+    } as never;
+    for (let tick = 0; tick < 20; tick++) element.tick();
+    document.body.appendChild(element);
+    await element.updateComplete;
+    expect(element.textContent).not.toContain("heads_up_message.catching_up");
+    expect(element.querySelector(".fixed")).toBeNull();
+    element.remove();
+  });
+});

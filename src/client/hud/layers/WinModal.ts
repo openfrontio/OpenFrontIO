@@ -1,26 +1,28 @@
-import { GameType, RankedType } from "@openfront/engine-api/game/GameTypes";
+import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import type { AllPlayersStats, Winner } from "@openfront/engine-api/Schemas";
 import type { GameXpEligible, Progress } from "@openfront/shared/ApiSchemas";
 import { Pattern } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
-import { html, LitElement, TemplateResult } from "lit";
+import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
-  copyToClipboard,
   DESKTOP_TUTORIAL_VIDEO_URL,
   getGamesPlayed,
   getTranslatedPlayerTeamLabel,
   homeHref,
   isInIframe,
-  showToast,
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
 import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
-import { ClientEnv } from "../../ClientEnv";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
+import {
+  ffaRatingGameOf,
+  type FfaRatingGame,
+  viewerHasFfaRating,
+} from "../../components/ffaRating/FfaRatingEligibility";
 import type { GameXpPanelState } from "../../components/GameXpPanel";
 import type { LegendCeremony } from "../../components/LegendCeremony";
 import "../../components/ProfileShare";
@@ -34,6 +36,8 @@ import {
 } from "../../Cosmetics";
 import { isDesktopShell } from "../../DesktopShell";
 import { gamePortal } from "../../GamePortal";
+import { lobbyPublicGameType } from "../../LobbyPublicGameType";
+import type { MatchmakingMode } from "../../Matchmaking";
 import {
   gameShareMoment,
   momentShareLabel,
@@ -57,9 +61,10 @@ import {
   provisionalXpRules,
   reconcileXp,
 } from "../../ProvisionalXpAtDeath";
+import { requeueModeForRankedType } from "../../RequeueUrl";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
-import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
+import { shareGame } from "../../utilities/ShareGame";
 import { GameView } from "../../view";
 
 type LegendCeremonyModule = typeof import("../../components/LegendCeremony");
@@ -94,6 +99,12 @@ function loadGameXpPanel(): void {
   );
 }
 
+// The rating panel is only worth its bytes after a rated FFA game: fetched
+// when the win screen finds the viewer has a rating to show.
+function loadFfaRatingPanel(): Promise<unknown> {
+  return import("../../components/ffaRating/FfaRatingPanel");
+}
+
 const iconShare = html`<svg
   xmlns="http://www.w3.org/2000/svg"
   viewBox="0 0 24 24"
@@ -125,8 +136,10 @@ export class WinModal extends LitElement implements Controller {
   @state()
   private isWin = false;
 
+  // The queue to rejoin from "Play Again"; null when the game has none (an
+  // unranked game, or a ranked FFA game, which has no queue any more).
   @state()
-  private isRankedGame = false;
+  private requeueMode: MatchmakingMode | null = null;
 
   @state()
   private patternContent: TemplateResult | null = null;
@@ -135,6 +148,11 @@ export class WinModal extends LitElement implements Controller {
   // no progression, a spectator or a replay never see the section at all.
   @state()
   private xpView: GameXpPanelState = { kind: "hidden" };
+  // The FFA rating this game may have changed; null shows no panel.
+  @state()
+  private ffaRating: FfaRatingGame | null = null;
+  // Decided once per game.
+  private ffaRatingChecked = false;
   // Polling starts once, at the end of the game.
   private xpPolling = false;
   private xpAbort: AbortController | null = null;
@@ -205,6 +223,15 @@ export class WinModal extends LitElement implements Controller {
             .gameType=${this.game?.config().gameConfig().gameType ?? null}
             @xp-legend=${this.onXpLegend}
           ></game-xp-panel>
+          ${
+            this.ffaRating === null
+              ? nothing
+              : html`<ffa-rating-panel
+                  class="mt-3 block"
+                  .gameId=${this.ffaRating.gameId}
+                  .lobbyHumans=${this.ffaRating.lobbyHumans}
+                ></ffa-rating-panel>`
+          }
           ${this.innerHtml()}
         </div>
         <!-- Leaving is the quieter action, on the left; staying in the game
@@ -219,7 +246,7 @@ export class WinModal extends LitElement implements Controller {
           )}
           ${this.renderShare()}
           ${
-            this.isRankedGame
+            this.requeueMode !== null
               ? this.actionButton(
                   "main",
                   translateText("win_modal.requeue"),
@@ -347,9 +374,10 @@ export class WinModal extends LitElement implements Controller {
     if (url === null) return null;
     // Three labelled buttons fit side by side from md up; below that (and
     // beside a ranked game's requeue button) it takes a row of its own.
-    const placement = this.isRankedGame
-      ? "order-first basis-full"
-      : "order-first basis-full md:order-none md:basis-0 md:flex-1";
+    const placement =
+      this.requeueMode !== null
+        ? "order-first basis-full"
+        : "order-first basis-full md:order-none md:basis-0 md:flex-1";
     return html`<profile-share
       data-win-share
       class="flex ${placement}"
@@ -501,9 +529,10 @@ export class WinModal extends LitElement implements Controller {
   }
 
   innerHtml() {
-    // The Steam desktop build has nothing to wishlist — fall through to the
-    // other promos so the box is never empty.
-    const canWishlist = !steamSDK.isOnSteam();
+    // The Steam desktop build has nothing to wishlist, and the Android app
+    // must not send the player to another store — fall through to the other
+    // promos so the box is never empty.
+    const canWishlist = !isDesktopShell();
 
     if (isInIframe()) {
       return canWishlist ? this.steamWishlist() : this.discordDisplay();
@@ -610,8 +639,8 @@ export class WinModal extends LitElement implements Controller {
                 .priceSoft=${pattern?.priceSoft ?? null}
                 .rarity=${pattern?.rarity ?? "common"}
                 .itemName=${cosmeticSelectionLabel(resolved)}
-                .onPurchaseHard=${() => purchaseCosmetic(resolved, "hard")}
-                .onPurchaseSoft=${() => purchaseCosmetic(resolved, "soft")}
+                .onPurchaseHard=${() => purchaseCosmetic(resolved, "hard", { kind: "post_game" })}
+                .onPurchaseSoft=${() => purchaseCosmetic(resolved, "soft", { kind: "post_game" })}
               ></purchase-button>
             </div>
           `;
@@ -657,8 +686,11 @@ export class WinModal extends LitElement implements Controller {
 
   async show() {
     void gamePortal.gameplayStop();
-    this.isRankedGame =
-      this.game.config().gameConfig().rankedType !== undefined;
+    // The onboarding tutorial ends on its own card (OnboardingOverlay).
+    if (this.game.config().gameConfig().tutorial === true) return;
+    this.requeueMode = requeueModeForRankedType(
+      this.game.config().gameConfig().rankedType,
+    );
     this.isVisible = true;
     this.requestUpdate();
     try {
@@ -980,49 +1012,20 @@ export class WinModal extends LitElement implements Controller {
   }
 
   private _handleRequeue() {
+    if (this.requeueMode === null) return;
     this.hide();
     // Requeue for the same mode; Main owns the mechanism (currently a
     // reload with the requeue param, which reopens the queue after the
     // page teardown).
-    const rankedType = this.game.config().gameConfig().rankedType;
     document.dispatchEvent(
       new CustomEvent("matchmaking-requeue", {
-        detail: {
-          mode:
-            rankedType === RankedType.TwoVTwo
-              ? ("2v2" as const)
-              : rankedType === RankedType.FreeForAll
-                ? ("ffa" as const)
-                : rankedType === RankedType.ClanWars
-                  ? ("clanwars" as const)
-                  : ("1v1" as const),
-        },
+        detail: { mode: this.requeueMode },
       }),
     );
   }
 
   private async _handleShare() {
-    const gameId = this.game?.gameID();
-    if (!gameId) {
-      showToast(translateText("common.failed_copy"), "red");
-      return;
-    }
-
-    try {
-      const text = gamePortal.isOnGamePortal()
-        ? await gamePortal.createInviteLink(gameId)
-        : `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
-
-      if (!text) {
-        showToast(translateText("common.failed_copy"), "red");
-        return;
-      }
-
-      await copyToClipboard(text);
-      showToast(translateText("common.copied"), "green");
-    } catch {
-      showToast(translateText("common.failed_copy"), "red");
-    }
+    await shareGame(this.game?.gameID());
   }
 
   init() {
@@ -1130,7 +1133,41 @@ export class WinModal extends LitElement implements Controller {
       }
     });
     // After the vote, so a figure from the end has what was voted.
-    if (winUpdates.length > 0) void this.updateXp(true);
+    if (winUpdates.length > 0) {
+      void this.updateXp(true);
+      void this.updateFfaRating();
+    }
+  }
+
+  /**
+   * Shows the FFA rating panel when this game can have changed the viewer's
+   * rating: a public unranked FFA game they played, and a signed-in account
+   * (a linked login or a portal profile) that already carries live rating
+   * fields (see viewerHasFfaRating). Trust only gates board listing, so it
+   * isn't checked here.
+   * Decided once per game; any failure shows nothing.
+   */
+  private async updateFfaRating(): Promise<void> {
+    if (this.ffaRatingChecked) return;
+    try {
+      const ffaGame = ffaRatingGameOf(
+        this.game,
+        lobbyPublicGameType(this.game.gameID()),
+      );
+      if (ffaGame === null) return;
+      // Only a human winner ends a rated game: a nation or tribe win, a team
+      // win or a cancelled match is never rated.
+      if (this.gameEnd?.winner?.[0] !== "player") return;
+      this.ffaRatingChecked = true;
+      const account = await resolveXpAccount();
+      if (account.kind !== "signed_in" || !viewerHasFfaRating(account.me)) {
+        return;
+      }
+      await loadFfaRatingPanel();
+      this.ffaRating = ffaGame;
+    } catch (err) {
+      console.warn("WinModal: no FFA rating panel", err);
+    }
   }
 
   private playEndOfGameSound(): void {

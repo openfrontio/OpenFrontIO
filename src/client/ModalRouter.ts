@@ -130,6 +130,7 @@ class ModalRouter {
     // tracking that modal, so its close wouldn't clear the path, and the next
     // reload would open it again.
     this.leavePath();
+    this.currentName = name;
     void this.openRegistered(name, entry, args);
     return true;
   }
@@ -146,6 +147,9 @@ class ModalRouter {
       await loadModal(entry.tag);
     } catch (err) {
       console.error(`${entry.tag} failed to load:`, err);
+      if (this.currentName === name) {
+        this.currentName = null;
+      }
       return;
     }
     await customElements.whenDefined(entry.tag);
@@ -155,6 +159,9 @@ class ModalRouter {
       this.currentHashParams().get("modal") !== name &&
       this.pathRoutedName !== name
     ) {
+      if (this.currentName === name) {
+        this.currentName = null;
+      }
       return;
     }
 
@@ -197,6 +204,32 @@ class ModalRouter {
     if (this.currentName !== name) return; // not the active routed modal
     this.currentName = null;
     this.replaceHash("");
+  }
+
+  /**
+   * Close the currently active router-managed modal, if any.
+   * Returns true if a modal was active and closed.
+   */
+  closeCurrent(): boolean {
+    if (this.currentName === null) return false;
+    const name = this.currentName;
+    this.currentName = null;
+    if (this.pathRoutedName === name) {
+      this.leavePath();
+    }
+    const entry = this.registry.get(name);
+    if (entry) {
+      this.routingFromUrl = true;
+      try {
+        const el = document.querySelector(entry.tag) as RoutableModal | null;
+        if (typeof el?.close === "function") {
+          el.close();
+        }
+      } finally {
+        this.routingFromUrl = false;
+      }
+    }
+    return true;
   }
 
   /** Called by BaseModal.setActiveTab() when a router-managed modal switches tabs. */

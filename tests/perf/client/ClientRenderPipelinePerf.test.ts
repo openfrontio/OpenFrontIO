@@ -939,7 +939,7 @@ function createGhostRailData(
     ownerID: 1,
     upgradeTargetTile: null,
     rangeRadius: 10,
-    rangeWarning: false,
+    rangeWarning: "none",
   };
 }
 
@@ -1258,7 +1258,7 @@ function makeGhostForPort(
     ownerID: 1,
     upgradeTargetTile: null,
     rangeRadius: 18,
-    rangeWarning: false,
+    rangeWarning: "none",
   };
 }
 

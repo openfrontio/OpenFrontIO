@@ -38,6 +38,7 @@ const translations = {
   "store.already_owned": "already owned",
   "store.purchase_failed": "failed",
   "store.purchase_success": "bought {name}",
+  "store.purchase_success_charged": "bought {name} for {amount} {currency}",
 };
 
 const pirateFlag: ResolvedCosmetic = {
@@ -302,6 +303,33 @@ describe("purchaseCosmetic when the wallet is in debt", () => {
     expect(reloadMock).not.toHaveBeenCalled();
   });
 
+  it("says what was charged when it isn't the price shown", async () => {
+    // The card showed 100 plutonium; a flash slot turned over before the
+    // request landed and the server charged the list price.
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: true,
+      amount: 200,
+    });
+
+    await purchaseCosmetic(pirateFlag, "hard");
+
+    expect(showInGameAlert).toHaveBeenCalledWith(
+      "bought pirate for 200 plutonium",
+    );
+    expect(reloadMock).toHaveBeenCalled();
+  });
+
+  it("keeps the plain success message when the charge matches", async () => {
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: true,
+      amount: 400,
+    });
+
+    await purchaseCosmetic(pirateFlag, "soft");
+
+    expect(showInGameAlert).toHaveBeenCalledWith("bought pirate");
+  });
+
   it("still grants and reloads on success", async () => {
     vi.mocked(purchaseWithCurrency).mockResolvedValue({ ok: true });
 
@@ -311,6 +339,7 @@ describe("purchaseCosmetic when the wallet is in debt", () => {
       "flag",
       "pirate",
       "hard",
+      undefined,
       undefined,
     );
     expect(showInGameAlert).toHaveBeenCalledWith("bought pirate");

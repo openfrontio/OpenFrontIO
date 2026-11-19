@@ -143,8 +143,11 @@ export class TutorialPanel extends LitElement implements Controller {
       this.started = true;
       // The steps walk a new game from its spawn; a resumed save is well
       // past that, and would hold the spawn ring up until the next attack.
+      // The onboarding tutorial has its own guide (OnboardingOverlay).
       this.setActive(
-        !this.userSettings.tutorialDismissed() && !this.game.resumedFromSave(),
+        !this.userSettings.tutorialDismissed() &&
+          !this.game.resumedFromSave() &&
+          this.game.config().gameConfig().tutorial !== true,
       );
     }
     if (!this.active) return;

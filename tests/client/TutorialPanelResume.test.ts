@@ -9,7 +9,7 @@ function firstTick(resumedFromSave: boolean) {
   const myPlayer = vi.fn(() => null);
   const panel = document.createElement("tutorial-panel") as TutorialPanel;
   panel.game = {
-    config: () => ({ isReplay: () => false }),
+    config: () => ({ isReplay: () => false, gameConfig: () => ({}) }),
     myPlayer,
     resumedFromSave: () => resumedFromSave,
     setOwnSpawnRing: vi.fn(),

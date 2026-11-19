@@ -52,6 +52,9 @@ export function clanApiMockFactory() {
       page: 1,
       limit: 10,
     })),
+    // An API without clan fund transfers: the Transfers tab stays hidden.
+    fetchClanFundTransfers: vi.fn(async () => ({ error: "unavailable" })),
+    fetchClanFundRecipients: vi.fn(async () => false),
     fetchClanRequests: vi.fn(async () => ({
       results: [],
       total: 0,
@@ -111,6 +114,10 @@ export function apiMockFactory() {
 export function utilsMockFactory() {
   return {
     translateText: vi.fn((key: string) => key),
+    // The clan map frame's strings (ClanMapView) and text direction.
+    translationTemplates: vi.fn(() => ({ claim_land: "Claim land" })),
+    isRTL: vi.fn(() => false),
+    getCurrentLanguage: vi.fn(() => "en"),
     showToast: vi.fn(),
     // Used by the game-history rows; identity formatting keeps assertions
     // readable without pulling in the real duration/map lookups.
@@ -129,6 +136,32 @@ export function authMockFactory() {
 export function crazyGamesSdkMockFactory() {
   return {
     crazyGamesSDK: { isAvailable: false },
+  };
+}
+
+export async function cosmeticsMockFactory() {
+  const actual = await vi.importActual<
+    typeof import("../../../src/client/Cosmetics")
+  >("../../../src/client/Cosmetics");
+  return {
+    ...actual,
+    fetchCosmetics: vi.fn(async () => null),
+    refreshStaleCosmetics: vi.fn(() => false),
+    broadcastFreshUserMe: vi.fn(async () => {
+      const api = await import("../../../src/client/Api");
+      api.invalidateUserMe();
+      const fresh = await api.getUserMe();
+      if (fresh) {
+        document.dispatchEvent(
+          new CustomEvent("userMeResponse", {
+            detail: fresh,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      }
+      return fresh;
+    }),
   };
 }
 

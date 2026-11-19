@@ -4,6 +4,8 @@
   "name": "Two Lakes",
   "translation_key": "map.twolakes",
   "categories": ["europe"],
+  "location": { "lat": 40.95, "lon": 20.9 },
+  "author": "Duwibi",
   "nations": [
     {
       "coordinates": [1025, 750],

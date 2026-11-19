@@ -10,18 +10,10 @@ import { translateText } from "../../Utils";
 import "../CapIcon";
 import { formatCurrencyAmount } from "../CurrencyDisplay";
 import "../PlutoniumIcon";
-import { formatBoostRemaining } from "./ClanShared";
+import { formatBoostRemaining, newIdempotencyKey } from "./ClanShared";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
-
-// Same shape as ClanDonateDialog's: UUID when available, random hex outside
-// secure contexts. 8–64 chars, as the API requires.
-function newIdempotencyKey(): string {
-  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 // Tier lengths: whole days as days ("7 days"), anything else as hours.
 function formatDuration(ms: number): string {

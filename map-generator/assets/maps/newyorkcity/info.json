@@ -4,6 +4,8 @@
   "name": "New York City",
   "translation_key": "map.newyorkcity",
   "categories": ["north_america"],
+  "location": { "lat": 40.7, "lon": -74 },
+  "author": "Aaron Tidwell",
   "nations": [
     {
       "coordinates": [127, 1323],

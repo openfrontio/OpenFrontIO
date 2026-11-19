@@ -4,6 +4,7 @@
   "name": "Achiran",
   "translation_key": "map.achiran",
   "categories": ["fictional", "europe"],
+  "author": "Duwibi",
   "nations": [
     {
       "coordinates": [785, 985],

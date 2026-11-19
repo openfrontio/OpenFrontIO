@@ -62,7 +62,7 @@ export class TeamStats extends StatsTable {
     return [...teams.entries()].map(([team, players]) => {
       return {
         key: team,
-        name: getTranslatedPlayerTeamLabel(team),
+        name: getTranslatedPlayerTeamLabel(team, game.teamClanTag?.(team)),
         values: aggregateTeamValues(players, columns, game),
         emphasized: team === myTeam,
         pinned: team === myTeam,

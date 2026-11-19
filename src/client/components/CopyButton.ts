@@ -76,7 +76,8 @@ export class CopyButton extends LitElement {
 
   private async resolveCopyText(): Promise<string | null> {
     if (this.copyText) return this.copyText;
-    if (gamePortal.isOnGamePortal()) {
+    // VIVERSE has no invite links of its own, so it shares a plain link.
+    if (gamePortal.isOnGamePortal() && gamePortal.name() !== "viverse") {
       return gamePortal.createInviteLink(this.lobbyId);
     }
     if (!this.lobbyId) return "";

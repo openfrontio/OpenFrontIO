@@ -463,6 +463,24 @@ describe("AccountModal — Progression tab", () => {
     expect(fetchPlayerByIdMock).toHaveBeenCalledWith("me");
   });
 
+  it("puts the account's own FFA rating on the full card", async () => {
+    me = {
+      ...me,
+      player: {
+        ...me.player!,
+        leaderboard: { ffa: { games: 3, wins: 1, calibrationGames: 3 } },
+      },
+    } as UserMeResponse;
+    modal.open();
+    await settle(() => {
+      expect(
+        modal.querySelector<HTMLElement & { ffaRating: unknown }>(
+          "profile-card",
+        )?.ffaRating,
+      ).toEqual({ kind: "calibrating", calibrationGames: 3 });
+    });
+  });
+
   it("opens on the tab from a link", async () => {
     history.replaceState(null, "", "/#modal=account&tab=progression");
     expect(modalRouter.routeFromHash()).toBe(true);

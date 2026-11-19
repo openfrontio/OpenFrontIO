@@ -1,8 +1,16 @@
-import { Difficulty, GameMapType } from "@openfront/engine-api/game/GameTypes";
+import {
+  Difficulty,
+  GameMapType,
+  maps,
+} from "@openfront/engine-api/game/GameTypes";
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
+import {
+  loadCachedManifest,
+  terrainMapFileLoader,
+} from "../../TerrainMapFileLoader";
 import { translateText } from "../../Utils";
+import { type MapStats, mapStats } from "./MapDetails";
 import { starIcon } from "./MapFavorites";
 import { MEDAL_ORDER, medalIcon } from "./Medals";
 
@@ -19,6 +27,7 @@ export class MapDisplay extends LitElement {
   @state() private mapName: string | null = null;
   @state() private isLoading = true;
   @state() private hasNations = true;
+  @state() private stats?: MapStats;
   private observer: IntersectionObserver | null = null;
   private dataLoaded = false;
 
@@ -66,11 +75,12 @@ export class MapDisplay extends LitElement {
 
     try {
       this.isLoading = true;
+      this.stats = undefined;
       const mapValue = GameMapType[this.mapKey as keyof typeof GameMapType];
-      const data = terrainMapFileLoader.getMapData(mapValue);
-      this.mapWebpPath = data.webpPath;
-      const manifest = await data.manifest();
+      this.mapWebpPath = terrainMapFileLoader.getMapData(mapValue).webpPath;
+      const manifest = await loadCachedManifest(mapValue);
       this.mapName = manifest.name;
+      this.stats = mapStats(manifest);
       this.hasNations =
         Array.isArray(manifest.nations) && manifest.nations.length > 0;
     } catch (error) {
@@ -130,7 +140,7 @@ export class MapDisplay extends LitElement {
         aria-selected="${this.selected}"
         aria-label="${this.translation ?? this.mapName ?? this.mapKey}"
         @keydown="${this.handleKeydown}"
-        class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 active:scale-95 gap-3 group ${
+        class="relative w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 active:scale-95 gap-3 group hover:z-10 focus-within:z-10 ${
           this.selected
             ? "bg-malibu-blue/20 border-malibu-blue/50 shadow-[var(--shadow-malibu-blue-strong)]"
             : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:scale-105"
@@ -176,6 +186,11 @@ export class MapDisplay extends LitElement {
         >
           ${this.translation || this.mapName}
         </div>
+        <map-details
+          class="contents"
+          .map=${maps.find((m) => m.id === this.mapKey)}
+          .stats=${this.stats}
+        ></map-details>
       </div>
     `;
   }

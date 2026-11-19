@@ -1,4 +1,5 @@
-import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { GameMapId, GameMapSize } from "@openfront/engine-api/game/GameTypes";
+import { MapManifest } from "@openfront/engine-api/game/MapManifest";
 import {
   loadTerrainMap,
   TerrainMapData,
@@ -12,10 +13,22 @@ export const terrainMapFileLoader = new FetchGameMapLoader((path) =>
 );
 
 const terrainMaps = new Map<string, TerrainMapData>();
+const manifests = new Map<GameMapId, Promise<MapManifest>>();
+
+/** A map's manifest, fetched once. */
+export function loadCachedManifest(map: GameMapId): Promise<MapManifest> {
+  let manifest = manifests.get(map);
+  if (manifest === undefined) {
+    manifest = terrainMapFileLoader.getMapData(map).manifest();
+    manifest.catch(() => manifests.delete(map));
+    manifests.set(map, manifest);
+  }
+  return manifest;
+}
 
 /** The maps the client draws on, built once per map and size. */
 export async function loadCachedTerrainMap(
-  map: GameMapType,
+  map: GameMapId,
   mapSize: GameMapSize,
 ): Promise<TerrainMapData> {
   const key = `${map}:${mapSize}`;

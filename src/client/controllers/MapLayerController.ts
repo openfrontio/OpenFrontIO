@@ -6,7 +6,7 @@
  * so the game starts without blocking on layer images.
  */
 
-import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { GameMapId, GameMapSize } from "@openfront/engine-api/game/GameTypes";
 import { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { GameMapLoader } from "@openfront/shared/GameMapLoader";
@@ -20,7 +20,7 @@ export class MapLayerController implements Controller {
     private readonly view: MapRenderer,
     private readonly gameMap: TerrainMapData,
     private readonly userSettings: UserSettings,
-    private readonly gameMapType: GameMapType,
+    private readonly gameMapType: GameMapId,
     private readonly gameMapSize: GameMapSize,
     private readonly mapLoader: GameMapLoader,
     private readonly abortSignal: AbortSignal,
@@ -60,7 +60,7 @@ export class MapLayerController implements Controller {
  * Compact games load the map4x-sized variant, matching the grid they draw on.
  */
 export async function loadLayerImages(
-  map: GameMapType,
+  map: GameMapId,
   mapSize: GameMapSize,
   terrainMapFileLoader: GameMapLoader,
   layers: MapLayer[],

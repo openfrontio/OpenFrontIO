@@ -4,6 +4,8 @@
   "name": "Europe",
   "translation_key": "map.europe",
   "categories": ["featured", "continental", "europe"],
+  "location": { "lat": 50.5, "lon": 16 },
+  "author": "APuddle210",
   "featured_rank": 2,
   "nations": [
     {

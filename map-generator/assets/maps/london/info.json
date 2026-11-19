@@ -1,0 +1,325 @@
+{
+  "$schema": "../../../info.schema.json",
+  "id": "London",
+  "name": "London",
+  "translation_key": "map.london",
+  "location": { "lat": 51.3, "lon": 0 },
+  "author": "Tristar",
+  "description": "A map of the Greater London area. Founded by the Romans in AD 43 as a settlement named Londinium, London is the capital city of England and the United Kingdom, and its largest metropolis. It is also the country's economic, transportation, and cultural center with a history spanning nearly 2,000 years.",
+  "categories": ["europe"],
+  "nations": [
+    {
+      "coordinates": [1396, 1285],
+      "name": "Bromley",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1538, 935],
+      "name": "Bexley",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1748, 594],
+      "name": "Havering",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1536, 644],
+      "name": "Barking and Dagenham",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1371, 877],
+      "name": "Greenwich",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1208, 1019],
+      "name": "Lewisham",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1081, 1260],
+      "name": "Croydon",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [845, 1344],
+      "name": "Sutton",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1348, 503],
+      "name": "Redbridge",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1308, 727],
+      "name": "Newham",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1162, 737],
+      "name": "Tower Hamlets",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1111, 611],
+      "name": "Hackney",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1190, 407],
+      "name": "Waltham Forest",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1023, 203],
+      "name": "Enfield",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [767, 343],
+      "name": "Barnet",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [462, 442],
+      "name": "Harrow",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [684, 610],
+      "name": "Brent",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [459, 747],
+      "name": "Ealing",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [220, 719],
+      "name": "Hillingdon",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [414, 895],
+      "name": "Hounslow",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [505, 1009],
+      "name": "Richmond upon Thames",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [556, 1237],
+      "name": "Kingston upon Thames",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [798, 1137],
+      "name": "Merton",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [821, 950],
+      "name": "Wandsworth",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [959, 983],
+      "name": "Lambeth",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1085, 875],
+      "name": "Southwark",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1033, 740],
+      "name": "City of London",
+      "flag": "gb-lnd"
+    },
+    {
+      "coordinates": [866, 738],
+      "name": "Westminster",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [822, 830],
+      "name": "Kensington and Chelsea",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [723, 819],
+      "name": "Hammersmith and Fulham",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [889, 600],
+      "name": "Camden",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [977, 574],
+      "name": "Islington",
+      "flag": "Greater London"
+    }
+  ],
+  "additionalNations": [
+    {
+      "coordinates": [253, 523],
+      "name": "Ruislip",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [129, 444],
+      "name": "Harefield",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [389, 462],
+      "name": "Pinner",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [554, 378],
+      "name": "Stanmore",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [673, 375],
+      "name": "Edgware",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1312, 421],
+      "name": "Woodford",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1425, 603],
+      "name": "Ilford",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1612, 529],
+      "name": "Romford",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1336, 762],
+      "name": "London City Airport",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [952, 506],
+      "name": "Holloway",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [532, 633],
+      "name": "Wembley",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [386, 634],
+      "name": "Northolt",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [242, 778],
+      "name": "Hayes",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [192, 907],
+      "name": "Heathrow Airport",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [291, 1014],
+      "name": "Feltham",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [428, 846],
+      "name": "Heston",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1575, 827],
+      "name": "Belvedere",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1472, 1062],
+      "name": "Sidcup",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1069, 1097],
+      "name": "Beckenham",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1288, 1468],
+      "name": "Biggin Hill",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1213, 1227],
+      "name": "West Wickham",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1015, 1180],
+      "name": "Thornton Heath",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [883, 1185],
+      "name": "Mitcham",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [515, 1107],
+      "name": "Teddington",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [473, 1023],
+      "name": "Twickenham",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1057, 987],
+      "name": "Dulwich Village",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [441, 697],
+      "name": "Greenford",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [368, 779],
+      "name": "Southall",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [1030, 803],
+      "name": "South Bank",
+      "flag": "Greater London"
+    },
+    {
+      "coordinates": [921, 727],
+      "name": "Bloomsbury",
+      "flag": "Greater London"
+    }
+  ],
+  "themes": ["europe"]
+}

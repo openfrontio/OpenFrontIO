@@ -148,6 +148,11 @@ export class HeatManager {
     return this.heatReadTex;
   }
 
+  /** True when radioactive fallout heat is non-zero anywhere on the map. */
+  get isHeatActive(): boolean {
+    return this.heatActive;
+  }
+
   /**
    * Run GPU heat update: detect fallout-bit transitions, apply decay,
    * then snapshot tileTex → prevTileTex.

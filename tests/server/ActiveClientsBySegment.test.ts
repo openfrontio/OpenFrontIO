@@ -70,8 +70,8 @@ describe("GameManager.activeClientsBySegment", () => {
       { platform: "steam", device: "desktop", auth: "account", count: 2 },
       { platform: "unknown", device: "unknown", auth: "anonymous", count: 1 },
     ]);
-    // 5 platforms x 3 devices x 2 auth states, every one present.
-    expect(segments).toHaveLength(30);
+    // 6 platforms x 3 devices x 2 auth states, every one present.
+    expect(segments).toHaveLength(36);
     expect(manager.activeClients()).toBe(6);
   });
 });

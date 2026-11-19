@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { EventBus } from "@openfront/shared/EventBus";
 import "../../src/client/hud/layers/ControlPanel";
 import type { ControlPanel } from "../../src/client/hud/layers/ControlPanel";
+import { FORWARDED_CLICK } from "../../src/client/InputHandler";
 import type { UIState } from "../../src/client/UIState";
 import { UserSettings } from "../../src/client/UserSettings";
 import type { GameView } from "../../src/client/view";
@@ -128,5 +129,111 @@ describe("control-panel attack ratio", () => {
     expect(() => fresh.onAttackRatioChange(0.3)).not.toThrow();
 
     fresh.remove();
+  });
+
+  it("moves the slider when the radial menu forwards a tap to it", async () => {
+    panel.game = {
+      inSpawnPhase: () => false,
+      myPlayer: () => ({ isAlive: () => true, troops: () => 100_000 }),
+    } as unknown as GameView;
+    panel.setVisibile(true);
+    await (panel as any).updateComplete;
+
+    const slider = panel.querySelector(
+      'input[type="range"]',
+    ) as HTMLInputElement;
+    expect(slider.hasAttribute("data-radial-click-through")).toBe(true);
+    slider.getBoundingClientRect = () => ({ left: 0, width: 100 }) as DOMRect;
+
+    // A forwarded tap is the click the radial menu's overlay sends down.
+    const forwarded = new MouseEvent("click", { bubbles: true, clientX: 50 });
+    (forwarded as unknown as Record<string, unknown>)[FORWARDED_CLICK] = true;
+    slider.dispatchEvent(forwarded);
+
+    expect(Number(slider.value)).toBe(51);
+    expect(uiState.attackRatio).toBeCloseTo(0.51, 2);
+  });
+
+  it("leaves a real slider press to the browser", async () => {
+    panel.game = {
+      inSpawnPhase: () => false,
+      myPlayer: () => ({ isAlive: () => true, troops: () => 100_000 }),
+    } as unknown as GameView;
+    panel.setVisibile(true);
+    await (panel as any).updateComplete;
+
+    const slider = panel.querySelector(
+      'input[type="range"]',
+    ) as HTMLInputElement;
+    slider.getBoundingClientRect = () => ({ left: 0, width: 100 }) as DOMRect;
+
+    // A plain click is a press the browser handles itself.
+    slider.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, clientX: 50 }),
+    );
+
+    expect(Number(slider.value)).toBe(20);
+    expect(uiState.attackRatio).toBeCloseTo(0.2, 2);
+  });
+  // In portrait on phones the slider is behind a button: dragged along the
+  // bottom edge it swiped through iOS's home indicator to another app.
+  describe("portrait popup", () => {
+    const show = async () => {
+      panel.game = {
+        inSpawnPhase: () => false,
+        myPlayer: () => ({ isAlive: () => true, troops: () => 100_000 }),
+      } as unknown as GameView;
+      panel.setVisibile(true);
+      await (panel as any).updateComplete;
+      return panel.querySelector(
+        "[data-ratio-popup-button]",
+      ) as HTMLButtonElement;
+    };
+    const popup = () => panel.querySelector("[data-ratio-popup]");
+
+    it("opens the slider from the button and closes it again", async () => {
+      const button = await show();
+      expect(button.textContent).toContain("20%\n(2.00K)");
+      // The numbers alone don't say what the button is for.
+      // (Tests have no translations loaded: translateText returns the key.)
+      expect(button.getAttribute("aria-label")).toBe(
+        "control_panel.attack_ratio_button",
+      );
+      expect(popup()).toBeNull();
+
+      button.click();
+      await (panel as any).updateComplete;
+      expect(button.getAttribute("aria-expanded")).toBe("true");
+      const slider = popup()?.querySelector(
+        'input[type="range"]',
+      ) as HTMLInputElement;
+      expect(slider.value).toBe("20");
+
+      slider.value = "65";
+      slider.dispatchEvent(new Event("input", { bubbles: true }));
+      await (panel as any).updateComplete;
+      expect(uiState.attackRatio).toBeCloseTo(0.65, 2);
+      expect(button.textContent).toContain("65%\n(6.50K)");
+
+      button.click();
+      await (panel as any).updateComplete;
+      expect(popup()).toBeNull();
+    });
+
+    it("closes on a press outside it, not inside it", async () => {
+      const button = await show();
+      button.click();
+      await (panel as any).updateComplete;
+
+      popup()!
+        .querySelector("input")!
+        .dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      await (panel as any).updateComplete;
+      expect(popup()).not.toBeNull();
+
+      document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      await (panel as any).updateComplete;
+      expect(popup()).toBeNull();
+    });
   });
 });

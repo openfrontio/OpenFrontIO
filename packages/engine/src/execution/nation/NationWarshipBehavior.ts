@@ -87,7 +87,7 @@ export class NationWarshipBehavior {
     if (
       ports.length > 0 &&
       ships.length === 0 &&
-      this.player.gold() > this.cost(UnitType.Warship)
+      this.spareGold() > this.cost(UnitType.Warship)
     ) {
       const port = this.random.randElement(ports);
       const targetTile = this.warshipSpawnTile(port.tile(), 250);
@@ -252,7 +252,7 @@ export class NationWarshipBehavior {
         this.maybeRetaliateWithWarship(
           oceanTiles,
           transport.owner(),
-          "transport",
+          "invasion",
         );
         this.dealtWithTransportShip.add(transport);
         break;
@@ -263,7 +263,7 @@ export class NationWarshipBehavior {
   private maybeRetaliateWithWarship(
     tile: TileRef,
     enemy: Player,
-    reason: "trade" | "transport",
+    reason: "trade" | "transport" | "invasion",
   ): void {
     // Don't retaliate against ourselves (e.g. own nuke destroyed own ship)
     if (enemy === this.player) {
@@ -289,7 +289,11 @@ export class NationWarshipBehavior {
       (difficulty === Difficulty.Impossible && this.random.nextInt(0, 100) < 80)
     ) {
       const canBuild = this.player.canBuild(UnitType.Warship, tile);
-      if (canBuild === false) {
+      // Stopping an invasion may dip into the gold kept for nukes
+      const affordable =
+        reason === "invasion" ||
+        this.spareGold() >= this.cost(UnitType.Warship);
+      if (canBuild === false || !affordable) {
         this.maybeMoveWarship(tile);
         return;
       }
@@ -353,7 +357,7 @@ export class NationWarshipBehavior {
       for (let i = 0; i < builds; i++) {
         total += this.cost(UnitType.Warship, i);
       }
-      if (this.player.gold() < total) return;
+      if (this.spareGold() < total) return;
       if (this.player.canBuild(UnitType.Warship, target) === false) return;
     }
     for (const w of recruits) {
@@ -456,7 +460,7 @@ export class NationWarshipBehavior {
     }
 
     // Quit early if we can't afford a warship
-    if (this.cost(UnitType.Warship) > this.player.gold()) {
+    if (this.cost(UnitType.Warship) > this.spareGold()) {
       return false;
     }
 
@@ -502,9 +506,11 @@ export class NationWarshipBehavior {
       { count: number; team: string; players: Player[] }
     >();
 
+    let ownFleet = 0;
     for (const p of this.game.players()) {
-      // Skip friendly players (our team and allies)
+      // Skip friendly players (our team and allies), but count their warships
       if (this.player.isFriendly(p) || p.id() === this.player.id()) {
+        ownFleet += p.units(UnitType.Warship).length;
         continue;
       }
 
@@ -526,9 +532,9 @@ export class NationWarshipBehavior {
       teamData.players.push(p);
     }
 
-    // Find team with more than 15 warships
+    // Find team with more than 15 warships that outnumbers our team and allies
     for (const [, teamData] of enemyTeamWarships.entries()) {
-      if (teamData.count > 15) {
+      if (teamData.count > 15 && teamData.count > ownFleet) {
         // Find player in that team with most warships
         const playerWithMostWarships = teamData.players.reduce(
           (max, p) => {
@@ -593,6 +599,19 @@ export class NationWarshipBehavior {
       ),
     );
     this.emojiBehavior.sendEmoji(AllPlayers, EMOJI_WARSHIP_RETALIATION);
+  }
+
+  /** Gold for warships that don't stop an invasion: with atom bombs disabled, silo owners keep a hydrogen bomb's price for nukes. */
+  private spareGold(): Gold {
+    const config = this.game.config();
+    if (
+      !config.isUnitDisabled(UnitType.AtomBomb) ||
+      config.isUnitDisabled(UnitType.HydrogenBomb) ||
+      this.player.unitCount(UnitType.MissileSilo) === 0
+    ) {
+      return this.player.gold();
+    }
+    return this.player.gold() - this.cost(UnitType.HydrogenBomb);
   }
 
   private cost(type: UnitType, extraUnits: number = 0): Gold {

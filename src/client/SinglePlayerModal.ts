@@ -12,16 +12,20 @@ import { TeamCountConfig } from "@openfront/engine-api/Schemas";
 import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
 import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
-import { generateID } from "@openfront/shared/SharedUtil";
+import {
+  generateID,
+  generateSingleplayerGameID,
+} from "@openfront/shared/SharedUtil";
 import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
+import { showToast, translateText } from "../client/Utils";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/GameConfigSettings";
+import "./components/LobbyPresetControls";
 import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
 import {
   type LoadSavedGameDetail,
@@ -33,6 +37,12 @@ import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
 import { gamePortal } from "./GamePortal";
 import { GameStartingModal } from "./GameStartingModal";
 import { showInGameAlert } from "./InGameModal";
+import {
+  deleteLobbyPreset,
+  LobbyPreset,
+  LobbyPresetConfig,
+  saveLobbyPreset,
+} from "./LobbyPresets";
 import { JoinLobbyEvent } from "./Main";
 import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
 import { downloadSavedGame } from "./SavedGamesApi";
@@ -44,6 +54,7 @@ import {
   getNationsForCompactMap,
   getRandomMapType,
   getUpdatedDisabledUnits,
+  nationsConfigToSlider,
   parseBoundedFloatFromInput,
   parseBoundedIntegerFromInput,
   preventDisallowedKeys,
@@ -107,6 +118,15 @@ type StartPreparation = {
   resolvedName: ResolvedPlayerName;
   cosmetics: PlayerCosmetics;
 };
+
+const TUTORIAL_DISABLED_UNITS: UnitType[] = [
+  UnitType.City,
+  UnitType.DefensePost,
+  UnitType.Factory,
+  UnitType.SAMLauncher,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+];
 
 const DEFAULT_OPTIONS = {
   selectedMap: GameMapType.World,
@@ -239,9 +259,14 @@ export class SinglePlayerModal extends BaseModal {
   private overlayAttempt: number = 0;
 
   private mapLoader = terrainMapFileLoader;
+  private userSettings = new UserSettings();
+
+  @state() private lobbyPresets: LobbyPreset[] = [];
+  @state() private selectedPresetName: string = "";
 
   connectedCallback() {
     super.connectedCallback();
+    this.lobbyPresets = this.userSettings.getLobbyPresets();
     document.addEventListener(
       "userMeResponse",
       this.handleUserMeResponse as EventListener,
@@ -346,31 +371,46 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   protected renderHeaderSlot() {
+    const signedIn = responseHasLinkedIdentity(this.userMeResponse);
     return modalHeader({
       title: translateText("main.solo") || "Solo",
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
-      rightContent: responseHasLinkedIdentity(this.userMeResponse)
-        ? html`<button
-              @click=${this.toggleAchievements}
-              class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${
-                this.showAchievements
-                  ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
-                  : "text-white/60"
-              }"
-            >
-              <img
-                src=${assetUrl("images/MedalIconWhite.svg")}
-                class="w-4 h-4 opacity-80 shrink-0"
-                style="${this.showAchievements ? "" : "filter: grayscale(1);"}"
-              />
-              <span
-                class="text-xs font-bold uppercase tracking-wider whitespace-nowrap"
-                >${translateText("single_modal.toggle_achievements")}</span
-              >
-            </button>
-            ${this.showAchievements ? this.renderMedalOverview() : null}`
-        : this.renderNotLoggedInBanner(),
+      rightContent: html`<div class="flex flex-wrap items-center gap-2">
+          <lobby-preset-controls
+            .presets=${this.lobbyPresets}
+            .selectedName=${this.selectedPresetName}
+            @preset-select=${this.handlePresetSelect}
+            @preset-load=${this.handlePresetLoad}
+            @preset-save=${this.handlePresetSave}
+            @preset-delete=${this.handlePresetDelete}
+          ></lobby-preset-controls>
+          ${
+            signedIn
+              ? html`<button
+                  @click=${this.toggleAchievements}
+                  class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${
+                    this.showAchievements
+                      ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
+                      : "text-white/60"
+                  }"
+                >
+                  <img
+                    src=${assetUrl("images/MedalIconWhite.svg")}
+                    class="w-4 h-4 opacity-80 shrink-0"
+                    style="${
+                      this.showAchievements ? "" : "filter: grayscale(1);"
+                    }"
+                  />
+                  <span
+                    class="text-xs font-bold uppercase tracking-wider whitespace-nowrap"
+                    >${translateText("single_modal.toggle_achievements")}</span
+                  >
+                </button>`
+              : this.renderNotLoggedInBanner()
+          }
+        </div>
+        ${signedIn && this.showAchievements ? this.renderMedalOverview() : null}`,
     });
   }
 
@@ -604,7 +644,9 @@ export class SinglePlayerModal extends BaseModal {
         </div>
 
         <!-- Footer Action -->
-        <div class="p-6 border-t border-white/10 bg-black/20 shrink-0">
+        <div
+          class="p-6 compact:py-3 border-t border-white/10 bg-black/20 shrink-0"
+        >
           ${
             responseHasLinkedIdentity(this.userMeResponse) &&
             this.hasOptionsChanged()
@@ -680,11 +722,64 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   /**
-   * Starts a solo game on the default settings without opening the modal,
-   * with the in-game tutorial switched back on (the play page's Tutorial
-   * card for new players).
+   * Starts the onboarding tutorial (docs/OnboardingTutorial.md) without
+   * opening the modal: the Tutorial map, with OnboardingOverlay guiding the
+   * player through spawning, attacking and boats.
    */
   public async startTutorial(): Promise<void> {
+    // The modal never opens on this path, so onOpen's prewarm never runs.
+    void prewarmCosmetics();
+    if (this.starting) return;
+    await this.launch(async ({ resolvedName, cosmetics }, usernameInput) => {
+      const gameID = generateSingleplayerGameID();
+      return {
+        gameID,
+        gameStartInfo: {
+          gameID,
+          players: [
+            {
+              clientID: generateID(),
+              username: resolvedName.name,
+              clanTag: usernameInput?.getClanTag() ?? null,
+              cosmetics,
+            },
+          ],
+          config: {
+            gameMap: GameMapType.Tutorial,
+            gameMapSize: GameMapSize.Normal,
+            gameType: GameType.Singleplayer,
+            gameMode: GameMode.FFA,
+            difficulty: Difficulty.Easy,
+            // Just the map's two positioned nations.
+            bots: 0,
+            nations: "default",
+            infiniteGold: false,
+            donateGold: false,
+            donateTroops: false,
+            infiniteTroops: false,
+            instantBuild: false,
+            randomSpawn: false,
+            disableAlliances: true,
+            // The only things built are the nation's silo, port and warship,
+            // and the atom bomb the player fires from the silo once captured;
+            // the gold is that one bomb's.
+            disabledUnits: TUTORIAL_DISABLED_UNITS,
+            startingGold: 750_000,
+            tutorial: true,
+          },
+          lobbyCreatedAt: Date.now(),
+        },
+        source: "singleplayer",
+      };
+    });
+  }
+
+  /**
+   * Starts a solo game on the default settings without opening the modal,
+   * with the in-game guide switched back on (where the onboarding
+   * tutorial's "Play a solo game" leads).
+   */
+  public async startSoloWithGuide(): Promise<void> {
     // The modal never opens on this path, so onOpen's prewarm never runs.
     // Overlap it with the manifest load below.
     void prewarmCosmetics();
@@ -701,6 +796,7 @@ export class SinglePlayerModal extends BaseModal {
     // the modal must always give the player a live Start button back, whatever
     // left the previous attempt in flight.
     this.starting = false;
+    this.selectedPresetName = "";
     this.selectedMap = DEFAULT_OPTIONS.selectedMap;
     this.selectedDifficulty = DEFAULT_OPTIONS.selectedDifficulty;
     this.gameMode = DEFAULT_OPTIONS.gameMode;
@@ -731,6 +827,7 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
+    this.lobbyPresets = this.userSettings.getLobbyPresets();
     const save = args?.save;
     this.sharedSaveId = typeof save === "string" ? savedGameIdFrom(save) : null;
     // Saves made since the list last loaded (a game played in between).
@@ -744,6 +841,118 @@ export class SinglePlayerModal extends BaseModal {
     // attempt. Remembering an unreachable backend is OPE-403.
     void prewarmCosmetics();
   }
+
+  private exportPresetConfig(): LobbyPresetConfig {
+    return {
+      gameMap: this.selectedMap,
+      useRandomMap: this.useRandomMap,
+      compactMap: this.compactMap,
+      difficulty: this.selectedDifficulty,
+      gameMode: this.gameMode,
+      teamCount: this.teamCount,
+      bots: this.bots,
+      nations: sliderToNationsConfig(this.nations, this.defaultNationCount),
+      infiniteGold: this.infiniteGold,
+      infiniteTroops: this.infiniteTroops,
+      instantBuild: this.instantBuild,
+      randomSpawn: this.randomSpawn,
+      maxTimer: this.maxTimer,
+      maxTimerValue: this.maxTimerValue,
+      disabledUnits: [...this.disabledUnits],
+      goldMultiplier: this.goldMultiplier,
+      goldMultiplierValue: this.goldMultiplierValue,
+      startingGold: this.startingGold,
+      startingGoldValue: this.startingGoldValue,
+      customAlliances: this.customAlliances,
+      customAllianceMinutes: this.customAllianceMinutes,
+      waterNukes: this.waterNukes,
+      doomsdayClock: this.doomsdayClock,
+      doomsdayClockSpeed: this.doomsdayClockSpeed,
+      overtime: this.overtime,
+      overtimeStartMinutes: this.overtimeStartMinutes,
+    };
+  }
+
+  private async importPresetConfig(config: LobbyPresetConfig) {
+    this.useRandomMap = config.useRandomMap ?? false;
+    this.selectedMap = this.useRandomMap ? getRandomMapType() : config.gameMap;
+    this.compactMap = config.compactMap ?? false;
+    this.selectedDifficulty = config.difficulty;
+    this.gameMode = config.gameMode;
+    this.teamCount = config.teamCount;
+    this.bots = config.bots;
+    this.infiniteGold = config.infiniteGold ?? false;
+    this.infiniteTroops = config.infiniteTroops ?? false;
+    this.instantBuild = config.instantBuild ?? false;
+    this.randomSpawn = config.randomSpawn ?? false;
+    this.maxTimer = config.maxTimer ?? false;
+    this.maxTimerValue = config.maxTimerValue;
+    this.disabledUnits = config.disabledUnits ? [...config.disabledUnits] : [];
+    this.goldMultiplier = config.goldMultiplier ?? false;
+    this.goldMultiplierValue = config.goldMultiplierValue;
+    this.startingGold = config.startingGold ?? false;
+    this.startingGoldValue = config.startingGoldValue;
+    this.customAlliances = config.customAlliances ?? false;
+    this.customAllianceMinutes = config.customAllianceMinutes;
+    this.waterNukes = config.waterNukes ?? false;
+    this.doomsdayClock = config.doomsdayClock ?? false;
+    this.doomsdayClockSpeed = config.doomsdayClockSpeed ?? "normal";
+    this.overtime = config.overtime ?? false;
+    this.overtimeStartMinutes = config.overtimeStartMinutes;
+
+    await this.loadNationCount();
+    if (config.nations !== undefined) {
+      this.nations = nationsConfigToSlider(
+        config.nations,
+        this.defaultNationCount,
+      );
+    }
+  }
+
+  private handlePresetSelect = (e: CustomEvent<string>) => {
+    this.selectedPresetName = e.detail;
+  };
+
+  private handlePresetLoad = async (e: CustomEvent<string>) => {
+    const name = e.detail;
+    const preset = this.lobbyPresets.find(
+      (p) => p.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (!preset) return;
+    await this.importPresetConfig(preset.config);
+    this.selectedPresetName = preset.name;
+    showToast(translateText("lobby_config.preset.loaded"), "green");
+  };
+
+  private handlePresetSave = (e: CustomEvent<string>) => {
+    const name = e.detail;
+    const config = this.exportPresetConfig();
+    const updated = saveLobbyPreset(name, config, this.userSettings);
+    if (!updated) {
+      showToast(translateText("lobby_config.preset.save_failed"), "red");
+      return;
+    }
+    this.lobbyPresets = updated;
+    const saved = updated.find(
+      (p) => p.name.toLowerCase() === name.trim().toLowerCase(),
+    );
+    this.selectedPresetName = saved ? saved.name : name.trim();
+    showToast(translateText("lobby_config.preset.saved"), "green");
+  };
+
+  private handlePresetDelete = (e: CustomEvent<string>) => {
+    const name = e.detail;
+    const updated = deleteLobbyPreset(name, this.userSettings);
+    if (!updated) {
+      showToast(translateText("lobby_config.preset.delete_failed"), "red");
+      return;
+    }
+    this.lobbyPresets = updated;
+    if (this.selectedPresetName.toLowerCase() === name.toLowerCase()) {
+      this.selectedPresetName = "";
+    }
+    showToast(translateText("lobby_config.preset.deleted"), "green");
+  };
 
   private handleSelectRandomMap() {
     this.useRandomMap = true;
@@ -1009,6 +1218,7 @@ export class SinglePlayerModal extends BaseModal {
    * resolution here is a cost with nothing to show for it, so
    * START_PREPARE_DEADLINE_MS cuts it short rather than pinning Start at
    * "Starting…" for the rest of the session, which would take startTutorial()
+   * or startSoloWithGuide()
    * down with it on the re-entrancy guard.
    *
    * The midgame ad is deliberately not part of this — see awaitMidgameAd.
@@ -1107,7 +1317,7 @@ export class SinglePlayerModal extends BaseModal {
         `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
       );
       const clientID = generateID();
-      const gameID = generateID();
+      const gameID = generateSingleplayerGameID();
       return {
         gameID: gameID,
         gameStartInfo: {
@@ -1223,7 +1433,7 @@ export class SinglePlayerModal extends BaseModal {
           `Resuming saved game ${id} on ${header.gameConfig.gameMap} at tick ${header.tick}`,
         );
         // A fresh id: a shared save is played by many, each its own game.
-        const gameID = generateID();
+        const gameID = generateSingleplayerGameID();
         return {
           gameID,
           gameStartInfo: {

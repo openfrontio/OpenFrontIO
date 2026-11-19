@@ -4,6 +4,8 @@
   "name": "Gateway to the Atlantic",
   "translation_key": "map.gatewaytotheatlantic",
   "categories": ["europe"],
+  "location": { "lat": 40, "lon": -4 },
+  "author": "APuddle210",
   "nations": [
     {
       "coordinates": [2161, 420],

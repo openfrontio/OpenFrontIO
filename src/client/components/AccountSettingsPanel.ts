@@ -10,7 +10,7 @@ import {
   type SetVisibilityResult,
 } from "../Api";
 import { clearLocalSession, linkGoogle, sendMagicLink } from "../Auth";
-import { isDesktopShell } from "../DesktopShell";
+import { isSteamShell } from "../DesktopShell";
 import { gamePortal } from "../GamePortal";
 import { showInGameAlert } from "../InGameModal";
 import { refreshOwnHiddenLevelBadge } from "../OwnLevelBadge";
@@ -321,7 +321,7 @@ export class AccountSettingsPanel extends LitElement {
                 this.handleLinkGoogle,
                 // The shell sends the player to the website for this (see
                 // linkGoogle in Auth.ts); the caption has to say so.
-                isDesktopShell()
+                isSteamShell()
                   ? "account_modal.link_google_on_web"
                   : "account_modal.link_google",
               )

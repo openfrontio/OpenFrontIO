@@ -368,6 +368,15 @@ export interface RenderSettings {
     duration: number; // ms — total animation lifetime
     converge: number; // 0–1 — fraction of radius consumed during animation
   };
+  rangeCircle: {
+    allianceColorR: number; // nuke breaks an alliance, no traitor mark
+    allianceColorG: number;
+    allianceColorB: number;
+    traitorColorR: number; // flashes between white and this — nuke marks you a traitor
+    traitorColorG: number;
+    traitorColorB: number;
+    flashHz: number; // traitor flash frequency
+  };
   samRadius: {
     strokeWidth: number; // ring half-width in world units
     dashLen: number; // dash length in world units

@@ -4,6 +4,7 @@ import {
   apiMockFactory,
   authMockFactory,
   clanApiMockFactory,
+  cosmeticsMockFactory,
   crazyGamesSdkMockFactory,
   flushAsync,
   getElState,
@@ -17,6 +18,7 @@ import {
 vi.mock("@lit-labs/virtualizer/virtualize.js", () => virtualizerMockFactory());
 vi.mock("../../../src/client/Api", () => apiMockFactory());
 vi.mock("../../../src/client/ClanApi", () => clanApiMockFactory());
+vi.mock("../../../src/client/Cosmetics", () => cosmeticsMockFactory());
 vi.mock("../../../src/client/Utils", () => utilsMockFactory());
 vi.mock("../../../src/client/Auth", () => authMockFactory());
 vi.mock("../../../src/client/CrazyGamesSDK", () => crazyGamesSdkMockFactory());
@@ -89,7 +91,7 @@ describe("ClanModal — signed out", () => {
 
     expect(modal.isOpen()).toBe(true);
     expect(getElState(modal, "activeTab")).toBe("map");
-    expect(modal.querySelector("clan-map-view")).not.toBeNull();
+    expect(document.querySelector("clan-map-view")).not.toBeNull();
     // The map is still in alpha, and its tab says so.
     const shell = modal.querySelector("o-modal") as unknown as {
       tabs: { key: string; label: string }[];
@@ -97,6 +99,64 @@ describe("ClanModal — signed out", () => {
     expect(shell.tabs.find((t) => t.key === "map")?.label).toBe(
       "clan_modal.tab_map_alpha",
     );
+  });
+
+  it("opens the map as a full-screen page with a way back to the clans", async () => {
+    modal.open({ tab: "map" });
+    await flushAsync(modal);
+
+    // On <body>, fixed over the whole viewport: inside the modal a fixed
+    // element would be positioned against the modal's box.
+    const page = document.querySelector<HTMLElement>("[data-clan-map-page]")!;
+    expect(page).not.toBeNull();
+    expect(page.parentElement?.parentElement).toBe(document.body);
+    expect(page.className).toContain("fixed");
+    expect(page.className).toContain("inset-0");
+    const view = page.querySelector("clan-map-view") as unknown as {
+      full: boolean;
+    };
+    expect(view.full).toBe(true);
+
+    page.querySelector<HTMLButtonElement>("[data-clan-map-back]")!.click();
+    await flushAsync(modal);
+
+    expect(modal.isOpen()).toBe(true);
+    expect(getElState(modal, "activeTab")).toBe("my-clans");
+    expect(document.querySelector("[data-clan-map-page]")).toBeNull();
+  });
+
+  it("goes back from the map to the clan list it was opened from", async () => {
+    modal.open({ tab: "browse" });
+    await flushAsync(modal);
+    modal.setActiveTab("map");
+    await flushAsync(modal);
+
+    document.querySelector<HTMLButtonElement>("[data-clan-map-back]")!.click();
+    await flushAsync(modal);
+
+    expect(getElState(modal, "activeTab")).toBe("browse");
+  });
+
+  it("never goes back from the map to the map, so a player can't get stuck there", async () => {
+    // A clan opened while the map is showing (a deep link or a profile
+    // handoff): the clan's Back returns to the map, and the map's Back must
+    // then leave it.
+    modal.open({ tab: "map" });
+    await flushAsync(modal);
+    (modal as unknown as { openDetail(tag: string): void }).openDetail("AAA");
+    await flushAsync(modal);
+    // The clan's own Back (its header's back button).
+    modal
+      .querySelector<HTMLButtonElement>('button[aria-label="common.back"]')!
+      .click();
+    await flushAsync(modal);
+    expect(getElState(modal, "activeTab")).toBe("map");
+
+    document.querySelector<HTMLButtonElement>("[data-clan-map-back]")!.click();
+    await flushAsync(modal);
+
+    expect(getElState(modal, "activeTab")).toBe("my-clans");
+    expect(document.querySelector("[data-clan-map-page]")).toBeNull();
   });
 
   it("lets a signed-out viewer browse clans", async () => {
@@ -121,44 +181,5 @@ describe("ClanModal — signed out", () => {
 
     expect(joinClan).not.toHaveBeenCalled();
     expect(showPage).toHaveBeenCalledWith("page-account");
-  });
-});
-
-describe("ClanModal — map fullscreen button", () => {
-  let modal: ClanModal;
-
-  beforeEach(async () => {
-    if (!customElements.get("clan-modal")) {
-      customElements.define("clan-modal", ClanModal);
-    }
-    stubGameEnv("dev");
-    modal = document.createElement("clan-modal") as ClanModal;
-    modal.setAttribute("inline", "");
-    document.body.appendChild(modal);
-    await modal.updateComplete;
-  });
-
-  afterEach(() => {
-    modal.remove();
-    vi.clearAllMocks();
-  });
-
-  const fullscreenButton = () =>
-    modal.querySelector<HTMLButtonElement>('[data-testid="map-fullscreen"]');
-
-  it("shows only on the Map tab and fullscreens the map frame", async () => {
-    modal.open();
-    await flushAsync(modal);
-    expect(fullscreenButton()).toBeNull();
-
-    modal.setActiveTab("map");
-    await flushAsync(modal);
-    const mapView = await waitForSubComponent(modal, "clan-map-view");
-    const request = vi.fn(() => Promise.resolve());
-    mapView.querySelector("iframe")!.requestFullscreen = request as never;
-
-    fullscreenButton()!.click();
-
-    expect(request).toHaveBeenCalledTimes(1);
   });
 });

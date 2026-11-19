@@ -1,4 +1,4 @@
-import { html } from "lit";
+import { html, nothing, render, type PropertyValues } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { type ClanInfo, type ClanMember } from "./ClanApi";
@@ -8,12 +8,14 @@ import "./components/clan/ClanBrowseView";
 import type { BrowseState } from "./components/clan/ClanBrowseView";
 import "./components/clan/ClanCard";
 import "./components/clan/ClanDetailView";
+import type { DonationsMode } from "./components/clan/ClanDonationsView";
 import "./components/clan/ClanDonationsView";
+import "./components/clan/ClanFundCard";
+import "./components/clan/ClanSendFundsView";
 import "./components/clan/ClanGameHistoryView";
 import type { ClanGameHistoryCache } from "./components/clan/ClanGameHistoryView";
 import "./components/clan/ClanManageView";
 import "./components/clan/ClanMapView";
-import type { ClanMapView } from "./components/clan/ClanMapView";
 import "./components/clan/ClanMyRequestsView";
 import "./components/clan/ClanRequestsView";
 import type { ClanRole } from "./components/clan/ClanShared";
@@ -34,6 +36,7 @@ type View =
   | "detail"
   | "manage"
   | "transfer"
+  | "send-funds"
   | "requests"
   | "bans"
   | "my-requests";
@@ -64,6 +67,22 @@ export class ClanModal extends BaseModal {
   }
 
   @state() private view: View = "list";
+
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    // Leaving the send page, however it went: a send may have moved money
+    // even when the page showed an error (a lost answer, or an earlier send
+    // that turned out to have gone through), so the overview's treasury and
+    // My Clans' balances (read from the cached user) are refetched.
+    if (changed.get("view") === "send-funds" && this.view !== "send-funds") {
+      this.detailCache = null;
+      invalidateUserMe();
+    }
+  }
+  // Mode the Donations tab opens on: "payouts" when Manage's "View full log"
+  // sent the player there, else the default. Reset whenever a detail tab is
+  // entered, so only that one navigation lands on Payouts.
+  @state() private donationsInitialMode: DonationsMode = "recent";
   @state() private loading = false;
   // No session: the map and Browse still work; My Clans asks to sign in and
   // the detail view offers sign-in instead of Join.
@@ -116,6 +135,10 @@ export class ClanModal extends BaseModal {
   private openedFromProfile: string | null = null;
   private openedFromProfileOrigin: ProfileOrigin | null = null;
   private previousListTab: ListTab = "my-clans";
+  // Where the map page's Back goes: the last list tab other than the map.
+  // Never the map itself, or a clan opened from the map would leave Back
+  // pointing at the page it's on, and the player stuck there.
+  private mapReturnTab: "my-clans" | "browse" = "my-clans";
   // Set when the open clan was picked from the browser's boosted block, so a
   // join from its detail page is attributed to the block.
   private joinSource: "boosted" | undefined = undefined;
@@ -165,8 +188,6 @@ export class ClanModal extends BaseModal {
           title: translateText("clan_modal.title"),
           onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
-          rightContent:
-            this.activeTab === "map" ? this.fullscreenButton() : undefined,
         })
       : this.renderSubViewHeader();
   }
@@ -188,41 +209,14 @@ export class ClanModal extends BaseModal {
       this.selectedClanTag = "";
       this.detailCache = null;
       this.gameHistoryCache = null;
+      if (tab === "my-clans" || tab === "browse") this.mapReturnTab = tab;
       if (tab === "my-clans") {
         void this.loadMyClans();
       }
       return;
     }
     // Detail tabs: BaseModal already updated activeTab; renderInner reads it.
-    // No additional side effects required here.
-  }
-
-  private fullscreenButton() {
-    const label = translateText("fullscreen.enter");
-    return html`<button
-      type="button"
-      data-testid="map-fullscreen"
-      title=${label}
-      aria-label=${label}
-      class="flex items-center justify-center w-10 h-10 rounded-full shrink-0 bg-white/5 hover:bg-white/10 transition-all border border-white/10 text-white/70 hover:text-white"
-      @click=${() =>
-        this.querySelector<ClanMapView>("clan-map-view")?.enterFullscreen()}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="w-5 h-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"
-        />
-      </svg>
-    </button>`;
+    this.donationsInitialMode = "recent";
   }
 
   private tagPill(tag: string) {
@@ -291,6 +285,14 @@ export class ClanModal extends BaseModal {
         ariaLabel,
       });
     }
+    if (this.view === "send-funds") {
+      return modalHeader({
+        title: translateText("clan_modal.send_funds"),
+        onBack: () => (this.view = "manage"),
+        ariaLabel,
+        rightContent: clan ? this.tagPill(clan.tag) : undefined,
+      });
+    }
     if (this.view === "requests") {
       return modalHeader({
         title: translateText("clan_modal.join_requests"),
@@ -350,6 +352,7 @@ export class ClanModal extends BaseModal {
     this.openedFromProfileOrigin = null;
     this.activeTab = "my-clans";
     this.previousListTab = "my-clans";
+    this.mapReturnTab = "my-clans";
     this.view = "list";
     this.selectedClan = null;
     this.selectedClanTag = "";
@@ -426,6 +429,12 @@ export class ClanModal extends BaseModal {
           @navigate-detail=${() => (this.view = "detail")}
           @navigate-bans=${() => (this.view = "bans")}
           @navigate-transfer=${() => (this.view = "transfer")}
+          @navigate-send-funds=${() => (this.view = "send-funds")}
+          @navigate-payouts=${() => {
+            this.view = "detail";
+            this.setActiveTab("donations");
+            this.donationsInitialMode = "payouts";
+          }}
           @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
             this.openPlayerProfile(e.detail.publicId)}
           @clan-updated=${(e: CustomEvent<Partial<ClanInfo>>) => {
@@ -464,6 +473,15 @@ export class ClanModal extends BaseModal {
           }}
         ></clan-transfer-view>`;
       }
+      if (this.view === "send-funds") {
+        return html`<clan-send-funds-view
+          .clanTag=${this.selectedClanTag}
+          .myPublicId=${this.myPublicId}
+          @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
+            this.openPlayerProfile(e.detail.publicId)}
+          @funds-sent=${() => (this.view = "manage")}
+        ></clan-send-funds-view>`;
+      }
       if (this.view === "requests") {
         return html`<clan-requests-view
           .clanTag=${this.selectedClanTag}
@@ -494,6 +512,7 @@ export class ClanModal extends BaseModal {
       if (this.activeTab === "donations") {
         return html`<clan-donations-view
           .clanTag=${this.selectedClanTag}
+          .initialMode=${this.donationsInitialMode}
           @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
             this.openPlayerProfile(e.detail.publicId)}
         ></clan-donations-view>`;
@@ -626,15 +645,15 @@ export class ClanModal extends BaseModal {
             },
           ];
         }}
+        @close-clan-modal=${() => this.close()}
       ></clan-detail-view>`;
     }
 
     // List view (map / my clans / browse) — header + tabs are rendered by o-modal
     if (this.activeTab === "map") {
       // Mounted only while open: the page polls its API while framed.
-      return this.isModalOpen
-        ? html`<clan-map-view class="block h-full"></clan-map-view>`
-        : html``;
+      // The map itself is a full-screen page on <body> (syncMapPage).
+      return html``;
     }
     return html`
       ${
@@ -653,6 +672,63 @@ export class ClanModal extends BaseModal {
             ></clan-browse-view>`
       }
     `;
+  }
+
+  // z-[9999]: just under the toasts and dialogs that use z-[10000]
+  // (MarketingConsentToast, PurchaseNudgeModal, WebGLGate), so one that
+  // appears while the map is open shows on top of it rather than behind.
+  // The clan map is its own full-screen page over the game: the map edge to
+  // edge (its sidebar floats over it) and a way back to the clan lists. It's
+  // rendered into its own element on <body>, because a `fixed` element
+  // inside the modal is positioned against the modal's box, not the screen.
+  private mapPage: HTMLDivElement | null = null;
+
+  protected updated(changed: PropertyValues): void {
+    super.updated(changed);
+    this.syncMapPage();
+  }
+
+  disconnectedCallback(): void {
+    this.removeMapPage();
+    super.disconnectedCallback();
+  }
+
+  private syncMapPage(): void {
+    // Mounted only while open: the page polls its API while framed.
+    if (!this.isModalOpen || !this.onListView || this.activeTab !== "map") {
+      this.removeMapPage();
+      return;
+    }
+    if (!this.mapPage) {
+      this.mapPage = document.createElement("div");
+      document.body.appendChild(this.mapPage);
+    }
+    render(this.renderMapPage(), this.mapPage);
+  }
+
+  private removeMapPage(): void {
+    if (!this.mapPage) return;
+    render(nothing, this.mapPage);
+    this.mapPage.remove();
+    this.mapPage = null;
+  }
+
+  private renderMapPage() {
+    return html`<div
+      data-clan-map-page
+      class="fixed inset-0 z-[9999] bg-[#3c3c3c]"
+    >
+      <clan-map-view full class="block w-full h-full"></clan-map-view>
+      <button
+        data-clan-map-back
+        type="button"
+        class="absolute top-3 left-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-[#151a21]/90 border border-white/10 backdrop-blur text-white text-sm font-bold uppercase tracking-wider hover:bg-[#1b212a] cursor-pointer"
+        aria-label=${translateText("clan_modal.map_back")}
+        @click=${() => this.setActiveTab(this.mapReturnTab)}
+      >
+        <span aria-hidden="true">←</span>${translateText("clan_modal.title")}
+      </button>
+    </div>`;
   }
 
   private openDetail(tag: string, source?: "boosted") {

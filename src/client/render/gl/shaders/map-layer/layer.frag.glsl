@@ -31,6 +31,12 @@ void main() {
   // User toggle.
   if (uVisible < 0.5) discard;
 
+  // Sample layer texture first; if transparent, discard immediately before
+  // reading terrain bytes or destroyed masks. This avoids massive texture
+  // memory bandwidth on 10,000x5,000 maps where 70%+ of each layer is transparent.
+  vec4 layer = texture(uLayerTex, vUV);
+  if (layer.a < 0.01) discard;
+
   ivec2 tc = ivec2(
     int(vUV.x * float(MAP_W)),
     int(vUV.y * float(MAP_H))
@@ -49,10 +55,6 @@ void main() {
     uint destroyed = texelFetch(uDestroyedMask, tc, 0).r;
     if (destroyed > 0u) discard;
   }
-
-  // Sample layer texture.
-  vec4 layer = texture(uLayerTex, vUV);
-  if (layer.a < 0.01) discard;
 
   fragColor = vec4(layer.rgb, layer.a * uAlpha);
 }

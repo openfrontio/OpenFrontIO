@@ -34,6 +34,11 @@ export const PENDING_XP_KEY = "provisionalXp";
 // When a tab last asked the API, per account: the other tabs skip a poll.
 export const PENDING_XP_CHECKED_KEY = "provisionalXpCheckedAt";
 export const PENDING_XP_TTL_MS = 12 * 60 * 60 * 1000;
+// Unscored entries expire after 3.5 hours (server's 3h maxGameDuration + leeway)
+// so dropped or un-archived games do not leave the player with a provisional
+// level for 12 hours. Singleplayer runs on LocalServer with no duration cap
+// and can be paused, so its unscored entries keep the 12h TTL.
+export const UNSCORED_PENDING_XP_TTL_MS = 3.5 * 60 * 60 * 1000;
 // More than this many games and the oldest go, scored ones first.
 export const MAX_PENDING_PER_ACCOUNT = 20;
 
@@ -114,7 +119,13 @@ export function readPendingXp(
     ? store[publicId]
     : [];
   // Either way: a clock set back mustn't keep an entry forever.
-  return list.filter((e) => Math.abs(now - e.at) < PENDING_XP_TTL_MS);
+  return list.filter((e) => {
+    const ttl =
+      e.scored !== undefined || e.kind === "singleplayer"
+        ? PENDING_XP_TTL_MS
+        : UNSCORED_PENDING_XP_TTL_MS;
+    return Math.abs(now - e.at) < ttl;
+  });
 }
 
 function updateList(

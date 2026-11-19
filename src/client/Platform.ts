@@ -1,3 +1,6 @@
+/** Fired once when a keypress detects a keyboard on a touch-primary device. */
+export const KEYBOARD_DETECTED_EVENT = "openfront:keyboard-detected";
+
 export const Platform = (() => {
   // Evaluated on every call, never cached: a jsdom environment can be torn
   // down while lit still has a microtask-scheduled render queued, so a flag
@@ -39,8 +42,9 @@ export const Platform = (() => {
             !NON_TEXT_INPUT_TYPES.has(
               (t as HTMLInputElement).type?.toLowerCase(),
             ));
-        if (!isTextInput) {
+        if (!isTextInput && !Platform.hasKeyboard) {
           (window as any).__hasKeyboard = true;
+          window.dispatchEvent(new Event(KEYBOARD_DETECTED_EVENT));
         }
       },
       { passive: true },

@@ -19,6 +19,7 @@ import { sendMagicLink } from "../../src/client/Auth";
 import { ClientEnv } from "../../src/client/ClientEnv";
 import "../../src/client/components/CopyButton";
 import type { CopyButton } from "../../src/client/components/CopyButton";
+import { gamePortal } from "../../src/client/GamePortal";
 
 // Every link that LEAVES the client, checked from the desktop shell — the one
 // place where the document's own origin (`app://openfront`) is not something
@@ -131,6 +132,17 @@ describe("the lobby invite link (copy-button)", () => {
 
   it("is unchanged on the web", async () => {
     const link = await copiedLobbyLink(WEB_HREF);
+    expect(link).toBe(
+      `https://openfront.io${ClientEnv.gamePath("aBcDeFgHiJ")}?lobby&s=xyz12`,
+    );
+  });
+
+  it("is a plain link on VIVERSE, which has no invite links", async () => {
+    vi.spyOn(gamePortal, "isOnGamePortal").mockReturnValue(true);
+    vi.spyOn(gamePortal, "name").mockReturnValue("viverse");
+    const invite = vi.spyOn(gamePortal, "createInviteLink");
+    const link = await copiedLobbyLink(WEB_HREF);
+    expect(invite).not.toHaveBeenCalled();
     expect(link).toBe(
       `https://openfront.io${ClientEnv.gamePath("aBcDeFgHiJ")}?lobby&s=xyz12`,
     );
