@@ -64,6 +64,41 @@ export const RemoveStructureCommandSchema = z.object({
   tile: Tile,
 });
 
+// What the author decides for a tile: 0 for water, 0x80 | elevation (0-30)
+// for land, 0x9f for impassable. These are the bits of the terrain byte the
+// map generator takes from the image; the engine derives the rest.
+const AuthoredTerrain = z
+  .int()
+  .min(0)
+  .max(0x9f)
+  .refine((v) => v === 0 || v >= 0x80, "not an authored terrain byte");
+
+// The most tiles one set_terrain takes. The repair keeps sets of the edited
+// tiles and their neighbours, which must stay under the 2^24 entries a JS
+// Set holds. A larger edit (a heightmap import) is sent as several.
+export const MAX_TERRAIN_BATCH = 1 << 20;
+
+/**
+ * Writes the authored terrain of the tiles (`terrain[i]` for `tiles[i]`) and
+ * repairs the shoreline, water depth and minimap around them. A tile that
+ * changes between water, land and impassable loses its owner and its units
+ * first. The ocean bit waits for `end_terrain_edit`, the water graph for
+ * the rebuild before test play and export.
+ */
+export const SetTerrainCommandSchema = z.object({
+  type: z.literal("set_terrain"),
+  tiles: z.array(Tile).max(MAX_TERRAIN_BATCH),
+  terrain: z.array(AuthoredTerrain).max(MAX_TERRAIN_BATCH),
+});
+
+/**
+ * Ends a run of `set_terrain` commands (a stroke): redoes the ocean bit
+ * and the water depth of bodies with no coast over the whole map.
+ */
+export const EndTerrainEditCommandSchema = z.object({
+  type: z.literal("end_terrain_edit"),
+});
+
 export const EditorCommandSchema = z.discriminatedUnion("type", [
   AddNationCommandSchema,
   RemoveNationCommandSchema,
@@ -71,5 +106,7 @@ export const EditorCommandSchema = z.discriminatedUnion("type", [
   SetOwnerCommandSchema,
   PlaceStructureCommandSchema,
   RemoveStructureCommandSchema,
+  SetTerrainCommandSchema,
+  EndTerrainEditCommandSchema,
 ]);
 export type EditorCommand = z.infer<typeof EditorCommandSchema>;

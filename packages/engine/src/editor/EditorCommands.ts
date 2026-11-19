@@ -127,7 +127,56 @@ export function applyEditorCommand(game: Game, command: EditorCommand): void {
       unit.delete(false);
       return;
     }
+    case "set_terrain": {
+      if (command.terrain.length !== command.tiles.length) {
+        throw new Error(
+          `${command.tiles.length} tiles but ${command.terrain.length} terrain values`,
+        );
+      }
+      // The last value given for a tile wins.
+      const terrain = new Map<TileRef, number>();
+      command.tiles.forEach((tile, i) => {
+        checkTile(game, tile);
+        terrain.set(tile, command.terrain[i]);
+      });
+      // What stands on a tile stands on its kind of terrain: a tile that
+      // changes between water, land and impassable loses its units (a
+      // structure on land, a ship on water) and its owner.
+      const kindChanged = new Set<TileRef>();
+      for (const [tile, value] of terrain) {
+        if (tileKind(game, tile) !== authoredKind(value)) kindChanged.add(tile);
+      }
+      for (const unit of game.units()) {
+        if (kindChanged.has(unit.tile())) unit.delete(false);
+      }
+      for (const tile of kindChanged) {
+        const owner = game.owner(tile);
+        if (owner.isPlayer()) owner.relinquish(tile);
+      }
+      game.setTerrain([...terrain.keys()], [...terrain.values()]);
+      // A port needs a shore, which an edit beside it can take away.
+      for (const port of game.units(UnitType.Port)) {
+        if (!game.isShore(port.tile())) port.delete(false);
+      }
+      return;
+    }
+    case "end_terrain_edit":
+      game.endTerrainEdit();
+      return;
   }
+}
+
+type TerrainKind = "water" | "land" | "impassable";
+
+function tileKind(game: Game, tile: TileRef): TerrainKind {
+  if (!game.isLand(tile)) return "water";
+  return game.isImpassable(tile) ? "impassable" : "land";
+}
+
+// See SetTerrainCommandSchema.
+function authoredKind(value: number): TerrainKind {
+  if (value === 0) return "water";
+  return value === 0x9f ? "impassable" : "land";
 }
 
 // GameMapImpl's PLAYER_ID_MASK: the largest owner id a tile can store.

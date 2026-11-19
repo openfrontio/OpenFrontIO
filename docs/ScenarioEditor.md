@@ -187,24 +187,33 @@ Terrain edits therefore run in two steps:
    runs on its surroundings: shoreline, depth, and the minimap tiles under
    it. This is enough for the screen.
 2. **When the stroke ends**, one full pass redoes what cannot be patched
-   locally: the ocean flood fill, the water component labels and the water
-   graph. Building a fresh `WaterManager` does the last two, the same work
-   every game does at load.
+   locally: it downscales the minimap from the full map again, then runs
+   the ocean flood fill and sets the depth of water with no coast. The
+   water component labels and the water graph wait for test play and
+   export (below).
 
-The full pass also runs before export, so the ocean bit and water components
-in the exported files never depend on the order of the strokes that made
-them.
+The full pass also runs before export, so the ocean bit, the minimap and
+the water components in the exported files never depend on the order of
+the strokes that made them.
 
-The cost of the full pass on a large map is not yet measured. It is fine at
-stroke end if it is in the range of game load; if not, the graph rebuild
-moves to "before test play and export" and only the ocean fill stays at
-stroke end.
+The full pass was to stay at stroke end if it cost about as much as game
+load, and otherwise the graph rebuild would move to "before test play and
+export". Measured with `tests/perf/TerrainEditFullPassPerf.ts` on World
+10000 (10000x5000): loading takes 0.5 s, the terrain pass 0.65-1.25 s and
+the graph rebuild 0.45-0.55 s. So the graph rebuild moved. `end_terrain_edit`
+runs the terrain pass: the ocean bit, and the depth of water with no coast.
+`Game.rebuildWaterGraph()` relabels the water components and rebuilds the
+graph, and runs before test play and export. On a 2212x2212 map the terrain
+pass takes about 0.1 s.
 
 Two rules:
 
 - The minimap rule must be the generator's (`createMiniMap`), not the
   simpler one the nuke path uses. A scenario started from a stock map would
-  otherwise drift from its own minimap as it is edited.
+  otherwise drift from its own minimap as it is edited. The generator also
+  removed tiny islands and lakes from most stock minimaps, which needs the
+  whole map; until that is a tool, the first stroke on a stock map brings
+  them back.
 - A terrain edit under existing content clears it first. Painting water over
   owned land removes the ownership and any structure there, and the document
   is updated to match.

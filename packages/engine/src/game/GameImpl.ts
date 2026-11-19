@@ -320,6 +320,26 @@ export class GameImpl implements Game {
     this.recordTileUpdate(tile);
   }
 
+  setTerrain(tiles: readonly TileRef[], terrain: readonly number[]): void {
+    this.recordTerrainChanges(this._waterManager.editTerrain(tiles, terrain));
+  }
+
+  endTerrainEdit(): void {
+    this.recordTerrainChanges(this._waterManager.endTerrainEdit());
+  }
+
+  rebuildWaterGraph(): void {
+    this._waterManager.rebuildWaterGraph();
+  }
+
+  private recordTerrainChanges(tiles: TileRef[]): void {
+    for (const tile of tiles) this.recordTileUpdate(tile);
+    if (tiles.length === 0) return;
+    this._territoryVersion++;
+    // Rail paths route around water, so a rail plan must be redone too.
+    this._structureVersion++;
+  }
+
   queueWaterConversion(tile: TileRef): void {
     if (!this.isLand(tile)) return;
     if (this.hasOwner(tile)) {
@@ -1562,6 +1582,9 @@ export class GameImpl implements Game {
   }
   setMagnitude(ref: TileRef, value: number): void {
     this._map.setMagnitude(ref, value);
+  }
+  setTerrainByte(ref: TileRef, value: number): void {
+    this._map.setTerrainByte(ref, value);
   }
   ownerID(ref: TileRef): number {
     return this._map.ownerID(ref);
