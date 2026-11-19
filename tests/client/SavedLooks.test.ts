@@ -57,6 +57,14 @@ describe("saved looks", () => {
     expect(isLookSaved("g1", "a")).toBe(false);
   });
 
+  it("a look of only earned items is not saved", () => {
+    saveLook(
+      "g1",
+      look("a", [{ ...ITEM, state: "earned", priceHard: undefined }]),
+    );
+    expect(savedLooks("g1")).toEqual([]);
+  });
+
   it("belongs to its game: a new game starts empty", () => {
     saveLook("g1", look("a"));
     expect(savedLooks("g2")).toEqual([]);

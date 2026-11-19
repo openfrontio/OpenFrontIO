@@ -23,7 +23,12 @@ import {
 import { translateText } from "../Utils";
 import { type LoadoutItem, loadoutItems } from "./card/LoadoutItems";
 import type { PlayerCardView } from "./card/PlayerCardModel";
-import { isLookSaved, saveLook, unsaveLook } from "./card/SavedLooks";
+import {
+  hasSomethingToBuy,
+  isLookSaved,
+  saveLook,
+  unsaveLook,
+} from "./card/SavedLooks";
 import "./EffectPreview";
 import { renderPatternPreview } from "./PatternPreview";
 
@@ -173,7 +178,8 @@ export class EquippedCosmeticsRow extends LitElement {
   }
 
   // What the look offers the viewer (the end screen's loadout: what they
-  // don't own yet), or [] when there is no tile to show.
+  // don't own yet), or [] when there is no tile to show: also when nothing in
+  // it can be bought (earned items alone).
   private lookItems(): LoadoutItem[] {
     const view = this.card;
     if (
@@ -186,7 +192,8 @@ export class EquippedCosmeticsRow extends LitElement {
     }
     const flares =
       this.userMe === false ? [] : (this.userMe.player.flares ?? []);
-    return loadoutItems(view, this.catalog, flares);
+    const items = loadoutItems(view, this.catalog, flares);
+    return hasSomethingToBuy(items) ? items : [];
   }
 
   private toggleLook(items: LoadoutItem[]) {

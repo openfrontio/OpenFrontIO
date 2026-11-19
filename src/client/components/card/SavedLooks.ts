@@ -22,6 +22,12 @@ let lookGameID: GameID | null = null;
 let looks: SavedLook[] = [];
 const listeners = new Set<() => void>();
 
+// Whether a look offers anything the viewer can buy: an earned item can only
+// be unlocked by playing, so a look of those alone isn't worth saving.
+export function hasSomethingToBuy(items: readonly LoadoutItem[]): boolean {
+  return items.some((i) => i.state === "buy");
+}
+
 function forGame(gameID: GameID): SavedLook[] {
   if (gameID !== lookGameID) {
     lookGameID = gameID;
@@ -42,11 +48,12 @@ export function onSavedLooksChanged(listener: () => void): () => void {
 }
 
 // Newest first, one per player, at most MAX_SAVED_LOOKS. A look with nothing
-// left to get isn't kept.
+// to buy (earned items alone don't count) isn't kept.
 export function saveLook(gameID: GameID, look: SavedLook): void {
   const rest = forGame(gameID).filter((l) => l.clientID !== look.clientID);
-  looks =
-    look.items.length === 0 ? rest : [look, ...rest].slice(0, MAX_SAVED_LOOKS);
+  looks = hasSomethingToBuy(look.items)
+    ? [look, ...rest].slice(0, MAX_SAVED_LOOKS)
+    : rest;
   changed();
 }
 

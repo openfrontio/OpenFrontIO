@@ -257,6 +257,16 @@ describe("equipped-cosmetics-row: get the look", () => {
     expect(el.hasAttribute("hidden")).toBe(true);
   });
 
+  it("hidden when only earned items are left (nothing to buy)", async () => {
+    const el = await renderLookRow([
+      "playerCard:standard",
+      "cardBackground:bg_pacific",
+      "cardTracker:wins",
+    ]);
+    expect(lookTile(el)).toBeNull();
+    expect(el.hasAttribute("hidden")).toBe(true);
+  });
+
   it("hidden on the viewer's own panel", async () => {
     const el = await renderLookRow([], CARD, null);
     expect(lookTile(el)).toBeNull();
