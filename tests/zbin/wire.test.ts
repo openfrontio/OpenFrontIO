@@ -175,6 +175,14 @@ const SERVER_MESSAGES: ServerMessage[] = [
       clients: [
         { clientID: P1, username: "alpha", clanTag: null, teamIndex: 0 },
         { clientID: P2, username: "bravo", clanTag: "XY", verified: true },
+        // Server-stamped card background, after levelBadge.
+        {
+          clientID: P3,
+          username: "charlie",
+          clanTag: null,
+          levelBadge: 7,
+          cardBackground: "bg_pacific",
+        },
       ],
       lobbyCreatorClientID: P1,
     },
