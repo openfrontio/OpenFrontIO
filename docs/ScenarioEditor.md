@@ -324,15 +324,16 @@ the editor when it ends. No upload.
 - The lobby shows the playable nations. The host assigns each joined player
   to one. The game cannot start until every player has a nation.
 - The server never fetches the bundle and does not simulate. It checks only
-  what it can see: every player has a nation and no nation is assigned
-  twice. It then puts the scenario block in the start info and runs the game
-  as usual, so starting a scenario game adds no API dependency to the game
-  servers.
+  what it can see: every player has exactly one nation and no nation is
+  assigned twice. It then puts the scenario block in the start info and runs
+  the game as usual, so starting a scenario game adds no API dependency to
+  the game servers.
 - Each client downloads the bundle by id and version, verifies the hash from
-  the start info, and checks the assignments against the bundle's nations.
-  A client that finds a mismatch refuses to start. The host's client makes
-  the same checks in the lobby, so only a modified host can send a bad
-  start, and it breaks only that host's own private game.
+  the start info, and checks the assignments against the playable nations
+  in the snapshot itself, not the header's copy of that list. A client that
+  finds a mismatch refuses to start. The host's client makes the same checks
+  in the lobby, so only a modified host can send a bad start, and it breaks
+  only that host's own private game.
 - Each client then restores the snapshot and applies the assignments.
 - Rejoining works unchanged: the server replays turns from the start, and the
   start state is reproducible.
