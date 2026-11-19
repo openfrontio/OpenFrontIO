@@ -1,5 +1,6 @@
 import {
   Difficulty,
+  GameMapId,
   GameMapSize,
   GameMapType,
   GameMode,
@@ -33,7 +34,7 @@ import {
   spawnOnLand,
 } from "./util/ArchiveGame";
 
-const loadMap = (c: { gameMap: GameMapType; gameMapSize: GameMapSize }) =>
+const loadMap = (c: { gameMap: GameMapId; gameMapSize: GameMapSize }) =>
   loadMapFiles(mapLoader, c.gameMap, c.gameMapSize);
 
 async function extractSnapshotFromRecord(opts: {
