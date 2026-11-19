@@ -132,3 +132,14 @@ describe("admin bot create_game pool", () => {
     expect(created.config).toBeUndefined();
   });
 });
+
+describe("admin bot create_game map", () => {
+  it("refuses a Custom map, whose files a lobby can't carry", () => {
+    const { handler, created } = captureCreateHandler({ setListed: vi.fn() });
+    const res = mockRes();
+    handler({ body: { ...BASE, gameMap: "Custom" } }, res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBe("custom_map_unsupported");
+    expect(created.config).toBeUndefined();
+  });
+});
