@@ -1141,7 +1141,7 @@ class Client {
     const initialAuth = await userAuth();
     // The player's store experiment groups, in parallel with the profile.
     // Signed out (or on Steam) this settles at once with no request.
-    void loadExperiments();
+    void loadExperiments().catch(() => undefined);
     if (initialAuth === false) {
       // Not logged in: apply the signed-out profile directly.
       applyUserMe(initialAuthGeneration)(false);

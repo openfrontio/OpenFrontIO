@@ -9,6 +9,7 @@ const env = vi.hoisted(() => ({
   signedIn: true,
   sub: "account-a",
   steam: false,
+  authThrows: false,
 }));
 
 vi.mock("../../src/client/ApiBase", () => ({
@@ -19,8 +20,10 @@ vi.mock("../../src/client/ApiBase", () => ({
 vi.mock("../../src/client/Auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Auth")>()),
   peekAuthHeader: () => (env.signedIn ? "Bearer token" : ""),
-  userAuth: async () =>
-    env.signedIn ? { jwt: "token", claims: { sub: env.sub } } : false,
+  userAuth: async () => {
+    if (env.authThrows) throw new Error("auth broke");
+    return env.signedIn ? { jwt: "token", claims: { sub: env.sub } } : false;
+  },
   getAuthHeader: async () => (env.signedIn ? "Bearer token" : ""),
   logOut: vi.fn(async () => true),
 }));
@@ -181,9 +184,12 @@ beforeEach(() => {
   env.signedIn = true;
   env.sub = "account-a";
   env.steam = false;
+  env.authThrows = false;
   Experiments.resetExperimentsForTest();
   Cosmetics.invalidateCosmetics();
   localStorage.clear();
+  // The last load on this device was signed in, so the catalog waits.
+  localStorage.setItem("experimentsSignedIn", "1");
   FakeIO.instances = [];
   vi.stubGlobal("IntersectionObserver", FakeIO);
   experimentsRoute = () => json(200, { assignments: [], catalogCohort: null });
@@ -411,6 +417,196 @@ describe("a group that arrives late", () => {
   }
 });
 
+describe("waiting for the groups", () => {
+  it("never waits for a signed-out player", async () => {
+    localStorage.removeItem("experimentsSignedIn");
+    env.signedIn = false;
+    Experiments.expectExperiments();
+    // The catalog goes out before auth has even started a load.
+    const fetched = Cosmetics.fetchCosmetics();
+    await vi.waitFor(() => expect(catalogCalls()).toHaveLength(1));
+    await fetched;
+    // Auth settles signed out: the plain catalog is already right, so it is
+    // only re-tagged, never fetched again.
+    await Experiments.loadExperiments();
+    await vi.advanceTimersByTimeAsync(Cosmetics.EXPERIMENTS_WAIT_MS);
+    expect(catalogCalls()).toHaveLength(1);
+    expect(experimentCalls()).toHaveLength(0);
+  });
+
+  it("doesn't refetch when a late answer has no test for the player", async () => {
+    let answer!: (r: Response) => void;
+    experimentsRoute = () =>
+      new Promise<Response>((resolve) => (answer = resolve));
+    Experiments.expectExperiments();
+    void Experiments.loadExperiments();
+    const first = Cosmetics.fetchCosmetics();
+    await vi.advanceTimersByTimeAsync(Cosmetics.EXPERIMENTS_WAIT_MS);
+    await first;
+    answer(json(200, { assignments: [], catalogCohort: null }));
+    await vi.waitFor(() =>
+      expect(Experiments.experimentsState()).not.toBeNull(),
+    );
+    await vi.advanceTimersByTimeAsync(100);
+    expect(catalogCalls()).toHaveLength(1);
+  });
+
+  it("never waits on Steam", async () => {
+    env.steam = true;
+    Experiments.expectExperiments();
+    const fetched = Cosmetics.fetchCosmetics();
+    await vi.waitFor(() => expect(catalogCalls()).toHaveLength(1));
+    await fetched;
+  });
+
+  it("forgets the signed-in hint once a load finds no session", async () => {
+    env.signedIn = false;
+    await Experiments.loadExperiments();
+    expect(localStorage.getItem("experimentsSignedIn")).toBeNull();
+    Experiments.resetExperimentsForTest();
+    env.signedIn = true;
+    await Experiments.loadExperiments();
+    expect(localStorage.getItem("experimentsSignedIn")).toBe("1");
+  });
+
+  it("gets a catalog when a load rejects", async () => {
+    Experiments.expectExperiments();
+    Experiments.loadInFlightForTest(
+      "account-a",
+      Promise.reject(new Error("boom")),
+    );
+    const cosmetics = await Cosmetics.fetchCosmetics();
+    expect(cosmetics).not.toBeNull();
+    expect(catalogCalls().map(([url]) => url)).toEqual([
+      "https://api.test/cosmetics.json?rail=web",
+    ]);
+    expect(Experiments.assignmentKnown()).toBe(false);
+  });
+
+  it("never rejects when auth or the response throws", async () => {
+    env.authThrows = true;
+    await expect(Experiments.loadExperiments()).resolves.toMatchObject({
+      account: null,
+      assignments: [],
+    });
+    env.authThrows = false;
+    Experiments.resetExperimentsForTest();
+    experimentsRoute = () =>
+      new Response("not json", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    await expect(Experiments.loadExperiments()).resolves.toMatchObject({
+      assignments: [],
+      catalogCohort: null,
+    });
+  });
+
+  it("doesn't fetch the previous account's cohort after a switch", async () => {
+    // A's load is in flight when the catalog starts waiting on it.
+    let answerA!: (r: Response) => void;
+    experimentsRoute = () =>
+      new Promise<Response>((resolve) => (answerA = resolve));
+    Experiments.expectExperiments();
+    void Experiments.loadExperiments();
+    await vi.waitFor(() => expect(experimentCalls()).toHaveLength(1));
+    const fetched = Cosmetics.fetchCosmetics();
+
+    // B signs in; B's load is in flight too.
+    let answerB!: (r: Response) => void;
+    experimentsRoute = () =>
+      new Promise<Response>((resolve) => (answerB = resolve));
+    env.sub = "account-b";
+    void Experiments.loadExperiments();
+    await vi.waitFor(() => expect(experimentCalls()).toHaveLength(2));
+
+    // A's answer lands first: its Deeper cohort is not B's.
+    answerA(json(200, assignments("deeper")));
+    await fetched;
+    expect(catalogCalls().map(([url]) => url)).toEqual([
+      "https://api.test/cosmetics.json?rail=web",
+    ]);
+    expect(Experiments.assignmentKnown()).toBe(false);
+
+    // B's control group lands: refetched for B, known for B.
+    answerB(json(200, assignments("control")));
+    await vi.waitFor(() => expect(catalogCalls()).toHaveLength(2));
+    await vi.waitFor(() => expect(Experiments.assignmentKnown()).toBe(true));
+    expect(catalogCalls()[1][0]).toBe(
+      "https://api.test/cosmetics.json?rail=web",
+    );
+    expect(Experiments.experimentsState()?.account).toBe("account-b");
+  });
+});
+
+describe("an account switch", () => {
+  async function knownFor(variant: "control" | "deeper") {
+    experimentsRoute = () => json(200, assignments(variant));
+    Experiments.expectExperiments();
+    void Experiments.loadExperiments();
+    await Cosmetics.fetchCosmetics();
+    expect(Experiments.assignmentKnown()).toBe(true);
+  }
+
+  it("sends nothing for A while B's groups load, then B's own exposure", async () => {
+    await knownFor("deeper");
+    const card = flashCard();
+    Experiments.exposureWatcher.observe(card, "store_flash");
+
+    // B signs in directly; B's answer is slow.
+    let answerB!: (r: Response) => void;
+    experimentsRoute = () =>
+      new Promise<Response>((resolve) => (answerB = resolve));
+    env.sub = "account-b";
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", {
+        detail: { player: { publicId: "PUB-B" } },
+      }),
+    );
+    await vi.waitFor(() => expect(experimentCalls()).toHaveLength(2));
+    expect(Experiments.assignmentKnown()).toBe(false);
+
+    // The card is on screen meanwhile: A's group is never sent as B.
+    setVisible(card, true);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(exposureBodies()).toEqual([]);
+
+    answerB(json(200, assignments("control")));
+    await vi.waitFor(() => expect(Experiments.assignmentKnown()).toBe(true));
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(exposureBodies()).toEqual([
+      {
+        platform: "web",
+        exposures: [{ key: KEY, variant: "control", surface: "store_flash" }],
+      },
+    ]);
+    expect(localStorage.getItem(`experimentExposure:account-b:${KEY}`)).toBe(
+      "1",
+    );
+    expect(localStorage.getItem(`experimentExposure:account-a:${KEY}`)).toBe(
+      null,
+    );
+  });
+
+  it("checks the token's account at send time", async () => {
+    await knownFor("deeper");
+    // The token is already B's, before B's groups load.
+    env.sub = "account-b";
+    expect(await Experiments.recordExposure(KEY, "store_flash")).toBe(false);
+    expect(exposureBodies()).toEqual([]);
+    expect(localStorage.getItem(`experimentExposure:account-a:${KEY}`)).toBe(
+      null,
+    );
+    expect(localStorage.getItem(`experimentExposure:account-b:${KEY}`)).toBe(
+      null,
+    );
+    // Back on A, A's exposure can still go.
+    env.sub = "account-a";
+    expect(await Experiments.recordExposure(KEY, "store_flash")).toBe(true);
+    expect(exposureBodies()).toHaveLength(1);
+  });
+});
+
 describe("exposures", () => {
   async function known(variant: "control" | "deeper", counted = true) {
     experimentsRoute = () => json(200, assignments(variant, counted));
@@ -457,7 +653,9 @@ describe("exposures", () => {
         exposures: [{ key: KEY, variant: "deeper", surface: "home_banner" }],
       },
     ]);
-    expect(localStorage.getItem(`experimentExposure:PUB1:${KEY}`)).toBe("1");
+    expect(localStorage.getItem(`experimentExposure:account-a:${KEY}`)).toBe(
+      "1",
+    );
 
     // A later page load (fresh module state) doesn't send it again.
     Experiments.resetExperimentsForTest();
@@ -471,7 +669,9 @@ describe("exposures", () => {
     fetchMock.mockImplementationOnce(async () => json(500, {}));
     expect(await Experiments.recordExposure(KEY, "store_flash")).toBe(true);
     expect(await Experiments.recordExposure(KEY, "store_flash")).toBe(false);
-    expect(localStorage.getItem(`experimentExposure:PUB1:${KEY}`)).toBeNull();
+    expect(
+      localStorage.getItem(`experimentExposure:account-a:${KEY}`),
+    ).toBeNull();
   });
 
   it("sends nothing for a player the test doesn't count", async () => {

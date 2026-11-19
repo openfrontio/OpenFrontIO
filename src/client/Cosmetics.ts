@@ -79,6 +79,10 @@ let __cosmeticsFetchedAt = 0;
 // fetched for: `undefined` while its request still waits for the player's
 // group, null when it went out without it (the wait timed out).
 let __cosmeticsGeneration: number | null | undefined = undefined;
+// The cohort the cached catalog was fetched with (null: the plain catalog).
+let __cosmeticsCohort: string | null = null;
+// Whether the cached request has landed (its catalog is the one in use).
+let __cosmeticsLanded = false;
 
 /**
  * How long a catalog fetch waits for the player's store experiment group
@@ -693,7 +697,11 @@ export async function purchaseCosmetic(
   }
 
   const cosmeticType = resolved.type as
-    "pattern" | "skin" | "flag" | "crown" | "effect";
+    | "pattern"
+    | "skin"
+    | "flag"
+    | "crown"
+    | "effect";
   const result = await purchaseWithCurrency(
     cosmeticType,
     c.name,
@@ -1076,6 +1084,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
     return __cosmetics;
   }
   __cosmeticsGeneration = undefined;
+  __cosmeticsLanded = false;
   // A holder, so the body can recognise its own request as the cached one
   // (filled in before any await inside can resume).
   const self: { request?: Promise<Cosmetics | null> } = {};
@@ -1085,11 +1094,13 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
       // isn't known in time, the plain catalog goes out untagged, sends no
       // exposure, and is refetched when the group lands.
       const experiments = await waitForExperiments(EXPERIMENTS_WAIT_MS);
+      const cohort = experiments?.catalogCohort ?? null;
       if (__cosmetics === self.request) {
         __cosmeticsGeneration = experiments?.generation ?? null;
+        __cosmeticsCohort = cohort;
       }
       const response = await fetch(
-        cosmeticsJsonUrl(experiments?.catalogCohort ?? null),
+        cosmeticsJsonUrl(cohort),
         {
           signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
         },
@@ -1113,7 +1124,12 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
       __cosmeticsHash = simpleHash(hashInput);
       __cosmeticsCache = result.data;
       __cosmeticsFetchedAt = Date.now();
-      setCatalogGeneration(experiments?.generation ?? null);
+      __cosmeticsLanded = true;
+      setCatalogGeneration(__cosmeticsGeneration ?? null);
+      // The groups moved on while this was in flight (a switch, or a late
+      // answer that landed before this request was tagged): refetch for the
+      // groups now known rather than keep this cohort until the 60 s refresh.
+      followExperiments();
       return result.data;
     } catch (error) {
       console.warn("Error getting cosmetics:", error);
@@ -1152,11 +1168,28 @@ export async function reloadCosmetics(): Promise<Cosmetics | null> {
 // without one, is refetched in every group, control included, so neither
 // group keeps a catalog that can never send exposures. A request still
 // waiting for the group picks it up itself.
-document.addEventListener(EXPERIMENTS_CHANGED, () => {
+document.addEventListener(EXPERIMENTS_CHANGED, () => followExperiments());
+
+/**
+ * Brings the catalog in hand up to the latest experiment groups. With no
+ * test for this player (signed out, or nothing running) and the same cohort,
+ * the catalog is already right: it is only re-tagged, with no request. Any
+ * other change refetches, the same way in every group.
+ */
+function followExperiments(): void {
   if (__cosmetics === null || __cosmeticsGeneration === undefined) return;
-  if (__cosmeticsGeneration === experimentsState()?.generation) return;
+  const latest = experimentsState();
+  if (latest === null || __cosmeticsGeneration === latest.generation) return;
+  if (
+    latest.assignments.length === 0 &&
+    latest.catalogCohort === __cosmeticsCohort
+  ) {
+    __cosmeticsGeneration = latest.generation;
+    if (__cosmeticsLanded) setCatalogGeneration(latest.generation);
+    return;
+  }
   void reloadCosmetics();
-});
+}
 
 /** A tier by name, listed on this rail or not. */
 export function subscriptionTier(

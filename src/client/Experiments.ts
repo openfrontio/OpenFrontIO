@@ -5,9 +5,8 @@ import {
   ExperimentsResponseSchema,
 } from "@openfront/shared/ApiSchemas";
 import { getApiBase } from "./ApiBase";
-import { getAuthHeader, peekAuthHeader, userAuth } from "./Auth";
+import { peekAuthHeader, userAuth } from "./Auth";
 import { storePlatform } from "./StoreTracking";
-import { lastUserMeResponse } from "./UserMeBroadcast";
 
 // Store experiments: which test group the signed-in player is in, the catalog
 // cohort that group is priced with, and the exposures that count them in a
@@ -30,6 +29,10 @@ const REQUEST_TIMEOUT_MS = 5_000;
 const EXPOSURE_MS = 1000;
 const EXPOSURE_RATIO = 0.5;
 const EXPOSURE_STORAGE_PREFIX = "experimentExposure:";
+// Set while the last load on this device was for a signed-in player, so the
+// next page load knows (synchronously, before auth) whether its catalog
+// should wait for a group. Signed-out players never wait.
+const SIGNED_IN_HINT_KEY = "experimentsSignedIn";
 
 export interface ExperimentsState {
   /** Bumped by every published state; a catalog is tagged with it. */
@@ -54,12 +57,30 @@ const publishWaiters = new Set<(state: ExperimentsState) => void>();
 let catalogGeneration: number | null = null;
 
 /**
- * Main calls this before auth starts, so a catalog fetched meanwhile waits
- * (briefly) for the player's group instead of going out without it. Without
- * it, as in tests and other entry points, the catalog never waits.
+ * Main calls this before any component loads, so a catalog fetched before
+ * auth settles waits (briefly) for the player's group instead of going out
+ * without it. Only when the last load here was signed in: a signed-out
+ * player (or Steam) never waits, and a first signed-in visit fetches plain
+ * and refetches once the group lands. Without this call, as in tests, the
+ * catalog never waits for a load that hasn't started.
  */
 export function expectExperiments(): void {
-  expected = true;
+  try {
+    expected =
+      platform() !== "steam" &&
+      localStorage.getItem(SIGNED_IN_HINT_KEY) !== null;
+  } catch {
+    expected = false;
+  }
+}
+
+function rememberSignedIn(signedIn: boolean): void {
+  try {
+    if (signedIn) localStorage.setItem(SIGNED_IN_HINT_KEY, "1");
+    else localStorage.removeItem(SIGNED_IN_HINT_KEY);
+  } catch {
+    // Storage blocked: the next load just doesn't wait.
+  }
 }
 
 function platform(): "web" | "crazygames" | "steam" {
@@ -72,10 +93,14 @@ async function currentAccount(): Promise<{
 } | null> {
   // The cached token decides signed-in without ever starting a refresh: a
   // signed-out player makes no auth call and no experiments call.
-  if (peekAuthHeader() === "") return null;
-  const auth = await userAuth();
-  if (auth === false) return null;
-  return { account: auth.claims.sub, auth: `Bearer ${auth.jwt}` };
+  try {
+    if (peekAuthHeader() === "") return null;
+    const auth = await userAuth();
+    if (auth === false) return null;
+    return { account: auth.claims.sub, auth: `Bearer ${auth.jwt}` };
+  } catch {
+    return null;
+  }
 }
 
 async function fetchAssignments(
@@ -104,6 +129,7 @@ async function fetchAssignments(
 
 function publish(state: ExperimentsState): void {
   published = state;
+  rememberSignedIn(state.account !== null);
   for (const resolve of publishWaiters) resolve(state);
   publishWaiters.clear();
   document.dispatchEvent(
@@ -127,16 +153,25 @@ export async function loadExperiments(): Promise<ExperimentsState> {
   const entry = { account } as NonNullable<typeof current>;
   current = entry;
   entry.promise = (async () => {
-    const result =
-      who === null || platform() === "steam"
-        ? { assignments: [], catalogCohort: null }
-        : await fetchAssignments(who.auth);
+    let result: Pick<ExperimentsState, "assignments" | "catalogCohort"> = {
+      assignments: [],
+      catalogCohort: null,
+    };
+    try {
+      if (who !== null && platform() !== "steam") {
+        result = await fetchAssignments(who.auth);
+      }
+      // The cohort is a web-rail catalog thing: Steam never sends one.
+      if (platform() === "steam") result = { ...result, catalogCohort: null };
+    } catch {
+      // Never rejects: anything unexpected is "no experiments".
+      result = { assignments: [], catalogCohort: null };
+    }
     const state: ExperimentsState = {
       generation: ++generation,
       account,
       assignments: result.assignments,
-      // The cohort is a web-rail catalog thing: Steam never sends one.
-      catalogCohort: platform() === "steam" ? null : result.catalogCohort,
+      catalogCohort: result.catalogCohort,
     };
     // Only the latest account's answer is published: one that lands after
     // a switch was made for a player who is no longer signed in.
@@ -151,22 +186,38 @@ export async function loadExperiments(): Promise<ExperimentsState> {
  * catalog fetched on null goes out plain and untagged, and is refetched when
  * the groups land.
  */
-export function waitForExperiments(
+export async function waitForExperiments(
   ms: number,
 ): Promise<ExperimentsState | null> {
-  let pending: Promise<ExperimentsState>;
+  let pending: Promise<ExperimentsState | null>;
   if (current !== null) {
-    pending = current.promise;
+    // Never rejects into the catalog: a failed load is "not known".
+    pending = current.promise.catch(() => null);
   } else if (expected) {
     pending = new Promise((resolve) => publishWaiters.add(resolve));
   } else {
-    return Promise.resolve(null);
+    return null;
   }
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<null>((resolve) => {
     timer = setTimeout(() => resolve(null), ms);
   });
-  return Promise.race([pending, timeout]).finally(() => clearTimeout(timer));
+  const state = await Promise.race([pending, timeout]).finally(() =>
+    clearTimeout(timer),
+  );
+  return freshest(state);
+}
+
+/**
+ * A state for the account now signed in, or null. A load for the previous
+ * account can resolve after a switch started; its cohort must not be used.
+ */
+function freshest(state: ExperimentsState | null): ExperimentsState | null {
+  if (state === null || current === null) return state;
+  if (state.account === current.account) return state;
+  return published !== null && published.account === current.account
+    ? published
+    : null;
 }
 
 /** The latest published groups, or null before the first load lands. */
@@ -198,22 +249,22 @@ export function assignmentKnown(): boolean {
   return (
     published !== null &&
     catalogGeneration !== null &&
-    catalogGeneration === published.generation
+    catalogGeneration === published.generation &&
+    // Disarmed while another account's groups load (a direct switch).
+    current !== null &&
+    current.account === published.account
   );
 }
 
-// Per page load: one exposure per test per account is enough.
+// Per page load: one exposure per test per account is enough. The page and
+// storage dedupe share one key: the account (JWT subject) the group is for.
 const sentThisPage = new Set<string>();
 
-function exposureStorageKey(key: string): string | null {
-  const last = lastUserMeResponse()?.response;
-  if (!last) return null;
-  return `${EXPOSURE_STORAGE_PREFIX}${last.player.publicId}:${key}`;
+function exposureKey(account: string, key: string): string {
+  return `${EXPOSURE_STORAGE_PREFIX}${account}:${key}`;
 }
 
-function storedExposure(key: string): boolean {
-  const storageKey = exposureStorageKey(key);
-  if (storageKey === null) return false;
+function storedExposure(storageKey: string): boolean {
   try {
     return localStorage.getItem(storageKey) !== null;
   } catch {
@@ -221,9 +272,7 @@ function storedExposure(key: string): boolean {
   }
 }
 
-function rememberExposure(key: string): void {
-  const storageKey = exposureStorageKey(key);
-  if (storageKey === null) return;
+function rememberExposure(storageKey: string): void {
   try {
     localStorage.setItem(storageKey, "1");
   } catch {
@@ -250,28 +299,37 @@ export async function recordExposure(
   surface: ExperimentExposureSurface,
 ): Promise<boolean> {
   const assignment = exposableAssignments().find((a) => a.key === key);
-  if (assignment === undefined || published === null) return false;
-  const pageKey = `${published.account}:${key}`;
-  if (sentThisPage.has(pageKey) || storedExposure(key)) return false;
-  sentThisPage.add(pageKey);
+  const account = published?.account ?? null;
+  if (assignment === undefined || account === null) return false;
+  const dedupeKey = exposureKey(account, key);
+  if (sentThisPage.has(dedupeKey) || storedExposure(dedupeKey)) return false;
   const where = platform();
   if (where === "steam") return false;
+  sentThisPage.add(dedupeKey);
   const body: ExperimentExposureBody = {
     platform: where,
     exposures: [{ key, variant: assignment.variant, surface }],
   };
   try {
-    const auth = await getAuthHeader();
-    if (auth === "") return false;
+    // Sent only with the token of the account the group was loaded for: an
+    // account switch in between must not send A's group as B.
+    const auth = await userAuth();
+    if (auth === false || auth.claims.sub !== account) {
+      sentThisPage.delete(dedupeKey);
+      return false;
+    }
     const response = await fetch(
       `${getApiBase()}/users/@me/experiments/exposures`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: auth },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.jwt}`,
+        },
         body: JSON.stringify(body),
       },
     );
-    if (response.ok) rememberExposure(key);
+    if (response.ok) rememberExposure(dedupeKey);
   } catch {
     // Not retried; the purchase-time exposure still catches buyers.
   }
@@ -392,7 +450,7 @@ export const exposureWatcher = new ExposureWatcher();
 // account; the same account answers from the memo with no request.
 document.addEventListener("userMeResponse", () => {
   if (current === null) return;
-  void loadExperiments();
+  void loadExperiments().catch(() => undefined);
 });
 
 /** Tests only. */
@@ -423,4 +481,12 @@ export function publishExperimentsForTest(
   publish(state);
   setCatalogGeneration(state.generation);
   return state;
+}
+
+/** Tests only: a load in flight for `account`, settling with `promise`. */
+export function loadInFlightForTest(
+  account: string | null,
+  promise: Promise<ExperimentsState>,
+): void {
+  current = { account, promise };
 }

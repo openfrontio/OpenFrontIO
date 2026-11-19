@@ -695,7 +695,11 @@ export type SetCreatorCodeResult =
   | {
       ok: false;
       code:
-        "invalid" | "not_found" | "self_referral" | "failed" | "rate_limited";
+        | "invalid"
+        | "not_found"
+        | "self_referral"
+        | "failed"
+        | "rate_limited";
     }
   | { ok: false; code: "cooldown"; retryAfterSeconds: number | null };
 
@@ -788,7 +792,8 @@ export async function setCreatorCode(
 }
 
 export type ClearCreatorCodeResult =
-  { ok: true } | { ok: false; code: "rate_limited" | "failed" };
+  | { ok: true }
+  | { ok: false; code: "rate_limited" | "failed" };
 
 // DELETE /users/@me/creator — unbinds the caller's supported creator, if any
 // (Creator Code programme). Always safe: unbinding is never gated by the
