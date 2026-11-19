@@ -47,6 +47,7 @@ interface Shipped {
   manifest: MapManifest;
   map: Uint8Array;
   map4x: Uint8Array;
+  map16x: Uint8Array;
 }
 
 function shipped(name: string): Shipped {
@@ -59,6 +60,7 @@ function shipped(name: string): Shipped {
     ) as MapManifest,
     map: read("map.bin"),
     map4x: read("map4x.bin"),
+    map16x: read("map16x.bin"),
   };
 }
 
@@ -224,9 +226,28 @@ function expectShipped(e: Editor, s: Shipped): void {
   );
 }
 
+/** Exports `e`'s terrain and checks the files are the shipped ones. */
+function expectExported(e: Editor, s: Shipped): void {
+  const files = e.runner.applyEditorCommand({ type: "export_terrain" })!;
+  expect(files.map).toBe(CustomGameMap);
+  expect(differences(files.mapBin!, s.map)).toBe(0);
+  expect(differences(files.map4xBin!, s.map4x)).toBe(0);
+  expect(differences(files.map16xBin!, s.map16x)).toBe(0);
+  for (const size of ["map", "map4x", "map16x"] as const) {
+    expect(files.manifest[size]).toEqual(s.manifest[size]);
+  }
+}
+
 describe("terrain edits reproduce a stock map's files", () => {
   // Tutorial and More Than Luck are two of the stock maps whose minimap
   // the generator didn't change after downscaling (see the Germany test).
+  // map16x is downscaled from map4x, so the export reproduces it on every
+  // map whose map4x the editor reproduces: alps, choppingblock, hawaii,
+  // labyrinth, morethanluck, sierpinski, thebox, tourney1-4, tradersdream,
+  // tutorial and warshipwarship (15 of the 148 stock maps), and on 14 more
+  // whose map4x differs only by islands too small to last to map16x. The
+  // other maps' map16x inherit their map4x's difference (see the map16x
+  // test below).
   test("Tutorial, painted as many overlapping strokes in shuffled order", async () => {
     const s = shipped("tutorial");
     const { width: w, height: h } = s.manifest.map;
@@ -274,6 +295,7 @@ describe("terrain edits reproduce a stock map's files", () => {
 
     e.apply({ type: "end_terrain_edit" });
     expectShipped(e, s);
+    expectExported(e, s);
   });
 
   test("More Than Luck, with impassable terrain, as one stroke", async () => {
@@ -284,6 +306,7 @@ describe("terrain edits reproduce a stock map's files", () => {
     expect(differences(e.miniTerrain(), s.map4x, OCEAN_BIT)).toBe(0);
     e.apply({ type: "end_terrain_edit" });
     expectShipped(e, s);
+    expectExported(e, s);
   }, 30_000);
 
   test("Germany, with water bodies that have no coast: the full map", async () => {
@@ -301,6 +324,32 @@ describe("terrain edits reproduce a stock map's files", () => {
     expect(e.runner.game.numLandTiles()).toBe(s.manifest.map.num_land_tiles);
     expect(e.clientMap.numLandTiles()).toBe(s.manifest.map.num_land_tiles);
     // The only stock map with water that has no coast, and a large one.
+  }, 30_000);
+
+  test("map16x is map4x downscaled, as the generator makes it", async () => {
+    // On maps whose map4x the editor doesn't reproduce: the generator
+    // removed small islands from it, which the editor leaves to a later
+    // tool. From the shipped map4x, the editor's map16x is the shipped one
+    // on all 148 stock maps; Germany has water with no coast, whose depth
+    // map16x copies from map4x, and Archipelago Sea the most islands.
+    for (const name of ["germany", "archipelagosea"]) {
+      const s = shipped(name);
+      const e = await editorOn(
+        {
+          map: CustomGameMap,
+          mapSize: GameMapSize.Normal,
+          manifest: s.manifest,
+          mapBin: s.map.slice(),
+          map4xBin: s.map4x.slice(),
+        },
+        s.map.slice(),
+      );
+      const map16x = e.runner.game.downscaleMiniMap();
+      const bytes = new Uint8Array(map16x.width() * map16x.height());
+      for (let t = 0; t < bytes.length; t++) bytes[t] = map16x.terrainByte(t);
+      expect(differences(bytes, s.map16x)).toBe(0);
+      expect(map16x.numLandTiles()).toBe(s.manifest.map16x.num_land_tiles);
+    }
   }, 30_000);
 
   test("a stock map's minimap doesn't depend on which tiles were painted", async () => {

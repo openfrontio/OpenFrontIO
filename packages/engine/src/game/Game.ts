@@ -667,9 +667,11 @@ export interface Game extends GameLike {
   setTerrain(tiles: readonly TileRef[], terrain: readonly number[]): void;
   /** Redoes the ocean bit and the depth of water with no coast. */
   endTerrainEdit(): void;
+  /** The map16x the map generator would make from the minimap. */
+  downscaleMiniMap(): GameMap;
   /**
    * Relabels the water components and rebuilds the water graph after
-   * terrain edits. The scenario editor runs it before test play and export.
+   * terrain edits. The scenario editor runs it before test play.
    */
   rebuildWaterGraph(): void;
 

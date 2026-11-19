@@ -4,6 +4,7 @@
  * result.
  */
 
+import type { EditorCommand } from "@openfront/engine-api/EditorCommands";
 import {
   CustomGameMap,
   GameMapSize,
@@ -161,6 +162,55 @@ test("an editor game takes no turns", async () => {
   expect(result.error?.errMsg).toMatch(/doesn't take turns/);
   expect(result.gameUpdates).toEqual([]);
   expect(posted().map((m) => m.type)).toEqual(["run_turns_result"]);
+});
+
+test("export_terrain answers with the map files written before the next command", async () => {
+  await init(true);
+  const command = (id: string, command: EditorCommand): MainThreadMessage => ({
+    type: "editor_command",
+    id,
+    command,
+  });
+  // Sent together: each waits for the one before it to finish.
+  self.dispatchEvent(
+    new MessageEvent("message", {
+      data: command("export1", { type: "export_terrain" }),
+    }),
+  );
+  self.dispatchEvent(
+    new MessageEvent("message", {
+      data: command("water", {
+        type: "set_terrain",
+        tiles: [0],
+        terrain: [0],
+      }),
+    }),
+  );
+  const second = await send<EditorCommandResultMessage>(
+    command("export2", { type: "export_terrain" }),
+    "editor_command_result",
+  );
+  const results = posted().filter(
+    (m) => m.type === "editor_command_result",
+  ) as EditorCommandResultMessage[];
+  expect(results.map((m) => m.id)).toEqual(["export1", "water", "export2"]);
+  const first = results[0];
+  expect(first.error).toBeUndefined();
+  expect(first.map!.map).toBe(CustomGameMap);
+  // Tile 0 is land on this map until the set_terrain sent after the first
+  // export makes it water.
+  expect(first.map!.mapBin![0] & 0x80).toBe(0x80);
+  expect(second.map!.mapBin![0] & 0x80).toBe(0);
+  expect(second.map!.manifest.map.num_land_tiles).toBe(
+    first.map!.manifest.map.num_land_tiles - 1,
+  );
+  // The files' buffers are transferred, not copied.
+  const call = self.postMessage.mock.calls.find((c) => c[0] === first);
+  expect(call![1]).toEqual([
+    first.map!.mapBin!.buffer,
+    first.map!.map4xBin!.buffer,
+    first.map!.map16xBin!.buffer,
+  ]);
 });
 
 test("an editor game can't start from a snapshot", async () => {

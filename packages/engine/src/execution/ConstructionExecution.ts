@@ -24,6 +24,30 @@ import { PortExecution } from "./PortExecution";
 import { SAMLauncherExecution } from "./SAMLauncherExecution";
 import { WarshipExecution } from "./WarshipExecution";
 
+/**
+ * The execution that runs a finished structure: what construction adds when
+ * it completes, and what the scenario editor's finalize gives the structures
+ * it placed.
+ */
+export function structureExecution(structure: Unit): Execution {
+  switch (structure.type()) {
+    case UnitType.Port:
+      return new PortExecution(structure);
+    case UnitType.MissileSilo:
+      return new MissileSiloExecution(structure);
+    case UnitType.DefensePost:
+      return new DefensePostExecution(structure);
+    case UnitType.SAMLauncher:
+      return new SAMLauncherExecution(structure.owner(), null, structure);
+    case UnitType.City:
+      return new CityExecution(structure);
+    case UnitType.Factory:
+      return new FactoryExecution(structure);
+    default:
+      throw new Error(`${structure.type()} is not a structure`);
+  }
+}
+
 export class ConstructionExecution implements Execution {
   private structure: Unit | null = null;
   private active: boolean = true;
@@ -145,24 +169,12 @@ export class ConstructionExecution implements Execution {
         );
         break;
       case UnitType.Port:
-        this.mg.addExecution(new PortExecution(this.structure!));
-        break;
       case UnitType.MissileSilo:
-        this.mg.addExecution(new MissileSiloExecution(this.structure!));
-        break;
       case UnitType.DefensePost:
-        this.mg.addExecution(new DefensePostExecution(this.structure!));
-        break;
       case UnitType.SAMLauncher:
-        this.mg.addExecution(
-          new SAMLauncherExecution(player, null, this.structure!),
-        );
-        break;
       case UnitType.City:
-        this.mg.addExecution(new CityExecution(this.structure!));
-        break;
       case UnitType.Factory:
-        this.mg.addExecution(new FactoryExecution(this.structure!));
+        this.mg.addExecution(structureExecution(this.structure!));
         break;
       default:
         console.warn(
