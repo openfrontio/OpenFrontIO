@@ -132,7 +132,7 @@ players download.
 ## Editor runtime
 
 `<scenario-editor>` owns a canvas with a `MapRenderer`, the tool and panel
-UI, the document, and at most one engine worker. It follows the
+UI, the document, and the editing engine's worker. It follows the
 `<replay-viewer>` precedent: a full-page element that drives the renderer
 itself and borrows HUD layers by setting their properties, calling `init()`
 and calling `tick()` by hand.
@@ -191,8 +191,9 @@ Terrain edits therefore run in two steps:
    graph. Building a fresh `WaterManager` does the last two, the same work
    every game does at load.
 
-The full pass also runs before any snapshot, so exported terrain never
-depends on the order of the strokes that made it.
+The full pass also runs before export, so the ocean bit and water components
+in the exported files never depend on the order of the strokes that made
+them.
 
 The cost of the full pass on a large map is not yet measured. It is fine at
 stroke end if it is in the range of game load; if not, the graph rebuild
@@ -262,15 +263,21 @@ Commands:
 ### Finalising for export
 
 Export does not snapshot the engine being edited, because finalising cannot
-be undone. It runs in two engines:
+be undone. Instead:
 
-1. Replay the document into a fresh editor engine on a blank map, run the
-   full terrain pass, and write out its terrain as the map files. The 16x map
-   is downscaled from the 4x one with the same minimap rule.
+1. Run the full terrain pass on the editing engine and write its terrain out
+   as the map files. Writing only reads the terrain, so editing carries on
+   afterwards. The 16x map is downscaled from the 4x one with the same
+   minimap rule.
 2. Start a second engine on those map files, replay everything except
-   terrain, send `finalize`, snapshot, and discard both.
+   terrain, send `finalize`, snapshot, and discard it.
 
 The second engine is what makes the snapshot's terrain diff empty.
+
+Because the map files come from the editing engine, they are whatever the
+stroke-by-stroke repairs left behind. The repairs must therefore be exact:
+the same authored bytes give the same files whatever order they were painted
+in. The terrain test checks this (see "Order of work").
 `finalize`:
 
 - gives every nation a nation AI execution,
@@ -396,7 +403,8 @@ input review before scenarios are shareable.
    including terrain, flush without a tick, `finalize`. Testable without any
    UI: build a document in a test, export, restore, tick. Terrain has its own
    test: replay a stock map's authored bytes onto a blank map and compare the
-   result with that map's shipped files.
+   result with that map's shipped files, both as one edit and as many
+   overlapping strokes in shuffled order.
 2. **Editor core**: document model, tools, PNG import, test play. Until the
    API exists, the draft is kept in browser storage.
 3. **Scenario start**: bundle loading, scenario block in the
