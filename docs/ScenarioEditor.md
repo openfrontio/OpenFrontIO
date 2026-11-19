@@ -253,7 +253,7 @@ Commands:
 | Command                               | Effect                                                             |
 | ------------------------------------- | ------------------------------------------------------------------ |
 | `add_nation`, `remove_nation`         | Create or delete a nation player                                   |
-| `set_nation`                          | Name, flag, troops, gold                                           |
+| `set_nation`                          | Name, flag, troops, gold, playable                                 |
 | `set_terrain`                         | Write authored terrain for a batch of tiles and repair around them |
 | `end_terrain_edit`                    | Run the full terrain pass (see "Terrain")                          |
 | `set_owner`                           | Give a batch of tiles to a nation, or to nobody                    |
@@ -265,12 +265,14 @@ Commands:
 Export does not snapshot the engine being edited, because finalising cannot
 be undone. Instead:
 
-1. Run the full terrain pass on the editing engine and write its terrain out
-   as the map files. Writing only reads the terrain, so editing carries on
-   afterwards. The 16x map is downscaled from the 4x one with the same
-   minimap rule.
+1. Copy the document, then run the full terrain pass on the editing engine
+   and write its terrain out as the map files. The worker handles commands
+   in order, so the files match the copy: every edit in the copy was sent
+   before the write. Writing only reads the terrain, so editing carries on
+   afterwards and goes only into the live document. The 16x map is
+   downscaled from the 4x one with the same minimap rule.
 2. Start a second engine on those map files, replay everything except
-   terrain, send `finalize`, snapshot, and discard it.
+   terrain from the copy, send `finalize`, snapshot, and discard it.
 
 The second engine is what makes the snapshot's terrain diff empty.
 
@@ -303,6 +305,13 @@ existing `takeoverPlayer` once per assignment, in list order. `takeoverPlayer`
 already removes the nation's AI execution and rebinds the player to a client.
 Because the start state is "snapshot plus assignments" and both are in the
 start info, every client and every replay reaches the same state.
+
+`playable` is a field on the nation player, set by `set_nation`, so the
+snapshot stores it with the rest of the player. Before any takeover, the
+restore checks every assignment against the restored game: the nation
+exists, is playable, and is assigned only once. If any check fails, the
+restore fails. Every client runs the same restore, so a bad start fails the
+same way everywhere.
 
 Singleplayer is the same path with one assignment, through the existing
 `LobbyConfig.snapshot` route that saved games use.
@@ -337,8 +346,9 @@ the editor when it ends. No upload.
   the game servers.
 - Each client downloads the bundle by id and version, verifies the hash from
   the start info, and checks the assignments against the playable nations
-  in the snapshot itself, not the header's copy of that list. A client that
-  finds a mismatch refuses to start. The host's client makes the same checks
+  in the snapshot itself, not the header's copy of that list (the restore
+  check in "Starting a game from a bundle"). A client that finds a mismatch
+  refuses to start. The host's client makes the same checks
   in the lobby, so only a modified host can send a bad start, and it breaks
   only that host's own private game.
 - Each client then restores the snapshot and applies the assignments.
