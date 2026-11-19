@@ -3,6 +3,7 @@ import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type { InsufficientCurrency, PurchaseResult } from "../Cosmetics";
 import { showInGameAlert } from "../InGameModal";
+import { type PricedItem, saleEndsAt, shownPrice } from "../ShownPrice";
 import { translateText } from "../Utils";
 import "./CapIcon";
 import "./ConfirmDialog";
@@ -278,6 +279,12 @@ export class PurchaseButton extends LitElement {
   @property({ type: Number })
   listPriceSoft: number | null = null;
 
+  /** The sale behind the list prices, from the catalogue. With it, the
+   * button charges the list price once the sale ends and re-renders at that
+   * moment, like the Store and Inventory (see shownPrice). */
+  @property({ type: Object })
+  promotion: PricedItem["promotion"] | null = null;
+
   @property({ type: String })
   rarity: string = "common";
 
@@ -337,6 +344,8 @@ export class PurchaseButton extends LitElement {
   } | null = null;
   @state() private busy = false;
 
+  private saleEndTimer: ReturnType<typeof setTimeout> | null = null;
+
   createRenderRoot() {
     return this;
   }
@@ -353,6 +362,51 @@ export class PurchaseButton extends LitElement {
     return this.priceSoft !== null && this.onPurchaseSoft !== undefined;
   }
 
+  /** The props as a catalogue item, for shownPrice. */
+  private get pricedItem(): PricedItem {
+    return {
+      priceHard: this.priceHard ?? undefined,
+      priceSoft: this.priceSoft ?? undefined,
+      listPriceHard: this.listPriceHard ?? undefined,
+      listPriceSoft: this.listPriceSoft ?? undefined,
+      promotion: this.promotion ?? undefined,
+    };
+  }
+
+  /** The price this button shows and charges in a currency, now. */
+  shown(currency: "hard" | "soft") {
+    return shownPrice(this.pricedItem, currency);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this.clearSaleEndTimer();
+  }
+
+  protected updated(changed: Map<PropertyKey, unknown>) {
+    super.updated(changed);
+    if (changed.has("promotion")) this.scheduleSaleEnd();
+  }
+
+  /** Re-render when the sale ends, so the price switches to the list price
+   * at the same moment everywhere it's shown. */
+  private scheduleSaleEnd() {
+    this.clearSaleEndTimer();
+    const endsAt = saleEndsAt(this.pricedItem);
+    if (endsAt === null) return;
+    const wait = endsAt - Date.now();
+    if (wait <= 0 || wait > 2 ** 31 - 1) return;
+    this.saleEndTimer = setTimeout(() => {
+      this.saleEndTimer = null;
+      this.requestUpdate();
+    }, wait + 1);
+  }
+
+  private clearSaleEndTimer() {
+    if (this.saleEndTimer !== null) clearTimeout(this.saleEndTimer);
+    this.saleEndTimer = null;
+  }
+
   private handleClick(e: Event, handler?: () => Promise<PurchaseResult>) {
     e.stopPropagation();
     this.executePurchase(handler);
@@ -365,7 +419,7 @@ export class PurchaseButton extends LitElement {
     if (!handler || this.busy) return;
     this.confirmingPurchase = {
       method,
-      amount: (method === "hard" ? this.priceHard : this.priceSoft) ?? 0,
+      amount: this.shown(method)?.price ?? 0,
       itemName: this.itemName,
       handler,
     };
@@ -427,7 +481,8 @@ export class PurchaseButton extends LitElement {
   }
 
   private renderHardButton() {
-    const hardOnSale = isOnSale(this.priceHard!, this.listPriceHard);
+    const hard = this.shown("hard")!;
+    const hardOnSale = isOnSale(hard.price, hard.listPrice);
     return html`
       <button
         class="purchase-sparkle-btn-hard relative overflow-hidden w-full min-h-11 px-2 py-1.5 ${
@@ -448,15 +503,16 @@ export class PurchaseButton extends LitElement {
             style="margin-top:3px"
           ></plutonium-icon>`,
           20,
-          this.priceHard!,
-          this.listPriceHard,
+          hard.price,
+          hard.listPrice,
         )}
       </button>
     `;
   }
 
   private renderSoftButton() {
-    const softOnSale = isOnSale(this.priceSoft!, this.listPriceSoft);
+    const soft = this.shown("soft")!;
+    const softOnSale = isOnSale(soft.price, soft.listPrice);
     return html`
       <button
         class="purchase-sparkle-btn-soft relative overflow-hidden w-full min-h-11 px-2 py-1.5 ${
@@ -474,8 +530,8 @@ export class PurchaseButton extends LitElement {
         ${renderPrice(
           html`<cap-icon .size=${22} style="margin-top:3px"></cap-icon>`,
           22,
-          this.priceSoft!,
-          this.listPriceSoft,
+          soft.price,
+          soft.listPrice,
         )}
       </button>
     `;
