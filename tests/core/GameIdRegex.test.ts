@@ -3,7 +3,11 @@ import {
   ID,
   isValidGameID,
 } from "@openfront/engine-api/Schemas";
-import { generateID } from "@openfront/shared/SharedUtil";
+import {
+  generateGameID,
+  generateID,
+  generateSingleplayerGameID,
+} from "@openfront/shared/SharedUtil";
 import { describe, expect, it } from "vitest";
 
 // Game ids are permanent archive keys, so the accepted range must cover every
@@ -41,5 +45,16 @@ describe("GAME_ID_REGEX", () => {
       expect(id).toHaveLength(8);
       expect(GAME_ID_REGEX.test(id)).toBe(true);
     }
+  });
+
+  // The API tells a singleplayer upload from a multiplayer game by length:
+  // singleplayer ids must stay shorter than generateGameID()'s 10.
+  it("generateSingleplayerGameID mints 9-char ids, shorter than multiplayer ids", () => {
+    for (let i = 0; i < 100; i++) {
+      const id = generateSingleplayerGameID();
+      expect(id).toHaveLength(9);
+      expect(GAME_ID_REGEX.test(id)).toBe(true);
+    }
+    expect(generateGameID("a")).toHaveLength(10);
   });
 });

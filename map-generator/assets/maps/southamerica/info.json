@@ -4,6 +4,8 @@
   "name": "South America",
   "translation_key": "map.southamerica",
   "categories": ["featured", "continental", "south_america"],
+  "location": { "lat": -15, "lon": -60 },
+  "author": "evanpelle",
   "featured_rank": 4,
   "nations": [
     {

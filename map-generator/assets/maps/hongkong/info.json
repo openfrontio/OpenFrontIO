@@ -4,6 +4,9 @@
   "name": "Hong Kong",
   "translation_key": "map.hongkong",
   "categories": ["asia"],
+  "location": { "lat": 22.3, "lon": 114.2 },
+  "author": "crunchybbb",
+  "description": "A special administrative region (SAR) of China and massive port city located on the south of the country. The abundance of dense district-themed nations, piratable strait between Kowloon and Hong Kong Island, and the numerous islands provide for a very fun shaped map.",
   "nations": [
     {
       "coordinates": [1592, 1147],
@@ -186,11 +189,6 @@
       "flag": "hk"
     },
     {
-      "coordinates": [932, 4],
-      "name": "Shenzhen",
-      "flag": "cn"
-    },
-    {
       "coordinates": [1178, 177],
       "name": "Lok Ma Chau",
       "flag": "hk"
@@ -281,26 +279,6 @@
       "flag": "hk"
     },
     {
-      "coordinates": [523, 55],
-      "name": "Houhai District",
-      "flag": "cn"
-    },
-    {
-      "coordinates": [462, 168],
-      "name": "Shekou District",
-      "flag": "cn"
-    },
-    {
-      "coordinates": [1237, 26],
-      "name": "Luohu District",
-      "flag": "cn"
-    },
-    {
-      "coordinates": [1027, 101],
-      "name": "Futian District",
-      "flag": "cn"
-    },
-    {
       "coordinates": [996, 1226],
       "name": "Peng Chau",
       "flag": "hk"
@@ -308,6 +286,21 @@
     {
       "coordinates": [2479, 781],
       "name": "Long Ke",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [2389, 1298],
+      "name": "Ninepin Islands",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [414, 1782],
+      "name": "Soko Islands",
+      "flag": "hk"
+    },
+    {
+      "coordinates": [312, 907],
+      "name": "Sha Chau",
       "flag": "hk"
     },
     {

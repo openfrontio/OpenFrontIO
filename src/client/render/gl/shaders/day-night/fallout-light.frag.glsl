@@ -37,12 +37,13 @@ void main() {
   }
 
   // Ember light — compute the same flicker as FalloutBloomPass.extract inline.
-  float h1 = fract(sin(float(tc.x) * 12.9898 + float(tc.y) * 78.233) * 43758.5453);
-  float h2 = fract(sin(float(tc.x) * 63.7 + float(tc.y) * 157.3) * 23421.631);
+  vec2 tcMod = mod(vec2(tc), 6.2831853);
+  float h1 = fract(sin(tcMod.x * 12.9898 + tcMod.y * 78.233) * 43758.5453);
+  float h2 = fract(sin(tcMod.x * 63.7 + tcMod.y * 157.3) * 23421.631);
   float pThresh = (owner == 0u) ? uParticleThresholdUnowned : uParticleThresholdOwned;
   if (h2 > pThresh) {
     float tileRate = uParticleFlickerSpeed * (0.4 + h1 * 1.2);
-    float flick = max(0.0, sin(uTick * tileRate + h1 * 12.0) * 0.8 + 0.2);
+    float flick = max(0.0, sin(mod(uTick * tileRate, 6.2831853) + h1 * 12.0) * 0.8 + 0.2);
     flick *= flick;
     flick *= mix(uParticleFreshScale, 1.0, 1.0 - heat);
     // Fade embers out with the heat. The fallout bit is permanent on tiles

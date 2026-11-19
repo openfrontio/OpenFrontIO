@@ -264,3 +264,29 @@ describe("ServerEnv.siteHost", () => {
     expect(ServerEnv.siteHost()).toBeUndefined();
   });
 });
+
+describe("ServerEnv.jwkPublicKey", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  // api.<domain> sits behind a Cloudflare WAF rule that admits game servers
+  // by IP allowlist or by x-api-key. Without the header, a server whose IP
+  // is not allowlisted gets a 403 challenge page instead of the JWKS.
+  test("sends x-api-key with the JWKS fetch", async () => {
+    vi.stubEnv("DOMAIN", "openfront.io");
+    vi.stubEnv("API_KEY", "test-api-key");
+    const key = { alg: "EdDSA", crv: "Ed25519", kty: "OKP", x: "abc" };
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ keys: [key] })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(ServerEnv.jwkPublicKey()).resolves.toEqual(key);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.openfront.io/.well-known/jwks.json",
+      { headers: { "x-api-key": "test-api-key" }, redirect: "error" },
+    );
+  });
+});

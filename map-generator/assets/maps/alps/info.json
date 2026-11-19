@@ -4,6 +4,8 @@
   "name": "Alps",
   "translation_key": "map.alps",
   "categories": ["europe"],
+  "location": { "lat": 46.5, "lon": 10 },
+  "author": "TsProphet94",
   "forced_modifiers": ["isWaterNukes:75"],
   "themes": ["europe"],
   "nations": [

@@ -74,19 +74,9 @@ describe("GameServer - short-handed matchmade game cancellation", () => {
     expect(game.phase()).not.toBe(GamePhase.Finished);
   });
 
-  it("cancels an FFA game with fewer than four players connected", () => {
+  it("leaves a ranked FFA game left over from before the queue closed to start", () => {
     const game = makeRankedGame(RankedType.FreeForAll, 6);
     for (const id of ["1", "2", "3"]) {
-      expect(game.joinClient(makeClient(`c${id}`, `p${id}`))).toBe("joined");
-    }
-
-    expect(game.cancelShortHandedMatch()).toBe(true);
-    expect(game.phase()).toBe(GamePhase.Finished);
-  });
-
-  it("starts an FFA game without its no-shows once four are connected", () => {
-    const game = makeRankedGame(RankedType.FreeForAll, 6);
-    for (const id of ["1", "2", "3", "4"]) {
       expect(game.joinClient(makeClient(`c${id}`, `p${id}`))).toBe("joined");
     }
 

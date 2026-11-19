@@ -4,6 +4,8 @@
   "name": "Traders Dream",
   "translation_key": "map.tradersdream",
   "categories": ["fictional"],
+  "author": "FloPinguin",
+  "description": "Big islands against small ones: two large islands hold about half the land, while a swarm of tiny islands is made for trade.",
   "special_team_count": 2,
   "nations": [
     {

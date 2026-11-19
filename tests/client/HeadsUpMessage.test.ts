@@ -145,4 +145,19 @@ describe("HeadsUpMessage spawn message", () => {
     );
     element.remove();
   });
+
+  it("leaves catch-up warnings to the health icons instead of showing a banner", async () => {
+    const element = new HeadsUpMessage();
+    element.game = {
+      ...spawningGame(false),
+      inSpawnPhase: () => false,
+      isCatchingUp: () => true,
+    } as never;
+    for (let tick = 0; tick < 20; tick++) element.tick();
+    document.body.appendChild(element);
+    await element.updateComplete;
+    expect(element.textContent).not.toContain("heads_up_message.catching_up");
+    expect(element.querySelector(".fixed")).toBeNull();
+    element.remove();
+  });
 });

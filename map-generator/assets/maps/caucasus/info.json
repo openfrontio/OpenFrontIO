@@ -4,6 +4,9 @@
   "name": "Caucasus",
   "translation_key": "map.caucasus",
   "categories": ["europe", "asia"],
+  "location": { "lat": 42.5, "lon": 44.5 },
+  "author": "Tristar",
+  "description": "A region located between the Black Sea and the Caspian Sea, which in this map are not connected allowing for 2 independent trading systems. In the middle lies the Caucasus Mountains, the border between Asia and Europe - Mount Elbrus, Europe's highest mountain is located here. To this day this is a very contested place, as there are more than 50 ethnic groups living in the region and has historically been in the crossroads of dozens of empires.",
   "nations": [
     {
       "coordinates": [624, 581],

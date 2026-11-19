@@ -24,6 +24,24 @@ interface ReachableCache {
 }
 const reachableComponents = new WeakMap<Player, ReachableCache>();
 
+// closestShoreByWater's answers, memoised per player and landing tile. The
+// answer reads the player's border, the terrain and the water pathfinder, and
+// that reads terrain only: so it holds while the player's tiles, the map's
+// water and the water graph are unchanged. A nation whose territory stands
+// still asked the same multi-source pathfind for every overseas target on
+// every attack decision.
+interface LaunchCache {
+  tileVersion: number;
+  waterVersion: number;
+  graphVersion: number;
+  launches: Map<TileRef, TileRef | null>;
+}
+const launchCaches = new WeakMap<Player, LaunchCache>();
+// Landings a cache holds before it starts over: a player asks about a few
+// hundred while its territory stands still, so this only caps a pathological
+// one.
+const MAX_CACHED_LAUNCHES = 4096;
+
 export class SpatialQuery {
   private boundedAStar: AStarWaterBounded | null = null;
 
@@ -193,34 +211,62 @@ export class SpatialQuery {
 
       const gm = this.game;
       const player = owner as Player;
-
-      // Target must be water or shore (land adjacent to water)
-      if (!gm.isWater(target) && !gm.isShore(target)) return null;
-
-      const targetComponent = gm.getWaterComponent(target);
-      if (targetComponent === null) return null;
-
-      const isValidTile = (t: TileRef) => {
-        if (!gm.isShore(t) || !gm.isLand(t)) return false;
-        const tComponent = gm.getWaterComponent(t);
-        return tComponent === targetComponent;
-      };
-
-      // Single pass over the border set (Array.from + filter walked it twice
-      // and allocated a full copy).
-      const shores: TileRef[] = [];
-      player.borderTiles().forEach((t) => {
-        if (isValidTile(t)) shores.push(t);
-      });
-      if (shores.length === 0) return null;
-
-      const path = PathFinding.Water(gm).findPath(shores, target);
-      if (!path || path.length === 0) return null;
-
-      return DebugSpan.wrap("SpatialQuery.refineStartTile", () =>
-        this.refineStartTile(path, shores, gm),
-      );
+      const tileVersion = player.tileChangeVersion();
+      const waterVersion = gm.map().waterVersion();
+      const graphVersion = gm.waterGraphVersion();
+      let cache = launchCaches.get(player);
+      if (
+        cache === undefined ||
+        cache.tileVersion !== tileVersion ||
+        cache.waterVersion !== waterVersion ||
+        cache.graphVersion !== graphVersion ||
+        cache.launches.size >= MAX_CACHED_LAUNCHES
+      ) {
+        cache = {
+          tileVersion,
+          waterVersion,
+          graphVersion,
+          launches: new Map(),
+        };
+        launchCaches.set(player, cache);
+      }
+      const known = cache.launches.get(target);
+      if (known !== undefined) return known;
+      const launch = this.findShoreByWater(player, target);
+      cache.launches.set(target, launch);
+      return launch;
     });
+  }
+
+  private findShoreByWater(player: Player, target: TileRef): TileRef | null {
+    const gm = this.game;
+
+    // Target must be water or shore (land adjacent to water)
+    if (!gm.isWater(target) && !gm.isShore(target)) return null;
+
+    const targetComponent = gm.getWaterComponent(target);
+    if (targetComponent === null) return null;
+
+    const isValidTile = (t: TileRef) => {
+      if (!gm.isShore(t) || !gm.isLand(t)) return false;
+      const tComponent = gm.getWaterComponent(t);
+      return tComponent === targetComponent;
+    };
+
+    // Single pass over the border set (Array.from + filter walked it twice
+    // and allocated a full copy).
+    const shores: TileRef[] = [];
+    player.borderTiles().forEach((t) => {
+      if (isValidTile(t)) shores.push(t);
+    });
+    if (shores.length === 0) return null;
+
+    const path = PathFinding.Water(gm).findPath(shores, target);
+    if (!path || path.length === 0) return null;
+
+    return DebugSpan.wrap("SpatialQuery.refineStartTile", () =>
+      this.refineStartTile(path, shores, gm),
+    );
   }
 
   private refineStartTile(

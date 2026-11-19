@@ -222,6 +222,9 @@ describe("CosmeticCard", () => {
     // longest line, so on a first-column card it ran past the modal's left
     // edge and was clipped. Its strip spans the card and caps it there.
     expect(info.className).toContain("inset-x-2");
+    // Top-left, leaving the artwork's top-right corner to a sale's band.
+    expect(info.className).toContain("justify-start");
+    expect(bubble.className).toContain("left-0");
     expect(bubble.className).toContain("max-w-full");
     expect(bubble.className).not.toContain("whitespace-nowrap");
     // The strip must not swallow clicks meant for the artwork beneath it.
@@ -278,6 +281,33 @@ describe("CosmeticCard", () => {
     expect(
       card!.querySelector("[data-test-purchase]")?.closest("cosmetic-card"),
     ).toBe(card);
+  });
+
+  // Play prices Plutonium in the player's own currency there, so no dollar
+  // figure may appear.
+  it("shows no dollar value inside the Android app", async () => {
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      shell: { platform: "android" },
+    };
+    try {
+      installTranslations();
+      await createCard();
+      card!.resolved = {
+        ...red,
+        cosmetic: {
+          ...red.cosmetic!,
+          artist: "Test Artist",
+          priceHard: 100,
+        } as never,
+      };
+      await card!.updateComplete;
+
+      const info = card!.querySelector("[data-cosmetic-info]")?.textContent;
+      expect(info).toContain("Artist: Test Artist");
+      expect(info).not.toContain("Value:");
+    } finally {
+      delete (window as { openfrontDesktop?: unknown }).openfrontDesktop;
+    }
   });
 
   it("shows the ad-free entitlement for purchasable cosmetics", async () => {

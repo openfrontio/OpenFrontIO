@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg id="warship" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 11 11">
+<svg id="warship" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="-2 -2 15 15">
   <!-- Generator: Adobe Illustrator 30.1.0, SVG Export Plug-In . SVG Version: 2.1.1 Build 136)  -->
   <defs>
     <style>
@@ -12,6 +12,7 @@
       }
     </style>
   </defs>
+  <rect id="background" x="-2" y="-2" width="15" height="15" fill="#000"/>
   <rect id="_x36_-1" class="st0" x="10" y="5" width="1" height="1" shape-rendering="crispEdges"/>
   <rect id="_x33_-2" class="st0" x="9" y="2" width="1" height="1" shape-rendering="crispEdges"/>
   <rect id="_x34_-2" class="st0" x="9" y="3" width="1" height="1" shape-rendering="crispEdges"/>

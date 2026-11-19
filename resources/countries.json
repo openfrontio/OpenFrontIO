@@ -1583,6 +1583,11 @@
     "name": "Grande Comore"
   },
   {
+    "code": "Greater London",
+    "continent": "Europe",
+    "name": "Greater London"
+  },
+  {
     "code": "gr",
     "continent": "Europe",
     "name": "Greece"
@@ -1905,6 +1910,11 @@
     "code": "Kansas",
     "continent": "North America",
     "name": "Kansas"
+  },
+  {
+    "code": "Karelians",
+    "continent": "Europe",
+    "name": "Karelians"
   },
   {
     "code": "Karelo-Finnish SSR",
@@ -2313,6 +2323,11 @@
     "name": "Lithuanian SSR"
   },
   {
+    "code": "gb-lnd",
+    "continent": "Europe",
+    "name": "London"
+  },
+  {
     "code": "Los Altos",
     "continent": "North America",
     "name": "Los Altos"
@@ -2391,6 +2406,11 @@
     "code": "mg",
     "continent": "Africa",
     "name": "Madagascar"
+  },
+  {
+    "code": "pt-ma",
+    "continent": "Africa",
+    "name": "Madeira"
   },
   {
     "code": "Mahra Sultanate",
@@ -3023,6 +3043,11 @@
     "code": "novascotia",
     "continent": "North America",
     "name": "Nova Scotia"
+  },
+  {
+    "code": "Novgorod Republic",
+    "continent": "Europe",
+    "name": "Novgorod Republic"
   },
   {
     "code": "Nunatsiavut",
@@ -4582,6 +4607,11 @@
     "code": "Trucial States",
     "continent": "Asia",
     "name": "Trucial States"
+  },
+  {
+    "code": "Tsardom of Russia",
+    "continent": "Europe",
+    "name": "Tsardom of Russia"
   },
   {
     "code": "Tucuman",

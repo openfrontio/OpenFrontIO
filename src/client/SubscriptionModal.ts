@@ -1,10 +1,16 @@
-import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import {
+  giftSubscriptionOf,
+  paidSubscriptionOf,
+  UserMeResponse,
+  UserSubscription,
+} from "@openfront/shared/ApiSchemas";
 import { Cosmetics } from "@openfront/shared/CosmeticSchemas";
-import { html, TemplateResult } from "lit";
+import { html, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderFreePlayPerks } from "./components/FreePlayPerks";
 import "./components/SubscriptionPanel";
 import { fetchCosmetics, subscriptionTier } from "./Cosmetics";
+import { sellsOnlyThroughPlay } from "./Payments";
 import { ProfileMenuModal } from "./ProfileMenuModal";
 import { translateText } from "./Utils";
 
@@ -26,8 +32,8 @@ export class SubscriptionModal extends ProfileMenuModal {
     // A past_due subscription renders on the same panel, which branches on
     // its status to offer only the billing portal. The server sends it only
     // for Stripe, and a renewal that failed has no period worth showing.
-    const sub =
-      userMe.player.subscription ??
+    const paid: UserSubscription | null =
+      paidSubscriptionOf(userMe.player) ??
       (pastDue
         ? {
             tier: pastDue.tier,
@@ -37,7 +43,8 @@ export class SubscriptionModal extends ProfileMenuModal {
             provider: "stripe",
           }
         : null);
-    if (!sub) {
+    const gift = giftSubscriptionOf(userMe.player);
+    if (!paid && !gift) {
       return html`
         <div class="p-6">
           <div
@@ -53,28 +60,38 @@ export class SubscriptionModal extends ProfileMenuModal {
                   : renderFreePlayPerks("free_play.free_heading")
               }
             </div>
-            <o-button
-              variant="primary"
-              size="md"
-              translationKey="subscription_modal.browse"
-              @click=${() => {
-                this.close();
-                window.location.hash = "modal=store&tab=subscriptions";
-              }}
-            ></o-button>
+            ${
+              // The Android app sells no subscription.
+              sellsOnlyThroughPlay()
+                ? nothing
+                : html`<o-button
+                    variant="primary"
+                    size="md"
+                    translationKey="subscription_modal.browse"
+                    @click=${() => {
+                      this.close();
+                      window.location.hash = "modal=store&tab=subscriptions";
+                    }}
+                  ></o-button>`
+            }
           </div>
         </div>
       `;
     }
+    const stacked = paid !== null && gift !== null;
+    const panel = (sub: UserSubscription, role: "paid" | "gift") => html`
+      <subscription-panel
+        .sub=${sub}
+        .cosmetic=${subscriptionTier(this.cosmetics, sub.tier)}
+        .steamLicence=${userMe.steamLicence}
+        .stacked=${stacked ? role : null}
+        @request-close=${() => this.close()}
+      ></subscription-panel>
+    `;
     return html`
       <div class="custom-scrollbar mr-1">
-        <div class="p-6">
-          <subscription-panel
-            .sub=${sub}
-            .cosmetic=${subscriptionTier(this.cosmetics, sub.tier)}
-            .steamLicence=${userMe.steamLicence}
-            @request-close=${() => this.close()}
-          ></subscription-panel>
+        <div class="p-6 flex flex-col gap-4">
+          ${paid ? panel(paid, "paid") : ""} ${gift ? panel(gift, "gift") : ""}
         </div>
       </div>
     `;

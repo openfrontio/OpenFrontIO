@@ -303,6 +303,15 @@
     "duration": 800,
     "converge": 0.7
   },
+  "rangeCircle": {
+    "allianceColorR": 1,
+    "allianceColorG": 0.85,
+    "allianceColorB": 0.1,
+    "traitorColorR": 1,
+    "traitorColorG": 0.2,
+    "traitorColorB": 0.2,
+    "flashHz": 2
+  },
   "samRadius": {
     "strokeWidth": 1.5,
     "dashLen": 12,
@@ -334,7 +343,7 @@
     "selfMinRad": 10,
     "selfMaxRad": 30,
     "mateMinRad": 5,
-    "mateMaxRad": 14,
+    "mateMaxRad": 18,
     "animSpeed": 0.008,
     "gradientInnerEdge": 0.01,
     "gradientSolidEnd": 0.1

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { NamePass } from "../../../../src/client/render/gl/passes/name-pass";
 import { FlagAtlasArray } from "../../../../src/client/render/gl/passes/name-pass/FlagAtlasArray";
+import { SkinAtlasArray } from "../../../../src/client/render/gl/passes/SkinAtlasArray";
 
 describe("NamePass verified badge hover", () => {
   it("includes verified badge in nameplate hover bounding box", () => {
@@ -190,5 +191,27 @@ describe("FlagAtlasArray disposal", () => {
     onload?.();
     expect(fakeGl.texSubImage3D).not.toHaveBeenCalled();
     expect(onReady).toBe(false);
+  });
+});
+
+describe("SkinAtlasArray", () => {
+  it("reuses scratch canvas across uploads", () => {
+    const sub = vi.fn();
+    const gl: any = new Proxy(
+      { createTexture: () => ({}), texSubImage3D: sub },
+      { get: (t: any, k: string) => t[k] ?? (() => {}) },
+    );
+    let canvasCount = 0;
+    const orig = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((t) => {
+      if (t === "canvas") canvasCount++;
+      return orig(t);
+    });
+    const atlas = new SkinAtlasArray(gl, [], () => {});
+    const img = document.createElement("img");
+    for (let i = 0; i < 2; i++) (atlas as any).uploadImage(img, i);
+    expect(canvasCount).toBe(1);
+    expect(sub).toHaveBeenCalledTimes(2);
+    atlas.dispose();
   });
 });

@@ -4,7 +4,6 @@ import {
   HumansVsNations,
   PlayerInfo,
   PlayerType,
-  RANKED_FFA_MIN_PLAYERS,
   RankedType,
 } from "@openfront/engine-api/game/GameTypes";
 import { maps } from "@openfront/engine-api/game/Maps.gen";
@@ -347,7 +346,7 @@ export class GameServer {
       undefined,
       this.gatekeeper,
     );
-    if (opts.startsAt !== undefined) {
+    if (opts.startsAt !== undefined && this.isPublic()) {
       this.visibleAt = Date.now();
     }
   }
@@ -883,7 +882,9 @@ export class GameServer {
   public setStartsAt(startsAt: number) {
     this.startsAt = startsAt;
     // Record when the lobby first became visible to players, used to measure lobby fill time.
-    this.visibleAt ??= Date.now();
+    if (this.isPublic()) {
+      this.visibleAt ??= Date.now();
+    }
   }
 
   public numClients(): number {
@@ -901,12 +902,11 @@ export class GameServer {
   // Matchmade ranked games (1v1/2v2/clan wars) must start with full
   // attendance: the roster freezes at start(), so a game missing a player
   // would run short-handed only to be voided by the sim (2v2, clan wars) or
-  // hand out a walkover the absent player never contested (1v1). Ranked FFA
-  // starts without the missing players as long as RANKED_FFA_MIN_PLAYERS
-  // showed up, the fewest the API rates. Called at the start deadline;
-  // cancels the game and returns true when too few matched players connected.
+  // hand out a walkover the absent player never contested (1v1). Called at
+  // the start deadline; cancels the game and returns true when too few
+  // matched players connected.
   public cancelShortHandedMatch(): boolean {
-    // Explicitly 1v1/2v2/FFA/clan wars only — a future ranked type must opt
+    // Explicitly 1v1/2v2/clan wars only — a future ranked type must opt
     // in rather than inherit pre-start cancellation.
     const rankedType = this.gameConfig.rankedType;
     let expected: number | undefined;
@@ -916,8 +916,6 @@ export class GameServer {
       rankedType === RankedType.ClanWars
     ) {
       expected = this.gameConfig.maxPlayers;
-    } else if (rankedType === RankedType.FreeForAll) {
-      expected = RANKED_FFA_MIN_PLAYERS;
     } else {
       return false;
     }
@@ -1713,6 +1711,10 @@ export class GameServer {
     return this.listing.isListed();
   }
 
+  public getVisibleAt(): number | undefined {
+    return this.visibleAt;
+  }
+
   /** Who joined, and the account behind each one.
    *
    *  The public game record is PII-stripped, so a clientID can only be tied back
@@ -1746,6 +1748,7 @@ export class GameServer {
     // Only on the transition: relisting must not change the cap players
     // joined under.
     if (listed && !wasListed) {
+      this.visibleAt ??= Date.now();
       const raw = options.maxPlayers ?? this.gameConfig.maxPlayers;
       if (raw !== undefined) {
         const max =

@@ -28,6 +28,26 @@ function resetUserSettingsState() {
   statics.playerId = null;
 }
 
+describe("UserSettings random name style", () => {
+  beforeEach(resetUserSettingsState);
+
+  it("defaults to Anon, including for an unknown stored style", () => {
+    expect(new UserSettings().randomNameStyle()).toBe("anon");
+    resetUserSettingsState();
+    localStorage.setItem("settings.randomNameStyle", "unknown");
+    expect(new UserSettings().randomNameStyle()).toBe("anon");
+  });
+
+  it("persists both choices across settings instances", () => {
+    const settings = new UserSettings();
+    for (const style of ["tribe", "anon"] as const) {
+      settings.setRandomNameStyle(style);
+      expect(new UserSettings().randomNameStyle()).toBe(style);
+      expect(localStorage.getItem("settings.randomNameStyle")).toBe(style);
+    }
+  });
+});
+
 describe("UserSettings effect selection", () => {
   beforeEach(resetUserSettingsState);
 
@@ -591,9 +611,11 @@ describe("getDefaultKeybinds", () => {
     const keybinds = getDefaultKeybinds(false);
     expect(keybinds.boxSelectWarships).toBe("ShiftLeft");
     expect(keybinds.resetGfx).toBe("KeyR");
+    expect(keybinds.performanceOverlay).toBe("Shift+KeyD");
     expect(keybinds.selectAllWarships).toBe("KeyX");
     expect(keybinds.emojiMenu).toBe("KeyF");
     expect(keybinds.quickChat).toBe("KeyR");
+    expect(keybinds.playerPanel).toBe("KeyI");
     expect(keybinds.targetPlayer).toBe("KeyN");
     expect(keybinds.buildMenuModifier).toBe("ControlLeft");
     expect(keybinds.moveUpArrow).toBe("ArrowUp");
@@ -622,6 +644,9 @@ describe("getDefaultKeybinds", () => {
     expect(keybinds.emojiMenuModifier).toBe("AltLeft");
     // Note: this is related to user_setting.graphics_refresh_modifier, not the actual alt key.
     expect(keybinds.altKey).toBe("AltLeft");
+    const sharedModifierPair = ["buildScrollModifier", "altKey"] as const;
+    expect(keysMayBeShared(...sharedModifierPair, "AltRight")).toBe(true);
+    expect(keysMayBeShared(...sharedModifierPair, "ShiftRight")).toBe(false);
   });
 
   it("handles Mac-specific modifier keys correctly", () => {
@@ -649,12 +674,12 @@ describe("UserSettings audio volumes", () => {
 describe("UserSettings replay viewer", () => {
   beforeEach(resetUserSettingsState);
 
-  it("is off by default, and remembers being turned on", () => {
-    expect(new UserSettings().replayViewer()).toBe(false);
-    new UserSettings().setReplayViewer(true);
+  it("is on by default, and remembers being turned off", () => {
     expect(new UserSettings().replayViewer()).toBe(true);
     new UserSettings().setReplayViewer(false);
     expect(new UserSettings().replayViewer()).toBe(false);
+    new UserSettings().setReplayViewer(true);
+    expect(new UserSettings().replayViewer()).toBe(true);
   });
 });
 

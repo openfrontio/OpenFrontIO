@@ -122,6 +122,10 @@ describe("boot sequencing on CrazyGames", () => {
       claimStringsReady: true,
       reportThanksDue: false,
       reportThanksStringsReady: true,
+      giftEndingDue: false,
+      giftEndingStringsReady: true,
+      renewalPushedDue: false,
+      renewalPushedStringsReady: true,
     });
     await runBootInterrupt(
       interrupt,

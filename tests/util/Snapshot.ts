@@ -141,6 +141,10 @@ const DERIVED_FIELDS = new Set<string>([
   "unitCountMemo",
   "unitsByTypeMemo",
   "borderNbuf",
+  "_structureVersion", // keys the rail preview memo; a restore just bumps it
+  // RailNetworkImpl: the rail preview memo and the version that keys it
+  "networkVersion",
+  "ghostPathsCache",
   // PlayerImpl
   "lastSentUpdate",
   "myUnitsMemo",
@@ -171,6 +175,8 @@ const DERIVED_FIELDS = new Set<string>([
   "reachableStationsCache",
   // NationStructureBehavior: only read in the tick it was computed in
   "mirvWorthSavingMemo",
+  // AiAttackBehavior: only read in the tick it was written in
+  "sentThisTick",
 ]);
 
 // Search engines whose fields are per-query scratch (stamps, scores, open

@@ -25,6 +25,7 @@ import {
   PENDING_XP_CHECKED_KEY,
   PENDING_XP_KEY,
   PENDING_XP_TTL_MS,
+  UNSCORED_PENDING_XP_TTL_MS,
   type PendingXp,
   pendingXpFor,
   projectPendingXp,
@@ -143,8 +144,8 @@ describe("pending XP storage", () => {
     expect(localStorage.getItem(PENDING_XP_KEY)).toBeNull();
   });
 
-  it("expires an entry after 12 hours", () => {
-    recordPendingXp("me", { gameId: "g1", xp: 250 }, T0);
+  it("expires a scored entry after 12 hours", () => {
+    applyGameXp("me", scored("g1", 250), {}, T0);
     expect(readPendingXp("me", T0 + PENDING_XP_TTL_MS - 1)).toHaveLength(1);
     expect(readPendingXp("me", T0 + PENDING_XP_TTL_MS)).toEqual([]);
     expect(PENDING_XP_TTL_MS).toBe(12 * 60 * 60 * 1000);
@@ -153,6 +154,24 @@ describe("pending XP storage", () => {
     expect(
       Object.keys(JSON.parse(localStorage.getItem(PENDING_XP_KEY)!)),
     ).toEqual(["other"]);
+  });
+
+  it("expires an unscored entry after 3.5 hours", () => {
+    recordPendingXp("me", { gameId: "g1", xp: 250 }, T0);
+    expect(
+      readPendingXp("me", T0 + UNSCORED_PENDING_XP_TTL_MS - 1),
+    ).toHaveLength(1);
+    expect(readPendingXp("me", T0 + UNSCORED_PENDING_XP_TTL_MS)).toEqual([]);
+    expect(UNSCORED_PENDING_XP_TTL_MS).toBe(3.5 * 60 * 60 * 1000);
+  });
+
+  it("keeps the 12-hour TTL for unscored singleplayer entries", () => {
+    recordPendingXp("me", { gameId: "g1", xp: 250, kind: "singleplayer" }, T0);
+    expect(readPendingXp("me", T0 + UNSCORED_PENDING_XP_TTL_MS)).toHaveLength(
+      1,
+    );
+    expect(readPendingXp("me", T0 + PENDING_XP_TTL_MS - 1)).toHaveLength(1);
+    expect(readPendingXp("me", T0 + PENDING_XP_TTL_MS)).toEqual([]);
   });
 
   it("prunes scored games first, then the oldest, past the cap", () => {

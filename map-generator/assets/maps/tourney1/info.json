@@ -4,6 +4,7 @@
   "name": "Tourney 2 Teams",
   "translation_key": "map.tourney1",
   "categories": ["tournament"],
+  "author": "bijx",
   "nations": [
     {
       "coordinates": [177, 510],

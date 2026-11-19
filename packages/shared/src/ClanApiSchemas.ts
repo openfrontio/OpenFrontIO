@@ -347,3 +347,118 @@ export const ClanDonationsResponseSchema = z.object({
   limit: z.number(),
 });
 export type ClanDonationsResponse = z.infer<typeof ClanDonationsResponseSchema>;
+
+// One row of the clan fund transfer log (GET /clans/:tag/fund_transfers): the
+// leader sending Plutonium from the clan fund to a member, or staff reversing
+// such a send. Members only.
+export const ClanFundTransferSchema = z.object({
+  id: z.string(),
+  kind: z.enum(["transfer", "reversal"]),
+  // Positive Plutonium amount as a decimal bigint string; parse with BigInt.
+  amount: z.string(),
+  // The leader who sent it; null on a reversal (staff aren't named) or once
+  // that account is deleted.
+  sender: z.string().nullable(),
+  senderUsername: z.string().nullable(),
+  // The member paid; null once that account is deleted.
+  recipient: z.string().nullable(),
+  recipientUsername: z.string().nullable(),
+  createdAt: z.iso.datetime(),
+  // On a transfer: when staff reversed it. Defaulted for API deploys without
+  // the field.
+  reversedAt: z.iso.datetime().nullable().default(null),
+  // On a reversal: the transfer it undid, and when that was sent.
+  reversesId: z.string().nullable().default(null),
+  reversesCreatedAt: z.iso.datetime().nullable().default(null),
+});
+export type ClanFundTransfer = z.infer<typeof ClanFundTransferSchema>;
+
+export const ClanFundTransferStatusSchema = z.object({
+  // CLAN_TRANSFERS_ENABLED on the API.
+  enabled: z.boolean(),
+  // Staff have frozen this clan's sends.
+  frozen: z.boolean(),
+  // Staff's reason for the freeze; sent to the leader and officers only.
+  frozenReason: z.string().nullable().default(null),
+  // The viewer may send right now (leader, enabled, not frozen, and has led
+  // the clan long enough).
+  canSend: z.boolean(),
+  // For a leader who took over too recently: when they may first send.
+  leaderEligibleAt: z.iso.datetime().nullable().default(null),
+  // Decimal bigint strings.
+  hardBalance: z.string(),
+  clanDailyCap: z.string(),
+  clanSentToday: z.string(),
+  // When the oldest send in the rolling 24h drops out and frees allowance;
+  // null when nothing was sent in the window.
+  capResetsAt: z.iso.datetime().nullable().default(null),
+  recipientDailyCap: z.string(),
+  minMembershipDays: z.number(),
+});
+export type ClanFundTransferStatus = z.infer<
+  typeof ClanFundTransferStatusSchema
+>;
+
+export const ClanFundTransfersResponseSchema = z.object({
+  results: ClanFundTransferSchema.array(),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+  status: ClanFundTransferStatusSchema,
+});
+export type ClanFundTransfersResponse = z.infer<
+  typeof ClanFundTransfersResponseSchema
+>;
+
+// GET /clans/:tag/fund_transfers/eligibility?ids=… (leader): whether each
+// member on the send page can receive right now. `not_eligible` covers
+// account rules the leader isn't told the detail of.
+export const ClanFundRecipientSchema = z.object({
+  publicId: z.string(),
+  eligible: z.boolean(),
+  reason: z
+    .enum(["too_recent", "not_eligible", "recipient_cap", "self", "not_member"])
+    .nullable(),
+  // When a too-recent member clears the membership cooldown.
+  eligibleAt: z.iso.datetime().nullable(),
+  // Plutonium they can still receive in the rolling 24h. Decimal bigint
+  // string.
+  leftToday: z.string(),
+});
+export type ClanFundRecipient = z.infer<typeof ClanFundRecipientSchema>;
+
+export const ClanFundRecipientsResponseSchema = z.object({
+  results: ClanFundRecipientSchema.array(),
+});
+
+export const ClanDonationPeriodSchema = z.enum(["all", "week", "month"]);
+export type ClanDonationPeriod = z.infer<typeof ClanDonationPeriodSchema>;
+
+// One row of the clan's Top donors ranking (GET /clans/:tag/donations/
+// leaderboard): a current member's net donations of one currency in the
+// period — refund reversals are subtracted, so it can be less than the sum of
+// their rows in the Recent list. Week/month are the last 7/30 days.
+export const ClanDonorSchema = z.object({
+  // 1-based across pages.
+  rank: z.number(),
+  // Donor's public ID.
+  playerId: z.string(),
+  // Display username; null when never set.
+  username: z.string().nullable(),
+  // Positive integer as a decimal bigint string; parse with BigInt.
+  total: z.string(),
+  // Donations counted towards `total`.
+  donations: z.number(),
+});
+export type ClanDonor = z.infer<typeof ClanDonorSchema>;
+
+export const ClanDonationLeaderboardResponseSchema = z.object({
+  results: ClanDonorSchema.array(),
+  // Ranked donors in the period, not just this page.
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+});
+export type ClanDonationLeaderboardResponse = z.infer<
+  typeof ClanDonationLeaderboardResponseSchema
+>;

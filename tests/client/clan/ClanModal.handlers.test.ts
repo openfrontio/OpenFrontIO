@@ -4,6 +4,7 @@ import {
   apiMockFactory,
   authMockFactory,
   clanApiMockFactory,
+  cosmeticsMockFactory,
   crazyGamesSdkMockFactory,
   flushAsync,
   getElState,
@@ -19,6 +20,7 @@ import {
 vi.mock("@lit-labs/virtualizer/virtualize.js", () => virtualizerMockFactory());
 vi.mock("../../../src/client/Api", () => apiMockFactory());
 vi.mock("../../../src/client/ClanApi", () => clanApiMockFactory());
+vi.mock("../../../src/client/Cosmetics", () => cosmeticsMockFactory());
 vi.mock("../../../src/client/Utils", () => utilsMockFactory());
 vi.mock("../../../src/client/Auth", () => authMockFactory());
 vi.mock("../../../src/client/CrazyGamesSDK", () => crazyGamesSdkMockFactory());
@@ -297,6 +299,51 @@ describe("ClanModal — handlers", () => {
       const updatedClan = (modal as unknown as { selectedClan: ClanInfo })
         .selectedClan;
       expect(updatedClan?.memberCount).toBe(4);
+    });
+  });
+
+  describe("after a clan fund send", () => {
+    it("returns to Manage and clears the cached user so My Clans refetches balances", async () => {
+      const { invalidateUserMe } = await import("../../../src/client/Api");
+      vi.mocked(invalidateUserMe).mockClear();
+      setState(modal, "selectedClan" as keyof ClanModal, makeClan() as never);
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "myRole" as keyof ClanModal, "leader" as never);
+      setState(modal, "view" as keyof ClanModal, "send-funds" as never);
+      const sendView = await waitForSubComponent(modal, "clan-send-funds-view");
+
+      sendView.dispatchEvent(
+        new CustomEvent("funds-sent", { bubbles: true, composed: true }),
+      );
+      await flushAsync(modal);
+
+      expect(invalidateUserMe).toHaveBeenCalled();
+      expect((modal as unknown as { view: string }).view).toBe("manage");
+    });
+
+    // An unknown or earlier-send result may have moved money too, and the
+    // page then shows an error instead of emitting funds-sent.
+    it("clears the cached clan and user however the send page is left", async () => {
+      const { invalidateUserMe } = await import("../../../src/client/Api");
+      setState(modal, "selectedClan" as keyof ClanModal, makeClan() as never);
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "myRole" as keyof ClanModal, "leader" as never);
+      setState(modal, "view" as keyof ClanModal, "send-funds" as never);
+      await waitForSubComponent(modal, "clan-send-funds-view");
+      const stale = { tag: "TST", stale: true };
+      setState(modal, "detailCache" as keyof ClanModal, stale as never);
+      vi.mocked(invalidateUserMe).mockClear();
+
+      // Left for the list (e.g. the modal closed). Going back to Manage
+      // already refetches, since Manage reports the clan when it loads.
+      setState(modal, "view" as keyof ClanModal, "list" as never);
+      await flushAsync(modal);
+
+      expect(invalidateUserMe).toHaveBeenCalledTimes(1);
+      // Dropped (and possibly refetched), never the pre-send copy.
+      expect(
+        (modal as unknown as { detailCache: unknown }).detailCache,
+      ).not.toBe(stale);
     });
   });
 
@@ -859,7 +906,10 @@ describe("ClanModal — handlers", () => {
 
     it("after a donation: closes the dialog, toasts, refreshes the clan and the wallet", async () => {
       const { fetchClanDetail } = await import("../../../src/client/ClanApi");
-      const { invalidateUserMe } = await import("../../../src/client/Api");
+      const { getUserMe, invalidateUserMe } =
+        await import("../../../src/client/Api");
+      const { lastUserMeResponse } =
+        await import("../../../src/client/UserMeBroadcast");
       const { showToast, translateText } =
         await import("../../../src/client/Utils");
       const detailView = await openDetailAs("member");
@@ -875,6 +925,21 @@ describe("ClanModal — handlers", () => {
         [makeClan({ softBalance: "1000", hardBalance: "25" })] as never,
       );
 
+      const me = await getUserMe();
+      if (!me) throw new Error("Expected signed-in fixture");
+      const before = {
+        ...me,
+        player: { ...me.player, currency: { soft: 16600, hard: 75 } },
+      };
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", { detail: before }),
+      );
+      const fresh = {
+        ...me,
+        player: { ...me.player, currency: { soft: 16300, hard: 75 } },
+      };
+      vi.mocked(getUserMe).mockResolvedValueOnce(fresh);
+
       modal.querySelector("clan-donate-dialog")!.dispatchEvent(
         new CustomEvent("donated", {
           detail: { currencyType: "soft", amount: "300" },
@@ -884,6 +949,7 @@ describe("ClanModal — handlers", () => {
 
       expect(modal.querySelector("clan-donate-dialog")).toBeNull();
       expect(invalidateUserMe).toHaveBeenCalled();
+      expect(lastUserMeResponse()?.response).toBe(fresh);
       expect(showToast).toHaveBeenCalledWith(
         "clan_modal.donate_success",
         "green",

@@ -16,6 +16,11 @@ import type {
 import { TradeShipExecution } from "./TradeShipExecution";
 import { TrainStationExecution } from "./TrainStationExecution";
 
+export interface WeightedPort {
+  port: Unit;
+  weight: number;
+}
+
 export class PortExecution implements Execution {
   private active = true;
   private mg: Game;
@@ -61,13 +66,11 @@ export class PortExecution implements Execution {
       return;
     }
 
-    const ports = this.tradingPorts();
-
-    if (ports.length === 0) {
+    const port = this.pickTradingPort(this.tradingPorts());
+    if (port === null) {
       return;
     }
 
-    const port = this.random.randElement(ports);
     this.mg.addExecution(
       new TradeShipExecution(this.port.owner(), this.port, port),
     );
@@ -112,9 +115,7 @@ export class PortExecution implements Execution {
     }
   }
 
-  // It's a probability list, so if an element appears twice it's because it's
-  // twice more likely to be picked later.
-  tradingPorts(): Unit[] {
+  tradingPorts(): WeightedPort[] {
     const sourceComponents = new Set<number>();
     for (const neighbor of this.mg.neighbors(this.port!.tile())) {
       if (!this.mg.isWater(neighbor)) continue;
@@ -138,26 +139,35 @@ export class PortExecution implements Execution {
         );
       });
 
-    const weightedPorts: Unit[] = [];
-
-    for (const [i, otherPort] of ports.entries()) {
-      const expanded = new Array(otherPort.level()).fill(otherPort);
-      weightedPorts.push(...expanded);
+    return ports.map((otherPort, i) => {
+      let multiplier = 1;
       const tooClose =
         this.mg.manhattanDist(this.port!.tile(), otherPort.tile()) <
         this.mg.config().tradeShipShortRangeDebuff();
       const closeBonus =
         i < this.mg.config().proximityBonusPortsNb(ports.length);
       if (!tooClose && closeBonus) {
-        // If the port is close, but not too close, add it again
-        // to increase the chances of trading with it.
-        weightedPorts.push(...expanded);
+        multiplier++;
       }
       if (!tooClose && this.port!.owner().isFriendly(otherPort.owner())) {
-        weightedPorts.push(...expanded);
+        multiplier++;
       }
+      return { port: otherPort, weight: otherPort.level() * multiplier };
+    });
+  }
+
+  pickTradingPort(ports: WeightedPort[]): Unit | null {
+    let total = 0;
+    for (const { weight } of ports) total += weight;
+    if (total === 0) {
+      return null;
     }
-    return weightedPorts;
+    let roll = this.random.nextInt(0, total);
+    for (const { port, weight } of ports) {
+      if (roll < weight) return port;
+      roll -= weight;
+    }
+    throw new Error("unreachable: roll exceeded total weight");
   }
 
   snapshot(w: SnapshotWriter): ExecRecord {

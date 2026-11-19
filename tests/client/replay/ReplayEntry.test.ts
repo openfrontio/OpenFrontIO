@@ -45,7 +45,7 @@ function config(gameEnv: string, jwtAudience: string) {
 }
 
 beforeEach(() => {
-  // The viewer is opt-in; these tests are about what happens once it's on.
+  // Explicitly ensure the viewer is on so tests don't rely solely on defaults.
   new UserSettings().setReplayViewer(true);
   shell.host = false;
   sessionStorage.clear();

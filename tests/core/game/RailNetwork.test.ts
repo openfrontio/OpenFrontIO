@@ -4,12 +4,19 @@ import { FactoryExecution } from "@openfront/engine/execution/FactoryExecution";
 import { PortExecution } from "@openfront/engine/execution/PortExecution";
 import { Unit } from "@openfront/engine/game/Game";
 import {
+  GhostRailNetworkState,
   RailNetworkImpl,
+  type RailPathFinderService,
   StationManagerImpl,
 } from "@openfront/engine/game/RailNetworkImpl";
 import { Railroad } from "@openfront/engine/game/Railroad";
-import { Cluster } from "@openfront/engine/game/TrainStation";
+import { Cluster, TrainStation } from "@openfront/engine/game/TrainStation";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "@openfront/engine/snapshot/SnapshotContext";
 import { playerInfo, setup } from "../../util/Setup";
+import { diffGraphs } from "../../util/Snapshot";
 
 // Mock types
 const createMockStation = (unitId: number): any => {
@@ -50,6 +57,49 @@ describe("StationManagerImpl", () => {
     manager.removeStation(station);
     expect(manager.findStation(station.unit)).toBe(null);
   });
+
+  test("falls back to the unit's next station in the order a restore rebuilds", () => {
+    const first = createMockStation(1);
+    const second = { ...createMockStation(1), unit: first.unit };
+    const other = createMockStation(2);
+    manager.addStation(first);
+    manager.addStation(second);
+    manager.addStation(other);
+
+    manager.removeStation(first);
+    expect(manager.findStation(first.unit)).toBe(second);
+
+    // A restored manager rebuilds its lookups in station order; the live one
+    // must keep the same order or the snapshot round-trip check reports it.
+    const stations = [first, second, other];
+    const writer = {
+      station: (s: TrainStation) => stations.indexOf(s),
+    } as unknown as SnapshotWriter;
+    const reader = {
+      station: (i: number) => stations[i],
+    } as unknown as SnapshotReader;
+    const restored = new StationManagerImpl();
+    restored.restoreSnapshot(manager.snapshot(writer), reader);
+    expect(diffGraphs(manager, restored)).toEqual([]);
+  });
+});
+
+describe("GhostRailNetworkState", () => {
+  test("resolves a unit with two stations to the one findStation answers", () => {
+    const manager = new StationManagerImpl();
+    const first = createMockStation(1);
+    const second = { ...createMockStation(1), unit: first.unit };
+    manager.addStation(first);
+    manager.addStation(second);
+    expect(manager.findStation(first.unit)).toBe(first);
+
+    const state = new GhostRailNetworkState(manager, 32);
+    // Walking a live rail can wrap the second station before the plan ever
+    // looks the unit up; the unit must still resolve as the live network does.
+    const secondGhost = state.ghostForStation(second);
+    expect(state.ghostForUnit(first.unit)).toBe(state.ghostForStation(first));
+    expect(state.ghostForUnit(first.unit)).not.toBe(secondGhost);
+  });
 });
 
 describe("RailNetworkImpl", () => {
@@ -78,8 +128,9 @@ describe("RailNetworkImpl", () => {
         trainStationMinRange: () => 10,
         railroadMaxSize: () => 100,
       }),
-      x: vi.fn(() => 0),
+      x: vi.fn((tile: number) => tile),
       y: vi.fn(() => 0),
+      structureVersion: vi.fn(() => 0),
     };
 
     network = new RailNetworkImpl(game, stationManager, pathService);
@@ -314,23 +365,23 @@ describe("RailNetworkImpl", () => {
       expect(result).toEqual([]);
     });
 
-    test("limits to at most 5 paths", () => {
+    test("returns every rail that placement would create", () => {
       const tile = 42 as any;
       const railGridMock = { query: vi.fn(() => new Set()) };
       (network as any).railGrid = railGridMock;
 
       const neighbors: Array<{ unit: any; distSquared: number }> = [];
+      const stations: any[] = [];
       for (let i = 0; i < 7; i++) {
         const station = createMockStation(i);
         station.tile.mockReturnValue(100 + i);
+        stations.push(station);
         neighbors.push({ unit: station.unit, distSquared: 400 + i });
       }
-
-      stationManager.findStation.mockImplementation((unit: any) => {
-        const station = createMockStation(unit.id);
-        station.tile.mockReturnValue(100 + unit.id);
-        return station;
-      });
+      stationManager.findStation.mockImplementation(
+        (unit: any) =>
+          stations.find((station) => station.unit === unit) ?? null,
+      );
 
       pathService.findTilePath.mockImplementation((_from: any, to: any) => [
         _from,
@@ -340,7 +391,7 @@ describe("RailNetworkImpl", () => {
       game.nearbyUnits.mockReturnValue(neighbors);
 
       const result = network.computeGhostRailPaths(UnitType.City, tile);
-      expect(result.length).toBe(5);
+      expect(result.length).toBe(7);
     });
 
     test("skips stations reachable through already-connected stations", () => {
@@ -354,9 +405,10 @@ describe("RailNetworkImpl", () => {
       const stationB = createMockStation(2);
       stationB.tile.mockReturnValue(200);
 
-      // Make A and B neighbors of each other (1 hop apart)
-      stationA.neighbors.mockReturnValue([stationB]);
-      stationB.neighbors.mockReturnValue([stationA]);
+      // Make A and B neighbors of each other (1 hop apart).
+      const existingRail = new Railroad(stationA, stationB, [100, 150, 200], 1);
+      stationA.getRailroads().add(existingRail);
+      stationB.getRailroads().add(existingRail);
 
       stationManager.findStation.mockImplementation((unit: any) => {
         if (unit.id === 1) return stationA;
@@ -376,7 +428,7 @@ describe("RailNetworkImpl", () => {
       ]);
 
       const result = network.computeGhostRailPaths(UnitType.City, tile);
-      // Only station A should get a path; B is reachable from A within maxConnectionDistance - 1
+      // Only station A should get a path; B is already reachable through A.
       expect(result.length).toBe(1);
       expect(pathService.findTilePath).toHaveBeenCalledTimes(1);
       expect(pathService.findTilePath).toHaveBeenCalledWith(tile, 100);
@@ -415,7 +467,7 @@ describe("RailNetworkImpl", () => {
       stationManager.findStation.mockReturnValue(null);
 
       const portUnit = {
-        id: 1,
+        id: vi.fn(() => 1),
         tile: vi.fn(() => 100),
         type: vi.fn(() => UnitType.Port),
       };
@@ -453,6 +505,26 @@ function expectSameRailGeometry(
         (tile, index) => tile === actualPath[actualPath.length - 1 - index],
       ));
   expect(sameGeometry).toBe(true);
+}
+
+function canonicalRailGeometry(path: TileRef[]): string {
+  const forward = path.join(",");
+  const reverse = [...path].reverse().join(",");
+  return forward < reverse ? forward : reverse;
+}
+
+function allRailGeometries(game: Awaited<ReturnType<typeof setup>>): string[] {
+  const railroads = new Set<Railroad>();
+  for (const station of game.railNetwork().stationManager().getAll()) {
+    for (const railroad of station.getRailroads()) railroads.add(railroad);
+  }
+  return Array.from(railroads, (railroad) =>
+    canonicalRailGeometry(railroad.tiles),
+  ).sort();
+}
+
+function previewGeometries(paths: TileRef[][]): string[] {
+  return paths.map(canonicalRailGeometry).sort();
 }
 
 describe("factory rail preview path consistency", () => {
@@ -523,5 +595,399 @@ describe("factory rail preview path consistency", () => {
     const railroad = factoryStation!.getRailroadTo(portStation!);
     expect(railroad).not.toBeNull();
     expectSameRailGeometry(previewPath, railroad!.tiles);
+  });
+
+  test("matches optimized placement for two non-collinear cities", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+    const city1 = player.buildUnit(UnitType.City, game.ref(5, 5), {});
+    const city2 = player.buildUnit(UnitType.City, game.ref(5, 25), {});
+    const factoryTile = game.ref(25, 15);
+
+    const preview = game
+      .railNetwork()
+      .computeGhostRailPaths(UnitType.Factory, factoryTile);
+    const factory = player.buildUnit(UnitType.Factory, factoryTile, {});
+    game.addExecution(new FactoryExecution(factory));
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+
+    expect(previewGeometries(preview)).toEqual(allRailGeometries(game));
+    expect(preview).toHaveLength(2);
+    const manager = game.railNetwork().stationManager();
+    expect(
+      manager.findStation(city2)!.getRailroadTo(manager.findStation(city1)!),
+    ).not.toBeNull();
+  });
+
+  test("matches sequential planning for three promoted cities", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+    for (const [x, y] of [
+      [5, 5],
+      [5, 25],
+      [25, 35],
+    ]) {
+      player.buildUnit(UnitType.City, game.ref(x, y), {});
+    }
+    const factoryTile = game.ref(35, 15);
+
+    const preview = game
+      .railNetwork()
+      .computeGhostRailPaths(UnitType.Factory, factoryTile);
+    const factory = player.buildUnit(UnitType.Factory, factoryTile, {});
+    game.addExecution(new FactoryExecution(factory));
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+
+    expect(previewGeometries(preview)).toEqual(allRailGeometries(game));
+  });
+
+  test("matches when a later city splits an earlier planned rail", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+    player.buildUnit(UnitType.City, game.ref(5, 5), {});
+    player.buildUnit(UnitType.City, game.ref(25, 7), {});
+    const factoryTile = game.ref(45, 5);
+
+    const preview = game
+      .railNetwork()
+      .computeGhostRailPaths(UnitType.Factory, factoryTile);
+    const factory = player.buildUnit(UnitType.Factory, factoryTile, {});
+    game.addExecution(new FactoryExecution(factory));
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+
+    expect(previewGeometries(preview)).toEqual(allRailGeometries(game));
+    expect(preview).toHaveLength(2);
+  });
+
+  test("matches mixed port and city activation ordering", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+    const port = player.buildUnit(UnitType.Port, game.ref(5, 5), {});
+    game.addExecution(new PortExecution(port));
+    game.executeNextTick();
+    game.executeNextTick();
+    player.buildUnit(UnitType.City, game.ref(5, 25), {});
+    const factoryTile = game.ref(25, 15);
+
+    const preview = game
+      .railNetwork()
+      .computeGhostRailPaths(UnitType.Factory, factoryTile);
+    const factory = player.buildUnit(UnitType.Factory, factoryTile, {});
+    game.addExecution(new FactoryExecution(factory));
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+
+    expect(previewGeometries(preview)).toEqual(allRailGeometries(game));
+  });
+
+  test("returns all final rails when placement produces more than five", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+    for (const [x, y] of [
+      [5, 5],
+      [25, 5],
+      [45, 5],
+      [65, 5],
+      [5, 25],
+      [25, 25],
+      [45, 25],
+    ]) {
+      player.buildUnit(UnitType.City, game.ref(x, y), {});
+    }
+    const factoryTile = game.ref(80, 60);
+
+    const preview = game
+      .railNetwork()
+      .computeGhostRailPaths(UnitType.Factory, factoryTile);
+    const factory = player.buildUnit(UnitType.Factory, factoryTile, {});
+    game.addExecution(new FactoryExecution(factory));
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+
+    expect(preview.length).toBeGreaterThan(5);
+    expect(previewGeometries(preview)).toEqual(allRailGeometries(game));
+  });
+});
+
+describe("ghost rail preview cost controls", () => {
+  type Counter = { calls: number };
+
+  function countPathfinderCalls(
+    game: Awaited<ReturnType<typeof setup>>,
+  ): Counter {
+    const internals = game.railNetwork() as unknown as {
+      pathService: RailPathFinderService;
+    };
+    const real = internals.pathService;
+    const counter: Counter = { calls: 0 };
+    internals.pathService = {
+      findTilePath(from, to) {
+        counter.calls++;
+        return real.findTilePath(from, to);
+      },
+      findStationsPath(from, to) {
+        return real.findStationsPath(from, to);
+      },
+    };
+    return counter;
+  }
+
+  test("a repeated query is answered from the memo until the world changes", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+    player.buildUnit(UnitType.City, game.ref(5, 5), {});
+    player.buildUnit(UnitType.City, game.ref(5, 25), {});
+    const tile = game.ref(25, 15);
+    const network = game.railNetwork();
+    const counter = countPathfinderCalls(game);
+
+    const first = network.computeGhostRailPaths(UnitType.Factory, tile);
+    expect(first).toHaveLength(2);
+    expect(counter.calls).toBeGreaterThan(0);
+
+    counter.calls = 0;
+    expect(network.computeGhostRailPaths(UnitType.Factory, tile)).toBe(first);
+    expect(network.computeGhostRailPaths(UnitType.Factory, tile)).toBe(first);
+    expect(counter.calls).toBe(0);
+
+    // Units the rail network never connects leave the memo valid.
+    player.buildUnit(UnitType.DefensePost, game.ref(60, 60), {});
+    expect(network.computeGhostRailPaths(UnitType.Factory, tile)).toBe(first);
+    expect(counter.calls).toBe(0);
+
+    // A new structure in range changes the plan.
+    player.buildUnit(UnitType.City, game.ref(25, 35), {});
+    const second = network.computeGhostRailPaths(UnitType.Factory, tile);
+    expect(counter.calls).toBeGreaterThan(0);
+    expect(second).not.toBe(first);
+    expect(second.length).toBeGreaterThanOrEqual(first.length);
+  });
+
+  test("a change to the live network invalidates the memo", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+    const city = player.buildUnit(UnitType.City, game.ref(5, 5), {});
+    player.buildUnit(UnitType.City, game.ref(5, 25), {});
+    const tile = game.ref(25, 15);
+    const network = game.railNetwork();
+    const counter = countPathfinderCalls(game);
+
+    const first = network.computeGhostRailPaths(UnitType.Factory, tile);
+    counter.calls = 0;
+
+    // Promote a city to a station without adding or removing any unit.
+    network.connectStation(new TrainStation(game, city));
+    const second = network.computeGhostRailPaths(UnitType.Factory, tile);
+    expect(counter.calls).toBeGreaterThan(0);
+    expect(second).not.toBe(first);
+  });
+
+  test("the pathfinder budget bounds a factory cascade over a dense map", async () => {
+    const game = await setup("big_plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+    for (let y = 5; y < 200; y += 20) {
+      for (let x = 5; x < 200; x += 20) {
+        player.buildUnit(UnitType.City, game.ref(x, y), {});
+      }
+    }
+    const tile = game.ref(100, 100);
+    const network = game.railNetwork();
+    const internals = network as unknown as {
+      ghostCascadeLimit: number;
+      ghostPathfinderBudget: number;
+      ghostPathsCache: Map<string, unknown>;
+    };
+    // Let the budget be the binding limit here.
+    internals.ghostCascadeLimit = Infinity;
+    const budget = internals.ghostPathfinderBudget;
+    const counter = countPathfinderCalls(game);
+
+    const budgeted = network.computeGhostRailPaths(UnitType.Factory, tile);
+    expect(counter.calls).toBeLessThanOrEqual(budget);
+    expect(budgeted.length).toBeGreaterThan(0);
+
+    // Without the budget the same plan is many times larger.
+    internals.ghostPathfinderBudget = Infinity;
+    internals.ghostPathsCache.clear();
+    counter.calls = 0;
+    const full = network.computeGhostRailPaths(UnitType.Factory, tile);
+    expect(counter.calls).toBeGreaterThan(budget);
+    expect(full.length).toBeGreaterThan(budgeted.length);
+  });
+
+  test("a crowded region previews only the nearest structures", async () => {
+    const game = await setup("big_plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+    for (let y = 5; y < 200; y += 12) {
+      for (let x = 5; x < 200; x += 12) {
+        player.buildUnit(UnitType.City, game.ref(x, y), {});
+      }
+    }
+    const tile = game.ref(100, 100);
+    const network = game.railNetwork();
+    const internals = network as unknown as {
+      ghostCascadeLimit: number;
+      ghostPathfinderBudget: number;
+      ghostPathsCache: Map<string, unknown>;
+    };
+    const counter = countPathfinderCalls(game);
+    const farthest = (paths: TileRef[][]) =>
+      Math.max(
+        ...paths.flatMap((path) =>
+          path.map((t) =>
+            Math.max(Math.abs(game.x(t) - 100), Math.abs(game.y(t) - 100)),
+          ),
+        ),
+      );
+
+    // The 12 nearest cities on this grid all lie within 25 tiles, so every
+    // rail stays local; a few calls per promoted city, not hundreds.
+    const local = network.computeGhostRailPaths(UnitType.Factory, tile);
+    expect(local.length).toBeGreaterThanOrEqual(internals.ghostCascadeLimit);
+    expect(farthest(local)).toBeLessThanOrEqual(30);
+    expect(counter.calls).toBeLessThanOrEqual(2 * internals.ghostCascadeLimit);
+
+    // Unlimited, the same placement cascades across the whole range.
+    internals.ghostCascadeLimit = Infinity;
+    internals.ghostPathfinderBudget = Infinity;
+    internals.ghostPathsCache.clear();
+    const full = network.computeGhostRailPaths(UnitType.Factory, tile);
+    expect(full.length).toBeGreaterThan(local.length);
+    expect(farthest(full)).toBeGreaterThan(60);
+  });
+
+  test("the rail network contributes to the game-state hash", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+    const network = game.railNetwork();
+    const gameHash = () => (game as unknown as { hash(): number }).hash();
+    expect(network.hash()).toBe(0);
+
+    const factory = player.buildUnit(UnitType.Factory, game.ref(10, 10), {});
+    const city = player.buildUnit(UnitType.City, game.ref(10, 40), {});
+    game.addExecution(new FactoryExecution(factory));
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+    expect(network.stationManager().getAll().size).toBe(2);
+
+    const withRails = network.hash();
+    expect(withRails).not.toBe(0);
+    expect(network.hash()).toBe(withRails);
+
+    // Dropping a station changes the rail digest and, through it, the game
+    // hash, while the set of units is unchanged.
+    const gameHashBefore = gameHash();
+    network.removeStation(city);
+    expect(network.hash()).not.toBe(withRails);
+    expect(gameHash()).not.toBe(gameHashBefore);
+  });
+
+  test("a preview touches only the stations its plan reaches", async () => {
+    const game = await setup("big_plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+    const buildNetwork = (
+      factoryAt: [number, number],
+      citiesAt: Array<[number, number]>,
+    ) => {
+      const cities = citiesAt.map(([x, y]) =>
+        player.buildUnit(UnitType.City, game.ref(x, y), {}),
+      );
+      const factory = player.buildUnit(
+        UnitType.Factory,
+        game.ref(factoryAt[0], factoryAt[1]),
+        {},
+      );
+      game.addExecution(new FactoryExecution(factory));
+      for (let i = 0; i < 5; i++) game.executeNextTick();
+      return [factory, ...cities];
+    };
+    buildNetwork(
+      [20, 20],
+      [
+        [20, 45],
+        [45, 20],
+      ],
+    );
+    const far = buildNetwork(
+      [180, 180],
+      [
+        [180, 155],
+        [155, 180],
+      ],
+    );
+    const manager = game.railNetwork().stationManager();
+    const farStations = far.map((unit) => manager.findStation(unit)!);
+    expect(farStations).toHaveLength(3);
+    const spies = farStations.flatMap((station) => [
+      vi.spyOn(station, "getRailroads"),
+      vi.spyOn(station, "getCluster"),
+    ]);
+
+    const preview = game
+      .railNetwork()
+      .computeGhostRailPaths(UnitType.City, game.ref(32, 32));
+    expect(preview.length).toBeGreaterThan(0);
+    for (const spy of spies) expect(spy).not.toHaveBeenCalled();
+    vi.restoreAllMocks();
+  });
+
+  test("a factory ghost splits a live rail found through the rail grid", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("player", PlayerType.Human),
+    ]);
+    const player = game.player("player")!;
+    const factory = player.buildUnit(UnitType.Factory, game.ref(10, 10), {});
+    const endCity = player.buildUnit(UnitType.City, game.ref(10, 50), {});
+    game.addExecution(new FactoryExecution(factory));
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+    const manager = game.railNetwork().stationManager();
+    const liveRail = manager
+      .findStation(factory)!
+      .getRailroadTo(manager.findStation(endCity)!);
+    expect(liveRail).not.toBeNull();
+
+    // A city the new factory would promote, built after the network formed.
+    const city = player.buildUnit(UnitType.City, game.ref(40, 30), {});
+    const mid = liveRail!.tiles[Math.floor(liveRail!.tiles.length / 2)];
+    const factoryTile = game.ref(game.x(mid) + 1, game.y(mid));
+
+    const preview = game
+      .railNetwork()
+      .computeGhostRailPaths(UnitType.Factory, factoryTile);
+    // Snapping onto the live rail adds no rail; only the promoted city does.
+    expect(preview).toHaveLength(1);
+
+    const newFactory = player.buildUnit(UnitType.Factory, factoryTile, {});
+    game.addExecution(new FactoryExecution(newFactory));
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+    const newStation = manager.findStation(newFactory)!;
+    expect(
+      newStation.getRailroadTo(manager.findStation(factory)!),
+    ).not.toBeNull();
+    expect(
+      newStation.getRailroadTo(manager.findStation(endCity)!),
+    ).not.toBeNull();
+    const cityRail = manager.findStation(city)!.getRailroadTo(newStation);
+    expect(cityRail).not.toBeNull();
+    expectSameRailGeometry(preview[0], cityRail!.tiles);
   });
 });

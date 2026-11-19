@@ -103,6 +103,14 @@ export class StatsImpl implements Stats {
     return this.data;
   }
 
+  migrateClientID(oldClientID: ClientID, newClientID: ClientID): void {
+    if (oldClientID === newClientID) return;
+    if (oldClientID in this.data) {
+      this.data[newClientID] = this.data[oldClientID];
+      delete this.data[oldClientID];
+    }
+  }
+
   private _makePlayerStats(player: Player): PlayerStats {
     const clientID = player.clientID();
     if (clientID === null) return undefined;

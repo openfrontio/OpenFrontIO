@@ -1,10 +1,10 @@
 {
-  "categories": ["arcade", "new"],
+  "categories": ["arcade"],
   "id": "BrainRot",
   "layers": [
     {
       "alpha": 0.7,
-      "id": "brland",
+      "id": "brainland",
       "nukeable": true,
       "placement": "land"
     }
@@ -199,7 +199,6 @@
       "name": "Brain Stem"
     }
   ],
-  "special_team_count": 27,
   "themes": ["space", "war"],
   "translation_key": "map.brainrot"
 }

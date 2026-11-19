@@ -4,6 +4,8 @@
   "name": "Baikal",
   "translation_key": "map.baikal",
   "categories": ["asia"],
+  "location": { "lat": 53.5, "lon": 108 },
+  "author": "Duwibi",
   "special_team_count": 2,
   "forced_modifiers": ["isWaterNukes:50"],
   "themes": ["asia"],

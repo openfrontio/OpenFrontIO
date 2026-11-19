@@ -4,6 +4,8 @@
   "name": "Gulf of St. Lawrence",
   "translation_key": "map.gulfofstlawrence",
   "categories": ["north_america"],
+  "location": { "lat": 48.5, "lon": -62 },
+  "author": "jachisc",
   "special_team_count": 3,
   "nations": [
     {

@@ -1,30 +1,29 @@
 {
   "categories": ["fictional"],
-  "custom_tribes": [
-    {
-      "coordinates": [38, 49],
-      "name": "Hill Tribe"
-    }
-  ],
   "hidden": true,
   "id": "Tutorial",
   "map": {
     "height": 168,
-    "num_land_tiles": 13053,
+    "num_land_tiles": 12660,
     "width": 224
   },
   "map16x": {
     "height": 42,
-    "num_land_tiles": 749,
+    "num_land_tiles": 732,
     "width": 56
   },
   "map4x": {
     "height": 84,
-    "num_land_tiles": 3174,
+    "num_land_tiles": 3087,
     "width": 112
   },
   "name": "Tutorial",
   "nations": [
+    {
+      "coordinates": [38, 49],
+      "flag": "",
+      "name": "Iron Kingdom"
+    },
     {
       "coordinates": [175, 84],
       "flag": "",

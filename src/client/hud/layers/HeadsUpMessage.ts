@@ -30,13 +30,8 @@ export class HeadsUpMessage extends LitElement implements Controller {
   private isImmunityActive = false;
 
   @state()
-  private isCatchingUp = false;
-  private catchingUpTicks = 0;
-
-  @state()
   private isOvertimeNotice = false;
 
-  private static readonly CATCHING_UP_SHOW_THRESHOLD = 10;
   // How long the overtime announcement banner stays up after the start minute.
   private static readonly OVERTIME_NOTICE_SECONDS = 5;
 
@@ -163,18 +158,6 @@ export class HeadsUpMessage extends LitElement implements Controller {
       this.game.isSpawnImmunityActive() &&
       ticksSinceSpawnEnd < showImmunityHudDuration;
 
-    const currentlyCatchingUp =
-      !this.game.config().isReplay() && this.game.isCatchingUp();
-
-    if (currentlyCatchingUp) {
-      this.catchingUpTicks++;
-    } else {
-      this.catchingUpTicks = 0;
-    }
-
-    this.isCatchingUp =
-      this.catchingUpTicks >= HeadsUpMessage.CATCHING_UP_SHOW_THRESHOLD;
-
     // Announce overtime in this banner (not the toast, which is a brief
     // notification slot). Window-based rather than a fired-once flag, so a
     // late joiner or replay seek doesn't get a stale announcement long after
@@ -194,15 +177,11 @@ export class HeadsUpMessage extends LitElement implements Controller {
         this.game.config().gameConfig().tutorial !== true) ||
       this.isPaused ||
       this.isImmunityActive ||
-      this.isCatchingUp ||
       this.isOvertimeNotice;
     this.requestUpdate();
   }
 
   private getMessage(): string {
-    if (this.isCatchingUp) {
-      return translateText("heads_up_message.catching_up");
-    }
     if (this.isPaused) {
       if (this.game.config().gameConfig().gameType === GameType.Singleplayer) {
         return translateText("heads_up_message.singleplayer_game_paused");

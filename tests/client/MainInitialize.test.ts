@@ -66,6 +66,10 @@ vi.mock("../../src/client/BootInterrupts", () => ({
   steamGrantStringsReady: () => false,
   reportThanksStringsReady: () => false,
   reportThanksDueThisLaunch: () => false,
+  giftEndingStringsReady: () => false,
+  renewalPushedStringsReady: () => false,
+  renewalPushedDueThisLaunch: () => false,
+  renewalPushedOf: () => null,
   joinOwnsInFlightFlag: () => true,
   lapseShownAfterDispatch: (
     _resp: unknown,
@@ -357,6 +361,47 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     closeSpy.mockRestore();
   });
 
+  it("does not close the lobby when navigating back from a router modal (popstate and hashchange)", async () => {
+    await loadModal("join-lobby-modal");
+    await loadModal("news-modal");
+    const newsModal = document.querySelector("news-modal") as unknown as {
+      close: () => void;
+    };
+    const newsCloseSpy = vi.spyOn(newsModal, "close");
+    const joinModal = document.querySelector("join-lobby-modal") as unknown as {
+      close: () => void;
+    };
+    const joinCloseSpy = vi
+      .spyOn(joinModal, "close")
+      .mockImplementation(() => {});
+
+    window.location.hash = "#modal=news";
+    window.dispatchEvent(new Event("hashchange"));
+
+    history.replaceState(null, "", window.location.pathname);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    window.dispatchEvent(new Event("hashchange"));
+
+    expect(newsCloseSpy).toHaveBeenCalled();
+    expect(joinCloseSpy).not.toHaveBeenCalled();
+    joinCloseSpy.mockRestore();
+    newsCloseSpy.mockRestore();
+  });
+
+  it("closes the join modal when navigating back to root without a modal", async () => {
+    await loadModal("join-lobby-modal");
+    const joinModal = document.querySelector("join-lobby-modal") as unknown as {
+      close: () => void;
+    };
+    const closeSpy = vi.spyOn(joinModal, "close").mockImplementation(() => {});
+
+    history.replaceState(null, "", "/");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+
+    await vi.waitFor(() => expect(closeSpy).toHaveBeenCalled());
+    closeSpy.mockRestore();
+  });
+
   it("reads the join-lobby detail and stops at the username gate", async () => {
     const input = document.querySelector("username-input") as unknown as {
       canPlay: () => boolean;
@@ -364,13 +409,14 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     const canPlay = vi.fn(() => false);
     input.canPlay = canPlay;
     logSpy.mockClear();
-    document.dispatchEvent(
-      new CustomEvent("join-lobby", {
-        detail: { gameID: "AbCd1234" },
-        bubbles: true,
-      }),
-    );
+    const event = new CustomEvent("join-lobby", {
+      detail: { gameID: "AbCd1234" },
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(event);
     await vi.waitFor(() => expect(canPlay).toHaveBeenCalled());
+    expect(event.defaultPrevented).toBe(true);
     // Early return before the "joining lobby" log — nothing joined.
     expect(logSpy).not.toHaveBeenCalledWith(
       expect.stringContaining("joining lobby"),

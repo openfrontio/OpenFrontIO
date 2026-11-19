@@ -4,6 +4,7 @@
   "name": "Tourney 3 Teams",
   "translation_key": "map.tourney2",
   "categories": ["tournament"],
+  "author": "bijx",
   "nations": [
     {
       "coordinates": [339, 987],

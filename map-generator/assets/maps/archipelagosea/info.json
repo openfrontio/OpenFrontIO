@@ -5,6 +5,9 @@
   "translation_key": "map.archipelagosea",
   "display_name": "Archipelago Sea",
   "categories": ["europe"],
+  "location": { "lat": 60.2, "lon": 21.6 },
+  "author": "Tristar",
+  "description": "Off the coast of Finland, this sea lives up to its name, by some estimates it contains the largest archipelago in the world by the number of islands at around 50,000. OpenFront's rarest (and perhaps most difficult) map.",
   "forced_modifiers": ["isWaterNukes:50"],
   "themes": ["europe"],
   "nations": [

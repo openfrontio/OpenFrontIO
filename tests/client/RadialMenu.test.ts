@@ -1,0 +1,280 @@
+import { EventBus } from "@openfront/shared/EventBus";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import {
+  CloseRadialMenuEvent,
+  RadialMenu,
+} from "../../src/client/hud/layers/RadialMenu";
+import {
+  centerButtonElement,
+  rootMenuElement,
+} from "../../src/client/hud/layers/RadialMenuElements";
+import {
+  CloseViewEvent,
+  FORWARDED_CLICK,
+  FORWARDED_TOUCH_CLICK,
+} from "../../src/client/InputHandler";
+
+// jsdom has no layout, so there is no element under a point to forward to.
+function stubElementFromPoint(element: Element | null) {
+  (document as any).elementFromPoint = vi.fn(() => element);
+}
+
+describe("RadialMenu overlay click-through", () => {
+  afterEach(() => {
+    delete (document as any).elementFromPoint;
+    document
+      .querySelectorAll(".radial-menu-container")
+      .forEach((el) => el.remove());
+  });
+
+  function makeMenu() {
+    const eventBus = new EventBus();
+    const radialMenu = new RadialMenu(
+      eventBus,
+      rootMenuElement,
+      centerButtonElement,
+    );
+    radialMenu.init();
+    const overlay = document.querySelector(
+      ".radial-menu-container",
+    ) as HTMLElement;
+    return { eventBus, radialMenu, overlay };
+  }
+
+  // A tap on the menu starts with a press on it; the menu ignores clicks
+  // whose press started before it opened.
+  function press(target: Element) {
+    target.dispatchEvent(
+      new PointerEvent("pointerdown", { pointerType: "touch", bubbles: true }),
+    );
+  }
+
+  function makeBuildBarButton() {
+    const layer = document.createElement("div");
+    layer.setAttribute("data-radial-click-through", "");
+    const button = document.createElement("button");
+    layer.appendChild(button);
+    document.body.appendChild(layer);
+    const clicks: MouseEvent[] = [];
+    button.addEventListener("click", (event) => clicks.push(event));
+    return { button, clicks };
+  }
+
+  test("forwards a tap on the overlay to the build bar below it", () => {
+    const { overlay } = makeMenu();
+    const { button, clicks } = makeBuildBarButton();
+    stubElementFromPoint(button);
+
+    press(overlay);
+    overlay.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, clientX: 10, clientY: 20 }),
+    );
+
+    expect(clicks).toHaveLength(1);
+    expect(clicks[0].clientX).toBe(10);
+    expect(clicks[0].clientY).toBe(20);
+    // The layer has to be able to tell a forwarded tap from a real press.
+    expect(
+      (clicks[0] as unknown as Record<string, unknown>)[FORWARDED_CLICK],
+    ).toBe(true);
+  });
+
+  test("preserves touch identity when forwarding a click", () => {
+    const { overlay } = makeMenu();
+    const { button, clicks } = makeBuildBarButton();
+    stubElementFromPoint(button);
+
+    overlay.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 1,
+        pointerType: "touch",
+        bubbles: true,
+      }),
+    );
+    overlay.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, clientX: 10, clientY: 20 }),
+    );
+
+    expect(clicks).toHaveLength(1);
+    expect(
+      (clicks[0] as unknown as Record<string, unknown>)[FORWARDED_TOUCH_CLICK],
+    ).toBe(true);
+  });
+
+  test("forwards a tap that landed on the menu's background", () => {
+    // The menu's SVG is a large hit-testable box around the tap point, so a
+    // tap on the build bar lands on it whenever the menu is close enough.
+    const { overlay } = makeMenu();
+    const { button, clicks } = makeBuildBarButton();
+    stubElementFromPoint(button);
+
+    const svg = overlay.querySelector("svg") as SVGElement;
+    press(svg);
+    svg.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, clientX: 10, clientY: 20 }),
+    );
+
+    expect(clicks).toHaveLength(1);
+    expect(
+      (clicks[0] as unknown as Record<string, unknown>)[FORWARDED_CLICK],
+    ).toBe(true);
+  });
+
+  test("does not forward a tap on a menu item", () => {
+    // Menu items stop the click from bubbling, so the overlay never sees it.
+    const { overlay } = makeMenu();
+    const { button, clicks } = makeBuildBarButton();
+    stubElementFromPoint(button);
+
+    const svg = overlay.querySelector("svg") as SVGElement;
+    const item = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "path",
+    ) as SVGPathElement;
+    item.addEventListener("click", (event) => event.stopPropagation());
+    svg.appendChild(item);
+    item.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, clientX: 10, clientY: 20 }),
+    );
+
+    expect(clicks).toHaveLength(0);
+  });
+
+  test("does not forward taps that miss the build bar", () => {
+    const { overlay } = makeMenu();
+    const other = document.createElement("div");
+    document.body.appendChild(other);
+    const clicks: MouseEvent[] = [];
+    other.addEventListener("click", (event) => clicks.push(event));
+    stubElementFromPoint(other);
+
+    overlay.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, clientX: 10, clientY: 20 }),
+    );
+
+    expect(clicks).toHaveLength(0);
+  });
+
+  test("closes when the view is closed", () => {
+    const { eventBus, radialMenu, overlay } = makeMenu();
+    // The menu needs its params to rebuild itself on close; the overlay
+    // hiding is what this test is about.
+    vi.spyOn(radialMenu as any, "resetMenu").mockImplementation(() => {});
+    (radialMenu as any).isVisible = true;
+    overlay.style.display = "block";
+
+    eventBus.emit(new CloseViewEvent());
+
+    expect(overlay.style.display).toBe("none");
+  });
+
+  // The player info panel opens with the menu and closes on this event, so
+  // it has to fire however the menu closes, including from an action like
+  // the attack button, which hides the menu directly.
+  function openMenu(radialMenu: RadialMenu, overlay: HTMLElement) {
+    vi.spyOn(radialMenu as any, "resetMenu").mockImplementation(() => {});
+    (radialMenu as any).isVisible = true;
+    overlay.style.display = "block";
+  }
+
+  function countCloseEvents(eventBus: EventBus) {
+    const closes: CloseRadialMenuEvent[] = [];
+    eventBus.on(CloseRadialMenuEvent, (e) => closes.push(e));
+    return closes;
+  }
+
+  test("announces it closed when an action hides it", () => {
+    const { eventBus, radialMenu, overlay } = makeMenu();
+    openMenu(radialMenu, overlay);
+    const closes = countCloseEvents(eventBus);
+
+    radialMenu.hideRadialMenu();
+
+    expect(closes).toHaveLength(1);
+  });
+
+  test("announces it closed once when the backdrop is tapped", () => {
+    const { eventBus, radialMenu, overlay } = makeMenu();
+    stubElementFromPoint(null);
+    openMenu(radialMenu, overlay);
+    const closes = countCloseEvents(eventBus);
+
+    press(overlay);
+    overlay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(closes).toHaveLength(1);
+  });
+
+  // A touch tap on the map opens the menu on pointerup, and that tap's click
+  // arrives after the menu is up. It must not close the menu or pick an item.
+  function showMenu(radialMenu: RadialMenu) {
+    vi.spyOn(radialMenu as any, "resetMenu").mockImplementation(() => {});
+    vi.spyOn(radialMenu as any, "renderMenuItems").mockImplementation(() => {});
+    vi.spyOn(radialMenu as any, "onCenterButtonHover").mockImplementation(
+      () => {},
+    );
+    radialMenu.showRadialMenu(10, 20);
+  }
+
+  test("stays open when the tap that opened it clicks the backdrop", () => {
+    const { eventBus, radialMenu, overlay } = makeMenu();
+    const { button, clicks } = makeBuildBarButton();
+    stubElementFromPoint(button);
+    showMenu(radialMenu);
+    const closes = countCloseEvents(eventBus);
+
+    overlay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(radialMenu.isMenuVisible()).toBe(true);
+    expect(closes).toHaveLength(0);
+    expect(clicks).toHaveLength(0);
+  });
+
+  test("does not pick an item with the tap that opened it", () => {
+    const { radialMenu, overlay } = makeMenu();
+    showMenu(radialMenu);
+    const svg = overlay.querySelector("svg") as SVGElement;
+    const item = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "path",
+    ) as SVGPathElement;
+    const picks: MouseEvent[] = [];
+    item.addEventListener("click", (event) => {
+      event.stopPropagation();
+      picks.push(event);
+    });
+    svg.appendChild(item);
+
+    item.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(picks).toHaveLength(0);
+
+    press(item);
+    item.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(picks).toHaveLength(1);
+  });
+
+  test("forgets a press from before it was last opened", () => {
+    const { eventBus, radialMenu, overlay } = makeMenu();
+    stubElementFromPoint(null);
+    showMenu(radialMenu);
+    press(overlay);
+    radialMenu.hideRadialMenu();
+    // Let the reopen cooldown pass.
+    (radialMenu as any).lastHideTime = 0;
+    showMenu(radialMenu);
+    const closes = countCloseEvents(eventBus);
+
+    overlay.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(closes).toHaveLength(0);
+  });
+
+  test("does not announce a close when it was already hidden", () => {
+    const { eventBus, radialMenu } = makeMenu();
+    const closes = countCloseEvents(eventBus);
+
+    radialMenu.hideRadialMenu();
+
+    expect(closes).toHaveLength(0);
+  });
+});

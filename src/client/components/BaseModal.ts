@@ -1,4 +1,4 @@
-import { html, LitElement, TemplateResult } from "lit";
+import { html, LitElement, type PropertyValues, TemplateResult } from "lit";
 import { property, query, state } from "lit/decorators.js";
 import { modalRouter } from "../ModalRouter";
 import "./baseComponents/Modal";
@@ -17,6 +17,7 @@ export interface ModalConfig {
   hideCloseButton?: boolean;
   alwaysMaximized?: boolean;
   maxWidth?: string;
+  sidePanel?: boolean;
   hideTabs?: boolean;
   showScrollToTop?: boolean;
 }
@@ -126,7 +127,8 @@ export abstract class BaseModal extends LitElement {
     return this;
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     // Default the active tab so the highlight is correct on first render,
     // before open() runs (matters for inline modals rendered on page mount).
     const tabs = this.modalConfig().tabs ?? [];
@@ -149,6 +151,7 @@ export abstract class BaseModal extends LitElement {
         ?hideCloseButton=${cfg.hideCloseButton ?? true}
         ?alwaysMaximized=${cfg.alwaysMaximized ?? false}
         maxWidth=${cfg.maxWidth ?? ""}
+        ?sidePanel=${cfg.sidePanel ?? false}
         ?showScrollToTop=${cfg.showScrollToTop ?? false}
         .tabs=${cfg.hideTabs ? [] : tabs}
         .activeTab=${this.activeTab}
@@ -296,8 +299,14 @@ export abstract class BaseModal extends LitElement {
     super.disconnectedCallback();
   }
 
+  private static escapeStack: BaseModal[] = [];
+
   private handleKeyDown = async (e: KeyboardEvent) => {
-    if (e.key === "Escape" && this.isModalOpen) {
+    if (
+      e.key === "Escape" &&
+      this.isModalOpen &&
+      BaseModal.escapeStack[BaseModal.escapeStack.length - 1] === this
+    ) {
       e.preventDefault();
       const confirmed = await this.confirmBeforeClose();
       // Bail if a parallel close() already closed us while we awaited.
@@ -310,11 +319,14 @@ export abstract class BaseModal extends LitElement {
 
   protected registerEscapeHandler() {
     this.isModalOpen = true;
+    BaseModal.escapeStack = BaseModal.escapeStack.filter((m) => m !== this);
+    BaseModal.escapeStack.push(this);
     window.addEventListener("keydown", this.handleKeyDown);
   }
 
   protected unregisterEscapeHandler() {
     this.isModalOpen = false;
+    BaseModal.escapeStack = BaseModal.escapeStack.filter((m) => m !== this);
     window.removeEventListener("keydown", this.handleKeyDown);
   }
 

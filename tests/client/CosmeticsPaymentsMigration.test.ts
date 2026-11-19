@@ -21,6 +21,7 @@ vi.mock("../../src/client/Utils", async (importOriginal) => ({
 
 vi.mock("../../src/client/Payments", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Payments")>()),
+  startPlayPurchase: vi.fn(),
   startPurchase: vi.fn(async () => ({ outcome: "redirecting" })),
 }));
 
@@ -56,7 +57,7 @@ import {
   showInGameAlert,
   showInGameConfirm,
 } from "../../src/client/InGameModal";
-import { startPurchase } from "../../src/client/Payments";
+import { startPlayPurchase, startPurchase } from "../../src/client/Payments";
 
 const startPurchaseMock = startPurchase as unknown as ReturnType<typeof vi.fn>;
 const alertMock = showInGameAlert as unknown as ReturnType<typeof vi.fn>;
@@ -383,4 +384,86 @@ describe("purchaseCosmetic dollar path: settling a Steam overlay purchase", () =
       "You already subscribe through Stripe.",
     );
   });
+});
+
+// The Android app: a currency pack is a Play product, and no subscription is
+// sold at all.
+describe("purchaseCosmetic in the Android app", () => {
+  const startPlayPurchaseMock = vi.mocked(startPlayPurchase);
+  const PLAY_PACK = {
+    ...STRIPE_PACK,
+    googleProductId: "plutonium_1000",
+  } as unknown as Pack;
+
+  function installAndroid(bridge: boolean) {
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      shell: { platform: "android" },
+      ...(bridge
+        ? {
+            playBilling: {
+              products: async () => ({ status: "ok", products: [] }),
+              purchase: async () => ({ status: "cancelled" }),
+              unconsumed: async () => ({ status: "ok", purchaseTokens: [] }),
+            },
+          }
+        : {}),
+    };
+  }
+
+  afterEach(() => {
+    delete (window as { openfrontDesktop?: unknown }).openfrontDesktop;
+  });
+
+  it("buys a pack through Play, never a checkout", async () => {
+    installAndroid(true);
+    startPlayPurchaseMock.mockResolvedValue({ outcome: "completed" });
+
+    await purchaseCosmetic(resolved({ cosmetic: PLAY_PACK }), "dollar");
+
+    expect(startPlayPurchaseMock).toHaveBeenCalledWith("plutonium_1000");
+    expect(startPurchaseMock).not.toHaveBeenCalled();
+    expect(alertMock).toHaveBeenCalledWith(
+      "store.currency_pack_purchase_success",
+    );
+    expect(invalidateUserMe).toHaveBeenCalled();
+  });
+
+  it("shows the message a pending Play purchase carries", async () => {
+    installAndroid(true);
+    startPlayPurchaseMock.mockResolvedValue({
+      outcome: "pending",
+      message: "store.play_purchase_retry",
+    });
+    await purchaseCosmetic(resolved({ cosmetic: PLAY_PACK }), "dollar");
+    expect(alertMock).toHaveBeenCalledWith("store.play_purchase_retry");
+  });
+
+  it("says nothing when the player closed Play's sheet", async () => {
+    installAndroid(true);
+    startPlayPurchaseMock.mockResolvedValue({
+      outcome: "cancelled",
+      quiet: true,
+    });
+    await purchaseCosmetic(resolved({ cosmetic: PLAY_PACK }), "dollar");
+    expect(alertMock).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])(
+    "starts nothing for a subscription (bridge: %s)",
+    async (bridge) => {
+      installAndroid(bridge);
+      await purchaseCosmetic(
+        resolved({
+          type: "subscription",
+          cosmetic: { name: "supporter", priceMonthly: 5 } as any,
+          key: "subscription:supporter",
+        }),
+        "dollar",
+      );
+      expect(startPurchaseMock).not.toHaveBeenCalled();
+      expect(startPlayPurchaseMock).not.toHaveBeenCalled();
+      expect(changeTierMock).not.toHaveBeenCalled();
+      expect(alertMock).not.toHaveBeenCalled();
+    },
+  );
 });
