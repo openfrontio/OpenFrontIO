@@ -1,4 +1,5 @@
-import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { CustomGameMap, GameType } from "@openfront/engine-api/game/GameTypes";
+import { GameConfigPatchSchema } from "@openfront/engine-api/Schemas";
 import {
   CreateGameInputSchema,
   isPrivateGameInput,
@@ -27,6 +28,17 @@ describe("create_game game type", () => {
     expect(accepts(testGameConfig({ gameType: GameType.Singleplayer }))).toBe(
       false,
     );
+  });
+
+  it("rejects a Custom map, whose files a lobby can't carry", () => {
+    const body = testGameConfig({
+      gameType: GameType.Private,
+      gameMap: CustomGameMap,
+    });
+    expect(CreateGameInputSchema.safeParse(body).success).toBe(false);
+    expect(
+      GameConfigPatchSchema.safeParse({ gameMap: CustomGameMap }).success,
+    ).toBe(false);
   });
 
   it("accepts an empty body, which gets the private default", () => {
