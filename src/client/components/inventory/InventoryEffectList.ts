@@ -64,49 +64,53 @@ export class InventoryEffectList extends LitElement {
         open ? "bg-white/[0.03]" : ""
       }"
     >
-      <div
-        class="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2"
-      >
-        <span
-          data-effect-row-name
-          class="w-full text-sm font-bold text-white sm:w-44 sm:shrink-0"
-          >${translateText(`inventory.effect_slot.${row.slot}`)}</span
-        >
+      <div class="flex min-h-14 items-center gap-3 px-3 py-2">
         <span
           data-effect-row-item
-          class="flex min-w-0 flex-1 items-center gap-2 text-sm text-white"
+          class="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white"
         >
           <span
-            class="flex h-9 w-12 shrink-0 items-center justify-center overflow-hidden rounded border border-white/15 bg-black/40"
-            >${
-              row.item
-                ? html`<cosmetic-preview
-                    .resolved=${row.item}
-                  ></cosmetic-preview>`
-                : nothing
-            }</span
+            data-effect-row-name
+            class="w-full text-sm font-bold text-white lg:w-36 lg:shrink-0"
+            >${translateText(`inventory.effect_slot.${row.slot}`)}</span
           >
-          <span class="truncate font-semibold capitalize"
-            >${
-              row.item
-                ? cosmeticDisplayName(row.item)
-                : translateText("inventory.effect_default")
-            }</span
-          >
-          ${
-            row.item
-              ? html`<span
-                  class="text-[11px] font-black uppercase tracking-wider text-white/50"
-                  >${cosmeticRarityLabel(row.item)}</span
-                >`
-              : nothing
-          }
+          <span class="flex min-w-0 flex-1 items-center gap-2">
+            <span
+              class="flex h-9 w-12 shrink-0 items-center justify-center overflow-hidden rounded border border-white/15 bg-black/40"
+              >${
+                row.item
+                  ? html`<cosmetic-preview
+                      .resolved=${row.item}
+                    ></cosmetic-preview>`
+                  : nothing
+              }</span
+            >
+            <span class="flex min-w-0 flex-col">
+              <span class="truncate font-semibold"
+                >${
+                  row.item
+                    ? cosmeticDisplayName(row.item)
+                    : translateText("inventory.effect_default")
+                }</span
+              >
+              <span class="flex flex-wrap gap-x-2 text-xs text-white/50">
+                ${
+                  row.item
+                    ? html`<span
+                        class="text-[11px] font-black uppercase tracking-wider"
+                        >${cosmeticRarityLabel(row.item)}</span
+                      >`
+                    : nothing
+                }
+                <span data-effect-row-owned
+                  >${translateText("inventory.owned_count", {
+                    count: row.ownedCount,
+                  })}</span
+                >
+              </span>
+            </span>
+          </span>
         </span>
-        <span data-effect-row-owned class="text-xs text-white/50"
-          >${translateText("inventory.owned_count", {
-            count: row.ownedCount,
-          })}</span
-        >
         <button
           type="button"
           data-effect-row-change

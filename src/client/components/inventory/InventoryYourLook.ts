@@ -67,9 +67,7 @@ export class InventoryYourLook extends LitElement {
           class="text-[11px] font-black uppercase tracking-wider text-white/50"
           >${label}</span
         >
-        <span class="truncate text-sm font-bold capitalize text-white"
-          >${value}</span
-        >
+        <span class="text-sm font-bold leading-tight text-white">${value}</span>
         ${extra}
       </span>
     </button>`;

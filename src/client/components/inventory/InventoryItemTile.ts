@@ -197,7 +197,10 @@ export class InventoryItemTile
     const variants = this.variants.filter((v) => v.colorPalette !== null);
     if (variants.length < 2) return nothing;
     const activeKey = this.active.key;
-    return html`<div data-tile-swatches class="flex flex-wrap justify-center">
+    return html`<div
+      data-tile-swatches
+      class="-mt-1 flex flex-wrap justify-center pb-1"
+    >
       ${variants.map((variant) => {
         const palette = variant.colorPalette!;
         const label = translateCosmetic(
@@ -211,7 +214,7 @@ export class InventoryItemTile
           title=${label}
           aria-label=${label}
           aria-pressed=${isActive ? "true" : "false"}
-          class="flex h-11 w-11 items-center justify-center rounded-full"
+          class="flex h-11 w-9 items-center justify-center rounded-full"
           @click=${(event: Event) => {
             event.stopPropagation();
             this.onVariantActivate?.(variant);
@@ -270,7 +273,7 @@ export class InventoryItemTile
         </div>
         <span
           data-tile-rarity
-          class="text-[11px] font-black uppercase tracking-wider ${
+          class="truncate text-[11px] font-black uppercase tracking-wider ${
             RARITY_TEXT[rarity] ?? RARITY_TEXT.common
           }"
           >${cosmeticRarityLabel(active)}</span

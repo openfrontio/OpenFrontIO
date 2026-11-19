@@ -409,6 +409,15 @@ describe("Inventory In game tab", () => {
       expect(modal.querySelector("[data-inventory-save-bar]")).toBeNull();
     });
 
+    it("never shows an item the account doesn't own as equipped", async () => {
+      // Equipped on this device, but not owned by this account.
+      new UserSettings().setSelectedCrownName("sale_crown");
+      await open("crowns");
+      expect(modal.querySelector("[data-inventory-equipped-chip]")).toBeNull();
+      await setFilter(modal, "all");
+      expect(tile(modal, "crown:sale_crown").state).toBe("forSale");
+    });
+
     it("offers Use default instead of Unequip", async () => {
       new UserSettings().setSelectedCrownName("gold_crown");
       await open("crowns");

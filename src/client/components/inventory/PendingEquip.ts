@@ -7,7 +7,7 @@
  * owned gets the "Equip now" offer; anything else is dropped. A record from
  * another account, or older than PENDING_EQUIP_TTL_MS, is dropped too.
  */
-export const PENDING_EQUIP_KEY = "inventory.pendingEquip";
+export const PENDING_EQUIP_KEY = "openfront-pending-equip";
 export const PENDING_EQUIP_TTL_MS = 10 * 60 * 1000;
 
 interface PendingEquip {

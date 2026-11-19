@@ -350,7 +350,10 @@ export class InventoryModal extends BaseModal {
     if (skinName !== null) {
       return (
         items.find(
-          (item) => item.type === "skin" && item.cosmetic?.name === skinName,
+          (item) =>
+            item.type === "skin" &&
+            item.relationship === "owned" &&
+            item.cosmetic?.name === skinName,
         ) ?? null
       );
     }
@@ -360,6 +363,7 @@ export class InventoryModal extends BaseModal {
       items.find(
         (item) =>
           item.type === "pattern" &&
+          item.relationship === "owned" &&
           item.cosmetic?.name === pattern.name &&
           (item.colorPalette?.name ?? null) ===
             (pattern.colorPalette?.name ?? null),
@@ -372,7 +376,10 @@ export class InventoryModal extends BaseModal {
     if (selectedFlag === null) return null;
     return (
       this.resolvedItems().find(
-        (item) => item.type === "flag" && item.key === selectedFlag,
+        (item) =>
+          item.type === "flag" &&
+          item.relationship === "owned" &&
+          item.key === selectedFlag,
       ) ??
       this.countryFlagTiles.find((item) => item.key === selectedFlag) ??
       null
@@ -385,7 +392,9 @@ export class InventoryModal extends BaseModal {
     return (
       this.resolvedItems().find(
         (item) =>
-          item.type === "crown" && item.cosmetic?.name === selectedCrown,
+          item.type === "crown" &&
+          item.relationship === "owned" &&
+          item.cosmetic?.name === selectedCrown,
       ) ?? null
     );
   }
@@ -838,10 +847,13 @@ export class InventoryModal extends BaseModal {
       )}
       <div
         data-inventory-grid=${slot ?? category}
-        class="grid grid-cols-2 gap-3 pt-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+        class="grid grid-cols-2 gap-3 pt-3 sm:grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))]"
       >
         ${page.items.map((entry) => this.renderTile(entry, slot))} ${page.more}
-        ${this.renderStoreTile(category)}
+        ${
+          // An empty grid's notice already links to the Store.
+          entries.length > 0 ? this.renderStoreTile(category) : nothing
+        }
       </div>
     `;
   }
@@ -880,7 +892,7 @@ export class InventoryModal extends BaseModal {
     return html`<input
       data-inventory-search
       type="search"
-      class="min-h-11 w-full min-w-0 flex-1 rounded-lg border border-white/10 bg-black/40 px-3 text-sm text-white placeholder-white/40 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 sm:max-w-xs"
+      class="order-last min-h-11 w-full min-w-0 basis-full rounded-lg sm:order-none sm:flex-1 sm:basis-0 border border-white/10 bg-black/40 px-3 text-sm text-white placeholder-white/40 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 sm:max-w-xs"
       placeholder=${translateText("inventory.search_owned")}
       aria-label=${translateText("inventory.search_owned")}
       .value=${this.search}
@@ -927,7 +939,7 @@ export class InventoryModal extends BaseModal {
           equipped
             ? html`<span
                 data-inventory-equipped-chip
-                class="flex min-h-7 items-center gap-1 rounded-md border border-blue-400/50 bg-blue-500/15 px-2 text-xs font-bold capitalize text-white"
+                class="flex min-h-7 items-center gap-1 rounded-md border border-blue-400/50 bg-blue-500/15 px-2 text-xs font-bold text-white"
                 ><span aria-hidden="true">✓</span>${translateText(
                   "inventory.item_equipped",
                   { name: cosmeticSelectionLabel(equipped) },
@@ -1083,7 +1095,7 @@ export class InventoryModal extends BaseModal {
     return html`<div
       data-inventory-state="loading"
       aria-busy="true"
-      class="grid gap-6 p-3 md:grid-cols-[17rem_minmax(0,1fr)]"
+      class="grid gap-4 p-3 md:grid-cols-[14rem_minmax(0,1fr)]"
     >
       <span class="sr-only">${translateText("inventory.loading")}</span>
       <div
@@ -1092,7 +1104,7 @@ export class InventoryModal extends BaseModal {
       ></div>
       <div
         data-inventory-skeleton="grid"
-        class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+        class="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))]"
       >
         ${Array.from(
           { length: 6 },
@@ -1167,7 +1179,7 @@ export class InventoryModal extends BaseModal {
         <div class="px-3 pb-2">${loadout}</div>
       </div>
       <div
-        class="grid gap-6 p-3 md:grid-cols-[17rem_minmax(0,1fr)] md:items-start"
+        class="grid gap-4 p-3 md:grid-cols-[14rem_minmax(0,1fr)] md:items-start"
       >
         <div class="hidden md:block md:border-r md:border-white/10 md:pr-4">
           <inventory-your-look
