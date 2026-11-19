@@ -321,5 +321,739 @@
       "name": "Sequoia National Park",
       "flag": "California"
     }
+  ],
+  "custom_tribes": [
+    {
+      "coordinates": [189, 357],
+      "name": "Eureka"
+    },
+    {
+      "coordinates": [170, 420],
+      "name": "Arcata"
+    },
+    {
+      "coordinates": [195, 134],
+      "name": "Crescent City"
+    },
+    {
+      "coordinates": [516, 546],
+      "name": "Redding"
+    },
+    {
+      "coordinates": [598, 698],
+      "name": "Chico"
+    },
+    {
+      "coordinates": [546, 646],
+      "name": "Red Bluff"
+    },
+    {
+      "coordinates": [375, 469],
+      "name": "Weaverville"
+    },
+    {
+      "coordinates": [507, 225],
+      "name": "Yreka"
+    },
+    {
+      "coordinates": [350, 390],
+      "name": "Mount Shasta"
+    },
+    {
+      "coordinates": [742, 506],
+      "name": "Susanville"
+    },
+    {
+      "coordinates": [365, 709],
+      "name": "Ukiah"
+    },
+    {
+      "coordinates": [429, 789],
+      "name": "Clearlake"
+    },
+    {
+      "coordinates": [425, 875],
+      "name": "Santa Rosa"
+    },
+    {
+      "coordinates": [489, 863],
+      "name": "Napa"
+    },
+    {
+      "coordinates": [492, 900],
+      "name": "Vallejo"
+    },
+    {
+      "coordinates": [515, 837],
+      "name": "Fairfield"
+    },
+    {
+      "coordinates": [540, 808],
+      "name": "Vacaville"
+    },
+    {
+      "coordinates": [545, 900],
+      "name": "Woodland"
+    },
+    {
+      "coordinates": [572, 825],
+      "name": "Davis"
+    },
+    {
+      "coordinates": [622, 805],
+      "name": "Sacramento"
+    },
+    {
+      "coordinates": [673, 835],
+      "name": "Roseville"
+    },
+    {
+      "coordinates": [643, 794],
+      "name": "Rocklin"
+    },
+    {
+      "coordinates": [678, 809],
+      "name": "Folsom"
+    },
+    {
+      "coordinates": [620, 864],
+      "name": "Elk Grove"
+    },
+    {
+      "coordinates": [659, 750],
+      "name": "Auburn"
+    },
+    {
+      "coordinates": [760, 729],
+      "name": "Placerville"
+    },
+    {
+      "coordinates": [695, 727],
+      "name": "Grass Valley"
+    },
+    {
+      "coordinates": [519, 768],
+      "name": "Yuba City"
+    },
+    {
+      "coordinates": [713, 2037],
+      "name": "Marysville"
+    },
+    {
+      "coordinates": [613, 736],
+      "name": "Oroville"
+    },
+    {
+      "coordinates": [445, 976],
+      "name": "San Francisco"
+    },
+    {
+      "coordinates": [455, 1040],
+      "name": "Daly City"
+    },
+    {
+      "coordinates": [428, 933],
+      "name": "San Rafael"
+    },
+    {
+      "coordinates": [489, 954],
+      "name": "Berkeley"
+    },
+    {
+      "coordinates": [513, 989],
+      "name": "Oakland"
+    },
+    {
+      "coordinates": [484, 984],
+      "name": "Alameda"
+    },
+    {
+      "coordinates": [470, 926],
+      "name": "Richmond"
+    },
+    {
+      "coordinates": [537, 979],
+      "name": "Walnut Creek"
+    },
+    {
+      "coordinates": [526, 928],
+      "name": "Concord"
+    },
+    {
+      "coordinates": [602, 930],
+      "name": "Antioch"
+    },
+    {
+      "coordinates": [523, 1055],
+      "name": "San Jose"
+    },
+    {
+      "coordinates": [535, 1079],
+      "name": "Santa Clara"
+    },
+    {
+      "coordinates": [506, 1077],
+      "name": "Sunnyvale"
+    },
+    {
+      "coordinates": [494, 1057],
+      "name": "Mountain View"
+    },
+    {
+      "coordinates": [485, 1040],
+      "name": "Palo Alto"
+    },
+    {
+      "coordinates": [478, 1022],
+      "name": "Redwood City"
+    },
+    {
+      "coordinates": [524, 1028],
+      "name": "Fremont"
+    },
+    {
+      "coordinates": [517, 1012],
+      "name": "Hayward"
+    },
+    {
+      "coordinates": [566, 956],
+      "name": "Livermore"
+    },
+    {
+      "coordinates": [555, 1016],
+      "name": "Pleasanton"
+    },
+    {
+      "coordinates": [517, 1119],
+      "name": "Santa Cruz"
+    },
+    {
+      "coordinates": [547, 1149],
+      "name": "Watsonville"
+    },
+    {
+      "coordinates": [541, 1235],
+      "name": "Monterey"
+    },
+    {
+      "coordinates": [563, 1212],
+      "name": "Salinas"
+    },
+    {
+      "coordinates": [651, 1245],
+      "name": "Hollister"
+    },
+    {
+      "coordinates": [591, 1118],
+      "name": "Gilroy"
+    },
+    {
+      "coordinates": [648, 1138],
+      "name": "Los Banos"
+    },
+    {
+      "coordinates": [774, 1116],
+      "name": "Merced"
+    },
+    {
+      "coordinates": [710, 1051],
+      "name": "Modesto"
+    },
+    {
+      "coordinates": [750, 1088],
+      "name": "Turlock"
+    },
+    {
+      "coordinates": [654, 962],
+      "name": "Stockton"
+    },
+    {
+      "coordinates": [647, 926],
+      "name": "Lodi"
+    },
+    {
+      "coordinates": [608, 986],
+      "name": "Tracy"
+    },
+    {
+      "coordinates": [654, 1033],
+      "name": "Manteca"
+    },
+    {
+      "coordinates": [679, 1095],
+      "name": "Patterson"
+    },
+    {
+      "coordinates": [725, 2033],
+      "name": "Sonora"
+    },
+    {
+      "coordinates": [699, 1964],
+      "name": "Angels Camp"
+    },
+    {
+      "coordinates": [1018, 983],
+      "name": "Mammoth Lakes"
+    },
+    {
+      "coordinates": [840, 764],
+      "name": "South Lake Tahoe"
+    },
+    {
+      "coordinates": [796, 641],
+      "name": "Truckee"
+    },
+    {
+      "coordinates": [839, 1227],
+      "name": "Fresno"
+    },
+    {
+      "coordinates": [874, 1179],
+      "name": "Clovis"
+    },
+    {
+      "coordinates": [818, 1187],
+      "name": "Madera"
+    },
+    {
+      "coordinates": [925, 1302],
+      "name": "Visalia"
+    },
+    {
+      "coordinates": [936, 1349],
+      "name": "Tulare"
+    },
+    {
+      "coordinates": [865, 1345],
+      "name": "Hanford"
+    },
+    {
+      "coordinates": [715, 2030],
+      "name": "Lemoore"
+    },
+    {
+      "coordinates": [712, 2028],
+      "name": "Kingsburg"
+    },
+    {
+      "coordinates": [862, 1263],
+      "name": "Selma"
+    },
+    {
+      "coordinates": [907, 1229],
+      "name": "Sanger"
+    },
+    {
+      "coordinates": [985, 1487],
+      "name": "Bakersfield"
+    },
+    {
+      "coordinates": [967, 1408],
+      "name": "Delano"
+    },
+    {
+      "coordinates": [918, 1428],
+      "name": "Wasco"
+    },
+    {
+      "coordinates": [946, 1453],
+      "name": "Shafter"
+    },
+    {
+      "coordinates": [1246, 1502],
+      "name": "Tehachapi"
+    },
+    {
+      "coordinates": [993, 1344],
+      "name": "Porterville"
+    },
+    {
+      "coordinates": [1176, 1367],
+      "name": "Inyokern"
+    },
+    {
+      "coordinates": [949, 1261],
+      "name": "Reedley"
+    },
+    {
+      "coordinates": [818, 1366],
+      "name": "Coalinga"
+    },
+    {
+      "coordinates": [1290, 1358],
+      "name": "Ridgecrest"
+    },
+    {
+      "coordinates": [769, 1472],
+      "name": "San Luis Obispo"
+    },
+    {
+      "coordinates": [746, 1377],
+      "name": "Paso Robles"
+    },
+    {
+      "coordinates": [741, 1423],
+      "name": "Atascadero"
+    },
+    {
+      "coordinates": [717, 1486],
+      "name": "Pismo Beach"
+    },
+    {
+      "coordinates": [786, 1535],
+      "name": "Santa Maria"
+    },
+    {
+      "coordinates": [775, 1576],
+      "name": "Lompoc"
+    },
+    {
+      "coordinates": [871, 1635],
+      "name": "Santa Barbara"
+    },
+    {
+      "coordinates": [823, 1608],
+      "name": "Goleta"
+    },
+    {
+      "coordinates": [952, 1654],
+      "name": "Ventura"
+    },
+    {
+      "coordinates": [989, 1681],
+      "name": "Oxnard"
+    },
+    {
+      "coordinates": [1129, 1721],
+      "name": "Los Angeles"
+    },
+    {
+      "coordinates": [1147, 1774],
+      "name": "Long Beach"
+    },
+    {
+      "coordinates": [1117, 1770],
+      "name": "Torrance"
+    },
+    {
+      "coordinates": [1108, 1739],
+      "name": "Inglewood"
+    },
+    {
+      "coordinates": [1079, 1713],
+      "name": "Santa Monica"
+    },
+    {
+      "coordinates": [1118, 1673],
+      "name": "Burbank"
+    },
+    {
+      "coordinates": [1116, 1699],
+      "name": "Glendale"
+    },
+    {
+      "coordinates": [1154, 1696],
+      "name": "Pasadena"
+    },
+    {
+      "coordinates": [716, 2030],
+      "name": "Downey"
+    },
+    {
+      "coordinates": [1140, 1747],
+      "name": "Compton"
+    },
+    {
+      "coordinates": [1189, 1580],
+      "name": "Lancaster"
+    },
+    {
+      "coordinates": [1202, 1640],
+      "name": "Palmdale"
+    },
+    {
+      "coordinates": [1045, 1600],
+      "name": "Santa Clarita"
+    },
+    {
+      "coordinates": [1092, 1648],
+      "name": "San Fernando"
+    },
+    {
+      "coordinates": [1197, 1727],
+      "name": "West Covina"
+    },
+    {
+      "coordinates": [1217, 1742],
+      "name": "Pomona"
+    },
+    {
+      "coordinates": [724, 2039],
+      "name": "Whittier"
+    },
+    {
+      "coordinates": [738, 2008],
+      "name": "Norwalk"
+    },
+    {
+      "coordinates": [720, 2021],
+      "name": "Culver City"
+    },
+    {
+      "coordinates": [1164, 1716],
+      "name": "El Monte"
+    },
+    {
+      "coordinates": [1200, 1772],
+      "name": "Anaheim"
+    },
+    {
+      "coordinates": [1230, 1795],
+      "name": "Santa Ana"
+    },
+    {
+      "coordinates": [1248, 1817],
+      "name": "Irvine"
+    },
+    {
+      "coordinates": [1177, 1794],
+      "name": "Huntington Beach"
+    },
+    {
+      "coordinates": [1224, 1831],
+      "name": "Newport Beach"
+    },
+    {
+      "coordinates": [720, 2049],
+      "name": "Costa Mesa"
+    },
+    {
+      "coordinates": [1189, 1751],
+      "name": "Fullerton"
+    },
+    {
+      "coordinates": [1227, 1774],
+      "name": "Orange"
+    },
+    {
+      "coordinates": [1155, 1800],
+      "name": "Garden Grove"
+    },
+    {
+      "coordinates": [728, 2034],
+      "name": "Mission Viejo"
+    },
+    {
+      "coordinates": [1278, 1776],
+      "name": "Riverside"
+    },
+    {
+      "coordinates": [1313, 1711],
+      "name": "San Bernardino"
+    },
+    {
+      "coordinates": [1225, 1721],
+      "name": "Ontario"
+    },
+    {
+      "coordinates": [1257, 1700],
+      "name": "Rancho Cucamonga"
+    },
+    {
+      "coordinates": [1264, 1731],
+      "name": "Fontana"
+    },
+    {
+      "coordinates": [1334, 1751],
+      "name": "Moreno Valley"
+    },
+    {
+      "coordinates": [1243, 1760],
+      "name": "Corona"
+    },
+    {
+      "coordinates": [1351, 1726],
+      "name": "Redlands"
+    },
+    {
+      "coordinates": [1407, 1740],
+      "name": "Palm Springs"
+    },
+    {
+      "coordinates": [1460, 1798],
+      "name": "Indio"
+    },
+    {
+      "coordinates": [1313, 1833],
+      "name": "Temecula"
+    },
+    {
+      "coordinates": [1337, 1866],
+      "name": "Murrieta"
+    },
+    {
+      "coordinates": [862, 1574],
+      "name": "Solvang"
+    },
+    {
+      "coordinates": [1368, 1792],
+      "name": "Perris"
+    },
+    {
+      "coordinates": [1303, 1799],
+      "name": "Lake Elsinore"
+    },
+    {
+      "coordinates": [1325, 1597],
+      "name": "Victorville"
+    },
+    {
+      "coordinates": [1301, 1657],
+      "name": "Hesperia"
+    },
+    {
+      "coordinates": [1372, 1653],
+      "name": "Apple Valley"
+    },
+    {
+      "coordinates": [1414, 1573],
+      "name": "Barstow"
+    },
+    {
+      "coordinates": [1731, 1725],
+      "name": "Needles"
+    },
+    {
+      "coordinates": [1324, 1960],
+      "name": "San Diego"
+    },
+    {
+      "coordinates": [1332, 2001],
+      "name": "Chula Vista"
+    },
+    {
+      "coordinates": [707, 2042],
+      "name": "National City"
+    },
+    {
+      "coordinates": [1378, 1958],
+      "name": "El Cajon"
+    },
+    {
+      "coordinates": [1550, 1541],
+      "name": "Baker"
+    },
+    {
+      "coordinates": [704, 1992],
+      "name": "Santee"
+    },
+    {
+      "coordinates": [1351, 1910],
+      "name": "Escondido"
+    },
+    {
+      "coordinates": [1277, 1878],
+      "name": "Carlsbad"
+    },
+    {
+      "coordinates": [1257, 1852],
+      "name": "Oceanside"
+    },
+    {
+      "coordinates": [1298, 1914],
+      "name": "Encinitas"
+    },
+    {
+      "coordinates": [552, 1047],
+      "name": "Milpitas"
+    },
+    {
+      "coordinates": [452, 1007],
+      "name": "South San Francisco"
+    },
+    {
+      "coordinates": [925, 871],
+      "name": "Bridgeport"
+    },
+    {
+      "coordinates": [949, 944],
+      "name": "Lee Vining"
+    },
+    {
+      "coordinates": [1071, 1062],
+      "name": "Bishop"
+    },
+    {
+      "coordinates": [1104, 1157],
+      "name": "Olancha"
+    },
+    {
+      "coordinates": [1075, 1427],
+      "name": "Lake Isabella"
+    },
+    {
+      "coordinates": [803, 1005],
+      "name": "Mariposa"
+    },
+    {
+      "coordinates": [850, 1073],
+      "name": "Oakhurst"
+    },
+    {
+      "coordinates": [742, 987],
+      "name": "Oakdale"
+    },
+    {
+      "coordinates": [667, 1323],
+      "name": "King City"
+    },
+    {
+      "coordinates": [669, 1410],
+      "name": "Cambria"
+    },
+    {
+      "coordinates": [907, 1521],
+      "name": "Taft"
+    },
+    {
+      "coordinates": [505, 360],
+      "name": "Mt Shasta"
+    },
+    {
+      "coordinates": [460, 98],
+      "name": "Hilt"
+    },
+    {
+      "coordinates": [723, 226],
+      "name": "Alturas"
+    },
+    {
+      "coordinates": [1581, 1943],
+      "name": "Brawley"
+    },
+    {
+      "coordinates": [1570, 1971],
+      "name": "El Centro"
+    },
+    {
+      "coordinates": [1694, 1866],
+      "name": "Blythe"
+    },
+    {
+      "coordinates": [1502, 1827],
+      "name": "Coachella"
+    },
+    {
+      "coordinates": [1529, 1705],
+      "name": "29 Palms"
+    },
+    {
+      "coordinates": [1569, 1622],
+      "name": "Zyzzx"
+    },
+    {
+      "coordinates": [256, 617],
+      "name": "Fort Bragg"
+    }
   ]
 }
