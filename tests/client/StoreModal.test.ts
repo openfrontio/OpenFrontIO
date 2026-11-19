@@ -866,6 +866,17 @@ describe("StoreModal cosmetic browser", () => {
     }
     expect(modal.textContent).not.toContain("store.flash_next_in");
     expect(modal.textContent).not.toContain("store.flash_left");
+    // The price and the way to pay sit in the hero, beside the offer, at
+    // full size; the hero's card carries no second buy button.
+    const heroBuy = hero.querySelector<PurchaseButton>(
+      "[data-store-flash-buy] purchase-button",
+    )!;
+    expect(heroBuy).toBeTruthy();
+    expect(heroBuy.priceHard).toBe(
+      (zap.cosmetic as { priceHard: number }).priceHard,
+    );
+    expect(hero.querySelector("cosmetic-card purchase-button")).toBeNull();
+    expect(hero.querySelectorAll("purchase-button")).toHaveLength(1);
     // The flash item leads in the hero, not again in the grid below it.
     const gridKeys = [
       ...modal.querySelectorAll<CosmeticCard>(

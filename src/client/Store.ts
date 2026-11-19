@@ -704,11 +704,14 @@ export class StoreModal extends BaseModal {
     userHasSubscription = false,
     cardClass = "block h-full min-w-0",
     previewSize: "card" | "detail" = "card",
+    withAction = true,
   ): TemplateResult {
     return html`${groups.map((group) => {
       const focused = group.find((item) => item.key === this.inspected?.key);
       const active = focused ?? group[0];
-      const action = this.renderCardAction(active, userHasSubscription);
+      const action = withAction
+        ? this.renderCardAction(active, userHasSubscription)
+        : nothing;
       return html`<cosmetic-card
         data-store-product
         data-cosmetic-key=${group[0].key}
@@ -971,12 +974,15 @@ export class StoreModal extends BaseModal {
       .map((resolved) => activeSale(resolved.cosmetic))
       .find((found) => found !== null);
     if (!sale) return html``;
+    // The variant the player is looking at: the hero's buy button pays for it.
+    const active =
+      group.find((item) => item.key === this.inspected?.key) ?? group[0];
     return html`<section
       data-store-flash
       class="mx-3 mt-3 flex flex-col items-center gap-4 rounded-xl border border-aquarius/50 bg-gradient-to-br from-deep-navy via-deep-navy to-malibu-blue/50 p-4 shadow-[0_0_28px_rgba(63,169,245,0.25)] sm:flex-row sm:items-stretch"
     >
       <div class="w-44 shrink-0 sm:w-52">
-        ${this.renderCosmeticCards([group])}
+        ${this.renderCosmeticCards([group], false, undefined, "card", false)}
       </div>
       <div
         class="flex flex-1 flex-col items-center justify-center gap-3 text-center sm:items-start sm:text-left"
@@ -995,6 +1001,14 @@ export class StoreModal extends BaseModal {
         <span class="max-w-sm text-sm text-dawn-blue"
           >${translateText("store.flash_sale_hero_body")}</span
         >
+        <!-- The price, and the way to pay it, beside the offer at full size
+             rather than small on the card: the card above carries none. -->
+        <div
+          data-store-flash-buy
+          class="w-full max-w-xs [&_button]:min-h-14 [&_button]:text-2xl [&_s]:text-base [&_s]:text-white/75"
+        >
+          ${this.renderCardAction(active, false)}
+        </div>
         <span
           class="flex items-baseline gap-2 rounded-lg bg-black/30 px-3 py-2 text-xs font-bold uppercase tracking-wider text-dawn-blue"
         >
