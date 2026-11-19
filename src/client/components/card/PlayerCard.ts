@@ -28,9 +28,9 @@ import {
 //   size "end"      652 × ~92 px on the end screens, 64 px badge
 //   size "account"  the Account header, 96 px badge
 //   size "thumb"    160 × 64 store / customiser preview: the background only
-//   size "panel"    the in-game player panel: one strip, 28 px badge, flag,
-//                   clan tag, name, prestige · level and short trackers in a
-//                   row. Always still (never animated) and never a title or
+//   size "panel"    the in-game player panel: one strip, 28 px badge, then
+//                   flag, clan tag and name over a small prestige · level
+//                   line, then short trackers (value over label). Always still (never animated) and never a title or
 //                   taunt: it sits beside a running game.
 //
 // Below 400 px wide (`narrow`, set from the strip's own width) the trackers
@@ -249,7 +249,7 @@ export class PlayerCard extends LitElement {
       ></card-background>
       <div
         data-card-row
-        class="relative flex min-h-[52px] items-center gap-2 px-3 py-2"
+        class="relative flex min-h-[52px] items-center gap-1.5 px-3 py-2"
       >
         ${
           badge === null
@@ -262,42 +262,55 @@ export class PlayerCard extends LitElement {
                 .size=${28}
               ></level-badge>`
         }
-        ${
-          view.flag === undefined
-            ? nothing
-            : html`<img
-                data-card-flag
-                class="h-4 w-auto shrink-0 rounded-[2px]"
-                src=${assetUrl(view.flag)}
-                alt=""
-              />`
-        }
-        ${clanTemplate(view.clanTag, true)}
-        ${nameTemplate(view.username, "min-w-0 text-lg")}
-        ${
-          badge === null
-            ? nothing
-            : html`<span class="shrink-0"
-                >${levelLineTemplate(badge, true)}</span
-              >`
-        }
+        <div class="min-w-0 flex-1">
+          <div class="flex min-w-0 items-center gap-1.5">
+            ${
+              view.flag === undefined
+                ? nothing
+                : html`<img
+                    data-card-flag
+                    class="h-4 w-auto shrink-0 rounded-[2px]"
+                    src=${assetUrl(view.flag)}
+                    alt=""
+                  />`
+            }
+            ${clanTemplate(view.clanTag, true)}
+            ${nameTemplate(view.username, "min-w-0 text-base")}
+          </div>
+          ${
+            badge === null
+              ? nothing
+              : html`<div
+                  class="truncate [&_[data-profile-level-line]]:truncate [&_[data-profile-level-line]]:text-[11px] [&_[data-profile-level-line]]:tracking-normal"
+                >
+                  ${levelLineTemplate(badge, true)}
+                </div>`
+          }
+        </div>
         ${
           view.trackers.length === 0
             ? nothing
             : html`<div
                 data-card-trackers-inline
-                class="ml-auto flex shrink-0 items-baseline gap-2.5 text-[11px] text-white/70"
+                class="flex shrink-0 items-stretch"
               >
                 ${view.trackers.map(
-                  (t) =>
-                    html`<span
+                  (t, i) =>
+                    html`<div
                       data-card-tracker=${t.stat}
-                      class="whitespace-nowrap"
-                      ><span class="text-sm font-black text-white tabular-nums"
+                      class="flex max-w-[4.5rem] flex-col items-center justify-center px-1 ${
+                        i > 0 ? "border-l border-white/15" : ""
+                      }"
+                    >
+                      <span
+                        class="text-sm font-black leading-none text-white tabular-nums"
                         >${formatTracker(t.value, true)}</span
                       >
-                      ${translateText(`player_card.tracker_${t.stat}`)}</span
-                    >`,
+                      <span
+                        class="mt-0.5 max-w-full truncate text-[11px] leading-tight text-white/60"
+                        >${translateText(`player_card.tracker_${t.stat}`)}</span
+                      >
+                    </div>`,
                 )}
               </div>`
         }

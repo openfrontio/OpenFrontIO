@@ -19,7 +19,7 @@ export function cardBackgroundUrl(
 // Dark enough over the brightest art for the white name, troop and gold text
 // to read as well as on today's flat fill.
 export const STILL_BACKDROP_SHADE =
-  "linear-gradient(90deg, rgba(8,15,30,0.88) 0%, rgba(8,15,30,0.72) 60%, rgba(8,15,30,0.6) 100%)";
+  "linear-gradient(90deg, rgba(8,15,30,0.82) 0%, rgba(8,15,30,0.62) 60%, rgba(8,15,30,0.48) 100%)";
 
 // The CSS background layers: the shade over the art.
 export function stillBackdropLayers(url: string): string {

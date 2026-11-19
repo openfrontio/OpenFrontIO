@@ -91,6 +91,21 @@ describe("player card: compact panel layout", () => {
     expect(trackers[2].textContent).toContain("38.9k");
   });
 
+  it("keeps the name in view at panel width: level under the name, labels truncate", async () => {
+    const el = await mount(VIEW);
+    // Name and level share one shrinkable column, so three trackers can't
+    // squeeze the name to nothing (as a ~320px panel row did).
+    const name = el.querySelector("[data-profile-name]")!;
+    const level = el.querySelector("[data-profile-level-line]")!;
+    const column = name.closest(".flex-1")!;
+    expect(column.className).toContain("min-w-0");
+    expect(column.contains(level)).toBe(true);
+    for (const t of el.querySelectorAll("[data-card-tracker]")) {
+      expect(t.className).toContain("max-w-");
+      expect(t.lastElementChild!.className).toContain("truncate");
+    }
+  });
+
   it("is never animated, even if asked", async () => {
     const el = await mount(VIEW, { animated: true });
     const bg = el.querySelector("card-background") as CardBackground;
