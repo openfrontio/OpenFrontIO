@@ -49,12 +49,14 @@ export class CosmeticInfo extends LitElement {
     // The strip spans the card so the bubble (right-aligned above the "?")
     // can be capped at the card's width and wrap. Sized to its longest line,
     // it used to run past the modal's edge and get clipped. Only the button
-    // takes pointer events. The "?" sits bottom-right: a sale's band takes the
-    // artwork's top-right corner and a new item's band the top-left
-    // (CosmeticCard); the preview button sits to its left.
+    // takes pointer events. The "?" sits bottom-right, stacked above the
+    // preview button in the corner: a sale's band takes the artwork's
+    // top-right corner and a new item's band the top-left (CosmeticCard), and
+    // the bottom strip belongs to the equipped badge and a flash sale's
+    // countdown.
     return html`<div
       data-cosmetic-info
-      class="group/cosmetic-info pointer-events-none absolute inset-x-2 bottom-2 z-10 flex justify-end"
+      class="group/cosmetic-info pointer-events-none absolute inset-x-2 bottom-11 z-10 flex justify-end"
       @click=${(event: Event) => event.stopPropagation()}
     >
       <button

@@ -229,7 +229,9 @@ describe("CosmeticCard", () => {
     expect(info.className).toContain("inset-x-2");
     // Bottom-right, opening upwards: a sale's band takes the artwork's
     // top-right corner and a new item's band the top-left.
-    expect(info.className).toContain("bottom-2");
+    // Stacked above the preview button, clear of the bottom strip the
+    // equipped badge and a flash sale's countdown use.
+    expect(info.className).toContain("bottom-11");
     expect(info.className).toContain("justify-end");
     expect(bubble.className).toContain("right-0");
     expect(bubble.className).toContain("bottom-9");
@@ -656,7 +658,7 @@ describe("CosmeticCard", () => {
       expect(band.textContent?.trim()).toBe("New");
     });
 
-    it("leaves the preview button beside the details button", async () => {
+    it("keeps the preview button in the corner, under the details button", async () => {
       installTranslations();
       const c = await createWith({ priceHard: 100, newUntil: inAWeek() });
       c.interactive = true;
@@ -664,8 +666,10 @@ describe("CosmeticCard", () => {
       const bubble = c.querySelector<HTMLElement>(
         "[data-cosmetic-preview-bubble]",
       )!;
-      // The "?" holds the bottom-right corner; the eye sits to its left.
-      expect(bubble.className).toContain("right-10");
+      // The eye keeps the bottom-right corner, clear of the equipped badge
+      // and a flash sale's countdown; the "?" stacks above it.
+      expect(bubble.className).toContain("right-2");
+      expect(bubble.className).not.toContain("right-10");
       expect(bubble.className).toContain("bottom-2");
     });
 
