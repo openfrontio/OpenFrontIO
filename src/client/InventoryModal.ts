@@ -146,6 +146,10 @@ export class InventoryModal extends BaseModal {
    * tiles and the buy dialog re-read them. */
   @state() private priceEpoch = 0;
   private saleEndTimer: ReturnType<typeof setTimeout> | null = null;
+  /** When the catalogue shown was fetched. */
+  private catalogFetchedAt = 0;
+  /** The ended sale (its endsAt) a refetch was last made for. */
+  private refetchedForSaleEnd: number | null = null;
   /** The phone status line's message ("Hex Grid equipped"). */
   @state() private statusMessage = "";
   private statusTimer: ReturnType<typeof setTimeout> | null = null;
@@ -215,6 +219,7 @@ export class InventoryModal extends BaseModal {
 
   disconnectedCallback() {
     this.clearSaleEndTimer();
+    this.clearStatus();
     this.removeEventListener(
       "open-cosmetic-preview",
       this.onOpenCosmeticPreview,
@@ -293,6 +298,7 @@ export class InventoryModal extends BaseModal {
       ]);
       if (loadId !== this.inventoryLoadId) return;
       this.cosmetics = cosmetics;
+      if (cosmetics !== null) this.catalogFetchedAt = Date.now();
       this.loadFailed = cosmetics === null;
     } catch {
       if (loadId !== this.inventoryLoadId) return;
@@ -1226,8 +1232,13 @@ export class InventoryModal extends BaseModal {
     this.updateFromSettings();
     // Prices change when a sale starts or ends: like the Store, refetch a
     // catalogue more than a minute old, or one still carrying an ended sale.
-    if (this.hasEndedSale()) invalidateCosmetics();
-    else refreshStaleCosmetics();
+    const ended = this.endedSaleToRefetch();
+    if (ended !== null) {
+      this.refetchedForSaleEnd = ended;
+      invalidateCosmetics();
+    } else {
+      refreshStaleCosmetics();
+    }
     await this.refreshCatalog();
   }
 
@@ -1237,6 +1248,7 @@ export class InventoryModal extends BaseModal {
     const fresh = await this.loadCatalog().catch(() => null);
     if (!fresh || !this.isModalOpen) return;
     this.cosmetics = fresh;
+    this.catalogFetchedAt = Date.now();
     this.priceEpoch++;
   }
 
@@ -1246,11 +1258,24 @@ export class InventoryModal extends BaseModal {
       .filter((item): item is PricedItem => item?.promotion !== undefined);
   }
 
-  private hasEndedSale(): boolean {
+  /**
+   * The end of a sale that has ended since the catalogue in hand was
+   * fetched, so a refetch should drop it; null when there is none. A
+   * catalogue fetched after the sale ended (the CDN still serving it) is not
+   * refetched again, and each ended sale is refetched for once.
+   */
+  private endedSaleToRefetch(): number | null {
     const now = Date.now();
-    return this.salePromotions().some(
-      (item) => (saleEndsAt(item) ?? Infinity) <= now,
-    );
+    let latest: number | null = null;
+    for (const item of this.salePromotions()) {
+      const end = saleEndsAt(item);
+      if (end === null || end > now) continue;
+      if (end <= this.catalogFetchedAt) continue;
+      if (latest === null || end > latest) latest = end;
+    }
+    return latest !== null && latest !== this.refetchedForSaleEnd
+      ? latest
+      : null;
   }
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
@@ -1278,6 +1303,8 @@ export class InventoryModal extends BaseModal {
       () => {
         this.saleEndTimer = null;
         this.priceEpoch++;
+        // This is the refetch for that sale; opening again won't repeat it.
+        this.refetchedForSaleEnd = next;
         invalidateCosmetics();
         void this.refreshCatalog();
       },
@@ -1292,6 +1319,7 @@ export class InventoryModal extends BaseModal {
 
   protected onClose(): void {
     this.clearSaleEndTimer();
+    this.clearStatus();
     this.search = "";
     this.previewingCosmetic = null;
     this.buying = null;
@@ -1443,6 +1471,12 @@ export class InventoryModal extends BaseModal {
    * the Inventory's title on phones, so there it shows in the Inventory's
    * own status line under the tabs instead.
    */
+  private clearStatus() {
+    if (this.statusTimer !== null) clearTimeout(this.statusTimer);
+    this.statusTimer = null;
+    this.statusMessage = "";
+  }
+
   private showMessage(message: string) {
     if (window.matchMedia?.("(max-width: 767px)").matches) {
       this.statusMessage = message;

@@ -62,16 +62,20 @@ export class InventoryBuyDialog extends LitElement {
     this.returnFocusTo = null;
   }
 
+  // Focus moves into the dialog when it opens, and to Equip now once the
+  // item is bought; never otherwise (a refreshed item, say, while the 3D
+  // preview has focus).
+  protected firstUpdated(changed: PropertyValues): void {
+    super.firstUpdated(changed);
+    if (!this.bought) {
+      this.querySelector<HTMLElement>("[data-buy-close]")?.focus();
+    }
+  }
+
   protected updated(changed: PropertyValues): void {
     super.updated(changed);
-    // Focus moves into the dialog when it opens, and to Equip now once the
-    // item is bought.
     if (changed.has("bought") && this.bought) {
       this.querySelector<HTMLElement>("[data-buy-equip-now]")?.focus();
-    } else if (changed.has("resolved") && this.resolved !== null) {
-      if (!this.contains(document.activeElement)) {
-        this.querySelector<HTMLElement>("[data-buy-close]")?.focus();
-      }
     }
   }
 
@@ -208,6 +212,7 @@ export class InventoryBuyDialog extends LitElement {
         .promotion=${priced.promotion ?? null}
         .rarity=${resolved.cosmetic?.rarity ?? "common"}
         .itemName=${cosmeticSelectionLabel(resolved)}
+        .busyKey=${resolved.key}
         .onPurchaseHard=${hard ? () => this.onPurchase!("hard") : undefined}
         .onPurchaseSoft=${soft ? () => this.onPurchase!("soft") : undefined}
       ></purchase-button>

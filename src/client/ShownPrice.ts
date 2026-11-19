@@ -47,13 +47,18 @@ export function shownPrice(
   now: number = Date.now(),
 ): ShownPrice | null {
   const price = currency === "hard" ? item.priceHard : item.priceSoft;
-  if (price === undefined) return null;
   const listPrice =
     currency === "hard" ? item.listPriceHard : item.listPriceSoft;
   const promotion = item.promotion;
   if (promotion !== undefined && new Date(promotion.endsAt).getTime() <= now) {
-    return { price: listPrice ?? price, listPrice: null, saleLabel: null };
+    // The sale is over: the list price is the price, even where the
+    // catalogue in hand has no sale price in this currency.
+    const after = listPrice ?? price;
+    return after === undefined
+      ? null
+      : { price: after, listPrice: null, saleLabel: null };
   }
+  if (price === undefined) return null;
   if (listPrice === undefined || listPrice <= price) {
     return { price, listPrice: null, saleLabel: null };
   }

@@ -20,7 +20,11 @@ import {
   rememberPendingEquip,
 } from "../../src/client/components/inventory/PendingEquip";
 import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
-import { fetchCosmetics, purchaseCosmetic } from "../../src/client/Cosmetics";
+import {
+  fetchCosmetics,
+  invalidateCosmetics,
+  purchaseCosmetic,
+} from "../../src/client/Cosmetics";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
 import {
@@ -46,6 +50,7 @@ vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
   fetchCosmetics: vi.fn(),
   purchaseCosmetic: vi.fn(),
+  invalidateCosmetics: vi.fn(),
 }));
 
 const base = { product: null, affiliateCode: null } as const;
@@ -417,6 +422,14 @@ describe("Inventory In game tab", () => {
           modal.querySelector("[data-inventory-status]")!.textContent,
         ).toContain("inventory.item_equipped");
         expect(messages).toEqual([]);
+        // Reopened within the 2 s: no stale message.
+        modal.close();
+        await settle(modal);
+        modal.open({ tab: "crowns" });
+        await settle(modal);
+        expect(
+          modal.querySelector("[data-inventory-status]")!.textContent!.trim(),
+        ).toBe("");
       } finally {
         vi.unstubAllGlobals();
         vi.stubGlobal(
@@ -774,6 +787,54 @@ describe("Inventory In game tab", () => {
       expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).toBeNull();
     });
 
+    it("a buy in flight stays busy after closing and reopening the dialog", async () => {
+      let finish!: () => void;
+      vi.mocked(purchaseCosmetic).mockImplementation(
+        () =>
+          new Promise<undefined>((resolve) => {
+            finish = () => resolve(undefined);
+          }),
+      );
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      const first = modal.querySelector<PurchaseButton>(
+        "inventory-buy-dialog purchase-button",
+      )!;
+      first.requestCurrencyPurchase("hard");
+      await first.updateComplete;
+      first
+        .querySelector("confirm-dialog")!
+        .dispatchEvent(new CustomEvent("confirm"));
+      await settle(modal);
+      expect(purchaseCosmetic).toHaveBeenCalledTimes(1);
+
+      modal
+        .querySelector<HTMLButtonElement>("inventory-buy-dialog [data-buy-close]")!
+        .click();
+      await settle(modal);
+      expect(modal.querySelector("inventory-buy-dialog")).toBeNull();
+      await clickTile(modal, "crown:sale_crown");
+      const again = modal.querySelector<PurchaseButton>(
+        "inventory-buy-dialog purchase-button",
+      )!;
+      expect(
+        again.querySelector<HTMLButtonElement>(".purchase-sparkle-btn-hard")!
+          .disabled,
+      ).toBe(true);
+      again.requestCurrencyPurchase("hard");
+      await again.updateComplete;
+      expect(again.querySelector("confirm-dialog")).toBeNull();
+      expect(purchaseCosmetic).toHaveBeenCalledTimes(1);
+
+      finish();
+      await settle(modal);
+      expect(
+        again.querySelector<HTMLButtonElement>(".purchase-sparkle-btn-hard")!
+          .disabled,
+      ).toBe(false);
+    });
+
     it("an earned item shows how to unlock it and no buy", async () => {
       await open("crowns");
       await setFilter(modal, "all");
@@ -867,7 +928,73 @@ describe("Inventory In game tab", () => {
     });
   });
 
+  describe("catalogue refetch for an ended sale", () => {
+    afterEach(() => vi.useRealTimers());
+
+    function endingCatalog(endsAt: number): Cosmetics {
+      const catalog = makeCatalog() as unknown as {
+        crowns: Record<string, { promotion: { endsAt: string } }>;
+      };
+      catalog.crowns.sale_crown.promotion.endsAt = new Date(
+        endsAt,
+      ).toISOString();
+      return catalog as unknown as Cosmetics;
+    }
+
+    it("refetches once for a sale that ended after the catalogue was fetched", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      vi.mocked(fetchCosmetics).mockResolvedValue(
+        endingCatalog(Date.now() + 5_000),
+      );
+      await open("crowns");
+      modal.close();
+      await settle(modal);
+      vi.advanceTimersByTime(6_000);
+      vi.mocked(invalidateCosmetics).mockClear();
+
+      modal.open({ tab: "crowns" });
+      await settle(modal);
+      expect(invalidateCosmetics).toHaveBeenCalledTimes(1);
+
+      // The CDN still serves the ended sale: no refetch on every open.
+      modal.close();
+      await settle(modal);
+      modal.open({ tab: "crowns" });
+      await settle(modal);
+      expect(invalidateCosmetics).toHaveBeenCalledTimes(1);
+    });
+
+    it("doesn't refetch for a sale that had ended before the catalogue was fetched", async () => {
+      vi.mocked(fetchCosmetics).mockResolvedValue(
+        endingCatalog(Date.now() - 60_000),
+      );
+      await open("crowns");
+      vi.mocked(invalidateCosmetics).mockClear();
+      modal.close();
+      await settle(modal);
+      modal.open({ tab: "crowns" });
+      await settle(modal);
+      expect(invalidateCosmetics).not.toHaveBeenCalled();
+    });
+  });
+
   describe("accessibility, focus and previews", () => {
+    it("focus stays put when the dialog's item refreshes while focus is elsewhere", async () => {
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      const outside = document.createElement("button");
+      document.body.appendChild(outside);
+      outside.focus();
+      // A refetched catalogue gives the dialog a new item object.
+      vi.mocked(fetchCosmetics).mockResolvedValue(makeCatalog());
+      await (
+        modal as unknown as { refreshCatalog(): Promise<void> }
+      ).refreshCatalog();
+      await settle(modal);
+      expect(document.activeElement).toBe(outside);
+    });
+
     function describedBy(el: Element): string {
       return (el.getAttribute("aria-describedby") ?? "")
         .split(" ")

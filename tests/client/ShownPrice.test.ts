@@ -86,7 +86,8 @@ describe("shownPrice", () => {
     };
     const items = [
       { priceHard: 300, listPriceHard: 400, promotion: ended },
-      // A list price with no price: not sold in that currency, sale or not.
+      // No price, a list price and an ended sale: the list price is the
+      // price now.
       { listPriceHard: 400, promotion: ended },
       { priceHard: 300 },
       {},
@@ -95,8 +96,21 @@ describe("shownPrice", () => {
       expect(shownPrice(item, "hard")?.price).toBe(currentPrice(item, "hard"));
     }
     expect(currentPrice({ listPriceHard: 400, promotion: ended }, "hard")).toBe(
-      undefined,
+      400,
     );
+    expect(shownPrice({ listPriceHard: 400, promotion: ended }, "hard")).toEqual(
+      { price: 400, listPrice: null, saleLabel: null },
+    );
+    // While the sale runs, no price in that currency means not for sale.
+    expect(
+      shownPrice(
+        {
+          listPriceHard: 400,
+          promotion: { ...ended, endsAt: new Date(Date.now() + 60_000).toISOString() },
+        },
+        "hard",
+      ),
+    ).toBeNull();
   });
 
   it("is null when the item has no price in that currency", () => {
