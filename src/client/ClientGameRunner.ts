@@ -15,7 +15,11 @@ import { ClientID, GameID } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { findClosestBy } from "@openfront/engine-lib/Util";
-import { EventBus } from "@openfront/shared/EventBus";
+import {
+  EventBus,
+  type EventConstructor,
+  type GameEvent,
+} from "@openfront/shared/EventBus";
 import { GameMapLoader } from "@openfront/shared/GameMapLoader";
 import { replacer } from "@openfront/shared/SharedUtil";
 import {
@@ -987,6 +991,8 @@ async function createClientGame(
 export class ClientGameRunner {
   private myPlayer: PlayerView | null = null;
   private isActive = false;
+  private hasStarted = false;
+  private isStopped = false;
 
   private turnsSeen = 0;
   // True from a (re)join request until the server's start message answers it.
@@ -996,8 +1002,10 @@ export class ClientGameRunner {
   private lastMousePosition: { x: number; y: number } | null = null;
 
   private lastMessageTime: number = 0;
+  private connectionCheckTimeout: ReturnType<typeof setTimeout> | null = null;
   private connectionCheckInterval: NodeJS.Timeout | null = null;
   private goToPlayerTimeout: NodeJS.Timeout | null = null;
+  private eventUnsubscribers: Array<() => void> = [];
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
@@ -1060,7 +1068,18 @@ export class ClientGameRunner {
     return !!this.myPlayer?.isAlive();
   }
 
+  private onBus<T extends GameEvent>(
+    eventType: EventConstructor<T>,
+    handler: (event: T) => void,
+  ): void {
+    this.eventBus.on(eventType, handler);
+    this.eventUnsubscribers.push(() => this.eventBus.off(eventType, handler));
+  }
+
   public start() {
+    if (this.hasStarted || this.isActive || this.isStopped) return;
+    this.hasStarted = true;
+
     this.soundManager.playBackgroundMusic();
     console.log("starting client game");
 
@@ -1074,40 +1093,27 @@ export class ClientGameRunner {
     this.healthTimer = setInterval(this.updateHealth, 250);
     document.addEventListener("visibilitychange", this.updateHealth);
     this.updateHealth();
-    setTimeout(() => {
+    this.connectionCheckTimeout = setTimeout(() => {
+      this.connectionCheckTimeout = null;
       this.connectionCheckInterval = setInterval(
         () => this.onConnectionCheck(),
         1000,
       );
     }, 20000);
 
-    this.eventBus.on(MouseUpEvent, this.inputEvent.bind(this));
-    this.eventBus.on(MouseMoveEvent, this.onMouseMove.bind(this));
-    this.eventBus.on(AutoUpgradeEvent, this.autoUpgradeEvent.bind(this));
-    this.eventBus.on(
-      DoBoatAttackEvent,
-      this.doBoatAttackUnderCursor.bind(this),
+    this.onBus(MouseUpEvent, (e) => this.inputEvent(e));
+    this.onBus(MouseMoveEvent, (e) => this.onMouseMove(e));
+    this.onBus(AutoUpgradeEvent, (e) => this.autoUpgradeEvent(e));
+    this.onBus(DoBoatAttackEvent, (e) => this.doBoatAttackUnderCursor(e));
+    this.onBus(DoGroundAttackEvent, () => this.doGroundAttackUnderCursor());
+    this.onBus(DoRetaliateAttackEvent, () =>
+      this.doRetaliateAttackMostRecent(),
     );
-    this.eventBus.on(
-      DoGroundAttackEvent,
-      this.doGroundAttackUnderCursor.bind(this),
+    this.onBus(DoRequestAllianceEvent, (e) =>
+      this.doRequestAllianceUnderCursor(e),
     );
-    this.eventBus.on(
-      DoRetaliateAttackEvent,
-      this.doRetaliateAttackMostRecent.bind(this),
-    );
-    this.eventBus.on(
-      DoRequestAllianceEvent,
-      this.doRequestAllianceUnderCursor.bind(this),
-    );
-    this.eventBus.on(
-      DoBreakAllianceEvent,
-      this.doBreakAllianceUnderCursor.bind(this),
-    );
-    this.eventBus.on(
-      DoTargetPlayerEvent,
-      this.doTargetPlayerUnderCursor.bind(this),
-    );
+    this.onBus(DoBreakAllianceEvent, (e) => this.doBreakAllianceUnderCursor(e));
+    this.onBus(DoTargetPlayerEvent, (e) => this.doTargetPlayerUnderCursor(e));
 
     this.renderer.initialize();
     this.input.initialize();
@@ -1332,9 +1338,18 @@ export class ClientGameRunner {
   // releaseTabAttention is false when disposing a runner for a lobby that was
   // already left: its flash (if any) isn't this runner's to clear anymore.
   public stop(releaseTabAttention: boolean = true) {
+    this.isStopped = true;
     if (releaseTabAttention) tabAttention.release();
     if (this.healthTimer !== null) clearInterval(this.healthTimer);
     this.healthTimer = null;
+    if (this.connectionCheckTimeout !== null) {
+      clearTimeout(this.connectionCheckTimeout);
+      this.connectionCheckTimeout = null;
+    }
+    for (const unsub of this.eventUnsubscribers) {
+      unsub();
+    }
+    this.eventUnsubscribers = [];
     document.removeEventListener("visibilitychange", this.updateHealth);
     this.healthIndicators?.remove();
     this.healthIndicators = null;

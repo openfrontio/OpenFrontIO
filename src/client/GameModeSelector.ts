@@ -475,6 +475,17 @@ export class GameModeSelector extends LitElement {
     this.joiningLobbyId = null;
   }
 
+  public releaseRefusedJoin(gameID?: string): void {
+    if (
+      gameID === undefined ||
+      this.joiningLobbyId === gameID ||
+      this.joiningLobbyId === null
+    ) {
+      this.inLobby = false;
+      this.joiningLobbyId = null;
+    }
+  }
+
   private onJoinLobby = (e?: Event) => {
     if (e?.defaultPrevented) return;
     this.inLobby = true;
@@ -874,11 +885,12 @@ export class GameModeSelector extends LitElement {
   private openSinglePlayerModal = () => {
     if (this.inLobby) return;
     if (!this.validateUsername()) return;
-    whenModalLoaded("single-player-modal", () =>
+    whenModalLoaded("single-player-modal", () => {
+      if (this.inLobby) return;
       (
         document.querySelector("single-player-modal") as SinglePlayerModal
-      )?.open(),
-    );
+      )?.open();
+    });
   };
 
   // Handled in Main, which also serves the help page's tutorial button.
@@ -892,18 +904,20 @@ export class GameModeSelector extends LitElement {
     if (this.inLobby) return;
     if (this.blockedFromApiAction()) return;
     if (!this.validateUsername()) return;
-    whenModalLoaded("host-lobby-modal", () =>
-      (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open(),
-    );
+    whenModalLoaded("host-lobby-modal", () => {
+      if (this.inLobby) return;
+      (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open();
+    });
   };
 
   private openJoinLobby = () => {
     if (this.inLobby) return;
     if (this.blockedFromApiAction()) return;
     if (!this.validateUsername()) return;
-    whenModalLoaded("join-lobby-modal", () =>
-      (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open(),
-    );
+    whenModalLoaded("join-lobby-modal", () => {
+      if (this.inLobby) return;
+      (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open();
+    });
   };
 
   // Number of open hosted lobbies waiting in the browser; shown as a chip

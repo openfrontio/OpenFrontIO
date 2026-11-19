@@ -8,8 +8,12 @@ import {
   createRenderer,
   GameRenderer,
 } from "../../../src/client/hud/GameRenderer";
+import type { AttacksDisplay } from "../../../src/client/hud/layers/AttacksDisplay";
 import type { EmojiTable } from "../../../src/client/hud/layers/EmojiTable";
+import type { EventsDisplay } from "../../../src/client/hud/layers/EventsDisplay";
+import type { PlayerInfoOverlay } from "../../../src/client/hud/layers/PlayerInfoOverlay";
 import type { SettingsModal } from "../../../src/client/hud/layers/SettingsModal";
+import { SpawnBarVisibleEvent } from "../../../src/client/hud/layers/SpawnTimer";
 import type { WinModal } from "../../../src/client/hud/layers/WinModal";
 import { ShowEmojiMenuEvent } from "../../../src/client/InputHandler";
 import type { MapRenderer } from "../../../src/client/render/gl";
@@ -193,5 +197,160 @@ describe("createRenderer", () => {
     expect(healthyLayer.dispose).toHaveBeenCalledTimes(1);
     expect(errorSpy).toHaveBeenCalledTimes(1);
     errorSpy.mockRestore();
+  });
+
+  it("skips disposing uninitialized singleton layers created by createRenderer", () => {
+    const eventBus = new EventBus();
+    const game = {
+      layers: () => [],
+      mapNationCount: () => 0,
+      width: () => 100,
+      height: () => 100,
+      isValidCoord: () => true,
+      ref: () => 1,
+      hasOwner: () => true,
+      owner: () => ({}),
+      myPlayer: () => ({}),
+      config: () => ({
+        gameConfig: () => ({}),
+        isReplay: () => false,
+      }),
+    } as unknown as GameView;
+    const playerInfo = elements.get("player-info-overlay") as PlayerInfoOverlay;
+    const disposeSpy = vi.spyOn(playerInfo, "dispose");
+
+    const renderer = createRenderer(
+      document.createElement("div"),
+      game,
+      eventBus,
+      null,
+      {} as MapRenderer,
+    );
+    renderer.dispose();
+
+    expect(disposeSpy).not.toHaveBeenCalled();
+  });
+
+  it("keeps shared singleton PlayerInfoOverlay active for Runner B when Runner A disposes", () => {
+    const overlay = document.createElement(
+      "player-info-overlay",
+    ) as PlayerInfoOverlay;
+    overlay.game = {
+      config: () => ({ gameConfig: () => ({}), isReplay: () => false }),
+    } as never;
+    const busA = new EventBus();
+    const busB = new EventBus();
+    const onBSpy = vi.spyOn(busB, "on");
+    const offBSpy = vi.spyOn(busB, "off");
+
+    const makeTransform = () =>
+      ({
+        updateCanvasBoundingRect: vi.fn(),
+        centerAll: vi.fn(),
+        observeCanvasSize: () => ({ disconnect: vi.fn() }),
+      }) as never;
+
+    const singletons = new Set<Controller>([overlay]);
+    const rendererA = new GameRenderer(
+      makeTransform(),
+      {} as never,
+      [overlay],
+      {} as never,
+      singletons,
+    );
+    const rendererB = new GameRenderer(
+      makeTransform(),
+      {} as never,
+      [overlay],
+      {} as never,
+      singletons,
+    );
+    const uninitRendererA = new GameRenderer(
+      makeTransform(),
+      {} as never,
+      [overlay],
+      {} as never,
+      singletons,
+    );
+
+    overlay.eventBus = busA;
+    rendererA.initialize();
+
+    overlay.eventBus = busB;
+    rendererB.initialize();
+
+    // Disposing both an initialized-earlier Renderer A and an uninitialized Renderer A
+    // must leave Runner B's active overlay and busB subscriptions intact.
+    rendererA.dispose();
+    uninitRendererA.dispose();
+
+    expect(overlay["_isActive"]).toBe(true);
+    expect(offBSpy).not.toHaveBeenCalled();
+    busB.emit(new SpawnBarVisibleEvent(true));
+    expect(overlay["spawnBarVisible"]).toBe(true);
+
+    rendererB.dispose();
+    expect(onBSpy.mock.calls.length).toBeGreaterThan(0);
+    expect(offBSpy).toHaveBeenCalledTimes(onBSpy.mock.calls.length);
+    expect(overlay["_isActive"]).toBe(false);
+  });
+
+  it("disposes singleton EventsDisplay and AttacksDisplay after initialize while protecting Runner B", () => {
+    const eventsDisplay = document.createElement(
+      "events-display",
+    ) as EventsDisplay;
+    const attacksDisplay = document.createElement(
+      "attacks-display",
+    ) as AttacksDisplay;
+    const busA = new EventBus();
+    const busB = new EventBus();
+    const offASpy = vi.spyOn(busA, "off");
+    const offBSpy = vi.spyOn(busB, "off");
+    const eventsDisposeSpy = vi.spyOn(eventsDisplay, "dispose");
+    const attacksDisposeSpy = vi.spyOn(attacksDisplay, "dispose");
+
+    const makeTransform = () =>
+      ({
+        updateCanvasBoundingRect: vi.fn(),
+        centerAll: vi.fn(),
+        observeCanvasSize: () => ({ disconnect: vi.fn() }),
+      }) as never;
+
+    const layers: Controller[] = [eventsDisplay, attacksDisplay];
+    const singletons = new Set<Controller>(layers);
+    const rendererA = new GameRenderer(
+      makeTransform(),
+      {} as never,
+      layers,
+      {} as never,
+      singletons,
+    );
+    const rendererB = new GameRenderer(
+      makeTransform(),
+      {} as never,
+      layers,
+      {} as never,
+      singletons,
+    );
+
+    eventsDisplay.eventBus = busA;
+    rendererA.initialize();
+
+    // Runner B takes ownership of the reused singleton elements
+    eventsDisplay.eventBus = busB;
+    rendererB.initialize();
+    expect(offASpy).toHaveBeenCalledTimes(1);
+
+    // Stale Runner A disposal must not dispose Runner B's layers
+    rendererA.dispose();
+    expect(eventsDisposeSpy).not.toHaveBeenCalled();
+    expect(attacksDisposeSpy).not.toHaveBeenCalled();
+    expect(offBSpy).not.toHaveBeenCalled();
+
+    // Active Runner B disposal must dispose both singletons and unsubscribe busB
+    rendererB.dispose();
+    expect(eventsDisposeSpy).toHaveBeenCalledTimes(1);
+    expect(attacksDisposeSpy).toHaveBeenCalledTimes(1);
+    expect(offBSpy).toHaveBeenCalledTimes(1);
   });
 });

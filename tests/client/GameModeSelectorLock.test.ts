@@ -10,6 +10,18 @@ import en from "../../resources/lang/en.json";
 import { ClientEnv } from "../../src/client/ClientEnv";
 import { GameModeSelector } from "../../src/client/GameModeSelector";
 
+const pendingModalLoads = vi.hoisted(
+  () => new Map<string, Array<() => void>>(),
+);
+
+vi.mock("../../src/client/LazyModals", () => ({
+  whenModalLoaded: vi.fn((tag: string, open: () => void) => {
+    const queue = pendingModalLoads.get(tag) ?? [];
+    queue.push(open);
+    pendingModalLoads.set(tag, queue);
+  }),
+}));
+
 vi.mock("../../src/client/LobbySocket", () => ({
   PublicLobbySocket: class {
     start = vi.fn().mockResolvedValue(undefined);
@@ -93,6 +105,7 @@ describe("GameModeSelector Click-Lock & In-Lobby State", () => {
   });
 
   afterEach(() => {
+    pendingModalLoads.clear();
     selector?.remove();
     selector = undefined;
     languageFixture?.remove();
@@ -263,4 +276,107 @@ describe("GameModeSelector Click-Lock & In-Lobby State", () => {
       document.removeEventListener("join-lobby", cancelJoin);
     }
   });
+
+  it("unlocks when a matchmaking join-lobby event is refused even if selector listener ran first", async () => {
+    const refuser = vi.fn((e: Event) => {
+      e.preventDefault();
+      selector!.releaseRefusedJoin(
+        (e as CustomEvent<{ gameID?: string }>).detail?.gameID,
+      );
+    });
+    document.addEventListener("join-lobby", refuser);
+
+    try {
+      const ev = new CustomEvent("join-lobby", {
+        detail: { gameID: "mm-refused-1", source: "matchmaking" },
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      const dispatched = document.dispatchEvent(ev);
+      await selector!.updateComplete;
+
+      expect(dispatched).toBe(false);
+      expect(ev.defaultPrevented).toBe(true);
+      expect(refuser).toHaveBeenCalledTimes(1);
+      expect(selector!.inLobby).toBe(false);
+      expect(selector!.joiningLobbyId).toBeNull();
+    } finally {
+      document.removeEventListener("join-lobby", refuser);
+    }
+  });
+
+  it("does not unlock an active lobby when releaseRefusedJoin is called for an unrelated gameID", async () => {
+    document.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: { gameID: "active-lobby-1", source: "public" },
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      }),
+    );
+    await selector!.updateComplete;
+    expect(selector!.inLobby).toBe(true);
+    expect(selector!.joiningLobbyId).toBe("active-lobby-1");
+
+    selector!.releaseRefusedJoin("unrelated-deep-link");
+    await selector!.updateComplete;
+    expect(selector!.inLobby).toBe(true);
+    expect(selector!.joiningLobbyId).toBe("active-lobby-1");
+
+    selector!.releaseRefusedJoin("active-lobby-1");
+    await selector!.updateComplete;
+    expect(selector!.inLobby).toBe(false);
+    expect(selector!.joiningLobbyId).toBeNull();
+  });
+
+  it.each([
+    ["single-player-modal", en.main.solo],
+    ["host-lobby-modal", en.main.create],
+    ["join-lobby-modal", en.main.join],
+  ] as const)(
+    "aborts pending whenModalLoaded callback for %s if inLobby flips true before load finishes",
+    async (tag, label) => {
+      const modal = document.createElement(tag) as HTMLElement & {
+        open: ReturnType<typeof vi.fn>;
+      };
+      modal.open = vi.fn();
+      document.body.appendChild(modal);
+
+      const btn = Array.from(selector!.querySelectorAll("button")).find((b) =>
+        b.textContent?.includes(label),
+      );
+      expect(btn).toBeDefined();
+
+      btn!.click();
+      expect(pendingModalLoads.get(tag)?.length).toBe(1);
+
+      document.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: { gameID: "ffa-game-123", source: "public" },
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+        }),
+      );
+      await selector!.updateComplete;
+      expect(selector!.inLobby).toBe(true);
+
+      pendingModalLoads
+        .get(tag)
+        ?.splice(0)
+        .forEach((cb) => cb());
+      expect(modal.open).not.toHaveBeenCalled();
+
+      // Control: when not inLobby, the loaded callback opens the modal.
+      document.dispatchEvent(new CustomEvent("leave-lobby"));
+      await selector!.updateComplete;
+      btn!.click();
+      pendingModalLoads
+        .get(tag)
+        ?.splice(0)
+        .forEach((cb) => cb());
+      expect(modal.open).toHaveBeenCalledTimes(1);
+    },
+  );
 });

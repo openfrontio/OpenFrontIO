@@ -228,6 +228,7 @@ import {
   LobbyConfig,
 } from "../../src/client/ClientGameRunner";
 import type { GameHealthIndicators } from "../../src/client/hud/layers/GameHealthIndicators";
+import { MouseUpEvent } from "../../src/client/InputHandler";
 import { loadCachedTerrainMap } from "../../src/client/TerrainMapFileLoader";
 import { SendHashEvent } from "../../src/client/Transport";
 import { reloadForUpdate } from "../../src/client/Utils";
@@ -375,6 +376,9 @@ describe("joinLobby lobby-phase messages", () => {
       resolveWorkerInit = res;
     });
 
+    const appendChildSpy = vi.spyOn(document.body, "appendChild");
+    const insertBeforeSpy = vi.spyOn(document.body, "insertBefore");
+    const appendSpy = vi.spyOn(document.body, "append");
     const cleanupSpy = vi.spyOn(WorkerClient.prototype, "cleanup");
     const startSpy = vi.spyOn(ClientGameRunner.prototype, "start");
 
@@ -405,6 +409,7 @@ describe("joinLobby lobby-phase messages", () => {
 
     // Now resolve worker.initialize; createClientGame should abort before DOM/WebGL setup
     resolveWorkerInit();
+    await result.join;
     await vi.waitFor(() => {
       expect(cleanupSpy).toHaveBeenCalled();
     });
@@ -412,6 +417,23 @@ describe("joinLobby lobby-phase messages", () => {
     expect(startSpy).not.toHaveBeenCalled();
     expect(document.getElementById("game-input-overlay")).toBeNull();
     expect(document.getElementById("webgl-debug-canvas")).toBeNull();
+
+    const insertedNodes = [
+      ...appendChildSpy.mock.calls.map(([node]) => node),
+      ...insertBeforeSpy.mock.calls.map(([node]) => node),
+      ...appendSpy.mock.calls.flat(),
+    ];
+    for (const node of insertedNodes) {
+      if (node instanceof Element) {
+        expect(node.id).not.toBe("game-input-overlay");
+        expect(node.id).not.toBe("webgl-debug-canvas");
+      }
+      if (node instanceof Element || node instanceof DocumentFragment) {
+        expect(
+          node.querySelector("#game-input-overlay, #webgl-debug-canvas"),
+        ).toBeNull();
+      }
+    }
   });
 
   it("skips worker initialization if stopped before terrain load completes", async () => {
@@ -1045,5 +1067,108 @@ describe("version_mismatch takes the versioned page on this host first", () => {
 
     for (let i = 0; i < 10; i++) await Promise.resolve();
     expect(reloadForUpdate).toHaveBeenCalled();
+  });
+});
+
+describe("ClientGameRunner lifecycle idempotency and cleanup", () => {
+  function makeRunner(isLocal = false) {
+    const eventBus = new EventBus();
+    const worker = { start: vi.fn(), sendTurn: vi.fn(), cleanup: vi.fn() };
+    const transport = {
+      updateCallback: vi.fn(),
+      rejoinGame: vi.fn(),
+      turnComplete: vi.fn(),
+      leaveGame: vi.fn(),
+      reconnect: vi.fn(),
+      isLocal,
+    };
+    const renderer = {
+      initialize: vi.fn(),
+      tick: vi.fn(),
+      uiState: { attackRatio: 0.5, ghostStructure: null },
+      transformHandler: {
+        screenToWorldCoordinates: vi.fn(() => ({ x: 0, y: 0 })),
+      },
+    };
+    const gameView = {
+      config: () => ({
+        isRandomSpawn: () => false,
+        isReplay: () => false,
+      }),
+      isCatchingUp: vi.fn(() => false),
+      inSpawnPhase: () => false,
+      myPlayer: () => null,
+      update: vi.fn(),
+    };
+    const runner = new ClientGameRunner(
+      makeLobbyConfig(true),
+      "c0000001",
+      eventBus,
+      renderer as never,
+      { initialize: vi.fn(), destroy: vi.fn() } as never,
+      transport as never,
+      worker as never,
+      gameView as never,
+      { playBackgroundMusic: vi.fn(), dispose: vi.fn() } as never,
+      { goToPlayer: () => false } as never,
+    );
+    startedRunners.push(runner);
+    return { runner, eventBus, worker, transport, renderer };
+  }
+
+  it("calling start() twice does not duplicate GameHealthIndicators, eventBus listeners, or worker.start()", () => {
+    const { runner, eventBus, worker } = makeRunner(true);
+    const onSpy = vi.spyOn(eventBus, "on");
+
+    runner.start();
+    expect(worker.start).toHaveBeenCalledTimes(1);
+    expect(document.querySelectorAll("game-health-indicators")).toHaveLength(1);
+    const subscriptionCount = onSpy.mock.calls.length;
+    expect(subscriptionCount).toBeGreaterThan(0);
+
+    runner.start();
+    expect(worker.start).toHaveBeenCalledTimes(1);
+    expect(document.querySelectorAll("game-health-indicators")).toHaveLength(1);
+    expect(onSpy).toHaveBeenCalledTimes(subscriptionCount);
+
+    runner.stop();
+    runner.start();
+    expect(worker.start).toHaveBeenCalledTimes(1);
+    expect(document.querySelectorAll("game-health-indicators")).toHaveLength(0);
+    expect(onSpy).toHaveBeenCalledTimes(subscriptionCount);
+  });
+
+  it("calling start() after an unstarted stop() is a no-op", () => {
+    const { runner, eventBus, worker } = makeRunner(true);
+    const onSpy = vi.spyOn(eventBus, "on");
+
+    runner.stop();
+    runner.start();
+
+    expect(worker.start).not.toHaveBeenCalled();
+    expect(document.querySelectorAll("game-health-indicators")).toHaveLength(0);
+    expect(onSpy).not.toHaveBeenCalled();
+  });
+
+  it("calling stop() before 20s cancels connectionCheckTimeout and unsubscribes eventBus listeners", () => {
+    vi.useFakeTimers();
+    const { runner, eventBus, transport, renderer } = makeRunner(false);
+    const onSpy = vi.spyOn(eventBus, "on");
+    const offSpy = vi.spyOn(eventBus, "off");
+
+    runner.start();
+    expect(onSpy.mock.calls.length).toBeGreaterThan(0);
+    vi.advanceTimersByTime(10_000);
+
+    runner.stop();
+    expect(offSpy).toHaveBeenCalledTimes(onSpy.mock.calls.length);
+
+    eventBus.emit(new MouseUpEvent(10, 10));
+    expect(
+      renderer.transformHandler.screenToWorldCoordinates,
+    ).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(30_000);
+    expect(transport.reconnect).not.toHaveBeenCalled();
   });
 });

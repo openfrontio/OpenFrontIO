@@ -307,6 +307,7 @@ export async function resolveTurnstileToken(
     console.warn("Turnstile timed out, retrying once on fresh widget");
     try {
       const retryRes = await deps.requestFresh(deps.signal);
+      if (deps.signal?.aborted) return null;
       return retryRes?.token ?? null;
     } catch (retryError) {
       if (isAbortError(retryError, deps.signal)) return null;
@@ -326,6 +327,7 @@ export async function resolveTurnstileToken(
     if (!deps.requestFresh) return null;
     try {
       const res = await deps.requestFresh(deps.signal);
+      if (deps.signal?.aborted) return null;
       return res?.token ?? null;
     } catch (error) {
       if (isAbortError(error, deps.signal)) return null;
