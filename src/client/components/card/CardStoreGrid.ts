@@ -7,6 +7,7 @@ import { translateText } from "../../Utils";
 import "../CosmeticCard";
 import "../PurchaseButton";
 import { type CardItem, type CardItemType, cardItemName } from "./CardItems";
+import { CARD_TAUNTS_ENABLED } from "./HeldBack";
 import "./PlayerCard";
 import { buildPlayerCardView } from "./PlayerCardModel";
 
@@ -46,6 +47,7 @@ export function cardStoreItems(
 ): { type: CardItemType; item: CardItem }[] {
   const out: { type: CardItemType; item: CardItem }[] = [];
   for (const [key, type] of SECTIONS) {
+    if (type === "taunt" && !CARD_TAUNTS_ENABLED) continue;
     const section = (cosmetics?.[key] ?? {}) as Record<string, CardItem>;
     for (const item of Object.values(section)) {
       if (isSold(item)) out.push({ type, item });

@@ -1,8 +1,17 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
+}));
+const heldBack = vi.hoisted(() => ({ taunts: false, titles: false }));
+vi.mock("../../src/client/components/card/HeldBack", () => ({
+  get CARD_TAUNTS_ENABLED() {
+    return heldBack.taunts;
+  },
+  get CARD_TITLES_ENABLED() {
+    return heldBack.titles;
+  },
 }));
 vi.mock("../../src/client/Cosmetics", () => ({
   purchaseCosmetic: vi.fn(),
@@ -18,6 +27,14 @@ import {
   loadoutItems,
   promoChoice,
 } from "../../src/client/hud/layers/LoadoutRow";
+
+// Taunts and titles are held back (HeldBack.ts). The tests below exercise
+// the code behind them with both switched on; the "held back" block turns
+// them off again.
+beforeEach(() => {
+  heldBack.taunts = true;
+  heldBack.titles = true;
+});
 
 if (!customElements.get("loadout-row")) {
   customElements.define("loadout-row", LoadoutRow);
@@ -85,6 +102,15 @@ const VOLT: PlayerCardView = buildPlayerCardView(
 );
 
 describe("loadoutItems", () => {
+  it("taunts held back: the killer's taunt is never offered", () => {
+    heldBack.taunts = false;
+    const items = loadoutItems(VOLT, COSMETICS, [
+      "playerCard:standard",
+      "cardBackground:bg_frontline",
+    ]);
+    expect(items.map((i) => i.type)).not.toContain("taunt");
+  });
+
   it("viewer without the card sees the card first", () => {
     const items = loadoutItems(VOLT, COSMETICS, []);
     expect(items.map((i) => `${i.type}:${i.item.name}`)).toEqual([

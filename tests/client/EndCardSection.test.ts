@@ -1,12 +1,29 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
 }));
+const heldBack = vi.hoisted(() => ({ taunts: false, titles: false }));
+vi.mock("../../src/client/components/card/HeldBack", () => ({
+  get CARD_TAUNTS_ENABLED() {
+    return heldBack.taunts;
+  },
+  get CARD_TITLES_ENABLED() {
+    return heldBack.titles;
+  },
+}));
 
 import { defaultPlayerCardView } from "../../src/client/components/card/PlayerCardModel";
 import { EndCardSection } from "../../src/client/hud/layers/EndCardSection";
+
+// Taunts and titles are held back (HeldBack.ts). The tests below exercise
+// the code behind them with both switched on; the "held back" block turns
+// them off again.
+beforeEach(() => {
+  heldBack.taunts = true;
+  heldBack.titles = true;
+});
 
 if (!customElements.get("end-card-section")) {
   customElements.define("end-card-section", EndCardSection);
@@ -27,6 +44,13 @@ describe("<end-card-section>", () => {
     await el.updateComplete;
   }
   const q = (sel: string) => (el as unknown as Element).querySelector(sel);
+
+  it("taunts held back: no mute button", async () => {
+    heldBack.taunts = false;
+    await render({ mode: "eliminatedBy", view: VIEW, showKey: "g1:dead" });
+    expect(q("[data-end-card-mute]")).toBeNull();
+    expect(q("player-card")).not.toBeNull();
+  });
 
   it("renders nothing for no card", async () => {
     await render({ mode: "none" });

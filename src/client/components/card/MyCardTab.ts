@@ -20,6 +20,7 @@ import { translateText } from "../../Utils";
 import "../CosmeticCard";
 import "../PurchaseButton";
 import { type CardItem, type CardItemType, cardItemName } from "./CardItems";
+import { CARD_TAUNTS_ENABLED } from "./HeldBack";
 import "./PlayerCard";
 import { buildPlayerCardView } from "./PlayerCardModel";
 
@@ -32,7 +33,12 @@ import { buildPlayerCardView } from "./PlayerCardModel";
 // offers the card itself.
 
 type Slot = "background" | "flag" | "title" | "trackers" | "taunt";
-const SLOTS: Slot[] = ["background", "flag", "title", "trackers", "taunt"];
+const ALL_SLOTS: Slot[] = ["background", "flag", "title", "trackers", "taunt"];
+
+// The slots on offer: held-back items get none (a saved one stays saved).
+function slots(): Slot[] {
+  return ALL_SLOTS.filter((s) => s !== "taunt" || CARD_TAUNTS_ENABLED);
+}
 
 type ItemState = "equipped" | "owned" | "buy" | "locked";
 
@@ -344,7 +350,7 @@ export class MyCardTab extends LitElement {
       ${this.renderGetCard()}
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap gap-2">
-          ${SLOTS.map(
+          ${slots().map(
             (s) =>
               html`<button
                 type="button"

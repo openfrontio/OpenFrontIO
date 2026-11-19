@@ -5,6 +5,7 @@ import { prefersReducedMotion } from "../../utilities/ReducedMotion";
 import { translateText } from "../../Utils";
 import { levelBadgeAccent } from "../LevelBadge";
 import "./CardBackground";
+import { CARD_TAUNTS_ENABLED } from "./HeldBack";
 import { formatTracker, type PlayerCardView } from "./PlayerCardModel";
 import {
   clanTemplate,
@@ -82,6 +83,8 @@ export class PlayerCard extends LitElement {
   }
 
   private preset(): TauntPreset | null {
+    // Held back: a saved taunt never shows or plays.
+    if (!CARD_TAUNTS_ENABLED) return null;
     const taunt = this.view?.taunt;
     if (!taunt) return null;
     const preset = TAUNT_PRESETS[taunt.preset];

@@ -10,6 +10,7 @@ import {
   type CardItemType,
   cardItemName,
 } from "../../components/card/CardItems";
+import { CARD_TAUNTS_ENABLED } from "../../components/card/HeldBack";
 import type { PlayerCardView } from "../../components/card/PlayerCardModel";
 import "../../components/CosmeticCard";
 import "../../components/PurchaseButton";
@@ -70,7 +71,7 @@ export function loadoutItems(
       cosmetics?.cardBackgrounds?.[view.background.name],
     ]);
   }
-  if (view.taunt) {
+  if (view.taunt && CARD_TAUNTS_ENABLED) {
     candidates.push(["taunt", cosmetics?.taunts?.[view.taunt.name]]);
   }
   if (view.title) {
