@@ -152,14 +152,16 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
   }
 
   private lastMouseUpdate = 0;
+  private initGeneration = 0;
   private eventUnsubscribers: Array<() => void> = [];
 
   private onBus<T extends GameEvent>(
     eventType: EventConstructor<T>,
     handler: (event: T) => void,
   ): void {
-    this.eventBus.on(eventType, handler);
-    this.eventUnsubscribers.push(() => this.eventBus.off(eventType, handler));
+    const bus = this.eventBus;
+    bus?.on(eventType, handler);
+    this.eventUnsubscribers.push(() => bus?.off?.(eventType, handler));
   }
 
   private unsubscribeBus(): void {
@@ -169,8 +171,9 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     this.eventUnsubscribers = [];
   }
 
-  init() {
+  init(): () => void {
     this.unsubscribeBus();
+    const gen = ++this.initGeneration;
     this.onBus(MouseMoveEvent, (e: MouseMoveEvent) => this.onMouseEvent(e));
     this.onBus(ContextMenuEvent, (e: ContextMenuEvent) =>
       this.maybeShow(e.x, e.y),
@@ -193,9 +196,15 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       this.markActionTaken(e.tile, "target"),
     );
     this._isActive = true;
+    return () => {
+      if (gen === this.initGeneration) {
+        this.dispose();
+      }
+    };
   }
 
   dispose(): void {
+    this.initGeneration++;
     this.unsubscribeBus();
     this.playerActionsVersion++;
     this.playerActionsFor = null;

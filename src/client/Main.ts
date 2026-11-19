@@ -1439,6 +1439,7 @@ class Client {
     // the way a game start does, without leaving a lobby it never joined.
     this.loadedHostModal()?.disarmLeaveOnClose();
     this.loadedJoinModal()?.disarmLeaveOnClose();
+    this.loadedMatchmakingModal()?.disarmLeaveOnClose();
     this.loadedHostModal()?.closeWithoutLeaving();
     this.loadedJoinModal()?.closeWithoutLeaving();
     this.closeMenu();
@@ -1829,7 +1830,7 @@ class Client {
       lobby.source === "matchmaking" &&
       this.loadedMatchmakingModal()?.isOpen()
     ) {
-      this.matchmakingModal.close();
+      this.matchmakingModal.closeWithoutLeaving();
     }
     // false: the web never refuses here any more, so the only feedback left
     // is the desktop status bar's wiggle -- the bar is already showing the
@@ -1850,7 +1851,7 @@ class Client {
       event.detail.source === "matchmaking" &&
       this.loadedMatchmakingModal()?.isOpen()
     ) {
-      this.matchmakingModal.close();
+      this.matchmakingModal.closeWithoutLeaving();
     }
     const startingModal = document.querySelector("game-starting-modal");
     if (startingModal instanceof GameStartingModal) {
@@ -1865,6 +1866,9 @@ class Client {
     const lobby = event.detail;
     if (this.usernameInput && !this.usernameInput.canPlay()) {
       event.preventDefault();
+      if (!this.joinInFlight && this.lobbyHandle === null) {
+        this.gameModeSelector?.releaseRefusedJoin(lobby?.gameID);
+      }
       // The singleplayer modal shows the starting overlay before dispatching
       // join-lobby; a refused join must release it or it stays over the menu.
       const startingModal = document.querySelector("game-starting-modal");
@@ -1875,6 +1879,9 @@ class Client {
     }
     if (this.blockedJoin(lobby)) {
       event.preventDefault();
+      if (!this.joinInFlight && this.lobbyHandle === null) {
+        this.gameModeSelector?.releaseRefusedJoin(lobby?.gameID);
+      }
       return;
     }
     // Only once the join is actually going ahead: a refused dispatch that
@@ -2098,6 +2105,7 @@ class Client {
       // game-start (host or joiner, depending on close order).
       this.loadedHostModal()?.disarmLeaveOnClose();
       this.loadedJoinModal()?.disarmLeaveOnClose();
+      this.loadedMatchmakingModal()?.disarmLeaveOnClose();
       this.loadedHostModal()?.closeWithoutLeaving();
       this.loadedJoinModal()?.closeWithoutLeaving();
       this.closeMenu();
@@ -2447,11 +2455,13 @@ class Client {
       signal: signal ?? this.activeJoinAbortController?.signal,
       // Always request a new token on a portal.
       forceFresh: this.gamePortal.isOnGamePortal(),
-      onError: (code) =>
+      onError: (code) => {
+        const key = "error_modal.turnstile_error";
+        const translated = translateText(key, { code: code ?? "" });
         void showInGameAlert(
-          translateText("error_modal.turnstile_error", { code: code ?? "" }) ??
-            "Turnstile verification failed",
-        ),
+          translated === key ? "Turnstile verification failed" : translated,
+        );
+      },
     });
   }
 }

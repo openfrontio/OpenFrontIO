@@ -992,6 +992,7 @@ export class HostLobbyModal extends BaseModal {
             } as JoinLobbyEvent,
             bubbles: true,
             composed: true,
+            cancelable: true,
           }),
         );
       })
@@ -1027,6 +1028,7 @@ export class HostLobbyModal extends BaseModal {
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
+        cancelable: true,
       }),
     );
   }

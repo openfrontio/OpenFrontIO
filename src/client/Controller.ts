@@ -12,7 +12,7 @@
  */
 export interface Controller {
   /** Called once at game start. Subscribe to events / set up state here. */
-  init?: () => void;
+  init?: () => void | (() => void);
 
   /**
    * Called per game tick (10Hz). Optional — pure event subscribers can omit.

@@ -170,21 +170,41 @@ export class EventsDisplay extends LitElement implements Controller {
     this.events = [];
   }
 
+  private initGeneration = 0;
+  private allianceConfirmationUnsub: (() => void) | null = null;
   private onAllianceRequestSentConfirmationBound =
     this.onAllianceRequestSentConfirmation.bind(this);
 
-  init() {
-    this.eventBus.on(
-      SendAllianceRequestIntentEvent,
-      this.onAllianceRequestSentConfirmationBound,
-    );
+  private unsubscribeBus(): void {
+    this.allianceConfirmationUnsub?.();
+    this.allianceConfirmationUnsub = null;
+  }
+
+  init(): () => void {
+    this.unsubscribeBus();
+    const gen = ++this.initGeneration;
+    const bus = this.eventBus;
+    if (bus) {
+      bus.on(
+        SendAllianceRequestIntentEvent,
+        this.onAllianceRequestSentConfirmationBound,
+      );
+      this.allianceConfirmationUnsub = () =>
+        bus.off?.(
+          SendAllianceRequestIntentEvent,
+          this.onAllianceRequestSentConfirmationBound,
+        );
+    }
+    return () => {
+      if (gen === this.initGeneration) {
+        this.dispose();
+      }
+    };
   }
 
   dispose(): void {
-    this.eventBus?.off(
-      SendAllianceRequestIntentEvent,
-      this.onAllianceRequestSentConfirmationBound,
-    );
+    this.initGeneration++;
+    this.unsubscribeBus();
     this.events = [];
     this.active = false;
     this._isVisible = false;
