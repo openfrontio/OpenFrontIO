@@ -12,6 +12,7 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { ClientID, TeamCountConfig } from "@openfront/engine-api/Schemas";
 import { assignTeamsLobbyPreview } from "@openfront/engine-lib/game/TeamAssignment";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import {
   type LevelBadge,
   unpackLevelBadge,
@@ -20,7 +21,9 @@ import { createRandomName } from "@openfront/shared/SharedUtil";
 import { ClientInfo } from "@openfront/shared/WireSchemas";
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { ifDefined } from "lit/directives/if-defined.js";
 import { repeat } from "lit/directives/repeat.js";
+import { fetchCosmetics, getCachedCosmetics } from "../Cosmetics";
 import {
   ownHiddenLevelBadge,
   refreshOwnHiddenLevelBadge,
@@ -32,6 +35,10 @@ import {
   resolveTeamClanTag,
   translateText,
 } from "../Utils";
+import {
+  cardBackgroundUrl,
+  stillBackdropStyle,
+} from "./card/StillCardBackdrop";
 import "./LevelBadge";
 
 function sameBadge(
@@ -81,6 +88,10 @@ export class LobbyTeamView extends LitElement {
   // off their roster entry, but they still see their own level.
   @state() private _ownHiddenBadge: LevelBadge | undefined =
     ownHiddenLevelBadge();
+  // The catalogue, to resolve a stamped card background's image. Null until
+  // loaded; tags show without a background until then.
+  @state() private _cosmetics: Cosmetics | null = getCachedCosmetics();
+  private _cosmeticsRequested = false;
 
   // Spectators are in the lobby roster (flagged) but hold no seat and never
   // reach the simulation — so the count header, the team preview and both
@@ -106,6 +117,17 @@ export class LobbyTeamView extends LitElement {
   }
 
   willUpdate(changedProperties: Map<string, any>) {
+    if (
+      changedProperties.has("clients") &&
+      this._cosmetics === null &&
+      !this._cosmeticsRequested &&
+      this.clients.some((c) => c.cardBackground !== undefined)
+    ) {
+      this._cosmeticsRequested = true;
+      void fetchCosmetics().then((cosmetics) => {
+        if (cosmetics !== null) this._cosmetics = cosmetics;
+      });
+    }
     if (
       changedProperties.has("clients") ||
       changedProperties.has("currentClientID")
@@ -221,6 +243,7 @@ export class LobbyTeamView extends LitElement {
                 class="player-tag ${
                   this.isCurrentPlayer(client) ? "current-player" : ""
                 }"
+                style=${ifDefined(this.tagBackdrop(client))}
               >
                 <span class="text-white"
                   >${this.renderLevelBadge(
@@ -335,6 +358,7 @@ export class LobbyTeamView extends LitElement {
           class="player-tag ${
             this.isCurrentPlayer(client) ? "current-player" : ""
           }"
+          style=${ifDefined(this.tagBackdrop(client))}
         >
           <span class="text-white"
             >${this.renderLevelBadge(client, false)}${displayName}
@@ -645,6 +669,19 @@ export class LobbyTeamView extends LitElement {
     const anonymizedUsername =
       createRandomName(client.username, PlayerType.Human) ?? client.username;
     return formatPlayerDisplayName(anonymizedUsername, client.clanTag);
+  }
+
+  // A card owner's equipped background behind their name tag, still, under a
+  // dark gradient (inline background, so the tag's size and contents don't
+  // change). The server stamps it only beside a real name; it is withheld
+  // here too while the viewer anonymises other players' names locally, as it
+  // would point out who they are. Undefined (no style at all) otherwise.
+  private tagBackdrop(client: ClientInfo): string | undefined {
+    if (this.userSettings.anonymousNames() && !this.isCurrentPlayer(client)) {
+      return undefined;
+    }
+    const url = cardBackgroundUrl(client.cardBackground, this._cosmetics);
+    return url === null ? undefined : stillBackdropStyle(url);
   }
 
   // Blue check for players on their server-validated account name. Withheld
