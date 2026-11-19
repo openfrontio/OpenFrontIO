@@ -249,3 +249,131 @@ describe("lobby name tag: card background", () => {
     );
   });
 });
+
+describe("team-mode lobby rows: card background", () => {
+  beforeEach(() => {
+    catalogue.cached = COSMETICS;
+    catalogue.fetched = COSMETICS;
+    catalogue.fetches = 0;
+    resetCardBackdropLoadsForTests();
+    installFakeImage((src) => src.includes("broken"));
+    vi.spyOn(UserSettings.prototype, "anonymousNames").mockReturnValue(false);
+  });
+  afterEach(() => {
+    document.body.innerHTML = "";
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const team = { gameMode: GameMode.Team, teamCount: 2 } as const;
+
+  // A name's rows: one in the players list, one in its team card.
+  const rowsOf = (view: LobbyTeamView, name: string) =>
+    Array.from(view.querySelectorAll<HTMLElement>("div.rounded-sm")).filter(
+      (r) => r.textContent?.includes(name),
+    );
+
+  it("shows the background on both of a carded player's rows", async () => {
+    const view = await mount(
+      [client("carded", { cardBackground: "bg_pacific" }), client("plain")],
+      team,
+    );
+    const carded = rowsOf(view, "carded");
+    expect(carded).toHaveLength(2);
+    for (const row of carded) {
+      const style = row.getAttribute("style") ?? "";
+      expect(style).toContain("bg_pacific.webp");
+      expect(style).toContain("linear-gradient(");
+      expect(style).toMatch(/background-size:\s*cover/);
+    }
+    const plain = rowsOf(view, "plain");
+    expect(plain).toHaveLength(2);
+    for (const row of plain) expect(row.hasAttribute("style")).toBe(false);
+  });
+
+  it("keeps the rows' classes, text and host controls", async () => {
+    const props = {
+      ...team,
+      lobbyCreatorClientID: "host",
+      currentClientID: "host",
+      onKickPlayer: () => {},
+    };
+    const carded = await mount(
+      [client("host"), client("guest", { cardBackground: "bg_pacific" })],
+      props,
+    );
+    const withBg = rowsOf(carded, "guest").map(shape);
+    expect(
+      rowsOf(carded, "guest").some((r) =>
+        r.querySelector(".remove-player-btn"),
+      ),
+    ).toBe(true);
+    document.body.innerHTML = "";
+    const plain = await mount([client("host"), client("guest")], props);
+    expect(withBg).toEqual(rowsOf(plain, "guest").map(shape));
+  });
+
+  it("an image that fails to load leaves today's rows exactly", async () => {
+    catalogue.cached = {
+      ...COSMETICS,
+      cardBackgrounds: {
+        bg_broken: {
+          name: "bg_broken",
+          url: "/cosmetics/broken.webp",
+          rarity: "epic",
+          product: null,
+        },
+      },
+    } as unknown as Cosmetics;
+    const view = await mount(
+      [client("carded", { cardBackground: "bg_broken" }), client("plain")],
+      team,
+    );
+    for (const row of rowsOf(view, "carded")) {
+      expect(row.hasAttribute("style")).toBe(false);
+    }
+  });
+
+  it("the current player's rows keep a blue tint over the art", async () => {
+    const view = await mount(
+      [
+        client("me", { cardBackground: "bg_pacific" }),
+        client("other", { cardBackground: "bg_pacific" }),
+      ],
+      { ...team, currentClientID: "me" },
+    );
+    for (const row of rowsOf(view, "me")) {
+      expect(row.className).toContain("bg-malibu-blue/20");
+      expect(row.getAttribute("style")).toContain("rgba(14,165,233,");
+    }
+    for (const row of rowsOf(view, "other")) {
+      expect(row.getAttribute("style")).not.toContain("rgba(14,165,233,");
+    }
+  });
+
+  it("withheld while the viewer anonymises names, except their own", async () => {
+    vi.spyOn(UserSettings.prototype, "anonymousNames").mockReturnValue(true);
+    const view = await mount(
+      [
+        client("other", { cardBackground: "bg_pacific" }),
+        client("me", { cardBackground: "bg_pacific" }),
+      ],
+      { ...team, currentClientID: "me" },
+    );
+    const styled = Array.from(
+      view.querySelectorAll<HTMLElement>("div.rounded-sm"),
+    ).filter((r) => r.hasAttribute("style"));
+    expect(styled).toHaveLength(2);
+    for (const row of rowsOf(view, "me")) {
+      expect(row.getAttribute("style")).toContain("bg_pacific");
+    }
+  });
+
+  it("not stamped (anonymised by the server): today's rows", async () => {
+    const view = await mount([client("carded"), client("plain")], team);
+    const styled = Array.from(
+      view.querySelectorAll<HTMLElement>("div.rounded-sm"),
+    ).filter((r) => r.hasAttribute("style"));
+    expect(styled).toHaveLength(0);
+  });
+});

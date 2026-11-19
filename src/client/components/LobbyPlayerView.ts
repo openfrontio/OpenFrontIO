@@ -297,6 +297,7 @@ export class LobbyTeamView extends LitElement {
                   ? "bg-malibu-blue/20 border-sky-500/40"
                   : "bg-gray-700/70 border-transparent"
               }"
+              style=${ifDefined(this.tagBackdrop(client))}
             >
               ${this.renderLevelBadge(client, listSlot)}${displayName}
               ${this.renderVerifiedBadge(client)}
@@ -463,6 +464,7 @@ export class LobbyTeamView extends LitElement {
                           ? "bg-malibu-blue/20 border-sky-500/40"
                           : "bg-gray-700/70 border-transparent"
                       }"
+                      style=${ifDefined(this.tagBackdrop(p))}
                     >
                       <span class="flex items-center gap-1 min-w-0">
                         ${this.renderLevelBadge(p, badgeSlot)}
@@ -676,9 +678,9 @@ export class LobbyTeamView extends LitElement {
     return formatPlayerDisplayName(anonymizedUsername, client.clanTag);
   }
 
-  // A card owner's equipped background behind their name tag, still, under a
-  // dark gradient (inline background, so the tag's size and contents don't
-  // change). The server stamps it only beside a real name; it is withheld
+  // A card owner's equipped background behind their name tag and team-mode
+  // rows, still, under a dark gradient (inline background, so the tag's size
+  // and contents don't change). The server stamps it only beside a real name; it is withheld
   // here too while the viewer anonymises other players' names locally, as it
   // would point out who they are. Undefined (no style at all) otherwise.
   private tagBackdrop(client: ClientInfo): string | undefined {
