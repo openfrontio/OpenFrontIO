@@ -855,6 +855,17 @@ describe("StoreModal cosmetic browser", () => {
       hero.querySelector<CosmeticCard>("cosmetic-card")!.resolved.key,
     ).toBe(zap.key);
     expect(hero.querySelector("sale-countdown")).toBeTruthy();
+    // One label for the one deadline, on the banner, the hero and the card:
+    // when this deal ends, not when the next item starts.
+    for (const el of [
+      modal.querySelector("[data-store-flash-banner]")!,
+      hero,
+      hero.querySelector("[data-cosmetic-flash-timer]")!,
+    ]) {
+      expect(el.textContent).toContain("store.flash_ends_in");
+    }
+    expect(modal.textContent).not.toContain("store.flash_next_in");
+    expect(modal.textContent).not.toContain("store.flash_left");
     // The flash item leads in the hero, not again in the grid below it.
     const gridKeys = [
       ...modal.querySelectorAll<CosmeticCard>(

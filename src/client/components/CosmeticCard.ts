@@ -480,24 +480,24 @@ export class CosmeticCard extends LitElement {
     </span>`;
   }
 
-  /** A flash sale's item: the time left, fading up from the artwork's foot. */
+  /** A flash sale's item: when its deal ends, fading up from the artwork's foot. */
   private renderFlashTimer(active: ResolvedCosmetic) {
     const sale = this.flashSale(active);
     if (sale === null) return nothing;
     return html`<div
       data-cosmetic-flash-timer
-      class="pointer-events-none absolute inset-x-0 bottom-0 z-[3] rounded-b-lg bg-gradient-to-t from-deep-navy/95 to-transparent pb-1.5 pt-5 text-center leading-none"
+      class="pointer-events-none absolute inset-x-0 bottom-0 z-[3] rounded-b-lg bg-gradient-to-t from-deep-navy via-deep-navy/90 via-70% to-transparent pb-1.5 pt-6 text-center leading-none"
     >
+      <div
+        class="mb-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-aquarius [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
+      >
+        ${translateText("store.flash_ends_in")}
+      </div>
       <sale-countdown
         class="text-base font-black tabular-nums text-white"
         format="clock"
         .endsAt=${sale.endsAt}
       ></sale-countdown>
-      <div
-        class="mt-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-aquarius"
-      >
-        ${translateText("store.flash_left")}
-      </div>
     </div>`;
   }
 

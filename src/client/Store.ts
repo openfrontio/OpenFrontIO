@@ -998,7 +998,7 @@ export class StoreModal extends BaseModal {
         <span
           class="flex items-baseline gap-2 rounded-lg bg-black/30 px-3 py-2 text-xs font-bold uppercase tracking-wider text-dawn-blue"
         >
-          ${translateText("store.flash_next_in")}
+          ${translateText("store.flash_ends_in")}
           <sale-countdown
             class="text-2xl font-black normal-case tracking-normal tabular-nums text-white"
             format="clock"
