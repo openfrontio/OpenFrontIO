@@ -1,0 +1,334 @@
+{
+  "$schema": "../../../info.schema.json",
+  "id": "Tongass",
+  "name": "Tongass",
+  "translation_key": "map.tongass",
+  "categories": ["north_america", "new"],
+  "author": "Tristar",
+  "location": { "lat": 57, "lon": -134 },
+  "description": "The Tongass National Forest covers most of the Alaska panhandle and is the largest national forest in the United States, with 17 million acres. Fjords, glaciers, and peaks of the Coast Mountains separate the islands of the Alexander Archipelago and cut them off from the mainland.",
+  "themes": ["north_america"],
+  "nations": [
+    {
+      "coordinates": [1016, 277],
+      "name": "Skagway",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [979, 335],
+      "name": "Haines",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [923, 690],
+      "name": "Gustavus",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [791, 855],
+      "name": "Pelican",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [827, 249],
+      "name": "Mosquito Lake",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [985, 840],
+      "name": "Hoonah",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1033, 945],
+      "name": "Tenakee Springs",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1157, 935],
+      "name": "Cube Cove",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1204, 719],
+      "name": "Juneau",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1172, 1043],
+      "name": "Angoon",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1013, 1213],
+      "name": "Sitka",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1326, 1281],
+      "name": "Kake",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1516, 1131],
+      "name": "Hobart Bay",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1550, 1392],
+      "name": "Petersburg",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1154, 1593],
+      "name": "Port Alexander",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [547, 541],
+      "name": "Glacier Bay National Park",
+      "flag": "us"
+    },
+    {
+      "coordinates": [55, 188],
+      "name": "Yakutat",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1686, 1528],
+      "name": "Wrangell",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1825, 1918],
+      "name": "Ketchikan",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1862, 2027],
+      "name": "Metlakatla",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1516, 1863],
+      "name": "Craig",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1411, 1578],
+      "name": "Port Protection",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1374, 1697],
+      "name": "Edna Bay",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1577, 1984],
+      "name": "Hydaburg",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1635, 1772],
+      "name": "Thorne Bay",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1, 1],
+      "name": "Wrangell-St. Elias National Park",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2165, 1728],
+      "name": "Hyder",
+      "flag": "Alaska"
+    }
+  ],
+  "additionalNations": [
+    {
+      "coordinates": [1810, 1909],
+      "name": "Ward Cove",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1793, 1894],
+      "name": "Clover Pass",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1865, 1923],
+      "name": "Beaver Pass",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1840, 1944],
+      "name": "Saxman",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1851, 2058],
+      "name": "Annette",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1677, 2114],
+      "name": "klinkwan",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1625, 2014],
+      "name": "Hetta",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1608, 1959],
+      "name": "Sulzer",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1485, 1959],
+      "name": "Waterfall",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1694, 1880],
+      "name": "Boggs Landing",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1680, 1863],
+      "name": "Hadley",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1645, 1848],
+      "name": "Kasaan",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1594, 1899],
+      "name": "Hollis",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1538, 1840],
+      "name": "Klawock",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1770, 1685],
+      "name": "Santa Anna",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1702, 1789],
+      "name": "Meyers Chuck",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1748, 1839],
+      "name": "Helm Bay",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1478, 1702],
+      "name": "Tuxekan",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1466, 1758],
+      "name": "Karheen",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1471, 1673],
+      "name": "Tokeen",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1428, 1607],
+      "name": "Calder",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1425, 1635],
+      "name": "Shakan",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1509, 1610],
+      "name": "Whale Pass",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [967, 870],
+      "name": "Game Creek",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [776, 833],
+      "name": "Sunnyside",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1205, 753],
+      "name": "Douglas",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1144, 654],
+      "name": "Auke Bay",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1107, 572],
+      "name": "Dobson Landing",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1014, 398],
+      "name": "Mud Bay",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [954, 291],
+      "name": "Lutak",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [918, 296],
+      "name": "Klukwan",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [875, 254],
+      "name": "Wells",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [858, 283],
+      "name": "Covenant Life",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [978, 639],
+      "name": "Excursion Inlet",
+      "flag": "Alaska"
+    },
+    {
+      "coordinates": [1235, 744],
+      "name": "Thane",
+      "flag": "Alaska"
+    }
+  ],
+
+  "layers": [
+    {
+      "id": "impassable",
+      "placement": "land",
+      "alpha": 0.75,
+      "nukeable": false
+    }
+  ]
+}
