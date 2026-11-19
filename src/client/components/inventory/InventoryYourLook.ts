@@ -67,7 +67,11 @@ export class InventoryYourLook extends LitElement {
           class="text-[11px] font-black uppercase tracking-wider text-white/50"
           >${label}</span
         >
-        <span class="text-sm font-bold leading-tight text-white">${value}</span>
+        <span
+          data-your-look-value=${category}
+          class="text-sm font-bold leading-tight text-white"
+          >${value}</span
+        >
         ${extra}
       </span>
     </button>`;
@@ -84,23 +88,20 @@ export class InventoryYourLook extends LitElement {
       first
         ? html`<cosmetic-preview .resolved=${first}></cosmetic-preview>`
         : html``,
-      html`<span data-your-look-effects-summary class="sr-only"
-          >${translateText("inventory.effects_summary", { custom, defaults })}</span
-        >
-        <span class="mt-1 flex flex-wrap gap-1" aria-hidden="true">
-          ${this.effects.map((effect) =>
-            effect.item
-              ? html`<span
-                  data-your-look-effect-swatch="custom"
-                  class="h-5 w-5 overflow-hidden rounded border border-white/30 bg-black/40"
-                  ><cosmetic-preview .resolved=${effect.item}></cosmetic-preview
-                ></span>`
-              : html`<span
-                  data-your-look-effect-swatch="default"
-                  class="h-5 w-5 rounded border border-white/15 bg-white/5 opacity-40"
-                ></span>`,
-          )}
-        </span>`,
+      html`<span class="mt-1 flex flex-wrap gap-1" aria-hidden="true">
+        ${this.effects.map((effect) =>
+          effect.item
+            ? html`<span
+                data-your-look-effect-swatch="custom"
+                class="h-5 w-5 overflow-hidden rounded border border-white/30 bg-black/40"
+                ><cosmetic-preview .resolved=${effect.item}></cosmetic-preview
+              ></span>`
+            : html`<span
+                data-your-look-effect-swatch="default"
+                class="h-5 w-5 rounded border border-white/15 bg-white/5 opacity-40"
+              ></span>`,
+        )}
+      </span>`,
     );
   }
 

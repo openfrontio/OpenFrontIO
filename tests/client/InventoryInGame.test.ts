@@ -16,6 +16,7 @@ import type { InventoryItemTile } from "../../src/client/components/inventory/In
 import { itemStateOf } from "../../src/client/components/inventory/ItemState";
 import {
   PENDING_EQUIP_KEY,
+  PENDING_EQUIP_TTL_MS,
   rememberPendingEquip,
 } from "../../src/client/components/inventory/PendingEquip";
 import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
@@ -367,6 +368,68 @@ describe("Inventory In game tab", () => {
       ).toContain("inventory.state_owned");
     });
 
+    it("counts owned items as tiles, colours included in one", async () => {
+      const catalog = makeCatalog() as unknown as {
+        patterns: Record<string, Record<string, unknown>>;
+        colorPalettes: Record<string, unknown>;
+      };
+      catalog.patterns.plain.colorPalettes = [
+        { name: "red", isArchived: false },
+        { name: "blue", isArchived: false },
+      ];
+      catalog.colorPalettes = {
+        red: { name: "red", primaryColor: "#f00", secondaryColor: "#000" },
+        blue: { name: "blue", primaryColor: "#00f", secondaryColor: "#000" },
+      };
+      vi.mocked(fetchCosmetics).mockResolvedValue(
+        catalog as unknown as Cosmetics,
+      );
+      await open(
+        "skins",
+        makeUser([...OWNED, "pattern:plain:red", "pattern:plain:blue"]),
+      );
+      const tilesWithItems = tiles(modal).filter(
+        (t) => t.resolved.cosmetic !== null,
+      );
+      expect(
+        modal.querySelector("[data-inventory-owned-count]")!.textContent,
+      ).toContain("inventory.owned_count");
+      expect(
+        (modal as unknown as { ownedCount(c: string): number }).ownedCount(
+          "skins",
+        ),
+      ).toBe(tilesWithItems.length);
+      // Colour swatches are full-size touch targets.
+      for (const swatch of modal.querySelectorAll("[data-variant-key]")) {
+        expect(swatch.className).toMatch(/(^| )h-11( |$)/);
+        expect(swatch.className).toMatch(/(^| )w-11( |$)/);
+      }
+    });
+
+    it("on phones, says what was equipped in its own status line", async () => {
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: query.includes("max-width"),
+      }));
+      try {
+        await open("crowns");
+        await clickTile(modal, "crown:gold_crown");
+        expect(
+          modal.querySelector("[data-inventory-status]")!.textContent,
+        ).toContain("inventory.item_equipped");
+        expect(messages).toEqual([]);
+      } finally {
+        vi.unstubAllGlobals();
+        vi.stubGlobal(
+          "IntersectionObserver",
+          class {
+            observe() {}
+            unobserve() {}
+            disconnect() {}
+          },
+        );
+      }
+    });
+
     it("shows the rarity word at the top of each tile", async () => {
       await open("skins");
       expect(
@@ -608,8 +671,13 @@ describe("Inventory In game tab", () => {
     it("Your look counts custom and default effect slots", async () => {
       new UserSettings().setSelectedEffectName("transportShipTrail", "smoke");
       await open("skins");
-      const summary = modal.querySelector("[data-your-look-effects-summary]")!;
+      const effects = modal.querySelector('[data-your-look-slot="effects"]')!;
+      const summary = effects.querySelector("[data-your-look-value]")!;
       expect(summary.textContent).toContain("inventory.effects_summary");
+      // Said once: the swatches are hidden from screen readers.
+      expect(
+        effects.textContent!.split("inventory.effects_summary").length - 1,
+      ).toBe(1);
       expect(
         modal.querySelectorAll("[data-your-look-effect-swatch]").length,
       ).toBe(9);
@@ -678,9 +746,31 @@ describe("Inventory In game tab", () => {
       expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).toBeNull();
     });
 
-    it("drops a remembered purchase that did not go through", async () => {
+    it("keeps the record while the item isn't owned yet, until it lapses", async () => {
       rememberPendingEquip("in-game-test-player", "crown:sale_crown");
       await open("crowns");
+      // A profile read before the purchase landed: nothing offered, kept.
+      expect(modal.querySelector("inventory-buy-dialog")).toBeNull();
+      expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).not.toBeNull();
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", {
+          detail: makeUser([...OWNED, "crown:sale_crown"]),
+        }),
+      );
+      await settle(modal);
+      expect(
+        modal.querySelector("inventory-buy-dialog [data-buy-equip-now]"),
+      ).not.toBeNull();
+      expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).toBeNull();
+    });
+
+    it("drops a remembered purchase once it lapses", async () => {
+      rememberPendingEquip(
+        "in-game-test-player",
+        "crown:sale_crown",
+        Date.now() - PENDING_EQUIP_TTL_MS - 1,
+      );
+      await open("crowns", makeUser([...OWNED, "crown:sale_crown"]));
       expect(modal.querySelector("inventory-buy-dialog")).toBeNull();
       expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).toBeNull();
     });

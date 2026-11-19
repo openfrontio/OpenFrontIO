@@ -39,8 +39,9 @@ import {
   itemStateOf,
 } from "./components/inventory/ItemState";
 import {
+  clearPendingEquip,
+  peekPendingEquip,
   rememberPendingEquip,
-  takePendingEquip,
 } from "./components/inventory/PendingEquip";
 import "./components/InventoryLoadoutBar";
 import type {
@@ -145,6 +146,9 @@ export class InventoryModal extends BaseModal {
    * tiles and the buy dialog re-read them. */
   @state() private priceEpoch = 0;
   private saleEndTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The phone status line's message ("Hex Grid equipped"). */
+  @state() private statusMessage = "";
+  private statusTimer: ReturnType<typeof setTimeout> | null = null;
 
   private cosmetics: Cosmetics | null = null;
   private userSettings: UserSettings = new UserSettings();
@@ -317,12 +321,14 @@ export class InventoryModal extends BaseModal {
       return;
     }
     if (this.cosmetics === null) return;
-    const key = takePendingEquip(this.userMeResponse.player.publicId);
+    const key = peekPendingEquip(this.userMeResponse.player.publicId);
     if (key === null) return;
     const owned = this.resolvedItems().find(
       (item) => item.key === key && item.relationship === "owned",
     );
+    // Not owned yet: the purchase may still be landing. Keep the record.
     if (owned === undefined) return;
+    clearPendingEquip();
     this.buying = owned;
     this.buyingBought = true;
   }
@@ -694,9 +700,13 @@ export class InventoryModal extends BaseModal {
     return entries;
   }
 
+  /** Owned items in a grid, counted as its tiles are (a pattern's colours
+   * share one tile). */
   private ownedCount(category: GridCategory | { slot: string }): number {
-    return this.itemsFor(category).filter(
-      (item) => item.relationship === "owned" && item.cosmetic !== null,
+    return groupCosmeticVariants(
+      this.itemsFor(category).filter(
+        (item) => item.relationship === "owned" && item.cosmetic !== null,
+      ),
     ).length;
   }
 
@@ -872,7 +882,7 @@ export class InventoryModal extends BaseModal {
     return html`<input
       data-inventory-search
       type="search"
-      class="order-last min-h-11 w-full min-w-0 basis-full rounded-lg sm:order-none sm:flex-1 sm:basis-0 border border-white/10 bg-black/40 px-3 text-sm text-white placeholder-white/40 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 sm:max-w-xs"
+      class="order-last min-h-11 w-full min-w-0 basis-full rounded-lg border border-white/10 bg-black/40 px-3 text-sm text-white placeholder-white/40 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
       placeholder=${translateText("inventory.search_owned")}
       aria-label=${translateText("inventory.search_owned")}
       .value=${this.search}
@@ -1042,6 +1052,15 @@ export class InventoryModal extends BaseModal {
           ></o-button>`,
         })}
         ${this.renderTopTabs()}
+        <p
+          data-inventory-status
+          role="status"
+          class="md:hidden ${
+            this.statusMessage === "" ? "sr-only" : ""
+          } mx-3 mt-2 rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 text-center text-sm font-semibold text-white"
+        >
+          ${this.statusMessage}
+        </p>
       </div>
       ${
         this.buying
@@ -1419,7 +1438,21 @@ export class InventoryModal extends BaseModal {
     this.buyingBought = false;
   }
 
+  /**
+   * A short confirmation ("Hex Grid equipped"). The page toast sits over
+   * the Inventory's title on phones, so there it shows in the Inventory's
+   * own status line under the tabs instead.
+   */
   private showMessage(message: string) {
+    if (window.matchMedia?.("(max-width: 767px)").matches) {
+      this.statusMessage = message;
+      if (this.statusTimer !== null) clearTimeout(this.statusTimer);
+      this.statusTimer = setTimeout(() => {
+        this.statusTimer = null;
+        this.statusMessage = "";
+      }, 2000);
+      return;
+    }
     window.dispatchEvent(
       new CustomEvent("show-message", {
         detail: { message, duration: 2000 },

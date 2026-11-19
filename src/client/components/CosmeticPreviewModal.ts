@@ -44,7 +44,8 @@ interface PaletteOption {
  * - Skin colors: only the palette variants authored for that pattern in the catalog.
  * - Team colors: what the cosmetic looks like in a team game, where the fill is the
  *   team color and a pattern keeps its palette's secondary color.
- * - Backdrop click & Escape key dismissal; optional purchase action in the header.
+ * - Backdrop click & Escape key dismissal. Preview only: buying happens in the
+ *   Store card or the Inventory buy dialog that opened it.
  */
 @customElement("cosmetic-preview-modal")
 export class CosmeticPreviewModal extends LitElement {

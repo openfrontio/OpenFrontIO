@@ -224,7 +224,7 @@ export class InventoryItemTile
           title=${label}
           aria-label=${label}
           aria-pressed=${isActive ? "true" : "false"}
-          class="flex h-11 w-9 items-center justify-center rounded-full"
+          class="flex h-11 w-11 items-center justify-center rounded-full"
           @click=${(event: Event) => {
             event.stopPropagation();
             this.onVariantActivate?.(variant);

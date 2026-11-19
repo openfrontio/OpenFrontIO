@@ -1,11 +1,12 @@
 /**
  * "Equip now" across a purchase. A currency purchase reloads the page when it
  * succeeds (purchaseCosmetic), so the Inventory remembers which item was
- * being bought, per tab, before it starts. When the Inventory next has the
+ * being bought, per tab, before it starts. Whenever the Inventory has the
  * player's ownership (after the reload, or straight away when the purchase
- * broadcast a fresh profile instead) it takes the record back: an item now
- * owned gets the "Equip now" offer; anything else is dropped. A record from
- * another account, or older than PENDING_EQUIP_TTL_MS, is dropped too.
+ * broadcast a fresh profile instead) it checks the record: once the item is
+ * owned it offers "Equip now" and clears the record. A read where the item
+ * isn't owned yet keeps it; it lapses after PENDING_EQUIP_TTL_MS, and one
+ * from another account is dropped.
  */
 export const PENDING_EQUIP_KEY = "openfront-pending-equip";
 export const PENDING_EQUIP_TTL_MS = 10 * 60 * 1000;
@@ -31,16 +32,19 @@ export function rememberPendingEquip(
   }
 }
 
-/** Reads and clears the record; the item key, if it is this player's and
- * still fresh. */
-export function takePendingEquip(
+/**
+ * The remembered item's key, if the record is this player's and still fresh;
+ * a stale or foreign record is dropped. The record itself stays until
+ * clearPendingEquip(): a profile read before the purchase has landed (or
+ * before the reload) must not lose it.
+ */
+export function peekPendingEquip(
   player: string,
   now: number = Date.now(),
 ): string | null {
   let raw: string | null = null;
   try {
     raw = sessionStorage.getItem(PENDING_EQUIP_KEY);
-    sessionStorage.removeItem(PENDING_EQUIP_KEY);
   } catch {
     return null;
   }
@@ -48,16 +52,25 @@ export function takePendingEquip(
   try {
     const parsed = JSON.parse(raw) as Partial<PendingEquip>;
     if (
-      parsed.player !== player ||
-      typeof parsed.key !== "string" ||
-      typeof parsed.at !== "number" ||
-      now - parsed.at > PENDING_EQUIP_TTL_MS
+      parsed.player === player &&
+      typeof parsed.key === "string" &&
+      typeof parsed.at === "number" &&
+      now - parsed.at <= PENDING_EQUIP_TTL_MS
     ) {
-      return null;
+      return parsed.key;
     }
-    return parsed.key;
   } catch {
-    return null;
+    // Unreadable: dropped below.
+  }
+  clearPendingEquip();
+  return null;
+}
+
+export function clearPendingEquip(): void {
+  try {
+    sessionStorage.removeItem(PENDING_EQUIP_KEY);
+  } catch {
+    // Storage blocked: nothing was stored either.
   }
 }
 

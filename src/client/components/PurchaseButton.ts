@@ -248,7 +248,7 @@ export function renderPrice(
       >
       <s
         data-sale-tag
-        class="text-[11px] font-semibold text-white/55 decoration-aquarius decoration-2"
+        class="text-xs font-semibold text-white/55 decoration-aquarius decoration-2"
         ><span class="sr-only">${translateText("store.sale_was")} </span
         >${listPrice!.toLocaleString()}</s
       > </span
