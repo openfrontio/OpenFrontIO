@@ -39,6 +39,13 @@ import {
   purchaseWithCurrency,
 } from "./Api";
 import { isDesktopShell } from "./DesktopShell";
+import {
+  COSMETICS_CHANGED,
+  EXPERIMENTS_CHANGED,
+  experimentsState,
+  setCatalogGeneration,
+  waitForExperiments,
+} from "./Experiments";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import {
   classifyPurchaseReturn,
@@ -48,6 +55,7 @@ import {
   startPlayPurchase,
   startPurchase,
 } from "./Payments";
+import { storePlatform } from "./StoreTracking";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
 import { UserSettings } from "./UserSettings";
 import { translateText } from "./Utils";
@@ -67,6 +75,16 @@ let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
 let __cosmeticsCache: Cosmetics | null = null;
 let __cosmeticsFetchedAt = 0;
+// The store experiments generation (Experiments.ts) the cached catalog was
+// fetched for: `undefined` while its request still waits for the player's
+// group, null when it went out without it (the wait timed out).
+let __cosmeticsGeneration: number | null | undefined = undefined;
+
+/**
+ * How long a catalog fetch waits for the player's store experiment group
+ * before going out plain. With no test running the answer is near-instant.
+ */
+export const EXPERIMENTS_WAIT_MS = 1500;
 
 /** How long a fetched catalog is trusted before the store refetches it. */
 export const COSMETICS_STALE_MS = 60_000;
@@ -614,7 +632,8 @@ export async function purchaseCosmetic(
   // ResolvedCosmetic isn't a discriminated union, so the guard above doesn't
   // narrow cosmetic's type. Subscriptions are excluded by the runtime check.
   const priced = c as Pattern | Flag | Pack;
-  const price = currentPrice(priced, method) ?? 0;
+  const shownPrice = currentPrice(priced, method);
+  const price = shownPrice ?? 0;
   const userMe = await getUserMe();
   if (userMe === false) {
     await showInGameAlert(translateText("store.login_required"));
@@ -674,20 +693,20 @@ export async function purchaseCosmetic(
   }
 
   const cosmeticType = resolved.type as
-    | "pattern"
-    | "skin"
-    | "flag"
-    | "crown"
-    | "effect";
+    "pattern" | "skin" | "flag" | "crown" | "effect";
   const result = await purchaseWithCurrency(
     cosmeticType,
     c.name,
     method,
     colorPaletteName,
     placement,
+    { expectedAmount: shownPrice, platform: storePlatform() },
   );
   if (!result.ok) {
     switch (result.code) {
+      case "price_changed":
+        await priceChanged();
+        return;
       case "insufficient_balance": {
         // The balance moved since the pre-check: re-read it for the shortfall,
         // the same way the pack path does. Broadcast as well as re-read —
@@ -748,6 +767,17 @@ export async function purchaseCosmetic(
   );
   invalidateUserMe();
   window.location.reload();
+}
+
+/**
+ * The server refused to charge more than the store showed (409
+ * price_changed): nothing was charged. Refetch the catalog so the store and
+ * the homepage banner show the price as it is now, and say so.
+ */
+async function priceChanged(): Promise<void> {
+  const reload = reloadCosmetics();
+  await showInGameAlert(translateText("store.price_changed"));
+  await reload;
 }
 
 /**
@@ -813,7 +843,10 @@ async function purchasePack(
     return insufficient(balance);
   }
 
-  const result = await purchaseCosmeticPack(pack.name, placement);
+  const result = await purchaseCosmeticPack(pack.name, placement, {
+    expectedAmount: price,
+    platform: storePlatform(),
+  });
   if (result.ok) {
     const charged = Number(result.data.amount);
     await showInGameAlert(
@@ -829,6 +862,9 @@ async function purchasePack(
     return;
   }
   switch (result.code) {
+    case "price_changed":
+      await priceChanged();
+      return;
     case "insufficient_balance": {
       // The balance moved since the pre-check: re-read it for the shortfall,
       // and re-broadcast so the open Store stops showing the old balance.
@@ -1025,19 +1061,39 @@ export function tierListingRail(): TierListingRail {
   return paymentsProvider() === "steam" ? "steam" : "web";
 }
 
-function cosmeticsJsonUrl(): string {
-  return `${getApiBase()}/cosmetics.json?rail=${tierListingRail()}`;
+function cosmeticsJsonUrl(cohort: string | null): string {
+  const rail = tierListingRail();
+  const base = `${getApiBase()}/cosmetics.json?rail=${rail}`;
+  // A store experiment cohort's catalog is a web-rail thing; Steam never
+  // sends one.
+  return cohort !== null && rail === "web"
+    ? `${base}&cohort=${encodeURIComponent(cohort)}`
+    : base;
 }
 
 export async function fetchCosmetics(): Promise<Cosmetics | null> {
   if (__cosmetics !== null) {
     return __cosmetics;
   }
+  __cosmeticsGeneration = undefined;
+  // A holder, so the body can recognise its own request as the cached one
+  // (filled in before any await inside can resume).
+  const self: { request?: Promise<Cosmetics | null> } = {};
   const request = (async () => {
     try {
-      const response = await fetch(cosmeticsJsonUrl(), {
-        signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
-      });
+      // The player's experiment group decides which catalog to fetch. If it
+      // isn't known in time, the plain catalog goes out untagged, sends no
+      // exposure, and is refetched when the group lands.
+      const experiments = await waitForExperiments(EXPERIMENTS_WAIT_MS);
+      if (__cosmetics === self.request) {
+        __cosmeticsGeneration = experiments?.generation ?? null;
+      }
+      const response = await fetch(
+        cosmeticsJsonUrl(experiments?.catalogCohort ?? null),
+        {
+          signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
+        },
+      );
       if (!response.ok) {
         console.warn(`HTTP error! status: ${response.status}`);
         return null;
@@ -1047,17 +1103,24 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
         console.error(`Invalid cosmetics: ${result.error.message}`);
         return null;
       }
+      // A request replaced meanwhile (a refetch for a new group) must not
+      // overwrite the newer catalog when it lands last.
+      if (__cosmetics !== self.request && __cosmetics !== null) {
+        return result.data;
+      }
       const patternKeys = Object.keys(result.data.patterns).sort();
       const hashInput = patternKeys.join(",");
       __cosmeticsHash = simpleHash(hashInput);
       __cosmeticsCache = result.data;
       __cosmeticsFetchedAt = Date.now();
+      setCatalogGeneration(experiments?.generation ?? null);
       return result.data;
     } catch (error) {
       console.warn("Error getting cosmetics:", error);
       return null;
     }
   })();
+  self.request = request;
   __cosmetics = request;
   void request.then((result) => {
     if (result === null && __cosmetics === request) {
@@ -1066,6 +1129,34 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
   });
   return request;
 }
+
+/**
+ * Drops the catalog, fetches it afresh, and tells the open Store and the
+ * homepage banner (COSMETICS_CHANGED): invalidating alone isn't enough, since
+ * they keep the catalog object they rendered. A failed fetch dispatches
+ * nothing, so they keep what they show.
+ */
+export async function reloadCosmetics(): Promise<Cosmetics | null> {
+  invalidateCosmetics();
+  const fresh = await fetchCosmetics();
+  if (fresh !== null) {
+    document.dispatchEvent(
+      new CustomEvent<Cosmetics>(COSMETICS_CHANGED, { detail: fresh }),
+    );
+  }
+  return fresh;
+}
+
+// The player's experiment group landed or changed (a late answer, a sign-in,
+// an account switch, a logout): a catalog fetched for another group, or
+// without one, is refetched in every group, control included, so neither
+// group keeps a catalog that can never send exposures. A request still
+// waiting for the group picks it up itself.
+document.addEventListener(EXPERIMENTS_CHANGED, () => {
+  if (__cosmetics === null || __cosmeticsGeneration === undefined) return;
+  if (__cosmeticsGeneration === experimentsState()?.generation) return;
+  void reloadCosmetics();
+});
 
 /** A tier by name, listed on this rail or not. */
 export function subscriptionTier(

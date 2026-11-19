@@ -3046,6 +3046,7 @@
     "preview_salvo_toggle": "Toggle Salvo Mode",
     "preview_skin_colors": "Skin colors",
     "preview_team_colors": "Team colors",
+    "price_changed": "The price changed. Check the new price and try again. You were not charged.",
     "price_per_month": "/mo",
     "purchase_currency": "Purchase {currency}",
     "purchase_failed": "Purchase failed. Please try again.",

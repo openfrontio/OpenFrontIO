@@ -17,6 +17,11 @@ import {
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../src/client/Cosmetics";
+import {
+  COSMETICS_CHANGED,
+  publishExperimentsForTest,
+  resetExperimentsForTest,
+} from "../../src/client/Experiments";
 import { initNavigation } from "../../src/client/Navigation";
 import { saleCoversEverything, type StoreModal } from "../../src/client/Store";
 import type { StoreTracker } from "../../src/client/StoreTracking";
@@ -2584,5 +2589,98 @@ describe("store analytics", () => {
     await vi.waitFor(() =>
       expect(FakeIO.instances.some((io) => io.observed.has(el))).toBe(true),
     );
+  });
+  // Store experiments: a refetched catalog (the player's group landed late,
+  // or a purchase met a changed price) re-renders the open store, and the
+  // flash card gets an exposure watcher of its own, so analytics never count
+  // the card twice in one page view.
+  it("re-renders on a refetched catalog without counting the flash card twice", async () => {
+    resetExperimentsForTest();
+    const endsAt = new Date(Date.now() + 3_600_000).toISOString();
+    const flashSale = {
+      id: "40",
+      name: "Hot sale",
+      percentOff: 35,
+      endsAt,
+      kind: "flash" as const,
+    };
+    const plain = {
+      patterns: {},
+      flags: {},
+      promotions: [flashSale],
+    } as unknown as Cosmetics;
+    vi.mocked(fetchCosmetics).mockResolvedValue(plain);
+    const zap: ResolvedCosmetic = {
+      ...red,
+      cosmetic: {
+        ...pattern,
+        name: "zap",
+        priceHard: 52,
+        listPriceHard: 80,
+        promotion: flashSale,
+      } as never,
+      key: "pattern:zap:red",
+    };
+    resolvedCatalog = [red, zap];
+    store = document.createElement("store-modal") as StoreModal;
+    store.inline = true;
+    document.body.appendChild(store);
+    await store.updateComplete;
+    store.open({ tab: "cosmetics", sub: "sale" });
+    const modal = store;
+    await vi.waitFor(() =>
+      expect(modal.querySelector("[data-store-flash]")).toBeTruthy(),
+    );
+    const hero = modal.querySelector("[data-store-flash]")!;
+    // Watched by the tracker (its card) and by the exposure watcher (the hero).
+    await vi.waitFor(() =>
+      expect(FakeIO.instances.some((io) => io.observed.has(hero))).toBe(true),
+    );
+    const heroCard = hero.querySelector("[data-store-product]")!;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    setVisible(heroCard, true);
+    vi.advanceTimersByTime(1000);
+
+    // The Deeper group's catalog lands.
+    const deeper = {
+      ...plain,
+      promotions: [{ ...flashSale, percentOff: 45 }],
+    } as unknown as Cosmetics;
+    vi.mocked(fetchCosmetics).mockResolvedValue(deeper);
+    vi.mocked(resolveCosmetics).mockClear();
+    publishExperimentsForTest(
+      [
+        {
+          key: "daily_deal_depth_1",
+          surface: "flash_sale_depth",
+          variant: "deeper",
+          counted: true,
+        },
+      ],
+      "daily_deal_depth_1.deeper",
+    );
+    document.dispatchEvent(
+      new CustomEvent(COSMETICS_CHANGED, { detail: deeper }),
+    );
+    await vi.waitFor(() =>
+      expect(vi.mocked(resolveCosmetics).mock.calls[0]?.[0]).toBe(deeper),
+    );
+    await modal.updateComplete;
+    expect(modal.querySelector("[data-store-flash]")!.textContent).toContain(
+      "store.flash_sale_hero_title",
+    );
+
+    // Seen again after the re-render: still one impression this page view.
+    setVisible(heroCard, false);
+    setVisible(heroCard, true);
+    vi.advanceTimersByTime(1000);
+    modal.close();
+    expect(
+      sent().filter(
+        (e: { type: string; item: string }) =>
+          e.type === "impression" && e.item === "pattern:zap",
+      ),
+    ).toHaveLength(1);
+    resetExperimentsForTest();
   });
 });

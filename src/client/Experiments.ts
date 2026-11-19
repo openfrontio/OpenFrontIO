@@ -1,0 +1,426 @@
+import {
+  type ExperimentAssignment,
+  type ExperimentExposureBody,
+  type ExperimentExposureSurface,
+  ExperimentsResponseSchema,
+} from "@openfront/shared/ApiSchemas";
+import { getApiBase } from "./ApiBase";
+import { getAuthHeader, peekAuthHeader, userAuth } from "./Auth";
+import { storePlatform } from "./StoreTracking";
+import { lastUserMeResponse } from "./UserMeBroadcast";
+
+// Store experiments: which test group the signed-in player is in, the catalog
+// cohort that group is priced with, and the exposures that count them in a
+// test (infra lib/Experiments.ts). Small and safe for the homepage.
+//
+// Fail safe throughout: signed out, Steam, or any error from the endpoint is
+// "no experiments": the plain catalog, no exposures, purchases unchanged.
+// Nothing here ever blocks the store.
+
+/** The surface whose tests price the daily flash deal. */
+export const FLASH_SALE_DEPTH = "flash_sale_depth";
+
+/** Dispatched on `document` each time a new set of assignments is known. */
+export const EXPERIMENTS_CHANGED = "experimentsChanged";
+/** Dispatched on `document` (Cosmetics.ts) when a refetched catalog lands. */
+export const COSMETICS_CHANGED = "cosmeticsChanged";
+
+const REQUEST_TIMEOUT_MS = 5_000;
+// Same rule as a store analytics impression (StoreTracking.ts).
+const EXPOSURE_MS = 1000;
+const EXPOSURE_RATIO = 0.5;
+const EXPOSURE_STORAGE_PREFIX = "experimentExposure:";
+
+export interface ExperimentsState {
+  /** Bumped by every published state; a catalog is tagged with it. */
+  generation: number;
+  /** The JWT subject the state was loaded for, or null when signed out. */
+  account: string | null;
+  assignments: ExperimentAssignment[];
+  catalogCohort: string | null;
+}
+
+let generation = 0;
+let current: {
+  account: string | null;
+  promise: Promise<ExperimentsState>;
+} | null = null;
+let published: ExperimentsState | null = null;
+let expected = false;
+const publishWaiters = new Set<(state: ExperimentsState) => void>();
+// The experiments generation of the catalog the store and banner render,
+// set by Cosmetics.ts. Null for a catalog fetched before the assignment was
+// known: it never sends an exposure, in any group.
+let catalogGeneration: number | null = null;
+
+/**
+ * Main calls this before auth starts, so a catalog fetched meanwhile waits
+ * (briefly) for the player's group instead of going out without it. Without
+ * it, as in tests and other entry points, the catalog never waits.
+ */
+export function expectExperiments(): void {
+  expected = true;
+}
+
+function platform(): "web" | "crazygames" | "steam" {
+  return storePlatform();
+}
+
+async function currentAccount(): Promise<{
+  account: string;
+  auth: string;
+} | null> {
+  // The cached token decides signed-in without ever starting a refresh: a
+  // signed-out player makes no auth call and no experiments call.
+  if (peekAuthHeader() === "") return null;
+  const auth = await userAuth();
+  if (auth === false) return null;
+  return { account: auth.claims.sub, auth: `Bearer ${auth.jwt}` };
+}
+
+async function fetchAssignments(
+  auth: string,
+): Promise<Pick<ExperimentsState, "assignments" | "catalogCohort">> {
+  const empty = { assignments: [], catalogCohort: null };
+  try {
+    const url = new URL(`${getApiBase()}/users/@me/experiments`);
+    url.searchParams.set("platform", platform());
+    const response = await fetch(url.toString(), {
+      headers: { Authorization: auth },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    if (!response.ok) return empty;
+    const parsed = ExperimentsResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.warn("experiments: unexpected response shape");
+      return empty;
+    }
+    return parsed.data;
+  } catch {
+    // Offline, timed out, or blocked: the plain store.
+    return empty;
+  }
+}
+
+function publish(state: ExperimentsState): void {
+  published = state;
+  for (const resolve of publishWaiters) resolve(state);
+  publishWaiters.clear();
+  document.dispatchEvent(
+    new CustomEvent(EXPERIMENTS_CHANGED, { detail: state }),
+  );
+  exposureWatcher.recheck();
+}
+
+/**
+ * The player's test groups, memoised per account. A different account (a
+ * sign-in, an account switch, a logout) drops the memo and loads afresh;
+ * when that load lands, EXPERIMENTS_CHANGED tells Cosmetics.ts to refetch
+ * the catalog. Signed out, or on Steam, it makes no request at all.
+ */
+export async function loadExperiments(): Promise<ExperimentsState> {
+  const who = await currentAccount();
+  const account = who?.account ?? null;
+  if (current !== null && current.account === account) return current.promise;
+  // Current before the body runs: signed out or on Steam it finishes with no
+  // await, and must still find itself current to publish.
+  const entry = { account } as NonNullable<typeof current>;
+  current = entry;
+  entry.promise = (async () => {
+    const result =
+      who === null || platform() === "steam"
+        ? { assignments: [], catalogCohort: null }
+        : await fetchAssignments(who.auth);
+    const state: ExperimentsState = {
+      generation: ++generation,
+      account,
+      assignments: result.assignments,
+      // The cohort is a web-rail catalog thing: Steam never sends one.
+      catalogCohort: platform() === "steam" ? null : result.catalogCohort,
+    };
+    // Only the latest account's answer is published: one that lands after
+    // a switch was made for a player who is no longer signed in.
+    if (current === entry) publish(state);
+    return state;
+  })();
+  return entry.promise;
+}
+
+/**
+ * The player's groups once known, or null if they aren't within `ms`. A
+ * catalog fetched on null goes out plain and untagged, and is refetched when
+ * the groups land.
+ */
+export function waitForExperiments(
+  ms: number,
+): Promise<ExperimentsState | null> {
+  let pending: Promise<ExperimentsState>;
+  if (current !== null) {
+    pending = current.promise;
+  } else if (expected) {
+    pending = new Promise((resolve) => publishWaiters.add(resolve));
+  } else {
+    return Promise.resolve(null);
+  }
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), ms);
+  });
+  return Promise.race([pending, timeout]).finally(() => clearTimeout(timer));
+}
+
+/** The latest published groups, or null before the first load lands. */
+export function experimentsState(): ExperimentsState | null {
+  return published;
+}
+
+/** The player's group in a test, or null when not in it. */
+export function experimentAssignment(key: string): ExperimentAssignment | null {
+  return published?.assignments.find((a) => a.key === key) ?? null;
+}
+
+/** The catalog cohort to fetch cosmetics.json with, or null. */
+export function catalogCohort(): string | null {
+  return published?.catalogCohort ?? null;
+}
+
+/** Cosmetics.ts: the experiments generation of the catalog now in use. */
+export function setCatalogGeneration(gen: number | null): void {
+  catalogGeneration = gen;
+  exposureWatcher.recheck();
+}
+
+/**
+ * Whether the catalog on screen was fetched with the player's group known
+ * (and is still that group's): only then may it send an exposure.
+ */
+export function assignmentKnown(): boolean {
+  return (
+    published !== null &&
+    catalogGeneration !== null &&
+    catalogGeneration === published.generation
+  );
+}
+
+// Per page load: one exposure per test per account is enough.
+const sentThisPage = new Set<string>();
+
+function exposureStorageKey(key: string): string | null {
+  const last = lastUserMeResponse()?.response;
+  if (!last) return null;
+  return `${EXPOSURE_STORAGE_PREFIX}${last.player.publicId}:${key}`;
+}
+
+function storedExposure(key: string): boolean {
+  const storageKey = exposureStorageKey(key);
+  if (storageKey === null) return false;
+  try {
+    return localStorage.getItem(storageKey) !== null;
+  } catch {
+    return false;
+  }
+}
+
+function rememberExposure(key: string): void {
+  const storageKey = exposureStorageKey(key);
+  if (storageKey === null) return;
+  try {
+    localStorage.setItem(storageKey, "1");
+  } catch {
+    // Storage blocked: the per-page dedupe and the server's still hold.
+  }
+}
+
+/** The flash-deal tests that count this player, as the catalog shows them. */
+function exposableAssignments(): ExperimentAssignment[] {
+  if (!assignmentKnown() || platform() === "steam") return [];
+  return (published?.assignments ?? []).filter(
+    (a) => a.surface === FLASH_SALE_DEPTH && a.counted,
+  );
+}
+
+/**
+ * The player saw the tested deal in their group (the flash card in the store,
+ * or the homepage deal banner). Sent once per test per page load, and not
+ * again on later loads once the server took it. A failed POST is not
+ * retried. Resolves to whether a request went out.
+ */
+export async function recordExposure(
+  key: string,
+  surface: ExperimentExposureSurface,
+): Promise<boolean> {
+  const assignment = exposableAssignments().find((a) => a.key === key);
+  if (assignment === undefined || published === null) return false;
+  const pageKey = `${published.account}:${key}`;
+  if (sentThisPage.has(pageKey) || storedExposure(key)) return false;
+  sentThisPage.add(pageKey);
+  const where = platform();
+  if (where === "steam") return false;
+  const body: ExperimentExposureBody = {
+    platform: where,
+    exposures: [{ key, variant: assignment.variant, surface }],
+  };
+  try {
+    const auth = await getAuthHeader();
+    if (auth === "") return false;
+    const response = await fetch(
+      `${getApiBase()}/users/@me/experiments/exposures`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: auth },
+        body: JSON.stringify(body),
+      },
+    );
+    if (response.ok) rememberExposure(key);
+  } catch {
+    // Not retried; the purchase-time exposure still catches buyers.
+  }
+  return true;
+}
+
+interface Watched {
+  surface: ExperimentExposureSurface;
+  timer: ReturnType<typeof setTimeout> | null;
+  visible: boolean;
+}
+
+/**
+ * Exposures' own trigger, apart from store analytics: the flash card
+ * (`[data-store-flash]`) or the homepage deal banner
+ * (`[data-store-flash-banner]`) half visible for a full second. StoreTracker's
+ * impression dedupe is untouched, so a catalog refetch never re-counts an
+ * analytics impression; this watcher re-checks after every refetch instead,
+ * so a card already on screen can send its exposure once the group is known.
+ */
+export class ExposureWatcher {
+  private observer: IntersectionObserver | null = null;
+  private readonly watched = new Map<Element, Watched>();
+  private listening = false;
+
+  observe(el: Element, surface: ExperimentExposureSurface): void {
+    this.release();
+    if (typeof IntersectionObserver === "undefined") return;
+    if (this.watched.get(el)?.surface === surface) return;
+    this.listen();
+    this.observer ??= new IntersectionObserver(
+      (entries) => this.onEntries(entries),
+      { threshold: EXPOSURE_RATIO },
+    );
+    this.watched.set(el, { surface, timer: null, visible: false });
+    this.observer.observe(el);
+  }
+
+  unobserve(el: Element): void {
+    const w = this.watched.get(el);
+    if (w === undefined) return;
+    this.stopTimer(w);
+    this.observer?.unobserve(el);
+    this.watched.delete(el);
+  }
+
+  /** Stops watching everything (the observer is made afresh on next use). */
+  dispose(): void {
+    for (const w of this.watched.values()) this.stopTimer(w);
+    this.watched.clear();
+    this.observer?.disconnect();
+    this.observer = null;
+  }
+
+  /** Re-arms every element already in view (after a refetch or a load). */
+  recheck(): void {
+    this.release();
+    for (const w of this.watched.values()) {
+      if (w.visible && w.timer === null) this.startTimer(w);
+    }
+  }
+
+  private release(): void {
+    for (const [el, w] of this.watched) {
+      if (el.isConnected) continue;
+      this.stopTimer(w);
+      this.observer?.unobserve(el);
+      this.watched.delete(el);
+    }
+  }
+
+  private listen(): void {
+    if (this.listening) return;
+    this.listening = true;
+    document.addEventListener(COSMETICS_CHANGED, () => this.recheck());
+    document.addEventListener("visibilitychange", () => {
+      for (const w of this.watched.values()) {
+        if (document.visibilityState === "hidden") this.stopTimer(w);
+        else if (w.visible) this.startTimer(w);
+      }
+    });
+  }
+
+  private onEntries(entries: IntersectionObserverEntry[]): void {
+    for (const entry of entries) {
+      const w = this.watched.get(entry.target);
+      if (w === undefined) continue;
+      this.stopTimer(w);
+      w.visible =
+        entry.isIntersecting && entry.intersectionRatio >= EXPOSURE_RATIO;
+      if (w.visible) this.startTimer(w);
+    }
+  }
+
+  private startTimer(w: Watched): void {
+    this.stopTimer(w);
+    // Disarmed until the catalog on screen was fetched with the group known.
+    if (document.visibilityState === "hidden") return;
+    if (exposableAssignments().length === 0) return;
+    w.timer = setTimeout(() => {
+      w.timer = null;
+      for (const a of exposableAssignments()) {
+        void recordExposure(a.key, w.surface);
+      }
+    }, EXPOSURE_MS);
+  }
+
+  private stopTimer(w: Watched): void {
+    if (w.timer === null) return;
+    clearTimeout(w.timer);
+    w.timer = null;
+  }
+}
+
+export const exposureWatcher = new ExposureWatcher();
+
+// An account change (sign-in, switch, logout) reloads the groups for the new
+// account; the same account answers from the memo with no request.
+document.addEventListener("userMeResponse", () => {
+  if (current === null) return;
+  void loadExperiments();
+});
+
+/** Tests only. */
+export function resetExperimentsForTest(): void {
+  generation = 0;
+  current = null;
+  published = null;
+  expected = false;
+  catalogGeneration = null;
+  publishWaiters.clear();
+  sentThisPage.clear();
+  exposureWatcher.dispose();
+}
+
+/** Tests only: publish groups as if loaded, and tag the catalog with them. */
+export function publishExperimentsForTest(
+  assignments: ExperimentAssignment[],
+  cohort: string | null = null,
+  account: string | null = "test-account",
+): ExperimentsState {
+  const state: ExperimentsState = {
+    generation: ++generation,
+    account,
+    assignments,
+    catalogCohort: cohort,
+  };
+  current = { account, promise: Promise.resolve(state) };
+  publish(state);
+  setCatalogGeneration(state.generation);
+  return state;
+}

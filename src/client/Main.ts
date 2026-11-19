@@ -168,6 +168,7 @@ import {
 } from "./TurnstileToken";
 // Before the first userMeResponse, for the modals that load after it.
 import "./UserMeBroadcast";
+import { expectExperiments, loadExperiments } from "./Experiments";
 import { classicReplayHref } from "./replay/ReplayEntry";
 import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
 import type { ScenarioEditor } from "./scenario/ScenarioEditor";
@@ -424,6 +425,9 @@ class Client {
     // URL, so take the value while it is still the URL we were served at.
     // See PagePin.ts.
     capturePagePin();
+    // A catalog fetched before auth settles waits (briefly) for the player's
+    // store experiment group rather than going out without it.
+    expectExperiments();
     document.documentElement.style.setProperty(
       "--hud-opacity",
       String(this.userSettings.hudOpacity()),
@@ -1135,7 +1139,11 @@ class Client {
     });
 
     const initialAuthGeneration = authGeneration;
-    if ((await userAuth()) === false) {
+    const initialAuth = await userAuth();
+    // The player's store experiment groups, in parallel with the profile.
+    // Signed out (or on Steam) this settles at once with no request.
+    void loadExperiments();
+    if (initialAuth === false) {
       // Not logged in: apply the signed-out profile directly.
       applyUserMe(initialAuthGeneration)(false);
     } else {
