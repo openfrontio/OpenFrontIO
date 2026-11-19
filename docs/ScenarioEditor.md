@@ -258,6 +258,7 @@ Commands:
 | `end_terrain_edit`                    | Run the full terrain pass (see "Terrain")                          |
 | `set_owner`                           | Give a batch of tiles to a nation, or to nobody                    |
 | `place_structure`, `remove_structure` | Structure of a type and level at a tile                            |
+| `export_terrain`                      | Run the full terrain pass and write out the map files (below)      |
 | `finalize`                            | Prepare for export (below)                                         |
 
 ### Finalising for export
@@ -265,12 +266,15 @@ Commands:
 Export does not snapshot the engine being edited, because finalising cannot
 be undone. Instead:
 
-1. Copy the document, then run the full terrain pass on the editing engine
-   and write its terrain out as the map files. The worker handles commands
-   in order, so the files match the copy: every edit in the copy was sent
-   before the write. Writing only reads the terrain, so editing carries on
-   afterwards and goes only into the live document. The 16x map is
-   downscaled from the 4x one with the same minimap rule.
+1. Copy the document and, in the same step, send the editing worker one
+   `export_terrain` message. It runs the full terrain pass and writes the
+   terrain out as the map files. The worker handles each message to the end
+   before it starts the next, and in the order sent. So the write sees
+   exactly the edits sent before it, which are the edits in the copy, and
+   any edit sent after it waits until the files are written. Writing only
+   reads the terrain, so editing carries on afterwards and goes only into
+   the live document. The 16x map is downscaled from the 4x one with the
+   same minimap rule.
 2. Start a second engine on those map files, replay everything except
    terrain from the copy, send `finalize`, snapshot, and discard it.
 
@@ -308,9 +312,10 @@ start info, every client and every replay reaches the same state.
 
 `playable` is a field on the nation player, set by `set_nation`, so the
 snapshot stores it with the rest of the player. Before any takeover, the
-restore checks every assignment against the restored game: the nation
-exists, is playable, and is assigned only once. If any check fails, the
-restore fails. Every client runs the same restore, so a bad start fails the
+restore checks every assignment against the restored game and the start
+info: the nation exists, is playable, and is assigned only once, and the
+client is one of the start info's players. If any check fails, the restore
+fails. Every client runs the same restore, so a bad start fails the
 same way everywhere.
 
 Singleplayer is the same path with one assignment, through the existing
@@ -338,10 +343,13 @@ the editor when it ends. No upload.
   number of playable nations, which the host's client sends with the
   scenario.
 - The lobby shows the playable nations. The host assigns each joined player
-  to one. The game cannot start until every player has a nation.
+  to one. The game cannot start until every player has a nation. A player
+  who leaves the lobby loses their assignment, and their nation is free
+  again.
 - The server never fetches the bundle and does not simulate. It checks only
-  what it can see: every player has exactly one nation and no nation is
-  assigned twice. It then puts the scenario block in the start info and runs
+  what it can see: every player has exactly one nation, no nation is
+  assigned twice, and every assignment is for a player still in the lobby.
+  If any check fails, it refuses the start. It then puts the scenario block in the start info and runs
   the game as usual, so starting a scenario game adds no API dependency to
   the game servers.
 - Each client downloads the bundle by id and version, verifies the hash from
