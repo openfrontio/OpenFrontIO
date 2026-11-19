@@ -490,7 +490,7 @@ export class AccountModal extends BaseModal {
       >
         ${translateText("account_modal.edit_card")}
       </button>
-      <player-card size="account" .view=${view}></player-card>
+      <player-card size="account" animated .view=${view}></player-card>
       ${bar}
     </div>`;
   }

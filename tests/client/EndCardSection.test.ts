@@ -81,6 +81,12 @@ describe("<end-card-section>", () => {
     expect(q("player-card")).not.toBeNull();
   });
 
+  it("the end-screen card animates", async () => {
+    await render({ mode: "winner", view: VIEW });
+    const card = q("player-card") as unknown as { animated: boolean };
+    expect(card.animated).toBe(true);
+  });
+
   it("edit my card link only for card owners", async () => {
     await render({ mode: "winner", view: VIEW, canEdit: false });
     expect(q("[data-end-card-edit]")).toBeNull();

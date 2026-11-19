@@ -1,0 +1,21 @@
+{
+  "name": "bg_storm_front",
+  "product": null,
+  "rarity": "legendary",
+  "url": "/cosmetics/card-backgrounds/bg_storm-front.webp",
+  "animation": {
+    "kind": "layers",
+    "layers": [
+      {
+        "src": "/cosmetics/card-backgrounds/bg_storm-front_fx-flicker.png",
+        "effect": "flicker",
+        "rate": "medium"
+      },
+      {
+        "src": "/cosmetics/card-backgrounds/bg_storm-front_fx-drift.png",
+        "effect": "drift",
+        "period": 45
+      }
+    ]
+  }
+}
