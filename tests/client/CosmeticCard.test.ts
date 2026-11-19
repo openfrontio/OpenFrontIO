@@ -205,7 +205,7 @@ describe("CosmeticCard", () => {
     const main = card!.querySelector("[data-cosmetic-main]")!;
     const name = card!.querySelector("[data-cosmetic-name]")!;
 
-    // Positioned against a wrapper that starts below the name, so it lands
+    // Positioned against a wrapper that starts below the name, so `top-2` lands
     // on the artwork's corner rather than over the title.
     expect(info.parentElement).toBe(main.parentElement);
     expect(info.parentElement!.className).toContain("relative");
@@ -227,14 +227,9 @@ describe("CosmeticCard", () => {
     // longest line, so on a first-column card it ran past the modal's left
     // edge and was clipped. Its strip spans the card and caps it there.
     expect(info.className).toContain("inset-x-2");
-    // Bottom-right, opening upwards: a sale's band takes the artwork's
-    // top-right corner and a new item's band the top-left.
-    // Stacked above the preview button, clear of the bottom strip the
-    // equipped badge and a flash sale's countdown use.
-    expect(info.className).toContain("bottom-11");
-    expect(info.className).toContain("justify-end");
-    expect(bubble.className).toContain("right-0");
-    expect(bubble.className).toContain("bottom-9");
+    // Top-left, leaving the artwork's top-right corner to a sale's band.
+    expect(info.className).toContain("justify-start");
+    expect(bubble.className).toContain("left-0");
     expect(bubble.className).toContain("max-w-full");
     expect(bubble.className).not.toContain("whitespace-nowrap");
     // The strip must not swallow clicks meant for the artwork beneath it.
@@ -645,35 +640,43 @@ describe("CosmeticCard", () => {
       expect(isNew({ newUntil: "soon" })).toBe(false);
     });
 
-    it("is a gold band across the artwork's top-left corner", async () => {
+    it("is a gold band across the artwork's top-right corner", async () => {
       installTranslations();
       const c = await createWith({ priceHard: 100, newUntil: inAWeek() });
       const corner = c.querySelector<HTMLElement>("[data-cosmetic-new]")!;
-      expect(corner.className).toContain("left-0");
+      // Alone, it takes the sale band's place: the outer band.
+      expect(corner.dataset.cosmeticNew).toBe("outer");
+      expect(corner.className).toContain("right-0");
       expect(corner.className).toContain("top-0");
       expect(corner.className).toContain("overflow-hidden");
       const band = corner.firstElementChild as HTMLElement;
-      expect(band.className).toContain("-rotate-45");
+      expect(band.className).toContain("rotate-45");
+      expect(band.className).not.toContain("-rotate-45");
       expect(band.className).toContain("bg-cyber-yellow");
       expect(band.textContent?.trim()).toBe("New");
     });
 
-    it("keeps the preview button in the corner, under the details button", async () => {
+    it("leaves the top-left corner to the details button", async () => {
       installTranslations();
       const c = await createWith({ priceHard: 100, newUntil: inAWeek() });
       c.interactive = true;
       await c.updateComplete;
-      const bubble = c.querySelector<HTMLElement>(
+      expect(c.querySelector("[data-cosmetic-new]")!.className).not.toContain(
+        "left-0",
+      );
+      const info = c.querySelector<HTMLElement>("[data-cosmetic-info]")!;
+      expect(info.className).toContain("top-2");
+      expect(info.className).toContain("justify-start");
+      // The preview button keeps its own corner.
+      const eye = c.querySelector<HTMLElement>(
         "[data-cosmetic-preview-bubble]",
       )!;
-      // The eye keeps the bottom-right corner, clear of the equipped badge
-      // and a flash sale's countdown; the "?" stacks above it.
-      expect(bubble.className).toContain("right-2");
-      expect(bubble.className).not.toContain("right-10");
-      expect(bubble.className).toContain("bottom-2");
+      expect(eye.className).toContain("right-2");
+      expect(eye.className).toContain("bottom-2");
     });
 
-    it("shows beside a sale ribbon", async () => {
+    it("stacks under a sale's band, in the same corner", async () => {
+      installTranslations();
       const c = await createWith({
         priceHard: 75,
         listPriceHard: 100,
@@ -685,8 +688,13 @@ describe("CosmeticCard", () => {
         },
         newUntil: inAWeek(),
       });
-      expect(c.querySelector("[data-cosmetic-new]")).toBeTruthy();
-      expect(c.querySelector("[data-cosmetic-sale]")).toBeTruthy();
+      const sale = c.querySelector<HTMLElement>("[data-cosmetic-sale]")!;
+      const corner = c.querySelector<HTMLElement>("[data-cosmetic-new]")!;
+      expect(sale).toBeTruthy();
+      // The discount keeps the outer band; New sits inside it.
+      expect(corner.dataset.cosmeticNew).toBe("inner");
+      expect(corner.className).toContain("right-0");
+      expect(corner.className).toContain("top-0");
     });
   });
 });

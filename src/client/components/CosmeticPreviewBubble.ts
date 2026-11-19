@@ -48,7 +48,6 @@ export class CosmeticPreviewBubble extends LitElement {
       return nothing;
     }
 
-    // The corner, under the "?" details button (CosmeticInfo).
     return html`<div
       data-cosmetic-preview-bubble
       class="group/preview-bubble absolute right-2 bottom-2 z-10"

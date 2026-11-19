@@ -438,19 +438,24 @@ export class CosmeticCard extends LitElement {
   /**
    * The sale's discount as a band across the artwork's top-right corner,
    * while one runs; the same for a flash sale's item, which the card's glow
-   * and timer mark instead. The "?" sits bottom-right to leave both top
-   * corners to these bands (CosmeticInfo).
+   * and timer mark instead. The "?" moved to the top-left to give it the
+   * corner (CosmeticInfo); a new item's band shares it (renderNewBadge).
+   * With New stacked under it, the pair sits further into the corner so the
+   * two together cover less of the artwork.
    */
   private renderSaleRibbon(active: ResolvedCosmetic) {
     if (active.relationship !== "purchasable") return nothing;
     const sale = activeSale(active.cosmetic);
     if (sale === null) return nothing;
+    const place = this.showsNew(active)
+      ? "-right-[26px] top-2 sm:-right-[34px] sm:top-3"
+      : "-right-[26px] top-3.5 sm:-right-[34px] sm:top-5";
     return html`<span
       data-cosmetic-sale=${sale.kind === "flash" ? "flash" : "sale"}
       class="pointer-events-none absolute right-0 top-0 z-[5] h-16 w-16 overflow-hidden rounded-tr-lg sm:h-[88px] sm:w-[88px]"
     >
       <span
-        class="absolute -right-[26px] top-3.5 w-24 rotate-45 bg-aquarius py-0.5 text-center text-xs font-black tabular-nums text-deep-navy shadow-[0_2px_6px_rgba(0,0,0,0.5)] sm:-right-[34px] sm:top-5 sm:w-[130px] sm:py-[3px] sm:text-[15px]"
+        class="absolute ${place} w-24 rotate-45 bg-aquarius py-0.5 text-center text-xs font-black tabular-nums text-deep-navy shadow-[0_2px_6px_rgba(0,0,0,0.5)] sm:w-[130px] sm:py-[3px] sm:text-[15px]"
         >${translateText("store.sale_percent_off", {
           percent: sale.percentOff,
         })}</span
@@ -460,21 +465,43 @@ export class CosmeticCard extends LitElement {
 
   /**
    * "New" on an item added to the store in the last 14 days, while the player
-   * can buy it: a gold band across the artwork's top-left corner, mirroring a
-   * sale's band on the right. Masters gold, not the sale's blue, so the two
-   * read as different things side by side; its dark edge keeps it apart from
-   * a legendary card's gold border.
+   * can buy it: a gold band in the artwork's top-right corner, so every
+   * reason to look at a card reads in one place. On its own it takes the
+   * sale band's place; with a sale running the discount keeps that outer
+   * band and New runs parallel inside it, a little slimmer. Masters gold, not
+   * the sale's blue, so the two read as different things; its dark edge
+   * keeps it apart from a legendary card's gold border.
    */
+  /** Whether this card marks its item New (renderNewBadge). */
+  private showsNew(active: ResolvedCosmetic): boolean {
+    return (
+      this.showNewBadge &&
+      active.relationship === "purchasable" &&
+      isNew(active.cosmetic)
+    );
+  }
+
   private renderNewBadge(active: ResolvedCosmetic) {
-    if (!this.showNewBadge) return nothing;
-    if (active.relationship !== "purchasable") return nothing;
-    if (!isNew(active.cosmetic)) return nothing;
+    if (!this.showsNew(active)) return nothing;
+    const band =
+      "absolute rotate-45 border-y border-deep-navy/60 bg-cyber-yellow text-center font-black uppercase tracking-wide text-deep-navy shadow-[0_2px_6px_rgba(0,0,0,0.5)]";
+    if (activeSale(active.cosmetic) === null) {
+      return html`<span
+        data-cosmetic-new="outer"
+        class="pointer-events-none absolute right-0 top-0 z-[5] h-16 w-16 overflow-hidden rounded-tr-lg sm:h-[88px] sm:w-[88px]"
+      >
+        <span
+          class="${band} -right-[26px] top-3.5 w-24 py-0.5 text-xs sm:-right-[34px] sm:top-5 sm:w-[130px] sm:py-[3px] sm:text-[15px]"
+          >${translateText("store.new_badge")}</span
+        >
+      </span>`;
+    }
     return html`<span
-      data-cosmetic-new
-      class="pointer-events-none absolute left-0 top-0 z-[5] h-16 w-16 overflow-hidden rounded-tl-lg sm:h-[88px] sm:w-[88px]"
+      data-cosmetic-new="inner"
+      class="pointer-events-none absolute right-0 top-0 z-[4] h-[88px] w-[88px] overflow-hidden rounded-tr-lg sm:h-[120px] sm:w-[120px]"
     >
       <span
-        class="absolute -left-[26px] top-3.5 w-24 -rotate-45 border-y border-deep-navy/60 bg-cyber-yellow py-0.5 text-center text-xs font-black uppercase tracking-wide text-deep-navy shadow-[0_2px_6px_rgba(0,0,0,0.5)] sm:-left-[34px] sm:top-5 sm:w-[130px] sm:py-[3px] sm:text-[15px]"
+        class="${band} -right-[21px] top-[19px] w-[120px] py-px text-[10px] sm:-right-[24px] sm:top-[30px] sm:w-[150px] sm:py-0.5 sm:text-xs"
         >${translateText("store.new_badge")}</span
       >
     </span>`;
