@@ -578,17 +578,9 @@ export class GameMapImpl implements GameMap {
 
     // Update terrain if the packed value includes a terrain byte that differs
     const terrainChanged = this.terrain[tile] !== terrainByte;
-    if (terrainChanged) {
-      const wasLand = this.isLand(tile);
-      this.noteTerrainEdit(tile);
-      this.terrain[tile] = terrainByte;
-      const isNowLand = Boolean(terrainByte & (1 << GameMapImpl.IS_LAND_BIT));
-      // Water-derived caches key on waterVersion(): a packed update that flips
-      // land/water must invalidate them just like setWater() does.
-      if (wasLand !== isNowLand) this.waterVersion_++;
-      if (wasLand && !isNowLand) this.numLandTiles_--;
-      else if (!wasLand && isNowLand) this.numLandTiles_++;
-    }
+    // Bumps waterVersion() on a land/water flip, as setWater() does, and
+    // keeps the land count the worker's: passable land only.
+    if (terrainChanged) this.setTerrainByte(tile, terrainByte);
     return terrainChanged;
   }
 

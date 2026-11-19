@@ -368,14 +368,28 @@ export class WaterManager {
    * Ends a run of editTerrain() calls. Derives every tile's terrain byte
    * from its authored part again, on both maps, as the map generator does:
    * this sets the ocean bit and the depth of water bodies with no coast,
-   * which editTerrain() leaves. The water components and graph wait for
-   * rebuildWaterGraph(). Returns the full-map tiles whose terrain changed.
+   * which editTerrain() leaves. The minimap is downscaled from the full map
+   * again first, so it depends on the full map alone, not on which tiles
+   * were edited: a stock map's minimap had small islands and lakes removed
+   * that editTerrain() would otherwise restore only where it was painted.
+   * The water components and graph wait for rebuildWaterGraph(). Returns
+   * the full-map tiles whose terrain changed.
    */
   endTerrainEdit(): TileRef[] {
     DebugSpan.start("WaterManager:endTerrainEdit");
     const changed: TileRef[] = [];
     this.deriveTerrain(this.map, null, changed);
-    this.deriveTerrain(this.miniMap, this.map, null);
+    const mini = this.miniMap;
+    const miniTerrain = terrainOf(mini);
+    for (let my = 0, t = 0; my < mini.height(); my++) {
+      for (let mx = 0; mx < mini.width(); mx++, t++) {
+        const value = miniAuthored(this.map, mx, my);
+        if (authoredByte(miniTerrain[t]) !== value) {
+          mini.setTerrainByte(t, value);
+        }
+      }
+    }
+    this.deriveTerrain(mini, this.map, null);
     DebugSpan.end("WaterManager:endTerrainEdit");
     return changed;
   }
@@ -1144,10 +1158,13 @@ export class WaterManager {
       }
     }
 
-    // BFS outward through water, clipped to the seed box.
+    // BFS outward through water, clipped to the seed box. It stops at
+    // MAX_MAG_DIST, from where the depth is 31 either way, so the distance
+    // fits distArr however far the water runs.
     let head = 0;
     while (head < queue.length) {
       const tile = queue[head++];
+      if (distArr[tile] >= MAX_MAG_DIST) continue;
       const nextDist = distArr[tile] + 1;
       const x = tile % w;
       const y = (tile - x) / w;
@@ -1276,13 +1293,13 @@ function miniAuthored(map: GameMap, mx: number, my: number): number {
   const terrain = terrainOf(map);
   const s = map.ref(mx * 2, my * 2);
   const w = map.width();
-  let impassable = false;
-  for (const src of [s, s + w, s + 1, s + w + 1]) {
-    const kind = terrainKind(terrain[src]);
-    if (kind === 0) return 0;
-    if (kind === 2) impassable = true;
-  }
-  return impassable ? IMPASSABLE_BYTE : authoredByte(terrain[s + w + 1]);
+  const a = terrainKind(terrain[s]);
+  const b = terrainKind(terrain[s + w]);
+  const c = terrainKind(terrain[s + 1]);
+  const d = terrainKind(terrain[s + w + 1]);
+  if (a === 0 || b === 0 || c === 0 || d === 0) return 0;
+  if (a === 2 || b === 2 || c === 2 || d === 2) return IMPASSABLE_BYTE;
+  return authoredByte(terrain[s + w + 1]);
 }
 
 /**

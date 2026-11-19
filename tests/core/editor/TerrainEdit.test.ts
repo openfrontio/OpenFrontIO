@@ -6,7 +6,10 @@
  * authored bytes, painted onto a blank map, must give back what it ships.
  */
 
-import type { EditorCommand } from "@openfront/engine-api/EditorCommands";
+import {
+  type EditorCommand,
+  MAX_TERRAIN_BATCH,
+} from "@openfront/engine-api/EditorCommands";
 import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   CustomGameMap,
@@ -16,6 +19,7 @@ import {
 import { GameUpdateViewData } from "@openfront/engine-api/game/GameUpdates";
 import { MapManifest } from "@openfront/engine-api/game/MapFiles";
 import { GameStartInfo } from "@openfront/engine-api/Schemas";
+import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { createGameRunner, GameRunner } from "@openfront/engine/GameRunner";
 import { snapshotGame } from "@openfront/engine/snapshot/GameSnapshot";
@@ -68,6 +72,8 @@ interface Editor {
   apply: (command: EditorCommand) => GameUpdateViewData;
   /** The full map's terrain as the tile updates sent so far leave it. */
   client: Uint8Array;
+  /** A client's map, kept up to date by the tile updates sent so far. */
+  clientMap: GameMapImpl;
   terrain: () => Uint8Array;
   miniTerrain: () => Uint8Array;
 }
@@ -77,6 +83,13 @@ async function editorOn(
   client: Uint8Array,
 ): Promise<Editor> {
   const sent: GameUpdateViewData[] = [];
+  const { width, height, num_land_tiles } = files.manifest.map;
+  const clientMap = new GameMapImpl(
+    width,
+    height,
+    client.slice(),
+    num_land_tiles,
+  );
   const runner = await createGameRunner(
     editorStart(),
     undefined,
@@ -87,6 +100,7 @@ async function editorOn(
       const packed = gu.packedTileUpdates;
       for (let i = 0; i < packed.length; i += 2) {
         client[packed[i]] = (packed[i + 1] >>> 16) & 0xff;
+        clientMap.updateTile(packed[i], packed[i + 1]);
       }
     },
     true,
@@ -100,6 +114,7 @@ async function editorOn(
   return {
     runner,
     client,
+    clientMap,
     apply: (command) => {
       const before = sent.length;
       runner.applyEditorCommand(command);
@@ -147,6 +162,20 @@ function setTerrain(tiles: TileRef[], terrain: number[]): EditorCommand {
   return { type: "set_terrain", tiles, terrain };
 }
 
+/** Paints a stock map's authored terrain onto `e` as one stroke. */
+function paintShipped(e: Editor, s: Shipped): void {
+  const tiles = Array.from(s.map.keys());
+  for (let i = 0; i < tiles.length; i += MAX_TERRAIN_BATCH) {
+    const batch = tiles.slice(i, i + MAX_TERRAIN_BATCH);
+    e.apply(
+      setTerrain(
+        batch,
+        batch.map((t) => authored(s.map[t])),
+      ),
+    );
+  }
+}
+
 function disc(
   w: number,
   h: number,
@@ -180,6 +209,7 @@ function expectShipped(e: Editor, s: Shipped): void {
   expect(differences(e.miniTerrain(), s.map4x)).toBe(0);
   expect(differences(e.client, s.map)).toBe(0);
   expect(e.runner.game.numLandTiles()).toBe(s.manifest.map.num_land_tiles);
+  expect(e.clientMap.numLandTiles()).toBe(s.manifest.map.num_land_tiles);
   expect(e.runner.game.miniMap().numLandTiles()).toBe(
     s.manifest.map4x.num_land_tiles,
   );
@@ -237,16 +267,10 @@ describe("terrain edits reproduce a stock map's files", () => {
     expectShipped(e, s);
   });
 
-  test("More Than Luck, with impassable terrain, as one edit", async () => {
+  test("More Than Luck, with impassable terrain, as one stroke", async () => {
     const s = shipped("morethanluck");
     const e = await blankEditor(s);
-    const tiles = Array.from(s.map.keys());
-    e.apply(
-      setTerrain(
-        tiles,
-        tiles.map((t) => authored(s.map[t])),
-      ),
-    );
+    paintShipped(e, s);
     expect(differences(e.terrain(), s.map, OCEAN_BIT)).toBe(0);
     expect(differences(e.miniTerrain(), s.map4x, OCEAN_BIT)).toBe(0);
     e.apply({ type: "end_terrain_edit" });
@@ -261,19 +285,45 @@ describe("terrain edits reproduce a stock map's files", () => {
     // a later tool, so it isn't a function of the full map alone.
     const s = shipped("germany");
     const e = await blankEditor(s);
-    const tiles = Array.from(s.map.keys());
-    e.apply(
-      setTerrain(
-        tiles,
-        tiles.map((t) => authored(s.map[t])),
-      ),
-    );
+    paintShipped(e, s);
     e.apply({ type: "end_terrain_edit" });
     expect(differences(e.terrain(), s.map)).toBe(0);
     expect(differences(e.client, s.map)).toBe(0);
     expect(e.runner.game.numLandTiles()).toBe(s.manifest.map.num_land_tiles);
+    expect(e.clientMap.numLandTiles()).toBe(s.manifest.map.num_land_tiles);
     // The only stock map with water that has no coast, and a large one.
   }, 30_000);
+
+  test("a stock map's minimap doesn't depend on which tiles were painted", async () => {
+    // The generator removed a small island from Onion's minimap: the
+    // minimap tile (109, 83) is water over four land tiles. Painting one
+    // of them and painting it back must leave the same minimap as not
+    // painting at all.
+    const s = shipped("onion");
+    const stock = () =>
+      editorOn(
+        {
+          map: CustomGameMap,
+          mapSize: GameMapSize.Normal,
+          manifest: s.manifest,
+          mapBin: s.map.slice(),
+          map4xBin: s.map4x.slice(),
+        },
+        s.map.slice(),
+      );
+    const untouched = await stock();
+    untouched.apply({ type: "end_terrain_edit" });
+
+    const painted = await stock();
+    const tile = 167 * s.manifest.map.width + 219;
+    const original = authored(s.map[tile]);
+    painted.apply(setTerrain([tile], [original === 0x80 ? 0x81 : 0x80]));
+    painted.apply(setTerrain([tile], [original]));
+    painted.apply({ type: "end_terrain_edit" });
+
+    expect(differences(painted.miniTerrain(), untouched.miniTerrain())).toBe(0);
+    expect(differences(painted.terrain(), s.map)).toBe(0);
+  });
 });
 
 describe("set_terrain and end_terrain_edit", () => {
@@ -424,6 +474,11 @@ describe("set_terrain and end_terrain_edit", () => {
 
     test("as many tiles as terrain values", async () => {
       await rejects(setTerrain([0, 1], [0]), /2 tiles but 1 terrain values/);
+    });
+
+    test("more tiles than one batch takes", async () => {
+      const tiles = new Array<number>(MAX_TERRAIN_BATCH + 1).fill(0);
+      await rejects(setTerrain(tiles, tiles), /./);
     });
 
     test("a value that isn't authored terrain", async () => {

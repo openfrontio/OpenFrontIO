@@ -73,6 +73,11 @@ const AuthoredTerrain = z
   .max(0x9f)
   .refine((v) => v === 0 || v >= 0x80, "not an authored terrain byte");
 
+// The most tiles one set_terrain takes. The repair keeps sets of the edited
+// tiles and their neighbours, which must stay under the 2^24 entries a JS
+// Set holds. A larger edit (a heightmap import) is sent as several.
+export const MAX_TERRAIN_BATCH = 1 << 20;
+
 /**
  * Writes the authored terrain of the tiles (`terrain[i]` for `tiles[i]`) and
  * repairs the shoreline, water depth and minimap around them. A tile that
@@ -82,8 +87,8 @@ const AuthoredTerrain = z
  */
 export const SetTerrainCommandSchema = z.object({
   type: z.literal("set_terrain"),
-  tiles: z.array(Tile),
-  terrain: z.array(AuthoredTerrain),
+  tiles: z.array(Tile).max(MAX_TERRAIN_BATCH),
+  terrain: z.array(AuthoredTerrain).max(MAX_TERRAIN_BATCH),
 });
 
 /**

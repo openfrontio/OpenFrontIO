@@ -187,13 +187,14 @@ Terrain edits therefore run in two steps:
    runs on its surroundings: shoreline, depth, and the minimap tiles under
    it. This is enough for the screen.
 2. **When the stroke ends**, one full pass redoes what cannot be patched
-   locally: the ocean flood fill, the water component labels and the water
-   graph. Building a fresh `WaterManager` does the last two, the same work
-   every game does at load.
+   locally: it downscales the minimap from the full map again, then runs
+   the ocean flood fill and sets the depth of water with no coast. The
+   water component labels and the water graph wait for test play and
+   export (below).
 
-The full pass also runs before export, so the ocean bit and water components
-in the exported files never depend on the order of the strokes that made
-them.
+The full pass also runs before export, so the ocean bit, the minimap and
+the water components in the exported files never depend on the order of
+the strokes that made them.
 
 The full pass was to stay at stroke end if it cost about as much as game
 load, and otherwise the graph rebuild would move to "before test play and
@@ -209,7 +210,10 @@ Two rules:
 
 - The minimap rule must be the generator's (`createMiniMap`), not the
   simpler one the nuke path uses. A scenario started from a stock map would
-  otherwise drift from its own minimap as it is edited.
+  otherwise drift from its own minimap as it is edited. The generator also
+  removed tiny islands and lakes from most stock minimaps, which needs the
+  whole map; until that is a tool, the first stroke on a stock map brings
+  them back.
 - A terrain edit under existing content clears it first. Painting water over
   owned land removes the ownership and any structure there, and the document
   is updated to match.
