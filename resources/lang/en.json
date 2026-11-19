@@ -1753,19 +1753,6 @@
     "unequip_all": "Unequip all",
     "unequipped_all": "Unequipped everything"
   },
-  "ios_banner": {
-    "got_it": "Got it",
-    "how": "How",
-    "later": "Later",
-    "modal_desc": "Your browser doesn't support fullscreen, but you can add OpenFront to your Home Screen for an immersive experience:",
-    "modal_title": "Fullscreen on iOS",
-    "never": "Never",
-    "step_add_to_home_label": "Add to Home Screen",
-    "step_open": "Open from your Home Screen — launches fullscreen without the address bar",
-    "step_scroll_and_tap": "Scroll down and tap",
-    "step_share": "Tap the Share button in your browser",
-    "text": "For fullscreen, add OpenFront to your Home Screen"
-  },
   "kick_reason": {
     "admin": "Kicked by an admin",
     "duplicate_session": "Kicked from game (you may have been playing on another tab)",
