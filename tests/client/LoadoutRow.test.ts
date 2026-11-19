@@ -169,6 +169,21 @@ describe("loadoutItems", () => {
   });
 });
 
+describe("the collapsed row's item count", () => {
+  // A saved look's row can be down to one item once the rows above take the
+  // player card and shared items: "1 item", not "1 items".
+  it("is plural-aware", async () => {
+    const { default: IntlMessageFormat } = await import("intl-messageformat");
+    const en = (await import("../../resources/lang/en.json")).default as {
+      win_modal: Record<string, string>;
+    };
+    const format = (n: number) =>
+      new IntlMessageFormat(en.win_modal.get_look_items, "en").format({ n });
+    expect(format(1)).toBe("1 item");
+    expect(format(3)).toBe("3 items");
+  });
+});
+
 describe("promoChoice", () => {
   const base = {
     isWin: false,

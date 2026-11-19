@@ -3493,7 +3493,7 @@
     "eliminated_by": "Eliminated by",
     "exit": "Exit Game",
     "get_look": "Get {name}'s look",
-    "get_look_items": "{n} items",
+    "get_look_items": "{n, plural, one {# item} other {# items}}",
     "join_discord": "Join Our Discord Community!",
     "join_server": "Join Server",
     "keep": "Keep Playing",
