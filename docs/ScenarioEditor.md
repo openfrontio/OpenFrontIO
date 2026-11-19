@@ -1,7 +1,6 @@
 # Scenario editor
 
-Status: design, 2026-11-18. Only the `#scenario-editor` route and a
-placeholder element exist.
+Status: design, 2026-11-18. Nothing here is built yet.
 
 ## What it is
 
