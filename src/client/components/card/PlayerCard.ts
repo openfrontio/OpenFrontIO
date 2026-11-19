@@ -28,11 +28,15 @@ import {
 //   size "end"      652 × ~92 px on the end screens, 64 px badge
 //   size "account"  the Account header, 96 px badge
 //   size "thumb"    160 × 64 store / customiser preview: the background only
+//   size "panel"    the in-game player panel: one strip, 28 px badge, flag,
+//                   clan tag, name, prestige · level and short trackers in a
+//                   row. Always still (never animated) and never a title or
+//                   taunt: it sits beside a running game.
 //
 // Below 400 px wide (`narrow`, set from the strip's own width) the trackers
 // move under the name as one line with short numbers.
 
-export type PlayerCardSize = "end" | "account" | "thumb";
+export type PlayerCardSize = "end" | "account" | "thumb" | "panel";
 
 const NARROW_BELOW_PX = 400;
 
@@ -85,6 +89,7 @@ export class PlayerCard extends LitElement {
   private preset(): TauntPreset | null {
     // Held back: a saved taunt never shows or plays.
     if (!CARD_TAUNTS_ENABLED) return null;
+    if (this.size === "panel") return null;
     const taunt = this.view?.taunt;
     if (!taunt) return null;
     const preset = TAUNT_PRESETS[taunt.preset];
@@ -230,6 +235,76 @@ export class PlayerCard extends LitElement {
     </div>`;
   }
 
+  // The panel strip: everything on one line, the name truncating first.
+  private renderPanel(view: PlayerCardView, rarity: string): TemplateResult {
+    const badge = view.badge;
+    return html`<section
+      data-player-card="panel"
+      data-card-rarity=${rarity}
+      class="player-card relative w-full overflow-hidden rounded-xl border-2 text-white"
+    >
+      <card-background
+        .background=${view.background}
+        .animated=${false}
+      ></card-background>
+      <div
+        data-card-row
+        class="relative flex min-h-[52px] items-center gap-2 px-3 py-2"
+      >
+        ${
+          badge === null
+            ? nothing
+            : html`<level-badge
+                class="shrink-0"
+                .level=${badge.level}
+                .prestige=${badge.prestige}
+                .legend=${badge.legend}
+                .size=${28}
+              ></level-badge>`
+        }
+        ${
+          view.flag === undefined
+            ? nothing
+            : html`<img
+                data-card-flag
+                class="h-4 w-auto shrink-0 rounded-[2px]"
+                src=${assetUrl(view.flag)}
+                alt=""
+              />`
+        }
+        ${clanTemplate(view.clanTag, true)}
+        ${nameTemplate(view.username, "min-w-0 text-lg")}
+        ${
+          badge === null
+            ? nothing
+            : html`<span class="shrink-0"
+                >${levelLineTemplate(badge, true)}</span
+              >`
+        }
+        ${
+          view.trackers.length === 0
+            ? nothing
+            : html`<div
+                data-card-trackers-inline
+                class="ml-auto flex shrink-0 items-baseline gap-2.5 text-[11px] text-white/70"
+              >
+                ${view.trackers.map(
+                  (t) =>
+                    html`<span
+                      data-card-tracker=${t.stat}
+                      class="whitespace-nowrap"
+                      ><span class="text-sm font-black text-white tabular-nums"
+                        >${formatTracker(t.value, true)}</span
+                      >
+                      ${translateText(`player_card.tracker_${t.stat}`)}</span
+                    >`,
+                )}
+              </div>`
+        }
+      </div>
+    </section>`;
+  }
+
   render() {
     const view = this.view;
     if (view === null) return nothing;
@@ -240,6 +315,7 @@ export class PlayerCard extends LitElement {
         : this.size === "account"
           ? "min-h-[140px] w-full"
           : "min-h-[92px] w-full";
+    if (this.size === "panel") return this.renderPanel(view, rarity);
     if (this.size === "thumb") {
       return html`<section
         data-player-card="thumb"

@@ -20,11 +20,17 @@ import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
 import { fetchLobbyListed, getUserMe } from "../../Api";
+import "../../components/card/PlayerCard";
+import {
+  buildPlayerCardView,
+  type PlayerCardView,
+} from "../../components/card/PlayerCardModel";
 import "../../components/EquippedCosmeticsRow";
 import "../../components/LevelBadge";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
 import { Controller } from "../../Controller";
+import { fetchCosmetics, getCachedCosmetics } from "../../Cosmetics";
 import {
   CloseViewEvent,
   ContextMenuEvent,
@@ -55,6 +61,7 @@ import { EmojiTable, ShowPlayerEmojiMenuEvent } from "./EmojiTable";
 import "./PlayerModerationModal";
 import "./PlayerReportModal";
 import "./SendResourceModal";
+import { visiblePlayerCard } from "./VisiblePlayerCard";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
 const chatIcon = assetUrl("images/ChatIconWhite.svg");
 const donateGoldIcon = assetUrl("images/DonateGoldIconWhite.svg");
@@ -696,7 +703,63 @@ export class PlayerPanel extends LitElement implements Controller {
     );
   }
 
+  // The card this viewer may see for `other`, resolved through the catalogue,
+  // or null: no card, bots and nations, withheld by the server (anonymised)
+  // or by the viewer's anonymous names, or the catalogue isn't loaded yet
+  // (fetched, then shown on the next render).
+  private cardViewFor(other: PlayerView): PlayerCardView | null {
+    const visible = visiblePlayerCard(
+      this.g,
+      other,
+      this.userSettings.anonymousNames(),
+    );
+    if (visible === undefined) return null;
+    const cosmetics = getCachedCosmetics();
+    if (cosmetics === null) {
+      this.requestCardCatalogue();
+      return null;
+    }
+    return buildPlayerCardView(
+      {
+        username: other.name(),
+        clanTag: other.clanTag(),
+        flag: visible.flag,
+        badge: this.levelBadgeFor(other) ?? null,
+        card: visible.card,
+      },
+      cosmetics,
+    );
+  }
+
+  private cardCatalogueRequested = false;
+  private requestCardCatalogue(): void {
+    if (this.cardCatalogueRequested) return;
+    this.cardCatalogueRequested = true;
+    void fetchCosmetics().then((c) => {
+      if (c !== null) this.requestUpdate();
+    });
+  }
+
+  // The cosmetics the player has equipped, plus their card's paid items.
+  private renderCosmeticsRow(other: PlayerView) {
+    return html`<equipped-cosmetics-row
+      .cosmetics=${other.cosmetics}
+      .card=${this.cardViewFor(other)}
+    ></equipped-cosmetics-row>`;
+  }
+
   private renderIdentityRow(other: PlayerView, my: PlayerView) {
+    // A card owner's compact card replaces the flag, badge and name, still
+    // (never animated) beside the running game. Card owners are human, so
+    // there is no player-type chip to keep.
+    const cardView = this.cardViewFor(other);
+    if (cardView !== null) {
+      return html`
+        <player-card .view=${cardView} size="panel"></player-card>
+        ${this.renderTraitorBadge(other)}
+        ${this.renderRelationPillIfNation(other, my)}
+      `;
+    }
     const flagPath = other.cosmetics.flag;
     const flagCode = flagPath?.match(/\/flags\/(.+)\.svg$/)?.[1];
     const country =
@@ -1231,10 +1294,7 @@ export class PlayerPanel extends LitElement implements Controller {
                     </div>
 
                     <!-- Cosmetics the player has equipped -->
-                    <equipped-cosmetics-row
-                      .cosmetics=${other.cosmetics}
-                    ></equipped-cosmetics-row>
-
+                    ${this.renderCosmeticsRow(other)}
                     ${
                       this.sendTarget && !isSpectator
                         ? html`

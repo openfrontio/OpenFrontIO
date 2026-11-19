@@ -1,0 +1,124 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../src/client/Utils", () => ({
+  translateText: (key: string, params?: Record<string, string | number>) =>
+    params ? `${key}:${JSON.stringify(params)}` : key,
+}));
+// Switched ON here, to show the compact card leaves them out on its own.
+vi.mock("../../src/client/components/card/HeldBack", () => ({
+  CARD_TAUNTS_ENABLED: true,
+  CARD_TITLES_ENABLED: true,
+}));
+
+import { CardBackground } from "../../src/client/components/card/CardBackground";
+import { PlayerCard } from "../../src/client/components/card/PlayerCard";
+import type { PlayerCardView } from "../../src/client/components/card/PlayerCardModel";
+
+// The player panel's card: size "panel", one strip with badge, flag, clan
+// tag, name, prestige and level, and the trackers, over a still background.
+
+if (!customElements.get("player-card")) {
+  customElements.define("player-card", PlayerCard);
+}
+if (!customElements.get("card-background")) {
+  customElements.define("card-background", CardBackground);
+}
+
+const VIEW: PlayerCardView = {
+  username: "Volt",
+  clanTag: "UN",
+  flag: "/flags/gb.svg",
+  badge: { level: 42, prestige: 3, legend: false },
+  background: {
+    name: "bg_frontline",
+    url: "/cosmetics/bg_frontline.webp",
+    rarity: "legendary",
+    animation: { layers: [] },
+  },
+  title: { text: "Warmonger" },
+  trackers: [
+    { stat: "wins", value: 1204 },
+    { stat: "best_elo", value: 1840 },
+    { stat: "games", value: 38912 } as never,
+  ],
+  taunt: { name: "salute", tauntKind: "icon", preset: "salute" },
+};
+
+async function mount(
+  view: PlayerCardView,
+  props: Partial<PlayerCard> = {},
+): Promise<PlayerCard> {
+  const el = document.createElement("player-card") as PlayerCard;
+  el.view = view;
+  el.size = "panel";
+  Object.assign(el, props);
+  document.body.append(el);
+  await el.updateComplete;
+  return el;
+}
+
+describe("player card: compact panel layout", () => {
+  beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("puts badge, flag, clan, name, level and trackers in one row", async () => {
+    const el = await mount(VIEW);
+    const section = el.querySelector('[data-player-card="panel"]')!;
+    expect(section).not.toBeNull();
+    const row = section.querySelector("[data-card-row]")!;
+    expect(row.className).toContain("flex");
+    expect(row.className).not.toContain("flex-col");
+    expect(row.className).not.toContain("flex-wrap");
+    const badge = row.querySelector("level-badge") as HTMLElement & {
+      size: number;
+    };
+    expect(badge.size).toBe(28);
+    expect(row.querySelector("[data-card-flag]")).not.toBeNull();
+    expect(row.querySelector("[data-profile-clan]")?.textContent).toContain(
+      "UN",
+    );
+    expect(row.querySelector("[data-profile-name]")?.textContent).toContain(
+      "Volt",
+    );
+    expect(row.querySelector("[data-profile-level-line]")).not.toBeNull();
+    const trackers = row.querySelectorAll("[data-card-tracker]");
+    expect(trackers).toHaveLength(3);
+    // Short numbers, so three fit beside the name.
+    expect(trackers[2].textContent).toContain("38.9k");
+  });
+
+  it("is never animated, even if asked", async () => {
+    const el = await mount(VIEW, { animated: true });
+    const bg = el.querySelector("card-background") as CardBackground;
+    expect(bg.animated).toBe(false);
+  });
+
+  it("leaves out the title and the taunt", async () => {
+    const el = await mount(VIEW, { showKey: "game-1" });
+    expect(el.querySelector("[data-card-title]")).toBeNull();
+    expect(el.querySelector("[data-card-taunt-icon]")).toBeNull();
+    expect(el.querySelector("[data-card-taunt-overlay]")).toBeNull();
+  });
+
+  it("keeps the rarity border and the name truncating", async () => {
+    const el = await mount(VIEW);
+    const section = el.querySelector("[data-player-card]")!;
+    expect(section.getAttribute("data-card-rarity")).toBe("legendary");
+    const name = el.querySelector("[data-profile-name]")!;
+    expect(name.className).toContain("truncate");
+  });
+
+  it("without a level or trackers it still renders the name", async () => {
+    const el = await mount({ ...VIEW, badge: null, trackers: [] });
+    expect(el.querySelector("level-badge")).toBeNull();
+    expect(el.querySelector("[data-profile-level-line]")).toBeNull();
+    expect(el.querySelector("[data-card-tracker]")).toBeNull();
+    expect(el.querySelector("[data-profile-name]")?.textContent).toContain(
+      "Volt",
+    );
+  });
+});
