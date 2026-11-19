@@ -44,6 +44,7 @@ import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import { GamePhase, type GameServer } from "./GameServer";
 import {
+  clientAuth,
   isSteamAuthenticated,
   type JoinVerifyResponse,
   planJoinVerify,
@@ -733,9 +734,10 @@ export async function startWorker() {
         if (ServerEnv.env() !== GameEnv.Dev) {
           const stored = game?.storedIdentity(persistentId) ?? null;
           const steamAuthed = isSteamAuthenticated(claims);
+          const accountAuthed = clientAuth(claims) === "account";
           // SECURITY: the reject/skip/verify split (first joins must
-          // present a token, only re-admits may omit it) lives in
-          // planJoinVerify — see its doc comment. Steam-authenticated first
+          // present a token or account pass, only re-admits may omit it) lives
+          // in planJoinVerify — see its doc comment. Steam-authenticated first
           // joins are the one sanctioned null-token first join: Steam
           // ownership (a signed, unforgeable provider="steam" claim) stands
           // in for the bot check, and the name check still runs.
@@ -748,6 +750,7 @@ export async function startWorker() {
               stored.username === clientMsg.username &&
               stored.clanTag === (clientMsg.clanTag ?? null),
             steamAuthed,
+            accountAuthed,
           });
           if (steamAuthed && !isReadmit) {
             log.info(
@@ -764,12 +767,19 @@ export async function startWorker() {
             return;
           }
           if (plan.action === "verify") {
+            if (plan.mode === "pass") {
+              log.info("Account-authed join: verifying 6h Turnstile pass", {
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
+              });
+            }
             const verdict = await verifyJoin(
               ip,
               plan.token,
               clientMsg.username,
               clientMsg.clanTag ?? null,
               persistentId,
+              plan.mode,
             );
             if (verdict.status === "approved" || verdict.status === "error") {
               admissionGuard.markAdmittedIfNeeded();
@@ -785,12 +795,18 @@ export async function startWorker() {
               log.warn("Unauthorized: Turnstile token rejected", {
                 persistentID: persistentId,
                 gameID: clientMsg.gameID,
+                mode: plan.mode,
                 reason: resolved.reason,
                 ...(resolved.errorCodes !== undefined && {
                   errorCodes: resolved.errorCodes,
                 }),
               });
-              ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
+              ws.close(
+                CloseCode.Unauthorized,
+                plan.mode === "pass"
+                  ? CloseReason.TurnstilePassRequired
+                  : CloseReason.TurnstileFailed,
+              );
               return;
             }
             username = resolved.username;
