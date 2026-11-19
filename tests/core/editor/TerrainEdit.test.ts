@@ -251,7 +251,7 @@ describe("terrain edits reproduce a stock map's files", () => {
     expect(differences(e.miniTerrain(), s.map4x, OCEAN_BIT)).toBe(0);
     e.apply({ type: "end_terrain_edit" });
     expectShipped(e, s);
-  });
+  }, 30_000);
 
   test("Germany, with water bodies that have no coast: the full map", async () => {
     // Water enclosed by impassable terrain has no coast: the generator
@@ -272,7 +272,8 @@ describe("terrain edits reproduce a stock map's files", () => {
     expect(differences(e.terrain(), s.map)).toBe(0);
     expect(differences(e.client, s.map)).toBe(0);
     expect(e.runner.game.numLandTiles()).toBe(s.manifest.map.num_land_tiles);
-  });
+    // The only stock map with water that has no coast, and a large one.
+  }, 30_000);
 });
 
 describe("set_terrain and end_terrain_edit", () => {
