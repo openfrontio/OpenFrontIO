@@ -1,3 +1,7 @@
+import {
+  EditorCommand,
+  EditorCommandSchema,
+} from "@openfront/engine-api/EditorCommands";
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   AllPlayers,
@@ -30,6 +34,7 @@ import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { simpleHash } from "@openfront/engine-lib/Util";
 import { EngineConfig } from "./configuration/EngineConfig";
+import { applyEditorCommand } from "./editor/EditorCommands";
 import { DoomsdayClockExecution } from "./execution/DoomsdayClockExecution";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
@@ -51,6 +56,9 @@ export async function createGameRunner(
   clientID: ClientID | undefined,
   map: MapFiles,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+  // The scenario editor's engine never ticks, so it gets none of the
+  // executions init() adds.
+  editor = false,
 ): Promise<GameRunner> {
   const config = new EngineConfig(gameStart.config, false, gameStart.listed);
   const gameMap = await loadGameMap(gameStart.config, map);
@@ -96,7 +104,7 @@ export async function createGameRunner(
     ),
     callBack,
   );
-  gr.init();
+  if (!editor) gr.init();
   return gr;
 }
 
@@ -255,6 +263,40 @@ export class GameRunner {
       return false;
     }
 
+    this.sendUpdates(
+      updates,
+      wasInSpawnPhase,
+      tickExecutionDuration,
+      pendingTurns ?? 0,
+    );
+    this.isExecuting = false;
+    return true;
+  }
+
+  /**
+   * Scenario editor: applies one command and sends the updates it made,
+   * without running a tick. Throws, having changed nothing, if the command
+   * is invalid.
+   */
+  public applyEditorCommand(command: EditorCommand): void {
+    const parsed = EditorCommandSchema.parse(command);
+    const wasInSpawnPhase = this.game.inSpawnPhase();
+    applyEditorCommand(this.game, parsed);
+    this.sendUpdates(
+      this.game.drainPendingUpdates(),
+      wasInSpawnPhase,
+      0,
+      this.pendingTurns(),
+    );
+  }
+
+  /** Builds the update for the host from the game's pending updates. */
+  private sendUpdates(
+    updates: GameUpdates,
+    wasInSpawnPhase: boolean,
+    tickExecutionDuration: number,
+    pendingTurns: number,
+  ): void {
     // Track whether placements were recomputed this tick — the record is
     // only attached to the update when it could have changed, so the main
     // thread doesn't structured-clone an identical ~all-players record on
@@ -332,10 +374,8 @@ export class GameRunner {
         ? { playerNameViewData: { ...this.playerViewData } }
         : {}),
       tickExecutionDuration: tickExecutionDuration,
-      pendingTurns: pendingTurns ?? 0,
+      pendingTurns: pendingTurns,
     });
-    this.isExecuting = false;
-    return true;
   }
 
   public pendingTurns(): number {
