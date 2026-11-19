@@ -7,9 +7,9 @@ export interface PricedItem {
   listPriceHard?: number;
   listPriceSoft?: number;
   promotion?: {
-    name: string;
-    percentOff: number;
     endsAt: string;
+    name?: string;
+    percentOff?: number;
     kind?: "flash";
   };
 }
@@ -31,10 +31,15 @@ export interface ShownPrice {
  * It reads the catalogue's sale fields today; a personal offer would plug in
  * here and nowhere else.
  *
- * Same rule as `currentPrice` and `activeSale` in Cosmetics.ts: once the
- * item's own sale has ended (`promotion.endsAt` has passed) the price is its
- * list price, as the purchase endpoints charge it, whatever the catalogue in
- * hand still says. A sale shows only while the list price is above the price.
+ * Once the item's own sale has ended (`promotion.endsAt` has passed) the
+ * price is its list price, as the purchase endpoints charge it, whatever the
+ * catalogue in hand still says. `currentPrice` in Cosmetics.ts is this
+ * function's price, so there is one rule.
+ *
+ * A sale shows only while the list price is above the price. A list price
+ * above the price with no promotion behind it still shows struck through,
+ * with no label: grids that pass only raw prices to <purchase-button>
+ * (CardStoreGrid, MyCardTab) keep showing their discount that way.
  */
 export function shownPrice(
   item: PricedItem,
@@ -57,7 +62,7 @@ export function shownPrice(
       ? null
       : promotion.kind === "flash"
         ? translateText("store.flash_sale")
-        : promotion.name;
+        : (promotion.name ?? null);
   return { price, listPrice, saleLabel };
 }
 

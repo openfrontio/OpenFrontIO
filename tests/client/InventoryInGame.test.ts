@@ -71,6 +71,8 @@ function makeCatalog(): Cosmetics {
         rarity: "rare",
         name: "hexgrid",
         pattern: "AAAAAA",
+        artist: "Ada",
+        aiDisclosed: false,
       },
       plain: { ...base, rarity: "common", name: "plain", pattern: "AAAAAA" },
       tiger: {
@@ -101,6 +103,8 @@ function makeCatalog(): Cosmetics {
         rarity: "epic",
         name: "sale_crown",
         url: "/crowns/sale.svg",
+        artist: "Grace",
+        aiDisclosed: true,
         priceHard: 300,
         listPriceHard: 400,
         priceSoft: 1800,
@@ -653,6 +657,194 @@ describe("Inventory In game tab", () => {
       await clickTile(modal, "crown:sale_crown");
       expect(modal.querySelector("inventory-buy-dialog")).toBeNull();
       expect(showPage).toHaveBeenCalledWith("page-account");
+    });
+  });
+
+  describe("prices stay current (Review Focus 3)", () => {
+    afterEach(() => vi.useRealTimers());
+
+    it("tiles and the buy dialog switch to list prices when a sale ends while open", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      const catalog = makeCatalog() as unknown as {
+        crowns: Record<string, { promotion: { endsAt: string } }>;
+      };
+      catalog.crowns.sale_crown.promotion.endsAt = new Date(
+        Date.now() + 5_000,
+      ).toISOString();
+      vi.mocked(fetchCosmetics).mockResolvedValue(
+        catalog as unknown as Cosmetics,
+      );
+      await open("crowns");
+      await setFilter(modal, "all");
+      expect(
+        tile(modal, "crown:sale_crown").querySelector("[data-tile-sale-label]"),
+      ).not.toBeNull();
+      await clickTile(modal, "crown:sale_crown");
+      const dialog = modal.querySelector("inventory-buy-dialog")!;
+      expect(dialog.querySelector("[data-buy-sale-label]")).not.toBeNull();
+
+      vi.advanceTimersByTime(5_100);
+      await settle(modal);
+
+      const sale = tile(modal, "crown:sale_crown");
+      expect(sale.querySelector("[data-tile-sale-label]")).toBeNull();
+      expect(sale.querySelector("[data-tile-list-price]")).toBeNull();
+      expect(
+        sale.querySelector('[data-tile-price="hard"]')!.textContent,
+      ).toContain("400");
+      const after = modal.querySelector("inventory-buy-dialog")!;
+      expect(after.querySelector("[data-buy-sale-label]")).toBeNull();
+      expect(
+        after.querySelector<PurchaseButton>("purchase-button")!.priceHard,
+      ).toBe(400);
+    });
+
+    it("a sale that starts after the first load shows on reopen", async () => {
+      const noSale = makeCatalog() as unknown as {
+        crowns: Record<string, Record<string, unknown>>;
+      };
+      const crown = noSale.crowns.sale_crown;
+      crown.priceHard = 400;
+      crown.priceSoft = 2400;
+      delete crown.listPriceHard;
+      delete crown.listPriceSoft;
+      delete crown.promotion;
+      vi.mocked(fetchCosmetics).mockResolvedValue(
+        noSale as unknown as Cosmetics,
+      );
+      await open("crowns");
+      await setFilter(modal, "all");
+      expect(
+        tile(modal, "crown:sale_crown").querySelector("[data-tile-sale-label]"),
+      ).toBeNull();
+
+      modal.close();
+      await settle(modal);
+      vi.mocked(fetchCosmetics).mockResolvedValue(makeCatalog());
+      modal.open({ tab: "crowns" });
+      await settle(modal);
+      await setFilter(modal, "all");
+      expect(
+        tile(modal, "crown:sale_crown").querySelector("[data-tile-sale-label]")!
+          .textContent,
+      ).toContain("Winter sale");
+    });
+  });
+
+  describe("accessibility, focus and previews", () => {
+    function describedBy(el: Element): string {
+      return (el.getAttribute("aria-describedby") ?? "")
+        .split(" ")
+        .map((id) => document.getElementById(id)?.textContent ?? "")
+        .join(" ");
+    }
+
+    it("a tile's button is described by its rarity, state and price", async () => {
+      new UserSettings().setSelectedPatternName("pattern:hexgrid");
+      await open("crowns");
+      await setFilter(modal, "all");
+      const owned = tile(modal, "crown:gold_crown").querySelector(
+        "[data-tile-main]",
+      )!;
+      expect(owned.getAttribute("aria-label")).toBeTruthy();
+      expect(describedBy(owned)).toContain("inventory.state_owned");
+      const sale = tile(modal, "crown:sale_crown").querySelector(
+        "[data-tile-main]",
+      )!;
+      const description = describedBy(sale);
+      expect(description).toContain("300");
+      expect(description).toContain("400");
+      expect(description).toContain("Winter sale");
+    });
+
+    it("the buy dialog takes focus, traps Tab and gives focus back to the tile", async () => {
+      await open("crowns");
+      await setFilter(modal, "all");
+      const main = tile(modal, "crown:sale_crown").querySelector<HTMLElement>(
+        "[data-tile-main]",
+      )!;
+      main.focus();
+      main.click();
+      await settle(modal);
+      const dialog = modal.querySelector("inventory-buy-dialog")!;
+      expect(document.activeElement).toBe(
+        dialog.querySelector("[data-buy-close]"),
+      );
+
+      const buttons = [
+        ...dialog.querySelectorAll<HTMLElement>("[data-buy-panel] button"),
+      ].filter((b) => !(b as HTMLButtonElement).disabled);
+      buttons[buttons.length - 1].focus();
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab" }));
+      expect(document.activeElement).toBe(buttons[0]);
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Tab", shiftKey: true }),
+      );
+      expect(document.activeElement).toBe(buttons[buttons.length - 1]);
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await settle(modal);
+      expect(modal.querySelector("inventory-buy-dialog")).toBeNull();
+      expect(document.activeElement).toBe(main);
+    });
+
+    it("Escape leaves the dialog open while the purchase confirm is open", async () => {
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      const button = modal.querySelector<PurchaseButton>(
+        "inventory-buy-dialog purchase-button",
+      )!;
+      button.requestCurrencyPurchase("hard");
+      await button.updateComplete;
+      expect(button.querySelector("confirm-dialog")).not.toBeNull();
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await settle(modal);
+      expect((modal as unknown as { isModalOpen: boolean }).isModalOpen).toBe(
+        true,
+      );
+      expect(modal.querySelector("inventory-buy-dialog")).not.toBeNull();
+      // That Escape cancelled the confirm; the next closes the dialog.
+      expect(button.querySelector("confirm-dialog")).toBeNull();
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await settle(modal);
+      expect(modal.querySelector("inventory-buy-dialog")).toBeNull();
+      expect((modal as unknown as { isModalOpen: boolean }).isModalOpen).toBe(
+        true,
+      );
+    });
+
+    it("owned tiles keep the 3D preview and the artist credits", async () => {
+      await open("skins");
+      const hex = tile(modal, "pattern:hexgrid");
+      const info = hex.querySelector("cosmetic-info") as unknown as {
+        artist?: string;
+        aiDisclosed?: boolean;
+      };
+      expect(info.artist).toBe("Ada");
+      expect(info.aiDisclosed).toBe(false);
+      expect(
+        hex.querySelector(
+          "[data-tile-main] cosmetic-info, [data-tile-main] button",
+        ),
+      ).toBeNull();
+      hex
+        .querySelector<HTMLButtonElement>("cosmetic-preview-bubble button")!
+        .click();
+      await settle(modal);
+      expect(modal.querySelector("cosmetic-preview-modal")).not.toBeNull();
+      expect(new UserSettings().getSelectedPatternName(null)).toBeNull();
+    });
+
+    it("the buy dialog shows the artist and AI disclosure", async () => {
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      const dialog = modal.querySelector("inventory-buy-dialog")!;
+      expect(dialog.querySelector("[data-buy-artist]")!.textContent).toContain(
+        "Grace",
+      );
+      expect(dialog.querySelector("[data-buy-ai]")).not.toBeNull();
     });
   });
 

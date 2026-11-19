@@ -9,7 +9,9 @@ import {
   cosmeticRarity,
   cosmeticRarityLabel,
 } from "../CosmeticPresentation";
+import "../CosmeticInfo";
 import "../CosmeticPreview";
+import "../CosmeticPreviewBubble";
 import "../PlutoniumIcon";
 import { type ItemState, unlockLabel } from "./ItemState";
 
@@ -40,6 +42,8 @@ export const lockIcon = html`<svg
     d="M4 7V5a4 4 0 1 1 8 0v2h.5A1.5 1.5 0 0 1 14 8.5v5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5v-5A1.5 1.5 0 0 1 3.5 7H4Zm2 0h4V5a2 2 0 1 0-4 0v2Z"
   />
 </svg>`;
+
+let nextTileId = 0;
 
 /** Rarity is the border colour, plus the rarity word at the top. */
 const RARITY_BORDER: Record<string, string> = {
@@ -75,12 +79,18 @@ export class InventoryItemTile
   @property({ attribute: false }) variants: readonly ResolvedCosmetic[] = [];
   @property({ type: String }) activeVariantKey: string | null = null;
   @property({ type: Boolean }) free = false;
+  /** Changes when shown prices may have (a sale ended); prices are read
+   * through shownPrice at render, so this only asks for a re-render. */
+  @property({ type: Number }) priceEpoch = 0;
   @property({ type: String }) note: string | null = null;
   @property({ attribute: false }) artwork: TemplateResult | null = null;
   @property({ attribute: false })
   onActivate?: (resolved: ResolvedCosmetic) => void;
   @property({ attribute: false })
   onVariantActivate?: (resolved: ResolvedCosmetic) => void;
+
+  /** Ids for the rarity and footer, which describe the tile's button. */
+  private readonly tileId = `inventory-tile-${++nextTileId}`;
 
   createRenderRoot() {
     return this;
@@ -232,6 +242,34 @@ export class InventoryItemTile
     </div>`;
   }
 
+  /**
+   * The Store card's credits ("?": artist, AI disclosure) and 3D preview
+   * buttons, over the artwork's corners. Outside the tile's own button, which
+   * may not nest a control.
+   */
+  private renderExtras(active: ResolvedCosmetic) {
+    if (active.cosmetic === null || this.artwork !== null) return nothing;
+    const credits = active.cosmetic as {
+      artist?: string;
+      aiDisclosed?: boolean;
+    };
+    return html`<div
+      data-tile-extras
+      class="pointer-events-none absolute left-2.5 right-2.5 top-2.5 aspect-[4/3]"
+    >
+      <cosmetic-info
+        .artist=${credits.artist}
+        .aiDisclosed=${credits.aiDisclosed}
+        .rarity=${cosmeticRarity(active)}
+        .colorPalette=${active.colorPalette?.name}
+      ></cosmetic-info>
+      <cosmetic-preview-bubble
+        class="pointer-events-auto"
+        .resolved=${active}
+      ></cosmetic-preview-bubble>
+    </div>`;
+  }
+
   render() {
     if (!this.resolved) return nothing;
     const active = this.active;
@@ -259,6 +297,7 @@ export class InventoryItemTile
         type="button"
         data-tile-main
         aria-label=${name}
+        aria-describedby="${this.tileId}-rarity ${this.tileId}-state"
         aria-pressed=${isEquipped ? "true" : "false"}
         class="flex flex-1 flex-col gap-1.5 rounded-xl p-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
         @click=${() => this.onActivate?.(active)}
@@ -273,6 +312,7 @@ export class InventoryItemTile
         </div>
         <span
           data-tile-rarity
+          id="${this.tileId}-rarity"
           class="truncate text-[11px] font-black uppercase tracking-wider ${
             RARITY_TEXT[rarity] ?? RARITY_TEXT.common
           }"
@@ -283,9 +323,11 @@ export class InventoryItemTile
           class="line-clamp-2 text-sm font-bold capitalize leading-tight text-white"
           >${name}</span
         >
-        <span class="mt-auto">${this.renderFooter(active)}</span>
+        <span id="${this.tileId}-state" class="mt-auto"
+          >${this.renderFooter(active)}</span
+        >
       </button>
-      ${this.renderSwatches()}
+      ${this.renderExtras(active)} ${this.renderSwatches()}
     </div>`;
   }
 }

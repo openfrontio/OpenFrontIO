@@ -1,9 +1,10 @@
-import { html, LitElement, nothing } from "lit";
+import { html, LitElement, nothing, type PropertyValues } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import type { PurchaseResult, ResolvedCosmetic } from "../../Cosmetics";
 import { type PricedItem, shownPrice } from "../../ShownPrice";
 import { translateText } from "../../Utils";
 import {
+  cosmeticAiLabelKey,
   cosmeticDisplayName,
   cosmeticRarityBadgeClass,
   cosmeticRarityLabel,
@@ -28,6 +29,9 @@ export class InventoryBuyDialog extends LitElement {
   @property({ attribute: false }) resolved: ResolvedCosmetic | null = null;
   /** True once the player owns the item: the dialog offers Equip now. */
   @property({ type: Boolean }) bought = false;
+  /** Changes when shown prices may have (a sale ended); prices are read
+   * through shownPrice at render, so this only asks for a re-render. */
+  @property({ type: Number }) priceEpoch = 0;
   @property({ attribute: false })
   onPurchase?: (method: "hard" | "soft") => Promise<PurchaseResult>;
   @property({ attribute: false }) onEquip?: () => void;
@@ -39,27 +43,114 @@ export class InventoryBuyDialog extends LitElement {
     return this;
   }
 
+  /** Where focus was when the dialog opened (the tile): it goes back there
+   * when the dialog closes. */
+  private returnFocusTo: HTMLElement | null = null;
+
   connectedCallback() {
     super.connectedCallback();
+    const active = document.activeElement;
+    this.returnFocusTo =
+      active instanceof HTMLElement && active !== document.body ? active : null;
     window.addEventListener("keydown", this.onKeyDown, { capture: true });
   }
 
   disconnectedCallback() {
     window.removeEventListener("keydown", this.onKeyDown, { capture: true });
     super.disconnectedCallback();
+    if (this.returnFocusTo?.isConnected) this.returnFocusTo.focus();
+    this.returnFocusTo = null;
+  }
+
+  protected updated(changed: PropertyValues): void {
+    super.updated(changed);
+    // Focus moves into the dialog when it opens, and to Equip now once the
+    // item is bought.
+    if (changed.has("bought") && this.bought) {
+      this.querySelector<HTMLElement>("[data-buy-equip-now]")?.focus();
+    } else if (changed.has("resolved") && this.resolved !== null) {
+      if (!this.contains(document.activeElement)) {
+        this.querySelector<HTMLElement>("[data-buy-close]")?.focus();
+      }
+    }
+  }
+
+  /** The purchase button's own dialog (confirm, or not enough currency,
+   * which is a confirm-dialog too), if one is open over this one. */
+  private nestedConfirm(): Element | null {
+    const all = this.querySelectorAll("confirm-dialog");
+    return all.length > 0 ? all[all.length - 1] : null;
+  }
+
+  private focusables(): HTMLElement[] {
+    return [
+      ...this.querySelectorAll<HTMLElement>(
+        "[data-buy-panel] button:not([disabled]), [data-buy-panel] [href], [data-buy-panel] input, [data-buy-panel] [tabindex]:not([tabindex='-1'])",
+      ),
+    ].filter((el) => !el.closest("[hidden]"));
   }
 
   // Capture phase, so Escape closes this and not the Inventory behind it.
   private onKeyDown = (event: KeyboardEvent) => {
-    if (
-      event.key !== "Escape" ||
-      document.querySelector("cosmetic-preview-modal")
-    )
+    // The 3D preview is on top: it handles its own keys.
+    if (document.querySelector("cosmetic-preview-modal")) return;
+    const nested = this.nestedConfirm();
+    if (event.key === "Tab" && nested === null) {
+      // Keep focus inside the dialog.
+      const items = this.focusables();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      const inside = active instanceof HTMLElement && this.contains(active);
+      if (event.shiftKey && (active === first || !inside)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !inside)) {
+        event.preventDefault();
+        first.focus();
+      }
       return;
+    }
+    if (event.key !== "Escape") return;
+    // Escape is ours, never the Inventory's behind us. It closes the topmost
+    // dialog: the purchase button's own first (as its Cancel does), then this.
     event.stopPropagation();
     event.preventDefault();
+    if (nested !== null) {
+      nested.dispatchEvent(new CustomEvent("cancel"));
+      return;
+    }
     this.onClose?.();
   };
+
+  private renderCredits(resolved: ResolvedCosmetic) {
+    const credits = resolved.cosmetic as {
+      artist?: string;
+      aiDisclosed?: boolean;
+    } | null;
+    const artist = credits?.artist;
+    const aiLabelKey = cosmeticAiLabelKey(credits?.aiDisclosed, artist);
+    if (!artist && !aiLabelKey) return nothing;
+    return html`<div
+      data-buy-credits
+      class="flex flex-col text-xs text-white/60"
+    >
+      ${
+        artist
+          ? html`<span data-buy-artist
+              >${translateText("cosmetics.artist_label")}
+              <span class="font-medium text-white/90">${artist}</span></span
+            >`
+          : nothing
+      }
+      ${
+        aiLabelKey
+          ? html`<span data-buy-ai>${translateText(aiLabelKey)}</span>`
+          : nothing
+      }
+    </div>`;
+  }
 
   private renderAction(resolved: ResolvedCosmetic) {
     if (this.bought) {
@@ -138,6 +229,7 @@ export class InventoryBuyDialog extends LitElement {
       }}
     >
       <div
+        data-buy-panel
         class="flex max-h-[90vh] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-t-2xl border border-white/15 bg-zinc-900 p-5 shadow-2xl sm:rounded-2xl"
       >
         <div class="flex items-start justify-between gap-3">
@@ -154,6 +246,7 @@ export class InventoryBuyDialog extends LitElement {
               )}"
               >${cosmeticRarityLabel(resolved)}</span
             >
+            ${this.renderCredits(resolved)}
           </div>
           <button
             type="button"

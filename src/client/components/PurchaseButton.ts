@@ -255,6 +255,17 @@ export function renderPrice(
     >${balance}`;
 }
 
+/** Items with a purchase in flight, by busyKey: a button for the same item
+ * made again (a dialog closed and reopened mid-purchase) stays busy. */
+const busyItems = new Set<string>();
+const BUSY_CHANGED_EVENT = "purchase-button-busy-changed";
+
+function setItemBusy(key: string, busy: boolean) {
+  if (busy) busyItems.add(key);
+  else busyItems.delete(key);
+  window.dispatchEvent(new CustomEvent(BUSY_CHANGED_EVENT));
+}
+
 @customElement("purchase-button")
 export class PurchaseButton extends LitElement {
   @property({ type: Object })
@@ -335,14 +346,25 @@ export class PurchaseButton extends LitElement {
 
   /** Set when a purchase fails for lack of funds; drives the dialog. */
   @state() private insufficient: InsufficientCurrency | null = null;
-  /** Currency purchase snapshot awaiting confirmation, if any. */
+  /** Currency purchase awaiting confirmation, if any. Its amount is read
+   * when the dialog renders, so a sale ending while it is open shows (and
+   * charges) the price at that moment. */
   @state() private confirmingPurchase: {
     method: "hard" | "soft";
-    amount: number;
     itemName: string;
     handler: () => Promise<PurchaseResult>;
   } | null = null;
-  @state() private busy = false;
+  @state() private ownBusy = false;
+
+  /** Names the item, so every button for it shares one busy state while a
+   * purchase is in flight. Empty: this button's own state only. */
+  @property({ type: String }) busyKey = "";
+
+  private get busy(): boolean {
+    return this.ownBusy || (this.busyKey !== "" && busyItems.has(this.busyKey));
+  }
+
+  private onBusyChanged = () => this.requestUpdate();
 
   private saleEndTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -378,8 +400,14 @@ export class PurchaseButton extends LitElement {
     return shownPrice(this.pricedItem, currency);
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    window.addEventListener(BUSY_CHANGED_EVENT, this.onBusyChanged);
+  }
+
   disconnectedCallback() {
     super.disconnectedCallback();
+    window.removeEventListener(BUSY_CHANGED_EVENT, this.onBusyChanged);
     this.clearSaleEndTimer();
   }
 
@@ -417,17 +445,14 @@ export class PurchaseButton extends LitElement {
     const handler =
       method === "hard" ? this.onPurchaseHard : this.onPurchaseSoft;
     if (!handler || this.busy) return;
-    this.confirmingPurchase = {
-      method,
-      amount: this.shown(method)?.price ?? 0,
-      itemName: this.itemName,
-      handler,
-    };
+    this.confirmingPurchase = { method, itemName: this.itemName, handler };
   }
 
   private executePurchase(handler?: () => Promise<PurchaseResult>) {
     if (!handler || this.busy) return;
-    this.busy = true;
+    const key = this.busyKey;
+    this.ownBusy = true;
+    if (key !== "") setItemBusy(key, true);
     void Promise.resolve()
       .then(() => handler())
       .then((result) => {
@@ -437,7 +462,10 @@ export class PurchaseButton extends LitElement {
         console.error("Purchase callback failed", error);
         void showInGameAlert(translateText("store.purchase_failed"));
       })
-      .finally(() => (this.busy = false));
+      .finally(() => {
+        this.ownBusy = false;
+        if (key !== "") setItemBusy(key, false);
+      });
   }
 
   showInsufficient(result: InsufficientCurrency) {
@@ -618,7 +646,7 @@ export class PurchaseButton extends LitElement {
               .heading=${translateText("store.confirm_purchase_title")}
               .message=${translateText("store.confirm_purchase_body", {
                 item: this.confirmingPurchase.itemName,
-                amount: this.confirmingPurchase.amount,
+                amount: this.shown(this.confirmingPurchase.method)?.price ?? 0,
                 currency: translateText(
                   this.confirmingPurchase.method === "hard"
                     ? "cosmetics.hard"

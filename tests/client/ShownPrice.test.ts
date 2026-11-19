@@ -78,6 +78,27 @@ describe("shownPrice", () => {
     expect(shownPrice(item, "hard")?.price).toBe(currentPrice(item, "hard"));
   });
 
+  it("is currentPrice's rule, edges included", () => {
+    const ended = {
+      name: "Old sale",
+      percentOff: 25,
+      endsAt: new Date(Date.now() - 1).toISOString(),
+    };
+    const items = [
+      { priceHard: 300, listPriceHard: 400, promotion: ended },
+      // A list price with no price: not sold in that currency, sale or not.
+      { listPriceHard: 400, promotion: ended },
+      { priceHard: 300 },
+      {},
+    ];
+    for (const item of items) {
+      expect(shownPrice(item, "hard")?.price).toBe(currentPrice(item, "hard"));
+    }
+    expect(currentPrice({ listPriceHard: 400, promotion: ended }, "hard")).toBe(
+      undefined,
+    );
+  });
+
   it("is null when the item has no price in that currency", () => {
     expect(shownPrice({ priceHard: 400 }, "soft", NOW)).toBeNull();
     expect(shownPrice({}, "hard", NOW)).toBeNull();
@@ -141,6 +162,62 @@ describe("<purchase-button> reads prices through shownPrice", () => {
       listPrice: null,
       saleLabel: null,
     });
+  });
+
+  it("an open confirm dialog shows the list price once the sale ends", async () => {
+    const lang = document.createElement("lang-selector");
+    const translations = { "store.confirm_purchase_body": "Pay {amount}" };
+    Object.assign(lang, {
+      translations,
+      defaultTranslations: translations,
+      currentLang: "en",
+    });
+    document.body.appendChild(lang);
+    vi.useFakeTimers();
+    const button = await mount(new Date(Date.now() + 5_000).toISOString());
+    button.requestCurrencyPurchase("hard");
+    await button.updateComplete;
+    const confirm = () =>
+      button.querySelector("confirm-dialog") as unknown as { message: string };
+    expect(confirm().message).toContain("300");
+    vi.advanceTimersByTime(5_010);
+    await button.updateComplete;
+    expect(confirm().message).toContain("400");
+    expect(confirm().message).not.toContain("300");
+  });
+
+  it("keeps a reopened button busy while the same item's purchase runs", async () => {
+    let finish!: () => void;
+    const first = await mount(new Date(Date.now() + 60_000).toISOString());
+    first.busyKey = "crown:x";
+    first.onPurchaseHard = () =>
+      new Promise<undefined>((resolve) => {
+        finish = () => resolve(undefined);
+      });
+    await first.updateComplete;
+    first.requestCurrencyPurchase("hard");
+    await first.updateComplete;
+    first
+      .querySelector("confirm-dialog")!
+      .dispatchEvent(new CustomEvent("confirm"));
+    await first.updateComplete;
+    first.remove();
+
+    const second = await mount(new Date(Date.now() + 60_000).toISOString());
+    second.busyKey = "crown:x";
+    await second.updateComplete;
+    const hard = second.querySelector<HTMLButtonElement>(
+      ".purchase-sparkle-btn-hard",
+    )!;
+    expect(hard.disabled).toBe(true);
+    second.requestCurrencyPurchase("hard");
+    await second.updateComplete;
+    expect(second.querySelector("confirm-dialog")).toBeNull();
+
+    finish();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await second.updateComplete;
+    expect(hard.disabled).toBe(false);
   });
 
   it("switches to the list price the moment the sale ends", async () => {

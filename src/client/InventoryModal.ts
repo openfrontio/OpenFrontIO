@@ -54,12 +54,15 @@ import { signedOutNotice } from "./components/ui/SignedOutNotice";
 import {
   fetchCosmetics,
   groupCosmeticVariants,
+  invalidateCosmetics,
   purchaseCosmetic,
   type PurchaseResult,
+  refreshStaleCosmetics,
   resolveCosmetics,
   ResolvedCosmetic,
   resolvedToPlayerPattern,
 } from "./Cosmetics";
+import { type PricedItem, saleEndsAt } from "./ShownPrice";
 import {
   type CosmeticLoadout,
   CROWN_KEY,
@@ -138,6 +141,10 @@ export class InventoryModal extends BaseModal {
   @state() private buying: ResolvedCosmetic | null = null;
   /** The dialog's item has been bought: it offers Equip now. */
   @state() private buyingBought = false;
+  /** Bumped when shown prices change (a sale ended, a fresh catalogue), so
+   * tiles and the buy dialog re-read them. */
+  @state() private priceEpoch = 0;
+  private saleEndTimer: ReturnType<typeof setTimeout> | null = null;
 
   private cosmetics: Cosmetics | null = null;
   private userSettings: UserSettings = new UserSettings();
@@ -203,6 +210,7 @@ export class InventoryModal extends BaseModal {
   }
 
   disconnectedCallback() {
+    this.clearSaleEndTimer();
     this.removeEventListener(
       "open-cosmetic-preview",
       this.onOpenCosmeticPreview,
@@ -259,7 +267,7 @@ export class InventoryModal extends BaseModal {
 
   private loadCatalog(): Promise<Cosmetics | null> {
     if (this.catalogLoad !== null) return this.catalogLoad;
-    const request = fetchCosmetics();
+    const request = Promise.resolve(fetchCosmetics());
     const guarded = request.finally(() => {
       if (this.catalogLoad === guarded) this.catalogLoad = null;
     });
@@ -729,6 +737,7 @@ export class InventoryModal extends BaseModal {
 
   private renderTile(entry: GridEntry, slot?: string): TemplateResult {
     return html`<inventory-item-tile
+      .priceEpoch=${this.priceEpoch}
       .resolved=${entry.resolved}
       .variants=${entry.variants}
       .activeVariantKey=${entry.resolved.key}
@@ -1066,10 +1075,11 @@ export class InventoryModal extends BaseModal {
       ${
         this.buying
           ? html`<inventory-buy-dialog
-              .resolved=${this.buying}
+              .resolved=${this.currentBuying()}
               .bought=${this.buyingBought}
+              .priceEpoch=${this.priceEpoch}
               .onPurchase=${(method: "hard" | "soft") =>
-                this.purchase(this.buying!, method)}
+                this.purchase(this.currentBuying()!, method)}
               .onEquip=${() => this.equipBought()}
               .onPreview=${() => {
                 this.previewingCosmetic = this.buying;
@@ -1224,9 +1234,74 @@ export class InventoryModal extends BaseModal {
       return;
     }
     this.updateFromSettings();
+    // Prices change when a sale starts or ends: like the Store, refetch a
+    // catalogue more than a minute old, or one still carrying an ended sale.
+    if (this.hasEndedSale()) invalidateCosmetics();
+    else refreshStaleCosmetics();
+    await this.refreshCatalog();
+  }
+
+  /** Loads the catalogue again and shows it, without the loading state. A
+   * failed fetch keeps the catalogue already shown. */
+  private async refreshCatalog(): Promise<void> {
+    const fresh = await this.loadCatalog().catch(() => null);
+    if (!fresh || !this.isModalOpen) return;
+    this.cosmetics = fresh;
+    this.priceEpoch++;
+  }
+
+  private salePromotions(): PricedItem[] {
+    return this.resolvedItems()
+      .map((item) => item.cosmetic as PricedItem | null)
+      .filter((item): item is PricedItem => item?.promotion !== undefined);
+  }
+
+  private hasEndedSale(): boolean {
+    const now = Date.now();
+    return this.salePromotions().some(
+      (item) => (saleEndsAt(item) ?? Infinity) <= now,
+    );
+  }
+
+  protected updated(changed: Map<PropertyKey, unknown>): void {
+    super.updated(changed);
+    this.scheduleSaleEnd();
+  }
+
+  /**
+   * At the soonest sale end, re-render (tiles and the buy dialog switch to
+   * list prices then) and refetch the catalogue for whatever runs next.
+   * Rescheduled on every render; cleared on close.
+   */
+  private scheduleSaleEnd(): void {
+    this.clearSaleEndTimer();
+    if (!this.isModalOpen || this.cosmetics === null) return;
+    const now = Date.now();
+    let next = Infinity;
+    for (const item of this.salePromotions()) {
+      const end = saleEndsAt(item);
+      if (end !== null && end > now && end < next) next = end;
+    }
+    // setTimeout overflows past ~24.8 days; a later render reschedules.
+    if (!Number.isFinite(next) || next - now > 2 ** 31 - 1) return;
+    this.saleEndTimer = setTimeout(
+      () => {
+        this.saleEndTimer = null;
+        this.priceEpoch++;
+        invalidateCosmetics();
+        void this.refreshCatalog();
+      },
+      next - now + 1,
+    );
+  }
+
+  private clearSaleEndTimer(): void {
+    if (this.saleEndTimer !== null) clearTimeout(this.saleEndTimer);
+    this.saleEndTimer = null;
   }
 
   protected onClose(): void {
+    this.clearSaleEndTimer();
     this.search = "";
     this.previewingCosmetic = null;
     this.buying = null;
@@ -1358,6 +1433,14 @@ export class InventoryModal extends BaseModal {
     const item = this.buying;
     this.closeBuy();
     if (item !== null) this.equip(item);
+  }
+
+  /** The dialog's item from the catalogue now shown: a refetch may have
+   * changed its price or sale. */
+  private currentBuying(): ResolvedCosmetic | null {
+    const key = this.buying?.key;
+    if (key === undefined) return null;
+    return this.resolvedItems().find((item) => item.key === key) ?? this.buying;
   }
 
   private closeBuy() {
