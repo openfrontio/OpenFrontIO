@@ -116,7 +116,11 @@ export function flickerSchedule(
 }
 
 // Whether a flash is on at `t` (the schedule loops over `length` seconds).
-export function flickerOn(t: number, flashes: Flash[], length: number): boolean {
+export function flickerOn(
+  t: number,
+  flashes: Flash[],
+  length: number,
+): boolean {
   const local = t - Math.floor(t / length) * length;
   for (const f of flashes) {
     if (local < f.start) return false;

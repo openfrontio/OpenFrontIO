@@ -121,9 +121,9 @@ describe("CardBackgroundAnimationSchema", () => {
   });
 
   it("bounds the mask's periods and ripple centre", () => {
-    expect(
-      ok({ kind: "mask", mask: "/m.png", flow: { period: 0.7 } }),
-    ).toBe(false);
+    expect(ok({ kind: "mask", mask: "/m.png", flow: { period: 0.7 } })).toBe(
+      false,
+    );
     expect(
       ok({ kind: "mask", mask: "/m.png", shimmer: { rippleCentre: [10, 20] } }),
     ).toBe(true);
@@ -193,9 +193,7 @@ describe("a catalogue with a bad animation", () => {
       url: "/cosmetics/bg_bad.webp",
       artist: "Someone",
     });
-    expect(bgs.bg_neon_grid.animation).toEqual(
-      fixture("neon-grid").animation,
-    );
+    expect(bgs.bg_neon_grid.animation).toEqual(fixture("neon-grid").animation);
     expect(bgs.bg_still.animation).toBeUndefined();
   });
 });

@@ -15,7 +15,13 @@ if (!customElements.get("card-background")) {
 function fixture(name: string): NonNullable<PlayerCardView["background"]> {
   const raw = JSON.parse(
     fs.readFileSync(
-      path.join(__dirname, "..", "testdata", "card-backgrounds", `${name}.json`),
+      path.join(
+        __dirname,
+        "..",
+        "testdata",
+        "card-backgrounds",
+        `${name}.json`,
+      ),
       "utf8",
     ),
   ) as { name: string; url: string; rarity: string; animation: unknown };
@@ -118,8 +124,9 @@ async function mount(
 
 const layerEls = (el: Element) =>
   el.querySelectorAll<HTMLElement>("[data-card-fx-layer]");
-const layerImgs = (el: Element) =>
-  [...el.querySelectorAll<HTMLImageElement>("[data-card-fx-img]")];
+const layerImgs = (el: Element) => [
+  ...el.querySelectorAll<HTMLImageElement>("[data-card-fx-img]"),
+];
 
 function loadBase(el: Element) {
   el.querySelector("[data-card-bg-base]")!.dispatchEvent(new Event("load"));
