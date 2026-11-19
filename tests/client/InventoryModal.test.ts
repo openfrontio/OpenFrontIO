@@ -254,15 +254,21 @@ async function showTab(
 }
 
 function loadoutMenu(modal: InventoryModal): LitElement {
-  return modal.querySelector("inventory-loadout-menu") as LitElement;
+  return modal.querySelector("inventory-loadout-select") as LitElement;
+}
+
+function loadoutSelect(modal: InventoryModal): HTMLSelectElement {
+  return loadoutMenu(modal).querySelector<HTMLSelectElement>(
+    "[data-loadout-select]",
+  )!;
 }
 
 function loadoutSlots(modal: InventoryModal): string[] {
   return [
-    ...loadoutMenu(modal).querySelectorAll<HTMLButtonElement>(
-      "[data-loadout-slot]",
+    ...loadoutSelect(modal).querySelectorAll<HTMLOptionElement>(
+      "option[data-loadout-slot]",
     ),
-  ].map((slot) => slot.dataset.loadoutSlot!);
+  ].map((slot) => slot.value);
 }
 
 async function addLoadoutSlot(modal: InventoryModal) {
@@ -274,18 +280,15 @@ async function addLoadoutSlot(modal: InventoryModal) {
 }
 
 async function selectLoadoutSlot(modal: InventoryModal, name: string) {
-  loadoutMenu(modal)
-    .querySelector<HTMLButtonElement>(`[data-loadout-slot="${name}"]`)!
-    .click();
+  const select = loadoutSelect(modal);
+  select.value = name;
+  select.dispatchEvent(new Event("change"));
   await modal.updateComplete;
   await loadoutMenu(modal).updateComplete;
 }
 
 function activeSlot(modal: InventoryModal): string | null {
-  const active = loadoutMenu(modal).querySelector<HTMLButtonElement>(
-    '[data-loadout-slot][aria-pressed="true"]',
-  );
-  return active?.dataset.loadoutSlot ?? null;
+  return loadoutSelect(modal).value || null;
 }
 
 describe("InventoryModal", () => {
@@ -321,7 +324,6 @@ describe("InventoryModal", () => {
       "inventory.loadout_limit": "You can save up to {count} loadouts.",
       "inventory.loadout_presets": "Loadouts",
       "inventory.loadout_saved": "Saved loadout {name}",
-      "inventory.loadout_add": "New loadout",
       "inventory.loadout_slot": "Loadout {name}",
       "inventory.loadout_delete_target": "Delete {name}",
       "common.none": "No flag",
@@ -1067,7 +1069,7 @@ describe("InventoryModal", () => {
     const remove = menu.querySelector<HTMLButtonElement>(
       '[data-loadout-delete="02"]',
     )!;
-    expect(remove.getAttribute("aria-label")).toBe("Delete 02");
+    expect(remove.getAttribute("aria-label")).toBe("Delete Loadout 02");
 
     remove.click();
     await modal.updateComplete;

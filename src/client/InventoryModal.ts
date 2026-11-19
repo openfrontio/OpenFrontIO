@@ -47,7 +47,7 @@ import type {
   InventoryCategory,
   InventoryLoadoutEntry,
 } from "./components/InventoryLoadoutBar";
-import "./components/InventoryLoadoutMenu";
+import "./components/inventory/InventoryLoadoutSelect";
 import { ProgressiveList } from "./components/ProgressiveList";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { signedOutNotice } from "./components/ui/SignedOutNotice";
@@ -528,47 +528,18 @@ export class InventoryModal extends BaseModal {
           >· ${translateText("inventory.loadout_on_device")}</span
         >
       </h3>
-      <inventory-loadout-menu
+      <inventory-loadout-select
         .names=${names}
         .active=${this.userSettings.getActiveLoadout() ?? ""}
+        .edited=${edited !== null}
         .canAdd=${names.length < MAX_LOADOUTS}
         .canUnequip=${this.hasEquippedCosmetic()}
         .onSelect=${(name: string) => this.applyLoadout(name)}
         .onAdd=${() => this.addLoadout()}
+        .onUpdate=${(name: string) => this.updateLoadout(name)}
         .onDelete=${(name: string) => this.deleteLoadout(name)}
         .onUnequipAll=${() => this.unequipAll()}
-      ></inventory-loadout-menu>
-      ${
-        edited !== null
-          ? html`<div
-              data-loadout-edited
-              class="flex items-center justify-between gap-2 px-1"
-            >
-              <span class="text-sm text-white/80"
-                >${translateText("inventory.loadout_edited", {
-                  name: edited,
-                })}</span
-              >
-              <button
-                type="button"
-                data-loadout-update
-                class="min-h-11 rounded-lg bg-blue-600 px-4 text-sm font-bold text-white hover:bg-blue-500"
-                @click=${() => this.updateLoadout(edited)}
-              >
-                ${translateText("inventory.loadout_update")}
-              </button>
-            </div>`
-          : nothing
-      }
-      <button
-        type="button"
-        data-loadout-save-new
-        ?disabled=${names.length >= MAX_LOADOUTS}
-        class="min-h-11 self-start px-1 text-left text-xs font-semibold text-white/60 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-        @click=${() => this.addLoadout()}
-      >
-        ${translateText("inventory.loadout_save_new")}
-      </button>
+      ></inventory-loadout-select>
     </section>`;
   }
 

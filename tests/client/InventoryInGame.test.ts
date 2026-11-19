@@ -444,6 +444,53 @@ describe("Inventory In game tab", () => {
     });
   });
 
+  describe("loadout dropdown", () => {
+    it("lists loadouts in a dropdown that equips the chosen one", async () => {
+      const settings = new UserSettings();
+      settings.setSelectedCrownName("gold_crown");
+      settings.addLoadout(); // 01: gold crown
+      settings.setActiveLoadout(null);
+      settings.setSelectedCrownName(undefined);
+      settings.addLoadout(); // 02: no crown, now active
+      await open("crowns");
+      const select = modal.querySelector<HTMLSelectElement>(
+        "[data-loadout-select]",
+      )!;
+      expect(
+        [...select.querySelectorAll("option[data-loadout-slot]")].map(
+          (o) => (o as HTMLOptionElement).value,
+        ),
+      ).toEqual(["01", "02"]);
+      expect(select.value).toBe("02");
+      select.value = "01";
+      select.dispatchEvent(new Event("change"));
+      await settle(modal);
+      expect(new UserSettings().getSelectedCrownName()).toBe("gold_crown");
+      expect(new UserSettings().getActiveLoadout()).toBe("01");
+      expect(
+        modal.querySelector("[data-inventory-loadout-area]")!.textContent,
+      ).toContain("inventory.loadout_on_device");
+    });
+
+    it("shows <name> · edited with Update when the look differs", async () => {
+      const settings = new UserSettings();
+      settings.addLoadout(); // 01, active, nothing equipped
+      settings.setActiveLoadout(null);
+      settings.setSelectedCrownName("gold_crown"); // not mirrored into 01
+      settings.setActiveLoadout("01");
+      await open("crowns");
+      expect(modal.querySelector("[data-loadout-edited]")).not.toBeNull();
+      expect(
+        modal.querySelector<HTMLSelectElement>("[data-loadout-select]")!
+          .selectedOptions[0].textContent,
+      ).toContain("inventory.loadout_edited");
+      modal.querySelector<HTMLButtonElement>("[data-loadout-update]")!.click();
+      await settle(modal);
+      expect(new UserSettings().getLoadout("01")?.crown).toBe("gold_crown");
+      expect(modal.querySelector("[data-loadout-edited]")).toBeNull();
+    });
+  });
+
   describe("states", () => {
     it("signed out: sign-in prompt, and country flags stay usable marked Free", async () => {
       await open("flags", false);
