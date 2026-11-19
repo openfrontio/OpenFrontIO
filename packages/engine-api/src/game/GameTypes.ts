@@ -2,7 +2,7 @@ import { AllPlayersStats, ClientID } from "../Schemas";
 
 import { TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
-import { maps, type MapInfo } from "./Maps.gen";
+import { GameMapType, maps, type MapInfo } from "./Maps.gen";
 
 function isEnumValue<T extends Record<string, string | number>>(
   enumObj: T,
@@ -119,6 +119,18 @@ export {
   type MapInfo,
   type SpecialModifierKey,
 } from "./Maps.gen";
+
+/**
+ * The map of a game whose map files came with its start (a scenario's own
+ * terrain) rather than from resources/maps. It is not a stock map: it is not
+ * in `GameMapType` or `maps`, so nothing lists, picks or fetches it, and the
+ * engine accepts any files for it. A snapshot still refuses to restore onto
+ * files other than the ones it was taken on.
+ */
+export const CustomGameMap = "Custom" as const;
+
+/** A game's map: a stock map, or `CustomGameMap`. */
+export type GameMapId = GameMapType | typeof CustomGameMap;
 
 /**
  * The maps players can pick or be dealt: everything but `hidden` ones (the

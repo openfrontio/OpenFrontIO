@@ -2,6 +2,7 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   AllPlayers,
   BuildableUnit,
+  CustomGameMap,
   GameType,
   GameUpdates,
   HumanDisconnects,
@@ -99,12 +100,19 @@ export async function createGameRunner(
   return gr;
 }
 
-/** The game's maps, from its map's files (which the game takes over). */
+/**
+ * The game's maps, from its map's files (which the game takes over). A stock
+ * map must get its own files; a Custom map's files came with the game start,
+ * so any are accepted (a snapshot still checks them against its own hash).
+ */
 function loadGameMap(
   config: Pick<GameStartInfo["config"], "gameMap" | "gameMapSize">,
   map: MapFiles,
 ) {
-  if (map.map !== config.gameMap || map.mapSize !== config.gameMapSize) {
+  if (
+    (config.gameMap !== CustomGameMap && map.map !== config.gameMap) ||
+    map.mapSize !== config.gameMapSize
+  ) {
     throw new Error(
       `the game is on ${config.gameMap} (${config.gameMapSize}), ` +
         `the files passed are ${map.map} (${map.mapSize})`,

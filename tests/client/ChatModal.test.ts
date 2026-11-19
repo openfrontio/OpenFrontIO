@@ -357,6 +357,14 @@ describe("ChatModal", () => {
     expect(sectionTitles("Recent")).toEqual(["GG!"]);
   });
 
+  it("uses light text in the dark phrase search field", async () => {
+    allPhrasesSwitch().click();
+    await modal.updateComplete;
+
+    const search = modal.querySelector("input");
+    expect(search?.classList.contains("text-white")).toBe(true);
+  });
+
   it("searches all phrases by their text once all phrases are on", async () => {
     expect(modal.querySelector("input")).toBeNull();
     chip("GG!").click();

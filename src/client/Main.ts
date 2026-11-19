@@ -170,6 +170,7 @@ import {
 import "./UserMeBroadcast";
 import { classicReplayHref } from "./replay/ReplayEntry";
 import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
+import { tabAttention } from "./TabAttention";
 // The UsernameInput class is used as a type; retain this for registration.
 // oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./UsernameInput";
@@ -529,7 +530,7 @@ class Client {
     // The canonical profile link, `/player/<id>` (see playerProfileUrl).
     modalRouter.registerPath("profile", playerProfileRouteArgs);
     modalRouter.register("help", { tag: "help-modal", pageId: "page-help" });
-    modalRouter.register("news", { tag: "news-modal", pageId: "page-news" });
+    modalRouter.register("news", { tag: "news-modal" });
     modalRouter.register("language", {
       tag: "language-modal",
       pageId: "page-language",
@@ -1183,7 +1184,15 @@ class Client {
         .catch(() => undefined);
     });
 
+    let lastHandledHref: string | null = null;
+
     const onHashUpdate = () => {
+      if (lastHandledHref === window.location.href) {
+        lastHandledHref = null;
+        return;
+      }
+      lastHandledHref = null;
+
       if (this.replayViewerID !== null) {
         this.leaveReplayViewer();
         return;
@@ -1213,6 +1222,10 @@ class Client {
       // syncing in/out; we don't need to tear down the lobby state for them.
       if (modalRouter.isHashRouted()) {
         modalRouter.routeFromHash();
+        return;
+      }
+      if (modalRouter.closeCurrent()) {
+        lastHandledHref = window.location.href;
         return;
       }
 
@@ -2007,6 +2020,9 @@ class Client {
       // through the wait (e.g. the featured-stream panel) hide at this point instead of on join.
       this.menuTornDown = true;
       document.dispatchEvent(new CustomEvent("game-starting"));
+      // Flash the tab if the player has switched away while waiting; the game
+      // runner takes over (and stops it) once the spawn phase is under way.
+      tabAttention.request("starting");
       // Earliest point the lobby is provably closed: the server has stopped
       // broadcasting lobby_info and refuses new seats, so the shell must stop
       // advertising this as joinable even though terrain is still loading.

@@ -160,18 +160,46 @@ export class GameMapImpl implements GameMap {
   // Original terrain byte of every tile whose terrain changed (water nukes),
   // in first-edit order. Lets a snapshot store terrain as a diff against the
   // map file and verify the file it will be restored onto is the same one.
-  private pristineTerrain: Map<TileRef, number> | null = null;
+  //
+  // Kept in typed arrays rather than a Map: a Map holds at most 2^24 entries,
+  // fewer than the largest maps have tiles, and a long water-nuke game there
+  // edits more tiles than that.
+  private editedMask: Uint8Array | null = null; // one bit per tile
+  private editTiles: Uint32Array = new Uint32Array(0);
+  private editOriginal: Uint8Array = new Uint8Array(0);
+  private editCount = 0;
 
-  /** Tiles whose terrain may differ from the map file's. */
-  editedTerrainTiles(): TileRef[] {
-    return [...(this.pristineTerrain?.keys() ?? [])];
+  /** Tiles whose terrain may differ from the map file's, in first-edit order. */
+  editedTerrainTiles(): Uint32Array {
+    return this.editTiles.slice(0, this.editCount);
+  }
+
+  /** Whether the tile's terrain may differ from the map file's. */
+  isTerrainEdited(ref: TileRef): boolean {
+    const mask = this.editedMask;
+    return mask !== null && (mask[ref >>> 3] & (1 << (ref & 7))) !== 0;
   }
 
   private noteTerrainEdit(ref: TileRef): void {
-    this.pristineTerrain ??= new Map();
-    if (!this.pristineTerrain.has(ref)) {
-      this.pristineTerrain.set(ref, this.terrain[ref]);
+    const mask = (this.editedMask ??= new Uint8Array(
+      (this.terrain.length + 7) >>> 3,
+    ));
+    const bit = 1 << (ref & 7);
+    if ((mask[ref >>> 3] & bit) !== 0) return;
+    mask[ref >>> 3] |= bit;
+    const n = this.editCount;
+    if (n === this.editTiles.length) {
+      const capacity = Math.min(Math.max(1024, n * 2), this.terrain.length);
+      const tiles = new Uint32Array(capacity);
+      tiles.set(this.editTiles);
+      this.editTiles = tiles;
+      const original = new Uint8Array(capacity);
+      original.set(this.editOriginal);
+      this.editOriginal = original;
     }
+    this.editTiles[n] = ref;
+    this.editOriginal[n] = this.terrain[ref];
+    this.editCount = n + 1;
   }
 
   setWater(ref: TileRef): void {
@@ -569,10 +597,9 @@ export class GameMapImpl implements GameMap {
     let h = 0;
     const terrain = this.terrain;
     for (let i = 0; i < terrain.length; i++) h = (h + mix(i, terrain[i])) | 0;
-    if (this.pristineTerrain !== null) {
-      for (const [ref, orig] of this.pristineTerrain) {
-        h = (h - mix(ref, terrain[ref]) + mix(ref, orig)) | 0;
-      }
+    for (let i = 0; i < this.editCount; i++) {
+      const ref = this.editTiles[i];
+      h = (h - mix(ref, terrain[ref]) + mix(ref, this.editOriginal[i])) | 0;
     }
     return h >>> 0;
   }
@@ -583,7 +610,11 @@ export class GameMapImpl implements GameMap {
    * who owns what, and restore writes them from there.
    */
   snapshot(): GameMapState {
-    const edits = [...(this.pristineTerrain ?? new Map<TileRef, number>())];
+    const editTiles = this.editedTerrainTiles();
+    const editCurrent = new Uint8Array(editTiles.length);
+    for (let i = 0; i < editTiles.length; i++) {
+      editCurrent[i] = this.terrain[editTiles[i]];
+    }
     const fallout: TileRef[] = [];
     const defense: TileRef[] = [];
     const falloutMask = 1 << GameMapImpl.FALLOUT_BIT;
@@ -598,9 +629,9 @@ export class GameMapImpl implements GameMap {
       width: this.width_,
       height: this.height_,
       pristineHash: this.pristineHash(),
-      editTiles: Uint32Array.from(edits, ([ref]) => ref),
-      editOriginal: Uint8Array.from(edits, ([, orig]) => orig),
-      editCurrent: Uint8Array.from(edits, ([ref]) => this.terrain[ref]),
+      editTiles,
+      editOriginal: this.editOriginal.slice(0, this.editCount),
+      editCurrent,
       fallout: Uint32Array.from(fallout),
       defense: Uint32Array.from(defense),
       numLandTiles: this.numLandTiles_,
@@ -616,7 +647,7 @@ export class GameMapImpl implements GameMap {
         `snapshot map is ${s.width}x${s.height}, loaded map is ${this.width_}x${this.height_}`,
       );
     }
-    if (this.pristineTerrain !== null || this.state.some((v) => v !== 0)) {
+    if (this.editedMask !== null || this.state.some((v) => v !== 0)) {
       throw new Error("snapshot must be restored onto a freshly loaded map");
     }
     if (this.pristineHash() !== s.pristineHash) {

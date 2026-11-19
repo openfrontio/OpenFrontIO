@@ -39,6 +39,13 @@ export class AllianceExtensionExecution implements Execution {
       return;
     }
 
+    if (
+      alliance.expiresAt() >
+      mg.ticks() + mg.config().allianceExtensionPromptOffset()
+    ) {
+      return;
+    }
+
     // Check if this is a new request (before adding it)
     const wasOnlyOneAgreed = alliance.onlyOneAgreedToExtend();
 

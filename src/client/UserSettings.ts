@@ -516,6 +516,16 @@ export class UserSettings {
     return this.getBool("settings.leftClickOpensMenu", false);
   }
 
+  // Flash the tab title/icon when the game is starting or a spawn is still to be
+  // picked while the tab is in the background. On by default.
+  tabAttention() {
+    return this.getBool("settings.tabAttention", true);
+  }
+
+  toggleTabAttention() {
+    this.setBool("settings.tabAttention", !this.tabAttention());
+  }
+
   goToPlayer() {
     return this.getBool("settings.goToPlayer", true);
   }
@@ -542,6 +552,20 @@ export class UserSettings {
 
   toggleSnapBuildPreview() {
     this.setBool("settings.snapBuildPreview", !this.snapBuildPreview());
+  }
+
+  /**
+   * Returns whether pressing a build hotkey cycles the build multiplier.
+   */
+  buildMultiplierCycle() {
+    return this.getBool("settings.buildMultiplierCycle", true);
+  }
+
+  /**
+   * Toggles whether pressing a build hotkey cycles the build multiplier.
+   */
+  toggleBuildMultiplierCycle() {
+    this.setBool("settings.buildMultiplierCycle", !this.buildMultiplierCycle());
   }
 
   toggleLeftClickOpenMenu() {

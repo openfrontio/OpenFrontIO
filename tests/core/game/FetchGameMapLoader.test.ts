@@ -1,4 +1,7 @@
-import { GameMapType } from "@openfront/engine-api/game/GameTypes";
+import {
+  CustomGameMap,
+  GameMapType,
+} from "@openfront/engine-api/game/GameTypes";
 import { FetchGameMapLoader } from "@openfront/shared/FetchGameMapLoader";
 import { describe, expect, test, vi } from "vitest";
 
@@ -49,5 +52,17 @@ describe("FetchGameMapLoader", () => {
 
     await expect(mapData.layerImage("label", true)).resolves.toBe(bitmap);
     expect(fetchMock).toHaveBeenLastCalledWith("/maps/china/label.4x.webp");
+  });
+
+  test("never fetches a Custom map: its files come with the game start", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const loader = new FetchGameMapLoader("/maps");
+
+    expect(() => loader.getMapData(CustomGameMap)).toThrow(
+      "Unknown map: Custom",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

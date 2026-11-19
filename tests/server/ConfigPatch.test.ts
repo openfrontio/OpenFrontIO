@@ -8,7 +8,7 @@ import {
   Trios,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { GameConfig } from "@openfront/engine-api/Schemas";
+import { GameConfig, GameConfigPatch } from "@openfront/engine-api/Schemas";
 import { describe, expect, it } from "vitest";
 import {
   applyGameConfigPatch,
@@ -164,7 +164,7 @@ describe("applyGameConfigPatch", () => {
   it("ignores keys that are not part of GameConfig at all", () => {
     // e.g. the listing flag, which lives on the GameServer, not the config.
     const target = testGameConfig();
-    applyGameConfigPatch(target, { listed: true } as Partial<GameConfig>);
+    applyGameConfigPatch(target, { listed: true } as GameConfigPatch);
     expect("listed" in target).toBe(false);
   });
 });
