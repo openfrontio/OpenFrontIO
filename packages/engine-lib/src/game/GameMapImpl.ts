@@ -232,6 +232,20 @@ export class GameMapImpl implements GameMap {
       (value & GameMapImpl.MAGNITUDE_MASK);
   }
 
+  setTerrainByte(ref: TileRef, value: number): void {
+    const old = this.terrain[ref];
+    if (old === value) return;
+    this.noteTerrainEdit(ref);
+    this.terrain[ref] = value;
+    const landBit = 1 << GameMapImpl.IS_LAND_BIT;
+    if (((old ^ value) & landBit) !== 0) this.waterVersion_++;
+    // The map files count passable land only.
+    const passable = (b: number) =>
+      (b & landBit) !== 0 &&
+      (b & GameMapImpl.MAGNITUDE_MASK) !== GameMapImpl.IMPASSABLE_MAGNITUDE;
+    this.numLandTiles_ += Number(passable(value)) - Number(passable(old));
+  }
+
   // State getters and setters (mutable)
   ownerID(ref: TileRef): number {
     return this.state[ref] & GameMapImpl.PLAYER_ID_MASK;

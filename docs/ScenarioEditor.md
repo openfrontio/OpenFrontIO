@@ -195,10 +195,15 @@ The full pass also runs before export, so the ocean bit and water components
 in the exported files never depend on the order of the strokes that made
 them.
 
-The cost of the full pass on a large map is not yet measured. It is fine at
-stroke end if it is in the range of game load; if not, the graph rebuild
-moves to "before test play and export" and only the ocean fill stays at
-stroke end.
+The full pass was to stay at stroke end if it cost about as much as game
+load, and otherwise the graph rebuild would move to "before test play and
+export". Measured with `tests/perf/TerrainEditFullPassPerf.ts` on World
+10000 (10000x5000): loading takes 0.5 s, the terrain pass 0.65-1.25 s and
+the graph rebuild 0.45-0.55 s. So the graph rebuild moved. `end_terrain_edit`
+runs the terrain pass: the ocean bit, and the depth of water with no coast.
+`Game.rebuildWaterGraph()` relabels the water components and rebuilds the
+graph, and runs before test play and export. On a 2212x2212 map the terrain
+pass takes about 0.1 s.
 
 Two rules:
 
