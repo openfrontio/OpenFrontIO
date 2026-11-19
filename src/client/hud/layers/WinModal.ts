@@ -86,6 +86,7 @@ import {
   type EndScreenCard,
   winnerCard,
 } from "./EndScreenCard";
+import { savedLooks } from "../../components/card/SavedLooks";
 import { type LoadoutItem, loadoutItems, promoChoice } from "./LoadoutRow";
 
 type LegendCeremonyModule = typeof import("../../components/LegendCeremony");
@@ -297,7 +298,7 @@ export class WinModal extends LitElement implements Controller {
                   .lobbyHumans=${this.ffaRating.lobbyHumans}
                 ></ffa-rating-panel>`
           }
-          ${this.innerHtml()}
+          ${this.innerHtml()} ${this.renderSavedLooks()}
         </div>
         <!-- Leaving is the quieter action, on the left; staying in the game
              is the main one, on the right. Sharing a milestone sits between
@@ -593,25 +594,48 @@ export class WinModal extends LitElement implements Controller {
     </style>`;
   }
 
-  innerHtml() {
-    // The Steam desktop build has nothing to wishlist, and the Android app
-    // must not send the player to another store — fall through to the other
-    // promos so the box is never empty.
-    const canWishlist = !isDesktopShell();
+  // The store-skins turn goes to "Get {name}'s look" on an eliminated-by
+  // card with something to buy (promoChoice).
+  private promo() {
+    return promoChoice({
+      isWin: this.isWin,
+      gamesPlayed: getGamesPlayed(),
+      inIframe: isInIframe(),
+      // The Steam desktop build has nothing to wishlist, and the Android app
+      // must not send the player to another store — fall through to the
+      // other promos so the box is never empty.
+      canWishlist: !isDesktopShell(),
+      rand: this.rand,
+      hasLoadout: this.loadout.some((i) => i.state === "buy"),
+      eliminatedByCard: this.endCardMode === "eliminatedBy",
+    });
+  }
 
-    // The store-skins turn goes to "Get {name}'s look" on an eliminated-by
-    // card with something to buy (promoChoice).
-    switch (
-      promoChoice({
-        isWin: this.isWin,
-        gamesPlayed: getGamesPlayed(),
-        inIframe: isInIframe(),
-        canWishlist,
-        rand: this.rand,
-        hasLoadout: this.loadout.some((i) => i.state === "buy"),
-        eliminatedByCard: this.endCardMode === "eliminatedBy",
-      })
-    ) {
+  // Looks saved from the player panel this game ("Get the look"), newest
+  // first, after the promo box: so after the killer's row when that shows,
+  // and without the killer's saved look then, which would repeat it.
+  private renderSavedLooks() {
+    const gameID = this.game?.gameID();
+    if (gameID === undefined) return nothing;
+    const card = this.lastEndCard;
+    const killer =
+      card?.kind === "eliminatedBy" && this.promo() === "loadout"
+        ? card.clientID
+        : null;
+    return savedLooks(gameID)
+      .filter((look) => look.clientID !== killer)
+      .map(
+        (look) =>
+          html`<loadout-row
+            data-saved-look=${look.clientID}
+            .ownerName=${look.name}
+            .items=${look.items}
+          ></loadout-row>`,
+      );
+  }
+
+  innerHtml() {
+    switch (this.promo()) {
       case "steam":
         return this.steamWishlist();
       case "discord":

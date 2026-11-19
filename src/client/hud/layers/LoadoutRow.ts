@@ -4,7 +4,12 @@ import { customElement, property, state } from "lit/decorators.js";
 import { cardItemName } from "../../components/card/CardItems";
 import "../../components/CosmeticCard";
 import "../../components/PurchaseButton";
-import { purchaseCosmetic, type ResolvedCosmetic } from "../../Cosmetics";
+import {
+  currentPrice,
+  purchaseCosmetic,
+  type ResolvedCosmetic,
+  saleHasEnded,
+} from "../../Cosmetics";
 import { translateText } from "../../Utils";
 
 // "Get {name}'s look": on the eliminated-by screen, up to three things the
@@ -21,6 +26,38 @@ export {
 } from "../../components/card/LoadoutItems";
 
 const PLACEMENT: StorePlacement = { kind: "card_loadout" };
+
+interface ShownPrices {
+  priceHard: number | null;
+  priceSoft: number | null;
+  listPriceHard: number | null;
+  listPriceSoft: number | null;
+}
+
+/**
+ * An item's prices as the Store shows them now (currentPrice): while its own
+ * sale runs, the sale price with the list price to strike through; once the
+ * sale has ended, the list price alone. Read at render, as a look saved
+ * mid-game is shown minutes later.
+ */
+export function shownPrices(entry: LoadoutItem): ShownPrices {
+  const item = entry.item as Parameters<typeof currentPrice>[0];
+  const ended = saleHasEnded(item);
+  const price = (currency: "hard" | "soft", fallback: number | undefined) => {
+    const now = currentPrice(item, currency);
+    return now !== undefined && now > 0 ? now : (fallback ?? null);
+  };
+  const priceHard = price("hard", entry.priceHard);
+  const priceSoft = price("soft", entry.priceSoft);
+  return {
+    priceHard,
+    priceSoft,
+    listPriceHard:
+      priceHard !== null && !ended ? (item.listPriceHard ?? null) : null,
+    listPriceSoft:
+      priceSoft !== null && !ended ? (item.listPriceSoft ?? null) : null,
+  };
+}
 
 export interface PromoInput {
   isWin: boolean;
@@ -115,6 +152,7 @@ export class LoadoutRow extends LitElement {
   }
 
   private renderItem(entry: LoadoutItem): TemplateResult {
+    const prices = shownPrices(entry);
     const key = `${entry.type}:${entry.item.name}`;
     return html`<div
       data-loadout-item=${key}
@@ -131,8 +169,10 @@ export class LoadoutRow extends LitElement {
       ${
         entry.state === "buy"
           ? html`<purchase-button
-              .priceHard=${entry.priceHard ?? null}
-              .priceSoft=${entry.priceSoft ?? null}
+              .priceHard=${prices.priceHard}
+              .priceSoft=${prices.priceSoft}
+              .listPriceHard=${prices.listPriceHard}
+              .listPriceSoft=${prices.listPriceSoft}
               .rarity=${String(entry.item.rarity)}
               .itemName=${cardItemName(entry.type, entry.item)}
               .onPurchaseHard=${() => this.buy(entry, "hard")}

@@ -13,7 +13,8 @@ vi.mock("../../src/client/components/card/HeldBack", () => ({
     return heldBack.titles;
   },
 }));
-vi.mock("../../src/client/Cosmetics", () => ({
+vi.mock("../../src/client/Cosmetics", async (orig) => ({
+  ...(await orig<typeof import("../../src/client/Cosmetics")>()),
   purchaseCosmetic: vi.fn(),
 }));
 
@@ -253,6 +254,43 @@ describe("<loadout-row>", () => {
     const title = q("[data-loadout-item='cardTitle:warmonger']")!;
     expect(title.textContent).toContain("FFA Diamond");
     expect(title.querySelector("purchase-button")).toBeNull();
+  });
+
+  // A running sale (flash or not) shows the sale price with the list price
+  // struck through, as in the Store; once it has ended, the list price.
+  const onSale = (endsAt: string) => ({
+    type: "cardBackground" as const,
+    item: {
+      ...COSMETICS.cardBackgrounds!.bg_frontline,
+      priceHard: 1800,
+      listPriceHard: 2400,
+      promotion: { percentOff: 25, endsAt, kind: "flash" },
+    } as never,
+    state: "buy" as const,
+    priceHard: 1800,
+  });
+  const button = () =>
+    q("purchase-button") as unknown as {
+      priceHard: number | null;
+      listPriceHard: number | null;
+    };
+
+  it("a running sale shows the sale price over the struck list price", async () => {
+    await render({
+      ownerName: "Volt",
+      items: [onSale(new Date(Date.now() + 3_600_000).toISOString())],
+    });
+    expect(button().priceHard).toBe(1800);
+    expect(button().listPriceHard).toBe(2400);
+  });
+
+  it("a sale that has ended shows the list price, not struck", async () => {
+    await render({
+      ownerName: "Volt",
+      items: [onSale(new Date(Date.now() - 1000).toISOString())],
+    });
+    expect(button().priceHard).toBe(2400);
+    expect(button().listPriceHard).toBeNull();
   });
 
   it("impression tracked with card_loadout placement", async () => {

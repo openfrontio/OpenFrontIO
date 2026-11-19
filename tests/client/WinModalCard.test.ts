@@ -17,6 +17,10 @@ vi.mock("../../src/client/Cosmetics", async (orig) => ({
 }));
 
 import { defaultPlayerCardView } from "../../src/client/components/card/PlayerCardModel";
+import {
+  clearSavedLooks,
+  saveLook,
+} from "../../src/client/components/card/SavedLooks";
 import { WinModal } from "../../src/client/hud/layers/WinModal";
 
 if (!customElements.get("win-modal")) {
@@ -182,5 +186,91 @@ describe("WinModal card section", () => {
       actions: actions(withCard),
       promo: withCard.querySelector("[data-win-cosmetic-promo]") !== null,
     }).toEqual(before);
+  });
+});
+
+// Looks saved from the player panel this game, as "Get {name}'s look" rows on
+// the end screen: after the killer's row, never twice for the same player.
+describe("WinModal saved looks", () => {
+  const ITEM = {
+    type: "cardBackground",
+    item: { name: "bg_pacific", rarity: "epic", product: null },
+    state: "buy",
+    priceHard: 400,
+  };
+  const KILLER_ITEM = {
+    type: "taunt",
+    item: { name: "salute", rarity: "epic", product: null },
+    state: "buy",
+    priceSoft: 800,
+  };
+  const game = {
+    gameID: () => "g1",
+    config: () => ({ gameConfig: () => ({}) }),
+    myPlayer: () => null,
+    resumedFromSave: () => false,
+  };
+  const owners = (modal: HTMLElement) =>
+    [...modal.querySelectorAll("loadout-row")].map(
+      (r) => (r as unknown as { ownerName: string }).ownerName,
+    );
+
+  beforeEach(() => {
+    localStorage.setItem("gamesPlayed", "10");
+    clearSavedLooks();
+  });
+  afterEach(() => {
+    document.body.innerHTML = "";
+    localStorage.removeItem("gamesPlayed");
+    clearSavedLooks();
+  });
+
+  it("shows each saved look on a game-over screen, newest first", async () => {
+    saveLook("g1", { clientID: "a", name: "Ada", items: [ITEM as never] });
+    saveLook("g1", { clientID: "b", name: "Bo", items: [ITEM as never] });
+    const modal = await renderModal({ game, endCardMode: "none" });
+    expect(owners(modal)).toEqual(["Bo", "Ada"]);
+  });
+
+  it("shows them on the win screen too", async () => {
+    saveLook("g1", { clientID: "a", name: "Ada", items: [ITEM as never] });
+    const modal = await renderModal({
+      game,
+      isWin: true,
+      endCardMode: "winner",
+      endCardView: defaultPlayerCardView("Me", "UN"),
+    });
+    expect(owners(modal)).toEqual(["Ada"]);
+  });
+
+  it("the killer's row comes first, and their saved look isn't repeated", async () => {
+    saveLook("g1", { clientID: "a", name: "Ada", items: [ITEM as never] });
+    saveLook("g1", { clientID: "killer", name: "Volt", items: [ITEM as never] });
+    const modal = await renderModal({
+      game,
+      endCardMode: "eliminatedBy",
+      endCardView: defaultPlayerCardView("Volt", "UN"),
+      lastEndCard: { kind: "eliminatedBy", clientID: "killer" },
+      loadout: [KILLER_ITEM],
+    });
+    expect(owners(modal)).toEqual(["Volt", "Ada"]);
+  });
+
+  it("a saved killer's look still shows when the killer's row doesn't", async () => {
+    saveLook("g1", { clientID: "killer", name: "Volt", items: [ITEM as never] });
+    const modal = await renderModal({
+      game,
+      endCardMode: "eliminatedBy",
+      endCardView: defaultPlayerCardView("Volt", "UN"),
+      lastEndCard: { kind: "eliminatedBy", clientID: "killer" },
+      loadout: [],
+    });
+    expect(owners(modal)).toEqual(["Volt"]);
+  });
+
+  it("another game's looks never show", async () => {
+    saveLook("g0", { clientID: "a", name: "Ada", items: [ITEM as never] });
+    const modal = await renderModal({ game, endCardMode: "none" });
+    expect(owners(modal)).toEqual([]);
   });
 });
