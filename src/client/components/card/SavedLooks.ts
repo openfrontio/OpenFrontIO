@@ -1,5 +1,5 @@
 import type { ClientID, GameID } from "@openfront/engine-api/Schemas";
-import type { LoadoutItem } from "./LoadoutRow";
+import type { LoadoutItem } from "./LoadoutItems";
 
 // Looks the viewer saved from the player panel ("Get the look") to buy on the
 // end screen: buying mid-game reloads the page and would end their game. Kept

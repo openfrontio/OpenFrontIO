@@ -775,9 +775,14 @@ export class PlayerPanel extends LitElement implements Controller {
 
   // The cosmetics the player has equipped, plus their card's paid items.
   private renderCosmeticsRow(other: PlayerView) {
+    // Another player's look can be saved for the end screen; not your own.
+    const clientID = other.clientID();
+    const theirs = clientID !== null && clientID !== this.g.myClientID();
     return html`<equipped-cosmetics-row
       .cosmetics=${other.cosmetics}
       .card=${this.cardViewFor(other)}
+      .lookGameID=${theirs ? this.g.gameID() : null}
+      .lookClientID=${theirs ? clientID : null}
     ></equipped-cosmetics-row>`;
   }
 

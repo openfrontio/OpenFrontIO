@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import type { LoadoutItem } from "../../src/client/hud/layers/LoadoutRow";
+import type { LoadoutItem } from "../../src/client/components/card/LoadoutItems";
 import {
   clearSavedLooks,
   isLookSaved,
@@ -7,7 +7,7 @@ import {
   savedLooks,
   saveLook,
   unsaveLook,
-} from "../../src/client/hud/layers/SavedLooks";
+} from "../../src/client/components/card/SavedLooks";
 
 // Looks the viewer saves from the player panel ("Get the look"), kept in
 // memory for the current game only, for the end screen.

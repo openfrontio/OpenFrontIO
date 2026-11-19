@@ -17,6 +17,11 @@ vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string) => key,
 }));
 
+import {
+  clearSavedLooks,
+  isLookSaved,
+  savedLooks,
+} from "../../src/client/components/card/SavedLooks";
 import { EquippedCosmeticsRow } from "../../src/client/components/EquippedCosmeticsRow";
 
 function crownEntry(
@@ -101,10 +106,11 @@ describe("equipped-cosmetics-row", () => {
   });
 });
 
-// The player panel passes the player's card: its paid items join the row,
-// with Store links for the ones the viewer doesn't own. Taunts and titles are
-// held back and never appear.
-describe("equipped-cosmetics-row: card items", () => {
+// The player panel passes another player's card: one "Get the look" tile, with
+// the card's background as its art. It never opens the Store (a purchase
+// reloads the page and would end the game): it saves the look for the end
+// screen, and a second click removes it.
+describe("equipped-cosmetics-row: get the look", () => {
   const sold = { product: null, priceHard: 200 };
   const CATALOG = {
     patterns: {},
@@ -151,8 +157,18 @@ describe("equipped-cosmetics-row: card items", () => {
     ],
     taunt: { name: "salute", tauntKind: "icon", preset: "s" },
   };
+  const EVERYTHING = [
+    "playerCard:standard",
+    "cardBackground:bg_pacific",
+    "cardTracker:wins",
+    "cardTracker:best_elo",
+  ];
 
-  async function renderCardRow(flares: string[], card: unknown = CARD) {
+  async function renderLookRow(
+    flares: string[],
+    card: unknown = CARD,
+    clientID: string | null = "volt",
+  ) {
     fetchCosmetics.mockResolvedValue(CATALOG as never);
     getUserMe.mockResolvedValue({ player: { flares } } as never);
     if (!customElements.get("equipped-cosmetics-row")) {
@@ -163,6 +179,8 @@ describe("equipped-cosmetics-row: card items", () => {
     ) as EquippedCosmeticsRow;
     el.cosmetics = {};
     el.card = card as never;
+    el.lookGameID = clientID === null ? null : "g1";
+    el.lookClientID = clientID;
     document.body.appendChild(el);
     await el.updateComplete;
     await Promise.resolve();
@@ -171,66 +189,82 @@ describe("equipped-cosmetics-row: card items", () => {
     return el;
   }
 
-  const tile = (el: Element, key: string) =>
-    el.querySelector<HTMLButtonElement>(`[data-card-item="${key}"]`);
+  const lookTile = (el: Element) =>
+    el.querySelector<HTMLButtonElement>("[data-get-look]");
 
   beforeEach(() => {
     document.body.innerHTML = "";
     resolveCosmetics.mockReturnValue([]);
+    clearSavedLooks();
   });
 
-  it("adds the card, its background and trackers, never title or taunt", async () => {
-    const el = await renderCardRow([]);
-    expect(tile(el, "playerCard:standard")).not.toBeNull();
-    expect(tile(el, "cardBackground:bg_pacific")).not.toBeNull();
-    expect(tile(el, "cardTracker:wins")).not.toBeNull();
-    expect(tile(el, "cardTracker:best_elo")).not.toBeNull();
-    expect(el.querySelector('[data-card-item^="cardTitle:"]')).toBeNull();
-    expect(el.querySelector('[data-card-item^="taunt:"]')).toBeNull();
+  it("one tile, labelled, with the card's background as its art", async () => {
+    const el = await renderLookRow([]);
+    const t = lookTile(el)!;
+    expect(t).not.toBeNull();
+    expect(t.textContent).toContain("player_panel.get_the_look");
+    expect(t.querySelector("img")!.getAttribute("src")).toContain(
+      "bg_pacific.webp",
+    );
+    expect(t.getAttribute("aria-pressed")).toBe("false");
+    // No separate card, background or tracker tiles any more.
+    expect(el.querySelector("[data-card-item]")).toBeNull();
     expect(el.hasAttribute("hidden")).toBe(false);
   });
 
-  it("the buy mark on a card tile is at least 11px", async () => {
-    const el = await renderCardRow([]);
-    const mark = tile(el, "cardBackground:bg_pacific")!.querySelector(
-      "span[aria-hidden='true'].absolute",
-    )!;
-    expect(mark.textContent).toBe("+");
-    expect(mark.className).not.toContain("text-[10px]");
-    expect(mark.className).toMatch(/text-\[(1[1-9]|[2-9]\d)px\]|text-xs/);
-  });
-
-  it("links an unowned paid item to it in the Store, in a new tab", async () => {
+  it("a click saves the look and never opens the Store", async () => {
     const open = vi.spyOn(window, "open").mockReturnValue(null);
-    const el = await renderCardRow(["playerCard:standard"]);
-    const bg = tile(el, "cardBackground:bg_pacific")!;
-    expect(bg.disabled).toBe(false);
-    bg.click();
-    expect(open).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "#modal=store&tab=cosmetics&item=cardBackground%3Abg_pacific",
-      ),
-      "_blank",
-      "noopener",
-    );
+    const el = await renderLookRow(["playerCard:standard"]);
+    lookTile(el)!.click();
+    await el.updateComplete;
+    expect(open).not.toHaveBeenCalled();
+    expect(isLookSaved("g1", "volt")).toBe(true);
+    const [look] = savedLooks("g1");
+    expect(look.name).toBe("Volt");
+    // The end screen's items, minus what the viewer owns.
+    expect(look.items.map((i) => `${i.type}:${i.item.name}`)).toEqual([
+      "cardBackground:bg_pacific",
+      "cardTracker:wins",
+      "cardTracker:best_elo",
+    ]);
+    const t = lookTile(el)!;
+    expect(t.textContent).toContain("player_panel.look_saved");
+    expect(t.getAttribute("aria-pressed")).toBe("true");
     open.mockRestore();
   });
 
-  it("owned items and earned-only items have no link", async () => {
-    const el = await renderCardRow([
-      "playerCard:standard",
-      "cardBackground:bg_pacific",
-    ]);
-    expect(tile(el, "playerCard:standard")!.disabled).toBe(true);
-    expect(tile(el, "cardBackground:bg_pacific")!.disabled).toBe(true);
-    // Earned by playing, not sold.
-    expect(tile(el, "cardTracker:best_elo")!.disabled).toBe(true);
-    expect(tile(el, "cardTracker:wins")!.disabled).toBe(false);
+  it("a second click removes it", async () => {
+    const el = await renderLookRow([]);
+    lookTile(el)!.click();
+    await el.updateComplete;
+    lookTile(el)!.click();
+    await el.updateComplete;
+    expect(isLookSaved("g1", "volt")).toBe(false);
+    expect(lookTile(el)!.textContent).toContain("player_panel.get_the_look");
   });
 
-  it("no card: no card items", async () => {
-    const el = await renderCardRow([], null);
-    expect(el.querySelector("[data-card-item]")).toBeNull();
+  it("shows Saved for a look saved earlier this game", async () => {
+    const first = await renderLookRow([]);
+    lookTile(first)!.click();
+    document.body.innerHTML = "";
+    const again = await renderLookRow([]);
+    expect(lookTile(again)!.textContent).toContain("player_panel.look_saved");
+  });
+
+  it("hidden when the viewer owns everything in the look", async () => {
+    const el = await renderLookRow(EVERYTHING);
+    expect(lookTile(el)).toBeNull();
+    expect(el.hasAttribute("hidden")).toBe(true);
+  });
+
+  it("hidden on the viewer's own panel", async () => {
+    const el = await renderLookRow([], CARD, null);
+    expect(lookTile(el)).toBeNull();
+  });
+
+  it("hidden with no card (none, withheld, bot or nation)", async () => {
+    const el = await renderLookRow([], null);
+    expect(lookTile(el)).toBeNull();
     expect(el.hasAttribute("hidden")).toBe(true);
   });
 });

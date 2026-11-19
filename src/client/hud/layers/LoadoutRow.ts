@@ -1,20 +1,7 @@
 import type { StorePlacement } from "@openfront/shared/ApiSchemas";
-import {
-  type Cosmetics,
-  ownsPlayerCard,
-} from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import {
-  type CardItem,
-  type CardItemType,
-  cardItemName,
-} from "../../components/card/CardItems";
-import {
-  CARD_TAUNTS_ENABLED,
-  CARD_TITLES_ENABLED,
-} from "../../components/card/HeldBack";
-import type { PlayerCardView } from "../../components/card/PlayerCardModel";
+import { cardItemName } from "../../components/card/CardItems";
 import "../../components/CosmeticCard";
 import "../../components/PurchaseButton";
 import { purchaseCosmetic, type ResolvedCosmetic } from "../../Cosmetics";
@@ -26,76 +13,14 @@ import { translateText } from "../../Utils";
 // earned ones show how to unlock them and can't be bought. A viewer without
 // the card is offered the card itself first.
 
-export interface LoadoutItem {
-  type: CardItemType;
-  item: CardItem;
-  state: "buy" | "earned";
-  priceHard?: number;
-  priceSoft?: number;
-  unlockLabel?: string;
-}
+import type { LoadoutItem } from "../../components/card/LoadoutItems";
 
-const MAX_ITEMS = 3;
+export {
+  type LoadoutItem,
+  loadoutItems,
+} from "../../components/card/LoadoutItems";
+
 const PLACEMENT: StorePlacement = { kind: "card_loadout" };
-
-function toItem(type: CardItemType, item: CardItem): LoadoutItem | null {
-  const unlock =
-    "unlockSource" in item && item.unlockSource ? item.unlockSource : undefined;
-  if (unlock !== undefined) {
-    return { type, item, state: "earned", unlockLabel: unlock.label };
-  }
-  const priceHard = (item.priceHard ?? 0) > 0 ? item.priceHard : undefined;
-  const priceSoft = (item.priceSoft ?? 0) > 0 ? item.priceSoft : undefined;
-  if (priceHard === undefined && priceSoft === undefined) return null;
-  return { type, item, state: "buy", priceHard, priceSoft };
-}
-
-/**
- * What to offer from `view` (the killer's card): the card itself if the
- * viewer lacks it, then background, taunt and title (only while switched on
- * in HeldBack.ts) and the killer's trackers.
- * Anything the viewer owns, or that is neither sold nor earnable, is skipped.
- */
-export function loadoutItems(
-  view: PlayerCardView,
-  cosmetics: Cosmetics | null,
-  viewerFlares: readonly string[],
-): LoadoutItem[] {
-  const owned = new Set(viewerFlares);
-  const candidates: [CardItemType, CardItem | undefined][] = [];
-  if (!ownsPlayerCard(viewerFlares)) {
-    candidates.push([
-      "playerCard",
-      Object.values(cosmetics?.playerCards ?? {})[0] as CardItem | undefined,
-    ]);
-  }
-  if (view.background) {
-    candidates.push([
-      "cardBackground",
-      cosmetics?.cardBackgrounds?.[view.background.name],
-    ]);
-  }
-  if (view.taunt && CARD_TAUNTS_ENABLED) {
-    candidates.push(["taunt", cosmetics?.taunts?.[view.taunt.name]]);
-  }
-  if (view.title && CARD_TITLES_ENABLED) {
-    const title = Object.values(cosmetics?.cardTitles ?? {}).find(
-      (t) => t.text === view.title!.text,
-    );
-    candidates.push(["cardTitle", title]);
-  }
-  for (const t of view.trackers) {
-    candidates.push(["cardTracker", cosmetics?.cardTrackers?.[t.stat]]);
-  }
-  const out: LoadoutItem[] = [];
-  for (const [type, item] of candidates) {
-    if (out.length === MAX_ITEMS) break;
-    if (item === undefined || owned.has(`${type}:${item.name}`)) continue;
-    const entry = toItem(type, item);
-    if (entry !== null) out.push(entry);
-  }
-  return out;
-}
 
 export interface PromoInput {
   isWin: boolean;

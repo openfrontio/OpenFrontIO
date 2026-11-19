@@ -217,6 +217,18 @@ describe("player panel: the compact card", () => {
     expect(out).toContain('.card={{"username":"name-vet"');
   });
 
+  it("another player's row can save their look in this game", () => {
+    const out = flatten((panel as any).renderCosmeticsRow(player("vet")));
+    expect(out).toContain(".lookGameID=game-1");
+    expect(out).toContain(".lookClientID=vet");
+  });
+
+  it("your own panel has no Get the look tile", () => {
+    const out = flatten((panel as any).renderCosmeticsRow(player("me")));
+    expect(out).not.toContain(".lookGameID=game-1");
+    expect(out).not.toContain(".lookClientID=me");
+  });
+
   it("no card: the equipped-cosmetics row gets none", () => {
     cards = {};
     const out = flatten((panel as any).renderCosmeticsRow(player("vet")));

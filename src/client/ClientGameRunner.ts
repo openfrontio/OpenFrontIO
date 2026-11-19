@@ -29,6 +29,7 @@ import {
 import { ClientEnv } from "../client/ClientEnv";
 import { reloadForUpdate, translateText } from "../client/Utils";
 import { rememberAdmitted } from "./AdmittedLobbies";
+import { clearSavedLooks } from "./components/card/SavedLooks";
 import { MapLayerController } from "./controllers/MapLayerController";
 import { isDesktopShell } from "./DesktopShell";
 import { GameHealth } from "./GameHealth";
@@ -37,7 +38,6 @@ import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import { GameHealthIndicators } from "./hud/layers/GameHealthIndicators";
 import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
 import { OnboardingOverlay } from "./hud/layers/OnboardingOverlay";
-import { clearSavedLooks } from "./hud/layers/SavedLooks";
 import { UnitDisplay } from "./hud/layers/UnitDisplay";
 import { showInGameAlert } from "./InGameModal";
 import {

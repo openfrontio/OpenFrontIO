@@ -1,10 +1,10 @@
+import type { ClientID, GameID } from "@openfront/engine-api/Schemas";
 import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import {
   Cosmetics,
   Effect,
   isNukeExplosionEffect,
-  ownsPlayerCard,
 } from "@openfront/shared/CosmeticSchemas";
 import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
@@ -21,12 +21,9 @@ import {
   storeRouteFor,
 } from "../EquippedCosmetics";
 import { translateText } from "../Utils";
-import {
-  type CardItem,
-  type CardItemType,
-  cardItemName,
-} from "./card/CardItems";
-import { formatTracker, type PlayerCardView } from "./card/PlayerCardModel";
+import { type LoadoutItem, loadoutItems } from "./card/LoadoutItems";
+import type { PlayerCardView } from "./card/PlayerCardModel";
+import { isLookSaved, saveLook, unsaveLook } from "./card/SavedLooks";
 import "./EffectPreview";
 import { renderPatternPreview } from "./PatternPreview";
 
@@ -38,24 +35,13 @@ const rarityRing: Record<string, string> = {
   legendary: "ring-orange-400/60",
 };
 
-// One paid item of a player's card, as a tile in the row.
-interface CardTile {
-  type: CardItemType;
-  item: CardItem;
-  // What the tile shows: the background art, a tracker's value, or (the card
-  // itself) a small card shape.
-  imageUrl: string | null;
-  value: number | null;
-  // Sold for Plutonium or caps and not owned by the viewer.
-  buyable: boolean;
-}
-
 /**
  * The cosmetics a player has equipped, as a row of small tiles under their name.
  * Tiles the viewer doesn't own link to that item in the store, opened in a new
- * tab so the running game is left alone. With the player's `card` set (the
- * panel, for a card owner), the card's paid items join the row: the card
- * itself, its background and its trackers. Titles and taunts are held back.
+ * tab so the running game is left alone. With another player's `card` set
+ * (the panel, for a card owner), one "Get the look" tile joins the row: it
+ * saves their look for the end screen (SavedLooks) instead of opening the
+ * Store, as a purchase reloads the page and would end the game.
  */
 @customElement("equipped-cosmetics-row")
 export class EquippedCosmeticsRow extends LitElement {
@@ -64,6 +50,12 @@ export class EquippedCosmeticsRow extends LitElement {
   // The player's card as this viewer may see it, or null.
   @property({ attribute: false })
   card: PlayerCardView | null = null;
+  // Whose look the tile saves, and in which game. Null on the viewer's own
+  // panel: there is no tile there.
+  @property({ attribute: false })
+  lookGameID: GameID | null = null;
+  @property({ attribute: false })
+  lookClientID: ClientID | null = null;
 
   @state() private catalog: Cosmetics | null = null;
   @state() private userMe: UserMeResponse | false = false;
@@ -180,129 +172,81 @@ export class EquippedCosmeticsRow extends LitElement {
     `;
   }
 
-  private cardTiles(): CardTile[] {
+  // What the look offers the viewer (the end screen's loadout: what they
+  // don't own yet), or [] when there is no tile to show.
+  private lookItems(): LoadoutItem[] {
     const view = this.card;
-    const catalog = this.catalog;
-    if (view === null || catalog === null) return [];
+    if (
+      view === null ||
+      this.catalog === null ||
+      this.lookGameID === null ||
+      this.lookClientID === null
+    ) {
+      return [];
+    }
     const flares =
       this.userMe === false ? [] : (this.userMe.player.flares ?? []);
-    const tiles: CardTile[] = [];
-    const add = (
-      type: CardItemType,
-      item: CardItem | undefined,
-      owned: boolean,
-      imageUrl: string | null,
-      value: number | null,
-    ) => {
-      if (item === undefined) return;
-      const earned = "unlockSource" in item && item.unlockSource !== undefined;
-      const sold = (item.priceHard ?? 0) > 0 || (item.priceSoft ?? 0) > 0;
-      tiles.push({
-        type,
-        item,
-        imageUrl,
-        value,
-        buyable: !owned && !earned && sold,
-      });
-    };
-    add(
-      "playerCard",
-      Object.values(catalog.playerCards ?? {})[0] as CardItem | undefined,
-      ownsPlayerCard(flares),
-      null,
-      null,
+    return loadoutItems(view, this.catalog, flares);
+  }
+
+  private toggleLook(items: LoadoutItem[]) {
+    const gameID = this.lookGameID;
+    const clientID = this.lookClientID;
+    if (gameID === null || clientID === null || this.card === null) return;
+    if (isLookSaved(gameID, clientID)) {
+      unsaveLook(gameID, clientID);
+    } else {
+      saveLook(gameID, { clientID, name: this.card.username, items });
+    }
+    this.requestUpdate();
+  }
+
+  private renderLookTile(items: LoadoutItem[]): TemplateResult {
+    const view = this.card!;
+    const saved = isLookSaved(this.lookGameID!, this.lookClientID!);
+    const ring = rarityRing[view.background?.rarity ?? ""] ?? "ring-white/15";
+    const hint = translateText(
+      saved ? "player_panel.look_saved_hint" : "player_panel.get_the_look_hint",
+      { name: view.username },
     );
-    if (view.background !== null) {
-      const bg = catalog.cardBackgrounds?.[view.background.name];
-      add(
-        "cardBackground",
-        bg,
-        bg !== undefined && flares.includes(`cardBackground:${bg.name}`),
-        bg?.url ?? null,
-        null,
-      );
-    }
-    for (const t of view.trackers) {
-      const tracker = catalog.cardTrackers?.[t.stat];
-      add(
-        "cardTracker",
-        tracker,
-        tracker !== undefined && flares.includes(`cardTracker:${tracker.name}`),
-        null,
-        t.value,
-      );
-    }
-    return tiles;
-  }
-
-  private openCardStore(tile: CardTile) {
-    if (!tile.buyable) return;
-    const key = encodeURIComponent(`${tile.type}:${tile.item.name}`);
-    window.open(
-      new URL(
-        `#modal=store&tab=cosmetics&item=${key}`,
-        `${window.location.origin}/`,
-      ).toString(),
-      "_blank",
-      "noopener",
-    );
-  }
-
-  private renderCardPreview(tile: CardTile): TemplateResult {
-    if (tile.imageUrl !== null) {
-      return html`<img
-        src=${assetUrl(tile.imageUrl)}
-        alt=""
-        class="h-full w-full rounded object-cover object-center pointer-events-none"
-        draggable="false"
-        loading="lazy"
-      />`;
-    }
-    if (tile.value !== null) {
-      return html`<span
-        class="flex h-full w-full items-center justify-center text-[11px] font-black tabular-nums text-white"
-        >${formatTracker(tile.value, true)}</span
-      >`;
-    }
-    return html`<span
-      class="flex h-full w-full items-center justify-center"
-      aria-hidden="true"
-      ><span
-        class="block h-3.5 w-full rounded-sm border border-white/40 bg-[#132644]"
-      ></span
-    ></span>`;
-  }
-
-  private renderCardTile(tile: CardTile): TemplateResult {
-    const name = cardItemName(tile.type, tile.item);
-    const ring = rarityRing[String(tile.item.rarity)] ?? "ring-white/15";
-    const label = tile.buyable
-      ? translateText("player_panel.cosmetic_get_label", { name })
-      : name;
     return html`
       <button
         type="button"
-        data-card-item=${`${tile.type}:${tile.item.name}`}
-        class=${`relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-white/5 p-1 ring-1 ${ring}
-          ${tile.buyable ? "cursor-pointer transition hover:bg-white/10 active:scale-95" : "cursor-default"}`}
-        title=${label}
-        aria-label=${label}
-        ?disabled=${!tile.buyable}
+        data-get-look
+        class=${`flex h-11 shrink-0 items-center gap-2 overflow-hidden rounded-lg bg-white/5 p-1 pr-2.5 ring-1 ${ring} cursor-pointer transition hover:bg-white/10 active:scale-95
+          ${saved ? "bg-malibu-blue/25 ring-sky-400/70" : ""}`}
+        title=${hint}
+        aria-label=${hint}
+        aria-pressed=${saved ? "true" : "false"}
         @click=${(e: Event) => {
           e.stopPropagation();
-          this.openCardStore(tile);
+          this.toggleLook(items);
         }}
       >
-        ${this.renderCardPreview(tile)}
         ${
-          tile.buyable
+          view.background === null
             ? html`<span
-                class="absolute bottom-0 right-0 rounded-tl bg-malibu-blue px-1 text-[11px] font-black leading-tight text-white"
+                class="flex h-9 w-9 shrink-0 items-center justify-center"
                 aria-hidden="true"
-                >+</span
-              >`
-            : nothing
+                ><span
+                  class="block h-3.5 w-full rounded-sm border border-white/40 bg-[#132644]"
+                ></span
+              ></span>`
+            : html`<img
+                src=${assetUrl(view.background.url)}
+                alt=""
+                class="h-9 w-9 shrink-0 rounded object-cover object-center pointer-events-none"
+                draggable="false"
+                loading="lazy"
+              />`
         }
+        <span class="whitespace-nowrap text-xs font-bold text-white"
+          >${
+            saved
+              ? html`✓ ${translateText("player_panel.look_saved")}`
+              : translateText("player_panel.get_the_look")
+          }</span
+        >
       </button>
     `;
   }
@@ -312,8 +256,8 @@ export class EquippedCosmeticsRow extends LitElement {
       this.cosmetics,
       resolveCosmetics(this.catalog, this.userMe, null),
     );
-    const cardTiles = this.cardTiles();
-    if (equipped.length === 0 && cardTiles.length === 0) return nothing;
+    const lookItems = this.lookItems();
+    if (equipped.length === 0 && lookItems.length === 0) return nothing;
 
     return html`
       <div class="flex items-center gap-2">
@@ -324,7 +268,7 @@ export class EquippedCosmeticsRow extends LitElement {
         </span>
         <div class="flex flex-wrap items-center gap-1.5">
           ${equipped.map((w) => this.renderTile(w))}
-          ${cardTiles.map((t) => this.renderCardTile(t))}
+          ${lookItems.length === 0 ? nothing : this.renderLookTile(lookItems)}
         </div>
       </div>
     `;
