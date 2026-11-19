@@ -136,6 +136,8 @@ export function flickerOn(
 // for the rest of the session.
 const SLOW_FRAME_MS = 25;
 const SLOW_WINDOW_MS = 2000;
+// A single frame longer than this is a stall, not a slow device.
+const STALL_MS = 250;
 // The flicker schedule repeats after this many seconds.
 const FLICKER_LOOP_S = 600;
 
@@ -207,6 +209,7 @@ export class CardFx {
   private t = 0;
   private windowMs = 0;
   private windowFrames = 0;
+  private flashes: Flash[] | null = null;
 
   constructor(
     private readonly host: Element,
@@ -248,8 +251,13 @@ export class CardFx {
     this.mounted = [];
   }
 
-  private image(src: string, style: string): HTMLImageElement {
+  private image(
+    src: string,
+    style: string,
+    crossOrigin?: "anonymous",
+  ): HTMLImageElement {
     const img = document.createElement("img");
+    if (crossOrigin !== undefined) img.crossOrigin = crossOrigin;
     img.dataset.cardFxImg = "";
     img.alt = "";
     img.decoding = "async";
@@ -310,8 +318,11 @@ export class CardFx {
           wrap.style.setProperty(`${prefix}mask-position`, "center");
           wrap.style.setProperty(`${prefix}mask-repeat`, "no-repeat");
         }
-        // Hidden: only tells us whether the layer loaded.
-        wrap.appendChild(this.image(layer.src, "display:none;"));
+        // Hidden: only tells us whether the layer loaded. Fetched with CORS,
+        // as the mask is, so a CDN that refuses the mask fails this too and
+        // the card stays on its base rather than showing an empty band.
+        const check = this.image(layer.src, "display:none;", "anonymous");
+        wrap.appendChild(check);
         move = document.createElement("div");
         move.setAttribute(
           "style",
@@ -327,16 +338,25 @@ export class CardFx {
     this.mounted.push({
       layer,
       move,
-      flashes:
-        layer.effect === "flicker"
-          ? flickerSchedule(
-              this.seed,
-              layer.rate ?? FX_DEFAULTS.rate,
-              FLICKER_LOOP_S,
-            )
-          : [],
+      flashes: layer.effect === "flicker" ? this.cardFlashes() : [],
     });
     return wrap;
+  }
+
+  // Every flicker layer on a card shares one schedule, at the card's fastest
+  // rate: the 3-flashes-a-second cap is about what the eye sees on the whole
+  // card, not per layer.
+  private cardFlashes(): Flash[] {
+    if (this.flashes === null) {
+      const rates = this.animation.layers
+        .filter((l) => l.effect === "flicker")
+        .map((l) => l.rate ?? FX_DEFAULTS.rate);
+      const rate = (["high", "medium", "low"] as const).find((r) =>
+        rates.includes(r),
+      )!;
+      this.flashes = flickerSchedule(this.seed, rate, FLICKER_LOOP_S);
+    }
+    return this.flashes;
   }
 
   private onLayerLoad = (): void => {
@@ -378,8 +398,15 @@ export class CardFx {
     if (this.last !== null) {
       const dt = now - this.last;
       this.t += dt / 1000;
-      this.windowMs += dt;
-      this.windowFrames++;
+      if (dt > STALL_MS) {
+        // One stall (a chunk loading, a GC pause) isn't a slow device: the
+        // frame window starts again.
+        this.windowMs = 0;
+        this.windowFrames = 0;
+      } else {
+        this.windowMs += dt;
+        this.windowFrames++;
+      }
       if (this.windowMs >= SLOW_WINDOW_MS) {
         if (this.windowMs / this.windowFrames > SLOW_FRAME_MS) {
           stopSession();

@@ -292,6 +292,54 @@ describe("<card-background> effect layers", () => {
     expect(layerEls(next)).toHaveLength(0);
   });
 
+  it("one long stall doesn't stop the session", async () => {
+    const el = await mount(NEON);
+    loadBase(el);
+    await el.updateComplete;
+    loadLayers(el);
+    observers[0].report(true);
+    frame(0);
+    frame(1000); // e.g. a chunk loading while the modal opens
+    for (let now = 1016; now <= 4000; now += 16) frame(now);
+    expect(cardFxStopped()).toBe(false);
+    expect(layerEls(el)).toHaveLength(2);
+  });
+
+  it("flicker layers on one card flash together, so the card keeps the cap", async () => {
+    const el = await mount({
+      name: "bg_two_flickers",
+      url: "/cosmetics/bg_two.webp",
+      rarity: "rare",
+      animation: {
+        kind: "layers",
+        layers: [
+          { src: "/a.png", effect: "flicker", rate: "high" },
+          { src: "/b.png", effect: "flicker", rate: "low" },
+        ],
+      },
+    });
+    loadBase(el);
+    await el.updateComplete;
+    loadLayers(el);
+    observers[0].report(true);
+    const [a, b] = [...layerEls(el)];
+    let onFrames = 0;
+    for (let now = 0; now <= 60_000; now += 10) {
+      frame(now);
+      expect(a.style.opacity).toBe(b.style.opacity);
+      if (a.style.opacity !== "0") onFrames++;
+    }
+    // The faster rate wins: a "high" card flashes at least every 2 s or so.
+    expect(onFrames).toBeGreaterThan(150);
+  });
+
+  it("shimmer checks its layer with CORS, like the mask fetch", async () => {
+    const el = await mount(SHIMMER);
+    loadBase(el);
+    await el.updateComplete;
+    expect(layerImgs(el)[0].crossOrigin).toBe("anonymous");
+  });
+
   it("keeps going at a normal frame rate", async () => {
     const el = await mount(NEON);
     loadBase(el);
