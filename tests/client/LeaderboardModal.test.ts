@@ -417,6 +417,110 @@ describe("LeaderboardModal", () => {
         modal.querySelector("leaderboard-player-list table tfoot"),
       ).toBeNull();
     });
+
+    it("correctly toggles pinned row visibility without boundary oscillation", async () => {
+      const { getUserMe } = await import("../../src/client/Api");
+      (getUserMe as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        player: { publicId: "player-1" },
+      });
+
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [
+            {
+              rank: 1,
+              elo: 1200,
+              wins: 6,
+              losses: 4,
+              total: 10,
+              public_id: "player-1",
+              accountUsername: "alpha.4821",
+            },
+          ],
+          "2v2": [],
+        }),
+      );
+
+      const playerList = getPlayerList()!;
+      await playerList.loadPlayerLeaderboard(true);
+      await playerList.updateComplete;
+
+      vi.spyOn(playerList as any, "isVisible").mockReturnValue(true);
+
+      const container = modal.querySelector(".scroll-container") as HTMLElement;
+      vi.spyOn(container, "getBoundingClientRect").mockReturnValue({
+        top: 100,
+        bottom: 500,
+        height: 400,
+        left: 0,
+        right: 400,
+        width: 400,
+      } as DOMRect);
+      Object.defineProperty(container, "clientHeight", {
+        value: 400,
+        configurable: true,
+      });
+
+      const thead = container.querySelector("thead")!;
+      vi.spyOn(thead, "getBoundingClientRect").mockReturnValue({
+        top: 100,
+        bottom: 148,
+        height: 48,
+        left: 0,
+        right: 400,
+        width: 400,
+      } as DOMRect);
+
+      const row = container.querySelector(
+        '[data-current-user="true"]',
+      ) as HTMLElement;
+
+      const check = async (top: number, bottom: number) => {
+        vi.spyOn(row, "getBoundingClientRect").mockReturnValue({
+          top,
+          bottom,
+          height: bottom - top,
+          left: 0,
+          right: 400,
+          width: 400,
+        } as DOMRect);
+        (playerList as any).updateStickyVisibility();
+        await playerList.updateComplete;
+        const tfoot = container.querySelector("tfoot");
+        if (tfoot) {
+          vi.spyOn(tfoot, "getBoundingClientRect").mockReturnValue({
+            top: 436,
+            bottom: 500,
+            height: 64,
+            left: 0,
+            right: 400,
+            width: 400,
+          } as DOMRect);
+        }
+        return playerList.showStickyUser;
+      };
+
+      // 1. Visible in viewport -> pinned row hidden
+      expect(await check(200, 260)).toBe(false);
+
+      // 2. Under the sticky thead (100-148) -> pinned row shown (old code failed this)
+      expect(await check(110, 140)).toBe(true);
+
+      // 3. Behind the sticky tfoot (436-500) -> stays shown without oscillating (old code failed this)
+      expect(await check(455, 495)).toBe(true);
+      (playerList as any).updateStickyVisibility();
+      await playerList.updateComplete;
+      expect(playerList.showStickyUser).toBe(true);
+
+      // 4. Scrolled into clear space above tfoot -> pinned row hides
+      expect(await check(350, 410)).toBe(false);
+
+      // 5. Subpixel rounding at max scroll -> stays hidden (within 1px tolerance)
+      expect(await check(440.5, 500.5)).toBe(false);
+
+      // 6. Mostly cut off at the bottom edge (2px sliver) -> pinned row shows
+      expect(await check(498, 558)).toBe(true);
+    });
   });
 
   describe("Player Pagination", () => {

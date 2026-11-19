@@ -1,0 +1,24 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "io.openfront.android",
+      "sha256_cert_fingerprints": [
+        "96:FC:8E:C9:AA:43:C5:3C:8E:EA:DB:44:91:93:F0:1D:B8:C8:78:FC:18:C3:DB:E5:98:19:6E:7C:D0:72:67:35",
+        "39:84:51:D8:A1:5B:FB:C0:B2:8F:6E:94:6C:CA:9E:31:B0:16:81:B1:72:95:1F:7A:9C:1B:D6:D8:B7:10:4E:44",
+        "85:72:6E:39:90:56:37:A7:C1:3D:0E:07:70:A3:5E:BD:0B:D1:EE:0C:EB:47:4E:CA:F9:70:8A:4B:CE:54:13:CB"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "io.openfront.app.staging",
+      "sha256_cert_fingerprints": [
+        "09:08:8F:E4:C5:96:C4:F4:EF:7C:46:C3:25:12:AD:04:9F:26:4F:82:D3:AC:B5:0F:BB:C6:B8:A7:69:DE:1B:DD"
+      ]
+    }
+  }
+]

@@ -45,6 +45,7 @@ describe("AllianceExtensionExecution", () => {
     const allianceSpy = vi.spyOn(allianceBefore, "extend");
 
     const expirationBefore = allianceBefore.expiresAt();
+    vi.spyOn(game, "ticks").mockReturnValue(2800);
 
     game.addExecution(new AllianceExtensionExecution(player1, player2.id()));
     game.executeNextTick();
@@ -88,6 +89,7 @@ describe("AllianceExtensionExecution", () => {
     const allianceBefore = player1.allianceWith(player3)!;
     const allianceSpy = vi.spyOn(allianceBefore, "extend");
     const expirationBefore = allianceBefore.expiresAt();
+    vi.spyOn(game, "ticks").mockReturnValue(2800);
 
     game.addExecution(new AllianceExtensionExecution(player1, player3.id()));
     game.executeNextTick();
@@ -123,6 +125,7 @@ describe("AllianceExtensionExecution", () => {
 
     // Spy on displayMessage to verify it's called
     const displayMessageSpy = vi.spyOn(game, "displayMessage");
+    vi.spyOn(game, "ticks").mockReturnValue(2800);
 
     // Player1 requests renewal
     game.addExecution(new AllianceExtensionExecution(player1, player2.id()));
@@ -148,5 +151,28 @@ describe("AllianceExtensionExecution", () => {
     expect(displayMessageSpy).toHaveBeenCalledTimes(1);
 
     displayMessageSpy.mockRestore();
+  });
+
+  test("Rejects extension outside prompt window", () => {
+    vi.spyOn(player1, "canSendAllianceRequest").mockReturnValue(true);
+    vi.spyOn(player2, "canSendAllianceRequest").mockReturnValue(true);
+    vi.spyOn(player2, "isAlive").mockReturnValue(true);
+    vi.spyOn(player1, "isAlive").mockReturnValue(true);
+
+    game.addExecution(new AllianceRequestExecution(player1, player2.id()));
+    game.executeNextTick();
+    game.addExecution(new AllianceRequestExecution(player2, player1.id()));
+    game.executeNextTick();
+
+    const alliance = player1.allianceWith(player2)!;
+    const allianceSpy = vi.spyOn(alliance, "extend");
+
+    game.addExecution(new AllianceExtensionExecution(player1, player2.id()));
+    game.executeNextTick();
+    game.addExecution(new AllianceExtensionExecution(player2, player1.id()));
+    game.executeNextTick();
+
+    expect(allianceSpy).not.toHaveBeenCalled();
+    expect(alliance.bothAgreedToExtend()).toBe(false);
   });
 });

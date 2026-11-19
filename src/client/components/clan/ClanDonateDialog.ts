@@ -1,20 +1,16 @@
 import { html, LitElement, render as litRender } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { getUserMe } from "../../Api";
-import { type ClanCurrencyType, donateToClan } from "../../ClanApi";
+import {
+  type ClanCurrencyType,
+  donateToClan,
+  fetchClanFundTransfers,
+} from "../../ClanApi";
 import { translateText } from "../../Utils";
 import "../CapIcon";
 import { formatCurrencyAmount } from "../CurrencyDisplay";
 import "../PlutoniumIcon";
-
-// UUID when available; crypto.randomUUID is undefined outside secure contexts
-// (e.g. dev over plain http on a LAN address), so fall back to random hex of
-// the same shape. Either way 8–64 chars, as the API requires.
-function newIdempotencyKey(): string {
-  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-}
+import { newIdempotencyKey } from "./ClanShared";
 
 // The player's wallet balances arrive as numbers (CurrencyBalancesSchema); the
 // entered amount is compared as BigInt so a very large integer isn't rounded.
@@ -41,6 +37,12 @@ export class ClanDonateDialog extends LitElement {
   @state() private balances: { soft: number; hard: number } | null = null;
   @state() private submitting = false;
   @state() private serverError: string | null = null;
+  // Whether clan fund payouts are on. "on": the Plutonium warning says the
+  // leader can send it on to members. "off" (feature absent): the original
+  // "never comes back to you" wording. "unknown" (still loading, or the check
+  // failed): wording that is true either way, since the donor may submit
+  // before the status arrives.
+  @state() private payouts: "unknown" | "on" | "off" = "unknown";
 
   private idempotencyKey = newIdempotencyKey();
   private portal: HTMLDivElement | null = null;
@@ -54,6 +56,7 @@ export class ClanDonateDialog extends LitElement {
     this.portal = document.createElement("div");
     document.body.appendChild(this.portal);
     void this.loadBalances();
+    void this.loadPayoutsStatus();
   }
 
   disconnectedCallback() {
@@ -70,6 +73,18 @@ export class ClanDonateDialog extends LitElement {
     if (!this.isConnected) return;
     if (!me || !me.player.currency) return;
     this.balances = me.player.currency;
+  }
+
+  private async loadPayoutsStatus() {
+    if (!this.clanTag) return;
+    const res = await fetchClanFundTransfers(this.clanTag, { limit: 1 });
+    if (!this.isConnected) return;
+    if ("error" in res) {
+      // 404: an API without clan fund transfers. Anything else: unknown.
+      if (res.error === "unavailable") this.payouts = "off";
+      return;
+    }
+    this.payouts = res.status.enabled ? "on" : "off";
   }
 
   private currencyLabel(type: ClanCurrencyType = this.currencyType): string {
@@ -301,12 +316,22 @@ export class ClanDonateDialog extends LitElement {
             }"
           >
             <p class="font-bold">
-              ${translateText("clan_modal.donate_irreversible")}
+              ${translateText(
+                isHard && this.payouts !== "off"
+                  ? "clan_modal.donate_irreversible_payouts"
+                  : "clan_modal.donate_irreversible",
+              )}
             </p>
             ${
               isHard
                 ? html`<p class="mt-1">
-                    ${translateText("clan_modal.donate_irreversible_hard")}
+                    ${translateText(
+                      {
+                        on: "clan_modal.donate_irreversible_hard_payouts",
+                        off: "clan_modal.donate_irreversible_hard",
+                        unknown: "clan_modal.donate_irreversible_hard_neutral",
+                      }[this.payouts],
+                    )}
                   </p>`
                 : ""
             }

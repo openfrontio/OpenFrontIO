@@ -1,10 +1,15 @@
 import {
   paidSubscriptionOf,
+  StorePlacement,
+  StorePlacementSubTab,
+  StorePlacementTab,
+  StorePlacementTabSchema,
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import {
   CosmeticPack,
   Cosmetics,
+  Pack,
   Product,
   Subscription,
 } from "@openfront/shared/CosmeticSchemas";
@@ -13,6 +18,7 @@ import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
+import type { CosmeticCard } from "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
 import { isPreviewableCosmetic } from "./components/CosmeticPreviewBubble";
 import "./components/CosmeticPreviewModal";
@@ -44,9 +50,12 @@ import {
 } from "./Cosmetics";
 import { matchesStoreItem } from "./EquippedCosmetics";
 import {
+  fetchPlayPrices,
   priceStringToCents,
   reportPendingSteamAuthorizations,
+  sellsOnlyThroughPlay,
 } from "./Payments";
+import { StoreTracker } from "./StoreTracking";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { translateText } from "./Utils";
 
@@ -61,17 +70,22 @@ function formatUsdCents(cents: number): string {
   return usdFormatter.format(cents / 100);
 }
 
-type StoreTab =
-  | "cosmetics"
-  | "bundles"
-  | "effects"
-  | "packs"
-  | "subscriptions"
-  | "tribes";
+// The store's tabs are the placement schema's: a tab the store analytics API
+// would reject cannot be added here without failing typecheck.
+type StoreTab = StorePlacementTab;
+
+function isStoreTab(key: string): key is StoreTab {
+  return (StorePlacementTabSchema.options as readonly string[]).includes(key);
+}
 
 // "sale" lists every discounted skin, flag, crown, effect and bundle; its tab
 // shows only while a sale covers one of them.
-const COSMETICS_SUB_TABS = ["sale", "patterns", "flags", "crowns"] as const;
+const COSMETICS_SUB_TABS = [
+  "sale",
+  "patterns",
+  "flags",
+  "crowns",
+] as const satisfies readonly StorePlacementSubTab[];
 type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
 
 /** Sub-tab holding the catalog item a store deep link points at. */
@@ -133,10 +147,22 @@ export function saleFirst<T extends readonly ResolvedCosmetic[]>(
 
 export { saleCoversEverything };
 
+/** The Play products the catalog's currency packs are sold as. */
+function playProductIds(cosmetics: Cosmetics | null): string[] {
+  return Object.values(cosmetics?.currencyPacks ?? {}).flatMap((pack) =>
+    pack.currency === "hard" && pack.googleProductId !== undefined
+      ? [pack.googleProductId]
+      : [],
+  );
+}
+
 @customElement("store-modal")
 export class StoreModal extends BaseModal {
   protected routerName = "store";
   private cosmetics: Cosmetics | null = null;
+  // In the Android app: Play's price for each product it sells, by product id.
+  // Null when Play could not be asked, which lists no pack for real money.
+  private playPrices: ReadonlyMap<string, string> | null = null;
   private affiliateCode: string | null = null;
   private userMeResponse: UserMeResponse | false = false;
   // `userMeResponse` starts at `false`, which is also what "no session" looks
@@ -144,9 +170,8 @@ export class StoreModal extends BaseModal {
   // logged-in player for the whole window before Main's first userMeResponse
   // broadcast (a Steam ticket exchange on desktop). This distinguishes the
   // two: nothing is asserted about the session until it has actually settled.
-  // Reactive on its own, unlike `userMeResponse`: onUserMe() only calls
-  // refresh() after the catalog fetch, and a settled no-session result must
-  // not wait on a slow catalog before it may say so.
+  // Reactive on its own, unlike `userMeResponse`, so a settled no-session
+  // result never waits on a slow catalog before it may say so.
   @state() private authSettled = false;
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
   // Item the URL asked for (`#modal=store&item=<key>`). Held until its group
@@ -173,7 +198,7 @@ export class StoreModal extends BaseModal {
         { key: "cosmetics", label: translateText("store.cosmetics") },
         { key: "effects", label: translateText("store.effects") },
         { key: "tribes", label: translateText("store.tribes") },
-      ],
+      ] satisfies { key: StoreTab; label: string }[],
     };
   }
 
@@ -198,6 +223,8 @@ export class StoreModal extends BaseModal {
       this.onOpenCosmeticPreview,
     );
     this.rowObserver?.disconnect();
+    this.tracker?.dispose();
+    this.tracker = null;
     if (this.alignFrame !== null) cancelAnimationFrame(this.alignFrame);
     this.alignFrame = null;
     super.disconnectedCallback();
@@ -205,6 +232,7 @@ export class StoreModal extends BaseModal {
 
   protected updated(changed: PropertyValues) {
     super.updated(changed);
+    this.observeProducts();
     // The cards are nested components, so their purchase buttons only exist
     // (and only have positions) after their own updates commit — a frame later.
     alignPurchaseRows(this);
@@ -222,6 +250,13 @@ export class StoreModal extends BaseModal {
 
   private onOpenCosmeticPreview = (event: Event) => {
     const customEvent = event as CustomEvent<ResolvedCosmetic>;
+    const target = event.target as Element | null;
+    // A preview from inside a bundle's contents is not a click on a store
+    // card: the item has no card on that tab, and counting it would also hide
+    // a real click on the item's own card later in the visit.
+    if (!target?.closest?.("pack-contents-dialog")) {
+      this.trackClick(customEvent.detail, target);
+    }
     this.previewingCosmetic = customEvent.detail;
     this.requestUpdate();
   };
@@ -240,6 +275,9 @@ export class StoreModal extends BaseModal {
   async onUserMe(userMeResponse: UserMeResponse | false) {
     this.userMeResponse = userMeResponse;
     this.authSettled = true;
+    // Show the new account (the balance in the header) now, not after the
+    // catalog: in the Android app that fetch also waits on Play's prices.
+    this.requestUpdate();
     await this.loadCatalog();
     this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();
@@ -273,7 +311,37 @@ export class StoreModal extends BaseModal {
       this.cosmetics,
       this.userMeResponse,
       this.affiliateCode,
-    ).filter((resolved) => resolved.relationship === "purchasable");
+    ).filter(
+      (resolved) =>
+        resolved.relationship === "purchasable" && this.sellable(resolved),
+    );
+  }
+
+  /**
+   * In the Android app Play is the only way to pay, so a currency pack is
+   * listed only at a price Play gave (or when it is bought with in-game
+   * currency) and no subscription is sold. Everything else is unaffected.
+   */
+  private sellable(resolved: ResolvedCosmetic): boolean {
+    if (!sellsOnlyThroughPlay()) return true;
+    if (resolved.type === "subscription") return false;
+    if (resolved.type !== "pack") return true;
+    const pack = resolved.cosmetic as Pack;
+    return (
+      this.playPrice(resolved) !== null ||
+      currentPrice(pack, "hard") !== undefined ||
+      currentPrice(pack, "soft") !== undefined
+    );
+  }
+
+  /** Play's price for a currency pack, or null when Play does not sell it. */
+  private playPrice(resolved: ResolvedCosmetic): string | null {
+    if (resolved.type !== "pack") return null;
+    const pack = resolved.cosmetic as Pack;
+    if (pack.currency !== "hard" || pack.googleProductId === undefined) {
+      return null;
+    }
+    return this.playPrices?.get(pack.googleProductId) ?? null;
   }
 
   private cosmeticsGroups(
@@ -368,7 +436,8 @@ export class StoreModal extends BaseModal {
         .filter(
           (resolved) =>
             resolved.type === "subscription" &&
-            (resolved.relationship === "purchasable" ||
+            ((resolved.relationship === "purchasable" &&
+              this.sellable(resolved)) ||
               resolved.relationship === "owned"),
         )
         .map((resolved) => [resolved]);
@@ -384,9 +453,72 @@ export class StoreModal extends BaseModal {
   // Activating a bundle also opens its contents: the card only has room to
   // tile a few items, so the dialog is where each one is shown with its name.
   private activate(resolved: ResolvedCosmetic): void {
+    this.trackClick(resolved, this.productFor(resolved));
     if (resolved.type === "cosmeticPack") this.openedPack = resolved;
     if (isPreviewableCosmetic(resolved)) this.previewingCosmetic = resolved;
     this.inspect(resolved);
+  }
+
+  // Store analytics. The tracker is made on the first open and kept.
+  private tracker: StoreTracker | null = null;
+
+  /**
+   * Where a card sits in the store; purchases are placed the same way.
+   * Undefined only before a tab is active: no placement is sent then.
+   */
+  private placementFor(el: Element): StorePlacement | undefined {
+    if (el.closest("[data-store-flash]")) return { kind: "flash" };
+    if (this.affiliateCode) return { kind: "affiliate" };
+    const tab = this.activeTab;
+    if (!isStoreTab(tab)) return undefined;
+    if (tab === "cosmetics") {
+      return { kind: "tab", tab, subTab: this.cosmeticsSubTab };
+    }
+    return { kind: "tab", tab };
+  }
+
+  // Cards are tracked under their item key; the tracker folds a pattern's
+  // palette keys into the pattern card's key (`pattern:<name>`), so
+  // data-cosmetic-key stays the palette key the store selects by.
+  private observeProducts(): void {
+    if (this.tracker === null || typeof IntersectionObserver === "undefined") {
+      return;
+    }
+    // One prune per update, not one per card.
+    this.tracker.releaseDetached();
+    for (const el of this.querySelectorAll<HTMLElement>(
+      "[data-store-product][data-cosmetic-key]",
+    )) {
+      const key = el.dataset.cosmeticKey;
+      const placement = this.placementFor(el);
+      if (key && placement) this.tracker.observe(el, key, placement);
+    }
+  }
+
+  /** The tile showing this item, or one of its variants. */
+  private productFor(resolved: ResolvedCosmetic): Element | null {
+    for (const el of this.querySelectorAll<HTMLElement>(
+      "[data-store-product][data-cosmetic-key]",
+    )) {
+      const card = el as Partial<CosmeticCard>;
+      if (
+        el.dataset.cosmeticKey === resolved.key ||
+        card.resolved?.key === resolved.key ||
+        card.variants?.some((variant) => variant.key === resolved.key)
+      ) {
+        return el;
+      }
+    }
+    return null;
+  }
+
+  private trackClick(resolved: ResolvedCosmetic, el: Element | null): void {
+    try {
+      const placement = this.placementFor(el ?? this);
+      if (placement) this.tracker?.click(resolved.key, placement);
+    } catch {
+      // Analytics must never break the click.
+    }
   }
 
   private closePack(): void {
@@ -533,20 +665,29 @@ export class StoreModal extends BaseModal {
       rarity?: string;
     } | null;
     const isPurchasable = resolved.relationship === "purchasable";
+    // In the Android app the only real-money price is Play's own, in the
+    // player's currency, and the only real-money button is a Play purchase.
+    const playOnly = sellsOnlyThroughPlay();
+    const playPrice = isPurchasable ? this.playPrice(resolved) : null;
     // Only packs and subscriptions still check out in USD; cosmetics are
     // currency-only (their catalog product is always null now, but a cached
     // cosmetics.json may still carry one — never render a dollar button).
     const product =
       isPurchasable &&
+      !playOnly &&
       (resolved.type === "pack" || resolved.type === "subscription")
         ? (priced?.product ?? null)
         : null;
     // A tier with no Stripe listing (sold only on Steam) has no `product`;
     // its price is the tier's own, in cents.
     const subscriptionDollarPrice =
-      isPurchasable && resolved.type === "subscription" && product === null
+      isPurchasable &&
+      !playOnly &&
+      resolved.type === "subscription" &&
+      product === null
         ? formatUsdCents((resolved.cosmetic as Subscription).priceMonthly)
         : "";
+    const dollarPrice = playPrice ?? subscriptionDollarPrice;
     // The price as the server charges it now: once the item's own sale has
     // ended that is its list price, whatever the catalog in hand says.
     const saleEnded = priced !== null && saleHasEnded(priced);
@@ -554,8 +695,18 @@ export class StoreModal extends BaseModal {
       isPurchasable && priced ? currentPrice(priced, "hard") : undefined;
     const priceSoft =
       isPurchasable && priced ? currentPrice(priced, "soft") : undefined;
+    // Resolved when clicked, from the card holding the button, so a purchase
+    // from the flash hero is placed as flash.
+    // Analytics must never break a purchase: a throw means no placement.
+    const placement = (): StorePlacement | undefined => {
+      try {
+        return this.placementFor(this.productFor(resolved) ?? this);
+      } catch {
+        return undefined;
+      }
+    };
     const purchase = (method: "dollar" | "hard" | "soft") =>
-      purchaseCosmetic(resolved, method);
+      purchaseCosmetic(resolved, method, placement());
     // Currency packs check out inline (wallet button / in-page card form)
     // when the display price parses; anything else — including subscriptions,
     // which are recurring and not a PaymentIntent — keeps the redirect flow,
@@ -573,13 +724,14 @@ export class StoreModal extends BaseModal {
             },
             amountCents,
             successMessageKey: "store.currency_pack_purchase_success",
+            placement,
           }
         : null;
     // Reserved currency lines are assigned per visual row by
     // alignPurchaseRows() once the grid has laid out.
     return html`<purchase-button
       .product=${product}
-      .dollarPrice=${subscriptionDollarPrice}
+      .dollarPrice=${dollarPrice}
       .inlineCheckout=${inlineCheckout}
       .priceHard=${priceHard ?? null}
       .priceSoft=${priceSoft ?? null}
@@ -606,9 +758,7 @@ export class StoreModal extends BaseModal {
           : ""
       }
       .onPurchaseDollar=${
-        product || subscriptionDollarPrice
-          ? () => purchase("dollar")
-          : undefined
+        product || dollarPrice ? () => purchase("dollar") : undefined
       }
       .onPurchaseHard=${
         priceHard !== undefined ? () => purchase("hard") : undefined
@@ -789,12 +939,24 @@ export class StoreModal extends BaseModal {
     // The custom-amount card is always purchasable (priced inline server-side,
     // no catalog entry), and follows the fixed packs at the end of the grid.
     // On BOTH rails: the Steam rail sells custom amounts since OPE-337, so
-    // there is no longer a rail on which this card is a dead button.
+    // there is no longer a rail on which this card is a dead button. Not in
+    // the Android app, though, where Play sells only its fixed packs; there a
+    // Play that could not price them says so instead.
+    const playOnly = sellsOnlyThroughPlay();
     return this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_packs",
-      trailingContent: html`<custom-currency-card
-        class="block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48"
-      ></custom-currency-card>`,
+      trailingContent: !playOnly
+        ? html`<custom-currency-card
+            class="block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48"
+          ></custom-currency-card>`
+        : this.cosmetics !== null && this.playPrices === null
+          ? html`<div
+              data-store-play-unavailable
+              class="w-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40"
+            >
+              ${translateText("store.play_unavailable")}
+            </div>`
+          : undefined,
       gridClass:
         "flex flex-wrap items-stretch justify-center content-start gap-4 p-4 sm:p-8",
       cardClass: "block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48",
@@ -897,8 +1059,15 @@ export class StoreModal extends BaseModal {
   private async loadCatalog(): Promise<Cosmetics | null> {
     const request = ++this.catalogRequest;
     const fresh = await fetchCosmetics();
-    if (request === this.catalogRequest)
+    // In the Android app, Play prices the packs it sells, in the player's
+    // own currency.
+    const playPrices = sellsOnlyThroughPlay()
+      ? await fetchPlayPrices(playProductIds(fresh ?? this.cosmetics))
+      : null;
+    if (request === this.catalogRequest) {
       this.cosmetics = fresh ?? this.cosmetics;
+      this.playPrices = playPrices;
+    }
     return fresh;
   }
 
@@ -979,6 +1148,8 @@ export class StoreModal extends BaseModal {
   }
 
   protected async onOpen(args?: Record<string, unknown>) {
+    this.tracker ??= new StoreTracker();
+    this.tracker.beginPageView();
     // Drain any Steam overlay approval parked before this UI existed. The
     // main process's "something arrived" nudge is contentless, so one that
     // fired with no window listening is heard by nobody and sits parked until
@@ -996,8 +1167,13 @@ export class StoreModal extends BaseModal {
     // groupsForTab falls back to Skins if nothing is on sale by now.
     if (args?.sub === "sale") this.cosmeticsSubTab = "sale";
     // Prices change when a sale starts or ends, so a catalog fetched more than
-    // a minute ago is refetched rather than shown with stale prices.
-    if (refreshStaleCosmetics() || this.cosmetics === null) {
+    // a minute ago is refetched rather than shown with stale prices. In the
+    // Android app, Play is asked again if it could not price the packs.
+    if (
+      refreshStaleCosmetics() ||
+      this.cosmetics === null ||
+      (sellsOnlyThroughPlay() && this.playPrices === null)
+    ) {
       await this.loadCatalog();
     }
     this.selectVisible(this.groupsForTab(this.activeTab));
@@ -1009,6 +1185,7 @@ export class StoreModal extends BaseModal {
   }
 
   protected onClose(): void {
+    this.tracker?.flush();
     if (this.saleEndTimer !== null) clearTimeout(this.saleEndTimer);
     this.saleEndTimer = null;
     if (this.saleRetryTimer !== null) clearTimeout(this.saleRetryTimer);

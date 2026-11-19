@@ -15,6 +15,7 @@ import {
 import { translateCosmetic } from "../Cosmetics";
 import { isDesktopShell } from "../DesktopShell";
 import { showInGameAlert, showInGameConfirm } from "../InGameModal";
+import { sellsOnlyThroughPlay } from "../Payments";
 import { STEAM_TIER_CHANGE_IN_APP } from "../SubscriptionPolicy";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
@@ -443,6 +444,16 @@ export class SubscriptionPanel extends LitElement {
     `;
   }
 
+  /**
+   * The Android app shows the subscription and none of its billing controls,
+   * nor its price: each control buys, changes or manages it somewhere other
+   * than Google Play, and the app may point the player nowhere else to pay.
+   * A grant's note is not a control, so it stays.
+   */
+  private billingHidden(): boolean {
+    return !this.isGranted() && sellsOnlyThroughPlay();
+  }
+
   private renderActions(tierName: string): TemplateResult {
     // Before every other branch, and NOT gated on the desktop shell: a grant is
     // a property of the account, so a Steam buyer who signs in on the website
@@ -539,7 +550,9 @@ export class SubscriptionPanel extends LitElement {
       renewalPushedBy(this.sub) !== null
     )
       return null;
-    const price = this.cosmetic?.product?.price;
+    const price = sellsOnlyThroughPlay()
+      ? undefined
+      : this.cosmetic?.product?.price;
     return [
       tierName,
       translateText("account_modal.sub_next_payment", { date }),
@@ -588,7 +601,7 @@ export class SubscriptionPanel extends LitElement {
         </div>
         ${summary === null ? this.renderPeriodLine(tierName) : nothing}
         ${
-          this.stacked === "paid"
+          this.stacked === "paid" && !this.billingHidden()
             ? html`<div class="border-t border-white/10 pt-4">
                 ${this.renderActions(tierName)}
               </div>`
@@ -616,7 +629,7 @@ export class SubscriptionPanel extends LitElement {
                 ${tierName}
               </div>
               ${
-                cosmetic?.product?.price
+                cosmetic?.product?.price && !sellsOnlyThroughPlay()
                   ? html`<div class="text-sm text-white/50">
                       ${translateText("account_modal.sub_price_monthly", {
                         price: cosmetic.product.price,
@@ -650,10 +663,13 @@ export class SubscriptionPanel extends LitElement {
               : ""
           }
           ${this.renderPeriodLine(tierName)}
-
-          <div class="border-t border-white/10 pt-4">
-            ${this.renderActions(tierName)}
-          </div>
+          ${
+            this.billingHidden()
+              ? nothing
+              : html`<div class="border-t border-white/10 pt-4">
+                  ${this.renderActions(tierName)}
+                </div>`
+          }
         </div>
       </div>
     `;

@@ -1,21 +1,46 @@
-import type { PaymentsProvider } from "@openfront/shared/ApiSchemas";
+import type {
+  PaymentsProvider,
+  StorePlacement,
+  UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 import {
   createPaymentsCheckout,
+  finalizeGooglePurchase,
   finalizeSteamOrder,
+  type FinalizeGooglePurchaseResult,
+  getUserMe,
   invalidateUserMe,
   type PaymentsCheckoutRequest,
   type PaymentsCheckoutResult,
 } from "./Api";
+import {
+  desktopPlayBilling,
+  isDesktopShell,
+  type PlayBilling,
+} from "./DesktopShell";
 import { showToast, translateText } from "./Utils";
 
 export type { PaymentsProvider };
+
+/**
+ * The checkout rails, plus two the checkout never sees. "google" is the
+ * Android app's Play billing: its purchases are credited by
+ * POST /payments/google/finalize, not bought through /payments/checkout.
+ * "none" is an Android app without the Play billing bridge, which sells
+ * nothing for real money.
+ */
+export type PaymentsRail = PaymentsProvider | "google" | "none";
 
 /**
  * Which payment rail this client buys on.
  *
  * The server does NOT infer the rail — `provider` is explicit on every
  * checkout — so this is the single place the decision is made. Steam inside
- * the desktop shell, Stripe on the web.
+ * the desktop shell, Google Play inside the Android app, Stripe on the web.
+ *
+ * The Android app must never reach Stripe either: Play is the only way it may
+ * take money for anything in the game. An Android app without the Play
+ * billing bridge (one older than it) is therefore "none", never "stripe".
  *
  * Note what this deliberately does NOT check: whether Steam is actually
  * running, or whether the shell is new enough to carry the microtxn bridge.
@@ -33,8 +58,23 @@ export type { PaymentsProvider };
  * simply settles via the poll loop instead of our finalize call, which is
  * exactly what `startPurchase` reports as pending.
  */
-export function paymentsProvider(): PaymentsProvider {
-  return steamBridge() !== undefined ? "steam" : "stripe";
+export function paymentsProvider(): PaymentsRail {
+  if (steamBridge() !== undefined) return "steam";
+  if (desktopPlayBilling() !== null) return "google";
+  // Any other shell is the Android app.
+  if (isDesktopShell()) return "none";
+  return "stripe";
+}
+
+/**
+ * True in the Android app, where Google Play is the only way to pay. Nothing
+ * else real-money (checkout, subscriptions, custom amounts, the billing
+ * portal) may be offered there, and nothing may point the player elsewhere to
+ * buy.
+ */
+export function sellsOnlyThroughPlay(): boolean {
+  const rail = paymentsProvider();
+  return rail === "google" || rail === "none";
 }
 
 // ---------------------------------------------------------------------------
@@ -301,10 +341,14 @@ async function awaitSteamAuthorization(
 // The purchase flow.
 
 /** What to buy. The rail is chosen by {@link paymentsProvider}, not here. */
-export type PurchaseRequest =
+export type PurchaseRequest = (
   | { kind: "currency_pack"; packName: string }
   | { kind: "custom_currency"; hardAmount: number }
-  | { kind: "subscription_tier"; tierName: string };
+  | { kind: "subscription_tier"; tierName: string }
+) & {
+  /** Where in the store it was bought (store analytics); omitted when unknown. */
+  placement?: StorePlacement;
+};
 
 export type PurchaseOutcome =
   // Navigation to the rail has been triggered; the page is going away.
@@ -315,12 +359,14 @@ export type PurchaseOutcome =
   // The Steam overlay purchase was approved and finalized.
   | { outcome: "completed" }
   // The player dismissed the Steam overlay. Nothing was charged and nothing
-  // was finalized.
-  | { outcome: "cancelled" }
+  // was finalized. `quiet`: nothing to tell them (they closed Play's sheet, or
+  // a purchase was already running).
+  | { outcome: "cancelled"; quiet?: true }
   // The order is real and durable but its settlement is not ours to observe --
   // the server-side sweeper owns it. Say "check your order history"; never
-  // "purchase failed".
-  | { outcome: "pending" }
+  // "purchase failed". `message` replaces that line where the rail has a more
+  // precise one (Play).
+  | { outcome: "pending"; message?: string }
   // `message` is ready to display: already translated, or the server's own
   // player-facing text where it had one. `manageBilling` means the fix is in
   // the billing portal, so callers should offer a way there.
@@ -440,6 +486,12 @@ export async function startPurchase(
   const navigate = options.navigate ?? defaultNavigate;
   const provider = paymentsProvider();
 
+  // The Android app buys only through startPlayPurchase; nothing it shows
+  // should get here, and a checkout must never be minted for it if it does.
+  if (provider === "google" || provider === "none") {
+    return error(translateText("store.play_unavailable"));
+  }
+
   // Refuse a second overlay purchase while one is still waiting, BEFORE
   // minting an order for it.
   //
@@ -557,6 +609,310 @@ async function runPurchase(
 }
 
 // ---------------------------------------------------------------------------
+// Google Play (the Android app).
+//
+// Play does the charging; the server credits the purchase when the client
+// posts its token to POST /payments/google/finalize, and consumes it once
+// credited. Until then the purchase stays in the bridge's unconsumed() list,
+// so posting it again is the retry: the drain below does that whenever the
+// app opens. The client never consumes anything itself.
+
+/**
+ * Play's local price for each product id it returned, or null when there is
+ * no bridge or Play could not answer. Ids Play did not return are absent.
+ */
+export async function fetchPlayPrices(
+  productIds: string[],
+): Promise<Map<string, string> | null> {
+  const billing = desktopPlayBilling();
+  if (billing === null) return null;
+  if (productIds.length === 0) return new Map();
+  const result = await billing.products(productIds);
+  if (result.status !== "ok") return null;
+  return new Map(result.products.map((p) => [p.productId, p.formattedPrice]));
+}
+
+// A purchase posts its own token, so a drain asked for while one runs waits
+// for it to finish.
+let playPurchaseInFlight = false;
+let playDrainAfterPurchase: string | null = null;
+
+/**
+ * The server's answer to one token a drain pass posted. "pending" includes a
+ * purchase it could not decide yet; "refused" one it will never credit. The
+ * bridge does not say which product a token is for.
+ */
+type PlayDrainAnswer = "settled" | "pending" | "wrong_account" | "refused";
+
+// The newest pass, the account it drains for, and its answers in order (null
+// when Play could not list the unconsumed purchases).
+interface PlayDrainPass {
+  account: string;
+  result: Promise<PlayDrainAnswer[] | null>;
+}
+let playDrain: PlayDrainPass | null = null;
+
+/**
+ * Buys one Play product. `productId` is the pack's googleProductId.
+ *
+ * "pending" carries its own message: a purchase Play has not finished, and one
+ * the server could not credit yet, are both credited later without the player
+ * doing anything, and they need telling which.
+ */
+export async function startPlayPurchase(
+  productId: string | undefined,
+): Promise<PurchaseOutcome> {
+  const billing = desktopPlayBilling();
+  if (billing === null || productId === undefined) {
+    return error(translateText("store.play_unavailable"));
+  }
+  if (playPurchaseInFlight) return { outcome: "cancelled", quiet: true };
+  // Reserved before the first await, like steamPurchaseInFlight.
+  playPurchaseInFlight = true;
+  try {
+    const userMe = await getUserMe();
+    if (userMe === false) return error(translateText("store.login_required"));
+
+    return await buyOnPlay(
+      billing,
+      { productId, accountId: userMe.player.publicId },
+      false,
+    );
+  } finally {
+    playPurchaseInFlight = false;
+    drainAfterPurchase();
+  }
+}
+
+/**
+ * Opens Play's dialog and settles what it returns. `retried` marks the second
+ * dialog an already_owned answer can open; it never opens a third.
+ */
+async function buyOnPlay(
+  billing: PlayBilling,
+  request: Parameters<PlayBilling["purchase"]>[0],
+  retried: boolean,
+): Promise<PurchaseOutcome> {
+  const purchase = await billing.purchase(request);
+  if (purchase.status === "cancelled") {
+    return { outcome: "cancelled", quiet: true };
+  }
+  if (purchase.status === "error") {
+    switch (purchase.code) {
+      // Play is already showing a purchase.
+      case "busy":
+        return { outcome: "cancelled", quiet: true };
+      // An earlier purchase of this product was never consumed, so the
+      // server has not credited it yet. Posting it is what credits it.
+      // With no product ids to tell them apart, only an answer every
+      // unconsumed purchase got is about this one.
+      //
+      // Or Play's cache is stale: it can still list a purchase the server
+      // has just consumed, and this error is what refreshes it. Nothing
+      // left unconsumed, or every one settled (the server consumes what it
+      // credits), means the product is free again, so Play's advice is to
+      // buy it again. Once: a second already_owned is not drained again.
+      // A list Play could not give says neither, so it is not bought again.
+      // The list is read afresh, after the error: a pass already running read
+      // it before Play refreshed its cache.
+      case "already_owned": {
+        if (retried) return error(translateText("store.play_rebuy_too_soon"));
+        const answers = await startPlayDrain(request.accountId);
+        if (answers === null) {
+          return {
+            outcome: "pending",
+            message: translateText("store.play_earlier_purchase_pending"),
+          };
+        }
+        const all = (...allowed: PlayDrainAnswer[]) =>
+          answers.length > 0 && answers.every((a) => allowed.includes(a));
+        if (all("wrong_account")) {
+          return error(translateText("store.play_wrong_account"));
+        }
+        if (all("wrong_account", "refused")) {
+          return error(translateText("store.play_purchase_refused"));
+        }
+        if (answers.length === 0 || all("settled")) {
+          return buyOnPlay(billing, request, true);
+        }
+        return {
+          outcome: "pending",
+          message: translateText("store.play_earlier_purchase_pending"),
+        };
+      }
+      case "unavailable":
+        return error(translateText("store.play_unavailable"));
+      case "failed":
+        return error(translateText("store.purchase_failed"));
+    }
+  }
+
+  const finalized = await finalizeGooglePurchase(purchase.purchaseToken);
+  // Not awaited: the purchase answers now, and the follow-up runs on its own.
+  if (mayStillSettle(finalized)) {
+    void followUpPlayPurchase(purchase.purchaseToken);
+  }
+  if (finalized.ok) {
+    return finalized.status === "settled"
+      ? { outcome: "completed" }
+      : {
+          outcome: "pending",
+          message: translateText("store.play_purchase_pending"),
+        };
+  }
+  switch (finalized.code) {
+    case "refused":
+      return error(
+        translateText(
+          finalized.reason === "wrong_account"
+            ? "store.play_wrong_account"
+            : "store.play_purchase_refused",
+        ),
+      );
+    case "failed":
+      return error(translateText("store.play_purchase_refused"));
+    // Nothing is lost: the purchase stays unconsumed and the next drain
+    // posts it again.
+    case "rate_limited":
+    case "unauthorized":
+    case "retry_later":
+      return {
+        outcome: "pending",
+        message: translateText("store.play_purchase_retry"),
+      };
+  }
+}
+
+/**
+ * How long to wait before each further post of a purchase's token, after its
+ * own post could not credit it yet. The server can credit it moments later
+ * (Google's notification, or its own retry) and consumes it then, so no drain
+ * ever sees it again: posting it again is how the client learns it settled.
+ * Only a few: finalize is rate limited per IP.
+ */
+const PLAY_FOLLOW_UP_DELAYS_MS = [3_000, 10_000, 30_000];
+
+/**
+ * An answer a later post of the same token may turn into "settled". Not
+ * `unauthorized`: that logged the player out, and signing in again drains.
+ */
+function mayStillSettle(finalized: FinalizeGooglePurchaseResult): boolean {
+  return finalized.ok
+    ? finalized.status === "pending"
+    : finalized.code === "retry_later" || finalized.code === "rate_limited";
+}
+
+/** Re-posts the token a few times; refreshes the account once it settles. */
+async function followUpPlayPurchase(token: string): Promise<void> {
+  for (const delay of PLAY_FOLLOW_UP_DELAYS_MS) {
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    const finalized = await finalizeGooglePurchase(token);
+    if (finalized.ok && finalized.status === "settled") {
+      await refreshAccount();
+      return;
+    }
+    if (!mayStillSettle(finalized)) return;
+  }
+}
+
+/** Runs the drain asked for while the purchase ran, if one was. */
+function drainAfterPurchase(): void {
+  const queued = playDrainAfterPurchase;
+  playDrainAfterPurchase = null;
+  if (queued !== null) void drainPlayPurchases(queued);
+}
+
+/**
+ * Posts every purchase Play reports as not yet consumed, one at a time, as
+ * `account` (the player's public id): purchases the app closed before
+ * posting, ones the server could not credit yet, and pending ones that have
+ * since completed. Silent; refreshes the account if anything settled. Joins
+ * a pass already running for the same account rather than starting a second.
+ */
+export function drainPlayPurchases(account: string): Promise<void> {
+  if (playPurchaseInFlight) {
+    playDrainAfterPurchase = account;
+    return Promise.resolve();
+  }
+  return joinPlayDrain(account).then(() => undefined);
+}
+
+function joinPlayDrain(account: string): Promise<PlayDrainAnswer[] | null> {
+  if (playDrain?.account === account) return playDrain.result;
+  // The server checks each purchase against the account posting it, so a
+  // pass for another account cannot answer for this one.
+  return startPlayDrain(account);
+}
+
+/** A new pass, run once the running one (if any) ends: one at a time. */
+function startPlayDrain(account: string): Promise<PlayDrainAnswer[] | null> {
+  const previous = playDrain?.result ?? Promise.resolve();
+  const pass: PlayDrainPass = {
+    account,
+    result: previous.then(runPlayDrain, runPlayDrain).finally(() => {
+      if (playDrain === pass) playDrain = null;
+    }),
+  };
+  playDrain = pass;
+  return pass.result;
+}
+
+async function runPlayDrain(): Promise<PlayDrainAnswer[] | null> {
+  const answers: PlayDrainAnswer[] = [];
+  const billing = desktopPlayBilling();
+  if (billing === null) return null;
+  const unconsumed = await billing.unconsumed();
+  if (unconsumed.status !== "ok") return null;
+  for (const token of unconsumed.purchaseTokens) {
+    const finalized = await finalizeGooglePurchase(token);
+    if (finalized.ok) {
+      answers.push(finalized.status);
+      continue;
+    }
+    if (finalized.code === "refused") {
+      answers.push(
+        finalized.reason === "wrong_account" ? "wrong_account" : "refused",
+      );
+      continue;
+    }
+    answers.push(finalized.code === "failed" ? "refused" : "pending");
+    // Every further post would meet the same answer.
+    if (
+      finalized.code === "rate_limited" ||
+      finalized.code === "unauthorized"
+    ) {
+      break;
+    }
+  }
+  if (answers.includes("settled")) await refreshAccount();
+  return answers;
+}
+
+/**
+ * On the Play rail, drains once an account is known (at launch, and again
+ * after signing in as someone else) and whenever the app comes back to the
+ * foreground. Main calls this once.
+ */
+export function watchPlayPurchases(): void {
+  if (paymentsProvider() !== "google") return;
+  let drainedFor: string | null = null;
+  document.addEventListener("userMeResponse", (event) => {
+    const userMe = (event as CustomEvent<UserMeResponse | false>).detail;
+    const publicId = userMe === false ? null : userMe.player.publicId;
+    // A same-account refresh (one the drain itself causes) is not a reason
+    // to drain again.
+    if (publicId === drainedFor) return;
+    drainedFor = publicId;
+    if (publicId !== null) void drainPlayPurchases(publicId);
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && drainedFor !== null) {
+      void drainPlayPurchases(drainedFor);
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
 // The inline Stripe flow (wallet button / in-page card form; see
 // StripeInline.ts for the Stripe.js half).
 
@@ -643,9 +999,11 @@ export function purchaseOutcomeMessage(
     case "completed":
       return translateText(successMessageKey);
     case "cancelled":
-      return translateText("store.steam_overlay_cancelled");
+      return outcome.quiet
+        ? null
+        : translateText("store.steam_overlay_cancelled");
     case "pending":
-      return translateText("store.purchase_pending");
+      return outcome.message ?? translateText("store.purchase_pending");
     case "error":
       return outcome.message;
   }

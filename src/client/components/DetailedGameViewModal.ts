@@ -1,7 +1,7 @@
 import { GameMapType } from "@openfront/engine-api/game/GameTypes";
 import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { PublicGameInfo, PublicGames } from "@openfront/shared/WireSchemas";
-import { html, nothing, TemplateResult } from "lit";
+import { html, nothing, type PropertyValues, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { getDesktopSessionState } from "../Auth";
@@ -280,8 +280,8 @@ export class DetailedGameViewModal extends BaseModal {
     return Array.from(this.querySelectorAll<HTMLElement>("[data-lobby-slot]"));
   }
 
-  protected override willUpdate(): void {
-    super.willUpdate();
+  protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     this.slotTops = new Map(
       this.slotElements().map((el) => [
         el.dataset.lobbySlot ?? "",

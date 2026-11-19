@@ -872,18 +872,22 @@ export class PlayerPanel extends LitElement implements Controller {
     for (const alliance of other.alliances()) {
       expiryByAlly.set(alliance.other, alliance.expiresAt);
     }
-    const remainingSecondsFor = (ally: PlayerView): number | null => {
+    const remainingTicksFor = (ally: PlayerView): number | null => {
       const expiresAt = expiryByAlly.get(ally.id());
       if (expiresAt === undefined) return null;
-      const remainingTicks = expiresAt - this.g.ticks();
-      return Math.max(0, Math.floor(remainingTicks / 10)); // 10 ticks per second
+      return Math.max(0, expiresAt - this.g.ticks());
+    };
+    const remainingSecondsFor = (ally: PlayerView): number | null => {
+      const remainingTicks = remainingTicksFor(ally);
+      if (remainingTicks === null) return null;
+      return Math.floor(remainingTicks / 10); // 10 ticks per second
     };
 
     // Soonest-expiring alliances first; ties (and no-expiry allies) by name.
     const nameCollator = new Intl.Collator(undefined, { sensitivity: "base" });
     const alliesSorted = [...allies].sort((a, b) => {
-      const remainingA = remainingSecondsFor(a) ?? Infinity;
-      const remainingB = remainingSecondsFor(b) ?? Infinity;
+      const remainingA = remainingTicksFor(a) ?? Infinity;
+      const remainingB = remainingTicksFor(b) ?? Infinity;
       if (remainingA !== remainingB) return remainingA - remainingB;
       return nameCollator.compare(a.displayName(), b.displayName());
     });

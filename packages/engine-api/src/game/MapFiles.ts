@@ -1,4 +1,4 @@
-import { GameMapSize, GameMapType } from "./GameTypes";
+import { GameMapId, GameMapSize } from "./GameTypes";
 import type { MapManifest } from "./MapManifest";
 
 /**
@@ -7,7 +7,7 @@ import type { MapManifest } from "./MapManifest";
  * and map4x.bin, compact ones map4x.bin and map16x.bin.
  */
 export interface MapFiles {
-  map: GameMapType;
+  map: GameMapId;
   mapSize: GameMapSize;
   manifest: MapManifest;
   mapBin?: Uint8Array;

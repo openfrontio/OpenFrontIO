@@ -22,7 +22,7 @@ type TokenVerificationResult =
 export async function verifyClientToken(
   token: string,
 ): Promise<TokenVerificationResult> {
-  if (PersistentIdSchema.safeParse(token).success) {
+  if (PersistentIdSchema.validate(token)) {
     if (ServerEnv.env() === GameEnv.Dev) {
       return { type: "success", persistentId: token, claims: null };
     } else {

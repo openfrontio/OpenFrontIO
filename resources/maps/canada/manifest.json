@@ -1,5 +1,5 @@
 {
-  "categories": ["north_america", "new", "countries"],
+  "categories": ["north_america", "countries"],
   "custom_tribes": [
     {
       "coordinates": [2538, 2415],
@@ -245,17 +245,17 @@
   "id": "Canada",
   "map": {
     "height": 2568,
-    "num_land_tiles": 2330015,
+    "num_land_tiles": 2329825,
     "width": 3428
   },
   "map16x": {
     "height": 642,
-    "num_land_tiles": 136946,
+    "num_land_tiles": 136921,
     "width": 857
   },
   "map4x": {
     "height": 1284,
-    "num_land_tiles": 569111,
+    "num_land_tiles": 569034,
     "width": 1714
   },
   "name": "Canada",

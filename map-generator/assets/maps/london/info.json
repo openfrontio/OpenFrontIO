@@ -6,7 +6,7 @@
   "location": { "lat": 51.3, "lon": 0 },
   "author": "Tristar",
   "description": "A map of the Greater London area. Founded by the Romans in AD 43 as a settlement named Londinium, London is the capital city of England and the United Kingdom, and its largest metropolis. It is also the country's economic, transportation, and cultural center with a history spanning nearly 2,000 years.",
-  "categories": ["new", "europe"],
+  "categories": ["europe"],
   "nations": [
     {
       "coordinates": [1396, 1285],

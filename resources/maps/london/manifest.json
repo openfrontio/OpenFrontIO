@@ -151,7 +151,7 @@
       "name": "Bloomsbury"
     }
   ],
-  "categories": ["new", "europe"],
+  "categories": ["europe"],
   "id": "London",
   "map": {
     "height": 1700,
