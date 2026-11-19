@@ -914,6 +914,7 @@ export class DetailedGameViewModal extends BaseModal {
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
+        cancelable: true,
       }),
     );
   }

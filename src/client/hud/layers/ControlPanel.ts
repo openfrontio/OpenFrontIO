@@ -5,7 +5,11 @@ import { ClientID } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import { assetUrl } from "@openfront/shared/AssetUrls";
-import { EventBus } from "@openfront/shared/EventBus";
+import {
+  EventBus,
+  type EventConstructor,
+  type GameEvent,
+} from "@openfront/shared/EventBus";
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
@@ -80,10 +84,31 @@ export class ControlPanel extends LitElement implements Controller {
   private _nearbyPlayerIDs: Set<number> = new Set();
   private _borderRefreshCounter: number = 0;
   private _borderTilesPromise: Promise<void> | null = null;
+  private _borderGeneration = 0;
   // Track last attack tick per target player (for 15-second threshold)
   private _lastAttackTickByTarget: Map<number, number> = new Map();
   private static readonly BORDER_REFRESH_INTERVAL = 10; // recompute every 1s
   private static readonly ATTACK_THRESHOLD_TICKS = 15 * 10; // 15 seconds
+
+  private eventUnsubscribers: Array<() => void> = [];
+  private initGeneration = 0;
+
+  private onBus<T extends GameEvent>(
+    eventType: EventConstructor<T>,
+    handler: (event: T) => void,
+  ): void {
+    const bus = this.eventBus;
+    if (!bus) return;
+    bus.on(eventType, handler);
+    this.eventUnsubscribers.push(() => bus.off?.(eventType, handler));
+  }
+
+  private unsubscribeBus(): void {
+    for (const unsub of this.eventUnsubscribers) {
+      unsub();
+    }
+    this.eventUnsubscribers = [];
+  }
 
   connectedCallback() {
     super.connectedCallback();
@@ -100,16 +125,18 @@ export class ControlPanel extends LitElement implements Controller {
     });
   }
 
-  init() {
+  init(): () => void {
+    this.unsubscribeBus();
+    const gen = ++this.initGeneration;
     this.attackRatio = new UserSettings().attackRatio();
     this.uiState.attackRatio = this.attackRatio;
-    this.eventBus.on(TutorialHighlightEvent, (e) => {
+    this.onBus(TutorialHighlightEvent, (e) => {
       this._tutorialHighlight = e.target;
     });
-    this.eventBus.on(OnboardingLowTroopsEvent, (e) => {
+    this.onBus(OnboardingLowTroopsEvent, (e) => {
       this._lowTroopsAlert = e.low;
     });
-    this.eventBus.on(AttackRatioEvent, (event) => {
+    this.onBus(AttackRatioEvent, (event) => {
       let newAttackRatio = this.attackRatio + event.attackRatio / 100;
 
       if (newAttackRatio < 0.01) {
@@ -128,6 +155,11 @@ export class ControlPanel extends LitElement implements Controller {
       this.attackRatio = newAttackRatio;
       this.onAttackRatioChange(this.attackRatio);
     });
+    return () => {
+      if (gen === this.initGeneration) {
+        this.dispose();
+      }
+    };
   }
 
   tick() {
@@ -242,20 +274,29 @@ export class ControlPanel extends LitElement implements Controller {
       return;
     }
     this._borderRefreshCounter = 0;
-    this._borderTilesPromise = player.borderTiles().then((bt) => {
-      this._borderTilesPromise = null;
-      const myID = player.smallID();
-      const nearby = new Set<number>();
-      for (const tile of bt.borderTiles) {
-        for (const neighbor of this.game.neighbors(tile as TileRef)) {
-          const ownerID = this.game.ownerID(neighbor);
-          if (ownerID !== 0 && ownerID !== myID) {
-            nearby.add(ownerID);
+    const gen = this._borderGeneration;
+    this._borderTilesPromise = player
+      .borderTiles()
+      .then((bt) => {
+        if (gen !== this._borderGeneration) return;
+        this._borderTilesPromise = null;
+        const myID = player.smallID();
+        const nearby = new Set<number>();
+        for (const tile of bt.borderTiles) {
+          for (const neighbor of this.game.neighbors(tile as TileRef)) {
+            const ownerID = this.game.ownerID(neighbor);
+            if (ownerID !== 0 && ownerID !== myID) {
+              nearby.add(ownerID);
+            }
           }
         }
-      }
-      this._nearbyPlayerIDs = nearby;
-    });
+        this._nearbyPlayerIDs = nearby;
+      })
+      .catch(() => {
+        if (gen === this._borderGeneration) {
+          this._borderTilesPromise = null;
+        }
+      });
   }
 
   private computeNotification(
@@ -372,6 +413,30 @@ export class ControlPanel extends LitElement implements Controller {
   setVisibile(visible: boolean) {
     this._isVisible = visible;
     this.requestUpdate();
+  }
+
+  setVisible(visible: boolean) {
+    this.setVisibile(visible);
+  }
+
+  dispose(): void {
+    this.initGeneration++;
+    this.unsubscribeBus();
+    if (this._goldGainTimeoutId !== null) {
+      clearTimeout(this._goldGainTimeoutId);
+      this._goldGainTimeoutId = null;
+    }
+    this._nearbyPlayerIDs.clear();
+    this._lastAttackTickByTarget.clear();
+    this._notification = null;
+    this._goldGain = null;
+    this._tutorialHighlight = null;
+    this._lowTroopsAlert = false;
+    this._ratioPopupOpen = false;
+    this._borderRefreshCounter = 0;
+    this._borderGeneration++;
+    this._borderTilesPromise = null;
+    this.setVisible(false);
   }
 
   private handleRatioSliderInput(e: Event) {

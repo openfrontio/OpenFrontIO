@@ -1085,6 +1085,7 @@ export class JoinLobbyModal extends BaseModal {
           } as JoinLobbyEvent,
           bubbles: true,
           composed: true,
+          cancelable: true,
         }),
       );
 
@@ -1153,6 +1154,7 @@ export class JoinLobbyModal extends BaseModal {
         } as JoinLobbyEvent,
         bubbles: true,
         composed: true,
+        cancelable: true,
       }),
     );
     return "success";

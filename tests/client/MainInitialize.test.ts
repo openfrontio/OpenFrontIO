@@ -10,6 +10,9 @@ import { EventBus } from "@openfront/shared/EventBus";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { ClientEnv } from "../../src/client/ClientEnv";
+import type { DesktopSessionState } from "../../src/client/DesktopShell";
+import { GameModeSelector } from "../../src/client/GameModeSelector";
 import { loadModal } from "../../src/client/LazyModals";
 import { SendKickPlayerIntentEvent } from "../../src/client/LobbyEvents";
 import { capturePagePin } from "../../src/client/PagePin";
@@ -19,7 +22,9 @@ const mocks = vi.hoisted(() => ({
   userAuth: vi.fn(async (): Promise<unknown> => false),
   retrySteamSignIn: vi.fn(async (): Promise<unknown> => false),
   reauthAfterPortalChange: vi.fn(async (): Promise<unknown> => false),
-  getDesktopSessionState: vi.fn(() => ({ status: "unknown" })),
+  getDesktopSessionState: vi.fn((): DesktopSessionState => ({
+    status: "unknown",
+  })),
   getUserMe: vi.fn(async (): Promise<unknown> => false),
   invalidateUserMe: vi.fn(),
   joinLobby: vi.fn(),
@@ -841,6 +846,277 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       document.dispatchEvent(new CustomEvent("leave-lobby"));
       warn.mockRestore();
     }
+  });
+
+  describe("Matchmaking, join refusal, and Turnstile error handling", () => {
+    it("does not lock GameModeSelector when a matchmaking join is refused by username or blockedJoin", async () => {
+      const selector = document.querySelector(
+        "game-mode-selector",
+      ) as GameModeSelector;
+      const input = document.querySelector("username-input") as unknown as {
+        canPlay: () => boolean;
+      };
+      const prevCanPlay = input.canPlay;
+      const prevDesktop = (window as { openfrontDesktop?: unknown })
+        .openfrontDesktop;
+
+      try {
+        // 1) Username refusal
+        input.canPlay = () => false;
+        const usernameEv = new CustomEvent("join-lobby", {
+          detail: { gameID: "mmRefuseUser1", source: "matchmaking" },
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+        });
+        document.dispatchEvent(usernameEv);
+        await vi.waitFor(() => expect(usernameEv.defaultPrevented).toBe(true));
+        expect(selector.inLobby).toBe(false);
+        expect(selector.joiningLobbyId).toBeNull();
+
+        // 2) blockedJoin refusal (Steam session signed out)
+        input.canPlay = () => true;
+        (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+          steam: {},
+        };
+        mocks.getDesktopSessionState.mockReturnValue({
+          status: "signed-out",
+          reason: "needs-account",
+        });
+
+        const blockedEv = new CustomEvent("join-lobby", {
+          detail: { gameID: "mmRefuseDesk1", source: "matchmaking" },
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+        });
+        document.dispatchEvent(blockedEv);
+        await vi.waitFor(() => expect(blockedEv.defaultPrevented).toBe(true));
+        expect(selector.inLobby).toBe(false);
+        expect(selector.joiningLobbyId).toBeNull();
+      } finally {
+        input.canPlay = prevCanPlay;
+        if (prevDesktop === undefined) {
+          delete (window as { openfrontDesktop?: unknown }).openfrontDesktop;
+        } else {
+          (window as { openfrontDesktop?: unknown }).openfrontDesktop =
+            prevDesktop;
+        }
+        mocks.getDesktopSessionState.mockReturnValue({ status: "unknown" });
+      }
+    });
+
+    it("Matchmaking Back cancels pending join and unlocks GameModeSelector while prestart closeMenu() does not emit leave-lobby", async () => {
+      await loadModal("matchmaking-modal");
+      const modal = document.querySelector(
+        "matchmaking-modal",
+      ) as HTMLElement & {
+        mode: string;
+        open: () => void;
+        close: () => void;
+        isOpen: () => boolean;
+        updateComplete: Promise<unknown>;
+      };
+      const selector = document.querySelector(
+        "game-mode-selector",
+      ) as GameModeSelector;
+      const input = document.querySelector("username-input") as unknown as {
+        canPlay: () => boolean;
+      };
+      input.canPlay = () => true;
+
+      const realWs = globalThis.WebSocket;
+      const realFetch = globalThis.fetch;
+      const sockets: Array<{
+        onmessage: ((ev: { data: string }) => void) | null;
+        close: () => void;
+      }> = [];
+
+      class TestWebSocket {
+        static readonly CONNECTING = 0;
+        static readonly OPEN = 1;
+        static readonly CLOSED = 3;
+        readyState = TestWebSocket.OPEN;
+        onopen: (() => void) | null = null;
+        onmessage: ((ev: { data: string }) => void) | null = null;
+        onerror: (() => void) | null = null;
+        onclose: (() => void) | null = null;
+        constructor() {
+          sockets.push(this);
+        }
+        send() {}
+        close() {
+          this.readyState = TestWebSocket.CLOSED;
+        }
+      }
+
+      globalThis.WebSocket = TestWebSocket as unknown as typeof WebSocket;
+      globalThis.fetch = vi.fn(
+        async () =>
+          new Response(JSON.stringify({ exists: true }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+      ) as unknown as typeof fetch;
+      mocks.getUserMe.mockResolvedValue(userMeFixture());
+      mocks.joinLobby.mockClear();
+
+      const leaveEvents: CustomEvent[] = [];
+      const onLeave = (e: Event) => leaveEvents.push(e as CustomEvent);
+      document.addEventListener("leave-lobby", onLeave);
+
+      try {
+        // Part 1: Back during pending join (held on userAuth before joinLobby)
+        let resolveAuth: (value: unknown) => void = () => {};
+        mocks.userAuth.mockImplementation(
+          () =>
+            new Promise((resolve) => {
+              resolveAuth = resolve;
+            }),
+        );
+
+        modal.mode = "1v1";
+        modal.open();
+        await vi.waitFor(() => expect(sockets).toHaveLength(1));
+        await modal.updateComplete;
+
+        sockets[0].onmessage?.({
+          data: JSON.stringify({
+            type: "match-assignment",
+            gameId: "mmBack1234",
+          }),
+        });
+
+        await vi.waitFor(() => expect(selector.inLobby).toBe(true), {
+          timeout: 3000,
+        });
+        expect(selector.joiningLobbyId).toBe("mmBack1234");
+        expect(mocks.joinLobby).not.toHaveBeenCalled();
+
+        const backBtn = modal.querySelector<HTMLButtonElement>(
+          '[aria-label="common.back"]',
+        );
+        if (backBtn) {
+          backBtn.click();
+        } else {
+          modal.close();
+        }
+
+        expect(leaveEvents).toHaveLength(1);
+        expect(selector.inLobby).toBe(false);
+        expect(selector.joiningLobbyId).toBeNull();
+
+        resolveAuth(false);
+        await new Promise((r) => setTimeout(r, 30));
+        expect(mocks.joinLobby).not.toHaveBeenCalled();
+
+        // Part 2: prestart closeMenu() closes MatchmakingModal without emitting leave-lobby
+        leaveEvents.length = 0;
+        mocks.userAuth.mockImplementation(async () => false);
+        let resolvePrestart: () => void = () => {};
+        mocks.joinLobby.mockReturnValueOnce({
+          prestart: new Promise<void>((resolve) => {
+            resolvePrestart = resolve;
+          }),
+          join: new Promise<void>(() => {}),
+          stop: () => true,
+        });
+
+        modal.open();
+        await vi.waitFor(() => expect(sockets).toHaveLength(2));
+        sockets[1].onmessage?.({
+          data: JSON.stringify({
+            type: "match-assignment",
+            gameId: "mmPre12345",
+          }),
+        });
+
+        await vi.waitFor(
+          () => expect(mocks.joinLobby).toHaveBeenCalledTimes(1),
+          { timeout: 3000 },
+        );
+        expect(leaveEvents).toHaveLength(0);
+
+        resolvePrestart();
+        await vi.waitFor(() => expect(modal.isOpen()).toBe(false));
+        expect(leaveEvents).toHaveLength(0);
+      } finally {
+        document.removeEventListener("leave-lobby", onLeave);
+        document.dispatchEvent(new CustomEvent("leave-lobby"));
+        (
+          document.querySelector("game-starting-modal") as {
+            hide?: () => void;
+          } | null
+        )?.hide?.();
+        globalThis.WebSocket = realWs;
+        globalThis.fetch = realFetch;
+        mocks.getUserMe.mockImplementation(async () => false);
+        mocks.userAuth.mockImplementation(async () => false);
+      }
+    }, 10_000);
+
+    it('falls back to "Turnstile verification failed" when translations are unloaded', async () => {
+      const prevGameEnv = (window as any).BOOTSTRAP_CONFIG.gameEnv;
+      const prevTurnstile = (window as any).turnstile;
+      const input = document.querySelector("username-input") as unknown as {
+        canPlay: () => boolean;
+      };
+      input.canPlay = () => true;
+
+      const langSelector = document.querySelector("lang-selector") as {
+        translations?: Record<string, string>;
+        defaultTranslations?: Record<string, string>;
+      } | null;
+      const prevTranslations = langSelector?.translations;
+      const prevDefaultTranslations = langSelector?.defaultTranslations;
+      if (langSelector) {
+        langSelector.translations = undefined;
+        langSelector.defaultTranslations = undefined;
+      }
+
+      let errorCallback: ((code: string) => void) | undefined;
+      (window as any).BOOTSTRAP_CONFIG.gameEnv = "prod";
+      ClientEnv.reset();
+      (window as any).turnstile = {
+        render: (
+          _container: unknown,
+          opts: { "error-callback"?: (code: string) => void },
+        ) => {
+          errorCallback = opts["error-callback"];
+          return "widget-err";
+        },
+        execute: () => errorCallback?.("300030"),
+        remove: () => {},
+      };
+
+      try {
+        document.dispatchEvent(
+          new CustomEvent("join-lobby", {
+            detail: { gameID: "turnErr123", source: "public" },
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+
+        await vi.waitFor(() => {
+          const dialog = document.querySelector("confirm-dialog") as {
+            message?: string;
+          } | null;
+          expect(dialog).not.toBeNull();
+          expect(dialog!.message).toBe("Turnstile verification failed");
+        });
+      } finally {
+        document.querySelector("confirm-dialog")?.remove();
+        document.dispatchEvent(new CustomEvent("leave-lobby"));
+        if (langSelector) {
+          langSelector.translations = prevTranslations;
+          langSelector.defaultTranslations = prevDefaultTranslations;
+        }
+        (window as any).turnstile = prevTurnstile;
+        (window as any).BOOTSTRAP_CONFIG.gameEnv = prevGameEnv;
+        ClientEnv.reset();
+      }
+    });
   });
 
   // Last: the viewer replaces the menu, and any later hash change would
