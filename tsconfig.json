@@ -4,9 +4,7 @@
   "compilerOptions": {
     "paths": {
       "resources/*": ["./resources/*"],
-      "src/*": ["./src/*"],
-      // Type-checked against the stub; vite.config.ts picks the real module.
-      "virtual:scenario-editor": ["./src/client/scenario/ScenarioEditorStub.ts"]
+      "src/*": ["./src/*"]
     }
   },
   "include": [

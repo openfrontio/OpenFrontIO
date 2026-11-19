@@ -1473,19 +1473,20 @@ class Client {
   }
 
   /**
-   * Replace the menu with the scenario editor, in a build that has it (see
-   * ScenarioEditorStub). Leaving it reloads the page, like leaving a game.
+   * Replace the menu with the scenario editor (loaded on demand). Leaving it
+   * reloads the page, like leaving a game.
    */
   private async openScenarioEditor(): Promise<void> {
     if (this.scenarioEditorOpen) return;
     this.scenarioEditorOpen = true;
     let editor: HTMLElement | null = null;
     try {
-      editor = (await import("virtual:scenario-editor")).createScenarioEditor();
+      const { ScenarioEditor } = await import("./scenario/ScenarioEditor");
+      editor = new ScenarioEditor();
     } catch (err) {
       console.error("scenario editor failed to load:", err);
     }
-    // No editor in this build, or a join started while the chunk loaded.
+    // The chunk didn't load, or a join started while it did.
     if (editor === null || this.gameUnderway()) {
       this.scenarioEditorOpen = false;
       return;

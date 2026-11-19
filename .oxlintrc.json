@@ -6,7 +6,6 @@
   },
   "ignorePatterns": [
     "src/server/gatekeeper/**",
-    "src/client/scenario-editor/**",
     "tests/pathfinding/playground/**",
     ".claude/**"
   ],

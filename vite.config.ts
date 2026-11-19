@@ -270,21 +270,6 @@ export default defineConfig(({ mode }) => {
   const devClusterJson = JSON.stringify({
     [devInstanceLetter]: { host: "localhost", numWorkers: devNumWorkers },
   });
-  // The scenario editor is closed source (the src/client/scenario-editor
-  // submodule). Only a build that sets SCENARIO_EDITOR=1 includes it; every
-  // other build gets the stub, whether or not the submodule is checked out.
-  const scenarioEditorEntry = path.resolve(
-    __dirname,
-    "src/client/scenario-editor/index.ts",
-  );
-  const includeScenarioEditor = env.SCENARIO_EDITOR === "1";
-  // Not a silent fallback: a release that asked for the editor must not ship
-  // without it because a checkout step failed.
-  if (includeScenarioEditor && !fs.existsSync(scenarioEditorEntry)) {
-    throw new Error(
-      `SCENARIO_EDITOR=1 but ${scenarioEditorEntry} is missing; check out the scenario-editor submodule`,
-    );
-  }
   const resourcesDir = getResourcesDir(__dirname);
   const proprietaryDir = getProprietaryDir(__dirname);
   const sourceDirs = [resourcesDir, proprietaryDir];
@@ -490,12 +475,6 @@ export default defineConfig(({ mode }) => {
       tsconfigPaths: true,
       alias: {
         resources: path.resolve(__dirname, "resources"),
-        "virtual:scenario-editor": includeScenarioEditor
-          ? scenarioEditorEntry
-          : path.resolve(
-              __dirname,
-              "src/client/scenario/ScenarioEditorStub.ts",
-            ),
       },
     },
 
