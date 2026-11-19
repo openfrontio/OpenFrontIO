@@ -663,6 +663,25 @@ export class GameImpl implements Game {
     return this.updates;
   }
 
+  /**
+   * Hands over the updates made since the game started, without running a
+   * tick: what the scenario editor's commands changed, in an engine that
+   * never ticks. Players get their updates as at the end of a tick. (After a
+   * tick, the updates still hold that tick's, already handed over.)
+   */
+  drainPendingUpdates(): GameUpdates {
+    for (const player of this._playersBySmallID) {
+      const update = player.toUpdate(
+        this.playerStatsQuads,
+        this.attackTroopsQuads,
+      );
+      if (update !== null) this.addUpdate(update);
+    }
+    const updates = this.updates;
+    this.updates = createGameUpdatesMap();
+    return updates;
+  }
+
   private recordTileUpdate(tile: TileRef): void {
     // Low 16 bits: tile state, bits 16-23: terrain byte
     this.tileUpdatePairs.push(
@@ -914,6 +933,36 @@ export class GameImpl implements Game {
     this.nextPlayerID++;
     this._players.set(playerInfo.id, player);
     return player;
+  }
+
+  /** Scenario editor: a nation with no spawn, which gets land by set_owner. */
+  addNation(info: PlayerInfo): Player {
+    const player = this.addPlayer(info);
+    this._nations.push(new Nation(undefined, info));
+    return player;
+  }
+
+  /**
+   * Scenario editor: deletes the nation's structures, frees its land and
+   * forgets its id. Its small id stays taken, so what is left is a dead
+   * player that no longer appears under its id or among the nations.
+   */
+  removeNation(nation: Player): void {
+    for (const unit of [...nation.units()]) unit.delete(false);
+    for (const tile of [...nation.tiles()]) this.relinquish(tile);
+    this._players.delete(nation.id());
+    this._nations = this._nations.filter(
+      (n) => n.playerInfo.id !== nation.id(),
+    );
+  }
+
+  /** Scenario editor: renames a nation or changes its flag. */
+  setNationInfo(nation: Player, info: PlayerInfo): void {
+    nation.setPlayerInfo(info);
+    // The nation and its player share one PlayerInfo, as in a new game.
+    this._nations = this._nations.map((n) =>
+      n.playerInfo.id === info.id ? new Nation(n.spawnCell, info) : n,
+    );
   }
 
   private maybeAssignTeam(player: PlayerInfo): Team | null {
