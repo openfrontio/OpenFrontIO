@@ -75,14 +75,26 @@ let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
 let __cosmeticsCache: Cosmetics | null = null;
 let __cosmeticsFetchedAt = 0;
-// The store experiments generation (Experiments.ts) the cached catalog was
-// fetched for: `undefined` while its request still waits for the player's
-// group, null when it went out without it (the wait timed out).
-let __cosmeticsGeneration: number | null | undefined = undefined;
-// The cohort the cached catalog was fetched with (null: the plain catalog).
-let __cosmeticsCohort: string | null = null;
-// Whether the cached request has landed (its catalog is the one in use).
-let __cosmeticsLanded = false;
+/**
+ * What one catalog request was fetched for (store experiments,
+ * Experiments.ts). Each request keeps its own, so a request that lands late
+ * can never be tagged with another request's group.
+ */
+interface CatalogTag {
+  // The experiments generation: `undefined` while the request still waits
+  // for the player's group, null when it went out without it (timed out).
+  generation: number | null | undefined;
+  // The cohort it was fetched with (null: the plain catalog).
+  cohort: string | null;
+  // Whether it has landed and its catalog is the one in use.
+  landed: boolean;
+}
+// The tag of the request in `__cosmetics` (meaningless while that is null).
+let __cosmeticsTag: CatalogTag = {
+  generation: undefined,
+  cohort: null,
+  landed: false,
+};
 
 /**
  * How long a catalog fetch waits for the player's store experiment group
@@ -1083,8 +1095,12 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
   if (__cosmetics !== null) {
     return __cosmetics;
   }
-  __cosmeticsGeneration = undefined;
-  __cosmeticsLanded = false;
+  const tag: CatalogTag = {
+    generation: undefined,
+    cohort: null,
+    landed: false,
+  };
+  __cosmeticsTag = tag;
   // A holder, so the body can recognise its own request as the cached one
   // (filled in before any await inside can resume).
   const self: { request?: Promise<Cosmetics | null> } = {};
@@ -1095,16 +1111,11 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
       // exposure, and is refetched when the group lands.
       const experiments = await waitForExperiments(EXPERIMENTS_WAIT_MS);
       const cohort = experiments?.catalogCohort ?? null;
-      if (__cosmetics === self.request) {
-        __cosmeticsGeneration = experiments?.generation ?? null;
-        __cosmeticsCohort = cohort;
-      }
-      const response = await fetch(
-        cosmeticsJsonUrl(cohort),
-        {
-          signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
-        },
-      );
+      tag.generation = experiments?.generation ?? null;
+      tag.cohort = cohort;
+      const response = await fetch(cosmeticsJsonUrl(cohort), {
+        signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
+      });
       if (!response.ok) {
         console.warn(`HTTP error! status: ${response.status}`);
         return null;
@@ -1114,18 +1125,18 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
         console.error(`Invalid cosmetics: ${result.error.message}`);
         return null;
       }
-      // A request replaced meanwhile (a refetch for a new group) must not
-      // overwrite the newer catalog when it lands last.
-      if (__cosmetics !== self.request && __cosmetics !== null) {
-        return result.data;
-      }
+      // Only the cached request caches and tags. One replaced meanwhile (a
+      // refetch for a new group) or dropped (invalidated, or its refetch
+      // failed) hands its data to its own caller and touches nothing: it may
+      // be for a group that is no longer the player's.
+      if (__cosmetics !== self.request) return result.data;
       const patternKeys = Object.keys(result.data.patterns).sort();
       const hashInput = patternKeys.join(",");
       __cosmeticsHash = simpleHash(hashInput);
       __cosmeticsCache = result.data;
       __cosmeticsFetchedAt = Date.now();
-      __cosmeticsLanded = true;
-      setCatalogGeneration(__cosmeticsGeneration ?? null);
+      tag.landed = true;
+      setCatalogGeneration(tag.generation ?? null);
       // The groups moved on while this was in flight (a switch, or a late
       // answer that landed before this request was tagged): refetch for the
       // groups now known rather than keep this cohort until the 60 s refresh.
@@ -1177,15 +1188,16 @@ document.addEventListener(EXPERIMENTS_CHANGED, () => followExperiments());
  * other change refetches, the same way in every group.
  */
 function followExperiments(): void {
-  if (__cosmetics === null || __cosmeticsGeneration === undefined) return;
+  // Nothing cached: the next fetch (the store opening, the banner's recheck,
+  // the 60 s refresh) is tagged with the groups known then.
+  if (__cosmetics === null) return;
+  const tag = __cosmeticsTag;
+  if (tag.generation === undefined) return;
   const latest = experimentsState();
-  if (latest === null || __cosmeticsGeneration === latest.generation) return;
-  if (
-    latest.assignments.length === 0 &&
-    latest.catalogCohort === __cosmeticsCohort
-  ) {
-    __cosmeticsGeneration = latest.generation;
-    if (__cosmeticsLanded) setCatalogGeneration(latest.generation);
+  if (latest === null || tag.generation === latest.generation) return;
+  if (latest.assignments.length === 0 && latest.catalogCohort === tag.cohort) {
+    tag.generation = latest.generation;
+    if (tag.landed) setCatalogGeneration(latest.generation);
     return;
   }
   void reloadCosmetics();

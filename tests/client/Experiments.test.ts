@@ -103,6 +103,8 @@ type Route = (url: string, init?: RequestInit) => Response | Promise<Response>;
 let fetchMock: ReturnType<typeof vi.fn>;
 let experimentsRoute: Route;
 let purchaseRoute: Route;
+// Overrides the catalog's answer when set.
+let catalogRoute: Route | null;
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -194,6 +196,7 @@ beforeEach(() => {
   vi.stubGlobal("IntersectionObserver", FakeIO);
   experimentsRoute = () => json(200, { assignments: [], catalogCohort: null });
   purchaseRoute = () => json(200, { amount: "44" });
+  catalogRoute = null;
   fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
     const url = String(input);
     if (url.includes("/users/@me/experiments/exposures")) {
@@ -201,6 +204,9 @@ beforeEach(() => {
     }
     if (url.includes("/users/@me/experiments")) {
       return experimentsRoute(url, init);
+    }
+    if (url.includes("/cosmetics.json") && catalogRoute !== null) {
+      return catalogRoute(url, init);
     }
     if (url.includes("/cosmetics.json")) {
       return json(200, catalog(url.includes("cohort=") ? 45 : 35));
@@ -536,6 +542,57 @@ describe("waiting for the groups", () => {
       "https://api.test/cosmetics.json?rail=web",
     );
     expect(Experiments.experimentsState()?.account).toBe("account-b");
+  });
+});
+
+describe("a late catalog request", () => {
+  it("never tags a slow plain catalog with a failed refetch's group", async () => {
+    // R1: the group isn't known in time, so the plain catalog goes out, slow.
+    let answerGroup!: (r: Response) => void;
+    experimentsRoute = () =>
+      new Promise<Response>((resolve) => (answerGroup = resolve));
+    let answerR1!: (r: Response) => void;
+    catalogRoute = () =>
+      new Promise<Response>((resolve) => (answerR1 = resolve));
+    Experiments.expectExperiments();
+    void Experiments.loadExperiments();
+    const r1 = Cosmetics.fetchCosmetics();
+    await vi.advanceTimersByTimeAsync(Cosmetics.EXPERIMENTS_WAIT_MS);
+    await vi.waitFor(() => expect(catalogCalls()).toHaveLength(1));
+
+    // The Deeper group lands; R2 (the cohort catalog) fails.
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    catalogRoute = () => json(500, {});
+    answerGroup(json(200, assignments("deeper")));
+    await vi.waitFor(() => expect(catalogCalls()).toHaveLength(2));
+    expect(catalogCalls()[1][0]).toContain(`cohort=${DEEPER}`);
+    await vi.advanceTimersByTimeAsync(10);
+
+    // R1 lands last: its plain catalog is not cached or tagged as Deeper.
+    answerR1(json(200, catalog(35)));
+    const plain = await r1;
+    expect(plain?.promotions?.[0].percentOff).toBe(35);
+    expect(Experiments.assignmentKnown()).toBe(false);
+    expect(Cosmetics.getCachedCosmetics()).not.toBe(plain);
+    const card = flashCard();
+    Experiments.exposureWatcher.observe(card, "store_flash");
+    setVisible(card, true);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(exposureBodies()).toEqual([]);
+
+    // Recoverable: the next fetch (store open, banner recheck, 60 s refresh)
+    // gets the cohort catalog, tagged, and the exposure follows.
+    catalogRoute = null;
+    const fresh = await Cosmetics.fetchCosmetics();
+    expect(fresh?.promotions?.[0].percentOff).toBe(45);
+    expect(Experiments.assignmentKnown()).toBe(true);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(exposureBodies()).toEqual([
+      {
+        platform: "web",
+        exposures: [{ key: KEY, variant: "deeper", surface: "store_flash" }],
+      },
+    ]);
   });
 });
 
