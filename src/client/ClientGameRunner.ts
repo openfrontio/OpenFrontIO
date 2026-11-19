@@ -37,6 +37,7 @@ import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import { GameHealthIndicators } from "./hud/layers/GameHealthIndicators";
 import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
 import { OnboardingOverlay } from "./hud/layers/OnboardingOverlay";
+import { clearSavedLooks } from "./hud/layers/SavedLooks";
 import { UnitDisplay } from "./hud/layers/UnitDisplay";
 import { showInGameAlert } from "./InGameModal";
 import {
@@ -1286,6 +1287,8 @@ export class ClientGameRunner {
   }
 
   public stop() {
+    // Looks saved from the player panel belong to this game.
+    clearSavedLooks();
     if (this.healthTimer !== null) clearInterval(this.healthTimer);
     this.healthTimer = null;
     document.removeEventListener("visibilitychange", this.updateHealth);
