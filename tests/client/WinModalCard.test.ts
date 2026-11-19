@@ -245,7 +245,11 @@ describe("WinModal saved looks", () => {
 
   it("the killer's row comes first, and their saved look isn't repeated", async () => {
     saveLook("g1", { clientID: "a", name: "Ada", items: [ITEM as never] });
-    saveLook("g1", { clientID: "killer", name: "Volt", items: [ITEM as never] });
+    saveLook("g1", {
+      clientID: "killer",
+      name: "Volt",
+      items: [ITEM as never],
+    });
     const modal = await renderModal({
       game,
       endCardMode: "eliminatedBy",
@@ -257,7 +261,11 @@ describe("WinModal saved looks", () => {
   });
 
   it("a saved killer's look still shows when the killer's row doesn't", async () => {
-    saveLook("g1", { clientID: "killer", name: "Volt", items: [ITEM as never] });
+    saveLook("g1", {
+      clientID: "killer",
+      name: "Volt",
+      items: [ITEM as never],
+    });
     const modal = await renderModal({
       game,
       endCardMode: "eliminatedBy",

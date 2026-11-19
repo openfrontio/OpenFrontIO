@@ -26,8 +26,9 @@ import {
   buildPlayerCardView,
   type PlayerCardView,
 } from "../../components/card/PlayerCardModel";
-import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
+import { savedLooks } from "../../components/card/SavedLooks";
 import "./EndCardSection";
+import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
 import {
   ffaRatingGameOf,
   type FfaRatingGame,
@@ -43,10 +44,10 @@ import {
   resolveCosmetics,
 } from "../../Cosmetics";
 import { isDesktopShell } from "../../DesktopShell";
-import { gamePortal } from "../../GamePortal";
 import "../../components/ProfileShare";
 import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
+import { gamePortal } from "../../GamePortal";
 import { lobbyPublicGameType } from "../../LobbyPublicGameType";
 import { lobbyLevelBadge } from "../../LobbyRosterLevels";
 import type { MatchmakingMode } from "../../Matchmaking";
@@ -86,7 +87,6 @@ import {
   type EndScreenCard,
   winnerCard,
 } from "./EndScreenCard";
-import { savedLooks } from "../../components/card/SavedLooks";
 import { type LoadoutItem, loadoutItems, promoChoice } from "./LoadoutRow";
 
 type LegendCeremonyModule = typeof import("../../components/LegendCeremony");
@@ -613,25 +613,31 @@ export class WinModal extends LitElement implements Controller {
 
   // Looks saved from the player panel this game ("Get the look"), newest
   // first, after the promo box: so after the killer's row when that shows,
-  // and without the killer's saved look then, which would repeat it.
+  // and without the killer's saved look then, which would repeat it. Like the
+  // card, a decoration: if anything goes wrong the screen shows without them.
   private renderSavedLooks() {
-    const gameID = this.game?.gameID();
-    if (gameID === undefined) return nothing;
-    const card = this.lastEndCard;
-    const killer =
-      card?.kind === "eliminatedBy" && this.promo() === "loadout"
-        ? card.clientID
-        : null;
-    return savedLooks(gameID)
-      .filter((look) => look.clientID !== killer)
-      .map(
-        (look) =>
-          html`<loadout-row
-            data-saved-look=${look.clientID}
-            .ownerName=${look.name}
-            .items=${look.items}
-          ></loadout-row>`,
-      );
+    try {
+      const gameID = this.game?.gameID();
+      if (gameID === undefined) return nothing;
+      const card = this.lastEndCard;
+      const killer =
+        card?.kind === "eliminatedBy" && this.promo() === "loadout"
+          ? card.clientID
+          : null;
+      return savedLooks(gameID)
+        .filter((look) => look.clientID !== killer)
+        .map(
+          (look) =>
+            html`<loadout-row
+              data-saved-look=${look.clientID}
+              .ownerName=${look.name}
+              .items=${look.items}
+            ></loadout-row>`,
+        );
+    } catch (error) {
+      console.warn("Saved looks left off the end screen:", error);
+      return nothing;
+    }
   }
 
   innerHtml() {
