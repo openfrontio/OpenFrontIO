@@ -241,6 +241,8 @@ describe("editor commands", () => {
     expect(city.tile()).toBe(e.land[20]);
     expect(city.owner()).toBe(game.player("FRANCE01"));
     expect(city.level()).toBe(3);
+    // Priced later as a nation that built all three levels.
+    expect(game.player("FRANCE01").unitsConstructed(UnitType.City)).toBe(3);
     expect(city.isUnderConstruction()).toBe(false);
     expect(game.player("FRANCE01").gold()).toBe(100n);
     expect(gu.packedUnitUpdates).toBeDefined();

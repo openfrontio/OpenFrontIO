@@ -110,6 +110,10 @@ export function applyEditorCommand(game: Game, command: EditorCommand): void {
       // Built as play builds it, but free: the author sets gold separately.
       const gold = n.gold();
       const unit = n.buildUnit(command.unit, command.tile, {});
+      // Each level counts as a construction, as upgrading does in play, so
+      // the nation's later builds of this type cost what they would have.
+      for (let level = 1; level < command.level; level++) n.upgradeUnit(unit);
+      // But it's placed finished: loaded, and a SAM at its full range.
       if (command.level > 1) unit.placeAtLevel(command.level);
       n.setGold(gold);
       return;
