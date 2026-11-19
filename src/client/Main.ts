@@ -1,3 +1,5 @@
+// First: before any component module fetches the catalog.
+import "./ExpectExperiments";
 import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
 import {
   isRewardClaimable,
@@ -168,7 +170,7 @@ import {
 } from "./TurnstileToken";
 // Before the first userMeResponse, for the modals that load after it.
 import "./UserMeBroadcast";
-import { expectExperiments, loadExperiments } from "./Experiments";
+import { loadExperiments } from "./Experiments";
 import { classicReplayHref } from "./replay/ReplayEntry";
 import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
 import type { ScenarioEditor } from "./scenario/ScenarioEditor";
@@ -425,9 +427,6 @@ class Client {
     // URL, so take the value while it is still the URL we were served at.
     // See PagePin.ts.
     capturePagePin();
-    // A catalog fetched before auth settles waits (briefly) for the player's
-    // store experiment group rather than going out without it.
-    expectExperiments();
     document.documentElement.style.setProperty(
       "--hud-opacity",
       String(this.userSettings.hudOpacity()),
