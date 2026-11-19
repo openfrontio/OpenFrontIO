@@ -1,0 +1,708 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { getUserMe } from "../../src/client/Api";
+import { userAuth } from "../../src/client/Auth";
+import type { InventoryItemTile } from "../../src/client/components/inventory/InventoryItemTile";
+import { itemStateOf } from "../../src/client/components/inventory/ItemState";
+import {
+  PENDING_EQUIP_KEY,
+  rememberPendingEquip,
+} from "../../src/client/components/inventory/PendingEquip";
+import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
+import { fetchCosmetics, purchaseCosmetic } from "../../src/client/Cosmetics";
+import "../../src/client/InventoryModal";
+import type { InventoryModal } from "../../src/client/InventoryModal";
+import {
+  CROWN_KEY,
+  EFFECTS_KEY,
+  FLAG_KEY,
+  LOADOUTS_KEY,
+  PATTERN_KEY,
+  UserSettings,
+} from "../../src/client/UserSettings";
+
+vi.mock("../../src/client/Api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/Api")>()),
+  getUserMe: vi.fn(),
+}));
+
+vi.mock("../../src/client/Auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/Auth")>()),
+  userAuth: vi.fn(),
+}));
+
+vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
+  fetchCosmetics: vi.fn(),
+  purchaseCosmetic: vi.fn(),
+}));
+
+const base = { product: null, affiliateCode: null } as const;
+const LATER = () => new Date(Date.now() + 3_600_000).toISOString();
+
+const trail = (name: string, effectType: string, rarity = "common") => ({
+  ...base,
+  rarity,
+  name,
+  effectType,
+  attributes: {
+    type: "gradient",
+    colors: ["#ffffff"],
+    colorSize: 1,
+    movementSpeed: 1,
+  },
+});
+
+function makeCatalog(): Cosmetics {
+  return {
+    patterns: {
+      hexgrid: {
+        ...base,
+        rarity: "rare",
+        name: "hexgrid",
+        pattern: "AAAAAA",
+      },
+      plain: { ...base, rarity: "common", name: "plain", pattern: "AAAAAA" },
+      tiger: {
+        ...base,
+        rarity: "epic",
+        name: "tiger",
+        pattern: "AAAAAA",
+      },
+    },
+    colorPalettes: {},
+    flags: {
+      owned_flag: {
+        ...base,
+        rarity: "common",
+        name: "owned_flag",
+        url: "/flags/owned.svg",
+      },
+    },
+    crowns: {
+      gold_crown: {
+        ...base,
+        rarity: "rare",
+        name: "gold_crown",
+        url: "/crowns/gold.svg",
+      },
+      sale_crown: {
+        ...base,
+        rarity: "epic",
+        name: "sale_crown",
+        url: "/crowns/sale.svg",
+        priceHard: 300,
+        listPriceHard: 400,
+        priceSoft: 1800,
+        listPriceSoft: 2400,
+        promotion: {
+          id: "p1",
+          name: "Winter sale",
+          percentOff: 25,
+          endsAt: LATER(),
+        },
+      },
+      season_crown: {
+        ...base,
+        rarity: "legendary",
+        name: "season_crown",
+        url: "/crowns/season.svg",
+        unlockSource: { kind: "season", label: "Season 1 · free tier 20" },
+      },
+    },
+    skins: {
+      camo: {
+        ...base,
+        rarity: "uncommon",
+        name: "camo",
+        url: "/skins/camo.png",
+        priceSoft: 4000,
+      },
+    },
+    effects: {
+      transportShipTrail: {
+        smoke: trail("smoke", "transportShipTrail", "uncommon"),
+        sparks: trail("sparks", "transportShipTrail", "rare"),
+        comet: { ...trail("comet", "transportShipTrail"), priceHard: 200 },
+      },
+      nukeTrail: { ember: trail("ember", "nukeTrail") },
+    },
+  } as unknown as Cosmetics;
+}
+
+function makeUser(flares: string[]): UserMeResponse {
+  return {
+    user: {},
+    player: {
+      publicId: "in-game-test-player",
+      adfree: false,
+      unlimitedRanked: false,
+      canCreatePublicLobbies: false,
+      achievements: { singleplayerMap: [] },
+      friends: [],
+      subscription: null,
+      currency: { soft: 5000, hard: 5000 },
+      flares,
+    },
+  } as unknown as UserMeResponse;
+}
+
+const OWNED = [
+  "pattern:hexgrid",
+  "pattern:plain",
+  "pattern:tiger",
+  "flag:owned_flag",
+  "crown:gold_crown",
+  "effect:smoke",
+  "effect:sparks",
+];
+
+async function settle(modal: InventoryModal) {
+  for (let i = 0; i < 4; i++) {
+    await modal.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+}
+
+function tiles(root: ParentNode): InventoryItemTile[] {
+  return [...root.querySelectorAll<InventoryItemTile>("inventory-item-tile")];
+}
+
+function tile(root: ParentNode, key: string): InventoryItemTile {
+  const found = tiles(root).find(
+    (candidate) =>
+      candidate.resolved.key === key ||
+      candidate.variants.some((variant) => variant.key === key),
+  );
+  if (!found) throw new Error(`no tile ${key}`);
+  return found;
+}
+
+async function setFilter(modal: InventoryModal, filter: string) {
+  modal
+    .querySelector<HTMLButtonElement>(`[data-inventory-filter="${filter}"]`)!
+    .click();
+  await settle(modal);
+}
+
+async function clickTile(modal: InventoryModal, key: string) {
+  tile(modal, key)
+    .querySelector<HTMLButtonElement>("[data-tile-main]")!
+    .click();
+  await settle(modal);
+}
+
+describe("Inventory In game tab", () => {
+  let modal: InventoryModal;
+  let messages: string[];
+  const onMessage = (event: Event) =>
+    messages.push((event as CustomEvent<{ message: string }>).detail.message);
+
+  Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
+
+  // Long grids (1,008 country flags) render a page at a time behind an
+  // IntersectionObserver, as in the browser; jsdom has none.
+  beforeAll(() => {
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+  });
+  afterAll(() => vi.unstubAllGlobals());
+
+  beforeEach(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+    const settings = new UserSettings();
+    for (const key of [
+      PATTERN_KEY,
+      FLAG_KEY,
+      CROWN_KEY,
+      EFFECTS_KEY,
+      LOADOUTS_KEY,
+    ]) {
+      settings.removeCached(key);
+    }
+    messages = [];
+    window.addEventListener("show-message", onMessage);
+    vi.mocked(fetchCosmetics).mockResolvedValue(makeCatalog());
+    vi.mocked(userAuth).mockResolvedValue({
+      jwt: "token",
+      claims: {},
+    } as Awaited<ReturnType<typeof userAuth>>);
+    vi.mocked(getUserMe).mockResolvedValue(makeUser(OWNED));
+    vi.mocked(purchaseCosmetic).mockReset();
+    modal = document.createElement("inventory-modal") as InventoryModal;
+    modal.setAttribute("inline", "");
+    document.body.appendChild(modal);
+  });
+
+  afterEach(() => {
+    window.removeEventListener("show-message", onMessage);
+    modal.remove();
+    document.body.innerHTML = "";
+    vi.clearAllMocks();
+  });
+
+  async function open(
+    tab = "skins",
+    user: UserMeResponse | false = makeUser(OWNED),
+  ) {
+    if (user === false) {
+      vi.mocked(userAuth).mockResolvedValue(false);
+    } else {
+      vi.mocked(getUserMe).mockResolvedValue(user);
+    }
+    modal.open({ tab });
+    await settle(modal);
+  }
+
+  describe("tabs and routes", () => {
+    it("opens In game on the requested category", async () => {
+      await open("crowns");
+      expect(
+        modal
+          .querySelector('[data-inventory-top-tab="ingame"]')!
+          .getAttribute("aria-selected"),
+      ).toBe("true");
+      expect(
+        modal.querySelector("[data-inventory-grid='crowns']"),
+      ).not.toBeNull();
+      expect(modal.querySelector("inventory-card-tab")).toBeNull();
+    });
+
+    it("tab=card opens the Player card tab", async () => {
+      await open("card");
+      expect(
+        modal
+          .querySelector('[data-inventory-top-tab="card"]')!
+          .getAttribute("aria-selected"),
+      ).toBe("true");
+      expect(modal.querySelector("inventory-card-tab")).not.toBeNull();
+      expect(modal.querySelector("[data-inventory-grid]")).toBeNull();
+    });
+
+    it("switches between the two tabs and back to the last category", async () => {
+      await open("crowns");
+      modal
+        .querySelector<HTMLButtonElement>('[data-inventory-top-tab="card"]')!
+        .click();
+      await settle(modal);
+      expect(modal.querySelector("inventory-card-tab")).not.toBeNull();
+      modal
+        .querySelector<HTMLButtonElement>('[data-inventory-top-tab="ingame"]')!
+        .click();
+      await settle(modal);
+      expect(
+        modal.querySelector("[data-inventory-grid='crowns']"),
+      ).not.toBeNull();
+    });
+
+    it("the Player card link in Your look opens the card tab", async () => {
+      await open("skins");
+      modal
+        .querySelector<HTMLButtonElement>("[data-your-look-card-link]")!
+        .click();
+      await settle(modal);
+      expect(modal.querySelector("inventory-card-tab")).not.toBeNull();
+    });
+  });
+
+  describe("grid", () => {
+    it("defaults to the Owned filter", async () => {
+      await open("skins");
+      expect(
+        modal
+          .querySelector('[data-inventory-filter="owned"]')!
+          .getAttribute("aria-pressed"),
+      ).toBe("true");
+      expect(tiles(modal).map((t) => t.resolved.key)).not.toContain(
+        "skin:camo",
+      );
+    });
+
+    it("sorts equipped first, then owned, then by rarity", async () => {
+      new UserSettings().setSelectedPatternName("pattern:plain");
+      await open("skins");
+      await setFilter(modal, "all");
+      expect(tiles(modal).map((t) => t.resolved.key)).toEqual([
+        "pattern:plain",
+        "pattern:tiger",
+        "pattern:hexgrid",
+        "pattern:default",
+        "skin:camo",
+      ]);
+    });
+
+    it("marks the equipped tile with text and a corner check, not colour alone", async () => {
+      new UserSettings().setSelectedPatternName("pattern:hexgrid");
+      await open("skins");
+      const equipped = tile(modal, "pattern:hexgrid");
+      expect(equipped.state).toBe("equipped");
+      expect(
+        equipped.querySelector("[data-tile-footer]")!.textContent,
+      ).toContain("inventory.equipped");
+      expect(equipped.querySelector("[data-tile-check]")).not.toBeNull();
+      expect(
+        tile(modal, "pattern:tiger").querySelector("[data-tile-footer]")!
+          .textContent,
+      ).toContain("inventory.state_owned");
+    });
+
+    it("shows the rarity word at the top of each tile", async () => {
+      await open("skins");
+      expect(
+        tile(modal, "pattern:tiger").querySelector("[data-tile-rarity]")!
+          .textContent,
+      ).toMatch(/\S/);
+    });
+
+    it("an earned-only tile shows how to unlock it and never a price", async () => {
+      await open("crowns");
+      await setFilter(modal, "all");
+      const earned = tile(modal, "crown:season_crown");
+      expect(earned.state).toBe("earned");
+      expect(earned.querySelector("[data-tile-unlock]")!.textContent).toContain(
+        "Season 1 · free tier 20",
+      );
+      expect(earned.querySelector("[data-tile-price]")).toBeNull();
+      expect(earned.querySelector("purchase-button")).toBeNull();
+    });
+
+    it("a for-sale tile shows the sale price, struck list price and sale name", async () => {
+      await open("crowns");
+      await setFilter(modal, "all");
+      const sale = tile(modal, "crown:sale_crown");
+      expect(sale.state).toBe("forSale");
+      const hard = sale.querySelector('[data-tile-price="hard"]')!;
+      expect(hard.textContent).toContain("300");
+      expect(
+        hard.querySelector("[data-tile-list-price]")!.textContent,
+      ).toContain("400");
+      const soft = sale.querySelector('[data-tile-price="soft"]')!;
+      expect(soft.textContent).toContain("1,800");
+      expect(
+        sale.querySelector("[data-tile-sale-label]")!.textContent,
+      ).toContain("Winter sale");
+    });
+
+    it("clicking an owned tile equips it at once with a message and no save bar", async () => {
+      await open("crowns");
+      await clickTile(modal, "crown:gold_crown");
+      expect(new UserSettings().getSelectedCrownName()).toBe("gold_crown");
+      expect(tile(modal, "crown:gold_crown").state).toBe("equipped");
+      expect(messages).toContain("inventory.item_equipped");
+      expect(modal.querySelector("[data-inventory-save-bar]")).toBeNull();
+    });
+
+    it("offers Use default instead of Unequip", async () => {
+      new UserSettings().setSelectedCrownName("gold_crown");
+      await open("crowns");
+      expect(modal.querySelector("[data-inventory-unequip]")).toBeNull();
+      const useDefault = modal.querySelector<HTMLButtonElement>(
+        "[data-inventory-use-default]",
+      )!;
+      expect(useDefault.textContent).toContain("inventory.use_default");
+      useDefault.click();
+      await settle(modal);
+      expect(new UserSettings().getSelectedCrownName()).toBeNull();
+    });
+
+    it("ends each grid with the Store tile", async () => {
+      await open("skins");
+      const grid = modal.querySelector("[data-inventory-grid='skins']")!;
+      expect(
+        grid.lastElementChild!.hasAttribute("data-inventory-store-tile"),
+      ).toBe(true);
+    });
+  });
+
+  describe("states", () => {
+    it("signed out: sign-in prompt, and country flags stay usable marked Free", async () => {
+      await open("flags", false);
+      expect(modal.querySelector("[data-inventory-sign-in]")).not.toBeNull();
+      const search = modal.querySelector<HTMLInputElement>(
+        "[data-inventory-search]",
+      )!;
+      search.value = "gb";
+      search.dispatchEvent(new Event("input"));
+      await settle(modal);
+      const gb = tile(modal, "country:gb");
+      expect(gb.querySelector("[data-tile-footer]")!.textContent).toContain(
+        "inventory.free",
+      );
+      await clickTile(modal, "country:gb");
+      expect(new UserSettings().getFlag()).toBe("country:gb");
+    });
+
+    it("loading: skeleton tiles", async () => {
+      vi.mocked(fetchCosmetics).mockReturnValue(new Promise(() => {}));
+      modal.open({ tab: "skins" });
+      await modal.updateComplete;
+      expect(
+        modal.querySelectorAll("[data-inventory-skeleton-tile]").length,
+      ).toBeGreaterThan(0);
+    });
+
+    it("owns nothing: the default shows equipped, with a note and a Store link", async () => {
+      await open("skins", makeUser([]));
+      expect(tile(modal, "pattern:default").state).toBe("equipped");
+      const empty = modal.querySelector("[data-inventory-empty='nothing']")!;
+      expect(empty.textContent).toContain("inventory.no_owned_skins");
+      expect(
+        empty.querySelector("[data-inventory-browse-store]"),
+      ).not.toBeNull();
+    });
+
+    it("empty filter: No owned crowns, with Show all and Browse the Store", async () => {
+      await open("crowns", makeUser([]));
+      const empty = modal.querySelector("[data-inventory-empty='filter']")!;
+      expect(empty.textContent).toContain("inventory.empty_owned_crowns");
+      expect(
+        empty.querySelector("[data-inventory-browse-store]"),
+      ).not.toBeNull();
+      empty
+        .querySelector<HTMLButtonElement>("[data-inventory-show-all]")!
+        .click();
+      await settle(modal);
+      expect(
+        modal
+          .querySelector('[data-inventory-filter="all"]')!
+          .getAttribute("aria-pressed"),
+      ).toBe("true");
+      expect(tiles(modal).length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("effects list", () => {
+    it("lists every effect slot with the item in use, owned count and Change", async () => {
+      new UserSettings().setSelectedEffectName("transportShipTrail", "smoke");
+      await open("effects");
+      const rows = [
+        ...modal.querySelectorAll<HTMLElement>("[data-effect-row]"),
+      ];
+      expect(rows.map((row) => row.dataset.effectRow)).toEqual([
+        "transportShipTrail",
+        "nukeTrail",
+        "atom",
+        "hydro",
+        "mirvWarhead",
+        "structures",
+        "warship",
+        "train",
+        "railroad",
+      ]);
+      const ship = rows[0];
+      expect(
+        ship.querySelector("[data-effect-row-name]")!.textContent,
+      ).toContain("inventory.effect_slot.transportShipTrail");
+      expect(ship.querySelector("[data-effect-row-item]")!.textContent).toMatch(
+        /smoke/i,
+      );
+      expect(
+        ship.querySelector("[data-effect-row-owned]")!.textContent,
+      ).toContain("inventory.owned_count");
+      expect(ship.querySelector("[data-effect-row-change]")).not.toBeNull();
+      expect(
+        rows[1].querySelector("[data-effect-row-item]")!.textContent,
+      ).toContain("inventory.effect_default");
+    });
+
+    it("Change opens that type's grid inline, and equipping works there", async () => {
+      await open("effects");
+      expect(modal.querySelector("[data-effect-row-grid]")).toBeNull();
+      modal
+        .querySelector<HTMLButtonElement>(
+          '[data-effect-row="transportShipTrail"] [data-effect-row-change]',
+        )!
+        .click();
+      await settle(modal);
+      const grid = modal.querySelector(
+        '[data-effect-row="transportShipTrail"] [data-effect-row-grid]',
+      )!;
+      expect(grid).not.toBeNull();
+      expect(tiles(grid).map((t) => t.resolved.key)).toEqual([
+        "effect:transportShipTrail:sparks",
+        "effect:transportShipTrail:smoke",
+      ]);
+      await clickTile(modal, "effect:transportShipTrail:sparks");
+      expect(
+        new UserSettings().getSelectedEffectName("transportShipTrail"),
+      ).toBe("sparks");
+    });
+
+    it("Your look counts custom and default effect slots", async () => {
+      new UserSettings().setSelectedEffectName("transportShipTrail", "smoke");
+      await open("skins");
+      const summary = modal.querySelector("[data-your-look-effects-summary]")!;
+      expect(summary.textContent).toContain("inventory.effects_summary");
+      expect(
+        modal.querySelectorAll("[data-your-look-effect-swatch]").length,
+      ).toBe(9);
+      expect(
+        modal.querySelectorAll('[data-your-look-effect-swatch="default"]')
+          .length,
+      ).toBe(8);
+    });
+  });
+
+  describe("unowned preview and buy", () => {
+    it("clicking an unowned item opens the buy popup with shown prices, equipping nothing", async () => {
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      const dialog = modal.querySelector("inventory-buy-dialog")!;
+      expect(dialog).not.toBeNull();
+      const button = dialog.querySelector<PurchaseButton>("purchase-button")!;
+      expect(button.priceHard).toBe(300);
+      expect(button.listPriceHard).toBe(400);
+      expect(button.priceSoft).toBe(1800);
+      expect(button.listPriceSoft).toBe(2400);
+      expect(button.promotion?.name).toBe("Winter sale");
+      expect(new UserSettings().getSelectedCrownName()).toBeNull();
+    });
+
+    it("after a purchase the popup offers Equip now, which equips it", async () => {
+      vi.mocked(purchaseCosmetic).mockImplementation(async () => {
+        document.dispatchEvent(
+          new CustomEvent("userMeResponse", {
+            detail: makeUser([...OWNED, "crown:sale_crown"]),
+          }),
+        );
+        return undefined;
+      });
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      const button = modal.querySelector<PurchaseButton>(
+        "inventory-buy-dialog purchase-button",
+      )!;
+      await button.onPurchaseHard!();
+      await settle(modal);
+      expect(purchaseCosmetic).toHaveBeenCalledWith(
+        expect.objectContaining({ key: "crown:sale_crown" }),
+        "hard",
+        undefined,
+      );
+      const equipNow = modal.querySelector<HTMLButtonElement>(
+        "inventory-buy-dialog [data-buy-equip-now]",
+      )!;
+      expect(equipNow).not.toBeNull();
+      equipNow.click();
+      await settle(modal);
+      expect(new UserSettings().getSelectedCrownName()).toBe("sale_crown");
+      expect(modal.querySelector("inventory-buy-dialog")).toBeNull();
+    });
+
+    it("offers Equip now after the purchase reloaded the page", async () => {
+      rememberPendingEquip("in-game-test-player", "crown:sale_crown");
+      await open("crowns", makeUser([...OWNED, "crown:sale_crown"]));
+      const equipNow = modal.querySelector<HTMLButtonElement>(
+        "inventory-buy-dialog [data-buy-equip-now]",
+      );
+      expect(equipNow).not.toBeNull();
+      expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).toBeNull();
+    });
+
+    it("drops a remembered purchase that did not go through", async () => {
+      rememberPendingEquip("in-game-test-player", "crown:sale_crown");
+      await open("crowns");
+      expect(modal.querySelector("inventory-buy-dialog")).toBeNull();
+      expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).toBeNull();
+    });
+
+    it("an earned item shows how to unlock it and no buy", async () => {
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:season_crown");
+      const dialog = modal.querySelector("inventory-buy-dialog")!;
+      expect(dialog.querySelector("[data-buy-unlock]")!.textContent).toContain(
+        "Season 1 · free tier 20",
+      );
+      expect(dialog.querySelector("purchase-button")).toBeNull();
+    });
+
+    it("signed out: clicking an unowned item opens the sign-in prompt instead", async () => {
+      const showPage = vi.fn();
+      (window as unknown as { showPage: unknown }).showPage = showPage;
+      await open("crowns", false);
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      expect(modal.querySelector("inventory-buy-dialog")).toBeNull();
+      expect(showPage).toHaveBeenCalledWith("page-account");
+    });
+  });
+
+  describe("phone", () => {
+    it("keeps text at 11px or more and touch targets at least 44px", async () => {
+      await open("effects");
+      // The item artwork (<cosmetic-preview>) is shared with the Store and
+      // not part of this check.
+      const copy = modal.cloneNode(true) as HTMLElement;
+      copy.querySelectorAll("cosmetic-preview").forEach((el) => el.remove());
+      const html = copy.innerHTML;
+      expect(html).not.toMatch(/text-\[(?:[0-9]|10)px\]/);
+      for (const selector of [
+        "[data-inventory-filter]",
+        "[data-effect-row-change]",
+        "[data-inventory-top-tab]",
+        "[data-loadout-category]",
+        "[data-effect-chip]",
+      ]) {
+        const elements = modal.querySelectorAll(selector);
+        expect(elements.length, selector).toBeGreaterThan(0);
+        for (const el of elements) {
+          expect(el.className, selector).toMatch(
+            /min-h-11|h-11|min-h-12|h-12|min-h-24/,
+          );
+        }
+      }
+    });
+
+    it("shows the slot strip and effect types as chips", async () => {
+      await open("effects");
+      expect(modal.querySelectorAll("[data-loadout-category]").length).toBe(4);
+      expect(modal.querySelector("[data-effect-chips]")).not.toBeNull();
+    });
+  });
+});
+
+describe("itemStateOf", () => {
+  const resolved = (relationship: string, extra: object = {}) =>
+    ({
+      type: "crown",
+      cosmetic: { name: "x", rarity: "common", ...extra },
+      colorPalette: null,
+      relationship,
+      key: "crown:x",
+    }) as never;
+
+  it("maps ownership and equip state", () => {
+    expect(itemStateOf(resolved("owned"), true)).toBe("equipped");
+    expect(itemStateOf(resolved("owned"), false)).toBe("owned");
+    expect(itemStateOf(resolved("purchasable", { priceHard: 1 }), false)).toBe(
+      "forSale",
+    );
+    expect(
+      itemStateOf(
+        resolved("blocked", { unlockSource: { kind: "quest", label: "Q" } }),
+        false,
+      ),
+    ).toBe("earned");
+    expect(itemStateOf(resolved("blocked"), false)).toBeNull();
+  });
+});
