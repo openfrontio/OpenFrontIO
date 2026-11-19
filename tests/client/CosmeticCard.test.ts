@@ -205,7 +205,7 @@ describe("CosmeticCard", () => {
     const main = card!.querySelector("[data-cosmetic-main]")!;
     const name = card!.querySelector("[data-cosmetic-name]")!;
 
-    // Positioned against a wrapper that starts below the name, so `top-2` lands
+    // Positioned against a wrapper that starts below the name, so it lands
     // on the artwork's corner rather than over the title.
     expect(info.parentElement).toBe(main.parentElement);
     expect(info.parentElement!.className).toContain("relative");
@@ -227,9 +227,12 @@ describe("CosmeticCard", () => {
     // longest line, so on a first-column card it ran past the modal's left
     // edge and was clipped. Its strip spans the card and caps it there.
     expect(info.className).toContain("inset-x-2");
-    // Top-left, leaving the artwork's top-right corner to a sale's band.
-    expect(info.className).toContain("justify-start");
-    expect(bubble.className).toContain("left-0");
+    // Bottom-right, opening upwards: a sale's band takes the artwork's
+    // top-right corner and a new item's band the top-left.
+    expect(info.className).toContain("bottom-2");
+    expect(info.className).toContain("justify-end");
+    expect(bubble.className).toContain("right-0");
+    expect(bubble.className).toContain("bottom-9");
     expect(bubble.className).toContain("max-w-full");
     expect(bubble.className).not.toContain("whitespace-nowrap");
     // The strip must not swallow clicks meant for the artwork beneath it.
@@ -638,6 +641,32 @@ describe("CosmeticCard", () => {
     it("reads an unparseable newUntil as not new", () => {
       expect(newUntilMs({ newUntil: "soon" })).toBeNull();
       expect(isNew({ newUntil: "soon" })).toBe(false);
+    });
+
+    it("is a gold band across the artwork's top-left corner", async () => {
+      installTranslations();
+      const c = await createWith({ priceHard: 100, newUntil: inAWeek() });
+      const corner = c.querySelector<HTMLElement>("[data-cosmetic-new]")!;
+      expect(corner.className).toContain("left-0");
+      expect(corner.className).toContain("top-0");
+      expect(corner.className).toContain("overflow-hidden");
+      const band = corner.firstElementChild as HTMLElement;
+      expect(band.className).toContain("-rotate-45");
+      expect(band.className).toContain("bg-cyber-yellow");
+      expect(band.textContent?.trim()).toBe("New");
+    });
+
+    it("leaves the preview button beside the details button", async () => {
+      installTranslations();
+      const c = await createWith({ priceHard: 100, newUntil: inAWeek() });
+      c.interactive = true;
+      await c.updateComplete;
+      const bubble = c.querySelector<HTMLElement>(
+        "[data-cosmetic-preview-bubble]",
+      )!;
+      // The "?" holds the bottom-right corner; the eye sits to its left.
+      expect(bubble.className).toContain("right-10");
+      expect(bubble.className).toContain("bottom-2");
     });
 
     it("shows beside a sale ribbon", async () => {

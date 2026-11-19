@@ -438,8 +438,8 @@ export class CosmeticCard extends LitElement {
   /**
    * The sale's discount as a band across the artwork's top-right corner,
    * while one runs; the same for a flash sale's item, which the card's glow
-   * and timer mark instead. The "?" moved to the top-left to give it the
-   * corner (CosmeticInfo).
+   * and timer mark instead. The "?" sits bottom-right to leave both top
+   * corners to these bands (CosmeticInfo).
    */
   private renderSaleRibbon(active: ResolvedCosmetic) {
     if (active.relationship !== "purchasable") return nothing;
@@ -460,19 +460,24 @@ export class CosmeticCard extends LitElement {
 
   /**
    * "New" on an item added to the store in the last 14 days, while the player
-   * can buy it. Bottom-left of the artwork: the equipped badge's corner, which
-   * a buyable item never has; lifted above a flash sale's timer.
+   * can buy it: a gold band across the artwork's top-left corner, mirroring a
+   * sale's band on the right. Masters gold, not the sale's blue, so the two
+   * read as different things side by side; its dark edge keeps it apart from
+   * a legendary card's gold border.
    */
   private renderNewBadge(active: ResolvedCosmetic) {
     if (!this.showNewBadge) return nothing;
     if (active.relationship !== "purchasable") return nothing;
     if (!isNew(active.cosmetic)) return nothing;
-    const bottom = this.flashSale(active) !== null ? "bottom-12" : "bottom-1";
     return html`<span
       data-cosmetic-new
-      class="pointer-events-none absolute left-1 ${bottom} z-[4] rounded-full bg-malibu-blue px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-deep-navy shadow-lg shadow-deep-navy/60"
-      >${translateText("store.new_badge")}</span
-    >`;
+      class="pointer-events-none absolute left-0 top-0 z-[5] h-16 w-16 overflow-hidden rounded-tl-lg sm:h-[88px] sm:w-[88px]"
+    >
+      <span
+        class="absolute -left-[26px] top-3.5 w-24 -rotate-45 border-y border-deep-navy/60 bg-cyber-yellow py-0.5 text-center text-xs font-black uppercase tracking-wide text-deep-navy shadow-[0_2px_6px_rgba(0,0,0,0.5)] sm:-left-[34px] sm:top-5 sm:w-[130px] sm:py-[3px] sm:text-[15px]"
+        >${translateText("store.new_badge")}</span
+      >
+    </span>`;
   }
 
   /** A flash sale's item: the time left, fading up from the artwork's foot. */

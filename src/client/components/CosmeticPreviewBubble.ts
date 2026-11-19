@@ -48,9 +48,10 @@ export class CosmeticPreviewBubble extends LitElement {
       return nothing;
     }
 
+    // Left of the "?" details button, which holds the corner (CosmeticInfo).
     return html`<div
       data-cosmetic-preview-bubble
-      class="group/preview-bubble absolute right-2 bottom-2 z-10"
+      class="group/preview-bubble absolute right-10 bottom-2 z-10"
       @click=${this.onBubbleClick}
     >
       <button
