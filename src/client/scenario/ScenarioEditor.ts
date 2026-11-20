@@ -54,7 +54,7 @@ import {
   IMPASSABLE,
   isScenarioSize,
   land,
-  MAX_AREA,
+  MAX_SIDE,
   MAX_ELEVATION,
   newScenarioDocument,
   resizeScenarioDocument,
@@ -799,7 +799,7 @@ export class ScenarioEditor extends LitElement {
           ? nothing
           : html`<p class="w-full text-sm text-red-400">
               ${translateText("scenario_editor.size_rule", {
-                max: MAX_AREA.toLocaleString(),
+                max: MAX_SIDE.toLocaleString(),
               })}
             </p>`
       }
@@ -901,7 +901,7 @@ export class ScenarioEditor extends LitElement {
                   {
                     width: stock.width,
                     height: stock.height,
-                    max: MAX_AREA.toLocaleString(),
+                    max: MAX_SIDE.toLocaleString(),
                   },
                 )}
               </p>`

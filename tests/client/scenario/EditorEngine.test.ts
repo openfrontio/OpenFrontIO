@@ -163,7 +163,7 @@ describe("starting from a stock map", () => {
 
   test("refuses a map too large for a scenario", () => {
     const files = tutorialFiles();
-    files.manifest.map = { width: 2400, height: 1600, num_land_tiles: 0 };
+    files.manifest.map = { width: 5004, height: 1600, num_land_tiles: 0 };
     expect(() => stockMapStart("Too large", files)).toThrow(/can't be/);
   });
 });

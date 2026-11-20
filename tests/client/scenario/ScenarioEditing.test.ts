@@ -649,6 +649,6 @@ describe("resizing", () => {
     const doc = built();
     expect(() => resizeScenarioDocument(doc, 202, 160)).toThrow();
     expect(() => resizeScenarioDocument(doc, 200, 96)).toThrow();
-    expect(() => resizeScenarioDocument(doc, 2000, 2000)).toThrow();
+    expect(() => resizeScenarioDocument(doc, 5004, 200)).toThrow();
   });
 });
