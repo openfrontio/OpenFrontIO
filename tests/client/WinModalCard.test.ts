@@ -16,6 +16,27 @@ vi.mock("../../src/client/Cosmetics", async (orig) => ({
   fetchCosmetics: async () => catalogue.fetched,
 }));
 
+// The session as Auth.userAuth sees it. Like the real one (Auth.ts), a
+// token expired or within 3 minutes of expiry is refreshed only when asked
+// to (shouldRefresh, the default); userAuth(false) answers false for it.
+const auth = vi.hoisted(() => ({
+  session: true,
+  expired: false,
+  throws: false,
+}));
+vi.mock("../../src/client/Auth", async (orig) => ({
+  ...(await orig<typeof import("../../src/client/Auth")>()),
+  userAuth: async (shouldRefresh = true) => {
+    if (auth.throws) throw new Error("auth broke");
+    if (!auth.session) return false;
+    if (auth.expired) {
+      if (!shouldRefresh) return false;
+      auth.expired = false; // refreshed from the refresh cookie
+    }
+    return { jwt: "j", claims: {} };
+  },
+}));
+
 import { defaultPlayerCardView } from "../../src/client/components/card/PlayerCardModel";
 import {
   clearSavedLooks,
@@ -411,6 +432,24 @@ describe("WinModal Get the look block", () => {
     expect(promo(modal)).toBe(false);
   });
 
+  it("no killer card and no saved look: the promo shows without waiting for /users/@me", async () => {
+    // viewerFlares not read yet (null), but there is nothing to check.
+    const modal = await renderModal({ game, endCardMode: "none", rand: 0.4 });
+    expect(block(modal)).toBeNull();
+    expect(promo(modal)).toBe(true);
+  });
+
+  it("a killer card still loading: waits, even with no saved look", async () => {
+    const modal = await renderModal({
+      game,
+      ...killed,
+      loadout: [],
+      loadoutPending: true,
+      rand: 0.4,
+    });
+    expect(promo(modal)).toBe(false);
+  });
+
   it("re-renders when a look is saved or removed", async () => {
     const modal = await renderModal({ ...base, endCardMode: "none" });
     expect(block(modal)).toBeNull();
@@ -582,5 +621,79 @@ describe("WinModal Get the look buying", () => {
     expect(block(modal).looks[0].items.map((i) => i.item.name)).toEqual([
       "bg_a2",
     ]);
+  });
+});
+
+// getUserMe answers false for a failed read (a 5xx, a network error, a bad
+// body) as well as for no session, and keeps that false cached. Only the
+// session decides "signed out"; a failed read leaves a signed-in player
+// signed in (no flares known), so they get real Buy buttons whose tap check
+// re-reads, never a "Sign in to buy" that sends them out of their game.
+describe("WinModal: signed in is the session, not the profile read", () => {
+  type Modal = HTMLElement & {
+    applyUserMe(me: unknown): Promise<void>;
+    signedIn: boolean;
+    viewerFlares: readonly string[] | null;
+  };
+  afterEach(() => {
+    auth.session = true;
+    auth.expired = false;
+    auth.throws = false;
+    document.body.innerHTML = "";
+  });
+
+  it("a failed profile read with a session: still signed in, no flares", async () => {
+    auth.session = true;
+    const modal = (await renderModal({ endCardMode: "none" })) as Modal;
+    await modal.applyUserMe(false);
+    expect(modal.signedIn).toBe(true);
+    expect(modal.viewerFlares).toEqual([]);
+  });
+
+  it("a cached failed read and a token near expiry after a long game: still signed in", async () => {
+    // /users/@me failed at boot (false cached, so no request now), and the
+    // 15-minute token has expired over a 20-minute game; the refresh cookie
+    // is still good.
+    auth.session = true;
+    auth.expired = true;
+    const modal = (await renderModal({ endCardMode: "none" })) as Modal;
+    await modal.applyUserMe(false);
+    expect(modal.signedIn).toBe(true);
+  });
+
+  it("reading the viewer never rejects, even if its fallback throws", async () => {
+    // getUserMe fails (it catches the throw and answers false), then the
+    // session check in the fallback throws too: nothing may escape the
+    // fire-and-forget call in show().
+    auth.throws = true;
+    const modal = (await renderModal({ endCardMode: "none" })) as Modal & {
+      loadViewerFlares(): Promise<void>;
+    };
+    await expect(modal.loadViewerFlares()).resolves.toBeUndefined();
+  });
+
+  it("no session: signed out", async () => {
+    auth.session = false;
+    const modal = (await renderModal({ endCardMode: "none" })) as Modal;
+    await modal.applyUserMe(false);
+    expect(modal.signedIn).toBe(false);
+  });
+
+  it("a profile: signed in, with its flares", async () => {
+    const modal = (await renderModal({ endCardMode: "none" })) as Modal;
+    await modal.applyUserMe({ player: { flares: ["taunt:salute"] } });
+    expect(modal.signedIn).toBe(true);
+    expect(modal.viewerFlares).toEqual(["taunt:salute"]);
+  });
+
+  it("an older answer landing late doesn't overwrite a newer one", async () => {
+    auth.session = false;
+    const modal = (await renderModal({ endCardMode: "none" })) as Modal;
+    // The failed read waits on its session check...
+    const first = modal.applyUserMe(false);
+    // ...while a fresh profile arrives and decides.
+    await modal.applyUserMe({ player: { flares: [] } });
+    await first;
+    expect(modal.signedIn).toBe(true);
   });
 });

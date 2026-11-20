@@ -8,11 +8,7 @@ import type { PropertyValues, TemplateResult } from "lit";
 import { html, LitElement, render as litRender, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { getUserMe, invalidateUserMe } from "../Api";
-import {
-  broadcastFreshUserMe,
-  invalidateCosmetics,
-  resumePendingPurchase,
-} from "../Cosmetics";
+import { broadcastFreshUserMe, invalidateCosmetics } from "../Cosmetics";
 import { showInGameAlert } from "../InGameModal";
 import type { PurchaseRequest } from "../Payments";
 import {
@@ -21,6 +17,7 @@ import {
   type InlineConfirmResult,
 } from "../StripeInline";
 import { translateText } from "../Utils";
+import { hasPendingPurchase } from "./inventory/PendingEquip";
 
 /**
  * The webhook grants the entitlement, so the balance read immediately after a
@@ -389,13 +386,20 @@ export class InlineCheckout extends LitElement {
       await showInGameAlert(translateText(this.successMessageKey));
       invalidateUserMe();
       // A Plutonium top-up for an item from the end screen ("Get
-      // Plutonium"): point the page at that item first, so the reload opens
-      // the Store on it. Never after a subscription.
+      // Plutonium"): reload straight onto the purchase landing, marked
+      // resume, which then opens the Store on that item (waiting for the
+      // Plutonium if it hasn't landed). replaceState, so no hashchange runs
+      // the landing before the reload. Never after a subscription.
       if (
-        this.request?.kind === "currency_pack" ||
-        this.request?.kind === "custom_currency"
+        (this.request?.kind === "currency_pack" ||
+          this.request?.kind === "custom_currency") &&
+        hasPendingPurchase()
       ) {
-        await resumePendingPurchase({ waitForProfile: false });
+        history.replaceState(
+          null,
+          "",
+          `${window.location.pathname}${window.location.search}#purchase-completed?status=true&type=currency_pack&resume=1`,
+        );
       }
       window.location.reload();
       return;

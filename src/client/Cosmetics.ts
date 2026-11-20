@@ -222,6 +222,13 @@ export function handlePurchaseReturn(
 
   const type = params.get("type");
   if (type === "currency_pack") {
+    // The in-page card form reloads onto this landing marked resume, after
+    // showing its own message: straight to the resume.
+    if (params.get("resume") === "1") {
+      actions.strip();
+      void resumePendingPurchase();
+      return;
+    }
     topUpLanded(actions, translateText("store.currency_pack_purchase_success"));
     return;
   }
@@ -710,6 +717,8 @@ export type InPlacePurchase =
   | { kind: "unconfirmed" }
   // No account: nothing to buy with.
   | { kind: "signed_out" }
+  // A session, but its profile couldn't be read: nothing sent.
+  | { kind: "unreachable" }
   // Explained already with its own message (a wallet in debt).
   | { kind: "handled" };
 
@@ -734,7 +743,12 @@ export async function purchaseCosmeticInPlace(
   const priced = c as Pattern | Flag;
   const price = currentPrice(priced, method) ?? 0;
   const userMe = await getUserMe();
-  if (userMe === false) return { kind: "signed_out" };
+  if (userMe === false) {
+    // getUserMe answers (and caches) false for a failed read too: only the
+    // session says signed out. Either way nothing was sent.
+    const session = await userAuth(false);
+    return { kind: session === false ? "signed_out" : "unreachable" };
+  }
   const wallet = userMe.player.currency;
   const balance = method === "hard" ? (wallet?.hard ?? 0) : (wallet?.soft ?? 0);
   if (balance < 0) {

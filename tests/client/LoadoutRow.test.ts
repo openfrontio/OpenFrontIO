@@ -415,6 +415,30 @@ describe("<loadout-row>", () => {
     ]);
   });
 
+  it("the selected player stays selected when a look is saved ahead of them", async () => {
+    await render({ looks: [voltLook(), adaLook()] });
+    (q("[data-look-chip='ada']") as HTMLButtonElement).click();
+    await row.updateComplete;
+    // A look saved meanwhile goes in newest first, after the killer.
+    const bo = look("bo", "Bo", loadoutItems(VOLT, COSMETICS, []));
+    row.looks = [voltLook(), bo, adaLook()];
+    await row.updateComplete;
+    expect(chips()).toEqual([
+      ["volt", "false"],
+      ["bo", "false"],
+      ["ada", "true"],
+    ]);
+  });
+
+  it("the selected player gone: the first is selected", async () => {
+    await render({ looks: [voltLook(), adaLook()] });
+    (q("[data-look-chip='ada']") as HTMLButtonElement).click();
+    await row.updateComplete;
+    row.looks = [voltLook()];
+    await row.updateComplete;
+    expect(chips()).toEqual([["volt", "true"]]);
+  });
+
   it("folds to one line on a phone; tapping opens chips and items", async () => {
     await render({ looks: [voltLook(), adaLook()] });
     const fold = q("[data-look-fold]") as HTMLButtonElement;
@@ -660,6 +684,18 @@ describe("<loadout-row> buying", () => {
         "win_modal.server_unreachable",
       ),
     );
+  });
+
+  it("the buy can't read the profile (a session, the network): says so", async () => {
+    vi.mocked(purchaseCosmeticInPlace).mockResolvedValue({
+      kind: "unreachable",
+    });
+    await render({});
+    await button().onPurchaseHard();
+    expect(showInGameAlert).toHaveBeenCalledWith(
+      "win_modal.server_unreachable",
+    );
+    expect(showInGameConfirm).not.toHaveBeenCalled();
   });
 
   it("a shortfall goes back to the button's box", async () => {
