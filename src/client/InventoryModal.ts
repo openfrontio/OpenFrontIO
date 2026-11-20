@@ -23,6 +23,7 @@ import {
 } from "./components/CosmeticPresentation";
 import "./components/CosmeticPreviewModal";
 import "./components/inventory/InventoryBuyDialog";
+import { CardEditor } from "./components/inventory/CardDraft";
 import "./components/inventory/InventoryCardTab";
 import { EFFECT_SLOTS } from "./components/inventory/EffectSlots";
 import "./components/inventory/InventoryEffectList";
@@ -155,6 +156,9 @@ export class InventoryModal extends BaseModal {
   private statusTimer: ReturnType<typeof setTimeout> | null = null;
 
   private cosmetics: Cosmetics | null = null;
+  /** The Player card tab's changes: kept here so they outlive the tab's
+   * element (the body re-renders while a fresh profile loads). */
+  private readonly cardEditor = new CardEditor();
   private userSettings: UserSettings = new UserSettings();
   private userMeResponse: UserMeResponse | false = false;
   private catalogLoad: Promise<Cosmetics | null> | null = null;
@@ -999,9 +1003,24 @@ export class InventoryModal extends BaseModal {
     if (this.userMeResponse === false) return null;
     const player = this.userMeResponse.player;
     if (!ownsPlayerCard(player.flares ?? [])) return null;
-    const background = player.card?.background;
+    // What the Player card tab last saved, else what the profile says.
+    const background = this.cardEditor.isSeededWith(this.userMeResponse)
+      ? this.cardEditor.saved.background
+      : player.card?.background;
     if (!background) return null;
     return this.cosmetics?.cardBackgrounds?.[background]?.url ?? null;
+  }
+
+  /** The in-game flag, for the card: its image path and its name. */
+  private cardFlag(): { path: string | undefined; name: string | null } {
+    const flag = this.equippedFlag();
+    if (flag === null || flag.cosmetic === null) {
+      return { path: undefined, name: null };
+    }
+    const path = flag.key.startsWith("country:")
+      ? `/flags/${flag.key.slice("country:".length)}.svg`
+      : (flag.cosmetic as Flag).url;
+    return { path, name: cosmeticDisplayName(flag) };
   }
 
   private renderTopTabs(): TemplateResult {
@@ -1163,10 +1182,17 @@ export class InventoryModal extends BaseModal {
     }
     if (tab === CARD_TAB) {
       if (this.ownershipState === "guest") return this.renderSignIn();
+      const flag = this.cardFlag();
       return html`<inventory-card-tab
         class="block p-3"
+        .editor=${this.cardEditor}
         .userMe=${this.userMeResponse === false ? null : this.userMeResponse}
+        .cosmetics=${this.cosmetics}
+        .flag=${flag.path}
+        .flagName=${flag.name}
+        .priceEpoch=${this.priceEpoch}
         @change-flag=${() => this.setActiveTab("flags")}
+        @open-store=${() => this.openStore("card")}
       ></inventory-card-tab>`;
     }
     const category = (
@@ -1341,9 +1367,12 @@ export class InventoryModal extends BaseModal {
     this.filter = filter;
   }
 
-  private openStore() {
+  private openStore(sub?: "card") {
     this.close();
-    window.location.hash = "modal=store&tab=cosmetics";
+    window.location.hash =
+      sub === undefined
+        ? "modal=store&tab=cosmetics"
+        : `modal=store&tab=cosmetics&sub=${sub}`;
   }
 
   // ---- Actions -----------------------------------------------------------

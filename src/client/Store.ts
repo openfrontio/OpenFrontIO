@@ -1181,6 +1181,8 @@ export class StoreModal extends BaseModal {
     // `sub=sale` (the home screen's sale banner) opens Cosmetics → On sale;
     // groupsForTab falls back to Skins if nothing is on sale by now.
     if (args?.sub === "sale") this.cosmeticsSubTab = "sale";
+    // `sub=card`: the Inventory's Player card tab ("More … in the Store").
+    if (args?.sub === "card") this.cosmeticsSubTab = "card";
     // Prices change when a sale starts or ends, so a catalog fetched more than
     // a minute ago is refetched rather than shown with stale prices. In the
     // Android app, Play is asked again if it could not price the packs.
