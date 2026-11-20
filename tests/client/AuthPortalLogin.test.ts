@@ -115,6 +115,19 @@ describe("portal login", () => {
       },
     );
 
+    it("a portal exchange that succeeds after an unreachable one: settled", async () => {
+      signedInPortal();
+      answer(503);
+      await userAuth();
+      expect(sessionUncertain()).toBe(true);
+      fetchMock.mockImplementation(async () => ({
+        status: 200,
+        json: async () => ({ jwt: "jwt-value", expiresIn: 3600 }),
+      }));
+      await userAuth();
+      expect(sessionUncertain()).toBe(false);
+    });
+
     it("a portal exchange that never reaches the server: uncertain", async () => {
       signedInPortal();
       fetchMock.mockImplementation(async () => {
