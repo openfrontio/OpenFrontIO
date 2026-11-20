@@ -320,6 +320,30 @@ export class GameImpl implements Game {
     this.recordTileUpdate(tile);
   }
 
+  setTerrain(tiles: readonly TileRef[], terrain: readonly number[]): void {
+    this.recordTerrainChanges(this._waterManager.editTerrain(tiles, terrain));
+  }
+
+  endTerrainEdit(): void {
+    this.recordTerrainChanges(this._waterManager.endTerrainEdit());
+  }
+
+  downscaleMiniMap(): GameMap {
+    return this._waterManager.downscaleMiniMap();
+  }
+
+  rebuildWaterGraph(): void {
+    this._waterManager.rebuildWaterGraph();
+  }
+
+  private recordTerrainChanges(tiles: TileRef[]): void {
+    for (const tile of tiles) this.recordTileUpdate(tile);
+    if (tiles.length === 0) return;
+    this._territoryVersion++;
+    // Rail paths route around water, so a rail plan must be redone too.
+    this._structureVersion++;
+  }
+
   queueWaterConversion(tile: TileRef): void {
     if (!this.isLand(tile)) return;
     if (this.hasOwner(tile)) {
@@ -663,6 +687,25 @@ export class GameImpl implements Game {
     return this.updates;
   }
 
+  /**
+   * Hands over the updates made since the game started, without running a
+   * tick: what the scenario editor's commands changed, in an engine that
+   * never ticks. Players get their updates as at the end of a tick. (After a
+   * tick, the updates still hold that tick's, already handed over.)
+   */
+  drainPendingUpdates(): GameUpdates {
+    for (const player of this._playersBySmallID) {
+      const update = player.toUpdate(
+        this.playerStatsQuads,
+        this.attackTroopsQuads,
+      );
+      if (update !== null) this.addUpdate(update);
+    }
+    const updates = this.updates;
+    this.updates = createGameUpdatesMap();
+    return updates;
+  }
+
   private recordTileUpdate(tile: TileRef): void {
     // Low 16 bits: tile state, bits 16-23: terrain byte
     this.tileUpdatePairs.push(
@@ -914,6 +957,53 @@ export class GameImpl implements Game {
     this.nextPlayerID++;
     this._players.set(playerInfo.id, player);
     return player;
+  }
+
+  /** Scenario editor: a nation with no spawn, which gets land by set_owner. */
+  addNation(info: PlayerInfo): Player {
+    const player = this.addPlayer(info);
+    this._nations.push(new Nation(undefined, info));
+    return player;
+  }
+
+  /**
+   * Scenario editor: deletes the nation's structures, frees its land and
+   * forgets its id. Its small id stays taken, so what is left is a dead
+   * player that no longer appears under its id or among the nations.
+   */
+  removeNation(nation: Player): void {
+    for (const unit of [...nation.units()]) unit.delete(false);
+    for (const tile of [...nation.tiles()]) this.relinquish(tile);
+    this._players.delete(nation.id());
+    this._nations = this._nations.filter(
+      (n) => n.playerInfo.id !== nation.id(),
+    );
+  }
+
+  /**
+   * Scenario editor: brings back a nation removeNation removed, under its
+   * id and small id, as a new nation would start.
+   */
+  restoreNation(info: PlayerInfo): void {
+    const nation = this._playersBySmallID.find((p) => p.id() === info.id);
+    if (!(nation instanceof PlayerImpl) || this._players.has(info.id)) {
+      throw new Error(`no removed nation ${info.id}`);
+    }
+    nation.setPlayerInfo(info);
+    nation.setTroops(this.config().startManpower(info));
+    nation.setGold(this.config().startingGold(info));
+    nation.setPlayable(false);
+    this._players.set(info.id, nation);
+    this._nations.push(new Nation(undefined, info));
+  }
+
+  /** Scenario editor: renames a nation or changes its flag. */
+  setNationInfo(nation: Player, info: PlayerInfo): void {
+    nation.setPlayerInfo(info);
+    // The nation and its player share one PlayerInfo, as in a new game.
+    this._nations = this._nations.map((n) =>
+      n.playerInfo.id === info.id ? new Nation(n.spawnCell, info) : n,
+    );
   }
 
   private maybeAssignTeam(player: PlayerInfo): Team | null {
@@ -1513,6 +1603,9 @@ export class GameImpl implements Game {
   }
   setMagnitude(ref: TileRef, value: number): void {
     this._map.setMagnitude(ref, value);
+  }
+  setTerrainByte(ref: TileRef, value: number): void {
+    this._map.setTerrainByte(ref, value);
   }
   ownerID(ref: TileRef): number {
     return this._map.ownerID(ref);

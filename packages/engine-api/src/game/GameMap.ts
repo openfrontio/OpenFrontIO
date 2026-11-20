@@ -30,6 +30,8 @@ export interface GameMap {
   clearShorelineBit(ref: TileRef): void;
   setOcean(ref: TileRef): void;
   setMagnitude(ref: TileRef, value: number): void;
+  /** Writes the whole terrain byte (the scenario editor's terrain edits). */
+  setTerrainByte(ref: TileRef, value: number): void;
   // State getters and setters (mutable)
   ownerID(ref: TileRef): number;
   hasOwner(ref: TileRef): boolean;

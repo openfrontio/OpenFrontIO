@@ -69,7 +69,7 @@ import {
   showGLGate,
   trackGLInit,
 } from "./render/gl";
-import { ALL_UNIT_TYPES, UnitState } from "./render/types";
+import { ALL_UNIT_TYPES } from "./render/types";
 import { versionedPathForMismatchedGame } from "./ServerList";
 import { audioMixer, initAudioMixer } from "./sound/AudioMixer";
 import { SoundManager } from "./sound/SoundManager";
@@ -686,32 +686,7 @@ function mountWebGLFrameLoop(
   const builder = new WebGLFrameBuilder(view);
 
   // When context is lost and restored, WebGL loses all textures and geometry.
-  // Force a full re-upload of the simulation state.
-  view.onContextRestored = () => {
-    builder.clearCaches();
-
-    // Full upload of terrain, territory & trail state
-    const mapSize = mapWidth * mapHeight;
-    const allTerrain = new Uint8Array(mapSize);
-    for (let i = 0; i < mapSize; i++) {
-      allTerrain[i] = gameView.terrainByte(i);
-    }
-    view.applyTerrainRects(
-      [{ x: 0, y: 0, w: mapWidth, h: mapHeight }],
-      allTerrain,
-    );
-
-    const frameData = gameView.frameData();
-    view.uploadTileAndTrailState(frameData.tileState, frameData.trailState);
-
-    // Structures, railroads and relations normally skip GPU upload unless
-    // marked dirty, now force
-    view.updateStructures(frameData.units as Map<number, UnitState>);
-    view.uploadRailroadState(frameData.railroadState);
-    view.updateRelations(frameData.relationMatrix, frameData.relationSize);
-
-    builder.update(gameView);
-  };
+  view.onContextRestored = () => builder.restoreContext(gameView);
 
   return { builder, stopFrameLoop };
 }
