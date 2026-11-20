@@ -287,6 +287,29 @@ describe("GameServer boosting", () => {
       vi.useRealTimers();
     }
   });
+
+  it("gives a payer dropped by the ping prune the same grace", () => {
+    vi.useFakeTimers();
+    try {
+      const game = publicLobby();
+      const client = makeClient();
+      game.joinClient(client);
+      game.reserveBoost(client.persistentID);
+      game.holdBoostForPayer();
+
+      // Silent for longer than the hold: the prune drops them, with no
+      // close event yet.
+      vi.advanceTimersByTime(BOOST_HOLD_MS * 2);
+      game.pruneStaleClients();
+      expect(game.hasConnectedClient(client.persistentID)).toBe(false);
+      expect(game.boostBlockedFor("someone-else")).toBe(true);
+
+      vi.advanceTimersByTime(BOOST_HOLD_MS);
+      expect(game.boostBlockedFor("someone-else")).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("WorkerLobbyService boosted lobbies", () => {

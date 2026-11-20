@@ -866,12 +866,7 @@ export class GameServer {
   private handleClientDisconnect(client: Client) {
     this.clients.markLeft(client);
     this.checkWinnerAfterElectorateShrink();
-    // A payer who drops with a boost charge unresolved gets a while to come
-    // back and retry it.
-    const reservation = this.boostReservation;
-    if (reservation?.persistentId === client.persistentID) {
-      reservation.heldUntil = Date.now() + BOOST_HOLD_MS;
-    }
+    this.startBoostGrace(client);
 
     // hasStarted() includes prestart: during the lobby -> game transition
     // clients reconnect, and a host socket closing then must not tear the
@@ -1598,6 +1593,7 @@ export class GameServer {
     }
     const stale = this.clients.pruneStale(Date.now(), 60_000);
     for (const client of stale) {
+      this.startBoostGrace(client);
       this.log.info("no pings received, terminating connection", {
         clientID: client.clientID,
         persistentID: client.persistentID,
@@ -1847,6 +1843,16 @@ export class GameServer {
 
   public releaseBoost(): void {
     this.boostReservation = undefined;
+  }
+
+  // A payer who drops with a boost charge unresolved gets BOOST_HOLD_MS to
+  // come back and retry it. Called wherever a client stops counting as
+  // connected: the ping prune can run long before the socket's close event.
+  private startBoostGrace(client: Client): void {
+    const reservation = this.boostReservation;
+    if (reservation?.persistentId === client.persistentID) {
+      reservation.heldUntil = Date.now() + BOOST_HOLD_MS;
+    }
   }
 
   public holdBoostForPayer(): void {
