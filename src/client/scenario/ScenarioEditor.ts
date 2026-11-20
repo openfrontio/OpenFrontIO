@@ -1145,7 +1145,7 @@ export class ScenarioEditor extends LitElement {
       </li>`;
     return html`
       <div
-        class="absolute top-14 right-2 flex max-h-[calc(100%-4.5rem)] w-64 flex-col gap-2 rounded-lg bg-zinc-900/90 p-3 text-sm"
+        class="absolute top-14 right-2 flex max-h-[calc(100%-4.5rem)] w-64 flex-col gap-2 overflow-y-auto rounded-lg bg-zinc-900/90 p-3 text-sm"
       >
         <div class="flex items-center justify-between gap-2">
           <h2 class="font-semibold">
@@ -1162,7 +1162,7 @@ export class ScenarioEditor extends LitElement {
             ${translateText("scenario_editor.add_nation")}
           </button>
         </div>
-        <ul class="flex min-h-0 flex-col gap-1 overflow-y-auto">
+        <ul class="flex max-h-60 shrink-0 flex-col gap-1 overflow-y-auto">
           ${pick(null, translateText("scenario_editor.nobody"))}
           ${doc.nations.map((n) => pick(n.id, n.name))}
         </ul>
