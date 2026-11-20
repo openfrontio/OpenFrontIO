@@ -312,6 +312,12 @@ export class PurchaseButton extends LitElement {
   @property({ type: String })
   itemName: string = "";
 
+  /** The player's balances, where the button knows them (the end screen).
+   * The confirm box then says what is left after the buy, and a buy the
+   * player can't afford goes straight to the shortfall box. */
+  @property({ attribute: false })
+  balances: { hard: number; soft: number } | null = null;
+
   /**
    * Keep an empty line where this payment method's button would go. Set by
    * grids where sibling cards do offer the method, so the same currency lands
@@ -445,7 +451,36 @@ export class PurchaseButton extends LitElement {
     const handler =
       method === "hard" ? this.onPurchaseHard : this.onPurchaseSoft;
     if (!handler || this.busy) return;
+    // Can't afford it: no point confirming. The handler's own pre-check
+    // answers with the shortfall, and charges nothing.
+    const balance = this.balances?.[method];
+    const price = this.shown(method)?.price;
+    if (balance !== undefined && price !== undefined && balance < price) {
+      this.executePurchase(handler);
+      return;
+    }
     this.confirmingPurchase = { method, itemName: this.itemName, handler };
+  }
+
+  /** The confirm box's question, with the balance after when known. */
+  private confirmMessage(method: "hard" | "soft", itemName: string): string {
+    const amount = this.shown(method)?.price ?? 0;
+    const currency = translateText(
+      method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
+    );
+    const balance = this.balances?.[method];
+    return balance === undefined
+      ? translateText("store.confirm_purchase_body", {
+          item: itemName,
+          amount,
+          currency,
+        })
+      : translateText("store.confirm_purchase_body_left", {
+          item: itemName,
+          amount,
+          currency,
+          left: balance - amount,
+        });
   }
 
   private executePurchase(handler?: () => Promise<PurchaseResult>) {
@@ -644,15 +679,10 @@ export class PurchaseButton extends LitElement {
         this.confirmingPurchase
           ? html`<confirm-dialog
               .heading=${translateText("store.confirm_purchase_title")}
-              .message=${translateText("store.confirm_purchase_body", {
-                item: this.confirmingPurchase.itemName,
-                amount: this.shown(this.confirmingPurchase.method)?.price ?? 0,
-                currency: translateText(
-                  this.confirmingPurchase.method === "hard"
-                    ? "cosmetics.hard"
-                    : "cosmetics.soft",
-                ),
-              })}
+              .message=${this.confirmMessage(
+                this.confirmingPurchase.method,
+                this.confirmingPurchase.itemName,
+              )}
               variant="warning"
               @confirm=${() => {
                 const pending = this.confirmingPurchase;
@@ -666,6 +696,10 @@ export class PurchaseButton extends LitElement {
       <insufficient-currency-dialog
         .info=${this.insufficient}
         @close=${() => (this.insufficient = null)}
+        @buy-caps=${() => {
+          this.insufficient = null;
+          this.requestCurrencyPurchase("soft");
+        }}
       ></insufficient-currency-dialog>
     `;
   }
