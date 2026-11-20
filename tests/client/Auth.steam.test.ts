@@ -97,6 +97,21 @@ describe("Steam login: sessionUncertain", () => {
     },
   );
 
+  it("a Steam login that succeeds after an unreachable one: settled", async () => {
+    onSteam();
+    answer(503);
+    await userAuth();
+    expect(sessionUncertain()).toBe(true);
+    vi.mocked(globalThis.fetch).mockRestore();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ jwt: "not-a-real-jwt", expiresIn: 900 }), {
+        status: 200,
+      }),
+    );
+    await userAuth();
+    expect(sessionUncertain()).toBe(false);
+  });
+
   it("a Steam ticket rejected (401) after an unreachable one: settled", async () => {
     onSteam();
     answer(503);
