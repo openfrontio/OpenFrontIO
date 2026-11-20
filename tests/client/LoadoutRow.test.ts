@@ -495,6 +495,30 @@ describe("<loadout-row> buying", () => {
     expect(q("purchase-button")).not.toBeNull();
   });
 
+  it("couldn't confirm: says to check the balance, not that nothing was charged", async () => {
+    vi.mocked(purchaseCosmeticInPlace).mockResolvedValue({
+      kind: "unconfirmed",
+    });
+    await render({});
+    await button().onPurchaseHard();
+    expect(showInGameAlert).toHaveBeenCalledWith(
+      "win_modal.purchase_unconfirmed",
+    );
+  });
+
+  it("charged other than the price shown: the Store's notice", async () => {
+    vi.mocked(purchaseCosmeticInPlace).mockResolvedValue({
+      kind: "owned",
+      fresh: false,
+      notice: "bought Frontline for 400 Plutonium",
+    });
+    await render({});
+    await button().onPurchaseHard();
+    expect(showInGameAlert).toHaveBeenCalledWith(
+      "bought Frontline for 400 Plutonium",
+    );
+  });
+
   it("a shortfall goes back to the button's box", async () => {
     const info = {
       currency: "Plutonium",

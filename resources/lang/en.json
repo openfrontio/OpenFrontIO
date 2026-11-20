@@ -3581,6 +3581,7 @@
     "other_team": "{team} team has won!",
     "other_won": "{player} has won!",
     "purchase_failed_not_charged": "Purchase failed — you weren't charged.",
+    "purchase_unconfirmed": "We couldn't confirm the purchase. Check your balance before trying again.",
     "requeue": "Play Again",
     "share": "Share",
     "sign_in_leaves_game": "Signing in leaves the game. Sign in to buy?",

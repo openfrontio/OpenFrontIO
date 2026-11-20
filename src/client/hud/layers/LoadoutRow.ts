@@ -179,6 +179,10 @@ export class LoadoutRow extends LitElement {
         this.dispatchEvent(
           new CustomEvent("look-owned", { detail: { key }, bubbles: true }),
         );
+        if (outcome.notice) await showInGameAlert(outcome.notice);
+        return;
+      case "unconfirmed":
+        await showInGameAlert(translateText("win_modal.purchase_unconfirmed"));
         return;
       case "insufficient":
         return outcome.info;

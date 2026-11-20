@@ -102,20 +102,75 @@ describe("buying on the end screen", () => {
     expect(broadcasts).toHaveLength(1);
   });
 
-  it("a server failure: failed, no reload", async () => {
+  it("a refusal that charged nothing (balance unchanged, not owned): failed", async () => {
     vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
     vi.mocked(purchaseWithCurrency).mockResolvedValue({
       ok: false,
-      code: "unknown",
+      code: "failed",
     } as never);
     expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe("failed");
     expect(reload).not.toHaveBeenCalled();
   });
 
-  it("a network failure (a throw): failed", async () => {
+  it("a refusal after which the balance moved: unconfirmed, not 'not charged'", async () => {
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(me(500, 0))
+      .mockResolvedValue(me(180, 0));
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: false,
+      code: "failed",
+    } as never);
+    expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe(
+      "unconfirmed",
+    );
+  });
+
+  it("a lost success response: the re-read shows it owned, so owned", async () => {
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(me(500, 0))
+      .mockResolvedValue(me(180, 0, ["cardBackground:bg_storm_front"]));
+    vi.mocked(purchaseWithCurrency).mockRejectedValue(new Error("timeout"));
+    expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe("owned");
+  });
+
+  it("a network failure, not owned on the re-read: unconfirmed", async () => {
     vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
     vi.mocked(purchaseWithCurrency).mockRejectedValue(new Error("offline"));
-    expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe("failed");
+    expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe(
+      "unconfirmed",
+    );
+  });
+
+  it("a refusal, but the re-read shows it owned: owned", async () => {
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(me(500, 0))
+      .mockResolvedValue(me(500, 0, ["cardBackground:bg_storm_front"]));
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: false,
+      code: "failed",
+    } as never);
+    expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe("owned");
+  });
+
+  it("charged something other than the price shown: owned, with the Store's notice", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: true,
+      amount: 400,
+    } as never);
+    const outcome = await purchaseCosmeticInPlace(STORM, "hard");
+    expect(outcome.kind).toBe("owned");
+    expect((outcome as { notice?: string }).notice).toBeDefined();
+  });
+
+  it("charged the price shown: owned, no notice", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: true,
+      amount: 320,
+    } as never);
+    const outcome = await purchaseCosmeticInPlace(STORM, "hard");
+    expect((outcome as { notice?: string }).notice).toBeUndefined();
   });
 
   it("short of Plutonium with enough caps: the shortfall and a caps offer", async () => {
