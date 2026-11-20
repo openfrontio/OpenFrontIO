@@ -895,7 +895,9 @@ export class InventoryCardTab extends LitElement {
       class="z-30 flex flex-wrap max-md:px-3 md:sticky md:bottom-0 md:-mx-3 items-center gap-3 border-t border-white/10 bg-slate-950 px-3 py-3"
     >
       ${this.renderToast()}
-      <div class="flex min-w-0 flex-1 basis-72 items-center gap-3">
+      <div
+        class="flex min-w-0 flex-1 basis-auto md:basis-72 items-center gap-3"
+      >
         ${
           changes.length > 0
             ? html`<span
@@ -913,7 +915,7 @@ export class InventoryCardTab extends LitElement {
           >${changes.map((c) => cardChangeLine(this.cosmetics, c)).join(" · ")}</span
         >
       </div>
-      <div class="flex flex-wrap items-center justify-end gap-2 max-md:w-full">
+      <div class="flex flex-wrap items-center justify-end gap-2 max-md:ml-auto">
         ${
           changes.length > 0
             ? html`<button
