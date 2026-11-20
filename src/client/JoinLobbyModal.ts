@@ -87,6 +87,10 @@ export class JoinLobbyModal extends BaseModal {
   // Boost price from cosmetics.json; the Boost button hides without it.
   @state() private boostPriceHard: number | null = null;
   @state() private boostRequestInFlight = false;
+  // This player's boost charge failed without a clear answer. The server
+  // holds the lobby for their retry, so the button stays wherever the lobby
+  // now is in its queue.
+  @state() private boostRetryHeld = false;
   @state() private showBoostConfirm = false;
   @state() private insufficientInfo: InsufficientCurrency | null = null;
   private hardBalance = 0;
@@ -231,13 +235,14 @@ export class JoinLobbyModal extends BaseModal {
     if (
       this.boosted === null ||
       this.boostPriceHard === null ||
-      this.lobbyStartAt !== null ||
-      !boostWouldMoveLobby(
-        this.publicQueues[this.scheduledQueue] ?? [],
-        this.currentLobbyId,
-        // A custom lobby in a scheduled queue is one its host paid to queue.
-        (l) => l.boosted === true || l.custom === true,
-      )
+      (!this.boostRetryHeld &&
+        (this.lobbyStartAt !== null ||
+          !boostWouldMoveLobby(
+            this.publicQueues[this.scheduledQueue] ?? [],
+            this.currentLobbyId,
+            // A custom lobby in a scheduled queue is one its host paid to queue.
+            (l) => l.boosted === true || l.custom === true,
+          )))
     ) {
       return nothing;
     }
@@ -272,6 +277,7 @@ export class JoinLobbyModal extends BaseModal {
       };
       return;
     }
+    this.boostRetryHeld = result.status !== 409;
     showToast(
       translateText(
         result.status === 409
@@ -791,6 +797,7 @@ export class JoinLobbyModal extends BaseModal {
     this.scheduledQueue = null;
     this.boosted = null;
     this.boostRequestInFlight = false;
+    this.boostRetryHeld = false;
     this.showBoostConfirm = false;
     this.insufficientInfo = null;
   }

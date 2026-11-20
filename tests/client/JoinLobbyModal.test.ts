@@ -466,6 +466,14 @@ describe("JoinLobbyModal boost button", () => {
     expect(renderBoost(m).children).toHaveLength(0);
   });
 
+  it("keeps it for a retry after a charge that failed without an answer", () => {
+    const m = boostableModal();
+    m.boostRetryHeld = true;
+    m.lobbyStartAt = Date.now() + 5000;
+    m.publicQueues = { ffa: [queued(LOBBY, { startsAt: 5000 })] };
+    expect(renderBoost(m).querySelector("button")).not.toBeNull();
+  });
+
   it("hides it in a private lobby", () => {
     const m = boostableModal({
       publicGameType: undefined,
