@@ -522,9 +522,10 @@ export function clearLocalSession(): void {
  * (/auth/<portal>) or a Steam login (/auth/steam, or a Steam ticket the shell
  * couldn't get for any reason but needs-account or ticket-rejected: a timeout,
  * an error, Steam unavailable, our API unreachable). The session may well still
- * be valid. Only a 401 means signed out; any other failure (a 5xx, 429, 400,
- * 403 edge block, timeout or network error) counts as "couldn't check", the
- * rule /auth/refresh already followed. It changes only when an exchange
+ * be valid. Only a definite refusal means signed out: a 401, or a Steam
+ * needs-account or ticket-rejected. Any other failure (a 5xx, 429, 400, 403
+ * edge block, timeout or network error) counts as "couldn't check", the rule
+ * /auth/refresh already followed. It changes only when an exchange
  * settles (a 401, a rejection or a success sets it false) or on a logout,
  * never when one starts, so a reader of one exchange isn't answered by the
  * next one still in flight. For callers
