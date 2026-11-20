@@ -639,10 +639,24 @@ export class WinModal extends LitElement implements Controller {
   private lookRows(): LookRow[] | "pending" {
     const gameID = this.game?.gameID();
     if (gameID === undefined) return [];
+    const card = this.lastEndCard;
+    // As visiblePlayerCard: while the viewer anonymises names, no one else's
+    // look under their real name.
+    const me = this.game.myPlayer()?.clientID() ?? null;
+    const anonymous = this.userSettings.anonymousNames();
+    const visible = savedLooks(gameID).filter(
+      (look) => !anonymous || look.clientID === me,
+    );
+    // Nothing that could become a look (no killer card loading or offering
+    // items, no saved look): the promo is as today, without waiting for the
+    // viewer's /users/@me.
+    const killerCard =
+      card?.kind === "eliminatedBy" &&
+      (this.loadoutPending || this.loadout.length > 0);
+    if (!killerCard && visible.length === 0) return [];
     if (this.viewerFlares === null || this.loadoutPending) return "pending";
     // What the viewer owns, but for what they bought here: that stays.
     const flares = this.viewerFlares.filter((f) => !this.boughtHere.has(f));
-    const card = this.lastEndCard;
     // The killer's current card when it has something to buy; otherwise
     // their saved look (if any) stands in for it.
     const killer: LookRow | null =
@@ -654,15 +668,7 @@ export class WinModal extends LitElement implements Controller {
             items: this.loadout,
           }
         : null;
-    // As visiblePlayerCard: while the viewer anonymises names, no one else's
-    // look under their real name.
-    const me = this.game.myPlayer()?.clientID() ?? null;
-    const anonymous = this.userSettings.anonymousNames();
-    const saved = savedLooks(gameID).filter(
-      (look) =>
-        look.clientID !== killer?.clientID &&
-        (!anonymous || look.clientID === me),
-    );
+    const saved = visible.filter((look) => look.clientID !== killer?.clientID);
     return endScreenLookRows(killer ? [killer, ...saved] : saved, flares);
   }
 

@@ -417,6 +417,24 @@ describe("WinModal Get the look block", () => {
     expect(promo(modal)).toBe(false);
   });
 
+  it("no killer card and no saved look: the promo shows without waiting for /users/@me", async () => {
+    // viewerFlares not read yet (null), but there is nothing to check.
+    const modal = await renderModal({ game, endCardMode: "none", rand: 0.4 });
+    expect(block(modal)).toBeNull();
+    expect(promo(modal)).toBe(true);
+  });
+
+  it("a killer card still loading: waits, even with no saved look", async () => {
+    const modal = await renderModal({
+      game,
+      ...killed,
+      loadout: [],
+      loadoutPending: true,
+      rand: 0.4,
+    });
+    expect(promo(modal)).toBe(false);
+  });
+
   it("re-renders when a look is saved or removed", async () => {
     const modal = await renderModal({ ...base, endCardMode: "none" });
     expect(block(modal)).toBeNull();
