@@ -16,10 +16,20 @@ vi.mock("../../src/client/Cosmetics", async (orig) => ({
   fetchCosmetics: async () => catalogue.fetched,
 }));
 
-const auth = vi.hoisted(() => ({ session: true }));
+// The session as Auth.userAuth sees it. Like the real one (Auth.ts), a
+// token expired or within 3 minutes of expiry is refreshed only when asked
+// to (shouldRefresh, the default); userAuth(false) answers false for it.
+const auth = vi.hoisted(() => ({ session: true, expired: false }));
 vi.mock("../../src/client/Auth", async (orig) => ({
   ...(await orig<typeof import("../../src/client/Auth")>()),
-  userAuth: async () => (auth.session ? { jwt: "j", claims: {} } : false),
+  userAuth: async (shouldRefresh = true) => {
+    if (!auth.session) return false;
+    if (auth.expired) {
+      if (!shouldRefresh) return false;
+      auth.expired = false; // refreshed from the refresh cookie
+    }
+    return { jwt: "j", claims: {} };
+  },
 }));
 
 import { defaultPlayerCardView } from "../../src/client/components/card/PlayerCardModel";
@@ -622,6 +632,7 @@ describe("WinModal: signed in is the session, not the profile read", () => {
   };
   afterEach(() => {
     auth.session = true;
+    auth.expired = false;
     document.body.innerHTML = "";
   });
 
@@ -631,6 +642,17 @@ describe("WinModal: signed in is the session, not the profile read", () => {
     await modal.applyUserMe(false);
     expect(modal.signedIn).toBe(true);
     expect(modal.viewerFlares).toEqual([]);
+  });
+
+  it("a cached failed read and a token near expiry after a long game: still signed in", async () => {
+    // /users/@me failed at boot (false cached, so no request now), and the
+    // 15-minute token has expired over a 20-minute game; the refresh cookie
+    // is still good.
+    auth.session = true;
+    auth.expired = true;
+    const modal = (await renderModal({ endCardMode: "none" })) as Modal;
+    await modal.applyUserMe(false);
+    expect(modal.signedIn).toBe(true);
   });
 
   it("no session: signed out", async () => {

@@ -1010,9 +1010,9 @@ export class WinModal extends LitElement implements Controller {
 
   // getUserMe answers false for a failed read (a 5xx, a network error, a
   // body that fails the schema) as well as for no session, and keeps that
-  // false cached. So only the session decides "signed out", as
-  // checkInPlacePurchase does: a failed read leaves a signed-in player
-  // signed in with no flares known, and their Buy's tap check re-reads.
+  // false cached. So only the session decides "signed out": a failed read
+  // leaves a signed-in player signed in with no flares known, and their
+  // Buy's tap check re-reads.
   private async applyUserMe(
     me: UserMeResponse | false | undefined,
   ): Promise<void> {
@@ -1023,7 +1023,11 @@ export class WinModal extends LitElement implements Controller {
       this.viewerFlares = me.player.flares ?? [];
       return;
     }
-    const session = await userAuth(false);
+    // With refresh: the token is short-lived and nothing renews it during a
+    // game, and a cached false makes getUserMe send no request that would.
+    // userAuth(false) would call an expired token signed out even with a
+    // valid refresh cookie.
+    const session = await userAuth();
     // A newer answer landed meanwhile: it decides.
     if (call !== this.userMeCall) return;
     this.signedIn = session !== false;
