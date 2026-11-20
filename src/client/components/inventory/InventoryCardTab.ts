@@ -1,5 +1,6 @@
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import {
+  type CardTracker,
   type Cosmetics,
   ownsPlayerCard,
 } from "@openfront/shared/CosmeticSchemas";
@@ -451,6 +452,13 @@ export class InventoryCardTab extends LitElement {
         : CARD_SLOT_KINDS[slot.kind].type;
     const entries: PickerEntry[] = [];
     for (const item of Object.values(section) as CardItem[]) {
+      // A row holds the item's name, which is also what's saved as the
+      // tracker stat. The API names each tracker by its stat (infra's
+      // cosmetics.json builds `stat: name`); one that ever differed would
+      // save the wrong stat, so it isn't offered.
+      if (type === "cardTracker" && (item as CardTracker).stat !== item.name) {
+        continue;
+      }
       const resolved = this.resolve(type, item);
       const base = itemStateOf(resolved, false);
       if (base === null) continue;

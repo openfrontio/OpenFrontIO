@@ -285,6 +285,21 @@ describe("<inventory-card-tab> owner layout and picker", () => {
     expect(values.some((v) => /0/.test(v))).toBe(false);
   });
 
+  it("a tracker whose name isn't its stat is never offered (rows save names as stats)", async () => {
+    const odd = structuredClone(COSMETICS) as Cosmetics;
+    (odd.cardTrackers as Record<string, object>).renamed = {
+      ...item,
+      name: "renamed",
+      stat: "conquests",
+      priceSoft: 400,
+    };
+    await render(userMe([...OWNER, "cardTracker:renamed"]), odd);
+    await click(row(2).querySelector("[data-card-row-open]"));
+    await click(q("[data-card-filter='all']"));
+    expect(q("[data-card-pick='cardTracker:renamed']")).toBeNull();
+    expect(q("[data-card-pick='cardTracker:conquests']")).not.toBeNull();
+  });
+
   it("the Saved / With changes switch shows the right card", async () => {
     await render(userMe([...OWNER, "cardBackground:bg_storm"]));
     await click(q("[data-card-slot='background']"));

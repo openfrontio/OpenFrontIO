@@ -71,7 +71,9 @@ function padRows(names: readonly string[], rows: number): (string | null)[] {
   return out;
 }
 
-/** The draft for a stored card (null: nothing equipped). */
+/** The draft for a stored card (null: nothing equipped). Tracker rows hold
+ * the catalogue item's name, which is its stat: the API names each tracker
+ * by its stat, and the picker offers no tracker where they differ. */
 export function draftFromCard(
   card: { background?: string | null; trackers?: { stat: string }[] } | null,
 ): CardDraft {
