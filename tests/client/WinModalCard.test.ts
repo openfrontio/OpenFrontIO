@@ -19,24 +19,33 @@ vi.mock("../../src/client/Cosmetics", async (orig) => ({
 // The session as Auth.userAuth sees it. Like the real one (Auth.ts), a
 // token expired or within 3 minutes of expiry is refreshed only when asked
 // to (shouldRefresh, the default); userAuth(false) answers false for it.
+// `real` hands the call to the real userAuth, with fetch stubbed, so a
+// refresh's answer goes through Auth.ts's own handling.
 const auth = vi.hoisted(() => ({
   session: true,
   expired: false,
   throws: false,
+  real: false,
 }));
-vi.mock("../../src/client/Auth", async (orig) => ({
-  ...(await orig<typeof import("../../src/client/Auth")>()),
-  userAuth: async (shouldRefresh = true) => {
-    if (auth.throws) throw new Error("auth broke");
-    if (!auth.session) return false;
-    if (auth.expired) {
-      if (!shouldRefresh) return false;
-      auth.expired = false; // refreshed from the refresh cookie
-    }
-    return { jwt: "j", claims: {} };
-  },
-}));
+vi.mock("../../src/client/Auth", async (orig) => {
+  const real = await orig<typeof import("../../src/client/Auth")>();
+  return {
+    ...real,
+    userAuth: async (shouldRefresh = true) => {
+      if (auth.real) return real.userAuth(shouldRefresh);
+      if (auth.throws) throw new Error("auth broke");
+      if (!auth.session) return false;
+      if (auth.expired) {
+        if (!shouldRefresh) return false;
+        auth.expired = false; // refreshed from the refresh cookie
+      }
+      return { jwt: "j", claims: {} };
+    },
+  };
+});
 
+import { clearLocalSession } from "../../src/client/Auth";
+import { ClientEnv } from "../../src/client/ClientEnv";
 import { defaultPlayerCardView } from "../../src/client/components/card/PlayerCardModel";
 import {
   clearSavedLooks,
@@ -639,7 +648,48 @@ describe("WinModal: signed in is the session, not the profile read", () => {
     auth.session = true;
     auth.expired = false;
     auth.throws = false;
+    auth.real = false;
+    clearLocalSession();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
     document.body.innerHTML = "";
+  });
+
+  // The real userAuth, no token in memory (none yet, or expired and
+  // dropped), and /auth/refresh answering `status`.
+  const refreshAnswers = (status: number) => {
+    auth.real = true;
+    // The local API base, as AuthRefreshFailure.test.ts sets it.
+    vi.spyOn(ClientEnv, "jwtAudience").mockReturnValue("localhost");
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        status,
+        ok: status >= 200 && status < 300,
+        json: async () => ({}),
+      })),
+    );
+  };
+
+  it("the refresh gets a 503: couldn't check, so still signed in (real Buy buttons)", async () => {
+    // A transient refresh failure keeps the refresh cookie: the session may
+    // be fine. "Sign in to buy" would send the player out of their game to
+    // sign in to an account they're signed in to.
+    refreshAnswers(503);
+    const modal = (await renderModal({ endCardMode: "none" })) as Modal;
+    await modal.applyUserMe(false);
+    expect(modal.signedIn).toBe(true);
+    expect(modal.viewerFlares).toEqual([]);
+  });
+
+  it("the refresh gets a 401: the session is dead, signed out", async () => {
+    refreshAnswers(401);
+    const modal = (await renderModal({ endCardMode: "none" })) as Modal;
+    await modal.applyUserMe(false);
+    expect(modal.signedIn).toBe(false);
   });
 
   it("a failed profile read with a session: still signed in, no flares", async () => {

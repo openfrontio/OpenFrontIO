@@ -38,7 +38,7 @@ import {
   purchaseCosmeticPack,
   purchaseWithCurrency,
 } from "./Api";
-import { userAuth } from "./Auth";
+import { sessionUncertain, userAuth } from "./Auth";
 import {
   cardItemName,
   type CardItem,
@@ -680,11 +680,14 @@ export async function checkInPlacePurchase(
   const me = await broadcastFreshUserMe();
   if (me === false) {
     // A 401 on the read clears the session, so no session here means
-    // signed out; a session that got no profile means the network.
+    // signed out; a session that got no profile means the network. So does
+    // a refresh that got no answer (sessionUncertain): the cookie may be
+    // fine, and signing in would leave the game.
     const session = await userAuth(false);
     return {
       ok: false,
-      reason: session === false ? "signed_out" : "unreachable",
+      reason:
+        session === false && !sessionUncertain() ? "signed_out" : "unreachable",
     };
   }
   const wallet = me.player.currency;
@@ -745,9 +748,13 @@ export async function purchaseCosmeticInPlace(
   const userMe = await getUserMe();
   if (userMe === false) {
     // getUserMe answers (and caches) false for a failed read too: only the
-    // session says signed out. Either way nothing was sent.
+    // session says signed out, and not a refresh that got no answer
+    // (sessionUncertain). Either way nothing was sent.
     const session = await userAuth(false);
-    return { kind: session === false ? "signed_out" : "unreachable" };
+    return {
+      kind:
+        session === false && !sessionUncertain() ? "signed_out" : "unreachable",
+    };
   }
   const wallet = userMe.player.currency;
   const balance = method === "hard" ? (wallet?.hard ?? 0) : (wallet?.soft ?? 0);

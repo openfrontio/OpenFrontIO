@@ -10,13 +10,19 @@ vi.mock("../../src/client/Api", async (importOriginal) => ({
   invalidateUserMe: vi.fn(),
   purchaseWithCurrency: vi.fn(),
 }));
-const auth = vi.hoisted(() => ({ session: true }));
-vi.mock("../../src/client/Auth", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../src/client/Auth")>()),
-  userAuth: vi.fn(async () =>
-    auth.session ? { jwt: "j", claims: {} } : false,
-  ),
-}));
+// `real` hands the call to the real userAuth, with fetch stubbed, so a
+// refresh's answer goes through Auth.ts's own handling.
+const auth = vi.hoisted(() => ({ session: true, real: false }));
+vi.mock("../../src/client/Auth", async (importOriginal) => {
+  const real = await importOriginal<typeof import("../../src/client/Auth")>();
+  return {
+    ...real,
+    userAuth: vi.fn(async (shouldRefresh = true) => {
+      if (auth.real) return real.userAuth(shouldRefresh);
+      return auth.session ? { jwt: "j", claims: {} } : false;
+    }),
+  };
+});
 vi.mock("../../src/client/InGameModal", () => ({
   showInGameAlert: vi.fn().mockResolvedValue(true),
   showInGameConfirm: vi.fn().mockResolvedValue(true),
@@ -287,6 +293,69 @@ describe("buying on the end screen", () => {
     expect(await checkInPlacePurchase(STORM, "hard")).toEqual({
       ok: false,
       reason: "unreachable",
+    });
+  });
+
+  describe("the refresh behind the session check", () => {
+    // The real userAuth, no token in memory (none yet, or expired and
+    // dropped), and /auth/refresh answering `status`.
+    // The profile read just before the check refreshed the token (with
+    // refresh, through getAuthHeader); `status` is how that went.
+    const refreshAnswers = async (status: number) => {
+      auth.real = true;
+      // The local API base, as AuthRefreshFailure.test.ts sets it.
+      const { ClientEnv } = await import("../../src/client/ClientEnv");
+      vi.spyOn(ClientEnv, "jwtAudience").mockReturnValue("localhost");
+      vi.spyOn(console, "log").mockImplementation(() => undefined);
+      vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => ({
+          status,
+          ok: status >= 200 && status < 300,
+          json: async () => ({}),
+        })),
+      );
+      const { userAuth } = await import("../../src/client/Auth");
+      await userAuth();
+    };
+    afterEach(async () => {
+      auth.real = false;
+      const { clearLocalSession } = await import("../../src/client/Auth");
+      clearLocalSession();
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
+
+    it("a 503: the buy says unreachable, never signed out", async () => {
+      await refreshAnswers(503);
+      vi.mocked(getUserMe).mockResolvedValue(false);
+      expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe(
+        "unreachable",
+      );
+      expect(purchaseWithCurrency).not.toHaveBeenCalled();
+    });
+
+    it("a 503: the tap check says unreachable, never signed out", async () => {
+      await refreshAnswers(503);
+      vi.mocked(getUserMe).mockResolvedValue(false);
+      expect(await checkInPlacePurchase(STORM, "hard")).toEqual({
+        ok: false,
+        reason: "unreachable",
+      });
+    });
+
+    it("a 401: signed out, for both", async () => {
+      await refreshAnswers(401);
+      vi.mocked(getUserMe).mockResolvedValue(false);
+      expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe(
+        "signed_out",
+      );
+      expect(await checkInPlacePurchase(STORM, "hard")).toEqual({
+        ok: false,
+        reason: "signed_out",
+      });
     });
   });
 

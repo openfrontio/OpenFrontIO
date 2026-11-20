@@ -38,6 +38,11 @@ let __inMemoryPublicIdSub: string | null = null;
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
 let __expiresAt: number = 0;
+// The last /auth/refresh got no answer that settles the session (a 5xx, 429,
+// edge block, timeout or network error): the cookie is kept and the next
+// userAuth() retries. userAuth() answers false either way, so this is how a
+// caller tells "couldn't check" from "signed out" (see sessionUncertain).
+let __refreshUnreachable = false;
 
 let __sessionState: DesktopSessionState = { status: "unknown" };
 
@@ -467,6 +472,7 @@ function announceLoggedOut(): void {
 export function clearLocalSession(): void {
   const hadSession = __jwt !== null;
   __jwt = null;
+  __refreshUnreachable = false;
   updateUserSettingsForJwt(null);
   localStorage.removeItem(PERSISTENT_ID_KEY);
   // Switch cosmetics back to the logged-out scope (via updateUserSettingsForJwt).
@@ -500,6 +506,17 @@ export function clearLocalSession(): void {
     setSessionState({ status: "unknown" });
   }
   if (hadSession) announceLoggedOut();
+}
+
+/**
+ * True when userAuth() last answered false only because /auth/refresh got no
+ * settling answer: the refresh cookie may well still be valid. A 401, a
+ * logout or a successful refresh clears it. For callers where calling a
+ * signed-in player signed out costs them something (the end screen's Buy,
+ * whose sign-in leaves the game); every other caller is unaffected.
+ */
+export function sessionUncertain(): boolean {
+  return __refreshUnreachable;
 }
 
 export async function isLoggedIn(): Promise<boolean> {
@@ -677,6 +694,7 @@ async function doRefreshJwt(): Promise<void> {
       // The only answer that means the session is dead: the server has
       // already cleared the refresh cookie.
       console.warn("Refresh rejected", response);
+      __refreshUnreachable = false;
       void logOut();
       return;
     }
@@ -687,18 +705,21 @@ async function doRefreshJwt(): Promise<void> {
       // like an unreachable server: keep the cookie, retry on next userAuth().
       console.warn("Refresh failed", response);
       __jwt = null;
+      __refreshUnreachable = true;
       return;
     }
     const json = await response.json();
     const { jwt, expiresIn } = json;
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Refresh succeeded");
+    __refreshUnreachable = false;
     __jwt = jwt;
     updateUserSettingsForJwt(jwt);
   } catch (e) {
     console.warn("Refresh failed", e);
     // if server unreachable, just clear jwt
     __jwt = null;
+    __refreshUnreachable = true;
     return;
   }
 }
