@@ -13,13 +13,34 @@ export type LobbyQueuePaymentResult =
  * host behind this server. The charge is idempotent per (player, gameID), so a
  * retry after a timeout can't double-charge.
  */
-export async function payForLobbyQueue(
+export function payForLobbyQueue(
+  token: string,
+  gameID: string,
+): Promise<LobbyQueuePaymentResult> {
+  return payLobbyFee("lobby_queue", token, gameID);
+}
+
+/**
+ * Charges a player for boosting the scheduled public lobby they are in
+ * (infra POST /users/@me/map_boost). Same contract as the queue charge. A
+ * replay for the same (player, gameID) succeeds without charging, so the
+ * caller must allow one boost per lobby.
+ */
+export function payForMapBoost(
+  token: string,
+  gameID: string,
+): Promise<LobbyQueuePaymentResult> {
+  return payLobbyFee("map_boost", token, gameID);
+}
+
+async function payLobbyFee(
+  endpoint: "lobby_queue" | "map_boost",
   token: string,
   gameID: string,
 ): Promise<LobbyQueuePaymentResult> {
   try {
     const response = await fetch(
-      `${ServerEnv.jwtIssuer()}/users/@me/lobby_queue`,
+      `${ServerEnv.jwtIssuer()}/users/@me/${endpoint}`,
       {
         method: "POST",
         signal: AbortSignal.timeout(5000),
@@ -48,7 +69,7 @@ export async function payForLobbyQueue(
       message: `api returned ${response.status}`,
     };
   } catch (e) {
-    return { type: "error", message: `lobby queue payment failed: ${e}` };
+    return { type: "error", message: `${endpoint} payment failed: ${e}` };
   }
 }
 

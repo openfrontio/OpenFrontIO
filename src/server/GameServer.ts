@@ -306,6 +306,12 @@ export class GameServer {
   private creatorPersistentID?: string;
   private startsAt?: number;
   private publicGameType?: PublicGameType;
+  // Scheduled public lobbies only: when a player paid to boost the lobby to
+  // the front of its queue, and who (shown to the lobby).
+  private boostedAt?: number;
+  private boostedBy?: ClientID;
+  // A boost's charge is in flight.
+  private boostPending = false;
   // Matchmade team split from the matchmaking assignment: publicIds per
   // team. At start each client is stamped with its team's index.
   private matchmakingTeams?: string[][];
@@ -1700,6 +1706,7 @@ export class GameServer {
       accent: this.listing.lobbyAccent(),
       featured: this.listing.isFeatured() ? true : undefined,
       queued: this.listing.isQueued() ? true : undefined,
+      boostedBy: this.boostedBy,
     };
   }
 
@@ -1776,6 +1783,36 @@ export class GameServer {
   // starts it; the listing deadline no longer applies.
   public queueForPublic(): void {
     this.listing.queue();
+  }
+
+  // Whether this account holds a connection to the game right now.
+  public hasConnectedClient(persistentId: string): boolean {
+    const client = this.clients.byPersistentId(persistentId);
+    return client !== undefined && this.clients.isConnected(client);
+  }
+
+  // Boosted, or a boost's charge is in flight: either way nobody else may
+  // pay for this lobby.
+  public isBoosted(): boolean {
+    return this.boostedAt !== undefined || this.boostPending;
+  }
+
+  public boostedAtTime(): number | undefined {
+    return this.boostedAt;
+  }
+
+  public setBoostPending(pending: boolean): void {
+    this.boostPending = pending;
+  }
+
+  // A player paid to move this scheduled public lobby to the front of its
+  // queue. The worker reports boostedAt to the master as the lobby's
+  // queuedAt, which puts it right behind the lobby that's counting down.
+  public boost(persistentId: string): void {
+    this.boostPending = false;
+    if (this.boostedAt !== undefined) return;
+    this.boostedAt = Date.now();
+    this.boostedBy = this.clients.byPersistentId(persistentId)?.clientID;
   }
 
   // Players (not spectators) currently seated in the lobby.

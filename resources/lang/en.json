@@ -2649,6 +2649,16 @@
     "water_nukes": "Water Nukes"
   },
   "public_lobby": {
+    "boost": "Boost",
+    "boost_confirm": "Pay and boost",
+    "boost_confirm_body": "Pay {price} Plutonium to boost this lobby? It will start right after the lobby that is counting down.",
+    "boost_confirm_title": "Boost this lobby?",
+    "boost_failed": "Could not boost the lobby. Try again; you won't be charged twice.",
+    "boost_item": "a lobby boost",
+    "boost_tooltip": "Move this lobby to the front of the queue, right behind the lobby that is about to start",
+    "boost_unavailable": "This lobby can no longer be boosted.",
+    "boosted": "Boosted",
+    "boosted_by": "{name} boosted this lobby",
     "connecting": "Connecting to lobby...",
     "custom": "Custom",
     "custom_default_settings": "Standard settings",
