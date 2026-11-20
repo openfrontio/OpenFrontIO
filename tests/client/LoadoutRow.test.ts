@@ -233,15 +233,15 @@ describe("loadoutItems", () => {
     expect(live).toMatchObject({ priceHard: 400, listPriceHard: 600 });
   });
 
-  it("the killer's tracker is found by its stat", () => {
+  it("a tracker whose name isn't its stat is never offered", () => {
     const cosmetics = {
       ...COSMETICS,
       cardTrackers: {
-        win_count: {
+        wins: {
           product: null,
           rarity: "common",
-          name: "win_count",
-          stat: "wins",
+          name: "wins",
+          stat: "games_played",
           priceSoft: 400,
         },
       },
@@ -252,9 +252,7 @@ describe("loadoutItems", () => {
       "taunt:salute",
       "cardTitle:warmonger",
     ]);
-    expect(items.map((i) => `${i.type}:${i.item.name}`)).toContain(
-      "cardTracker:win_count",
-    );
+    expect(items.map((i) => i.type)).not.toContain("cardTracker");
   });
 
   it("caps-only item shows a caps price", () => {

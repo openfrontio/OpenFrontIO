@@ -441,41 +441,28 @@ describe("<my-card-tab>", () => {
     expect(front.querySelector("purchase-button")).not.toBeNull();
   });
 
-  it("a tracker is keyed on its stat, as the server checks it", async () => {
-    // The catalogue's name and stat are equal today (infra builds stat from
-    // the name), but the server and the saved loadout use the stat.
-    api.save.mockImplementation(async (body: unknown) => ({
-      ok: true,
-      loadout: body,
-    }));
-    tab = document.createElement("my-card-tab") as unknown as MyCardTab;
-    tab.userMe = userMe(["playerCard:standard", "cardTracker:conquests"], {
-      ...SAVED,
-      trackers: [],
-    });
+  it("a tracker whose name isn't its stat is never offered", async () => {
+    // One rule everywhere (PR 4's inventory too): infra grants the flare as
+    // cardTracker:<name> and the API names every tracker by its stat, so a
+    // tracker where they differ could be bought but never shown.
+    await render(userMe([...OWNER, "cardTracker:renamed"], SAVED));
     tab.cosmetics = {
       ...COSMETICS,
       cardTrackers: {
-        conquest_count: {
+        ...COSMETICS.cardTrackers,
+        renamed: {
           product: null,
           rarity: "common",
-          name: "conquest_count",
+          name: "renamed",
           stat: "conquests",
           priceSoft: 400,
         },
       },
     } as unknown as Cosmetics;
-    document.body.appendChild(tab as unknown as Node);
     await tab.updateComplete;
     await openSlot("trackers");
-    const conq = tile("cardTracker:conquest_count");
-    expect(conq.dataset.state).toBe("owned");
-    conq.click();
-    await settle();
-    expect(api.save).toHaveBeenCalledWith(
-      expect.objectContaining({ trackers: ["conquests"] }),
-    );
-    expect(tile("cardTracker:conquest_count").dataset.state).toBe("equipped");
+    expect(q("[data-card-item='cardTracker:renamed']")).toBeNull();
+    expect(tile("cardTracker:conquests")).not.toBeNull();
   });
 
   it("fourth tracker is disabled", async () => {

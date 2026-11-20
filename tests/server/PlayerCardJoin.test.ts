@@ -115,6 +115,22 @@ describe("resolveCard", () => {
     ]);
   });
 
+  it("drops a tracker whose catalogue entry isn't named by its stat", () => {
+    const renamed = new PrivilegeCheckerImpl(
+      {
+        ...cosmetics,
+        cardTrackers: {
+          wins: { ...item, name: "wins", stat: "best_elo" },
+          best_elo: cosmetics.cardTrackers!.best_elo,
+        },
+      } as unknown as Cosmetics,
+      () => new Uint8Array(),
+    );
+    expect(renamed.resolveCard(ALL, refs, "pub1")?.trackers).toEqual([
+      { stat: "best_elo", value: 1840 },
+    ]);
+  });
+
   it("fail-open checker still requires the card flare", () => {
     const open = new FailOpenPrivilegeChecker();
     expect(open.resolveCard([], refs, "pub1")).toBeUndefined();

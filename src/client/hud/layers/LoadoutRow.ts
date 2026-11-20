@@ -9,7 +9,7 @@ import {
   type CardItem,
   type CardItemType,
   cardItemName,
-  cardOwnershipKey,
+  isOfferedCardItem,
   cardPrices,
 } from "../../components/card/CardItems";
 import {
@@ -101,16 +101,13 @@ export function loadoutItems(
     candidates.push(["cardTitle", title]);
   }
   for (const t of view.trackers) {
-    // By stat: that is what the card carries and the server checks.
-    const tracker = Object.values(cosmetics?.cardTrackers ?? {}).find(
-      (c) => c.stat === t.stat,
-    );
-    candidates.push(["cardTracker", tracker]);
+    candidates.push(["cardTracker", cosmetics?.cardTrackers?.[t.stat]]);
   }
   const out: LoadoutItem[] = [];
   for (const [type, item] of candidates) {
     if (out.length === MAX_ITEMS) break;
-    if (item === undefined || owned.has(cardOwnershipKey(type, item))) continue;
+    if (item === undefined || !isOfferedCardItem(type, item)) continue;
+    if (owned.has(`${type}:${item.name}`)) continue;
     const entry = toItem(type, item);
     if (entry !== null) out.push(entry);
   }

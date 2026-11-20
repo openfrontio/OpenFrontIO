@@ -139,6 +139,29 @@ describe("<card-store-grid>", () => {
     expect(keys()).toContain("taunt:salute");
   });
 
+  it("a tracker whose name isn't its stat is never sold", async () => {
+    grid = document.createElement(
+      "card-store-grid",
+    ) as unknown as CardStoreGrid;
+    grid.cosmetics = {
+      ...COSMETICS,
+      cardTrackers: {
+        ...COSMETICS.cardTrackers,
+        renamed: {
+          product: null,
+          rarity: "common",
+          name: "renamed",
+          stat: "conquests",
+          priceSoft: 400,
+        },
+      },
+    } as unknown as Cosmetics;
+    document.body.appendChild(grid as unknown as Node);
+    await grid.updateComplete;
+    expect(keys()).toContain("cardTracker:wins");
+    expect(keys()).not.toContain("cardTracker:renamed");
+  });
+
   it("player card listed first, trackers after it", async () => {
     await render();
     expect(keys().slice(0, 2)).toEqual([

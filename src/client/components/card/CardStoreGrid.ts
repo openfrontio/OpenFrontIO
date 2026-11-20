@@ -10,7 +10,7 @@ import {
   type CardItem,
   type CardItemType,
   cardItemName,
-  cardOwnershipKey,
+  isOfferedCardItem,
   cardPrices,
 } from "./CardItems";
 import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";
@@ -58,7 +58,9 @@ export function cardStoreItems(
     if (type === "cardTitle" && !CARD_TITLES_ENABLED) continue;
     const section = (cosmetics?.[key] ?? {}) as Record<string, CardItem>;
     for (const item of Object.values(section)) {
-      if (isSold(item)) out.push({ type, item });
+      if (isSold(item) && isOfferedCardItem(type, item)) {
+        out.push({ type, item });
+      }
     }
   }
   return out;
@@ -146,7 +148,7 @@ export class CardStoreGrid extends LitElement {
             >${cardItemName(type, item)}</span
           >
           ${
-            owned.has(cardOwnershipKey(type, item))
+            owned.has(key)
               ? html`<span
                   class="rounded-md bg-white/10 py-1 text-center text-xs font-bold"
                   >${translateText("my_card.owned")}</span

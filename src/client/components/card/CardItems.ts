@@ -1,9 +1,10 @@
-import type {
-  CardBackground,
-  CardTitle,
-  CardTracker,
-  PlayerCardItem,
-  Taunt,
+import {
+  type CardBackground,
+  type CardTitle,
+  type CardTracker,
+  cardTrackerNamedByStat,
+  type PlayerCardItem,
+  type Taunt,
 } from "@openfront/shared/CosmeticSchemas";
 import { currentPrice, saleHasEnded } from "../../SalePrice";
 import { translateText } from "../../Utils";
@@ -93,11 +94,9 @@ export function cardRarityLabel(rarity: string): string {
   }
 }
 
-// The flare that says a player owns `item`. A tracker is keyed on its stat,
-// as the server and the saved loadout key it (the catalogue's name is the
-// stat today, but only the stat is what gets checked).
-export function cardOwnershipKey(type: CardItemType, item: CardItem): string {
-  if (type === "cardTracker")
-    return `cardTracker:${(item as CardTracker).stat}`;
-  return `${type}:${item.name}`;
+// Whether a card item may be offered at all: a tracker only when its name
+// is its stat (cardTrackerNamedByStat). Ownership is then `<type>:<name>`,
+// the flare the shop grants.
+export function isOfferedCardItem(type: CardItemType, item: CardItem): boolean {
+  return type !== "cardTracker" || cardTrackerNamedByStat(item as CardTracker);
 }

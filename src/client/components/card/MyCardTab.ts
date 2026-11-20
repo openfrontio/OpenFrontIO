@@ -24,7 +24,7 @@ import {
   type CardItem,
   type CardItemType,
   cardItemName,
-  cardOwnershipKey,
+  isOfferedCardItem,
   cardPrices,
   cardRarityLabel,
 } from "./CardItems";
@@ -150,7 +150,9 @@ export class MyCardTab extends LitElement {
     const section = this.cosmetics?.[SECTION[slot].key] as
       | Record<string, CardItem>
       | undefined;
-    return Object.values(section ?? {});
+    return Object.values(section ?? {}).filter((item) =>
+      isOfferedCardItem(SECTION[slot].type, item),
+    );
   }
 
   private equippedName(slot: Exclude<Slot, "flag" | "trackers">) {
@@ -159,7 +161,7 @@ export class MyCardTab extends LitElement {
 
   private stateOf(slot: Exclude<Slot, "flag">, item: CardItem): ItemState {
     const type = SECTION[slot].type;
-    if (this.flares.includes(cardOwnershipKey(type, item))) {
+    if (this.flares.includes(`${type}:${item.name}`)) {
       if (slot === "trackers") {
         return this.loadout.trackers.includes((item as CardTracker).stat)
           ? "equipped"
