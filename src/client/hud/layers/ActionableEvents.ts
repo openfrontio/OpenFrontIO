@@ -9,6 +9,7 @@ import {
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { ifDefined } from "lit/directives/if-defined.js";
 import { repeat } from "lit/directives/repeat.js";
 import "../../components/OfIcon";
 import type { OfIconName } from "../../components/OfIcon";
@@ -38,38 +39,84 @@ const LIST = "flex flex-col w-full min-[1200px]:w-96 pointer-events-auto";
 // A new card opens its height, so the feed above glides instead of jumping.
 // The card's space above it is a margin inside the opening part, so it
 // opens with the card.
-const OPENING =
-  "grid grid-rows-[1fr] animate-card-open motion-reduce:animate-none";
+const SPACE = "grid grid-rows-[1fr]";
+const OPENING = "animate-card-open motion-reduce:animate-none";
 // Positioned and clipped for the time-left line on its bottom edge.
 const CARD =
   "hud-panel relative overflow-hidden rounded-lg sm:max-lg:landscape:rounded-l-none mt-1 p-2 text-white animate-card-rise motion-reduce:animate-none";
 const HEAD = "grid grid-cols-[1.25rem_minmax(0,1fr)_auto] gap-x-2";
 const ICON_SIZE = 16;
 // One text line tall, so a wrapped sentence keeps the icon on its first line.
-const MARK = "flex h-5 lg:h-6 items-center justify-center text-yellow-400";
+const MARK =
+  "flex h-5 lg:h-6 items-center justify-center transition-colors duration-200";
 const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aquarius";
-const TITLE = `min-w-0 self-baseline cursor-pointer rounded-sm text-start text-sm/5 lg:text-base/6 font-semibold wrap-anywhere pointer-fine:hover:text-aquarius ${FOCUS_RING}`;
+const TITLE = `min-w-0 self-baseline cursor-pointer rounded-sm text-start text-sm/5 lg:text-base/6 font-semibold wrap-anywhere transition-colors duration-200 pointer-fine:hover:text-aquarius ${FOCUS_RING}`;
 // On the title's first baseline. The minimum width keeps the title from
 // shifting when the count drops a digit.
 const SECONDS =
-  "min-w-[3ch] self-baseline text-end text-[13px]/5 lg:text-sm/5 font-semibold tabular-nums text-white/70";
+  "min-w-[3ch] self-baseline text-end text-[13px]/5 lg:text-sm/5 font-semibold tabular-nums text-white/70 transition-opacity duration-150 motion-reduce:transition-none";
 // Buttons wrap to a second line when a translation is too long for one.
 // Labels keep today's 12px until the card takes its 384px width at 1200px
 // (from 1024px it is only 262px wide), and the sides stay narrow, so the
 // three buttons still share a line where they did before the icons.
-const ACTIONS = "mt-2 flex flex-wrap gap-1";
-const BUTTON = `inline-flex h-8 lg:h-9 items-center justify-center gap-1 whitespace-nowrap rounded-md px-2.5 text-xs min-[1200px]:text-sm font-semibold cursor-pointer transition-colors ${FOCUS_RING}`;
+// Once answered, the other buttons close up (inert) and the gap with them,
+// so the chosen one takes the row.
+const ACTIONS =
+  "mt-2 flex flex-wrap transition-[gap] duration-260 ease-in-out motion-reduce:transition-none";
+const BUTTON = `inline-flex h-8 lg:h-9 max-w-full items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-md px-2.5 text-xs min-[1200px]:text-sm font-semibold cursor-pointer disabled:cursor-default transition-[color,background-color,flex-grow,max-width,padding,opacity] duration-260 ease-in-out motion-reduce:transition-none inert:max-w-0 inert:grow-0 inert:px-0 inert:opacity-0 ${FOCUS_RING}`;
 const QUIET = "bg-white/6 pointer-fine:hover:bg-white/10 active:bg-white/15";
 // Hover darkens: the lighter shades hold white text under 4.5:1.
 const YES = "flex-1 bg-green-700 pointer-fine:hover:bg-green-800";
 const NO = "flex-1 bg-red-600 pointer-fine:hover:bg-red-700";
-const CARD_BUTTON: Record<CardAction, { look: string; icon?: OfIconName }> = {
+// The chosen button's icon pops once.
+const POP = "animate-card-answer-pop motion-reduce:animate-none";
+// The card's edge, over the panel's own hairline: a child, since the panel
+// keeps its own shadow. It takes the answer's colour.
+const EDGE =
+  "pointer-events-none absolute inset-0 rounded-[inherit] ring-1 ring-inset transition-shadow duration-200";
+
+// How an answer shows while the card holds it, and how long it holds: a yes
+// longer than a no. The card keeps its place for that time, so the second
+// click of a double click lands on it and not on the card that would drop
+// into its place; then it folds away, and the fold's end removes it. The
+// time-left line refills in the answer's colour.
+interface Answer {
+  fold: string;
+  edge: string;
+  mark: string;
+  title?: string;
+  line?: string;
+}
+const ACCEPTED: Answer = {
+  fold: "animate-card-accepted motion-reduce:animate-card-accepted-still",
+  edge: "ring-green-400/55",
+  mark: "text-green-400",
+  line: "bg-green-400 transition-[width,background-color] duration-300 ease-out",
+};
+const REJECTED: Answer = {
+  fold: "animate-card-declined motion-reduce:animate-card-declined-still",
+  edge: "ring-red-400/50",
+  mark: "text-red-400",
+  title: "text-white/60",
+  line: "bg-red-400 transition-[width,background-color] duration-300 ease-out",
+};
+// Ignore is no answer to the ally: no colour, the line runs on.
+const IGNORED: Answer = {
+  fold: "animate-card-declined motion-reduce:animate-card-declined-still",
+  edge: "ring-transparent",
+  mark: "text-yellow-400",
+};
+
+const CARD_BUTTON: Record<
+  CardAction,
+  { look: string; icon?: OfIconName; answer?: Answer }
+> = {
   focus: { look: `flex-none ${QUIET}`, icon: "focus" },
-  accept: { look: YES, icon: "check" },
-  reject: { look: NO, icon: "close" },
-  renew: { look: YES },
-  ignore: { look: `flex-1 ${QUIET}` },
+  accept: { look: YES, icon: "check", answer: ACCEPTED },
+  reject: { look: NO, icon: "close", answer: REJECTED },
+  renew: { look: YES, answer: ACCEPTED },
+  ignore: { look: `flex-1 ${QUIET}`, answer: IGNORED },
 };
 
 interface ActionableEvent {
@@ -90,7 +137,13 @@ interface ActionableEvent {
   requestorID: number;
   /** The line read out when the card arrived, with the time it gave. */
   spoken?: string;
+  /** The button that answered the card, while the card shows the answer. */
+  answered?: CardAction;
 }
+
+// An answered card stays until its fold ends: the reply, the expiry and a
+// withdrawn request do not cut it short.
+const isOpen = (event: ActionableEvent) => event.answered === undefined;
 
 @customElement("actionable-events")
 export class ActionableEvents extends LitElement implements Controller {
@@ -137,6 +190,7 @@ export class ActionableEvents extends LitElement implements Controller {
   private removeAllianceRenewalEvents(allianceID: number) {
     this.events = this.events.filter(
       (event) =>
+        !isOpen(event) ||
         !(
           event.type === MessageType.RENEW_ALLIANCE &&
           event.allianceID === allianceID
@@ -154,6 +208,8 @@ export class ActionableEvents extends LitElement implements Controller {
 
     const myPlayer = this.game.myPlayer();
     if (!myPlayer || !myPlayer.isAlive()) {
+      // The cards are not drawn, so an answered card's fold would never end.
+      this.events = this.events.filter(isOpen);
       if (this._isVisible) {
         this._isVisible = false;
         this.requestUpdate();
@@ -193,17 +249,18 @@ export class ActionableEvents extends LitElement implements Controller {
 
     const remainingEvents = this.events.filter(
       (event) =>
-        (event.duration === undefined ||
+        !isOpen(event) ||
+        ((event.duration === undefined ||
           this.game.ticks() - event.createdAt < event.duration) &&
-        (event.type !== MessageType.ALLIANCE_REQUEST ||
-          // We remove Alliance Requests if the requestor is dead.
-          ((
-            this.game.playerBySmallID(event.requestorID) as PlayerView
-          ).isAlive() &&
-            // We remove Alliance Requests if the requestor is no longer requesting an alliance with us.
-            (
+          (event.type !== MessageType.ALLIANCE_REQUEST ||
+            // We remove Alliance Requests if the requestor is dead.
+            ((
               this.game.playerBySmallID(event.requestorID) as PlayerView
-            ).isRequestingAllianceWith(this.game.myPlayer() as PlayerView))),
+            ).isAlive() &&
+              // We remove Alliance Requests if the requestor is no longer requesting an alliance with us.
+              (
+                this.game.playerBySmallID(event.requestorID) as PlayerView
+              ).isRequestingAllianceWith(this.game.myPlayer() as PlayerView)))),
     );
 
     if (this.events.length !== remainingEvents.length) {
@@ -352,6 +409,7 @@ export class ActionableEvents extends LitElement implements Controller {
     const requestorID = update.request.requestorID;
     const remaining = this.events.filter(
       (event) =>
+        !isOpen(event) ||
         !(
           event.type === MessageType.ALLIANCE_REQUEST &&
           event.focusID === requestorID
@@ -397,6 +455,17 @@ export class ActionableEvents extends LitElement implements Controller {
     };
   }
 
+  // The fold is an answered card's last moment, so the card goes when it
+  // ends: no timer has to match it, and a paused game cannot hold it.
+  private endAnswered(e: AnimationEvent, event: ActionableEvent) {
+    // The card's own rise ends too and bubbles up here, and the opening
+    // that an answer cuts short is cancelled here.
+    if (e.target !== e.currentTarget || e.animationName !== "card-fold") return;
+    const index = this.events.indexOf(event);
+    if (index !== -1) this.removeEvent(index);
+    this.requestUpdate();
+  }
+
   private emitGoToPlayerEvent(focusID: number) {
     const target = this.game.playerBySmallID(focusID) as PlayerView;
     if (!target) return;
@@ -438,11 +507,20 @@ export class ActionableEvents extends LitElement implements Controller {
           (event) => event.id,
           (event) => {
             const time = this.timeLeft(event);
+            const answered = event.answered;
+            const answer = answered && CARD_BUTTON[answered].answer;
             return html`
-              <div class=${OPENING}>
+              <div
+                class="${SPACE} ${answer ? answer.fold : OPENING}"
+                @animationend=${(e: AnimationEvent) =>
+                  this.endAnswered(e, event)}
+                @animationcancel=${(e: AnimationEvent) =>
+                  this.endAnswered(e, event)}
+              >
                 <div class="min-h-0">
                   <div
                     data-event-card
+                    data-answered=${ifDefined(answered)}
                     data-card-kind=${
                       event.type === MessageType.RENEW_ALLIANCE
                         ? "renewal"
@@ -452,12 +530,18 @@ export class ActionableEvents extends LitElement implements Controller {
                     aria-label=${event.description}
                     class=${CARD}
                   >
+                    <span
+                      aria-hidden="true"
+                      class="${EDGE} ${answer ? answer.edge : "ring-transparent"}"
+                    ></span>
                     <div class=${HEAD}>
-                      <span class=${MARK}>
+                      <span
+                        class="${MARK} ${answer ? answer.mark : "text-yellow-400"}"
+                      >
                         <of-icon name="alliance" size=${ICON_SIZE}></of-icon>
                       </span>
                       <button
-                        class=${TITLE}
+                        class="${TITLE} ${answer?.title ?? ""}"
                         @mousedown=${pressWithoutFocus}
                         @click=${() => this.emitGoToPlayerEvent(event.focusID)}
                       >
@@ -468,7 +552,7 @@ export class ActionableEvents extends LitElement implements Controller {
                           ? html`<span
                               data-card-seconds
                               aria-hidden="true"
-                              class=${SECONDS}
+                              class="${SECONDS} ${answered ? "opacity-0" : ""}"
                               >${renderDuration(
                                 Math.ceil(ticksToSeconds(time.left)),
                               )}</span
@@ -476,21 +560,18 @@ export class ActionableEvents extends LitElement implements Controller {
                           : ""
                       }
                     </div>
-                    <div class=${ACTIONS}>
+                    <div class="${ACTIONS} ${answered ? "gap-0" : "gap-1"}">
                       ${event.buttons.map(
                         (btn) => html`
                           <button
                             data-card-action=${btn.kind}
                             class="${BUTTON} ${CARD_BUTTON[btn.kind].look}"
+                            ?inert=${answered !== undefined && btn.kind !== answered}
+                            ?disabled=${answered !== undefined}
                             @mousedown=${pressWithoutFocus}
                             @click=${() => {
                               btn.action();
-                              if (!btn.preventClose) {
-                                const index = this.events.findIndex(
-                                  (e) => e === event,
-                                );
-                                if (index !== -1) this.removeEvent(index);
-                              }
+                              if (!btn.preventClose) event.answered = btn.kind;
                               this.requestUpdate();
                             }}
                           >
@@ -499,6 +580,7 @@ export class ActionableEvents extends LitElement implements Controller {
                                 ? html`<of-icon
                                     name=${CARD_BUTTON[btn.kind].icon}
                                     size=${ICON_SIZE}
+                                    class=${btn.kind === answered ? POP : ""}
                                   ></of-icon>`
                                 : ""
                             }
@@ -507,7 +589,13 @@ export class ActionableEvents extends LitElement implements Controller {
                         `,
                       )}
                     </div>
-                    ${time ? timeLeftLine(time.left / time.total) : ""}
+                    ${
+                      answer?.line
+                        ? timeLeftLine(1, answer.line)
+                        : time
+                          ? timeLeftLine(time.left / time.total)
+                          : ""
+                    }
                   </div>
                 </div>
               </div>

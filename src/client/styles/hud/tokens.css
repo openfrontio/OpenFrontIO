@@ -160,4 +160,41 @@
       grid-template-rows: minmax(0, 0fr);
     }
   }
+
+  /* An answered alliance card shows its answer, then folds its space away
+     over 280 ms: a yes holds for 880 ms, a no or an ignore for 640 ms.
+     ActionableEvents removes the card when the fold ends. The space is
+     clipped only while it folds, so the card's shadow shows while it holds. */
+  --animate-card-accepted: card-fold 280ms cubic-bezier(0.4, 0, 0.2, 1) 880ms
+    forwards;
+  --animate-card-declined: card-fold 280ms cubic-bezier(0.4, 0, 0.2, 1) 640ms
+    forwards;
+  @keyframes card-fold {
+    from {
+      clip-path: inset(0);
+    }
+    to {
+      grid-template-rows: 0fr;
+      opacity: 0;
+      clip-path: inset(0);
+    }
+  }
+  /* The same lives without the fold, for reduced motion: the card goes in
+     one step at the end, and the animation still ends. */
+  --animate-card-accepted-still: card-fold 280ms steps(1, jump-end) 880ms
+    forwards;
+  --animate-card-declined-still: card-fold 280ms steps(1, jump-end) 640ms
+    forwards;
+  /* The icon of the button that answered pops once, as the other buttons
+     close up around it. */
+  --animate-card-answer-pop: card-answer-pop 380ms
+    cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+  @keyframes card-answer-pop {
+    from {
+      transform: scale(0.5);
+    }
+    55% {
+      transform: scale(1.22);
+    }
+  }
 }

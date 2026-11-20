@@ -5,14 +5,17 @@ import { html } from "lit";
 // linear transition glides between ticks. Under reduced motion it is not
 // drawn: the seconds shown next to it carry the same information.
 const LINE =
-  "pointer-events-none absolute bottom-0 start-0 h-0.5 w-(--time-left) bg-yellow-400 transition-[width] duration-100 ease-linear motion-reduce:hidden";
+  "pointer-events-none absolute bottom-0 start-0 h-0.5 w-(--time-left) motion-reduce:hidden";
+const DRAINING = "bg-yellow-400 transition-[width] duration-100 ease-linear";
 
-export function timeLeftLine(fraction: number) {
+// `look` replaces the colour and the transition, for a line that does more
+// than drain.
+export function timeLeftLine(fraction: number, look = DRAINING) {
   const left = Math.min(Math.max(fraction, 0), 1);
   return html`<span
     aria-hidden="true"
     data-time-left=${left}
-    class=${LINE}
+    class="${LINE} ${look}"
     style=${`--time-left: ${left * 100}%`}
   ></span>`;
 }
