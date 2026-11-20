@@ -2,6 +2,7 @@ import { AllPlayers, MessageType } from "@openfront/engine-api/game/GameTypes";
 import {
   AllianceExpiredUpdate,
   AllianceRequestReplyUpdate,
+  AllianceRequestUpdate,
   BrokeAllianceUpdate,
   DisplayChatMessageUpdate,
   DisplayMessageUpdate,
@@ -33,6 +34,7 @@ import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { UIState } from "../../UIState";
 import {
   getMessageTypeClasses,
+  renderDuration,
   severityColors,
   translateText,
 } from "../../Utils";
@@ -60,6 +62,11 @@ interface GameEvent {
   icon?: OfIconName;
   /** Set on a missile warning that stands for every bomb of one type from one sender. */
   missileGroup?: InboundMissileGroup;
+  /**
+   * Set on the row of my own alliance request once the game has the
+   * request: the tick it was made. The row then lives as long as it does.
+   */
+  requestedAt?: number;
   /**
    * The line read out when the event arrived. Kept apart from the
    * description, so a missile line's new count is not read out again.
@@ -223,6 +230,11 @@ const QUIET_TEXT = "text-[13px]/5 lg:text-sm/6 text-white/80";
 const EMOJI =
   "inline-block text-[1.33em] leading-[0] translate-y-[0.1em] text-white";
 const BETRAYAL_ICON = "text-yellow-400";
+// The seconds left on my pending alliance request, in a column of their own
+// at the row's end, on the first line. The minimum width keeps the sentence
+// from shifting when the count drops a digit.
+const ROW_SECONDS =
+  "col-start-3 row-start-1 min-w-[3ch] text-end font-semibold tabular-nums";
 
 type Tier = keyof typeof TIERS;
 
@@ -263,6 +275,8 @@ export class EventsDisplay extends LitElement implements Controller {
   private updateMap = [
     [GameUpdateType.DisplayEvent, this.onDisplayMessageEvent.bind(this)],
     [GameUpdateType.DisplayChatEvent, this.onDisplayChatEvent.bind(this)],
+    // Before the reply, so a reply on the same tick finds the request.
+    [GameUpdateType.AllianceRequest, this.onAllianceRequestEvent.bind(this)],
     [
       GameUpdateType.AllianceRequestReply,
       this.onAllianceRequestReplyEvent.bind(this),
@@ -306,6 +320,9 @@ export class EventsDisplay extends LitElement implements Controller {
       ),
       type: MessageType.ALLIANCE_REQUEST,
       createdAt: this.game.ticks(),
+      // A button from the start, so the row keeps its element when the
+      // game's request arrives and the row becomes the pending request.
+      focusID: e.recipient.smallID(),
     });
   }
 
@@ -375,6 +392,9 @@ export class EventsDisplay extends LitElement implements Controller {
       if (event.missileGroup) {
         return this.keepMissileGroup(event, expired);
       }
+      if (event.requestedAt !== undefined) {
+        return age >= 0 && this.isRequestOpen(event);
+      }
       const isInboundWarning =
         event.type === MessageType.NUKE_INBOUND ||
         event.type === MessageType.HYDROGEN_BOMB_INBOUND ||
@@ -391,8 +411,14 @@ export class EventsDisplay extends LitElement implements Controller {
       return shouldKeep;
     });
 
-    if (remainingEvents.length > 30) {
-      remainingEvents = remainingEvents.slice(-30);
+    // The newest 30 rows stay, and my pending alliance requests past them:
+    // nothing would bring those back before their answer.
+    const capped = remainingEvents.filter(
+      (event) => event.requestedAt === undefined,
+    );
+    if (capped.length > 30) {
+      const cut = new Set(capped.slice(0, -30));
+      remainingEvents = remainingEvents.filter((event) => !cut.has(event));
     }
 
     if (this.events.length !== remainingEvents.length) {
@@ -460,6 +486,29 @@ export class EventsDisplay extends LitElement implements Controller {
       Object.assign(event, this.missileGroupSentence(group));
     }
     return true;
+  }
+
+  // The row of my alliance request stays until the answer replaces it, or
+  // until the game lets the request lapse. The game keeps a request whose
+  // recipient died, but nobody will answer it. A replay can miss the answer,
+  // when it seeks past it or follows another player, so the row also goes
+  // once the game no longer has the request.
+  private isRequestOpen(event: GameEvent): boolean {
+    const recipient = this.game.playerBySmallID(event.focusID!) as PlayerView;
+    return (
+      this.requestTicksLeft(event.requestedAt!) >= 0 &&
+      recipient.isAlive() &&
+      this.game.myPlayer()?.isRequestingAllianceWith(recipient) === true
+    );
+  }
+
+  // Ticks until the game lets the request lapse: its own bound, read from
+  // its config.
+  private requestTicksLeft(requestedAt: number): number {
+    return (
+      this.game.config().allianceRequestDuration() -
+      (this.game.ticks() - requestedAt)
+    );
   }
 
   private missileGroupSentence(group: InboundMissileGroup) {
@@ -646,12 +695,55 @@ export class EventsDisplay extends LitElement implements Controller {
     }
   }
 
+  // The game made my alliance request: the row that confirmed my click now
+  // stands for it, so the same row counts down and nothing new appears.
+  onAllianceRequestEvent(update: AllianceRequestUpdate) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || update.requestorID !== myPlayer.smallID()) {
+      return;
+    }
+
+    const sent = this.events.find(
+      (event) =>
+        event.type === MessageType.ALLIANCE_REQUEST &&
+        event.focusID === update.recipientID &&
+        event.requestedAt === undefined,
+    );
+    if (sent) {
+      sent.requestedAt = update.createdAt;
+      this.requestUpdate();
+      return;
+    }
+
+    // No click came first: the replay viewer has none.
+    const recipient = this.game.playerBySmallID(
+      update.recipientID,
+    ) as PlayerView;
+    this.addEvent({
+      ...sentence(
+        "events_display.alliance_request_sent",
+        { name: recipient.displayName() },
+        ["name"],
+      ),
+      type: MessageType.ALLIANCE_REQUEST,
+      createdAt: this.game.ticks(),
+      focusID: update.recipientID,
+      requestedAt: update.createdAt,
+    });
+  }
+
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer || update.request.requestorID !== myPlayer.smallID()) {
       return;
     }
 
+    // The answer takes the pending request's place.
+    this.events = this.events.filter(
+      (event) =>
+        event.requestedAt === undefined ||
+        event.focusID !== update.request.recipientID,
+    );
     const recipient = this.game.playerBySmallID(
       update.request.recipientID,
     ) as PlayerView;
@@ -1007,6 +1099,20 @@ export class EventsDisplay extends LitElement implements Controller {
             : this.getEventDescription(event)
         }
       </span>
+      ${
+        event.requestedAt !== undefined
+          ? html`<span
+              data-row-seconds
+              aria-hidden="true"
+              class="${ROW_SECONDS} ${look.text}"
+              >${renderDuration(
+                Math.ceil(
+                  ticksToSeconds(this.requestTicksLeft(event.requestedAt)),
+                ),
+              )}</span
+            >`
+          : ""
+      }
     `;
     const { focusID, unitView } = event;
     const goTo = focusID
@@ -1022,6 +1128,7 @@ export class EventsDisplay extends LitElement implements Controller {
         data-tier=${tier}
         data-tone=${tone}
         ?data-quiet=${quiet}
+        ?data-request-pending=${event.requestedAt !== undefined}
         ?data-leaving=${leaving}
         ?inert=${leaving}
         class="${ROW} ${leaving ? LEAVING : ""}"
