@@ -825,6 +825,21 @@ describe("Inventory In game tab", () => {
       expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).toBeNull();
     });
 
+    it("a purchase that throws forgets the item", async () => {
+      vi.mocked(purchaseCosmetic).mockRejectedValue(new Error("network"));
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      const purchase = modal as unknown as {
+        purchase(item: unknown, method: "hard"): Promise<unknown>;
+        buying: unknown;
+      };
+      await expect(purchase.purchase(purchase.buying, "hard")).rejects.toThrow(
+        "network",
+      );
+      expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).toBeNull();
+    });
+
     it("a purchase that reloads the page keeps the item for Equip now", async () => {
       vi.mocked(purchaseCosmetic).mockResolvedValue(undefined);
       vi.mocked(purchaseReloading).mockReturnValue(true);

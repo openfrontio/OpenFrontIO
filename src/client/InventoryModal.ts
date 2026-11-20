@@ -1452,11 +1452,14 @@ export class InventoryModal extends BaseModal {
     if (this.userMeResponse !== false) {
       rememberPendingEquip(this.userMeResponse.player.publicId, resolved.key);
     }
-    const result = await purchaseCosmetic(resolved, method, undefined);
-    // No reload means no purchase: forget the item, or a later purchase of
-    // it elsewhere (the Store) would bring back this Equip now.
-    if (!purchaseReloading()) clearPendingEquip();
-    return result;
+    try {
+      return await purchaseCosmetic(resolved, method, undefined);
+    } finally {
+      // No reload means no purchase (failed, cancelled or thrown): forget
+      // the item, or a later purchase of it elsewhere (the Store) would
+      // bring back this Equip now.
+      if (!purchaseReloading()) clearPendingEquip();
+    }
   }
 
   private equipBought() {
