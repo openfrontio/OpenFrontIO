@@ -17,6 +17,8 @@ import { customElement, query, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { repeat } from "lit/directives/repeat.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
+import "../../components/OfIcon";
+import type { OfIconName } from "../../components/OfIcon";
 import { Controller } from "../../Controller";
 import { SendAllianceRequestIntentEvent } from "../../Transport";
 import { UserSettings } from "../../UserSettings";
@@ -29,6 +31,7 @@ import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { UIState } from "../../UIState";
 import { getMessageTypeClasses, translateText } from "../../Utils";
+import { ticksToSeconds } from "../GameTicks";
 
 interface GameEvent {
   /** Keys the event's row, so the row stays its own as others come and go. */
@@ -43,6 +46,8 @@ interface GameEvent {
   onDelete?: () => void;
   focusID?: number;
   unitView?: UnitView;
+  /** Replaces the type's icon, when the type alone does not say enough. */
+  icon?: OfIconName;
   /** Set on a missile warning that stands for every bomb of one type from one sender. */
   missileGroup?: InboundMissileGroup;
 }
@@ -84,12 +89,80 @@ const TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
 
 const isTier1 = (type: MessageType): boolean => TIER_1_TYPES.has(type);
 
+// The icon of each message type. A Record, so a new type does not build
+// until it has one.
+const EVENT_ICONS: Record<MessageType, OfIconName> = {
+  [MessageType.ATTACK_FAILED]: "sword",
+  [MessageType.ATTACK_CANCELLED]: "sword",
+  [MessageType.ATTACK_REQUEST]: "target",
+  [MessageType.CONQUERED_PLAYER]: "sword",
+  [MessageType.MIRV_INBOUND]: "mirv",
+  [MessageType.NUKE_INBOUND]: "atom-bomb",
+  [MessageType.NUKE_DETONATED]: "atom-bomb",
+  [MessageType.HYDROGEN_BOMB_INBOUND]: "hydrogen-bomb",
+  [MessageType.NAVAL_INVASION_INBOUND]: "boat",
+  [MessageType.SAM_MISS]: "sam-launcher",
+  [MessageType.SAM_HIT]: "sam-launcher",
+  [MessageType.CAPTURED_ENEMY_UNIT]: "sword",
+  [MessageType.UNIT_DESTROYED]: "explosion",
+  [MessageType.ALLIANCE_ACCEPTED]: "alliance",
+  [MessageType.ALLIANCE_REJECTED]: "alliance",
+  [MessageType.ALLIANCE_REQUEST]: "alliance-request",
+  [MessageType.ALLIANCE_BROKEN]: "break-alliance",
+  [MessageType.ALLIANCE_EXPIRED]: "alliance",
+  [MessageType.DONATION_SENT]: "donate-gold",
+  [MessageType.DONATION_RECEIVED]: "donate-gold",
+  [MessageType.CHAT]: "chat",
+  [MessageType.RENEW_ALLIANCE]: "alliance",
+};
+
 // Good news about gold or troops: important, but not a warning, so it reads
 // a size smaller than the rest of the important events.
 const QUIET_TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
   MessageType.CONQUERED_PLAYER,
   MessageType.DONATION_RECEIVED,
 ]);
+
+// Look. Sizes, colours and spacing of each part live here, so a change of
+// look is one edit. The templates below only hold structure.
+
+// Each block is one flat panel; the rows are not panels. The scrollbar has a
+// fixed colour so it still shows over the map at 0% HUD opacity.
+const BLOCK =
+  "hud-panel rounded-lg sm:max-lg:landscape:rounded-l-none overflow-x-hidden overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgb(255_255_255_/_0.35)_transparent]";
+// The hairline between rows is an inset shadow, not a border, so it takes no
+// height of its own.
+const ROW = "not-first:shadow-[inset_0_1px_var(--color-hud-line)]";
+// An icon column, then the text. The icon's box is one line tall and sits on
+// the first line, so a wrapped row keeps its icon at the top.
+const ROW_BODY =
+  "grid w-full grid-cols-[1.25rem_minmax(0,1fr)] gap-x-2 ps-2 pe-2.5 text-start";
+const GO_TO =
+  "pointer-fine:hover:bg-white/5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-aquarius";
+const ICON_BOX = "flex items-center justify-center";
+const TEXT = "min-w-0 wrap-anywhere";
+// Important rows: 15px text in 32px rows, 16px in 36px from lg. Routine
+// rows: 13px in 24px, 14px in 28px from lg, and dimmer.
+const TIERS = {
+  important: {
+    body: "py-1.5",
+    icon: "h-5 lg:h-6",
+    iconSize: 16,
+    text: "text-[15px]/5 lg:text-base/6 font-medium text-white",
+  },
+  routine: {
+    body: "py-1",
+    icon: "h-4 lg:h-5",
+    iconSize: 14,
+    text: "text-[13px]/4 lg:text-sm/5 text-white/70",
+  },
+} as const;
+// Good news about gold or troops (QUIET_TIER_1_TYPES): a size smaller, in
+// the same row height.
+const QUIET_TEXT = "text-[13px]/5 lg:text-sm/6 font-medium text-white";
+const BETRAYAL_ICON = "text-yellow-400";
+
+type Tier = keyof typeof TIERS;
 
 @customElement("events-display")
 export class EventsDisplay extends LitElement implements Controller {
@@ -121,37 +194,6 @@ export class EventsDisplay extends LitElement implements Controller {
       this._importantEventsContainer.scrollTop =
         this._importantEventsContainer.scrollHeight;
     }
-  }
-
-  private renderButton(options: {
-    content: unknown;
-    onClick?: () => void;
-    className?: string;
-    disabled?: boolean;
-    translate?: boolean;
-    hidden?: boolean;
-  }) {
-    const {
-      content,
-      onClick,
-      className = "",
-      disabled = false,
-      translate = true,
-      hidden = false,
-    } = options;
-    if (hidden) {
-      return html``;
-    }
-    return html`
-      <button
-        class="${className}"
-        @click=${onClick}
-        ?disabled=${disabled}
-        ?translate=${translate}
-      >
-        ${content}
-      </button>
-    `;
   }
 
   private updateMap = [
@@ -520,7 +562,7 @@ export class EventsDisplay extends LitElement implements Controller {
       );
 
       const traitorDuration = Math.floor(
-        this.game.config().traitorDuration() * 0.1,
+        ticksToSeconds(this.game.config().traitorDuration()),
       );
       const durationText =
         traitorDuration === 1
@@ -611,6 +653,7 @@ export class EventsDisplay extends LitElement implements Controller {
       type: isRecipient
         ? MessageType.DONATION_RECEIVED
         : MessageType.DONATION_SENT,
+      icon: isGold ? "donate-gold" : "donate-troops",
       highlight: true,
       createdAt: this.game.ticks(),
       focusID: other.smallID(),
@@ -667,6 +710,7 @@ export class EventsDisplay extends LitElement implements Controller {
         description: `${sender.displayName()}: ${update.emoji.message}`,
         unsafeDescription: true,
         type: MessageType.CHAT,
+        icon: "emoji",
         highlight: true,
         createdAt: this.game.ticks(),
         focusID: update.emoji.senderID,
@@ -679,6 +723,7 @@ export class EventsDisplay extends LitElement implements Controller {
         }),
         unsafeDescription: true,
         type: MessageType.CHAT,
+        icon: "emoji",
         minor: true,
         createdAt: this.game.ticks(),
         focusID: recipient.smallID(),
@@ -690,6 +735,7 @@ export class EventsDisplay extends LitElement implements Controller {
         }),
         unsafeDescription: true,
         type: MessageType.CHAT,
+        icon: "emoji",
         minor: true,
         createdAt: this.game.ticks(),
       });
@@ -750,54 +796,66 @@ export class EventsDisplay extends LitElement implements Controller {
       return html``;
     }
 
-    const remainingTicks = myPlayer.getTraitorRemainingTicks();
-    const remainingSeconds = Math.ceil(remainingTicks / 10);
-
+    const remainingSeconds = Math.ceil(
+      ticksToSeconds(myPlayer.getTraitorRemainingTicks()),
+    );
     if (remainingSeconds <= 0) {
       return html``;
     }
 
+    const look = TIERS.important;
     return html`
-      ${this.renderButton({
-        content: html`${translateText("events_display.betrayal_debuff_ends", {
-          time: remainingSeconds,
-        })}`,
-        className: "text-left text-yellow-400",
-        translate: false,
-      })}
+      <li data-betrayal-debuff class=${ROW}>
+        <div class="${ROW_BODY} ${look.body}">
+          <span class="${ICON_BOX} ${look.icon} ${BETRAYAL_ICON}">
+            <of-icon name="traitor" size=${look.iconSize}></of-icon>
+          </span>
+          <span class="${TEXT} ${look.text}">
+            ${translateText("events_display.betrayal_debuff_ends", {
+              time: remainingSeconds,
+            })}
+          </span>
+        </div>
+      </li>
     `;
   }
 
-  private renderEventRow(event: GameEvent) {
+  private renderEventRow(event: GameEvent, tier: Tier) {
+    const look = TIERS[tier];
+    const quiet = tier === "important" && QUIET_TIER_1_TYPES.has(event.type);
+    const content = html`
+      <span
+        class="${ICON_BOX} ${look.icon} ${getMessageTypeClasses(event.type)}"
+      >
+        <of-icon
+          name=${event.icon ?? EVENT_ICONS[event.type]}
+          size=${look.iconSize}
+        ></of-icon>
+      </span>
+      <span class="${TEXT} ${quiet ? QUIET_TEXT : look.text}">
+        ${this.getEventDescription(event)}
+      </span>
+    `;
+    const { focusID, unitView } = event;
+    const goTo = focusID
+      ? () => this.emitGoToPlayerEvent(focusID)
+      : unitView
+        ? () => this.emitGoToUnitEvent(unitView)
+        : undefined;
     return html`
-      <tr data-event-row>
-        <td
-          class="lg:px-2 lg:py-1 p-1 text-left ${getMessageTypeClasses(
-            event.type,
-          )} ${QUIET_TIER_1_TYPES.has(event.type) ? "text-sm lg:text-base" : ""}"
-        >
-          ${
-            event.focusID
-              ? this.renderButton({
-                  content: this.getEventDescription(event),
-                  onClick: () => {
-                    if (event.focusID) this.emitGoToPlayerEvent(event.focusID);
-                  },
-                  className: "text-left",
-                })
-              : event.unitView
-                ? this.renderButton({
-                    content: this.getEventDescription(event),
-                    onClick: () => {
-                      if (event.unitView)
-                        this.emitGoToUnitEvent(event.unitView);
-                    },
-                    className: "text-left",
-                  })
-                : this.getEventDescription(event)
-          }
-        </td>
-      </tr>
+      <li data-event-row data-tier=${tier} ?data-quiet=${quiet} class=${ROW}>
+        ${
+          goTo
+            ? html`<button
+                type="button"
+                class="${ROW_BODY} ${look.body} ${GO_TO}"
+                @click=${goTo}
+              >
+                ${content}
+              </button>`
+            : html`<div class="${ROW_BODY} ${look.body}">${content}</div>`
+        }
+      </li>
     `;
   }
 
@@ -838,19 +896,15 @@ export class EventsDisplay extends LitElement implements Controller {
           tier2Events.length > 0
             ? html`
                 <div
-                  class="hud-panel max-h-[12vh] lg:max-h-[22vh] overflow-y-auto rounded-lg sm:max-lg:landscape:rounded-l-none opacity-90 events-container"
+                  class="${BLOCK} max-h-[12vh] lg:max-h-[22vh] events-container"
                 >
-                  <table
-                    class="w-full border-collapse text-white text-xs lg:text-sm pointer-events-auto"
-                  >
-                    <tbody>
-                      ${repeat(
-                        tier2Events,
-                        (event) => event.id,
-                        (event) => this.renderEventRow(event),
-                      )}
-                    </tbody>
-                  </table>
+                  <ul role="list" class="pointer-events-auto">
+                    ${repeat(
+                      tier2Events,
+                      (event) => event.id,
+                      (event) => this.renderEventRow(event, "routine"),
+                    )}
+                  </ul>
                 </div>
               `
             : ""
@@ -859,30 +913,16 @@ export class EventsDisplay extends LitElement implements Controller {
           tier1Events.length > 0 || showBetrayalTimer
             ? html`
                 <div
-                  class="hud-panel max-h-[30vh] lg:max-h-[40vh] overflow-y-auto rounded-lg sm:max-lg:landscape:rounded-l-none border-l-4 border-red-500 important-events-container"
+                  class="${BLOCK} max-h-[30vh] lg:max-h-[40vh] important-events-container"
                 >
-                  <table
-                    class="w-full border-collapse text-white text-base lg:text-lg font-medium pointer-events-auto"
-                  >
-                    <tbody>
-                      ${repeat(
-                        tier1Events,
-                        (event) => event.id,
-                        (event) => this.renderEventRow(event),
-                      )}
-                      ${
-                        showBetrayalTimer
-                          ? html`
-                              <tr>
-                                <td class="lg:px-2 lg:py-1 p-1 text-left">
-                                  ${this.renderBetrayalDebuffTimer()}
-                                </td>
-                              </tr>
-                            `
-                          : ""
-                      }
-                    </tbody>
-                  </table>
+                  <ul role="list" class="pointer-events-auto">
+                    ${repeat(
+                      tier1Events,
+                      (event) => event.id,
+                      (event) => this.renderEventRow(event, "important"),
+                    )}
+                    ${showBetrayalTimer ? this.renderBetrayalDebuffTimer() : ""}
+                  </ul>
                 </div>
               `
             : ""
