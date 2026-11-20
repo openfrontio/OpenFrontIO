@@ -36,6 +36,7 @@ import {
   translateText,
 } from "../../Utils";
 import { ticksToSeconds } from "../GameTicks";
+import { timeLeftLine } from "../TimeLeftLine";
 import { eventText, EventTextPart } from "./EventText";
 
 interface GameEvent {
@@ -902,9 +903,8 @@ export class EventsDisplay extends LitElement implements Controller {
       return html``;
     }
 
-    const remainingSeconds = Math.ceil(
-      ticksToSeconds(myPlayer.getTraitorRemainingTicks()),
-    );
+    const remainingTicks = myPlayer.getTraitorRemainingTicks();
+    const remainingSeconds = Math.ceil(ticksToSeconds(remainingTicks));
     if (remainingSeconds <= 0) {
       return html``;
     }
@@ -922,6 +922,7 @@ export class EventsDisplay extends LitElement implements Controller {
             })}
           </span>
         </div>
+        ${timeLeftLine(remainingTicks / this.game.config().traitorDuration())}
       </li>
     `;
   }

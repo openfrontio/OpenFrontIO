@@ -134,6 +134,7 @@ describe("events-display", () => {
       playerBySmallID: (id: number) => players.get(id),
       player: (id: string) => [...players.values()].find((p) => p.id() === id),
       updatesSinceLastTick: () => null,
+      config: () => ({ traitorDuration: () => 300 }),
     } as unknown as GameView;
     document.body.appendChild(display);
   });
@@ -365,6 +366,31 @@ describe("events-display", () => {
     );
     expect(line.querySelector("button")).toBeNull();
     expect(rows()).toHaveLength(0);
+  });
+
+  it("drains a line under the betrayal debuff as its time runs out", async () => {
+    let remaining = 240;
+    Object.assign(players.get(ME)!, {
+      isTraitor: () => true,
+      getTraitorRemainingTicks: () => remaining,
+    });
+    attackRequest("Attack them", 1);
+    await advanceTo(1);
+
+    const lines = () => [
+      ...display.querySelectorAll<HTMLElement>("[data-time-left]"),
+    ];
+    expect(lines()).toHaveLength(1);
+    expect(lines()[0].closest("[data-betrayal-debuff]")).not.toBeNull();
+    expect(lines()[0].getAttribute("aria-hidden")).toBe("true");
+    expect(Number(lines()[0].dataset.timeLeft)).toBeCloseTo(0.8);
+
+    remaining = 60;
+    await advanceTo(2);
+    expect(Number(lines()[0].dataset.timeLeft)).toBeCloseTo(0.2);
+    expect(rowSaying("Attack them").querySelector("[data-time-left]")).toBe(
+      null,
+    );
   });
 
   describe("names and amounts", () => {
