@@ -403,13 +403,18 @@ export class CardEditor {
       background: stored.background ?? null,
       trackers: stored.trackers.map((stat) => ({ stat })),
     });
-    // Nothing edited while it saved (or the Inventory closed meanwhile, and
-    // nothing was edited since): the draft becomes the stored card.
-    const dropped =
-      this.droppedTo !== null &&
-      cardChanges(this.droppedTo, this.draft).length === 0;
+    // Nothing edited while it saved: the draft becomes the stored card. The
+    // Inventory closed meanwhile: the draft was reset to the card this save
+    // replaces, so any edit made since goes on top of the stored card
+    // instead (kept as it is, its other slots would undo the save).
+    const droppedTo = this.droppedTo;
     this.droppedTo = null;
-    if (dropped || cardChanges(sent, this.draft).length === 0) {
+    if (droppedTo !== null) {
+      this.draft = cardChanges(droppedTo, this.draft).reduce(
+        (draft, change) => pickInto(draft, change.slot, change.to),
+        cloneDraft(storedDraft),
+      );
+    } else if (cardChanges(sent, this.draft).length === 0) {
       this.draft = cloneDraft(storedDraft);
     }
     this.saved = storedDraft;

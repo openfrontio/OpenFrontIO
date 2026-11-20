@@ -263,6 +263,33 @@ describe("CardEditor", () => {
     expect(editor.changeCount()).toBe(0);
   });
 
+  it("an edit after a close mid-save goes on top of what the save stored", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(
+      me(CARD, [
+        "cardBackground:bg_pacific",
+        "cardBackground:bg_storm",
+        "cardTracker:games_played",
+      ]),
+    );
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    // Browser Back: the Inventory closes with no guard, then reopens.
+    editor.settle();
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    finish({ ok: true, loadout: {} });
+    await saving;
+    expect(editor.saved.background).toBe("bg_storm");
+    expect(editor.draft.background).toBe("bg_storm");
+    expect(editor.draft.rows.tracker[0]).toBe("games_played");
+    // Only the tracker: nothing that would put the old background back.
+    expect(editor.changes()).toEqual([
+      { slot: { kind: "tracker", index: 0 }, from: "wins", to: "games_played" },
+    ]);
+  });
+
   it("closing mid-save that then fails leaves no Retry behind", async () => {
     let finish!: (v: unknown) => void;
     api.save.mockReturnValue(new Promise((r) => (finish = r)));
