@@ -273,6 +273,10 @@ describe("GameServer boosting", () => {
       game.reserveBoost(client.persistentID);
       game.holdBoostForPayer();
 
+      // Connected, the payer keeps the hold however long they take.
+      vi.advanceTimersByTime(BOOST_HOLD_MS * 2);
+      expect(game.boostBlockedFor("someone-else")).toBe(true);
+
       await ws.trigger("close");
       expect(game.boostBlockedFor("someone-else")).toBe(true);
       expect(game.boostHeldFor(client.persistentID)).toBe(true);

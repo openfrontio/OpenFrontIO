@@ -1,7 +1,8 @@
 import { LobbyQueuePaymentResult } from "./LobbyQueuePayment";
 
-// How long a lobby stays reserved for a player whose boost charge ended
-// without a known outcome, so they can retry before anyone else may pay.
+// How long a lobby stays reserved for a disconnected player whose boost
+// charge ended without a known outcome, so they can come back and retry
+// before anyone else may pay.
 export const BOOST_HOLD_MS = 60_000;
 
 // The slice of GameServer (and the worker's view of the queue) the boost
@@ -11,7 +12,7 @@ export interface BoostableLobby {
   // A public lobby the master schedules (ffa, team, special), still a lobby.
   isScheduledLobby(): boolean;
   // Boosted already, a charge for it is in flight, or another player's charge
-  // ended without a known outcome a moment ago.
+  // ended without a known outcome and still holds the lobby.
   boostBlockedFor(persistentId: string): boolean;
   // This player's earlier charge ended without a known outcome.
   boostHeldFor(persistentId: string): boolean;
@@ -42,8 +43,8 @@ export type BoostLobbyOutcome =
  * so a second boost by the same player would be free. The lobby is reserved
  * before the charge so two clicks can't both pay. A charge that fails without
  * a clear answer (a timeout, an API error) may still have gone through, so
- * the lobby stays reserved for that player for BOOST_HOLD_MS; their retry is
- * free if it did.
+ * the lobby stays reserved for that player while they are connected and for
+ * BOOST_HOLD_MS after they drop; their retry is free if it did.
  * That retry skips the queue-position checks: the player may already have
  * paid, so the charge is replayed and the boost recorded wherever the lobby
  * now stands.

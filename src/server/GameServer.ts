@@ -866,6 +866,12 @@ export class GameServer {
   private handleClientDisconnect(client: Client) {
     this.clients.markLeft(client);
     this.checkWinnerAfterElectorateShrink();
+    // A payer who drops with a boost charge unresolved gets a while to come
+    // back and retry it.
+    const reservation = this.boostReservation;
+    if (reservation?.persistentId === client.persistentID) {
+      reservation.heldUntil = Date.now() + BOOST_HOLD_MS;
+    }
 
     // hasStarted() includes prestart: during the lobby -> game transition
     // clients reconnect, and a host socket closing then must not tear the
@@ -1803,8 +1809,9 @@ export class GameServer {
 
   // Boosted, a boost's charge is in flight, or another player's charge ended
   // without a known outcome: this player may not pay for the lobby. That
-  // last hold gives its payer BOOST_HOLD_MS to retry, connected or not (a
-  // reload shouldn't lose it); after that someone else may boost.
+  // last hold lasts while its payer is connected, and for BOOST_HOLD_MS
+  // after they drop (a reload shouldn't lose it); then someone else may
+  // boost.
   public boostBlockedFor(persistentId: string): boolean {
     if (this.boostedAt !== undefined) return true;
     const reservation = this.boostReservation;
@@ -1812,7 +1819,8 @@ export class GameServer {
     if (reservation.inFlight) return true;
     return (
       reservation.persistentId !== persistentId &&
-      Date.now() < (reservation.heldUntil ?? 0)
+      (this.hasConnectedClient(reservation.persistentId) ||
+        Date.now() < (reservation.heldUntil ?? 0))
     );
   }
 
