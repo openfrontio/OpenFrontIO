@@ -583,4 +583,13 @@ describe("WinModal Get the look buying", () => {
       "bg_a2",
     ]);
   });
+
+  it("Edit my card leaves for the Inventory's Player card tab", async () => {
+    const modal = (await renderModal({})) as unknown as {
+      onEditCard: () => void;
+    };
+    history.replaceState(null, "", "/");
+    modal.onEditCard();
+    expect(window.location.hash).toBe("#modal=inventory&tab=card");
+  });
 });

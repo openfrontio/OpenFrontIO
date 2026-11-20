@@ -10,9 +10,8 @@ import {
   ownsPlayerCard,
 } from "@openfront/shared/CosmeticSchemas";
 import { html, nothing, PropertyValues, TemplateResult } from "lit";
-import "./components/card/MyCardTab";
-import "./components/card/PlayerCard";
 import { customElement, state } from "lit/decorators.js";
+import "./components/card/PlayerCard";
 import { ClientEnv } from "src/client/ClientEnv";
 import {
   hasLinkedIdentity,
@@ -31,6 +30,7 @@ import {
 } from "./Auth";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import { BaseModal } from "./components/BaseModal";
+import { EDIT_CARD_HASH } from "./components/card/CardLinks";
 import { buildPlayerCardView } from "./components/card/PlayerCardModel";
 import { xpBarTemplate } from "./components/card/ProfileIdentity";
 import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
@@ -57,7 +57,6 @@ import { fetchCosmetics } from "./Cosmetics";
 import { desktopLinkGate, isSteamShell } from "./DesktopShell";
 import { gamePortal, type PortalUser } from "./GamePortal";
 import { showInGameAlert } from "./InGameModal";
-import { whenModalLoaded } from "./LazyModals";
 import "./GameStatsModal";
 import { consumeLinkResult } from "./LinkResult";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
@@ -244,7 +243,6 @@ export class AccountModal extends BaseModal {
     return {
       tabs: [
         { key: "account", label: translateText("account_modal.tab_account") },
-        { key: "card", label: translateText("account_modal.tab_my_card") },
         { key: "stats", label: translateText("account_modal.tab_stats") },
         { key: "games", label: translateText("account_modal.tab_games") },
         // Where the player profile has it, after Games. Only for a player
@@ -297,8 +295,6 @@ export class AccountModal extends BaseModal {
 
   private renderTab(tab: string): TemplateResult {
     switch (tab) {
-      case "card":
-        return this.renderMyCardTab();
       case "stats":
         return this.renderStatsTab();
       case "games":
@@ -352,20 +348,9 @@ export class AccountModal extends BaseModal {
     this.open({ tab: "friends" });
   }
 
-  // The player card customiser (components/card/MyCardTab.ts). It reads the
-  // catalogue itself; the flag slot opens the inventory's flags.
-  private renderMyCardTab(): TemplateResult {
-    return html`<my-card-tab
-      .userMe=${this.userMeResponse}
-      @change-flag=${() =>
-        whenModalLoaded("inventory-modal", () =>
-          (
-            document.querySelector("inventory-modal") as unknown as {
-              open(args: Record<string, unknown>): void;
-            } | null
-          )?.open({ tab: "flags" }),
-        )}
-    ></my-card-tab>`;
+  // The card is edited (or bought) on the Inventory's Player card tab.
+  private editCard(): void {
+    window.location.hash = EDIT_CARD_HASH;
   }
 
   private renderAccountTab(): TemplateResult {
@@ -439,7 +424,7 @@ export class AccountModal extends BaseModal {
           type="button"
           data-account-get-card
           class="self-end text-xs font-bold text-sky-300 hover:underline"
-          @click=${() => this.open({ tab: "card" })}
+          @click=${() => this.editCard()}
         >
           ${translateText("account_modal.get_card")}
         </button>
@@ -486,7 +471,7 @@ export class AccountModal extends BaseModal {
         type="button"
         data-account-edit-card
         class="self-end text-xs font-bold text-sky-300 hover:underline"
-        @click=${() => this.open({ tab: "card" })}
+        @click=${() => this.editCard()}
       >
         ${translateText("account_modal.edit_card")}
       </button>

@@ -144,7 +144,6 @@
     "tab_clans": "Clans",
     "tab_friends": "Friends",
     "tab_games": "Games",
-    "tab_my_card": "My Card",
     "tab_progression": "Progression",
     "tab_stats": "Stats",
     "title": "Account",
@@ -2377,22 +2376,7 @@
     "warning": "Vigilant Mode Warning"
   },
   "my_card": {
-    "change_flag": "Change flag",
-    "earned_note": "Earned items show how to unlock them and can't be bought.",
-    "equipped": "Equipped",
-    "flag_note": "Your card shows the flag you play with.",
-    "get_card": "Get the player card to show it on end screens",
-    "needs_card": "Get the player card to equip items",
-    "not_available": "Not available",
-    "owned": "Owned",
-    "reset": "Reset",
-    "save_failed": "Couldn't save your card. Try again.",
-    "slot_background": "Background",
-    "slot_flag": "Flag",
-    "slot_taunt": "Taunt",
-    "slot_title": "Title",
-    "slot_trackers": "Trackers",
-    "staff_note": "All card art is made by staff."
+    "owned": "Owned"
   },
   "nav_account_menu": {
     "account_settings": "Account settings",
