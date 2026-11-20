@@ -16,6 +16,12 @@ vi.mock("../../src/client/Cosmetics", async (orig) => ({
   fetchCosmetics: async () => catalogue.fetched,
 }));
 
+const auth = vi.hoisted(() => ({ session: true }));
+vi.mock("../../src/client/Auth", async (orig) => ({
+  ...(await orig<typeof import("../../src/client/Auth")>()),
+  userAuth: async () => (auth.session ? { jwt: "j", claims: {} } : false),
+}));
+
 import { defaultPlayerCardView } from "../../src/client/components/card/PlayerCardModel";
 import {
   clearSavedLooks,
@@ -582,5 +588,55 @@ describe("WinModal Get the look buying", () => {
     expect(block(modal).looks[0].items.map((i) => i.item.name)).toEqual([
       "bg_a2",
     ]);
+  });
+});
+
+// getUserMe answers false for a failed read (a 5xx, a network error, a bad
+// body) as well as for no session, and keeps that false cached. Only the
+// session decides "signed out"; a failed read leaves a signed-in player
+// signed in (no flares known), so they get real Buy buttons whose tap check
+// re-reads, never a "Sign in to buy" that sends them out of their game.
+describe("WinModal: signed in is the session, not the profile read", () => {
+  type Modal = HTMLElement & {
+    applyUserMe(me: unknown): Promise<void>;
+    signedIn: boolean;
+    viewerFlares: readonly string[] | null;
+  };
+  afterEach(() => {
+    auth.session = true;
+    document.body.innerHTML = "";
+  });
+
+  it("a failed profile read with a session: still signed in, no flares", async () => {
+    auth.session = true;
+    const modal = (await renderModal({ endCardMode: "none" })) as Modal;
+    await modal.applyUserMe(false);
+    expect(modal.signedIn).toBe(true);
+    expect(modal.viewerFlares).toEqual([]);
+  });
+
+  it("no session: signed out", async () => {
+    auth.session = false;
+    const modal = (await renderModal({ endCardMode: "none" })) as Modal;
+    await modal.applyUserMe(false);
+    expect(modal.signedIn).toBe(false);
+  });
+
+  it("a profile: signed in, with its flares", async () => {
+    const modal = (await renderModal({ endCardMode: "none" })) as Modal;
+    await modal.applyUserMe({ player: { flares: ["taunt:salute"] } });
+    expect(modal.signedIn).toBe(true);
+    expect(modal.viewerFlares).toEqual(["taunt:salute"]);
+  });
+
+  it("an older answer landing late doesn't overwrite a newer one", async () => {
+    auth.session = false;
+    const modal = (await renderModal({ endCardMode: "none" })) as Modal;
+    // The failed read waits on its session check...
+    const first = modal.applyUserMe(false);
+    // ...while a fresh profile arrives and decides.
+    await modal.applyUserMe({ player: { flares: [] } });
+    await first;
+    expect(modal.signedIn).toBe(true);
   });
 });

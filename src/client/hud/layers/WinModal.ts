@@ -24,6 +24,7 @@ import {
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
 import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
+import { userAuth } from "../../Auth";
 import "../../components/CosmeticCard";
 import { saveTauntsMuted } from "../../CardLoadoutApi";
 import {
@@ -214,7 +215,7 @@ export class WinModal extends LitElement implements Controller {
   @state()
   private boughtHere: ReadonlySet<string> = new Set();
   private onUserMe = (e: Event) =>
-    this.applyUserMe((e as CustomEvent<UserMeResponse | false>).detail);
+    void this.applyUserMe((e as CustomEvent<UserMeResponse | false>).detail);
   private unsubscribeLooks: (() => void) | null = null;
   private userSettings = new UserSettings();
   private nemesisAbort: AbortController | null = null;
@@ -995,17 +996,34 @@ export class WinModal extends LitElement implements Controller {
 
   private async loadViewerFlares(): Promise<void> {
     try {
-      this.applyUserMe(await getUserMe());
+      await this.applyUserMe(await getUserMe());
     } catch {
-      this.applyUserMe(false);
+      await this.applyUserMe(false);
     }
   }
 
-  private applyUserMe(me: UserMeResponse | false | undefined): void {
+  // getUserMe answers false for a failed read (a 5xx, a network error, a
+  // body that fails the schema) as well as for no session, and keeps that
+  // false cached. So only the session decides "signed out", as
+  // checkInPlacePurchase does: a failed read leaves a signed-in player
+  // signed in with no flares known, and their Buy's tap check re-reads.
+  private async applyUserMe(
+    me: UserMeResponse | false | undefined,
+  ): Promise<void> {
     if (me === undefined) return;
-    this.signedIn = me !== false;
-    this.viewerFlares = me === false ? [] : (me.player.flares ?? []);
+    const call = ++this.userMeCall;
+    if (me !== false) {
+      this.signedIn = true;
+      this.viewerFlares = me.player.flares ?? [];
+      return;
+    }
+    const session = await userAuth(false);
+    // A newer answer landed meanwhile: it decides.
+    if (call !== this.userMeCall) return;
+    this.signedIn = session !== false;
+    this.viewerFlares = [];
   }
+  private userMeCall = 0;
 
   private async readTauntsMuted(): Promise<void> {
     if (this.tauntsMutedRead) return;
