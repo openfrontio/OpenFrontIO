@@ -133,7 +133,10 @@ export function rememberPendingPurchase(
   try {
     sessionStorage.setItem(
       PENDING_PURCHASE_KEY,
-      JSON.stringify({ player, key, at: now } satisfies PendingEquip),
+      JSON.stringify({ player, key, at: now } satisfies Omit<
+        PendingEquip,
+        "id"
+      >),
     );
   } catch {
     // Storage blocked: the Store then opens on the packs only.
