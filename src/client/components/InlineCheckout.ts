@@ -8,7 +8,11 @@ import type { PropertyValues, TemplateResult } from "lit";
 import { html, LitElement, render as litRender, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { getUserMe, invalidateUserMe } from "../Api";
-import { broadcastFreshUserMe, invalidateCosmetics } from "../Cosmetics";
+import {
+  broadcastFreshUserMe,
+  invalidateCosmetics,
+  resumePendingPurchase,
+} from "../Cosmetics";
 import { showInGameAlert } from "../InGameModal";
 import type { PurchaseRequest } from "../Payments";
 import {
@@ -384,6 +388,9 @@ export class InlineCheckout extends LitElement {
       // head start.
       await showInGameAlert(translateText(this.successMessageKey));
       invalidateUserMe();
+      // A top-up for an item from the end screen ("Get Plutonium"): point
+      // the page at that item first, so the reload opens the Store on it.
+      await resumePendingPurchase({ waitForProfile: false });
       window.location.reload();
       return;
     }
