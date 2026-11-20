@@ -100,6 +100,21 @@ describe("mountCardBackgroundPreview", () => {
     },
   );
 
+  test("the hover summary and panel keep the game's width in any layout", () => {
+    // Their host may be a flex item that would otherwise shrink them to the text.
+    for (const [size, width] of [
+      ["hover", "500px"],
+      ["panel", "368px"],
+    ] as const) {
+      const el = document.createElement("div");
+      document.body.append(el);
+      mountCardBackgroundPreview(el, { url: BLOB }, { size, animated: true });
+      const wrapper = el.querySelector<HTMLElement>("[data-card-preview]")!;
+      expect(wrapper.style.width).toBe(width);
+      expect(wrapper.style.maxWidth).toBe("100%");
+    }
+  });
+
   test("motion off: the large views are still too", () => {
     for (const size of ANIMATED) {
       const el = document.createElement("div");

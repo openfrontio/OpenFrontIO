@@ -78,9 +78,17 @@ const SIZES: Record<CardPreviewSize, SizeSpec> = {
   // LobbyPlayerView: the .player-tag's own background (StillCardBackdrop).
   lobbyTag: { card: "lobbyTag", animates: false, width: "" },
   // PlayerInfoOverlay: the 500 px summary row's background.
-  hover: { card: "hover", animates: false, width: "max-width:500px" },
+  hover: {
+    card: "hover",
+    animates: false,
+    width: "width:500px;max-width:100%",
+  },
   // PlayerPanel: <player-card size="panel"> in a max-w-100 panel, less padding.
-  panel: { card: "panel", animates: false, width: "max-width:368px" },
+  panel: {
+    card: "panel",
+    animates: false,
+    width: "width:368px;max-width:100%",
+  },
 };
 
 // A sample player, so the dark area under the name is real.
