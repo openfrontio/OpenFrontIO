@@ -257,7 +257,9 @@ export function lobbyCard({
           }
           ${
             lobby.boosted
-              ? html`<span class=${BOOSTED_PILL}
+              ? html`<span
+                  class=${BOOSTED_PILL}
+                  title=${translateText("public_lobby.boosted_tooltip")}
                   >${translateText("public_lobby.boosted")}</span
                 >`
               : nothing
