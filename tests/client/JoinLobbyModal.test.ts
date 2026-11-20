@@ -438,6 +438,20 @@ describe("JoinLobbyModal boost button", () => {
     document.body.innerHTML = "";
   });
 
+  it("shows the lobby's position in its queue", () => {
+    const container = document.createElement("div");
+    const m = boostableModal();
+    expect(m.queuePosition()).toBe(3);
+    render(m.renderQueuePosition() as never, container);
+    expect(container.querySelector("span")).not.toBeNull();
+
+    // Not listed yet: nothing to show.
+    m.publicQueues = { ffa: [queued("front")] };
+    expect(m.queuePosition()).toBeNull();
+    render(m.renderQueuePosition() as never, container);
+    expect(container.children).toHaveLength(0);
+  });
+
   it("offers the boost with its price in a waiting public lobby", () => {
     const button = renderBoost(boostableModal()).querySelector("button");
     expect(button?.textContent).toContain("3");

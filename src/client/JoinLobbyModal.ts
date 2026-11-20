@@ -177,7 +177,7 @@ export class JoinLobbyModal extends BaseModal {
           >${translateText("public_lobby.title")}</span
         >
         <div class="ml-auto flex items-center gap-2">
-          ${this.renderBoost()}${this.gameStartAlert.renderBell()}
+          ${this.renderQueuePosition()}${this.renderBoost()}${this.gameStartAlert.renderBell()}
         </div>`,
       onBack: () => this.closeAndLeave(),
       ariaLabel: translateText("common.close"),
@@ -219,6 +219,25 @@ export class JoinLobbyModal extends BaseModal {
         </button>
       </div>
     `;
+  }
+
+  // Where a scheduled public lobby stands in its queue, 1 being the one that
+  // starts next. Null when it isn't in a queue (or isn't listed yet).
+  private queuePosition(): number | null {
+    if (this.scheduledQueue === null || this.isConnecting) return null;
+    const index = (this.publicQueues[this.scheduledQueue] ?? []).findIndex(
+      (l) => l.gameID === this.currentLobbyId,
+    );
+    return index < 0 ? null : index + 1;
+  }
+
+  private renderQueuePosition() {
+    const position = this.queuePosition();
+    if (position === null) return nothing;
+    return html`<span
+      class="text-[10px] font-bold uppercase tracking-widest text-white/60 shrink-0 tabular-nums"
+      >${translateText("public_lobby.queue_position", { position })}</span
+    >`;
   }
 
   // Scheduled public lobbies still waiting in the queue: pay plutonium to

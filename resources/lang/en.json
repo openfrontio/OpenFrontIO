@@ -2659,6 +2659,7 @@
     "boost_unavailable": "This lobby can no longer be boosted.",
     "boosted": "Boosted",
     "boosted_by": "{name} boosted this lobby",
+    "queue_position": "#{position} in queue",
     "connecting": "Connecting to lobby...",
     "custom": "Custom",
     "custom_default_settings": "Standard settings",
