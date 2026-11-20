@@ -314,6 +314,9 @@ describe("editor commands", () => {
       e.runner.applyEditorCommand({ ...ADD_FRANCE, id: "SPAIN001" }),
     ).toThrow(/no player ids left/);
     expect(game.hasPlayer("SPAIN001")).toBe(false);
+    // A removed nation still has its id to come back under.
+    e.apply(ADD_FRANCE);
+    expect(game.player("FRANCE01").smallID()).toBe(0xfff);
   });
 
   test("remove_structure deletes the structure on the tile", async () => {
@@ -357,11 +360,41 @@ describe("editor commands", () => {
       expect.objectContaining({ id: "FRANCE01", isAlive: false }),
     ]);
     expect(france.isAlive()).toBe(false);
-    // Its player is left dead, so a view never sees the id reused.
-    expect(() => e.runner.applyEditorCommand(ADD_FRANCE)).toThrow(
-      /already exists/,
-    );
     expect(game.ticks()).toBe(0);
+  });
+
+  test("add_nation brings a removed nation back as its own player", async () => {
+    const e = await editor();
+    const game = e.runner.game;
+    e.apply(ADD_FRANCE);
+    const france = game.player("FRANCE01");
+    e.apply({
+      type: "set_nation",
+      id: "FRANCE01",
+      troops: 777,
+      gold: 888,
+      playable: true,
+    });
+    e.apply({ type: "set_owner", tiles: e.land, owner: "FRANCE01" });
+    e.apply({ type: "remove_nation", id: "FRANCE01" });
+
+    const gu = e.apply({ ...ADD_FRANCE, name: "Gaul" });
+    // The same player and small id, so a view sees it return.
+    expect(game.player("FRANCE01")).toBe(france);
+    expect(game.allPlayers()).toEqual([france]);
+    expect(game.nations().map((n) => n.playerInfo.name)).toEqual(["Gaul"]);
+    expect(playerUpdates(gu)).toEqual([
+      expect.objectContaining({ id: "FRANCE01", name: "Gaul" }),
+    ]);
+    // It starts as a new nation would: no land, and the author's troops,
+    // gold and playable gone.
+    expect(france.numTilesOwned()).toBe(0);
+    expect(france.playable()).toBe(false);
+    const fresh = await editor();
+    fresh.apply(ADD_FRANCE);
+    const added = fresh.runner.game.player("FRANCE01");
+    expect(france.troops()).toBe(added.troops());
+    expect(france.gold()).toBe(added.gold());
   });
 
   describe("rejects bad commands and changes nothing", () => {

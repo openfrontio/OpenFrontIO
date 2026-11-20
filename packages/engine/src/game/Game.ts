@@ -659,6 +659,7 @@ export interface Game extends GameLike {
   // Scenario editor (docs/ScenarioEditor.md)
   addNation(info: PlayerInfo): Player;
   removeNation(nation: Player): void;
+  restoreNation(info: PlayerInfo): void;
   setNationInfo(nation: Player, info: PlayerInfo): void;
   /**
    * Writes the authored terrain of the tiles and repairs the terrain around

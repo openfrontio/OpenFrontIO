@@ -980,6 +980,23 @@ export class GameImpl implements Game {
     );
   }
 
+  /**
+   * Scenario editor: brings back a nation removeNation removed, under its
+   * id and small id, as a new nation would start.
+   */
+  restoreNation(info: PlayerInfo): void {
+    const nation = this._playersBySmallID.find((p) => p.id() === info.id);
+    if (!(nation instanceof PlayerImpl) || this._players.has(info.id)) {
+      throw new Error(`no removed nation ${info.id}`);
+    }
+    nation.setPlayerInfo(info);
+    nation.setTroops(this.config().startManpower(info));
+    nation.setGold(this.config().startingGold(info));
+    nation.setPlayable(false);
+    this._players.set(info.id, nation);
+    this._nations.push(new Nation(undefined, info));
+  }
+
   /** Scenario editor: renames a nation or changes its flag. */
   setNationInfo(nation: Player, info: PlayerInfo): void {
     nation.setPlayerInfo(info);
