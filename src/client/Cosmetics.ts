@@ -54,9 +54,12 @@ import {
   startPlayPurchase,
   startPurchase,
 } from "./Payments";
+import { currentPrice } from "./SalePrice";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
 import { UserSettings } from "./UserSettings";
 import { translateText } from "./Utils";
+
+export { currentPrice, saleHasEnded } from "./SalePrice";
 
 /**
  * Ceiling on the cosmetics catalog request. Matches the bound the auth calls
@@ -918,39 +921,6 @@ function simpleHash(str: string): string {
     hash = hash & hash;
   }
   return hash.toString(36);
-}
-
-/**
- * An item's price in one currency as the store shows and the server charges
- * it now. While the item's own sale runs that is the catalog price (the sale
- * price); once the sale's endsAt has passed it is the list price, even if the
- * catalog in hand predates the end. The store's buttons and the purchase
- * balance check both read this, so they never disagree.
- */
-export function currentPrice(
-  item: {
-    priceHard?: number;
-    priceSoft?: number;
-    listPriceHard?: number;
-    listPriceSoft?: number;
-    promotion?: { endsAt: string };
-  },
-  currency: "hard" | "soft",
-): number | undefined {
-  const price = currency === "hard" ? item.priceHard : item.priceSoft;
-  const listPrice =
-    currency === "hard" ? item.listPriceHard : item.listPriceSoft;
-  return saleHasEnded(item) ? (listPrice ?? price) : price;
-}
-
-/** Whether the item's own sale has ended (its endsAt has passed). */
-export function saleHasEnded(item: {
-  promotion?: { endsAt: string };
-}): boolean {
-  return (
-    item.promotion !== undefined &&
-    new Date(item.promotion.endsAt).getTime() <= Date.now()
-  );
 }
 
 /**

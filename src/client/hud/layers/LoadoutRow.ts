@@ -9,6 +9,7 @@ import {
   type CardItem,
   type CardItemType,
   cardItemName,
+  cardPrices,
 } from "../../components/card/CardItems";
 import {
   CARD_TAUNTS_ENABLED,
@@ -30,8 +31,11 @@ export interface LoadoutItem {
   type: CardItemType;
   item: CardItem;
   state: "buy" | "earned";
+  // As charged now: the list price once the item's own sale has ended.
   priceHard?: number;
   priceSoft?: number;
+  listPriceHard?: number;
+  listPriceSoft?: number;
   unlockLabel?: string;
 }
 
@@ -44,10 +48,21 @@ function toItem(type: CardItemType, item: CardItem): LoadoutItem | null {
   if (unlock !== undefined) {
     return { type, item, state: "earned", unlockLabel: unlock.label };
   }
-  const priceHard = (item.priceHard ?? 0) > 0 ? item.priceHard : undefined;
-  const priceSoft = (item.priceSoft ?? 0) > 0 ? item.priceSoft : undefined;
+  const prices = cardPrices(item);
+  const priceHard =
+    (prices.priceHard ?? 0) > 0 ? (prices.priceHard ?? undefined) : undefined;
+  const priceSoft =
+    (prices.priceSoft ?? 0) > 0 ? (prices.priceSoft ?? undefined) : undefined;
   if (priceHard === undefined && priceSoft === undefined) return null;
-  return { type, item, state: "buy", priceHard, priceSoft };
+  return {
+    type,
+    item,
+    state: "buy",
+    priceHard,
+    priceSoft,
+    listPriceHard: prices.listPriceHard ?? undefined,
+    listPriceSoft: prices.listPriceSoft ?? undefined,
+  };
 }
 
 /**
@@ -208,6 +223,8 @@ export class LoadoutRow extends LitElement {
           ? html`<purchase-button
               .priceHard=${entry.priceHard ?? null}
               .priceSoft=${entry.priceSoft ?? null}
+              .listPriceHard=${entry.listPriceHard ?? null}
+              .listPriceSoft=${entry.listPriceSoft ?? null}
               .rarity=${String(entry.item.rarity)}
               .itemName=${cardItemName(entry.type, entry.item)}
               .onPurchaseHard=${() => this.buy(entry, "hard")}

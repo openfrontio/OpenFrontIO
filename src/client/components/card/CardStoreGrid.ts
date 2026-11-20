@@ -6,7 +6,12 @@ import { purchaseCosmetic, type ResolvedCosmetic } from "../../Cosmetics";
 import { translateText } from "../../Utils";
 import "../CosmeticCard";
 import "../PurchaseButton";
-import { type CardItem, type CardItemType, cardItemName } from "./CardItems";
+import {
+  type CardItem,
+  type CardItemType,
+  cardItemName,
+  cardPrices,
+} from "./CardItems";
 import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";
 import "./PlayerCard";
 import { buildPlayerCardView } from "./PlayerCardModel";
@@ -124,6 +129,7 @@ export class CardStoreGrid extends LitElement {
     return html`<div class="flex flex-wrap justify-center gap-3 p-3">
       ${items.map(({ type, item }) => {
         const key = `${type}:${item.name}`;
+        const prices = cardPrices(item);
         return html`<div
           data-card-store-item=${key}
           data-cosmetic-shell
@@ -145,10 +151,10 @@ export class CardStoreGrid extends LitElement {
                   >${translateText("my_card.owned")}</span
                 >`
               : html`<purchase-button
-                  .priceHard=${item.priceHard ?? null}
-                  .priceSoft=${item.priceSoft ?? null}
-                  .listPriceHard=${item.listPriceHard ?? null}
-                  .listPriceSoft=${item.listPriceSoft ?? null}
+                  .priceHard=${prices.priceHard}
+                  .priceSoft=${prices.priceSoft}
+                  .listPriceHard=${prices.listPriceHard}
+                  .listPriceSoft=${prices.listPriceSoft}
                   .rarity=${String(item.rarity)}
                   .itemName=${cardItemName(type, item)}
                   .onPurchaseHard=${() => this.buy(type, item, "hard")}

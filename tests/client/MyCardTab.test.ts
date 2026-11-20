@@ -103,6 +103,27 @@ const SAVED = {
   ],
 };
 
+// A card item whose sale has ended, though the catalogue in hand still holds
+// the sale price.
+const ENDED = new Date(Date.now() - 60_000).toISOString();
+const onSale = (name: string, endsAt: string) => ({
+  product: null,
+  rarity: "epic",
+  name,
+  url: `/${name}.webp`,
+  priceHard: 400,
+  listPriceHard: 600,
+  priceSoft: 4000,
+  listPriceSoft: 6000,
+  promotion: { id: "s1", name: "Sale", percentOff: 33, endsAt },
+});
+type PriceProps = {
+  priceHard: number | null;
+  priceSoft: number | null;
+  listPriceHard: number | null;
+  listPriceSoft: number | null;
+};
+
 describe("<my-card-tab>", () => {
   let tab: MyCardTab;
   beforeEach(() => {
@@ -217,6 +238,26 @@ describe("<my-card-tab>", () => {
     expect(red.dataset.state).toBe("locked");
     expect(red.textContent).toContain("Season 1 · free tier 20");
     expect(red.querySelector("purchase-button")).toBeNull();
+  });
+
+  it("a sale that has ended shows the list price, not struck through", async () => {
+    tab = document.createElement("my-card-tab") as unknown as MyCardTab;
+    tab.userMe = userMe(OWNER, SAVED);
+    tab.cosmetics = {
+      ...COSMETICS,
+      cardBackgrounds: { bg_ended: onSale("bg_ended", ENDED) },
+    } as unknown as Cosmetics;
+    document.body.appendChild(tab as unknown as Node);
+    await tab.updateComplete;
+    const button = tile("cardBackground:bg_ended").querySelector(
+      "purchase-button",
+    ) as unknown as PriceProps;
+    expect(button).toMatchObject({
+      priceHard: 600,
+      priceSoft: 6000,
+      listPriceHard: null,
+      listPriceSoft: null,
+    });
   });
 
   it("a paid item shows its price", async () => {

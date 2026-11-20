@@ -101,6 +101,22 @@ const VOLT: PlayerCardView = buildPlayerCardView(
   COSMETICS,
 );
 
+// A card item whose sale has ended, though the catalogue in hand still holds
+// the sale price, and one whose sale is still running.
+const ENDED = new Date(Date.now() - 60_000).toISOString();
+const RUNNING = new Date(Date.now() + 3_600_000).toISOString();
+const onSale = (name: string, endsAt: string) => ({
+  product: null,
+  rarity: "epic",
+  name,
+  url: `/${name}.webp`,
+  priceHard: 400,
+  listPriceHard: 600,
+  priceSoft: 4000,
+  listPriceSoft: 6000,
+  promotion: { id: "s1", name: "Sale", percentOff: 33, endsAt },
+});
+
 describe("loadoutItems", () => {
   it("titles held back: the killer's title is never offered", () => {
     heldBack.titles = false;
@@ -155,6 +171,48 @@ describe("loadoutItems", () => {
     });
     const taunt = items.find((i) => i.type === "taunt")!;
     expect(taunt).toMatchObject({ state: "buy", priceSoft: 800 });
+  });
+
+  it("a sale that has ended offers the list price", () => {
+    const cosmetics = {
+      ...COSMETICS,
+      cardBackgrounds: { bg_ended: onSale("bg_ended", ENDED) },
+    } as unknown as Cosmetics;
+    const view = buildPlayerCardView(
+      {
+        username: "Volt",
+        clanTag: null,
+        badge: null,
+        card: { background: "bg_ended", trackers: [] },
+      },
+      cosmetics,
+    );
+    const [bg] = loadoutItems(view, cosmetics, ["playerCard:standard"]);
+    expect(bg).toMatchObject({
+      type: "cardBackground",
+      priceHard: 600,
+      priceSoft: 6000,
+    });
+    expect(bg.listPriceHard).toBeUndefined();
+
+    const running = {
+      ...COSMETICS,
+      cardBackgrounds: { bg_running: onSale("bg_running", RUNNING) },
+    } as unknown as Cosmetics;
+    const [live] = loadoutItems(
+      buildPlayerCardView(
+        {
+          username: "Volt",
+          clanTag: null,
+          badge: null,
+          card: { background: "bg_running", trackers: [] },
+        },
+        running,
+      ),
+      running,
+      ["playerCard:standard"],
+    );
+    expect(live).toMatchObject({ priceHard: 400, listPriceHard: 600 });
   });
 
   it("caps-only item shows a caps price", () => {

@@ -70,6 +70,28 @@ const COSMETICS = {
   },
 } as unknown as Cosmetics;
 
+// A card item whose sale has ended, though the catalogue in hand still holds
+// the sale price, and one whose sale is still running.
+const ENDED = new Date(Date.now() - 60_000).toISOString();
+const RUNNING = new Date(Date.now() + 3_600_000).toISOString();
+const onSale = (name: string, endsAt: string) => ({
+  product: null,
+  rarity: "epic",
+  name,
+  url: `/${name}.webp`,
+  priceHard: 400,
+  listPriceHard: 600,
+  priceSoft: 4000,
+  listPriceSoft: 6000,
+  promotion: { id: "s1", name: "Sale", percentOff: 33, endsAt },
+});
+type PriceProps = {
+  priceHard: number | null;
+  priceSoft: number | null;
+  listPriceHard: number | null;
+  listPriceSoft: number | null;
+};
+
 describe("<card-store-grid>", () => {
   let grid: CardStoreGrid;
   afterEach(() => grid?.remove());
@@ -149,6 +171,37 @@ describe("<card-store-grid>", () => {
     )!;
     expect(salute.querySelector("purchase-button")).toBeNull();
     expect(salute.textContent).toContain("my_card.owned");
+  });
+
+  it("a sale that has ended shows the list price, not struck through", async () => {
+    grid = document.createElement(
+      "card-store-grid",
+    ) as unknown as CardStoreGrid;
+    grid.cosmetics = {
+      ...COSMETICS,
+      cardBackgrounds: {
+        bg_ended: onSale("bg_ended", ENDED),
+        bg_running: onSale("bg_running", RUNNING),
+      },
+    } as unknown as Cosmetics;
+    document.body.appendChild(grid as unknown as Node);
+    await grid.updateComplete;
+    const button = (key: string) =>
+      (grid as unknown as Element).querySelector(
+        `[data-card-store-item='${key}'] purchase-button`,
+      ) as unknown as PriceProps;
+    expect(button("cardBackground:bg_ended")).toMatchObject({
+      priceHard: 600,
+      priceSoft: 6000,
+      listPriceHard: null,
+      listPriceSoft: null,
+    });
+    expect(button("cardBackground:bg_running")).toMatchObject({
+      priceHard: 400,
+      priceSoft: 4000,
+      listPriceHard: 600,
+      listPriceSoft: 6000,
+    });
   });
 
   it("impressions tracked on the card sub-tab", async () => {

@@ -19,7 +19,12 @@ import {
 import { translateText } from "../../Utils";
 import "../CosmeticCard";
 import "../PurchaseButton";
-import { type CardItem, type CardItemType, cardItemName } from "./CardItems";
+import {
+  type CardItem,
+  type CardItemType,
+  cardItemName,
+  cardPrices,
+} from "./CardItems";
 import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";
 import "./PlayerCard";
 import { buildPlayerCardView } from "./PlayerCardModel";
@@ -195,11 +200,12 @@ export class MyCardTab extends LitElement {
 
   private renderPrice(type: CardItemType, item: CardItem): TemplateResult {
     const r = this.resolved(type, item);
+    const prices = cardPrices(item);
     return html`<purchase-button
-      .priceHard=${item.priceHard ?? null}
-      .priceSoft=${item.priceSoft ?? null}
-      .listPriceHard=${item.listPriceHard ?? null}
-      .listPriceSoft=${item.listPriceSoft ?? null}
+      .priceHard=${prices.priceHard}
+      .priceSoft=${prices.priceSoft}
+      .listPriceHard=${prices.listPriceHard}
+      .listPriceSoft=${prices.listPriceSoft}
       .rarity=${String(item.rarity)}
       .itemName=${cardItemName(type, item)}
       .onPurchaseHard=${() => purchaseCosmetic(r, "hard")}
