@@ -195,7 +195,9 @@ export function replayByItem(
       const at = rows.indexOf(x);
       const y = now[i];
       if (isNew(y) && at !== -1) {
-        rows[at] = y;
+        // The kept card may already have it elsewhere (the failed save had
+        // taken it off): then it just stays there, never twice.
+        rows[at] = rows.includes(y) ? null : y;
       } else {
         if (at !== -1) rows[at] = null;
         if (isNew(y)) adds.push(y);

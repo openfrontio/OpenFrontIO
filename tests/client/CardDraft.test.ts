@@ -411,6 +411,68 @@ describe("CardEditor", () => {
     ]);
   });
 
+  /** Owns every tracker and both backgrounds. */
+  const ALL = [
+    ...["wins", "nukes_launched", "best_elo", "games_played"].map(
+      (s) => `cardTracker:${s}`,
+    ),
+    "cardBackground:bg_pacific",
+    "cardBackground:bg_storm",
+  ];
+  /** Saves with the PUT held, then a close with no guard; returns the
+   * failure. */
+  function holdSaveDrop(editor: CardEditor) {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const saving = editor.save();
+    editor.settle();
+    return async () => {
+      finish({ ok: false, error: "failed" });
+      await saving;
+    };
+  }
+
+  it("a failed save after a drop never replays an edit into a duplicate", async () => {
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL));
+    editor.pick({ kind: "tracker", index: 1 }, "games_played");
+    const fail = holdSaveDrop(editor);
+    // Reopened: nukes into row 1 in place of wins (nukes isn't on the
+    // draft, so no swap).
+    editor.pick({ kind: "tracker", index: 0 }, "nukes_launched");
+    await fail();
+    expect(editor.draft.rows.tracker).toEqual([
+      null,
+      "nukes_launched",
+      "best_elo",
+    ]);
+  });
+
+  it("a background the failed save sent doesn't survive a drop and an edit", async () => {
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const fail = holdSaveDrop(editor);
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    await fail();
+    expect(editor.draft.background).toBe("bg_pacific");
+    expect(editor.changes()).toEqual([
+      { slot: { kind: "tracker", index: 0 }, from: "wins", to: "games_played" },
+    ]);
+  });
+
+  it("a background picked after the drop sticks when the save fails", async () => {
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ALL));
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    const fail = holdSaveDrop(editor);
+    editor.pick({ kind: "background" }, "bg_storm");
+    await fail();
+    expect(editor.changes()).toEqual([
+      { slot: { kind: "background" }, from: "bg_pacific", to: "bg_storm" },
+    ]);
+  });
+
   it("closing mid-save that then fails leaves no Retry behind", async () => {
     let finish!: (v: unknown) => void;
     api.save.mockReturnValue(new Promise((r) => (finish = r)));
