@@ -113,10 +113,15 @@ export function initNavigation() {
       const visibleModal = document.querySelector(
         ".page-content:not(.hidden)",
       ) as any;
-      // Its own nav item (the page already shown) changes nothing: no prompt.
+      // Its own nav item (the page already shown) changes nothing: no prompt,
+      // and no close and reopen either (closing the Inventory drops its
+      // unsaved card draft).
+      if (visibleModal?.id === pageId) {
+        closeMobileSidebar();
+        return;
+      }
       if (
         visibleModal &&
-        visibleModal.id !== pageId &&
         typeof visibleModal.isOpen === "function" &&
         visibleModal.isOpen() &&
         typeof visibleModal.confirmBeforeClose === "function" &&
