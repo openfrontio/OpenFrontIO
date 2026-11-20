@@ -102,6 +102,12 @@ describe("resuming after the top-up", () => {
     );
   });
 
+  it("in-page (the profile already known): no waiting", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    rememberPendingPurchase("p1", "cardBackground:bg_x");
+    expect(await resumePendingPurchase({ waitForProfile: false })).toBe(false);
+  });
+
   it("does nothing signed out", async () => {
     vi.useFakeTimers();
     vi.mocked(getUserMe).mockResolvedValue(false);

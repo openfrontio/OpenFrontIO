@@ -242,9 +242,12 @@ export function handlePurchaseReturn(
  * buy. True when it did. The record (PendingEquip.ts) is this player's and
  * fresh, or it is dropped; it is dropped too once the item is owned.
  */
-export async function resumePendingPurchase(): Promise<boolean> {
+export async function resumePendingPurchase({
+  waitForProfile = true,
+}: { waitForProfile?: boolean } = {}): Promise<boolean> {
   const me = await getUserMe();
   if (me !== false) return resumePendingPurchaseFor(me);
+  if (!waitForProfile) return false;
   // On a fresh landing this runs before the page has signed in, so there is
   // no profile yet: try once more on the app's first profile broadcast.
   return new Promise<boolean>((resolve) => {
@@ -810,7 +813,8 @@ export async function purchaseCosmetic(
       if (message !== null) await showInGameAlert(message);
       // A top-up for an item from the end screen: open the Store on it.
       if (isPack && outcome.outcome === "completed") {
-        await resumePendingPurchase();
+        // In page: the profile is as known as it will be.
+        await resumePendingPurchase({ waitForProfile: false });
       }
       return;
     }
