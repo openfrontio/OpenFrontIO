@@ -83,6 +83,45 @@ export declare function loadCosmeticPreview(
 export declare const PREVIEW_ASSET_PATHS: readonly string[];
 `,
   );
+  // The DOM-free entry: its types come from index.d.ts.
+  fs.writeFileSync(
+    path.join(outDir, "checks.d.ts"),
+    `import type { CardBackgroundFiles, CardEffect, CardIssue } from "./index.js";
+
+export declare const CARD_ART_WIDTH: 2800;
+export declare const CARD_ART_HEIGHT: 400;
+export declare const MAX_SET_BYTES: number;
+export declare const MAX_LAYERS: 3;
+
+/** A layer animation as the game's schema accepts it. */
+export interface CardLayerAnimation {
+  kind: "layers";
+  layers: {
+    src: string;
+    effect: CardEffect;
+    period?: number;
+    strength?: number;
+    min?: number;
+    max?: number;
+    angle?: number;
+    rate?: "low" | "medium" | "high";
+  }[];
+}
+
+export type CardAnimationResult =
+  | { ok: true; animation: CardLayerAnimation }
+  | { ok: false; error: string };
+
+/** Parse a layer animation with the game's own schema. */
+export declare function parseCardAnimation(input: unknown): CardAnimationResult;
+
+/** The artist guide's checks: errors first, then warnings. Pure. */
+export declare function checkCardBackground(
+  files: CardBackgroundFiles,
+  animation: unknown,
+): CardIssue[];
+`,
+  );
 }
 
 /** Write package metadata with the supplied version and commit, and copy licenses. */
@@ -97,6 +136,7 @@ function writePackageJson(version: string, commit: string): void {
     sideEffects: ["*.css"],
     exports: {
       ".": { types: "./index.d.ts", import: "./index.js" },
+      "./checks": { types: "./checks.d.ts", import: "./checks.js" },
       "./style.css": "./style.css",
       "./assets/*": "./assets/*",
     },

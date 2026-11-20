@@ -37,9 +37,17 @@ export default defineConfig({
     copyPublicDir: false,
     sourcemap: false,
     lib: {
-      entry: path.resolve(__dirname, "src/client/cosmetic-preview/index.ts"),
+      // index: the previews (needs a document). checks: the card
+      // background schema and checks alone, for a host's server.
+      entry: {
+        index: path.resolve(__dirname, "src/client/cosmetic-preview/index.ts"),
+        checks: path.resolve(
+          __dirname,
+          "src/client/cosmetic-preview/checks.ts",
+        ),
+      },
       formats: ["es"],
-      fileName: "index",
+      fileName: (_format, name) => `${name}.js`,
       cssFileName: "style",
     },
   },
