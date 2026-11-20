@@ -17,7 +17,7 @@ import {
 import { translateText } from "../Utils";
 import { runningSales, visibleBannerSales } from "./SaleBanner";
 
-// The sale banner setting, and the sign-in it depends on: re-render on either.
+// Re-render when the sale banner setting changes.
 const SALE_BANNER_SETTING_EVENT = `${USER_SETTINGS_CHANGED_EVENT}:${HIDE_SALE_BANNERS_KEY}`;
 
 export type { NewsItem };
@@ -93,7 +93,6 @@ export class NewsBox extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     globalThis.addEventListener(SALE_BANNER_SETTING_EVENT, this.rerender);
-    document.addEventListener("userMeResponse", this.rerender);
     void this.loadNews();
     void this.loadSales();
   }
@@ -205,7 +204,6 @@ export class NewsBox extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     globalThis.removeEventListener(SALE_BANNER_SETTING_EVENT, this.rerender);
-    document.removeEventListener("userMeResponse", this.rerender);
     this.stopCycle();
     this.clearSaleTimer();
   }

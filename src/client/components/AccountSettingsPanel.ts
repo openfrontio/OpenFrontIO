@@ -221,10 +221,11 @@ export class AccountSettingsPanel extends LitElement {
     `;
   }
 
-  // Store: Steam-only players can turn the sale banners (sales and flash
-  // deals) off, on the home screen and in the store. On = shown, like the Privacy rows.
+  // Store: in the Steam app only, players can turn the sale banners (sales and
+  // flash deals) off, on the home screen and in the store. On = shown, like
+  // the Privacy rows. Not offered anywhere else, where banners always show.
   private renderStoreCard(): TemplateResult | typeof nothing {
-    if (!this.isSteamPrimary()) return nothing;
+    if (!isSteamShell()) return nothing;
     return html`
       <div
         class="bg-white/5 rounded-xl border border-white/10 p-6"
@@ -238,7 +239,7 @@ export class AccountSettingsPanel extends LitElement {
         ${this.renderPrivacySwitchRow(
           translateText("account_modal.sale_banners_title"),
           translateText("account_modal.sale_banners_desc"),
-          // Saved on this device, per player (UserSettings), not on the account.
+          // Saved on this device (UserSettings), not on the account.
           !new UserSettings().hideSaleBanners(),
           false,
           (shown) => this.setSaleBannersShown(shown),

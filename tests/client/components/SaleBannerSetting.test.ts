@@ -33,14 +33,7 @@ vi.mock("../../../src/client/Auth", () => ({
   sendMagicLink: vi.fn(async () => true),
 }));
 
-const STEAM_ONLY: UserMeUser = {
-  steam: { steamId: "1", personaName: "P", avatarUrl: null },
-};
-const STEAM_AND_DISCORD = {
-  ...STEAM_ONLY,
-  discord: { id: "2", username: "d", global_name: null, avatar: null },
-} as UserMeUser;
-const DISCORD_ONLY = {
+const DISCORD_USER = {
   discord: { id: "2", username: "d", global_name: null, avatar: null },
 } as UserMeUser;
 
@@ -57,46 +50,38 @@ function sale(id: string, kind: "flash" | "sale"): Promotion {
 const FLASH = sale("flash-1", "flash");
 const STORE_WIDE = sale("sale-1", "sale");
 
-function signIn(user: UserMeUser): void {
-  document.dispatchEvent(
-    new CustomEvent("userMeResponse", {
-      detail: { user, player: { publicId: "p1" } } as UserMeResponse,
-    }),
-  );
+// The Steam app's preload exposes `openfrontDesktop.steam`; the web, Android
+// and portals don't (DesktopShell.isSteamShell).
+function inSteamApp(on: boolean): void {
+  (window as { openfrontDesktop?: unknown }).openfrontDesktop = on
+    ? { steam: {} }
+    : undefined;
 }
 
 beforeEach(() => {
   localStorage.clear();
   new UserSettings().removeCached("settings.hideSaleBanners");
+  inSteamApp(false);
+});
+
+afterEach(() => {
+  inSteamApp(false);
 });
 
 describe("bannerSales", () => {
-  it("drops every sale, flash or not, for a Steam-only player who turned them off", () => {
-    expect(bannerSales([STORE_WIDE, FLASH], STEAM_ONLY, true)).toEqual([]);
-    expect(bannerSales([STORE_WIDE], STEAM_ONLY, true)).toEqual([]);
-    expect(bannerSales([FLASH], STEAM_ONLY, true)).toEqual([]);
+  it("drops every sale, flash or not, in the Steam app with banners off", () => {
+    expect(bannerSales([STORE_WIDE, FLASH], true, true)).toEqual([]);
   });
 
-  it("keeps every sale while the setting is off", () => {
-    expect(bannerSales([STORE_WIDE, FLASH], STEAM_ONLY, false)).toEqual([
+  it("keeps every sale in the Steam app while banners are on", () => {
+    expect(bannerSales([STORE_WIDE, FLASH], true, false)).toEqual([
       STORE_WIDE,
       FLASH,
     ]);
   });
 
-  it("ignores the setting once another account is linked", () => {
-    expect(bannerSales([STORE_WIDE, FLASH], STEAM_AND_DISCORD, true)).toEqual([
-      STORE_WIDE,
-      FLASH,
-    ]);
-    expect(bannerSales([STORE_WIDE, FLASH], DISCORD_ONLY, true)).toEqual([
-      STORE_WIDE,
-      FLASH,
-    ]);
-  });
-
-  it("ignores the setting when signed out", () => {
-    expect(bannerSales([STORE_WIDE, FLASH], undefined, true)).toEqual([
+  it("ignores the setting outside the Steam app", () => {
+    expect(bannerSales([STORE_WIDE, FLASH], false, true)).toEqual([
       STORE_WIDE,
       FLASH,
     ]);
@@ -104,14 +89,22 @@ describe("bannerSales", () => {
 });
 
 describe("visibleBannerSales", () => {
-  it("reads the signed-in player and their saved setting", () => {
-    signIn(STEAM_ONLY);
+  it("hides the banners in the Steam app once they're turned off", () => {
+    inSteamApp(true);
     expect(visibleBannerSales([STORE_WIDE, FLASH])).toEqual([
       STORE_WIDE,
       FLASH,
     ]);
     new UserSettings().setHideSaleBanners(true);
     expect(visibleBannerSales([STORE_WIDE, FLASH])).toEqual([]);
+  });
+
+  it("shows them outside the Steam app even with the setting saved", () => {
+    new UserSettings().setHideSaleBanners(true);
+    expect(visibleBannerSales([STORE_WIDE, FLASH])).toEqual([
+      STORE_WIDE,
+      FLASH,
+    ]);
   });
 });
 
@@ -125,6 +118,7 @@ describe("AccountSettingsPanel — store card", () => {
     panel = document.createElement(
       "account-settings-panel",
     ) as AccountSettingsPanel;
+    panel.user = DISCORD_USER;
     document.body.appendChild(panel);
     await panel.updateComplete;
   });
@@ -133,8 +127,8 @@ describe("AccountSettingsPanel — store card", () => {
     document.body.removeChild(panel);
   });
 
-  async function setUser(user: UserMeUser): Promise<void> {
-    panel.user = user;
+  async function rerender(): Promise<void> {
+    panel.requestUpdate();
     await panel.updateComplete;
   }
 
@@ -144,21 +138,21 @@ describe("AccountSettingsPanel — store card", () => {
     ) as HTMLButtonElement | null;
   }
 
-  it("shows the sale banners switch, on by default, to a Steam-only player", async () => {
-    await setUser(STEAM_ONLY);
+  it("shows the sale banners switch, on by default, in the Steam app", async () => {
+    inSteamApp(true);
+    await rerender();
     expect(panel.textContent).toContain("account_modal.sale_banners_title");
     expect(bannerSwitch()?.getAttribute("aria-checked")).toBe("true");
   });
 
-  it("isn't offered to anyone else", async () => {
-    await setUser(STEAM_AND_DISCORD);
-    expect(panel.querySelector("[data-store-settings]")).toBeNull();
-    await setUser(DISCORD_ONLY);
+  it("doesn't exist outside the Steam app", async () => {
+    await rerender();
     expect(panel.querySelector("[data-store-settings]")).toBeNull();
   });
 
   it("turning it off saves the setting, and on again clears it", async () => {
-    await setUser(STEAM_ONLY);
+    inSteamApp(true);
+    await rerender();
     bannerSwitch()!.click();
     await panel.updateComplete;
     expect(new UserSettings().hideSaleBanners()).toBe(true);
@@ -171,8 +165,9 @@ describe("AccountSettingsPanel — store card", () => {
   });
 
   it("shows a saved choice as off", async () => {
+    inSteamApp(true);
     new UserSettings().setHideSaleBanners(true);
-    await setUser(STEAM_ONLY);
+    await rerender();
     expect(bannerSwitch()?.getAttribute("aria-checked")).toBe("false");
   });
 });
