@@ -4,7 +4,11 @@
  * changes nothing.
  */
 
-import type { EditorCommand } from "@openfront/engine-api/EditorCommands";
+import {
+  authoredTerrain,
+  type EditorCommand,
+  SetTerrainCommandSchema,
+} from "@openfront/engine-api/EditorCommands";
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   CustomGameMap,
@@ -525,5 +529,29 @@ describe("editor commands", () => {
         /has no structure/,
       );
     });
+  });
+});
+
+describe("authoredTerrain", () => {
+  test("keeps the land bit and elevation, and drops what is derived", () => {
+    // Water, ocean, and water with a shoreline and depth.
+    expect(authoredTerrain(0x00)).toBe(0);
+    expect(authoredTerrain(0x20)).toBe(0);
+    expect(authoredTerrain(0x45)).toBe(0);
+    // Land at elevation 7, inland and on a shore.
+    expect(authoredTerrain(0x87)).toBe(0x87);
+    expect(authoredTerrain(0xc7)).toBe(0x87);
+    // Impassable, inland and on a shore.
+    expect(authoredTerrain(0x9f)).toBe(0x9f);
+    expect(authoredTerrain(0xdf)).toBe(0x9f);
+  });
+
+  test("gives a value set_terrain takes for every byte", () => {
+    const terrain = Array.from({ length: 256 }, (_, b) => authoredTerrain(b));
+    const tiles = terrain.map((_, i) => i);
+    expect(
+      SetTerrainCommandSchema.safeParse({ type: "set_terrain", tiles, terrain })
+        .success,
+    ).toBe(true);
   });
 });

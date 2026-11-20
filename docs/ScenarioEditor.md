@@ -1,7 +1,8 @@
 # Scenario editor
 
-Status: design, 2026-11-18. The engine's editor mode and the document model
-(with undo and local drafts) are built. The editor UI is not.
+Status: design, 2026-11-19. The engine's editor mode, the document model
+(with undo and local drafts) and the editor page are built. The tools, PNG
+import and test play are not.
 
 ## What it is
 
@@ -159,6 +160,11 @@ UI, the document, and the editing engine's worker. It follows the
 itself and borrows HUD layers by setting their properties, calling `init()`
 and calling `tick()` by hand.
 
+Until the menu entry exists it is opened by URL: `#scenario-editor` shows
+its start screen (the local drafts, a new blank scenario, or one started
+from a stock map), and `#scenario-editor=<draftID>` opens a draft. Main
+loads the element with `import()`.
+
 ### One engine, never ticking
 
 Opening a scenario builds an engine from the document:
@@ -265,7 +271,14 @@ Two rules:
   is updated to match.
 
 Starting from a stock map loads that map's files instead of a blank one and
-copies its authored bytes into the document.
+copies its authored bytes into the document (`stockMapStart`). The files
+are relabelled as a `Custom` map with no nations, so the engine
+starts on them as it would on a blank map. Only the terrain is taken. A
+draft started this way reopens like any other, from a blank map.
+
+The start screen lists the stock maps and reads the picked one's manifest
+for its size; a map over the limits below is shown as too large and cannot
+be started from.
 
 PNG import is editor code and is small: decode the image, apply the
 generator's pixel rules (blue channel for elevation, black for impassable,

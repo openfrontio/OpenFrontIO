@@ -28,6 +28,19 @@ export const SCENARIO_FORMAT = 1;
 export const MIN_SIDE = 100;
 export const MAX_AREA = 3_000_000;
 
+/** Whether a scenario's map can be this size. */
+export function isScenarioSize(width: number, height: number): boolean {
+  return (
+    Number.isInteger(width) &&
+    Number.isInteger(height) &&
+    width >= MIN_SIDE &&
+    height >= MIN_SIDE &&
+    width % 4 === 0 &&
+    height % 4 === 0 &&
+    width * height <= MAX_AREA
+  );
+}
+
 // GameConfig's limit on the number of nations.
 export const MAX_NATIONS = 400;
 
@@ -242,6 +255,48 @@ export function newScenarioDocument(
       instantBuild: false,
     },
   } satisfies StoredScenarioDocument);
+}
+
+/**
+ * The document on a map of another size, which keeps its top-left corner:
+ * cropped tiles go with their owners and structures, new ones are water,
+ * and a port left without a shore goes. Nations and settings stay.
+ */
+export function resizeScenarioDocument(
+  doc: ScenarioDocument,
+  width: number,
+  height: number,
+): ScenarioDocument {
+  if (!isScenarioSize(width, height)) {
+    throw new Error(`a scenario can't be ${width}x${height}`);
+  }
+  const terrain = new Uint8Array(width * height);
+  const owners = new Uint16Array(width * height);
+  const rowLength = Math.min(width, doc.width);
+  for (let y = 0; y < Math.min(height, doc.height); y++) {
+    const from = y * doc.width;
+    terrain.set(doc.terrain.subarray(from, from + rowLength), y * width);
+    owners.set(doc.owners.subarray(from, from + rowLength), y * width);
+  }
+  const resized: ScenarioDocument = {
+    ...doc,
+    meta: { ...doc.meta },
+    width,
+    height,
+    terrain,
+    nations: doc.nations.map((n) => ({ ...n })),
+    owners,
+    structures: [],
+  };
+  for (const s of doc.structures) {
+    const x = s.tile % doc.width;
+    const y = Math.floor(s.tile / doc.width);
+    if (x >= width || y >= height) continue;
+    const tile = y * width + x;
+    if (s.type === UnitType.Port && !isShore(resized, tile)) continue;
+    resized.structures.push({ ...s, tile });
+  }
+  return resized;
 }
 
 export function encodeOwnership(owners: Uint16Array): number[] {
