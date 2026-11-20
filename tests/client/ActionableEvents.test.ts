@@ -315,6 +315,96 @@ describe("actionable-events", () => {
     expect(line(anna).getAttribute("aria-hidden")).toBe("true");
   });
 
+  describe("keys", () => {
+    // What a browser does with a key on a focused button: Enter presses it on
+    // keydown, Space on keyup, unless the page cancelled that event.
+    function pressKey(target: HTMLElement, key: "Enter" | " ") {
+      for (const type of ["keydown", "keyup"] as const) {
+        const event = new KeyboardEvent(type, {
+          key,
+          code: key === " " ? "Space" : "Enter",
+          bubbles: true,
+          cancelable: true,
+        });
+        target.dispatchEvent(event);
+        const presses = key === "Enter" ? type === "keydown" : type === "keyup";
+        if (presses && !event.defaultPrevented) target.click();
+      }
+    }
+
+    let onWindow: string[];
+    const listen = (e: KeyboardEvent) => onWindow.push(`${e.type} ${e.code}`);
+    beforeEach(() => {
+      onWindow = [];
+      window.addEventListener("keydown", listen);
+      window.addEventListener("keyup", listen);
+    });
+    afterEach(() => {
+      window.removeEventListener("keydown", listen);
+      window.removeEventListener("keyup", listen);
+    });
+
+    it.each([
+      { name: "Space", key: " " },
+      { name: "Enter", key: "Enter" },
+    ] as const)(
+      "keeps $name on Accept from the game, and accepts",
+      async ({ key }) => {
+        await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(ANNA)] });
+        const accept = button(cardOf("Anna")!, "accept");
+        accept.focus();
+
+        pressKey(accept, key);
+        await display.updateComplete;
+
+        expect(onWindow).toEqual([]);
+        expect(intents()).toHaveLength(1);
+        expect(intents()[0]).toBeInstanceOf(SendAllianceRequestIntentEvent);
+        expect(cards()).toHaveLength(0);
+      },
+    );
+
+    it("lets the game have the release of a Space held elsewhere", async () => {
+      await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(ANNA)] });
+      const focus = button(cardOf("Anna")!, "focus");
+
+      // The alternate view is held from the map; then a card gets focus.
+      document.body.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          code: "Space",
+          key: " ",
+          bubbles: true,
+        }),
+      );
+      focus.focus();
+      focus.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Space", key: " ", bubbles: true }),
+      );
+
+      expect(onWindow).toEqual(["keydown Space", "keyup Space"]);
+    });
+
+    it("leaves no focus on a card's buttons pressed with the mouse", async () => {
+      await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(ANNA)] });
+      const anna = cardOf("Anna")!;
+      const title = [...anna.querySelectorAll("button")].find(
+        (b) => !b.dataset.cardAction,
+      )!;
+      button(anna, "accept").focus();
+
+      // Focus left on Accept would make the next Space accept the card.
+      for (const target of [title, button(anna, "reject")]) {
+        const mousedown = new MouseEvent("mousedown", {
+          bubbles: true,
+          cancelable: true,
+        });
+        target.dispatchEvent(mousedown);
+        expect(mousedown.defaultPrevented).toBe(true);
+      }
+      expect(anna.contains(document.activeElement)).toBe(false);
+    });
+  });
+
   describe("renewal card", () => {
     async function renewalWith(other: number) {
       // Late in the game: the prompt skips alliances checked within the
