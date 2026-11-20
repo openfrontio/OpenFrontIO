@@ -561,8 +561,8 @@ export class InventoryModal extends BaseModal {
   }
 
   private applyLoadout(name: string) {
-    // Re-selecting the active slot would only re-equip what's already worn.
-    if (this.userSettings.getActiveLoadout() === name) return;
+    // Choosing a loadout applies it, the active one included: equipping
+    // doesn't save into it, so that puts its saved look back.
     if (!this.userSettings.applyLoadout(name)) return;
     this.showMessage(translateText("inventory.loadout_applied", { name }));
     this.updateFromSettings();

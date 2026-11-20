@@ -550,6 +550,24 @@ describe("Inventory In game tab", () => {
       ).toContain("inventory.loadout_on_device");
     });
 
+    it("choosing the active loadout again puts its saved look back", async () => {
+      const settings = new UserSettings();
+      settings.addLoadout(); // 01, active, nothing equipped
+      await open("crowns");
+      await clickTile(modal, "crown:gold_crown");
+      expect(modal.querySelector("[data-loadout-edited]")).not.toBeNull();
+      // The native select fires no change for the option already chosen;
+      // the component's callback is what a choice reaches.
+      modal
+        .querySelector<HTMLElement & { onSelect: (name: string) => void }>(
+          "inventory-loadout-select",
+        )!
+        .onSelect("01");
+      await settle(modal);
+      expect(new UserSettings().getSelectedCrownName()).toBeNull();
+      expect(modal.querySelector("[data-loadout-edited]")).toBeNull();
+    });
+
     it("shows <name> · edited with Update when the look differs", async () => {
       const settings = new UserSettings();
       settings.addLoadout(); // 01, active, nothing equipped
