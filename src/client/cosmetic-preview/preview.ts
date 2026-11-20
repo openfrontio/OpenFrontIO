@@ -1,7 +1,7 @@
 // The renderer half of @openfront/cosmetic-preview, loaded by index.ts only
 // once the asset base is configured (see assets.ts for why the order matters).
 
-import { store } from "../../../resources/lang/en.json";
+import en from "../../../resources/lang/en.json";
 import "../components/cosmetics/CosmeticRenderCanvas";
 import type { CosmeticRenderCanvas } from "../components/cosmetics/CosmeticRenderCanvas";
 import { setStandaloneTranslations } from "../Utils";
@@ -11,14 +11,31 @@ import type {
   CosmeticPreviewRequest,
   CosmeticPreviewResult,
 } from "./api";
+import { cardPreviewModule } from "./card";
 import { parsePreviewRequest, toResolvedCosmetic } from "./config";
 
-// The only strings CosmeticRenderCanvas shows. A host app has no
-// <lang-selector>, so without these it would show the raw keys.
+// The only strings the previews show: CosmeticRenderCanvas's, and the
+// player card's (tracker labels, the level line, the sample name). A host app
+// has no <lang-selector>, so without these it would show the raw keys.
+const prefixed = (
+  section: string,
+  strings: Record<string, unknown>,
+  keep: (key: string) => boolean = () => true,
+): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(strings)
+      .filter(([key, value]) => typeof value === "string" && keep(key))
+      .map(([key, value]) => [`${section}.${key}`, value as string]),
+  );
 setStandaloneTranslations({
-  "store.preview_error": store.preview_error,
-  "store.preview_salvo_count": store.preview_salvo_count,
-  "store.preview_salvo_toggle": store.preview_salvo_toggle,
+  "store.preview_error": en.store.preview_error,
+  "store.preview_salvo_count": en.store.preview_salvo_count,
+  "store.preview_salvo_toggle": en.store.preview_salvo_toggle,
+  ...prefixed("player_card", en.player_card, (k) => k.startsWith("tracker_")),
+  ...prefixed("progression", en.progression, (k) =>
+    ["level", "prestige", "legend"].includes(k),
+  ),
+  ...prefixed("card_preview", en.card_preview),
 });
 
 /**
@@ -73,4 +90,7 @@ function mountCosmeticPreview(
   return { handle, result: show(request) };
 }
 
-export const previewModule: CosmeticPreviewModule = { mountCosmeticPreview };
+export const previewModule: CosmeticPreviewModule = {
+  mountCosmeticPreview,
+  ...cardPreviewModule,
+};

@@ -50,6 +50,113 @@ export interface CosmeticPreviewHandle {
   destroy(): void;
 }
 
+// ---- Card backgrounds. ----
+
+/**
+ * Where a card background shows in the game. The first three are drawn
+ * animated (when `animated` is set); the rest are always still and crop
+ * more tightly, as the game draws them:
+ *  - "inventory": the Inventory's card preview
+ *  - "large": the Store's large preview
+ *  - "endScreen": the card on the end screens
+ *  - "store": the Store tile (a 160 × 64 thumbnail)
+ *  - "lobbyTag": the lobby name tag
+ *  - "hover": the hover player summary in game
+ *  - "panel": the in-game player panel
+ */
+export type CardPreviewSize =
+  | "inventory"
+  | "large"
+  | "endScreen"
+  | "store"
+  | "lobbyTag"
+  | "hover"
+  | "panel";
+
+export interface CardBackgroundPreviewInput {
+  /**
+   * The base image: an https:, blob: or data:image URL (http: only on
+   * localhost). An https host must allow CORS for shimmer layers.
+   */
+  url: string;
+  /**
+   * The background's `animation`, as the catalogue stores it: checked
+   * against the game's schema. Layer `src`s follow the same URL rules.
+   */
+  animation?: unknown;
+  /** Seeds flicker, as the background's catalogue name does in game. */
+  id?: string;
+  /** Sets the card's border colour. Default "common". */
+  rarity?: string;
+}
+
+export interface CardBackgroundPreviewOptions {
+  size: CardPreviewSize;
+  /** False: the still card players with reduced motion see. */
+  animated: boolean;
+  /** The sample player name on the card. */
+  name?: string;
+  /** Layer indexes (into animation.layers) to leave out. */
+  hiddenLayers?: number[];
+  /** Mark the centre 1260 × 290 of the art the small views keep. */
+  safeArea?: boolean;
+}
+
+export interface CardBackgroundPreviewHandle {
+  /**
+   * Show another background or other options on the same card. An invalid
+   * animation draws the still base and returns the error.
+   */
+  update(
+    background: CardBackgroundPreviewInput,
+    options: CardBackgroundPreviewOptions,
+  ): CosmeticPreviewResult;
+  /** Remove the card. Final: afterwards update() returns an error. */
+  destroy(): void;
+}
+
+export type CardEffect = "pulse" | "shimmer" | "flicker" | "drift";
+
+/** Decoded pixels: an ImageData, or anything shaped like one. */
+export interface CardCheckImage {
+  width: number;
+  height: number;
+  /** RGBA, 4 bytes a pixel, row by row. */
+  data: Uint8ClampedArray;
+}
+
+export interface CardBackgroundFiles {
+  /** `type` is the file's MIME type, `bytes` its size. */
+  base: { image: CardCheckImage; type: string; bytes: number };
+  /** In the order the animation lists them. */
+  layers: { effect: CardEffect; image: CardCheckImage; bytes: number }[];
+}
+
+export type CardIssueCode =
+  | "base_size"
+  | "base_format"
+  | "layer_size"
+  | "too_many_layers"
+  | "animation_not_layers"
+  | "animation_invalid"
+  | "layer_count_mismatch"
+  | "layer_effect_mismatch"
+  | "layer_opaque"
+  | "set_too_large"
+  | "animated_area"
+  | "busy_under_name"
+  | "drift_seam";
+
+/** One problem with a card background. The host writes the words. */
+export interface CardIssue {
+  code: CardIssueCode;
+  /** Errors block submitting; warnings don't. */
+  level: "error" | "warning";
+  /** Which layer (0-based), for a layer's own issue. */
+  layer?: number;
+  params?: Record<string, string | number>;
+}
+
 export interface CosmeticPreviewModule {
   /**
    * Render `request` into `host` (sized by the host; fill it). Invalid
@@ -59,6 +166,40 @@ export interface CosmeticPreviewModule {
     host: HTMLElement,
     request: CosmeticPreviewRequest,
   ): { handle: CosmeticPreviewHandle; result: CosmeticPreviewResult };
+
+  /**
+   * Render a player card with `background` into `host`, at a size the game
+   * uses, with a sample name and stats on it. The card sets its own width
+   * (at most the game's), so the host only places it. An invalid URL
+   * renders nothing; an invalid animation draws the still base. Either way
+   * the result has the error.
+   */
+  mountCardBackgroundPreview(
+    host: HTMLElement,
+    background: CardBackgroundPreviewInput,
+    options: CardBackgroundPreviewOptions,
+  ): { handle: CardBackgroundPreviewHandle; result: CosmeticPreviewResult };
+
+  /**
+   * The game stops every card animation for the rest of the session after
+   * about 2 s of slow frames. Calls `cb` each time that happens. Returns the
+   * unsubscribe.
+   */
+  onCardAnimationStopped(cb: () => void): () => void;
+  /** Whether slow frames have stopped card animation (until a restart). */
+  cardAnimationStopped(): boolean;
+  /** Undo a slow-frame stop and mount every live card preview afresh. */
+  restartCardAnimation(): void;
+  /**
+   * Whether this browser asks for reduced motion: the game then draws every
+   * card still, and so does the preview, whatever `animated` says.
+   */
+  systemPrefersReducedMotion(): boolean;
+  /** The artist guide's checks: errors first, then warnings. Pure. */
+  checkCardBackground(
+    files: CardBackgroundFiles,
+    animation: unknown,
+  ): CardIssue[];
 }
 
 export interface LoadCosmeticPreviewOptions {

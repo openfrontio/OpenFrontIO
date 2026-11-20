@@ -1,3 +1,4 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import type { CosmeticPreviewRequest } from "../../src/client/cosmetic-preview/api";
 import {
   configurePreviewAssets,
@@ -8,7 +9,6 @@ import {
   toResolvedCosmetic,
   type PreviewRequest,
 } from "../../src/client/cosmetic-preview/config";
-import { assetUrl } from "@openfront/shared/AssetUrls";
 
 // Compile-time: everything the runtime schema accepts is a request the
 // published types (api.ts, shipped as index.d.ts) allow. If this stops

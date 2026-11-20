@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CardBackground } from "../../src/client/components/card/CardBackground";
 import {
   cardFxStopped,
+  onCardFxSessionStop,
   resetCardFxSession,
   SHIMMER_BAND_WIDTH,
   shimmerBand,
@@ -339,6 +340,32 @@ describe("<card-background> effect layers", () => {
     loadBase(next);
     await next.updateComplete;
     expect(layerEls(next)).toHaveLength(0);
+  });
+
+  it("tells listeners once when slow frames stop the session", async () => {
+    const heard = vi.fn();
+    const unsubscribe = onCardFxSessionStop(heard);
+    const el = await mount(NEON);
+    loadBase(el);
+    await el.updateComplete;
+    loadLayers(el);
+    observers[0].report(true);
+    for (let now = 0; now <= 2200; now += 40) frame(now);
+    expect(cardFxStopped()).toBe(true);
+    expect(heard).toHaveBeenCalledTimes(1);
+
+    // After a restart, the next stop is heard again; after unsubscribing,
+    // nothing is.
+    resetCardFxSession();
+    const again = await mount(STORM);
+    loadBase(again);
+    await again.updateComplete;
+    loadLayers(again);
+    observers[observers.length - 1].report(true);
+    for (let now = 10_000; now <= 12_200; now += 40) frame(now);
+    expect(heard).toHaveBeenCalledTimes(2);
+    unsubscribe();
+    resetCardFxSession();
   });
 
   it("stops a ~40 ms device that also hitches over 250 ms every 1.2 s", async () => {

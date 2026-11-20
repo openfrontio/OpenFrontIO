@@ -95,7 +95,8 @@ describe("AssetUrls", () => {
   test("returns blob: URLs from a dropped file unchanged and ignores baseUrl", () => {
     // URL.createObjectURL gives blob:<origin>/<uuid>: no "//" after the
     // scheme, so the absolute-URL check alone would mangle it into a path.
-    const blob = "blob:https://dashboard.example/5f0c9a1e-3b7d-4c2e-9a10-2f6e8b1d4c3a";
+    const blob =
+      "blob:https://dashboard.example/5f0c9a1e-3b7d-4c2e-9a10-2f6e8b1d4c3a";
     expect(buildAssetUrl(blob)).toBe(blob);
     expect(buildAssetUrl(blob, {}, "https://cdn.example.com")).toBe(blob);
     expect(buildAssetUrl("blob:null/1234")).toBe("blob:null/1234");

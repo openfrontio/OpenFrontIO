@@ -11,7 +11,6 @@
 // Every field is validated with the catalogue's own schemas, so the preview
 // accepts precisely what the store could sell and nothing else.
 
-import { z } from "zod";
 import {
   EffectSchema,
   PatternDataSchema,
@@ -19,6 +18,7 @@ import {
   type Pattern,
   type Skin,
 } from "@openfront/shared/CosmeticSchemas";
+import { z } from "zod";
 import type { ResolvedCosmetic } from "../Cosmetics";
 
 const HexColor = z.string().regex(/^#[0-9a-fA-F]{6}$/);

@@ -202,14 +202,29 @@ export function cardFxStopped(): boolean {
   return sessionStopped;
 }
 
-// Tests only: forget a slow-frame stop.
+// Forget a slow-frame stop. The game never does (a stop lasts the
+// session); tests do, and so does the cosmetic-preview package, whose
+// previewer lets an artist restart after one slow moment. Cards already
+// stopped stay still until they are mounted again.
 export function resetCardFxSession(): void {
   sessionStopped = false;
+}
+
+const stopListeners = new Set<() => void>();
+
+// Calls `cb` each time slow frames stop the session. Returns the
+// unsubscribe. The game doesn't listen; the cosmetic-preview package does.
+export function onCardFxSessionStop(cb: () => void): () => void {
+  stopListeners.add(cb);
+  return () => {
+    stopListeners.delete(cb);
+  };
 }
 
 function stopSession(): void {
   sessionStopped = true;
   for (const fx of [...live]) fx.destroy();
+  for (const cb of [...stopListeners]) cb();
 }
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
