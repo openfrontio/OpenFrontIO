@@ -96,11 +96,17 @@ const redKey = "pattern:stripes:red";
 const blueKey = "pattern:stripes:blue";
 const greenKey = "pattern:stripes:green";
 
+// The Store's cards and the Inventory's tiles share the parts these tests use:
+// the item, its colour variants and its state.
 function cardFor(
   root: InventoryModal | StoreModal,
   key: string,
 ): CosmeticCard | undefined {
-  return [...root.querySelectorAll<CosmeticCard>("cosmetic-card")].find(
+  return [
+    ...root.querySelectorAll<CosmeticCard>(
+      "cosmetic-card, inventory-item-tile",
+    ),
+  ].find(
     (candidate) =>
       candidate.resolved.key === key ||
       candidate.variants.some((variant) => variant.key === key),
@@ -263,7 +269,7 @@ describe("Cosmetic locker integration", () => {
     const storeCard = cardFor(store, redKey)!;
     for (const cosmeticCard of [inventoryCard, storeCard]) {
       const main = cosmeticCard.querySelector<HTMLButtonElement>(
-        "button[data-cosmetic-main]",
+        "button[data-cosmetic-main], button[data-tile-main]",
       );
       expect(main?.tagName).toBe("BUTTON");
       expect(main?.type).toBe("button");
