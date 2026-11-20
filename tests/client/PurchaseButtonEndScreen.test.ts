@@ -326,7 +326,8 @@ describe("end-screen shortfall box", () => {
   it("a parent can hold the top-up (the Inventory's unsaved card guard)", async () => {
     const confirm = await showPlain({ ...PLUTONIUM, leavesGame: false });
     let go: (() => void) | null = null;
-    document.body.addEventListener("top-up", (e) => {
+    // On the dialog itself, so the listener goes with it after the test.
+    dialog.addEventListener("top-up", (e) => {
       e.preventDefault();
       go = (e as CustomEvent<{ go: () => void }>).detail.go;
     });
