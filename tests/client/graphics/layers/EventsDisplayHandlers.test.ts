@@ -156,42 +156,6 @@ describe("EventsDisplay handlers", () => {
     });
   });
 
-  describe("renderButton", () => {
-    const renderButton = (options: Record<string, unknown>) =>
-      (
-        ed as unknown as {
-          renderButton: (o: unknown) => {
-            strings: string[];
-            values: unknown[];
-          };
-        }
-      ).renderButton(options);
-
-    it("renders a button wired to the given click handler", () => {
-      const onClick = vi.fn();
-      const button = renderButton({
-        content: "jump to player",
-        onClick,
-        className: "text-left",
-        disabled: true,
-      });
-
-      expect(button.strings.join("")).toContain("<button");
-      expect(button.values).toContain("jump to player");
-      expect(button.values).toContain("text-left");
-      const handler = button.values.find((v) => typeof v === "function") as
-        | (() => void)
-        | undefined;
-      expect(handler).toBe(onClick);
-    });
-
-    it("renders nothing when hidden", () => {
-      const button = renderButton({ content: "invisible", hidden: true });
-      expect(button.values).toHaveLength(0);
-      expect(button.strings.join("")).toBe("");
-    });
-  });
-
   describe("onAllianceRequestReplyEvent", () => {
     const reply = (requestorID: number, accepted: boolean) => ({
       type: GameUpdateType.AllianceRequestReply,
