@@ -53,7 +53,9 @@ describe("graphics preview panel", () => {
     await panel.updateComplete;
     const shell = panel.querySelector<OModal>("o-modal")!;
     await shell.updateComplete;
-    shell.shadowRoot!.querySelector("aside")!.click();
+    const aside = shell.shadowRoot!.querySelector("aside")!;
+    aside.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    aside.click();
     await Promise.resolve();
     expect(panel.isOpen()).toBe(false);
     expect(onReturn).toHaveBeenCalledOnce();

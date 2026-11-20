@@ -299,8 +299,14 @@ export abstract class BaseModal extends LitElement {
     super.disconnectedCallback();
   }
 
+  private static escapeStack: BaseModal[] = [];
+
   private handleKeyDown = async (e: KeyboardEvent) => {
-    if (e.key === "Escape" && this.isModalOpen) {
+    if (
+      e.key === "Escape" &&
+      this.isModalOpen &&
+      BaseModal.escapeStack[BaseModal.escapeStack.length - 1] === this
+    ) {
       e.preventDefault();
       const confirmed = await this.confirmBeforeClose();
       // Bail if a parallel close() already closed us while we awaited.
@@ -313,11 +319,14 @@ export abstract class BaseModal extends LitElement {
 
   protected registerEscapeHandler() {
     this.isModalOpen = true;
+    BaseModal.escapeStack = BaseModal.escapeStack.filter((m) => m !== this);
+    BaseModal.escapeStack.push(this);
     window.addEventListener("keydown", this.handleKeyDown);
   }
 
   protected unregisterEscapeHandler() {
     this.isModalOpen = false;
+    BaseModal.escapeStack = BaseModal.escapeStack.filter((m) => m !== this);
     window.removeEventListener("keydown", this.handleKeyDown);
   }
 

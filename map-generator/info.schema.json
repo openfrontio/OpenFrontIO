@@ -121,7 +121,8 @@
           "scary",
           "weird",
           "vs",
-          "ukraine"
+          "ukraine",
+          "china"
         ]
       }
     },
@@ -154,6 +155,9 @@
                     "maximum": 9007199254740991
                   }
                 ],
+                "items": false,
+                "minItems": 2,
+                "maxItems": 2,
                 "description": "[x, y] tile position. Origin is top-left; y extends down."
               }
             },
@@ -186,7 +190,10 @@
                 "minimum": 0,
                 "maximum": 9007199254740991
               }
-            ]
+            ],
+            "items": false,
+            "minItems": 2,
+            "maxItems": 2
           },
           "flag": {
             "description": "Flag file name in resources/flags/ without the .svg suffix. Empty means no flag.",
@@ -221,7 +228,10 @@
                 "minimum": 0,
                 "maximum": 9007199254740991
               }
-            ]
+            ],
+            "items": false,
+            "minItems": 2,
+            "maxItems": 2
           },
           "flag": {
             "description": "Flag file name in resources/flags/ without the .svg suffix. Empty means no flag.",

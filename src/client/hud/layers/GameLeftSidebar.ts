@@ -116,6 +116,14 @@ export class GameLeftSidebar extends LitElement implements Controller {
     this.isTeamStatsShown = !this.isTeamStatsShown;
   }
 
+  private handleLeaderboardMouseDown = (e: MouseEvent): void => {
+    e.preventDefault();
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) {
+      active.blur();
+    }
+  };
+
   private toggleAlternateView(): void {
     this.eventBus?.emit(new AlternateViewEvent(!this.alternateView));
   }
@@ -135,12 +143,17 @@ export class GameLeftSidebar extends LitElement implements Controller {
         <div class="flex items-center gap-4 xl:gap-6 text-white">
           <div
             class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
-            @click=${this.togglePlayerStats}
+            @mousedown=${this.handleLeaderboardMouseDown}
+            @click=${(e: MouseEvent) => {
+              if (e.detail > 0) (e.currentTarget as HTMLElement).blur();
+              this.togglePlayerStats();
+            }}
             role="button"
             tabindex="0"
             @keydown=${(e: KeyboardEvent) => {
               if (e.key === "Enter" || e.key === " " || e.code === "Space") {
                 e.preventDefault();
+                e.stopPropagation();
                 this.togglePlayerStats();
               }
             }}
@@ -164,7 +177,11 @@ export class GameLeftSidebar extends LitElement implements Controller {
               ? html`
                   <div
                     class="cursor-pointer p-0.5 bg-gray-700/50 hover:bg-gray-600 border rounded-md border-slate-500 transition-colors"
-                    @click=${this.toggleTeamStats}
+                    @mousedown=${this.handleLeaderboardMouseDown}
+                    @click=${(e: MouseEvent) => {
+                      if (e.detail > 0) (e.currentTarget as HTMLElement).blur();
+                      this.toggleTeamStats();
+                    }}
                     role="button"
                     tabindex="0"
                     @keydown=${(e: KeyboardEvent) => {
@@ -174,6 +191,7 @@ export class GameLeftSidebar extends LitElement implements Controller {
                         e.code === "Space"
                       ) {
                         e.preventDefault();
+                        e.stopPropagation();
                         this.toggleTeamStats();
                       }
                     }}

@@ -5,7 +5,6 @@ import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { getDesktopSessionState } from "./Auth";
-import "./components/IOSAddToHomeScreenBanner";
 import {
   canJoinTrustedLobby,
   lobbyCard,
@@ -663,17 +662,12 @@ export class GameModeSelector extends LitElement {
     // reading-flow keeps focus order following the rows (Chromium only).
     // On compact screens (styles.css) Solo/Tutorial sit under the hero card only,
     // and the lobby column runs down beside them, so its two cards get that height.
-    // There the grid also pulls up over the gap after the banner's row when it's empty.
     return html`
       <div
-        class="flex flex-col gap-4 sm:compact:gap-3 sm:compact:has-[>ios-add-to-home-screen-banner:empty]:-mt-3 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_min(24rem,40vh)_auto_auto] sm:compact:grid-rows-[auto_minmax(min(24rem,40vh),auto)_3.5rem_auto] desktop:sm:grid-rows-[auto_40vh_auto_auto] sm:[reading-flow:grid-rows]"
+        class="flex flex-col gap-4 sm:compact:gap-3 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[min(24rem,40vh)_auto_auto] sm:compact:grid-rows-[minmax(min(24rem,40vh),auto)_3.5rem_auto] desktop:sm:grid-rows-[40vh_auto_auto] sm:[reading-flow:grid-rows]"
       >
-        <ios-add-to-home-screen-banner
-          class="no-game-portal [&:empty]:hidden sm:col-span-2 sm:row-start-1"
-        ></ios-add-to-home-screen-banner>
-
         <div
-          class="flex gap-4 sm:compact:gap-3 h-14 sm:col-span-2 sm:row-start-3 sm:compact:col-span-1!"
+          class="flex gap-4 sm:compact:gap-3 h-14 sm:col-span-2 sm:row-start-2 sm:compact:col-span-1!"
         >
           <div class="flex-[2]">
             ${this.renderSmallActionCard(
@@ -695,7 +689,7 @@ export class GameModeSelector extends LitElement {
           }
         </div>
         <div
-          class="grid grid-cols-3 gap-4 sm:compact:gap-3 h-14 sm:col-span-2 sm:row-start-4"
+          class="grid grid-cols-3 gap-4 sm:compact:gap-3 h-14 sm:col-span-2 sm:row-start-3"
         >
           ${this.renderSmallActionCard(
             translateText("main.create"),
@@ -733,7 +727,7 @@ export class GameModeSelector extends LitElement {
           )}
         </div>
 
-        <div class="min-w-0 sm:col-start-1 sm:row-start-2">
+        <div class="min-w-0 sm:col-start-1 sm:row-start-1">
           ${
             ffa?.gameConfig
               ? this.renderLobbyCard(ffa, getGameModeLabel(ffa.gameConfig))
@@ -757,7 +751,7 @@ export class GameModeSelector extends LitElement {
 
         <!-- Always rendered: the heading is the only way into the lobby browser. -->
         <section
-          class="flex flex-col gap-4 sm:compact:gap-3 min-w-0 sm:grid sm:grid-rows-[auto_1fr_1fr] sm:row-start-2 sm:min-h-0 sm:[reading-flow:grid-rows] sm:col-start-2 sm:compact:row-end-4 sm:compact:grid-rows-[auto_minmax(7.5rem,1fr)_minmax(7.5rem,1fr)]"
+          class="flex flex-col gap-4 sm:compact:gap-3 min-w-0 sm:grid sm:grid-rows-[auto_1fr_1fr] sm:row-start-1 sm:min-h-0 sm:[reading-flow:grid-rows] sm:col-start-2 sm:compact:row-end-3 sm:compact:grid-rows-[auto_minmax(7.5rem,1fr)_minmax(7.5rem,1fr)]"
         >
           ${
             teams

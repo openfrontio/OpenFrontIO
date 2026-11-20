@@ -3,17 +3,17 @@
   "id": "HongKong",
   "map": {
     "height": 1996,
-    "num_land_tiles": 2260689,
+    "num_land_tiles": 2114377,
     "width": 2780
   },
   "map16x": {
     "height": 499,
-    "num_land_tiles": 136157,
+    "num_land_tiles": 127321,
     "width": 695
   },
   "map4x": {
     "height": 998,
-    "num_land_tiles": 557907,
+    "num_land_tiles": 521740,
     "width": 1390
   },
   "name": "Hong Kong",
@@ -199,11 +199,6 @@
       "name": "Mai Po"
     },
     {
-      "coordinates": [932, 4],
-      "flag": "cn",
-      "name": "Shenzhen"
-    },
-    {
       "coordinates": [1178, 177],
       "flag": "hk",
       "name": "Lok Ma Chau"
@@ -294,26 +289,6 @@
       "name": "Pat Heung"
     },
     {
-      "coordinates": [523, 55],
-      "flag": "cn",
-      "name": "Houhai District"
-    },
-    {
-      "coordinates": [462, 168],
-      "flag": "cn",
-      "name": "Shekou District"
-    },
-    {
-      "coordinates": [1237, 26],
-      "flag": "cn",
-      "name": "Luohu District"
-    },
-    {
-      "coordinates": [1027, 101],
-      "flag": "cn",
-      "name": "Futian District"
-    },
-    {
       "coordinates": [996, 1226],
       "flag": "hk",
       "name": "Peng Chau"
@@ -322,6 +297,21 @@
       "coordinates": [2479, 781],
       "flag": "hk",
       "name": "Long Ke"
+    },
+    {
+      "coordinates": [2389, 1298],
+      "flag": "hk",
+      "name": "Ninepin Islands"
+    },
+    {
+      "coordinates": [414, 1782],
+      "flag": "hk",
+      "name": "Soko Islands"
+    },
+    {
+      "coordinates": [312, 907],
+      "flag": "hk",
+      "name": "Sha Chau"
     },
     {
       "coordinates": [1698, 182],

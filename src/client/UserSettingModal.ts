@@ -112,13 +112,14 @@ export class UserSettingModal extends BaseModal {
 
   // ---- Graphics: the running game's map layers ----
   //
-  // Also set on the in-game instance by GameRenderer. Every other graphics
-  // option is stored under one settings key that ClientGameRunner watches, so
-  // a running game follows it with no reference here; map layers are the
-  // exception. Their control set comes from the current map, and the renderer
-  // does not re-read their visibility or alpha from settings after startup —
-  // so the layer rows exist only where a game hands them over, and every
-  // change to the graphics key re-pushes them through these callbacks.
+  // Also set on the in-game instance by GameRenderer and the replay viewer.
+  // Every other graphics option is stored under one settings key that
+  // ClientGameRunner watches, so a running game follows it with no reference
+  // here; map layers are the exception. Their control set comes from the
+  // current map, and the renderer does not re-read their visibility or alpha
+  // from settings after startup — so the layer rows exist only where a game
+  // hands them over, and every change to the graphics key re-pushes them
+  // through these callbacks.
 
   /** Map layers for the current game. Empty on the page instance. */
   public mapLayers: MapLayer[] = [];
@@ -452,13 +453,25 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
+  /**
+   * Toggles the snap build preview setting.
+   */
   private toggleSnapBuildPreview() {
     this.userSettings.toggleSnapBuildPreview();
-
     console.log(
       "🧲 Snap build preview:",
       this.userSettings.snapBuildPreview() ? "ON" : "OFF",
     );
+  }
+
+  /**
+   * Toggles the build multiplier cycle setting and resets the active multiplier when disabled.
+   */
+  private toggleBuildMultiplierCycle() {
+    this.userSettings.toggleBuildMultiplierCycle();
+    if (!this.userSettings.buildMultiplierCycle() && this.uiState) {
+      this.uiState.upgradeMultiplier = 1;
+    }
   }
 
   private toggleAnonymousNames() {
@@ -522,6 +535,16 @@ export class UserSettingModal extends BaseModal {
     console.log(
       "🖱️ Left Click Opens Menu:",
       this.userSettings.leftClickOpensMenu() ? "ON" : "OFF",
+    );
+
+    this.requestUpdate();
+  }
+
+  private toggleTabAttention() {
+    this.userSettings.toggleTabAttention();
+    console.log(
+      "🔔 Tab Attention:",
+      this.userSettings.tabAttention() ? "ON" : "OFF",
     );
 
     this.requestUpdate();
@@ -2024,6 +2047,17 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleSnapBuildPreview}
       ></setting-toggle>
 
+      <!-- 🔢 Build Multiplier Cycle -->
+      <setting-toggle
+        label="${translateText("user_setting.build_multiplier_cycle_label")}"
+        description="${translateText(
+          "user_setting.build_multiplier_cycle_desc",
+        )}"
+        id="build-multiplier-cycle-toggle"
+        .checked=${this.userSettings.buildMultiplierCycle()}
+        @change=${this.toggleBuildMultiplierCycle}
+      ></setting-toggle>
+
       <!-- 🖱️ Left Click Menu -->
       <setting-toggle
         label="${translateText("user_setting.left_click_label")}"
@@ -2083,6 +2117,15 @@ export class UserSettingModal extends BaseModal {
         id="lobby-start-alerts-toggle"
         .checked=${this.userSettings.lobbyStartAlerts()}
         @change=${this.toggleLobbyStartAlerts}
+      ></setting-toggle>
+
+      <!-- 🔔 Tab Attention -->
+      <setting-toggle
+        label="${translateText("user_setting.tab_attention_label")}"
+        description="${translateText("user_setting.tab_attention_desc")}"
+        id="tab-attention-toggle"
+        .checked=${this.userSettings.tabAttention()}
+        @change=${this.toggleTabAttention}
       ></setting-toggle>
 
       <!-- 🎬 New replay viewer (on by default) -->
