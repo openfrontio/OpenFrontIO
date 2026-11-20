@@ -277,7 +277,7 @@ export class JoinLobbyModal extends BaseModal {
       };
       return;
     }
-    this.boostRetryHeld = result.status !== 409;
+    this.boostRetryHeld = result.status !== 409 && result.status !== 403;
     showToast(
       translateText(
         result.status === 409

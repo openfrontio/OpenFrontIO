@@ -3,6 +3,7 @@ import { boostWouldMoveLobby } from "@openfront/shared/LobbyBoost";
 import EventEmitter from "events";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  BOOST_HOLD_MS,
   BoostableLobby,
   boostScheduledLobby,
 } from "../../src/server/LobbyBoost";
@@ -262,17 +263,25 @@ describe("GameServer boosting", () => {
     expect(game.boostBlockedFor("someone-else")).toBe(false);
   });
 
-  it("frees an unresolved charge's hold when its payer disconnects", async () => {
-    const game = publicLobby();
-    const ws = makeMockWs();
-    const client = makeClient({ ws });
-    game.joinClient(client);
-    game.reserveBoost(client.persistentID);
-    game.holdBoostForPayer();
-    expect(game.boostBlockedFor("someone-else")).toBe(true);
+  it("holds an unresolved charge through a disconnect, for a limited time", async () => {
+    vi.useFakeTimers();
+    try {
+      const game = publicLobby();
+      const ws = makeMockWs();
+      const client = makeClient({ ws });
+      game.joinClient(client);
+      game.reserveBoost(client.persistentID);
+      game.holdBoostForPayer();
 
-    await ws.trigger("close");
-    expect(game.boostBlockedFor("someone-else")).toBe(false);
+      await ws.trigger("close");
+      expect(game.boostBlockedFor("someone-else")).toBe(true);
+      expect(game.boostHeldFor(client.persistentID)).toBe(true);
+
+      vi.advanceTimersByTime(BOOST_HOLD_MS);
+      expect(game.boostBlockedFor("someone-else")).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

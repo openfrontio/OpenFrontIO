@@ -76,6 +76,7 @@ import {
   IntentOutcome,
 } from "./IntentAuthorization";
 import { ListingState } from "./ListingState";
+import { BOOST_HOLD_MS } from "./LobbyBoost";
 import { friendsLookup, NameVisibility } from "./NameVisibility";
 import { poolTargetFor } from "./PoolRouting";
 import { Roster } from "./Roster";
@@ -317,6 +318,9 @@ export class GameServer {
     persistentId: string;
     clientID?: ClientID;
     inFlight: boolean;
+    // Set when the charge ended without a known outcome: until then only
+    // this player may boost.
+    heldUntil?: number;
   };
   // Matchmade team split from the matchmaking assignment: publicIds per
   // team. At start each client is stamped with its team's index.
@@ -1799,8 +1803,8 @@ export class GameServer {
 
   // Boosted, a boost's charge is in flight, or another player's charge ended
   // without a known outcome: this player may not pay for the lobby. That
-  // last hold lasts only while its payer is connected to retry; once they
-  // leave, someone else may boost.
+  // last hold gives its payer BOOST_HOLD_MS to retry, connected or not (a
+  // reload shouldn't lose it); after that someone else may boost.
   public boostBlockedFor(persistentId: string): boolean {
     if (this.boostedAt !== undefined) return true;
     const reservation = this.boostReservation;
@@ -1808,7 +1812,7 @@ export class GameServer {
     if (reservation.inFlight) return true;
     return (
       reservation.persistentId !== persistentId &&
-      this.hasConnectedClient(reservation.persistentId)
+      Date.now() < (reservation.heldUntil ?? 0)
     );
   }
 
@@ -1838,7 +1842,9 @@ export class GameServer {
   }
 
   public holdBoostForPayer(): void {
-    if (this.boostReservation) this.boostReservation.inFlight = false;
+    if (!this.boostReservation) return;
+    this.boostReservation.inFlight = false;
+    this.boostReservation.heldUntil = Date.now() + BOOST_HOLD_MS;
   }
 
   // The player holding the reservation paid to move this scheduled public
