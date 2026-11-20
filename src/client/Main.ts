@@ -2080,8 +2080,11 @@ class Client {
       }
       // handleLeaveLobby only resets the URL once a lobby handle exists.
       history.replaceState(null, "", "/");
-      // Go home only once the player has read the alert.
+      // Go home only once the player has read the alert. Taking the flag
+      // also stops beforeunload clearing the editor's in-game signal, so
+      // clear it here.
       const menuGone = this.menuGoneForJoin;
+      if (menuGone) setInGameSignal(false);
       this.menuGoneForJoin = false;
       void this.handleLeaveLobby();
       void showInGameAlert(
