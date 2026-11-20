@@ -1,10 +1,38 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics, Promotion } from "@openfront/shared/CosmeticSchemas";
 import type { TemplateResult } from "lit";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { isSteamPrimaryUser } from "../AccountIdentity";
 import { translateCosmetic } from "../Cosmetics";
+import { lastUserMeResponse } from "../UserMeBroadcast";
+import { UserSettings } from "../UserSettings";
 import { translateText } from "../Utils";
 import "./SaleCountdown";
+
+/**
+ * The sales a banner shows: all of them, or none when a Steam-only player has
+ * turned the sale banners off in account settings (sales and flash deals
+ * alike). The setting is offered to Steam-only players alone, so it's ignored
+ * for anyone else (say, after they link another account).
+ */
+export function bannerSales(
+  sales: Promotion[],
+  user: UserMeResponse["user"] | undefined,
+  hideBanners: boolean,
+): Promotion[] {
+  return hideBanners && isSteamPrimaryUser(user) ? [] : sales;
+}
+
+/** {@link bannerSales} for the signed-in player and their saved setting. */
+export function visibleBannerSales(sales: Promotion[]): Promotion[] {
+  const last = lastUserMeResponse()?.response;
+  return bannerSales(
+    sales,
+    last ? last.user : undefined,
+    new UserSettings().hideSaleBanners(),
+  );
+}
 
 /** The catalog's sales that haven't ended yet, of `only` if given. */
 export function runningSales(

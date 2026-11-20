@@ -236,15 +236,18 @@ export const ACTIVE_LOADOUT_KEY = "settings.activeLoadout";
 export const PLAYER_STATS_COLUMNS_KEY = "settings.leaderboardColumns";
 export const TEAM_STATS_COLUMNS_KEY = "settings.teamStatsColumns";
 export const FAVORITE_EMOJIS_KEY = "settings.favoriteEmojis";
+// Steam-only players can turn off the sale banners (account settings).
+export const HIDE_SALE_BANNERS_KEY = "settings.hideSaleBanners";
 const STATS_COLUMNS_KEYS: Record<StatsTableKind, string> = {
   player: PLAYER_STATS_COLUMNS_KEY,
   team: TEAM_STATS_COLUMNS_KEY,
 };
 
 /**
- * Cosmetic selections are stored per player: while logged in, the storage key
- * is suffixed with the player's publicId so selections survive logout and are
- * restored on the next login (#4955). Logged out, the bare key is used.
+ * Cosmetic selections (and the sale-banner choice, an account setting) are
+ * stored per player: while logged in, the storage key is suffixed with the
+ * player's publicId so selections survive logout and are restored on the next
+ * login (#4955). Logged out, the bare key is used.
  */
 const PER_PLAYER_KEYS: readonly string[] = [
   PATTERN_KEY,
@@ -253,6 +256,7 @@ const PER_PLAYER_KEYS: readonly string[] = [
   EFFECTS_KEY,
   LOADOUTS_KEY,
   ACTIVE_LOADOUT_KEY,
+  HIDE_SALE_BANNERS_KEY,
 ];
 
 /**
@@ -447,6 +451,15 @@ export class UserSettings {
 
   performanceOverlay() {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
+  }
+
+  /** Whether the player turned the sale banners off. */
+  hideSaleBanners(): boolean {
+    return this.getBool(HIDE_SALE_BANNERS_KEY, false);
+  }
+
+  setHideSaleBanners(hidden: boolean): void {
+    this.setBool(HIDE_SALE_BANNERS_KEY, hidden);
   }
 
   mapLayers() {

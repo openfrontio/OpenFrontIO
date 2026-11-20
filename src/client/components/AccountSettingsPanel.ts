@@ -15,6 +15,7 @@ import { gamePortal } from "../GamePortal";
 import { showInGameAlert } from "../InGameModal";
 import { refreshOwnHiddenLevelBadge } from "../OwnLevelBadge";
 import { steamSDK } from "../SteamSDK";
+import { UserSettings } from "../UserSettings";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 import "./DeleteAccountDialog";
@@ -95,6 +96,7 @@ export class AccountSettingsPanel extends LitElement {
     return html`
       <div class="flex flex-col gap-6">
         ${this.renderMarketingCard()} ${this.renderPrivacyCard()}
+        ${this.renderStoreCard()}
         <identity-token-card></identity-token-card>
         ${this.renderDeleteAccountCard()}
       </div>
@@ -217,6 +219,37 @@ export class AccountSettingsPanel extends LitElement {
         }
       </div>
     `;
+  }
+
+  // Store: Steam-only players can turn the sale banners (sales and flash
+  // deals) off, on the home screen and in the store. On = shown, like the Privacy rows.
+  private renderStoreCard(): TemplateResult | typeof nothing {
+    if (!this.isSteamPrimary()) return nothing;
+    return html`
+      <div
+        class="bg-white/5 rounded-xl border border-white/10 p-6"
+        data-store-settings
+      >
+        <div
+          class="text-xs text-white/40 uppercase tracking-widest font-bold mb-4"
+        >
+          ${translateText("account_modal.store_settings_title")}
+        </div>
+        ${this.renderPrivacySwitchRow(
+          translateText("account_modal.sale_banners_title"),
+          translateText("account_modal.sale_banners_desc"),
+          // Saved on this device, per player (UserSettings), not on the account.
+          !new UserSettings().hideSaleBanners(),
+          false,
+          (shown) => this.setSaleBannersShown(shown),
+        )}
+      </div>
+    `;
+  }
+
+  private setSaleBannersShown(shown: boolean): void {
+    new UserSettings().setHideSaleBanners(!shown);
+    this.requestUpdate();
   }
 
   // One Privacy row: title, description and the same role="switch" toggle as
