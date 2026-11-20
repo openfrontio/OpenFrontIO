@@ -182,9 +182,8 @@ export class StoreModal extends BaseModal {
   // logged-in player for the whole window before Main's first userMeResponse
   // broadcast (a Steam ticket exchange on desktop). This distinguishes the
   // two: nothing is asserted about the session until it has actually settled.
-  // Reactive on its own, unlike `userMeResponse`: onUserMe() only calls
-  // refresh() after the catalog fetch, and a settled no-session result must
-  // not wait on a slow catalog before it may say so.
+  // Reactive on its own, unlike `userMeResponse`, so a settled no-session
+  // result never waits on a slow catalog before it may say so.
   @state() private authSettled = false;
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
   // Item the URL asked for (`#modal=store&item=<key>`). Held until its group
@@ -288,6 +287,9 @@ export class StoreModal extends BaseModal {
   async onUserMe(userMeResponse: UserMeResponse | false) {
     this.userMeResponse = userMeResponse;
     this.authSettled = true;
+    // Show the new account (the balance in the header) now, not after the
+    // catalog: in the Android app that fetch also waits on Play's prices.
+    this.requestUpdate();
     await this.loadCatalog();
     this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();

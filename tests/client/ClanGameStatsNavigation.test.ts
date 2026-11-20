@@ -9,10 +9,15 @@ import {
   vi,
 } from "vitest";
 
-import { apiMockFactory, clanApiMockFactory } from "./clan/ClanModalTestUtils";
+import {
+  apiMockFactory,
+  clanApiMockFactory,
+  cosmeticsMockFactory,
+} from "./clan/ClanModalTestUtils";
 
 vi.mock("../../src/client/Api", () => apiMockFactory());
 vi.mock("../../src/client/ClanApi", () => clanApiMockFactory());
+vi.mock("../../src/client/Cosmetics", () => cosmeticsMockFactory());
 
 vi.mock("../../src/client/ClientEnv", () => ({
   ClientEnv: { workerPath: vi.fn(() => "w0") },

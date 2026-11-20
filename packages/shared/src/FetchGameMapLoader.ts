@@ -1,16 +1,16 @@
-import { GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { GameMapId, GameMapType } from "@openfront/engine-api/game/GameTypes";
 import { GameMapLoader, MapData } from "./GameMapLoader";
 
 export class FetchGameMapLoader implements GameMapLoader {
-  private maps: Map<GameMapType, MapData>;
+  private maps: Map<GameMapId, MapData>;
 
   public constructor(
     private readonly pathResolver: string | ((path: string) => string),
   ) {
-    this.maps = new Map<GameMapType, MapData>();
+    this.maps = new Map<GameMapId, MapData>();
   }
 
-  public getMapData(map: GameMapType): MapData {
+  public getMapData(map: GameMapId): MapData {
     const cachedMap = this.maps.get(map);
     if (cachedMap) {
       return cachedMap;

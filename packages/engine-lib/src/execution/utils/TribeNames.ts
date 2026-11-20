@@ -1,6 +1,6 @@
+import type { GameMapId } from "@openfront/engine-api/game/GameTypes";
 import {
   type CustomTribe,
-  GameMapType,
   type MapInfo,
   maps,
 } from "@openfront/engine-api/game/Maps.gen";
@@ -20,7 +20,7 @@ interface TribeNameTheme {
 const tribeNameThemes: Record<string, TribeNameTheme> = tribeNameThemesData;
 
 /** Look up MapInfo by GameMapType. */
-function getMapInfo(mapType: GameMapType): MapInfo | undefined {
+function getMapInfo(mapType: GameMapId): MapInfo | undefined {
   return maps.find((m) => m.type === mapType);
 }
 
@@ -32,7 +32,7 @@ function getMapInfo(mapType: GameMapType): MapInfo | undefined {
  * 2. Theme-based names (prefix + suffix) from the referenced theme
  * 3. Default theme if no theme is specified or the referenced theme is missing
  */
-export function resolveTribeNameData(mapType?: GameMapType): TribeNameData {
+export function resolveTribeNameData(mapType?: GameMapId): TribeNameData {
   if (mapType !== undefined) {
     const mapInfo = getMapInfo(mapType);
     if (mapInfo !== undefined) {

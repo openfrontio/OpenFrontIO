@@ -4,7 +4,9 @@ import {
   apiMockFactory,
   authMockFactory,
   clanApiMockFactory,
+  cosmeticsMockFactory,
   crazyGamesSdkMockFactory,
+  flushAsync,
   getElState,
   makeClan,
   setState,
@@ -17,6 +19,7 @@ import {
 vi.mock("@lit-labs/virtualizer/virtualize.js", () => virtualizerMockFactory());
 vi.mock("../../../src/client/Api", () => apiMockFactory());
 vi.mock("../../../src/client/ClanApi", () => clanApiMockFactory());
+vi.mock("../../../src/client/Cosmetics", () => cosmeticsMockFactory());
 vi.mock("../../../src/client/Utils", () => utilsMockFactory());
 vi.mock("../../../src/client/Auth", () => authMockFactory());
 vi.mock("../../../src/client/CrazyGamesSDK", () => crazyGamesSdkMockFactory());
@@ -564,6 +567,274 @@ describe("ClanModal — rendering", () => {
       ).size;
 
       expect(cardSize).toBeLessThan(headerSize);
+    });
+  });
+
+  // ── 3c. Clan affiliate shop button ──────────────────────────────────────
+
+  describe("clan affiliate shop button", () => {
+    afterEach(() => {
+      window.location.hash = "";
+    });
+
+    it("hides the Clan Shop button when no catalog item matches the clan tag", async () => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      const { fetchCosmetics } = await import("../../../src/client/Cosmetics");
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeClan({ tag: "TST" }),
+      );
+      (fetchCosmetics as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        patterns: {},
+        flags: {},
+      });
+
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "view" as keyof ClanModal, "detail" as never);
+      await waitForSubComponent(modal, "clan-detail-view");
+
+      expect(modal.querySelector("[data-action='clan-shop']")).toBeNull();
+    });
+
+    it("hides the Clan Shop button when the only affiliate item uses another clan tag", async () => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      const { fetchCosmetics } = await import("../../../src/client/Cosmetics");
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeClan({ tag: "TST" }),
+      );
+      (fetchCosmetics as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        patterns: {
+          other_camo: {
+            name: "other_camo",
+            pattern: "AA==",
+            priceSoft: 500,
+            product: null,
+            rarity: "common",
+            colorPalettes: [{ name: "default", isArchived: false }],
+            affiliateCode: "OTH",
+          },
+        },
+        flags: {},
+      });
+
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "view" as keyof ClanModal, "detail" as never);
+      await waitForSubComponent(modal, "clan-detail-view");
+
+      expect(modal.querySelector("[data-action='clan-shop']")).toBeNull();
+    });
+
+    it("hides the Clan Shop button when matching affiliate items are off-market (no price)", async () => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      const { fetchCosmetics } = await import("../../../src/client/Cosmetics");
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeClan({ tag: "TST" }),
+      );
+      (fetchCosmetics as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        patterns: {
+          clan_camo: {
+            name: "clan_camo",
+            pattern: "AA==",
+            product: null,
+            rarity: "common",
+            colorPalettes: [{ name: "default", isArchived: false }],
+            affiliateCode: "tst",
+          },
+        },
+        flags: {},
+      });
+
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "view" as keyof ClanModal, "detail" as never);
+      await waitForSubComponent(modal, "clan-detail-view");
+
+      expect(modal.querySelector("[data-action='clan-shop']")).toBeNull();
+    });
+
+    it("hides the Clan Shop button when all matching affiliate items are already owned by the player", async () => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      const { fetchCosmetics } = await import("../../../src/client/Cosmetics");
+      const { getUserMe } = await import("../../../src/client/Api");
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeClan({ tag: "TST" }),
+      );
+      (getUserMe as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        player: {
+          publicId: "test-player",
+          flares: ["flag:clan_flag"],
+          clans: [],
+        },
+      });
+      (fetchCosmetics as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        patterns: {},
+        flags: {
+          clan_flag: {
+            name: "clan_flag",
+            url: "https://example.com/flag.svg",
+            product: null,
+            priceSoft: 500,
+            rarity: "common",
+            affiliateCode: "tst",
+          },
+        },
+      });
+
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "view" as keyof ClanModal, "detail" as never);
+      await waitForSubComponent(modal, "clan-detail-view");
+
+      expect(modal.querySelector("[data-action='clan-shop']")).toBeNull();
+    });
+
+    it("renders the Clan Shop button when a cosmetic matches the clan tag case-insensitively and opens the affiliate store on click", async () => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      const { fetchCosmetics, refreshStaleCosmetics } =
+        await import("../../../src/client/Cosmetics");
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeClan({ tag: "TST" }),
+      );
+      const positiveCatalog = {
+        patterns: {
+          clan_camo: {
+            name: "clan_camo",
+            pattern: "AA==",
+            priceSoft: 500,
+            product: null,
+            rarity: "common",
+            colorPalettes: [{ name: "default", isArchived: false }],
+            affiliateCode: "tst",
+          },
+        },
+        flags: {},
+      };
+      (fetchCosmetics as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        positiveCatalog,
+      );
+
+      const { resolveCosmetics } = await vi.importActual<
+        typeof import("../../../src/client/Cosmetics")
+      >("../../../src/client/Cosmetics");
+      const resolved = resolveCosmetics(positiveCatalog as any, false, "tst");
+      expect(
+        resolved.some(
+          (r) =>
+            r.relationship === "purchasable" &&
+            r.cosmetic !== null &&
+            "affiliateCode" in r.cosmetic &&
+            r.cosmetic.name === "clan_camo" &&
+            r.cosmetic.affiliateCode === "tst",
+        ),
+      ).toBe(true);
+
+      modal.open({ clan: "TST" });
+      await waitForSubComponent(modal, "clan-detail-view");
+      expect(refreshStaleCosmetics).toHaveBeenCalled();
+
+      const shopBtn = modal.querySelector<HTMLButtonElement>(
+        "[data-action='clan-shop']",
+      );
+      expect(shopBtn).toBeTruthy();
+      expect(shopBtn?.textContent).toContain("clan_modal.clan_shop");
+
+      const { modalRouter } = await import("../../../src/client/ModalRouter");
+      const { StoreModal } = await import("../../../src/client/Store");
+      modalRouter.register("store", {
+        tag: "store-modal",
+        pageId: "page-item-store",
+      });
+      const storeModal = document.createElement("store-modal") as InstanceType<
+        typeof StoreModal
+      >;
+      const openSpy = vi.spyOn(storeModal, "open").mockImplementation(() => {});
+      document.body.appendChild(storeModal);
+
+      const onHashChange = () => {
+        if (modalRouter.isHashRouted()) {
+          modalRouter.routeFromHash();
+        }
+      };
+      window.addEventListener("hashchange", onHashChange);
+
+      try {
+        shopBtn!.click();
+        expect(modal.isOpen()).toBe(false);
+        expect(window.location.hash).toBe("#modal=store&affiliateCode=tst");
+
+        await vi.waitFor(() => {
+          expect(openSpy).toHaveBeenCalledWith(
+            expect.objectContaining({ affiliateCode: "tst" }),
+          );
+        });
+      } finally {
+        window.removeEventListener("hashchange", onHashChange);
+        storeModal.remove();
+      }
+    });
+
+    it("discards an older out-of-order lookup when a newer lookup finishes first", async () => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      const { fetchCosmetics } = await import("../../../src/client/Cosmetics");
+      const { getUserMe } = await import("../../../src/client/Api");
+
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeClan({ tag: "TST" }),
+      );
+
+      const positiveCatalog = {
+        patterns: {},
+        flags: {
+          clan_flag: {
+            name: "clan_flag",
+            url: "https://example.com/flag.svg",
+            product: null,
+            priceSoft: 500,
+            rarity: "common",
+            affiliateCode: "tst",
+          },
+        },
+      };
+      (fetchCosmetics as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce(positiveCatalog)
+        .mockResolvedValueOnce(positiveCatalog);
+
+      let resolveOldUserMe!: (val: unknown) => void;
+      const oldUserMePromise = new Promise((resolve) => {
+        resolveOldUserMe = resolve;
+      });
+
+      // 1st lookup in loadAffiliateCode hangs on oldUserMePromise
+      // 2nd lookup in loadAffiliateCode resolves immediately with owned flare
+      (getUserMe as ReturnType<typeof vi.fn>)
+        .mockImplementationOnce(() => oldUserMePromise)
+        .mockResolvedValueOnce({
+          player: {
+            publicId: "test-player",
+            flares: ["flag:clan_flag"],
+          },
+        });
+
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(modal, "view" as keyof ClanModal, "detail" as never);
+      const detailView = await waitForSubComponent(modal, "clan-detail-view");
+
+      // Trigger newer lookup via userMeResponse
+      document.dispatchEvent(new Event("userMeResponse"));
+      await flushAsync(modal, detailView);
+
+      // Newer lookup finished first: item is owned, so button is hidden
+      expect(modal.querySelector("[data-action='clan-shop']")).toBeNull();
+
+      // Now resolve the older lookup as unowned (which would have shown button)
+      resolveOldUserMe({
+        player: {
+          publicId: "test-player",
+          flares: [],
+        },
+      });
+      await oldUserMePromise;
+      await flushAsync(modal, detailView);
+
+      // Stale lookup was discarded, button remains hidden
+      expect(modal.querySelector("[data-action='clan-shop']")).toBeNull();
     });
   });
 
