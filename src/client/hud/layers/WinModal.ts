@@ -24,7 +24,7 @@ import {
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
 import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
-import { userAuth } from "../../Auth";
+import { sessionUncertain, userAuth } from "../../Auth";
 import { saveTauntsMuted } from "../../CardLoadoutApi";
 import "../../components/CosmeticCard";
 import { EDIT_CARD_HREF } from "../../components/card/CardLinks";
@@ -1044,7 +1044,10 @@ export class WinModal extends LitElement implements Controller {
     const session = await userAuth();
     // A newer answer landed meanwhile: it decides.
     if (call !== this.userMeCall) return;
-    this.signedIn = session !== false;
+    // A refresh that got no answer (a 5xx, 429, the network) keeps the
+    // cookie: that's "couldn't check", not signed out, so real Buy buttons
+    // whose tap check re-reads.
+    this.signedIn = session !== false || sessionUncertain();
     this.viewerFlares = [];
   }
   private userMeCall = 0;

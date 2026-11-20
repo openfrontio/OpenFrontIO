@@ -145,7 +145,9 @@ export class AccountModal extends BaseModal {
   // Global FFA position, read from the rank-position call (not /users/@me).
   @state() private ffaGlobalPosition: number | null = null;
 
-  private userMeResponse: UserMeResponse | null = null;
+  // State, so every new copy re-renders: a card save patched in after the
+  // player left My Card and came back reaches the tab made on the way back.
+  @state() private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
   // The card's clan tag, from the player's own profile (displayClanTag).
   private displayClanTag: string | null = null;

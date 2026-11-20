@@ -1631,16 +1631,23 @@ export class InventoryModal extends BaseModal {
     resolved: ResolvedCosmetic,
     method: "hard" | "soft",
   ): Promise<PurchaseResult> {
-    if (this.userMeResponse !== false) {
-      rememberPendingEquip(this.userMeResponse.player.publicId, resolved.key);
-    }
+    const remembered =
+      this.userMeResponse !== false
+        ? rememberPendingEquip(
+            this.userMeResponse.player.publicId,
+            resolved.key,
+          )
+        : null;
     try {
       return await purchaseCosmetic(resolved, method, undefined);
     } finally {
       // No reload means no purchase (failed, cancelled or thrown): forget
       // the item, or a later purchase of it elsewhere (the Store) would
-      // bring back this Equip now.
-      if (!purchaseReloading()) clearPendingEquip();
+      // bring back this Equip now. Only this purchase's record: one
+      // started since (even of the same item) may have written over it.
+      if (!purchaseReloading() && remembered !== null) {
+        clearPendingEquip(remembered);
+      }
     }
   }
 
