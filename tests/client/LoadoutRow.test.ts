@@ -370,4 +370,23 @@ describe("<loadout-row>", () => {
     expect(button().priceHard).toBe(2400);
     expect(button().listPriceHard).toBeNull();
   });
+
+  it("passes the sale to the button, so its end switches over live", async () => {
+    vi.useFakeTimers();
+    try {
+      const ends = new Date(Date.now() + 60_000).toISOString();
+      await render({ looks: [look("volt", "Volt", [onSale(ends)])] });
+      const b = q("purchase-button") as unknown as {
+        promotion: { endsAt: string } | null;
+        shown(c: "hard"): { price: number; listPrice: number | null };
+      };
+      expect(b.promotion?.endsAt).toBe(ends);
+      expect(b.shown("hard")).toMatchObject({ price: 1800, listPrice: 2400 });
+      vi.advanceTimersByTime(61_000);
+      // The button reads the price through shownPrice at the moment it shows.
+      expect(b.shown("hard")).toMatchObject({ price: 2400, listPrice: null });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

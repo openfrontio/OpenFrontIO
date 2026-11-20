@@ -4,12 +4,8 @@ import { customElement, property, state } from "lit/decorators.js";
 import { cardItemName } from "../../components/card/CardItems";
 import "../../components/CosmeticCard";
 import "../../components/PurchaseButton";
-import {
-  currentPrice,
-  purchaseCosmetic,
-  type ResolvedCosmetic,
-  saleHasEnded,
-} from "../../Cosmetics";
+import { purchaseCosmetic, type ResolvedCosmetic } from "../../Cosmetics";
+import { type PricedItem, shownPrice } from "../../ShownPrice";
 import { translateText } from "../../Utils";
 
 // "Get the look" on the end screen, in the promo box's place: for each player
@@ -33,32 +29,31 @@ interface ShownPrices {
   priceSoft: number | null;
   listPriceHard: number | null;
   listPriceSoft: number | null;
+  // The sale behind them: <purchase-button> switches to the list price the
+  // moment it ends, without a re-render from here.
+  promotion: PricedItem["promotion"] | null;
 }
 
 /**
- * An item's prices as the Store shows them now (currentPrice): while its own
+ * An item's prices as the Store shows them now (shownPrice): while its own
  * sale runs, the sale price with the list price to strike through; once the
  * sale has ended, the list price alone. Read at render, as a look saved
  * mid-game is shown minutes later.
  */
-// TODO(merge): shownPrice — switch to W1's ShownPrice.ts when the branches
-// merge.
 export function shownPrices(entry: LoadoutItem): ShownPrices {
-  const item = entry.item as Parameters<typeof currentPrice>[0];
-  const ended = saleHasEnded(item);
-  const price = (currency: "hard" | "soft", fallback: number | undefined) => {
-    const now = currentPrice(item, currency);
-    return now !== undefined && now > 0 ? now : (fallback ?? null);
+  const item = entry.item as PricedItem;
+  const shown = (currency: "hard" | "soft") => {
+    const s = shownPrice(item, currency);
+    return s !== null && s.price > 0 ? s : null;
   };
-  const priceHard = price("hard", entry.priceHard);
-  const priceSoft = price("soft", entry.priceSoft);
+  const hard = shown("hard");
+  const soft = shown("soft");
   return {
-    priceHard,
-    priceSoft,
-    listPriceHard:
-      priceHard !== null && !ended ? (item.listPriceHard ?? null) : null,
-    listPriceSoft:
-      priceSoft !== null && !ended ? (item.listPriceSoft ?? null) : null,
+    priceHard: hard?.price ?? null,
+    priceSoft: soft?.price ?? null,
+    listPriceHard: hard?.listPrice ?? null,
+    listPriceSoft: soft?.listPrice ?? null,
+    promotion: item.promotion ?? null,
   };
 }
 
@@ -183,6 +178,7 @@ export class LoadoutRow extends LitElement {
               .priceSoft=${prices.priceSoft}
               .listPriceHard=${prices.listPriceHard}
               .listPriceSoft=${prices.listPriceSoft}
+              .promotion=${prices.promotion}
               .rarity=${String(entry.item.rarity)}
               .itemName=${cardItemName(entry.type, entry.item)}
               .onPurchaseHard=${() => this.buy(entry, "hard")}
