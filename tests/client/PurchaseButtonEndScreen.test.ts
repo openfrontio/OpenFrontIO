@@ -313,3 +313,84 @@ describe("end-screen shortfall box", () => {
     expect(document.querySelector("[data-shortfall-box]")).toBeNull();
   });
 });
+
+// Keyboard: focus moves into the box, Tab stays in it, Escape closes it, and
+// focus goes back to the Buy button.
+describe("end-screen shortfall box: focus", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+  const INFO: InsufficientCurrency = {
+    currency: "Plutonium",
+    shortfall: 220,
+    item: "Storm Front",
+    canTopUp: true,
+    leavesGame: true,
+    capsPrice: 2000,
+  };
+  async function open() {
+    const buy = document.createElement("button");
+    buy.textContent = "Buy";
+    document.body.appendChild(buy);
+    const dialog = document.createElement(
+      "insufficient-currency-dialog",
+    ) as InstanceType<typeof InsufficientCurrencyDialog>;
+    dialog.returnFocus = buy;
+    dialog.info = INFO;
+    document.body.appendChild(dialog);
+    await dialog.updateComplete;
+    await new Promise((r) => setTimeout(r, 0));
+    const box = document.querySelector("[data-shortfall-box]") as HTMLElement;
+    return { buy, dialog, box };
+  }
+  const press = (key: string, shift = false) =>
+    document.activeElement!.dispatchEvent(
+      new KeyboardEvent("keydown", { key, shiftKey: shift, bubbles: true }),
+    );
+
+  it("focus moves into the box on open", async () => {
+    const { box } = await open();
+    expect(box.contains(document.activeElement)).toBe(true);
+  });
+
+  it("Tab stays inside the box, both ways", async () => {
+    const { box } = await open();
+    const buttons = [...box.querySelectorAll<HTMLButtonElement>("button")];
+    buttons[buttons.length - 1]!.focus();
+    press("Tab");
+    expect(document.activeElement).toBe(buttons[0]);
+    buttons[0].focus();
+    press("Tab", true);
+    expect(document.activeElement).toBe(buttons[buttons.length - 1]);
+  });
+
+  it("Escape closes it", async () => {
+    const { dialog } = await open();
+    const closed = vi.fn();
+    dialog.addEventListener("close", closed);
+    press("Escape");
+    expect(closed).toHaveBeenCalled();
+  });
+
+  it("closing puts focus back on the Buy button", async () => {
+    const { buy, dialog } = await open();
+    dialog.addEventListener("close", () => (dialog.info = null));
+    press("Escape");
+    await dialog.updateComplete;
+    expect(document.activeElement).toBe(buy);
+  });
+
+  it("the button hands its own Buy to the box", async () => {
+    const b = await mountButton({
+      preflight: async () => ({ ok: false as const, info: INFO }),
+      onPurchaseHard: vi.fn(async () => undefined),
+    });
+    hardButton(b).click();
+    await new Promise((r) => setTimeout(r, 0));
+    await b.updateComplete;
+    const dialog = b.querySelector(
+      "insufficient-currency-dialog",
+    ) as unknown as { returnFocus: HTMLElement | null };
+    expect(dialog.returnFocus).toBe(hardButton(b));
+  });
+});

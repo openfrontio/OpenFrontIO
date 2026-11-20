@@ -21,6 +21,9 @@ import { rememberPendingPurchase } from "./inventory/PendingEquip";
 @customElement("insufficient-currency-dialog")
 export class InsufficientCurrencyDialog extends LitElement {
   @property({ attribute: false }) info: InsufficientCurrency | null = null;
+  /** Where focus goes back to when the end-screen box closes (the Buy
+   * button that opened it). */
+  @property({ attribute: false }) returnFocus: HTMLElement | null = null;
   // End screen: the leaves-the-game warning is showing.
   @state() private leaving = false;
   private portal: HTMLDivElement | null = null;
@@ -43,6 +46,9 @@ export class InsufficientCurrencyDialog extends LitElement {
         document.body.appendChild(this.portal);
       }
       litRender(this.renderBox(info), this.portal);
+      // Focus moves in when the box opens, and again when its step changes
+      // (the buttons are new).
+      if (changed.has("info") || changed.has("leaving")) this.focusFirst();
     } else {
       this.dropPortal();
     }
@@ -53,7 +59,45 @@ export class InsufficientCurrencyDialog extends LitElement {
     litRender(html``, this.portal);
     this.portal.remove();
     this.portal = null;
+    // Back to where the player was: the Buy button that opened the box.
+    if (this.returnFocus?.isConnected) this.returnFocus.focus();
   }
+
+  private buttons(): HTMLButtonElement[] {
+    return [
+      ...(this.portal?.querySelectorAll<HTMLButtonElement>(
+        "[data-shortfall-box] button",
+      ) ?? []),
+    ];
+  }
+
+  private focusFirst() {
+    const first = this.buttons().find((b) => b.dataset.shortfallAction);
+    (first ?? this.buttons()[0])?.focus();
+  }
+
+  // Escape closes; Tab and Shift+Tab stay inside the box.
+  private onKeydown = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      this.close();
+      return;
+    }
+    if (e.key !== "Tab") return;
+    const buttons = this.buttons();
+    if (buttons.length === 0) return;
+    const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    const next = e.shiftKey
+      ? at <= 0
+        ? buttons.length - 1
+        : at - 1
+      : at === -1 || at === buttons.length - 1
+        ? 0
+        : at + 1;
+    e.preventDefault();
+    buttons[next].focus();
+  };
 
   private close() {
     this.dispatchEvent(new CustomEvent("close"));
@@ -153,6 +197,7 @@ export class InsufficientCurrencyDialog extends LitElement {
       @click=${(e: Event) => {
         if (e.target === e.currentTarget) this.close();
       }}
+      @keydown=${this.onKeydown}
     >
       <div
         data-shortfall-box

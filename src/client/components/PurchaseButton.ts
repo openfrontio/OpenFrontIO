@@ -373,6 +373,9 @@ export class PurchaseButton extends LitElement {
     balance?: number;
   } | null = null;
   @state() private ownBusy = false;
+  /** The currency last tapped, so the shortfall box can give focus back to
+   * that button. */
+  private lastMethod: "hard" | "soft" = "hard";
 
   /** Names the item, so every button for it shares one busy state while a
    * purchase is in flight. Empty: this button's own state only. */
@@ -463,6 +466,7 @@ export class PurchaseButton extends LitElement {
     const handler =
       method === "hard" ? this.onPurchaseHard : this.onPurchaseSoft;
     if (!handler || this.busy) return;
+    this.lastMethod = method;
     const preflight = this.preflight;
     if (preflight === null) {
       this.confirmingPurchase = { method, itemName: this.itemName, handler };
@@ -728,6 +732,11 @@ export class PurchaseButton extends LitElement {
       }
       <insufficient-currency-dialog
         .info=${this.insufficient}
+        .returnFocus=${this.querySelector<HTMLElement>(
+          this.lastMethod === "hard"
+            ? ".purchase-sparkle-btn-hard"
+            : ".purchase-sparkle-btn-soft",
+        )}
         @close=${() => (this.insufficient = null)}
         @buy-caps=${() => {
           this.insufficient = null;
