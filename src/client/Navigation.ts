@@ -113,8 +113,10 @@ export function initNavigation() {
       const visibleModal = document.querySelector(
         ".page-content:not(.hidden)",
       ) as any;
+      // Its own nav item (the page already shown) changes nothing: no prompt.
       if (
         visibleModal &&
+        visibleModal.id !== pageId &&
         typeof visibleModal.isOpen === "function" &&
         visibleModal.isOpen() &&
         typeof visibleModal.confirmBeforeClose === "function" &&
