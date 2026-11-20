@@ -68,23 +68,47 @@ describe("Steam login: sessionUncertain", () => {
     expect(sessionUncertain()).toBe(true);
   });
 
-  it("no ticket because the shell couldn't reach our API: uncertain", async () => {
-    onSteam();
-    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
-      ok: false,
-      reason: "api-unreachable",
-    });
-    expect(await userAuth()).toBe(false);
-    expect(sessionUncertain()).toBe(true);
-  });
+  const noTicket = (reason: SteamTicketFailure) =>
+    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({ ok: false, reason });
 
-  it("no ticket because Steam refused it: settled", async () => {
+  // Only the shell declining to bind this Steam id says anything about the
+  // session. A hung native call, an IPC race, Steam's client being down or
+  // our API unreachable from the shell settle nothing.
+  it.each(["api-unreachable", "timeout", "error", "unavailable"] as const)(
+    "no ticket (%s): uncertain",
+    async (reason) => {
+      onSteam();
+      noTicket(reason);
+      expect(await userAuth()).toBe(false);
+      expect(sessionUncertain()).toBe(true);
+    },
+  );
+
+  it.each(["needs-account", "ticket-rejected"] as const)(
+    "no ticket (%s) after an uncertain one: settled, signed out",
+    async (reason) => {
+      onSteam();
+      noTicket("timeout");
+      await userAuth();
+      expect(sessionUncertain()).toBe(true);
+      noTicket(reason);
+      expect(await userAuth()).toBe(false);
+      expect(sessionUncertain()).toBe(false);
+    },
+  );
+
+  it("a Steam login that succeeds after an unreachable one: settled", async () => {
     onSteam();
-    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
-      ok: false,
-      reason: "ticket-rejected",
-    });
-    expect(await userAuth()).toBe(false);
+    answer(503);
+    await userAuth();
+    expect(sessionUncertain()).toBe(true);
+    vi.mocked(globalThis.fetch).mockRestore();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ jwt: "not-a-real-jwt", expiresIn: 900 }), {
+        status: 200,
+      }),
+    );
+    await userAuth();
     expect(sessionUncertain()).toBe(false);
   });
 

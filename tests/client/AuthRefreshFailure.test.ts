@@ -73,6 +73,35 @@ describe("/auth/refresh failure handling", () => {
   // userAuth() answers false for both, so callers that must tell "signed
   // out" from "couldn't check" (the end screen's Buy) ask sessionUncertain().
   describe("sessionUncertain", () => {
+    it("a reader of refresh A still sees A's answer while refresh B is in flight", async () => {
+      // The end screen's tap check waited on refresh A (a 503) and reads
+      // the flag after loadViewerFlares has started refresh B. B hasn't
+      // answered, so nothing has settled: A's "couldn't check" stands.
+      let answerB: (r: unknown) => void = () => undefined;
+      fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce({
+          status: 503,
+          ok: false,
+          json: async () => ({}),
+        })
+        .mockImplementationOnce(
+          () => new Promise((resolve) => (answerB = resolve)),
+        );
+      vi.stubGlobal("fetch", fetchMock);
+
+      expect(await userAuth()).toBe(false); // refresh A: 503
+      const b = userAuth(); // refresh B starts, unanswered
+      try {
+        await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+        expect(sessionUncertain()).toBe(true);
+      } finally {
+        // Settle B either way, so no later test joins it.
+        answerB({ status: 503, ok: false, json: async () => ({}) });
+        await b;
+      }
+    });
+
     it.each([500, 503, 429, 403])("is true after a %i", async (status) => {
       answerRefreshWith(status);
       expect(await userAuth()).toBe(false);
