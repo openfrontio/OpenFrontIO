@@ -22,6 +22,7 @@ import type { OfIconName } from "../../components/OfIcon";
 import { Controller } from "../../Controller";
 import { SendAllianceRequestIntentEvent } from "../../Transport";
 import { UserSettings } from "../../UserSettings";
+import { prefersReducedMotion } from "../../utilities/ReducedMotion";
 
 import { GoToPlayerEvent, GoToUnitEvent } from "../../TransformHandler";
 import { GameView, PlayerView, UnitView } from "../../view";
@@ -104,6 +105,15 @@ const TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
 const isImportant = (event: GameEvent): boolean =>
   TIER_1_TYPES.has(event.type) && !event.minor;
 
+const byAge = (a: GameEvent, b: GameEvent) => a.createdAt - b.createdAt;
+
+// The routine block shows the newest four; older ones wait in the feed.
+const shownRoutine = (events: GameEvent[]): GameEvent[] =>
+  events
+    .filter((event) => !isImportant(event))
+    .sort(byAge)
+    .slice(-4);
+
 // A translated sentence for an event: plain as its description, and in parts
 // for its row, with the values of the params named in `strong` and `emoji`
 // marked.
@@ -163,6 +173,10 @@ const BLOCK =
 // does not make the block taller and scroll it while it rises.
 const ROW =
   "relative overflow-clip not-first:shadow-[inset_0_1px_var(--color-hud-line)]";
+// A row that goes fades, then closes its height, so the rows after it glide
+// into its place. One grid track, as an fr track can be animated and a
+// height of auto cannot.
+const LEAVING = "grid animate-event-out";
 // Important rows with a tone: a light fade of the tone's colour, strongest at
 // the row's end and gone before the text. A child, so the row's hover draws
 // over it; it does not fade with the HUD opacity, as it is content. It is
@@ -220,6 +234,10 @@ export class EventsDisplay extends LitElement implements Controller {
 
   private active: boolean = false;
   private events: GameEvent[] = [];
+  // Rows gone from the feed, drawn until they have folded away.
+  private leaving: GameEvent[] = [];
+  // The rows drawn by the last render: only those can fold away.
+  private drawn = new Set<GameEvent>();
   private nextEventID = 0;
   private userSettings = new UserSettings();
 
@@ -300,6 +318,10 @@ export class EventsDisplay extends LitElement implements Controller {
     this.initGeneration++;
     this.unsubscribeBus();
     this.events = [];
+    // The element outlives the game: a row still folding would come back
+    // in the next one.
+    this.leaving = [];
+    this.drawn.clear();
     this.active = false;
     this._isVisible = false;
     this.requestUpdate();
@@ -355,6 +377,8 @@ export class EventsDisplay extends LitElement implements Controller {
     if (!myPlayer || !myPlayer.isAlive()) {
       if (this._isVisible) {
         this._isVisible = false;
+        // Not drawn any more, so their animations will not end.
+        this.leaving = [];
         this.requestUpdate();
       }
       return;
@@ -412,10 +436,49 @@ export class EventsDisplay extends LitElement implements Controller {
     }
 
     if (this.events.length !== remainingEvents.length) {
+      this.foldAway(
+        this.events.filter((event) => !remainingEvents.includes(event)),
+      );
       this.events = remainingEvents;
       this.requestUpdate();
     }
 
+    // A row still folding is from later in the game when the replay viewer
+    // seeked back before it: at this point it never was.
+    const now = this.game.ticks();
+    this.leaving = this.leaving.filter((event) => event.createdAt <= now);
+
+    this.requestUpdate();
+  }
+
+  // Rows on screen that go are folded away instead of cut. Only rows the
+  // last render drew: one that came and went between two renders was never
+  // seen. Not a routine row pushed out of the newest four, even on the tick
+  // it expires: it goes at once, as any row pushed out does. Nor a row from
+  // later in the game, after the replay viewer seeked back: at this point it
+  // never was. Nor while the page is hidden: animations do not run there, so
+  // the rows would pile up and all fold at once when the player comes back.
+  private foldAway(gone: GameEvent[]) {
+    if (!this._isVisible || document.hidden || prefersReducedMotion()) return;
+    const routine = shownRoutine(this.events);
+    const now = this.game.ticks();
+    this.leaving = [
+      ...this.leaving,
+      ...gone.filter(
+        (event) =>
+          event.createdAt <= now &&
+          this.drawn.has(event) &&
+          (isImportant(event) || routine.includes(event)),
+      ),
+    ];
+  }
+
+  // A leaving row's animation is the rest of its life: it goes when that
+  // ends, so no timer has to match it.
+  private endLeaving(e: AnimationEvent, event: GameEvent) {
+    // The row's content may still be easing in; its end bubbles up here.
+    if (e.target !== e.currentTarget) return;
+    this.leaving = this.leaving.filter((other) => other !== event);
     this.requestUpdate();
   }
 
@@ -958,6 +1021,7 @@ export class EventsDisplay extends LitElement implements Controller {
 
   private renderEventRow(event: GameEvent, tier: Tier) {
     const look = TIERS[tier];
+    const leaving = this.leaving.includes(event);
     const quiet = tier === "important" && QUIET_TIER_1_TYPES.has(event.type);
     const toneClass = getMessageTypeClasses(event.type);
     const tone = Object.keys(severityColors).find(
@@ -993,13 +1057,19 @@ export class EventsDisplay extends LitElement implements Controller {
       : unitView
         ? () => this.emitGoToUnitEvent(unitView)
         : undefined;
+    // A leaving row is inert, so a click or a key meant for it cannot go
+    // to its player, or to the row that glides into its place.
     return html`
       <li
         data-event-row
         data-tier=${tier}
         data-tone=${tone}
         ?data-quiet=${quiet}
-        class=${ROW}
+        ?data-leaving=${leaving}
+        ?inert=${leaving}
+        class="${ROW} ${leaving ? LEAVING : ""}"
+        @animationend=${(e: AnimationEvent) => this.endLeaving(e, event)}
+        @animationcancel=${(e: AnimationEvent) => this.endLeaving(e, event)}
       >
         ${tinted ? html`<span data-tint class="${TINT} ${toneClass}"></span>` : ""}
         ${
@@ -1020,6 +1090,7 @@ export class EventsDisplay extends LitElement implements Controller {
 
   render() {
     if (!this.active || !this._isVisible) {
+      this.drawn.clear();
       return html``;
     }
 
@@ -1030,14 +1101,15 @@ export class EventsDisplay extends LitElement implements Controller {
       myPlayer.getTraitorRemainingTicks() > 0
     );
 
-    const tier1Events: GameEvent[] = [];
-    let tier2Events: GameEvent[] = [];
-    for (const event of this.events) {
-      (isImportant(event) ? tier1Events : tier2Events).push(event);
-    }
-    tier1Events.sort((a, b) => a.createdAt - b.createdAt);
-    tier2Events.sort((a, b) => a.createdAt - b.createdAt);
-    tier2Events = tier2Events.slice(-4);
+    // Leaving rows keep their place until they have folded away.
+    const tier1Events = [...this.events, ...this.leaving]
+      .filter(isImportant)
+      .sort(byAge);
+    const tier2Events = [
+      ...shownRoutine(this.events),
+      ...this.leaving.filter((event) => !isImportant(event)),
+    ].sort(byAge);
+    this.drawn = new Set([...tier1Events, ...tier2Events]);
 
     // The log is there whenever the feed is, even empty: a screen reader may
     // not read out a region that appears together with its first line. It

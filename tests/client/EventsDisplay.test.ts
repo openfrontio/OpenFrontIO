@@ -75,8 +75,14 @@ describe("events-display", () => {
   let goToUnit: GoToUnitEvent[];
 
   const feed = () => display as unknown as Feed;
+  // The rows in the feed, not those folding away after it.
   const rows = () => [
-    ...display.querySelectorAll<HTMLElement>("[data-event-row]"),
+    ...display.querySelectorAll<HTMLElement>(
+      "[data-event-row]:not([data-leaving])",
+    ),
+  ];
+  const leaving = () => [
+    ...display.querySelectorAll<HTMLElement>("[data-event-row][data-leaving]"),
   ];
   const rowSaying = (text: string) =>
     rows().find((r) => r.textContent?.includes(text)) as HTMLElement;
@@ -496,6 +502,216 @@ describe("events-display", () => {
     expect(rowSaying("Attack them").querySelector("[data-time-left]")).toBe(
       null,
     );
+  });
+
+  describe("a row that goes", () => {
+    const end = (row: HTMLElement, type = "animationend") =>
+      row.dispatchEvent(new Event(type, { bubbles: true }));
+
+    it("folds away in its place, inert, and goes when its animation ends", async () => {
+      attackRequest("first", 0);
+      attackRequest("second", 40);
+      await advanceTo(50);
+      const first = rowSaying("first");
+
+      await advanceTo(85);
+
+      expect(leaving()).toEqual([first]);
+      expect(first.hasAttribute("inert")).toBe(true);
+      expect(first.nextElementSibling).toBe(rowSaying("second"));
+      expect(rowSaying("second").hasAttribute("inert")).toBe(false);
+
+      // A redraw does not drop it; its animation's end does.
+      await advanceTo(86);
+      expect(leaving()).toEqual([first]);
+      end(first);
+      await display.updateComplete;
+      expect(leaving()).toEqual([]);
+      expect(rows().map((r) => r.textContent?.trim())).toEqual(["second"]);
+    });
+
+    it("waits for its own animation, not its content's", async () => {
+      // A naval warning goes when its boat does, maybe before its content
+      // has eased in.
+      let afloat = true;
+      const boat = { ...bomb(10), isActive: () => afloat } as UnitView;
+      feed().addEvent({
+        description: "boat",
+        type: MessageType.NAVAL_INVASION_INBOUND,
+        createdAt: 0,
+        unitView: boat,
+      });
+      await advanceTo(1);
+      afloat = false;
+      await advanceTo(2);
+      const [row] = leaving();
+
+      end(row.querySelector("button")!);
+      await display.updateComplete;
+      expect(leaving()).toEqual([row]);
+
+      end(row, "animationcancel");
+      await display.updateComplete;
+      expect(leaving()).toEqual([]);
+    });
+
+    it("folds a burst away together, and only the routine rows on screen", async () => {
+      for (let i = 0; i < 6; i++) {
+        attackRequest(`important ${i}`, 0);
+        feed().addEvent({
+          description: `routine ${i}`,
+          type: MessageType.ALLIANCE_EXPIRED,
+          createdAt: 0,
+        });
+      }
+      await advanceTo(1);
+
+      await advanceTo(80);
+
+      expect(rows()).toEqual([]);
+      expect(leaving().map((r) => r.textContent?.trim())).toEqual([
+        "routine 2",
+        "routine 3",
+        "routine 4",
+        "routine 5",
+        "important 0",
+        "important 1",
+        "important 2",
+        "important 3",
+        "important 4",
+        "important 5",
+      ]);
+      for (const row of leaving()) end(row);
+      await display.updateComplete;
+      expect(leaving()).toEqual([]);
+    });
+
+    it("keeps the newest four routine rows while one folds away", async () => {
+      for (let i = 0; i < 4; i++) {
+        feed().addEvent({
+          description: `routine ${i}`,
+          type: MessageType.ALLIANCE_EXPIRED,
+          createdAt: i,
+        });
+      }
+      await advanceTo(4);
+      feed().addEvent({
+        description: "routine 4",
+        type: MessageType.ALLIANCE_EXPIRED,
+        createdAt: 80,
+      });
+
+      // Routine 0 expires on the tick routine 4 pushes it out of the four:
+      // it goes at once, as any row pushed out does.
+      await advanceTo(80);
+      expect(leaving()).toEqual([]);
+
+      await advanceTo(81);
+      expect(leaving().map((r) => r.textContent?.trim())).toEqual([
+        "routine 1",
+      ]);
+      expect(rows().map((r) => r.textContent?.trim())).toEqual([
+        "routine 2",
+        "routine 3",
+        "routine 4",
+      ]);
+    });
+
+    it("goes at once if it came and went between two draws", async () => {
+      await advanceTo(1);
+      attackRequest("never drawn", 1);
+      ticks = 2;
+      display.tick();
+
+      await advanceTo(90);
+
+      expect(rows()).toEqual([]);
+      expect(leaving()).toEqual([]);
+    });
+
+    it("does not outlive the game it folded in", async () => {
+      attackRequest("first", 0);
+      await advanceTo(1);
+      await advanceTo(85);
+      expect(leaving()).toHaveLength(1);
+
+      display.dispose();
+
+      expect((display as unknown as { leaving: unknown[] }).leaving).toEqual(
+        [],
+      );
+    });
+
+    it("goes at once when a replay seeks back before it", async () => {
+      attackRequest("from later on", 50);
+      await advanceTo(60);
+
+      await advanceTo(20);
+
+      expect(rows()).toEqual([]);
+      expect(leaving()).toEqual([]);
+    });
+
+    it("goes at once when a replay seeks back before it while it folds", async () => {
+      attackRequest("from later on", 50);
+      await advanceTo(60);
+      await advanceTo(130);
+      expect(leaving()).toHaveLength(1);
+
+      await advanceTo(20);
+
+      expect(rows()).toEqual([]);
+      expect(leaving()).toEqual([]);
+    });
+
+    it("goes at once under reduced motion", async () => {
+      const original = window.matchMedia;
+      window.matchMedia = ((query: string) => ({
+        matches: query === "(prefers-reduced-motion: reduce)",
+      })) as unknown as typeof window.matchMedia;
+      try {
+        attackRequest("first", 0);
+        await advanceTo(1);
+        await advanceTo(80);
+      } finally {
+        window.matchMedia = original;
+      }
+
+      expect(rows()).toEqual([]);
+      expect(leaving()).toEqual([]);
+    });
+
+    it("goes at once while the page is hidden", async () => {
+      Object.defineProperty(document, "hidden", {
+        configurable: true,
+        get: () => true,
+      });
+      try {
+        attackRequest("first", 0);
+        await advanceTo(1);
+        await advanceTo(80);
+      } finally {
+        delete (document as { hidden?: boolean }).hidden;
+      }
+
+      expect(rows()).toEqual([]);
+      expect(leaving()).toEqual([]);
+    });
+
+    it("is forgotten when the feed is hidden", async () => {
+      attackRequest("first", 0);
+      await advanceTo(1);
+      await advanceTo(80);
+      expect(leaving()).toHaveLength(1);
+
+      // Dead, then (in a test only) alive again: nothing left to fold.
+      players.get(ME)!.isAlive = () => false;
+      await advanceTo(81);
+      expect(leaving()).toEqual([]);
+      players.get(ME)!.isAlive = () => true;
+      await advanceTo(82);
+      expect(leaving()).toEqual([]);
+    });
   });
 
   describe("names and amounts", () => {
