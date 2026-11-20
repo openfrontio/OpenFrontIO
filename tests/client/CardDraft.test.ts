@@ -209,4 +209,32 @@ describe("CardEditor", () => {
     vi.advanceTimersByTime(SAVED_SHOWN_MS);
     expect(editor.saveState).toBe("saving");
   });
+
+  it("a save with an empty middle row stores the rows as the server has them", async () => {
+    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    const editor = new CardEditor();
+    editor.seed(me(CARD));
+    editor.pick({ kind: "tracker", index: 1 }, null);
+    await editor.save();
+    // Saved compacts the gap away (the PUT left it out), and the draft
+    // follows, so nothing reads as changed.
+    expect(editor.saved.rows.tracker).toEqual(["wins", "best_elo", null]);
+    expect(editor.draft.rows.tracker).toEqual(["wins", "best_elo", null]);
+    expect(editor.changeCount()).toBe(0);
+  });
+
+  it("an edit made while saving stays a change afterwards", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTracker:games_played"]));
+    editor.pick({ kind: "tracker", index: 1 }, null);
+    const saving = editor.save();
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    finish({ ok: true, loadout: {} });
+    await saving;
+    expect(editor.saved.rows.tracker).toEqual(["wins", "best_elo", null]);
+    expect(editor.draft.rows.tracker).toEqual(["wins", null, "games_played"]);
+    expect(editor.changeCount()).toBeGreaterThan(0);
+  });
 });

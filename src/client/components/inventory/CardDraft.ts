@@ -344,13 +344,28 @@ export class CardEditor {
     this.clearSavedTimer();
     this.saveState = "saving";
     this.emit();
-    const result = await saveCardLoadout(loadoutBody(sent, this.held));
+    const body = loadoutBody(sent, this.held);
+    const result = await saveCardLoadout(body);
     if (!result.ok) {
       this.saveState = "failed";
       this.emit();
       return false;
     }
-    this.saved = sent;
+    // What is stored now: the loadout the server answers with, or what was
+    // sent. Either way empty rows are gone (the PUT leaves them out), so a
+    // gap in the middle closes up, as it will on the next load.
+    const stored = Array.isArray(result.loadout?.trackers)
+      ? result.loadout
+      : body;
+    const storedDraft = draftFromCard({
+      background: stored.background ?? null,
+      trackers: stored.trackers.map((stat) => ({ stat })),
+    });
+    // Nothing edited while it saved: the draft becomes the stored card.
+    if (cardChanges(sent, this.draft).length === 0) {
+      this.draft = cloneDraft(storedDraft);
+    }
+    this.saved = storedDraft;
     this.saveState = "saved";
     this.savedTimer = setTimeout(() => {
       this.savedTimer = null;
