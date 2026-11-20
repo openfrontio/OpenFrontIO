@@ -52,8 +52,12 @@ export function normalizeAssetPath(path: string): string {
 // "app://openfront/_assets/flags/US.<hash>.svg" into
 // "/app%3A/openfront/_assets/..." — a 404, and a country flag that silently
 // never rendered in game on desktop.
+//
+// blob: and data: URLs carry no "//" but are just as final: a blob: URL is a
+// file the page itself holds (an artist's dropped image in the dashboard's
+// card preview), and a data: URL is the image itself.
 function isAbsoluteUrl(path: string): boolean {
-  return /^[a-z][a-z0-9+.-]*:\/\//i.test(path);
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(path) || /^(?:blob|data):/i.test(path);
 }
 
 export function buildAssetUrl(

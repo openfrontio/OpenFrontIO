@@ -39,3 +39,6 @@ map-generator/map-generator.exe
 # Saved replay records for local testing
 records/*
 !records/demoGame1.json
+
+# Built packages (npm run build:cosmetic-preview)
+dist/
