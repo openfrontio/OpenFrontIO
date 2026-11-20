@@ -185,4 +185,28 @@ describe("CardEditor", () => {
     expect(editor.saveState).toBe("failed");
     expect(editor.changeCount()).toBe(1);
   });
+
+  it("an edit right after a save ends Saved at once, so Save can be clicked", async () => {
+    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    const editor = new CardEditor();
+    editor.seed(
+      me(CARD, [
+        "cardTracker:games_played",
+        "cardTracker:wins",
+        "cardTracker:best_elo",
+      ]),
+    );
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    await editor.save();
+    expect(editor.saveState).toBe("saved");
+    editor.pick({ kind: "tracker", index: 2 }, "best_elo");
+    editor.pick({ kind: "tracker", index: 1 }, "games_played");
+    expect(editor.saveState).toBe("idle");
+    expect(editor.canSave()).toBe(true);
+    // The old timer doesn't fire into a later save.
+    api.save.mockReturnValue(new Promise(() => {}));
+    void editor.save();
+    vi.advanceTimersByTime(SAVED_SHOWN_MS);
+    expect(editor.saveState).toBe("saving");
+  });
 });

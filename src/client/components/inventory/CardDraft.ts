@@ -319,8 +319,13 @@ export class CardEditor {
   }
 
   private afterEdit(): void {
-    // A failed save's Retry is for the changes it failed on.
-    if (this.saveState === "failed") this.saveState = "idle";
+    // A failed save's Retry is for the changes it failed on, and "Saved"
+    // was for the ones just stored: either way the new changes get Save card
+    // back at once (a "Saved" button takes no clicks).
+    if (this.saveState === "failed" || this.saveState === "saved") {
+      this.clearSavedTimer();
+      this.saveState = "idle";
+    }
     this.emit();
   }
 
