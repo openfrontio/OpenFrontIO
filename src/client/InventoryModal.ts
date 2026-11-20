@@ -23,7 +23,10 @@ import {
 } from "./components/CosmeticPresentation";
 import "./components/CosmeticPreviewModal";
 import "./components/inventory/InventoryBuyDialog";
+import { cardChangeLine } from "./components/inventory/CardChangeText";
 import { CardEditor } from "./components/inventory/CardDraft";
+import "./components/inventory/CardUnsavedDialog";
+import type { CardGuardChoice } from "./components/inventory/CardUnsavedDialog";
 import "./components/inventory/InventoryCardTab";
 import { EFFECT_SLOTS } from "./components/inventory/EffectSlots";
 import "./components/inventory/InventoryEffectList";
@@ -159,6 +162,11 @@ export class InventoryModal extends BaseModal {
   /** The Player card tab's changes: kept here so they outlive the tab's
    * element (the body re-renders while a fresh profile loads). */
   private readonly cardEditor = new CardEditor();
+  /** The unsaved-changes guard, while it asks. */
+  @state() private cardGuard: {
+    resolve: (go: boolean) => void;
+    saving: boolean;
+  } | null = null;
   private userSettings: UserSettings = new UserSettings();
   private userMeResponse: UserMeResponse | false = false;
   private catalogLoad: Promise<Cosmetics | null> | null = null;
@@ -1057,7 +1065,7 @@ export class InventoryModal extends BaseModal {
       <div class="relative flex shrink-0 flex-col">
         ${modalHeader({
           title: translateText("inventory.title"),
-          onBack: () => this.close(),
+          onBack: () => this.leaveThen(() => this.close()),
           ariaLabel: translateText("common.back"),
           rightContent: html`<o-button
             data-inventory-header-action
@@ -1087,6 +1095,7 @@ export class InventoryModal extends BaseModal {
           ${this.statusMessage}
         </p>
       </div>
+      ${this.renderCardGuard()}
       ${
         this.buying
           ? html`<inventory-buy-dialog
@@ -1344,6 +1353,12 @@ export class InventoryModal extends BaseModal {
   }
 
   protected onClose(): void {
+    // Closed from elsewhere (another modal's link): the guard has no say.
+    if (this.cardGuard !== null) {
+      this.cardGuard.resolve(false);
+      this.cardGuard = null;
+    }
+    this.cardEditor.settle();
     this.clearSaleEndTimer();
     this.clearStatus();
     this.search = "";
@@ -1368,11 +1383,92 @@ export class InventoryModal extends BaseModal {
   }
 
   private openStore(sub?: "card") {
-    this.close();
-    window.location.hash =
-      sub === undefined
-        ? "modal=store&tab=cosmetics"
-        : `modal=store&tab=cosmetics&sub=${sub}`;
+    this.leaveThen(() => {
+      this.close();
+      window.location.hash =
+        sub === undefined
+          ? "modal=store&tab=cosmetics"
+          : `modal=store&tab=cosmetics&sub=${sub}`;
+    });
+  }
+
+  // ---- Unsaved card changes guard -----------------------------------------
+
+  /** True when leaving the Player card tab would drop changes. */
+  private hasCardChanges(): boolean {
+    return this.activeTab === CARD_TAB && this.cardEditor.changeCount() > 0;
+  }
+
+  /**
+   * Whether the player may leave the Player card tab: at once without
+   * changes; otherwise once they choose Save (and it saves) or Discard.
+   */
+  private confirmLeaveCard(): Promise<boolean> {
+    if (!this.hasCardChanges()) return Promise.resolve(true);
+    if (this.cardGuard !== null) return Promise.resolve(false);
+    return new Promise((resolve) => {
+      this.cardGuard = { resolve, saving: false };
+    });
+  }
+
+  /** Runs `go` now when nothing would be lost (so tab switches and links
+   * stay synchronous), otherwise after the guard allows it. */
+  private leaveThen(go: () => void): void {
+    if (!this.hasCardChanges()) {
+      go();
+      return;
+    }
+    void this.confirmLeaveCard().then((ok) => {
+      if (ok) go();
+    });
+  }
+
+  private async chooseCardGuard(choice: CardGuardChoice): Promise<void> {
+    const guard = this.cardGuard;
+    if (guard === null || guard.saving) return;
+    if (choice === "keep") {
+      this.cardGuard = null;
+      guard.resolve(false);
+      return;
+    }
+    if (choice === "discard") {
+      this.cardEditor.discard();
+      this.cardGuard = null;
+      guard.resolve(true);
+      return;
+    }
+    this.cardGuard = { ...guard, saving: true };
+    const saved = await this.cardEditor.save();
+    this.cardGuard = null;
+    // A failed save stays on the tab: its bar and toast offer Retry.
+    guard.resolve(saved);
+  }
+
+  private renderCardGuard(): TemplateResult | typeof nothing {
+    const guard = this.cardGuard;
+    if (guard === null) return nothing;
+    const changes = this.cardEditor.changes();
+    return html`<card-unsaved-dialog
+      .count=${changes.length}
+      .lines=${changes.map((c) => cardChangeLine(this.cosmetics, c))}
+      .canSave=${this.cardEditor.unownedInChanges().length === 0}
+      .saving=${guard.saving}
+      .onChoose=${(choice: CardGuardChoice) => void this.chooseCardGuard(choice)}
+    ></card-unsaved-dialog>`;
+  }
+
+  /** Escape and clicking outside close the Inventory: ask first. */
+  public confirmBeforeClose(): Promise<boolean> {
+    return this.confirmLeaveCard();
+  }
+
+  /** Leaving the Player card tab for In game: ask first. */
+  public setActiveTab(key: string): void {
+    if (key === CARD_TAB || this.activeTab !== CARD_TAB) {
+      super.setActiveTab(key);
+      return;
+    }
+    this.leaveThen(() => super.setActiveTab(key));
   }
 
   // ---- Actions -----------------------------------------------------------

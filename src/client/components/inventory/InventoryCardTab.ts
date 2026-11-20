@@ -4,16 +4,17 @@ import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type { ResolvedCosmetic } from "../../Cosmetics";
 import { translateText } from "../../Utils";
-import {
-  type CardItem,
-  type CardItemType,
-  cardItemName,
-} from "../card/CardItems";
+import { type CardItem, type CardItemType } from "../card/CardItems";
 import "../card/PlayerCard";
 import {
   buildPlayerCardView,
   type PlayerCardView,
 } from "../card/PlayerCardModel";
+import {
+  cardChangeLine,
+  cardSlotItemName,
+  cardSlotLabel,
+} from "./CardChangeText";
 import {
   CARD_SLOT_KIND_LIST,
   CARD_SLOT_KINDS,
@@ -22,7 +23,6 @@ import {
   type CardSlotKind,
   type CardSlotRef,
   sameSlot,
-  slotItem,
   swapPreview,
 } from "./CardDraft";
 import "./InventoryItemTile";
@@ -99,27 +99,11 @@ export class InventoryCardTab extends LitElement {
   // ---- Names ---------------------------------------------------------------
 
   private itemName(slot: CardSlotRef, name: string | null): string {
-    if (name === null) {
-      return translateText(
-        slot.kind === "background"
-          ? "inventory_card.background_none"
-          : "inventory_card.empty_slot",
-      );
-    }
-    const found = slotItem(this.cosmetics, slot, name);
-    if (found !== null) return cardItemName(found.type, found.item);
-    if (slot.kind === "tracker") {
-      return translateText(`player_card.tracker_${name}`);
-    }
-    return name;
+    return cardSlotItemName(this.cosmetics, slot, name);
   }
 
   private slotLabel(slot: CardSlotRef): string {
-    return slot.kind === "background"
-      ? translateText("inventory_card.background")
-      : translateText(`inventory_card.slot_${slot.kind}`, {
-          slot: slot.index + 1,
-        });
+    return cardSlotLabel(slot);
   }
 
   // ---- Card view -----------------------------------------------------------
@@ -688,7 +672,130 @@ export class InventoryCardTab extends LitElement {
         </div>
         <div class="order-1 md:order-2">${this.renderPreview()}</div>
       </div>
-      ${this.renderPicker()}
+      ${this.renderPicker()} ${this.renderSaveBar()} ${this.renderToast()}
+    </div>`;
+  }
+
+  // ---- Save bar ------------------------------------------------------------
+
+  private save(): void {
+    void this.editor?.save();
+  }
+
+  private renderSaveButton(): TemplateResult {
+    const editor = this.editor!;
+    const state = editor.saveState;
+    const label =
+      state === "saving"
+        ? "inventory_card.saving"
+        : state === "saved"
+          ? "inventory_card.saved"
+          : state === "failed"
+            ? "inventory_card.save_retry"
+            : "inventory_card.save_card";
+    const style =
+      state === "failed"
+        ? "border border-rose-400/60 bg-rose-950 text-rose-100 hover:bg-rose-900"
+        : state === "saved"
+          ? "border border-white/15 bg-slate-800 text-white"
+          : "bg-sky-600 text-white hover:bg-sky-500";
+    return html`<button
+      type="button"
+      data-card-save
+      data-save-state=${state}
+      ?disabled=${state === "saving" || (state !== "saved" && !editor.canSave())}
+      class="flex min-h-11 items-center gap-2 rounded-lg px-4 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50 ${style}"
+      @click=${() => {
+        if (state !== "saved") this.save();
+      }}
+    >
+      ${
+        state === "saving"
+          ? html`<span
+              aria-hidden="true"
+              class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+            ></span>`
+          : state === "saved"
+            ? html`<span aria-hidden="true">✓</span>`
+            : nothing
+      }
+      ${translateText(label)}
+    </button>`;
+  }
+
+  private renderSaveBar(): TemplateResult | typeof nothing {
+    const editor = this.editor!;
+    const changes = editor.changes();
+    if (changes.length === 0 && editor.saveState === "idle") return nothing;
+    return html`<div
+      data-card-save-bar
+      class="sticky bottom-0 z-30 -mx-3 flex flex-wrap items-center gap-3 border-t border-white/10 bg-slate-950/95 px-3 py-3"
+    >
+      <div class="flex min-w-0 flex-1 items-center gap-3">
+        ${
+          changes.length > 0
+            ? html`<span
+                data-card-change-count
+                class="shrink-0 rounded-md border border-dashed border-white px-2 py-0.5 text-xs font-bold text-white"
+                >${translateText("inventory_card.changes_not_saved", {
+                  count: changes.length,
+                })}</span
+              >`
+            : nothing
+        }
+        <span
+          data-card-changes-summary
+          class="hidden min-w-0 truncate text-sm text-white/70 md:inline"
+          >${changes.map((c) => cardChangeLine(this.cosmetics, c)).join(" · ")}</span
+        >
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        ${
+          changes.length > 0
+            ? html`<button
+                type="button"
+                data-card-discard
+                ?disabled=${editor.saveState === "saving"}
+                class="min-h-11 rounded-lg border border-white/15 bg-white/5 px-4 text-sm font-bold text-white hover:bg-white/10 disabled:opacity-50"
+                @click=${() => editor.discard()}
+              >
+                ${translateText("inventory_card.discard")}
+              </button>`
+            : nothing
+        }
+        ${this.renderSaveButton()}
+      </div>
+    </div>`;
+  }
+
+  private renderToast(): TemplateResult | typeof nothing {
+    if (this.editor?.saveState !== "failed") return nothing;
+    return html`<div
+      data-card-save-toast
+      role="alert"
+      class="fixed bottom-24 left-1/2 z-50 flex w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 items-start gap-3 rounded-xl border border-rose-400/50 bg-rose-950 p-3 text-white shadow-2xl"
+    >
+      <span
+        aria-hidden="true"
+        class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-500 text-sm font-black"
+        >!</span
+      >
+      <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span class="text-sm font-bold"
+          >${translateText("inventory_card.save_failed_title")}</span
+        >
+        <span class="text-xs text-white/80"
+          >${translateText("inventory_card.save_failed_body")}</span
+        >
+      </div>
+      <button
+        type="button"
+        data-card-toast-retry
+        class="min-h-11 shrink-0 rounded-lg border border-white/20 bg-white/10 px-3 text-sm font-bold hover:bg-white/20"
+        @click=${() => this.save()}
+      >
+        ${translateText("inventory_card.retry")}
+      </button>
     </div>`;
   }
 }

@@ -24,10 +24,8 @@ import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { CardEditor } from "../../src/client/components/inventory/CardDraft";
 import "../../src/client/components/inventory/InventoryCardTab";
 import type { InventoryCardTab } from "../../src/client/components/inventory/InventoryCardTab";
-import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
 
 const item = { product: null, rarity: "common" };
-const LATER = () => new Date(Date.now() + 3_600_000).toISOString();
 const COSMETICS = {
   patterns: {},
   flags: {},
@@ -319,5 +317,96 @@ describe("<inventory-card-tab> owner layout and picker", () => {
     expect(q("[data-card-unlock-note]")!.textContent).toContain(
       "Season 1 · free tier 20",
     );
+  });
+});
+
+describe("<inventory-card-tab> save bar", () => {
+  async function changeTracker3() {
+    await click(row(2).querySelector("[data-card-row-open]"));
+    await pickTile("cardTracker:games_played");
+  }
+  const bar = () => q("[data-card-save-bar]");
+  const saveButton = () => q<HTMLButtonElement>("[data-card-save]")!;
+
+  it("there's no bar without changes", async () => {
+    await render(userMe(OWNER));
+    expect(bar()).toBeNull();
+  });
+
+  it("lists the changes", async () => {
+    await render(userMe(OWNER));
+    await changeTracker3();
+    expect(q("[data-card-change-count]")!.textContent).toContain(
+      'inventory_card.changes_not_saved:{"count":1}',
+    );
+    const summary = q("[data-card-changes-summary]")!.textContent!;
+    expect(summary).toContain("inventory_card.change_line:");
+    expect(summary).toContain(
+      '"slot":"inventory_card.slot_tracker:{\\"slot\\":3}"',
+    );
+    expect(summary).toContain('"from":"player_card.tracker_best_elo"');
+    expect(summary).toContain('"to":"player_card.tracker_games_played"');
+  });
+
+  it("Discard restores the saved card", async () => {
+    await render(userMe(OWNER));
+    await changeTracker3();
+    await click(q("[data-card-discard]"));
+    expect(editor.draft.rows.tracker).toEqual([
+      "wins",
+      "nukes_launched",
+      "best_elo",
+    ]);
+    expect(bar()).toBeNull();
+  });
+
+  it("Save card → Saving… → Saved for 2 seconds → gone", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    await render(userMe(OWNER));
+    await changeTracker3();
+    expect(saveButton().textContent).toContain("inventory_card.save_card");
+    await click(saveButton());
+    expect(saveButton().textContent).toContain("inventory_card.saving");
+    expect(saveButton().disabled).toBe(true);
+    vi.useFakeTimers();
+    finish({ ok: true, loadout: {} });
+    await vi.waitFor(() =>
+      expect(saveButton().textContent).toContain("inventory_card.saved"),
+    );
+    vi.advanceTimersByTime(2000);
+    vi.useRealTimers();
+    await settle();
+    expect(bar()).toBeNull();
+  });
+
+  it("sends a saved taunt and title back unchanged", async () => {
+    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    await render(userMe(OWNER));
+    await changeTracker3();
+    await click(saveButton());
+    expect(api.save).toHaveBeenCalledWith({
+      background: "bg_pacific",
+      title: "warmonger",
+      taunt: "salute",
+      trackers: ["wins", "nukes_launched", "games_played"],
+    });
+  });
+
+  it("a failed save says so with Retry and a toast, and keeps the changes", async () => {
+    api.save.mockResolvedValue({ ok: false, error: "failed" });
+    await render(userMe(OWNER));
+    await changeTracker3();
+    await click(saveButton());
+    expect(saveButton().textContent).toContain("inventory_card.save_retry");
+    const toast = q("[data-card-save-toast]")!;
+    expect(toast.getAttribute("role")).toBe("alert");
+    expect(toast.textContent).toContain("inventory_card.save_failed_title");
+    expect(editor.changeCount()).toBe(1);
+    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    await click(q("[data-card-toast-retry]"));
+    expect(api.save).toHaveBeenCalledTimes(2);
+    expect(q("[data-card-save-toast]")).toBeNull();
+    expect(saveButton().textContent).toContain("inventory_card.saved");
   });
 });
