@@ -1708,6 +1708,18 @@ export const StorePlacementSubTabSchema = z.enum([
   "crowns",
 ]);
 export type StorePlacementSubTab = z.infer<typeof StorePlacementSubTabSchema>;
+// The Featured tab's sections. Featured is a kind of its own, not a tab: the
+// section says which slot an item was seen or bought in. The client never
+// sends `{ kind: "tab", tab: "featured" }`. Mirrors the API's copy.
+export const StorePlacementFeaturedSectionSchema = z.enum([
+  "deal",
+  "starter",
+  "new",
+  "sale",
+]);
+export type StorePlacementFeaturedSection = z.infer<
+  typeof StorePlacementFeaturedSectionSchema
+>;
 
 export const StorePlacementSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -1718,6 +1730,10 @@ export const StorePlacementSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("flash") }),
   z.object({ kind: z.literal("affiliate") }),
   z.object({ kind: z.literal("post_game") }),
+  z.object({
+    kind: z.literal("featured"),
+    section: StorePlacementFeaturedSectionSchema,
+  }),
 ]);
 export type StorePlacement = z.infer<typeof StorePlacementSchema>;
 
