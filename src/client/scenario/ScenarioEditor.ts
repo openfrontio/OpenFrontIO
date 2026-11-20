@@ -261,6 +261,8 @@ export class ScenarioEditor extends LitElement {
     if (doc === null || id === null) return;
     if (!isScenarioSize(this.width, this.height)) return;
     if (this.width === doc.width && this.height === doc.height) return;
+    // A stroke still open goes into the resized document.
+    this.endStroke();
     this.status = "loading";
     try {
       const resized = resizeScenarioDocument(doc, this.width, this.height);
@@ -295,12 +297,13 @@ export class ScenarioEditor extends LitElement {
   }
 
   private onKey(e: KeyboardEvent): void {
-    if (e.target instanceof HTMLInputElement || e.altKey) return;
-    if (!(e.ctrlKey || e.metaKey)) {
-      if (e.key === "[") this.setBrushRadius(this.brushRadius - 1);
-      else if (e.key === "]") this.setBrushRadius(this.brushRadius + 1);
+    if (e.target instanceof HTMLInputElement) return;
+    // Some layouts type the brackets with AltGr (Ctrl+Alt) or Option.
+    if (!e.metaKey && (e.key === "[" || e.key === "]")) {
+      this.setBrushRadius(this.brushRadius + (e.key === "]" ? 1 : -1));
       return;
     }
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
     const key = e.key.toLowerCase();
     if (key === "z") this.undoOrRedo(e.shiftKey);
     else if (key === "y") this.undoOrRedo(true);
@@ -628,6 +631,15 @@ export class ScenarioEditor extends LitElement {
     );
   }
 
+  private onPointerCancel(e: PointerEvent): void {
+    // A cancelled touch, as palm rejection sends, is not a lift: if it
+    // hasn't painted yet, it paints nothing.
+    if (this.stroke?.pointerId === e.pointerId && !this.stroke.confirmed) {
+      this.stroke = null;
+    }
+    this.onPointerUp(e);
+  }
+
   private onPointerUp(e: PointerEvent): void {
     if (this.stroke?.pointerId === e.pointerId) this.endStroke();
     this.gestures?.up(e.pointerId);
@@ -700,7 +712,7 @@ export class ScenarioEditor extends LitElement {
           @pointerdown=${this.onPointerDown}
           @pointermove=${this.onPointerMove}
           @pointerup=${this.onPointerUp}
-          @pointercancel=${this.onPointerUp}
+          @pointercancel=${this.onPointerCancel}
           @pointerleave=${() => (this.hover = null)}
           @wheel=${this.onWheel}
           @dblclick=${this.onDoubleClick}
