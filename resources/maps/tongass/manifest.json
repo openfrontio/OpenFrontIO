@@ -1,0 +1,344 @@
+{
+  "additionalNations": [
+    {
+      "coordinates": [1810, 1909],
+      "flag": "Alaska",
+      "name": "Ward Cove"
+    },
+    {
+      "coordinates": [1793, 1894],
+      "flag": "Alaska",
+      "name": "Clover Pass"
+    },
+    {
+      "coordinates": [1865, 1923],
+      "flag": "Alaska",
+      "name": "Beaver Pass"
+    },
+    {
+      "coordinates": [1840, 1944],
+      "flag": "Alaska",
+      "name": "Saxman"
+    },
+    {
+      "coordinates": [1851, 2058],
+      "flag": "Alaska",
+      "name": "Annette"
+    },
+    {
+      "coordinates": [1677, 2114],
+      "flag": "Alaska",
+      "name": "klinkwan"
+    },
+    {
+      "coordinates": [1625, 2014],
+      "flag": "Alaska",
+      "name": "Hetta"
+    },
+    {
+      "coordinates": [1608, 1959],
+      "flag": "Alaska",
+      "name": "Sulzer"
+    },
+    {
+      "coordinates": [1485, 1959],
+      "flag": "Alaska",
+      "name": "Waterfall"
+    },
+    {
+      "coordinates": [1694, 1880],
+      "flag": "Alaska",
+      "name": "Boggs Landing"
+    },
+    {
+      "coordinates": [1680, 1863],
+      "flag": "Alaska",
+      "name": "Hadley"
+    },
+    {
+      "coordinates": [1645, 1848],
+      "flag": "Alaska",
+      "name": "Kasaan"
+    },
+    {
+      "coordinates": [1594, 1899],
+      "flag": "Alaska",
+      "name": "Hollis"
+    },
+    {
+      "coordinates": [1538, 1840],
+      "flag": "Alaska",
+      "name": "Klawock"
+    },
+    {
+      "coordinates": [1770, 1685],
+      "flag": "Alaska",
+      "name": "Santa Anna"
+    },
+    {
+      "coordinates": [1702, 1789],
+      "flag": "Alaska",
+      "name": "Meyers Chuck"
+    },
+    {
+      "coordinates": [1748, 1839],
+      "flag": "Alaska",
+      "name": "Helm Bay"
+    },
+    {
+      "coordinates": [1478, 1702],
+      "flag": "Alaska",
+      "name": "Tuxekan"
+    },
+    {
+      "coordinates": [1466, 1758],
+      "flag": "Alaska",
+      "name": "Karheen"
+    },
+    {
+      "coordinates": [1471, 1673],
+      "flag": "Alaska",
+      "name": "Tokeen"
+    },
+    {
+      "coordinates": [1428, 1607],
+      "flag": "Alaska",
+      "name": "Calder"
+    },
+    {
+      "coordinates": [1425, 1635],
+      "flag": "Alaska",
+      "name": "Shakan"
+    },
+    {
+      "coordinates": [1509, 1610],
+      "flag": "Alaska",
+      "name": "Whale Pass"
+    },
+    {
+      "coordinates": [967, 870],
+      "flag": "Alaska",
+      "name": "Game Creek"
+    },
+    {
+      "coordinates": [776, 833],
+      "flag": "Alaska",
+      "name": "Sunnyside"
+    },
+    {
+      "coordinates": [1205, 753],
+      "flag": "Alaska",
+      "name": "Douglas"
+    },
+    {
+      "coordinates": [1144, 654],
+      "flag": "Alaska",
+      "name": "Auke Bay"
+    },
+    {
+      "coordinates": [1107, 572],
+      "flag": "Alaska",
+      "name": "Dobson Landing"
+    },
+    {
+      "coordinates": [1014, 398],
+      "flag": "Alaska",
+      "name": "Mud Bay"
+    },
+    {
+      "coordinates": [954, 291],
+      "flag": "Alaska",
+      "name": "Lutak"
+    },
+    {
+      "coordinates": [918, 296],
+      "flag": "Alaska",
+      "name": "Klukwan"
+    },
+    {
+      "coordinates": [875, 254],
+      "flag": "Alaska",
+      "name": "Wells"
+    },
+    {
+      "coordinates": [858, 283],
+      "flag": "Alaska",
+      "name": "Covenant Life"
+    },
+    {
+      "coordinates": [978, 639],
+      "flag": "Alaska",
+      "name": "Excursion Inlet"
+    },
+    {
+      "coordinates": [1235, 744],
+      "flag": "Alaska",
+      "name": "Thane"
+    }
+  ],
+  "categories": ["north_america", "new"],
+  "id": "Tongass",
+  "layers": [
+    {
+      "alpha": 0.75,
+      "id": "impassable",
+      "nukeable": false,
+      "placement": "land"
+    }
+  ],
+  "map": {
+    "height": 2224,
+    "num_land_tiles": 1192377,
+    "width": 2200
+  },
+  "map16x": {
+    "height": 556,
+    "num_land_tiles": 67623,
+    "width": 550
+  },
+  "map4x": {
+    "height": 1112,
+    "num_land_tiles": 287711,
+    "width": 1100
+  },
+  "name": "Tongass",
+  "nations": [
+    {
+      "coordinates": [1016, 277],
+      "flag": "Alaska",
+      "name": "Skagway"
+    },
+    {
+      "coordinates": [979, 335],
+      "flag": "Alaska",
+      "name": "Haines"
+    },
+    {
+      "coordinates": [923, 690],
+      "flag": "Alaska",
+      "name": "Gustavus"
+    },
+    {
+      "coordinates": [791, 855],
+      "flag": "Alaska",
+      "name": "Pelican"
+    },
+    {
+      "coordinates": [827, 249],
+      "flag": "Alaska",
+      "name": "Mosquito Lake"
+    },
+    {
+      "coordinates": [985, 840],
+      "flag": "Alaska",
+      "name": "Hoonah"
+    },
+    {
+      "coordinates": [1033, 945],
+      "flag": "Alaska",
+      "name": "Tenakee Springs"
+    },
+    {
+      "coordinates": [1157, 935],
+      "flag": "Alaska",
+      "name": "Cube Cove"
+    },
+    {
+      "coordinates": [1204, 719],
+      "flag": "Alaska",
+      "name": "Juneau"
+    },
+    {
+      "coordinates": [1172, 1043],
+      "flag": "Alaska",
+      "name": "Angoon"
+    },
+    {
+      "coordinates": [1013, 1213],
+      "flag": "Alaska",
+      "name": "Sitka"
+    },
+    {
+      "coordinates": [1326, 1281],
+      "flag": "Alaska",
+      "name": "Kake"
+    },
+    {
+      "coordinates": [1516, 1131],
+      "flag": "Alaska",
+      "name": "Hobart Bay"
+    },
+    {
+      "coordinates": [1550, 1392],
+      "flag": "Alaska",
+      "name": "Petersburg"
+    },
+    {
+      "coordinates": [1154, 1593],
+      "flag": "Alaska",
+      "name": "Port Alexander"
+    },
+    {
+      "coordinates": [547, 541],
+      "flag": "us",
+      "name": "Glacier Bay National Park"
+    },
+    {
+      "coordinates": [55, 188],
+      "flag": "Alaska",
+      "name": "Yakutat"
+    },
+    {
+      "coordinates": [1686, 1528],
+      "flag": "Alaska",
+      "name": "Wrangell"
+    },
+    {
+      "coordinates": [1825, 1918],
+      "flag": "Alaska",
+      "name": "Ketchikan"
+    },
+    {
+      "coordinates": [1862, 2027],
+      "flag": "Alaska",
+      "name": "Metlakatla"
+    },
+    {
+      "coordinates": [1516, 1863],
+      "flag": "Alaska",
+      "name": "Craig"
+    },
+    {
+      "coordinates": [1411, 1578],
+      "flag": "Alaska",
+      "name": "Port Protection"
+    },
+    {
+      "coordinates": [1374, 1697],
+      "flag": "Alaska",
+      "name": "Edna Bay"
+    },
+    {
+      "coordinates": [1577, 1984],
+      "flag": "Alaska",
+      "name": "Hydaburg"
+    },
+    {
+      "coordinates": [1635, 1772],
+      "flag": "Alaska",
+      "name": "Thorne Bay"
+    },
+    {
+      "coordinates": [1, 1],
+      "flag": "us",
+      "name": "Wrangell-St. Elias National Park"
+    },
+    {
+      "coordinates": [2165, 1728],
+      "flag": "Alaska",
+      "name": "Hyder"
+    }
+  ],
+  "themes": ["north_america"],
+  "translation_key": "map.tongass"
+}
