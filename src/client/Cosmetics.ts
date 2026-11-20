@@ -38,6 +38,7 @@ import {
   purchaseCosmeticPack,
   purchaseWithCurrency,
 } from "./Api";
+import { userAuth } from "./Auth";
 import {
   cardItemName,
   type CardItem,
@@ -589,7 +590,13 @@ function inPlaceShortfall(
  * (none when the check couldn't run or explained itself). */
 export type PurchasePreflight =
   | { ok: true; balance: number }
-  | { ok: false; info?: InsufficientCurrency };
+  | {
+      ok: false;
+      info?: InsufficientCurrency;
+      // The profile couldn't be read: no session (none, or a 401 cleared
+      // it), or a session but no answer (the network).
+      reason?: "signed_out" | "unreachable";
+    };
 
 /**
  * The end screen's check when a buy button is tapped, before any confirm box:
@@ -607,7 +614,15 @@ export async function checkInPlacePurchase(
   }
   const price = currentPrice(c as Pattern | Flag, method) ?? 0;
   const me = await broadcastFreshUserMe();
-  if (me === false) return { ok: false };
+  if (me === false) {
+    // A 401 on the read clears the session, so no session here means
+    // signed out; a session that got no profile means the network.
+    const session = await userAuth(false);
+    return {
+      ok: false,
+      reason: session === false ? "signed_out" : "unreachable",
+    };
+  }
   const wallet = me.player.currency;
   const balance = method === "hard" ? (wallet?.hard ?? 0) : (wallet?.soft ?? 0);
   if (balance < 0) {

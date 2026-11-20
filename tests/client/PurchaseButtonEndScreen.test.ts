@@ -106,7 +106,7 @@ describe("end-screen purchase button", () => {
     expect(dialog.info).toEqual(SHORT);
   });
 
-  it("the check can't run (signed out, a failed read): nothing at all", async () => {
+  it("the check can't run: no confirm and no charge (the check's caller explains why)", async () => {
     const buy = vi.fn(async () => undefined);
     const b = await mountButton({
       preflight: async () => ({ ok: false as const }),

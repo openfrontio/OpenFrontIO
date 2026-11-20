@@ -10,6 +10,13 @@ vi.mock("../../src/client/Api", async (importOriginal) => ({
   invalidateUserMe: vi.fn(),
   purchaseWithCurrency: vi.fn(),
 }));
+const auth = vi.hoisted(() => ({ session: true }));
+vi.mock("../../src/client/Auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/Auth")>()),
+  userAuth: vi.fn(async () =>
+    auth.session ? { jwt: "j", claims: {} } : false,
+  ),
+}));
 vi.mock("../../src/client/InGameModal", () => ({
   showInGameAlert: vi.fn().mockResolvedValue(true),
   showInGameConfirm: vi.fn().mockResolvedValue(true),
@@ -253,9 +260,22 @@ describe("buying on the end screen", () => {
     expect(purchaseWithCurrency).not.toHaveBeenCalled();
   });
 
-  it("the tap check: signed out, nothing to show", async () => {
+  it("the tap check: no session (none, or a 401 cleared it): signed out", async () => {
+    auth.session = false;
     vi.mocked(getUserMe).mockResolvedValue(false);
-    expect(await checkInPlacePurchase(STORM, "hard")).toEqual({ ok: false });
+    expect(await checkInPlacePurchase(STORM, "hard")).toEqual({
+      ok: false,
+      reason: "signed_out",
+    });
+    auth.session = true;
+  });
+
+  it("the tap check: a session but no profile (the network): unreachable", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    expect(await checkInPlacePurchase(STORM, "hard")).toEqual({
+      ok: false,
+      reason: "unreachable",
+    });
   });
 
   it("the Store and Inventory still reload after a purchase", async () => {

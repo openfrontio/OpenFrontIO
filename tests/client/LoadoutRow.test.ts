@@ -531,6 +531,35 @@ describe("<loadout-row> buying", () => {
     );
   });
 
+  it("the tap check finds no session: the sign-in prompt, not a dead tap", async () => {
+    vi.mocked(checkInPlacePurchase).mockResolvedValueOnce({
+      ok: false,
+      reason: "signed_out",
+    });
+    await render({});
+    await button().preflight!("hard");
+    await vi.waitFor(() =>
+      expect(showInGameConfirm).toHaveBeenCalledWith(
+        "win_modal.sign_in_leaves_game",
+        expect.anything(),
+      ),
+    );
+  });
+
+  it("the tap check can't reach the server: says so", async () => {
+    vi.mocked(checkInPlacePurchase).mockResolvedValueOnce({
+      ok: false,
+      reason: "unreachable",
+    });
+    await render({});
+    await button().preflight!("hard");
+    await vi.waitFor(() =>
+      expect(showInGameAlert).toHaveBeenCalledWith(
+        "win_modal.server_unreachable",
+      ),
+    );
+  });
+
   it("a shortfall goes back to the button's box", async () => {
     const info = {
       currency: "Plutonium",

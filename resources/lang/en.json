@@ -3585,6 +3585,7 @@
     "purchase_failed_not_charged": "Purchase failed — you weren't charged.",
     "purchase_unconfirmed": "We couldn't confirm the purchase. Check your balance before trying again.",
     "requeue": "Play Again",
+    "server_unreachable": "Couldn't reach the server. Try again.",
     "share": "Share",
     "sign_in_leaves_game": "Signing in leaves the game. Sign in to buy?",
     "sign_in_to_buy": "Sign in to buy",

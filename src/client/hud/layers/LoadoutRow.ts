@@ -201,6 +201,16 @@ export class LoadoutRow extends LitElement {
     }
   }
 
+  // The tap check: a profile that can't be read is never a dead tap.
+  private async check(entry: LoadoutItem, method: "hard" | "soft") {
+    const result = await checkInPlacePurchase(this.resolved(entry), method);
+    if (!result.ok && result.reason === "signed_out") void this.signIn();
+    if (!result.ok && result.reason === "unreachable") {
+      void showInGameAlert(translateText("win_modal.server_unreachable"));
+    }
+    return result;
+  }
+
   // Signing in leaves the game: say so first.
   private async signIn(): Promise<void> {
     const go = await showInGameConfirm(
@@ -238,8 +248,7 @@ export class LoadoutRow extends LitElement {
       .listPriceHard=${prices.listPriceHard}
       .listPriceSoft=${prices.listPriceSoft}
       .promotion=${prices.promotion}
-      .preflight=${(method: "hard" | "soft") =>
-        checkInPlacePurchase(this.resolved(entry), method)}
+      .preflight=${(method: "hard" | "soft") => this.check(entry, method)}
       .busyKey=${key}
       .rarity=${String(entry.item.rarity)}
       .itemName=${cardItemName(entry.type, entry.item)}
