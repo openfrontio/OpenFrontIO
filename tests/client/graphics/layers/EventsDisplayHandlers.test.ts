@@ -36,6 +36,7 @@ vi.mock("../../../../src/client/Utils", () => ({
     return params ? `${text} ${JSON.stringify(params)}` : text;
   }),
   getMessageTypeClasses: vi.fn(() => ""),
+  severityColors: {},
 }));
 vi.mock("@openfront/engine-lib/Format", () => ({
   renderNumber: vi.fn(),

@@ -38,6 +38,7 @@ vi.mock("../../../../src/client/Utils", () => ({
       params?.name !== undefined ? String(params.name) : key,
   ),
   getMessageTypeClasses: vi.fn(() => ""),
+  severityColors: {},
 }));
 vi.mock("@openfront/engine-lib/Format", () => ({
   renderNumber: vi.fn(),

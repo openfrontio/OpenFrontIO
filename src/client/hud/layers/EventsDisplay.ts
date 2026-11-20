@@ -30,7 +30,11 @@ import { onlyImages } from "./OnlyImages";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { UIState } from "../../UIState";
-import { getMessageTypeClasses, translateText } from "../../Utils";
+import {
+  getMessageTypeClasses,
+  severityColors,
+  translateText,
+} from "../../Utils";
 import { ticksToSeconds } from "../GameTicks";
 
 interface GameEvent {
@@ -132,11 +136,16 @@ const BLOCK =
   "hud-panel rounded-lg sm:max-lg:landscape:rounded-l-none overflow-x-hidden overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgb(255_255_255_/_0.35)_transparent]";
 // The hairline between rows is an inset shadow, not a border, so it takes no
 // height of its own.
-const ROW = "not-first:shadow-[inset_0_1px_var(--color-hud-line)]";
+const ROW = "relative not-first:shadow-[inset_0_1px_var(--color-hud-line)]";
+// Important rows with a tone: a light fade of the tone's colour, strongest at
+// the row's end and gone before the text. A child, so the row's hover draws
+// over it; it does not fade with the HUD opacity, as it is content.
+const TINT =
+  "pointer-events-none absolute inset-0 bg-linear-to-l from-current/20 via-current/5 via-55% to-transparent";
 // An icon column, then the text. The icon's box is one line tall and sits on
 // the first line, so a wrapped row keeps its icon at the top.
 const ROW_BODY =
-  "grid w-full grid-cols-[1.25rem_minmax(0,1fr)] gap-x-2 ps-2 pe-2.5 text-start";
+  "relative grid w-full grid-cols-[1.25rem_minmax(0,1fr)] gap-x-2 ps-2 pe-2.5 text-start";
 const GO_TO =
   "pointer-fine:hover:bg-white/5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-aquarius";
 const ICON_BOX = "flex items-center justify-center";
@@ -857,10 +866,13 @@ export class EventsDisplay extends LitElement implements Controller {
   private renderEventRow(event: GameEvent, tier: Tier) {
     const look = TIERS[tier];
     const quiet = tier === "important" && QUIET_TIER_1_TYPES.has(event.type);
+    const toneClass = getMessageTypeClasses(event.type);
+    const tone = Object.keys(severityColors).find(
+      (key) => severityColors[key] === toneClass,
+    );
+    const tinted = tier === "important" && tone !== "info";
     const content = html`
-      <span
-        class="${ICON_BOX} ${look.icon} ${getMessageTypeClasses(event.type)}"
-      >
+      <span class="${ICON_BOX} ${look.icon} ${toneClass}">
         <of-icon
           name=${event.icon ?? EVENT_ICONS[event.type]}
           size=${look.iconSize}
@@ -877,7 +889,14 @@ export class EventsDisplay extends LitElement implements Controller {
         ? () => this.emitGoToUnitEvent(unitView)
         : undefined;
     return html`
-      <li data-event-row data-tier=${tier} ?data-quiet=${quiet} class=${ROW}>
+      <li
+        data-event-row
+        data-tier=${tier}
+        data-tone=${tone}
+        ?data-quiet=${quiet}
+        class=${ROW}
+      >
+        ${tinted ? html`<span data-tint class="${TINT} ${toneClass}"></span>` : ""}
         ${
           goTo
             ? html`<button
