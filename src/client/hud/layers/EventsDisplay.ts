@@ -36,11 +36,14 @@ import {
   translateText,
 } from "../../Utils";
 import { ticksToSeconds } from "../GameTicks";
+import { eventText, EventTextPart } from "./EventText";
 
 interface GameEvent {
   /** Keys the event's row, so the row stays its own as others come and go. */
   id: number;
   description: string;
+  /** The description in parts, its names and amounts marked to be bold. */
+  parts?: EventTextPart[];
   unsafeDescription?: boolean;
   type: MessageType;
   highlight?: boolean;
@@ -92,6 +95,17 @@ const TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
 ]);
 
 const isTier1 = (type: MessageType): boolean => TIER_1_TYPES.has(type);
+
+// A translated sentence for an event: plain as its description, and in parts
+// for its row, with the values of the params named in `strong` marked.
+function sentence(
+  key: string,
+  params: Record<string, string | number>,
+  strong: readonly string[],
+): Pick<GameEvent, "description" | "parts"> {
+  const parts = eventText(key, params, strong);
+  return { description: parts.map((part) => part.text).join(""), parts };
+}
 
 // The icon of each message type. A Record, so a new type does not build
 // until it has one.
@@ -151,24 +165,27 @@ const GO_TO =
 const ICON_BOX = "flex items-center justify-center";
 const TEXT = "min-w-0 wrap-anywhere";
 // Important rows: 15px text in 32px rows, 16px in 36px from lg. Routine
-// rows: 13px in 24px, 14px in 28px from lg, and dimmer.
+// rows: 13px in 24px, 14px in 28px from lg, and dimmer. The sentence is in a
+// regular weight and its names and amounts (`strong`) stand out from it.
 const TIERS = {
   important: {
     body: "py-1.5",
     icon: "h-5 lg:h-6",
     iconSize: 16,
-    text: "text-[15px]/5 lg:text-base/6 font-medium text-white",
+    text: "text-[15px]/5 lg:text-base/6 text-white/80",
+    strong: "font-bold text-white",
   },
   routine: {
     body: "py-1",
     icon: "h-4 lg:h-5",
     iconSize: 14,
     text: "text-[13px]/4 lg:text-sm/5 text-white/70",
+    strong: "font-semibold text-white",
   },
 } as const;
 // Good news about gold or troops (QUIET_TIER_1_TYPES): a size smaller, in
 // the same row height.
-const QUIET_TEXT = "text-[13px]/5 lg:text-sm/6 font-medium text-white";
+const QUIET_TEXT = "text-[13px]/5 lg:text-sm/6 text-white/80";
 const BETRAYAL_ICON = "text-yellow-400";
 
 type Tier = keyof typeof TIERS;
@@ -244,9 +261,11 @@ export class EventsDisplay extends LitElement implements Controller {
       return;
     }
     this.addEvent({
-      description: translateText("events_display.alliance_request_sent", {
-        name: e.recipient.displayName(),
-      }),
+      ...sentence(
+        "events_display.alliance_request_sent",
+        { name: e.recipient.displayName() },
+        ["name"],
+      ),
       type: MessageType.ALLIANCE_REQUEST,
       createdAt: this.game.ticks(),
     });
@@ -346,19 +365,20 @@ export class EventsDisplay extends LitElement implements Controller {
     }
     if (group.units.length !== before) {
       event.unitView = group.units[0];
-      event.description = this.missileGroupDescription(group);
+      Object.assign(event, this.missileGroupSentence(group));
     }
     return true;
   }
 
-  private missileGroupDescription(group: InboundMissileGroup): string {
+  private missileGroupSentence(group: InboundMissileGroup) {
     if (group.units.length === 1) {
-      return translateText(group.messageKey, { name: group.senderName });
+      return sentence(group.messageKey, { name: group.senderName }, ["name"]);
     }
-    return translateText(group.countKey, {
-      name: group.senderName,
-      count: group.units.length,
-    });
+    return sentence(
+      group.countKey,
+      { name: group.senderName, count: group.units.length },
+      ["name"],
+    );
   }
 
   // Adds the bomb to the open line for its sender and type, or starts one.
@@ -380,7 +400,7 @@ export class EventsDisplay extends LitElement implements Controller {
       if (!group.units.some((unit) => unit.id() === unitView.id())) {
         group.units.push(unitView);
       }
-      existing.description = this.missileGroupDescription(group);
+      Object.assign(existing, this.missileGroupSentence(group));
       // Each new bomb restarts the timer, so the line stays up while
       // bombs keep coming.
       existing.createdAt = this.game.ticks();
@@ -397,7 +417,7 @@ export class EventsDisplay extends LitElement implements Controller {
       units: [unitView],
     };
     this.addEvent({
-      description: this.missileGroupDescription(group),
+      ...this.missileGroupSentence(group),
       type,
       unsafeDescription: false,
       highlight: true,
@@ -452,15 +472,23 @@ export class EventsDisplay extends LitElement implements Controller {
       return;
     }
 
-    let description: string = event.message;
+    // Every string value is a name, an amount or a unit, so all are marked.
+    // They are the resolved ones, so an anonymised name is the one in bold.
+    let text: Pick<GameEvent, "description" | "parts"> = {
+      description: event.message,
+    };
     if (event.message.startsWith("events_display.")) {
-      description = translateText(event.message, this.resolveParams(event));
+      const params = this.resolveParams(event);
+      const strong = Object.keys(params).filter(
+        (name) => typeof params[name] === "string",
+      );
+      text = sentence(event.message, params, strong);
     }
 
     const unitView =
       event.unitID !== undefined ? this.game.unit(event.unitID) : undefined;
     this.addEvent({
-      description: description,
+      ...text,
       createdAt: this.game.ticks(),
       highlight: true,
       type: event.messageType,
@@ -509,10 +537,11 @@ export class EventsDisplay extends LitElement implements Controller {
     // the small feed, quietly.
     const sent = !event.isFrom;
     this.addEvent({
-      description: translateText(sent ? "chat.to" : "chat.from", {
-        user: otherPlayerDiplayName,
-        msg: translatedMessage,
-      }),
+      ...sentence(
+        sent ? "chat.to" : "chat.from",
+        { user: otherPlayerDiplayName, msg: translatedMessage },
+        ["user"],
+      ),
       createdAt: this.game.ticks(),
       highlight: !sent,
       minor: sent,
@@ -535,12 +564,16 @@ export class EventsDisplay extends LitElement implements Controller {
       update.request.recipientID,
     ) as PlayerView;
     this.addEvent({
-      description: translateText("events_display.alliance_request_status", {
-        name: recipient.displayName(),
-        status: update.accepted
-          ? translateText("events_display.alliance_accepted")
-          : translateText("events_display.alliance_rejected"),
-      }),
+      ...sentence(
+        "events_display.alliance_request_status",
+        {
+          name: recipient.displayName(),
+          status: update.accepted
+            ? translateText("events_display.alliance_accepted")
+            : translateText("events_display.alliance_rejected"),
+        },
+        ["name"],
+      ),
       type: update.accepted
         ? MessageType.ALLIANCE_ACCEPTED
         : MessageType.ALLIANCE_REJECTED,
@@ -581,11 +614,15 @@ export class EventsDisplay extends LitElement implements Controller {
             });
 
       this.addEvent({
-        description: translateText("events_display.betrayal_description", {
-          name: betrayed.displayName(),
-          malusPercent: malusPercent,
-          durationText: durationText,
-        }),
+        ...sentence(
+          "events_display.betrayal_description",
+          {
+            name: betrayed.displayName(),
+            malusPercent: malusPercent,
+            durationText: durationText,
+          },
+          ["name"],
+        ),
         type: MessageType.ALLIANCE_BROKEN,
         highlight: true,
         createdAt: this.game.ticks(),
@@ -594,9 +631,11 @@ export class EventsDisplay extends LitElement implements Controller {
     } else if (betrayed === myPlayer) {
       this.eventBus.emit(new PlaySoundEffectEvent("alliance-broken"));
       this.addEvent({
-        description: translateText("events_display.betrayed_you", {
-          name: traitor.displayName(),
-        }),
+        ...sentence(
+          "events_display.betrayed_you",
+          { name: traitor.displayName() },
+          ["name"],
+        ),
         type: MessageType.ALLIANCE_BROKEN,
         highlight: true,
         createdAt: this.game.ticks(),
@@ -620,9 +659,11 @@ export class EventsDisplay extends LitElement implements Controller {
     if (!other || !myPlayer.isAlive() || !other.isAlive()) return;
 
     this.addEvent({
-      description: translateText("events_display.alliance_expired", {
-        name: other.displayName(),
-      }),
+      ...sentence(
+        "events_display.alliance_expired",
+        { name: other.displayName() },
+        ["name"],
+      ),
       type: MessageType.ALLIANCE_EXPIRED,
       highlight: true,
       createdAt: this.game.ticks(),
@@ -658,7 +699,7 @@ export class EventsDisplay extends LitElement implements Controller {
     };
 
     this.addEvent({
-      description: translateText(messageKey, params),
+      ...sentence(messageKey, params, ["name", "gold", "troops"]),
       type: isRecipient
         ? MessageType.DONATION_RECEIVED
         : MessageType.DONATION_SENT,
@@ -677,10 +718,11 @@ export class EventsDisplay extends LitElement implements Controller {
     const target = this.game.playerBySmallID(event.targetID) as PlayerView;
 
     this.addEvent({
-      description: translateText("events_display.attack_request", {
-        name: other.displayName(),
-        target: target.displayName(),
-      }),
+      ...sentence(
+        "events_display.attack_request",
+        { name: other.displayName(), target: target.displayName() },
+        ["name", "target"],
+      ),
       type: MessageType.ATTACK_REQUEST,
       highlight: true,
       createdAt: this.game.ticks(),
@@ -726,11 +768,14 @@ export class EventsDisplay extends LitElement implements Controller {
       });
     } else if (sender === myPlayer && recipient !== AllPlayers) {
       this.addEvent({
-        description: translateText("events_display.sent_emoji", {
-          name: (recipient as PlayerView).displayName(),
-          emoji: update.emoji.message,
-        }),
-        unsafeDescription: true,
+        ...sentence(
+          "events_display.sent_emoji",
+          {
+            name: (recipient as PlayerView).displayName(),
+            emoji: update.emoji.message,
+          },
+          ["name"],
+        ),
         type: MessageType.CHAT,
         icon: "emoji",
         minor: true,
@@ -770,7 +815,9 @@ export class EventsDisplay extends LitElement implements Controller {
       return;
     }
 
-    let description = event.message;
+    let text: Pick<GameEvent, "description" | "parts"> = {
+      description: event.message,
+    };
     if (event.message.startsWith("events_display.") && unitView) {
       const params: Record<string, string | number> = {
         name: unitView.owner().displayName(),
@@ -778,11 +825,11 @@ export class EventsDisplay extends LitElement implements Controller {
       if (event.messageType === MessageType.NAVAL_INVASION_INBOUND) {
         params.troops = renderTroops(unitView.troops());
       }
-      description = translateText(event.message, params);
+      text = sentence(event.message, params, ["name", "troops"]);
     }
 
     this.addEvent({
-      description: description,
+      ...text,
       type: event.messageType,
       unsafeDescription: false,
       highlight: true,
@@ -845,7 +892,17 @@ export class EventsDisplay extends LitElement implements Controller {
         ></of-icon>
       </span>
       <span class="${TEXT} ${quiet ? QUIET_TEXT : look.text}">
-        ${this.getEventDescription(event)}
+        ${
+          event.parts
+            ? event.parts.map((part) =>
+                part.strong
+                  ? html`<strong dir="auto" class=${look.strong}
+                      >${part.text}</strong
+                    >`
+                  : part.text,
+              )
+            : this.getEventDescription(event)
+        }
       </span>
     `;
     const { focusID, unitView } = event;

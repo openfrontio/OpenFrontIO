@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { MessageType } from "@openfront/engine-api/game/GameTypes";
 import {
+  DisplayMessageUpdate,
   DonateEventUpdate,
   GameUpdateType,
 } from "@openfront/engine-api/game/GameUpdates";
@@ -24,6 +25,7 @@ function player(smallID: number) {
     smallID: () => smallID,
     id: () => `p${smallID}`,
     displayName: () => `Player${smallID}`,
+    isPlayer: () => true,
     isAlive: () => true,
     isTraitor: () => false,
     getTraitorRemainingTicks: () => 0,
@@ -57,6 +59,7 @@ interface Feed {
     type: MessageType,
   ): void;
   onDonateEvent(update: DonateEventUpdate): void;
+  onDisplayMessageEvent(update: DisplayMessageUpdate): void;
 }
 
 describe("events-display", () => {
@@ -99,6 +102,10 @@ describe("events-display", () => {
           "{name} - {count, plural, other {# atom bombs}} inbound",
         "events_display.betrayal_debuff_ends":
           "{time} seconds left until betrayal debuff ends",
+        "events_display.received_gold_from_player":
+          "Received {gold} gold from {name}",
+        "events_display.trade_ship_captured":
+          "Your trade ship was captured by {name}",
       },
     });
     document.body.appendChild(langSelector);
@@ -354,5 +361,81 @@ describe("events-display", () => {
     );
     expect(line.querySelector("button")).toBeNull();
     expect(rows()).toHaveLength(0);
+  });
+
+  describe("names and amounts", () => {
+    const strong = (row: HTMLElement) =>
+      [...row.querySelectorAll("strong")].map((el) => el.textContent);
+
+    it("sets them in bold in the translated sentence", async () => {
+      feed().onDonateEvent({
+        type: GameUpdateType.DonateEvent,
+        donationType: "gold",
+        senderId: "p2",
+        recipientId: "p1",
+        amount: 500n,
+      });
+      await advanceTo(1);
+
+      const row = rowSaying("Received");
+      expect(row.textContent?.trim()).toBe("Received 500 gold from Player2");
+      expect(strong(row)).toEqual(["500", "Player2"]);
+    });
+
+    it("keeps the name in bold as a missile line's count changes", async () => {
+      for (const id of [10, 11]) {
+        feed().addInboundMissile(
+          bomb(id),
+          "events_display.atom_bomb_inbound",
+          "events_display.atom_bomb_inbound_count",
+          MessageType.NUKE_INBOUND,
+        );
+      }
+      await advanceTo(1);
+
+      const line = rowSaying("inbound");
+      expect(line.textContent?.trim()).toBe("Player2 - 2 atom bombs inbound");
+      expect(strong(line)).toEqual(["Player2"]);
+    });
+
+    it("sets this viewer's name for the player in bold in an engine message", async () => {
+      feed().onDisplayMessageEvent({
+        type: GameUpdateType.DisplayEvent,
+        message: "events_display.trade_ship_captured",
+        messageType: MessageType.UNIT_DESTROYED,
+        playerID: ME,
+        params: { name: "RealName" },
+        focusPlayerID: ENEMY,
+      });
+      feed().onDisplayMessageEvent({
+        type: GameUpdateType.DisplayEvent,
+        message: "A message without a key",
+        messageType: MessageType.UNIT_DESTROYED,
+        playerID: ME,
+      });
+      await advanceTo(1);
+
+      const captured = rowSaying("captured");
+      expect(captured.textContent).not.toContain("RealName");
+      expect(strong(captured)).toEqual(["Player2"]);
+      expect(strong(rowSaying("without a key"))).toEqual([]);
+    });
+
+    it("keeps a right-to-left name from reordering the sentence", async () => {
+      players.get(ENEMY)!.displayName = () => "سارة";
+      feed().onDonateEvent({
+        type: GameUpdateType.DonateEvent,
+        donationType: "gold",
+        senderId: "p2",
+        recipientId: "p1",
+        amount: 500n,
+      });
+      await advanceTo(1);
+
+      const name = [...rowSaying("Received").querySelectorAll("strong")].find(
+        (el) => el.textContent === "سارة",
+      );
+      expect(name?.getAttribute("dir")).toBe("auto");
+    });
   });
 });
