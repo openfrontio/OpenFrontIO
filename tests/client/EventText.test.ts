@@ -120,6 +120,21 @@ describe("eventText", () => {
     ]);
   });
 
+  it("marks an emoji as an emoji, where the translation puts it", () => {
+    useLanguage("de", {
+      sent: "{emoji} an {name} gesendet",
+    });
+
+    expect(
+      eventText("sent", { name: "Ann", emoji: "😀" }, ["name"], "emoji"),
+    ).toEqual([
+      { text: "😀", strong: false, emoji: true },
+      { text: " an ", strong: false },
+      { text: "Ann", strong: true },
+      { text: " gesendet", strong: false },
+    ]);
+  });
+
   it("returns the key as one plain part when it has no translation", () => {
     useLanguage("en", {});
 
