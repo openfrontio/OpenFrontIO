@@ -11,6 +11,7 @@ import {
   UnitIncomingUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { EventBus } from "@openfront/shared/EventBus";
+import en from "../../resources/lang/en.json";
 import { OF_ICONS } from "../../src/client/components/OfIcon";
 // Side-effect import: the @customElement decorator registers <events-display>.
 import "../../src/client/hud/layers/EventsDisplay";
@@ -126,6 +127,9 @@ describe("events-display", () => {
         "events_display.betrayal_debuff_ends":
           "{time} seconds left until betrayal debuff ends",
         "events_display.log_label": "Game events",
+        "events_display.mirv_inbound": en.events_display.mirv_inbound,
+        "events_display.mirv_inbound_count":
+          en.events_display.mirv_inbound_count,
         // Emoji first, as some languages put it.
         "events_display.sent_emoji": "{emoji} sent to {name}",
         "events_display.sent_emoji_all": "Sent everyone: {emoji}",
@@ -1184,6 +1188,124 @@ describe("events-display", () => {
       const counter = pending()[0].querySelector("[data-row-seconds]")!;
       expect(counter.getAttribute("aria-hidden")).toBe("true");
       expect(display.querySelectorAll('[role="log"] p')).toHaveLength(0);
+    });
+  });
+
+  describe("the MIRV warning", () => {
+    const alarms = () =>
+      rows().filter((row) => row.dataset.alarm !== undefined);
+    const said = (selector: string) =>
+      [...display.querySelectorAll(`${selector} p`)].map((p) => p.textContent);
+
+    function mirv(id: number, active = () => true) {
+      return {
+        id: () => id,
+        isActive: active,
+        owner: () => players.get(ENEMY),
+      } as unknown as UnitView;
+    }
+    function launch(unit: UnitView, type = MessageType.MIRV_INBOUND) {
+      const key = {
+        [MessageType.MIRV_INBOUND]: "events_display.mirv_inbound",
+        [MessageType.NUKE_INBOUND]: "events_display.atom_bomb_inbound",
+        [MessageType.HYDROGEN_BOMB_INBOUND]:
+          "events_display.hydrogen_bomb_inbound",
+      }[type as number]!;
+      feed().addInboundMissile(unit, key, `${key}_count`, type);
+    }
+
+    it("is the only row drawn as an alarm", async () => {
+      launch(mirv(1));
+      launch(bomb(2), MessageType.NUKE_INBOUND);
+      launch(bomb(3), MessageType.HYDROGEN_BOMB_INBOUND);
+      feed().addEvent({
+        description: "Naval invasion incoming",
+        type: MessageType.NAVAL_INVASION_INBOUND,
+        createdAt: 0,
+      });
+      await advanceTo(1);
+
+      expect(rows()).toHaveLength(4);
+      expect(alarms()).toEqual([rowSaying("MIRV INBOUND")]);
+      expect(alarms()[0].querySelector("[data-tint]")).toBeNull();
+      expect(alarms()[0].querySelector("[data-alarm-fill]")).not.toBeNull();
+    });
+
+    it("says its sentence once, its warning signs hidden", async () => {
+      launch(mirv(1));
+      await advanceTo(1);
+      const row = alarms()[0];
+
+      expect(row.textContent!.trim().replace(/\s+/g, " ")).toBe(
+        "Player2 - MIRV INBOUND",
+      );
+      expect(row.textContent).not.toContain("\u26A0");
+      const icons = [...row.querySelectorAll("of-icon")];
+      expect(icons.map((icon) => icon.getAttribute("name"))).toEqual([
+        "mirv",
+        "warning",
+        "warning",
+        "warning",
+        "warning",
+      ]);
+      for (const icon of icons) {
+        expect(icon.firstElementChild!.getAttribute("aria-hidden")).toBe(
+          "true",
+        );
+      }
+    });
+
+    it("keeps one row as MIRVs join and land, and pulses again only for one that joins", async () => {
+      // The glow and the signs pulse as they are drawn: new elements replay
+      // it, kept ones do not.
+      const pulsing = (row: HTMLElement) => [
+        row.querySelector("[data-alarm-fill]"),
+        ...row.querySelectorAll('of-icon[name="warning"]'),
+      ];
+      let firstActive = true;
+      launch(mirv(1, () => firstActive));
+      await advanceTo(1);
+      const row = alarms()[0];
+      const first = pulsing(row);
+
+      launch(mirv(2));
+      await advanceTo(2);
+      const joined = pulsing(row);
+
+      expect(alarms()).toEqual([row]);
+      expect(row.textContent).toContain("Player2 - 2 MIRVS INBOUND");
+      expect(joined).toHaveLength(5);
+      joined.forEach((element, i) => expect(element).not.toBe(first[i]));
+
+      firstActive = false;
+      await advanceTo(3);
+
+      expect(alarms()).toEqual([row]);
+      expect(row.textContent).toContain("Player2 - MIRV INBOUND");
+      pulsing(row).forEach((element, i) => expect(element).toBe(joined[i]));
+    });
+
+    it("is read out at once, apart from the log, and only as it arrives", async () => {
+      updates = {
+        [GameUpdateType.UnitIncoming]: [
+          {
+            type: GameUpdateType.UnitIncoming,
+            unitID: 1,
+            message: "events_display.mirv_inbound",
+            messageType: MessageType.MIRV_INBOUND,
+            playerID: ME,
+          },
+        ],
+      };
+      await advanceTo(1);
+      launch(mirv(2));
+      await advanceTo(2);
+
+      expect(rowSaying("MIRVS").textContent).toContain("2 MIRVS");
+      expect(said('[aria-live="assertive"]')).toEqual([
+        "Player2 - MIRV INBOUND",
+      ]);
+      expect(said('[role="log"]')).toEqual([]);
     });
   });
 });

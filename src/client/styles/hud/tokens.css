@@ -161,6 +161,36 @@
     }
   }
 
+  /* The MIRV warning's row: the navy with a red cast, opaque, under a red
+     outline and inner glow. As it arrives, the glow swells three times,
+     600 ms each, and its warning signs beat with it; then both rest. Three
+     flashes in 1.8 s, below the three a second that is the limit for
+     flashing content. */
+  --color-hud-alarm: color-mix(
+    in srgb,
+    var(--color-surface) 86%,
+    var(--color-red-800)
+  );
+  --shadow-hud-alarm:
+    inset 0 0 0 2px var(--color-red-500),
+    inset 0 0 14px 2px rgb(239 68 68 / 0.55);
+  --animate-event-alarm: event-alarm 600ms ease-in-out 3;
+  @keyframes event-alarm {
+    50% {
+      box-shadow:
+        inset 0 0 0 2px var(--color-red-200),
+        inset 0 0 26px 8px rgb(248 113 113 / 0.85);
+    }
+  }
+  --animate-event-alarm-sign: event-alarm-sign 600ms ease-in-out 3;
+  @keyframes event-alarm-sign {
+    50% {
+      scale: 1.2;
+      color: var(--color-yellow-100);
+      filter: drop-shadow(0 0 4px var(--color-yellow-400));
+    }
+  }
+
   /* An answered alliance card shows its answer, then folds its space away
      over 280 ms: a yes holds for 880 ms, a no or an ignore for 640 ms.
      ActionableEvents removes the card when the fold ends. The space is
