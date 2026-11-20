@@ -2100,7 +2100,10 @@ class Client {
       void showInGameAlert(
         translateText("error_modal.game_client_failed"),
       ).then(() => {
-        if (menuGone) window.location.href = homeHref();
+        // Unless the player has joined another game while the alert was up.
+        if (menuGone && !this.gameUnderway()) {
+          window.location.href = homeHref();
+        }
       });
       return;
     }
