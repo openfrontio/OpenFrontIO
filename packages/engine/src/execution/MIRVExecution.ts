@@ -169,7 +169,7 @@ export class MirvExecution implements Execution {
       if (this.targetPlayer.isPlayer()) {
         this.mg.displayIncomingUnit(
           this.nuke.id(),
-          "events_display.mirv_inbound",
+          "events_display.mirv_inbound_alarm",
           MessageType.MIRV_INBOUND,
           this.targetPlayer.id(),
         );

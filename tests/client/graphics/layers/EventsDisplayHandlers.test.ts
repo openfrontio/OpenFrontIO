@@ -356,7 +356,7 @@ describe("EventsDisplay handlers", () => {
       ed.onUnitIncomingEvent(
         incoming(
           1,
-          "events_display.mirv_inbound",
+          "events_display.mirv_inbound_alarm",
           MessageType.MIRV_INBOUND,
         ) as never,
       );
@@ -371,7 +371,7 @@ describe("EventsDisplay handlers", () => {
       expect(events().map((event) => event.description)).toEqual([
         'events_display.atom_bomb_inbound {"name":"Stranger"}',
         'events_display.hydrogen_bomb_inbound {"name":"Stranger"}',
-        'events_display.mirv_inbound {"name":"Stranger"}',
+        'events_display.mirv_inbound_alarm {"name":"Stranger"}',
         'events_display.naval_invasion_inbound {"name":"Stranger","troops":"5000"}',
       ]);
     });
@@ -444,7 +444,7 @@ describe("EventsDisplay handlers", () => {
       launch(
         12,
         stranger,
-        "events_display.mirv_inbound",
+        "events_display.mirv_inbound_alarm",
         MessageType.MIRV_INBOUND,
       );
 

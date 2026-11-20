@@ -16,6 +16,7 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
+import { keyed } from "lit/directives/keyed.js";
 import { repeat } from "lit/directives/repeat.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import "../../components/OfIcon";
@@ -69,9 +70,14 @@ interface GameEvent {
   requestedAt?: number;
   /**
    * The line read out when the event arrived. Kept apart from the
-   * description, so a missile line's new count is not read out again.
+   * description, so a missile line's new count is not read out again when
+   * a bomb lands. A new MIRV joining its line is: the line pulses again.
    */
   spoken?: string;
+  /** The tick it was last read out: a new reading is a new line to say. */
+  spokenAt?: number;
+  /** Set when a MIRV joins the line, until the line is read out again. */
+  joined?: boolean;
 }
 
 interface InboundMissileGroup {
@@ -90,7 +96,8 @@ const INBOUND_MISSILE_COUNT_KEYS: Readonly<Record<string, string>> = {
   "events_display.atom_bomb_inbound": "events_display.atom_bomb_inbound_count",
   "events_display.hydrogen_bomb_inbound":
     "events_display.hydrogen_bomb_inbound_count",
-  "events_display.mirv_inbound": "events_display.mirv_inbound_count",
+  "events_display.mirv_inbound_alarm":
+    "events_display.mirv_inbound_alarm_count",
 };
 
 const TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
@@ -235,6 +242,29 @@ const BETRAYAL_ICON = "text-yellow-400";
 // from shifting when the count drops a digit.
 const ROW_SECONDS =
   "col-start-3 row-start-1 min-w-[3ch] text-end font-semibold tabular-nums";
+
+// The MIRV warning, the most dangerous event in the game: in place of the
+// tint, a dark red fill with a red outline and inner glow over the
+// strongest red wash, and two warning signs at each end. On arrival the glow
+// swells three times and the signs beat with it, then both rest. The fill
+// does not fade with the HUD opacity: like the tint, it is content, and dark
+// enough that white text on it reads over the brightest land. The glow is
+// inset, as the block clips anything drawn outside its rows.
+const ALARM_FILL =
+  "pointer-events-none absolute inset-0 bg-hud-alarm bg-linear-to-l from-red-600/55 via-red-700/28 via-60% to-red-700/18 shadow-hud-alarm animate-event-alarm motion-reduce:animate-none";
+// The rows' size, not a step above it: the signs already take room on the
+// line, and a larger sentence would wrap a name the other rows fit.
+const ALARM_TEXT = "text-[15px]/5 lg:text-base/6 font-bold text-white";
+// In the signs' yellow, like the other bombs' icons: red vanishes on the fill.
+const ALARM_ICON = "text-yellow-300";
+const ALARM_SIGNS = "items-center gap-1 text-yellow-300";
+// One sign at each end on phones, upright or on their side, where two
+// would wrap most names.
+const ALARM_SIGN =
+  "hud-sheet:not-first:hidden animate-event-alarm-sign motion-reduce:animate-none";
+
+const isAlarm = (event: GameEvent): boolean =>
+  event.type === MessageType.MIRV_INBOUND;
 
 type Tier = keyof typeof TIERS;
 
@@ -409,19 +439,24 @@ export class EventsDisplay extends LitElement implements Controller {
       }
     }
 
-    // Important events are read out once, as they arrive; routine ones would
-    // drown them. Not in a replay, nor while the game catches up on missed
-    // turns: events come many ticks at a time there, faster than speech.
-    if (
+    // Important events are read out once, as they arrive, and a MIRV line
+    // again when a new one joins it; routine ones would drown them. Not in a
+    // replay, nor while the game catches up on missed turns: events come many
+    // ticks at a time there, faster than speech.
+    const speak =
       this._isVisible &&
       !this.game.config().isReplay() &&
-      !this.game.isCatchingUp()
-    ) {
-      for (const event of this.events) {
-        if (event.id >= firstNewID && isImportant(event)) {
-          event.spoken = event.description;
-        }
+      !this.game.isCatchingUp();
+    for (const event of this.events) {
+      if (
+        speak &&
+        (event.id >= firstNewID || event.joined) &&
+        isImportant(event)
+      ) {
+        event.spoken = event.description;
+        event.spokenAt = this.game.ticks();
       }
+      event.joined = false;
     }
 
     let remainingEvents = this.events.filter((event) => {
@@ -584,6 +619,7 @@ export class EventsDisplay extends LitElement implements Controller {
       const group = existing.missileGroup!;
       if (!group.units.some((unit) => unit.id() === unitView.id())) {
         group.units.push(unitView);
+        existing.joined = isAlarm(existing);
       }
       Object.assign(existing, this.missileGroupSentence(group));
       // Each new bomb restarts the timer, so the line stays up while
@@ -1120,15 +1156,43 @@ export class EventsDisplay extends LitElement implements Controller {
     const tone = Object.keys(severityColors).find(
       (key) => severityColors[key] === toneClass,
     );
-    const tinted = tier === "important" && tone !== "info";
+    const alarm = isAlarm(event);
+    const tinted = tier === "important" && tone !== "info" && !alarm;
+    // Keyed on the line's start, which each new MIRV restarts and a landing
+    // one leaves alone, so the glow and the signs replay for a new MIRV.
+    const alarmSigns = (place: string) =>
+      keyed(
+        event.createdAt,
+        html`<span class="${place} ${ALARM_SIGNS} ${look.icon}">
+          <of-icon
+            name="warning"
+            size=${look.iconSize}
+            class=${ALARM_SIGN}
+          ></of-icon>
+          <of-icon
+            name="warning"
+            size=${look.iconSize}
+            class=${ALARM_SIGN}
+          ></of-icon>
+        </span>`,
+      );
     const content = html`
-      <span class="${ICON_BOX} ${look.icon} ${toneClass}">
+      <span class="${ICON_BOX} ${look.icon} ${alarm ? ALARM_ICON : toneClass}">
         <of-icon
           name=${event.icon ?? EVENT_ICONS[event.type]}
           size=${look.iconSize}
         ></of-icon>
       </span>
-      <span class="${TEXT} ${quiet ? QUIET_TEXT : look.text}">
+      <span
+        class="${TEXT} ${alarm ? ALARM_TEXT : quiet ? QUIET_TEXT : look.text}"
+      >
+        ${
+          alarm
+            ? html`${alarmSigns("float-end ms-2 flex")}${alarmSigns(
+                "me-1 inline-flex align-top",
+              )}`
+            : ""
+        }
         ${
           event.parts
             ? event.parts.map((part) =>
@@ -1173,6 +1237,7 @@ export class EventsDisplay extends LitElement implements Controller {
         data-tone=${tone}
         ?data-quiet=${quiet}
         ?data-request-pending=${event.requestedAt !== undefined}
+        ?data-alarm=${alarm}
         ?data-leaving=${leaving}
         ?inert=${leaving}
         class="${ROW} ${leaving ? LEAVING : ""}"
@@ -1180,6 +1245,14 @@ export class EventsDisplay extends LitElement implements Controller {
         @animationcancel=${(e: AnimationEvent) => this.endLeaving(e, event)}
       >
         ${tinted ? html`<span data-tint class="${TINT} ${toneClass}"></span>` : ""}
+        ${
+          alarm
+            ? keyed(
+                event.createdAt,
+                html`<span data-alarm-fill class=${ALARM_FILL}></span>`,
+              )
+            : ""
+        }
         ${
           goTo
             ? html`<button
@@ -1221,7 +1294,10 @@ export class EventsDisplay extends LitElement implements Controller {
 
     // The log is there whenever the feed is, even empty: a screen reader may
     // not read out a region that appears together with its first line. It
-    // is out of the flow, so an empty feed still shows nothing.
+    // is out of the flow, so an empty feed still shows nothing. The MIRV
+    // warning cannot wait behind the log's queue: it has a region of its own
+    // that interrupts.
+    const spoken = this.events.filter((event) => event.spoken !== undefined);
     return html`
       <div
         class="flex flex-col gap-1 w-full min-[1200px]:w-96"
@@ -1235,8 +1311,15 @@ export class EventsDisplay extends LitElement implements Controller {
           class="sr-only"
         >
           ${repeat(
-            this.events.filter((event) => event.spoken !== undefined),
+            spoken.filter((event) => !isAlarm(event)),
             (event) => event.id,
+            (event) => html`<p>${event.spoken}</p>`,
+          )}
+        </div>
+        <div aria-live="assertive" class="sr-only">
+          ${repeat(
+            spoken.filter(isAlarm),
+            (event) => `${event.id}-${event.spokenAt}`,
             (event) => html`<p>${event.spoken}</p>`,
           )}
         </div>
