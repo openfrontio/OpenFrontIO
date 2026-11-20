@@ -34,11 +34,15 @@ type CardAction = "focus" | "accept" | "reject" | "renew" | "ignore";
 
 // The same flat block as the events feed above. The sentence starts in the
 // feed's 20px icon column, on the same edge as the event text.
-const LIST =
-  "flex flex-col gap-1 w-full min-[1200px]:w-96 pointer-events-auto mt-1";
+const LIST = "flex flex-col w-full min-[1200px]:w-96 pointer-events-auto";
+// A new card opens its height, so the feed above glides instead of jumping.
+// The card's space above it is a margin inside the opening part, so it
+// opens with the card.
+const OPENING =
+  "grid grid-rows-[1fr] animate-card-open motion-reduce:animate-none";
 // Positioned and clipped for the time-left line on its bottom edge.
 const CARD =
-  "hud-panel relative overflow-hidden rounded-lg sm:max-lg:landscape:rounded-l-none p-2 text-white";
+  "hud-panel relative overflow-hidden rounded-lg sm:max-lg:landscape:rounded-l-none mt-1 p-2 text-white animate-card-rise motion-reduce:animate-none";
 const HEAD = "grid grid-cols-[1.25rem_minmax(0,1fr)_auto] gap-x-2";
 const ICON_SIZE = 16;
 // One text line tall, so a wrapped sentence keeps the icon on its first line.
@@ -435,73 +439,77 @@ export class ActionableEvents extends LitElement implements Controller {
           (event) => {
             const time = this.timeLeft(event);
             return html`
-              <div
-                data-event-card
-                data-card-kind=${
-                  event.type === MessageType.RENEW_ALLIANCE
-                    ? "renewal"
-                    : "request"
-                }
-                role="group"
-                aria-label=${event.description}
-                class=${CARD}
-              >
-                <div class=${HEAD}>
-                  <span class=${MARK}>
-                    <of-icon name="alliance" size=${ICON_SIZE}></of-icon>
-                  </span>
-                  <button
-                    class=${TITLE}
-                    @mousedown=${pressWithoutFocus}
-                    @click=${() => this.emitGoToPlayerEvent(event.focusID)}
+              <div class=${OPENING}>
+                <div class="min-h-0">
+                  <div
+                    data-event-card
+                    data-card-kind=${
+                      event.type === MessageType.RENEW_ALLIANCE
+                        ? "renewal"
+                        : "request"
+                    }
+                    role="group"
+                    aria-label=${event.description}
+                    class=${CARD}
                   >
-                    ${event.description}
-                  </button>
-                  ${
-                    time
-                      ? html`<span
-                          data-card-seconds
-                          aria-hidden="true"
-                          class=${SECONDS}
-                          >${renderDuration(
-                            Math.ceil(ticksToSeconds(time.left)),
-                          )}</span
-                        >`
-                      : ""
-                  }
-                </div>
-                <div class=${ACTIONS}>
-                  ${event.buttons.map(
-                    (btn) => html`
+                    <div class=${HEAD}>
+                      <span class=${MARK}>
+                        <of-icon name="alliance" size=${ICON_SIZE}></of-icon>
+                      </span>
                       <button
-                        data-card-action=${btn.kind}
-                        class="${BUTTON} ${CARD_BUTTON[btn.kind].look}"
+                        class=${TITLE}
                         @mousedown=${pressWithoutFocus}
-                        @click=${() => {
-                          btn.action();
-                          if (!btn.preventClose) {
-                            const index = this.events.findIndex(
-                              (e) => e === event,
-                            );
-                            if (index !== -1) this.removeEvent(index);
-                          }
-                          this.requestUpdate();
-                        }}
+                        @click=${() => this.emitGoToPlayerEvent(event.focusID)}
                       >
-                        ${
-                          CARD_BUTTON[btn.kind].icon
-                            ? html`<of-icon
-                                name=${CARD_BUTTON[btn.kind].icon}
-                                size=${ICON_SIZE}
-                              ></of-icon>`
-                            : ""
-                        }
-                        ${btn.text}
+                        ${event.description}
                       </button>
-                    `,
-                  )}
+                      ${
+                        time
+                          ? html`<span
+                              data-card-seconds
+                              aria-hidden="true"
+                              class=${SECONDS}
+                              >${renderDuration(
+                                Math.ceil(ticksToSeconds(time.left)),
+                              )}</span
+                            >`
+                          : ""
+                      }
+                    </div>
+                    <div class=${ACTIONS}>
+                      ${event.buttons.map(
+                        (btn) => html`
+                          <button
+                            data-card-action=${btn.kind}
+                            class="${BUTTON} ${CARD_BUTTON[btn.kind].look}"
+                            @mousedown=${pressWithoutFocus}
+                            @click=${() => {
+                              btn.action();
+                              if (!btn.preventClose) {
+                                const index = this.events.findIndex(
+                                  (e) => e === event,
+                                );
+                                if (index !== -1) this.removeEvent(index);
+                              }
+                              this.requestUpdate();
+                            }}
+                          >
+                            ${
+                              CARD_BUTTON[btn.kind].icon
+                                ? html`<of-icon
+                                    name=${CARD_BUTTON[btn.kind].icon}
+                                    size=${ICON_SIZE}
+                                  ></of-icon>`
+                                : ""
+                            }
+                            ${btn.text}
+                          </button>
+                        `,
+                      )}
+                    </div>
+                    ${time ? timeLeftLine(time.left / time.total) : ""}
+                  </div>
                 </div>
-                ${time ? timeLeftLine(time.left / time.total) : ""}
               </div>
             `;
           },

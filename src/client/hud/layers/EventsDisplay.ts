@@ -159,17 +159,23 @@ const QUIET_TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
 const BLOCK =
   "hud-panel rounded-lg sm:max-lg:landscape:rounded-l-none overflow-x-hidden overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgb(255_255_255_/_0.35)_transparent]";
 // The hairline between rows is an inset shadow, not a border, so it takes no
-// height of its own.
-const ROW = "relative not-first:shadow-[inset_0_1px_var(--color-hud-line)]";
+// height of its own. Clipped, so the content of a new row rising from below
+// does not make the block taller and scroll it while it rises.
+const ROW =
+  "relative overflow-clip not-first:shadow-[inset_0_1px_var(--color-hud-line)]";
 // Important rows with a tone: a light fade of the tone's colour, strongest at
 // the row's end and gone before the text. A child, so the row's hover draws
-// over it; it does not fade with the HUD opacity, as it is content.
+// over it; it does not fade with the HUD opacity, as it is content. It is
+// drawn twice as strong at half opacity, so a new row can land with it at
+// full strength and let it settle by fading opacity alone.
 const TINT =
-  "pointer-events-none absolute inset-0 bg-linear-to-l from-current/20 via-current/5 via-55% to-transparent";
+  "pointer-events-none absolute inset-0 bg-linear-to-l from-current/40 via-current/10 via-55% to-transparent opacity-50 animate-event-arrive motion-reduce:animate-none";
 // An icon column, then the text. The icon's box is one line tall and sits on
-// the first line, so a wrapped row keeps its icon at the top.
+// the first line, so a wrapped row keeps its icon at the top. A new row's
+// content rises into place; the row's own height does not open, as that
+// would fight the important block's stick-to-bottom scrolling.
 const ROW_BODY =
-  "relative grid w-full grid-cols-[1.25rem_minmax(0,1fr)] gap-x-2 ps-2 pe-2.5 text-start";
+  "relative grid w-full grid-cols-[1.25rem_minmax(0,1fr)] gap-x-2 ps-2 pe-2.5 text-start animate-hud-rise motion-reduce:animate-none";
 const GO_TO =
   "pointer-fine:hover:bg-white/5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-aquarius";
 const ICON_BOX = "flex items-center justify-center";

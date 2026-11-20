@@ -40,6 +40,32 @@
     }
   }
 
+  /* A new important row with a tone: its tint lands at full strength and
+     settles to its resting level. */
+  --animate-event-arrive: event-arrive 900ms ease-out;
+  @keyframes event-arrive {
+    from {
+      opacity: 1;
+    }
+  }
+
+  /* A new alliance card opens its space first, so the feed above glides up
+     instead of jumping, and the card rises into it once there is room. The
+     space is clipped while it opens, and only then, so the card's shadow
+     shows at rest. A browser that cannot interpolate fr rows shows the
+     space at once. */
+  --animate-card-open: card-open 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  @keyframes card-open {
+    from {
+      grid-template-rows: 0fr;
+      clip-path: inset(0);
+    }
+    to {
+      clip-path: inset(0);
+    }
+  }
+  --animate-card-rise: hud-rise 200ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+
   /* A gold gain popping up from the gold chip, for two seconds: in with a
      small overshoot by 165 ms, settled by 270 ms, then up and out over the
      last 420 ms. The animation is the pop's whole life: ControlPanel removes
