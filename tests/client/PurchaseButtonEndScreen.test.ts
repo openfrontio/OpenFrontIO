@@ -304,6 +304,41 @@ describe("end-screen shortfall box", () => {
     readable(box);
   });
 
+  // The Inventory's Player card tab buys in place too, but isn't a game:
+  // its box is the plain one.
+  async function showPlain(info: InsufficientCurrency) {
+    dialog = document.createElement(
+      "insufficient-currency-dialog",
+    ) as InstanceType<typeof InsufficientCurrencyDialog>;
+    dialog.info = info;
+    document.body.appendChild(dialog);
+    await dialog.updateComplete;
+    return dialog.querySelector("confirm-dialog")!;
+  }
+
+  it("no game to leave: Get Plutonium still remembers the item", async () => {
+    const confirm = await showPlain({ ...PLUTONIUM, leavesGame: false });
+    confirm.dispatchEvent(new CustomEvent("confirm"));
+    expect(peekPendingPurchase("p1")).toBe("cardBackground:bg_storm_front");
+    expect(window.location.hash).toBe("#modal=store&tab=packs");
+  });
+
+  it("a parent can hold the top-up (the Inventory's unsaved card guard)", async () => {
+    const confirm = await showPlain({ ...PLUTONIUM, leavesGame: false });
+    let go: (() => void) | null = null;
+    document.body.addEventListener("top-up", (e) => {
+      e.preventDefault();
+      go = (e as CustomEvent<{ go: () => void }>).detail.go;
+    });
+    confirm.dispatchEvent(new CustomEvent("confirm"));
+    // Held: nothing remembered, nowhere gone yet.
+    expect(peekPendingPurchase("p1")).toBeNull();
+    expect(window.location.hash).not.toContain("tab=packs");
+    go!();
+    expect(peekPendingPurchase("p1")).toBe("cardBackground:bg_storm_front");
+    expect(window.location.hash).toBe("#modal=store&tab=packs");
+  });
+
   it("the Store's box is as today", async () => {
     dialog = document.createElement(
       "insufficient-currency-dialog",

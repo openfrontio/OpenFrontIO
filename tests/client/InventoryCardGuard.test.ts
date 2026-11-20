@@ -13,6 +13,10 @@ import {
 import { getUserMe } from "../../src/client/Api";
 import { userAuth } from "../../src/client/Auth";
 import { saveCardLoadout } from "../../src/client/CardLoadoutApi";
+import {
+  clearPendingPurchase,
+  peekPendingPurchase,
+} from "../../src/client/components/inventory/PendingEquip";
 import { fetchCosmetics } from "../../src/client/Cosmetics";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
@@ -128,6 +132,8 @@ describe("Inventory: unsaved card changes guard", () => {
   afterEach(() => {
     modal.remove();
     document.body.innerHTML = "";
+    clearPendingPurchase();
+    window.location.hash = "";
     vi.clearAllMocks();
   });
 
@@ -231,6 +237,49 @@ describe("Inventory: unsaved card changes guard", () => {
     expect(q("[data-card-guard]")).toBeNull();
     expect(onCardTab()).toBe(false);
     expect(saveCardLoadout).toHaveBeenCalledTimes(1);
+  });
+
+  /** The card tab's shortfall box (no game to leave), as a Buy opens it. */
+  async function plutoniumShort() {
+    const dialog = document.createElement(
+      "insufficient-currency-dialog",
+    ) as HTMLElement & { info: unknown; updateComplete: Promise<unknown> };
+    dialog.info = {
+      currency: "Plutonium",
+      shortfall: 220,
+      item: "Storm",
+      canTopUp: true,
+      leavesGame: false,
+      itemKey: "cardBackground:bg_storm",
+      player: "guard-test-player",
+    };
+    q("inventory-card-tab")!.appendChild(dialog);
+    await dialog.updateComplete;
+    return dialog.querySelector("confirm-dialog")!;
+  }
+
+  it("Get Plutonium with changes asks first; Keep editing stays", async () => {
+    await openWithChange();
+    (await plutoniumShort()).dispatchEvent(new CustomEvent("confirm"));
+    await settle(modal);
+    expect(q("[data-card-guard]")).not.toBeNull();
+    expect(window.location.hash).not.toContain("tab=packs");
+    await click("[data-card-guard-keep]");
+    expect(modal.isOpen()).toBe(true);
+    expect(window.location.hash).not.toContain("tab=packs");
+    expect(q("[data-card-save-bar]")).not.toBeNull();
+  });
+
+  it("Get Plutonium, then Discard: goes to the packs, the item remembered", async () => {
+    await openWithChange();
+    (await plutoniumShort()).dispatchEvent(new CustomEvent("confirm"));
+    await settle(modal);
+    await click("[data-card-guard-discard]");
+    expect(modal.isOpen()).toBe(false);
+    expect(window.location.hash).toBe("#modal=store&tab=packs");
+    expect(peekPendingPurchase("guard-test-player")).toBe(
+      "cardBackground:bg_storm",
+    );
   });
 
   it("a Save that fails stays, with the changes", async () => {

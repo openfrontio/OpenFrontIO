@@ -31,8 +31,10 @@ export function cardResolved(
 }
 
 // The in-place shortfall warns that a top-up leaves the game; the Inventory
-// isn't one. What it remembers for "Get Plutonium" stays, so the Store opens
-// on the item once the top-up lands.
+// isn't one, so it gets the plain box. That box still remembers the item
+// (it has `itemKey` and `player`), so the Store opens on it once the top-up
+// lands, and its `top-up` event lets the Inventory run its unsaved card
+// guard before leaving.
 function outsideGame(info: InsufficientCurrency): InsufficientCurrency {
   return { ...info, leavesGame: false };
 }

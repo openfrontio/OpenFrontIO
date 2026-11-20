@@ -1220,6 +1220,7 @@ export class InventoryModal extends BaseModal {
         @change-flag=${() => this.setActiveTab("flags")}
         @open-store=${(event: CustomEvent<{ item?: string }>) =>
           this.openStore(event.detail.item ?? "card")}
+        @top-up=${(event: CustomEvent<{ go: () => void }>) => this.topUp(event)}
       ></inventory-card-tab>`;
     }
     const category = (
@@ -1411,6 +1412,17 @@ export class InventoryModal extends BaseModal {
           : target === "card"
             ? "modal=store&tab=cosmetics&sub=card"
             : `modal=store&tab=cosmetics&item=${encodeURIComponent(target)}`;
+    });
+  }
+
+  /** "Get Plutonium" from a card Buy's shortfall box leaves for the packs:
+   * like the Store links, ask about unsaved card changes first. */
+  private topUp(event: CustomEvent<{ go: () => void }>) {
+    event.preventDefault();
+    const { go } = event.detail;
+    this.leaveThen(() => {
+      this.close();
+      go();
     });
   }
 
