@@ -288,6 +288,11 @@ describe("<card-background> effect layers", () => {
     frame(500);
     const band = layer.querySelector<HTMLElement>("[data-card-fx-move]")!;
     expect(band.style.transform).toContain("rotate(30deg)");
+    // Both of shimmerBand's centre terms move the band sideways; there is no
+    // vertical move (see the centreH test in CardFxMaths).
+    expect(band.style.transform).toMatch(
+      /^translateX\(calc\(-?[\d.]+cqw [+-] -?[\d.]+cqh\)\) rotate\(30deg\)$/,
+    );
   });
 
   it("shimmer: a steep band is as long as shimmerBand says", async () => {

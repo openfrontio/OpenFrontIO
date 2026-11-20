@@ -59,6 +59,10 @@ export function shimmerBand(
   t: number,
   layer: FxLayer,
 ): {
+  // The centre's distance from the card's left edge, sideways only:
+  // centreW × width + centreH × height. The height term is the tilted band's
+  // extra reach (H/2 · tan a), not a vertical move: the centre always stays
+  // on the card's middle row.
   centreW: number;
   centreH: number;
   lengthW: number;

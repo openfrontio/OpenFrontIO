@@ -98,6 +98,24 @@ describe("shimmerBand (rotated)", () => {
     },
   );
 
+  // centreH is a sideways offset measured in card heights (the H·tan a part
+  // of the tilted band's reach), not a vertical move. Read as vertical, the
+  // band starts the sweep already across the card.
+  it("centreH is horizontal: read as a vertical move, the band starts on the card", () => {
+    const b = shimmerBand(0, layer);
+    const a = (45 * Math.PI) / 180;
+    const half = (SHIMMER_BAND_WIDTH * W) / (2 * Math.cos(a));
+    // Rightmost point of the band within the card's rows (y from -H/2 to
+    // H/2 around the middle row), for a band centred at (x, y).
+    const rightmost = (x: number, y: number) =>
+      Math.max(...[-H / 2, H / 2].map((row) => x + (row - y) * Math.tan(a))) +
+      half;
+    // As drawn: both terms move the band sideways; it starts off the card.
+    expect(rightmost(b.centreW * W + b.centreH * H, 0)).toBeLessThanOrEqual(0);
+    // As a vertical move instead, part of the band is already on the card.
+    expect(rightmost(b.centreW * W, b.centreH * H)).toBeGreaterThan(0);
+  });
+
   it("draws angles past the limit at the limit", () => {
     expect(shimmerBand(0, { ...layer, angle: 90 }).angle).toBe(
       SHIMMER_MAX_ANGLE,
