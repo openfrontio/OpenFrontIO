@@ -588,3 +588,41 @@ describe("<inventory-card-tab> unowned items in the changes", () => {
     expect(saveButton().disabled).toBe(false);
   });
 });
+
+describe("<inventory-card-tab> large preview", () => {
+  it("a tile's preview opens the large animated preview of that item on the card", async () => {
+    await render(userMe(OWNER));
+    await click(q("[data-card-slot='background']"));
+    await click(q("[data-card-filter='all']"));
+    await click(
+      pick("cardBackground:bg_storm").querySelector("[data-tile-preview]"),
+    );
+    // Previewing never picks.
+    expect(editor.changeCount()).toBe(0);
+    const card = q("card-item-preview player-card") as unknown as {
+      animated: boolean;
+      view: { username: string; background: { name: string } | null };
+    };
+    expect(card.animated).toBe(true);
+    expect(card.view.background?.name).toBe("bg_storm");
+    expect(card.view.username).toBe("iamlewis");
+    await click(q("[data-card-preview-close]"));
+    expect(q("card-item-preview")).toBeNull();
+  });
+
+  it("tracker tiles preview the stat on the card", async () => {
+    await render(userMe(OWNER));
+    await click(row(2).querySelector("[data-card-row-open]"));
+    await click(
+      pick("cardTracker:games_played").querySelector("[data-tile-preview]"),
+    );
+    const card = q("card-item-preview player-card") as unknown as {
+      view: { trackers: { stat: string }[] };
+    };
+    expect(card.view.trackers.map((t) => t.stat)).toEqual([
+      "wins",
+      "nukes_launched",
+      "games_played",
+    ]);
+  });
+});

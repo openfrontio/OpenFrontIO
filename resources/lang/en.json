@@ -1851,6 +1851,8 @@
     "pick_background": "Background · pick one",
     "pick_tracker": "Tracker {slot} · pick a stat",
     "preview": "Preview {name}",
+    "preview_close": "Close preview",
+    "preview_sample": "Tracker values here are a sample.",
     "purchase_failed": "Purchase failed — you weren't charged.",
     "purchase_unconfirmed": "We couldn't confirm the purchase. Check your balance before trying again.",
     "retry": "Retry",

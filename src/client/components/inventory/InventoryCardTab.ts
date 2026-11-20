@@ -12,6 +12,7 @@ import {
   type CardItemType,
   cardItemName,
 } from "../card/CardItems";
+import "../card/CardItemPreview";
 import "../card/PlayerCard";
 import "../PurchaseButton";
 import {
@@ -30,6 +31,7 @@ import {
   type CardEditor,
   type CardSlotKind,
   type CardSlotRef,
+  pickInto,
   sameSlot,
   slotItem,
   swapPreview,
@@ -81,6 +83,12 @@ export class InventoryCardTab extends LitElement {
   @state() private filter: OwnershipFilter = "owned";
   @state() private hovered: string | null = null;
   @state() private unlockNote: string | null = null;
+  /** The item in the large preview, and the slot it was previewed for. */
+  @state() private previewing: {
+    slot: CardSlotRef;
+    type: CardItemType;
+    item: CardItem;
+  } | null = null;
   private dragFrom: { kind: CardSlotKind; index: number } | null = null;
   private unsubscribe: (() => void) | null = null;
   private subscribedTo: CardEditor | null = null;
@@ -659,6 +667,13 @@ export class InventoryCardTab extends LitElement {
                 .note=${entry.note}
                 .artwork=${this.artwork(slot, entry.resolved.cosmetic as CardItem)}
                 .onActivate=${() => this.onPick(slot, entry)}
+                .onPreview=${() => {
+                  this.previewing = {
+                    slot,
+                    type: entry.resolved.type as CardItemType,
+                    item: entry.resolved.cosmetic as CardItem,
+                  };
+                }}
               ></inventory-item-tile>
             </div>`,
         )}
@@ -769,7 +784,20 @@ export class InventoryCardTab extends LitElement {
         <div class="order-1 md:order-2">${this.renderPreview()}</div>
       </div>
       ${this.renderPicker()} ${this.renderSaveBar()} ${this.renderToast()}
+      ${this.renderLargePreview()}
     </div>`;
+  }
+
+  /** The large animated preview: the With changes card with the item put
+   * in the slot it was previewed for. Previewing never picks. */
+  private renderLargePreview(): TemplateResult | typeof nothing {
+    const p = this.previewing;
+    if (p === null || this.editor === null) return nothing;
+    return html`<card-item-preview
+      .entry=${{ type: p.type, item: p.item }}
+      .view=${this.view(pickInto(this.editor.draft, p.slot, p.item.name))}
+      .onClose=${() => (this.previewing = null)}
+    ></card-item-preview>`;
   }
 
   // ---- Save bar ------------------------------------------------------------
