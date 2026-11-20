@@ -1221,6 +1221,8 @@ export class InventoryModal extends BaseModal {
         @open-store=${(event: CustomEvent<{ item?: string }>) =>
           this.openStore(event.detail.item ?? "card")}
         @top-up=${(event: CustomEvent<{ go: () => void }>) => this.topUp(event)}
+        @sign-in=${() =>
+          this.leaveThen(() => window.showPage?.("page-account"))}
       ></inventory-card-tab>`;
     }
     const category = (

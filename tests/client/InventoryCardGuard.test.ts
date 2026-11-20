@@ -17,7 +17,10 @@ import {
   clearPendingPurchase,
   peekPendingPurchase,
 } from "../../src/client/components/inventory/PendingEquip";
-import { fetchCosmetics } from "../../src/client/Cosmetics";
+import {
+  checkInPlacePurchase,
+  fetchCosmetics,
+} from "../../src/client/Cosmetics";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
 
@@ -32,11 +35,16 @@ vi.mock("../../src/client/Auth", async (importOriginal) => ({
 vi.mock("../../src/client/CardLoadoutApi", () => ({
   saveCardLoadout: vi.fn(),
 }));
-vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
-  fetchCosmetics: vi.fn(),
-  invalidateCosmetics: vi.fn(),
-}));
+vi.mock("../../src/client/Cosmetics", async (importOriginal) => {
+  const real =
+    await importOriginal<typeof import("../../src/client/Cosmetics")>();
+  return {
+    ...real,
+    fetchCosmetics: vi.fn(),
+    invalidateCosmetics: vi.fn(),
+    checkInPlacePurchase: vi.fn(real.checkInPlacePurchase),
+  };
+});
 
 const item = { product: null, rarity: "common", affiliateCode: null };
 function catalog(): Cosmetics {
@@ -471,6 +479,43 @@ describe("Inventory: buying card items in place", () => {
     await settle(modal);
     expect(q(`${within} confirm-dialog`)).not.toBeNull();
   }
+
+  /** A Buy tap that finds the session signed out. */
+  async function buySignedOut(within: string, method: "hard" | "soft") {
+    vi.mocked(checkInPlacePurchase).mockResolvedValueOnce({
+      ok: false,
+      reason: "signed_out",
+    } as never);
+    const button = q(`${within} purchase-button`) as unknown as {
+      requestCurrencyPurchase(m: "hard" | "soft"): void;
+    };
+    button.requestCurrencyPurchase(method);
+    await settle(modal);
+  }
+
+  it("a Buy that finds the session signed out asks about the changes before Account", async () => {
+    const showPage = vi.fn();
+    window.showPage = showPage;
+    await pickStorm();
+    await buySignedOut("[data-card-buy='cardBackground:bg_storm']", "soft");
+    expect(q("[data-card-guard]")).not.toBeNull();
+    expect(showPage).not.toHaveBeenCalled();
+    await click("[data-card-guard-discard]");
+    expect(showPage).toHaveBeenCalledWith("page-account");
+  });
+
+  it("signed out with no changes (the no-card screen): straight to Account", async () => {
+    const showPage = vi.fn();
+    window.showPage = showPage;
+    vi.mocked(getUserMe).mockResolvedValue(
+      owner(["cardBackground:bg_pacific"]),
+    );
+    modal.open({ tab: "card" });
+    await settle(modal);
+    await buySignedOut("[data-card-get-card]", "hard");
+    expect(q("[data-card-guard]")).toBeNull();
+    expect(showPage).toHaveBeenCalledWith("page-account");
+  });
 
   it("Escape with the Save bar's buy confirm open closes the confirm, not the Inventory", async () => {
     await pickStorm();
