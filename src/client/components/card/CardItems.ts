@@ -73,3 +73,22 @@ export function cardPrices(item: CardItem): CardPrices {
     listPriceSoft: ended ? null : (item.listPriceSoft ?? null),
   };
 }
+
+// A card item's rarity as a word, in the player's language. The card has a
+// 1 of 1 tier the other cosmetics don't; anything unknown reads as Common.
+export function cardRarityLabel(rarity: string): string {
+  switch (rarity) {
+    case "uncommon":
+      return translateText("cosmetics.uncommon");
+    case "rare":
+      return translateText("cosmetics.rare");
+    case "epic":
+      return translateText("cosmetics.epic");
+    case "legendary":
+      return translateText("cosmetics.legendary");
+    case "oneofone":
+      return translateText("cosmetics.oneofone");
+    default:
+      return translateText("cosmetics.common");
+  }
+}

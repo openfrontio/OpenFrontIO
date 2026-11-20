@@ -24,6 +24,7 @@ import {
   type CardItemType,
   cardItemName,
   cardPrices,
+  cardRarityLabel,
 } from "./CardItems";
 import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";
 import "./PlayerCard";
@@ -287,8 +288,10 @@ export class MyCardTab extends LitElement {
       @click=${() => this.onItem(slot, item)}
     >
       ${this.renderPreviewArt(slot, item)}
-      <span class="text-[10px] font-bold uppercase tracking-wider text-white/50"
-        >${String(item.rarity)}</span
+      <span
+        data-my-card-rarity
+        class="text-[10px] font-bold uppercase tracking-wider text-white/50"
+        >${cardRarityLabel(String(item.rarity))}</span
       >
       <span class="truncate text-sm font-bold"
         >${cardItemName(type, item)}</span

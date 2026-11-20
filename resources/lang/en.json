@@ -1007,6 +1007,7 @@
     "free": "+{numFree} BONUS!",
     "hard": "Plutonium",
     "legendary": "Legendary",
+    "oneofone": "1 of 1",
     "pack_includes": "Includes:",
     "pack_more_items": "+{count} more",
     "pattern_preview": "Pattern preview",

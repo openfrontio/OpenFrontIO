@@ -375,6 +375,32 @@ describe("<my-card-tab>", () => {
     });
   });
 
+  it("rarity labels are translated, 1 of 1 included", async () => {
+    tab = document.createElement("my-card-tab") as unknown as MyCardTab;
+    tab.userMe = userMe(OWNER, SAVED);
+    tab.cosmetics = {
+      ...COSMETICS,
+      cardBackgrounds: {
+        ...COSMETICS.cardBackgrounds,
+        bg_bespoke: {
+          product: null,
+          rarity: "oneofone",
+          name: "bg_bespoke",
+          url: "/bg/bespoke.webp",
+        },
+      },
+    } as unknown as Cosmetics;
+    document.body.appendChild(tab as unknown as Node);
+    await tab.updateComplete;
+    const label = (key: string) =>
+      tile(key).querySelector("[data-my-card-rarity]")?.textContent?.trim();
+    expect(label("cardBackground:bg_pacific")).toBe("cosmetics.epic");
+    expect(label("cardBackground:bg_bespoke")).toBe("cosmetics.oneofone");
+    expect(tile("cardBackground:bg_bespoke").dataset.cosmeticRarity).toBe(
+      "oneofone",
+    );
+  });
+
   it("a paid item shows its price", async () => {
     await render(userMe(OWNER, SAVED));
     const front = tile("cardBackground:bg_frontline");
