@@ -222,8 +222,12 @@ describe("anonymizeNames: pinned teammates see each other (lobby)", () => {
 // as in AnonymizeNames.test.ts, and shaped by a NameVisibility over the same
 // roster and pins the game has. clanTag and friends are populated so the
 // "blank for everyone" assertion is meaningful.
-function withStartInfo(matchmakingTeams?: string[][]) {
+function withStartInfo(
+  matchmakingTeams?: string[][],
+  reveals: { nameReveals?: string[]; nameRevealPublicIds?: string[] } = {},
+) {
   const game = makeGame(matchmakingTeams);
+  Object.assign(game.gameConfig, reveals);
   const names = new NameVisibility({
     gameID: "g1",
     config: () => game.gameConfig,
@@ -316,5 +320,26 @@ describe("anonymizeNames: pinned teammates in the IN-GAME start payload", () => 
     const info = withStartInfo(TEAMS).startInfoFor("carol");
     expect(player(info, "alice").card).toBeUndefined();
     expect(player(info, "bob").card).toBeUndefined();
+  });
+
+  it("a host-granted reveal keeps the full card, publicId included", () => {
+    // nameReveals / nameRevealPublicIds carry the full identity (the wider
+    // reveal); only a teammate-only reveal drops the publicId.
+    const byClient = withStartInfo(TEAMS, { nameReveals: ["carol"] });
+    expect(player(byClient.startInfoFor("carol"), "bob").card.publicId).toBe(
+      "pub-bob",
+    );
+    const byPublicId = withStartInfo(TEAMS, {
+      nameRevealPublicIds: ["dave-pub"],
+    });
+    expect(player(byPublicId.startInfoFor("dave"), "alice").card.publicId).toBe(
+      "pub-alice",
+    );
+    // A host-granted viewer on the same team still gets it: the wider reveal
+    // wins over the teammate one.
+    const teammate = withStartInfo(TEAMS, { nameReveals: ["alice"] });
+    expect(player(teammate.startInfoFor("alice"), "bob").card.publicId).toBe(
+      "pub-bob",
+    );
   });
 });
