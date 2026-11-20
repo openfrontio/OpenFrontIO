@@ -6,10 +6,7 @@
  * holds what a fresh replay of the document gives.
  */
 
-import {
-  type EditorCommand,
-  MAX_TERRAIN_BATCH,
-} from "@openfront/engine-api/EditorCommands";
+import type { EditorCommand } from "@openfront/engine-api/EditorCommands";
 import {
   CustomGameMap,
   GameMapSize,
@@ -47,6 +44,9 @@ import { scriptedGameStart } from "../../util/ScriptedGame";
 
 const W = 200;
 const H = 160;
+// A terrain batch small enough to cross in a test: the editor's real one,
+// MAX_TERRAIN_BATCH, is over a million tiles.
+const BATCH = 1000;
 const OCEAN_BIT = 0x20;
 
 function editorStart(): GameStartInfo {
@@ -464,13 +464,13 @@ test("an edit that can't apply changes nothing", () => {
 });
 
 test("a terrain write over the batch limit goes in several batches", () => {
-  // 1200 x 1000 tiles: more than one set_terrain holds. No engine here, as
-  // it takes seconds over a million tiles.
-  const doc = newScenarioDocument("Big", 1200, 1000);
+  // More tiles than one set_terrain holds, with the batch made small: at
+  // MAX_TERRAIN_BATCH it is over a million tiles, seconds of work.
+  const doc = newScenarioDocument("Big", W, H);
   const sent: EditorCommand[] = [];
-  const editor = new DocumentEditor(doc, (c) => sent.push(c));
-  const tiles = Array.from({ length: 1100 * 1000 }, (_, i) => {
-    return Math.floor(i / 1100) * 1200 + 50 + (i % 1100);
+  const editor = new DocumentEditor(doc, (c) => sent.push(c), BATCH);
+  const tiles = Array.from({ length: 150 * 10 }, (_, i) => {
+    return Math.floor(i / 150) * W + 25 + (i % 150);
   });
   editor.apply({
     type: "set_terrain",
@@ -481,11 +481,10 @@ test("a terrain write over the batch limit goes in several batches", () => {
   const written = (commands: EditorCommand[]) =>
     commands.flatMap((c) => (c.type === "set_terrain" ? [c.tiles] : []));
   expect(written(sent).map((t) => t.length)).toEqual([
-    MAX_TERRAIN_BATCH,
-    tiles.length - MAX_TERRAIN_BATCH,
+    BATCH,
+    tiles.length - BATCH,
   ]);
-  // toEqual takes seconds on arrays this long.
-  expect(written(sent).flat().join() === tiles.join()).toBe(true);
+  expect(written(sent).flat()).toEqual(tiles);
   expect(sent[sent.length - 1]).toEqual({ type: "end_terrain_edit" });
 
   sent.length = 0;
@@ -503,8 +502,8 @@ test("a defense post is the one structure without levels, as the document checks
 
 test("a port that loses its shore in one batch of a write goes, and undo keeps the ports the write kept", async () => {
   // Over one batch of tiles, all land but one water tile beside the port.
-  const w = 1104;
-  const doc = newScenarioDocument("Ports", w, 1000);
+  const w = W;
+  const doc = newScenarioDocument("Ports", w, H);
   doc.terrain.fill(land(2));
   const at = (x: number, y: number) => y * w + x;
   const port = at(10, 11);
@@ -518,13 +517,10 @@ test("a port that loses its shore in one batch of a write goes, and undo keeps t
     level: 1,
   });
   const e = await replayed(doc);
-  const editor = new DocumentEditor(doc, e.send);
+  const editor = new DocumentEditor(doc, e.send, BATCH);
   // The first batch fills the port's water; the second digs new water
   // beside it, which comes too late for the port.
-  const filler = Array.from(
-    { length: MAX_TERRAIN_BATCH - 1 },
-    (_, i) => at(0, 20) + i,
-  );
+  const filler = Array.from({ length: BATCH - 1 }, (_, i) => at(0, 20) + i);
   const tiles = [at(10, 10), ...filler, at(10, 12)];
   editor.apply({
     type: "set_terrain",
@@ -555,7 +551,7 @@ test("a port that loses its shore in one batch of a write goes, and undo keeps t
   expect(doc.terrain[at(10, 12)]).toBe(land(2));
   expect(doc.structures).toHaveLength(1);
   expect(structures()).toEqual(doc.structures);
-}, 60_000);
+});
 
 describe("resizing", () => {
   /** An engine built for the document the way the editor builds one. */
