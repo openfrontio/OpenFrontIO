@@ -4,12 +4,14 @@
  */
 
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { ID } from "@openfront/engine-api/Schemas";
 import {
   decodeOwnership,
   encodeOwnership,
   IMPASSABLE,
   isScenarioSize,
   land,
+  newNation,
   newScenarioDocument,
   SCENARIO_FORMAT,
   ScenarioDocumentSchema,
@@ -239,4 +241,25 @@ test("isScenarioSize takes what the schema takes", () => {
   expect(isScenarioSize(100, 96)).toBe(false);
   expect(isScenarioSize(100.5, 100)).toBe(false);
   expect(isScenarioSize(Number.NaN, 100)).toBe(false);
+});
+
+describe("newNation", () => {
+  test("takes the first free name and a new valid id", () => {
+    const doc = newScenarioDocument("Nations", W, H);
+    const name = (n: number) => `Nation ${n}`;
+    const first = newNation(doc, name);
+    expect(first).toMatchObject({ name: "Nation 1", flag: null, gold: 0 });
+    expect(ID.safeParse(first.id).success).toBe(true);
+    doc.nations.push(first, { ...newNation(doc, name), name: "Nation 3" });
+    expect(newNation(doc, name).name).toBe("Nation 2");
+    doc.nations.push(newNation(doc, name));
+    const fourth = newNation(doc, name);
+    expect(fourth.name).toBe("Nation 4");
+    expect(new Set([...doc.nations.map((n) => n.id), fourth.id]).size).toBe(4);
+    // It passes the document's schema, as add_nation checks.
+    doc.nations.push(fourth);
+    expect(() =>
+      ScenarioDocumentSchema.parse(serializeScenarioDocument(doc)),
+    ).not.toThrow();
+  });
 });
