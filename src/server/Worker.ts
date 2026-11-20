@@ -566,12 +566,15 @@ export async function startWorker() {
           game.isPublic() &&
           game.phase() === GamePhase.Lobby &&
           !game.hasStarted(),
-        isBoosted: () => game.isBoosted(),
+        boostBlockedFor: (id) => game.boostBlockedFor(id),
+        boostHeldFor: (id) => game.boostHeldFor(id),
         startsAt: () => game.gameInfo().startsAt,
         wouldMoveUp: () =>
           queue.success && lobbyService.boostWouldMove(game.id, queue.data),
-        setBoostPending: (pending) => game.setBoostPending(pending),
-        boost: (id) => game.boost(id),
+        reserveBoost: (id) => game.reserveBoost(id),
+        releaseBoost: () => game.releaseBoost(),
+        holdBoostForPayer: () => game.holdBoostForPayer(),
+        boost: () => game.boost(),
       },
       auth.persistentId,
       // Dev has no payment backend; skip the charge, like the queue route.

@@ -310,8 +310,14 @@ export class GameServer {
   // the front of its queue, and who (shown to the lobby).
   private boostedAt?: number;
   private boostedBy?: ClientID;
-  // A boost's charge is in flight.
-  private boostPending = false;
+  // The player whose boost charge is in flight, or ended without a known
+  // outcome. The client id is taken up front: the payer may disconnect
+  // before the charge returns.
+  private boostReservation?: {
+    persistentId: string;
+    clientID?: ClientID;
+    inFlight: boolean;
+  };
   // Matchmade team split from the matchmaking assignment: publicIds per
   // team. At start each client is stamped with its team's index.
   private matchmakingTeams?: string[][];
@@ -1791,28 +1797,55 @@ export class GameServer {
     return client !== undefined && this.clients.isConnected(client);
   }
 
-  // Boosted, or a boost's charge is in flight: either way nobody else may
-  // pay for this lobby.
-  public isBoosted(): boolean {
-    return this.boostedAt !== undefined || this.boostPending;
+  // Boosted, a boost's charge is in flight, or another player's charge ended
+  // without a known outcome: this player may not pay for the lobby.
+  public boostBlockedFor(persistentId: string): boolean {
+    if (this.boostedAt !== undefined) return true;
+    const reservation = this.boostReservation;
+    return (
+      reservation !== undefined &&
+      (reservation.inFlight || reservation.persistentId !== persistentId)
+    );
+  }
+
+  public boostHeldFor(persistentId: string): boolean {
+    const reservation = this.boostReservation;
+    return (
+      reservation !== undefined &&
+      !reservation.inFlight &&
+      reservation.persistentId === persistentId
+    );
   }
 
   public boostedAtTime(): number | undefined {
     return this.boostedAt;
   }
 
-  public setBoostPending(pending: boolean): void {
-    this.boostPending = pending;
+  public reserveBoost(persistentId: string): void {
+    this.boostReservation = {
+      persistentId,
+      clientID: this.clients.byPersistentId(persistentId)?.clientID,
+      inFlight: true,
+    };
   }
 
-  // A player paid to move this scheduled public lobby to the front of its
-  // queue. The worker reports boostedAt to the master as the lobby's
-  // queuedAt, which puts it right behind the lobby that's counting down.
-  public boost(persistentId: string): void {
-    this.boostPending = false;
+  public releaseBoost(): void {
+    this.boostReservation = undefined;
+  }
+
+  public holdBoostForPayer(): void {
+    if (this.boostReservation) this.boostReservation.inFlight = false;
+  }
+
+  // The player holding the reservation paid to move this scheduled public
+  // lobby to the front of its queue. The worker reports boostedAt to the
+  // master as the lobby's queuedAt, which puts it right behind the lobby
+  // that's counting down.
+  public boost(): void {
     if (this.boostedAt !== undefined) return;
     this.boostedAt = Date.now();
-    this.boostedBy = this.clients.byPersistentId(persistentId)?.clientID;
+    this.boostedBy = this.boostReservation?.clientID;
+    this.boostReservation = undefined;
   }
 
   // Players (not spectators) currently seated in the lobby.

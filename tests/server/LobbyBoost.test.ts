@@ -49,24 +49,43 @@ describe("boostWouldMoveLobby", () => {
 
   it("treats a lobby the queue doesn't list yet as being at the back", () => {
     expect(wouldMove("new")).toBe(true);
+    expect(wouldMove("new", [])).toBe(false);
+    expect(wouldMove("new", [{ gameID: "front", startsAt: 999 }])).toBe(false);
+    expect(wouldMove("new", [{ gameID: "paid", paid: true }])).toBe(false);
   });
 });
 
 describe("boostScheduledLobby", () => {
   function lobby(over: Partial<BoostableLobby> = {}) {
-    const state = { boosted: false, pending: false };
+    const state: { boosted: boolean; pending: boolean; heldFor?: string } = {
+      boosted: false,
+      pending: false,
+    };
     const l: BoostableLobby = {
       hasConnectedClient: (id) => id === PLAYER,
       isScheduledLobby: () => true,
-      isBoosted: () => state.boosted || state.pending,
+      boostBlockedFor: (id) =>
+        state.boosted ||
+        state.pending ||
+        (state.heldFor !== undefined && state.heldFor !== id),
+      boostHeldFor: (id) => !state.pending && state.heldFor === id,
       startsAt: () => undefined,
       wouldMoveUp: () => true,
-      setBoostPending: (pending) => {
-        state.pending = pending;
+      reserveBoost: (id) => {
+        state.pending = true;
+        state.heldFor = id;
+      },
+      releaseBoost: () => {
+        state.pending = false;
+        state.heldFor = undefined;
+      },
+      holdBoostForPayer: () => {
+        state.pending = false;
       },
       boost: () => {
         state.boosted = true;
         state.pending = false;
+        state.heldFor = undefined;
       },
       ...over,
     };
@@ -93,7 +112,7 @@ describe("boostScheduledLobby", () => {
       PLAYER,
       409,
     ],
-    ["a boosted lobby", { isBoosted: () => true }, PLAYER, 409],
+    ["a boosted lobby", { boostBlockedFor: () => true }, PLAYER, 409],
     ["a lobby counting down", { startsAt: () => 123 }, PLAYER, 409],
     ["a lobby that is already next", { wouldMoveUp: () => false }, PLAYER, 409],
   ])("refuses %s without charging", async (_, over, who, status) => {
@@ -120,18 +139,51 @@ describe("boostScheduledLobby", () => {
     expect(pay).toHaveBeenCalledOnce();
   });
 
-  it.each<[LobbyQueuePaymentResult, number, string]>([
-    [{ type: "insufficient_balance" }, 402, "insufficient_balance"],
-    [{ type: "error", message: "boom" }, 502, "boost_payment_failed"],
-  ])(
-    "leaves the lobby boostable when payment fails",
-    async (result, status, error) => {
-      const { l, state } = lobby();
-      const out = await boostScheduledLobby(l, PLAYER, async () => result);
-      expect(out).toEqual({ status, body: { error } });
-      expect(state).toEqual({ boosted: false, pending: false });
-    },
-  );
+  it("leaves the lobby boostable when the player can't afford it", async () => {
+    const { l, state } = lobby({ hasConnectedClient: () => true });
+    const out = await boostScheduledLobby(l, PLAYER, async () => ({
+      type: "insufficient_balance",
+    }));
+    expect(out).toEqual({
+      status: 402,
+      body: { error: "insufficient_balance" },
+    });
+    expect(state).toEqual({ boosted: false, pending: false });
+    expect((await boostScheduledLobby(l, "other-player", paid())).status).toBe(
+      200,
+    );
+  });
+
+  it("keeps the lobby for the payer when the charge's outcome is unknown", async () => {
+    let next = true;
+    const { l, state } = lobby({
+      hasConnectedClient: () => true,
+      wouldMoveUp: () => next,
+    });
+    const out = await boostScheduledLobby(l, PLAYER, async () => ({
+      type: "error",
+      message: "timeout",
+    }));
+    expect(out).toEqual({
+      status: 502,
+      body: { error: "boost_payment_failed" },
+    });
+    expect(state.boosted).toBe(false);
+
+    const other = paid();
+    expect((await boostScheduledLobby(l, "other-player", other)).status).toBe(
+      409,
+    );
+    expect(other).not.toHaveBeenCalled();
+
+    // The lobby moved up meanwhile: the payer's retry still replays the
+    // charge, since the first one may have gone through.
+    next = false;
+    const retry = paid();
+    expect((await boostScheduledLobby(l, PLAYER, retry)).status).toBe(200);
+    expect(retry).toHaveBeenCalledOnce();
+    expect(state.boosted).toBe(true);
+  });
 });
 
 describe("GameServer boosting", () => {
@@ -155,21 +207,40 @@ describe("GameServer boosting", () => {
     const game = publicLobby();
     const client = makeClient();
     game.joinClient(client);
-    expect(game.isBoosted()).toBe(false);
+    expect(game.boostBlockedFor(client.persistentID)).toBe(false);
     expect(game.gameInfo().boostedBy).toBeUndefined();
 
-    game.setBoostPending(true);
-    expect(game.isBoosted()).toBe(true);
+    game.reserveBoost(client.persistentID);
+    expect(game.boostBlockedFor(client.persistentID)).toBe(true);
     expect(game.boostedAtTime()).toBeUndefined();
+    expect(game.gameInfo().boostedBy).toBeUndefined();
 
-    game.boost(client.persistentID);
+    game.boost();
     const at = game.boostedAtTime();
     expect(at).toBeTypeOf("number");
     expect(game.gameInfo().boostedBy).toBe(client.clientID);
 
-    game.boost("someone-else");
+    game.boost();
     expect(game.boostedAtTime()).toBe(at);
     expect(game.gameInfo().boostedBy).toBe(client.clientID);
+    expect(game.boostBlockedFor(client.persistentID)).toBe(true);
+  });
+
+  it("holds an unresolved charge for its payer and frees a refused one", () => {
+    const game = publicLobby();
+    const client = makeClient();
+    game.joinClient(client);
+
+    game.reserveBoost(client.persistentID);
+    expect(game.boostHeldFor(client.persistentID)).toBe(false);
+    game.holdBoostForPayer();
+    expect(game.boostHeldFor(client.persistentID)).toBe(true);
+    expect(game.boostHeldFor("someone-else")).toBe(false);
+    expect(game.boostBlockedFor(client.persistentID)).toBe(false);
+    expect(game.boostBlockedFor("someone-else")).toBe(true);
+
+    game.releaseBoost();
+    expect(game.boostBlockedFor("someone-else")).toBe(false);
   });
 });
 
@@ -204,7 +275,7 @@ describe("WorkerLobbyService boosted lobbies", () => {
       config: { gameType: GameType.Public },
       publicGameType: "ffa",
     });
-    boosted.boost("anyone");
+    boosted.boost();
     const plain = makeGame({
       config: { gameType: GameType.Public },
       publicGameType: "ffa",
@@ -242,8 +313,9 @@ describe("WorkerLobbyService boosted lobbies", () => {
     expect(service.boostWouldMove("back", "ffa")).toBe(true);
     expect(service.boostWouldMove("next", "ffa")).toBe(false);
     expect(service.boostWouldMove("paid", "ffa")).toBe(false);
-    // Another queue's order says nothing about this lobby.
-    expect(service.boostWouldMove("next", "team")).toBe(true);
+    // Another queue's order says nothing about this lobby, and an empty
+    // queue has nothing to move ahead of.
+    expect(service.boostWouldMove("next", "team")).toBe(false);
   });
 
   it("tells browsers a lobby is boosted, without its boost time", () => {
