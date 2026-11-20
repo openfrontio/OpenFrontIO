@@ -414,8 +414,9 @@ export class AccountModal extends BaseModal {
   // The page reads as the player's profile: their card for a card owner, with
   // the XP bar under it and "Edit card"; otherwise the profile card as before,
   // with a way to the card.
-  // The catalogue the card header resolves the equipped items from, read
-  // once per modal (the store's cache makes it cheap).
+  // The catalogue the card header resolves the equipped items from: read
+  // once, or once per opening until a read succeeds (the store's cache makes
+  // it cheap).
   private cardCosmetics: Cosmetics | null = null;
   private cardCosmeticsRequested = false;
   private headerCosmetics(): Cosmetics | null {
@@ -1384,6 +1385,9 @@ export class AccountModal extends BaseModal {
     // no two openings share a key.
     const opening = (this.openCount = ++accountOpenings);
     this.dropProgression();
+    // A catalogue read that failed (or is still missing) is tried again at
+    // this opening; a good one stays cached.
+    if (this.cardCosmetics === null) this.cardCosmeticsRequested = false;
     this.isLoadingUser = true;
     this.requestedTab = typeof args?.tab === "string" ? args.tab : null;
     consumeLinkResult(args);
