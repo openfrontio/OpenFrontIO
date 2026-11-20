@@ -28,9 +28,14 @@ import {
   type Edit,
 } from "../../../src/client/scenario/DocumentEditor";
 import {
+  editorStartInfo,
+  startEditorEngine,
+} from "../../../src/client/scenario/EditorEngine";
+import {
   IMPASSABLE,
   land,
   newScenarioDocument,
+  resizeScenarioDocument,
   type ScenarioDocument,
   type ScenarioNation,
   ScenarioDocumentSchema,
@@ -551,3 +556,69 @@ test("a port that loses its shore in one batch of a write goes, and undo keeps t
   expect(doc.structures).toHaveLength(1);
   expect(structures()).toEqual(doc.structures);
 }, 60_000);
+
+describe("resizing", () => {
+  /** An engine built for the document the way the editor builds one. */
+  async function rebuilt(doc: ScenarioDocument): Promise<GameRunner> {
+    let runner: GameRunner | undefined;
+    await startEditorEngine(doc, async (files) => {
+      const r = await createGameRunner(
+        editorStartInfo(),
+        undefined,
+        files,
+        throwOnError,
+        true,
+      );
+      runner = r;
+      return (command) => {
+        r.applyEditorCommand(command);
+      };
+    });
+    return runner!;
+  }
+
+  function expectSameTiles(from: ScenarioDocument, to: ScenarioDocument) {
+    for (let y = 0; y < to.height; y++) {
+      for (let x = 0; x < to.width; x++) {
+        const t = y * to.width + x;
+        const inside = x < from.width && y < from.height;
+        const f = y * from.width + x;
+        expect(to.terrain[t]).toBe(inside ? from.terrain[f] : WATER);
+        expect(to.owners[t]).toBe(inside ? from.owners[f] : 0);
+      }
+    }
+  }
+
+  test("cropping keeps the top-left corner and drops a port off the coast", async () => {
+    const doc = built();
+    // At width 180 East's port, at x = 179, has no water beside it.
+    const cropped = resizeScenarioDocument(doc, 180, 120);
+    expectSameTiles(doc, cropped);
+    const moved = (s: (typeof doc.structures)[number]) => ({
+      ...s,
+      tile: Math.floor(s.tile / W) * 180 + (s.tile % W),
+    });
+    expect(cropped.structures).toEqual(
+      doc.structures.filter((s) => s.tile !== tile(179, 90)).map(moved),
+    );
+    expect(cropped.nations).toEqual(doc.nations);
+    // Still a valid document, and the engine built for it holds it.
+    expect(copy(cropped)).toEqual(cropped);
+    expectEngineHolds(await rebuilt(cropped), cropped);
+  });
+
+  test("growing adds water and keeps everything", async () => {
+    const doc = built();
+    const grown = resizeScenarioDocument(doc, 240, 200);
+    expectSameTiles(doc, grown);
+    expect(grown.structures).toHaveLength(doc.structures.length);
+    expectEngineHolds(await rebuilt(grown), grown);
+  });
+
+  test("only to a size a scenario can have", () => {
+    const doc = built();
+    expect(() => resizeScenarioDocument(doc, 202, 160)).toThrow();
+    expect(() => resizeScenarioDocument(doc, 200, 96)).toThrow();
+    expect(() => resizeScenarioDocument(doc, 2000, 2000)).toThrow();
+  });
+});

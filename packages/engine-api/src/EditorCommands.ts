@@ -73,6 +73,15 @@ const AuthoredTerrain = z
   .max(0x9f)
   .refine((v) => v === 0 || v >= 0x80, "not an authored terrain byte");
 
+/**
+ * The authored bits of a full terrain byte (one from a map file or the
+ * engine's map): 0 for water, else the land bit and the elevation, which is
+ * 31 for impassable. Drops the shoreline and ocean bits and water depth.
+ */
+export function authoredTerrain(b: number): number {
+  return (b & 0x80) === 0 ? 0 : b & 0x9f;
+}
+
 // The most tiles one set_terrain takes. The repair keeps sets of the edited
 // tiles and their neighbours, which must stay under the 2^24 entries a JS
 // Set holds. A larger edit (a heightmap import) is sent as several.

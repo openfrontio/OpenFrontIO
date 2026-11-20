@@ -8,6 +8,7 @@ import {
   decodeOwnership,
   encodeOwnership,
   IMPASSABLE,
+  isScenarioSize,
   land,
   MAX_AREA,
   newScenarioDocument,
@@ -233,4 +234,14 @@ describe("ownership run-length encoding", () => {
       0, 2, 3, 3, 0, 1,
     ]);
   });
+});
+
+test("isScenarioSize takes what the schema takes", () => {
+  expect(isScenarioSize(100, 100)).toBe(true);
+  expect(isScenarioSize(2000, 1500)).toBe(true);
+  expect(isScenarioSize(2000, 1504)).toBe(false);
+  expect(isScenarioSize(102, 100)).toBe(false);
+  expect(isScenarioSize(100, 96)).toBe(false);
+  expect(isScenarioSize(100.5, 100)).toBe(false);
+  expect(isScenarioSize(Number.NaN, 100)).toBe(false);
 });
