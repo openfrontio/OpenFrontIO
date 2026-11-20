@@ -41,9 +41,12 @@ function cancelRun(): void {
   current = null;
 }
 
-// Sign-out (any path: Auth's clearLocalSession announces it).
+// Sign-out (any path: Auth's clearLocalSession announces it), and a portal
+// account change (reauthAfterPortalChange), which swaps the session without
+// one.
 if (typeof document !== "undefined") {
   document.addEventListener("session-cleared", cancelRun);
+  document.addEventListener("session-reauth", cancelRun);
 }
 
 // Saves `loadout` for account `publicId`, after any save in flight for it.

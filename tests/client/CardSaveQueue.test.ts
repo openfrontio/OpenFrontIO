@@ -105,6 +105,17 @@ describe("CardSaveQueue", () => {
     expect(save).toHaveBeenCalledTimes(1);
   });
 
+  it("portal re-auth drops what was queued: it is never sent", async () => {
+    const run = requestCardSave("a", loadout("a"));
+    await tick();
+    void requestCardSave("a", loadout("b"));
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    expect(cardSaveInFlight("a")).toBeNull();
+    waiting.shift()!(true);
+    expect((await run).result).toEqual({ ok: false, error: "cancelled" });
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
   it("a save for another account drops the old account's queue", async () => {
     const runA = requestCardSave("a", loadout("a"));
     await tick();
