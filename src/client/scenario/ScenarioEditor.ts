@@ -575,7 +575,7 @@ export class ScenarioEditor extends LitElement {
         <input
           type="number"
           step="4"
-          class="w-24 rounded bg-zinc-800 px-2 py-1"
+          class="w-24 rounded bg-zinc-800 px-2 py-1 text-white"
           .value=${String(this.width)}
           @input=${(e: Event) =>
             (this.width = Number((e.target as HTMLInputElement).value))}
@@ -586,7 +586,7 @@ export class ScenarioEditor extends LitElement {
         <input
           type="number"
           step="4"
-          class="w-24 rounded bg-zinc-800 px-2 py-1"
+          class="w-24 rounded bg-zinc-800 px-2 py-1 text-white"
           .value=${String(this.height)}
           @input=${(e: Event) =>
             (this.height = Number((e.target as HTMLInputElement).value))}
@@ -650,7 +650,7 @@ export class ScenarioEditor extends LitElement {
       <label class="mb-3 flex flex-col gap-1">
         ${translateText("scenario_editor.name")}
         <input
-          class="rounded bg-zinc-800 px-2 py-1"
+          class="rounded bg-zinc-800 px-2 py-1 text-white"
           maxlength="64"
           .value=${this.name}
           @input=${(e: Event) =>
@@ -669,7 +669,7 @@ export class ScenarioEditor extends LitElement {
       </div>
       <div class="mt-4 flex flex-wrap items-center gap-3">
         <select
-          class="rounded bg-zinc-800 px-2 py-1"
+          class="rounded bg-zinc-800 px-2 py-1 text-white"
           .value=${this.stockMap}
           @change=${(e: Event) =>
             void this.pickStockMap((e.target as HTMLSelectElement).value)}
