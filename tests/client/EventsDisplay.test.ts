@@ -239,6 +239,51 @@ describe("events-display", () => {
     ]);
   });
 
+  it("tints important rows with their tone, but not chat or routine rows", async () => {
+    attackRequest("asked", 0);
+    feed().addEvent({
+      description: "broke",
+      type: MessageType.ALLIANCE_BROKEN,
+      createdAt: 0,
+    });
+    feed().addEvent({
+      description: "chat",
+      type: MessageType.CHAT,
+      createdAt: 0,
+    });
+    feed().addEvent({
+      description: "expired",
+      type: MessageType.ALLIANCE_EXPIRED,
+      createdAt: 0,
+    });
+    await advanceTo(1);
+
+    const tone = (text: string) => rowSaying(text).dataset.tone;
+    const tinted = (text: string) =>
+      rowSaying(text).querySelector("[data-tint]") !== null;
+    expect(tone("asked")).toBe("blue");
+    expect(tone("broke")).toBe("fail");
+    expect(tone("chat")).toBe("info");
+    expect(tone("expired")).toBe("warn");
+    expect(tinted("asked")).toBe(true);
+    expect(tinted("broke")).toBe(true);
+    expect(tinted("chat")).toBe(false);
+    expect(tinted("expired")).toBe(false);
+  });
+
+  it("gives every row a tone", async () => {
+    const types = Object.values(MessageType).filter(
+      (v): v is MessageType => typeof v === "number",
+    );
+    for (const [i, type] of types.entries()) {
+      feed().addEvent({ description: `type ${type}`, type, createdAt: i });
+      await advanceTo(i);
+      expect(rowSaying(`type ${type}`).dataset.tone, MessageType[type]).toMatch(
+        /^(fail|warn|success|blue|info)$/,
+      );
+    }
+  });
+
   it("makes a row a button only when it goes somewhere", async () => {
     attackRequest("to a player", 0);
     const unit = bomb(10);
