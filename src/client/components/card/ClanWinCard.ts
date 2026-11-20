@@ -37,17 +37,25 @@ export class ClanWinCard extends LitElement {
     const alive = this.members.filter((m) => m.alive).length;
     return html`<section
       data-clan-win-card
-      class="player-card relative min-h-[92px] w-full overflow-hidden rounded-xl border-2 border-sky-300/50 text-white"
+      class="player-card @container relative min-h-[92px] w-full overflow-hidden rounded-xl border-2 border-sky-300/50 text-white"
     >
       <card-background .background=${null}></card-background>
-      <div class="relative flex h-full items-center gap-4 px-4 py-3">
+      <!-- Narrower than 32rem (a phone's end screen) the row wraps: tag and
+           trackers on top, the chips on a line of their own. -->
+      <div
+        data-clan-win-row
+        class="relative flex h-full flex-wrap items-center gap-x-3 gap-y-2 px-3 py-3 @lg:flex-nowrap @lg:gap-4 @lg:px-4"
+      >
         <div
           data-clan-tag
-          class="shrink-0 text-3xl font-black tracking-wider text-aquarius"
+          class="min-w-0 shrink text-2xl font-black tracking-wider break-all text-aquarius @lg:shrink-0 @lg:text-3xl"
         >
           [${this.clanTag}]
         </div>
-        <div class="flex min-w-0 flex-1 flex-wrap gap-1.5">
+        <div
+          data-clan-members
+          class="order-last flex min-w-0 basis-full flex-wrap gap-1.5 @lg:order-none @lg:flex-1 @lg:basis-0"
+        >
           ${shown.map(
             (m) =>
               html`<span
@@ -80,10 +88,10 @@ export class ClanWinCard extends LitElement {
               : nothing
           }
         </div>
-        <div class="flex shrink-0 items-stretch">
+        <div class="ml-auto flex shrink-0 items-stretch">
           <div
             data-card-tracker="territory"
-            class="flex min-w-[4.5rem] flex-col items-center justify-center px-3"
+            class="flex min-w-[3.5rem] flex-col items-center justify-center px-2 @lg:min-w-[4.5rem] @lg:px-3"
           >
             <span class="text-xl font-black tabular-nums leading-none"
               >${Math.round(this.territoryPct)}%</span
@@ -95,7 +103,7 @@ export class ClanWinCard extends LitElement {
           </div>
           <div
             data-card-tracker="members_alive"
-            class="flex min-w-[4.5rem] flex-col items-center justify-center border-l border-white/15 px-3"
+            class="flex min-w-[3.5rem] flex-col items-center justify-center border-l border-white/15 px-2 @lg:min-w-[4.5rem] @lg:px-3"
           >
             <span class="text-xl font-black tabular-nums leading-none"
               >${alive}/${this.members.length}</span

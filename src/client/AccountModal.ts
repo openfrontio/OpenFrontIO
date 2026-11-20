@@ -29,6 +29,7 @@ import {
   sendMagicLink,
   steamLogin,
 } from "./Auth";
+import { type CardLoadoutBody, cardRefsFromLoadout } from "./CardLoadoutApi";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import { BaseModal } from "./components/BaseModal";
 import { buildPlayerCardView } from "./components/card/PlayerCardModel";
@@ -53,6 +54,7 @@ import "./components/ProfileCard";
 import "./components/ProfileProgression";
 import "./components/RewardsPanel";
 import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
+import { xpProgressText } from "./components/XpBar";
 import { fetchCosmetics } from "./Cosmetics";
 import { desktopLinkGate, isSteamShell } from "./DesktopShell";
 import { gamePortal, type PortalUser } from "./GamePortal";
@@ -357,6 +359,7 @@ export class AccountModal extends BaseModal {
   private renderMyCardTab(): TemplateResult {
     return html`<my-card-tab
       .userMe=${this.userMeResponse}
+      @card-saved=${this.handleCardSaved}
       @change-flag=${() =>
         whenModalLoaded("inventory-modal", () =>
           (
@@ -413,8 +416,9 @@ export class AccountModal extends BaseModal {
   // The page reads as the player's profile: their card for a card owner, with
   // the XP bar under it and "Edit card"; otherwise the profile card as before,
   // with a way to the card.
-  // The catalogue the card header resolves the equipped items from, read
-  // once per modal (the store's cache makes it cheap).
+  // The catalogue the card header resolves the equipped items from: read
+  // once, or once per opening until a read succeeds (the store's cache makes
+  // it cheap).
   private cardCosmetics: Cosmetics | null = null;
   private cardCosmeticsRequested = false;
   private headerCosmetics(): Cosmetics | null {
@@ -445,7 +449,13 @@ export class AccountModal extends BaseModal {
         </button>
       </div>`;
     }
-    const progress = player.progress;
+    // With any XP still waiting to be scored, provisionally, as the profile
+    // card shows it.
+    const provisional =
+      player.progress && player.publicId
+        ? provisionalProgress(player.publicId, player.progress)
+        : null;
+    const progress = provisional?.progress ?? player.progress;
     const view = buildPlayerCardView(
       {
         username: player.username ?? player.publicId ?? "",
@@ -476,11 +486,18 @@ export class AccountModal extends BaseModal {
               true,
             )}
             <span class="shrink-0 tabular-nums text-white/60"
-              >${progress.xpInLevel.toLocaleString()} /
-              ${progress.xpForNext.toLocaleString()} XP</span
+              >${xpProgressText(progress.xpInLevel, progress.xpForNext)}</span
             >
           </div>`
         : nothing;
+    const provisionalLabel = provisional?.provisional
+      ? html`<div
+          data-account-provisional
+          class="text-xs font-semibold text-amber-200/80"
+        >
+          ${translateText("progression.provisional_label")}
+        </div>`
+      : nothing;
     return html`<div data-account-card-header class="flex flex-col gap-2">
       <button
         type="button"
@@ -491,7 +508,7 @@ export class AccountModal extends BaseModal {
         ${translateText("account_modal.edit_card")}
       </button>
       <player-card size="account" animated .view=${view}></player-card>
-      ${bar}
+      ${bar} ${provisionalLabel}
     </div>`;
   }
 
@@ -747,6 +764,21 @@ export class AccountModal extends BaseModal {
       @creator-changed=${this.handleCreatorChanged}
     ></creator-code-panel>`;
   }
+
+  // A card save went through: patch the card into a new /users/@me copy, so
+  // the header and a My Card tab made later read it even if the refresh that
+  // follows a save fails. (On the tab that saved, it's what it holds.)
+  private handleCardSaved = (event: CustomEvent<CardLoadoutBody>): void => {
+    const me = this.userMeResponse;
+    if (!me) return;
+    this.userMeResponse = {
+      ...me,
+      player: {
+        ...me.player,
+        card: cardRefsFromLoadout(event.detail, me.player.card),
+      },
+    };
+  };
 
   // A claim moved unclaimed rewards into the balances; both were returned by
   // the claim endpoint, so update in place instead of re-fetching /users/@me.
@@ -1370,6 +1402,9 @@ export class AccountModal extends BaseModal {
     // no two openings share a key.
     const opening = (this.openCount = ++accountOpenings);
     this.dropProgression();
+    // A catalogue read that failed (or is still missing) is tried again at
+    // this opening; a good one stays cached.
+    if (this.cardCosmetics === null) this.cardCosmeticsRequested = false;
     this.isLoadingUser = true;
     this.requestedTab = typeof args?.tab === "string" ? args.tab : null;
     consumeLinkResult(args);

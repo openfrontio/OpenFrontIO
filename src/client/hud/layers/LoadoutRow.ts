@@ -9,6 +9,8 @@ import {
   type CardItem,
   type CardItemType,
   cardItemName,
+  isOfferedCardItem,
+  cardPrices,
 } from "../../components/card/CardItems";
 import {
   CARD_TAUNTS_ENABLED,
@@ -30,8 +32,11 @@ export interface LoadoutItem {
   type: CardItemType;
   item: CardItem;
   state: "buy" | "earned";
+  // As charged now: the list price once the item's own sale has ended.
   priceHard?: number;
   priceSoft?: number;
+  listPriceHard?: number;
+  listPriceSoft?: number;
   unlockLabel?: string;
 }
 
@@ -44,10 +49,21 @@ function toItem(type: CardItemType, item: CardItem): LoadoutItem | null {
   if (unlock !== undefined) {
     return { type, item, state: "earned", unlockLabel: unlock.label };
   }
-  const priceHard = (item.priceHard ?? 0) > 0 ? item.priceHard : undefined;
-  const priceSoft = (item.priceSoft ?? 0) > 0 ? item.priceSoft : undefined;
+  const prices = cardPrices(item);
+  const priceHard =
+    (prices.priceHard ?? 0) > 0 ? (prices.priceHard ?? undefined) : undefined;
+  const priceSoft =
+    (prices.priceSoft ?? 0) > 0 ? (prices.priceSoft ?? undefined) : undefined;
   if (priceHard === undefined && priceSoft === undefined) return null;
-  return { type, item, state: "buy", priceHard, priceSoft };
+  return {
+    type,
+    item,
+    state: "buy",
+    priceHard,
+    priceSoft,
+    listPriceHard: prices.listPriceHard ?? undefined,
+    listPriceSoft: prices.listPriceSoft ?? undefined,
+  };
 }
 
 /**
@@ -90,7 +106,8 @@ export function loadoutItems(
   const out: LoadoutItem[] = [];
   for (const [type, item] of candidates) {
     if (out.length === MAX_ITEMS) break;
-    if (item === undefined || owned.has(`${type}:${item.name}`)) continue;
+    if (item === undefined || !isOfferedCardItem(type, item)) continue;
+    if (owned.has(`${type}:${item.name}`)) continue;
     const entry = toItem(type, item);
     if (entry !== null) out.push(entry);
   }
@@ -152,6 +169,8 @@ export class LoadoutRow extends LitElement {
     super.connectedCallback();
     if (this.tracker === null && typeof IntersectionObserver !== "undefined") {
       const { StoreTracker } = await import("../../StoreTracking");
+      // Removed (or given a tracker) while the module loaded: none to make.
+      if (!this.isConnected || this.tracker !== null) return;
       this.tracker = new StoreTracker();
       this.ownTracker = true;
     }
@@ -159,7 +178,12 @@ export class LoadoutRow extends LitElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    if (this.ownTracker) this.tracker?.dispose();
+    // A disposed tracker sends nothing: drop it, so reattaching makes a new one.
+    if (this.ownTracker) {
+      this.tracker?.dispose();
+      this.tracker = null;
+      this.ownTracker = false;
+    }
   }
 
   protected updated(): void {
@@ -208,6 +232,8 @@ export class LoadoutRow extends LitElement {
           ? html`<purchase-button
               .priceHard=${entry.priceHard ?? null}
               .priceSoft=${entry.priceSoft ?? null}
+              .listPriceHard=${entry.listPriceHard ?? null}
+              .listPriceSoft=${entry.listPriceSoft ?? null}
               .rarity=${String(entry.item.rarity)}
               .itemName=${cardItemName(entry.type, entry.item)}
               .onPurchaseHard=${() => this.buy(entry, "hard")}

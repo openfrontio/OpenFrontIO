@@ -1,10 +1,12 @@
-import type {
-  CardBackground,
-  CardTitle,
-  CardTracker,
-  PlayerCardItem,
-  Taunt,
+import {
+  type CardBackground,
+  type CardTitle,
+  type CardTracker,
+  cardTrackerNamedByStat,
+  type PlayerCardItem,
+  type Taunt,
 } from "@openfront/shared/CosmeticSchemas";
+import { currentPrice, saleHasEnded } from "../../SalePrice";
 import { translateText } from "../../Utils";
 
 // The player card cosmetics, as the client lists and sells them.
@@ -51,4 +53,50 @@ function readableName(name: string): string {
     .filter((w) => w.length > 0)
     .map((w) => w[0].toUpperCase() + w.slice(1))
     .join(" ");
+}
+
+export interface CardPrices {
+  priceHard: number | null;
+  priceSoft: number | null;
+  listPriceHard: number | null;
+  listPriceSoft: number | null;
+}
+
+// A card item's prices as the server charges them now, for <purchase-button>:
+// once the item's own sale has ended that is the list price, with nothing
+// struck through, whatever the catalogue in hand says. Same rule as the store.
+export function cardPrices(item: CardItem): CardPrices {
+  const ended = saleHasEnded(item);
+  return {
+    priceHard: currentPrice(item, "hard") ?? null,
+    priceSoft: currentPrice(item, "soft") ?? null,
+    listPriceHard: ended ? null : (item.listPriceHard ?? null),
+    listPriceSoft: ended ? null : (item.listPriceSoft ?? null),
+  };
+}
+
+// A card item's rarity as a word, in the player's language. The card has a
+// 1 of 1 tier the other cosmetics don't; anything unknown reads as Common.
+export function cardRarityLabel(rarity: string): string {
+  switch (rarity) {
+    case "uncommon":
+      return translateText("cosmetics.uncommon");
+    case "rare":
+      return translateText("cosmetics.rare");
+    case "epic":
+      return translateText("cosmetics.epic");
+    case "legendary":
+      return translateText("cosmetics.legendary");
+    case "oneofone":
+      return translateText("cosmetics.oneofone");
+    default:
+      return translateText("cosmetics.common");
+  }
+}
+
+// Whether a card item may be offered at all: a tracker only when its name
+// is its stat (cardTrackerNamedByStat). Ownership is then `<type>:<name>`,
+// the flare the shop grants.
+export function isOfferedCardItem(type: CardItemType, item: CardItem): boolean {
+  return type !== "cardTracker" || cardTrackerNamedByStat(item as CardTracker);
 }
