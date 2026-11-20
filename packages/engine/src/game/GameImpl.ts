@@ -320,6 +320,30 @@ export class GameImpl implements Game {
     this.recordTileUpdate(tile);
   }
 
+  setTerrain(tiles: readonly TileRef[], terrain: readonly number[]): void {
+    this.recordTerrainChanges(this._waterManager.editTerrain(tiles, terrain));
+  }
+
+  endTerrainEdit(): void {
+    this.recordTerrainChanges(this._waterManager.endTerrainEdit());
+  }
+
+  downscaleMiniMap(): GameMap {
+    return this._waterManager.downscaleMiniMap();
+  }
+
+  rebuildWaterGraph(): void {
+    this._waterManager.rebuildWaterGraph();
+  }
+
+  private recordTerrainChanges(tiles: TileRef[]): void {
+    for (const tile of tiles) this.recordTileUpdate(tile);
+    if (tiles.length === 0) return;
+    this._territoryVersion++;
+    // Rail paths route around water, so a rail plan must be redone too.
+    this._structureVersion++;
+  }
+
   queueWaterConversion(tile: TileRef): void {
     if (!this.isLand(tile)) return;
     if (this.hasOwner(tile)) {
@@ -956,6 +980,23 @@ export class GameImpl implements Game {
     );
   }
 
+  /**
+   * Scenario editor: brings back a nation removeNation removed, under its
+   * id and small id, as a new nation would start.
+   */
+  restoreNation(info: PlayerInfo): void {
+    const nation = this._playersBySmallID.find((p) => p.id() === info.id);
+    if (!(nation instanceof PlayerImpl) || this._players.has(info.id)) {
+      throw new Error(`no removed nation ${info.id}`);
+    }
+    nation.setPlayerInfo(info);
+    nation.setTroops(this.config().startManpower(info));
+    nation.setGold(this.config().startingGold(info));
+    nation.setPlayable(false);
+    this._players.set(info.id, nation);
+    this._nations.push(new Nation(undefined, info));
+  }
+
   /** Scenario editor: renames a nation or changes its flag. */
   setNationInfo(nation: Player, info: PlayerInfo): void {
     nation.setPlayerInfo(info);
@@ -1562,6 +1603,9 @@ export class GameImpl implements Game {
   }
   setMagnitude(ref: TileRef, value: number): void {
     this._map.setMagnitude(ref, value);
+  }
+  setTerrainByte(ref: TileRef, value: number): void {
+    this._map.setTerrainByte(ref, value);
   }
   ownerID(ref: TileRef): number {
     return this._map.ownerID(ref);

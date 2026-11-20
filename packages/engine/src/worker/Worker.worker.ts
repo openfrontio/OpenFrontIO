@@ -2,6 +2,7 @@ import {
   ErrorUpdate,
   GameUpdateViewData,
 } from "@openfront/engine-api/game/GameUpdates";
+import { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import {
   AttackClusteredPositionsResultMessage,
   EditorCommandResultMessage,
@@ -535,6 +536,7 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
     }
     case "editor_command": {
       let error: string | undefined;
+      let map: MapFiles | undefined;
       if (!editor || !gameRunner) {
         error = "this engine is not in editor mode";
       } else {
@@ -545,7 +547,7 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
             if ("updates" in gu) gameUpdates.push(gu);
           };
           try {
-            gr.applyEditorCommand(message.command);
+            map = gr.applyEditorCommand(message.command);
           } finally {
             tickUpdateSink = null;
           }
@@ -554,11 +556,17 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
           error = e instanceof Error ? e.message : String(e);
         }
       }
-      sendMessage({
-        type: "editor_command_result",
-        id: message.id,
-        ...(error !== undefined ? { error } : {}),
-      } as EditorCommandResultMessage);
+      out.postMessage(
+        {
+          type: "editor_command_result",
+          id: message.id,
+          ...(error !== undefined ? { error } : {}),
+          ...(map !== undefined ? { map } : {}),
+        } as EditorCommandResultMessage,
+        map !== undefined
+          ? [map.mapBin!.buffer, map.map4xBin!.buffer, map.map16xBin!.buffer]
+          : [],
+      );
       break;
     }
     default:

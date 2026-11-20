@@ -288,10 +288,14 @@ export interface EditorCommandMessage extends BaseWorkerMessage {
   command: EditorCommand;
 }
 
-/** `error` says why the command was rejected; a rejected one changed nothing. */
+/**
+ * `error` says why the command was rejected; a rejected one changed nothing.
+ * `map` is the map files an `export_terrain` wrote.
+ */
 export interface EditorCommandResultMessage extends BaseWorkerMessage {
   type: "editor_command_result";
   error?: string;
+  map?: MapFiles;
 }
 
 // Union types for type safety

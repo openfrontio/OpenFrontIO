@@ -2,11 +2,12 @@ import {
   EditorCommand,
   EditorCommandSchema,
 } from "@openfront/engine-api/EditorCommands";
-import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   AllPlayers,
   BuildableUnit,
   CustomGameMap,
+  GameMapSize,
   GameType,
   GameUpdates,
   HumanDisconnects,
@@ -19,6 +20,7 @@ import {
   PlayerInfo,
   PlayerProfile,
   PlayerType,
+  Structures,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import {
@@ -27,7 +29,11 @@ import {
   GameUpdateViewData,
   UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
-import { MapFiles } from "@openfront/engine-api/game/MapFiles";
+import {
+  MapFiles,
+  MapManifest,
+  MapMetadata,
+} from "@openfront/engine-api/game/MapFiles";
 import { ClientID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
 import { packUnitUpdates } from "@openfront/engine-lib/game/PackedUnitUpdates";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
@@ -35,8 +41,10 @@ import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { simpleHash } from "@openfront/engine-lib/Util";
 import { EngineConfig } from "./configuration/EngineConfig";
 import { applyEditorCommand } from "./editor/EditorCommands";
+import { structureExecution } from "./execution/ConstructionExecution";
 import { DoomsdayClockExecution } from "./execution/DoomsdayClockExecution";
 import { Executor } from "./execution/ExecutionManager";
+import { PlayerExecution } from "./execution/PlayerExecution";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
@@ -103,6 +111,7 @@ export async function createGameRunner(
       gameStart.tribes?.map((t) => t.name),
     ),
     callBack,
+    editor ? map.manifest : null,
   );
   if (!editor) gr.init();
   return gr;
@@ -180,6 +189,9 @@ export class GameRunner {
     public game: Game,
     private execManager: Executor,
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+    // Scenario editor: the manifest the engine started on, which the
+    // exported map files' manifest is based on.
+    private editorManifest: MapManifest | null = null,
   ) {}
 
   /**
@@ -211,6 +223,11 @@ export class GameRunner {
         ...this.execManager.spawnTribes(this.game.config().bots()),
       );
     }
+    this.addRunningGameExecutions();
+  }
+
+  /** What every running game has, however it started. */
+  private addRunningGameExecutions(): void {
     this.game.addExecution(new WinCheckExecution());
     if (this.game.config().doomsdayClockConfig().enabled) {
       this.game.addExecution(new DoomsdayClockExecution());
@@ -276,18 +293,95 @@ export class GameRunner {
   /**
    * Scenario editor: applies one command and sends the updates it made,
    * without running a tick. Throws, having changed nothing, if the command
-   * is invalid.
+   * is invalid. Returns the map files `export_terrain` writes.
    */
-  public applyEditorCommand(command: EditorCommand): void {
+  public applyEditorCommand(command: EditorCommand): MapFiles | undefined {
     const parsed = EditorCommandSchema.parse(command);
     const wasInSpawnPhase = this.game.inSpawnPhase();
-    applyEditorCommand(this.game, parsed);
+    let files: MapFiles | undefined;
+    switch (parsed.type) {
+      case "export_terrain":
+        files = this.exportTerrain();
+        break;
+      case "finalize":
+        this.finalize();
+        break;
+      default:
+        applyEditorCommand(this.game, parsed);
+    }
     this.sendUpdates(
       this.game.drainPendingUpdates(),
       wasInSpawnPhase,
       0,
       this.pendingTurns(),
     );
+    return files;
+  }
+
+  /**
+   * Runs the full terrain pass and writes the terrain out as a Custom map's
+   * files (docs/ScenarioEditor.md, "Finalising for export"). The water
+   * graph is not rebuilt: the files don't hold it, and the engine that
+   * loads them builds its own.
+   */
+  private exportTerrain(): MapFiles {
+    if (this.editorManifest === null) {
+      throw new Error("only an editor engine exports its terrain");
+    }
+    if (this.game.config().gameConfig().gameMapSize !== GameMapSize.Normal) {
+      throw new Error("only a Normal-size editor engine has map.bin");
+    }
+    this.game.endTerrainEdit();
+    const map = this.game.map();
+    const map4x = this.game.miniMap();
+    const map16x = this.game.downscaleMiniMap();
+    return {
+      map: CustomGameMap,
+      mapSize: GameMapSize.Normal,
+      manifest: {
+        ...this.editorManifest,
+        map: mapMetadata(map),
+        map4x: mapMetadata(map4x),
+        map16x: mapMetadata(map16x),
+      },
+      mapBin: terrainBytes(map),
+      map4xBin: terrainBytes(map4x),
+      map16xBin: terrainBytes(map16x),
+    };
+  }
+
+  /**
+   * Scenario editor: makes the game a running one with every nation
+   * AI-run, ready to snapshot (docs/ScenarioEditor.md, "Finalising for
+   * export"). Nothing ticks between this and the snapshot.
+   */
+  private finalize(): void {
+    if (!this.game.inSpawnPhase()) {
+      throw new Error("the game is already finalized");
+    }
+    // In the order a new game adds them: init()'s, then each spawn's, then
+    // each structure's as it's built. Every nation gets its AI, whatever
+    // the config's nations setting: they are the author's. One with no land
+    // is dead and stops on its first tick.
+    this.game.addExecution(...this.execManager.nationExecutions());
+    this.addRunningGameExecutions();
+    for (const nation of this.game.nations()) {
+      const player = this.game.player(nation.playerInfo.id);
+      // A nation the author gave land has spawned, as SpawnExecution
+      // spawns one: a spawn tile and its player execution.
+      let spawnTile: TileRef | undefined;
+      for (const tile of player.tiles()) {
+        if (spawnTile === undefined || tile < spawnTile) spawnTile = tile;
+      }
+      if (spawnTile === undefined) continue;
+      player.setSpawnTile(spawnTile);
+      this.game.stats().recordSpawnTile(player, spawnTile);
+      this.game.addExecution(new PlayerExecution(player));
+    }
+    for (const structure of this.game.units(Structures.types)) {
+      this.game.addExecution(structureExecution(structure));
+    }
+    this.game.endSpawnPhase();
   }
 
   /** Builds the update for the host from the game's pending updates. */
@@ -484,4 +578,19 @@ export class GameRunner {
     }
     return player.bestTransportShipSpawn(targetTile);
   }
+}
+
+function mapMetadata(map: GameMap): MapMetadata {
+  return {
+    width: map.width(),
+    height: map.height(),
+    num_land_tiles: map.numLandTiles(),
+  };
+}
+
+/** A copy of the map's terrain bytes: the game keeps the map. */
+function terrainBytes(map: GameMap): Uint8Array {
+  const bytes = new Uint8Array(map.width() * map.height());
+  for (let t = 0; t < bytes.length; t++) bytes[t] = map.terrainByte(t);
+  return bytes;
 }

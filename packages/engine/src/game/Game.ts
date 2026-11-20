@@ -659,7 +659,22 @@ export interface Game extends GameLike {
   // Scenario editor (docs/ScenarioEditor.md)
   addNation(info: PlayerInfo): Player;
   removeNation(nation: Player): void;
+  restoreNation(info: PlayerInfo): void;
   setNationInfo(nation: Player, info: PlayerInfo): void;
+  /**
+   * Writes the authored terrain of the tiles and repairs the terrain around
+   * them, except what waits for endTerrainEdit() (WaterManager.editTerrain).
+   */
+  setTerrain(tiles: readonly TileRef[], terrain: readonly number[]): void;
+  /** Redoes the ocean bit and the depth of water with no coast. */
+  endTerrainEdit(): void;
+  /** The map16x the map generator would make from the minimap. */
+  downscaleMiniMap(): GameMap;
+  /**
+   * Relabels the water components and rebuilds the water graph after
+   * terrain edits. The scenario editor runs it before test play.
+   */
+  rebuildWaterGraph(): void;
 
   numTilesWithFallout(): number;
   stats(): Stats;

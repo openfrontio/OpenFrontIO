@@ -64,6 +64,69 @@ export const RemoveStructureCommandSchema = z.object({
   tile: Tile,
 });
 
+// What the author decides for a tile: 0 for water, 0x80 | elevation (0-30)
+// for land, 0x9f for impassable. These are the bits of the terrain byte the
+// map generator takes from the image; the engine derives the rest.
+const AuthoredTerrain = z
+  .int()
+  .min(0)
+  .max(0x9f)
+  .refine((v) => v === 0 || v >= 0x80, "not an authored terrain byte");
+
+/**
+ * The authored bits of a full terrain byte (one from a map file or the
+ * engine's map): 0 for water, else the land bit and the elevation, which is
+ * 31 for impassable. Drops the shoreline and ocean bits and water depth.
+ */
+export function authoredTerrain(b: number): number {
+  return (b & 0x80) === 0 ? 0 : b & 0x9f;
+}
+
+// The most tiles one set_terrain takes. The repair keeps sets of the edited
+// tiles and their neighbours, which must stay under the 2^24 entries a JS
+// Set holds. A larger edit (a heightmap import) is sent as several.
+export const MAX_TERRAIN_BATCH = 1 << 20;
+
+/**
+ * Writes the authored terrain of the tiles (`terrain[i]` for `tiles[i]`) and
+ * repairs the shoreline, water depth and minimap around them. A tile that
+ * changes between water, land and impassable loses its owner and its units
+ * first. The ocean bit waits for `end_terrain_edit`, the water graph for
+ * the rebuild before test play.
+ */
+export const SetTerrainCommandSchema = z.object({
+  type: z.literal("set_terrain"),
+  tiles: z.array(Tile).max(MAX_TERRAIN_BATCH),
+  terrain: z.array(AuthoredTerrain).max(MAX_TERRAIN_BATCH),
+});
+
+/**
+ * Ends a run of `set_terrain` commands (a stroke): redoes the ocean bit
+ * and the water depth of bodies with no coast over the whole map.
+ */
+export const EndTerrainEditCommandSchema = z.object({
+  type: z.literal("end_terrain_edit"),
+});
+
+/**
+ * Runs the full terrain pass and writes the terrain out as map files, which
+ * the result carries (docs/ScenarioEditor.md, "Finalising for export"). It
+ * changes nothing else, so editing can carry on.
+ */
+export const ExportTerrainCommandSchema = z.object({
+  type: z.literal("export_terrain"),
+});
+
+/**
+ * Makes the game ready to play: AI for every nation, executions for the
+ * structures and the running game, spawn phase over. Sent to a second
+ * engine started on the exported map files, which is then snapshotted and
+ * discarded; it can't be undone.
+ */
+export const FinalizeCommandSchema = z.object({
+  type: z.literal("finalize"),
+});
+
 export const EditorCommandSchema = z.discriminatedUnion("type", [
   AddNationCommandSchema,
   RemoveNationCommandSchema,
@@ -71,5 +134,9 @@ export const EditorCommandSchema = z.discriminatedUnion("type", [
   SetOwnerCommandSchema,
   PlaceStructureCommandSchema,
   RemoveStructureCommandSchema,
+  SetTerrainCommandSchema,
+  EndTerrainEditCommandSchema,
+  ExportTerrainCommandSchema,
+  FinalizeCommandSchema,
 ]);
 export type EditorCommand = z.infer<typeof EditorCommandSchema>;
