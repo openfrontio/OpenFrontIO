@@ -34,25 +34,26 @@ import { BaseModal } from "./components/BaseModal";
 import { buildPlayerCardView } from "./components/card/PlayerCardModel";
 import { xpBarTemplate } from "./components/card/ProfileIdentity";
 import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
+import { ffaSummaryFromMe } from "./components/ffaRating/FfaRatingSummary";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
-import { ffaSummaryFromMe } from "./components/ffaRating/FfaRatingSummary";
+import type { PrestigeFlow } from "./components/PrestigeFlow";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import "./components/baseComponents/stats/SteamUserHeader";
-import type { PrestigeFlow } from "./components/PrestigeFlow";
+import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import "./components/CopyButton";
 import "./components/CreatorCodePanel";
-import type { RewardsChangedDetail } from "./components/RewardsPanel";
+import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
-import { googleLinkButton } from "./components/ui/GoogleLinkButton";
-import "./components/FriendsList";
 import { modalHeader } from "./components/ui/ModalHeader";
+import "./components/FriendsList";
+import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
 import "./components/ProfileCard";
 import "./components/ProfileProgression";
 import "./components/RewardsPanel";
-import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
+import { xpProgressText } from "./components/XpBar";
 import { fetchCosmetics } from "./Cosmetics";
 import { desktopLinkGate, isSteamShell } from "./DesktopShell";
 import { gamePortal, type PortalUser } from "./GamePortal";
@@ -476,8 +477,7 @@ export class AccountModal extends BaseModal {
               true,
             )}
             <span class="shrink-0 tabular-nums text-white/60"
-              >${progress.xpInLevel.toLocaleString()} /
-              ${progress.xpForNext.toLocaleString()} XP</span
+              >${xpProgressText(progress.xpInLevel, progress.xpForNext)}</span
             >
           </div>`
         : nothing;

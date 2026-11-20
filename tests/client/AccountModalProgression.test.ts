@@ -323,6 +323,20 @@ describe("AccountModal — Progression tab", () => {
     await settle(() => expect(myCard()?.userMe).toBe(saved));
   });
 
+  it("the card owner's XP line is translated", async () => {
+    me = {
+      ...me,
+      player: { ...me.player, flares: ["playerCard:standard"] },
+    } as unknown as UserMeResponse;
+    modal.open();
+    await settle(() => {
+      const header = modal.querySelector("[data-account-card-header]");
+      expect(header?.textContent).toContain("progression.xp_progress");
+      expect(header?.textContent).not.toMatch(/XP/);
+      expect(header?.querySelector("[data-account-provisional]")).toBeNull();
+    });
+  });
+
   it("has no tab for a player without a level (progression off)", async () => {
     me = userMe(undefined);
     modal.open({ tab: "progression" });
