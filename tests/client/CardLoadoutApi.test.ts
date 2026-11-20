@@ -12,6 +12,10 @@ const userMe = vi.hoisted(() => ({ invalidate: vi.fn() }));
 vi.mock("../../src/client/Api", () => ({
   invalidateUserMe: userMe.invalidate,
 }));
+const fresh = vi.hoisted(() => ({ broadcast: vi.fn(async () => false) }));
+vi.mock("../../src/client/Cosmetics", () => ({
+  broadcastFreshUserMe: fresh.broadcast,
+}));
 
 import {
   saveCardLoadout,
@@ -30,9 +34,45 @@ describe("saveCardLoadout", () => {
   beforeEach(() => {
     fetchMock.mockReset();
     userMe.invalidate.mockReset();
+    fresh.broadcast.mockReset();
+    fresh.broadcast.mockResolvedValue(false);
     vi.stubGlobal("fetch", fetchMock);
   });
   afterEach(() => vi.unstubAllGlobals());
+
+  it("broadcasts a fresh /users/@me before a successful save returns", async () => {
+    // So the Account header, a recreated My Card tab and any other editor
+    // read the saved card, not the copy from when the modal opened.
+    let broadcastDone = false;
+    fresh.broadcast.mockImplementation(async () => {
+      await Promise.resolve();
+      broadcastDone = true;
+      return false;
+    });
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify(LOADOUT), { status: 200 }),
+    );
+    await saveCardLoadout(LOADOUT);
+    expect(fresh.broadcast).toHaveBeenCalledTimes(1);
+    expect(broadcastDone).toBe(true);
+  });
+
+  it("a failed refresh doesn't fail the save", async () => {
+    fresh.broadcast.mockRejectedValue(new Error("offline"));
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify(LOADOUT), { status: 200 }),
+    );
+    expect(await saveCardLoadout(LOADOUT)).toEqual({
+      ok: true,
+      loadout: LOADOUT,
+    });
+  });
+
+  it("a failed save broadcasts nothing", async () => {
+    fetchMock.mockResolvedValue(new Response("", { status: 500 }));
+    await saveCardLoadout(LOADOUT);
+    expect(fresh.broadcast).not.toHaveBeenCalled();
+  });
 
   it("PUTs the loadout and returns what was stored", async () => {
     fetchMock.mockResolvedValue(
@@ -46,7 +86,6 @@ describe("saveCardLoadout", () => {
     expect(url).toBe("https://api.test/users/@me/card");
     expect(init.method).toBe("PUT");
     expect(JSON.parse(init.body)).toEqual(LOADOUT);
-    expect(userMe.invalidate).toHaveBeenCalled();
   });
 
   it("403 not_owned names the slot", async () => {

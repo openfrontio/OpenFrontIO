@@ -2,6 +2,7 @@ import type { TrackerStat } from "@openfront/shared/PlayerCardSchemas";
 import { invalidateUserMe } from "./Api";
 import { getApiBase } from "./ApiBase";
 import { getAuthHeader, logOut } from "./Auth";
+import { broadcastFreshUserMe } from "./Cosmetics";
 
 // Saving the player card loadout and the "Mute taunts" setting.
 
@@ -21,8 +22,10 @@ export type SaveCardResult =
   | { ok: false; error: "logged_out" }
   | { ok: false; error: "failed" };
 
-// PUT /users/@me/card: the whole loadout (idempotent). Invalidates the cached
-// /users/@me on success so the next read has it.
+// PUT /users/@me/card: the whole loadout (idempotent). On success it
+// broadcasts a fresh /users/@me before returning, so everything holding the
+// player's card (the Account header, a recreated My Card tab, other editors)
+// reads the saved one. A failed refresh doesn't fail the save.
 export async function saveCardLoadout(
   loadout: CardLoadoutBody,
 ): Promise<SaveCardResult> {
@@ -55,8 +58,9 @@ export async function saveCardLoadout(
       return { ok: false, error: "failed" };
     }
     if (!response.ok) return { ok: false, error: "failed" };
-    invalidateUserMe();
-    return { ok: true, loadout: (await response.json()) as CardLoadoutBody };
+    const stored = (await response.json()) as CardLoadoutBody;
+    await broadcastFreshUserMe().catch(() => false);
+    return { ok: true, loadout: stored };
   } catch {
     return { ok: false, error: "failed" };
   }
