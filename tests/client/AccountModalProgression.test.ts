@@ -103,7 +103,10 @@ import { AccountModal } from "../../src/client/AccountModal";
 import { invalidateUserMe } from "../../src/client/Api";
 import { resetCardSavesForTests } from "../../src/client/CardSaveQueue";
 import { ProfileProgression } from "../../src/client/components/ProfileProgression";
-import { fetchCosmetics } from "../../src/client/Cosmetics";
+import {
+  broadcastFreshUserMe,
+  fetchCosmetics,
+} from "../../src/client/Cosmetics";
 import "../../src/client/components/RewardTrack";
 import { modalRouter } from "../../src/client/ModalRouter";
 import { initNavigation } from "../../src/client/Navigation";
@@ -496,6 +499,75 @@ describe("AccountModal — Progression tab", () => {
     } finally {
       globalThis.fetch = realFetch;
       vi.mocked(fetchCosmetics).mockResolvedValue(null);
+    }
+  });
+
+  it("a save answered while away from My Card shows when the refresh after it fails", async () => {
+    // Equip X, go to Account; the PUT answers 200 there and the /users/@me
+    // refresh after it fails (getUserMe resolves false, as on a 500). Back
+    // on My Card, X is equipped.
+    const actual = await vi.importActual<
+      typeof import("../../src/client/Cosmetics")
+    >("../../src/client/Cosmetics");
+    vi.mocked(broadcastFreshUserMe).mockImplementation(
+      actual.broadcastFreshUserMe,
+    );
+    const item = { product: null, rarity: "epic" };
+    vi.mocked(fetchCosmetics).mockResolvedValue({
+      patterns: {},
+      flags: {},
+      playerCards: {},
+      cardBackgrounds: { bg_x: { ...item, name: "bg_x", url: "/bg/x.webp" } },
+      cardTrackers: {},
+      cardTitles: {},
+      taunts: {},
+    } as unknown as Cosmetics);
+    me = {
+      ...me,
+      player: {
+        ...me.player,
+        flares: ["playerCard:standard", "cardBackground:bg_x"],
+        card: { trackers: [] },
+      },
+    } as unknown as UserMeResponse;
+    let answer: (() => void) | null = null;
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn(
+      (_url: unknown, init?: RequestInit) =>
+        new Promise<Response>((resolve) => {
+          answer = () =>
+            resolve(new Response(String(init?.body), { status: 200 }));
+        }),
+    ) as typeof fetch;
+    try {
+      const myCard = () => modal.querySelector("my-card-tab");
+      const tabButton = (label: string) =>
+        [
+          ...((
+            modal.querySelector("o-modal") as ModalShell
+          ).shadowRoot?.querySelectorAll("button") ?? []),
+        ].find((b) => b.textContent?.trim() === label) as HTMLButtonElement;
+      const tile = () =>
+        myCard()?.querySelector<HTMLButtonElement>(
+          "[data-card-item='cardBackground:bg_x']",
+        ) ?? null;
+      modal.open({ tab: "card" });
+      await settle(() => expect(tile()).not.toBeNull());
+      tile()!.click();
+      await settle(() => expect(answer).not.toBeNull());
+      tabButton("account_modal.tab_account").click();
+      await settle(() => expect(myCard()).toBeNull());
+      getUserMeMock.mockClear();
+      getUserMeMock.mockResolvedValue(false);
+      answer!();
+      await vi.waitFor(() => expect(getUserMeMock).toHaveBeenCalled());
+      await new Promise((r) => setTimeout(r, 0));
+      tabButton("account_modal.tab_my_card").click();
+      await settle(() => expect(tile()?.dataset.state).toBe("equipped"));
+    } finally {
+      globalThis.fetch = realFetch;
+      vi.mocked(fetchCosmetics).mockResolvedValue(null);
+      vi.mocked(broadcastFreshUserMe).mockImplementation(async () => false);
     }
   });
 
