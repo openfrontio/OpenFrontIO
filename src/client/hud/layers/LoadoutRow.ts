@@ -115,8 +115,8 @@ export class LoadoutRow extends LitElement {
   @property({ attribute: false }) owned: ReadonlySet<string> = new Set();
   // Signed out: "Sign in to buy" in place of the buy buttons.
   @property({ type: Boolean }) signedIn = true;
-  // Index into `looks` of the chip shown.
-  @state() private selected = 0;
+  // The player whose chip is shown (their clientID); null: the first.
+  @state() private selected: string | null = null;
   // On a phone the row starts collapsed to one line; tapping opens it.
   @state() private open = false;
   private ownTracker = false;
@@ -287,7 +287,11 @@ export class LoadoutRow extends LitElement {
 
   render() {
     if (this.looks.length === 0) return nothing;
-    const index = Math.min(this.selected, this.looks.length - 1);
+    // By player, not position: a look saved while the screen is open goes in
+    // ahead of older ones and would move an index onto someone else. Gone
+    // (or none picked yet): the first.
+    const found = this.looks.findIndex((l) => l.clientID === this.selected);
+    const index = found === -1 ? 0 : found;
     const look = this.looks[index];
     const chips = this.looks.map(
       (l, i) =>
@@ -296,7 +300,7 @@ export class LoadoutRow extends LitElement {
           data-look-chip=${l.clientID}
           aria-pressed=${i === index ? "true" : "false"}
           class="group flex min-h-11 shrink-0 items-center"
-          @click=${() => (this.selected = i)}
+          @click=${() => (this.selected = l.clientID)}
         >
           <span
             class="whitespace-nowrap rounded-full px-3 py-1 text-sm font-bold transition ${
