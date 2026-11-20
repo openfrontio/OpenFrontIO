@@ -38,8 +38,8 @@ export interface ShownPrice {
  *
  * A sale shows only while the list price is above the price. A list price
  * above the price with no promotion behind it still shows struck through,
- * with no label: grids that pass only raw prices to <purchase-button>
- * (CardStoreGrid) keep showing their discount that way.
+ * with no label: a grid that passes only raw prices to <purchase-button>
+ * keeps showing its discount that way.
  */
 export function shownPrice(
   item: PricedItem,
