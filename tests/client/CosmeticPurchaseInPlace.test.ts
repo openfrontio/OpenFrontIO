@@ -102,54 +102,62 @@ describe("buying on the end screen", () => {
     expect(broadcasts).toHaveLength(1);
   });
 
-  it("a refusal that charged nothing (balance unchanged, not owned): failed", async () => {
+  // purchaseWithCurrency never throws: a network drop, a timeout and a 5xx
+  // all come back as {ok: false, code: "failed"}, and a server transaction
+  // can still commit after the client has given up on it. So "failed" is
+  // never "you weren't charged".
+  const FAILED = { ok: false, code: "failed" } as never;
+
+  it("failed, balance unchanged on the re-read: still unconfirmed, never 'not charged'", async () => {
     vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
-    vi.mocked(purchaseWithCurrency).mockResolvedValue({
-      ok: false,
-      code: "failed",
-    } as never);
-    expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe("failed");
+    vi.mocked(purchaseWithCurrency).mockResolvedValue(FAILED);
+    expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe(
+      "unconfirmed",
+    );
     expect(reload).not.toHaveBeenCalled();
   });
 
-  it("a refusal after which the balance moved: unconfirmed, not 'not charged'", async () => {
+  it("failed, balance moved on the re-read: unconfirmed", async () => {
     vi.mocked(getUserMe)
       .mockResolvedValueOnce(me(500, 0))
       .mockResolvedValue(me(180, 0));
-    vi.mocked(purchaseWithCurrency).mockResolvedValue({
-      ok: false,
-      code: "failed",
-    } as never);
+    vi.mocked(purchaseWithCurrency).mockResolvedValue(FAILED);
     expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe(
       "unconfirmed",
     );
   });
 
-  it("a lost success response: the re-read shows it owned, so owned", async () => {
+  it("failed, but the re-read shows it owned (a lost success): owned", async () => {
     vi.mocked(getUserMe)
       .mockResolvedValueOnce(me(500, 0))
       .mockResolvedValue(me(180, 0, ["cardBackground:bg_storm_front"]));
-    vi.mocked(purchaseWithCurrency).mockRejectedValue(new Error("timeout"));
+    vi.mocked(purchaseWithCurrency).mockResolvedValue(FAILED);
     expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe("owned");
   });
 
-  it("a network failure, not owned on the re-read: unconfirmed", async () => {
-    vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
-    vi.mocked(purchaseWithCurrency).mockRejectedValue(new Error("offline"));
+  it("failed and the re-read fails too: unconfirmed", async () => {
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(me(500, 0))
+      .mockResolvedValue(false);
+    vi.mocked(purchaseWithCurrency).mockResolvedValue(FAILED);
     expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe(
       "unconfirmed",
     );
   });
 
-  it("a refusal, but the re-read shows it owned: owned", async () => {
-    vi.mocked(getUserMe)
-      .mockResolvedValueOnce(me(500, 0))
-      .mockResolvedValue(me(500, 0, ["cardBackground:bg_storm_front"]));
+  it("a named refusal (insufficient funds, still short): the shortfall, nothing charged", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
     vi.mocked(purchaseWithCurrency).mockResolvedValue({
       ok: false,
-      code: "failed",
+      code: "insufficient_balance",
     } as never);
-    expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe("owned");
+    // The balance moved under the confirm: the re-read says 100.
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(me(500, 0))
+      .mockResolvedValue(me(100, 0));
+    expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe(
+      "insufficient",
+    );
   });
 
   it("charged something other than the price shown: owned, with the Store's notice", async () => {

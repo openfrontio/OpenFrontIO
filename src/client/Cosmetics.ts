@@ -631,10 +631,10 @@ export type InPlacePurchase =
   | { kind: "owned"; fresh: UserMeResponse | false; notice?: string }
   // Not enough of the currency: nothing charged.
   | { kind: "insufficient"; info: InsufficientCurrency }
-  // Refused, and nothing charged (the balance unchanged, the item not owned).
+  // Refused for a reason the API names, so nothing charged.
   | { kind: "failed" }
-  // No answer, or a refusal after which the balance moved: whether anything
-  // was charged can't be said.
+  // `failed` from the API (a network drop, a timeout, a 5xx or an unnamed
+  // refusal) and not owned on the re-read: whether it charged can't be said.
   | { kind: "unconfirmed" }
   // No account: nothing to buy with.
   | { kind: "signed_out" }
@@ -682,27 +682,17 @@ export async function purchaseCosmeticInPlace(
     }
     return { kind: "owned" as const, fresh, notice };
   };
-  // A failure isn't always one: a success whose response was lost (a
-  // timeout, a dropped connection) has bought it. Re-read: owned now means
-  // bought. Otherwise "you weren't charged" only where that is certain, a
-  // refusal with the balance unchanged; anything else (no answer at all, or
-  // a balance that moved) can't be confirmed either way. Api.ts gives one
-  // `failed` for every refusal it doesn't name, 4xx and 5xx alike, so the
-  // balance is the evidence.
-  const settleFailure = async (refused: boolean): Promise<InPlacePurchase> => {
+  // `failed` isn't a refusal: purchaseWithCurrency also answers it for a
+  // network drop, a timeout or a 5xx, and the server's transaction can still
+  // commit after that. Re-read: owned now means it went through. Otherwise
+  // say it couldn't be confirmed, never "you weren't charged"; a retry is
+  // safe, as a committed buy answers already_owned.
+  const settleFailure = async (): Promise<InPlacePurchase> => {
     const fresh = await broadcastFreshUserMe();
     if (fresh !== false && (fresh.player.flares ?? []).includes(resolved.key)) {
       return owned(fresh);
     }
-    const after =
-      fresh === false
-        ? undefined
-        : method === "hard"
-          ? (fresh.player.currency?.hard ?? 0)
-          : (fresh.player.currency?.soft ?? 0);
-    return refused && after === balance
-      ? { kind: "failed" }
-      : { kind: "unconfirmed" };
+    return { kind: "unconfirmed" };
   };
 
   let result: Awaited<ReturnType<typeof purchaseWithCurrency>>;
@@ -716,7 +706,7 @@ export async function purchaseCosmeticInPlace(
     );
   } catch (error) {
     console.error("End-screen purchase failed", error);
-    return settleFailure(false);
+    return settleFailure();
   }
   if (!result.ok && result.code === "insufficient_balance") {
     const fresh = await broadcastFreshUserMe();
@@ -735,7 +725,7 @@ export async function purchaseCosmeticInPlace(
       );
       return { kind: "handled" };
     }
-    return settleFailure(true);
+    return settleFailure();
   }
   // Charged something other than the price shown (a sale started or ended
   // since the catalogue loaded): say what was taken, as the Store does, and
