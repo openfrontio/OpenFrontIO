@@ -95,10 +95,13 @@ export class CardStoreGrid extends LitElement {
     // The catalogue loads after open: keep asking until the item shows.
     if (tile === undefined) return;
     this.selected = key;
-    tile.scrollIntoView({ block: "center", behavior: "smooth" });
+    tile.scrollIntoView({ block: "center" });
+    // Once its Buy has rendered: bring the tile into view again (the grid
+    // may have grown above it meanwhile) and focus the Buy.
     void this.updateComplete.then(async () => {
       const button = tile.querySelector<PurchaseButton>("purchase-button");
       await button?.updateComplete;
+      tile.scrollIntoView({ block: "center" });
       tile
         .querySelector<HTMLButtonElement>("button:not([disabled])")
         ?.focus({ preventScroll: true });
