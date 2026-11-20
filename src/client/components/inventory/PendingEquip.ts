@@ -15,20 +15,31 @@ interface PendingEquip {
   player: string;
   key: string;
   at: number;
+  /** This purchase's own id: two purchases of one item are told apart. */
+  id: string;
 }
 
+let lastId = 0;
+
+/**
+ * Remembers the item and returns this record's id, for
+ * clearPendingEquip(id); null when storage is blocked.
+ */
 export function rememberPendingEquip(
   player: string,
   key: string,
   now: number = Date.now(),
-): void {
+): string | null {
+  const id = `${now}:${++lastId}`;
   try {
     sessionStorage.setItem(
       PENDING_EQUIP_KEY,
-      JSON.stringify({ player, key, at: now } satisfies PendingEquip),
+      JSON.stringify({ player, key, at: now, id } satisfies PendingEquip),
     );
+    return id;
   } catch {
     // Storage blocked: "Equip now" then only works without a reload.
+    return null;
   }
 }
 
@@ -67,24 +78,25 @@ export function peekPendingEquip(
 }
 
 /**
- * Drops the record. With `key`, only a record for that item: one purchase
- * ending must not drop the record a later purchase has written over it.
+ * Drops the record. With `id` (from rememberPendingEquip), only that exact
+ * record: one purchase ending must not drop the record a later purchase,
+ * even of the same item, has written over it.
  */
-export function clearPendingEquip(key?: string): void {
+export function clearPendingEquip(id?: string): void {
   try {
-    if (key !== undefined && storedKey() !== key) return;
+    if (id !== undefined && storedId() !== id) return;
     sessionStorage.removeItem(PENDING_EQUIP_KEY);
   } catch {
     // Storage blocked: nothing was stored either.
   }
 }
 
-function storedKey(): string | undefined {
+function storedId(): string | undefined {
   const raw = sessionStorage.getItem(PENDING_EQUIP_KEY);
   if (raw === null) return undefined;
   try {
     const parsed = JSON.parse(raw) as Partial<PendingEquip>;
-    return typeof parsed.key === "string" ? parsed.key : undefined;
+    return typeof parsed.id === "string" ? parsed.id : undefined;
   } catch {
     return undefined;
   }
