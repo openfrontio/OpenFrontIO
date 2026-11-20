@@ -114,6 +114,10 @@ const CosmeticSchema = z.object({
   listPriceSoft: z.number().optional(),
   listPriceHard: z.number().optional(),
   promotion: PromotionSchema.optional(),
+  // Present only while the item is new to the store (added in the last 14
+  // days): when it stops being new. Compare with the clock (isNew), since
+  // the catalog is cached.
+  newUntil: z.string().optional(),
   artist: z.string().optional(),
   // Whether the artist declared they used generative AI making this. Present only when they
   // actually answered: the catalogue omits the field for everything nobody was asked about, so
@@ -511,6 +515,8 @@ export const CosmeticPackSchema = z.object({
   // Present only while a sale covers the pack; priceHard is then the sale price.
   listPriceHard: z.number().optional(),
   promotion: PromotionSchema.optional(),
+  // As on a cosmetic: present only while the pack is new.
+  newUntil: z.string().optional(),
   rarity: z
     .enum(["common", "uncommon", "rare", "epic", "legendary"])
     .or(z.string()),
