@@ -10,6 +10,8 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
+import "../../components/OfIcon";
+import type { OfIconName } from "../../components/OfIcon";
 import { Controller } from "../../Controller";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { GoToPlayerEvent } from "../../TransformHandler";
@@ -19,8 +21,44 @@ import {
   SendAllianceRequestIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
-import { getMessageTypeClasses, translateText } from "../../Utils";
+import { translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
+
+type CardAction = "focus" | "accept" | "reject" | "renew" | "ignore";
+
+// Look. Sizes, colours, radii and spacing of each part live here, so a
+// change of look is one edit. The templates below only hold structure.
+
+// The same flat block as the events feed above. The sentence starts in the
+// feed's 20px icon column, on the same edge as the event text.
+const LIST =
+  "flex flex-col gap-1 w-full min-[1200px]:w-96 pointer-events-auto mt-1";
+const CARD =
+  "hud-panel rounded-lg sm:max-lg:landscape:rounded-l-none p-2 text-white";
+const HEAD = "grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-2";
+const ICON_SIZE = 16;
+// One text line tall, so a wrapped sentence keeps the icon on its first line.
+const MARK = "flex h-5 lg:h-6 items-center justify-center text-yellow-400";
+const FOCUS_RING =
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aquarius";
+const TITLE = `min-w-0 cursor-pointer rounded-sm text-start text-sm/5 lg:text-base/6 font-semibold wrap-anywhere pointer-fine:hover:text-aquarius ${FOCUS_RING}`;
+// Buttons wrap to a second line when a translation is too long for one.
+// Labels keep today's 12px until the card takes its 384px width at 1200px
+// (from 1024px it is only 262px wide), and the sides stay narrow, so the
+// three buttons still share a line where they did before the icons.
+const ACTIONS = "mt-2 flex flex-wrap gap-1";
+const BUTTON = `inline-flex h-8 lg:h-9 items-center justify-center gap-1 whitespace-nowrap rounded-md px-2.5 text-xs min-[1200px]:text-sm font-semibold cursor-pointer transition-colors ${FOCUS_RING}`;
+const QUIET = "bg-white/6 pointer-fine:hover:bg-white/10 active:bg-white/15";
+// Hover darkens: the lighter shades hold white text under 4.5:1.
+const YES = "flex-1 bg-green-700 pointer-fine:hover:bg-green-800";
+const NO = "flex-1 bg-red-600 pointer-fine:hover:bg-red-700";
+const CARD_BUTTON: Record<CardAction, { look: string; icon?: OfIconName }> = {
+  focus: { look: `flex-none ${QUIET}`, icon: "focus" },
+  accept: { look: YES, icon: "check" },
+  reject: { look: NO, icon: "close" },
+  renew: { look: YES },
+  ignore: { look: `flex-1 ${QUIET}` },
+};
 
 interface ActionableEvent {
   id: number;
@@ -29,8 +67,8 @@ interface ActionableEvent {
   createdAt: number;
   focusID: number;
   buttons: {
+    kind: CardAction;
     text: string;
-    className: string;
     action: () => void;
     preventClose?: boolean;
   }[];
@@ -174,22 +212,22 @@ export class ActionableEvents extends LitElement implements Controller {
         type: MessageType.RENEW_ALLIANCE,
         buttons: [
           {
+            kind: "focus",
             text: translateText("events_display.focus"),
-            className: "btn-gray",
             action: () => this.eventBus.emit(new GoToPlayerEvent(other)),
             preventClose: true,
           },
           {
+            kind: "renew",
             text: translateText("events_display.renew_alliance", {
               name: other.displayName(),
             }),
-            className: "btn",
             action: () =>
               this.eventBus.emit(new SendAllianceExtensionIntentEvent(other)),
           },
           {
+            kind: "ignore",
             text: translateText("events_display.ignore"),
-            className: "btn-info",
             action: () => {},
           },
         ],
@@ -231,14 +269,14 @@ export class ActionableEvents extends LitElement implements Controller {
       }),
       buttons: [
         {
+          kind: "focus",
           text: translateText("events_display.focus"),
-          className: "btn-gray",
           action: () => this.eventBus.emit(new GoToPlayerEvent(requestor)),
           preventClose: true,
         },
         {
+          kind: "accept",
           text: translateText("events_display.accept_alliance"),
-          className: "btn",
           action: () => {
             this.eventBus.emit(new PlaySoundEffectEvent("alliance-accepted"));
             this.eventBus.emit(
@@ -247,8 +285,8 @@ export class ActionableEvents extends LitElement implements Controller {
           },
         },
         {
+          kind: "reject",
           text: translateText("events_display.reject_alliance"),
-          className: "btn-info",
           action: () => {
             this.eventBus.emit(new PlaySoundEffectEvent("alliance-declined"));
             this.eventBus.emit(new SendAllianceRejectIntentEvent(requestor));
@@ -320,37 +358,39 @@ export class ActionableEvents extends LitElement implements Controller {
     });
 
     return html`
-      <div
-        class="flex flex-col gap-2 w-full min-[1200px]:w-96 pointer-events-auto mt-2"
-      >
+      <div class=${LIST}>
         ${repeat(
           sorted,
           (event) => event.id,
           (event) => html`
             <div
               data-event-card
-              class="hud-panel rounded-lg sm:max-lg:landscape:rounded-l-none border-l-4 border-yellow-400 p-3 lg:p-4 text-white"
+              data-card-kind=${
+                event.type === MessageType.RENEW_ALLIANCE
+                  ? "renewal"
+                  : "request"
+              }
+              role="group"
+              aria-label=${event.description}
+              class=${CARD}
             >
-              <button
-                class="text-left text-sm lg:text-base font-semibold w-full cursor-pointer ${getMessageTypeClasses(
-                  event.type,
-                )}"
-                @click=${() => this.emitGoToPlayerEvent(event.focusID)}
-              >
-                ${event.description}
-              </button>
-              <div class="flex flex-wrap gap-1.5 mt-2">
+              <div class=${HEAD}>
+                <span class=${MARK}>
+                  <of-icon name="alliance" size=${ICON_SIZE}></of-icon>
+                </span>
+                <button
+                  class=${TITLE}
+                  @click=${() => this.emitGoToPlayerEvent(event.focusID)}
+                >
+                  ${event.description}
+                </button>
+              </div>
+              <div class=${ACTIONS}>
                 ${event.buttons.map(
                   (btn) => html`
                     <button
-                      class="inline-block px-3 py-1 text-white rounded-sm text-xs lg:text-sm cursor-pointer transition-colors duration-300
-                        ${
-                        btn.className.includes("btn-info")
-                          ? "bg-blue-500 hover:bg-blue-600"
-                          : btn.className.includes("btn-gray")
-                            ? "bg-gray-500 hover:bg-gray-600"
-                            : "bg-green-600 hover:bg-green-700"
-                      }"
+                      data-card-action=${btn.kind}
+                      class="${BUTTON} ${CARD_BUTTON[btn.kind].look}"
                       @click=${() => {
                         btn.action();
                         if (!btn.preventClose) {
@@ -362,6 +402,14 @@ export class ActionableEvents extends LitElement implements Controller {
                         this.requestUpdate();
                       }}
                     >
+                      ${
+                        CARD_BUTTON[btn.kind].icon
+                          ? html`<of-icon
+                              name=${CARD_BUTTON[btn.kind].icon}
+                              size=${ICON_SIZE}
+                            ></of-icon>`
+                          : ""
+                      }
                       ${btn.text}
                     </button>
                   `,
