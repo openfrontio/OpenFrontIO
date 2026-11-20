@@ -1,100 +1,65 @@
 import type { StorePlacement } from "@openfront/shared/ApiSchemas";
-import {
-  type Cosmetics,
-  ownsPlayerCard,
-} from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import {
-  type CardItem,
-  type CardItemType,
-  cardItemName,
-} from "../../components/card/CardItems";
-import {
-  CARD_TAUNTS_ENABLED,
-  CARD_TITLES_ENABLED,
-} from "../../components/card/HeldBack";
-import type { PlayerCardView } from "../../components/card/PlayerCardModel";
+import { cardItemName } from "../../components/card/CardItems";
 import "../../components/CosmeticCard";
 import "../../components/PurchaseButton";
-import { purchaseCosmetic, type ResolvedCosmetic } from "../../Cosmetics";
+import {
+  currentPrice,
+  purchaseCosmetic,
+  type ResolvedCosmetic,
+  saleHasEnded,
+} from "../../Cosmetics";
 import { translateText } from "../../Utils";
 
-// "Get {name}'s look": on the eliminated-by screen, up to three things the
-// player who eliminated you has on their card, in the promo box's place (the
-// store-skins turn). Paid items buy in Plutonium or caps like the store;
-// earned ones show how to unlock them and can't be bought. A viewer without
-// the card is offered the card itself first.
+// "Get the look" on the end screen, in the promo box's place: for each player
+// (the one who eliminated you, then looks saved from the player panel), up to
+// three things on their card. Paid items buy in Plutonium or caps like the
+// store; earned ones show how to unlock them and can't be bought. A viewer
+// without the card is offered the card itself, under the first name.
 
-export interface LoadoutItem {
-  type: CardItemType;
-  item: CardItem;
-  state: "buy" | "earned";
-  priceHard?: number;
-  priceSoft?: number;
-  unlockLabel?: string;
-}
+import type { LoadoutItem } from "../../components/card/LoadoutItems";
+import type { LookRow } from "../../components/card/SavedLooks";
 
-const MAX_ITEMS = 3;
+export {
+  type LoadoutItem,
+  loadoutItems,
+} from "../../components/card/LoadoutItems";
+
 const PLACEMENT: StorePlacement = { kind: "card_loadout" };
 
-function toItem(type: CardItemType, item: CardItem): LoadoutItem | null {
-  const unlock =
-    "unlockSource" in item && item.unlockSource ? item.unlockSource : undefined;
-  if (unlock !== undefined) {
-    return { type, item, state: "earned", unlockLabel: unlock.label };
-  }
-  const priceHard = (item.priceHard ?? 0) > 0 ? item.priceHard : undefined;
-  const priceSoft = (item.priceSoft ?? 0) > 0 ? item.priceSoft : undefined;
-  if (priceHard === undefined && priceSoft === undefined) return null;
-  return { type, item, state: "buy", priceHard, priceSoft };
+interface ShownPrices {
+  priceHard: number | null;
+  priceSoft: number | null;
+  listPriceHard: number | null;
+  listPriceSoft: number | null;
 }
 
 /**
- * What to offer from `view` (the killer's card): the card itself if the
- * viewer lacks it, then background, taunt and title (only while switched on
- * in HeldBack.ts) and the killer's trackers.
- * Anything the viewer owns, or that is neither sold nor earnable, is skipped.
+ * An item's prices as the Store shows them now (currentPrice): while its own
+ * sale runs, the sale price with the list price to strike through; once the
+ * sale has ended, the list price alone. Read at render, as a look saved
+ * mid-game is shown minutes later.
  */
-export function loadoutItems(
-  view: PlayerCardView,
-  cosmetics: Cosmetics | null,
-  viewerFlares: readonly string[],
-): LoadoutItem[] {
-  const owned = new Set(viewerFlares);
-  const candidates: [CardItemType, CardItem | undefined][] = [];
-  if (!ownsPlayerCard(viewerFlares)) {
-    candidates.push([
-      "playerCard",
-      Object.values(cosmetics?.playerCards ?? {})[0] as CardItem | undefined,
-    ]);
-  }
-  if (view.background) {
-    candidates.push([
-      "cardBackground",
-      cosmetics?.cardBackgrounds?.[view.background.name],
-    ]);
-  }
-  if (view.taunt && CARD_TAUNTS_ENABLED) {
-    candidates.push(["taunt", cosmetics?.taunts?.[view.taunt.name]]);
-  }
-  if (view.title && CARD_TITLES_ENABLED) {
-    const title = Object.values(cosmetics?.cardTitles ?? {}).find(
-      (t) => t.text === view.title!.text,
-    );
-    candidates.push(["cardTitle", title]);
-  }
-  for (const t of view.trackers) {
-    candidates.push(["cardTracker", cosmetics?.cardTrackers?.[t.stat]]);
-  }
-  const out: LoadoutItem[] = [];
-  for (const [type, item] of candidates) {
-    if (out.length === MAX_ITEMS) break;
-    if (item === undefined || owned.has(`${type}:${item.name}`)) continue;
-    const entry = toItem(type, item);
-    if (entry !== null) out.push(entry);
-  }
-  return out;
+// TODO(merge): shownPrice — switch to W1's ShownPrice.ts when the branches
+// merge.
+export function shownPrices(entry: LoadoutItem): ShownPrices {
+  const item = entry.item as Parameters<typeof currentPrice>[0];
+  const ended = saleHasEnded(item);
+  const price = (currency: "hard" | "soft", fallback: number | undefined) => {
+    const now = currentPrice(item, currency);
+    return now !== undefined && now > 0 ? now : (fallback ?? null);
+  };
+  const priceHard = price("hard", entry.priceHard);
+  const priceSoft = price("soft", entry.priceSoft);
+  return {
+    priceHard,
+    priceSoft,
+    listPriceHard:
+      priceHard !== null && !ended ? (item.listPriceHard ?? null) : null,
+    listPriceSoft:
+      priceSoft !== null && !ended ? (item.listPriceSoft ?? null) : null,
+  };
 }
 
 export interface PromoInput {
@@ -103,10 +68,8 @@ export interface PromoInput {
   inIframe: boolean;
   canWishlist: boolean;
   rand: number;
-  // The loadout has something to buy.
-  hasLoadout: boolean;
-  // This is the eliminated-by screen with a card on it.
-  eliminatedByCard: boolean;
+  // There is a look to get (the killer's or a saved one).
+  hasLooks: boolean;
 }
 
 export type PromoChoice =
@@ -116,15 +79,16 @@ export type PromoChoice =
   | "loadout"
   | "skins";
 
-// The end screen's promo box, as before, except that the store-skins turn
-// goes to "Get {name}'s look" on an eliminated-by screen with something to
-// buy.
+// The end screen's promo box, as before, except that a look to get (the
+// "Get the look" block) takes it from every other promo. An iframe keeps
+// today's choice: no shopping there.
 export function promoChoice(p: PromoInput): PromoChoice {
   if (p.inIframe) return p.canWishlist ? "steam" : "discord";
+  if (p.hasLooks) return "loadout";
   if (!p.isWin && p.gamesPlayed < 3) return "tutorial";
   if (p.rand < 0.25 && p.canWishlist) return "steam";
   if (p.rand < 0.5) return "discord";
-  return p.eliminatedByCard && p.hasLoadout ? "loadout" : "skins";
+  return "skins";
 }
 
 // The part of StoreTracker the row uses (a test passes its own).
@@ -135,11 +99,19 @@ export interface LoadoutTracker {
   dispose(): void;
 }
 
+/**
+ * The end screen's "Get the look" block, in the promo slot: a name switcher
+ * (chips: the killer first, then looks saved this game, newest first) over
+ * one row of the selected player's items. Never taller than one player's
+ * row: the chips sit in the title's place. On a phone it folds to one line as
+ * before; opened, the items scroll sideways instead of stacking.
+ */
 @customElement("loadout-row")
 export class LoadoutRow extends LitElement {
-  @property({ type: String }) ownerName = "";
-  @property({ attribute: false }) items: LoadoutItem[] = [];
+  @property({ attribute: false }) looks: readonly LookRow[] = [];
   @property({ attribute: false }) tracker: LoadoutTracker | null = null;
+  // Index into `looks` of the chip shown.
+  @state() private selected = 0;
   // On a phone the row starts collapsed to one line; tapping opens it.
   @state() private open = false;
   private ownTracker = false;
@@ -190,6 +162,7 @@ export class LoadoutRow extends LitElement {
   }
 
   private renderItem(entry: LoadoutItem): TemplateResult {
+    const prices = shownPrices(entry);
     const key = `${entry.type}:${entry.item.name}`;
     return html`<div
       data-loadout-item=${key}
@@ -206,8 +179,10 @@ export class LoadoutRow extends LitElement {
       ${
         entry.state === "buy"
           ? html`<purchase-button
-              .priceHard=${entry.priceHard ?? null}
-              .priceSoft=${entry.priceSoft ?? null}
+              .priceHard=${prices.priceHard}
+              .priceSoft=${prices.priceSoft}
+              .listPriceHard=${prices.listPriceHard}
+              .listPriceSoft=${prices.listPriceSoft}
               .rarity=${String(entry.item.rarity)}
               .itemName=${cardItemName(entry.type, entry.item)}
               .onPurchaseHard=${() => this.buy(entry, "hard")}
@@ -222,35 +197,58 @@ export class LoadoutRow extends LitElement {
   }
 
   render() {
-    if (this.items.length === 0) return nothing;
-    const title = translateText("win_modal.get_look", { name: this.ownerName });
+    if (this.looks.length === 0) return nothing;
+    const index = Math.min(this.selected, this.looks.length - 1);
+    const look = this.looks[index];
+    const chips = this.looks.map(
+      (l, i) =>
+        html`<button
+          type="button"
+          data-look-chip=${l.clientID}
+          aria-pressed=${i === index ? "true" : "false"}
+          class="shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-sm font-bold transition ${
+            i === index
+              ? "bg-malibu-blue text-white"
+              : "bg-white/10 text-white/80 hover:bg-white/20"
+          }"
+          @click=${() => (this.selected = i)}
+        >
+          ${l.name}
+        </button>`,
+    );
     return html`<div
       data-loadout-row
+      data-look-block
       class="mb-6 rounded-sm bg-black/30 p-2.5 text-center"
     >
       <button
         type="button"
+        data-look-fold
         class="flex w-full items-center justify-between text-sm font-bold text-white sm:hidden"
         @click=${() => (this.open = !this.open)}
       >
-        <span>${title}</span>
+        <span>${translateText("win_modal.get_the_look")}</span>
         <span class="text-white/60"
-          >${translateText("win_modal.get_look_items", {
-            n: this.items.length,
+          >${translateText("win_modal.get_look_players", {
+            n: this.looks.length,
           })}
           ›</span
         >
       </button>
-      <h3
-        data-loadout-title
-        class="mb-3 hidden text-xl font-semibold text-white sm:block"
-      >
-        ${title}
-      </h3>
       <div
-        class="${this.open ? "mt-3 flex" : "hidden"} flex-wrap justify-center gap-3 sm:flex"
+        data-loadout-title
+        class="${this.open ? "mt-3 flex" : "hidden"} mb-3 items-center gap-2 overflow-x-auto sm:flex sm:justify-center"
       >
-        ${this.items.map((i) => this.renderItem(i))}
+        <span class="hidden shrink-0 text-xl font-semibold text-white sm:inline"
+          >${translateText("win_modal.get_the_look")}</span
+        >
+        ${chips}
+      </div>
+      <div
+        data-look-items
+        class="${this.open ? "flex" : "hidden"} flex-nowrap justify-start gap-3 overflow-x-auto sm:flex sm:flex-wrap sm:justify-center"
+      >
+        ${look.items.map((i) => this.renderItem(i))}
       </div>
     </div>`;
   }

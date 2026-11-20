@@ -29,6 +29,7 @@ import {
 import { ClientEnv } from "../client/ClientEnv";
 import { reloadForUpdate, translateText } from "../client/Utils";
 import { rememberAdmitted } from "./AdmittedLobbies";
+import { clearSavedLooks } from "./components/card/SavedLooks";
 import { MapLayerController } from "./controllers/MapLayerController";
 import { isDesktopShell } from "./DesktopShell";
 import { GameHealth } from "./GameHealth";
@@ -1286,6 +1287,8 @@ export class ClientGameRunner {
   }
 
   public stop() {
+    // Looks saved from the player panel belong to this game.
+    clearSavedLooks();
     if (this.healthTimer !== null) clearInterval(this.healthTimer);
     this.healthTimer = null;
     document.removeEventListener("visibilitychange", this.updateHealth);

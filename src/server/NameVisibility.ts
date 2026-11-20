@@ -217,6 +217,11 @@ export class NameVisibility {
         // level beside an anonymous name would point out the veterans. Kept on
         // a teammate reveal: it describes the teammate alone, like `verified`.
         levelBadge: c.wireLevelBadge,
+        // Only beside a real name, like levelBadge. Client.card is the card
+        // resolveCard checked at join, so its background is owned, in the
+        // catalogue, and the player owns the card; the join message's
+        // cosmetics never reach it.
+        cardBackground: c.card?.background,
       };
     });
   }
