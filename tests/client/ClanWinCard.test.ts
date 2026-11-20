@@ -32,6 +32,21 @@ describe("<clan-win-card>", () => {
     ...(card as unknown as Element).querySelectorAll(sel),
   ];
 
+  it("on a phone the row wraps: chips get their own line, nothing is clipped", async () => {
+    // Laid out for real (320 px) in the review screenshots; jsdom has no
+    // layout, so this pins the classes that make it wrap.
+    await render({
+      clanTag: "WOLF",
+      members: [member("Volt"), member("Ash")],
+      territoryPct: 61,
+    });
+    const row = q("[data-clan-win-row]")!;
+    expect(row.classList.contains("flex-wrap")).toBe(true);
+    const chips = q("[data-clan-members]")!;
+    expect(chips.classList.contains("basis-full")).toBe(true);
+    expect(chips.classList.contains("order-last")).toBe(true);
+  });
+
   it("shows tag, member chips and both trackers", async () => {
     await render({
       clanTag: "UN",

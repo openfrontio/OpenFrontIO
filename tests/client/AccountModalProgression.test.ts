@@ -4,6 +4,7 @@ import type {
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import { ProgressionConfigSchema } from "@openfront/shared/ApiSchemas";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getUserMeMock = vi.hoisted(() => vi.fn());
@@ -22,6 +23,12 @@ vi.mock("../../src/client/Api", () => ({
   fetchPlayerById: fetchPlayerByIdMock,
   setMarketingConsent: vi.fn(async () => true),
   getApiBase: vi.fn(() => ""),
+}));
+
+// The card save's PUT origin (the real one needs the bootstrap config).
+vi.mock("../../src/client/ApiBase", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/ApiBase")>()),
+  getApiBase: () => "https://api.test",
 }));
 
 vi.mock("../../src/client/ProgressionApi", () => ({
@@ -62,6 +69,9 @@ vi.mock("../../src/client/CrazyGamesSDK", () => ({
 
 vi.mock("../../src/client/Cosmetics", () => ({
   fetchCosmetics: vi.fn(async () => null),
+  getPlayerCosmetics: vi.fn(async () => ({})),
+  // The refresh a card save broadcasts: failing here, as offline.
+  broadcastFreshUserMe: vi.fn(async () => false),
   translateCosmetic: vi.fn((v: unknown) => v),
 }));
 
@@ -92,6 +102,7 @@ vi.stubGlobal("localStorage", {
 import { AccountModal } from "../../src/client/AccountModal";
 import { invalidateUserMe } from "../../src/client/Api";
 import { ProfileProgression } from "../../src/client/components/ProfileProgression";
+import { fetchCosmetics } from "../../src/client/Cosmetics";
 import "../../src/client/components/RewardTrack";
 import { modalRouter } from "../../src/client/ModalRouter";
 import { initNavigation } from "../../src/client/Navigation";
@@ -291,6 +302,177 @@ describe("AccountModal — Progression tab", () => {
     expect(text.indexOf("account_modal.tab_my_card")).toBeLessThan(
       text.indexOf("account_modal.tab_stats"),
     );
+  });
+
+  it("a My Card tab recreated after a card save reads the saved card", async () => {
+    // A card save broadcasts a fresh /users/@me (CardLoadoutApi). Leaving
+    // My Card destroys its tab, so coming back must seed from that, not from
+    // the copy the modal opened with — or the next edit overwrites the save.
+    modal.open({ tab: "card" });
+    const myCard = () =>
+      modal.querySelector("my-card-tab") as
+        | (HTMLElement & { userMe: UserMeResponse | null })
+        | null;
+    await settle(() => expect(myCard()).not.toBeNull());
+    const saved = {
+      ...me,
+      player: { ...me.player, card: { background: "bg_x", trackers: [] } },
+    } as unknown as UserMeResponse;
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: saved }),
+    );
+    const tabButton = (label: string) =>
+      [
+        ...((
+          modal.querySelector("o-modal") as ModalShell
+        ).shadowRoot?.querySelectorAll("button") ?? []),
+      ].find((b) => b.textContent?.trim() === label) as HTMLButtonElement;
+    tabButton("account_modal.tab_account").click();
+    await settle(() => expect(myCard()).toBeNull());
+    tabButton("account_modal.tab_my_card").click();
+    await settle(() => expect(myCard()?.userMe).toBe(saved));
+  });
+
+  it("the card owner's XP line is translated", async () => {
+    me = {
+      ...me,
+      player: { ...me.player, flares: ["playerCard:standard"] },
+    } as unknown as UserMeResponse;
+    modal.open();
+    await settle(() => {
+      const header = modal.querySelector("[data-account-card-header]");
+      expect(header?.textContent).toContain("progression.xp_progress");
+      expect(header?.textContent).not.toMatch(/XP/);
+      expect(header?.querySelector("[data-account-provisional]")).toBeNull();
+    });
+  });
+
+  it("a saved card survives leaving My Card even when the refresh fails", async () => {
+    // Equip X (the PUT succeeds, the /users/@me refresh doesn't), go to
+    // Account and back, toggle a tracker: that save must still carry X.
+    const item = { product: null, rarity: "epic" };
+    vi.mocked(fetchCosmetics).mockResolvedValue({
+      patterns: {},
+      flags: {},
+      playerCards: {},
+      cardBackgrounds: {
+        bg_x: { ...item, name: "bg_x", url: "/bg/x.webp" },
+      },
+      cardTrackers: { wins: { ...item, name: "wins", stat: "wins" } },
+      cardTitles: {},
+      taunts: {},
+    } as unknown as Cosmetics);
+    me = {
+      ...me,
+      player: {
+        ...me.player,
+        flares: [
+          "playerCard:standard",
+          "cardBackground:bg_x",
+          "cardTracker:wins",
+        ],
+        card: { trackers: [] },
+      },
+    } as unknown as UserMeResponse;
+    const puts: Record<string, unknown>[] = [];
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn(async (_url: unknown, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body));
+      puts.push(body);
+      return new Response(JSON.stringify(body), { status: 200 });
+    }) as typeof fetch;
+    try {
+      const myCard = () => modal.querySelector("my-card-tab");
+      const tabButton = (label: string) =>
+        [
+          ...((
+            modal.querySelector("o-modal") as ModalShell
+          ).shadowRoot?.querySelectorAll("button") ?? []),
+        ].find((b) => b.textContent?.trim() === label) as HTMLButtonElement;
+      const tile = (key: string) =>
+        myCard()?.querySelector<HTMLButtonElement>(
+          `[data-card-item='${key}']`,
+        ) ?? null;
+
+      modal.open({ tab: "card" });
+      await settle(() => expect(tile("cardBackground:bg_x")).not.toBeNull());
+      tile("cardBackground:bg_x")!.click();
+      await settle(() => expect(puts).toHaveLength(1));
+      await new Promise((r) => setTimeout(r, 0));
+
+      tabButton("account_modal.tab_account").click();
+      await settle(() => expect(myCard()).toBeNull());
+      tabButton("account_modal.tab_my_card").click();
+      await settle(() =>
+        expect(tile("cardBackground:bg_x")?.dataset.state).toBe("equipped"),
+      );
+      myCard()!
+        .querySelector<HTMLButtonElement>("[data-my-card-slot='trackers']")!
+        .click();
+      await settle(() => expect(tile("cardTracker:wins")).not.toBeNull());
+      tile("cardTracker:wins")!.click();
+      await settle(() => expect(puts).toHaveLength(2));
+      expect(puts[1]).toMatchObject({ background: "bg_x", trackers: ["wins"] });
+    } finally {
+      globalThis.fetch = realFetch;
+      vi.mocked(fetchCosmetics).mockResolvedValue(null);
+    }
+  });
+
+  it("a save still in flight when My Card is left reaches the next tab", async () => {
+    const item = { product: null, rarity: "epic" };
+    vi.mocked(fetchCosmetics).mockResolvedValue({
+      patterns: {},
+      flags: {},
+      playerCards: {},
+      cardBackgrounds: { bg_x: { ...item, name: "bg_x", url: "/bg/x.webp" } },
+      cardTrackers: {},
+      cardTitles: {},
+      taunts: {},
+    } as unknown as Cosmetics);
+    me = {
+      ...me,
+      player: {
+        ...me.player,
+        flares: ["playerCard:standard", "cardBackground:bg_x"],
+        card: { trackers: [] },
+      },
+    } as unknown as UserMeResponse;
+    let answer: (() => void) | null = null;
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn(
+      (_url: unknown, init?: RequestInit) =>
+        new Promise<Response>((resolve) => {
+          answer = () =>
+            resolve(new Response(String(init?.body), { status: 200 }));
+        }),
+    ) as typeof fetch;
+    try {
+      const myCard = () => modal.querySelector("my-card-tab");
+      const tabButton = (label: string) =>
+        [
+          ...((
+            modal.querySelector("o-modal") as ModalShell
+          ).shadowRoot?.querySelectorAll("button") ?? []),
+        ].find((b) => b.textContent?.trim() === label) as HTMLButtonElement;
+      const tile = () =>
+        myCard()?.querySelector<HTMLButtonElement>(
+          "[data-card-item='cardBackground:bg_x']",
+        ) ?? null;
+      modal.open({ tab: "card" });
+      await settle(() => expect(tile()).not.toBeNull());
+      tile()!.click();
+      await settle(() => expect(answer).not.toBeNull());
+      tabButton("account_modal.tab_account").click();
+      await settle(() => expect(myCard()).toBeNull());
+      answer!();
+      await new Promise((r) => setTimeout(r, 0));
+      tabButton("account_modal.tab_my_card").click();
+      await settle(() => expect(tile()?.dataset.state).toBe("equipped"));
+    } finally {
+      globalThis.fetch = realFetch;
+      vi.mocked(fetchCosmetics).mockResolvedValue(null);
+    }
   });
 
   it("has no tab for a player without a level (progression off)", async () => {
@@ -565,6 +747,26 @@ describe("AccountModal — Progression tab", () => {
       expect(
         modal.querySelector<CardEl>("profile-card")!.progress.canPrestige,
       ).toBe(false);
+    });
+
+    it("a card owner's header shows the projected level too, marked provisional", async () => {
+      me = {
+        ...me,
+        player: { ...me.player, flares: ["playerCard:standard"] },
+      } as unknown as UserMeResponse;
+      await runCheck();
+      modal.open();
+      const header = () => modal.querySelector("[data-account-card-header]");
+      await settle(() => {
+        const card = header()?.querySelector("player-card") as
+          | (HTMLElement & { view: { badge: { level: number } | null } })
+          | null;
+        expect(card?.view.badge?.level).toBe(49);
+        expect(header()?.textContent).toContain("progression.level");
+        expect(
+          header()?.querySelector("[data-account-provisional]"),
+        ).not.toBeNull();
+      });
     });
 
     it('puts "You" on the projected level, with the levels past the confirmed one pending', async () => {

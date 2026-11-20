@@ -1,5 +1,6 @@
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import {
+  type CardTracker,
   type Cosmetics,
   ownsPlayerCard,
 } from "@openfront/shared/CosmeticSchemas";
@@ -19,7 +20,14 @@ import {
 import { translateText } from "../../Utils";
 import "../CosmeticCard";
 import "../PurchaseButton";
-import { type CardItem, type CardItemType, cardItemName } from "./CardItems";
+import {
+  type CardItem,
+  type CardItemType,
+  cardItemName,
+  isOfferedCardItem,
+  cardPrices,
+  cardRarityLabel,
+} from "./CardItems";
 import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";
 import "./PlayerCard";
 import { buildPlayerCardView } from "./PlayerCardModel";
@@ -70,9 +78,14 @@ export class MyCardTab extends LitElement {
   @property({ attribute: false }) cosmetics: Cosmetics | null = null;
 
   @state() private activeSlot: Slot = "background";
-  // What is equipped now (optimistically), and what the server last stored.
+  // What is equipped now (optimistically), and what the server last
+  // confirmed. Saves go one at a time (each PUT replaces the whole loadout,
+  // so two in flight could land in either order); clicks made meanwhile are
+  // sent together when the save in flight returns.
   @state() private loadout: CardLoadoutBody = EMPTY;
   @state() private saved: CardLoadoutBody = EMPTY;
+  private saving = false;
+  private initialSeeded = false;
   // The loadout the tab opened with: what Reset goes back to.
   @state() private initial: CardLoadoutBody = EMPTY;
   @state() private saveError = false;
@@ -108,6 +121,9 @@ export class MyCardTab extends LitElement {
     this.values = new Map(
       (card?.trackers ?? []).map((t) => [t.stat, t.value] as const),
     );
+    // Mid-save, the loadout the server confirms is newer than any response
+    // in hand (a card save broadcasts one before it returns): keep the clicks.
+    if (this.saving) return;
     this.saved = {
       background: card?.background ?? null,
       title: card?.title ?? null,
@@ -115,7 +131,11 @@ export class MyCardTab extends LitElement {
       trackers: (card?.trackers ?? []).map((t) => t.stat),
     };
     this.loadout = this.saved;
-    this.initial = this.saved;
+    // Reset goes back to what the tab opened with, not to the last save.
+    if (!this.initialSeeded && this.userMe !== null) {
+      this.initialSeeded = true;
+      this.initial = this.saved;
+    }
   }
 
   private get flares(): string[] {
@@ -130,7 +150,9 @@ export class MyCardTab extends LitElement {
     const section = this.cosmetics?.[SECTION[slot].key] as
       | Record<string, CardItem>
       | undefined;
-    return Object.values(section ?? {});
+    return Object.values(section ?? {}).filter((item) =>
+      isOfferedCardItem(SECTION[slot].type, item),
+    );
   }
 
   private equippedName(slot: Exclude<Slot, "flag" | "trackers">) {
@@ -141,7 +163,7 @@ export class MyCardTab extends LitElement {
     const type = SECTION[slot].type;
     if (this.flares.includes(`${type}:${item.name}`)) {
       if (slot === "trackers") {
-        return this.loadout.trackers.includes(item.name as TrackerStat)
+        return this.loadout.trackers.includes((item as CardTracker).stat)
           ? "equipped"
           : "owned";
       }
@@ -154,16 +176,39 @@ export class MyCardTab extends LitElement {
   }
 
   private async save(next: CardLoadoutBody): Promise<void> {
-    const before = this.loadout;
     this.loadout = next;
     this.saveError = false;
-    const result = await saveCardLoadout(next);
-    if (result.ok) {
-      this.saved = next;
-      return;
+    if (this.saving) return; // sent when the save in flight returns
+    this.saving = true;
+    try {
+      for (;;) {
+        const sending = this.loadout;
+        const result = await saveCardLoadout(sending);
+        if (!result.ok) {
+          // Back to what the server holds; clicks queued behind it go too.
+          this.loadout = this.saved;
+          this.saveError = true;
+          return;
+        }
+        // What the server stored is what it holds now, whether or not the
+        // /users/@me refresh after it got through: tell the host, which keeps
+        // its copy (and so the next tab it makes) in step.
+        this.saved = result.loadout;
+        this.dispatchEvent(
+          new CustomEvent<CardLoadoutBody>("card-saved", {
+            detail: result.loadout,
+            bubbles: true,
+            composed: true,
+          }),
+        );
+        if (this.loadout === sending) {
+          this.loadout = result.loadout;
+          return;
+        }
+      }
+    } finally {
+      this.saving = false;
     }
-    this.loadout = before;
-    this.saveError = true;
   }
 
   private onItem(slot: Exclude<Slot, "flag">, item: CardItem): void {
@@ -171,7 +216,7 @@ export class MyCardTab extends LitElement {
     const state = this.stateOf(slot, item);
     if (state !== "owned" && state !== "equipped") return;
     if (slot === "trackers") {
-      const stat = item.name as TrackerStat;
+      const stat = (item as CardTracker).stat;
       const trackers = this.loadout.trackers.includes(stat)
         ? this.loadout.trackers.filter((s) => s !== stat)
         : [...this.loadout.trackers, stat];
@@ -195,11 +240,12 @@ export class MyCardTab extends LitElement {
 
   private renderPrice(type: CardItemType, item: CardItem): TemplateResult {
     const r = this.resolved(type, item);
+    const prices = cardPrices(item);
     return html`<purchase-button
-      .priceHard=${item.priceHard ?? null}
-      .priceSoft=${item.priceSoft ?? null}
-      .listPriceHard=${item.listPriceHard ?? null}
-      .listPriceSoft=${item.listPriceSoft ?? null}
+      .priceHard=${prices.priceHard}
+      .priceSoft=${prices.priceSoft}
+      .listPriceHard=${prices.listPriceHard}
+      .listPriceSoft=${prices.listPriceSoft}
       .rarity=${String(item.rarity)}
       .itemName=${cardItemName(type, item)}
       .onPurchaseHard=${() => purchaseCosmetic(r, "hard")}
@@ -259,8 +305,10 @@ export class MyCardTab extends LitElement {
       @click=${() => this.onItem(slot, item)}
     >
       ${this.renderPreviewArt(slot, item)}
-      <span class="text-[10px] font-bold uppercase tracking-wider text-white/50"
-        >${String(item.rarity)}</span
+      <span
+        data-my-card-rarity
+        class="text-[10px] font-bold uppercase tracking-wider text-white/50"
+        >${cardRarityLabel(String(item.rarity))}</span
       >
       <span class="truncate text-sm font-bold"
         >${cardItemName(type, item)}</span
