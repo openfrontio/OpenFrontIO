@@ -1465,9 +1465,11 @@ export class InventoryModal extends BaseModal {
    * that failed).
    */
   private async afterBarSave(): Promise<void> {
-    await this.cardEditor.whenSaved();
     const guard = this.cardGuard;
     if (guard === null) return;
+    await this.cardEditor.whenSaved();
+    // Answered or replaced meanwhile: not this one's to settle.
+    if (this.cardGuard?.resolve !== guard.resolve) return;
     if (this.cardEditor.changeCount() === 0) {
       this.cardGuard = null;
       guard.resolve(true);
@@ -1504,7 +1506,9 @@ export class InventoryModal extends BaseModal {
     }
     this.cardGuard = { ...guard, saving: true };
     const saved = await this.cardEditor.save();
-    this.cardGuard = null;
+    // A newer guard may have replaced this one meanwhile (the Inventory
+    // closed and reopened): that one is still to be answered.
+    if (this.cardGuard?.resolve === guard.resolve) this.cardGuard = null;
     // A failed save stays on the tab: its bar and toast offer Retry.
     guard.resolve(saved);
   }

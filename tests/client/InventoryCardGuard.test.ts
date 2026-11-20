@@ -273,6 +273,35 @@ describe("Inventory: unsaved card changes guard", () => {
     expect(onCardTab()).toBe(true);
   });
 
+  it("a guard Save landing after a newer guard opened leaves that guard to be answered", async () => {
+    let finish!: (v: Awaited<ReturnType<typeof saveCardLoadout>>) => void;
+    vi.mocked(saveCardLoadout).mockReturnValueOnce(
+      new Promise((r) => (finish = r)),
+    );
+    await openWithChange();
+    // Guard A: Save, with the PUT held.
+    await click("[data-inventory-top-tab='ingame']");
+    await click("[data-card-guard-save]");
+    // Browser Back closes the Inventory with no guard; reopen and edit.
+    modal.close();
+    await settle(modal);
+    modal.open({ tab: "card" });
+    await settle(modal);
+    await click("[data-card-slot-row='tracker:0'] [data-card-row-open]");
+    await click("[data-card-pick='cardTracker:games_played'] [data-tile-main]");
+    // Guard B, Saving while A's save is in flight.
+    await click("[data-inventory-top-tab='ingame']");
+    expect(q("[data-card-guard]")).not.toBeNull();
+    finish({ ok: true, loadout: {} as never });
+    await settle(modal);
+    // B is still there, now with a choice, and answering it goes.
+    expect(q("[data-card-guard]")).not.toBeNull();
+    expect(guardButton("discard").disabled).toBe(false);
+    await click("[data-card-guard-discard]");
+    expect(q("[data-card-guard]")).toBeNull();
+    expect(onCardTab()).toBe(false);
+  });
+
   /** The card tab's shortfall box (no game to leave), as a Buy opens it. */
   async function plutoniumShort() {
     const dialog = document.createElement(

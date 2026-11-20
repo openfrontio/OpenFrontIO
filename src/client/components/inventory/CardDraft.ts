@@ -162,6 +162,60 @@ export function swapPreview(
   };
 }
 
+/**
+ * Replays the edits that took `before` to `after` onto `base`, a card laid
+ * out differently (the one the server kept when a save failed), by what
+ * they name rather than by row: a removed item goes from wherever `base`
+ * has it, and one picked into a row in place of another replaces that one
+ * there. An item added into an empty row takes `base`'s first empty row,
+ * else the row of an item `before` didn't have (one the failed save had
+ * taken off, which the player never saw). Moves aren't replayed: `base`
+ * keeps its own order.
+ */
+export function replayByItem(
+  base: CardDraft,
+  before: CardDraft,
+  after: CardDraft,
+): CardDraft {
+  const out = cloneDraft(base);
+  if (before.background !== after.background) {
+    out.background = after.background;
+  }
+  for (const kind of CARD_SLOT_KIND_LIST) {
+    const was = before.rows[kind];
+    const now = after.rows[kind];
+    const rows = out.rows[kind];
+    const gone = (x: string | null): x is string =>
+      x !== null && !now.includes(x);
+    const isNew = (y: string | null): y is string =>
+      y !== null && !was.includes(y);
+    const adds: string[] = [];
+    was.forEach((x, i) => {
+      if (!gone(x)) return;
+      const at = rows.indexOf(x);
+      const y = now[i];
+      if (isNew(y) && at !== -1) {
+        // The kept card may already have it elsewhere (the failed save had
+        // taken it off): then it just stays there, never twice.
+        rows[at] = rows.includes(y) ? null : y;
+      } else {
+        if (at !== -1) rows[at] = null;
+        if (isNew(y)) adds.push(y);
+      }
+    });
+    now.forEach((y, i) => {
+      if (isNew(y) && !gone(was[i])) adds.push(y);
+    });
+    for (const y of adds) {
+      if (rows.includes(y)) continue;
+      let at = rows.indexOf(null);
+      if (at === -1) at = rows.findIndex((x) => x !== null && !was.includes(x));
+      if (at !== -1) rows[at] = y;
+    }
+  }
+  return out;
+}
+
 /** Moves a row (↑/↓ or a drag): the rows between shift over. */
 export function moveRow(
   draft: CardDraft,
@@ -243,9 +297,12 @@ export class CardEditor {
   private seededFrom: UserMeResponse | null = null;
   private savedTimer: ReturnType<typeof setTimeout> | null = null;
   /**
-   * The Inventory closed while a save was in flight: the draft it was
-   * dropped to. Until it's edited again, the draft follows what that save
-   * stores.
+   * The changes were dropped (Discard, or the Inventory closed) while a save
+   * was in flight: the draft that save sent, which the draft was reset to.
+   * They end on what the server confirms: the stored card if the save lands
+   * (edits made since stay, built on what it sent), the old card if it
+   * fails (edits made since are replayed on it by what they name: see
+   * replayByItem).
    */
   private droppedTo: CardDraft | null = null;
   /** The draft the save in flight sent. */
@@ -329,8 +386,19 @@ export class CardEditor {
    * edits made since it started: `saved` is still the card it replaces, and
    * going back to that would undo the save once it lands. */
   discard(): void {
-    this.draft = cloneDraft(this.sending ?? this.saved);
+    if (this.sending !== null) {
+      this.dropToSending(this.sending);
+    } else {
+      this.draft = cloneDraft(this.saved);
+    }
     this.afterEdit();
+  }
+
+  /** Drops the changes while a save runs: to what it sent (`saved` is still
+   * the card it replaces, and going back to that would undo it). */
+  private dropToSending(sending: CardDraft): void {
+    this.draft = cloneDraft(sending);
+    this.droppedTo = cloneDraft(sending);
   }
 
   /** Resolves once no save is in flight (at once when none is). */
@@ -387,9 +455,14 @@ export class CardEditor {
     const result = await saveCardLoadout(body);
     this.sending = null;
     if (!result.ok) {
-      // Closed meanwhile: its changes are gone, so no Retry is left over.
-      this.saveState = this.droppedTo !== null ? "idle" : "failed";
+      // Dropped meanwhile: the draft goes back to the card the server kept,
+      // with any edit made since, and no Retry is left over.
+      const droppedTo = this.droppedTo;
       this.droppedTo = null;
+      if (droppedTo !== null) {
+        this.draft = replayByItem(this.saved, droppedTo, this.draft);
+      }
+      this.saveState = droppedTo !== null ? "idle" : "failed";
       this.emit();
       return false;
     }
@@ -403,13 +476,13 @@ export class CardEditor {
       background: stored.background ?? null,
       trackers: stored.trackers.map((stat) => ({ stat })),
     });
-    // Nothing edited while it saved (or the Inventory closed meanwhile, and
-    // nothing was edited since): the draft becomes the stored card.
-    const dropped =
-      this.droppedTo !== null &&
-      cardChanges(this.droppedTo, this.draft).length === 0;
+    // Nothing edited while it saved (or since a drop, which reset the draft
+    // to what it sent): the draft becomes the stored card. An edit made
+    // meanwhile is kept as it is: it was made on what was sent, which the
+    // stored card only differs from by closed-up gaps, so it names the
+    // same trackers.
     this.droppedTo = null;
-    if (dropped || cardChanges(sent, this.draft).length === 0) {
+    if (cardChanges(sent, this.draft).length === 0) {
       this.draft = cloneDraft(storedDraft);
     }
     this.saved = storedDraft;
@@ -444,10 +517,10 @@ export class CardEditor {
    */
   settle(): void {
     this.clearSavedTimer();
-    this.draft = cloneDraft(this.saved);
-    if (this.saveState === "saving") {
-      this.droppedTo = cloneDraft(this.draft);
+    if (this.sending !== null) {
+      this.dropToSending(this.sending);
     } else {
+      this.draft = cloneDraft(this.saved);
       this.saveState = "idle";
     }
     this.emit();
