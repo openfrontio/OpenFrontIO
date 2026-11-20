@@ -237,4 +237,40 @@ describe("CardEditor", () => {
     expect(editor.draft.rows.tracker).toEqual(["wins", null, "games_played"]);
     expect(editor.changeCount()).toBeGreaterThan(0);
   });
+
+  it("closing the Inventory drops unsaved changes", () => {
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTracker:games_played"]));
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    editor.settle();
+    expect(editor.changeCount()).toBe(0);
+  });
+
+  it("closing mid-save: the save lands and the draft follows it", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTracker:games_played"]));
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    const saving = editor.save();
+    editor.settle();
+    finish({ ok: true, loadout: {} });
+    await saving;
+    expect(editor.saved.rows.tracker[2]).toBe("games_played");
+    expect(editor.changeCount()).toBe(0);
+  });
+
+  it("closing mid-save that then fails leaves no Retry behind", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTracker:games_played"]));
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    const saving = editor.save();
+    editor.settle();
+    finish({ ok: false, error: "failed" });
+    await saving;
+    expect(editor.saveState).toBe("idle");
+    expect(editor.changeCount()).toBe(0);
+  });
 });

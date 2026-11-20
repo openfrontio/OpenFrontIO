@@ -218,6 +218,25 @@ describe("Inventory: unsaved card changes guard", () => {
     expect(modal.isOpen()).toBe(false);
   });
 
+  it("a close the guard didn't see (another modal's link, browser Back) drops the changes", async () => {
+    await openWithChange();
+    // The router closing it directly, with no guard.
+    modal.close();
+    await settle(modal);
+    // Reopened on In game: closing again doesn't ask about stale changes...
+    modal.open({ tab: "skins" });
+    await settle(modal);
+    back().click();
+    await settle(modal);
+    expect(q("[data-card-guard]")).toBeNull();
+    expect(modal.isOpen()).toBe(false);
+    // ...and they don't come back on the card tab.
+    modal.open({ tab: "card" });
+    await settle(modal);
+    expect(q("[data-card-save-bar]")).toBeNull();
+    expect(saveCardLoadout).not.toHaveBeenCalled();
+  });
+
   it("Escape asks first; Escape again keeps editing", async () => {
     await openWithChange();
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));

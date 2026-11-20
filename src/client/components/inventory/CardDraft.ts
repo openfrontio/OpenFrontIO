@@ -240,6 +240,8 @@ export class CardEditor {
   private flares: readonly string[] = [];
   private seededFrom: UserMeResponse | null = null;
   private savedTimer: ReturnType<typeof setTimeout> | null = null;
+  /** The Inventory closed while a save was in flight. */
+  private droppedDuringSave = false;
   private listeners = new Set<() => void>();
 
   subscribe(listener: () => void): () => void {
@@ -347,7 +349,9 @@ export class CardEditor {
     const body = loadoutBody(sent, this.held);
     const result = await saveCardLoadout(body);
     if (!result.ok) {
-      this.saveState = "failed";
+      // Closed meanwhile: its changes are gone, so no Retry is left over.
+      this.saveState = this.droppedDuringSave ? "idle" : "failed";
+      this.droppedDuringSave = false;
       this.emit();
       return false;
     }
@@ -361,8 +365,11 @@ export class CardEditor {
       background: stored.background ?? null,
       trackers: stored.trackers.map((stat) => ({ stat })),
     });
-    // Nothing edited while it saved: the draft becomes the stored card.
-    if (cardChanges(sent, this.draft).length === 0) {
+    // Nothing edited while it saved (or the changes were dropped meanwhile):
+    // the draft becomes the stored card.
+    const dropped = this.droppedDuringSave;
+    this.droppedDuringSave = false;
+    if (dropped || cardChanges(sent, this.draft).length === 0) {
       this.draft = cloneDraft(storedDraft);
     }
     this.saved = storedDraft;
@@ -381,10 +388,21 @@ export class CardEditor {
     this.savedTimer = null;
   }
 
-  /** The Inventory closed: "Saved" and a failed save's toast go with it. */
+  /**
+   * The Inventory closed. When its guard ran, the changes are already saved
+   * or discarded; a close it didn't see (another modal's link, browser
+   * Back) drops them, so they never come back later. "Saved" and a failed
+   * save's toast go too. A save still in flight finishes, and the draft
+   * then follows what it stored.
+   */
   settle(): void {
     this.clearSavedTimer();
-    if (this.saveState !== "saving") this.saveState = "idle";
+    this.draft = cloneDraft(this.saved);
+    if (this.saveState === "saving") {
+      this.droppedDuringSave = true;
+    } else {
+      this.saveState = "idle";
+    }
     this.emit();
   }
 }
