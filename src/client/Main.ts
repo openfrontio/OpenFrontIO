@@ -632,9 +632,15 @@ class Client {
 
     window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
-      if (this.replayViewerID !== null || this.scenarioEditor !== null) {
+      if (
+        this.replayViewerID !== null ||
+        this.scenarioEditor !== null ||
+        this.menuGoneForJoin
+      ) {
         // Leaving the replay viewer or the scenario editor always navigates,
         // so the same applies: nothing else clears the in-game signal they set.
+        // menuGoneForJoin: a join closed the editor and goes home without
+        // reaching a lobby, so neither the editor nor lobbyHandle is left.
         setInGameSignal(false);
       }
       if (this.lobbyHandle !== null) {
