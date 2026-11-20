@@ -44,6 +44,10 @@ import {
   type CardItemType,
   isCardItemType,
 } from "./components/card/CardItems";
+import {
+  clearPendingPurchase,
+  peekPendingPurchase,
+} from "./components/inventory/PendingEquip";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import {
@@ -99,6 +103,14 @@ export interface InsufficientCurrency {
   item: string;
   /** Whether the currency can be topped up (hard currency only). */
   canTopUp: boolean;
+  /** End screen only (purchaseCosmeticInPlace). A top-up leaves the game, so
+   * the box warns first and remembers the item (`itemKey`, for `player`). */
+  leavesGame?: boolean;
+  itemKey?: string;
+  player?: string;
+  /** End screen only: the caps price, when Plutonium is short and the
+   * player has enough caps for it. */
+  capsPrice?: number;
 }
 
 /** Outcome of a purchase: unaffordable details, or void on success/redirect. */
@@ -178,6 +190,8 @@ export function handlePurchaseReturn(
     actions.alertAndStrip(
       translateText("store.currency_pack_purchase_success"),
     );
+    // A top-up for an item from the end screen: open the Store on it.
+    void resumePendingPurchase();
     return;
   }
 
@@ -187,6 +201,7 @@ export function handlePurchaseReturn(
     actions.alertAndStrip(
       translateText("store.custom_currency_purchase_success"),
     );
+    void resumePendingPurchase();
     return;
   }
 
@@ -219,6 +234,27 @@ export function handlePurchaseReturn(
     params.get("login-token"),
     actions,
   );
+}
+
+/**
+ * After a Plutonium top-up that started from the end screen ("Get
+ * Plutonium"), open the Store on the item the player was buying, ready to
+ * buy. True when it did. The record (PendingEquip.ts) is this player's and
+ * fresh, or it is dropped; it is dropped too once the item is owned.
+ */
+export async function resumePendingPurchase(): Promise<boolean> {
+  const me = await getUserMe();
+  if (me === false) return false;
+  const player = me.player.publicId;
+  if (!player) return false;
+  const key = peekPendingPurchase(player);
+  if (key === null) return false;
+  if ((me.player.flares ?? []).includes(key)) {
+    clearPendingPurchase();
+    return false;
+  }
+  window.location.hash = `modal=store&tab=cosmetics&item=${encodeURIComponent(key)}`;
+  return true;
 }
 
 /**
@@ -399,6 +435,153 @@ async function promptManageBilling(message: string): Promise<void> {
     return;
   }
   window.open(url, "_blank", "noopener,noreferrer");
+}
+
+/** What a currency purchase is short of, for the insufficient-funds box. */
+function currencyShortfall(
+  resolved: ResolvedCosmetic,
+  method: "hard" | "soft",
+  price: number,
+  available: number,
+): InsufficientCurrency {
+  const c = resolved.cosmetic!;
+  const currencyName = translateText(
+    method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
+  );
+  let itemName: string;
+  if (resolved.type === "flag") {
+    itemName = translateCosmetic("flags", c.name);
+  } else if (isCardItemType(resolved.type)) {
+    itemName = cardItemName(resolved.type, c as CardItem);
+  } else if (resolved.type === "crown") {
+    itemName = translateCosmetic("crowns", c.name);
+  } else {
+    itemName = translateCosmetic("territory_patterns.pattern", c.name);
+  }
+  // Every palette of a pattern shares one name, so say which colour is short.
+  if (resolved.colorPalette !== null) {
+    itemName = translateText("inventory.selected_cosmetic_variant", {
+      name: itemName,
+      variant: translateCosmetic(
+        "territory_patterns.color_palette",
+        resolved.colorPalette.name,
+      ),
+    });
+  }
+  return {
+    currency: currencyName,
+    // Clamped: the server can refuse on a balance the client still reads as
+    // sufficient, and a zero or negative shortfall reads as "you have
+    // enough", which is the one thing we know is untrue.
+    shortfall: Math.max(1, price - available),
+    item: itemName,
+    // Only plutonium can be topped up; caps are dismiss-only.
+    canTopUp: method === "hard",
+  };
+}
+
+/** How an end-screen purchase ended (purchaseCosmeticInPlace). */
+export type InPlacePurchase =
+  // Bought, or the server says it was already owned: owned now either way.
+  // The fresh profile has been broadcast (false when the re-read failed).
+  | { kind: "owned"; fresh: UserMeResponse | false }
+  // Not enough of the currency: nothing charged.
+  | { kind: "insufficient"; info: InsufficientCurrency }
+  // Refused or unreachable: nothing charged.
+  | { kind: "failed" }
+  // No account: nothing to buy with.
+  | { kind: "signed_out" }
+  // Explained already with its own message (a wallet in debt).
+  | { kind: "handled" };
+
+/**
+ * A currency purchase from the end screen. Unlike purchaseCosmetic it never
+ * reloads the page, which would end the player's game: on success (or
+ * `already_owned`) it re-reads /users/@me and broadcasts it, so ownership and
+ * every balance on screen update in place, and it says nothing itself. The
+ * caller shows the outcome where the purchase was made. A shortfall carries
+ * what the end screen offers besides a top-up: the caps price when the
+ * player can afford it, and what to remember across "Get Plutonium".
+ */
+export async function purchaseCosmeticInPlace(
+  resolved: ResolvedCosmetic,
+  method: "hard" | "soft",
+  placement?: StorePlacement,
+): Promise<InPlacePurchase> {
+  const c = resolved.cosmetic;
+  if (!c || resolved.type === "subscription" || resolved.type === "pack") {
+    return { kind: "failed" };
+  }
+  const priced = c as Pattern | Flag;
+  const price = currentPrice(priced, method) ?? 0;
+  const userMe = await getUserMe();
+  if (userMe === false) return { kind: "signed_out" };
+  const wallet = userMe.player.currency;
+  const balance = method === "hard" ? (wallet?.hard ?? 0) : (wallet?.soft ?? 0);
+  if (balance < 0) {
+    await showInGameAlert(debtMessage(-balance));
+    return { kind: "handled" };
+  }
+  const shortfall = (available: number): InPlacePurchase => {
+    const info = currencyShortfall(resolved, method, price, available);
+    const capsPrice = currentPrice(priced, "soft");
+    return {
+      kind: "insufficient",
+      info: {
+        ...info,
+        leavesGame: true,
+        itemKey: resolved.key,
+        player: userMe.player.publicId,
+        // Plutonium short but the caps price affordable: offer it.
+        capsPrice:
+          method === "hard" &&
+          capsPrice !== undefined &&
+          capsPrice > 0 &&
+          (wallet?.soft ?? 0) >= capsPrice
+            ? capsPrice
+            : undefined,
+      },
+    };
+  };
+  if (balance < price) return shortfall(balance);
+
+  let result: Awaited<ReturnType<typeof purchaseWithCurrency>>;
+  try {
+    result = await purchaseWithCurrency(
+      resolved.type as "pattern" | "flag" | "crown" | "effect" | CardItemType,
+      c.name,
+      method,
+      resolved.colorPalette?.name,
+      placement,
+    );
+  } catch (error) {
+    console.error("End-screen purchase failed", error);
+    return { kind: "failed" };
+  }
+  if (!result.ok && result.code === "insufficient_balance") {
+    const fresh = await broadcastFreshUserMe();
+    if (fresh === false) return { kind: "failed" };
+    const available =
+      method === "hard"
+        ? (fresh.player.currency?.hard ?? 0)
+        : (fresh.player.currency?.soft ?? 0);
+    return available < price ? shortfall(available) : { kind: "failed" };
+  }
+  if (!result.ok && result.code !== "already_owned") {
+    if (result.code === "debt") {
+      await broadcastFreshUserMe();
+      await showInGameAlert(
+        translateText("store.pack_debt", { debt: result.debt }),
+      );
+      return { kind: "handled" };
+    }
+    return { kind: "failed" };
+  }
+  if (userMe.player.publicId) {
+    const pending = peekPendingPurchase(userMe.player.publicId);
+    if (pending === resolved.key) clearPendingPurchase();
+  }
+  return { kind: "owned", fresh: await broadcastFreshUserMe() };
 }
 
 export async function purchaseCosmetic(
@@ -600,6 +783,10 @@ export async function purchaseCosmetic(
           : "store.subscription_purchase_success",
       );
       if (message !== null) await showInGameAlert(message);
+      // A top-up for an item from the end screen: open the Store on it.
+      if (isPack && outcome.outcome === "completed") {
+        await resumePendingPurchase();
+      }
       return;
     }
 
@@ -643,41 +830,8 @@ export async function purchaseCosmetic(
   }
   // Built for the pre-check below and reused when the server refuses for the
   // same reason, so both routes describe the same item the same way.
-  const insufficient = (available: number): InsufficientCurrency => {
-    const currencyName = translateText(
-      method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
-    );
-    let itemName: string;
-    if (resolved.type === "flag") {
-      itemName = translateCosmetic("flags", c.name);
-    } else if (isCardItemType(resolved.type)) {
-      itemName = cardItemName(resolved.type, c as CardItem);
-    } else if (resolved.type === "crown") {
-      itemName = translateCosmetic("crowns", c.name);
-    } else {
-      itemName = translateCosmetic("territory_patterns.pattern", c.name);
-    }
-    // Every palette of a pattern shares one name, so say which colour is short.
-    if (resolved.colorPalette !== null) {
-      itemName = translateText("inventory.selected_cosmetic_variant", {
-        name: itemName,
-        variant: translateCosmetic(
-          "territory_patterns.color_palette",
-          resolved.colorPalette.name,
-        ),
-      });
-    }
-    return {
-      currency: currencyName,
-      // Clamped: the server can refuse on a balance the client still reads as
-      // sufficient, and a zero or negative shortfall reads as "you have
-      // enough", which is the one thing we know is untrue.
-      shortfall: Math.max(1, price - available),
-      item: itemName,
-      // Only plutonium can be topped up; caps are dismiss-only.
-      canTopUp: method === "hard",
-    };
-  };
+  const insufficient = (available: number): InsufficientCurrency =>
+    currencyShortfall(resolved, method, price, available);
   if (balance < price) {
     return insufficient(balance);
   }
@@ -752,6 +906,11 @@ export async function purchaseCosmetic(
         await showInGameAlert(translateText("store.purchase_failed"));
         return;
     }
+  }
+  // The item a top-up was for (resumePendingPurchase) is bought.
+  if (userMe.player.publicId) {
+    const pending = peekPendingPurchase(userMe.player.publicId);
+    if (pending === resolved.key) clearPendingPurchase();
   }
   await showInGameAlert(
     purchaseSuccessMessage(c.name, price, result.amount, method),

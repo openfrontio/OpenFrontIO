@@ -82,3 +82,71 @@ export function hasPendingEquip(): boolean {
     return false;
   }
 }
+
+/**
+ * An end-screen purchase across a Plutonium top-up. "Get Plutonium" on the
+ * end screen leaves the game for the Plutonium packs, so the item being
+ * bought is remembered per tab first, in the same shape as the record above
+ * (player, item key, when), and under its own key. When the top-up brings the
+ * player back to the site the Store opens on that item
+ * (resumePendingPurchase in Cosmetics.ts). The record is dropped once the
+ * item is bought, owned, or older than PENDING_PURCHASE_TTL_MS, and one from
+ * another account is dropped.
+ */
+export const PENDING_PURCHASE_KEY = "openfront-pending-purchase";
+// Longer than an equip: a top-up can mean a card form or a payment app.
+export const PENDING_PURCHASE_TTL_MS = 30 * 60 * 1000;
+
+export function rememberPendingPurchase(
+  player: string,
+  key: string,
+  now: number = Date.now(),
+): void {
+  try {
+    sessionStorage.setItem(
+      PENDING_PURCHASE_KEY,
+      JSON.stringify({ player, key, at: now } satisfies PendingEquip),
+    );
+  } catch {
+    // Storage blocked: the Store then opens on the packs only.
+  }
+}
+
+/** The remembered item's key, if the record is this player's and fresh; a
+ * stale or foreign record is dropped. Kept until clearPendingPurchase(). */
+export function peekPendingPurchase(
+  player: string,
+  now: number = Date.now(),
+): string | null {
+  let raw: string | null = null;
+  try {
+    raw = sessionStorage.getItem(PENDING_PURCHASE_KEY);
+  } catch {
+    return null;
+  }
+  if (raw === null) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<PendingEquip>;
+    if (
+      parsed.player === player &&
+      typeof parsed.key === "string" &&
+      typeof parsed.at === "number" &&
+      now >= parsed.at &&
+      now - parsed.at <= PENDING_PURCHASE_TTL_MS
+    ) {
+      return parsed.key;
+    }
+  } catch {
+    // Unreadable: dropped below.
+  }
+  clearPendingPurchase();
+  return null;
+}
+
+export function clearPendingPurchase(): void {
+  try {
+    sessionStorage.removeItem(PENDING_PURCHASE_KEY);
+  } catch {
+    // Storage blocked: nothing was stored either.
+  }
+}
