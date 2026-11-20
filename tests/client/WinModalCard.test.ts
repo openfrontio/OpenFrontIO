@@ -76,24 +76,6 @@ describe("WinModal card section", () => {
     expect(order).toEqual(["h2", "card", "xp"]);
   });
 
-  it("loadout takes the skins turn on an eliminated-by card", async () => {
-    const modal = await renderModal({
-      endCardMode: "eliminatedBy",
-      endCardView: defaultPlayerCardView("Volt", "UN"),
-      rand: 0.9,
-      loadout: [
-        {
-          type: "taunt",
-          item: { name: "salute", rarity: "epic", product: null },
-          state: "buy",
-          priceSoft: 800,
-        },
-      ],
-    });
-    expect(modal.querySelector("loadout-row")).not.toBeNull();
-    expect(modal.querySelector("[data-win-cosmetic-promo]")).toBeNull();
-  });
-
   it("fetches the catalogue when it isn't cached, then shows the items", async () => {
     catalogue.cached = null;
     catalogue.fetched = {
@@ -190,16 +172,23 @@ describe("WinModal card section", () => {
   });
 });
 
-// Looks saved from the player panel this game, as "Get {name}'s look" rows on
-// the end screen: after the killer's row, filtered against what the viewer
-// owns now, never twice for the same player or item.
-describe("WinModal saved looks", () => {
+// One "Get the look" block in the promo slot: the killer's look first, then
+// looks saved from the player panel this game, newest first, filtered against
+// what the viewer owns now. It takes the slot from Steam, Discord, tutorial
+// and skins; without a look the promo is as today.
+describe("WinModal Get the look block", () => {
   const bg = (name: string) => ({
     type: "cardBackground",
     item: { name, rarity: "epic", product: null },
     state: "buy",
     priceHard: 400,
   });
+  const CARD = {
+    type: "playerCard",
+    item: { name: "standard", rarity: "rare", product: null },
+    state: "buy",
+    priceHard: 300,
+  };
   const look = (clientID: string, name: string, items: unknown[]) => ({
     clientID,
     name,
@@ -219,16 +208,30 @@ describe("WinModal saved looks", () => {
   };
   // What the viewer owns, read when the screen shows.
   const base = { game, viewerFlares: [] as string[] };
-  const owners = (modal: HTMLElement) =>
-    [...modal.querySelectorAll("loadout-row")].map(
-      (r) => (r as unknown as { ownerName: string }).ownerName,
-    );
-  const items = (modal: HTMLElement, owner: string) =>
-    (
-      [...modal.querySelectorAll("loadout-row")].find(
-        (r) => (r as unknown as { ownerName: string }).ownerName === owner,
-      ) as unknown as { items: { item: { name: string } }[] }
-    ).items.map((i) => i.item.name);
+  const killed = {
+    endCardMode: "eliminatedBy",
+    endCardView: defaultPlayerCardView("Volt", "UN"),
+    lastEndCard: { kind: "eliminatedBy", clientID: "killer" },
+  };
+  type Block = {
+    looks: {
+      clientID: string;
+      name: string;
+      items: { item: { name: string } }[];
+    }[];
+  };
+  const block = (modal: HTMLElement) =>
+    modal.querySelector("loadout-row") as unknown as Block | null;
+  // The block's players, in chip order.
+  const names = (modal: HTMLElement) =>
+    (block(modal)?.looks ?? []).map((l) => l.name);
+  const items = (modal: HTMLElement, name: string) =>
+    block(modal)!
+      .looks.find((l) => l.name === name)!
+      .items.map((i) => i.item.name);
+  // Today's Discord promo (rand 0.4), as a stand-in for any of them.
+  const promo = (modal: HTMLElement) =>
+    modal.textContent!.includes("win_modal.join_discord");
 
   beforeEach(() => {
     localStorage.setItem("gamesPlayed", "10");
@@ -242,25 +245,69 @@ describe("WinModal saved looks", () => {
     vi.restoreAllMocks();
   });
 
-  it("shows each saved look on a game-over screen, newest first", async () => {
+  it("is one block: the killer first, then saved looks newest first", async () => {
     saveLook("g1", look("a", "Ada", [bg("bg_a")]));
     saveLook("g1", look("b", "Bo", [bg("bg_b")]));
-    const modal = await renderModal({ ...base, endCardMode: "none" });
-    expect(owners(modal)).toEqual(["Bo", "Ada"]);
+    const modal = await renderModal({
+      ...base,
+      ...killed,
+      loadout: [KILLER_ITEM],
+    });
+    expect(modal.querySelectorAll("loadout-row")).toHaveLength(1);
+    expect(names(modal)).toEqual(["Volt", "Bo", "Ada"]);
   });
 
-  it("shows them on the win screen too", async () => {
+  it("takes the promo slot from every other promo", async () => {
+    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
+    // rand 0.1 would be Steam, 0.4 Discord; the first games the tutorial.
+    for (const state of [{ rand: 0.1 }, { rand: 0.4 }, { rand: 0.9 }]) {
+      const modal = await renderModal({
+        ...base,
+        endCardMode: "none",
+        ...state,
+      });
+      expect(names(modal)).toEqual(["Ada"]);
+      expect(promo(modal)).toBe(false);
+      document.body.innerHTML = "";
+    }
+    localStorage.setItem("gamesPlayed", "1");
+    const first = await renderModal({ ...base, endCardMode: "none" });
+    expect(names(first)).toEqual(["Ada"]);
+  });
+
+  it("without a look the promo is as today", async () => {
+    const modal = await renderModal({
+      ...base,
+      endCardMode: "none",
+      rand: 0.4,
+    });
+    expect(block(modal)).toBeNull();
+    expect(promo(modal)).toBe(true);
+  });
+
+  it("the killer's look alone takes the slot", async () => {
+    const modal = await renderModal({
+      ...base,
+      ...killed,
+      loadout: [KILLER_ITEM],
+      rand: 0.1,
+    });
+    expect(names(modal)).toEqual(["Volt"]);
+  });
+
+  it("shows on the win screen too", async () => {
     saveLook("g1", look("a", "Ada", [bg("bg_a")]));
     const modal = await renderModal({
       ...base,
       isWin: true,
       endCardMode: "winner",
       endCardView: defaultPlayerCardView("Me", "UN"),
+      lastEndCard: { kind: "winner", clientID: "me" },
     });
-    expect(owners(modal)).toEqual(["Ada"]);
+    expect(names(modal)).toEqual(["Ada"]);
   });
 
-  it("shows them under a clan-win card", async () => {
+  it("shows under a clan-win card", async () => {
     saveLook("g1", look("a", "Ada", [bg("bg_a")]));
     const modal = await renderModal({
       ...base,
@@ -268,72 +315,38 @@ describe("WinModal saved looks", () => {
       endCardClan: { clanTag: "UN", members: [], territoryPct: 40 },
       lastEndCard: { kind: "clan", clanTag: "UN", team: "Red" },
     });
-    expect(owners(modal)).toEqual(["Ada"]);
+    expect(names(modal)).toEqual(["Ada"]);
   });
 
-  it("the killer's row comes first, and their saved look isn't repeated", async () => {
-    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
+  it("the killer's saved look is one chip, not two", async () => {
     saveLook("g1", look("killer", "Volt", [bg("bg_k")]));
+    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
     const modal = await renderModal({
       ...base,
-      endCardMode: "eliminatedBy",
-      endCardView: defaultPlayerCardView("Volt", "UN"),
-      lastEndCard: { kind: "eliminatedBy", clientID: "killer" },
+      ...killed,
       loadout: [KILLER_ITEM],
     });
-    expect(owners(modal)).toEqual(["Volt", "Ada"]);
+    expect(names(modal)).toEqual(["Volt", "Ada"]);
   });
 
-  it("a saved killer's look still shows when the killer's row doesn't", async () => {
+  it("the killer's saved look still shows when they have nothing else", async () => {
     saveLook("g1", look("killer", "Volt", [bg("bg_k")]));
+    const modal = await renderModal({ ...base, ...killed, loadout: [] });
+    expect(names(modal)).toEqual(["Volt"]);
+  });
+
+  it("the player card is offered under the first name only", async () => {
+    saveLook("g1", look("a", "Ada", [CARD, bg("bg_a")]));
     const modal = await renderModal({
       ...base,
-      endCardMode: "eliminatedBy",
-      endCardView: defaultPlayerCardView("Volt", "UN"),
-      lastEndCard: { kind: "eliminatedBy", clientID: "killer" },
-      loadout: [],
+      ...killed,
+      loadout: [CARD, KILLER_ITEM],
     });
-    expect(owners(modal)).toEqual(["Volt"]);
+    expect(items(modal, "Volt")).toEqual(["standard", "salute"]);
+    expect(items(modal, "Ada")).toEqual(["bg_a"]);
   });
 
-  it("waits for the killer's row, so the killer's look never shows alone first", async () => {
-    saveLook("g1", look("killer", "Volt", [bg("bg_k")]));
-    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
-    const modal = (await renderModal({
-      ...base,
-      endCardMode: "eliminatedBy",
-      endCardView: defaultPlayerCardView("Volt", "UN"),
-      lastEndCard: { kind: "eliminatedBy", clientID: "killer" },
-      loadout: [],
-      loadoutPending: true,
-    })) as HTMLElement & Record<string, unknown>;
-    expect(owners(modal)).toEqual([]);
-    modal.loadout = [KILLER_ITEM];
-    modal.loadoutPending = false;
-    await (modal as unknown as { updateComplete: Promise<unknown> })
-      .updateComplete;
-    expect(owners(modal)).toEqual(["Volt", "Ada"]);
-  });
-
-  it("waits for what the viewer owns", async () => {
-    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
-    const modal = await renderModal({ game, endCardMode: "none" });
-    expect(owners(modal)).toEqual([]);
-  });
-
-  it("drops items bought after the look was saved, and emptied rows", async () => {
-    saveLook("g1", look("a", "Ada", [bg("bg_a"), bg("bg_a2")]));
-    saveLook("g1", look("b", "Bo", [bg("bg_b")]));
-    const modal = await renderModal({
-      ...base,
-      viewerFlares: ["cardBackground:bg_a", "cardBackground:bg_b"],
-      endCardMode: "none",
-    });
-    expect(owners(modal)).toEqual(["Ada"]);
-    expect(items(modal, "Ada")).toEqual(["bg_a2"]);
-  });
-
-  it("the same item is offered once, in the earlier row", async () => {
+  it("the same item is offered once, under the earlier name", async () => {
     saveLook("g1", look("a", "Ada", [bg("bg_x"), bg("bg_a")]));
     saveLook("g1", look("b", "Bo", [bg("bg_x"), bg("bg_b")]));
     const modal = await renderModal({ ...base, endCardMode: "none" });
@@ -341,25 +354,75 @@ describe("WinModal saved looks", () => {
     expect(items(modal, "Ada")).toEqual(["bg_a"]);
   });
 
+  it("drops items bought after saving, and players left with nothing", async () => {
+    saveLook("g1", look("a", "Ada", [bg("bg_a"), bg("bg_a2")]));
+    saveLook("g1", look("b", "Bo", [bg("bg_b")]));
+    const modal = await renderModal({
+      ...base,
+      viewerFlares: ["cardBackground:bg_a", "cardBackground:bg_b"],
+      endCardMode: "none",
+    });
+    expect(names(modal)).toEqual(["Ada"]);
+    expect(items(modal, "Ada")).toEqual(["bg_a2"]);
+  });
+
+  it("everything owned: no block, the promo as today", async () => {
+    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
+    const modal = await renderModal({
+      ...base,
+      viewerFlares: ["cardBackground:bg_a"],
+      endCardMode: "none",
+      rand: 0.4,
+    });
+    expect(block(modal)).toBeNull();
+    expect(promo(modal)).toBe(true);
+  });
+
   it("not by real name while the viewer anonymises names", async () => {
     vi.spyOn(UserSettings.prototype, "anonymousNames").mockReturnValue(true);
     saveLook("g1", look("a", "Ada", [bg("bg_a")]));
     const modal = await renderModal({ ...base, endCardMode: "none" });
-    expect(owners(modal)).toEqual([]);
+    expect(block(modal)).toBeNull();
+  });
+
+  it("no flicker: the slot stays empty until the killer's look has loaded", async () => {
+    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
+    const modal = (await renderModal({
+      ...base,
+      ...killed,
+      loadout: [],
+      loadoutPending: true,
+      rand: 0.4,
+    })) as HTMLElement & Record<string, unknown>;
+    // Neither the block nor the Discord promo it would replace.
+    expect(block(modal)).toBeNull();
+    expect(promo(modal)).toBe(false);
+    modal.loadout = [KILLER_ITEM];
+    modal.loadoutPending = false;
+    await (modal as unknown as { updateComplete: Promise<unknown> })
+      .updateComplete;
+    expect(names(modal)).toEqual(["Volt", "Ada"]);
+  });
+
+  it("no flicker: the slot stays empty until the viewer's items are read", async () => {
+    saveLook("g1", look("a", "Ada", [bg("bg_a")]));
+    const modal = await renderModal({ game, endCardMode: "none", rand: 0.4 });
+    expect(block(modal)).toBeNull();
+    expect(promo(modal)).toBe(false);
   });
 
   it("re-renders when a look is saved or removed", async () => {
     const modal = await renderModal({ ...base, endCardMode: "none" });
-    expect(owners(modal)).toEqual([]);
+    expect(block(modal)).toBeNull();
     saveLook("g1", look("a", "Ada", [bg("bg_a")]));
     await (modal as unknown as { updateComplete: Promise<unknown> })
       .updateComplete;
-    expect(owners(modal)).toEqual(["Ada"]);
+    expect(names(modal)).toEqual(["Ada"]);
   });
 
   it("another game's looks never show", async () => {
     saveLook("g0", look("a", "Ada", [bg("bg_a")]));
     const modal = await renderModal({ ...base, endCardMode: "none" });
-    expect(owners(modal)).toEqual([]);
+    expect(block(modal)).toBeNull();
   });
 });
