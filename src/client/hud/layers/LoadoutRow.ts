@@ -186,6 +186,9 @@ export class LoadoutRow extends LitElement {
         // tap that does nothing.
         await this.signIn();
         return;
+      case "unreachable":
+        await showInGameAlert(translateText("win_modal.server_unreachable"));
+        return;
       case "unconfirmed":
         await showInGameAlert(translateText("win_modal.purchase_unconfirmed"));
         return;

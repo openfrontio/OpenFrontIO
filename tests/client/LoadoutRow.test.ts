@@ -560,6 +560,18 @@ describe("<loadout-row> buying", () => {
     );
   });
 
+  it("the buy can't read the profile (a session, the network): says so", async () => {
+    vi.mocked(purchaseCosmeticInPlace).mockResolvedValue({
+      kind: "unreachable",
+    });
+    await render({});
+    await button().onPurchaseHard();
+    expect(showInGameAlert).toHaveBeenCalledWith(
+      "win_modal.server_unreachable",
+    );
+    expect(showInGameConfirm).not.toHaveBeenCalled();
+  });
+
   it("a shortfall goes back to the button's box", async () => {
     const info = {
       currency: "Plutonium",
