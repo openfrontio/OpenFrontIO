@@ -329,4 +329,44 @@ describe("Inventory: buying card items in place", () => {
     expect(q<HTMLButtonElement>("[data-card-save]")!.disabled).toBe(false);
     expect(q("[data-card-change-count]")).not.toBeNull();
   });
+
+  /** Opens <purchase-button>'s confirm box for a currency, the way a tap
+   * on its button does (the tap check runs first). */
+  async function openConfirm(within: string, method: "hard" | "soft") {
+    const button = q(`${within} purchase-button`) as unknown as {
+      requestCurrencyPurchase(m: "hard" | "soft"): void;
+    };
+    button.requestCurrencyPurchase(method);
+    await settle(modal);
+    expect(q(`${within} confirm-dialog`)).not.toBeNull();
+  }
+
+  it("Escape with the Save bar's buy confirm open closes the confirm, not the Inventory", async () => {
+    await pickStorm();
+    await openConfirm("[data-card-buy='cardBackground:bg_storm']", "soft");
+    const behind = vi.fn();
+    window.addEventListener("keydown", behind);
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    window.removeEventListener("keydown", behind);
+    await settle(modal);
+    expect(q("confirm-dialog")).toBeNull();
+    expect(q("[data-card-guard]")).toBeNull();
+    expect(behind).not.toHaveBeenCalled();
+    expect(modal.isOpen()).toBe(true);
+    // The change is still there.
+    expect(q("[data-card-buy='cardBackground:bg_storm']")).not.toBeNull();
+  });
+
+  it("Escape with the no-card screen's buy confirm open closes only the confirm", async () => {
+    const noCard = owner(["cardBackground:bg_pacific"]);
+    vi.mocked(getUserMe).mockResolvedValue(noCard);
+    modal.open({ tab: "card" });
+    await settle(modal);
+    await openConfirm("[data-card-get-card]", "hard");
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    await settle(modal);
+    expect(q("confirm-dialog")).toBeNull();
+    expect(modal.isOpen()).toBe(true);
+    expect(q("[data-card-get-card]")).not.toBeNull();
+  });
 });

@@ -97,7 +97,28 @@ export class InventoryCardTab extends LitElement {
     return this;
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    window.addEventListener("keydown", this.onKeyDown, { capture: true });
+  }
+
+  /**
+   * A <purchase-button>'s confirm box (the buy confirm, or the shortfall
+   * box, a confirm-dialog too) doesn't handle Escape itself. Capture phase:
+   * Escape closes the topmost one, as its Cancel does, and goes no further,
+   * so it never closes the Inventory or opens its guard behind the box.
+   */
+  private onKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== "Escape") return;
+    const open = this.querySelectorAll("confirm-dialog");
+    if (open.length === 0) return;
+    event.stopPropagation();
+    event.preventDefault();
+    open[open.length - 1].dispatchEvent(new CustomEvent("cancel"));
+  };
+
   disconnectedCallback(): void {
+    window.removeEventListener("keydown", this.onKeyDown, { capture: true });
     super.disconnectedCallback();
     this.unsubscribe?.();
     this.unsubscribe = null;
