@@ -362,14 +362,21 @@ export class ScenarioEditor extends LitElement {
   }
 
   private onKey(e: KeyboardEvent): void {
+    const t = e.target;
+    // A text field keeps its keys, undo included. Other controls (a select,
+    // a checkbox, a slider) keep only the brackets, so undo still works
+    // after a change in one.
     if (
-      e.target instanceof HTMLInputElement ||
-      e.target instanceof HTMLSelectElement
+      t instanceof HTMLInputElement &&
+      (t.type === "text" || t.type === "number")
     ) {
       return;
     }
+    const control =
+      t instanceof HTMLInputElement || t instanceof HTMLSelectElement;
     // Some layouts type the brackets with AltGr (Ctrl+Alt) or Option.
     if (!e.metaKey && (e.key === "[" || e.key === "]")) {
+      if (control) return;
       this.setBrushRadius(this.brushRadius + (e.key === "]" ? 1 : -1));
       return;
     }
