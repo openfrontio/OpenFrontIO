@@ -777,10 +777,12 @@ export class AccountModal extends BaseModal {
 
   // A card save went through: patch the card into a new /users/@me copy, so
   // the header and a My Card tab made later read it even if the refresh that
-  // follows a save fails. (On the tab that saved, it's what it holds.)
+  // follows a save fails. (On the tab that saved, it's what it holds.) A
+  // save made for another account (signed out or switched since) is left
+  // alone.
   private handleCardSaved = (event: CustomEvent<CardSavedDetail>): void => {
     const me = this.userMeResponse;
-    if (!me) return;
+    if (!me || me.player.publicId !== event.detail.publicId) return;
     this.userMeResponse = {
       ...me,
       player: {

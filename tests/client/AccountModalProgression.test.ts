@@ -605,6 +605,63 @@ describe("AccountModal — Progression tab", () => {
     },
   );
 
+  it("ignores a card save made for another account", async () => {
+    const item = { product: null, rarity: "epic" };
+    vi.mocked(fetchCosmetics).mockResolvedValue({
+      patterns: {},
+      flags: {},
+      playerCards: {},
+      cardBackgrounds: { bg_x: { ...item, name: "bg_x", url: "/bg/x.webp" } },
+      cardTrackers: {},
+      cardTitles: {},
+      taunts: {},
+    } as unknown as Cosmetics);
+    me = {
+      ...me,
+      player: {
+        ...me.player,
+        flares: ["playerCard:standard", "cardBackground:bg_x"],
+        card: { trackers: [] },
+      },
+    } as unknown as UserMeResponse;
+    try {
+      const myCard = () => modal.querySelector("my-card-tab");
+      const tabButton = (label: string) =>
+        [
+          ...((
+            modal.querySelector("o-modal") as ModalShell
+          ).shadowRoot?.querySelectorAll("button") ?? []),
+        ].find((b) => b.textContent?.trim() === label) as HTMLButtonElement;
+      const tile = () =>
+        myCard()?.querySelector<HTMLButtonElement>(
+          "[data-card-item='cardBackground:bg_x']",
+        ) ?? null;
+      modal.open({ tab: "card" });
+      await settle(() => expect(tile()).not.toBeNull());
+      myCard()!.dispatchEvent(
+        new CustomEvent("card-saved", {
+          detail: {
+            publicId: "someone-else",
+            loadout: {
+              background: "bg_x",
+              title: null,
+              taunt: null,
+              trackers: [],
+            },
+          },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      tabButton("account_modal.tab_account").click();
+      await settle(() => expect(myCard()).toBeNull());
+      tabButton("account_modal.tab_my_card").click();
+      await settle(() => expect(tile()?.dataset.state).toBe("owned"));
+    } finally {
+      vi.mocked(fetchCosmetics).mockResolvedValue(null);
+    }
+  });
+
   it("has no tab for a player without a level (progression off)", async () => {
     me = userMe(undefined);
     modal.open({ tab: "progression" });
