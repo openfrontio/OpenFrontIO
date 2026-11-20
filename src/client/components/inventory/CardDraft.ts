@@ -209,7 +209,14 @@ export function replayByItem(
     for (const y of adds) {
       if (rows.includes(y)) continue;
       let at = rows.indexOf(null);
-      if (at === -1) at = rows.findIndex((x) => x !== null && !was.includes(x));
+      // Never a tracker the player has now: that includes every one this
+      // replay wrote (each comes from `after`), so nothing it placed is
+      // overwritten.
+      if (at === -1) {
+        at = rows.findIndex(
+          (x) => x !== null && !was.includes(x) && !now.includes(x),
+        );
+      }
       if (at !== -1) rows[at] = y;
     }
   }
