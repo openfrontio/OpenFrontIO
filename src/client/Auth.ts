@@ -518,7 +518,8 @@ export function clearLocalSession(): void {
  * True when userAuth() last answered false only because the last session
  * exchange got no settling answer: /auth/refresh, a portal login
  * (/auth/<portal>) or a Steam login (/auth/steam, or a Steam ticket the shell
- * couldn't get because it couldn't reach our API). The session may well still
+ * couldn't get for any reason but needs-account or ticket-rejected: a timeout,
+ * an error, Steam unavailable, our API unreachable). The session may well still
  * be valid. Only a 401 means signed out; any other failure (a 5xx, 429, 400,
  * 403 edge block, timeout or network error) counts as "couldn't check", the
  * rule /auth/refresh already followed. Each exchange starts by clearing it,
@@ -679,9 +680,13 @@ async function doRefreshJwt(): Promise<void> {
     // pointless round trips and the player's stored persistent ID every time
     // Steam hiccuped. Record why and stop.
     __jwt = null;
-    // The shell couldn't reach our API to get a ticket: that's "couldn't
-    // check", like any other unreachable answer, not signed out.
-    __refreshUnreachable = result.reason === "api-unreachable";
+    // Only the shell declining to bind this Steam id (needs-account,
+    // ticket-rejected) says anything about the session. Every other reason
+    // -- a hung native call (timeout), an IPC race or Steam client failure
+    // (error, unavailable), our API unreachable from the shell -- settles
+    // nothing: "couldn't check", not signed out.
+    __refreshUnreachable =
+      result.reason !== "needs-account" && result.reason !== "ticket-rejected";
     setSessionState({ status: "signed-out", reason: ticketReason(result) });
     return;
   }
