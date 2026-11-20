@@ -34,7 +34,8 @@ import {
   sendMagicLink,
   steamLogin,
 } from "./Auth";
-import { type CardLoadoutBody, cardRefsFromLoadout } from "./CardLoadoutApi";
+import { cardRefsFromLoadout } from "./CardLoadoutApi";
+import type { CardSavedDetail } from "./CardSaveQueue";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import { BaseModal } from "./components/BaseModal";
 import { buildPlayerCardView } from "./components/card/PlayerCardModel";
@@ -777,14 +778,14 @@ export class AccountModal extends BaseModal {
   // A card save went through: patch the card into a new /users/@me copy, so
   // the header and a My Card tab made later read it even if the refresh that
   // follows a save fails. (On the tab that saved, it's what it holds.)
-  private handleCardSaved = (event: CustomEvent<CardLoadoutBody>): void => {
+  private handleCardSaved = (event: CustomEvent<CardSavedDetail>): void => {
     const me = this.userMeResponse;
     if (!me) return;
     this.userMeResponse = {
       ...me,
       player: {
         ...me.player,
-        card: cardRefsFromLoadout(event.detail, me.player.card),
+        card: cardRefsFromLoadout(event.detail.loadout, me.player.card),
       },
     };
   };

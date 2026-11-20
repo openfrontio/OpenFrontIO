@@ -497,6 +497,114 @@ describe("AccountModal — Progression tab", () => {
     }
   });
 
+  it.each(["in the order sent", "newest first"])(
+    "a change made in a reopened tab while a save is in flight builds on it (answers %s)",
+    async (order) => {
+      // Equip X in tab #1; go to Account and back before that PUT answers;
+      // equip the wins tracker in tab #2. The server must end on X + wins,
+      // and the screen must show what the server holds, whichever order the
+      // answers would come in.
+      const item = { product: null, rarity: "epic" };
+      vi.mocked(fetchCosmetics).mockResolvedValue({
+        patterns: {},
+        flags: {},
+        playerCards: {},
+        cardBackgrounds: {
+          bg_x: { ...item, name: "bg_x", url: "/bg/x.webp" },
+        },
+        cardTrackers: { wins: { ...item, name: "wins", stat: "wins" } },
+        cardTitles: {},
+        taunts: {},
+      } as unknown as Cosmetics);
+      me = {
+        ...me,
+        player: {
+          ...me.player,
+          flares: [
+            "playerCard:standard",
+            "cardBackground:bg_x",
+            "cardTracker:wins",
+          ],
+          card: { trackers: [] },
+        },
+      } as unknown as UserMeResponse;
+      // Every PUT waits until the test answers it.
+      const puts: Record<string, unknown>[] = [];
+      const waiting: (() => void)[] = [];
+      let serverHas: Record<string, unknown> | null = null;
+      const realFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn((_url: unknown, init?: RequestInit) => {
+        const body = String(init?.body);
+        puts.push(JSON.parse(body));
+        return new Promise<Response>((resolve) => {
+          waiting.push(() => {
+            serverHas = JSON.parse(body);
+            resolve(new Response(body, { status: 200 }));
+          });
+        });
+      }) as typeof fetch;
+      const answerAll = async () => {
+        for (;;) {
+          await new Promise((r) => setTimeout(r, 20));
+          if (waiting.length === 0) return;
+          const next =
+            order === "newest first" ? waiting.pop()! : waiting.shift()!;
+          next();
+        }
+      };
+      try {
+        const myCard = () => modal.querySelector("my-card-tab");
+        const tabButton = (label: string) =>
+          [
+            ...((
+              modal.querySelector("o-modal") as ModalShell
+            ).shadowRoot?.querySelectorAll("button") ?? []),
+          ].find((b) => b.textContent?.trim() === label) as HTMLButtonElement;
+        const tile = (key: string) =>
+          myCard()?.querySelector<HTMLButtonElement>(
+            `[data-card-item='${key}']`,
+          ) ?? null;
+
+        modal.open({ tab: "card" });
+        await settle(() => expect(tile("cardBackground:bg_x")).not.toBeNull());
+        tile("cardBackground:bg_x")!.click();
+        await settle(() => expect(puts).toHaveLength(1));
+        tabButton("account_modal.tab_account").click();
+        await settle(() => expect(myCard()).toBeNull());
+        tabButton("account_modal.tab_my_card").click();
+        // The reopened tab shows the save in flight.
+        await settle(() =>
+          expect(tile("cardBackground:bg_x")?.dataset.state).toBe("equipped"),
+        );
+        myCard()!
+          .querySelector<HTMLButtonElement>("[data-my-card-slot='trackers']")!
+          .click();
+        await settle(() => expect(tile("cardTracker:wins")).not.toBeNull());
+        tile("cardTracker:wins")!.click();
+        await answerAll();
+
+        expect(serverHas).toEqual({
+          background: "bg_x",
+          title: null,
+          taunt: null,
+          trackers: ["wins"],
+        });
+        await settle(() =>
+          expect(tile("cardTracker:wins")?.dataset.state).toBe("equipped"),
+        );
+        myCard()!
+          .querySelector<HTMLButtonElement>("[data-my-card-slot='background']")!
+          .click();
+        await settle(() =>
+          expect(tile("cardBackground:bg_x")?.dataset.state).toBe("equipped"),
+        );
+      } finally {
+        globalThis.fetch = realFetch;
+        vi.mocked(fetchCosmetics).mockResolvedValue(null);
+      }
+    },
+  );
+
   it("has no tab for a player without a level (progression off)", async () => {
     me = userMe(undefined);
     modal.open({ tab: "progression" });

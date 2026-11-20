@@ -10,7 +10,14 @@ import {
 } from "@openfront/shared/PlayerCardSchemas";
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { type CardLoadoutBody, saveCardLoadout } from "../../CardLoadoutApi";
+import type { CardLoadoutBody } from "../../CardLoadoutApi";
+import {
+  type CardSaveOutcome,
+  type CardSavedDetail,
+  cardSaveInFlight,
+  cardSaveRunning,
+  requestCardSave,
+} from "../../CardSaveQueue";
 import {
   fetchCosmetics,
   getPlayerCosmetics,
@@ -79,12 +86,12 @@ export class MyCardTab extends LitElement {
 
   @state() private activeSlot: Slot = "background";
   // What is equipped now (optimistically), and what the server last
-  // confirmed. Saves go one at a time (each PUT replaces the whole loadout,
-  // so two in flight could land in either order); clicks made meanwhile are
-  // sent together when the save in flight returns.
+  // confirmed. Saves run one at a time in CardLoadoutApi, shared with any
+  // other tab: a click made meanwhile is sent on top of the save in flight.
   @state() private loadout: CardLoadoutBody = EMPTY;
   @state() private saved: CardLoadoutBody = EMPTY;
-  private saving = false;
+  // The save run this tab is waiting on.
+  private following: Promise<CardSaveOutcome> | null = null;
   private initialSeeded = false;
   // The loadout the tab opened with: what Reset goes back to.
   @state() private initial: CardLoadoutBody = EMPTY;
@@ -121,20 +128,23 @@ export class MyCardTab extends LitElement {
     this.values = new Map(
       (card?.trackers ?? []).map((t) => [t.stat, t.value] as const),
     );
-    // Mid-save, the loadout the server confirms is newer than any response
-    // in hand (a card save broadcasts one before it returns): keep the clicks.
-    if (this.saving) return;
     this.saved = {
       background: card?.background ?? null,
       title: card?.title ?? null,
       taunt: card?.taunt ?? null,
       trackers: (card?.trackers ?? []).map((t) => t.stat),
     };
-    this.loadout = this.saved;
+    // Mid-save (from this tab, or one closed before it answered), show the
+    // newest loadout asked for: the server will hold it, and the next click
+    // builds on it.
+    const inFlight = cardSaveInFlight();
+    this.loadout = inFlight ?? this.saved;
+    const run = cardSaveRunning();
+    if (inFlight !== null && run !== null) void this.follow(run);
     // Reset goes back to what the tab opened with, not to the last save.
     if (!this.initialSeeded && this.userMe !== null) {
       this.initialSeeded = true;
-      this.initial = this.saved;
+      this.initial = this.loadout;
     }
   }
 
@@ -175,40 +185,36 @@ export class MyCardTab extends LitElement {
       : "locked";
   }
 
-  private async save(next: CardLoadoutBody): Promise<void> {
+  private save(next: CardLoadoutBody): void {
     this.loadout = next;
     this.saveError = false;
-    if (this.saving) return; // sent when the save in flight returns
-    this.saving = true;
-    try {
-      for (;;) {
-        const sending = this.loadout;
-        const result = await saveCardLoadout(sending);
-        if (!result.ok) {
-          // Back to what the server holds; clicks queued behind it go too.
-          this.loadout = this.saved;
-          this.saveError = true;
-          return;
-        }
-        // What the server stored is what it holds now, whether or not the
-        // /users/@me refresh after it got through: tell the host, which keeps
-        // its copy (and so the next tab it makes) in step.
-        this.saved = result.loadout;
-        this.dispatchEvent(
-          new CustomEvent<CardLoadoutBody>("card-saved", {
-            detail: result.loadout,
-            bubbles: true,
-            composed: true,
-          }),
-        );
-        if (this.loadout === sending) {
-          this.loadout = result.loadout;
-          return;
-        }
-      }
-    } finally {
-      this.saving = false;
+    void this.follow(requestCardSave(next));
+  }
+
+  // Wait for a save run, then take what the server holds after it.
+  private async follow(run: Promise<CardSaveOutcome>): Promise<void> {
+    if (this.following === run) return;
+    this.following = run;
+    const publicId = this.userMe?.player.publicId ?? "";
+    const { result, saved } = await run;
+    if (this.following === run) this.following = null;
+    if (saved !== null) {
+      // Stored, whether or not the /users/@me refresh after it got through:
+      // tell the host, which keeps its copy (and so the next tab it makes)
+      // in step.
+      this.saved = saved;
+      this.dispatchEvent(
+        new CustomEvent<CardSavedDetail>("card-saved", {
+          detail: { publicId, loadout: saved },
+          bubbles: true,
+          composed: true,
+        }),
+      );
     }
+    // On success that's the newest loadout asked for; on failure, back to
+    // what the server holds (clicks queued behind it go too).
+    this.loadout = this.saved;
+    if (!result.ok) this.saveError = true;
   }
 
   private onItem(slot: Exclude<Slot, "flag">, item: CardItem): void {
@@ -220,12 +226,12 @@ export class MyCardTab extends LitElement {
       const trackers = this.loadout.trackers.includes(stat)
         ? this.loadout.trackers.filter((s) => s !== stat)
         : [...this.loadout.trackers, stat];
-      void this.save({ ...this.loadout, trackers });
+      this.save({ ...this.loadout, trackers });
       return;
     }
     // Clicking the equipped item takes it off.
     const name = state === "equipped" ? null : item.name;
-    void this.save({ ...this.loadout, [slot]: name });
+    this.save({ ...this.loadout, [slot]: name });
   }
 
   private resolved(type: CardItemType, item: CardItem): ResolvedCosmetic {
@@ -423,7 +429,7 @@ export class MyCardTab extends LitElement {
             data-my-card-reset
             class="rounded-lg px-3 py-1.5 text-sm font-bold text-white/70 hover:text-white"
             ?hidden=${!changed}
-            @click=${() => void this.save(this.initial)}
+            @click=${() => this.save(this.initial)}
           >
             ${translateText("my_card.reset")}
           </button>

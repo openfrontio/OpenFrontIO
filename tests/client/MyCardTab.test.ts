@@ -365,7 +365,7 @@ describe("<my-card-tab>", () => {
     el().addEventListener("card-saved", (e) => seen((e as CustomEvent).detail));
     tile("cardBackground:bg_pacific").click();
     await settle();
-    expect(seen).toHaveBeenCalledWith(stored);
+    expect(seen).toHaveBeenCalledWith({ publicId: "p1", loadout: stored });
     await openSlot("trackers");
     expect(tile("cardTracker:nukes_launched").dataset.state).toBe("owned");
     expect(tile("cardTracker:wins").dataset.state).toBe("equipped");
