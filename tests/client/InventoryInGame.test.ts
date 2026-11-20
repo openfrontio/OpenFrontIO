@@ -551,7 +551,7 @@ describe("Inventory In game tab", () => {
       ).toContain("inventory.loadout_on_device");
     });
 
-    it("choosing the active loadout again puts its saved look back", async () => {
+    it("choosing the active loadout again keeps the unsaved look", async () => {
       const settings = new UserSettings();
       settings.addLoadout(); // 01, active, nothing equipped
       await open("crowns");
@@ -565,8 +565,8 @@ describe("Inventory In game tab", () => {
         )!
         .onSelect("01");
       await settle(modal);
-      expect(new UserSettings().getSelectedCrownName()).toBeNull();
-      expect(modal.querySelector("[data-loadout-edited]")).toBeNull();
+      expect(new UserSettings().getSelectedCrownName()).toBe("gold_crown");
+      expect(modal.querySelector("[data-loadout-edited]")).not.toBeNull();
     });
 
     it("shows <name> · edited with Update when the look differs", async () => {

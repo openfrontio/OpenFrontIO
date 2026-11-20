@@ -561,8 +561,10 @@ export class InventoryModal extends BaseModal {
   }
 
   private applyLoadout(name: string) {
-    // Choosing a loadout applies it, the active one included: equipping
-    // doesn't save into it, so that puts its saved look back.
+    // Equipping doesn't save into the active loadout, so applying it again
+    // would throw away the unsaved ("edited") look. The native select never
+    // re-picks its chosen option; this keeps any later UI from doing so.
+    if (this.userSettings.getActiveLoadout() === name) return;
     if (!this.userSettings.applyLoadout(name)) return;
     this.showMessage(translateText("inventory.loadout_applied", { name }));
     this.updateFromSettings();
