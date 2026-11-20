@@ -533,9 +533,11 @@ export class StoreModal extends BaseModal {
     const keysOf = (groups: readonly Group[]) =>
       new Set(groups.flatMap((group) => group.map((item) => item.key)));
     const dealKeys = keysOf(deal ? [deal] : []);
-    const fresh = this.cosmeticsGroups("new").filter(
-      (group) => !group.some((item) => dealKeys.has(item.key)),
-    );
+    const fresh = this.cosmeticsGroups("new")
+      .filter((group) => !group.some((item) => dealKeys.has(item.key)))
+      .slice(0, FEATURED_ROW_LENGTH);
+    // Only what the New row shows: a new item on sale that doesn't fit there
+    // still shows under On sale.
     const newKeys = keysOf(fresh);
     const sale = onSale.filter(
       (group) =>
@@ -544,7 +546,7 @@ export class StoreModal extends BaseModal {
     );
     return {
       deal,
-      new: fresh.slice(0, FEATURED_ROW_LENGTH),
+      new: fresh,
       sale: sale.slice(0, FEATURED_ROW_LENGTH),
     };
   }
@@ -1595,6 +1597,10 @@ export class StoreModal extends BaseModal {
   private endDealRollover(): void {
     if (this.dealRollover === null) return;
     this.dealRollover = null;
+    // The ended deal is done with: a later sale ending (one the API still
+    // serves) must not start the placeholder again. The next render sets
+    // this to the deal it draws, if any.
+    this.shownFlashPromotionId = null;
     this.requestUpdate();
   }
 

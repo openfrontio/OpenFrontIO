@@ -2,9 +2,11 @@ import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
+import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
 import {
   fetchCosmetics,
   getCachedCosmetics,
+  purchaseCosmetic,
   refreshStaleCosmetics,
   resolveCosmetics,
   type ResolvedCosmetic,
@@ -123,7 +125,18 @@ describe("store Featured tab", () => {
     vi.mocked(refreshStaleCosmetics).mockReset();
     vi.mocked(refreshStaleCosmetics).mockReturnValue(false);
     vi.mocked(resolveCosmetics).mockReset();
-    vi.mocked(resolveCosmetics).mockImplementation(() => resolvedCatalog);
+    vi.mocked(resolveCosmetics).mockImplementation(
+      (_cosmetics, _userMe, affiliateCode) =>
+        affiliateCode
+          ? resolvedCatalog.filter(
+              (item) =>
+                (item.cosmetic as { affiliateCode?: string | null })
+                  .affiliateCode === affiliateCode,
+            )
+          : resolvedCatalog,
+    );
+    vi.mocked(purchaseCosmetic).mockReset();
+    vi.mocked(purchaseCosmetic).mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -178,6 +191,11 @@ describe("store Featured tab", () => {
         modal.remove();
       }
       const modal = await mountStore();
+      modal.open({ tab: "cosmetics", item: "pattern:fresh" });
+      expect(activeTab(modal)).toBe("cosmetics");
+      // The router's form of an item link.
+      modal.close();
+      modal.open();
       modal.open({ tab: "cosmetics", item: "pattern:fresh" });
       expect(activeTab(modal)).toBe("cosmetics");
     });
@@ -262,14 +280,17 @@ describe("store Featured tab", () => {
       expect(activeTab(modal)).toBe("featured");
       modal.close();
 
+      // Nothing to feature now. An affiliate link sets no tab of its own,
+      // so only the reset moves the store off the hidden Featured.
       resolvedCatalog = [skin("plain")];
-      // Targeted, with a tab the store does show: that tab.
-      modal.open({ tab: "subscriptions" });
-      expect(activeTab(modal)).toBe("subscriptions");
-      modal.setActiveTab("packs");
-      (internals(modal) as { activeTab: string }).activeTab = "featured";
-      modal.close();
+      internals(modal).cosmetics = catalog([]);
+      modal.open({ affiliateCode: "creator" });
+      expect(tabKeys(modal)).not.toContain("featured");
+      expect(activeTab(modal)).toBe("packs");
+
       // Targeted at an item: Cosmetics, never the hidden Featured.
+      modal.close();
+      (internals(modal) as { activeTab: string }).activeTab = "featured";
       modal.open({ item: "pattern:plain" });
       expect(activeTab(modal)).toBe("cosmetics");
     });
@@ -425,6 +446,27 @@ describe("store Featured tab", () => {
       expect(seeAll.getAttribute("aria-describedby")).toBe(
         row.querySelector("h3")!.id,
       );
+    });
+
+    it("lists a new item on sale that doesn't fit the New row under On sale", async () => {
+      const sale = regularPromotion(hour());
+      const oldest = skin("oldest", { ...discounted(sale), newUntil: days(2) });
+      resolvedCatalog = [
+        oldest,
+        ...["a", "b", "c", "d"].map((name, i) =>
+          skin(name, { newUntil: days(i + 3) }),
+        ),
+      ];
+      vi.mocked(fetchCosmetics).mockResolvedValue(catalog([sale]));
+      const modal = await mountStore();
+      modal.open();
+      await settle(modal);
+      expect(
+        cardKeys(modal.querySelector('[data-featured-section="new"]')!),
+      ).not.toContain(oldest.key);
+      expect(
+        cardKeys(modal.querySelector('[data-featured-section="sale"]')!),
+      ).toEqual([oldest.key]);
     });
 
     it("opens Cosmetics → New from New's See all", async () => {
@@ -635,7 +677,50 @@ describe("store Featured tab", () => {
     });
   });
 
+  describe("affiliate mode", () => {
+    it("shows no Featured tab and places cards as affiliate", async () => {
+      const mine = skin("mine", {
+        affiliateCode: "creator",
+        newUntil: days(3),
+      });
+      resolvedCatalog = [mine, skin("fresh", { newUntil: days(3) })];
+      const modal = await mountStore();
+      modal.open({ affiliateCode: "creator" });
+      await settle(modal);
+      expect(internals(modal).modalConfig().tabs).toBeUndefined();
+      expect(modal.querySelector("[data-featured-section]")).toBeNull();
+      const product = modal.querySelector("[data-store-product]")!;
+      expect(internals(modal).placementFor(product)).toEqual({
+        kind: "affiliate",
+      });
+    });
+  });
+
   describe("analytics placement", () => {
+    it("places a purchase from the Featured hero as featured/deal", async () => {
+      const flash = flashPromotion(hour());
+      const deal = skin("zap", discounted(flash));
+      resolvedCatalog = [deal, skin("fresh", { newUntil: days(3) })];
+      vi.mocked(fetchCosmetics).mockResolvedValue(catalog([flash]));
+      const modal = await mountStore();
+      modal.open();
+      await settle(modal);
+      const button = modal.querySelector<PurchaseButton>(
+        '[data-featured-section="deal"] [data-store-flash-buy] purchase-button',
+      )!;
+      button.requestCurrencyPurchase("hard");
+      await button.updateComplete;
+      button
+        .querySelector("confirm-dialog")!
+        .dispatchEvent(new CustomEvent("confirm"));
+      await vi.waitFor(() =>
+        expect(purchaseCosmetic).toHaveBeenCalledWith(deal, "hard", {
+          kind: "featured",
+          section: "deal",
+        }),
+      );
+    });
+
     it("places each section's cards as featured/<section>, and nothing outside them", async () => {
       const flash = flashPromotion(hour());
       const sale = regularPromotion(hour());
