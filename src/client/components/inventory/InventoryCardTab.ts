@@ -206,6 +206,14 @@ export class InventoryCardTab extends LitElement {
     this.showing = "changes";
   }
 
+  /** A Buy found the session signed out: the Inventory opens Account,
+   * asking about unsaved changes first. */
+  private signIn = (): void => {
+    this.dispatchEvent(
+      new CustomEvent("sign-in", { bubbles: true, composed: true }),
+    );
+  };
+
   /** The Store's Card tab, on `item` when given. */
   private openStore(item?: string): void {
     this.dispatchEvent(
@@ -741,9 +749,9 @@ export class InventoryCardTab extends LitElement {
       .itemName=${cardItemName(type, item)}
       .busyKey=${resolved.key}
       .preflight=${(method: "hard" | "soft") =>
-        checkCardPurchase(resolved, method)}
-      .onPurchaseHard=${() => buyCardItem(resolved, "hard")}
-      .onPurchaseSoft=${() => buyCardItem(resolved, "soft")}
+        checkCardPurchase(resolved, method, this.signIn)}
+      .onPurchaseHard=${() => buyCardItem(resolved, "hard", this.signIn)}
+      .onPurchaseSoft=${() => buyCardItem(resolved, "soft", this.signIn)}
     ></purchase-button>`;
   }
 

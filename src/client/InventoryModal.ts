@@ -1227,6 +1227,9 @@ export class InventoryModal extends BaseModal {
         @change-flag=${() => this.setActiveTab("flags")}
         @open-store=${(event: CustomEvent<{ item?: string }>) =>
           this.openStore(event.detail.item ?? "card")}
+        @top-up=${(event: CustomEvent<{ go: () => void }>) => this.topUp(event)}
+        @sign-in=${() =>
+          this.leaveThen(() => window.showPage?.("page-account"))}
       ></inventory-card-tab>`;
     }
     const category = (
@@ -1422,6 +1425,17 @@ export class InventoryModal extends BaseModal {
     });
   }
 
+  /** "Get Plutonium" from a card Buy's shortfall box leaves for the packs:
+   * like the Store links, ask about unsaved card changes first. */
+  private topUp(event: CustomEvent<{ go: () => void }>) {
+    event.preventDefault();
+    const { go } = event.detail;
+    this.leaveThen(() => {
+      this.close();
+      go();
+    });
+  }
+
   // ---- Unsaved card changes guard -----------------------------------------
 
   /** True when leaving the Player card tab would drop changes. */
@@ -1437,8 +1451,29 @@ export class InventoryModal extends BaseModal {
     if (!this.hasCardChanges()) return Promise.resolve(true);
     if (this.cardGuard !== null) return Promise.resolve(false);
     return new Promise((resolve) => {
-      this.cardGuard = { resolve, saving: false };
+      const saving = this.cardEditor.saveState === "saving";
+      this.cardGuard = { resolve, saving };
+      if (saving) void this.afterBarSave();
     });
+  }
+
+  /**
+   * Left while the bar's save is in flight: the guard shows Saving, with no
+   * Discard (the saved card is still the one being replaced), until it
+   * lands. Then it goes when nothing is left to save, and otherwise asks
+   * about what's left (an edit made meanwhile, or the changes of a save
+   * that failed).
+   */
+  private async afterBarSave(): Promise<void> {
+    await this.cardEditor.whenSaved();
+    const guard = this.cardGuard;
+    if (guard === null) return;
+    if (this.cardEditor.changeCount() === 0) {
+      this.cardGuard = null;
+      guard.resolve(true);
+      return;
+    }
+    this.cardGuard = { ...guard, saving: false };
   }
 
   /** Runs `go` now when nothing would be lost (so tab switches and links
