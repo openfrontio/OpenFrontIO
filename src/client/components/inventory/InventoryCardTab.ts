@@ -169,7 +169,8 @@ export class InventoryCardTab extends LitElement {
             .filter((s): s is string => s !== null)
             .map((stat) => ({
               stat: stat as never,
-              value: values.get(stat) ?? 0,
+              // Unknown (not on the saved card): "—", as on its tile.
+              value: values.get(stat) ?? Number.NaN,
             })),
         },
       },

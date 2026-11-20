@@ -267,6 +267,24 @@ describe("<inventory-card-tab> owner layout and picker", () => {
     expect(row(2).textContent).toContain("inventory_card.was:");
   });
 
+  it("a stat the server has no value for reads — on the tile and on the card", async () => {
+    await render(userMe(OWNER));
+    await click(row(2).querySelector("[data-card-row-open]"));
+    expect(
+      pick("cardTracker:games_played").querySelector("[data-tile-main]")!
+        .textContent,
+    ).toContain("—");
+    await pickTile("cardTracker:games_played");
+    const card = q("[data-card-preview] player-card")!;
+    await (card as unknown as { updateComplete: Promise<unknown> })
+      .updateComplete;
+    const values = [...card.querySelectorAll("[data-card-tracker]")].map(
+      (t) => t.textContent ?? "",
+    );
+    expect(values.some((v) => v.includes("—"))).toBe(true);
+    expect(values.some((v) => /0/.test(v))).toBe(false);
+  });
+
   it("the Saved / With changes switch shows the right card", async () => {
     await render(userMe([...OWNER, "cardBackground:bg_storm"]));
     await click(q("[data-card-slot='background']"));
