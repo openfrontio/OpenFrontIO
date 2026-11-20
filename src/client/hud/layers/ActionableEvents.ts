@@ -9,6 +9,7 @@ import {
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
 import { Controller } from "../../Controller";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { GoToPlayerEvent } from "../../TransformHandler";
@@ -22,6 +23,7 @@ import { getMessageTypeClasses, translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
 
 interface ActionableEvent {
+  id: number;
   description: string;
   type: MessageType;
   createdAt: number;
@@ -46,6 +48,7 @@ export class ActionableEvents extends LitElement implements Controller {
 
   private active = false;
   private events: ActionableEvent[] = [];
+  private nextEventId = 0;
   // allianceID -> last checked at tick
   private alliancesCheckedAt = new Map<number, Tick>();
   @state() private _isVisible = false;
@@ -67,8 +70,8 @@ export class ActionableEvents extends LitElement implements Controller {
     return this;
   }
 
-  private addEvent(event: ActionableEvent) {
-    this.events = [...this.events, event];
+  private addEvent(event: Omit<ActionableEvent, "id">) {
+    this.events = [...this.events, { ...event, id: this.nextEventId++ }];
     this.requestUpdate();
   }
 
@@ -320,9 +323,12 @@ export class ActionableEvents extends LitElement implements Controller {
       <div
         class="flex flex-col gap-2 w-full min-[1200px]:w-96 pointer-events-auto mt-2"
       >
-        ${sorted.map(
+        ${repeat(
+          sorted,
+          (event) => event.id,
           (event) => html`
             <div
+              data-event-card
               class="hud-panel rounded-lg sm:max-lg:landscape:rounded-l-none border-l-4 border-yellow-400 p-3 lg:p-4 text-white"
             >
               <button
