@@ -27,6 +27,7 @@ import { GameView, PlayerView } from "../../view";
 import { ticksToSeconds } from "../GameTicks";
 import { keepPressKeysFromGame, pressWithoutFocus } from "../HudKeys";
 import { timeLeftLine } from "../TimeLeftLine";
+import { TINT } from "../Tint";
 
 type CardAction = "focus" | "accept" | "reject" | "renew" | "ignore";
 
@@ -44,7 +45,8 @@ const OPENING = "animate-card-open motion-reduce:animate-none";
 // Positioned and clipped for the time-left line on its bottom edge.
 const CARD =
   "hud-panel relative overflow-hidden rounded-lg sm:max-lg:landscape:rounded-l-none mt-1 p-2 text-white animate-card-rise motion-reduce:animate-none";
-const HEAD = "grid grid-cols-[1.25rem_minmax(0,1fr)_auto] gap-x-2";
+// Positioned, so the content draws over a renewal's tint.
+const HEAD = "relative grid grid-cols-[1.25rem_minmax(0,1fr)_auto] gap-x-2";
 const ICON_SIZE = 16;
 // One text line tall, so a wrapped sentence keeps the icon on its first line.
 const MARK =
@@ -63,7 +65,7 @@ const SECONDS =
 // Once answered, the other buttons close up (inert) and the gap with them,
 // so the chosen one takes the row.
 const ACTIONS =
-  "mt-2 flex flex-wrap transition-[gap] duration-260 ease-in-out motion-reduce:transition-none";
+  "relative mt-2 flex flex-wrap transition-[gap] duration-260 ease-in-out motion-reduce:transition-none";
 const BUTTON = `inline-flex h-8 lg:h-9 max-w-full items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-md px-2.5 text-xs min-[1200px]:text-sm font-semibold cursor-pointer disabled:cursor-default transition-[color,background-color,flex-grow,max-width,padding,opacity] duration-260 ease-in-out motion-reduce:transition-none inert:max-w-0 inert:grow-0 inert:px-0 inert:opacity-0 ${FOCUS_RING}`;
 const QUIET = "bg-white/6 pointer-fine:hover:bg-white/10 active:bg-white/15";
 // Hover darkens: the lighter shades hold white text under 4.5:1.
@@ -71,6 +73,13 @@ const YES = "flex-1 bg-green-700 pointer-fine:hover:bg-green-800";
 const NO = "flex-1 bg-red-600 pointer-fine:hover:bg-red-700";
 // The chosen button's icon pops once.
 const POP = "animate-card-answer-pop motion-reduce:animate-none";
+// An alliance about to end is the more urgent card: it carries the tint of
+// the feed's warning rows, and an hourglass where a request has a handshake.
+// Renew settles it, so the tint fades and the card shows the green of the
+// answer alone, as an accepted request does. Ignore leaves it: the alliance
+// still ends.
+const RENEWAL_TINT =
+  "text-yellow-400 transition-opacity duration-200 motion-reduce:transition-none in-data-[answered=renew]:opacity-0";
 // The card's edge, over the panel's own hairline: a child, since the panel
 // keeps its own shadow. It takes the answer's colour.
 const EDGE =
@@ -509,6 +518,7 @@ export class ActionableEvents extends LitElement implements Controller {
             const time = this.timeLeft(event);
             const answered = event.answered;
             const answer = answered && CARD_BUTTON[answered].answer;
+            const renewal = event.type === MessageType.RENEW_ALLIANCE;
             return html`
               <div
                 class="${SPACE} ${answer ? answer.fold : OPENING}"
@@ -521,15 +531,19 @@ export class ActionableEvents extends LitElement implements Controller {
                   <div
                     data-event-card
                     data-answered=${ifDefined(answered)}
-                    data-card-kind=${
-                      event.type === MessageType.RENEW_ALLIANCE
-                        ? "renewal"
-                        : "request"
-                    }
+                    data-card-kind=${renewal ? "renewal" : "request"}
                     role="group"
                     aria-label=${event.description}
                     class=${CARD}
                   >
+                    ${
+                      renewal
+                        ? html`<span
+                            data-tint
+                            class="${TINT} ${RENEWAL_TINT}"
+                          ></span>`
+                        : ""
+                    }
                     <span
                       aria-hidden="true"
                       class="${EDGE} ${answer ? answer.edge : "ring-transparent"}"
@@ -538,7 +552,10 @@ export class ActionableEvents extends LitElement implements Controller {
                       <span
                         class="${MARK} ${answer ? answer.mark : "text-yellow-400"}"
                       >
-                        <of-icon name="alliance" size=${ICON_SIZE}></of-icon>
+                        <of-icon
+                          name=${renewal ? "hourglass" : "alliance"}
+                          size=${ICON_SIZE}
+                        ></of-icon>
                       </span>
                       <button
                         class="${TITLE} ${answer?.title ?? ""}"
