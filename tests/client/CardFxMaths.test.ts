@@ -6,6 +6,7 @@ import {
   flickerSchedule,
   pulseOpacity,
   SHIMMER_BAND_WIDTH,
+  SHIMMER_MAX_ANGLE,
   shimmerBand,
   shimmerBandX,
 } from "../../src/client/components/card/CardFx";
@@ -77,6 +78,33 @@ describe("shimmerBand (rotated)", () => {
   it("is long enough to span the card's diagonal", () => {
     const { lengthW, lengthH } = at(1);
     expect(lengthW * W + lengthH * H).toBeGreaterThanOrEqual(Math.hypot(W, H));
+  });
+
+  // The band is centred on the card's middle row and rotated about its own
+  // centre, so an end's nearest corner is (L/2)·cos a − (b/2)·sin a from that
+  // row. Above H/2 the end is off the card wherever the band is across.
+  it.each([0, 20, 45, 60, 80, 90, -80])(
+    "keeps both ends off the card for the whole sweep at %i°",
+    (angle) => {
+      for (const aspect of [2.6, 2.9, 4, 6.3, 7]) {
+        const b = shimmerBand(0, { ...layer, angle });
+        const a = (Math.abs(b.angle) * Math.PI) / 180;
+        const length = b.lengthW * aspect + b.lengthH * 1;
+        const band = SHIMMER_BAND_WIDTH * aspect;
+        const nearestCorner =
+          (length / 2) * Math.cos(a) - (band / 2) * Math.sin(a);
+        expect(nearestCorner, `aspect ${aspect}`).toBeGreaterThanOrEqual(0.5);
+      }
+    },
+  );
+
+  it("draws angles past the limit at the limit", () => {
+    expect(shimmerBand(0, { ...layer, angle: 90 }).angle).toBe(
+      SHIMMER_MAX_ANGLE,
+    );
+    expect(shimmerBand(0, { ...layer, angle: -90 }).angle).toBe(
+      -SHIMMER_MAX_ANGLE,
+    );
   });
 
   it("matches the spec's travel when upright", () => {

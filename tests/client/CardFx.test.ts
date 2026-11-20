@@ -5,6 +5,7 @@ import { CardBackground } from "../../src/client/components/card/CardBackground"
 import {
   cardFxStopped,
   resetCardFxSession,
+  shimmerBand,
 } from "../../src/client/components/card/CardFx";
 import type { PlayerCardView } from "../../src/client/components/card/PlayerCardModel";
 
@@ -287,6 +288,27 @@ describe("<card-background> effect layers", () => {
     frame(500);
     const band = layer.querySelector<HTMLElement>("[data-card-fx-move]")!;
     expect(band.style.transform).toContain("rotate(30deg)");
+  });
+
+  it("shimmer: a steep band is as long as shimmerBand says", async () => {
+    const steep = {
+      src: "/fx-shimmer.png",
+      effect: "shimmer" as const,
+      angle: 80,
+    };
+    const el = await mount({
+      ...SHIMMER,
+      animation: { kind: "layers", layers: [steep] },
+    });
+    loadBase(el);
+    await el.updateComplete;
+    const band = el.querySelector<HTMLElement>("[data-card-fx-move]")!;
+    const { lengthW, lengthH } = shimmerBand(0, steep);
+    const length = `${(lengthW * 100).toFixed(2)}cqw + ${(lengthH * 100).toFixed(2)}cqh`;
+    expect(band.getAttribute("style")).toContain(`height:calc(${length})`);
+    expect(band.getAttribute("style")).toContain(
+      `top:calc(50cqh - (${length}) / 2)`,
+    );
   });
 
   it("stops for the session after 2 s of slow frames", async () => {
