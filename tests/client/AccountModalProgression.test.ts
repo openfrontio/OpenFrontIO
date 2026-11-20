@@ -420,13 +420,16 @@ describe("AccountModal — Progression tab", () => {
   });
 
   it("a save still in flight when My Card is left reaches the next tab", async () => {
+    // Equip X, go to Account and back before the PUT answers: the tab made
+    // on the way back opened on the old card, and must take X once it lands,
+    // or its next save (a whole loadout) would put the old card back.
     const item = { product: null, rarity: "epic" };
     vi.mocked(fetchCosmetics).mockResolvedValue({
       patterns: {},
       flags: {},
       playerCards: {},
       cardBackgrounds: { bg_x: { ...item, name: "bg_x", url: "/bg/x.webp" } },
-      cardTrackers: {},
+      cardTrackers: { wins: { ...item, name: "wins", stat: "wins" } },
       cardTitles: {},
       taunts: {},
     } as unknown as Cosmetics);
@@ -434,19 +437,27 @@ describe("AccountModal — Progression tab", () => {
       ...me,
       player: {
         ...me.player,
-        flares: ["playerCard:standard", "cardBackground:bg_x"],
+        flares: [
+          "playerCard:standard",
+          "cardBackground:bg_x",
+          "cardTracker:wins",
+        ],
         card: { trackers: [] },
       },
     } as unknown as UserMeResponse;
+    // The first PUT waits for answer(); later ones answer at once.
     let answer: (() => void) | null = null;
+    const puts: Record<string, unknown>[] = [];
     const realFetch = globalThis.fetch;
-    globalThis.fetch = vi.fn(
-      (_url: unknown, init?: RequestInit) =>
-        new Promise<Response>((resolve) => {
-          answer = () =>
-            resolve(new Response(String(init?.body), { status: 200 }));
-        }),
-    ) as typeof fetch;
+    globalThis.fetch = vi.fn((_url: unknown, init?: RequestInit) => {
+      const body = String(init?.body);
+      puts.push(JSON.parse(body));
+      const response = () => new Response(body, { status: 200 });
+      if (puts.length > 1) return Promise.resolve(response());
+      return new Promise<Response>((resolve) => {
+        answer = () => resolve(response());
+      });
+    }) as typeof fetch;
     try {
       const myCard = () => modal.querySelector("my-card-tab");
       const tabButton = (label: string) =>
@@ -455,20 +466,31 @@ describe("AccountModal — Progression tab", () => {
             modal.querySelector("o-modal") as ModalShell
           ).shadowRoot?.querySelectorAll("button") ?? []),
         ].find((b) => b.textContent?.trim() === label) as HTMLButtonElement;
-      const tile = () =>
+      const tile = (key: string) =>
         myCard()?.querySelector<HTMLButtonElement>(
-          "[data-card-item='cardBackground:bg_x']",
+          `[data-card-item='${key}']`,
         ) ?? null;
       modal.open({ tab: "card" });
-      await settle(() => expect(tile()).not.toBeNull());
-      tile()!.click();
+      await settle(() => expect(tile("cardBackground:bg_x")).not.toBeNull());
+      const first = myCard();
+      tile("cardBackground:bg_x")!.click();
       await settle(() => expect(answer).not.toBeNull());
       tabButton("account_modal.tab_account").click();
       await settle(() => expect(myCard()).toBeNull());
-      answer!();
-      await new Promise((r) => setTimeout(r, 0));
       tabButton("account_modal.tab_my_card").click();
-      await settle(() => expect(tile()?.dataset.state).toBe("equipped"));
+      await settle(() => expect(tile("cardBackground:bg_x")).not.toBeNull());
+      expect(myCard()).not.toBe(first);
+      answer!();
+      await settle(() =>
+        expect(tile("cardBackground:bg_x")?.dataset.state).toBe("equipped"),
+      );
+      myCard()!
+        .querySelector<HTMLButtonElement>("[data-my-card-slot='trackers']")!
+        .click();
+      await settle(() => expect(tile("cardTracker:wins")).not.toBeNull());
+      tile("cardTracker:wins")!.click();
+      await settle(() => expect(puts).toHaveLength(2));
+      expect(puts[1]).toMatchObject({ background: "bg_x", trackers: ["wins"] });
     } finally {
       globalThis.fetch = realFetch;
       vi.mocked(fetchCosmetics).mockResolvedValue(null);
