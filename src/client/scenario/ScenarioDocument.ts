@@ -21,12 +21,11 @@ import { z } from "zod";
 /** The version of the stored form. A change to it gets a new one. */
 export const SCENARIO_FORMAT = 1;
 
-// The map generator recommends 2M-3M tiles, and at most 3M land tiles. Its
-// lower bound is for stock maps; a scenario can be small. So the area is
-// capped at 3M tiles and each side is at least 100, which leaves room for a
-// few nations and a 16x map at least 25 tiles wide.
+// Each side is at least 100, which leaves room for a few nations and a 16x
+// map at least 25 tiles wide, and at most 5000, so a map is at most 25M
+// tiles: about three times the largest stock maps in play.
 export const MIN_SIDE = 100;
-export const MAX_AREA = 3_000_000;
+export const MAX_SIDE = 5000;
 
 /** Whether a scenario's map can be this size. */
 export function isScenarioSize(width: number, height: number): boolean {
@@ -37,7 +36,8 @@ export function isScenarioSize(width: number, height: number): boolean {
     height >= MIN_SIDE &&
     width % 4 === 0 &&
     height % 4 === 0 &&
-    width * height <= MAX_AREA
+    width <= MAX_SIDE &&
+    height <= MAX_SIDE
   );
 }
 
@@ -127,7 +127,7 @@ export interface ScenarioDocument {
   config: ScenarioConfig;
 }
 
-const Side = z.int().min(MIN_SIDE).multipleOf(4);
+const Side = z.int().min(MIN_SIDE).max(MAX_SIDE).multipleOf(4);
 
 /**
  * The stored form. Terrain is base64. Ownership is run-length encoded as
@@ -168,9 +168,6 @@ export type StoredScenarioDocument = z.input<typeof ScenarioDocumentSchema>;
 function decode(stored: StoredScenarioDocument): ScenarioDocument {
   const { width, height } = stored.terrain;
   const size = width * height;
-  if (size > MAX_AREA) {
-    throw new Error(`${width}x${height} is over ${MAX_AREA} tiles`);
-  }
   const terrain = base64ToBytes(stored.terrain.tiles);
   if (terrain.length !== size) {
     throw new Error(`${terrain.length} terrain bytes for ${size} tiles`);

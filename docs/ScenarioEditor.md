@@ -286,13 +286,13 @@ transparent for water), and send the result as one terrain edit. The
 generator's optional removal of tiny islands and lakes is a later tool, not
 part of import.
 
-Limits: width and height are multiples of 4, each at least 100, and the
-area is at most 3,000,000 tiles. The generator recommends 2-3 million tiles
-for a stock map. Its upper bound holds for scenarios: the engine, renderer
-and snapshot all scale with area. Its lower bound does not, as a scenario
-may be a small duel. A side of 100 still gives a 16x map 25 tiles across.
-About half the stock maps are over 3 million tiles, so they cannot be a
-scenario's starting map.
+Limits: width and height are multiples of 4, each from 100 to 5000, so a
+map is at most 25 million tiles. The engine, renderer and snapshot all
+scale with area, and the largest stock maps in play are 8-11 million
+tiles. The generator's lower bound of 2 million tiles does not hold, as a
+scenario may be a small duel. A side of 100 still gives a 16x map 25 tiles
+across. Stock maps with a side over 5000 cannot be a scenario's starting
+map.
 
 ## Engine changes
 
@@ -508,7 +508,7 @@ input review before scenarios are shareable.
 2. **Editor core**: document model, tools, PNG import, test play. Until the
    API exists, the draft is kept in browser storage: IndexedDB, as the
    stored form the API will take (`ScenarioDrafts`). localStorage is too
-   small, as a 3M-tile document is about 4 MB of base64.
+   small, as a 25M-tile document is about 33 MB of base64.
 3. **Scenario start**: bundle loading, scenario block in the
    start info, singleplayer play.
 4. **API**: storage, entitlement, publish, list. Then the editor's save and

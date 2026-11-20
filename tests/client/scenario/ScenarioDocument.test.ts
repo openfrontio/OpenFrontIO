@@ -10,7 +10,6 @@ import {
   IMPASSABLE,
   isScenarioSize,
   land,
-  MAX_AREA,
   newScenarioDocument,
   SCENARIO_FORMAT,
   ScenarioDocumentSchema,
@@ -143,14 +142,9 @@ describe("ScenarioDocumentSchema", () => {
     rejects((s) => (s.terrain.height = 96), />=100/);
   });
 
-  test("rejects a map over the area limit", () => {
-    rejects(
-      (s) => {
-        s.terrain.width = 2000;
-        s.terrain.height = 1504;
-      },
-      new RegExp(`over ${MAX_AREA} tiles`),
-    );
+  test("rejects a side over 5000", () => {
+    rejects((s) => (s.terrain.width = 5004), /<=5000/);
+    rejects((s) => (s.terrain.height = 5004), /<=5000/);
   });
 
   test("rejects the wrong number of terrain bytes", () => {
@@ -238,8 +232,9 @@ describe("ownership run-length encoding", () => {
 
 test("isScenarioSize takes what the schema takes", () => {
   expect(isScenarioSize(100, 100)).toBe(true);
-  expect(isScenarioSize(2000, 1500)).toBe(true);
-  expect(isScenarioSize(2000, 1504)).toBe(false);
+  expect(isScenarioSize(5000, 5000)).toBe(true);
+  expect(isScenarioSize(5004, 100)).toBe(false);
+  expect(isScenarioSize(100, 5004)).toBe(false);
   expect(isScenarioSize(102, 100)).toBe(false);
   expect(isScenarioSize(100, 96)).toBe(false);
   expect(isScenarioSize(100.5, 100)).toBe(false);
