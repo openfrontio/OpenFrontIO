@@ -15,6 +15,7 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
+import { repeat } from "lit/directives/repeat.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import { Controller } from "../../Controller";
 import { SendAllianceRequestIntentEvent } from "../../Transport";
@@ -30,6 +31,8 @@ import { UIState } from "../../UIState";
 import { getMessageTypeClasses, translateText } from "../../Utils";
 
 interface GameEvent {
+  /** Keys the event's row, so the row stays its own as others come and go. */
+  id: number;
   description: string;
   unsafeDescription?: boolean;
   type: MessageType;
@@ -96,6 +99,7 @@ export class EventsDisplay extends LitElement implements Controller {
 
   private active: boolean = false;
   private events: GameEvent[] = [];
+  private nextEventID = 0;
   private userSettings = new UserSettings();
 
   @state() private _isVisible: boolean = false;
@@ -307,8 +311,8 @@ export class EventsDisplay extends LitElement implements Controller {
     this.requestUpdate();
   }
 
-  private addEvent(event: GameEvent) {
-    this.events = [...this.events, event];
+  private addEvent(event: Omit<GameEvent, "id">) {
+    this.events = [...this.events, { ...event, id: this.nextEventID++ }];
     this.requestUpdate();
   }
 
@@ -800,7 +804,7 @@ export class EventsDisplay extends LitElement implements Controller {
 
   private renderEventRow(event: GameEvent) {
     return html`
-      <tr>
+      <tr data-event-row>
         <td
           class="lg:px-2 lg:py-1 p-1 text-left ${getMessageTypeClasses(
             event.type,
@@ -874,7 +878,11 @@ export class EventsDisplay extends LitElement implements Controller {
                     class="w-full border-collapse text-white text-xs lg:text-sm pointer-events-auto"
                   >
                     <tbody>
-                      ${tier2Events.map((event) => this.renderEventRow(event))}
+                      ${repeat(
+                        tier2Events,
+                        (event) => event.id,
+                        (event) => this.renderEventRow(event),
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -891,7 +899,11 @@ export class EventsDisplay extends LitElement implements Controller {
                     class="w-full border-collapse text-white text-base lg:text-lg font-medium pointer-events-auto"
                   >
                     <tbody>
-                      ${tier1Events.map((event) => this.renderEventRow(event))}
+                      ${repeat(
+                        tier1Events,
+                        (event) => event.id,
+                        (event) => this.renderEventRow(event),
+                      )}
                       ${
                         showBetrayalTimer
                           ? html`
