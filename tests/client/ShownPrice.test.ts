@@ -98,15 +98,18 @@ describe("shownPrice", () => {
     expect(currentPrice({ listPriceHard: 400, promotion: ended }, "hard")).toBe(
       400,
     );
-    expect(shownPrice({ listPriceHard: 400, promotion: ended }, "hard")).toEqual(
-      { price: 400, listPrice: null, saleLabel: null },
-    );
+    expect(
+      shownPrice({ listPriceHard: 400, promotion: ended }, "hard"),
+    ).toEqual({ price: 400, listPrice: null, saleLabel: null });
     // While the sale runs, no price in that currency means not for sale.
     expect(
       shownPrice(
         {
           listPriceHard: 400,
-          promotion: { ...ended, endsAt: new Date(Date.now() + 60_000).toISOString() },
+          promotion: {
+            ...ended,
+            endsAt: new Date(Date.now() + 60_000).toISOString(),
+          },
         },
         "hard",
       ),
