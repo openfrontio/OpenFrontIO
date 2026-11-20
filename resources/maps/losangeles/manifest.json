@@ -2,12 +2,8 @@
   "categories": ["north_america"],
   "custom_tribes": [
     {
-      "coordinates": [1734, 682],
-      "name": "El Monte"
-    },
-    {
-      "coordinates": [1485, 646],
-      "name": "Alhambra"
+      "coordinates": [1976, 526],
+      "name": "Azusa"
     },
     {
       "coordinates": [1487, 721],
@@ -20,10 +16,6 @@
     {
       "coordinates": [1881, 1270],
       "name": "Garden Grove"
-    },
-    {
-      "coordinates": [1669, 1112],
-      "name": "Cerritos"
     },
     {
       "coordinates": [1690, 1190],
@@ -66,10 +58,6 @@
       "name": "Rosemead"
     },
     {
-      "coordinates": [1898, 668],
-      "name": "West Covina"
-    },
-    {
       "coordinates": [1567, 787],
       "name": "Montebello"
     },
@@ -103,7 +91,7 @@
     },
     {
       "coordinates": [1281, 736],
-      "name": "DTLA"
+      "name": "Skid Row"
     },
     {
       "coordinates": [1281, 834],
@@ -174,10 +162,6 @@
       "name": "El Segundo"
     },
     {
-      "coordinates": [992, 1126],
-      "name": "Redondo Beach"
-    },
-    {
       "coordinates": [954, 1005],
       "name": "Manhattan Beach"
     },
@@ -196,6 +180,10 @@
     {
       "coordinates": [945, 783],
       "name": "Culver City"
+    },
+    {
+      "coordinates": [2043, 903],
+      "name": "Diamond Bar"
     },
     {
       "coordinates": [1029, 830],
@@ -292,10 +280,6 @@
     {
       "coordinates": [869, 362],
       "name": "Panorama City"
-    },
-    {
-      "coordinates": [481, 566],
-      "name": "Calabasas"
     },
     {
       "coordinates": [567, 627],
@@ -522,20 +506,8 @@
       "name": "Charter Oak"
     },
     {
-      "coordinates": [2002, 559],
-      "name": "Glendora"
-    },
-    {
-      "coordinates": [2046, 725],
-      "name": "Pomona"
-    },
-    {
       "coordinates": [2049, 1193],
       "name": "Villa Park"
-    },
-    {
-      "coordinates": [1958, 1563],
-      "name": "Newport Beach"
     },
     {
       "coordinates": [1179, 957],
@@ -588,19 +560,19 @@
   ],
   "id": "LosAngeles",
   "map": {
-    "height": 2268,
-    "num_land_tiles": 2310584,
-    "width": 2052
+    "height": 2276,
+    "num_land_tiles": 2474264,
+    "width": 2152
   },
   "map16x": {
-    "height": 567,
-    "num_land_tiles": 137549,
-    "width": 513
+    "height": 569,
+    "num_land_tiles": 147312,
+    "width": 538
   },
   "map4x": {
-    "height": 1134,
-    "num_land_tiles": 568000,
-    "width": 1026
+    "height": 1138,
+    "num_land_tiles": 608284,
+    "width": 1076
   },
   "name": "Los Angeles",
   "nations": [
@@ -615,7 +587,7 @@
       "name": "Glendale"
     },
     {
-      "coordinates": [1511, 584],
+      "coordinates": [1515, 473],
       "flag": "California",
       "name": "Pasadena"
     },
@@ -625,27 +597,27 @@
       "name": "Anaheim"
     },
     {
-      "coordinates": [2009, 858],
+      "coordinates": [2020, 792],
       "flag": "California",
       "name": "Walnut"
     },
     {
-      "coordinates": [2002, 1364],
+      "coordinates": [1982, 1348],
       "flag": "California",
       "name": "Santa Ana"
     },
     {
-      "coordinates": [1762, 1473],
+      "coordinates": [1738, 1454],
       "flag": "California",
       "name": "Huntington Beach"
     },
     {
-      "coordinates": [1382, 1270],
+      "coordinates": [1392, 1254],
       "flag": "California",
       "name": "Long Beach"
     },
     {
-      "coordinates": [1031, 1146],
+      "coordinates": [1098, 1112],
       "flag": "California",
       "name": "Torrance"
     },
@@ -662,7 +634,7 @@
     {
       "coordinates": [1950, 675],
       "flag": "California",
-      "name": "Covina"
+      "name": "West Covina"
     },
     {
       "coordinates": [1491, 959],
@@ -680,14 +652,9 @@
       "name": "Hollywood"
     },
     {
-      "coordinates": [2043, 903],
-      "flag": "California",
-      "name": "Diamond Bar"
-    },
-    {
       "coordinates": [1284, 748],
       "flag": "California",
-      "name": "Skid Row"
+      "name": "Downtown Los Angeles"
     },
     {
       "coordinates": [1079, 887],
@@ -725,7 +692,7 @@
       "name": "Bardsdale"
     },
     {
-      "coordinates": [750, 2100],
+      "coordinates": [952, 2073],
       "flag": "California",
       "name": "Santa Catalina"
     },
@@ -735,17 +702,12 @@
       "name": "Hidden Springs"
     },
     {
-      "coordinates": [1580, 40],
-      "flag": "California",
-      "name": "Palmdale"
-    },
-    {
-      "coordinates": [449, 506],
+      "coordinates": [712, 536],
       "flag": "California",
       "name": "Encino"
     },
     {
-      "coordinates": [1722, 593],
+      "coordinates": [1720, 481],
       "flag": "California",
       "name": "Arcadia"
     },
@@ -755,7 +717,7 @@
       "name": "Buena Park"
     },
     {
-      "coordinates": [1918, 1473],
+      "coordinates": [1877, 1455],
       "flag": "California",
       "name": "Costa Mesa"
     },
@@ -780,24 +742,64 @@
       "name": "San Pedro"
     },
     {
-      "coordinates": [1975, 514],
-      "flag": "California",
-      "name": "Azusa"
-    },
-    {
-      "coordinates": [1608, 1306],
-      "flag": "California",
-      "name": "Seal Beach"
-    },
-    {
       "coordinates": [231, 303],
       "flag": "California",
       "name": "Simi Valley"
     },
     {
+      "coordinates": [1669, 1112],
+      "flag": "California",
+      "name": "Cerritos"
+    },
+    {
       "coordinates": [490, 214],
       "flag": "California",
       "name": "Chatsworth"
+    },
+    {
+      "coordinates": [663, 343],
+      "flag": "California",
+      "name": "Northridge"
+    },
+    {
+      "coordinates": [2141, 716],
+      "flag": "California",
+      "name": "Pomona"
+    },
+    {
+      "coordinates": [2133, 1454],
+      "flag": "California",
+      "name": "Irvine"
+    },
+    {
+      "coordinates": [2039, 1603],
+      "flag": "California",
+      "name": "Newport Beach"
+    },
+    {
+      "coordinates": [1718, 683],
+      "flag": "California",
+      "name": "El Monte"
+    },
+    {
+      "coordinates": [447, 559],
+      "flag": "California",
+      "name": "Calabasas"
+    },
+    {
+      "coordinates": [1485, 670],
+      "flag": "California",
+      "name": "Alhambra"
+    },
+    {
+      "coordinates": [2040, 506],
+      "flag": "California",
+      "name": "Glendora"
+    },
+    {
+      "coordinates": [1000, 1189],
+      "flag": "California",
+      "name": "Redondo Beach"
     }
   ],
   "themes": ["north_america"],

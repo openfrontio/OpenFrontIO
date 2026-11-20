@@ -49,10 +49,12 @@ export interface Versioned {
   d: unknown;
 }
 
-export const VersionedSchema = z.object({
-  v: z.number().int(),
-  d: z.unknown(),
-});
+export const VersionedSchema = z.compile(
+  z.object({
+    v: z.number().int(),
+    d: z.unknown(),
+  }),
+);
 
 export class SnapshotError extends Error {
   override readonly name = "SnapshotError";

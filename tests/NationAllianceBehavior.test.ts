@@ -179,6 +179,7 @@ describe("AllianceBehavior.handleAllianceExtensionRequests", () => {
     game.executeNextTick();
     game.addExecution(new AllianceRequestExecution(ally, nation.id()));
     game.executeNextTick();
+    vi.spyOn(game, "ticks").mockReturnValue(2800);
     game.addExecution(new AllianceExtensionExecution(ally, nation.id()));
     game.executeNextTick();
     const alliance = nation.allianceWith(ally)!;

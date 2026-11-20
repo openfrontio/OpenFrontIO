@@ -89,4 +89,80 @@ describe("LangSelector language loading", () => {
     // The array value is dropped, not flattened.
     expect(warn).toHaveBeenCalledWith("Unknown type", "object", [1, 2]);
   });
+
+  it("populates defaultTranslations synchronously before async locale fetch resolves", async () => {
+    let resolveFetch!: (value: unknown) => void;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise((resolve) => {
+            resolveFetch = resolve;
+          }),
+      ),
+    );
+    localStorage.setItem("lang", "fr");
+    const selector = new LangSelector();
+    const initPromise = (
+      selector as unknown as { initializeLanguage(): Promise<void> }
+    ).initializeLanguage();
+
+    // Before the network fetch for fr.json resolves, English fallback is already live
+    // and currentLang remains "en" until the target locale finishes loading.
+    expect(selector.currentLang).toBe("en");
+    expect(
+      selector.translateText("store.sale_percent_off", { percent: 25 }),
+    ).toBe("-25%");
+
+    resolveFetch({
+      ok: true,
+      json: async () => ({ store: { sale_percent_off: "-{percent}% FR" } }),
+    });
+    await initPromise;
+    localStorage.removeItem("lang");
+
+    expect(selector.currentLang).toBe("fr");
+    expect(
+      selector.translateText("store.sale_percent_off", { percent: 25 }),
+    ).toBe("-25% FR");
+  });
+
+  it("ignores stale initializeLanguage results if changeLanguage runs first", async () => {
+    let resolveInitFetch!: (value: unknown) => void;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("fr.json")) {
+          return new Promise((resolve) => {
+            resolveInitFetch = resolve;
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ store: { sale_percent_off: "-{percent}% ES" } }),
+        });
+      }),
+    );
+    localStorage.setItem("lang", "fr");
+    const selector = new LangSelector();
+    const initPromise = (
+      selector as unknown as { initializeLanguage(): Promise<void> }
+    ).initializeLanguage();
+
+    await (
+      selector as unknown as { changeLanguage(lang: string): Promise<void> }
+    ).changeLanguage("es");
+
+    resolveInitFetch({
+      ok: true,
+      json: async () => ({ store: { sale_percent_off: "-{percent}% FR" } }),
+    });
+    await initPromise;
+    localStorage.removeItem("lang");
+
+    expect(selector.currentLang).toBe("es");
+    expect(
+      selector.translateText("store.sale_percent_off", { percent: 25 }),
+    ).toBe("-25% ES");
+  });
 });

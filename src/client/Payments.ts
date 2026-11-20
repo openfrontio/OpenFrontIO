@@ -7,12 +7,17 @@ import {
   createPaymentsCheckout,
   finalizeGooglePurchase,
   finalizeSteamOrder,
+  type FinalizeGooglePurchaseResult,
   getUserMe,
   invalidateUserMe,
   type PaymentsCheckoutRequest,
   type PaymentsCheckoutResult,
 } from "./Api";
-import { desktopPlayBilling, isDesktopShell } from "./DesktopShell";
+import {
+  desktopPlayBilling,
+  isDesktopShell,
+  type PlayBilling,
+} from "./DesktopShell";
 import { showToast, translateText } from "./Utils";
 
 export type { PaymentsProvider };
@@ -639,10 +644,11 @@ let playDrainAfterPurchase: string | null = null;
  */
 type PlayDrainAnswer = "settled" | "pending" | "wrong_account" | "refused";
 
-// The newest pass, the account it drains for, and its answers in order.
+// The newest pass, the account it drains for, and its answers in order (null
+// when Play could not list the unconsumed purchases).
 interface PlayDrainPass {
   account: string;
-  result: Promise<PlayDrainAnswer[]>;
+  result: Promise<PlayDrainAnswer[] | null>;
 }
 let playDrain: PlayDrainPass | null = null;
 
@@ -667,78 +673,145 @@ export async function startPlayPurchase(
     const userMe = await getUserMe();
     if (userMe === false) return error(translateText("store.login_required"));
 
-    const purchase = await billing.purchase({
-      productId,
-      accountId: userMe.player.publicId,
-    });
-    if (purchase.status === "cancelled") {
-      return { outcome: "cancelled", quiet: true };
-    }
-    if (purchase.status === "error") {
-      switch (purchase.code) {
-        // Play is already showing a purchase.
-        case "busy":
-          return { outcome: "cancelled", quiet: true };
-        // An earlier purchase of this product was never consumed, so the
-        // server has not credited it yet. Posting it is what credits it.
-        // With no product ids to tell them apart, only an answer every
-        // unconsumed purchase got is about this one.
-        case "already_owned": {
-          const answers = await joinPlayDrain(userMe.player.publicId);
-          const all = (...allowed: PlayDrainAnswer[]) =>
-            answers.length > 0 && answers.every((a) => allowed.includes(a));
-          if (all("settled")) return { outcome: "completed" };
-          if (all("wrong_account")) {
-            return error(translateText("store.play_wrong_account"));
-          }
-          if (all("wrong_account", "refused")) {
-            return error(translateText("store.play_purchase_refused"));
-          }
+    return await buyOnPlay(
+      billing,
+      { productId, accountId: userMe.player.publicId },
+      false,
+    );
+  } finally {
+    playPurchaseInFlight = false;
+    drainAfterPurchase();
+  }
+}
+
+/**
+ * Opens Play's dialog and settles what it returns. `retried` marks the second
+ * dialog an already_owned answer can open; it never opens a third.
+ */
+async function buyOnPlay(
+  billing: PlayBilling,
+  request: Parameters<PlayBilling["purchase"]>[0],
+  retried: boolean,
+): Promise<PurchaseOutcome> {
+  const purchase = await billing.purchase(request);
+  if (purchase.status === "cancelled") {
+    return { outcome: "cancelled", quiet: true };
+  }
+  if (purchase.status === "error") {
+    switch (purchase.code) {
+      // Play is already showing a purchase.
+      case "busy":
+        return { outcome: "cancelled", quiet: true };
+      // An earlier purchase of this product was never consumed, so the
+      // server has not credited it yet. Posting it is what credits it.
+      // With no product ids to tell them apart, only an answer every
+      // unconsumed purchase got is about this one.
+      //
+      // Or Play's cache is stale: it can still list a purchase the server
+      // has just consumed, and this error is what refreshes it. Nothing
+      // left unconsumed, or every one settled (the server consumes what it
+      // credits), means the product is free again, so Play's advice is to
+      // buy it again. Once: a second already_owned is not drained again.
+      // A list Play could not give says neither, so it is not bought again.
+      // The list is read afresh, after the error: a pass already running read
+      // it before Play refreshed its cache.
+      case "already_owned": {
+        if (retried) return error(translateText("store.play_rebuy_too_soon"));
+        const answers = await startPlayDrain(request.accountId);
+        if (answers === null) {
           return {
             outcome: "pending",
             message: translateText("store.play_earlier_purchase_pending"),
           };
         }
-        case "unavailable":
-          return error(translateText("store.play_unavailable"));
-        case "failed":
-          return error(translateText("store.purchase_failed"));
-      }
-    }
-
-    const finalized = await finalizeGooglePurchase(purchase.purchaseToken);
-    if (finalized.ok) {
-      return finalized.status === "settled"
-        ? { outcome: "completed" }
-        : {
-            outcome: "pending",
-            message: translateText("store.play_purchase_pending"),
-          };
-    }
-    switch (finalized.code) {
-      case "refused":
-        return error(
-          translateText(
-            finalized.reason === "wrong_account"
-              ? "store.play_wrong_account"
-              : "store.play_purchase_refused",
-          ),
-        );
-      case "failed":
-        return error(translateText("store.play_purchase_refused"));
-      // Nothing is lost: the purchase stays unconsumed and the next drain
-      // posts it again.
-      case "rate_limited":
-      case "unauthorized":
-      case "retry_later":
+        const all = (...allowed: PlayDrainAnswer[]) =>
+          answers.length > 0 && answers.every((a) => allowed.includes(a));
+        if (all("wrong_account")) {
+          return error(translateText("store.play_wrong_account"));
+        }
+        if (all("wrong_account", "refused")) {
+          return error(translateText("store.play_purchase_refused"));
+        }
+        if (answers.length === 0 || all("settled")) {
+          return buyOnPlay(billing, request, true);
+        }
         return {
           outcome: "pending",
-          message: translateText("store.play_purchase_retry"),
+          message: translateText("store.play_earlier_purchase_pending"),
         };
+      }
+      case "unavailable":
+        return error(translateText("store.play_unavailable"));
+      case "failed":
+        return error(translateText("store.purchase_failed"));
     }
-  } finally {
-    playPurchaseInFlight = false;
-    drainAfterPurchase();
+  }
+
+  const finalized = await finalizeGooglePurchase(purchase.purchaseToken);
+  // Not awaited: the purchase answers now, and the follow-up runs on its own.
+  if (mayStillSettle(finalized)) {
+    void followUpPlayPurchase(purchase.purchaseToken);
+  }
+  if (finalized.ok) {
+    return finalized.status === "settled"
+      ? { outcome: "completed" }
+      : {
+          outcome: "pending",
+          message: translateText("store.play_purchase_pending"),
+        };
+  }
+  switch (finalized.code) {
+    case "refused":
+      return error(
+        translateText(
+          finalized.reason === "wrong_account"
+            ? "store.play_wrong_account"
+            : "store.play_purchase_refused",
+        ),
+      );
+    case "failed":
+      return error(translateText("store.play_purchase_refused"));
+    // Nothing is lost: the purchase stays unconsumed and the next drain
+    // posts it again.
+    case "rate_limited":
+    case "unauthorized":
+    case "retry_later":
+      return {
+        outcome: "pending",
+        message: translateText("store.play_purchase_retry"),
+      };
+  }
+}
+
+/**
+ * How long to wait before each further post of a purchase's token, after its
+ * own post could not credit it yet. The server can credit it moments later
+ * (Google's notification, or its own retry) and consumes it then, so no drain
+ * ever sees it again: posting it again is how the client learns it settled.
+ * Only a few: finalize is rate limited per IP.
+ */
+const PLAY_FOLLOW_UP_DELAYS_MS = [3_000, 10_000, 30_000];
+
+/**
+ * An answer a later post of the same token may turn into "settled". Not
+ * `unauthorized`: that logged the player out, and signing in again drains.
+ */
+function mayStillSettle(finalized: FinalizeGooglePurchaseResult): boolean {
+  return finalized.ok
+    ? finalized.status === "pending"
+    : finalized.code === "retry_later" || finalized.code === "rate_limited";
+}
+
+/** Re-posts the token a few times; refreshes the account once it settles. */
+async function followUpPlayPurchase(token: string): Promise<void> {
+  for (const delay of PLAY_FOLLOW_UP_DELAYS_MS) {
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    const finalized = await finalizeGooglePurchase(token);
+    if (finalized.ok && finalized.status === "settled") {
+      await refreshAccount();
+      return;
+    }
+    if (!mayStillSettle(finalized)) return;
   }
 }
 
@@ -764,11 +837,15 @@ export function drainPlayPurchases(account: string): Promise<void> {
   return joinPlayDrain(account).then(() => undefined);
 }
 
-function joinPlayDrain(account: string): Promise<PlayDrainAnswer[]> {
+function joinPlayDrain(account: string): Promise<PlayDrainAnswer[] | null> {
   if (playDrain?.account === account) return playDrain.result;
   // The server checks each purchase against the account posting it, so a
-  // pass for another account cannot answer for this one: a fresh pass runs
-  // once it ends. One pass at a time either way.
+  // pass for another account cannot answer for this one.
+  return startPlayDrain(account);
+}
+
+/** A new pass, run once the running one (if any) ends: one at a time. */
+function startPlayDrain(account: string): Promise<PlayDrainAnswer[] | null> {
   const previous = playDrain?.result ?? Promise.resolve();
   const pass: PlayDrainPass = {
     account,
@@ -780,12 +857,12 @@ function joinPlayDrain(account: string): Promise<PlayDrainAnswer[]> {
   return pass.result;
 }
 
-async function runPlayDrain(): Promise<PlayDrainAnswer[]> {
+async function runPlayDrain(): Promise<PlayDrainAnswer[] | null> {
   const answers: PlayDrainAnswer[] = [];
   const billing = desktopPlayBilling();
-  if (billing === null) return answers;
+  if (billing === null) return null;
   const unconsumed = await billing.unconsumed();
-  if (unconsumed.status !== "ok") return answers;
+  if (unconsumed.status !== "ok") return null;
   for (const token of unconsumed.purchaseTokens) {
     const finalized = await finalizeGooglePurchase(token);
     if (finalized.ok) {

@@ -4,6 +4,7 @@ import {
   apiMockFactory,
   authMockFactory,
   clanApiMockFactory,
+  cosmeticsMockFactory,
   crazyGamesSdkMockFactory,
   flushAsync,
   getElState,
@@ -17,6 +18,7 @@ import {
 vi.mock("@lit-labs/virtualizer/virtualize.js", () => virtualizerMockFactory());
 vi.mock("../../../src/client/Api", () => apiMockFactory());
 vi.mock("../../../src/client/ClanApi", () => clanApiMockFactory());
+vi.mock("../../../src/client/Cosmetics", () => cosmeticsMockFactory());
 vi.mock("../../../src/client/Utils", () => utilsMockFactory());
 vi.mock("../../../src/client/Auth", () => authMockFactory());
 vi.mock("../../../src/client/CrazyGamesSDK", () => crazyGamesSdkMockFactory());

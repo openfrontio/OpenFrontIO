@@ -1,15 +1,19 @@
-import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { GameMapType, GameType } from "@openfront/engine-api/game/GameTypes";
 import { GameConfigSchema } from "@openfront/engine-api/Schemas";
 import { z } from "zod";
 
 // `pool` points joiners at other lobbies, so only the authenticated admin-bot
-// route (which parses GameConfigSchema directly) may set one.
-export const CreateGameInputSchema = GameConfigSchema.omit({ pool: true }).or(
-  z
-    .object({})
-    .strict()
-    .transform((val) => undefined),
-);
+// route (which parses GameConfigSchema directly) may set one. Stock maps only:
+// a Custom map's files come with a scenario start, which a lobby can't carry
+// yet.
+export const CreateGameInputSchema = GameConfigSchema.omit({ pool: true })
+  .extend({ gameMap: z.enum(GameMapType) })
+  .or(
+    z
+      .object({})
+      .strict()
+      .transform((val) => undefined),
+  );
 
 export type CreateGameInput = z.infer<typeof CreateGameInputSchema>;
 
