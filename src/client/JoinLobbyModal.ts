@@ -248,6 +248,7 @@ export class JoinLobbyModal extends BaseModal {
     if (this.boosted) {
       return html`<span
         class="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full bg-green-500/15 text-green-400 border border-green-500/30 shrink-0"
+        title=${translateText("public_lobby.boosted_tooltip")}
         >${translateText("public_lobby.boosted")}</span
       >`;
     }

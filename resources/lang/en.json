@@ -2659,6 +2659,7 @@
     "boost_unavailable": "This lobby can no longer be boosted.",
     "boosted": "Boosted",
     "boosted_by": "{name} boosted this lobby",
+    "boosted_tooltip": "A player paid Plutonium to move this lobby to the front of the queue, right behind the lobby that is about to start",
     "queue_position": "#{position} in queue",
     "connecting": "Connecting to lobby...",
     "custom": "Custom",
