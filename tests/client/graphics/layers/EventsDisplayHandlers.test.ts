@@ -63,6 +63,7 @@ describe("EventsDisplay handlers", () => {
     displayName: () => "Me",
     isAlive: () => true,
     isFriendly: (p: { smallID: () => number }) => p.smallID() === 2,
+    isRequestingAllianceWith: () => true,
   };
   const friend = {
     smallID: () => 2,
@@ -177,6 +178,62 @@ describe("EventsDisplay handlers", () => {
     it("ignores replies to other players' requests", () => {
       ed.onAllianceRequestReplyEvent(reply(3, true) as never);
       expect(events()).toHaveLength(0);
+    });
+  });
+
+  describe("my own pending alliance request", () => {
+    let now: number;
+    const request = {
+      type: GameUpdateType.AllianceRequest,
+      requestorID: 1,
+      recipientID: 2,
+      createdAt: 0,
+    };
+
+    beforeEach(() => {
+      now = 0;
+      game.ticks = () => now;
+      game.config = () => ({
+        isReplay: () => false,
+        allianceRequestDuration: () => 50,
+      });
+    });
+
+    it("lasts as long as the game's config gives a request", () => {
+      game.updatesSinceLastTick = () => ({
+        [GameUpdateType.AllianceRequest]: [request],
+      });
+      ed.tick();
+      game.updatesSinceLastTick = () => null;
+      expect(events()).toHaveLength(1);
+      expect(events()[0].type).toBe(MessageType.ALLIANCE_REQUEST);
+      expect(events()[0].focusID).toBe(2);
+
+      now = 51;
+      ed.tick();
+      expect(events()).toHaveLength(1);
+
+      now = 52;
+      ed.tick();
+      expect(events()).toHaveLength(0);
+    });
+
+    it("gives way to an answer that comes on the same tick", () => {
+      game.updatesSinceLastTick = () => ({
+        [GameUpdateType.AllianceRequestReply]: [
+          {
+            type: GameUpdateType.AllianceRequestReply,
+            request,
+            accepted: true,
+          },
+        ],
+        [GameUpdateType.AllianceRequest]: [request],
+      });
+      ed.tick();
+
+      expect(events().map((e) => e.type)).toEqual([
+        MessageType.ALLIANCE_ACCEPTED,
+      ]);
     });
   });
 

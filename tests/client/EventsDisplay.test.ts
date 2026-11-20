@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { MessageType } from "@openfront/engine-api/game/GameTypes";
 import {
+  AllianceRequestReplyUpdate,
+  AllianceRequestUpdate,
   DisplayMessageUpdate,
   DonateEventUpdate,
   EmojiUpdate,
@@ -17,7 +19,8 @@ import {
   GoToPlayerEvent,
   GoToUnitEvent,
 } from "../../src/client/TransformHandler";
-import type { GameView, UnitView } from "../../src/client/view";
+import { SendAllianceRequestIntentEvent } from "../../src/client/Transport";
+import type { GameView, PlayerView, UnitView } from "../../src/client/view";
 
 const ME = 1;
 const ENEMY = 2;
@@ -31,6 +34,7 @@ function player(smallID: number) {
     isAlive: () => true,
     isTraitor: () => false,
     getTraitorRemainingTicks: () => 0,
+    isRequestingAllianceWith: () => false,
   };
 }
 
@@ -108,6 +112,13 @@ describe("events-display", () => {
     Object.assign(langSelector, {
       currentLang: "en",
       translations: {
+        "common.duration_second_short": "s",
+        "events_display.alliance_accepted": "accepted",
+        "events_display.alliance_rejected": "rejected",
+        "events_display.alliance_request_sent":
+          "Alliance request sent to {name}.",
+        "events_display.alliance_request_status":
+          "{name} {status} your alliance request",
         "events_display.atom_bomb_detonated": "{name} - atom bomb detonated",
         "events_display.atom_bomb_inbound": "{name} - atom bomb inbound",
         "events_display.atom_bomb_inbound_count":
@@ -159,6 +170,7 @@ describe("events-display", () => {
       config: () => ({
         isReplay: () => replay,
         traitorDuration: () => 300,
+        allianceRequestDuration: () => 200,
       }),
     } as unknown as GameView;
     document.body.appendChild(display);
@@ -934,6 +946,270 @@ describe("events-display", () => {
 
       expect(rows()).toHaveLength(2);
       expect(said()).toEqual([]);
+    });
+  });
+
+  describe("my own alliance request", () => {
+    const THIRD = 3;
+    const pending = () =>
+      rows().filter((row) => row.hasAttribute("data-request-pending"));
+    const seconds = (row: HTMLElement) =>
+      row.querySelector("[data-row-seconds]")?.textContent?.trim();
+    const request = (
+      recipientID: number,
+      createdAt: number,
+      requestorID = ME,
+    ): AllianceRequestUpdate => ({
+      type: GameUpdateType.AllianceRequest,
+      requestorID,
+      recipientID,
+      createdAt,
+    });
+    const reply = (
+      recipientID: number,
+      createdAt: number,
+      accepted: boolean,
+    ): AllianceRequestReplyUpdate => ({
+      type: GameUpdateType.AllianceRequestReply,
+      request: request(recipientID, createdAt),
+      accepted,
+    });
+    // Runs the game to `tick`, the HUD getting these updates on the way.
+    async function arrive(
+      tick: number,
+      type: GameUpdateType,
+      ...list: unknown[]
+    ) {
+      updates = { [type]: list };
+      await advanceTo(tick);
+    }
+    function click(recipientID: number) {
+      display.eventBus.emit(
+        new SendAllianceRequestIntentEvent(
+          players.get(ME) as unknown as PlayerView,
+          players.get(recipientID) as unknown as PlayerView,
+        ),
+      );
+    }
+
+    beforeEach(() => {
+      players.set(THIRD, player(THIRD));
+      // The game has my requests until they are answered or lapse.
+      players.get(ME)!.isRequestingAllianceWith = () => true;
+      display.init();
+    });
+
+    it("turns the row that confirmed my click into the pending request", async () => {
+      click(ENEMY);
+      await advanceTo(1);
+      const row = rowSaying("Alliance request sent to Player2.");
+      const body = row.querySelector("button")!;
+      expect(row.hasAttribute("data-request-pending")).toBe(false);
+      expect(seconds(row)).toBeUndefined();
+
+      await arrive(3, GameUpdateType.AllianceRequest, request(ENEMY, 2));
+
+      expect(rows()).toEqual([row]);
+      expect(row.querySelector("button")).toBe(body);
+      expect(row.hasAttribute("data-request-pending")).toBe(true);
+      expect(row.dataset.tier).toBe("routine");
+      expect(seconds(row)).toBe("20s");
+      body.click();
+      expect(goTo.map((e) => e.player)).toEqual([players.get(ENEMY)]);
+    });
+
+    it("ignores requests I did not make", async () => {
+      await arrive(
+        1,
+        GameUpdateType.AllianceRequest,
+        request(ENEMY, 0, THIRD),
+        request(ME, 0, ENEMY),
+      );
+
+      expect(rows()).toEqual([]);
+    });
+
+    it("shows the request without a click before it, as in a replay", async () => {
+      await arrive(1, GameUpdateType.AllianceRequest, request(ENEMY, 0));
+
+      expect(pending()).toHaveLength(1);
+      expect(pending()[0].textContent).toContain(
+        "Alliance request sent to Player2.",
+      );
+      expect(seconds(pending()[0])).toBe("20s");
+    });
+
+    it("lives as long as the game gives the request", async () => {
+      await arrive(1, GameUpdateType.AllianceRequest, request(ENEMY, 0));
+      const row = pending()[0];
+
+      // Past the 80 ticks of any other row.
+      await advanceTo(91);
+      expect(pending()).toEqual([row]);
+      expect(seconds(row)).toBe("11s");
+      await advanceTo(101);
+      expect(seconds(row)).toBe("10s");
+      await advanceTo(201);
+      expect(pending()).toEqual([row]);
+      expect(seconds(row)).toBe("0s");
+
+      await advanceTo(202);
+      expect(rows()).toEqual([]);
+      expect(leaving()).toEqual([row]);
+    });
+
+    for (const accepted of [true, false]) {
+      it(`gives way to the answer at once when ${accepted ? "accepted" : "rejected"}`, async () => {
+        await arrive(1, GameUpdateType.AllianceRequest, request(ENEMY, 0));
+        expect(pending()).toHaveLength(1);
+
+        await arrive(
+          30,
+          GameUpdateType.AllianceRequestReply,
+          reply(ENEMY, 0, accepted),
+        );
+
+        expect(leaving()).toEqual([]);
+        expect(rows().map((row) => row.textContent?.trim())).toEqual([
+          `Player2 ${accepted ? "accepted" : "rejected"} your alliance request`,
+        ]);
+      });
+    }
+
+    it("counts to 0s, then gives way to the game's rejection", async () => {
+      await arrive(1, GameUpdateType.AllianceRequest, request(ENEMY, 0));
+      await advanceTo(201);
+      expect(seconds(pending()[0])).toBe("0s");
+
+      await arrive(
+        202,
+        GameUpdateType.AllianceRequestReply,
+        reply(ENEMY, 0, false),
+      );
+
+      expect(leaving()).toEqual([]);
+      expect(rows().map((row) => row.textContent?.trim())).toEqual([
+        "Player2 rejected your alliance request",
+      ]);
+    });
+
+    it("keeps a row and its seconds for each player I asked", async () => {
+      await arrive(1, GameUpdateType.AllianceRequest, request(ENEMY, 0));
+      await arrive(50, GameUpdateType.AllianceRequest, request(THIRD, 50));
+      await advanceTo(101);
+
+      const secondsOf = (name: string) =>
+        seconds(pending().find((row) => row.textContent?.includes(name))!);
+      expect(secondsOf("Player2")).toBe("10s");
+      expect(secondsOf("Player3")).toBe("15s");
+
+      await arrive(
+        102,
+        GameUpdateType.AllianceRequestReply,
+        reply(THIRD, 50, true),
+      );
+      expect(pending()).toHaveLength(1);
+      expect(pending()[0].textContent).toContain("Player2");
+    });
+
+    it("goes when the player I asked dies", async () => {
+      await arrive(1, GameUpdateType.AllianceRequest, request(ENEMY, 0));
+      expect(pending()).toHaveLength(1);
+
+      players.get(ENEMY)!.isAlive = () => false;
+      await advanceTo(2);
+
+      expect(pending()).toEqual([]);
+    });
+
+    it("leaves a click the game never takes up to expire like any row", async () => {
+      click(ENEMY);
+      await advanceTo(79);
+      expect(rowSaying("Alliance request sent to Player2.")).toBeDefined();
+
+      await advanceTo(80);
+      expect(rows()).toEqual([]);
+    });
+
+    it("waits behind four newer routine rows, and comes back after them", async () => {
+      await arrive(1, GameUpdateType.AllianceRequest, request(ENEMY, 0));
+      for (let i = 0; i < 4; i++) {
+        feed().addEvent({
+          description: `routine ${i}`,
+          type: MessageType.ALLIANCE_EXPIRED,
+          createdAt: 10 + i,
+        });
+      }
+      await advanceTo(14);
+      expect(pending()).toEqual([]);
+
+      await advanceTo(93);
+      expect(pending()).toHaveLength(1);
+      expect(seconds(pending()[0])).toBe("11s");
+    });
+
+    it("outlasts the 30 rows the feed keeps, and comes back after them", async () => {
+      await arrive(1, GameUpdateType.AllianceRequest, request(ENEMY, 0));
+      for (let i = 0; i < 31; i++) {
+        feed().addEvent({
+          description: `routine ${i}`,
+          type: MessageType.ALLIANCE_EXPIRED,
+          createdAt: 10,
+        });
+      }
+      await advanceTo(10);
+      expect(pending()).toEqual([]);
+
+      await advanceTo(91);
+      expect(pending()).toHaveLength(1);
+      expect(seconds(pending()[0])).toBe("11s");
+    });
+
+    it("goes when the game no longer has it, as after a replay seeks past the answer", async () => {
+      await arrive(1, GameUpdateType.AllianceRequest, request(ENEMY, 0));
+      expect(pending()).toHaveLength(1);
+
+      players.get(ME)!.isRequestingAllianceWith = () => false;
+      await advanceTo(60);
+
+      expect(pending()).toEqual([]);
+    });
+
+    it("goes when the replay follows a player who did not send it", async () => {
+      await arrive(1, GameUpdateType.AllianceRequest, request(ENEMY, 0));
+      expect(pending()).toHaveLength(1);
+
+      players.set(ME, player(THIRD));
+      await advanceTo(2);
+
+      expect(pending()).toEqual([]);
+    });
+
+    it("goes at once when a replay seeks back before it", async () => {
+      await arrive(50, GameUpdateType.AllianceRequest, request(ENEMY, 50));
+      expect(pending()).toHaveLength(1);
+
+      await advanceTo(20);
+
+      expect(rows()).toEqual([]);
+      expect(leaving()).toEqual([]);
+    });
+
+    it("adds no row when my click accepts their request", async () => {
+      players.get(ENEMY)!.isRequestingAllianceWith = () => true;
+
+      click(ENEMY);
+      await advanceTo(1);
+
+      expect(rows()).toEqual([]);
+    });
+
+    it("hides its seconds from screen readers and is not read out", async () => {
+      await arrive(1, GameUpdateType.AllianceRequest, request(ENEMY, 0));
+
+      const counter = pending()[0].querySelector("[data-row-seconds]")!;
+      expect(counter.getAttribute("aria-hidden")).toBe("true");
+      expect(display.querySelectorAll('[role="log"] p')).toHaveLength(0);
     });
   });
 });
