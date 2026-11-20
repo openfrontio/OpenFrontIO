@@ -10,6 +10,7 @@ import {
   type CardItem,
   type CardItemType,
   cardItemName,
+  cardOwnershipKey,
   cardPrices,
 } from "./CardItems";
 import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";
@@ -145,7 +146,7 @@ export class CardStoreGrid extends LitElement {
             >${cardItemName(type, item)}</span
           >
           ${
-            owned.has(key)
+            owned.has(cardOwnershipKey(type, item))
               ? html`<span
                   class="rounded-md bg-white/10 py-1 text-center text-xs font-bold"
                   >${translateText("my_card.owned")}</span

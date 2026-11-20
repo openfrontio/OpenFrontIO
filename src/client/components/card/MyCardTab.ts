@@ -1,5 +1,6 @@
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import {
+  type CardTracker,
   type Cosmetics,
   ownsPlayerCard,
 } from "@openfront/shared/CosmeticSchemas";
@@ -23,6 +24,7 @@ import {
   type CardItem,
   type CardItemType,
   cardItemName,
+  cardOwnershipKey,
   cardPrices,
   cardRarityLabel,
 } from "./CardItems";
@@ -157,9 +159,9 @@ export class MyCardTab extends LitElement {
 
   private stateOf(slot: Exclude<Slot, "flag">, item: CardItem): ItemState {
     const type = SECTION[slot].type;
-    if (this.flares.includes(`${type}:${item.name}`)) {
+    if (this.flares.includes(cardOwnershipKey(type, item))) {
       if (slot === "trackers") {
-        return this.loadout.trackers.includes(item.name as TrackerStat)
+        return this.loadout.trackers.includes((item as CardTracker).stat)
           ? "equipped"
           : "owned";
       }
@@ -199,7 +201,7 @@ export class MyCardTab extends LitElement {
     const state = this.stateOf(slot, item);
     if (state !== "owned" && state !== "equipped") return;
     if (slot === "trackers") {
-      const stat = item.name as TrackerStat;
+      const stat = (item as CardTracker).stat;
       const trackers = this.loadout.trackers.includes(stat)
         ? this.loadout.trackers.filter((s) => s !== stat)
         : [...this.loadout.trackers, stat];

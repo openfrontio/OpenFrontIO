@@ -233,6 +233,30 @@ describe("loadoutItems", () => {
     expect(live).toMatchObject({ priceHard: 400, listPriceHard: 600 });
   });
 
+  it("the killer's tracker is found by its stat", () => {
+    const cosmetics = {
+      ...COSMETICS,
+      cardTrackers: {
+        win_count: {
+          product: null,
+          rarity: "common",
+          name: "win_count",
+          stat: "wins",
+          priceSoft: 400,
+        },
+      },
+    } as unknown as Cosmetics;
+    const items = loadoutItems(VOLT, cosmetics, [
+      "playerCard:standard",
+      "cardBackground:bg_frontline",
+      "taunt:salute",
+      "cardTitle:warmonger",
+    ]);
+    expect(items.map((i) => `${i.type}:${i.item.name}`)).toContain(
+      "cardTracker:win_count",
+    );
+  });
+
   it("caps-only item shows a caps price", () => {
     const items = loadoutItems(VOLT, COSMETICS, [
       "playerCard:standard",

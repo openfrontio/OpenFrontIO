@@ -92,3 +92,12 @@ export function cardRarityLabel(rarity: string): string {
       return translateText("cosmetics.common");
   }
 }
+
+// The flare that says a player owns `item`. A tracker is keyed on its stat,
+// as the server and the saved loadout key it (the catalogue's name is the
+// stat today, but only the stat is what gets checked).
+export function cardOwnershipKey(type: CardItemType, item: CardItem): string {
+  if (type === "cardTracker")
+    return `cardTracker:${(item as CardTracker).stat}`;
+  return `${type}:${item.name}`;
+}

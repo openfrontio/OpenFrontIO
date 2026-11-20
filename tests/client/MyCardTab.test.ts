@@ -408,6 +408,40 @@ describe("<my-card-tab>", () => {
     expect(front.querySelector("purchase-button")).not.toBeNull();
   });
 
+  it("a tracker is keyed on its stat, as the server checks it", async () => {
+    // The catalogue's name and stat are equal today (infra builds stat from
+    // the name), but the server and the saved loadout use the stat.
+    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    tab = document.createElement("my-card-tab") as unknown as MyCardTab;
+    tab.userMe = userMe(["playerCard:standard", "cardTracker:conquests"], {
+      ...SAVED,
+      trackers: [],
+    });
+    tab.cosmetics = {
+      ...COSMETICS,
+      cardTrackers: {
+        conquest_count: {
+          product: null,
+          rarity: "common",
+          name: "conquest_count",
+          stat: "conquests",
+          priceSoft: 400,
+        },
+      },
+    } as unknown as Cosmetics;
+    document.body.appendChild(tab as unknown as Node);
+    await tab.updateComplete;
+    await openSlot("trackers");
+    const conq = tile("cardTracker:conquest_count");
+    expect(conq.dataset.state).toBe("owned");
+    conq.click();
+    await settle();
+    expect(api.save).toHaveBeenCalledWith(
+      expect.objectContaining({ trackers: ["conquests"] }),
+    );
+    expect(tile("cardTracker:conquest_count").dataset.state).toBe("equipped");
+  });
+
   it("fourth tracker is disabled", async () => {
     await render(userMe(OWNER, SAVED));
     await openSlot("trackers");
