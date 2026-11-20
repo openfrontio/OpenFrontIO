@@ -14,6 +14,7 @@ import {
   loadoutBody,
   moveRow,
   pickInto,
+  replayByItem,
   SAVED_SHOWN_MS,
   swapPreview,
 } from "../../src/client/components/inventory/CardDraft";
@@ -98,6 +99,26 @@ describe("card draft", () => {
         from: "best_elo",
         to: "games_played",
       },
+    ]);
+  });
+
+  it("replays edits by the item they name onto a card laid out differently", () => {
+    const kept = draftFromCard(CARD); // wins, nukes, best_elo
+    // The failed save had taken nukes off; the player then filled the gap.
+    const before = draftFromCard({
+      trackers: [{ stat: "best_elo" }, { stat: "wins" }],
+    });
+    const after = pickInto(
+      before,
+      { kind: "tracker", index: 2 },
+      "games_played",
+    );
+    // No empty row on the kept card: games_played goes where nukes was,
+    // which the player never saw.
+    expect(replayByItem(kept, before, after).rows.tracker).toEqual([
+      "wins",
+      "games_played",
+      "best_elo",
     ]);
   });
 
@@ -333,25 +354,60 @@ describe("CardEditor", () => {
     expect(editor.saveState).toBe("idle");
   });
 
-  it("an edit after a close mid-save that then fails stays, on the card the server kept", async () => {
+  /** Moves best_elo to the top and saves, holding the PUT; the Inventory
+   * then closes with no guard (browser Back) and reopens. */
+  async function moveSaveDrop(editor: CardEditor) {
     let finish!: (v: unknown) => void;
     api.save.mockReturnValue(new Promise((r) => (finish = r)));
-    const editor = new CardEditor();
     editor.seed(
-      me(CARD, [
-        "cardBackground:bg_pacific",
-        "cardBackground:bg_storm",
-        "cardTracker:games_played",
-      ]),
+      me(
+        CARD,
+        ["wins", "nukes_launched", "best_elo", "games_played"].map(
+          (s) => `cardTracker:${s}`,
+        ),
+      ),
     );
-    editor.pick({ kind: "background" }, "bg_storm");
+    editor.move("tracker", 2, 0);
     const saving = editor.save();
     editor.settle();
-    editor.pick({ kind: "tracker", index: 0 }, "games_played");
-    finish({ ok: false, error: "failed" });
-    await saving;
+    expect(editor.draft.rows.tracker).toEqual([
+      "best_elo",
+      "wins",
+      "nukes_launched",
+    ]);
+    return async () => {
+      finish({ ok: false, error: "failed" });
+      await saving;
+    };
+  }
+
+  it("a move saved, Back, a tracker removed, the save fails: that tracker goes from the kept card", async () => {
+    const editor = new CardEditor();
+    const fail = await moveSaveDrop(editor);
+    editor.pick({ kind: "tracker", index: 0 }, null);
+    await fail();
+    expect(editor.draft.rows.tracker).toEqual(["wins", "nukes_launched", null]);
     expect(editor.changes()).toEqual([
-      { slot: { kind: "tracker", index: 0 }, from: "wins", to: "games_played" },
+      { slot: { kind: "tracker", index: 2 }, from: "best_elo", to: null },
+    ]);
+  });
+
+  it("a move saved, Back, a tracker replaced, the save fails: the one replaced is the one named", async () => {
+    const editor = new CardEditor();
+    const fail = await moveSaveDrop(editor);
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    await fail();
+    expect(editor.draft.rows.tracker).toEqual([
+      "wins",
+      "nukes_launched",
+      "games_played",
+    ]);
+    expect(editor.changes()).toEqual([
+      {
+        slot: { kind: "tracker", index: 2 },
+        from: "best_elo",
+        to: "games_played",
+      },
     ]);
   });
 
