@@ -861,6 +861,8 @@ export class StoreModal extends BaseModal {
                   : (this.userMeResponse.player.flares ?? [])
               }
               .tracker=${this.tracker ?? null}
+              .requestedItem=${this.requestedItem}
+              @requested-item-shown=${() => (this.requestedItem = null)}
             ></card-store-grid>`
           : flash
             ? html`${this.renderFlashHero(flash)}

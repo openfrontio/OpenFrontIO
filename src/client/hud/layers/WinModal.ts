@@ -5,7 +5,11 @@ import type {
   ClientID,
   Winner,
 } from "@openfront/engine-api/Schemas";
-import type { GameXpEligible, Progress } from "@openfront/shared/ApiSchemas";
+import type {
+  GameXpEligible,
+  Progress,
+  UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 import type { Cosmetics, Pattern } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, nothing, TemplateResult } from "lit";
@@ -201,6 +205,16 @@ export class WinModal extends LitElement implements Controller {
   // filtered against it, not what they owned when saving. Null until read.
   @state()
   private viewerFlares: readonly string[] | null = null;
+  // Whether the viewer is signed in ("Sign in to buy" otherwise), following
+  // the /users/@me broadcast.
+  @state()
+  private signedIn = false;
+  // Items bought from the block this screen: they stay in their row, read
+  // Owned ✓ there, and aren't filtered out as owned.
+  @state()
+  private boughtHere: ReadonlySet<string> = new Set();
+  private onUserMe = (e: Event) =>
+    this.applyUserMe((e as CustomEvent<UserMeResponse | false>).detail);
   private unsubscribeLooks: (() => void) | null = null;
   private userSettings = new UserSettings();
   private nemesisAbort: AbortController | null = null;
@@ -624,8 +638,9 @@ export class WinModal extends LitElement implements Controller {
   private lookRows(): LookRow[] | "pending" {
     const gameID = this.game?.gameID();
     if (gameID === undefined) return [];
-    const flares = this.viewerFlares;
-    if (flares === null || this.loadoutPending) return "pending";
+    if (this.viewerFlares === null || this.loadoutPending) return "pending";
+    // What the viewer owns, but for what they bought here: that stays.
+    const flares = this.viewerFlares.filter((f) => !this.boughtHere.has(f));
     const card = this.lastEndCard;
     // The killer's current card when it has something to buy; otherwise
     // their saved look (if any) stands in for it.
@@ -692,6 +707,14 @@ export class WinModal extends LitElement implements Controller {
         const looks = this.lookRows();
         return html`<loadout-row
           .looks=${looks === "pending" ? [] : looks}
+          .owned=${
+            // Bought here counts even if the profile refresh after it failed.
+            new Set([...(this.viewerFlares ?? []), ...this.boughtHere])
+          }
+          .signedIn=${this.signedIn}
+          @look-owned=${(e: CustomEvent<{ key: string }>) => {
+            this.boughtHere = new Set([...this.boughtHere, e.detail.key]);
+          }}
         ></loadout-row>`;
       }
       default:
@@ -972,11 +995,16 @@ export class WinModal extends LitElement implements Controller {
 
   private async loadViewerFlares(): Promise<void> {
     try {
-      const me = await getUserMe();
-      this.viewerFlares = me === false ? [] : (me.player.flares ?? []);
+      this.applyUserMe(await getUserMe());
     } catch {
-      this.viewerFlares = [];
+      this.applyUserMe(false);
     }
+  }
+
+  private applyUserMe(me: UserMeResponse | false | undefined): void {
+    if (me === undefined) return;
+    this.signedIn = me !== false;
+    this.viewerFlares = me === false ? [] : (me.player.flares ?? []);
   }
 
   private async readTauntsMuted(): Promise<void> {
@@ -1023,6 +1051,7 @@ export class WinModal extends LitElement implements Controller {
   connectedCallback(): void {
     super.connectedCallback();
     this.unsubscribeLooks ??= onSavedLooksChanged(() => this.requestUpdate());
+    document.addEventListener("userMeResponse", this.onUserMe);
     if (this.xpPollAborted) {
       this.xpPollAborted = false;
       void this.updateXp(true);
@@ -1033,6 +1062,7 @@ export class WinModal extends LitElement implements Controller {
     this.xpAbort?.abort();
     this.unsubscribeLooks?.();
     this.unsubscribeLooks = null;
+    document.removeEventListener("userMeResponse", this.onUserMe);
     super.disconnectedCallback();
   }
 

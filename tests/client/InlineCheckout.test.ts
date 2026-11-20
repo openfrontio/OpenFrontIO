@@ -15,6 +15,7 @@ vi.mock("../../src/client/Api", () => ({
 vi.mock("../../src/client/Cosmetics", () => ({
   broadcastFreshUserMe: vi.fn(async () => {}),
   invalidateCosmetics: vi.fn(),
+  resumePendingPurchase: vi.fn(async () => false),
 }));
 
 vi.mock("../../src/client/InGameModal", () => ({
@@ -183,6 +184,42 @@ describe("inline-checkout wallet row", () => {
     // confirmPayment resolved the wallet sheet; failing it too would be a lie.
     expect(paymentFailed).not.toHaveBeenCalled();
     expect(el.querySelector("button")).toBeTruthy();
+  });
+
+  it("a top-up for an end-screen item reopens the Store on it after the reload", async () => {
+    const { resumePendingPurchase } =
+      await import("../../src/client/Cosmetics");
+    const order: string[] = [];
+    vi.mocked(resumePendingPurchase).mockImplementation(async () => {
+      order.push("resume");
+      return true;
+    });
+    reloadMock.mockImplementation(() => order.push("reload"));
+    const { session, express } = fakeSession();
+    createMock.mockResolvedValue(session);
+    await renderComponent();
+    express.fire("confirm", { paymentFailed: vi.fn() });
+    await vi.waitFor(() => expect(reloadMock).toHaveBeenCalled());
+    // The remembered item's hash is set first, so the reload lands on it;
+    // the profile is as known as it will be, so no waiting.
+    expect(resumePendingPurchase).toHaveBeenCalledWith({
+      waitForProfile: false,
+    });
+    expect(order).toEqual(["resume", "reload"]);
+  });
+
+  it("a subscription checkout never resumes an end-screen item", async () => {
+    const { resumePendingPurchase } =
+      await import("../../src/client/Cosmetics");
+    vi.mocked(resumePendingPurchase).mockClear();
+    const { session, express } = fakeSession();
+    createMock.mockResolvedValue(session);
+    const el = await renderComponent();
+    el.request = { kind: "subscription_tier", tierName: "gold" } as never;
+    await el.updateComplete;
+    express.fire("confirm", { paymentFailed: vi.fn() });
+    await vi.waitFor(() => expect(reloadMock).toHaveBeenCalled());
+    expect(resumePendingPurchase).not.toHaveBeenCalled();
   });
 
   it("shows wallet errors without opening the modal", async () => {
