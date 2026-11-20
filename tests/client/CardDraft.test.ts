@@ -292,19 +292,25 @@ describe("CardEditor", () => {
     expect(editor.changeCount()).toBe(0);
   });
 
-  it("an edit after a mid-save Discard stays a change", async () => {
+  it("an edit after a mid-save Discard: no change undoes the save", async () => {
     let finish!: (v: unknown) => void;
     api.save.mockReturnValue(new Promise((r) => (finish = r)));
     const editor = new CardEditor();
-    editor.seed(me(CARD, ["cardTracker:games_played"]));
-    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    editor.seed(
+      me(CARD, ["cardBackground:bg_pacific", "cardBackground:bg_storm"]),
+    );
+    editor.pick({ kind: "background" }, "bg_storm");
     const saving = editor.save();
+    // Discard drops only what isn't being saved: the save stands.
     editor.discard();
+    expect(editor.draft.background).toBe("bg_storm");
     editor.pick({ kind: "tracker", index: 0 }, null);
     finish({ ok: true, loadout: {} });
     await saving;
-    expect(editor.draft.rows.tracker[0]).toBeNull();
-    expect(editor.changeCount()).toBeGreaterThan(0);
+    expect(editor.saved.background).toBe("bg_storm");
+    expect(editor.changes()).toEqual([
+      { slot: { kind: "tracker", index: 0 }, from: "wins", to: null },
+    ]);
   });
 
   it("Save while a save is in flight waits for it, then saves what's left", async () => {

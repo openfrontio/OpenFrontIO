@@ -1441,8 +1441,29 @@ export class InventoryModal extends BaseModal {
     if (!this.hasCardChanges()) return Promise.resolve(true);
     if (this.cardGuard !== null) return Promise.resolve(false);
     return new Promise((resolve) => {
-      this.cardGuard = { resolve, saving: false };
+      const saving = this.cardEditor.saveState === "saving";
+      this.cardGuard = { resolve, saving };
+      if (saving) void this.afterBarSave();
     });
+  }
+
+  /**
+   * Left while the bar's save is in flight: the guard shows Saving, with no
+   * Discard (the saved card is still the one being replaced), until it
+   * lands. Then it goes when nothing is left to save, and otherwise asks
+   * about what's left (an edit made meanwhile, or the changes of a save
+   * that failed).
+   */
+  private async afterBarSave(): Promise<void> {
+    await this.cardEditor.whenSaved();
+    const guard = this.cardGuard;
+    if (guard === null) return;
+    if (this.cardEditor.changeCount() === 0) {
+      this.cardGuard = null;
+      guard.resolve(true);
+      return;
+    }
+    this.cardGuard = { ...guard, saving: false };
   }
 
   /** Runs `go` now when nothing would be lost (so tab switches and links

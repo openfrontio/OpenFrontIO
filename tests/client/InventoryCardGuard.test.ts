@@ -202,41 +202,67 @@ describe("Inventory: unsaved card changes guard", () => {
     expect(onCardTab()).toBe(false);
   });
 
-  it("Discard while the bar's save is in flight keeps what it saves", async () => {
+  /** Clicks the bar's Save card with the PUT held until `finish`. */
+  async function saveHeld() {
     let finish!: (v: Awaited<ReturnType<typeof saveCardLoadout>>) => void;
-    vi.mocked(saveCardLoadout).mockReturnValue(
+    vi.mocked(saveCardLoadout).mockReturnValueOnce(
       new Promise((r) => (finish = r)),
     );
-    await openWithChange();
     await click("[data-card-save]");
-    await click("[data-inventory-top-tab='ingame']");
-    await click("[data-card-guard-discard]");
-    expect(onCardTab()).toBe(false);
-    finish({ ok: true, loadout: {} as never });
-    await settle(modal);
-    // Back on the card: no changes that would undo the save.
-    await click("[data-inventory-top-tab='card']");
-    expect(q("[data-card-change-count]")).toBeNull();
-    expect(q("[data-card-discard]")).toBeNull();
-    expect(saveCardLoadout).toHaveBeenCalledTimes(1);
-  });
+    return (v: Awaited<ReturnType<typeof saveCardLoadout>>) => finish(v);
+  }
+  const guardButton = (name: string) =>
+    q<HTMLButtonElement>(`[data-card-guard-${name}]`)!;
 
-  it("the guard's Save while the bar's save is in flight waits for it, then goes", async () => {
-    let finish!: (v: Awaited<ReturnType<typeof saveCardLoadout>>) => void;
-    vi.mocked(saveCardLoadout).mockReturnValue(
-      new Promise((r) => (finish = r)),
-    );
+  it("leaving while the bar's save is in flight: Saving, no Discard; once it lands, goes", async () => {
     await openWithChange();
-    await click("[data-card-save]");
+    const finish = await saveHeld();
     await click("[data-inventory-top-tab='ingame']");
-    await click("[data-card-guard-save]");
-    // Still saving: the guard shows it rather than closing with nothing.
+    // Discarding now would set the draft to the card being replaced.
     expect(q("[data-card-guard]")).not.toBeNull();
+    expect(guardButton("discard").disabled).toBe(true);
+    expect(guardButton("save").disabled).toBe(true);
+    expect(guardButton("save").textContent).toContain("inventory_card.saving");
+    expect(onCardTab()).toBe(true);
     finish({ ok: true, loadout: {} as never });
     await settle(modal);
     expect(q("[data-card-guard]")).toBeNull();
     expect(onCardTab()).toBe(false);
+    // Back on the card: nothing that would undo the save.
+    await click("[data-inventory-top-tab='card']");
+    expect(q("[data-card-change-count]")).toBeNull();
     expect(saveCardLoadout).toHaveBeenCalledTimes(1);
+  });
+
+  it("an edit made during that save: once it lands, the guard asks about that edit only", async () => {
+    await openWithChange();
+    const finish = await saveHeld();
+    await click("[data-card-slot-row='tracker:0'] [data-card-row-open]");
+    await click("[data-card-pick='cardTracker:best_elo'] [data-tile-main]");
+    await click("[data-inventory-top-tab='ingame']");
+    finish({ ok: true, loadout: {} as never });
+    await settle(modal);
+    const guard = q("[data-card-guard]")!;
+    // Tracker 1 (wins → best_elo); tracker 3 (games_played) is saved.
+    expect(guard.dataset.count).toBe("1");
+    expect(guardButton("discard").disabled).toBe(false);
+    expect(guardButton("save").disabled).toBe(false);
+    await click("[data-card-guard-discard]");
+    expect(onCardTab()).toBe(false);
+    await click("[data-inventory-top-tab='card']");
+    expect(q("[data-card-change-count]")).toBeNull();
+  });
+
+  it("that save failing: the guard offers Save again, and Discard", async () => {
+    await openWithChange();
+    const finish = await saveHeld();
+    await click("[data-inventory-top-tab='ingame']");
+    finish({ ok: false, error: "failed" });
+    await settle(modal);
+    expect(q("[data-card-guard]")!.dataset.count).toBe("1");
+    expect(guardButton("save").disabled).toBe(false);
+    expect(guardButton("discard").disabled).toBe(false);
+    expect(onCardTab()).toBe(true);
   });
 
   /** The card tab's shortfall box (no game to leave), as a Buy opens it. */
