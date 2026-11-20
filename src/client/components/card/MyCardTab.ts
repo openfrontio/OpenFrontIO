@@ -188,8 +188,21 @@ export class MyCardTab extends LitElement {
           this.saveError = true;
           return;
         }
-        this.saved = sending;
-        if (this.loadout === sending) return;
+        // What the server stored is what it holds now, whether or not the
+        // /users/@me refresh after it got through: tell the host, which keeps
+        // its copy (and so the next tab it makes) in step.
+        this.saved = result.loadout;
+        this.dispatchEvent(
+          new CustomEvent<CardLoadoutBody>("card-saved", {
+            detail: result.loadout,
+            bubbles: true,
+            composed: true,
+          }),
+        );
+        if (this.loadout === sending) {
+          this.loadout = result.loadout;
+          return;
+        }
       }
     } finally {
       this.saving = false;

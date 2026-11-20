@@ -161,7 +161,10 @@ describe("<my-card-tab>", () => {
 
   it("taunts held back: saving sends the saved taunt back unchanged", async () => {
     heldBack.taunts = false;
-    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    api.save.mockImplementation(async (body: unknown) => ({
+      ok: true,
+      loadout: body,
+    }));
     await render(userMe(OWNER, { ...SAVED, taunt: "salute" }));
     tile("cardBackground:bg_pacific").click();
     await settle();
@@ -179,7 +182,10 @@ describe("<my-card-tab>", () => {
 
   it("titles held back: saving sends the saved title back unchanged", async () => {
     heldBack.titles = false;
-    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    api.save.mockImplementation(async (body: unknown) => ({
+      ok: true,
+      loadout: body,
+    }));
     await render(userMe(OWNER, { ...SAVED, title: "warmonger" }));
     tile("cardBackground:bg_pacific").click();
     await settle();
@@ -210,7 +216,10 @@ describe("<my-card-tab>", () => {
   });
 
   it("equipping an owned background saves and updates preview", async () => {
-    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    api.save.mockImplementation(async (body: unknown) => ({
+      ok: true,
+      loadout: body,
+    }));
     await render(userMe(OWNER, SAVED));
     tile("cardBackground:bg_pacific").click();
     await settle();
@@ -317,7 +326,10 @@ describe("<my-card-tab>", () => {
   });
 
   it("Reset still goes back to the opening loadout after a save's refresh", async () => {
-    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    api.save.mockImplementation(async (body: unknown) => ({
+      ok: true,
+      loadout: body,
+    }));
     const me = userMe(OWNER, SAVED);
     await render(me);
     tile("cardBackground:bg_pacific").click();
@@ -336,6 +348,27 @@ describe("<my-card-tab>", () => {
     expect(api.save).toHaveBeenLastCalledWith(
       expect.objectContaining({ background: null }),
     );
+  });
+
+  it("takes the loadout the server stored, and tells the host", async () => {
+    // The server's answer is the truth (it may drop or reorder): that is
+    // what the tab holds and what it hands up in card-saved.
+    const stored = {
+      background: "bg_pacific",
+      title: null,
+      taunt: null,
+      trackers: ["best_elo", "wins"],
+    };
+    api.save.mockResolvedValue({ ok: true, loadout: stored });
+    await render(userMe(OWNER, SAVED));
+    const seen = vi.fn();
+    el().addEventListener("card-saved", (e) => seen((e as CustomEvent).detail));
+    tile("cardBackground:bg_pacific").click();
+    await settle();
+    expect(seen).toHaveBeenCalledWith(stored);
+    await openSlot("trackers");
+    expect(tile("cardTracker:nukes_launched").dataset.state).toBe("owned");
+    expect(tile("cardTracker:wins").dataset.state).toBe("equipped");
   });
 
   it("failed save rolls back", async () => {
@@ -411,7 +444,10 @@ describe("<my-card-tab>", () => {
   it("a tracker is keyed on its stat, as the server checks it", async () => {
     // The catalogue's name and stat are equal today (infra builds stat from
     // the name), but the server and the saved loadout use the stat.
-    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    api.save.mockImplementation(async (body: unknown) => ({
+      ok: true,
+      loadout: body,
+    }));
     tab = document.createElement("my-card-tab") as unknown as MyCardTab;
     tab.userMe = userMe(["playerCard:standard", "cardTracker:conquests"], {
       ...SAVED,
@@ -459,7 +495,10 @@ describe("<my-card-tab>", () => {
   });
 
   it("unpicking a tracker saves the rest", async () => {
-    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    api.save.mockImplementation(async (body: unknown) => ({
+      ok: true,
+      loadout: body,
+    }));
     await render(userMe(OWNER, SAVED));
     await openSlot("trackers");
     tile("cardTracker:wins").click();
@@ -470,7 +509,10 @@ describe("<my-card-tab>", () => {
   });
 
   it("reset restores saved loadout", async () => {
-    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    api.save.mockImplementation(async (body: unknown) => ({
+      ok: true,
+      loadout: body,
+    }));
     await render(userMe(OWNER, SAVED));
     tile("cardBackground:bg_pacific").click();
     await settle();

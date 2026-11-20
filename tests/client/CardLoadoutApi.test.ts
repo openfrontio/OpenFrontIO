@@ -18,6 +18,7 @@ vi.mock("../../src/client/Cosmetics", () => ({
 }));
 
 import {
+  cardRefsFromLoadout,
   saveCardLoadout,
   saveTauntsMuted,
 } from "../../src/client/CardLoadoutApi";
@@ -150,5 +151,28 @@ describe("saveTauntsMuted", () => {
   it("failure gives false", async () => {
     fetchMock.mockResolvedValue(new Response("", { status: 500 }));
     expect(await saveTauntsMuted(true)).toBe(false);
+  });
+});
+
+describe("cardRefsFromLoadout", () => {
+  it("is the saved loadout as /users/@me carries it, keeping known values", () => {
+    expect(
+      cardRefsFromLoadout(
+        {
+          background: "bg_x",
+          title: null,
+          taunt: "salute",
+          trackers: ["wins", "conquests"],
+        },
+        { trackers: [{ stat: "wins", value: 12 }] },
+      ),
+    ).toEqual({
+      background: "bg_x",
+      taunt: "salute",
+      trackers: [
+        { stat: "wins", value: 12 },
+        { stat: "conquests", value: 0 },
+      ],
+    });
   });
 });

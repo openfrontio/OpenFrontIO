@@ -29,30 +29,31 @@ import {
   sendMagicLink,
   steamLogin,
 } from "./Auth";
+import { type CardLoadoutBody, cardRefsFromLoadout } from "./CardLoadoutApi";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import { BaseModal } from "./components/BaseModal";
 import { buildPlayerCardView } from "./components/card/PlayerCardModel";
 import { xpBarTemplate } from "./components/card/ProfileIdentity";
 import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
-import { ffaSummaryFromMe } from "./components/ffaRating/FfaRatingSummary";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
-import type { PrestigeFlow } from "./components/PrestigeFlow";
+import { ffaSummaryFromMe } from "./components/ffaRating/FfaRatingSummary";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import "./components/baseComponents/stats/SteamUserHeader";
-import type { RewardsChangedDetail } from "./components/RewardsPanel";
+import type { PrestigeFlow } from "./components/PrestigeFlow";
 import "./components/CopyButton";
 import "./components/CreatorCodePanel";
-import { googleLinkButton } from "./components/ui/GoogleLinkButton";
+import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
-import { modalHeader } from "./components/ui/ModalHeader";
+import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import "./components/FriendsList";
-import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
+import { modalHeader } from "./components/ui/ModalHeader";
 import "./components/ProfileCard";
 import "./components/ProfileProgression";
 import "./components/RewardsPanel";
+import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
 import { xpProgressText } from "./components/XpBar";
 import { fetchCosmetics } from "./Cosmetics";
 import { desktopLinkGate, isSteamShell } from "./DesktopShell";
@@ -358,6 +359,7 @@ export class AccountModal extends BaseModal {
   private renderMyCardTab(): TemplateResult {
     return html`<my-card-tab
       .userMe=${this.userMeResponse}
+      @card-saved=${this.handleCardSaved}
       @change-flag=${() =>
         whenModalLoaded("inventory-modal", () =>
           (
@@ -762,6 +764,21 @@ export class AccountModal extends BaseModal {
       @creator-changed=${this.handleCreatorChanged}
     ></creator-code-panel>`;
   }
+
+  // A card save went through: patch the card into a new /users/@me copy, so
+  // the header and a My Card tab made later read it even if the refresh that
+  // follows a save fails. (On the tab that saved, it's what it holds.)
+  private handleCardSaved = (event: CustomEvent<CardLoadoutBody>): void => {
+    const me = this.userMeResponse;
+    if (!me) return;
+    this.userMeResponse = {
+      ...me,
+      player: {
+        ...me.player,
+        card: cardRefsFromLoadout(event.detail, me.player.card),
+      },
+    };
+  };
 
   // A claim moved unclaimed rewards into the balances; both were returned by
   // the claim endpoint, so update in place instead of re-fetching /users/@me.
