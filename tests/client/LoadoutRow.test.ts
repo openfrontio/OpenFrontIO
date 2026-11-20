@@ -16,6 +16,24 @@ vi.mock("../../src/client/components/card/HeldBack", () => ({
 vi.mock("../../src/client/Cosmetics", () => ({
   purchaseCosmetic: vi.fn(),
 }));
+// The row's own tracker, counted: made, and disposed.
+const trackers = vi.hoisted(() => ({
+  made: [] as { disposed: boolean }[],
+}));
+vi.mock("../../src/client/StoreTracking", () => ({
+  StoreTracker: class {
+    disposed = false;
+    constructor() {
+      trackers.made.push(this);
+    }
+    observe() {}
+    click() {}
+    releaseDetached() {}
+    dispose() {
+      this.disposed = true;
+    }
+  },
+}));
 
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import {
@@ -330,5 +348,43 @@ describe("<loadout-row>", () => {
       "cardBackground:bg_frontline",
       { kind: "card_loadout" },
     );
+  });
+});
+
+describe("<loadout-row> owned tracker", () => {
+  beforeEach(() => {
+    trackers.made.length = 0;
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+  });
+  afterEach(() => vi.unstubAllGlobals());
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  it("a row removed before the tracker loads never makes one", async () => {
+    const row = document.createElement("loadout-row") as unknown as LoadoutRow;
+    document.body.appendChild(row as unknown as Node);
+    (row as unknown as Element).remove();
+    await settle();
+    expect(trackers.made.filter((t) => !t.disposed)).toHaveLength(0);
+  });
+
+  it("disposes its tracker on removal and makes a new one when reattached", async () => {
+    const row = document.createElement("loadout-row") as unknown as LoadoutRow;
+    document.body.appendChild(row as unknown as Node);
+    await settle();
+    expect(trackers.made).toHaveLength(1);
+    (row as unknown as Element).remove();
+    expect(trackers.made[0].disposed).toBe(true);
+    document.body.appendChild(row as unknown as Node);
+    await settle();
+    expect(trackers.made).toHaveLength(2);
+    expect(row.tracker).toBe(trackers.made[1]);
+    (row as unknown as Element).remove();
   });
 });

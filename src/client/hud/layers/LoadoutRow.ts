@@ -167,6 +167,8 @@ export class LoadoutRow extends LitElement {
     super.connectedCallback();
     if (this.tracker === null && typeof IntersectionObserver !== "undefined") {
       const { StoreTracker } = await import("../../StoreTracking");
+      // Removed (or given a tracker) while the module loaded: none to make.
+      if (!this.isConnected || this.tracker !== null) return;
       this.tracker = new StoreTracker();
       this.ownTracker = true;
     }
@@ -174,7 +176,12 @@ export class LoadoutRow extends LitElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    if (this.ownTracker) this.tracker?.dispose();
+    // A disposed tracker sends nothing: drop it, so reattaching makes a new one.
+    if (this.ownTracker) {
+      this.tracker?.dispose();
+      this.tracker = null;
+      this.ownTracker = false;
+    }
   }
 
   protected updated(): void {
