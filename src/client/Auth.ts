@@ -673,6 +673,9 @@ async function doRefreshJwt(): Promise<void> {
     // pointless round trips and the player's stored persistent ID every time
     // Steam hiccuped. Record why and stop.
     __jwt = null;
+    // The shell couldn't reach our API to get a ticket: that's "couldn't
+    // check", like any other unreachable answer, not signed out.
+    __refreshUnreachable = result.reason === "api-unreachable";
     setSessionState({ status: "signed-out", reason: ticketReason(result) });
     return;
   }

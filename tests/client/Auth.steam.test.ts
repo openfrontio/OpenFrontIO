@@ -68,6 +68,26 @@ describe("Steam login: sessionUncertain", () => {
     expect(sessionUncertain()).toBe(true);
   });
 
+  it("no ticket because the shell couldn't reach our API: uncertain", async () => {
+    onSteam();
+    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
+      ok: false,
+      reason: "api-unreachable",
+    });
+    expect(await userAuth()).toBe(false);
+    expect(sessionUncertain()).toBe(true);
+  });
+
+  it("no ticket because Steam refused it: settled", async () => {
+    onSteam();
+    vi.spyOn(steamSDK, "getTicket").mockResolvedValue({
+      ok: false,
+      reason: "ticket-rejected",
+    });
+    expect(await userAuth()).toBe(false);
+    expect(sessionUncertain()).toBe(false);
+  });
+
   it("a Steam ticket rejected (401) after an unreachable one: settled", async () => {
     onSteam();
     answer(503);
