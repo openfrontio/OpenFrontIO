@@ -54,6 +54,7 @@ import {
   startPlayPurchase,
   startPurchase,
 } from "./Payments";
+import { shownPrice } from "./ShownPrice";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
 import { UserSettings } from "./UserSettings";
 import { translateText } from "./Utils";
@@ -937,10 +938,7 @@ export function currentPrice(
   },
   currency: "hard" | "soft",
 ): number | undefined {
-  const price = currency === "hard" ? item.priceHard : item.priceSoft;
-  const listPrice =
-    currency === "hard" ? item.listPriceHard : item.listPriceSoft;
-  return saleHasEnded(item) ? (listPrice ?? price) : price;
+  return shownPrice(item, currency)?.price;
 }
 
 /** Whether the item's own sale has ended (its endsAt has passed). */
