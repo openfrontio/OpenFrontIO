@@ -232,6 +232,27 @@ describe("Nation nuke targeting", () => {
     expect(nukes).toHaveLength(1);
     expect(isOnIsland(game, nukes[0].targetTile()!)).toBe(true);
   });
+
+  // Our 15x15 corner is 120 tiles from (100, 100), out of a hydrogen bomb's 100-tile blast,
+  // but on the edge of the blast's bounding square
+  it("picks a hydrogen bomb spot whose blast misses our land diagonally", async () => {
+    const { game, nation, human } = await setupDuel();
+    game.map().forEachTile((tile) => {
+      if (game.owner(tile) !== nation) human.conquer(tile);
+    });
+    const target = game.ref(100, 100);
+    human.buildUnit(UnitType.City, target, {});
+
+    const tile = nukeBehavior(game, nation)["findBestNukeTile"](
+      UnitType.HydrogenBomb,
+      human,
+      new Set([target]),
+      nation.units(UnitType.MissileSilo),
+      human.units(UnitType.City),
+      false,
+    );
+    expect(tile).toBe(target);
+  });
 });
 
 describe("Nation nuke targets in team games", () => {
@@ -287,6 +308,57 @@ describe("Nation nuke targets in team games", () => {
     expect(nukeBehavior(game, nation).findBestNukeTarget()).toBe(
       game.player("built"),
     );
+  });
+
+  // Columns: our 20 tiles, our teammate's 40, then the enemy. A hydrogen bomb on (140, 100)
+  // reaches 20 tiles into the teammate's land and stops 20 short of ours.
+  it.each([
+    ["hits a teammate's land, as a human may", false, true],
+    ["spares a teammate's structure, as a human must", true, false],
+  ])("Hard %s", async (_, mateCity, nukes) => {
+    const ids = ["nation", "mate", "enemy"];
+    const game = await setup(
+      "big_plains",
+      { difficulty: Difficulty.Hard, gameMode: GameMode.Team, playerTeams: 2 },
+      ids.map(
+        (id, i) =>
+          new PlayerInfo(
+            id,
+            id === "nation" ? PlayerType.Nation : PlayerType.Human,
+            null,
+            id,
+            false,
+            null,
+            [],
+            i < 2 ? 0 : 1,
+          ),
+      ),
+      undefined,
+      RealNukeRadiusConfig,
+    );
+    game.map().forEachTile((tile) => {
+      const x = game.x(tile);
+      game.player(x < 20 ? "nation" : x < 60 ? "mate" : "enemy").conquer(tile);
+    });
+    const nation = game.player("nation");
+    const enemy = game.player("enemy");
+    nation.buildUnit(UnitType.MissileSilo, game.ref(5, 5), {});
+    nation.addGold(40_000_000n);
+    const target = game.ref(140, 100);
+    enemy.buildUnit(UnitType.City, target, {});
+    if (mateCity) {
+      game.player("mate").buildUnit(UnitType.City, game.ref(50, 100), {});
+    }
+
+    const tile = nukeBehavior(game, nation)["findBestNukeTile"](
+      UnitType.HydrogenBomb,
+      enemy,
+      new Set([target]),
+      nation.units(UnitType.MissileSilo),
+      enemy.units(UnitType.City),
+      false,
+    );
+    expect(tile).toBe(nukes ? target : null);
   });
 });
 

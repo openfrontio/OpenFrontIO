@@ -1,6 +1,7 @@
 import {
   Difficulty,
   GameMode,
+  MAX_UPGRADE_AMOUNT,
   PlayerInfo,
   PlayerType,
   UnitType,
@@ -9,6 +10,7 @@ import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
 import { NationStructureBehavior } from "@openfront/engine/execution/nation/NationStructureBehavior";
 import { UpgradeStructureExecution } from "@openfront/engine/execution/UpgradeStructureExecution";
+import type { Game } from "@openfront/engine/game/Game";
 import { createGame, L, W } from "./core/pathfinding/_fixtures";
 
 // size x size with a lake in the middle half: `nation` owns the west coast, `other` the
@@ -19,6 +21,7 @@ function setupCoast(
     difficulty: Difficulty;
     gameMode?: GameMode;
     disabledUnits?: UnitType[];
+    startingGold?: number;
   },
   { spawnAreas = false, landlocked = false, size = 100 } = {},
 ) {
@@ -75,12 +78,27 @@ function setupCoast(
       .map((c) => c[0])
       .filter((e) => e instanceof UpgradeStructureExecution)
       .map((e) => e["unitId"]);
+  const builtTiles = (): number[] =>
+    spy.mock.calls
+      .map((c) => c[0])
+      .filter((e) => e instanceof ConstructionExecution)
+      .map((e) => e["tile"]);
   // Lifetime income, which tells Hard & Impossible whether a save-up target is within reach
   const earned = (gold: bigint) => {
     nation.addGold(gold);
     nation.removeGold(gold);
   };
-  return { game, nation, coast, behavior, cities, built, upgraded, earned };
+  return {
+    game,
+    nation,
+    coast,
+    behavior,
+    cities,
+    built,
+    builtTiles,
+    upgraded,
+    earned,
+  };
 }
 
 describe("Nation economy at the start", () => {
@@ -283,6 +301,60 @@ describe("Nation structure upgrades", () => {
     expect(upgraded()).toEqual([]);
   });
 
+  const within20 = (game: Game, a: number, b: number) =>
+    game.euclideanDistSquared(a, b) <= 20 ** 2;
+
+  it("Hard values a SAM spot by the structure no SAM covers over one by its biggest, covered city", () => {
+    const { game, nation, behavior } = withSam(Difficulty.Hard, [
+      UnitType.Factory,
+      30,
+      150,
+    ]);
+    const [city] = nation.units(UnitType.City);
+    for (let i = 1; i < 50; i++) city.increaseLevel();
+    const value = behavior["placement"]["samLauncherValue"](false);
+    // 15 tiles from the factory vs 15 tiles from the city
+    expect(value(game.ref(30, 135))).toBeGreaterThan(value(game.ref(10, 45)));
+  });
+
+  it("Impossible with plenty of spare gold puts a new SAM over land no SAM covers", () => {
+    const { game, nation, behavior, sam, built, builtTiles } = withSam(
+      Difficulty.Impossible,
+      [UnitType.Factory, 20, 25],
+    );
+    nation.addGold(90_000_000n);
+    expect(behavior["maybeSpawnStructure"](UnitType.SAMLauncher)).toBe(true);
+    expect(built()).toEqual([UnitType.SAMLauncher]);
+    expect(within20(game, builtTiles()[0], sam.tile())).toBe(false);
+  });
+
+  // A SAM guarding a level-10 city and a level-6 SAM guarding a level-100 city. 15M beyond the
+  // 30M savings pays for five SAM levels at 3M.
+  it.each([
+    ["first raises a SAM below level 5 to 5", 1, 5, 6],
+    ["then the one guarding the most", 5, 5, 11],
+  ])("Impossible %s", (_, smallLevel, smallAfter, bigAfter) => {
+    const { game, nation, behavior } = setupCoast(
+      { difficulty: Difficulty.Impossible, gameMode: ffa },
+      { size: 200 },
+    );
+    const guarded = (y: number, samLevel: number, cityLevel: number) => {
+      const sam = nation.buildUnit(UnitType.SAMLauncher, game.ref(10, y), {});
+      for (let i = 1; i < samLevel; i++) sam.increaseLevel();
+      const city = nation.buildUnit(UnitType.City, game.ref(10, y + 10), {});
+      for (let i = 1; i < cityLevel; i++) city.increaseLevel();
+      return sam;
+    };
+    const small = guarded(20, smallLevel, 10);
+    const big = guarded(120, 6, 100);
+    nation.addGold(45_000_000n);
+    game.endSpawnPhase();
+    expect(behavior["maybeSpawnStructure"](UnitType.SAMLauncher)).toBe(true);
+    game.executeNextTick();
+    expect(small.level()).toBe(smallAfter);
+    expect(big.level()).toBe(bigAfter);
+  });
+
   // Ports are due (cities disabled: one city per 2000 tiles), and nothing else is. Without silos
   // the nation saves up for a SAM (1.5M).
   function withPort(
@@ -363,17 +435,22 @@ describe("Nation structure upgrades", () => {
   it.each([
     [Difficulty.Easy, 3],
     [Difficulty.Medium, 10],
+    [Difficulty.Hard, MAX_UPGRADE_AMOUNT],
+    [Difficulty.Impossible, MAX_UPGRADE_AMOUNT],
   ])("%s buys at most %i city levels at once", (difficulty, levels) => {
     expect(withCities(difficulty).cityLevels).toBe(2 + levels);
   });
 
   it.each([Difficulty.Hard, Difficulty.Impossible])(
-    "%s spends everything beyond its savings on city levels at once",
+    "%s spends the gold left after a full city upgrade on other structures",
     (difficulty) => {
-      const { nation, cityLevels } = withCities(difficulty);
-      expect(cityLevels).toBeGreaterThan(900);
-      expect(nation.gold()).toBeGreaterThanOrEqual(30_000_000n);
-      expect(nation.gold()).toBeLessThan(31_000_000n);
+      const { game, nation, behavior } = withCities(difficulty);
+      expect(nation.gold()).toBeGreaterThan(900_000_000n);
+      expect(behavior.handleStructures()).toBe(true);
+      game.executeNextTick();
+      // 52 city levels ask for 39 ports in FFA
+      const [port] = nation.units(UnitType.Port);
+      expect(port.level()).toBe(39);
     },
   );
 
@@ -393,6 +470,54 @@ describe("Nation structure upgrades", () => {
     expect(behavior.handleStructures()).toBe(true);
     expect(built()).toEqual([UnitType.Port]);
     expect(upgraded()).toEqual([]);
+  });
+});
+
+describe("Nation nuke reserve from a high starting gold", () => {
+  function richNation(difficulty: Difficulty, nukes = 0) {
+    const setup = setupCoast(
+      { difficulty, gameMode: GameMode.FFA, startingGold: 1_000_000_000 },
+      { size: 200 },
+    );
+    const { game, nation, cities, behavior } = setup;
+    cities(2);
+    for (let i = 0; i < nukes; i++) {
+      nation.buildUnit(UnitType.HydrogenBomb, game.ref(5, 5), {
+        targetTile: game.ref(150, 5),
+        trajectory: [],
+      });
+    }
+    game.endSpawnPhase();
+    const spendAll = () => {
+      for (let i = 0; i < 200; i++) {
+        behavior.handleStructures();
+        game.executeNextTick();
+      }
+    };
+    return { ...setup, spendAll };
+  }
+
+  // On top of the 30M saved for a MIRV and a hydrogen bomb
+  it.each([
+    [Difficulty.Hard, 0, 60_000_000n],
+    [Difficulty.Impossible, 0, 100_000_000n],
+    [Difficulty.Impossible, 10, 50_000_000n],
+  ])(
+    "%s with %i hydrogen bombs bought keeps %i for nukes",
+    (difficulty, nukes, reserve) => {
+      const { nation, spendAll } = richNation(difficulty, nukes);
+      spendAll();
+      expect(nation.gold()).toBeGreaterThanOrEqual(reserve);
+      expect(nation.gold()).toBeLessThan(reserve + 31_000_000n);
+    },
+  );
+
+  it.each([
+    [Difficulty.Easy, 3],
+    [Difficulty.Impossible, 7],
+  ])("%s wants up to %i missile silo levels", (difficulty, levels) => {
+    const { behavior } = richNation(difficulty);
+    expect(behavior["levelsDue"](UnitType.MissileSilo, 100, true)).toBe(levels);
   });
 });
 

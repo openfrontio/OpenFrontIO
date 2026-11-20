@@ -47,13 +47,14 @@ export class NationStructurePlacement {
     return this._sharedWaterComponents !== null;
   }
 
-  spawnTile(type: UnitType): TileRef | null {
+  /** `coverLand`: a SAM also values land no SAM covers yet, not just structures. */
+  spawnTile(type: UnitType, coverLand = false): TileRef | null {
     const tiles =
       type === UnitType.Port
         ? this.randCoastalTileArray(25)
         : randTerritoryTileArray(this.random, this.game, this.player, 25);
     if (tiles.length === 0) return null;
-    const valueFunction = this.structureSpawnTileValue(type);
+    const valueFunction = this.structureSpawnTileValue(type, coverLand);
     if (valueFunction === null) return null;
     let bestTile: TileRef | null = null;
     let bestValue = 0;
@@ -111,6 +112,7 @@ export class NationStructurePlacement {
 
   private structureSpawnTileValue(
     type: UnitType,
+    coverLand: boolean,
   ): ((tile: TileRef) => number) | null {
     switch (type) {
       case UnitType.City:
@@ -122,7 +124,7 @@ export class NationStructurePlacement {
       case UnitType.Port:
         return this.portValue();
       case UnitType.SAMLauncher:
-        return this.samLauncherValue();
+        return this.samLauncherValue(coverLand);
       default:
         throw new Error(`Value function not implemented for ${type}`);
     }
@@ -458,9 +460,10 @@ export class NationStructurePlacement {
   /**
    * Value function for SAM launchers.
    * Prefers elevation, distance from border, spacing, and proximity to protectable structures.
-   * On harder difficulties, weights by structure level and considers existing SAM coverage.
+   * On harder difficulties, weights by structure level and considers existing SAM coverage;
+   * Hard & Impossible only count structures no SAM covers yet.
    */
-  private samLauncherValue(): (tile: TileRef) => number {
+  private samLauncherValue(coverLand: boolean): (tile: TileRef) => number {
     const game = this.game;
     const player = this.player;
     const borderTiles = player.borderTiles();
@@ -470,6 +473,12 @@ export class NationStructurePlacement {
     const { difficulty } = game.config().gameConfig();
     const weightByLevel =
       difficulty === Difficulty.Hard || difficulty === Difficulty.Impossible;
+    const coveredBySam = (tile: TileRef) =>
+      otherUnits.some(
+        (sam) =>
+          game.euclideanDistSquared(tile, sam.tile()) <=
+          game.config().samRange(sam.level()) ** 2,
+      );
 
     const protectEntries: { tile: TileRef; weight: number }[] = [];
     for (const unit of player.units()) {
@@ -478,6 +487,7 @@ export class NationStructurePlacement {
         case UnitType.Factory:
         case UnitType.MissileSilo:
         case UnitType.Port:
+          if (weightByLevel && coveredBySam(unit.tile())) break;
           protectEntries.push({
             tile: unit.tile(),
             weight: weightByLevel ? unit.level() : 1,
@@ -532,6 +542,8 @@ export class NationStructurePlacement {
       otherTiles.delete(tile);
       const d = nearestTileDist(game, otherTiles, tile);
       if (d !== Infinity) w += Math.min(d, structureSpacing);
+
+      if (coverLand && !coveredBySam(tile)) w += structureSpacing;
 
       // Prefer to be in range of other structures (skip on easy difficulty)
       if (difficulty !== Difficulty.Easy) {

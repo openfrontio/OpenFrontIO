@@ -21,7 +21,7 @@ import {
   zRef,
   zTile,
 } from "@openfront/engine-lib/snapshot/SnapshotType";
-import { assertNever, boundingBoxTiles } from "@openfront/engine-lib/Util";
+import { assertNever } from "@openfront/engine-lib/Util";
 import { z } from "zod";
 import { Game, Player, Unit } from "../../game/Game";
 import type {
@@ -35,12 +35,14 @@ import { NationAttackBehavior } from "./NationAttackBehavior";
 import { EMOJI_NUKE, NationEmojiBehavior } from "./NationEmojiBehavior";
 import { isMirvWorthSavingFor } from "./NationMIRVBehavior";
 import {
-  blastHitsFriendlyLand,
+  blastHitsFriendly,
+  circleTiles,
   enemyLandBlastCoverage,
   isNukeAlreadyLandingNear,
   isTrajectoryInterceptableBySam,
   NukeType,
   planSamSalvo,
+  sparesLandOf,
   siloToUpgradeForSalvo,
 } from "./NationNukePlanning";
 import {
@@ -287,11 +289,11 @@ export class NationNukeBehavior {
     const scored: { tile: TileRef; score: number }[] = [];
 
     outer: for (const tile of candidates) {
-      // Cheap pre-filter, blastHitsFriendlyLand checks the whole blast of the winner
-      const boundingBox = boundingBoxTiles(this.game, tile, range)
+      // Cheap pre-filter on the blast's rim, blastHitsFriendly checks the whole blast of the winner
+      const rim = circleTiles(this.game, tile, range)
         // Add radius / 2 in case there is a piece of unwanted territory inside the outer radius that we miss.
-        .concat(boundingBoxTiles(this.game, tile, Math.floor(range / 2)));
-      for (const t of boundingBox) {
+        .concat(circleTiles(this.game, tile, Math.floor(range / 2)));
+      for (const t of rim) {
         if (!this.isValidNukeTile(t, nukeTarget)) {
           continue outer;
         }
@@ -338,7 +340,7 @@ export class NationNukeBehavior {
     const margin = strike ? STRIKE_BORDER_MARGIN : 0;
     const best = scored.find(
       ({ tile }) =>
-        !blastHitsFriendlyLand(this.game, this.player, tile, nukeType, margin),
+        !blastHitsFriendly(this.game, this.player, tile, nukeType, margin),
     );
     return best?.tile ?? null;
   }
@@ -977,11 +979,11 @@ export class NationNukeBehavior {
 
     const owner = this.game.owner(t);
     if (owner === nukeTarget) return true;
-    // On Hard & Impossible, allow TerraNullius (hit small islands) and other players unless they are teammates or allies (even AFK ones)
+    // On Hard & Impossible, allow TerraNullius (hit small islands) and other players' land, teammates' included, but not ours or allies'
     if (
       (difficulty === Difficulty.Hard ||
         difficulty === Difficulty.Impossible) &&
-      (!owner.isPlayer() || !this.player.isFriendly(owner, true))
+      (!owner.isPlayer() || !sparesLandOf(this.player, owner))
     ) {
       return true;
     }

@@ -1,5 +1,5 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { Structures, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { Game, Player, Unit } from "../../game/Game";
 import { UniversalPathFinding } from "../../pathfinding/PathFinder";
 
@@ -66,21 +66,63 @@ export function enemyLandBlastCoverage(
   return enemyLand / total;
 }
 
-/** Whether any tile in the blast, widened by margin, belongs to player, a teammate or an ally (even AFK ones). */
-export function blastHitsFriendlyLand(
+/** Map tiles on the circle of the given radius around center. */
+export function circleTiles(
+  game: Game,
+  center: TileRef,
+  radius: number,
+): TileRef[] {
+  const cx = game.x(center);
+  const cy = game.y(center);
+  const tiles: TileRef[] = [];
+  const add = (x: number, y: number) => {
+    if (game.isValidCoord(x, y)) tiles.push(game.ref(x, y));
+  };
+  // Stepping along both axes leaves no gaps where the circle is steep
+  for (let d = -radius; d <= radius; d++) {
+    const e = Math.floor(Math.sqrt(radius * radius - d * d));
+    add(cx + d, cy + e);
+    add(cx + d, cy - e);
+    add(cx + e, cy + d);
+    add(cx - e, cy + d);
+  }
+  return tiles;
+}
+
+/** Whether player's nukes keep off owner's land: its own, and allies' (even AFK ones), as hitting them breaks the alliance. */
+export function sparesLandOf(player: Player, owner: Player): boolean {
+  return owner === player || player.isAlliedWith(owner);
+}
+
+/**
+ * Whether the blast hits our or an ally's land (widened by margin), or a teammate's structure.
+ * Like a human, a nation may hit teammates' land without structures.
+ */
+export function blastHitsFriendly(
   game: Game,
   player: Player,
   center: TileRef,
   nukeType: NukeType,
   margin = 0,
 ): boolean {
-  const friendlyIds = new Set(
+  const radius = game.config().nukeMagnitudes(nukeType).outer;
+  if (
+    game.anyUnitNearby(
+      center,
+      radius,
+      Structures.types,
+      (unit) => unit.owner().isPlayer() && player.isOnSameTeam(unit.owner()),
+    )
+  ) {
+    return true;
+  }
+  const sparedIds = new Set(
     game
       .players()
-      .filter((p) => player.isFriendly(p, true))
+      .filter((p) => sparesLandOf(player, p))
       .map((p) => p.smallID()),
   );
-  const outer = game.config().nukeMagnitudes(nukeType).outer + margin;
+  const outer = radius + margin;
   const cx = game.x(center);
   const cy = game.y(center);
   for (let dy = -outer; dy <= outer; dy++) {
@@ -88,7 +130,7 @@ export function blastHitsFriendlyLand(
       if (dx * dx + dy * dy > outer * outer) continue;
       if (!game.isValidCoord(cx + dx, cy + dy)) continue;
       const ownerId = game.ownerID(game.ref(cx + dx, cy + dy));
-      if (friendlyIds.has(ownerId)) return true;
+      if (sparedIds.has(ownerId)) return true;
     }
   }
   return false;
@@ -221,8 +263,7 @@ export function planSamSalvo(
 
   for (const targetSam of sortedSams) {
     const targetTile = targetSam.tile();
-    // Hitting an ally's land would break the alliance
-    if (blastHitsFriendlyLand(game, player, targetTile, UnitType.AtomBomb)) {
+    if (blastHitsFriendly(game, player, targetTile, UnitType.AtomBomb)) {
       continue;
     }
 
