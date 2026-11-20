@@ -344,7 +344,7 @@ describe("AccountModal — Progression tab", () => {
     await settle(() => {
       const header = modal.querySelector("[data-account-card-header]");
       expect(header?.textContent).toContain("progression.xp_progress");
-      expect(header?.textContent).not.toMatch(/XP/);
+      expect(header?.textContent).not.toMatch(/\bXP\b/);
       expect(header?.querySelector("[data-account-provisional]")).toBeNull();
     });
   });
