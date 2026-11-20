@@ -683,6 +683,10 @@ export async function checkInPlacePurchase(
     // signed out; a session that got no profile means the network. So does
     // a refresh that got no answer (sessionUncertain): the cookie may be
     // fine, and signing in would leave the game.
+    // userAuth(false) on purpose, unlike purchaseCosmeticInPlace's
+    // userAuth(): broadcastFreshUserMe just read the profile through
+    // getAuthHeader, which refreshed the token, and recorded how that
+    // refresh went. Don't "align" it into a second refresh.
     const session = await userAuth(false);
     return {
       ok: false,
