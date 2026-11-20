@@ -626,3 +626,47 @@ describe("<inventory-card-tab> large preview", () => {
     ]);
   });
 });
+
+describe("<inventory-card-tab> on a phone", () => {
+  it("every slot is a row; ↑/↓ are 44px touch targets", async () => {
+    await render(userMe(OWNER));
+    expect(q("[data-card-slot='background']")!.className).toContain("min-h-14");
+    for (const button of qa("[data-card-row-up], [data-card-row-down]")) {
+      expect(button.className).toContain("h-11");
+      expect(button.className).toContain("w-11");
+    }
+  });
+
+  it("the picker is a bottom sheet with a real Done button; the preview stays above", async () => {
+    await render(userMe(OWNER));
+    await click(row(2).querySelector("[data-card-row-open]"));
+    const sheet = q("[data-card-sheet]")!;
+    expect(sheet.className).toContain("max-md:fixed");
+    expect(sheet.className).toContain("max-md:bottom-0");
+    expect(sheet.querySelector("[data-card-picker]")!.className).toContain(
+      "max-md:max-h-[50vh]",
+    );
+    // The preview isn't inside the sheet.
+    expect(sheet.querySelector("[data-card-preview]")).toBeNull();
+    const done = sheet.querySelector<HTMLButtonElement>(
+      "[data-card-picker-done]",
+    )!;
+    expect(done.className).toContain("min-h-11");
+    await pickTile("cardTracker:games_played");
+    await click(done);
+    // Done closes the sheet; it doesn't save.
+    expect(q("[data-card-picker]")).toBeNull();
+    expect(api.save).not.toHaveBeenCalled();
+    expect(editor.changeCount()).toBe(1);
+  });
+
+  it("the Save bar sits in the sheet's place at the bottom", async () => {
+    await render(userMe(OWNER));
+    await click(row(2).querySelector("[data-card-row-open]"));
+    await pickTile("cardTracker:games_played");
+    const sheet = q("[data-card-sheet]")!;
+    expect(sheet.lastElementChild!.hasAttribute("data-card-save-bar")).toBe(
+      true,
+    );
+  });
+});

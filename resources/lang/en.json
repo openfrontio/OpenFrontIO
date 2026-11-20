@@ -1825,6 +1825,7 @@
     "change_line": "{slot}: {from} → {to}",
     "changes_not_saved": "{count, plural, one {# change not saved} other {# changes not saved}}",
     "discard": "Discard",
+    "done": "Done",
     "drag": "Drag to reorder",
     "empty_slot": "Empty",
     "flag_note": "Flag: uses your in-game flag ({flag}). Change it in the In game tab.",

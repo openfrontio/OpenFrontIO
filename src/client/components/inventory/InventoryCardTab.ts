@@ -587,12 +587,20 @@ export class InventoryCardTab extends LitElement {
     return html`<section
       data-card-picker=${slotKey(slot)}
       aria-label=${heading}
-      class="flex flex-col gap-3 border-t border-white/10 pt-4"
+      class="flex flex-col gap-3 border-t border-white/10 pt-4 max-md:max-h-[50vh] max-md:overflow-y-auto max-md:rounded-t-2xl max-md:border max-md:bg-slate-900 max-md:px-3 max-md:pb-3 max-md:shadow-2xl"
     >
       <div class="flex flex-wrap items-center gap-2">
         <h3 class="text-sm font-black uppercase tracking-wider text-white">
           ${heading}
         </h3>
+        <button
+          type="button"
+          data-card-picker-done
+          class="ml-auto min-h-11 rounded-lg border border-white/15 bg-white/10 px-4 text-sm font-bold text-white hover:bg-white/15 md:hidden"
+          @click=${() => (this.openSlot = null)}
+        >
+          ${translateText("inventory_card.done")}
+        </button>
         <p
           data-card-swap-hint
           aria-live="polite"
@@ -775,7 +783,12 @@ export class InventoryCardTab extends LitElement {
     if (!ownsPlayerCard(this.userMe.player.flares ?? [])) {
       return this.renderGetCard();
     }
-    return html`<div data-card-tab class="flex flex-col gap-4">
+    const barShown =
+      this.editor.changeCount() > 0 || this.editor.saveState !== "idle";
+    return html`<div
+      data-card-tab
+      class="flex flex-col gap-4 ${barShown || this.openSlot !== null ? "max-md:pb-28" : ""}"
+    >
       <div class="grid gap-4 md:grid-cols-[18rem_minmax(0,1fr)] md:items-start">
         <div class="order-2 flex flex-col gap-3 md:order-1">
           ${this.renderBackgroundRow()}
@@ -783,8 +796,13 @@ export class InventoryCardTab extends LitElement {
         </div>
         <div class="order-1 md:order-2">${this.renderPreview()}</div>
       </div>
-      ${this.renderPicker()} ${this.renderSaveBar()} ${this.renderToast()}
-      ${this.renderLargePreview()}
+      <div
+        data-card-sheet
+        class="flex flex-col gap-4 max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:z-40 max-md:gap-0 md:contents"
+      >
+        ${this.renderPicker()} ${this.renderSaveBar()}
+      </div>
+      ${this.renderToast()} ${this.renderLargePreview()}
     </div>`;
   }
 
@@ -853,7 +871,7 @@ export class InventoryCardTab extends LitElement {
     if (changes.length === 0 && editor.saveState === "idle") return nothing;
     return html`<div
       data-card-save-bar
-      class="sticky bottom-0 z-30 -mx-3 flex flex-wrap items-center gap-3 border-t border-white/10 bg-slate-950/95 px-3 py-3"
+      class="z-30 flex flex-wrap max-md:px-3 md:sticky md:bottom-0 md:-mx-3 items-center gap-3 border-t border-white/10 bg-slate-950/95 px-3 py-3"
     >
       <div class="flex min-w-0 flex-1 items-center gap-3">
         ${
