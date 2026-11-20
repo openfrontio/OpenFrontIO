@@ -62,6 +62,7 @@ vi.mock("../../src/client/CrazyGamesSDK", () => ({
 
 vi.mock("../../src/client/Cosmetics", () => ({
   fetchCosmetics: vi.fn(async () => null),
+  getPlayerCosmetics: vi.fn(async () => ({})),
   translateCosmetic: vi.fn((v: unknown) => v),
 }));
 
@@ -291,6 +292,35 @@ describe("AccountModal — Progression tab", () => {
     expect(text.indexOf("account_modal.tab_my_card")).toBeLessThan(
       text.indexOf("account_modal.tab_stats"),
     );
+  });
+
+  it("a My Card tab recreated after a card save reads the saved card", async () => {
+    // A card save broadcasts a fresh /users/@me (CardLoadoutApi). Leaving
+    // My Card destroys its tab, so coming back must seed from that, not from
+    // the copy the modal opened with — or the next edit overwrites the save.
+    modal.open({ tab: "card" });
+    const myCard = () =>
+      modal.querySelector("my-card-tab") as
+        | (HTMLElement & { userMe: UserMeResponse | null })
+        | null;
+    await settle(() => expect(myCard()).not.toBeNull());
+    const saved = {
+      ...me,
+      player: { ...me.player, card: { background: "bg_x", trackers: [] } },
+    } as unknown as UserMeResponse;
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: saved }),
+    );
+    const tabButton = (label: string) =>
+      [
+        ...((
+          modal.querySelector("o-modal") as ModalShell
+        ).shadowRoot?.querySelectorAll("button") ?? []),
+      ].find((b) => b.textContent?.trim() === label) as HTMLButtonElement;
+    tabButton("account_modal.tab_account").click();
+    await settle(() => expect(myCard()).toBeNull());
+    tabButton("account_modal.tab_my_card").click();
+    await settle(() => expect(myCard()?.userMe).toBe(saved));
   });
 
   it("has no tab for a player without a level (progression off)", async () => {
