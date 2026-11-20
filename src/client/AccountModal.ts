@@ -17,7 +17,12 @@ import {
   hasLinkedIdentity,
   responseHasLinkedIdentity,
 } from "./AccountIdentity";
-import { fetchPlayerById, getUserMe, invalidateUserMe } from "./Api";
+import {
+  fetchFfaRankPosition,
+  fetchPlayerById,
+  getUserMe,
+  invalidateUserMe,
+} from "./Api";
 import {
   discordLogin,
   googleLogin,
@@ -137,6 +142,8 @@ export class AccountModal extends BaseModal {
   // from the `creatorCode=` router arg (a `/c/CODE` share-link visit).
   // Reassigned on every open, same as loginError above.
   @state() private prefillCreatorCode: string | undefined;
+  // Global FFA position, read from the rank-position call (not /users/@me).
+  @state() private ffaGlobalPosition: number | null = null;
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
@@ -783,7 +790,11 @@ export class AccountModal extends BaseModal {
     variant: "full" | "compact",
   ): TemplateResult | typeof nothing {
     const player = this.userMeResponse?.player;
-    const ffaRating = ffaSummaryFromMe(player?.leaderboard?.ffa);
+    const meRating = ffaSummaryFromMe(player?.leaderboard?.ffa);
+    const ffaRating =
+      meRating?.kind === "rated"
+        ? { ...meRating, globalPosition: this.ffaGlobalPosition }
+        : meRating;
     // No level to show (progression off): the full tab still shows the rating.
     if (player?.publicId && !player.progress) {
       return variant === "full" && ffaRating !== null
@@ -1388,6 +1399,7 @@ export class AccountModal extends BaseModal {
           this.prefetchPrestigeFlow();
           if (this.userMeResponse?.player?.publicId) {
             void this.loadPlayerProfile(this.userMeResponse.player.publicId);
+            void this.loadFfaGlobalPosition(this.userMeResponse);
           }
         }
         this.finishLoadingUser(opening);
@@ -1397,6 +1409,20 @@ export class AccountModal extends BaseModal {
         this.finishLoadingUser(opening);
       });
     this.requestUpdate();
+  }
+
+  // Global position only comes from the rank-position endpoint, and only a
+  // rated player has one.
+  private async loadFfaGlobalPosition(userMe: UserMeResponse): Promise<void> {
+    this.ffaGlobalPosition = null;
+    if (ffaSummaryFromMe(userMe.player.leaderboard?.ffa)?.kind !== "rated") {
+      return;
+    }
+    const result = await fetchFfaRankPosition();
+    if (this.userMeResponse?.player?.publicId !== userMe.player.publicId) {
+      return;
+    }
+    this.ffaGlobalPosition = result?.globalPosition ?? null;
   }
 
   protected onClose(): void {
