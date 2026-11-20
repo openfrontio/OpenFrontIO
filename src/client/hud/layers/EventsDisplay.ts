@@ -97,13 +97,15 @@ const TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
 const isTier1 = (type: MessageType): boolean => TIER_1_TYPES.has(type);
 
 // A translated sentence for an event: plain as its description, and in parts
-// for its row, with the values of the params named in `strong` marked.
+// for its row, with the values of the params named in `strong` and `emoji`
+// marked.
 function sentence(
   key: string,
   params: Record<string, string | number>,
   strong: readonly string[],
+  emoji?: string,
 ): Pick<GameEvent, "description" | "parts"> {
-  const parts = eventText(key, params, strong);
+  const parts = eventText(key, params, strong, emoji);
   return { description: parts.map((part) => part.text).join(""), parts };
 }
 
@@ -186,6 +188,12 @@ const TIERS = {
 // Good news about gold or troops (QUIET_TIER_1_TYPES): a size smaller, in
 // the same row height.
 const QUIET_TEXT = "text-[13px]/5 lg:text-sm/6 text-white/80";
+// An emoji a third larger than the text. No line height of its own, so the
+// row keeps its height; moved down onto the capitals, as emoji fonts draw the
+// glyph above them (translate, not top: layout rounds top to whole pixels).
+// In opaque white, as a colour emoji takes the alpha of the dimmed sentence.
+const EMOJI =
+  "inline-block text-[1.33em] leading-[0] translate-y-[0.1em] text-white";
 const BETRAYAL_ICON = "text-yellow-400";
 
 type Tier = keyof typeof TIERS;
@@ -791,9 +799,14 @@ export class EventsDisplay extends LitElement implements Controller {
       // the events feed either (#4430). Confirmations of emojis you sent
       // still show, since the setting doesn't stop you sending them.
       if (!this.userSettings.emojis()) return;
+      const name = sender.displayName();
       this.addEvent({
-        description: `${sender.displayName()}: ${update.emoji.message}`,
-        unsafeDescription: true,
+        description: `${name}: ${update.emoji.message}`,
+        parts: [
+          { text: name, strong: true },
+          { text: ": ", strong: false },
+          { text: update.emoji.message, strong: false, emoji: true },
+        ],
         type: MessageType.CHAT,
         icon: "emoji",
         highlight: true,
@@ -809,6 +822,7 @@ export class EventsDisplay extends LitElement implements Controller {
             emoji: update.emoji.message,
           },
           ["name"],
+          "emoji",
         ),
         type: MessageType.CHAT,
         icon: "emoji",
@@ -818,10 +832,12 @@ export class EventsDisplay extends LitElement implements Controller {
       });
     } else if (sender === myPlayer) {
       this.addEvent({
-        description: translateText("events_display.sent_emoji_all", {
-          emoji: update.emoji.message,
-        }),
-        unsafeDescription: true,
+        ...sentence(
+          "events_display.sent_emoji_all",
+          { emoji: update.emoji.message },
+          [],
+          "emoji",
+        ),
         type: MessageType.CHAT,
         icon: "emoji",
         minor: true,
@@ -933,7 +949,9 @@ export class EventsDisplay extends LitElement implements Controller {
                   ? html`<strong dir="auto" class=${look.strong}
                       >${part.text}</strong
                     >`
-                  : part.text,
+                  : part.emoji
+                    ? html`<span data-emoji class=${EMOJI}>${part.text}</span>`
+                    : part.text,
               )
             : this.getEventDescription(event)
         }

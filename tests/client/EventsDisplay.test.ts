@@ -4,6 +4,7 @@ import { MessageType } from "@openfront/engine-api/game/GameTypes";
 import {
   DisplayMessageUpdate,
   DonateEventUpdate,
+  EmojiUpdate,
   GameUpdateType,
 } from "@openfront/engine-api/game/GameUpdates";
 import { EventBus } from "@openfront/shared/EventBus";
@@ -102,6 +103,9 @@ describe("events-display", () => {
           "{name} - {count, plural, other {# atom bombs}} inbound",
         "events_display.betrayal_debuff_ends":
           "{time} seconds left until betrayal debuff ends",
+        // Emoji first, as some languages put it.
+        "events_display.sent_emoji": "{emoji} sent to {name}",
+        "events_display.sent_emoji_all": "Sent everyone: {emoji}",
         "events_display.received_gold_from_player":
           "Received {gold} gold from {name}",
         "events_display.trade_ship_captured":
@@ -436,6 +440,44 @@ describe("events-display", () => {
         (el) => el.textContent === "سارة",
       );
       expect(name?.getAttribute("dir")).toBe("auto");
+    });
+  });
+
+  describe("emojis", () => {
+    const emoji = (
+      senderID: number,
+      recipientID: number | "AllPlayers",
+    ): EmojiUpdate => ({
+      type: GameUpdateType.Emoji,
+      emoji: { message: "😀", senderID, recipientID, createdAt: 0 },
+    });
+    const emojiPart = (row: HTMLElement) =>
+      [...row.querySelectorAll("[data-emoji]")].map((el) => el.textContent);
+    const strong = (row: HTMLElement) =>
+      [...row.querySelectorAll("strong")].map((el) => el.textContent);
+
+    it("shows a received emoji after its sender's name", async () => {
+      display.onEmojiMessageEvent(emoji(ENEMY, ME));
+      await advanceTo(1);
+
+      const row = rows()[0];
+      expect(row.dataset.tier).toBe("important");
+      expect(row.textContent?.trim()).toBe("Player2: 😀");
+      expect(strong(row)).toEqual(["Player2"]);
+      expect(emojiPart(row)).toEqual(["😀"]);
+    });
+
+    it("keeps the translation's order for an emoji I sent", async () => {
+      display.onEmojiMessageEvent(emoji(ME, ENEMY));
+      display.onEmojiMessageEvent(emoji(ME, "AllPlayers"));
+      await advanceTo(1);
+
+      const [toOne, toAll] = rows();
+      expect(toOne.textContent?.trim()).toBe("😀 sent to Player2");
+      expect(strong(toOne)).toEqual(["Player2"]);
+      expect(emojiPart(toOne)).toEqual(["😀"]);
+      expect(toAll.textContent?.trim()).toBe("Sent everyone: 😀");
+      expect(emojiPart(toAll)).toEqual(["😀"]);
     });
   });
 });
