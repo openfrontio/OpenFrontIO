@@ -75,9 +75,14 @@ export class MyCardTab extends LitElement {
   @property({ attribute: false }) cosmetics: Cosmetics | null = null;
 
   @state() private activeSlot: Slot = "background";
-  // What is equipped now (optimistically), and what the server last stored.
+  // What is equipped now (optimistically), and what the server last
+  // confirmed. Saves go one at a time (each PUT replaces the whole loadout,
+  // so two in flight could land in either order); clicks made meanwhile are
+  // sent together when the save in flight returns.
   @state() private loadout: CardLoadoutBody = EMPTY;
   @state() private saved: CardLoadoutBody = EMPTY;
+  private saving = false;
+  private initialSeeded = false;
   // The loadout the tab opened with: what Reset goes back to.
   @state() private initial: CardLoadoutBody = EMPTY;
   @state() private saveError = false;
@@ -113,6 +118,9 @@ export class MyCardTab extends LitElement {
     this.values = new Map(
       (card?.trackers ?? []).map((t) => [t.stat, t.value] as const),
     );
+    // Mid-save, the loadout the server confirms is newer than any response
+    // in hand (a card save broadcasts one before it returns): keep the clicks.
+    if (this.saving) return;
     this.saved = {
       background: card?.background ?? null,
       title: card?.title ?? null,
@@ -120,7 +128,11 @@ export class MyCardTab extends LitElement {
       trackers: (card?.trackers ?? []).map((t) => t.stat),
     };
     this.loadout = this.saved;
-    this.initial = this.saved;
+    // Reset goes back to what the tab opened with, not to the last save.
+    if (!this.initialSeeded && this.userMe !== null) {
+      this.initialSeeded = true;
+      this.initial = this.saved;
+    }
   }
 
   private get flares(): string[] {
@@ -159,16 +171,26 @@ export class MyCardTab extends LitElement {
   }
 
   private async save(next: CardLoadoutBody): Promise<void> {
-    const before = this.loadout;
     this.loadout = next;
     this.saveError = false;
-    const result = await saveCardLoadout(next);
-    if (result.ok) {
-      this.saved = next;
-      return;
+    if (this.saving) return; // sent when the save in flight returns
+    this.saving = true;
+    try {
+      for (;;) {
+        const sending = this.loadout;
+        const result = await saveCardLoadout(sending);
+        if (!result.ok) {
+          // Back to what the server holds; clicks queued behind it go too.
+          this.loadout = this.saved;
+          this.saveError = true;
+          return;
+        }
+        this.saved = sending;
+        if (this.loadout === sending) return;
+      }
+    } finally {
+      this.saving = false;
     }
-    this.loadout = before;
-    this.saveError = true;
   }
 
   private onItem(slot: Exclude<Slot, "flag">, item: CardItem): void {

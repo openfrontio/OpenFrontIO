@@ -223,6 +223,121 @@ describe("<my-card-tab>", () => {
     expect(tile("cardBackground:bg_pacific").dataset.state).toBe("equipped");
   });
 
+  // A save the test answers when it chooses.
+  function deferredSaves() {
+    const calls: { body: unknown; answer: (ok: boolean) => void }[] = [];
+    api.save.mockImplementation(
+      (body: unknown) =>
+        new Promise((resolve) =>
+          calls.push({
+            body,
+            answer: (ok) =>
+              resolve(
+                ok
+                  ? { ok: true, loadout: body }
+                  : { ok: false, error: "failed" },
+              ),
+          }),
+        ),
+    );
+    return calls;
+  }
+
+  it("quick clicks save one at a time, the last one carrying both", async () => {
+    const calls = deferredSaves();
+    await render(userMe(OWNER, SAVED));
+    await openSlot("trackers");
+    tile("cardTracker:wins").click();
+    await settle();
+    tile("cardTracker:nukes_launched").click();
+    await settle();
+    // The second waits for the first: two PUTs in flight could land in
+    // either order, and each replaces the whole loadout.
+    expect(calls).toHaveLength(1);
+    expect(calls[0].body).toMatchObject({
+      trackers: ["nukes_launched", "best_elo"],
+    });
+    calls[0].answer(true);
+    await settle();
+    expect(calls).toHaveLength(2);
+    expect(calls[1].body).toMatchObject({ trackers: ["best_elo"] });
+    calls[1].answer(true);
+    await settle();
+    expect(tile("cardTracker:wins").dataset.state).toBe("owned");
+    expect(tile("cardTracker:nukes_launched").dataset.state).toBe("owned");
+    expect(q("[data-my-card-error]")).toBeNull();
+  });
+
+  it("a failed save rolls back to what the server last confirmed", async () => {
+    const calls = deferredSaves();
+    await render(userMe(OWNER, SAVED));
+    await openSlot("trackers");
+    tile("cardTracker:wins").click();
+    await settle();
+    calls[0].answer(true);
+    await settle();
+    tile("cardTracker:nukes_launched").click();
+    await settle();
+    calls[1].answer(false);
+    await settle();
+    // Wins stays off (confirmed); only the failed change is undone.
+    expect(tile("cardTracker:wins").dataset.state).toBe("owned");
+    expect(tile("cardTracker:nukes_launched").dataset.state).toBe("equipped");
+    expect(q("[data-my-card-error]")).not.toBeNull();
+  });
+
+  it("a failure drops clicks queued behind it, matching the server", async () => {
+    const calls = deferredSaves();
+    await render(userMe(OWNER, SAVED));
+    await openSlot("trackers");
+    tile("cardTracker:wins").click();
+    await settle();
+    tile("cardTracker:nukes_launched").click();
+    await settle();
+    calls[0].answer(false);
+    await settle();
+    expect(calls).toHaveLength(1);
+    expect(tile("cardTracker:wins").dataset.state).toBe("equipped");
+    expect(tile("cardTracker:nukes_launched").dataset.state).toBe("equipped");
+  });
+
+  it("a fresh /users/@me mid-save doesn't undo the clicks in flight", async () => {
+    const calls = deferredSaves();
+    const me = userMe(OWNER, SAVED);
+    await render(me);
+    await openSlot("trackers");
+    tile("cardTracker:wins").click();
+    await settle();
+    tab.userMe = { ...me } as UserMeResponse;
+    await settle();
+    expect(tile("cardTracker:wins").dataset.state).toBe("owned");
+    calls[0].answer(true);
+    await settle();
+    expect(tile("cardTracker:wins").dataset.state).toBe("owned");
+  });
+
+  it("Reset still goes back to the opening loadout after a save's refresh", async () => {
+    api.save.mockResolvedValue({ ok: true, loadout: {} });
+    const me = userMe(OWNER, SAVED);
+    await render(me);
+    tile("cardBackground:bg_pacific").click();
+    await settle();
+    // The refresh a save broadcasts.
+    tab.userMe = {
+      ...me,
+      player: {
+        ...me.player,
+        card: { ...SAVED, background: "bg_pacific" },
+      },
+    } as unknown as UserMeResponse;
+    await settle();
+    (q("[data-my-card-reset]") as HTMLButtonElement).click();
+    await settle();
+    expect(api.save).toHaveBeenLastCalledWith(
+      expect.objectContaining({ background: null }),
+    );
+  });
+
   it("failed save rolls back", async () => {
     api.save.mockResolvedValue({ ok: false, error: "failed" });
     await render(userMe(OWNER, SAVED));
