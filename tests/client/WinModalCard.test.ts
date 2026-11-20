@@ -450,7 +450,6 @@ describe("WinModal Get the look buying", () => {
   };
   type Block = HTMLElement & {
     looks: { name: string; items: { item: { name: string } }[] }[];
-    balances: { hard: number; soft: number } | null;
     owned: ReadonlySet<string>;
     signedIn: boolean;
   };
@@ -479,7 +478,7 @@ describe("WinModal Get the look buying", () => {
     vi.restoreAllMocks();
   });
 
-  it("gives the block the balances and that the viewer is signed in", async () => {
+  it("tells the block the viewer is signed in", async () => {
     saveLook("g1", {
       clientID: "a",
       name: "Ada",
@@ -489,10 +488,8 @@ describe("WinModal Get the look buying", () => {
       game,
       endCardMode: "none",
       viewerFlares: [],
-      balances: { hard: 500, soft: 1200 },
       signedIn: true,
     });
-    expect(block(modal).balances).toEqual({ hard: 500, soft: 1200 });
     expect(block(modal).signedIn).toBe(true);
   });
 
@@ -506,28 +503,9 @@ describe("WinModal Get the look buying", () => {
       game,
       endCardMode: "none",
       viewerFlares: [],
-      balances: null,
       signedIn: false,
     });
     expect(block(modal).signedIn).toBe(false);
-  });
-
-  it("a fresh profile updates the balances on screen", async () => {
-    saveLook("g1", {
-      clientID: "a",
-      name: "Ada",
-      items: [bg("bg_a")] as never,
-    });
-    const modal = await renderModal({
-      game,
-      endCardMode: "none",
-      viewerFlares: [],
-      balances: { hard: 500, soft: 0 },
-      signedIn: true,
-    });
-    broadcast([], 100, 0);
-    await settle(modal);
-    expect(block(modal).balances).toEqual({ hard: 100, soft: 0 });
   });
 
   it("bought here: Owned ✓ in its row; the other names never offer it", async () => {
@@ -543,7 +521,6 @@ describe("WinModal Get the look buying", () => {
       lastEndCard: { kind: "eliminatedBy", clientID: "killer" },
       loadout: [SALUTE],
       viewerFlares: [],
-      balances: { hard: 0, soft: 5000 },
       signedIn: true,
     });
     block(modal).dispatchEvent(
@@ -571,7 +548,6 @@ describe("WinModal Get the look buying", () => {
       game,
       endCardMode: "none",
       viewerFlares: [],
-      balances: { hard: 500, soft: 0 },
       signedIn: true,
     });
     broadcast(["cardBackground:bg_a"], 500, 0);

@@ -508,6 +508,72 @@ function currencyShortfall(
   };
 }
 
+/** What the end screen's shortfall box needs: the Store's shortfall, plus
+ * the caps price when Plutonium is short and caps are enough, and what to
+ * remember across "Get Plutonium". */
+function inPlaceShortfall(
+  resolved: ResolvedCosmetic,
+  method: "hard" | "soft",
+  price: number,
+  me: UserMeResponse,
+  available: number,
+): InsufficientCurrency {
+  const capsPrice = currentPrice(resolved.cosmetic as Pattern | Flag, "soft");
+  const soft = me.player.currency?.soft ?? 0;
+  return {
+    ...currencyShortfall(resolved, method, price, available),
+    leavesGame: true,
+    itemKey: resolved.key,
+    player: me.player.publicId,
+    capsPrice:
+      method === "hard" &&
+      capsPrice !== undefined &&
+      capsPrice > 0 &&
+      soft >= capsPrice
+        ? capsPrice
+        : undefined,
+  };
+}
+
+/** What the end screen's check on tap answers (<purchase-button preflight>):
+ * affordable, with the balance read; or not, with the shortfall to show
+ * (none when the check couldn't run or explained itself). */
+export type PurchasePreflight =
+  | { ok: true; balance: number }
+  | { ok: false; info?: InsufficientCurrency };
+
+/**
+ * The end screen's check when a buy button is tapped, before any confirm box:
+ * one fresh read of the profile (the cache dropped first, so an older copy
+ * can't decide; broadcast, so the rest of the screen follows). Charges
+ * nothing. The purchase itself only runs from the confirm box this leads to.
+ */
+export async function checkInPlacePurchase(
+  resolved: ResolvedCosmetic,
+  method: "hard" | "soft",
+): Promise<PurchasePreflight> {
+  const c = resolved.cosmetic;
+  if (!c || resolved.type === "subscription" || resolved.type === "pack") {
+    return { ok: false };
+  }
+  const price = currentPrice(c as Pattern | Flag, method) ?? 0;
+  const me = await broadcastFreshUserMe();
+  if (me === false) return { ok: false };
+  const wallet = me.player.currency;
+  const balance = method === "hard" ? (wallet?.hard ?? 0) : (wallet?.soft ?? 0);
+  if (balance < 0) {
+    await showInGameAlert(debtMessage(-balance));
+    return { ok: false };
+  }
+  if (balance < price) {
+    return {
+      ok: false,
+      info: inPlaceShortfall(resolved, method, price, me, balance),
+    };
+  }
+  return { ok: true, balance };
+}
+
 /** How an end-screen purchase ended (purchaseCosmeticInPlace). */
 export type InPlacePurchase =
   // Bought, or the server says it was already owned: owned now either way.
@@ -550,27 +616,10 @@ export async function purchaseCosmeticInPlace(
     await showInGameAlert(debtMessage(-balance));
     return { kind: "handled" };
   }
-  const shortfall = (available: number): InPlacePurchase => {
-    const info = currencyShortfall(resolved, method, price, available);
-    const capsPrice = currentPrice(priced, "soft");
-    return {
-      kind: "insufficient",
-      info: {
-        ...info,
-        leavesGame: true,
-        itemKey: resolved.key,
-        player: userMe.player.publicId,
-        // Plutonium short but the caps price affordable: offer it.
-        capsPrice:
-          method === "hard" &&
-          capsPrice !== undefined &&
-          capsPrice > 0 &&
-          (wallet?.soft ?? 0) >= capsPrice
-            ? capsPrice
-            : undefined,
-      },
-    };
-  };
+  const shortfall = (available: number): InPlacePurchase => ({
+    kind: "insufficient",
+    info: inPlaceShortfall(resolved, method, price, userMe, available),
+  });
   if (balance < price) return shortfall(balance);
 
   let result: Awaited<ReturnType<typeof purchaseWithCurrency>>;

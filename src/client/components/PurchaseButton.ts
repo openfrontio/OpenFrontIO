@@ -1,7 +1,11 @@
 import { Product } from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type { InsufficientCurrency, PurchaseResult } from "../Cosmetics";
+import type {
+  InsufficientCurrency,
+  PurchasePreflight,
+  PurchaseResult,
+} from "../Cosmetics";
 import { showInGameAlert } from "../InGameModal";
 import { type PricedItem, saleEndsAt, shownPrice } from "../ShownPrice";
 import { translateText } from "../Utils";
@@ -258,6 +262,7 @@ export function renderPrice(
 /** Items with a purchase in flight, by busyKey: a button for the same item
  * made again (a dialog closed and reopened mid-purchase) stays busy. */
 const busyItems = new Set<string>();
+
 const BUSY_CHANGED_EVENT = "purchase-button-busy-changed";
 
 function setItemBusy(key: string, busy: boolean) {
@@ -312,11 +317,16 @@ export class PurchaseButton extends LitElement {
   @property({ type: String })
   itemName: string = "";
 
-  /** The player's balances, where the button knows them (the end screen).
-   * The confirm box then says what is left after the buy, and a buy the
-   * player can't afford goes straight to the shortfall box. */
+  /**
+   * The end screen's check on tap: one fresh read of the player's balance
+   * that charges nothing. Affordable: the confirm box, saying what is left
+   * after the buy. Not: the shortfall box. Unset (the Store): the confirm
+   * box as before. Either way the paying handler only runs from the confirm
+   * box.
+   */
   @property({ attribute: false })
-  balances: { hard: number; soft: number } | null = null;
+  preflight: ((method: "hard" | "soft") => Promise<PurchasePreflight>) | null =
+    null;
 
   /**
    * Keep an empty line where this payment method's button would go. Set by
@@ -359,6 +369,8 @@ export class PurchaseButton extends LitElement {
     method: "hard" | "soft";
     itemName: string;
     handler: () => Promise<PurchaseResult>;
+    // From the preflight's fresh read, for "you'll have N left".
+    balance?: number;
   } | null = null;
   @state() private ownBusy = false;
 
@@ -451,24 +463,44 @@ export class PurchaseButton extends LitElement {
     const handler =
       method === "hard" ? this.onPurchaseHard : this.onPurchaseSoft;
     if (!handler || this.busy) return;
-    // Can't afford it: no point confirming. The handler's own pre-check
-    // answers with the shortfall, and charges nothing.
-    const balance = this.balances?.[method];
-    const price = this.shown(method)?.price;
-    if (balance !== undefined && price !== undefined && balance < price) {
-      this.executePurchase(handler);
+    const preflight = this.preflight;
+    if (preflight === null) {
+      this.confirmingPurchase = { method, itemName: this.itemName, handler };
       return;
     }
-    this.confirmingPurchase = { method, itemName: this.itemName, handler };
+    // Busy while the balance is read, so a second tap can't start another.
+    this.ownBusy = true;
+    void preflight(method)
+      .then((check) => {
+        if (check.ok) {
+          this.confirmingPurchase = {
+            method,
+            itemName: this.itemName,
+            handler,
+            balance: check.balance,
+          };
+        } else if (check.info) {
+          this.insufficient = check.info;
+        }
+      })
+      .catch((error: unknown) => {
+        console.error("Purchase check failed", error);
+      })
+      .finally(() => {
+        this.ownBusy = false;
+      });
   }
 
   /** The confirm box's question, with the balance after when known. */
-  private confirmMessage(method: "hard" | "soft", itemName: string): string {
+  private confirmMessage(
+    method: "hard" | "soft",
+    itemName: string,
+    balance: number | undefined,
+  ): string {
     const amount = this.shown(method)?.price ?? 0;
     const currency = translateText(
       method === "hard" ? "cosmetics.hard" : "cosmetics.soft",
     );
-    const balance = this.balances?.[method];
     return balance === undefined
       ? translateText("store.confirm_purchase_body", {
           item: itemName,
@@ -682,6 +714,7 @@ export class PurchaseButton extends LitElement {
               .message=${this.confirmMessage(
                 this.confirmingPurchase.method,
                 this.confirmingPurchase.itemName,
+                this.confirmingPurchase.balance,
               )}
               variant="warning"
               @confirm=${() => {

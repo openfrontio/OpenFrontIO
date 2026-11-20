@@ -17,6 +17,7 @@ vi.mock("../../src/client/Cosmetics", async (orig) => ({
   ...(await orig<typeof import("../../src/client/Cosmetics")>()),
   purchaseCosmetic: vi.fn(),
   purchaseCosmeticInPlace: vi.fn(),
+  checkInPlacePurchase: vi.fn(async () => ({ ok: true, balance: 3000 })),
 }));
 vi.mock("../../src/client/InGameModal", () => ({
   showInGameAlert: vi.fn().mockResolvedValue(true),
@@ -28,7 +29,10 @@ import {
   buildPlayerCardView,
   type PlayerCardView,
 } from "../../src/client/components/card/PlayerCardModel";
-import { purchaseCosmeticInPlace } from "../../src/client/Cosmetics";
+import {
+  checkInPlacePurchase,
+  purchaseCosmeticInPlace,
+} from "../../src/client/Cosmetics";
 import {
   type LoadoutItem,
   LoadoutRow,
@@ -429,7 +433,6 @@ describe("<loadout-row> buying", () => {
         dispose: vi.fn(),
       },
       looks: [{ clientID: "volt", name: "Volt", items: [BG] }],
-      balances: { hard: 3000, soft: 0 },
       ...props,
     });
     document.body.appendChild(row as unknown as Node);
@@ -439,13 +442,17 @@ describe("<loadout-row> buying", () => {
   const button = () =>
     q("purchase-button") as unknown as {
       busyKey: string;
-      balances: { hard: number; soft: number } | null;
+      preflight: ((m: "hard" | "soft") => Promise<unknown>) | null;
       onPurchaseHard: () => Promise<unknown>;
     };
 
-  it("the button knows the balances and shares the item's busy key", async () => {
+  it("the button checks fresh on tap and shares the item's busy key", async () => {
     await render({});
-    expect(button().balances).toEqual({ hard: 3000, soft: 0 });
+    await button().preflight!("hard");
+    expect(checkInPlacePurchase).toHaveBeenCalledWith(
+      expect.objectContaining({ key: "cardBackground:bg_frontline" }),
+      "hard",
+    );
     // One purchase in flight per item, across every button for it.
     expect(button().busyKey).toBe("cardBackground:bg_frontline");
   });

@@ -5,6 +5,7 @@ import { cardItemName } from "../../components/card/CardItems";
 import "../../components/CosmeticCard";
 import "../../components/PurchaseButton";
 import {
+  checkInPlacePurchase,
   type PurchaseResult,
   purchaseCosmeticInPlace,
   type ResolvedCosmetic,
@@ -110,11 +111,6 @@ export interface LoadoutTracker {
 export class LoadoutRow extends LitElement {
   @property({ attribute: false }) looks: readonly LookRow[] = [];
   @property({ attribute: false }) tracker: LoadoutTracker | null = null;
-  // The viewer's balances, for the confirm box's "you'll have N left".
-  @property({ attribute: false }) balances: {
-    hard: number;
-    soft: number;
-  } | null = null;
   // Item keys the viewer owns now: bought here, they read Owned ✓.
   @property({ attribute: false }) owned: ReadonlySet<string> = new Set();
   // Signed out: "Sign in to buy" in place of the buy buttons.
@@ -233,7 +229,8 @@ export class LoadoutRow extends LitElement {
       .listPriceHard=${prices.listPriceHard}
       .listPriceSoft=${prices.listPriceSoft}
       .promotion=${prices.promotion}
-      .balances=${this.balances}
+      .preflight=${(method: "hard" | "soft") =>
+        checkInPlacePurchase(this.resolved(entry), method)}
       .busyKey=${key}
       .rarity=${String(entry.item.rarity)}
       .itemName=${cardItemName(entry.type, entry.item)}

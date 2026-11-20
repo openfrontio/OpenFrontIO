@@ -205,11 +205,8 @@ export class WinModal extends LitElement implements Controller {
   // filtered against it, not what they owned when saving. Null until read.
   @state()
   private viewerFlares: readonly string[] | null = null;
-  // The viewer's balances (null signed out), for "you'll have N left", and
-  // whether they're signed in at all ("Sign in to buy" otherwise). Both
-  // follow the /users/@me broadcast a purchase sends.
-  @state()
-  private balances: { hard: number; soft: number } | null = null;
+  // Whether the viewer is signed in ("Sign in to buy" otherwise), following
+  // the /users/@me broadcast.
   @state()
   private signedIn = false;
   // Items bought from the block this screen: they stay in their row, read
@@ -710,7 +707,6 @@ export class WinModal extends LitElement implements Controller {
         const looks = this.lookRows();
         return html`<loadout-row
           .looks=${looks === "pending" ? [] : looks}
-          .balances=${this.balances}
           .owned=${new Set(this.viewerFlares ?? [])}
           .signedIn=${this.signedIn}
           @look-owned=${(e: CustomEvent<{ key: string }>) => {
@@ -1006,11 +1002,6 @@ export class WinModal extends LitElement implements Controller {
     if (me === undefined) return;
     this.signedIn = me !== false;
     this.viewerFlares = me === false ? [] : (me.player.flares ?? []);
-    const wallet = me === false ? undefined : me.player.currency;
-    this.balances =
-      me === false
-        ? null
-        : { hard: wallet?.hard ?? 0, soft: wallet?.soft ?? 0 };
   }
 
   private async readTauntsMuted(): Promise<void> {

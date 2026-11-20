@@ -15,13 +15,12 @@ vi.mock("../../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn().mockResolvedValue(true),
 }));
 
-const { getUserMe, purchaseWithCurrency } = await import(
-  "../../src/client/Api"
-);
+const { getUserMe, purchaseWithCurrency } =
+  await import("../../src/client/Api");
 const { showInGameAlert } = await import("../../src/client/InGameModal");
-const { purchaseCosmetic, purchaseCosmeticInPlace } = await import(
-  "../../src/client/Cosmetics"
-);
+const { checkInPlacePurchase, purchaseCosmetic, purchaseCosmeticInPlace } =
+  await import("../../src/client/Cosmetics");
+const { invalidateUserMe } = await import("../../src/client/Api");
 const { clearPendingPurchase, peekPendingPurchase, rememberPendingPurchase } =
   await import("../../src/client/components/inventory/PendingEquip");
 
@@ -109,18 +108,14 @@ describe("buying on the end screen", () => {
       ok: false,
       code: "unknown",
     } as never);
-    expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe(
-      "failed",
-    );
+    expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe("failed");
     expect(reload).not.toHaveBeenCalled();
   });
 
   it("a network failure (a throw): failed", async () => {
     vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
     vi.mocked(purchaseWithCurrency).mockRejectedValue(new Error("offline"));
-    expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe(
-      "failed",
-    );
+    expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe("failed");
   });
 
   it("short of Plutonium with enough caps: the shortfall and a caps offer", async () => {
@@ -164,6 +159,40 @@ describe("buying on the end screen", () => {
       "signed_out",
     );
     expect(purchaseWithCurrency).not.toHaveBeenCalled();
+  });
+
+  it("the tap check reads the balance fresh, and charges nothing", async () => {
+    const order: string[] = [];
+    vi.mocked(invalidateUserMe).mockImplementation(() => {
+      order.push("invalidate");
+    });
+    vi.mocked(getUserMe).mockImplementation(async () => {
+      order.push("read");
+      return me(500, 0);
+    });
+    expect(await checkInPlacePurchase(STORM, "hard")).toEqual({
+      ok: true,
+      balance: 500,
+    });
+    // The cache is dropped first: an older copy can't decide.
+    expect(order.slice(0, 2)).toEqual(["invalidate", "read"]);
+    expect(purchaseWithCurrency).not.toHaveBeenCalled();
+    // The fresh read is broadcast, so the rest of the screen follows.
+    expect(broadcasts).toHaveLength(1);
+  });
+
+  it("the tap check: short, with the shortfall and the caps offer", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me(100, 2500));
+    expect(await checkInPlacePurchase(STORM, "hard")).toMatchObject({
+      ok: false,
+      info: { shortfall: 220, capsPrice: 2000, leavesGame: true },
+    });
+    expect(purchaseWithCurrency).not.toHaveBeenCalled();
+  });
+
+  it("the tap check: signed out, nothing to show", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    expect(await checkInPlacePurchase(STORM, "hard")).toEqual({ ok: false });
   });
 
   it("the Store and Inventory still reload after a purchase", async () => {

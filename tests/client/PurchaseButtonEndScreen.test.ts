@@ -44,25 +44,100 @@ const hardButton = (b: Button) =>
 const confirmBox = (b: Button) =>
   b.querySelector("confirm-dialog") as ConfirmLike | null;
 
+// The end screen's buttons check the player's balance on tap, from one fresh
+// read that charges nothing (`preflight`), and only then show the confirm box
+// or the shortfall box. The paying handler only ever runs from the confirm.
 describe("end-screen purchase button", () => {
   afterEach(() => {
     document.body.innerHTML = "";
     vi.restoreAllMocks();
   });
 
-  it("the confirm box says the balance after the buy", async () => {
+  const ok = (balance: number) => async () => ({ ok: true as const, balance });
+  const SHORT: InsufficientCurrency = {
+    currency: "Plutonium",
+    shortfall: 220,
+    item: "Storm Front",
+    canTopUp: true,
+    leavesGame: true,
+  };
+  const settle = async (b: Button) => {
+    await new Promise((r) => setTimeout(r, 0));
+    await b.updateComplete;
+  };
+
+  it("the confirm box says the balance after the buy, from the fresh read", async () => {
     const b = await mountButton({
-      balances: { hard: 500, soft: 0 },
+      preflight: ok(500),
       onPurchaseHard: vi.fn(async () => undefined),
     });
     hardButton(b).click();
-    await b.updateComplete;
+    await settle(b);
     expect(confirmBox(b)!.message).toBe(
       'store.confirm_purchase_body_left:{"item":"Storm Front","amount":320,"currency":"cosmetics.hard","left":180}',
     );
   });
 
-  it("without balances (the Store) the confirm box is as today", async () => {
+  it("stale balance short, fresh balance enough: the confirm shows, nothing charged", async () => {
+    // Whatever an older copy of the balance said, the tap reads it fresh.
+    const preflight = vi.fn(ok(500));
+    const buy = vi.fn(async () => undefined);
+    const b = await mountButton({ preflight, onPurchaseHard: buy });
+    hardButton(b).click();
+    await settle(b);
+    expect(preflight).toHaveBeenCalledWith("hard");
+    expect(confirmBox(b)).not.toBeNull();
+    expect(buy).not.toHaveBeenCalled();
+  });
+
+  it("can't afford it: the shortfall box, and the paying handler never runs", async () => {
+    const buy = vi.fn(async () => undefined);
+    const b = await mountButton({
+      preflight: async () => ({ ok: false as const, info: SHORT }),
+      onPurchaseHard: buy,
+    });
+    hardButton(b).click();
+    await settle(b);
+    expect(confirmBox(b)).toBeNull();
+    expect(buy).not.toHaveBeenCalled();
+    const dialog = b.querySelector(
+      "insufficient-currency-dialog",
+    ) as unknown as { info: InsufficientCurrency | null };
+    expect(dialog.info).toEqual(SHORT);
+  });
+
+  it("the check can't run (signed out, a failed read): nothing at all", async () => {
+    const buy = vi.fn(async () => undefined);
+    const b = await mountButton({
+      preflight: async () => ({ ok: false as const }),
+      onPurchaseHard: buy,
+    });
+    hardButton(b).click();
+    await settle(b);
+    expect(confirmBox(b)).toBeNull();
+    expect(buy).not.toHaveBeenCalled();
+  });
+
+  it("a second tap while the check runs is ignored", async () => {
+    let release!: () => void;
+    const preflight = vi.fn(
+      () =>
+        new Promise<{ ok: true; balance: number }>((r) => {
+          release = () => r({ ok: true, balance: 500 });
+        }),
+    );
+    const b = await mountButton({
+      preflight,
+      onPurchaseHard: vi.fn(async () => undefined),
+    });
+    hardButton(b).click();
+    hardButton(b).click();
+    expect(preflight).toHaveBeenCalledTimes(1);
+    release();
+    await settle(b);
+  });
+
+  it("without a check (the Store) the confirm box is as today", async () => {
     const b = await mountButton({
       onPurchaseHard: vi.fn(async () => undefined),
     });
@@ -73,12 +148,9 @@ describe("end-screen purchase button", () => {
 
   it("cancel does nothing", async () => {
     const buy = vi.fn(async () => undefined);
-    const b = await mountButton({
-      balances: { hard: 500, soft: 0 },
-      onPurchaseHard: buy,
-    });
+    const b = await mountButton({ preflight: ok(500), onPurchaseHard: buy });
     hardButton(b).click();
-    await b.updateComplete;
+    await settle(b);
     confirmBox(b)!.dispatchEvent(new CustomEvent("cancel"));
     await b.updateComplete;
     expect(confirmBox(b)).toBeNull();
@@ -87,60 +159,30 @@ describe("end-screen purchase button", () => {
 
   it("confirming buys", async () => {
     const buy = vi.fn(async () => undefined);
-    const b = await mountButton({
-      balances: { hard: 500, soft: 0 },
-      onPurchaseHard: buy,
-    });
+    const b = await mountButton({ preflight: ok(500), onPurchaseHard: buy });
     hardButton(b).click();
-    await b.updateComplete;
+    await settle(b);
     confirmBox(b)!.dispatchEvent(new CustomEvent("confirm"));
     await vi.waitFor(() => expect(buy).toHaveBeenCalledTimes(1));
   });
 
-  it("short of the price: straight to the shortfall box, no confirm", async () => {
-    const info: InsufficientCurrency = {
-      currency: "Plutonium",
-      shortfall: 220,
-      item: "Storm Front",
-      canTopUp: true,
-      leavesGame: true,
-    };
-    const buy = vi.fn(async () => info);
+  it("the caps offer checks caps, then opens the caps confirm", async () => {
+    const preflight = vi.fn(async (method: "hard" | "soft") => ({
+      ok: true as const,
+      balance: method === "soft" ? 2500 : 100,
+    }));
     const b = await mountButton({
-      balances: { hard: 100, soft: 0 },
-      onPurchaseHard: buy,
-    });
-    hardButton(b).click();
-    await vi.waitFor(() => expect(buy).toHaveBeenCalledTimes(1));
-    await b.updateComplete;
-    expect(confirmBox(b)).toBeNull();
-    const dialog = b.querySelector(
-      "insufficient-currency-dialog",
-    ) as unknown as {
-      info: InsufficientCurrency | null;
-    };
-    expect(dialog.info).toEqual(info);
-  });
-
-  it("the caps offer opens the caps confirm", async () => {
-    const b = await mountButton({
-      balances: { hard: 100, soft: 2500 },
+      preflight,
       onPurchaseHard: vi.fn(async () => undefined),
       onPurchaseSoft: vi.fn(async () => undefined),
     });
-    b.showInsufficient({
-      currency: "Plutonium",
-      shortfall: 220,
-      item: "Storm Front",
-      canTopUp: true,
-      leavesGame: true,
-      capsPrice: 2000,
-    });
+    b.showInsufficient({ ...SHORT, capsPrice: 2000 });
     await b.updateComplete;
     b.querySelector("insufficient-currency-dialog")!.dispatchEvent(
       new CustomEvent("buy-caps"),
     );
-    await b.updateComplete;
+    await settle(b);
+    expect(preflight).toHaveBeenCalledWith("soft");
     expect(confirmBox(b)!.message).toContain('"currency":"cosmetics.soft"');
     expect(confirmBox(b)!.message).toContain('"left":500');
   });
