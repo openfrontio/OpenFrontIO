@@ -253,3 +253,80 @@ describe("Inventory: Player card tab, signed out", () => {
     expect(modal.querySelector("player-card")).toBeNull();
   });
 });
+
+describe("Inventory: buying card items in place", () => {
+  let modal: InventoryModal;
+  Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
+  beforeEach(() => {
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    vi.mocked(fetchCosmetics).mockResolvedValue(catalog());
+    vi.mocked(userAuth).mockResolvedValue({
+      jwt: "token",
+      claims: {},
+    } as Awaited<ReturnType<typeof userAuth>>);
+    vi.mocked(getUserMe).mockResolvedValue(owner());
+    modal = document.createElement("inventory-modal") as InventoryModal;
+    modal.setAttribute("inline", "");
+    document.body.appendChild(modal);
+  });
+  afterEach(() => {
+    modal.remove();
+    document.body.innerHTML = "";
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
+  const q = <T extends HTMLElement = HTMLElement>(s: string) =>
+    modal.querySelector<T>(s);
+  async function click(selector: string) {
+    q(selector)!.click();
+    await settle(modal);
+  }
+  async function pickStorm() {
+    modal.open({ tab: "card" });
+    await settle(modal);
+    await click("[data-card-slot='background']");
+    await click("[data-card-filter='all']");
+    await click("[data-card-pick='cardBackground:bg_storm'] [data-tile-main]");
+  }
+
+  it("closing with an unowned item: the guard counts it, Save is off, Discard drops it", async () => {
+    await pickStorm();
+    q<HTMLButtonElement>("[slot='header'] button")!.click();
+    await settle(modal);
+    expect(q("[data-card-guard]")!.dataset.count).toBe("1");
+    expect(q<HTMLButtonElement>("[data-card-guard-save]")!.disabled).toBe(true);
+    expect(q("[data-card-guard-buy-first]")).not.toBeNull();
+    await click("[data-card-guard-discard]");
+    expect(modal.isOpen()).toBe(false);
+    modal.open({ tab: "card" });
+    await settle(modal);
+    expect(q("[data-card-save-bar]")).toBeNull();
+    expect(q("[data-card-slot='background']")!.textContent).not.toContain(
+      "inventory_card.was",
+    );
+  });
+
+  it("the fresh profile a purchase broadcasts keeps the changes, with no reload", async () => {
+    await pickStorm();
+    const tab = q("inventory-card-tab");
+    expect(q("[data-card-buy='cardBackground:bg_storm']")).not.toBeNull();
+    const fresh = owner([...OWNER, "cardBackground:bg_storm"]);
+    vi.mocked(getUserMe).mockResolvedValue(fresh);
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: fresh }),
+    );
+    await settle(modal);
+    // The same tab, never the loading skeleton in between.
+    expect(q("inventory-card-tab")).toBe(tab);
+    expect(q("[data-card-buy]")).toBeNull();
+    expect(q<HTMLButtonElement>("[data-card-save]")!.disabled).toBe(false);
+    expect(q("[data-card-change-count]")).not.toBeNull();
+  });
+});

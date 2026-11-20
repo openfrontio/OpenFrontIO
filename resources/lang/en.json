@@ -1821,6 +1821,7 @@
   "inventory_card": {
     "background": "Background",
     "background_none": "None",
+    "buy_item": "Buy {name}",
     "caption": "Shown on the end screen when you beat someone",
     "change_line": "{slot}: {from} → {to}",
     "changes_not_saved": "{count, plural, one {# change not saved} other {# changes not saved}}",

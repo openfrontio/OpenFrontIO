@@ -502,3 +502,89 @@ describe("<inventory-card-tab> without the card", () => {
     expect(seen).toEqual([{ item: "playerCard:standard" }]);
   });
 });
+
+describe("<inventory-card-tab> unowned items in the changes", () => {
+  const buyGroup = (flare: string) => q(`[data-card-buy='${flare}']`);
+  const buttonIn = (flare: string) =>
+    buyGroup(flare)!.querySelector("purchase-button") as unknown as {
+      priceHard: number | null;
+      priceSoft: number | null;
+      onPurchaseHard: () => Promise<unknown>;
+    };
+  const saveButton = () => q<HTMLButtonElement>("[data-card-save]")!;
+  async function pickStorm() {
+    await click(q("[data-card-slot='background']"));
+    await click(q("[data-card-filter='all']"));
+    await pickTile("cardBackground:bg_storm");
+  }
+
+  it("picking an unowned item puts it on the With changes card", async () => {
+    await render(userMe(OWNER));
+    await pickStorm();
+    expect(editor.draft.background).toBe("bg_storm");
+    const shown = (
+      q("[data-card-preview] player-card") as unknown as {
+        view: { background: { name: string } | null };
+      }
+    ).view.background?.name;
+    expect(shown).toBe("bg_storm");
+  });
+
+  it("the bar offers Buy <item> in both currencies, and Save is disabled", async () => {
+    await render(userMe(OWNER));
+    await pickStorm();
+    expect(buyGroup("cardBackground:bg_storm")!.textContent).toContain(
+      "inventory_card.buy_item:",
+    );
+    expect(buttonIn("cardBackground:bg_storm").priceHard).toBe(240);
+    expect(buttonIn("cardBackground:bg_storm").priceSoft).toBe(2400);
+    expect(saveButton().disabled).toBe(true);
+  });
+
+  it("once bought, the bar is back to Save card with the change in place", async () => {
+    shop.buy.mockResolvedValue({ kind: "owned", fresh: false });
+    await render(userMe(OWNER));
+    await pickStorm();
+    await buttonIn("cardBackground:bg_storm").onPurchaseHard();
+    expect(shop.buy.mock.calls[0][0]).toMatchObject({
+      key: "cardBackground:bg_storm",
+    });
+    // The purchase broadcasts a fresh profile, which now owns it.
+    tab.userMe = userMe([...OWNER, "cardBackground:bg_storm"]);
+    await settle();
+    expect(buyGroup("cardBackground:bg_storm")).toBeNull();
+    expect(editor.draft.background).toBe("bg_storm");
+    expect(saveButton().disabled).toBe(false);
+    expect(saveButton().textContent).toContain("inventory_card.save_card");
+  });
+
+  it("Discard drops the unowned item", async () => {
+    await render(userMe(OWNER));
+    await pickStorm();
+    await click(q("[data-card-discard]"));
+    expect(editor.draft.background).toBe("bg_pacific");
+    expect(buyGroup("cardBackground:bg_storm")).toBeNull();
+  });
+
+  it("two unowned items: two Buy buttons, Save off until each is bought", async () => {
+    await render(userMe(OWNER));
+    await pickStorm();
+    await click(row(2).querySelector("[data-card-row-open]"));
+    await click(q("[data-card-filter='all']"));
+    await pickTile("cardTracker:conquests");
+    expect(qa("[data-card-buy]")).toHaveLength(2);
+    expect(saveButton().disabled).toBe(true);
+    tab.userMe = userMe([...OWNER, "cardBackground:bg_storm"]);
+    await settle();
+    expect(qa("[data-card-buy]")).toHaveLength(1);
+    expect(saveButton().disabled).toBe(true);
+    tab.userMe = userMe([
+      ...OWNER,
+      "cardBackground:bg_storm",
+      "cardTracker:conquests",
+    ]);
+    await settle();
+    expect(qa("[data-card-buy]")).toHaveLength(0);
+    expect(saveButton().disabled).toBe(false);
+  });
+});

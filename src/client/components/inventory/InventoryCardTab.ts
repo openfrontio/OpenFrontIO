@@ -31,6 +31,7 @@ import {
   type CardSlotKind,
   type CardSlotRef,
   sameSlot,
+  slotItem,
   swapPreview,
 } from "./CardDraft";
 import { buyCardItem, cardResolved, checkCardPurchase } from "./CardPurchase";
@@ -858,9 +859,40 @@ export class InventoryCardTab extends LitElement {
               </button>`
             : nothing
         }
-        ${this.renderSaveButton()}
+        ${this.renderBuyInBar()} ${this.renderSaveButton()}
       </div>
     </div>`;
+  }
+
+  /**
+   * One Buy per item in the changes the player doesn't own yet, in its
+   * place in the bar; Save stays off until each is bought or discarded.
+   * Buying doesn't reload the page, so the changes stay, and the fresh
+   * profile the purchase broadcasts drops the item from here.
+   */
+  private renderBuyInBar(): TemplateResult[] {
+    const editor = this.editor!;
+    return editor.unownedInChanges().flatMap(({ slot, name, flare }) => {
+      const found = slotItem(this.cosmetics, slot, name);
+      if (found === null) return [];
+      return [
+        html`<div
+          data-card-buy=${flare}
+          role="group"
+          aria-label=${translateText("inventory_card.buy_item", {
+            name: cardItemName(found.type, found.item),
+          })}
+          class="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 py-1 pl-3 pr-1"
+        >
+          <span class="text-sm font-bold text-white"
+            >${translateText("inventory_card.buy_item", {
+              name: cardItemName(found.type, found.item),
+            })}</span
+          >
+          <div class="w-40">${this.renderBuy(found.type, found.item)}</div>
+        </div>`,
+      ];
+    });
   }
 
   private renderToast(): TemplateResult | typeof nothing {

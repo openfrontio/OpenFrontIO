@@ -327,6 +327,23 @@ export class InventoryModal extends BaseModal {
   }
 
   async onUserMe(userMeResponse: UserMeResponse | false) {
+    // A fresh profile while the Inventory shows a loaded one (a purchase made
+    // in place broadcasts one): take it as it is, without the loading state,
+    // so the Player card tab and its unsaved changes stay on screen.
+    if (
+      userMeResponse !== false &&
+      this.isModalOpen &&
+      !this.isLoading &&
+      this.ownershipState === "loaded" &&
+      this.cosmetics !== null
+    ) {
+      this.inventoryLoadId++;
+      this.ownershipLoadId++;
+      this.userMeResponse = userMeResponse;
+      this.resumePendingEquip();
+      this.updateFromSettings();
+      return;
+    }
     await this.loadInventory(userMeResponse);
   }
 
