@@ -6,6 +6,7 @@ import {
   DonateEventUpdate,
   EmojiUpdate,
   GameUpdateType,
+  UnitIncomingUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { EventBus } from "@openfront/shared/EventBus";
 import { OF_ICONS } from "../../src/client/components/OfIcon";
@@ -67,6 +68,9 @@ describe("events-display", () => {
   let display: EventsDisplay;
   let langSelector: HTMLElement;
   let ticks: number;
+  let updates: Partial<Record<GameUpdateType, unknown[]>> | null;
+  let replay: boolean;
+  let catchingUp: boolean;
   let goTo: GoToPlayerEvent[];
   let goToUnit: GoToUnitEvent[];
 
@@ -98,11 +102,13 @@ describe("events-display", () => {
     Object.assign(langSelector, {
       currentLang: "en",
       translations: {
+        "events_display.atom_bomb_detonated": "{name} - atom bomb detonated",
         "events_display.atom_bomb_inbound": "{name} - atom bomb inbound",
         "events_display.atom_bomb_inbound_count":
           "{name} - {count, plural, other {# atom bombs}} inbound",
         "events_display.betrayal_debuff_ends":
           "{time} seconds left until betrayal debuff ends",
+        "events_display.log_label": "Game events",
         // Emoji first, as some languages put it.
         "events_display.sent_emoji": "{emoji} sent to {name}",
         "events_display.sent_emoji_all": "Sent everyone: {emoji}",
@@ -110,6 +116,7 @@ describe("events-display", () => {
           "Received {gold} gold from {name}",
         "events_display.trade_ship_captured":
           "Your trade ship was captured by {name}",
+        "events_display.unit_destroyed": "Your {unit} was destroyed",
       },
     });
     document.body.appendChild(langSelector);
@@ -119,6 +126,9 @@ describe("events-display", () => {
       [ENEMY, player(ENEMY)],
     ]);
     ticks = 0;
+    updates = null;
+    replay = false;
+    catchingUp = false;
     goTo = [];
     goToUnit = [];
     const eventBus = new EventBus();
@@ -130,11 +140,20 @@ describe("events-display", () => {
     display.game = {
       inSpawnPhase: () => false,
       ticks: () => ticks,
+      isCatchingUp: () => catchingUp,
       myPlayer: () => players.get(ME),
       playerBySmallID: (id: number) => players.get(id),
       player: (id: string) => [...players.values()].find((p) => p.id() === id),
-      updatesSinceLastTick: () => null,
-      config: () => ({ traitorDuration: () => 300 }),
+      unit: (id: number) => bomb(id),
+      updatesSinceLastTick: () => {
+        const since = updates;
+        updates = null;
+        return since;
+      },
+      config: () => ({
+        isReplay: () => replay,
+        traitorDuration: () => 300,
+      }),
     } as unknown as GameView;
     document.body.appendChild(display);
   });
@@ -590,6 +609,115 @@ describe("events-display", () => {
       expect(emojiPart(toOne)).toEqual(["😀"]);
       expect(toAll.textContent?.trim()).toBe("Sent everyone: 😀");
       expect(emojiPart(toAll)).toEqual(["😀"]);
+    });
+  });
+
+  describe("screen readers", () => {
+    const log = () => display.querySelector<HTMLElement>('[role="log"]')!;
+    const said = () =>
+      [...log().querySelectorAll("p")].map((line) => line.textContent);
+
+    // Runs the game to `tick`, the HUD getting these updates on the way.
+    async function arrive(tick: number, ...list: DisplayMessageUpdate[]) {
+      updates = { [GameUpdateType.DisplayEvent]: list };
+      await advanceTo(tick);
+    }
+    const message = (
+      key: string,
+      messageType: MessageType,
+      params: Record<string, string>,
+    ): DisplayMessageUpdate => ({
+      type: GameUpdateType.DisplayEvent,
+      message: key,
+      messageType,
+      playerID: ME,
+      params,
+    });
+    const detonated = () =>
+      message(
+        "events_display.atom_bomb_detonated",
+        MessageType.NUKE_DETONATED,
+        {
+          name: "Player2",
+        },
+      );
+    const destroyed = () =>
+      message("events_display.unit_destroyed", MessageType.UNIT_DESTROYED, {
+        unit: "Warship",
+      });
+    const incoming = (unitID: number): UnitIncomingUpdate => ({
+      type: GameUpdateType.UnitIncoming,
+      unitID,
+      message: "events_display.atom_bomb_inbound",
+      messageType: MessageType.NUKE_INBOUND,
+      playerID: ME,
+    });
+
+    it("keeps a labelled log while the feed is empty", async () => {
+      await advanceTo(1);
+
+      expect(rows()).toHaveLength(0);
+      expect(log().getAttribute("aria-label")).toBe("Game events");
+      expect(log().getAttribute("aria-relevant")).toBe("additions");
+      expect(said()).toEqual([]);
+    });
+
+    it("reads a new important event out once, as its plain sentence", async () => {
+      await arrive(1, detonated());
+
+      expect(said()).toEqual(["Player2 - atom bomb detonated"]);
+      expect(log().querySelector("strong")).toBeNull();
+
+      // The feed redraws every tick; the log must not change with it.
+      const changes: MutationRecord[] = [];
+      new MutationObserver((records) => changes.push(...records)).observe(
+        log(),
+        { childList: true, characterData: true, subtree: true },
+      );
+      for (let tick = 2; tick < 10; tick++) await advanceTo(tick);
+
+      expect(changes).toEqual([]);
+    });
+
+    it("does not read routine events out", async () => {
+      await arrive(1, destroyed());
+
+      expect(rowSaying("Warship").dataset.tier).toBe("routine");
+      expect(said()).toEqual([]);
+    });
+
+    it("does not read a missile line out again when its count changes", async () => {
+      updates = { [GameUpdateType.UnitIncoming]: [incoming(10)] };
+      await advanceTo(1);
+      const line = log().querySelector("p");
+      updates = { [GameUpdateType.UnitIncoming]: [incoming(11)] };
+      await advanceTo(2);
+
+      expect(rowSaying("inbound").textContent).toContain("2 atom bombs");
+      expect(said()).toEqual(["Player2 - atom bomb inbound"]);
+      expect(log().querySelector("p")).toBe(line);
+    });
+
+    it("drops a line with its event", async () => {
+      await arrive(1, detonated());
+
+      await advanceTo(81);
+
+      expect(rows()).toHaveLength(0);
+      expect(said()).toEqual([]);
+    });
+
+    it("stays silent in a replay and while the game catches up", async () => {
+      replay = true;
+      await arrive(1, detonated());
+      replay = false;
+      catchingUp = true;
+      await arrive(2, detonated());
+      catchingUp = false;
+      await advanceTo(3);
+
+      expect(rows()).toHaveLength(2);
+      expect(said()).toEqual([]);
     });
   });
 });
