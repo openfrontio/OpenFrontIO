@@ -1000,11 +1000,24 @@ export class WinModal extends LitElement implements Controller {
     }
   }
 
+  // Called fire-and-forget from show(): it never rejects.
   private async loadViewerFlares(): Promise<void> {
+    let me: UserMeResponse | false = false;
     try {
-      await this.applyUserMe(await getUserMe());
+      me = await getUserMe();
     } catch {
-      await this.applyUserMe(false);
+      me = false;
+    }
+    try {
+      await this.applyUserMe(me);
+    } catch (error) {
+      console.warn("End screen: couldn't read the viewer", error);
+      // Unknown: don't hold the promo slot empty or say "Sign in to buy" on
+      // a guess. A Buy's tap check reads the profile and the session itself.
+      if (this.viewerFlares === null) {
+        this.viewerFlares = [];
+        this.signedIn = true;
+      }
     }
   }
 

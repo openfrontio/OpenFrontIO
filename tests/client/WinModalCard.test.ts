@@ -19,10 +19,15 @@ vi.mock("../../src/client/Cosmetics", async (orig) => ({
 // The session as Auth.userAuth sees it. Like the real one (Auth.ts), a
 // token expired or within 3 minutes of expiry is refreshed only when asked
 // to (shouldRefresh, the default); userAuth(false) answers false for it.
-const auth = vi.hoisted(() => ({ session: true, expired: false }));
+const auth = vi.hoisted(() => ({
+  session: true,
+  expired: false,
+  throws: false,
+}));
 vi.mock("../../src/client/Auth", async (orig) => ({
   ...(await orig<typeof import("../../src/client/Auth")>()),
   userAuth: async (shouldRefresh = true) => {
+    if (auth.throws) throw new Error("auth broke");
     if (!auth.session) return false;
     if (auth.expired) {
       if (!shouldRefresh) return false;
@@ -633,6 +638,7 @@ describe("WinModal: signed in is the session, not the profile read", () => {
   afterEach(() => {
     auth.session = true;
     auth.expired = false;
+    auth.throws = false;
     document.body.innerHTML = "";
   });
 
@@ -653,6 +659,17 @@ describe("WinModal: signed in is the session, not the profile read", () => {
     const modal = (await renderModal({ endCardMode: "none" })) as Modal;
     await modal.applyUserMe(false);
     expect(modal.signedIn).toBe(true);
+  });
+
+  it("reading the viewer never rejects, even if its fallback throws", async () => {
+    // getUserMe fails (it catches the throw and answers false), then the
+    // session check in the fallback throws too: nothing may escape the
+    // fire-and-forget call in show().
+    auth.throws = true;
+    const modal = (await renderModal({ endCardMode: "none" })) as Modal & {
+      loadViewerFlares(): Promise<void>;
+    };
+    await expect(modal.loadViewerFlares()).resolves.toBeUndefined();
   });
 
   it("no session: signed out", async () => {
