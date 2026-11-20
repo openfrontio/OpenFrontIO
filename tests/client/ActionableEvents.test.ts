@@ -57,11 +57,21 @@ describe("actionable-events", () => {
     await display.updateComplete;
   }
 
-  const requestFrom = (requestorID: number): AllianceRequestUpdate => ({
+  // Moves the game n ticks on; the HUD sees the last of them.
+  async function advance(n: number) {
+    ticks += n - 1;
+    await tick();
+  }
+
+  // Made on the tick that brings it, unless it arrives late.
+  const requestFrom = (
+    requestorID: number,
+    createdAt = ticks + 1,
+  ): AllianceRequestUpdate => ({
     type: GameUpdateType.AllianceRequest,
     requestorID,
     recipientID: ME,
-    createdAt: ticks,
+    createdAt,
   });
 
   const cards = () => [
@@ -74,6 +84,14 @@ describe("actionable-events", () => {
   ];
   const button = (card: HTMLElement, action: string) =>
     card.querySelector<HTMLButtonElement>(`[data-card-action="${action}"]`)!;
+  const seconds = (card: HTMLElement) =>
+    card.querySelector<HTMLElement>("[data-card-seconds]")!;
+  const line = (card: HTMLElement) =>
+    card.querySelector<HTMLElement>("[data-time-left]")!;
+  const timeLeft = (card: HTMLElement) => ({
+    seconds: seconds(card).textContent,
+    line: Number(line(card).dataset.timeLeft),
+  });
   const sounds = () =>
     events
       .filter((e) => e instanceof PlaySoundEffectEvent)
@@ -87,6 +105,7 @@ describe("actionable-events", () => {
     (langSelector as any).translations = {
       "events_display.request_alliance": "{name} asks for an alliance",
       "events_display.about_to_expire": "Your alliance with {name} ends soon",
+      "common.duration_second_short": "s",
     };
     document.body.appendChild(langSelector);
 
@@ -243,6 +262,58 @@ describe("actionable-events", () => {
     expect(cards()).toHaveLength(0);
   });
 
+  it("counts a request's 20 seconds down with the game and closes it at 0", async () => {
+    await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(ANNA)] });
+    const anna = cardOf("Anna")!;
+    expect(timeLeft(anna)).toEqual({ seconds: "20s", line: 1 });
+
+    await advance(100);
+    expect(timeLeft(anna)).toEqual({ seconds: "10s", line: 0.5 });
+
+    await advance(99);
+    expect(timeLeft(anna)).toEqual({ seconds: "1s", line: 0.005 });
+
+    await advance(1);
+    expect(cards()).toHaveLength(0);
+  });
+
+  it("counts from when the engine made a request that arrives late", async () => {
+    ticks = 100;
+    await tick({
+      [GameUpdateType.AllianceRequest]: [requestFrom(ANNA, ticks + 1 - 30)],
+    });
+    const anna = cardOf("Anna")!;
+    expect(timeLeft(anna)).toEqual({ seconds: "17s", line: 0.85 });
+
+    await advance(169);
+    expect(timeLeft(anna)).toEqual({ seconds: "1s", line: 0.005 });
+
+    await advance(1);
+    expect(cards()).toHaveLength(0);
+  });
+
+  it("holds the time left while the game does not tick", async () => {
+    await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(ANNA)] });
+    await advance(50);
+    const anna = cardOf("Anna")!;
+
+    // Paused: the HUD keeps drawing, the game's tick count stays.
+    for (let i = 0; i < 3; i++) {
+      display.requestUpdate();
+      await display.updateComplete;
+    }
+
+    expect(timeLeft(anna)).toEqual({ seconds: "15s", line: 0.75 });
+  });
+
+  it("keeps the seconds and the line away from screen readers", async () => {
+    await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(ANNA)] });
+    const anna = cardOf("Anna")!;
+
+    expect(seconds(anna).getAttribute("aria-hidden")).toBe("true");
+    expect(line(anna).getAttribute("aria-hidden")).toBe("true");
+  });
+
   describe("renewal card", () => {
     async function renewalWith(other: number) {
       // Late in the game: the prompt skips alliances checked within the
@@ -265,6 +336,16 @@ describe("actionable-events", () => {
         "renew",
         "ignore",
       ]);
+    });
+
+    it("counts down to the end of the alliance", async () => {
+      const card = await renewalWith(BORIS);
+
+      // The alliance ends at 1250 and the prompt opened at 1001.
+      expect(timeLeft(card)).toEqual({ seconds: "25s", line: 249 / 300 });
+
+      await advance(150);
+      expect(timeLeft(card)).toEqual({ seconds: "10s", line: 99 / 300 });
     });
 
     it("renews and closes", async () => {
