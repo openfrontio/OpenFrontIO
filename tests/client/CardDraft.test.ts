@@ -122,6 +122,35 @@ describe("card draft", () => {
     ]);
   });
 
+  const rows = (...trackers: (string | null)[]) => ({
+    background: null,
+    rows: { tracker: trackers },
+  });
+
+  it("replaying never overwrites a tracker it placed itself", () => {
+    // Kept [A,B,C]; the failed save had cleared B and C; the player then
+    // filled both rows with D and E.
+    expect(
+      replayByItem(
+        rows("a", "b", "c"),
+        rows("a", null, null),
+        rows("a", "d", "e"),
+      ).rows.tracker,
+    ).toEqual(["a", "d", "e"]);
+  });
+
+  it("replaying keeps a replace when a later add needs a row", () => {
+    // Kept [A,B,C]; the failed save had cleared C; the player then replaced
+    // A with D and filled row 3 with E.
+    expect(
+      replayByItem(
+        rows("a", "b", "c"),
+        rows("a", "b", null),
+        rows("d", "b", "e"),
+      ).rows.tracker,
+    ).toEqual(["d", "b", "e"]);
+  });
+
   it("the body keeps held-back title and taunt and drops empty rows", () => {
     const d = pickInto(
       draftFromCard(CARD),
