@@ -644,7 +644,7 @@ describe("<inventory-card-tab> on a phone", () => {
     expect(sheet.className).toContain("max-md:fixed");
     expect(sheet.className).toContain("max-md:bottom-0");
     expect(sheet.querySelector("[data-card-picker]")!.className).toContain(
-      "max-md:max-h-[50vh]",
+      "max-md:max-h-[45vh]",
     );
     // The preview isn't inside the sheet.
     expect(sheet.querySelector("[data-card-preview]")).toBeNull();

@@ -13,6 +13,7 @@ import {
   Product,
   Subscription,
 } from "@openfront/shared/CosmeticSchemas";
+import type { LevelBadge } from "@openfront/shared/LevelBadgeWire";
 import type { PropertyValues, TemplateResult } from "lit";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
@@ -186,6 +187,21 @@ export class StoreModal extends BaseModal {
   // not wait on a slow catalog before it may say so.
   @state() private authSettled = false;
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
+
+  /** The viewer's level badge, for the Card tab's large preview. */
+  private cardBadge(): LevelBadge | null {
+    const progress =
+      this.userMeResponse === false
+        ? null
+        : this.userMeResponse.player.progress;
+    return progress
+      ? {
+          level: progress.level,
+          prestige: progress.prestige,
+          legend: progress.legend,
+        }
+      : null;
+  }
   // Item the URL asked for (`#modal=store&item=<key>`). Held until its group
   // is visible, then inspected so the store opens on that item.
   private requestedItem: string | null = null;
@@ -867,6 +883,7 @@ export class StoreModal extends BaseModal {
                   ? ""
                   : (this.userMeResponse.player.username ?? "")
               }
+              .badge=${this.cardBadge()}
               @requested-item-shown=${() => (this.requestedItem = null)}
             ></card-store-grid>`
           : flash

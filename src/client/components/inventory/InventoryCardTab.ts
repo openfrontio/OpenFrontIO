@@ -318,7 +318,7 @@ export class InventoryCardTab extends LitElement {
           >
           ${
             changed
-              ? html`<span class="truncate text-[11px] text-white/60"
+              ? html`<span class="text-[11px] leading-tight text-white/60"
                   >${translateText("inventory_card.was", {
                     name: this.itemName(slot, was),
                   })}</span
@@ -587,7 +587,7 @@ export class InventoryCardTab extends LitElement {
     return html`<section
       data-card-picker=${slotKey(slot)}
       aria-label=${heading}
-      class="flex flex-col gap-3 border-t border-white/10 pt-4 max-md:max-h-[50vh] max-md:overflow-y-auto max-md:rounded-t-2xl max-md:border max-md:bg-slate-900 max-md:px-3 max-md:pb-3 max-md:shadow-2xl"
+      class="flex flex-col gap-3 border-t border-white/10 pt-4 max-md:max-h-[45vh] max-md:overflow-y-auto max-md:rounded-t-2xl max-md:border max-md:bg-slate-900 max-md:px-3 max-md:pb-3 max-md:shadow-2xl"
     >
       <div class="flex flex-wrap items-center gap-2">
         <h3 class="text-sm font-black uppercase tracking-wider text-white">
@@ -717,6 +717,18 @@ export class InventoryCardTab extends LitElement {
     ></purchase-button>`;
   }
 
+  /** A background for the sample card: one the player owns, else the
+   * first one sold, else none. */
+  private sampleBackground(): string | null {
+    const all = Object.values(this.cosmetics?.cardBackgrounds ?? {});
+    const flares = this.userMe?.player.flares ?? [];
+    return (
+      all.find((b) => flares.includes(`cardBackground:${b.name}`))?.name ??
+      all.find((b) => (b.priceHard ?? 0) > 0 || (b.priceSoft ?? 0) > 0)?.name ??
+      null
+    );
+  }
+
   private renderGetCard(): TemplateResult {
     const card = Object.values(this.cosmetics?.playerCards ?? {})[0] as
       | CardItem
@@ -749,7 +761,10 @@ export class InventoryCardTab extends LitElement {
         <player-card
           size="account"
           class="block w-full"
-          .view=${this.view({ background: null, rows: { tracker: [] } })}
+          .view=${this.view({
+            background: this.sampleBackground(),
+            rows: { tracker: [] },
+          })}
         ></player-card>
         <span
           class="text-[11px] font-black uppercase tracking-wider text-white/50"
@@ -789,12 +804,18 @@ export class InventoryCardTab extends LitElement {
       data-card-tab
       class="flex flex-col gap-4 ${barShown || this.openSlot !== null ? "max-md:pb-28" : ""}"
     >
-      <div class="grid gap-4 md:grid-cols-[18rem_minmax(0,1fr)] md:items-start">
-        <div class="order-2 flex flex-col gap-3 md:order-1">
-          ${this.renderBackgroundRow()}
-          ${CARD_SLOT_KIND_LIST.map((kind) => this.renderRows(kind))}
+      <div class="@container grid gap-4">
+        <div
+          class="grid min-w-0 gap-4 @3xl:grid-cols-[17rem_minmax(0,1fr)] @3xl:items-start"
+        >
+          <div class="order-2 flex min-w-0 flex-col gap-3 @3xl:order-1">
+            ${this.renderBackgroundRow()}
+            ${CARD_SLOT_KIND_LIST.map((kind) => this.renderRows(kind))}
+          </div>
+          <div class="order-1 min-w-0 @3xl:order-2">
+            ${this.renderPreview()}
+          </div>
         </div>
-        <div class="order-1 md:order-2">${this.renderPreview()}</div>
       </div>
       <div
         data-card-sheet
@@ -802,7 +823,7 @@ export class InventoryCardTab extends LitElement {
       >
         ${this.renderPicker()} ${this.renderSaveBar()}
       </div>
-      ${this.renderToast()} ${this.renderLargePreview()}
+      ${this.renderLargePreview()}
     </div>`;
   }
 
@@ -871,9 +892,10 @@ export class InventoryCardTab extends LitElement {
     if (changes.length === 0 && editor.saveState === "idle") return nothing;
     return html`<div
       data-card-save-bar
-      class="z-30 flex flex-wrap max-md:px-3 md:sticky md:bottom-0 md:-mx-3 items-center gap-3 border-t border-white/10 bg-slate-950/95 px-3 py-3"
+      class="z-30 flex flex-wrap max-md:px-3 md:sticky md:bottom-0 md:-mx-3 items-center gap-3 border-t border-white/10 bg-slate-950 px-3 py-3"
     >
-      <div class="flex min-w-0 flex-1 items-center gap-3">
+      ${this.renderToast()}
+      <div class="flex min-w-0 flex-1 basis-72 items-center gap-3">
         ${
           changes.length > 0
             ? html`<span
@@ -891,7 +913,7 @@ export class InventoryCardTab extends LitElement {
           >${changes.map((c) => cardChangeLine(this.cosmetics, c)).join(" · ")}</span
         >
       </div>
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="flex flex-wrap items-center justify-end gap-2 max-md:w-full">
         ${
           changes.length > 0
             ? html`<button
@@ -928,14 +950,18 @@ export class InventoryCardTab extends LitElement {
           aria-label=${translateText("inventory_card.buy_item", {
             name: cardItemName(found.type, found.item),
           })}
-          class="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 py-1 pl-3 pr-1"
+          class="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 py-1 pl-3 pr-1 max-md:w-full max-md:justify-between"
         >
           <span class="text-sm font-bold text-white"
             >${translateText("inventory_card.buy_item", {
               name: cardItemName(found.type, found.item),
             })}</span
           >
-          <div class="w-40">${this.renderBuy(found.type, found.item)}</div>
+          <div
+            class="w-56 [&_.purchase-btn-wrap]:mt-0 [&_.purchase-btn-wrap>div]:flex-row"
+          >
+            ${this.renderBuy(found.type, found.item)}
+          </div>
         </div>`,
       ];
     });
@@ -946,7 +972,7 @@ export class InventoryCardTab extends LitElement {
     return html`<div
       data-card-save-toast
       role="alert"
-      class="fixed bottom-24 left-1/2 z-50 flex w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 items-start gap-3 rounded-xl border border-rose-400/50 bg-rose-950 p-3 text-white shadow-2xl"
+      class="flex basis-full items-start gap-3 rounded-xl border border-rose-400/50 bg-rose-950 p-3 text-white md:ml-auto md:max-w-md"
     >
       <span
         aria-hidden="true"

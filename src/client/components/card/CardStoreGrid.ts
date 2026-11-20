@@ -1,5 +1,6 @@
 import type { StorePlacement } from "@openfront/shared/ApiSchemas";
-import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import type { CardTracker, Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import type { LevelBadge } from "@openfront/shared/LevelBadgeWire";
 import {
   html,
   LitElement,
@@ -81,6 +82,8 @@ export class CardStoreGrid extends LitElement {
   @property({ attribute: false }) requestedItem: string | null = null;
   /** The viewer's name, for the large preview's card. */
   @property({ attribute: false }) username = "";
+  /** And their level badge. */
+  @property({ attribute: false }) badge: LevelBadge | null = null;
   @state() private selected: string | null = null;
   /** The item in the large preview. */
   @state() private previewing: { type: CardItemType; item: CardItem } | null =
@@ -181,14 +184,14 @@ export class CardStoreGrid extends LitElement {
       {
         username: this.username,
         clanTag: null,
-        badge: null,
+        badge: this.badge,
         card: {
           background: type === "cardBackground" ? item.name : undefined,
           trackers:
             type === "cardTracker"
               ? [
                   {
-                    stat: (item as { stat: never }).stat,
+                    stat: (item as CardTracker).stat,
                     value: SAMPLE_TRACKER_VALUE,
                   },
                 ]
