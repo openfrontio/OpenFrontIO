@@ -38,12 +38,14 @@
         transition: opacity 0.5s ease-out;
       }
 
-      /* iOS safe area support. padding-bottom is !important because
-         Playwire's site stylesheet (config.playwire.com/.../styles.css,
-         loaded by ramp.js after this) sets body { padding-bottom: 105px },
-         which left a blank band under the footer whenever ads load. The
-         bottom rail is position: fixed (below) and needs no reserved space. */
-      body {
+      /* iOS safe area support. Playwire's site stylesheet
+         (config.playwire.com/.../styles.css, loaded by ramp.js after this)
+         sets body { padding-bottom: 105px !important }, which leaves a blank
+         band under the footer whenever ads load. Both rules being
+         !important, the later stylesheet would win at equal specificity, so
+         this one uses html body to win regardless of load order. The bottom
+         rail is position: fixed (below) and needs no reserved space. */
+      html body {
         padding-top: env(safe-area-inset-top);
         padding-right: env(safe-area-inset-right);
         padding-bottom: env(safe-area-inset-bottom) !important;
