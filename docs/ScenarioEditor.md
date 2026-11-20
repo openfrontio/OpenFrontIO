@@ -1,6 +1,7 @@
 # Scenario editor
 
-Status: design, 2026-11-18. Nothing here is built yet.
+Status: design, 2026-11-18. The engine's editor mode and the document model
+(with undo and local drafts) are built. The editor UI is not.
 
 ## What it is
 
@@ -78,6 +79,27 @@ ScenarioDocument
 `playable` marks nations a human may be assigned to. Nations nobody takes
 are run by the nation AI.
 
+The stored form is JSON (`src/client/scenario/ScenarioDocument.ts`):
+
+- `format` is 1.
+- `terrain.tiles` is the bytes in base64: 0 is water, `0x80` plus 0-30 is
+  land, `0x9f` is impassable.
+- A nation's `id` is the engine's nation id, the one `add_nation` takes.
+- `ownership` is flat `[owner, count]` pairs that cover every tile in order.
+  Owner 0 is nobody and owner `i` is `nations[i - 1]`. Only land can be
+  owned.
+- `structures` is kept in tile order, one per tile. A structure stands on its
+  nation's land, a port on a shore, and none is a type the config disables.
+- `config` is `difficulty`, `donateGold`, `donateTroops`, `infiniteGold`,
+  `infiniteTroops`, `instantBuild`, and optionally `disabledUnits`,
+  `maxTimerValue`, `goldMultiplier`, `customAllianceDuration`, `waterNukes`,
+  `doomsdayClock` and `overtime`. The rest of `GameConfig` is fixed for a
+  scenario (free-for-all, normal size, its own map and nations, no bots) or
+  set per nation.
+
+Parsing checks all of this and gives the editor its working form, with the
+terrain and owners as typed arrays.
+
 The document stores only what the author decided. Shoreline flags, ocean
 versus lake, water depth and the downscaled maps are all derived by the
 engine (see "Terrain").
@@ -143,8 +165,13 @@ Opening a scenario builds an engine from the document:
 
 1. Start a `WorkerClient` in editor mode on a blank all-water map of the
    document's width and height.
-2. Replay the document: write the terrain, add nations, set ownership, place
-   structures, set troops and gold.
+2. Replay the document (`replayDocument`): write the terrain and end the
+   stroke, then add each nation with its troops, gold and land, then place
+   the structures.
+
+Replay takes a function that sends one command, so the same code drives a
+worker or, in tests, a `GameRunner`. For export's second engine it skips
+the terrain, which the map files already hold.
 
 The engine then holds the whole scenario, terrain included. Every edit goes
 two places: into the document, and to the worker as an editor command. The
@@ -161,8 +188,27 @@ live. It rebuilds the engine from the document.
 
 ### Undo
 
-Undo works on the document. Each edit records its inverse; undoing applies
-the inverse to the document and sends the matching command to the engine.
+Undo works on the document (`DocumentEditor`). Each edit records its
+inverse; undoing applies the inverse to the document and sends the matching
+command to the engine.
+
+- An undo step is every edit since the last commit. A stroke commits once,
+  at its end, so it undoes as one step, and a step with terrain in it ends
+  with one `end_terrain_edit`.
+- A new edit clears redo.
+- An edit is checked before it changes anything, so a bad one changes
+  neither the document nor the engine.
+- The document makes the engine's side effects itself and records them in
+  the inverse. A tile that changes between water, land and impassable loses
+  its owner and its structure. A port that loses its shore goes. Land given
+  to another nation loses the old owner's structure.
+- Undoing `add_nation` is `remove_nation`. Undoing `remove_nation` adds the
+  nation back at its place in the list and gives back its land and
+  structures. The engine keeps a removed nation's player, so adding the id
+  again brings back that player, with its small id, as a new nation starts.
+  `set_nation` then restores its troops, gold and playable.
+
+Undo history is not saved with a draft.
 
 ## Terrain
 
@@ -227,8 +273,13 @@ transparent for water), and send the result as one terrain edit. The
 generator's optional removal of tiny islands and lakes is a later tool, not
 part of import.
 
-Limits: width and height are multiples of 4, with a minimum and maximum area
-to be set from the generator's existing recommended range.
+Limits: width and height are multiples of 4, each at least 100, and the
+area is at most 3,000,000 tiles. The generator recommends 2-3 million tiles
+for a stock map. Its upper bound holds for scenarios: the engine, renderer
+and snapshot all scale with area. Its lower bound does not, as a scenario
+may be a small duel. A side of 100 still gives a 16x map 25 tiles across.
+About half the stock maps are over 3 million tiles, so they cannot be a
+scenario's starting map.
 
 ## Engine changes
 
@@ -442,7 +493,9 @@ input review before scenarios are shareable.
    result with that map's shipped files, both as one edit and as many
    overlapping strokes in shuffled order.
 2. **Editor core**: document model, tools, PNG import, test play. Until the
-   API exists, the draft is kept in browser storage.
+   API exists, the draft is kept in browser storage: IndexedDB, as the
+   stored form the API will take (`ScenarioDrafts`). localStorage is too
+   small, as a 3M-tile document is about 4 MB of base64.
 3. **Scenario start**: bundle loading, scenario block in the
    start info, singleplayer play.
 4. **API**: storage, entitlement, publish, list. Then the editor's save and
