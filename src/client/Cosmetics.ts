@@ -203,6 +203,13 @@ export function handlePurchaseReturn(
 
   const type = params.get("type");
   if (type === "currency_pack") {
+    // The in-page card form reloads onto this landing marked resume, after
+    // showing its own message: straight to the resume.
+    if (params.get("resume") === "1") {
+      actions.strip();
+      void resumePendingPurchase();
+      return;
+    }
     topUpLanded(actions, translateText("store.currency_pack_purchase_success"));
     return;
   }
