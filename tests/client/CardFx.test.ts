@@ -1,3 +1,4 @@
+import type { FxLayer } from "@openfront/shared/CardBackgroundAnimation";
 import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -5,6 +6,8 @@ import { CardBackground } from "../../src/client/components/card/CardBackground"
 import {
   cardFxStopped,
   resetCardFxSession,
+  SHIMMER_BAND_WIDTH,
+  shimmerBand,
 } from "../../src/client/components/card/CardFx";
 import type { PlayerCardView } from "../../src/client/components/card/PlayerCardModel";
 
@@ -283,10 +286,42 @@ describe("<card-background> effect layers", () => {
     );
     loadLayers(el);
     observers[0].report(true);
-    frame(0);
-    frame(500);
     const band = layer.querySelector<HTMLElement>("[data-card-fx-move]")!;
-    expect(band.style.transform).toContain("rotate(30deg)");
+    const shimmer = (SHIMMER.animation as { layers: FxLayer[] }).layers[0];
+    // Exactly where shimmerBand puts it: the left edge is half a band left of
+    // the centre, and both centre terms move the band sideways (no vertical
+    // move; see the centreH test in CardFxMaths).
+    const expected = (t: number) => {
+      const b = shimmerBand(t, shimmer);
+      const w = ((b.centreW - SHIMMER_BAND_WIDTH / 2) * 100).toFixed(2);
+      const h = (b.centreH * 100).toFixed(2);
+      return `translateX(calc(${w}cqw + ${h}cqh)) rotate(30deg)`;
+    };
+    frame(0);
+    expect(band.style.transform).toBe(expected(0));
+    frame(500);
+    expect(band.style.transform).toBe(expected(0.5));
+  });
+
+  it("shimmer: a steep band is as long as shimmerBand says", async () => {
+    const steep = {
+      src: "/fx-shimmer.png",
+      effect: "shimmer" as const,
+      angle: 80,
+    };
+    const el = await mount({
+      ...SHIMMER,
+      animation: { kind: "layers", layers: [steep] },
+    });
+    loadBase(el);
+    await el.updateComplete;
+    const band = el.querySelector<HTMLElement>("[data-card-fx-move]")!;
+    const { lengthW, lengthH } = shimmerBand(0, steep);
+    const length = `${(lengthW * 100).toFixed(2)}cqw + ${(lengthH * 100).toFixed(2)}cqh`;
+    expect(band.getAttribute("style")).toContain(`height:calc(${length})`);
+    expect(band.getAttribute("style")).toContain(
+      `top:calc(50cqh - (${length}) / 2)`,
+    );
   });
 
   it("stops for the session after 2 s of slow frames", async () => {

@@ -24,6 +24,7 @@ import {
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
 import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
+import { userAuth } from "../../Auth";
 import { saveTauntsMuted } from "../../CardLoadoutApi";
 import "../../components/CosmeticCard";
 import { EDIT_CARD_HREF } from "../../components/card/CardLinks";
@@ -215,7 +216,7 @@ export class WinModal extends LitElement implements Controller {
   @state()
   private boughtHere: ReadonlySet<string> = new Set();
   private onUserMe = (e: Event) =>
-    this.applyUserMe((e as CustomEvent<UserMeResponse | false>).detail);
+    void this.applyUserMe((e as CustomEvent<UserMeResponse | false>).detail);
   private unsubscribeLooks: (() => void) | null = null;
   private userSettings = new UserSettings();
   private nemesisAbort: AbortController | null = null;
@@ -639,10 +640,24 @@ export class WinModal extends LitElement implements Controller {
   private lookRows(): LookRow[] | "pending" {
     const gameID = this.game?.gameID();
     if (gameID === undefined) return [];
+    const card = this.lastEndCard;
+    // As visiblePlayerCard: while the viewer anonymises names, no one else's
+    // look under their real name.
+    const me = this.game.myPlayer()?.clientID() ?? null;
+    const anonymous = this.userSettings.anonymousNames();
+    const visible = savedLooks(gameID).filter(
+      (look) => !anonymous || look.clientID === me,
+    );
+    // Nothing that could become a look (no killer card loading or offering
+    // items, no saved look): the promo is as today, without waiting for the
+    // viewer's /users/@me.
+    const killerCard =
+      card?.kind === "eliminatedBy" &&
+      (this.loadoutPending || this.loadout.length > 0);
+    if (!killerCard && visible.length === 0) return [];
     if (this.viewerFlares === null || this.loadoutPending) return "pending";
     // What the viewer owns, but for what they bought here: that stays.
     const flares = this.viewerFlares.filter((f) => !this.boughtHere.has(f));
-    const card = this.lastEndCard;
     // The killer's current card when it has something to buy; otherwise
     // their saved look (if any) stands in for it.
     const killer: LookRow | null =
@@ -654,15 +669,7 @@ export class WinModal extends LitElement implements Controller {
             items: this.loadout,
           }
         : null;
-    // As visiblePlayerCard: while the viewer anonymises names, no one else's
-    // look under their real name.
-    const me = this.game.myPlayer()?.clientID() ?? null;
-    const anonymous = this.userSettings.anonymousNames();
-    const saved = savedLooks(gameID).filter(
-      (look) =>
-        look.clientID !== killer?.clientID &&
-        (!anonymous || look.clientID === me),
-    );
+    const saved = visible.filter((look) => look.clientID !== killer?.clientID);
     return endScreenLookRows(killer ? [killer, ...saved] : saved, flares);
   }
 
@@ -994,19 +1001,53 @@ export class WinModal extends LitElement implements Controller {
     }
   }
 
+  // Called fire-and-forget from show(): it never rejects.
   private async loadViewerFlares(): Promise<void> {
+    let me: UserMeResponse | false = false;
     try {
-      this.applyUserMe(await getUserMe());
+      me = await getUserMe();
     } catch {
-      this.applyUserMe(false);
+      me = false;
+    }
+    try {
+      await this.applyUserMe(me);
+    } catch (error) {
+      console.warn("End screen: couldn't read the viewer", error);
+      // Unknown: don't hold the promo slot empty or say "Sign in to buy" on
+      // a guess. A Buy's tap check reads the profile and the session itself.
+      if (this.viewerFlares === null) {
+        this.viewerFlares = [];
+        this.signedIn = true;
+      }
     }
   }
 
-  private applyUserMe(me: UserMeResponse | false | undefined): void {
+  // getUserMe answers false for a failed read (a 5xx, a network error, a
+  // body that fails the schema) as well as for no session, and keeps that
+  // false cached. So only the session decides "signed out": a failed read
+  // leaves a signed-in player signed in with no flares known, and their
+  // Buy's tap check re-reads.
+  private async applyUserMe(
+    me: UserMeResponse | false | undefined,
+  ): Promise<void> {
     if (me === undefined) return;
-    this.signedIn = me !== false;
-    this.viewerFlares = me === false ? [] : (me.player.flares ?? []);
+    const call = ++this.userMeCall;
+    if (me !== false) {
+      this.signedIn = true;
+      this.viewerFlares = me.player.flares ?? [];
+      return;
+    }
+    // With refresh: the token is short-lived and nothing renews it during a
+    // game, and a cached false makes getUserMe send no request that would.
+    // userAuth(false) would call an expired token signed out even with a
+    // valid refresh cookie.
+    const session = await userAuth();
+    // A newer answer landed meanwhile: it decides.
+    if (call !== this.userMeCall) return;
+    this.signedIn = session !== false;
+    this.viewerFlares = [];
   }
+  private userMeCall = 0;
 
   private async readTauntsMuted(): Promise<void> {
     if (this.tauntsMutedRead) return;

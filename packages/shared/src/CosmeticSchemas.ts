@@ -199,6 +199,17 @@ export function ownsPlayerCard(flares: readonly string[]): boolean {
   return flares.some((f) => f.startsWith("playerCard:"));
 }
 
+// The one tracker rule: the API names every tracker by its stat, the shop
+// grants it as cardTracker:<name>, and the saved loadout and the game key it
+// on the stat. A catalogue entry where name and stat differ could be bought
+// but never shown, so nothing offers, sells or keeps it.
+export function cardTrackerNamedByStat(t: {
+  name: string;
+  stat: string;
+}): boolean {
+  return t.name === t.stat;
+}
+
 export const CrownSchema = CosmeticSchema.extend({
   url: z.string(),
 });

@@ -4,6 +4,7 @@ import { isTemporaryUsername } from "@openfront/shared/ApiSchemas";
 import {
   Cosmetics,
   findEffectForSlot,
+  cardTrackerNamedByStat,
   ownsPlayerCard,
 } from "@openfront/shared/CosmeticSchemas";
 import { decodePatternData } from "@openfront/shared/PatternDecoder";
@@ -192,8 +193,15 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     ) {
       card.taunt = taunt;
     }
+    // Like every other slot: owned AND still in the catalogue, under the one
+    // tracker rule (named by its stat, so the flare cardTracker:<name> is
+    // cardTracker:<stat>).
+    const inCatalogue = (stat: string) => {
+      const entry = this.cosmetics.cardTrackers?.[stat];
+      return entry !== undefined && cardTrackerNamedByStat(entry);
+    };
     card.trackers = (refs?.trackers ?? [])
-      .filter((t) => owned(`cardTracker:${t.stat}`))
+      .filter((t) => inCatalogue(t.stat) && owned(`cardTracker:${t.stat}`))
       .slice(0, MAX_CARD_TRACKERS);
     if (publicId !== undefined) card.publicId = publicId;
     return card;

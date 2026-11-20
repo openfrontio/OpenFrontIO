@@ -223,10 +223,22 @@ describe("buying on the end screen", () => {
     });
   });
 
-  it("signed out: nothing bought", async () => {
+  it("no session: signed out, nothing bought", async () => {
+    auth.session = false;
     vi.mocked(getUserMe).mockResolvedValue(false);
     expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe(
       "signed_out",
+    );
+    expect(purchaseWithCurrency).not.toHaveBeenCalled();
+    auth.session = true;
+  });
+
+  it("a session but a failed profile read: unreachable, nothing sent", async () => {
+    // getUserMe answers (and caches) false for a 5xx too, e.g. another
+    // item's tap check failing between this one's confirm and its buy.
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe(
+      "unreachable",
     );
     expect(purchaseWithCurrency).not.toHaveBeenCalled();
   });

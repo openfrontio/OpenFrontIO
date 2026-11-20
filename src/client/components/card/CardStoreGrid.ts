@@ -15,7 +15,12 @@ import { translateText } from "../../Utils";
 import "../CosmeticCard";
 import type { PurchaseButton } from "../PurchaseButton";
 import "../PurchaseButton";
-import { type CardItem, type CardItemType, cardItemName } from "./CardItems";
+import {
+  type CardItem,
+  type CardItemType,
+  cardItemName,
+  isOfferedCardItem,
+} from "./CardItems";
 import "./CardItemPreview";
 import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";
 import "./PlayerCard";
@@ -65,7 +70,9 @@ export function cardStoreItems(
     if (type === "cardTitle" && !CARD_TITLES_ENABLED) continue;
     const section = (cosmetics?.[key] ?? {}) as Record<string, CardItem>;
     for (const item of Object.values(section)) {
-      if (isSold(item)) out.push({ type, item });
+      if (isSold(item) && isOfferedCardItem(type, item)) {
+        out.push({ type, item });
+      }
     }
   }
   return out;

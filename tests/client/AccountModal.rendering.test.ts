@@ -63,6 +63,7 @@ import {
   linkGoogle,
   linkSteam,
 } from "../../src/client/Auth";
+import { fetchCosmetics } from "../../src/client/Cosmetics";
 
 function makeUserMe(
   overrides: Partial<UserMeResponse["user"]>,
@@ -141,6 +142,33 @@ describe("AccountModal — rendering", () => {
       me.player.card = owns ? { trackers: [] } : null;
       return me;
     }
+
+    it("a failed catalogue read is retried at the next opening; a good one is kept", async () => {
+      const fetchMock = vi.mocked(fetchCosmetics);
+      fetchMock.mockClear();
+      fetchMock.mockResolvedValueOnce(null);
+      const openAsOwner = async () => {
+        modal.open();
+        await flushOpen();
+        await setLoggedInUser(withCard(true));
+        await flushOpen();
+      };
+      await openAsOwner();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      // Not on every render: offline, that would be a request loop.
+      modal.requestUpdate();
+      await flushOpen();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      modal.close();
+      fetchMock.mockResolvedValueOnce({} as never);
+      await openAsOwner();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      modal.close();
+      await openAsOwner();
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
 
     it("account tab header is the player card for owners", async () => {
       await setLoggedInUser(withCard(true));

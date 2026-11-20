@@ -23,6 +23,24 @@ vi.mock("../../src/client/InGameModal", () => ({
   showInGameAlert: vi.fn().mockResolvedValue(true),
   showInGameConfirm: vi.fn().mockResolvedValue(false),
 }));
+// The row's own tracker, counted: made, and disposed.
+const trackers = vi.hoisted(() => ({
+  made: [] as { disposed: boolean }[],
+}));
+vi.mock("../../src/client/StoreTracking", () => ({
+  StoreTracker: class {
+    disposed = false;
+    constructor() {
+      trackers.made.push(this);
+    }
+    observe() {}
+    click() {}
+    releaseDetached() {}
+    dispose() {
+      this.disposed = true;
+    }
+  },
+}));
 
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import {
@@ -38,6 +56,7 @@ import {
   LoadoutRow,
   loadoutItems,
   promoChoice,
+  shownPrices,
 } from "../../src/client/hud/layers/LoadoutRow";
 import {
   showInGameAlert,
@@ -117,6 +136,22 @@ const VOLT: PlayerCardView = buildPlayerCardView(
   COSMETICS,
 );
 
+// A card item whose sale has ended, though the catalogue in hand still holds
+// the sale price, and one whose sale is still running.
+const ENDED = new Date(Date.now() - 60_000).toISOString();
+const RUNNING = new Date(Date.now() + 3_600_000).toISOString();
+const onSale = (name: string, endsAt: string) => ({
+  product: null,
+  rarity: "epic",
+  name,
+  url: `/${name}.webp`,
+  priceHard: 400,
+  listPriceHard: 600,
+  priceSoft: 4000,
+  listPriceSoft: 6000,
+  promotion: { id: "s1", name: "Sale", percentOff: 33, endsAt },
+});
+
 describe("loadoutItems", () => {
   it("titles held back: the killer's title is never offered", () => {
     heldBack.titles = false;
@@ -171,6 +206,73 @@ describe("loadoutItems", () => {
     });
     const taunt = items.find((i) => i.type === "taunt")!;
     expect(taunt).toMatchObject({ state: "buy", priceSoft: 800 });
+  });
+
+  it("a sale that has ended offers the list price", () => {
+    const cosmetics = {
+      ...COSMETICS,
+      cardBackgrounds: { bg_ended: onSale("bg_ended", ENDED) },
+    } as unknown as Cosmetics;
+    const view = buildPlayerCardView(
+      {
+        username: "Volt",
+        clanTag: null,
+        badge: null,
+        card: { background: "bg_ended", trackers: [] },
+      },
+      cosmetics,
+    );
+    const [bg] = loadoutItems(view, cosmetics, ["playerCard:standard"]);
+    expect(bg.type).toBe("cardBackground");
+    expect(shownPrices(bg)).toMatchObject({
+      priceHard: 600,
+      priceSoft: 6000,
+      listPriceHard: null,
+    });
+
+    const running = {
+      ...COSMETICS,
+      cardBackgrounds: { bg_running: onSale("bg_running", RUNNING) },
+    } as unknown as Cosmetics;
+    const [live] = loadoutItems(
+      buildPlayerCardView(
+        {
+          username: "Volt",
+          clanTag: null,
+          badge: null,
+          card: { background: "bg_running", trackers: [] },
+        },
+        running,
+      ),
+      running,
+      ["playerCard:standard"],
+    );
+    expect(shownPrices(live)).toMatchObject({
+      priceHard: 400,
+      listPriceHard: 600,
+    });
+  });
+
+  it("a tracker whose name isn't its stat is never offered", () => {
+    const cosmetics = {
+      ...COSMETICS,
+      cardTrackers: {
+        wins: {
+          product: null,
+          rarity: "common",
+          name: "wins",
+          stat: "games_played",
+          priceSoft: 400,
+        },
+      },
+    } as unknown as Cosmetics;
+    const items = loadoutItems(VOLT, cosmetics, [
+      "playerCard:standard",
+      "cardBackground:bg_frontline",
+      "taunt:salute",
+      "cardTitle:warmonger",
+    ]);
+    expect(items.map((i) => i.type)).not.toContain("cardTracker");
   });
 
   it("caps-only item shows a caps price", () => {
@@ -311,6 +413,30 @@ describe("<loadout-row>", () => {
       "cardTitle:warmonger",
       "cardTracker:wins",
     ]);
+  });
+
+  it("the selected player stays selected when a look is saved ahead of them", async () => {
+    await render({ looks: [voltLook(), adaLook()] });
+    (q("[data-look-chip='ada']") as HTMLButtonElement).click();
+    await row.updateComplete;
+    // A look saved meanwhile goes in newest first, after the killer.
+    const bo = look("bo", "Bo", loadoutItems(VOLT, COSMETICS, []));
+    row.looks = [voltLook(), bo, adaLook()];
+    await row.updateComplete;
+    expect(chips()).toEqual([
+      ["volt", "false"],
+      ["bo", "false"],
+      ["ada", "true"],
+    ]);
+  });
+
+  it("the selected player gone: the first is selected", async () => {
+    await render({ looks: [voltLook(), adaLook()] });
+    (q("[data-look-chip='ada']") as HTMLButtonElement).click();
+    await row.updateComplete;
+    row.looks = [voltLook()];
+    await row.updateComplete;
+    expect(chips()).toEqual([["volt", "true"]]);
   });
 
   it("folds to one line on a phone; tapping opens chips and items", async () => {
@@ -560,6 +686,18 @@ describe("<loadout-row> buying", () => {
     );
   });
 
+  it("the buy can't read the profile (a session, the network): says so", async () => {
+    vi.mocked(purchaseCosmeticInPlace).mockResolvedValue({
+      kind: "unreachable",
+    });
+    await render({});
+    await button().onPurchaseHard();
+    expect(showInGameAlert).toHaveBeenCalledWith(
+      "win_modal.server_unreachable",
+    );
+    expect(showInGameConfirm).not.toHaveBeenCalled();
+  });
+
   it("a shortfall goes back to the button's box", async () => {
     const info = {
       currency: "Plutonium",
@@ -609,5 +747,43 @@ describe("<loadout-row> buying", () => {
     expect((row as unknown as Element).innerHTML).not.toMatch(
       /text-\[(\d|10)px\]/,
     );
+  });
+});
+
+describe("<loadout-row> owned tracker", () => {
+  beforeEach(() => {
+    trackers.made.length = 0;
+    vi.stubGlobal(
+      "IntersectionObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+  });
+  afterEach(() => vi.unstubAllGlobals());
+  const settle = () => new Promise((r) => setTimeout(r, 0));
+
+  it("a row removed before the tracker loads never makes one", async () => {
+    const row = document.createElement("loadout-row") as unknown as LoadoutRow;
+    document.body.appendChild(row as unknown as Node);
+    (row as unknown as Element).remove();
+    await settle();
+    expect(trackers.made.filter((t) => !t.disposed)).toHaveLength(0);
+  });
+
+  it("disposes its tracker on removal and makes a new one when reattached", async () => {
+    const row = document.createElement("loadout-row") as unknown as LoadoutRow;
+    document.body.appendChild(row as unknown as Node);
+    await settle();
+    expect(trackers.made).toHaveLength(1);
+    (row as unknown as Element).remove();
+    expect(trackers.made[0].disposed).toBe(true);
+    document.body.appendChild(row as unknown as Node);
+    await settle();
+    expect(trackers.made).toHaveLength(2);
+    expect(row.tracker).toBe(trackers.made[1]);
+    (row as unknown as Element).remove();
   });
 });

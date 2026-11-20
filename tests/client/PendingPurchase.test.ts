@@ -156,6 +156,26 @@ describe("resuming after the top-up", () => {
     await vi.waitFor(() => expect(window.location.hash).toBe(ITEM_HASH));
   });
 
+  it("the in-page form's resume landing: no second message, straight to the resume", async () => {
+    rememberPendingPurchase("p1", "cardBackground:bg_x");
+    const actions = {
+      strip: vi.fn(),
+      alertAndStrip: vi.fn(),
+      openTokenLogin: vi.fn(),
+      refreshStore: vi.fn(),
+      reload: vi.fn(),
+      alert: vi.fn(async () => true),
+    };
+    handlePurchaseReturn(
+      new URLSearchParams("status=true&type=currency_pack&resume=1"),
+      actions,
+    );
+    expect(actions.strip).toHaveBeenCalled();
+    expect(actions.alert).not.toHaveBeenCalled();
+    expect(actions.alertAndStrip).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(window.location.hash).toBe(ITEM_HASH));
+  });
+
   it("a landing with nothing remembered is as today", () => {
     const { actions } = landing("true");
     expect(actions.alertAndStrip).toHaveBeenCalledWith(

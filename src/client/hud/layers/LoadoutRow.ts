@@ -115,8 +115,8 @@ export class LoadoutRow extends LitElement {
   @property({ attribute: false }) owned: ReadonlySet<string> = new Set();
   // Signed out: "Sign in to buy" in place of the buy buttons.
   @property({ type: Boolean }) signedIn = true;
-  // Index into `looks` of the chip shown.
-  @state() private selected = 0;
+  // The player whose chip is shown (their clientID); null: the first.
+  @state() private selected: string | null = null;
   // On a phone the row starts collapsed to one line; tapping opens it.
   @state() private open = false;
   private ownTracker = false;
@@ -129,6 +129,8 @@ export class LoadoutRow extends LitElement {
     super.connectedCallback();
     if (this.tracker === null && typeof IntersectionObserver !== "undefined") {
       const { StoreTracker } = await import("../../StoreTracking");
+      // Removed (or given a tracker) while the module loaded: none to make.
+      if (!this.isConnected || this.tracker !== null) return;
       this.tracker = new StoreTracker();
       this.ownTracker = true;
     }
@@ -136,7 +138,12 @@ export class LoadoutRow extends LitElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
-    if (this.ownTracker) this.tracker?.dispose();
+    // A disposed tracker sends nothing: drop it, so reattaching makes a new one.
+    if (this.ownTracker) {
+      this.tracker?.dispose();
+      this.tracker = null;
+      this.ownTracker = false;
+    }
   }
 
   protected updated(): void {
@@ -185,6 +192,9 @@ export class LoadoutRow extends LitElement {
         // Signed out since the screen opened: the sign-in prompt, never a
         // tap that does nothing.
         await this.signIn();
+        return;
+      case "unreachable":
+        await showInGameAlert(translateText("win_modal.server_unreachable"));
         return;
       case "unconfirmed":
         await showInGameAlert(translateText("win_modal.purchase_unconfirmed"));
@@ -284,7 +294,11 @@ export class LoadoutRow extends LitElement {
 
   render() {
     if (this.looks.length === 0) return nothing;
-    const index = Math.min(this.selected, this.looks.length - 1);
+    // By player, not position: a look saved while the screen is open goes in
+    // ahead of older ones and would move an index onto someone else. Gone
+    // (or none picked yet): the first.
+    const found = this.looks.findIndex((l) => l.clientID === this.selected);
+    const index = found === -1 ? 0 : found;
     const look = this.looks[index];
     const chips = this.looks.map(
       (l, i) =>
@@ -293,7 +307,7 @@ export class LoadoutRow extends LitElement {
           data-look-chip=${l.clientID}
           aria-pressed=${i === index ? "true" : "false"}
           class="group flex min-h-11 shrink-0 items-center"
-          @click=${() => (this.selected = i)}
+          @click=${() => (this.selected = l.clientID)}
         >
           <span
             class="whitespace-nowrap rounded-full px-3 py-1 text-sm font-bold transition ${

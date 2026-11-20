@@ -186,32 +186,67 @@ describe("inline-checkout wallet row", () => {
     expect(el.querySelector("button")).toBeTruthy();
   });
 
-  it("a top-up for an end-screen item reopens the Store on it after the reload", async () => {
+  // A Plutonium top-up for an item remembered from the end screen reloads
+  // straight away onto the purchase landing, marked resume: after the
+  // reload the landing runs the resume (which opens the Store on the item,
+  // waits for the Plutonium, can be cancelled, and never opens mid-game).
+  // Nothing waits before the reload.
+  const remember = () =>
+    sessionStorage.setItem(
+      "openfront-pending-purchase",
+      JSON.stringify({
+        player: "p1",
+        key: "cardBackground:bg_x",
+        at: Date.now(),
+      }),
+    );
+
+  it("a top-up for a remembered item reloads at once onto the resume landing", async () => {
+    remember();
     const { resumePendingPurchase } =
       await import("../../src/client/Cosmetics");
+    vi.mocked(resumePendingPurchase).mockClear();
     const order: string[] = [];
-    vi.mocked(resumePendingPurchase).mockImplementation(async () => {
-      order.push("resume");
-      return true;
-    });
+    // replaceState, not a hash assignment: no hashchange, so no landing
+    // runs before the reload.
+    const replace = vi
+      .spyOn(history, "replaceState")
+      .mockImplementation((_s, _t, url) => {
+        order.push(`replace:${String(url)}`);
+      });
     reloadMock.mockImplementation(() => order.push("reload"));
     const { session, express } = fakeSession();
     createMock.mockResolvedValue(session);
     await renderComponent();
     express.fire("confirm", { paymentFailed: vi.fn() });
     await vi.waitFor(() => expect(reloadMock).toHaveBeenCalled());
-    // The remembered item's hash is set first, so the reload lands on it;
-    // the profile is as known as it will be, so no waiting.
-    expect(resumePendingPurchase).toHaveBeenCalledWith({
-      waitForProfile: false,
-    });
-    expect(order).toEqual(["resume", "reload"]);
+    expect(order).toEqual([
+      expect.stringMatching(
+        /^replace:.*#purchase-completed\?status=true&type=currency_pack&resume=1$/,
+      ),
+      "reload",
+    ]);
+    replace.mockRestore();
+    // No waiting before the reload: the resume runs after it.
+    expect(resumePendingPurchase).not.toHaveBeenCalled();
+    sessionStorage.clear();
+  });
+
+  it("nothing remembered: reloads as before, URL untouched", async () => {
+    sessionStorage.clear();
+    const replace = vi.spyOn(history, "replaceState");
+    const { session, express } = fakeSession();
+    createMock.mockResolvedValue(session);
+    await renderComponent();
+    express.fire("confirm", { paymentFailed: vi.fn() });
+    await vi.waitFor(() => expect(reloadMock).toHaveBeenCalled());
+    expect(replace).not.toHaveBeenCalled();
+    replace.mockRestore();
   });
 
   it("a subscription checkout never resumes an end-screen item", async () => {
-    const { resumePendingPurchase } =
-      await import("../../src/client/Cosmetics");
-    vi.mocked(resumePendingPurchase).mockClear();
+    remember();
+    const replace = vi.spyOn(history, "replaceState");
     const { session, express } = fakeSession();
     createMock.mockResolvedValue(session);
     const el = await renderComponent();
@@ -219,7 +254,9 @@ describe("inline-checkout wallet row", () => {
     await el.updateComplete;
     express.fire("confirm", { paymentFailed: vi.fn() });
     await vi.waitFor(() => expect(reloadMock).toHaveBeenCalled());
-    expect(resumePendingPurchase).not.toHaveBeenCalled();
+    expect(replace).not.toHaveBeenCalled();
+    replace.mockRestore();
+    sessionStorage.clear();
   });
 
   it("shows wallet errors without opening the modal", async () => {

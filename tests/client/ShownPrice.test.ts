@@ -68,52 +68,60 @@ describe("shownPrice", () => {
     });
   });
 
-  it("matches currentPrice at the moment a sale ends (Store and Inventory agree)", () => {
-    const endsAt = new Date(Date.now() - 1).toISOString();
-    const item = {
-      priceHard: 300,
-      listPriceHard: 400,
-      promotion: { name: "Winter sale", percentOff: 25, endsAt },
-    };
-    expect(shownPrice(item, "hard")?.price).toBe(currentPrice(item, "hard"));
-  });
-
-  it("is currentPrice's rule, edges included", () => {
+  describe("edge cases, shown and charged", () => {
     const ended = {
       name: "Old sale",
       percentOff: 25,
       endsAt: new Date(Date.now() - 1).toISOString(),
     };
-    const items = [
-      { priceHard: 300, listPriceHard: 400, promotion: ended },
-      // No price, a list price and an ended sale: the list price is the
-      // price now.
-      { listPriceHard: 400, promotion: ended },
-      { priceHard: 300 },
-      {},
+    const running = {
+      ...ended,
+      endsAt: new Date(Date.now() + 60_000).toISOString(),
+    };
+    const invalid = { ...ended, endsAt: "not a date" };
+    // Hard-coded: currentPrice reads shownPrice, so comparing the two can't
+    // catch a change to the rule.
+    const cases: [string, object, number | undefined][] = [
+      [
+        "a sale that ended a moment ago: the list price",
+        { priceHard: 300, listPriceHard: 400, promotion: ended },
+        400,
+      ],
+      [
+        "an ended sale with only a list price: the list price",
+        { listPriceHard: 400, promotion: ended },
+        400,
+      ],
+      [
+        "a running sale: the sale price",
+        { priceHard: 300, listPriceHard: 400, promotion: running },
+        300,
+      ],
+      [
+        "a running sale with no price: not for sale",
+        { listPriceHard: 400, promotion: running },
+        undefined,
+      ],
+      [
+        "an endsAt that isn't a date: the sale price",
+        { priceHard: 300, listPriceHard: 400, promotion: invalid },
+        300,
+      ],
+      ["no sale: the price", { priceHard: 300 }, 300],
+      ["no price: not for sale", {}, undefined],
     ];
-    for (const item of items) {
-      expect(shownPrice(item, "hard")?.price).toBe(currentPrice(item, "hard"));
+    for (const [name, item, expected] of cases) {
+      it(name, () => {
+        expect(shownPrice(item, "hard")?.price).toBe(expected);
+        expect(currentPrice(item, "hard")).toBe(expected);
+      });
     }
-    expect(currentPrice({ listPriceHard: 400, promotion: ended }, "hard")).toBe(
-      400,
-    );
-    expect(
-      shownPrice({ listPriceHard: 400, promotion: ended }, "hard"),
-    ).toEqual({ price: 400, listPrice: null, saleLabel: null });
-    // While the sale runs, no price in that currency means not for sale.
-    expect(
-      shownPrice(
-        {
-          listPriceHard: 400,
-          promotion: {
-            ...ended,
-            endsAt: new Date(Date.now() + 60_000).toISOString(),
-          },
-        },
-        "hard",
-      ),
-    ).toBeNull();
+
+    it("an ended sale shows no struck price or label", () => {
+      expect(
+        shownPrice({ listPriceHard: 400, promotion: ended }, "hard"),
+      ).toEqual({ price: 400, listPrice: null, saleLabel: null });
+    });
   });
 
   it("is null when the item has no price in that currency", () => {
