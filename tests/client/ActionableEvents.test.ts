@@ -95,6 +95,12 @@ describe("actionable-events", () => {
     seconds: seconds(card).textContent,
     line: Number(line(card).dataset.timeLeft),
   });
+  // An answered card's fold ends (it runs on the card's outer wrapper).
+  const endFold = (card: HTMLElement, animationName = "card-fold") => {
+    const e = new Event("animationend", { bubbles: true });
+    Object.defineProperty(e, "animationName", { value: animationName });
+    card.parentElement!.parentElement!.dispatchEvent(e);
+  };
   const sounds = () =>
     events
       .filter((e) => e instanceof PlaySoundEffectEvent)
@@ -170,7 +176,10 @@ describe("actionable-events", () => {
     await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(BORIS)] });
     const anna = cardOf("Anna");
 
-    button(cardOf("Boris")!, "reject").click();
+    const boris = cardOf("Boris")!;
+    button(boris, "reject").click();
+    await display.updateComplete;
+    endFold(boris);
     await display.updateComplete;
 
     expect(cards()).toHaveLength(1);
@@ -184,6 +193,8 @@ describe("actionable-events", () => {
 
     button(anna, "focus").click();
     button(anna, "accept").click();
+    await display.updateComplete;
+    endFold(anna);
     await display.updateComplete;
 
     const [focus, accept] = intents() as [
@@ -242,7 +253,7 @@ describe("actionable-events", () => {
     expect(cardOf("Anna")).toBe(anna);
   });
 
-  it("accepts with its sound and closes the card", async () => {
+  it("accepts with its sound and shows the answer", async () => {
     await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(ANNA)] });
     events = [];
 
@@ -252,10 +263,10 @@ describe("actionable-events", () => {
     expect(sounds()).toEqual(["alliance-accepted"]);
     expect(intents()).toHaveLength(1);
     expect(intents()[0]).toBeInstanceOf(SendAllianceRequestIntentEvent);
-    expect(cards()).toHaveLength(0);
+    expect(cardOf("Anna")!.dataset.answered).toBe("accept");
   });
 
-  it("rejects with its sound and closes the card", async () => {
+  it("rejects with its sound and shows the answer", async () => {
     await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(ANNA)] });
     events = [];
 
@@ -268,7 +279,7 @@ describe("actionable-events", () => {
     expect((intents()[0] as SendAllianceRejectIntentEvent).requestor).toBe(
       players.get(ANNA),
     );
-    expect(cards()).toHaveLength(0);
+    expect(cardOf("Anna")!.dataset.answered).toBe("reject");
   });
 
   it("counts a request's 20 seconds down with the game and closes it at 0", async () => {
@@ -368,7 +379,7 @@ describe("actionable-events", () => {
         expect(onWindow).toEqual([]);
         expect(intents()).toHaveLength(1);
         expect(intents()[0]).toBeInstanceOf(SendAllianceRequestIntentEvent);
-        expect(cards()).toHaveLength(0);
+        expect(cardOf("Anna")!.dataset.answered).toBe("accept");
       },
     );
 
@@ -465,12 +476,18 @@ describe("actionable-events", () => {
       ]);
     });
 
-    it("drops the line when the card goes", async () => {
+    it("drops the line when the card goes, and says nothing on the answer", async () => {
       await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(ANNA)] });
+      const anna = cardOf("Anna")!;
 
-      button(cardOf("Anna")!, "reject").click();
+      button(anna, "reject").click();
       await display.updateComplete;
+      expect(said()).toEqual([
+        "Anna asks for an alliance 20 seconds to answer",
+      ]);
 
+      endFold(anna);
+      await display.updateComplete;
       expect(said()).toEqual([]);
     });
 
@@ -485,6 +502,125 @@ describe("actionable-events", () => {
 
       expect(cards()).toHaveLength(2);
       expect(said()).toEqual([]);
+    });
+  });
+
+  describe("answered card", () => {
+    async function answerAnna(action = "accept") {
+      await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(ANNA)] });
+      const anna = cardOf("Anna")!;
+      button(anna, action).click();
+      await display.updateComplete;
+      events = [];
+      return anna;
+    }
+
+    it("keeps only the answer, inert, with the line full", async () => {
+      const anna = await answerAnna();
+
+      // The others close up rather than vanish, and are out of reach at once.
+      expect(actions(anna).filter((b) => !b.hasAttribute("inert"))).toEqual([
+        button(anna, "accept"),
+      ]);
+      expect(actions(anna).every((b) => b.disabled && !b.hidden)).toBe(true);
+      expect(line(anna).dataset.timeLeft).toBe("1");
+
+      // The second click of a double click lands on the same card.
+      button(anna, "accept").click();
+      await display.updateComplete;
+      expect(events).toEqual([]);
+    });
+
+    it("stays through the reply and its own expiry, and goes when it has folded", async () => {
+      const anna = await answerAnna("reject");
+
+      await tick({
+        [GameUpdateType.AllianceRequestReply]: [
+          {
+            type: GameUpdateType.AllianceRequestReply,
+            request: requestFrom(ANNA),
+            accepted: false,
+          },
+        ],
+      });
+      await advance(300);
+      expect(cards()).toEqual([anna]);
+
+      endFold(anna);
+      await display.updateComplete;
+      expect(cards()).toEqual([]);
+    });
+
+    it("ignores the end of any other animation on the card", async () => {
+      const anna = await answerAnna();
+
+      // The opening the answer cut short, and the card's own rise.
+      endFold(anna, "card-open");
+      const rise = new Event("animationend", { bubbles: true });
+      Object.defineProperty(rise, "animationName", { value: "card-fold" });
+      anna.dispatchEvent(rise);
+      await display.updateComplete;
+
+      expect(cards()).toEqual([anna]);
+    });
+
+    it("keeps the rejected card's other buttons out of reach too", async () => {
+      const anna = await answerAnna("reject");
+
+      expect(anna.dataset.answered).toBe("reject");
+      expect(actions(anna).filter((b) => !b.hasAttribute("inert"))).toEqual([
+        button(anna, "reject"),
+      ]);
+      expect(line(anna).dataset.timeLeft).toBe("1");
+    });
+
+    it("ends on its fold, not on the end of its button's motion", async () => {
+      const anna = await answerAnna();
+
+      // The chosen icon's pop and the buttons closing up end first.
+      const pop = new Event("animationend", { bubbles: true });
+      Object.defineProperty(pop, "animationName", {
+        value: "card-answer-pop",
+      });
+      button(anna, "accept").querySelector("of-icon")!.dispatchEvent(pop);
+      button(anna, "reject").dispatchEvent(
+        new Event("transitionend", { bubbles: true }),
+      );
+      await display.updateComplete;
+      expect(cards()).toEqual([anna]);
+
+      endFold(anna);
+      await display.updateComplete;
+      expect(cards()).toEqual([]);
+    });
+
+    it("is never answered by Focus", async () => {
+      await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(ANNA)] });
+      const anna = cardOf("Anna")!;
+
+      button(anna, "focus").click();
+      await display.updateComplete;
+
+      expect(anna.dataset.answered).toBeUndefined();
+      expect(actions(anna).every((b) => !b.disabled)).toBe(true);
+    });
+
+    it("goes at once when the player dies, since it is no longer drawn", async () => {
+      await answerAnna();
+      await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(BORIS)] });
+
+      const me = players.get(ME)!;
+      me.isAlive = () => false;
+      try {
+        await tick();
+        me.isAlive = () => true;
+        await tick();
+      } finally {
+        me.isAlive = () => true;
+      }
+
+      // Boris's card was still open: it is back with the player.
+      expect(cards()).toEqual([cardOf("Boris")]);
     });
   });
 
@@ -522,7 +658,7 @@ describe("actionable-events", () => {
       expect(timeLeft(card)).toEqual({ seconds: "10s", line: 99 / 300 });
     });
 
-    it("renews and closes", async () => {
+    it("renews and shows the answer", async () => {
       const card = await renewalWith(BORIS);
 
       button(card, "renew").click();
@@ -533,17 +669,35 @@ describe("actionable-events", () => {
       expect((intents()[0] as SendAllianceExtensionIntentEvent).recipient).toBe(
         players.get(BORIS),
       );
-      expect(cards()).toHaveLength(0);
+      expect(card.dataset.answered).toBe("renew");
     });
 
-    it("ignores without sending anything and closes", async () => {
+    it("ignores without sending anything and shows the answer", async () => {
       const card = await renewalWith(BORIS);
 
       button(card, "ignore").click();
       await display.updateComplete;
 
       expect(events).toEqual([]);
-      expect(cards()).toHaveLength(0);
+      expect(card.dataset.answered).toBe("ignore");
+    });
+
+    it("still goes when the alliance breaks while it shows the answer", async () => {
+      const card = await renewalWith(BORIS);
+      button(card, "renew").click();
+      await display.updateComplete;
+
+      myAlliances = [];
+      await tick({
+        [GameUpdateType.BrokeAlliance]: [
+          { type: GameUpdateType.BrokeAlliance, allianceID: 7 },
+        ],
+      });
+      expect(cards()).toEqual([card]);
+
+      endFold(card);
+      await display.updateComplete;
+      expect(cards()).toEqual([]);
     });
 
     it("focuses the ally and keeps the card", async () => {
