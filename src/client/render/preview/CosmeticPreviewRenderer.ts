@@ -71,6 +71,7 @@ import {
   PREVIEW_SCENE,
   type PreviewMapData,
 } from "./PreviewMap";
+import { previewUpdateKind, type PreviewUpdateKind } from "./previewUpdateKind";
 
 export interface CosmeticPreviewConfig {
   mode: CosmeticPreviewMode;
@@ -265,6 +266,32 @@ export class CosmeticPreviewRenderer {
     this.applyConfig(config, true);
   }
 
+  /**
+   * Apply a config to what is already on screen where possible (see
+   * previewUpdateKind): colour and timing changes carry on playing and keep
+   * the camera. Returns how it was applied. Only hosts that reuse one
+   * renderer call this (the cosmetic-preview package); the store builds a
+   * fresh renderer per preview and uses setCosmetic.
+   */
+  updateCosmetic(config: CosmeticPreviewConfig): PreviewUpdateKind {
+    if (this.isDisposed) return "reframe";
+    const kind = previewUpdateKind(this.currentConfig ?? null, config);
+    if (kind === "inPlace") {
+      this.currentConfig = config;
+      this.applyAppearance(config);
+      this.ticker.setSpiralParams(this.spiralParams(config));
+      return kind;
+    }
+    if (config.mode !== "SKIN") {
+      // Effects play over plain territory: clear any skin or pattern the
+      // previous cosmetic left on this reused renderer.
+      this.territoryPass.setDecoration(undefined, undefined);
+      this.territoryPass.setTeamMode(false);
+    }
+    this.applyConfig(config, kind === "reframe");
+    return kind;
+  }
+
   /** Apply a config; `resetCamera` re-frames the scene for its mode. */
   private applyConfig(
     config: CosmeticPreviewConfig,
@@ -276,9 +303,27 @@ export class CosmeticPreviewRenderer {
     this.explosionParams = config.explosionParams;
     this.fxPass.clear();
     this.lastUnitTick = -1;
-    this.updateEffectTexture(config);
+    this.applyAppearance(config);
 
     if (resetCamera) this.applyCameraPreset(config.mode);
+
+    const explosionDurationSec = config.explosionParams
+      ? calculateExplosionDurationMs(config.explosionParams, 1500) / 1000
+      : undefined;
+
+    this.ticker = new PreviewAnimationTicker({
+      mode: config.mode,
+      cosmeticUnitType: config.cosmeticUnitType,
+      structureLevel: config.structureLevel,
+      explosionDurationSec,
+      salvoMode: config.salvoMode,
+      spiralParams: this.spiralParams(config),
+    });
+  }
+
+  /** Colours, decoration and highlight: everything about a config but the animation. */
+  private applyAppearance(config: CosmeticPreviewConfig): void {
+    this.updateEffectTexture(config);
 
     const rgbColors = this.toRgb01(config.effectColors);
 
@@ -293,19 +338,6 @@ export class CosmeticPreviewRenderer {
       this.updatePalette();
     }
     this.structurePass.setHighlightOwner(config.mode === "BUILDING" ? 1 : 0);
-
-    const explosionDurationSec = config.explosionParams
-      ? calculateExplosionDurationMs(config.explosionParams, 1500) / 1000
-      : undefined;
-
-    this.ticker = new PreviewAnimationTicker({
-      mode: config.mode,
-      cosmeticUnitType: config.cosmeticUnitType,
-      structureLevel: config.structureLevel,
-      explosionDurationSec,
-      salvoMode: config.salvoMode,
-      spiralParams: this.spiralParams(config),
-    });
   }
 
   get zoom(): number {

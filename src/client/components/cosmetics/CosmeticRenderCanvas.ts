@@ -46,6 +46,13 @@ export class CosmeticRenderCanvas extends LitElement {
   @property({ attribute: false })
   salvoEnabled = false;
 
+  // Set only by the cosmetic-preview package, which shows one cosmetic after
+  // another on the same canvas: a change to the same scene then updates what
+  // is playing and keeps the camera. The store opens a fresh canvas per
+  // preview and leaves this off.
+  @property({ attribute: false })
+  reuseScene = false;
+
   @state()
   private hasError = false;
 
@@ -138,7 +145,11 @@ export class CosmeticRenderCanvas extends LitElement {
       config.effectColors = this.customColors;
     }
     config.salvoMode = this.salvoEnabled;
-    this.renderer.setCosmetic(config);
+    if (this.reuseScene) {
+      if (this.renderer.updateCosmetic(config) !== "reframe") return;
+    } else {
+      this.renderer.setCosmetic(config);
+    }
 
     if (config.mode === "SKIN") {
       const isSmall = this.checkIsSmallSkin(this.resolved);

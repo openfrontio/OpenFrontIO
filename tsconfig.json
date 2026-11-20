@@ -17,7 +17,9 @@
     "src/scripts",
     "scripts/replay",
     "scripts/split-packages",
-    "vite.config.ts"
+    "vite.config.ts",
+    "vite.cosmetic-preview.config.ts",
+    "scripts/buildCosmeticPreview.ts"
   ],
   "exclude": [
     "node_modules",

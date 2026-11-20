@@ -47,7 +47,8 @@
     "prepare": "husky",
     "gen-maps": "cd map-generator && go run -tags nodynamic . && npm run gen-map-schema",
     "gen-map-schema": "tsx scripts/genMapInfoSchema.ts && npx --no-install oxfmt --write map-generator/info.schema.json",
-    "inst": "npm ci --ignore-scripts"
+    "inst": "npm ci --ignore-scripts",
+    "build:cosmetic-preview": "tsx scripts/buildCosmeticPreview.ts"
   },
   "lint-staged": {
     "**/*.{js,mjs,cjs,ts,jsx,tsx}": [

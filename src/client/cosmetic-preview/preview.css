@@ -1,0 +1,9 @@
+/*
+ * The utilities CosmeticRenderCanvas uses, and nothing else: no preflight, so
+ * the host app's own base styles are left alone.
+ */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+
+@source "../components/cosmetics/CosmeticRenderCanvas.ts";
+@source "./preview.ts";
