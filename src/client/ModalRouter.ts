@@ -15,6 +15,7 @@
  * hands the URL to the hash and leaves the path the same way.
  */
 
+import { EDIT_CARD_HASH } from "./components/card/CardLinks";
 import { loadModal } from "./LazyModals";
 import { pagePin } from "./PagePin";
 
@@ -108,7 +109,13 @@ class ModalRouter {
   routeFromHash(): boolean {
     const hash = window.location.hash;
     if (!hash.startsWith("#")) return false;
-    const params = new URLSearchParams(hash.slice(1));
+    let params = new URLSearchParams(hash.slice(1));
+    // The Account page's My Card tab moved to the Inventory: old links
+    // (bookmarks, an older build's end screen) land on its Player card tab.
+    if (params.get("modal") === "account" && params.get("tab") === "card") {
+      this.replaceHash(`#${EDIT_CARD_HASH}`);
+      params = new URLSearchParams(EDIT_CARD_HASH);
+    }
     const name = params.get("modal");
     if (!name) return false;
 

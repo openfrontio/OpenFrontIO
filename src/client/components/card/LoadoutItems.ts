@@ -39,8 +39,8 @@ function toItem(type: CardItemType, item: CardItem): LoadoutItem | null {
 
 /**
  * What to offer from `view` (the killer's card): the card itself if the
- * viewer lacks it, then background, taunt and title (only while switched on
- * in HeldBack.ts) and the killer's trackers.
+ * viewer lacks it, then the background and the killer's trackers. Held-back
+ * items (HeldBack.ts) are left out.
  * Anything the viewer owns, or that is neither sold nor earnable, is skipped.
  */
 export function loadoutItems(

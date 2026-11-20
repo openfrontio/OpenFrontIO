@@ -25,8 +25,9 @@ import {
 } from "../../../client/Utils";
 import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
 import { sessionUncertain, userAuth } from "../../Auth";
-import "../../components/CosmeticCard";
 import { saveTauntsMuted } from "../../CardLoadoutApi";
+import "../../components/CosmeticCard";
+import { EDIT_CARD_HREF } from "../../components/card/CardLinks";
 import {
   buildPlayerCardView,
   type PlayerCardView,
@@ -1063,9 +1064,9 @@ export class WinModal extends LitElement implements Controller {
     void saveTauntsMuted(this.tauntsMuted);
   };
 
-  // The finished game is left for the Account page's My Card tab.
+  // The finished game is left for the Inventory's Player card tab.
   private onEditCard = (): void => {
-    window.location.href = "/#modal=account&tab=card";
+    window.location.href = EDIT_CARD_HREF;
   };
 
   async show() {

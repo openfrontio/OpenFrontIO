@@ -1,6 +1,7 @@
 import { CosmeticPack, Pack } from "@openfront/shared/CosmeticSchemas";
 import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
+import { type CardItem, cardItemName, isCardItemType } from "./card/CardItems";
 
 export function cosmeticDisplayName(resolved: ResolvedCosmetic): string {
   const cosmetic = resolved.cosmetic;
@@ -30,6 +31,9 @@ export function cosmeticDisplayName(resolved: ResolvedCosmetic): string {
   }
   if (resolved.type === "crown") {
     return translateCosmetic("crowns", cosmetic.name);
+  }
+  if (isCardItemType(resolved.type)) {
+    return cardItemName(resolved.type, cosmetic as CardItem);
   }
   return translateCosmetic("flags", cosmetic.name);
 }

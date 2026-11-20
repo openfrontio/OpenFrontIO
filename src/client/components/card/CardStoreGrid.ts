@@ -1,5 +1,6 @@
 import type { StorePlacement } from "@openfront/shared/ApiSchemas";
-import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import type { CardTracker, Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import type { LevelBadge } from "@openfront/shared/LevelBadgeWire";
 import {
   html,
   LitElement,
@@ -9,6 +10,7 @@ import {
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { purchaseCosmetic, type ResolvedCosmetic } from "../../Cosmetics";
+import type { PricedItem } from "../../ShownPrice";
 import { translateText } from "../../Utils";
 import "../CosmeticCard";
 import type { PurchaseButton } from "../PurchaseButton";
@@ -18,17 +20,17 @@ import {
   type CardItemType,
   cardItemName,
   isOfferedCardItem,
-  cardPrices,
 } from "./CardItems";
+import "./CardItemPreview";
 import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";
 import "./PlayerCard";
-import { buildPlayerCardView } from "./PlayerCardModel";
+import { buildPlayerCardView, type PlayerCardView } from "./PlayerCardModel";
 
 // The store's Card sub-tab: every player card item that is sold, the card
-// itself first, then trackers and backgrounds (titles and taunts too, once
-// switched back on in HeldBack.ts). Earned items
-// aren't listed (they're never sold). Prices in Plutonium and/or caps,
-// bought through the store's purchase flow.
+// itself first, then trackers and backgrounds. Held-back items (HeldBack.ts)
+// and earned items (never sold) aren't listed. Prices in Plutonium and/or
+// caps, bought through the store's purchase flow. A tile's preview opens a
+// large, animated preview of the item on the card.
 
 const PLACEMENT: StorePlacement = {
   kind: "tab",
@@ -43,6 +45,9 @@ const SECTIONS: [keyof Cosmetics, CardItemType][] = [
   ["cardTitles", "cardTitle"],
   ["taunts", "taunt"],
 ];
+
+// The value a tracker shows in its large preview.
+const SAMPLE_TRACKER_VALUE = 1904;
 
 export interface CardStoreTracker {
   observe(el: Element, key: string, placement: StorePlacement): void;
@@ -82,7 +87,14 @@ export class CardStoreGrid extends LitElement {
    * from the end screen: once it shows it is selected, scrolled to and its
    * Buy focused, and `requested-item-shown` tells the Store. */
   @property({ attribute: false }) requestedItem: string | null = null;
+  /** The viewer's name, for the large preview's card. */
+  @property({ attribute: false }) username = "";
+  /** And their level badge. */
+  @property({ attribute: false }) badge: LevelBadge | null = null;
   @state() private selected: string | null = null;
+  /** The item in the large preview. */
+  @state() private previewing: { type: CardItemType; item: CardItem } | null =
+    null;
 
   createRenderRoot() {
     return this;
@@ -125,7 +137,9 @@ export class CardStoreGrid extends LitElement {
       await button?.updateComplete;
       tile.scrollIntoView({ block: "center" });
       tile
-        .querySelector<HTMLButtonElement>("button:not([disabled])")
+        .querySelector<HTMLButtonElement>(
+          "purchase-button button:not([disabled])",
+        )
         ?.focus({ preventScroll: true });
     });
     this.dispatchEvent(
@@ -170,6 +184,46 @@ export class CardStoreGrid extends LitElement {
     </div>`;
   }
 
+  /** The viewer's card with the previewed item on it. Tracker values are
+   * a sample (the Store doesn't know the viewer's stats). */
+  private previewView(type: CardItemType, item: CardItem): PlayerCardView {
+    return buildPlayerCardView(
+      {
+        username: this.username,
+        clanTag: null,
+        badge: this.badge,
+        card: {
+          background: type === "cardBackground" ? item.name : undefined,
+          trackers:
+            type === "cardTracker"
+              ? [
+                  {
+                    stat: (item as CardTracker).stat,
+                    value: SAMPLE_TRACKER_VALUE,
+                  },
+                ]
+              : [],
+        },
+      },
+      this.cosmetics,
+    );
+  }
+
+  private renderPreview() {
+    const entry = this.previewing;
+    if (entry === null) return nothing;
+    return html`<card-item-preview
+      .entry=${entry}
+      .view=${this.previewView(entry.type, entry.item)}
+      .note=${
+        entry.type === "cardTracker"
+          ? translateText("inventory_card.preview_sample")
+          : ""
+      }
+      .onClose=${() => (this.previewing = null)}
+    ></card-item-preview>`;
+  }
+
   render() {
     const items = cardStoreItems(this.cosmetics);
     if (items.length === 0) {
@@ -182,7 +236,6 @@ export class CardStoreGrid extends LitElement {
       ${items.map(({ type, item }) => {
         const key = `${type}:${item.name}`;
         const selected = this.selected === key;
-        const prices = cardPrices(item);
         return html`<div
           data-card-store-item=${key}
           data-cosmetic-shell
@@ -194,7 +247,17 @@ export class CardStoreGrid extends LitElement {
               : ""
           }"
         >
-          ${this.preview(type, item)}
+          <button
+            type="button"
+            data-card-store-preview
+            aria-label=${translateText("inventory_card.preview", {
+              name: cardItemName(type, item),
+            })}
+            class="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+            @click=${() => (this.previewing = { type, item })}
+          >
+            ${this.preview(type, item)}
+          </button>
           <span
             class="text-[10px] font-bold uppercase tracking-wider text-white/50"
             >${translateText(`win_modal.loadout_type_${type}`)}</span
@@ -209,10 +272,14 @@ export class CardStoreGrid extends LitElement {
                   >${translateText("my_card.owned")}</span
                 >`
               : html`<purchase-button
-                  .priceHard=${prices.priceHard}
-                  .priceSoft=${prices.priceSoft}
-                  .listPriceHard=${prices.listPriceHard}
-                  .listPriceSoft=${prices.listPriceSoft}
+                  .priceHard=${item.priceHard ?? null}
+                  .priceSoft=${item.priceSoft ?? null}
+                  .listPriceHard=${item.listPriceHard ?? null}
+                  .listPriceSoft=${item.listPriceSoft ?? null}
+                  .promotion=${
+                    (item as { promotion?: PricedItem["promotion"] })
+                      .promotion ?? null
+                  }
                   .rarity=${String(item.rarity)}
                   .itemName=${cardItemName(type, item)}
                   .onPurchaseHard=${() => this.buy(type, item, "hard")}
@@ -221,7 +288,7 @@ export class CardStoreGrid extends LitElement {
           }
         </div>`;
       })}
-      ${nothing}
+      ${this.renderPreview()}
     </div>`;
   }
 }

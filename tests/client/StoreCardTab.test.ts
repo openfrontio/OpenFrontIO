@@ -20,6 +20,7 @@ vi.mock("../../src/client/Cosmetics", () => ({
 import { StorePlacementSubTabSchema } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { CardStoreGrid } from "../../src/client/components/card/CardStoreGrid";
+import { shownPrice } from "../../src/client/ShownPrice";
 
 // Taunts and titles are held back (HeldBack.ts). The tests below exercise
 // the code behind them with both switched on; the "held back" block turns
@@ -209,21 +210,38 @@ describe("<card-store-grid>", () => {
     } as unknown as Cosmetics;
     document.body.appendChild(grid as unknown as Node);
     await grid.updateComplete;
-    const button = (key: string) =>
-      (grid as unknown as Element).querySelector(
+    // The button gets the sale with its prices and shows them through
+    // shownPrice, so check what it shows.
+    const shown = (key: string, currency: "hard" | "soft") => {
+      const b = (grid as unknown as Element).querySelector(
         `[data-card-store-item='${key}'] purchase-button`,
-      ) as unknown as PriceProps;
-    expect(button("cardBackground:bg_ended")).toMatchObject({
-      priceHard: 600,
-      priceSoft: 6000,
-      listPriceHard: null,
-      listPriceSoft: null,
+      ) as unknown as PriceProps & { promotion: { endsAt: string } | null };
+      return shownPrice(
+        {
+          priceHard: b.priceHard ?? undefined,
+          priceSoft: b.priceSoft ?? undefined,
+          listPriceHard: b.listPriceHard ?? undefined,
+          listPriceSoft: b.listPriceSoft ?? undefined,
+          promotion: b.promotion ?? undefined,
+        },
+        currency,
+      );
+    };
+    expect(shown("cardBackground:bg_ended", "hard")).toMatchObject({
+      price: 600,
+      listPrice: null,
     });
-    expect(button("cardBackground:bg_running")).toMatchObject({
-      priceHard: 400,
-      priceSoft: 4000,
-      listPriceHard: 600,
-      listPriceSoft: 6000,
+    expect(shown("cardBackground:bg_ended", "soft")).toMatchObject({
+      price: 6000,
+      listPrice: null,
+    });
+    expect(shown("cardBackground:bg_running", "hard")).toMatchObject({
+      price: 400,
+      listPrice: 600,
+    });
+    expect(shown("cardBackground:bg_running", "soft")).toMatchObject({
+      price: 4000,
+      listPrice: 6000,
     });
   });
 
@@ -361,5 +379,68 @@ describe("<card-store-grid> opened on an item", () => {
       ),
     ).toBe(true);
     expect(scrolled).toContain(tile("cardBackground:bg_frontline"));
+  });
+});
+
+describe("<card-store-grid> preview and live prices", () => {
+  let grid: CardStoreGrid;
+  afterEach(() => grid?.remove());
+  async function render(cosmetics: Cosmetics = COSMETICS) {
+    grid = document.createElement(
+      "card-store-grid",
+    ) as unknown as CardStoreGrid;
+    grid.cosmetics = cosmetics;
+    grid.username = "iamlewis";
+    document.body.appendChild(grid as unknown as Node);
+    await grid.updateComplete;
+  }
+  const el = () => grid as unknown as Element;
+
+  it("clicking an item's preview opens the large animated preview", async () => {
+    await render();
+    expect(el().querySelector("card-item-preview")).toBeNull();
+    el()
+      .querySelector<HTMLButtonElement>(
+        "[data-card-store-item='cardBackground:bg_frontline'] [data-card-store-preview]",
+      )!
+      .click();
+    await grid.updateComplete;
+    const preview = el().querySelector("card-item-preview")!;
+    const card = preview.querySelector("player-card") as unknown as {
+      animated: boolean;
+      view: { username: string; background: { name: string } | null };
+    };
+    expect(card.animated).toBe(true);
+    expect(card.view.background?.name).toBe("bg_frontline");
+    expect(card.view.username).toBe("iamlewis");
+  });
+
+  it("trackers and the card itself preview too", async () => {
+    await render();
+    for (const key of ["cardTracker:wins", "playerCard:standard"]) {
+      expect(
+        el().querySelector(
+          `[data-card-store-item='${key}'] [data-card-store-preview]`,
+        ),
+      ).not.toBeNull();
+    }
+  });
+
+  it("passes each item's sale to its buy button, so the price changes when it ends", async () => {
+    const promotion = {
+      name: "Storm week",
+      percentOff: 50,
+      endsAt: new Date(Date.now() + 60_000).toISOString(),
+    };
+    const onSale = structuredClone(COSMETICS) as Cosmetics;
+    Object.assign(
+      (onSale.cardBackgrounds as Record<string, object>).bg_frontline,
+      { priceHard: 1200, listPriceHard: 2400, promotion },
+    );
+    await render(onSale);
+    const button = el().querySelector(
+      "[data-card-store-item='cardBackground:bg_frontline'] purchase-button",
+    ) as unknown as { promotion: unknown };
+    expect(button.promotion).toEqual(promotion);
   });
 });
