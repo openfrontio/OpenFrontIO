@@ -40,6 +40,7 @@ import {
   WATER,
 } from "../../../src/client/scenario/ScenarioDocument";
 import { replayDocument } from "../../../src/client/scenario/ScenarioReplay";
+import { TerrainStroke } from "../../../src/client/scenario/TerrainBrush";
 import { scriptedGameStart } from "../../util/ScriptedGame";
 
 const W = 200;
@@ -551,6 +552,39 @@ test("a port that loses its shore in one batch of a write goes, and undo keeps t
   expect(doc.terrain[at(10, 12)]).toBe(land(2));
   expect(doc.structures).toHaveLength(1);
   expect(structures()).toEqual(doc.structures);
+});
+
+test("a brush stroke reaches the engine in batches, and undo takes it all back", async () => {
+  const doc = built();
+  const original = copy(doc);
+  const live = await replayed(doc);
+  const editor = new DocumentEditor(doc, live.send);
+  live.sent.length = 0;
+  // Water dragged across West's port, the mountains and East's port and
+  // SAM launcher, flushed now and then as the frames go by.
+  const stroke = new TerrainStroke(editor, WATER, 4);
+  stroke.moveTo(5, 70);
+  stroke.moveTo(60, 70);
+  stroke.flush();
+  stroke.moveTo(120, 90);
+  stroke.flush();
+  stroke.flush();
+  stroke.moveTo(190, 93);
+  expect(stroke.end()).toBe(true);
+  expect(doc.structures.map((s) => s.type).sort()).toEqual(
+    [UnitType.City, UnitType.DefensePost, UnitType.Factory].sort(),
+  );
+  const types = live.sent.map((c) => c.type);
+  expect(types.filter((t) => t === "set_terrain")).toHaveLength(3);
+  expect(types.filter((t) => t === "end_terrain_edit")).toHaveLength(1);
+  expect(types[types.length - 1]).toBe("end_terrain_edit");
+  expect(doc).not.toEqual(original);
+  expectEngineHolds(live.runner, doc);
+
+  editor.undo();
+  expect(doc).toEqual(original);
+  expect(editor.canUndo()).toBe(false);
+  expectEngineHolds(live.runner, doc);
 });
 
 describe("resizing", () => {

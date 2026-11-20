@@ -5,8 +5,8 @@
  *
  * It owns the document and one editor engine in a worker. Each edit goes to
  * both; the worker's updates reach GameView, the renderer and the borrowed
- * HUD layers as in game. Resizing the map rebuilds the engine. The editing
- * tools come later; for now it opens or creates a draft and shows its map.
+ * HUD layers as in game. Resizing the map rebuilds the engine. Its one
+ * editing tool so far is the terrain brush.
  */
 
 import type { GameMap } from "@openfront/engine-api/game/GameMap";
@@ -19,7 +19,7 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { generateID } from "@openfront/shared/SharedUtil";
 import { html, LitElement, nothing } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import "../hud/layers/PlayerInfoOverlay";
 import type { PlayerInfoOverlay } from "../hud/layers/PlayerInfoOverlay";
 import { MouseMoveEvent } from "../InputHandler";
@@ -51,16 +51,27 @@ import {
   stockMapStart,
 } from "./EditorEngine";
 import {
+  IMPASSABLE,
   isScenarioSize,
+  land,
   MAX_AREA,
+  MAX_ELEVATION,
   newScenarioDocument,
   resizeScenarioDocument,
   type ScenarioDocument,
+  WATER,
 } from "./ScenarioDocument";
 import { type DraftInfo, scenarioDrafts } from "./ScenarioDrafts";
 import { scenarioEditorHash } from "./ScenarioEditorRoute";
+import { TerrainStroke } from "./TerrainBrush";
 
 const WHEEL_ZOOM = 1.0015;
+const MAX_BRUSH_RADIUS = 50;
+/** How far, in CSS px, a finger moves before its touch is a stroke. */
+const TOUCH_SLOP = 8;
+
+type Tool = "pan" | "terrain";
+type TerrainKind = "water" | "land" | "impassable";
 
 /** Copies of the files' maps: the client and the worker each take theirs. */
 function copyMapFiles(files: MapFiles): MapFiles {
@@ -95,11 +106,34 @@ export class ScenarioEditor extends LitElement {
   /** The picked stock map's size, once its manifest is in. */
   @state() private stockSize: { width: number; height: number } | null = null;
   @state() private doc: ScenarioDocument | null = null;
+  @state() private tool: Tool = "pan";
+  @state() private terrainKind: TerrainKind = "land";
+  @state() private elevation = 0;
+  /** In tiles; 0 paints one tile. */
+  @state() private brushRadius = 2;
+
+  @query("#scenario-editor-brush") private brushPreview!: HTMLElement | null;
 
   private editor: DocumentEditor | null = null;
   private session: Session | null = null;
   private camera: ReplayCamera | null = null;
   private gestures: CameraGestures | null = null;
+  /** The brush stroke in progress, by the pointer painting it. */
+  private stroke: {
+    pointerId: number;
+    brush: TerrainStroke;
+    x: number;
+    y: number;
+    startX: number;
+    startY: number;
+    /**
+     * A touch paints nothing until it moves or lifts: until then a second
+     * finger may still make it a pinch.
+     */
+    confirmed: boolean;
+  } | null = null;
+  /** Where the pointer is over the map, in CSS px; null when off it. */
+  private hover: { x: number; y: number } | null = null;
   /** Sends pointer moves to the HUD (InputHandler does this in game). */
   private hudBus = new EventBus();
   private readonly abort = new AbortController();
@@ -227,6 +261,8 @@ export class ScenarioEditor extends LitElement {
     if (doc === null || id === null) return;
     if (!isScenarioSize(this.width, this.height)) return;
     if (this.width === doc.width && this.height === doc.height) return;
+    // A stroke still open goes into the resized document.
+    this.endStroke();
     this.status = "loading";
     try {
       const resized = resizeScenarioDocument(doc, this.width, this.height);
@@ -241,19 +277,33 @@ export class ScenarioEditor extends LitElement {
 
   private undoOrRedo(redo: boolean): void {
     const editor = this.editor;
-    const id = this.draftId;
-    if (editor === null || id === null || this.status !== "ready") return;
+    if (editor === null || this.status !== "ready") return;
+    // Mid-stroke, undo would split the stroke in two.
+    if (this.stroke !== null) return;
     if (redo ? !editor.canRedo() : !editor.canUndo()) return;
     if (redo) editor.redo();
     else editor.undo();
+    this.saveDraft();
+    this.requestUpdate();
+  }
+
+  private saveDraft(): void {
+    const editor = this.editor;
+    const id = this.draftId;
+    if (editor === null || id === null) return;
     void scenarioDrafts.save(id, editor.doc).catch((e: unknown) => {
       console.error("scenario editor: saving the draft failed:", e);
     });
   }
 
   private onKey(e: KeyboardEvent): void {
-    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
     if (e.target instanceof HTMLInputElement) return;
+    // Some layouts type the brackets with AltGr (Ctrl+Alt) or Option.
+    if (!e.metaKey && (e.key === "[" || e.key === "]")) {
+      this.setBrushRadius(this.brushRadius + (e.key === "]" ? 1 : -1));
+      return;
+    }
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
     const key = e.key.toLowerCase();
     if (key === "z") this.undoOrRedo(e.shiftKey);
     else if (key === "y") this.undoOrRedo(true);
@@ -431,6 +481,9 @@ export class ScenarioEditor extends LitElement {
       pending = null;
       cb?.(now);
       session.rafId = requestAnimationFrame(loop);
+      // At most one terrain edit a frame, however often the pointer moves.
+      if (this.stroke?.confirmed) this.stroke.brush.flush();
+      this.placeBrushPreview(canvas);
     };
     session.rafId = requestAnimationFrame(loop);
     return builder;
@@ -461,6 +514,8 @@ export class ScenarioEditor extends LitElement {
     session.view?.dispose();
     session.canvas?.remove();
     session.worker?.cleanup();
+    // A stroke still open is dropped with the editor it paints through.
+    this.stroke = null;
     this.camera = null;
     this.gestures = null;
     // The overlay listens on the bus; a new one leaves the old listeners.
@@ -469,23 +524,104 @@ export class ScenarioEditor extends LitElement {
 
   // ---- Pointer ----
 
+  // With the terrain tool, the primary button or a single finger paints.
+  // The other buttons and two fingers move the camera, as in pan mode.
+
   private onPointerDown(e: PointerEvent): void {
     const el = e.currentTarget as HTMLElement;
     el.setPointerCapture(e.pointerId);
     const rect = el.getBoundingClientRect();
-    this.gestures?.down(
-      e.pointerId,
-      e.clientX - rect.left,
-      e.clientY - rect.top,
-    );
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const stroke = this.stroke;
+    if (stroke !== null) {
+      // A second finger: the two pinch. A touch that hasn't painted yet
+      // was the start of the pinch, so it paints nothing.
+      if (stroke.confirmed) this.endStroke();
+      else this.stroke = null;
+      this.gestures?.down(stroke.pointerId, stroke.x, stroke.y);
+    } else if (
+      this.tool === "terrain" &&
+      e.button === 0 &&
+      this.gestures?.active === false &&
+      this.startStroke(e.pointerId, e.pointerType !== "touch", x, y, rect)
+    ) {
+      return;
+    }
+    this.gestures?.down(e.pointerId, x, y);
+  }
+
+  private startStroke(
+    pointerId: number,
+    confirmed: boolean,
+    x: number,
+    y: number,
+    rect: DOMRect,
+  ): boolean {
+    const editor = this.editor;
+    if (editor === null || this.status !== "ready") return false;
+    const terrain =
+      this.terrainKind === "water"
+        ? WATER
+        : this.terrainKind === "land"
+          ? land(this.elevation)
+          : IMPASSABLE;
+    const brush = new TerrainStroke(editor, terrain, this.brushRadius);
+    this.stroke = {
+      pointerId,
+      brush,
+      x,
+      y,
+      startX: x,
+      startY: y,
+      confirmed,
+    };
+    this.paint(x, y, rect);
+    return true;
+  }
+
+  /** Moves the stroke's brush to the tile under (x, y). */
+  private paint(x: number, y: number, rect: DOMRect): void {
+    const stroke = this.stroke;
+    const camera = this.camera;
+    if (stroke === null || camera === null) return;
+    stroke.x = x;
+    stroke.y = y;
+    const world = camera.worldAt(x, y, rect.width, rect.height);
+    stroke.brush.moveTo(Math.floor(world.x), Math.floor(world.y));
+  }
+
+  /** Applies what the stroke has left, as one undo step, and saves. */
+  private endStroke(): void {
+    const stroke = this.stroke;
+    if (stroke === null) return;
+    this.stroke = null;
+    if (stroke.brush.end()) this.saveDraft();
+    this.requestUpdate();
   }
 
   private onPointerMove(e: PointerEvent): void {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    this.hover = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const stroke = this.stroke;
+    if (stroke?.pointerId === e.pointerId) {
+      if ((e.buttons & 1) !== 0) {
+        const { x, y } = this.hover;
+        if (Math.hypot(x - stroke.startX, y - stroke.startY) > TOUCH_SLOP) {
+          stroke.confirmed = true;
+        }
+        this.paint(x, y, rect);
+        return;
+      }
+      // The primary button is up but another is held (pointerup waits for
+      // the last): the stroke ends and that button moves the camera.
+      this.endStroke();
+      this.gestures?.down(e.pointerId, this.hover.x, this.hover.y);
+    }
     const g = this.gestures;
     if (this.status === "ready" && g?.active === false) {
       this.hudBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
     }
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     g?.move(
       e.pointerId,
       e.clientX - rect.left,
@@ -495,8 +631,50 @@ export class ScenarioEditor extends LitElement {
     );
   }
 
+  private onPointerCancel(e: PointerEvent): void {
+    // A cancelled touch, as palm rejection sends, is not a lift: if it
+    // hasn't painted yet, it paints nothing.
+    if (this.stroke?.pointerId === e.pointerId && !this.stroke.confirmed) {
+      this.stroke = null;
+    }
+    this.onPointerUp(e);
+  }
+
   private onPointerUp(e: PointerEvent): void {
+    if (this.stroke?.pointerId === e.pointerId) this.endStroke();
     this.gestures?.up(e.pointerId);
+    // A finger lifted leaves nothing to preview the brush under.
+    if (e.pointerType !== "mouse") this.hover = null;
+  }
+
+  private setBrushRadius(radius: number): void {
+    this.brushRadius = Math.max(0, Math.min(MAX_BRUSH_RADIUS, radius));
+  }
+
+  /** Outlines the tiles the brush would paint under the pointer. */
+  private placeBrushPreview(canvas: HTMLCanvasElement): void {
+    const el = this.brushPreview;
+    const camera = this.camera;
+    const hover = this.hover;
+    if (el === null) return;
+    if (this.tool !== "terrain" || hover === null || camera === null) {
+      el.style.display = "none";
+      return;
+    }
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const world = camera.worldAt(hover.x, hover.y, w, h);
+    // The centre tile's centre, on screen; the disc reaches radius + 0.5.
+    const cx = (Math.floor(world.x) + 0.5 - camera.x) * camera.zoom + w / 2;
+    const cy = (Math.floor(world.y) + 0.5 - camera.y) * camera.zoom + h / 2;
+    // A stroke keeps the radius it started with.
+    const radius = this.stroke?.brush.radius ?? this.brushRadius;
+    const size = (2 * radius + 1) * camera.zoom;
+    el.style.display = "block";
+    el.style.left = `${cx - size / 2}px`;
+    el.style.top = `${cy - size / 2}px`;
+    el.style.width = `${size}px`;
+    el.style.height = `${size}px`;
   }
 
   private onWheel(e: WheelEvent): void {
@@ -512,6 +690,8 @@ export class ScenarioEditor extends LitElement {
   }
 
   private onDoubleClick(e: MouseEvent): void {
+    // With the terrain tool, a double click is two dabs of paint.
+    if (this.tool !== "pan") return;
     const el = e.currentTarget as HTMLElement;
     this.camera?.fit(el.clientWidth, el.clientHeight);
   }
@@ -524,16 +704,37 @@ export class ScenarioEditor extends LitElement {
       <div class="fixed inset-0 z-[9000] bg-black text-white">
         <div id="scenario-editor-canvas" class="absolute inset-0"></div>
         <div
-          class="absolute inset-0 touch-none cursor-grab active:cursor-grabbing"
+          class="absolute inset-0 touch-none ${
+            this.tool === "pan"
+              ? "cursor-grab active:cursor-grabbing"
+              : "cursor-crosshair"
+          }"
           @pointerdown=${this.onPointerDown}
           @pointermove=${this.onPointerMove}
           @pointerup=${this.onPointerUp}
-          @pointercancel=${this.onPointerUp}
+          @pointercancel=${this.onPointerCancel}
+          @pointerleave=${() => (this.hover = null)}
           @wheel=${this.onWheel}
           @dblclick=${this.onDoubleClick}
+          @contextmenu=${(e: Event) => {
+            // The right button pans while the terrain tool is out.
+            if (this.tool !== "pan") e.preventDefault();
+          }}
         ></div>
+        ${
+          this.status === "ready"
+            ? html`
+                <!-- The frame loop places it (placeBrushPreview). -->
+                <div
+                  id="scenario-editor-brush"
+                  class="pointer-events-none absolute hidden rounded-full border border-white/80 shadow-[0_0_0_1px_rgba(0,0,0,0.6)]"
+                ></div>
+              `
+            : nothing
+        }
         <player-info-overlay></player-info-overlay>
         ${this.status === "ready" ? this.renderBar() : nothing}
+        ${this.status === "ready" ? this.renderTools() : nothing}
         ${this.status === "start" ? this.renderStart() : nothing}
         ${
           this.status === "loading"
@@ -732,6 +933,98 @@ export class ScenarioEditor extends LitElement {
         <a class="${button} ml-auto" href=${homeHref()}>
           ${translateText("scenario_editor.exit")}
         </a>
+      </div>
+    `;
+  }
+
+  private renderTools() {
+    const editor = this.editor!;
+    const button =
+      "rounded px-2 py-1 disabled:opacity-50 aria-pressed:bg-blue-600 bg-zinc-700 hover:bg-zinc-600 aria-pressed:hover:bg-blue-500";
+    const choice = <T>(value: T, current: T, label: string, pick: () => void) =>
+      html`<button
+        class="${button} flex-1"
+        aria-pressed=${value === current}
+        @click=${pick}
+      >
+        ${translateText(label)}
+      </button>`;
+    const tool = (t: Tool, label: string) =>
+      choice(t, this.tool, label, () => (this.tool = t));
+    const kind = (k: TerrainKind, label: string) =>
+      choice(k, this.terrainKind, label, () => (this.terrainKind = k));
+    return html`
+      <div
+        class="absolute bottom-2 left-2 flex w-64 flex-col gap-2 rounded-lg bg-zinc-900/90 p-3 text-sm"
+      >
+        <div class="flex gap-1">
+          ${tool("pan", "scenario_editor.tool_pan")}
+          ${tool("terrain", "scenario_editor.tool_terrain")}
+        </div>
+        <div class="flex gap-1">
+          <button
+            class="${button} flex-1"
+            ?disabled=${!editor.canUndo()}
+            @click=${() => this.undoOrRedo(false)}
+          >
+            ${translateText("scenario_editor.undo")}
+          </button>
+          <button
+            class="${button} flex-1"
+            ?disabled=${!editor.canRedo()}
+            @click=${() => this.undoOrRedo(true)}
+          >
+            ${translateText("scenario_editor.redo")}
+          </button>
+        </div>
+        ${
+          this.tool === "terrain"
+            ? html`
+                <div class="flex gap-1">
+                  ${kind("water", "scenario_editor.water")}
+                  ${kind("land", "scenario_editor.land")}
+                  ${kind("impassable", "scenario_editor.impassable")}
+                </div>
+                ${
+                  this.terrainKind === "land"
+                    ? html`<label class="flex flex-col gap-1">
+                        ${translateText("scenario_editor.elevation", {
+                          value: this.elevation,
+                        })}
+                        <input
+                          type="range"
+                          min="0"
+                          max=${MAX_ELEVATION}
+                          .value=${String(this.elevation)}
+                          @input=${(e: Event) =>
+                            (this.elevation = Number(
+                              (e.target as HTMLInputElement).value,
+                            ))}
+                        />
+                      </label>`
+                    : nothing
+                }
+                <label
+                  class="flex flex-col gap-1"
+                  title=${translateText("scenario_editor.brush_size_keys")}
+                >
+                  ${translateText("scenario_editor.brush_size", {
+                    value: this.brushRadius,
+                  })}
+                  <input
+                    type="range"
+                    min="0"
+                    max=${MAX_BRUSH_RADIUS}
+                    .value=${String(this.brushRadius)}
+                    @input=${(e: Event) =>
+                      this.setBrushRadius(
+                        Number((e.target as HTMLInputElement).value),
+                      )}
+                  />
+                </label>
+              `
+            : nothing
+        }
       </div>
     `;
   }
