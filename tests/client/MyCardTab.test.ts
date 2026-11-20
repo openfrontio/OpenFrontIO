@@ -25,12 +25,14 @@ vi.mock("../../src/client/Cosmetics", () => ({
 
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import { resetCardSavesForTests } from "../../src/client/CardSaveQueue";
 import { MyCardTab } from "../../src/client/components/card/MyCardTab";
 
 // Taunts and titles are held back (HeldBack.ts). The tests below exercise
 // the code behind them with both switched on; the "held back" block turns
 // them off again.
 beforeEach(() => {
+  resetCardSavesForTests();
   heldBack.taunts = true;
   heldBack.titles = true;
 });

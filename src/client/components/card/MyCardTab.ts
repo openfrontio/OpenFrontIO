@@ -86,15 +86,18 @@ export class MyCardTab extends LitElement {
 
   @state() private activeSlot: Slot = "background";
   // What is equipped now (optimistically), and what the server last
-  // confirmed. Saves run one at a time in CardLoadoutApi, shared with any
+  // confirmed. Saves run one at a time in CardSaveQueue, shared with any
   // other tab: a click made meanwhile is sent on top of the save in flight.
   @state() private loadout: CardLoadoutBody = EMPTY;
   @state() private saved: CardLoadoutBody = EMPTY;
   // The save run this tab is waiting on.
   private following: Promise<CardSaveOutcome> | null = null;
-  private initialSeeded = false;
-  // The loadout the tab opened with: what Reset goes back to.
+  // The account `initial` was seeded for.
+  private initialFor: string | null = null;
+  // The loadout the tab opened with: what Reset goes back to. Opened mid-save,
+  // it's the save in flight (`initialRun`) until that run ends.
   @state() private initial: CardLoadoutBody = EMPTY;
+  private initialRun: Promise<CardSaveOutcome> | null = null;
   @state() private saveError = false;
   @state() private flag: string | undefined = undefined;
   // Tracker values the server last sent, for the preview.
@@ -137,15 +140,18 @@ export class MyCardTab extends LitElement {
     // Mid-save (from this tab, or one closed before it answered), show the
     // newest loadout asked for: the server will hold it, and the next click
     // builds on it.
-    const inFlight = cardSaveInFlight();
+    const publicId = this.userMe?.player.publicId ?? null;
+    const inFlight = publicId === null ? null : cardSaveInFlight(publicId);
+    const run = publicId === null ? null : cardSaveRunning(publicId);
     this.loadout = inFlight ?? this.saved;
-    const run = cardSaveRunning();
-    if (inFlight !== null && run !== null) void this.follow(run);
-    // Reset goes back to what the tab opened with, not to the last save.
-    if (!this.initialSeeded && this.userMe !== null) {
-      this.initialSeeded = true;
+    // Reset goes back to what the tab opened with (for this account), not to
+    // the last save.
+    if (publicId !== null && this.initialFor !== publicId) {
+      this.initialFor = publicId;
       this.initial = this.loadout;
+      this.initialRun = inFlight !== null ? run : null;
     }
+    if (inFlight !== null && run !== null) void this.follow(run);
   }
 
   private get flares(): string[] {
@@ -188,7 +194,9 @@ export class MyCardTab extends LitElement {
   private save(next: CardLoadoutBody): void {
     this.loadout = next;
     this.saveError = false;
-    void this.follow(requestCardSave(next));
+    const publicId = this.userMe?.player.publicId;
+    if (publicId === undefined) return;
+    void this.follow(requestCardSave(publicId, next));
   }
 
   // Wait for a save run, then take what the server holds after it.
@@ -198,11 +206,14 @@ export class MyCardTab extends LitElement {
     const publicId = this.userMe?.player.publicId ?? "";
     const { result, saved } = await run;
     if (this.following === run) this.following = null;
+    // Signed out, or into another account, since: the host ignores a save
+    // for another account, and this tab now shows that account's card.
+    const sameAccount = this.userMe?.player.publicId === publicId;
     if (saved !== null) {
       // Stored, whether or not the /users/@me refresh after it got through:
       // tell the host, which keeps its copy (and so the next tab it makes)
       // in step.
-      this.saved = saved;
+      if (sameAccount) this.saved = saved;
       this.dispatchEvent(
         new CustomEvent<CardSavedDetail>("card-saved", {
           detail: { publicId, loadout: saved },
@@ -211,10 +222,16 @@ export class MyCardTab extends LitElement {
         }),
       );
     }
+    if (!sameAccount) return;
     // On success that's the newest loadout asked for; on failure, back to
     // what the server holds (clicks queued behind it go too).
     this.loadout = this.saved;
-    if (!result.ok) this.saveError = true;
+    if (!result.ok && result.error !== "cancelled") this.saveError = true;
+    // Opened on this run's save: Reset now goes to what the server holds.
+    if (this.initialRun === run) {
+      this.initialRun = null;
+      if (!result.ok) this.initial = this.saved;
+    }
   }
 
   private onItem(slot: Exclude<Slot, "flag">, item: CardItem): void {
