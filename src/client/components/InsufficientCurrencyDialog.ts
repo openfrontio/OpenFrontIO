@@ -156,9 +156,7 @@ export class InsufficientCurrencyDialog extends LitElement {
           ),
           this.button(
             "leave",
-            translateText("store.purchase_currency", {
-              currency: info.currency,
-            }),
+            translateText("store.get_plutonium"),
             () => this.leaveForTopUp(info),
             true,
           ),
@@ -177,9 +175,7 @@ export class InsufficientCurrencyDialog extends LitElement {
                 ),
             this.button(
               "top-up",
-              translateText("store.purchase_currency", {
-                currency: info.currency,
-              }),
+              translateText("store.get_plutonium"),
               () => (this.leaving = true),
               true,
             ),

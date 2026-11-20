@@ -707,7 +707,10 @@ export class WinModal extends LitElement implements Controller {
         const looks = this.lookRows();
         return html`<loadout-row
           .looks=${looks === "pending" ? [] : looks}
-          .owned=${new Set(this.viewerFlares ?? [])}
+          .owned=${
+            // Bought here counts even if the profile refresh after it failed.
+            new Set([...(this.viewerFlares ?? []), ...this.boughtHere])
+          }
           .signedIn=${this.signedIn}
           @look-owned=${(e: CustomEvent<{ key: string }>) => {
             this.boughtHere = new Set([...this.boughtHere, e.detail.key]);

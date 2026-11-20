@@ -181,6 +181,11 @@ export class LoadoutRow extends LitElement {
         );
         if (outcome.notice) await showInGameAlert(outcome.notice);
         return;
+      case "signed_out":
+        // Signed out since the screen opened: the sign-in prompt, never a
+        // tap that does nothing.
+        await this.signIn();
+        return;
       case "unconfirmed":
         await showInGameAlert(translateText("win_modal.purchase_unconfirmed"));
         return;

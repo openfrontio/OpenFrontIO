@@ -233,6 +233,7 @@ describe("end-screen shortfall box", () => {
 
   it("says how much more Plutonium is needed, with a top-up", async () => {
     const box = await show(PLUTONIUM);
+    expect(action(box, "top-up")!.textContent).toContain("store.get_plutonium");
     expect(box.textContent).toContain(
       'store.insufficient_currency_body:{"amount":220,"currency":"Plutonium","item":"Storm Front"}',
     );
@@ -260,6 +261,7 @@ describe("end-screen shortfall box", () => {
     expect(warn.textContent).toContain(
       'store.top_up_leaves_game:{"item":"Storm Front"}',
     );
+    expect(action(warn, "leave")!.textContent).toContain("store.get_plutonium");
     // Nothing remembered, nowhere gone, until confirmed.
     expect(peekPendingPurchase("p1")).toBeNull();
     expect(window.location.hash).not.toContain("tab=packs");

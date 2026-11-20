@@ -519,6 +519,18 @@ describe("<loadout-row> buying", () => {
     );
   });
 
+  it("signed out by the time of the buy: the sign-in prompt", async () => {
+    vi.mocked(purchaseCosmeticInPlace).mockResolvedValue({
+      kind: "signed_out",
+    });
+    await render({});
+    await button().onPurchaseHard();
+    expect(showInGameConfirm).toHaveBeenCalledWith(
+      "win_modal.sign_in_leaves_game",
+      expect.anything(),
+    );
+  });
+
   it("a shortfall goes back to the button's box", async () => {
     const info = {
       currency: "Plutonium",

@@ -538,6 +538,33 @@ describe("WinModal Get the look buying", () => {
     expect(block(modal).owned.has("taunt:salute")).toBe(true);
   });
 
+  it("bought here reads Owned ✓ even if the profile refresh fails", async () => {
+    saveLook("g1", {
+      clientID: "a",
+      name: "Ada",
+      items: [bg("bg_a"), bg("bg_a2")] as never,
+    });
+    const modal = await renderModal({
+      game,
+      endCardMode: "none",
+      viewerFlares: [],
+      signedIn: true,
+    });
+    block(modal).dispatchEvent(
+      new CustomEvent("look-owned", {
+        detail: { key: "cardBackground:bg_a" },
+        bubbles: true,
+      }),
+    );
+    // No userMeResponse broadcast follows.
+    await settle(modal);
+    expect(block(modal).owned.has("cardBackground:bg_a")).toBe(true);
+    expect(block(modal).looks[0].items.map((i) => i.item.name)).toEqual([
+      "bg_a",
+      "bg_a2",
+    ]);
+  });
+
   it("owned elsewhere (not bought here): it drops out", async () => {
     saveLook("g1", {
       clientID: "a",
