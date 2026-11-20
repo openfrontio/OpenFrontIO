@@ -297,6 +297,18 @@ describe("resuming before the Plutonium lands", () => {
     expect(peekPendingPurchase("p1")).toBe("cardBackground:bg_x");
   });
 
+  it("a late hashchange for the hash it started on doesn't cancel it", async () => {
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(me([], 100))
+      .mockResolvedValue(me([], 400));
+    rememberPendingPurchase("p1", "cardBackground:bg_x");
+    const resumed = resumePendingPurchase({ waitForProfile: false });
+    await vi.advanceTimersByTimeAsync(1_000);
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await vi.advanceTimersByTimeAsync(7_000);
+    expect(await resumed).toBe(true);
+  });
+
   it("enough already: opens straight away, no message", async () => {
     vi.mocked(getUserMe).mockResolvedValue(me([], 500));
     rememberPendingPurchase("p1", "cardBackground:bg_x");

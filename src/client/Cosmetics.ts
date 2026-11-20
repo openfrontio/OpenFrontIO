@@ -299,7 +299,12 @@ async function resumePendingPurchaseFor(me: UserMeResponse): Promise<boolean> {
   cancelPendingResume();
   const abort = new AbortController();
   resumeAbort = abort;
-  const onHashChange = () => abort.abort();
+  // Only a real move elsewhere: a hashchange queued from just before this
+  // resume started (the hash as it is now) doesn't count.
+  const startHash = window.location.hash;
+  const onHashChange = () => {
+    if (window.location.hash !== startHash) abort.abort();
+  };
   window.addEventListener("hashchange", onHashChange);
   try {
     // The Plutonium can lag the redirect (the rail's webhook credits it):
