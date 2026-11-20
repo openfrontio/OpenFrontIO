@@ -104,6 +104,23 @@ export interface InsufficientCurrency {
 /** Outcome of a purchase: unaffordable details, or void on success/redirect. */
 export type PurchaseResult = InsufficientCurrency | void;
 
+let purchaseReloadStarted = false;
+
+/**
+ * True once a purchase has started reloading the page. `purchaseCosmetic`
+ * calls `location.reload()` and then returns, so the caller runs again
+ * before the page unloads: this is how it tells that apart from a purchase
+ * that ended without a reload (failed, cancelled, or not enough currency).
+ */
+export function purchaseReloading(): boolean {
+  return purchaseReloadStarted;
+}
+
+function reloadAfterPurchase(): void {
+  purchaseReloadStarted = true;
+  window.location.reload();
+}
+
 export interface CosmeticPurchaseReturnActions {
   strip(): void;
   alertAndStrip(message: string): void;
@@ -551,7 +568,7 @@ export async function purchaseCosmetic(
       await showInGameAlert(
         translateText("store.change_tier_success", { tier: targetName }),
       );
-      window.location.reload();
+      reloadAfterPurchase();
       return;
     }
   }
@@ -746,7 +763,7 @@ export async function purchaseCosmetic(
         // so re-dispatching the profile first would be dead work.
         await showInGameAlert(translateText("store.already_owned"));
         invalidateUserMe();
-        window.location.reload();
+        reloadAfterPurchase();
         return;
       default:
         await showInGameAlert(translateText("store.purchase_failed"));
@@ -757,7 +774,7 @@ export async function purchaseCosmetic(
     purchaseSuccessMessage(c.name, price, result.amount, method),
   );
   invalidateUserMe();
-  window.location.reload();
+  reloadAfterPurchase();
 }
 
 /**
@@ -835,7 +852,7 @@ async function purchasePack(
       ),
     );
     invalidateUserMe();
-    window.location.reload();
+    reloadAfterPurchase();
     return;
   }
   switch (result.code) {
@@ -878,7 +895,7 @@ async function purchasePack(
         }),
       );
       invalidateUserMe();
-      window.location.reload();
+      reloadAfterPurchase();
       return;
     case "unavailable":
       await showInGameAlert(translateText("store.pack_unavailable"));

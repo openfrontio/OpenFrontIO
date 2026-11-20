@@ -57,6 +57,7 @@ import {
   groupCosmeticVariants,
   invalidateCosmetics,
   purchaseCosmetic,
+  purchaseReloading,
   type PurchaseResult,
   refreshStaleCosmetics,
   resolveCosmetics,
@@ -323,6 +324,10 @@ export class InventoryModal extends BaseModal {
    * reload a purchase does) gets the Equip now offer once it shows as owned.
    */
   private resumePendingEquip(): void {
+    // Only while open: a closed Inventory is still mounted (prefetched), and
+    // a dialog there would take over Tab and Escape on whatever page shows.
+    // onOpen tries again.
+    if (!this.isModalOpen) return;
     if (this.ownershipState !== "loaded" || this.userMeResponse === false) {
       return;
     }
@@ -1069,7 +1074,7 @@ export class InventoryModal extends BaseModal {
         </p>
       </div>
       ${
-        this.buying
+        this.buying && this.isModalOpen
           ? html`<inventory-buy-dialog
               .resolved=${this.currentBuying()}
               .bought=${this.buyingBought}
@@ -1229,6 +1234,7 @@ export class InventoryModal extends BaseModal {
       await this.loadInventory();
       return;
     }
+    this.resumePendingEquip();
     this.updateFromSettings();
     // Prices change when a sale starts or ends: like the Store, refetch a
     // catalogue more than a minute old, or one still carrying an ended sale.
@@ -1444,7 +1450,11 @@ export class InventoryModal extends BaseModal {
     if (this.userMeResponse !== false) {
       rememberPendingEquip(this.userMeResponse.player.publicId, resolved.key);
     }
-    return purchaseCosmetic(resolved, method, undefined);
+    const result = await purchaseCosmetic(resolved, method, undefined);
+    // No reload means no purchase: forget the item, or a later purchase of
+    // it elsewhere (the Store) would bring back this Equip now.
+    if (!purchaseReloading()) clearPendingEquip();
+    return result;
   }
 
   private equipBought() {
