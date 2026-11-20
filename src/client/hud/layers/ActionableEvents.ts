@@ -21,8 +21,10 @@ import {
   SendAllianceRequestIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
-import { translateText } from "../../Utils";
+import { renderDuration, translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
+import { requestTicksLeft, ticksToSeconds } from "../GameTicks";
+import { timeLeftLine } from "../TimeLeftLine";
 
 type CardAction = "focus" | "accept" | "reject" | "renew" | "ignore";
 
@@ -33,15 +35,20 @@ type CardAction = "focus" | "accept" | "reject" | "renew" | "ignore";
 // feed's 20px icon column, on the same edge as the event text.
 const LIST =
   "flex flex-col gap-1 w-full min-[1200px]:w-96 pointer-events-auto mt-1";
+// Positioned and clipped for the time-left line on its bottom edge.
 const CARD =
-  "hud-panel rounded-lg sm:max-lg:landscape:rounded-l-none p-2 text-white";
-const HEAD = "grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-2";
+  "hud-panel relative overflow-hidden rounded-lg sm:max-lg:landscape:rounded-l-none p-2 text-white";
+const HEAD = "grid grid-cols-[1.25rem_minmax(0,1fr)_auto] gap-x-2";
 const ICON_SIZE = 16;
 // One text line tall, so a wrapped sentence keeps the icon on its first line.
 const MARK = "flex h-5 lg:h-6 items-center justify-center text-yellow-400";
 const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aquarius";
-const TITLE = `min-w-0 cursor-pointer rounded-sm text-start text-sm/5 lg:text-base/6 font-semibold wrap-anywhere pointer-fine:hover:text-aquarius ${FOCUS_RING}`;
+const TITLE = `min-w-0 self-baseline cursor-pointer rounded-sm text-start text-sm/5 lg:text-base/6 font-semibold wrap-anywhere pointer-fine:hover:text-aquarius ${FOCUS_RING}`;
+// On the title's first baseline. The minimum width keeps the title from
+// shifting when the count drops a digit.
+const SECONDS =
+  "min-w-[3ch] self-baseline text-end text-[13px]/5 lg:text-sm/5 font-semibold tabular-nums text-white/70";
 // Buttons wrap to a second line when a translation is too long for one.
 // Labels keep today's 12px until the card takes its 384px width at 1200px
 // (from 1024px it is only 262px wide), and the sides stay narrow, so the
@@ -159,7 +166,8 @@ export class ActionableEvents extends LitElement implements Controller {
     const remainingEvents = this.events.filter(
       (event) =>
         (event.duration === undefined ||
-          this.game.ticks() - event.createdAt < event.duration) &&
+          requestTicksLeft(event.createdAt, this.game.ticks(), event.duration) >
+            0) &&
         (event.type !== MessageType.ALLIANCE_REQUEST ||
           // We remove Alliance Requests if the requestor is dead.
           ((
@@ -173,6 +181,9 @@ export class ActionableEvents extends LitElement implements Controller {
 
     if (this.events.length !== remainingEvents.length) {
       this.events = remainingEvents;
+      this.requestUpdate();
+    } else if (this.events.length > 0) {
+      // The time left on open cards moves with every tick.
       this.requestUpdate();
     }
   }
@@ -294,7 +305,9 @@ export class ActionableEvents extends LitElement implements Controller {
         },
       ],
       type: MessageType.ALLIANCE_REQUEST,
-      createdAt: this.game.ticks(),
+      // The engine lets the request lapse from the tick it made it, which
+      // an update that arrives late is already past.
+      createdAt: update.createdAt,
       priority: 0,
       duration: this.game.config().allianceRequestDuration(),
       focusID: update.requestorID,
@@ -337,6 +350,30 @@ export class ActionableEvents extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  // Ticks until the card's question lapses, and the whole span it had.
+  private timeLeft(event: ActionableEvent): { left: Tick; total: Tick } | null {
+    if (event.duration !== undefined) {
+      return {
+        left: requestTicksLeft(
+          event.createdAt,
+          this.game.ticks(),
+          event.duration,
+        ),
+        total: event.duration,
+      };
+    }
+    // A renewal prompt lapses with the alliance itself.
+    const alliance = this.game
+      .myPlayer()
+      ?.alliances()
+      .find((a) => a.id === event.allianceID);
+    if (!alliance) return null;
+    return {
+      left: alliance.expiresAt - this.game.ticks(),
+      total: this.game.config().allianceExtensionPromptOffset(),
+    };
+  }
+
   private emitGoToPlayerEvent(focusID: number) {
     const target = this.game.playerBySmallID(focusID) as PlayerView;
     if (!target) return;
@@ -362,61 +399,77 @@ export class ActionableEvents extends LitElement implements Controller {
         ${repeat(
           sorted,
           (event) => event.id,
-          (event) => html`
-            <div
-              data-event-card
-              data-card-kind=${
-                event.type === MessageType.RENEW_ALLIANCE
-                  ? "renewal"
-                  : "request"
-              }
-              role="group"
-              aria-label=${event.description}
-              class=${CARD}
-            >
-              <div class=${HEAD}>
-                <span class=${MARK}>
-                  <of-icon name="alliance" size=${ICON_SIZE}></of-icon>
-                </span>
-                <button
-                  class=${TITLE}
-                  @click=${() => this.emitGoToPlayerEvent(event.focusID)}
-                >
-                  ${event.description}
-                </button>
-              </div>
-              <div class=${ACTIONS}>
-                ${event.buttons.map(
-                  (btn) => html`
-                    <button
-                      data-card-action=${btn.kind}
-                      class="${BUTTON} ${CARD_BUTTON[btn.kind].look}"
-                      @click=${() => {
-                        btn.action();
-                        if (!btn.preventClose) {
-                          const index = this.events.findIndex(
-                            (e) => e === event,
-                          );
-                          if (index !== -1) this.removeEvent(index);
+          (event) => {
+            const time = this.timeLeft(event);
+            return html`
+              <div
+                data-event-card
+                data-card-kind=${
+                  event.type === MessageType.RENEW_ALLIANCE
+                    ? "renewal"
+                    : "request"
+                }
+                role="group"
+                aria-label=${event.description}
+                class=${CARD}
+              >
+                <div class=${HEAD}>
+                  <span class=${MARK}>
+                    <of-icon name="alliance" size=${ICON_SIZE}></of-icon>
+                  </span>
+                  <button
+                    class=${TITLE}
+                    @click=${() => this.emitGoToPlayerEvent(event.focusID)}
+                  >
+                    ${event.description}
+                  </button>
+                  ${
+                    time
+                      ? html`<span
+                          data-card-seconds
+                          aria-hidden="true"
+                          class=${SECONDS}
+                          >${renderDuration(
+                            Math.ceil(ticksToSeconds(time.left)),
+                          )}</span
+                        >`
+                      : ""
+                  }
+                </div>
+                <div class=${ACTIONS}>
+                  ${event.buttons.map(
+                    (btn) => html`
+                      <button
+                        data-card-action=${btn.kind}
+                        class="${BUTTON} ${CARD_BUTTON[btn.kind].look}"
+                        @click=${() => {
+                          btn.action();
+                          if (!btn.preventClose) {
+                            const index = this.events.findIndex(
+                              (e) => e === event,
+                            );
+                            if (index !== -1) this.removeEvent(index);
+                          }
+                          this.requestUpdate();
+                        }}
+                      >
+                        ${
+                          CARD_BUTTON[btn.kind].icon
+                            ? html`<of-icon
+                                name=${CARD_BUTTON[btn.kind].icon}
+                                size=${ICON_SIZE}
+                              ></of-icon>`
+                            : ""
                         }
-                        this.requestUpdate();
-                      }}
-                    >
-                      ${
-                        CARD_BUTTON[btn.kind].icon
-                          ? html`<of-icon
-                              name=${CARD_BUTTON[btn.kind].icon}
-                              size=${ICON_SIZE}
-                            ></of-icon>`
-                          : ""
-                      }
-                      ${btn.text}
-                    </button>
-                  `,
-                )}
+                        ${btn.text}
+                      </button>
+                    `,
+                  )}
+                </div>
+                ${time ? timeLeftLine(time.left / time.total) : ""}
               </div>
-            </div>
-          `,
+            `;
+          },
         )}
       </div>
     `;
