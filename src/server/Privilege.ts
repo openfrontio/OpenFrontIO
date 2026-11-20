@@ -192,8 +192,12 @@ export class PrivilegeCheckerImpl implements PrivilegeChecker {
     ) {
       card.taunt = taunt;
     }
+    // Like every other slot: owned AND still in the catalogue (by stat).
+    const sold = new Set(
+      Object.values(this.cosmetics.cardTrackers ?? {}).map((c) => c.stat),
+    );
     card.trackers = (refs?.trackers ?? [])
-      .filter((t) => owned(`cardTracker:${t.stat}`))
+      .filter((t) => sold.has(t.stat) && owned(`cardTracker:${t.stat}`))
       .slice(0, MAX_CARD_TRACKERS);
     if (publicId !== undefined) card.publicId = publicId;
     return card;
