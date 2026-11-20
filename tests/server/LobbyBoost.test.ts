@@ -8,7 +8,12 @@ import {
 } from "../../src/server/LobbyBoost";
 import { LobbyQueuePaymentResult } from "../../src/server/LobbyQueuePayment";
 import { WorkerLobbyService } from "../../src/server/WorkerLobbyService";
-import { makeClient, makeGame, mockLogger } from "../util/GameServerHarness";
+import {
+  makeClient,
+  makeGame,
+  makeMockWs,
+  mockLogger,
+} from "../util/GameServerHarness";
 
 vi.mock("../../src/server/Logger", () => ({
   logger: {
@@ -154,6 +159,20 @@ describe("boostScheduledLobby", () => {
     );
   });
 
+  it("frees the lobby when the API refuses the charge", async () => {
+    const { l, state } = lobby({ hasConnectedClient: () => true });
+    const out = await boostScheduledLobby(l, PLAYER, async () => ({
+      type: "error",
+      message: "api returned 403",
+      refused: true,
+    }));
+    expect(out.status).toBe(502);
+    expect(state).toEqual({ boosted: false, pending: false });
+    expect((await boostScheduledLobby(l, "other-player", paid())).status).toBe(
+      200,
+    );
+  });
+
   it("keeps the lobby for the payer when the charge's outcome is unknown", async () => {
     let next = true;
     const { l, state } = lobby({
@@ -240,6 +259,19 @@ describe("GameServer boosting", () => {
     expect(game.boostBlockedFor("someone-else")).toBe(true);
 
     game.releaseBoost();
+    expect(game.boostBlockedFor("someone-else")).toBe(false);
+  });
+
+  it("frees an unresolved charge's hold when its payer disconnects", async () => {
+    const game = publicLobby();
+    const ws = makeMockWs();
+    const client = makeClient({ ws });
+    game.joinClient(client);
+    game.reserveBoost(client.persistentID);
+    game.holdBoostForPayer();
+    expect(game.boostBlockedFor("someone-else")).toBe(true);
+
+    await ws.trigger("close");
     expect(game.boostBlockedFor("someone-else")).toBe(false);
   });
 });

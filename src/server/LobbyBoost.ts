@@ -6,8 +6,8 @@ export interface BoostableLobby {
   hasConnectedClient(persistentId: string): boolean;
   // A public lobby the master schedules (ffa, team, special), still a lobby.
   isScheduledLobby(): boolean;
-  // Boosted already, a charge for it is in flight, or another player's charge
-  // ended without a known outcome.
+  // Boosted already, a charge for it is in flight, or another player who is
+  // still in the lobby had a charge end without a known outcome.
   boostBlockedFor(persistentId: string): boolean;
   // This player's earlier charge ended without a known outcome.
   boostHeldFor(persistentId: string): boolean;
@@ -38,7 +38,8 @@ export type BoostLobbyOutcome =
  * so a second boost by the same player would be free. The lobby is reserved
  * before the charge so two clicks can't both pay. A charge that fails without
  * a clear answer (a timeout, an API error) may still have gone through, so
- * the lobby stays reserved for that player, whose retry is free if it did.
+ * the lobby stays reserved for that player while they stay connected; their
+ * retry is free if it did.
  * That retry skips the queue-position checks: the player may already have
  * paid, so the charge is replayed and the boost recorded wherever the lobby
  * now stands.
@@ -73,7 +74,8 @@ export async function boostScheduledLobby(
     return { status: 402, body: { error: "insufficient_balance" } };
   }
   if (payment.type !== "success") {
-    game.holdBoostForPayer();
+    if (payment.refused) game.releaseBoost();
+    else game.holdBoostForPayer();
     return { status: 502, body: { error: "boost_payment_failed" } };
   }
 

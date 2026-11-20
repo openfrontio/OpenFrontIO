@@ -1798,13 +1798,17 @@ export class GameServer {
   }
 
   // Boosted, a boost's charge is in flight, or another player's charge ended
-  // without a known outcome: this player may not pay for the lobby.
+  // without a known outcome: this player may not pay for the lobby. That
+  // last hold lasts only while its payer is connected to retry; once they
+  // leave, someone else may boost.
   public boostBlockedFor(persistentId: string): boolean {
     if (this.boostedAt !== undefined) return true;
     const reservation = this.boostReservation;
+    if (reservation === undefined) return false;
+    if (reservation.inFlight) return true;
     return (
-      reservation !== undefined &&
-      (reservation.inFlight || reservation.persistentId !== persistentId)
+      reservation.persistentId !== persistentId &&
+      this.hasConnectedClient(reservation.persistentId)
     );
   }
 

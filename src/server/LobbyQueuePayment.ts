@@ -4,7 +4,9 @@ import { ServerEnv } from "./ServerEnv";
 export type LobbyQueuePaymentResult =
   | { type: "success" }
   | { type: "insufficient_balance" }
-  | { type: "error"; message: string };
+  // refused: the API answered that it did not charge. Without it the charge
+  // may have gone through (a timeout, a network error, a 5xx).
+  | { type: "error"; message: string; refused?: true };
 
 /**
  * Charges the host for putting their listed lobby in the public queue
@@ -67,6 +69,9 @@ async function payLobbyFee(
     return {
       type: "error",
       message: `api returned ${response.status}`,
+      ...(response.status < 500 &&
+        response.status !== 408 &&
+        response.status !== 429 && { refused: true as const }),
     };
   } catch (e) {
     return { type: "error", message: `${endpoint} payment failed: ${e}` };
