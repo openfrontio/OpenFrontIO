@@ -258,6 +258,7 @@ describe("Inventory In game tab", () => {
     } as Awaited<ReturnType<typeof userAuth>>);
     vi.mocked(getUserMe).mockResolvedValue(makeUser(OWNED));
     vi.mocked(purchaseCosmetic).mockReset();
+    vi.mocked(purchaseReloading).mockReset().mockReturnValue(false);
     modal = document.createElement("inventory-modal") as InventoryModal;
     modal.setAttribute("inline", "");
     document.body.appendChild(modal);
