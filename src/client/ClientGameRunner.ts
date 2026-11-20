@@ -29,7 +29,9 @@ import {
 import { ClientEnv } from "../client/ClientEnv";
 import { reloadForUpdate, translateText } from "../client/Utils";
 import { rememberAdmitted } from "./AdmittedLobbies";
+import { clearSavedLooks } from "./components/card/SavedLooks";
 import { MapLayerController } from "./controllers/MapLayerController";
+import { cancelPendingResume, setGameInProgress } from "./Cosmetics";
 import { isDesktopShell } from "./DesktopShell";
 import { GameHealth } from "./GameHealth";
 import { GameMetrics } from "./GameMetrics";
@@ -139,6 +141,8 @@ export function joinLobby(
   eventBus: EventBus,
   lobbyConfig: LobbyConfig,
 ): JoinLobbyResult {
+  // Joining a game stops a resume waiting to open the Store.
+  cancelPendingResume();
   // Mutable clientID state — assigned by server (multiplayer) or derived from gameStartInfo (singleplayer)
   let clientID: ClientID | undefined;
 
@@ -1040,6 +1044,8 @@ export class ClientGameRunner {
   }
 
   public start() {
+    // A resume waiting for a top-up's Plutonium never opens the Store now.
+    setGameInProgress(true);
     this.soundManager.playBackgroundMusic();
     console.log("starting client game");
 
@@ -1311,7 +1317,14 @@ export class ClientGameRunner {
   // releaseTabAttention is false when disposing a runner for a lobby that was
   // already left: its flash (if any) isn't this runner's to clear anymore.
   public stop(releaseTabAttention: boolean = true) {
-    if (releaseTabAttention) tabAttention.release();
+    if (releaseTabAttention) {
+      tabAttention.release();
+      // Looks saved from the player panel belong to this game. A runner
+      // disposed for a lobby already left skips this: a newer game may be
+      // running by now.
+      clearSavedLooks();
+      setGameInProgress(false);
+    }
     if (this.healthTimer !== null) clearInterval(this.healthTimer);
     this.healthTimer = null;
     document.removeEventListener("visibilitychange", this.updateHealth);

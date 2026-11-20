@@ -5,7 +5,11 @@ import type {
   ClientID,
   Winner,
 } from "@openfront/engine-api/Schemas";
-import type { GameXpEligible, Progress } from "@openfront/shared/ApiSchemas";
+import type {
+  GameXpEligible,
+  Progress,
+  UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 import type { Cosmetics, Pattern } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, nothing, TemplateResult } from "lit";
@@ -20,14 +24,21 @@ import {
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
 import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
+import { sessionUncertain, userAuth } from "../../Auth";
 import "../../components/CosmeticCard";
 import { saveTauntsMuted } from "../../CardLoadoutApi";
 import {
   buildPlayerCardView,
   type PlayerCardView,
 } from "../../components/card/PlayerCardModel";
-import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
+import {
+  endScreenLookRows,
+  type LookRow,
+  onSavedLooksChanged,
+  savedLooks,
+} from "../../components/card/SavedLooks";
 import "./EndCardSection";
+import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
 import {
   ffaRatingGameOf,
   type FfaRatingGame,
@@ -43,10 +54,10 @@ import {
   resolveCosmetics,
 } from "../../Cosmetics";
 import { isDesktopShell } from "../../DesktopShell";
-import { gamePortal } from "../../GamePortal";
 import "../../components/ProfileShare";
 import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
+import { gamePortal } from "../../GamePortal";
 import { lobbyPublicGameType } from "../../LobbyPublicGameType";
 import { lobbyLevelBadge } from "../../LobbyRosterLevels";
 import type { MatchmakingMode } from "../../Matchmaking";
@@ -77,6 +88,7 @@ import {
 import { requeueModeForRankedType } from "../../RequeueUrl";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { SendWinnerEvent } from "../../Transport";
+import { UserSettings } from "../../UserSettings";
 import { shareGame } from "../../utilities/ShareGame";
 import { GameView } from "../../view";
 import type { EndCardClan, EndCardMode } from "./EndCardSection";
@@ -86,7 +98,12 @@ import {
   type EndScreenCard,
   winnerCard,
 } from "./EndScreenCard";
-import { type LoadoutItem, loadoutItems, promoChoice } from "./LoadoutRow";
+import {
+  type LoadoutItem,
+  loadoutItems,
+  type PromoChoice,
+  promoChoice,
+} from "./LoadoutRow";
 
 type LegendCeremonyModule = typeof import("../../components/LegendCeremony");
 
@@ -181,6 +198,26 @@ export class WinModal extends LitElement implements Controller {
   // "Get {name}'s look": what the killer's card offers this viewer.
   @state()
   private loadout: LoadoutItem[] = [];
+  // While the killer's row is still loading, saved looks wait, so the
+  // killer's saved look never shows on its own and then jumps.
+  @state()
+  private loadoutPending = false;
+  // What the viewer owns, read when the screen shows: saved looks are
+  // filtered against it, not what they owned when saving. Null until read.
+  @state()
+  private viewerFlares: readonly string[] | null = null;
+  // Whether the viewer is signed in ("Sign in to buy" otherwise), following
+  // the /users/@me broadcast.
+  @state()
+  private signedIn = false;
+  // Items bought from the block this screen: they stay in their row, read
+  // Owned ✓ there, and aren't filtered out as owned.
+  @state()
+  private boughtHere: ReadonlySet<string> = new Set();
+  private onUserMe = (e: Event) =>
+    void this.applyUserMe((e as CustomEvent<UserMeResponse | false>).detail);
+  private unsubscribeLooks: (() => void) | null = null;
+  private userSettings = new UserSettings();
   private nemesisAbort: AbortController | null = null;
   private lastEndCard: EndScreenCard | null = null;
   private endCardCosmetics: Cosmetics | null = null;
@@ -593,36 +630,100 @@ export class WinModal extends LitElement implements Controller {
     </style>`;
   }
 
-  innerHtml() {
-    // The Steam desktop build has nothing to wishlist, and the Android app
-    // must not send the player to another store — fall through to the other
-    // promos so the box is never empty.
-    const canWishlist = !isDesktopShell();
+  // The "Get the look" block's players: the killer (their card's items, as
+  // the end screen offered them before) and then looks saved from the player
+  // panel this game, newest first. Filtered against what the viewer owns
+  // now: the player card under the first name only, no item twice, and
+  // players left with nothing to buy dropped. "pending" while the killer's
+  // items or the viewer's are still loading.
+  private lookRows(): LookRow[] | "pending" {
+    const gameID = this.game?.gameID();
+    if (gameID === undefined) return [];
+    const card = this.lastEndCard;
+    // As visiblePlayerCard: while the viewer anonymises names, no one else's
+    // look under their real name.
+    const me = this.game.myPlayer()?.clientID() ?? null;
+    const anonymous = this.userSettings.anonymousNames();
+    const visible = savedLooks(gameID).filter(
+      (look) => !anonymous || look.clientID === me,
+    );
+    // Nothing that could become a look (no killer card loading or offering
+    // items, no saved look): the promo is as today, without waiting for the
+    // viewer's /users/@me.
+    const killerCard =
+      card?.kind === "eliminatedBy" &&
+      (this.loadoutPending || this.loadout.length > 0);
+    if (!killerCard && visible.length === 0) return [];
+    if (this.viewerFlares === null || this.loadoutPending) return "pending";
+    // What the viewer owns, but for what they bought here: that stays.
+    const flares = this.viewerFlares.filter((f) => !this.boughtHere.has(f));
+    // The killer's current card when it has something to buy; otherwise
+    // their saved look (if any) stands in for it.
+    const killer: LookRow | null =
+      card?.kind === "eliminatedBy" &&
+      this.loadout.some((i) => i.state === "buy")
+        ? {
+            clientID: card.clientID,
+            name: this.endCardView?.username ?? "",
+            items: this.loadout,
+          }
+        : null;
+    const saved = visible.filter((look) => look.clientID !== killer?.clientID);
+    return endScreenLookRows(killer ? [killer, ...saved] : saved, flares);
+  }
 
-    // The store-skins turn goes to "Get {name}'s look" on an eliminated-by
-    // card with something to buy (promoChoice).
-    switch (
-      promoChoice({
-        isWin: this.isWin,
-        gamesPlayed: getGamesPlayed(),
-        inIframe: isInIframe(),
-        canWishlist,
-        rand: this.rand,
-        hasLoadout: this.loadout.some((i) => i.state === "buy"),
-        eliminatedByCard: this.endCardMode === "eliminatedBy",
-      })
-    ) {
+  // The promo slot: the "Get the look" block whenever there is a look to
+  // get, else today's random promo. Empty while the looks load, so the
+  // block never replaces a promo already shown. Like the card, the looks are
+  // a decoration: if anything goes wrong the promo is as today.
+  private promo(): PromoChoice | "pending" {
+    let looks: LookRow[] | "pending" = [];
+    const inIframe = isInIframe();
+    if (!inIframe) {
+      try {
+        looks = this.lookRows();
+      } catch (error) {
+        console.warn("Get the look left off the end screen:", error);
+      }
+    }
+    if (looks === "pending") return "pending";
+    return promoChoice({
+      isWin: this.isWin,
+      gamesPlayed: getGamesPlayed(),
+      inIframe,
+      // The Steam desktop build has nothing to wishlist, and the Android app
+      // must not send the player to another store — fall through to the
+      // other promos so the box is never empty.
+      canWishlist: !isDesktopShell(),
+      rand: this.rand,
+      hasLooks: looks.length > 0,
+    });
+  }
+
+  innerHtml() {
+    switch (this.promo()) {
       case "steam":
         return this.steamWishlist();
       case "discord":
         return this.discordDisplay();
       case "tutorial":
         return this.renderYoutubeTutorial();
-      case "loadout":
+      case "pending":
+        return nothing;
+      case "loadout": {
+        const looks = this.lookRows();
         return html`<loadout-row
-          .ownerName=${this.endCardView?.username ?? ""}
-          .items=${this.loadout}
+          .looks=${looks === "pending" ? [] : looks}
+          .owned=${
+            // Bought here counts even if the profile refresh after it failed.
+            new Set([...(this.viewerFlares ?? []), ...this.boughtHere])
+          }
+          .signedIn=${this.signedIn}
+          @look-owned=${(e: CustomEvent<{ key: string }>) => {
+            this.boughtHere = new Set([...this.boughtHere, e.detail.key]);
+          }}
         ></loadout-row>`;
+      }
       default:
         return this.renderPatternButton();
     }
@@ -833,6 +934,7 @@ export class WinModal extends LitElement implements Controller {
     this.endCardView = null;
     this.endCardClan = null;
     this.loadout = [];
+    this.loadoutPending = false;
     const myID = this.game.myPlayer()?.clientID() ?? null;
     this.canEditCard = myID !== null && this.hasCard(myID);
     if (card.kind === "none") {
@@ -884,14 +986,70 @@ export class WinModal extends LitElement implements Controller {
   }
 
   private async loadLoadout(view: PlayerCardView): Promise<void> {
-    const me = await getUserMe();
-    if (this.endCardView !== view) return;
-    this.loadout = loadoutItems(
-      view,
-      this.cardCatalogue(),
-      me === false ? [] : (me.player.flares ?? []),
-    );
+    this.loadoutPending = true;
+    try {
+      const me = await getUserMe();
+      if (this.endCardView !== view) return;
+      this.loadout = loadoutItems(
+        view,
+        this.cardCatalogue(),
+        me === false ? [] : (me.player.flares ?? []),
+      );
+    } finally {
+      if (this.endCardView === view) this.loadoutPending = false;
+    }
   }
+
+  // Called fire-and-forget from show(): it never rejects.
+  private async loadViewerFlares(): Promise<void> {
+    let me: UserMeResponse | false = false;
+    try {
+      me = await getUserMe();
+    } catch {
+      me = false;
+    }
+    try {
+      await this.applyUserMe(me);
+    } catch (error) {
+      console.warn("End screen: couldn't read the viewer", error);
+      // Unknown: don't hold the promo slot empty or say "Sign in to buy" on
+      // a guess. A Buy's tap check reads the profile and the session itself.
+      if (this.viewerFlares === null) {
+        this.viewerFlares = [];
+        this.signedIn = true;
+      }
+    }
+  }
+
+  // getUserMe answers false for a failed read (a 5xx, a network error, a
+  // body that fails the schema) as well as for no session, and keeps that
+  // false cached. So only the session decides "signed out": a failed read
+  // leaves a signed-in player signed in with no flares known, and their
+  // Buy's tap check re-reads.
+  private async applyUserMe(
+    me: UserMeResponse | false | undefined,
+  ): Promise<void> {
+    if (me === undefined) return;
+    const call = ++this.userMeCall;
+    if (me !== false) {
+      this.signedIn = true;
+      this.viewerFlares = me.player.flares ?? [];
+      return;
+    }
+    // With refresh: the token is short-lived and nothing renews it during a
+    // game, and a cached false makes getUserMe send no request that would.
+    // userAuth(false) would call an expired token signed out even with a
+    // valid refresh cookie.
+    const session = await userAuth();
+    // A newer answer landed meanwhile: it decides.
+    if (call !== this.userMeCall) return;
+    // A refresh that got no answer (a 5xx, 429, the network) keeps the
+    // cookie: that's "couldn't check", not signed out, so real Buy buttons
+    // whose tap check re-reads.
+    this.signedIn = session !== false || sessionUncertain();
+    this.viewerFlares = [];
+  }
+  private userMeCall = 0;
 
   private async readTauntsMuted(): Promise<void> {
     if (this.tauntsMutedRead) return;
@@ -918,6 +1076,7 @@ export class WinModal extends LitElement implements Controller {
       this.game.config().gameConfig().rankedType,
     );
     this.isVisible = true;
+    void this.loadViewerFlares();
     this.requestUpdate();
     try {
       await this.loadPatternContent();
@@ -935,6 +1094,8 @@ export class WinModal extends LitElement implements Controller {
 
   connectedCallback(): void {
     super.connectedCallback();
+    this.unsubscribeLooks ??= onSavedLooksChanged(() => this.requestUpdate());
+    document.addEventListener("userMeResponse", this.onUserMe);
     if (this.xpPollAborted) {
       this.xpPollAborted = false;
       void this.updateXp(true);
@@ -943,6 +1104,9 @@ export class WinModal extends LitElement implements Controller {
 
   disconnectedCallback(): void {
     this.xpAbort?.abort();
+    this.unsubscribeLooks?.();
+    this.unsubscribeLooks = null;
+    document.removeEventListener("userMeResponse", this.onUserMe);
     super.disconnectedCallback();
   }
 

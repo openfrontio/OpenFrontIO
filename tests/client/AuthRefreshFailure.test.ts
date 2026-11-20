@@ -4,7 +4,11 @@ vi.mock("../../src/client/ClientEnv", () => ({
   ClientEnv: { jwtAudience: () => "localhost" },
 }));
 
-import { userAuth } from "../../src/client/Auth";
+import {
+  clearLocalSession,
+  sessionUncertain,
+  userAuth,
+} from "../../src/client/Auth";
 
 // Only a 401 from /auth/refresh means the session is dead. A 5xx (a database
 // or Hyperdrive blip), a 429 or an edge 403 is transient: logging out on it
@@ -38,6 +42,7 @@ describe("/auth/refresh failure handling", () => {
   });
 
   afterEach(() => {
+    clearLocalSession();
     localStorage.clear();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -63,5 +68,82 @@ describe("/auth/refresh failure handling", () => {
     await vi.waitFor(() =>
       expect(localStorage.getItem(PERSISTENT_ID_KEY)).toBeNull(),
     );
+  });
+
+  // userAuth() answers false for both, so callers that must tell "signed
+  // out" from "couldn't check" (the end screen's Buy) ask sessionUncertain().
+  describe("sessionUncertain", () => {
+    it("a reader of refresh A still sees A's answer while refresh B is in flight", async () => {
+      // The end screen's tap check waited on refresh A (a 503) and reads
+      // the flag after loadViewerFlares has started refresh B. B hasn't
+      // answered, so nothing has settled: A's "couldn't check" stands.
+      let answerB: (r: unknown) => void = () => undefined;
+      fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce({
+          status: 503,
+          ok: false,
+          json: async () => ({}),
+        })
+        .mockImplementationOnce(
+          () => new Promise((resolve) => (answerB = resolve)),
+        );
+      vi.stubGlobal("fetch", fetchMock);
+
+      expect(await userAuth()).toBe(false); // refresh A: 503
+      const b = userAuth(); // refresh B starts, unanswered
+      try {
+        await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+        expect(sessionUncertain()).toBe(true);
+      } finally {
+        // Settle B either way, so no later test joins it.
+        answerB({ status: 503, ok: false, json: async () => ({}) });
+        await b;
+      }
+    });
+
+    it.each([500, 503, 429, 403])("is true after a %i", async (status) => {
+      answerRefreshWith(status);
+      expect(await userAuth()).toBe(false);
+      expect(sessionUncertain()).toBe(true);
+    });
+
+    it("is true when the refresh never reaches the server", async () => {
+      fetchMock = vi.fn(async () => {
+        throw new TypeError("Failed to fetch");
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      expect(await userAuth()).toBe(false);
+      expect(sessionUncertain()).toBe(true);
+    });
+
+    it("is false after a 401: the session is dead", async () => {
+      answerRefreshWith(503);
+      await userAuth();
+      answerRefreshWith(401);
+      expect(await userAuth()).toBe(false);
+      expect(sessionUncertain()).toBe(false);
+    });
+
+    it("a successful refresh clears it", async () => {
+      answerRefreshWith(503);
+      await userAuth();
+      expect(sessionUncertain()).toBe(true);
+      fetchMock = vi.fn(async () => ({
+        status: 200,
+        ok: true,
+        json: async () => ({ jwt: "not-a-real-jwt", expiresIn: 900 }),
+      }));
+      vi.stubGlobal("fetch", fetchMock);
+      await userAuth();
+      expect(sessionUncertain()).toBe(false);
+    });
+
+    it("a local logout clears it", async () => {
+      answerRefreshWith(503);
+      await userAuth();
+      clearLocalSession();
+      expect(sessionUncertain()).toBe(false);
+    });
   });
 });

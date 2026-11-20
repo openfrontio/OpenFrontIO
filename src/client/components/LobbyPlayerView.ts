@@ -12,6 +12,7 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { ClientID, TeamCountConfig } from "@openfront/engine-api/Schemas";
 import { assignTeamsLobbyPreview } from "@openfront/engine-lib/game/TeamAssignment";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import {
   type LevelBadge,
   unpackLevelBadge,
@@ -20,7 +21,9 @@ import { createRandomName } from "@openfront/shared/SharedUtil";
 import { ClientInfo } from "@openfront/shared/WireSchemas";
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { ifDefined } from "lit/directives/if-defined.js";
 import { repeat } from "lit/directives/repeat.js";
+import { fetchCosmetics, getCachedCosmetics } from "../Cosmetics";
 import {
   ownHiddenLevelBadge,
   refreshOwnHiddenLevelBadge,
@@ -32,6 +35,11 @@ import {
   resolveTeamClanTag,
   translateText,
 } from "../Utils";
+import { CardCatalogueRequest } from "./card/CardCatalogueRequest";
+import {
+  loadedCardBackgroundUrl,
+  stillBackdropStyle,
+} from "./card/StillCardBackdrop";
 import "./LevelBadge";
 
 function sameBadge(
@@ -81,6 +89,17 @@ export class LobbyTeamView extends LitElement {
   // off their roster entry, but they still see their own level.
   @state() private _ownHiddenBadge: LevelBadge | undefined =
     ownHiddenLevelBadge();
+  // The catalogue, to resolve a stamped card background's image. Null until
+  // loaded; tags show without a background until then.
+  @state() private _cosmetics: Cosmetics | null = getCachedCosmetics();
+  private _catalogueRequest = new CardCatalogueRequest(
+    () => fetchCosmetics(),
+    (cosmetics) => {
+      this._cosmetics = cosmetics;
+    },
+  );
+  // Re-render once a tag's background image has loaded.
+  private readonly _onArtLoaded = () => this.requestUpdate();
 
   // Spectators are in the lobby roster (flagged) but hold no seat and never
   // reach the simulation — so the count header, the team preview and both
@@ -106,6 +125,14 @@ export class LobbyTeamView extends LitElement {
   }
 
   willUpdate(changedProperties: Map<string, any>) {
+    if (
+      changedProperties.has("clients") &&
+      this._cosmetics === null &&
+      this.clients.some((c) => c.cardBackground !== undefined)
+    ) {
+      // A failed fetch is tried again on a later roster update.
+      this._catalogueRequest.request();
+    }
     if (
       changedProperties.has("clients") ||
       changedProperties.has("currentClientID")
@@ -221,6 +248,7 @@ export class LobbyTeamView extends LitElement {
                 class="player-tag ${
                   this.isCurrentPlayer(client) ? "current-player" : ""
                 }"
+                style=${ifDefined(this.tagBackdrop(client))}
               >
                 <span class="text-white"
                   >${this.renderLevelBadge(
@@ -269,6 +297,7 @@ export class LobbyTeamView extends LitElement {
                   ? "bg-malibu-blue/20 border-sky-500/40"
                   : "bg-gray-700/70 border-transparent"
               }"
+              style=${ifDefined(this.tagBackdrop(client))}
             >
               ${this.renderLevelBadge(client, listSlot)}${displayName}
               ${this.renderVerifiedBadge(client)}
@@ -335,6 +364,7 @@ export class LobbyTeamView extends LitElement {
           class="player-tag ${
             this.isCurrentPlayer(client) ? "current-player" : ""
           }"
+          style=${ifDefined(this.tagBackdrop(client))}
         >
           <span class="text-white"
             >${this.renderLevelBadge(client, false)}${displayName}
@@ -434,6 +464,7 @@ export class LobbyTeamView extends LitElement {
                           ? "bg-malibu-blue/20 border-sky-500/40"
                           : "bg-gray-700/70 border-transparent"
                       }"
+                      style=${ifDefined(this.tagBackdrop(p))}
                     >
                       <span class="flex items-center gap-1 min-w-0">
                         ${this.renderLevelBadge(p, badgeSlot)}
@@ -645,6 +676,29 @@ export class LobbyTeamView extends LitElement {
     const anonymizedUsername =
       createRandomName(client.username, PlayerType.Human) ?? client.username;
     return formatPlayerDisplayName(anonymizedUsername, client.clanTag);
+  }
+
+  // A card owner's equipped background behind their name tag and team-mode
+  // rows, still, under a dark gradient (inline background, so the tag's size
+  // and contents don't change). The server stamps it only beside a real name; it is withheld
+  // here too while the viewer anonymises other players' names locally, as it
+  // would point out who they are. Undefined (no style at all) otherwise.
+  private tagBackdrop(client: ClientInfo): string | undefined {
+    if (this.userSettings.anonymousNames() && !this.isCurrentPlayer(client)) {
+      return undefined;
+    }
+    // Only once the image has loaded: a CSS background can't report a broken
+    // one, which would leave the shade over nothing instead of today's fill.
+    const url = loadedCardBackgroundUrl(
+      client.cardBackground,
+      this._cosmetics,
+      this._onArtLoaded,
+    );
+    // The current player's tag is marked by its blue fill, which the art
+    // would hide: it goes on top as a tint instead.
+    return url === null
+      ? undefined
+      : stillBackdropStyle(url, this.isCurrentPlayer(client));
   }
 
   // Blue check for players on their server-validated account name. Withheld

@@ -1,10 +1,17 @@
 import type { StorePlacement } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
-import { html, LitElement, nothing, type TemplateResult } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import {
+  html,
+  LitElement,
+  nothing,
+  type PropertyValues,
+  type TemplateResult,
+} from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { purchaseCosmetic, type ResolvedCosmetic } from "../../Cosmetics";
 import { translateText } from "../../Utils";
 import "../CosmeticCard";
+import type { PurchaseButton } from "../PurchaseButton";
 import "../PurchaseButton";
 import {
   type CardItem,
@@ -71,12 +78,26 @@ export class CardStoreGrid extends LitElement {
   @property({ attribute: false }) cosmetics: Cosmetics | null = null;
   @property({ attribute: false }) flares: readonly string[] = [];
   @property({ attribute: false }) tracker: CardStoreTracker | null = null;
+  /** An item a Store link asked for (`<type>:<name>`), e.g. after a top-up
+   * from the end screen: once it shows it is selected, scrolled to and its
+   * Buy focused, and `requested-item-shown` tells the Store. */
+  @property({ attribute: false }) requestedItem: string | null = null;
+  @state() private selected: string | null = null;
 
   createRenderRoot() {
     return this;
   }
 
+  protected willUpdate(changed: PropertyValues<this>): void {
+    // The request was handled: clear the selection, so the same item can be
+    // asked for again.
+    if (changed.has("requestedItem") && this.requestedItem === null) {
+      this.selected = null;
+    }
+  }
+
   protected updated(): void {
+    this.showRequested();
     const tracker = this.tracker;
     if (tracker === null) return;
     for (const el of this.querySelectorAll<HTMLElement>(
@@ -85,6 +106,34 @@ export class CardStoreGrid extends LitElement {
       tracker.observe(el, el.dataset.cardStoreItem!, PLACEMENT);
     }
     tracker.releaseDetached();
+  }
+
+  private showRequested(): void {
+    const key = this.requestedItem;
+    if (key === null || key === this.selected) return;
+    const tile = [
+      ...this.querySelectorAll<HTMLElement>("[data-card-store-item]"),
+    ].find((el) => el.dataset.cardStoreItem === key);
+    // The catalogue loads after open: keep asking until the item shows.
+    if (tile === undefined) return;
+    this.selected = key;
+    tile.scrollIntoView({ block: "center" });
+    // Once its Buy has rendered: bring the tile into view again (the grid
+    // may have grown above it meanwhile) and focus the Buy.
+    void this.updateComplete.then(async () => {
+      const button = tile.querySelector<PurchaseButton>("purchase-button");
+      await button?.updateComplete;
+      tile.scrollIntoView({ block: "center" });
+      tile
+        .querySelector<HTMLButtonElement>("button:not([disabled])")
+        ?.focus({ preventScroll: true });
+    });
+    this.dispatchEvent(
+      new CustomEvent("requested-item-shown", {
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   private buy(type: CardItemType, item: CardItem, method: "hard" | "soft") {
@@ -132,12 +181,18 @@ export class CardStoreGrid extends LitElement {
     return html`<div class="flex flex-wrap justify-center gap-3 p-3">
       ${items.map(({ type, item }) => {
         const key = `${type}:${item.name}`;
+        const selected = this.selected === key;
         const prices = cardPrices(item);
         return html`<div
           data-card-store-item=${key}
           data-cosmetic-shell
           data-cosmetic-rarity=${String(item.rarity)}
-          class="flex w-44 flex-col gap-1.5 rounded-xl border-2 p-2 text-white"
+          ?data-card-store-selected=${selected}
+          class="flex w-44 flex-col gap-1.5 rounded-xl border-2 p-2 text-white ${
+            selected
+              ? "ring-4 ring-sky-400 ring-offset-2 ring-offset-black"
+              : ""
+          }"
         >
           ${this.preview(type, item)}
           <span

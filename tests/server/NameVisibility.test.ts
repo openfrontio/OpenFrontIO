@@ -256,3 +256,36 @@ describe("admin clan-tag reveal through the start message GameServer sends", () 
     });
   });
 });
+
+describe("lobbyClients: the card background", () => {
+  const card = { trackers: [], background: "bg_pacific" };
+  const clients = [
+    makeClient({ clientID: "alice", publicId: "alice-pub", card }),
+    makeClient({ clientID: "bob", publicId: "bob-pub", card }),
+    makeClient({ clientID: "carol", publicId: "carol-pub" }),
+  ];
+  const entry = (v: NameVisibility, viewer: string | undefined, id: string) =>
+    v.lobbyClients(viewer, clients).find((c) => c.clientID === id)!;
+
+  it("names on: stamped from the resolved card, absent without one", () => {
+    const v = visibility(clients);
+    expect(entry(v, "carol", "alice").cardBackground).toBe("bg_pacific");
+    expect(entry(v, "alice", "carol").cardBackground).toBeUndefined();
+  });
+
+  it("anonymised: never on the entry, only on the viewer's own", () => {
+    const v = visibility(clients, { anonymizeNames: true });
+    expect(entry(v, "carol", "alice")).not.toHaveProperty("cardBackground");
+    expect(entry(v, undefined, "alice")).not.toHaveProperty("cardBackground");
+    expect(entry(v, "alice", "alice").cardBackground).toBe("bg_pacific");
+  });
+
+  it("anonymised: a pinned teammate's shows beside their real name", () => {
+    const v = visibility(clients, { anonymizeNames: true }, [
+      ["alice-pub", "bob-pub"],
+      ["carol-pub"],
+    ]);
+    expect(entry(v, "bob", "alice").cardBackground).toBe("bg_pacific");
+    expect(entry(v, "carol", "alice")).not.toHaveProperty("cardBackground");
+  });
+});

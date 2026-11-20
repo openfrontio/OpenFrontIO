@@ -17,6 +17,7 @@ import {
   type InlineConfirmResult,
 } from "../StripeInline";
 import { translateText } from "../Utils";
+import { hasPendingPurchase } from "./inventory/PendingEquip";
 
 /**
  * The webhook grants the entitlement, so the balance read immediately after a
@@ -384,6 +385,22 @@ export class InlineCheckout extends LitElement {
       // head start.
       await showInGameAlert(translateText(this.successMessageKey));
       invalidateUserMe();
+      // A Plutonium top-up for an item from the end screen ("Get
+      // Plutonium"): reload straight onto the purchase landing, marked
+      // resume, which then opens the Store on that item (waiting for the
+      // Plutonium if it hasn't landed). replaceState, so no hashchange runs
+      // the landing before the reload. Never after a subscription.
+      if (
+        (this.request?.kind === "currency_pack" ||
+          this.request?.kind === "custom_currency") &&
+        hasPendingPurchase()
+      ) {
+        history.replaceState(
+          null,
+          "",
+          `${window.location.pathname}${window.location.search}#purchase-completed?status=true&type=currency_pack&resume=1`,
+        );
+      }
       window.location.reload();
       return;
     }
