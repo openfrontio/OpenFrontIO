@@ -611,6 +611,26 @@ describe("AccountModal — Progression tab", () => {
       ).toBe(false);
     });
 
+    it("a card owner's header shows the projected level too, marked provisional", async () => {
+      me = {
+        ...me,
+        player: { ...me.player, flares: ["playerCard:standard"] },
+      } as unknown as UserMeResponse;
+      await runCheck();
+      modal.open();
+      const header = () => modal.querySelector("[data-account-card-header]");
+      await settle(() => {
+        const card = header()?.querySelector("player-card") as
+          | (HTMLElement & { view: { badge: { level: number } | null } })
+          | null;
+        expect(card?.view.badge?.level).toBe(49);
+        expect(header()?.textContent).toContain("progression.level");
+        expect(
+          header()?.querySelector("[data-account-provisional]"),
+        ).not.toBeNull();
+      });
+    });
+
     it('puts "You" on the projected level, with the levels past the confirmed one pending', async () => {
       await runCheck();
       modal.open({ tab: "progression" });

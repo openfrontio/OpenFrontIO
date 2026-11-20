@@ -446,7 +446,13 @@ export class AccountModal extends BaseModal {
         </button>
       </div>`;
     }
-    const progress = player.progress;
+    // With any XP still waiting to be scored, provisionally, as the profile
+    // card shows it.
+    const provisional =
+      player.progress && player.publicId
+        ? provisionalProgress(player.publicId, player.progress)
+        : null;
+    const progress = provisional?.progress ?? player.progress;
     const view = buildPlayerCardView(
       {
         username: player.username ?? player.publicId ?? "",
@@ -481,6 +487,14 @@ export class AccountModal extends BaseModal {
             >
           </div>`
         : nothing;
+    const provisionalLabel = provisional?.provisional
+      ? html`<div
+          data-account-provisional
+          class="text-xs font-semibold text-amber-200/80"
+        >
+          ${translateText("progression.provisional_label")}
+        </div>`
+      : nothing;
     return html`<div data-account-card-header class="flex flex-col gap-2">
       <button
         type="button"
@@ -491,7 +505,7 @@ export class AccountModal extends BaseModal {
         ${translateText("account_modal.edit_card")}
       </button>
       <player-card size="account" animated .view=${view}></player-card>
-      ${bar}
+      ${bar} ${provisionalLabel}
     </div>`;
   }
 
