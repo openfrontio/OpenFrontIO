@@ -11,15 +11,22 @@ vi.mock("../../src/client/Api", async (importOriginal) => ({
   purchaseWithCurrency: vi.fn(),
 }));
 // `real` hands the call to the real userAuth, with fetch stubbed, so a
-// refresh's answer goes through Auth.ts's own handling.
-const auth = vi.hoisted(() => ({ session: true, real: false }));
+// refresh's answer goes through Auth.ts's own handling. Otherwise, like the
+// real one, a token expired or within 3 minutes of expiry is refreshed only
+// when asked to (shouldRefresh, the default).
+const auth = vi.hoisted(() => ({ session: true, real: false, expired: false }));
 vi.mock("../../src/client/Auth", async (importOriginal) => {
   const real = await importOriginal<typeof import("../../src/client/Auth")>();
   return {
     ...real,
     userAuth: vi.fn(async (shouldRefresh = true) => {
       if (auth.real) return real.userAuth(shouldRefresh);
-      return auth.session ? { jwt: "j", claims: {} } : false;
+      if (!auth.session) return false;
+      if (auth.expired) {
+        if (!shouldRefresh) return false;
+        auth.expired = false; // refreshed from the refresh cookie
+      }
+      return { jwt: "j", claims: {} };
     }),
   };
 });
@@ -80,6 +87,7 @@ describe("buying on the end screen", () => {
     });
     document.removeEventListener("userMeResponse", onUserMe);
     clearPendingPurchase();
+    auth.expired = false;
   });
 
   it("a success refreshes in place: no reload, the fresh profile broadcast", async () => {
@@ -242,6 +250,17 @@ describe("buying on the end screen", () => {
   it("a session but a failed profile read: unreachable, nothing sent", async () => {
     // getUserMe answers (and caches) false for a 5xx too, e.g. another
     // item's tap check failing between this one's confirm and its buy.
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe(
+      "unreachable",
+    );
+    expect(purchaseWithCurrency).not.toHaveBeenCalled();
+  });
+
+  it("a failed read and a token near expiry: unreachable, not signed out", async () => {
+    // getUserMe's cached false sent no request that would have refreshed
+    // the token; the refresh cookie is still good.
+    auth.expired = true;
     vi.mocked(getUserMe).mockResolvedValue(false);
     expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe(
       "unreachable",

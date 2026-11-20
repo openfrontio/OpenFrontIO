@@ -749,8 +749,11 @@ export async function purchaseCosmeticInPlace(
   if (userMe === false) {
     // getUserMe answers (and caches) false for a failed read too: only the
     // session says signed out, and not a refresh that got no answer
-    // (sessionUncertain). Either way nothing was sent.
-    const session = await userAuth(false);
+    // (sessionUncertain). Either way nothing was sent. With refresh: a
+    // cached false sent no request that would have renewed the token, and
+    // userAuth(false) calls one near expiry signed out despite a good
+    // refresh cookie.
+    const session = await userAuth();
     return {
       kind:
         session === false && !sessionUncertain() ? "signed_out" : "unreachable",
