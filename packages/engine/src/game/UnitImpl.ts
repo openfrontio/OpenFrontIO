@@ -762,6 +762,19 @@ export class UnitImpl implements Unit {
     this.mg.addUpdate(this.toUpdate());
   }
 
+  placeAtLevel(level: number): void {
+    this._level = level;
+    this._missileTimerQueue = [];
+    if (this._type === UnitType.SAMLauncher) {
+      // No upgrade in progress: dynamicSamRange gives samRange(level).
+      this._samLauncherState = undefined;
+    }
+    // unitCount()/unitsOwned() are level-weighted and memoised on these versions
+    this.mg.bumpUnitsVersion();
+    this._owner._myUnitsVersion++;
+    this.mg.addUpdate(this.toUpdate());
+  }
+
   decreaseLevel(destroyer?: Player): void {
     this._level--;
     if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {

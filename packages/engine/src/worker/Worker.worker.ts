@@ -2,8 +2,10 @@ import {
   ErrorUpdate,
   GameUpdateViewData,
 } from "@openfront/engine-api/game/GameUpdates";
+import { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import {
   AttackClusteredPositionsResultMessage,
+  EditorCommandResultMessage,
   ExtractSnapshotErrorMessage,
   ExtractSnapshotResultMessage,
   HumanDisconnectsResultMessage,
@@ -35,6 +37,8 @@ const ctx: Worker = self as any;
 // handed over (connect).
 let out: Pick<MessagePort, "postMessage"> = ctx;
 let gameRunner: Promise<GameRunner> | null = null;
+// Set by init: only the scenario editor's engine takes editor commands.
+let editor = false;
 // Yield threshold; not a backlog cap. Used to avoid monopolizing the worker task
 // and flooding the main thread with messages during catch-up.
 const MAX_TICKS_BEFORE_YIELD = 4;
@@ -173,27 +177,35 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
       message.port.onmessage = onMessage;
       break;
     case "init":
+      editor = message.editor === true;
       try {
         gameRunner = (
-          message.snapshot !== undefined
-            ? createGameRunnerFromSnapshot(
-                message.gameStartInfo,
-                message.snapshot,
-                message.clientID,
-                message.map,
-                gameUpdate,
-              ).then((gr) => {
-                // The page's view starts empty, so the first tick carries
-                // the state the snapshot restored.
-                gr.game.queueViewResync();
-                return gr;
-              })
-            : createGameRunner(
-                message.gameStartInfo,
-                message.clientID,
-                message.map,
-                gameUpdate,
+          editor && message.snapshot !== undefined
+            ? // The editing engine is built by replaying the document
+              // (docs/ScenarioEditor.md), never restored from a snapshot.
+              Promise.reject<GameRunner>(
+                new Error("an editor engine can't start from a snapshot"),
               )
+            : message.snapshot !== undefined
+              ? createGameRunnerFromSnapshot(
+                  message.gameStartInfo,
+                  message.snapshot,
+                  message.clientID,
+                  message.map,
+                  gameUpdate,
+                ).then((gr) => {
+                  // The page's view starts empty, so the first tick carries
+                  // the state the snapshot restored.
+                  gr.game.queueViewResync();
+                  return gr;
+                })
+              : createGameRunner(
+                  message.gameStartInfo,
+                  message.clientID,
+                  message.map,
+                  gameUpdate,
+                  editor,
+                )
         ).then(
           (gr) => {
             sendMessage({
@@ -221,6 +233,11 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
       break;
 
     case "turn":
+      // The editing engine never ticks.
+      if (editor) {
+        console.warn("an editor engine doesn't take turns");
+        break;
+      }
       if (!gameRunner) {
         throw new Error("Game runner not initialized");
       }
@@ -236,6 +253,15 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
       break;
 
     case "run_turns": {
+      if (editor) {
+        sendMessage({
+          type: "run_turns_result",
+          id: message.id,
+          gameUpdates: [],
+          error: { errMsg: "an editor engine doesn't take turns" },
+        } as RunTurnsResultMessage);
+        break;
+      }
       if (!gameRunner) {
         throw new Error("Game runner not initialized");
       }
@@ -506,6 +532,41 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
           error: error instanceof Error ? error.message : String(error),
         } as ExtractSnapshotErrorMessage);
       }
+      break;
+    }
+    case "editor_command": {
+      let error: string | undefined;
+      let map: MapFiles | undefined;
+      if (!editor || !gameRunner) {
+        error = "this engine is not in editor mode";
+      } else {
+        try {
+          const gr = await gameRunner;
+          const gameUpdates: GameUpdateViewData[] = [];
+          tickUpdateSink = (gu) => {
+            if ("updates" in gu) gameUpdates.push(gu);
+          };
+          try {
+            map = gr.applyEditorCommand(message.command);
+          } finally {
+            tickUpdateSink = null;
+          }
+          sendGameUpdateBatch(gameUpdates);
+        } catch (e) {
+          error = e instanceof Error ? e.message : String(e);
+        }
+      }
+      out.postMessage(
+        {
+          type: "editor_command_result",
+          id: message.id,
+          ...(error !== undefined ? { error } : {}),
+          ...(map !== undefined ? { map } : {}),
+        } as EditorCommandResultMessage,
+        map !== undefined
+          ? [map.mapBin!.buffer, map.map4xBin!.buffer, map.map16xBin!.buffer]
+          : [],
+      );
       break;
     }
     default:

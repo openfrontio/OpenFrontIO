@@ -60,27 +60,29 @@ const ExecRecordSchema = z.object({
   d: z.unknown(),
 });
 
-const RootSchema = z.object({
-  magic: z.literal(SNAPSHOT_MAGIC),
-  format: z.number().int(),
-  /** Build that wrote the snapshot. Informational: any build can read it. */
-  gitCommit: z.string(),
-  gameID: z.string().nullable(),
-  tick: z.number().int(),
-  gameConfig: z.unknown(),
-  game: VersionedSchema,
-  map: VersionedSchema,
-  miniMap: VersionedSchema,
-  players: z.array(VersionedSchema),
-  units: z.array(VersionedSchema),
-  attacks: z.array(VersionedSchema),
-  alliances: z.array(VersionedSchema),
-  allianceRequests: z.array(VersionedSchema),
-  stations: z.array(VersionedSchema),
-  railroads: z.array(VersionedSchema),
-  clusters: z.array(VersionedSchema),
-  execs: z.array(ExecRecordSchema),
-});
+const RootSchema = z.compile(
+  z.object({
+    magic: z.literal(SNAPSHOT_MAGIC),
+    format: z.number().int(),
+    /** Build that wrote the snapshot. Informational: any build can read it. */
+    gitCommit: z.string(),
+    gameID: z.string().nullable(),
+    tick: z.number().int(),
+    gameConfig: z.unknown(),
+    game: VersionedSchema,
+    map: VersionedSchema,
+    miniMap: VersionedSchema,
+    players: z.array(VersionedSchema),
+    units: z.array(VersionedSchema),
+    attacks: z.array(VersionedSchema),
+    alliances: z.array(VersionedSchema),
+    allianceRequests: z.array(VersionedSchema),
+    stations: z.array(VersionedSchema),
+    railroads: z.array(VersionedSchema),
+    clusters: z.array(VersionedSchema),
+    execs: z.array(ExecRecordSchema),
+  }),
+);
 type Root = z.infer<typeof RootSchema>;
 
 const EXEC_TYPES = EXECUTION_SNAPSHOT_TYPES;
