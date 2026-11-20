@@ -24,6 +24,7 @@ import {
   fetchCosmetics,
   invalidateCosmetics,
   purchaseCosmetic,
+  purchaseReloading,
 } from "../../src/client/Cosmetics";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
@@ -50,6 +51,7 @@ vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
   fetchCosmetics: vi.fn(),
   purchaseCosmetic: vi.fn(),
+  purchaseReloading: vi.fn(() => false),
   invalidateCosmetics: vi.fn(),
 }));
 
@@ -256,6 +258,7 @@ describe("Inventory In game tab", () => {
     } as Awaited<ReturnType<typeof userAuth>>);
     vi.mocked(getUserMe).mockResolvedValue(makeUser(OWNED));
     vi.mocked(purchaseCosmetic).mockReset();
+    vi.mocked(purchaseReloading).mockReset().mockReturnValue(false);
     modal = document.createElement("inventory-modal") as InventoryModal;
     modal.setAttribute("inline", "");
     document.body.appendChild(modal);
@@ -548,6 +551,24 @@ describe("Inventory In game tab", () => {
       ).toContain("inventory.loadout_on_device");
     });
 
+    it("choosing the active loadout again keeps the unsaved look", async () => {
+      const settings = new UserSettings();
+      settings.addLoadout(); // 01, active, nothing equipped
+      await open("crowns");
+      await clickTile(modal, "crown:gold_crown");
+      expect(modal.querySelector("[data-loadout-edited]")).not.toBeNull();
+      // The native select fires no change for the option already chosen;
+      // the component's callback is what a choice reaches.
+      modal
+        .querySelector<HTMLElement & { onSelect: (name: string) => void }>(
+          "inventory-loadout-select",
+        )!
+        .onSelect("01");
+      await settle(modal);
+      expect(new UserSettings().getSelectedCrownName()).toBe("gold_crown");
+      expect(modal.querySelector("[data-loadout-edited]")).not.toBeNull();
+    });
+
     it("shows <name> · edited with Update when the look differs", async () => {
       const settings = new UserSettings();
       settings.addLoadout(); // 01, active, nothing equipped
@@ -720,6 +741,8 @@ describe("Inventory In game tab", () => {
     });
 
     it("after a purchase the popup offers Equip now, which equips it", async () => {
+      // A successful purchase reloads the page; the profile can land first.
+      vi.mocked(purchaseReloading).mockReturnValue(true);
       vi.mocked(purchaseCosmetic).mockImplementation(async () => {
         document.dispatchEvent(
           new CustomEvent("userMeResponse", {
@@ -759,6 +782,74 @@ describe("Inventory In game tab", () => {
       );
       expect(equipNow).not.toBeNull();
       expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).toBeNull();
+    });
+
+    it("a closed Inventory leaves a remembered purchase for when it opens", async () => {
+      rememberPendingEquip("in-game-test-player", "crown:sale_crown");
+      // The Inventory is mounted but closed (prefetched) when a profile
+      // broadcast says the item is owned, e.g. after buying it in the Store.
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", {
+          detail: makeUser([...OWNED, "crown:sale_crown"]),
+        }),
+      );
+      await settle(modal);
+      expect(modal.querySelector("inventory-buy-dialog")).toBeNull();
+      expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).not.toBeNull();
+      // Its keys aren't taken over: Tab and Escape reach the page.
+      const tab = new KeyboardEvent("keydown", {
+        key: "Tab",
+        cancelable: true,
+      });
+      window.dispatchEvent(tab);
+      expect(tab.defaultPrevented).toBe(false);
+
+      modal.open({ tab: "crowns" });
+      await settle(modal);
+      expect(
+        modal.querySelector("inventory-buy-dialog [data-buy-equip-now]"),
+      ).not.toBeNull();
+      expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).toBeNull();
+    });
+
+    it("a purchase that fails without a reload forgets the item", async () => {
+      vi.mocked(purchaseCosmetic).mockResolvedValue(undefined);
+      vi.mocked(purchaseReloading).mockReturnValue(false);
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      await modal.querySelector<PurchaseButton>(
+        "inventory-buy-dialog purchase-button",
+      )!.onPurchaseHard!();
+      expect(purchaseCosmetic).toHaveBeenCalledTimes(1);
+      expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).toBeNull();
+    });
+
+    it("a purchase that throws forgets the item", async () => {
+      vi.mocked(purchaseCosmetic).mockRejectedValue(new Error("network"));
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      const purchase = modal as unknown as {
+        purchase(item: unknown, method: "hard"): Promise<unknown>;
+        buying: unknown;
+      };
+      await expect(purchase.purchase(purchase.buying, "hard")).rejects.toThrow(
+        "network",
+      );
+      expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).toBeNull();
+    });
+
+    it("a purchase that reloads the page keeps the item for Equip now", async () => {
+      vi.mocked(purchaseCosmetic).mockResolvedValue(undefined);
+      vi.mocked(purchaseReloading).mockReturnValue(true);
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      await modal.querySelector<PurchaseButton>(
+        "inventory-buy-dialog purchase-button",
+      )!.onPurchaseHard!();
+      expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).not.toBeNull();
     });
 
     it("keeps the record while the item isn't owned yet, until it lapses", async () => {
@@ -1054,6 +1145,36 @@ describe("Inventory In game tab", () => {
       await settle(modal);
       expect(modal.querySelector("inventory-buy-dialog")).toBeNull();
       expect(document.activeElement).toBe(main);
+    });
+
+    it("an alert over the dialog keeps Tab and gets Escape", async () => {
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      // The purchase flow's alerts (showInGameAlert) go on document.body.
+      const alert = document.createElement("confirm-dialog");
+      let cancelled = 0;
+      alert.addEventListener("cancel", () => cancelled++);
+      document.body.appendChild(alert);
+      (document.activeElement as HTMLElement | null)?.blur();
+
+      const tab = new KeyboardEvent("keydown", {
+        key: "Tab",
+        cancelable: true,
+      });
+      window.dispatchEvent(tab);
+      expect(tab.defaultPrevented).toBe(false);
+      expect(
+        modal
+          .querySelector("inventory-buy-dialog")!
+          .contains(document.activeElement),
+      ).toBe(false);
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await settle(modal);
+      expect(cancelled).toBe(1);
+      expect(modal.querySelector("inventory-buy-dialog")).not.toBeNull();
+      alert.remove();
     });
 
     it("Escape leaves the dialog open while the purchase confirm is open", async () => {
