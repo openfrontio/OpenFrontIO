@@ -21,29 +21,33 @@ export function applyEditorCommand(
 ): void {
   switch (command.type) {
     case "add_nation": {
-      // Removed nations keep their player (see removeNation), and with it
-      // their id: a view would take a new nation under it for the old one.
-      if (game.allPlayers().some((p) => p.id() === command.id)) {
+      if (game.hasPlayer(command.id)) {
         throw new Error(`player ${command.id} already exists`);
+      }
+      const info = new PlayerInfo(
+        command.name,
+        PlayerType.Nation,
+        null,
+        command.id,
+        false,
+        null,
+        [],
+        null,
+        command.flag,
+      );
+      // Removed nations keep their player (see removeNation). Adding the id
+      // again brings that player back, as the editor's undo does, so a view
+      // sees the same player return and never a new one under an old id.
+      if (game.allPlayers().some((p) => p.id() === command.id)) {
+        game.restoreNation(info);
+        return;
       }
       // Small ids start at 1 and are never reused (removed nations keep
       // theirs), and a tile stores its owner's in 12 bits.
       if (game.allPlayers().length >= MAX_SMALL_ID) {
         throw new Error(`no player ids left (the limit is ${MAX_SMALL_ID})`);
       }
-      game.addNation(
-        new PlayerInfo(
-          command.name,
-          PlayerType.Nation,
-          null,
-          command.id,
-          false,
-          null,
-          [],
-          null,
-          command.flag,
-        ),
-      );
+      game.addNation(info);
       return;
     }
     case "remove_nation":
