@@ -89,10 +89,27 @@ describe("resuming after the top-up", () => {
     expect(peekPendingPurchase("p1")).toBeNull();
   });
 
-  it("does nothing signed out", async () => {
+  it("on a fresh landing, waits for the app's first profile", async () => {
+    // The landing runs before the page has signed in: no profile yet.
     vi.mocked(getUserMe).mockResolvedValue(false);
     rememberPendingPurchase("p1", "cardBackground:bg_x");
-    expect(await resumePendingPurchase()).toBe(false);
+    const resumed = resumePendingPurchase();
+    await Promise.resolve();
+    document.dispatchEvent(new CustomEvent("userMeResponse", { detail: me() }));
+    expect(await resumed).toBe(true);
+    expect(window.location.hash).toBe(
+      "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x",
+    );
+  });
+
+  it("does nothing signed out", async () => {
+    vi.useFakeTimers();
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    rememberPendingPurchase("p1", "cardBackground:bg_x");
+    const resumed = resumePendingPurchase();
+    await vi.advanceTimersByTimeAsync(20_000);
+    vi.useRealTimers();
+    expect(await resumed).toBe(false);
     expect(window.location.hash).toBe("");
   });
 

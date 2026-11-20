@@ -244,7 +244,32 @@ export function handlePurchaseReturn(
  */
 export async function resumePendingPurchase(): Promise<boolean> {
   const me = await getUserMe();
-  if (me === false) return false;
+  if (me !== false) return resumePendingPurchaseFor(me);
+  // On a fresh landing this runs before the page has signed in, so there is
+  // no profile yet: try once more on the app's first profile broadcast.
+  return new Promise<boolean>((resolve) => {
+    const onUserMe = (e: Event) => {
+      done();
+      const fresh = (e as CustomEvent<UserMeResponse | false>).detail;
+      resolve(fresh ? resumePendingPurchaseFor(fresh) : false);
+    };
+    const timer = setTimeout(() => {
+      done();
+      resolve(false);
+    }, RESUME_WAIT_MS);
+    const done = () => {
+      clearTimeout(timer);
+      document.removeEventListener("userMeResponse", onUserMe);
+    };
+    document.addEventListener("userMeResponse", onUserMe);
+  });
+}
+
+// How long a fresh landing waits for the player's profile before giving up
+// (signed out, or the API unreachable).
+const RESUME_WAIT_MS = 15_000;
+
+function resumePendingPurchaseFor(me: UserMeResponse): boolean {
   const player = me.player.publicId;
   if (!player) return false;
   const key = peekPendingPurchase(player);
