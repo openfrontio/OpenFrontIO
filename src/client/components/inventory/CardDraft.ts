@@ -243,9 +243,11 @@ export class CardEditor {
   private seededFrom: UserMeResponse | null = null;
   private savedTimer: ReturnType<typeof setTimeout> | null = null;
   /**
-   * The Inventory closed while a save was in flight: the draft it was
-   * dropped to. Until it's edited again, the draft follows what that save
-   * stores.
+   * The changes were dropped (Discard, or the Inventory closed) while a save
+   * was in flight: the draft that save sent, which the draft was reset to.
+   * They end on what the server confirms: the stored card if the save lands
+   * (edits made since stay, built on what it sent), the old card if it
+   * fails (edits made since go on top of that).
    */
   private droppedTo: CardDraft | null = null;
   /** The draft the save in flight sent. */
@@ -329,8 +331,19 @@ export class CardEditor {
    * edits made since it started: `saved` is still the card it replaces, and
    * going back to that would undo the save once it lands. */
   discard(): void {
-    this.draft = cloneDraft(this.sending ?? this.saved);
+    if (this.sending !== null) {
+      this.dropToSending(this.sending);
+    } else {
+      this.draft = cloneDraft(this.saved);
+    }
     this.afterEdit();
+  }
+
+  /** Drops the changes while a save runs: to what it sent (`saved` is still
+   * the card it replaces, and going back to that would undo it). */
+  private dropToSending(sending: CardDraft): void {
+    this.draft = cloneDraft(sending);
+    this.droppedTo = cloneDraft(sending);
   }
 
   /** Resolves once no save is in flight (at once when none is). */
@@ -387,9 +400,17 @@ export class CardEditor {
     const result = await saveCardLoadout(body);
     this.sending = null;
     if (!result.ok) {
-      // Closed meanwhile: its changes are gone, so no Retry is left over.
-      this.saveState = this.droppedTo !== null ? "idle" : "failed";
+      // Dropped meanwhile: the draft goes back to the card the server kept,
+      // with any edit made since, and no Retry is left over.
+      const droppedTo = this.droppedTo;
       this.droppedTo = null;
+      if (droppedTo !== null) {
+        this.draft = cardChanges(droppedTo, this.draft).reduce(
+          (draft, change) => pickInto(draft, change.slot, change.to),
+          cloneDraft(this.saved),
+        );
+      }
+      this.saveState = droppedTo !== null ? "idle" : "failed";
       this.emit();
       return false;
     }
@@ -403,18 +424,13 @@ export class CardEditor {
       background: stored.background ?? null,
       trackers: stored.trackers.map((stat) => ({ stat })),
     });
-    // Nothing edited while it saved: the draft becomes the stored card. The
-    // Inventory closed meanwhile: the draft was reset to the card this save
-    // replaces, so any edit made since goes on top of the stored card
-    // instead (kept as it is, its other slots would undo the save).
-    const droppedTo = this.droppedTo;
+    // Nothing edited while it saved (or since a drop, which reset the draft
+    // to what it sent): the draft becomes the stored card. An edit made
+    // meanwhile is kept as it is: it was made on what was sent, which the
+    // stored card only differs from by closed-up gaps, so it names the
+    // same trackers.
     this.droppedTo = null;
-    if (droppedTo !== null) {
-      this.draft = cardChanges(droppedTo, this.draft).reduce(
-        (draft, change) => pickInto(draft, change.slot, change.to),
-        cloneDraft(storedDraft),
-      );
-    } else if (cardChanges(sent, this.draft).length === 0) {
+    if (cardChanges(sent, this.draft).length === 0) {
       this.draft = cloneDraft(storedDraft);
     }
     this.saved = storedDraft;
@@ -449,10 +465,10 @@ export class CardEditor {
    */
   settle(): void {
     this.clearSavedTimer();
-    this.draft = cloneDraft(this.saved);
-    if (this.saveState === "saving") {
-      this.droppedTo = cloneDraft(this.draft);
+    if (this.sending !== null) {
+      this.dropToSending(this.sending);
     } else {
+      this.draft = cloneDraft(this.saved);
       this.saveState = "idle";
     }
     this.emit();

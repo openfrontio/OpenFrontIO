@@ -290,6 +290,71 @@ describe("CardEditor", () => {
     ]);
   });
 
+  it("an edit after a close mid-save hits the tracker it names, not its row in the stored card", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD));
+    // Clear row 1: the stored card closes the gap, [nukes, best_elo, —].
+    editor.pick({ kind: "tracker", index: 0 }, null);
+    const saving = editor.save();
+    editor.settle();
+    // Reopened: remove nukes (row 2 as the player sees it).
+    const row = editor.draft.rows.tracker.indexOf("nukes_launched");
+    editor.pick({ kind: "tracker", index: row }, null);
+    finish({ ok: true, loadout: {} });
+    await saving;
+    expect(editor.saved.rows.tracker).toEqual([
+      "nukes_launched",
+      "best_elo",
+      null,
+    ]);
+    expect(editor.draft.rows.tracker).toContain("best_elo");
+    expect(editor.draft.rows.tracker).not.toContain("nukes_launched");
+    expect(
+      loadoutBody(editor.draft, { title: null, taunt: null }).trackers,
+    ).toEqual(["best_elo"]);
+  });
+
+  it("Discard mid-save, then the save fails: the draft ends on the card the server kept", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(
+      me(CARD, ["cardBackground:bg_pacific", "cardBackground:bg_storm"]),
+    );
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    editor.discard();
+    finish({ ok: false, error: "failed" });
+    await saving;
+    expect(editor.draft.background).toBe("bg_pacific");
+    expect(editor.changeCount()).toBe(0);
+    expect(editor.saveState).toBe("idle");
+  });
+
+  it("an edit after a close mid-save that then fails stays, on the card the server kept", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(
+      me(CARD, [
+        "cardBackground:bg_pacific",
+        "cardBackground:bg_storm",
+        "cardTracker:games_played",
+      ]),
+    );
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    editor.settle();
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
+    finish({ ok: false, error: "failed" });
+    await saving;
+    expect(editor.changes()).toEqual([
+      { slot: { kind: "tracker", index: 0 }, from: "wins", to: "games_played" },
+    ]);
+  });
+
   it("closing mid-save that then fails leaves no Retry behind", async () => {
     let finish!: (v: unknown) => void;
     api.save.mockReturnValue(new Promise((r) => (finish = r)));
