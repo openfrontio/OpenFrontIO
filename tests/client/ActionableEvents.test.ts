@@ -101,6 +101,11 @@ describe("actionable-events", () => {
     Object.defineProperty(e, "animationName", { value: animationName });
     card.parentElement!.parentElement!.dispatchEvent(e);
   };
+  const icons = (card: HTMLElement) =>
+    [...card.querySelectorAll("of-icon")].map((icon) =>
+      icon.getAttribute("name"),
+    );
+  const tint = (card: HTMLElement) => card.querySelector("[data-tint]");
   const sounds = () =>
     events
       .filter((e) => e instanceof PlaySoundEffectEvent)
@@ -226,6 +231,15 @@ describe("actionable-events", () => {
       "events_display.accept_alliance",
       "events_display.reject_alliance",
     ]);
+  });
+
+  it("marks a request with the handshake and leaves it untinted", async () => {
+    await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(ANNA)] });
+    const anna = cardOf("Anna")!;
+
+    expect(icons(anna)).toContain("alliance");
+    expect(icons(anna)).not.toContain("hourglass");
+    expect(tint(anna)).toBeNull();
   });
 
   it("plays the request sound when a request arrives", async () => {
@@ -646,6 +660,14 @@ describe("actionable-events", () => {
         "renew",
         "ignore",
       ]);
+    });
+
+    it("stands out from a request with an hourglass and a tint", async () => {
+      const card = await renewalWith(BORIS);
+
+      expect(icons(card)).toContain("hourglass");
+      expect(icons(card)).not.toContain("alliance");
+      expect(tint(card)).not.toBeNull();
     });
 
     it("counts down to the end of the alliance", async () => {

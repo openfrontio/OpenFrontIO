@@ -42,6 +42,7 @@ import {
 import { requestTicksLeft, ticksToSeconds } from "../GameTicks";
 import { keepPressKeysFromGame, pressWithoutFocus } from "../HudKeys";
 import { timeLeftLine } from "../TimeLeftLine";
+import { TINT } from "../Tint";
 import { eventText, EventTextPart } from "./EventText";
 
 interface GameEvent {
@@ -191,13 +192,6 @@ const ROW =
 // into its place. One grid track, as an fr track can be animated and a
 // height of auto cannot.
 const LEAVING = "grid animate-event-out";
-// Important rows with a tone: a light fade of the tone's colour, strongest at
-// the row's end and gone before the text. A child, so the row's hover draws
-// over it; it does not fade with the HUD opacity, as it is content. It is
-// drawn twice as strong at half opacity, so a new row can land with it at
-// full strength and let it settle by fading opacity alone.
-const TINT =
-  "pointer-events-none absolute inset-0 bg-linear-to-l from-current/40 via-current/10 via-55% to-transparent opacity-50 animate-event-arrive motion-reduce:animate-none";
 // An icon column, then the text. The icon's box is one line tall and sits on
 // the first line, so a wrapped row keeps its icon at the top. A new row's
 // content rises into place; the row's own height does not open, as that
