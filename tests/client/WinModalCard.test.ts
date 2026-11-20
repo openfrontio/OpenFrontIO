@@ -426,3 +426,158 @@ describe("WinModal Get the look block", () => {
     expect(block(modal)).toBeNull();
   });
 });
+
+// Buying from the block: balances and ownership refresh in place from the
+// /users/@me broadcast; an item bought here reads Owned ✓ where it was bought.
+describe("WinModal Get the look buying", () => {
+  const bg = (name: string) => ({
+    type: "cardBackground",
+    item: { name, rarity: "epic", product: null },
+    state: "buy",
+    priceHard: 400,
+  });
+  const SALUTE = {
+    type: "taunt",
+    item: { name: "salute", rarity: "epic", product: null },
+    state: "buy",
+    priceSoft: 800,
+  };
+  const game = {
+    gameID: () => "g1",
+    config: () => ({ gameConfig: () => ({}) }),
+    myPlayer: () => null,
+    resumedFromSave: () => false,
+  };
+  type Block = HTMLElement & {
+    looks: { name: string; items: { item: { name: string } }[] }[];
+    balances: { hard: number; soft: number } | null;
+    owned: ReadonlySet<string>;
+    signedIn: boolean;
+  };
+  const block = (modal: HTMLElement) =>
+    modal.querySelector("loadout-row") as Block;
+  const broadcast = (flares: string[], hard: number, soft: number) =>
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", {
+        detail: {
+          player: { publicId: "p1", flares, currency: { hard, soft } },
+        },
+      }),
+    );
+  const settle = (modal: HTMLElement) =>
+    (modal as unknown as { updateComplete: Promise<unknown> }).updateComplete;
+
+  beforeEach(() => {
+    localStorage.setItem("gamesPlayed", "10");
+    clearSavedLooks();
+    vi.spyOn(UserSettings.prototype, "anonymousNames").mockReturnValue(false);
+  });
+  afterEach(() => {
+    document.body.innerHTML = "";
+    localStorage.removeItem("gamesPlayed");
+    clearSavedLooks();
+    vi.restoreAllMocks();
+  });
+
+  it("gives the block the balances and that the viewer is signed in", async () => {
+    saveLook("g1", {
+      clientID: "a",
+      name: "Ada",
+      items: [bg("bg_a")] as never,
+    });
+    const modal = await renderModal({
+      game,
+      endCardMode: "none",
+      viewerFlares: [],
+      balances: { hard: 500, soft: 1200 },
+      signedIn: true,
+    });
+    expect(block(modal).balances).toEqual({ hard: 500, soft: 1200 });
+    expect(block(modal).signedIn).toBe(true);
+  });
+
+  it("signed out: the block says so", async () => {
+    saveLook("g1", {
+      clientID: "a",
+      name: "Ada",
+      items: [bg("bg_a")] as never,
+    });
+    const modal = await renderModal({
+      game,
+      endCardMode: "none",
+      viewerFlares: [],
+      balances: null,
+      signedIn: false,
+    });
+    expect(block(modal).signedIn).toBe(false);
+  });
+
+  it("a fresh profile updates the balances on screen", async () => {
+    saveLook("g1", {
+      clientID: "a",
+      name: "Ada",
+      items: [bg("bg_a")] as never,
+    });
+    const modal = await renderModal({
+      game,
+      endCardMode: "none",
+      viewerFlares: [],
+      balances: { hard: 500, soft: 0 },
+      signedIn: true,
+    });
+    broadcast([], 100, 0);
+    await settle(modal);
+    expect(block(modal).balances).toEqual({ hard: 100, soft: 0 });
+  });
+
+  it("bought here: Owned ✓ in its row; the other names never offer it", async () => {
+    saveLook("g1", {
+      clientID: "a",
+      name: "Ada",
+      items: [SALUTE, bg("bg_a")] as never,
+    });
+    const modal = await renderModal({
+      game,
+      endCardMode: "eliminatedBy",
+      endCardView: defaultPlayerCardView("Volt", "UN"),
+      lastEndCard: { kind: "eliminatedBy", clientID: "killer" },
+      loadout: [SALUTE],
+      viewerFlares: [],
+      balances: { hard: 0, soft: 5000 },
+      signedIn: true,
+    });
+    block(modal).dispatchEvent(
+      new CustomEvent("look-owned", {
+        detail: { key: "taunt:salute" },
+        bubbles: true,
+      }),
+    );
+    broadcast(["taunt:salute"], 0, 4200);
+    await settle(modal);
+    const looks = block(modal).looks;
+    expect(looks.map((l) => l.name)).toEqual(["Volt", "Ada"]);
+    expect(looks[0].items.map((i) => i.item.name)).toEqual(["salute"]);
+    expect(looks[1].items.map((i) => i.item.name)).toEqual(["bg_a"]);
+    expect(block(modal).owned.has("taunt:salute")).toBe(true);
+  });
+
+  it("owned elsewhere (not bought here): it drops out", async () => {
+    saveLook("g1", {
+      clientID: "a",
+      name: "Ada",
+      items: [bg("bg_a"), bg("bg_a2")] as never,
+    });
+    const modal = await renderModal({
+      game,
+      endCardMode: "none",
+      viewerFlares: [],
+      balances: { hard: 500, soft: 0 },
+      signedIn: true,
+    });
+    broadcast(["cardBackground:bg_a"], 500, 0);
+    await settle(modal);
+    expect(block(modal).looks[0].items.map((i) => i.item.name)).toEqual([
+      "bg_a2",
+    ]);
+  });
+});

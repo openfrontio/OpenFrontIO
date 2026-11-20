@@ -4,7 +4,12 @@ import { customElement, property, state } from "lit/decorators.js";
 import { cardItemName } from "../../components/card/CardItems";
 import "../../components/CosmeticCard";
 import "../../components/PurchaseButton";
-import { purchaseCosmetic, type ResolvedCosmetic } from "../../Cosmetics";
+import {
+  type PurchaseResult,
+  purchaseCosmeticInPlace,
+  type ResolvedCosmetic,
+} from "../../Cosmetics";
+import { showInGameAlert, showInGameConfirm } from "../../InGameModal";
 import { type PricedItem, shownPrice } from "../../ShownPrice";
 import { translateText } from "../../Utils";
 
@@ -105,6 +110,15 @@ export interface LoadoutTracker {
 export class LoadoutRow extends LitElement {
   @property({ attribute: false }) looks: readonly LookRow[] = [];
   @property({ attribute: false }) tracker: LoadoutTracker | null = null;
+  // The viewer's balances, for the confirm box's "you'll have N left".
+  @property({ attribute: false }) balances: {
+    hard: number;
+    soft: number;
+  } | null = null;
+  // Item keys the viewer owns now: bought here, they read Owned ✓.
+  @property({ attribute: false }) owned: ReadonlySet<string> = new Set();
+  // Signed out: "Sign in to buy" in place of the buy buttons.
+  @property({ type: Boolean }) signedIn = true;
   // Index into `looks` of the chip shown.
   @state() private selected = 0;
   // On a phone the row starts collapsed to one line; tapping opens it.
@@ -150,14 +164,85 @@ export class LoadoutRow extends LitElement {
     };
   }
 
-  private buy(entry: LoadoutItem, method: "hard" | "soft") {
+  // Buys in place (purchaseCosmeticInPlace): a reload would end the game.
+  // Owned (or already owned): tells the end screen, which marks it Owned ✓
+  // here and drops it elsewhere. A shortfall goes back to the button's box.
+  private async buy(
+    entry: LoadoutItem,
+    method: "hard" | "soft",
+  ): Promise<PurchaseResult> {
     const key = `${entry.type}:${entry.item.name}`;
     this.tracker?.click(key, PLACEMENT);
-    return purchaseCosmetic(this.resolved(entry), method, PLACEMENT);
+    const outcome = await purchaseCosmeticInPlace(
+      this.resolved(entry),
+      method,
+      PLACEMENT,
+    );
+    switch (outcome.kind) {
+      case "owned":
+        this.dispatchEvent(
+          new CustomEvent("look-owned", { detail: { key }, bubbles: true }),
+        );
+        return;
+      case "insufficient":
+        return outcome.info;
+      case "failed":
+        await showInGameAlert(
+          translateText("win_modal.purchase_failed_not_charged"),
+        );
+        return;
+      default:
+        return;
+    }
+  }
+
+  // Signing in leaves the game: say so first.
+  private async signIn(): Promise<void> {
+    const go = await showInGameConfirm(
+      translateText("win_modal.sign_in_leaves_game"),
+      {
+        variant: "warning",
+        confirmText: translateText("win_modal.sign_in_to_buy"),
+      },
+    );
+    if (go) window.location.href = "/#modal=account";
+  }
+
+  private renderBuy(entry: LoadoutItem, key: string): TemplateResult {
+    if (this.owned.has(key)) {
+      return html`<span
+        data-look-owned
+        class="flex min-h-11 items-center justify-center rounded-lg border border-emerald-400/40 bg-emerald-500/15 text-sm font-bold text-emerald-300"
+        >${translateText("win_modal.look_owned")}</span
+      >`;
+    }
+    if (!this.signedIn) {
+      return html`<button
+        type="button"
+        data-look-sign-in
+        class="min-h-11 rounded-lg border border-blue-500/40 bg-blue-500/20 px-2 text-sm font-bold text-blue-200 transition hover:bg-blue-600 hover:text-white"
+        @click=${() => void this.signIn()}
+      >
+        ${translateText("win_modal.sign_in_to_buy")}
+      </button>`;
+    }
+    const prices = shownPrices(entry);
+    return html`<purchase-button
+      .priceHard=${prices.priceHard}
+      .priceSoft=${prices.priceSoft}
+      .listPriceHard=${prices.listPriceHard}
+      .listPriceSoft=${prices.listPriceSoft}
+      .promotion=${prices.promotion}
+      .balances=${this.balances}
+      .busyKey=${key}
+      .rarity=${String(entry.item.rarity)}
+      .itemName=${cardItemName(entry.type, entry.item)}
+      .onPurchaseHard=${() => this.buy(entry, "hard")}
+      .onPurchaseSoft=${() => this.buy(entry, "soft")}
+    ></purchase-button>`;
   }
 
   private renderItem(entry: LoadoutItem): TemplateResult {
-    const prices = shownPrices(entry);
     const key = `${entry.type}:${entry.item.name}`;
     return html`<div
       data-loadout-item=${key}
@@ -165,7 +250,7 @@ export class LoadoutRow extends LitElement {
       data-cosmetic-rarity=${String(entry.item.rarity)}
       class="flex w-40 flex-col gap-1.5 rounded-xl border-2 p-2 text-left text-white"
     >
-      <span class="text-[10px] font-bold uppercase tracking-wider text-white/50"
+      <span class="text-[11px] font-bold uppercase tracking-wider text-white/50"
         >${translateText(`win_modal.loadout_type_${entry.type}`)}</span
       >
       <span class="truncate text-sm font-bold"
@@ -173,17 +258,7 @@ export class LoadoutRow extends LitElement {
       >
       ${
         entry.state === "buy"
-          ? html`<purchase-button
-              .priceHard=${prices.priceHard}
-              .priceSoft=${prices.priceSoft}
-              .listPriceHard=${prices.listPriceHard}
-              .listPriceSoft=${prices.listPriceSoft}
-              .promotion=${prices.promotion}
-              .rarity=${String(entry.item.rarity)}
-              .itemName=${cardItemName(entry.type, entry.item)}
-              .onPurchaseHard=${() => this.buy(entry, "hard")}
-              .onPurchaseSoft=${() => this.buy(entry, "soft")}
-            ></purchase-button>`
+          ? this.renderBuy(entry, key)
           : html`<span
               class="rounded-md border border-dashed border-white/30 py-1 text-center text-xs font-bold text-white/70"
               >🔒 ${entry.unlockLabel}</span
@@ -202,14 +277,17 @@ export class LoadoutRow extends LitElement {
           type="button"
           data-look-chip=${l.clientID}
           aria-pressed=${i === index ? "true" : "false"}
-          class="shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-sm font-bold transition ${
-            i === index
-              ? "bg-malibu-blue text-white"
-              : "bg-white/10 text-white/80 hover:bg-white/20"
-          }"
+          class="group flex min-h-11 shrink-0 items-center"
           @click=${() => (this.selected = i)}
         >
-          ${l.name}
+          <span
+            class="whitespace-nowrap rounded-full px-3 py-1 text-sm font-bold transition ${
+              i === index
+                ? "bg-malibu-blue text-white"
+                : "bg-white/10 text-white/80 group-hover:bg-white/20"
+            }"
+            >${l.name}</span
+          >
         </button>`,
     );
     return html`<div
@@ -220,7 +298,7 @@ export class LoadoutRow extends LitElement {
       <button
         type="button"
         data-look-fold
-        class="flex w-full items-center justify-between text-sm font-bold text-white sm:hidden"
+        class="flex min-h-11 w-full items-center justify-between text-sm font-bold text-white sm:hidden"
         @click=${() => (this.open = !this.open)}
       >
         <span>${translateText("win_modal.get_the_look")}</span>

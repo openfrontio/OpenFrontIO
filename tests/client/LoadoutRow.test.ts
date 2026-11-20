@@ -16,6 +16,11 @@ vi.mock("../../src/client/components/card/HeldBack", () => ({
 vi.mock("../../src/client/Cosmetics", async (orig) => ({
   ...(await orig<typeof import("../../src/client/Cosmetics")>()),
   purchaseCosmetic: vi.fn(),
+  purchaseCosmeticInPlace: vi.fn(),
+}));
+vi.mock("../../src/client/InGameModal", () => ({
+  showInGameAlert: vi.fn().mockResolvedValue(true),
+  showInGameConfirm: vi.fn().mockResolvedValue(false),
 }));
 
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
@@ -23,12 +28,17 @@ import {
   buildPlayerCardView,
   type PlayerCardView,
 } from "../../src/client/components/card/PlayerCardModel";
+import { purchaseCosmeticInPlace } from "../../src/client/Cosmetics";
 import {
   type LoadoutItem,
   LoadoutRow,
   loadoutItems,
   promoChoice,
 } from "../../src/client/hud/layers/LoadoutRow";
+import {
+  showInGameAlert,
+  showInGameConfirm,
+} from "../../src/client/InGameModal";
 
 // Taunts and titles are held back (HeldBack.ts). The tests below exercise
 // the code behind them with both switched on; the "held back" block turns
@@ -388,5 +398,144 @@ describe("<loadout-row>", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+// Buying from the block: in place, never a reload (that would end the game).
+describe("<loadout-row> buying", () => {
+  let row: LoadoutRow;
+  afterEach(() => {
+    row?.remove();
+    document.body.innerHTML = "";
+    vi.mocked(purchaseCosmeticInPlace).mockReset();
+    vi.mocked(showInGameAlert).mockClear();
+    vi.mocked(showInGameConfirm).mockReset();
+    vi.mocked(showInGameConfirm).mockResolvedValue(false);
+  });
+
+  const BG: LoadoutItem = {
+    type: "cardBackground",
+    item: COSMETICS.cardBackgrounds!.bg_frontline as never,
+    state: "buy",
+    priceHard: 2400,
+  };
+  async function render(props: Partial<LoadoutRow>) {
+    row = document.createElement("loadout-row") as unknown as LoadoutRow;
+    Object.assign(row, {
+      tracker: {
+        observe: vi.fn(),
+        click: vi.fn(),
+        releaseDetached: vi.fn(),
+        dispose: vi.fn(),
+      },
+      looks: [{ clientID: "volt", name: "Volt", items: [BG] }],
+      balances: { hard: 3000, soft: 0 },
+      ...props,
+    });
+    document.body.appendChild(row as unknown as Node);
+    await row.updateComplete;
+  }
+  const q = (s: string) => (row as unknown as Element).querySelector(s);
+  const button = () =>
+    q("purchase-button") as unknown as {
+      busyKey: string;
+      balances: { hard: number; soft: number } | null;
+      onPurchaseHard: () => Promise<unknown>;
+    };
+
+  it("the button knows the balances and shares the item's busy key", async () => {
+    await render({});
+    expect(button().balances).toEqual({ hard: 3000, soft: 0 });
+    // One purchase in flight per item, across every button for it.
+    expect(button().busyKey).toBe("cardBackground:bg_frontline");
+  });
+
+  it("buys in place and reports the item owned", async () => {
+    vi.mocked(purchaseCosmeticInPlace).mockResolvedValue({
+      kind: "owned",
+      fresh: false,
+    });
+    await render({});
+    const heard = vi.fn();
+    (row as unknown as Element).addEventListener("look-owned", (e) =>
+      heard((e as CustomEvent).detail),
+    );
+    await button().onPurchaseHard();
+    expect(purchaseCosmeticInPlace).toHaveBeenCalledWith(
+      expect.objectContaining({ key: "cardBackground:bg_frontline" }),
+      "hard",
+      { kind: "card_loadout" },
+    );
+    expect(heard).toHaveBeenCalledWith({ key: "cardBackground:bg_frontline" });
+    expect(showInGameAlert).not.toHaveBeenCalled();
+  });
+
+  it("an owned item reads Owned ✓ in place of the button", async () => {
+    await render({ owned: new Set(["cardBackground:bg_frontline"]) });
+    expect(q("purchase-button")).toBeNull();
+    const owned = q("[data-look-owned]")!;
+    expect(owned.textContent).toContain("win_modal.look_owned");
+    expect(owned.className).toMatch(/min-h-11/);
+  });
+
+  it("a failure says nothing was charged; the button stays to buy", async () => {
+    vi.mocked(purchaseCosmeticInPlace).mockResolvedValue({ kind: "failed" });
+    await render({});
+    await button().onPurchaseHard();
+    expect(showInGameAlert).toHaveBeenCalledWith(
+      "win_modal.purchase_failed_not_charged",
+    );
+    expect(q("purchase-button")).not.toBeNull();
+  });
+
+  it("a shortfall goes back to the button's box", async () => {
+    const info = {
+      currency: "Plutonium",
+      shortfall: 100,
+      item: "Frontline",
+      canTopUp: true,
+      leavesGame: true,
+    };
+    vi.mocked(purchaseCosmeticInPlace).mockResolvedValue({
+      kind: "insufficient",
+      info,
+    });
+    await render({});
+    expect(await button().onPurchaseHard()).toEqual(info);
+  });
+
+  it("signed out: Sign in to buy, no buy buttons", async () => {
+    await render({ signedIn: false });
+    expect(q("purchase-button")).toBeNull();
+    const signIn = q("[data-look-sign-in]") as HTMLButtonElement;
+    expect(signIn.textContent).toContain("win_modal.sign_in_to_buy");
+    expect(signIn.className).toMatch(/min-h-11/);
+  });
+
+  it("Sign in to buy warns that it leaves the game first", async () => {
+    await render({ signedIn: false });
+    const before = window.location.hash;
+    (q("[data-look-sign-in]") as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(showInGameConfirm).toHaveBeenCalled());
+    expect(vi.mocked(showInGameConfirm).mock.calls[0][0]).toBe(
+      "win_modal.sign_in_leaves_game",
+    );
+    // Declined: still here.
+    expect(window.location.hash).toBe(before);
+  });
+
+  it("going on to sign in opens the account page", async () => {
+    vi.mocked(showInGameConfirm).mockResolvedValue(true);
+    await render({ signedIn: false });
+    (q("[data-look-sign-in]") as HTMLButtonElement).click();
+    await vi.waitFor(() => expect(window.location.hash).toBe("#modal=account"));
+    window.location.hash = "";
+  });
+
+  it("no text under 11px", async () => {
+    await render({});
+    expect((row as unknown as Element).innerHTML).not.toMatch(
+      /text-\[(\d|10)px\]/,
+    );
   });
 });
