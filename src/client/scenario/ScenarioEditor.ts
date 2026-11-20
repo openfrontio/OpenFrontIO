@@ -138,6 +138,8 @@ export class ScenarioEditor extends LitElement {
     this.status = "loading";
     try {
       const doc = await scenarioDrafts.load(id);
+      // Removed meanwhile (a lobby join): leave the URL and engine alone.
+      if (this.abort.signal.aborted) return;
       if (doc === undefined) {
         this.fail(translateText("scenario_editor.draft_not_found"));
         return;
@@ -176,6 +178,7 @@ export class ScenarioEditor extends LitElement {
       const { doc, files } = await begin();
       const id = generateID();
       await scenarioDrafts.save(id, doc);
+      if (this.abort.signal.aborted) return;
       this.setDraft(id);
       await this.startSession(doc, files);
     } catch (e) {
@@ -299,10 +302,15 @@ export class ScenarioEditor extends LitElement {
       doc,
       async (files) => {
         const terrain = await loadTerrainMap(copyMapFiles(files));
+        if (signal.aborted) throw new DOMException("closed", "AbortError");
         const worker = new WorkerClient(start, undefined, undefined, files);
         session.worker = worker;
         await worker.initialize();
-        if (signal.aborted) throw new DOMException("closed", "AbortError");
+        if (signal.aborted) {
+          // endSession may have run before the worker existed.
+          worker.cleanup();
+          throw new DOMException("closed", "AbortError");
+        }
         const view = new GameView(
           worker,
           config,
@@ -317,6 +325,7 @@ export class ScenarioEditor extends LitElement {
         builder = this.createView(
           session,
           terrain.gameMap,
+          view,
           config,
           userSettings,
         );
@@ -357,6 +366,7 @@ export class ScenarioEditor extends LitElement {
   private createView(
     session: Session,
     map: GameMap,
+    gameView: GameView,
     config: Config,
     userSettings: UserSettings,
   ): WebGLFrameBuilder {
@@ -403,6 +413,9 @@ export class ScenarioEditor extends LitElement {
       throw err;
     }
     session.view = view;
+    const builder = new WebGLFrameBuilder(view);
+    // The editor never ticks, so nothing else would redraw the state.
+    view.onContextRestored = () => builder.restoreContext(gameView);
 
     const camera = new ReplayCamera(mapWidth, mapHeight);
     camera.fit(canvas.clientWidth, canvas.clientHeight);
@@ -419,7 +432,7 @@ export class ScenarioEditor extends LitElement {
       session.rafId = requestAnimationFrame(loop);
     };
     session.rafId = requestAnimationFrame(loop);
-    return new WebGLFrameBuilder(view);
+    return builder;
   }
 
   /** The hover card's TransformHandler: the camera stands in for it. */

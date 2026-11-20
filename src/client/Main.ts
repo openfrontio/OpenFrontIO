@@ -338,6 +338,8 @@ class Client {
    * draft it opens while its chunk loads.
    */
   private scenarioEditor: Pick<ScenarioEditor, "draftId"> | null = null;
+  /** A join closed the scenario editor; the menu is gone. */
+  private menuGoneForJoin = false;
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
@@ -694,6 +696,9 @@ class Client {
         // superseded cannot clear the flag its successor is relying on.
         if (joinOwnsInFlightFlag(this.mostRecentJoinEvent, event.timeStamp)) {
           this.joinInFlight = false;
+          // The join closed the scenario editor, which had replaced the
+          // menu: nothing is left on the page, so go home.
+          if (this.menuGoneForJoin) window.location.href = homeHref();
         }
         throw error;
       });
@@ -1480,20 +1485,22 @@ class Client {
   private async openScenarioEditor(draft: string | null): Promise<void> {
     // Both popstate and hashchange can get here; only the first opens it.
     if (this.scenarioEditor !== null) return;
-    this.scenarioEditor = { draftId: draft };
+    const request = { draftId: draft };
+    this.scenarioEditor = request;
     let ScenarioEditorClass: typeof ScenarioEditor;
     try {
       ({ ScenarioEditor: ScenarioEditorClass } =
         await import("./scenario/ScenarioEditor"));
     } catch (err) {
       console.error("scenario editor failed to load:", err);
-      this.scenarioEditor = null;
+      if (this.scenarioEditor === request) this.scenarioEditor = null;
       return;
     }
-    // A join may have started while the chunk loaded.
-    if (this.gameUnderway()) {
+    // A join may have started while the chunk loaded, and dropped this
+    // request even if it has since failed.
+    if (this.scenarioEditor !== request || this.gameUnderway()) {
       console.warn("scenario editor: ignored, a game started");
-      this.scenarioEditor = null;
+      if (this.scenarioEditor === request) this.scenarioEditor = null;
       return;
     }
     this.replaceMenu();
@@ -1978,6 +1985,10 @@ class Client {
     }
     if (this.scenarioEditor !== null) {
       console.log("joining lobby, tearing down scenario editor");
+      // Only the loaded editor has replaced the menu.
+      if (this.scenarioEditor instanceof HTMLElement) {
+        this.menuGoneForJoin = true;
+      }
       this.scenarioEditor = null;
       document.querySelector("scenario-editor")?.remove();
       if (parseScenarioEditorHash(window.location.hash) !== null) {
@@ -2105,6 +2116,7 @@ class Client {
     this.lobbyHandle = newLobbyHandle;
     // From here lobbyHandle is the guard.
     this.joinInFlight = false;
+    this.menuGoneForJoin = false;
 
     void this.lobbyHandle.prestart.then(() => {
       // The game is actually starting now (lobby wait is over). Let listeners that stay up
