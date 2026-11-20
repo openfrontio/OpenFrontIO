@@ -1113,6 +1113,36 @@ describe("Inventory In game tab", () => {
       expect(document.activeElement).toBe(main);
     });
 
+    it("an alert over the dialog keeps Tab and gets Escape", async () => {
+      await open("crowns");
+      await setFilter(modal, "all");
+      await clickTile(modal, "crown:sale_crown");
+      // The purchase flow's alerts (showInGameAlert) go on document.body.
+      const alert = document.createElement("confirm-dialog");
+      let cancelled = 0;
+      alert.addEventListener("cancel", () => cancelled++);
+      document.body.appendChild(alert);
+      (document.activeElement as HTMLElement | null)?.blur();
+
+      const tab = new KeyboardEvent("keydown", {
+        key: "Tab",
+        cancelable: true,
+      });
+      window.dispatchEvent(tab);
+      expect(tab.defaultPrevented).toBe(false);
+      expect(
+        modal
+          .querySelector("inventory-buy-dialog")!
+          .contains(document.activeElement),
+      ).toBe(false);
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await settle(modal);
+      expect(cancelled).toBe(1);
+      expect(modal.querySelector("inventory-buy-dialog")).not.toBeNull();
+      alert.remove();
+    });
+
     it("Escape leaves the dialog open while the purchase confirm is open", async () => {
       await open("crowns");
       await setFilter(modal, "all");
