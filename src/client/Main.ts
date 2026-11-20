@@ -2100,8 +2100,14 @@ class Client {
       void showInGameAlert(
         translateText("error_modal.game_client_failed"),
       ).then(() => {
-        // Unless the player has joined another game while the alert was up.
-        if (menuGone && !this.gameUnderway()) {
+        // Unless the player has joined another game, or opened the editor or
+        // a replay, while the alert was up.
+        if (
+          menuGone &&
+          !this.gameUnderway() &&
+          this.scenarioEditor === null &&
+          this.replayViewerID === null
+        ) {
           window.location.href = homeHref();
         }
       });
