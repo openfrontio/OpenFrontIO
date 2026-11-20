@@ -79,11 +79,14 @@ export class InventoryBuyDialog extends LitElement {
     }
   }
 
-  /** The purchase button's own dialog (confirm, or not enough currency,
-   * which is a confirm-dialog too), if one is open over this one. */
+  /** The dialog open over this one, if any: an alert from the purchase flow
+   * (showInGameAlert puts it on document.body, above everything), or the
+   * purchase button's own (confirm, or not enough currency). */
   private nestedConfirm(): Element | null {
-    const all = this.querySelectorAll("confirm-dialog");
-    return all.length > 0 ? all[all.length - 1] : null;
+    const alerts = document.querySelectorAll("body > confirm-dialog");
+    if (alerts.length > 0) return alerts[alerts.length - 1];
+    const own = this.querySelectorAll("confirm-dialog");
+    return own.length > 0 ? own[own.length - 1] : null;
   }
 
   private focusables(): HTMLElement[] {
@@ -118,7 +121,8 @@ export class InventoryBuyDialog extends LitElement {
     }
     if (event.key !== "Escape") return;
     // Escape is ours, never the Inventory's behind us. It closes the topmost
-    // dialog: the purchase button's own first (as its Cancel does), then this.
+    // dialog: an alert or the purchase button's own first (as its Cancel
+    // does), then this.
     event.stopPropagation();
     event.preventDefault();
     if (nested !== null) {

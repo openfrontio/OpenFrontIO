@@ -60,10 +60,12 @@ import {
   startPlayPurchase,
   startPurchase,
 } from "./Payments";
-import { shownPrice } from "./ShownPrice";
+import { currentPrice } from "./SalePrice";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
 import { UserSettings } from "./UserSettings";
 import { showToast, translateText } from "./Utils";
+
+export { currentPrice, saleHasEnded } from "./SalePrice";
 
 /**
  * Ceiling on the cosmetics catalog request. Matches the bound the auth calls
@@ -117,6 +119,23 @@ export interface InsufficientCurrency {
 
 /** Outcome of a purchase: unaffordable details, or void on success/redirect. */
 export type PurchaseResult = InsufficientCurrency | void;
+
+let purchaseReloadStarted = false;
+
+/**
+ * True once a purchase has started reloading the page. `purchaseCosmetic`
+ * calls `location.reload()` and then returns, so the caller runs again
+ * before the page unloads: this is how it tells that apart from a purchase
+ * that ended without a reload (failed, cancelled, or not enough currency).
+ */
+export function purchaseReloading(): boolean {
+  return purchaseReloadStarted;
+}
+
+function reloadAfterPurchase(): void {
+  purchaseReloadStarted = true;
+  window.location.reload();
+}
 
 export interface CosmeticPurchaseReturnActions {
   strip(): void;
@@ -940,7 +959,7 @@ export async function purchaseCosmetic(
       await showInGameAlert(
         translateText("store.change_tier_success", { tier: targetName }),
       );
-      window.location.reload();
+      reloadAfterPurchase();
       return;
     }
   }
@@ -1114,7 +1133,7 @@ export async function purchaseCosmetic(
         }
         await showInGameAlert(translateText("store.already_owned"));
         invalidateUserMe();
-        window.location.reload();
+        reloadAfterPurchase();
         return;
       default:
         await showInGameAlert(translateText("store.purchase_failed"));
@@ -1130,7 +1149,7 @@ export async function purchaseCosmetic(
     purchaseSuccessMessage(c.name, price, result.amount, method),
   );
   invalidateUserMe();
-  window.location.reload();
+  reloadAfterPurchase();
 }
 
 /**
@@ -1208,7 +1227,7 @@ async function purchasePack(
       ),
     );
     invalidateUserMe();
-    window.location.reload();
+    reloadAfterPurchase();
     return;
   }
   switch (result.code) {
@@ -1251,7 +1270,7 @@ async function purchasePack(
         }),
       );
       invalidateUserMe();
-      window.location.reload();
+      reloadAfterPurchase();
       return;
     case "unavailable":
       await showInGameAlert(translateText("store.pack_unavailable"));
@@ -1292,36 +1311,6 @@ function simpleHash(str: string): string {
     hash = hash & hash;
   }
   return hash.toString(36);
-}
-
-/**
- * An item's price in one currency as the store shows and the server charges
- * it now. While the item's own sale runs that is the catalog price (the sale
- * price); once the sale's endsAt has passed it is the list price, even if the
- * catalog in hand predates the end. The store's buttons and the purchase
- * balance check both read this, so they never disagree.
- */
-export function currentPrice(
-  item: {
-    priceHard?: number;
-    priceSoft?: number;
-    listPriceHard?: number;
-    listPriceSoft?: number;
-    promotion?: { endsAt: string };
-  },
-  currency: "hard" | "soft",
-): number | undefined {
-  return shownPrice(item, currency)?.price;
-}
-
-/** Whether the item's own sale has ended (its endsAt has passed). */
-export function saleHasEnded(item: {
-  promotion?: { endsAt: string };
-}): boolean {
-  return (
-    item.promotion !== undefined &&
-    new Date(item.promotion.endsAt).getTime() <= Date.now()
-  );
 }
 
 /**

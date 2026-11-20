@@ -2,7 +2,11 @@ import {
   type Cosmetics,
   ownsPlayerCard,
 } from "@openfront/shared/CosmeticSchemas";
-import type { CardItem, CardItemType } from "./CardItems";
+import {
+  type CardItem,
+  type CardItemType,
+  isOfferedCardItem,
+} from "./CardItems";
 import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";
 import type { PlayerCardView } from "./PlayerCardModel";
 
@@ -73,7 +77,8 @@ export function loadoutItems(
   const out: LoadoutItem[] = [];
   for (const [type, item] of candidates) {
     if (out.length === MAX_ITEMS) break;
-    if (item === undefined || owned.has(`${type}:${item.name}`)) continue;
+    if (item === undefined || !isOfferedCardItem(type, item)) continue;
+    if (owned.has(`${type}:${item.name}`)) continue;
     const entry = toItem(type, item);
     if (entry !== null) out.push(entry);
   }
