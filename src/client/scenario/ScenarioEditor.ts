@@ -67,6 +67,8 @@ import { TerrainStroke } from "./TerrainBrush";
 
 const WHEEL_ZOOM = 1.0015;
 const MAX_BRUSH_RADIUS = 50;
+/** How far, in CSS px, a finger moves before its touch is a stroke. */
+const TOUCH_SLOP = 8;
 
 type Tool = "pan" | "terrain";
 type TerrainKind = "water" | "land" | "impassable";
@@ -122,6 +124,13 @@ export class ScenarioEditor extends LitElement {
     brush: TerrainStroke;
     x: number;
     y: number;
+    startX: number;
+    startY: number;
+    /**
+     * A touch paints nothing until it moves or lifts: until then a second
+     * finger may still make it a pinch.
+     */
+    confirmed: boolean;
   } | null = null;
   /** Where the pointer is over the map, in CSS px; null when off it. */
   private hover: { x: number; y: number } | null = null;
@@ -470,7 +479,7 @@ export class ScenarioEditor extends LitElement {
       cb?.(now);
       session.rafId = requestAnimationFrame(loop);
       // At most one terrain edit a frame, however often the pointer moves.
-      this.stroke?.brush.flush();
+      if (this.stroke?.confirmed) this.stroke.brush.flush();
       this.placeBrushPreview(canvas);
     };
     session.rafId = requestAnimationFrame(loop);
@@ -523,14 +532,16 @@ export class ScenarioEditor extends LitElement {
     const y = e.clientY - rect.top;
     const stroke = this.stroke;
     if (stroke !== null) {
-      // A second finger: end the stroke, and the two pinch.
-      this.endStroke();
+      // A second finger: the two pinch. A touch that hasn't painted yet
+      // was the start of the pinch, so it paints nothing.
+      if (stroke.confirmed) this.endStroke();
+      else this.stroke = null;
       this.gestures?.down(stroke.pointerId, stroke.x, stroke.y);
     } else if (
       this.tool === "terrain" &&
       e.button === 0 &&
       this.gestures?.active === false &&
-      this.startStroke(e.pointerId, x, y, rect)
+      this.startStroke(e.pointerId, e.pointerType !== "touch", x, y, rect)
     ) {
       return;
     }
@@ -539,6 +550,7 @@ export class ScenarioEditor extends LitElement {
 
   private startStroke(
     pointerId: number,
+    confirmed: boolean,
     x: number,
     y: number,
     rect: DOMRect,
@@ -552,7 +564,15 @@ export class ScenarioEditor extends LitElement {
           ? land(this.elevation)
           : IMPASSABLE;
     const brush = new TerrainStroke(editor, terrain, this.brushRadius);
-    this.stroke = { pointerId, brush, x, y };
+    this.stroke = {
+      pointerId,
+      brush,
+      x,
+      y,
+      startX: x,
+      startY: y,
+      confirmed,
+    };
     this.paint(x, y, rect);
     return true;
   }
@@ -580,9 +600,20 @@ export class ScenarioEditor extends LitElement {
   private onPointerMove(e: PointerEvent): void {
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     this.hover = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-    if (this.stroke?.pointerId === e.pointerId) {
-      this.paint(this.hover.x, this.hover.y, rect);
-      return;
+    const stroke = this.stroke;
+    if (stroke?.pointerId === e.pointerId) {
+      if ((e.buttons & 1) !== 0) {
+        const { x, y } = this.hover;
+        if (Math.hypot(x - stroke.startX, y - stroke.startY) > TOUCH_SLOP) {
+          stroke.confirmed = true;
+        }
+        this.paint(x, y, rect);
+        return;
+      }
+      // The primary button is up but another is held (pointerup waits for
+      // the last): the stroke ends and that button moves the camera.
+      this.endStroke();
+      this.gestures?.down(e.pointerId, this.hover.x, this.hover.y);
     }
     const g = this.gestures;
     if (this.status === "ready" && g?.active === false) {
@@ -624,7 +655,9 @@ export class ScenarioEditor extends LitElement {
     // The centre tile's centre, on screen; the disc reaches radius + 0.5.
     const cx = (Math.floor(world.x) + 0.5 - camera.x) * camera.zoom + w / 2;
     const cy = (Math.floor(world.y) + 0.5 - camera.y) * camera.zoom + h / 2;
-    const size = (2 * this.brushRadius + 1) * camera.zoom;
+    // A stroke keeps the radius it started with.
+    const radius = this.stroke?.brush.radius ?? this.brushRadius;
+    const size = (2 * radius + 1) * camera.zoom;
     el.style.display = "block";
     el.style.left = `${cx - size / 2}px`;
     el.style.top = `${cy - size / 2}px`;

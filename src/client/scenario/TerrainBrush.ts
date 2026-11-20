@@ -106,7 +106,7 @@ export class TerrainStroke {
   constructor(
     private readonly editor: DocumentEditor,
     private readonly terrain: number,
-    private readonly radius: number,
+    readonly radius: number,
   ) {}
 
   /** Moves the brush to tile (x, y), which may lie off the map. */
