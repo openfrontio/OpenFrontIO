@@ -36,6 +36,7 @@ import {
   translateText,
 } from "../../Utils";
 import { ticksToSeconds } from "../GameTicks";
+import { keepPressKeysFromGame, pressWithoutFocus } from "../HudKeys";
 import { timeLeftLine } from "../TimeLeftLine";
 import { eventText, EventTextPart } from "./EventText";
 
@@ -944,6 +945,7 @@ export class EventsDisplay extends LitElement implements Controller {
             ? html`<button
                 type="button"
                 class="${ROW_BODY} ${look.body} ${GO_TO}"
+                @mousedown=${pressWithoutFocus}
                 @click=${goTo}
               >
                 ${content}
@@ -986,7 +988,11 @@ export class EventsDisplay extends LitElement implements Controller {
     }
 
     return html`
-      <div class="flex flex-col gap-1 w-full min-[1200px]:w-96">
+      <div
+        class="flex flex-col gap-1 w-full min-[1200px]:w-96"
+        @keydown=${keepPressKeysFromGame}
+        @keyup=${keepPressKeysFromGame}
+      >
         ${
           tier2Events.length > 0
             ? html`

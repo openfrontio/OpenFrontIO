@@ -24,6 +24,7 @@ import { UIState } from "../../UIState";
 import { renderDuration, translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
 import { ticksToSeconds } from "../GameTicks";
+import { keepPressKeysFromGame, pressWithoutFocus } from "../HudKeys";
 import { timeLeftLine } from "../TimeLeftLine";
 
 type CardAction = "focus" | "accept" | "reject" | "renew" | "ignore";
@@ -390,7 +391,11 @@ export class ActionableEvents extends LitElement implements Controller {
     });
 
     return html`
-      <div class=${LIST}>
+      <div
+        class=${LIST}
+        @keydown=${keepPressKeysFromGame}
+        @keyup=${keepPressKeysFromGame}
+      >
         ${repeat(
           sorted,
           (event) => event.id,
@@ -414,6 +419,7 @@ export class ActionableEvents extends LitElement implements Controller {
                   </span>
                   <button
                     class=${TITLE}
+                    @mousedown=${pressWithoutFocus}
                     @click=${() => this.emitGoToPlayerEvent(event.focusID)}
                   >
                     ${event.description}
@@ -437,6 +443,7 @@ export class ActionableEvents extends LitElement implements Controller {
                       <button
                         data-card-action=${btn.kind}
                         class="${BUTTON} ${CARD_BUTTON[btn.kind].look}"
+                        @mousedown=${pressWithoutFocus}
                         @click=${() => {
                           btn.action();
                           if (!btn.preventClose) {

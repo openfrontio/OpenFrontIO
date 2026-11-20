@@ -320,6 +320,92 @@ describe("events-display", () => {
     expect(rowSaying("nowhere").querySelector("button")).toBeNull();
   });
 
+  describe("keys", () => {
+    // What a browser does with a key on a focused button: Enter presses it on
+    // keydown, Space on keyup, unless the page cancelled that event.
+    function pressKey(target: HTMLElement, key: "Enter" | " ") {
+      for (const type of ["keydown", "keyup"] as const) {
+        const event = new KeyboardEvent(type, {
+          key,
+          code: key === " " ? "Space" : "Enter",
+          bubbles: true,
+          cancelable: true,
+        });
+        target.dispatchEvent(event);
+        const presses = key === "Enter" ? type === "keydown" : type === "keyup";
+        if (presses && !event.defaultPrevented) target.click();
+      }
+    }
+
+    let onWindow: string[];
+    const listen = (e: KeyboardEvent) => onWindow.push(`${e.type} ${e.code}`);
+    beforeEach(() => {
+      onWindow = [];
+      window.addEventListener("keydown", listen);
+      window.addEventListener("keyup", listen);
+    });
+    afterEach(() => {
+      window.removeEventListener("keydown", listen);
+      window.removeEventListener("keyup", listen);
+    });
+
+    it("keeps Space and Enter on a row from the game, and presses the row", async () => {
+      attackRequest("a row", 0);
+      await advanceTo(1);
+      const button = rowSaying("a row").querySelector("button")!;
+      button.focus();
+
+      pressKey(button, " ");
+      pressKey(button, "Enter");
+
+      expect(onWindow).toEqual([]);
+      expect(goTo.map((e) => e.player)).toEqual([
+        players.get(ENEMY),
+        players.get(ENEMY),
+      ]);
+    });
+
+    it("lets the game have the release of a Space held elsewhere", async () => {
+      attackRequest("a row", 0);
+      await advanceTo(1);
+      const button = rowSaying("a row").querySelector("button")!;
+
+      // The alternate view is held from the map; then a row gets focus.
+      document.body.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          code: "Space",
+          key: " ",
+          bubbles: true,
+        }),
+      );
+      button.focus();
+      button.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Space", key: " ", bubbles: true }),
+      );
+
+      expect(onWindow).toEqual(["keydown Space", "keyup Space"]);
+    });
+
+    it("leaves no focus on a row pressed with the mouse", async () => {
+      attackRequest("first", 0);
+      attackRequest("second", 0);
+      await advanceTo(1);
+      const first = rowSaying("first").querySelector("button")!;
+      const second = rowSaying("second").querySelector("button")!;
+      first.focus();
+
+      const mousedown = new MouseEvent("mousedown", {
+        bubbles: true,
+        cancelable: true,
+      });
+      second.dispatchEvent(mousedown);
+
+      expect(mousedown.defaultPrevented).toBe(true);
+      expect(document.activeElement).not.toBe(first);
+      expect(document.activeElement).not.toBe(second);
+    });
+  });
+
   it("gives every message type an icon", async () => {
     const types = Object.values(MessageType).filter(
       (v): v is MessageType => typeof v === "number",
