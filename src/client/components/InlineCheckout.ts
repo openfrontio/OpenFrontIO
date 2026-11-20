@@ -388,9 +388,15 @@ export class InlineCheckout extends LitElement {
       // head start.
       await showInGameAlert(translateText(this.successMessageKey));
       invalidateUserMe();
-      // A top-up for an item from the end screen ("Get Plutonium"): point
-      // the page at that item first, so the reload opens the Store on it.
-      await resumePendingPurchase({ waitForProfile: false });
+      // A Plutonium top-up for an item from the end screen ("Get
+      // Plutonium"): point the page at that item first, so the reload opens
+      // the Store on it. Never after a subscription.
+      if (
+        this.request?.kind === "currency_pack" ||
+        this.request?.kind === "custom_currency"
+      ) {
+        await resumePendingPurchase({ waitForProfile: false });
+      }
       window.location.reload();
       return;
     }

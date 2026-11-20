@@ -150,3 +150,12 @@ export function clearPendingPurchase(): void {
     // Storage blocked: nothing was stored either.
   }
 }
+
+/** Whether a top-up record is waiting (without reading whose it is). */
+export function hasPendingPurchase(): boolean {
+  try {
+    return sessionStorage.getItem(PENDING_PURCHASE_KEY) !== null;
+  } catch {
+    return false;
+  }
+}

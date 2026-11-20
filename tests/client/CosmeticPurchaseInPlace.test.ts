@@ -267,6 +267,17 @@ describe("buying on the end screen", () => {
     expect(reload).toHaveBeenCalledTimes(1);
   });
 
+  it("the Store's already-owned path drops a remembered top-up for it", async () => {
+    rememberPendingPurchase("p1", "cardBackground:bg_storm_front");
+    vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: false,
+      code: "already_owned",
+    } as never);
+    await purchaseCosmetic(STORM, "hard");
+    expect(peekPendingPurchase("p1")).toBeNull();
+  });
+
   it("the Store's shortfall has no end-screen extras", async () => {
     vi.mocked(getUserMe).mockResolvedValue(me(100, 2500));
     const info = await purchaseCosmetic(STORM, "hard");

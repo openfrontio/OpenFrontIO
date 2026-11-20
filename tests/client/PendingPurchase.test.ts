@@ -119,25 +119,138 @@ describe("resuming after the top-up", () => {
     expect(window.location.hash).toBe("");
   });
 
-  it("a top-up landing back on the site resumes it", async () => {
-    rememberPendingPurchase("p1", "cardBackground:bg_x");
+  const landing = (status: string) => {
+    let closeAlert!: () => void;
     const actions = {
       strip: vi.fn(),
       alertAndStrip: vi.fn(),
       openTokenLogin: vi.fn(),
       refreshStore: vi.fn(),
       reload: vi.fn(),
-      alert: vi.fn().mockResolvedValue(true),
+      alert: vi.fn(
+        () => new Promise<unknown>((r) => (closeAlert = () => r(true))),
+      ),
     };
     handlePurchaseReturn(
-      new URLSearchParams("status=true&type=currency_pack"),
+      new URLSearchParams(`status=${status}&type=currency_pack`),
       actions,
     );
-    expect(actions.alertAndStrip).toHaveBeenCalled();
-    await vi.waitFor(() =>
-      expect(window.location.hash).toBe(
-        "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x",
-      ),
+    return { actions, closeAlert: () => closeAlert() };
+  };
+  const ITEM_HASH = "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x";
+
+  it("a top-up landing opens the item only after the success message closes", async () => {
+    rememberPendingPurchase("p1", "cardBackground:bg_x");
+    const { actions, closeAlert } = landing("true");
+    expect(actions.strip).toHaveBeenCalled();
+    expect(actions.alert).toHaveBeenCalledWith(
+      "store.currency_pack_purchase_success",
     );
+    await new Promise((r) => setTimeout(r, 20));
+    expect(window.location.hash).toBe("");
+    closeAlert();
+    await vi.waitFor(() => expect(window.location.hash).toBe(ITEM_HASH));
+  });
+
+  it("a landing with nothing remembered is as today", () => {
+    const { actions } = landing("true");
+    expect(actions.alertAndStrip).toHaveBeenCalledWith(
+      "store.currency_pack_purchase_success",
+    );
+  });
+
+  it("a pending top-up keeps the record for the next visit", async () => {
+    rememberPendingPurchase("p1", "cardBackground:bg_x");
+    landing("pending");
+    await new Promise((r) => setTimeout(r, 20));
+    expect(window.location.hash).toBe("");
+    expect(peekPendingPurchase("p1")).toBe("cardBackground:bg_x");
+  });
+});
+
+// The Plutonium can lag the redirect (the rail's webhook): the Store waits
+// for it, saying so, before opening the item to buy.
+describe("resuming before the Plutonium lands", () => {
+  const CATALOGUE = {
+    patterns: {},
+    flags: {},
+    cardBackgrounds: {
+      bg_x: {
+        name: "bg_x",
+        product: null,
+        rarity: "epic",
+        url: "/bg.webp",
+        priceHard: 300,
+      },
+    },
+  };
+  let toasts: string[];
+  const onToast = (e: Event) =>
+    toasts.push((e as CustomEvent<{ message: string }>).detail.message);
+
+  beforeEach(() => {
+    // The catalogue's URL comes from the page's bootstrap config.
+    (window as unknown as { BOOTSTRAP_CONFIG: unknown }).BOOTSTRAP_CONFIG = {
+      gameEnv: "dev",
+      cluster: { a: { host: "localhost", numWorkers: 1 } },
+      instanceLetter: "a",
+      turnstileSiteKey: "k",
+      jwtAudience: "localhost",
+      instanceId: "i",
+      gitCommit: "abc",
+    };
+    window.location.hash = "";
+    toasts = [];
+    window.addEventListener("show-message", onToast);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify(CATALOGUE))),
+    );
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    window.removeEventListener("show-message", onToast);
+    delete (window as unknown as { BOOTSTRAP_CONFIG?: unknown })
+      .BOOTSTRAP_CONFIG;
+    clearPendingPurchase();
+  });
+
+  it("says it's on its way, then opens the item once it lands", async () => {
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(me([], 100))
+      .mockResolvedValueOnce(me([], 100))
+      .mockResolvedValue(me([], 400));
+    rememberPendingPurchase("p1", "cardBackground:bg_x");
+    const resumed = resumePendingPurchase({ waitForProfile: false });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(toasts).toEqual(["store.plutonium_on_its_way"]);
+    expect(window.location.hash).toBe("");
+    await vi.advanceTimersByTimeAsync(7_000);
+    expect(await resumed).toBe(true);
+    expect(window.location.hash).toBe(
+      "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x",
+    );
+  });
+
+  it("opens it anyway after about 30 seconds", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me([], 100));
+    rememberPendingPurchase("p1", "cardBackground:bg_x");
+    const resumed = resumePendingPurchase({ waitForProfile: false });
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(window.location.hash).toBe("");
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(await resumed).toBe(true);
+    expect(window.location.hash).toBe(
+      "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x",
+    );
+  });
+
+  it("enough already: opens straight away, no message", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me([], 500));
+    rememberPendingPurchase("p1", "cardBackground:bg_x");
+    expect(await resumePendingPurchase({ waitForProfile: false })).toBe(true);
+    expect(toasts).toEqual([]);
   });
 });

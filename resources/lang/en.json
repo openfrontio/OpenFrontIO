@@ -3109,6 +3109,7 @@
     "play_unavailable": "Google Play purchases aren't available right now. Please try again later.",
     "play_wrong_account": "This purchase was made for a different OpenFront account. Sign in to that account to receive it.",
     "plutonium_amount": "Plutonium amount",
+    "plutonium_on_its_way": "Your Plutonium is on its way.",
     "preview_cosmetic": "In-Game Preview",
     "preview_error": "Failed to load in-game preview.",
     "preview_salvo_count": "{count, plural, one {Single (x#)} other {Salvo (x#)}}",

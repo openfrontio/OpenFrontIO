@@ -46,6 +46,7 @@ import {
 } from "./components/card/CardItems";
 import {
   clearPendingPurchase,
+  hasPendingPurchase,
   peekPendingPurchase,
 } from "./components/inventory/PendingEquip";
 import { isDesktopShell } from "./DesktopShell";
@@ -61,7 +62,7 @@ import {
 import { shownPrice } from "./ShownPrice";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
 import { UserSettings } from "./UserSettings";
-import { translateText } from "./Utils";
+import { showToast, translateText } from "./Utils";
 
 /**
  * Ceiling on the cosmetics catalog request. Matches the bound the auth calls
@@ -164,6 +165,20 @@ export interface PurchaseReturnActions extends CosmeticPurchaseReturnActions {
  * `subscription_tier`. `provider`, `orderId`, `pack` and `tier` also ride
  * along; none of them changes what is shown.
  */
+/**
+ * A Plutonium top-up landed back on the site. With an end-screen item
+ * remembered ("Get Plutonium"), the Store opens on it once the success
+ * message is closed; otherwise the message shows as before.
+ */
+function topUpLanded(actions: PurchaseReturnActions, message: string): void {
+  if (!hasPendingPurchase()) {
+    actions.alertAndStrip(message);
+    return;
+  }
+  actions.strip();
+  void actions.alert(message).then(() => resumePendingPurchase());
+}
+
 export function handlePurchaseReturn(
   params: URLSearchParams,
   actions: PurchaseReturnActions,
@@ -187,21 +202,17 @@ export function handlePurchaseReturn(
 
   const type = params.get("type");
   if (type === "currency_pack") {
-    actions.alertAndStrip(
-      translateText("store.currency_pack_purchase_success"),
-    );
-    // A top-up for an item from the end screen: open the Store on it.
-    void resumePendingPurchase();
+    topUpLanded(actions, translateText("store.currency_pack_purchase_success"));
     return;
   }
 
   if (type === "custom_currency") {
     // Plutonium is credited asynchronously by the rail's webhook; the balance
     // refreshes from /users/@me on the next load.
-    actions.alertAndStrip(
+    topUpLanded(
+      actions,
       translateText("store.custom_currency_purchase_success"),
     );
-    void resumePendingPurchase();
     return;
   }
 
@@ -246,7 +257,7 @@ export async function resumePendingPurchase({
   waitForProfile = true,
 }: { waitForProfile?: boolean } = {}): Promise<boolean> {
   const me = await getUserMe();
-  if (me !== false) return resumePendingPurchaseFor(me);
+  if (me !== false) return await resumePendingPurchaseFor(me);
   if (!waitForProfile) return false;
   // On a fresh landing this runs before the page has signed in, so there is
   // no profile yet: try once more on the app's first profile broadcast.
@@ -272,7 +283,7 @@ export async function resumePendingPurchase({
 // (signed out, or the API unreachable).
 const RESUME_WAIT_MS = 15_000;
 
-function resumePendingPurchaseFor(me: UserMeResponse): boolean {
+async function resumePendingPurchaseFor(me: UserMeResponse): Promise<boolean> {
   const player = me.player.publicId;
   if (!player) return false;
   const key = peekPendingPurchase(player);
@@ -281,8 +292,46 @@ function resumePendingPurchaseFor(me: UserMeResponse): boolean {
     clearPendingPurchase();
     return false;
   }
+  // The Plutonium can lag the redirect (the rail's webhook credits it): say
+  // so, and re-check for a while before opening the item to buy.
+  const price = await hardPriceOf(key);
+  let hard = me.player.currency?.hard ?? 0;
+  if (price !== null && hard < price) {
+    showToast(translateText("store.plutonium_on_its_way"), "green");
+    const until = Date.now() + PLUTONIUM_WAIT_MS;
+    while (hard < price && Date.now() < until) {
+      await new Promise((r) => setTimeout(r, PLUTONIUM_RECHECK_MS));
+      const fresh = await broadcastFreshUserMe();
+      if (fresh !== false) hard = fresh.player.currency?.hard ?? 0;
+    }
+  }
   window.location.hash = `modal=store&tab=cosmetics&item=${encodeURIComponent(key)}`;
   return true;
+}
+
+// How long a resume waits for a top-up's Plutonium to land, and how often it
+// re-reads the balance meanwhile.
+const PLUTONIUM_WAIT_MS = 30_000;
+const PLUTONIUM_RECHECK_MS = 3_000;
+
+// A card item's Plutonium price from its key ("<type>:<name>"), or null.
+async function hardPriceOf(key: string): Promise<number | null> {
+  const [type, name] = key.split(":");
+  const group = (
+    {
+      playerCard: "playerCards",
+      cardBackground: "cardBackgrounds",
+      cardTracker: "cardTrackers",
+      cardTitle: "cardTitles",
+      taunt: "taunts",
+    } as const
+  )[type as "playerCard"];
+  if (group === undefined || !name) return null;
+  const cosmetics = await fetchCosmetics();
+  const item = (
+    cosmetics?.[group] as Record<string, Pattern | Flag> | undefined
+  )?.[name];
+  return item === undefined ? null : (currentPrice(item, "hard") ?? null);
 }
 
 /**
@@ -1013,6 +1062,13 @@ export async function purchaseCosmetic(
         // ownership state is stale, so refetch. Mirrors the pack path. No
         // broadcastFreshUserMe() here — the reload below tears the page down,
         // so re-dispatching the profile first would be dead work.
+        // Owned now: a top-up remembered for it is done with.
+        if (
+          userMe.player.publicId &&
+          peekPendingPurchase(userMe.player.publicId) === resolved.key
+        ) {
+          clearPendingPurchase();
+        }
         await showInGameAlert(translateText("store.already_owned"));
         invalidateUserMe();
         window.location.reload();

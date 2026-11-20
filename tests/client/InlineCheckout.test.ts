@@ -208,6 +208,20 @@ describe("inline-checkout wallet row", () => {
     expect(order).toEqual(["resume", "reload"]);
   });
 
+  it("a subscription checkout never resumes an end-screen item", async () => {
+    const { resumePendingPurchase } =
+      await import("../../src/client/Cosmetics");
+    vi.mocked(resumePendingPurchase).mockClear();
+    const { session, express } = fakeSession();
+    createMock.mockResolvedValue(session);
+    const el = await renderComponent();
+    el.request = { kind: "subscription_tier", tierName: "gold" } as never;
+    await el.updateComplete;
+    express.fire("confirm", { paymentFailed: vi.fn() });
+    await vi.waitFor(() => expect(reloadMock).toHaveBeenCalled());
+    expect(resumePendingPurchase).not.toHaveBeenCalled();
+  });
+
   it("shows wallet errors without opening the modal", async () => {
     const { session, express } = fakeSession();
     session.confirm.mockResolvedValue({
