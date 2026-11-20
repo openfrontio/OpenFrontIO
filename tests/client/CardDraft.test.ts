@@ -236,6 +236,9 @@ describe("CardEditor", () => {
     expect(editor.saved.rows.tracker).toEqual(["wins", "best_elo", null]);
     expect(editor.draft.rows.tracker).toEqual(["wins", null, "games_played"]);
     expect(editor.changeCount()).toBeGreaterThan(0);
+    // Not "Saved": that edit isn't, and Save card takes it.
+    expect(editor.saveState).toBe("idle");
+    expect(editor.canSave()).toBe(true);
   });
 
   it("closing the Inventory drops unsaved changes", () => {

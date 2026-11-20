@@ -408,6 +408,13 @@ export class CardEditor {
       this.draft = cloneDraft(storedDraft);
     }
     this.saved = storedDraft;
+    // An edit made while it saved isn't saved: no "Saved" over it, and
+    // Save card takes it at once.
+    if (cardChanges(this.saved, this.draft).length > 0) {
+      this.saveState = "idle";
+      this.emit();
+      return true;
+    }
     this.saveState = "saved";
     this.savedTimer = setTimeout(() => {
       this.savedTimer = null;
