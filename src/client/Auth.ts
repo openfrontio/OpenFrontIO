@@ -43,6 +43,11 @@ let __expiresAt: number = 0;
 // error): the cookie is kept and the next userAuth() retries. userAuth()
 // answers false either way, so this is how a caller tells "couldn't check"
 // from "signed out" (see sessionUncertain). Each exchange clears it first.
+//
+// A guest with no refresh cookie at all also reads as uncertain while
+// /auth/refresh is unreachable: the client can't tell "no cookie" from
+// "server down". Accepted: the end screen then shows Buy, whose check
+// answers "unreachable" and sends (and charges) nothing.
 let __refreshUnreachable = false;
 
 let __sessionState: DesktopSessionState = { status: "unknown" };
