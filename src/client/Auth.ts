@@ -515,11 +515,17 @@ export function clearLocalSession(): void {
 }
 
 /**
- * True when userAuth() last answered false only because /auth/refresh got no
- * settling answer: the refresh cookie may well still be valid. A 401, a
- * logout or a successful refresh clears it. For callers where calling a
- * signed-in player signed out costs them something (the end screen's Buy,
- * whose sign-in leaves the game); every other caller is unaffected.
+ * True when userAuth() last answered false only because the last session
+ * exchange got no settling answer: /auth/refresh, a portal login
+ * (/auth/<portal>) or a Steam login (/auth/steam, or a Steam ticket the shell
+ * couldn't get because it couldn't reach our API). The session may well still
+ * be valid. Only a 401 means signed out; any other failure (a 5xx, 429, 400,
+ * 403 edge block, timeout or network error) counts as "couldn't check", the
+ * rule /auth/refresh already followed. Each exchange starts by clearing it,
+ * so a 401 or a success leaves it false, and so does a logout. For callers
+ * where calling a signed-in player signed out costs them something (the end
+ * screen's Buy, whose sign-in leaves the game); every other caller is
+ * unaffected.
  */
 export function sessionUncertain(): boolean {
   return __refreshUnreachable;
