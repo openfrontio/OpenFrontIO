@@ -1,11 +1,19 @@
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
-import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import {
+  type Cosmetics,
+  ownsPlayerCard,
+} from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import type { ResolvedCosmetic } from "../../Cosmetics";
 import { translateText } from "../../Utils";
-import { type CardItem, type CardItemType } from "../card/CardItems";
+import {
+  type CardItem,
+  type CardItemType,
+  cardItemName,
+} from "../card/CardItems";
 import "../card/PlayerCard";
+import "../PurchaseButton";
 import {
   buildPlayerCardView,
   type PlayerCardView,
@@ -25,6 +33,7 @@ import {
   sameSlot,
   swapPreview,
 } from "./CardDraft";
+import { buyCardItem, cardResolved, checkCardPurchase } from "./CardPurchase";
 import "./InventoryItemTile";
 import {
   compareTiles,
@@ -165,10 +174,11 @@ export class InventoryCardTab extends LitElement {
     this.showing = "changes";
   }
 
-  private openStore(type: CardItemType): void {
+  /** The Store's Card tab, on `item` when given. */
+  private openStore(item?: string): void {
     this.dispatchEvent(
       new CustomEvent("open-store", {
-        detail: { type },
+        detail: item === undefined ? {} : { item },
         bubbles: true,
         composed: true,
       }),
@@ -540,15 +550,11 @@ export class InventoryCardTab extends LitElement {
   }
 
   private renderStoreTile(slot: CardSlotRef): TemplateResult {
-    const type: CardItemType =
-      slot.kind === "background"
-        ? "cardBackground"
-        : CARD_SLOT_KINDS[slot.kind].type;
     return html`<button
       type="button"
       data-card-store-tile
       class="flex min-h-40 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/20 p-4 text-center text-sm font-bold text-sky-300 hover:border-white/40 hover:bg-white/5"
-      @click=${() => this.openStore(type)}
+      @click=${() => this.openStore()}
     >
       <span>${translateText(`inventory_card.store_tile_${slot.kind}`)}</span>
       <span aria-hidden="true">→</span>
@@ -662,8 +668,97 @@ export class InventoryCardTab extends LitElement {
 
   // ---- Render --------------------------------------------------------------
 
+  // ---- No card -------------------------------------------------------------
+
+  /** A <purchase-button> for a card item, at the catalogue's prices (the
+   * button reads them through shownPrice), bought in place. */
+  private renderBuy(type: CardItemType, item: CardItem): TemplateResult {
+    const resolved = cardResolved(type, item);
+    const priced = item as CardItem & {
+      promotion?: { name: string; percentOff: number; endsAt: string };
+    };
+    return html`<purchase-button
+      .priceHard=${item.priceHard ?? null}
+      .priceSoft=${item.priceSoft ?? null}
+      .listPriceHard=${item.listPriceHard ?? null}
+      .listPriceSoft=${item.listPriceSoft ?? null}
+      .promotion=${priced.promotion ?? null}
+      .rarity=${String(item.rarity)}
+      .itemName=${cardItemName(type, item)}
+      .busyKey=${resolved.key}
+      .preflight=${(method: "hard" | "soft") =>
+        checkCardPurchase(resolved, method)}
+      .onPurchaseHard=${() => buyCardItem(resolved, "hard")}
+      .onPurchaseSoft=${() => buyCardItem(resolved, "soft")}
+    ></purchase-button>`;
+  }
+
+  private renderGetCard(): TemplateResult {
+    const card = Object.values(this.cosmetics?.playerCards ?? {})[0] as
+      | CardItem
+      | undefined;
+    const included = (key: "background" | "trackers") =>
+      html`<li data-card-included=${key} class="flex gap-3">
+        <span aria-hidden="true" class="font-bold text-sky-300">✓</span>
+        <span class="flex flex-col">
+          <span class="text-sm font-bold text-white"
+            >${translateText(`inventory_card.included_${key}`)}</span
+          >
+          <span class="text-xs text-white/60"
+            >${translateText(`inventory_card.included_${key}_note`)}</span
+          >
+        </span>
+      </li>`;
+    return html`<section
+      data-card-get-card
+      class="mx-auto flex w-full max-w-2xl flex-col items-center gap-5 py-4 text-center"
+    >
+      <div class="flex flex-col gap-1">
+        <h2 class="text-xl font-black uppercase tracking-wider text-white">
+          ${translateText("inventory_card.get_title")}
+        </h2>
+        <p class="text-sm text-white/60">
+          ${translateText("inventory_card.get_subtitle")}
+        </p>
+      </div>
+      <div class="flex w-full flex-col items-center gap-1">
+        <player-card
+          size="account"
+          class="block w-full"
+          .view=${this.view({ background: null, rows: { tracker: [] } })}
+        ></player-card>
+        <span
+          class="text-[11px] font-black uppercase tracking-wider text-white/50"
+          >${translateText("inventory_card.get_sample")}</span
+        >
+      </div>
+      <ul class="flex flex-col gap-3 self-stretch text-left sm:self-center">
+        ${included("background")} ${included("trackers")}
+      </ul>
+      ${
+        card === undefined
+          ? nothing
+          : html`<div data-card-get-buy class="w-full max-w-sm">
+                ${this.renderBuy("playerCard", card)}
+              </div>
+              <button
+                type="button"
+                data-card-see-store
+                class="min-h-11 text-sm font-bold text-sky-300 hover:underline"
+                @click=${() => this.openStore(`playerCard:${card.name}`)}
+              >
+                ${translateText("inventory_card.see_in_store")}
+                <span aria-hidden="true">→</span>
+              </button>`
+      }
+    </section>`;
+  }
+
   render() {
     if (this.editor === null || this.userMe === null) return nothing;
+    if (!ownsPlayerCard(this.userMe.player.flares ?? [])) {
+      return this.renderGetCard();
+    }
     return html`<div data-card-tab class="flex flex-col gap-4">
       <div class="grid gap-4 md:grid-cols-[18rem_minmax(0,1fr)] md:items-start">
         <div class="order-2 flex flex-col gap-3 md:order-1">

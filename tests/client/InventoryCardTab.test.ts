@@ -410,3 +410,95 @@ describe("<inventory-card-tab> save bar", () => {
     expect(saveButton().textContent).toContain("inventory_card.saved");
   });
 });
+
+describe("<inventory-card-tab> without the card", () => {
+  const NO_CARD = ["cardBackground:bg_pacific"];
+  const getCard = () => q("[data-card-get-card]")!;
+  const buyButton = () =>
+    getCard().querySelector("purchase-button") as unknown as {
+      priceHard: number | null;
+      priceSoft: number | null;
+      listPriceHard: number | null;
+      promotion: unknown;
+      onPurchaseHard: () => Promise<unknown>;
+      onPurchaseSoft: () => Promise<unknown>;
+    };
+
+  it("shows the Get the player card screen, not the editor", async () => {
+    await render(userMe(NO_CARD, null));
+    expect(getCard()).not.toBeNull();
+    expect(q("[data-card-slot='background']")).toBeNull();
+    expect(q("[data-card-save-bar]")).toBeNull();
+    expect(getCard().textContent).toContain("inventory_card.get_title");
+  });
+
+  it("the sample card uses the player's own name and badge", async () => {
+    await render(userMe(NO_CARD, null));
+    const view = (
+      getCard().querySelector("player-card") as unknown as {
+        view: { username: string; badge: { level: number } | null };
+      }
+    ).view;
+    expect(view.username).toBe("iamlewis");
+    expect(view.badge?.level).toBe(80);
+  });
+
+  it("says what's included: a background and up to 3 trackers, no taunt", async () => {
+    await render(userMe(NO_CARD, null));
+    const included = qa("[data-card-included]").map(
+      (li) => li.dataset.cardIncluded,
+    );
+    expect(included).toEqual(["background", "trackers"]);
+  });
+
+  it("prices come from the catalogue's card item", async () => {
+    await render(userMe(NO_CARD, null));
+    expect(buyButton().priceHard).toBe(300);
+    expect(buyButton().priceSoft).toBe(30000);
+    tab.remove();
+    const other = structuredClone(COSMETICS) as Cosmetics;
+    (
+      other.playerCards as Record<string, { priceHard: number }>
+    ).standard.priceHard = 450;
+    await render(userMe(NO_CARD, null), other);
+    expect(buyButton().priceHard).toBe(450);
+  });
+
+  it("a running sale shows the list price to strike through", async () => {
+    const onSale = structuredClone(COSMETICS) as Cosmetics;
+    Object.assign((onSale.playerCards as Record<string, object>).standard, {
+      priceHard: 240,
+      listPriceHard: 300,
+      promotion: {
+        name: "Launch sale",
+        percentOff: 20,
+        endsAt: new Date(Date.now() + 3_600_000).toISOString(),
+      },
+    });
+    await render(userMe(NO_CARD, null), onSale);
+    expect(buyButton().priceHard).toBe(240);
+    expect(buyButton().listPriceHard).toBe(300);
+    expect(buyButton().promotion).not.toBeNull();
+  });
+
+  it("buying goes through the currency purchase flow, in place", async () => {
+    shop.buy.mockResolvedValue({ kind: "owned", fresh: false });
+    await render(userMe(NO_CARD, null));
+    await buyButton().onPurchaseHard();
+    expect(shop.buy.mock.calls[0][0]).toMatchObject({
+      key: "playerCard:standard",
+      type: "playerCard",
+    });
+    expect(shop.buy.mock.calls[0][1]).toBe("hard");
+  });
+
+  it("See it in the Store asks for the card in the Store", async () => {
+    await render(userMe(NO_CARD, null));
+    const seen: unknown[] = [];
+    tab.addEventListener("open-store", (e) =>
+      seen.push((e as CustomEvent).detail),
+    );
+    await click(q("[data-card-see-store]"));
+    expect(seen).toEqual([{ item: "playerCard:standard" }]);
+  });
+});

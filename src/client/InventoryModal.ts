@@ -1201,7 +1201,8 @@ export class InventoryModal extends BaseModal {
         .flagName=${flag.name}
         .priceEpoch=${this.priceEpoch}
         @change-flag=${() => this.setActiveTab("flags")}
-        @open-store=${() => this.openStore("card")}
+        @open-store=${(event: CustomEvent<{ item?: string }>) =>
+          this.openStore(event.detail.item ?? "card")}
       ></inventory-card-tab>`;
     }
     const category = (
@@ -1382,13 +1383,17 @@ export class InventoryModal extends BaseModal {
     this.filter = filter;
   }
 
-  private openStore(sub?: "card") {
+  /** The Store's cosmetics; `"card"` for its Card tab, or an item key
+   * (`<type>:<name>`) to open on. */
+  private openStore(target?: string) {
     this.leaveThen(() => {
       this.close();
       window.location.hash =
-        sub === undefined
+        target === undefined
           ? "modal=store&tab=cosmetics"
-          : `modal=store&tab=cosmetics&sub=${sub}`;
+          : target === "card"
+            ? "modal=store&tab=cosmetics&sub=card"
+            : `modal=store&tab=cosmetics&item=${encodeURIComponent(target)}`;
     });
   }
 

@@ -229,3 +229,27 @@ describe("Inventory: unsaved card changes guard", () => {
     expect(modal.isOpen()).toBe(true);
   });
 });
+
+describe("Inventory: Player card tab, signed out", () => {
+  let modal: InventoryModal;
+  beforeEach(() => {
+    vi.mocked(fetchCosmetics).mockResolvedValue(catalog());
+    vi.mocked(userAuth).mockResolvedValue(false);
+    modal = document.createElement("inventory-modal") as InventoryModal;
+    modal.setAttribute("inline", "");
+    document.body.appendChild(modal);
+  });
+  afterEach(() => {
+    modal.remove();
+    document.body.innerHTML = "";
+    vi.clearAllMocks();
+  });
+
+  it("shows the same sign-in prompt as In game, and no card", async () => {
+    modal.open({ tab: "card" });
+    await settle(modal);
+    expect(modal.querySelector("[data-inventory-sign-in]")).not.toBeNull();
+    expect(modal.querySelector("inventory-card-tab")).toBeNull();
+    expect(modal.querySelector("player-card")).toBeNull();
+  });
+});
