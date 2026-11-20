@@ -34,7 +34,8 @@ import {
   sendMagicLink,
   steamLogin,
 } from "./Auth";
-import { type CardLoadoutBody, cardRefsFromLoadout } from "./CardLoadoutApi";
+import { cardRefsFromLoadout } from "./CardLoadoutApi";
+import type { CardSavedDetail } from "./CardSaveQueue";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import { BaseModal } from "./components/BaseModal";
 import { buildPlayerCardView } from "./components/card/PlayerCardModel";
@@ -147,7 +148,9 @@ export class AccountModal extends BaseModal {
   // Global FFA position, read from the rank-position call (not /users/@me).
   @state() private ffaGlobalPosition: number | null = null;
 
-  private userMeResponse: UserMeResponse | null = null;
+  // State, so every new copy re-renders: a card save patched in after the
+  // player left My Card and came back reaches the tab made on the way back.
+  @state() private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
   // The card's clan tag, from the player's own profile (displayClanTag).
   private displayClanTag: string | null = null;
@@ -774,15 +777,17 @@ export class AccountModal extends BaseModal {
 
   // A card save went through: patch the card into a new /users/@me copy, so
   // the header and a My Card tab made later read it even if the refresh that
-  // follows a save fails. (On the tab that saved, it's what it holds.)
-  private handleCardSaved = (event: CustomEvent<CardLoadoutBody>): void => {
+  // follows a save fails. (On the tab that saved, it's what it holds.) A
+  // save made for another account (signed out or switched since) is left
+  // alone.
+  private handleCardSaved = (event: CustomEvent<CardSavedDetail>): void => {
     const me = this.userMeResponse;
-    if (!me) return;
+    if (!me || me.player.publicId !== event.detail.publicId) return;
     this.userMeResponse = {
       ...me,
       player: {
         ...me.player,
-        card: cardRefsFromLoadout(event.detail, me.player.card),
+        card: cardRefsFromLoadout(event.detail.loadout, me.player.card),
       },
     };
   };
