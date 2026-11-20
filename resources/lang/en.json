@@ -2841,6 +2841,7 @@
     "drafts": "Drafts",
     "exit": "Exit",
     "height": "Height",
+    "load_failed": "The scenario editor failed to load. Check your connection and try again.",
     "loading": "Loading…",
     "name": "Name",
     "new_scenario": "New scenario",

@@ -1499,7 +1499,17 @@ class Client {
         await import("./scenario/ScenarioEditor"));
     } catch (err) {
       console.error("scenario editor failed to load:", err);
-      if (this.scenarioEditor === request) this.scenarioEditor = null;
+      if (this.scenarioEditor !== request) return;
+      this.scenarioEditor = null;
+      // Drop the hash, so opening the editor again retries the load.
+      if (parseScenarioEditorHash(window.location.hash) !== null) {
+        history.replaceState(
+          null,
+          "",
+          window.location.pathname + window.location.search,
+        );
+      }
+      void showInGameAlert(translateText("scenario_editor.load_failed"));
       return;
     }
     // A join may have started while the chunk loaded, and dropped this
