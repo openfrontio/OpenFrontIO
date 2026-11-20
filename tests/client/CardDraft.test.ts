@@ -273,4 +273,68 @@ describe("CardEditor", () => {
     expect(editor.saveState).toBe("idle");
     expect(editor.changeCount()).toBe(0);
   });
+
+  it("Discard while a save is in flight: the draft follows what it stores", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTracker:games_played"]));
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    const saving = editor.save();
+    editor.discard();
+    finish({ ok: true, loadout: {} });
+    await saving;
+    expect(editor.saved.rows.tracker[2]).toBe("games_played");
+    expect(editor.draft.rows.tracker[2]).toBe("games_played");
+    expect(editor.changeCount()).toBe(0);
+  });
+
+  it("an edit after a mid-save Discard stays a change", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTracker:games_played"]));
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    const saving = editor.save();
+    editor.discard();
+    editor.pick({ kind: "tracker", index: 0 }, null);
+    finish({ ok: true, loadout: {} });
+    await saving;
+    expect(editor.draft.rows.tracker[0]).toBeNull();
+    expect(editor.changeCount()).toBeGreaterThan(0);
+  });
+
+  it("Save while a save is in flight waits for it, then saves what's left", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    api.save.mockResolvedValueOnce({ ok: true, loadout: {} });
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTracker:games_played"]));
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    const first = editor.save();
+    editor.pick({ kind: "tracker", index: 0 }, null);
+    const second = editor.save();
+    finish({ ok: true, loadout: {} });
+    expect(await first).toBe(true);
+    expect(await second).toBe(true);
+    expect(api.save).toHaveBeenCalledTimes(2);
+    expect(api.save.mock.calls[1][0].trackers).toEqual([
+      "nukes_launched",
+      "games_played",
+    ]);
+    expect(editor.changeCount()).toBe(0);
+  });
+
+  it("Save while a save is in flight, with nothing new: true once it lands", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTracker:games_played"]));
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    void editor.save();
+    const second = editor.save();
+    finish({ ok: true, loadout: {} });
+    expect(await second).toBe(true);
+    expect(api.save).toHaveBeenCalledTimes(1);
+  });
 });

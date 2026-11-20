@@ -242,8 +242,14 @@ export class CardEditor {
   private flares: readonly string[] = [];
   private seededFrom: UserMeResponse | null = null;
   private savedTimer: ReturnType<typeof setTimeout> | null = null;
-  /** The Inventory closed while a save was in flight. */
-  private droppedDuringSave = false;
+  /**
+   * The changes were dropped (Discard, or the Inventory closed) while a
+   * save was in flight: the draft they were dropped to. Until it's edited
+   * again, the draft follows what that save stores.
+   */
+  private droppedTo: CardDraft | null = null;
+  /** The save in flight, for a Save clicked while it runs to wait on. */
+  private inFlight: Promise<boolean> | null = null;
   private listeners = new Set<() => void>();
 
   subscribe(listener: () => void): () => void {
@@ -319,7 +325,14 @@ export class CardEditor {
 
   discard(): void {
     this.draft = cloneDraft(this.saved);
+    this.dropDuringSave();
     this.afterEdit();
+  }
+
+  /** `saved` is still the old card while a save runs: dropping the changes
+   * then means following what the save stores, not reverting it. */
+  private dropDuringSave(): void {
+    if (this.saveState === "saving") this.droppedTo = cloneDraft(this.draft);
   }
 
   private afterEdit(): void {
@@ -341,9 +354,27 @@ export class CardEditor {
     );
   }
 
-  /** Saves the draft. True when stored; on failure the changes stay. */
+  /**
+   * Saves the draft. True when stored; on failure the changes stay. Clicked
+   * while a save is in flight (the guard's Save), it waits for that one,
+   * then saves whatever was changed since.
+   */
   async save(): Promise<boolean> {
+    if (this.inFlight !== null) {
+      if (!(await this.inFlight)) return false;
+      return this.changeCount() === 0 || this.save();
+    }
     if (!this.canSave()) return false;
+    const saving = this.store();
+    this.inFlight = saving;
+    try {
+      return await saving;
+    } finally {
+      if (this.inFlight === saving) this.inFlight = null;
+    }
+  }
+
+  private async store(): Promise<boolean> {
     const sent = cloneDraft(this.draft);
     this.clearSavedTimer();
     this.saveState = "saving";
@@ -352,8 +383,8 @@ export class CardEditor {
     const result = await saveCardLoadout(body);
     if (!result.ok) {
       // Closed meanwhile: its changes are gone, so no Retry is left over.
-      this.saveState = this.droppedDuringSave ? "idle" : "failed";
-      this.droppedDuringSave = false;
+      this.saveState = this.droppedTo !== null ? "idle" : "failed";
+      this.droppedTo = null;
       this.emit();
       return false;
     }
@@ -367,10 +398,12 @@ export class CardEditor {
       background: stored.background ?? null,
       trackers: stored.trackers.map((stat) => ({ stat })),
     });
-    // Nothing edited while it saved (or the changes were dropped meanwhile):
-    // the draft becomes the stored card.
-    const dropped = this.droppedDuringSave;
-    this.droppedDuringSave = false;
+    // Nothing edited while it saved (or the changes were dropped meanwhile,
+    // and not edited since): the draft becomes the stored card.
+    const dropped =
+      this.droppedTo !== null &&
+      cardChanges(this.droppedTo, this.draft).length === 0;
+    this.droppedTo = null;
     if (dropped || cardChanges(sent, this.draft).length === 0) {
       this.draft = cloneDraft(storedDraft);
     }
@@ -401,7 +434,7 @@ export class CardEditor {
     this.clearSavedTimer();
     this.draft = cloneDraft(this.saved);
     if (this.saveState === "saving") {
-      this.droppedDuringSave = true;
+      this.dropDuringSave();
     } else {
       this.saveState = "idle";
     }

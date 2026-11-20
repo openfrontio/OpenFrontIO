@@ -196,6 +196,43 @@ describe("Inventory: unsaved card changes guard", () => {
     expect(onCardTab()).toBe(false);
   });
 
+  it("Discard while the bar's save is in flight keeps what it saves", async () => {
+    let finish!: (v: Awaited<ReturnType<typeof saveCardLoadout>>) => void;
+    vi.mocked(saveCardLoadout).mockReturnValue(
+      new Promise((r) => (finish = r)),
+    );
+    await openWithChange();
+    await click("[data-card-save]");
+    await click("[data-inventory-top-tab='ingame']");
+    await click("[data-card-guard-discard]");
+    expect(onCardTab()).toBe(false);
+    finish({ ok: true, loadout: {} as never });
+    await settle(modal);
+    // Back on the card: no changes that would undo the save.
+    await click("[data-inventory-top-tab='card']");
+    expect(q("[data-card-change-count]")).toBeNull();
+    expect(q("[data-card-discard]")).toBeNull();
+    expect(saveCardLoadout).toHaveBeenCalledTimes(1);
+  });
+
+  it("the guard's Save while the bar's save is in flight waits for it, then goes", async () => {
+    let finish!: (v: Awaited<ReturnType<typeof saveCardLoadout>>) => void;
+    vi.mocked(saveCardLoadout).mockReturnValue(
+      new Promise((r) => (finish = r)),
+    );
+    await openWithChange();
+    await click("[data-card-save]");
+    await click("[data-inventory-top-tab='ingame']");
+    await click("[data-card-guard-save]");
+    // Still saving: the guard shows it rather than closing with nothing.
+    expect(q("[data-card-guard]")).not.toBeNull();
+    finish({ ok: true, loadout: {} as never });
+    await settle(modal);
+    expect(q("[data-card-guard]")).toBeNull();
+    expect(onCardTab()).toBe(false);
+    expect(saveCardLoadout).toHaveBeenCalledTimes(1);
+  });
+
   it("a Save that fails stays, with the changes", async () => {
     vi.mocked(saveCardLoadout).mockResolvedValue({
       ok: false,
