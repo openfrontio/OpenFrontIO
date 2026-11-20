@@ -139,4 +139,25 @@
         var(--shadow-hud-modal);
     }
   }
+
+  /* An event row that goes: its content fades, then its height closes, and
+     it stays closed until EventsDisplay drops it when this ends. The row is
+     a grid of one track for it, with no minimum, so padding cannot hold it
+     open. A browser that cannot interpolate fr rows closes it in one step. */
+  --animate-event-out: event-out 300ms both;
+  @keyframes event-out {
+    from {
+      grid-template-rows: minmax(0, 1fr);
+      animation-timing-function: ease-out;
+    }
+    40% {
+      opacity: 0;
+      grid-template-rows: minmax(0, 1fr);
+      animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    to {
+      opacity: 0;
+      grid-template-rows: minmax(0, 0fr);
+    }
+  }
 }
