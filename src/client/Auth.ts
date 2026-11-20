@@ -38,10 +38,11 @@ let __inMemoryPublicIdSub: string | null = null;
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
 let __expiresAt: number = 0;
-// The last /auth/refresh got no answer that settles the session (a 5xx, 429,
-// edge block, timeout or network error): the cookie is kept and the next
-// userAuth() retries. userAuth() answers false either way, so this is how a
-// caller tells "couldn't check" from "signed out" (see sessionUncertain).
+// The last session exchange (/auth/refresh, a portal or a Steam login) got no
+// answer that settles the session (a 5xx, 429, edge block, timeout or network
+// error): the cookie is kept and the next userAuth() retries. userAuth()
+// answers false either way, so this is how a caller tells "couldn't check"
+// from "signed out" (see sessionUncertain). Each exchange clears it first.
 let __refreshUnreachable = false;
 
 let __sessionState: DesktopSessionState = { status: "unknown" };
@@ -653,6 +654,8 @@ async function refreshJwt(): Promise<void> {
 }
 
 async function doRefreshJwt(): Promise<void> {
+  // Each attempt decides afresh; only an unreachable answer sets it.
+  __refreshUnreachable = false;
   if (steamSDK.isOnSteam()) {
     const result = await steamSDK.getTicket();
     if (result.ok) {
@@ -767,6 +770,7 @@ async function doPortalLogin(
   portal: GamePortalName,
   token: string,
 ): Promise<void> {
+  __refreshUnreachable = false;
   try {
     console.log(`Logging in with ${portal}`);
     // Bounded like doSteamLogin: userAuth() awaits this exchange, so a
@@ -780,6 +784,8 @@ async function doPortalLogin(
     if (response.status !== 200) {
       console.error(`${portal} login failed`, response);
       __jwt = null;
+      // A 401 settles it (signed out); anything else got no answer.
+      __refreshUnreachable = response.status !== 401;
       return;
     }
     const json = await response.json();
@@ -791,6 +797,7 @@ async function doPortalLogin(
   } catch (e) {
     console.warn(`${portal} login failed`, e);
     __jwt = null;
+    __refreshUnreachable = true;
   }
 }
 
@@ -798,6 +805,7 @@ async function doPortalLogin(
 // refresh cookie isn't usable from app://openfront (cross-site), so we
 // re-exchange a fresh ticket on expiry rather than hitting /auth/refresh.
 async function doSteamLogin(ticket: string): Promise<void> {
+  __refreshUnreachable = false;
   try {
     console.log("Logging in with Steam");
     // Bounded so a response that never settles can't leave the session
@@ -815,6 +823,8 @@ async function doSteamLogin(ticket: string): Promise<void> {
     if (response.status !== 200) {
       console.error("Steam login failed", response);
       __jwt = null;
+      // A 401 settles it (signed out); anything else got no answer.
+      __refreshUnreachable = response.status !== 401;
       // 401 is infra's unauthorized("Invalid Steam ticket"); 5xx is its
       // internalServerError for "steam unreachable" / "steam auth error",
       // which is Steam's backend rather than anything the player did. Any
@@ -843,6 +853,7 @@ async function doSteamLogin(ticket: string): Promise<void> {
   } catch (e) {
     console.warn("Steam login failed", e);
     __jwt = null;
+    __refreshUnreachable = true;
     setSessionState({ status: "signed-out", reason: "network" });
   }
 }
