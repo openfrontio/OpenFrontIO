@@ -84,6 +84,8 @@ interface ActionableEvent {
   allianceID?: number;
   duration?: Tick;
   requestorID: number;
+  /** The line read out when the card arrived, with the time it gave. */
+  spoken?: string;
 }
 
 @customElement("actionable-events")
@@ -155,12 +157,33 @@ export class ActionableEvents extends LitElement implements Controller {
       return;
     }
 
+    const firstNewID = this.nextEventId;
     this.checkForAllianceExpirations();
 
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
       for (const [ut, fn] of this.updateMap) {
         updates[ut]?.forEach(fn as (event: unknown) => void);
+      }
+    }
+
+    // A card asks for an answer within seconds, so it is read out at once,
+    // with the time it gives. Not in a replay, nor while the game catches up
+    // on missed turns: cards come and go many ticks at a time there.
+    if (
+      this._isVisible &&
+      !this.game.config().isReplay() &&
+      !this.game.isCatchingUp()
+    ) {
+      for (const event of this.events) {
+        if (event.id < firstNewID) continue;
+        const time = this.timeLeft(event);
+        event.spoken = time
+          ? `${event.description} ${translateText(
+              "events_display.time_to_answer",
+              { seconds: Math.ceil(ticksToSeconds(time.left)) },
+            )}`
+          : event.description;
       }
     }
 
@@ -377,7 +400,7 @@ export class ActionableEvents extends LitElement implements Controller {
   }
 
   render() {
-    if (!this.active || !this._isVisible || this.events.length === 0) {
+    if (!this.active || !this._isVisible) {
       return html``;
     }
 
@@ -390,9 +413,19 @@ export class ActionableEvents extends LitElement implements Controller {
       return bPrior - aPrior;
     });
 
+    // The region stays while the cards are shown, even with none open: a
+    // screen reader may not read out a region that appears with its first line.
     return html`
+      <div aria-live="assertive" class="sr-only">
+        ${repeat(
+          this.events.filter((event) => event.spoken !== undefined),
+          (event) => event.id,
+          (event) => html`<p>${event.spoken}</p>`,
+        )}
+      </div>
       <div
         class=${LIST}
+        ?hidden=${sorted.length === 0}
         @keydown=${keepPressKeysFromGame}
         @keyup=${keepPressKeysFromGame}
       >

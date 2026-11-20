@@ -59,6 +59,11 @@ interface GameEvent {
   icon?: OfIconName;
   /** Set on a missile warning that stands for every bomb of one type from one sender. */
   missileGroup?: InboundMissileGroup;
+  /**
+   * The line read out when the event arrived. Kept apart from the
+   * description, so a missile line's new count is not read out again.
+   */
+  spoken?: string;
 }
 
 interface InboundMissileGroup {
@@ -96,7 +101,8 @@ const TIER_1_TYPES: ReadonlySet<MessageType> = new Set([
   MessageType.DONATION_RECEIVED,
 ]);
 
-const isTier1 = (type: MessageType): boolean => TIER_1_TYPES.has(type);
+const isImportant = (event: GameEvent): boolean =>
+  TIER_1_TYPES.has(event.type) && !event.minor;
 
 // A translated sentence for an event: plain as its description, and in parts
 // for its row, with the values of the params named in `strong` and `emoji`
@@ -314,10 +320,26 @@ export class EventsDisplay extends LitElement implements Controller {
       return;
     }
 
+    const firstNewID = this.nextEventID;
     const updates = this.game.updatesSinceLastTick();
     if (updates) {
       for (const [ut, fn] of this.updateMap) {
         updates[ut]?.forEach(fn as (event: unknown) => void);
+      }
+    }
+
+    // Important events are read out once, as they arrive; routine ones would
+    // drown them. Not in a replay, nor while the game catches up on missed
+    // turns: events come many ticks at a time there, faster than speech.
+    if (
+      this._isVisible &&
+      !this.game.config().isReplay() &&
+      !this.game.isCatchingUp()
+    ) {
+      for (const event of this.events) {
+        if (event.id >= firstNewID && isImportant(event)) {
+          event.spoken = event.description;
+        }
       }
     }
 
@@ -971,28 +993,33 @@ export class EventsDisplay extends LitElement implements Controller {
     const tier1Events: GameEvent[] = [];
     let tier2Events: GameEvent[] = [];
     for (const event of this.events) {
-      (isTier1(event.type) && !event.minor ? tier1Events : tier2Events).push(
-        event,
-      );
+      (isImportant(event) ? tier1Events : tier2Events).push(event);
     }
     tier1Events.sort((a, b) => a.createdAt - b.createdAt);
     tier2Events.sort((a, b) => a.createdAt - b.createdAt);
     tier2Events = tier2Events.slice(-4);
 
-    if (
-      tier1Events.length === 0 &&
-      tier2Events.length === 0 &&
-      !showBetrayalTimer
-    ) {
-      return html``;
-    }
-
+    // The log is there whenever the feed is, even empty: a screen reader may
+    // not read out a region that appears together with its first line. It
+    // is out of the flow, so an empty feed still shows nothing.
     return html`
       <div
         class="flex flex-col gap-1 w-full min-[1200px]:w-96"
         @keydown=${keepPressKeysFromGame}
         @keyup=${keepPressKeysFromGame}
       >
+        <div
+          role="log"
+          aria-relevant="additions"
+          aria-label=${translateText("events_display.log_label")}
+          class="sr-only"
+        >
+          ${repeat(
+            this.events.filter((event) => event.spoken !== undefined),
+            (event) => event.id,
+            (event) => html`<p>${event.spoken}</p>`,
+          )}
+        </div>
         ${
           tier2Events.length > 0
             ? html`

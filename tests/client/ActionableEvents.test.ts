@@ -48,6 +48,8 @@ describe("actionable-events", () => {
   let events: unknown[];
   let ticks: number;
   let updates: Partial<Record<GameUpdateType, unknown[]>>;
+  let replay: boolean;
+  let catchingUp: boolean;
 
   // Runs one game tick carrying the given updates.
   async function tick(next: Partial<Record<GameUpdateType, unknown[]>> = {}) {
@@ -106,6 +108,8 @@ describe("actionable-events", () => {
       "events_display.request_alliance": "{name} asks for an alliance",
       "events_display.about_to_expire": "Your alliance with {name} ends soon",
       "common.duration_second_short": "s",
+      "events_display.time_to_answer":
+        "{seconds, plural, one {# second} other {# seconds}} to answer",
     };
     document.body.appendChild(langSelector);
 
@@ -113,6 +117,8 @@ describe("actionable-events", () => {
     updates = {};
     events = [];
     myAlliances = [];
+    replay = false;
+    catchingUp = false;
     const eventBus = new EventBus();
     const record = (e: unknown) => events.push(e);
     eventBus.on(GoToPlayerEvent, record);
@@ -126,10 +132,12 @@ describe("actionable-events", () => {
     display.game = {
       inSpawnPhase: () => false,
       ticks: () => ticks,
+      isCatchingUp: () => catchingUp,
       myPlayer: () => players.get(ME),
       player: (id: number) => players.get(id),
       playerBySmallID: (id: number) => players.get(id),
       config: () => ({
+        isReplay: () => replay,
         allianceRequestDuration: () => 200,
         allianceExtensionPromptOffset: () => 300,
       }),
@@ -401,6 +409,81 @@ describe("actionable-events", () => {
         expect(mousedown.defaultPrevented).toBe(true);
       }
       expect(anna.contains(document.activeElement)).toBe(false);
+    });
+  });
+
+  describe("screen readers", () => {
+    const region = () =>
+      display.querySelector<HTMLElement>('[aria-live="assertive"]')!;
+    const said = () =>
+      [...region().querySelectorAll("p")].map((p) => p.textContent);
+
+    it("keeps the region while no card is open", async () => {
+      await tick();
+
+      expect(region()).not.toBeNull();
+      expect(said()).toEqual([]);
+      expect(cards()).toHaveLength(0);
+    });
+
+    it("reads a new request out once, with the time to answer", async () => {
+      await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(ANNA)] });
+      expect(said()).toEqual([
+        "Anna asks for an alliance 20 seconds to answer",
+      ]);
+
+      // The card redraws every tick for its seconds; the region must not.
+      const changes: MutationRecord[] = [];
+      new MutationObserver((records) => changes.push(...records)).observe(
+        region(),
+        { childList: true, characterData: true, subtree: true },
+      );
+      await advance(10);
+      await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(BORIS)] });
+
+      expect(said()).toEqual([
+        "Anna asks for an alliance 20 seconds to answer",
+        "Boris asks for an alliance 20 seconds to answer",
+      ]);
+      // Only Boris's line went in (Lit adds comment markers around it).
+      const added = changes.flatMap((r) => [...r.addedNodes]);
+      expect(added.filter((n) => n.nodeType !== Node.COMMENT_NODE)).toEqual([
+        region().querySelectorAll("p")[1],
+      ]);
+      expect(changes.every((r) => r.type === "childList")).toBe(true);
+      expect(changes.flatMap((r) => [...r.removedNodes])).toEqual([]);
+    });
+
+    it("reads a renewal prompt out with the time left in the alliance", async () => {
+      ticks = 1000;
+      myAlliances = [{ id: 7, other: BORIS, expiresAt: ticks + 250 }];
+      await tick();
+
+      expect(said()).toEqual([
+        "Your alliance with Boris ends soon 25 seconds to answer",
+      ]);
+    });
+
+    it("drops the line when the card goes", async () => {
+      await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(ANNA)] });
+
+      button(cardOf("Anna")!, "reject").click();
+      await display.updateComplete;
+
+      expect(said()).toEqual([]);
+    });
+
+    it("stays silent in a replay and while the game catches up", async () => {
+      replay = true;
+      await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(ANNA)] });
+      replay = false;
+      catchingUp = true;
+      await tick({ [GameUpdateType.AllianceRequest]: [requestFrom(BORIS)] });
+      catchingUp = false;
+      await tick();
+
+      expect(cards()).toHaveLength(2);
+      expect(said()).toEqual([]);
     });
   });
 

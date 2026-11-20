@@ -98,7 +98,9 @@ describe("EventsDisplay handlers", () => {
       }),
       ticks: () => 0,
       inSpawnPhase: () => false,
+      isCatchingUp: () => false,
       config: () => ({
+        isReplay: () => false,
         traitorDefenseDebuff: () => 0.5,
         traitorDuration: () => 25, // ticks -> floor(2.5) = 2 seconds
       }),
