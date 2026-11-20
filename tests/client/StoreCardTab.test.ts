@@ -266,4 +266,24 @@ describe("<card-store-grid> opened on an item", () => {
       tile("cardTracker:wins").hasAttribute("data-card-store-selected"),
     ).toBe(true);
   });
+
+  it("handled requests clear the selection, so the same item can be asked for again", async () => {
+    await render("cardBackground:bg_frontline");
+    grid.requestedItem = null;
+    await grid.updateComplete;
+    expect(
+      (grid as unknown as Element).querySelector("[data-card-store-selected]"),
+    ).toBeNull();
+    scrolled = [];
+    grid.requestedItem = "cardBackground:bg_frontline";
+    await grid.updateComplete;
+    await new Promise((r) => setTimeout(r, 0));
+    await grid.updateComplete;
+    expect(
+      tile("cardBackground:bg_frontline").hasAttribute(
+        "data-card-store-selected",
+      ),
+    ).toBe(true);
+    expect(scrolled).toContain(tile("cardBackground:bg_frontline"));
+  });
 });

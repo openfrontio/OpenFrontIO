@@ -22,8 +22,12 @@ const {
   PENDING_PURCHASE_TTL_MS,
   rememberPendingPurchase,
 } = await import("../../src/client/components/inventory/PendingEquip");
-const { handlePurchaseReturn, resumePendingPurchase } =
-  await import("../../src/client/Cosmetics");
+const {
+  cancelPendingResume,
+  handlePurchaseReturn,
+  resumePendingPurchase,
+  setGameInProgress,
+} = await import("../../src/client/Cosmetics");
 
 const me = (flares: string[] = [], hard = 500) =>
   ({
@@ -245,6 +249,52 @@ describe("resuming before the Plutonium lands", () => {
     expect(window.location.hash).toBe(
       "#modal=store&tab=cosmetics&item=cardBackground%3Abg_x",
     );
+  });
+
+  it("cancelled while it waits: never opens the Store, keeps the record", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me([], 100));
+    rememberPendingPurchase("p1", "cardBackground:bg_x");
+    const resumed = resumePendingPurchase({ waitForProfile: false });
+    await vi.advanceTimersByTimeAsync(4_000);
+    cancelPendingResume();
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(await resumed).toBe(false);
+    expect(window.location.hash).toBe("");
+    expect(peekPendingPurchase("p1")).toBe("cardBackground:bg_x");
+  });
+
+  it("navigating elsewhere while it waits cancels it", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me([], 100));
+    rememberPendingPurchase("p1", "cardBackground:bg_x");
+    const resumed = resumePendingPurchase({ waitForProfile: false });
+    await vi.advanceTimersByTimeAsync(4_000);
+    window.location.hash = "#modal=account";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(await resumed).toBe(false);
+    expect(window.location.hash).toBe("#modal=account");
+  });
+
+  it("a game starting while it waits cancels it", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me([], 100));
+    rememberPendingPurchase("p1", "cardBackground:bg_x");
+    const resumed = resumePendingPurchase({ waitForProfile: false });
+    await vi.advanceTimersByTimeAsync(4_000);
+    setGameInProgress(true);
+    await vi.advanceTimersByTimeAsync(40_000);
+    setGameInProgress(false);
+    expect(await resumed).toBe(false);
+    expect(window.location.hash).toBe("");
+  });
+
+  it("never sets the Store hash while a game is running", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(me([], 500));
+    rememberPendingPurchase("p1", "cardBackground:bg_x");
+    setGameInProgress(true);
+    expect(await resumePendingPurchase({ waitForProfile: false })).toBe(false);
+    setGameInProgress(false);
+    expect(window.location.hash).toBe("");
+    expect(peekPendingPurchase("p1")).toBe("cardBackground:bg_x");
   });
 
   it("enough already: opens straight away, no message", async () => {

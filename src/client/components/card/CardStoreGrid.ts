@@ -1,6 +1,12 @@
 import type { StorePlacement } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
-import { html, LitElement, nothing, type TemplateResult } from "lit";
+import {
+  html,
+  LitElement,
+  nothing,
+  type PropertyValues,
+  type TemplateResult,
+} from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { purchaseCosmetic, type ResolvedCosmetic } from "../../Cosmetics";
 import { translateText } from "../../Utils";
@@ -72,6 +78,14 @@ export class CardStoreGrid extends LitElement {
 
   createRenderRoot() {
     return this;
+  }
+
+  protected willUpdate(changed: PropertyValues<this>): void {
+    // The request was handled: clear the selection, so the same item can be
+    // asked for again.
+    if (changed.has("requestedItem") && this.requestedItem === null) {
+      this.selected = null;
+    }
   }
 
   protected updated(): void {

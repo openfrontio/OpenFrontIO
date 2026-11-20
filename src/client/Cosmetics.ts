@@ -293,21 +293,54 @@ async function resumePendingPurchaseFor(me: UserMeResponse): Promise<boolean> {
     clearPendingPurchase();
     return false;
   }
-  // The Plutonium can lag the redirect (the rail's webhook credits it): say
-  // so, and re-check for a while before opening the item to buy.
-  const price = await hardPriceOf(key);
-  let hard = me.player.currency?.hard ?? 0;
-  if (price !== null && hard < price) {
-    showToast(translateText("store.plutonium_on_its_way"), "green");
-    const until = Date.now() + PLUTONIUM_WAIT_MS;
-    while (hard < price && Date.now() < until) {
-      await new Promise((r) => setTimeout(r, PLUTONIUM_RECHECK_MS));
-      const fresh = await broadcastFreshUserMe();
-      if (fresh !== false) hard = fresh.player.currency?.hard ?? 0;
+  // One resume at a time; it stops if the player goes elsewhere (another
+  // modal: any hash change) or into a game (setGameInProgress), and then
+  // never opens the Store. The record stays for the next visit.
+  cancelPendingResume();
+  const abort = new AbortController();
+  resumeAbort = abort;
+  const onHashChange = () => abort.abort();
+  window.addEventListener("hashchange", onHashChange);
+  try {
+    // The Plutonium can lag the redirect (the rail's webhook credits it):
+    // say so, and re-check for a while before opening the item to buy.
+    const price = await hardPriceOf(key);
+    let hard = me.player.currency?.hard ?? 0;
+    if (price !== null && hard < price && !abort.signal.aborted) {
+      showToast(translateText("store.plutonium_on_its_way"), "green");
+      const until = Date.now() + PLUTONIUM_WAIT_MS;
+      while (hard < price && Date.now() < until && !abort.signal.aborted) {
+        await new Promise((r) => setTimeout(r, PLUTONIUM_RECHECK_MS));
+        if (abort.signal.aborted) break;
+        const fresh = await broadcastFreshUserMe();
+        if (fresh !== false) hard = fresh.player.currency?.hard ?? 0;
+      }
     }
+    if (abort.signal.aborted || gameInProgress) return false;
+  } finally {
+    window.removeEventListener("hashchange", onHashChange);
+    if (resumeAbort === abort) resumeAbort = null;
   }
   window.location.hash = `modal=store&tab=cosmetics&item=${encodeURIComponent(key)}`;
   return true;
+}
+
+let resumeAbort: AbortController | null = null;
+let gameInProgress = false;
+
+/** Stops a resume that is waiting for a top-up's Plutonium. */
+export function cancelPendingResume(): void {
+  resumeAbort?.abort();
+  resumeAbort = null;
+}
+
+/**
+ * Whether a game is running (ClientGameRunner start/stop). A resume never
+ * opens the Store during one, and starting one cancels a waiting resume.
+ */
+export function setGameInProgress(running: boolean): void {
+  gameInProgress = running;
+  if (running) cancelPendingResume();
 }
 
 // How long a resume waits for a top-up's Plutonium to land, and how often it
