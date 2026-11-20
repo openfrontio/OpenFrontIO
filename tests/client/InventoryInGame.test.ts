@@ -840,6 +840,41 @@ describe("Inventory In game tab", () => {
       expect(sessionStorage.getItem(PENDING_EQUIP_KEY)).toBeNull();
     });
 
+    it("an earlier purchase that fails keeps a later one's item", async () => {
+      let failA!: (error: Error) => void;
+      let finishB!: () => void;
+      vi.mocked(purchaseCosmetic)
+        .mockImplementationOnce(
+          () =>
+            new Promise((_, reject) => {
+              failA = reject;
+            }),
+        )
+        .mockImplementationOnce(
+          () =>
+            new Promise((resolve) => {
+              finishB = () => resolve(undefined);
+            }),
+        );
+      await open("crowns");
+      const purchase = modal as unknown as {
+        purchase(item: { key: string }, method: "hard"): Promise<unknown>;
+      };
+      const a = purchase.purchase({ key: "crown:sale_crown" }, "hard");
+      const b = purchase.purchase({ key: "crown:other_crown" }, "hard");
+      failA(new Error("network"));
+      await expect(a).rejects.toThrow("network");
+      expect(JSON.parse(sessionStorage.getItem(PENDING_EQUIP_KEY)!).key).toBe(
+        "crown:other_crown",
+      );
+      vi.mocked(purchaseReloading).mockReturnValue(true);
+      finishB();
+      await b;
+      expect(JSON.parse(sessionStorage.getItem(PENDING_EQUIP_KEY)!).key).toBe(
+        "crown:other_crown",
+      );
+    });
+
     it("a purchase that reloads the page keeps the item for Equip now", async () => {
       vi.mocked(purchaseCosmetic).mockResolvedValue(undefined);
       vi.mocked(purchaseReloading).mockReturnValue(true);

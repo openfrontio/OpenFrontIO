@@ -66,11 +66,27 @@ export function peekPendingEquip(
   return null;
 }
 
-export function clearPendingEquip(): void {
+/**
+ * Drops the record. With `key`, only a record for that item: one purchase
+ * ending must not drop the record a later purchase has written over it.
+ */
+export function clearPendingEquip(key?: string): void {
   try {
+    if (key !== undefined && storedKey() !== key) return;
     sessionStorage.removeItem(PENDING_EQUIP_KEY);
   } catch {
     // Storage blocked: nothing was stored either.
+  }
+}
+
+function storedKey(): string | undefined {
+  const raw = sessionStorage.getItem(PENDING_EQUIP_KEY);
+  if (raw === null) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as Partial<PendingEquip>;
+    return typeof parsed.key === "string" ? parsed.key : undefined;
+  } catch {
+    return undefined;
   }
 }
 

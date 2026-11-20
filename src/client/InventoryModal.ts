@@ -1457,8 +1457,9 @@ export class InventoryModal extends BaseModal {
     } finally {
       // No reload means no purchase (failed, cancelled or thrown): forget
       // the item, or a later purchase of it elsewhere (the Store) would
-      // bring back this Equip now.
-      if (!purchaseReloading()) clearPendingEquip();
+      // bring back this Equip now. Only this item's record: a purchase
+      // started since has written its own over it.
+      if (!purchaseReloading()) clearPendingEquip(resolved.key);
     }
   }
 
