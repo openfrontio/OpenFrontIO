@@ -1677,6 +1677,7 @@ export const StorePlacementTabSchema = z.enum([
 ]);
 export type StorePlacementTab = z.infer<typeof StorePlacementTabSchema>;
 export const StorePlacementSubTabSchema = z.enum([
+  "new",
   "sale",
   "patterns",
   "flags",
