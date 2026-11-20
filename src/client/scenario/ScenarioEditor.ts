@@ -231,6 +231,7 @@ export class ScenarioEditor extends LitElement {
     try {
       const resized = resizeScenarioDocument(doc, this.width, this.height);
       await scenarioDrafts.save(id, resized);
+      if (this.abort.signal.aborted) return;
       await this.startSession(resized);
     } catch (e) {
       console.error("scenario editor: resizing failed:", e);

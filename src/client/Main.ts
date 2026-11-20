@@ -2074,8 +2074,15 @@ class Client {
       }
       // handleLeaveLobby only resets the URL once a lobby handle exists.
       history.replaceState(null, "", "/");
+      // Go home only once the player has read the alert.
+      const menuGone = this.menuGoneForJoin;
+      this.menuGoneForJoin = false;
       void this.handleLeaveLobby();
-      void showInGameAlert(translateText("error_modal.game_client_failed"));
+      void showInGameAlert(
+        translateText("error_modal.game_client_failed"),
+      ).then(() => {
+        if (menuGone) window.location.href = homeHref();
+      });
       return;
     }
     const newLobbyHandle = joinLobby(this.eventBus, {
@@ -2347,6 +2354,9 @@ class Client {
     this.mostRecentJoinEvent = performance.now();
 
     if (this.lobbyHandle === null) {
+      // The join closed the scenario editor, which had replaced the menu, and
+      // ended before reaching a lobby: nothing is left on the page, so go home.
+      if (this.menuGoneForJoin) window.location.href = homeHref();
       return;
     }
     console.log("leaving lobby, cancelling game");
