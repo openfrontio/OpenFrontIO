@@ -16,6 +16,7 @@ import {
 } from "@openfront/engine-api/EditorCommands";
 import { Difficulty, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { GameConfigSchema, ID } from "@openfront/engine-api/Schemas";
+import { generateID } from "@openfront/shared/SharedUtil";
 import { z } from "zod";
 
 /** The version of the stored form. A change to it gets a new one. */
@@ -74,6 +75,32 @@ export const ScenarioNationSchema = z.object({
   playable: z.boolean(),
 });
 export type ScenarioNation = z.infer<typeof ScenarioNationSchema>;
+
+// What a human starts with in play.
+const NEW_NATION_TROOPS = 25_000;
+
+/**
+ * A nation to add to the document: a new id, and the first of `name(1)`,
+ * `name(2)`, ... that no nation has.
+ */
+export function newNation(
+  doc: ScenarioDocument,
+  name: (n: number) => string,
+): ScenarioNation {
+  const names = new Set(doc.nations.map((n) => n.name));
+  let n = 1;
+  while (names.has(name(n))) n++;
+  let id = generateID();
+  while (doc.nations.some((other) => other.id === id)) id = generateID();
+  return {
+    id,
+    name: name(n),
+    flag: null,
+    troops: NEW_NATION_TROOPS,
+    gold: 0,
+    playable: false,
+  };
+}
 
 export const ScenarioStructureSchema = z.object({
   type: PlaceStructureCommandSchema.shape.unit,

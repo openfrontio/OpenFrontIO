@@ -5,10 +5,11 @@
  *
  * It owns the document and one editor engine in a worker. Each edit goes to
  * both; the worker's updates reach GameView, the renderer and the borrowed
- * HUD layers as in game. Resizing the map rebuilds the engine. Its one
- * editing tool so far is the terrain brush.
+ * HUD layers as in game. Resizing the map rebuilds the engine. Its tools
+ * so far are the terrain and territory brushes and the nations panel.
  */
 
+import { SetNationCommandSchema } from "@openfront/engine-api/EditorCommands";
 import type { GameMap } from "@openfront/engine-api/game/GameMap";
 import { Cell, GameMapSize } from "@openfront/engine-api/game/GameTypes";
 import type { MapFiles } from "@openfront/engine-api/game/MapFiles";
@@ -20,6 +21,8 @@ import { loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { generateID } from "@openfront/shared/SharedUtil";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import { live } from "lit/directives/live.js";
+import Countries from "resources/countries.json" with { type: "json" };
 import "../hud/layers/PlayerInfoOverlay";
 import type { PlayerInfoOverlay } from "../hud/layers/PlayerInfoOverlay";
 import { MouseMoveEvent } from "../InputHandler";
@@ -44,7 +47,7 @@ import { homeHref, translateText } from "../Utils";
 import { GameView } from "../view/GameView";
 import { WebGLFrameBuilder } from "../WebGLFrameBuilder";
 import { WorkerClient } from "../WorkerClient";
-import { DocumentEditor } from "./DocumentEditor";
+import { DocumentEditor, type Edit } from "./DocumentEditor";
 import {
   editorStartInfo,
   startEditorEngine,
@@ -54,24 +57,35 @@ import {
   IMPASSABLE,
   isScenarioSize,
   land,
+  MAX_NATIONS,
   MAX_SIDE,
   MAX_ELEVATION,
+  newNation,
   newScenarioDocument,
   resizeScenarioDocument,
   type ScenarioDocument,
+  type ScenarioNation,
   WATER,
 } from "./ScenarioDocument";
 import { type DraftInfo, scenarioDrafts } from "./ScenarioDrafts";
 import { scenarioEditorHash } from "./ScenarioEditorRoute";
-import { TerrainStroke } from "./TerrainBrush";
+import {
+  type BrushStroke,
+  TerrainStroke,
+  TerritoryStroke,
+} from "./TerrainBrush";
 
 const WHEEL_ZOOM = 1.0015;
 const MAX_BRUSH_RADIUS = 50;
 /** How far, in CSS px, a finger moves before its touch is a stroke. */
 const TOUCH_SLOP = 8;
 
-type Tool = "pan" | "terrain";
+type Tool = "pan" | "terrain" | "territory";
 type TerrainKind = "water" | "land" | "impassable";
+type NationFields = Omit<Extract<Edit, { type: "set_nation" }>, "type" | "id">;
+
+/** The flags a nation can take, as the flag picker lists them. */
+const FLAGS = Countries.filter((c) => c.code !== "xx" && c.restricted !== true);
 
 /** Copies of the files' maps: the client and the worker each take theirs. */
 function copyMapFiles(files: MapFiles): MapFiles {
@@ -111,6 +125,11 @@ export class ScenarioEditor extends LitElement {
   @state() private elevation = 0;
   /** In tiles; 0 paints one tile. */
   @state() private brushRadius = 2;
+  /**
+   * The nation picked in the nations panel, which the territory brush
+   * paints; null, or a nation since removed, erases.
+   */
+  @state() private nationId: string | null = null;
 
   @query("#scenario-editor-brush") private brushPreview!: HTMLElement | null;
 
@@ -121,7 +140,7 @@ export class ScenarioEditor extends LitElement {
   /** The brush stroke in progress, by the pointer painting it. */
   private stroke: {
     pointerId: number;
-    brush: TerrainStroke;
+    brush: BrushStroke;
     x: number;
     y: number;
     startX: number;
@@ -296,10 +315,68 @@ export class ScenarioEditor extends LitElement {
     });
   }
 
+  // ---- Nations ----
+
+  /** The nation the territory brush paints, unless removed since. */
+  private selectedNation(): ScenarioNation | null {
+    return this.doc?.nations.find((n) => n.id === this.nationId) ?? null;
+  }
+
+  /** Applies an edit as an undo step of its own, and saves. */
+  private applyEdit(edit: Edit): void {
+    const editor = this.editor;
+    if (editor === null || this.status !== "ready") return;
+    // A stroke still open ends first, as its own step.
+    this.endStroke();
+    editor.apply(edit);
+    editor.commit();
+    this.saveDraft();
+    this.requestUpdate();
+  }
+
+  private addNation(): void {
+    const doc = this.doc;
+    if (doc === null || doc.nations.length >= MAX_NATIONS) return;
+    const nation = newNation(doc, (n) =>
+      translateText("scenario_editor.new_nation_name", { n }),
+    );
+    this.applyEdit({ type: "add_nation", nation });
+    this.nationId = nation.id;
+  }
+
+  /**
+   * Changes the nation's fields as one undo step. Values that change
+   * nothing or that the command schema rejects put the inputs back.
+   */
+  private setNation(nation: ScenarioNation, fields: NationFields): void {
+    const edit: Edit = { type: "set_nation", id: nation.id, ...fields };
+    const keys = Object.keys(fields) as (keyof NationFields)[];
+    if (
+      keys.every((k) => fields[k] === nation[k]) ||
+      !SetNationCommandSchema.safeParse(edit).success
+    ) {
+      this.requestUpdate();
+      return;
+    }
+    this.applyEdit(edit);
+  }
+
   private onKey(e: KeyboardEvent): void {
-    if (e.target instanceof HTMLInputElement) return;
+    const t = e.target;
+    // A text field keeps its keys, undo included. Other controls (a select,
+    // a checkbox, a slider) keep only the brackets, so undo still works
+    // after a change in one.
+    if (
+      t instanceof HTMLInputElement &&
+      (t.type === "text" || t.type === "number")
+    ) {
+      return;
+    }
+    const control =
+      t instanceof HTMLInputElement || t instanceof HTMLSelectElement;
     // Some layouts type the brackets with AltGr (Ctrl+Alt) or Option.
     if (!e.metaKey && (e.key === "[" || e.key === "]")) {
+      if (control) return;
       this.setBrushRadius(this.brushRadius + (e.key === "]" ? 1 : -1));
       return;
     }
@@ -524,7 +601,7 @@ export class ScenarioEditor extends LitElement {
 
   // ---- Pointer ----
 
-  // With the terrain tool, the primary button or a single finger paints.
+  // With a brush tool, the primary button or a single finger paints.
   // The other buttons and two fingers move the camera, as in pan mode.
 
   private onPointerDown(e: PointerEvent): void {
@@ -541,7 +618,7 @@ export class ScenarioEditor extends LitElement {
       else this.stroke = null;
       this.gestures?.down(stroke.pointerId, stroke.x, stroke.y);
     } else if (
-      this.tool === "terrain" &&
+      this.tool !== "pan" &&
       e.button === 0 &&
       this.gestures?.active === false &&
       this.startStroke(e.pointerId, e.pointerType !== "touch", x, y, rect)
@@ -566,7 +643,14 @@ export class ScenarioEditor extends LitElement {
         : this.terrainKind === "land"
           ? land(this.elevation)
           : IMPASSABLE;
-    const brush = new TerrainStroke(editor, terrain, this.brushRadius);
+    const brush =
+      this.tool === "terrain"
+        ? new TerrainStroke(editor, terrain, this.brushRadius)
+        : new TerritoryStroke(
+            editor,
+            this.selectedNation()?.id ?? null,
+            this.brushRadius,
+          );
     this.stroke = {
       pointerId,
       brush,
@@ -657,7 +741,7 @@ export class ScenarioEditor extends LitElement {
     const camera = this.camera;
     const hover = this.hover;
     if (el === null) return;
-    if (this.tool !== "terrain" || hover === null || camera === null) {
+    if (this.tool === "pan" || hover === null || camera === null) {
       el.style.display = "none";
       return;
     }
@@ -690,7 +774,7 @@ export class ScenarioEditor extends LitElement {
   }
 
   private onDoubleClick(e: MouseEvent): void {
-    // With the terrain tool, a double click is two dabs of paint.
+    // With a brush tool, a double click is two dabs of paint.
     if (this.tool !== "pan") return;
     const el = e.currentTarget as HTMLElement;
     this.camera?.fit(el.clientWidth, el.clientHeight);
@@ -717,7 +801,7 @@ export class ScenarioEditor extends LitElement {
           @wheel=${this.onWheel}
           @dblclick=${this.onDoubleClick}
           @contextmenu=${(e: Event) => {
-            // The right button pans while the terrain tool is out.
+            // The right button pans while a brush tool is out.
             if (this.tool !== "pan") e.preventDefault();
           }}
         ></div>
@@ -732,9 +816,13 @@ export class ScenarioEditor extends LitElement {
               `
             : nothing
         }
-        <player-info-overlay></player-info-overlay>
+        <!-- Its offset puts the hover card below the bar. -->
+        <player-info-overlay
+          style="--game-health-offset: 3.5rem"
+        ></player-info-overlay>
         ${this.status === "ready" ? this.renderBar() : nothing}
         ${this.status === "ready" ? this.renderTools() : nothing}
+        ${this.status === "ready" ? this.renderNations() : nothing}
         ${this.status === "start" ? this.renderStart() : nothing}
         ${
           this.status === "loading"
@@ -960,6 +1048,7 @@ export class ScenarioEditor extends LitElement {
         <div class="flex gap-1">
           ${tool("pan", "scenario_editor.tool_pan")}
           ${tool("terrain", "scenario_editor.tool_terrain")}
+          ${tool("territory", "scenario_editor.tool_territory")}
         </div>
         <div class="flex gap-1">
           <button
@@ -1004,6 +1093,12 @@ export class ScenarioEditor extends LitElement {
                       </label>`
                     : nothing
                 }
+              `
+            : nothing
+        }
+        ${
+          this.tool !== "pan"
+            ? html`
                 <label
                   class="flex flex-col gap-1"
                   title=${translateText("scenario_editor.brush_size_keys")}
@@ -1025,6 +1120,138 @@ export class ScenarioEditor extends LitElement {
               `
             : nothing
         }
+      </div>
+    `;
+  }
+
+  /**
+   * The nations: picking one makes it what the territory brush paints, or
+   * nobody to erase, and the picked one's fields are edited below the list.
+   */
+  private renderNations() {
+    const doc = this.doc!;
+    const selected = this.selectedNation();
+    const button =
+      "rounded px-2 py-1 disabled:opacity-50 aria-pressed:bg-blue-600 bg-zinc-700 hover:bg-zinc-600 aria-pressed:hover:bg-blue-500";
+    const pick = (id: string | null, label: string) =>
+      html`<li>
+        <button
+          class="${button} w-full truncate text-left"
+          aria-pressed=${(selected?.id ?? null) === id}
+          @click=${() => (this.nationId = id)}
+        >
+          ${label}
+        </button>
+      </li>`;
+    return html`
+      <div
+        class="absolute top-14 right-2 flex max-h-[calc(100%-4.5rem)] w-64 flex-col gap-2 overflow-y-auto rounded-lg bg-zinc-900/90 p-3 text-sm"
+      >
+        <div class="flex items-center justify-between gap-2">
+          <h2 class="font-semibold">
+            ${translateText("scenario_editor.nations", {
+              count: doc.nations.length,
+              max: MAX_NATIONS,
+            })}
+          </h2>
+          <button
+            class=${button}
+            ?disabled=${doc.nations.length >= MAX_NATIONS}
+            @click=${() => this.addNation()}
+          >
+            ${translateText("scenario_editor.add_nation")}
+          </button>
+        </div>
+        <ul class="flex max-h-60 shrink-0 flex-col gap-1 overflow-y-auto">
+          ${pick(null, translateText("scenario_editor.nobody"))}
+          ${doc.nations.map((n) => pick(n.id, n.name))}
+        </ul>
+        ${selected === null ? nothing : this.renderNation(selected)}
+      </div>
+    `;
+  }
+
+  private renderNation(n: ScenarioNation) {
+    const input = "rounded bg-zinc-800 px-2 py-1 text-white";
+    const target = (e: Event) => e.target as HTMLInputElement;
+    const flags =
+      n.flag === null || FLAGS.some((c) => c.code === n.flag)
+        ? FLAGS
+        : [{ code: n.flag, name: n.flag }, ...FLAGS];
+    return html`
+      <div class="flex flex-col gap-2 border-t border-zinc-700 pt-2">
+        <label class="flex flex-col gap-1">
+          ${translateText("scenario_editor.name")}
+          <input
+            class=${input}
+            maxlength="64"
+            .value=${live(n.name)}
+            @change=${(e: Event) =>
+              this.setNation(n, { name: target(e).value.trim() })}
+          />
+        </label>
+        <label class="flex flex-col gap-1">
+          ${translateText("scenario_editor.flag")}
+          <select
+            class=${input}
+            @change=${(e: Event) =>
+              this.setNation(n, {
+                flag: (e.target as HTMLSelectElement).value || null,
+              })}
+          >
+            <option value="" .selected=${n.flag === null}>
+              ${translateText("scenario_editor.no_flag")}
+            </option>
+            ${flags.map(
+              (c) =>
+                html`<option value=${c.code} .selected=${c.code === n.flag}>
+                  ${c.name}
+                </option>`,
+            )}
+          </select>
+        </label>
+        <label class="flex flex-col gap-1">
+          ${translateText("scenario_editor.troops")}
+          <input
+            type="number"
+            min="0"
+            step="1"
+            class=${input}
+            .value=${live(String(n.troops))}
+            @change=${(e: Event) =>
+              this.setNation(n, { troops: target(e).valueAsNumber })}
+          />
+        </label>
+        <label class="flex flex-col gap-1">
+          ${translateText("scenario_editor.gold")}
+          <input
+            type="number"
+            min="0"
+            step="1"
+            class=${input}
+            .value=${live(String(n.gold))}
+            @change=${(e: Event) =>
+              this.setNation(n, { gold: target(e).valueAsNumber })}
+          />
+        </label>
+        <label
+          class="flex items-center gap-2"
+          title=${translateText("scenario_editor.playable_hint")}
+        >
+          <input
+            type="checkbox"
+            .checked=${live(n.playable)}
+            @change=${(e: Event) =>
+              this.setNation(n, { playable: target(e).checked })}
+          />
+          ${translateText("scenario_editor.playable")}
+        </label>
+        <button
+          class="rounded bg-red-700 px-2 py-1 hover:bg-red-600"
+          @click=${() => this.applyEdit({ type: "remove_nation", id: n.id })}
+        >
+          ${translateText("scenario_editor.remove_nation")}
+        </button>
       </div>
     `;
   }

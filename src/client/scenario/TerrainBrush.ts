@@ -1,10 +1,11 @@
 /**
- * The terrain brush (docs/ScenarioEditor.md, "Terrain"): which tiles a
- * round brush covers, and a stroke that paints them through the
- * DocumentEditor in batches.
+ * The terrain and territory brushes (docs/ScenarioEditor.md, "Terrain"):
+ * which tiles a round brush covers, and a stroke that paints them through
+ * the DocumentEditor in batches.
  */
 
-import type { DocumentEditor } from "./DocumentEditor";
+import type { DocumentEditor, Edit } from "./DocumentEditor";
+import { isOwnable } from "./ScenarioDocument";
 
 /**
  * The tiles within `radius` of tile (cx, cy), clipped to a `width` x
@@ -93,30 +94,31 @@ function addDisc(
 }
 
 /**
- * One stroke of the brush: moveTo() collects the tiles it passes that don't
- * already hold the terrain, flush() applies them as one edit, and end()
- * makes the stroke one undo step. A stroke that changes nothing sends
- * nothing.
+ * One stroke of a brush: moveTo() collects the tiles it passes that it would
+ * change, flush() applies them as one edit, and end() makes the stroke one
+ * undo step. A stroke that changes nothing sends nothing.
  */
-export class TerrainStroke {
+export class BrushStroke {
   private last: { x: number; y: number } | null = null;
   private readonly pending = new Set<number>();
   private changed = false;
 
   constructor(
     private readonly editor: DocumentEditor,
-    private readonly terrain: number,
     readonly radius: number,
+    /** Whether painting the tile would change it. */
+    private readonly changes: (tile: number) => boolean,
+    /** The edit that paints the tiles. */
+    private readonly edit: (tiles: number[]) => Edit,
   ) {}
 
   /** Moves the brush to tile (x, y), which may lie off the map. */
   moveTo(x: number, y: number): void {
-    const { doc } = this.editor;
+    const { width, height } = this.editor.doc;
     const from = this.last ?? { x, y };
-    const { width, height } = doc;
     const tiles = lineTiles(from.x, from.y, x, y, this.radius, width, height);
     for (const t of tiles) {
-      if (doc.terrain[t] !== this.terrain) this.pending.add(t);
+      if (this.changes(t)) this.pending.add(t);
     }
     this.last = { x, y };
   }
@@ -126,11 +128,7 @@ export class TerrainStroke {
     if (this.pending.size === 0) return;
     const tiles = [...this.pending];
     this.pending.clear();
-    this.editor.apply({
-      type: "set_terrain",
-      tiles,
-      terrain: tiles.map(() => this.terrain),
-    });
+    this.editor.apply(this.edit(tiles));
     this.changed = true;
   }
 
@@ -139,5 +137,45 @@ export class TerrainStroke {
     this.flush();
     this.editor.commit();
     return this.changed;
+  }
+}
+
+/** Paints a terrain byte, skipping tiles that already hold it. */
+export class TerrainStroke extends BrushStroke {
+  constructor(editor: DocumentEditor, terrain: number, radius: number) {
+    const { doc } = editor;
+    super(
+      editor,
+      radius,
+      (t) => doc.terrain[t] !== terrain,
+      (tiles) => ({
+        type: "set_terrain",
+        tiles,
+        terrain: tiles.map(() => terrain),
+      }),
+    );
+  }
+}
+
+/**
+ * Gives land to the nation with id `owner`, or to nobody when it's null.
+ * Skips water, impassable tiles and tiles the owner already has.
+ */
+export class TerritoryStroke extends BrushStroke {
+  constructor(editor: DocumentEditor, owner: string | null, radius: number) {
+    const { doc } = editor;
+    super(
+      editor,
+      radius,
+      (t) => {
+        const o = doc.owners[t];
+        if (owner === null) return o !== 0;
+        return (
+          isOwnable(doc.terrain[t]) &&
+          (o === 0 || doc.nations[o - 1].id !== owner)
+        );
+      },
+      (tiles) => ({ type: "set_owner", tiles, owner }),
+    );
   }
 }
