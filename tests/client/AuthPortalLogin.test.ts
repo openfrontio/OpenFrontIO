@@ -13,7 +13,8 @@ vi.mock("../../src/client/SteamSDK", () => ({
 }));
 vi.mock("../../src/client/GamePortal", () => ({ gamePortal: portal }));
 
-const { clearLocalSession, userAuth } = await import("../../src/client/Auth");
+const { clearLocalSession, sessionUncertain, userAuth } =
+  await import("../../src/client/Auth");
 const { ClientEnv } = await import("../../src/client/ClientEnv");
 
 // Portal players exchange a fresh portal token at /auth/<portal> rather than
@@ -74,4 +75,53 @@ describe("portal login", () => {
       );
     },
   );
+
+  // sessionUncertain: "couldn't check" vs "signed out" for the end screen's
+  // Buy. A portal exchange settles it like /auth/refresh does.
+  describe("sessionUncertain", () => {
+    const answer = (status: number) =>
+      fetchMock.mockImplementation(async () => ({
+        status,
+        json: async () => ({}),
+      }));
+    const signedInPortal = () => {
+      portal.name.mockReturnValue("crazygames");
+      portal.getUserToken.mockResolvedValue("portal-token");
+    };
+    beforeEach(() => {
+      vi.spyOn(console, "log").mockImplementation(() => undefined);
+      vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+    });
+    afterEach(() => vi.restoreAllMocks());
+
+    it("a portal exchange rejected (401) after an unreachable refresh: settled", async () => {
+      answer(503);
+      expect(await userAuth()).toBe(false);
+      expect(sessionUncertain()).toBe(true);
+      signedInPortal();
+      answer(401);
+      expect(await userAuth()).toBe(false);
+      expect(sessionUncertain()).toBe(false);
+    });
+
+    it.each([500, 503, 429])(
+      "a portal exchange that gets a %i: uncertain",
+      async (status) => {
+        signedInPortal();
+        answer(status);
+        expect(await userAuth()).toBe(false);
+        expect(sessionUncertain()).toBe(true);
+      },
+    );
+
+    it("a portal exchange that never reaches the server: uncertain", async () => {
+      signedInPortal();
+      fetchMock.mockImplementation(async () => {
+        throw new TypeError("Failed to fetch");
+      });
+      expect(await userAuth()).toBe(false);
+      expect(sessionUncertain()).toBe(true);
+    });
+  });
 });

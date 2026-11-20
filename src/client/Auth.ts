@@ -38,6 +38,17 @@ let __inMemoryPublicIdSub: string | null = null;
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
 let __expiresAt: number = 0;
+// The last session exchange (/auth/refresh, a portal or a Steam login) got no
+// answer that settles the session (a 5xx, 429, edge block, timeout or network
+// error): the cookie is kept and the next userAuth() retries. userAuth()
+// answers false either way, so this is how a caller tells "couldn't check"
+// from "signed out" (see sessionUncertain). Each exchange clears it first.
+//
+// A guest with no refresh cookie at all also reads as uncertain while
+// /auth/refresh is unreachable: the client can't tell "no cookie" from
+// "server down". Accepted: the end screen then shows Buy, whose check
+// answers "unreachable" and sends (and charges) nothing.
+let __refreshUnreachable = false;
 
 let __sessionState: DesktopSessionState = { status: "unknown" };
 
@@ -467,6 +478,7 @@ function announceLoggedOut(): void {
 export function clearLocalSession(): void {
   const hadSession = __jwt !== null;
   __jwt = null;
+  __refreshUnreachable = false;
   updateUserSettingsForJwt(null);
   localStorage.removeItem(PERSISTENT_ID_KEY);
   // Switch cosmetics back to the logged-out scope (via updateUserSettingsForJwt).
@@ -500,6 +512,23 @@ export function clearLocalSession(): void {
     setSessionState({ status: "unknown" });
   }
   if (hadSession) announceLoggedOut();
+}
+
+/**
+ * True when userAuth() last answered false only because the last session
+ * exchange got no settling answer: /auth/refresh, a portal login
+ * (/auth/<portal>) or a Steam login (/auth/steam, or a Steam ticket the shell
+ * couldn't get because it couldn't reach our API). The session may well still
+ * be valid. Only a 401 means signed out; any other failure (a 5xx, 429, 400,
+ * 403 edge block, timeout or network error) counts as "couldn't check", the
+ * rule /auth/refresh already followed. Each exchange starts by clearing it,
+ * so a 401 or a success leaves it false, and so does a logout. For callers
+ * where calling a signed-in player signed out costs them something (the end
+ * screen's Buy, whose sign-in leaves the game); every other caller is
+ * unaffected.
+ */
+export function sessionUncertain(): boolean {
+  return __refreshUnreachable;
 }
 
 export async function isLoggedIn(): Promise<boolean> {
@@ -636,6 +665,8 @@ async function refreshJwt(): Promise<void> {
 }
 
 async function doRefreshJwt(): Promise<void> {
+  // Each attempt decides afresh; only an unreachable answer sets it.
+  __refreshUnreachable = false;
   if (steamSDK.isOnSteam()) {
     const result = await steamSDK.getTicket();
     if (result.ok) {
@@ -648,6 +679,9 @@ async function doRefreshJwt(): Promise<void> {
     // pointless round trips and the player's stored persistent ID every time
     // Steam hiccuped. Record why and stop.
     __jwt = null;
+    // The shell couldn't reach our API to get a ticket: that's "couldn't
+    // check", like any other unreachable answer, not signed out.
+    __refreshUnreachable = result.reason === "api-unreachable";
     setSessionState({ status: "signed-out", reason: ticketReason(result) });
     return;
   }
@@ -677,6 +711,7 @@ async function doRefreshJwt(): Promise<void> {
       // The only answer that means the session is dead: the server has
       // already cleared the refresh cookie.
       console.warn("Refresh rejected", response);
+      __refreshUnreachable = false;
       void logOut();
       return;
     }
@@ -687,18 +722,21 @@ async function doRefreshJwt(): Promise<void> {
       // like an unreachable server: keep the cookie, retry on next userAuth().
       console.warn("Refresh failed", response);
       __jwt = null;
+      __refreshUnreachable = true;
       return;
     }
     const json = await response.json();
     const { jwt, expiresIn } = json;
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Refresh succeeded");
+    __refreshUnreachable = false;
     __jwt = jwt;
     updateUserSettingsForJwt(jwt);
   } catch (e) {
     console.warn("Refresh failed", e);
     // if server unreachable, just clear jwt
     __jwt = null;
+    __refreshUnreachable = true;
     return;
   }
 }
@@ -746,6 +784,7 @@ async function doPortalLogin(
   portal: GamePortalName,
   token: string,
 ): Promise<void> {
+  __refreshUnreachable = false;
   try {
     console.log(`Logging in with ${portal}`);
     // Bounded like doSteamLogin: userAuth() awaits this exchange, so a
@@ -759,6 +798,8 @@ async function doPortalLogin(
     if (response.status !== 200) {
       console.error(`${portal} login failed`, response);
       __jwt = null;
+      // A 401 settles it (signed out); anything else got no answer.
+      __refreshUnreachable = response.status !== 401;
       return;
     }
     const json = await response.json();
@@ -770,6 +811,7 @@ async function doPortalLogin(
   } catch (e) {
     console.warn(`${portal} login failed`, e);
     __jwt = null;
+    __refreshUnreachable = true;
   }
 }
 
@@ -777,6 +819,7 @@ async function doPortalLogin(
 // refresh cookie isn't usable from app://openfront (cross-site), so we
 // re-exchange a fresh ticket on expiry rather than hitting /auth/refresh.
 async function doSteamLogin(ticket: string): Promise<void> {
+  __refreshUnreachable = false;
   try {
     console.log("Logging in with Steam");
     // Bounded so a response that never settles can't leave the session
@@ -794,6 +837,8 @@ async function doSteamLogin(ticket: string): Promise<void> {
     if (response.status !== 200) {
       console.error("Steam login failed", response);
       __jwt = null;
+      // A 401 settles it (signed out); anything else got no answer.
+      __refreshUnreachable = response.status !== 401;
       // 401 is infra's unauthorized("Invalid Steam ticket"); 5xx is its
       // internalServerError for "steam unreachable" / "steam auth error",
       // which is Steam's backend rather than anything the player did. Any
@@ -822,6 +867,7 @@ async function doSteamLogin(ticket: string): Promise<void> {
   } catch (e) {
     console.warn("Steam login failed", e);
     __jwt = null;
+    __refreshUnreachable = true;
     setSessionState({ status: "signed-out", reason: "network" });
   }
 }
