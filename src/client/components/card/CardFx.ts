@@ -48,12 +48,21 @@ export const SHIMMER_MAX_ANGLE = 80;
 // place it without measuring the card. Upright, the left edge runs from 30%
 // off the left to 30% off the right as shimmerBandX says; tilted, the travel
 // widens by the band's extra sideways reach inside the card's height, so it
-// starts and ends wholly off the card. Its length is width + height, at
-// least the card's diagonal, so its ends never show.
+// starts and ends wholly off the card.
+//
+// Its length keeps both ends off the card for the whole sweep: the band is
+// centred on the card's middle row, so an end's nearest corner sits
+// (L/2)·cos a − (b/2)·sin a from it, which must reach H/2. That needs
+// L ≥ H/cos a + b·tan a (b = 18% of W); the length used is that plus W,
+// which also keeps it at least the card's diagonal.
 export function shimmerBand(
   t: number,
   layer: FxLayer,
 ): {
+  // The centre's distance from the card's left edge, sideways only:
+  // centreW × width + centreH × height. The height term is the tilted band's
+  // extra reach (H/2 · tan a), not a vertical move: the centre always stays
+  // on the card's middle row.
   centreW: number;
   centreH: number;
   lengthW: number;
@@ -75,8 +84,8 @@ export function shimmerBand(
   return {
     centreW: startW + f * (endW - startW),
     centreH: -extraH + f * 2 * extraH,
-    lengthW: 1,
-    lengthH: 1,
+    lengthW: 1 + SHIMMER_BAND_WIDTH * Math.tan(a),
+    lengthH: 1 / Math.cos(a),
     angle,
   };
 }
@@ -393,11 +402,14 @@ export class CardFx {
         wrap.appendChild(check);
         // Sized and moved in container units (see shimmerBand).
         wrap.style.setProperty("container-type", "size");
+        // The angle is fixed per layer, so the length is too.
+        const { lengthW, lengthH } = shimmerBand(0, layer);
+        const length = `${(lengthW * 100).toFixed(2)}cqw + ${(lengthH * 100).toFixed(2)}cqh`;
         move = document.createElement("div");
         move.setAttribute(
           "style",
-          "position:absolute;left:0;top:calc(50cqh - (100cqw + 100cqh) / 2);" +
-            `height:calc(100cqw + 100cqh);width:${SHIMMER_BAND_WIDTH * 100}cqw;` +
+          `position:absolute;left:0;top:calc(50cqh - (${length}) / 2);` +
+            `height:calc(${length});width:${SHIMMER_BAND_WIDTH * 100}cqw;` +
             `opacity:${strength};will-change:transform;background:${BAND};`,
         );
         wrap.appendChild(move);
