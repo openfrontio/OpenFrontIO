@@ -16,12 +16,53 @@
     var(--shadow-hud-modal);
 }
 
-/* Uppercase labels: trim the line box to the capitals, so a flex row centres
-   the letters and not the space kept for descenders. Browsers without
-   text-box keep the normal line box. */
+/* Uppercase labels and numbers: trim the line box to the capitals, so a flex
+   row centres the letters and not the space kept for descenders. Browsers
+   without text-box keep the normal line box. */
 @utility hud-caps {
   @supports (text-box: trim-both cap alphabetic) {
     text-box: trim-both cap alphabetic;
+  }
+}
+
+/* The attack ratio slider. The input keeps the keyboard, the pointer and the
+   screen reader; only its thumb is drawn, over a track of our own. The
+   browser's track is as tall as the thumb, so the thumb sits in the middle of
+   the input: on a taller track Chrome draws it at the top. */
+@utility hud-range {
+  --hud-thumb: 1rem;
+  appearance: none;
+  background: transparent;
+
+  &::-webkit-slider-runnable-track {
+    height: var(--hud-thumb);
+    background: transparent;
+  }
+  &::-moz-range-track {
+    height: var(--hud-thumb);
+    background: transparent;
+  }
+  &::-webkit-slider-thumb {
+    appearance: none;
+    width: var(--hud-thumb);
+    height: var(--hud-thumb);
+    border: 2px solid var(--color-malibu-blue);
+    border-radius: 9999px;
+    background: white;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+  }
+  &::-moz-range-thumb {
+    box-sizing: border-box;
+    width: var(--hud-thumb);
+    height: var(--hud-thumb);
+    border: 2px solid var(--color-malibu-blue);
+    border-radius: 9999px;
+    background: white;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-aquarius);
+    outline-offset: 2px;
   }
 }
 
