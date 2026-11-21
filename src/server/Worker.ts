@@ -17,6 +17,7 @@ import {
   MAX_HOSTED_LOBBY_PLAYERS,
   MIN_HOSTED_LOBBY_AUTO_START_MS,
   MIN_HOSTED_LOBBY_PLAYERS,
+  ScheduledPublicGameTypeSchema,
   ServerErrorMessage,
 } from "@openfront/shared/WireSchemas";
 import {
@@ -51,7 +52,12 @@ import {
 } from "./JoinVerify";
 import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
 import { levelBadgeForPlayer } from "./LevelBadge";
-import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
+import { boostScheduledLobby } from "./LobbyBoost";
+import {
+  payForLobbyQueue,
+  payForMapBoost,
+  queueListedLobby,
+} from "./LobbyQueuePayment";
 import { logger } from "./Logger";
 import { registerPlayerProfileRoute } from "./PlayerProfileRoute";
 import { resolveVerifiedJoin } from "./Privilege";
@@ -527,6 +533,59 @@ export async function startWorker() {
       log.warn("lobby queue payment failed", { gameID: game.id });
     } else if (outcome.status === 200) {
       log.info("lobby queued for public play", { gameID: game.id });
+    }
+    res.status(outcome.status).json(outcome.body);
+  });
+
+  // A player in a scheduled public lobby pays (plutonium, charged by the API
+  // with their token) to move it to the front of its queue, right behind the
+  // lobby that's counting down.
+  app.post("/api/game/:id/boost", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(400).json({ error: "Authorization header required" });
+    }
+    const token = authHeader.substring("Bearer ".length);
+    const auth = await verifyClientToken(token);
+    if (auth.type !== "success") {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const game = gm.game(req.params.id);
+    if (game === null) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+    const queue = ScheduledPublicGameTypeSchema.safeParse(
+      game.gameInfo().publicGameType,
+    );
+    const outcome = await boostScheduledLobby(
+      {
+        hasConnectedClient: (id) => game.hasConnectedClient(id),
+        isScheduledLobby: () =>
+          queue.success &&
+          game.isPublic() &&
+          game.phase() === GamePhase.Lobby &&
+          !game.hasStarted(),
+        boostBlockedFor: (id) => game.boostBlockedFor(id),
+        boostHeldFor: (id) => game.boostHeldFor(id),
+        startsAt: () => game.gameInfo().startsAt,
+        wouldMoveUp: () =>
+          queue.success && lobbyService.boostWouldMove(game.id, queue.data),
+        reserveBoost: (id) => game.reserveBoost(id),
+        releaseBoost: () => game.releaseBoost(),
+        holdBoostForPayer: () => game.holdBoostForPayer(),
+        boost: () => game.boost(),
+      },
+      auth.persistentId,
+      // Dev has no payment backend; skip the charge, like the queue route.
+      ServerEnv.env() === GameEnv.Dev
+        ? async () => ({ type: "success" })
+        : () => payForMapBoost(token, game.id),
+    );
+    if (outcome.status === 502) {
+      log.warn("map boost payment failed", { gameID: game.id });
+    } else if (outcome.status === 200) {
+      log.info("public lobby boosted", { gameID: game.id });
     }
     res.status(outcome.status).json(outcome.body);
   });

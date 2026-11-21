@@ -40,6 +40,8 @@ import {
   PutUsernameResponseSchema,
   FfaRankLeaderboardResponse,
   FfaRankLeaderboardResponseSchema,
+  FfaAllRanksLeaderboardResponse,
+  FfaAllRanksLeaderboardResponseSchema,
   FfaRankPositionResponseSchema,
   RankedLeaderboardResponse,
   RankedLeaderboardResponseSchema,
@@ -2247,6 +2249,32 @@ export async function queueLobby(
   }
 }
 
+// POST /api/game/:id/boost on the game server — a player in a scheduled
+// public lobby pays plutonium to move it to the front of its queue. The
+// worker charges through the API with the player's token. On failure,
+// `status` is the HTTP status (402 = can't afford it, 409 = the lobby can no
+// longer be boosted).
+export async function boostLobby(
+  gameID: string,
+): Promise<{ ok: true } | { ok: false; status?: number }> {
+  try {
+    await ensureServerList();
+    const token = await getPlayToken();
+    const response = await fetch(
+      `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}/boost`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    if (response.ok) return { ok: true };
+    return { ok: false, status: response.status };
+  } catch (e) {
+    console.error("boostLobby: request failed", e);
+    return { ok: false };
+  }
+}
+
 // POST /api/create_game on the game server — mints a fresh private lobby with
 // the caller as creator. Deliberately has no worker prefix and no id: the edge
 // (nginx in prod, the vite dev proxy locally) picks a worker, which mints a
@@ -2492,8 +2520,38 @@ export async function fetchFfaRankLeaderboard(
   }
 }
 
-/** The signed-in player's position in their rank, or null if there's none to show. */
-export async function fetchFfaRankPosition(): Promise<number | null> {
+/** One page of the globally ordered FFA Top 250 (five pages maximum). */
+export async function fetchFfaAllRanksLeaderboard(
+  page: number,
+): Promise<FfaAllRanksLeaderboardResponse | "reached_limit" | false> {
+  try {
+    const url = new URL(`${getApiBase()}/leaderboard/ranked/ffa/all`);
+    url.searchParams.set("page", String(page));
+    const res = await fetch(url.toString(), {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) {
+      if (res.status === 400) {
+        const body = await res.json().catch(() => null);
+        if (isPageBoundsMessage(body)) return "reached_limit";
+      }
+      return false;
+    }
+    const parsed = FfaAllRanksLeaderboardResponseSchema.safeParse(
+      await res.json(),
+    );
+    return parsed.success ? parsed.data : false;
+  } catch (err) {
+    console.warn("fetchFfaAllRanksLeaderboard: request failed", err);
+    return false;
+  }
+}
+
+/** The signed-in player's rank position and global position; null if the request fails. */
+export async function fetchFfaRankPosition(): Promise<{
+  position: number | null;
+  globalPosition: number | null;
+} | null> {
   try {
     const res = await fetch(`${getApiBase()}/users/@me/ffa_rank_position`, {
       headers: {
@@ -2503,7 +2561,11 @@ export async function fetchFfaRankPosition(): Promise<number | null> {
     });
     if (!res.ok) return null;
     const parsed = FfaRankPositionResponseSchema.safeParse(await res.json());
-    return parsed.success ? parsed.data.position : null;
+    if (!parsed.success) return null;
+    return {
+      position: parsed.data.position,
+      globalPosition: parsed.data.globalPosition ?? null,
+    };
   } catch (err) {
     console.warn("fetchFfaRankPosition: request failed", err);
     return null;
