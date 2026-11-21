@@ -65,6 +65,7 @@ export class DonateTroopsExecution implements Execution {
     if (this.troops === null) throw new Error("not initialized");
 
     const minTroops = this.getMinTroopsForRelationUpdate();
+    this.troops = Math.floor(Math.min(this.troops, this.sender.troops()));
 
     if (
       this.sender.canDonateTroops(this.recipient) &&

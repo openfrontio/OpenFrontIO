@@ -1,4 +1,8 @@
-import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import {
+  PlayerInfo,
+  PlayerType,
+  Relation,
+} from "@openfront/engine-api/game/GameTypes";
 import { GameID } from "@openfront/engine-api/Schemas";
 import { DonateGoldExecution } from "@openfront/engine/execution/DonateGoldExecution";
 import { DonateTroopsExecution } from "@openfront/engine/execution/DonateTroopExecution";
@@ -317,5 +321,44 @@ describe("Self donation prevention", () => {
     // Verify no changes occurred to gold or troops (execution failed/aborted)
     expect(player.gold()).toBeGreaterThanOrEqual(goldBefore);
     expect(player.troops()).toBeGreaterThanOrEqual(troopsBefore);
+  });
+
+  it("uses actual transferred balance when updating nation relation", async () => {
+    const game = await setup(
+      "ocean_and_land",
+      {
+        infiniteGold: false,
+        infiniteTroops: false,
+        donateGold: true,
+        donateTroops: true,
+      },
+      [
+        new PlayerInfo("s", PlayerType.Human, null, "s_id"),
+        new PlayerInfo("n1", PlayerType.Nation, null, "n1_id"),
+        new PlayerInfo("n2", PlayerType.Nation, null, "n2_id"),
+      ],
+    );
+    const sender = game.player("s_id");
+    const n1 = game.player("n1_id");
+    const n2 = game.player("n2_id");
+    sender.conquer(game.ref(0, 10));
+    n1.conquer(game.ref(0, 12));
+    n2.conquer(game.ref(0, 15));
+    sender.createAllianceRequest(n1)?.accept();
+    sender.createAllianceRequest(n2)?.accept();
+    sender.addGold(1n);
+    sender.setTroops(10_000);
+    n2.setTroops(0);
+    game.addExecution(
+      new DonateGoldExecution(sender, "n1_id", 1_000_000),
+      new DonateTroopsExecution(sender, "n2_id", 10_000),
+    );
+    game.executeNextTick(); // init with 10_000 troops
+    sender.removeTroops(sender.troops() - 1); // drain before tick() runs
+    game.executeNextTick();
+    expect(n1.gold()).toBe(1n);
+    expect(n2.troops()).toBe(1);
+    expect(n1.relation(sender)).toBe(Relation.Neutral);
+    expect(n2.relation(sender)).toBe(Relation.Neutral);
   });
 });
