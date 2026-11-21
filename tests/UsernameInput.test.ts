@@ -1085,6 +1085,9 @@ describe("UsernameInput lapse notice", () => {
     expect(line!.parentElement?.className).toContain(
       "lg:group-has-[.streaming-live]/strip:max-w-full",
     );
+    expect(line!.parentElement?.className).toContain(
+      "lg:group-has-[.shop-spotlight-live]/strip:max-w-full",
+    );
   });
 
   // The player dismissed the one-time notice; the standing line is what they

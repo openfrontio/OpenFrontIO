@@ -20,8 +20,12 @@ export function formatViewers(n: number): string {
 // OpenFront, fed by the shared streams feed. Every entry has been verified live
 // server-side (Twitch via Helix, YouTube via videos.list), so nothing here decides
 // liveness or fetches from a platform to find out. Streamers are compact cards in a
-// horizontal slider, so the bubble never grows with the count. Stays hidden until there
-// is a live stream, so the sibling news box keeps the full row when nobody is live.
+// horizontal slider, so the bubble never grows with the count. Stays hidden until at
+// least MIN_LIVE_STREAMS are live; until then play-page shows the store spotlight in
+// its slot (or, failing that, the news box keeps the full row).
+// A lone stream doesn't earn the slot; the store spotlight keeps it instead.
+const MIN_LIVE_STREAMS = 2;
+
 @customElement("streaming-now")
 export class StreamingNow extends LitElement {
   @state() private streams: LiveStream[] = [];
@@ -35,7 +39,7 @@ export class StreamingNow extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.style.display = "none"; // hidden until the feed reports a live stream (no flash)
+    this.style.display = "none"; // hidden until the feed reports enough live streams (no flash)
     // Not on compact screens (below lg, where the host is also `hidden`, or short
     // ones such as Poki's frame): don't even subscribe. Followed live, so toggling
     // fullscreen drops or brings back the strip.
@@ -71,10 +75,10 @@ export class StreamingNow extends LitElement {
   };
 
   private show(streams: LiveStream[]) {
-    this.streams = streams;
-    // Collapse the host when nobody is live; .streaming-live lets the play-page strip
-    // switch to its 2-column grid (via has-[]) only while the panel is actually shown.
-    const live = streams.length > 0;
+    // Collapse the host below MIN_LIVE_STREAMS; .streaming-live lets the play-page
+    // strip switch to its 2-column grid (via has-[]) only while the panel is shown.
+    const live = streams.length >= MIN_LIVE_STREAMS;
+    this.streams = live ? streams : [];
     this.style.display = live ? "" : "none";
     this.classList.toggle("streaming-live", live);
   }

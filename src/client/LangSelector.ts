@@ -312,6 +312,7 @@ export class LangSelector extends LitElement {
       "steam-wishlist",
       "steam-wishlist-button",
       "streaming-now",
+      "shop-spotlight",
       "tutorial-panel",
       // Re-sends its strings to the clan map frame.
       "clan-map-view",
