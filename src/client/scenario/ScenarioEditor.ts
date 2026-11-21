@@ -287,7 +287,9 @@ export class ScenarioEditor extends LitElement {
   private async resize(): Promise<void> {
     const doc = this.doc;
     const id = this.draftId;
-    if (doc === null || id === null) return;
+    // A test play starting exports from the current session; replacing it
+    // would leave that export waiting on a terminated worker.
+    if (doc === null || id === null || this.starting) return;
     if (!isScenarioSize(this.width, this.height)) return;
     if (this.width === doc.width && this.height === doc.height) return;
     // A stroke still open goes into the resized document.
@@ -702,7 +704,11 @@ export class ScenarioEditor extends LitElement {
     rect: DOMRect,
   ): boolean {
     const editor = this.editor;
-    if (editor === null || this.status !== "ready") return false;
+    // While a test play starts, the draft it plays is already saved, and a
+    // stroke still open when the editor is removed would never be.
+    if (editor === null || this.status !== "ready" || this.starting) {
+      return false;
+    }
     const terrain =
       this.terrainKind === "water"
         ? WATER
