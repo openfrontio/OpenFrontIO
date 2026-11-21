@@ -185,6 +185,9 @@ function safeAreaOverlay(inset: string): HTMLElement {
 }
 
 interface LivePreview {
+  // Whether it is still on the page: a host may drop a preview without
+  // destroy(), and restart then forgets it rather than re-render it.
+  attached(): boolean;
   remount(): void;
 }
 const live = new Set<LivePreview>();
@@ -260,7 +263,8 @@ function mountCardBackgroundPreview(
     opts: CardBackgroundPreviewOptions,
   ): CosmeticPreviewResult => {
     if (destroyed) return { ok: false, error: "This preview was destroyed." };
-    if (!(opts.size in SIZES)) {
+    // Own keys only: "toString" is in every object.
+    if (!Object.prototype.hasOwnProperty.call(SIZES, opts.size)) {
       return { ok: false, error: `Unknown size: ${String(opts.size)}` };
     }
     if (!loadableUrl(bg.url)) {
@@ -280,6 +284,7 @@ function mountCardBackgroundPreview(
   };
 
   const preview: LivePreview = {
+    attached: () => wrapper.isConnected,
     // A card stopped for slow frames stays still until mounted again.
     remount: () => {
       if (destroyed || current === null) return;
@@ -341,7 +346,13 @@ export const cardPreviewModule: Omit<
   cardAnimationStopped: cardFxStopped,
   restartCardAnimation: () => {
     resetCardFxSession();
-    for (const preview of [...live]) preview.remount();
+    for (const preview of [...live]) {
+      if (preview.attached()) {
+        preview.remount();
+      } else {
+        live.delete(preview);
+      }
+    }
   },
   systemPrefersReducedMotion: () => prefersReducedMotion(),
   checkCardBackground: (files, animation) =>

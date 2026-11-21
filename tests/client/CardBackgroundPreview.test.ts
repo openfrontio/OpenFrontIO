@@ -281,4 +281,33 @@ describe("mountCardBackgroundPreview", () => {
     unsubscribe();
     expect(heard).toEqual([]);
   });
+
+  test("restart leaves out, and forgets, a preview dropped without destroy()", () => {
+    const gone = document.createElement("div");
+    document.body.append(gone);
+    mountCardBackgroundPreview(
+      gone,
+      { url: BLOB, animation: ANIMATION },
+      { size: "large", animated: true },
+    );
+    const before = card(gone);
+    gone.remove();
+    restartCardAnimation();
+    expect(card(gone)).toBe(before);
+    // Forgotten: put back, it is still not remounted.
+    document.body.append(gone);
+    restartCardAnimation();
+    expect(card(gone)).toBe(before);
+  });
+
+  test("a size is one of its own, not an inherited key", () => {
+    for (const size of ["toString", "constructor", "__proto__"]) {
+      const { result } = mountCardBackgroundPreview(
+        host,
+        { url: BLOB },
+        { size: size as CardPreviewSize, animated: true },
+      );
+      expect(result).toEqual({ ok: false, error: `Unknown size: ${size}` });
+    }
+  });
 });
