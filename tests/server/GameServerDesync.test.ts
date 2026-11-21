@@ -121,4 +121,16 @@ describe("desync handling in the turn loop", () => {
     const turns = replayedTurns(game, clients[0].persistentID, ctx);
     expect(turns[0].hash).toBeUndefined();
   });
+
+  it("excludes spectators from desync majority thresholds", async () => {
+    const { game, clients } = lobbyWith(3);
+    game.joinClient(makeClient({ clientID: cid("s1"), spectator: true }));
+    game.joinClient(makeClient({ clientID: cid("s2"), spectator: true }));
+    startGame(game);
+    await reportHash(clients[0], 0, 111);
+    await reportHash(clients[1], 0, 222);
+    await reportHash(clients[2], 0, 333);
+    vi.advanceTimersByTime(10 * TURN_MS);
+    expect(game.numDesyncedClients()).toBe(3);
+  });
 });

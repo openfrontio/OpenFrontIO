@@ -2264,7 +2264,8 @@ export class GameServer {
   }
 
   private handleSynchronization() {
-    const check = this.desync.check(this.turns.length, this.clients.active());
+    const players = this.clients.players();
+    const check = this.desync.check(this.turns.length, players);
     if (check === null) {
       return;
     }
@@ -2279,9 +2280,8 @@ export class GameServer {
       type: "desync",
       turn,
       correctHash: mostCommonHash,
-      clientsWithCorrectHash:
-        this.clients.active().length - outOfSyncClients.length,
-      totalActiveClients: this.clients.active().length,
+      clientsWithCorrectHash: players.length - outOfSyncClients.length,
+      totalActiveClients: players.length,
     });
     if (!serverDesync.success) {
       this.log.warn("failed to create desync message", {
