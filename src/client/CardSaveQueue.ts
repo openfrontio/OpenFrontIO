@@ -11,8 +11,9 @@ import {
 export interface CardSaveOutcome {
   // The last save in the run: ok when the newest loadout asked for is
   // stored; "cancelled" when the account signed out (or another asked to
-  // save) and what was queued was dropped.
-  result: SaveCardResult | { ok: false; error: "cancelled" };
+  // save) while it ran: what was queued was dropped, and the run is
+  // superseded, even if its last PUT was stored.
+  result: SaveCardResult;
   // What the server holds after the run (the last loadout it stored), or
   // null when nothing in it was stored.
   saved: CardLoadoutBody | null;
@@ -73,13 +74,18 @@ export function requestCardSave(
     try {
       for (;;) {
         const sending = run.wanted;
-        const result = await saveCardLoadout(sending);
+        // Checked again once the token is read: that can wait on a JWT
+        // refresh, and a sign-out meanwhile must not send this loadout
+        // under the next session's token.
+        const result = await saveCardLoadout(sending, () => !run.cancelled);
         if (!result.ok) return { result, saved };
         saved = result.loadout;
-        if (run.wanted === sending) return { result, saved };
+        // Cancelled while the PUT was out: a newer run (or session) owns the
+        // card now, so this one never reports success.
         if (run.cancelled) {
           return { result: { ok: false, error: "cancelled" }, saved };
         }
+        if (run.wanted === sending) return { result, saved };
       }
     } finally {
       if (current === run) current = null;

@@ -55,7 +55,7 @@ describe("CardSaveQueue", () => {
     await tick();
     // "b" was overtaken by "c" before it was sent.
     expect(save).toHaveBeenCalledTimes(2);
-    expect(save).toHaveBeenLastCalledWith(loadout("c"));
+    expect(save).toHaveBeenLastCalledWith(loadout("c"), expect.any(Function));
     waiting.shift()!(true);
     expect(await first).toEqual({
       result: { ok: true, loadout: loadout("c") },
@@ -134,5 +134,38 @@ describe("CardSaveQueue", () => {
       loadout("a"),
       loadout("b"),
     ]);
+  });
+  it("a sign-out while the token is read stops the PUT", async () => {
+    // The queue's guard is what saveCardLoadout asks once it holds a token.
+    let guard: (() => boolean) | undefined;
+    save.mockImplementationOnce(
+      (_body: CardLoadoutBody, stillWanted: () => boolean) => {
+        guard = stillWanted;
+        return new Promise(() => {});
+      },
+    );
+    void requestCardSave("a", loadout("a"));
+    await tick();
+    expect(guard!()).toBe(true);
+    document.dispatchEvent(new CustomEvent("session-cleared"));
+    expect(guard!()).toBe(false);
+  });
+
+  it("a run cancelled with its last PUT out never reports success", async () => {
+    // Signed out and back into the same account: the old run's late answer
+    // must not pass for the newer run's.
+    const old = requestCardSave("a", loadout("old"));
+    await tick();
+    document.dispatchEvent(new CustomEvent("session-cleared"));
+    const next = requestCardSave("a", loadout("new"));
+    expect(next).not.toBe(old);
+    await tick();
+    waiting[1](true);
+    expect((await next).result).toEqual({ ok: true, loadout: loadout("new") });
+    waiting[0](true);
+    expect(await old).toEqual({
+      result: { ok: false, error: "cancelled" },
+      saved: loadout("old"),
+    });
   });
 });

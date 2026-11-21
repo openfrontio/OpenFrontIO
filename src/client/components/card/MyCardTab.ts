@@ -164,8 +164,7 @@ export class MyCardTab extends LitElement {
 
   private items(slot: Exclude<Slot, "flag">): CardItem[] {
     const section = this.cosmetics?.[SECTION[slot].key] as
-      | Record<string, CardItem>
-      | undefined;
+      Record<string, CardItem> | undefined;
     return Object.values(section ?? {}).filter((item) =>
       isOfferedCardItem(SECTION[slot].type, item),
     );
@@ -209,6 +208,16 @@ export class MyCardTab extends LitElement {
     // Signed out, or into another account, since: the host ignores a save
     // for another account, and this tab now shows that account's card.
     const sameAccount = this.userMe?.player.publicId === publicId;
+    if (!result.ok && result.error === "cancelled") {
+      // A run dropped at sign-out or an account change. Even back in the
+      // same account, a newer run or the next /users/@me owns the card now:
+      // what this one stored is neither taken nor handed up.
+      if (this.initialRun === run) this.initialRun = null;
+      // Nothing newer in flight here: show the last confirmed loadout
+      // rather than the dropped clicks.
+      if (sameAccount && this.following === null) this.loadout = this.saved;
+      return;
+    }
     if (saved !== null) {
       // Stored, whether or not the /users/@me refresh after it got through:
       // tell the host, which keeps its copy (and so the next tab it makes)
@@ -226,7 +235,7 @@ export class MyCardTab extends LitElement {
     // On success that's the newest loadout asked for; on failure, back to
     // what the server holds (clicks queued behind it go too).
     this.loadout = this.saved;
-    if (!result.ok && result.error !== "cancelled") this.saveError = true;
+    if (!result.ok) this.saveError = true;
     // Opened on this run's save: Reset now goes to what the server holds.
     if (this.initialRun === run) {
       this.initialRun = null;
@@ -377,8 +386,7 @@ export class MyCardTab extends LitElement {
   private renderGetCard(): TemplateResult | typeof nothing {
     if (this.ownsCard) return nothing;
     const card = Object.values(this.cosmetics?.playerCards ?? {})[0] as
-      | CardItem
-      | undefined;
+      CardItem | undefined;
     return html`<div
       data-my-card-get-card
       class="flex flex-col items-center justify-between gap-3 rounded-xl border border-amber-300/40 bg-amber-300/10 p-4 sm:flex-row"
