@@ -145,6 +145,7 @@ export enum GameMapType {
   WhiteSea = "White Sea", // map-generator/assets/maps/whitesea/info.json
   World = "World", // map-generator/assets/maps/world/info.json
   World10000 = "World 10000", // map-generator/assets/maps/world10000/info.json
+  World2000 = "World 2000", // map-generator/assets/maps/world2000/info.json
   World4000 = "World 4000", // map-generator/assets/maps/world4000/info.json
   WorldInverted = "World Inverted", // map-generator/assets/maps/worldinverted/info.json
   YangtzeRiver = "Yangtze River", // map-generator/assets/maps/yangtzeriver/info.json
@@ -171,7 +172,8 @@ export type MapCategory =
   | "cosmic"
   | "fictional"
   | "arcade"
-  | "tournament";
+  | "tournament"
+  | "classic";
 
 // Category display order in the map picker.
 export const mapCategoryOrder: readonly MapCategory[] = [
@@ -191,6 +193,7 @@ export const mapCategoryOrder: readonly MapCategory[] = [
   "fictional",
   "arcade",
   "tournament",
+  "classic",
 ];
 
 export type SpecialModifierKey =
@@ -1451,10 +1454,10 @@ export const maps: readonly MapInfo[] = [
     id: "GiantWorldMap",
     type: GameMapType.GiantWorldMap,
     translationKey: "map.giantworldmap",
-    categories: ["world"],
+    categories: ["classic", "world"],
     defaultNationCount: 107,
-    hidden: true,
     author: "1brucben",
+    descriptionKey: "map_description.giantworldmap",
   },
   {
     id: "GreatLakes",
@@ -2649,14 +2652,8 @@ export const maps: readonly MapInfo[] = [
     id: "World",
     type: GameMapType.World,
     translationKey: "map.world",
-    categories: ["featured", "world"],
-    defaultNationCount: 70,
-    featuredRank: 1,
-    forcedModifiers: ["isCrowded:50"],
-    layers: [
-      { id: "w2kland", placement: "land", nukeable: true },
-      { id: "w2kwater", placement: "water" },
-    ],
+    categories: ["classic", "world"],
+    defaultNationCount: 72,
     author: "evanpelle",
     descriptionKey: "map_description.world",
   },
@@ -2674,6 +2671,21 @@ export const maps: readonly MapInfo[] = [
     descriptionKey: "map_description.world10000",
   },
   {
+    id: "World2000",
+    type: GameMapType.World2000,
+    translationKey: "map.world2000",
+    categories: ["featured", "world"],
+    defaultNationCount: 70,
+    featuredRank: 1,
+    forcedModifiers: ["isCrowded:50"],
+    layers: [
+      { id: "w2kland", placement: "land", nukeable: true },
+      { id: "w2kwater", placement: "water" },
+    ],
+    author: "Patrick Plays Badly",
+    descriptionKey: "map_description.world2000",
+  },
+  {
     id: "World4000",
     type: GameMapType.World4000,
     translationKey: "map.world4000",
@@ -2685,7 +2697,7 @@ export const maps: readonly MapInfo[] = [
       { id: "w4kland", placement: "land", nukeable: true },
       { id: "w4kwater", placement: "water" },
     ],
-    author: "evanpelle",
+    author: "Patrick Plays Badly",
     descriptionKey: "map_description.world4000",
   },
   {
