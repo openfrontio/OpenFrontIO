@@ -43,13 +43,19 @@
          sets body { padding-bottom: 105px !important }, which leaves a blank
          band under the footer whenever ads load. Both rules being
          !important, the later stylesheet would win at equal specificity, so
-         this one uses html body to win regardless of load order. The bottom
-         rail is position: fixed (below) and needs no reserved space. */
+         this one uses html body to win regardless of load order. */
       html body {
         padding-top: env(safe-area-inset-top);
         padding-right: env(safe-area-inset-right);
         padding-bottom: env(safe-area-inset-bottom) !important;
         padding-left: env(safe-area-inset-left);
+      }
+      /* The bottom rail (position: fixed, a direct body child, inline
+         max-height: 100px) loads on lobby join, while the footer is still
+         shown under the lobby modal: reserve its height only while it's on
+         the page so it can't cover the footer links. */
+      html body:has(> #pw-oop-bottom_rail) {
+        padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important;
       }
 
       /* Prevent Playwire bottom rail from affecting flex layout,
