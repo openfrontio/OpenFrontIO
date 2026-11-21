@@ -111,4 +111,14 @@ describe("winner vote re-tally when the electorate shrinks", () => {
       expect(archivedWinners()).toEqual([["player", WINNER]]),
     );
   });
+
+  it("ignores connected spectators when re-tallying after electorate shrinks", async () => {
+    const { game, winner, loser } = game1v1();
+    game.joinClient(
+      makeClient({ clientID: cid("spec"), ip: "3.3.3.3", spectator: true }),
+    );
+    await vote(winner, ["player", WINNER]);
+    await disconnect(loser);
+    expect(archivedWinners()).toEqual([["player", WINNER]]);
+  });
 });
