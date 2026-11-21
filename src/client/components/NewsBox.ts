@@ -75,6 +75,9 @@ export class NewsBox extends LitElement {
   // The sales news.json announces: a sale set not to announce gets no banner.
   @state() private announcedSales: ReadonlySet<string> = new Set();
   private saleTimer: ReturnType<typeof setTimeout> | null = null;
+  // Bumped by every catalog the box takes: a read started before it (a slow
+  // first fetch) must not put an older catalog back.
+  private salesRead = 0;
   // The markdown renderer is its own chunk, loaded alongside the news.
   private renderMarkdown: typeof import("../Markdown").renderMarkdown | null =
     null;
@@ -96,7 +99,11 @@ export class NewsBox extends LitElement {
   // so a Deeper player sees their group's % here as in the store.
   private onCosmeticsChanged = (event: Event) => {
     const fresh = (event as CustomEvent<Cosmetics>).detail;
-    if (fresh) this.cosmetics = fresh;
+    if (!fresh || !this.isConnected) return;
+    this.salesRead++;
+    // Its sales may end sooner than the next check: reschedule from it,
+    // without fetching again.
+    this.showSales(fresh, 0);
   };
 
   /**
@@ -106,8 +113,14 @@ export class NewsBox extends LitElement {
    * has started.
    */
   private async loadSales(attempt = 0) {
+    const read = ++this.salesRead;
     const cosmetics = await fetchCosmetics();
-    if (!this.isConnected) return;
+    if (!this.isConnected || read !== this.salesRead) return;
+    this.showSales(cosmetics, attempt);
+  }
+
+  /** Shows a catalog's sales and schedules the next check from them. */
+  private showSales(cosmetics: Cosmetics | null, attempt: number) {
     if (cosmetics !== null) this.cosmetics = cosmetics;
     // Re-render even when the refetch hands back the same catalog: a sale
     // whose end has passed drops out of the banner on time.

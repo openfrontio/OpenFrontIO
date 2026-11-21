@@ -1324,6 +1324,7 @@ describe("StoreModal cosmetic browser", () => {
         blue,
         "hard",
         expect.objectContaining({ kind: "tab", tab: "cosmetics" }),
+        240,
       ),
     );
     expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
@@ -1343,7 +1344,12 @@ describe("StoreModal cosmetic browser", () => {
     await clickHardPurchase(modal);
 
     await vi.waitFor(() =>
-      expect(purchaseCosmetic).toHaveBeenCalledWith(blue, "hard", undefined),
+      expect(purchaseCosmetic).toHaveBeenCalledWith(
+        blue,
+        "hard",
+        undefined,
+        240,
+      ),
     );
   });
 
@@ -1365,6 +1371,7 @@ describe("StoreModal cosmetic browser", () => {
         red,
         "hard",
         expect.any(Object),
+        120,
       ),
     );
     expect(
@@ -1507,6 +1514,7 @@ describe("StoreModal cosmetic browser", () => {
       hydro,
       "hard",
       expect.any(Object),
+      90,
     );
     expect(localStorage.getItem(EFFECTS_KEY)).toBeNull();
   });
@@ -1689,6 +1697,7 @@ describe("StoreModal cosmetic browser", () => {
       pack,
       "dollar",
       expect.any(Object),
+      undefined,
     );
   });
 
@@ -1750,6 +1759,7 @@ describe("StoreModal cosmetic browser", () => {
       steamPlus,
       "dollar",
       expect.any(Object),
+      undefined,
     );
   });
 
@@ -1818,6 +1828,7 @@ describe("StoreModal cosmetic browser", () => {
       platinumSubscription,
       "dollar",
       expect.any(Object),
+      undefined,
     );
   });
 
@@ -1863,6 +1874,7 @@ describe("StoreModal cosmetic browser", () => {
       { ...goldSubscription, relationship: "purchasable" },
       "dollar",
       expect.any(Object),
+      undefined,
     );
   });
 
@@ -1887,6 +1899,7 @@ describe("StoreModal cosmetic browser", () => {
       starterBundle,
       "hard",
       expect.any(Object),
+      250,
     );
   });
 
@@ -1937,6 +1950,7 @@ describe("StoreModal cosmetic browser", () => {
         starterBundle,
         "hard",
         expect.any(Object),
+        250,
       ),
     );
 
@@ -2018,6 +2032,7 @@ describe("StoreModal cosmetic browser", () => {
       affiliatePattern,
       "hard",
       expect.any(Object),
+      120,
     );
   });
 });
@@ -2202,6 +2217,7 @@ describe("StoreModal on the Play rail", () => {
       playPack,
       "dollar",
       expect.any(Object),
+      undefined,
     );
 
     // The catalog's dollar price shows nowhere, on the card or in its preview.
@@ -2682,5 +2698,97 @@ describe("store analytics", () => {
       ),
     ).toHaveLength(1);
     resetExperimentsForTest();
+  });
+
+  it("stops watching the flash card for an exposure when the store closes", async () => {
+    resetExperimentsForTest();
+    const flashSale = {
+      id: "40",
+      name: "Hot sale",
+      percentOff: 35,
+      endsAt: new Date(Date.now() + 3_600_000).toISOString(),
+      kind: "flash" as const,
+    };
+    vi.mocked(fetchCosmetics).mockResolvedValue({
+      patterns: {},
+      flags: {},
+      promotions: [flashSale],
+    } as unknown as Cosmetics);
+    resolvedCatalog = [
+      red,
+      {
+        ...red,
+        cosmetic: {
+          ...pattern,
+          name: "zap",
+          priceHard: 52,
+          listPriceHard: 80,
+          promotion: flashSale,
+        } as never,
+        key: "pattern:zap:red",
+      },
+    ];
+    store = document.createElement("store-modal") as StoreModal;
+    store.inline = true;
+    document.body.appendChild(store);
+    await store.updateComplete;
+    const modal = store;
+    const watched = () => {
+      const hero = modal.querySelector("[data-store-flash]");
+      return (
+        hero !== null && FakeIO.instances.some((io) => io.observed.has(hero))
+      );
+    };
+    modal.open({ tab: "cosmetics", sub: "sale" });
+    await vi.waitFor(() => expect(watched()).toBe(true));
+
+    // Hidden, not removed: the clock stops at once, not when the observer
+    // gets round to reporting it.
+    modal.close();
+    await modal.updateComplete;
+    expect(modal.querySelector("[data-store-flash]")).toBeTruthy();
+    expect(watched()).toBe(false);
+
+    // Reopened: watched again, from a fresh interval.
+    modal.open({ tab: "cosmetics", sub: "sale" });
+    await vi.waitFor(() => expect(watched()).toBe(true));
+    resetExperimentsForTest();
+  });
+
+  it("moves an open bundle dialog onto a refetched catalog's price", async () => {
+    resolvedCatalog = [starterBundle];
+    const modal = await openStoreOnTab("bundles");
+    card(modal, starterBundle.key)!.onActivate!(starterBundle);
+    await modal.updateComplete;
+    const dialogButton = async () => {
+      const host = modal.querySelector(
+        "pack-contents-dialog",
+      ) as LitElement | null;
+      await host?.updateComplete;
+      return document.body.querySelector(
+        "[data-pack-contents-action] purchase-button",
+      ) as PurchaseButton | null;
+    };
+    expect((await dialogButton())!.priceHard).toBe(250);
+
+    // A purchase met a changed price; the catalog is refetched at 300.
+    const repriced: ResolvedCosmetic = {
+      ...starterBundle,
+      cosmetic: { ...(starterBundle.cosmetic as object), priceHard: 300 },
+    } as ResolvedCosmetic;
+    resolvedCatalog = [repriced];
+    vi.mocked(fetchCosmetics).mockResolvedValue({} as Cosmetics);
+    document.dispatchEvent(new CustomEvent(COSMETICS_CHANGED, { detail: {} }));
+    await vi.waitFor(async () =>
+      expect((await dialogButton())?.priceHard).toBe(300),
+    );
+
+    // Gone from the catalog: the dialog closes rather than sell it.
+    resolvedCatalog = [];
+    vi.mocked(fetchCosmetics).mockResolvedValue({} as Cosmetics);
+    document.dispatchEvent(new CustomEvent(COSMETICS_CHANGED, { detail: {} }));
+    await vi.waitFor(() =>
+      expect(document.body.querySelector("[data-pack-contents]")).toBeNull(),
+    );
   });
 });

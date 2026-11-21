@@ -189,12 +189,18 @@ export async function loadExperiments(): Promise<ExperimentsState> {
 export async function waitForExperiments(
   ms: number,
 ): Promise<ExperimentsState | null> {
+  // The load this wait is for: null while waiting for the first publication.
+  const waited = current;
+  let waiter: ((state: ExperimentsState) => void) | null = null;
   let pending: Promise<ExperimentsState | null>;
-  if (current !== null) {
+  if (waited !== null) {
     // Never rejects into the catalog: a failed load is "not known".
-    pending = current.promise.catch(() => null);
+    pending = waited.promise.catch(() => null);
   } else if (expected) {
-    pending = new Promise((resolve) => publishWaiters.add(resolve));
+    pending = new Promise((resolve) => {
+      waiter = resolve;
+      publishWaiters.add(resolve);
+    });
   } else {
     return null;
   }
@@ -202,19 +208,27 @@ export async function waitForExperiments(
   const timeout = new Promise<null>((resolve) => {
     timer = setTimeout(() => resolve(null), ms);
   });
-  const state = await Promise.race([pending, timeout]).finally(() =>
-    clearTimeout(timer),
-  );
-  return freshest(state);
+  const state = await Promise.race([pending, timeout]).finally(() => {
+    clearTimeout(timer);
+    // A wait that timed out leaves nothing behind for a publication that
+    // may never come.
+    if (waiter !== null) publishWaiters.delete(waiter);
+  });
+  return freshest(state, waited);
 }
 
 /**
- * A state for the account now signed in, or null. A load for the previous
- * account can resolve after a switch started; its cohort must not be used.
+ * A state for the load now current, or null. A load superseded meanwhile (an
+ * account switch, even one that came back to the same account) must not
+ * choose the cohort: the latest published answer does, if it is for the
+ * account now signed in. A wait for the first publication gets the same.
  */
-function freshest(state: ExperimentsState | null): ExperimentsState | null {
+function freshest(
+  state: ExperimentsState | null,
+  waited: typeof current,
+): ExperimentsState | null {
   if (state === null || current === null) return state;
-  if (state.account === current.account) return state;
+  if (waited === current) return state;
   return published !== null && published.account === current.account
     ? published
     : null;
@@ -481,6 +495,11 @@ export function publishExperimentsForTest(
   publish(state);
   setCatalogGeneration(state.generation);
   return state;
+}
+
+/** Tests only: how many catalog waits are registered for a publication. */
+export function publishWaitersForTest(): number {
+  return publishWaiters.size;
 }
 
 /** Tests only: a load in flight for `account`, settling with `promise`. */

@@ -88,13 +88,18 @@ interface CatalogTag {
   cohort: string | null;
   // Whether it has landed and its catalog is the one in use.
   landed: boolean;
+  // Fetched by reloadCosmetics, which tells the Store and banner itself.
+  reload: boolean;
 }
 // The tag of the request in `__cosmetics` (meaningless while that is null).
 let __cosmeticsTag: CatalogTag = {
   generation: undefined,
   cohort: null,
   landed: false,
+  reload: false,
 };
+// The experiments generation of the catalog last landed (undefined: none yet).
+let __landedGeneration: number | null | undefined = undefined;
 
 /**
  * How long a catalog fetch waits for the player's store experiment group
@@ -432,6 +437,10 @@ export async function purchaseCosmetic(
   resolved: ResolvedCosmetic,
   method: PaymentMethod,
   placement?: StorePlacement,
+  // The price on the button the player clicked, if the caller rendered one.
+  // The server refuses (409) to charge more than this. Without it, the price
+  // the catalog in hand gives now.
+  shownAmount?: number,
 ): Promise<PurchaseResult> {
   if (!resolved.cosmetic) return;
   const c = resolved.cosmetic;
@@ -584,7 +593,7 @@ export async function purchaseCosmetic(
   }
 
   if (resolved.type === "cosmeticPack") {
-    return purchasePack(c as CosmeticPack, method, placement);
+    return purchasePack(c as CosmeticPack, method, placement, shownAmount);
   }
 
   if (method === "dollar") {
@@ -648,8 +657,11 @@ export async function purchaseCosmetic(
   // ResolvedCosmetic isn't a discriminated union, so the guard above doesn't
   // narrow cosmetic's type. Subscriptions are excluded by the runtime check.
   const priced = c as Pattern | Flag | Pack;
-  const shownPrice = currentPrice(priced, method);
-  const price = shownPrice ?? 0;
+  const nowPrice = currentPrice(priced, method);
+  const price = nowPrice ?? 0;
+  // A sale can end between the render and the click: the button still showed
+  // the sale price, and that is what the player agreed to pay.
+  const shownPrice = shownAmount ?? nowPrice;
   const userMe = await getUserMe();
   if (userMe === false) {
     await showInGameAlert(translateText("store.login_required"));
@@ -834,6 +846,7 @@ async function purchasePack(
   pack: CosmeticPack,
   method: PaymentMethod,
   placement?: StorePlacement,
+  shownAmount?: number,
 ): Promise<PurchaseResult> {
   if (method !== "hard") {
     console.error("purchaseCosmetic: packs are only sold for hard currency");
@@ -864,7 +877,7 @@ async function purchasePack(
   }
 
   const result = await purchaseCosmeticPack(pack.name, placement, {
-    expectedAmount: price,
+    expectedAmount: shownAmount ?? price,
     platform: storePlatform(),
   });
   if (result.ok) {
@@ -1010,6 +1023,11 @@ export function invalidateCosmetics(): void {
   __cosmetics = null;
 }
 
+/** Tests only: forget which experiments group the last catalog was for. */
+export function resetCatalogGenerationForTest(): void {
+  __landedGeneration = undefined;
+}
+
 /**
  * Whether a catalog item is new to the store: the API sends `newUntil` while
  * it is (added in the last 14 days). Judged against the clock, since the
@@ -1099,6 +1117,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
     generation: undefined,
     cohort: null,
     landed: false,
+    reload: false,
   };
   __cosmeticsTag = tag;
   // A holder, so the body can recognise its own request as the cached one
@@ -1136,7 +1155,15 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
       __cosmeticsCache = result.data;
       __cosmeticsFetchedAt = Date.now();
       tag.landed = true;
-      setCatalogGeneration(tag.generation ?? null);
+      const generation = tag.generation ?? null;
+      const groupChanged =
+        __landedGeneration !== undefined && __landedGeneration !== generation;
+      __landedGeneration = generation;
+      setCatalogGeneration(generation);
+      // A catalog for another group replaced the one the Store and the
+      // homepage banner show (say the store opened after a failed refetch):
+      // move them onto it, so what they show is what exposures are sent for.
+      if (groupChanged && !tag.reload) announceCatalog(result.data);
       // The groups moved on while this was in flight (a switch, or a late
       // answer that landed before this request was tagged): refetch for the
       // groups now known rather than keep this cohort until the 60 s refresh.
@@ -1165,13 +1192,19 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
  */
 export async function reloadCosmetics(): Promise<Cosmetics | null> {
   invalidateCosmetics();
-  const fresh = await fetchCosmetics();
-  if (fresh !== null) {
-    document.dispatchEvent(
-      new CustomEvent<Cosmetics>(COSMETICS_CHANGED, { detail: fresh }),
-    );
-  }
+  const request = fetchCosmetics();
+  __cosmeticsTag.reload = true;
+  const fresh = await request;
+  // Only the catalog now in use: a reload that a newer one overtook hands its
+  // data back but must not replace what the newer one put on screen.
+  if (fresh !== null && fresh === __cosmeticsCache) announceCatalog(fresh);
   return fresh;
+}
+
+function announceCatalog(cosmetics: Cosmetics): void {
+  document.dispatchEvent(
+    new CustomEvent<Cosmetics>(COSMETICS_CHANGED, { detail: cosmetics }),
+  );
 }
 
 // The player's experiment group landed or changed (a late answer, a sign-in,

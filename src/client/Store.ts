@@ -284,9 +284,30 @@ export class StoreModal extends BaseModal {
   private onCosmeticsChanged = () => {
     void this.loadCatalog().then(() => {
       this.selectVisible(this.groupsForTab(this.activeTab));
+      this.refreshOpenedPack();
       this.requestUpdate();
     });
   };
+
+  /**
+   * An open bundle dialog shows (and buys at) the price of the catalog it was
+   * opened from: move it onto the catalog now shown, or close it if the
+   * bundle is no longer there.
+   */
+  private refreshOpenedPack(): void {
+    const opened = this.openedPack;
+    if (opened === null) return;
+    const fresh = resolveCosmetics(
+      this.cosmetics,
+      this.userMeResponse,
+      this.affiliateCode,
+    ).find(
+      (resolved) =>
+        resolved.type === "cosmeticPack" && resolved.key === opened.key,
+    );
+    if (fresh === undefined) this.closePack();
+    else this.openedPack = fresh;
+  }
 
   private onUserMeEvent = (event: Event) => {
     const customEvent = event as CustomEvent<UserMeResponse | false>;
@@ -820,8 +841,18 @@ export class StoreModal extends BaseModal {
         return undefined;
       }
     };
+    // With the price this button shows: the server refuses to charge more.
     const purchase = (method: "dollar" | "hard" | "soft") =>
-      purchaseCosmetic(resolved, method, placement());
+      purchaseCosmetic(
+        resolved,
+        method,
+        placement(),
+        method === "hard"
+          ? priceHard
+          : method === "soft"
+            ? priceSoft
+            : undefined,
+      );
     // Currency packs check out inline (wallet button / in-page card form)
     // when the display price parses; anything else — including subscriptions,
     // which are recurring and not a PaymentIntent — keeps the redirect flow,
@@ -1408,6 +1439,10 @@ export class StoreModal extends BaseModal {
 
   protected onClose(): void {
     this.tracker?.flush();
+    // The store hides rather than disconnects: stop the flash card's exposure
+    // clock now, before the observer reports it hidden. Reopening re-observes.
+    const flash = this.querySelector("[data-store-flash]");
+    if (flash !== null) exposureWatcher.unobserve(flash);
     if (this.saleEndTimer !== null) clearTimeout(this.saleEndTimer);
     this.saleEndTimer = null;
     this.clearNewEnd();

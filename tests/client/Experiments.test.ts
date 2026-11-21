@@ -189,6 +189,7 @@ beforeEach(() => {
   env.authThrows = false;
   Experiments.resetExperimentsForTest();
   Cosmetics.invalidateCosmetics();
+  Cosmetics.resetCatalogGenerationForTest();
   localStorage.clear();
   // The last load on this device was signed in, so the catalog waits.
   localStorage.setItem("experimentsSignedIn", "1");
@@ -508,6 +509,56 @@ describe("waiting for the groups", () => {
     });
   });
 
+  it("leaves no waiter behind when a wait times out", async () => {
+    Experiments.expectExperiments();
+    for (let i = 0; i < 3; i++) {
+      const waited = Experiments.waitForExperiments(100);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(await waited).toBeNull();
+    }
+    expect(Experiments.publishWaitersForTest()).toBe(0);
+    // A wait still running when the groups land gets them.
+    const live = Experiments.waitForExperiments(1000);
+    expect(Experiments.publishWaitersForTest()).toBe(1);
+    experimentsRoute = () => json(200, assignments("deeper"));
+    void Experiments.loadExperiments();
+    expect((await live)?.catalogCohort).toBe(DEEPER);
+    expect(Experiments.publishWaitersForTest()).toBe(0);
+  });
+
+  it("doesn't use a superseded load of the same account (A, B, then A)", async () => {
+    const answers: ((r: Response) => void)[] = [];
+    experimentsRoute = () =>
+      new Promise<Response>((resolve) => answers.push(resolve));
+    Experiments.expectExperiments();
+    // A's first load is in flight when the catalog starts waiting on it.
+    void Experiments.loadExperiments();
+    await vi.waitFor(() => expect(experimentCalls()).toHaveLength(1));
+    const fetched = Cosmetics.fetchCosmetics();
+    // B, then A again: each a load of its own.
+    env.sub = "account-b";
+    void Experiments.loadExperiments();
+    await vi.waitFor(() => expect(experimentCalls()).toHaveLength(2));
+    env.sub = "account-a";
+    void Experiments.loadExperiments();
+    await vi.waitFor(() => expect(experimentCalls()).toHaveLength(3));
+
+    // The first A load lands: it no longer decides the catalog.
+    answers[0](json(200, assignments("deeper")));
+    await fetched;
+    expect(catalogCalls().map(([url]) => url)).toEqual([
+      "https://api.test/cosmetics.json?rail=web",
+    ]);
+    expect(Experiments.assignmentKnown()).toBe(false);
+
+    // The current A load lands: refetched with its cohort, and known.
+    answers[2](json(200, assignments("deeper")));
+    await vi.waitFor(() => expect(Experiments.assignmentKnown()).toBe(true));
+    expect(catalogCalls()[1][0]).toBe(
+      `https://api.test/cosmetics.json?rail=web&cohort=${DEEPER}`,
+    );
+  });
+
   it("doesn't fetch the previous account's cohort after a switch", async () => {
     // A's load is in flight when the catalog starts waiting on it.
     let answerA!: (r: Response) => void;
@@ -593,6 +644,107 @@ describe("a late catalog request", () => {
         exposures: [{ key: KEY, variant: "deeper", surface: "store_flash" }],
       },
     ]);
+  });
+});
+
+describe("telling the Store and the banner", () => {
+  it("announces only the reload that still owns the catalog", async () => {
+    Experiments.publishExperimentsForTest([], null, env.sub);
+    const pending: ((r: Response) => void)[] = [];
+    catalogRoute = () =>
+      new Promise<Response>((resolve) => pending.push(resolve));
+    const changed = vi.fn();
+    document.addEventListener(Experiments.COSMETICS_CHANGED, changed);
+    const first = Cosmetics.reloadCosmetics();
+    await vi.waitFor(() => expect(catalogCalls()).toHaveLength(1));
+    const second = Cosmetics.reloadCosmetics();
+    await vi.waitFor(() => expect(catalogCalls()).toHaveLength(2));
+
+    // The newer reload lands first, then the older one.
+    pending[1](json(200, catalog(45)));
+    const newer = await second;
+    pending[0](json(200, catalog(35)));
+    await first;
+    document.removeEventListener(Experiments.COSMETICS_CHANGED, changed);
+
+    expect(changed).toHaveBeenCalledTimes(1);
+    expect((changed.mock.calls[0][0] as CustomEvent<Cosmetics>).detail).toBe(
+      newer,
+    );
+    expect(Cosmetics.getCachedCosmetics()).toBe(newer);
+  });
+
+  it("moves the banner onto a new group's catalog fetched by the store", async () => {
+    // A (Deeper) is shown on the homepage.
+    experimentsRoute = () => json(200, assignments("deeper"));
+    Experiments.expectExperiments();
+    void Experiments.loadExperiments();
+    const box = document.createElement("news-box");
+    document.body.appendChild(box);
+    await vi.waitFor(() =>
+      expect(box.querySelector("sale-banner")?.textContent).toContain("45"),
+    );
+
+    // B (control) signs in; B's own refetch fails, so the banner keeps A's.
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    catalogRoute = () => json(500, {});
+    experimentsRoute = () => json(200, assignments("control"));
+    env.sub = "account-b";
+    void Experiments.loadExperiments();
+    await vi.waitFor(() => expect(catalogCalls()).toHaveLength(2));
+    await vi.advanceTimersByTimeAsync(10);
+    expect(box.querySelector("sale-banner")?.textContent).toContain("45");
+
+    // The store opens and gets B's catalog: the banner shows it too, so its
+    // exposure is for what it shows.
+    catalogRoute = null;
+    await Cosmetics.fetchCosmetics();
+    expect(Experiments.assignmentKnown()).toBe(true);
+    await vi.waitFor(() =>
+      expect(box.querySelector("sale-banner")?.textContent).toContain("35"),
+    );
+  });
+
+  it("keeps a slow first read from undoing a newer catalog on the banner", async () => {
+    // The banner's first read is slow.
+    let answerFirst!: (r: Response) => void;
+    catalogRoute = () =>
+      new Promise<Response>((resolve) => (answerFirst = resolve));
+    const box = document.createElement("news-box");
+    document.body.appendChild(box);
+    await vi.waitFor(() => expect(catalogCalls()).toHaveLength(1));
+
+    // A newer catalog reaches it first.
+    document.dispatchEvent(
+      new CustomEvent(Experiments.COSMETICS_CHANGED, { detail: catalog(45) }),
+    );
+    await vi.waitFor(() =>
+      expect(box.querySelector("sale-banner")?.textContent).toContain("45"),
+    );
+    answerFirst(json(200, catalog(35)));
+    await vi.advanceTimersByTimeAsync(10);
+    expect(box.querySelector("sale-banner")?.textContent).toContain("45");
+  });
+
+  it("rechecks when a new catalog's sale ends sooner", async () => {
+    const box = document.createElement("news-box");
+    document.body.appendChild(box);
+    await vi.waitFor(() =>
+      expect(box.querySelector("sale-banner")?.textContent).toContain("35"),
+    );
+    const before = catalogCalls().length;
+    // A catalog whose sale ends in 30 s, well before the next check.
+    const soon = catalog(45);
+    soon.promotions![0].endsAt = new Date(Date.now() + 30_000).toISOString();
+    document.dispatchEvent(
+      new CustomEvent(Experiments.COSMETICS_CHANGED, { detail: soon }),
+    );
+    await vi.advanceTimersByTimeAsync(29_000);
+    expect(catalogCalls()).toHaveLength(before);
+    await vi.advanceTimersByTimeAsync(1_500);
+    await vi.waitFor(() =>
+      expect(catalogCalls().length).toBeGreaterThan(before),
+    );
   });
 });
 
@@ -741,13 +893,19 @@ describe("exposures", () => {
   });
 
   it("sends nothing on Steam", async () => {
+    // For the signed-in account, so only Steam can be what stops it.
     Experiments.publishExperimentsForTest(
       assignments("deeper").assignments,
       DEEPER,
+      env.sub,
     );
     env.steam = true;
     expect(await Experiments.recordExposure(KEY, "store_flash")).toBe(false);
     expect(exposureBodies()).toEqual([]);
+    // The same groups and account off Steam do send.
+    env.steam = false;
+    expect(await Experiments.recordExposure(KEY, "store_flash")).toBe(true);
+    expect(exposureBodies()).toHaveLength(1);
   });
 
   it("sends nothing until the deal is seen", async () => {
@@ -908,6 +1066,25 @@ describe("purchases", () => {
     ]);
     // Bought: the profile is refreshed (and the page reloads).
     expect(invalidateUserMe).toHaveBeenCalled();
+  });
+
+  it("sends the price on the button even if the sale ended since", async () => {
+    // Rendered at 44; the sale ended before the click, so the catalog in hand
+    // now prices it at 80.
+    const ended = {
+      ...skull,
+      cosmetic: {
+        ...(skull.cosmetic as object),
+        promotion: {
+          id: "40",
+          name: "Hot sale",
+          percentOff: 45,
+          endsAt: new Date(Date.now() - 1000).toISOString(),
+        },
+      },
+    } as unknown as import("../../src/client/Cosmetics").ResolvedCosmetic;
+    await Cosmetics.purchaseCosmetic(ended, "hard", undefined, 44);
+    expect(purchaseBodies()[0]).toMatchObject({ expectedAmount: 44 });
   });
 
   it("sends platform steam from the Steam build", async () => {

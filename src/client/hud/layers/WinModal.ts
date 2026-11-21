@@ -639,8 +639,8 @@ export class WinModal extends LitElement implements Controller {
                 .priceSoft=${pattern?.priceSoft ?? null}
                 .rarity=${pattern?.rarity ?? "common"}
                 .itemName=${cosmeticSelectionLabel(resolved)}
-                .onPurchaseHard=${() => purchaseCosmetic(resolved, "hard", { kind: "post_game" })}
-                .onPurchaseSoft=${() => purchaseCosmetic(resolved, "soft", { kind: "post_game" })}
+                .onPurchaseHard=${() => purchaseCosmetic(resolved, "hard", { kind: "post_game" }, pattern?.priceHard)}
+                .onPurchaseSoft=${() => purchaseCosmetic(resolved, "soft", { kind: "post_game" }, pattern?.priceSoft)}
               ></purchase-button>
             </div>
           `;
