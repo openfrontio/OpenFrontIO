@@ -166,3 +166,22 @@ describe("LangSelector language loading", () => {
     ).toBe("-25% ES");
   });
 });
+
+describe("LangSelector lifecycle listeners", () => {
+  it("removes window keydown and keyup listeners when disconnected", () => {
+    const addSpy = vi.spyOn(window, "addEventListener");
+    const removeSpy = vi.spyOn(window, "removeEventListener");
+
+    const selector = new LangSelector();
+    (selector as unknown as { initializeLanguage(): void }).initializeLanguage =
+      vi.fn();
+
+    selector.connectedCallback();
+    expect(addSpy).toHaveBeenCalledWith("keydown", expect.any(Function));
+    expect(addSpy).toHaveBeenCalledWith("keyup", expect.any(Function));
+
+    selector.disconnectedCallback();
+    expect(removeSpy).toHaveBeenCalledWith("keydown", expect.any(Function));
+    expect(removeSpy).toHaveBeenCalledWith("keyup", expect.any(Function));
+  });
+});
