@@ -2,6 +2,7 @@ import type { Cosmetics, Promotion } from "@openfront/shared/CosmeticSchemas";
 import type { TemplateResult } from "lit";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
+import { translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./SaleCountdown";
 
@@ -47,6 +48,62 @@ export function saleCoversEverything(
     priced.every((item) => item.promotion?.id === promotionId)
   );
 }
+
+/**
+ * The display name of the item a flash sale is on, or null when the catalog
+ * doesn't carry it (an older or partial catalog).
+ */
+export function flashSaleItemName(
+  cosmetics: Cosmetics | null,
+  promotionId: string,
+): string | null {
+  if (cosmetics === null) return null;
+  type Item = {
+    name: string;
+    displayName?: string;
+    promotion?: { id: string };
+  };
+  const on = (items: object | undefined): Item | undefined =>
+    Object.values(items ?? {}).find(
+      (item) => (item as Item).promotion?.id === promotionId,
+    ) as Item | undefined;
+  const pattern = on(cosmetics.patterns) ?? on(cosmetics.skins);
+  if (pattern) {
+    return translateCosmetic("territory_patterns.pattern", pattern.name);
+  }
+  const flag = on(cosmetics.flags);
+  if (flag) return translateCosmetic("flags", flag.name);
+  const crown = on(cosmetics.crowns);
+  if (crown) return translateCosmetic("crowns", crown.name);
+  for (const byName of Object.values(cosmetics.effects ?? {})) {
+    const effect = on(byName);
+    if (effect) return translateCosmetic("effects", effect.name);
+  }
+  const bundle = on(cosmetics.packs);
+  if (bundle) {
+    // Same casing as the bundle's card (cosmeticDisplayName).
+    return (bundle.displayName ?? bundle.name).replace(
+      /(^|[\s-])\p{L}/gu,
+      (match) => match.toLocaleUpperCase(),
+    );
+  }
+  return null;
+}
+
+/** A banner's closing arrow: on the home screen the banner opens the store. */
+const OPEN_ARROW = html`<svg
+  data-sale-open
+  class="h-4 w-4 shrink-0 text-white/80"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="3"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+>
+  <path d="m9 18 6-6-6-6" />
+</svg>`;
 
 const STRIP_CLASS =
   "overflow-hidden rounded-lg border border-aquarius/40 bg-gradient-to-r from-deep-navy via-malibu-blue/70 to-malibu-blue shadow-[0_4px_20px_rgba(63,169,245,0.3)]";
@@ -160,6 +217,7 @@ export class SaleBanner extends LitElement {
         >
           <sale-countdown .endsAt=${sale.endsAt}></sale-countdown>
         </span>
+        ${this.linked ? OPEN_ARROW : nothing}
       </div>
       ${flash ? this.renderFlashRow(flash) : nothing}
     </div>`;
@@ -175,8 +233,23 @@ export class SaleBanner extends LitElement {
   }
 
   /**
-   * A flash sale as a slim row under another sale's strip: what it is and a
-   * clock to the next item.
+   * What a flash sale is on: the item by name, or "one item" when the catalog
+   * doesn't carry it.
+   */
+  private flashText(
+    sale: Promotion,
+    namedKey: string,
+    unnamedKey: string,
+  ): string {
+    const name = flashSaleItemName(this.cosmetics, sale.id);
+    return name === null
+      ? translateText(unnamedKey, { percent: sale.percentOff })
+      : translateText(namedKey, { name, percent: sale.percentOff });
+  }
+
+  /**
+   * A flash sale as a slim row under another sale's strip: the item, and a
+   * clock to the end of its deal.
    */
   private renderFlashRow(sale: Promotion): TemplateResult {
     const content = html`<span
@@ -184,13 +257,15 @@ export class SaleBanner extends LitElement {
         >${translateText("store.flash_sale")}</span
       >
       <span class="min-w-0 truncate font-semibold text-dawn-blue"
-        >${translateText("store.flash_sale_row", {
-          percent: sale.percentOff,
-        })}</span
+        >${this.flashText(
+          sale,
+          "store.flash_sale_item_row",
+          "store.flash_sale_row",
+        )}</span
       >
       <span class="ml-auto flex shrink-0 items-center gap-1.5 tabular-nums">
         <span class="hidden font-semibold text-dawn-blue sm:inline"
-          >${translateText("store.flash_next_in")}</span
+          >${translateText("store.flash_ends_in")}</span
         >
         <sale-countdown format="clock" .endsAt=${sale.endsAt}></sale-countdown>
         <svg
@@ -221,7 +296,8 @@ export class SaleBanner extends LitElement {
   }
 
   /**
-   * A flash sale running alone: one item at a time, with a clock to the next.
+   * A flash sale running alone: the item, and a clock to the end of its deal
+   * (when the next item's starts).
    */
   private renderFlashLine(sale: Promotion): TemplateResult {
     const content = html`${this.renderBadge(sale)}
@@ -232,19 +308,22 @@ export class SaleBanner extends LitElement {
           <span class="truncate">${translateText("store.flash_sale")}</span>
         </span>
         <span class="truncate text-xs font-semibold text-dawn-blue"
-          >${translateText("store.flash_sale_banner", {
-            percent: sale.percentOff,
-          })}</span
+          >${this.flashText(
+            sale,
+            "store.flash_sale_item_banner",
+            "store.flash_sale_banner",
+          )}</span
         >
       </span>
       <span
         class="flex shrink-0 items-center gap-1.5 rounded-md bg-deep-navy/60 px-2 py-1 text-xs font-bold tabular-nums text-white"
       >
         <span class="hidden sm:inline"
-          >${translateText("store.flash_next_in")}</span
+          >${translateText("store.flash_ends_in")}</span
         >
         <sale-countdown format="clock" .endsAt=${sale.endsAt}></sale-countdown>
-      </span>`;
+      </span>
+      ${OPEN_ARROW}`;
     return this.linked
       ? html`<div data-store-flash-banner class=${FLASH_LINE_CLASS}>
           ${content}
