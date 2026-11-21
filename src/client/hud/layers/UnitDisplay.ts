@@ -41,10 +41,11 @@ interface BuildNeeds {
 
 // Look. Sizes, colours, radii and spacing of each part live here, so a
 // change of look is one edit. The templates below only hold structure.
+const ITEM = "gap-0.5";
 // The border is a real one: the tutorial highlight in styles.css recolours it.
-// From lg a tile is at least 44px wide, so the row does not shift when a
-// count goes from 9 to 10, and wider when its count needs it (1.19K), so the
-// count never spills over the tiles beside it.
+// From lg a tile is at least 44px wide, so the prices above them line up,
+// and wider when its count needs it (1.19K), so the count never spills over
+// the tiles beside it.
 // The column's scroller gets 100dvh - 5.5rem and ten tiles need ten heights
 // plus nine 2px gaps (1.125rem), so on short screens the tiles shrink, down
 // to 36px, instead of scrolling. From 586px tall they stay 48px.
@@ -56,13 +57,18 @@ const TILE_SELECTION = {
   selected:
     "border-aquarius bg-malibu-blue/25 pointer-fine:hover:bg-malibu-blue/35",
 } as const;
-// A unit you cannot build dims its icon and count but keeps its tile's edge,
-// so at the start of a game the bar does not look switched off.
+// A unit you cannot build dims its icon, count and price but keeps its
+// tile's edge, so at the start of a game the bar does not look switched off.
 // A locked one (no silo for a bomb, no port for a warship) dims further.
 const ICON_STATE: Record<BuildState, string> = {
   ready: "",
   poor: "opacity-50",
   locked: "opacity-30",
+};
+const PRICE_STATE: Record<BuildState, string> = {
+  ready: "text-cyber-yellow/80",
+  poor: "text-white/40",
+  locked: "text-white/30",
 };
 // In place of the count from lg; below lg, where no count is shown, a badge
 // in the tile's bottom end corner. The lock is narrower than it is tall, so
@@ -79,6 +85,10 @@ const DETAILS_PRICE: Record<BuildState, string> = {
   poor: "text-red-400",
   locked: "text-cyber-yellow",
 };
+// Drawn above the tile with order-first; it keeps its height while empty so
+// the row does not jump when the costs arrive. No room for it in the column.
+const PRICE =
+  "order-first h-2.5 text-[10px] font-semibold leading-[10px] tabular-nums side-bar:hidden";
 // In the corner, out of the tile's flow, so it does not push the icon aside.
 const HOTKEY =
   "absolute top-0.5 start-0.5 max-w-full truncate text-[10px] leading-none text-white/45";
@@ -818,6 +828,12 @@ export class UnitDisplay extends LitElement implements Controller {
     const state = this.buildState(unitType, needs);
     const name = translateText("unit_type." + structureKey);
     const highlighted = this.tutorialHighlight === unitType;
+    // Undefined until the worker sends the costs; a unit can also cost 0
+    // (infinite gold), and that 0 is shown.
+    const cost = this.playerBuildables?.find(
+      (bu) => bu.type === unitType,
+    )?.cost;
+    const priceId = `unit-price-${structureKey}`;
     // The label stands in for what the tile holds, so the count goes in it.
     const label = [
       name,
@@ -831,7 +847,7 @@ export class UnitDisplay extends LitElement implements Controller {
 
     return html`
       <div
-        class="flex flex-col items-center relative"
+        class="flex flex-col items-center relative ${ITEM}"
         data-unit=${structureKey}
         @mouseenter=${(event: MouseEvent) => {
           const item = event.currentTarget as HTMLElement;
@@ -859,6 +875,7 @@ export class UnitDisplay extends LitElement implements Controller {
           role="button"
           aria-label=${label}
           aria-pressed=${selected}
+          aria-describedby=${priceId}
           aria-disabled=${!selected && state !== "ready"}
           data-build-state=${state}
           @click=${(event: Event) =>
@@ -902,6 +919,17 @@ export class UnitDisplay extends LitElement implements Controller {
               : nothing
           }
         </div>
+        <!-- Hidden so it is not read twice: the tile reads it as its
+             description. -->
+        <span
+          id=${priceId}
+          data-unit-price
+          aria-hidden="true"
+          class="${PRICE} ${PRICE_STATE[state]} ${
+            highlighted ? "invisible" : ""
+          }"
+          >${cost !== undefined ? renderNumber(cost) : ""}</span
+        >
       </div>
     `;
   }
