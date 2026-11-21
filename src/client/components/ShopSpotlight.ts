@@ -1,3 +1,4 @@
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { LitElement, html, nothing } from "lit";
@@ -10,6 +11,7 @@ import {
   groupCosmeticVariants,
   isNew,
   newUntilMs,
+  refreshStaleCosmetics,
   ResolvedCosmetic,
   resolveCosmetics,
 } from "../Cosmetics";
@@ -21,8 +23,9 @@ import { cosmeticDisplayName } from "./CosmeticPresentation";
 import "./PlutoniumIcon";
 
 const SPOTLIGHT_COUNT = 3;
-// setTimeout's ceiling (~24.8 days); a later deadline just re-arms.
-const MAX_TIMEOUT_MS = 2 ** 31 - 1;
+// How often the catalog is rechecked for a sale or item that has started since
+// (the news box's sale banner rechecks as often).
+const RECHECK_MS = 5 * 60_000;
 
 // Kinds the store can deep-link to by item key (see subTabForItem in Store.ts).
 const SPOTLIGHT_TYPES: ReadonlySet<ResolvedCosmetic["type"]> = new Set([
@@ -110,13 +113,17 @@ export function storeItemHash(resolved: ResolvedCosmetic): string {
 
 // Homepage "In the Store" panel: three store items, each opening the store on
 // itself. Fills the Streaming Now slot while that panel is hidden (fewer than two
-// live); play-page hides it (via group-has) whenever Streaming Now is showing. Desktop only, like Streaming Now.
+// live); play-page hides it (via group-has) whenever Streaming Now is showing.
+// Desktop only, like Streaming Now.
 @customElement("shop-spotlight")
 export class ShopSpotlight extends LitElement {
   @state() private items: ResolvedCosmetic[] = [];
   private cosmetics: Cosmetics | null = null;
   private me: UserMeResponse | false = false;
-  private repickTimer: ReturnType<typeof setTimeout> | null = null;
+  // Fixed for the page load, so a recheck with an unchanged catalog keeps the
+  // same random fill instead of reshuffling the tiles under the player.
+  private readonly seed = Math.floor(Math.random() * 2 ** 31);
+  private refreshTimer: ReturnType<typeof setTimeout> | null = null;
   private compactQuery: MediaQueryList | null = null;
 
   createRenderRoot() {
@@ -130,7 +137,8 @@ export class ShopSpotlight extends LitElement {
     this.compactQuery?.addEventListener("change", this.syncVisibility);
     // Ownership changes on login, logout and purchase: pick again.
     document.addEventListener("userMeResponse", this.onUserMe);
-    void this.load();
+    this.me = lastUserMeResponse()?.response ?? false;
+    void this.refresh();
   }
 
   disconnectedCallback() {
@@ -138,48 +146,54 @@ export class ShopSpotlight extends LitElement {
     this.compactQuery?.removeEventListener("change", this.syncVisibility);
     this.compactQuery = null;
     document.removeEventListener("userMeResponse", this.onUserMe);
-    this.clearRepick();
+    this.clearRefresh();
   }
 
   private onUserMe = (event: Event) => {
-    this.pick((event as CustomEvent<UserMeResponse | false>).detail);
+    this.me = (event as CustomEvent<UserMeResponse | false>).detail;
+    void this.refresh();
   };
 
-  private async load() {
-    // Already fetched (and cached) for the news box's sale banner.
-    this.cosmetics = await fetchCosmetics();
+  /**
+   * Picks from the current catalog, then rechecks it: every few minutes, in
+   * case a sale has started or the first fetch failed, and just after a shown
+   * sale or "new" badge ends, since that changes the tile's price and order.
+   */
+  private async refresh() {
+    // The catalog is shared with the news box, which keeps it current too. A
+    // background tab stays on what it has.
+    if (!document.hidden) refreshStaleCosmetics();
+    const cosmetics = await fetchCosmetics();
     if (!this.isConnected) return;
-    this.pick(lastUserMeResponse()?.response ?? false);
+    if (cosmetics !== null) this.cosmetics = cosmetics;
+    if (this.cosmetics !== null) {
+      const random = new PseudoRandom(this.seed);
+      this.items = pickSpotlightItems(
+        resolveCosmetics(this.cosmetics, this.me, null),
+        () => random.next(),
+      );
+      this.syncVisibility();
+    }
+    this.scheduleRefresh();
   }
 
-  private pick(me: UserMeResponse | false) {
-    this.me = me;
-    if (this.cosmetics === null) return;
-    this.items = pickSpotlightItems(resolveCosmetics(this.cosmetics, me, null));
-    this.syncVisibility();
-    this.scheduleRepick();
-  }
-
-  // A shown sale or "new" badge ending changes the tile's price and the
-  // ordering: pick again just after it does.
-  private scheduleRepick() {
-    this.clearRepick();
+  private scheduleRefresh() {
+    this.clearRefresh();
     const now = Date.now();
     const deadline = nextSpotlightDeadline(this.items, now);
-    if (deadline === null) return;
-    this.repickTimer = setTimeout(
-      () => {
-        this.repickTimer = null;
-        if (deadline <= Date.now()) this.pick(this.me);
-        else this.scheduleRepick();
-      },
-      Math.min(deadline - now + 1000, MAX_TIMEOUT_MS),
-    );
+    const wait =
+      deadline === null
+        ? RECHECK_MS
+        : Math.min(deadline - now + 1000, RECHECK_MS);
+    this.refreshTimer = setTimeout(() => {
+      this.refreshTimer = null;
+      void this.refresh();
+    }, wait);
   }
 
-  private clearRepick() {
-    if (this.repickTimer !== null) clearTimeout(this.repickTimer);
-    this.repickTimer = null;
+  private clearRefresh() {
+    if (this.refreshTimer !== null) clearTimeout(this.refreshTimer);
+    this.refreshTimer = null;
   }
 
   private syncVisibility = () => {

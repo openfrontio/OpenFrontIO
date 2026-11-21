@@ -6,10 +6,14 @@ import {
 } from "../../src/client/components/ShopSpotlight";
 import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 
-const catalog = vi.hoisted(() => ({ items: [] as unknown[] }));
+const catalog = vi.hoisted(() => ({
+  items: [] as unknown[],
+  // What fetchCosmetics answers: a fresh object per fetch, or null (failed).
+  fetch: (() => ({})) as () => object | null,
+}));
 vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
-  fetchCosmetics: async () => ({}),
+  fetchCosmetics: async () => catalog.fetch(),
   resolveCosmetics: () => catalog.items,
 }));
 
@@ -132,6 +136,7 @@ describe("nextSpotlightDeadline", () => {
 describe("<shop-spotlight>", () => {
   afterEach(() => {
     document.body.innerHTML = "";
+    catalog.fetch = () => ({});
     vi.useRealTimers();
   });
 
@@ -169,5 +174,73 @@ describe("<shop-spotlight>", () => {
     expect(vi.getTimerCount()).toBe(1);
     el.remove();
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("<shop-spotlight> rechecks", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+    catalog.fetch = () => ({});
+    vi.useRealTimers();
+  });
+
+  const mount = async () => {
+    await import("../../src/client/components/ShopSpotlight");
+    const el = document.createElement("shop-spotlight") as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(0);
+    await el.updateComplete;
+    return el;
+  };
+  const shown = (el: HTMLElement) =>
+    [...el.querySelectorAll("a[href*='item=']")].map((a) =>
+      a.getAttribute("href"),
+    );
+
+  it("appears once a failed first fetch succeeds on a later recheck", async () => {
+    vi.useFakeTimers({ now: NOW });
+    catalog.items = [item("flag", "plain")];
+    catalog.fetch = () => null;
+    const el = await mount();
+    expect(el.style.display).toBe("none");
+
+    catalog.fetch = () => ({});
+    await vi.advanceTimersByTimeAsync(5 * 60_000);
+    await el.updateComplete;
+    expect(el.style.display).not.toBe("none");
+    expect(shown(el)).toHaveLength(1);
+  });
+
+  it("puts a sale that started since the last fetch first", async () => {
+    vi.useFakeTimers({ now: NOW });
+    catalog.items = ["a", "b", "c", "d"].map((n) => item("flag", n));
+    const el = await mount();
+    expect(shown(el)).not.toContain(storeItemHash(item("skin", "deal")));
+
+    catalog.items = [
+      ...catalog.items,
+      item("skin", "deal", {
+        priceSoft: 80,
+        listPriceSoft: 100,
+        promotion: { percentOff: 20, endsAt: LATER },
+      }),
+    ];
+    await vi.advanceTimersByTimeAsync(5 * 60_000);
+    await el.updateComplete;
+    expect(shown(el)[0]).toBe(storeItemHash(item("skin", "deal")));
+  });
+
+  it("keeps the same tiles when the catalog hasn't changed", async () => {
+    vi.useFakeTimers({ now: NOW });
+    catalog.items = ["a", "b", "c", "d", "e", "f"].map((n) => item("flag", n));
+    const el = await mount();
+    const before = shown(el);
+    for (let i = 0; i < 5; i++) {
+      await vi.advanceTimersByTimeAsync(5 * 60_000);
+      await el.updateComplete;
+      expect(shown(el)).toEqual(before);
+    }
   });
 });
