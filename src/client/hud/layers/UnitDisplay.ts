@@ -65,9 +65,10 @@ const ICON_STATE: Record<BuildState, string> = {
   poor: "opacity-50",
   locked: "opacity-30",
 };
+// The price turns red when you cannot afford the unit, as in the details.
 const PRICE_STATE: Record<BuildState, string> = {
   ready: "text-cyber-yellow/80",
-  poor: "text-white/40",
+  poor: "text-red-400",
   locked: "text-white/30",
 };
 // In place of the count from lg; below lg, where no count is shown, a badge
