@@ -44,15 +44,11 @@ const TRACK_BORDER = {
 } as const;
 const TROOP_FILL = "bg-malibu-blue";
 const TROOPS_OUT = "bg-sky-300";
-// Below lg the count at the start and the max at the end, with the rate in
-// the middle. From lg "count / max", centred on the slash.
-const TROOPS_LINE = "gap-1 px-1.5";
-const TROOPS = `text-xs font-bold text-white lg:text-base ${BAR_TEXT_SHADOW}`;
-// A fixed width from lg, so the icon after the max does not move with it.
-const MAX_TROOPS = "lg:w-14";
-// In the middle of the bar below lg; from lg a chip in the grid's empty
-// first column.
-const RATE = `text-[11px] transition-colors duration-700 ${BAR_TEXT_SHADOW} lg:absolute lg:inset-y-0 lg:end-full lg:me-2 lg:w-[6.5rem] lg:justify-center lg:text-[13px] lg:drop-shadow-none`;
+const TROOPS = `gap-1 ps-1.5 text-xs font-bold text-white lg:text-base ${BAR_TEXT_SHADOW}`;
+const MAX_TROOPS =
+  "me-0.5 h-5 gap-1 rounded-xs bg-black/50 px-1 text-[11px] font-bold text-white lg:px-1.5 lg:text-[13px]";
+// Inside the bar below lg; from lg a chip in the grid's empty first column.
+const RATE = `ms-1.5 text-[11px] transition-colors duration-700 ${BAR_TEXT_SHADOW} lg:absolute lg:inset-y-0 lg:end-full lg:me-2 lg:w-[6.5rem] lg:justify-center lg:text-[13px] lg:drop-shadow-none`;
 const RATE_TREND = {
   up: "text-green-400 lg:bg-green-400/12",
   down: "text-orange-400 lg:bg-orange-400/14",
@@ -612,14 +608,15 @@ export class ControlPanel extends LitElement implements Controller {
               : nothing
           }
         </div>
+        <!-- One line that clips: when the three do not fit, the max wraps out
+             of sight first, then the rate; the count always stays. From lg
+             the rate leaves the line for the chip column. -->
         <div
-          class="relative flex h-6 items-center overflow-hidden lg:overflow-visible ${TROOPS_LINE}"
+          class="relative flex h-6 flex-wrap content-start items-center overflow-hidden lg:flex-nowrap lg:overflow-visible"
           translate="no"
         >
-          <span
-            data-troops
-            class="flex flex-1 justify-start lg:justify-end ${TROOPS}"
-          >
+          <span data-troops class="flex h-6 shrink-0 items-center ${TROOPS}">
+            <of-icon name="troops" size="14" class="max-lg:hidden"></of-icon>
             <span class="hud-caps">${renderTroops(this._troops)}</span>
           </span>
           <span
@@ -631,14 +628,12 @@ export class ControlPanel extends LitElement implements Controller {
           >
             <span class="lg:hud-caps">${rate}</span>
           </span>
-          <span class="hud-caps max-lg:hidden ${TROOPS}">/</span>
           <span
-            class="flex flex-1 items-center justify-end gap-1 lg:justify-start ${TROOPS}"
+            data-max-troops
+            class="ms-auto flex shrink-0 items-center ${MAX_TROOPS}"
           >
-            <span data-max-troops class="hud-caps ${MAX_TROOPS}"
-              >${renderTroops(this._maxTroops)}</span
-            >
-            <of-icon name="troops" size="14" class="max-lg:hidden"></of-icon>
+            <of-icon name="max" size="10" class="max-lg:hidden"></of-icon>
+            <span class="hud-caps">${renderTroops(this._maxTroops)}</span>
           </span>
         </div>
       </div>

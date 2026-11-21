@@ -45,6 +45,7 @@ export const OF_ICONS = {
   tribe: { file: "SwordIconWhite.svg" },
   swap: { file: "SwapIconWhite.svg" },
   sword: { file: "SwordIconWhite.svg" },
+  max: { file: "UpperLimitIcon.svg" },
   info: { file: "InfoIconRegularWhite.svg" },
   warning: { file: "WarningIconWhite.svg" },
   lock: { file: "LockIconWhite.svg" },
