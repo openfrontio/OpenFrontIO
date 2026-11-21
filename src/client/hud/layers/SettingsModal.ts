@@ -28,7 +28,7 @@ import {
   notableLobbySettings,
   VISIBILITY_BADGE_CLASS,
 } from "../../utilities/LobbySettingsSummary";
-import { getMapName, homeHref, translateText } from "../../Utils";
+import { exitGame, getMapName, translateText } from "../../Utils";
 import type { GameView } from "../../view/GameView";
 const exitIcon = assetUrl("images/ExitIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
@@ -323,7 +323,7 @@ export class SettingsModal extends LitElement implements Controller {
 
   private onExitButtonClick() {
     // redirect to the home page
-    window.location.href = homeHref();
+    exitGame();
   }
 
   private renderHeaderBadges() {

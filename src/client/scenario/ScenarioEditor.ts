@@ -23,9 +23,12 @@ import { html, LitElement, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
 import Countries from "resources/countries.json" with { type: "json" };
+import { ClientEnv } from "../ClientEnv";
 import "../hud/layers/PlayerInfoOverlay";
 import type { PlayerInfoOverlay } from "../hud/layers/PlayerInfoOverlay";
+import { showInGameAlert } from "../InGameModal";
 import { MouseMoveEvent } from "../InputHandler";
+import { fallbackPlayerName } from "../PlayerName";
 import {
   applyGraphicsOverrides,
   createRenderSettings,
@@ -42,8 +45,9 @@ import {
   terrainMapFileLoader,
 } from "../TerrainMapFileLoader";
 import type { TransformHandler } from "../TransformHandler";
+import type { UsernameInput } from "../UsernameInput";
 import { UserSettings } from "../UserSettings";
-import { homeHref, translateText } from "../Utils";
+import { homeHref, returnFromGameTo, translateText } from "../Utils";
 import { GameView } from "../view/GameView";
 import { WebGLFrameBuilder } from "../WebGLFrameBuilder";
 import { WorkerClient } from "../WorkerClient";
@@ -69,6 +73,8 @@ import {
 } from "./ScenarioDocument";
 import { type DraftInfo, scenarioDrafts } from "./ScenarioDrafts";
 import { scenarioEditorHash } from "./ScenarioEditorRoute";
+import { exportScenario } from "./ScenarioExport";
+import { scenarioGameStart } from "./ScenarioStart";
 import {
   type BrushStroke,
   TerrainStroke,
@@ -130,6 +136,10 @@ export class ScenarioEditor extends LitElement {
    * paints; null, or a nation since removed, erases.
    */
   @state() private nationId: string | null = null;
+  /** The Play button's menu: the nations to play as, or why there are none. */
+  @state() private playMenu = false;
+  /** A test game is being exported and started. */
+  @state() private starting = false;
 
   @query("#scenario-editor-brush") private brushPreview!: HTMLElement | null;
 
@@ -386,6 +396,62 @@ export class ScenarioEditor extends LitElement {
     else if (key === "y") this.undoOrRedo(true);
     else return;
     e.preventDefault();
+  }
+
+  // ---- Test play ----
+
+  private onPlay(): void {
+    const playable = this.doc?.nations.filter((n) => n.playable) ?? [];
+    if (playable.length === 1) void this.testPlay(playable[0].id);
+    else this.playMenu = !this.playMenu;
+  }
+
+  /**
+   * Plays the document as a singleplayer game, as `nationID`, from a bundle
+   * exported in memory (docs/ScenarioEditor.md, "Test play from the
+   * editor"). Leaving the game loads the page again on this draft, so the
+   * draft is saved first; the undo history doesn't survive it.
+   */
+  private async testPlay(nationID: string): Promise<void> {
+    const editor = this.editor;
+    const worker = this.session?.worker ?? null;
+    const id = this.draftId;
+    if (editor === null || worker === null || id === null) return;
+    if (this.status !== "ready" || this.starting) return;
+    this.endStroke();
+    this.playMenu = false;
+    this.starting = true;
+    try {
+      await scenarioDrafts.save(id, editor.doc);
+      const bundle = await exportScenario(
+        editor.doc,
+        (c) => worker.editorCommand(c),
+        // Unpublished: the draft's id, and no version yet.
+        { scenario: { id, version: 0 }, gitCommit: ClientEnv.gitCommit() },
+      );
+      const usernameInput = document.querySelector(
+        "username-input",
+      ) as UsernameInput | null;
+      const name = usernameInput?.resolvedName() ?? fallbackPlayerName();
+      const detail = await scenarioGameStart(bundle, nationID, {
+        username: name.name,
+        clanTag: usernameInput?.getClanTag() ?? null,
+      });
+      if (this.abort.signal.aborted) return;
+      returnFromGameTo(scenarioEditorHash(id));
+      this.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail,
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    } catch (e) {
+      console.error("scenario editor: test play failed:", e);
+      void showInGameAlert(translateText("scenario_editor.play_failed"));
+    } finally {
+      this.starting = false;
+    }
   }
 
   // ---- The engine and the view ----
@@ -1018,9 +1084,58 @@ export class ScenarioEditor extends LitElement {
         >
           ${translateText("scenario_editor.resize")}
         </button>
-        <a class="${button} ml-auto" href=${homeHref()}>
+        <button
+          class="${button} ml-auto"
+          aria-expanded=${this.playMenu}
+          ?disabled=${this.starting}
+          @click=${() => this.onPlay()}
+        >
+          ${translateText(
+            this.starting ? "scenario_editor.starting" : "scenario_editor.play",
+          )}
+        </button>
+        <a class=${button} href=${homeHref()}>
           ${translateText("scenario_editor.exit")}
         </a>
+      </div>
+      ${this.playMenu ? this.renderPlayMenu() : nothing}
+    `;
+  }
+
+  /** The playable nations to test play as, or why there are none. */
+  private renderPlayMenu() {
+    const playable = this.doc!.nations.filter((n) => n.playable);
+    const button =
+      "rounded bg-zinc-700 px-2 py-1 hover:bg-zinc-600 disabled:opacity-50";
+    return html`
+      <div
+        class="absolute top-14 left-1/2 flex max-h-[calc(100%-4.5rem)] w-64 -translate-x-1/2 flex-col gap-2 overflow-y-auto rounded-lg bg-zinc-900/90 p-3 text-sm"
+      >
+        ${
+          playable.length === 0
+            ? html`<p>${translateText("scenario_editor.play_no_playable")}</p>`
+            : html`
+                <h2 class="font-semibold">
+                  ${translateText("scenario_editor.play_as")}
+                </h2>
+                <ul class="flex flex-col gap-1">
+                  ${playable.map(
+                    (n) =>
+                      html`<li>
+                        <button
+                          class="${button} w-full truncate text-left"
+                          @click=${() => void this.testPlay(n.id)}
+                        >
+                          ${n.name}
+                        </button>
+                      </li>`,
+                  )}
+                </ul>
+              `
+        }
+        <button class=${button} @click=${() => (this.playMenu = false)}>
+          ${translateText("common.cancel")}
+        </button>
       </div>
     `;
   }

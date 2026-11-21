@@ -29,6 +29,9 @@ vi.mock("../../src/client/InGameModal", () => ({
 vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string) => key,
   homeHref: () => "/",
+  exitGame: vi.fn(() => {
+    window.location.href = "/";
+  }),
 }));
 
 import type { LobbyConfig } from "../../src/client/ClientGameRunner";

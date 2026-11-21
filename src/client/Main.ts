@@ -191,6 +191,7 @@ import { playerProfileRouteArgs } from "./utilities/PlayerProfileUrl";
 import {
   apexPathFor,
   currentPagePath,
+  exitGame,
   flushReloadToast,
   homeHref,
   incrementGamesPlayed,
@@ -703,8 +704,9 @@ class Client {
         if (joinOwnsInFlightFlag(this.mostRecentJoinEvent, event.timeStamp)) {
           this.joinInFlight = false;
           // The join closed the scenario editor, which had replaced the
-          // menu: nothing is left on the page, so go home.
-          if (this.menuGoneForJoin) window.location.href = homeHref();
+          // menu: nothing is left on the page, so leave as a game does
+          // (back to the editor, for its test play).
+          if (this.menuGoneForJoin) exitGame();
         }
         throw error;
       });
@@ -1264,7 +1266,7 @@ class Client {
     const leaveGame = () => {
       void gamePortal.gameplayStop().then(() => {
         // redirect to the home page
-        window.location.href = homeHref();
+        exitGame();
       });
     };
 
@@ -2108,7 +2110,7 @@ class Client {
           this.scenarioEditor === null &&
           this.replayViewerID === null
         ) {
-          window.location.href = homeHref();
+          exitGame();
         }
       });
       return;
@@ -2383,8 +2385,9 @@ class Client {
 
     if (this.lobbyHandle === null) {
       // The join closed the scenario editor, which had replaced the menu, and
-      // ended before reaching a lobby: nothing is left on the page, so go home.
-      if (this.menuGoneForJoin) window.location.href = homeHref();
+      // ended before reaching a lobby: nothing is left on the page, so leave as
+      // a game does (back to the editor, for its test play).
+      if (this.menuGoneForJoin) exitGame();
       return;
     }
     console.log("leaving lobby, cancelling game");
