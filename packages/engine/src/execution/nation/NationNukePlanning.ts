@@ -2,30 +2,53 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { Structures, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { Game, Player, Unit } from "../../game/Game";
 import { UniversalPathFinding } from "../../pathfinding/PathFinder";
+import { NukeExecution } from "../NukeExecution";
 
 export type NukeType = UnitType.AtomBomb | UnitType.HydrogenBomb;
 
 /** Cap on silo levels reachable via the SAM salvo's upgrade fallback. */
 const MAX_NATION_SILO_UPGRADE_LEVEL = 5;
 
-/** Whether our inner blast would overlap the inner blast of any player's nuke in flight. */
+export interface IncomingNuke {
+  owner: Player;
+  tile: TileRef;
+  type: UnitType;
+}
+
+/** Every player's nukes in flight, and those launched this tick or last whose bombs don't exist yet. */
+export function incomingNukes(game: Game): IncomingNuke[] {
+  const nukes: IncomingNuke[] = [];
+  for (const unit of game.units([
+    UnitType.AtomBomb,
+    UnitType.HydrogenBomb,
+    UnitType.MIRV,
+    UnitType.MIRVWarhead,
+  ])) {
+    const tile = unit.targetTile();
+    if (tile !== undefined) {
+      nukes.push({ owner: unit.owner(), tile, type: unit.type() });
+    }
+  }
+  for (const exec of game.executions()) {
+    const pending = exec instanceof NukeExecution ? exec.pendingBomb() : null;
+    if (pending !== null) nukes.push(pending);
+  }
+  return nukes;
+}
+
+/** Whether our inner blast would overlap the inner blast of an incoming bomb (MIRVs don't count until they split). */
 export function isNukeAlreadyLandingNear(
   game: Game,
+  incoming: IncomingNuke[],
   tile: TileRef,
   nukeType: NukeType,
 ): boolean {
   const config = game.config();
   const ourInnerRadius = config.nukeMagnitudes(nukeType).inner;
-  const nukesInFlight = game.units(
-    UnitType.AtomBomb,
-    UnitType.HydrogenBomb,
-    UnitType.MIRVWarhead,
-  );
-  for (const nuke of nukesInFlight) {
-    const targetTile = nuke.targetTile();
-    if (targetTile === undefined) continue;
-    const sumRadius = ourInnerRadius + config.nukeMagnitudes(nuke.type()).inner;
-    if (game.euclideanDistSquared(tile, targetTile) <= sumRadius * sumRadius) {
+  for (const nuke of incoming) {
+    if (nuke.type === UnitType.MIRV) continue;
+    const sumRadius = ourInnerRadius + config.nukeMagnitudes(nuke.type).inner;
+    if (game.euclideanDistSquared(tile, nuke.tile) <= sumRadius * sumRadius) {
       return true;
     }
   }

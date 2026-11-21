@@ -314,6 +314,16 @@ export class NukeExecution implements Execution {
     return this.nuke;
   }
 
+  /** The bomb this launch will spawn on its first tick, until it does. */
+  public pendingBomb(): {
+    owner: Player;
+    tile: TileRef;
+    type: NukeType;
+  } | null {
+    if (!this.active || this.nuke !== null) return null;
+    return { owner: this.player, tile: this.dst, type: this.nukeType };
+  }
+
   /**
    * Record a motion plan so the client can derive the nuke's position each
    * tick instead of receiving per-tick unit updates (see TradeShipExecution).

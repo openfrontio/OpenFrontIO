@@ -11,10 +11,12 @@ import {
   NukeMagnitude,
 } from "@openfront/engine-lib/configuration/Config";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
 import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { NationNukeBehavior } from "@openfront/engine/execution/nation/NationNukeBehavior";
+import { incomingNukes } from "@openfront/engine/execution/nation/NationNukePlanning";
 import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { Game, Player, Unit } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
@@ -250,6 +252,7 @@ describe("Nation nuke targeting", () => {
       nation.units(UnitType.MissileSilo),
       human.units(UnitType.City),
       false,
+      incomingNukes(game),
     );
     expect(tile).toBe(target);
   });
@@ -357,9 +360,129 @@ describe("Nation nuke targets in team games", () => {
       nation.units(UnitType.MissileSilo),
       enemy.units(UnitType.City),
       false,
+      incomingNukes(game),
     );
     expect(tile).toBe(nukes ? target : null);
   });
+
+  // A bomb only exists from its execution's first tick, the tick after its launch
+  it.each([0, 1])(
+    "Hard: a teammate launching %i tick(s) after us doesn't hit the same spot",
+    async (ticksBetween) => {
+      const ids = ["first", "second", "enemy"];
+      const game = await setup(
+        "big_plains",
+        {
+          difficulty: Difficulty.Hard,
+          gameMode: GameMode.Team,
+          playerTeams: 2,
+        },
+        ids.map(
+          (id, i) =>
+            new PlayerInfo(
+              id,
+              id === "enemy" ? PlayerType.Human : PlayerType.Nation,
+              null,
+              id,
+              false,
+              null,
+              [],
+              i < 2 ? 0 : 1,
+            ),
+        ),
+      );
+      const [first, second, enemy] = ids.map((id) => game.player(id));
+      conquerRect(game, first, 0, 0, 20, 20);
+      conquerRect(game, second, 0, 180, 20, 200);
+      conquerRect(game, enemy, 100, 0, 200, 200);
+      // Its value draws both nations' bombs
+      enemy.buildUnit(UnitType.City, game.ref(150, 100), {});
+      for (const [nation, y] of [
+        [first, 5],
+        [second, 190],
+      ] as const) {
+        nation.buildUnit(UnitType.MissileSilo, game.ref(5, y), {});
+        nation.addGold(40_000_000n);
+      }
+
+      nukeBehavior(game, first).maybeSendNuke();
+      for (let t = 0; t < ticksBetween; t++) game.executeNextTick();
+      nukeBehavior(game, second).maybeSendNuke();
+      game.executeNextTick();
+      game.executeNextTick();
+
+      const [a, b] = [first, second].map((nation) => {
+        const nukes = nation.units(UnitType.AtomBomb, UnitType.HydrogenBomb);
+        expect(nukes).toHaveLength(1);
+        return nukes[0];
+      });
+      const innerSum =
+        game.config().nukeMagnitudes(a.type()).inner +
+        game.config().nukeMagnitudes(b.type()).inner;
+      expect(
+        game.euclideanDistSquared(a.targetTile()!, b.targetTile()!),
+      ).toBeGreaterThan(innerSum * innerSum);
+    },
+  );
+
+  // The raider attacks our teammate; "other", its built-up teammate, is the strongest-team pick
+  it.each([
+    [2, 0, "raider"],
+    [3, 0, "other"],
+    [3, 3, "raider"],
+  ])(
+    "Hard: with %i atom bombs flying at a teammate's raider and %i at its teammate, nukes the %s",
+    async (raiderBombs, otherBombs, expected) => {
+      const ids = ["nation", "mate", "raider", "other"];
+      const game = await setup(
+        "big_plains",
+        {
+          difficulty: Difficulty.Hard,
+          gameMode: GameMode.Team,
+          playerTeams: 2,
+        },
+        ids.map(
+          (id, i) =>
+            new PlayerInfo(
+              id,
+              id === "nation" ? PlayerType.Nation : PlayerType.Human,
+              null,
+              id,
+              false,
+              null,
+              [],
+              i < 2 ? 0 : 1,
+            ),
+        ),
+      );
+      const [nation, mate, raider, other] = ids.map((id) => game.player(id));
+      conquerRect(game, nation, 0, 0, 20, 20);
+      conquerRect(game, mate, 0, 140, 60, 200);
+      conquerRect(game, raider, 60, 140, 80, 200);
+      conquerRect(game, other, 120, 0, 200, 120);
+      other.buildUnit(UnitType.City, game.ref(160, 60), {});
+      nation.buildUnit(UnitType.MissileSilo, game.ref(5, 5), {});
+      nation.addGold(40_000_000n);
+      nation.setTroops(1_000_000);
+      mate.addTroops(100_000);
+      raider.addTroops(100_000);
+      game.addExecution(new AttackExecution(50_000, raider, mate.id()));
+      game.executeNextTick();
+      expect(mate.incomingAttacks()).toHaveLength(1);
+
+      const bomb = (target: TileRef) =>
+        mate.buildUnit(UnitType.AtomBomb, game.ref(10, 150), {
+          targetTile: target,
+          trajectory: [],
+        });
+      for (let i = 0; i < raiderBombs; i++) bomb(game.ref(70, 145 + i * 20));
+      for (let i = 0; i < otherBombs; i++) bomb(game.ref(140 + i * 20, 20));
+
+      const nukes = launchNukes(game, nation);
+      expect(nukes).toHaveLength(1);
+      expect(game.owner(nukes[0].targetTile()!)).toBe(game.player(expected));
+    },
+  );
 });
 
 describe("Nuke tile scores around SAMs", () => {
