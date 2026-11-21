@@ -5,6 +5,8 @@
   "translation_key": "map.ottomanempire",
   "categories": ["europe", "asia", "africa", "countries"],
   "location": { "lat": 39, "lon": 29 },
+  "author": "halil1054",
+  "description": "The Ottoman Empire in 1683, at the height of its power in Europe just before the Siege of Vienna. Stretching across three continents from Algiers to Basra and from Buda to the Hejaz, its eyalets and vassal states fight for control of the Mediterranean, the Black Sea and the Red Sea.",
   "nations": [
     {
       "coordinates": [1722, 701],

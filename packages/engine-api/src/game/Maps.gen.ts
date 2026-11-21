@@ -2063,6 +2063,8 @@ export const maps: readonly MapInfo[] = [
     categories: ["europe", "asia", "africa", "countries"],
     defaultNationCount: 46,
     themes: ["europe", "asia", "africa"],
+    author: "halil1054",
+    descriptionKey: "map_description.ottomanempire",
     location: { lat: 39, lon: 29 },
   },
   {
@@ -2446,6 +2448,8 @@ export const maps: readonly MapInfo[] = [
     categories: ["countries", "europe", "asia"],
     defaultNationCount: 30,
     themes: ["europe", "asia"],
+    author: "halil1054",
+    descriptionKey: "map_description.turkiye",
     location: { lat: 39, lon: 35 },
   },
   {
