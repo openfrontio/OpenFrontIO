@@ -1440,6 +1440,63 @@ describe("UnitDisplay tiles", () => {
     }
   });
 
+  test("shows a unit's price once the worker has sent it", async () => {
+    const { display } = makeDisplay();
+    try {
+      await display.updateComplete;
+      const price = () =>
+        display.querySelector('[data-unit="city"] [data-unit-price]');
+      // Unknown until the worker answers, but the line is already there.
+      expect(price()).not.toBeNull();
+      expect(price()?.textContent).toBe("");
+
+      (display as any).playerBuildables = [
+        { type: UnitType.City, cost: 1000n },
+      ];
+      display.requestUpdate();
+      await display.updateComplete;
+      expect(price()?.textContent).toBe("1.00K");
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("shows 0 above a unit that costs nothing", async () => {
+    const { display } = makeDisplay();
+    try {
+      (display as any).playerBuildables = [{ type: UnitType.City, cost: 0n }];
+      display.requestUpdate();
+      await display.updateComplete;
+      expect(
+        display.querySelector('[data-unit="city"] [data-unit-price]')
+          ?.textContent,
+      ).toBe("0");
+    } finally {
+      display.remove();
+    }
+  });
+
+  test("a tile's description reads its price", async () => {
+    const { display } = makeDisplay();
+    try {
+      (display as any).playerBuildables = [
+        { type: UnitType.City, cost: 1000n },
+      ];
+      display.requestUpdate();
+      await display.updateComplete;
+
+      const city = display.querySelector(
+        '[data-unit="city"] > [role="button"]',
+      );
+      const description = document.getElementById(
+        city?.getAttribute("aria-describedby") ?? "",
+      );
+      expect(description?.textContent).toBe("1.00K");
+    } finally {
+      display.remove();
+    }
+  });
+
   test("the details show a unit's price", async () => {
     const { display } = makeDisplay();
     try {
