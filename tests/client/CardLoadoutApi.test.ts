@@ -75,6 +75,17 @@ describe("saveCardLoadout", () => {
     expect(fresh.broadcast).not.toHaveBeenCalled();
   });
 
+  it("sends nothing when no longer wanted once the token is read", async () => {
+    // Reading the token can wait on a JWT refresh; a sign-out meanwhile
+    // must not send this loadout under the next session's token.
+    expect(await saveCardLoadout(LOADOUT, () => false)).toEqual({
+      ok: false,
+      error: "cancelled",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fresh.broadcast).not.toHaveBeenCalled();
+  });
+
   it("PUTs the loadout and returns what was stored", async () => {
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify(LOADOUT), { status: 200 }),

@@ -172,6 +172,7 @@ describe("<my-card-tab>", () => {
     await settle();
     expect(api.save).toHaveBeenCalledWith(
       expect.objectContaining({ background: "bg_pacific", taunt: "salute" }),
+      expect.any(Function),
     );
   });
 
@@ -193,6 +194,7 @@ describe("<my-card-tab>", () => {
     await settle();
     expect(api.save).toHaveBeenCalledWith(
       expect.objectContaining({ background: "bg_pacific", title: "warmonger" }),
+      expect.any(Function),
     );
   });
 
@@ -225,12 +227,15 @@ describe("<my-card-tab>", () => {
     await render(userMe(OWNER, SAVED));
     tile("cardBackground:bg_pacific").click();
     await settle();
-    expect(api.save).toHaveBeenCalledWith({
-      background: "bg_pacific",
-      title: null,
-      taunt: null,
-      trackers: ["wins", "nukes_launched", "best_elo"],
-    });
+    expect(api.save).toHaveBeenCalledWith(
+      {
+        background: "bg_pacific",
+        title: null,
+        taunt: null,
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+      expect.any(Function),
+    );
     expect(tile("cardBackground:bg_pacific").dataset.state).toBe("equipped");
   });
 
@@ -349,7 +354,46 @@ describe("<my-card-tab>", () => {
     await settle();
     expect(api.save).toHaveBeenLastCalledWith(
       expect.objectContaining({ background: null }),
+      expect.any(Function),
     );
+  });
+
+  it("a superseded save's late answer is not taken, back in the same account", async () => {
+    const calls = deferredSaves();
+    const me = userMe(OWNER, SAVED);
+    await render(me);
+    const seen = vi.fn();
+    el().addEventListener("card-saved", (e) => seen((e as CustomEvent).detail));
+    tile("cardBackground:bg_pacific").click();
+    await settle();
+    expect(calls).toHaveLength(1);
+    // Signed out and back into the same account, then a newer save.
+    document.dispatchEvent(new CustomEvent("session-cleared"));
+    tab.userMe = { ...me } as UserMeResponse;
+    await settle();
+    await openSlot("trackers");
+    tile("cardTracker:wins").click();
+    await settle();
+    expect(calls).toHaveLength(2);
+    calls[1].answer(true);
+    await settle();
+    // The old run answers last.
+    calls[0].answer(true);
+    await settle();
+    expect(seen).toHaveBeenCalledTimes(1);
+    expect(seen).toHaveBeenCalledWith({
+      publicId: "p1",
+      loadout: {
+        background: null,
+        title: null,
+        taunt: null,
+        trackers: ["nukes_launched", "best_elo"],
+      },
+    });
+    expect(tile("cardTracker:wins").dataset.state).toBe("owned");
+    await openSlot("background");
+    expect(tile("cardBackground:bg_pacific").dataset.state).toBe("owned");
+    expect(q("[data-my-card-error]")).toBeNull();
   });
 
   it("takes the loadout the server stored, and tells the host", async () => {
@@ -494,6 +538,7 @@ describe("<my-card-tab>", () => {
     await settle();
     expect(api.save).toHaveBeenCalledWith(
       expect.objectContaining({ trackers: ["nukes_launched", "best_elo"] }),
+      expect.any(Function),
     );
   });
 
@@ -507,12 +552,15 @@ describe("<my-card-tab>", () => {
     await settle();
     (q("[data-my-card-reset]") as HTMLButtonElement).click();
     await settle();
-    expect(api.save).toHaveBeenLastCalledWith({
-      background: null,
-      title: null,
-      taunt: null,
-      trackers: ["wins", "nukes_launched", "best_elo"],
-    });
+    expect(api.save).toHaveBeenLastCalledWith(
+      {
+        background: null,
+        title: null,
+        taunt: null,
+        trackers: ["wins", "nukes_launched", "best_elo"],
+      },
+      expect.any(Function),
+    );
     expect(tile("cardBackground:bg_pacific").dataset.state).toBe("owned");
   });
 
