@@ -138,6 +138,12 @@ const SAM_LAND_COVER_SPARE_GOLD = 30_000_000n;
 /** Territory tiles checked for SAM cover */
 const SAM_LAND_COVER_SAMPLES = 20;
 
+/** Most levels a structure gets without a finished SAM over it once an enemy owns a missile silo, keyed by difficulty */
+const UNCOVERED_MAX_LEVEL: Partial<Record<Difficulty, number>> = {
+  [Difficulty.Hard]: 8,
+  [Difficulty.Impossible]: 4,
+};
+
 /** Most missile silo levels a nation builds or upgrades to */
 const MAX_MISSILE_SILOS = 3;
 
@@ -188,9 +194,21 @@ const HIGH_NATION_DENSITY_THRESHOLD = 1 / 7500;
 
 /**
  * Starting gold below which high-starting-gold nations wait between their first structures, so they
- * don't cluster inside a single nuke blast radius; with more, waiting would leave most gold idle.
+ * don't cluster inside a single nuke blast radius; Hard & Impossible with more release the rest over a ramp.
  */
 const PACED_STARTING_GOLD_LIMIT = 10_000_000n;
+
+/** Seconds over which rich Hard & Impossible nations release their starting gold beyond the paced limit to structures */
+const RICH_START_GOLD_RAMP_SECONDS = 240;
+
+/** Rich Hard & Impossible nations first build one of each structure type in this order; a missile silo first nukes before enemy SAMs stand */
+const RICH_START_FIRST_TYPES: readonly UnitType[] = [
+  UnitType.MissileSilo,
+  UnitType.SAMLauncher,
+  UnitType.Port,
+  UnitType.Factory,
+  UnitType.City,
+];
 
 /** Tick gap a high-starting-gold nation must wait before placing its Nth structure */
 const HIGH_GOLD_STRUCTURE_COOLDOWN_TICKS: readonly number[] = [
@@ -635,17 +653,25 @@ export class NationStructureBehavior {
     const cityCount = this.cityCount();
     const hasCoastalTiles = this.placement.hasCoastalTiles();
 
-    const missileSilosEnabled = !config.isUnitDisabled(UnitType.MissileSilo);
-
-    // High-starting-gold Hard/Impossible nations build a SAM first so their
-    // next structures get SAM coverage and aren't clustered under the same nuke target.
     const { difficulty } = config.gameConfig();
-    if (
+    const richStart = this.hasRichStart();
+    if (richStart) {
+      for (const type of RICH_START_FIRST_TYPES) {
+        if (
+          this.player.unitsOwned(type) === 0 &&
+          this.usesStructure(type, hasCoastalTiles) &&
+          this.maybeSpawnStructure(type)
+        ) {
+          return true;
+        }
+      }
+    } else if (
+      // Other high-starting-gold Hard/Impossible nations build a SAM first so their
+      // next structures get SAM coverage and aren't clustered under the same nuke target.
       this.placementsCount === 0 &&
-      (difficulty === Difficulty.Hard ||
-        difficulty === Difficulty.Impossible) &&
+      this.isHardOrImpossible() &&
       !config.isUnitDisabled(UnitType.AtomBomb) &&
-      missileSilosEnabled &&
+      !config.isUnitDisabled(UnitType.MissileSilo) &&
       !config.isUnitDisabled(UnitType.SAMLauncher) &&
       this.hasHighStartingGold() &&
       this.maybeSpawnStructure(UnitType.SAMLauncher)
@@ -661,6 +687,7 @@ export class NationStructureBehavior {
     // SAM-first branch above.
     if (
       !citiesDisabled &&
+      !richStart &&
       !this.builtCrowdedMapFirstStructure &&
       (this.isHighNationDensity() ||
         (difficulty !== Difficulty.Easy && this.startsInTeamSpawnArea()))
@@ -689,33 +716,8 @@ export class NationStructureBehavior {
       UnitType.MissileSilo,
     ];
 
-    const nukesEnabled =
-      !config.isUnitDisabled(UnitType.AtomBomb) ||
-      !config.isUnitDisabled(UnitType.HydrogenBomb) ||
-      !config.isUnitDisabled(UnitType.MIRV);
-
     for (const structureType of buildOrder) {
-      // Skip disabled structure types
-      if (config.isUnitDisabled(structureType)) {
-        continue;
-      }
-
-      // Skip ports if no coastal tiles
-      if (structureType === UnitType.Port && !hasCoastalTiles) {
-        continue;
-      }
-
-      // Skip missile silos and SAM launchers if all nukes are disabled
-      if (
-        !nukesEnabled &&
-        (structureType === UnitType.MissileSilo ||
-          structureType === UnitType.SAMLauncher)
-      ) {
-        continue;
-      }
-
-      // Skip SAM launchers if missile silos are disabled
-      if (!missileSilosEnabled && structureType === UnitType.SAMLauncher) {
+      if (!this.usesStructure(structureType, hasCoastalTiles)) {
         continue;
       }
 
@@ -733,6 +735,23 @@ export class NationStructureBehavior {
     }
 
     return false;
+  }
+
+  /** Whether the structure type is enabled and of use to us: ports need a coast, silos and SAMs need nukes. */
+  private usesStructure(type: UnitType, hasCoastalTiles: boolean): boolean {
+    const config = this.game.config();
+    if (config.isUnitDisabled(type)) return false;
+    const nukesEnabled = NUKE_TYPES.some((t) => !config.isUnitDisabled(t));
+    switch (type) {
+      case UnitType.Port:
+        return hasCoastalTiles;
+      case UnitType.MissileSilo:
+        return nukesEnabled;
+      case UnitType.SAMLauncher:
+        return nukesEnabled && !config.isUnitDisabled(UnitType.MissileSilo);
+      default:
+        return true;
+    }
   }
 
   // Cities owned, or a territory-based equivalent when cities are disabled
@@ -840,6 +859,9 @@ export class NationStructureBehavior {
     ) {
       if (this.maybeUpgradeStructure(type, structures)) {
         return true;
+      }
+      if (this.levelRooms(structures).includes(0)) {
+        return this.buildCoveringSam();
       }
       // Density too high but couldn't upgrade (e.g. all under construction) — don't build new, wait for construction (most relevant for SAMs)
       if (structures.length > 0) {
@@ -984,9 +1006,32 @@ export class NationStructureBehavior {
     return reserve > 0n ? reserve : 0n;
   }
 
-  /** Gold beyond the nuke reserve. */
+  /** Hard & Impossible with a starting gold too big to pace by pauses. */
+  private hasRichStart(): boolean {
+    return (
+      this.isHardOrImpossible() &&
+      this.game.config().startingGold(this.player.info()) >=
+        PACED_STARTING_GOLD_LIMIT
+    );
+  }
+
+  /** The starting gold beyond the paced limit that a rich start hasn't released to structures yet. */
+  private unreleasedStartingGold(): Gold {
+    if (!this.hasRichStart()) return 0n;
+    const left =
+      1 - this.game.elapsedGameSeconds() / RICH_START_GOLD_RAMP_SECONDS;
+    if (left <= 0) return 0n;
+    const excess =
+      this.game.config().startingGold(this.player.info()) -
+      PACED_STARTING_GOLD_LIMIT;
+    return BigInt(Math.floor(Number(excess) * left));
+  }
+
+  /** Gold beyond the nuke reserve and the starting gold not released yet. */
   private spendableGold(): Gold {
-    return this.player.gold() - this.nukeReserve();
+    const reserve = this.nukeReserve();
+    const unreleased = this.unreleasedStartingGold();
+    return this.player.gold() - (reserve > unreleased ? reserve : unreleased);
   }
 
   private isMirvWorthSavingFor(): boolean {
@@ -1005,7 +1050,72 @@ export class NationStructureBehavior {
     if (type === UnitType.SAMLauncher && this.isHardOrImpossible()) {
       return this.upgradeSam();
     }
-    return this.upgradeStructure(this.findBestStructureToUpgrade(structures));
+    const rooms = this.levelRooms(structures);
+    const open = structures.filter((_, i) => rooms[i] > 0);
+    const best = this.findBestStructureToUpgrade(open);
+    if (best === null) return false;
+    return this.upgradeStructure(best, rooms[structures.indexOf(best)]);
+  }
+
+  /** Per structure, the levels it may still get: Hard & Impossible keep big investments under finished SAMs once an enemy owns a missile silo. */
+  private levelRooms(structures: Unit[]): number[] {
+    const maxLevel =
+      UNCOVERED_MAX_LEVEL[this.game.config().gameConfig().difficulty];
+    if (maxLevel === undefined || !this.enemyOwnsMissileSilo()) {
+      return structures.map(() => Infinity);
+    }
+    const sams = this.player
+      .units(UnitType.SAMLauncher)
+      .filter((sam) => !sam.isUnderConstruction());
+    return structures.map((s) =>
+      !SAM_PROTECTED_TYPES.includes(s.type()) ||
+      this.isCoveredBySam(s.tile(), sams)
+        ? Infinity
+        : Math.max(0, maxLevel - s.level()),
+    );
+  }
+
+  private enemyOwnsMissileSilo(): boolean {
+    return this.game
+      .players()
+      .some(
+        (p) =>
+          p.type() !== PlayerType.Bot &&
+          !this.player.isFriendly(p) &&
+          p.unitCount(UnitType.MissileSilo) > 0,
+      );
+  }
+
+  /** Builds a SAM over some of our structures that no SAM covers yet, not even one under construction. */
+  private buildCoveringSam(): boolean {
+    if (
+      !this.usesStructure(
+        UnitType.SAMLauncher,
+        this.placement.hasCoastalTiles(),
+      ) ||
+      this.spendableGold() < this.getPerceivedCost(UnitType.SAMLauncher)
+    ) {
+      return false;
+    }
+    const sams = this.player.units(UnitType.SAMLauncher);
+    const uncovered = this.player
+      .units(SAM_PROTECTED_TYPES)
+      .filter((u) => !this.isCoveredBySam(u.tile(), sams));
+    if (uncovered.length === 0) return false;
+    const tile = this.placement.spawnTile(UnitType.SAMLauncher);
+    const rangeSquared = this.game.config().samRange(1) ** 2;
+    if (
+      tile === null ||
+      !uncovered.some(
+        (u) => this.game.euclideanDistSquared(u.tile(), tile) <= rangeSquared,
+      )
+    ) {
+      return false;
+    }
+    this.game.addExecution(
+      new ConstructionExecution(this.player, UnitType.SAMLauncher, tile),
+    );
+    return true;
   }
 
   private upgradeStructure(

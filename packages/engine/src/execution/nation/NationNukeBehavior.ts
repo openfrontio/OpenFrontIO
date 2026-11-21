@@ -802,7 +802,8 @@ export class NationNukeBehavior {
 
     for (const p of this.game.players()) {
       const team = p.team();
-      if (team === null) continue;
+      // Tribes form a team of their own, often the biggest early on
+      if (team === null || p.type() === PlayerType.Bot) continue;
 
       teamTiles.set(team, (teamTiles.get(team) ?? 0) + p.numTilesOwned());
       let players = teamPlayers.get(team);
@@ -1010,16 +1011,20 @@ export class NationNukeBehavior {
 
     const owner = this.game.owner(t);
     if (owner === nukeTarget) return true;
-    // On Hard & Impossible, allow TerraNullius (hit small islands) and other players' land, teammates' included, but not ours or allies'
-    if (
-      (difficulty === Difficulty.Hard ||
-        difficulty === Difficulty.Impossible) &&
-      (!owner.isPlayer() || !sparesLandOf(this.player, owner))
-    ) {
-      return true;
+    switch (difficulty) {
+      // Only the target's land (=> nuke away from the border) to reduce nuke usage
+      case Difficulty.Easy:
+        return false;
+      // Also TerraNullius (hit small players) and tribes
+      case Difficulty.Medium:
+        return !owner.isPlayer() || owner.type() === PlayerType.Bot;
+      // Also other players' land, teammates' included, but not ours or allies'
+      case Difficulty.Hard:
+      case Difficulty.Impossible:
+        return !owner.isPlayer() || !sparesLandOf(this.player, owner);
+      default:
+        assertNever(difficulty);
     }
-    // On Easy & Medium, only allow tiles owned by the target player (=> nuke away from the border) to reduce nuke usage
-    return false;
   }
 
   private nukeTileScore(

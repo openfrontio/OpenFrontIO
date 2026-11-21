@@ -473,8 +473,89 @@ describe("Nation structure upgrades", () => {
   });
 });
 
+describe("Nation upgrades without SAM cover", () => {
+  // A SAM still under construction at (10, 20) covers a city at (10, 30); nothing covers the
+  // one at (10, 90). Both cities are at level 4.
+  function cappedCities(difficulty: Difficulty, enemySilo: boolean) {
+    const setup = setupCoast({ difficulty, gameMode: GameMode.FFA });
+    const { game, nation } = setup;
+    const sam = nation.buildUnit(UnitType.SAMLauncher, game.ref(10, 20), {});
+    sam.setUnderConstruction(true);
+    for (const y of [30, 90]) {
+      const city = nation.buildUnit(UnitType.City, game.ref(10, y), {});
+      for (let l = 1; l < 4; l++) city.increaseLevel();
+    }
+    if (enemySilo) {
+      game
+        .player("other_id")
+        .buildUnit(UnitType.MissileSilo, game.ref(80, 50), {});
+    }
+    nation.addGold(10_000_000n);
+    return setup;
+  }
+
+  it.each([
+    [Difficulty.Impossible, true, [UnitType.SAMLauncher], 0],
+    [Difficulty.Impossible, false, [], 1],
+    [Difficulty.Hard, true, [], 1],
+  ])(
+    "%s, enemy owns a silo: %s, builds %j and upgrades %i cities",
+    (difficulty, enemySilo, built, upgrades) => {
+      const setup = cappedCities(difficulty, enemySilo);
+      expect(setup.behavior["maybeSpawnStructure"](UnitType.City)).toBe(true);
+      expect(setup.built()).toEqual(built);
+      expect(setup.upgraded()).toHaveLength(upgrades);
+    },
+  );
+
+  it("puts that SAM over the city nothing covers", () => {
+    const { game, behavior, builtTiles } = cappedCities(
+      Difficulty.Impossible,
+      true,
+    );
+    behavior["maybeSpawnStructure"](UnitType.City);
+    expect(
+      game.euclideanDistSquared(builtTiles()[0], game.ref(10, 90)),
+    ).toBeLessThanOrEqual(20 ** 2);
+  });
+});
+
+describe("Nation first structures with a high starting gold", () => {
+  const firstOfEach = [
+    UnitType.MissileSilo,
+    UnitType.SAMLauncher,
+    UnitType.Port,
+    UnitType.Factory,
+    UnitType.City,
+  ];
+
+  it.each([
+    [Difficulty.Impossible, 1_000_000_000, firstOfEach],
+    [Difficulty.Hard, 25_000_000, firstOfEach],
+    [Difficulty.Impossible, 5_000_000, [UnitType.SAMLauncher]],
+    [Difficulty.Medium, 1_000_000_000, [UnitType.City]],
+  ])(
+    "%s starting with %i builds %j first, without upgrading",
+    (difficulty, startingGold, first) => {
+      const { game, behavior, built, upgraded } = setupCoast(
+        { difficulty, gameMode: GameMode.FFA, startingGold },
+        { size: 200 },
+      );
+      game.endSpawnPhase();
+      for (let i = 0; i < first.length; i++) {
+        behavior.handleStructures();
+        // The first tick inits the construction, the second places the structure
+        game.executeNextTick();
+        game.executeNextTick();
+      }
+      expect(built()).toEqual(first);
+      expect(upgraded()).toEqual([]);
+    },
+  );
+});
+
 describe("Nation nuke reserve from a high starting gold", () => {
-  function richNation(difficulty: Difficulty, nukes = 0) {
+  function richNation(difficulty: Difficulty, nukes = 0, seconds = 600) {
     const setup = setupCoast(
       { difficulty, gameMode: GameMode.FFA, startingGold: 1_000_000_000 },
       { size: 200 },
@@ -488,6 +569,7 @@ describe("Nation nuke reserve from a high starting gold", () => {
       });
     }
     game.endSpawnPhase();
+    vi.spyOn(game, "elapsedGameSeconds").mockReturnValue(seconds);
     const spendAll = () => {
       for (let i = 0; i < 200; i++) {
         behavior.handleStructures();
@@ -511,6 +593,17 @@ describe("Nation nuke reserve from a high starting gold", () => {
       expect(nation.gold()).toBeLessThan(reserve + 31_000_000n);
     },
   );
+
+  // Hard & Impossible get the first 10M at once, the rest over four minutes
+  it.each([
+    [30, 866_250_000n],
+    [180, 247_500_000n],
+  ])("Impossible after %is still keeps %i", (seconds, kept) => {
+    const { nation, spendAll } = richNation(Difficulty.Impossible, 0, seconds);
+    spendAll();
+    expect(nation.gold()).toBeGreaterThanOrEqual(kept);
+    expect(nation.gold()).toBeLessThan(kept + 31_000_000n);
+  });
 
   it.each([
     [Difficulty.Easy, 3],

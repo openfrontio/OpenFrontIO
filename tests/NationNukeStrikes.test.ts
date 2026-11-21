@@ -487,6 +487,14 @@ describe("Nation rival MIRVs", () => {
     const { game, nation, human, nukeBehavior } = await setupFront(
       Difficulty.Hard,
     );
+    // A neighbor big enough to MIRV doesn't fit this map, so shrink the hydrogen bomb blast it's measured by
+    const config = game.config();
+    const magnitudes = config.nukeMagnitudes.bind(config);
+    vi.spyOn(config, "nukeMagnitudes").mockImplementation((type) =>
+      type === UnitType.HydrogenBomb
+        ? { inner: 40, outer: 50 }
+        : magnitudes(type),
+    );
     setTroops(game, nation, human, 1_000_000, 1_000_000);
     expect(considerMirv(mirvBehavior(game, nation))).toBe(true);
 

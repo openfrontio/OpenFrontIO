@@ -50,6 +50,16 @@ import type { NationWarshipBehavior } from "./NationWarshipBehavior";
 // Reusable neighbor buffer for hot loops; the simulation is single-threaded.
 const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
 
+/** Most troops, as a share of ours at home, a bordering enemy may have for us to attack it below our troop ratios, keyed by difficulty */
+const CRUSH_TARGET_TROOP_SHARE: Partial<Record<Difficulty, number>> = {
+  [Difficulty.Medium]: 0.05,
+  [Difficulty.Hard]: 0.1,
+  [Difficulty.Impossible]: 0.15,
+};
+
+/** Such an attack sends this many times the most troops such an enemy may have */
+const CRUSH_STACK = 2;
+
 type Box = { min: Cell; max: Cell } | null | undefined;
 
 // Fewest tiles between two boxes (unknown boxes count as touching)
@@ -370,14 +380,20 @@ export class NationAttackBehavior extends AiAttackBehavior {
       if (this.attackBots()) return;
     }
 
-    // Save up troops until we reach the reserve ratio
-    if (!this.hasReserveRatioTroops()) return;
+    // Save up troops until we reach the reserve ratio; a neighbor with next to no troops is free land anyway
+    if (!this.hasReserveRatioTroops()) {
+      this.crushWeakNeighbor(borderingEnemies);
+      return;
+    }
 
     // Medium: answer attacks without saving up to the trigger ratio first
     if (difficulty === Difficulty.Medium && this.retaliate()) return;
 
     // Maybe save up troops until we reach the trigger ratio
-    if (!this.hasTriggerRatioTroops() && !this.random.chance(10)) return;
+    if (!this.hasTriggerRatioTroops() && !this.random.chance(10)) {
+      this.crushWeakNeighbor(borderingEnemies);
+      return;
+    }
 
     // Get attack strategies in priority order based on difficulty
     const strategies = this.getAttackStrategies(
@@ -1093,6 +1109,10 @@ export class NationAttackBehavior extends AiAttackBehavior {
     return attacker.type() === PlayerType.Bot;
   }
 
+  protected override bordersFallout(): boolean {
+    return this.isBorderingNukedTerritory();
+  }
+
   /**
    * For Hard & Impossible nations in FFA: returns true if `troops` is less
    * than 20% of the target's troop count, meaning the attack is too weak to
@@ -1294,6 +1314,30 @@ export class NationAttackBehavior extends AiAttackBehavior {
       boatTroops,
     );
     return true;
+  }
+
+  /** Attacks the weakest bordering enemy we vastly outnumber and aren't attacking yet; enemies come sorted by troops. */
+  private crushWeakNeighbor(borderingEnemies: Player[]): boolean {
+    const share =
+      CRUSH_TARGET_TROOP_SHARE[this.game.config().gameConfig().difficulty];
+    if (share === undefined) return false;
+    const maxTargetTroops = this.homeTroops() * share;
+    const attacking = new Set(
+      this.player.outgoingAttacks().map((a) => a.target()),
+    );
+    for (const enemy of borderingEnemies) {
+      if (enemy.troops() > maxTargetTroops) return false;
+      if (
+        enemy.type() === PlayerType.Bot ||
+        attacking.has(enemy) ||
+        !this.bordersByLand(enemy) ||
+        !this.shouldAttack(enemy)
+      ) {
+        continue;
+      }
+      return this.sendLandAttack(enemy, () => maxTargetTroops * CRUSH_STACK);
+    }
+    return false;
   }
 
   private bordersByLand(target: Player): boolean {

@@ -34,7 +34,10 @@ const ISLAND = { min: 130, max: 170 };
  * Hard FFA on the 200x200 all-land map. The nation owns the top-left corner
  * with a silo, the human owns a 40x40 block in the bottom-right.
  */
-async function setupDuel(withThirdPlayer = false) {
+async function setupDuel(
+  withThirdPlayer = false,
+  difficulty = Difficulty.Hard,
+) {
   const infos = [
     new PlayerInfo("nation", PlayerType.Nation, null, "nation_id"),
     new PlayerInfo("human", PlayerType.Human, null, "human_id"),
@@ -44,7 +47,7 @@ async function setupDuel(withThirdPlayer = false) {
   }
   const game = await setup(
     "big_plains",
-    { difficulty: Difficulty.Hard },
+    { difficulty },
     infos,
     undefined,
     RealNukeRadiusConfig,
@@ -122,6 +125,34 @@ function isOnIsland(game: Game, tile: TileRef): boolean {
 }
 
 describe("Nation nuke targeting", () => {
+  // Tiles: the target's, free land, a tribe's, another nation's, ours
+  it.each([
+    [Difficulty.Easy, [true, false, false, false, false]],
+    [Difficulty.Medium, [true, true, true, false, false]],
+    [Difficulty.Hard, [true, true, true, true, false]],
+  ])(
+    "%s lets a blast reach the target's land, free land, a tribe's, another nation's, ours: %j",
+    async (difficulty, valid) => {
+      const { game, nation, human } = await setupDuel(true, difficulty);
+      const tribe = game.addPlayer(
+        new PlayerInfo("tribe", PlayerType.Bot, null, "tribe_id"),
+      );
+      tribe.conquer(game.ref(100, 100));
+      game.player("other_id").conquer(game.ref(100, 101));
+      const tiles = [
+        game.ref(150, 150),
+        game.ref(100, 50),
+        game.ref(100, 100),
+        game.ref(100, 101),
+        game.ref(5, 5),
+      ];
+      const behavior = nukeBehavior(game, nation);
+      expect(tiles.map((t) => behavior["isValidNukeTile"](t, human))).toEqual(
+        valid,
+      );
+    },
+  );
+
   it("uses an atom bomb instead of a hydrogen bomb on a small island", async () => {
     const { game, nation, human } = await setupDuel();
     game.map().forEachTile((tile) => {
@@ -311,6 +342,51 @@ describe("Nation nuke targets in team games", () => {
     expect(nukeBehavior(game, nation).findBestNukeTarget()).toBe(
       game.player("built"),
     );
+  });
+
+  it("Hard: passes over the tribes' team, even when it holds the most land", async () => {
+    const stripes: [string, number][] = [
+      ["nation", 30],
+      ["tribe", 150],
+      ["enemy", 200],
+    ];
+    const game = await setup(
+      "big_plains",
+      { difficulty: Difficulty.Hard, gameMode: GameMode.Team, playerTeams: 2 },
+      [
+        new PlayerInfo(
+          "nation",
+          PlayerType.Nation,
+          null,
+          "nation",
+          false,
+          null,
+          [],
+          0,
+        ),
+        new PlayerInfo(
+          "enemy",
+          PlayerType.Human,
+          null,
+          "enemy",
+          false,
+          null,
+          [],
+          1,
+        ),
+      ],
+    );
+    // Added like the bot spawner does, which puts it on the tribes' team
+    game.addPlayer(new PlayerInfo("tribe", PlayerType.Bot, null, "tribe"));
+    game.map().forEachTile((tile) => {
+      const [id] = stripes.find(([, end]) => game.x(tile) < end)!;
+      game.player(id).conquer(tile);
+    });
+    game.player("enemy").buildUnit(UnitType.City, game.ref(180, 10), {});
+    const nation = game.player("nation");
+    nation.setTroops(1_000_000);
+
+    expect(nukeBehavior(game, nation).findBestNukeTarget()?.id()).toBe("enemy");
   });
 
   // Columns: our 20 tiles, our teammate's 40, then the enemy. A hydrogen bomb on (140, 100)
