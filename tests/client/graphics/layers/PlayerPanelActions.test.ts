@@ -16,7 +16,10 @@ vi.mock("lit/decorators.js", () => ({
 }));
 
 vi.mock("../../../../src/client/Utils", () => ({
-  translateText: vi.fn((key: string) => key),
+  // Keys stand in for text; parameters are appended so a test can see them.
+  translateText: vi.fn((key: string, params?: Record<string, string>) =>
+    params ? `${key} ${Object.values(params).join(" ")}` : key,
+  ),
   renderDuration: vi.fn(),
   showToast: vi.fn(),
 }));
@@ -270,6 +273,50 @@ describe("PlayerPanel - action buttons follow PlayerActions capability flags", (
     (panel as any).renderActions(my, my);
 
     expect(renderedLabels()).not.toContain("player_panel.emotes");
+  });
+
+  test("own panel shows the trade-with-enemies cooldown without changing the labels", () => {
+    // The two buttons the last render produced for trading with enemies.
+    const tradeWithEnemiesButtons = () =>
+      mockActionButton.mock.calls
+        .map((c) => c[0])
+        .filter((props) => props.label.endsWith("_trade_enemies"));
+
+    (panel as any).actions = { canEmbargoAll: false, interaction: {} };
+    (panel as any).renderActions(my, my);
+
+    const [stop, start] = tradeWithEnemiesButtons();
+    expect(stop).toMatchObject({
+      label: "player_panel.stop_trade_enemies",
+      title: "player_panel.cooldown player_panel.stop_trade_enemies",
+      icon: "hourglass",
+      disabled: true,
+    });
+    expect(start).toMatchObject({
+      label: "player_panel.start_trade_enemies",
+      title: "player_panel.cooldown player_panel.start_trade_enemies",
+      icon: "hourglass",
+      disabled: true,
+    });
+
+    mockActionButton.mockClear();
+    (panel as any).actions = { canEmbargoAll: true, interaction: {} };
+    (panel as any).renderActions(my, my);
+
+    expect(tradeWithEnemiesButtons()).toMatchObject([
+      {
+        label: "player_panel.stop_trade_enemies",
+        title: "player_panel.stop_trade_enemies",
+        icon: "embargo",
+        disabled: false,
+      },
+      {
+        label: "player_panel.start_trade_enemies",
+        title: "player_panel.start_trade_enemies",
+        icon: "trade",
+        disabled: false,
+      },
+    ]);
   });
 });
 
