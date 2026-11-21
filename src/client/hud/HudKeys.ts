@@ -27,3 +27,11 @@ export function keepPressKeysFromGame(e: KeyboardEvent): void {
   }
   e.stopPropagation();
 }
+
+/** On mousedown: no focus left anywhere, so the next Space is the game's. */
+export function pressWithoutFocus(e: MouseEvent): void {
+  e.preventDefault();
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
+}
