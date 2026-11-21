@@ -5,7 +5,13 @@ import {
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
+import {
+  type Cosmetics,
+  ownsPlayerCard,
+} from "@openfront/shared/CosmeticSchemas";
 import { html, nothing, PropertyValues, TemplateResult } from "lit";
+import "./components/card/MyCardTab";
+import "./components/card/PlayerCard";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import {
@@ -28,36 +34,44 @@ import {
   sendMagicLink,
   steamLogin,
 } from "./Auth";
+import { cardRefsFromLoadout } from "./CardLoadoutApi";
+import type { CardSavedDetail } from "./CardSaveQueue";
+import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
+import { BaseModal } from "./components/BaseModal";
+import { buildPlayerCardView } from "./components/card/PlayerCardModel";
+import { xpBarTemplate } from "./components/card/ProfileIdentity";
+import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
-import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
+import { ffaSummaryFromMe } from "./components/ffaRating/FfaRatingSummary";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import "./components/baseComponents/stats/SteamUserHeader";
-import { BaseModal } from "./components/BaseModal";
+import type { PrestigeFlow } from "./components/PrestigeFlow";
 import "./components/CopyButton";
 import "./components/CreatorCodePanel";
-import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
+import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
-import { ffaSummaryFromMe } from "./components/ffaRating/FfaRatingSummary";
+import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import "./components/FriendsList";
-import type { PrestigeFlow } from "./components/PrestigeFlow";
+import { modalHeader } from "./components/ui/ModalHeader";
 import "./components/ProfileCard";
 import "./components/ProfileProgression";
 import "./components/RewardsPanel";
-import type { RewardsChangedDetail } from "./components/RewardsPanel";
-import { googleLinkButton } from "./components/ui/GoogleLinkButton";
-import { modalHeader } from "./components/ui/ModalHeader";
 import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
+import { xpProgressText } from "./components/XpBar";
+import { fetchCosmetics } from "./Cosmetics";
 import { desktopLinkGate, isSteamShell } from "./DesktopShell";
 import { gamePortal, type PortalUser } from "./GamePortal";
-import "./GameStatsModal";
 import { showInGameAlert } from "./InGameModal";
+import { whenModalLoaded } from "./LazyModals";
+import "./GameStatsModal";
 import { consumeLinkResult } from "./LinkResult";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
-import "./PlayerProfileModal";
 import { loadPlayerProgress } from "./PlayerProgress";
+import "./PlayerProfileModal";
+import { levelFraction } from "./Progression";
 import {
   PROVISIONAL_PROGRESS_CHANGED,
   provisionalProgress,
@@ -134,7 +148,9 @@ export class AccountModal extends BaseModal {
   // Global FFA position, read from the rank-position call (not /users/@me).
   @state() private ffaGlobalPosition: number | null = null;
 
-  private userMeResponse: UserMeResponse | null = null;
+  // State, so every new copy re-renders: a card save patched in after the
+  // player left My Card and came back reaches the tab made on the way back.
+  @state() private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
   // The card's clan tag, from the player's own profile (displayClanTag).
   private displayClanTag: string | null = null;
@@ -240,6 +256,7 @@ export class AccountModal extends BaseModal {
     return {
       tabs: [
         { key: "account", label: translateText("account_modal.tab_account") },
+        { key: "card", label: translateText("account_modal.tab_my_card") },
         { key: "stats", label: translateText("account_modal.tab_stats") },
         { key: "games", label: translateText("account_modal.tab_games") },
         // Where the player profile has it, after Games. Only for a player
@@ -292,6 +309,8 @@ export class AccountModal extends BaseModal {
 
   private renderTab(tab: string): TemplateResult {
     switch (tab) {
+      case "card":
+        return this.renderMyCardTab();
       case "stats":
         return this.renderStatsTab();
       case "games":
@@ -345,39 +364,162 @@ export class AccountModal extends BaseModal {
     this.open({ tab: "friends" });
   }
 
+  // The player card customiser (components/card/MyCardTab.ts). It reads the
+  // catalogue itself; the flag slot opens the inventory's flags.
+  private renderMyCardTab(): TemplateResult {
+    return html`<my-card-tab
+      .userMe=${this.userMeResponse}
+      @card-saved=${this.handleCardSaved}
+      @change-flag=${() =>
+        whenModalLoaded("inventory-modal", () =>
+          (
+            document.querySelector("inventory-modal") as unknown as {
+              open(args: Record<string, unknown>): void;
+            } | null
+          )?.open({ tab: "flags" }),
+        )}
+    ></my-card-tab>`;
+  }
+
   private renderAccountTab(): TemplateResult {
     if (this.portalUser) {
       return this.renderPortalAccount(this.portalUser);
     }
     return html`
       <div class="flex flex-col gap-6">
-        ${this.renderProfileCard("compact")}
-        <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-          <div class="flex flex-col items-center gap-4">
-            <div
-              class="text-xs text-white/40 uppercase tracking-widest font-bold border-b border-white/5 pb-2 px-8"
-            >
-              ${translateText("account_modal.connected_as")}
+        ${this.renderAccountHeader()}
+        <div
+          data-account-panels
+          class="grid gap-6 md:grid-cols-2 md:items-start"
+        >
+          <div class="flex flex-col gap-6">
+            <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+              <div class="flex flex-col items-center gap-4">
+                <div
+                  class="text-xs text-white/40 uppercase tracking-widest font-bold border-b border-white/5 pb-2 px-8"
+                >
+                  ${translateText("account_modal.connected_as")}
+                </div>
+                <div class="flex items-center gap-8 justify-center flex-wrap">
+                  <discord-user-header
+                    .data=${this.userMeResponse?.user?.discord ?? null}
+                  ></discord-user-header>
+                  ${
+                    this.userMeResponse?.user?.steam
+                      ? html`<steam-user-header
+                          .data=${this.userMeResponse.user.steam}
+                        ></steam-user-header>`
+                      : null
+                  }
+                  ${this.renderLoggedInAs()}
+                </div>
+              </div>
             </div>
-            <div class="flex items-center gap-8 justify-center flex-wrap">
-              <discord-user-header
-                .data=${this.userMeResponse?.user?.discord ?? null}
-              ></discord-user-header>
-              ${
-                this.userMeResponse?.user?.steam
-                  ? html`<steam-user-header
-                      .data=${this.userMeResponse.user.steam}
-                    ></steam-user-header>`
-                  : null
-              }
-              ${this.renderLoggedInAs()}
-            </div>
+            ${this.renderRewardsPanel()} ${this.renderDesktopLinkGateAction()}
           </div>
+          ${this.renderCreatorCodePanel()}
         </div>
-        ${this.renderRewardsPanel()} ${this.renderCreatorCodePanel()}
-        ${this.renderDesktopLinkGateAction()}
       </div>
     `;
+  }
+
+  // The page reads as the player's profile: their card for a card owner, with
+  // the XP bar under it and "Edit card"; otherwise the profile card as before,
+  // with a way to the card.
+  // The catalogue the card header resolves the equipped items from: read
+  // once, or once per opening until a read succeeds (the store's cache makes
+  // it cheap).
+  private cardCosmetics: Cosmetics | null = null;
+  private cardCosmeticsRequested = false;
+  private headerCosmetics(): Cosmetics | null {
+    if (!this.cardCosmeticsRequested) {
+      this.cardCosmeticsRequested = true;
+      void fetchCosmetics()
+        .then((c) => {
+          this.cardCosmetics = c;
+          this.requestUpdate();
+        })
+        .catch(() => {});
+    }
+    return this.cardCosmetics;
+  }
+
+  private renderAccountHeader(): TemplateResult | typeof nothing {
+    const player = this.userMeResponse?.player;
+    if (!player || !ownsPlayerCard(player.flares ?? [])) {
+      return html`<div class="flex flex-col gap-1.5">
+        ${this.renderProfileCard("compact")}
+        <button
+          type="button"
+          data-account-get-card
+          class="self-end text-xs font-bold text-sky-300 hover:underline"
+          @click=${() => this.open({ tab: "card" })}
+        >
+          ${translateText("account_modal.get_card")}
+        </button>
+      </div>`;
+    }
+    // With any XP still waiting to be scored, provisionally, as the profile
+    // card shows it.
+    const provisional =
+      player.progress && player.publicId
+        ? provisionalProgress(player.publicId, player.progress)
+        : null;
+    const progress = provisional?.progress ?? player.progress;
+    const view = buildPlayerCardView(
+      {
+        username: player.username ?? player.publicId ?? "",
+        clanTag: this.displayClanTag,
+        badge: progress
+          ? {
+              level: progress.level,
+              prestige: progress.prestige,
+              legend: progress.legend,
+            }
+          : null,
+        card: player.card ?? null,
+      },
+      this.headerCosmetics(),
+    );
+    const bar =
+      progress?.xpInLevel !== undefined && progress.xpForNext !== undefined
+        ? html`<div class="flex items-center gap-3 text-xs font-bold">
+            <span class="shrink-0 uppercase text-white/60"
+              >${translateText("progression.level", {
+                level: progress.level,
+              })}</span
+            >
+            ${xpBarTemplate(
+              progress.legend
+                ? 1
+                : levelFraction(progress.xpInLevel, progress.xpForNext),
+              true,
+            )}
+            <span class="shrink-0 tabular-nums text-white/60"
+              >${xpProgressText(progress.xpInLevel, progress.xpForNext)}</span
+            >
+          </div>`
+        : nothing;
+    const provisionalLabel = provisional?.provisional
+      ? html`<div
+          data-account-provisional
+          class="text-xs font-semibold text-amber-200/80"
+        >
+          ${translateText("progression.provisional_label")}
+        </div>`
+      : nothing;
+    return html`<div data-account-card-header class="flex flex-col gap-2">
+      <button
+        type="button"
+        data-account-edit-card
+        class="self-end text-xs font-bold text-sky-300 hover:underline"
+        @click=${() => this.open({ tab: "card" })}
+      >
+        ${translateText("account_modal.edit_card")}
+      </button>
+      <player-card size="account" animated .view=${view}></player-card>
+      ${bar} ${provisionalLabel}
+    </div>`;
   }
 
   // Re-entry to the desktop shell's account-linking gate shown at first
@@ -632,6 +774,23 @@ export class AccountModal extends BaseModal {
       @creator-changed=${this.handleCreatorChanged}
     ></creator-code-panel>`;
   }
+
+  // A card save went through: patch the card into a new /users/@me copy, so
+  // the header and a My Card tab made later read it even if the refresh that
+  // follows a save fails. (On the tab that saved, it's what it holds.) A
+  // save made for another account (signed out or switched since) is left
+  // alone.
+  private handleCardSaved = (event: CustomEvent<CardSavedDetail>): void => {
+    const me = this.userMeResponse;
+    if (!me || me.player.publicId !== event.detail.publicId) return;
+    this.userMeResponse = {
+      ...me,
+      player: {
+        ...me.player,
+        card: cardRefsFromLoadout(event.detail.loadout, me.player.card),
+      },
+    };
+  };
 
   // A claim moved unclaimed rewards into the balances; both were returned by
   // the claim endpoint, so update in place instead of re-fetching /users/@me.
@@ -1259,6 +1418,9 @@ export class AccountModal extends BaseModal {
     // no two openings share a key.
     const opening = (this.openCount = ++accountOpenings);
     this.dropProgression();
+    // A catalogue read that failed (or is still missing) is tried again at
+    // this opening; a good one stays cached.
+    if (this.cardCosmetics === null) this.cardCosmeticsRequested = false;
     this.isLoadingUser = true;
     this.requestedTab = typeof args?.tab === "string" ? args.tab : null;
     consumeLinkResult(args);

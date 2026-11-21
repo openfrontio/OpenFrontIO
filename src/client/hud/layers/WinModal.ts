@@ -1,8 +1,12 @@
 import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
-import type { AllPlayersStats, Winner } from "@openfront/engine-api/Schemas";
+import type {
+  AllPlayersStats,
+  ClientID,
+  Winner,
+} from "@openfront/engine-api/Schemas";
 import type { GameXpEligible, Progress } from "@openfront/shared/ApiSchemas";
-import { Pattern } from "@openfront/shared/CosmeticSchemas";
+import type { Cosmetics, Pattern } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
@@ -17,7 +21,13 @@ import {
 } from "../../../client/Utils";
 import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
 import "../../components/CosmeticCard";
+import { saveTauntsMuted } from "../../CardLoadoutApi";
+import {
+  buildPlayerCardView,
+  type PlayerCardView,
+} from "../../components/card/PlayerCardModel";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
+import "./EndCardSection";
 import {
   ffaRatingGameOf,
   type FfaRatingGame,
@@ -25,18 +35,20 @@ import {
 } from "../../components/ffaRating/FfaRatingEligibility";
 import type { GameXpPanelState } from "../../components/GameXpPanel";
 import type { LegendCeremony } from "../../components/LegendCeremony";
-import "../../components/ProfileShare";
-import "../../components/PurchaseButton";
-import "../../components/SteamWishlist";
 import { Controller } from "../../Controller";
 import {
   fetchCosmetics,
+  getCachedCosmetics,
   purchaseCosmetic,
   resolveCosmetics,
 } from "../../Cosmetics";
 import { isDesktopShell } from "../../DesktopShell";
 import { gamePortal } from "../../GamePortal";
+import "../../components/ProfileShare";
+import "../../components/PurchaseButton";
+import "../../components/SteamWishlist";
 import { lobbyPublicGameType } from "../../LobbyPublicGameType";
+import { lobbyLevelBadge } from "../../LobbyRosterLevels";
 import type { MatchmakingMode } from "../../Matchmaking";
 import {
   gameShareMoment,
@@ -44,6 +56,7 @@ import {
   momentShareText,
   momentShareUrl,
 } from "../../MomentShare";
+import { fetchNemesisCount, nemesisLine } from "../../NemesisApi";
 import { Platform } from "../../Platform";
 import { MAX_PRESTIGE, reachedLegendThisGame } from "../../Progression";
 import { resolveXpAccount } from "../../ProgressionAccount";
@@ -66,6 +79,14 @@ import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { SendWinnerEvent } from "../../Transport";
 import { shareGame } from "../../utilities/ShareGame";
 import { GameView } from "../../view";
+import type { EndCardClan, EndCardMode } from "./EndCardSection";
+import {
+  eliminatedByCard,
+  type EndCardGame,
+  type EndScreenCard,
+  winnerCard,
+} from "./EndScreenCard";
+import { type LoadoutItem, loadoutItems, promoChoice } from "./LoadoutRow";
 
 type LegendCeremonyModule = typeof import("../../components/LegendCeremony");
 
@@ -135,6 +156,34 @@ export class WinModal extends LitElement implements Controller {
 
   @state()
   private isWin = false;
+
+  // The card at the top: the player who eliminated you, or the winner (a
+  // player, or a Clan Wars clan). "none" shows today's screen.
+  @state()
+  private endCardMode: EndCardMode = "none";
+  @state()
+  private endCardView: PlayerCardView | null = null;
+  @state()
+  private endCardClan: EndCardClan | null = null;
+  // "Your nemesis · N times this week", on the eliminated-by card.
+  @state()
+  private nemesis: { count: number } | null = null;
+  // Whether the viewer owns the card: "Edit my card" under a winner card.
+  @state()
+  private canEditCard = false;
+  // "Mute taunts": from /users/@me for a signed-in player (saved there when
+  // changed); for a guest, just for this screen.
+  @state()
+  private tauntsMuted = false;
+  private tauntsMutedRead = false;
+  @state()
+  private endCardTerritoryColor: string | null = null;
+  // "Get {name}'s look": what the killer's card offers this viewer.
+  @state()
+  private loadout: LoadoutItem[] = [];
+  private nemesisAbort: AbortController | null = null;
+  private lastEndCard: EndScreenCard | null = null;
+  private endCardCosmetics: Cosmetics | null = null;
 
   // The queue to rejoin from "Play Again"; null when the game has none (an
   // unranked game, or a ranked FFA game, which has no queue any more).
@@ -215,6 +264,22 @@ export class WinModal extends LitElement implements Controller {
           ${this._title || ""}
         </h2>
         <div class="min-h-0 flex-1 overflow-y-auto pr-0.5">
+          <end-card-section
+            .mode=${this.endCardMode}
+            .view=${this.endCardView}
+            .clan=${this.endCardClan}
+            .nemesis=${this.nemesis}
+            .canEdit=${this.canEditCard}
+            .tauntsMuted=${this.tauntsMuted}
+            .showKey=${
+              this.endCardMode === "none"
+                ? null
+                : `${this.game?.gameID() ?? ""}:${this.endCardMode}`
+            }
+            .territoryColor=${this.endCardTerritoryColor}
+            @edit-card=${this.onEditCard}
+            @toggle-taunts=${this.onToggleTaunts}
+          ></end-card-section>
           <game-xp-panel
             .view=${this.xpView}
             .onScreen=${this.isVisible}
@@ -534,19 +599,32 @@ export class WinModal extends LitElement implements Controller {
     // promos so the box is never empty.
     const canWishlist = !isDesktopShell();
 
-    if (isInIframe()) {
-      return canWishlist ? this.steamWishlist() : this.discordDisplay();
-    }
-
-    if (!this.isWin && getGamesPlayed() < 3) {
-      return this.renderYoutubeTutorial();
-    }
-    if (this.rand < 0.25 && canWishlist) {
-      return this.steamWishlist();
-    } else if (this.rand < 0.5) {
-      return this.discordDisplay();
-    } else {
-      return this.renderPatternButton();
+    // The store-skins turn goes to "Get {name}'s look" on an eliminated-by
+    // card with something to buy (promoChoice).
+    switch (
+      promoChoice({
+        isWin: this.isWin,
+        gamesPlayed: getGamesPlayed(),
+        inIframe: isInIframe(),
+        canWishlist,
+        rand: this.rand,
+        hasLoadout: this.loadout.some((i) => i.state === "buy"),
+        eliminatedByCard: this.endCardMode === "eliminatedBy",
+      })
+    ) {
+      case "steam":
+        return this.steamWishlist();
+      case "discord":
+        return this.discordDisplay();
+      case "tutorial":
+        return this.renderYoutubeTutorial();
+      case "loadout":
+        return html`<loadout-row
+          .ownerName=${this.endCardView?.username ?? ""}
+          .items=${this.loadout}
+        ></loadout-row>`;
+      default:
+        return this.renderPatternButton();
     }
   }
 
@@ -683,6 +761,154 @@ export class WinModal extends LitElement implements Controller {
       </div>
     `;
   }
+
+  // The game, as the end-screen card choice reads it.
+  private cardGame(): EndCardGame {
+    return {
+      players: () => this.game.playerViews(),
+      playerByClientID: (id) => this.game.playerByClientID(id),
+      rankedType: () => this.game.config().gameConfig().rankedType,
+    };
+  }
+
+  // Whether that player owns the card (their entry carries one for us).
+  private hasCard = (clientID: ClientID): boolean =>
+    this.game.playerCardOf(clientID).card !== undefined;
+
+  private cardViewFor(clientID: ClientID): PlayerCardView | null {
+    const player = this.game.playerByClientID(clientID);
+    if (player === null) return null;
+    const { card, flag } = this.game.playerCardOf(clientID);
+    return buildPlayerCardView(
+      {
+        username: player.name(),
+        clanTag: player.clanTag(),
+        flag,
+        badge: lobbyLevelBadge(this.game.gameID(), clientID) ?? null,
+        card,
+      },
+      this.cardCatalogue(),
+    );
+  }
+
+  // The card is a decoration: whatever goes wrong choosing or building it,
+  // the end screen shows as it would without one.
+  private setEndCard(choose: () => EndScreenCard): void {
+    try {
+      const card = choose();
+      this.lastEndCard = card;
+      this.applyEndCard(card);
+      // A game joined before the store's catalogue arrived (a direct link, an
+      // iframe, a failed fetch) has none cached: fetch it and show the items.
+      if (card.kind !== "none" && this.cardCatalogue() === null) {
+        void fetchCosmetics()
+          .then((fetched) => {
+            if (fetched === null || this.lastEndCard !== card) return;
+            this.endCardCosmetics = fetched;
+            this.applyEndCard(card);
+          })
+          .catch(() => {});
+      }
+    } catch (error) {
+      console.warn("End-screen card left off:", error);
+      this.nemesisAbort?.abort();
+      this.nemesisAbort = null;
+      this.endCardMode = "none";
+      this.endCardView = null;
+      this.endCardClan = null;
+      this.nemesis = null;
+      this.loadout = [];
+    }
+  }
+
+  // The catalogue the card's items resolve through.
+  private cardCatalogue(): Cosmetics | null {
+    return this.endCardCosmetics ?? getCachedCosmetics();
+  }
+
+  private applyEndCard(card: EndScreenCard): void {
+    this.nemesisAbort?.abort();
+    this.nemesisAbort = null;
+    this.nemesis = null;
+    this.endCardView = null;
+    this.endCardClan = null;
+    this.loadout = [];
+    const myID = this.game.myPlayer()?.clientID() ?? null;
+    this.canEditCard = myID !== null && this.hasCard(myID);
+    if (card.kind === "none") {
+      this.endCardMode = "none";
+      return;
+    }
+    if (card.kind === "clan") {
+      const members = this.game
+        .playerViews()
+        .filter((p) => p.team() === card.team && p.clientID() !== null);
+      const tiles = members.reduce((n, p) => n + p.numTilesOwned(), 0);
+      const land = this.game.numLandTiles();
+      this.endCardClan = {
+        clanTag: card.clanTag,
+        members: members.map((p) => ({
+          username: p.name(),
+          badge: lobbyLevelBadge(this.game.gameID(), p.clientID()) ?? null,
+          alive: p.isAlive(),
+        })),
+        territoryPct: land > 0 ? (tiles / land) * 100 : 0,
+      };
+      this.endCardMode = "clan";
+      return;
+    }
+    const view = this.cardViewFor(card.clientID);
+    if (view === null) {
+      this.endCardMode = "none";
+      return;
+    }
+    this.endCardView = view;
+    this.endCardTerritoryColor =
+      this.game.playerByClientID(card.clientID)?.territoryColor().toHex() ??
+      null;
+    this.endCardMode = card.kind;
+    void this.readTauntsMuted();
+    if (card.kind === "eliminatedBy") {
+      void this.loadLoadout(view);
+      const publicId = this.game.playerCardOf(card.clientID).card?.publicId;
+      if (publicId !== undefined) void this.loadNemesis(publicId);
+    }
+  }
+
+  private async loadNemesis(publicId: string): Promise<void> {
+    const abort = new AbortController();
+    this.nemesisAbort = abort;
+    const past = await fetchNemesisCount(publicId, abort.signal);
+    if (abort.signal.aborted || past === null) return;
+    this.nemesis = nemesisLine(past);
+  }
+
+  private async loadLoadout(view: PlayerCardView): Promise<void> {
+    const me = await getUserMe();
+    if (this.endCardView !== view) return;
+    this.loadout = loadoutItems(
+      view,
+      this.cardCatalogue(),
+      me === false ? [] : (me.player.flares ?? []),
+    );
+  }
+
+  private async readTauntsMuted(): Promise<void> {
+    if (this.tauntsMutedRead) return;
+    this.tauntsMutedRead = true;
+    const me = await getUserMe();
+    if (me !== false) this.tauntsMuted = me.player.tauntsMuted ?? false;
+  }
+
+  private onToggleTaunts = (): void => {
+    this.tauntsMuted = !this.tauntsMuted;
+    void saveTauntsMuted(this.tauntsMuted);
+  };
+
+  // The finished game is left for the Account page's My Card tab.
+  private onEditCard = (): void => {
+    window.location.href = "/#modal=account&tab=card";
+  };
 
   async show() {
     void gamePortal.gameplayStop();
@@ -1060,6 +1286,9 @@ export class WinModal extends LitElement implements Controller {
     ) {
       this.hasShownDeathModal = true;
       this._title = translateText("win_modal.died");
+      this.setEndCard(() =>
+        eliminatedByCard(myPlayer, this.cardGame(), this.hasCard),
+      );
       this.eventBus.emit(new PlaySoundEffectEvent("defeat"));
       void this.updateXp(false);
       void this.show();
@@ -1082,10 +1311,15 @@ export class WinModal extends LitElement implements Controller {
         vote(undefined, wu.allPlayersStats);
         this._title = translateText("win_modal.match_cancelled");
         this.isWin = false;
+        this.setEndCard(() => ({ kind: "none" }));
         history.replaceState(null, "", `${window.location.pathname}?replay`);
         void this.show();
       } else if (wu.winner[0] === "team") {
         vote(wu.winner, wu.allPlayersStats);
+        const teamWinner = wu.winner;
+        this.setEndCard(() =>
+          winnerCard(teamWinner, this.cardGame(), this.hasCard),
+        );
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
           this.isWin = true;
@@ -1105,6 +1339,7 @@ export class WinModal extends LitElement implements Controller {
           nation: wu.winner[1],
         });
         this.isWin = false;
+        this.setEndCard(() => ({ kind: "none" }));
         this.playEndOfGameSound();
         void this.show();
       } else {
@@ -1113,6 +1348,9 @@ export class WinModal extends LitElement implements Controller {
         const winnerClient = winner.clientID();
         if (winnerClient !== null) {
           vote(["player", winnerClient], wu.allPlayersStats);
+          this.setEndCard(() =>
+            winnerCard(["player", winnerClient], this.cardGame(), this.hasCard),
+          );
         }
         if (
           winnerClient !== null &&

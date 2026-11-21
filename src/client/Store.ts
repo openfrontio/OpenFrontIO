@@ -17,6 +17,12 @@ import type { PropertyValues, TemplateResult } from "lit";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { BaseModal } from "./components/BaseModal";
+import { isCardItemType } from "./components/card/CardItems";
+import { cardStoreItems } from "./components/card/CardStoreGrid";
+import {
+  CARD_TAUNTS_ENABLED,
+  CARD_TITLES_ENABLED,
+} from "./components/card/HeldBack";
 import "./components/CosmeticCard";
 import type { CosmeticCard } from "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
@@ -88,6 +94,7 @@ const COSMETICS_SUB_TABS = [
   "patterns",
   "flags",
   "crowns",
+  "card",
 ] as const satisfies readonly StorePlacementSubTab[];
 type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
 
@@ -95,6 +102,11 @@ type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
 export function subTabForItem(itemKey: string): CosmeticsSubTab {
   if (itemKey.startsWith("crown:")) return "crowns";
   if (itemKey.startsWith("flag:")) return "flags";
+  const type = itemKey.split(":")[0];
+  // Held-back items aren't on the Card sub-tab: their links open the default.
+  if (type === "taunt" && !CARD_TAUNTS_ENABLED) return "patterns";
+  if (type === "cardTitle" && !CARD_TITLES_ENABLED) return "patterns";
+  if (isCardItemType(type)) return "card";
   return "patterns";
 }
 
@@ -437,6 +449,8 @@ export class StoreModal extends BaseModal {
         ? saleFirst(all.filter(groupOnSale))
         : newestFirst(all.filter(groupIsNew));
     }
+    // The Card sub-tab draws its own grid (<card-store-grid>).
+    if (tab === "card") return [];
     return saleFirst(
       tab === "flags" ? flags : tab === "crowns" ? crowns : skins,
     );
@@ -635,12 +649,15 @@ export class StoreModal extends BaseModal {
   private visibleCosmeticsSubTabs(): CosmeticsSubTab[] {
     const hasNew = this.cosmeticsGroups("new").length > 0;
     const hasSale = this.cosmeticsGroups("sale").length > 0;
+    const hasCard = cardStoreItems(this.cosmetics).length > 0;
     return COSMETICS_SUB_TABS.filter(
       (tab) =>
         // The selected one stays while groupsForTab holds it for a pending
         // catalog fetch, so the bar still shows where the player is.
         tab === this.cosmeticsSubTab ||
-        ((tab !== "new" || hasNew) && (tab !== "sale" || hasSale)),
+        ((tab !== "new" || hasNew) &&
+          (tab !== "sale" || hasSale) &&
+          (tab !== "card" || hasCard)),
     );
   }
 
@@ -945,21 +962,31 @@ export class StoreModal extends BaseModal {
         })}
       </div>
       ${
-        flash
-          ? html`${this.renderFlashHero(flash)}
-            ${(() => {
-              // With the flash item the only thing on sale, the hero is the
-              // whole tab: no "No skins available" under it.
-              const rest = this.visibleGroups.filter(
-                (group) => group !== flash,
-              );
-              return rest.length > 0
-                ? this.renderBrowser(rest, { emptyTranslationKey: emptyKey })
-                : nothing;
-            })()}`
-          : this.renderBrowser(this.visibleGroups, {
-              emptyTranslationKey: emptyKey,
-            })
+        this.cosmeticsSubTab === "card"
+          ? html`<card-store-grid
+              .cosmetics=${this.cosmetics}
+              .flares=${
+                this.userMeResponse === false
+                  ? []
+                  : (this.userMeResponse.player.flares ?? [])
+              }
+              .tracker=${this.tracker ?? null}
+            ></card-store-grid>`
+          : flash
+            ? html`${this.renderFlashHero(flash)}
+              ${(() => {
+                // With the flash item the only thing on sale, the hero is the
+                // whole tab: no "No skins available" under it.
+                const rest = this.visibleGroups.filter(
+                  (group) => group !== flash,
+                );
+                return rest.length > 0
+                  ? this.renderBrowser(rest, { emptyTranslationKey: emptyKey })
+                  : nothing;
+              })()}`
+            : this.renderBrowser(this.visibleGroups, {
+                emptyTranslationKey: emptyKey,
+              })
       }
       ${this.renderPackDialog()}
     `;
