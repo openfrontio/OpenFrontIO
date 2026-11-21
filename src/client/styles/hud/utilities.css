@@ -1,3 +1,14 @@
+/* Phones, upright or on their side: too small for a popover, so a menu is a
+   sheet from the bottom edge. */
+@custom-variant hud-sheet {
+  @media (width < 40rem) {
+    @slot;
+  }
+  @media (height < 31.25rem) {
+    @slot;
+  }
+}
+
 /* A floating in-game panel. */
 @utility hud-panel {
   background-color: var(--color-hud-panel);
@@ -68,7 +79,8 @@
 
 /* The leaderboard's list. A row is 24px, 28px from 768px wide. It shows five
    rows; from 1024px wide, as many as fit in 30% of the window's height under
-   the top bar and the header (74px), eight at most. */
+   the top bar and the header (74px), eight at most, or --stats-max-rows when
+   another table has to fit under it. */
 @utility stats-rows {
   --stats-row: 1.5rem;
   max-height: calc(5 * var(--stats-row));
@@ -81,7 +93,7 @@
       max-height: clamp(
         calc(5 * var(--stats-row)),
         round(down, 30dvh - 4.625rem, var(--stats-row)),
-        calc(8 * var(--stats-row))
+        calc(var(--stats-max-rows, 8) * var(--stats-row))
       );
     }
   }
