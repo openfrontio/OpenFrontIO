@@ -5,7 +5,11 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { OTHER_INDEX_DESTROY } from "@openfront/engine-api/StatsSchemas";
+import {
+  BOMB_INDEX_LAND,
+  BOMB_INDEX_LAUNCH,
+  OTHER_INDEX_DESTROY,
+} from "@openfront/engine-api/StatsSchemas";
 import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
 import { MissileSiloExecution } from "@openfront/engine/execution/MissileSiloExecution";
 import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
@@ -561,6 +565,21 @@ describe("NukeExecution", () => {
     expect(nukes).toHaveLength(6);
     const tiles = nukes.map((n) => n.tile());
     expect(new Set(tiles).size).toBe(6);
+  });
+
+  test("records bombLaunch and bombLand stats when targeting an unowned tile", () => {
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+    const unownedTarget = game.ref(50, 50);
+    expect(game.hasOwner(unownedTarget)).toBe(false);
+
+    game.addExecution(
+      new NukeExecution(UnitType.HydrogenBomb, player, unownedTarget),
+    );
+    executeTicks(game, 200);
+
+    const hbomb = game.stats().getPlayerStats(player)?.bombs?.hbomb;
+    expect(hbomb?.[BOMB_INDEX_LAUNCH]).toBe(1n);
+    expect(hbomb?.[BOMB_INDEX_LAND]).toBe(1n);
   });
 });
 

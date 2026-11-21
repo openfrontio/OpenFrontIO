@@ -254,13 +254,13 @@ export class NukeExecution implements Execution {
             target.id(),
           );
         }
-
-        if (this.nukeType === UnitType.MIRV) {
-          this.mg.recordMirvLaunch();
-        }
-        // Record stats
-        this.mg.stats().bombLaunch(this.player, target, this.nukeType);
       }
+
+      if (this.nukeType === UnitType.MIRV) {
+        this.mg.recordMirvLaunch();
+      }
+      // Record stats
+      this.mg.stats().bombLaunch(this.player, this.target(), this.nukeType);
 
       // after sending a nuke set the missilesilo on cooldown
       if (silo) {
