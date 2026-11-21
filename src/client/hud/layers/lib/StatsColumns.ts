@@ -2,7 +2,7 @@ import { PlayerType, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import type { OfIconName } from "../../../components/OfIcon";
 import type { ColumnId, StatsTableKind } from "../../../StatsConstants";
-import { formatPercentage, translateText } from "../../../Utils";
+import { translateText } from "../../../Utils";
 import type { GameView, PlayerView } from "../../../view";
 import { goldRateTracker } from "./GoldRateTracker";
 
@@ -128,10 +128,12 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "player",
     labelKey: "leaderboard.player",
     headerVisual: { kind: "icon", icon: "player" },
-    // The table widens it on large windows (--stats-name). It gives up the
-    // room a host leaves at the table's end (--stats-end-track), so the
+    // The table widens it on large windows (--stats-name) and adds the
+    // colour chip's room (--stats-chip), so names keep theirs. It gives up
+    // the room a host leaves at the table's end (--stats-end-track), so the
     // table keeps its width.
-    width: "calc(var(--stats-name, 100px) - var(--stats-end-track, 0px))",
+    width:
+      "calc(var(--stats-name, 100px) + var(--stats-chip, 0.75rem) - var(--stats-end-track, 0px))",
     widest: () => [],
     align: "start",
     headerAlign: "center",
@@ -186,9 +188,10 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     id: "team",
     labelKey: "leaderboard.team",
     headerVisual: { kind: "icon", icon: "team" },
-    // Gives up the room a host leaves at the table's end (--stats-end-track),
-    // so the table keeps its width.
-    width: "calc(var(--stats-name, 100px) - var(--stats-end-track, 0px))",
+    // As wide as the player track, so the panel keeps its width whichever
+    // tables are open; the players alive count takes its room from the name.
+    width:
+      "calc(var(--stats-name, 100px) + var(--stats-chip, 0.75rem) - var(--stats-end-track, 0px))",
     widest: () => [],
     align: "start",
     headerAlign: "center",
@@ -205,7 +208,10 @@ export const COLUMN_DEFS: readonly ColumnDef[] = [
     value: (player) => player.numTilesOwned(),
     cell: (row, game) => {
       const validTiles = game.numLandTiles() - game.numTilesWithFallout();
-      return formatPercentage(validTiles > 0 ? row.value / validTiles : 0);
+      const percent = validTiles > 0 ? (row.value / validTiles) * 100 : 0;
+      // Late in a big game most players hold under 1%: two decimals tell
+      // them apart. From 9.995% they would round to a wider "10.00%".
+      return `${percent.toFixed(percent < 9.995 ? 2 : 1)}%`;
     },
   }),
   defineColumn({

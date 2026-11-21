@@ -135,6 +135,21 @@ describe("Stats column registry", () => {
     vi.spyOn(game, "numLandTiles").mockReturnValue(0);
     vi.spyOn(game, "numTilesWithFallout").mockReturnValue(0);
 
-    expect(columnById("tiles").cell(emptyRow, game)).toBe("0.0%");
+    expect(columnById("tiles").cell(emptyRow, game)).toBe("0.00%");
+  });
+
+  it("shows land with two decimals below 10% and one from there", () => {
+    const game = makeGameView();
+    vi.spyOn(game, "numLandTiles").mockReturnValue(110_000);
+    vi.spyOn(game, "numTilesWithFallout").mockReturnValue(10_000);
+    const land = (tiles: number) =>
+      columnById("tiles").cell({ ...emptyRow, value: tiles }, game);
+
+    expect(land(820)).toBe("0.82%");
+    expect(land(9_990)).toBe("9.99%");
+    // Two decimals would make it "10.00%", wider than the column is sized for.
+    expect(land(9_996)).toBe("10.0%");
+    expect(land(10_000)).toBe("10.0%");
+    expect(land(100_000)).toBe("100.0%");
   });
 });
