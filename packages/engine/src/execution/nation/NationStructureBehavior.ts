@@ -18,6 +18,7 @@ import {
 } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { assertNever } from "@openfront/engine-lib/Util";
 import { z } from "zod";
+import { MIRV_BASE_COST } from "../../configuration/EngineConfig";
 import { Attack, Game, Player, Unit } from "../../game/Game";
 import type {
   SnapshotReader,
@@ -850,10 +851,13 @@ export class NationStructureBehavior {
       return this.upgradeSam();
     }
 
-    // Check if we should upgrade instead of building new
+    // Check if we should upgrade instead of building new; Hard & Impossible get here with a SAM only while SAM cover is missing
     const structures = this.player.units(type);
     const upgradable = game.config().unitInfo(type).upgradable === true;
+    const samCoverMissing =
+      type === UnitType.SAMLauncher && this.isHardOrImpossible();
     if (
+      !samCoverMissing &&
       this.getTotalStructureDensity() > UPGRADE_DENSITY_THRESHOLD &&
       upgradable
     ) {
@@ -996,12 +1000,13 @@ export class NationStructureBehavior {
     return (config.startingGold(this.player.info()) * percent) / 100n;
   }
 
-  /** The starting nuke reserve less what our nukes have cost so far. */
+  /** The starting nuke reserve less what our nukes have cost so far, MIRVs at the lowest price they sell for. */
   private nukeReserve(): Gold {
     let reserve = this.startingNukeReserve();
     for (const type of NUKE_TYPES) {
       if (reserve <= 0n) return 0n;
-      reserve -= BigInt(this.player.unitsConstructed(type)) * this.cost(type);
+      const price = type === UnitType.MIRV ? MIRV_BASE_COST : this.cost(type);
+      reserve -= BigInt(this.player.unitsConstructed(type)) * price;
     }
     return reserve > 0n ? reserve : 0n;
   }
@@ -1061,7 +1066,11 @@ export class NationStructureBehavior {
   private levelRooms(structures: Unit[]): number[] {
     const maxLevel =
       UNCOVERED_MAX_LEVEL[this.game.config().gameConfig().difficulty];
-    if (maxLevel === undefined || !this.enemyOwnsMissileSilo()) {
+    if (
+      maxLevel === undefined ||
+      !this.usesSams() ||
+      !this.enemyOwnsMissileSilo()
+    ) {
       return structures.map(() => Infinity);
     }
     const sams = this.player
@@ -1072,6 +1081,13 @@ export class NationStructureBehavior {
       this.isCoveredBySam(s.tile(), sams)
         ? Infinity
         : Math.max(0, maxLevel - s.level()),
+    );
+  }
+
+  private usesSams(): boolean {
+    return this.usesStructure(
+      UnitType.SAMLauncher,
+      this.placement.hasCoastalTiles(),
     );
   }
 
@@ -1089,10 +1105,7 @@ export class NationStructureBehavior {
   /** Builds a SAM over some of our structures that no SAM covers yet, not even one under construction. */
   private buildCoveringSam(): boolean {
     if (
-      !this.usesStructure(
-        UnitType.SAMLauncher,
-        this.placement.hasCoastalTiles(),
-      ) ||
+      !this.usesSams() ||
       this.spendableGold() < this.getPerceivedCost(UnitType.SAMLauncher)
     ) {
       return false;

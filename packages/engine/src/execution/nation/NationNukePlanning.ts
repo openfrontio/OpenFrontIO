@@ -2,6 +2,7 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { Structures, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { Game, Player, Unit } from "../../game/Game";
 import { UniversalPathFinding } from "../../pathfinding/PathFinder";
+import { MirvExecution } from "../MIRVExecution";
 import { NukeExecution } from "../NukeExecution";
 
 export type NukeType = UnitType.AtomBomb | UnitType.HydrogenBomb;
@@ -30,7 +31,10 @@ export function incomingNukes(game: Game): IncomingNuke[] {
     }
   }
   for (const exec of game.executions()) {
-    const pending = exec instanceof NukeExecution ? exec.pendingBomb() : null;
+    const pending =
+      exec instanceof NukeExecution || exec instanceof MirvExecution
+        ? exec.pendingBomb()
+        : null;
     if (pending !== null) nukes.push(pending);
   }
   return nukes;
@@ -118,7 +122,7 @@ export function sparesLandOf(player: Player, owner: Player): boolean {
 }
 
 /**
- * Whether the blast hits our or an ally's land (widened by margin), or a teammate's structure.
+ * Whether the blast hits our or an ally's land (widened by margin), or a teammate's structure, finished or not.
  * Like a human, a nation may hit teammates' land without structures.
  */
 export function blastHitsFriendly(
@@ -135,6 +139,8 @@ export function blastHitsFriendly(
       radius,
       Structures.types,
       (unit) => unit.owner().isPlayer() && player.isOnSameTeam(unit.owner()),
+      undefined,
+      true,
     )
   ) {
     return true;

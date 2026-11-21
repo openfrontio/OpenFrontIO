@@ -437,6 +437,16 @@ export class MirvExecution implements Execution {
     return this.player;
   }
 
+  /** The MIRV this launch will spawn on its first tick, until it does. */
+  public pendingBomb(): {
+    owner: Player;
+    tile: TileRef;
+    type: UnitType.MIRV;
+  } | null {
+    if (!this.active || this.nuke !== null) return null;
+    return { owner: this.player, tile: this.dst, type: UnitType.MIRV };
+  }
+
   isActive(): boolean {
     return this.active;
   }

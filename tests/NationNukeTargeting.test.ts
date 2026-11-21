@@ -12,6 +12,7 @@ import {
 } from "@openfront/engine-lib/configuration/Config";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { MirvExecution } from "@openfront/engine/execution/MIRVExecution";
 import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
 import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
@@ -192,6 +193,19 @@ describe("Nation nuke targeting", () => {
     });
 
     expect(launchNukes(game, nation)).toHaveLength(0);
+  });
+
+  it("counts a MIRV once from its launch on, before and after its unit exists", async () => {
+    const { game, nation } = await setupDuel();
+    const target = game.ref(150, 150);
+    game.addExecution(new MirvExecution(nation, target));
+    for (let tick = 0; tick < 3; tick++) {
+      expect(incomingNukes(game)).toEqual([
+        { owner: nation, tile: target, type: UnitType.MIRV },
+      ]);
+      game.executeNextTick();
+    }
+    expect(nation.units(UnitType.MIRV)).toHaveLength(1);
   });
 
   it.each([false, true])(
@@ -392,9 +406,10 @@ describe("Nation nuke targets in team games", () => {
   // Columns: our 20 tiles, our teammate's 40, then the enemy. A hydrogen bomb on (140, 100)
   // reaches 20 tiles into the teammate's land and stops 20 short of ours.
   it.each([
-    ["hits a teammate's land, as a human may", false, true],
-    ["spares a teammate's structure, as a human must", true, false],
-  ])("Hard %s", async (_, mateCity, nukes) => {
+    ["hits a teammate's land, as a human may", null, true],
+    ["spares a teammate's structure, as a human must", false, false],
+    ["spares a teammate's structure under construction", true, false],
+  ])("Hard %s", async (_, mateCityUnfinished, nukes) => {
     const ids = ["nation", "mate", "enemy"];
     const game = await setup(
       "big_plains",
@@ -425,8 +440,11 @@ describe("Nation nuke targets in team games", () => {
     nation.addGold(40_000_000n);
     const target = game.ref(140, 100);
     enemy.buildUnit(UnitType.City, target, {});
-    if (mateCity) {
-      game.player("mate").buildUnit(UnitType.City, game.ref(50, 100), {});
+    if (mateCityUnfinished !== null) {
+      game
+        .player("mate")
+        .buildUnit(UnitType.City, game.ref(50, 100), {})
+        .setUnderConstruction(mateCityUnfinished);
     }
 
     const tile = nukeBehavior(game, nation)["findBestNukeTile"](

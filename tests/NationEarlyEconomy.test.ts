@@ -301,6 +301,27 @@ describe("Nation structure upgrades", () => {
     expect(upgraded()).toEqual([]);
   });
 
+  it.each([Difficulty.Hard, Difficulty.Impossible])(
+    "%s builds another SAM when a city is out of SAM range, however dense its structures",
+    (difficulty) => {
+      const { game, nation, behavior, built, upgraded } = withSam(difficulty, [
+        UnitType.City,
+        10,
+        190,
+      ]);
+      // Six more factories the SAM covers
+      for (const x of [20, 25]) {
+        for (const y of [22, 26, 30]) {
+          nation.buildUnit(UnitType.Factory, game.ref(x, y), {});
+        }
+      }
+      expect(behavior["getTotalStructureDensity"]()).toBeGreaterThan(1 / 1500);
+      expect(behavior["maybeSpawnStructure"](UnitType.SAMLauncher)).toBe(true);
+      expect(built()).toEqual([UnitType.SAMLauncher]);
+      expect(upgraded()).toEqual([]);
+    },
+  );
+
   const within20 = (game: Game, a: number, b: number) =>
     game.euclideanDistSquared(a, b) <= 20 ** 2;
 
@@ -476,11 +497,21 @@ describe("Nation structure upgrades", () => {
 describe("Nation upgrades without SAM cover", () => {
   // A SAM still under construction at (10, 20) covers a city at (10, 30); nothing covers the
   // one at (10, 90). Both cities are at level 4.
-  function cappedCities(difficulty: Difficulty, enemySilo: boolean) {
-    const setup = setupCoast({ difficulty, gameMode: GameMode.FFA });
+  function cappedCities(
+    difficulty: Difficulty,
+    enemySilo: boolean,
+    samsDisabled = false,
+  ) {
+    const setup = setupCoast({
+      difficulty,
+      gameMode: GameMode.FFA,
+      disabledUnits: samsDisabled ? [UnitType.SAMLauncher] : [],
+    });
     const { game, nation } = setup;
-    const sam = nation.buildUnit(UnitType.SAMLauncher, game.ref(10, 20), {});
-    sam.setUnderConstruction(true);
+    if (!samsDisabled) {
+      const sam = nation.buildUnit(UnitType.SAMLauncher, game.ref(10, 20), {});
+      sam.setUnderConstruction(true);
+    }
     for (const y of [30, 90]) {
       const city = nation.buildUnit(UnitType.City, game.ref(10, y), {});
       for (let l = 1; l < 4; l++) city.increaseLevel();
@@ -495,13 +526,14 @@ describe("Nation upgrades without SAM cover", () => {
   }
 
   it.each([
-    [Difficulty.Impossible, true, [UnitType.SAMLauncher], 0],
-    [Difficulty.Impossible, false, [], 1],
-    [Difficulty.Hard, true, [], 1],
+    [Difficulty.Impossible, true, false, [UnitType.SAMLauncher], 0],
+    [Difficulty.Impossible, false, false, [], 1],
+    [Difficulty.Hard, true, false, [], 1],
+    [Difficulty.Impossible, true, true, [], 1],
   ])(
-    "%s, enemy owns a silo: %s, builds %j and upgrades %i cities",
-    (difficulty, enemySilo, built, upgrades) => {
-      const setup = cappedCities(difficulty, enemySilo);
+    "%s, enemy owns a silo: %s, SAMs disabled: %s, builds %j and upgrades %i cities",
+    (difficulty, enemySilo, samsDisabled, built, upgrades) => {
+      const setup = cappedCities(difficulty, enemySilo, samsDisabled);
       expect(setup.behavior["maybeSpawnStructure"](UnitType.City)).toBe(true);
       expect(setup.built()).toEqual(built);
       expect(setup.upgraded()).toHaveLength(upgrades);
@@ -603,6 +635,17 @@ describe("Nation nuke reserve from a high starting gold", () => {
     spendAll();
     expect(nation.gold()).toBeGreaterThanOrEqual(kept);
     expect(nation.gold()).toBeLessThan(kept + 31_000_000n);
+  });
+
+  // Every MIRV launched, by anyone, raises the price of the next
+  it("Impossible takes a MIRV it bought off its reserve at the lowest MIRV price", () => {
+    const { game, nation, behavior } = richNation(Difficulty.Impossible);
+    nation.buildUnit(UnitType.MIRV, game.ref(5, 5), {
+      targetTile: game.ref(150, 5),
+    });
+    game.recordMirvLaunch();
+    game.recordMirvLaunch();
+    expect(behavior["nukeReserve"]()).toBe(100_000_000n - 25_000_000n);
   });
 
   it.each([
