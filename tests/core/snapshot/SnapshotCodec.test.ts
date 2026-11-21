@@ -82,4 +82,13 @@ describe("snapshot codec", () => {
     expect(() => decodeSnapshotValue(new Uint8Array([...bytes, 0]))).toThrow();
     expect(() => decodeSnapshotValue(new Uint8Array([99]))).toThrow();
   });
+
+  test("rejects truncated array and object counts", () => {
+    expect(() =>
+      decodeSnapshotValue(new Uint8Array([10, 0xff, 0xff, 0xff, 0xff, 0x0f])),
+    ).toThrow(/truncated array/);
+    expect(() => decodeSnapshotValue(new Uint8Array([11, 1, 8, 0]))).toThrow(
+      /truncated object/,
+    );
+  });
 });
