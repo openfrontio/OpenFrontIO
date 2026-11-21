@@ -232,6 +232,20 @@ export class GameMapImpl implements GameMap {
       (value & GameMapImpl.MAGNITUDE_MASK);
   }
 
+  setTerrainByte(ref: TileRef, value: number): void {
+    const old = this.terrain[ref];
+    if (old === value) return;
+    this.noteTerrainEdit(ref);
+    this.terrain[ref] = value;
+    const landBit = 1 << GameMapImpl.IS_LAND_BIT;
+    if (((old ^ value) & landBit) !== 0) this.waterVersion_++;
+    // The map files count passable land only.
+    const passable = (b: number) =>
+      (b & landBit) !== 0 &&
+      (b & GameMapImpl.MAGNITUDE_MASK) !== GameMapImpl.IMPASSABLE_MAGNITUDE;
+    this.numLandTiles_ += Number(passable(value)) - Number(passable(old));
+  }
+
   // State getters and setters (mutable)
   ownerID(ref: TileRef): number {
     return this.state[ref] & GameMapImpl.PLAYER_ID_MASK;
@@ -564,17 +578,9 @@ export class GameMapImpl implements GameMap {
 
     // Update terrain if the packed value includes a terrain byte that differs
     const terrainChanged = this.terrain[tile] !== terrainByte;
-    if (terrainChanged) {
-      const wasLand = this.isLand(tile);
-      this.noteTerrainEdit(tile);
-      this.terrain[tile] = terrainByte;
-      const isNowLand = Boolean(terrainByte & (1 << GameMapImpl.IS_LAND_BIT));
-      // Water-derived caches key on waterVersion(): a packed update that flips
-      // land/water must invalidate them just like setWater() does.
-      if (wasLand !== isNowLand) this.waterVersion_++;
-      if (wasLand && !isNowLand) this.numLandTiles_--;
-      else if (!wasLand && isNowLand) this.numLandTiles_++;
-    }
+    // Bumps waterVersion() on a land/water flip, as setWater() does, and
+    // keeps the land count the worker's: passable land only.
+    if (terrainChanged) this.setTerrainByte(tile, terrainByte);
     return terrainChanged;
   }
 

@@ -1,4 +1,4 @@
-import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { CustomGameMap, GameType } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig } from "@openfront/engine-api/Schemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
@@ -28,7 +28,7 @@ import {
   notableLobbySettings,
   VISIBILITY_BADGE_CLASS,
 } from "../../utilities/LobbySettingsSummary";
-import { getMapName, homeHref, translateText } from "../../Utils";
+import { exitGame, getMapName, translateText } from "../../Utils";
 import type { GameView } from "../../view/GameView";
 const exitIcon = assetUrl("images/ExitIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
@@ -249,13 +249,16 @@ export class SettingsModal extends LitElement implements Controller {
   // Saves are kept on the player's account: singleplayer games only, and
   // only for a signed-in account, since a guest's saves would be lost with
   // the browser's session. Not the onboarding tutorial: its overlay keeps
-  // state a save doesn't carry, so a resumed one could get stuck.
+  // state a save doesn't carry, so a resumed one could get stuck. Not a
+  // scenario's Custom map either: a save doesn't carry its terrain, and after
+  // a reload no scenario is loaded to supply it.
   private canSave(): boolean {
     const game = this.game;
     return (
       game !== null &&
       game.config().gameConfig().gameType === GameType.Singleplayer &&
       game.config().gameConfig().tutorial !== true &&
+      game.config().gameConfig().gameMap !== CustomGameMap &&
       !game.config().isReplay() &&
       responseHasLinkedIdentity(lastUserMeResponse()?.response ?? false)
     );
@@ -323,7 +326,7 @@ export class SettingsModal extends LitElement implements Controller {
 
   private onExitButtonClick() {
     // redirect to the home page
-    window.location.href = homeHref();
+    exitGame();
   }
 
   private renderHeaderBadges() {

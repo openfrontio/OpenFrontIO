@@ -1782,6 +1782,7 @@ exports[`GameServer wire transcript > matches the golden transcript for a script
   "lobbyHttpView": {
     "accent": undefined,
     "autoStartAt": undefined,
+    "boostedBy": undefined,
     "clients": [
       {
         "clanTag": "HST",

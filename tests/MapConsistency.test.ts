@@ -32,6 +32,7 @@ const PREVIEW_FOLDER_EXCEPTIONS: Set<GameMapName> = new Set([
 ]);
 
 // Keys in the en.json "map" section that are UI strings, not map names.
+// "scenario" names a scenario editor's Custom map, not a stock one.
 const EN_JSON_META_KEYS = new Set([
   "map",
   "featured",
@@ -39,6 +40,7 @@ const EN_JSON_META_KEYS = new Set([
   "favorites",
   "random",
   "atlas",
+  "scenario",
 ]);
 
 /** Get an en.json section. */

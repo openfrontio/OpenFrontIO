@@ -59,7 +59,7 @@ import {
 } from "./LobbyEvents";
 import { LocalServer } from "./LocalServer";
 import { describeSocketClose } from "./SocketClose";
-import { homeHref, translateText } from "./Utils";
+import { exitGame, translateText } from "./Utils";
 import { PlayerView } from "./view";
 
 export class PauseGameIntentEvent implements GameEvent {
@@ -648,7 +648,7 @@ export class Transport {
       cancelText: translateText("common.close"),
     }).then((goHome) => {
       if (goHome) {
-        window.location.href = homeHref();
+        exitGame();
       }
     });
   }

@@ -396,6 +396,140 @@ describe("JoinLobbyModal Steam invite button", () => {
   });
 });
 
+describe("JoinLobbyModal boost button", () => {
+  const LOBBY = "ABCD1234";
+  const queued = (gameID: string, extra: Record<string, unknown> = {}) => ({
+    gameID,
+    numClients: 0,
+    publicGameType: "ffa",
+    ...extra,
+  });
+
+  // A joined public FFA lobby waiting at the back of its queue, with the
+  // boost priced.
+  function boostableModal(lobby: Record<string, unknown> = {}) {
+    const modal = new JoinLobbyModal();
+    const m = modal as any;
+    m.currentLobbyId = LOBBY;
+    m.isConnecting = false;
+    m.boostPriceHard = 3;
+    m.publicQueues = {
+      ffa: [queued("front", { startsAt: 5000 }), queued("mid"), queued(LOBBY)],
+    };
+    m.updateFromLobby({
+      gameID: LOBBY,
+      serverTime: Date.now(),
+      publicGameType: "ffa",
+      gameConfig: { gameType: GameType.Public, gameMode: GameMode.FFA },
+      clients: [{ clientID: "c1", username: "Alice" }],
+      ...lobby,
+    });
+    return m;
+  }
+
+  function renderBoost(m: any): HTMLElement {
+    const container = document.createElement("div");
+    render(m.renderBoost() as never, container);
+    return container;
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    document.body.innerHTML = "";
+  });
+
+  it("shows the lobby's position in its queue", () => {
+    const container = document.createElement("div");
+    const m = boostableModal();
+    expect(m.queuePosition()).toBe(3);
+    render(m.renderQueuePosition() as never, container);
+    expect(container.querySelector("span")).not.toBeNull();
+
+    // Not listed yet: nothing to show.
+    m.publicQueues = { ffa: [queued("front")] };
+    expect(m.queuePosition()).toBeNull();
+    render(m.renderQueuePosition() as never, container);
+    expect(container.children).toHaveLength(0);
+  });
+
+  it("offers the boost with its price in a waiting public lobby", () => {
+    const button = renderBoost(boostableModal()).querySelector("button");
+    expect(button?.textContent).toContain("3");
+  });
+
+  it.each<[string, (m: any) => void]>([
+    ["the catalog has no price", (m) => (m.boostPriceHard = null)],
+    ["the lobby is counting down", (m) => (m.lobbyStartAt = Date.now() + 5000)],
+    [
+      "the lobby is already next",
+      (m) =>
+        (m.publicQueues = {
+          ffa: [queued("front", { startsAt: 5000 }), queued(LOBBY)],
+        }),
+    ],
+    [
+      "only boosted lobbies are ahead",
+      (m) =>
+        (m.publicQueues = {
+          ffa: [queued("mid", { boosted: true }), queued(LOBBY)],
+        }),
+    ],
+  ])("hides it when %s", (_, change) => {
+    const m = boostableModal();
+    change(m);
+    expect(renderBoost(m).children).toHaveLength(0);
+  });
+
+  it("keeps it for a retry after a charge that failed without an answer", () => {
+    const m = boostableModal();
+    m.boostRetryHeld = true;
+    m.lobbyStartAt = Date.now() + 5000;
+    m.publicQueues = { ffa: [queued(LOBBY, { startsAt: 5000 })] };
+    expect(renderBoost(m).querySelector("button")).not.toBeNull();
+  });
+
+  it("hides it in a private lobby", () => {
+    const m = boostableModal({
+      publicGameType: undefined,
+      gameConfig: { gameType: GameType.Private, gameMode: GameMode.FFA },
+    });
+    expect(renderBoost(m).children).toHaveLength(0);
+  });
+
+  it("shows a boosted lobby as boosted, with no button", () => {
+    const container = renderBoost(boostableModal({ boostedBy: "c1" }));
+    expect(container.querySelector("button")).toBeNull();
+    expect(container.querySelector("span")).not.toBeNull();
+  });
+
+  it("announces a boost that happens while in the lobby, once", () => {
+    const toasts: string[] = [];
+    window.addEventListener("show-message", ((e: CustomEvent) => {
+      toasts.push(String(e.detail?.message));
+    }) as EventListener);
+    const m = boostableModal();
+    const update = {
+      gameID: LOBBY,
+      serverTime: Date.now(),
+      publicGameType: "ffa",
+      gameConfig: { gameType: GameType.Public, gameMode: GameMode.FFA },
+      clients: [{ clientID: "c1", username: "Alice" }],
+      boostedBy: "c1",
+    };
+    m.updateFromLobby(update);
+    m.updateFromLobby(update);
+    expect(m.boosted).toBe(true);
+    expect(toasts).toHaveLength(1);
+  });
+
+  it("doesn't announce a lobby that was boosted before joining", () => {
+    const toasts: unknown[] = [];
+    window.addEventListener("show-message", (e) => toasts.push(e));
+    boostableModal({ boostedBy: "c1" });
+    expect(toasts).toHaveLength(0);
+  });
+});
+
 describe("JoinLobbyModal map preview", () => {
   const PREVIEW = "[data-test-map-preview]";
   const SETTINGS = "[data-test-lobby-settings]";
