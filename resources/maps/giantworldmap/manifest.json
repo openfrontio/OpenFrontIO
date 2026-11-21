@@ -1,6 +1,6 @@
 {
-  "categories": ["world"],
-  "hidden": true,
+  "categories": ["classic", "world"],
+  "display_name": "Giant World (Classic)",
   "id": "GiantWorldMap",
   "map": {
     "height": 1948,
