@@ -400,6 +400,28 @@ describe("checkCardBackground", () => {
       expect(codes(issues)).not.toContain("layer_opaque");
     });
 
+    test("pixels of an image the wrong size are never read", () => {
+      // Claims 10^10 pixels; reading any of them throws.
+      const forged = {
+        width: 1e5,
+        height: 1e5,
+        data: new Proxy(
+          { length: 4e10 },
+          {
+            get: (t, k) => {
+              if (k === "length") return t.length;
+              throw new Error(`read pixel ${String(k)}`);
+            },
+          },
+        ),
+      } as unknown as CardCheckImage;
+      const issues = checkCardBackground(
+        files({ layers: [layer("drift", forged)] }),
+        anim({ src: "a.png", effect: "drift" }),
+      );
+      expect(codes(issues)).toEqual(["layer_size"]);
+    });
+
     test("an image with no pixel data is the wrong size", () => {
       const noData = { width: W, height: H } as unknown as CardCheckImage;
       const issues = checkCardBackground(

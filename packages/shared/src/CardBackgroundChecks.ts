@@ -168,8 +168,10 @@ function luma(d: Uint8ClampedArray, i: number): number {
 }
 
 function hasTransparency(img: CardCheckImage): boolean {
-  // An image with unreadable pixels already has its size issue.
-  if (!pixelsOk(img)) return true;
+  // Only an image the right size is read: any other already has its size
+  // issue, and its claimed size is not to be trusted (10^5 × 10^5 would take
+  // minutes).
+  if (!sizeOk(img)) return true;
   const d = img.data;
   for (let i = 3; i < d.length; i += 4) if (d[i] < 255) return true;
   return false;
