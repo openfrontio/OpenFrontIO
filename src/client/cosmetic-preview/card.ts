@@ -185,9 +185,10 @@ function safeAreaOverlay(inset: string): HTMLElement {
 }
 
 interface LivePreview {
-  // Whether it is still on the page: a host may drop a preview without
-  // destroy(), and restart then forgets it rather than re-render it.
-  attached(): boolean;
+  // Where it is: on the page, not on it yet (mounted into an element the
+  // host inserts later), or gone (was on the page and left it). A host may
+  // drop a preview without destroy(); restart forgets one that is gone.
+  place(): "on" | "notYet" | "gone";
   remount(): void;
 }
 const live = new Set<LivePreview>();
@@ -199,6 +200,8 @@ function mountCardBackgroundPreview(
 ): { handle: CardBackgroundPreviewHandle; result: CosmeticPreviewResult } {
   let destroyed = false;
   let mounted = false;
+  // Whether the card has been on the page: restart forgets it once it leaves.
+  let seenOnPage = false;
   const wrapper = document.createElement("div");
   wrapper.dataset.cardPreview = "";
   let current: {
@@ -280,11 +283,18 @@ function mountCardBackgroundPreview(
       host.replaceChildren(wrapper);
       mounted = true;
     }
+    if (wrapper.isConnected) seenOnPage = true;
     return checked.ok ? { ok: true } : { ok: false, error: checked.error };
   };
 
   const preview: LivePreview = {
-    attached: () => wrapper.isConnected,
+    place: () => {
+      if (wrapper.isConnected) {
+        seenOnPage = true;
+        return "on";
+      }
+      return seenOnPage ? "gone" : "notYet";
+    },
     // A card stopped for slow frames stays still until mounted again.
     remount: () => {
       if (destroyed || current === null) return;
@@ -347,11 +357,9 @@ export const cardPreviewModule: Omit<
   restartCardAnimation: () => {
     resetCardFxSession();
     for (const preview of [...live]) {
-      if (preview.attached()) {
-        preview.remount();
-      } else {
-        live.delete(preview);
-      }
+      const place = preview.place();
+      if (place === "on") preview.remount();
+      else if (place === "gone") live.delete(preview);
     }
   },
   systemPrefersReducedMotion: () => prefersReducedMotion(),

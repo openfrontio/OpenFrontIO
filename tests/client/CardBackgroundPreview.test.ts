@@ -300,6 +300,21 @@ describe("mountCardBackgroundPreview", () => {
     expect(card(gone)).toBe(before);
   });
 
+  test("restart keeps a preview mounted before its host is on the page", () => {
+    const later = document.createElement("div");
+    mountCardBackgroundPreview(
+      later,
+      { url: BLOB, animation: ANIMATION },
+      { size: "large", animated: true },
+    );
+    const before = card(later);
+    restartCardAnimation();
+    expect(card(later)).toBe(before);
+    document.body.append(later);
+    restartCardAnimation();
+    expect(card(later)).not.toBe(before);
+  });
+
   test("a size is one of its own, not an inherited key", () => {
     for (const size of ["toString", "constructor", "__proto__"]) {
       const { result } = mountCardBackgroundPreview(
