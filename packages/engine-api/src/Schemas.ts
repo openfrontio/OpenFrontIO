@@ -261,6 +261,8 @@ export const PoolConfigSchema = z
   });
 export type PoolConfig = z.infer<typeof PoolConfigSchema>;
 
+export const MAX_BOTS = 1000;
+
 export const GameConfigSchema = z.compile(
   z.object({
     // Custom goes last, so the stock maps keep their zbin enum indices.
@@ -297,7 +299,7 @@ export const GameConfigSchema = z.compile(
         select: (v) => (typeof v === "number" ? 0 : 1),
       },
     ),
-    bots: zb.uint({ max: 400 }),
+    bots: zb.uint({ max: MAX_BOTS }),
     infiniteGold: z.boolean(),
     infiniteTroops: z.boolean(),
     instantBuild: z.boolean(),

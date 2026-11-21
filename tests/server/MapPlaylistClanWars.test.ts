@@ -4,7 +4,7 @@ import {
   GameMode,
   RankedType,
 } from "@openfront/engine-api/game/GameTypes";
-import { GameConfigSchema } from "@openfront/engine-api/Schemas";
+import { GameConfigSchema, MAX_BOTS } from "@openfront/engine-api/Schemas";
 import { describe, expect, it } from "vitest";
 import { MapPlaylist } from "../../src/server/MapPlaylist";
 
@@ -46,5 +46,15 @@ describe("MapPlaylist clan wars config", () => {
       expect(SMALL_MAPS).toContain(playlist.getClanWarsConfig(2, 6).gameMap);
       expect(LARGE_MAPS).toContain(playlist.getClanWarsConfig(2, 8).gameMap);
     }
+  });
+
+  it("allows bots up to MAX_BOTS (1000) and rejects above it in GameConfigSchema", () => {
+    const config = new MapPlaylist().getClanWarsConfig(3, 9);
+    expect(
+      GameConfigSchema.safeParse({ ...config, bots: MAX_BOTS }).success,
+    ).toBe(true);
+    expect(
+      GameConfigSchema.safeParse({ ...config, bots: MAX_BOTS + 1 }).success,
+    ).toBe(false);
   });
 });

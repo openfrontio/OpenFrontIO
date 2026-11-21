@@ -8,7 +8,7 @@ import {
   Trios,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { TeamCountConfig } from "@openfront/engine-api/Schemas";
+import { MAX_BOTS, TeamCountConfig } from "@openfront/engine-api/Schemas";
 import {
   DOOMSDAY_CLOCK_SPEEDS,
   DoomsdayClockSpeed,
@@ -586,13 +586,22 @@ export class GameConfigSettings extends LitElement {
               >
                 <fluent-slider
                   min="0"
-                  max="400"
+                  max=${MAX_BOTS}
                   step="1"
                   .value=${settings.options.bots.value}
                   labelKey=${settings.options.bots.labelKey}
                   disabledKey=${settings.options.bots.disabledKey}
                   @value-changed=${this.handleBotsChanged}
                 ></fluent-slider>
+                <div role="status" aria-live="polite">
+                  ${
+                    settings.options.bots.value > 400
+                      ? html`<p class="mt-2 text-xs text-amber-300 text-center">
+                          ${translateText("game_settings.bots_high_warning")}
+                        </p>`
+                      : nothing
+                  }
+                </div>
               </div>
 
               ${
