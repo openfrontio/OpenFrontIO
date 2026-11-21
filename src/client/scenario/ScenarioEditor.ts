@@ -308,7 +308,8 @@ export class ScenarioEditor extends LitElement {
 
   private undoOrRedo(redo: boolean): void {
     const editor = this.editor;
-    if (editor === null || this.status !== "ready") return;
+    // While a test play starts, its export reads the document (testPlay).
+    if (editor === null || this.status !== "ready" || this.starting) return;
     // Mid-stroke, undo would split the stroke in two.
     if (this.stroke !== null) return;
     if (redo ? !editor.canRedo() : !editor.canUndo()) return;
@@ -337,7 +338,9 @@ export class ScenarioEditor extends LitElement {
   /** Applies an edit as an undo step of its own, and saves. */
   private applyEdit(edit: Edit): void {
     const editor = this.editor;
-    if (editor === null || this.status !== "ready") return;
+    // While a test play starts, its export reads the document: an edit then
+    // could, say, make the nation being played unplayable.
+    if (editor === null || this.status !== "ready" || this.starting) return;
     // A stroke still open ends first, as its own step.
     this.endStroke();
     editor.apply(edit);
