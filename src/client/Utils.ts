@@ -270,8 +270,7 @@ export function getModifierLabels(
 export function renderDuration(totalSeconds: number): string {
   // Floor once so fractional inputs don't leak through to the seconds
   // component (e.g. `0.5` → `"0.5s"`).
-  const whole = Math.floor(totalSeconds);
-  if (whole <= 0) return `0${translateText("common.duration_second_short")}`;
+  const whole = Math.max(0, Math.floor(totalSeconds));
   const hours = Math.floor(whole / 3600);
   const minutes = Math.floor((whole % 3600) / 60);
   const seconds = whole % 60;
@@ -285,7 +284,10 @@ export function renderDuration(totalSeconds: number): string {
     parts.push(`${minutes}${translateText("common.duration_minute_short")}`);
   if (seconds > 0 || parts.length === 0)
     parts.push(`${seconds}${translateText("common.duration_second_short")}`);
-  return parts.join(" ");
+  if (!isRTL()) return parts.join(" ");
+  // Isolate the full duration from its surrounding text without splitting
+  // English fallback units into separate RTL runs.
+  return `\u2067${parts.join(" ")}\u2069`;
 }
 
 export async function copyToClipboard(
