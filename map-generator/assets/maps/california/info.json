@@ -3,7 +3,10 @@
   "id": "California",
   "name": "California",
   "translation_key": "map.california",
-  "categories": ["north_america"],
+  "categories": ["north_america", "new"],
+  "author": "crunchybbb",
+  "location": { "lat": 36.8, "lon": -119.4 },
+  "description": "California, known as the Golden State, is the most populous state in the United States (over 39M people) and the third largest by area. It covers a long stretch of the Pacific coast and reaches inland to the Central Valley, Sierra Nevada mountains and the Mojave Desert. Alongside Los Angeles and San Francisco, major cities include Sacramento, San Diego, and San Jose.",
   "themes": ["north_america", "western"],
   "nations": [
     {
@@ -336,7 +339,7 @@
       "name": "Crescent City"
     },
     {
-      "coordinates": [516, 546],
+      "coordinates": [506, 546],
       "name": "Redding"
     },
     {
@@ -354,10 +357,6 @@
     {
       "coordinates": [507, 225],
       "name": "Yreka"
-    },
-    {
-      "coordinates": [350, 390],
-      "name": "Mount Shasta"
     },
     {
       "coordinates": [742, 506],
@@ -434,10 +433,6 @@
     {
       "coordinates": [519, 768],
       "name": "Yuba City"
-    },
-    {
-      "coordinates": [713, 2037],
-      "name": "Marysville"
     },
     {
       "coordinates": [613, 736],
@@ -584,14 +579,6 @@
       "name": "Patterson"
     },
     {
-      "coordinates": [725, 2033],
-      "name": "Sonora"
-    },
-    {
-      "coordinates": [699, 1964],
-      "name": "Angels Camp"
-    },
-    {
       "coordinates": [1018, 983],
       "name": "Mammoth Lakes"
     },
@@ -626,14 +613,6 @@
     {
       "coordinates": [865, 1345],
       "name": "Hanford"
-    },
-    {
-      "coordinates": [715, 2030],
-      "name": "Lemoore"
-    },
-    {
-      "coordinates": [712, 2028],
-      "name": "Kingsburg"
     },
     {
       "coordinates": [862, 1263],
@@ -756,10 +735,6 @@
       "name": "Pasadena"
     },
     {
-      "coordinates": [716, 2030],
-      "name": "Downey"
-    },
-    {
       "coordinates": [1140, 1747],
       "name": "Compton"
     },
@@ -788,18 +763,6 @@
       "name": "Pomona"
     },
     {
-      "coordinates": [724, 2039],
-      "name": "Whittier"
-    },
-    {
-      "coordinates": [738, 2008],
-      "name": "Norwalk"
-    },
-    {
-      "coordinates": [720, 2021],
-      "name": "Culver City"
-    },
-    {
       "coordinates": [1164, 1716],
       "name": "El Monte"
     },
@@ -824,10 +787,6 @@
       "name": "Newport Beach"
     },
     {
-      "coordinates": [720, 2049],
-      "name": "Costa Mesa"
-    },
-    {
       "coordinates": [1189, 1751],
       "name": "Fullerton"
     },
@@ -836,12 +795,8 @@
       "name": "Orange"
     },
     {
-      "coordinates": [1155, 1800],
+      "coordinates": [1155, 1780],
       "name": "Garden Grove"
-    },
-    {
-      "coordinates": [728, 2034],
-      "name": "Mission Viejo"
     },
     {
       "coordinates": [1278, 1776],
@@ -932,20 +887,12 @@
       "name": "Chula Vista"
     },
     {
-      "coordinates": [707, 2042],
-      "name": "National City"
-    },
-    {
       "coordinates": [1378, 1958],
       "name": "El Cajon"
     },
     {
       "coordinates": [1550, 1541],
       "name": "Baker"
-    },
-    {
-      "coordinates": [704, 1992],
-      "name": "Santee"
     },
     {
       "coordinates": [1351, 1910],
