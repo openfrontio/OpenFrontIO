@@ -1029,3 +1029,26 @@ export function homeHref(): string {
   }
   return "/";
 }
+
+// Where leaving the game goes instead of the menu: the scenario editor's
+// hash while it test-plays a draft.
+let gameReturnHash: string | null = null;
+
+export function returnFromGameTo(hash: string | null): void {
+  gameReturnHash = hash;
+}
+
+/**
+ * Leaves a started game (or a join that took the page with it), to the menu
+ * or to the page that started it. Either way the page loads again: a game
+ * has no in-place teardown (MenuChrome.ts). A href that differs only in its
+ * hash wouldn't reload, so the return sets the URL and reloads.
+ */
+export function exitGame(): void {
+  if (gameReturnHash === null) {
+    window.location.href = homeHref();
+    return;
+  }
+  history.replaceState(null, "", window.location.pathname + gameReturnHash);
+  window.location.reload();
+}

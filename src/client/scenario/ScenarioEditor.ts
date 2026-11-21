@@ -23,9 +23,12 @@ import { html, LitElement, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
 import Countries from "resources/countries.json" with { type: "json" };
+import { ClientEnv } from "../ClientEnv";
 import "../hud/layers/PlayerInfoOverlay";
 import type { PlayerInfoOverlay } from "../hud/layers/PlayerInfoOverlay";
+import { showInGameAlert } from "../InGameModal";
 import { MouseMoveEvent } from "../InputHandler";
+import { fallbackPlayerName } from "../PlayerName";
 import {
   applyGraphicsOverrides,
   createRenderSettings,
@@ -42,8 +45,9 @@ import {
   terrainMapFileLoader,
 } from "../TerrainMapFileLoader";
 import type { TransformHandler } from "../TransformHandler";
+import type { UsernameInput } from "../UsernameInput";
 import { UserSettings } from "../UserSettings";
-import { homeHref, translateText } from "../Utils";
+import { homeHref, returnFromGameTo, translateText } from "../Utils";
 import { GameView } from "../view/GameView";
 import { WebGLFrameBuilder } from "../WebGLFrameBuilder";
 import { WorkerClient } from "../WorkerClient";
@@ -69,6 +73,8 @@ import {
 } from "./ScenarioDocument";
 import { type DraftInfo, scenarioDrafts } from "./ScenarioDrafts";
 import { scenarioEditorHash } from "./ScenarioEditorRoute";
+import { exportScenario } from "./ScenarioExport";
+import { scenarioGameStart } from "./ScenarioStart";
 import {
   type BrushStroke,
   TerrainStroke,
@@ -130,6 +136,10 @@ export class ScenarioEditor extends LitElement {
    * paints; null, or a nation since removed, erases.
    */
   @state() private nationId: string | null = null;
+  /** The Play button's menu: the nations to play as, or why there are none. */
+  @state() private playMenu = false;
+  /** A test game is being exported and started. */
+  @state() private starting = false;
 
   @query("#scenario-editor-brush") private brushPreview!: HTMLElement | null;
 
@@ -277,7 +287,9 @@ export class ScenarioEditor extends LitElement {
   private async resize(): Promise<void> {
     const doc = this.doc;
     const id = this.draftId;
-    if (doc === null || id === null) return;
+    // A test play starting exports from the current session; replacing it
+    // would leave that export waiting on a terminated worker.
+    if (doc === null || id === null || this.starting) return;
     if (!isScenarioSize(this.width, this.height)) return;
     if (this.width === doc.width && this.height === doc.height) return;
     // A stroke still open goes into the resized document.
@@ -296,7 +308,8 @@ export class ScenarioEditor extends LitElement {
 
   private undoOrRedo(redo: boolean): void {
     const editor = this.editor;
-    if (editor === null || this.status !== "ready") return;
+    // While a test play starts, its export reads the document (testPlay).
+    if (editor === null || this.status !== "ready" || this.starting) return;
     // Mid-stroke, undo would split the stroke in two.
     if (this.stroke !== null) return;
     if (redo ? !editor.canRedo() : !editor.canUndo()) return;
@@ -325,7 +338,9 @@ export class ScenarioEditor extends LitElement {
   /** Applies an edit as an undo step of its own, and saves. */
   private applyEdit(edit: Edit): void {
     const editor = this.editor;
-    if (editor === null || this.status !== "ready") return;
+    // While a test play starts, its export reads the document: an edit then
+    // could, say, make the nation being played unplayable.
+    if (editor === null || this.status !== "ready" || this.starting) return;
     // A stroke still open ends first, as its own step.
     this.endStroke();
     editor.apply(edit);
@@ -386,6 +401,62 @@ export class ScenarioEditor extends LitElement {
     else if (key === "y") this.undoOrRedo(true);
     else return;
     e.preventDefault();
+  }
+
+  // ---- Test play ----
+
+  private onPlay(): void {
+    const playable = this.doc?.nations.filter((n) => n.playable) ?? [];
+    if (playable.length === 1) void this.testPlay(playable[0].id);
+    else this.playMenu = !this.playMenu;
+  }
+
+  /**
+   * Plays the document as a singleplayer game, as `nationID`, from a bundle
+   * exported in memory (docs/ScenarioEditor.md, "Test play from the
+   * editor"). Leaving the game loads the page again on this draft, so the
+   * draft is saved first; the undo history doesn't survive it.
+   */
+  private async testPlay(nationID: string): Promise<void> {
+    const editor = this.editor;
+    const worker = this.session?.worker ?? null;
+    const id = this.draftId;
+    if (editor === null || worker === null || id === null) return;
+    if (this.status !== "ready" || this.starting) return;
+    this.endStroke();
+    this.playMenu = false;
+    this.starting = true;
+    try {
+      await scenarioDrafts.save(id, editor.doc);
+      const bundle = await exportScenario(
+        editor.doc,
+        (c) => worker.editorCommand(c),
+        // Unpublished: the draft's id, and no version yet.
+        { scenario: { id, version: 0 }, gitCommit: ClientEnv.gitCommit() },
+      );
+      const usernameInput = document.querySelector(
+        "username-input",
+      ) as UsernameInput | null;
+      const name = usernameInput?.resolvedName() ?? fallbackPlayerName();
+      const detail = await scenarioGameStart(bundle, nationID, {
+        username: name.name,
+        clanTag: usernameInput?.getClanTag() ?? null,
+      });
+      if (this.abort.signal.aborted) return;
+      returnFromGameTo(scenarioEditorHash(id));
+      this.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail,
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    } catch (e) {
+      console.error("scenario editor: test play failed:", e);
+      void showInGameAlert(translateText("scenario_editor.play_failed"));
+    } finally {
+      this.starting = false;
+    }
   }
 
   // ---- The engine and the view ----
@@ -636,7 +707,11 @@ export class ScenarioEditor extends LitElement {
     rect: DOMRect,
   ): boolean {
     const editor = this.editor;
-    if (editor === null || this.status !== "ready") return false;
+    // While a test play starts, the draft it plays is already saved, and a
+    // stroke still open when the editor is removed would never be.
+    if (editor === null || this.status !== "ready" || this.starting) {
+      return false;
+    }
     const terrain =
       this.terrainKind === "water"
         ? WATER
@@ -1018,9 +1093,58 @@ export class ScenarioEditor extends LitElement {
         >
           ${translateText("scenario_editor.resize")}
         </button>
-        <a class="${button} ml-auto" href=${homeHref()}>
+        <button
+          class="${button} ml-auto"
+          aria-expanded=${this.playMenu}
+          ?disabled=${this.starting}
+          @click=${() => this.onPlay()}
+        >
+          ${translateText(
+            this.starting ? "scenario_editor.starting" : "scenario_editor.play",
+          )}
+        </button>
+        <a class=${button} href=${homeHref()}>
           ${translateText("scenario_editor.exit")}
         </a>
+      </div>
+      ${this.playMenu ? this.renderPlayMenu() : nothing}
+    `;
+  }
+
+  /** The playable nations to test play as, or why there are none. */
+  private renderPlayMenu() {
+    const playable = this.doc!.nations.filter((n) => n.playable);
+    const button =
+      "rounded bg-zinc-700 px-2 py-1 hover:bg-zinc-600 disabled:opacity-50";
+    return html`
+      <div
+        class="absolute top-14 left-1/2 flex max-h-[calc(100%-4.5rem)] w-64 -translate-x-1/2 flex-col gap-2 overflow-y-auto rounded-lg bg-zinc-900/90 p-3 text-sm"
+      >
+        ${
+          playable.length === 0
+            ? html`<p>${translateText("scenario_editor.play_no_playable")}</p>`
+            : html`
+                <h2 class="font-semibold">
+                  ${translateText("scenario_editor.play_as")}
+                </h2>
+                <ul class="flex flex-col gap-1">
+                  ${playable.map(
+                    (n) =>
+                      html`<li>
+                        <button
+                          class="${button} w-full truncate text-left"
+                          @click=${() => void this.testPlay(n.id)}
+                        >
+                          ${n.name}
+                        </button>
+                      </li>`,
+                  )}
+                </ul>
+              `
+        }
+        <button class=${button} @click=${() => (this.playMenu = false)}>
+          ${translateText("common.cancel")}
+        </button>
       </div>
     `;
   }
@@ -1043,7 +1167,8 @@ export class ScenarioEditor extends LitElement {
       choice(k, this.terrainKind, label, () => (this.terrainKind = k));
     return html`
       <div
-        class="absolute bottom-2 left-2 flex w-64 flex-col gap-2 rounded-lg bg-zinc-900/90 p-3 text-sm"
+        class="absolute bottom-2 left-2 flex w-64 flex-col gap-2 rounded-lg bg-zinc-900/90 p-3 text-sm ${this.starting ? "opacity-50" : ""}"
+        ?inert=${this.starting}
       >
         <div class="flex gap-1">
           ${tool("pan", "scenario_editor.tool_pan")}
@@ -1144,8 +1269,11 @@ export class ScenarioEditor extends LitElement {
         </button>
       </li>`;
     return html`
+      <!-- Inert while a test play starts, whose export reads the document:
+           applyEdit ignores edits then, and an input mustn't show one. -->
       <div
-        class="absolute top-14 right-2 flex max-h-[calc(100%-4.5rem)] w-64 flex-col gap-2 overflow-y-auto rounded-lg bg-zinc-900/90 p-3 text-sm"
+        class="absolute top-14 right-2 flex max-h-[calc(100%-4.5rem)] w-64 flex-col gap-2 overflow-y-auto rounded-lg bg-zinc-900/90 p-3 text-sm ${this.starting ? "opacity-50" : ""}"
+        ?inert=${this.starting}
       >
         <div class="flex items-center justify-between gap-2">
           <h2 class="font-semibold">
