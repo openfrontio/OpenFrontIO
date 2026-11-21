@@ -82,4 +82,29 @@ describe("previewUpdateKind", () => {
       }),
     ).toBe("inPlace");
   });
+
+  it("reframes a different skin or pattern, but keeps the camera for its colours", () => {
+    const skin = (url: string, colors?: string[]) =>
+      ({
+        mode: "SKIN",
+        skinUrl: url,
+        effectColors: colors,
+      }) as CosmeticPreviewConfig;
+    const pattern = (data: string, colors: string[]) =>
+      ({
+        mode: "SKIN",
+        patternData: data,
+        effectColors: colors,
+      }) as CosmeticPreviewConfig;
+    expect(previewUpdateKind(skin("a.png"), skin("b.png"))).toBe("reframe");
+    expect(
+      previewUpdateKind(pattern("AAA", ["#fff"]), pattern("BBB", ["#fff"])),
+    ).toBe("reframe");
+    expect(
+      previewUpdateKind(pattern("AAA", ["#fff"]), pattern("AAA", ["#f00"])),
+    ).toBe("inPlace");
+    expect(
+      previewUpdateKind(skin("a.png", ["#fff"]), skin("a.png", ["#0f0"])),
+    ).toBe("inPlace");
+  });
 });

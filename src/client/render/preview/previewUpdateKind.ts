@@ -1,12 +1,14 @@
 import type { CosmeticPreviewConfig } from "./CosmeticPreviewRenderer";
 
 // How a new preview config is applied to a renderer already showing `prev`:
-//  - "reframe": a different scene (mode, unit or structure level) — restart
-//    the animation and re-frame the camera, as for a new preview.
+//  - "reframe": a different scene (mode, unit or structure level) or a
+//    different skin or pattern — restart the animation and re-frame the
+//    camera, as for a new preview.
 //  - "replay": the same scene, but the animation itself changed (an
 //    explosion's shape, the salvo) — restart it, keep the camera.
-//  - "inPlace": only colours or timings changed — apply them to what is
-//    already playing, and keep the camera.
+//  - "inPlace": only colours or timings changed (a pattern's colourway, a
+//    trail's speed) — apply them to what is already playing, and keep the
+//    camera.
 // The store opens a fresh renderer per preview, so it only ever sees
 // "reframe". Hosts that reuse one renderer (the cosmetic-preview package:
 // the dashboard's effects editor and review pages) get live edits instead of
@@ -21,7 +23,9 @@ export function previewUpdateKind(
     !prev ||
     prev.mode !== next.mode ||
     prev.cosmeticUnitType !== next.cosmeticUnitType ||
-    prev.structureLevel !== next.structureLevel
+    prev.structureLevel !== next.structureLevel ||
+    prev.skinUrl !== next.skinUrl ||
+    prev.patternData !== next.patternData
   ) {
     return "reframe";
   }
