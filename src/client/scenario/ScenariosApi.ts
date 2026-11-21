@@ -164,13 +164,23 @@ export async function saveScenarioDocument(
   }
 }
 
-/** The draft's document. A document that fails its schema throws. */
+/**
+ * The draft's document, or null if it has none yet: its first save never
+ * landed. A document that fails its schema throws.
+ */
 export async function loadScenarioDocument(
   id: string,
-): Promise<ScenarioDocument | ScenarioApiError> {
+): Promise<ScenarioDocument | ScenarioApiError | null> {
   let raw: Uint8Array;
   try {
     const res = await authedFetch(`${path(id)}/document`);
+    if (res.status === 404) {
+      const body = (await res
+        .clone()
+        .json()
+        .catch(() => null)) as { reason?: unknown } | null;
+      if (body?.reason === "No document saved") return null;
+    }
     if (!res.ok) return await errorFor(res);
     // The owner's own upload, so it is not capped as a shared one is.
     raw = await gunzipInBrowser(new Uint8Array(await res.arrayBuffer()));
@@ -185,7 +195,8 @@ export async function loadScenarioDocument(
 
 /**
  * Creates a draft holding the document. If the document doesn't save, the
- * empty draft is deleted again, so it doesn't count against the cap.
+ * empty draft is deleted again so it doesn't count against the cap. That
+ * can fail too; such a draft opens as a blank document.
  */
 export async function createScenarioDraft(
   doc: ScenarioDocument,
@@ -194,9 +205,12 @@ export async function createScenarioDraft(
   if (typeof created === "string") return created;
   const saved = await saveScenarioDocument(created.id, doc);
   if (typeof saved === "string") {
-    await authedFetch(path(created.id), { method: "DELETE" }).catch(
-      (err: unknown) => console.warn("deleting the empty draft failed", err),
-    );
+    try {
+      const res = await authedFetch(path(created.id), { method: "DELETE" });
+      if (!res.ok) await errorFor(res);
+    } catch (err) {
+      console.warn("deleting the empty draft failed", err);
+    }
   }
   return saved;
 }

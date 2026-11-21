@@ -181,6 +181,11 @@ describe("ScenariosApi", () => {
     await expect(loadScenarioDocument(SCENARIO.id)).resolves.toBe("not_found");
   });
 
+  it("reports a draft whose first save never landed as null", async () => {
+    fetchMock.mockResolvedValue(json({ reason: "No document saved" }, 404));
+    await expect(loadScenarioDocument(SCENARIO.id)).resolves.toBeNull();
+  });
+
   it("lists the caller's scenarios, and fails closed on a bad answer", async () => {
     const mine = { ...SCENARIO, latestVersion: 2 };
     fetchMock.mockResolvedValueOnce(json({ scenarios: [mine] }));
@@ -218,6 +223,18 @@ describe("ScenariosApi", () => {
     const [url, init] = fetchMock.mock.calls[2];
     expect(url).toBe(`https://api.test/scenarios/${SCENARIO.id}`);
     expect(init.method).toBe("DELETE");
+  });
+
+  it("still reports the save's error when the cleanup is refused", async () => {
+    fetchMock
+      .mockResolvedValueOnce(json(SCENARIO, 201))
+      .mockResolvedValueOnce(json({ reason: "too large" }, 400))
+      .mockResolvedValueOnce(json({ reason: "down" }, 503));
+
+    await expect(
+      createScenarioDraft(newScenarioDocument("Islands", 100, 100)),
+    ).resolves.toBe("rejected");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
   it("doesn't save a document when the create fails", async () => {

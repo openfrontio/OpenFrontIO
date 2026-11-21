@@ -74,7 +74,7 @@ import { type DraftInfo, scenarioDrafts } from "./ScenarioDrafts";
 import { scenarioEditorHash } from "./ScenarioEditorRoute";
 import { exportScenario } from "./ScenarioExport";
 import {
-  createScenarioDraft,
+  createScenario,
   listMyScenarios,
   loadScenarioDocument,
   moveDraftToAccount,
@@ -180,6 +180,8 @@ export class ScenarioEditor extends LitElement {
   @query("#scenario-editor-brush") private brushPreview!: HTMLElement | null;
 
   private editor: DocumentEditor | null = null;
+  /** The document the session started from: saved until it has an editor. */
+  private sessionDoc: ScenarioDocument | null = null;
   private saver: ScenarioSaver | null = null;
   private session: Session | null = null;
   private camera: ReplayCamera | null = null;
@@ -272,19 +274,40 @@ export class ScenarioEditor extends LitElement {
   private async openDraft(id: string): Promise<void> {
     this.status = "loading";
     try {
-      const doc = await loadScenarioDocument(id);
+      const loaded = await loadScenarioDocument(id);
       // Removed meanwhile (a lobby join): leave the URL and engine alone.
       if (this.abort.signal.aborted) return;
-      if (typeof doc === "string") {
-        this.fail(apiErrorText(doc));
+      if (typeof loaded === "string") {
+        this.fail(apiErrorText(loaded));
         return;
       }
+      const doc = loaded ?? (await this.blankDraft(id));
+      if (this.abort.signal.aborted) return;
       this.setDraft(id);
-      await this.startSession(doc);
+      const session = this.startSession(doc);
+      if (loaded === null) this.saveDraft();
+      await session;
     } catch (e) {
       console.error("scenario editor: opening the draft failed:", e);
       this.fail(translateText("scenario_editor.open_failed"));
     }
+  }
+
+  /**
+   * A blank document for a draft whose first save never landed (the tab
+   * closed first), under the draft's name.
+   */
+  private async blankDraft(id: string): Promise<ScenarioDocument> {
+    const mine = await listMyScenarios();
+    const name =
+      typeof mine === "string"
+        ? undefined
+        : mine.find((s) => s.id === id)?.name;
+    return newScenarioDocument(
+      name ?? this.draftName(),
+      this.width,
+      this.height,
+    );
   }
 
   private async createBlank(): Promise<void> {
@@ -304,21 +327,26 @@ export class ScenarioEditor extends LitElement {
     );
   }
 
-  /** Creates a new draft on the API, names it in the URL and opens it. */
+  /**
+   * Creates a new draft on the API, names it in the URL and opens it. Its
+   * document saves as edits do, so a save that fails can be retried.
+   */
   private async create(
     begin: () => Promise<{ doc: ScenarioDocument; files?: MapFiles }>,
   ): Promise<void> {
     this.status = "loading";
     try {
       const { doc, files } = await begin();
-      const created = await createScenarioDraft(doc);
+      const created = await createScenario(doc.meta);
       if (this.abort.signal.aborted) return;
       if (typeof created === "string") {
         this.fail(apiErrorText(created));
         return;
       }
       this.setDraft(created.id);
-      await this.startSession(doc, files);
+      const session = this.startSession(doc, files);
+      this.saveDraft();
+      await session;
     } catch (e) {
       console.error("scenario editor: creating the draft failed:", e);
       this.fail(translateText("scenario_editor.create_failed"));
@@ -333,7 +361,7 @@ export class ScenarioEditor extends LitElement {
     this.draftId = id;
     this.saver = new ScenarioSaver(
       id,
-      () => this.editor?.doc ?? null,
+      () => this.editor?.doc ?? this.sessionDoc,
       () => this.requestUpdate(),
     );
     history.replaceState(
@@ -377,8 +405,10 @@ export class ScenarioEditor extends LitElement {
     this.status = "loading";
     try {
       const resized = resizeScenarioDocument(doc, this.width, this.height);
-      await this.startSession(resized);
+      const session = this.startSession(resized);
+      // Saved from sessionDoc if the editor closes before the session starts.
       this.saveDraft();
+      await session;
     } catch (e) {
       console.error("scenario editor: resizing failed:", e);
       this.fail(translateText("scenario_editor.open_failed"));
@@ -611,6 +641,7 @@ export class ScenarioEditor extends LitElement {
   ): Promise<void> {
     this.endSession();
     this.status = "loading";
+    this.sessionDoc = doc;
     this.doc = null;
     this.editor = null;
     this.width = doc.width;
