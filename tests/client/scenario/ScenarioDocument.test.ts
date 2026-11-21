@@ -4,12 +4,14 @@
  */
 
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { ID } from "@openfront/engine-api/Schemas";
 import {
   decodeOwnership,
   encodeOwnership,
   IMPASSABLE,
+  isScenarioSize,
   land,
-  MAX_AREA,
+  newNation,
   newScenarioDocument,
   SCENARIO_FORMAT,
   ScenarioDocumentSchema,
@@ -142,14 +144,9 @@ describe("ScenarioDocumentSchema", () => {
     rejects((s) => (s.terrain.height = 96), />=100/);
   });
 
-  test("rejects a map over the area limit", () => {
-    rejects(
-      (s) => {
-        s.terrain.width = 2000;
-        s.terrain.height = 1504;
-      },
-      new RegExp(`over ${MAX_AREA} tiles`),
-    );
+  test("rejects a side over 5000", () => {
+    rejects((s) => (s.terrain.width = 5004), /<=5000/);
+    rejects((s) => (s.terrain.height = 5004), /<=5000/);
   });
 
   test("rejects the wrong number of terrain bytes", () => {
@@ -232,5 +229,37 @@ describe("ownership run-length encoding", () => {
     expect(encodeOwnership(Uint16Array.of(0, 0, 3, 3, 3, 0))).toEqual([
       0, 2, 3, 3, 0, 1,
     ]);
+  });
+});
+
+test("isScenarioSize takes what the schema takes", () => {
+  expect(isScenarioSize(100, 100)).toBe(true);
+  expect(isScenarioSize(5000, 5000)).toBe(true);
+  expect(isScenarioSize(5004, 100)).toBe(false);
+  expect(isScenarioSize(100, 5004)).toBe(false);
+  expect(isScenarioSize(102, 100)).toBe(false);
+  expect(isScenarioSize(100, 96)).toBe(false);
+  expect(isScenarioSize(100.5, 100)).toBe(false);
+  expect(isScenarioSize(Number.NaN, 100)).toBe(false);
+});
+
+describe("newNation", () => {
+  test("takes the first free name and a new valid id", () => {
+    const doc = newScenarioDocument("Nations", W, H);
+    const name = (n: number) => `Nation ${n}`;
+    const first = newNation(doc, name);
+    expect(first).toMatchObject({ name: "Nation 1", flag: null, gold: 0 });
+    expect(ID.safeParse(first.id).success).toBe(true);
+    doc.nations.push(first, { ...newNation(doc, name), name: "Nation 3" });
+    expect(newNation(doc, name).name).toBe("Nation 2");
+    doc.nations.push(newNation(doc, name));
+    const fourth = newNation(doc, name);
+    expect(fourth.name).toBe("Nation 4");
+    expect(new Set([...doc.nations.map((n) => n.id), fourth.id]).size).toBe(4);
+    // It passes the document's schema, as add_nation checks.
+    doc.nations.push(fourth);
+    expect(() =>
+      ScenarioDocumentSchema.parse(serializeScenarioDocument(doc)),
+    ).not.toThrow();
   });
 });

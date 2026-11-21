@@ -72,12 +72,15 @@ export function sendTerrain(
   tiles: readonly number[],
   terrain: readonly number[],
   send: SendCommand,
+  // Tests split at a few tiles rather than a million, to cross a batch
+  // boundary in milliseconds.
+  batchSize: number = MAX_TERRAIN_BATCH,
 ): void {
-  for (let i = 0; i < tiles.length; i += MAX_TERRAIN_BATCH) {
+  for (let i = 0; i < tiles.length; i += batchSize) {
     send({
       type: "set_terrain",
-      tiles: tiles.slice(i, i + MAX_TERRAIN_BATCH),
-      terrain: terrain.slice(i, i + MAX_TERRAIN_BATCH),
+      tiles: tiles.slice(i, i + batchSize),
+      terrain: terrain.slice(i, i + batchSize),
     });
   }
 }

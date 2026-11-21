@@ -1,3 +1,4 @@
+import type { EditorCommand } from "@openfront/engine-api/EditorCommands";
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
@@ -18,6 +19,7 @@ import { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import { SnapshotHeader } from "@openfront/engine-api/game/SnapshotHeader";
 import { ClientID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
 import {
+  EditorCommandMessage,
   InitMessage,
   ReadSnapshotHeaderMessage,
   WorkerMessage,
@@ -95,6 +97,11 @@ export class WorkerClient {
     private clientID: ClientID | undefined,
     /** Resume from this game snapshot instead of starting a new game. */
     private snapshotToRestore?: Uint8Array,
+    /**
+     * The scenario editor: start an editor engine on these map files
+     * instead of loading the game's map.
+     */
+    private editorMap?: MapFiles,
   ) {
     this.messageHandlers = new Map();
   }
@@ -138,7 +145,9 @@ export class WorkerClient {
     const created = createGameWorker();
     let map: MapFiles;
     try {
-      map = await loadMapFiles(terrainMapFileLoader, gameMap, gameMapSize);
+      map =
+        this.editorMap ??
+        (await loadMapFiles(terrainMapFileLoader, gameMap, gameMapSize));
     } catch (err) {
       // Nothing will use the worker; don't leave it running.
       created.then(
@@ -172,6 +181,7 @@ export class WorkerClient {
         clientID: this.clientID,
         map,
         snapshot: this.snapshotToRestore,
+        editor: this.editorMap !== undefined,
       };
       worker.postMessage(init, mapFilesTransfer(map));
 
@@ -199,6 +209,32 @@ export class WorkerClient {
     this.worker!.postMessage({
       type: "turn",
       turn,
+    });
+  }
+
+  /**
+   * Applies one command in an editor engine. Its updates reach the
+   * callback given to start() before this resolves, with the map files
+   * if the command was `export_terrain`. Rejects if the engine refused it,
+   * having changed nothing.
+   */
+  editorCommand(command: EditorCommand): Promise<MapFiles | undefined> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+      const messageId = generateID();
+      this.messageHandlers.set(messageId, (message) => {
+        if (message.type !== "editor_command_result") return;
+        if (message.error !== undefined) reject(new Error(message.error));
+        else resolve(message.map);
+      });
+      this.worker!.postMessage({
+        type: "editor_command",
+        id: messageId,
+        command,
+      } satisfies EditorCommandMessage);
     });
   }
 

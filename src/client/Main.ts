@@ -170,6 +170,8 @@ import {
 import "./UserMeBroadcast";
 import { classicReplayHref } from "./replay/ReplayEntry";
 import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
+import type { ScenarioEditor } from "./scenario/ScenarioEditor";
+import { parseScenarioEditorHash } from "./scenario/ScenarioEditorRoute";
 import { tabAttention } from "./TabAttention";
 // The UsernameInput class is used as a type; retain this for registration.
 // oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
@@ -189,6 +191,7 @@ import { playerProfileRouteArgs } from "./utilities/PlayerProfileUrl";
 import {
   apexPathFor,
   currentPagePath,
+  exitGame,
   flushReloadToast,
   homeHref,
   incrementGamesPlayed,
@@ -331,6 +334,13 @@ class Client {
   private lobbyHandle: JoinLobbyResult | null = null;
   /** The game the replay viewer is showing, once it has replaced the menu. */
   private replayViewerID: string | null = null;
+  /**
+   * The scenario editor once it has replaced the menu: the element, or the
+   * draft it opens while its chunk loads.
+   */
+  private scenarioEditor: Pick<ScenarioEditor, "draftId"> | null = null;
+  /** A join closed the scenario editor; the menu is gone. */
+  private menuGoneForJoin = false;
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
@@ -623,9 +633,15 @@ class Client {
 
     window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
-      if (this.replayViewerID !== null) {
-        // Leaving the replay viewer always navigates, so the same applies:
-        // nothing else clears the in-game signal it set.
+      if (
+        this.replayViewerID !== null ||
+        this.scenarioEditor !== null ||
+        this.menuGoneForJoin
+      ) {
+        // Leaving the replay viewer or the scenario editor always navigates,
+        // so the same applies: nothing else clears the in-game signal they set.
+        // menuGoneForJoin: a join closed the editor and goes home without
+        // reaching a lobby, so neither the editor nor lobbyHandle is left.
         setInGameSignal(false);
       }
       if (this.lobbyHandle !== null) {
@@ -687,6 +703,10 @@ class Client {
         // superseded cannot clear the flag its successor is relying on.
         if (joinOwnsInFlightFlag(this.mostRecentJoinEvent, event.timeStamp)) {
           this.joinInFlight = false;
+          // The join closed the scenario editor, which had replaced the
+          // menu: nothing is left on the page, so leave as a game does
+          // (back to the editor, for its test play).
+          if (this.menuGoneForJoin) exitGame();
         }
         throw error;
       });
@@ -1197,16 +1217,23 @@ class Client {
         this.leaveReplayViewer();
         return;
       }
+      if (this.scenarioEditor !== null) {
+        this.leaveScenarioEditor();
+        return;
+      }
       // Checked before the join modal is closed below: closing it resets
       // the URL, which would drop the hash before handleUrl reads it.
       const replayViewerID = parseReplayViewerHash(window.location.hash);
-      if (replayViewerID !== null) {
+      const scenarioEditor = parseScenarioEditorHash(window.location.hash);
+      if (replayViewerID !== null || scenarioEditor !== null) {
         // Not over a game that's running, a lobby being waited in, or a join
-        // still on its way to one: the viewer would open on top of it. Drop
-        // the hash, so a reload goes back to the game rather than the viewer.
-        // currentUrl is only set once the game starts.
+        // still on its way to one: the viewer (or editor) would open on top
+        // of it. Drop the hash, so a reload goes back to the game rather than
+        // the viewer. currentUrl is only set once the game starts.
         if (this.gameUnderway()) {
-          console.warn("replay viewer: ignored, a game is running");
+          console.warn(
+            `${replayViewerID !== null ? "replay viewer" : "scenario editor"}: ignored, a game is running`,
+          );
           history.replaceState(
             null,
             "",
@@ -1215,7 +1242,8 @@ class Client {
           );
           return;
         }
-        void this.openReplayViewer(replayViewerID);
+        if (replayViewerID !== null) void this.openReplayViewer(replayViewerID);
+        else void this.openScenarioEditor(scenarioEditor!.draft);
         return;
       }
       // Router-managed hash changes (#modal=...) are handled by the router
@@ -1238,7 +1266,7 @@ class Client {
     const leaveGame = () => {
       void gamePortal.gameplayStop().then(() => {
         // redirect to the home page
-        window.location.href = homeHref();
+        exitGame();
       });
     };
 
@@ -1259,6 +1287,10 @@ class Client {
 
       if (this.replayViewerID !== null) {
         this.leaveReplayViewer();
+        return;
+      }
+      if (this.scenarioEditor !== null) {
+        this.leaveScenarioEditor();
         return;
       }
       if (this.currentUrl !== null && this.lobbyHandle !== null) {
@@ -1413,14 +1445,25 @@ class Client {
       this.replayViewerID = null;
       return;
     }
-    // The same teardown as starting a game: the featured stream, ads and
-    // menu music stop, and the menu's modals close.
+    this.replaceMenu();
+    setInGameSignal(true);
+    const viewer = new ReplayViewer();
+    viewer.gameID = gameID;
+    document.body.appendChild(viewer);
+  }
+
+  /**
+   * The same teardown as starting a game, for a page that replaces the menu
+   * (the replay viewer, the scenario editor): the featured stream, ads and
+   * menu music stop, and the menu's modals close.
+   */
+  private replaceMenu(): void {
     const hash = window.location.hash;
     // Set first, as at game prestart: a menu-audio import that finishes
-    // later must not start the menu theme under the viewer.
+    // later must not start the menu theme under the page.
     this.menuTornDown = true;
     document.dispatchEvent(new CustomEvent("game-starting"));
-    // A lobby modal may be open (a #join hash switched to a replay): close it
+    // A lobby modal may be open (a #join hash switched to the page): close it
     // the way a game start does, without leaving a lobby it never joined.
     this.loadedHostModal()?.disarmLeaveOnClose();
     this.loadedJoinModal()?.disarmLeaveOnClose();
@@ -1428,12 +1471,12 @@ class Client {
     this.loadedJoinModal()?.closeWithoutLeaving();
     this.closeMenu();
     // close() keeps a lobby's bottom rail for the spawn phase, which the
-    // viewer never reaches.
+    // page never reaches.
     (
       document.querySelector("homepage-promos") as HomepagePromos | null
     )?.destroyBottomRail?.();
-    // Closing a modal the router opened clears the hash. Put the viewer's
-    // back, so a reload opens the replay again.
+    // Closing a modal the router opened clears the hash. Put the page's
+    // back, so a reload opens it again.
     if (window.location.hash !== hash) {
       history.replaceState(
         history.state,
@@ -1441,10 +1484,65 @@ class Client {
         window.location.pathname + window.location.search + hash,
       );
     }
+  }
+
+  /**
+   * Replace the menu with the scenario editor. Leaving it reloads the page,
+   * like leaving the replay viewer.
+   */
+  private async openScenarioEditor(draft: string | null): Promise<void> {
+    // Both popstate and hashchange can get here; only the first opens it.
+    if (this.scenarioEditor !== null) return;
+    const request = { draftId: draft };
+    this.scenarioEditor = request;
+    let ScenarioEditorClass: typeof ScenarioEditor;
+    try {
+      ({ ScenarioEditor: ScenarioEditorClass } =
+        await import("./scenario/ScenarioEditor"));
+    } catch (err) {
+      console.error("scenario editor failed to load:", err);
+      if (this.scenarioEditor !== request) return;
+      this.scenarioEditor = null;
+      // Drop the hash, so opening the editor again retries the load.
+      if (parseScenarioEditorHash(window.location.hash) !== null) {
+        history.replaceState(
+          null,
+          "",
+          window.location.pathname + window.location.search,
+        );
+      }
+      void showInGameAlert(translateText("scenario_editor.load_failed"));
+      return;
+    }
+    // A join may have started while the chunk loaded, and dropped this
+    // request even if it has since failed.
+    if (this.scenarioEditor !== request || this.gameUnderway()) {
+      console.warn("scenario editor: ignored, a game started");
+      if (this.scenarioEditor === request) this.scenarioEditor = null;
+      return;
+    }
+    this.replaceMenu();
     setInGameSignal(true);
-    const viewer = new ReplayViewer();
-    viewer.gameID = gameID;
-    document.body.appendChild(viewer);
+    const editor = new ScenarioEditorClass();
+    editor.draftId = draft;
+    this.scenarioEditor = editor;
+    document.body.appendChild(editor);
+  }
+
+  /**
+   * The URL changed under the editor. As for the replay viewer: another
+   * draft reloads the page, anything else goes home.
+   */
+  private leaveScenarioEditor(): void {
+    const route = parseScenarioEditorHash(window.location.hash);
+    // The second of the two events that opened it, or the hash the editor
+    // set for the draft it opened.
+    if (route !== null && route.draft === this.scenarioEditor?.draftId) return;
+    if (route !== null) {
+      window.location.reload();
+    } else {
+      window.location.href = homeHref();
+    }
   }
 
   /**
@@ -1511,6 +1609,12 @@ class Client {
     const replayViewerID = parseReplayViewerHash(hash);
     if (replayViewerID !== null) {
       await this.openReplayViewer(replayViewerID);
+      return;
+    }
+    // So does the scenario editor.
+    const scenarioEditor = parseScenarioEditorHash(hash);
+    if (scenarioEditor !== null) {
+      await this.openScenarioEditor(scenarioEditor.draft);
       return;
     }
 
@@ -1897,6 +2001,22 @@ class Client {
         );
       }
     }
+    if (this.scenarioEditor !== null) {
+      console.log("joining lobby, tearing down scenario editor");
+      // Only the loaded editor has replaced the menu.
+      if (this.scenarioEditor instanceof HTMLElement) {
+        this.menuGoneForJoin = true;
+      }
+      this.scenarioEditor = null;
+      document.querySelector("scenario-editor")?.remove();
+      if (parseScenarioEditorHash(window.location.hash) !== null) {
+        history.replaceState(
+          null,
+          "",
+          window.location.pathname + window.location.search,
+        );
+      }
+    }
 
     if (this.lobbyHandle !== null) {
       console.log("joining lobby, stopping existing game");
@@ -1972,8 +2092,27 @@ class Client {
       }
       // handleLeaveLobby only resets the URL once a lobby handle exists.
       history.replaceState(null, "", "/");
+      // Go home only once the player has read the alert. Taking the flag
+      // also stops beforeunload clearing the editor's in-game signal, so
+      // clear it here.
+      const menuGone = this.menuGoneForJoin;
+      if (menuGone) setInGameSignal(false);
+      this.menuGoneForJoin = false;
       void this.handleLeaveLobby();
-      void showInGameAlert(translateText("error_modal.game_client_failed"));
+      void showInGameAlert(
+        translateText("error_modal.game_client_failed"),
+      ).then(() => {
+        // Unless the player has joined another game, or opened the editor or
+        // a replay, while the alert was up.
+        if (
+          menuGone &&
+          !this.gameUnderway() &&
+          this.scenarioEditor === null &&
+          this.replayViewerID === null
+        ) {
+          exitGame();
+        }
+      });
       return;
     }
     const newLobbyHandle = joinLobby(this.eventBus, {
@@ -2014,6 +2153,7 @@ class Client {
     this.lobbyHandle = newLobbyHandle;
     // From here lobbyHandle is the guard.
     this.joinInFlight = false;
+    this.menuGoneForJoin = false;
 
     void this.lobbyHandle.prestart.then(() => {
       // The game is actually starting now (lobby wait is over). Let listeners that stay up
@@ -2244,6 +2384,10 @@ class Client {
     this.mostRecentJoinEvent = performance.now();
 
     if (this.lobbyHandle === null) {
+      // The join closed the scenario editor, which had replaced the menu, and
+      // ended before reaching a lobby: nothing is left on the page, so leave as
+      // a game does (back to the editor, for its test play).
+      if (this.menuGoneForJoin) exitGame();
       return;
     }
     console.log("leaving lobby, cancelling game");

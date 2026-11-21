@@ -15,6 +15,9 @@ vi.mock("../../src/client/Utils", () => ({
     vars?.reason !== undefined ? `${key}:${vars.reason}` : key,
   ),
   homeHref: vi.fn(() => "/"),
+  exitGame: vi.fn(() => {
+    window.location.href = "/";
+  }),
 }));
 
 vi.mock("src/client/ClientEnv", async (importOriginal) => {

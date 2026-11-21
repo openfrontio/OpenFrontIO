@@ -70,6 +70,9 @@ export class DocumentEditor {
   constructor(
     readonly doc: ScenarioDocument,
     private readonly send: SendCommand,
+    // How many tiles one set_terrain carries. Only tests set it, small, to
+    // cross a batch boundary without writing a million tiles.
+    private readonly terrainBatch: number = MAX_TERRAIN_BATCH,
   ) {}
 
   /**
@@ -280,8 +283,8 @@ export class DocumentEditor {
         // Undo writes the batches back last first, so it passes through the
         // same terrain the edit did, where every port it keeps had a shore.
         const undoTerrain: Edit[] = [];
-        for (let i = 0; i < tiles.length; i += MAX_TERRAIN_BATCH) {
-          const batch = tiles.slice(i, i + MAX_TERRAIN_BATCH);
+        for (let i = 0; i < tiles.length; i += this.terrainBatch) {
+          const batch = tiles.slice(i, i + this.terrainBatch);
           for (const t of batch) doc.terrain[t] = terrain.get(t)!;
           const ports = this.removeStructures(
             (s) => s.type === UnitType.Port && !isShore(doc, s.tile),
@@ -290,10 +293,10 @@ export class DocumentEditor {
           undoTerrain.unshift({
             type: "set_terrain",
             tiles: batch,
-            terrain: previous.slice(i, i + MAX_TERRAIN_BATCH),
+            terrain: previous.slice(i, i + this.terrainBatch),
           });
         }
-        sendTerrain(tiles, [...terrain.values()], this.send);
+        sendTerrain(tiles, [...terrain.values()], this.send, this.terrainBatch);
         return [...undoTerrain, ...this.ownerEdits(before), ...lost];
       }
     }

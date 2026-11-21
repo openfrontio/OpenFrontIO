@@ -40,6 +40,9 @@ vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, unknown>) =>
     params === undefined ? key : `${key} ${JSON.stringify(params)}`,
   homeHref: () => "/",
+  exitGame: vi.fn(() => {
+    window.location.href = "/";
+  }),
 }));
 
 import type { LobbyConfig } from "../../src/client/ClientGameRunner";

@@ -5,8 +5,10 @@ import { isPinnedToAVersion } from "../../src/client/ServerList";
 import {
   apexPathFor,
   currentPagePath,
+  exitGame,
   homeHref,
   reloadForUpdate,
+  returnFromGameTo,
 } from "../../src/client/Utils";
 
 // A document can sit on a deployment host (cross-host game visit, stale
@@ -16,6 +18,7 @@ import {
 // the apex instead, which always fronts the active deployment.
 describe("apex-aware navigation", () => {
   const replace = vi.fn<(url: string) => void>();
+  const reload = vi.fn<() => void>();
 
   // currentPagePath reads the pin captured at boot (PagePin.ts), not the
   // live pathname, so every restubbed location has to drop the captured
@@ -43,6 +46,7 @@ describe("apex-aware navigation", () => {
         pathname: path,
         search: "",
         replace,
+        reload,
       },
       writable: true,
       configurable: true,
@@ -51,9 +55,12 @@ describe("apex-aware navigation", () => {
 
   beforeEach(() => {
     replace.mockClear();
+    reload.mockClear();
   });
 
   afterEach(() => {
+    returnFromGameTo(null);
+    vi.restoreAllMocks();
     ClientEnv.reset();
     delete window.BOOTSTRAP_CONFIG;
   });
@@ -68,6 +75,32 @@ describe("apex-aware navigation", () => {
     expect(homeHref()).toBe("/");
     stubPage("beta.openfront.io", "/");
     expect(homeHref()).toBe("/");
+  });
+
+  it("exitGame leaves for the menu as homeHref says", () => {
+    stubPage("green.openfront.io", "/", "openfront.io");
+    exitGame();
+    expect(window.location.href).toBe("https://openfront.io/");
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  // A scenario test play goes back to the editor's draft. Only the hash
+  // differs from the game's URL, and a href that changes only the hash
+  // wouldn't load the page again.
+  it("exitGame reloads the page that started the game, on this host", () => {
+    stubPage("green.openfront.io", "/v/5ccc50a7/", "openfront.io");
+    const replaceState = vi
+      .spyOn(history, "replaceState")
+      .mockImplementation(() => {});
+    returnFromGameTo("#scenario-editor=DRAFT001");
+    exitGame();
+    expect(replaceState).toHaveBeenCalledWith(
+      null,
+      "",
+      "/v/5ccc50a7/#scenario-editor=DRAFT001",
+    );
+    expect(reload).toHaveBeenCalledOnce();
+    expect(window.location.href).toBe("https://green.openfront.io/v/5ccc50a7/");
   });
 
   it("reloadForUpdate re-enters through the apex, keeping the game path", () => {

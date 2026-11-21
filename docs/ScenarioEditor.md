@@ -1,7 +1,9 @@
 # Scenario editor
 
-Status: design, 2026-11-18. The engine's editor mode and the document model
-(with undo and local drafts) are built. The editor UI is not.
+Status: design, 2026-11-19. The engine's editor mode, the document model
+(with undo and local drafts), the editor page, the terrain and territory
+tools, the nations panel and bundle export and loading are built. The
+structure and settings tools, PNG import and test play are not.
 
 ## What it is
 
@@ -134,6 +136,16 @@ ScenarioBundle
 The bundle is gzipped as a whole. For scale: a late-game World snapshot is
 about 2.7 MB raw, and terrain is one byte per tile and compresses well.
 
+Before gzip, each section is a frame: a little-endian u32 length, then the
+bytes (`ScenarioBundle.ts`). The header and the manifest are JSON. The header
+comes first in every format, so any build can read its `format` and refuse
+one it doesn't know. The thumbnail is drawn from the 4x map as the map
+generator draws a stock map's; Safari can't encode webp, so it can't export.
+The hash is SHA-256 over every frame after the header, so the header can
+carry it. The header's nations are only for showing before play; the
+snapshot's own nations are what play. zbin is not used: it has no version and
+is tied to the build.
+
 The map files in the bundle are the finished terrain, so the snapshot's
 terrain diff is empty. Shipping a blank map and letting the diff carry the
 terrain would also work, but the diff costs about 6 bytes per changed tile
@@ -158,6 +170,11 @@ UI, the document, and the editing engine's worker. It follows the
 `<replay-viewer>` precedent: a full-page element that drives the renderer
 itself and borrows HUD layers by setting their properties, calling `init()`
 and calling `tick()` by hand.
+
+Until the menu entry exists it is opened by URL: `#scenario-editor` shows
+its start screen (the local drafts, a new blank scenario, or one started
+from a stock map), and `#scenario-editor=<draftID>` opens a draft. Main
+loads the element with `import()`.
 
 ### One engine, never ticking
 
@@ -265,7 +282,14 @@ Two rules:
   is updated to match.
 
 Starting from a stock map loads that map's files instead of a blank one and
-copies its authored bytes into the document.
+copies its authored bytes into the document (`stockMapStart`). The files
+are relabelled as a `Custom` map with no nations, so the engine
+starts on them as it would on a blank map. Only the terrain is taken. A
+draft started this way reopens like any other, from a blank map.
+
+The start screen lists the stock maps and reads the picked one's manifest
+for its size; a map over the limits below is shown as too large and cannot
+be started from.
 
 PNG import is editor code and is small: decode the image, apply the
 generator's pixel rules (blue channel for elevation, black for impassable,
@@ -273,13 +297,13 @@ transparent for water), and send the result as one terrain edit. The
 generator's optional removal of tiny islands and lakes is a later tool, not
 part of import.
 
-Limits: width and height are multiples of 4, each at least 100, and the
-area is at most 3,000,000 tiles. The generator recommends 2-3 million tiles
-for a stock map. Its upper bound holds for scenarios: the engine, renderer
-and snapshot all scale with area. Its lower bound does not, as a scenario
-may be a small duel. A side of 100 still gives a 16x map 25 tiles across.
-About half the stock maps are over 3 million tiles, so they cannot be a
-scenario's starting map.
+Limits: width and height are multiples of 4, each from 100 to 5000, so a
+map is at most 25 million tiles. The engine, renderer and snapshot all
+scale with area, and the largest stock maps in play are 8-11 million
+tiles. The generator's lower bound of 2 million tiles does not hold, as a
+scenario may be a small duel. A side of 100 still gives a 16x map 25 tiles
+across. Stock maps with a side over 5000 cannot be a scenario's starting
+map.
 
 ## Engine changes
 
@@ -291,7 +315,8 @@ value, `Custom`, that means "the files came with the game start". The
 snapshot's terrain hash still guarantees the files match.
 
 The client's `GameMapLoader` gets a way to answer for `Custom` from a loaded
-bundle instead of from `resources/maps`.
+bundle instead of from `resources/maps`: `FetchGameMapLoader.setCustomMap`,
+which `useScenarioMap` calls with the bundle's files and its thumbnail.
 
 ### Editor mode in the worker
 
@@ -341,7 +366,10 @@ be undone. Instead:
    `Custom` map whose manifest is the one the engine started on with the
    three sizes' tile counts redone.
 2. Start a second engine on those map files, replay everything except
-   terrain from the copy, send `finalize`, snapshot, and discard it.
+   terrain from the copy, send `finalize`, snapshot, and discard it. In the
+   browser that engine is a second worker (`exportScenario`). It starts on
+   the editor's start info with the document's settings, which the snapshot
+   keeps, and the snapshot records the build's commit, as the header does.
 
 The second engine is what makes the snapshot's terrain diff empty.
 
@@ -480,9 +508,13 @@ covers every way of saving or sharing one.
 
 A bundle is another player's upload that the client decodes and restores.
 Clients cap its inflated size (as `SavedGamesApi` does for shared saves),
-validate every section against its schema, and verify the hash. Snapshot
-restore already validates each record with zod; that path gets a hostile
-input review before scenarios are shareable.
+validate every section against its schema, and verify the hash. The cap is
+21/16 bytes a tile for the map files plus 5 for the snapshot, about 166 MB on
+a 25M-tile map; export refuses a bundle over it. Measured on exported maps, a
+snapshot's tile lists take one byte a tile owned in one block and four with
+every tile a random one of 400 nations'. Snapshot restore already validates
+each record with zod; that path gets a hostile input review before scenarios
+are shareable.
 
 ## Order of work
 
@@ -495,7 +527,7 @@ input review before scenarios are shareable.
 2. **Editor core**: document model, tools, PNG import, test play. Until the
    API exists, the draft is kept in browser storage: IndexedDB, as the
    stored form the API will take (`ScenarioDrafts`). localStorage is too
-   small, as a 3M-tile document is about 4 MB of base64.
+   small, as a 25M-tile document is about 33 MB of base64.
 3. **Scenario start**: bundle loading, scenario block in the
    start info, singleplayer play.
 4. **API**: storage, entitlement, publish, list. Then the editor's save and

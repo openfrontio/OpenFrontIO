@@ -19,6 +19,7 @@ import {
   DEFAULT_NUKE_EXPLOSION_COLOR,
   MAX_NUKE_EXPLOSION_COLORS,
   type NukeExplosionRenderParams,
+  type UnitState,
 } from "./render/types";
 // Value import from the leaf module (not the ./render/gl barrel) so non-Vite
 // consumers don't pull in GPURenderer and its shaders — see note above.
@@ -179,6 +180,39 @@ export class WebGLFrameBuilder {
     this.lastSpawnTile.clear();
     this.localPlayerSmallID = 0;
     this.skinsInitialized = false;
+  }
+
+  /**
+   * After the renderer's context is restored, WebGL has lost all textures
+   * and geometry: upload the whole simulation state again.
+   */
+  restoreContext(gameView: GameView): void {
+    this.clearCaches();
+    const view = this.view;
+    const mapWidth = gameView.width();
+    const mapHeight = gameView.height();
+
+    // Full upload of terrain, territory & trail state
+    const mapSize = mapWidth * mapHeight;
+    const allTerrain = new Uint8Array(mapSize);
+    for (let i = 0; i < mapSize; i++) {
+      allTerrain[i] = gameView.terrainByte(i);
+    }
+    view.applyTerrainRects(
+      [{ x: 0, y: 0, w: mapWidth, h: mapHeight }],
+      allTerrain,
+    );
+
+    const frameData = gameView.frameData();
+    view.uploadTileAndTrailState(frameData.tileState, frameData.trailState);
+
+    // Structures, railroads and relations normally skip GPU upload unless
+    // marked dirty, now force
+    view.updateStructures(frameData.units as Map<number, UnitState>);
+    view.uploadRailroadState(frameData.railroadState);
+    view.updateRelations(frameData.relationMatrix, frameData.relationSize);
+
+    this.update(gameView);
   }
 
   /**

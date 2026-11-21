@@ -16,17 +16,31 @@ import {
 } from "@openfront/engine-api/EditorCommands";
 import { Difficulty, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { GameConfigSchema, ID } from "@openfront/engine-api/Schemas";
+import { generateID } from "@openfront/shared/SharedUtil";
 import { z } from "zod";
 
 /** The version of the stored form. A change to it gets a new one. */
 export const SCENARIO_FORMAT = 1;
 
-// The map generator recommends 2M-3M tiles, and at most 3M land tiles. Its
-// lower bound is for stock maps; a scenario can be small. So the area is
-// capped at 3M tiles and each side is at least 100, which leaves room for a
-// few nations and a 16x map at least 25 tiles wide.
+// Each side is at least 100, which leaves room for a few nations and a 16x
+// map at least 25 tiles wide, and at most 5000, so a map is at most 25M
+// tiles: about three times the largest stock maps in play.
 export const MIN_SIDE = 100;
-export const MAX_AREA = 3_000_000;
+export const MAX_SIDE = 5000;
+
+/** Whether a scenario's map can be this size. */
+export function isScenarioSize(width: number, height: number): boolean {
+  return (
+    Number.isInteger(width) &&
+    Number.isInteger(height) &&
+    width >= MIN_SIDE &&
+    height >= MIN_SIDE &&
+    width % 4 === 0 &&
+    height % 4 === 0 &&
+    width <= MAX_SIDE &&
+    height <= MAX_SIDE
+  );
+}
 
 // GameConfig's limit on the number of nations.
 export const MAX_NATIONS = 400;
@@ -61,6 +75,32 @@ export const ScenarioNationSchema = z.object({
   playable: z.boolean(),
 });
 export type ScenarioNation = z.infer<typeof ScenarioNationSchema>;
+
+// What a human starts with in play.
+const NEW_NATION_TROOPS = 25_000;
+
+/**
+ * A nation to add to the document: a new id, and the first of `name(1)`,
+ * `name(2)`, ... that no nation has.
+ */
+export function newNation(
+  doc: ScenarioDocument,
+  name: (n: number) => string,
+): ScenarioNation {
+  const names = new Set(doc.nations.map((n) => n.name));
+  let n = 1;
+  while (names.has(name(n))) n++;
+  let id = generateID();
+  while (doc.nations.some((other) => other.id === id)) id = generateID();
+  return {
+    id,
+    name: name(n),
+    flag: null,
+    troops: NEW_NATION_TROOPS,
+    gold: 0,
+    playable: false,
+  };
+}
 
 export const ScenarioStructureSchema = z.object({
   type: PlaceStructureCommandSchema.shape.unit,
@@ -114,7 +154,7 @@ export interface ScenarioDocument {
   config: ScenarioConfig;
 }
 
-const Side = z.int().min(MIN_SIDE).multipleOf(4);
+const Side = z.int().min(MIN_SIDE).max(MAX_SIDE).multipleOf(4);
 
 /**
  * The stored form. Terrain is base64. Ownership is run-length encoded as
@@ -155,9 +195,6 @@ export type StoredScenarioDocument = z.input<typeof ScenarioDocumentSchema>;
 function decode(stored: StoredScenarioDocument): ScenarioDocument {
   const { width, height } = stored.terrain;
   const size = width * height;
-  if (size > MAX_AREA) {
-    throw new Error(`${width}x${height} is over ${MAX_AREA} tiles`);
-  }
   const terrain = base64ToBytes(stored.terrain.tiles);
   if (terrain.length !== size) {
     throw new Error(`${terrain.length} terrain bytes for ${size} tiles`);
@@ -242,6 +279,48 @@ export function newScenarioDocument(
       instantBuild: false,
     },
   } satisfies StoredScenarioDocument);
+}
+
+/**
+ * The document on a map of another size, which keeps its top-left corner:
+ * cropped tiles go with their owners and structures, new ones are water,
+ * and a port left without a shore goes. Nations and settings stay.
+ */
+export function resizeScenarioDocument(
+  doc: ScenarioDocument,
+  width: number,
+  height: number,
+): ScenarioDocument {
+  if (!isScenarioSize(width, height)) {
+    throw new Error(`a scenario can't be ${width}x${height}`);
+  }
+  const terrain = new Uint8Array(width * height);
+  const owners = new Uint16Array(width * height);
+  const rowLength = Math.min(width, doc.width);
+  for (let y = 0; y < Math.min(height, doc.height); y++) {
+    const from = y * doc.width;
+    terrain.set(doc.terrain.subarray(from, from + rowLength), y * width);
+    owners.set(doc.owners.subarray(from, from + rowLength), y * width);
+  }
+  const resized: ScenarioDocument = {
+    ...doc,
+    meta: { ...doc.meta },
+    width,
+    height,
+    terrain,
+    nations: doc.nations.map((n) => ({ ...n })),
+    owners,
+    structures: [],
+  };
+  for (const s of doc.structures) {
+    const x = s.tile % doc.width;
+    const y = Math.floor(s.tile / doc.width);
+    if (x >= width || y >= height) continue;
+    const tile = y * width + x;
+    if (s.type === UnitType.Port && !isShore(resized, tile)) continue;
+    resized.structures.push({ ...s, tile });
+  }
+  return resized;
 }
 
 export function encodeOwnership(owners: Uint16Array): number[] {

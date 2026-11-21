@@ -1,3 +1,4 @@
+import { authoredTerrain } from "@openfront/engine-api/EditorCommands";
 import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
 import {
@@ -385,7 +386,7 @@ export class WaterManager {
     for (let my = 0, t = 0; my < mini.height(); my++) {
       for (let mx = 0; mx < mini.width(); mx++, t++) {
         const value = miniAuthored(this.map, mx, my);
-        if (authoredByte(miniTerrain[t]) !== value) {
+        if (authoredTerrain(miniTerrain[t]) !== value) {
           mini.setTerrainByte(t, value);
         }
       }
@@ -1273,13 +1274,6 @@ function terrainOf(map: GameMap): Uint8Array {
   return (map as unknown as { terrain: Uint8Array }).terrain;
 }
 
-/** The bits of a terrain byte the author decides: 0, 0x80 | elevation, 0x9f. */
-function authoredByte(b: number): number {
-  return (b & TERRAIN_LAND_MASK) === 0
-    ? 0
-    : b & (TERRAIN_LAND_MASK | TERRAIN_MAG_MASK);
-}
-
 /** 0 water, 1 land, 2 impassable. */
 function terrainKind(b: number): number {
   if ((b & TERRAIN_LAND_MASK) === 0) return 0;
@@ -1302,7 +1296,7 @@ function writeAuthored(
   kindChanged: Set<TileRef>,
 ): boolean {
   const b = map.terrainByte(tile);
-  if (authoredByte(b) === value) return false;
+  if (authoredTerrain(b) === value) return false;
   if (terrainKind(b) !== terrainKind(value)) kindChanged.add(tile);
   map.setTerrainByte(tile, value);
   return true;
@@ -1323,7 +1317,7 @@ function miniAuthored(map: GameMap, mx: number, my: number): number {
   const d = terrainKind(terrain[s + w + 1]);
   if (a === 0 || b === 0 || c === 0 || d === 0) return 0;
   if (a === 2 || b === 2 || c === 2 || d === 2) return IMPASSABLE_BYTE;
-  return authoredByte(terrain[s + w + 1]);
+  return authoredTerrain(terrain[s + w + 1]);
 }
 
 /**
