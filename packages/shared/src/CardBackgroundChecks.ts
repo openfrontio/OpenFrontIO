@@ -54,6 +54,7 @@ export interface CardBackgroundFiles {
 }
 
 export type CardIssueCode =
+  | "files_invalid"
   | "base_size"
   | "base_format"
   | "layer_size"
@@ -62,6 +63,7 @@ export type CardIssueCode =
   | "animation_invalid"
   | "layer_count_mismatch"
   | "layer_effect_mismatch"
+  | "layer_src"
   | "layer_opaque"
   | "set_too_large"
   | "animated_area"
@@ -77,8 +79,88 @@ export interface CardIssue {
   params?: Record<string, string | number>;
 }
 
+// Whether `img` is an image whose pixel buffer holds exactly width × height
+// pixels. Anything else (no data, a short buffer) is never read pixel by pixel.
+function pixelsOk(img: unknown): img is CardCheckImage {
+  if (typeof img !== "object" || img === null) return false;
+  const { width, height, data } = img as Partial<CardCheckImage>;
+  return (
+    Number.isInteger(width) &&
+    Number.isInteger(height) &&
+    typeof data === "object" &&
+    data !== null &&
+    typeof data.length === "number" &&
+    data.length === (width as number) * (height as number) * 4
+  );
+}
+
 function sizeOk(img: CardCheckImage): boolean {
-  return img.width === CARD_ART_WIDTH && img.height === CARD_ART_HEIGHT;
+  return (
+    pixelsOk(img) &&
+    img.width === CARD_ART_WIDTH &&
+    img.height === CARD_ART_HEIGHT
+  );
+}
+
+// The width and height an image says it has, for a size issue.
+function reportedSize(img: unknown): { width: number; height: number } {
+  const { width, height } = (img ?? {}) as Partial<CardCheckImage>;
+  return {
+    width: typeof width === "number" ? width : 0,
+    height: typeof height === "number" ? height : 0,
+  };
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null;
+
+// Whether `files` has the shape checkCardBackground reads. The host builds it
+// from files it decoded; a server re-checking what a page sent can't assume
+// that.
+function filesShapeOk(files: unknown): files is CardBackgroundFiles {
+  if (!isObject(files) || !isObject(files.base)) return false;
+  if (!Array.isArray(files.layers)) return false;
+  return files.layers.every(isObject);
+}
+
+// A layer's src in a catalogue entry: a relative path to a PNG, like
+// /cosmetics/card-backgrounds/bg_neon_grid_fx-drift.png, or the bare file
+// name. No scheme, host, "..", backslash or quote: the game loads it as an
+// image and inside a CSS url().
+const CATALOGUE_SRC =
+  /^\/?(?:[A-Za-z0-9_-][A-Za-z0-9._-]*\/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.png$/i;
+const MAX_SRC_LENGTH = 200;
+
+/** Whether `src` is a relative catalogue path to a PNG layer. */
+export function isCatalogueLayerSrc(src: unknown): boolean {
+  return (
+    typeof src === "string" &&
+    src.length <= MAX_SRC_LENGTH &&
+    CATALOGUE_SRC.test(src)
+  );
+}
+
+/**
+ * The layers of `animation` whose src isn't a relative catalogue path, as
+ * `layer_src` errors. Not part of checkCardBackground, since the browser
+ * previews layers from blob: URLs: the checks entry adds it, for what a host
+ * stores or sends on.
+ */
+export function checkLayerSources(animation: unknown): CardIssue[] {
+  if (!isObject(animation) || !Array.isArray(animation.layers)) return [];
+  const issues: CardIssue[] = [];
+  animation.layers.forEach((layer: unknown, i: number) => {
+    const src = isObject(layer) ? layer.src : undefined;
+    if (!isCatalogueLayerSrc(src)) {
+      issues.push({
+        code: "layer_src",
+        level: "error",
+        layer: i,
+        params: { src: String(src).slice(0, MAX_SRC_LENGTH) },
+      });
+    }
+  });
+  return issues;
 }
 
 function luma(d: Uint8ClampedArray, i: number): number {
@@ -86,6 +168,8 @@ function luma(d: Uint8ClampedArray, i: number): number {
 }
 
 function hasTransparency(img: CardCheckImage): boolean {
+  // An image with unreadable pixels already has its size issue.
+  if (!pixelsOk(img)) return true;
   const d = img.data;
   for (let i = 3; i < d.length; i += 4) if (d[i] < 255) return true;
   return false;
@@ -131,6 +215,9 @@ export function checkCardBackground(
   files: CardBackgroundFiles,
   animation: unknown,
 ): CardIssue[] {
+  if (!filesShapeOk(files)) {
+    return [{ code: "files_invalid", level: "error" }];
+  }
   const issues: CardIssue[] = [];
   const { base, layers } = files;
 
@@ -139,7 +226,7 @@ export function checkCardBackground(
     issues.push({
       code: "base_size",
       level: "error",
-      params: { width: base.image.width, height: base.image.height },
+      params: reportedSize(base.image),
     });
   }
   if (!BASE_TYPES.has(base.type)) {
@@ -155,7 +242,7 @@ export function checkCardBackground(
         code: "layer_size",
         level: "error",
         layer: i,
-        params: { width: l.image.width, height: l.image.height },
+        params: reportedSize(l.image),
       });
     }
   });
@@ -217,7 +304,9 @@ export function checkCardBackground(
   });
 
   // ---- Warnings. ----
-  const bytes = base.bytes + layers.reduce((sum, l) => sum + l.bytes, 0);
+  const size = (b: unknown) => (typeof b === "number" && b > 0 ? b : 0);
+  const bytes =
+    size(base.bytes) + layers.reduce((sum, l) => sum + size(l.bytes), 0);
   if (bytes > MAX_SET_BYTES) {
     issues.push({
       code: "set_too_large",

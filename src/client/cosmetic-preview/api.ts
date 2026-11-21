@@ -133,6 +133,8 @@ export interface CardBackgroundFiles {
 }
 
 export type CardIssueCode =
+  /** The files given aren't shaped as CardBackgroundFiles. */
+  | "files_invalid"
   | "base_size"
   | "base_format"
   | "layer_size"
@@ -141,6 +143,8 @@ export type CardIssueCode =
   | "animation_invalid"
   | "layer_count_mismatch"
   | "layer_effect_mismatch"
+  /** A layer src isn't a relative catalogue path (checks entry only). */
+  | "layer_src"
   | "layer_opaque"
   | "set_too_large"
   | "animated_area"

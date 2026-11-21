@@ -379,6 +379,51 @@ describe("checkCardBackground", () => {
     expect(codes(pulse)).not.toContain("drift_seam");
   });
 
+  describe("malformed input gives issues, never a throw", () => {
+    test("a pixel buffer shorter than width × height × 4 is the wrong size, not a seam", () => {
+      const short = {
+        width: W,
+        height: H,
+        data: new Uint8ClampedArray(W * H * 4 - 4),
+      };
+      const issues = checkCardBackground(
+        files({ layers: [layer("drift", short)] }),
+        anim({ src: "a.png", effect: "drift" }),
+      );
+      expect(issues).toContainEqual({
+        code: "layer_size",
+        level: "error",
+        layer: 0,
+        params: { width: W, height: H },
+      });
+      expect(codes(issues)).not.toContain("drift_seam");
+      expect(codes(issues)).not.toContain("layer_opaque");
+    });
+
+    test("an image with no pixel data is the wrong size", () => {
+      const noData = { width: W, height: H } as unknown as CardCheckImage;
+      const issues = checkCardBackground(
+        files({
+          base: { image: noData, type: "image/webp", bytes: 1 },
+          layers: [layer("pulse", noData)],
+        }),
+        anim({ src: "a.png", effect: "pulse" }),
+      );
+      expect(codes(issues)).toEqual(["base_size", "layer_size"]);
+    });
+
+    test.each([
+      ["no files", null],
+      ["no base", { layers: [] }],
+      ["layers not a list", { base: files().base, layers: "x" }],
+      ["a layer that isn't an object", { base: files().base, layers: [7] }],
+    ])("%s is files_invalid", (_name, input) => {
+      expect(
+        checkCardBackground(input as unknown as CardBackgroundFiles, undefined),
+      ).toEqual([{ code: "files_invalid", level: "error" }]);
+    });
+  });
+
   test("errors come before warnings", () => {
     const issues = checkCardBackground(
       files({
