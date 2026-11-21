@@ -179,6 +179,26 @@ describe("StreamingNow", () => {
       expect(el.querySelectorAll("a")).toHaveLength(0);
     });
 
+    it("stays collapsed with a single live stream", async () => {
+      getStreams.mockResolvedValue({
+        verifiedAt: new Date().toISOString(),
+        featured: [],
+        live: [
+          {
+            platform: "twitch",
+            channel: "bobthegamertwitch",
+            displayName: "Bob",
+            viewers: 14,
+            startedAt,
+          },
+        ],
+      });
+      const el = await mount();
+      expect(el.style.display).toBe("none");
+      expect(el.classList.contains("streaming-live")).toBe(false);
+      expect(el.querySelectorAll("a")).toHaveLength(0);
+    });
+
     it("does not subscribe on a short desktop-width screen", async () => {
       viewport.set(shortDesktop);
       const el = document.createElement("streaming-now") as HTMLElement & {

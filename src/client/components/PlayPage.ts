@@ -78,8 +78,8 @@ export class PlayPage extends LitElement {
           </div>
         </div>
 
-        <!-- Top strip: news + identity on the left, Streaming Now (or, while nobody is
-             live, the store spotlight) on the right. The 2fr/1fr split only exists while
+        <!-- Top strip: news + identity on the left, Streaming Now (or, while fewer
+             than two are live, the store spotlight) on the right. The 2fr/1fr split only exists while
              one of them is shown (.streaming-live / .shop-spotlight-live via has-[]) —
              otherwise the left column takes the full row. -->
         <div
@@ -119,8 +119,8 @@ export class PlayPage extends LitElement {
             class="hidden lg:flex lg:h-full lg:flex-col w-full min-w-0"
           ></streaming-now>
 
-          <!-- Same slot while nobody is streaming: three store items. Hidden whenever
-               Streaming Now is live. -->
+          <!-- Same slot while fewer than two are streaming: three store items. Hidden
+               whenever Streaming Now is shown. -->
           <shop-spotlight
             class="hidden lg:flex lg:h-full lg:flex-col lg:group-has-[.streaming-live]/strip:hidden w-full min-w-0"
           ></shop-spotlight>

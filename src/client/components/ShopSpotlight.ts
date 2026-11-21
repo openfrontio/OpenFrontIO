@@ -86,8 +86,8 @@ export function storeItemHash(resolved: ResolvedCosmetic): string {
 }
 
 // Homepage "In the Store" panel: three store items, each opening the store on
-// itself. Fills the Streaming Now slot while nobody is live; play-page hides it
-// (via group-has) whenever that panel is showing. Desktop only, like Streaming Now.
+// itself. Fills the Streaming Now slot while that panel is hidden (fewer than two
+// live); play-page hides it (via group-has) whenever Streaming Now is showing. Desktop only, like Streaming Now.
 @customElement("shop-spotlight")
 export class ShopSpotlight extends LitElement {
   @state() private items: ResolvedCosmetic[] = [];
