@@ -257,13 +257,15 @@ export interface FailedSamSalvo {
  * An atom bomb salvo from player that destroys one of target's SAMs, trying
  * the easiest (lowest level) first. A SAM of level N can intercept N nukes
  * before going on cooldown, so it takes N+1 bombs (accounting for all
- * covering SAMs). Without one, `failed` is the first SAM our silos lacked
- * the capacity for; a SAM we only lack the gold for leaves it null.
+ * covering SAMs). A SAM some bomb is already landing at is left to it.
+ * Without one, `failed` is the first SAM our silos lacked the capacity for;
+ * a SAM we only lack the gold for leaves it null.
  */
 export function planSamSalvo(
   game: Game,
   player: Player,
   target: Player,
+  incoming: IncomingNuke[],
 ): { salvo: SamSalvo | null; failed: FailedSamSalvo | null } {
   const atomCost = game.unitInfo(UnitType.AtomBomb).cost(game, player);
   const enemySams = target.units(UnitType.SAMLauncher);
@@ -286,7 +288,10 @@ export function planSamSalvo(
 
   for (const targetSam of sortedSams) {
     const targetTile = targetSam.tile();
-    if (blastHitsFriendly(game, player, targetTile, UnitType.AtomBomb)) {
+    if (
+      blastHitsFriendly(game, player, targetTile, UnitType.AtomBomb) ||
+      isNukeAlreadyLandingNear(game, incoming, targetTile, UnitType.AtomBomb)
+    ) {
       continue;
     }
 

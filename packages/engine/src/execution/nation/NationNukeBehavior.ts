@@ -214,7 +214,7 @@ export class NationNukeBehavior {
       this.game.config().gameConfig().difficulty === Difficulty.Impossible &&
       !saving
     ) {
-      this.maybeDestroyEnemySam(targets[0]);
+      this.maybeDestroyEnemySam(targets[0], incoming);
     }
   }
 
@@ -1154,7 +1154,10 @@ export class NationNukeBehavior {
   }
 
   // On Impossible, when no spot is worth a nuke, overwhelm one of the target's SAMs with atom bombs
-  private maybeDestroyEnemySam(nukeTarget: Player): void {
+  private maybeDestroyEnemySam(
+    nukeTarget: Player,
+    incoming: IncomingNuke[],
+  ): void {
     if (this.game.config().isUnitDisabled(UnitType.AtomBomb)) {
       return;
     }
@@ -1165,7 +1168,12 @@ export class NationNukeBehavior {
       return;
     }
 
-    const { salvo, failed } = planSamSalvo(this.game, this.player, nukeTarget);
+    const { salvo, failed } = planSamSalvo(
+      this.game,
+      this.player,
+      nukeTarget,
+      incoming,
+    );
     if (salvo !== null) {
       for (const waitTicks of salvo.waitTicks) {
         this.sendNuke(
