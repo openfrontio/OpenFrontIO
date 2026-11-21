@@ -117,7 +117,11 @@ export class TransportShipExecution implements Execution {
     this.troops ??= this.mg
       .config()
       .boatAttackAmount(this.attacker, this.target);
-    this.troops = Math.min(this.troops, this.attacker.troops());
+    this.troops = Math.floor(Math.min(this.troops, this.attacker.troops()));
+    if (this.troops <= 0) {
+      this.active = false;
+      return;
+    }
 
     this.dst = targetTransportTile(this.mg, this.attacker, this.ref);
 
