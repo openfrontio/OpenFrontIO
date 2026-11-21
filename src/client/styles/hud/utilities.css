@@ -66,6 +66,27 @@
   }
 }
 
+/* The leaderboard's list. A row is 24px, 28px from 768px wide. It shows five
+   rows; from 1024px wide, as many as fit in 30% of the window's height under
+   the top bar and the header (74px), eight at most. */
+@utility stats-rows {
+  --stats-row: 1.5rem;
+  max-height: calc(5 * var(--stats-row));
+
+  @variant md {
+    --stats-row: 1.75rem;
+  }
+  @variant lg {
+    @supports (height: round(down, 1px, 1px)) {
+      max-height: clamp(
+        calc(5 * var(--stats-row)),
+        round(down, 30dvh - 4.625rem, var(--stats-row)),
+        calc(8 * var(--stats-row))
+      );
+    }
+  }
+}
+
 @layer components {
   of-icon {
     display: inline-flex;
