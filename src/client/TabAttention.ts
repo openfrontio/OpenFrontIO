@@ -9,14 +9,22 @@ const FLASH_INTERVAL_MS = 250;
 // stop flashing rather than blinking in a background tab forever.
 const MAX_FLASH_MS = 2 * 60 * 1000;
 
-// The game's own warship favicon on a white tile. Same pixels and the same
-// padded -2 -2 15 15 framing as Favicon.svg (which has a black tile), so the
-// ship stays the same size and only the background flips between black and
-// white. Inline so it needs no asset pipeline entry.
+// The game's own cracked-B favicon on a white tile. Same geometry and framing
+// as BrokenFrontMark.svg (which has a charcoal tile), so the mark stays the
+// same size and only the background flips between charcoal and white. Inline
+// so it needs no asset pipeline entry.
 const ALERT_ICON_SVG =
-  `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="-2 -2 15 15" shape-rendering="crispEdges">` +
-  `<rect x="-2" y="-2" width="15" height="15" fill="#fff"/>` +
-  `<path fill="#0084d1" d="M2 0h4v1h-4zM2 1h4v1h-4zM4 2h4v1h-4zM4 3h4v1h-4zM6 4h4v1h-4zM6 5h4v1h-4zM6 6h4v1h-4zM4 7h4v1h-4zM4 8h4v1h-4zM2 9h4v1h-4zM2 10h4v1h-4z"/>` +
+  `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 100 100">` +
+  `<defs>` +
+  `<path id="b" fill-rule="evenodd" d="M0 0H46L60 14V38L52 50L60 62V86L46 100H0Z M20 20H40V40H20Z M20 60H40V80H20Z"/>` +
+  `<clipPath id="a"><path d="M-10 -10H70V50L40 44L22 56L-10 48Z"/></clipPath>` +
+  `<clipPath id="u"><path d="M-10 110H70V50L40 44L22 56L-10 48Z"/></clipPath>` +
+  `</defs>` +
+  `<rect width="100" height="100" rx="18" fill="#fff"/>` +
+  `<g transform="translate(30 17) scale(0.64)" fill="#c94a1c">` +
+  `<use href="#b" clip-path="url(#a)"/>` +
+  `<g transform="translate(5 8)"><use href="#b" clip-path="url(#u)"/></g>` +
+  `</g>` +
   `</svg>`;
 const ALERT_ICON_SVG_HREF =
   "data:image/svg+xml," + encodeURIComponent(ALERT_ICON_SVG);

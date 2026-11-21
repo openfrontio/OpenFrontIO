@@ -29,7 +29,7 @@ import "./FluentSlider";
 import "./map/MapPicker";
 
 const ACTIVE_CARD =
-  "bg-malibu-blue/20 border-malibu-blue/50 shadow-[var(--shadow-malibu-blue)]";
+  "bg-brand/20 border-brand/50 shadow-[var(--shadow-brand)]";
 const INACTIVE_CARD =
   "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20";
 
@@ -401,7 +401,7 @@ export class GameConfigSettings extends LitElement {
         placeholder="${translateText("map_component.search_maps")}"
         .value=${this.mapSearchQuery}
         @input=${this.handleMapSearchInput}
-        class="w-48 px-3 py-1.5 pl-8 pr-7 rounded-lg text-sm bg-transparent border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-malibu-blue/50 transition-all"
+        class="w-48 px-3 py-1.5 pl-8 pr-7 rounded-lg text-sm bg-transparent border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-brand/50 transition-all"
       />
       <svg
         class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40"
@@ -440,8 +440,8 @@ export class GameConfigSettings extends LitElement {
       <div class=${this.sectionGapClass}>
         ${renderSection(
           MAP_ICON,
-          "text-aquarius",
-          "bg-malibu-blue/20",
+          "text-brand-light",
+          "bg-brand/20",
           "map.map",
           html`<map-picker
             .selectedMap=${settings.map.selected}

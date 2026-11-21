@@ -2,30 +2,48 @@ import { zb, ZbEncodeError } from "@openfront/zbin";
 import { z } from "zod";
 import { UnitType } from "./game/GameTypes";
 
-export const bombUnits = ["abomb", "hbomb", "mirv", "mirvw"] as const;
+export const bombUnits = [
+  "abomb",
+  "hbomb",
+  "mirv",
+  "mirvw",
+  "lnuke",
+  "cnuke",
+  "cnukew",
+] as const;
 export const BombUnitSchema = z.enum(bombUnits);
 export type BombUnit = z.infer<typeof BombUnitSchema>;
 export type NukeType =
   | UnitType.AtomBomb
   | UnitType.HydrogenBomb
   | UnitType.MIRV
-  | UnitType.MIRVWarhead;
+  | UnitType.MIRVWarhead
+  | UnitType.LargeNuke
+  | UnitType.ClusterNuke
+  | UnitType.ClusterWarhead;
 
 export const unitTypeToBombUnit = {
   [UnitType.AtomBomb]: "abomb",
   [UnitType.HydrogenBomb]: "hbomb",
   [UnitType.MIRV]: "mirv",
   [UnitType.MIRVWarhead]: "mirvw",
+  [UnitType.LargeNuke]: "lnuke",
+  [UnitType.ClusterNuke]: "cnuke",
+  [UnitType.ClusterWarhead]: "cnukew",
 } as const satisfies Record<NukeType, BombUnit>;
 
-export const boatUnits = ["trade", "trans"] as const;
+export const boatUnits = ["trade", "trans", "fish"] as const;
 export const BoatUnitSchema = z.enum(boatUnits);
 export type BoatUnit = z.infer<typeof BoatUnitSchema>;
-export type BoatUnitType = UnitType.TradeShip | UnitType.TransportShip;
+export type BoatUnitType =
+  | UnitType.TradeShip
+  | UnitType.TransportShip
+  | UnitType.FishingBoat;
 
 export const unitTypeToBoatUnit = {
   [UnitType.TradeShip]: "trade",
   [UnitType.TransportShip]: "trans",
+  [UnitType.FishingBoat]: "fish",
 } as const satisfies Record<BoatUnitType, BoatUnit>;
 
 export const otherUnits = [
@@ -36,6 +54,10 @@ export const otherUnits = [
   "silo",
   "saml",
   "fact",
+  "umine",
+  "oilr",
+  "abase",
+  "carr",
 ] as const;
 export const OtherUnitSchema = z.enum(otherUnits);
 export type OtherUnit = z.infer<typeof OtherUnitSchema>;
@@ -46,7 +68,11 @@ export type OtherUnitType =
   | UnitType.Port
   | UnitType.SAMLauncher
   | UnitType.Warship
-  | UnitType.Factory;
+  | UnitType.Factory
+  | UnitType.UraniumMine
+  | UnitType.OilRig
+  | UnitType.Airbase
+  | UnitType.AircraftCarrier;
 
 export const unitTypeToOtherUnit = {
   [UnitType.City]: "city",
@@ -56,6 +82,10 @@ export const unitTypeToOtherUnit = {
   [UnitType.SAMLauncher]: "saml",
   [UnitType.Warship]: "wshp",
   [UnitType.Factory]: "fact",
+  [UnitType.UraniumMine]: "umine",
+  [UnitType.OilRig]: "oilr",
+  [UnitType.Airbase]: "abase",
+  [UnitType.AircraftCarrier]: "carr",
 } as const satisfies Record<OtherUnitType, OtherUnit>;
 
 // Attacks

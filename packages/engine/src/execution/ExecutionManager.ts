@@ -4,6 +4,9 @@ import {
   StampedIntent,
   Turn,
 } from "@openfront/engine-api/Schemas";
+import { AirStrikeExecution } from "./air/AirStrikeExecution";
+import { BrokenfrontIntentExecution } from "./BrokenfrontIntentExecution";
+import { TroopColumnExecution } from "./TroopColumnExecution";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { simpleHash } from "@openfront/engine-lib/Util";
 import { Execution, Game } from "../game/Game";
@@ -144,6 +147,23 @@ export class Executor {
         return new MarkDisconnectedExecution(player, intent.isDisconnected);
       case "toggle_pause":
         return new PauseExecution(player, intent.paused);
+      case "air_strike":
+        return new AirStrikeExecution(
+          player,
+          intent.tile,
+          intent.kind,
+          intent.troops,
+        );
+      case "transit_attack":
+        return new TroopColumnExecution(player, intent.dst, intent.troops);
+      case "call_to_arms":
+      case "donate_uranium":
+      case "trade_agreement":
+      case "set_tariff":
+      case "trade_offer":
+      case "trade_offer_reply":
+      case "market_trade":
+        return new BrokenfrontIntentExecution(player, intent);
       default:
         throw new Error(`intent type ${intent} not found`);
     }

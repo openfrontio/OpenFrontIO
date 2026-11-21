@@ -545,7 +545,7 @@ export class ClanDetailView extends LitElement {
         boostLeft
           ? html`<div
               data-boost-left
-              class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-malibu-blue/15 text-aquarius border border-malibu-blue/40 shadow-malibu-blue-pill"
+              class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-brand/15 text-brand-light border border-brand/40 shadow-brand-pill"
             >
               ${translateText("clan_modal.boost_time_left", {
                 remaining: boostLeft,
@@ -926,7 +926,7 @@ export class ClanDetailView extends LitElement {
       buttons.push(html`
         <button
           @click=${() => window.showPage?.("page-account")}
-          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-brand hover:bg-brand-light active:bg-brand/80 rounded-xl transition-all"
         >
           ${translateText("clan_modal.sign_in_to_join")}
         </button>
@@ -945,7 +945,7 @@ export class ClanDetailView extends LitElement {
         <button
           @click=${() => this.handleJoin()}
           ?disabled=${this.actionPending}
-          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-brand hover:bg-brand-light active:bg-brand/80 rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none"
         >
           ${translateText("clan_modal.join_clan")}
         </button>
@@ -976,7 +976,7 @@ export class ClanDetailView extends LitElement {
         <button
           data-action="boost"
           @click=${() => (this.boostOpen = true)}
-          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-brand hover:bg-brand-light active:bg-brand/80 rounded-xl transition-all"
         >
           ${translateText("clan_modal.boost")}
         </button>

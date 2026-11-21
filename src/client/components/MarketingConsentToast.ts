@@ -82,13 +82,13 @@ export class MarketingConsentToast extends LitElement {
 
     return html`
       <div
-        class="fixed top-16 z-[10000] left-4 right-4 w-auto sm:left-auto sm:right-4 sm:w-[236px] bg-surface border border-white/10 rounded-xl shadow-[var(--shadow-malibu-blue)] p-3"
+        class="fixed top-16 z-[10000] left-4 right-4 w-auto sm:left-auto sm:right-4 sm:w-[236px] bg-surface border border-white/10 rounded-xl shadow-[var(--shadow-brand)] p-3"
         role="dialog"
         aria-label=${translateText("marketing_consent.title")}
       >
         <div class="flex items-start gap-2 mb-2">
           <svg
-            class="shrink-0 mt-px text-aquarius"
+            class="shrink-0 mt-px text-brand-light"
             width="14"
             height="14"
             viewBox="0 0 24 24"
@@ -139,7 +139,7 @@ export class MarketingConsentToast extends LitElement {
             ${translateText("marketing_consent.no")}
           </button>
           <button
-            class="flex-1 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-transparent bg-malibu-blue text-white shadow-[var(--shadow-malibu-blue-pill)] hover:bg-aquarius transition-all cursor-pointer whitespace-nowrap"
+            class="flex-1 px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-transparent bg-brand text-white shadow-[var(--shadow-brand-pill)] hover:bg-brand-light transition-all cursor-pointer whitespace-nowrap"
             ?disabled=${this.busy}
             @click=${() => this.decide(true)}
           >

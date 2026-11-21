@@ -47,7 +47,26 @@ export type Intent =
   | KickPlayerIntent
   | TogglePauseIntent
   | UpdateGameConfigIntent
-  | ToggleGameStartTimer;
+  | ToggleGameStartTimer
+  | AirStrikeIntent
+  | TransitAttackIntent
+  | CallToArmsIntent
+  | DonateUraniumIntent
+  | TradeAgreementIntent
+  | SetTariffIntent
+  | TradeOfferIntent
+  | TradeOfferReplyIntent
+  | MarketTradeIntent;
+
+export type AirStrikeIntent = z.infer<typeof AirStrikeIntentSchema>;
+export type TransitAttackIntent = z.infer<typeof TransitAttackIntentSchema>;
+export type CallToArmsIntent = z.infer<typeof CallToArmsIntentSchema>;
+export type DonateUraniumIntent = z.infer<typeof DonateUraniumIntentSchema>;
+export type TradeAgreementIntent = z.infer<typeof TradeAgreementIntentSchema>;
+export type SetTariffIntent = z.infer<typeof SetTariffIntentSchema>;
+export type TradeOfferIntent = z.infer<typeof TradeOfferIntentSchema>;
+export type TradeOfferReplyIntent = z.infer<typeof TradeOfferReplyIntentSchema>;
+export type MarketTradeIntent = z.infer<typeof MarketTradeIntentSchema>;
 
 export type AttackIntent = z.infer<typeof AttackIntentSchema>;
 export type CancelAttackIntent = z.infer<typeof CancelAttackIntentSchema>;
@@ -263,6 +282,15 @@ export type PoolConfig = z.infer<typeof PoolConfigSchema>;
 
 export const MAX_BOTS = 1000;
 
+export const BrokenfrontFeaturesSchema = z.object({
+  uranium: z.boolean().optional(),
+  alliedTransit: z.boolean().optional(),
+  tradeDeals: z.boolean().optional(),
+  airWar: z.boolean().optional(),
+});
+export type BrokenfrontFeatures = z.infer<typeof BrokenfrontFeaturesSchema>;
+export type BrokenfrontFeature = keyof BrokenfrontFeatures;
+
 export const GameConfigSchema = z.compile(
   z.object({
     // Custom goes last, so the stock maps keep their zbin enum indices.
@@ -352,6 +380,10 @@ export const GameConfigSchema = z.compile(
     // Stripped from gameStartInfo and from the advertised lobby config: sibling
     // ids are private lobby ids, which are join secrets.
     pool: PoolConfigSchema.optional(),
+    // BrokenFront feature toggles. Appended last so earlier fields keep their
+    // zbin layout. Unset means "on" except in public games (see
+    // Config.brokenfrontFeature).
+    brokenfront: BrokenfrontFeaturesSchema.optional(),
   }),
 );
 
@@ -570,6 +602,71 @@ export const ToggleGameStartTimerIntentSchema = z.object({
   type: z.literal("toggle_game_start_timer"),
 });
 
+// --- BrokenFront intents (appended to the union: zbin encodes by index) ---
+
+/** Bomb run or paradrop from the nearest airbase/carrier with a free slot. */
+export const AirStrikeIntentSchema = z.object({
+  type: z.literal("air_strike"),
+  kind: z.enum(["bomb", "paratroop"]),
+  tile: zb.uint(),
+  troops: zb.float({ min: 0 }).nullable(),
+});
+
+/** March troops through allied territory to attack `targetID` at `dst`. */
+export const TransitAttackIntentSchema = z.object({
+  type: z.literal("transit_attack"),
+  dst: zb.uint(),
+  troops: zb.float({ min: 0 }).nullable(),
+});
+
+/** Ask every ally to join the war on `target`. */
+export const CallToArmsIntentSchema = z.object({
+  type: z.literal("call_to_arms"),
+  target: MappedID,
+});
+
+export const DonateUraniumIntentSchema = z.object({
+  type: z.literal("donate_uranium"),
+  recipient: MappedID,
+  amount: zb.uint().nullable(),
+});
+
+/** Propose, accept, reject or cancel a trade agreement with `other`. */
+export const TradeAgreementIntentSchema = z.object({
+  type: z.literal("trade_agreement"),
+  action: z.enum(["request", "accept", "reject", "cancel"]),
+  other: MappedID,
+});
+
+/** Tariff on non-partner trade ships arriving at your ports, in percent. */
+export const SetTariffIntentSchema = z.object({
+  type: z.literal("set_tariff"),
+  pct: zb.uint({ max: 25 }),
+});
+
+/** Offer a resource swap to `recipient`; they have 30 s to accept. */
+export const TradeOfferIntentSchema = z.object({
+  type: z.literal("trade_offer"),
+  recipient: MappedID,
+  giveGold: zb.uint(),
+  giveUranium: zb.uint(),
+  wantGold: zb.uint(),
+  wantUranium: zb.uint(),
+});
+
+export const TradeOfferReplyIntentSchema = z.object({
+  type: z.literal("trade_offer_reply"),
+  offerId: zb.uint(),
+  accept: z.boolean(),
+});
+
+/** Buy or sell uranium on the world market. */
+export const MarketTradeIntentSchema = z.object({
+  type: z.literal("market_trade"),
+  side: z.enum(["buy", "sell"]),
+  amount: zb.uint({ min: 1, max: 100 }),
+});
+
 export const IntentSchema = z.compile(
   z.discriminatedUnion("type", [
     AttackIntentSchema,
@@ -597,6 +694,15 @@ export const IntentSchema = z.compile(
     TogglePauseIntentSchema,
     UpdateGameConfigIntentSchema,
     ToggleGameStartTimerIntentSchema,
+    AirStrikeIntentSchema,
+    TransitAttackIntentSchema,
+    CallToArmsIntentSchema,
+    DonateUraniumIntentSchema,
+    TradeAgreementIntentSchema,
+    SetTariffIntentSchema,
+    TradeOfferIntentSchema,
+    TradeOfferReplyIntentSchema,
+    MarketTradeIntentSchema,
   ]),
 );
 

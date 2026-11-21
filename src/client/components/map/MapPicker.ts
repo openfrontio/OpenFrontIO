@@ -153,7 +153,7 @@ export class MapPicker extends LitElement {
         @click=${() => this.toggleCategory(categoryKey)}
         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl border transition-all duration-200 active:scale-[0.99] ${
           expanded
-            ? "bg-malibu-blue/20 border-malibu-blue/50"
+            ? "bg-brand/20 border-brand/50"
             : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
         }"
       >
@@ -323,7 +323,7 @@ export class MapPicker extends LitElement {
       aria-selected=${isActive}
       class="min-w-0 truncate px-1 sm:px-3 py-2 rounded-lg text-xs font-bold uppercase sm:tracking-wider transition-all active:scale-95 ${
         isActive
-          ? "bg-malibu-blue/20 text-white shadow-[var(--shadow-malibu-blue-soft)]"
+          ? "bg-brand/20 text-white shadow-[var(--shadow-brand-soft)]"
           : "text-white/60 hover:text-white"
       }"
       @click=${() => (this.activeTab = tab)}
@@ -371,7 +371,7 @@ export class MapPicker extends LitElement {
               type="button"
               class="w-full h-full p-3 flex flex-col items-center justify-between rounded-xl border cursor-pointer transition-all duration-200 active:scale-95 gap-3 group ${
                 this.useRandomMap
-                  ? "bg-malibu-blue/20 border-malibu-blue/50 shadow-[var(--shadow-malibu-blue-strong)]"
+                  ? "bg-brand/20 border-brand/50 shadow-[var(--shadow-brand-strong)]"
                   : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1"
               }"
               @click=${this.handleSelectRandomMap}

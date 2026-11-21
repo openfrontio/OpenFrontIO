@@ -21,6 +21,7 @@ export function applyStateUpdate(target: PlayerState, pu: PlayerUpdate): void {
   if (pu.trainGold !== undefined) target.trainGold = Number(pu.trainGold);
   if (pu.piracyGold !== undefined) target.piracyGold = Number(pu.piracyGold);
   if (pu.goldEarned !== undefined) target.goldEarned = Number(pu.goldEarned);
+  if (pu.uranium !== undefined) target.uranium = pu.uranium;
   if (pu.troops !== undefined) target.troops = pu.troops;
   if (pu.isTraitor !== undefined) target.isTraitor = pu.isTraitor;
   if (pu.traitorRemainingTicks !== undefined) {

@@ -164,7 +164,7 @@ export class GameInfoView extends LitElement {
         <button
           type="button"
           @click=${() => this.retry()}
-          class="rounded-lg border border-malibu-blue/40 bg-malibu-blue/20 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-aquarius transition-colors hover:border-malibu-blue/60 hover:bg-malibu-blue/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aquarius/70"
+          class="rounded-lg border border-brand/40 bg-brand/20 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-brand-light transition-colors hover:border-brand/60 hover:bg-brand/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-light/70"
         >
           ${translateText("game_info_modal.retry")}
         </button>
@@ -205,7 +205,7 @@ export class GameInfoView extends LitElement {
       >
         <div class="grid sm:grid-cols-[240px_minmax(0,1fr)]">
           <div
-            class="relative min-h-36 overflow-hidden border-b border-white/10 bg-deep-navy sm:min-h-44 sm:border-b-0 sm:border-r"
+            class="relative min-h-36 overflow-hidden border-b border-white/10 bg-surface-deep sm:min-h-44 sm:border-b-0 sm:border-r"
           >
             ${
               this.mapImage
@@ -246,7 +246,7 @@ export class GameInfoView extends LitElement {
                 data-game-date
                 class="mt-2 flex items-center gap-1.5 text-xs font-medium tabular-nums text-white/50"
               >
-                <span class="text-aquarius/70" aria-hidden="true">
+                <span class="text-brand-light/70" aria-hidden="true">
                   ${this.renderCalendarIcon("size-3.5")}
                 </span>
                 <time datetime=${startDate}
@@ -331,7 +331,7 @@ export class GameInfoView extends LitElement {
         <div
           class="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-white/35"
         >
-          <span class="text-aquarius/70" aria-hidden="true">${icon}</span>
+          <span class="text-brand-light/70" aria-hidden="true">${icon}</span>
           ${label}
         </div>
         <div class="text-sm font-semibold tabular-nums text-white/85">
@@ -345,7 +345,7 @@ export class GameInfoView extends LitElement {
     return html`
       <div
         data-map-fallback
-        class="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_50%_40%,rgba(0,132,209,0.18),transparent_65%)] text-aquarius/35"
+        class="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_50%_40%,rgba(201,74,28,0.18),transparent_65%)] text-brand-light/35"
         aria-hidden="true"
       >
         <svg

@@ -295,7 +295,7 @@ export class ReplayControls extends LitElement {
             (sp) =>
               html`<button
                 class="py-0.5 px-1 text-sm text-white rounded-sm border transition border-gray-500 hover:border-gray-200 ${
-                  sp === this.speed ? "bg-malibu-blue" : ""
+                  sp === this.speed ? "bg-brand" : ""
                 }"
                 @click=${() => this.setSpeed(sp)}
               >

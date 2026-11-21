@@ -20,7 +20,7 @@
     "none": "Τίποτα"
   },
   "main": {
-    "title": "OpenFront (ALPHA)",
+    "title": "BrokenFront (ALPHA)",
     "join_discord": "Βρες μας στο Discord!",
     "login_discord": "Σύνδεση με Discord",
     "checking_login": "Έλεγχος σύνδεσης...",
@@ -502,7 +502,7 @@
     "not_enough_money": "Όχι αρκετά χρήματα"
   },
   "win_modal": {
-    "support_openfront": "Υποστήριξε το OpenFront!",
+    "support_openfront": "Υποστήριξε το BrokenFront!",
     "territory_pattern": "Αγόρασε ένα σχέδιο εδάφους για να αφαιρέσεις τις διαφημίσεις!",
     "died": "Πέθανες",
     "your_team": "Η ομάδα σου κέρδισε!",

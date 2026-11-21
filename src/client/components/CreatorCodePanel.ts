@@ -291,7 +291,7 @@ export class CreatorCodePanel extends LitElement {
             class="w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 transition-all font-medium hover:bg-white/10 disabled:opacity-50 disabled:hover:bg-white/5 ${
               this.error
                 ? "border-red-500/50 focus:ring-red-500/40 focus:border-red-500/50"
-                : "border-white/10 focus:ring-malibu-blue/50 focus:border-malibu-blue/50"
+                : "border-white/10 focus:ring-brand/50 focus:border-brand/50"
             }"
           />
           <div class="text-sm text-red-400 min-h-[1.25rem]">${this.error}</div>

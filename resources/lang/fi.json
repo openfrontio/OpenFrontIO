@@ -9,7 +9,7 @@
     "close": "Sulje"
   },
   "main": {
-    "title": "OpenFront (ALPHA)",
+    "title": "BrokenFront (ALPHA)",
     "join_discord": "Liity Discordiin!",
     "login_discord": "Kirjaudu sisään Discordilla",
     "checking_login": "Tarkistetaan sisäänkirjautumista...",
@@ -461,8 +461,8 @@
     "not_enough_money": "Ei tarpeeksi rahaa"
   },
   "win_modal": {
-    "support_openfront": "Tue OpenFrontia!",
-    "territory_pattern": "Osta aluekuvio tukeaksesi OpenFrontia!",
+    "support_openfront": "Tue BrokenFrontia!",
+    "territory_pattern": "Osta aluekuvio tukeaksesi BrokenFrontia!",
     "died": "Sinä kuolit",
     "your_team": "Joukkueesi voitti!",
     "other_team": "{team} joukkue on voittanut!",
@@ -618,8 +618,8 @@
       "cursor": "Kursori",
       "hand": "Käsi",
       "radiation": "Säteily",
-      "openfront_qr": "OpenFront.io:n QR-koodi",
-      "openfront": "OpenFront",
+      "openfront_qr": "BrokenFront:n QR-koodi",
+      "openfront": "BrokenFront",
       "t_rex": "T-Rex",
       "embelem": "Tunnus",
       "contributor": "Avustaja",

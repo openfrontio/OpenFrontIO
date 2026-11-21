@@ -1,3 +1,5 @@
+import type { TradeBook } from "./TradeBook";
+import type { Deposit } from "@openfront/engine-lib/game/ResourceDeposits";
 import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   AllianceInfo,
@@ -115,6 +117,59 @@ export interface UnitParamsMap {
   [UnitType.SAMLauncher]: Record<string, never>;
 
   [UnitType.City]: Record<string, never>;
+
+  [UnitType.UraniumMine]: Record<string, never>;
+
+  [UnitType.LargeNuke]: {
+    targetTile?: number;
+    trajectory: TileRef[];
+  };
+
+  [UnitType.ClusterNuke]: {
+    targetTile?: number;
+    trajectory: TileRef[];
+  };
+
+  [UnitType.ClusterWarhead]: {
+    targetTile?: number;
+    trajectory: TileRef[];
+  };
+
+  // targetUnit is the home port the boat returns its catch to.
+  [UnitType.FishingBoat]: {
+    targetUnit: Unit;
+    targetTile?: TileRef;
+  };
+
+  [UnitType.OilRig]: Record<string, never>;
+
+  [UnitType.Airbase]: Record<string, never>;
+
+  [UnitType.AircraftCarrier]: {
+    patrolTile: TileRef;
+  };
+
+  // Aircraft: targetUnit is the home base (Airbase or Aircraft Carrier).
+  [UnitType.Fighter]: {
+    targetUnit: Unit;
+    targetTile?: TileRef;
+  };
+
+  [UnitType.Bomber]: {
+    targetUnit: Unit;
+    targetTile?: TileRef;
+  };
+
+  [UnitType.TransportPlane]: {
+    targetUnit: Unit;
+    troops?: number;
+    targetTile?: TileRef;
+  };
+
+  [UnitType.TroopColumn]: {
+    troops?: number;
+    targetTile?: TileRef;
+  };
 }
 
 // Type helper to get params type for a specific unit type
@@ -388,6 +443,27 @@ export interface Player extends PlayerLike {
   // Cumulative piracy revenue (captured trade ships; GOLD_INDEX_STEAL).
   piracyGold(): Gold;
   addPiracyGold(toAdd: Gold): void;
+
+  // Uranium: the second resource. Mined from deposits by Uranium Mines and
+  // spent (with gold) on every nuke launch.
+  uranium(): number;
+  addUranium(toAdd: number): void;
+  /** Removes up to `toRemove` (clamped at 0); returns the amount taken. */
+  removeUranium(toRemove: number): number;
+  /** Cumulative uranium mined (stats only). */
+  uraniumMined(): number;
+  /** Mine output: adds to the stockpile and to uraniumMined. */
+  addMinedUranium(toAdd: number): void;
+  /** Whether any land tile this player owns lies within `radius` (Chebyshev). */
+  hasOwnLandWithin(tile: TileRef, radius: number): boolean;
+  /** Aircraft slots `base` (an Airbase or Aircraft Carrier) offers. */
+  airCapacity(base: Unit): number;
+  /** Aircraft currently assigned to `base`. */
+  aircraftAt(base: Unit): number;
+  /** The base an aircraft of `type` would take off from to reach `tile`. */
+  airBaseFor(tile: TileRef, type: UnitType): Unit | null;
+  /** Uranium a launch of `unitType` costs this player right now. */
+  uraniumCostOf(unitType: UnitType): number;
 
   // Cumulative gold received from ALL sources (workers, trade, trains,
   // piracy, conquest, donations). Incremented inside addGold(); surfaced on
@@ -690,6 +766,14 @@ export interface Game extends GameLike {
   structureVersion(): number;
   /** MIRVs launched so far by anyone; each one raises the next one's price. */
   mirvsLaunched(): number;
+  /** BrokenFront trade: agreements, tariffs, offers, uranium market. */
+  trade(): TradeBook;
+  /** Uranium deposits on this map (seeded from the map, or from its manifest). */
+  uraniumDeposits(): readonly Deposit[];
+  /** Replaces the seeded deposits, e.g. with a manifest's hand-placed ones. */
+  setUraniumDeposits(deposits: Deposit[]): void;
+  /** Whether a Uranium Mine may stand on this tile. */
+  isUraniumDeposit(tile: TileRef): boolean;
   recordMirvLaunch(): void;
   /**
    * Round-robin counter per ship kind, used to spread the ships' water

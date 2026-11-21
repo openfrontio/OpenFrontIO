@@ -11,7 +11,7 @@ const BUTTON_BASE =
   "transition-all border-0";
 const BUTTON_SECONDARY =
   "bg-white/5 text-white/60 border border-white/10 hover:bg-white/10 hover:text-white/80";
-const BUTTON_PRIMARY = "bg-malibu-blue text-white hover:bg-aquarius";
+const BUTTON_PRIMARY = "bg-brand text-white hover:bg-brand-light";
 
 @customElement("steam-handoff-modal")
 export class SteamHandoffModal extends BaseModal {

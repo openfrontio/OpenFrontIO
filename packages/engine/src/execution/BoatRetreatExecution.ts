@@ -23,8 +23,19 @@ export class BoatRetreatExecution implements Execution {
       .units()
       .find(
         (unit) =>
-          unit.id() === this.unitID && unit.type() === UnitType.TransportShip,
+          unit.id() === this.unitID &&
+          (unit.type() === UnitType.TransportShip ||
+            unit.type() === UnitType.TroopColumn),
       );
+
+    // A troop column marching through allied land turns back at once: it
+    // dissolves and its troops rejoin the army, less the retreat penalty.
+    if (unit?.type() === UnitType.TroopColumn) {
+      this.player.addTroops(Math.floor(unit.troops() * 0.75));
+      unit.delete(false);
+      this.active = false;
+      return;
+    }
 
     if (!unit) {
       console.warn(`Didn't find outgoing boat with id ${this.unitID}`);

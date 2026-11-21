@@ -188,19 +188,19 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
        and invisible (opacity: 0) sparkles rather than a calmer effect. */
 
     /* A flash sale's item: the theme's accent (blue; orange under the
-       Halloween theme, which overrides --color-aquarius), pulsing all the
+       Halloween theme, which overrides --color-brand-light), pulsing all the
        time (not only on hover), with a light running round the edge. Listed
        after the rarity rules so it wins over a legendary card's hover pulse. */
     @keyframes cosmetic-card-flash-pulse {
-      0%, 100% { box-shadow: 0 0 0 2px var(--color-aquarius), 0 0 8px color-mix(in srgb, var(--color-aquarius) 40%, transparent); }
-      50% { box-shadow: 0 0 0 2px var(--color-aquarius), 0 0 30px color-mix(in srgb, var(--color-aquarius) 90%, transparent); }
+      0%, 100% { box-shadow: 0 0 0 2px var(--color-brand-light), 0 0 8px color-mix(in srgb, var(--color-brand-light) 40%, transparent); }
+      50% { box-shadow: 0 0 0 2px var(--color-brand-light), 0 0 30px color-mix(in srgb, var(--color-brand-light) 90%, transparent); }
     }
     @keyframes cosmetic-card-flash-spin {
       to { transform: translate(-50%, -50%) rotate(360deg); }
     }
     cosmetic-card [data-cosmetic-shell][data-cosmetic-flash],
     cosmetic-card:hover [data-cosmetic-shell][data-cosmetic-flash] {
-      border-color: var(--color-aquarius);
+      border-color: var(--color-brand-light);
       animation: cosmetic-card-flash-pulse 1.8s ease-in-out infinite;
     }
     [data-cosmetic-flash-ring] {
@@ -222,7 +222,7 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
       top: 50%;
       width: 250%;
       aspect-ratio: 1;
-      background: conic-gradient(from 0deg, transparent 0 55%, var(--color-aquarius) 72%, #fff 80%, var(--color-aquarius) 88%, transparent 100%);
+      background: conic-gradient(from 0deg, transparent 0 55%, var(--color-brand-light) 72%, #fff 80%, var(--color-brand-light) 88%, transparent 100%);
       transform: translate(-50%, -50%);
       animation: cosmetic-card-flash-spin 2.6s linear infinite;
     }
@@ -232,7 +232,7 @@ if (!document.getElementById(COSMETIC_CARD_STYLE_ID)) {
       cosmetic-card [data-cosmetic-shell][data-cosmetic-flash],
       cosmetic-card:hover [data-cosmetic-shell][data-cosmetic-flash] {
         animation: none;
-        box-shadow: 0 0 0 2px var(--color-aquarius), 0 0 14px color-mix(in srgb, var(--color-aquarius) 60%, transparent);
+        box-shadow: 0 0 0 2px var(--color-brand-light), 0 0 14px color-mix(in srgb, var(--color-brand-light) 60%, transparent);
       }
       [data-cosmetic-flash-ring] { display: none; }
     }
@@ -455,7 +455,7 @@ export class CosmeticCard extends LitElement {
       class="pointer-events-none absolute right-0 top-0 z-[5] h-16 w-16 overflow-hidden rounded-tr-lg sm:h-[88px] sm:w-[88px]"
     >
       <span
-        class="absolute ${place} w-24 rotate-45 bg-aquarius py-0.5 text-center text-xs font-black tabular-nums text-deep-navy shadow-[0_2px_6px_rgba(0,0,0,0.5)] sm:w-[130px] sm:py-[3px] sm:text-[15px]"
+        class="absolute ${place} w-24 rotate-45 bg-brand-light py-0.5 text-center text-xs font-black tabular-nums text-surface-deep shadow-[0_2px_6px_rgba(0,0,0,0.5)] sm:w-[130px] sm:py-[3px] sm:text-[15px]"
         >${translateText("store.sale_percent_off", {
           percent: sale.percentOff,
         })}</span
@@ -484,7 +484,7 @@ export class CosmeticCard extends LitElement {
   private renderNewBadge(active: ResolvedCosmetic) {
     if (!this.showsNew(active)) return nothing;
     const band =
-      "absolute rotate-45 border-y border-deep-navy/60 bg-cyber-yellow text-center font-black uppercase tracking-wide text-deep-navy shadow-[0_2px_6px_rgba(0,0,0,0.5)]";
+      "absolute rotate-45 border-y border-surface-deep/60 bg-cyber-yellow text-center font-black uppercase tracking-wide text-surface-deep shadow-[0_2px_6px_rgba(0,0,0,0.5)]";
     if (activeSale(active.cosmetic) === null) {
       return html`<span
         data-cosmetic-new="outer"
@@ -513,10 +513,10 @@ export class CosmeticCard extends LitElement {
     if (sale === null) return nothing;
     return html`<div
       data-cosmetic-flash-timer
-      class="pointer-events-none absolute inset-x-0 bottom-0 z-[3] rounded-b-lg bg-gradient-to-t from-deep-navy via-deep-navy/90 via-70% to-transparent pb-1.5 pt-6 text-center leading-none"
+      class="pointer-events-none absolute inset-x-0 bottom-0 z-[3] rounded-b-lg bg-gradient-to-t from-surface-deep via-surface-deep/90 via-70% to-transparent pb-1.5 pt-6 text-center leading-none"
     >
       <div
-        class="mb-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-aquarius [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
+        class="mb-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-brand-light [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
       >
         ${translateText("store.flash_ends_in")}
       </div>

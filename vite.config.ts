@@ -294,14 +294,18 @@ export default defineConfig(({ mode }) => {
       : undefined,
     instanceId: JSON.stringify(env.INSTANCE_ID ?? "DEV_ID"),
     manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
-    faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
+    faviconHref: buildAssetUrl(
+      "images/BrokenFrontMark.svg",
+      assetManifest,
+      cdnBase,
+    ),
     appleTouchIconHref: buildAssetUrl(
-      "icons/icon512_maskable.png",
+      "icons/brokenfront_maskable_512.png",
       assetManifest,
       cdnBase,
     ),
     gameplayScreenshotUrl: buildAssetUrl(
-      "images/KeyArt.jpg",
+      "images/BrokenFrontKeyArt.png",
       assetManifest,
       cdnBase,
     ),
@@ -311,11 +315,15 @@ export default defineConfig(({ mode }) => {
       cdnBase,
     ),
     desktopLogoImageUrl: buildAssetUrl(
-      "images/OpenFront.png",
+      "images/BrokenFrontLogo.svg",
       assetManifest,
       cdnBase,
     ),
-    mobileLogoImageUrl: buildAssetUrl("images/OF.png", assetManifest, cdnBase),
+    mobileLogoImageUrl: buildAssetUrl(
+      "images/BrokenFrontMarkBare.svg",
+      assetManifest,
+      cdnBase,
+    ),
   };
 
   // Vite's HTML transform replaces the source <script src="/src/client/Main.ts">

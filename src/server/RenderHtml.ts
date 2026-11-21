@@ -102,14 +102,18 @@ export async function renderHtmlContent(
         ? undefined
         : JSON.stringify(ServerEnv.faroCollectorUrl()),
     manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
-    faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
+    faviconHref: buildAssetUrl(
+      "images/BrokenFrontMark.svg",
+      assetManifest,
+      cdnBase,
+    ),
     appleTouchIconHref: buildAssetUrl(
-      "icons/icon512_maskable.png",
+      "icons/brokenfront_maskable_512.png",
       assetManifest,
       cdnBase,
     ),
     gameplayScreenshotUrl: buildAssetUrl(
-      "images/KeyArt.jpg",
+      "images/BrokenFrontKeyArt.png",
       assetManifest,
       cdnBase,
     ),
@@ -119,11 +123,15 @@ export async function renderHtmlContent(
       cdnBase,
     ),
     desktopLogoImageUrl: buildAssetUrl(
-      "images/OpenFront.png",
+      "images/BrokenFrontLogo.svg",
       assetManifest,
       cdnBase,
     ),
-    mobileLogoImageUrl: buildAssetUrl("images/OF.png", assetManifest, cdnBase),
+    mobileLogoImageUrl: buildAssetUrl(
+      "images/BrokenFrontMarkBare.svg",
+      assetManifest,
+      cdnBase,
+    ),
   });
 }
 

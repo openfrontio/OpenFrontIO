@@ -9,7 +9,7 @@
     "close": "Zavrieť"
   },
   "main": {
-    "title": "OpenFront (ALFA)",
+    "title": "BrokenFront (ALFA)",
     "join_discord": "Pridaj sa do Discordu!",
     "login_discord": "Prihlás sa cez Discord",
     "checking_login": "Kontrolujem prihlásenie...",
@@ -580,8 +580,8 @@
       "cursor": "Kurzor",
       "hand": "Ruka",
       "radiation": "Radiácia",
-      "openfront_qr": "QR kód OpenFront.io",
-      "openfront": "OpenFront",
+      "openfront_qr": "QR kód BrokenFront",
+      "openfront": "BrokenFront",
       "t_rex": "T-rex",
       "embelem": "Odznak",
       "contributor": "Prispievateľ",

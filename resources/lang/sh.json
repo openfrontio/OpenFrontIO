@@ -32,7 +32,7 @@
     "desktop_login_discord": "Nastavi sa Discord-om u pregledaču",
     "desktop_login_google": "Nastavi sa Google-om u pregledaču",
     "desktop_login_needs_update": "Prijavljivanje zahteva noviju verziju aplikacije za računar. Ponovo pokrenite Steam da biste je ažurirali, a zatim pokušajte ponovo.",
-    "desktop_sign_in_desc": "Prijavljivanje otvara veb-sajt OpenFront u vašem pregledaču. Prijavite se tamo, potvrdite povezivanje sa Steam nalogom i igra će ga automatski prepoznati.",
+    "desktop_sign_in_desc": "Prijavljivanje otvara veb-sajt BrokenFront u vašem pregledaču. Prijavite se tamo, potvrdite povezivanje sa Steam nalogom i igra će ga automatski prepoznati.",
     "email_placeholder": "Unesite Vašu email adresu",
     "enter_email_address": "Molimo Vas unesite email adresu",
     "failed_to_send_recovery_email": "Slanje email-a za povratak naloga je bilo neuspešno",
@@ -50,7 +50,7 @@
     "link_google_already_linked": "Ovaj Google nalog je već povezan sa drugim igračem.",
     "link_google_error": "Povezivanje Google naloga je bilo neuspešno. Molimo Vas proverite da ste se povezali i probajte opet.",
     "link_google_failed": "Nismo mogli početi povezivanje Google naloga. Molimo Vas probajte ponovo.",
-    "link_google_on_web": "Poveži Google nalog na OpenFront veb-sajtu",
+    "link_google_on_web": "Poveži Google nalog na BrokenFront veb-sajtu",
     "link_google_success": "Google nalog je povezan.",
     "link_steam": "Poveži Steam nalog",
     "link_steam_error": "Povezivanje vašeg Steam naloga nije uspelo. Proverite da li ste prijavljeni i pokušajte ponovo.",
@@ -64,13 +64,13 @@
     "login_deleted": "Ovaj nalog je izbrisan.",
     "login_email_exists": "Već imaš nalog sa ovim email-om. Prijavi se sa njim, zatim poveži ovaj nalog u podešavanjima.",
     "login_error": "Verifikacija prijavljivanja nije uspela. Pokušajte ponovo.",
-    "login_no_account": "Nijedan OpenFront nalog još uvek ne koristi ovaj Steam nalog. Prijavite se sa svojim postojećim nalogom i povežite Steam u podešavanjima, ili pokrenite igru putem Steam-a.",
+    "login_no_account": "Nijedan BrokenFront nalog još uvek ne koristi ovaj Steam nalog. Prijavite se sa svojim postojećim nalogom i povežite Steam u podešavanjima, ili pokrenite igru putem Steam-a.",
     "manage_subscription": "Uredi",
     "manage_subscription_on_steam": "Naplaćuje se putem Steam-a. Opcija „Upravljaj” otvara vašu stranicu sa Steam pretplatama.",
     "manage_subscription_on_steam_ending": "Otkazano — aktivno do {date}. Opcija „Upravljaj” otvara vašu stranicu sa Steam pretplatama.",
     "manage_subscription_on_steam_ending_no_date": "Otkazano — aktivno do kraja plaćenog perioda. Opcija „Upravljaj” otvara vašu stranicu sa Steam pretplatama.",
     "manage_subscription_on_steam_no_tier_change": "Naplaćuje se putem Steam-a. Opcija „Upravljaj” otvara vašu stranicu sa Steam pretplatama. Da biste promenili paket, otkažite trenutni i pretplatite se na novi nakon isteka tekućeg meseca.",
-    "manage_subscription_on_web": "Upravljajte nalogom ili promenite način plaćanja na OpenFront veb-sajtu.",
+    "manage_subscription_on_web": "Upravljajte nalogom ili promenite način plaćanja na BrokenFront veb-sajtu.",
     "marketing_desc": "Povremene vesti, dešavanja i ažuriranja igre. Slobodno prekinite bilo kad.",
     "marketing_no_email": "Povežite email sa Vašim nalogom da bi ste se prijavili za novosti.",
     "marketing_no_email_steam": "Steam ne deli vašu adresu e-pošte sa nama, tako da nemamo gde da vam šaljemo obaveštenja.",
@@ -577,8 +577,8 @@
     "spectating": "Posmatranje"
   },
   "desktop_session": {
-    "generic": "Prijavljivanje na vaš OpenFront nalog nije uspelo",
-    "network": "Povezivanje sa OpenFront serverom nije uspelo. Proverite vašu internet vezu.",
+    "generic": "Prijavljivanje na vaš BrokenFront nalog nije uspelo",
+    "network": "Povezivanje sa BrokenFront serverom nije uspelo. Proverite vašu internet vezu.",
     "retry": "Pokušaj ponovo",
     "retrying": "Prijavljivanje u toku…",
     "steam_backend": "Steam ima problema sa prijavljivanjem. Pokušajte ponovo uskoro.",
@@ -903,7 +903,7 @@
     "preset_colorblind_desc": "Boje teritorije i granica prilagođene slepima za boje",
     "preset_custom": "Prilagođeno",
     "preset_default": "Podrazumevano",
-    "preset_default_desc": "Standardni OpenFront izgled",
+    "preset_default_desc": "Standardni BrokenFront izgled",
     "preset_delete_confirm": "Izbrisati podešavanje \"{name}\"?",
     "preset_evans_pick": "Evan-ov izbor",
     "preset_evans_pick_desc": "Podešavanja sa kojim Evan igra",
@@ -1021,7 +1021,7 @@
     "radial_title": "Kružni izbornik",
     "table_action": "Efekat",
     "table_key": "Taster",
-    "troubleshooting_desc": "Ako imate problema sa performansama, padovima ili drugim problemima tokom igranja OpenFront-a, posetite našu stranicu za otklanjanje problema za pomoć:",
+    "troubleshooting_desc": "Ako imate problema sa performansama, padovima ili drugim problemima tokom igranja BrokenFront-a, posetite našu stranicu za otklanjanje problema za pomoć:",
     "ui_attack_ratio": "Razmjer napada - Količina vojnika koja će biti upotrebljena u napadu. Možeš prilagoditi razmjer pomoću klizača. Ukoliko imaš više napadača nego protivnik branilaca, gubićeš manje vojnika u napadu. Ukoliko imaš manje napadača, trpiti ćeš više štete. Učinak ne raste dalje od razmjera 2:1.",
     "ui_control": "Konzola",
     "ui_control_desc": "Konzola sadrži sljedeće elemente:",
@@ -1041,7 +1041,7 @@
     "ui_wilderness": "Divljina",
     "ui_your_team": "Vaš tim:",
     "video_tutorial": "Video vodič",
-    "video_tutorial_title": "OpenFront.io vodič"
+    "video_tutorial_title": "BrokenFront vodič"
   },
   "host_modal": {
     "anonymous_players": "Anonimni igrači",
@@ -1113,14 +1113,14 @@
     "got_it": "Razumem",
     "how": "Kako",
     "later": "Kasnije",
-    "modal_desc": "Vaš pregledač ne podržava prikaz preko celog ekrana, ali možete dodati OpenFront na početni ekran za potpuno iskustvo:",
+    "modal_desc": "Vaš pregledač ne podržava prikaz preko celog ekrana, ali možete dodati BrokenFront na početni ekran za potpuno iskustvo:",
     "modal_title": "Ceo ekran na iOS-u",
     "never": "Nikada",
     "step_add_to_home_label": "Dodaj na početni ekran",
     "step_open": "Otvorite sa početnog ekrana — pokreće se preko celog ekrana bez trake sa adresom",
     "step_scroll_and_tap": "Pomerite nadole i dodirnite",
     "step_share": "Dodirnite dugme Za deli u vašem pregledaču",
-    "text": "Za prikaz preko celog ekrana, dodajte OpenFront na početni ekran"
+    "text": "Za prikaz preko celog ekrana, dodajte BrokenFront na početni ekran"
   },
   "kick_reason": {
     "admin": "Izbačeni ste od strane administratora",
@@ -1193,7 +1193,7 @@
   "main": {
     "account": "Nalog",
     "clans": "Klanovi",
-    "copyright": "© OpenFront™ i Saradnici",
+    "copyright": "© BrokenFront i Saradnici",
     "create": "Kreiraj sobu",
     "discord_avatar_alt": "Avatar Discord profila",
     "github": "GitHub",
@@ -1214,7 +1214,7 @@
     "solo": "Samostalno",
     "store": "Prodavnica",
     "terms_of_service": "Uslovi korišćenja",
-    "title": "OpenFront (ALFA)",
+    "title": "BrokenFront (ALFA)",
     "troubleshooting": "Otklanjanje problema",
     "tutorial": "Tutorijal",
     "user_avatar_alt": "{username} avatar",
@@ -1385,7 +1385,7 @@
     "dismiss": "Odbaci",
     "error": "Nije bilo moguće sačuvati. Pokušajte ponovo.",
     "no": "Ne, hvala",
-    "title": "Želite li da pratite vesti o OpenFront-u?",
+    "title": "Želite li da pratite vesti o BrokenFront-u?",
     "yes": "Da, molim"
   },
   "matchmaking_modal": {
@@ -1445,7 +1445,7 @@
   },
   "news_box": {
     "dismiss": "Odbaci",
-    "firefox_warning": "OpenFront.io ne radi dobro na pregledačima [zasnovanim na Firefox-u.](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox) Preporučujemo da koristite pregledač [zasnovan na Chromium-u](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) za najbolje performanse.",
+    "firefox_warning": "BrokenFront ne radi dobro na pregledačima [zasnovanim na Firefox-u.](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox) Preporučujemo da koristite pregledač [zasnovan na Chromium-u](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) za najbolje performanse.",
     "go_to_item": "Idi na stavku {num}",
     "news": "VESTI",
     "tournament": "TURNIR",
@@ -1682,9 +1682,9 @@
     "waiting_for_players": "Čekanje igrača"
   },
   "purchase_nudge": {
-    "body": "Izgleda da uživate u igranju OpenFront-a! Razmislite o tome da nas podržite kupovinom — bilo koja kupovina vam trajno uklanja reklame.",
+    "body": "Izgleda da uživate u igranju BrokenFront-a! Razmislite o tome da nas podržite kupovinom — bilo koja kupovina vam trajno uklanja reklame.",
     "close": "Zatvori",
-    "title": "Uživate u OpenFront-u?",
+    "title": "Uživate u BrokenFront-u?",
     "visit_store": "Poseti prodavnicu"
   },
   "radial_menu": {
@@ -1747,7 +1747,7 @@
     "reason_expired": "Ova veza je istekla. Pokušajte ponovo sa Steam-a.",
     "reason_rate_limited": "Previše pokušaja. Sačekajte {seconds, plural, =0 {trenutak} one {# sekundu} few {# sekunde} other {# sekundi}} i pokušajte ponovo.",
     "reason_steam_has_progress": "Ovaj Steam nalog već ima sopstveni napredak i ne može se spojiti.",
-    "reason_steam_linked_elsewhere": "Ovaj Steam nalog je već povezan sa drugim OpenFront nalogom.",
+    "reason_steam_linked_elsewhere": "Ovaj Steam nalog je već povezan sa drugim BrokenFront nalogom.",
     "success": "Vaš Steam nalog je sada povezan.",
     "title": "Povežite Steam nalog"
   },
@@ -1757,9 +1757,9 @@
   },
   "steam_wishlist": {
     "cta": "Dodajte na listu želja odmah",
-    "on_steam": "OpenFront na Steam-u",
+    "on_steam": "BrokenFront na Steam-u",
     "release": "Dostupno u Q3 2026. godine",
-    "title": "Dodajte OpenFront na listu želja na Steam-u!"
+    "title": "Dodajte BrokenFront na listu želja na Steam-u!"
   },
   "store": {
     "already_owned": "Već posedujete ovaj artikal. Ništa vam nije naplaćeno.",
@@ -1833,7 +1833,7 @@
     "subscription_purchase_success": "Pretplata je aktivirana!",
     "subscriptions": "Pretplate",
     "switch_button": "Promeni",
-    "tier_change_steam_needs_desktop": "Vaša pretplata se naplaćuje putem Steam-a. Promenite je u OpenFront aplikaciji na Steam-u ili upravljajte njom u podešavanjima vašeg Steam naloga.",
+    "tier_change_steam_needs_desktop": "Vaša pretplata se naplaćuje putem Steam-a. Promenite je u BrokenFront aplikaciji na Steam-u ili upravljajte njom u podešavanjima vašeg Steam naloga.",
     "tier_change_unavailable_steam": "Da biste promenili paket na Steam-u, otkažite pretplatu u podešavanjima Steam naloga i pretplatite se na novi paket nakon što vam istekne tekući mesec.",
     "title": "Prodavnica",
     "tribe_boost_button": "Pojačanje",
@@ -1910,7 +1910,7 @@
     "browser": "Pregledač",
     "canvas_2d_no_gpu": "Platno 2D (bez GPU)",
     "charging": "Punjenje",
-    "chromium_tip": "OpenFront najbolje radi na pregledačima zasnovanim na Chromium-u.",
+    "chromium_tip": "BrokenFront najbolje radi na pregledačima zasnovanim na Chromium-u.",
     "copied_to_clipboard": "Informacije su kopirane u međuspremnik! Slobodno ih podeli na našem Discord serveru ako ti je potrebna pomoć.",
     "device_pixel_ratio": "Odnos piksela uređaja",
     "environment": "Okruženje",
@@ -2001,8 +2001,8 @@
     "warship": "Ratni brod"
   },
   "update_available": {
-    "desktop": "Dostupna je nova verzija OpenFront-a. Preuzeće se u pozadini; osvežite stranicu putem trake za ažuriranje kada bude spremna.",
-    "message": "Dostupna je nova verzija OpenFront-a. Stranica će se sada osvežiti radi ažuriranja."
+    "desktop": "Dostupna je nova verzija BrokenFront-a. Preuzeće se u pozadini; osvežite stranicu putem trake za ažuriranje kada bude spremna.",
+    "message": "Dostupna je nova verzija BrokenFront-a. Stranica će se sada osvežiti radi ažuriranja."
   },
   "user_setting": {
     "alert_frame_desc": "Uključi/isključi okvir za upozorenja. Kada je omogućen, okvir će se prikazati kada vas neko izda ili napadne preko kopna.",
@@ -2160,7 +2160,7 @@
     "zoom_in_desc": "Približava te mapi",
     "zoom_out": "Udalji",
     "zoom_out_desc": "Udaljava te od mape",
-    "quit_desc": "Zatvorite OpenFront i vratite se na radnu površinu.",
+    "quit_desc": "Zatvorite BrokenFront i vratite se na radnu površinu.",
     "quit_label": "Izađi iz igre"
   },
   "username": {
@@ -2211,7 +2211,7 @@
     "other_won": "{player} je pobedio!",
     "requeue": "Igraj ponovo",
     "spectate": "Posmatraj",
-    "support_openfront": "Podrži OpenFront!",
+    "support_openfront": "Podrži BrokenFront!",
     "territory_pattern": "Kupi teritorijalni skin i ukloni reklame!",
     "you_won": "Pobedio si!",
     "your_team": "Tvoj tim je pobedio!",

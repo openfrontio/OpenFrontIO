@@ -1209,7 +1209,7 @@ describe("StoreModal cosmetic browser", () => {
       await vi.waitFor(() =>
         expect(
           modal
-            .querySelector("[data-store-subtab].border-malibu-blue")
+            .querySelector("[data-store-subtab].border-brand")
             ?.getAttribute("data-store-subtab"),
         ).toBe("patterns"),
       );
@@ -1239,7 +1239,7 @@ describe("StoreModal cosmetic browser", () => {
       // empty grid says nothing is new rather than "No skins".
       expect(
         modal
-          .querySelector("[data-store-subtab].border-malibu-blue")
+          .querySelector("[data-store-subtab].border-brand")
           ?.getAttribute("data-store-subtab"),
       ).toBe("new");
       expect(modal.textContent).toContain("store.no_new_items");

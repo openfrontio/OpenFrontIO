@@ -958,8 +958,8 @@ export class LeaderboardPlayerList extends LitElement {
 
     const panel = lastDay
       ? "border-orange-400/70 shadow-[0_0_24px_rgba(251,146,60,0.25)]"
-      : "border-aquarius/40 shadow-[0_0_24px_rgba(63,169,245,0.15)]";
-    const statusColor = lastDay ? "text-orange-400" : "text-aquarius";
+      : "border-brand-light/40 shadow-[0_0_24px_rgba(63,169,245,0.15)]";
+    const statusColor = lastDay ? "text-orange-400" : "text-brand-light";
     const status = lastDay
       ? translateText("ffa_rating.season_last_day")
       : timing
@@ -971,7 +971,7 @@ export class LeaderboardPlayerList extends LitElement {
     return html`
       <div data-ffa-season class="shrink-0 px-2 py-2 sm:px-3 sm:pt-3">
         <section
-          class="rounded-xl border bg-gradient-to-br from-deep-navy via-[#0b1830] to-[#132644] px-4 py-3 text-white sm:px-5 sm:py-4 ${panel}"
+          class="rounded-xl border bg-gradient-to-br from-surface-deep via-[#0b1830] to-[#132644] px-4 py-3 text-white sm:px-5 sm:py-4 ${panel}"
         >
           <div
             class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1"
@@ -1008,10 +1008,10 @@ export class LeaderboardPlayerList extends LitElement {
                     >
                     <span
                       aria-hidden="true"
-                      class="h-3.5 w-3.5 shrink-0 rounded-full border-2 border-aquarius bg-white"
+                      class="h-3.5 w-3.5 shrink-0 rounded-full border-2 border-brand-light bg-white"
                     ></span>
                     <div
-                      class="-ml-3 h-0 min-w-0 flex-1 border-t-2 border-dashed border-aquarius/50"
+                      class="-ml-3 h-0 min-w-0 flex-1 border-t-2 border-dashed border-brand-light/50"
                     ></div>
                     <span class="shrink-0 text-white/70"
                       >${translateText("ffa_rating.season_no_end_date")}</span
@@ -1028,7 +1028,7 @@ export class LeaderboardPlayerList extends LitElement {
                         class="relative h-full rounded-full ${
                           lastDay
                             ? "bg-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.7)]"
-                            : "bg-aquarius shadow-[0_0_10px_rgba(63,169,245,0.6)]"
+                            : "bg-brand-light shadow-[0_0_10px_rgba(63,169,245,0.6)]"
                         }"
                         style="width: ${Math.round(timing.progress * 100)}%"
                       >
@@ -1036,7 +1036,7 @@ export class LeaderboardPlayerList extends LitElement {
                           class="absolute -right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 bg-white ${
                             lastDay
                               ? "border-orange-400 motion-safe:animate-pulse"
-                              : "border-aquarius"
+                              : "border-brand-light"
                           }"
                         ></span>
                       </div>

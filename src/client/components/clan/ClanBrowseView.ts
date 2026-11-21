@@ -39,7 +39,7 @@ const browseFilterOptions: { value: ClanBrowseFilter; labelKey: string }[] = [
 ];
 
 const selectClass =
-  "w-full h-full min-h-10 appearance-none pl-3 pr-9 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm";
+  "w-full h-full min-h-10 appearance-none pl-3 pr-9 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand/50 transition-all font-medium hover:bg-white/10 text-sm";
 
 @customElement("clan-browse-view")
 export class ClanBrowseView extends LitElement {
@@ -181,7 +181,7 @@ export class ClanBrowseView extends LitElement {
               type="text"
               .value=${this.searchQuery}
               @input=${(e: Event) => this.onSearchInput(e)}
-              class="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
+              class="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand/50 transition-all font-medium hover:bg-white/10 text-sm"
               placeholder="${translateText("clan_modal.search_placeholder")}"
             />
             <svg
@@ -264,10 +264,10 @@ export class ClanBrowseView extends LitElement {
           boostedBlock.length > 0
             ? html`<section
                 data-boosted-block
-                class="space-y-3 rounded-2xl border border-malibu-blue/50 bg-malibu-blue/5 shadow-malibu-blue p-3"
+                class="space-y-3 rounded-2xl border border-brand/50 bg-brand/5 shadow-brand p-3"
               >
                 <h3
-                  class="text-[10px] font-bold text-aquarius uppercase tracking-wider px-1"
+                  class="text-[10px] font-bold text-brand-light uppercase tracking-wider px-1"
                 >
                   ${translateText("clan_modal.boosted_clans")}
                 </h3>

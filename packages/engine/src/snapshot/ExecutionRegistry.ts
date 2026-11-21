@@ -1,4 +1,14 @@
 // Every entry is `<ClassName>Snapshot`, exported next to its class.
+import { AirStrikeExecutionSnapshot } from "../execution/air/AirStrikeExecution";
+import { FighterExecutionSnapshot } from "../execution/air/FighterExecution";
+import { AirbaseExecutionSnapshot } from "../execution/AirbaseExecution";
+import { BrokenfrontIntentExecutionSnapshot } from "../execution/BrokenfrontIntentExecution";
+import { TroopColumnExecutionSnapshot } from "../execution/TroopColumnExecution";
+import { CarrierExecutionSnapshot } from "../execution/CarrierExecution";
+import { ClusterNukeExecutionSnapshot } from "../execution/ClusterNukeExecution";
+import { FishingBoatExecutionSnapshot } from "../execution/FishingBoatExecution";
+import { OilRigExecutionSnapshot } from "../execution/OilRigExecution";
+import { UraniumMineExecutionSnapshot } from "../execution/UraniumMineExecution";
 import { AllianceExtensionExecutionSnapshot } from "../execution/alliance/AllianceExtensionExecution";
 import { AllianceRejectExecutionSnapshot } from "../execution/alliance/AllianceRejectExecution";
 import { AllianceRequestExecutionSnapshot } from "../execution/alliance/AllianceRequestExecution";
@@ -53,6 +63,16 @@ import type { ExecutionSnapshotType } from "./ExecutionSnapshot";
  * replaced it.
  */
 export const EXECUTION_SNAPSHOT_TYPES = [
+  AirStrikeExecutionSnapshot,
+  AirbaseExecutionSnapshot,
+  BrokenfrontIntentExecutionSnapshot,
+  TroopColumnExecutionSnapshot,
+  CarrierExecutionSnapshot,
+  ClusterNukeExecutionSnapshot,
+  FighterExecutionSnapshot,
+  FishingBoatExecutionSnapshot,
+  OilRigExecutionSnapshot,
+  UraniumMineExecutionSnapshot,
   AllianceExtensionExecutionSnapshot,
   AllianceRejectExecutionSnapshot,
   AllianceRequestExecutionSnapshot,

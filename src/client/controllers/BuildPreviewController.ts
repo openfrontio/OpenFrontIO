@@ -1425,6 +1425,7 @@ export class BuildPreviewController implements Controller {
         canBuild: false,
         canUpgrade: false,
         cost: 0n,
+        uraniumCost: 0,
         overlappingRailroads: [],
         ghostRailPaths: [],
       },

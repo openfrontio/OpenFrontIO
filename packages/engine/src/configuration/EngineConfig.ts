@@ -273,6 +273,35 @@ export class EngineConfig extends Config {
     return this.trainStationMaxRange() * 1.4142;
   }
 
+  // --- BrokenFront sea economy -------------------------------------------
+
+  /** Gold an oil rig of `level` pays its owner each oilRigCycleTicks. */
+  oilRigGold(level: number, player: PlayerLike): Gold {
+    return BigInt(Math.floor(8_000 * level * this.goldMultiplierFor(player)));
+  }
+  oilRigCycleTicks(): number {
+    return 50;
+  }
+
+  /** A fishing boat's catch, paid when it gets home from `dist` tiles out. */
+  fishingGold(dist: number, player: PlayerLike): Gold {
+    return BigInt(
+      Math.floor((6_000 + 80 * dist) * this.goldMultiplierFor(player)),
+    );
+  }
+  fishingBoatSpawnTicks(): number {
+    return 200;
+  }
+  fishingLoiterTicks(): number {
+    return 150;
+  }
+  fishingMinDistance(): number {
+    return 25;
+  }
+  fishingMaxDistance(): number {
+    return 60;
+  }
+
   tradeShipGold(dist: number, player: PlayerLike): Gold {
     // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
     const debuff = this.tradeShipShortRangeDebuff();
@@ -394,12 +423,46 @@ export class EngineConfig extends Config {
           UnitType.Factory,
           UnitType.Port,
         );
+      case UnitType.LargeNuke:
+        return this.costWrapper(() => 2_500_000, UnitType.LargeNuke);
+      case UnitType.ClusterNuke:
+        // Five atom-sized warheads for the price of three atom bombs.
+        return this.costWrapper(() => 2_250_000, UnitType.ClusterNuke);
+      case UnitType.UraniumMine:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(1_500_000, (numUnits + 1) * 400_000),
+          UnitType.UraniumMine,
+        );
+      case UnitType.OilRig:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(2_000_000, (numUnits + 1) * 600_000),
+          UnitType.OilRig,
+        );
+      case UnitType.Airbase:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(3_000_000, (numUnits + 1) * 1_000_000),
+          UnitType.Airbase,
+        );
+      case UnitType.AircraftCarrier:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(4_000_000, (numUnits + 1) * 2_000_000),
+          UnitType.AircraftCarrier,
+        );
+      case UnitType.Fighter:
+        return this.costWrapper(() => 150_000, UnitType.Fighter);
+      case UnitType.Bomber:
+        return this.costWrapper(() => 400_000, UnitType.Bomber);
+      case UnitType.TransportPlane:
+        return this.costWrapper(() => 250_000, UnitType.TransportPlane);
       case UnitType.TransportShip:
       case UnitType.Shell:
       case UnitType.SAMMissile:
       case UnitType.MIRVWarhead:
       case UnitType.TradeShip:
       case UnitType.Train:
+      case UnitType.ClusterWarhead:
+      case UnitType.FishingBoat:
+      case UnitType.TroopColumn:
         return () => 0n;
       default:
         assertNever(type);
@@ -687,9 +750,13 @@ export class EngineConfig extends Config {
     switch (unitType) {
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
+      case UnitType.LargeNuke:
         return 10;
+      case UnitType.ClusterNuke:
       case UnitType.MIRV:
         return 15;
+      case UnitType.ClusterWarhead:
+        return 18;
       case UnitType.MIRVWarhead:
         return 22;
     }

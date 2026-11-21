@@ -461,6 +461,12 @@ export class UserSettings {
     return this.getBool("settings.anonymousNames", false);
   }
 
+  // On by default: other players' names show profanity as ***. Opting out
+  // shows general profanity as typed; hate terms stay masked by the server.
+  profanityFilter() {
+    return this.getBool("settings.profanityFilter", true);
+  }
+
   randomNameStyle(): RandomNameStyle {
     return this.getCached("settings.randomNameStyle") === "tribe"
       ? "tribe"
@@ -608,6 +614,10 @@ export class UserSettings {
 
   setTutorialDismissed(value: boolean) {
     this.setBool("settings.tutorialDismissed", value);
+  }
+
+  toggleProfanityFilter() {
+    this.setBool("settings.profanityFilter", !this.profanityFilter());
   }
 
   toggleRandomName() {

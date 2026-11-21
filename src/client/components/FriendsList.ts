@@ -368,7 +368,7 @@ export class FriendsList extends LitElement {
             @keydown=${(e: KeyboardEvent) => {
               if (e.key === "Enter") void this.handleSend();
             }}
-            class="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-mono text-sm"
+            class="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand/50 transition-all font-mono text-sm"
             placeholder=${translateText("friends.public_id_placeholder")}
             maxlength="200"
             ?disabled=${this.actionPending}

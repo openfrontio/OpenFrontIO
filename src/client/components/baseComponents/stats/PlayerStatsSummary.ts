@@ -391,10 +391,10 @@ export class PlayerStatsSummary extends LitElement {
       >
         <div
           data-win-rate
-          class="relative overflow-hidden rounded-xl border border-malibu-blue/25 bg-gradient-to-br from-malibu-blue/15 via-white/5 to-transparent px-4 py-3"
+          class="relative overflow-hidden rounded-xl border border-brand/25 bg-gradient-to-br from-brand/15 via-white/5 to-transparent px-4 py-3"
         >
           <div
-            class="pointer-events-none absolute -right-8 -top-12 h-32 w-32 rounded-full bg-aquarius/10 blur-2xl"
+            class="pointer-events-none absolute -right-8 -top-12 h-32 w-32 rounded-full bg-brand-light/10 blur-2xl"
           ></div>
           <div
             class="relative grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(17rem,20rem)] sm:items-center"

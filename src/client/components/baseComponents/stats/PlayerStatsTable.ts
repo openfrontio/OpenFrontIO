@@ -21,6 +21,10 @@ const BUILDING_ORDER = {
   defp: 4,
   silo: 5,
   saml: 6,
+  umine: 7,
+  oilr: 8,
+  abase: 9,
+  carr: 10,
 } as const satisfies Record<
   Exclude<(typeof otherUnits)[number], "wshp">,
   number
@@ -49,6 +53,14 @@ const UNIT_LABEL_KEYS = {
   mirvw: "player_stats_table.unit.mirvw",
   trade: "player_stats_table.unit.trade",
   trans: "player_stats_table.unit.trans",
+  fish: "unit_type.fishing_boat",
+  lnuke: "unit_type.large_nuke",
+  cnuke: "unit_type.cluster_nuke",
+  cnukew: "player_stats_table.unit.cnukew",
+  umine: "unit_type.uranium_mine",
+  oilr: "unit_type.oil_rig",
+  abase: "unit_type.airbase",
+  carr: "unit_type.aircraft_carrier",
 } as const satisfies Record<
   | (typeof otherUnits)[number]
   | (typeof boatUnits)[number]

@@ -10,7 +10,7 @@
     "cancel_subscription_confirm": "您是否確認取消訂閱？訂閱在當前計費周期中依然有效。",
     "cancel_subscription_confirm_steam": "您的訂閱將持續至 {date}。Steam 訂閱一旦取消便無法重新啟用──若要再繼續訂閱，您需要再重新購買。",
     "cancel_subscription_confirm_steam_no_date": "您的訂閱將保持啟用直到您購買時所指定的期限。Steam 訂閱一旦取消便無法重新啟用──若要再繼續訂閱，您需要再重新購買。",
-    "cancel_subscription_failed": "訂閱取消失敗。請再試一次，或前往 OpenFront 網站上的\"管理\"進一步管理您的付款方式。",
+    "cancel_subscription_failed": "訂閱取消失敗。請再試一次，或前往 BrokenFront 網站上的\"管理\"進一步管理您的付款方式。",
     "cancel_subscription_success": "訂閱取消成功。訂閱在當前計費周期中依然有效。",
     "cancel_subscription_success_steam": "已取消──啟用至 {date}。",
     "cancel_subscription_success_steam_no_date": "已取消──啟用直到您購買時所指定的期限。",
@@ -32,7 +32,7 @@
     "desktop_login_discord": "在瀏覽器中以 Discord 繼續",
     "desktop_login_google": "在瀏覽器中以 Google 繼續",
     "desktop_login_needs_update": "登入需要最新版本的桌面程式。請先重啟 Steam 並更新後再試。",
-    "desktop_sign_in_desc": "登入將會在瀏覽器中開啟 OpenFront 網站。登入並確認綁定至您的 Steam 帳號，遊戲將會辨識並登入。",
+    "desktop_sign_in_desc": "登入將會在瀏覽器中開啟 BrokenFront 網站。登入並確認綁定至您的 Steam 帳號，遊戲將會辨識並登入。",
     "email_placeholder": "請輸入您的電子信箱地址",
     "enter_email_address": "請輸入電子信箱地址",
     "failed_to_send_recovery_email": "帳號恢復郵件發送失敗",
@@ -50,7 +50,7 @@
     "link_google_already_linked": "該 Google 帳號已綁定至其他玩家。",
     "link_google_error": "無法綁定您的 Google 帳號。請確認您已登入 Google，然後再試一次。",
     "link_google_failed": "無法開始綁定 Google 帳號，請再試一次。",
-    "link_google_on_web": "在 OpenFront 網站中綁定 Google",
+    "link_google_on_web": "在 BrokenFront 網站中綁定 Google",
     "link_google_success": "已綁定 Google 帳號。",
     "link_steam": "綁定 Steam 帳號",
     "link_steam_error": "無法綁定您的 Steam 帳號。請確認您已登入 Steam，然後再試一次。",
@@ -64,13 +64,13 @@
     "login_deleted": "該帳號已被刪除。",
     "login_email_exists": "您已使用該電子信箱創建帳號。請登入後於\"設定\"中綁定至帳號。",
     "login_error": "我們無法驗證該登入。請再試一次。",
-    "login_no_account": "尚未有 OpenFront 帳號使用該 Steam 帳號。使用您現有的帳號登入並從\"設定\"中綁定 Steam 帳號，或從 Steam 中啟動遊戲。",
+    "login_no_account": "尚未有 BrokenFront 帳號使用該 Steam 帳號。使用您現有的帳號登入並從\"設定\"中綁定 Steam 帳號，或從 Steam 中啟動遊戲。",
     "manage_subscription": "管理",
     "manage_subscription_on_steam": "透過 Steam 付款。\"管理\"將會開啟您的 Steam 訂閱頁面。",
     "manage_subscription_on_steam_ending": "已取消──啟用至 {date}。\"管理\"將會開啟您的 Steam 訂閱頁面。",
     "manage_subscription_on_steam_ending_no_date": "已訂閱──啟用直到您購買時所指定的期限。\"管理\"將會開啟您的 Steam 訂閱頁面。",
     "manage_subscription_on_steam_no_tier_change": "透過 Steam 付款。\"管理\"將會開啟您的 Steam 訂閱頁面。若要變更訂閱等級，請在您本月的訂閱結束後再取消並訂閱新的等級。",
-    "manage_subscription_on_web": "在 OpenFront 網站上管理或更改您的付款方式。",
+    "manage_subscription_on_web": "在 BrokenFront 網站上管理或更改您的付款方式。",
     "marketing_desc": "不定期提供最新消息、活動資訊與遊戲更新，您可隨時取消訂閱。",
     "marketing_no_email": "將電子信箱地址綁定至您的帳號，以獲取最新消息。",
     "marketing_no_email_steam": "Steam 沒有和我們分享您的電子信箱地址，所以不會有任何消息寄送給您。",
@@ -477,7 +477,7 @@
   "common": {
     "available": "可用的",
     "back": "後退",
-    "backend_unreachable": "無法連線至 OpenFront 伺服器。請檢查您得網路連線並重試。",
+    "backend_unreachable": "無法連線至 BrokenFront 伺服器。請檢查您得網路連線並重試。",
     "cancel": "取消",
     "cap_label": "帽子",
     "cap_tooltip": "接收方剩餘容量",
@@ -580,11 +580,11 @@
     "back_to_game": "返回遊戲",
     "browser_fallback": "無法自動開啟您的瀏覽器，請改用上方的連結。",
     "cancel": "取消",
-    "code_destination_generic": "請在 OpenFront 網站中輸入這個驗證碼以連結您的帳號：",
+    "code_destination_generic": "請在 BrokenFront 網站中輸入這個驗證碼以連結您的帳號：",
     "code_destination_site": "在 {site} 上輸入這個驗證碼以連結您的帳號：",
     "continue_to_game": "繼續遊戲",
     "expired": "該驗證碼已過期。請重新開始以取得新的驗證碼。",
-    "heading": "歡迎來到 OpenFront",
+    "heading": "歡迎來到 BrokenFront",
     "link_existing": "綁定現有帳號",
     "linking_failed_reason": "綁定失敗：{reason}",
     "linking_failed_unknown": "綁定失敗，原因不明。",
@@ -594,16 +594,16 @@
     "retry": "重試",
     "starting_link": "開始帳號綁定中……",
     "ticket_unavailable": "現在無法開始帳號綁定。您可以重試，或是繼續遊戲。",
-    "title": "OpenFront — 帳號設定"
+    "title": "BrokenFront — 帳號設定"
   },
   "desktop_presence": {
     "in_game": "遊戲中",
     "spectating": "觀戰中"
   },
   "desktop_session": {
-    "generic": "無法登入至您的 OpenFront 帳號",
-    "needs_account": "設定您的 OpenFront 帳號即可線上遊玩",
-    "network": "無法連線至 OpenFront。請檢查您的網路連線。",
+    "generic": "無法登入至您的 BrokenFront 帳號",
+    "needs_account": "設定您的 BrokenFront 帳號即可線上遊玩",
+    "network": "無法連線至 BrokenFront。請檢查您的網路連線。",
     "retry": "重試",
     "retrying": "登入中…",
     "steam_backend": "Steam 目前無法將您登入。請稍後重試。",
@@ -613,7 +613,7 @@
   },
   "desktop_status": {
     "go_online": "改為線上",
-    "offline": "離線：無法連線至 OpenFront 伺服器",
+    "offline": "離線：無法連線至 BrokenFront 伺服器",
     "retry": "重試",
     "retrying": "正在重試……"
   },
@@ -626,12 +626,12 @@
     "retry": "重試"
   },
   "desktop_webgl_gate": {
-    "intro": "OpenFront 無法使用您的顯示卡，因此遊戲無法啟動。這種狀況通常是暫時的。若要解決這個問題：",
-    "quit": "退出 OpenFront",
+    "intro": "BrokenFront 無法使用您的顯示卡，因此遊戲無法啟動。這種狀況通常是暫時的。若要解決這個問題：",
+    "quit": "退出 BrokenFront",
     "step_drivers": "如果這個狀況仍發生，請從 NVIDIA、AMD、或 Intel 更新您的顯示驅動。",
-    "step_quit": "退出 OpenFront。",
+    "step_quit": "退出 BrokenFront。",
     "step_restart_computer": "如果這個狀況仍持續發生，請重新啟動您的電腦。",
-    "step_restart_steam": "重啟 Steam，然後再重啟 OpenFront。",
+    "step_restart_steam": "重啟 Steam，然後再重啟 BrokenFront。",
     "title": "硬體加速不可用"
   },
   "detailed_view": {
@@ -972,7 +972,7 @@
     "preset_colorblind_desc": "色盲友善的領土和邊界顏色",
     "preset_custom": "自訂",
     "preset_default": "預設",
-    "preset_default_desc": "標準 OpenFront 外觀",
+    "preset_default_desc": "標準 BrokenFront 外觀",
     "preset_delete_confirm": "刪除設定檔 \"{name}\"？",
     "preset_evans_pick": "Evan 的精選設定",
     "preset_evans_pick_desc": "Evan 實際會遊玩的設定檔",
@@ -1091,7 +1091,7 @@
     "radial_title": "環形選單",
     "table_action": "操作",
     "table_key": "鍵",
-    "troubleshooting_desc": "如果您在玩 OpenFront 時遇到效能問題、當機或其他問題，請造訪我們的故障排除頁面，以取得診斷和修復常見問題的協助：",
+    "troubleshooting_desc": "如果您在玩 BrokenFront 時遇到效能問題、當機或其他問題，請造訪我們的故障排除頁面，以取得診斷和修復常見問題的協助：",
     "ui_attack_ratio": "攻擊比例 - 攻擊時使用的軍隊數量。您可以使用控制條調整攻擊比例。攻擊軍隊數量超過防禦軍隊數量，則攻擊時損失的軍隊較少；防禦軍隊數超過攻擊軍隊數量，，則攻擊時損失的軍隊較多。此比例效果不會超過 2:1。",
     "ui_control": "控制面板",
     "ui_control_desc": "控制面板包括如下內容：",
@@ -1111,7 +1111,7 @@
     "ui_wilderness": "荒野",
     "ui_your_team": "你的隊伍：",
     "video_tutorial": "影片教學",
-    "video_tutorial_title": "OpenFront.io 教學"
+    "video_tutorial_title": "BrokenFront 教學"
   },
   "host_modal": {
     "anonymous_players": "匿名玩家",
@@ -1183,14 +1183,14 @@
     "got_it": "好的",
     "how": "如何操作",
     "later": "稍後",
-    "modal_desc": "您的瀏覽器不支援全螢幕，但您可以將 OpenFront 新增到您的主螢幕以獲得沉浸體驗：",
+    "modal_desc": "您的瀏覽器不支援全螢幕，但您可以將 BrokenFront 新增到您的主螢幕以獲得沉浸體驗：",
     "modal_title": "在 iOS 上全螢幕使用",
     "never": "從不",
     "step_add_to_home_label": "新增到主螢幕",
     "step_open": "從主螢幕開啟──以無搜尋列全螢幕啟動",
     "step_scroll_and_tap": "向下滾動並點選",
     "step_share": "點選瀏覽器中的“分享”按鈕",
-    "text": "將 OpenFront 新增到主螢幕，獲得全螢幕體驗"
+    "text": "將 BrokenFront 新增到主螢幕，獲得全螢幕體驗"
   },
   "kick_reason": {
     "admin": "被管理員踢出",
@@ -1263,7 +1263,7 @@
   "main": {
     "account": "帳號",
     "clans": "公會",
-    "copyright": "© OpenFront™ 及貢獻者們",
+    "copyright": "© BrokenFront 及貢獻者們",
     "create": "創建大廳",
     "discord_avatar_alt": "Discord 頭像",
     "github": "GitHub",
@@ -1285,7 +1285,7 @@
     "solo": "單人模式",
     "store": "商店",
     "terms_of_service": "服務條款",
-    "title": "OpenFront (ALPHA)",
+    "title": "BrokenFront (ALPHA)",
     "troubleshooting": "故障排除",
     "tutorial": "教學",
     "user_avatar_alt": "{username} 的頭像",
@@ -1458,7 +1458,7 @@
     "dismiss": "忽略",
     "error": "無法儲存。請再試一次。",
     "no": "不了，謝謝",
-    "title": "想收到 OpenFront 的一線消息嗎？",
+    "title": "想收到 BrokenFront 的一線消息嗎？",
     "yes": "沒問題"
   },
   "matchmaking_modal": {
@@ -1488,7 +1488,7 @@
     "ranked_pairing_note": "在團隊模式中，匹配隊伍中您的公會成員和朋友會盡可能地被分配在同一隊。朋友優先，接著才是公會成員。如果您的評分差距太大，您則會被匹配到其他隊局中，以保持遊戲公平。",
     "ranked_title": "排位賽",
     "retry_lobbies": "重試",
-    "servers_unreachable": "無法連線至 OpenFront 伺服器",
+    "servers_unreachable": "無法連線至 BrokenFront 伺服器",
     "teams_count": "{teamCount} 支隊伍",
     "teams_of": "{teamCount} 支隊伍，每隊 {playersPerTeam} 人",
     "teams_title": "隊伍"
@@ -1763,9 +1763,9 @@
     "waiting_for_players": "正在等待玩家"
   },
   "purchase_nudge": {
-    "body": "看起來您很喜歡 OpenFront！請考慮以購買支持我們──任何購買將會永遠移除廣告。",
+    "body": "看起來您很喜歡 BrokenFront！請考慮以購買支持我們──任何購買將會永遠移除廣告。",
     "close": "關閉",
-    "title": "喜歡 OpenFront？",
+    "title": "喜歡 BrokenFront？",
     "visit_store": "前往商店"
   },
   "radial_menu": {
@@ -1817,7 +1817,7 @@
     "launched": "在 Steam 程式中開啟這個大廳。如果沒有反應，請確保 Steam 正在運行。",
     "open_in_steam": "在 Steam 中開啟",
     "play_in_browser": "在瀏覽器中遊玩",
-    "prompt": "您在 Steam 上擁有 OpenFront。您想從哪裡加入這個大廳？",
+    "prompt": "您在 Steam 上擁有 BrokenFront。您想從哪裡加入這個大廳？",
     "remember": "記住我的選擇",
     "title": "加入大廳",
     "try_again": "重試"
@@ -1835,23 +1835,23 @@
     "conflict_games": "{games, plural, =0 {未遊玩任何遊戲} other {已遊玩 # 場遊戲}}",
     "conflict_games_capped": "已遊玩 {games}+ 場遊戲",
     "conflict_keep": "您將保留 {username}，且您的 Steam 購買紀錄將會因綁定一併遷移。",
-    "conflict_prompt": "Steam {persona} 已經綁定到另一個 OpenFront 帳號。",
-    "conflict_prompt_no_persona": "這個 Steam 帳號已經綁定到另一個 OpenFront 帳號。",
+    "conflict_prompt": "Steam {persona} 已經綁定到另一個 BrokenFront 帳號。",
+    "conflict_prompt_no_persona": "這個 Steam 帳號已經綁定到另一個 BrokenFront 帳號。",
     "conflict_warning": "這是無法還原的。",
     "invalid_code": "您輸入了一個錯誤的驗證碼。請檢查並再試一次。",
     "linking": "綁定中…",
     "load_error": "無法載入您的帳號細節。請從 Steam 再試一次。",
     "load_error_code": "無法載入您的帳號細節。請再試一次。",
     "reason_account_already_has_steam": "您的帳號已綁定到其他 Steam 帳號。",
-    "reason_discard_blocked": "這個 Steam 帳號的 OpenFront 帳號無法被自動移除。請聯絡支援團隊，我們將會為您解決。",
-    "reason_discard_blocked_paid": "這個 Steam 帳號的 OpenFront 帳號擁有購買紀錄，因此無法被自動移除。請聯絡支援團隊，我們將會為您解決。",
+    "reason_discard_blocked": "這個 Steam 帳號的 BrokenFront 帳號無法被自動移除。請聯絡支援團隊，我們將會為您解決。",
+    "reason_discard_blocked_paid": "這個 Steam 帳號的 BrokenFront 帳號擁有購買紀錄，因此無法被自動移除。請聯絡支援團隊，我們將會為您解決。",
     "reason_discard_deferred": "仍有一個購買正在該帳號上進行中。請稍後再試。",
     "reason_discard_not_linked": "綁定未完成。請重新開始綁定。",
     "reason_expired": "這個網址已過期。請從 Steam 再試一次。",
     "reason_offer_unavailable": "該確認已過期。請重新開始綁定。",
     "reason_rate_limited": "嘗試次數過多。請{seconds, plural,  =0 {稍後} other {稍等 # 秒後}}再試一次。",
     "reason_steam_has_progress": "這個 Steam 帳號已經有自己的進度，因此無法合併。",
-    "reason_steam_linked_elsewhere": "這個 Steam 帳號已經綁定到其他 OpenFront 帳號。",
+    "reason_steam_linked_elsewhere": "這個 Steam 帳號已經綁定到其他 BrokenFront 帳號。",
     "success": "您的 Steam 帳號已綁定。",
     "title": "綁定 Steam 帳戶"
   },
@@ -1861,9 +1861,9 @@
   },
   "steam_wishlist": {
     "cta": "立即加入願望清單",
-    "on_steam": "在 Steam 上開啟 OpenFront",
+    "on_steam": "在 Steam 上開啟 BrokenFront",
     "release": "於 2026 年第三季度發布",
-    "title": "將 OpenFront 加入 Steam 願望清單！"
+    "title": "將 BrokenFront 加入 Steam 願望清單！"
   },
   "store": {
     "already_owned": "您已經擁有該物品。沒有收取費用。",
@@ -1940,7 +1940,7 @@
     "subscription_purchase_success": "成功訂閱！",
     "subscriptions": "訂閱",
     "switch_button": "切換",
-    "tier_change_steam_needs_desktop": "您的訂閱將從 Steam 扣款。請從 Steam 上的 OpenFront 更改或從您的 Steam 帳號設定中管理。",
+    "tier_change_steam_needs_desktop": "您的訂閱將從 Steam 扣款。請從 Steam 上的 BrokenFront 更改或從您的 Steam 帳號設定中管理。",
     "tier_change_unavailable_steam": "若要在 Steam 上更改訂閱等級，請在您的 Steam 帳號管理中取消訂閱，並在您本月的訂閱結束後再訂閱新的等級。",
     "title": "商店",
     "tribe_boost_button": "加成",
@@ -2017,7 +2017,7 @@
     "browser": "瀏覽器",
     "canvas_2d_no_gpu": "Canvas 2D（無 GPU）",
     "charging": "充電中",
-    "chromium_tip": "OpenFront 在基於 Chromium 的瀏覽器上運作效果最佳。",
+    "chromium_tip": "BrokenFront 在基於 Chromium 的瀏覽器上運作效果最佳。",
     "copied_to_clipboard": "訊息已複製到剪貼簿！如果您需要協助，歡迎在我們的 Discord 伺服器上分享。",
     "device_pixel_ratio": "裝置像素比",
     "environment": "環境",
@@ -2108,8 +2108,8 @@
     "warship": "軍艦"
   },
   "update_available": {
-    "desktop": "新的 OpenFront 版本已可用。該版本將會在背景程序中下載；當準備就緒後可從更新列重新載入。",
-    "message": "新的 OpenFront 版本已可用。網頁將會立即刷新以更新。"
+    "desktop": "新的 BrokenFront 版本已可用。該版本將會在背景程序中下載；當準備就緒後可從更新列重新載入。",
+    "message": "新的 BrokenFront 版本已可用。網頁將會立即刷新以更新。"
   },
   "user_setting": {
     "alert_frame_desc": "切換警示框顯示。當啟用，當您被背叛或被路上攻擊時警示框將會顯示。",
@@ -2335,7 +2335,7 @@
     "other_won": "{player} 獲勝了！",
     "requeue": "再玩一次",
     "spectate": "觀戰",
-    "support_openfront": "支持 OpenFront！",
+    "support_openfront": "支持 BrokenFront！",
     "territory_pattern": "購買皮膚即可移除廣告！",
     "you_won": "你獲勝了！",
     "your_team": "你的隊伍獲勝了！",

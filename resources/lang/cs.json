@@ -10,7 +10,7 @@
     "cancel_subscription_confirm": "Zrušit předplatné? Můžete okamžitě ztratit přístup.",
     "cancel_subscription_confirm_steam": "Vaše předplatné zůstane aktivní do {date}. Předplatné přes Steam nelze po zrušení znovu aktivovat — pokud si ho budete chtít znovu předplatit, musíte si koupit nové.",
     "cancel_subscription_confirm_steam_no_date": "Vaše předplatné zůstane aktivní do konce zaplaceného období. Předplatné přes Steam nelze po zrušení znovu aktivovat — pokud si ho budete chtít znovu předplatit, musíte si koupit nové.",
-    "cancel_subscription_failed": "Zrušení předplatného se nezdařilo. Zkuste to prosím znovu nebo spravujte fakturaci na webu OpenFront.",
+    "cancel_subscription_failed": "Zrušení předplatného se nezdařilo. Zkuste to prosím znovu nebo spravujte fakturaci na webu BrokenFront.",
     "cancel_subscription_success": "Předplatné zrušeno. Váš účet nyní zobrazuje váš aktuální přístup.",
     "cancel_subscription_success_steam": "Zrušeno — aktivní do {date}.",
     "cancel_subscription_success_steam_no_date": "Zrušeno — aktivní do konce zaplaceného období.",
@@ -32,7 +32,7 @@
     "desktop_login_discord": "Pokračovat přes Discord v prohlížeči",
     "desktop_login_google": "Pokračovat přes Google v prohlížeči",
     "desktop_login_needs_update": "Přihlášení vyžaduje novější verzi desktopové aplikace. Restartujte Steam, aby se aktualizovala, a poté to zkuste znovu.",
-    "desktop_sign_in_desc": "Při přihlášení se v prohlížeči otevře web OpenFront. Přihlaste se tam, potvrďte propojení se svým účtem Steam a hra jej následně rozpozná.",
+    "desktop_sign_in_desc": "Při přihlášení se v prohlížeči otevře web BrokenFront. Přihlaste se tam, potvrďte propojení se svým účtem Steam a hra jej následně rozpozná.",
     "email_placeholder": "Zadejte svou e-mailovou adresu",
     "enter_email_address": "Zadejte prosím e-mailovou adresu",
     "failed_to_send_recovery_email": "Obnovovací e-mail se nepodařilo odeslat",
@@ -50,7 +50,7 @@
     "link_google_already_linked": "Tento účet Google je už propojený s jiným hráčem.",
     "link_google_error": "Nepodařilo se propojit váš účet Google. Ujistěte se, že jste přihlášeni, a zkuste to znovu.",
     "link_google_failed": "Nepodařilo se zahájit propojení s Googlem. Zkuste to prosím znovu.",
-    "link_google_on_web": "Propojit Google na webu OpenFront",
+    "link_google_on_web": "Propojit Google na webu BrokenFront",
     "link_google_success": "Účet Google byl propojen.",
     "link_steam": "Propojit účet Steam",
     "link_steam_error": "Účet Steam se nepodařilo propojit. Ujistěte se, že jste přihlášeni, a zkuste to znovu.",
@@ -64,13 +64,13 @@
     "login_deleted": "Tento účet byl smazán.",
     "login_email_exists": "Účet s tímto e-mailem již existuje. Přihlaste se k němu a poté tento účet propojte v nastavení.",
     "login_error": "Přihlášení se nepodařilo ověřit. Zkuste to prosím znovu.",
-    "login_no_account": "Tento účet Steam zatím není propojen s žádným účtem OpenFront. Přihlaste se ke svému stávajícímu účtu a propojte Steam v nastavení, nebo spusťte hru přes Steam.",
+    "login_no_account": "Tento účet Steam zatím není propojen s žádným účtem BrokenFront. Přihlaste se ke svému stávajícímu účtu a propojte Steam v nastavení, nebo spusťte hru přes Steam.",
     "manage_subscription": "Spravovat",
     "manage_subscription_on_steam": "Účtováno přes Steam. Možnost Spravovat otevře stránku s vašimi předplatnými na Steamu.",
     "manage_subscription_on_steam_ending": "Zrušeno — aktivní do {date}. Možnost Spravovat otevře stránku s vašimi předplatnými na Steamu.",
     "manage_subscription_on_steam_ending_no_date": "Zrušeno — aktivní do konce zaplaceného období. Možnost Spravovat otevře stránku s vašimi předplatnými na Steamu.",
     "manage_subscription_on_steam_no_tier_change": "Účtováno přes Steam. Možnost Spravovat otevře stránku s vašimi předplatnými na Steamu. Chcete-li změnit úroveň předplatného, zrušte stávající a po skončení aktuálního měsíce si předplaťte novou.",
-    "manage_subscription_on_web": "Spravujte nebo změňte svou fakturaci na webu OpenFront.",
+    "manage_subscription_on_web": "Spravujte nebo změňte svou fakturaci na webu BrokenFront.",
     "marketing_desc": "Občasné novinky, události a aktualizace hry. Odběr můžete kdykoli zrušit.",
     "marketing_no_email": "Přidejte ke svému účtu e-mailovou adresu, abyste mohli odebírat novinky.",
     "marketing_no_email_steam": "Steam s námi nesdílí vaši e-mailovou adresu, takže vám nemáme kam zasílat aktualizace.",
@@ -477,7 +477,7 @@
   "common": {
     "available": "K dispozici",
     "back": "Zpět",
-    "backend_unreachable": "K serverům OpenFront se nelze připojit. Zkontrolujte své připojení a zkuste to znovu.",
+    "backend_unreachable": "K serverům BrokenFront se nelze připojit. Zkontrolujte své připojení a zkuste to znovu.",
     "cancel": "Zrušit",
     "cap_label": "Limit",
     "cap_tooltip": "Zbývající kapacita příjemce",
@@ -580,11 +580,11 @@
     "back_to_game": "Zpět do hry",
     "browser_fallback": "Prohlížeč se nepodařilo otevřít automaticky — použijte odkaz výše.",
     "cancel": "Zrušit",
-    "code_destination_generic": "Pro propojení účtu zadejte tento kód na webu OpenFront:",
+    "code_destination_generic": "Pro propojení účtu zadejte tento kód na webu BrokenFront:",
     "code_destination_site": "Pro propojení účtu zadejte tento kód na webu {site}:",
     "continue_to_game": "Pokračovat do hry",
     "expired": "Platnost tohoto kódu vypršela. Začněte znovu a získejte nový.",
-    "heading": "Vítejte v OpenFront",
+    "heading": "Vítejte v BrokenFront",
     "link_existing": "Propojit stávající účet",
     "linking_failed_reason": "Propojení se nezdařilo: {reason}",
     "linking_failed_unknown": "Propojení se z neznámého důvodu nezdařilo.",
@@ -594,16 +594,16 @@
     "retry": "Zkusit znovu",
     "starting_link": "Zahajování propojení účtu…",
     "ticket_unavailable": "Propojení účtu nyní nelze zahájit. Můžete to zkusit znovu nebo pokračovat do hry.",
-    "title": "OpenFront – Nastavení účtu"
+    "title": "BrokenFront – Nastavení účtu"
   },
   "desktop_presence": {
     "in_game": "Ve hře",
     "spectating": "Sleduje hru"
   },
   "desktop_session": {
-    "generic": "K vašemu účtu OpenFront se nepodařilo přihlásit",
-    "needs_account": "Nastavte si účet OpenFront, abyste mohli hrát online",
-    "network": "K OpenFront se nelze připojit. Zkontrolujte své připojení.",
+    "generic": "K vašemu účtu BrokenFront se nepodařilo přihlásit",
+    "needs_account": "Nastavte si účet BrokenFront, abyste mohli hrát online",
+    "network": "K BrokenFront se nelze připojit. Zkontrolujte své připojení.",
     "retry": "Zkusit znovu",
     "retrying": "Přihlašování…",
     "steam_backend": "Steamu se nedaří vás přihlásit. Zkuste to za chvíli znovu.",
@@ -613,7 +613,7 @@
   },
   "desktop_status": {
     "go_online": "Přejít online",
-    "offline": "Offline: k serverům OpenFront se nelze připojit",
+    "offline": "Offline: k serverům BrokenFront se nelze připojit",
     "retry": "Zkusit znovu",
     "retrying": "Opakování pokusu…"
   },
@@ -626,12 +626,12 @@
     "retry": "Zkusit znovu"
   },
   "desktop_webgl_gate": {
-    "intro": "OpenFront nemohl použít vaši grafickou kartu, takže hru nelze spustit. Obvykle jde o dočasný problém. Řešení:",
-    "quit": "Ukončit OpenFront",
+    "intro": "BrokenFront nemohl použít vaši grafickou kartu, takže hru nelze spustit. Obvykle jde o dočasný problém. Řešení:",
+    "quit": "Ukončit BrokenFront",
     "step_drivers": "Pokud problém přetrvává, aktualizujte ovladače grafické karty od NVIDIA, AMD nebo Intelu.",
-    "step_quit": "Ukončit OpenFront.",
+    "step_quit": "Ukončit BrokenFront.",
     "step_restart_computer": "Pokud problém přetrvává, restartujte počítač.",
-    "step_restart_steam": "Restartujte Steam a poté znovu spusťte OpenFront.",
+    "step_restart_steam": "Restartujte Steam a poté znovu spusťte BrokenFront.",
     "title": "Grafická akcelerace není k dispozici"
   },
   "detailed_view": {
@@ -972,7 +972,7 @@
     "preset_colorblind_desc": "Barvy území a hranic vhodné pro barvoslepé",
     "preset_custom": "Vlastní",
     "preset_default": "Výchozí",
-    "preset_default_desc": "Standardní vzhled OpenFront",
+    "preset_default_desc": "Standardní vzhled BrokenFront",
     "preset_delete_confirm": "Odstranit předvolbu \"{name}\"?",
     "preset_evans_pick": "Evanova volba",
     "preset_evans_pick_desc": "Nastavení, se kterým Evan skutečně hraje",
@@ -1091,7 +1091,7 @@
     "radial_title": "Kruhová nabídka",
     "table_action": "Akce",
     "table_key": "Klávesa",
-    "troubleshooting_desc": "Pokud při hraní OpenFront narazíte na problémy s výkonem, pády nebo jiné potíže, navštivte prosím naši stránku řešení potíží, která vám pomůže s diagnostikou a opravou běžných problémů:",
+    "troubleshooting_desc": "Pokud při hraní BrokenFront narazíte na problémy s výkonem, pády nebo jiné potíže, navštivte prosím naši stránku řešení potíží, která vám pomůže s diagnostikou a opravou běžných problémů:",
     "ui_attack_ratio": "Poměr útoku – množství jednotek použitých při útoku. Poměr útoku můžete upravit posuvníkem. Pokud máte více útočících jednotek než obránce, ztratíte při útoku méně jednotek. Pokud jich máte méně, vaše útočící jednotky utrpí větší poškození. Účinek nepřesahuje poměr 2:1.",
     "ui_control": "Ovládací panel",
     "ui_control_desc": "Ovládací panel obsahuje následující prvky:",
@@ -1111,7 +1111,7 @@
     "ui_wilderness": "Divočina",
     "ui_your_team": "Váš tým:",
     "video_tutorial": "Video návod",
-    "video_tutorial_title": "OpenFront.io Návod"
+    "video_tutorial_title": "BrokenFront Návod"
   },
   "host_modal": {
     "anonymous_players": "Anonymní hráči",
@@ -1183,14 +1183,14 @@
     "got_it": "Rozumím",
     "how": "Návod",
     "later": "Později",
-    "modal_desc": "Váš prohlížeč nepodporuje režim celé obrazovky. Pro lepší zážitek si ale můžete OpenFront přidat na plochu:",
+    "modal_desc": "Váš prohlížeč nepodporuje režim celé obrazovky. Pro lepší zážitek si ale můžete BrokenFront přidat na plochu:",
     "modal_title": "Celá obrazovka na iOS",
     "never": "Nikdy",
     "step_add_to_home_label": "Přidat na plochu",
     "step_open": "Otevřete z plochy – spustí se na celé obrazovce bez adresního řádku",
     "step_scroll_and_tap": "Sjeďte dolů a klepněte",
     "step_share": "Klepněte v prohlížeči na tlačítko Sdílet",
-    "text": "Pro režim celé obrazovky přidejte OpenFront na plochu"
+    "text": "Pro režim celé obrazovky přidejte BrokenFront na plochu"
   },
   "kick_reason": {
     "admin": "Vyhozen správcem",
@@ -1263,7 +1263,7 @@
   "main": {
     "account": "Účet",
     "clans": "Klany",
-    "copyright": "© OpenFront™ a přispěvatelé",
+    "copyright": "© BrokenFront a přispěvatelé",
     "create": "Vytvořit lobby",
     "discord_avatar_alt": "Profilový obrázek na Discordu",
     "github": "GitHub",
@@ -1285,7 +1285,7 @@
     "solo": "Sólo",
     "store": "Obchod",
     "terms_of_service": "Podmínky používání",
-    "title": "OpenFront (ALPHA)",
+    "title": "BrokenFront (ALPHA)",
     "troubleshooting": "Řešení problémů",
     "tutorial": "Tutoriál",
     "user_avatar_alt": "Profilový obrázek uživatele {username}",
@@ -1458,7 +1458,7 @@
     "dismiss": "Zavřít",
     "error": "Nastavení se nepodařilo uložit. Zkuste to znovu.",
     "no": "Ne, děkuji",
-    "title": "Chcete dostávat novinky z OpenFrontu?",
+    "title": "Chcete dostávat novinky z BrokenFrontu?",
     "yes": "Ano, prosím"
   },
   "matchmaking_modal": {
@@ -1488,7 +1488,7 @@
     "ranked_pairing_note": "V týmových režimech jsou členové klanu a přátelé ve frontě pokud možno zařazeni do stejného týmu. Přednost mají přátelé, poté členové klanu. Pokud jsou vaše hodnocení příliš rozdílná, budete zařazeni odděleně, aby hry zůstaly férové.",
     "ranked_title": "Hodnocené",
     "retry_lobbies": "Zkusit znovu",
-    "servers_unreachable": "K serverům OpenFront se nelze připojit",
+    "servers_unreachable": "K serverům BrokenFront se nelze připojit",
     "teams_count": "Počet týmů: {teamCount}",
     "teams_of": "Týmy: {teamCount}, hráčů v týmu: {playersPerTeam}",
     "teams_title": "Týmy"
@@ -1522,7 +1522,7 @@
   },
   "news_box": {
     "dismiss": "Zavřít",
-    "firefox_warning": "OpenFront.io běží nejlépe v [prohlížečích založených na Chromiu](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium). Výkon může být horší v [prohlížečích založených na Firefoxu](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox).",
+    "firefox_warning": "BrokenFront běží nejlépe v [prohlížečích založených na Chromiu](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium). Výkon může být horší v [prohlížečích založených na Firefoxu](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox).",
     "go_to_item": "Přejít na položku {num}",
     "news": "NOVINKY",
     "tournament": "TURNAJ",
@@ -1763,9 +1763,9 @@
     "waiting_for_players": "Čeká se na hráče"
   },
   "purchase_nudge": {
-    "body": "Vypadá to, že vás OpenFront baví! Zvažte prosím, zda nás nepodpořit nákupem — jakýkoli nákup vám zajistí hraní bez reklam navždy.",
+    "body": "Vypadá to, že vás BrokenFront baví! Zvažte prosím, zda nás nepodpořit nákupem — jakýkoli nákup vám zajistí hraní bez reklam navždy.",
     "close": "Zavřít",
-    "title": "Baví vás OpenFront?",
+    "title": "Baví vás BrokenFront?",
     "visit_store": "Navštívit obchod"
   },
   "radial_menu": {
@@ -1817,7 +1817,7 @@
     "launched": "Otevírání této lobby v aplikaci Steam. Pokud se nic nestane, ujistěte se, že je Steam spuštěný.",
     "open_in_steam": "Otevřít ve Steamu",
     "play_in_browser": "Hrát v prohlížeči",
-    "prompt": "Máte OpenFront na Steamu. Kde se chcete k této lobby připojit?",
+    "prompt": "Máte BrokenFront na Steamu. Kde se chcete k této lobby připojit?",
     "remember": "Zapamatovat moji volbu",
     "title": "Připojit se k lobby",
     "try_again": "Zkusit znovu"
@@ -1835,23 +1835,23 @@
     "conflict_games": "{games, plural, =0 {Žádné odehrané hry} one {# odehraná hra} few {# odehrané hry} other {# odehraných her}}",
     "conflict_games_capped": "Odehráno {games}+ her",
     "conflict_keep": "Uživatelské jméno {username} vám zůstane a propojením se převedou i vaše nákupy ze Steamu.",
-    "conflict_prompt": "Účet Steam {persona} je již propojen s jiným účtem OpenFront.",
-    "conflict_prompt_no_persona": "Tento účet Steam je již propojen s jiným účtem OpenFront.",
+    "conflict_prompt": "Účet Steam {persona} je již propojen s jiným účtem BrokenFront.",
+    "conflict_prompt_no_persona": "Tento účet Steam je již propojen s jiným účtem BrokenFront.",
     "conflict_warning": "Tuto akci nelze vrátit zpět.",
     "invalid_code": "Toto nevypadá jako platný kód. Zkontrolujte ho a zkuste to znovu.",
     "linking": "Propojuji…",
     "load_error": "Nepodařilo se načíst údaje o vašem účtu. Zkuste propojení znovu spustit ze Steamu.",
     "load_error_code": "Nepodařilo se načíst údaje o vašem účtu. Zkuste to prosím znovu.",
     "reason_account_already_has_steam": "Váš účet je již propojen s jiným účtem Steam.",
-    "reason_discard_blocked": "Účet OpenFront propojený s tímto účtem Steam nelze automaticky odstranit. Kontaktujte prosím podporu a pomůžeme vám to vyřešit.",
-    "reason_discard_blocked_paid": "Účet OpenFront propojený s tímto účtem Steam obsahuje nákupy, takže jej nemůžeme automaticky smazat. Kontaktujte prosím podporu a pomůžeme vám to vyřešit.",
+    "reason_discard_blocked": "Účet BrokenFront propojený s tímto účtem Steam nelze automaticky odstranit. Kontaktujte prosím podporu a pomůžeme vám to vyřešit.",
+    "reason_discard_blocked_paid": "Účet BrokenFront propojený s tímto účtem Steam obsahuje nákupy, takže jej nemůžeme automaticky smazat. Kontaktujte prosím podporu a pomůžeme vám to vyřešit.",
     "reason_discard_deferred": "Na tomto účtu stále probíhá nákup. Zkuste to prosím znovu za několik minut.",
     "reason_discard_not_linked": "Propojení nebylo dokončeno. Zahajte jej prosím znovu.",
     "reason_expired": "Platnost tohoto odkazu vypršela. Zkuste propojení znovu spustit ze Steamu.",
     "reason_offer_unavailable": "Platnost tohoto potvrzení vypršela. Zahajte propojení prosím znovu.",
     "reason_rate_limited": "Příliš mnoho pokusů. Počkejte {seconds, plural, =0 {chvíli} one {# sekundu} few {# sekundy} other {# sekund}} a zkuste to znovu.",
     "reason_steam_has_progress": "Tento účet Steam již obsahuje vlastní postup ve hře a nelze ho sloučit.",
-    "reason_steam_linked_elsewhere": "Tento účet Steam je již propojen s jiným účtem OpenFront.",
+    "reason_steam_linked_elsewhere": "Tento účet Steam je již propojen s jiným účtem BrokenFront.",
     "success": "Váš účet Steam je nyní propojen.",
     "title": "Propojit účet Steam"
   },
@@ -1861,9 +1861,9 @@
   },
   "steam_wishlist": {
     "cta": "Přidat do seznamu přání",
-    "on_steam": "OpenFront na Steamu",
+    "on_steam": "BrokenFront na Steamu",
     "release": "Dostupné ve 3. čtvrtletí 2026",
-    "title": "Přidejte si OpenFront do seznamu přání na Steamu!"
+    "title": "Přidejte si BrokenFront do seznamu přání na Steamu!"
   },
   "store": {
     "already_owned": "Tuto položku již vlastníte. Nic vám nebylo účtováno.",
@@ -1940,7 +1940,7 @@
     "subscription_purchase_success": "Předplatné aktivováno!",
     "subscriptions": "Předplatná",
     "switch_button": "Změnit",
-    "tier_change_steam_needs_desktop": "Vaše předplatné je účtováno přes Steam. Změňte jej v aplikaci OpenFront na Steamu nebo jej spravujte v nastavení svého účtu Steam.",
+    "tier_change_steam_needs_desktop": "Vaše předplatné je účtováno přes Steam. Změňte jej v aplikaci BrokenFront na Steamu nebo jej spravujte v nastavení svého účtu Steam.",
     "tier_change_unavailable_steam": "Chcete-li změnit úroveň předplatného na Steamu, zrušte předplatné v nastavení svého účtu Steam a po skončení aktuálního měsíce si předplaťte novou úroveň.",
     "title": "Obchod",
     "tribe_boost_button": "Zvýhodnit",
@@ -2017,7 +2017,7 @@
     "browser": "Prohlížeč",
     "canvas_2d_no_gpu": "Canvas 2D (bez GPU)",
     "charging": "Nabíjení",
-    "chromium_tip": "OpenFront běží nejlépe v prohlížečích založených na Chromiu.",
+    "chromium_tip": "BrokenFront běží nejlépe v prohlížečích založených na Chromiu.",
     "copied_to_clipboard": "Informace byly zkopírovány do schránky. Neváhejte nás kontaktovat na Discordu, pokud potřebujete pomoct.",
     "device_pixel_ratio": "Poměr pixelů zařízení",
     "environment": "Prostředí",
@@ -2108,8 +2108,8 @@
     "warship": "Bitevní loď"
   },
   "update_available": {
-    "desktop": "Je k dispozici nová verze OpenFront. Stáhne se na pozadí; jakmile bude připravena, načtěte hru znovu pomocí lišty aktualizace.",
-    "message": "Je k dispozici nová verze OpenFront. Stránka se nyní obnoví a aktualizuje."
+    "desktop": "Je k dispozici nová verze BrokenFront. Stáhne se na pozadí; jakmile bude připravena, načtěte hru znovu pomocí lišty aktualizace.",
+    "message": "Je k dispozici nová verze BrokenFront. Stránka se nyní obnoví a aktualizuje."
   },
   "user_setting": {
     "alert_frame_desc": "Zapne/vypne rámeček s upozorněním. Pokud je povolený, zobrazí se při zradě nebo útoku přes pevninu.",
@@ -2335,7 +2335,7 @@
     "other_won": "{player} vítězí!",
     "requeue": "Hrát znovu",
     "spectate": "Sledovat",
-    "support_openfront": "Podpořte OpenFront!",
+    "support_openfront": "Podpořte BrokenFront!",
     "territory_pattern": "Kupte si vzor území a hrajte bez reklam!",
     "you_won": "Vítězství!",
     "your_team": "Váš tým vyhrál!",

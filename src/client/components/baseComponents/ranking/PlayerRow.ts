@@ -37,7 +37,7 @@ export class PlayerRow extends LitElement {
           player.winner
             ? "bg-gradient-to-r from-yellow-400/[0.08] via-yellow-400/[0.025] to-transparent"
             : this.currentPlayer
-              ? "bg-malibu-blue/10"
+              ? "bg-brand/10"
               : "bg-transparent"
         }"
       >
@@ -142,7 +142,7 @@ export class PlayerRow extends LitElement {
             this.player.clanTag
               ? html`<div
                   data-player-clan-tag
-                  class="inline-flex min-w-0 max-w-[40%] shrink-0 rounded-md border border-malibu-blue/20 bg-malibu-blue/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-aquarius/85"
+                  class="inline-flex min-w-0 max-w-[40%] shrink-0 rounded-md border border-brand/20 bg-brand/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand-light/85"
                 >
                   <span class="truncate">${this.player.clanTag}</span>
                 </div>`
@@ -219,7 +219,7 @@ export class PlayerRow extends LitElement {
           class="h-2 w-full overflow-hidden rounded-full bg-white/[0.07]"
         >
           <div
-            class="h-full rounded-full bg-gradient-to-r from-malibu-blue/65 to-aquarius shadow-[0_0_10px_rgba(63,169,245,0.2)] w-(--width)"
+            class="h-full rounded-full bg-gradient-to-r from-brand/65 to-brand-light shadow-[0_0_10px_rgba(63,169,245,0.2)] w-(--width)"
             style="--width: ${width}%;"
           ></div>
         </div>
@@ -276,7 +276,7 @@ export class PlayerRow extends LitElement {
     return html`
       <div
         data-player-avatar="fallback"
-        class="flex size-10 items-center justify-center rounded-xl border border-malibu-blue/15 bg-gradient-to-br from-malibu-blue/20 to-white/[0.04] text-xs font-bold uppercase tracking-wide text-aquarius/80"
+        class="flex size-10 items-center justify-center rounded-xl border border-brand/15 bg-gradient-to-br from-brand/20 to-white/[0.04] text-xs font-bold uppercase tracking-wide text-brand-light/80"
         aria-hidden="true"
       >
         ${this.initials()}

@@ -288,7 +288,7 @@ export class AttacksDisplay extends LitElement implements Controller {
               > `,
             onClick: async () => this.attackWarningOnClick(attack),
             className:
-              "text-left text-aquarius inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
+              "text-left text-brand-light inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
             translate: false,
           })}
           ${
@@ -299,7 +299,7 @@ export class AttacksDisplay extends LitElement implements Controller {
                   className: "ml-auto text-left shrink-0",
                   disabled: attack.retreating,
                 })
-              : html`<span class="ml-auto truncate text-aquarius"
+              : html`<span class="ml-auto truncate text-brand-light"
                   >(${translateText("events_display.retreating")}...)</span
                 >`
           }
@@ -326,7 +326,7 @@ export class AttacksDisplay extends LitElement implements Controller {
               ><span class="ml-1">${renderTroops(landAttack.troops)}</span>
               ${translateText("help_modal.ui_wilderness")}`,
             className:
-              "text-left text-aquarius inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
+              "text-left text-brand-light inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
             translate: false,
           })}
           ${
@@ -337,7 +337,7 @@ export class AttacksDisplay extends LitElement implements Controller {
                   className: "ml-auto text-left shrink-0",
                   disabled: landAttack.retreating,
                 })
-              : html`<span class="ml-auto truncate text-aquarius"
+              : html`<span class="ml-auto truncate text-brand-light"
                   >(${translateText("events_display.retreating")}...)</span
                 >`
           }
@@ -405,12 +405,12 @@ export class AttacksDisplay extends LitElement implements Controller {
               >`,
             onClick: () => this.eventBus.emit(new GoToUnitEvent(boat)),
             className:
-              "text-left text-aquarius inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
+              "text-left text-brand-light inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
             translate: false,
           })}
           ${
             boat.transportShipState().isRetreating
-              ? html`<span class="ml-auto truncate text-aquarius"
+              ? html`<span class="ml-auto truncate text-brand-light"
                   >(${translateText("events_display.retreating")}...)</span
                 >`
               : this.renderButton({

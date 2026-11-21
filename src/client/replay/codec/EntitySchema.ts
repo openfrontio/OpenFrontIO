@@ -387,6 +387,7 @@ export const PLAYER_FIELDS: readonly FieldDef<PlayerFields>[] = [
   field(["outgoingAllianceRequests", list(STRING)]),
   field(["alliances", list(ALLIANCE)]),
   field(["outgoingEmojis", list(EMOJI)]),
+  field(["uranium", COUNTER]),
 ];
 
 export const UNIT_FIELDS: readonly FieldDef<UnitFields>[] = [

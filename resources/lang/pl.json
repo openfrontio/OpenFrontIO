@@ -20,7 +20,7 @@
     "none": "Brak"
   },
   "main": {
-    "title": "OpenFront (ALPHA)",
+    "title": "BrokenFront (ALPHA)",
     "join_discord": "Dołącz do Discord'a!",
     "login_discord": "Zaloguj się przez Discorda",
     "checking_login": "Sprawdzanie logowania...",
@@ -502,7 +502,7 @@
     "not_enough_money": "Za mało złota"
   },
   "win_modal": {
-    "support_openfront": "Wesprzyj OpenFront!",
+    "support_openfront": "Wesprzyj BrokenFront!",
     "territory_pattern": "Kup skórkę na terytorium, aby zwolnić z reklam!",
     "died": "Nie żyjesz",
     "your_team": "Twoja drużyna wygrała!",

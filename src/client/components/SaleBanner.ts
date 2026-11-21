@@ -106,11 +106,11 @@ const OPEN_ARROW = html`<svg
 </svg>`;
 
 const STRIP_CLASS =
-  "overflow-hidden rounded-lg border border-aquarius/40 bg-gradient-to-r from-deep-navy via-malibu-blue/70 to-malibu-blue shadow-[0_4px_20px_rgba(63,169,245,0.3)]";
+  "overflow-hidden rounded-lg border border-brand-light/40 bg-gradient-to-r from-surface-deep via-brand/70 to-brand shadow-[0_4px_20px_rgba(63,169,245,0.3)]";
 const FLASH_LINE_CLASS =
-  "flex w-full items-center gap-3 rounded-lg border border-aquarius/60 bg-gradient-to-r from-deep-navy via-malibu-blue/70 to-malibu-blue px-3 py-2 text-left shadow-[0_4px_20px_rgba(63,169,245,0.3)]";
+  "flex w-full items-center gap-3 rounded-lg border border-brand-light/60 bg-gradient-to-r from-surface-deep via-brand/70 to-brand px-3 py-2 text-left shadow-[0_4px_20px_rgba(63,169,245,0.3)]";
 const FLASH_ROW_CLASS =
-  "flex w-full items-center gap-2 border-t border-white/15 bg-deep-navy/50 px-3 py-1.5 text-left text-xs font-bold text-white";
+  "flex w-full items-center gap-2 border-t border-white/15 bg-surface-deep/50 px-3 py-1.5 text-left text-xs font-bold text-white";
 
 /**
  * One strip per running sale: its % off, name, what it covers and a countdown.
@@ -197,7 +197,7 @@ export class SaleBanner extends LitElement {
             </svg>
             <span class="truncate">${sale.name}</span>
           </span>
-          <span class="truncate text-xs font-semibold text-dawn-blue"
+          <span class="truncate text-xs font-semibold text-mist"
             >${translateText(
               saleCoversEverything(this.cosmetics, sale.id)
                 ? "store.sale_store_wide"
@@ -207,7 +207,7 @@ export class SaleBanner extends LitElement {
           >
         </div>
         <span
-          class="flex shrink-0 items-center gap-1.5 rounded-md bg-deep-navy/60 px-2 py-1 text-xs font-bold tabular-nums ${
+          class="flex shrink-0 items-center gap-1.5 rounded-md bg-surface-deep/60 px-2 py-1 text-xs font-bold tabular-nums ${
             endingSoon ? "text-cyber-yellow" : "text-white"
           }"
           title=${new Date(sale.endsAt).toLocaleString(undefined, {
@@ -225,7 +225,7 @@ export class SaleBanner extends LitElement {
 
   private renderBadge(sale: Promotion): TemplateResult {
     return html`<span
-      class="shrink-0 rounded-md bg-aquarius px-2 py-0.5 text-base font-black tabular-nums text-deep-navy shadow-md shadow-black/40"
+      class="shrink-0 rounded-md bg-brand-light px-2 py-0.5 text-base font-black tabular-nums text-surface-deep shadow-md shadow-black/40"
       >${translateText("store.sale_percent_off", {
         percent: sale.percentOff,
       })}</span
@@ -253,10 +253,10 @@ export class SaleBanner extends LitElement {
    */
   private renderFlashRow(sale: Promotion): TemplateResult {
     const content = html`<span
-        class="shrink-0 uppercase tracking-wider text-aquarius"
+        class="shrink-0 uppercase tracking-wider text-brand-light"
         >${translateText("store.flash_sale")}</span
       >
-      <span class="min-w-0 truncate font-semibold text-dawn-blue"
+      <span class="min-w-0 truncate font-semibold text-mist"
         >${this.flashText(
           sale,
           "store.flash_sale_item_row",
@@ -264,12 +264,12 @@ export class SaleBanner extends LitElement {
         )}</span
       >
       <span class="ml-auto flex shrink-0 items-center gap-1.5 tabular-nums">
-        <span class="hidden font-semibold text-dawn-blue sm:inline"
+        <span class="hidden font-semibold text-mist sm:inline"
           >${translateText("store.flash_ends_in")}</span
         >
         <sale-countdown format="clock" .endsAt=${sale.endsAt}></sale-countdown>
         <svg
-          class="h-3 w-3 text-dawn-blue"
+          class="h-3 w-3 text-mist"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -288,7 +288,7 @@ export class SaleBanner extends LitElement {
         </div>`
       : html`<button
           data-store-flash-banner
-          class="${FLASH_ROW_CLASS} transition-colors hover:bg-deep-navy/70"
+          class="${FLASH_ROW_CLASS} transition-colors hover:bg-surface-deep/70"
           @click=${() => this.openSale()}
         >
           ${content}
@@ -307,7 +307,7 @@ export class SaleBanner extends LitElement {
         >
           <span class="truncate">${translateText("store.flash_sale")}</span>
         </span>
-        <span class="truncate text-xs font-semibold text-dawn-blue"
+        <span class="truncate text-xs font-semibold text-mist"
           >${this.flashText(
             sale,
             "store.flash_sale_item_banner",
@@ -316,7 +316,7 @@ export class SaleBanner extends LitElement {
         >
       </span>
       <span
-        class="flex shrink-0 items-center gap-1.5 rounded-md bg-deep-navy/60 px-2 py-1 text-xs font-bold tabular-nums text-white"
+        class="flex shrink-0 items-center gap-1.5 rounded-md bg-surface-deep/60 px-2 py-1 text-xs font-bold tabular-nums text-white"
       >
         <span class="hidden sm:inline"
           >${translateText("store.flash_ends_in")}</span

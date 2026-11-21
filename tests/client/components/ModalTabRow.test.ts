@@ -70,7 +70,7 @@ describe("o-modal tab row", () => {
     }
     // The active tab keeps its underline.
     const active = row.querySelector('[aria-selected="true"]')!;
-    expect(active.querySelector(".bg-malibu-blue")).not.toBeNull();
+    expect(active.querySelector(".bg-brand")).not.toBeNull();
   });
 
   // jsdom does no layout: give the row a width and each tab a box, 100px

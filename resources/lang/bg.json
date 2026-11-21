@@ -498,8 +498,8 @@
     "spectating": "Наблюдава"
   },
   "desktop_session": {
-    "generic": "Неуспешно влизане в акаунта ти в OpenFront",
-    "network": "Не може да се осъществи връзка с OpenFront. Провери връзката си.",
+    "generic": "Неуспешно влизане в акаунта ти в BrokenFront",
+    "network": "Не може да се осъществи връзка с BrokenFront. Провери връзката си.",
     "retry": "Опитай отново",
     "retrying": "Вписване…",
     "steam_backend": "Steam среща затруднения при вписването ти в системата. Опитай отново след малко.",
@@ -825,7 +825,7 @@
     "preset_colorblind_desc": "Цветове на територии и граници, подходящи за хора с делтонизъм",
     "preset_custom": "Персонализирано",
     "preset_default": "Стандартно",
-    "preset_default_desc": "Стандартният лик OpenFront",
+    "preset_default_desc": "Стандартният лик BrokenFront",
     "preset_delete_confirm": "Искаш ли да изтриеш предварителната настройка „{name}“?",
     "preset_evans_pick": "Избор на създателя",
     "preset_evans_pick_desc": "Настройките, с които играе създателя",
@@ -943,7 +943,7 @@
     "radial_title": "Радиално меню",
     "table_action": "Действие",
     "table_key": "Бутон",
-    "troubleshooting_desc": "Ако имаш проблеми с производителността, сривове или други проблеми, докато играеш OpenFront, моля, посети страницата ни за отстраняване на проблеми за помощ при диагностицирането и отстраняването на често срещани проблеми:",
+    "troubleshooting_desc": "Ако имаш проблеми с производителността, сривове или други проблеми, докато играеш BrokenFront, моля, посети страницата ни за отстраняване на проблеми за помощ при диагностицирането и отстраняването на често срещани проблеми:",
     "ui_attack_ratio": "Съотношение на атака - Количеството войници, които ще се използват при атака. Можеш да коригираш съотношението на атака, използвайки плъзгача. Притежаването на повече атакуващи войници от тези в защита ще доведе до по-малка загуба на войници при атака, докато разполагането с по-малко ще увеличи щетите, нанесени на атакуващите ти войници. Ефектът не надхвърля съотношения 2:1.",
     "ui_control": "Контролен панел",
     "ui_control_desc": "Контролният панел съдържа следните елементи:",
@@ -963,7 +963,7 @@
     "ui_wilderness": "Пустош",
     "ui_your_team": "Твоят отбор:",
     "video_tutorial": "Видео урок за игра",
-    "video_tutorial_title": "Урок за игра на OpenFront.io"
+    "video_tutorial_title": "Урок за игра на BrokenFront"
   },
   "host_modal": {
     "anonymous_players": "Анонимни играчи",
@@ -1035,14 +1035,14 @@
     "got_it": "Разбрано",
     "how": "Как",
     "later": "По-късно",
-    "modal_desc": "Браузърът ти не поддържа цял екран, но можеш да добавиш OpenFront към началния си екран за по-завладяващо изживяване:",
+    "modal_desc": "Браузърът ти не поддържа цял екран, но можеш да добавиш BrokenFront към началния си екран за по-завладяващо изживяване:",
     "modal_title": "Пълен екран на iOS",
     "never": "Никога",
     "step_add_to_home_label": "Добавяне към началния екран",
     "step_open": "Отвори от началния екран — играта се стартира на цял екран без адресната лента",
     "step_scroll_and_tap": "Скролни надолу и цъкни",
     "step_share": "Цъкни бутона „Споделяне“ в браузъра си",
-    "text": "За пълен екран, добави OpenFront към началния си екран"
+    "text": "За пълен екран, добави BrokenFront към началния си екран"
   },
   "kick_reason": {
     "admin": "Изхвърлен си от администратор",
@@ -1115,7 +1115,7 @@
   "main": {
     "account": "Акаунт",
     "clans": "Кланове",
-    "copyright": "© OpenFront™ and Contributors",
+    "copyright": "© BrokenFront and Contributors",
     "create": "Създай частно лоби",
     "discord_avatar_alt": "Discord профилна снимка",
     "github": "GitHub",
@@ -1134,7 +1134,7 @@
     "solo": "Самостоятелно",
     "store": "Магазин",
     "terms_of_service": "Условия за ползване",
-    "title": "OpenFront (АЛФА)",
+    "title": "BrokenFront (АЛФА)",
     "troubleshooting": "Отстраняване на проблеми",
     "user_avatar_alt": "Профилната снимка на {username}",
     "wiki": "Wiki",
@@ -1300,7 +1300,7 @@
     "dismiss": "Отхвърли",
     "error": "Грешка при запазването. Моля, опитай отново.",
     "no": "Не, благодаря",
-    "title": "Искаш ли да си в крачка с OpenFront?",
+    "title": "Искаш ли да си в крачка с BrokenFront?",
     "yes": "Да, моля"
   },
   "matchmaking_modal": {
@@ -1360,7 +1360,7 @@
   },
   "news_box": {
     "dismiss": "Отхвърли",
-    "firefox_warning": "OpenFront.io не работи добре с [браузъри, базирани на Firefox](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). Препоръчваме ти да ползваш [браузър, базиран на Chromium](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) за най-добро качество.",
+    "firefox_warning": "BrokenFront не работи добре с [браузъри, базирани на Firefox](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). Препоръчваме ти да ползваш [браузър, базиран на Chromium](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) за най-добро качество.",
     "go_to_item": "Отиди на предмет {num}",
     "news": "НОВИНИ",
     "tournament": "ТУРНИР",
@@ -1591,9 +1591,9 @@
     "waiting_for_players": "Изчакване на играчи"
   },
   "purchase_nudge": {
-    "body": "Изглежда, че OpenFront ти харесва! Моля, помисли дали да не ни подкрепиш с покупка – всякаква покупка премахва рекламите на твоя акаунт завинаги.",
+    "body": "Изглежда, че BrokenFront ти харесва! Моля, помисли дали да не ни подкрепиш с покупка – всякаква покупка премахва рекламите на твоя акаунт завинаги.",
     "close": "Затвори",
-    "title": "Харесва ли ти OpenFront?",
+    "title": "Харесва ли ти BrokenFront?",
     "visit_store": "Посети магазина"
   },
   "radial_menu": {
@@ -1656,7 +1656,7 @@
     "reason_expired": "Линкът е изтекъл. Моля, опитай отново от Steam.",
     "reason_rate_limited": "Твърде много опити. Моля, изчакай {seconds, plural, =0 {един момент} one {# секунда} other {# секунди}} и опитай отново.",
     "reason_steam_has_progress": "Този акаунт в Steam вече си има собствен напредък и не може да бъде свързан.",
-    "reason_steam_linked_elsewhere": "Този акаунт вече е вързан за друг акаунт в OpenFront.",
+    "reason_steam_linked_elsewhere": "Този акаунт вече е вързан за друг акаунт в BrokenFront.",
     "success": "Акаунтът ти в Steam вече е свързан.",
     "title": "Свържи акаунт в Steam"
   },
@@ -1666,9 +1666,9 @@
   },
   "steam_wishlist": {
     "cta": "Добави към списъка си с желания",
-    "on_steam": "OpenFront в Steam",
+    "on_steam": "BrokenFront в Steam",
     "release": "Налична през третото тримесечие на 2026г.",
-    "title": "Добави OpenFront към списъка си с желания в Steam!"
+    "title": "Добави BrokenFront към списъка си с желания в Steam!"
   },
   "store": {
     "already_subscribed": "Вече си абониран.",
@@ -1756,7 +1756,7 @@
     "tribes_purchase_heading": "Купи име на племе",
     "your_tribes_heading": "Твоите имена на племена",
     "merch": "Мърч",
-    "merch_blurb": "Поръчай морч на OpenFront с доставка до прага ти!",
+    "merch_blurb": "Поръчай морч на BrokenFront с доставка до прага ти!",
     "merch_visit_store": "Посети магазина"
   },
   "streaming_now": {
@@ -1798,7 +1798,7 @@
     "browser": "Браузър",
     "canvas_2d_no_gpu": "Canvas 2D (без видеокарта)",
     "charging": "Зареждане",
-    "chromium_tip": "OpenFront работи най-добре в браузъри, базирани на Chromium.",
+    "chromium_tip": "BrokenFront работи най-добре в браузъри, базирани на Chromium.",
     "copied_to_clipboard": "Информацията бе копирана в клипборда! Чувствай се свободен да я споделиш в Discord-а ни, ако имаш нужда от помощ.",
     "device_pixel_ratio": "Съотношение на пикселите на устройството",
     "environment": "Среда",
@@ -2016,7 +2016,7 @@
     "other_won": "{player} спечели!",
     "requeue": "Играй отново",
     "spectate": "Наблюдаване",
-    "support_openfront": "Подкрепи OpenFront!",
+    "support_openfront": "Подкрепи BrokenFront!",
     "territory_pattern": "Купи териториален шаблон, за да се освободиш от рекламите!",
     "you_won": "Ти спечели!",
     "your_team": "Твоят отбор спечели!",

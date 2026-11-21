@@ -162,8 +162,8 @@ export class NavUtilityIcons extends LitElement {
     const box = this.size === "mobile" ? "w-9 h-9" : "w-10 h-10";
     return (
       `nav-menu-item flex items-center justify-center ${box} rounded-full ` +
-      "text-white/70 hover:text-malibu-blue cursor-pointer transition-colors " +
-      "[&.active]:text-malibu-blue"
+      "text-white/70 hover:text-brand cursor-pointer transition-colors " +
+      "[&.active]:text-brand"
     );
   }
 

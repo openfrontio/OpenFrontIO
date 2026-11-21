@@ -922,7 +922,7 @@ export class StoreModal extends BaseModal {
             data-store-subtab=${tab}
             class="-mb-px flex items-center gap-1.5 shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${
               active
-                ? "border-malibu-blue text-aquarius"
+                ? "border-brand text-brand-light"
                 : "border-transparent text-white/40 hover:text-white/70"
             }"
             @click=${() => this.setCosmeticsSubTab(tab)}
@@ -930,7 +930,7 @@ export class StoreModal extends BaseModal {
             ${
               tab === "sale"
                 ? html`<span
-                    class="h-2 w-2 rounded-full bg-aquarius shadow-[0_0_6px_var(--color-aquarius)]"
+                    class="h-2 w-2 rounded-full bg-brand-light shadow-[0_0_6px_var(--color-brand-light)]"
                     aria-hidden="true"
                   ></span>`
                 : nothing
@@ -979,7 +979,7 @@ export class StoreModal extends BaseModal {
       group.find((item) => item.key === this.inspected?.key) ?? group[0];
     return html`<section
       data-store-flash
-      class="mx-3 mt-3 flex flex-col items-center gap-4 rounded-xl border border-aquarius/50 bg-gradient-to-br from-deep-navy via-deep-navy to-malibu-blue/50 p-4 shadow-[0_0_28px_rgba(63,169,245,0.25)] sm:flex-row sm:items-stretch"
+      class="mx-3 mt-3 flex flex-col items-center gap-4 rounded-xl border border-brand-light/50 bg-gradient-to-br from-surface-deep via-surface-deep to-brand/50 p-4 shadow-[0_0_28px_rgba(63,169,245,0.25)] sm:flex-row sm:items-stretch"
     >
       <div class="w-44 shrink-0 sm:w-52">
         ${this.renderCosmeticCards([group], false, undefined, "card", false)}
@@ -988,7 +988,7 @@ export class StoreModal extends BaseModal {
         class="flex flex-1 flex-col items-center justify-center gap-3 text-center sm:items-start sm:text-left"
       >
         <span
-          class="flex items-center gap-1.5 text-sm font-black uppercase tracking-widest text-aquarius"
+          class="flex items-center gap-1.5 text-sm font-black uppercase tracking-widest text-brand-light"
         >
           ${translateText("store.flash_sale")}
         </span>
@@ -998,7 +998,7 @@ export class StoreModal extends BaseModal {
             percent: sale.percentOff,
           })}</span
         >
-        <span class="max-w-sm text-sm text-dawn-blue"
+        <span class="max-w-sm text-sm text-mist"
           >${translateText("store.flash_sale_hero_body")}</span
         >
         <!-- The price, and the way to pay it, beside the offer at full size
@@ -1010,7 +1010,7 @@ export class StoreModal extends BaseModal {
           ${this.renderCardAction(active, false)}
         </div>
         <span
-          class="flex items-baseline gap-2 rounded-lg bg-black/30 px-3 py-2 text-xs font-bold uppercase tracking-wider text-dawn-blue"
+          class="flex items-baseline gap-2 rounded-lg bg-black/30 px-3 py-2 text-xs font-bold uppercase tracking-wider text-mist"
         >
           ${translateText("store.flash_ends_in")}
           <sale-countdown

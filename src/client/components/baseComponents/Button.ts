@@ -33,7 +33,7 @@ export class OButton extends LitElement {
   private variantClasses(): string {
     switch (this.variant) {
       case "primary":
-        return "bg-malibu-blue hover:bg-aquarius text-white disabled:bg-gray-600 disabled:text-gray-300";
+        return "bg-brand hover:bg-brand-light text-white disabled:bg-gray-600 disabled:text-gray-300";
       case "secondary":
         return "bg-gray-700 hover:bg-gray-600 text-white disabled:bg-gray-800 disabled:text-gray-400";
       case "danger":
@@ -41,7 +41,7 @@ export class OButton extends LitElement {
       case "warning":
         return "bg-cyber-yellow hover:brightness-110 text-gray-900 disabled:bg-yellow-900 disabled:text-gray-300";
       case "ghost":
-        return "bg-transparent hover:bg-white/10 text-malibu-blue disabled:text-gray-500 disabled:hover:bg-transparent";
+        return "bg-transparent hover:bg-white/10 text-brand disabled:text-gray-500 disabled:hover:bg-transparent";
     }
   }
 

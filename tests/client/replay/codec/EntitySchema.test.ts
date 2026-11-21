@@ -45,6 +45,7 @@ const basePlayer: PlayerState = {
   trainGold: 200,
   piracyGold: 0,
   goldEarned: 90_000,
+  uranium: 12,
   troops: 25_000,
   isTraitor: false,
   traitorRemainingTicks: 0,
@@ -76,6 +77,7 @@ const playerAlternatives: { [K in keyof PlayerFields]: PlayerFields[K] } = {
   trainGold: 150, // negative delta
   piracyGold: 2 ** 40, // huge
   goldEarned: 95_000,
+  uranium: 40,
   troops: 24_990,
   isTraitor: true,
   traitorRemainingTicks: 300,

@@ -74,6 +74,8 @@ export interface PlayerState {
   piracyGold: number;
   /** Cumulative gold received from all sources (live). */
   goldEarned: number;
+  /** Uranium held (live). */
+  uranium: number;
   troops: number;
   isTraitor: boolean;
   traitorRemainingTicks: number;

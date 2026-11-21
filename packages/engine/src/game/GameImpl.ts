@@ -50,6 +50,12 @@ import {
   resolveTeamsList,
 } from "@openfront/engine-lib/game/TeamAssignment";
 import { TerraNulliusImpl } from "@openfront/engine-lib/game/TerraNulliusImpl";
+import {
+  Deposit,
+  rasterizeDeposits,
+  sanitizeDeposits,
+  seedUraniumDeposits,
+} from "@openfront/engine-lib/game/ResourceDeposits";
 import { UnitGrid } from "@openfront/engine-lib/game/UnitGrid";
 import {
   readVersioned,
@@ -105,6 +111,7 @@ import {
 import { Railroad } from "./Railroad";
 import { Stats } from "./Stats";
 import { StatsImpl, StatsSnapshot } from "./StatsImpl";
+import { TradeBook, TradeBookSchema } from "./TradeBook";
 import { WaterManager, WaterManagerSnapshot } from "./WaterManager";
 
 export function createGame(
@@ -168,6 +175,9 @@ export class GameImpl implements Game {
   private nextAllianceID: number = 0;
 
   private _mirvsLaunched = 0;
+  private _trade: TradeBook = new TradeBook(this);
+  private _uraniumDeposits: Deposit[] = [];
+  private _uraniumDepositMask: Uint8Array = new Uint8Array(0);
   private shipStaggers = { tradeShip: 0, transportShip: 0 };
   private _nationMirvTargets = new Map<PlayerID, Tick>();
 
@@ -204,6 +214,9 @@ export class GameImpl implements Game {
       _config.disableNavMesh(),
     );
     this._sharedWaterCache = new SharedWaterCache(this);
+    // Seeded from the pristine map, before any nuke can turn land to water.
+    // A restore replaces these with the snapshot's copy.
+    this.applyUraniumDeposits(seedUraniumDeposits(this._map));
 
     if (!restoring) {
       if (_config.gameConfig().gameMode === GameMode.Team) {
@@ -650,6 +663,10 @@ export class GameImpl implements Game {
     }
 
     this.removeInactiveExecutions();
+
+    if (!this.inSpawnPhase()) {
+      this._trade.tick(this._ticks);
+    }
 
     for (const player of this._playersBySmallID) {
       // Sampled before toUpdate so the reading is of the tick that just ran.
@@ -1701,6 +1718,22 @@ export class GameImpl implements Game {
   recordMirvLaunch(): void {
     this._mirvsLaunched++;
   }
+  trade(): TradeBook {
+    return this._trade;
+  }
+  uraniumDeposits(): readonly Deposit[] {
+    return this._uraniumDeposits;
+  }
+  setUraniumDeposits(deposits: Deposit[]): void {
+    this.applyUraniumDeposits(sanitizeDeposits(this._map, deposits));
+  }
+  isUraniumDeposit(tile: TileRef): boolean {
+    return this._uraniumDepositMask[tile] === 1;
+  }
+  private applyUraniumDeposits(deposits: Deposit[]): void {
+    this._uraniumDeposits = deposits;
+    this._uraniumDepositMask = rasterizeDeposits(this._map, deposits);
+  }
   nextShipStagger(kind: "tradeShip" | "transportShip"): number {
     return this.shipStaggers[kind]++ % WaterPathFinder.STAGGER_SPREAD;
   }
@@ -1775,6 +1808,8 @@ export class GameImpl implements Game {
       shipStaggers: { ...this.shipStaggers },
       nationMirvTargets: [...this._nationMirvTargets],
       mirvsLaunched: this._mirvsLaunched,
+      uraniumDeposits: this._uraniumDeposits.map((d) => [d.x, d.y, d.r]),
+      trade: this._trade.snapshot(w),
       rail: w.versioned(
         RailNetworkSnapshot,
         (this._railNetwork as RailNetworkImpl).snapshot(w),
@@ -1833,6 +1868,10 @@ export class GameImpl implements Game {
     this.shipStaggers = { ...s.shipStaggers };
     this._nationMirvTargets = new Map(s.nationMirvTargets);
     this._mirvsLaunched = s.mirvsLaunched;
+    this.applyUraniumDeposits(
+      s.uraniumDeposits.map(([x, y, r]) => ({ x, y, r })),
+    );
+    this._trade.restoreSnapshot(s.trade, r);
     (this._railNetwork as RailNetworkImpl).restoreSnapshot(
       readVersioned(RailNetworkSnapshot, s.rail),
       r,
@@ -1935,7 +1974,23 @@ export class GameImpl implements Game {
 
 export const GameSnapshot = snapshotType({
   name: "Game",
-  version: 1,
+  version: 2,
+  migrations: {
+    // v1 predates uranium: those games had no deposits.
+    1: (d) => ({
+      ...d,
+      uraniumDeposits: [],
+      trade: {
+        agreements: [],
+        requests: [],
+        offers: [],
+        tariffs: [],
+        callToArmsAt: [],
+        netFlow: 0,
+        nextOfferId: 1,
+      },
+    }),
+  },
   schema: z.object({
     ticks: zInt(),
     startTick: zInt().nullable(),
@@ -1965,6 +2020,8 @@ export const GameSnapshot = snapshotType({
     shipStaggers: z.object({ tradeShip: zInt(), transportShip: zInt() }),
     nationMirvTargets: z.array(z.tuple([z.string(), zInt()])),
     mirvsLaunched: zInt(),
+    uraniumDeposits: z.array(z.tuple([zInt(), zInt(), zInt()])),
+    trade: TradeBookSchema,
     rail: VersionedSchema,
     water: VersionedSchema,
     sharedWaterCache: VersionedSchema,

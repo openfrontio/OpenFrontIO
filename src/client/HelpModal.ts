@@ -141,7 +141,7 @@ export class HelpModal extends BaseModal {
               </p>
             </div>
             <button
-              class="shrink-0 hover:bg-white/5 px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)]"
+              class="shrink-0 hover:bg-white/5 px-6 py-2 text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-brand/20 text-brand-light border border-brand/30 shadow-[var(--shadow-brand)]"
               @click=${() =>
                 document.dispatchEvent(new CustomEvent("start-tutorial"))}
             >
@@ -240,7 +240,7 @@ export class HelpModal extends BaseModal {
               </p>
               <button
                 id="troubleshooting-button"
-                class="w-full sm:w-fit max-w-full hover:bg-white/5 px-4 sm:px-6 py-2 text-sm sm:text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-malibu-blue/20 text-aquarius border border-malibu-blue/30 shadow-[var(--shadow-malibu-blue)] whitespace-normal break-words text-center"
+                class="w-full sm:w-fit max-w-full hover:bg-white/5 px-4 sm:px-6 py-2 text-sm sm:text-xs font-bold transition-all duration-200 rounded-lg uppercase tracking-widest bg-brand/20 text-brand-light border border-brand/30 shadow-[var(--shadow-brand)] whitespace-normal break-words text-center"
                 data-page="page-troubleshooting"
                 @click="${this.openTroubleshooting}"
               >

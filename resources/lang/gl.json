@@ -9,7 +9,7 @@
     "close": "Pechar"
   },
   "main": {
-    "title": "OpenFront (ALFA)",
+    "title": "BrokenFront (ALFA)",
     "join_discord": "Únete ó Discord!",
     "login_discord": "Iniciar sesión con Discord",
     "checking_login": "Comprobando a sesión...",
@@ -580,8 +580,8 @@
       "cursor": "Cursor",
       "hand": "Man",
       "radiation": "Radiación",
-      "openfront_qr": "Código QR de OpenFront.io",
-      "openfront": "OpenFront",
+      "openfront_qr": "Código QR de BrokenFront",
+      "openfront": "BrokenFront",
       "t_rex": "Tiranosauro",
       "embelem": "Emblema",
       "contributor": "Contribuidor",

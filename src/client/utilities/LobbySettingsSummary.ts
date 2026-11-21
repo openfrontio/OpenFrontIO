@@ -12,7 +12,7 @@ import { renderDuration, translateText } from "../Utils";
 // The homepage lobby card's modifier pill, one size down: a lobby can run a
 // dozen settings and they all have to fit beside the preview.
 export const LOBBY_SETTING_TAG =
-  "rounded bg-malibu-blue px-1.5 py-0.5 text-[11px] font-bold tracking-widest text-white";
+  "rounded bg-brand px-1.5 py-0.5 text-[11px] font-bold tracking-widest text-white";
 
 export const FLAT_SETTING_TAG =
   "rounded-md border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white/70";

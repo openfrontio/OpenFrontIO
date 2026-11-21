@@ -1,5 +1,10 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { GameType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import {
+  AirUnits,
+  GameType,
+  SamTargetNukes,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -237,7 +242,14 @@ class SAMTargetingSystem {
 
     // Hydro unit type bonus
     // 70,000 offset balances the distance bonus between Hydro at 100 and Atom at 30
-    const typeBonus = unit.type() === UnitType.HydrogenBomb ? 70_001 : 0;
+    const typeBonus =
+      unit.type() === UnitType.HydrogenBomb
+        ? 70_001
+        : unit.type() === UnitType.LargeNuke
+          ? 35_001
+          : unit.type() === UnitType.ClusterNuke
+            ? 50_001
+            : 0;
 
     // Distance bonus: Closer to silo higher score (-1,000 pts per unit distance)
     // due to manhattanDist, distToSilo can exceed 150 diagonally, 200000 starting point.
@@ -268,7 +280,7 @@ class SAMTargetingSystem {
     const nukes = this.mg.nearbyUnits(
       samTile,
       detectionRange,
-      [UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRVWarhead],
+      SamTargetNukes.types,
       this.isTargetableNearbyUnit,
     );
 
@@ -308,6 +320,7 @@ class SAMTargetingSystem {
     return this.sortTargets(targets);
   }
 }
+
 
 export class SAMLauncherExecution implements Execution {
   private mg: Game;
@@ -391,11 +404,8 @@ export class SAMLauncherExecution implements Execution {
     // them (unit ids are unique). unitCount(type) is memoised per unit-list version — one shared
     // walk a tick, not one a launcher — and unlike units(type) a hit allocates nothing. A nuke's
     // level is always 1, so a zero count is exactly an empty list.
-    if (
-      this.mg.unitCount(UnitType.AtomBomb) === 0 &&
-      this.mg.unitCount(UnitType.HydrogenBomb) === 0 &&
-      this.mg.unitCount(UnitType.MIRVWarhead) === 0
-    ) {
+    if (SamTargetNukes.types.every((t) => this.mg.unitCount(t) === 0)) {
+      this.engageAircraft();
       return;
     }
     // target is already filtered to exclude nukes targeted by other SAMs
@@ -416,6 +426,45 @@ export class SAMLauncherExecution implements Execution {
         ),
       );
     }
+    this.engageAircraft();
+  }
+
+  /**
+   * Anti-air: with missiles left after the nuke pass, fire one homing
+   * missile at the nearest enemy aircraft in range not already targeted.
+   */
+  private engageAircraft(): void {
+    if (this.sam === null || this.sam.isInCooldown()) return;
+    if (AirUnits.types.every((t) => this.mg.unitCount(t) === 0)) return;
+    const owner = this.sam.owner();
+    const range = this.mg.config().samRange(this.sam.level());
+    const candidates = this.mg.nearbyUnits(
+      this.sam.tile(),
+      range,
+      AirUnits.types,
+      ({ unit }) =>
+        isUnit(unit) &&
+        unit.isActive() &&
+        !unit.targetedBySAM() &&
+        unit.owner() !== owner &&
+        !owner.isFriendly(unit.owner()),
+    );
+    if (candidates.length === 0) return;
+    candidates.sort(
+      (a, b) => a.distSquared - b.distSquared || a.unit.id() - b.unit.id(),
+    );
+    const target = candidates[0].unit as Unit;
+    this.sam.launch();
+    target.setTargetedBySAM(true);
+    this.mg.addExecution(
+      new SAMMissileExecution(
+        this.sam.tile(),
+        owner,
+        this.sam,
+        target,
+        target.tile(),
+      ),
+    );
   }
 
   isActive(): boolean {

@@ -9,7 +9,7 @@
     "close": "Stäng"
   },
   "main": {
-    "title": "OpenFront (ALPHA)",
+    "title": "BrokenFront (ALPHA)",
     "join_discord": "Gå med i Discord!",
     "login_discord": "Logga in med Discord",
     "checking_login": "Kontrollerar inloggning...",
@@ -569,8 +569,8 @@
       "cursor": "Muspekare",
       "hand": "Hand",
       "radiation": "Radioaktivitet",
-      "openfront_qr": "OpenFront.io QR kod",
-      "openfront": "OpenFront",
+      "openfront_qr": "BrokenFront QR kod",
+      "openfront": "BrokenFront",
       "t_rex": "T-Rex",
       "embelem": "Emblem",
       "grogu_head": "Grogu Huvud",

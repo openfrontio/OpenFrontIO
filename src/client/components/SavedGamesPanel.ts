@@ -517,7 +517,7 @@ export class SavedGamesPanel extends LitElement {
         @click=${this.toggle}
         class="w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold text-white uppercase tracking-wider transition-all duration-200 active:scale-[0.99] ${
           expanded
-            ? "bg-malibu-blue/20 border-malibu-blue/50"
+            ? "bg-brand/20 border-brand/50"
             : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
         }"
       >

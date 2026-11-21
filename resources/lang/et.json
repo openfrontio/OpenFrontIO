@@ -26,7 +26,7 @@
     "enabled": "Sees"
   },
   "main": {
-    "title": "OpenFront (ALPHA)",
+    "title": "BrokenFront (ALPHA)",
     "login_discord": "Logi sisse Discordiga",
     "sign_in": "Logi sisse",
     "discord_avatar_alt": "Discordi profiili avatar",
@@ -38,7 +38,7 @@
     "wiki": "Viki",
     "privacy_policy": "Privaatsuspoliitika",
     "terms_of_service": "Kasutustingimused",
-    "copyright": "© OpenFront™ ja kaastöölised",
+    "copyright": "© BrokenFront ja kaastöölised",
     "play": "Mängi",
     "news": "Uudised",
     "store": "Pood",
@@ -65,7 +65,7 @@
     "copied_to_clipboard": "Info kopeeritud lõikelauale! Võid jagada seda julgesti meie Discordis, kui sul on abi vaja.",
     "os": "OS",
     "device_pixel_ratio": "Seadme pikslite suhe",
-    "chromium_tip": "OpenFront töötab kõige paremini Cromiumil põhinevatel brauseritel.",
+    "chromium_tip": "BrokenFront töötab kõige paremini Cromiumil põhinevatel brauseritel.",
     "hardware_acceleration_tip": "Veendu, et sinu brauseri seadetes oleks lubatud riistvarakiirendus(hardware acceleration), et saavutada parim jõudlus.",
     "renderer": "Renderdaja",
     "max_texture_size": "Maksimaalne tekstuuri suurus",
@@ -85,7 +85,7 @@
   },
   "help_modal": {
     "video_tutorial": "Videoõpetus",
-    "video_tutorial_title": "OpenFront.io õpetus",
+    "video_tutorial_title": "BrokenFront õpetus",
     "hotkeys": "Kiirklahvid",
     "table_key": "Klahv",
     "table_action": "Tegevus",
@@ -166,7 +166,7 @@
     "build_mirv": "MIRV",
     "build_mirv_desc": "Mängu kõige võimsam pomm. Jaguneb väiksemateks pommideks, mis katavad väga suure ala. Kahjustab ainult seda mängijat, kellele peale esimesena klõpsasid. Tekib lähimast raketisilost ja langeb piirkonda, kuhu algselt klõpsasid.",
     "player_icons": "Mängija ikoonid",
-    "troubleshooting_desc": "Kui sul tekib OpenFronti mängimise ajal jõudlusprobleeme, krahhe või muid tõrkeid, külasta palun meie tõrkeotsingu lehte, et saada abi levinud probleemide tuvastamisel ja lahendamisel:",
+    "troubleshooting_desc": "Kui sul tekib BrokenFronti mängimise ajal jõudlusprobleeme, krahhe või muid tõrkeid, külasta palun meie tõrkeotsingu lehte, et saada abi levinud probleemide tuvastamisel ja lahendamisel:",
     "icon_desc": "Näited mõningatest mängusisestest ikoonidest, millega võid kokku puutuda, ja nende tähendused:",
     "icon_crown": "Kroon - Esimene koht edetabelil.",
     "icon_traitor": "Katkine kilp - Reetur. See mängija on rünnanud oma liitlast.",
@@ -681,7 +681,7 @@
     "not_enough_money": "Pole piisavalt raha"
   },
   "win_modal": {
-    "support_openfront": "Toeta OpenFront'i!",
+    "support_openfront": "Toeta BrokenFront'i!",
     "territory_pattern": "Osta territooriumi skin, et minna reklaami-vabaks!",
     "died": "Sa said surma",
     "your_team": "Sinu tiim võitis!",
@@ -868,7 +868,7 @@
     "trial_cooldown": "Ainult üks prooviperiood 24 tunni jooksul. Proovi hiljem uuesti.",
     "trial_login_required": "Pead olema sisse logitud, et proovida skine",
     "reward_countdown": "Tasu {seconds} sekundi pärast...",
-    "steam_wishlist_prompt": "Toeta OpenFront'i lisades selle oma Steam wishlist'i",
+    "steam_wishlist_prompt": "Toeta BrokenFront'i lisades selle oma Steam wishlist'i",
     "select_skin": "Vali Skin",
     "selected": "valitud"
   },

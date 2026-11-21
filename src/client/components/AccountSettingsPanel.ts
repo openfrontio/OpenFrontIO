@@ -143,9 +143,9 @@ export class AccountSettingsPanel extends LitElement {
                   aria-label=${translateText("account_modal.marketing_title")}
                   ?disabled=${this.consentBusy || steamNoEmail}
                   @click=${() => this.setConsent(!on)}
-                  class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${
+                  class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand/50 disabled:opacity-60 ${
                     on
-                      ? "bg-malibu-blue shadow-[var(--shadow-malibu-blue-pill)]"
+                      ? "bg-brand shadow-[var(--shadow-brand-pill)]"
                       : "bg-white/15"
                   }"
                 >
@@ -240,9 +240,9 @@ export class AccountSettingsPanel extends LitElement {
           aria-label=${title}
           ?disabled=${busy}
           @click=${() => setShown(!shown)}
-          class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${
+          class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-brand/50 disabled:opacity-60 ${
             shown
-              ? "bg-malibu-blue shadow-[var(--shadow-malibu-blue-pill)]"
+              ? "bg-brand shadow-[var(--shadow-brand-pill)]"
               : "bg-white/15"
           }"
         >
@@ -337,7 +337,7 @@ export class AccountSettingsPanel extends LitElement {
         .value=${this.email}
         @input=${this.handleEmailInput}
         placeholder=${translateText("account_modal.email_placeholder")}
-        class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10"
+        class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand/50 transition-all font-medium hover:bg-white/10"
       />
       <o-button
         variant="primary"

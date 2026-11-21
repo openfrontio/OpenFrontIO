@@ -210,10 +210,15 @@ export class TradeShipExecution implements Execution {
         .stats()
         .boatCapturedTrade(this.tradeShip!.owner(), this.origOwner, gold);
     } else {
-      this.srcPort.owner().addGold(gold, this.srcPort.tile());
-      this._dstPort.owner().addGold(gold, this._dstPort.tile());
-      this.srcPort.owner().addTradeGold(gold);
-      this._dstPort.owner().addTradeGold(gold);
+      // Trade agreements add a bonus; the destination's tariff shifts a
+      // share of the payout from the source owner to it (TradeBook).
+      const split = this.mg
+        .trade()
+        .tradeShipSplit(this.srcPort.owner(), this._dstPort.owner(), gold);
+      this.srcPort.owner().addGold(split.src, this.srcPort.tile());
+      this._dstPort.owner().addGold(split.dst, this._dstPort.tile());
+      this.srcPort.owner().addTradeGold(split.src);
+      this._dstPort.owner().addTradeGold(split.dst);
       // Record stats
       this.mg
         .stats()

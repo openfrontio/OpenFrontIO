@@ -1,5 +1,10 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { MessageType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import {
+  AirUnits,
+  MessageType,
+  SamTargetNukes,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import { NukeType } from "@openfront/engine-api/StatsSchemas";
 import {
   zNum,
@@ -27,6 +32,12 @@ const INTERCEPTED_UNIT_TRANSLATION_KEYS: Partial<Record<UnitType, string>> = {
   [UnitType.AtomBomb]: "unit_type.atom_bomb",
   [UnitType.HydrogenBomb]: "unit_type.hydrogen_bomb",
   [UnitType.MIRVWarhead]: "unit_type.mirv",
+  [UnitType.LargeNuke]: "unit_type.large_nuke",
+  [UnitType.ClusterNuke]: "unit_type.cluster_nuke",
+  [UnitType.ClusterWarhead]: "unit_type.cluster_nuke",
+  [UnitType.Fighter]: "unit_type.fighter",
+  [UnitType.Bomber]: "unit_type.bomber",
+  [UnitType.TransportPlane]: "unit_type.transport_plane",
 };
 
 export class SAMMissileExecution implements Execution {
@@ -59,17 +70,14 @@ export class SAMMissileExecution implements Execution {
       this.active = false;
       return;
     }
-    // The MIRV carrier itself can't be intercepted, only its warheads
-    const nukesWhitelist = [
-      UnitType.AtomBomb,
-      UnitType.HydrogenBomb,
-      UnitType.MIRVWarhead,
-    ];
+    // The MIRV carrier itself can't be intercepted, only its warheads.
+    // Aircraft are tracked as they fly (homing).
+    const isAircraft = AirUnits.has(this.target.type());
     if (
       !this.target.isActive() ||
       !this.ownerUnit.isActive() ||
       this.target.owner() === this.SAMMissile.owner() ||
-      !nukesWhitelist.includes(this.target.type())
+      !(SamTargetNukes.has(this.target.type()) || isAircraft)
     ) {
       // Clear the flag so other SAMs can re-target this nuke
       if (this.target.isActive()) {
@@ -78,6 +86,9 @@ export class SAMMissileExecution implements Execution {
       this.SAMMissile.delete(false);
       this.active = false;
       return;
+    }
+    if (isAircraft) {
+      this.targetTile = this.target.tile();
     }
     for (let i = 0; i < this.speed; i++) {
       const result = this.pathFinder.next(
@@ -101,9 +112,11 @@ export class SAMMissileExecution implements Execution {
         this.SAMMissile.delete(false);
 
         // Record stats
-        this.mg
-          .stats()
-          .bombIntercept(this._owner, this.target.type() as NukeType, 1);
+        if (!isAircraft) {
+          this.mg
+            .stats()
+            .bombIntercept(this._owner, this.target.type() as NukeType, 1);
+        }
         return;
       } else if (result.status === PathStatus.NEXT) {
         this.SAMMissile.move(result.node);

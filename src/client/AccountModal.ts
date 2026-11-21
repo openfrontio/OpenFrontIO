@@ -313,7 +313,7 @@ export class AccountModal extends BaseModal {
         .value=${this.email}
         @input=${this.handleEmailInput}
         placeholder=${translateText("account_modal.email_placeholder")}
-        class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10"
+        class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand/50 transition-all font-medium hover:bg-white/10"
       />
       <o-button
         variant="primary"

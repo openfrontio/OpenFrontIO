@@ -105,7 +105,7 @@ export class ListLobbyDialog extends LitElement {
         }}
       >
         <div
-          class="relative mx-4 w-full max-w-md p-6 rounded-2xl border border-malibu-blue/50 bg-surface shadow-2xl"
+          class="relative mx-4 w-full max-w-md p-6 rounded-2xl border border-brand/50 bg-surface shadow-2xl"
         >
           <h2 class="text-lg font-bold text-white mb-2">
             ${translateText("host_modal.list_lobby_title")}
@@ -142,7 +142,7 @@ export class ListLobbyDialog extends LitElement {
             </button>
             <button
               @click=${() => this.handleConfirm(maxPlayers)}
-              class="flex-1 px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl bg-malibu-blue text-white hover:brightness-110 transition-all border-0"
+              class="flex-1 px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl bg-brand text-white hover:brightness-110 transition-all border-0"
             >
               ${translateText("host_modal.list_lobby_confirm")}
             </button>

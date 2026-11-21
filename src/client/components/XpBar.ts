@@ -72,7 +72,7 @@ export function xpBar(
   >
     <div
       data-xp-bar-fill
-      class="h-full rounded-full bg-malibu-blue ${opts.fillClass ?? ""}"
+      class="h-full rounded-full bg-brand ${opts.fillClass ?? ""}"
       style="width: ${fill}%${
         ms > 0
           ? `; transition: width ${ms}ms cubic-bezier(0.3, 0.7, 0.2, 1)`

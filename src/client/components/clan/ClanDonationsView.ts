@@ -336,7 +336,7 @@ export class ClanDonationsView extends LitElement {
                 compact ? "" : "flex-1"
               } inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${
                 selected
-                  ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30"
+                  ? "bg-brand/20 text-brand-light border border-brand/30"
                   : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"
               }"
             >

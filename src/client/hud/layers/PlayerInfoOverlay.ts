@@ -658,7 +658,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
             </div>
             <div
               class="flex flex-1 flex-col items-center justify-center text-xs font-bold ${
-                attackingTroops > 0 ? "text-aquarius" : "text-white/40"
+                attackingTroops > 0 ? "text-brand-light" : "text-white/40"
               } drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
               translate="no"
             >
@@ -846,7 +846,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
             style="transform: scaleX(${greenPercent / 100});"
           ></div>
           <div
-            class="absolute inset-y-0 left-0 w-full origin-left bg-malibu-blue transition-transform duration-200 ease-out"
+            class="absolute inset-y-0 left-0 w-full origin-left bg-brand transition-transform duration-200 ease-out"
             style="transform: translateX(${greenPercent}%) scaleX(${
               orangePercent / 100
             });"

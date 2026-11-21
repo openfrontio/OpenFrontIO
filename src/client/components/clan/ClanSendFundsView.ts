@@ -697,7 +697,7 @@ export class ClanSendFundsView extends LitElement {
               this.amountInput = (e.target as HTMLInputElement).value;
               this.serverError = null;
             }}
-            class="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-lg font-bold tabular-nums placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-50"
+            class="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white text-lg font-bold tabular-nums placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-brand/50 disabled:opacity-50"
           />
         </div>
         <div class="flex flex-wrap items-center justify-between gap-2">

@@ -6,6 +6,7 @@ import {
   AttackUpdate,
   GameUpdateType,
   PlayerUpdate,
+  TradeView,
 } from "@openfront/engine-api/game/GameUpdates";
 
 /**
@@ -53,6 +54,8 @@ export function diffPlayerUpdate(
     prev.tradeGold === next.tradeGold &&
     prev.trainGold === next.trainGold &&
     prev.piracyGold === next.piracyGold &&
+    prev.uranium === next.uranium &&
+    tradeViewEqual(prev.trade, next.trade) &&
     prev.isTraitor === next.isTraitor &&
     prev.traitorRemainingTicks === next.traitorRemainingTicks &&
     prev.inDoomsdayClock === next.inDoomsdayClock &&
@@ -107,6 +110,8 @@ export function diffPlayerUpdate(
   setIfDifferent("tradeGold", prev.tradeGold === next.tradeGold);
   setIfDifferent("trainGold", prev.trainGold === next.trainGold);
   setIfDifferent("piracyGold", prev.piracyGold === next.piracyGold);
+  setIfDifferent("uranium", prev.uranium === next.uranium);
+  setIfDifferent("trade", tradeViewEqual(prev.trade, next.trade));
   // tilesOwned / gold / troops / goldEarned intentionally absent — see
   // EXCEPTION above (goldEarned churns every tick via worker income).
   setIfDifferent("isTraitor", prev.isTraitor === next.isTraitor);
@@ -164,6 +169,13 @@ export function diffPlayerUpdate(
   );
 
   return changed ? diff : null;
+}
+
+function tradeViewEqual(a?: TradeView, b?: TradeView): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  // Small, plain-data objects: a structural compare is cheap and exact.
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 function numberArrayEqual(a?: number[], b?: number[]): boolean {

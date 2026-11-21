@@ -14,14 +14,19 @@ import type {
   SnapshotReader,
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
+import { AirbaseExecution } from "./AirbaseExecution";
+import { CarrierExecution } from "./CarrierExecution";
 import { CityExecution } from "./CityExecution";
+import { ClusterNukeExecution } from "./ClusterNukeExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
 import { FactoryExecution } from "./FactoryExecution";
 import { MirvExecution } from "./MIRVExecution";
 import { MissileSiloExecution } from "./MissileSiloExecution";
 import { NukeExecution } from "./NukeExecution";
+import { OilRigExecution } from "./OilRigExecution";
 import { PortExecution } from "./PortExecution";
 import { SAMLauncherExecution } from "./SAMLauncherExecution";
+import { UraniumMineExecution } from "./UraniumMineExecution";
 import { WarshipExecution } from "./WarshipExecution";
 
 /**
@@ -43,6 +48,12 @@ export function structureExecution(structure: Unit): Execution {
       return new CityExecution(structure);
     case UnitType.Factory:
       return new FactoryExecution(structure);
+    case UnitType.UraniumMine:
+      return new UraniumMineExecution(structure);
+    case UnitType.OilRig:
+      return new OilRigExecution(structure);
+    case UnitType.Airbase:
+      return new AirbaseExecution(structure);
     default:
       throw new Error(`${structure.type()} is not a structure`);
   }
@@ -142,7 +153,8 @@ export class ConstructionExecution implements Execution {
     const player = this.player;
     switch (this.constructionType) {
       case UnitType.AtomBomb:
-      case UnitType.HydrogenBomb: {
+      case UnitType.HydrogenBomb:
+      case UnitType.LargeNuke: {
         const count = this.amount ?? 1;
         for (let i = 0; i < count; i++) {
           // NukeExecution staggers same-tick launches per silo itself.
@@ -160,6 +172,15 @@ export class ConstructionExecution implements Execution {
         }
         break;
       }
+      case UnitType.ClusterNuke: {
+        const count = this.amount ?? 1;
+        for (let i = 0; i < count; i++) {
+          this.mg.addExecution(
+            new ClusterNukeExecution(player, this.tile, this.rocketDirectionUp),
+          );
+        }
+        break;
+      }
       case UnitType.MIRV:
         this.mg.addExecution(new MirvExecution(player, this.tile));
         break;
@@ -168,12 +189,18 @@ export class ConstructionExecution implements Execution {
           new WarshipExecution({ owner: player, patrolTile: this.tile }),
         );
         break;
+      case UnitType.AircraftCarrier:
+        this.mg.addExecution(new CarrierExecution(player, this.tile));
+        break;
       case UnitType.Port:
       case UnitType.MissileSilo:
       case UnitType.DefensePost:
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
+      case UnitType.UraniumMine:
+      case UnitType.OilRig:
+      case UnitType.Airbase:
         this.mg.addExecution(structureExecution(this.structure!));
         break;
       default:
@@ -192,6 +219,9 @@ export class ConstructionExecution implements Execution {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
+      case UnitType.UraniumMine:
+      case UnitType.OilRig:
+      case UnitType.Airbase:
         return true;
       default:
         return false;

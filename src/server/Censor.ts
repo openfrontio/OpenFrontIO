@@ -1,17 +1,17 @@
 import { MAX_USERNAME_LENGTH } from "@openfront/engine-api/Schemas";
 import { simpleHash } from "@openfront/engine-lib/Util";
 import {
-  DataSet,
-  RegExpMatcher,
-  collapseDuplicatesTransformer,
-  englishDataset,
-  pattern,
-  resolveConfusablesTransformer,
-  resolveLeetSpeakTransformer,
-  skipNonAlphabeticTransformer,
-  toAsciiLowerCaseTransformer,
-} from "obscenity";
+  hateSpeechMatcher,
+  maskHateSpeech,
+  profanityMatcher,
+} from "@openfront/shared/ProfanityFilter";
 
+export { profanityMatcher };
+
+// The pool the API's join_verify picks a replacement name from when it flags
+// a username (same list and hash). The game server no longer hands these
+// out itself; it only recognises them, so an API-issued replacement can be
+// swapped back for the masked form (see unshadowApiName).
 export const shadowNames = [
   "UnhuggedToday",
   "DaddysLilChamp",
@@ -36,122 +36,96 @@ export const shadowNames = [
   "AlmostPottyTrained",
 ];
 
-// Basic obscenity check. Full username moderation happens in the API
-// (join_verify); this static list plus the obscenity englishDataset only
-// screens the paths that call never covers: Dev, API failure (fail-open
-// joins), and re-admitted reconnects with no stored identity.
-//
-// Every word here is needed even when englishDataset also covers it: the
-// dataset has no hate/extremism terms (hitler, nazi, spic, ...), and its
-// patterns are partly word-anchored and keep double letters, so only the
-// unanchored + deduped patterns built from this list catch substring and
-// repeated-character bypasses ("xXfaggotXx", "niiiigger").
-const bannedWords = [
-  "nigger",
-  "nigga",
-  "chink",
-  "spic",
-  "kike",
-  "faggot",
-  "retard",
-  "hitler",
-  "adolf",
-  "nazi",
-  "auschwitz",
-  "whitepower",
-  "heil",
-];
-
-function buildDataset(dedup: boolean) {
-  const dataset = new DataSet<{ originalWord: string }>().addAll(
-    englishDataset,
-  );
-  for (const word of bannedWords) {
-    const w = dedup ? word.replace(/(.)\1+/g, "$1") : word;
-    dataset.addPhrase((phrase) =>
-      phrase.setMetadata({ originalWord: word }).addPattern(pattern`${w}`),
-    );
-  }
-  return dataset.build();
+function shadowNameFor(username: string): string {
+  return shadowNames[simpleHash(username) % shadowNames.length];
 }
 
-function createMatcher(): RegExpMatcher {
-  const baseTransformers = [
-    toAsciiLowerCaseTransformer(),
-    resolveConfusablesTransformer(),
-    resolveLeetSpeakTransformer(),
-  ];
-  // substringMatcher: literal patterns, no collapse — catches "niggertesting" as a substring
-  // collapseMatcher: deduped patterns + collapse transformer — catches "niiiigger", "hiiitler"
-  // skipNonAlphabeticTransformer is applied last to catch punctuation-separated bypasses
-  // like "n.i.g.g.e.r".
-  const substringMatcher = new RegExpMatcher({
-    ...buildDataset(false),
-    blacklistMatcherTransformers: [
-      ...baseTransformers,
-      skipNonAlphabeticTransformer(),
-    ],
-  });
-  const collapseMatcher = new RegExpMatcher({
-    ...buildDataset(true),
-    blacklistMatcherTransformers: [
-      ...baseTransformers,
-      collapseDuplicatesTransformer(),
-      skipNonAlphabeticTransformer(),
-    ],
-  });
-  return {
-    hasMatch: (input: string) =>
-      input.toLowerCase().includes("kkk") ||
-      substringMatcher.hasMatch(input) ||
-      collapseMatcher.hasMatch(input),
-    getAllMatches: (input: string, sorted?: boolean) => [
-      ...substringMatcher.getAllMatches(input, sorted),
-      ...collapseMatcher.getAllMatches(input, sorted),
-    ],
-  } as unknown as RegExpMatcher;
+function clamp(name: string): string {
+  return name.length > MAX_USERNAME_LENGTH
+    ? name.slice(0, MAX_USERNAME_LENGTH).trim()
+    : name;
 }
-
-export const profanityMatcher = createMatcher();
 
 /**
- * Same censoring semantics as the API's join_verify: a profane username is
- * replaced with its deterministic shadow name (same pool and hash the API
- * uses); a profane clan tag, the literal "ss", or a banned word completed
- * across the tag/name boundary (tag HIT + name LER — which also shadow-names
- * the username) drops the tag; a surviving tag is uppercased.
+ * The join-time screen for a display name and clan tag.
+ *
+ * Profanity is masked with `*`, never replaced with a made-up name:
+ *   - hate terms (slurs, extremist names) are masked here, for every viewer;
+ *   - general profanity is left as typed and masked on each viewer's client,
+ *     unless that viewer has turned the profanity filter off
+ *     (UserSettings.profanityFilter).
+ *
+ * A clan tag is too short to mask legibly, so a profane tag (either tier),
+ * the literal "ss", or a tag that completes a banned word across the
+ * tag/name boundary (tag HIT + name LER) is dropped. In the boundary case the
+ * part of the word that falls in the name is masked too when it is a hate
+ * term. A surviving tag is uppercased.
  */
 export function censorPlayer(
   username: string,
   clanTag: string | null,
 ): { username: string; clanTag: string | null } {
-  const usernameIsProfane = profanityMatcher.hasMatch(username);
   const clanTagIsProfane = clanTag
     ? profanityMatcher.hasMatch(clanTag) || clanTag.toLowerCase() === "ss"
     : false;
-  const combinedSlurAcrossBoundary = clanTag
-    ? profanityMatcher.getAllMatches(clanTag + username).some(
-        (match) =>
-          // Match must start in the clan and extend into the name — otherwise
-          // it's already handled by the clan-only or name-only checks above.
-          match.startIndex < clanTag.length && match.endIndex >= clanTag.length,
-      )
+  const crossesBoundary = (
+    spans: { startIndex: number; endIndex: number }[],
+    tag: string,
+  ) =>
+    // A span must start in the clan and extend into the name — otherwise
+    // it's already handled by the clan-only or name-only checks.
+    spans.filter(
+      (s) => s.startIndex < tag.length && s.endIndex >= tag.length,
+    );
+  const boundaryProfanity = clanTag
+    ? crossesBoundary(profanityMatcher.spans(clanTag + username), clanTag)
+        .length > 0
     : false;
 
-  const censoredName =
-    usernameIsProfane || combinedSlurAcrossBoundary
-      ? shadowNames[simpleHash(username) % shadowNames.length]
-      : username;
-
-  const clampedName =
-    censoredName.length > MAX_USERNAME_LENGTH
-      ? censoredName.slice(0, MAX_USERNAME_LENGTH).trim()
-      : censoredName;
+  let censoredName = maskHateSpeech(username);
+  if (clanTag) {
+    const hateAcross = crossesBoundary(
+      hateSpeechMatcher.spans(clanTag + username),
+      clanTag,
+    );
+    if (hateAcross.length > 0) {
+      const chars = censoredName.split("");
+      for (const span of hateAcross) {
+        for (let i = span.startIndex; i <= span.endIndex; i++) {
+          const nameIndex = i - clanTag.length;
+          if (nameIndex >= 0 && nameIndex < chars.length) {
+            if (!/\s/.test(chars[nameIndex])) chars[nameIndex] = "*";
+          }
+        }
+      }
+      censoredName = chars.join("");
+    }
+  }
 
   const censoredClanTag =
-    clanTag && !clanTagIsProfane && !combinedSlurAcrossBoundary
+    clanTag && !clanTagIsProfane && !boundaryProfanity
       ? clanTag.toUpperCase()
       : null;
 
-  return { username: clampedName, clanTag: censoredClanTag };
+  return { username: clamp(censoredName), clanTag: censoredClanTag };
+}
+
+/**
+ * The API's join_verify replaces a name it flags with one of shadowNames.
+ * This server masks instead, so when the API's answer is exactly the shadow
+ * name for what the player typed, use the locally masked name in its place.
+ * Should the API have flagged a name the local filter finds nothing in (its
+ * own list or a model caught it), the whole name is masked rather than shown
+ * as typed. Any other answer from the API is kept.
+ */
+export function unshadowApiName(
+  requested: string,
+  approved: string,
+  locallyCensored: string,
+): string {
+  if (approved === requested || approved !== shadowNameFor(requested)) {
+    return approved;
+  }
+  if (profanityMatcher.hasMatch(requested)) return locallyCensored;
+  return clamp(requested.replace(/\S/g, "*"));
 }

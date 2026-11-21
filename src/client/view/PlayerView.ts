@@ -28,6 +28,7 @@ import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { Colord, colord } from "colord";
 import { base64url } from "jose";
 import { PlayerState, PlayerStatic, PlayerTypeEnum } from "../render/types";
+import { filterName } from "../NameFilter";
 import { themeProvider } from "../theme/ThemeProvider";
 import { UserSettings } from "../UserSettings";
 import { type CosmeticOwner, visibleCosmetics } from "./CosmeticVisibility";
@@ -388,15 +389,24 @@ export class PlayerView implements PlayerLike {
     return this.state.smallID;
   }
 
+  // Other players' names go through the viewer's profanity filter; your own
+  // is shown as you typed it.
+  private filtered(name: string): string {
+    return this.static.clientID !== null &&
+      this.static.clientID === this.game.myClientID()
+      ? name
+      : filterName(name);
+  }
+
   name(): string {
     return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
-      : this.static.name;
+      : this.filtered(this.static.name);
   }
   displayName(): string {
     return this.anonymousName !== null && userSettings.anonymousNames()
       ? this.anonymousName
-      : this.static.displayName;
+      : this.filtered(this.static.displayName);
   }
   clanTag(): string | null {
     return this.anonymousName !== null && userSettings.anonymousNames()
@@ -469,6 +479,11 @@ export class PlayerView implements PlayerLike {
   /** Cumulative piracy revenue: captured-ship payouts. */
   piracyGold(): number {
     return this.state.piracyGold;
+  }
+
+  /** Uranium held, spent on nuke launches. */
+  uranium(): number {
+    return this.state.uranium;
   }
 
   /** Cumulative gold received from all sources. */

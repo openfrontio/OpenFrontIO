@@ -9,7 +9,7 @@
     "close": "Затвори"
   },
   "main": {
-    "title": "OpenFront (АЛФА)",
+    "title": "BrokenFront (АЛФА)",
     "join_discord": "Приклучи се на Discord!",
     "login_discord": "Најави се со Discord",
     "checking_login": "Проверка на најава...",
@@ -461,8 +461,8 @@
     "not_enough_money": "Нема доволно пари"
   },
   "win_modal": {
-    "support_openfront": "Поддржи го OpenFront!",
-    "territory_pattern": "Купи шаблон за територија за да го поддржиш OpenFront!",
+    "support_openfront": "Поддржи го BrokenFront!",
+    "territory_pattern": "Купи шаблон за територија за да го поддржиш BrokenFront!",
     "died": "Умре",
     "your_team": "Твојот тим победи!",
     "other_team": "Тимот {team} победи!",
@@ -618,8 +618,8 @@
       "cursor": "Курсор",
       "hand": "Рака",
       "radiation": "Зрачење",
-      "openfront_qr": "OpenFront.io QR код",
-      "openfront": "OpenFront",
+      "openfront_qr": "BrokenFront QR код",
+      "openfront": "BrokenFront",
       "t_rex": "Т-Рекс",
       "embelem": "Амблем",
       "contributor": "Придонесувач",

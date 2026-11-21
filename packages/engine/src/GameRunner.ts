@@ -101,6 +101,9 @@ export async function createGameRunner(
     config,
     gameMap.teamGameSpawnAreas,
   );
+  if (gameMap.uraniumDeposits !== undefined) {
+    game.setUraniumDeposits(gameMap.uraniumDeposits);
+  }
 
   const gr = new GameRunner(
     game,

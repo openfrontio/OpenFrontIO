@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="BrokenFront">
+  <!-- BrokenFront mark: the wordmark's B, split along the same fault line.
+       Used for the favicon and the app icons. -->
+  <defs>
+    <path id="b" fill-rule="evenodd" d="M0 0H46L60 14V38L52 50L60 62V86L46 100H0Z M20 20H40V40H20Z M20 60H40V80H20Z"/>
+    <clipPath id="above"><path d="M-10 -10H70V50L40 44L22 56L-10 48Z"/></clipPath>
+    <clipPath id="below"><path d="M-10 110H70V50L40 44L22 56L-10 48Z"/></clipPath>
+  </defs>
+  <rect width="100" height="100" rx="18" fill="#161310"/>
+  <g transform="translate(30 17) scale(0.64)" fill="#e5602a">
+    <use href="#b" clip-path="url(#above)"/>
+    <g transform="translate(5 8)">
+      <use href="#b" clip-path="url(#below)"/>
+    </g>
+  </g>
+</svg>

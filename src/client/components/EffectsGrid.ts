@@ -327,7 +327,7 @@ export class EffectsGrid extends LitElement {
           return html`<button
             class="-mb-px max-w-full shrink-0 whitespace-normal border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${
               active
-                ? "border-malibu-blue text-aquarius"
+                ? "border-brand text-brand-light"
                 : "border-transparent text-white/40 hover:text-white/70"
             }"
             @click=${() => this.selectEffectType(type)}

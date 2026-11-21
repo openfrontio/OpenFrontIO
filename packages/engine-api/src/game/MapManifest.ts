@@ -95,6 +95,25 @@ export const CustomTribeSchema = z.union([
   }),
 ]);
 
+export const ResourceDepositSchema = z.strictObject({
+  x: z.int().nonnegative(),
+  y: z.int().nonnegative(),
+  r: z
+    .int()
+    .min(1)
+    .max(8)
+    .optional()
+    .describe("Radius in tiles. Defaults to 3."),
+});
+
+export const MapResourcesSchema = z.strictObject({
+  uranium: z
+    .array(ResourceDepositSchema)
+    .describe(
+      "Hand-placed uranium deposits. Omit the field to have them seeded from the map.",
+    ),
+});
+
 const MapMetadataSchema = z.strictObject({
   width: z.int().positive(),
   height: z.int().positive(),
@@ -174,6 +193,9 @@ const mapInfoShape = {
       message: "layer ids must be unique",
     })
     .optional(),
+  resources: MapResourcesSchema.optional().describe(
+    "Gameplay resources placed on the map (BrokenFront).",
+  ),
 };
 
 // Map picker metadata; the generator keeps it out of manifest.json.
@@ -244,6 +266,15 @@ export const MapManifestSchema = z
         }
       });
     }
+    (manifest.resources?.uranium ?? []).forEach((d, i) => {
+      if (!inBounds([d.x, d.y])) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["resources", "uranium", i],
+          message: `outside the ${width}x${height} map`,
+        });
+      }
+    });
     for (const [teams, areas] of Object.entries(
       manifest.teamGameSpawnAreas ?? {},
     )) {

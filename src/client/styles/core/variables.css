@@ -3,24 +3,24 @@
   --breakPoint-tablet: 800px;
   --breakPoint-Desktop: 1024px;
   --blur-md: 4px;
-  --boxBackgroundColor: #111827cc;
+  --boxBackgroundColor: #1c1917cc;
   --fontColor: #202020;
   --fontColorLight: #fff;
 
-  --primaryColorHover: var(--color-malibu-blue);
+  --primaryColorHover: var(--color-brand);
   --primaryColorDisabled: linear-gradient(
     to right,
     rgb(74, 74, 74),
     rgb(61, 61, 61)
   );
-  --secondaryColor: var(--color-malibu-blue);
-  --secondaryColorHover: var(--color-aquarius);
+  --secondaryColor: var(--color-brand);
+  --secondaryColorHover: var(--color-brand-light);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-  --primaryColorHoverDark: var(--color-malibu-blue);
-  --primaryColorDisabledDark: #4b5563;
-  --secondaryColorDark: var(--color-malibu-blue);
-  --secondaryColorHoverDark: var(--color-aquarius);
+  --primaryColorHoverDark: var(--color-brand);
+  --primaryColorDisabledDark: #57534e;
+  --secondaryColorDark: var(--color-brand);
+  --secondaryColorHoverDark: var(--color-brand-light);
   --fontColorDark: #f3f4f6;
 
   /* Achievements */

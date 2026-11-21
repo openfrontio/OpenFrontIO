@@ -27,7 +27,7 @@
     "map_default": "Peta Default"
   },
   "main": {
-    "title": "OpenFront (ALPHA)",
+    "title": "BrokenFront (ALPHA)",
     "login_discord": "Masuk dengan Discord",
     "sign_in": "Masuk",
     "discord_avatar_alt": "Avatar profil Discord",
@@ -39,7 +39,7 @@
     "wiki": "Wiki",
     "privacy_policy": "Kebijakan Privasi",
     "terms_of_service": "Ketentuan Layanan",
-    "copyright": "© OpenFront™ dan para kontributor",
+    "copyright": "© BrokenFront dan para kontributor",
     "play": "Main",
     "news": "Berita",
     "store": "Toko",
@@ -65,7 +65,7 @@
     "copied_to_clipboard": "Informasinya sudah disalin ke clipboard! Silakan bagikan di Discord kami jika Anda membutuhkan bantuan.",
     "os": "OS",
     "device_pixel_ratio": "Rasio Piksel Perangkat",
-    "chromium_tip": "OpenFront berjalan paling baik pada browser berbasis Chromium.",
+    "chromium_tip": "BrokenFront berjalan paling baik pada browser berbasis Chromium.",
     "hardware_acceleration_tip": "Pastikan akselerasi perangkat keras diaktifkan di pengaturan browser Anda untuk performa optimal.",
     "renderer": "Renderer",
     "max_texture_size": "Maks Ukuran Tekstur",
@@ -85,7 +85,7 @@
   },
   "help_modal": {
     "video_tutorial": "Video Panduan",
-    "video_tutorial_title": "Panduan OpenFront.io",
+    "video_tutorial_title": "Panduan BrokenFront",
     "hotkeys": "Tombol pintas",
     "table_key": "Kunci",
     "table_action": "Tindakan",
@@ -169,7 +169,7 @@
     "build_mirv": "MIRV",
     "build_mirv_desc": "Bom paling kuat di dalam permainan. Akan terpecah menjadi bom-bom yang lebih kecil dan mencakup area wilayah yang sangat luas. Hanya memberikan kerusakan kepada pemain yang pertama kali kamu klik saat membangunnya.\nSenjata ini muncul dari Silo Rudal terdekat dan akan mendarat di area yang pertama kali kamu klik saat membangunnya.",
     "player_icons": "Ikon Pemain",
-    "troubleshooting_desc": "Jika Anda mengalami masalah performa, crash, atau masalah lain saat memainkan OpenFront, silakan kunjungi halaman Penyelesaian Masalah kami untuk mendapatkan bantuan dalam mendiagnosis dan memperbaiki masalah umum:",
+    "troubleshooting_desc": "Jika Anda mengalami masalah performa, crash, atau masalah lain saat memainkan BrokenFront, silakan kunjungi halaman Penyelesaian Masalah kami untuk mendapatkan bantuan dalam mendiagnosis dan memperbaiki masalah umum:",
     "icon_desc": "Berikut beberapa ikon yang akan kamu temui di dalam permainan beserta artinya:",
     "icon_crown": "Mahkota – Peringkat 1. Pemain teratas di papan peringkat.",
     "icon_traitor": "Perisai Retak – Pengkhianat. Pemain ini menyerang sekutu.",
@@ -717,7 +717,7 @@
     "not_enough_money": "Uang tidak cukup"
   },
   "win_modal": {
-    "support_openfront": "Dukung OpenFront!",
+    "support_openfront": "Dukung BrokenFront!",
     "territory_pattern": "Beli skin wilayah untuk bebas iklan!",
     "died": "Anda meninggal",
     "your_team": "Tim Anda menang!",

@@ -23,7 +23,7 @@
     "click_to_copy": "Kopyalamak için tıkla"
   },
   "main": {
-    "title": "OpenFront (ALFA)",
+    "title": "BrokenFront (ALFA)",
     "join_discord": "Discord",
     "login_discord": "Discord'la giriş yap",
     "sign_in": "Oturum Aç",
@@ -40,7 +40,7 @@
     "wiki": "Wiki",
     "privacy_policy": "Gizlilik Politikası",
     "terms_of_service": "Hizmet Şartları",
-    "copyright": "© OpenFront™ ve Katkıda Bulunanlar",
+    "copyright": "© BrokenFront ve Katkıda Bulunanlar",
     "reddit": "Reddit",
     "play": "Oyna",
     "news": "Haberler",
@@ -633,7 +633,7 @@
     "not_enough_money": "Yeterli para yok"
   },
   "win_modal": {
-    "support_openfront": "OpenFront'u Destekle!",
+    "support_openfront": "BrokenFront'u Destekle!",
     "territory_pattern": "Bir toprak kaplaması alarak reklamlardan kurtul!",
     "died": "Öldün",
     "your_team": "Takımınız kazandı!",
@@ -645,7 +645,7 @@
     "keep": "Oynamaya Devam Et",
     "spectate": "İzle",
     "wishlist": "Steam'de İstek Listesine Ekle!",
-    "ofm_winter": "OpenFront Masters Kış Turnuvası!",
+    "ofm_winter": "BrokenFront Masters Kış Turnuvası!",
     "ofm_winter_description": "Rekabetçi turnuvaya katıl ve en iyi oyunculara karşı mücadele et",
     "join_tournament": "Turnuvaya Katıl",
     "join_discord": "Discord Topluluğumuza Katıl!",

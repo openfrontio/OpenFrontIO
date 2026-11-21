@@ -468,7 +468,7 @@ export class ProfileCard extends LitElement {
         ? nothing
         : html`<span
             data-profile-clan
-            class="font-black tracking-wider text-aquarius ${
+            class="font-black tracking-wider text-brand-light ${
               this.compact ? "shrink-0 text-sm" : "block text-sm"
             }"
             >[${this.clanTag}]</span

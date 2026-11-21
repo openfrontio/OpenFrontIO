@@ -21,6 +21,7 @@ import { ClientInfo } from "@openfront/shared/WireSchemas";
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
+import { filterName } from "../NameFilter";
 import {
   ownHiddenLevelBadge,
   refreshOwnHiddenLevelBadge,
@@ -266,7 +267,7 @@ export class LobbyTeamView extends LitElement {
               class="px-2 py-1 rounded-sm mb-1 text-xs text-white border break-words
                 ${
                 this.isCurrentPlayer(client)
-                  ? "bg-malibu-blue/20 border-sky-500/40"
+                  ? "bg-brand/20 border-sky-500/40"
                   : "bg-gray-700/70 border-transparent"
               }"
             >
@@ -431,7 +432,7 @@ export class LobbyTeamView extends LitElement {
                       class="px-2 py-1 rounded-sm text-xs flex items-center justify-between border
                       ${
                         this.isCurrentPlayer(p)
-                          ? "bg-malibu-blue/20 border-sky-500/40"
+                          ? "bg-brand/20 border-sky-500/40"
                           : "bg-gray-700/70 border-transparent"
                       }"
                     >
@@ -634,11 +635,19 @@ export class LobbyTeamView extends LitElement {
   }
 
   private getClientDisplayName(client: ClientInfo): string {
-    const full = formatPlayerDisplayName(client.username, client.clanTag);
-    if (!this.userSettings.anonymousNames()) {
-      return full;
+    const isSelf =
+      this.currentClientID !== undefined &&
+      this.currentClientID !== null &&
+      client.clientID === this.currentClientID;
+    if (isSelf) {
+      return formatPlayerDisplayName(client.username, client.clanTag);
     }
-    if (this.currentClientID && client.clientID === this.currentClientID) {
+    // Other players go through this viewer's profanity filter.
+    const full = formatPlayerDisplayName(
+      filterName(client.username),
+      client.clanTag,
+    );
+    if (!this.userSettings.anonymousNames()) {
       return full;
     }
     // Keep clan tag visible while anonymizing only the username.

@@ -46,6 +46,18 @@ export const PACKED_UNIT_TYPES: readonly UnitType[] = [
   UnitType.MIRVWarhead, // 14
   UnitType.Train, // 15
   UnitType.Factory, // 16
+  UnitType.UraniumMine, // 17
+  UnitType.LargeNuke, // 18
+  UnitType.ClusterNuke, // 19
+  UnitType.ClusterWarhead, // 20
+  UnitType.FishingBoat, // 21
+  UnitType.OilRig, // 22
+  UnitType.Airbase, // 23
+  UnitType.AircraftCarrier, // 24
+  UnitType.Fighter, // 25
+  UnitType.Bomber, // 26
+  UnitType.TransportPlane, // 27
+  UnitType.TroopColumn, // 28
 ] as const;
 
 const UNIT_TYPE_TO_INT = new Map<UnitType, number>(
@@ -95,7 +107,8 @@ export const intToTrainType = (val: number): TrainType | undefined => {
   }
 };
 
-// Packed A: ownerID (12 bits), lastOwnerID (12 bits), unitType (5 bits)
+// Packed A: ownerID (12 bits), lastOwnerID (12 bits), unitType (7 bits, so
+// bit 31 stays clear and the value stays a positive int32).
 export const packA = (
   ownerID: number,
   lastOwnerID: number | undefined,
@@ -103,7 +116,7 @@ export const packA = (
 ): number => {
   const oID = ownerID & 0xfff;
   const lID = lastOwnerID !== undefined ? lastOwnerID & 0xfff : 0xfff;
-  const uType = unitTypeToInt(unitType) & 0x1f;
+  const uType = unitTypeToInt(unitType) & 0x7f;
   return oID | (lID << 12) | (uType << 24);
 };
 
@@ -113,7 +126,7 @@ export const unpackALastOwnerID = (packed: number): number | undefined => {
   return val === 0xfff ? undefined : val;
 };
 export const unpackAUnitType = (packed: number): UnitType =>
-  intToUnitType((packed >> 24) & 0x1f);
+  intToUnitType((packed >> 24) & 0x7f);
 
 // Packed B: level (8 bits), warshipState (2 bits), flags (many bits)
 export const packB = (update: UnitUpdate): number => {

@@ -34,7 +34,7 @@ class TradeStationStopHandler implements TrainStopHandler {
     const gold = mg
       .config()
       .trainGold(
-        rel(trainOwner, stationOwner),
+        rel(mg, trainOwner, stationOwner),
         trainExecution.tradeStopsVisited(),
         trainOwner,
       );
@@ -320,6 +320,7 @@ export const ClusterSnapshot = snapshotType({
 export type ClusterState = z.infer<typeof ClusterSnapshot.schema>;
 
 function rel(
+  mg: Game,
   player: Player,
   other: Player,
 ): "self" | "team" | "ally" | "other" {
@@ -330,6 +331,10 @@ function rel(
     return "team";
   }
   if (player.isAlliedWith(other)) {
+    return "ally";
+  }
+  // Trade-agreement partners pay like allies.
+  if (mg.trade().isPartner(player, other)) {
     return "ally";
   }
   return "other";

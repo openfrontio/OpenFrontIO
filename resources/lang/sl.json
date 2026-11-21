@@ -9,7 +9,7 @@
     "close": "Zapri"
   },
   "main": {
-    "title": "OpenFront (Alfa)",
+    "title": "BrokenFront (Alfa)",
     "join_discord": "Pridruži se našemu Discord serverju!",
     "login_discord": "Prijava z Discord računom",
     "checking_login": "Preverjanje prijave...",
@@ -466,8 +466,8 @@
     "not_enough_money": "Ni dovolj denarja"
   },
   "win_modal": {
-    "support_openfront": "Podprite OpenFront!",
-    "territory_pattern": "Kupite vzorec teritorija, da podprete OpenFront!",
+    "support_openfront": "Podprite BrokenFront!",
+    "territory_pattern": "Kupite vzorec teritorija, da podprete BrokenFront!",
     "died": "Umrl si",
     "your_team": "Vaša ekipa je zmagala!",
     "other_team": "Ekipa {team} je zmagala!",
@@ -624,8 +624,8 @@
       "cursor": "Kazalnik",
       "hand": "Roka",
       "radiation": "Radiacija",
-      "openfront_qr": "OpenFront.io QR koda",
-      "openfront": "OpenFront",
+      "openfront_qr": "BrokenFront QR koda",
+      "openfront": "BrokenFront",
       "t_rex": "T-Rex",
       "embelem": "Grb",
       "contributor": "Podpornik",

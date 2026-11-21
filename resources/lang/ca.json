@@ -26,7 +26,7 @@
     "enabled": "Activat"
   },
   "main": {
-    "title": "OpenFront (ALFA)",
+    "title": "BrokenFront (ALFA)",
     "login_discord": "Inicia sessió amb Discord",
     "sign_in": "Iniciar sessió",
     "discord_avatar_alt": "Foto de perfil Discord",
@@ -38,7 +38,7 @@
     "wiki": "Wiki",
     "privacy_policy": "Política de Privacitat",
     "terms_of_service": "Condicions de Servei",
-    "copyright": "© OpenFront™ i Col·laboradors",
+    "copyright": "© BrokenFront i Col·laboradors",
     "play": "Jugar",
     "news": "Notícies",
     "store": "Botiga",
@@ -65,7 +65,7 @@
     "copied_to_clipboard": "Informació copiada en el porta-retalls! Sigues lliure de compartir-la en el nostre Discord si necessites ajuda.",
     "os": "OS",
     "device_pixel_ratio": "Ràtio de píxels del dispositiu",
-    "chromium_tip": "OpenFront funciona millor en navegadors Chromium.",
+    "chromium_tip": "BrokenFront funciona millor en navegadors Chromium.",
     "hardware_acceleration_tip": "Assegura't que l'acceleració de maquinari estigui habilitada a la configuració del teu navegador per a un rendiment òptim.",
     "renderer": "Rendidor",
     "max_texture_size": "Mida màxima de la textura",
@@ -85,7 +85,7 @@
   },
   "help_modal": {
     "video_tutorial": "Vídeo Tutorial",
-    "video_tutorial_title": "Tutorial de OpenFront.io",
+    "video_tutorial_title": "Tutorial de BrokenFront",
     "hotkeys": "Tecles d'accés ràpid",
     "table_key": "Clau",
     "table_action": "Acció",
@@ -166,7 +166,7 @@
     "build_mirv": "MIRV",
     "build_mirv_desc": "La bomba més poderosa del joc. Es trenca en nombroses bombes petites que cobriran un vast terreny. Només danya al jugador que has seleccionat. Surt del Llançador de Míssils més proper i cau a on has clicat per llançar-la.",
     "player_icons": "Icones de jugador",
-    "troubleshooting_desc": "Si experimenteu problemes de rendiment, bloquejos o altres problemes mentre jugueu a OpenFront, visiteu la nostra pàgina de resolució de problemes per obtenir ajuda per diagnosticar i solucionar els problemes més comuns:",
+    "troubleshooting_desc": "Si experimenteu problemes de rendiment, bloquejos o altres problemes mentre jugueu a BrokenFront, visiteu la nostra pàgina de resolució de problemes per obtenir ajuda per diagnosticar i solucionar els problemes més comuns:",
     "icon_desc": "Exemples d'algunes de les icones del joc que trobaràs i què volen dir:",
     "icon_crown": "Corona - Número 1. Aquest és el jugador número u de la classificació.",
     "icon_traitor": "Escut trencat - Traïdor. Aquest jugador ha atacat un aliat.",
@@ -681,7 +681,7 @@
     "not_enough_money": "No tens prou diners"
   },
   "win_modal": {
-    "support_openfront": "Dona suport a OpenFront!",
+    "support_openfront": "Dona suport a BrokenFront!",
     "territory_pattern": "Compra un Aspecte de Territori per eliminar els anuncis!",
     "died": "Has mort",
     "your_team": "El teu equip ha guanyat!",
@@ -868,7 +868,7 @@
     "trial_cooldown": "Només una prova per cada 24 hores. Torni a provar més tard.",
     "trial_login_required": "Cal iniciar sessió per provar una Aparença",
     "reward_countdown": "Premi en {seconds} segons...",
-    "steam_wishlist_prompt": "Dona suport a OpenFront afegint-lo a la teva llista de desitjos de Steam",
+    "steam_wishlist_prompt": "Dona suport a BrokenFront afegint-lo a la teva llista de desitjos de Steam",
     "select_skin": "Tria l'Aparença",
     "selected": "seleccionat"
   },

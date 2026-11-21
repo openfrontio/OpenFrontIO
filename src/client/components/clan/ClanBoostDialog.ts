@@ -250,7 +250,7 @@ export class ClanBoostDialog extends LitElement {
         @click=${() => this.selectTier(tier.tier)}
         class="flex-1 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border transition-all ${
           selected
-            ? "bg-malibu-blue/15 border-aquarius/70 ring-2 ring-malibu-blue/40 text-white"
+            ? "bg-brand/15 border-brand-light/70 ring-2 ring-brand/40 text-white"
             : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white"
         } disabled:opacity-50 disabled:pointer-events-none"
       >
@@ -298,7 +298,7 @@ export class ClanBoostDialog extends LitElement {
       <span class="w-20 h-1.5 rounded-full bg-white/10 overflow-hidden">
         <span
           data-limit-fill
-          class="block h-full rounded-full bg-aquarius"
+          class="block h-full rounded-full bg-brand-light"
           style="width: ${pct}%"
         ></span>
       </span>
@@ -355,7 +355,7 @@ export class ClanBoostDialog extends LitElement {
         running
           ? html`<p
               data-boost-running
-              class="mt-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-malibu-blue/15 text-aquarius border border-malibu-blue/40"
+              class="mt-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-brand/15 text-brand-light border border-brand/40"
             >
               ${translateText("clan_modal.boost_time_left", {
                 remaining: running,
@@ -392,7 +392,7 @@ export class ClanBoostDialog extends LitElement {
              this panel keeps its own look like the donate dialog. -->
         <section
           data-boost-panel
-          class="relative mx-4 w-full max-w-md p-6 rounded-2xl border border-malibu-blue/50 bg-surface shadow-2xl"
+          class="relative mx-4 w-full max-w-md p-6 rounded-2xl border border-brand/50 bg-surface shadow-2xl"
         >
           <h2
             id="clan-boost-dialog-title"
@@ -420,7 +420,7 @@ export class ClanBoostDialog extends LitElement {
               data-action="buy-boost"
               @click=${() => void this.submit()}
               ?disabled=${!this.canSubmit()}
-              class="flex-1 px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl text-white transition-all disabled:opacity-50 disabled:pointer-events-none border-0 bg-malibu-blue hover:bg-aquarius"
+              class="flex-1 px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl text-white transition-all disabled:opacity-50 disabled:pointer-events-none border-0 bg-brand hover:bg-brand-light"
             >
               ${translateText(
                 this.submitting

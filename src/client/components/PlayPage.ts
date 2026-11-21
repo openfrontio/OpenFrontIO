@@ -56,11 +56,11 @@ export class PlayPage extends LitElement {
             </button>
 
             <div
-              class="col-start-2 flex items-center justify-center text-malibu-blue min-w-0"
+              class="col-start-2 flex items-center justify-center text-brand min-w-0"
             >
               <img
-                src=${assetUrl("images/OpenFrontLogo.svg")}
-                alt="OpenFront"
+                src=${assetUrl("images/BrokenFrontLogo.svg")}
+                alt="BrokenFront"
                 class="h-full w-auto"
               />
             </div>

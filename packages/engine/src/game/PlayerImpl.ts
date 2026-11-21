@@ -1,5 +1,7 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
+  AirBases,
+  AirUnits,
   AllianceInfo,
   AllPlayers,
   BuildableUnit,
@@ -30,6 +32,7 @@ import {
   AttackUpdate,
   GameUpdateType,
   PlayerUpdate,
+  TradeView,
 } from "@openfront/engine-api/game/GameUpdates";
 import { ReadonlyTileSet } from "@openfront/engine-api/game/ReadViews";
 import { ClientID } from "@openfront/engine-api/Schemas";
@@ -149,6 +152,10 @@ export class PlayerImpl implements Player {
   private _piracyGold: bigint = 0n;
   /** Cumulative gold received from all sources (incremented in addGold). */
   private _goldEarned: bigint = 0n;
+  /** Uranium held: spent on nuke launches. */
+  private _uranium: number = 0;
+  /** Cumulative uranium produced by this player's mines. */
+  private _uraniumMined: number = 0;
 
   markedTraitorTick = -1;
   markedDoomsdayClockTick = -1;
@@ -398,6 +405,8 @@ export class PlayerImpl implements Player {
       trainGold: this._trainGold,
       piracyGold: this._piracyGold,
       goldEarned: this._goldEarned,
+      uranium: this._uranium,
+      trade: this.tradeView(),
       troops: this.troops(),
       allies: allies,
       embargoes: embargoes,
@@ -1355,6 +1364,46 @@ export class PlayerImpl implements Player {
     return this._goldEarned;
   }
 
+  uranium(): number {
+    return this._uranium;
+  }
+
+  // Rebuilt only when the trade book changes, so the per-tick update diff
+  // short-circuits on reference equality.
+  private _tradeView: TradeView | undefined;
+  private _tradeViewVersion = -1;
+  private tradeView(): TradeView {
+    const book = this.mg.trade();
+    if (this._tradeView === undefined || this._tradeViewVersion !== book.version()) {
+      this._tradeView = book.viewFor(this);
+      this._tradeViewVersion = book.version();
+    }
+    return this._tradeView;
+  }
+
+  addUranium(toAdd: number): void {
+    if (toAdd <= 0) return;
+    this._uranium += Math.floor(toAdd);
+  }
+
+  removeUranium(toRemove: number): number {
+    if (toRemove <= 0) return 0;
+    const taken = Math.min(this._uranium, Math.floor(toRemove));
+    this._uranium -= taken;
+    return taken;
+  }
+
+  uraniumMined(): number {
+    return this._uraniumMined;
+  }
+
+  /** Mine output: counts toward uraniumMined as well as the stockpile. */
+  addMinedUranium(toAdd: number): void {
+    if (toAdd <= 0) return;
+    this.addUranium(toAdd);
+    this._uraniumMined += Math.floor(toAdd);
+  }
+
   setGold(gold: Gold): void {
     this._gold = gold;
   }
@@ -1425,6 +1474,7 @@ export class PlayerImpl implements Player {
     }
 
     const cost = this.mg.unitInfo(type).cost(this.mg, this);
+    const uraniumCost = this.uraniumCostOf(type);
     const b = new UnitImpl(
       type,
       this.mg,
@@ -1437,6 +1487,7 @@ export class PlayerImpl implements Player {
     this._myUnitsVersion++;
     this.recordUnitConstructed(type);
     this.removeGold(cost);
+    this.removeUranium(uraniumCost);
     this.removeTroops("troops" in params ? (params.troops ?? 0) : 0);
     this.mg.addUpdate(b.toUpdate());
     this.mg.addUnit(b);
@@ -1481,10 +1532,31 @@ export class PlayerImpl implements Player {
     if (this._gold < cost) {
       return false;
     }
-    if (unitType !== UnitType.MIRVWarhead && !this.isAlive()) {
+    if (this._uranium < this.uraniumCostOf(unitType)) {
+      return false;
+    }
+    if (
+      unitType !== UnitType.MIRVWarhead &&
+      unitType !== UnitType.ClusterWarhead &&
+      !this.isAlive()
+    ) {
       return false;
     }
     return true;
+  }
+
+  /** Uranium a launch of `unitType` costs this player (0 with infinite gold). */
+  uraniumCostOf(unitType: UnitType): number {
+    const cost = this.mg.config().uraniumCost(unitType);
+    if (cost === 0) return 0;
+    // Infinite-gold cheats waive uranium too: a free gold cost marks them.
+    if (
+      this.type() === PlayerType.Human &&
+      this.mg.unitInfo(unitType).cost(this.mg, this) === 0n
+    ) {
+      return 0;
+    }
+    return cost;
   }
 
   private canUpgradeUnitType(unitType: UnitType): boolean {
@@ -1585,6 +1657,7 @@ export class PlayerImpl implements Player {
         canBuild,
         canUpgrade,
         cost,
+        uraniumCost: this.uraniumCostOf(u),
         upgradeCosts,
         overlappingRailroads: buildNew
           ? rail.overlappingRailroads(u, canBuild as TileRef)
@@ -1623,9 +1696,28 @@ export class PlayerImpl implements Player {
         return this.nukeSpawn(targetTile, unitType);
       case UnitType.AtomBomb:
       case UnitType.HydrogenBomb:
+      case UnitType.LargeNuke:
+      case UnitType.ClusterNuke:
         return this.nukeSpawn(targetTile, unitType);
       case UnitType.MIRVWarhead:
+      case UnitType.ClusterWarhead:
         return targetTile;
+      case UnitType.UraniumMine:
+        return this.uraniumMineSpawn(targetTile, validTiles);
+      case UnitType.OilRig:
+        return this.oilRigSpawn(targetTile);
+      case UnitType.Airbase:
+        return this.landBasedStructureSpawn(targetTile, validTiles);
+      case UnitType.AircraftCarrier:
+        return this.warshipSpawn(targetTile);
+      case UnitType.FishingBoat:
+        return this.tradeShipSpawn(targetTile);
+      case UnitType.Fighter:
+      case UnitType.Bomber:
+      case UnitType.TransportPlane:
+        return this.airSpawn(targetTile, unitType);
+      case UnitType.TroopColumn:
+        return this.landBasedUnitSpawn(targetTile);
       case UnitType.Port:
         return this.portSpawn(targetTile, validTiles);
       case UnitType.Warship:
@@ -1691,15 +1783,140 @@ export class PlayerImpl implements Player {
     }
 
     // only get missilesilos that are not on cooldown and not under construction
+    // (and, for a cluster nuke, upgraded far enough to fire one)
+    const minLevel =
+      nukeType === UnitType.ClusterNuke ? config.clusterNukeMinSiloLevel() : 1;
     const readySilos = this.units(UnitType.MissileSilo).filter(
       (silo) =>
-        silo.isActive() && !silo.isInCooldown() && !silo.isUnderConstruction(),
+        silo.isActive() &&
+        !silo.isInCooldown() &&
+        !silo.isUnderConstruction() &&
+        silo.level() >= minLevel,
     );
     readySilos.sort(
       (a, b) =>
         mg.manhattanDist(a.tile(), tile) - mg.manhattanDist(b.tile(), tile),
     );
     return readySilos[0]?.tile() ?? false;
+  }
+
+  uraniumMineSpawn(
+    tile: TileRef,
+    validTiles: TileRef[] | null,
+  ): TileRef | false {
+    const tiles = validTiles ?? this.validStructureSpawnTiles(tile);
+    for (const t of tiles) {
+      if (this.mg.isUraniumDeposit(t)) {
+        return t;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * An offshore rig stands on a water tile within oilRigMaxShoreDistance of
+   * this player's own land, spaced like any other structure.
+   */
+  oilRigSpawn(tile: TileRef): TileRef | false {
+    const mg = this.mg;
+    if (!mg.isWater(tile) || mg.isImpassable(tile)) {
+      return false;
+    }
+    if (!this.hasOwnLandWithin(tile, mg.config().oilRigMaxShoreDistance())) {
+      return false;
+    }
+    if (
+      mg.anyUnitNearby(
+        tile,
+        mg.config().structureMinDist(),
+        Structures.types,
+        () => true,
+        undefined,
+        true,
+      )
+    ) {
+      return false;
+    }
+    return tile;
+  }
+
+  /** Whether any land tile this player owns lies within `radius` (Chebyshev). */
+  hasOwnLandWithin(tile: TileRef, radius: number): boolean {
+    const map = this.mg.map();
+    const w = map.width();
+    const h = map.height();
+    const cx = map.x(tile);
+    const cy = map.y(tile);
+    const smallID = this.smallID();
+    for (let y = Math.max(0, cy - radius); y <= Math.min(h - 1, cy + radius); y++) {
+      for (
+        let x = Math.max(0, cx - radius);
+        x <= Math.min(w - 1, cx + radius);
+        x++
+      ) {
+        const t = y * w + x;
+        if (map.ownerID(t) === smallID && map.isLand(t)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Aircraft slots a base offers: airbases scale with level, carriers are fixed. */
+  airCapacity(base: Unit): number {
+    const config = this.mg.config();
+    return base.type() === UnitType.AircraftCarrier
+      ? config.carrierAircraftCapacity()
+      : config.airbaseAircraftPerLevel() * base.level();
+  }
+
+  /** Aircraft currently assigned to `base` (their targetUnit is their home). */
+  aircraftAt(base: Unit): number {
+    let n = 0;
+    for (const u of this.units(AirUnits.types)) {
+      if (u.isActive() && u.targetUnit() === base) n++;
+    }
+    return n;
+  }
+
+  /**
+   * The base an aircraft of `type` would take off from to reach `tile`: the
+   * nearest finished airbase or carrier with a free slot (fighters ignore
+   * range: they patrol their base).
+   */
+  airBaseFor(tile: TileRef, type: UnitType): Unit | null {
+    const mg = this.mg;
+    const range =
+      type === UnitType.Bomber
+        ? mg.config().bomberRange()
+        : type === UnitType.TransportPlane
+          ? mg.config().paradropRange()
+          : Infinity;
+    const best = findClosestBy(
+      this.units(AirBases.types),
+      (base) => mg.manhattanDist(base.tile(), tile),
+      (base) =>
+        base.isActive() &&
+        !base.isUnderConstruction() &&
+        this.aircraftAt(base) < this.airCapacity(base) &&
+        mg.manhattanDist(base.tile(), tile) <= range,
+    );
+    return best ?? null;
+  }
+
+  airSpawn(tile: TileRef, type: UnitType): TileRef | false {
+    if (type !== UnitType.Fighter) {
+      if (this.mg.isSpawnImmunityActive()) {
+        return false;
+      }
+      // No bombing or paradropping onto yourself, a teammate or an ally.
+      const owner = this.mg.owner(tile);
+      if (owner.isPlayer() && (owner === this || this.isFriendly(owner))) {
+        return false;
+      }
+    }
+    return this.airBaseFor(tile, type)?.tile() ?? false;
   }
 
   portSpawn(tile: TileRef, validTiles: TileRef[] | null): TileRef | false {
@@ -1994,6 +2211,8 @@ export class PlayerImpl implements Player {
       trainGold: this._trainGold,
       piracyGold: this._piracyGold,
       goldEarned: this._goldEarned,
+      uranium: this._uranium,
+      uraniumMined: this._uraniumMined,
       markedTraitorTick: this.markedTraitorTick,
       markedDoomsdayClockTick: this.markedDoomsdayClockTick,
       rottedAtTick: this.rottedAtTick,
@@ -2067,6 +2286,8 @@ export class PlayerImpl implements Player {
     this._trainGold = s.trainGold;
     this._piracyGold = s.piracyGold;
     this._goldEarned = s.goldEarned;
+    this._uranium = s.uranium;
+    this._uraniumMined = s.uraniumMined;
     this.markedTraitorTick = s.markedTraitorTick;
     this.markedDoomsdayClockTick = s.markedDoomsdayClockTick;
     this.rottedAtTick = s.rottedAtTick;
@@ -2129,10 +2350,12 @@ export class PlayerImpl implements Player {
 
 export const PlayerSnapshot = snapshotType({
   name: "Player",
-  version: 2,
+  version: 3,
   migrations: {
     // v1 had no scenario nations, so none was playable.
     1: (d) => ({ ...d, playable: false }),
+    // v2 had no uranium economy.
+    2: (d) => ({ ...d, uranium: 0, uraniumMined: 0 }),
   },
   schema: z.object({
     smallID: zInt(),
@@ -2147,6 +2370,8 @@ export const PlayerSnapshot = snapshotType({
     trainGold: z.bigint(),
     piracyGold: z.bigint(),
     goldEarned: z.bigint(),
+    uranium: zInt(),
+    uraniumMined: zInt(),
     markedTraitorTick: zInt(),
     markedDoomsdayClockTick: zInt(),
     rottedAtTick: zInt(),

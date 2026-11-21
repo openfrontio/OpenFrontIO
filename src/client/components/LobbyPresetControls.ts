@@ -176,7 +176,7 @@ export class LobbyPresetControls extends LitElement {
           @click=${() => this.setOpen(!this.open)}
           class="flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
             open
-              ? "bg-malibu-blue/20 border-malibu-blue/50 text-white"
+              ? "bg-brand/20 border-brand/50 text-white"
               : "border-white/10 bg-white/5 hover:bg-white/10 text-white/60"
           }"
         >
@@ -235,7 +235,7 @@ export class LobbyPresetControls extends LitElement {
           <div class="flex gap-2 items-center">
             <select
               data-test-preset-select
-              class="flex-1 min-w-0 bg-black/60 border border-white/20 rounded-xl px-3 py-2 text-white text-sm font-semibold focus:outline-none focus:border-malibu-blue disabled:opacity-50 transition-colors"
+              class="flex-1 min-w-0 bg-black/60 border border-white/20 rounded-xl px-3 py-2 text-white text-sm font-semibold focus:outline-none focus:border-brand disabled:opacity-50 transition-colors"
               .value=${this.selectedName}
               @change=${this.handleSelectChange}
               ?disabled=${this.disabled || !hasPresets}
@@ -293,7 +293,7 @@ export class LobbyPresetControls extends LitElement {
               .value=${this.nameInput}
               @input=${this.handleNameInput}
               @keydown=${this.handleKeyDown}
-              class="flex-1 min-w-0 bg-black/60 border border-white/20 rounded-xl px-3 py-2 text-white text-sm font-semibold placeholder:text-white/40 focus:outline-none focus:border-malibu-blue disabled:opacity-50 transition-colors"
+              class="flex-1 min-w-0 bg-black/60 border border-white/20 rounded-xl px-3 py-2 text-white text-sm font-semibold placeholder:text-white/40 focus:outline-none focus:border-brand disabled:opacity-50 transition-colors"
               ?disabled=${this.disabled}
             />
             <o-button

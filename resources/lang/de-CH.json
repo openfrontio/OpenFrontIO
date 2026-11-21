@@ -27,7 +27,7 @@
     "map_default": "Kartestandard"
   },
   "main": {
-    "title": "OpenFront (ALPHA)",
+    "title": "BrokenFront (ALPHA)",
     "login_discord": "Mäud di a mit Discord",
     "sign_in": "Amäude",
     "discord_avatar_alt": "Discord Profiubüud",
@@ -39,7 +39,7 @@
     "wiki": "Wiki",
     "privacy_policy": "Dateschutzerklärig",
     "terms_of_service": "Nutzigsbedingige",
-    "copyright": "©️ OpenFront™ und Mitwirkendi",
+    "copyright": "©️ BrokenFront und Mitwirkendi",
     "play": "Spiele",
     "news": "Neuigkeite",
     "store": "Shop",
@@ -65,7 +65,7 @@
     "copied_to_clipboard": "Informatione i d Zwüscheablag kopiert! Du chasch se im Discord teile, wenn du Hüuf bruchsch.",
     "os": "Betriebssystem",
     "device_pixel_ratio": "Pixelverhäutniss vom Grät",
-    "chromium_tip": "OpenFront louft am beschte uf Chromium-basierte Browser.",
+    "chromium_tip": "BrokenFront louft am beschte uf Chromium-basierte Browser.",
     "hardware_acceleration_tip": "Steu sicher, dass d Hardwarebeschleunigung in dine Browseristellige aktiviert ist, um e optimale Leistig z erziele.",
     "renderer": "Renderer",
     "max_texture_size": "Maximali Texturgrössi",
@@ -85,7 +85,7 @@
   },
   "help_modal": {
     "video_tutorial": "Video-Aleitig",
-    "video_tutorial_title": "OpenFront.io Aleitig",
+    "video_tutorial_title": "BrokenFront Aleitig",
     "hotkeys": "Tastaturbelegige",
     "table_key": "Schlüssu",
     "table_action": "Aktion",
@@ -169,7 +169,7 @@
     "build_mirv": "Mehrfach Zieu Rageete - MIRV",
     "build_mirv_desc": "Die stärchschti bombe im Spiel. Teilt sech i chlineri bombene wo es risigs territorium düe zerstöre. Duet nume dä Spieler beschädige wo du zersch hesch dermit acklickt- Wird vom nächstglägene Raggetesilo abgfüret und landet im territorium wo si isch bout worde.",
     "player_icons": "Spieler-Icons",
-    "troubleshooting_desc": "Wenn du Leistigsproblem, Abstürz oder angeri Problem bim Spiele vo OpenFront hesch, bsuech bitte üsi sitte zur Fehlerbehebig und Diagnose vo hüfige problem:",
+    "troubleshooting_desc": "Wenn du Leistigsproblem, Abstürz oder angeri Problem bim Spiele vo BrokenFront hesch, bsuech bitte üsi sitte zur Fehlerbehebig und Diagnose vo hüfige problem:",
     "icon_desc": "Beispüu für einigi ingame Icons, wo du wirsch gseh und was sie bedüte:",
     "icon_crown": "Krone - Nummer 1. Das isch der Top-Spieler ir Ranglsichte.",
     "icon_traitor": "Verbrochene Schild - Verräter. Dä Spieler het e Verbündete agriffe.",
@@ -717,7 +717,7 @@
     "not_enough_money": "Nid gnue Gäud"
   },
   "win_modal": {
-    "support_openfront": "Ungerstütz OpenFront!",
+    "support_openfront": "Ungerstütz BrokenFront!",
     "territory_pattern": "Chouf es Gebietsmuster, um werbefrei z spiele!",
     "died": "Du bisch gstorbe",
     "your_team": "Dis team het gwunne!",

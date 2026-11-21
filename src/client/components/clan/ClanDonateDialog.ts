@@ -298,7 +298,7 @@ export class ClanDonateDialog extends LitElement {
             @keydown=${(e: KeyboardEvent) => {
               if (e.key === "Enter") void this.submit();
             }}
-            class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm disabled:opacity-50"
+            class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand/50 transition-all font-medium hover:bg-white/10 text-sm disabled:opacity-50"
           />
           ${
             error

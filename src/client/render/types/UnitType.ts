@@ -21,6 +21,15 @@ export const UT_SAM_MISSILE = "SAMMissile" as const;
 export const UT_SHELL = "Shell" as const;
 export const UT_MIRV_WARHEAD = "MIRV Warhead" as const;
 export const UT_TRAIN = "Train" as const;
+export const UT_LARGE_NUKE = "Large Nuke" as const;
+export const UT_CLUSTER_NUKE = "Cluster Nuke" as const;
+export const UT_CLUSTER_WARHEAD = "Cluster Warhead" as const;
+export const UT_FISHING_BOAT = "Fishing Boat" as const;
+export const UT_AIRCRAFT_CARRIER = "Aircraft Carrier" as const;
+export const UT_FIGHTER = "Fighter" as const;
+export const UT_BOMBER = "Bomber" as const;
+export const UT_TRANSPORT_PLANE = "Transport Plane" as const;
+export const UT_TROOP_COLUMN = "Troop Column" as const;
 
 // Structures
 export const UT_CITY = "City" as const;
@@ -29,6 +38,9 @@ export const UT_FACTORY = "Factory" as const;
 export const UT_DEFENSE_POST = "Defense Post" as const;
 export const UT_SAM_LAUNCHER = "SAM Launcher" as const;
 export const UT_MISSILE_SILO = "Missile Silo" as const;
+export const UT_URANIUM_MINE = "Uranium Mine" as const;
+export const UT_OIL_RIG = "Oil Rig" as const;
+export const UT_AIRBASE = "Airbase" as const;
 
 // ---------------------------------------------------------------------------
 // Derived sets
@@ -41,12 +53,24 @@ export const STRUCTURE_TYPES: ReadonlySet<string> = new Set([
   UT_DEFENSE_POST,
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,
+  UT_URANIUM_MINE,
+  UT_OIL_RIG,
+  UT_AIRBASE,
 ]);
 
 export const NUKE_TYPES: ReadonlySet<string> = new Set([
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
   UT_MIRV,
+  UT_LARGE_NUKE,
+  UT_CLUSTER_NUKE,
+]);
+
+/** Aircraft: interpolated like nukes, drawn above everything else. */
+export const AIR_TYPES: ReadonlySet<string> = new Set([
+  UT_FIGHTER,
+  UT_BOMBER,
+  UT_TRANSPORT_PLANE,
 ]);
 
 /** Nuke types whose rendered position is interpolated lastPos→pos each render
@@ -57,6 +81,12 @@ export const SMOOTHED_NUKE_TYPES: ReadonlySet<string> = new Set([
   UT_HYDROGEN_BOMB,
   UT_MIRV,
   UT_MIRV_WARHEAD,
+  UT_LARGE_NUKE,
+  UT_CLUSTER_NUKE,
+  UT_CLUSTER_WARHEAD,
+  UT_FIGHTER,
+  UT_BOMBER,
+  UT_TRANSPORT_PLANE,
 ]);
 
 /** Units that leave a trail on the map (TrailManager). */
@@ -66,6 +96,10 @@ export const TRAIL_TYPES: ReadonlySet<string> = new Set([
   UT_HYDROGEN_BOMB,
   UT_MIRV,
   UT_MIRV_WARHEAD,
+  UT_LARGE_NUKE,
+  UT_CLUSTER_NUKE,
+  UT_CLUSTER_WARHEAD,
+  UT_TROOP_COLUMN,
 ]);
 
 /** Blast radii (in tiles) matching upstream DefaultConfig.nukeMagnitudes(). */
@@ -75,6 +109,10 @@ export const NUKE_MAGNITUDES: Readonly<
   [UT_ATOM_BOMB]: { inner: 12, outer: 30 },
   [UT_HYDROGEN_BOMB]: { inner: 80, outer: 100 },
   [UT_MIRV_WARHEAD]: { inner: 12, outer: 18 },
+  [UT_LARGE_NUKE]: { inner: 40, outer: 60 },
+  [UT_CLUSTER_WARHEAD]: { inner: 12, outer: 30 },
+  // The whole salvo's footprint: ring radius 40 plus an atom bomb's outer.
+  [UT_CLUSTER_NUKE]: { inner: 52, outer: 70 },
 };
 
 // ---------------------------------------------------------------------------
@@ -99,4 +137,17 @@ export const ALL_UNIT_TYPES = [
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,
   UT_TRAIN,
+  // BrokenFront additions (append only).
+  UT_URANIUM_MINE,
+  UT_LARGE_NUKE,
+  UT_CLUSTER_NUKE,
+  UT_CLUSTER_WARHEAD,
+  UT_FISHING_BOAT,
+  UT_OIL_RIG,
+  UT_AIRBASE,
+  UT_AIRCRAFT_CARRIER,
+  UT_FIGHTER,
+  UT_BOMBER,
+  UT_TRANSPORT_PLANE,
+  UT_TROOP_COLUMN,
 ] as const;

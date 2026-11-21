@@ -34,6 +34,16 @@ import type {
 } from "../snapshot/SnapshotContext";
 import { ShellExecution } from "./ShellExecution";
 
+// Lower is shot first. Trade ships are hunted (captured), not shot.
+const WARSHIP_TARGET_PRIORITY: Partial<Record<UnitType, number>> = {
+  [UnitType.TransportShip]: 0,
+  [UnitType.Warship]: 1,
+  [UnitType.AircraftCarrier]: 2,
+  [UnitType.TradeShip]: 3,
+  [UnitType.FishingBoat]: 4,
+  [UnitType.OilRig]: 5,
+};
+
 export class WarshipExecution implements Execution {
   private random: PseudoRandom;
   private warship: Unit;
@@ -134,8 +144,15 @@ export class WarshipExecution implements Execution {
       return;
     }
 
-    // Priority 2: Fight enemy warship if in range
-    if (this.warship.targetUnit()?.type() === UnitType.Warship) {
+    // Priority 2: Fight enemy warships, carriers, fishing boats and
+    // offshore rigs in range
+    const targetType = this.warship.targetUnit()?.type();
+    if (
+      targetType === UnitType.Warship ||
+      targetType === UnitType.AircraftCarrier ||
+      targetType === UnitType.FishingBoat ||
+      targetType === UnitType.OilRig
+    ) {
       this.shootTarget();
       this.patrol();
       return;
@@ -252,7 +269,14 @@ export class WarshipExecution implements Execution {
 
   private findTargetUnit(): Unit | undefined {
     return this.findBestTarget(
-      [UnitType.TransportShip, UnitType.Warship, UnitType.TradeShip],
+      [
+        UnitType.TransportShip,
+        UnitType.Warship,
+        UnitType.AircraftCarrier,
+        UnitType.TradeShip,
+        UnitType.FishingBoat,
+        UnitType.OilRig,
+      ],
       true,
     );
   }
@@ -336,8 +360,7 @@ export class WarshipExecution implements Execution {
         }
       }
 
-      const typePriority =
-        type === UnitType.TransportShip ? 0 : type === UnitType.Warship ? 1 : 2;
+      const typePriority = WARSHIP_TARGET_PRIORITY[type] ?? 9;
 
       if (
         bestUnit === undefined ||

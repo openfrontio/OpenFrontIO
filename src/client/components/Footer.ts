@@ -50,7 +50,7 @@ export class Footer extends LitElement {
             class="flex items-center justify-center gap-4 lg:gap-6 pt-2 w-full relative"
           >
             <a
-              href="https://github.com/openfrontio/OpenFrontIO"
+              href="https://github.com/DLO08/BrokenFrontIO"
               target="_blank"
               rel="noopener noreferrer"
               class="opacity-60 hover:opacity-100 hover:scale-110 transition-all"
@@ -136,6 +136,15 @@ export class Footer extends LitElement {
               href="/privacy-policy.html"
               data-i18n="main.privacy_policy"
               target="_blank"
+              class="hover:text-white transition-colors"
+            ></a>
+            <!-- Attribution required by the upstream AGPL-3.0 code and the
+                 CC BY-SA 4.0 assets in resources/. -->
+            <a
+              href="https://github.com/openfrontio/OpenFrontIO"
+              data-i18n="main.based_on"
+              target="_blank"
+              rel="noopener noreferrer"
               class="hover:text-white transition-colors"
             ></a>
           </div>

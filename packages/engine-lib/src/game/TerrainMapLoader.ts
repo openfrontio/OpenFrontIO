@@ -20,6 +20,8 @@ export type TerrainMapData = {
   teamGameSpawnAreas?: TeamGameSpawnAreas;
   /** Map layers from the manifest, if any. */
   layers?: MapLayer[];
+  /** Hand-placed uranium deposits (scaled for compact maps), if any. */
+  uraniumDeposits?: { x: number; y: number; r: number }[];
 };
 
 /**
@@ -89,6 +91,13 @@ export async function loadTerrainMap(files: MapFiles): Promise<TerrainMapData> {
 
   const layers = manifest.layers;
 
+  const compact = mapSize === GameMapSize.Compact;
+  const uraniumDeposits = manifest.resources?.uranium.map((d) => ({
+    x: compact ? Math.floor(d.x / 2) : d.x,
+    y: compact ? Math.floor(d.y / 2) : d.y,
+    r: Math.max(1, compact ? Math.ceil((d.r ?? 3) / 2) : (d.r ?? 3)),
+  }));
+
   // Validate layer placements and alpha at game start.
   if (layers) {
     for (const layer of layers) {
@@ -115,6 +124,7 @@ export async function loadTerrainMap(files: MapFiles): Promise<TerrainMapData> {
     miniGameMap: miniMap,
     teamGameSpawnAreas,
     layers,
+    uraniumDeposits,
   };
 }
 

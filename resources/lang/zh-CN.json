@@ -29,7 +29,7 @@
     "map_default": "地图默认值"
   },
   "main": {
-    "title": "OpenFront (内测版)",
+    "title": "BrokenFront (内测版)",
     "login_discord": "用 Discord 登录",
     "sign_in": "登录",
     "discord_avatar_alt": "Discord 头像",
@@ -41,7 +41,7 @@
     "wiki": "游戏百科",
     "privacy_policy": "隐私政策",
     "terms_of_service": "服务条款",
-    "copyright": "© OpenFront™ 和贡献者们",
+    "copyright": "© BrokenFront 和贡献者们",
     "play": "游戏",
     "news": "公告",
     "store": "商店",
@@ -67,7 +67,7 @@
     "copied_to_clipboard": "信息已复制到剪贴板！如果你需要帮助，可以随时在我们的Discord上分享它。",
     "os": "操作系统",
     "device_pixel_ratio": "设备像素比",
-    "chromium_tip": "OpenFront 在基于 Chromium 的浏览器上运行最佳。",
+    "chromium_tip": "BrokenFront 在基于 Chromium 的浏览器上运行最佳。",
     "hardware_acceleration_tip": "确保在您的浏览器设置中启用硬件加速以实现最佳性能。",
     "renderer": "渲染器",
     "max_texture_size": "最大纹理尺寸",
@@ -87,7 +87,7 @@
   },
   "help_modal": {
     "video_tutorial": "视频教程",
-    "video_tutorial_title": "OpenFront.io 教程",
+    "video_tutorial_title": "BrokenFront 教程",
     "hotkeys": "快捷键",
     "table_key": "键",
     "table_action": "动作",
@@ -177,7 +177,7 @@
     "build_mirv": "MIRV",
     "build_mirv_desc": "游戏中最强大的导弹。会分裂成多个小型导弹，覆盖大范围区域。只会对你最初点击发射时所选的玩家造成伤害。从最近的导弹发射井发射，并落在你最初点击发射的位置。",
     "player_icons": "玩家图标",
-    "troubleshooting_desc": "如果您在游玩 OpenFront 时遇到性能问题、崩溃或其他问题，请访问我们的故障排除页面以帮助诊断和修复常见问题：",
+    "troubleshooting_desc": "如果您在游玩 BrokenFront 时遇到性能问题、崩溃或其他问题，请访问我们的故障排除页面以帮助诊断和修复常见问题：",
     "icon_desc": "您将遇到的一些游戏内图标及其含义的示例：",
     "icon_crown": "皇冠 - 榜一玩家。这是排行榜上第一名的玩家。",
     "icon_traitor": "破损的盾牌 - 叛徒。该玩家攻击了盟友。",
@@ -777,7 +777,7 @@
     "not_enough_money": "金钱不足"
   },
   "win_modal": {
-    "support_openfront": "支持 OpenFront！",
+    "support_openfront": "支持 BrokenFront！",
     "territory_pattern": "购买皮肤即可去除广告！",
     "died": "你已经死了",
     "your_team": "你的队伍获胜了！",
@@ -1092,12 +1092,12 @@
     "firefox_warning": "Openfront.io 在 [基于 Firefox 的浏览器](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox) 上表现不佳。我们推荐你使用 [基于 Chromium 的浏览器](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) 来获得最佳性能体验。"
   },
   "ios_banner": {
-    "text": "将 OpenFront 添加到主屏幕，获得全屏体验",
+    "text": "将 BrokenFront 添加到主屏幕，获得全屏体验",
     "how": "如何操作",
     "later": "稍后",
     "never": "从不",
     "modal_title": "在 iOS 上全屏使用",
-    "modal_desc": "您的浏览器不支持全屏，但您可以将 OpenFront 添加到您的主屏幕以获得沉浸体验：",
+    "modal_desc": "您的浏览器不支持全屏，但您可以将 BrokenFront 添加到您的主屏幕以获得沉浸体验：",
     "step_share": "点击浏览器中的“分享”按钮",
     "step_scroll_and_tap": "向下滚动并点击",
     "step_add_to_home_label": "添加到主屏幕",

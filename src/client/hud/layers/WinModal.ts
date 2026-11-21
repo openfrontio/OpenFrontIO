@@ -445,26 +445,26 @@ export class WinModal extends LitElement implements Controller {
         transform: translateY(0) scale(0.98);
       }
       .win-action:focus-visible {
-        outline: 2px solid #3fa9f5;
+        outline: 2px solid #f2804a;
         outline-offset: 2px;
       }
       .win-action-main {
         background: linear-gradient(
           to top,
-          rgba(0, 132, 209, 0.95) 0%,
-          rgba(0, 101, 170, 0.8) 100%
+          rgba(201, 74, 28, 0.95) 0%,
+          rgba(140, 46, 14, 0.85) 100%
         );
-        border-color: rgba(63, 169, 245, 0.55);
+        border-color: rgba(242, 128, 74, 0.55);
       }
       .win-action-main:hover,
       .win-action-main:focus-visible {
         background: linear-gradient(
           to top,
-          rgba(29, 150, 230, 1) 0%,
-          rgba(0, 120, 200, 0.9) 100%
+          rgba(229, 96, 42, 1) 0%,
+          rgba(170, 60, 20, 0.9) 100%
         );
-        border-color: rgba(125, 200, 255, 0.9);
-        box-shadow: 0 0 20px rgba(63, 169, 245, 0.55);
+        border-color: rgba(255, 176, 128, 0.9);
+        box-shadow: 0 0 20px rgba(242, 128, 74, 0.55);
       }
       .win-action-quiet {
         background: linear-gradient(

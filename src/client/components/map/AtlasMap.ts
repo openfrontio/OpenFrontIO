@@ -279,12 +279,12 @@ export class AtlasMap extends LitElement {
               class="flex h-4 w-4 items-center justify-center rounded-full border-2 bg-black/40 transition-transform duration-150 group-hover/pin:scale-125 ${
                 selected
                   ? "border-cyber-yellow shadow-[0_0_10px_rgba(255,215,0,0.7)]"
-                  : "border-aquarius"
+                  : "border-brand-light"
               }"
             >
               <span
                 class="h-1.5 w-1.5 rounded-full ${
-                  selected ? "bg-cyber-yellow" : "bg-aquarius"
+                  selected ? "bg-cyber-yellow" : "bg-brand-light"
                 }"
               ></span>
             </span>`
@@ -303,7 +303,7 @@ export class AtlasMap extends LitElement {
     const [left, top] = this.position(pin);
     if (left < 0 || left > 100 || top < 0 || top > 100) return nothing;
     return html`<span
-      class="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap text-[11px] font-bold text-aquarius [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]"
+      class="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap text-[11px] font-bold text-brand-light [text-shadow:0_1px_3px_rgba(0,0,0,0.9)]"
       style="left: ${left}%; ${
         labelsBelow.has(pin)
           ? `top: calc(${top}% + 10px)`
@@ -409,7 +409,7 @@ export class AtlasMap extends LitElement {
     >
       <span class="flex items-center gap-1.5">
         <span
-          class="h-3 w-3 rounded-full border-2 border-aquarius bg-black/40"
+          class="h-3 w-3 rounded-full border-2 border-brand-light bg-black/40"
         ></span>
         ${translateText("map_component.atlas_continental")}
       </span>

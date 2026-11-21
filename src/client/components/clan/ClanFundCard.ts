@@ -245,7 +245,7 @@ export class ClanFundCard extends LitElement {
               type="button"
               data-action="view-payouts"
               @click=${() => this.emit("navigate-payouts")}
-              class="text-xs text-aquarius hover:underline"
+              class="text-xs text-brand-light hover:underline"
             >
               ${translateText("clan_modal.clan_fund_view_log")}
             </button>

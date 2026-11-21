@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 832 114" role="img" aria-label="BrokenFront">
+  <!-- BrokenFront wordmark. Geometric glyphs on a 60x100 grid, 14 apart,
+       split along a fault line with the lower half knocked out of true. -->
+  <defs>
+    <path id="g-b" fill-rule="evenodd" d="M0 0H46L60 14V38L52 50L60 62V86L46 100H0Z M20 20H40V40H20Z M20 60H40V80H20Z"/>
+    <path id="g-r" fill-rule="evenodd" d="M0 0H46L60 14V42L50 54L62 100H41L32 60H20V100H0Z M20 20H40V40H20Z"/>
+    <path id="g-o" fill-rule="evenodd" d="M14 0H46L60 14V86L46 100H14L0 86V14Z M20 20H40V80H20Z"/>
+    <path id="g-k" d="M0 0H20V40L40 0H62L36 50L62 100H40L20 60V100H0Z"/>
+    <path id="g-e" d="M0 0H60V20H20V40H50V60H20V80H60V100H0Z"/>
+    <path id="g-n" d="M0 0H20L40 58V0H60V100H40L20 42V100H0Z"/>
+    <path id="g-f" d="M0 0H60V20H20V40H50V60H20V100H0Z"/>
+    <path id="g-t" d="M0 0H60V20H40V100H20V20H0Z"/>
+    <g id="word">
+      <g fill="#ede6dd">
+        <use href="#g-b"/>
+        <use href="#g-r" x="74"/>
+        <use href="#g-o" x="148"/>
+        <use href="#g-k" x="222"/>
+        <use href="#g-e" x="296"/>
+        <use href="#g-n" x="370"/>
+      </g>
+      <g fill="#e5602a">
+        <use href="#g-f" x="464"/>
+        <use href="#g-r" x="538"/>
+        <use href="#g-o" x="612"/>
+        <use href="#g-n" x="686"/>
+        <use href="#g-t" x="760"/>
+      </g>
+    </g>
+    <clipPath id="above">
+      <path d="M-20 -20H840V52L770 45L690 55L600 42L520 60L440 46L340 56L260 40L170 58L90 44L-20 52Z"/>
+    </clipPath>
+    <clipPath id="below">
+      <path d="M-20 140H840V52L770 45L690 55L600 42L520 60L440 46L340 56L260 40L170 58L90 44L-20 52Z"/>
+    </clipPath>
+  </defs>
+  <use href="#word" clip-path="url(#above)"/>
+  <g transform="translate(4 6)">
+    <use href="#word" clip-path="url(#below)"/>
+  </g>
+</svg>

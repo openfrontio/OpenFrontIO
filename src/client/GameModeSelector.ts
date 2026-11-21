@@ -55,7 +55,7 @@ import {
 import { isReplayShellHost } from "./VersionedReplay";
 
 const PRIMARY_ACTION =
-  "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]";
+  "bg-brand hover:bg-brand-light active:bg-brand/80 hover:scale-y-105 hover:scale-x-[1.01]";
 const SECONDARY_ACTION =
   "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]";
 const DISABLED = "opacity-50 cursor-not-allowed pointer-events-none";
@@ -597,7 +597,7 @@ export class GameModeSelector extends LitElement {
       ${
         canRetry
           ? html`<button
-              class="px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius text-white text-sm font-medium uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-malibu-blue"
+              class="px-4 py-2 rounded-md bg-brand hover:bg-brand-light text-white text-sm font-medium uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-brand"
               ?disabled=${this.retryCoolingDown}
               @click=${this.retryLobbies}
             >
@@ -897,7 +897,7 @@ export class GameModeSelector extends LitElement {
         <button
           @click=${this.openDetailedView}
           ?disabled=${!this.inputValid}
-          class="group/upcoming flex w-full items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.04] py-1.5 pl-2.5 pr-1.5 transition-colors hover:border-malibu-blue/50 hover:bg-malibu-blue/15 ${
+          class="group/upcoming flex w-full items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/[0.04] py-1.5 pl-2.5 pr-1.5 transition-colors hover:border-brand/50 hover:bg-brand/15 ${
             this.inputValid ? "" : DISABLED
           }"
         >
@@ -906,7 +906,7 @@ export class GameModeSelector extends LitElement {
             >${translateText("public_lobby.upcoming")}</span
           >
           <span
-            class="flex shrink-0 items-center gap-0.5 rounded bg-malibu-blue py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wider text-white group-hover/upcoming:bg-aquarius"
+            class="flex shrink-0 items-center gap-0.5 rounded bg-brand py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wider text-white group-hover/upcoming:bg-brand-light"
           >
             ${
               count > 0

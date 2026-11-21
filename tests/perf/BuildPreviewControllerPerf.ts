@@ -216,6 +216,7 @@ function setupControllerPreview(
       canBuild: targetTile,
       canUpgrade: false,
       cost: 5000n,
+      uraniumCost: 0,
       overlappingRailroads: [],
       ghostRailPaths: [],
     },

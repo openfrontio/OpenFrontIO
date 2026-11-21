@@ -82,12 +82,12 @@ export class MobileNavBar extends LitElement {
       >
         <!-- Logo + Menu -->
         <div
-          class="flex flex-col text-malibu-blue mb-4 ml-[clamp(0.2rem,0.4vw,0.4vh)]"
+          class="flex flex-col text-brand mb-4 ml-[clamp(0.2rem,0.4vw,0.4vh)]"
         >
           <div class="flex flex-col items-center gap-1">
             <img
-              src=${assetUrl("images/OpenFrontLogo.svg")}
-              alt="OpenFront"
+              src=${assetUrl("images/BrokenFrontLogo.svg")}
+              alt="BrokenFront"
               class="w-auto h-auto max-w-[220px] max-h-[4.5rem]"
             />
             <div

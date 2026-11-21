@@ -1,4 +1,4 @@
-/* Halloween Theme Overrides for OpenFront (Polished Orange & Black) */
+/* Halloween Theme Overrides for BrokenFront (Polished Orange & Black) */
 
 /* 
   Crucial Constraint: This file ONLY contains decorative styling overrides
@@ -17,9 +17,9 @@
   --hw-pumpkin-svg: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0iTTI5IDEyQzI5IDYgMzQgMyAzOSA0IiBzdHJva2U9IiM5YTM0MTIiIHN0cm9rZS13aWR0aD0iNS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8ZWxsaXBzZSBjeD0iMTUiIGN5PSIzNiIgcng9IjE0IiByeT0iMjIiIGZpbGw9IiM5YTM0MTIiLz4KICA8ZWxsaXBzZSBjeD0iNDkiIGN5PSIzNiIgcng9IjE0IiByeT0iMjIiIGZpbGw9IiM5YTM0MTIiLz4KICA8ZWxsaXBzZSBjeD0iMjMiIGN5PSIzNyIgcng9IjE0IiByeT0iMjQiIGZpbGw9IiNlYTU4MGMiLz4KICA8ZWxsaXBzZSBjeD0iNDEiIGN5PSIzNyIgcng9IjE0IiByeT0iMjQiIGZpbGw9IiNlYTU4MGMiLz4KICA8ZWxsaXBzZSBjeD0iMzIiIGN5PSIzNyIgcng9IjEyIiByeT0iMjUiIGZpbGw9IiNmZjdhMTgiLz4KICA8cG9seWdvbiBwb2ludHM9IjIxLDIyIDEyLDM0IDI2LDMzIiBmaWxsPSIjMTgwOTI0Ii8+CiAgPHBvbHlnb24gcG9pbnRzPSI0MywyMiAzOCwzMyA1MiwzNCIgZmlsbD0iIzE4MDkyNCIvPgogIDxwb2x5Z29uIHBvaW50cz0iMzIsMzEgMjgsMzggMzYsMzgiIGZpbGw9IiMxODA5MjQiLz4KICA8cGF0aCBkPSJNMTIgNDEgTDE5IDQ2IEwyNSA0MiBMMzIgNDcgTDM5IDQyIEw0NSA0NiBMNTIgNDEgTDQ3IDUzIEwzOSA0OSBMMzIgNTUgTDI1IDQ5IEwxNyA1MyBaIiBmaWxsPSIjMTgwOTI0Ii8+Cjwvc3ZnPg==");
 }
 
-/* Base body styles & OpenFront @theme variable overrides (Homepage & Modals)
+/* Base body styles & BrokenFront @theme variable overrides (Homepage & Modals)
    Note: <o-modal> is a Shadow DOM host that adopts documentStylesSheet(), where
-   Tailwind v4's @layer theme declares `:root, :host { --color-malibu-blue: #0084d1 }`.
+   Tailwind v4's @layer theme declares `:root, :host { --color-brand: #c94a1c }`.
    We declare `body.halloween-theme:not(.in-game) o-modal` (excluding in-game modals)
    separately from `:host-context(...)` so browsers without `:host-context()` (Safari/Firefox)
    still apply all variable overrides cleanly. */
@@ -35,15 +35,15 @@ body.halloween-theme:not(.in-game)
     multi-tab-modal *,
     alert-frame *
   ) {
-  --color-malibu-blue: #e06c12;
-  --color-aquarius: #f08228;
-  --color-bright-blue: #e06c12;
-  --shadow-malibu-blue: 0 0 8px rgba(224, 108, 18, 0.16);
-  --shadow-malibu-blue-soft: 0 0 6px rgba(224, 108, 18, 0.14);
-  --shadow-malibu-blue-strong: 0 0 10px rgba(224, 108, 18, 0.22);
-  --shadow-malibu-blue-pill: 0 0 5px rgba(224, 108, 18, 0.22);
-  --shadow-malibu-blue-ring-sm: 0 0 0 4px rgba(224, 108, 18, 0.2);
-  --shadow-malibu-blue-ring-lg: 0 0 0 6px rgba(224, 108, 18, 0.28);
+  --color-brand: #e06c12;
+  --color-brand-light: #f08228;
+  --color-brand-bright: #e06c12;
+  --shadow-brand: 0 0 8px rgba(224, 108, 18, 0.16);
+  --shadow-brand-soft: 0 0 6px rgba(224, 108, 18, 0.14);
+  --shadow-brand-strong: 0 0 10px rgba(224, 108, 18, 0.22);
+  --shadow-brand-pill: 0 0 5px rgba(224, 108, 18, 0.22);
+  --shadow-brand-ring-sm: 0 0 0 4px rgba(224, 108, 18, 0.2);
+  --shadow-brand-ring-lg: 0 0 0 6px rgba(224, 108, 18, 0.28);
   --shadow-lobby-card-hover:
     0 0 0 2px rgba(255, 255, 255, 0.2), 0 8px 20px rgba(0, 0, 0, 0.6);
   --shadow-action-card-hover:
@@ -51,15 +51,15 @@ body.halloween-theme:not(.in-game)
 }
 
 :host-context(body.halloween-theme:not(.in-game)) {
-  --color-malibu-blue: #e06c12;
-  --color-aquarius: #f08228;
-  --color-bright-blue: #e06c12;
-  --shadow-malibu-blue: 0 0 8px rgba(224, 108, 18, 0.16);
-  --shadow-malibu-blue-soft: 0 0 6px rgba(224, 108, 18, 0.14);
-  --shadow-malibu-blue-strong: 0 0 10px rgba(224, 108, 18, 0.22);
-  --shadow-malibu-blue-pill: 0 0 5px rgba(224, 108, 18, 0.22);
-  --shadow-malibu-blue-ring-sm: 0 0 0 4px rgba(224, 108, 18, 0.2);
-  --shadow-malibu-blue-ring-lg: 0 0 0 6px rgba(224, 108, 18, 0.28);
+  --color-brand: #e06c12;
+  --color-brand-light: #f08228;
+  --color-brand-bright: #e06c12;
+  --shadow-brand: 0 0 8px rgba(224, 108, 18, 0.16);
+  --shadow-brand-soft: 0 0 6px rgba(224, 108, 18, 0.14);
+  --shadow-brand-strong: 0 0 10px rgba(224, 108, 18, 0.22);
+  --shadow-brand-pill: 0 0 5px rgba(224, 108, 18, 0.22);
+  --shadow-brand-ring-sm: 0 0 0 4px rgba(224, 108, 18, 0.2);
+  --shadow-brand-ring-lg: 0 0 0 6px rgba(224, 108, 18, 0.28);
   --shadow-lobby-card-hover:
     0 0 0 2px rgba(255, 255, 255, 0.2), 0 8px 20px rgba(0, 0, 0, 0.6);
   --shadow-action-card-hover:
@@ -157,15 +157,15 @@ body.halloween-theme:not(.in-game) mobile-nav-bar .nav-menu-item.active {
   filter: drop-shadow(0 0 16px rgba(234, 112, 8, 0.45)) !important;
 }
 
-/* Nav Bar Logo Image (Blue -> Orange with Jack-o'-Lantern candlelight flicker) */
-body.halloween-theme:not(.in-game) desktop-nav-bar img[src*="OpenFrontLogo"],
-body.halloween-theme:not(.in-game) mobile-nav-bar img[src*="OpenFrontLogo"],
+/* Nav Bar Logo Image (already ember-toned; add Jack-o'-Lantern candlelight flicker) */
+body.halloween-theme:not(.in-game) desktop-nav-bar img[src*="BrokenFrontLogo"],
+body.halloween-theme:not(.in-game) mobile-nav-bar img[src*="BrokenFrontLogo"],
 body.halloween-theme:not(.in-game)
   play-page
   div.fixed
-  img[src*="OpenFrontLogo"],
-body.halloween-theme:not(.in-game) img[src*="OpenFrontLogo"] {
-  filter: hue-rotate(150deg) saturate(1.5) brightness(1.15)
+  img[src*="BrokenFrontLogo"],
+body.halloween-theme:not(.in-game) img[src*="BrokenFrontLogo"] {
+  filter: saturate(1.2) brightness(1.1)
     drop-shadow(0 0 6px rgba(234, 112, 8, 0.5));
   animation: hw-candle-flicker 3.2s infinite ease-in-out !important;
 }
@@ -217,9 +217,9 @@ body.halloween-theme:not(.in-game) [role="dialog"]:not(#clan-tag-menu) > div {
 
 /* --- Homepage Action Buttons (Preserving original layout, borders, and font-weight) --- */
 /* Primary Action Button - Solo & Modal Primary Buttons (Halloween orange with crisp white text) */
-body.halloween-theme:not(.in-game) button.bg-malibu-blue,
-body.halloween-theme:not(.in-game) button.bg-aquarius,
-body.halloween-theme:not(.in-game) button.bg-bright-blue,
+body.halloween-theme:not(.in-game) button.bg-brand,
+body.halloween-theme:not(.in-game) button.bg-brand-light,
+body.halloween-theme:not(.in-game) button.bg-brand-bright,
 body.halloween-theme:not(.in-game) button.bg-blue-600,
 body.halloween-theme:not(.in-game) .btn-primary,
 body.halloween-theme:not(.in-game) #play-btn {
@@ -230,9 +230,9 @@ body.halloween-theme:not(.in-game) #play-btn {
     0 0 6px rgba(184, 71, 0, 0.2) !important;
 }
 
-body.halloween-theme:not(.in-game) button.bg-malibu-blue:hover:not(:disabled),
-body.halloween-theme:not(.in-game) button.bg-aquarius:hover:not(:disabled),
-body.halloween-theme:not(.in-game) button.bg-bright-blue:hover:not(:disabled),
+body.halloween-theme:not(.in-game) button.bg-brand:hover:not(:disabled),
+body.halloween-theme:not(.in-game) button.bg-brand-light:hover:not(:disabled),
+body.halloween-theme:not(.in-game) button.bg-brand-bright:hover:not(:disabled),
 body.halloween-theme:not(.in-game) button.bg-blue-600:hover:not(:disabled),
 body.halloween-theme:not(.in-game) .btn-primary:hover:not(:disabled),
 body.halloween-theme:not(.in-game) #play-btn:hover:not(:disabled) {
@@ -244,14 +244,14 @@ body.halloween-theme:not(.in-game) #play-btn:hover:not(:disabled) {
 }
 
 /* Keep disabled primary buttons (e.g., Waiting for players in Host Lobby) muted gray */
-body.halloween-theme:not(.in-game) button.bg-malibu-blue:disabled {
+body.halloween-theme:not(.in-game) button.bg-brand:disabled {
   background-color: #4b5563 !important;
   color: #d1d5db !important;
   box-shadow: none !important;
 }
 
 /* Secondary Action Buttons - Create Lobby, Ranked, Join Lobby
-   Scoped strictly to .grid-cols-3 so map cards (which also use button.bg-surface) keep their native #0a1628 water color! */
+   Scoped strictly to .grid-cols-3 so map cards (which also use button.bg-surface) keep their native #161310 water color! */
 body.halloween-theme:not(.in-game)
   game-mode-selector
   .grid-cols-3
@@ -399,16 +399,16 @@ body.halloween-theme:not(.in-game) .border-t-blue-500 {
 /* Active selection cards (Maps, Difficulty, Mode, Options toggles, Enable Units, Input Cards) */
 body.halloween-theme:not(.in-game)
   game-config-settings
-  .bg-malibu-blue\/20.border-malibu-blue\/50,
+  .bg-brand\/20.border-brand\/50,
 body.halloween-theme:not(.in-game)
   map-picker
-  .bg-malibu-blue\/20.border-malibu-blue\/50,
+  .bg-brand\/20.border-brand\/50,
 body.halloween-theme:not(.in-game)
   toggle-input-card
-  .bg-malibu-blue\/20.border-malibu-blue\/50,
+  .bg-brand\/20.border-brand\/50,
 body.halloween-theme:not(.in-game)
   input-card
-  .bg-malibu-blue\/20.border-malibu-blue\/50 {
+  .bg-brand\/20.border-brand\/50 {
   background-color: rgba(224, 108, 18, 0.15) !important;
   border-color: rgba(224, 108, 18, 0.45) !important;
 }
@@ -433,7 +433,7 @@ body.halloween-theme:not(.in-game) .bg-blue-500.border-blue-500 {
 
 /* Focus rings and borders on slider/lobby inputs */
 body.halloween-theme:not(.in-game) .focus\:border-blue-500:focus,
-body.halloween-theme:not(.in-game) .focus\:border-malibu-blue:focus {
+body.halloween-theme:not(.in-game) .focus\:border-brand:focus {
   border-color: #e06c12 !important;
 }
 
@@ -537,7 +537,7 @@ body.halloween-theme:not(.in-game)
 @keyframes hw-candle-flicker {
   0%,
   100% {
-    filter: hue-rotate(150deg) saturate(1.5) brightness(1.15)
+    filter: saturate(1.2) brightness(1.1)
       drop-shadow(0 0 5px rgba(234, 112, 8, 0.45));
   }
   20% {
@@ -582,13 +582,13 @@ body.halloween-theme:not(.in-game)
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body.halloween-theme:not(.in-game) desktop-nav-bar img[src*="OpenFrontLogo"],
-  body.halloween-theme:not(.in-game) mobile-nav-bar img[src*="OpenFrontLogo"],
+  body.halloween-theme:not(.in-game) desktop-nav-bar img[src*="BrokenFrontLogo"],
+  body.halloween-theme:not(.in-game) mobile-nav-bar img[src*="BrokenFrontLogo"],
   body.halloween-theme:not(.in-game)
     play-page
     div.fixed
-    img[src*="OpenFrontLogo"],
-  body.halloween-theme:not(.in-game) img[src*="OpenFrontLogo"],
+    img[src*="BrokenFrontLogo"],
+  body.halloween-theme:not(.in-game) img[src*="BrokenFrontLogo"],
   body.halloween-theme:not(.in-game) .l-header__highlightText {
     animation: none !important;
   }

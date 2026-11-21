@@ -1032,7 +1032,7 @@ export class PrestigeFlow extends LitElement {
   private renderStyles(): TemplateResult {
     return html`<style>
       .prestige-honeycomb {
-        --hx-color: #00c8ff;
+        --hx-color: #ffb347;
       }
       /* The charge layer fades in over the idle honeycomb, and out again at
          the shatter. */

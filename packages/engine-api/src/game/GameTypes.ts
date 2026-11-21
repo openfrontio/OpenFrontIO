@@ -220,6 +220,19 @@ export enum UnitType {
   MIRVWarhead = "MIRV Warhead",
   Train = "Train",
   Factory = "Factory",
+  // BrokenFront additions. Append only: the enum is zbin-encoded by index.
+  UraniumMine = "Uranium Mine",
+  LargeNuke = "Large Nuke",
+  ClusterNuke = "Cluster Nuke",
+  ClusterWarhead = "Cluster Warhead",
+  FishingBoat = "Fishing Boat",
+  OilRig = "Oil Rig",
+  Airbase = "Airbase",
+  AircraftCarrier = "Aircraft Carrier",
+  Fighter = "Fighter",
+  Bomber = "Bomber",
+  TransportPlane = "Transport Plane",
+  TroopColumn = "Troop Column",
 }
 
 export enum TrainType {
@@ -233,6 +246,29 @@ export const Nukes = unitTypeGroup([
   UnitType.HydrogenBomb,
   UnitType.MIRVWarhead,
   UnitType.MIRV,
+  UnitType.LargeNuke,
+  UnitType.ClusterNuke,
+  UnitType.ClusterWarhead,
+] as const);
+
+// Missiles a SAM can shoot down. A MIRV carrier can't be intercepted (only its
+// warheads); a cluster nuke's carrier can, which stops the whole salvo.
+export const SamTargetNukes = unitTypeGroup([
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRVWarhead,
+  UnitType.LargeNuke,
+  UnitType.ClusterNuke,
+  UnitType.ClusterWarhead,
+] as const);
+
+// Nukes a player launches from a silo (not warheads split off a carrier).
+export const LaunchableNukes = unitTypeGroup([
+  UnitType.AtomBomb,
+  UnitType.HydrogenBomb,
+  UnitType.MIRV,
+  UnitType.LargeNuke,
+  UnitType.ClusterNuke,
 ] as const);
 
 export const BuildableAttacks = unitTypeGroup([
@@ -240,6 +276,9 @@ export const BuildableAttacks = unitTypeGroup([
   UnitType.HydrogenBomb,
   UnitType.MIRV,
   UnitType.Warship,
+  UnitType.LargeNuke,
+  UnitType.ClusterNuke,
+  UnitType.AircraftCarrier,
 ] as const);
 
 export const Structures = unitTypeGroup([
@@ -249,6 +288,22 @@ export const Structures = unitTypeGroup([
   UnitType.MissileSilo,
   UnitType.Port,
   UnitType.Factory,
+  UnitType.UraniumMine,
+  UnitType.OilRig,
+  UnitType.Airbase,
+] as const);
+
+// Aircraft: fly over everything, ignore nuke blasts, SAMs and fighters hit them.
+export const AirUnits = unitTypeGroup([
+  UnitType.Fighter,
+  UnitType.Bomber,
+  UnitType.TransportPlane,
+] as const);
+
+// Units that launch and recover aircraft.
+export const AirBases = unitTypeGroup([
+  UnitType.Airbase,
+  UnitType.AircraftCarrier,
 ] as const);
 
 export const BuildMenus = unitTypeGroup([
@@ -362,6 +417,8 @@ export interface BuildableUnit {
   canUpgrade: number | false;
   type: PlayerBuildableUnitType;
   cost: Gold;
+  /** Uranium a build costs on top of gold (nukes only; 0 otherwise). */
+  uraniumCost: number;
   // Cumulative cost of upgrading 1..MAX_UPGRADE_AMOUNT times (upgrade costs
   // escalate per level, so a bulk total is NOT cost * amount). Only set when
   // canUpgrade is not false.
@@ -484,6 +541,11 @@ export enum MessageType {
   DONATION_RECEIVED,
   CHAT,
   RENEW_ALLIANCE,
+  // BrokenFront (append only: zbin-encoded by index).
+  AIR_RAID_INBOUND,
+  PARATROOPERS_INBOUND,
+  TRADE_DEAL,
+  CALL_TO_ARMS,
 }
 
 // Message categories used for filtering events in the EventsDisplay
@@ -519,6 +581,10 @@ export const MESSAGE_TYPE_CATEGORIES: Record<MessageType, MessageCategory> = {
   [MessageType.DONATION_SENT]: MessageCategory.TRADE,
   [MessageType.DONATION_RECEIVED]: MessageCategory.TRADE,
   [MessageType.CHAT]: MessageCategory.CHAT,
+  [MessageType.AIR_RAID_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.PARATROOPERS_INBOUND]: MessageCategory.ATTACK,
+  [MessageType.TRADE_DEAL]: MessageCategory.TRADE,
+  [MessageType.CALL_TO_ARMS]: MessageCategory.ALLIANCE,
 } as const;
 
 /**

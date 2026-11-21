@@ -130,6 +130,7 @@ export function makePlayerUpdate(
     tradeGold: 0n,
     trainGold: 0n,
     piracyGold: 0n,
+    uranium: 0,
     goldEarned: 0n,
     troops: 100,
     allies: [],

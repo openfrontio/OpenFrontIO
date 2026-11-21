@@ -7,7 +7,10 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { PlayerLike } from "@openfront/engine-api/game/ReadViews";
-import { GameConfig } from "@openfront/engine-api/Schemas";
+import {
+  BrokenfrontFeature,
+  GameConfig,
+} from "@openfront/engine-api/Schemas";
 import { pow } from "../DetMath";
 import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
 import { assertNever } from "../Util";
@@ -177,7 +180,132 @@ export class Config {
   }
 
   isUnitDisabled(unitType: UnitType): boolean {
-    return this._gameConfig.disabledUnits?.includes(unitType) ?? false;
+    if (this._gameConfig.disabledUnits?.includes(unitType) ?? false) {
+      return true;
+    }
+    switch (unitType) {
+      case UnitType.UraniumMine:
+        return !this.brokenfrontFeature("uranium");
+      case UnitType.Airbase:
+      case UnitType.AircraftCarrier:
+      case UnitType.Fighter:
+      case UnitType.Bomber:
+      case UnitType.TransportPlane:
+        return !this.brokenfrontFeature("airWar");
+      case UnitType.TroopColumn:
+        return !this.brokenfrontFeature("alliedTransit");
+      default:
+        return false;
+    }
+  }
+
+  // BrokenFront feature toggles: an explicit setting wins; unset means on,
+  // except in public games, which stay on the classic ruleset until balanced.
+  brokenfrontFeature(feature: BrokenfrontFeature): boolean {
+    const explicit = this._gameConfig.brokenfront?.[feature];
+    if (explicit !== undefined) return explicit;
+    return this._gameConfig.gameType !== GameType.Public;
+  }
+
+  // Uranium each launch costs on top of gold. 0 when the uranium economy is
+  // off, for warheads split off a carrier, and for non-nukes.
+  uraniumCost(unitType: UnitType): number {
+    if (!this.brokenfrontFeature("uranium")) return 0;
+    switch (unitType) {
+      case UnitType.AtomBomb:
+        return 10;
+      case UnitType.LargeNuke:
+        return 25;
+      case UnitType.ClusterNuke:
+        return 30;
+      case UnitType.HydrogenBomb:
+        return 40;
+      case UnitType.MIRV:
+        return 150;
+      default:
+        return 0;
+    }
+  }
+
+  // Uranium a mine produces per level each uraniumMineCycleTicks.
+  uraniumPerMineCycle(): number {
+    return 1;
+  }
+  uraniumMineCycleTicks(): Tick {
+    return 60;
+  }
+
+  // Offshore oil rigs: how far out to sea from your own land they may stand,
+  // and the land they need to keep within reach to survive.
+  oilRigMaxShoreDistance(): number {
+    return 10;
+  }
+  oilRigSupplyDistance(): number {
+    return 12;
+  }
+
+  // Air war.
+  airbaseAircraftPerLevel(): number {
+    return 2;
+  }
+  carrierAircraftCapacity(): number {
+    return 4;
+  }
+  bomberRange(): number {
+    return 250;
+  }
+  paradropRange(): number {
+    return 200;
+  }
+  bombRadius(): number {
+    return 10;
+  }
+  paratroopersPerBaseLevel(): number {
+    return 20_000;
+  }
+  bomberShipDamage(): number {
+    return 400;
+  }
+  bomberTroopLossShare(): number {
+    return 0.04;
+  }
+  bomberMaxTroopLoss(): number {
+    return 25_000;
+  }
+  bomberSpeed(): number {
+    return 2;
+  }
+  transportPlaneSpeed(): number {
+    return 2;
+  }
+  fighterSpeed(): number {
+    return 3;
+  }
+  fighterDamage(): number {
+    return 120;
+  }
+  fighterFireTicks(): number {
+    return 5;
+  }
+  fighterGunRange(): number {
+    return 2;
+  }
+  fighterPatrolRadius(): number {
+    return 25;
+  }
+  fighterDetectionRange(): number {
+    return 40;
+  }
+  fighterLeash(): number {
+    return 80;
+  }
+  fighterRespawnTicks(): number {
+    return 150;
+  }
+
+  // Minimum missile-silo level that can fire a cluster nuke.
+  clusterNukeMinSiloLevel(): number {
+    return 2;
   }
   instantBuild(): boolean {
     return this._gameConfig.instantBuild;
@@ -247,6 +375,35 @@ export class Config {
           upgradable: true,
         };
         break;
+      case UnitType.UraniumMine:
+      case UnitType.Airbase:
+        info = {
+          constructionDuration: this.instantBuild() ? 0 : 15 * 10,
+          upgradable: true,
+        };
+        break;
+      case UnitType.OilRig:
+        info = {
+          constructionDuration: this.instantBuild() ? 0 : 10 * 10,
+          upgradable: true,
+          maxHealth: 600,
+        };
+        break;
+      case UnitType.AircraftCarrier:
+        info = { maxHealth: 2500 };
+        break;
+      case UnitType.Fighter:
+        info = { maxHealth: 300, damage: 120 };
+        break;
+      case UnitType.Bomber:
+        info = { maxHealth: 400 };
+        break;
+      case UnitType.TransportPlane:
+        info = { maxHealth: 300 };
+        break;
+      case UnitType.FishingBoat:
+        info = { maxHealth: 200 };
+        break;
       case UnitType.TransportShip:
       case UnitType.SAMMissile:
       case UnitType.AtomBomb:
@@ -255,6 +412,10 @@ export class Config {
       case UnitType.MIRVWarhead:
       case UnitType.TradeShip:
       case UnitType.Train:
+      case UnitType.LargeNuke:
+      case UnitType.ClusterNuke:
+      case UnitType.ClusterWarhead:
+      case UnitType.TroopColumn:
         info = {};
         break;
       default:
@@ -427,8 +588,30 @@ export class Config {
         return { inner: 12, outer: 30 };
       case UnitType.HydrogenBomb:
         return { inner: 80, outer: 100 };
+      case UnitType.LargeNuke:
+        return { inner: 40, outer: 60 };
+      case UnitType.ClusterWarhead:
+        // Each cluster warhead is an atom bomb.
+        return this.nukeMagnitudes(UnitType.AtomBomb);
+      case UnitType.ClusterNuke:
+        // The carrier itself never detonates; this is the footprint of the
+        // whole salvo (centre warhead plus ring), used for alliance checks
+        // and targeting previews.
+        return {
+          inner: 12 + this.clusterNukeSpread(),
+          outer: this.nukeMagnitudes(UnitType.AtomBomb).outer +
+            this.clusterNukeSpread(),
+        };
     }
     throw new Error(`Unknown nuke type: ${unitType}`);
+  }
+
+  // Radius of the ring the four outer cluster warheads land on.
+  clusterNukeSpread(): number {
+    return 40;
+  }
+  clusterNukeWarheads(): number {
+    return 5;
   }
 
   nukeAllianceBreakThreshold(): number {

@@ -22,37 +22,74 @@
 
 @theme {
   --default-ring-width: 3px;
-  --default-ring-color: var(--color-malibu-blue);
-  --font-display: "OpenFront", Inter, Arial, sans-serif;
+  --default-ring-color: var(--color-brand);
+  --font-display: "BrokenFront", Inter, Arial, sans-serif;
 
-  /* Openfront.io brand palette — see Openfront_Brand_Guidelines.pdf §4 */
-  --color-malibu-blue: #0084d1;
-  --color-aquarius: #3fa9f5;
-  --color-dawn-blue: #cccccc;
+  /* BrokenFront brand palette: "ember on charcoal".
+     brand        primary actions, selected states (white text passes AA)
+     brand-light  accent text and hovers on dark surfaces
+     brand-bright highlights, progress fills
+     mist         secondary text on dark surfaces */
+  --color-brand: #c94a1c;
+  --color-brand-light: #f2804a;
+  --color-mist: #d9d0c5;
   --color-bright-white: #ffffff;
-  --color-bright-blue: #1e90ff;
+  --color-brand-bright: #e5602a;
 
-  /* Openfront Masters sub-brand */
-  --color-cyber-yellow: #ffd700;
-  --color-limestone: #999999;
+  /* Masters sub-brand */
+  --color-cyber-yellow: #ffc233;
+  --color-limestone: #9c958c;
 
   /* Background & decorative — not for standalone UI use */
-  --color-deep-navy: #0a1628;
-  --color-hex-cyan: #00c8ff;
-  --color-frame-orange: #f97316;
+  --color-surface-deep: #120e0c;
+  --color-brand-glow: #ffb347;
+  --color-frame-steel: #8fa3b3;
 
-  /* App-specific surface colors */
-  --color-surface: #0a1628;
+  /* App-specific surface colors (also the water tone on map cards) */
+  --color-surface: #161310;
 
-  --shadow-malibu-blue: 0 0 15px rgba(0, 132, 209, 0.2);
-  --shadow-malibu-blue-soft: 0 0 12px rgba(0, 132, 209, 0.2);
-  --shadow-malibu-blue-strong: 0 0 15px rgba(0, 132, 209, 0.3);
-  --shadow-malibu-blue-pill: 0 0 6px rgba(0, 132, 209, 0.35);
-  --shadow-malibu-blue-ring-sm: 0 0 0 4px rgba(0, 132, 209, 0.2);
-  --shadow-malibu-blue-ring-lg: 0 0 0 6px rgba(0, 132, 209, 0.3);
-  --shadow-lobby-card-hover: 0 0 0 2px #0084d1, 0 0 20px rgba(0, 132, 209, 0.5);
+  --shadow-brand: 0 0 15px rgba(201, 74, 28, 0.22);
+  --shadow-brand-soft: 0 0 12px rgba(201, 74, 28, 0.2);
+  --shadow-brand-strong: 0 0 15px rgba(201, 74, 28, 0.32);
+  --shadow-brand-pill: 0 0 6px rgba(201, 74, 28, 0.38);
+  --shadow-brand-ring-sm: 0 0 0 4px rgba(201, 74, 28, 0.2);
+  --shadow-brand-ring-lg: 0 0 0 6px rgba(201, 74, 28, 0.3);
+  --shadow-lobby-card-hover: 0 0 0 2px #c94a1c, 0 0 20px rgba(201, 74, 28, 0.5);
   --shadow-action-card-hover:
-    0 0 0 1px #0084d1, 0 0 12px rgba(0, 132, 209, 0.35);
+    0 0 0 1px #c94a1c, 0 0 12px rgba(201, 74, 28, 0.35);
+
+  /* Warm the cool neutrals (gray, slate) to Tailwind's stone scale so every
+     panel, modal and HUD surface reads as charcoal rather than blue-gray. */
+  --color-gray-50: oklch(98.5% 0.001 106.423);
+  --color-gray-100: oklch(97% 0.001 106.424);
+  --color-gray-200: oklch(92.3% 0.003 48.717);
+  --color-gray-300: oklch(86.9% 0.005 56.366);
+  --color-gray-400: oklch(70.9% 0.01 56.259);
+  --color-gray-500: oklch(55.3% 0.013 58.071);
+  --color-gray-600: oklch(44.4% 0.011 73.639);
+  --color-gray-700: oklch(37.4% 0.01 67.558);
+  --color-gray-800: oklch(26.8% 0.007 34.298);
+  --color-gray-900: oklch(21.6% 0.006 56.043);
+  --color-gray-950: oklch(14.7% 0.004 49.25);
+  --color-slate-50: oklch(98.5% 0.001 106.423);
+  --color-slate-100: oklch(97% 0.001 106.424);
+  --color-slate-200: oklch(92.3% 0.003 48.717);
+  --color-slate-300: oklch(86.9% 0.005 56.366);
+  --color-slate-400: oklch(70.9% 0.01 56.259);
+  --color-slate-500: oklch(55.3% 0.013 58.071);
+  --color-slate-600: oklch(44.4% 0.011 73.639);
+  --color-slate-700: oklch(37.4% 0.01 67.558);
+  --color-slate-800: oklch(26.8% 0.007 34.298);
+  --color-slate-900: oklch(21.6% 0.006 56.043);
+  --color-slate-950: oklch(14.7% 0.004 49.25);
+
+  /* Tighter, more angular corners than Tailwind's defaults. */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.1875rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.375rem;
+  --radius-2xl: 0.5rem;
+  --radius-3xl: 0.75rem;
 }
 
 /* Match the in-game HUD surface; opacity affects the surface, not the controls. */
@@ -268,7 +305,7 @@ body.page-open {
   padding: 15px 20px;
   font-size: 16px;
   cursor: pointer;
-  background-color: var(--color-malibu-blue);
+  background-color: var(--color-brand);
   color: white;
   border: none;
   border-radius: 8px;
@@ -278,7 +315,7 @@ body.page-open {
 }
 
 .start-game-button:not(:disabled):hover {
-  background-color: var(--color-aquarius);
+  background-color: var(--color-brand-light);
 }
 
 .start-game-button:disabled {
@@ -325,8 +362,8 @@ body.page-open {
 }
 
 .option-card.selected {
-  border-color: #4a9eff;
-  background: rgba(74, 158, 255, 0.1);
+  border-color: var(--color-brand-light);
+  background: rgba(242, 128, 74, 0.1);
 }
 
 .option-card.disabled {
@@ -377,8 +414,8 @@ label.option-card:hover {
 }
 
 .option-card.selected .checkbox-icon {
-  border-color: #4a9eff;
-  background: #4a9eff;
+  border-color: var(--color-brand-light);
+  background: var(--color-brand-light);
 }
 
 .option-card.selected .checkbox-icon::after {
@@ -459,8 +496,8 @@ label.option-card:hover {
 }
 
 .player-tag.current-player {
-  background: rgba(14, 165, 233, 0.15);
-  border: 1px solid rgba(14, 165, 233, 0.4);
+  background: rgba(201, 74, 28, 0.15);
+  border: 1px solid rgba(201, 74, 28, 0.4);
 }
 
 #bots-count,
@@ -482,14 +519,14 @@ label.option-card:hover {
 #bots-count::-moz-range-progress,
 #private-lobby-bots-count::-moz-range-progress {
   height: 8px;
-  background-color: #0075ff;
+  background-color: var(--color-brand);
 }
 
 #bots-count::-moz-range-thumb,
 #private-lobby-bots-count::-moz-range-thumb {
   height: 16px;
   width: 16px;
-  background: #0075ff;
+  background: var(--color-brand);
   border: none;
   border-radius: 50%;
 }
@@ -500,7 +537,7 @@ label.option-card:hover {
   height: 8px;
   background: linear-gradient(
     to right,
-    #0075ff var(--progress, 0%),
+    var(--color-brand) var(--progress, 0%),
     white var(--progress, 0%)
   );
 }
@@ -510,7 +547,7 @@ label.option-card:hover {
   -webkit-appearance: none;
   height: 16px;
   width: 16px;
-  background: #0075ff;
+  background: var(--color-brand);
   border: none;
   border-radius: 50%;
   margin-top: -4px;
@@ -522,8 +559,8 @@ label.option-card:hover {
 }
 
 .random-map.selected {
-  border: 2px solid #4a9eff;
-  background: rgba(74, 158, 255, 0.1);
+  border: 2px solid var(--color-brand-light);
+  background: rgba(242, 128, 74, 0.1);
 }
 
 #helpModal table {
@@ -732,14 +769,14 @@ label.option-card:hover {
   justify-content: center;
 }
 
-/* News button glows blue while there is unread news. */
+/* News button glows ember while there is unread news. */
 news-button .active button {
   position: relative;
-  border-color: var(--color-malibu-blue) !important;
+  border-color: var(--color-brand) !important;
   border-width: 2px !important;
   box-shadow:
-    0 0 0 1px rgba(37, 99, 235, 0.5),
-    0 0 8px rgba(37, 99, 235, 0.4);
+    0 0 0 1px rgba(201, 74, 28, 0.5),
+    0 0 8px rgba(201, 74, 28, 0.4);
 }
 
 /* Amber notification dot pinned to the news button's top-right corner. */
@@ -929,8 +966,8 @@ unit-display .tutorial-highlight::after {
   height: 1.25rem;
   background: linear-gradient(
     to bottom,
-    rgb(31 41 55 / 0.92),
-    rgb(31 41 55 / 0)
+    rgb(41 37 36 / 0.92),
+    rgb(41 37 36 / 0)
   );
 }
 
@@ -939,7 +976,7 @@ unit-display .tutorial-highlight::after {
   right: 0;
   bottom: 0;
   height: 1.25rem;
-  background: linear-gradient(to top, rgb(31 41 55 / 0.92), rgb(31 41 55 / 0));
+  background: linear-gradient(to top, rgb(41 37 36 / 0.92), rgb(41 37 36 / 0));
 }
 
 @media (width >= 64rem), (orientation: landscape) {
@@ -955,8 +992,8 @@ unit-display .tutorial-highlight::after {
     right: auto;
     background: linear-gradient(
       to right,
-      rgb(31 41 55 / 0.92),
-      rgb(31 41 55 / 0)
+      rgb(41 37 36 / 0.92),
+      rgb(41 37 36 / 0)
     );
   }
 
@@ -964,8 +1001,8 @@ unit-display .tutorial-highlight::after {
     left: auto;
     background: linear-gradient(
       to left,
-      rgb(31 41 55 / 0.92),
-      rgb(31 41 55 / 0)
+      rgb(41 37 36 / 0.92),
+      rgb(41 37 36 / 0)
     );
   }
 }

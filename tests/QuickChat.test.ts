@@ -109,7 +109,11 @@ describe("QuickChat phrases", () => {
     ["help", "send_gold_to", "Send gold to [P1]!"],
     ["warnings", "disconnected", "[P1] has disconnected!"],
     ["warnings", "pirating", "[P1] is pirating all of our trade!"],
-    ["misc", "join_discord", "You should join the OpenFront Discord server!"],
+    [
+      "misc",
+      "join_discord",
+      "You should join the BrokenFront Discord server!",
+    ],
   ];
 
   test.each(newPhrases)(

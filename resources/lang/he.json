@@ -9,7 +9,7 @@
     "close": "סגור"
   },
   "main": {
-    "title": "OpenFront (ALPHA)",
+    "title": "BrokenFront (ALPHA)",
     "join_discord": "הצטרף לשרת הדיסקורד!",
     "login_discord": "התחבר עם דיסקורד",
     "checking_login": "בודק התחברות...",
@@ -531,8 +531,8 @@
       "cursor": "סמן",
       "hand": "יד",
       "radiation": "קרינה",
-      "openfront_qr": "קוד QR של OpenFront.io",
-      "openfront": "OpenFront",
+      "openfront_qr": "קוד QR של BrokenFront",
+      "openfront": "BrokenFront",
       "t_rex": "טי-רקס",
       "embelem": "סמל",
       "grogu_head": "ראש גרוגו",

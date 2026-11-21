@@ -13,6 +13,7 @@ import type {
   SnapshotReader,
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
+import { FishingBoatExecution } from "./FishingBoatExecution";
 import { TradeShipExecution } from "./TradeShipExecution";
 import { TrainStationExecution } from "./TrainStationExecution";
 
@@ -28,6 +29,7 @@ export class PortExecution implements Execution {
   private random: PseudoRandom;
   private checkOffset: number;
   private tradeShipSpawnRejections = 0;
+  private ticksUntilFishingBoat = 0;
 
   constructor(port: Unit) {
     this.port = port;
@@ -37,6 +39,7 @@ export class PortExecution implements Execution {
     this.mg = mg;
     this.random = new PseudoRandom(mg.ticks());
     this.checkOffset = mg.ticks() % 10;
+    this.ticksUntilFishingBoat = mg.config().fishingBoatSpawnTicks();
   }
 
   tick(ticks: number): void {
@@ -56,6 +59,8 @@ export class PortExecution implements Execution {
     if (!this.port.hasTrainStation()) {
       this.createStation();
     }
+
+    this.maybeLaunchFishingBoat();
 
     // Only check every 10 ticks for performance.
     if ((this.mg.ticks() + this.checkOffset) % 10 !== 0) {
@@ -82,6 +87,20 @@ export class PortExecution implements Execution {
 
   activeDuringSpawnPhase(): boolean {
     return false;
+  }
+
+  /** Keeps up to one fishing boat per port level out at sea. */
+  private maybeLaunchFishingBoat(): void {
+    if (--this.ticksUntilFishingBoat > 0) return;
+    this.ticksUntilFishingBoat = this.mg.config().fishingBoatSpawnTicks();
+    const owner = this.port.owner();
+    if (this.mg.config().isUnitDisabled(UnitType.FishingBoat)) return;
+    let out = 0;
+    for (const boat of owner.units(UnitType.FishingBoat)) {
+      if (boat.isActive() && boat.targetUnit() === this.port) out++;
+    }
+    if (out >= this.port.level()) return;
+    this.mg.addExecution(new FishingBoatExecution(this.port));
   }
 
   shouldSpawnTradeShip(): boolean {
@@ -152,6 +171,10 @@ export class PortExecution implements Execution {
       if (!tooClose && this.port!.owner().isFriendly(otherPort.owner())) {
         multiplier++;
       }
+      // Trade-agreement partners are preferred destinations.
+      if (this.mg.trade().isPartner(this.port!.owner(), otherPort.owner())) {
+        multiplier += 2;
+      }
       return { port: otherPort, weight: otherPort.level() * multiplier };
     });
   }
@@ -179,6 +202,7 @@ export class PortExecution implements Execution {
         ? { random: w.random(this.random), checkOffset: this.checkOffset }
         : null,
       tradeShipSpawnRejections: this.tradeShipSpawnRejections,
+      ticksUntilFishingBoat: this.ticksUntilFishingBoat,
     });
   }
 
@@ -191,6 +215,7 @@ export class PortExecution implements Execution {
       this.checkOffset = s.init.checkOffset;
     }
     this.tradeShipSpawnRejections = s.tradeShipSpawnRejections;
+    this.ticksUntilFishingBoat = s.ticksUntilFishingBoat;
   }
 }
 
@@ -200,12 +225,17 @@ const PortStateSchema = z.object({
   // Set by init.
   init: z.object({ random: zRandom(), checkOffset: zInt() }).nullable(),
   tradeShipSpawnRejections: zInt(),
+  ticksUntilFishingBoat: zInt(),
 });
 type PortState = z.infer<typeof PortStateSchema>;
 
 export const PortExecutionSnapshot = execSnapshotType({
   name: "Port",
-  version: 1,
+  version: 2,
+  migrations: {
+    // v1 predates fishing boats.
+    1: (d) => ({ ...d, ticksUntilFishingBoat: 200 }),
+  },
   schema: PortStateSchema,
   cls: () => PortExecution,
 });

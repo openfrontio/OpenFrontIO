@@ -38,7 +38,7 @@ import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
 import { registerAdminBotRoutes } from "./AdminBotRoutes";
-import { censorPlayer } from "./Censor";
+import { censorPlayer, unshadowApiName } from "./Censor";
 import { Client } from "./Client";
 import { gameApiCors } from "./GameApiCors";
 import { GameManager } from "./GameManager";
@@ -852,7 +852,13 @@ export async function startWorker() {
               ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
               return;
             }
-            username = resolved.username;
+            // The API answers a flagged name with a made-up replacement;
+            // this server masks profanity instead (see Censor.ts).
+            username = unshadowApiName(
+              clientMsg.username,
+              resolved.username,
+              username,
+            );
             clanTag = resolved.clanTag;
 
             if (verdict.status === "error") {

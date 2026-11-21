@@ -136,11 +136,11 @@ const CEREMONY_CSS = /* css */ `
   width: 100%;
   height: 100%;
   pointer-events: none;
-  filter: drop-shadow(0 0 6px var(--hx-glow, var(--hx-color, #00c8ff)));
+  filter: drop-shadow(0 0 6px var(--hx-glow, var(--hx-color, #ffb347)));
 }
 .ceremony-honeycomb .hx {
   fill: none;
-  stroke: var(--hx-color, #00c8ff);
+  stroke: var(--hx-color, #ffb347);
   stroke-width: 9;
   stroke-linejoin: round;
   opacity: 0;
@@ -176,11 +176,11 @@ const CEREMONY_CSS = /* css */ `
   }
   40% {
     opacity: 0.9;
-    stroke: var(--hx-color, #00c8ff);
+    stroke: var(--hx-color, #ffb347);
   }
   100% {
     opacity: 0.12;
-    stroke: var(--hx-color, #00c8ff);
+    stroke: var(--hx-color, #ffb347);
   }
 }
 /* At rest: a slow shimmer rolling outward. */

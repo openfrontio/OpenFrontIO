@@ -269,6 +269,10 @@ export interface PlayerUpdate {
   piracyGold?: Gold;
   /** Cumulative gold received from all sources (workers, trade, ...). */
   goldEarned?: Gold;
+  /** Uranium held (changes only on mine cycles and launches, so it diffs). */
+  uranium?: number;
+  /** BrokenFront trade state (agreements, offers, tariff, market price). */
+  trade?: TradeView;
   troops?: number;
   allies?: number[];
   embargoes?: Set<PlayerID>;
@@ -290,6 +294,30 @@ export interface PlayerUpdate {
   isLobbyCreator?: boolean;
   /** Scenario nations: a human may be assigned this one. */
   playable?: boolean;
+}
+
+/** A player's BrokenFront trade state, as their client shows it. */
+export interface TradeView {
+  tariffPct: number;
+  partners: { other: PlayerID; expiresAt: Tick }[];
+  incomingRequests: PlayerID[];
+  outgoingRequests: PlayerID[];
+  offers: TradeOfferView[];
+  /** World uranium market mid price, gold per unit. */
+  marketPrice: number;
+  /** Tick from which this player may call allies to arms again. */
+  callToArmsReadyAt: Tick;
+}
+
+export interface TradeOfferView {
+  id: number;
+  from: PlayerID;
+  to: PlayerID;
+  giveGold: number;
+  giveUranium: number;
+  wantGold: number;
+  wantUranium: number;
+  expiresAt: Tick;
 }
 
 export interface AllianceView {

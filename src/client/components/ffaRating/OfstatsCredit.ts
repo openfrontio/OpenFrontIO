@@ -18,7 +18,7 @@ export class OfstatsCredit extends LitElement {
       href=${OFSTATS_HOW_IT_WORKS_URL}
       target="_blank"
       rel="noopener noreferrer"
-      class="text-xs font-medium text-malibu-blue no-underline transition-colors duration-200 hover:text-aquarius"
+      class="text-xs font-medium text-brand no-underline transition-colors duration-200 hover:text-brand-light"
       >${translateText("ffa_rating.credit")}</a
     >`;
   }

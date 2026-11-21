@@ -649,6 +649,11 @@ export class NationStructureBehavior {
       return true;
     }
 
+    // Nukes cost uranium: once the economy is going, claim deposits.
+    if (cityCount >= 2 && this.maybeBuildUraniumMine()) {
+      return true;
+    }
+
     // Build order for non-city structures (priority order)
     const buildOrder: UnitType[] = [
       UnitType.Port,
@@ -704,6 +709,24 @@ export class NationStructureBehavior {
   }
 
   // Cities owned, or a territory-based equivalent when cities are disabled
+  /** Builds a mine on the first deposit inside this nation's land, if any. */
+  private maybeBuildUraniumMine(): boolean {
+    const config = this.game.config();
+    if (config.isUnitDisabled(UnitType.UraniumMine)) return false;
+    if (this.player.gold() < this.cost(UnitType.UraniumMine)) return false;
+    for (const d of this.game.uraniumDeposits()) {
+      const tile = this.game.ref(d.x, d.y);
+      if (this.game.owner(tile) !== this.player) continue;
+      const spawn = this.player.canBuild(UnitType.UraniumMine, tile);
+      if (spawn === false) continue;
+      this.game.addExecution(
+        new ConstructionExecution(this.player, UnitType.UraniumMine, spawn),
+      );
+      return true;
+    }
+    return false;
+  }
+
   private cityCount(): number {
     if (this.game.config().isUnitDisabled(UnitType.City)) {
       return Math.max(

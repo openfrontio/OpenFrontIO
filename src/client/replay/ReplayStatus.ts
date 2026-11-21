@@ -89,7 +89,7 @@ export class ReplayStatus extends LitElement {
       </h2>
       <div class="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
         <div
-          class="h-full rounded-full bg-malibu-blue shadow-malibu-blue-pill transition-[width] duration-500 ease-out"
+          class="h-full rounded-full bg-brand shadow-brand-pill transition-[width] duration-500 ease-out"
           style=${`width: ${step === "simulating" ? percent : 0}%`}
         ></div>
       </div>
@@ -114,7 +114,7 @@ export class ReplayStatus extends LitElement {
 function spinner() {
   return html`
     <div
-      class="w-14 h-14 rounded-full border border-malibu-blue/40 bg-malibu-blue/10 flex items-center justify-center"
+      class="w-14 h-14 rounded-full border border-brand/40 bg-brand/10 flex items-center justify-center"
     >
       <div
         class="w-7 h-7 border-[3px] border-white/20 border-t-white rounded-full animate-spin"

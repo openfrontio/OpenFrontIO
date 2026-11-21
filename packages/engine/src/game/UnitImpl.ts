@@ -61,6 +61,8 @@ export class UnitImpl implements Unit {
   private _trainType: TrainType | undefined;
   // Nuke only
   private _deletionAt: number | null = null;
+  // Aircraft only: a SAM missile is already on its way.
+  private _airTargetedBySam = false;
   private _samLauncherState: SamLauncherState | undefined;
 
   constructor(
@@ -123,6 +125,10 @@ export class UnitImpl implements Unit {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
+      case UnitType.UraniumMine:
+      case UnitType.OilRig:
+      case UnitType.Airbase:
+      case UnitType.AircraftCarrier:
         this.mg.stats().unitBuild(_owner, this._type);
     }
   }
@@ -257,6 +263,10 @@ export class UnitImpl implements Unit {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
+      case UnitType.UraniumMine:
+      case UnitType.OilRig:
+      case UnitType.Airbase:
+      case UnitType.AircraftCarrier:
         this.mg.stats().unitCapture(newOwner, this._type);
         this.mg.stats().unitLose(this._owner, this._type);
         break;
@@ -390,6 +400,10 @@ export class UnitImpl implements Unit {
         case UnitType.SAMLauncher:
         case UnitType.Warship:
         case UnitType.Factory:
+        case UnitType.UraniumMine:
+        case UnitType.OilRig:
+        case UnitType.Airbase:
+        case UnitType.AircraftCarrier:
           this.mg.stats().unitDestroy(destroyer, this._type);
           this.mg.stats().unitLose(this.owner(), this._type);
           break;
@@ -624,11 +638,17 @@ export class UnitImpl implements Unit {
   }
 
   setTargetedBySAM(targeted: boolean): void {
-    this._nukeState!.targetedBySam = targeted;
+    if (this._nukeState === undefined) {
+      // Aircraft carry no nuke state; a SAM's lock is not snapshotted for
+      // them (the homing missile re-acquires its target each tick).
+      this._airTargetedBySam = targeted;
+      return;
+    }
+    this._nukeState.targetedBySam = targeted;
   }
 
   targetedBySAM(): boolean {
-    return this._nukeState!.targetedBySam;
+    return this._nukeState?.targetedBySam ?? this._airTargetedBySam;
   }
 
   setReachedTarget(): void {
@@ -872,6 +892,7 @@ export class UnitImpl implements Unit {
             duration: this._samLauncherState.duration,
           }
         : null,
+      airTargetedBySam: this._airTargetedBySam,
     };
   }
 
@@ -919,12 +940,17 @@ export class UnitImpl implements Unit {
     this._samLauncherState = s.samLauncherState
       ? { ...s.samLauncherState }
       : undefined;
+    this._airTargetedBySam = s.airTargetedBySam;
   }
 }
 
 export const UnitSnapshot = snapshotType({
   name: "Unit",
-  version: 1,
+  version: 2,
+  migrations: {
+    // v1 predates aircraft.
+    1: (d) => ({ ...d, airTargetedBySam: false }),
+  },
   schema: z.object({
     id: zInt(),
     type: UnitTypeSchema,
@@ -980,6 +1006,7 @@ export const UnitSnapshot = snapshotType({
         duration: zInt(),
       })
       .nullable(),
+    airTargetedBySam: z.boolean(),
   }),
 });
 export type UnitState = z.infer<typeof UnitSnapshot.schema>;

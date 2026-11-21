@@ -620,7 +620,7 @@
     "radial_title": "Radia menuo",
     "table_action": "Influo",
     "table_key": "Klavo",
-    "troubleshooting_desc": "Se vi havas rendimentajn problemojn, kolapsojn, aŭ aliajn problemojn ludante OpenFront, bonvolu viziti nian problemsolvan paĝon por helpo diagnozi kaj ripari kutimajn problemojn:",
+    "troubleshooting_desc": "Se vi havas rendimentajn problemojn, kolapsojn, aŭ aliajn problemojn ludante BrokenFront, bonvolu viziti nian problemsolvan paĝon por helpo diagnozi kaj ripari kutimajn problemojn:",
     "ui_attack_ratio": "Ataka kvociento - La nombro da uzataj trupoj kiam vi atakas. Vi povas ĝustigi la atakan kvocienton uzante la glitilon. Havi pli da atakaj trupoj ol la defendaj trupoj malpliigos la perdojn dum atako, dum havi malpli multe pliigos la damaĝon ricevitan de viaj atakaj trupoj. La efiko ne superas rilatumon de 2:1.",
     "ui_control": "Kontrolpanelo",
     "ui_control_desc": "La kontrolpanelo enhavas la sekvajn elementojn:",
@@ -640,7 +640,7 @@
     "ui_wilderness": "Sovaĝejo",
     "ui_your_team": "Via teamo:",
     "video_tutorial": "Lernila Filmeto",
-    "video_tutorial_title": "OpenFront.io Lernilo"
+    "video_tutorial_title": "BrokenFront Lernilo"
   },
   "host_modal": {
     "assigned_teams": "Asignitaj Teamoj",
@@ -692,14 +692,14 @@
     "got_it": "Mi komprenis",
     "how": "Kiel",
     "later": "Poste",
-    "modal_desc": "Via retnavigilo ne kapablas plenekranan reĝimon, sed vi povas aldoni OpenFront al via komenca ekrano por pli entira sperto:",
+    "modal_desc": "Via retnavigilo ne kapablas plenekranan reĝimon, sed vi povas aldoni BrokenFront al via komenca ekrano por pli entira sperto:",
     "modal_title": "Plenekrana sur iOS",
     "never": "Neniam",
     "step_add_to_home_label": "Aldoni al komenca ekrano",
     "step_open": "Malfermi de via komenca ekrano — ekas plenekrane sen la adresa linio",
     "step_scroll_and_tap": "Rulumu suben kaj klaku",
     "step_share": "Alklaku la kunhavigan butonon de via retnavigilo",
-    "text": "Por plenekrana reĝimo, aldonu OpenFront al via komenca ekrano"
+    "text": "Por plenekrana reĝimo, aldonu BrokenFront al via komenca ekrano"
   },
   "kick_reason": {
     "admin": "Forpelita de administranto",
@@ -746,7 +746,7 @@
   "main": {
     "account": "Konto",
     "clans": "Klanoj",
-    "copyright": "© OpenFront™ kaj Kontribuantoj",
+    "copyright": "© BrokenFront kaj Kontribuantoj",
     "create": "Krei Ludejon",
     "discord_avatar_alt": "Profilbildo de Diskorda profilo",
     "game_info": "Informo pri ludo",
@@ -765,7 +765,7 @@
     "solo": "Unu ludanto",
     "store": "Butiko",
     "terms_of_service": "Uzokondiĉoj",
-    "title": "OpenFront (ALFA)",
+    "title": "BrokenFront (ALFA)",
     "troubleshooting": "Problemsolvado",
     "user_avatar_alt": "Profilbildo de %{username}",
     "wiki": "Vikio"
@@ -904,7 +904,7 @@
   },
   "news_box": {
     "dismiss": "Ignori",
-    "firefox_warning": "OpenFront.io ne funkcias efike kun [retnavigiloj bazitaj sur Fajrovulpo](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). Ni rekomendas al vi uzi [retnavigilon bazitan sur Chromium](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) por plej bonaj rendimentoj.",
+    "firefox_warning": "BrokenFront ne funkcias efike kun [retnavigiloj bazitaj sur Fajrovulpo](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). Ni rekomendas al vi uzi [retnavigilon bazitan sur Chromium](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) por plej bonaj rendimentoj.",
     "go_to_item": "Iri al {num}a ero ",
     "news": "NOVAĴOJ",
     "tournament": "TURNIRO",
@@ -1190,7 +1190,7 @@
     "browser": "Retnavigilo",
     "canvas_2d_no_gpu": "2D kanvaso (ne grafika karto)",
     "charging": "Ŝarganta",
-    "chromium_tip": "OpenFront plej bone funkcias per retnavigiloj bazitaj sur Chromium.",
+    "chromium_tip": "BrokenFront plej bone funkcias per retnavigiloj bazitaj sur Chromium.",
     "copied_to_clipboard": "Informoj kopiitaj al tondujo! Libere sendu ilin en nian Diskordan servilon se vi bezonas helpon.",
     "device_pixel_ratio": "Aparata rilatumo de rastrumeroj",
     "environment": "Medio",
@@ -1376,7 +1376,7 @@
     "other_won": "{player} venkis!",
     "requeue": "Reludi",
     "spectate": "Spekti",
-    "support_openfront": "Subtenu OpenFront!",
+    "support_openfront": "Subtenu BrokenFront!",
     "territory_pattern": "Aĉetu teritorian haŭton por ludi sen reklamoj!",
     "wishlist": "Dezirlistu ĉe Steam!",
     "you_won": "Vi venkis!",

@@ -105,6 +105,9 @@ export class AllianceRequestExecution implements Execution {
         UnitType.HydrogenBomb,
         UnitType.MIRV,
         UnitType.MIRVWarhead,
+        UnitType.LargeNuke,
+        UnitType.ClusterNuke,
+        UnitType.ClusterWarhead,
       ])) {
         if (!unit.isActive() || unit.reachedTarget()) continue;
 
@@ -119,7 +122,10 @@ export class AllianceRequestExecution implements Execution {
             unit.targetPlayer() ??
             (targetTile ? this.mg.owner(targetTile) : null);
           if (target !== other) continue;
-        } else if (unit.type() === UnitType.MIRVWarhead) {
+        } else if (
+          unit.type() === UnitType.MIRVWarhead ||
+          unit.type() === UnitType.ClusterWarhead
+        ) {
           if (!targetTile || this.mg.owner(targetTile) !== other) continue;
         } else {
           if (!targetTile) continue;
@@ -138,7 +144,10 @@ export class AllianceRequestExecution implements Execution {
         }
 
         unit.delete(false);
-        if (unit.type() === UnitType.MIRVWarhead) {
+        if (
+          unit.type() === UnitType.MIRVWarhead ||
+          unit.type() === UnitType.ClusterWarhead
+        ) {
           cancelledWarheadLaunchers.add(launcher);
         } else {
           neutralized.set(launcher, (neutralized.get(launcher) ?? 0) + 1);

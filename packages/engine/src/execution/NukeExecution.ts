@@ -1,6 +1,8 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
+  AirUnits,
   MessageType,
+  Nukes,
   Structures,
   TerraNullius,
   UnitType,
@@ -152,8 +154,11 @@ export class NukeExecution implements Execution {
     if (this.nuke === null) {
       throw new Error("Not initialized");
     }
-    if (this.nuke.type() === UnitType.MIRVWarhead) {
-      // MIRV warheads shouldn't break alliances
+    if (
+      this.nuke.type() === UnitType.MIRVWarhead ||
+      this.nuke.type() === UnitType.ClusterWarhead
+    ) {
+      // Warheads shouldn't break alliances: their carrier already did.
       return;
     }
 
@@ -232,9 +237,7 @@ export class NukeExecution implements Execution {
       });
       this.nuke.updateNukeState({ waitTicks: this.waitTicks });
       this.recordMotionPlan(ticks);
-      if (this.nuke.type() !== UnitType.MIRVWarhead) {
-        this.maybeBreakAlliances();
-      }
+      this.maybeBreakAlliances();
       if (this.mg.hasOwner(this.dst)) {
         const target = this.mg.owner(this.dst);
         if (!target.isPlayer()) {
@@ -250,6 +253,13 @@ export class NukeExecution implements Execution {
           this.mg.displayIncomingUnit(
             this.nuke.id(),
             "events_display.hydrogen_bomb_inbound",
+            MessageType.HYDROGEN_BOMB_INBOUND,
+            target.id(),
+          );
+        } else if (this.nukeType === UnitType.LargeNuke) {
+          this.mg.displayIncomingUnit(
+            this.nuke.id(),
+            "events_display.large_nuke_inbound",
             MessageType.HYDROGEN_BOMB_INBOUND,
             target.id(),
           );
@@ -445,11 +455,11 @@ export class NukeExecution implements Execution {
     const dst = this.dst;
     for (const unit of mg.units()) {
       const type = unit.type();
+      // Missiles and aircraft in flight ride out the blast (sibling
+      // cluster warheads must not destroy each other).
       if (
-        type === UnitType.AtomBomb ||
-        type === UnitType.HydrogenBomb ||
-        type === UnitType.MIRVWarhead ||
-        type === UnitType.MIRV ||
+        Nukes.has(type) ||
+        AirUnits.has(type) ||
         type === UnitType.SAMMissile
       ) {
         continue;
@@ -469,12 +479,15 @@ export class NukeExecution implements Execution {
 
     if (
       this.nukeType === UnitType.AtomBomb ||
-      this.nukeType === UnitType.HydrogenBomb
+      this.nukeType === UnitType.HydrogenBomb ||
+      this.nukeType === UnitType.LargeNuke
     ) {
       const messageKey =
         this.nukeType === UnitType.AtomBomb
           ? "events_display.atom_bomb_detonated"
-          : "events_display.hydrogen_bomb_detonated";
+          : this.nukeType === UnitType.LargeNuke
+            ? "events_display.large_nuke_detonated"
+            : "events_display.hydrogen_bomb_detonated";
       for (const [impactedPlayer] of tilesPerPlayers) {
         mg.displayMessage(
           messageKey,

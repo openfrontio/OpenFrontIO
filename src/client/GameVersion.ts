@@ -92,7 +92,7 @@ export function renderNavVersion(root: ParentNode = document): number {
   const elements = root.querySelectorAll(NAV_VERSION_SELECTOR);
   const label = taggedGameVersion(version);
   elements.forEach((el) => {
-    (el as HTMLElement).style.fontFamily = '"OpenFront", Inter, sans-serif';
+    (el as HTMLElement).style.fontFamily = '"BrokenFront", Inter, sans-serif';
     el.textContent = label;
   });
   return elements.length;

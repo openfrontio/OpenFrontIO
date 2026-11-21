@@ -699,7 +699,7 @@
     "radial_title": "Hjulmenu",
     "table_action": "Handling",
     "table_key": "Tast",
-    "troubleshooting_desc": "Hvis du oplever ydelsesproblemer, nedbrud eller andre problemer under spil på OpenFront, bedes du besøge vores fejlsøgningsside for hjælp til at diagnosticere og løse almindelige problemer:",
+    "troubleshooting_desc": "Hvis du oplever ydelsesproblemer, nedbrud eller andre problemer under spil på BrokenFront, bedes du besøge vores fejlsøgningsside for hjælp til at diagnosticere og løse almindelige problemer:",
     "ui_attack_ratio": "Angrebsforhold — Antallet af tropper, der bruges, når du angriber. Du kan justere angrebsforholdet med skyderen. Hvis du har flere angribende tropper end forsvarende, vil du tabe færre tropper under angrebet, mens færre angribende tropper øger skaden på dine tropper. Effekten gælder kun op til forholdet 2:1.",
     "ui_control": "Betjeningspanel",
     "ui_control_desc": "Kontrolpanelet indeholder følgende elementer:",
@@ -719,7 +719,7 @@
     "ui_wilderness": "Ødemark",
     "ui_your_team": "Dit hold:",
     "video_tutorial": "Videoguide",
-    "video_tutorial_title": "OpenFront.io Vejledning"
+    "video_tutorial_title": "BrokenFront Vejledning"
   },
   "host_modal": {
     "anonymous_players": "Anonyme spillere",
@@ -778,14 +778,14 @@
     "got_it": "Forstået",
     "how": "Hvordan",
     "later": "Senere",
-    "modal_desc": "Din browser understøtter ikke fuldskærm, men du kan tilføje OpenFront til din startskærm for en fordybende oplevelse:",
+    "modal_desc": "Din browser understøtter ikke fuldskærm, men du kan tilføje BrokenFront til din startskærm for en fordybende oplevelse:",
     "modal_title": "Fuldskærm på iOS",
     "never": "Aldrig",
     "step_add_to_home_label": "Føj til Startskærm",
     "step_open": "Åbn fra din startskærm – åbner i fuldskærm uden adresselinjen",
     "step_scroll_and_tap": "Rul ned og tryk",
     "step_share": "Tryk på Del-knappen i din browser",
-    "text": "For fuldskærm, tilføj OpenFront til din startskærm"
+    "text": "For fuldskærm, tilføj BrokenFront til din startskærm"
   },
   "kick_reason": {
     "admin": "Smidt ud af en administrator",
@@ -832,7 +832,7 @@
   "main": {
     "account": "Konto",
     "clans": "Klaner",
-    "copyright": "© OpenFront™ og bidragydere",
+    "copyright": "© BrokenFront og bidragydere",
     "create": "Opret Lobby",
     "discord_avatar_alt": "Discord profilavatar",
     "github": "GitHub",
@@ -851,7 +851,7 @@
     "solo": "Solo",
     "store": "Butik",
     "terms_of_service": "Servicevilkår",
-    "title": "OpenFront (ALPHA)",
+    "title": "BrokenFront (ALPHA)",
     "troubleshooting": "Fejlfinding",
     "user_avatar_alt": "{username}s avatar",
     "wiki": "Wiki",
@@ -1018,7 +1018,7 @@
   },
   "news_box": {
     "dismiss": "Afvis",
-    "firefox_warning": "OpenFront.io fungerer ikke godt med [Firefox-baserede browsere](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). Vi anbefaler dig at bruge en [Chromium-baseret browser](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) for den bedste ydeevne.",
+    "firefox_warning": "BrokenFront fungerer ikke godt med [Firefox-baserede browsere](https://simple.wikipedia.org/wiki/Web_browsers_based_on_Firefox). Vi anbefaler dig at bruge en [Chromium-baseret browser](https://en.wikipedia.org/wiki/Chromium_(web_browser)#Browsers_based_on_Chromium) for den bedste ydeevne.",
     "go_to_item": "Gå til element {num}",
     "news": "NYHEDER",
     "tournament": "TURNERING",
@@ -1304,7 +1304,7 @@
     "browser": "Browser",
     "canvas_2d_no_gpu": "Canvas 2D (ingen GPU)",
     "charging": "Oplader",
-    "chromium_tip": "OpenFront kører bedst på Chromium-baserede browsere.",
+    "chromium_tip": "BrokenFront kører bedst på Chromium-baserede browsere.",
     "copied_to_clipboard": "Information kopieret til udklipsholderen! Du er velkommen til at dele det på vores Discord hvis du har brug for hjælp.",
     "device_pixel_ratio": "Enhedens Pixel Ratio",
     "environment": "Miljø",
@@ -1493,7 +1493,7 @@
     "other_won": "{player} har vundet!",
     "requeue": "Spil igen",
     "spectate": "Forsæt som tilskuer",
-    "support_openfront": "Støt OpenFront!",
+    "support_openfront": "Støt BrokenFront!",
     "territory_pattern": "Køb et territoriums-skin for at spille uden annoncer!",
     "wishlist": "Føj til ønskelisten på Steam!",
     "you_won": "Du Vandt!",

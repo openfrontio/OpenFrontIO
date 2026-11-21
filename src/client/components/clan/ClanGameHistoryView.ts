@@ -274,7 +274,7 @@ export class ClanGameHistoryView extends LitElement {
               @click=${() => this.setFilter(tab.key)}
               class="grow ${basis} px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${
                 active
-                  ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30"
+                  ? "bg-brand/20 text-brand-light border border-brand/30"
                   : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"
               }"
             >
@@ -467,7 +467,7 @@ export class ClanGameHistoryView extends LitElement {
               title=${translateText("game_list.stats")}
               aria-label=${translateText("game_list.stats")}
               @click=${() => this.showStats(game.gameId)}
-              class="inline-flex w-8 h-8 items-center justify-center text-white bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
+              class="inline-flex w-8 h-8 items-center justify-center text-white bg-brand hover:bg-brand-light active:bg-brand/80 rounded-lg transition-all"
             >
               <img
                 src=${statsIcon}
@@ -483,7 +483,7 @@ export class ClanGameHistoryView extends LitElement {
               title=${translateText("common.click_to_copy")}
               aria-label=${translateText("common.click_to_copy")}
               @click=${() => this.copyGameLink(game.gameId)}
-              class="inline-flex w-8 h-8 items-center justify-center text-white bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
+              class="inline-flex w-8 h-8 items-center justify-center text-white bg-brand hover:bg-brand-light active:bg-brand/80 rounded-lg transition-all"
             >
               <img
                 src=${linkIcon}
@@ -501,7 +501,7 @@ export class ClanGameHistoryView extends LitElement {
               title=${translateText("clan_modal.history_watch_replay")}
               aria-label=${translateText("clan_modal.history_watch_replay")}
               @click=${() => this.watchReplay(game.gameId)}
-              class="inline-flex w-8 h-8 items-center justify-center text-white bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
+              class="inline-flex w-8 h-8 items-center justify-center text-white bg-brand hover:bg-brand-light active:bg-brand/80 rounded-lg transition-all"
             >
               <img
                 src=${replayIcon}
