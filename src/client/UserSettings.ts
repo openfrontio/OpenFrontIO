@@ -307,6 +307,50 @@ function parseLoadout(value: unknown): CosmeticLoadout | null {
   };
 }
 
+// Storage can be unusable: browsers that block site data throw a SecurityError
+// as soon as `localStorage` is read, and some Android WebViews expose it as
+// null. Settings then fall back to their defaults and to the in-memory cache
+// for the session, instead of every settings read throwing.
+function settingsStorage(): Storage | null {
+  try {
+    return globalThis.localStorage ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function readStored(key: string): string | null {
+  try {
+    return settingsStorage()?.getItem(key) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Returns false when the value could not be persisted. */
+function writeStored(key: string, value: string): boolean {
+  try {
+    const storage = settingsStorage();
+    if (storage === null) return false;
+    storage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Returns false when the value could not be removed from storage. */
+function removeStored(key: string): boolean {
+  try {
+    const storage = settingsStorage();
+    if (storage === null) return false;
+    storage.removeItem(key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export class UserSettings {
   private static cache = new Map<string, string | null>();
   /** publicId of the logged-in player, or null when logged out. */
@@ -329,12 +373,12 @@ export class UserSettings {
     const settings = new UserSettings();
     if (playerId !== null) {
       for (const key of PER_PLAYER_KEYS) {
-        const bare = localStorage.getItem(key);
+        const bare = readStored(key);
         if (bare === null) continue;
         const scopedKey = `${key}:${playerId}`;
-        localStorage.setItem(scopedKey, bare);
+        writeStored(scopedKey, bare);
         UserSettings.cache.set(scopedKey, bare);
-        localStorage.removeItem(key);
+        removeStored(key);
         UserSettings.cache.set(key, null);
       }
     }
@@ -373,29 +417,37 @@ export class UserSettings {
   private getCached(key: string): string | null {
     const storageKey = this.storageKey(key);
     if (!UserSettings.cache.has(storageKey)) {
-      UserSettings.cache.set(storageKey, localStorage.getItem(storageKey));
+      UserSettings.cache.set(storageKey, readStored(storageKey));
     }
     return UserSettings.cache.get(storageKey) ?? null;
   }
 
   // Change events always use the base key — listeners subscribe with the
   // exported key constants, not the per-player storage key.
-  private setCached(key: string, value: string, emitChange: boolean = true) {
+  // Both return whether storage took the change; the cache always does, so
+  // the value holds for the session even when it cannot be persisted.
+  private setCached(
+    key: string,
+    value: string,
+    emitChange: boolean = true,
+  ): boolean {
     const storageKey = this.storageKey(key);
-    localStorage.setItem(storageKey, value);
+    const persisted = writeStored(storageKey, value);
     UserSettings.cache.set(storageKey, value);
     if (emitChange) {
       this.emitChange(key, value);
     }
+    return persisted;
   }
 
-  public removeCached(key: string, emitChange: boolean = true) {
+  public removeCached(key: string, emitChange: boolean = true): boolean {
     const storageKey = this.storageKey(key);
-    localStorage.removeItem(storageKey);
+    const persisted = removeStored(storageKey);
     UserSettings.cache.set(storageKey, null);
     if (emitChange) {
       this.emitChange(key, null);
     }
+    return persisted;
   }
 
   private getBool(key: string, defaultValue: boolean): boolean {
@@ -651,15 +703,15 @@ export class UserSettings {
 
   // For development only. Used for testing patterns, set in the console manually.
   getDevOnlyPattern(): PlayerPattern | undefined {
-    const data = localStorage.getItem("dev-pattern") ?? undefined;
+    const data = readStored("dev-pattern") ?? undefined;
     if (data === undefined) return undefined;
     return {
       name: "dev-pattern",
       patternData: data,
       colorPalette: {
         name: "dev-color-palette",
-        primaryColor: localStorage.getItem("dev-primary") ?? "#ffffff",
-        secondaryColor: localStorage.getItem("dev-secondary") ?? "#000000",
+        primaryColor: readStored("dev-primary") ?? "#ffffff",
+        secondaryColor: readStored("dev-secondary") ?? "#000000",
       },
     } satisfies PlayerPattern;
   }
@@ -711,7 +763,7 @@ export class UserSettings {
   // For development only. Crown image URL for testing, set in the console
   // manually (localStorage "dev-crown"), like getDevOnlyPattern.
   getDevOnlyCrown(): string | undefined {
-    return localStorage.getItem("dev-crown") ?? undefined;
+    return readStored("dev-crown") ?? undefined;
   }
 
   /** Returns the selected crown name, or null if none is selected. */
@@ -1096,10 +1148,10 @@ export class UserSettings {
    * version without a reset it did not need and a returning player is reset
    * exactly once however many times the page reloads.
    *
-   * The stamp is written LAST. A throw anywhere in resetAudio -- localStorage
-   * full, or unavailable in a hardened browser -- then leaves the version
-   * unspent and the next load tries again, rather than recording a reset that
-   * did not happen.
+   * The stamp is written LAST. A throw anywhere in resetAudio, or storage that
+   * will not take the stamp (full, or unavailable in a hardened browser), then
+   * leaves the version unspent and the next load tries again, rather than
+   * recording a reset that did not happen.
    *
    * @returns whether this call performed the reset.
    */
@@ -1251,11 +1303,9 @@ export class UserSettings {
   setLobbyPresets(presets: readonly unknown[]): boolean {
     try {
       if (presets.length === 0) {
-        this.removeCached(LOBBY_PRESETS_KEY);
-      } else {
-        this.setString(LOBBY_PRESETS_KEY, JSON.stringify(presets));
+        return this.removeCached(LOBBY_PRESETS_KEY);
       }
-      return true;
+      return this.setCached(LOBBY_PRESETS_KEY, JSON.stringify(presets));
     } catch {
       return false;
     }
