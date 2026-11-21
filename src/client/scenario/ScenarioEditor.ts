@@ -1167,7 +1167,8 @@ export class ScenarioEditor extends LitElement {
       choice(k, this.terrainKind, label, () => (this.terrainKind = k));
     return html`
       <div
-        class="absolute bottom-2 left-2 flex w-64 flex-col gap-2 rounded-lg bg-zinc-900/90 p-3 text-sm"
+        class="absolute bottom-2 left-2 flex w-64 flex-col gap-2 rounded-lg bg-zinc-900/90 p-3 text-sm ${this.starting ? "opacity-50" : ""}"
+        ?inert=${this.starting}
       >
         <div class="flex gap-1">
           ${tool("pan", "scenario_editor.tool_pan")}
@@ -1268,8 +1269,11 @@ export class ScenarioEditor extends LitElement {
         </button>
       </li>`;
     return html`
+      <!-- Inert while a test play starts, whose export reads the document:
+           applyEdit ignores edits then, and an input mustn't show one. -->
       <div
-        class="absolute top-14 right-2 flex max-h-[calc(100%-4.5rem)] w-64 flex-col gap-2 overflow-y-auto rounded-lg bg-zinc-900/90 p-3 text-sm"
+        class="absolute top-14 right-2 flex max-h-[calc(100%-4.5rem)] w-64 flex-col gap-2 overflow-y-auto rounded-lg bg-zinc-900/90 p-3 text-sm ${this.starting ? "opacity-50" : ""}"
+        ?inert=${this.starting}
       >
         <div class="flex items-center justify-between gap-2">
           <h2 class="font-semibold">
