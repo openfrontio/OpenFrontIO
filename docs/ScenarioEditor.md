@@ -1,8 +1,9 @@
 # Scenario editor
 
 Status: design, 2026-11-19. The engine's editor mode, the document model
-(with undo and local drafts) and the editor page are built. The tools, PNG
-import and test play are not.
+(with undo and local drafts), the editor page, the terrain and territory
+tools, the nations panel and bundle export and loading are built. The
+structure and settings tools, PNG import and test play are not.
 
 ## What it is
 
@@ -134,6 +135,16 @@ ScenarioBundle
 
 The bundle is gzipped as a whole. For scale: a late-game World snapshot is
 about 2.7 MB raw, and terrain is one byte per tile and compresses well.
+
+Before gzip, each section is a frame: a little-endian u32 length, then the
+bytes (`ScenarioBundle.ts`). The header and the manifest are JSON. The header
+comes first in every format, so any build can read its `format` and refuse
+one it doesn't know. The thumbnail is drawn from the 4x map as the map
+generator draws a stock map's; Safari can't encode webp, so it can't export.
+The hash is SHA-256 over every frame after the header, so the header can
+carry it. The header's nations are only for showing before play; the
+snapshot's own nations are what play. zbin is not used: it has no version and
+is tied to the build.
 
 The map files in the bundle are the finished terrain, so the snapshot's
 terrain diff is empty. Shipping a blank map and letting the diff carry the
@@ -304,7 +315,8 @@ value, `Custom`, that means "the files came with the game start". The
 snapshot's terrain hash still guarantees the files match.
 
 The client's `GameMapLoader` gets a way to answer for `Custom` from a loaded
-bundle instead of from `resources/maps`.
+bundle instead of from `resources/maps`: `FetchGameMapLoader.setCustomMap`,
+which `useScenarioMap` calls with the bundle's files and its thumbnail.
 
 ### Editor mode in the worker
 
@@ -354,7 +366,10 @@ be undone. Instead:
    `Custom` map whose manifest is the one the engine started on with the
    three sizes' tile counts redone.
 2. Start a second engine on those map files, replay everything except
-   terrain from the copy, send `finalize`, snapshot, and discard it.
+   terrain from the copy, send `finalize`, snapshot, and discard it. In the
+   browser that engine is a second worker (`exportScenario`). It starts on
+   the editor's start info with the document's settings, which the snapshot
+   keeps, and the snapshot records the build's commit, as the header does.
 
 The second engine is what makes the snapshot's terrain diff empty.
 
@@ -493,9 +508,13 @@ covers every way of saving or sharing one.
 
 A bundle is another player's upload that the client decodes and restores.
 Clients cap its inflated size (as `SavedGamesApi` does for shared saves),
-validate every section against its schema, and verify the hash. Snapshot
-restore already validates each record with zod; that path gets a hostile
-input review before scenarios are shareable.
+validate every section against its schema, and verify the hash. The cap is
+21/16 bytes a tile for the map files plus 5 for the snapshot, about 166 MB on
+a 25M-tile map; export refuses a bundle over it. Measured on exported maps, a
+snapshot's tile lists take one byte a tile owned in one block and four with
+every tile a random one of 400 nations'. Snapshot restore already validates
+each record with zod; that path gets a hostile input review before scenarios
+are shareable.
 
 ## Order of work
 
