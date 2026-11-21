@@ -8,9 +8,9 @@ import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   DESKTOP_TUTORIAL_VIDEO_URL,
+  exitGame,
   getGamesPlayed,
   getTranslatedPlayerTeamLabel,
-  homeHref,
   isInIframe,
   translateText,
   TUTORIAL_VIDEO_URL,
@@ -63,7 +63,6 @@ import {
 } from "../../ProvisionalXpAtDeath";
 import { requeueModeForRankedType } from "../../RequeueUrl";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
-import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
 import { shareGame } from "../../utilities/ShareGame";
 import { GameView } from "../../view";
@@ -530,9 +529,10 @@ export class WinModal extends LitElement implements Controller {
   }
 
   innerHtml() {
-    // The Steam desktop build has nothing to wishlist — fall through to the
-    // other promos so the box is never empty.
-    const canWishlist = !steamSDK.isOnSteam();
+    // The Steam desktop build has nothing to wishlist, and the Android app
+    // must not send the player to another store — fall through to the other
+    // promos so the box is never empty.
+    const canWishlist = !isDesktopShell();
 
     if (isInIframe()) {
       return canWishlist ? this.steamWishlist() : this.discordDisplay();
@@ -639,8 +639,8 @@ export class WinModal extends LitElement implements Controller {
                 .priceSoft=${pattern?.priceSoft ?? null}
                 .rarity=${pattern?.rarity ?? "common"}
                 .itemName=${cosmeticSelectionLabel(resolved)}
-                .onPurchaseHard=${() => purchaseCosmetic(resolved, "hard")}
-                .onPurchaseSoft=${() => purchaseCosmetic(resolved, "soft")}
+                .onPurchaseHard=${() => purchaseCosmetic(resolved, "hard", { kind: "post_game" })}
+                .onPurchaseSoft=${() => purchaseCosmetic(resolved, "soft", { kind: "post_game" })}
               ></purchase-button>
             </div>
           `;
@@ -1008,7 +1008,7 @@ export class WinModal extends LitElement implements Controller {
 
   private _handleExit() {
     this.hide();
-    window.location.href = homeHref();
+    exitGame();
   }
 
   private _handleRequeue() {

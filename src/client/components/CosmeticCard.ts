@@ -1,8 +1,14 @@
 import { Subscription } from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { activeSale, ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
+import {
+  activeSale,
+  isNew,
+  ResolvedCosmetic,
+  translateCosmetic,
+} from "../Cosmetics";
 import { isDesktopShell } from "../DesktopShell";
+import { sellsOnlyThroughPlay } from "../Payments";
 import { translateText } from "../Utils";
 import "./CosmeticInfo";
 import {
@@ -256,6 +262,10 @@ export class CosmeticCard extends LitElement {
   @property({ type: Boolean })
   interactive = true;
 
+  /** The store's "New" badge; off everywhere else (e.g. the post-game offer). */
+  @property({ type: Boolean })
+  showNewBadge = false;
+
   @property({ type: String })
   previewSize: "card" | "detail" = "card";
 
@@ -429,18 +439,23 @@ export class CosmeticCard extends LitElement {
    * The sale's discount as a band across the artwork's top-right corner,
    * while one runs; the same for a flash sale's item, which the card's glow
    * and timer mark instead. The "?" moved to the top-left to give it the
-   * corner (CosmeticInfo).
+   * corner (CosmeticInfo); a new item's band shares it (renderNewBadge).
+   * With New stacked under it, the pair sits further into the corner so the
+   * two together cover less of the artwork.
    */
   private renderSaleRibbon(active: ResolvedCosmetic) {
     if (active.relationship !== "purchasable") return nothing;
     const sale = activeSale(active.cosmetic);
     if (sale === null) return nothing;
+    const place = this.showsNew(active)
+      ? "-right-[26px] top-2 sm:-right-[34px] sm:top-3"
+      : "-right-[26px] top-3.5 sm:-right-[34px] sm:top-5";
     return html`<span
       data-cosmetic-sale=${sale.kind === "flash" ? "flash" : "sale"}
       class="pointer-events-none absolute right-0 top-0 z-[5] h-16 w-16 overflow-hidden rounded-tr-lg sm:h-[88px] sm:w-[88px]"
     >
       <span
-        class="absolute -right-[26px] top-3.5 w-24 rotate-45 bg-aquarius py-0.5 text-center text-xs font-black tabular-nums text-deep-navy shadow-[0_2px_6px_rgba(0,0,0,0.5)] sm:-right-[34px] sm:top-5 sm:w-[130px] sm:py-[3px] sm:text-[15px]"
+        class="absolute ${place} w-24 rotate-45 bg-aquarius py-0.5 text-center text-xs font-black tabular-nums text-deep-navy shadow-[0_2px_6px_rgba(0,0,0,0.5)] sm:w-[130px] sm:py-[3px] sm:text-[15px]"
         >${translateText("store.sale_percent_off", {
           percent: sale.percentOff,
         })}</span
@@ -448,24 +463,68 @@ export class CosmeticCard extends LitElement {
     </span>`;
   }
 
-  /** A flash sale's item: the time left, fading up from the artwork's foot. */
+  /**
+   * "New" on an item added to the store in the last 14 days, while the player
+   * can buy it: a gold band in the artwork's top-right corner, so every
+   * reason to look at a card reads in one place. On its own it takes the
+   * sale band's place; with a sale running the discount keeps that outer
+   * band and New runs parallel inside it, a little slimmer. Masters gold, not
+   * the sale's blue, so the two read as different things; its dark edge
+   * keeps it apart from a legendary card's gold border.
+   */
+  /** Whether this card marks its item New (renderNewBadge). */
+  private showsNew(active: ResolvedCosmetic): boolean {
+    return (
+      this.showNewBadge &&
+      active.relationship === "purchasable" &&
+      isNew(active.cosmetic)
+    );
+  }
+
+  private renderNewBadge(active: ResolvedCosmetic) {
+    if (!this.showsNew(active)) return nothing;
+    const band =
+      "absolute rotate-45 border-y border-deep-navy/60 bg-cyber-yellow text-center font-black uppercase tracking-wide text-deep-navy shadow-[0_2px_6px_rgba(0,0,0,0.5)]";
+    if (activeSale(active.cosmetic) === null) {
+      return html`<span
+        data-cosmetic-new="outer"
+        class="pointer-events-none absolute right-0 top-0 z-[5] h-16 w-16 overflow-hidden rounded-tr-lg sm:h-[88px] sm:w-[88px]"
+      >
+        <span
+          class="${band} -right-[26px] top-3.5 w-24 py-0.5 text-xs sm:-right-[34px] sm:top-5 sm:w-[130px] sm:py-[3px] sm:text-[15px]"
+          >${translateText("store.new_badge")}</span
+        >
+      </span>`;
+    }
+    return html`<span
+      data-cosmetic-new="inner"
+      class="pointer-events-none absolute right-0 top-0 z-[4] h-[88px] w-[88px] overflow-hidden rounded-tr-lg sm:h-[120px] sm:w-[120px]"
+    >
+      <span
+        class="${band} -right-[21px] top-[19px] w-[120px] py-px text-[10px] sm:-right-[24px] sm:top-[30px] sm:w-[150px] sm:py-0.5 sm:text-xs"
+        >${translateText("store.new_badge")}</span
+      >
+    </span>`;
+  }
+
+  /** A flash sale's item: when its deal ends, fading up from the artwork's foot. */
   private renderFlashTimer(active: ResolvedCosmetic) {
     const sale = this.flashSale(active);
     if (sale === null) return nothing;
     return html`<div
       data-cosmetic-flash-timer
-      class="pointer-events-none absolute inset-x-0 bottom-0 z-[3] rounded-b-lg bg-gradient-to-t from-deep-navy/95 to-transparent pb-1.5 pt-5 text-center leading-none"
+      class="pointer-events-none absolute inset-x-0 bottom-0 z-[3] rounded-b-lg bg-gradient-to-t from-deep-navy via-deep-navy/90 via-70% to-transparent pb-1.5 pt-6 text-center leading-none"
     >
+      <div
+        class="mb-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-aquarius [text-shadow:0_1px_2px_rgba(0,0,0,0.9)]"
+      >
+        ${translateText("store.flash_ends_in")}
+      </div>
       <sale-countdown
         class="text-base font-black tabular-nums text-white"
         format="clock"
         .endsAt=${sale.endsAt}
       ></sale-countdown>
-      <div
-        class="mt-0.5 text-[9px] font-black uppercase tracking-[0.14em] text-aquarius"
-      >
-        ${translateText("store.flash_left")}
-      </div>
     </div>`;
   }
 
@@ -493,8 +552,12 @@ export class CosmeticCard extends LitElement {
       aiDisclosed?: boolean;
       priceHard?: number;
     } | null;
+    // Not in the Android app, where Play prices Plutonium in the player's own
+    // currency and no dollar figure may appear.
     const usdValue =
-      priced?.priceHard !== undefined ? priced.priceHard / 20 : undefined;
+      priced?.priceHard !== undefined && !sellsOnlyThroughPlay()
+        ? priced.priceHard / 20
+        : undefined;
     // A subscription lists its perks as text, which wraps to more lines than a
     // square box holds once cards are phone-width — let it take the height it
     // needs rather than clipping the last perk.
@@ -514,6 +577,7 @@ export class CosmeticCard extends LitElement {
           ></cosmetic-preview>
         </div>
         ${this.renderSaleRibbon(active)} ${this.renderFlashTimer(active)}
+        ${this.renderNewBadge(active)}
         ${
           isEquipped
             ? html`<span

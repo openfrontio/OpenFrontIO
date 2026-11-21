@@ -114,6 +114,10 @@ const CosmeticSchema = z.object({
   listPriceSoft: z.number().optional(),
   listPriceHard: z.number().optional(),
   promotion: PromotionSchema.optional(),
+  // Present only while the item is new to the store (added in the last 14
+  // days): when it stops being new. Compare with the clock (isNew), since
+  // the catalog is cached.
+  newUntil: z.string().optional(),
   artist: z.string().optional(),
   // Whether the artist declared they used generative AI making this. Present only when they
   // actually answered: the catalogue omits the field for everything nobody was asked about, so
@@ -479,6 +483,9 @@ export const PackSchema = CosmeticSchema.extend({
   currency: z.enum(["hard", "soft"]),
   amount: z.number().int().positive(),
   bonusAmount: z.number().int().nonnegative(),
+  // The Google Play product this pack is sold as in the Android app. Only
+  // hard-currency packs sold on Play carry one; the app lists no other pack.
+  googleProductId: z.string().optional(),
 });
 
 // One member of a cosmetic pack: a reference to a cosmetic elsewhere in the
@@ -508,6 +515,8 @@ export const CosmeticPackSchema = z.object({
   // Present only while a sale covers the pack; priceHard is then the sale price.
   listPriceHard: z.number().optional(),
   promotion: PromotionSchema.optional(),
+  // As on a cosmetic: present only while the pack is new.
+  newUntil: z.string().optional(),
   rarity: z
     .enum(["common", "uncommon", "rare", "epic", "legendary"])
     .or(z.string()),
@@ -578,6 +587,9 @@ export const CosmeticsSchema = z.object({
   // Price to put a listed lobby in the public queue (host modal's Queue
   // button). Optional like tribeNames; the button hides when absent.
   lobbyQueue: z.object({ priceHard: z.number() }).optional(),
+  // Price to boost a scheduled public lobby to the front of its queue (join
+  // modal's Boost button). The button hides when absent.
+  mapBoost: z.object({ priceHard: z.number() }).optional(),
   // Every sale running when the catalog was served, for the store banner.
   // Optional: an older cosmetics.json has none.
   promotions: PromotionSchema.array().optional(),

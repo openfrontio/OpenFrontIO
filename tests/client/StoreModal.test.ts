@@ -1,7 +1,9 @@
 import type { Cosmetics, Effect } from "@openfront/shared/CosmeticSchemas";
 import { nothing, type LitElement } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ClientEnv } from "../../src/client/ClientEnv";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
+import type { CurrencyDisplay } from "../../src/client/components/CurrencyDisplay";
 import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
 import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
 import {
@@ -15,7 +17,9 @@ import {
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../src/client/Cosmetics";
+import { initNavigation } from "../../src/client/Navigation";
 import { saleCoversEverything, type StoreModal } from "../../src/client/Store";
+import type { StoreTracker } from "../../src/client/StoreTracking";
 import {
   EFFECTS_KEY,
   PATTERN_KEY,
@@ -611,6 +615,41 @@ describe("StoreModal cosmetic browser", () => {
     }
   });
 
+  it("still refetches when the store redraws after a sale ends, before its timer runs", async () => {
+    const running = {
+      patterns: {},
+      flags: {},
+      promotions: [
+        {
+          id: "1",
+          name: "Flash",
+          percentOff: 10,
+          endsAt: new Date(Date.now() + 60_000).toISOString(),
+        },
+      ],
+    } as unknown as Cosmetics;
+    vi.mocked(fetchCosmetics).mockResolvedValue(running);
+    const modal = await openStoreOnCosmetic("patterns");
+    vi.useFakeTimers({ now: Date.now() });
+    try {
+      // Arms the sale-end timer on the fake clock.
+      modal.requestUpdate();
+      await modal.updateComplete;
+      vi.setSystemTime(Date.now() + 61_000);
+      modal.requestUpdate();
+      await modal.updateComplete;
+      vi.mocked(fetchCosmetics).mockClear();
+      vi.mocked(fetchCosmetics).mockResolvedValue({
+        promotions: [],
+      } as unknown as Cosmetics);
+      // Not the old timeout's minute: at once.
+      vi.advanceTimersByTime(1);
+      expect(fetchCosmetics).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("refetches on reopen when the kept catalog still has an ended sale", async () => {
     const ended = {
       patterns: {},
@@ -816,6 +855,28 @@ describe("StoreModal cosmetic browser", () => {
       hero.querySelector<CosmeticCard>("cosmetic-card")!.resolved.key,
     ).toBe(zap.key);
     expect(hero.querySelector("sale-countdown")).toBeTruthy();
+    // One label for the one deadline, on the banner, the hero and the card:
+    // when this deal ends, not when the next item starts.
+    for (const el of [
+      modal.querySelector("[data-store-flash-banner]")!,
+      hero,
+      hero.querySelector("[data-cosmetic-flash-timer]")!,
+    ]) {
+      expect(el.textContent).toContain("store.flash_ends_in");
+    }
+    expect(modal.textContent).not.toContain("store.flash_next_in");
+    expect(modal.textContent).not.toContain("store.flash_left");
+    // The price and the way to pay sit in the hero, beside the offer, at
+    // full size; the hero's card carries no second buy button.
+    const heroBuy = hero.querySelector<PurchaseButton>(
+      "[data-store-flash-buy] purchase-button",
+    )!;
+    expect(heroBuy).toBeTruthy();
+    expect(heroBuy.priceHard).toBe(
+      (zap.cosmetic as { priceHard: number }).priceHard,
+    );
+    expect(hero.querySelector("cosmetic-card purchase-button")).toBeNull();
+    expect(hero.querySelectorAll("purchase-button")).toHaveLength(1);
     // The flash item leads in the hero, not again in the grid below it.
     const gridKeys = [
       ...modal.querySelectorAll<CosmeticCard>(
@@ -875,6 +936,334 @@ describe("StoreModal cosmetic browser", () => {
     expect(modal.querySelector('[data-store-subtab="patterns"]')).toBeTruthy();
   });
 
+  describe("New tab", () => {
+    const soon = () => new Date(Date.now() + 3 * 86_400_000).toISOString();
+    const later = () => new Date(Date.now() + 10 * 86_400_000).toISOString();
+    const withNew = (
+      resolved: ResolvedCosmetic,
+      newUntil: string,
+      key = resolved.key,
+    ): ResolvedCosmetic => ({
+      ...resolved,
+      cosmetic: { ...(resolved.cosmetic as object), newUntil } as never,
+      key,
+    });
+    const keys = (modal: StoreModal) =>
+      [...modal.querySelectorAll<CosmeticCard>("cosmetic-card")].map(
+        (c) => c.resolved.key,
+      );
+
+    it("lists new cosmetics, effects and bundles, newest first", async () => {
+      const newFlag = withNew(flag, soon());
+      const newTrail = withNew(trail("comet"), later());
+      const newBundle = withNew(starterBundle, soon());
+      resolvedCatalog = [red, blue, newFlag, newTrail, newBundle];
+      const modal = await openStoreOnCosmetic("patterns");
+
+      const newTab = modal.querySelector<HTMLButtonElement>(
+        '[data-store-subtab="new"]',
+      )!;
+      expect(newTab.textContent).toContain("store.new_tab");
+      // New comes first in the sub-tab bar.
+      expect(
+        modal
+          .querySelector("[data-store-subtab]")!
+          .getAttribute("data-store-subtab"),
+      ).toBe("new");
+      newTab.click();
+      await modal.updateComplete;
+      expect(keys(modal)[0]).toBe(newTrail.key);
+      expect(new Set(keys(modal))).toEqual(
+        new Set([newTrail.key, newFlag.key, newBundle.key]),
+      );
+      expect(
+        (
+          modal as unknown as { placementFor(el: Element): unknown }
+        ).placementFor(product(modal, newFlag.key)!),
+      ).toEqual({
+        kind: "tab",
+        tab: "cosmetics",
+        subTab: "new",
+      });
+    });
+
+    it("hides the New tab when nothing is new", async () => {
+      resolvedCatalog = [
+        red,
+        withNew(flag, new Date(Date.now() - 1000).toISOString()),
+      ];
+      const modal = await openStoreOnCosmetic("patterns");
+      expect(modal.querySelector('[data-store-subtab="new"]')).toBeNull();
+    });
+
+    it("leaves out a new item the player already owns", async () => {
+      resolvedCatalog = [
+        { ...withNew(flag, soon()), relationship: "owned" },
+        withNew(red, soon(), "pattern:fresh:red"),
+      ];
+      const modal = await openStoreOnCosmetic("patterns");
+      modal
+        .querySelector<HTMLButtonElement>('[data-store-subtab="new"]')!
+        .click();
+      await modal.updateComplete;
+      expect(keys(modal)).toEqual(["pattern:fresh:red"]);
+    });
+
+    it("drops the badges, and the New tab, when the items stop being new", async () => {
+      const until = new Date(Date.now() + 60_000).toISOString();
+      const fresh = withNew(red, until, "pattern:fresh:red");
+      (fresh.cosmetic as { name: string }).name = "fresh";
+      resolvedCatalog = [red, fresh, withNew(flag, until)];
+      const modal = await openStoreOnCosmetic("patterns");
+      modal
+        .querySelector<HTMLButtonElement>('[data-store-subtab="new"]')!
+        .click();
+      await modal.updateComplete;
+      expect(new Set(keys(modal))).toEqual(new Set([flag.key, fresh.key]));
+      expect(modal.querySelectorAll("[data-cosmetic-new]")).toHaveLength(2);
+
+      vi.useFakeTimers({ now: Date.now() });
+      try {
+        // Drop the real timer; the redraw re-arms it on the fake clock.
+        (modal as unknown as { clearNewEnd(): void }).clearNewEnd();
+        modal.requestUpdate();
+        await modal.updateComplete;
+        vi.advanceTimersByTime(61_000);
+        await modal.updateComplete;
+        expect(modal.querySelector('[data-store-subtab="new"]')).toBeNull();
+        expect(keys(modal)).toEqual([red.key, fresh.key]);
+        await Promise.all(
+          [...modal.querySelectorAll<CosmeticCard>("cosmetic-card")].map(
+            (c) => c.updateComplete,
+          ),
+        );
+        expect(modal.querySelector("[data-cosmetic-new]")).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("opens straight on the New tab with sub=new", async () => {
+      const newFlag = withNew(flag, soon());
+      resolvedCatalog = [red, newFlag];
+      store = document.createElement("store-modal") as StoreModal;
+      store.inline = true;
+      document.body.appendChild(store);
+      await store.updateComplete;
+      store.open({ tab: "cosmetics", sub: "new" });
+      await vi.waitFor(() =>
+        expect(store!.querySelector("cosmetic-card")).toBeTruthy(),
+      );
+      expect(keys(store)).toEqual([newFlag.key]);
+    });
+
+    it("keeps sub=new while the catalog is still loading", async () => {
+      const newFlag = withNew(flag, soon());
+      resolvedCatalog = [red, newFlag];
+      // Like the real resolver: no catalog yet, nothing to list.
+      vi.mocked(resolveCosmetics).mockImplementation((cosmetics) =>
+        cosmetics === null ? [] : resolvedCatalog,
+      );
+      let deliver!: (catalog: Cosmetics) => void;
+      vi.mocked(fetchCosmetics).mockReturnValueOnce(
+        new Promise((resolve) => (deliver = resolve)),
+      );
+      store = document.createElement("store-modal") as StoreModal;
+      store.inline = true;
+      document.body.appendChild(store);
+      await store.updateComplete;
+      store.open({ tab: "cosmetics", sub: "new" });
+      await store.updateComplete;
+      deliver({} as Cosmetics);
+      await vi.waitFor(() =>
+        expect(store!.querySelector("cosmetic-card")).toBeTruthy(),
+      );
+      expect(keys(store)).toEqual([newFlag.key]);
+    });
+
+    it("shows a bundle's contents from the New tab", async () => {
+      const newBundle = withNew(starterBundle, soon());
+      resolvedCatalog = [red, newBundle];
+      const modal = await openStoreOnCosmetic("patterns");
+      modal
+        .querySelector<HTMLButtonElement>('[data-store-subtab="new"]')!
+        .click();
+      await modal.updateComplete;
+      card(modal, newBundle.key)!.onActivate!(newBundle);
+      await modal.updateComplete;
+      expect(modal.querySelector("pack-contents-dialog")).toBeTruthy();
+    });
+
+    /** Opens the New tab on one flag that stops being new in a minute. */
+    async function openNewTabExpiringSoon() {
+      const until = new Date(Date.now() + 60_000).toISOString();
+      resolvedCatalog = [red, withNew(flag, until)];
+      const modal = await openStoreOnCosmetic("patterns");
+      modal
+        .querySelector<HTMLButtonElement>('[data-store-subtab="new"]')!
+        .click();
+      await modal.updateComplete;
+      expect(keys(modal)).toEqual([flag.key]);
+      return modal;
+    }
+    const newEndTimer = (modal: StoreModal) =>
+      (modal as unknown as { newEndTimer: unknown }).newEndTimer;
+
+    it("drops expired items at once when the clock passes the deadline before the timer fires", async () => {
+      const modal = await openNewTabExpiringSoon();
+      vi.useFakeTimers({ now: Date.now() });
+      try {
+        // Arms the timer on the fake clock, a minute out.
+        modal.requestUpdate();
+        await modal.updateComplete;
+        // The clock jumps past the deadline; the timer is still a minute
+        // away when a redraw comes in.
+        vi.setSystemTime(Date.now() + 61_000);
+        modal.requestUpdate();
+        await modal.updateComplete;
+        vi.advanceTimersByTime(1);
+        await modal.updateComplete;
+        expect(modal.querySelector('[data-store-subtab="new"]')).toBeNull();
+        expect(keys(modal)).toEqual([red.key]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("drops expired items on a redraw with no timer armed", async () => {
+      const modal = await openNewTabExpiringSoon();
+      vi.useFakeTimers({ now: Date.now() });
+      try {
+        (modal as unknown as { clearNewEnd(): void }).clearNewEnd();
+        vi.setSystemTime(Date.now() + 61_000);
+        modal.requestUpdate();
+        await modal.updateComplete;
+        vi.advanceTimersByTime(1);
+        await modal.updateComplete;
+        expect(keys(modal)).toEqual([red.key]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("clears the New timer when the store is removed while open", async () => {
+      const modal = await openNewTabExpiringSoon();
+      modal.requestUpdate();
+      await modal.updateComplete;
+      const armed = newEndTimer(modal);
+      expect(armed).not.toBeNull();
+      const clear = vi.spyOn(globalThis, "clearTimeout");
+      try {
+        modal.remove();
+        expect(clear).toHaveBeenCalledWith(armed);
+      } finally {
+        clear.mockRestore();
+      }
+      expect(newEndTimer(modal)).toBeNull();
+    });
+
+    it("leaves the Effects tab's selection alone when an effect stops being new", async () => {
+      const until = new Date(Date.now() + 60_000).toISOString();
+      resolvedCatalog = [red, withNew(trail("comet"), until), atom];
+      const { store: modal } = await openEffectsStore();
+      vi.useFakeTimers({ now: Date.now() });
+      try {
+        // Drop the real timer; the redraw re-arms it on the fake clock.
+        (modal as unknown as { clearNewEnd(): void }).clearNewEnd();
+        modal.requestUpdate();
+        await modal.updateComplete;
+        const select = vi.spyOn(
+          modal as unknown as { selectVisible(groups: unknown): void },
+          "selectVisible",
+        );
+        const cardsDone = () =>
+          Promise.all(
+            [...modal.querySelectorAll<CosmeticCard>("cosmetic-card")].map(
+              (c) => c.updateComplete,
+            ),
+          );
+        await cardsDone();
+        expect(modal.querySelector("[data-cosmetic-new]")).toBeTruthy();
+        vi.advanceTimersByTime(61_000);
+        await modal.updateComplete;
+        await cardsDone();
+        expect(modal.querySelector("[data-cosmetic-new]")).toBeNull();
+        expect(select).not.toHaveBeenCalled();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("falls back to Skins when the latest fetch finds nothing new, even with an older one pending", async () => {
+      const modal = await openStoreOnCosmetic("patterns");
+      modal.close();
+      // A sale-end refetch from before still hangs…
+      vi.mocked(fetchCosmetics).mockReturnValueOnce(new Promise(() => {}));
+      void (
+        modal as unknown as { loadCatalog(): Promise<unknown> }
+      ).loadCatalog();
+      // …and the reopen's own fetch finds nothing new.
+      vi.mocked(refreshStaleCosmetics).mockReturnValueOnce(true);
+      vi.mocked(fetchCosmetics).mockResolvedValueOnce({} as Cosmetics);
+      modal.open({ tab: "cosmetics", sub: "new" });
+      await vi.waitFor(() =>
+        expect(
+          modal
+            .querySelector("[data-store-subtab].border-malibu-blue")
+            ?.getAttribute("data-store-subtab"),
+        ).toBe("patterns"),
+      );
+      await vi.waitFor(() => expect(keys(modal)[0]).toBe(red.key));
+    });
+
+    it("keeps sub=new while a stale catalog refreshes", async () => {
+      // The cached catalog has nothing new; the refreshed one does.
+      const cached = {} as Cosmetics;
+      const refreshed = {} as Cosmetics;
+      const newFlag = withNew(flag, soon());
+      vi.mocked(resolveCosmetics).mockImplementation((cosmetics) =>
+        cosmetics === refreshed ? [red, newFlag] : [red],
+      );
+      vi.mocked(fetchCosmetics).mockResolvedValueOnce(cached);
+      const modal = await openStoreOnCosmetic("patterns");
+      modal.close();
+
+      vi.mocked(refreshStaleCosmetics).mockReturnValueOnce(true);
+      let deliver!: (catalog: Cosmetics) => void;
+      vi.mocked(fetchCosmetics).mockReturnValueOnce(
+        new Promise((resolve) => (deliver = resolve)),
+      );
+      modal.open({ tab: "cosmetics", sub: "new" });
+      await modal.updateComplete;
+      // While it waits, the bar still shows New as the selected tab, and the
+      // empty grid says nothing is new rather than "No skins".
+      expect(
+        modal
+          .querySelector("[data-store-subtab].border-malibu-blue")
+          ?.getAttribute("data-store-subtab"),
+      ).toBe("new");
+      expect(modal.textContent).toContain("store.no_new_items");
+      expect(modal.textContent).not.toContain("store.no_skins");
+      deliver(refreshed);
+      await vi.waitFor(() => expect(keys(modal)).toEqual([newFlag.key]));
+    });
+
+    it("keeps its New timer, and its resolved catalog, across redraws", async () => {
+      const modal = await openNewTabExpiringSoon();
+      modal.requestUpdate();
+      await modal.updateComplete;
+      const armed = newEndTimer(modal);
+      expect(armed).not.toBeNull();
+      vi.mocked(resolveCosmetics).mockClear();
+      modal.requestUpdate();
+      await modal.updateComplete;
+      modal.requestUpdate();
+      await modal.updateComplete;
+      expect(newEndTimer(modal)).toBe(armed);
+      expect(resolveCosmetics).not.toHaveBeenCalled();
+    });
+  });
+
   it("tells a store-wide sale from one on selected items", () => {
     const promotion = { id: "s", name: "Sale", percentOff: 20, endsAt: "" };
     const catalog = (secondOnSale: boolean) =>
@@ -926,9 +1315,31 @@ describe("StoreModal cosmetic browser", () => {
     await clickHardPurchase(modal);
 
     await vi.waitFor(() =>
-      expect(purchaseCosmetic).toHaveBeenCalledWith(blue, "hard"),
+      expect(purchaseCosmetic).toHaveBeenCalledWith(
+        blue,
+        "hard",
+        expect.objectContaining({ kind: "tab", tab: "cosmetics" }),
+      ),
     );
     expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
+  });
+
+  it("still purchases, without a placement, when resolving it throws", async () => {
+    const modal = await openStoreOnCosmetic("patterns");
+    vi.spyOn(
+      modal as unknown as { placementFor(el: Element): unknown },
+      "placementFor",
+    ).mockImplementation(() => {
+      throw new Error("boom");
+    });
+
+    await focusCard(modal, blue.key);
+    await activateVariant(modal, blue.key);
+    await clickHardPurchase(modal);
+
+    await vi.waitFor(() =>
+      expect(purchaseCosmetic).toHaveBeenCalledWith(blue, "hard", undefined),
+    );
   });
 
   it("confirms the exact variant and price that initiated checkout", async () => {
@@ -945,7 +1356,11 @@ describe("StoreModal cosmetic browser", () => {
       .dispatchEvent(new CustomEvent("confirm"));
 
     await vi.waitFor(() =>
-      expect(purchaseCosmetic).toHaveBeenCalledWith(red, "hard"),
+      expect(purchaseCosmetic).toHaveBeenCalledWith(
+        red,
+        "hard",
+        expect.any(Object),
+      ),
     );
     expect(
       (
@@ -954,7 +1369,12 @@ describe("StoreModal cosmetic browser", () => {
         }
       ).priceHard,
     ).toBe(120);
-    expect(purchaseCosmetic).not.toHaveBeenCalledWith(blue, "hard");
+    expect(purchaseCosmetic).not.toHaveBeenCalledWith(
+      blue,
+      "hard",
+      expect.anything(),
+    );
+    expect(purchaseCosmetic).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem(PATTERN_KEY)).toBeNull();
   });
 
@@ -1078,7 +1498,11 @@ describe("StoreModal cosmetic browser", () => {
 
     expect(hydroCard.state).toBe("focused");
     await purchaseButton(modal, hydro.key).onPurchaseHard!();
-    expect(purchaseCosmetic).toHaveBeenCalledWith(hydro, "hard");
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      hydro,
+      "hard",
+      expect.any(Object),
+    );
     expect(localStorage.getItem(EFFECTS_KEY)).toBeNull();
   });
 
@@ -1256,7 +1680,11 @@ describe("StoreModal cosmetic browser", () => {
 
     await purchaseButton(modal, pack.key).onPurchaseDollar!();
 
-    expect(purchaseCosmetic).toHaveBeenCalledWith(pack, "dollar");
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      pack,
+      "dollar",
+      expect.any(Object),
+    );
   });
 
   it("keeps each currency on its own line across mixed-payment cards", async () => {
@@ -1313,7 +1741,11 @@ describe("StoreModal cosmetic browser", () => {
     expect(button.product).toBeNull();
     expect(button.dollarPrice).toBe("$4.99");
     await button.onPurchaseDollar!();
-    expect(purchaseCosmetic).toHaveBeenCalledWith(steamPlus, "dollar");
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      steamPlus,
+      "dollar",
+      expect.any(Object),
+    );
   });
 
   it("widens a lone subscription card and enlarges its preview", async () => {
@@ -1380,6 +1812,7 @@ describe("StoreModal cosmetic browser", () => {
     expect(purchaseCosmetic).toHaveBeenCalledWith(
       platinumSubscription,
       "dollar",
+      expect.any(Object),
     );
   });
 
@@ -1424,6 +1857,7 @@ describe("StoreModal cosmetic browser", () => {
     expect(purchaseCosmetic).toHaveBeenCalledWith(
       { ...goldSubscription, relationship: "purchasable" },
       "dollar",
+      expect.any(Object),
     );
   });
 
@@ -1444,7 +1878,11 @@ describe("StoreModal cosmetic browser", () => {
     ).toContain("inventory.selected_cosmetic_variant, Aurora");
 
     await clickHardPurchase(modal);
-    expect(purchaseCosmetic).toHaveBeenCalledWith(starterBundle, "hard");
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      starterBundle,
+      "hard",
+      expect.any(Object),
+    );
   });
 
   it("opens a contents dialog naming each bundle item when a bundle is activated", async () => {
@@ -1490,7 +1928,11 @@ describe("StoreModal cosmetic browser", () => {
       .querySelector("confirm-dialog")!
       .dispatchEvent(new CustomEvent("confirm"));
     await vi.waitFor(() =>
-      expect(purchaseCosmetic).toHaveBeenCalledWith(starterBundle, "hard"),
+      expect(purchaseCosmetic).toHaveBeenCalledWith(
+        starterBundle,
+        "hard",
+        expect.any(Object),
+      ),
     );
 
     dialog
@@ -1567,7 +2009,11 @@ describe("StoreModal cosmetic browser", () => {
     ).toBeTruthy();
 
     await purchaseButton(modal, affiliatePattern.key).onPurchaseHard!();
-    expect(purchaseCosmetic).toHaveBeenCalledWith(affiliatePattern, "hard");
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      affiliatePattern,
+      "hard",
+      expect.any(Object),
+    );
   });
 });
 
@@ -1652,5 +2098,491 @@ describe("StoreModal on the Steam rail", () => {
 
     await vi.waitFor(() => expect(seen).toContain("store.purchase_pending"));
     window.removeEventListener("show-message", onToast);
+  });
+});
+
+// The Android app: Google Play is its only way to pay. Packs are listed at
+// Play's own price, and nothing else real-money is offered.
+describe("StoreModal on the Play rail", () => {
+  Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
+
+  const playPack: ResolvedCosmetic = {
+    ...pack,
+    cosmetic: {
+      ...(pack.cosmetic as object),
+      googleProductId: "plutonium_1000",
+    } as never,
+  };
+  const otherPack: ResolvedCosmetic = {
+    ...pack,
+    cosmetic: {
+      ...(pack.cosmetic as object),
+      name: "plutonium_big",
+      googleProductId: "plutonium_5000",
+    } as never,
+    key: "pack:plutonium_big",
+  };
+  const webOnlyPack: ResolvedCosmetic = {
+    ...pack,
+    cosmetic: { ...(pack.cosmetic as object), name: "web_only" } as never,
+    key: "pack:web_only",
+  };
+
+  function installPlay(products: unknown) {
+    const playBilling = {
+      products: vi.fn(async () => products),
+      purchase: vi.fn(async () => ({ status: "cancelled" })),
+      unconsumed: vi.fn(async () => ({ status: "ok", purchaseTokens: [] })),
+    };
+    (window as any).openfrontDesktop = {
+      shell: { platform: "android" },
+      playBilling,
+    };
+    return playBilling;
+  }
+
+  async function openPacks() {
+    store = document.createElement("store-modal") as StoreModal;
+    store.inline = true;
+    document.body.appendChild(store);
+    await store.updateComplete;
+    store.open({ tab: "packs" });
+    await vi.waitFor(() =>
+      expect(
+        store!.querySelector("cosmetic-card, [data-store-play-unavailable]"),
+      ).toBeTruthy(),
+    );
+    return store;
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    resolvedCatalog = [playPack, otherPack, webOnlyPack];
+    vi.mocked(fetchCosmetics).mockReset();
+    vi.mocked(fetchCosmetics).mockResolvedValue({
+      currencyPacks: Object.fromEntries(
+        resolvedCatalog.map((r) => [r.cosmetic!.name, r.cosmetic]),
+      ),
+    } as unknown as Cosmetics);
+    vi.mocked(resolveCosmetics).mockReset();
+    vi.mocked(resolveCosmetics).mockImplementation(() => resolvedCatalog);
+    vi.mocked(purchaseCosmetic).mockReset();
+    vi.mocked(purchaseCosmetic).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    store?.remove();
+    store = undefined;
+    delete (window as any).openfrontDesktop;
+    localStorage.clear();
+  });
+
+  it("lists only the packs Play returned, at Play's price, with no Stripe checkout", async () => {
+    const play = installPlay({
+      status: "ok",
+      products: [{ productId: "plutonium_1000", formattedPrice: "€5,49" }],
+    });
+    const modal = await openPacks();
+
+    expect(play.products).toHaveBeenCalledWith([
+      "plutonium_1000",
+      "plutonium_5000",
+    ]);
+    const button = purchaseButton(modal, playPack.key);
+    expect(button.dollarPrice).toBe("€5,49");
+    expect(button.product).toBeNull();
+    expect(button.inlineCheckout).toBeNull();
+    await button.onPurchaseDollar!();
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      playPack,
+      "dollar",
+      expect.any(Object),
+    );
+
+    // The catalog's dollar price shows nowhere, on the card or in its preview.
+    expect(card(modal, playPack.key)!.textContent).toContain("1,000");
+    expect(modal.querySelector("[data-pack-price]")).toBeNull();
+    expect(modal.textContent).not.toContain("$5");
+
+    // Not returned by Play, and not on Play at all.
+    expect(card(modal, otherPack.key)).toBeUndefined();
+    expect(card(modal, webOnlyPack.key)).toBeUndefined();
+    expect(modal.querySelector("custom-currency-card")).toBeNull();
+    expect(modal.querySelector("[data-store-play-unavailable]")).toBeNull();
+  });
+
+  it("lists no pack and says so when Play cannot price them", async () => {
+    installPlay({ status: "error", code: "unavailable" });
+    const modal = await openPacks();
+
+    expect(modal.querySelector("cosmetic-card")).toBeNull();
+    expect(modal.querySelector("custom-currency-card")).toBeNull();
+    expect(
+      modal.querySelector("[data-store-play-unavailable]")?.textContent,
+    ).toContain("store.play_unavailable");
+  });
+
+  it("asks Play again when the store reopens after it could not price the packs", async () => {
+    const play = installPlay({ status: "error", code: "unavailable" });
+    const modal = await openPacks();
+    expect(modal.querySelector("[data-store-play-unavailable]")).toBeTruthy();
+    modal.close();
+
+    // The catalog itself is still fresh.
+    play.products.mockResolvedValue({
+      status: "ok",
+      products: [{ productId: "plutonium_1000", formattedPrice: "€5,49" }],
+    });
+    modal.open({ tab: "packs" });
+    await vi.waitFor(() =>
+      expect(purchaseButton(modal, playPack.key).dollarPrice).toBe("€5,49"),
+    );
+    expect(play.products).toHaveBeenCalledTimes(2);
+    expect(modal.querySelector("[data-store-play-unavailable]")).toBeNull();
+  });
+
+  it("sells nothing for real money in an Android app without the bridge", async () => {
+    (window as any).openfrontDesktop = { shell: { platform: "android" } };
+    const modal = await openPacks();
+
+    expect(modal.querySelector("cosmetic-card")).toBeNull();
+    expect(modal.querySelector("custom-currency-card")).toBeNull();
+    expect(modal.querySelector("[data-store-play-unavailable]")).toBeTruthy();
+  });
+
+  // A purchase updates the balance by sending the account afresh, and every
+  // account the store receives also reloads the catalog, which asks Play for
+  // prices again. The header must not wait on Play.
+  it("shows a new balance while Play is still pricing the packs", async () => {
+    const play = installPlay({
+      status: "ok",
+      products: [{ productId: "plutonium_1000", formattedPrice: "€5,49" }],
+    });
+    const modal = await openPacks();
+    const account = (hard: number) =>
+      ({
+        player: { publicId: "p", flares: [], currency: { hard, soft: 0 } },
+      }) as never;
+    const balance = () =>
+      modal.querySelector<CurrencyDisplay>("currency-display")?.hard;
+    await modal.onUserMe(account(100));
+    await modal.updateComplete;
+    expect(balance()).toBe(100);
+
+    const asked = play.products.mock.calls.length;
+    play.products.mockReturnValue(new Promise(() => {}));
+    void modal.onUserMe(account(1_100));
+    await vi.waitFor(() =>
+      expect(play.products).toHaveBeenCalledTimes(asked + 1),
+    );
+    await modal.updateComplete;
+    expect(balance()).toBe(1_100);
+  });
+
+  it("sells no subscription, but still shows the one the player holds", async () => {
+    installPlay({ status: "ok", products: [] });
+    resolvedCatalog = [goldSubscription, platinumSubscription];
+    const modal = await openStoreOnTab("subscriptions");
+    await modal.onUserMe({
+      player: { subscription: { tier: "gold" } },
+    } as never);
+    await modal.updateComplete;
+
+    expect(card(modal, goldSubscription.key)).toBeTruthy();
+    expect(card(modal, platinumSubscription.key)).toBeUndefined();
+  });
+});
+
+describe("store analytics", () => {
+  Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
+
+  type Entry = {
+    target: Element;
+    isIntersecting: boolean;
+    intersectionRatio: number;
+  };
+  class FakeIO {
+    static instances: FakeIO[] = [];
+    observed = new Set<Element>();
+    constructor(public cb: (entries: Entry[]) => void) {
+      FakeIO.instances.push(this);
+    }
+    observe(el: Element) {
+      this.observed.add(el);
+    }
+    unobserve(el: Element) {
+      this.observed.delete(el);
+    }
+    disconnect() {
+      this.observed.clear();
+    }
+  }
+  // Report a card as shown (or hidden) to whichever observer watches it.
+  function setVisible(el: Element, isIntersecting: boolean) {
+    for (const io of FakeIO.instances) {
+      if (io.observed.has(el)) {
+        io.cb([
+          {
+            target: el,
+            isIntersecting,
+            intersectionRatio: isIntersecting ? 1 : 0,
+          },
+        ]);
+      }
+    }
+  }
+
+  let fetchSpy: ReturnType<typeof vi.fn>;
+  function sent() {
+    return fetchSpy.mock.calls
+      .filter(([url]) => String(url).endsWith("/store/events"))
+      .flatMap(([, init]) => JSON.parse(init.body).events);
+  }
+
+  beforeEach(() => {
+    FakeIO.instances = [];
+    (window as unknown as { BOOTSTRAP_CONFIG: unknown }).BOOTSTRAP_CONFIG = {
+      gameEnv: "dev",
+      numWorkers: 1,
+      turnstileSiteKey: "x",
+      jwtAudience: "localhost",
+      instanceId: "test",
+      gitCommit: "test",
+    };
+    ClientEnv.reset();
+    vi.stubGlobal("IntersectionObserver", FakeIO);
+    fetchSpy = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchSpy);
+    localStorage.clear();
+    const settings = new UserSettings();
+    settings.removeCached(PATTERN_KEY);
+    settings.removeCached(EFFECTS_KEY);
+    resolvedCatalog = [
+      red,
+      blue,
+      green,
+      flag,
+      wake,
+      atom,
+      pack,
+      goldSubscription,
+      platinumSubscription,
+      starterBundle,
+    ];
+    vi.mocked(fetchCosmetics).mockReset();
+    vi.mocked(fetchCosmetics).mockResolvedValue({} as Cosmetics);
+    vi.mocked(resolveCosmetics).mockReset();
+    vi.mocked(resolveCosmetics).mockImplementation(
+      (_cosmetics, _userMeResponse, affiliateCode) =>
+        affiliateCode
+          ? resolvedCatalog.filter(
+              (item) =>
+                item.cosmetic !== null &&
+                "affiliateCode" in item.cosmetic &&
+                item.cosmetic.affiliateCode === affiliateCode,
+            )
+          : resolvedCatalog,
+    );
+    vi.mocked(purchaseCosmetic).mockReset();
+  });
+
+  afterEach(() => {
+    store?.remove();
+    store = undefined;
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    delete (window as unknown as { BOOTSTRAP_CONFIG?: unknown })
+      .BOOTSTRAP_CONFIG;
+    ClientEnv.reset();
+    localStorage.clear();
+  });
+
+  function placementOf(modal: StoreModal, el: Element) {
+    return (
+      modal as unknown as { placementFor(el: Element): unknown }
+    ).placementFor(el);
+  }
+
+  function keysOf(modal: StoreModal): string[] {
+    return [...modal.querySelectorAll<HTMLElement>("[data-store-product]")].map(
+      (el) => el.dataset.cosmeticKey ?? "",
+    );
+  }
+
+  it("gives every product tile a cosmetic key on every tab", async () => {
+    for (const tab of ["packs", "subscriptions", "bundles"] as const) {
+      const modal = await openStoreOnTab(tab);
+      const keys = keysOf(modal);
+      expect(keys.length).toBeGreaterThan(0);
+      expect(keys.every((key) => key !== "")).toBe(true);
+      modal.remove();
+      store = undefined;
+    }
+    const cosmetics = await openStoreOnCosmetic("patterns");
+    expect(keysOf(cosmetics).length).toBeGreaterThan(0);
+    expect(keysOf(cosmetics).every((key) => key !== "")).toBe(true);
+    cosmetics.remove();
+    store = undefined;
+
+    const { store: effects } = await openEffectsStore();
+    expect(keysOf(effects)).toContain(wake.key);
+    expect(keysOf(effects).every((key) => key !== "")).toBe(true);
+  });
+
+  it("places a card by tab, sub-tab, flash hero or affiliate mode", async () => {
+    const modal = await openStoreOnCosmetic("flags");
+    const el = product(modal, flag.key)!;
+    expect(placementOf(modal, el)).toEqual({
+      kind: "tab",
+      tab: "cosmetics",
+      subTab: "flags",
+    });
+
+    const hero = document.createElement("section");
+    hero.setAttribute("data-store-flash", "");
+    const inner = document.createElement("div");
+    hero.appendChild(inner);
+    expect(placementOf(modal, inner)).toEqual({ kind: "flash" });
+
+    modal.setActiveTab("packs");
+    await modal.updateComplete;
+    expect(placementOf(modal, el)).toEqual({ kind: "tab", tab: "packs" });
+
+    (modal as unknown as { affiliateCode: string }).affiliateCode = "creator";
+    expect(placementOf(modal, el)).toEqual({ kind: "affiliate" });
+  });
+
+  it("records a click with the card's placement when it is activated", async () => {
+    const modal = await openStoreOnCosmetic("flags");
+    await focusCard(modal, flag.key);
+    (modal as unknown as { tracker: { flush(): void } }).tracker.flush();
+    expect(sent()).toEqual([
+      {
+        type: "click",
+        item: flag.key,
+        placement: { kind: "tab", tab: "cosmetics", subTab: "flags" },
+      },
+    ]);
+  });
+
+  it("does not count a preview from inside a bundle's contents as a click", async () => {
+    const modal = await openStoreOnCosmetic("flags");
+    const dialog = document.createElement("pack-contents-dialog");
+    modal.appendChild(dialog);
+    dialog.dispatchEvent(
+      new CustomEvent("open-cosmetic-preview", {
+        detail: flag,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    dialog.remove();
+    const tracker = (modal as unknown as { tracker: { flush(): void } })
+      .tracker;
+    tracker.flush();
+    expect(sent()).toEqual([]);
+    await focusCard(modal, flag.key);
+    tracker.flush();
+    expect(sent()).toEqual([
+      {
+        type: "click",
+        item: flag.key,
+        placement: { kind: "tab", tab: "cosmetics", subTab: "flags" },
+      },
+    ]);
+  });
+
+  it("flushes queued events when the store closes", async () => {
+    const modal = await openStoreOnCosmetic("flags");
+    await focusCard(modal, flag.key);
+    expect(sent()).toEqual([]);
+    modal.close();
+    expect(sent()).toHaveLength(1);
+  });
+
+  it("records an impression after a second in view, and again after a reopen", async () => {
+    initNavigation();
+    const modal = await openStoreOnCosmetic("flags");
+    modal.classList.add("page-content");
+    const el = product(modal, flag.key)!;
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+
+    setVisible(el, true);
+    vi.advanceTimersByTime(1000);
+    modal.close();
+    expect(modal.classList.contains("hidden")).toBe(true);
+    expect(sent()).toEqual([
+      {
+        type: "impression",
+        item: flag.key,
+        placement: { kind: "tab", tab: "cosmetics", subTab: "flags" },
+      },
+    ]);
+
+    // Closing hides the store with display: none, so the browser reports the
+    // card as not intersecting, then intersecting again on reopen.
+    setVisible(el, false);
+    modal.open({ tab: "cosmetics" });
+    await modal.updateComplete;
+    setVisible(el, true);
+    vi.advanceTimersByTime(1000);
+    modal.close();
+    expect(sent().filter((e) => e.type === "impression")).toHaveLength(2);
+  });
+
+  it("follows a reused card element to its new item", async () => {
+    resolvedCatalog = [red, flag];
+    const modal = await openStoreOnCosmetic("patterns");
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const first = modal.querySelector<HTMLElement>("[data-store-product]")!;
+    expect(first.dataset.cosmeticKey).toBe(red.key);
+    setVisible(first, true);
+    vi.advanceTimersByTime(1000);
+
+    first.dataset.cosmeticKey = flag.key;
+    (modal as unknown as { requestUpdate(): void }).requestUpdate();
+    await modal.updateComplete;
+    setVisible(first, true);
+    vi.advanceTimersByTime(1000);
+    modal.close();
+    expect(
+      sent()
+        .filter((e) => e.type === "impression")
+        .map((e) => e.item),
+    ).toEqual(["pattern:stripes", flag.key]);
+  });
+
+  it("records a palette click and impression under the pattern card", async () => {
+    const modal = await openStoreOnCosmetic("patterns");
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    setVisible(product(modal, red.key)!, true);
+    vi.advanceTimersByTime(1000);
+    await activateVariant(modal, blue.key);
+    await focusCard(modal, blue.key);
+    modal.close();
+    expect(sent().map((e) => [e.type, e.item])).toEqual([
+      ["impression", "pattern:stripes"],
+      ["click", "pattern:stripes"],
+    ]);
+  });
+
+  it("prunes detached cards once per store update, not once per card", async () => {
+    const modal = await openStoreOnTab("subscriptions");
+    expect(keysOf(modal).length).toBeGreaterThan(1);
+    const tracker = (modal as unknown as { tracker: StoreTracker }).tracker;
+    const release = vi.spyOn(tracker, "releaseDetached");
+    const observe = vi.spyOn(tracker, "observe");
+    (modal as unknown as { requestUpdate(): void }).requestUpdate();
+    await modal.updateComplete;
+    expect(observe.mock.calls.length).toBeGreaterThan(1);
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+
+  it("watches the effect tiles the grid renders after the store does", async () => {
+    const { store: modal } = await openEffectsStore();
+    const el = product(modal, wake.key)!;
+    await vi.waitFor(() =>
+      expect(FakeIO.instances.some((io) => io.observed.has(el))).toBe(true),
+    );
   });
 });

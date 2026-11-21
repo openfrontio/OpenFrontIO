@@ -1,7 +1,13 @@
-import { TileRef } from "@openfront/engine-api/game/GameMap";
+import {
+  EditorCommand,
+  EditorCommandSchema,
+} from "@openfront/engine-api/EditorCommands";
+import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   AllPlayers,
   BuildableUnit,
+  CustomGameMap,
+  GameMapSize,
   GameType,
   GameUpdates,
   HumanDisconnects,
@@ -14,6 +20,7 @@ import {
   PlayerInfo,
   PlayerProfile,
   PlayerType,
+  Structures,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import {
@@ -22,15 +29,22 @@ import {
   GameUpdateViewData,
   UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
-import { MapFiles } from "@openfront/engine-api/game/MapFiles";
+import {
+  MapFiles,
+  MapManifest,
+  MapMetadata,
+} from "@openfront/engine-api/game/MapFiles";
 import { ClientID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
 import { packUnitUpdates } from "@openfront/engine-lib/game/PackedUnitUpdates";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { simpleHash } from "@openfront/engine-lib/Util";
 import { EngineConfig } from "./configuration/EngineConfig";
+import { applyEditorCommand } from "./editor/EditorCommands";
+import { structureExecution } from "./execution/ConstructionExecution";
 import { DoomsdayClockExecution } from "./execution/DoomsdayClockExecution";
 import { Executor } from "./execution/ExecutionManager";
+import { PlayerExecution } from "./execution/PlayerExecution";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
@@ -50,6 +64,9 @@ export async function createGameRunner(
   clientID: ClientID | undefined,
   map: MapFiles,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+  // The scenario editor's engine never ticks, so it gets none of the
+  // executions init() adds.
+  editor = false,
 ): Promise<GameRunner> {
   const config = new EngineConfig(gameStart.config, false, gameStart.listed);
   const gameMap = await loadGameMap(gameStart.config, map);
@@ -94,17 +111,25 @@ export async function createGameRunner(
       gameStart.tribes?.map((t) => t.name),
     ),
     callBack,
+    editor ? map.manifest : null,
   );
-  gr.init();
+  if (!editor) gr.init();
   return gr;
 }
 
-/** The game's maps, from its map's files (which the game takes over). */
+/**
+ * The game's maps, from its map's files (which the game takes over). A stock
+ * map must get its own files; a Custom map's files came with the game start,
+ * so any are accepted (a snapshot still checks them against its own hash).
+ */
 function loadGameMap(
   config: Pick<GameStartInfo["config"], "gameMap" | "gameMapSize">,
   map: MapFiles,
 ) {
-  if (map.map !== config.gameMap || map.mapSize !== config.gameMapSize) {
+  if (
+    (config.gameMap !== CustomGameMap && map.map !== config.gameMap) ||
+    map.mapSize !== config.gameMapSize
+  ) {
     throw new Error(
       `the game is on ${config.gameMap} (${config.gameMapSize}), ` +
         `the files passed are ${map.map} (${map.mapSize})`,
@@ -134,6 +159,9 @@ export async function createGameRunnerFromSnapshot(
     miniGameMap: gameMap.miniGameMap,
     teamGameSpawnAreas: gameMap.teamGameSpawnAreas,
   });
+  if (gameStart.scenario !== undefined) {
+    assignScenarioNations(game, gameStart);
+  }
   // No init(): the snapshot already holds every execution init() adds.
   return new GameRunner(
     game,
@@ -145,6 +173,46 @@ export async function createGameRunnerFromSnapshot(
     ),
     callBack,
   );
+}
+
+/**
+ * Hands each scenario nation to its player (docs/ScenarioEditor.md,
+ * "Starting a game from a bundle"). Every assignment is checked against the
+ * restored game and the start info before any takeover, so a bad start
+ * fails whole, and the same way on every client.
+ */
+function assignScenarioNations(game: Game, gameStart: GameStartInfo): void {
+  const assignments = gameStart.scenario!.assignments;
+  const players = new Set(gameStart.players.map((p) => p.clientID));
+  const nations = new Set<string>();
+  const clients = new Set<ClientID>();
+  for (const { clientID, nationID } of assignments) {
+    const nation = game.hasPlayer(nationID) ? game.player(nationID) : null;
+    if (nation === null || nation.type() !== PlayerType.Nation) {
+      throw new Error(`scenario: no nation ${nationID}`);
+    }
+    if (!nation.playable()) {
+      throw new Error(`scenario: nation ${nationID} is not playable`);
+    }
+    if (nations.has(nationID)) {
+      throw new Error(`scenario: nation ${nationID} is assigned twice`);
+    }
+    if (!players.has(clientID)) {
+      throw new Error(`scenario: client ${clientID} is not a player`);
+    }
+    if (clients.has(clientID)) {
+      throw new Error(`scenario: client ${clientID} has two nations`);
+    }
+    nations.add(nationID);
+    clients.add(clientID);
+  }
+  // The spawn phase is over, so a player without a nation has nowhere to be.
+  if (clients.size !== players.size) {
+    throw new Error("scenario: a player has no nation");
+  }
+  for (const { clientID, nationID } of assignments) {
+    game.takeoverPlayer(nationID, clientID);
+  }
 }
 
 export class GameRunner {
@@ -164,6 +232,9 @@ export class GameRunner {
     public game: Game,
     private execManager: Executor,
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
+    // Scenario editor: the manifest the engine started on, which the
+    // exported map files' manifest is based on.
+    private editorManifest: MapManifest | null = null,
   ) {}
 
   /**
@@ -195,6 +266,11 @@ export class GameRunner {
         ...this.execManager.spawnTribes(this.game.config().bots()),
       );
     }
+    this.addRunningGameExecutions();
+  }
+
+  /** What every running game has, however it started. */
+  private addRunningGameExecutions(): void {
     this.game.addExecution(new WinCheckExecution());
     if (this.game.config().doomsdayClockConfig().enabled) {
       this.game.addExecution(new DoomsdayClockExecution());
@@ -247,6 +323,117 @@ export class GameRunner {
       return false;
     }
 
+    this.sendUpdates(
+      updates,
+      wasInSpawnPhase,
+      tickExecutionDuration,
+      pendingTurns ?? 0,
+    );
+    this.isExecuting = false;
+    return true;
+  }
+
+  /**
+   * Scenario editor: applies one command and sends the updates it made,
+   * without running a tick. Throws, having changed nothing, if the command
+   * is invalid. Returns the map files `export_terrain` writes.
+   */
+  public applyEditorCommand(command: EditorCommand): MapFiles | undefined {
+    const parsed = EditorCommandSchema.parse(command);
+    const wasInSpawnPhase = this.game.inSpawnPhase();
+    let files: MapFiles | undefined;
+    switch (parsed.type) {
+      case "export_terrain":
+        files = this.exportTerrain();
+        break;
+      case "finalize":
+        this.finalize();
+        break;
+      default:
+        applyEditorCommand(this.game, parsed);
+    }
+    this.sendUpdates(
+      this.game.drainPendingUpdates(),
+      wasInSpawnPhase,
+      0,
+      this.pendingTurns(),
+    );
+    return files;
+  }
+
+  /**
+   * Runs the full terrain pass and writes the terrain out as a Custom map's
+   * files (docs/ScenarioEditor.md, "Finalising for export"). The water
+   * graph is not rebuilt: the files don't hold it, and the engine that
+   * loads them builds its own.
+   */
+  private exportTerrain(): MapFiles {
+    if (this.editorManifest === null) {
+      throw new Error("only an editor engine exports its terrain");
+    }
+    if (this.game.config().gameConfig().gameMapSize !== GameMapSize.Normal) {
+      throw new Error("only a Normal-size editor engine has map.bin");
+    }
+    this.game.endTerrainEdit();
+    const map = this.game.map();
+    const map4x = this.game.miniMap();
+    const map16x = this.game.downscaleMiniMap();
+    return {
+      map: CustomGameMap,
+      mapSize: GameMapSize.Normal,
+      manifest: {
+        ...this.editorManifest,
+        map: mapMetadata(map),
+        map4x: mapMetadata(map4x),
+        map16x: mapMetadata(map16x),
+      },
+      mapBin: terrainBytes(map),
+      map4xBin: terrainBytes(map4x),
+      map16xBin: terrainBytes(map16x),
+    };
+  }
+
+  /**
+   * Scenario editor: makes the game a running one with every nation
+   * AI-run, ready to snapshot (docs/ScenarioEditor.md, "Finalising for
+   * export"). Nothing ticks between this and the snapshot.
+   */
+  private finalize(): void {
+    if (!this.game.inSpawnPhase()) {
+      throw new Error("the game is already finalized");
+    }
+    // In the order a new game adds them: init()'s, then each spawn's, then
+    // each structure's as it's built. Every nation gets its AI, whatever
+    // the config's nations setting: they are the author's. One with no land
+    // is dead and stops on its first tick.
+    this.game.addExecution(...this.execManager.nationExecutions());
+    this.addRunningGameExecutions();
+    for (const nation of this.game.nations()) {
+      const player = this.game.player(nation.playerInfo.id);
+      // A nation the author gave land has spawned, as SpawnExecution
+      // spawns one: a spawn tile and its player execution.
+      let spawnTile: TileRef | undefined;
+      for (const tile of player.tiles()) {
+        if (spawnTile === undefined || tile < spawnTile) spawnTile = tile;
+      }
+      if (spawnTile === undefined) continue;
+      player.setSpawnTile(spawnTile);
+      this.game.stats().recordSpawnTile(player, spawnTile);
+      this.game.addExecution(new PlayerExecution(player));
+    }
+    for (const structure of this.game.units(Structures.types)) {
+      this.game.addExecution(structureExecution(structure));
+    }
+    this.game.endSpawnPhase();
+  }
+
+  /** Builds the update for the host from the game's pending updates. */
+  private sendUpdates(
+    updates: GameUpdates,
+    wasInSpawnPhase: boolean,
+    tickExecutionDuration: number,
+    pendingTurns: number,
+  ): void {
     // Track whether placements were recomputed this tick — the record is
     // only attached to the update when it could have changed, so the main
     // thread doesn't structured-clone an identical ~all-players record on
@@ -324,10 +511,8 @@ export class GameRunner {
         ? { playerNameViewData: { ...this.playerViewData } }
         : {}),
       tickExecutionDuration: tickExecutionDuration,
-      pendingTurns: pendingTurns ?? 0,
+      pendingTurns: pendingTurns,
     });
-    this.isExecuting = false;
-    return true;
   }
 
   public pendingTurns(): number {
@@ -436,4 +621,19 @@ export class GameRunner {
     }
     return player.bestTransportShipSpawn(targetTile);
   }
+}
+
+function mapMetadata(map: GameMap): MapMetadata {
+  return {
+    width: map.width(),
+    height: map.height(),
+    num_land_tiles: map.numLandTiles(),
+  };
+}
+
+/** A copy of the map's terrain bytes: the game keeps the map. */
+function terrainBytes(map: GameMap): Uint8Array {
+  const bytes = new Uint8Array(map.width() * map.height());
+  for (let t = 0; t < bytes.length; t++) bytes[t] = map.terrainByte(t);
+  return bytes;
 }

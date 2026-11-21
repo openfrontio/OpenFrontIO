@@ -1,16 +1,49 @@
-import { GameMapType } from "@openfront/engine-api/game/GameTypes";
+import {
+  CustomGameMap,
+  GameMapId,
+  GameMapType,
+} from "@openfront/engine-api/game/GameTypes";
+import { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import { GameMapLoader, MapData } from "./GameMapLoader";
 
 export class FetchGameMapLoader implements GameMapLoader {
-  private maps: Map<GameMapType, MapData>;
+  private maps: Map<GameMapId, MapData>;
+  private custom: MapData | null = null;
 
   public constructor(
     private readonly pathResolver: string | ((path: string) => string),
   ) {
-    this.maps = new Map<GameMapType, MapData>();
+    this.maps = new Map<GameMapId, MapData>();
   }
 
-  public getMapData(map: GameMapType): MapData {
+  /**
+   * Answers for the Custom map from a loaded scenario bundle's files and
+   * thumbnail (docs/ScenarioEditor.md, "Custom map identity"), until the
+   * next bundle. Each load gets its own copy of a file: a game takes over
+   * the files it loads, and a worker is sent them by transfer.
+   */
+  public setCustomMap(files: MapFiles, webpPath: string): void {
+    const copy = (bin: Uint8Array | undefined) => async () => {
+      if (bin === undefined) throw new Error("the scenario lacks a map file");
+      return bin.slice();
+    };
+    this.custom = {
+      mapBin: copy(files.mapBin),
+      map4xBin: copy(files.map4xBin),
+      map16xBin: copy(files.map16xBin),
+      manifest: async () => structuredClone(files.manifest),
+      webpPath,
+      layerImage: async () => {
+        throw new Error("a scenario's map has no layers");
+      },
+    };
+  }
+
+  public getMapData(map: GameMapId): MapData {
+    if (map === CustomGameMap) {
+      if (this.custom === null) throw new Error("no scenario is loaded");
+      return this.custom;
+    }
     const cachedMap = this.maps.get(map);
     if (cachedMap) {
       return cachedMap;

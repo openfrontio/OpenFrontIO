@@ -46,6 +46,9 @@ vi.mock("../../src/client/Utils", () => ({
   reloadForUpdate: vi.fn(),
   createCanvas: () => document.createElement("canvas"),
   homeHref: () => "/",
+  exitGame: vi.fn(() => {
+    window.location.href = "/";
+  }),
 }));
 vi.mock("../../src/client/TerrainMapFileLoader", () => ({
   terrainMapFileLoader: {},

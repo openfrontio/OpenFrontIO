@@ -2,7 +2,11 @@ import { html } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 import "../../src/client/components/CosmeticCard";
-import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
+import {
+  isNew,
+  newUntilMs,
+  type ResolvedCosmetic,
+} from "../../src/client/Cosmetics";
 
 const translations = {
   "cosmetics.adfree": "ad-free for life!",
@@ -11,6 +15,7 @@ const translations = {
   "cosmetics.usd_value": "Value: {usd}",
   "cosmetics.verified_name": "Verified username",
   "cosmetics.verified_name_info": "Reserved username",
+  "store.new_badge": "New",
   "territory_patterns.pattern.stripes": "Ocean Stripes",
   "territory_patterns.color_palette.red": "Crimson",
 };
@@ -283,6 +288,33 @@ describe("CosmeticCard", () => {
     ).toBe(card);
   });
 
+  // Play prices Plutonium in the player's own currency there, so no dollar
+  // figure may appear.
+  it("shows no dollar value inside the Android app", async () => {
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      shell: { platform: "android" },
+    };
+    try {
+      installTranslations();
+      await createCard();
+      card!.resolved = {
+        ...red,
+        cosmetic: {
+          ...red.cosmetic!,
+          artist: "Test Artist",
+          priceHard: 100,
+        } as never,
+      };
+      await card!.updateComplete;
+
+      const info = card!.querySelector("[data-cosmetic-info]")?.textContent;
+      expect(info).toContain("Artist: Test Artist");
+      expect(info).not.toContain("Value:");
+    } finally {
+      delete (window as { openfrontDesktop?: unknown }).openfrontDesktop;
+    }
+  });
+
   it("shows the ad-free entitlement for purchasable cosmetics", async () => {
     installTranslations();
     await createCard();
@@ -552,5 +584,117 @@ describe("CosmeticCard", () => {
     card!.previewSize = "detail";
     await card!.updateComplete;
     expect(preview().size).toBe("detail");
+  });
+
+  describe("New badge", () => {
+    async function createWith(
+      cosmetic: Record<string, unknown>,
+      relationship: ResolvedCosmetic["relationship"] = "purchasable",
+      // null leaves the property at its default.
+      showNewBadge: boolean | null = true,
+    ) {
+      card = document.createElement("cosmetic-card") as CosmeticCard;
+      if (showNewBadge !== null) card.showNewBadge = showNewBadge;
+      card.resolved = {
+        ...red,
+        relationship,
+        cosmetic: { ...(red.cosmetic as object), ...cosmetic } as never,
+      };
+      document.body.appendChild(card);
+      await card.updateComplete;
+      return card;
+    }
+    const inAWeek = () => new Date(Date.now() + 7 * 86_400_000).toISOString();
+
+    it("marks a new item the player can buy", async () => {
+      installTranslations();
+      const c = await createWith({ priceHard: 100, newUntil: inAWeek() });
+      expect(c.querySelector("[data-cosmetic-new]")?.textContent?.trim()).toBe(
+        "New",
+      );
+    });
+
+    it("shows only where the store asks for it (not the post-game offer)", async () => {
+      const c = await createWith(
+        { priceHard: 100, newUntil: inAWeek() },
+        "purchasable",
+        // Left unset: off is the default.
+        null,
+      );
+      expect(c.querySelector("[data-cosmetic-new]")).toBeNull();
+    });
+
+    it("doesn't mark an owned item or one no longer new", async () => {
+      let c = await createWith({ newUntil: inAWeek() }, "owned");
+      expect(c.querySelector("[data-cosmetic-new]")).toBeNull();
+      c.remove();
+      c = await createWith({
+        priceHard: 100,
+        newUntil: new Date(Date.now() - 1000).toISOString(),
+      });
+      expect(c.querySelector("[data-cosmetic-new]")).toBeNull();
+    });
+
+    it("reads an unparseable newUntil as not new", () => {
+      expect(newUntilMs({ newUntil: "soon" })).toBeNull();
+      expect(isNew({ newUntil: "soon" })).toBe(false);
+    });
+
+    it("is a gold band across the artwork's top-right corner", async () => {
+      installTranslations();
+      const c = await createWith({ priceHard: 100, newUntil: inAWeek() });
+      const corner = c.querySelector<HTMLElement>("[data-cosmetic-new]")!;
+      // Alone, it takes the sale band's place: the outer band.
+      expect(corner.dataset.cosmeticNew).toBe("outer");
+      expect(corner.className).toContain("right-0");
+      expect(corner.className).toContain("top-0");
+      expect(corner.className).toContain("overflow-hidden");
+      const band = corner.firstElementChild as HTMLElement;
+      expect(band.className).toContain("rotate-45");
+      expect(band.className).not.toContain("-rotate-45");
+      expect(band.className).toContain("bg-cyber-yellow");
+      expect(band.textContent?.trim()).toBe("New");
+    });
+
+    it("leaves the top-left corner to the details button", async () => {
+      installTranslations();
+      const c = await createWith({ priceHard: 100, newUntil: inAWeek() });
+      c.interactive = true;
+      await c.updateComplete;
+      expect(c.querySelector("[data-cosmetic-new]")!.className).not.toContain(
+        "left-0",
+      );
+      const info = c.querySelector<HTMLElement>("[data-cosmetic-info]")!;
+      expect(info.className).toContain("top-2");
+      expect(info.className).toContain("justify-start");
+      // The preview button keeps its own corner.
+      const eye = c.querySelector<HTMLElement>(
+        "[data-cosmetic-preview-bubble]",
+      )!;
+      expect(eye.className).toContain("right-2");
+      expect(eye.className).toContain("bottom-2");
+    });
+
+    it("stacks under a sale's band, in the same corner", async () => {
+      installTranslations();
+      const c = await createWith({
+        priceHard: 75,
+        listPriceHard: 100,
+        promotion: {
+          id: "1",
+          name: "Sale",
+          percentOff: 25,
+          endsAt: inAWeek(),
+        },
+        newUntil: inAWeek(),
+      });
+      const sale = c.querySelector<HTMLElement>("[data-cosmetic-sale]")!;
+      const corner = c.querySelector<HTMLElement>("[data-cosmetic-new]")!;
+      expect(sale).toBeTruthy();
+      // The discount keeps the outer band; New sits inside it.
+      expect(corner.dataset.cosmeticNew).toBe("inner");
+      expect(corner.className).toContain("right-0");
+      expect(corner.className).toContain("top-0");
+    });
   });
 });

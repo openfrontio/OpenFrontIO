@@ -3,6 +3,7 @@ import quickChatData from "resources/QuickChat.json";
 import { z } from "zod";
 import {
   AllPlayers,
+  CustomGameMap,
   Difficulty,
   Duos,
   GameMapSize,
@@ -227,6 +228,17 @@ export const OvertimeConfigSchema = z.object({
   startMinutes: zb.uint({ min: 1, max: 120 }).optional(),
 });
 
+// 8–10: today's ids are 8 chars; multi-server ids (docs/MultiServer.md) will
+// be 10 (instance letter + 9 random). The range ships ahead of the new format
+// so every deployed client/server validates the longer ids before any are
+// minted — old bundles reject unknown id lengths at the Zod layer.
+export const GAME_ID_REGEX = /^[A-Za-z0-9]{8,10}$/;
+
+export const isValidGameID = (value: string): boolean =>
+  GAME_ID_REGEX.test(value);
+
+export const ID = z.string().regex(GAME_ID_REGEX);
+
 // A lobby pool: several lobbies that arriving players are spread across, so
 // one advertised entry point can absorb more players than a single lobby
 // holds. Assignment is a hash of the joiner's identity (server/PoolRouting.ts),
@@ -239,13 +251,7 @@ export const OvertimeConfigSchema = z.object({
 export const PoolConfigSchema = z
   .object({
     id: z.string().min(1).max(64),
-    // z.lazy because ID is declared further down this file, and GameConfigSchema
-    // — which embeds this — is evaluated before that point.
-    siblings: z
-      .lazy(() => ID)
-      .array()
-      .min(1)
-      .max(64),
+    siblings: ID.array().min(1).max(64),
   })
   // Rejected rather than deduped: a repeated id holds more than one slot and
   // draws proportionally more players than the rest.
@@ -255,99 +261,107 @@ export const PoolConfigSchema = z
   });
 export type PoolConfig = z.infer<typeof PoolConfigSchema>;
 
-export const GameConfigSchema = z.object({
-  gameMap: z.enum(GameMapType),
-  difficulty: z.enum(Difficulty),
-  donateGold: z.boolean(), // Configures donations to humans only
-  donateTroops: z.boolean(), // Configures donations to humans only
-  gameType: z.enum(GameType),
-  gameMode: z.enum(GameMode),
-  rankedType: z.enum(RankedType).optional(), // Only set for ranked games.
-  gameMapSize: z.enum(GameMapSize),
-  doomsdayClock: DoomsdayClockConfigSchema.optional(),
-  overtime: OvertimeConfigSchema.optional(),
-  publicGameModifiers: z
-    .object({
-      isCompact: z.boolean().optional(),
-      isRandomSpawn: z.boolean().optional(),
-      isCrowded: z.boolean().optional(),
-      isHardNations: z.boolean().optional(),
-      startingGold: zb.uint().optional(),
-      goldMultiplier: zb.float({ min: 0.1, max: 1000 }).optional(),
-      isAlliancesDisabled: z.boolean().optional(),
-      isPortsDisabled: z.boolean().optional(),
-      isNukesDisabled: z.boolean().optional(),
-      isSAMsDisabled: z.boolean().optional(),
-      isPeaceTime: z.boolean().optional(),
-      isWaterNukes: z.boolean().optional(),
-      isDoomsdayClock: z.boolean().optional(),
-    })
-    .optional(),
-  nations: zb.union(
-    [zb.uint({ min: 1, max: 400 }), z.enum(["default", "disabled"])],
-    {
-      select: (v) => (typeof v === "number" ? 0 : 1),
-    },
-  ),
-  bots: zb.uint({ max: 400 }),
-  infiniteGold: z.boolean(),
-  infiniteTroops: z.boolean(),
-  instantBuild: z.boolean(),
-  disableNavMesh: z.boolean().optional(),
-  disableAlliances: z.boolean().nullable().optional(),
-  disableClanTags: z.boolean().optional(),
-  // Opt-in live game stats reporting for the admin bot. Off by default and has
-  // no UI — the admin bot sets it when creating tournament games, since it adds
-  // per-client traffic. See LiveStatsController / GameServer.handleLiveStats.
-  liveStatsEnabled: z.boolean().optional(),
-  anonymizeNames: z.boolean().optional(),
-  // While anonymizeNames is on, clientIDs the host has granted real-name
-  // visibility to (e.g. casters / observers). Everyone else stays anonymized.
-  nameReveals: z.string().array().optional(),
-  // Like nameReveals but keyed by stable account publicId (for automated hosts
-  // that only know publicIds at create_game); resolved to clientID at lookup.
-  nameRevealPublicIds: z.string().array().max(200).optional(),
-  waterNukes: z.boolean().nullable().optional(),
-  randomSpawn: z.boolean(),
-  // The onboarding tutorial (docs/OnboardingTutorial.md): nations and tribes
-  // only grow into free land, and the game ends once the human is alone.
-  tutorial: z.boolean().optional(),
-  maxPlayers: zb.uint().optional(),
-  // OFM: allowlist of publicIds allowed to join (admin-only, see create_game).
-  allowedPublicIds: z.array(z.string()).max(200).optional(),
-  // Only accounts the API reports as trusted (users/@me `trustTier`) may join.
-  // Enforced server-side at join (GameServer.joinClient); advertised in the
-  // lobby browser so a card can show a lock. No host UI yet: set through
-  // create_game / update_game_config.
-  trusted: z.boolean().optional(),
-  maxTimerValue: zb.uint({ min: 1, max: 120 }).nullable().optional(), // In minutes
-  // Tile share needed to win, in tenths of a percent (755 = 75.5%). Capped at
-  // 99.9%: the win check is a strict ">", so 100% could never be won.
-  winThresholdTenths: zb.uint({ min: 100, max: 999 }).nullable().optional(),
-  customAllianceDuration: zb.uint({ max: 15 }).nullable().optional(), // In minutes; 0 disables alliances
-  startDelay: zb.uint({ max: 600 }).nullable().optional(), // In seconds
-  spawnImmunityDuration: zb.uint().nullable().optional(), // In ticks
-  disabledUnits: z.enum(UnitType).array().optional(),
-  playerTeams: TeamCountConfigSchema.optional(),
-  goldMultiplier: zb.float({ min: 0.1, max: 1000 }).nullable().optional(),
-  startingGold: zb.uint({ max: 1000000000 }).nullable().optional(),
-  hostCheats: z
-    .object({
-      infiniteGold: z.boolean().optional(),
-      infiniteTroops: z.boolean().optional(),
-      goldMultiplier: zb.float({ min: 0.1, max: 1000 }).nullable().optional(),
-      startingGold: zb.uint({ max: 1000000000 }).nullable().optional(),
-    })
-    .optional(),
-  // Stripped from gameStartInfo and from the advertised lobby config: sibling
-  // ids are private lobby ids, which are join secrets.
-  pool: PoolConfigSchema.optional(),
-});
+export const MAX_BOTS = 1000;
+
+export const GameConfigSchema = z.compile(
+  z.object({
+    // Custom goes last, so the stock maps keep their zbin enum indices.
+    gameMap: z.enum({ ...GameMapType, Custom: CustomGameMap }),
+    difficulty: z.enum(Difficulty),
+    donateGold: z.boolean(), // Configures donations to humans only
+    donateTroops: z.boolean(), // Configures donations to humans only
+    gameType: z.enum(GameType),
+    gameMode: z.enum(GameMode),
+    rankedType: z.enum(RankedType).optional(), // Only set for ranked games.
+    gameMapSize: z.enum(GameMapSize),
+    doomsdayClock: DoomsdayClockConfigSchema.optional(),
+    overtime: OvertimeConfigSchema.optional(),
+    publicGameModifiers: z
+      .object({
+        isCompact: z.boolean().optional(),
+        isRandomSpawn: z.boolean().optional(),
+        isCrowded: z.boolean().optional(),
+        isHardNations: z.boolean().optional(),
+        startingGold: zb.uint().optional(),
+        goldMultiplier: zb.float({ min: 0.1, max: 1000 }).optional(),
+        isAlliancesDisabled: z.boolean().optional(),
+        isPortsDisabled: z.boolean().optional(),
+        isNukesDisabled: z.boolean().optional(),
+        isSAMsDisabled: z.boolean().optional(),
+        isPeaceTime: z.boolean().optional(),
+        isWaterNukes: z.boolean().optional(),
+        isDoomsdayClock: z.boolean().optional(),
+      })
+      .optional(),
+    nations: zb.union(
+      [zb.uint({ min: 1, max: 400 }), z.enum(["default", "disabled"])],
+      {
+        select: (v) => (typeof v === "number" ? 0 : 1),
+      },
+    ),
+    bots: zb.uint({ max: MAX_BOTS }),
+    infiniteGold: z.boolean(),
+    infiniteTroops: z.boolean(),
+    instantBuild: z.boolean(),
+    disableNavMesh: z.boolean().optional(),
+    disableAlliances: z.boolean().nullable().optional(),
+    disableClanTags: z.boolean().optional(),
+    // Opt-in live game stats reporting for the admin bot. Off by default and has
+    // no UI — the admin bot sets it when creating tournament games, since it adds
+    // per-client traffic. See LiveStatsController / GameServer.handleLiveStats.
+    liveStatsEnabled: z.boolean().optional(),
+    anonymizeNames: z.boolean().optional(),
+    // While anonymizeNames is on, clientIDs the host has granted real-name
+    // visibility to (e.g. casters / observers). Everyone else stays anonymized.
+    nameReveals: z.string().array().optional(),
+    // Like nameReveals but keyed by stable account publicId (for automated hosts
+    // that only know publicIds at create_game); resolved to clientID at lookup.
+    nameRevealPublicIds: z.string().array().max(200).optional(),
+    waterNukes: z.boolean().nullable().optional(),
+    randomSpawn: z.boolean(),
+    // The onboarding tutorial (docs/OnboardingTutorial.md): nations and tribes
+    // only grow into free land, and the game ends once the human is alone.
+    tutorial: z.boolean().optional(),
+    maxPlayers: zb.uint().optional(),
+    // OFM: allowlist of publicIds allowed to join (admin-only, see create_game).
+    allowedPublicIds: z.array(z.string()).max(200).optional(),
+    // Only accounts the API reports as trusted (users/@me `trustTier`) may join.
+    // Enforced server-side at join (GameServer.joinClient); advertised in the
+    // lobby browser so a card can show a lock. No host UI yet: set through
+    // create_game / update_game_config.
+    trusted: z.boolean().optional(),
+    maxTimerValue: zb.uint({ min: 1, max: 120 }).nullable().optional(), // In minutes
+    // Tile share needed to win, in tenths of a percent (755 = 75.5%). Capped at
+    // 99.9%: the win check is a strict ">", so 100% could never be won.
+    winThresholdTenths: zb.uint({ min: 100, max: 999 }).nullable().optional(),
+    customAllianceDuration: zb.uint({ max: 15 }).nullable().optional(), // In minutes; 0 disables alliances
+    startDelay: zb.uint({ max: 600 }).nullable().optional(), // In seconds
+    spawnImmunityDuration: zb.uint().nullable().optional(), // In ticks
+    disabledUnits: z.enum(UnitType).array().optional(),
+    playerTeams: TeamCountConfigSchema.optional(),
+    goldMultiplier: zb.float({ min: 0.1, max: 1000 }).nullable().optional(),
+    startingGold: zb.uint({ max: 1000000000 }).nullable().optional(),
+    hostCheats: z
+      .object({
+        infiniteGold: z.boolean().optional(),
+        infiniteTroops: z.boolean().optional(),
+        goldMultiplier: zb.float({ min: 0.1, max: 1000 }).nullable().optional(),
+        startingGold: zb.uint({ max: 1000000000 }).nullable().optional(),
+      })
+      .optional(),
+    // Stripped from gameStartInfo and from the advertised lobby config: sibling
+    // ids are private lobby ids, which are join secrets.
+    pool: PoolConfigSchema.optional(),
+  }),
+);
 
 // What a host sends in update_game_config. maxPlayers is the private-lobby
 // player cap: nullable so the host can lift it (null clears, undefined leaves
 // it alone), and at least 2 so a lobby can't be capped down to the host alone.
 export const GameConfigPatchSchema = GameConfigSchema.partial().extend({
+  // Stock maps only: a Custom map's files come with a scenario start, which a
+  // lobby can't carry yet.
+  gameMap: z.enum(GameMapType).optional(),
   maxPlayers: zb.uint({ min: 2, max: 1000 }).nullable().optional(),
 });
 export type GameConfigPatch = z.infer<typeof GameConfigPatchSchema>;
@@ -382,17 +396,6 @@ export const flattenedEmojiTable = emojiTable.flat();
 export type Emoji = (typeof flattenedEmojiTable)[number];
 
 const EmojiSchema = zb.uint({ max: flattenedEmojiTable.length - 1 });
-
-// 8–10: today's ids are 8 chars; multi-server ids (docs/MultiServer.md) will
-// be 10 (instance letter + 9 random). The range ships ahead of the new format
-// so every deployed client/server validates the longer ids before any are
-// minted — old bundles reject unknown id lengths at the Zod layer.
-export const GAME_ID_REGEX = /^[A-Za-z0-9]{8,10}$/;
-
-export const isValidGameID = (value: string): boolean =>
-  GAME_ID_REGEX.test(value);
-
-export const ID = z.string().regex(GAME_ID_REGEX);
 
 // zbin dictionary for player clientIDs (see ZbinWire.ts): both peers seed it
 // from GameStartInfo.players, so an in-game player id costs one byte on the
@@ -567,33 +570,35 @@ export const ToggleGameStartTimerIntentSchema = z.object({
   type: z.literal("toggle_game_start_timer"),
 });
 
-export const IntentSchema = z.discriminatedUnion("type", [
-  AttackIntentSchema,
-  CancelAttackIntentSchema,
-  SpawnIntentSchema,
-  MarkDisconnectedIntentSchema,
-  BoatAttackIntentSchema,
-  CancelBoatIntentSchema,
-  AllianceRequestIntentSchema,
-  AllianceRejectIntentSchema,
-  BreakAllianceIntentSchema,
-  TargetPlayerIntentSchema,
-  EmojiIntentSchema,
-  DonateGoldIntentSchema,
-  DonateTroopIntentSchema,
-  BuildUnitIntentSchema,
-  UpgradeStructureIntentSchema,
-  EmbargoIntentSchema,
-  EmbargoAllIntentSchema,
-  MoveWarshipIntentSchema,
-  QuickChatIntentSchema,
-  AllianceExtensionIntentSchema,
-  DeleteUnitIntentSchema,
-  KickPlayerIntentSchema,
-  TogglePauseIntentSchema,
-  UpdateGameConfigIntentSchema,
-  ToggleGameStartTimerIntentSchema,
-]);
+export const IntentSchema = z.compile(
+  z.discriminatedUnion("type", [
+    AttackIntentSchema,
+    CancelAttackIntentSchema,
+    SpawnIntentSchema,
+    MarkDisconnectedIntentSchema,
+    BoatAttackIntentSchema,
+    CancelBoatIntentSchema,
+    AllianceRequestIntentSchema,
+    AllianceRejectIntentSchema,
+    BreakAllianceIntentSchema,
+    TargetPlayerIntentSchema,
+    EmojiIntentSchema,
+    DonateGoldIntentSchema,
+    DonateTroopIntentSchema,
+    BuildUnitIntentSchema,
+    UpgradeStructureIntentSchema,
+    EmbargoIntentSchema,
+    EmbargoAllIntentSchema,
+    MoveWarshipIntentSchema,
+    QuickChatIntentSchema,
+    AllianceExtensionIntentSchema,
+    DeleteUnitIntentSchema,
+    KickPlayerIntentSchema,
+    TogglePauseIntentSchema,
+    UpdateGameConfigIntentSchema,
+    ToggleGameStartTimerIntentSchema,
+  ]),
+);
 
 // StampedIntent = Intent with server-stamped clientID (used in turns and execution)
 export const StampedIntentSchema = zb.stamped(IntentSchema, {
@@ -611,12 +616,14 @@ export const ADMIN_BOT_CLIENT_ID: ClientID = "ADMINBOT";
 // Server utility types
 //
 
-export const TurnSchema = z.object({
-  turnNumber: zb.uint(),
-  intents: StampedIntentSchema.array(),
-  // The hash of the game state at the end of the turn.
-  hash: zb.float().nullable().optional(),
-});
+export const TurnSchema = z.compile(
+  z.object({
+    turnNumber: zb.uint(),
+    intents: StampedIntentSchema.array(),
+    // The hash of the game state at the end of the turn.
+    hash: zb.float().nullable().optional(),
+  }),
+);
 
 export const PlayerSchema = z.object({
   clientID: ID,
@@ -641,6 +648,18 @@ export const TribeSchema = z
   .loose();
 export type Tribe = z.infer<typeof TribeSchema>;
 
+// A game started from a scenario bundle (docs/ScenarioEditor.md, "Starting a
+// game from a bundle"): which published version, the bundle hash every
+// client checks its download against, and the nation each player takes over.
+export const ScenarioStartSchema = z.object({
+  id: ID,
+  version: zb.uint(),
+  hash: z.string().regex(/^[0-9a-f]{64}$/),
+  // At most one per nation, and a scenario holds at most 400 (MAX_NATIONS).
+  assignments: z.array(z.object({ clientID: ID, nationID: ID })).max(400),
+});
+export type ScenarioStart = z.infer<typeof ScenarioStartSchema>;
+
 export const GameStartInfoSchema = z.object({
   gameID: ID,
   lobbyCreatedAt: zb.uint(),
@@ -653,6 +672,8 @@ export const GameStartInfoSchema = z.object({
   // zb.json: TribeSchema is `.loose()`, and a positional binary layout would
   // silently drop the passthrough keys that looseness exists to preserve.
   tribes: z.array(zb.json(TribeSchema)).max(100).optional(),
+  // Set only for a game that restores a scenario's snapshot.
+  scenario: ScenarioStartSchema.optional(),
 });
 
 export const WinnerSchema = z

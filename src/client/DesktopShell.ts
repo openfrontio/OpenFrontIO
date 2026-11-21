@@ -496,6 +496,153 @@ export function desktopGoogleSignIn():
   };
 }
 
+export interface PlayProduct {
+  productId: string;
+  /** Play's formatted local price, e.g. "€1,99". Shown as is. */
+  formattedPrice: string;
+}
+
+export type PlayProductsResult =
+  | { status: "ok"; products: PlayProduct[] } // ids Play did not return are absent
+  | { status: "error"; code: "unavailable" | "failed" };
+
+export type PlayPurchaseResult =
+  // Purchased or pending: either way the token goes to the server, which decides.
+  | { status: "ok"; purchaseToken: string }
+  | { status: "cancelled" }
+  | {
+      status: "error";
+      code: "already_owned" | "unavailable" | "busy" | "failed";
+    };
+
+export type PlayUnconsumedResult =
+  // Purchases Play reports as PURCHASED that the server has not consumed yet.
+  | { status: "ok"; purchaseTokens: string[] }
+  | { status: "error"; code: "unavailable" | "failed" };
+
+export interface PlayBilling {
+  products(productIds: string[]): Promise<PlayProductsResult>;
+  // `accountId` is the player's PUBLIC id; Play stores it on the purchase so
+  // the server can check the purchase belongs to the account crediting it.
+  purchase(opts: {
+    productId: string;
+    accountId: string;
+  }): Promise<PlayPurchaseResult>;
+  unconsumed(): Promise<PlayUnconsumedResult>;
+}
+
+const PLAY_FAILED = { status: "error", code: "failed" } as const;
+
+/**
+ * The Android app's Play billing bridge, or null where there is none: the web,
+ * the Steam shell, and an Android app older than the bridge.
+ *
+ * Found by its methods, like desktopLinkGate(). The returned methods never
+ * reject, and whatever the shell hands back is checked rather than trusted,
+ * like desktopGoogleSignIn(): a throw, a malformed result or an error code
+ * this client does not know (a newer shell) all become `failed`.
+ */
+export function desktopPlayBilling(): PlayBilling | null {
+  if (typeof window === "undefined") return null;
+  const billing = (
+    window.openfrontDesktop as { playBilling?: unknown } | undefined
+  )?.playBilling as
+    | { products?: unknown; purchase?: unknown; unconsumed?: unknown }
+    | undefined;
+  const products = billing?.products;
+  const purchase = billing?.purchase;
+  const unconsumed = billing?.unconsumed;
+  if (
+    typeof products !== "function" ||
+    typeof purchase !== "function" ||
+    typeof unconsumed !== "function"
+  ) {
+    return null;
+  }
+  return {
+    async products(productIds) {
+      try {
+        const result = (await products.call(billing, productIds)) as {
+          status?: unknown;
+          products?: unknown;
+          code?: unknown;
+        } | null;
+        if (result?.status === "ok" && Array.isArray(result.products)) {
+          return {
+            status: "ok",
+            products: (result.products as unknown[]).filter(
+              (p): p is PlayProduct =>
+                typeof p === "object" &&
+                p !== null &&
+                typeof (p as PlayProduct).productId === "string" &&
+                (p as PlayProduct).productId !== "" &&
+                typeof (p as PlayProduct).formattedPrice === "string" &&
+                (p as PlayProduct).formattedPrice !== "",
+            ),
+          };
+        }
+        if (result?.status === "error" && result.code === "unavailable") {
+          return { status: "error", code: "unavailable" };
+        }
+      } catch {
+        // Treated as a failure below, like a malformed result.
+      }
+      return PLAY_FAILED;
+    },
+    async purchase(opts) {
+      try {
+        const result = (await purchase.call(billing, opts)) as {
+          status?: unknown;
+          purchaseToken?: unknown;
+          code?: unknown;
+        } | null;
+        if (
+          result?.status === "ok" &&
+          typeof result.purchaseToken === "string" &&
+          result.purchaseToken !== ""
+        ) {
+          return { status: "ok", purchaseToken: result.purchaseToken };
+        }
+        if (result?.status === "cancelled") return { status: "cancelled" };
+        if (
+          result?.status === "error" &&
+          (result.code === "already_owned" ||
+            result.code === "unavailable" ||
+            result.code === "busy")
+        ) {
+          return { status: "error", code: result.code };
+        }
+      } catch {
+        // Treated as a failure below, like a malformed result.
+      }
+      return PLAY_FAILED;
+    },
+    async unconsumed() {
+      try {
+        const result = (await unconsumed.call(billing)) as {
+          status?: unknown;
+          purchaseTokens?: unknown;
+          code?: unknown;
+        } | null;
+        if (result?.status === "ok" && Array.isArray(result.purchaseTokens)) {
+          return {
+            status: "ok",
+            purchaseTokens: (result.purchaseTokens as unknown[]).filter(
+              (t): t is string => typeof t === "string" && t !== "",
+            ),
+          };
+        }
+        if (result?.status === "error" && result.code === "unavailable") {
+          return { status: "error", code: "unavailable" };
+        }
+      } catch {
+        // Treated as a failure below, like a malformed result.
+      }
+      return PLAY_FAILED;
+    },
+  };
+}
+
 /**
  * The shell's in-app exit (OPE-402).
  *

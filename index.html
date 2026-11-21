@@ -38,12 +38,24 @@
         transition: opacity 0.5s ease-out;
       }
 
-      /* iOS safe area support */
-      body {
+      /* iOS safe area support. Playwire's site stylesheet
+         (config.playwire.com/.../styles.css, loaded by ramp.js after this)
+         sets body { padding-bottom: 105px !important }, which leaves a blank
+         band under the footer whenever ads load. Both rules being
+         !important, the later stylesheet would win at equal specificity, so
+         this one uses html body to win regardless of load order. */
+      html body {
         padding-top: env(safe-area-inset-top);
         padding-right: env(safe-area-inset-right);
-        padding-bottom: env(safe-area-inset-bottom);
+        padding-bottom: env(safe-area-inset-bottom) !important;
         padding-left: env(safe-area-inset-left);
+      }
+      /* The bottom rail (position: fixed, a direct body child, inline
+         max-height: 100px) loads on lobby join, while the footer is still
+         shown under the lobby modal: reserve its height only while it's on
+         the page so it can't cover the footer links. */
+      html body:has(> #pw-oop-bottom_rail) {
+        padding-bottom: calc(100px + env(safe-area-inset-bottom)) !important;
       }
 
       /* Prevent Playwire bottom rail from affecting flex layout,
@@ -444,11 +456,6 @@
           inline
           class="hidden w-full h-full page-content relative z-50"
         ></matchmaking-modal>
-        <news-modal
-          id="page-news"
-          inline
-          class="hidden w-full h-full page-content relative z-50"
-        ></news-modal>
         <single-player-modal
           id="page-single-player"
           inline
@@ -545,6 +552,7 @@
       <account-settings-modal></account-settings-modal>
       <change-username-modal></change-username-modal>
       <subscription-modal></subscription-modal>
+      <news-modal></news-modal>
     </div>
 
     <!-- Game components -->
@@ -553,7 +561,7 @@
     <!-- Bottom HUD: <sm=column, sm..lg=2col (HUD left | events right; flipped on
          landscape phones so the events are on the left), lg+=3col grid centered -->
     <div
-      class="fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:flex-row sm:max-lg:landscape:flex-row-reverse sm:items-end lg:grid lg:grid-cols-[1fr_500px_1fr] lg:items-end min-[1200px]:px-4"
+      class="fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:flex-row sm:max-lg:landscape:flex-row-reverse sm:items-end lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-end min-[1200px]:px-4"
       style="
         padding-bottom: env(safe-area-inset-bottom);
         padding-left: env(safe-area-inset-left);
@@ -562,13 +570,16 @@
     >
       <!-- HUD: <sm contents (children join outer flex), sm+ flex-col 460px, lg+ col-2 -->
       <div
-        class="contents sm:flex sm:flex-col sm:pointer-events-none w-full sm:w-[500px] lg:col-start-2 sm:z-10"
+        class="contents sm:flex sm:flex-col sm:pointer-events-none w-full sm:w-[500px] lg:w-fit lg:min-w-[500px] lg:col-start-2 sm:z-10"
       >
         <attacks-display
-          class="w-full pointer-events-auto order-1 sm:order-none"
+          class="w-full lg:w-0 lg:min-w-full pointer-events-auto order-1 sm:order-none"
         ></attacks-display>
+        <!-- Above the control panel's stacking context: in portrait below lg
+             the unit bar inside it is fixed to the right edge and would
+             otherwise cover the panel's close button on phones. -->
         <tutorial-panel
-          class="hidden w-full order-3 sm:order-none"
+          class="hidden w-full lg:w-0 lg:min-w-full order-3 sm:order-none z-20"
         ></tutorial-panel>
         <!-- The unit bar is a row below the control panel from lg up, a row
              above it on landscape phones, and a column fixed to the right edge
@@ -592,9 +603,10 @@
       <!-- events+chat: <sm between attacks and control (order-2), sm+ right side, lg+ col-3.
            sm and up in portrait below lg they clear the unit bar on the right edge.
            On landscape phones they're on the left, run into the safe-area insets
-           like the control panel. -->
+           like the control panel. Above the control panel's stacking context,
+           like the tutorial panel, so the portrait unit bar doesn't cover them. -->
       <div
-        class="flex flex-col pointer-events-none items-end order-2 sm:order-none sm:flex-1 sm:side-bar:pr-9 sm:max-lg:landscape:items-start sm:max-lg:landscape:-ml-[env(safe-area-inset-left)] sm:max-lg:landscape:-mb-[env(safe-area-inset-bottom)] lg:col-start-3 lg:self-end lg:justify-end"
+        class="flex flex-col pointer-events-none items-end order-2 sm:order-none z-20 sm:flex-1 sm:side-bar:pr-9 sm:max-lg:landscape:items-start sm:max-lg:landscape:-ml-[env(safe-area-inset-left)] sm:max-lg:landscape:-mb-[env(safe-area-inset-bottom)] lg:col-start-3 lg:self-end lg:justify-end"
       >
         <chat-display
           class="w-full sm:w-auto pointer-events-auto"

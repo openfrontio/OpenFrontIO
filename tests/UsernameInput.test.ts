@@ -1182,6 +1182,21 @@ describe("UsernameInput claim grace, live behaviour", () => {
   // left the stale "reserved until {past date}" wording in place. Unreachable
   // in the app today — <play-page> is hidden by class toggling, not removed —
   // but the code claims to handle it, so something should hold that.
+  it("hides the reminder when closed, until it escalates", async () => {
+    vi.useFakeTimers({ now: new Date("2026-09-30T23:59:00.000Z") });
+    const el = await mount();
+    await signIn(el, lapsedUser());
+
+    q(el, "#username-claim-grace-close")!.click();
+    await el.updateComplete;
+    expect(q(el, GRACE)).toBeNull();
+
+    // Closing "reserved until" must not also silence "can be taken now".
+    await vi.advanceTimersByTimeAsync(61_000);
+    await el.updateComplete;
+    expect(q(el, GRACE)!.textContent).toContain("username.claim_at_risk");
+  });
+
   it("escalates on reconnect when the deadline passed while detached", async () => {
     vi.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
     const el = await mount();

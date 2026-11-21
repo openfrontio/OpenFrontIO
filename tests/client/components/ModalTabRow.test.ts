@@ -245,3 +245,51 @@ describe("o-modal scroll-to-top", () => {
     expect(scrollEl.className).not.toContain("pb-16");
   });
 });
+
+describe("o-modal backdrop click", () => {
+  it("does not close when a drag starts inside the modal and ends on the backdrop", async () => {
+    const modal = document.createElement("o-modal") as OModal;
+    document.body.appendChild(modal);
+    modal.open();
+    await modal.updateComplete;
+
+    const backdrop = modal.shadowRoot!.querySelector<HTMLElement>("aside")!;
+    const inner = backdrop.querySelector<HTMLElement>("div")!;
+    inner.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    backdrop.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await modal.updateComplete;
+
+    expect(modal.isModalOpen).toBe(true);
+  });
+
+  it("does not close when a drag starts on the backdrop and ends inside the modal", async () => {
+    const modal = document.createElement("o-modal") as OModal;
+    document.body.appendChild(modal);
+    modal.open();
+    await modal.updateComplete;
+
+    const backdrop = modal.shadowRoot!.querySelector<HTMLElement>("aside")!;
+    const inner = backdrop.querySelector<HTMLElement>("div")!;
+    backdrop.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    inner.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    backdrop.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await modal.updateComplete;
+
+    expect(modal.isModalOpen).toBe(true);
+  });
+
+  it("closes when mousedown and click both happen on the backdrop", async () => {
+    const modal = document.createElement("o-modal") as OModal;
+    document.body.appendChild(modal);
+    modal.open();
+    await modal.updateComplete;
+
+    const backdrop = modal.shadowRoot!.querySelector<HTMLElement>("aside")!;
+    backdrop.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    backdrop.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    backdrop.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await modal.updateComplete;
+
+    expect(modal.isModalOpen).toBe(false);
+  });
+});

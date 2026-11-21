@@ -1,4 +1,6 @@
+import { authoredTerrain } from "@openfront/engine-api/EditorCommands";
 import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
+import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
 import {
   snapshotType,
   zBytes,
@@ -31,6 +33,10 @@ const MAX_MAG_DIST = 62;
 const TERRAIN_LAND_MASK = 0x80;
 const TERRAIN_MAG_MASK = 0x1f;
 const IMPASSABLE_MAG = 31;
+const TERRAIN_SHORELINE_BIT = 0x40;
+const TERRAIN_OCEAN_BIT = 0x20;
+// The map generator's depth for water next to impassable terrain (packed).
+const IMPASSABLE_NEIGHBOR_MAG = 10;
 
 interface CraterBounds {
   minX: number;
@@ -309,6 +315,357 @@ export class WaterManager {
     if (componentId === null) return null;
     if (!this._miniWaterGraph) return 0;
     return this._miniWaterGraph.getComponentSize(componentId) * 4;
+  }
+
+  /**
+   * The scenario editor's terrain edit (docs/ScenarioEditor.md, "Terrain").
+   * Writes the authored part of each tile's terrain byte, `terrain[i]` for
+   * `tiles[i]` (water 0, land 0x80 | elevation, impassable 0x9f), and
+   * repairs what the map generator derives from it around the tiles: the
+   * shoreline bits, the water depth, and the minimap tiles above them, with
+   * the generator's rules.
+   *
+   * What needs the whole map waits for endTerrainEdit(): new water has no
+   * ocean bit, a water body with no coast gets depth 31 instead of the
+   * generator's, and the water components and graph are not updated.
+   * Returns the full-map tiles whose terrain changed.
+   */
+  editTerrain(
+    tiles: readonly TileRef[],
+    terrain: readonly number[],
+  ): TileRef[] {
+    const map = this.map;
+    const changed = new Set<TileRef>();
+    const edited: TileRef[] = [];
+    const kindChanged = new Set<TileRef>();
+    for (let i = 0; i < tiles.length; i++) {
+      if (writeAuthored(map, tiles[i], terrain[i], kindChanged)) {
+        edited.push(tiles[i]);
+        changed.add(tiles[i]);
+      }
+    }
+    if (edited.length === 0) return [];
+    this.repairAround(map, edited, kindChanged, false, changed);
+
+    const mini = this.miniMap;
+    const miniEdited: TileRef[] = [];
+    const miniKindChanged = new Set<TileRef>();
+    for (const tile of edited) {
+      const mx = map.x(tile) >> 1;
+      const my = map.y(tile) >> 1;
+      if (!mini.isValidCoord(mx, my)) continue;
+      const miniTile = mini.ref(mx, my);
+      const value = miniAuthored(map, mx, my);
+      if (writeAuthored(mini, miniTile, value, miniKindChanged)) {
+        miniEdited.push(miniTile);
+      }
+    }
+    if (miniEdited.length > 0) {
+      this.repairAround(mini, miniEdited, miniKindChanged, true, null);
+    }
+    return [...changed];
+  }
+
+  /**
+   * Ends a run of editTerrain() calls. Derives every tile's terrain byte
+   * from its authored part again, on both maps, as the map generator does:
+   * this sets the ocean bit and the depth of water bodies with no coast,
+   * which editTerrain() leaves. The minimap is downscaled from the full map
+   * again first, so it depends on the full map alone, not on which tiles
+   * were edited: a stock map's minimap had small islands and lakes removed
+   * that editTerrain() would otherwise restore only where it was painted.
+   * The water components and graph wait for rebuildWaterGraph(). Returns
+   * the full-map tiles whose terrain changed.
+   */
+  endTerrainEdit(): TileRef[] {
+    DebugSpan.start("WaterManager:endTerrainEdit");
+    const changed: TileRef[] = [];
+    this.deriveTerrain(this.map, null, changed);
+    const mini = this.miniMap;
+    const miniTerrain = terrainOf(mini);
+    for (let my = 0, t = 0; my < mini.height(); my++) {
+      for (let mx = 0; mx < mini.width(); mx++, t++) {
+        const value = miniAuthored(this.map, mx, my);
+        if (authoredTerrain(miniTerrain[t]) !== value) {
+          mini.setTerrainByte(t, value);
+        }
+      }
+    }
+    this.deriveTerrain(mini, this.map, null);
+    DebugSpan.end("WaterManager:endTerrainEdit");
+    return changed;
+  }
+
+  /**
+   * The map generator's map16x: the minimap downscaled by the minimap's
+   * rule and derived, with no small islands removed, as the generator makes
+   * it from map4x. For the scenario editor's export, after endTerrainEdit()
+   * has derived the minimap.
+   */
+  downscaleMiniMap(): GameMap {
+    const mini = this.miniMap;
+    const w = mini.width() >> 1;
+    const h = mini.height() >> 1;
+    const terrain = new Uint8Array(w * h);
+    let land = 0;
+    for (let y = 0, t = 0; y < h; y++) {
+      for (let x = 0; x < w; x++, t++) {
+        terrain[t] = miniAuthored(mini, x, y);
+        if (terrainKind(terrain[t]) === 1) land++;
+      }
+    }
+    const map = new GameMapImpl(w, h, terrain, land);
+    this.deriveTerrain(map, mini, null);
+    return map;
+  }
+
+  /**
+   * Labels the water components and builds the water graph afresh, as game
+   * load does, after terrain edits: an edit can split a body of water,
+   * which the water nukes' incremental updates never have to handle. The
+   * scenario editor runs this before test play rather than at each
+   * stroke's end: on the largest map it costs about as much as the game's
+   * load (docs/ScenarioEditor.md, "Terrain").
+   */
+  rebuildWaterGraph(): void {
+    DebugSpan.start("WaterManager:rebuildWaterGraphFully");
+    if (this._miniWaterCC !== null) {
+      this._miniWaterCC.initialize();
+      this._miniWaterGraph = new AbstractGraphBuilder(
+        this.miniMap,
+        AbstractGraphBuilder.CLUSTER_SIZE,
+        undefined,
+        undefined,
+        this._miniWaterCC,
+        this._builderBFS ?? undefined,
+      ).build();
+      this._miniWaterHPA?.setGraph(this._miniWaterGraph);
+    }
+    this._waterGraphDirty = false;
+    this._dirtyMiniTiles.clear();
+    this._waterGraphVersion++;
+    DebugSpan.end("WaterManager:rebuildWaterGraphFully");
+  }
+
+  /**
+   * After editTerrain() wrote `edited`: fixes the shoreline bits of the
+   * edited tiles and the neighbours of those that changed kind, and the
+   * water depth around the latter.
+   */
+  private repairAround(
+    map: GameMap,
+    edited: TileRef[],
+    kindChanged: Set<TileRef>,
+    mini: boolean,
+    changed: Set<TileRef> | null,
+  ): void {
+    const w = map.width();
+    const h = map.height();
+    const terrain = terrainOf(map);
+    const check = new Set<TileRef>(edited);
+    for (const tile of kindChanged) {
+      const x = tile % w;
+      if (tile >= w) check.add(tile - w);
+      if (tile < (h - 1) * w) check.add(tile + w);
+      if (x > 0) check.add(tile - 1);
+      if (x < w - 1) check.add(tile + 1);
+    }
+    for (const tile of check) {
+      const b = terrain[tile];
+      const value = isShorelineTile(terrain, w, h, tile)
+        ? b | TERRAIN_SHORELINE_BIT
+        : b & ~TERRAIN_SHORELINE_BIT;
+      if (value !== b) {
+        map.setTerrainByte(tile, value);
+        changed?.add(tile);
+      }
+    }
+    if (kindChanged.size === 0) return;
+    const { stampArr, distArr } = this.magnitudeScratch(mini);
+    for (const g of this.computeCraterGroups(kindChanged, w, MAX_MAG_DIST)) {
+      this.recomputeMagnitudesInBox(
+        map,
+        g,
+        stampArr,
+        distArr,
+        mini ? this.bumpMiniStamp() : this.bumpFullMapStamp(),
+        true,
+        changed,
+        true,
+      );
+    }
+  }
+
+  /**
+   * Derives the shoreline bit, ocean bit and water depth of every tile of
+   * `map` from the authored part of the terrain, by the map generator's
+   * rules. `source` is the map `map` was downscaled from, if any: water
+   * with no coast takes its first water source's depth, as the generator's
+   * createMiniMap copies it.
+   */
+  private deriveTerrain(
+    map: GameMap,
+    source: GameMap | null,
+    changed: TileRef[] | null,
+  ): void {
+    const w = map.width();
+    const h = map.height();
+    const total = w * h;
+    const terrain = terrainOf(map);
+    const { distArr } = this.magnitudeScratch(source !== null);
+    const queue = new Int32Array(total);
+
+    // What each tile's neighbours are: the kinds of terrain among them, and
+    // the directions in which they are water.
+    const around = new Uint8Array(total);
+    // From here distArr holds, for each water tile, its distance to
+    // passable land + 1 (0 if not reached) and the DERIVE_ flags.
+    distArr.fill(0);
+    let tail = 0;
+    for (let y = 0, t = 0; y < h; y++) {
+      for (let x = 0; x < w; x++, t++) {
+        let m = 0;
+        let k = 0;
+        if (y > 0) m |= (k = KIND_BIT[terrain[t - w]]) === WATER ? k | UP : k;
+        if (y < h - 1) {
+          m |= (k = KIND_BIT[terrain[t + w]]) === WATER ? k | DOWN : k;
+        }
+        if (x > 0) m |= (k = KIND_BIT[terrain[t - 1]]) === WATER ? k | LEFT : k;
+        if (x < w - 1) {
+          m |= (k = KIND_BIT[terrain[t + 1]]) === WATER ? k | RIGHT : k;
+        }
+        around[t] = m;
+        if (KIND_BIT[terrain[t]] === WATER && (m & LAND) !== 0) {
+          distArr[t] = 1;
+          queue[tail++] = t;
+        }
+      }
+    }
+
+    // Depth: ceil(distance to passable land / 2), capped at 31, by a BFS
+    // from the shoreline water. Water further out than the cap is 31 if
+    // its body has a coast; DERIVE_COASTLESS marks the bodies that don't.
+    for (let head = 0; head < tail; head++) {
+      const t = queue[head];
+      const d = distArr[t];
+      if (d >= MAX_MAG_DIST) continue;
+      const m = around[t];
+      if ((m & UP) !== 0 && distArr[t - w] === 0) {
+        distArr[t - w] = d + 1;
+        queue[tail++] = t - w;
+      }
+      if ((m & DOWN) !== 0 && distArr[t + w] === 0) {
+        distArr[t + w] = d + 1;
+        queue[tail++] = t + w;
+      }
+      if ((m & LEFT) !== 0 && distArr[t - 1] === 0) {
+        distArr[t - 1] = d + 1;
+        queue[tail++] = t - 1;
+      }
+      if ((m & RIGHT) !== 0 && distArr[t + 1] === 0) {
+        distArr[t + 1] = d + 1;
+        queue[tail++] = t + 1;
+      }
+    }
+
+    // The ocean is the largest body of water. On a tie the generator takes
+    // the body it finds first scanning column by column: the one holding
+    // the smallest x * h + y.
+    let ocean = -1;
+    let oceanSize = 0;
+    let oceanKey = 0;
+    const coastless: number[] = [];
+    for (let start = 0; start < total; start++) {
+      if (KIND_BIT[terrain[start]] !== WATER) continue;
+      if ((distArr[start] & DERIVE_SEEN) !== 0) continue;
+      const body = fillWaterBody(
+        start,
+        DERIVE_SEEN,
+        distArr,
+        around,
+        w,
+        h,
+        queue,
+      );
+      if (!body.coast) coastless.push(start);
+      if (
+        body.size > oceanSize ||
+        (body.size === oceanSize && body.key < oceanKey)
+      ) {
+        ocean = start;
+        oceanSize = body.size;
+        oceanKey = body.key;
+      }
+    }
+    for (const start of coastless) {
+      fillWaterBody(start, DERIVE_COASTLESS, distArr, around, w, h, queue);
+    }
+    if (ocean >= 0) {
+      fillWaterBody(ocean, DERIVE_OCEAN, distArr, around, w, h, queue);
+    }
+
+    const sourceTerrain = source !== null ? terrainOf(source) : null;
+    const sw = source?.width() ?? 0;
+    for (let y = 0, t = 0; y < h; y++) {
+      for (let x = 0; x < w; x++, t++) {
+        const b = terrain[t];
+        const m = around[t];
+        const kind = KIND_BIT[b];
+        let value = b & (TERRAIN_LAND_MASK | TERRAIN_MAG_MASK);
+        if (kind === WATER) {
+          const d = distArr[t];
+          if ((m & IMPASSABLE) !== 0) {
+            value = IMPASSABLE_NEIGHBOR_MAG;
+          } else if ((d & DERIVE_COASTLESS) !== 0) {
+            // No coast: 0, or on a minimap the depth of the first water
+            // source in createMiniMap's order (0,0), (0,1), (1,0), (1,1).
+            value = 0;
+            if (sourceTerrain !== null) {
+              const s = y * 2 * sw + x * 2;
+              for (const src of [s, s + sw, s + 1, s + sw + 1]) {
+                if ((sourceTerrain[src] & TERRAIN_LAND_MASK) === 0) {
+                  value = sourceTerrain[src] & TERRAIN_MAG_MASK;
+                  break;
+                }
+              }
+            }
+          } else {
+            const reached = d & DERIVE_DIST_MASK;
+            value = reached === 0 ? TERRAIN_MAG_MASK : reached >> 1;
+          }
+          if ((d & DERIVE_OCEAN) !== 0) value |= TERRAIN_OCEAN_BIT;
+          if ((m & LAND) !== 0) value |= TERRAIN_SHORELINE_BIT;
+        } else if (kind === LAND && (m & WATER) !== 0) {
+          value |= TERRAIN_SHORELINE_BIT;
+        }
+        if (value !== b) {
+          map.setTerrainByte(t, value);
+          changed?.push(t);
+        }
+      }
+    }
+  }
+
+  private magnitudeScratch(mini: boolean): {
+    stampArr: Uint16Array;
+    distArr: Uint16Array;
+  } {
+    const map = mini ? this.miniMap : this.map;
+    const total = map.width() * map.height();
+    if (mini) {
+      if (!this._miniDistArr || this._miniDistArr.length !== total) {
+        this._miniDistArr = new Uint16Array(total);
+        this._miniStampArr = new Uint16Array(total);
+        this._miniStamp = 0;
+      }
+      return { stampArr: this._miniStampArr!, distArr: this._miniDistArr };
+    }
+    if (!this._waterDistArr || this._waterDistArr.length !== total) {
+      this._waterDistArr = new Uint16Array(total);
+      this._waterStampArr = new Uint16Array(total);
+      this._waterStamp = 0;
+    }
+    return { stampArr: this._waterStampArr!, distArr: this._waterDistArr };
   }
 
   private finalizeWaterChanges(
@@ -772,6 +1129,8 @@ export class WaterManager {
    *   (Used on the full map; the minimap counts any land as coastline.)
    * @param changed When set, tiles whose magnitude changed are recorded
    *   for client updates.
+   * @param impassableNeighborDepth When true, water next to impassable
+   *   terrain gets the map generator's fixed depth instead (editor edits).
    */
   private recomputeMagnitudesInBox(
     map: GameMap,
@@ -781,6 +1140,7 @@ export class WaterManager {
     stamp: number,
     passableCoastOnly: boolean,
     changed: Set<TileRef> | null,
+    impassableNeighborDepth = false,
   ): void {
     const w = map.width();
     const h = map.height();
@@ -823,10 +1183,13 @@ export class WaterManager {
       }
     }
 
-    // BFS outward through water, clipped to the seed box.
+    // BFS outward through water, clipped to the seed box. It stops at
+    // MAX_MAG_DIST, from where the depth is 31 either way, so the distance
+    // fits distArr however far the water runs.
     let head = 0;
     while (head < queue.length) {
       const tile = queue[head++];
+      if (distArr[tile] >= MAX_MAG_DIST) continue;
       const nextDist = distArr[tile] + 1;
       const x = tile % w;
       const y = (tile - x) / w;
@@ -874,9 +1237,11 @@ export class WaterManager {
         // Reached by BFS → magnitude from distance; unreached → nearest
         // coast is >MAX_MAG_DIST away → deep water (31).
         const newMag =
-          stampArr[tile] === stamp
-            ? Math.min(Math.ceil(distArr[tile] / 2), 31)
-            : 31;
+          impassableNeighborDepth && touchesImpassable(terrain, w, h, tile)
+            ? IMPASSABLE_NEIGHBOR_MAG
+            : stampArr[tile] === stamp
+              ? Math.min(Math.ceil(distArr[tile] / 2), 31)
+              : 31;
         if ((b & TERRAIN_MAG_MASK) !== newMag) {
           map.setMagnitude(tile, newMag);
           changed?.add(tile);
@@ -884,6 +1249,169 @@ export class WaterManager {
       }
     }
   }
+}
+
+// The authored terrain byte of impassable terrain.
+const IMPASSABLE_BYTE = TERRAIN_LAND_MASK | IMPASSABLE_MAG;
+
+// deriveTerrain's per-tile bits. A terrain byte's kind as a bit
+// (KIND_BIT[byte]), and the directions of a tile's water neighbours.
+const WATER = 1;
+const LAND = 2;
+const IMPASSABLE = 4;
+const UP = 8;
+const DOWN = 16;
+const LEFT = 32;
+const RIGHT = 64;
+// distArr in deriveTerrain: distance to passable land + 1, and flags.
+const DERIVE_DIST_MASK = 0x3f;
+const DERIVE_SEEN = 0x2000;
+const DERIVE_COASTLESS = 0x4000;
+const DERIVE_OCEAN = 0x8000;
+
+function terrainOf(map: GameMap): Uint8Array {
+  // Direct terrain access, same precedent as ConnectedComponents
+  return (map as unknown as { terrain: Uint8Array }).terrain;
+}
+
+/** 0 water, 1 land, 2 impassable. */
+function terrainKind(b: number): number {
+  if ((b & TERRAIN_LAND_MASK) === 0) return 0;
+  return (b & TERRAIN_MAG_MASK) === IMPASSABLE_MAG ? 2 : 1;
+}
+
+const KIND_BIT = Uint8Array.from(
+  { length: 256 },
+  (_, b) => 1 << terrainKind(b),
+);
+
+/**
+ * Writes the authored byte `value` to the tile, clearing what is derived
+ * from it, unless the tile has it already. Returns whether it wrote.
+ */
+function writeAuthored(
+  map: GameMap,
+  tile: TileRef,
+  value: number,
+  kindChanged: Set<TileRef>,
+): boolean {
+  const b = map.terrainByte(tile);
+  if (authoredTerrain(b) === value) return false;
+  if (terrainKind(b) !== terrainKind(value)) kindChanged.add(tile);
+  map.setTerrainByte(tile, value);
+  return true;
+}
+
+/**
+ * The map generator's createMiniMap rule for the minimap tile (mx, my) of
+ * `map`: water if any of its four tiles is, else impassable if any is, else
+ * land at the elevation of the last, (1,1).
+ */
+function miniAuthored(map: GameMap, mx: number, my: number): number {
+  const terrain = terrainOf(map);
+  const s = map.ref(mx * 2, my * 2);
+  const w = map.width();
+  const a = terrainKind(terrain[s]);
+  const b = terrainKind(terrain[s + w]);
+  const c = terrainKind(terrain[s + 1]);
+  const d = terrainKind(terrain[s + w + 1]);
+  if (a === 0 || b === 0 || c === 0 || d === 0) return 0;
+  if (a === 2 || b === 2 || c === 2 || d === 2) return IMPASSABLE_BYTE;
+  return authoredTerrain(terrain[s + w + 1]);
+}
+
+/**
+ * The map generator's shoreline rule: land next to water, or water next to
+ * passable land. Impassable terrain is never shoreline.
+ */
+function isShorelineTile(
+  terrain: Uint8Array,
+  w: number,
+  h: number,
+  tile: number,
+): boolean {
+  const kind = terrainKind(terrain[tile]);
+  if (kind === 2) return false;
+  const coast = kind === 0 ? 1 : 0;
+  const x = tile % w;
+  return (
+    (tile >= w && terrainKind(terrain[tile - w]) === coast) ||
+    (tile < (h - 1) * w && terrainKind(terrain[tile + w]) === coast) ||
+    (x > 0 && terrainKind(terrain[tile - 1]) === coast) ||
+    (x < w - 1 && terrainKind(terrain[tile + 1]) === coast)
+  );
+}
+
+/**
+ * Scan-line flood fill (as in ConnectedComponents) of the water body
+ * holding `start`, setting `bit` in `marks` on its tiles. `around` is
+ * deriveTerrain's. Returns the body's size, whether any of its tiles has
+ * passable land beside it, and the smallest x * h + y among its tiles.
+ */
+function fillWaterBody(
+  start: number,
+  bit: number,
+  marks: Uint16Array,
+  around: Uint8Array,
+  w: number,
+  h: number,
+  queue: Int32Array,
+): { size: number; coast: boolean; key: number } {
+  let size = 0;
+  let coast = 0;
+  let key = Infinity;
+  // A tile is marked when it is queued, and only the first tile of each
+  // unmarked run above or below a span is queued: the run is filled from it.
+  marks[start] |= bit;
+  queue[0] = start;
+  let tail = 1;
+  for (let head = 0; head < tail; head++) {
+    let left = queue[head];
+    let right = left;
+    while ((around[left] & LEFT) !== 0 && (marks[left - 1] & bit) === 0) {
+      marks[--left] |= bit;
+    }
+    while ((around[right] & RIGHT) !== 0 && (marks[right + 1] & bit) === 0) {
+      marks[++right] |= bit;
+    }
+    size += right - left + 1;
+    const x = left % w;
+    key = Math.min(key, x * h + (left - x) / w);
+    let upRun = false;
+    let downRun = false;
+    for (let t = left; t <= right; t++) {
+      const m = around[t];
+      coast |= m & LAND;
+      const up = (m & UP) !== 0 && (marks[t - w] & bit) === 0;
+      if (up && !upRun) {
+        marks[t - w] |= bit;
+        queue[tail++] = t - w;
+      }
+      upRun = up;
+      const down = (m & DOWN) !== 0 && (marks[t + w] & bit) === 0;
+      if (down && !downRun) {
+        marks[t + w] |= bit;
+        queue[tail++] = t + w;
+      }
+      downRun = down;
+    }
+  }
+  return { size, coast: coast !== 0, key };
+}
+
+function touchesImpassable(
+  terrain: Uint8Array,
+  w: number,
+  h: number,
+  tile: number,
+): boolean {
+  const x = tile % w;
+  return (
+    (tile >= w && terrainKind(terrain[tile - w]) === 2) ||
+    (tile < (h - 1) * w && terrainKind(terrain[tile + w]) === 2) ||
+    (x > 0 && terrainKind(terrain[tile - 1]) === 2) ||
+    (x < w - 1 && terrainKind(terrain[tile + 1]) === 2)
+  );
 }
 
 export const WaterManagerSnapshot = snapshotType({

@@ -1439,8 +1439,25 @@ export type FfaRankLeaderboardResponse = z.infer<
   typeof FfaRankLeaderboardResponseSchema
 >;
 
+// Globally ordered top-250 FFA view (five pages of fifty).
+export const FfaAllRanksLeaderboardResponseSchema = z.object({
+  players: RankedLeaderboardEntrySchema.array(),
+});
+export type FfaAllRanksLeaderboardResponse = z.infer<
+  typeof FfaAllRanksLeaderboardResponseSchema
+>;
+
 export const FfaRankPositionResponseSchema = z.object({
   position: z.number().int().nullable(),
+  // Global FFA position; null for unlisted players and for up to 15 minutes
+  // after a deploy, absent on an older API.
+  globalPosition: z
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .optional()
+    .catch(undefined),
 });
 
 export const FriendEntrySchema = z.object({
@@ -1644,6 +1661,13 @@ export const SteamFinalizeResponseSchema = z.object({
 });
 export type SteamFinalizeResponse = z.infer<typeof SteamFinalizeResponseSchema>;
 
+// POST /payments/google/finalize — credits a Google Play purchase. A 200 is
+// "settled" (credited) or "pending" (Play has not taken the money yet; the
+// purchase is credited when it completes). A refusal is a 409, not a 200.
+export const GoogleFinalizeResponseSchema = z.object({
+  status: z.enum(["settled", "pending"]),
+});
+
 // A saved singleplayer game (/users/@me/saved_games, /public/saved_games).
 // The bytes are fetched separately from its `/data` route.
 export const SavedGameSchema = z.object({
@@ -1660,3 +1684,55 @@ export type SavedGame = z.infer<typeof SavedGameSchema>;
 export const SavedGamesListResponseSchema = z.object({
   savedGames: SavedGameSchema.array(),
 });
+
+// Store analytics. A deliberate copy of the schema in the infra API's
+// src/api/lib/StoreTracking.ts: keep the two identical. A new placement kind
+// is deployed to the API before any client sends it.
+// The store's tabs and cosmetics sub-tabs. The client's StoreTab and
+// CosmeticsSubTab types are derived from these, so a tab the API would reject
+// fails typecheck instead of a request.
+export const StorePlacementTabSchema = z.enum([
+  "cosmetics",
+  "bundles",
+  "effects",
+  "packs",
+  "subscriptions",
+  "tribes",
+]);
+export type StorePlacementTab = z.infer<typeof StorePlacementTabSchema>;
+export const StorePlacementSubTabSchema = z.enum([
+  "new",
+  "sale",
+  "patterns",
+  "flags",
+  "crowns",
+]);
+export type StorePlacementSubTab = z.infer<typeof StorePlacementSubTabSchema>;
+
+export const StorePlacementSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("tab"),
+    tab: StorePlacementTabSchema,
+    subTab: StorePlacementSubTabSchema.optional(),
+  }),
+  z.object({ kind: z.literal("flash") }),
+  z.object({ kind: z.literal("affiliate") }),
+  z.object({ kind: z.literal("post_game") }),
+]);
+export type StorePlacement = z.infer<typeof StorePlacementSchema>;
+
+export const StoreEventsBodySchema = z.object({
+  platform: z.enum(["web", "steam", "crazygames"]),
+  events: z
+    .array(
+      z.object({
+        type: z.enum(["impression", "click"]),
+        item: z.string().min(1).max(120),
+        placement: StorePlacementSchema,
+      }),
+    )
+    .min(1)
+    // The API's limit per request; StoreTracker splits its queue to fit.
+    .max(50),
+});
+export type StoreEventsBody = z.infer<typeof StoreEventsBodySchema>;

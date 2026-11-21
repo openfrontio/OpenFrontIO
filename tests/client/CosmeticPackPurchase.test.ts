@@ -103,7 +103,7 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
 
     await expect(purchaseCosmetic(starter, "hard")).resolves.toBeUndefined();
 
-    expect(purchaseCosmeticPack).toHaveBeenCalledWith("starter");
+    expect(purchaseCosmeticPack).toHaveBeenCalledWith("starter", undefined);
     expect(showInGameAlert).toHaveBeenCalledWith("bought Starter Pack");
     expect(invalidateUserMe).toHaveBeenCalled();
     expect(reloadMock).toHaveBeenCalled();

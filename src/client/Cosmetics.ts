@@ -2,6 +2,7 @@ import {
   giftSubscriptionOf,
   isGrantedSubscription,
   paidSubscriptionOf,
+  type StorePlacement,
   subscriptionsOf,
   UserMeResponse,
   UserSubscription,
@@ -43,6 +44,8 @@ import {
   classifyPurchaseReturn,
   paymentsProvider,
   purchaseOutcomeMessage,
+  sellsOnlyThroughPlay,
+  startPlayPurchase,
   startPurchase,
 } from "./Payments";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
@@ -303,6 +306,7 @@ function grantedDaysRemaining(sub: UserSubscription): number | null {
 async function purchaseOverGrant(
   sub: Subscription,
   gift: UserSubscription,
+  placement?: StorePlacement,
 ): Promise<void> {
   const targetName = translateCosmetic("subscriptions", sub.name);
   const giftTier = subscriptionTier(await fetchCosmetics(), gift.tier);
@@ -346,6 +350,7 @@ async function purchaseOverGrant(
   const outcome = await startPurchase({
     kind: "subscription_tier",
     tierName: sub.name,
+    placement,
   });
   if (outcome.outcome === "completed") await broadcastFreshUserMe();
   if (outcome.outcome === "error" && outcome.refetchCatalog) {
@@ -392,12 +397,16 @@ async function promptManageBilling(message: string): Promise<void> {
 export async function purchaseCosmetic(
   resolved: ResolvedCosmetic,
   method: PaymentMethod,
+  placement?: StorePlacement,
 ): Promise<PurchaseResult> {
   if (!resolved.cosmetic) return;
   const c = resolved.cosmetic;
   const colorPaletteName = resolved.colorPalette?.name;
 
   if (resolved.type === "subscription") {
+    // The Android app sells no subscription (Play is its only way to pay) and
+    // never offers one; nothing here may start a checkout or a tier change.
+    if (sellsOnlyThroughPlay()) return;
     const sub = c as Subscription;
     const userMe = await getUserMe();
     // The paid row decides: a grant beside it is not something to change
@@ -427,7 +436,7 @@ export async function purchaseCosmetic(
       // there is — Steam inside the shell, Stripe on the web. Both are
       // admitted.
       if (paidSub === null) {
-        return purchaseOverGrant(sub, currentSub);
+        return purchaseOverGrant(sub, currentSub, placement);
       }
 
       if (currentSub.tier === sub.name) {
@@ -505,6 +514,7 @@ export async function purchaseCosmetic(
         const outcome = await startPurchase({
           kind: "subscription_tier",
           tierName: sub.name,
+          placement,
         });
         if (outcome.outcome === "completed") await broadcastFreshUserMe();
         if (outcome.outcome === "error" && outcome.refetchCatalog) {
@@ -540,7 +550,7 @@ export async function purchaseCosmetic(
   }
 
   if (resolved.type === "cosmeticPack") {
-    return purchasePack(c as CosmeticPack, method);
+    return purchasePack(c as CosmeticPack, method, placement);
   }
 
   if (method === "dollar") {
@@ -550,11 +560,15 @@ export async function purchaseCosmetic(
     // and gating on it is what made those unbuyable.
     if (resolved.type === "pack" || resolved.type === "subscription") {
       const isPack = resolved.type === "pack";
-      const outcome = await startPurchase(
-        isPack
-          ? { kind: "currency_pack", packName: c.name }
-          : { kind: "subscription_tier", tierName: c.name },
-      );
+      // In the Android app a currency pack is a Play product instead.
+      const outcome =
+        isPack && paymentsProvider() === "google"
+          ? await startPlayPurchase((c as Pack).googleProductId)
+          : await startPurchase(
+              isPack
+                ? { kind: "currency_pack", packName: c.name, placement }
+                : { kind: "subscription_tier", tierName: c.name, placement },
+            );
       if (outcome.outcome === "completed") {
         // Not just invalidateUserMe(): that clears the cache and nothing more.
         // On the overlay path the page never navigates, so an open StoreModal
@@ -670,6 +684,7 @@ export async function purchaseCosmetic(
     c.name,
     method,
     colorPaletteName,
+    placement,
   );
   if (!result.ok) {
     switch (result.code) {
@@ -768,6 +783,7 @@ function purchaseSuccessMessage(
 async function purchasePack(
   pack: CosmeticPack,
   method: PaymentMethod,
+  placement?: StorePlacement,
 ): Promise<PurchaseResult> {
   if (method !== "hard") {
     console.error("purchaseCosmetic: packs are only sold for hard currency");
@@ -797,7 +813,7 @@ async function purchasePack(
     return insufficient(balance);
   }
 
-  const result = await purchaseCosmeticPack(pack.name);
+  const result = await purchaseCosmeticPack(pack.name, placement);
   if (result.ok) {
     const charged = Number(result.data.amount);
     await showInGameAlert(
@@ -936,6 +952,27 @@ export function saleHasEnded(item: {
  */
 export function invalidateCosmetics(): void {
   __cosmetics = null;
+}
+
+/**
+ * Whether a catalog item is new to the store: the API sends `newUntil` while
+ * it is (added in the last 14 days). Judged against the clock, since the
+ * catalog is cached and an item can stop being new while the store is open.
+ */
+export function isNew(cosmetic: unknown, now: number = Date.now()): boolean {
+  const until = newUntilMs(cosmetic);
+  return until !== null && until > now;
+}
+
+/**
+ * When a catalog item stops being new (ms), or null if it has no newUntil or
+ * an unparseable one.
+ */
+export function newUntilMs(cosmetic: unknown): number | null {
+  const newUntil = (cosmetic as { newUntil?: string } | null)?.newUntil;
+  if (newUntil === undefined) return null;
+  const ms = new Date(newUntil).getTime();
+  return Number.isFinite(ms) ? ms : null;
 }
 
 /**

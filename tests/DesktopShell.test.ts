@@ -4,6 +4,7 @@ import {
   composeVersionDisplay,
   desktopGoogleSignIn,
   desktopLinkGate,
+  desktopPlayBilling,
   desktopQuit,
   desktopSteamLocale,
   desktopVersion,
@@ -242,6 +243,174 @@ describe("desktopGoogleSignIn", () => {
       status: "error",
       code: "failed",
     });
+  });
+});
+
+// The Android app's Play billing bridge. Same rule as desktopGoogleSignIn:
+// found by its methods, and every answer is checked before it is believed.
+describe("desktopPlayBilling", () => {
+  afterEach(() => {
+    window.openfrontDesktop = undefined;
+  });
+
+  function install(overrides: Record<string, unknown> = {}) {
+    const playBilling = {
+      products: vi.fn(async () => ({ status: "ok", products: [] })),
+      purchase: vi.fn(async () => ({ status: "cancelled" })),
+      unconsumed: vi.fn(async () => ({ status: "ok", purchaseTokens: [] })),
+      ...overrides,
+    };
+    window.openfrontDesktop = { playBilling };
+    return playBilling;
+  }
+
+  it("is null in the browser, with no bridge present", () => {
+    window.openfrontDesktop = undefined;
+    expect(desktopPlayBilling()).toBeNull();
+  });
+
+  it("is null unless all three methods are functions", () => {
+    window.openfrontDesktop = { shell: { platform: "android" } };
+    expect(desktopPlayBilling()).toBeNull();
+    install({ unconsumed: undefined });
+    expect(desktopPlayBilling()).toBeNull();
+    install({ purchase: true });
+    expect(desktopPlayBilling()).toBeNull();
+    install();
+    expect(desktopPlayBilling()).not.toBeNull();
+  });
+
+  it("calls the methods on the bridge object", async () => {
+    const playBilling = install();
+    expect(
+      await desktopPlayBilling()!.purchase({
+        productId: "pack_1",
+        accountId: "pub-1",
+      }),
+    ).toEqual({ status: "cancelled" });
+    expect(playBilling.purchase).toHaveBeenCalledWith({
+      productId: "pack_1",
+      accountId: "pub-1",
+    });
+    expect(playBilling.purchase.mock.contexts[0]).toBe(playBilling);
+  });
+
+  it("keeps only well-formed products", async () => {
+    install({
+      products: async () => ({
+        status: "ok",
+        products: [
+          { productId: "pack_1", formattedPrice: "€1,99" },
+          { productId: "", formattedPrice: "€1,99" },
+          { productId: "pack_2", formattedPrice: "" },
+          { productId: "pack_3" },
+          { productId: 4, formattedPrice: "€4" },
+          null,
+          "pack_5",
+        ],
+      }),
+    });
+    await expect(desktopPlayBilling()!.products(["pack_1"])).resolves.toEqual({
+      status: "ok",
+      products: [{ productId: "pack_1", formattedPrice: "€1,99" }],
+    });
+  });
+
+  it("keeps only non-empty string tokens", async () => {
+    install({
+      unconsumed: async () => ({
+        status: "ok",
+        purchaseTokens: ["t1", "", 2, null, "t2"],
+      }),
+    });
+    await expect(desktopPlayBilling()!.unconsumed()).resolves.toEqual({
+      status: "ok",
+      purchaseTokens: ["t1", "t2"],
+    });
+  });
+
+  it.each([
+    [
+      { status: "ok", purchaseToken: "tok" },
+      { status: "ok", purchaseToken: "tok" },
+    ],
+    [{ status: "cancelled" }, { status: "cancelled" }],
+    [
+      { status: "error", code: "already_owned" },
+      { status: "error", code: "already_owned" },
+    ],
+    [
+      { status: "error", code: "unavailable" },
+      { status: "error", code: "unavailable" },
+    ],
+    [
+      { status: "error", code: "busy" },
+      { status: "error", code: "busy" },
+    ],
+    [
+      { status: "error", code: "failed" },
+      { status: "error", code: "failed" },
+    ],
+  ])("purchase passes %j through", async (raw, expected) => {
+    install({ purchase: async () => raw });
+    await expect(
+      desktopPlayBilling()!.purchase({ productId: "p", accountId: "a" }),
+    ).resolves.toEqual(expected);
+  });
+
+  it("passes unavailable through from products and unconsumed", async () => {
+    const unavailable = { status: "error", code: "unavailable" };
+    install({
+      products: async () => unavailable,
+      unconsumed: async () => unavailable,
+    });
+    const billing = desktopPlayBilling()!;
+    await expect(billing.products(["p"])).resolves.toEqual(unavailable);
+    await expect(billing.unconsumed()).resolves.toEqual(unavailable);
+  });
+
+  it.each([
+    ["an unknown error code", { status: "error", code: "something_new" }],
+    ["ok without a token", { status: "ok" }],
+    ["ok with an empty token", { status: "ok", purchaseToken: "" }],
+    ["ok with a non-string token", { status: "ok", purchaseToken: 42 }],
+    ["an unknown status", { status: "maybe" }],
+    ["null", null],
+    ["a string", "ok"],
+  ])("purchase answers failed for %s", async (_label, raw) => {
+    install({ purchase: async () => raw });
+    await expect(
+      desktopPlayBilling()!.purchase({ productId: "p", accountId: "a" }),
+    ).resolves.toEqual({ status: "error", code: "failed" });
+  });
+
+  it.each([
+    ["an unknown error code", { status: "error", code: "busy" }],
+    ["ok without a list", { status: "ok" }],
+    ["null", null],
+  ])("products and unconsumed answer failed for %s", async (_label, raw) => {
+    install({ products: async () => raw, unconsumed: async () => raw });
+    const billing = desktopPlayBilling()!;
+    const failed = { status: "error", code: "failed" };
+    await expect(billing.products(["p"])).resolves.toEqual(failed);
+    await expect(billing.unconsumed()).resolves.toEqual(failed);
+  });
+
+  it("answers failed when a method rejects or throws", async () => {
+    install({
+      products: () => Promise.reject(new Error("ipc")),
+      purchase: () => {
+        throw new Error("sync");
+      },
+      unconsumed: () => Promise.reject(new Error("ipc")),
+    });
+    const billing = desktopPlayBilling()!;
+    const failed = { status: "error", code: "failed" };
+    await expect(billing.products(["p"])).resolves.toEqual(failed);
+    await expect(
+      billing.purchase({ productId: "p", accountId: "a" }),
+    ).resolves.toEqual(failed);
+    await expect(billing.unconsumed()).resolves.toEqual(failed);
   });
 });
 

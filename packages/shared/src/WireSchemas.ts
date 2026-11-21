@@ -261,6 +261,9 @@ export const GameInfoSchema = z.object({
   // Listed lobbies only: the host paid to put it in the public Special
   // queue, so the queue's countdown starts it.
   queued: z.boolean().optional(),
+  // Scheduled public lobbies only: the client who paid to boost the lobby to
+  // the front of its queue.
+  boostedBy: z.string().optional(),
 });
 
 // Browser-facing lobby info. Master/worker-internal fields (the creator hash
@@ -285,6 +288,8 @@ export const PublicGameInfoSchema = z.object({
   // than one the server scheduled, so the browser can label it Custom.
   // Featured lobbies are official events and never carry it.
   custom: z.boolean().optional(),
+  // A scheduled lobby a player paid to boost to the front of its queue.
+  boosted: z.boolean().optional(),
 });
 
 export const PublicGamesSchema = z.object({
@@ -377,14 +382,9 @@ const JwtTokenSchema = z.jwt();
 
 const TokenSchema = z
   .string()
-  .refine(
-    (v) =>
-      PersistentIdSchema.safeParse(v).success ||
-      JwtTokenSchema.safeParse(v).success,
-    {
-      message: "Token must be a valid UUID or JWT",
-    },
-  );
+  .refine((v) => PersistentIdSchema.validate(v) || JwtTokenSchema.validate(v), {
+    message: "Token must be a valid UUID or JWT",
+  });
 
 export const FlagName = z
   .string()
@@ -586,19 +586,21 @@ export const ServerRedirectMessageSchema = z.object({
   gameID: ID,
 });
 
-export const ServerMessageSchema = zb.discriminatedUnion("type", [
-  ServerTurnMessageSchema,
-  ServerPrestartMessageSchema,
-  ServerStartGameMessageSchema,
-  ServerPingMessageSchema,
-  ServerDesyncSchema,
-  ServerErrorSchema,
-  ServerLobbyInfoMessageSchema,
-  ServerNewLobbyMessageSchema,
-  ServerPongMessageSchema,
-  // Appended, never inserted: variant order is the wire tag (zbin/README.md).
-  ServerRedirectMessageSchema,
-]);
+export const ServerMessageSchema = zb.compile(
+  zb.discriminatedUnion("type", [
+    ServerTurnMessageSchema,
+    ServerPrestartMessageSchema,
+    ServerStartGameMessageSchema,
+    ServerPingMessageSchema,
+    ServerDesyncSchema,
+    ServerErrorSchema,
+    ServerLobbyInfoMessageSchema,
+    ServerNewLobbyMessageSchema,
+    ServerPongMessageSchema,
+    // Appended, never inserted: variant order is the wire tag (zbin/README.md).
+    ServerRedirectMessageSchema,
+  ]),
+);
 
 //
 // Client
@@ -686,10 +688,12 @@ export const ClientPingMessageSchema = z.object({
   sentAt: zb.uint(),
 });
 
-export const ClientIntentMessageSchema = z.object({
-  type: z.literal("intent"),
-  intent: IntentSchema,
-});
+export const ClientIntentMessageSchema = z.compile(
+  z.object({
+    type: z.literal("intent"),
+    intent: IntentSchema,
+  }),
+);
 
 // Where the client was distributed, as the client reports it. Unverified, so
 // fit for metric dimensions only; the signed provider="steam" claim is the
@@ -754,18 +758,20 @@ export const ClientSpectateMessageSchema = z.object({
   spectator: z.boolean(),
 });
 
-export const ClientMessageSchema = zb.discriminatedUnion("type", [
-  ClientSendWinnerSchema,
-  ClientSendLiveStatsSchema,
-  ClientPingMessageSchema,
-  ClientIntentMessageSchema,
-  ClientJoinMessageSchema,
-  ClientRejoinMessageSchema,
-  ClientLogMessageSchema,
-  ClientHashSchema,
-  ClientSpectateMessageSchema,
-  ClientReportMessageSchema,
-]);
+export const ClientMessageSchema = zb.compile(
+  zb.discriminatedUnion("type", [
+    ClientSendWinnerSchema,
+    ClientSendLiveStatsSchema,
+    ClientPingMessageSchema,
+    ClientIntentMessageSchema,
+    ClientJoinMessageSchema,
+    ClientRejoinMessageSchema,
+    ClientLogMessageSchema,
+    ClientHashSchema,
+    ClientSpectateMessageSchema,
+    ClientReportMessageSchema,
+  ]),
+);
 
 //
 // Records
