@@ -21,6 +21,8 @@ import { cosmeticDisplayName } from "./CosmeticPresentation";
 import "./PlutoniumIcon";
 
 const SPOTLIGHT_COUNT = 3;
+// setTimeout's ceiling (~24.8 days); a later deadline just re-arms.
+const MAX_TIMEOUT_MS = 2 ** 31 - 1;
 
 // Kinds the store can deep-link to by item key (see subTabForItem in Store.ts).
 const SPOTLIGHT_TYPES: ReadonlySet<ResolvedCosmetic["type"]> = new Set([
@@ -81,6 +83,27 @@ export function pickSpotlightItems(
   return [...onSale, ...fresh, ...rest].slice(0, SPOTLIGHT_COUNT);
 }
 
+/**
+ * When the shown items next go stale (ms): the earliest sale end or "new" end
+ * still ahead, or null if none is.
+ */
+export function nextSpotlightDeadline(
+  items: readonly ResolvedCosmetic[],
+  now: number = Date.now(),
+): number | null {
+  let next: number | null = null;
+  for (const r of items) {
+    const saleEnd = activeSale(r.cosmetic, now)?.endsAt;
+    for (const t of [
+      saleEnd === undefined ? NaN : Date.parse(saleEnd),
+      newUntilMs(r.cosmetic) ?? NaN,
+    ]) {
+      if (t > now && (next === null || t < next)) next = t;
+    }
+  }
+  return next;
+}
+
 export function storeItemHash(resolved: ResolvedCosmetic): string {
   return `#modal=store&tab=cosmetics&item=${encodeURIComponent(resolved.key)}`;
 }
@@ -92,6 +115,8 @@ export function storeItemHash(resolved: ResolvedCosmetic): string {
 export class ShopSpotlight extends LitElement {
   @state() private items: ResolvedCosmetic[] = [];
   private cosmetics: Cosmetics | null = null;
+  private me: UserMeResponse | false = false;
+  private repickTimer: ReturnType<typeof setTimeout> | null = null;
   private compactQuery: MediaQueryList | null = null;
 
   createRenderRoot() {
@@ -113,6 +138,7 @@ export class ShopSpotlight extends LitElement {
     this.compactQuery?.removeEventListener("change", this.syncVisibility);
     this.compactQuery = null;
     document.removeEventListener("userMeResponse", this.onUserMe);
+    this.clearRepick();
   }
 
   private onUserMe = (event: Event) => {
@@ -127,9 +153,33 @@ export class ShopSpotlight extends LitElement {
   }
 
   private pick(me: UserMeResponse | false) {
+    this.me = me;
     if (this.cosmetics === null) return;
     this.items = pickSpotlightItems(resolveCosmetics(this.cosmetics, me, null));
     this.syncVisibility();
+    this.scheduleRepick();
+  }
+
+  // A shown sale or "new" badge ending changes the tile's price and the
+  // ordering: pick again just after it does.
+  private scheduleRepick() {
+    this.clearRepick();
+    const now = Date.now();
+    const deadline = nextSpotlightDeadline(this.items, now);
+    if (deadline === null) return;
+    this.repickTimer = setTimeout(
+      () => {
+        this.repickTimer = null;
+        if (deadline <= Date.now()) this.pick(this.me);
+        else this.scheduleRepick();
+      },
+      Math.min(deadline - now + 1000, MAX_TIMEOUT_MS),
+    );
+  }
+
+  private clearRepick() {
+    if (this.repickTimer !== null) clearTimeout(this.repickTimer);
+    this.repickTimer = null;
   }
 
   private syncVisibility = () => {

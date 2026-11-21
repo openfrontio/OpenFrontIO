@@ -1,9 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  nextSpotlightDeadline,
   pickSpotlightItems,
   storeItemHash,
 } from "../../src/client/components/ShopSpotlight";
 import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
+
+const catalog = vi.hoisted(() => ({ items: [] as unknown[] }));
+vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
+  fetchCosmetics: async () => ({}),
+  resolveCosmetics: () => catalog.items,
+}));
 
 const NOW = Date.parse("2026-11-20T12:00:00Z");
 const LATER = "2026-11-25T12:00:00Z";
@@ -100,5 +108,66 @@ describe("storeItemHash", () => {
     expect(
       storeItemHash(item("pattern", "stripes", {}, "purchasable", "red")),
     ).toBe("#modal=store&tab=cosmetics&item=pattern%3Astripes%3Ared");
+  });
+});
+
+describe("nextSpotlightDeadline", () => {
+  it("is the earliest sale or new end still ahead", () => {
+    const items = [
+      item("flag", "new", { newUntil: "2026-11-22T00:00:00Z" }),
+      item("skin", "sale", {
+        priceSoft: 80,
+        listPriceSoft: 100,
+        promotion: { percentOff: 20, endsAt: "2026-11-21T00:00:00Z" },
+      }),
+      item("crown", "was_new", { newUntil: "2026-11-19T00:00:00Z" }),
+    ];
+    expect(nextSpotlightDeadline(items, NOW)).toBe(
+      Date.parse("2026-11-21T00:00:00Z"),
+    );
+    expect(nextSpotlightDeadline([item("flag", "plain")], NOW)).toBeNull();
+  });
+});
+
+describe("<shop-spotlight>", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+    vi.useRealTimers();
+  });
+
+  it("picks again when a shown sale ends", async () => {
+    vi.useFakeTimers({ now: NOW });
+    catalog.items = [
+      item("skin", "sale", {
+        priceSoft: 80,
+        listPriceSoft: 100,
+        promotion: { percentOff: 20, endsAt: "2026-11-20T13:00:00Z" },
+      }),
+    ];
+    await import("../../src/client/components/ShopSpotlight");
+    const el = document.createElement("shop-spotlight") as HTMLElement & {
+      updateComplete: Promise<boolean>;
+    };
+    document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(0);
+    await el.updateComplete;
+    expect(el.textContent).toContain("store.sale_percent_off");
+
+    await vi.advanceTimersByTimeAsync(60 * 60_000 + 1_000);
+    await el.updateComplete;
+    expect(el.textContent).not.toContain("store.sale_percent_off");
+    expect(el.querySelectorAll("a[href*='item=']")).toHaveLength(1);
+  });
+
+  it("stops its timer once disconnected", async () => {
+    vi.useFakeTimers({ now: NOW });
+    catalog.items = [item("flag", "new", { newUntil: LATER })];
+    await import("../../src/client/components/ShopSpotlight");
+    const el = document.createElement("shop-spotlight");
+    document.body.appendChild(el);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(vi.getTimerCount()).toBe(1);
+    el.remove();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });
