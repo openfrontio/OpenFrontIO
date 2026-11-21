@@ -116,6 +116,9 @@ function apiErrorText(error: ScenarioApiError): string {
   return translateText(API_ERRORS[error]);
 }
 
+/** A new scenario's width and height until the author picks others. */
+const DEFAULT_SIDE = 1000;
+
 /** Copies of the files' maps: the client and the worker each take theirs. */
 function copyMapFiles(files: MapFiles): MapFiles {
   return {
@@ -150,8 +153,8 @@ export class ScenarioEditor extends LitElement {
   /** The local draft being moved to the account. */
   @state() private moving: string | null = null;
   @state() private name = "";
-  @state() private width = 1000;
-  @state() private height = 1000;
+  @state() private width = DEFAULT_SIDE;
+  @state() private height = DEFAULT_SIDE;
   @state() private stockMap = "";
   /** The picked stock map's size, once its manifest is in. */
   @state() private stockSize: { width: number; height: number } | null = null;
@@ -283,6 +286,10 @@ export class ScenarioEditor extends LitElement {
       }
       const doc = loaded ?? (await this.blankDraft(id));
       if (this.abort.signal.aborted) return;
+      if (typeof doc === "string") {
+        this.fail(apiErrorText(doc));
+        return;
+      }
       this.setDraft(id);
       const session = this.startSession(doc);
       if (loaded === null) this.saveDraft();
@@ -295,19 +302,19 @@ export class ScenarioEditor extends LitElement {
 
   /**
    * A blank document for a draft whose first save never landed (the tab
-   * closed first), under the draft's name.
+   * closed first), under the draft's name and description.
    */
-  private async blankDraft(id: string): Promise<ScenarioDocument> {
+  private async blankDraft(
+    id: string,
+  ): Promise<ScenarioDocument | ScenarioApiError> {
+    // Not a fallback name: saving the blank would rename the draft.
     const mine = await listMyScenarios();
-    const name =
-      typeof mine === "string"
-        ? undefined
-        : mine.find((s) => s.id === id)?.name;
-    return newScenarioDocument(
-      name ?? this.draftName(),
-      this.width,
-      this.height,
-    );
+    if (typeof mine === "string") return mine;
+    const scenario = mine.find((s) => s.id === id);
+    if (scenario === undefined) return "not_found";
+    // Not the create form's size, which may be half typed.
+    const doc = newScenarioDocument(scenario.name, DEFAULT_SIDE, DEFAULT_SIDE);
+    return { ...doc, meta: { ...doc.meta, description: scenario.description } };
   }
 
   private async createBlank(): Promise<void> {
