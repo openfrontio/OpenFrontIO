@@ -214,12 +214,15 @@ describe("CardEditor", () => {
     const saving = editor.save();
     expect(editor.saveState).toBe("saving");
     expect(await saving).toBe(true);
-    expect(api.save).toHaveBeenCalledWith({
-      background: "bg_pacific",
-      title: "warmonger",
-      taunt: "salute",
-      trackers: ["wins", "nukes_launched", "games_played"],
-    });
+    expect(api.save).toHaveBeenCalledWith(
+      {
+        background: "bg_pacific",
+        title: "warmonger",
+        taunt: "salute",
+        trackers: ["wins", "nukes_launched", "games_played"],
+      },
+      expect.any(Function),
+    );
     expect(editor.saveState).toBe("saved");
     expect(editor.changeCount()).toBe(0);
     vi.advanceTimersByTime(SAVED_SHOWN_MS);
@@ -297,6 +300,36 @@ describe("CardEditor", () => {
     editor.pick({ kind: "tracker", index: 2 }, "games_played");
     editor.settle();
     expect(editor.changeCount()).toBe(0);
+  });
+
+  it("a sign-out while the token is read stops the PUT", async () => {
+    // saveCardLoadout asks the guard once it holds a token.
+    let guard: (() => boolean) | undefined;
+    api.save.mockImplementationOnce((_body: unknown, stillWanted) => {
+      guard = stillWanted as () => boolean;
+      return new Promise(() => {});
+    });
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTracker:games_played"]));
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    void editor.save();
+    expect(guard!()).toBe(true);
+    document.dispatchEvent(new CustomEvent("session-cleared"));
+    expect(guard!()).toBe(false);
+  });
+
+  it("a save answered after a sign-out isn't taken as the saved card", async () => {
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    const editor = new CardEditor();
+    editor.seed(me(CARD, ["cardTracker:games_played"]));
+    editor.pick({ kind: "tracker", index: 2 }, "games_played");
+    const saving = editor.save();
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    finish({ ok: true, loadout: {} });
+    expect(await saving).toBe(false);
+    expect(editor.saved.rows.tracker[2]).toBe("best_elo");
+    expect(editor.saveState).toBe("idle");
   });
 
   it("closing mid-save: the save lands and the draft follows it", async () => {

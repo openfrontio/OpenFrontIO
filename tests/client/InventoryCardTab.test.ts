@@ -418,12 +418,15 @@ describe("<inventory-card-tab> save bar", () => {
     await render(userMe(OWNER));
     await changeTracker3();
     await click(saveButton());
-    expect(api.save).toHaveBeenCalledWith({
-      background: "bg_pacific",
-      title: "warmonger",
-      taunt: "salute",
-      trackers: ["wins", "nukes_launched", "games_played"],
-    });
+    expect(api.save).toHaveBeenCalledWith(
+      {
+        background: "bg_pacific",
+        title: "warmonger",
+        taunt: "salute",
+        trackers: ["wins", "nukes_launched", "games_played"],
+      },
+      expect.any(Function),
+    );
   });
 
   it("a failed save says so with Retry and a toast, and keeps the changes", async () => {

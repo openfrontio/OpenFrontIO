@@ -44,8 +44,7 @@ export const CARD_SLOT_KIND_LIST = Object.keys(
 
 /** A slot on the card: the background, or row `index` of a kind. */
 export type CardSlotRef =
-  | { kind: "background" }
-  | { kind: CardSlotKind; index: number };
+  { kind: "background" } | { kind: CardSlotKind; index: number };
 
 export interface CardDraft {
   background: string | null;
@@ -275,8 +274,7 @@ export function slotItem(
   }
   const spec = CARD_SLOT_KINDS[slot.kind];
   const section = cosmetics?.[spec.section] as
-    | Record<string, CardItem>
-    | undefined;
+    Record<string, CardItem> | undefined;
   const item = section?.[name];
   return item ? { type: spec.type, item } : null;
 }
@@ -289,6 +287,18 @@ export const SAVED_SHOWN_MS = 2000;
 /**
  * The tab's state, held by the Inventory. Listeners hear every change.
  */
+// Bumped at sign-out (any path: Auth's clearLocalSession announces it) and
+// at a portal account change, which swaps the session without one. A save
+// started under one session is never sent, nor taken, under the next.
+let sessionEpoch = 0;
+if (typeof document !== "undefined") {
+  const bump = () => {
+    sessionEpoch++;
+  };
+  document.addEventListener("session-cleared", bump);
+  document.addEventListener("session-reauth", bump);
+}
+
 export class CardEditor {
   saved: CardDraft = draftFromCard(null);
   draft: CardDraft = draftFromCard(null);
@@ -459,8 +469,22 @@ export class CardEditor {
     this.saveState = "saving";
     this.emit();
     const body = loadoutBody(sent, this.held);
-    const result = await saveCardLoadout(body);
+    // Asked again once the token is read: that can wait on a JWT refresh,
+    // and a sign-out meanwhile must not send this card under the next
+    // session's token.
+    const epoch = sessionEpoch;
+    const result = await saveCardLoadout(body, () => sessionEpoch === epoch);
     this.sending = null;
+    if (sessionEpoch !== epoch) {
+      // Signed out, or into another account, while it saved: whatever it
+      // stored belongs to a session that's gone, so it isn't taken as the
+      // saved card, and there's nothing to Retry. The next /users/@me
+      // seeds the editor.
+      this.droppedTo = null;
+      this.saveState = "idle";
+      this.emit();
+      return false;
+    }
     if (!result.ok) {
       // Dropped meanwhile: the draft goes back to the card the server kept,
       // with any edit made since, and no Retry is left over.

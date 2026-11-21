@@ -206,6 +206,7 @@ describe("Inventory: unsaved card changes guard", () => {
       expect.objectContaining({
         trackers: ["wins", "nukes_launched", "games_played"],
       }),
+      expect.any(Function),
     );
     expect(onCardTab()).toBe(false);
   });
