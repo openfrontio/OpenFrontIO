@@ -10,6 +10,7 @@ import {
   invalidateCosmetics,
   refreshStaleCosmetics,
 } from "../Cosmetics";
+import { COSMETICS_CHANGED } from "../Experiments";
 import { translateText } from "../Utils";
 import { runningSales } from "./SaleBanner";
 
@@ -85,9 +86,18 @@ export class NewsBox extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    document.addEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     void this.loadNews();
     void this.loadSales();
   }
+
+  // A refetched catalog (the player's store experiment group landed or
+  // changed, or a purchase met a changed price): the banner shows its sales,
+  // so a Deeper player sees their group's % here as in the store.
+  private onCosmeticsChanged = (event: Event) => {
+    const fresh = (event as CustomEvent<Cosmetics>).detail;
+    if (fresh) this.cosmetics = fresh;
+  };
 
   /**
    * Fetches the catalog for its running sales, and keeps it current for as long
@@ -193,6 +203,7 @@ export class NewsBox extends LitElement {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    document.removeEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     this.stopCycle();
     this.clearSaleTimer();
   }

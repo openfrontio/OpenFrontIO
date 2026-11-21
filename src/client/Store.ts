@@ -51,6 +51,7 @@ import {
   ResolvedCosmetic,
 } from "./Cosmetics";
 import { matchesStoreItem } from "./EquippedCosmetics";
+import { COSMETICS_CHANGED, exposureWatcher } from "./Experiments";
 import {
   fetchPlayPrices,
   priceStringToCents,
@@ -230,6 +231,7 @@ export class StoreModal extends BaseModal {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this.onUserMeEvent);
+    document.addEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     // The store loads on demand, usually after Main's broadcast went out.
     const last = lastUserMeResponse();
     if (last !== null) void this.onUserMe(last.response);
@@ -243,6 +245,7 @@ export class StoreModal extends BaseModal {
 
   disconnectedCallback() {
     document.removeEventListener("userMeResponse", this.onUserMeEvent);
+    document.removeEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     this.removeEventListener(
       "open-cosmetic-preview",
       this.onOpenCosmeticPreview,
@@ -261,6 +264,7 @@ export class StoreModal extends BaseModal {
   protected updated(changed: PropertyValues) {
     super.updated(changed);
     this.observeProducts();
+    this.observeFlashExposure();
     // The cards are nested components, so their purchase buttons only exist
     // (and only have positions) after their own updates commit — a frame later.
     alignPurchaseRows(this);
@@ -270,6 +274,19 @@ export class StoreModal extends BaseModal {
       alignPurchaseRows(this);
     });
   }
+
+  /**
+   * The catalog was refetched (the player's store experiment group landed or
+   * changed, or a purchase met a changed price): show it. The open store
+   * keeps the object it rendered, so this is what moves it on. Analytics are
+   * untouched: no new page view, so no impression is counted twice.
+   */
+  private onCosmeticsChanged = () => {
+    void this.loadCatalog().then(() => {
+      this.selectVisible(this.groupsForTab(this.activeTab));
+      this.requestUpdate();
+    });
+  };
 
   private onUserMeEvent = (event: Event) => {
     const customEvent = event as CustomEvent<UserMeResponse | false>;
@@ -564,6 +581,18 @@ export class StoreModal extends BaseModal {
       const key = el.dataset.cosmeticKey;
       const placement = this.placementFor(el);
       if (key && placement) this.tracker.observe(el, key, placement);
+    }
+  }
+
+  /**
+   * The flash deal's card, for the store experiment exposure (Experiments.ts),
+   * which has its own trigger apart from the analytics above. Only purchasable
+   * items reach the hero, so the card always shows a price.
+   */
+  private observeFlashExposure(): void {
+    const flash = this.querySelector("[data-store-flash]");
+    if (flash !== null && this.isModalOpen) {
+      exposureWatcher.observe(flash, "store_flash");
     }
   }
 

@@ -103,7 +103,12 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
 
     await expect(purchaseCosmetic(starter, "hard")).resolves.toBeUndefined();
 
-    expect(purchaseCosmeticPack).toHaveBeenCalledWith("starter", undefined);
+    // The price the card showed goes along, so the server refuses rather
+    // than charge more (409 price_changed).
+    expect(purchaseCosmeticPack).toHaveBeenCalledWith("starter", undefined, {
+      expectedAmount: 250,
+      platform: "web",
+    });
     expect(showInGameAlert).toHaveBeenCalledWith("bought Starter Pack");
     expect(invalidateUserMe).toHaveBeenCalled();
     expect(reloadMock).toHaveBeenCalled();

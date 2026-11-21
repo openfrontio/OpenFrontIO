@@ -1,3 +1,5 @@
+// First: before any component module fetches the catalog.
+import "./ExpectExperiments";
 import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
 import {
   isRewardClaimable,
@@ -168,6 +170,7 @@ import {
 } from "./TurnstileToken";
 // Before the first userMeResponse, for the modals that load after it.
 import "./UserMeBroadcast";
+import { loadExperiments } from "./Experiments";
 import { classicReplayHref } from "./replay/ReplayEntry";
 import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
 import type { ScenarioEditor } from "./scenario/ScenarioEditor";
@@ -1137,7 +1140,11 @@ class Client {
     });
 
     const initialAuthGeneration = authGeneration;
-    if ((await userAuth()) === false) {
+    const initialAuth = await userAuth();
+    // The player's store experiment groups, in parallel with the profile.
+    // Signed out (or on Steam) this settles at once with no request.
+    void loadExperiments().catch(() => undefined);
+    if (initialAuth === false) {
       // Not logged in: apply the signed-out profile directly.
       applyUserMe(initialAuthGeneration)(false);
     } else {
