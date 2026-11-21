@@ -331,7 +331,7 @@
       "name": "Eureka"
     },
     {
-      "coordinates": [170, 420],
+      "coordinates": [180, 345],
       "name": "Arcata"
     },
     {
@@ -339,15 +339,15 @@
       "name": "Crescent City"
     },
     {
-      "coordinates": [506, 546],
+      "coordinates": [480, 410],
       "name": "Redding"
     },
     {
-      "coordinates": [598, 698],
+      "coordinates": [565, 575],
       "name": "Chico"
     },
     {
-      "coordinates": [546, 646],
+      "coordinates": [500, 485],
       "name": "Red Bluff"
     },
     {
@@ -391,7 +391,7 @@
       "name": "Vacaville"
     },
     {
-      "coordinates": [545, 900],
+      "coordinates": [560, 790],
       "name": "Woodland"
     },
     {
@@ -403,7 +403,7 @@
       "name": "Sacramento"
     },
     {
-      "coordinates": [673, 835],
+      "coordinates": [655, 775],
       "name": "Roseville"
     },
     {
@@ -431,11 +431,11 @@
       "name": "Grass Valley"
     },
     {
-      "coordinates": [519, 768],
+      "coordinates": [600, 690],
       "name": "Yuba City"
     },
     {
-      "coordinates": [613, 736],
+      "coordinates": [610, 620],
       "name": "Oroville"
     },
     {
@@ -996,7 +996,7 @@
     },
     {
       "coordinates": [1569, 1622],
-      "name": "Zyzzx"
+      "name": "Zzyzx"
     },
     {
       "coordinates": [256, 617],
