@@ -12,7 +12,7 @@ import { GameView } from "../../view";
 export class MultiTabModal extends LitElement implements Controller {
   public game: GameView;
 
-  private detector: MultiTabDetector;
+  private detector?: MultiTabDetector;
 
   @property({ type: Number }) duration: number = 5000;
   @state() private countdown: number = 5;
@@ -111,6 +111,7 @@ export class MultiTabModal extends LitElement implements Controller {
     if (this.intervalId) {
       window.clearInterval(this.intervalId);
     }
+    this.detector?.stopMonitoring();
   }
 
   render() {
