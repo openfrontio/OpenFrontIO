@@ -929,6 +929,7 @@
     "protocol_error": "The connection was corrupted.",
     "ranked_limit_reached": "You are out of free ranked matches for today.",
     "turnstile_failed": "The bot check failed. Please reload the page and try again.",
+    "turnstile_pass_required": "Your verification pass expired. Please complete the bot check and try again.",
     "unknown": "The server closed the connection.",
     "wrong_worker": "This connection reached the wrong server process. Please reload the page and try again."
   },
@@ -1222,6 +1223,7 @@
       "description": "Automatic spawn selection failed. You can't play this game.",
       "title": "Spawn failed"
     },
+    "turnstile_challenge_label": "Verification required",
     "turnstile_error": "Verification error: {code}. Please refresh and try again."
   },
   "events_display": {

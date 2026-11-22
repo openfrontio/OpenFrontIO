@@ -1540,6 +1540,7 @@ export class SinglePlayerModal extends BaseModal {
           detail,
           bubbles: true,
           composed: true,
+          cancelable: true,
         }),
       );
       // The overlay is the join pipeline's now — GameRenderer or Main's

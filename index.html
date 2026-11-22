@@ -433,7 +433,7 @@
 
       <div
         id="turnstile-container"
-        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-99999"
+        class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-99999 pointer-events-none data-[interactive=true]:top-0 data-[interactive=true]:left-0 data-[interactive=true]:translate-x-0 data-[interactive=true]:translate-y-0 data-[interactive=true]:w-full data-[interactive=true]:h-full data-[interactive=true]:flex data-[interactive=true]:items-center data-[interactive=true]:justify-center data-[interactive=true]:bg-black/50"
       ></div>
 
       <homepage-promos></homepage-promos>
@@ -553,7 +553,7 @@
 
     <!-- Bottom HUD: <sm=column, sm..lg=2col (HUD left | events right), lg+=3col grid centered -->
     <div
-      class="fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:flex-row sm:items-end lg:grid lg:grid-cols-[1fr_500px_1fr] lg:items-end min-[1200px]:px-4"
+      class="[body:not(.in-game)_&]:hidden! fixed bottom-0 left-0 w-full z-[200] flex flex-col pointer-events-none sm:flex-row sm:items-end lg:grid lg:grid-cols-[1fr_500px_1fr] lg:items-end min-[1200px]:px-4"
       style="
         padding-bottom: env(safe-area-inset-bottom);
         padding-left: env(safe-area-inset-left);
@@ -606,7 +606,7 @@
          sidebar: the card is centered when it fits and shifts right or narrows
          to clear the open leaderboard instead of covering it. -->
     <div
-      class="contents lg:fixed lg:top-0 lg:inset-x-0 lg:z-1000 lg:grid lg:grid-cols-[minmax(max-content,1fr)_minmax(0,max-content)_minmax(max-content,1fr)] lg:items-start lg:pointer-events-none"
+      class="[body:not(.in-game)_&]:hidden! contents lg:fixed lg:top-0 lg:inset-x-0 lg:z-1000 lg:grid lg:grid-cols-[minmax(max-content,1fr)_minmax(0,max-content)_minmax(max-content,1fr)] lg:items-start lg:pointer-events-none"
     >
       <game-left-sidebar
         class="lg:col-start-1 lg:justify-self-start"
