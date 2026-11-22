@@ -1337,7 +1337,11 @@ describe("MatchmakingModal Back and leave-lobby lifecycle", () => {
       ),
     );
 
-    const preventJoin = (e: Event) => e.preventDefault();
+    const prevented: boolean[] = [];
+    const preventJoin = vi.fn((e: Event) => {
+      e.preventDefault();
+      prevented.push(e.defaultPrevented);
+    });
     const leaveEvents: CustomEvent[] = [];
     const onLeave = (e: Event) => leaveEvents.push(e as CustomEvent);
     document.addEventListener("join-lobby", preventJoin);
@@ -1356,6 +1360,9 @@ describe("MatchmakingModal Back and leave-lobby lifecycle", () => {
         }),
       });
       await vi.advanceTimersByTimeAsync(1000);
+
+      expect(preventJoin).toHaveBeenCalledTimes(1);
+      expect(prevented).toEqual([true]);
 
       modal.close();
       expect(leaveEvents).toHaveLength(0);

@@ -993,16 +993,15 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
         expect(selector.joiningLobbyId).toBe("mmBack1234");
         expect(mocks.joinLobby).not.toHaveBeenCalled();
 
+        const backLabel = translateText("common.back");
         const backBtn = modal.querySelector<HTMLButtonElement>(
-          '[aria-label="common.back"]',
+          `[aria-label="${backLabel}"]`,
         );
-        if (backBtn) {
-          backBtn.click();
-        } else {
-          modal.close();
-        }
+        expect(backBtn).not.toBeNull();
+        backBtn!.click();
 
         expect(leaveEvents).toHaveLength(1);
+        expect(window.location.pathname).toBe("/");
         expect(selector.inLobby).toBe(false);
         expect(selector.joiningLobbyId).toBeNull();
 
@@ -1042,6 +1041,7 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
         expect(leaveEvents).toHaveLength(0);
       } finally {
         document.removeEventListener("leave-lobby", onLeave);
+        modal.close();
         document.dispatchEvent(new CustomEvent("leave-lobby"));
         (
           document.querySelector("game-starting-modal") as {

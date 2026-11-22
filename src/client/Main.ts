@@ -2443,6 +2443,7 @@ class Client {
   }
 
   private async handleLeaveLobby(event?: CustomEvent) {
+    const wasJoining = this.joinInFlight;
     this.activeJoinAbortController?.abort();
     this.activeJoinAbortController = null;
     this.gameModeSelector?.resetJoinState();
@@ -2466,6 +2467,22 @@ class Client {
     this.mostRecentJoinEvent = performance.now();
 
     if (this.lobbyHandle === null) {
+      if (wasJoining) {
+        const canceledLobby = event?.detail?.lobby;
+        const pathname = window.location.pathname;
+        const matchesCanceledLobby =
+          typeof canceledLobby === "string"
+            ? pathname === ClientEnv.gamePath(canceledLobby) ||
+              pathname === "/streamer-mode"
+            : pathname.startsWith("/join/") || pathname === "/streamer-mode";
+        if (matchesCanceledLobby) {
+          try {
+            history.replaceState(null, "", "/");
+          } catch (e) {
+            console.warn("Failed to restore URL on leave:", e);
+          }
+        }
+      }
       // The join closed the scenario editor, which had replaced the menu, and
       // ended before reaching a lobby: nothing is left on the page, so leave as
       // a game does (back to the editor, for its test play).
