@@ -1,5 +1,14 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { GameType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import {
+  FixedWing,
+  GameType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  SAM_AIR_HIT_PERCENT,
+  SAM_AIR_MISSILE_DAMAGE,
+  SAM_AIR_MISSILE_SPEED,
+} from "@openfront/engine-lib/game/AirRules";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -17,6 +26,8 @@ import type {
   SnapshotReader,
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
+import { isHostileTo, isTrackedBy } from "./air/AirCombat";
+import { GuidedMissileExecution } from "./air/GuidedMissileExecution";
 import { SAMMissileExecution } from "./SAMMissileExecution";
 
 type Target = {
@@ -396,6 +407,7 @@ export class SAMLauncherExecution implements Execution {
       this.mg.unitCount(UnitType.HydrogenBomb) === 0 &&
       this.mg.unitCount(UnitType.MIRVWarhead) === 0
     ) {
+      this.engageAircraft(ticks);
       return;
     }
     // target is already filtered to exclude nukes targeted by other SAMs
@@ -416,6 +428,66 @@ export class SAMLauncherExecution implements Execution {
         ),
       );
     }
+    // Nukes always come first; a missile left over may go to an aircraft.
+    this.engageAircraft(ticks);
+  }
+
+  /**
+   * AIR update: fires one interceptor at the closest hostile high-flying
+   * aircraft in range that the friendly radar network tracks. Helicopters
+   * fly below the SAM's engagement envelope (AA guns handle them), and an
+   * aircraft that already has one of this side's missiles inbound is left
+   * alone so a launcher does not empty its rack on one target. Every missile
+   * spent here is one fewer ready for an incoming nuke.
+   */
+  private engageAircraft(ticks: number): void {
+    const sam = this.sam!;
+    if (sam.isInCooldown()) return;
+    if (
+      this.mg.unitCount(UnitType.Fighter) === 0 &&
+      this.mg.unitCount(UnitType.Bomber) === 0
+    ) {
+      return;
+    }
+    const owner = sam.owner();
+    const range = Math.floor(this.mg.config().dynamicSamRange(sam, ticks));
+    let best: Unit | undefined;
+    let bestDistSq = Infinity;
+    for (const { unit, distSquared } of this.mg.nearbyUnits(
+      sam.tile(),
+      range,
+      FixedWing.types,
+    )) {
+      if (
+        distSquared >= bestDistSq ||
+        !unit.isActive() ||
+        !isHostileTo(owner, unit) ||
+        !isTrackedBy(this.mg, owner, unit) ||
+        this.hasMissileInbound(owner, unit)
+      ) {
+        continue;
+      }
+      best = unit;
+      bestDistSq = distSquared;
+    }
+    if (best === undefined) return;
+    sam.launch();
+    this.mg.addExecution(
+      GuidedMissileExecution.fire(sam.tile(), owner, best, {
+        speed: SAM_AIR_MISSILE_SPEED,
+        damage: SAM_AIR_MISSILE_DAMAGE,
+        hitPercent: SAM_AIR_HIT_PERCENT,
+      }),
+    );
+  }
+
+  private hasMissileInbound(owner: Player, target: Unit): boolean {
+    return this.mg.anyUnitNearby(
+      target.tile(),
+      this.mg.config().maxSamRange(),
+      [UnitType.SAMMissile],
+      (missile) => missile.owner() === owner && missile.targetUnit() === target,
+    );
   }
 
   isActive(): boolean {

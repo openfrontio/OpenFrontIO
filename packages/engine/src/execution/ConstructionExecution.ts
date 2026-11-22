@@ -14,6 +14,9 @@ import type {
   SnapshotReader,
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
+import { AAGunExecution } from "./air/AAGunExecution";
+import { AircraftExecution } from "./air/AircraftExecution";
+import { AirStructureExecution } from "./air/AirStructureExecution";
 import { CityExecution } from "./CityExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
 import { FactoryExecution } from "./FactoryExecution";
@@ -43,6 +46,11 @@ export function structureExecution(structure: Unit): Execution {
       return new CityExecution(structure);
     case UnitType.Factory:
       return new FactoryExecution(structure);
+    case UnitType.Airbase:
+    case UnitType.RadarStation:
+      return new AirStructureExecution(structure);
+    case UnitType.AAGun:
+      return new AAGunExecution(structure);
     default:
       throw new Error(`${structure.type()} is not a structure`);
   }
@@ -168,12 +176,27 @@ export class ConstructionExecution implements Execution {
           new WarshipExecution({ owner: player, patrolTile: this.tile }),
         );
         break;
+      case UnitType.AttackHelicopter:
+      case UnitType.TransportHelicopter:
+      case UnitType.Fighter:
+      case UnitType.Bomber:
+        this.mg.addExecution(
+          new AircraftExecution({
+            owner: player,
+            type: this.constructionType,
+            patrolTile: this.tile,
+          }),
+        );
+        break;
       case UnitType.Port:
       case UnitType.MissileSilo:
       case UnitType.DefensePost:
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
+      case UnitType.Airbase:
+      case UnitType.RadarStation:
+      case UnitType.AAGun:
         this.mg.addExecution(structureExecution(this.structure!));
         break;
       default:
@@ -186,6 +209,9 @@ export class ConstructionExecution implements Execution {
 
   private isStructure(type: UnitType): boolean {
     switch (type) {
+      case UnitType.Airbase:
+      case UnitType.RadarStation:
+      case UnitType.AAGun:
       case UnitType.Port:
       case UnitType.MissileSilo:
       case UnitType.DefensePost:

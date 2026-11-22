@@ -1,5 +1,5 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { Aircraft, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { zNum, zPlayerRef } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { z } from "zod";
 import { Execution, Game, Player } from "../game/Game";
@@ -24,9 +24,12 @@ export class MoveWarshipExecution implements Execution {
     }
     // Get water component of new TargetTile for connectivity check
     const newPatrolTileWaterComponent = mg.getWaterComponent(this.position);
-    // Cache warship list and build a lookup map — avoids repeated iteration
+    // Cache the commandable units (warships and, since the AIR update,
+    // aircraft) and build a lookup map — avoids repeated iteration
     const warshipMap = new Map(
-      this.owner.units(UnitType.Warship).map((u) => [u.id(), u]),
+      this.owner
+        .units([UnitType.Warship, ...Aircraft.types])
+        .map((u) => [u.id(), u]),
     );
     // Deduplicate ids so each warship is only moved once
     for (const unitId of new Set(this.unitIds)) {
@@ -37,6 +40,12 @@ export class MoveWarshipExecution implements Execution {
       }
       if (!warship.isActive()) {
         console.warn(`MoveWarshipExecution: warship ${unitId} is not active`);
+        continue;
+      }
+      // Aircraft fly anywhere: the new tile is their station, strike target
+      // or landing zone (see AircraftExecution).
+      if (Aircraft.has(warship.type())) {
+        warship.updateWarshipState({ patrolTile: this.position });
         continue;
       }
       // Do not update the warship's patrolTile if it is in a different Water Component

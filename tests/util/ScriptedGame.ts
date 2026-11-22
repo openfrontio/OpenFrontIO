@@ -276,6 +276,70 @@ const STRUCTURES = [
   UnitType.MissileSilo,
 ] as const;
 
+const AIRCRAFT = [
+  UnitType.Fighter,
+  UnitType.Bomber,
+  UnitType.AttackHelicopter,
+  UnitType.TransportHelicopter,
+] as const;
+
+/**
+ * AIR update: builds an airbase (with a radar and an AA gun beside it), then
+ * launches aircraft of every type and retasks them: fighters and attack
+ * helicopters over home, bombers and transport helicopters at an enemy.
+ */
+function airIntent(
+  game: Game,
+  p: Player,
+  rand: PseudoRandom,
+  other: Player | null,
+): Intent | null {
+  const bases = p
+    .units(UnitType.Airbase)
+    .filter((b) => b.isActive() && !b.isUnderConstruction());
+  if (p.units(UnitType.Airbase).length === 0) {
+    for (let i = 0; i < 10; i++) {
+      const tile = randomOwnedTile(rand, p);
+      if (tile !== null && p.canBuild(UnitType.Airbase, tile) !== false) {
+        return { type: "build_unit", unit: UnitType.Airbase, tile };
+      }
+    }
+    return null;
+  }
+  if (bases.length === 0) return null;
+  for (const support of [UnitType.RadarStation, UnitType.AAGun]) {
+    if (p.units(support).length > 0) continue;
+    const near = bases[0].tile();
+    for (let i = 0; i < 10; i++) {
+      const x = game.x(near) + rand.nextInt(-10, 11);
+      const y = game.y(near) + rand.nextInt(-10, 11);
+      if (!game.isValidCoord(x, y)) continue;
+      const tile = game.ref(x, y);
+      if (p.canBuild(support, tile) !== false) {
+        return { type: "build_unit", unit: support, tile };
+      }
+    }
+  }
+  const own = p.units([...AIRCRAFT]);
+  const enemyTile = other === null ? null : randomOwnedTile(rand, other);
+  if (own.length < 4 && rand.chance(2)) {
+    const unit = pick(rand, AIRCRAFT)!;
+    const offensive =
+      unit === UnitType.Bomber || unit === UnitType.TransportHelicopter;
+    const tile = offensive ? enemyTile : randomOwnedTile(rand, p);
+    if (tile === null || p.canBuild(unit, tile) === false) return null;
+    return { type: "build_unit", unit, tile };
+  }
+  const aircraft = pick(rand, own);
+  if (aircraft === null) return null;
+  const offensive =
+    aircraft.type() === UnitType.Bomber ||
+    aircraft.type() === UnitType.TransportHelicopter;
+  const tile = offensive ? enemyTile : randomOwnedTile(rand, p);
+  if (tile === null) return null;
+  return { type: "move_warship", unitIds: [aircraft.id()], tile };
+}
+
 function nearbyWater(
   game: Game,
   tile: TileRef,
@@ -482,6 +546,12 @@ function playIntent(game: Game, p: Player, rand: PseudoRandom): Intent | null {
   ) {
     const bombIntent = launchBombIntent(game, p, rand, other);
     if (bombIntent !== null) return bombIntent;
+  }
+
+  // The air war starts once the economy (factories, trains) is under way.
+  if (game.ticks() > 300 && rand.chance(4)) {
+    const air = airIntent(game, p, rand, other);
+    if (air !== null) return air;
   }
 
   switch (rand.nextInt(0, 22)) {
