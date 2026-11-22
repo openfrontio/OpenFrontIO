@@ -775,7 +775,9 @@ export async function startWorker() {
         // only: an already-admitted player who reconnects or refreshes must
         // not be re-challenged — their original token is single-use and was
         // already redeemed — so the token is omitted for them and the API
-        // runs the name check alone (an omitted token is always approved).
+        // runs the name check alone (an omitted token is approved unless the
+        // join is flagged firstJoin, which only passes while Turnstile is
+        // switched off).
         // Re-admits only call out when the verdict could matter (pre-start,
         // with a changed identity); otherwise the reconnect proceeds with
         // zero API calls, keeping mass reconnects at game start off the

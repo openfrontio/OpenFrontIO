@@ -68,7 +68,7 @@ export const TURNSTILE_TIMEOUT_CODE = "timeout";
 export const TURNSTILE_LOAD_FAILED_CODE = "load-failed";
 
 /**
- * A Turnstile failure with the code the error modal shows. Turnstile's own
+ * A Turnstile failure with the code that gets logged. Turnstile's own
  * codes are numeric strings (e.g. "300030"); the two synthetic ones above
  * cover the failures that happen before or instead of a Turnstile callback.
  */
