@@ -220,9 +220,24 @@ export function requestTurnstileToken(
     // would block the whole page.
     let backdropShown = false;
     let cancelButton: HTMLButtonElement | undefined;
+    let previousFocus: HTMLElement | null = null;
+    const onFocusIn = (event: FocusEvent) => {
+      if (
+        event.target instanceof Node &&
+        !options.container.contains(event.target)
+      ) {
+        cancelButton?.focus();
+      }
+    };
     const showBackdrop = () => {
       if (backdropShown || options.container === document.body) return;
       backdropShown = true;
+      previousFocus =
+        document.activeElement instanceof HTMLElement &&
+        document.activeElement !== document.body &&
+        !options.container.contains(document.activeElement)
+          ? document.activeElement
+          : null;
       options.container.dataset.interactive = "true";
       options.container.style.pointerEvents = "auto";
       options.container.setAttribute("role", "dialog");
@@ -239,8 +254,10 @@ export function requestTurnstileToken(
         "ml-4 px-4 py-2 rounded bg-white text-black font-semibold shadow";
       cancelButton.addEventListener("click", cancel);
       options.container.appendChild(cancelButton);
+      cancelButton.focus();
       options.container.addEventListener("click", onBackdropClick);
       document.addEventListener("keydown", onEscape, true);
+      document.addEventListener("focusin", onFocusIn, true);
     };
     const hideBackdrop = () => {
       if (!backdropShown) return;
@@ -250,10 +267,20 @@ export function requestTurnstileToken(
       options.container.removeAttribute("role");
       options.container.removeAttribute("aria-modal");
       options.container.removeAttribute("aria-label");
+      document.removeEventListener("focusin", onFocusIn, true);
       cancelButton?.remove();
       cancelButton = undefined;
       options.container.removeEventListener("click", onBackdropClick);
       document.removeEventListener("keydown", onEscape, true);
+      const toRestore = previousFocus;
+      previousFocus = null;
+      if (toRestore?.isConnected) {
+        try {
+          toRestore.focus();
+        } catch {
+          // Ignore focus errors on detached/disabled targets
+        }
+      }
     };
 
     // Turnstile can still call back after we are done with the widget (a late

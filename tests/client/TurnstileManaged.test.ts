@@ -231,4 +231,30 @@ describe("Managed Turnstile", () => {
     f.opts().callback!("tok");
     await p;
   });
+
+  it("moves focus inside the modal on open, traps external focus, and restores previous focus on close", async () => {
+    const triggerButton = document.createElement("button");
+    document.body.appendChild(triggerButton);
+    triggerButton.focus();
+    expect(document.activeElement).toBe(triggerButton);
+
+    const f = makeFake();
+    const p = requestTurnstileToken(f.api, { sitekey: "k", container });
+    f.opts()["before-interactive-callback"]!();
+
+    const cancelButton = container.querySelector("button")!;
+    expect(document.activeElement).toBe(cancelButton);
+
+    // Focus escaping to an element outside the dialog container is redirected back inside
+    triggerButton.focus();
+    triggerButton.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+    expect(document.activeElement).toBe(cancelButton);
+
+    f.opts()["after-interactive-callback"]!();
+    expect(document.activeElement).toBe(triggerButton);
+
+    f.opts().callback!("tok");
+    await p;
+    triggerButton.remove();
+  });
 });
