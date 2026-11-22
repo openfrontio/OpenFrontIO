@@ -47,6 +47,10 @@ export interface TurnstileToken {
   createdAt: number;
 }
 
+export interface GamePortal {
+  isOnGamePortal(): boolean;
+}
+
 /**
  * How long a prefetched token stays usable. Turnstile tokens are good for five
  * minutes server-side; three leaves room for the join round trip.
@@ -84,7 +88,50 @@ export class TurnstileError extends Error {
 
 /** The code to show for any failure, Turnstile's own or otherwise. */
 function turnstileErrorCode(error: unknown): string {
-  return error instanceof TurnstileError ? error.code : "unknown";
+  if (error instanceof TurnstileError) {
+    return error.code;
+  }
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof (error as { code: unknown }).code === "string"
+  ) {
+    return (error as { code: string }).code;
+  }
+  return "unknown";
+}
+
+function isAbortError(error: unknown, signal?: AbortSignal): boolean {
+  if (signal?.aborted) return true;
+  if (
+    typeof DOMException !== "undefined" &&
+    error instanceof DOMException &&
+    error.name === "AbortError"
+  ) {
+    return true;
+  }
+  if (error instanceof Error && error.name === "AbortError") {
+    return true;
+  }
+  return false;
+}
+
+function createAbortError(signal?: AbortSignal): Error {
+  if (signal?.reason instanceof Error) {
+    return signal.reason;
+  }
+  if (typeof signal?.reason === "string") {
+    const error = new Error(signal.reason);
+    error.name = "AbortError";
+    return error;
+  }
+  if (typeof DOMException !== "undefined") {
+    return new DOMException("The operation was aborted", "AbortError");
+  }
+  const error = new Error("The operation was aborted");
+  error.name = "AbortError";
+  return error;
 }
 
 /**
@@ -109,14 +156,17 @@ export function requestTurnstileToken(
     container: HTMLElement;
     timeoutMs?: number;
     now?: () => number;
+    signal?: AbortSignal;
   },
 ): Promise<TurnstileToken> {
   const timeoutMs = options.timeoutMs ?? TURNSTILE_TOKEN_TIMEOUT_MS;
   const now = options.now ?? Date.now;
+  const signal = options.signal;
 
   return new Promise<TurnstileToken>((resolve, reject) => {
     let widgetId: string | undefined;
-    let removed = false;
+    let widgetRemoved = false;
+    let hostRemoved = false;
     let settled = false;
     let timer: ReturnType<typeof setTimeout> | undefined = undefined;
 
@@ -128,25 +178,49 @@ export function requestTurnstileToken(
     // a call cannot double-resolve, and cannot throw by removing a widget id
     // Turnstile no longer knows about.
     const removeWidget = () => {
-      if (removed || widgetId === undefined) return;
-      removed = true;
-      try {
-        turnstile.remove(widgetId);
-      } catch (error) {
-        console.error("Turnstile: failed to remove widget", error);
+      if (!widgetRemoved && widgetId !== undefined) {
+        widgetRemoved = true;
+        try {
+          turnstile.remove(widgetId);
+        } catch (error) {
+          console.error("Turnstile: failed to remove widget", error);
+        }
       }
-      // Takes the widget's iframe with it even when Turnstile has lost track
-      // of the id.
-      host.remove();
+      if (!hostRemoved) {
+        hostRemoved = true;
+        // Takes the widget's iframe with it even when Turnstile has lost track
+        // of the id.
+        host.remove();
+      }
+    };
+
+    const cleanup = () => {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+        timer = undefined;
+      }
+      if (signal !== undefined) {
+        signal.removeEventListener("abort", onAbort);
+      }
     };
 
     const settle = (finish: () => void) => {
       if (settled) return;
       settled = true;
-      if (timer !== undefined) clearTimeout(timer);
+      cleanup();
       removeWidget();
       finish();
     };
+
+    const onAbort = () => {
+      settle(() => reject(createAbortError(signal)));
+    };
+
+    if (signal?.aborted) {
+      onAbort();
+      return;
+    }
+    signal?.addEventListener("abort", onAbort);
 
     const succeed = (token: string) =>
       settle(() => resolve({ token, createdAt: now() }));
@@ -195,6 +269,21 @@ export function requestTurnstileToken(
   });
 }
 
+export interface ResolveTurnstileTokenDeps {
+  /** The boot-time prefetch, or null when there is none to reuse. */
+  prefetch?: Promise<TurnstileToken> | null;
+  requestFresh?: (signal?: AbortSignal) => Promise<TurnstileToken>;
+  /** Web game portal instance to detect if on portal. */
+  gamePortal?: GamePortal;
+  /** Signal to abort token request. */
+  signal?: AbortSignal;
+  /** Portals always want a token minted for this join. */
+  forceFresh?: boolean;
+  /** Shows the error modal. Called at most once, for the final failure. */
+  onError?: (code?: string) => void;
+  now?: () => number;
+}
+
 /**
  * Decide which token a join uses: the one prefetched at boot, or a fresh one.
  *
@@ -204,40 +293,77 @@ export function requestTurnstileToken(
  * Only the fresh fetch's failure reaches `onError`, so a join shows at most one
  * error modal and only for the attempt that actually decided it.
  */
-export async function resolveTurnstileToken(deps: {
-  /** The boot-time prefetch, or null when there is none to reuse. */
-  prefetch: Promise<TurnstileToken> | null;
-  requestFresh: () => Promise<TurnstileToken>;
-  /** Portals always want a token minted for this join. */
-  forceFresh?: boolean;
-  /** Shows the error modal. Called at most once, for the final failure. */
-  onError: (code: string) => void;
-  now?: () => number;
-}): Promise<string | null> {
+export async function resolveTurnstileToken(
+  deps: ResolveTurnstileTokenDeps,
+): Promise<string | null> {
   const now = deps.now ?? Date.now;
 
-  const fresh = async (): Promise<string | null> => {
+  if (deps.signal?.aborted) {
+    return null;
+  }
+
+  const retryFresh = async (): Promise<string | null> => {
+    if (deps.signal?.aborted || !deps.requestFresh) return null;
+    console.warn("Turnstile timed out, retrying once on fresh widget");
     try {
-      return (await deps.requestFresh())?.token ?? null;
-    } catch (error) {
-      console.warn("Turnstile: token request failed", error);
-      deps.onError(turnstileErrorCode(error));
-      throw error;
+      const retryRes = await deps.requestFresh(deps.signal);
+      if (deps.signal?.aborted) return null;
+      return retryRes?.token ?? null;
+    } catch (retryError) {
+      if (isAbortError(retryError, deps.signal)) return null;
+      console.warn("Turnstile retry failed", retryError);
+      deps.onError?.(turnstileErrorCode(retryError));
+      throw retryError instanceof TurnstileError
+        ? retryError
+        : new TurnstileError(
+            turnstileErrorCode(retryError),
+            retryError instanceof Error ? retryError.message : undefined,
+          );
     }
   };
 
-  if (deps.prefetch === null || deps.forceFresh === true) {
+  const fetchFreshWithRetry = async (): Promise<string | null> => {
+    if (deps.signal?.aborted) return null;
+    if (!deps.requestFresh) return null;
+    try {
+      const res = await deps.requestFresh(deps.signal);
+      if (deps.signal?.aborted) return null;
+      return res?.token ?? null;
+    } catch (error) {
+      if (isAbortError(error, deps.signal)) return null;
+      if (turnstileErrorCode(error) === TURNSTILE_TIMEOUT_CODE) {
+        return retryFresh();
+      }
+      console.warn("Turnstile: token request failed", error);
+      deps.onError?.(turnstileErrorCode(error));
+      throw error instanceof TurnstileError
+        ? error
+        : new TurnstileError(
+            turnstileErrorCode(error),
+            error instanceof Error ? error.message : undefined,
+          );
+    }
+  };
+
+  const forceFresh =
+    deps.forceFresh ?? deps.gamePortal?.isOnGamePortal() ?? false;
+
+  if (!deps.prefetch || forceFresh) {
     console.log("No prefetched turnstile token, getting new token");
-    return fresh();
+    return fetchFreshWithRetry();
   }
 
-  let prefetched: TurnstileToken | null;
+  let prefetched: TurnstileToken | null = null;
   try {
     prefetched = await deps.prefetch;
   } catch (error) {
     // Boot-time failure: worth a line, not a modal. The join gets its own try.
     console.warn("Prefetched turnstile token failed, getting new token", error);
-    return fresh();
+    return fetchFreshWithRetry();
+  }
+
+  if (deps.signal?.aborted) {
+    return null;
   }
 
   if (!prefetched) {
@@ -251,5 +377,5 @@ export async function resolveTurnstileToken(deps: {
   }
 
   console.log("Turnstile token expired, getting new token");
-  return fresh();
+  return fetchFreshWithRetry();
 }

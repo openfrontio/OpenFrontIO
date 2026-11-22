@@ -44,6 +44,10 @@ export class MatchmakingModal extends BaseModal {
   private watchdogTimeout: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempts = 0;
   private intentionalClose = false;
+  private leaveLobbyOnClose = true;
+  private pendingMatchJoin = false;
+  private checkGeneration = 0;
+  private checkAbortController: AbortController | null = null;
   // Which queue to join; set by Main from the open-matchmaking event
   // before the modal opens.
   public mode: MatchmakingMode = "1v1";
@@ -201,6 +205,11 @@ export class MatchmakingModal extends BaseModal {
       clearInterval(this.gameCheckInterval);
       this.gameCheckInterval = null;
     }
+    this.checkGeneration++;
+    this.checkAbortController?.abort();
+    this.checkAbortController = null;
+    this.leaveLobbyOnClose = true;
+    this.pendingMatchJoin = false;
     this.connected = false;
     this.gameID = null;
     this.intentionalClose = false;
@@ -210,6 +219,15 @@ export class MatchmakingModal extends BaseModal {
     this.reconnectAttempts = 0;
     void this.connect();
     return true;
+  }
+
+  public disarmLeaveOnClose(): void {
+    this.leaveLobbyOnClose = false;
+  }
+
+  public closeWithoutLeaving(): void {
+    this.disarmLeaveOnClose();
+    this.close();
   }
 
   private openSubscriptions = () => {
@@ -495,6 +513,12 @@ export class MatchmakingModal extends BaseModal {
     // Like a lobby bell, a new matchmaking session starts from the saved
     // default; a cancellation requeue keeps any per-session override.
     this.gameStartAlert.reset();
+    this.checkAbortController?.abort();
+    this.checkAbortController = null;
+    this.leaveLobbyOnClose = true;
+    this.pendingMatchJoin = false;
+    this.gameID = null;
+    this.checkGeneration++;
     const userMe = await getUserMe();
     // Early return if modal was closed during async operation
     if (!this.isModalOpen) {
@@ -558,6 +582,14 @@ export class MatchmakingModal extends BaseModal {
   }
 
   protected onClose(): void {
+    this.checkGeneration++;
+    this.checkAbortController?.abort();
+    this.checkAbortController = null;
+    const shouldLeave = this.leaveLobbyOnClose && this.pendingMatchJoin;
+    const canceledLobbyId = this.gameID;
+    this.pendingMatchJoin = false;
+    this.gameID = null;
+
     this.gameStartAlert.reset();
     this.connected = false;
     this.intentionalClose = true;
@@ -575,6 +607,19 @@ export class MatchmakingModal extends BaseModal {
       clearInterval(this.gameCheckInterval);
       this.gameCheckInterval = null;
     }
+
+    if (shouldLeave) {
+      const ev = new CustomEvent("leave-lobby", {
+        detail: canceledLobbyId ? { lobby: canceledLobbyId } : undefined,
+        bubbles: true,
+        composed: true,
+      });
+      if (this.isConnected) {
+        this.dispatchEvent(ev);
+      } else {
+        document.dispatchEvent(ev);
+      }
+    }
   }
 
   disconnectedCallback(): void {
@@ -582,57 +627,126 @@ export class MatchmakingModal extends BaseModal {
     super.disconnectedCallback();
   }
 
+  private static readonly CHECK_GAME_TIMEOUT_MS = 3000;
+
   private async checkGame() {
-    if (this.gameID === null) {
+    const targetGameId = this.gameID;
+    const gen = this.checkGeneration;
+    if (
+      this.checkAbortController !== null ||
+      this.pendingMatchJoin ||
+      !this.isModalOpen ||
+      targetGameId === null
+    ) {
       return;
     }
-    // The matched game may carry any server's letter: resolve it through
-    // the API's list (multi-server v2) rather than this page's own map. The
-    // version check waits until the game exists, below: this poll fires
-    // every second and must never navigate.
-    await ensureServerList();
-    const url = `${ClientEnv.gameHttpBase(this.gameID)}/${ClientEnv.gameWorkerPath(this.gameID)}/api/game/${this.gameID}/exists`;
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
+    const abort = new AbortController();
+    this.checkAbortController = abort;
+    const timeoutId = setTimeout(() => {
+      abort.abort();
+      if (this.checkAbortController === abort) {
+        this.checkAbortController = null;
+      }
+    }, MatchmakingModal.CHECK_GAME_TIMEOUT_MS);
+    abort.signal.addEventListener("abort", () => clearTimeout(timeoutId), {
+      once: true,
     });
+    try {
+      // The matched game may carry any server's letter: resolve it through
+      // the API's list (multi-server v2) rather than this page's own map. The
+      // version check waits until the game exists, below: this poll fires
+      // every second and must never navigate.
+      await ensureServerList();
+      if (
+        abort.signal.aborted ||
+        !this.isModalOpen ||
+        this.gameID !== targetGameId ||
+        this.checkGeneration !== gen
+      ) {
+        return;
+      }
+      const url = `${ClientEnv.gameHttpBase(targetGameId)}/${ClientEnv.gameWorkerPath(targetGameId)}/api/game/${targetGameId}/exists`;
 
-    const gameInfo = await response.json();
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+        signal: abort.signal,
+      });
+      if (
+        abort.signal.aborted ||
+        !this.isModalOpen ||
+        this.gameID !== targetGameId ||
+        this.checkGeneration !== gen
+      ) {
+        return;
+      }
 
-    if (response.status !== 200) {
-      console.warn(`Error checking game ${this.gameID}: ${response.status}`);
-      return;
+      const gameInfo = await response.json();
+      if (
+        abort.signal.aborted ||
+        !this.isModalOpen ||
+        this.gameID !== targetGameId ||
+        this.checkGeneration !== gen
+      ) {
+        return;
+      }
+
+      if (response.status !== 200) {
+        console.warn(`Error checking game ${targetGameId}: ${response.status}`);
+        return;
+      }
+
+      if (!gameInfo.exists) {
+        console.info(
+          `Game ${targetGameId} does not exist or hasn't started yet`,
+        );
+        return;
+      }
+
+      if (this.gameCheckInterval) {
+        clearInterval(this.gameCheckInterval);
+        this.gameCheckInterval = null;
+      }
+
+      // A match is made by rating, not by build, so it can land on a server
+      // running another version. Open the game at that version now: being
+      // bounced at join time costs a page load, which a ranked game's start
+      // deadline does not allow. See docs/MultiServer.md, "Opening a game at
+      // its server's version" (OPE-471).
+      if (redirectToGameVersion(targetGameId)) {
+        return;
+      }
+
+      this.pendingMatchJoin = true;
+      const dispatched = this.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: {
+            gameID: targetGameId,
+            source: "matchmaking",
+          } as JoinLobbyEvent,
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+        }),
+      );
+      if (!dispatched || !this.isModalOpen || this.checkGeneration !== gen) {
+        this.pendingMatchJoin = false;
+      }
+    } catch (err) {
+      if (
+        abort.signal.aborted ||
+        (err instanceof Error &&
+          (err.name === "AbortError" || err.name === "TimeoutError"))
+      ) {
+        return;
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+      if (this.checkAbortController === abort) {
+        this.checkAbortController = null;
+      }
     }
-
-    if (!gameInfo.exists) {
-      console.info(`Game ${this.gameID} does not exist or hasn't started yet`);
-      return;
-    }
-
-    if (this.gameCheckInterval) {
-      clearInterval(this.gameCheckInterval);
-      this.gameCheckInterval = null;
-    }
-
-    // A match is made by rating, not by build, so it can land on a server
-    // running another version. Open the game at that version now: being
-    // bounced at join time costs a page load, which a ranked game's start
-    // deadline does not allow. See docs/MultiServer.md, "Opening a game at
-    // its server's version" (OPE-471).
-    if (redirectToGameVersion(this.gameID)) {
-      return;
-    }
-
-    this.dispatchEvent(
-      new CustomEvent("join-lobby", {
-        detail: {
-          gameID: this.gameID,
-          source: "matchmaking",
-        } as JoinLobbyEvent,
-        bubbles: true,
-        composed: true,
-      }),
-    );
   }
 }
