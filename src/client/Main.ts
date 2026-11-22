@@ -2202,10 +2202,14 @@ class Client {
       });
       if (joinAbort.signal.aborted) return;
 
+      // Dismissing a managed challenge is a cancelled join: close the lobby
+      // modals without a second leave and without an error dialog.
+      const cancelJoin = () => this.cleanupFailedJoin(event);
       const turnstileToken = await this.getTurnstileToken(
         lobby,
         auth,
         joinAbort.signal,
+        cancelJoin,
       );
       if (joinAbort.signal.aborted) return;
 
@@ -2237,7 +2241,7 @@ class Client {
                 clearTurnstilePass(passPersistentId, attemptPassTimestamp);
                 return resolveTurnstileToken({
                   prefetch: null,
-                  requestFresh: requestFreshTurnstileToken,
+                  requestFresh: freshTurnstileRequester(cancelJoin),
                   signal,
                   forceFresh: true,
                 });
@@ -2682,6 +2686,7 @@ class Client {
     lobby: JoinLobbyEvent,
     auth: UserAuth,
     signal?: AbortSignal,
+    onCancel?: () => void,
   ): Promise<string | null> {
     if (signal?.aborted) return null;
     if (
@@ -2712,7 +2717,7 @@ class Client {
 
     return resolveTurnstileToken({
       prefetch,
-      requestFresh: requestFreshTurnstileToken,
+      requestFresh: freshTurnstileRequester(onCancel),
       signal: signal ?? this.activeJoinAbortController?.signal,
       // Always request a new token on a portal.
       forceFresh: this.gamePortal.isOnGamePortal(),
@@ -2765,14 +2770,12 @@ if (document.readyState === "loading") {
   bootstrap();
 }
 
-// Join-time requests may show a managed challenge; dismissing it leaves the
-// lobby the same way closing the modal does.
-function requestFreshTurnstileToken(
-  signal?: AbortSignal,
-): Promise<TurnstileToken> {
-  return getTurnstileToken(signal, {
-    onCancel: () => document.dispatchEvent(new CustomEvent("leave-lobby")),
-  });
+// Join-time requests may show a managed challenge. onCancel runs synchronously
+// when the player dismisses it, before the rejection reaches any awaiter.
+function freshTurnstileRequester(
+  onCancel?: () => void,
+): (signal?: AbortSignal) => Promise<TurnstileToken> {
+  return (signal) => getTurnstileToken(signal, { onCancel });
 }
 
 async function getTurnstileToken(

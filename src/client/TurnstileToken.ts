@@ -326,7 +326,9 @@ export function requestTurnstileToken(
         "after-interactive-callback": () => {
           if (settled) return;
           hideBackdrop();
-          armTimer(timeoutMs, TURNSTILE_TIMEOUT_CODE);
+          // Short wait again, but the player has already been shown a
+          // challenge: report it as interactive so it is never auto-retried.
+          armTimer(timeoutMs, TURNSTILE_INTERACTIVE_TIMEOUT_CODE);
         },
       });
     } catch (error) {

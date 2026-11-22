@@ -46,7 +46,9 @@ describe("Managed Turnstile", () => {
     f.opts()["after-interactive-callback"]!();
     expect(container.style.pointerEvents).toBe("none");
 
-    const assertion = expect(p).rejects.toMatchObject({ code: "timeout" });
+    const assertion = expect(p).rejects.toMatchObject({
+      code: TURNSTILE_INTERACTIVE_TIMEOUT_CODE,
+    });
     await vi.advanceTimersByTimeAsync(15_000);
     await assertion;
   });
