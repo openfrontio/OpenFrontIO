@@ -59,6 +59,7 @@ import {
 } from "./LobbyEvents";
 import { LocalServer } from "./LocalServer";
 import { describeSocketClose } from "./SocketClose";
+import { TURNSTILE_CANCELLED_CODE, TurnstileError } from "./TurnstileToken";
 import { homeHref, translateText } from "./Utils";
 import { PlayerView } from "./view";
 
@@ -657,12 +658,19 @@ export class Transport {
       } else {
         this.handleConnectionRefused(fallbackReason);
       }
-    } catch {
+    } catch (error) {
       if (this.turnstileRetryAbort === abort) {
         this.turnstileRetryAbort = null;
       }
       this.isRetryingTurnstile = false;
-      if (this.connectionRefused || abort.signal.aborted) {
+      if (
+        this.connectionRefused ||
+        abort.signal.aborted ||
+        (error instanceof TurnstileError &&
+          error.code === TURNSTILE_CANCELLED_CODE)
+      ) {
+        this.fallbackCreatorToken = undefined;
+        this.connectionRefused = true;
         return;
       }
       this.handleConnectionRefused(fallbackReason);

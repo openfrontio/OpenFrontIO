@@ -1223,6 +1223,7 @@
       "description": "Automatic spawn selection failed. You can't play this game.",
       "title": "Spawn failed"
     },
+    "turnstile_challenge_label": "Verification required",
     "turnstile_error": "Verification error: {code}. Please refresh and try again."
   },
   "events_display": {
