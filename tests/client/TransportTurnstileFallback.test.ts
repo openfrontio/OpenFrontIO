@@ -189,7 +189,7 @@ describe("Transport Turnstile fallback", () => {
         token: CREATOR_TOKEN,
         turnstileToken: null,
       });
-      expect(config.creatorToken).toBe(CREATOR_TOKEN);
+      expect(config.creatorToken).toBeUndefined();
 
       sockets[0].serverClose(CloseCode.Unauthorized, reason);
 
@@ -202,7 +202,6 @@ describe("Transport Turnstile fallback", () => {
       vi.advanceTimersByTime(10_000);
       expect(sockets).toHaveLength(1);
       expect(sockets[0].sent).toHaveLength(1);
-      expect(config.creatorToken).toBe(CREATOR_TOKEN);
 
       pending.resolve("fresh-turnstile-token");
       await flushMicrotasks();
@@ -233,6 +232,37 @@ describe("Transport Turnstile fallback", () => {
       expect(config.creatorToken).toBeUndefined();
     },
   );
+
+  it("refreshes play token instead of resending creatorToken after a non-Turnstile pre-admission close", async () => {
+    const config = makeLobbyConfig({
+      turnstileToken: null,
+      creatorToken: CREATOR_TOKEN,
+      refreshTurnstileToken: vi.fn(async () => "fresh-token"),
+    });
+
+    connectWithJoin(config);
+    expect(sockets).toHaveLength(1);
+
+    sockets[0].serverOpen();
+    await flushMicrotasks();
+
+    const firstJoin = decodeClientMessage(sockets[0].sent[0], undefined);
+    expect(firstJoin).toMatchObject({ type: "join", token: CREATOR_TOKEN });
+
+    // Non-Turnstile retryable close (e.g., expired creator JWT rejected as InvalidToken).
+    sockets[0].serverClose(CloseCode.InternalError, CloseReason.InvalidToken);
+    vi.advanceTimersByTime(1_000);
+    expect(sockets).toHaveLength(2);
+
+    sockets[1].serverOpen();
+    await flushMicrotasks();
+
+    const reconnectJoin = decodeClientMessage(sockets[1].sent[0], undefined);
+    expect(reconnectJoin).toMatchObject({
+      type: "join",
+      token: PLAY_TOKEN,
+    });
+  });
 
   it.each([CloseReason.TurnstileFailed, CloseReason.TurnstilePassRequired])(
     "does not retry a third time if the retried connection also closes with %s",

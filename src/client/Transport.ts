@@ -283,6 +283,7 @@ export class Transport {
   private retriedWithTurnstile = false;
   private isRetryingTurnstile = false;
   private hasBeenAdmitted = false;
+  private fallbackCreatorToken: string | undefined = undefined;
   private turnstileRetryAbort: AbortController | null = null;
 
   // True once the server has responded to join/rejoin (via start or lobby_info),
@@ -524,6 +525,7 @@ export class Transport {
         }
         if (msg.type === "lobby_info" || msg.type === "start") {
           this.hasBeenAdmitted = true;
+          this.fallbackCreatorToken = undefined;
           delete this.lobbyConfig.creatorToken;
           // Admitted, so the redirect that sent us here is spent: drop the
           // source's latch so it can route this player again later. Any other
@@ -580,15 +582,18 @@ export class Transport {
           // The server ended the session (game over, kick): nothing to say
           // and nothing to retry. Latch, or the silence watchdog would open
           // a fresh socket 5s later only to be refused with "game not found".
+          this.fallbackCreatorToken = undefined;
           this.connectionRefused = true;
           this.stopPing();
         } else if (this.shouldAttemptTurnstileFallback(event)) {
           void this.retryWithFreshTurnstileToken(event.reason);
         } else {
+          this.fallbackCreatorToken = undefined;
           this.handleConnectionRefused(event.reason);
         }
         return;
       }
+      this.fallbackCreatorToken = undefined;
       this.scheduleReconnect();
     };
   }
@@ -637,10 +642,15 @@ export class Transport {
         return;
       }
       if (!freshToken) {
+        this.fallbackCreatorToken = undefined;
         this.handleConnectionRefused(fallbackReason);
         return;
       }
       this.lobbyConfig.turnstileToken = freshToken;
+      if (this.fallbackCreatorToken !== undefined) {
+        this.lobbyConfig.creatorToken = this.fallbackCreatorToken;
+        this.fallbackCreatorToken = undefined;
+      }
       this.reconnectAttempts = 0;
       if (this.onconnect && this.onmessage) {
         this.connectRemote(this.onconnect, this.onmessage);
@@ -799,10 +809,14 @@ export class Transport {
   }
 
   async joinGame() {
-    // Preserve creatorToken until admission (onmessage) so an initial pass-mode
-    // rejection that retries with Turnstile still sends it; admission deletes it
-    // so later reconnects never reuse an expired token.
-    const token = this.lobbyConfig.creatorToken ?? (await getPlayToken());
+    // Only the first join: the token is short-lived, and a later reconnect
+    // must not present one that has since expired. Stash it in
+    // fallbackCreatorToken so an immediate pre-admission Turnstile pass
+    // fallback can still present it once.
+    const creatorToken = this.lobbyConfig.creatorToken;
+    delete this.lobbyConfig.creatorToken;
+    this.fallbackCreatorToken = creatorToken;
+    const token = creatorToken ?? (await getPlayToken());
     this.sendMsg({
       type: "join",
       gameID: this.lobbyConfig.gameID,
@@ -841,6 +855,7 @@ export class Transport {
     // A left game is never rejoined through this transport, whatever still
     // asks (the watchdog, a late send).
     this.connectionRefused = true;
+    this.fallbackCreatorToken = undefined;
     this.turnstileRetryAbort?.abort();
     this.turnstileRetryAbort = null;
     this.isRetryingTurnstile = false;

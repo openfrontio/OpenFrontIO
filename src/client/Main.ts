@@ -163,6 +163,7 @@ import type { TokenLoginModal } from "./TokenLoginModal";
 import {
   clearTurnstilePass,
   hasValidTurnstilePass,
+  readTurnstilePassTimestamp,
   recordTurnstilePass,
 } from "./TurnstilePass";
 import {
@@ -601,18 +602,39 @@ class Client {
     // versioned replay shells: the replay host may not be on the Turnstile
     // site key's domain allowlist, so rendering the widget there just fails —
     // and replays never send a token anyway (see getTurnstileToken below).
-    const turnstilePrefetch =
-      isSteamShell() ||
-      isReplayShellHost(window.location.hostname) ||
-      this.gamePortal.isOnGamePortal()
-        ? null
-        : getTurnstileToken();
-    // A prefetch that fails is not an error anyone has asked about yet: the
-    // join path drops it and fetches once more (see getTurnstileToken below),
-    // and only that attempt alerts. Mark it handled here so a boot-time
-    // rejection nobody is awaiting yet does not surface as an unhandled one.
-    turnstilePrefetch?.catch(() => {});
-    this.turnstileTokenPromise = turnstilePrefetch;
+    // Also skip for returning accounts that already hold a valid 6h pass hint.
+    this.turnstileTokenPromise = null;
+    if (
+      !isSteamShell() &&
+      !isReplayShellHost(window.location.hostname) &&
+      !this.gamePortal.isOnGamePortal()
+    ) {
+      void userAuth()
+        .then((auth) => {
+          if (
+            auth !== false &&
+            clientAuth(auth.claims) === "account" &&
+            hasValidTurnstilePass(auth.claims.sub)
+          ) {
+            return;
+          }
+          if (
+            this.turnstileTokenPromise === null &&
+            !this.joinInFlight &&
+            this.lobbyHandle === null
+          ) {
+            const prefetch = getTurnstileToken();
+            // A prefetch that fails is not an error anyone has asked about yet:
+            // the join path drops it and fetches once more (see getTurnstileToken
+            // below), and only that attempt alerts. Mark it handled here so a
+            // boot-time rejection nobody is awaiting yet does not surface as an
+            // unhandled one.
+            prefetch.catch(() => {});
+            this.turnstileTokenPromise = prefetch;
+          }
+        })
+        .catch(() => {});
+    }
 
     // Wait for components to render before setting version
     await customElements.whenDefined("mobile-nav-bar");
@@ -2196,6 +2218,10 @@ class Client {
         !wasAdmitted(lobby.gameID)
           ? auth.claims.sub
           : null;
+      const attemptPassTimestamp =
+        passPersistentId !== null
+          ? (readTurnstilePassTimestamp(passPersistentId) ?? Date.now())
+          : undefined;
 
       const newLobbyHandle = joinLobby(this.eventBus, {
         gameID: lobby.gameID,
@@ -2206,7 +2232,7 @@ class Client {
               onTurnstileTokenAdmitted: () =>
                 recordTurnstilePass(passPersistentId),
               refreshTurnstileToken: (signal?: AbortSignal) => {
-                clearTurnstilePass(passPersistentId);
+                clearTurnstilePass(passPersistentId, attemptPassTimestamp);
                 return resolveTurnstileToken({
                   prefetch: null,
                   requestFresh: getTurnstileToken,

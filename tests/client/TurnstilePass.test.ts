@@ -118,4 +118,17 @@ describe("TurnstilePass", () => {
     expect(hasValidTurnstilePass("user-1", 1_000)).toBe(false);
     expect(() => clearTurnstilePass("user-1")).not.toThrow();
   });
+
+  it("preserves a newer pass hint when clearTurnstilePass is given an older maxTimestamp", () => {
+    recordTurnstilePass("user-1", 1_000);
+    // Another tab refreshes and writes a newer hint at t = 2_000.
+    recordTurnstilePass("user-1", 2_000);
+
+    clearTurnstilePass("user-1", 1_000);
+    expect(hasValidTurnstilePass("user-1", 2_500)).toBe(true);
+
+    // Clearing with maxTimestamp >= stored removes it.
+    clearTurnstilePass("user-1", 2_000);
+    expect(hasValidTurnstilePass("user-1", 2_500)).toBe(false);
+  });
 });

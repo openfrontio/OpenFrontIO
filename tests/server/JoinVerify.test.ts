@@ -613,15 +613,15 @@ describe("verifyJoin", () => {
       .mockImplementationOnce(() => tokenPromise);
     vi.stubGlobal("fetch", fetchMock);
 
-    // Choose token === ip so only the namespace prefix separates the keys if
-    // the trailing tuple overlaps.
+    // Make the trailing tuples identical so only the namespace prefix separates
+    // the keys.
     const passCall = verifyJoin("shared", null, "Alice", null, "pid-1", "pass");
     const tokenCall = verifyJoin(
       "shared",
-      "shared",
+      "pid-1",
       "Alice",
       null,
-      "pid-1",
+      "shared",
       "token",
     );
 
