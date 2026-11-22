@@ -237,6 +237,108 @@ describe("joinLobby lobby-phase messages", () => {
     expect(errorModalText()).toContain("game id: game1234");
     expect(errorModalText()).toContain("Error: missing gameStartInfo");
   });
+
+  it("notifies onTurnstileTokenAdmitted at most once across repeated lobby_info and start messages", async () => {
+    const onTurnstileTokenAdmitted = vi.fn();
+    const config = makeLobbyConfig(false);
+    config.turnstileToken = "turnstile-token";
+    config.onTurnstileTokenAdmitted = onTurnstileTokenAdmitted;
+
+    const result = joinLobby(new EventBus(), config);
+    const lobbyInfoMsg = {
+      type: "lobby_info",
+      myClientID: "c0000001",
+      lobby: {
+        gameID: "game1234",
+        serverTime: 1_700_000_000_000,
+        clients: [],
+      },
+    };
+
+    captured.lobbyOnMessage!(lobbyInfoMsg);
+    expect(onTurnstileTokenAdmitted).toHaveBeenCalledTimes(1);
+
+    captured.lobbyOnMessage!(lobbyInfoMsg);
+    expect(onTurnstileTokenAdmitted).toHaveBeenCalledTimes(1);
+
+    captured.lobbyOnMessage!({
+      type: "start",
+      myClientID: "c0000001",
+      turns: [],
+      gameStartInfo: {
+        gameID: "game1234",
+        config: { gameMap: "world", gameMapSize: "medium" },
+        players: [],
+      },
+    });
+    result.stop();
+    await result.join;
+
+    expect(onTurnstileTokenAdmitted).toHaveBeenCalledTimes(1);
+  });
+
+  it("notifies onTurnstileTokenAdmitted on start when turnstileToken is updated from null before admission", async () => {
+    const onTurnstileTokenAdmitted = vi.fn();
+    const config = makeLobbyConfig(false);
+    config.turnstileToken = null;
+    config.onTurnstileTokenAdmitted = onTurnstileTokenAdmitted;
+
+    const result = joinLobby(new EventBus(), config);
+
+    // Simulates fallback updating lobbyConfig.turnstileToken prior to admission.
+    config.turnstileToken = "fallback-turnstile-token";
+
+    captured.lobbyOnMessage!({
+      type: "start",
+      myClientID: "c0000001",
+      turns: [],
+      gameStartInfo: {
+        gameID: "game1234",
+        config: { gameMap: "world", gameMapSize: "medium" },
+        players: [],
+      },
+    });
+    result.stop();
+    await result.join;
+
+    expect(onTurnstileTokenAdmitted).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([null, ""])(
+    "does not notify onTurnstileTokenAdmitted when turnstileToken is %j",
+    async (token) => {
+      const onTurnstileTokenAdmitted = vi.fn();
+      const config = makeLobbyConfig(false);
+      config.turnstileToken = token;
+      config.onTurnstileTokenAdmitted = onTurnstileTokenAdmitted;
+
+      const result = joinLobby(new EventBus(), config);
+
+      captured.lobbyOnMessage!({
+        type: "lobby_info",
+        myClientID: "c0000001",
+        lobby: {
+          gameID: "game1234",
+          serverTime: 1_700_000_000_000,
+          clients: [],
+        },
+      });
+      captured.lobbyOnMessage!({
+        type: "start",
+        myClientID: "c0000001",
+        turns: [],
+        gameStartInfo: {
+          gameID: "game1234",
+          config: { gameMap: "world", gameMapSize: "medium" },
+          players: [],
+        },
+      });
+      result.stop();
+      await result.join;
+
+      expect(onTurnstileTokenAdmitted).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe("ClientGameRunner in-game messages", () => {

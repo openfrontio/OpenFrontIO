@@ -46,6 +46,7 @@ const clientForksTests = [
   "tests/client/TransportConnectionRefused.test.ts",
   "tests/client/TransportPoolRedirect.test.ts",
   "tests/client/TransportReconnect.test.ts",
+  "tests/client/TransportTurnstileFallback.test.ts",
   "tests/client/UsernameBareClaim.test.ts",
   "tests/client/UsernameClaimPrefill.test.ts",
   "tests/client/graphics/layers/WinModal.test.ts",
