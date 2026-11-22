@@ -160,6 +160,7 @@ import type { TokenLoginModal } from "./TokenLoginModal";
 import {
   requestTurnstileToken,
   resolveTurnstileToken,
+  TURNSTILE_CANCELLED_CODE,
   TURNSTILE_LOAD_FAILED_CODE,
   TurnstileError,
   type TurnstileApi,
@@ -571,7 +572,7 @@ class Client {
     const turnstilePrefetch =
       isDesktopShell() || isReplayShellHost(window.location.hostname)
         ? null
-        : getTurnstileToken();
+        : getTurnstileToken({ abortOnInteractive: true });
     // A prefetch that fails is not an error anyone has asked about yet: the
     // join path drops it and fetches once more (see getTurnstileToken below),
     // and only that attempt alerts. Mark it handled here so a boot-time
@@ -1951,30 +1952,35 @@ class Client {
         reloadForUpdate();
         return;
       }
-      this.loadedJoinModal()?.close();
-      this.loadedHostModal()?.close();
-      if (
-        lobby.source === "matchmaking" &&
-        this.loadedMatchmakingModal()?.isOpen()
-      ) {
-        this.matchmakingModal.close();
-      }
-      const startingModal = document.querySelector("game-starting-modal");
-      if (startingModal instanceof GameStartingModal) {
-        startingModal.hide();
-      }
-      // handleLeaveLobby only resets the URL once a lobby handle exists.
-      history.replaceState(null, "", "/");
-      void this.handleLeaveLobby();
+      this.closeLobbyForFailedJoin(lobby);
       void showInGameAlert(translateText("error_modal.game_client_failed"));
       return;
     }
+    const cosmetics = await getPlayerCosmeticsRefs({
+      verified: resolvedName.verified,
+    });
+    // Dismissing a managed challenge is a cancelled join: close the lobby
+    // modals without an error dialog.
+    const cancelJoin = () => {
+      if (this.mostRecentJoinEvent !== event.timeStamp) return;
+      this.closeLobbyForFailedJoin(lobby);
+    };
+    let turnstileToken: string | null;
+    try {
+      turnstileToken = await this.getTurnstileToken(lobby, cancelJoin);
+    } catch (error) {
+      if (
+        error instanceof TurnstileError &&
+        error.code === TURNSTILE_CANCELLED_CODE
+      ) {
+        return;
+      }
+      throw error;
+    }
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
-      cosmetics: await getPlayerCosmeticsRefs({
-        verified: resolvedName.verified,
-      }),
-      turnstileToken: await this.getTurnstileToken(lobby),
+      cosmetics,
+      turnstileToken,
       playerName: resolvedName.name,
       playerClanTag: this.usernameInput?.getClanTag() ?? null,
       clanTagCheck: this.usernameInput?.getClanCheck(),
@@ -2350,8 +2356,28 @@ class Client {
     }
   }
 
+  // Closes the lobby modals of a join that ended before a handle existed.
+  private closeLobbyForFailedJoin(lobby: JoinLobbyEvent) {
+    this.loadedJoinModal()?.close();
+    this.loadedHostModal()?.close();
+    if (
+      lobby.source === "matchmaking" &&
+      this.loadedMatchmakingModal()?.isOpen()
+    ) {
+      this.matchmakingModal.close();
+    }
+    const startingModal = document.querySelector("game-starting-modal");
+    if (startingModal instanceof GameStartingModal) {
+      startingModal.hide();
+    }
+    // handleLeaveLobby only resets the URL once a lobby handle exists.
+    history.replaceState(null, "", "/");
+    void this.handleLeaveLobby();
+  }
+
   private async getTurnstileToken(
     lobby: JoinLobbyEvent,
+    onCancel?: () => void,
   ): Promise<string | null> {
     if (
       ClientEnv.env() === GameEnv.Dev ||
@@ -2373,7 +2399,7 @@ class Client {
 
     return resolveTurnstileToken({
       prefetch,
-      requestFresh: getTurnstileToken,
+      requestFresh: freshTurnstileRequester(onCancel),
       // Always request a new token on a portal.
       forceFresh: gamePortal.isOnGamePortal(),
       onError: (code) =>
@@ -2425,7 +2451,27 @@ if (document.readyState === "loading") {
   bootstrap();
 }
 
-async function getTurnstileToken(): Promise<TurnstileToken> {
+// Join-time requests may show a managed challenge. onCancel runs synchronously
+// when the player dismisses it, before the rejection reaches any awaiter.
+function freshTurnstileRequester(
+  onCancel?: () => void,
+): () => Promise<TurnstileToken> {
+  return () =>
+    getTurnstileToken({
+      onCancel,
+      cancelLabel: translateText("common.cancel"),
+      dialogLabel: translateText("error_modal.turnstile_challenge_label"),
+    });
+}
+
+async function getTurnstileToken(
+  managed: {
+    abortOnInteractive?: boolean;
+    onCancel?: () => void;
+    cancelLabel?: string;
+    dialogLabel?: string;
+  } = {},
+): Promise<TurnstileToken> {
   // Wait for Turnstile script to load (handles slow connections)
   let attempts = 0;
   while (window.turnstile === undefined && attempts < 100) {
@@ -2446,5 +2492,6 @@ async function getTurnstileToken(): Promise<TurnstileToken> {
   return requestTurnstileToken(turnstile, {
     sitekey: ClientEnv.turnstileSiteKey(),
     container: document.getElementById("turnstile-container") ?? document.body,
+    ...managed,
   });
 }

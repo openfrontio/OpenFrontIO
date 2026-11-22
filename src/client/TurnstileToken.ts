@@ -31,6 +31,8 @@ export interface TurnstileRenderOptions {
   execution?: "render" | "execute";
   callback?: (token: string) => void;
   "error-callback"?: (errorCode: string) => void;
+  "before-interactive-callback"?: () => void;
+  "after-interactive-callback"?: () => void;
 }
 
 export interface TurnstileApi {
@@ -63,6 +65,22 @@ export const TURNSTILE_TOKEN_TIMEOUT_MS = 15_000;
 
 /** The code reported when the widget never answers within the timeout. */
 export const TURNSTILE_TIMEOUT_CODE = "timeout";
+
+/**
+ * How long a visible (managed) challenge may wait for the player. Separate from
+ * the silent timeout: it is armed by before-interactive-callback and the silent
+ * timeout is re-armed by after-interactive-callback.
+ */
+export const TURNSTILE_INTERACTIVE_TIMEOUT_MS = 60_000;
+
+/** Reported when a visible challenge sat unanswered; never auto-retried. */
+export const TURNSTILE_INTERACTIVE_TIMEOUT_CODE = "interactive-timeout";
+
+/** Reported when the player dismissed the visible challenge. */
+export const TURNSTILE_CANCELLED_CODE = "cancelled";
+
+/** Reported when a boot prefetch is dropped because it turned interactive. */
+export const TURNSTILE_PREFETCH_INTERACTIVE_CODE = "prefetch-interactive";
 
 /** The code reported when the Turnstile script itself never loaded. */
 export const TURNSTILE_LOAD_FAILED_CODE = "load-failed";
@@ -108,10 +126,21 @@ export function requestTurnstileToken(
     sitekey: string;
     container: HTMLElement;
     timeoutMs?: number;
+    interactiveTimeoutMs?: number;
+    /** Boot prefetch: never show a challenge, drop the request instead. */
+    abortOnInteractive?: boolean;
+    /** Fired when the player dismisses a visible challenge. */
+    onCancel?: () => void;
+    /** Visible Cancel button text; the keyboard route out of the iframe. */
+    cancelLabel?: string;
+    /** Accessible name announced for the challenge overlay. */
+    dialogLabel?: string;
     now?: () => number;
   },
 ): Promise<TurnstileToken> {
   const timeoutMs = options.timeoutMs ?? TURNSTILE_TOKEN_TIMEOUT_MS;
+  const interactiveTimeoutMs =
+    options.interactiveTimeoutMs ?? TURNSTILE_INTERACTIVE_TIMEOUT_MS;
   const now = options.now ?? Date.now;
 
   return new Promise<TurnstileToken>((resolve, reject) => {
@@ -123,11 +152,93 @@ export function requestTurnstileToken(
     const host = document.createElement("div");
     options.container.appendChild(host);
 
+    // The backdrop is the container itself: inert until a challenge turns
+    // interactive, and always reset on removal so no path strands it.
+    const onBackdropClick = (event: Event) => {
+      if (event.target === options.container) cancel();
+    };
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      // Capture phase: keep BaseModal's own Escape handler from also firing.
+      event.stopPropagation();
+      event.preventDefault();
+      cancel();
+    };
+    // Only a request that raised the backdrop may lower it: the container is
+    // shared, so a prefetch settling must not strip a join's live backdrop. The
+    // body fallback (no #turnstile-container) never gets one, since styling it
+    // would block the whole page.
+    let backdropShown = false;
+    let cancelButton: HTMLButtonElement | undefined;
+    let previousFocus: HTMLElement | null = null;
+    const onFocusIn = (event: FocusEvent) => {
+      if (
+        event.target instanceof Node &&
+        !options.container.contains(event.target)
+      ) {
+        cancelButton?.focus();
+      }
+    };
+    const showBackdrop = () => {
+      if (backdropShown || options.container === document.body) return;
+      backdropShown = true;
+      previousFocus =
+        document.activeElement instanceof HTMLElement &&
+        document.activeElement !== document.body &&
+        !options.container.contains(document.activeElement)
+          ? document.activeElement
+          : null;
+      options.container.dataset.interactive = "true";
+      options.container.style.pointerEvents = "auto";
+      options.container.setAttribute("role", "dialog");
+      options.container.setAttribute("aria-modal", "true");
+      if (options.dialogLabel) {
+        options.container.setAttribute("aria-label", options.dialogLabel);
+      }
+      // The iframe is cross-origin, so Escape pressed inside it never reaches
+      // us. Tab leaves the frame, and this button is the next stop.
+      cancelButton = document.createElement("button");
+      cancelButton.type = "button";
+      cancelButton.textContent = options.cancelLabel ?? "Cancel";
+      cancelButton.className =
+        "ml-4 px-4 py-2 rounded bg-white text-black font-semibold shadow";
+      cancelButton.addEventListener("click", cancel);
+      options.container.appendChild(cancelButton);
+      cancelButton.focus();
+      options.container.addEventListener("click", onBackdropClick);
+      document.addEventListener("keydown", onEscape, true);
+      document.addEventListener("focusin", onFocusIn, true);
+    };
+    const hideBackdrop = () => {
+      if (!backdropShown) return;
+      backdropShown = false;
+      delete options.container.dataset.interactive;
+      options.container.style.pointerEvents = "none";
+      options.container.removeAttribute("role");
+      options.container.removeAttribute("aria-modal");
+      options.container.removeAttribute("aria-label");
+      document.removeEventListener("focusin", onFocusIn, true);
+      cancelButton?.remove();
+      cancelButton = undefined;
+      options.container.removeEventListener("click", onBackdropClick);
+      document.removeEventListener("keydown", onEscape, true);
+      const toRestore = previousFocus;
+      previousFocus = null;
+      if (toRestore?.isConnected) {
+        try {
+          toRestore.focus();
+        } catch {
+          // Ignore focus errors on detached/disabled targets
+        }
+      }
+    };
+
     // Turnstile can still call back after we are done with the widget (a late
     // error after a timeout, say). Removing once and settling once means such
     // a call cannot double-resolve, and cannot throw by removing a widget id
     // Turnstile no longer knows about.
     const removeWidget = () => {
+      hideBackdrop();
       if (removed || widgetId === undefined) return;
       removed = true;
       try {
@@ -151,6 +262,24 @@ export function requestTurnstileToken(
     const succeed = (token: string) =>
       settle(() => resolve({ token, createdAt: now() }));
     const fail = (error: unknown) => settle(() => reject(error));
+    function cancel() {
+      if (settled) return;
+      settle(() =>
+        reject(
+          new TurnstileError(TURNSTILE_CANCELLED_CODE, "Turnstile cancelled"),
+        ),
+      );
+      options.onCancel?.();
+    }
+
+    const armTimer = (ms: number, code: string) => {
+      if (timer !== undefined) clearTimeout(timer);
+      timer = setTimeout(
+        () =>
+          fail(new TurnstileError(code, `Turnstile timed out after ${ms}ms`)),
+        ms,
+      );
+    };
 
     try {
       widgetId = turnstile.render(host, {
@@ -162,6 +291,22 @@ export function requestTurnstileToken(
         callback: (token: string) => succeed(token),
         "error-callback": (errorCode: string) =>
           fail(new TurnstileError(errorCode ?? "unknown")),
+        "before-interactive-callback": () => {
+          if (settled) return;
+          if (options.abortOnInteractive) {
+            fail(new TurnstileError(TURNSTILE_PREFETCH_INTERACTIVE_CODE));
+            return;
+          }
+          showBackdrop();
+          armTimer(interactiveTimeoutMs, TURNSTILE_INTERACTIVE_TIMEOUT_CODE);
+        },
+        "after-interactive-callback": () => {
+          if (settled) return;
+          hideBackdrop();
+          // Short wait again, but the player has already been shown a
+          // challenge: report it as interactive so it is never auto-retried.
+          armTimer(timeoutMs, TURNSTILE_INTERACTIVE_TIMEOUT_CODE);
+        },
       });
     } catch (error) {
       host.remove();
@@ -176,16 +321,7 @@ export function requestTurnstileToken(
       return;
     }
 
-    timer = setTimeout(
-      () =>
-        fail(
-          new TurnstileError(
-            TURNSTILE_TIMEOUT_CODE,
-            `Turnstile timed out after ${timeoutMs}ms`,
-          ),
-        ),
-      timeoutMs,
-    );
+    armTimer(timeoutMs, TURNSTILE_TIMEOUT_CODE);
 
     try {
       turnstile.execute(widgetId);
@@ -220,6 +356,10 @@ export async function resolveTurnstileToken(deps: {
     try {
       return (await deps.requestFresh())?.token ?? null;
     } catch (error) {
+      // The player dismissed the challenge: leave quietly, no modal.
+      if (turnstileErrorCode(error) === TURNSTILE_CANCELLED_CODE) {
+        throw error;
+      }
       console.warn("Turnstile: token request failed", error);
       deps.onError(turnstileErrorCode(error));
       throw error;
