@@ -1920,20 +1920,23 @@ class Client {
     // "joined, waiting", and HostLobbyModal after the server lobby exists.
     // Refusing without closing those would leave the UI claiming a lobby the
     // client never entered, with the game starting without them.
+    // Disarm matchmaking before closing any sibling inline modal: BaseModal.close()
+    // calls showPage("page-play") even when already closed, which force-closes an
+    // open matchmaking modal and would emit leave-lobby for a refused join.
+    const closeMatchmaking =
+      lobby.source === "matchmaking" && this.loadedMatchmakingModal()?.isOpen();
+    if (closeMatchmaking) {
+      this.loadedMatchmakingModal()?.disarmLeaveOnClose();
+    }
     this.loadedJoinModal()?.close();
     this.loadedHostModal()?.close();
     // Matchmaking dispatches its own join once the server matches it, so a
     // refusal here leaves its modal sitting on "waiting for a game" over a
-    // match that will never be entered. close() is the same teardown its Back
-    // button uses -- it shuts the queue socket and clears the watchdog -- so
-    // the player leaves the queue rather than holding a slot from a screen
-    // that is lying to them. Scoped to the source that owns that modal: a
-    // deep link refused while someone is legitimately queued must not cancel
-    // their queue.
-    if (
-      lobby.source === "matchmaking" &&
-      this.loadedMatchmakingModal()?.isOpen()
-    ) {
+    // match that will never be entered. closeWithoutLeaving() shuts the queue
+    // socket and clears the watchdog without emitting leave-lobby. Scoped to
+    // the source that owns that modal: a deep link refused while someone is
+    // legitimately queued must not cancel their queue.
+    if (closeMatchmaking && this.loadedMatchmakingModal()?.isOpen()) {
       this.matchmakingModal.closeWithoutLeaving();
     }
     // false: the web never refuses here any more, so the only feedback left
@@ -1949,12 +1952,19 @@ class Client {
 
     this.activeJoinAbortController?.abort();
     this.activeJoinAbortController = null;
-    this.joinLobbyModal.closeWithoutLeaving();
-    this.loadedHostModal()?.close();
-    if (
+    const closeMatchmaking =
       event.detail.source === "matchmaking" &&
-      this.loadedMatchmakingModal()?.isOpen()
-    ) {
+      this.loadedMatchmakingModal()?.isOpen();
+    // Disarm all involved lobby modals before closing any of them so inline
+    // showPage("page-play") side effects cannot emit an extra leave-lobby.
+    this.loadedHostModal()?.disarmLeaveOnClose();
+    this.loadedJoinModal()?.disarmLeaveOnClose();
+    if (closeMatchmaking) {
+      this.loadedMatchmakingModal()?.disarmLeaveOnClose();
+    }
+    this.joinLobbyModal.closeWithoutLeaving();
+    this.loadedHostModal()?.closeWithoutLeaving();
+    if (closeMatchmaking && this.loadedMatchmakingModal()?.isOpen()) {
       this.matchmakingModal.closeWithoutLeaving();
     }
     const startingModal = document.querySelector("game-starting-modal");
@@ -2493,6 +2503,10 @@ class Client {
     this.lobbyHandle.stop(true);
     this.lobbyHandle = null;
     this.currentUrl = null;
+    const startingModal = document.querySelector("game-starting-modal");
+    if (startingModal instanceof GameStartingModal) {
+      startingModal.hide();
+    }
 
     try {
       history.replaceState(null, "", "/");

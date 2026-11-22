@@ -38,6 +38,7 @@ export class ImmunityTimer extends LitElement implements Controller {
     this.isActive = false;
     this.progressRatio = 0;
     this.style.top = "0px";
+    this.requestUpdate();
     return () => {
       if (gen === this.initGeneration) {
         this.dispose();
