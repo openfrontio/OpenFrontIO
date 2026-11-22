@@ -448,7 +448,9 @@ export async function resolveTurnstileToken(
     } catch (retryError) {
       if (isAbortError(retryError, deps.signal)) return null;
       if (turnstileErrorCode(retryError) === TURNSTILE_CANCELLED_CODE) {
-        return null;
+        throw retryError instanceof TurnstileError
+          ? retryError
+          : new TurnstileError(TURNSTILE_CANCELLED_CODE);
       }
       console.warn("Turnstile retry failed", retryError);
       deps.onError?.(turnstileErrorCode(retryError));
@@ -471,7 +473,11 @@ export async function resolveTurnstileToken(
     } catch (error) {
       if (isAbortError(error, deps.signal)) return null;
       // The player dismissed the challenge: leave quietly, no modal, no retry.
-      if (turnstileErrorCode(error) === TURNSTILE_CANCELLED_CODE) return null;
+      if (turnstileErrorCode(error) === TURNSTILE_CANCELLED_CODE) {
+        throw error instanceof TurnstileError
+          ? error
+          : new TurnstileError(TURNSTILE_CANCELLED_CODE);
+      }
       if (turnstileErrorCode(error) === TURNSTILE_TIMEOUT_CODE) {
         return retryFresh();
       }

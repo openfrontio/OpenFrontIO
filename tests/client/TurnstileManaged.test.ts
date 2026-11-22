@@ -144,14 +144,14 @@ describe("Managed Turnstile", () => {
     document.removeEventListener("keydown", modalEscape);
   });
 
-  it("a cancelled fresh request resolves null with no error modal", async () => {
+  it("a cancelled fresh request rejects with cancelled code and no error modal", async () => {
     const requestFresh = vi
       .fn()
       .mockRejectedValue(new TurnstileError(TURNSTILE_CANCELLED_CODE));
     const onError = vi.fn();
     await expect(
       resolveTurnstileToken({ requestFresh, onError }),
-    ).resolves.toBeNull();
+    ).rejects.toMatchObject({ code: TURNSTILE_CANCELLED_CODE });
     expect(onError).not.toHaveBeenCalled();
     expect(requestFresh).toHaveBeenCalledTimes(1);
   });
