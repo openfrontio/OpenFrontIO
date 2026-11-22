@@ -264,6 +264,46 @@ describe("Transport Turnstile fallback", () => {
     });
   });
 
+  it("uses a fresh play token instead of creatorToken when reconnecting after admission", async () => {
+    const config = makeLobbyConfig({
+      turnstileToken: null,
+      creatorToken: CREATOR_TOKEN,
+      refreshTurnstileToken: vi.fn(async () => "fresh-token"),
+    });
+
+    connectWithJoin(config);
+    expect(sockets).toHaveLength(1);
+
+    sockets[0].serverOpen();
+    await flushMicrotasks();
+
+    const firstJoin = decodeClientMessage(sockets[0].sent[0], undefined);
+    expect(firstJoin).toMatchObject({ type: "join", token: CREATOR_TOKEN });
+
+    sockets[0].serverSend({
+      type: "lobby_info",
+      myClientID: "c0000001",
+      lobby: {
+        gameID: "abcd1234",
+        serverTime: 1_700_000_000_000,
+      },
+    });
+
+    // Retryable disconnect after admission must reconnect using PLAY_TOKEN, not CREATOR_TOKEN.
+    sockets[0].serverClose(1006, "");
+    vi.advanceTimersByTime(1_000);
+    expect(sockets).toHaveLength(2);
+
+    sockets[1].serverOpen();
+    await flushMicrotasks();
+
+    const reconnectJoin = decodeClientMessage(sockets[1].sent[0], undefined);
+    expect(reconnectJoin).toMatchObject({
+      type: "join",
+      token: PLAY_TOKEN,
+    });
+  });
+
   it.each([CloseReason.TurnstileFailed, CloseReason.TurnstilePassRequired])(
     "does not retry a third time if the retried connection also closes with %s",
     async (secondReason) => {
