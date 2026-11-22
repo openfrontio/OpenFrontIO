@@ -73,7 +73,7 @@ import {
 
 @customElement("host-lobby-modal")
 export class HostLobbyModal extends BaseModal {
-  @state() private selectedMap: GameMapType = GameMapType.World;
+  @state() private selectedMap: GameMapType = GameMapType.World2000;
   @state() private selectedDifficulty: Difficulty = Difficulty.Easy;
   @state() private nations: number = 0;
   @state() private defaultNationCount: number = 0;
@@ -1085,7 +1085,7 @@ export class HostLobbyModal extends BaseModal {
 
     // Reset all transient form state to ensure clean slate
     this.selectedPresetName = "";
-    this.selectedMap = GameMapType.World;
+    this.selectedMap = GameMapType.World2000;
     this.selectedDifficulty = Difficulty.Easy;
     this.nations = 0;
     this.defaultNationCount = 0;

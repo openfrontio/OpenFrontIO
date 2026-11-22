@@ -129,7 +129,7 @@ const TUTORIAL_DISABLED_UNITS: UnitType[] = [
 ];
 
 const DEFAULT_OPTIONS = {
-  selectedMap: GameMapType.World,
+  selectedMap: GameMapType.World2000,
   selectedDifficulty: Difficulty.Easy,
   bots: 400,
   infiniteGold: false,
