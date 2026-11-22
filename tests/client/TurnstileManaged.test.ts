@@ -168,4 +168,32 @@ describe("Managed Turnstile", () => {
     expect(container.style.pointerEvents).toBe("none");
     expect(container.dataset.interactive).toBeUndefined();
   });
+
+  it("a settling request does not strip another request's backdrop", async () => {
+    const a = makeFake();
+    const b = makeFake();
+    const pa = requestTurnstileToken(a.api, { sitekey: "k", container });
+    const pb = requestTurnstileToken(b.api, { sitekey: "k", container });
+    b.opts()["before-interactive-callback"]!();
+    a.opts().callback!("tok");
+    await pa;
+    expect(container.dataset.interactive).toBe("true");
+    expect(container.style.pointerEvents).toBe("auto");
+    b.opts().callback!("tok2");
+    await pb;
+    expect(container.style.pointerEvents).toBe("none");
+  });
+
+  it("never styles document.body when used as the fallback container", async () => {
+    const f = makeFake();
+    const p = requestTurnstileToken(f.api, {
+      sitekey: "k",
+      container: document.body,
+    });
+    f.opts()["before-interactive-callback"]!();
+    expect(document.body.style.pointerEvents).toBe("");
+    f.opts().callback!("tok");
+    await p;
+    expect(document.body.style.pointerEvents).toBe("");
+  });
 });

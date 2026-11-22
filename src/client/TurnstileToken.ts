@@ -210,13 +210,22 @@ export function requestTurnstileToken(
       event.preventDefault();
       cancel();
     };
+    // Only a request that raised the backdrop may lower it: the container is
+    // shared, so a prefetch settling must not strip a join's live backdrop. The
+    // body fallback (no #turnstile-container) never gets one, since styling it
+    // would block the whole page.
+    let backdropShown = false;
     const showBackdrop = () => {
+      if (backdropShown || options.container === document.body) return;
+      backdropShown = true;
       options.container.dataset.interactive = "true";
       options.container.style.pointerEvents = "auto";
       options.container.addEventListener("click", onBackdropClick);
       document.addEventListener("keydown", onEscape, true);
     };
     const hideBackdrop = () => {
+      if (!backdropShown) return;
+      backdropShown = false;
       delete options.container.dataset.interactive;
       options.container.style.pointerEvents = "none";
       options.container.removeEventListener("click", onBackdropClick);
