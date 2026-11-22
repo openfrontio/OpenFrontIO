@@ -6,7 +6,7 @@
   "translation_key": "map.giantworldmap",
   "categories": ["classic", "world"],
   "author": "1brucben",
-  "description": "Back in my day we couldn't even run this giant world map without burning up critical infastructure. The webgl just wasn't all that snappy enough. Them processing was done on the process-or. No GPU. Times were tough. You kids don't get it with your world ten hundred and giant lobbies. This use to be a cold war map before yall went and warmed it up!",
+  "description": "Back in my day we couldn't even run this giant world map without burning up critical infrastructure. The webgl just wasn't all that snappy. Them processing was done on the process-or. No GPU. Times were tough. You kids don't get it with your world ten hundred and giant lobbies. This used to be a cold war map before you all went and warmed it up!",
   "nations": [
     {
       "coordinates": [2309, 535],

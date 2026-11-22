@@ -5,7 +5,7 @@
   "translation_key": "map.world2000",
   "categories": ["featured", "world"],
   "author": "Patrick Plays Badly",
-  "description": "The smallest world map. Just the continents, oceans, and a few major water ways. Almost no rivers. Equal in size and based off of World (Classic); 2000 is meant to mimic and add too the traditional world map. There are cosmetics (map skins) for land and water. Terrain now considers climate like permafrost and desert in addition to its height.",
+  "description": "The smallest world map. Just the continents, oceans, and a few major water ways. Almost no rivers. Equal in size and based off of World (Classic); 2000 is meant to mimic and add to the traditional world map. There are cosmetics (map skins) for land and water. Terrain now considers climate like permafrost and desert in addition to its height.",
   "forced_modifiers": ["isCrowded:50"],
   "featured_rank": 1,
   "nations": [
