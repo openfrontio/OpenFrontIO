@@ -627,6 +627,8 @@ export class MatchmakingModal extends BaseModal {
     super.disconnectedCallback();
   }
 
+  private static readonly CHECK_GAME_TIMEOUT_MS = 3000;
+
   private async checkGame() {
     const targetGameId = this.gameID;
     const gen = this.checkGeneration;
@@ -641,6 +643,15 @@ export class MatchmakingModal extends BaseModal {
 
     const abort = new AbortController();
     this.checkAbortController = abort;
+    const timeoutId = setTimeout(() => {
+      abort.abort();
+      if (this.checkAbortController === abort) {
+        this.checkAbortController = null;
+      }
+    }, MatchmakingModal.CHECK_GAME_TIMEOUT_MS);
+    abort.signal.addEventListener("abort", () => clearTimeout(timeoutId), {
+      once: true,
+    });
     try {
       // The matched game may carry any server's letter: resolve it through
       // the API's list (multi-server v2) rather than this page's own map. The
@@ -725,12 +736,14 @@ export class MatchmakingModal extends BaseModal {
     } catch (err) {
       if (
         abort.signal.aborted ||
-        (err instanceof Error && err.name === "AbortError")
+        (err instanceof Error &&
+          (err.name === "AbortError" || err.name === "TimeoutError"))
       ) {
         return;
       }
       throw err;
     } finally {
+      clearTimeout(timeoutId);
       if (this.checkAbortController === abort) {
         this.checkAbortController = null;
       }

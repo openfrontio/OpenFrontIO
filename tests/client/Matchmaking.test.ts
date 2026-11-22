@@ -1364,4 +1364,68 @@ describe("MatchmakingModal Back and leave-lobby lifecycle", () => {
       document.removeEventListener("leave-lobby", onLeave);
     }
   });
+
+  it("aborts a stalled /exists check after its deadline so the next poll can dispatch join-lobby", async () => {
+    let firstAborted = false;
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(
+        (_url: string, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener("abort", () => {
+              firstAborted = true;
+              const err = new Error("Aborted");
+              err.name = "AbortError";
+              reject(err);
+            });
+          }),
+      )
+      .mockImplementationOnce(
+        async () =>
+          new Response(JSON.stringify({ exists: true }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const joinEvents: CustomEvent[] = [];
+    const onJoin = (e: Event) => joinEvents.push(e as CustomEvent);
+    document.addEventListener("join-lobby", onJoin);
+
+    try {
+      const joined = await openAndJoin("1v1");
+      modal = joined.modal;
+      document.body.append(modal);
+      await modal.updateComplete;
+
+      joined.socket.onmessage?.({
+        data: JSON.stringify({
+          type: "match-assignment",
+          gameId: "stalled123",
+        }),
+      });
+
+      // Tick at 1s starts the first fetch; ticks at 2s and 3s are skipped while in flight.
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(firstAborted).toBe(false);
+
+      // At 4s total (3s after poll 1 started), the deadline aborts poll 1; the
+      // next interval tick at 5s sends poll 2, which succeeds and dispatches join-lobby once.
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(firstAborted).toBe(true);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(joinEvents).toHaveLength(1);
+      expect(joinEvents[0].detail).toEqual({
+        gameID: "stalled123",
+        source: "matchmaking",
+      });
+    } finally {
+      document.removeEventListener("join-lobby", onJoin);
+    }
+  });
 });

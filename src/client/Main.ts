@@ -2615,13 +2615,10 @@ class Client {
       signal: signal ?? this.activeJoinAbortController?.signal,
       // Always request a new token on a portal.
       forceFresh: this.gamePortal.isOnGamePortal(),
-      onError: (code) => {
-        const key = "error_modal.turnstile_error";
-        const translated = translateText(key, { code: code ?? "" });
+      onError: (code) =>
         void showInGameAlert(
-          translated === key ? "Turnstile verification failed" : translated,
-        );
-      },
+          translateText("error_modal.turnstile_error", { code: code ?? "" }),
+        ),
     });
   }
 }

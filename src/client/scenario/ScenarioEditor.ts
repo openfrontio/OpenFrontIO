@@ -449,6 +449,7 @@ export class ScenarioEditor extends LitElement {
           detail,
           bubbles: true,
           composed: true,
+          cancelable: true,
         }),
       );
     } catch (e) {

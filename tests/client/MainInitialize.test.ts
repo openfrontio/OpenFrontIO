@@ -1055,24 +1055,13 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       }
     }, 10_000);
 
-    it('falls back to "Turnstile verification failed" when translations are unloaded', async () => {
+    it("routes Turnstile error alert through translateText with the error code", async () => {
       const prevGameEnv = (window as any).BOOTSTRAP_CONFIG.gameEnv;
       const prevTurnstile = (window as any).turnstile;
       const input = document.querySelector("username-input") as unknown as {
         canPlay: () => boolean;
       };
       input.canPlay = () => true;
-
-      const langSelector = document.querySelector("lang-selector") as {
-        translations?: Record<string, string>;
-        defaultTranslations?: Record<string, string>;
-      } | null;
-      const prevTranslations = langSelector?.translations;
-      const prevDefaultTranslations = langSelector?.defaultTranslations;
-      if (langSelector) {
-        langSelector.translations = undefined;
-        langSelector.defaultTranslations = undefined;
-      }
 
       let errorCallback: ((code: string) => void) | undefined;
       (window as any).BOOTSTRAP_CONFIG.gameEnv = "prod";
@@ -1103,15 +1092,11 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
             message?: string;
           } | null;
           expect(dialog).not.toBeNull();
-          expect(dialog!.message).toBe("Turnstile verification failed");
+          expect(dialog!.message).toContain("300030");
         });
       } finally {
         document.querySelector("confirm-dialog")?.remove();
         document.dispatchEvent(new CustomEvent("leave-lobby"));
-        if (langSelector) {
-          langSelector.translations = prevTranslations;
-          langSelector.defaultTranslations = prevDefaultTranslations;
-        }
         (window as any).turnstile = prevTurnstile;
         (window as any).BOOTSTRAP_CONFIG.gameEnv = prevGameEnv;
         ClientEnv.reset();
