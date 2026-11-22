@@ -39,9 +39,9 @@ export type JoinVerifyResponse =
     };
 
 export type JoinVerifyPlan =
-  | { action: "reject" } // first join with no Turnstile token
   | { action: "skip" } // the verdict couldn't change anything
-  | { action: "verify"; token: string | null };
+  // firstJoin: a first join with no Turnstile token (see planJoinVerify).
+  | { action: "verify"; token: string | null; firstJoin?: true };
 
 /**
  * Pure decision for whether a join needs a join_verify call, kept free of
@@ -49,9 +49,16 @@ export type JoinVerifyPlan =
  *
  * SECURITY: the API skips siteverify entirely when the token is null,
  * trusting the game server to only do that for already-admitted reconnects
- * (whose single-use token is spent). A first join must therefore present a
- * token — rejecting instead of forwarding a null one, which would be a full
- * Turnstile bypass.
+ * (whose single-use token is spent). A first join without a token is
+ * therefore sent with `firstJoin`, which makes the API run the Turnstile
+ * check on the missing token: approved only while Turnstile is switched off
+ * in the admin panel, rejected otherwise. The client sends a null token when
+ * it could not get one, so a broken widget doesn't stop joins while the
+ * switch is off.
+ *
+ * DEPLOY ORDER: the API must understand `firstJoin` before this ships. An
+ * older API ignores it and treats the null token as a trusted reconnect,
+ * which would approve every token-less first join.
  *
  * Re-admits verify with a null token (name check alone), and only when the
  * verdict could matter: identity updates apply only before the game starts,
@@ -101,7 +108,7 @@ export function planJoinVerify(args: {
       return { action: "verify", token: null };
     }
     if (!args.turnstileToken) {
-      return { action: "reject" };
+      return { action: "verify", token: null, firstJoin: true };
     }
     return { action: "verify", token: args.turnstileToken };
   }
@@ -149,6 +156,7 @@ async function fetchJoinVerify(
   token: string | null,
   username: string,
   clanTag: string | null,
+  firstJoin: boolean,
 ): Promise<Response> {
   return fetch(`${ServerEnv.jwtIssuer()}/join_verify`, {
     method: "POST",
@@ -159,7 +167,13 @@ async function fetchJoinVerify(
       "Content-Type": "application/json",
       "x-api-key": ServerEnv.apiKey(),
     },
-    body: JSON.stringify({ ip, token, username, clanTag }),
+    body: JSON.stringify({
+      ip,
+      token,
+      username,
+      clanTag,
+      ...(firstJoin && { firstJoin: true }),
+    }),
   });
 }
 
@@ -168,6 +182,7 @@ async function verifyJoinRequest(
   turnstileToken: string | null,
   username: string,
   clanTag: string | null,
+  firstJoin: boolean,
 ): Promise<JoinVerifyResponse> {
   try {
     const response = await fetchJoinVerify(
@@ -175,6 +190,7 @@ async function verifyJoinRequest(
       turnstileToken,
       username,
       clanTag,
+      firstJoin,
     );
     if (!response.ok) {
       return {
@@ -204,8 +220,7 @@ async function verifyJoinRequest(
  * SECURITY: a null token SKIPS siteverify — the API trusts the game server
  * to omit the token only for already-admitted reconnects (whose single-use
  * token is spent); those come back approved with just the name check run.
- * Callers must never forward a first join with a null token (see
- * planJoinVerify).
+ * A first join with a null token must pass `firstJoin` (see planJoinVerify).
  *
  * Failures are never retried: a Turnstile token is single-use, so
  * re-submitting after a timeout or 5xx can redeem an already-spent token and
@@ -213,7 +228,9 @@ async function verifyJoinRequest(
  * failure returns "error" and the caller fails open, matching the old
  * standalone-Turnstile stance: with the API's screened identity when it
  * sent one (a degraded verdict whose name check finished), otherwise with
- * the locally screened name (see Censor.ts).
+ * the locally screened name (see Censor.ts). The exception is a token-less
+ * first join: it has passed no bot check at all, so only an API answer that
+ * Turnstile is off admits it, and an "error" becomes a rejection.
  */
 export async function verifyJoin(
   ip: string,
@@ -221,7 +238,18 @@ export async function verifyJoin(
   username: string,
   clanTag: string | null,
   persistentId?: string,
+  firstJoin = false,
 ): Promise<JoinVerifyResponse> {
+  if (firstJoin && !turnstileToken) {
+    // Never coalesced: there is no token to key on.
+    const verdict = await verifyJoinRequest(ip, null, username, clanTag, true);
+    return verdict.status === "error"
+      ? {
+          status: "rejected",
+          reason: `no Turnstile token and join_verify failed: ${verdict.reason}`,
+        }
+      : verdict;
+  }
   if (turnstileToken !== null && turnstileToken.length > 0) {
     const key = `${turnstileToken}\0${persistentId ?? ""}\0${username}\0${clanTag ?? ""}`;
     const inFlight = inFlightByToken.get(key);
@@ -233,13 +261,14 @@ export async function verifyJoin(
       turnstileToken,
       username,
       clanTag,
+      false,
     ).finally(() => {
       inFlightByToken.delete(key);
     });
     inFlightByToken.set(key, promise);
     return promise;
   }
-  return verifyJoinRequest(ip, turnstileToken, username, clanTag);
+  return verifyJoinRequest(ip, turnstileToken, username, clanTag, false);
 }
 
 export function _inFlightTokenCount(): number {

@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   requestTurnstileToken,
   resolveTurnstileToken,
+  TURNSTILE_LOAD_FAILED_CODE,
   TURNSTILE_TIMEOUT_CODE,
   TURNSTILE_TOKEN_TIMEOUT_MS,
   TURNSTILE_TOKEN_TTL_MS,
@@ -239,13 +240,11 @@ describe("requestTurnstileToken runs exactly one challenge", () => {
 });
 
 describe("resolveTurnstileToken picks the token a join uses", () => {
-  const makeOnError = () => vi.fn((_code: string) => undefined);
-  let onError: ReturnType<typeof makeOnError>;
+  let warn: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    onError = makeOnError();
     vi.spyOn(console, "log").mockImplementation(() => undefined);
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     vi.spyOn(console, "error").mockImplementation(() => undefined);
   });
 
@@ -261,12 +260,10 @@ describe("resolveTurnstileToken picks the token a join uses", () => {
       resolveTurnstileToken({
         prefetch: Promise.resolve({ token: "pre", createdAt: 0 }),
         requestFresh,
-        onError,
         now: () => TURNSTILE_TOKEN_TTL_MS - 1,
       }),
     ).resolves.toBe("pre");
     expect(requestFresh).not.toHaveBeenCalled();
-    expect(onError).not.toHaveBeenCalled();
   });
 
   it("refetches a prefetched token that has expired", async () => {
@@ -276,7 +273,6 @@ describe("resolveTurnstileToken picks the token a join uses", () => {
       resolveTurnstileToken({
         prefetch: Promise.resolve({ token: "pre", createdAt: 0 }),
         requestFresh,
-        onError,
         now: () => TURNSTILE_TOKEN_TTL_MS + 1,
       }),
     ).resolves.toBe("fresh");
@@ -291,7 +287,6 @@ describe("resolveTurnstileToken picks the token a join uses", () => {
         prefetch: Promise.resolve({ token: "pre", createdAt: 0 }),
         requestFresh,
         forceFresh: true,
-        onError,
         now: () => 0,
       }),
     ).resolves.toBe("fresh");
@@ -307,14 +302,14 @@ describe("resolveTurnstileToken picks the token a join uses", () => {
       resolveTurnstileToken({
         prefetch: Promise.reject(new TurnstileError("300030")),
         requestFresh,
-        onError,
       }),
     ).resolves.toBe("fresh");
     expect(requestFresh).toHaveBeenCalledTimes(1);
-    expect(onError).not.toHaveBeenCalled();
   });
 
-  it("alerts only for the fresh fetch when both attempts fail", async () => {
+  // The server admits a token-less first join only while Turnstile is
+  // switched off, so a failure here must not stop the join.
+  it("joins with a null token when both attempts fail, keeping the code in the warning", async () => {
     const requestFresh = vi.fn(async () => {
       throw new TurnstileError("300031");
     });
@@ -323,19 +318,34 @@ describe("resolveTurnstileToken picks the token a join uses", () => {
       resolveTurnstileToken({
         prefetch: Promise.reject(new TurnstileError("300030")),
         requestFresh,
-        onError,
       }),
-    ).rejects.toMatchObject({ code: "300031" });
+    ).resolves.toBeNull();
     expect(requestFresh).toHaveBeenCalledTimes(1);
-    expect(onError).toHaveBeenCalledTimes(1);
-    expect(onError).toHaveBeenCalledWith("300031");
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("code 300031"),
+      expect.any(TurnstileError),
+    );
+  });
+
+  it("joins with a null token when the script never loads", async () => {
+    const requestFresh = vi.fn(async () => {
+      throw new TurnstileError(TURNSTILE_LOAD_FAILED_CODE);
+    });
+
+    await expect(
+      resolveTurnstileToken({ prefetch: null, requestFresh }),
+    ).resolves.toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining(`code ${TURNSTILE_LOAD_FAILED_CODE}`),
+      expect.any(TurnstileError),
+    );
   });
 
   it("fetches fresh when there is no prefetch at all", async () => {
     const requestFresh = fresh();
 
     await expect(
-      resolveTurnstileToken({ prefetch: null, requestFresh, onError }),
+      resolveTurnstileToken({ prefetch: null, requestFresh }),
     ).resolves.toBe("fresh");
     expect(requestFresh).toHaveBeenCalledTimes(1);
   });

@@ -201,8 +201,12 @@ export function requestTurnstileToken(
  * A prefetch that rejected is treated exactly like one that went stale -- it is
  * dropped and a fresh fetch takes its place, because the boot-time failure is
  * not the join's failure and the player has had minutes of page life since.
- * Only the fresh fetch's failure reaches `onError`, so a join shows at most one
- * error modal and only for the attempt that actually decided it.
+ *
+ * When the fresh fetch fails too, the join goes ahead with a null token
+ * rather than stopping here: the server lets a token-less first join in only
+ * while Turnstile is switched off in the admin panel, and otherwise rejects
+ * it with the "bot check failed" close reason, which the player then sees.
+ * The failure code is kept in the console warning.
  */
 export async function resolveTurnstileToken(deps: {
   /** The boot-time prefetch, or null when there is none to reuse. */
@@ -210,8 +214,6 @@ export async function resolveTurnstileToken(deps: {
   requestFresh: () => Promise<TurnstileToken>;
   /** Portals always want a token minted for this join. */
   forceFresh?: boolean;
-  /** Shows the error modal. Called at most once, for the final failure. */
-  onError: (code: string) => void;
   now?: () => number;
 }): Promise<string | null> {
   const now = deps.now ?? Date.now;
@@ -220,9 +222,11 @@ export async function resolveTurnstileToken(deps: {
     try {
       return (await deps.requestFresh())?.token ?? null;
     } catch (error) {
-      console.warn("Turnstile: token request failed", error);
-      deps.onError(turnstileErrorCode(error));
-      throw error;
+      console.warn(
+        `Turnstile: token request failed (code ${turnstileErrorCode(error)}), joining without a token`,
+        error,
+      );
+      return null;
     }
   };
 
@@ -235,7 +239,7 @@ export async function resolveTurnstileToken(deps: {
   try {
     prefetched = await deps.prefetch;
   } catch (error) {
-    // Boot-time failure: worth a line, not a modal. The join gets its own try.
+    // Boot-time failure: worth a line. The join gets its own try.
     console.warn("Prefetched turnstile token failed, getting new token", error);
     return fresh();
   }

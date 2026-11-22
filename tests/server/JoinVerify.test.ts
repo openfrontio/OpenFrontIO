@@ -49,6 +49,89 @@ describe("verifyJoin", () => {
     });
   });
 
+  it("sends firstJoin for a token-less first join and passes the verdict through", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ status: "approved", username: "Alice", clanTag: null }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(
+      await verifyJoin("1.2.3.4", null, "Alice", null, "pid-1", true),
+    ).toEqual({ status: "approved", username: "Alice", clanTag: null });
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(init.body)).toEqual({
+      ip: "1.2.3.4",
+      token: null,
+      username: "Alice",
+      clanTag: null,
+      firstJoin: true,
+    });
+  });
+
+  it("omits firstJoin from a re-admit's null-token request", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ status: "approved", username: "Alice", clanTag: null }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await verifyJoin("1.2.3.4", null, "Alice", null, "pid-1");
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(init.body)).not.toHaveProperty("firstJoin");
+  });
+
+  it("passes a rejected token-less first join through", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          status: "rejected",
+          reason: "No turnstile token provided",
+        }),
+      ),
+    );
+    expect(await verifyJoin("ip", null, "Alice", null, "pid", true)).toEqual({
+      status: "rejected",
+      reason: "No turnstile token provided",
+    });
+  });
+
+  // SECURITY: no token means no bot check passed, so the usual fail-open on an
+  // API failure must not admit it.
+  it("rejects a token-less first join when join_verify fails or degrades", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({}, 503)));
+    expect(
+      (await verifyJoin("ip", null, "Alice", null, "pid", true)).status,
+    ).toBe("rejected");
+
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          jsonResponse({ status: "error", reason: "turnstile timed out" }),
+        ),
+    );
+    expect(
+      (await verifyJoin("ip", null, "Alice", null, "pid", true)).status,
+    ).toBe("rejected");
+  });
+
+  it("never coalesces token-less first joins", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => new Promise(() => undefined));
+    vi.stubGlobal("fetch", fetchMock);
+
+    void verifyJoin("ip", null, "Alice", null, "pid", true);
+    void verifyJoin("ip", null, "Alice", null, "pid", true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
   it("normalizes an absent clanTag to null on approval", async () => {
     vi.stubGlobal(
       "fetch",
@@ -438,12 +521,18 @@ describe("planJoinVerify", () => {
     });
   });
 
-  it("rejects a first join without a token", () => {
+  // The API then runs the Turnstile check on the missing token: approved
+  // only while Turnstile is switched off.
+  it("verifies a first join without a token as a token-less first join", () => {
     expect(planJoinVerify({ ...firstJoin, turnstileToken: null })).toEqual({
-      action: "reject",
+      action: "verify",
+      token: null,
+      firstJoin: true,
     });
     expect(planJoinVerify({ ...firstJoin, turnstileToken: "" })).toEqual({
-      action: "reject",
+      action: "verify",
+      token: null,
+      firstJoin: true,
     });
   });
 
@@ -464,7 +553,7 @@ describe("planJoinVerify", () => {
         gameStarted: true,
         identityUnchanged: true,
       }),
-    ).toEqual({ action: "reject" });
+    ).toEqual({ action: "verify", token: null, firstJoin: true });
   });
 
   it("verifies a pre-start re-admit with a changed identity using a null token", () => {
@@ -519,6 +608,14 @@ describe("planJoinVerify", () => {
     expect(
       planJoinVerify({ ...firstJoin, steamAuthed: true, turnstileToken: null }),
     ).toEqual({ action: "verify", token: null });
+  });
+
+  // firstJoin would make the API demand a token these joins don't need.
+  it("never marks Steam-authed first joins or re-admits as token-less first joins", () => {
+    expect(
+      planJoinVerify({ ...firstJoin, steamAuthed: true, turnstileToken: null }),
+    ).not.toHaveProperty("firstJoin");
+    expect(planJoinVerify(readmit)).not.toHaveProperty("firstJoin");
   });
 
   it("ignores steamAuthed on re-admits (they already went through the gate)", () => {

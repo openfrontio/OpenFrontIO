@@ -1227,8 +1227,7 @@
     "spawn_failed": {
       "description": "Automatic spawn selection failed. You can't play this game.",
       "title": "Spawn failed"
-    },
-    "turnstile_error": "Verification error: {code}. Please refresh and try again."
+    }
   },
   "events_display": {
     "about_to_expire": "Your alliance with {name} is about to expire!",

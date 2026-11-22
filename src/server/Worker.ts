@@ -792,12 +792,12 @@ export async function startWorker() {
         if (ServerEnv.env() !== GameEnv.Dev) {
           const stored = game?.storedIdentity(persistentId) ?? null;
           const steamAuthed = isSteamAuthenticated(claims);
-          // SECURITY: the reject/skip/verify split (first joins must
-          // present a token, only re-admits may omit it) lives in
-          // planJoinVerify — see its doc comment. Steam-authenticated first
-          // joins are the one sanctioned null-token first join: Steam
-          // ownership (a signed, unforgeable provider="steam" claim) stands
-          // in for the bot check, and the name check still runs.
+          // SECURITY: the skip/verify split lives in planJoinVerify — see
+          // its doc comment. A first join is always verified; one without a
+          // token is admitted only while Turnstile is switched off, except
+          // a Steam-authenticated one: Steam ownership (a signed,
+          // unforgeable provider="steam" claim) stands in for the bot
+          // check, and the name check still runs.
           const plan = planJoinVerify({
             isReadmit,
             gameStarted: game?.hasStarted() ?? false,
@@ -814,14 +814,6 @@ export async function startWorker() {
               { persistentID: persistentId, gameID: clientMsg.gameID },
             );
           }
-          if (plan.action === "reject") {
-            log.warn("Unauthorized: missing Turnstile token", {
-              persistentID: persistentId,
-              gameID: clientMsg.gameID,
-            });
-            ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
-            return;
-          }
           if (plan.action === "verify") {
             const verdict = await verifyJoin(
               ip,
@@ -829,6 +821,7 @@ export async function startWorker() {
               clientMsg.username,
               clientMsg.clanTag ?? null,
               persistentId,
+              plan.firstJoin === true,
             );
             if (verdict.status === "approved" || verdict.status === "error") {
               admissionGuard.markAdmittedIfNeeded();

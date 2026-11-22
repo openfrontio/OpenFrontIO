@@ -588,8 +588,9 @@ class Client {
         : getTurnstileToken();
     // A prefetch that fails is not an error anyone has asked about yet: the
     // join path drops it and fetches once more (see getTurnstileToken below),
-    // and only that attempt alerts. Mark it handled here so a boot-time
-    // rejection nobody is awaiting yet does not surface as an unhandled one.
+    // then joins without a token if that fails too. Mark it handled here so
+    // a boot-time rejection nobody is awaiting yet does not surface as an
+    // unhandled one.
     turnstilePrefetch?.catch(() => {});
     this.turnstileTokenPromise = turnstilePrefetch;
 
@@ -2530,10 +2531,6 @@ class Client {
       requestFresh: getTurnstileToken,
       // Always request a new token on a portal.
       forceFresh: gamePortal.isOnGamePortal(),
-      onError: (code) =>
-        void showInGameAlert(
-          translateText("error_modal.turnstile_error", { code }),
-        ),
     });
   }
 }
