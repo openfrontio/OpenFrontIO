@@ -156,6 +156,7 @@ async function fetchJoinVerify(
   token: string | null,
   username: string,
   clanTag: string | null,
+  persistentId: string | undefined,
   firstJoin: boolean,
 ): Promise<Response> {
   return fetch(`${ServerEnv.jwtIssuer()}/join_verify`, {
@@ -172,6 +173,9 @@ async function fetchJoinVerify(
       token,
       username,
       clanTag,
+      // Lets the API approve a player on its Turnstile exemption list when
+      // their Turnstile check fails. A credential: never log this body.
+      ...(persistentId && { persistentId }),
       ...(firstJoin && { firstJoin: true }),
     }),
   });
@@ -182,6 +186,7 @@ async function verifyJoinRequest(
   turnstileToken: string | null,
   username: string,
   clanTag: string | null,
+  persistentId: string | undefined,
   firstJoin: boolean,
 ): Promise<JoinVerifyResponse> {
   try {
@@ -190,6 +195,7 @@ async function verifyJoinRequest(
       turnstileToken,
       username,
       clanTag,
+      persistentId,
       firstJoin,
     );
     if (!response.ok) {
@@ -242,7 +248,14 @@ export async function verifyJoin(
 ): Promise<JoinVerifyResponse> {
   if (firstJoin && !turnstileToken) {
     // Never coalesced: there is no token to key on.
-    const verdict = await verifyJoinRequest(ip, null, username, clanTag, true);
+    const verdict = await verifyJoinRequest(
+      ip,
+      null,
+      username,
+      clanTag,
+      persistentId,
+      true,
+    );
     return verdict.status === "error"
       ? {
           status: "rejected",
@@ -261,6 +274,7 @@ export async function verifyJoin(
       turnstileToken,
       username,
       clanTag,
+      persistentId,
       false,
     ).finally(() => {
       inFlightByToken.delete(key);
@@ -268,7 +282,14 @@ export async function verifyJoin(
     inFlightByToken.set(key, promise);
     return promise;
   }
-  return verifyJoinRequest(ip, turnstileToken, username, clanTag, false);
+  return verifyJoinRequest(
+    ip,
+    turnstileToken,
+    username,
+    clanTag,
+    persistentId,
+    false,
+  );
 }
 
 export function _inFlightTokenCount(): number {

@@ -66,7 +66,27 @@ describe("verifyJoin", () => {
       token: null,
       username: "Alice",
       clanTag: null,
+      persistentId: "pid-1",
       firstJoin: true,
+    });
+  });
+
+  it("sends the persistentId with a token-bearing join", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ status: "approved", username: "Alice", clanTag: null }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await verifyJoin("1.2.3.4", "tok", "Alice", null, "pid-1");
+    const [, init] = fetchMock.mock.calls[0];
+    expect(JSON.parse(init.body)).toEqual({
+      ip: "1.2.3.4",
+      token: "tok",
+      username: "Alice",
+      clanTag: null,
+      persistentId: "pid-1",
     });
   });
 
@@ -80,7 +100,9 @@ describe("verifyJoin", () => {
 
     await verifyJoin("1.2.3.4", null, "Alice", null, "pid-1");
     const [, init] = fetchMock.mock.calls[0];
-    expect(JSON.parse(init.body)).not.toHaveProperty("firstJoin");
+    const body = JSON.parse(init.body);
+    expect(body).not.toHaveProperty("firstJoin");
+    expect(body.persistentId).toBe("pid-1");
   });
 
   it("passes a rejected token-less first join through", async () => {
