@@ -51,7 +51,9 @@ import {
   MockInstance,
   vi,
 } from "vitest";
+import { ImmunityBarVisibleEvent } from "../../../../src/client/hud/layers/ImmunityTimer";
 import { PlayerInfoOverlay } from "../../../../src/client/hud/layers/PlayerInfoOverlay";
+import { SpawnBarVisibleEvent } from "../../../../src/client/hud/layers/SpawnTimer";
 import {
   DoBoatAttackEvent,
   DoRequestAllianceEvent,
@@ -473,6 +475,70 @@ describe("PlayerInfoOverlay", () => {
       overlay.maybeShow(10, 10);
       expect(me.actions).not.toHaveBeenCalled();
       expect(flatten(overlay.render())).not.toContain("player_panel.target");
+    });
+  });
+
+  describe("singleton disposal and bar offset sync", () => {
+    it("ignores stale disposer from Runner A after Runner B re-initializes", () => {
+      const busA = new EventBus();
+      const busB = new EventBus();
+      const offASpy = vi.spyOn(busA, "off");
+      const offBSpy = vi.spyOn(busB, "off");
+
+      overlay.game = makeGame(null) as never;
+      overlay.eventBus = busA;
+      const disposerA = overlay.init();
+
+      overlay.eventBus = busB;
+      const disposerB = overlay.init();
+      expect(offASpy).toHaveBeenCalledTimes(9);
+      expect(offBSpy).not.toHaveBeenCalled();
+
+      disposerA();
+      expect(overlay["_isActive"]).toBe(true);
+      expect(offBSpy).not.toHaveBeenCalled();
+
+      busB.emit(new SpawnBarVisibleEvent(true));
+      expect(flatten(overlay.render())).toContain(
+        "calc(7px + var(--game-health-offset, 0px))",
+      );
+
+      disposerB();
+      expect(offBSpy).toHaveBeenCalledTimes(9);
+      expect(overlay["_isActive"]).toBe(false);
+      expect(flatten(overlay.render())).toBe("");
+    });
+
+    it("resets spawnBarVisible and immunityBarVisible on dispose and re-syncs on re-init", () => {
+      const bus = new EventBus();
+      overlay.game = makeGame(null) as never;
+      overlay.eventBus = bus;
+      overlay.init();
+
+      bus.emit(new SpawnBarVisibleEvent(true));
+      bus.emit(new ImmunityBarVisibleEvent(true));
+      expect(overlay["spawnBarVisible"]).toBe(true);
+      expect(overlay["immunityBarVisible"]).toBe(true);
+      expect(flatten(overlay.render())).toContain(
+        "calc(14px + var(--game-health-offset, 0px))",
+      );
+
+      overlay.dispose();
+      expect(overlay["spawnBarVisible"]).toBe(false);
+      expect(overlay["immunityBarVisible"]).toBe(false);
+
+      overlay.init();
+      expect(flatten(overlay.render())).toContain(
+        "calc(0px + var(--game-health-offset, 0px))",
+      );
+      bus.emit(new SpawnBarVisibleEvent(true));
+      expect(flatten(overlay.render())).toContain(
+        "calc(7px + var(--game-health-offset, 0px))",
+      );
+      bus.emit(new ImmunityBarVisibleEvent(true));
+      expect(flatten(overlay.render())).toContain(
+        "calc(14px + var(--game-health-offset, 0px))",
+      );
     });
   });
 });

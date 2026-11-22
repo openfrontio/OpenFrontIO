@@ -45,6 +45,7 @@ import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import { GamePhase, type GameServer } from "./GameServer";
 import {
+  clientAuth,
   isSteamAuthenticated,
   type JoinVerifyResponse,
   planJoinVerify,
@@ -771,11 +772,15 @@ export async function startWorker() {
         // Gate the join and screen the display name in one API call: status
         // is the Turnstile verdict, and the response carries the
         // display-ready (username, clanTag) pair, so a banned name is never
-        // visible — not even in the lobby. Turnstile gates the FIRST join
-        // only: an already-admitted player who reconnects or refreshes must
-        // not be re-challenged — their original token is single-use and was
-        // already redeemed — so the token is omitted for them and the API
-        // runs the name check alone (an omitted token is always approved).
+        // visible — not even in the lobby. The API handles three modes:
+        // - `token`: Turnstile siteverify + name check (first joins with a
+        //   token; an approved account join also issues/refreshes a 6h pass).
+        // - `pass`: checks for an active 6h Turnstile pass for
+        //   `(persistentId, ip)` + name check (signed-in account first joins
+        //   that omit a token).
+        // - `readmit`: name check alone (Steam-authenticated first joins, and
+        //   already-admitted reconnects whose single-use token was already
+        //   redeemed).
         // Re-admits only call out when the verdict could matter (pre-start,
         // with a changed identity); otherwise the reconnect proceeds with
         // zero API calls, keeping mass reconnects at game start off the
@@ -792,12 +797,15 @@ export async function startWorker() {
         if (ServerEnv.env() !== GameEnv.Dev) {
           const stored = game?.storedIdentity(persistentId) ?? null;
           const steamAuthed = isSteamAuthenticated(claims);
+          const accountAuthed = clientAuth(claims) === "account";
           // SECURITY: the reject/skip/verify split (first joins must
-          // present a token, only re-admits may omit it) lives in
-          // planJoinVerify — see its doc comment. Steam-authenticated first
-          // joins are the one sanctioned null-token first join: Steam
-          // ownership (a signed, unforgeable provider="steam" claim) stands
-          // in for the bot check, and the name check still runs.
+          // present a token, Steam auth, or an eligible account pass; only
+          // re-admits may skip) lives in planJoinVerify — see its doc comment.
+          // Null-token first joins are sanctioned only for Steam-authenticated
+          // joins (mode "readmit": signed provider="steam" claim stands in for
+          // the bot check, name check still runs) and account-authenticated
+          // joins (mode "pass": API verifies an active 6h pass for
+          // persistentId + ip and runs the name check).
           const plan = planJoinVerify({
             isReadmit,
             gameStarted: game?.hasStarted() ?? false,
@@ -807,6 +815,7 @@ export async function startWorker() {
               stored.username === clientMsg.username &&
               stored.clanTag === (clientMsg.clanTag ?? null),
             steamAuthed,
+            accountAuthed,
           });
           if (steamAuthed && !isReadmit) {
             log.info(
@@ -823,12 +832,19 @@ export async function startWorker() {
             return;
           }
           if (plan.action === "verify") {
+            if (plan.mode === "pass") {
+              log.info("Account-authed join: verifying 6h Turnstile pass", {
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
+              });
+            }
             const verdict = await verifyJoin(
               ip,
               plan.token,
               clientMsg.username,
               clientMsg.clanTag ?? null,
               persistentId,
+              plan.mode,
             );
             if (verdict.status === "approved" || verdict.status === "error") {
               admissionGuard.markAdmittedIfNeeded();
@@ -844,12 +860,18 @@ export async function startWorker() {
               log.warn("Unauthorized: Turnstile token rejected", {
                 persistentID: persistentId,
                 gameID: clientMsg.gameID,
+                mode: plan.mode,
                 reason: resolved.reason,
                 ...(resolved.errorCodes !== undefined && {
                   errorCodes: resolved.errorCodes,
                 }),
               });
-              ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
+              ws.close(
+                CloseCode.Unauthorized,
+                plan.mode === "pass"
+                  ? CloseReason.TurnstilePassRequired
+                  : CloseReason.TurnstileFailed,
+              );
               return;
             }
             username = resolved.username;
