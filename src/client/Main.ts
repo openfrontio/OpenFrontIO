@@ -623,7 +623,9 @@ class Client {
             !this.joinInFlight &&
             this.lobbyHandle === null
           ) {
-            const prefetch = getTurnstileToken();
+            const prefetch = getTurnstileToken(undefined, {
+              abortOnInteractive: true,
+            });
             // A prefetch that fails is not an error anyone has asked about yet:
             // the join path drops it and fetches once more (see getTurnstileToken
             // below), and only that attempt alerts. Mark it handled here so a
@@ -2200,10 +2202,14 @@ class Client {
       });
       if (joinAbort.signal.aborted) return;
 
+      // Dismissing a managed challenge is a cancelled join: close the lobby
+      // modals without a second leave and without an error dialog.
+      const cancelJoin = () => this.cleanupFailedJoin(event);
       const turnstileToken = await this.getTurnstileToken(
         lobby,
         auth,
         joinAbort.signal,
+        cancelJoin,
       );
       if (joinAbort.signal.aborted) return;
 
@@ -2235,7 +2241,7 @@ class Client {
                 clearTurnstilePass(passPersistentId, attemptPassTimestamp);
                 return resolveTurnstileToken({
                   prefetch: null,
-                  requestFresh: getTurnstileToken,
+                  requestFresh: freshTurnstileRequester(cancelJoin),
                   signal,
                   forceFresh: true,
                 });
@@ -2680,6 +2686,7 @@ class Client {
     lobby: JoinLobbyEvent,
     auth: UserAuth,
     signal?: AbortSignal,
+    onCancel?: () => void,
   ): Promise<string | null> {
     if (signal?.aborted) return null;
     if (
@@ -2710,7 +2717,7 @@ class Client {
 
     return resolveTurnstileToken({
       prefetch,
-      requestFresh: getTurnstileToken,
+      requestFresh: freshTurnstileRequester(onCancel),
       signal: signal ?? this.activeJoinAbortController?.signal,
       // Always request a new token on a portal.
       forceFresh: this.gamePortal.isOnGamePortal(),
@@ -2763,8 +2770,27 @@ if (document.readyState === "loading") {
   bootstrap();
 }
 
+// Join-time requests may show a managed challenge. onCancel runs synchronously
+// when the player dismisses it, before the rejection reaches any awaiter.
+function freshTurnstileRequester(
+  onCancel?: () => void,
+): (signal?: AbortSignal) => Promise<TurnstileToken> {
+  return (signal) =>
+    getTurnstileToken(signal, {
+      onCancel,
+      cancelLabel: translateText("common.cancel"),
+      dialogLabel: translateText("error_modal.turnstile_challenge_label"),
+    });
+}
+
 async function getTurnstileToken(
   signal?: AbortSignal,
+  managed: {
+    abortOnInteractive?: boolean;
+    onCancel?: () => void;
+    cancelLabel?: string;
+    dialogLabel?: string;
+  } = {},
 ): Promise<TurnstileToken> {
   // Wait for Turnstile script to load (handles slow connections)
   let attempts = 0;
@@ -2794,5 +2820,6 @@ async function getTurnstileToken(
     sitekey: ClientEnv.turnstileSiteKey(),
     container: document.getElementById("turnstile-container") ?? document.body,
     signal,
+    ...managed,
   });
 }

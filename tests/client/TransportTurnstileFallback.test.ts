@@ -7,6 +7,10 @@ import {
 } from "@openfront/shared/ZbinWire";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LobbyConfig } from "../../src/client/ClientGameRunner";
+import {
+  TURNSTILE_CANCELLED_CODE,
+  TurnstileError,
+} from "../../src/client/TurnstileToken";
 
 const modalMocks = vi.hoisted(() => ({
   showInGameConfirm:
@@ -466,4 +470,27 @@ describe("Transport Turnstile fallback", () => {
       );
     },
   );
+
+  it("ends quietly without a connection-refused dialog when the fallback challenge is cancelled", async () => {
+    const config = makeLobbyConfig({
+      turnstileToken: null,
+      creatorToken: CREATOR_TOKEN,
+      refreshTurnstileToken: vi.fn(() =>
+        Promise.reject(new TurnstileError(TURNSTILE_CANCELLED_CODE)),
+      ),
+    });
+
+    connectWithJoin(config);
+    sockets[0].serverOpen();
+    await flushMicrotasks();
+
+    sockets[0].serverClose(
+      CloseCode.Unauthorized,
+      CloseReason.TurnstilePassRequired,
+    );
+    await flushMicrotasks();
+
+    expect(sockets).toHaveLength(1);
+    expect(modalMocks.showInGameConfirm).not.toHaveBeenCalled();
+  });
 });
