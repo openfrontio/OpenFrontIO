@@ -12,7 +12,7 @@
  *   UnitState.veterancy → one instance per level (x, y, slot) → solid gold rect
  */
 
-import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { Aircraft, UnitType } from "@openfront/engine-api/game/GameTypes";
 import type { Config } from "@openfront/engine-lib/configuration/Config";
 import { maxHealthWithVeterancy } from "@openfront/engine-lib/game/Veterancy";
 import type { RendererConfig, UnitState } from "../../types";
@@ -64,7 +64,8 @@ export class BarPass {
   private veterancyCount = 0;
 
   private mapW: number;
-  private warshipMaxHealth: number;
+  /** Base max health by unit type (warships and, since AIR, aircraft). */
+  private baseMaxHealth = new Map<string, number>();
   private veterancyHealthBonus: number;
 
   constructor(
@@ -76,7 +77,9 @@ export class BarPass {
     this.gl = gl;
     this.settings = settings;
     this.mapW = header.mapWidth;
-    this.warshipMaxHealth = config.unitInfo(UnitType.Warship).maxHealth ?? 0;
+    for (const type of HEALTH_BAR_TYPES) {
+      this.baseMaxHealth.set(type, config.unitInfo(type).maxHealth ?? 0);
+    }
     this.veterancyHealthBonus = config.warshipVeterancyHealthBonus();
 
     // --- Shader program ---
@@ -139,15 +142,17 @@ export class BarPass {
     this.progressCount = 0;
     this.veterancyCount = 0;
 
-    // --- Health bars + veterancy pips (warships) ---
-    // Only warships carry health among mobile units, so this loop is effectively
-    // warship-only.
+    // --- Health bars + veterancy pips (warships, aircraft) ---
+    // Warships and aircraft are the mobile units that carry health; each
+    // reads against its own type's max health.
     for (const unit of mobileUnits.values()) {
       if (unit.health === null || unit.health <= 0) continue;
+      const baseMaxHealth = this.baseMaxHealth.get(unit.unitType);
+      if (baseMaxHealth === undefined || baseMaxHealth <= 0) continue;
       // Veteran warships have a higher effective max health, so a full veteran
       // ship reads as full. Shared with the engine's UnitImpl.maxHealth().
       const maxHealth = maxHealthWithVeterancy(
-        this.warshipMaxHealth,
+        baseMaxHealth,
         unit.veterancy,
         this.veterancyHealthBonus,
       );
@@ -347,3 +352,9 @@ export class BarPass {
     return Math.max(0, Math.min(1, readiness));
   }
 }
+
+/** Mobile unit types that carry health and show a bar when damaged. */
+const HEALTH_BAR_TYPES: readonly UnitType[] = [
+  UnitType.Warship,
+  ...Aircraft.types,
+];

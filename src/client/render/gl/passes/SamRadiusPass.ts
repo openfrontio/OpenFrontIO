@@ -2,6 +2,9 @@
  * SAMRadiusPass — renders rotating dashed circles around SAM launchers
  * when the player is in build mode (ghost preview active).
  *
+ * AIR update: the pass is parameterized by structure type and range, so a
+ * second instance draws radar-station coverage (see RadiusSource).
+ *
  * Allied SAM ranges are merged via circle union: overlapping circles from
  * the same alliance group show as a single combined shape rather than
  * overlapping rings. Each circle's visible (uncovered) arcs are emitted
@@ -48,6 +51,17 @@ interface SAMCircle {
 }
 
 type Interval = [number, number];
+
+/** Which structures a radius pass draws, and how far each reaches. */
+export interface RadiusSource {
+  unitType: string;
+  range: (level: number) => number;
+}
+
+const SAM_SOURCE: RadiusSource = {
+  unitType: UT_SAM_LAUNCHER,
+  range: samRange,
+};
 
 function compareIntervalStart(a: Interval, b: Interval): number {
   return a[0] - b[0];
@@ -188,6 +202,7 @@ export class SAMRadiusPass {
     gl: WebGL2RenderingContext,
     mapW: number,
     settings: RenderSettings,
+    private readonly source: RadiusSource = SAM_SOURCE,
   ) {
     this.gl = gl;
     this.mapW = mapW;
@@ -356,7 +371,7 @@ export class SAMRadiusPass {
     this.dirtyGroups.clear();
 
     for (const u of structures.values()) {
-      if (u.unitType !== UT_SAM_LAUNCHER || !u.isActive) continue;
+      if (u.unitType !== this.source.unitType || !u.isActive) continue;
       const isFriendly =
         u.ownerID === this.localPlayerID || this.allies.has(u.ownerID);
       const bg = this.getSAMBaseGroup(u, isFriendly);
@@ -373,7 +388,7 @@ export class SAMRadiusPass {
     this.hasUpgradingSAM = this.dirtyGroups.size > 0;
 
     for (const u of structures.values()) {
-      if (u.unitType !== UT_SAM_LAUNCHER || !u.isActive) continue;
+      if (u.unitType !== this.source.unitType || !u.isActive) continue;
       const isFriendly =
         u.ownerID === this.localPlayerID || this.allies.has(u.ownerID);
       const bg = this.getSAMBaseGroup(u, isFriendly);
@@ -418,7 +433,7 @@ export class SAMRadiusPass {
     ) {
       const elapsed = continuousTick - startTick;
       const progress = Math.max(0, Math.min(1, elapsed / duration));
-      const targetRadius = samRange(u.samUpgradeTargetLevel ?? 0);
+      const targetRadius = this.source.range(u.samUpgradeTargetLevel ?? 0);
       const startRange = u.samUpgradeStartRange ?? 0;
       const currentRadius = startRange + (targetRadius - startRange) * progress;
 
@@ -451,7 +466,7 @@ export class SAMRadiusPass {
       circles.push({
         x,
         y,
-        radius: samRange(u.level),
+        radius: this.source.range(u.level),
         r: color[0],
         g: color[1],
         b: color[2],
@@ -464,7 +479,7 @@ export class SAMRadiusPass {
         circles.push({
           x,
           y,
-          radius: samRange(u.level),
+          radius: this.source.range(u.level),
           r: color[0],
           g: color[1],
           b: color[2],

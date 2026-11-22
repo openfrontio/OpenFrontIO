@@ -157,7 +157,7 @@ void main() {
   }
 
   // train cosmetic: the train sprites (engine, carriage, loaded carriage) are
-  // the last three atlas columns. The engine is drawn entirely in the border
+  // the atlas columns TRAIN_FIRST_COL..TRAIN_LAST_COL (aircraft follow them). The engine is drawn entirely in the border
   // band and the carriages are a border-band frame around a territory-band
   // fill, so recolor both bands — the border band darkened — to keep that
   // engine/frame/fill structure while the whole train takes the effect.
@@ -165,7 +165,8 @@ void main() {
   // 5×5 train sprites fill only the middle of the 13-tile unit cell, so an
   // icon-space gradient would show a sliver of the palette per car, whereas a
   // world-space one runs along the whole train.
-  if (vAtlasCol > float(TRAIN_FIRST_COL) - 0.1) {
+  if (vAtlasCol > float(TRAIN_FIRST_COL) - 0.1 &&
+      vAtlasCol < float(TRAIN_LAST_COL) + 0.1) {
     vec3 effectRGB;
     float diag = vWorldPos.x + vWorldPos.y;
     if (spriteEffectColor(TRAIN_EFFECT_ROW_BASE, int(vOwnerID + 0.5), diag, false, effectRGB)) {

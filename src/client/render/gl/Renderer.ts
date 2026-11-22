@@ -11,6 +11,7 @@
 
 import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import type { Config } from "@openfront/engine-lib/configuration/Config";
+import { radarRange } from "@openfront/engine-lib/game/AirRules";
 import { translateText } from "../../Utils";
 import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
@@ -28,6 +29,16 @@ import type {
   RendererConfig,
   TerrainRect,
   UnitState,
+} from "../types";
+import {
+  UT_AA_GUN,
+  UT_AIRBASE,
+  UT_ATTACK_HELICOPTER,
+  UT_BOMBER,
+  UT_FIGHTER,
+  UT_RADAR_STATION,
+  UT_SAM_LAUNCHER,
+  UT_TRANSPORT_HELICOPTER,
 } from "../types";
 import { Camera } from "./Camera";
 import { GLUnavailableError, initGL } from "./initGL";
@@ -96,6 +107,24 @@ const SAM_RADIUS_GHOST_TYPES = new Set([
 ]);
 
 /** Subset for build-button hover — excludes City/Silo (SAM radii irrelevant). */
+/**
+ * AIR update: radar coverage is shown while placing anything whose use
+ * depends on it — radars, SAMs (they only engage aircraft radar tracks), AA
+ * guns, airbases — or ordering aircraft.
+ */
+const RADAR_RADIUS_GHOST_TYPES = new Set<string>([
+  UT_RADAR_STATION,
+  UT_SAM_LAUNCHER,
+  UT_AA_GUN,
+  UT_AIRBASE,
+  UT_FIGHTER,
+  UT_BOMBER,
+  UT_ATTACK_HELICOPTER,
+  UT_TRANSPORT_HELICOPTER,
+]);
+
+const RADAR_RADIUS_HIGHLIGHT_TYPES = new Set<string>([UT_RADAR_STATION]);
+
 const SAM_RADIUS_HIGHLIGHT_TYPES = new Set([
   "SAM Launcher",
   "Atom Bomb",
@@ -136,6 +165,8 @@ export class GPURenderer {
   private fxPass: FxPass;
   private rangeCirclePass: RangeCirclePass;
   private samRadiusPass: SAMRadiusPass;
+  /** AIR update: radar-station coverage, drawn with the SAM ring style. */
+  private radarRadiusPass: SAMRadiusPass;
   private crosshairPass: CrosshairPass;
   private railroadPass: RailroadPass;
   private barPass: BarPass;
@@ -204,6 +235,8 @@ export class GPURenderer {
   // SAM radius visibility tracking (show if either source is true)
   private samGhostVisible = false;
   private samHighlightVisible = false;
+  private radarGhostVisible = false;
+  private radarHighlightVisible = false;
 
   // Warship selection — supports any number of selections.
   private selectedUnitIds: number[] = [];
@@ -559,6 +592,11 @@ export class GPURenderer {
     // --- SAM radius overlay (dashed green circles during build mode) ---
     this.samRadiusPass = new SAMRadiusPass(gl, mapW, this.settings);
     this.samRadiusPass.setPaletteData(paletteData);
+    this.radarRadiusPass = new SAMRadiusPass(gl, mapW, this.settings, {
+      unitType: UT_RADAR_STATION,
+      range: radarRange,
+    });
+    this.radarRadiusPass.setPaletteData(paletteData);
 
     // --- Crosshair (warship placement) ---
     this.crosshairPass = new CrosshairPass(gl);
@@ -752,6 +790,7 @@ export class GPURenderer {
     );
     // SAM radius pass stores its own copy
     this.samRadiusPass.setPaletteData(this.paletteData);
+    this.radarRadiusPass.setPaletteData(this.paletteData);
     // Name pass caches per-player colors and bakes them into slot rows
     this.namePass.refreshPlayerColors(this.paletteData);
   }
@@ -923,6 +962,7 @@ export class GPURenderer {
     this.unitPass.setFrameTick(this.frameTick);
     this.unitPass.updateUnits(units, gameTick);
     this.samRadiusPass.setTick(gameTick);
+    this.radarRadiusPass.setTick(gameTick);
     this.barPass.updateBars(units, this.lastStructures, gameTick);
     this.pointLightPass.updateLights(units);
     this.heatManager.decayHeat();
@@ -947,6 +987,7 @@ export class GPURenderer {
         }
       }
       this.samRadiusPass.setAllies(friendly);
+      this.radarRadiusPass.setAllies(friendly);
       this.unitPass.setAllies(friendly);
     }
   }
@@ -966,6 +1007,7 @@ export class GPURenderer {
     this.structurePass.updateStructures(units);
     this.structureLevelPass.updateStructures(units);
     this.samRadiusPass.updateStructures(units);
+    this.radarRadiusPass.updateStructures(units);
     this.unitPass.setStructures(units);
     const posts: { x: number; y: number; ownerID: number }[] = [];
     const w = this.mapW;
@@ -1083,6 +1125,11 @@ export class GPURenderer {
     this.samRadiusPass.setVisible(
       this.samGhostVisible || this.samHighlightVisible,
     );
+    this.radarGhostVisible =
+      data !== null && RADAR_RADIUS_GHOST_TYPES.has(data.ghostType);
+    this.radarRadiusPass.setVisible(
+      this.radarGhostVisible || this.radarHighlightVisible,
+    );
   }
 
   updateNukeTrajectory(data: NukeTrajectoryData | null): void {
@@ -1126,12 +1173,19 @@ export class GPURenderer {
     this.samRadiusPass.setVisible(
       this.samGhostVisible || this.samHighlightVisible,
     );
+    this.radarHighlightVisible =
+      unitTypes !== null &&
+      unitTypes.some((t) => RADAR_RADIUS_HIGHLIGHT_TYPES.has(t));
+    this.radarRadiusPass.setVisible(
+      this.radarGhostVisible || this.radarHighlightVisible,
+    );
   }
 
   setLocalPlayerID(id: number): void {
     if (id === this.localPlayerID) return;
     this.localPlayerID = id;
     this.samRadiusPass.setLocalPlayer(id);
+    this.radarRadiusPass.setLocalPlayer(id);
     this.structurePass.setLocalPlayer(id);
     this.affiliationPalette.setLocalPlayer(id);
     this.unitPass.setLocalPlayer(id);
@@ -1144,6 +1198,7 @@ export class GPURenderer {
 
   setSAMAllianceClusters(clusters: Map<number, number>): void {
     this.samRadiusPass.setAllianceClusters(clusters);
+    this.radarRadiusPass.setAllianceClusters(clusters);
   }
 
   setAltView(active: boolean): void {
@@ -1363,6 +1418,7 @@ export class GPURenderer {
     if (pe.unit) this.unitPass.drawGround(cam);
     if (pe.falloutBloom) this.bloomPass.draw(cam, this.frameTick);
     this.samRadiusPass.draw(cam);
+    this.radarRadiusPass.draw(cam);
     this.rangeCirclePass.draw(cam);
     this.nukeTrajectoryPass.draw(cam);
     this.crosshairPass.draw(cam);
@@ -1503,6 +1559,7 @@ export class GPURenderer {
     this.railroadPass.dispose();
     this.rangeCirclePass.dispose();
     this.samRadiusPass.dispose();
+    this.radarRadiusPass.dispose();
     this.crosshairPass.dispose();
     this.structurePass.dispose();
     this.structureLevelPass.dispose();

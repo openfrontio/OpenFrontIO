@@ -15,11 +15,14 @@
 import type { RendererConfig, UnitState } from "../../types";
 import {
   STRUCTURE_TYPES,
+  UT_AA_GUN,
+  UT_AIRBASE,
   UT_CITY,
   UT_DEFENSE_POST,
   UT_FACTORY,
   UT_MISSILE_SILO,
   UT_PORT,
+  UT_RADAR_STATION,
   UT_SAM_LAUNCHER,
 } from "../../types";
 import { DynamicInstanceBuffer } from "../DynamicBuffer";
@@ -51,6 +54,9 @@ const STRUCTURE_ORDER = [
   UT_DEFENSE_POST,
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,
+  UT_AIRBASE,
+  UT_RADAR_STATION,
+  UT_AA_GUN,
 ] as const;
 
 /** Max characters per level label (handles up to "99"). */

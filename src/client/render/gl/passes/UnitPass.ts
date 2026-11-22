@@ -26,6 +26,10 @@
  *   Col 9: Train Engine (5×5)
  *   Col 10: Train Carriage (5×5)
  *   Col 11: Train Carriage Loaded (5×5)
+ *   Col 12: Attack Helicopter (13×13)   ┐ AIR update: drawn in the air
+ *   Col 13: Transport Helicopter (13×13)│ layer above structures, with the
+ *   Col 14: Fighter (13×13)             │ warship flags (angry when engaging,
+ *   Col 15: Bomber (13×13)              ┘ blinking when returning to base)
  *
  * Data flow:
  *   FrameSnapshot.units → filter by typeToAtlasIdx → instance VBO → GPU
@@ -36,9 +40,13 @@ import type { Config } from "@openfront/engine-lib/configuration/Config";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import type { RendererConfig, UnitState } from "../../types";
 import {
+  AIRCRAFT_TYPES,
   SMOOTHED_NUKE_TYPES,
   TrainType,
   UT_ATOM_BOMB,
+  UT_ATTACK_HELICOPTER,
+  UT_BOMBER,
+  UT_FIGHTER,
   UT_HYDROGEN_BOMB,
   UT_MIRV,
   UT_MIRV_WARHEAD,
@@ -47,6 +55,7 @@ import {
   UT_TRADE_SHIP,
   UT_TRAIN,
   UT_TRANSPORT,
+  UT_TRANSPORT_HELICOPTER,
   UT_WARSHIP,
 } from "../../types";
 import { DynamicInstanceBuffer } from "../DynamicBuffer";
@@ -85,6 +94,10 @@ const UNIT_ORDER = [
   "TrainEngine",
   "TrainCarriage",
   "TrainCarriageLoaded",
+  UT_ATTACK_HELICOPTER,
+  UT_TRANSPORT_HELICOPTER,
+  UT_FIGHTER,
+  UT_BOMBER,
 ] as const;
 
 const ATLAS_COLS = UNIT_ORDER.length;
@@ -98,6 +111,7 @@ const WARSHIP_COL = UNIT_ORDER.indexOf(UT_WARSHIP);
 /** First atlas column of the train sprites (engine, carriage, loaded
  *  carriage are contiguous) — gates the train cosmetic effect. */
 const TRAIN_FIRST_COL = UNIT_ORDER.indexOf("TrainEngine");
+const TRAIN_LAST_COL = UNIT_ORDER.indexOf("TrainCarriageLoaded");
 
 // ---------------------------------------------------------------------------
 // Instance data layout
@@ -147,6 +161,11 @@ const MISSILE_TYPES: ReadonlySet<string> = new Set([
   UT_SAM_MISSILE,
   UT_SHELL,
   UT_MIRV_WARHEAD,
+  // AIR update: aircraft fly above structures.
+  UT_ATTACK_HELICOPTER,
+  UT_TRANSPORT_HELICOPTER,
+  UT_FIGHTER,
+  UT_BOMBER,
 ]);
 
 /** Values per smoothing segment in the flat `smoothSegs` array:
@@ -297,6 +316,7 @@ export class UnitPass {
         WARSHIP_COL,
         WARSHIP_EFFECT_ROW_BASE: WARSHIP_EFFECT_BLOCK * MAX_TRAIL_COLORS,
         TRAIN_FIRST_COL,
+        TRAIN_LAST_COL,
         TRAIN_EFFECT_ROW_BASE: TRAIN_EFFECT_BLOCK * MAX_TRAIL_COLORS,
       }),
       "UnitPass",
@@ -475,10 +495,12 @@ export class UnitPass {
 
       if (atlasIdx === undefined) continue;
 
-      const isRetreatingWarship =
-        unit.unitType === UT_WARSHIP && unit.retreating;
-      const isAngryWarship =
-        unit.unitType === UT_WARSHIP && unit.targetUnitId !== null;
+      // Aircraft reuse the warship flags: blinking while returning to base,
+      // angry while engaging a target.
+      const isCombatant =
+        unit.unitType === UT_WARSHIP || AIRCRAFT_TYPES.has(unit.unitType);
+      const isRetreatingWarship = isCombatant && unit.retreating;
+      const isAngryWarship = isCombatant && unit.targetUnitId !== null;
       const isFlicker = FLICKER_TYPES.has(unit.unitType);
 
       // Alt-view trade ship color from owner + destination port owner:

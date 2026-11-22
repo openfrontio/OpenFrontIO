@@ -1,5 +1,6 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
+  AircraftState,
   NukeState,
   Tick,
   TrainType,
@@ -37,6 +38,8 @@ export class UnitView implements UnitLike {
   private _warshipState?: WarshipState;
   private _transportShipState?: TransportShipState;
   private _nukeState?: NukeState;
+  /** AIR update: fuel, weapons and flares of an aircraft. */
+  private _aircraftState?: AircraftState;
   private _createdAt: Tick;
 
   constructor(
@@ -47,6 +50,7 @@ export class UnitView implements UnitLike {
     this._warshipState = data.warshipState;
     this._transportShipState = data.transportShipState;
     this._nukeState = data.nukeState;
+    this._aircraftState = data.aircraftState;
     this.lastPos.push(data.pos);
     this._createdAt = this.gameView.ticks();
     if (this.state.underConstruction) {
@@ -81,6 +85,7 @@ export class UnitView implements UnitLike {
     this._warshipState = data.warshipState;
     this._transportShipState = data.transportShipState;
     this._nukeState = data.nukeState;
+    this._aircraftState = data.aircraftState;
     // constructionStartTick: set on transition into underConstruction.
     if (this.state.underConstruction && !wasUnderConstruction) {
       this.state.constructionStartTick = this.gameView.ticks();
@@ -137,6 +142,11 @@ export class UnitView implements UnitLike {
   touch(): void {
     throw new Error("touch is not supported on UnitView");
   }
+  /** Undefined for units that are not aircraft. */
+  aircraftState(): AircraftState | undefined {
+    return this._aircraftState;
+  }
+
   transportShipState(): TransportShipState {
     return this._transportShipState ?? { isRetreating: false, troops: 0 };
   }

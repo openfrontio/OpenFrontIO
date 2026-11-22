@@ -151,6 +151,18 @@
       "Missile Silo": {
         "scale": 1.55,
         "iconFill": 0.85
+      },
+      "Airbase": {
+        "scale": 1.3,
+        "iconFill": 0.8
+      },
+      "Radar Station": {
+        "scale": 1.1,
+        "iconFill": 0.85
+      },
+      "AA Gun": {
+        "scale": 1.55,
+        "iconFill": 0.8
       }
     },
     "highlightOutlineWidth": 0.04,

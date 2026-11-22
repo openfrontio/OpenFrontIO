@@ -21,6 +21,11 @@ export const UT_SAM_MISSILE = "SAMMissile" as const;
 export const UT_SHELL = "Shell" as const;
 export const UT_MIRV_WARHEAD = "MIRV Warhead" as const;
 export const UT_TRAIN = "Train" as const;
+// AIR update aircraft
+export const UT_ATTACK_HELICOPTER = "Attack Helicopter" as const;
+export const UT_TRANSPORT_HELICOPTER = "Transport Helicopter" as const;
+export const UT_FIGHTER = "Fighter" as const;
+export const UT_BOMBER = "Bomber" as const;
 
 // Structures
 export const UT_CITY = "City" as const;
@@ -29,6 +34,10 @@ export const UT_FACTORY = "Factory" as const;
 export const UT_DEFENSE_POST = "Defense Post" as const;
 export const UT_SAM_LAUNCHER = "SAM Launcher" as const;
 export const UT_MISSILE_SILO = "Missile Silo" as const;
+// AIR update structures
+export const UT_AIRBASE = "Airbase" as const;
+export const UT_RADAR_STATION = "Radar Station" as const;
+export const UT_AA_GUN = "AA Gun" as const;
 
 // ---------------------------------------------------------------------------
 // Derived sets
@@ -41,6 +50,17 @@ export const STRUCTURE_TYPES: ReadonlySet<string> = new Set([
   UT_DEFENSE_POST,
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,
+  UT_AIRBASE,
+  UT_RADAR_STATION,
+  UT_AA_GUN,
+]);
+
+/** AIR update: units drawn in the air layer, above structures. */
+export const AIRCRAFT_TYPES: ReadonlySet<string> = new Set([
+  UT_ATTACK_HELICOPTER,
+  UT_TRANSPORT_HELICOPTER,
+  UT_FIGHTER,
+  UT_BOMBER,
 ]);
 
 export const NUKE_TYPES: ReadonlySet<string> = new Set([
@@ -99,4 +119,12 @@ export const ALL_UNIT_TYPES = [
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,
   UT_TRAIN,
+  // AIR update (appended: existing positions are unchanged)
+  UT_AIRBASE,
+  UT_RADAR_STATION,
+  UT_AA_GUN,
+  UT_ATTACK_HELICOPTER,
+  UT_TRANSPORT_HELICOPTER,
+  UT_FIGHTER,
+  UT_BOMBER,
 ] as const;
