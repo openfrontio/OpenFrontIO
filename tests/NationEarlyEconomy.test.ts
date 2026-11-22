@@ -496,30 +496,34 @@ describe("Nation structure upgrades", () => {
 
 describe("Nation upgrades without SAM cover", () => {
   // A SAM still under construction at (10, 20) covers a city at (10, 30); nothing covers the
-  // one at (10, 90). Both cities are at level 4.
+  // one at (10, size - 10). Both cities are at level 4.
   function cappedCities(
     difficulty: Difficulty,
     enemySilo: boolean,
     samsDisabled = false,
+    size = 100,
   ) {
-    const setup = setupCoast({
-      difficulty,
-      gameMode: GameMode.FFA,
-      disabledUnits: samsDisabled ? [UnitType.SAMLauncher] : [],
-    });
+    const setup = setupCoast(
+      {
+        difficulty,
+        gameMode: GameMode.FFA,
+        disabledUnits: samsDisabled ? [UnitType.SAMLauncher] : [],
+      },
+      { size },
+    );
     const { game, nation } = setup;
     if (!samsDisabled) {
       const sam = nation.buildUnit(UnitType.SAMLauncher, game.ref(10, 20), {});
       sam.setUnderConstruction(true);
     }
-    for (const y of [30, 90]) {
+    for (const y of [30, size - 10]) {
       const city = nation.buildUnit(UnitType.City, game.ref(10, y), {});
       for (let l = 1; l < 4; l++) city.increaseLevel();
     }
     if (enemySilo) {
       game
         .player("other_id")
-        .buildUnit(UnitType.MissileSilo, game.ref(80, 50), {});
+        .buildUnit(UnitType.MissileSilo, game.ref(size - 20, 50), {});
     }
     nation.addGold(10_000_000n);
     return setup;
@@ -549,6 +553,28 @@ describe("Nation upgrades without SAM cover", () => {
     expect(
       game.euclideanDistSquared(builtTiles()[0], game.ref(10, 90)),
     ).toBeLessThanOrEqual(20 ** 2);
+  });
+
+  it("finds a spot for that SAM in a corner of a large territory", () => {
+    const { game, nation, builtTiles } = cappedCities(
+      Difficulty.Impossible,
+      true,
+      false,
+      400,
+    );
+    for (let seed = 0; seed < 10; seed++) {
+      const behavior = new NationStructureBehavior(
+        new PseudoRandom(seed),
+        game,
+        nation,
+      );
+      expect(behavior["buildCoveringSam"]()).toBe(true);
+    }
+    for (const tile of builtTiles()) {
+      expect(
+        game.euclideanDistSquared(tile, game.ref(10, 390)),
+      ).toBeLessThanOrEqual(20 ** 2);
+    }
   });
 });
 

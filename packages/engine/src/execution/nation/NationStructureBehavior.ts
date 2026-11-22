@@ -1115,16 +1115,11 @@ export class NationStructureBehavior {
       .units(SAM_PROTECTED_TYPES)
       .filter((u) => !this.isCoveredBySam(u.tile(), sams));
     if (uncovered.length === 0) return false;
-    const tile = this.placement.spawnTile(UnitType.SAMLauncher);
-    const rangeSquared = this.game.config().samRange(1) ** 2;
-    if (
-      tile === null ||
-      !uncovered.some(
-        (u) => this.game.euclideanDistSquared(u.tile(), tile) <= rangeSquared,
-      )
-    ) {
-      return false;
-    }
+    const tile = this.placement.samTileNear(
+      uncovered.map((u) => u.tile()),
+      this.game.config().samRange(1),
+    );
+    if (tile === null) return false;
     this.game.addExecution(
       new ConstructionExecution(this.player, UnitType.SAMLauncher, tile),
     );

@@ -18,6 +18,8 @@ import { randTerritoryTileArray } from "./NationUtils";
  */
 const MIN_PORT_WATER_COMPONENT_SIZE = 3000;
 
+const SAM_NEAR_SAMPLE_ATTEMPTS = 100;
+
 interface ReachableStation {
   tile: TileRef;
   cluster: Cluster | null;
@@ -56,6 +58,44 @@ export class NationStructurePlacement {
     if (tiles.length === 0) return null;
     const valueFunction = this.structureSpawnTileValue(type, coverLand);
     if (valueFunction === null) return null;
+    return this.bestTile(type, tiles, valueFunction);
+  }
+
+  /** The best SAM spot among tiles we own within `radius` of one of `anchors`. */
+  samTileNear(anchors: TileRef[], radius: number): TileRef | null {
+    const game = this.game;
+    const r = Math.floor(radius);
+    const tiles: TileRef[] = [];
+    for (
+      let attempt = 0;
+      attempt < SAM_NEAR_SAMPLE_ATTEMPTS && tiles.length < 25;
+      attempt++
+    ) {
+      const anchor = this.random.randElement(anchors);
+      const x = game.x(anchor) + this.random.nextInt(-r, r + 1);
+      const y = game.y(anchor) + this.random.nextInt(-r, r + 1);
+      if (!game.isValidCoord(x, y)) continue;
+      const t = game.ref(x, y);
+      if (
+        game.owner(t) === this.player &&
+        game.euclideanDistSquared(t, anchor) <= r * r
+      ) {
+        tiles.push(t);
+      }
+    }
+    if (tiles.length === 0) return null;
+    return this.bestTile(
+      UnitType.SAMLauncher,
+      tiles,
+      this.samLauncherValue(false),
+    );
+  }
+
+  private bestTile(
+    type: UnitType,
+    tiles: TileRef[],
+    valueFunction: (tile: TileRef) => number,
+  ): TileRef | null {
     let bestTile: TileRef | null = null;
     let bestValue = 0;
     for (const t of tiles) {
