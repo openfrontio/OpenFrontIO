@@ -623,7 +623,9 @@ class Client {
             !this.joinInFlight &&
             this.lobbyHandle === null
           ) {
-            const prefetch = getTurnstileToken();
+            const prefetch = getTurnstileToken(undefined, {
+              abortOnInteractive: true,
+            });
             // A prefetch that fails is not an error anyone has asked about yet:
             // the join path drops it and fetches once more (see getTurnstileToken
             // below), and only that attempt alerts. Mark it handled here so a
@@ -2235,7 +2237,7 @@ class Client {
                 clearTurnstilePass(passPersistentId, attemptPassTimestamp);
                 return resolveTurnstileToken({
                   prefetch: null,
-                  requestFresh: getTurnstileToken,
+                  requestFresh: requestFreshTurnstileToken,
                   signal,
                   forceFresh: true,
                 });
@@ -2710,7 +2712,7 @@ class Client {
 
     return resolveTurnstileToken({
       prefetch,
-      requestFresh: getTurnstileToken,
+      requestFresh: requestFreshTurnstileToken,
       signal: signal ?? this.activeJoinAbortController?.signal,
       // Always request a new token on a portal.
       forceFresh: this.gamePortal.isOnGamePortal(),
@@ -2763,8 +2765,19 @@ if (document.readyState === "loading") {
   bootstrap();
 }
 
+// Join-time requests may show a managed challenge; dismissing it leaves the
+// lobby the same way closing the modal does.
+function requestFreshTurnstileToken(
+  signal?: AbortSignal,
+): Promise<TurnstileToken> {
+  return getTurnstileToken(signal, {
+    onCancel: () => document.dispatchEvent(new CustomEvent("leave-lobby")),
+  });
+}
+
 async function getTurnstileToken(
   signal?: AbortSignal,
+  managed: { abortOnInteractive?: boolean; onCancel?: () => void } = {},
 ): Promise<TurnstileToken> {
   // Wait for Turnstile script to load (handles slow connections)
   let attempts = 0;
@@ -2794,5 +2807,6 @@ async function getTurnstileToken(
     sitekey: ClientEnv.turnstileSiteKey(),
     container: document.getElementById("turnstile-container") ?? document.body,
     signal,
+    ...managed,
   });
 }
