@@ -1,5 +1,6 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
+  Aircraft,
   BuildableUnit,
   PlayerType,
   Structures,
@@ -34,6 +35,7 @@ import { ClientEnv } from "../client/ClientEnv";
 import { reloadForUpdate, translateText } from "../client/Utils";
 import { rememberAdmitted } from "./AdmittedLobbies";
 import { MapLayerController } from "./controllers/MapLayerController";
+import { WARSHIP_SELECTION_RADIUS } from "./controllers/WarshipSelectionController";
 import { isDesktopShell } from "./DesktopShell";
 import { GameHealth } from "./GameHealth";
 import { GameMetrics } from "./GameMetrics";
@@ -1405,6 +1407,11 @@ export class ClientGameRunner {
     if (!this.isActive || this.renderer.uiState.ghostStructure !== null) {
       return;
     }
+    // AIR update: with aircraft selected, the click is their order (handled
+    // by WarshipSelectionController, which runs after this handler).
+    if (this.renderer.uiState.aircraftSelected === true) {
+      return;
+    }
     const cell = this.renderer.transformHandler.screenToWorldCoordinates(
       event.x,
       event.y,
@@ -1431,6 +1438,21 @@ export class ClientGameRunner {
       const myPlayer = this.gameView.playerByClientID(this.clientID);
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
+    }
+    // AIR update: a click on one of your aircraft selects it
+    // (WarshipSelectionController); it is not an attack on the land below.
+    const myPlayer = this.myPlayer;
+    if (
+      this.gameView
+        .units(...Aircraft.types)
+        .some(
+          (u) =>
+            u.owner() === myPlayer &&
+            this.gameView.manhattanDist(u.tile(), tile) <=
+              WARSHIP_SELECTION_RADIUS,
+        )
+    ) {
+      return;
     }
     this.myPlayer
       .actions(tile, [UnitType.TransportShip])

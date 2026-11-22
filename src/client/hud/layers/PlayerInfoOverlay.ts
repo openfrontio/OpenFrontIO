@@ -1,5 +1,6 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
+  Aircraft,
   PlayerProfile,
   PlayerType,
   Relation,
@@ -8,6 +9,13 @@ import {
 import { AllianceView } from "@openfront/engine-api/game/GameUpdates";
 import { UnitLike } from "@openfront/engine-api/game/ReadViews";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
+import {
+  aircraftSpec,
+  AircraftType,
+  Altitude,
+  altitudeOf,
+  isAircraftType,
+} from "@openfront/engine-lib/game/AirRules";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import {
   EventBus,
@@ -277,6 +285,18 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
 
     const tile = this.game.ref(worldCoord.x, worldCoord.y);
     if (!tile) return;
+
+    // AIR update: aircraft fly over land and sea alike and take precedence
+    // over the ground below them.
+    const aircraft = this.game
+      .units(...Aircraft.types)
+      .filter((u) => euclideanDistWorld(worldCoord, u.tile(), this.game) < 8)
+      .sort(distSortUnitWorld(worldCoord, this.game));
+    if (aircraft.length > 0) {
+      this.unit = aircraft[0];
+      this.setVisible(true);
+      return;
+    }
 
     const owner = this.game.owner(tile);
 
@@ -922,6 +942,47 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     `;
   }
 
+  /** AIR update: altitude, mission state and consumables of an aircraft. */
+  private renderAircraftInfo(unit: UnitView) {
+    if (!isAircraftType(unit.type())) return "";
+    // The replay viewer's units (ReplayUnitView) carry no aircraft state:
+    // show the plain unit card there.
+    if (typeof unit.aircraftState !== "function") return "";
+    const state = unit.aircraftState();
+    if (state === undefined) return "";
+    const spec = aircraftSpec(unit.type() as AircraftType);
+    const mission = unit.warshipState().state;
+    const missionKey =
+      mission === "docked"
+        ? "air.mission_docked"
+        : mission === "retreating"
+          ? "air.mission_returning"
+          : "air.mission_airborne";
+    const altitudeKey =
+      altitudeOf(unit.type()) === Altitude.Low
+        ? "air.altitude_low"
+        : "air.altitude_high";
+    const fuelPct = Math.round((state.fuel * 100) / spec.maxFuel);
+    return html`
+      <div class="text-sm">
+        ${translateText(altitudeKey)} · ${translateText(missionKey)}
+      </div>
+      <div class="text-sm">
+        ${translateText("air.fuel", { percent: fuelPct })}
+        ${
+          spec.ammo > 0
+            ? html` ·
+              ${translateText("air.ammo", {
+                ammo: state.ammo,
+                max: spec.ammo,
+              })}`
+            : ""
+        }
+        · ${translateText("air.flares", { flares: state.flares })}
+      </div>
+    `;
+  }
+
   private renderUnitInfo(unit: UnitView) {
     const isAlly =
       (unit.owner() === this.game.myPlayer() ||
@@ -934,14 +995,21 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
           ${unit.owner().displayName()}
         </div>
         <div class="mt-1">
-          <div class="text-sm opacity-80">${unit.type()}</div>
+          <div class="text-sm opacity-80">
+            ${
+              UNIT_NAME_KEYS[unit.type()] !== undefined
+                ? translateText(UNIT_NAME_KEYS[unit.type()]!)
+                : unit.type()
+            }
+          </div>
           ${
             unit.hasHealth()
               ? html` <div class="text-sm">Health: ${unit.health()}</div> `
               : ""
           }
           ${
-            unit.type() === UnitType.TransportShip
+            unit.type() === UnitType.TransportShip ||
+            unit.type() === UnitType.TransportHelicopter
               ? html`
                   <div class="text-sm">
                     Troops: ${renderTroops(unit.troops())}
@@ -949,6 +1017,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
                 `
               : ""
           }
+          ${this.renderAircraftInfo(unit)}
         </div>
       </div>
     `;
@@ -991,3 +1060,13 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     return this; // Disable shadow DOM to allow Tailwind styles
   }
 }
+
+/** AIR update: translated names for the unit types the overlay shows. */
+const UNIT_NAME_KEYS: Partial<Record<UnitType, string>> = {
+  [UnitType.Warship]: "unit_type.warship",
+  [UnitType.TransportShip]: "unit_type.boat",
+  [UnitType.AttackHelicopter]: "unit_type.attack_helicopter",
+  [UnitType.TransportHelicopter]: "unit_type.transport_helicopter",
+  [UnitType.Fighter]: "unit_type.fighter",
+  [UnitType.Bomber]: "unit_type.bomber",
+};

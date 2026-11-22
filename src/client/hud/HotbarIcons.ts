@@ -11,6 +11,18 @@ export const atomBombIcon = assetUrl("images/NukeIconWhite.svg");
 export const portIcon = assetUrl("images/PortIcon.svg");
 export const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
 export const defensePostIcon = assetUrl("images/ShieldIconWhite.svg");
+// AIR update
+export const airbaseIcon = assetUrl("images/AirbaseIconWhite.svg");
+export const radarIcon = assetUrl("images/RadarIconWhite.svg");
+export const aaGunIcon = assetUrl("images/AAGunIconWhite.svg");
+export const fighterIcon = assetUrl("images/FighterIconWhite.svg");
+export const bomberIcon = assetUrl("images/BomberIconWhite.svg");
+export const attackHelicopterIcon = assetUrl(
+  "images/AttackHelicopterIconWhite.svg",
+);
+export const transportHelicopterIcon = assetUrl(
+  "images/TransportHelicopterIconWhite.svg",
+);
 export const soldierIcon = assetUrl("images/SoldierIcon.svg");
 export const claimIcon = assetUrl("images/ClaimIcon.svg");
 export const profileIcon = assetUrl("images/ProfileIcon.svg");

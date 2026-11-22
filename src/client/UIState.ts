@@ -6,4 +6,9 @@ export interface UIState {
   ghostStructure: PlayerBuildableUnitType | null;
   rocketDirectionUp: boolean;
   upgradeMultiplier: number;
+  /**
+   * AIR update: aircraft are selected, so a click on the map is an order
+   * for them (WarshipSelectionController), not a ground attack.
+   */
+  aircraftSelected?: boolean;
 }

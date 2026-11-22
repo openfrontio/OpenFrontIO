@@ -106,6 +106,8 @@ describe("PlayerInfoOverlay", () => {
       gameConfig: () => ({}),
     }),
     teamClanTag: () => undefined,
+    // No aircraft overhead (the overlay shows those before the ground).
+    units: () => [],
   });
 
   beforeEach(() => {
@@ -130,6 +132,51 @@ describe("PlayerInfoOverlay", () => {
     expect(out).toContain("opacity-100 visible");
     expect(out).toContain("Bob");
     expect(out).toContain("text-green-500");
+  });
+
+  describe("aircraft (AIR update)", () => {
+    const fighter = (withState: boolean) => ({
+      type: () => UnitType.Fighter,
+      tile: () => 42,
+      owner: () => hovered,
+      isActive: () => true,
+      hasHealth: () => true,
+      health: () => 400,
+      troops: () => 0,
+      warshipState: () => ({ state: "retreating" }),
+      ...(withState
+        ? { aircraftState: () => ({ fuel: 450, ammo: 3, flares: 1 }) }
+        : {}),
+    });
+    const gameWith = (unit: unknown) => ({
+      ...makeGame(null),
+      x: () => 5,
+      y: () => 5,
+      units: (...types: string[]) =>
+        types.includes(UnitType.Fighter) ? [unit] : [],
+    });
+
+    it("shows the aircraft under the cursor with its altitude, mission and stores", () => {
+      overlay.game = gameWith(fighter(true)) as never;
+      overlay.maybeShow(10, 10);
+      const out = flatten(overlay.render());
+
+      expect(out).toContain("unit_type.fighter");
+      expect(out).toContain("air.altitude_high");
+      expect(out).toContain("air.mission_returning");
+      expect(out).toContain("air.fuel");
+      expect(out).toContain("air.ammo");
+      expect(out).toContain("air.flares");
+    });
+
+    it("shows a plain card for a replay unit without aircraft state", () => {
+      overlay.game = gameWith(fighter(false)) as never;
+      overlay.maybeShow(10, 10);
+      const out = flatten(overlay.render());
+
+      expect(out).toContain("unit_type.fighter");
+      expect(out).not.toContain("air.fuel");
+    });
   });
 
   it("shows a white name when there is no local player", () => {

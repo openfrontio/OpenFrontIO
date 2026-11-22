@@ -1,5 +1,5 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { Cell, UnitType } from "@openfront/engine-api/game/GameTypes";
+import { Aircraft, Cell, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
 import {
@@ -16,9 +16,21 @@ import {
 import { MapRenderer } from "../render/gl";
 import { TransformHandler } from "../TransformHandler";
 import { MoveWarshipIntentEvent } from "../Transport";
+import { UIState } from "../UIState";
 import { GameView, UnitView } from "../view";
 
-const WARSHIP_SELECTION_RADIUS = 10;
+export const WARSHIP_SELECTION_RADIUS = 10;
+
+/** Units a player commands by selecting them: warships and aircraft. */
+const COMMANDABLE_TYPES: readonly UnitType[] = [
+  UnitType.Warship,
+  ...Aircraft.types,
+];
+
+/** Aircraft fly anywhere; warships only take orders on water. */
+function isAircraftUnit(unit: UnitView): boolean {
+  return Aircraft.has(unit.type());
+}
 
 /**
  * Controller for warship selection state + click handling.
@@ -27,6 +39,11 @@ const WARSHIP_SELECTION_RADIUS = 10;
  * SelectionBoxPass (forwarded via UnitSelectionEvent from ClientGameRunner).
  * The drag-rectangle preview is a screen-space DOM overlay (dragRectEl) we
  * own here.
+ *
+ * AIR update: aircraft are selected and ordered the same way. They take
+ * orders on land as well as water (a station, strike target or landing
+ * zone); while any is selected, UIState.aircraftSelected tells the
+ * click-to-attack handler to leave the click to this controller.
  *
  * This class does not render anything to canvas2D — it's purely a state +
  * click controller. The "Controller" pattern: main-thread analog of the
@@ -48,6 +65,7 @@ export class WarshipSelectionController implements Controller {
     private eventBus: EventBus,
     private transformHandler: TransformHandler,
     private view: MapRenderer,
+    private uiState?: UIState,
   ) {}
 
   tick() {
@@ -142,8 +160,12 @@ export class WarshipSelectionController implements Controller {
   private findWarshipsNearCell(clickRef: TileRef): UnitView[] {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return [];
+    // Over land only aircraft can be under the cursor.
+    const types = this.game.isWater(clickRef)
+      ? COMMANDABLE_TYPES
+      : Aircraft.types;
     return this.game
-      .units(UnitType.Warship)
+      .units(...types)
       .filter(
         (unit) =>
           unit.isActive() &&
@@ -177,12 +199,26 @@ export class WarshipSelectionController implements Controller {
       if (!this.game.isValidCoord(cell.x, cell.y)) return;
       clickRef = this.game.ref(cell.x, cell.y);
     }
-    if (!this.game.isWater(clickRef)) return;
+    const onWater = this.game.isWater(clickRef);
+    // On land, only a selection that contains aircraft (or a click on one
+    // of your aircraft) is ours to handle.
+    if (!onWater && !this.selectionHasAircraft()) {
+      nearbyWarships ??= this.findWarshipsNearCell(clickRef);
+      if (nearbyWarships.length > 0) {
+        this.eventBus.emit(new UnitSelectionEvent(nearbyWarships[0], true));
+      }
+      return;
+    }
 
     if (this.multiSelectedWarships.length > 0) {
       const myPlayer = this.game.myPlayer();
       const activeIds = this.multiSelectedWarships
-        .filter((u) => u.isActive() && u.owner() === myPlayer)
+        .filter(
+          (u) =>
+            u.isActive() &&
+            u.owner() === myPlayer &&
+            (onWater || isAircraftUnit(u)),
+        )
         .map((u) => u.id());
 
       if (activeIds.length > 0) {
@@ -230,6 +266,15 @@ export class WarshipSelectionController implements Controller {
       return;
     }
     if (!this.game.isWater(clickRef)) {
+      // A tap on land orders selected aircraft, or selects your aircraft
+      // there; otherwise it opens the radial menu.
+      if (
+        this.selectionHasAircraft() ||
+        this.findWarshipsNearCell(clickRef).length > 0
+      ) {
+        this.onMouseUp(new MouseUpEvent(event.x, event.y), clickRef);
+        return;
+      }
       this.eventBus.emit(new ContextMenuEvent(event.x, event.y));
       return;
     }
@@ -262,7 +307,7 @@ export class WarshipSelectionController implements Controller {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
-    const selected = this.game.units(UnitType.Warship).filter((unit) => {
+    const selected = this.game.units(...COMMANDABLE_TYPES).filter((unit) => {
       if (!unit.isActive() || unit.owner() !== myPlayer) return false;
       const screen = this.transformHandler.worldToScreenCoordinates(
         new Cell(this.game.x(unit.tile()), this.game.y(unit.tile())),
@@ -313,12 +358,20 @@ export class WarshipSelectionController implements Controller {
    * When event.unit is set it's a single warship selection.
    * When event.isSelected is false it clears all selection state.
    */
+  private selectionHasAircraft(): boolean {
+    return (
+      (this.selectedUnit !== null && isAircraftUnit(this.selectedUnit)) ||
+      this.multiSelectedWarships.some(isAircraftUnit)
+    );
+  }
+
   private onUnitSelection(event: UnitSelectionEvent) {
     this.multiSelectedWarships = [];
     this.selectedUnit = null;
 
     if (!event.isSelected) {
       this.view.setSelectedUnits([]);
+      this.syncAircraftSelected();
       return;
     }
 
@@ -328,6 +381,13 @@ export class WarshipSelectionController implements Controller {
     } else {
       this.selectedUnit = event.unit;
       this.view.setSelectedUnits(event.unit ? [event.unit.id()] : []);
+    }
+    this.syncAircraftSelected();
+  }
+
+  private syncAircraftSelected(): void {
+    if (this.uiState !== undefined) {
+      this.uiState.aircraftSelected = this.selectionHasAircraft();
     }
   }
 }

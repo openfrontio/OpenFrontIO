@@ -26,16 +26,23 @@ import { UserSettings } from "../../UserSettings";
 import { resolveKeybindLabel, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {
+  aaGunIcon,
+  airbaseIcon,
   atomBombIcon,
+  attackHelicopterIcon,
+  bomberIcon,
   cityIcon,
   defensePostIcon,
   factoryIcon,
+  fighterIcon,
   goldCoinIcon,
   hydrogenBombIcon,
   mirvIcon,
   missileSiloIcon,
   portIcon,
+  radarIcon,
   samLauncherIcon,
+  transportHelicopterIcon,
   warshipIcon,
 } from "../HotbarIcons";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
@@ -60,6 +67,14 @@ export class UnitDisplay extends LitElement implements Controller {
   private keyboardLayout = new KeyboardLayoutController(this);
   private _cities = 0;
   private _warships = 0;
+  // AIR update
+  private _airbases = 0;
+  private _radars = 0;
+  private _aaGuns = 0;
+  private _fighters = 0;
+  private _bombers = 0;
+  private _attackHelicopters = 0;
+  private _transportHelicopters = 0;
   private _factories = 0;
   private _missileSilo = 0;
   private _port = 0;
@@ -565,6 +580,15 @@ export class UnitDisplay extends LitElement implements Controller {
           this.cost(item) <= (player?.gold() ?? 0n) &&
           (player?.units(UnitType.Port).length ?? 0) > 0
         );
+      // AIR update: aircraft take off from an airbase.
+      case UnitType.Fighter:
+      case UnitType.Bomber:
+      case UnitType.AttackHelicopter:
+      case UnitType.TransportHelicopter:
+        return (
+          this.cost(item) <= (player?.gold() ?? 0n) &&
+          (player?.units(UnitType.Airbase).length ?? 0) > 0
+        );
       default:
         return this.cost(item) <= (player?.gold() ?? 0n);
     }
@@ -593,6 +617,15 @@ export class UnitDisplay extends LitElement implements Controller {
     this._samLauncher = player.totalUnitLevels(UnitType.SAMLauncher);
     this._factories = player.totalUnitLevels(UnitType.Factory);
     this._warships = player.totalUnitLevels(UnitType.Warship);
+    this._airbases = player.totalUnitLevels(UnitType.Airbase);
+    this._radars = player.totalUnitLevels(UnitType.RadarStation);
+    this._aaGuns = player.totalUnitLevels(UnitType.AAGun);
+    this._fighters = player.totalUnitLevels(UnitType.Fighter);
+    this._bombers = player.totalUnitLevels(UnitType.Bomber);
+    this._attackHelicopters = player.totalUnitLevels(UnitType.AttackHelicopter);
+    this._transportHelicopters = player.totalUnitLevels(
+      UnitType.TransportHelicopter,
+    );
     this.requestUpdate();
   }
 
@@ -705,6 +738,55 @@ export class UnitDisplay extends LitElement implements Controller {
               UnitType.MIRV,
               "mirv",
               this.getHotkey("buildMIRV", "Digit0"),
+            )}
+            ${this.renderUnitItem(
+              airbaseIcon,
+              this._airbases,
+              UnitType.Airbase,
+              "airbase",
+              "",
+            )}
+            ${this.renderUnitItem(
+              radarIcon,
+              this._radars,
+              UnitType.RadarStation,
+              "radar_station",
+              "",
+            )}
+            ${this.renderUnitItem(
+              aaGunIcon,
+              this._aaGuns,
+              UnitType.AAGun,
+              "aa_gun",
+              "",
+            )}
+            ${this.renderUnitItem(
+              fighterIcon,
+              this._fighters,
+              UnitType.Fighter,
+              "fighter",
+              "",
+            )}
+            ${this.renderUnitItem(
+              bomberIcon,
+              this._bombers,
+              UnitType.Bomber,
+              "bomber",
+              "",
+            )}
+            ${this.renderUnitItem(
+              attackHelicopterIcon,
+              this._attackHelicopters,
+              UnitType.AttackHelicopter,
+              "attack_helicopter",
+              "",
+            )}
+            ${this.renderUnitItem(
+              transportHelicopterIcon,
+              this._transportHelicopters,
+              UnitType.TransportHelicopter,
+              "transport_helicopter",
+              "",
             )}
           </div>
         </div>

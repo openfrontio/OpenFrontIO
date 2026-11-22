@@ -126,7 +126,8 @@ describe("mobile UnitDisplay layout", () => {
       expect(grid?.classList.contains("lg:auto-cols-max")).toBe(true);
       expect(grid?.classList.contains("side-bar:grid-flow-row")).toBe(true);
       expect(grid?.classList.contains("side-bar:grid-cols-1")).toBe(true);
-      expect(grid?.children).toHaveLength(10);
+      // One button per build-menu unit (ground, nukes and the AIR row).
+      expect(grid?.children).toHaveLength(BuildMenus.types.length);
     } finally {
       display.remove();
     }

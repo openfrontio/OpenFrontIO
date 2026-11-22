@@ -181,6 +181,16 @@
   "account_settings_modal": {
     "title": "Account Settings"
   },
+  "air": {
+    "altitude_high": "High altitude",
+    "altitude_low": "Low altitude",
+    "ammo": "Ammo {ammo}/{max}",
+    "flares": "Flares {flares}",
+    "fuel": "Fuel {percent}%",
+    "mission_airborne": "Airborne",
+    "mission_docked": "At airbase",
+    "mission_returning": "Returning to base"
+  },
   "ban_notice": {
     "appeal_prompt": "Think this is a mistake or want to appeal?",
     "category": {
@@ -205,15 +215,22 @@
   },
   "build_menu": {
     "desc": {
+      "aa_gun": "Short-range flak against aircraft, no radar needed",
+      "airbase": "Launches, refuels, repairs and rearms aircraft",
       "atom_bomb": "Small explosion",
+      "attack_helicopter": "Low-flying gunship that hunts boats and warships",
+      "bomber": "Strikes enemy structures and troops, then returns to rearm",
       "city": "Increases max population",
       "defense_post": "Increases defenses of nearby borders",
       "factory": "Creates railroads and spawns trains",
+      "fighter": "Shoots down enemy aircraft; sees further with radar",
       "hydrogen_bomb": "Large explosion",
       "mirv": "Huge explosion, only targets selected player",
       "missile_silo": "Used to launch nukes",
       "port": "Sends trade ships to generate gold",
+      "radar_station": "Tracks aircraft so SAMs and fighters can engage them",
       "sam_launcher": "Defends against incoming nukes",
+      "transport_helicopter": "Lands troops behind enemy lines",
       "warship": "Captures trade ships, destroys ships and boats"
     },
     "not_enough_money": "Not enough money",
@@ -1251,6 +1268,7 @@
     "betrayal_debuff_ends": "{time} seconds left until betrayal debuff ends",
     "betrayal_description": "You broke your alliance with {name}, making you a TRAITOR ({malusPercent}% defense debuff for {durationText})",
     "betrayed_you": "{name} broke their alliance with you",
+    "bomber_strike": "{name}'s bombers struck your territory",
     "conquered_no_gold": "Conquered {name} (didn't play, no gold awarded)",
     "duration_second": "1 second",
     "duration_seconds_plural": "{seconds} seconds",
@@ -1261,6 +1279,7 @@
     "ignore": "Ignore",
     "mirv_inbound": "⚠️⚠️⚠️ {name} - MIRV INBOUND ⚠️⚠️⚠️",
     "mirv_inbound_count": "⚠️⚠️⚠️ {name} - {count, plural, other {# MIRVS}} INBOUND ⚠️⚠️⚠️",
+    "missile_decoyed": "Your aircraft's flares decoyed an incoming missile",
     "missile_intercepted": "SAM intercepted {unit}",
     "naval_invasion_inbound": "Naval invasion incoming from {name} ({troops})",
     "no_boats_available": "No boats available, max {max}",
@@ -3273,16 +3292,23 @@
     "title": "Tutorial"
   },
   "unit_type": {
+    "aa_gun": "AA Gun",
+    "airbase": "Airbase",
     "atom_bomb": "Atom Bomb",
+    "attack_helicopter": "Attack Helicopter",
     "boat": "Boat",
+    "bomber": "Bomber",
     "city": "City",
     "defense_post": "Defense Post",
     "factory": "Factory",
+    "fighter": "Fighter",
     "hydrogen_bomb": "Hydrogen Bomb",
     "mirv": "MIRV",
     "missile_silo": "Missile Silo",
     "port": "Port",
+    "radar_station": "Radar Station",
     "sam_launcher": "SAM Launcher",
+    "transport_helicopter": "Transport Helicopter",
     "warship": "Warship"
   },
   "update_available": {

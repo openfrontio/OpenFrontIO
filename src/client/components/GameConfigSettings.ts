@@ -119,6 +119,20 @@ const unitOptions: { type: UnitType; translationKey: string }[] = [
   { type: UnitType.HydrogenBomb, translationKey: "unit_type.hydrogen_bomb" },
   { type: UnitType.MIRV, translationKey: "unit_type.mirv" },
   { type: UnitType.Factory, translationKey: "unit_type.factory" },
+  // AIR update
+  { type: UnitType.Airbase, translationKey: "unit_type.airbase" },
+  { type: UnitType.RadarStation, translationKey: "unit_type.radar_station" },
+  { type: UnitType.AAGun, translationKey: "unit_type.aa_gun" },
+  { type: UnitType.Fighter, translationKey: "unit_type.fighter" },
+  { type: UnitType.Bomber, translationKey: "unit_type.bomber" },
+  {
+    type: UnitType.AttackHelicopter,
+    translationKey: "unit_type.attack_helicopter",
+  },
+  {
+    type: UnitType.TransportHelicopter,
+    translationKey: "unit_type.transport_helicopter",
+  },
 ];
 
 const MAP_ICON = svg`<path

@@ -20,6 +20,11 @@ import {
   listNukeBreakAlliance,
   wouldNukeBreakAlliance,
 } from "@openfront/engine-lib/execution/NukeAlliance";
+import {
+  AA_GUN_RANGE,
+  AIRBASE_RADAR_RANGE,
+  radarRange,
+} from "@openfront/engine-lib/game/AirRules";
 import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
 import {
@@ -871,6 +876,15 @@ export class BuildPreviewController implements Controller {
         return this.game.config().trainStationMaxRange();
       case UnitType.DefensePost:
         return this.game.config().defensePostRange();
+      // AIR update: what each air structure covers.
+      case UnitType.RadarStation: {
+        const level = this.resolveGhostRangeLevel(u) ?? 1;
+        return radarRange(level);
+      }
+      case UnitType.AAGun:
+        return AA_GUN_RANGE;
+      case UnitType.Airbase:
+        return AIRBASE_RADAR_RANGE;
       default:
         return 0;
     }

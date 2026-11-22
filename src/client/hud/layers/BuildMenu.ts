@@ -37,6 +37,16 @@ const atomBombIcon = assetUrl("images/NukeIconWhite.svg");
 const portIcon = assetUrl("images/PortIcon.svg");
 const samlauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
 const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
+// AIR update
+const airbaseIcon = assetUrl("images/AirbaseIconWhite.svg");
+const radarIcon = assetUrl("images/RadarIconWhite.svg");
+const aaGunIcon = assetUrl("images/AAGunIconWhite.svg");
+const fighterIcon = assetUrl("images/FighterIconWhite.svg");
+const bomberIcon = assetUrl("images/BomberIconWhite.svg");
+const attackHelicopterIcon = assetUrl("images/AttackHelicopterIconWhite.svg");
+const transportHelicopterIcon = assetUrl(
+  "images/TransportHelicopterIconWhite.svg",
+);
 
 export interface BuildItemDisplay {
   unitType: PlayerBuildableUnitType;
@@ -116,6 +126,58 @@ const buildTable: BuildItemDisplay[][] = [
       icon: factoryIcon,
       description: "build_menu.desc.factory",
       key: "unit_type.factory",
+      countable: true,
+    },
+  ],
+  // AIR update: the aerial production row.
+  [
+    {
+      unitType: UnitType.Airbase,
+      icon: airbaseIcon,
+      description: "build_menu.desc.airbase",
+      key: "unit_type.airbase",
+      countable: true,
+    },
+    {
+      unitType: UnitType.RadarStation,
+      icon: radarIcon,
+      description: "build_menu.desc.radar_station",
+      key: "unit_type.radar_station",
+      countable: true,
+    },
+    {
+      unitType: UnitType.AAGun,
+      icon: aaGunIcon,
+      description: "build_menu.desc.aa_gun",
+      key: "unit_type.aa_gun",
+      countable: true,
+    },
+    {
+      unitType: UnitType.Fighter,
+      icon: fighterIcon,
+      description: "build_menu.desc.fighter",
+      key: "unit_type.fighter",
+      countable: true,
+    },
+    {
+      unitType: UnitType.Bomber,
+      icon: bomberIcon,
+      description: "build_menu.desc.bomber",
+      key: "unit_type.bomber",
+      countable: true,
+    },
+    {
+      unitType: UnitType.AttackHelicopter,
+      icon: attackHelicopterIcon,
+      description: "build_menu.desc.attack_helicopter",
+      key: "unit_type.attack_helicopter",
+      countable: true,
+    },
+    {
+      unitType: UnitType.TransportHelicopter,
+      icon: transportHelicopterIcon,
+      description: "build_menu.desc.transport_helicopter",
+      key: "unit_type.transport_helicopter",
       countable: true,
     },
   ],

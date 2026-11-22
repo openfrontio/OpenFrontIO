@@ -126,6 +126,14 @@ const TUTORIAL_DISABLED_UNITS: UnitType[] = [
   UnitType.SAMLauncher,
   UnitType.HydrogenBomb,
   UnitType.MIRV,
+  // AIR update: the onboarding tutorial teaches the ground game only.
+  UnitType.Airbase,
+  UnitType.RadarStation,
+  UnitType.AAGun,
+  UnitType.Fighter,
+  UnitType.Bomber,
+  UnitType.AttackHelicopter,
+  UnitType.TransportHelicopter,
 ];
 
 const DEFAULT_OPTIONS = {

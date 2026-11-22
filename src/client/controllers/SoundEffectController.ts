@@ -181,6 +181,20 @@ export class SoundEffectController implements Controller {
       case UnitType.TransportShip:
         if (unit.owner() === myPlayer) this.emit("transport-ship");
         break;
+      // AIR update: reuses the existing cues of the closest ground unit.
+      case UnitType.Airbase:
+        if (unit.owner() === myPlayer) this.emit("build-port");
+        break;
+      case UnitType.RadarStation:
+      case UnitType.AAGun:
+        if (unit.owner() === myPlayer) this.emit("sam-built");
+        break;
+      case UnitType.Fighter:
+      case UnitType.Bomber:
+      case UnitType.AttackHelicopter:
+      case UnitType.TransportHelicopter:
+        if (unit.owner() === myPlayer) this.emit("build-warship");
+        break;
     }
   }
 

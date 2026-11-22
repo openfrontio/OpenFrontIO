@@ -118,6 +118,8 @@ function makeRunner(overrides: {
     owner: () => ({ id: () => "enemy1" }),
     playerByClientID: vi.fn(overrides.playerByClientID ?? (() => myPlayer)),
     euclideanDistSquared: () => overrides.boatDistSquared ?? 0,
+    // No aircraft under the cursor (a click on one selects it instead).
+    units: () => [],
   };
   const input = { initialize: vi.fn(), destroy: vi.fn() };
   const runner = new ClientGameRunner(
