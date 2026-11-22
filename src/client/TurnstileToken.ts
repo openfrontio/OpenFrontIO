@@ -178,6 +178,10 @@ export function requestTurnstileToken(
     abortOnInteractive?: boolean;
     /** Fired when the player dismisses a visible challenge. */
     onCancel?: () => void;
+    /** Visible Cancel button text; the keyboard route out of the iframe. */
+    cancelLabel?: string;
+    /** Accessible name announced for the challenge overlay. */
+    dialogLabel?: string;
     now?: () => number;
     signal?: AbortSignal;
   },
@@ -215,11 +219,26 @@ export function requestTurnstileToken(
     // body fallback (no #turnstile-container) never gets one, since styling it
     // would block the whole page.
     let backdropShown = false;
+    let cancelButton: HTMLButtonElement | undefined;
     const showBackdrop = () => {
       if (backdropShown || options.container === document.body) return;
       backdropShown = true;
       options.container.dataset.interactive = "true";
       options.container.style.pointerEvents = "auto";
+      options.container.setAttribute("role", "dialog");
+      options.container.setAttribute("aria-modal", "true");
+      if (options.dialogLabel) {
+        options.container.setAttribute("aria-label", options.dialogLabel);
+      }
+      // The iframe is cross-origin, so Escape pressed inside it never reaches
+      // us. Tab leaves the frame, and this button is the next stop.
+      cancelButton = document.createElement("button");
+      cancelButton.type = "button";
+      cancelButton.textContent = options.cancelLabel ?? "Cancel";
+      cancelButton.className =
+        "ml-4 px-4 py-2 rounded bg-white text-black font-semibold shadow";
+      cancelButton.addEventListener("click", cancel);
+      options.container.appendChild(cancelButton);
       options.container.addEventListener("click", onBackdropClick);
       document.addEventListener("keydown", onEscape, true);
     };
@@ -228,6 +247,11 @@ export function requestTurnstileToken(
       backdropShown = false;
       delete options.container.dataset.interactive;
       options.container.style.pointerEvents = "none";
+      options.container.removeAttribute("role");
+      options.container.removeAttribute("aria-modal");
+      options.container.removeAttribute("aria-label");
+      cancelButton?.remove();
+      cancelButton = undefined;
       options.container.removeEventListener("click", onBackdropClick);
       document.removeEventListener("keydown", onEscape, true);
     };

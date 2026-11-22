@@ -198,4 +198,37 @@ describe("Managed Turnstile", () => {
     await p;
     expect(document.body.style.pointerEvents).toBe("");
   });
+
+  it("shows a labelled Cancel button only while interactive; it cancels", async () => {
+    const f = makeFake();
+    const onCancel = vi.fn();
+    const p = requestTurnstileToken(f.api, {
+      sitekey: "k",
+      container,
+      onCancel,
+      cancelLabel: "Nope",
+      dialogLabel: "Verify",
+    });
+    expect(container.querySelector("button")).toBeNull();
+    f.opts()["before-interactive-callback"]!();
+    const button = container.querySelector("button")!;
+    expect(button.textContent).toBe("Nope");
+    expect(container.getAttribute("role")).toBe("dialog");
+    expect(container.getAttribute("aria-label")).toBe("Verify");
+    button.click();
+    await expect(p).rejects.toMatchObject({ code: TURNSTILE_CANCELLED_CODE });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(container.querySelector("button")).toBeNull();
+    expect(container.getAttribute("role")).toBeNull();
+  });
+
+  it("removes the Cancel button after the challenge is solved", async () => {
+    const f = makeFake();
+    const p = requestTurnstileToken(f.api, { sitekey: "k", container });
+    f.opts()["before-interactive-callback"]!();
+    f.opts()["after-interactive-callback"]!();
+    expect(container.querySelector("button")).toBeNull();
+    f.opts().callback!("tok");
+    await p;
+  });
 });

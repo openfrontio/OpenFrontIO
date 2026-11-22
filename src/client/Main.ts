@@ -2775,12 +2775,22 @@ if (document.readyState === "loading") {
 function freshTurnstileRequester(
   onCancel?: () => void,
 ): (signal?: AbortSignal) => Promise<TurnstileToken> {
-  return (signal) => getTurnstileToken(signal, { onCancel });
+  return (signal) =>
+    getTurnstileToken(signal, {
+      onCancel,
+      cancelLabel: translateText("common.cancel"),
+      dialogLabel: translateText("error_modal.turnstile_challenge_label"),
+    });
 }
 
 async function getTurnstileToken(
   signal?: AbortSignal,
-  managed: { abortOnInteractive?: boolean; onCancel?: () => void } = {},
+  managed: {
+    abortOnInteractive?: boolean;
+    onCancel?: () => void;
+    cancelLabel?: string;
+    dialogLabel?: string;
+  } = {},
 ): Promise<TurnstileToken> {
   // Wait for Turnstile script to load (handles slow connections)
   let attempts = 0;
