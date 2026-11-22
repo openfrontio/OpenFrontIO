@@ -1,6 +1,7 @@
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
 import { TileRef } from "./GameMap";
 import {
+  AircraftState,
   EmojiMessage,
   GameUpdates,
   Gold,
@@ -36,7 +37,7 @@ export interface GameUpdateViewData {
    */
   packedMotionPlans?: Uint32Array;
   /**
-   * Packed unit updates (stride of 21 floats per unit, see UNIT_UPDATE_STRIDE).
+   * Packed unit updates (stride of 22 floats per unit, see UNIT_UPDATE_STRIDE).
    */
   packedUnitUpdates?: Float64Array;
   /**
@@ -221,6 +222,7 @@ export interface UnitUpdate {
   trainType?: TrainType; // Only for trains
   loaded?: boolean; // Only for trains
   samUpgrade?: SamLauncherState;
+  aircraftState?: AircraftState; // Only for aircraft (AIR update)
 }
 
 export interface AttackUpdate {

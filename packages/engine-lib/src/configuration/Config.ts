@@ -247,6 +247,38 @@ export class Config {
           upgradable: true,
         };
         break;
+      // AIR update structures.
+      case UnitType.Airbase:
+        info = {
+          constructionDuration: this.instantBuild() ? 0 : 8 * 10,
+          upgradable: true,
+        };
+        break;
+      case UnitType.RadarStation:
+        info = {
+          constructionDuration: this.instantBuild() ? 0 : 5 * 10,
+          upgradable: true,
+        };
+        break;
+      case UnitType.AAGun:
+        info = {
+          constructionDuration: this.instantBuild() ? 0 : 4 * 10,
+          upgradable: true,
+        };
+        break;
+      // AIR update aircraft.
+      case UnitType.AttackHelicopter:
+        info = { maxHealth: 600 };
+        break;
+      case UnitType.TransportHelicopter:
+        info = { maxHealth: 450 };
+        break;
+      case UnitType.Fighter:
+        info = { maxHealth: 500 };
+        break;
+      case UnitType.Bomber:
+        info = { maxHealth: 900 };
+        break;
       case UnitType.TransportShip:
       case UnitType.SAMMissile:
       case UnitType.AtomBomb:

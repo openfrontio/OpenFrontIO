@@ -1,5 +1,6 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
+  AircraftState,
   MessageType,
   NukeState,
   SamLauncherState,
@@ -14,6 +15,10 @@ import {
   GameUpdateType,
   UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
+import {
+  aircraftSpec,
+  isAircraftType,
+} from "@openfront/engine-lib/game/AirRules";
 import { maxHealthWithVeterancy } from "@openfront/engine-lib/game/Veterancy";
 import {
   snapshotType,
@@ -62,6 +67,8 @@ export class UnitImpl implements Unit {
   // Nuke only
   private _deletionAt: number | null = null;
   private _samLauncherState: SamLauncherState | undefined;
+  // AIR update: fuel, weapons and flares of an aircraft.
+  private _aircraftState: AircraftState | undefined;
 
   constructor(
     private _type: UnitType,
@@ -107,6 +114,14 @@ export class UnitImpl implements Unit {
         lastCombatTick: -100,
         veterancy: 0,
         veterancyProgress: 0,
+      };
+    }
+    if (isAircraftType(this._type)) {
+      const spec = aircraftSpec(this._type);
+      this._aircraftState = {
+        fuel: spec.maxFuel,
+        ammo: spec.ammo,
+        flares: spec.flares,
       };
     }
     this._targetUnit =
@@ -198,6 +213,10 @@ export class UnitImpl implements Unit {
       hasTrainStation: this._hasTrainStation,
       trainType: this._trainType,
       loaded: this._loaded,
+      aircraftState:
+        this._aircraftState !== undefined
+          ? { ...this._aircraftState }
+          : undefined,
     };
     return update;
   }
@@ -400,10 +419,8 @@ export class UnitImpl implements Unit {
   private displayMessageOnDeleted(): void {
     // Only warships and transport ships are worth notifying about; everything
     // else is either visible on the map or too low-stakes to surface.
-    if (
-      this._type !== UnitType.Warship &&
-      this._type !== UnitType.TransportShip
-    ) {
+    const unitKey = DESTROYED_UNIT_KEYS[this._type];
+    if (unitKey === undefined) {
       return;
     }
 
@@ -412,12 +429,7 @@ export class UnitImpl implements Unit {
       MessageType.UNIT_DESTROYED,
       this.owner().id(),
       undefined,
-      {
-        unit:
-          this._type === UnitType.TransportShip
-            ? "unit_type.boat"
-            : "unit_type.warship",
-      },
+      { unit: unitKey },
       this.id(),
     );
   }
@@ -509,6 +521,33 @@ export class UnitImpl implements Unit {
     if (changed) {
       this.mg.addUpdate(this.toUpdate());
     }
+  }
+
+  aircraftState(): AircraftState {
+    if (this._aircraftState === undefined) {
+      throw new Error("aircraftState called on non-aircraft unit");
+    }
+    return this._aircraftState;
+  }
+
+  updateAircraftState(update: Partial<AircraftState>): void {
+    if (this._aircraftState === undefined) {
+      throw new Error("updateAircraftState called on non-aircraft unit");
+    }
+    const next = { ...this._aircraftState, ...update };
+    if (
+      next.fuel === this._aircraftState.fuel &&
+      next.ammo === this._aircraftState.ammo &&
+      next.flares === this._aircraftState.flares
+    ) {
+      return;
+    }
+    this._aircraftState = {
+      fuel: next.fuel,
+      ammo: next.ammo,
+      flares: next.flares,
+    };
+    this.mg.addUpdate(this.toUpdate());
   }
 
   nukeState(): NukeState {
@@ -872,6 +911,13 @@ export class UnitImpl implements Unit {
             duration: this._samLauncherState.duration,
           }
         : null,
+      aircraftState: this._aircraftState
+        ? {
+            fuel: this._aircraftState.fuel,
+            ammo: this._aircraftState.ammo,
+            flares: this._aircraftState.flares,
+          }
+        : null,
     };
   }
 
@@ -919,12 +965,17 @@ export class UnitImpl implements Unit {
     this._samLauncherState = s.samLauncherState
       ? { ...s.samLauncherState }
       : undefined;
+    this._aircraftState = s.aircraftState ? { ...s.aircraftState } : undefined;
   }
 }
 
 export const UnitSnapshot = snapshotType({
   name: "Unit",
-  version: 1,
+  version: 2,
+  migrations: {
+    // v1 predates the AIR update, so no unit was an aircraft.
+    1: (d) => ({ ...d, aircraftState: null }),
+  },
   schema: z.object({
     id: zInt(),
     type: UnitTypeSchema,
@@ -980,6 +1031,19 @@ export const UnitSnapshot = snapshotType({
         duration: zInt(),
       })
       .nullable(),
+    aircraftState: z
+      .object({ fuel: zInt(), ammo: zInt(), flares: zInt() })
+      .nullable(),
   }),
 });
 export type UnitState = z.infer<typeof UnitSnapshot.schema>;
+
+/** Units whose destruction is announced to their owner, with their name key. */
+const DESTROYED_UNIT_KEYS: Partial<Record<UnitType, string>> = {
+  [UnitType.TransportShip]: "unit_type.boat",
+  [UnitType.Warship]: "unit_type.warship",
+  [UnitType.AttackHelicopter]: "unit_type.attack_helicopter",
+  [UnitType.TransportHelicopter]: "unit_type.transport_helicopter",
+  [UnitType.Fighter]: "unit_type.fighter",
+  [UnitType.Bomber]: "unit_type.bomber",
+};

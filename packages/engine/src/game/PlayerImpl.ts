@@ -1644,7 +1644,15 @@ export class PlayerImpl implements Player {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
+      case UnitType.Airbase:
+      case UnitType.RadarStation:
+      case UnitType.AAGun:
         return this.landBasedStructureSpawn(targetTile, validTiles);
+      case UnitType.AttackHelicopter:
+      case UnitType.TransportHelicopter:
+      case UnitType.Fighter:
+      case UnitType.Bomber:
+        return this.aircraftSpawn(targetTile);
       default:
         assertNever(unitType);
     }
@@ -1729,6 +1737,23 @@ export class PlayerImpl implements Player {
     );
 
     return bestPort?.tile() ?? false;
+  }
+
+  /**
+   * AIR update: aircraft take off from the owner's operational airbase
+   * nearest to the ordered tile (their station, strike target or landing
+   * zone), which may be anywhere on the map.
+   */
+  aircraftSpawn(tile: TileRef): TileRef | false {
+    if (!this.mg.isValidRef(tile)) {
+      return false;
+    }
+    const airbase = findClosestBy(
+      this.units(UnitType.Airbase),
+      (base) => this.mg.manhattanDist(base.tile(), tile),
+      (base) => base.isActive() && !base.isUnderConstruction(),
+    );
+    return airbase?.tile() ?? false;
   }
 
   landBasedUnitSpawn(tile: TileRef): TileRef | false {

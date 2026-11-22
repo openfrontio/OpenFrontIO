@@ -394,6 +394,43 @@ export class EngineConfig extends Config {
           UnitType.Factory,
           UnitType.Port,
         );
+      // AIR update. Airbases price like ports; aircraft escalate per unit
+      // owned like warships, so a side cannot spam a single type cheaply.
+      case UnitType.Airbase:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(1_500_000, pow2(numUnits) * 250_000),
+          UnitType.Airbase,
+        );
+      case UnitType.RadarStation:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(1_200_000, (numUnits + 1) * 300_000),
+          UnitType.RadarStation,
+        );
+      case UnitType.AAGun:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(500_000, (numUnits + 1) * 100_000),
+          UnitType.AAGun,
+        );
+      case UnitType.AttackHelicopter:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(900_000, (numUnits + 1) * 225_000),
+          UnitType.AttackHelicopter,
+        );
+      case UnitType.TransportHelicopter:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(600_000, (numUnits + 1) * 150_000),
+          UnitType.TransportHelicopter,
+        );
+      case UnitType.Fighter:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(1_200_000, (numUnits + 1) * 300_000),
+          UnitType.Fighter,
+        );
+      case UnitType.Bomber:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(2_000_000, (numUnits + 1) * 500_000),
+          UnitType.Bomber,
+        );
       case UnitType.TransportShip:
       case UnitType.Shell:
       case UnitType.SAMMissile:

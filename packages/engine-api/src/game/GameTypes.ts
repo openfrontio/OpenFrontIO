@@ -29,6 +29,20 @@ export type WarshipState = {
   veterancyProgress: number;
 };
 
+/**
+ * AIR update: per-sortie consumables of an aircraft. Motion state (patrol
+ * tile, patrolling / returning to base / docked at an airbase) reuses
+ * WarshipState: retreatPort is the airbase the aircraft is returning to.
+ */
+export type AircraftState = {
+  /** Ticks of flight left before the aircraft must land (or crash). */
+  fuel: number;
+  /** Weapon loads left this sortie (missiles, rockets, or the bomb load). */
+  ammo: number;
+  /** Countermeasure (flare) charges left this sortie. */
+  flares: number;
+};
+
 export type TransportShipState = {
   isRetreating: boolean;
   troops: number;
@@ -220,6 +234,14 @@ export enum UnitType {
   MIRVWarhead = "MIRV Warhead",
   Train = "Train",
   Factory = "Factory",
+  // AIR update. Appended so existing packed/wire indices never shift.
+  Airbase = "Airbase",
+  RadarStation = "Radar Station",
+  AAGun = "AA Gun",
+  AttackHelicopter = "Attack Helicopter",
+  TransportHelicopter = "Transport Helicopter",
+  Fighter = "Fighter",
+  Bomber = "Bomber",
 }
 
 export enum TrainType {
@@ -235,11 +257,39 @@ export const Nukes = unitTypeGroup([
   UnitType.MIRV,
 ] as const);
 
+/** AIR update: every aircraft type. */
+export const Aircraft = unitTypeGroup([
+  UnitType.AttackHelicopter,
+  UnitType.TransportHelicopter,
+  UnitType.Fighter,
+  UnitType.Bomber,
+] as const);
+
+/** Low-flying aircraft: masked from radar by terrain, below SAM engagement. */
+export const Helicopters = unitTypeGroup([
+  UnitType.AttackHelicopter,
+  UnitType.TransportHelicopter,
+] as const);
+
+/** High-flying fixed-wing aircraft. */
+export const FixedWing = unitTypeGroup([
+  UnitType.Fighter,
+  UnitType.Bomber,
+] as const);
+
 export const BuildableAttacks = unitTypeGroup([
   UnitType.AtomBomb,
   UnitType.HydrogenBomb,
   UnitType.MIRV,
   UnitType.Warship,
+  ...Aircraft.types,
+] as const);
+
+/** AIR update: structures of the air war. */
+export const AirStructures = unitTypeGroup([
+  UnitType.Airbase,
+  UnitType.RadarStation,
+  UnitType.AAGun,
 ] as const);
 
 export const Structures = unitTypeGroup([
@@ -249,6 +299,7 @@ export const Structures = unitTypeGroup([
   UnitType.MissileSilo,
   UnitType.Port,
   UnitType.Factory,
+  ...AirStructures.types,
 ] as const);
 
 export const BuildMenus = unitTypeGroup([

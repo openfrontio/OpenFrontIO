@@ -1,10 +1,14 @@
-import { TrainType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import {
+  AircraftState,
+  TrainType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import {
   GameUpdateType,
   UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 
-export const UNIT_UPDATE_STRIDE = 21;
+export const UNIT_UPDATE_STRIDE = 22;
 
 export const OFFSET_ID = 0;
 export const OFFSET_POS = 1;
@@ -27,6 +31,27 @@ export const OFFSET_NUKE_WAIT_TICKS = 17;
 export const OFFSET_PACKED_A = 18;
 export const OFFSET_PACKED_B = 19;
 export const OFFSET_LEVEL = 20;
+// Aircraft consumables packed into one float: fuel * 2^12 + ammo * 2^6 +
+// flares (ammo and flares < 64; fuel is an integer tick count). NaN when the
+// unit is not an aircraft.
+export const OFFSET_AIRCRAFT = 21;
+
+const AIRCRAFT_FIELD_MASK = 0x3f;
+
+export const packAircraftState = (state: AircraftState): number =>
+  state.fuel * 4096 +
+  (state.ammo & AIRCRAFT_FIELD_MASK) * 64 +
+  (state.flares & AIRCRAFT_FIELD_MASK);
+
+export const unpackAircraftState = (packed: number): AircraftState => {
+  const fuel = Math.floor(packed / 4096);
+  const rest = packed - fuel * 4096;
+  return {
+    fuel,
+    ammo: Math.floor(rest / 64),
+    flares: rest % 64,
+  };
+};
 
 // unitType mapping
 export const PACKED_UNIT_TYPES: readonly UnitType[] = [
@@ -46,6 +71,14 @@ export const PACKED_UNIT_TYPES: readonly UnitType[] = [
   UnitType.MIRVWarhead, // 14
   UnitType.Train, // 15
   UnitType.Factory, // 16
+  // AIR update (5-bit field: 31 slots, 23 used).
+  UnitType.Airbase, // 17
+  UnitType.RadarStation, // 18
+  UnitType.AAGun, // 19
+  UnitType.AttackHelicopter, // 20
+  UnitType.TransportHelicopter, // 21
+  UnitType.Fighter, // 22
+  UnitType.Bomber, // 23
 ] as const;
 
 const UNIT_TYPE_TO_INT = new Map<UnitType, number>(
@@ -348,6 +381,11 @@ export class PackedUnitUpdateDecoder {
     return this.buffer[this.offset + OFFSET_SAM_UPGRADE_TARGET_LEVEL];
   }
 
+  get aircraftState(): AircraftState | undefined {
+    const v = this.buffer[this.offset + OFFSET_AIRCRAFT];
+    return Number.isNaN(v) ? undefined : unpackAircraftState(v);
+  }
+
   toUnitUpdate(): UnitUpdate {
     let warshipState;
     if (this.hasWarshipState) {
@@ -413,6 +451,7 @@ export class PackedUnitUpdateDecoder {
       trainType: this.trainType,
       loaded: this.loaded,
       samUpgrade,
+      aircraftState: this.aircraftState,
       missileTimerQueue: [],
     };
   }
@@ -494,6 +533,9 @@ export function packUnitUpdates(units: UnitUpdate[]): {
     );
     packedUnitUpdates[offset + OFFSET_PACKED_B] = packB(update);
     packedUnitUpdates[offset + OFFSET_LEVEL] = update.level;
+    packedUnitUpdates[offset + OFFSET_AIRCRAFT] = update.aircraftState
+      ? packAircraftState(update.aircraftState)
+      : NaN;
 
     if (update.missileTimerQueue && update.missileTimerQueue.length > 0) {
       packedMissileTimers[timerOffset++] = update.id;

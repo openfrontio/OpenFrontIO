@@ -1,5 +1,6 @@
 import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import {
+  AircraftState,
   AllianceInfo,
   AllPlayers,
   BuildableUnit,
@@ -115,6 +116,16 @@ export interface UnitParamsMap {
   [UnitType.SAMLauncher]: Record<string, never>;
 
   [UnitType.City]: Record<string, never>;
+
+  // AIR update. Aircraft carry a patrol tile (their station or strike
+  // target), which gives them the shared patrol state (see WarshipState).
+  [UnitType.Airbase]: Record<string, never>;
+  [UnitType.RadarStation]: Record<string, never>;
+  [UnitType.AAGun]: Record<string, never>;
+  [UnitType.AttackHelicopter]: { patrolTile: TileRef };
+  [UnitType.TransportHelicopter]: { patrolTile: TileRef; troops?: number };
+  [UnitType.Fighter]: { patrolTile: TileRef };
+  [UnitType.Bomber]: { patrolTile: TileRef };
 }
 
 // Type helper to get params type for a specific unit type
@@ -257,6 +268,9 @@ export interface Unit extends UnitLike {
   updateTransportShipState(update: Partial<TransportShipState>): void;
   nukeState(): NukeState;
   updateNukeState(update: Partial<NukeState>): void;
+  /** AIR update: fuel, weapons and flares. Throws on non-aircraft units. */
+  aircraftState(): AircraftState;
+  updateAircraftState(update: Partial<AircraftState>): void;
 
   health(): number;
   /** Effective max health, including any warship veterancy bonus. */
