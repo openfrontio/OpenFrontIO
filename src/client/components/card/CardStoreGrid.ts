@@ -1,5 +1,9 @@
 import type { StorePlacement } from "@openfront/shared/ApiSchemas";
-import type { CardTracker, Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import {
+  type CardTracker,
+  type Cosmetics,
+  ownsPlayerCard,
+} from "@openfront/shared/CosmeticSchemas";
 import type { LevelBadge } from "@openfront/shared/LevelBadgeWire";
 import {
   html,
@@ -16,20 +20,23 @@ import "../CosmeticCard";
 import type { PurchaseButton } from "../PurchaseButton";
 import "../PurchaseButton";
 import {
+  CARD_ITEM_GROUP,
+  CARD_ITEM_TYPES,
   type CardItem,
   type CardItemType,
   cardItemName,
   isOfferedCardItem,
 } from "./CardItems";
 import "./CardItemPreview";
-import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";
 import "./PlayerCard";
 import { buildPlayerCardView, type PlayerCardView } from "./PlayerCardModel";
 
 // The store's Card sub-tab: every player card item that is sold, the card
-// itself first, then trackers and backgrounds. Held-back items (HeldBack.ts)
-// and earned items (never sold) aren't listed. Prices in Plutonium and/or
-// caps, bought through the store's purchase flow. A tile's preview opens a
+// itself first, then trackers and backgrounds (titles and taunts are held
+// back). Without the card, its items still sell (the card comes first, as
+// in "Get {name}'s look") but each says it needs the card. Earned items
+// aren't listed (they're never sold). Prices in Plutonium and/or caps,
+// bought through the store's purchase flow. A tile's preview opens a
 // large, animated preview of the item on the card.
 
 const PLACEMENT: StorePlacement = {
@@ -38,13 +45,10 @@ const PLACEMENT: StorePlacement = {
   subTab: "card",
 };
 
-const SECTIONS: [keyof Cosmetics, CardItemType][] = [
-  ["playerCards", "playerCard"],
-  ["cardTrackers", "cardTracker"],
-  ["cardBackgrounds", "cardBackground"],
-  ["cardTitles", "cardTitle"],
-  ["taunts", "taunt"],
-];
+// In CARD_ITEM_TYPES order: card, trackers, backgrounds.
+const SECTIONS: [keyof Cosmetics, CardItemType][] = CARD_ITEM_TYPES.map(
+  (type) => [CARD_ITEM_GROUP[type], type],
+);
 
 // The value a tracker shows in its large preview.
 const SAMPLE_TRACKER_VALUE = 1904;
@@ -66,8 +70,6 @@ export function cardStoreItems(
 ): { type: CardItemType; item: CardItem }[] {
   const out: { type: CardItemType; item: CardItem }[] = [];
   for (const [key, type] of SECTIONS) {
-    if (type === "taunt" && !CARD_TAUNTS_ENABLED) continue;
-    if (type === "cardTitle" && !CARD_TITLES_ENABLED) continue;
     const section = (cosmetics?.[key] ?? {}) as Record<string, CardItem>;
     for (const item of Object.values(section)) {
       if (isSold(item) && isOfferedCardItem(type, item)) {
@@ -232,6 +234,7 @@ export class CardStoreGrid extends LitElement {
       </p>`;
     }
     const owned = new Set(this.flares);
+    const hasCard = ownsPlayerCard(this.flares);
     return html`<div class="flex flex-wrap justify-center gap-3 p-3">
       ${items.map(({ type, item }) => {
         const key = `${type}:${item.name}`;
@@ -265,6 +268,15 @@ export class CardStoreGrid extends LitElement {
           <span class="truncate text-sm font-bold"
             >${cardItemName(type, item)}</span
           >
+          ${
+            !hasCard && type !== "playerCard"
+              ? html`<span
+                  data-card-store-needs-card
+                  class="text-[11px] font-bold text-amber-300"
+                  >${translateText("store.card_item_needs_card")}</span
+                >`
+              : nothing
+          }
           ${
             owned.has(key)
               ? html`<span

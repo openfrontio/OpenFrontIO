@@ -17,10 +17,7 @@ vi.mock("../../src/client/Cosmetics", () => ({
   broadcastFreshUserMe: fresh.broadcast,
 }));
 
-import {
-  saveCardLoadout,
-  saveTauntsMuted,
-} from "../../src/client/CardLoadoutApi";
+import { saveCardLoadout } from "../../src/client/CardLoadoutApi";
 
 const LOADOUT = {
   background: "bg_pacific",
@@ -150,29 +147,5 @@ describe("saveCardLoadout", () => {
       ok: false,
       error: "failed",
     });
-  });
-});
-
-describe("saveTauntsMuted", () => {
-  const fetchMock = vi.fn();
-  beforeEach(() => {
-    fetchMock.mockReset();
-    vi.stubGlobal("fetch", fetchMock);
-  });
-  afterEach(() => vi.unstubAllGlobals());
-
-  it("saves the setting", async () => {
-    fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ muted: true }), { status: 200 }),
-    );
-    expect(await saveTauntsMuted(true)).toBe(true);
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
-      muted: true,
-    });
-  });
-
-  it("failure gives false", async () => {
-    fetchMock.mockResolvedValue(new Response("", { status: 500 }));
-    expect(await saveTauntsMuted(true)).toBe(false);
   });
 });

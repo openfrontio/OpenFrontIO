@@ -156,6 +156,56 @@ describe("buying on the end screen", () => {
     expect((await purchaseCosmeticInPlace(STORM, "hard")).kind).toBe("owned");
   });
 
+  // The end screen marks the item bought here (onOwned) before the fresh
+  // profile lands, or one render sees it owned but not bought here, drops
+  // it, and tears the block down and rebuilds it.
+  describe("onOwned comes before the fresh profile's broadcast", () => {
+    const order = (onOwned: () => void) => {
+      const seen: string[] = [];
+      const listener = () => seen.push("broadcast");
+      document.addEventListener("userMeResponse", listener);
+      return {
+        seen,
+        onOwned: () => {
+          seen.push("owned");
+          onOwned();
+        },
+        done: () => document.removeEventListener("userMeResponse", listener),
+      };
+    };
+
+    it.each([
+      ["bought", { ok: true }],
+      ["already owned", { ok: false, code: "already_owned" }],
+      ["a lost success, owned on the re-read", { ok: false, code: "failed" }],
+    ])("%s", async (_name, answer) => {
+      vi.mocked(getUserMe)
+        .mockResolvedValueOnce(me(500, 0))
+        .mockResolvedValue(me(180, 0, ["cardBackground:bg_storm_front"]));
+      vi.mocked(purchaseWithCurrency).mockResolvedValue(answer as never);
+      const onOwned = vi.fn();
+      const o = order(onOwned);
+      const outcome = await purchaseCosmeticInPlace(
+        STORM,
+        "hard",
+        undefined,
+        o.onOwned,
+      );
+      o.done();
+      expect(outcome.kind).toBe("owned");
+      expect(o.seen).toEqual(["owned", "broadcast"]);
+      expect(onOwned).toHaveBeenCalledOnce();
+    });
+
+    it("not owned on the re-read: never called", async () => {
+      vi.mocked(getUserMe).mockResolvedValue(me(500, 0));
+      vi.mocked(purchaseWithCurrency).mockResolvedValue(FAILED);
+      const onOwned = vi.fn();
+      await purchaseCosmeticInPlace(STORM, "hard", undefined, onOwned);
+      expect(onOwned).not.toHaveBeenCalled();
+    });
+  });
+
   it("failed and the re-read fails too: unconfirmed", async () => {
     vi.mocked(getUserMe)
       .mockResolvedValueOnce(me(500, 0))

@@ -176,16 +176,25 @@ export class LoadoutRow extends LitElement {
   ): Promise<PurchaseResult> {
     const key = `${entry.type}:${entry.item.name}`;
     this.tracker?.click(key, PLACEMENT);
+    // Before the fresh profile's broadcast (purchaseCosmeticInPlace), so the
+    // end screen never renders it owned but not bought here.
+    let told = false;
+    const tellOwned = () => {
+      if (told) return;
+      told = true;
+      this.dispatchEvent(
+        new CustomEvent("look-owned", { detail: { key }, bubbles: true }),
+      );
+    };
     const outcome = await purchaseCosmeticInPlace(
       this.resolved(entry),
       method,
       PLACEMENT,
+      tellOwned,
     );
     switch (outcome.kind) {
       case "owned":
-        this.dispatchEvent(
-          new CustomEvent("look-owned", { detail: { key }, bubbles: true }),
-        );
+        tellOwned();
         if (outcome.notice) await showInGameAlert(outcome.notice);
         return;
       case "signed_out":

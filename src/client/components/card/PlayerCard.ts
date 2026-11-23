@@ -1,27 +1,20 @@
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, nothing, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { prefersReducedMotion } from "../../utilities/ReducedMotion";
+import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../../Utils";
 import { levelBadgeAccent } from "../LevelBadge";
 import "./CardBackground";
-import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";
 import { formatTracker, type PlayerCardView } from "./PlayerCardModel";
 import {
   clanTemplate,
   levelLineTemplate,
   nameTemplate,
 } from "./ProfileIdentity";
-import {
-  ensureTauntStyles,
-  TAUNT_PRESETS,
-  type TauntPreset,
-  tauntPlayback,
-} from "./taunts/TauntPresets";
 
 // The player card: a thin banner strip with the player's level badge, flag,
-// clan tag and name, prestige · level line, equipped title and up to three
-// tracked stats, over their card background. Shown on the end screens (the
+// clan tag and name, prestige · level line and up to three tracked stats,
+// over their card background. (Titles and taunts are held back: a saved one
+// is kept on the loadout but never shown.) Shown on the end screens (the
 // player who eliminated you, the winner), as the Account page's header, and
 // as a small preview in the store.
 //
@@ -52,17 +45,6 @@ export class PlayerCard extends LitElement {
   @property({ type: Boolean }) narrow = false;
   // Whether the card's background may animate (one card per screen).
   @property({ type: Boolean }) animated = false;
-  // Names one showing of the card: its taunt plays once per key (none: it
-  // rests). The end screen passes the game and screen.
-  @property({ type: String }) showKey: string | null = null;
-  // The viewer's "Mute taunts": no taunt of either kind.
-  @property({ type: Boolean }) tauntsMuted = false;
-  // The card owner's territory colour, for the territory sweep.
-  @property({ type: String }) territoryColor: string | null = null;
-
-  // Whether the taunt is mid-animation, and the last showing it played for.
-  @state() private tauntPlaying = false;
-  private playedKey: string | null = null;
 
   private resizeObserver: ResizeObserver | null = null;
 
@@ -73,7 +55,6 @@ export class PlayerCard extends LitElement {
   connectedCallback(): void {
     super.connectedCallback();
     ensurePlayerCardStyles();
-    ensureTauntStyles();
     if (typeof ResizeObserver !== "undefined") {
       this.resizeObserver = new ResizeObserver((entries) => {
         const width = entries[0]?.contentRect.width ?? 0;
@@ -87,90 +68,6 @@ export class PlayerCard extends LitElement {
     super.disconnectedCallback();
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
-  }
-
-  private preset(): TauntPreset | null {
-    // Held back: a saved taunt never shows or plays.
-    if (!CARD_TAUNTS_ENABLED) return null;
-    if (this.size === "panel") return null;
-    const taunt = this.view?.taunt;
-    if (!taunt) return null;
-    const preset = TAUNT_PRESETS[taunt.preset];
-    return preset?.kind === taunt.tauntKind ? preset : null;
-  }
-
-  private playback(preset: TauntPreset) {
-    return tauntPlayback(preset, {
-      reducedMotion: prefersReducedMotion(),
-      muted: this.tauntsMuted,
-    });
-  }
-
-  protected willUpdate(): void {
-    // A new showing starts the taunt, once.
-    const key = this.showKey;
-    if (key === null || key === this.playedKey) return;
-    const preset = this.preset();
-    if (preset === null || this.playback(preset) !== "play") return;
-    this.playedKey = key;
-    this.tauntPlaying = true;
-    this.dispatchEvent(
-      new CustomEvent("card-taunt-played", { bubbles: true, composed: true }),
-    );
-  }
-
-  private onTauntEnd = (): void => {
-    this.tauntPlaying = false;
-  };
-
-  private renderTauntIcon(
-    view: PlayerCardView,
-  ): TemplateResult | typeof nothing {
-    const preset = this.preset();
-    if (preset === null || preset.kind !== "icon") return nothing;
-    if (this.playback(preset) === "none") return nothing;
-    const animate = this.tauntPlaying && this.playback(preset) === "play";
-    const flag = preset.restingFrame === "" ? view.flag : undefined;
-    return html`<span
-      data-card-taunt-icon
-      class="inline-grid h-6 w-6 shrink-0 place-items-center text-lg leading-none ${
-        animate ? preset.className : ""
-      }"
-      @animationend=${this.onTauntEnd}
-      >${
-        flag !== undefined
-          ? html`<img class="h-4 w-auto" src=${assetUrl(flag)} alt="" />`
-          : preset.restingFrame
-      }</span
-    >`;
-  }
-
-  private renderTauntOverlay(): TemplateResult | typeof nothing {
-    const preset = this.preset();
-    if (preset === null || preset.kind !== "card") return nothing;
-    if (!this.tauntPlaying || this.playback(preset) !== "play") return nothing;
-    const name = this.view!.taunt!.preset;
-    const look: Record<string, string> = {
-      nuke_flash:
-        "inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white to-transparent",
-      shockwave:
-        "left-8 top-1/2 h-16 w-16 -translate-y-1/2 rounded-full border-4 border-white/80",
-      tremor: "inset-0",
-      territory_sweep: "inset-0 origin-left",
-      badge_pulse:
-        "left-4 top-1/2 h-16 w-16 -translate-y-1/2 rounded-full bg-amber-200/60",
-    };
-    const style =
-      name === "territory_sweep"
-        ? `background: ${this.territoryColor ?? "#3b82f6"}`
-        : "";
-    return html`<div
-      data-card-taunt-overlay
-      aria-hidden="true"
-      class="pointer-events-none absolute ${look[name] ?? "inset-0"} ${preset.className}"
-      style=${style}
-      @animationend=${this.onTauntEnd}
-    ></div>`;
   }
 
   private renderBadge(view: PlayerCardView): TemplateResult | typeof nothing {
@@ -350,7 +247,6 @@ export class PlayerCard extends LitElement {
         .background=${view.background}
         .animated=${this.animated}
       ></card-background>
-      ${this.renderTauntOverlay()}
       <div
         class="relative flex h-full items-center gap-4 ${
           this.size === "account" ? "px-6 py-5" : "px-4 py-3"
@@ -374,20 +270,8 @@ export class PlayerCard extends LitElement {
               view.username,
               this.size === "account" ? "text-3xl" : "text-2xl",
             )}
-            ${this.renderTauntIcon(view)}
           </div>
           ${view.badge === null ? nothing : levelLineTemplate(view.badge, true)}
-          ${
-            view.title === null || !CARD_TITLES_ENABLED
-              ? nothing
-              : html`<div
-                  data-card-title
-                  class="truncate text-sm font-bold"
-                  style="color: ${view.title.accent ?? "#fbbf24"}"
-                >
-                  ${view.title.text}
-                </div>`
-          }
           ${this.narrow ? this.renderTrackers(view) : nothing}
         </div>
         ${this.narrow ? nothing : this.renderTrackers(view)}

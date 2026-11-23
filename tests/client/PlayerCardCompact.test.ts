@@ -4,11 +4,6 @@ vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
 }));
-// Switched ON here, to show the compact card leaves them out on its own.
-vi.mock("../../src/client/components/card/HeldBack", () => ({
-  CARD_TAUNTS_ENABLED: true,
-  CARD_TITLES_ENABLED: true,
-}));
 
 import { CardBackground } from "../../src/client/components/card/CardBackground";
 import { PlayerCard } from "../../src/client/components/card/PlayerCard";
@@ -35,13 +30,11 @@ const VIEW: PlayerCardView = {
     rarity: "legendary",
     animation: { layers: [] },
   },
-  title: { text: "Warmonger" },
   trackers: [
     { stat: "wins", value: 1204 },
     { stat: "best_elo", value: 1840 },
     { stat: "games_played", value: 38912 },
   ],
-  taunt: { name: "salute", tauntKind: "icon", preset: "salute" },
 };
 
 async function mount(
@@ -138,13 +131,6 @@ describe("player card: compact panel layout", () => {
     const el = await mount(VIEW, { animated: true });
     const bg = el.querySelector("card-background") as CardBackground;
     expect(bg.animated).toBe(false);
-  });
-
-  it("leaves out the title and the taunt", async () => {
-    const el = await mount(VIEW, { showKey: "game-1" });
-    expect(el.querySelector("[data-card-title]")).toBeNull();
-    expect(el.querySelector("[data-card-taunt-icon]")).toBeNull();
-    expect(el.querySelector("[data-card-taunt-overlay]")).toBeNull();
   });
 
   it("keeps the rarity border and the name truncating", async () => {
