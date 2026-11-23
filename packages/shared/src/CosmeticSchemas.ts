@@ -185,7 +185,7 @@ export const CardTitleSchema = CosmeticSchema.extend({
 
 export const TauntSchema = CosmeticSchema.extend({
   tauntKind: z.enum(["icon", "card"]),
-  // Which built-in animation plays (TAUNT_PRESETS on the client).
+  // Which built-in animation plays (the presets ship with the taunt UI).
   preset: z.string(),
   url: z.string().optional(),
   unlockSource: UnlockSourceSchema.optional(),
