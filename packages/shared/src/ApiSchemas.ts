@@ -1717,12 +1717,13 @@ export const StorePlacementSubTabSchema = z.enum([
   "card",
 ]);
 export type StorePlacementSubTab = z.infer<typeof StorePlacementSubTabSchema>;
-// The Inventory's In game categories, where its buy dialog sells from.
+// The Inventory's tabs: its In game categories, and its Player card tab.
 export const StorePlacementInventorySubTabSchema = z.enum([
   "skins",
   "flags",
   "crowns",
   "effects",
+  "card",
 ]);
 export type StorePlacementInventorySubTab = z.infer<
   typeof StorePlacementInventorySubTabSchema
@@ -1742,7 +1743,7 @@ export const StorePlacementSchema = z.discriminatedUnion("kind", [
   // The Inventory's buy dialog.
   z.object({
     kind: z.literal("inventory"),
-    subTab: StorePlacementInventorySubTabSchema.optional(),
+    subTab: StorePlacementInventorySubTabSchema,
   }),
 ]);
 export type StorePlacement = z.infer<typeof StorePlacementSchema>;

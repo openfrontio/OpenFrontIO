@@ -767,10 +767,15 @@ describe("Inventory In game tab", () => {
         "hard",
         { kind: "inventory", subTab: "crowns" },
       );
+      // The infra API's schema for this kind: these sub-tabs, required.
+      for (const subTab of ["skins", "flags", "crowns", "effects", "card"]) {
+        expect(
+          StorePlacementSchema.safeParse({ kind: "inventory", subTab }).success,
+        ).toBe(true);
+      }
       expect(
-        StorePlacementSchema.safeParse({ kind: "inventory", subTab: "crowns" })
-          .success,
-      ).toBe(true);
+        StorePlacementSchema.safeParse({ kind: "inventory" }).success,
+      ).toBe(false);
       const equipNow = modal.querySelector<HTMLButtonElement>(
         "inventory-buy-dialog [data-buy-equip-now]",
       )!;

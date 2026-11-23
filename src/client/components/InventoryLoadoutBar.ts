@@ -1,13 +1,13 @@
-import type { StorePlacementInventorySubTab } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { ResolvedCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CosmeticPreview";
 
-// Derived from the placement schema, so a category the API would reject
-// fails typecheck.
-export type InventoryCategory = StorePlacementInventorySubTab;
+// Each is also a sub-tab of the "inventory" StorePlacement (ApiSchemas.ts):
+// purchase() passes one there, so a category the API would reject fails
+// typecheck.
+export type InventoryCategory = "skins" | "flags" | "crowns" | "effects";
 
 export interface InventoryLoadoutEntry {
   category: InventoryCategory;
