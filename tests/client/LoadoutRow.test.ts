@@ -598,9 +598,32 @@ describe("<loadout-row> buying", () => {
       expect.objectContaining({ key: "cardBackground:bg_frontline" }),
       "hard",
       { kind: "card_loadout" },
+      expect.any(Function),
     );
     expect(heard).toHaveBeenCalledWith({ key: "cardBackground:bg_frontline" });
     expect(showInGameAlert).not.toHaveBeenCalled();
+  });
+
+  it("reports it owned when the buy says so, before the fresh profile lands", async () => {
+    // purchaseCosmeticInPlace calls onOwned, then broadcasts the profile.
+    const seen: string[] = [];
+    const onUserMe = () => seen.push("broadcast");
+    document.addEventListener("userMeResponse", onUserMe);
+    vi.mocked(purchaseCosmeticInPlace).mockImplementation(
+      async (_r, _m, _p, onOwned) => {
+        onOwned?.();
+        document.dispatchEvent(new CustomEvent("userMeResponse"));
+        return { kind: "owned", fresh: false };
+      },
+    );
+    await render({});
+    (row as unknown as Element).addEventListener("look-owned", () =>
+      seen.push("look-owned"),
+    );
+    await button().onPurchaseHard();
+    document.removeEventListener("userMeResponse", onUserMe);
+    // Once, and first.
+    expect(seen).toEqual(["look-owned", "broadcast"]);
   });
 
   it("an owned item reads Owned ✓ in place of the button", async () => {

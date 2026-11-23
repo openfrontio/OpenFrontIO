@@ -411,12 +411,18 @@ async function hardPriceOf(key: string): Promise<number | null> {
  * any error, not only an auth failure, and broadcasting it would flip the
  * whole app to its logged-out UI immediately after a successful purchase. A
  * stale balance is much the better failure.
+ *
+ * `beforeBroadcast` sees the fresh profile first (not called for `false`),
+ * for a caller whose own state must change before everyone else's does.
  */
 let freshUserMeRequestId = 0;
-export async function broadcastFreshUserMe(): Promise<UserMeResponse | false> {
+export async function broadcastFreshUserMe(
+  beforeBroadcast?: (fresh: UserMeResponse) => void,
+): Promise<UserMeResponse | false> {
   const requestId = ++freshUserMeRequestId;
   invalidateUserMe();
   const fresh = await getUserMe();
+  if (fresh !== false) beforeBroadcast?.(fresh);
   // A newer refresh owns the broadcast, even if it is still pending or failed.
   if (fresh === false || requestId !== freshUserMeRequestId) return fresh;
   document.dispatchEvent(
@@ -737,11 +743,17 @@ export type InPlacePurchase =
  * caller shows the outcome where the purchase was made. A shortfall carries
  * what the end screen offers besides a top-up: the caps price when the
  * player can afford it, and what to remember across "Get Plutonium".
+ *
+ * `onOwned` runs as soon as it is known to be owned, before the fresh
+ * profile is broadcast: the end screen marks it bought here first, so no
+ * render sees it owned but not bought here (which would drop it and rebuild
+ * the block).
  */
 export async function purchaseCosmeticInPlace(
   resolved: ResolvedCosmetic,
   method: "hard" | "soft",
   placement?: StorePlacement,
+  onOwned?: () => void,
 ): Promise<InPlacePurchase> {
   const c = resolved.cosmetic;
   if (!c || resolved.type === "subscription" || resolved.type === "pack") {
@@ -787,9 +799,13 @@ export async function purchaseCosmeticInPlace(
   // commit after that. Re-read: owned now means it went through. Otherwise
   // say it couldn't be confirmed, never "you weren't charged"; a retry is
   // safe, as a committed buy answers already_owned.
+  const ownsIt = (fresh: UserMeResponse) =>
+    (fresh.player.flares ?? []).includes(resolved.key);
   const settleFailure = async (): Promise<InPlacePurchase> => {
-    const fresh = await broadcastFreshUserMe();
-    if (fresh !== false && (fresh.player.flares ?? []).includes(resolved.key)) {
+    const fresh = await broadcastFreshUserMe((f) => {
+      if (ownsIt(f)) onOwned?.();
+    });
+    if (fresh !== false && ownsIt(fresh)) {
       return owned(fresh);
     }
     return { kind: "unconfirmed" };
@@ -834,6 +850,7 @@ export async function purchaseCosmeticInPlace(
     result.ok && result.amount !== undefined && result.amount !== price
       ? purchaseSuccessMessage(c.name, price, result.amount, method)
       : undefined;
+  onOwned?.();
   return owned(await broadcastFreshUserMe(), notice);
 }
 

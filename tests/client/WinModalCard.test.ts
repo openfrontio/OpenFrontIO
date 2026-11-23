@@ -608,6 +608,8 @@ describe("WinModal Get the look buying", () => {
       viewerFlares: [],
       signedIn: true,
     });
+    // A buy's order (purchaseCosmeticInPlace's onOwned, then its
+    // broadcast): look-owned first, then the fresh profile.
     block(modal).dispatchEvent(
       new CustomEvent("look-owned", {
         detail: { key: "taunt:salute" },
@@ -621,6 +623,34 @@ describe("WinModal Get the look buying", () => {
     expect(looks[0].items.map((i) => i.item.name)).toEqual(["salute"]);
     expect(looks[1].items.map((i) => i.item.name)).toEqual(["bg_a"]);
     expect(block(modal).owned.has("taunt:salute")).toBe(true);
+  });
+
+  it("one look, one item, bought: the block stays (no rebuild, no new impressions)", async () => {
+    saveLook("g1", {
+      clientID: "a",
+      name: "Ada",
+      items: [bg("bg_a")] as never,
+    });
+    const modal = await renderModal({
+      game,
+      endCardMode: "none",
+      viewerFlares: [],
+      signedIn: true,
+    });
+    const before = block(modal);
+    // A buy's order: look-owned, then the fresh profile.
+    before.dispatchEvent(
+      new CustomEvent("look-owned", {
+        detail: { key: "cardBackground:bg_a" },
+        bubbles: true,
+      }),
+    );
+    await settle(modal);
+    expect(block(modal)).toBe(before);
+    broadcast(["cardBackground:bg_a"], 0, 0);
+    await settle(modal);
+    expect(block(modal)).toBe(before);
+    expect(block(modal).owned.has("cardBackground:bg_a")).toBe(true);
   });
 
   it("bought here reads Owned ✓ even if the profile refresh fails", async () => {
