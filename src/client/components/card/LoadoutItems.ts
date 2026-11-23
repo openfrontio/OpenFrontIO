@@ -18,8 +18,6 @@ export interface LoadoutItem {
   type: CardItemType;
   item: CardItem;
   state: "buy" | "earned";
-  priceHard?: number;
-  priceSoft?: number;
   unlockLabel?: string;
 }
 
@@ -34,10 +32,10 @@ function toItem(type: CardItemType, item: CardItem): LoadoutItem | null {
   if (unlock !== undefined) {
     return { type, item, state: "earned", unlockLabel: unlock.label };
   }
-  const priceHard = (item.priceHard ?? 0) > 0 ? item.priceHard : undefined;
-  const priceSoft = (item.priceSoft ?? 0) > 0 ? item.priceSoft : undefined;
-  if (priceHard === undefined && priceSoft === undefined) return null;
-  return { type, item, state: "buy", priceHard, priceSoft };
+  // Priced from the item where shown (LoadoutRow's shownPrices), so a saved
+  // look holds no price snapshot to go stale.
+  if ((item.priceHard ?? 0) <= 0 && (item.priceSoft ?? 0) <= 0) return null;
+  return { type, item, state: "buy" };
 }
 
 /**

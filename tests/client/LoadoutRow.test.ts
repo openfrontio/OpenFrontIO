@@ -208,7 +208,7 @@ describe("loadoutItems", () => {
     ]);
   });
 
-  it("earned item has an unlock label, paid item its prices", () => {
+  it("earned item has an unlock label; a paid one is priced where shown", () => {
     const items = loadoutItems(VOLT, COSMETICS, [
       "playerCard:standard",
       "cardBackground:bg_frontline",
@@ -219,7 +219,11 @@ describe("loadoutItems", () => {
       unlockLabel: "FFA Diamond",
     });
     const taunt = items.find((i) => i.type === "taunt")!;
-    expect(taunt).toMatchObject({ state: "buy", priceSoft: 800 });
+    expect(taunt).toMatchObject({ state: "buy" });
+    // Priced where it's shown, never from a snapshot on the item.
+    expect(taunt).not.toHaveProperty("priceHard");
+    expect(taunt).not.toHaveProperty("priceSoft");
+    expect(shownPrices(taunt).priceSoft).toBe(800);
   });
 
   it("a sale that has ended offers the list price", () => {
@@ -295,8 +299,10 @@ describe("loadoutItems", () => {
       "cardBackground:bg_frontline",
     ]);
     const taunt = items.find((i) => i.type === "taunt")!;
-    expect(taunt.priceHard).toBeUndefined();
-    expect(taunt.priceSoft).toBe(800);
+    expect(shownPrices(taunt)).toMatchObject({
+      priceHard: null,
+      priceSoft: 800,
+    });
   });
 });
 
@@ -504,7 +510,6 @@ describe("<loadout-row>", () => {
       promotion: { percentOff: 25, endsAt, kind: "flash" },
     } as never,
     state: "buy" as const,
-    priceHard: 1800,
   });
   const button = () =>
     q("purchase-button") as unknown as {
@@ -562,7 +567,6 @@ describe("<loadout-row> buying", () => {
     type: "cardBackground",
     item: COSMETICS.cardBackgrounds!.bg_frontline as never,
     state: "buy",
-    priceHard: 2400,
   };
   async function render(props: Partial<LoadoutRow>) {
     row = document.createElement("loadout-row") as unknown as LoadoutRow;

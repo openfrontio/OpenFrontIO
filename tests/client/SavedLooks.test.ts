@@ -17,7 +17,6 @@ const ITEM: LoadoutItem = {
   type: "cardBackground",
   item: { name: "bg_pacific", rarity: "epic", product: null } as never,
   state: "buy",
-  priceHard: 400,
 };
 const look = (clientID: string, items: LoadoutItem[] = [ITEM]) => ({
   clientID,
@@ -58,10 +57,7 @@ describe("saved looks", () => {
   });
 
   it("a look of only earned items is not saved", () => {
-    saveLook(
-      "g1",
-      look("a", [{ ...ITEM, state: "earned", priceHard: undefined }]),
-    );
+    saveLook("g1", look("a", [{ ...ITEM, state: "earned" }]));
     expect(savedLooks("g1")).toEqual([]);
   });
 
@@ -92,7 +88,6 @@ describe("endScreenLookRows", () => {
     type,
     item: { name, rarity: "epic", product: null } as never,
     state,
-    priceHard: state === "buy" ? 400 : undefined,
   });
   const CARD = item("playerCard", "standard");
   const row = (clientID: string, items: LoadoutItem[]) => ({
