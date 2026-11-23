@@ -312,6 +312,18 @@ describe("Inventory In game tab", () => {
       expect(modal.querySelector("[data-inventory-grid]")).toBeNull();
     });
 
+    it("the Player card tab buys with the inventory card placement", async () => {
+      await open("card");
+      const cardTab = modal.querySelector("inventory-card-tab") as unknown as {
+        updateComplete: Promise<unknown>;
+      };
+      await cardTab.updateComplete;
+      const myCard = modal.querySelector("my-card-tab") as unknown as {
+        placement: unknown;
+      };
+      expect(myCard.placement).toEqual({ kind: "inventory", subTab: "card" });
+    });
+
     it("switches between the two tabs and back to the last category", async () => {
       await open("crowns");
       modal

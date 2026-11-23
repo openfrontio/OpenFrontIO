@@ -1,4 +1,7 @@
-import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import type {
+  StorePlacement,
+  UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 import {
   type CardTracker,
   type Cosmetics,
@@ -83,6 +86,10 @@ const EMPTY: CardLoadoutBody = {
 export class MyCardTab extends LitElement {
   @property({ attribute: false }) userMe: UserMeResponse | null = null;
   @property({ attribute: false }) cosmetics: Cosmetics | null = null;
+  /** Sent with each purchase: the Inventory's Player card tab sets it; the
+   * Account modal sends none. */
+  @property({ attribute: false }) placement: StorePlacement | undefined =
+    undefined;
 
   @state() private activeSlot: Slot = "background";
   // What is equipped now (optimistically), and what the server last
@@ -282,8 +289,8 @@ export class MyCardTab extends LitElement {
       .promotion=${prices.promotion ?? null}
       .rarity=${String(item.rarity)}
       .itemName=${cardItemName(type, item)}
-      .onPurchaseHard=${() => purchaseCosmetic(r, "hard")}
-      .onPurchaseSoft=${() => purchaseCosmetic(r, "soft")}
+      .onPurchaseHard=${() => purchaseCosmetic(r, "hard", this.placement)}
+      .onPurchaseSoft=${() => purchaseCosmetic(r, "soft", this.placement)}
     ></purchase-button>`;
   }
 

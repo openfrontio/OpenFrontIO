@@ -1,4 +1,7 @@
-import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import type {
+  StorePlacement,
+  UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import "../card/MyCardTab";
@@ -12,6 +15,11 @@ import "../card/MyCardTab";
 export class InventoryCardTab extends LitElement {
   @property({ attribute: false }) userMe: UserMeResponse | null = null;
 
+  private static readonly PLACEMENT: StorePlacement = {
+    kind: "inventory",
+    subTab: "card",
+  };
+
   createRenderRoot() {
     return this;
   }
@@ -19,6 +27,7 @@ export class InventoryCardTab extends LitElement {
   render() {
     return html`<my-card-tab
       .userMe=${this.userMe}
+      .placement=${InventoryCardTab.PLACEMENT}
       @change-flag=${(event: Event) => {
         event.stopPropagation();
         this.dispatchEvent(

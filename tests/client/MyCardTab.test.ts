@@ -519,6 +519,37 @@ describe("<my-card-tab>", () => {
     expect(front.querySelector("purchase-button")).not.toBeNull();
   });
 
+  it("buys with no placement by default (the Account modal)", async () => {
+    await render(userMe(OWNER, SAVED));
+    const button = tile("cardBackground:bg_frontline").querySelector(
+      "purchase-button",
+    ) as unknown as { onPurchaseHard: () => Promise<unknown> };
+    await button.onPurchaseHard();
+    expect(cosmeticsMod.purchase).toHaveBeenCalledWith(
+      expect.anything(),
+      "hard",
+      undefined,
+    );
+  });
+
+  it("buys with the placement it is given (the Inventory)", async () => {
+    tab = document.createElement("my-card-tab") as unknown as MyCardTab;
+    tab.userMe = userMe(OWNER, SAVED);
+    tab.cosmetics = COSMETICS;
+    tab.placement = { kind: "inventory", subTab: "card" };
+    document.body.appendChild(tab as unknown as Node);
+    await tab.updateComplete;
+    const button = tile("cardBackground:bg_frontline").querySelector(
+      "purchase-button",
+    ) as unknown as { onPurchaseSoft: () => Promise<unknown> };
+    await button.onPurchaseSoft();
+    expect(cosmeticsMod.purchase).toHaveBeenCalledWith(
+      expect.anything(),
+      "soft",
+      { kind: "inventory", subTab: "card" },
+    );
+  });
+
   it("a tracker whose name isn't its stat is never offered", async () => {
     // One rule everywhere (PR 4's inventory too): infra grants the flare as
     // cardTracker:<name> and the API names every tracker by its stat, so a
