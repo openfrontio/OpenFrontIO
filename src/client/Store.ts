@@ -21,10 +21,6 @@ import { customElement, state } from "lit/decorators.js";
 import { BaseModal } from "./components/BaseModal";
 import { isCardItemType } from "./components/card/CardItems";
 import { cardStoreItems } from "./components/card/CardStoreGrid";
-import {
-  CARD_TAUNTS_ENABLED,
-  CARD_TITLES_ENABLED,
-} from "./components/card/HeldBack";
 import "./components/CosmeticCard";
 import type { CosmeticCard } from "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
@@ -156,9 +152,8 @@ export function subTabForItem(itemKey: string): CosmeticsSubTab {
   if (itemKey.startsWith("crown:")) return "crowns";
   if (itemKey.startsWith("flag:")) return "flags";
   const type = itemKey.split(":")[0];
-  // Held-back items aren't on the Card sub-tab: their links open the default.
-  if (type === "taunt" && !CARD_TAUNTS_ENABLED) return "patterns";
-  if (type === "cardTitle" && !CARD_TITLES_ENABLED) return "patterns";
+  // Held-back titles and taunts aren't card item types here: their links open
+  // the default.
   if (isCardItemType(type)) return "card";
   return "patterns";
 }

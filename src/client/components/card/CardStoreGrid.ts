@@ -13,13 +13,12 @@ import {
   isOfferedCardItem,
   cardPrices,
 } from "./CardItems";
-import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";
 import "./PlayerCard";
 import { buildPlayerCardView } from "./PlayerCardModel";
 
 // The store's Card sub-tab: every player card item that is sold, the card
-// itself first, then trackers and backgrounds (titles and taunts too, once
-// switched back on in HeldBack.ts). Earned items
+// itself first, then trackers and backgrounds (titles and taunts are held
+// back). Earned items
 // aren't listed (they're never sold). Prices in Plutonium and/or caps,
 // bought through the store's purchase flow.
 
@@ -33,8 +32,6 @@ const SECTIONS: [keyof Cosmetics, CardItemType][] = [
   ["playerCards", "playerCard"],
   ["cardTrackers", "cardTracker"],
   ["cardBackgrounds", "cardBackground"],
-  ["cardTitles", "cardTitle"],
-  ["taunts", "taunt"],
 ];
 
 export interface CardStoreTracker {
@@ -54,8 +51,6 @@ export function cardStoreItems(
 ): { type: CardItemType; item: CardItem }[] {
   const out: { type: CardItemType; item: CardItem }[] = [];
   for (const [key, type] of SECTIONS) {
-    if (type === "taunt" && !CARD_TAUNTS_ENABLED) continue;
-    if (type === "cardTitle" && !CARD_TITLES_ENABLED) continue;
     const section = (cosmetics?.[key] ?? {}) as Record<string, CardItem>;
     for (const item of Object.values(section)) {
       if (isSold(item) && isOfferedCardItem(type, item)) {

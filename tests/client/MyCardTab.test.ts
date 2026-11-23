@@ -4,15 +4,6 @@ vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
 }));
-const heldBack = vi.hoisted(() => ({ taunts: false, titles: false }));
-vi.mock("../../src/client/components/card/HeldBack", () => ({
-  get CARD_TAUNTS_ENABLED() {
-    return heldBack.taunts;
-  },
-  get CARD_TITLES_ENABLED() {
-    return heldBack.titles;
-  },
-}));
 const api = vi.hoisted(() => ({ save: vi.fn() }));
 vi.mock("../../src/client/CardLoadoutApi", () => ({
   saveCardLoadout: api.save,
@@ -28,13 +19,8 @@ import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { resetCardSavesForTests } from "../../src/client/CardSaveQueue";
 import { MyCardTab } from "../../src/client/components/card/MyCardTab";
 
-// Taunts and titles are held back (HeldBack.ts). The tests below exercise
-// the code behind them with both switched on; the "held back" block turns
-// them off again.
 beforeEach(() => {
   resetCardSavesForTests();
-  heldBack.taunts = true;
-  heldBack.titles = true;
 });
 
 if (!customElements.get("my-card-tab")) {
@@ -154,15 +140,13 @@ describe("<my-card-tab>", () => {
   }
   const tile = (key: string) => q(`[data-card-item='${key}']`) as HTMLElement;
 
-  it("taunts held back: no Taunt slot, even with a taunt saved", async () => {
-    heldBack.taunts = false;
+  it("held back: no Taunt slot, even with a taunt saved", async () => {
     await render(userMe(OWNER, { ...SAVED, taunt: "salute" }));
     expect(q("[data-my-card-slot='taunt']")).toBeNull();
     expect(q("[data-my-card-slot='background']")).not.toBeNull();
   });
 
-  it("taunts held back: saving sends the saved taunt back unchanged", async () => {
-    heldBack.taunts = false;
+  it("held back: saving sends the saved taunt back unchanged", async () => {
     api.save.mockImplementation(async (body: unknown) => ({
       ok: true,
       loadout: body,
@@ -176,15 +160,13 @@ describe("<my-card-tab>", () => {
     );
   });
 
-  it("titles held back: no Title slot, even with a title saved", async () => {
-    heldBack.titles = false;
+  it("held back: no Title slot, even with a title saved", async () => {
     await render(userMe(OWNER, { ...SAVED, title: "warmonger" }));
     expect(q("[data-my-card-slot='title']")).toBeNull();
     expect(q("[data-my-card-slot='trackers']")).not.toBeNull();
   });
 
-  it("titles held back: saving sends the saved title back unchanged", async () => {
-    heldBack.titles = false;
+  it("held back: saving sends the saved title back unchanged", async () => {
     api.save.mockImplementation(async (body: unknown) => ({
       ok: true,
       loadout: body,
@@ -196,16 +178,6 @@ describe("<my-card-tab>", () => {
       expect.objectContaining({ background: "bg_pacific", title: "warmonger" }),
       expect.any(Function),
     );
-  });
-
-  it("titles switched on: the Title slot shows", async () => {
-    await render(userMe(OWNER, SAVED));
-    expect(q("[data-my-card-slot='title']")).not.toBeNull();
-  });
-
-  it("taunts switched on: the Taunt slot shows", async () => {
-    await render(userMe(OWNER, SAVED));
-    expect(q("[data-my-card-slot='taunt']")).not.toBeNull();
   });
 
   it("tab shows a live preview and both balances", async () => {

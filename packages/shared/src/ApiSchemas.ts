@@ -751,8 +751,9 @@ export const UserMeResponseSchema = z.object({
     // as absent (the game server parses this at join, so it must never fail
     // the whole parse).
     card: UserMeCardSchema.nullable().optional().catch(undefined),
-    // "Mute taunts": turns off every card taunt for this player.
-    tauntsMuted: z.boolean().optional().catch(undefined),
+    // "Mute taunts": turns off every card taunt for this player. Fails closed:
+    // a malformed value reads as muted. (Taunts are held back; schema only.)
+    tauntsMuted: z.boolean().optional().catch(true),
     // "Hide my level": true when the player opted out of showing their level
     // to others. They still earn XP and see their own level; the game server
     // then leaves the badge off their lobby roster entry. Optional so an older

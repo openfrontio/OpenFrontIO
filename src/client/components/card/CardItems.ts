@@ -1,40 +1,32 @@
 import {
   type CardBackground,
-  type CardTitle,
   type CardTracker,
   cardTrackerNamedByStat,
   type PlayerCardItem,
-  type Taunt,
 } from "@openfront/shared/CosmeticSchemas";
 import { currentPrice, saleHasEnded } from "../../SalePrice";
 import { translateText } from "../../Utils";
 
-// The player card cosmetics, as the client lists and sells them.
+// The player card cosmetics, as the client lists and sells them. Titles and
+// taunts are held back: their schemas and catalogue entries stay, but the
+// client neither lists nor sells them.
 
 export const CARD_ITEM_TYPES = [
   "playerCard",
   "cardTracker",
   "cardBackground",
-  "cardTitle",
-  "taunt",
 ] as const;
 export type CardItemType = (typeof CARD_ITEM_TYPES)[number];
 
-export type CardItem =
-  | PlayerCardItem
-  | CardTracker
-  | CardBackground
-  | CardTitle
-  | Taunt;
+export type CardItem = PlayerCardItem | CardTracker | CardBackground;
 
 export function isCardItemType(type: string): type is CardItemType {
   return (CARD_ITEM_TYPES as readonly string[]).includes(type);
 }
 
-// The name a card item goes by in the UI: a title's own text, a tracker's
-// stat label, otherwise its translated name (falling back to the raw name).
+// The name a card item goes by in the UI: a tracker's stat label, otherwise
+// its translated name (falling back to the raw name).
 export function cardItemName(type: CardItemType, item: CardItem): string {
-  if (type === "cardTitle") return (item as CardTitle).text;
   if (type === "cardTracker") {
     return translateText(`player_card.tracker_${(item as CardTracker).stat}`);
   }

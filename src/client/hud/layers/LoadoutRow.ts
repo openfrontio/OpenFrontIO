@@ -12,10 +12,6 @@ import {
   isOfferedCardItem,
   cardPrices,
 } from "../../components/card/CardItems";
-import {
-  CARD_TAUNTS_ENABLED,
-  CARD_TITLES_ENABLED,
-} from "../../components/card/HeldBack";
 import type { PlayerCardView } from "../../components/card/PlayerCardModel";
 import "../../components/CosmeticCard";
 import "../../components/PurchaseButton";
@@ -68,8 +64,8 @@ function toItem(type: CardItemType, item: CardItem): LoadoutItem | null {
 
 /**
  * What to offer from `view` (the killer's card): the card itself if the
- * viewer lacks it, then background, taunt and title (only while switched on
- * in HeldBack.ts) and the killer's trackers.
+ * viewer lacks it, then the killer's background and trackers (titles and
+ * taunts are held back).
  * Anything the viewer owns, or that is neither sold nor earnable, is skipped.
  */
 export function loadoutItems(
@@ -90,15 +86,6 @@ export function loadoutItems(
       "cardBackground",
       cosmetics?.cardBackgrounds?.[view.background.name],
     ]);
-  }
-  if (view.taunt && CARD_TAUNTS_ENABLED) {
-    candidates.push(["taunt", cosmetics?.taunts?.[view.taunt.name]]);
-  }
-  if (view.title && CARD_TITLES_ENABLED) {
-    const title = Object.values(cosmetics?.cardTitles ?? {}).find(
-      (t) => t.text === view.title!.text,
-    );
-    candidates.push(["cardTitle", title]);
   }
   for (const t of view.trackers) {
     candidates.push(["cardTracker", cosmetics?.cardTrackers?.[t.stat]]);

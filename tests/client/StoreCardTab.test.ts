@@ -1,17 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
-}));
-const heldBack = vi.hoisted(() => ({ taunts: false, titles: false }));
-vi.mock("../../src/client/components/card/HeldBack", () => ({
-  get CARD_TAUNTS_ENABLED() {
-    return heldBack.taunts;
-  },
-  get CARD_TITLES_ENABLED() {
-    return heldBack.titles;
-  },
 }));
 vi.mock("../../src/client/Cosmetics", () => ({
   purchaseCosmetic: vi.fn(),
@@ -20,14 +11,6 @@ vi.mock("../../src/client/Cosmetics", () => ({
 import { StorePlacementSubTabSchema } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { CardStoreGrid } from "../../src/client/components/card/CardStoreGrid";
-
-// Taunts and titles are held back (HeldBack.ts). The tests below exercise
-// the code behind them with both switched on; the "held back" block turns
-// them off again.
-beforeEach(() => {
-  heldBack.taunts = true;
-  heldBack.titles = true;
-});
 
 if (!customElements.get("card-store-grid")) {
   customElements.define("card-store-grid", CardStoreGrid);
@@ -113,20 +96,13 @@ describe("<card-store-grid>", () => {
       ),
     ].map((e) => e.getAttribute("data-card-store-item"));
 
-  it("titles held back: no title items", async () => {
-    heldBack.titles = false;
+  it("no title items, even a sold one (held back)", async () => {
     await render();
     expect(keys().filter((k) => k!.startsWith("cardTitle:"))).toEqual([]);
     expect(keys()).toContain("cardTracker:wins");
   });
 
-  it("titles switched on: a sold title is listed", async () => {
-    await render();
-    expect(keys()).toContain("cardTitle:veteran");
-  });
-
-  it("taunts held back: no taunt items", async () => {
-    heldBack.taunts = false;
+  it("no taunt items, even a sold one (held back)", async () => {
     await render();
     expect(keys().filter((k) => k!.startsWith("taunt:"))).toEqual([]);
     expect(keys()).toContain("cardTracker:wins");
@@ -135,8 +111,7 @@ describe("<card-store-grid>", () => {
   it("card sub-tab lists paid card items only", async () => {
     await render();
     expect(keys()).not.toContain("cardBackground:bg_redplanet");
-    expect(keys()).not.toContain("cardTitle:warmonger");
-    expect(keys()).toContain("taunt:salute");
+    expect(keys()).toContain("cardBackground:bg_frontline");
   });
 
   it("a tracker whose name isn't its stat is never sold", async () => {
@@ -188,12 +163,12 @@ describe("<card-store-grid>", () => {
   });
 
   it("owned items show Owned, not a price", async () => {
-    await render(["taunt:salute"]);
-    const salute = (grid as unknown as Element).querySelector(
-      "[data-card-store-item='taunt:salute']",
+    await render(["cardTracker:wins"]);
+    const wins = (grid as unknown as Element).querySelector(
+      "[data-card-store-item='cardTracker:wins']",
     )!;
-    expect(salute.querySelector("purchase-button")).toBeNull();
-    expect(salute.textContent).toContain("my_card.owned");
+    expect(wins.querySelector("purchase-button")).toBeNull();
+    expect(wins.textContent).toContain("my_card.owned");
   });
 
   it("a sale that has ended shows the list price, not struck through", async () => {
