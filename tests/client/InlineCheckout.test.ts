@@ -376,6 +376,18 @@ describe("inline-checkout buyer email", () => {
     expect(google.session.createExpressCheckoutElement).toHaveBeenCalledWith({
       emailRequired: false,
     });
+
+    // So does an Apple login, whose address is often Apple's private relay.
+    document.body.innerHTML = "";
+    const apple = fakeSession();
+    createMock.mockResolvedValue(apple.session);
+    userMeMock.mockResolvedValue({
+      user: { apple: { email: "abc@privaterelay.appleid.com" } },
+    });
+    await renderComponent();
+    expect(apple.session.createExpressCheckoutElement).toHaveBeenCalledWith({
+      emailRequired: false,
+    });
   });
 
   it("rides the wallet-collected email on the confirm", async () => {
