@@ -46,6 +46,16 @@ import {
 import { JoinLobbyEvent } from "./Main";
 import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
 import { downloadSavedGame } from "./SavedGamesApi";
+import {
+  type ScenarioBundle,
+  ScenarioBundleError,
+} from "./scenario/ScenarioBundle";
+import {
+  scenarioPickerAllowed,
+  scenarioPlayErrorKey,
+} from "./scenario/ScenarioPicker";
+import "./scenario/ScenarioPickerPanel";
+import type { PlayScenarioDetail } from "./scenario/ScenarioPickerPanel";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { UsernameInput } from "./UsernameInput";
 import { UserSettings } from "./UserSettings";
@@ -557,6 +567,16 @@ export class SinglePlayerModal extends BaseModal {
             @open-shared-save=${(e: CustomEvent<string>) =>
               (this.sharedSaveId = e.detail)}
           ></saved-games-panel>
+          ${
+            scenarioPickerAllowed(this.userMeResponse)
+              ? html`<scenario-picker-panel
+                  class="block mb-6"
+                  .signedIn=${responseHasLinkedIdentity(this.userMeResponse)}
+                  .busy=${this.starting}
+                  @play-scenario=${this.handlePlayScenario}
+                ></scenario-picker-panel>`
+              : null
+          }
           <game-config-settings
             class="block"
             .sectionGapClass=${"space-y-6"}
@@ -718,6 +738,8 @@ export class SinglePlayerModal extends BaseModal {
       }
     }
     this.sharedSaveId = null;
+    // Drops a downloaded scenario bundle, which can be large.
+    this.querySelector("scenario-picker-panel")?.reset();
     this.resetOptions();
   }
 
@@ -1464,6 +1486,42 @@ export class SinglePlayerModal extends BaseModal {
           err instanceof SavedGameLoadError
             ? err.messageKey
             : "saved_games.error.load_failed",
+        ),
+      );
+    }
+  }
+
+  private handlePlayScenario = (e: Event) => {
+    const { bundle, nationID } = (e as CustomEvent<PlayScenarioDetail>).detail;
+    void this.startScenario(bundle, nationID);
+  };
+
+  /**
+   * Plays a published scenario as one of its nations, from the bundle the
+   * picker downloaded and checked. Like a saved game, it starts from a
+   * snapshot, so it is not archived and awards nothing.
+   */
+  private async startScenario(bundle: ScenarioBundle, nationID: string) {
+    if (this.starting) return;
+    try {
+      await this.launch(async ({ resolvedName, cosmetics }, usernameInput) => {
+        // It reads the snapshot on a worker (this page can't load the
+        // engine).
+        const { scenarioBundleGameStart } =
+          await import("./scenario/ScenarioStart");
+        return scenarioBundleGameStart(bundle, nationID, {
+          username: resolvedName.name,
+          clanTag: usernameInput?.getClanTag() ?? null,
+          cosmetics,
+        });
+      });
+    } catch (err) {
+      console.error("Failed to start the scenario", err);
+      await showInGameAlert(
+        translateText(
+          err instanceof ScenarioBundleError
+            ? scenarioPlayErrorKey(err.problem)
+            : "scenario_picker.error.start_failed",
         ),
       );
     }

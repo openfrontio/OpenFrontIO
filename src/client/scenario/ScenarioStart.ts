@@ -11,9 +11,22 @@ import {
   generateID,
   generateSingleplayerGameID,
 } from "@openfront/shared/SharedUtil";
+import type { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import type { JoinLobbyEvent } from "../Main";
 import { readSnapshotHeader } from "../WorkerClient";
-import { loadScenarioBundle, useScenarioMap } from "./ScenarioBundle";
+import {
+  loadScenarioBundle,
+  type ScenarioBundle,
+  ScenarioBundleError,
+  useScenarioMap,
+} from "./ScenarioBundle";
+
+/** Who plays the scenario's nation. */
+export interface ScenarioPlayer {
+  username: string;
+  clanTag: string | null;
+  cosmetics?: PlayerCosmetics;
+}
 
 /**
  * The join-lobby event for playing `nationID` in the bundle. A download
@@ -23,17 +36,38 @@ import { loadScenarioBundle, useScenarioMap } from "./ScenarioBundle";
 export async function scenarioGameStart(
   gzipped: Uint8Array,
   nationID: string,
-  player: { username: string; clanTag: string | null },
+  player: ScenarioPlayer,
   expectedHash?: string,
 ): Promise<JoinLobbyEvent> {
-  const bundle = await loadScenarioBundle(gzipped);
+  const bundle = await loadScenarioBundle(gzipped, expectedHash);
+  return scenarioBundleGameStart(bundle, nationID, player);
+}
+
+/**
+ * As scenarioGameStart, for a bundle already loaded (and checked against its
+ * listing). Throws a ScenarioBundleError if this build can't read the
+ * snapshot, as when a newer build exported it, or it isn't a singleplayer
+ * game.
+ */
+export async function scenarioBundleGameStart(
+  bundle: ScenarioBundle,
+  nationID: string,
+  player: ScenarioPlayer,
+): Promise<JoinLobbyEvent> {
   const { header, snapshot } = bundle;
-  if (expectedHash !== undefined && header.hash !== expectedHash) {
-    throw new Error("the bundle is not the scenario version asked for");
-  }
-  const { gameConfig } = await readSnapshotHeader(snapshot);
+  const { gameConfig } = await readSnapshotHeader(snapshot).catch(
+    (e: unknown) => {
+      throw new ScenarioBundleError(
+        "format",
+        `this build can't read the scenario's snapshot: ${String(e)}`,
+      );
+    },
+  );
   if (gameConfig.gameType !== GameType.Singleplayer) {
-    throw new Error("the scenario's snapshot is not a singleplayer game");
+    throw new ScenarioBundleError(
+      "malformed",
+      "the scenario's snapshot is not a singleplayer game",
+    );
   }
   useScenarioMap(bundle);
   const gameID = generateSingleplayerGameID();

@@ -2925,6 +2925,31 @@
     "water": "Water",
     "width": "Width"
   },
+  "scenario_picker": {
+    "downloading": "Downloading the scenario…",
+    "error": {
+      "hash": "The download doesn't match the published scenario. Try again.",
+      "incompatible": "This scenario was made with a newer version of the game. Reload the page to update, then try again.",
+      "malformed": "This scenario's file is damaged and can't be played.",
+      "no_playable": "This scenario has no nation you can play.",
+      "not_found": "This scenario is no longer available.",
+      "request_failed": "Couldn't reach the server. Check your connection and try again.",
+      "start_failed": "Couldn't start the scenario.",
+      "too_large": "This scenario is too large to load.",
+      "unauthorized": "Log in to see your scenarios."
+    },
+    "load_more": "Load more",
+    "loading": "Loading…",
+    "mine": "My scenarios",
+    "mine_empty": "You haven't published a scenario yet.",
+    "pick_nation": "Play as",
+    "play": "Play",
+    "retry": "Retry",
+    "shared": "Shared",
+    "shared_empty": "No scenarios have been shared yet.",
+    "starting": "Starting…",
+    "title": "Scenarios"
+  },
   "select_lang": {
     "title": "Select Language",
     "translated": "{percent}% translated"
