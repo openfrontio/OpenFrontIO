@@ -4,6 +4,11 @@ const save = vi.hoisted(() => vi.fn());
 vi.mock("../../src/client/CardLoadoutApi", () => ({
   saveCardLoadout: save,
 }));
+// The account the session's token belongs to.
+const auth = vi.hoisted(() => ({ publicId: "a" as string | null }));
+vi.mock("../../src/client/Auth", () => ({
+  currentPublicId: () => auth.publicId,
+}));
 
 import type { CardLoadoutBody } from "../../src/client/CardLoadoutApi";
 import {
@@ -24,6 +29,7 @@ const loadout = (background: string | null): CardLoadoutBody => ({
 let waiting: ((ok: boolean) => void)[] = [];
 beforeEach(() => {
   resetCardSavesForTests();
+  auth.publicId = "a";
   save.mockReset();
   waiting = [];
   save.mockImplementation(
@@ -149,6 +155,41 @@ describe("CardSaveQueue", () => {
     expect(guard!()).toBe(true);
     document.dispatchEvent(new CustomEvent("session-cleared"));
     expect(guard!()).toBe(false);
+  });
+
+  it("sends nothing once the token belongs to another account", async () => {
+    // A refresh that picked up another tab's sign-in fires no session
+    // event: the guard checks whose token it is.
+    let guard: (() => boolean) | undefined;
+    save.mockImplementationOnce(
+      (_body: CardLoadoutBody, stillWanted: () => boolean) => {
+        guard = stillWanted;
+        return new Promise(() => {});
+      },
+    );
+    void requestCardSave("a", loadout("a"));
+    await tick();
+    expect(guard!()).toBe(true);
+    auth.publicId = "b";
+    expect(guard!()).toBe(false);
+    auth.publicId = null;
+    expect(guard!()).toBe(false);
+  });
+
+  it("a cancelled run whose next PUT fails reports cancelled", async () => {
+    // Its first PUT was stored, then the run was dropped: the failure of
+    // the PUT after it must not hand that superseded loadout back.
+    const run = requestCardSave("a", loadout("a"));
+    await tick();
+    void requestCardSave("a", loadout("b"));
+    waiting.shift()!(true);
+    await tick();
+    document.dispatchEvent(new CustomEvent("session-cleared"));
+    waiting.shift()!(false);
+    expect(await run).toEqual({
+      result: { ok: false, error: "cancelled" },
+      saved: loadout("a"),
+    });
   });
 
   it("a run cancelled with its last PUT out never reports success", async () => {

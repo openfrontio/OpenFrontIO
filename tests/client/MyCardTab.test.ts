@@ -396,6 +396,26 @@ describe("<my-card-tab>", () => {
     expect(q("[data-my-card-error]")).toBeNull();
   });
 
+  it("Reset never offers a loadout from a save that was dropped", async () => {
+    // A tab opened mid-save resets to that save's loadout. Once the save is
+    // dropped (a sign-out while it ran), Reset goes to what the server
+    // confirmed instead.
+    const calls = deferredSaves();
+    const me = userMe(OWNER, SAVED);
+    await render(me);
+    tile("cardBackground:bg_pacific").click();
+    await settle();
+    tab.remove();
+    await render(me);
+    expect(tile("cardBackground:bg_pacific").dataset.state).toBe("equipped");
+    document.dispatchEvent(new CustomEvent("session-cleared"));
+    calls[0].answer(true);
+    await settle();
+    expect(tile("cardBackground:bg_pacific").dataset.state).toBe("owned");
+    expect((q("[data-my-card-reset]") as HTMLButtonElement).hidden).toBe(true);
+    expect(calls).toHaveLength(1);
+  });
+
   it("takes the loadout the server stored, and tells the host", async () => {
     // The server's answer is the truth (it may drop or reorder): that is
     // what the tab holds and what it hands up in card-saved.

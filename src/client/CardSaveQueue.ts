@@ -3,6 +3,7 @@ import {
   type SaveCardResult,
   saveCardLoadout,
 } from "./CardLoadoutApi";
+import { currentPublicId } from "./Auth";
 
 // Card saves, shared by every editor (a My Card tab, and one made after
 // the player left it and came back). Each PUT replaces the whole loadout,
@@ -76,15 +77,21 @@ export function requestCardSave(
         const sending = run.wanted;
         // Checked again once the token is read: that can wait on a JWT
         // refresh, and a sign-out meanwhile must not send this loadout
-        // under the next session's token.
-        const result = await saveCardLoadout(sending, () => !run.cancelled);
-        if (!result.ok) return { result, saved };
-        saved = result.loadout;
+        // under the next session's token. The token must also still be this
+        // account's: a refresh can pick up another tab's sign-in, which
+        // fires no session event here.
+        const result = await saveCardLoadout(
+          sending,
+          () => !run.cancelled && currentPublicId() === run.publicId,
+        );
+        if (result.ok) saved = result.loadout;
         // Cancelled while the PUT was out: a newer run (or session) owns the
-        // card now, so this one never reports success.
+        // card now, so this one never reports success, nor a failure that
+        // would hand back what it stored as the card.
         if (run.cancelled) {
           return { result: { ok: false, error: "cancelled" }, saved };
         }
+        if (!result.ok) return { result, saved };
         if (run.wanted === sending) return { result, saved };
       }
     } finally {
