@@ -183,30 +183,34 @@ export function flickerOn(
 
 // ---- The controller. ----
 
-// Slow frames are judged against the display's own cadence, not a fixed
-// 60 Hz budget: a 30 fps cap (Low Power Mode, battery saver, a 30 Hz panel,
-// a throttled iframe) is a steady display, not a slow one.
-//  - The cadence is the median of the first CADENCE_FRAMES intervals.
-//  - Over each SLOW_WINDOW_MS window, the card stops if the average frame
-//    passes SLOWDOWN × cadence (and SLOW_FRAME_MS), or if it stutters
-//    (a frame over STUTTER × cadence) STUTTERS_TO_STOP times or more.
-//  - Outside a game, a cadence slower than MIN_FPS_MS stops it too.
+// Slow frames, judged per SLOW_WINDOW_MS window. A steady display at any
+// rate from 20 fps up animates, whenever that rate starts: a 30 fps cap
+// (Low Power Mode, battery saver, a 30 Hz panel, a throttled iframe) is a
+// steady display, not a slow one.
+//  - The cadence is the median of CADENCE_FRAMES intervals, measured when
+//    the card starts, again after every pause, and again when a game starts
+//    or ends under it.
+//  - Outside a game, a card stops when a window averages under 20 fps
+//    (MIN_FPS_MS), or stutters (a frame over STUTTER × cadence and
+//    MAX_COUNTED_FRAME_MS) STUTTERS_TO_STOP times in one window.
 //  - While a game renders (`body.in-game`, the end screens over a live map),
-//    the frame time is mostly the game's: its steady load is part of the
-//    cadence, only a slowdown of IN_GAME_SLOWDOWN × cadence counts, and
-//    stutters and the MIN_FPS floor don't.
+//    the frame time is mostly the game's, so its steady load is part of the
+//    cadence: a card stops when a window averages over IN_GAME_SLOWDOWN ×
+//    cadence, never below MIN_FPS_MS and always by IN_GAME_MIN_FPS_MS
+//    (8 fps). Frames count up to 4 × cadence there, so the limit can always
+//    be reached. No stutter rule.
 // A stop holds for that surface (the player card size: "end", "account"…)
 // for the rest of the session; other surfaces keep animating.
 const CADENCE_FRAMES = 20;
-const SLOW_FRAME_MS = 25;
-const SLOWDOWN = 1.5;
-const IN_GAME_SLOWDOWN = 2;
 const MIN_FPS_MS = 50;
+const IN_GAME_SLOWDOWN = 2;
+const IN_GAME_MIN_FPS_MS = 125;
 const STUTTER = 4;
 const STUTTERS_TO_STOP = 2;
 const SLOW_WINDOW_MS = 2000;
-// A frame counts for at most this long, so one long stall (a chunk loading,
-// a GC pause) can't stop a card alone.
+// A frame counts for at most this long (in a game, at least STUTTER ×
+// cadence), so one long stall (a chunk loading, a GC pause) can't stop a
+// card alone.
 const MAX_COUNTED_FRAME_MS = 100;
 // The flicker schedule repeats after this many seconds.
 const FLICKER_LOOP_S = 600;
@@ -522,11 +526,18 @@ export class CardFx {
     } else if (!run && this.raf !== null) {
       cancelAnimationFrame(this.raf);
       this.raf = null;
-      // A pause isn't a slow frame: timing and the frame window restart.
+      // A pause isn't a slow frame: timing and the frame window restart,
+      // and the display may come back at another rate, so measure again.
       this.last = null;
-      this.resetWindow();
+      this.remeasure();
     }
   };
+
+  private remeasure(): void {
+    this.cadence = null;
+    this.intervals = [];
+    this.resetWindow();
+  }
 
   private resetWindow(): void {
     this.windowMs = 0;
@@ -536,23 +547,24 @@ export class CardFx {
 
   // Counts one frame interval; true when this surface should stop.
   private tooSlow(dt: number): boolean {
-    const counted = Math.min(dt, MAX_COUNTED_FRAME_MS);
     const inGame = gameRendering();
+    // A game started or ended under the card: measure again.
     if (this.cadence !== null && inGame !== this.cadenceInGame) {
-      // A game started or ended under the card: measure again.
-      this.cadence = null;
-      this.intervals = [];
-      this.resetWindow();
+      this.remeasure();
     }
     if (this.cadence === null) {
-      this.intervals.push(counted);
-      if (this.intervals.length < CADENCE_FRAMES) return false;
-      this.cadence = median(this.intervals);
-      this.cadenceInGame = inGame;
-      this.intervals = [];
-      return !inGame && this.cadence > MIN_FPS_MS;
+      this.intervals.push(Math.min(dt, MAX_COUNTED_FRAME_MS));
+      if (this.intervals.length >= CADENCE_FRAMES) {
+        this.cadence = median(this.intervals);
+        this.cadenceInGame = inGame;
+        this.intervals = [];
+      }
+      return false;
     }
-    this.windowMs += counted;
+    const cap = inGame
+      ? Math.max(MAX_COUNTED_FRAME_MS, STUTTER * this.cadence)
+      : MAX_COUNTED_FRAME_MS;
+    this.windowMs += Math.min(dt, cap);
     this.windowFrames++;
     if (
       !inGame &&
@@ -563,8 +575,11 @@ export class CardFx {
     if (this.windowMs < SLOW_WINDOW_MS) return false;
     const average = this.windowMs / this.windowFrames;
     const limit = inGame
-      ? IN_GAME_SLOWDOWN * this.cadence
-      : Math.max(SLOW_FRAME_MS, SLOWDOWN * this.cadence);
+      ? Math.min(
+          Math.max(MIN_FPS_MS, IN_GAME_SLOWDOWN * this.cadence),
+          IN_GAME_MIN_FPS_MS,
+        )
+      : MIN_FPS_MS;
     const slow = average > limit || this.windowStutters >= STUTTERS_TO_STOP;
     this.resetWindow();
     return slow;

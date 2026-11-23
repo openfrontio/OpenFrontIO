@@ -357,9 +357,9 @@ describe("<card-background> effect layers", () => {
 
   it("a real slowdown stops the card, and its surface stays still", async () => {
     const el = await running(NEON, "account");
-    // A 60 Hz display, then 2.5x slower for 3 s.
+    // A 60 Hz display, then under 20 fps for 6 s.
     const now = frames(0, 1000, 16);
-    frames(now + 40, now + 3000, 40);
+    frames(now + 70, now + 6000, 70);
     expect(cardFxStopped("account")).toBe(true);
     expect(layerEls(el)).toHaveLength(0);
     expect(rafCallbacks.size).toBe(0);
@@ -407,10 +407,78 @@ describe("<card-background> effect layers", () => {
     expect(cardFxStopped("end")).toBe(true);
   });
 
+  it("a 30 fps cap that starts mid-session keeps animating", async () => {
+    // e.g. Low Power Mode or battery saver turning on under a 60 Hz card.
+    const el = await running(NEON, "account");
+    const now = frames(0, 2000, 16);
+    frames(now + 33, now + 20_000, 33);
+    expect(cardFxStopped("account")).toBe(false);
+    expect(layerEls(el)).toHaveLength(2);
+  });
+
+  it("measures the cadence again after a pause", async () => {
+    // 60 Hz, then the tab comes back capped at 25 fps with a 150 ms frame
+    // every 25 frames. Against the old 16 ms cadence those are stutters;
+    // against the new 40 ms one they aren't.
+    const el = await running(NEON, "account");
+    let now = frames(0, 2000, 16);
+    setHidden(true);
+    setHidden(false);
+    for (let i = 0; i < 500; i++) {
+      now += i % 25 === 24 ? 150 : 40;
+      frame(now);
+    }
+    expect(cardFxStopped("account")).toBe(false);
+    expect(layerEls(el)).toHaveLength(2);
+  });
+
+  it("a game starting and ending under a running card measures again", async () => {
+    const el = await running(NEON, "end");
+    let now = frames(0, 2000, 16);
+    // The game's own load: a steady 60 ms. Measured against 60 Hz this
+    // would be a slowdown; measured again, it's the game's cadence.
+    document.body.classList.add("in-game");
+    now = frames(now + 60, now + 15_000, 60);
+    expect(cardFxStopped("end")).toBe(false);
+    // The game ends: back to 60 Hz, then under 20 fps outside a game stops.
+    document.body.classList.remove("in-game");
+    now = frames(now + 16, now + 3000, 16);
+    expect(cardFxStopped("end")).toBe(false);
+    expect(layerEls(el)).toHaveLength(2);
+    frames(now + 70, now + 5000, 70);
+    expect(cardFxStopped("end")).toBe(true);
+  });
+
+  it("a slow game cadence that collapses still stops", async () => {
+    // A 20 fps game (50 ms) that drops to 2 fps.
+    document.body.classList.add("in-game");
+    await running(NEON, "end");
+    const now = frames(0, 2000, 50);
+    frames(now + 500, now + 20_000, 500);
+    expect(cardFxStopped("end")).toBe(true);
+  });
+
+  it("a 30 fps cap during a 60 Hz game keeps animating", async () => {
+    document.body.classList.add("in-game");
+    const el = await running(NEON, "end");
+    const now = frames(0, 2000, 16);
+    frames(now + 33, now + 20_000, 33);
+    expect(cardFxStopped("end")).toBe(false);
+    expect(layerEls(el)).toHaveLength(2);
+  });
+
+  it("the 20 fps floor holds after a high cadence was measured", async () => {
+    // Measured at 45 ms during a heavy modal, then a steady 65 ms.
+    await running(NEON, "account");
+    const now = frames(0, 1000, 45);
+    frames(now + 65, now + 10_000, 65);
+    expect(cardFxStopped("account")).toBe(true);
+  });
+
   it("a stop is scoped to its surface", async () => {
     const end = await running(NEON, "end");
     const now = frames(0, 1000, 16);
-    frames(now + 40, now + 3000, 40);
+    frames(now + 70, now + 6000, 70);
     expect(cardFxStopped("end")).toBe(true);
     expect(layerEls(end)).toHaveLength(0);
 
