@@ -689,9 +689,9 @@ describe("NukeExecution alliance break threshold", () => {
     launcher.buildUnit(UnitType.MissileSilo, g.ref(1, 1), {});
     launcher.createAllianceRequest(ally)!.accept();
 
-    // A 10-wide strip next to the target, all within the blast radius.
+    // A 20-wide strip around the target, all within the blast radius.
     for (let i = 0; i < tileCount; i++) {
-      ally.conquer(g.ref(90 + (i % 10), 90 + Math.floor(i / 10)));
+      ally.conquer(g.ref(90 + (i % 20), 90 + Math.floor(i / 20)));
     }
 
     g.addExecution(
@@ -704,7 +704,7 @@ describe("NukeExecution alliance break threshold", () => {
 
   test.each([
     [UnitType.AtomBomb, 150],
-    [UnitType.HydrogenBomb, 300],
+    [UnitType.HydrogenBomb, 500],
   ] as const)("%s keeps the alliance at %i allied tiles", async (type, n) => {
     const { launcher, ally } = await allianceWithTiles(type, n);
     expect(launcher.isAlliedWith(ally)).toBe(true);
@@ -713,7 +713,7 @@ describe("NukeExecution alliance break threshold", () => {
 
   test.each([
     [UnitType.AtomBomb, 151],
-    [UnitType.HydrogenBomb, 301],
+    [UnitType.HydrogenBomb, 501],
   ] as const)("%s breaks the alliance at %i allied tiles", async (type, n) => {
     const { launcher, ally } = await allianceWithTiles(type, n);
     expect(launcher.isAlliedWith(ally)).toBe(false);
