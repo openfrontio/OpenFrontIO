@@ -18,8 +18,16 @@ const tsc = path.join(
 );
 const dirs: string[] = [];
 
-/** Lay out the package as installed, plus `consumer.ts`, and compile it. */
-function compile(consumer: string): { ok: boolean; output: string } {
+/**
+ * Lay out the package as installed, plus `consumer.ts`, and compile it. With
+ * `againstSource`, the consumer is compiled with the repo's own settings (so it
+ * can import the real entry), plus strict function types.
+ */
+function compile(
+  consumer: string,
+  againstSource = false,
+  checksDts = CHECKS_DTS,
+): { ok: boolean; output: string } {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cosmetic-preview-types-"));
   dirs.push(dir);
   const pkg = path.join(dir, "node_modules", "@openfront", "cosmetic-preview");
@@ -29,7 +37,7 @@ function compile(consumer: string): { ok: boolean; output: string } {
     "utf8",
   );
   fs.writeFileSync(path.join(pkg, "index.d.ts"), indexDts(api));
-  fs.writeFileSync(path.join(pkg, "checks.d.ts"), CHECKS_DTS);
+  fs.writeFileSync(path.join(pkg, "checks.d.ts"), checksDts);
   fs.writeFileSync(
     path.join(pkg, "package.json"),
     JSON.stringify({
@@ -44,19 +52,7 @@ function compile(consumer: string): { ok: boolean; output: string } {
   fs.writeFileSync(path.join(dir, "consumer.ts"), consumer);
   fs.writeFileSync(
     path.join(dir, "tsconfig.json"),
-    JSON.stringify({
-      compilerOptions: {
-        strict: true,
-        noEmit: true,
-        target: "ES2022",
-        module: "ESNext",
-        moduleResolution: "bundler",
-        lib: ["ES2022", "DOM"],
-        types: [],
-        skipLibCheck: false,
-      },
-      files: ["consumer.ts"],
-    }),
+    JSON.stringify(againstSource ? sourceTsconfig() : standaloneTsconfig()),
   );
   try {
     const output = execFileSync(process.execPath, [tsc, "-p", dir], {
@@ -68,6 +64,89 @@ function compile(consumer: string): { ok: boolean; output: string } {
     return { ok: false, output: `${e.stdout ?? ""}${e.stderr ?? ""}` };
   }
 }
+
+/** A host's own settings: strict, with nothing from this repo. */
+function standaloneTsconfig(): object {
+  return {
+    compilerOptions: {
+      strict: true,
+      noEmit: true,
+      target: "ES2022",
+      module: "ESNext",
+      moduleResolution: "bundler",
+      lib: ["ES2022", "DOM"],
+      types: [],
+      skipLibCheck: false,
+    },
+    files: ["consumer.ts"],
+  };
+}
+
+/**
+ * The repo's settings, so the real entry and its imports compile, plus strict
+ * function types: without them a parameter that went from optional to
+ * required would still be assignable both ways.
+ */
+function sourceTsconfig(): object {
+  return {
+    extends: path.join(root, "tsconfig.json").split(path.sep).join("/"),
+    // No ambient types: the consumer needs none, and they resolve from the repo.
+    compilerOptions: { noEmit: true, strictFunctionTypes: true, types: [] },
+    include: [],
+    files: ["consumer.ts"],
+  };
+}
+
+// Each export of the declared entry (D) against the real one (R): assignable
+// both ways, and identical where both sides are written out alike.
+const SOURCE = path
+  .join(root, "src", "client", "cosmetic-preview", "checks")
+  .split(path.sep)
+  .join("/");
+const ANIMATION = path
+  .join(root, "packages", "shared", "src", "CardBackgroundAnimation")
+  .split(path.sep)
+  .join("/");
+const AGAINST_SOURCE = `
+import type * as D from "@openfront/cosmetic-preview/checks";
+import type * as R from "${SOURCE}";
+import type { LayerAnimation } from "${ANIMATION}";
+
+// Assignable both ways: real to declared, and declared to real.
+declare function both<A, B>(
+  toDeclared: (real: B) => A,
+  toReal: (declared: A) => B,
+): void;
+declare const id: <T>(x: T) => T;
+
+both<typeof D.parseCardAnimation, typeof R.parseCardAnimation>(id, id);
+both<typeof D.checkCardBackground, typeof R.checkCardBackground>(id, id);
+both<typeof D.isCatalogueLayerSrc, typeof R.isCatalogueLayerSrc>(id, id);
+both<D.LayerSrcOptions, R.LayerSrcOptions>(id, id);
+both<D.CardLayerAnimation, LayerAnimation>(id, id);
+both<D.CardAnimationResult, R.CardAnimationResult>(id, id);
+both<typeof D.CARD_ART_WIDTH, typeof R.CARD_ART_WIDTH>(id, id);
+both<typeof D.CARD_ART_HEIGHT, typeof R.CARD_ART_HEIGHT>(id, id);
+both<typeof D.MAX_SET_BYTES, typeof R.MAX_SET_BYTES>(id, id);
+both<typeof D.MAX_LAYERS, typeof R.MAX_LAYERS>(id, id);
+
+// Identical: also catches an optional member or parameter added on one side.
+type Same<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2
+    ? true
+    : false;
+declare function same<A, B>(ok: Same<A, B>): void;
+same<D.LayerSrcOptions, R.LayerSrcOptions>(true);
+same<D.CardLayerAnimation, LayerAnimation>(true);
+same<D.CardLayerAnimation["layers"][number], LayerAnimation["layers"][number]>(true);
+same<Parameters<typeof D.parseCardAnimation>, Parameters<typeof R.parseCardAnimation>>(true);
+same<Parameters<typeof D.isCatalogueLayerSrc>, Parameters<typeof R.isCatalogueLayerSrc>>(true);
+same<Parameters<typeof D.checkCardBackground>[1 | 2], Parameters<typeof R.checkCardBackground>[1 | 2]>(true);
+same<typeof D.CARD_ART_WIDTH, typeof R.CARD_ART_WIDTH>(true);
+same<typeof D.CARD_ART_HEIGHT, typeof R.CARD_ART_HEIGHT>(true);
+same<typeof D.MAX_SET_BYTES, typeof R.MAX_SET_BYTES>(true);
+same<typeof D.MAX_LAYERS, typeof R.MAX_LAYERS>(true);
+`;
 
 afterAll(() => {
   for (const dir of dirs) fs.rmSync(dir, { recursive: true, force: true });
@@ -113,6 +192,48 @@ checkCardBackground(files, {}, { allowedLayerHosts: "https://cdn.example.com" })
       "error TS2322: Type 'string' is not assignable to type 'readonly string[]'",
     );
   }, 60_000);
+
+  test("every export matches the real entry's type, both ways", () => {
+    const result = compile(AGAINST_SOURCE, true);
+    expect(result.output).toBe("");
+    expect(result.ok).toBe(true);
+  }, 120_000);
+
+  test.each([
+    [
+      "a required option",
+      "  allowedLayerHosts?: readonly string[];\n}",
+      "  allowedLayerHosts?: readonly string[];\n  bucket: string;\n}",
+    ],
+    [
+      "an extra optional option",
+      "  allowedLayerHosts?: readonly string[];\n}",
+      "  allowedLayerHosts?: readonly string[];\n  bucket?: string;\n}",
+    ],
+    [
+      "a required parameter",
+      "  input: unknown,\n  options?: LayerSrcOptions,\n): CardAnimationResult;",
+      "  input: unknown,\n  options: LayerSrcOptions,\n): CardAnimationResult;",
+    ],
+    [
+      "a dropped parameter",
+      "  animation: unknown,\n  options?: LayerSrcOptions,\n): CardIssue[];",
+      "  animation: unknown,\n): CardIssue[];",
+    ],
+    ["a wider return", "): boolean;", "): boolean | string;"],
+    ["a different constant", "MAX_LAYERS: 3;", "MAX_LAYERS: 4;"],
+    ["a missing animation field", "    angle?: number;\n", ""],
+  ])(
+    "fails on drift: %s",
+    (_, from, to) => {
+      expect(CHECKS_DTS).toContain(from);
+      const drifted = CHECKS_DTS.replace(from, to);
+      const result = compile(AGAINST_SOURCE, true, drifted);
+      expect(result.ok).toBe(false);
+      expect(result.output).toContain("consumer.ts");
+    },
+    120_000,
+  );
 
   test("declares every runtime export of the checks entry, and nothing else", () => {
     const declared = [
