@@ -21,6 +21,8 @@ const discord: User["discord"] = {
   discriminator: "0",
 };
 const google: User["google"] = { email: "player@example.com" };
+// A hidden-email Apple account: Apple's relay address.
+const apple: User["apple"] = { email: "abc@privaterelay.appleid.com" };
 const email = "player@example.com";
 
 describe("isSteamPrimaryUser", () => {
@@ -28,6 +30,7 @@ describe("isSteamPrimaryUser", () => {
     ["steam-only", { steam }, true],
     ["steam + discord", { steam, discord }, false],
     ["steam + google", { steam, google }, false],
+    ["steam + apple", { steam, apple }, false],
     ["steam + email", { steam, email }, false],
     ["no steam", { discord }, false],
     ["undefined user", undefined, false],
@@ -40,6 +43,9 @@ describe("hasLinkedIdentity", () => {
   it.each<[string, User | undefined, boolean]>([
     ["discord", { discord }, true],
     ["google", { google }, true],
+    ["apple", { apple }, true],
+    // Apple may share no email at all; the identity still counts.
+    ["apple without an email", { apple: {} }, true],
     ["steam", { steam }, true],
     ["email", { email }, true],
     // The case that motivated extracting this: an empty-string `email` must
