@@ -183,33 +183,72 @@ export function flickerOn(
 
 // ---- The controller. ----
 
-// Average frame time above this for SLOW_WINDOW_MS stops every animated card
-// for the rest of the session.
+// Slow frames are judged against the display's own cadence, not a fixed
+// 60 Hz budget: a 30 fps cap (Low Power Mode, battery saver, a 30 Hz panel,
+// a throttled iframe) is a steady display, not a slow one.
+//  - The cadence is the median of the first CADENCE_FRAMES intervals.
+//  - Over each SLOW_WINDOW_MS window, the card stops if the average frame
+//    passes SLOWDOWN × cadence (and SLOW_FRAME_MS), or if it stutters
+//    (a frame over STUTTER × cadence) STUTTERS_TO_STOP times or more.
+//  - Outside a game, a cadence slower than MIN_FPS_MS stops it too.
+//  - While a game renders (`body.in-game`, the end screens over a live map),
+//    the frame time is mostly the game's: its steady load is part of the
+//    cadence, only a slowdown of IN_GAME_SLOWDOWN × cadence counts, and
+//    stutters and the MIN_FPS floor don't.
+// A stop holds for that surface (the player card size: "end", "account"…)
+// for the rest of the session; other surfaces keep animating.
+const CADENCE_FRAMES = 20;
 const SLOW_FRAME_MS = 25;
+const SLOWDOWN = 1.5;
+const IN_GAME_SLOWDOWN = 2;
+const MIN_FPS_MS = 50;
+const STUTTER = 4;
+const STUTTERS_TO_STOP = 2;
 const SLOW_WINDOW_MS = 2000;
-// A frame counts for at most this long: one long stall (a chunk loading, a
-// GC pause) can't stop the session alone, but a device that keeps stalling,
-// or runs under 10 fps, still averages over SLOW_FRAME_MS.
+// A frame counts for at most this long, so one long stall (a chunk loading,
+// a GC pause) can't stop a card alone.
 const MAX_COUNTED_FRAME_MS = 100;
 // The flicker schedule repeats after this many seconds.
 const FLICKER_LOOP_S = 600;
+// The surface of a card outside any <player-card>.
+const DEFAULT_SURFACE = "card";
 
-let sessionStopped = false;
+const stoppedSurfaces = new Set<string>();
 const live = new Set<CardFx>();
 
-// Whether slow frames stopped animation for this session.
-export function cardFxStopped(): boolean {
-  return sessionStopped;
+// Whether slow frames stopped animation on this surface for the session.
+export function cardFxStopped(surface = DEFAULT_SURFACE): boolean {
+  return stoppedSurfaces.has(surface);
 }
 
-// Tests only: forget a slow-frame stop.
+// Tests only: forget every slow-frame stop.
 export function resetCardFxSession(): void {
-  sessionStopped = false;
+  stoppedSurfaces.clear();
 }
 
-function stopSession(): void {
-  sessionStopped = true;
-  for (const fx of [...live]) fx.destroy();
+function stopSurface(surface: string): void {
+  stoppedSurfaces.add(surface);
+  for (const fx of [...live]) if (fx.surface === surface) fx.destroy();
+}
+
+// A card's surface: the size of the <player-card> it sits in.
+export function cardSurface(el: Element): string {
+  return (
+    el.closest("[data-player-card]")?.getAttribute("data-player-card") ??
+    DEFAULT_SURFACE
+  );
+}
+
+function gameRendering(): boolean {
+  return document.body.classList.contains("in-game");
+}
+
+function median(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = sorted.length >> 1;
+  return sorted.length % 2 === 1
+    ? sorted[mid]
+    : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
@@ -244,13 +283,14 @@ export function onReducedMotionChange(cb: () => void): () => void {
 
 // The effect layers a card should play, or null for a still image: not an
 // animated surface, reduced motion, a mask (no shader yet), an animation
-// this client can't read, or the session stopped for slow frames.
+// this client can't read, or slow frames stopped this surface.
 export function playableAnimation(
   animated: boolean,
   animation: unknown,
+  surface = DEFAULT_SURFACE,
 ): LayerAnimation | null {
   if (!animated || animation === undefined || animation === null) return null;
-  if (sessionStopped || prefersReducedMotion()) return null;
+  if (stoppedSurfaces.has(surface) || prefersReducedMotion()) return null;
   const parsed = LayerAnimationSchema.safeParse(animation);
   return parsed.success ? parsed.data : null;
 }
@@ -285,6 +325,12 @@ export class CardFx {
   private t = 0;
   private windowMs = 0;
   private windowFrames = 0;
+  private windowStutters = 0;
+  // The display's cadence (ms per frame), once measured, and whether a game
+  // was rendering when it was.
+  private cadence: number | null = null;
+  private cadenceInGame = false;
+  private intervals: number[] = [];
   private flashes: Flash[] | null = null;
 
   constructor(
@@ -293,10 +339,18 @@ export class CardFx {
     private readonly animation: LayerAnimation,
     // The background's id: seeds flicker so it looks the same everywhere.
     private readonly seed: string,
+    // Where the card is shown; a slow-frame stop holds for this surface.
+    readonly surface: string = DEFAULT_SURFACE,
   ) {}
 
   start(): void {
-    if (this.destroyed || sessionStopped || this.mounted.length > 0) return;
+    if (
+      this.destroyed ||
+      stoppedSurfaces.has(this.surface) ||
+      this.mounted.length > 0
+    ) {
+      return;
+    }
     live.add(this);
     this.container.style.visibility = "hidden";
     for (const layer of this.animation.layers) {
@@ -460,7 +514,7 @@ export class CardFx {
     const run =
       this.ready &&
       !this.destroyed &&
-      !sessionStopped &&
+      !stoppedSurfaces.has(this.surface) &&
       this.onScreen &&
       !document.hidden;
     if (run && this.raf === null) {
@@ -470,25 +524,60 @@ export class CardFx {
       this.raf = null;
       // A pause isn't a slow frame: timing and the frame window restart.
       this.last = null;
-      this.windowMs = 0;
-      this.windowFrames = 0;
+      this.resetWindow();
     }
   };
+
+  private resetWindow(): void {
+    this.windowMs = 0;
+    this.windowFrames = 0;
+    this.windowStutters = 0;
+  }
+
+  // Counts one frame interval; true when this surface should stop.
+  private tooSlow(dt: number): boolean {
+    const counted = Math.min(dt, MAX_COUNTED_FRAME_MS);
+    const inGame = gameRendering();
+    if (this.cadence !== null && inGame !== this.cadenceInGame) {
+      // A game started or ended under the card: measure again.
+      this.cadence = null;
+      this.intervals = [];
+      this.resetWindow();
+    }
+    if (this.cadence === null) {
+      this.intervals.push(counted);
+      if (this.intervals.length < CADENCE_FRAMES) return false;
+      this.cadence = median(this.intervals);
+      this.cadenceInGame = inGame;
+      this.intervals = [];
+      return !inGame && this.cadence > MIN_FPS_MS;
+    }
+    this.windowMs += counted;
+    this.windowFrames++;
+    if (
+      !inGame &&
+      dt > Math.max(STUTTER * this.cadence, MAX_COUNTED_FRAME_MS)
+    ) {
+      this.windowStutters++;
+    }
+    if (this.windowMs < SLOW_WINDOW_MS) return false;
+    const average = this.windowMs / this.windowFrames;
+    const limit = inGame
+      ? IN_GAME_SLOWDOWN * this.cadence
+      : Math.max(SLOW_FRAME_MS, SLOWDOWN * this.cadence);
+    const slow = average > limit || this.windowStutters >= STUTTERS_TO_STOP;
+    this.resetWindow();
+    return slow;
+  }
 
   private tick = (now: number): void => {
     this.raf = null;
     if (this.last !== null) {
       const dt = now - this.last;
       this.t += dt / 1000;
-      this.windowMs += Math.min(dt, MAX_COUNTED_FRAME_MS);
-      this.windowFrames++;
-      if (this.windowMs >= SLOW_WINDOW_MS) {
-        if (this.windowMs / this.windowFrames > SLOW_FRAME_MS) {
-          stopSession();
-          return;
-        }
-        this.windowMs = 0;
-        this.windowFrames = 0;
+      if (this.tooSlow(dt)) {
+        stopSurface(this.surface);
+        return;
       }
     }
     this.last = now;

@@ -124,18 +124,49 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   setHidden(false);
+  document.body.classList.remove("in-game");
 });
 
+// `surface` puts the card inside a player card of that size, the way
+// <player-card> does ("end", "account"…); without it the card is unscoped.
 async function mount(
   background: PlayerCardView["background"],
   animated = true,
+  surface?: string,
 ): Promise<CardBackground> {
   const el = document.createElement("card-background") as CardBackground;
   el.background = background;
   el.animated = animated;
-  document.body.appendChild(el);
+  if (surface === undefined) {
+    document.body.appendChild(el);
+  } else {
+    const card = document.createElement("section");
+    card.dataset.playerCard = surface;
+    card.appendChild(el);
+    document.body.appendChild(card);
+  }
   await el.updateComplete;
   return el;
+}
+
+// Mounts a running animated card (base and layers loaded, on screen).
+async function running(
+  background: PlayerCardView["background"] = NEON,
+  surface?: string,
+): Promise<CardBackground> {
+  const el = await mount(background, true, surface);
+  loadBase(el);
+  await el.updateComplete;
+  loadLayers(el);
+  observers[observers.length - 1].report(true);
+  return el;
+}
+
+// Runs frames `step` ms apart from `from` up to `to`; returns the last time.
+function frames(from: number, to: number, step: number): number {
+  let now = from;
+  for (; now <= to; now += step) frame(now);
+  return now - step;
 }
 
 const layerEls = (el: Element) =>
@@ -324,21 +355,69 @@ describe("<card-background> effect layers", () => {
     );
   });
 
-  it("stops for the session after 2 s of slow frames", async () => {
-    const el = await mount(NEON);
-    loadBase(el);
-    await el.updateComplete;
-    loadLayers(el);
-    observers[0].report(true);
-    for (let now = 0; now <= 2200; now += 40) frame(now);
-    expect(cardFxStopped()).toBe(true);
+  it("a real slowdown stops the card, and its surface stays still", async () => {
+    const el = await running(NEON, "account");
+    // A 60 Hz display, then 2.5x slower for 3 s.
+    const now = frames(0, 1000, 16);
+    frames(now + 40, now + 3000, 40);
+    expect(cardFxStopped("account")).toBe(true);
     expect(layerEls(el)).toHaveLength(0);
     expect(rafCallbacks.size).toBe(0);
 
-    const next = await mount(STORM);
+    const next = await mount(STORM, true, "account");
     loadBase(next);
     await next.updateComplete;
     expect(layerEls(next)).toHaveLength(0);
+  });
+
+  it("a steady 33 ms cadence (a 30 fps cap) keeps animating", async () => {
+    const el = await running(NEON, "account");
+    frames(0, 20_000, 33);
+    expect(cardFxStopped("account")).toBe(false);
+    expect(layerEls(el)).toHaveLength(2);
+    expect(rafCallbacks.size).toBe(1);
+  });
+
+  it("a 30 fps display that then halves still stops", async () => {
+    await running(NEON, "account");
+    const now = frames(0, 2000, 33);
+    frames(now + 66, now + 4000, 66);
+    expect(cardFxStopped("account")).toBe(true);
+  });
+
+  it("outside a game, a steady cadence under 20 fps stops", async () => {
+    await running(NEON, "account");
+    frames(0, 10_000, 60);
+    expect(cardFxStopped("account")).toBe(true);
+  });
+
+  it("while a game renders, its steady load doesn't stop the card", async () => {
+    document.body.classList.add("in-game");
+    const el = await running(NEON, "end");
+    frames(0, 20_000, 60);
+    expect(cardFxStopped("end")).toBe(false);
+    expect(layerEls(el)).toHaveLength(2);
+  });
+
+  it("while a game renders, a real slowdown still stops the card", async () => {
+    document.body.classList.add("in-game");
+    await running(NEON, "end");
+    const now = frames(0, 2000, 33);
+    frames(now + 100, now + 6000, 100);
+    expect(cardFxStopped("end")).toBe(true);
+  });
+
+  it("a stop is scoped to its surface", async () => {
+    const end = await running(NEON, "end");
+    const now = frames(0, 1000, 16);
+    frames(now + 40, now + 3000, 40);
+    expect(cardFxStopped("end")).toBe(true);
+    expect(layerEls(end)).toHaveLength(0);
+
+    const account = await running(STORM, "account");
+    expect(cardFxStopped("account")).toBe(false);
+    expect(layerEls(account)).toHaveLength(2);
+    expect(rafCallbacks.size).toBe(1);
   });
 
   it("stops a ~40 ms device that also hitches over 250 ms every 1.2 s", async () => {
