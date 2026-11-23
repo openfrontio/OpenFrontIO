@@ -864,6 +864,8 @@ export class ScenarioEditor extends LitElement {
     if (send === null || signal.aborted) return;
 
     this.editor = new DocumentEditor(doc, send);
+    // The new editor has no undo history to bring removed content back.
+    this.settingsRemoved = null;
     this.doc = doc;
     this.status = "ready";
     if (overlay !== null && gameView !== null) {
@@ -1641,9 +1643,10 @@ export class ScenarioEditor extends LitElement {
     const doomsday = config.doomsdayClock?.enabled === true;
     const overtime = config.overtime?.enabled === true;
     return html`
-      <!-- Inert while a test play starts, as the nations panel is. -->
+      <!-- Inert while a test play starts, as the nations panel is. Above
+           the nations panel, which it overlaps on a narrow screen. -->
       <div
-        class="absolute top-14 left-1/2 flex max-h-[calc(100%-4.5rem)] w-72 -translate-x-1/2 flex-col gap-2 overflow-y-auto rounded-lg bg-zinc-900/90 p-3 text-sm ${this.starting ? "opacity-50" : ""}"
+        class="absolute top-14 left-1/2 z-10 flex max-h-[calc(100%-4.5rem)] w-72 -translate-x-1/2 flex-col gap-2 overflow-y-auto rounded-lg bg-zinc-900/90 p-3 text-sm ${this.starting ? "opacity-50" : ""}"
         ?inert=${this.starting}
       >
         <h2 class="font-semibold">
