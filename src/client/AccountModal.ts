@@ -481,8 +481,23 @@ export class AccountModal extends BaseModal {
       },
       this.headerCosmetics(),
     );
+    // At level 100 with ranks left, Prestige in the XP bar's place, as on
+    // the compact profile card (never on provisional XP: only the confirmed
+    // level can prestige).
+    const prestige =
+      progress?.canPrestige === true && !provisional?.provisional
+        ? html`<button
+            type="button"
+            data-account-prestige
+            class="self-end rounded-xl border border-yellow-300/70 bg-gradient-to-b from-yellow-300 to-amber-500 px-6 py-2.5 text-sm font-black uppercase tracking-widest text-zinc-900 transition-transform hover:-translate-y-0.5"
+            @click=${this.handlePrestigeRequest}
+          >
+            ${translateText("prestige.button")}
+          </button>`
+        : null;
     const bar =
-      progress?.xpInLevel !== undefined && progress.xpForNext !== undefined
+      prestige ??
+      (progress?.xpInLevel !== undefined && progress.xpForNext !== undefined
         ? html`<div class="flex items-center gap-3 text-xs font-bold">
             <span class="shrink-0 uppercase text-white/60"
               >${translateText("progression.level", {
@@ -499,7 +514,7 @@ export class AccountModal extends BaseModal {
               >${xpProgressText(progress.xpInLevel, progress.xpForNext)}</span
             >
           </div>`
-        : nothing;
+        : nothing);
     const provisionalLabel = provisional?.provisional
       ? html`<div
           data-account-provisional
