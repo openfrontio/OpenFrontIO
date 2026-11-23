@@ -4,6 +4,12 @@ const api = vi.hoisted(() => ({ save: vi.fn() }));
 vi.mock("../../src/client/CardLoadoutApi", () => ({
   saveCardLoadout: api.save,
 }));
+// The account the session is signed in as (Auth's currentPublicId).
+const session = vi.hoisted(() => ({ id: "p1" as string | null }));
+vi.mock("../../src/client/Auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/client/Auth")>()),
+  currentPublicId: () => session.id,
+}));
 
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import {
@@ -172,6 +178,7 @@ describe("card draft", () => {
 
 describe("CardEditor", () => {
   beforeEach(() => {
+    session.id = "p1";
     api.save.mockReset();
     vi.useFakeTimers();
   });
@@ -554,10 +561,12 @@ describe("CardEditor", () => {
   ];
 
   it("another account's profile drops this account's unsaved changes", async () => {
+    session.id = "account-a";
     const editor = new CardEditor();
     editor.seed(me(CARD, B_FLARES, "account-a"));
     editor.pick({ kind: "background" }, "bg_storm");
     document.dispatchEvent(new CustomEvent("session-reauth"));
+    session.id = "account-b";
     editor.seed(me(B_CARD, B_FLARES, "account-b"));
     expect(editor.changeCount()).toBe(0);
     expect(editor.canSave()).toBe(false);
@@ -567,6 +576,7 @@ describe("CardEditor", () => {
   });
 
   it("a profile with no player (signed out) counts as another account", () => {
+    session.id = "account-a";
     const editor = new CardEditor();
     editor.seed(me(CARD, B_FLARES, "account-a"));
     editor.pick({ kind: "background" }, "bg_storm");
@@ -578,11 +588,13 @@ describe("CardEditor", () => {
   it("another account mid-save: A's save isn't taken, and B's card has no changes", async () => {
     let finish!: (v: unknown) => void;
     api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    session.id = "account-a";
     const editor = new CardEditor();
     editor.seed(me(CARD, B_FLARES, "account-a"));
     editor.pick({ kind: "background" }, "bg_storm");
     const saving = editor.save();
     document.dispatchEvent(new CustomEvent("session-reauth"));
+    session.id = "account-b";
     editor.seed(me(B_CARD, B_FLARES, "account-b"));
     expect(editor.saveState).toBe("idle");
     finish({ ok: true, loadout: {} });
@@ -598,10 +610,12 @@ describe("CardEditor", () => {
   it("another account's profile mid-save, with no session event: the save still isn't taken", async () => {
     let finish!: (v: unknown) => void;
     api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    session.id = "account-a";
     const editor = new CardEditor();
     editor.seed(me(CARD, B_FLARES, "account-a"));
     editor.pick({ kind: "background" }, "bg_storm");
     const saving = editor.save();
+    session.id = "account-b";
     editor.seed(me(B_CARD, B_FLARES, "account-b"));
     finish({ ok: true, loadout: {} });
     expect(await saving).toBe(false);
@@ -611,6 +625,7 @@ describe("CardEditor", () => {
 
   it("after a session change, the old account's profile never re-seeds the editor", async () => {
     api.save.mockResolvedValue({ ok: true, loadout: {} });
+    session.id = "account-a";
     const editor = new CardEditor();
     const a = me(CARD, B_FLARES, "account-a");
     editor.seed(a);
@@ -623,9 +638,81 @@ describe("CardEditor", () => {
     expect(await editor.save()).toBe(false);
     expect(api.save).not.toHaveBeenCalled();
     // B's profile arrives: B's card, and B can save.
+    session.id = "account-b";
     editor.seed(me(B_CARD, B_FLARES, "account-b"));
     expect(editor.changeCount()).toBe(0);
     editor.pick({ kind: "background" }, "bg_storm");
+    expect(editor.canSave()).toBe(true);
+  });
+
+  it("a profile for an account the session isn't signed in as is never seeded", async () => {
+    session.id = "account-b";
+    const editor = new CardEditor();
+    const a = me(CARD, B_FLARES, "account-a");
+    editor.seed(a);
+    expect(editor.isSeededWith(a)).toBe(false);
+    expect(editor.saved.background).toBeNull();
+    editor.pick({ kind: "background" }, "bg_storm");
+    expect(editor.canSave()).toBe(false);
+    expect(await editor.save()).toBe(false);
+    expect(api.save).not.toHaveBeenCalled();
+  });
+
+  it("the session's account not known yet: nothing is seeded", () => {
+    session.id = null;
+    const editor = new CardEditor();
+    const a = me(CARD, B_FLARES, "account-a");
+    editor.seed(a);
+    expect(editor.isSeededWith(a)).toBe(false);
+    // Known now, and it's this one: taken.
+    session.id = "account-a";
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    expect(editor.saved.background).toBe("bg_pacific");
+  });
+
+  it("the session moving to another account turns Save off at once", async () => {
+    session.id = "account-a";
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    expect(editor.canSave()).toBe(true);
+    // No event and no new profile yet: only the session says so.
+    session.id = "account-b";
+    expect(editor.canSave()).toBe(false);
+    expect(await editor.save()).toBe(false);
+    expect(api.save).not.toHaveBeenCalled();
+  });
+
+  it("a session that moves to another account while saving isn't sent", async () => {
+    session.id = "account-a";
+    api.save.mockImplementation(
+      async (_body: unknown, stillWanted: () => boolean) => {
+        // The token is read; the session has moved on by then.
+        session.id = "account-b";
+        return stillWanted() ? { ok: true, loadout: {} } : { ok: false };
+      },
+    );
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    expect(await editor.save()).toBe(false);
+  });
+
+  it("a reauth into the same account re-seeds with its new profile", () => {
+    session.id = "account-a";
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    document.dispatchEvent(new CustomEvent("session-reauth"));
+    editor.dropAccount();
+    const again = me(
+      { ...CARD, background: "bg_storm" },
+      B_FLARES,
+      "account-a",
+    );
+    editor.seed(again);
+    expect(editor.isSeededWith(again)).toBe(true);
+    expect(editor.saved.background).toBe("bg_storm");
+    editor.pick({ kind: "tracker", index: 0 }, "games_played");
     expect(editor.canSave()).toBe(true);
   });
 

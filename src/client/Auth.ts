@@ -982,6 +982,24 @@ export async function sendMagicLink(email: string): Promise<boolean> {
 }
 
 // WARNING: DO NOT EXPOSE THIS ID
+/**
+ * The publicId of the account the session is signed in as: the one
+ * /users/@me reported for this JWT's subject (Api records it only while
+ * that session is the active one, and it's dropped when the subject
+ * changes). Null with no session, or before it's known.
+ */
+export function currentPublicId(): string | null {
+  const jwt = __jwt;
+  if (jwt === null) return null;
+  try {
+    const raw = decodeJwt(jwt).sub;
+    if (raw === undefined) return null;
+    return getCachedPublicId(base64urlToUuid(raw));
+  } catch {
+    return null;
+  }
+}
+
 export async function getPlayToken(): Promise<string> {
   const result = await userAuth();
   if (result !== false) return result.jwt;

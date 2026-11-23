@@ -8,7 +8,8 @@ vi.mock("../../src/client/Auth", () => ({
   getAuthHeader: vi.fn(async () => ""),
   getPlayToken: vi.fn(async () => null),
   logOut: vi.fn(async () => {}),
-  isSessionActive: vi.fn(() => false),
+  isSessionActive: vi.fn(() => true),
+  rememberPublicId: vi.fn(),
   userAuth: vi.fn(async () => ({
     jwt: "test-jwt",
     claims: { sub: "player-1" },
@@ -205,7 +206,7 @@ describe("a 401 only ends the session that asked for it", () => {
 
   afterEach(() => {
     // Restore the module mock's default for the rest of the file.
-    vi.mocked(isSessionActive).mockReturnValue(false);
+    vi.mocked(isSessionActive).mockReturnValue(true);
     invalidateUserMe();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -230,5 +231,53 @@ describe("a 401 only ends the session that asked for it", () => {
     expect(await getUserMe()).toBe(false);
 
     expect(logOut).toHaveBeenCalledTimes(1);
+  });
+});
+
+// A profile fetched with one session's token describes that session's
+// account. If the session is gone by the time it lands (signed out, or a
+// portal switch to another account), caching it would answer the next
+// session's getUserMe() with the old account.
+describe("/users/@me from a session that has gone", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+  const meCalls = () =>
+    fetchMock.mock.calls.filter((c) => String(c[0]).includes("/users/@me"));
+
+  beforeEach(() => {
+    invalidateUserMe();
+    fetchMock = vi.fn(async () => ({ status: 200, json: async () => profile }));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.mocked(isSessionActive).mockReturnValue(true);
+    invalidateUserMe();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("isn't cached: the next caller asks again", async () => {
+    vi.mocked(isSessionActive).mockReturnValue(false);
+    // Its own caller still gets what it fetched.
+    expect(await getUserMe()).toEqual(profile);
+    vi.mocked(isSessionActive).mockReturnValue(true);
+    await getUserMe();
+    expect(meCalls()).toHaveLength(2);
+  });
+
+  it("nor is a failure it got (a 401 for the old token)", async () => {
+    vi.mocked(isSessionActive).mockReturnValue(false);
+    fetchMock.mockResolvedValueOnce({ status: 401, json: async () => ({}) });
+    expect(await getUserMe()).toBe(false);
+    vi.mocked(isSessionActive).mockReturnValue(true);
+    expect(await getUserMe()).toEqual(profile);
+    expect(meCalls()).toHaveLength(2);
+  });
+
+  it("one for the session still current is cached as before", async () => {
+    await getUserMe();
+    await getUserMe();
+    expect(meCalls()).toHaveLength(1);
   });
 });
