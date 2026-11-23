@@ -432,7 +432,7 @@ export class Config {
   }
 
   nukeAllianceBreakThreshold(): number {
-    return 100;
+    return 200;
   }
 
   samRange(level: number): number {

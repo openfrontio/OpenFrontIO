@@ -667,3 +667,47 @@ describe("NukeExecution kill credit", () => {
     expect(warshipsDestroyed(g, launcher)).toBe(1n);
   });
 });
+
+describe("NukeExecution alliance break threshold", () => {
+  // Uses the real nukeAllianceBreakThreshold. Inner and outer radii are equal,
+  // so every tile in the blast weighs 1.
+  async function allianceWithTiles(tileCount: number) {
+    const g = await setup("big_plains", { infiniteGold: true }, [
+      new PlayerInfo("launcher", PlayerType.Human, "c1", "launcher_id"),
+      new PlayerInfo("ally", PlayerType.Human, "c2", "ally_id"),
+    ]);
+    (g.config() as TestConfig).nukeMagnitudes = vi.fn(() => ({
+      inner: 30,
+      outer: 30,
+    }));
+    const launcher = g.player("launcher_id");
+    const ally = g.player("ally_id");
+    launcher.conquer(g.ref(1, 1));
+    launcher.buildUnit(UnitType.MissileSilo, g.ref(1, 1), {});
+    launcher.createAllianceRequest(ally)!.accept();
+
+    // A 10-wide strip next to the target, all within the blast radius.
+    for (let i = 0; i < tileCount; i++) {
+      ally.conquer(g.ref(90 + (i % 10), 90 + Math.floor(i / 10)));
+    }
+
+    g.addExecution(
+      new NukeExecution(UnitType.AtomBomb, launcher, g.ref(100, 100), null),
+    );
+    g.executeNextTick(); // init
+    g.executeNextTick(); // launch
+    return { launcher, ally };
+  }
+
+  test("hitting 200 allied tiles keeps the alliance", async () => {
+    const { launcher, ally } = await allianceWithTiles(200);
+    expect(launcher.isAlliedWith(ally)).toBe(true);
+    expect(launcher.isTraitor()).toBe(false);
+  });
+
+  test("hitting 201 allied tiles breaks the alliance", async () => {
+    const { launcher, ally } = await allianceWithTiles(201);
+    expect(launcher.isAlliedWith(ally)).toBe(false);
+    expect(launcher.isTraitor()).toBe(true);
+  });
+});
