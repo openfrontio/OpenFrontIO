@@ -1017,6 +1017,16 @@ export function refreshStaleCosmetics(now: number = Date.now()): boolean {
   return true;
 }
 
+/**
+ * Whether the cached catalog is missing or older than COSMETICS_STALE_MS, so
+ * the next open refetches it. Unlike refreshStaleCosmetics, drops nothing.
+ */
+export function cosmeticsCacheIsStale(now: number = Date.now()): boolean {
+  return (
+    __cosmeticsCache === null || now - __cosmeticsFetchedAt > COSMETICS_STALE_MS
+  );
+}
+
 export type TierListingRail = "steam" | "web";
 
 // cosmetics.json lists subscription tiers per rail: the one this device checks
