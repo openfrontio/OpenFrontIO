@@ -19,7 +19,10 @@ vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   checkInPlacePurchase: shop.check,
 }));
 
-import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import {
+  StorePlacementSchema,
+  type UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { CardEditor } from "../../src/client/components/inventory/CardDraft";
 import "../../src/client/components/inventory/InventoryCardTab";
@@ -526,6 +529,15 @@ describe("<inventory-card-tab> without the card", () => {
       type: "playerCard",
     });
     expect(shop.buy.mock.calls[0][1]).toBe("hard");
+    // Attributed to the Inventory's Player card tab, in the shape the
+    // infra API takes.
+    expect(shop.buy.mock.calls[0][2]).toEqual({
+      kind: "inventory",
+      subTab: "card",
+    });
+    expect(
+      StorePlacementSchema.safeParse(shop.buy.mock.calls[0][2]).success,
+    ).toBe(true);
   });
 
   it("See it in the Store asks for the card in the Store", async () => {
@@ -584,6 +596,10 @@ describe("<inventory-card-tab> unowned items in the changes", () => {
     await buttonIn("cardBackground:bg_storm").onPurchaseHard();
     expect(shop.buy.mock.calls[0][0]).toMatchObject({
       key: "cardBackground:bg_storm",
+    });
+    expect(shop.buy.mock.calls[0][2]).toEqual({
+      kind: "inventory",
+      subTab: "card",
     });
     // The purchase broadcasts a fresh profile, which now owns it.
     tab.userMe = userMe([...OWNER, "cardBackground:bg_storm"]);
