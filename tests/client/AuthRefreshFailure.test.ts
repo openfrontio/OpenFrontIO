@@ -6,6 +6,7 @@ vi.mock("../../src/client/ClientEnv", () => ({
 
 import {
   clearLocalSession,
+  knownSignedOut,
   sessionUncertain,
   userAuth,
 } from "../../src/client/Auth";
@@ -14,6 +15,11 @@ import {
 // or Hyperdrive blip), a 429 or an edge 403 is transient: logging out on it
 // dropped players mid-session and, when /auth/logout reached a healthy
 // connection, deleted a session that was still valid.
+// First in the file, so no exchange has run in this module yet.
+it("knownSignedOut is false before any exchange: nothing is known yet", () => {
+  expect(knownSignedOut()).toBe(false);
+});
+
 describe("/auth/refresh failure handling", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
   // Written by the client, and removed only by clearLocalSession().
@@ -144,6 +150,40 @@ describe("/auth/refresh failure handling", () => {
       await userAuth();
       clearLocalSession();
       expect(sessionUncertain()).toBe(false);
+    });
+  });
+
+  // knownSignedOut: the last exchange settled "no session", so a caller can
+  // say "signed out" without a refresh (and the logout a 401 brings).
+  describe("knownSignedOut", () => {
+    it("is true after a 401", async () => {
+      answerRefreshWith(401);
+      await userAuth();
+      expect(knownSignedOut()).toBe(true);
+    });
+
+    it("is false after an unreachable refresh: couldn't check", async () => {
+      answerRefreshWith(503);
+      await userAuth();
+      expect(knownSignedOut()).toBe(false);
+    });
+
+    it("is false with a token from a successful refresh", async () => {
+      fetchMock = vi.fn(async () => ({
+        status: 200,
+        ok: true,
+        json: async () => ({ jwt: "not-a-real-jwt", expiresIn: 900 }),
+      }));
+      vi.stubGlobal("fetch", fetchMock);
+      await userAuth();
+      expect(knownSignedOut()).toBe(false);
+    });
+
+    it("is true after a logout", async () => {
+      answerRefreshWith(503);
+      await userAuth();
+      clearLocalSession();
+      expect(knownSignedOut()).toBe(true);
     });
   });
 });

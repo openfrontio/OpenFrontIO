@@ -38,9 +38,9 @@ let __inMemoryPublicIdSub: string | null = null;
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
 let __expiresAt: number = 0;
-// The last session exchange (/auth/refresh, a portal or a Steam login) got no
-// answer that settles the session (a 5xx, 429, edge block, timeout or network
-// error): the cookie is kept and the next userAuth() retries. userAuth()
+// "unreachable": the last session exchange (/auth/refresh, a portal or a
+// Steam login) got no answer that settles the session (a 5xx, 429, edge
+// block, timeout or network error): the cookie is kept and the next userAuth() retries. userAuth()
 // answers false either way, so this is how a caller tells "couldn't check"
 // from "signed out" (see sessionUncertain). Assigned only where an exchange
 // settles, never when one starts: a reader that waited on one exchange may
@@ -50,7 +50,11 @@ let __expiresAt: number = 0;
 // /auth/refresh is unreachable: the client can't tell "no cookie" from
 // "server down". Accepted: the end screen then shows Buy, whose check
 // answers "unreachable" and sends (and charges) nothing.
-let __refreshUnreachable = false;
+//
+// "none" until an exchange has settled (nothing known yet, e.g. before the
+// first userAuth()), then "settled" (a 401, a rejection, a success or a
+// logout) or "unreachable".
+let __lastExchange: "none" | "settled" | "unreachable" = "none";
 
 let __sessionState: DesktopSessionState = { status: "unknown" };
 
@@ -480,7 +484,7 @@ function announceLoggedOut(): void {
 export function clearLocalSession(): void {
   const hadSession = __jwt !== null;
   __jwt = null;
-  __refreshUnreachable = false;
+  __lastExchange = "settled";
   updateUserSettingsForJwt(null);
   localStorage.removeItem(PERSISTENT_ID_KEY);
   // Switch cosmetics back to the logged-out scope (via updateUserSettingsForJwt).
@@ -534,7 +538,18 @@ export function clearLocalSession(): void {
  * unaffected.
  */
 export function sessionUncertain(): boolean {
-  return __refreshUnreachable;
+  return __lastExchange === "unreachable";
+}
+
+/**
+ * True when "signed out" is already settled: no token in memory and the last
+ * session exchange answered (a 401, a declined Steam ticket, a logout) rather
+ * than going unanswered. Lets a caller that only needs to know skip
+ * userAuth(), whose refresh with no token is a guaranteed 401 and a logout
+ * for a guest. False before any exchange has settled: nothing is known yet.
+ */
+export function knownSignedOut(): boolean {
+  return __jwt === null && __lastExchange === "settled";
 }
 
 export async function isLoggedIn(): Promise<boolean> {
@@ -688,8 +703,10 @@ async function doRefreshJwt(): Promise<void> {
     // -- a hung native call (timeout), an IPC race or Steam client failure
     // (error, unavailable), our API unreachable from the shell -- settles
     // nothing: "couldn't check", not signed out.
-    __refreshUnreachable =
-      result.reason !== "needs-account" && result.reason !== "ticket-rejected";
+    __lastExchange =
+      result.reason !== "needs-account" && result.reason !== "ticket-rejected"
+        ? "unreachable"
+        : "settled";
     setSessionState({ status: "signed-out", reason: ticketReason(result) });
     return;
   }
@@ -719,7 +736,7 @@ async function doRefreshJwt(): Promise<void> {
       // The only answer that means the session is dead: the server has
       // already cleared the refresh cookie.
       console.warn("Refresh rejected", response);
-      __refreshUnreachable = false;
+      __lastExchange = "settled";
       void logOut();
       return;
     }
@@ -730,21 +747,21 @@ async function doRefreshJwt(): Promise<void> {
       // like an unreachable server: keep the cookie, retry on next userAuth().
       console.warn("Refresh failed", response);
       __jwt = null;
-      __refreshUnreachable = true;
+      __lastExchange = "unreachable";
       return;
     }
     const json = await response.json();
     const { jwt, expiresIn } = json;
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Refresh succeeded");
-    __refreshUnreachable = false;
+    __lastExchange = "settled";
     __jwt = jwt;
     updateUserSettingsForJwt(jwt);
   } catch (e) {
     console.warn("Refresh failed", e);
     // if server unreachable, just clear jwt
     __jwt = null;
-    __refreshUnreachable = true;
+    __lastExchange = "unreachable";
     return;
   }
 }
@@ -806,20 +823,20 @@ async function doPortalLogin(
       console.error(`${portal} login failed`, response);
       __jwt = null;
       // A 401 settles it (signed out); anything else got no answer.
-      __refreshUnreachable = response.status !== 401;
+      __lastExchange = response.status !== 401 ? "unreachable" : "settled";
       return;
     }
     const json = await response.json();
     const { jwt, expiresIn } = json;
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log(`${portal} login succeeded`);
-    __refreshUnreachable = false;
+    __lastExchange = "settled";
     __jwt = jwt;
     updateUserSettingsForJwt(jwt);
   } catch (e) {
     console.warn(`${portal} login failed`, e);
     __jwt = null;
-    __refreshUnreachable = true;
+    __lastExchange = "unreachable";
   }
 }
 
@@ -845,7 +862,7 @@ async function doSteamLogin(ticket: string): Promise<void> {
       console.error("Steam login failed", response);
       __jwt = null;
       // A 401 settles it (signed out); anything else got no answer.
-      __refreshUnreachable = response.status !== 401;
+      __lastExchange = response.status !== 401 ? "unreachable" : "settled";
       // 401 is infra's unauthorized("Invalid Steam ticket"); 5xx is its
       // internalServerError for "steam unreachable" / "steam auth error",
       // which is Steam's backend rather than anything the player did. Any
@@ -868,14 +885,14 @@ async function doSteamLogin(ticket: string): Promise<void> {
     const { jwt, expiresIn } = json;
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Steam login succeeded");
-    __refreshUnreachable = false;
+    __lastExchange = "settled";
     __jwt = jwt;
     updateUserSettingsForJwt(jwt);
     setSessionState({ status: "signed-in" });
   } catch (e) {
     console.warn("Steam login failed", e);
     __jwt = null;
-    __refreshUnreachable = true;
+    __lastExchange = "unreachable";
     setSessionState({ status: "signed-out", reason: "network" });
   }
 }

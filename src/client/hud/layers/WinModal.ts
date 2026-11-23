@@ -12,7 +12,7 @@ import type {
 } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics, Pattern } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
-import { html, LitElement, nothing, TemplateResult } from "lit";
+import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   DESKTOP_TUTORIAL_VIDEO_URL,
@@ -24,7 +24,7 @@ import {
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
 import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
-import { sessionUncertain, userAuth } from "../../Auth";
+import { knownSignedOut, sessionUncertain, userAuth } from "../../Auth";
 import "../../components/CosmeticCard";
 import { saveTauntsMuted } from "../../CardLoadoutApi";
 import {
@@ -34,6 +34,7 @@ import {
 import {
   endScreenLookRows,
   type LookRow,
+  type SavedLook,
   onSavedLooksChanged,
   savedLooks,
 } from "../../components/card/SavedLooks";
@@ -636,9 +637,15 @@ export class WinModal extends LitElement implements Controller {
   // now: the player card under the first name only, no item twice, and
   // players left with nothing to buy dropped. "pending" while the killer's
   // items or the viewer's are still loading.
-  private lookRows(): LookRow[] | "pending" {
+  // The saved looks this viewer may see, and whether anything could become a
+  // look row at all (a killer card loading or offering items, or a saved
+  // look). Null without a game.
+  private lookCandidates(): {
+    visible: readonly SavedLook[];
+    couldShow: boolean;
+  } | null {
     const gameID = this.game?.gameID();
-    if (gameID === undefined) return [];
+    if (gameID === undefined) return null;
     const card = this.lastEndCard;
     // As visiblePlayerCard: while the viewer anonymises names, no one else's
     // look under their real name.
@@ -647,13 +654,20 @@ export class WinModal extends LitElement implements Controller {
     const visible = savedLooks(gameID).filter(
       (look) => !anonymous || look.clientID === me,
     );
-    // Nothing that could become a look (no killer card loading or offering
-    // items, no saved look): the promo is as today, without waiting for the
-    // viewer's /users/@me.
     const killerCard =
       card?.kind === "eliminatedBy" &&
       (this.loadoutPending || this.loadout.length > 0);
-    if (!killerCard && visible.length === 0) return [];
+    return { visible, couldShow: killerCard || visible.length > 0 };
+  }
+
+  private lookRows(): LookRow[] | "pending" {
+    const candidates = this.lookCandidates();
+    if (candidates === null) return [];
+    const { visible, couldShow } = candidates;
+    const card = this.lastEndCard;
+    // Nothing that could become a look: the promo is as today, without
+    // waiting for the viewer's /users/@me.
+    if (!couldShow) return [];
     if (this.viewerFlares === null || this.loadoutPending) return "pending";
     // What the viewer owns, but for what they bought here: that stays.
     const flares = this.viewerFlares.filter((f) => !this.boughtHere.has(f));
@@ -1000,7 +1014,27 @@ export class WinModal extends LitElement implements Controller {
     }
   }
 
-  // Called fire-and-forget from show(): it never rejects.
+  // The viewer is read once per screen, and only when a look row could show:
+  // for a guest the read ends in a session check, and most end screens have
+  // nothing to buy.
+  private viewerRequested = false;
+  protected willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
+    if (!this.isVisible || this.viewerRequested || this.viewerFlares !== null)
+      return;
+    let couldShow = false;
+    try {
+      couldShow = this.lookCandidates()?.couldShow === true;
+    } catch (error) {
+      // As promo(): the looks are a decoration, never the end screen's end.
+      console.warn("Get the look left off the end screen:", error);
+    }
+    if (!couldShow) return;
+    this.viewerRequested = true;
+    void this.loadViewerFlares();
+  }
+
+  // Called fire-and-forget from willUpdate(): it never rejects.
   private async loadViewerFlares(): Promise<void> {
     let me: UserMeResponse | false = false;
     try {
@@ -1034,6 +1068,13 @@ export class WinModal extends LitElement implements Controller {
     if (me !== false) {
       this.signedIn = true;
       this.viewerFlares = me.player.flares ?? [];
+      return;
+    }
+    // Already settled (boot's refresh got its 401): no refresh, and no
+    // logout, to say so again.
+    if (knownSignedOut()) {
+      this.signedIn = false;
+      this.viewerFlares = [];
       return;
     }
     // With refresh: the token is short-lived and nothing renews it during a
@@ -1076,7 +1117,6 @@ export class WinModal extends LitElement implements Controller {
       this.game.config().gameConfig().rankedType,
     );
     this.isVisible = true;
-    void this.loadViewerFlares();
     this.requestUpdate();
     try {
       await this.loadPatternContent();
