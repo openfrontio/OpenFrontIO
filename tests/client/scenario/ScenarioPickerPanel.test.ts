@@ -115,6 +115,49 @@ describe("<scenario-picker-panel>", () => {
     expect(el.querySelector("[data-load-more]")).toBeNull();
   });
 
+  it("loads the next shared page only on load more", async () => {
+    const page1 = Array.from({ length: 20 }, (_, i) => published(i));
+    api.listPublishedScenarios.mockResolvedValue(page1);
+    const el = await panel(true);
+    await click(el, "[data-scenarios-toggle]");
+    await click(el, '[data-scenario-tab="shared"]');
+    expect(api.listPublishedScenarios).toHaveBeenCalledTimes(1);
+
+    await click(el, '[data-scenario-tab="mine"]');
+    await click(el, '[data-scenario-tab="shared"]');
+    await click(el, "[data-scenarios-toggle]");
+    await click(el, "[data-scenarios-toggle]");
+    await click(el, '[data-scenario-tab="shared"]');
+
+    expect(api.listPublishedScenarios).toHaveBeenCalledTimes(1);
+    expect(el.querySelectorAll("[data-scenario-id]")).toHaveLength(20);
+    expect(el.querySelector("[data-load-more]")).not.toBeNull();
+  });
+
+  it("retries the player's own list after it fails", async () => {
+    api.listMyScenarios
+      .mockResolvedValueOnce("request_failed")
+      .mockResolvedValueOnce([{ ...published(3), latestVersion: 1 }]);
+    const el = await panel(true);
+    await click(el, "[data-scenarios-toggle]");
+    expect(el.querySelector("[data-scenario-error]")?.textContent).toContain(
+      "scenario_picker.error.request_failed",
+    );
+
+    await click(el, "[data-retry-mine]");
+
+    expect(el.querySelectorAll("[data-scenario-id]")).toHaveLength(1);
+    expect(el.querySelector("[data-scenario-error]")).toBeNull();
+  });
+
+  it("offers no retry when the player's session has ended", async () => {
+    api.listMyScenarios.mockResolvedValueOnce("unauthorized");
+    const el = await panel(true);
+    await click(el, "[data-scenarios-toggle]");
+    expect(el.querySelector("[data-scenario-error]")).not.toBeNull();
+    expect(el.querySelector("[data-retry-mine]")).toBeNull();
+  });
+
   it("says why the list failed, and retries", async () => {
     api.listPublishedScenarios.mockResolvedValueOnce("request_failed");
     const el = await panel();

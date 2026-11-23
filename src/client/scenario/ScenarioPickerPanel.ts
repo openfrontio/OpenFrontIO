@@ -53,9 +53,12 @@ export class ScenarioPickerPanel extends LitElement {
   @state() private shared: Entry[] = [];
   // The page of shared scenarios "load more" asks for, from 1.
   private nextPage = 1;
+  // "idle" until the first page is asked for; "more" once a full page has
+  // loaded, so another may follow on "load more".
   @state() private sharedState:
     | "idle"
     | "loading"
+    | "more"
     | "done"
     | ScenarioPlayError = "idle";
   @state() private selected: {
@@ -138,7 +141,7 @@ export class ScenarioPickerPanel extends LitElement {
         .map((s) => ({ ...s, version: s.latestVersion })),
     ];
     this.nextPage++;
-    this.sharedState = list.length < PAGE_SIZE ? "done" : "idle";
+    this.sharedState = list.length < PAGE_SIZE ? "done" : "more";
   }
 
   private async select(entry: Entry): Promise<void> {
@@ -246,13 +249,34 @@ export class ScenarioPickerPanel extends LitElement {
     if (mine === null || mine === "loading") {
       return this.message("scenario_picker.loading");
     }
-    if (typeof mine === "string") return this.errorText(mine);
+    if (typeof mine === "string") {
+      return html`<div class="flex flex-col gap-2">
+        ${this.errorText(mine)}
+        ${
+          // Signing in again is what fixes that one, not a retry.
+          mine === "unauthorized"
+            ? null
+            : html`<button
+                type="button"
+                class="self-center px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors bg-white/5 hover:bg-white/10 text-white/80 border border-white/10"
+                data-retry-mine
+                @click=${() => void this.loadMine()}
+              >
+                ${translateText("scenario_picker.retry")}
+              </button>`
+        }
+      </div>`;
+    }
     return this.renderList(mine, "scenario_picker.mine_empty");
   }
 
   private renderShared(): TemplateResult {
     const state = this.sharedState;
-    const failed = state !== "idle" && state !== "loading" && state !== "done";
+    const failed =
+      state !== "idle" &&
+      state !== "loading" &&
+      state !== "more" &&
+      state !== "done";
     const listed = this.shared.length > 0;
     let list: TemplateResult | null = null;
     if (listed || state === "done") {

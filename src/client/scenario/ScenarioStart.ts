@@ -13,7 +13,7 @@ import {
 } from "@openfront/shared/SharedUtil";
 import type { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import type { JoinLobbyEvent } from "../Main";
-import { readSnapshotHeader } from "../WorkerClient";
+import { readSnapshotHeader, UnreadableSnapshotError } from "../WorkerClient";
 import {
   loadScenarioBundle,
   type ScenarioBundle,
@@ -40,12 +40,15 @@ export async function scenarioGameStart(
   expectedHash?: string,
 ): Promise<JoinLobbyEvent> {
   const bundle = await loadScenarioBundle(gzipped, expectedHash);
-  return scenarioBundleGameStart(bundle, nationID, player);
+  const detail = await scenarioBundleGameStart(bundle, nationID, player);
+  useScenarioMap(bundle);
+  return detail;
 }
 
 /**
  * As scenarioGameStart, for a bundle already loaded (and checked against its
- * listing). Throws a ScenarioBundleError if this build can't read the
+ * listing), but it leaves the map loader alone: the caller installs the
+ * bundle's map with useScenarioMap once it is sure to start. Throws a ScenarioBundleError if this build can't read the
  * snapshot, as when a newer build exported it, or it isn't a singleplayer
  * game.
  */
@@ -57,6 +60,9 @@ export async function scenarioBundleGameStart(
   const { header, snapshot } = bundle;
   const { gameConfig } = await readSnapshotHeader(snapshot).catch(
     (e: unknown) => {
+      // Only a snapshot the worker can't decode; a worker that fails to
+      // load or times out is no sign the scenario is from a newer build.
+      if (!(e instanceof UnreadableSnapshotError)) throw e;
       throw new ScenarioBundleError(
         "format",
         `this build can't read the scenario's snapshot: ${String(e)}`,
@@ -69,7 +75,6 @@ export async function scenarioBundleGameStart(
       "the scenario's snapshot is not a singleplayer game",
     );
   }
-  useScenarioMap(bundle);
   const gameID = generateSingleplayerGameID();
   const clientID = generateID();
   return {

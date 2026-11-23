@@ -344,6 +344,27 @@ describe("ScenariosApi", () => {
       );
     });
 
+    it("stops a download that runs past the cap without saying its length", async () => {
+      const chunk = new Uint8Array(1024 * 1024);
+      let sent = 0;
+      const cancel = vi.fn();
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          sent++;
+          controller.enqueue(chunk);
+        },
+        cancel,
+      });
+      fetchMock.mockResolvedValue(new Response(body, { status: 200 }));
+      await expect(downloadScenarioBundle(SCENARIO.id, 3)).resolves.toBe(
+        "too_large",
+      );
+      expect(sent * chunk.length).toBeLessThanOrEqual(
+        MAX_BUNDLE_DOWNLOAD_BYTES + 2 * chunk.length,
+      );
+      await vi.waitFor(() => expect(cancel).toHaveBeenCalled());
+    });
+
     it("names the thumbnail's URL", () => {
       expect(scenarioThumbnailUrl(SCENARIO.id, 3)).toBe(
         `https://api.test/scenarios/${SCENARIO.id}/versions/3/thumbnail`,

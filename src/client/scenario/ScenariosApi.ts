@@ -208,8 +208,29 @@ export async function downloadScenarioBundle(
       void res.body?.cancel().catch(() => {});
       return "too_large";
     }
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    return bytes.length > MAX_BUNDLE_DOWNLOAD_BYTES ? "too_large" : bytes;
+    if (res.body === null) return new Uint8Array(0);
+    // Content-Length can be missing or wrong, so the cap holds while it
+    // streams rather than after the whole body is in memory.
+    const reader = res.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.length;
+      if (total > MAX_BUNDLE_DOWNLOAD_BYTES) {
+        void reader.cancel().catch(() => {});
+        return "too_large";
+      }
+      chunks.push(value);
+    }
+    const bytes = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return bytes;
   } catch (err) {
     console.warn("downloadScenarioBundle: request failed", err);
     return "request_failed";

@@ -27,6 +27,12 @@ vi.mock("../../src/client/UserMeBroadcast", () => ({
 const start = vi.hoisted(() => ({ scenarioBundleGameStart: vi.fn() }));
 vi.mock("../../src/client/scenario/ScenarioStart", () => start);
 
+const bundleModule = vi.hoisted(() => ({ useScenarioMap: vi.fn() }));
+vi.mock("../../src/client/scenario/ScenarioBundle", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useScenarioMap: bundleModule.useScenarioMap,
+}));
+
 const dialogs = vi.hoisted(() => ({
   showInGameAlert: vi.fn(async () => true),
   showInGameConfirm: vi.fn(async () => true),
@@ -105,6 +111,40 @@ describe("SinglePlayerModal scenarios", () => {
       expect.objectContaining({ username: expect.any(String) }),
     );
     expect(joins).toEqual([detail]);
+    expect(bundleModule.useScenarioMap).toHaveBeenCalledWith(bundle);
+    expect(dialogs.showInGameAlert).not.toHaveBeenCalled();
+  });
+
+  it("leaves the map and the player alone when the start is retired", async () => {
+    const modal = await mount();
+    const joins: unknown[] = [];
+    modal.addEventListener("join-lobby", () => joins.push(1));
+    let fail!: (e: unknown) => void;
+    let succeed!: (d: unknown) => void;
+
+    start.scenarioBundleGameStart.mockReturnValueOnce(
+      new Promise((resolve) => (succeed = resolve)),
+    );
+    const finished = modal.startScenario({ header: {} }, "fr");
+    await vi.waitFor(() =>
+      expect(start.scenarioBundleGameStart).toHaveBeenCalledTimes(1),
+    );
+    modal.onClose();
+    succeed({ gameID: "g" });
+    await finished;
+    expect(joins).toEqual([]);
+    expect(bundleModule.useScenarioMap).not.toHaveBeenCalled();
+
+    start.scenarioBundleGameStart.mockReturnValueOnce(
+      new Promise((_, reject) => (fail = reject)),
+    );
+    const failed = modal.startScenario({ header: {} }, "fr");
+    await vi.waitFor(() =>
+      expect(start.scenarioBundleGameStart).toHaveBeenCalledTimes(2),
+    );
+    modal.onClose();
+    fail(new ScenarioBundleError("format", "newer"));
+    await failed;
     expect(dialogs.showInGameAlert).not.toHaveBeenCalled();
   });
 
