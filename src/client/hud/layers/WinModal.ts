@@ -2,7 +2,7 @@ import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import type { AllPlayersStats, Winner } from "@openfront/engine-api/Schemas";
 import type { GameXpEligible, Progress } from "@openfront/shared/ApiSchemas";
-import { Pattern } from "@openfront/shared/CosmeticSchemas";
+import type { Cosmetics, Pattern } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
@@ -33,8 +33,10 @@ import {
   fetchCosmetics,
   purchaseCosmetic,
   resolveCosmetics,
+  type ResolvedCosmetic,
 } from "../../Cosmetics";
 import { isDesktopShell } from "../../DesktopShell";
+import { COSMETICS_CHANGED } from "../../Experiments";
 import { gamePortal } from "../../GamePortal";
 import { lobbyPublicGameType } from "../../LobbyPublicGameType";
 import type { MatchmakingMode } from "../../Matchmaking";
@@ -122,6 +124,21 @@ const iconShare = html`<svg
   <line x1="8.6" y1="10.5" x2="15.4" y2="6.5" />
   <line x1="8.6" y1="13.5" x2="15.4" y2="17.5" />
 </svg>`;
+
+/** The patterns a post-game offer can show. */
+function purchasablePatterns(
+  cosmetics: Cosmetics | null,
+  me: Awaited<ReturnType<typeof getUserMe>>,
+): ResolvedCosmetic[] {
+  return resolveCosmetics(cosmetics, me, null).filter(
+    (r) => r.type === "pattern" && r.relationship === "purchasable",
+  );
+}
+
+/** One offered pattern and colour, across catalogs. */
+function offerKey(resolved: ResolvedCosmetic): string {
+  return `${resolved.cosmetic?.name ?? ""}:${resolved.colorPalette?.name ?? ""}`;
+}
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Controller {
@@ -606,15 +623,37 @@ export class WinModal extends LitElement implements Controller {
     `;
   }
 
+  // The patterns the post-game offer picked, by name and palette, so a fresh
+  // catalog (a price_changed refusal reloads it) redraws the same offer at
+  // the prices it now has.
+  private offerKeys: string[] = [];
+
+  private onCosmeticsChanged = (e: Event): void => {
+    const cosmetics = (e as CustomEvent<Cosmetics>).detail;
+    if (this.offerKeys.length === 0 || !cosmetics) return;
+    void this.redrawOffer(cosmetics);
+  };
+
+  private async redrawOffer(cosmetics: Cosmetics): Promise<void> {
+    const me = await getUserMe();
+    const byKey = new Map(
+      purchasablePatterns(cosmetics, me).map((r) => [offerKey(r), r]),
+    );
+    const selected = this.offerKeys.flatMap((key) => {
+      const resolved = byKey.get(key);
+      return resolved === undefined ? [] : [resolved];
+    });
+    this.renderOffer(selected);
+  }
+
   async loadPatternContent() {
     const me = await getUserMe();
     const cosmetics = await fetchCosmetics();
 
-    const purchasable = resolveCosmetics(cosmetics, me, null).filter(
-      (r) => r.type === "pattern" && r.relationship === "purchasable",
-    );
+    const purchasable = purchasablePatterns(cosmetics, me);
 
     if (purchasable.length === 0) {
+      this.offerKeys = [];
       this.patternContent = html``;
       return;
     }
@@ -622,7 +661,15 @@ export class WinModal extends LitElement implements Controller {
     // Shuffle the array and take patterns. Will always be 3 wide to allow scrolling
     const shuffled = [...purchasable].sort(() => Math.random() - 0.5);
     const selected = shuffled.slice(0, Math.min(3, shuffled.length));
+    this.offerKeys = selected.map(offerKey);
+    this.renderOffer(selected);
+  }
 
+  private renderOffer(selected: ResolvedCosmetic[]): void {
+    if (selected.length === 0) {
+      this.patternContent = html``;
+      return;
+    }
     this.patternContent = html`
       <div class="flex gap-4 flex-nowrap justify-start items-start">
         ${selected.map((resolved) => {
@@ -709,6 +756,7 @@ export class WinModal extends LitElement implements Controller {
 
   connectedCallback(): void {
     super.connectedCallback();
+    document.addEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     if (this.xpPollAborted) {
       this.xpPollAborted = false;
       void this.updateXp(true);
@@ -716,6 +764,7 @@ export class WinModal extends LitElement implements Controller {
   }
 
   disconnectedCallback(): void {
+    document.removeEventListener(COSMETICS_CHANGED, this.onCosmeticsChanged);
     this.xpAbort?.abort();
     super.disconnectedCallback();
   }

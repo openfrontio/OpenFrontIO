@@ -200,6 +200,90 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
     expect(result).toMatchObject({ shortfall: 50 });
   });
 
+  it("checks the balance against the shown sale price after the sale ends", async () => {
+    // The button showed 150; the sale has since ended (250 now). A balance of
+    // 200 covers what was shown, so the server gets to answer price_changed
+    // instead of the player being asked to top up for a price never shown.
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(200));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValue({
+      ok: false,
+      code: "other",
+    } as never);
+    const endedSale: ResolvedCosmetic = {
+      ...starter,
+      cosmetic: {
+        ...(starter.cosmetic as object),
+        priceHard: 150,
+        listPriceHard: 250,
+        promotion: {
+          id: "1",
+          name: "Flash",
+          percentOff: 40,
+          endsAt: new Date(Date.now() - 1000).toISOString(),
+        },
+      } as never,
+    };
+
+    const result = await purchaseCosmetic(endedSale, "hard", undefined, 150);
+
+    expect(result).not.toMatchObject({ canTopUp: true });
+    expect(purchaseCosmeticPack).toHaveBeenCalledWith("starter", undefined, {
+      expectedAmount: 150,
+      platform: "web",
+    });
+  });
+
+  it("quotes a shortfall from the shown price when that is the lower one", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(100));
+    const endedSale: ResolvedCosmetic = {
+      ...starter,
+      cosmetic: {
+        ...(starter.cosmetic as object),
+        priceHard: 150,
+        listPriceHard: 250,
+        promotion: {
+          id: "1",
+          name: "Flash",
+          percentOff: 40,
+          endsAt: new Date(Date.now() - 1000).toISOString(),
+        },
+      } as never,
+    };
+
+    const result = await purchaseCosmetic(endedSale, "hard", undefined, 150);
+
+    expect(result).toMatchObject({ shortfall: 50 });
+    expect(purchaseCosmeticPack).not.toHaveBeenCalled();
+  });
+
+  it("does not block on a higher shown price once a sale has started", async () => {
+    // Shown at 250 before the sale; it now costs 150, which 200 covers.
+    vi.mocked(getUserMe).mockResolvedValue(userWithHard(200));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValue({
+      ok: false,
+      code: "other",
+    } as never);
+    const runningSale: ResolvedCosmetic = {
+      ...starter,
+      cosmetic: {
+        ...(starter.cosmetic as object),
+        priceHard: 150,
+        listPriceHard: 250,
+        promotion: {
+          id: "1",
+          name: "Flash",
+          percentOff: 40,
+          endsAt: new Date(Date.now() + 60_000).toISOString(),
+        },
+      } as never,
+    };
+
+    const result = await purchaseCosmetic(runningSale, "hard", undefined, 250);
+
+    expect(result).not.toMatchObject({ canTopUp: true });
+    expect(purchaseCosmeticPack).toHaveBeenCalled();
+  });
+
   it("re-reads the balance when the server rejects for insufficient funds", async () => {
     vi.mocked(getUserMe)
       .mockResolvedValueOnce(userWithHard(300))

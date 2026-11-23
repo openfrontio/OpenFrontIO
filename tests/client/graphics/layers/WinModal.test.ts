@@ -15,6 +15,7 @@ import {
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../../../src/client/Cosmetics";
+import { COSMETICS_CHANGED } from "../../../../src/client/Experiments";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 import { rememberLobbyPublicGameType } from "../../../../src/client/LobbyPublicGameType";
@@ -268,6 +269,52 @@ describe("WinModal pattern promotion", () => {
     const legacyContainerTag = ["cosmetic", "container"].join("-");
     expect(modal.querySelectorAll(legacyButtonTag)).toHaveLength(0);
     expect(modal.querySelectorAll(legacyContainerTag)).toHaveLength(0);
+  });
+
+  it("redraws the same offer at the new price when the catalog changes", async () => {
+    const pattern = (name: string, priceHard: number): ResolvedCosmetic => ({
+      type: "pattern",
+      cosmetic: {
+        name,
+        pattern: "AAAAAA",
+        product: null,
+        priceHard,
+        rarity: "rare",
+      } as never,
+      colorPalette: null,
+      relationship: "purchasable",
+      key: `pattern:${name}`,
+    });
+    vi.mocked(fetchCosmetics).mockResolvedValue(null);
+    vi.mocked(resolveCosmetics).mockReturnValue([pattern("aurora", 80)]);
+
+    modal = document.createElement("win-modal") as WinModal;
+    Object.assign(modal as unknown as { rand: number; isWin: boolean }, {
+      rand: 0.75,
+      isWin: true,
+    });
+    document.body.appendChild(modal);
+    await modal.updateComplete;
+    await modal.loadPatternContent();
+    modal.requestUpdate();
+    await modal.updateComplete;
+    expect(
+      modal.querySelector<PurchaseButton>("purchase-button")?.priceHard,
+    ).toBe(80);
+
+    // A price_changed refusal reloads the catalog: the sale has ended.
+    vi.mocked(resolveCosmetics).mockReturnValue([
+      pattern("blaze", 50),
+      pattern("aurora", 100),
+    ]);
+    document.dispatchEvent(new CustomEvent(COSMETICS_CHANGED, { detail: {} }));
+    await vi.waitFor(() =>
+      expect(
+        modal!.querySelector<PurchaseButton>("purchase-button")?.priceHard,
+      ).toBe(100),
+    );
+    // The same pattern, not a new pick.
+    expect(modal.querySelectorAll("purchase-button")).toHaveLength(1);
   });
 
   it("drops the ad-free pitch in the desktop shell, which has no ads", async () => {

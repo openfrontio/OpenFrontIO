@@ -662,6 +662,11 @@ export async function purchaseCosmetic(
   // A sale can end between the render and the click: the button still showed
   // the sale price, and that is what the player agreed to pay.
   const shownPrice = shownAmount ?? nowPrice;
+  // Checked against the cheaper of the two: a sale that ended since the render
+  // lets the server answer price_changed (and the catalog refresh) rather
+  // than a top-up for an amount the button never showed, and one that started
+  // since doesn't block a balance that covers the price now.
+  const needed = lowerPrice(shownAmount, price);
   const userMe = await getUserMe();
   if (userMe === false) {
     await showInGameAlert(translateText("store.login_required"));
@@ -710,22 +715,18 @@ export async function purchaseCosmetic(
       // Clamped: the server can refuse on a balance the client still reads as
       // sufficient, and a zero or negative shortfall reads as "you have
       // enough", which is the one thing we know is untrue.
-      shortfall: Math.max(1, price - available),
+      shortfall: Math.max(1, needed - available),
       item: itemName,
       // Only plutonium can be topped up; caps are dismiss-only.
       canTopUp: method === "hard",
     };
   };
-  if (balance < price) {
+  if (balance < needed) {
     return insufficient(balance);
   }
 
   const cosmeticType = resolved.type as
-    | "pattern"
-    | "skin"
-    | "flag"
-    | "crown"
-    | "effect";
+    "pattern" | "skin" | "flag" | "crown" | "effect";
   const result = await purchaseWithCurrency(
     cosmeticType,
     c.name,
@@ -838,6 +839,14 @@ function purchaseSuccessMessage(
 }
 
 /**
+ * The amount a balance pre-check asks for: the lower of the price the button
+ * showed and the price now, or the price now when nothing was shown.
+ */
+export function lowerPrice(shown: number | undefined, now: number): number {
+  return shown === undefined ? now : Math.min(shown, now);
+}
+
+/**
  * Buys a cosmetic pack (plutonium only). Mirrors the single-cosmetic currency
  * flow: a local balance pre-check surfaces the insufficient-funds dialog
  * before any request; a success reloads so every granted item shows as owned.
@@ -853,6 +862,8 @@ async function purchasePack(
     return;
   }
   const price = currentPrice(pack, "hard") ?? pack.priceHard;
+  // As for a single cosmetic: the cheaper of the shown and current price.
+  const needed = lowerPrice(shownAmount, price);
   const userMe = await getUserMe();
   if (userMe === false) {
     await showInGameAlert(translateText("store.login_required"));
@@ -860,7 +871,7 @@ async function purchasePack(
   }
   const insufficient = (balance: number): InsufficientCurrency => ({
     currency: translateText("cosmetics.hard"),
-    shortfall: price - balance,
+    shortfall: needed - balance,
     item: pack.displayName,
     canTopUp: true,
   });
@@ -872,7 +883,7 @@ async function purchasePack(
     await showInGameAlert(debtMessage(-balance));
     return;
   }
-  if (balance < price) {
+  if (balance < needed) {
     return insufficient(balance);
   }
 
