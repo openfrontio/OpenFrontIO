@@ -3,6 +3,7 @@ import {
   CARD_ART_HEIGHT,
   CARD_ART_WIDTH,
   checkCardBackground,
+  type LayerSrcOptions,
   parseCardAnimation,
 } from "../src/client/cosmetic-preview/checks";
 
@@ -39,19 +40,33 @@ describe("cosmetic-preview checks entry", () => {
       kind: "layers",
       layers: [{ src, effect: "pulse" }],
     });
+    // Every host the shape cases use, so they test the regex, not the list.
+    const ANY_TEST_HOST = {
+      allowedLayerHosts: [
+        "https://pub-0123456789abcdef.r2.dev",
+        "https://cdn.example.com",
+        "https://cdn.ofedge.io",
+        "https://localhost:8787",
+      ],
+    };
 
     test.each([
       "/cosmetics/card-backgrounds/bg_neon-grid_fx-pulse.png",
       "bg_x_fx-pulse.png",
       "cosmetics/bg_x.v2_fx-pulse.PNG",
+    ])("accepts the relative %s, with or without hosts", (src) => {
+      expect(parseCardAnimation(withSrc(src)).ok).toBe(true);
+      expect(parseCardAnimation(withSrc(src), ANY_TEST_HOST).ok).toBe(true);
+    });
+
+    test.each([
       // What the infra Assets page hands out: the bucket's public URL.
       "https://pub-0123456789abcdef.r2.dev/cosmetics/card-backgrounds/bg_x_fx-pulse.png",
-      "https://cdn.example.com/bg_x_fx-pulse.png",
       // The shape infra's tests use for the same regex.
       "https://cdn.ofedge.io/cosmetics/card_background/neon_grid.png",
-      "https://localhost:8787/assets/bg_x_fx-pulse.png",
-    ])("accepts %s", (src) => {
-      expect(parseCardAnimation(withSrc(src)).ok).toBe(true);
+      "https://localhost:8787/cosmetics/bg_x_fx-pulse.png",
+    ])("accepts %s from a listed host", (src) => {
+      expect(parseCardAnimation(withSrc(src), ANY_TEST_HOST).ok).toBe(true);
     });
 
     test.each([
@@ -81,7 +96,7 @@ describe("cosmetic-preview checks entry", () => {
       "/cosmetics/x.webp",
       "",
     ])("refuses %s", (src) => {
-      const parsed = parseCardAnimation(withSrc(src));
+      const parsed = parseCardAnimation(withSrc(src), ANY_TEST_HOST);
       expect(parsed.ok).toBe(false);
       if (!parsed.ok) expect(parsed.error).toContain("src");
     });
@@ -132,18 +147,85 @@ describe("cosmetic-preview checks entry", () => {
         base: { image: px(255), type: "image/webp", bytes: 1 },
         layers: [{ effect: "pulse" as const, image: px(0), bytes: 1 }],
       };
-      const srcIssues = (src: string) =>
-        checkCardBackground(files, {
-          kind: "layers",
-          layers: [{ src, effect: "pulse" }],
-        }).filter((i) => i.code === "layer_src");
+      const BUCKET = "https://cdn.ofedge.io";
+      const LISTED = { allowedLayerHosts: [BUCKET] };
+      const ASSETS_LINK = `${BUCKET}/cosmetics/card_background/neon_grid.png`;
+      const srcIssues = (src: string, options: LayerSrcOptions = LISTED) =>
+        checkCardBackground(
+          files,
+          { kind: "layers", layers: [{ src, effect: "pulse" }] },
+          options,
+        ).filter((i) => i.code === "layer_src");
+      const refused = (src: string) => [
+        { code: "layer_src", level: "error", layer: 0, params: { src } },
+      ];
 
-      test("an Assets page link passes", () => {
+      test("an Assets page link from the listed bucket passes", () => {
+        expect(srcIssues(ASSETS_LINK)).toEqual([]);
+      });
+
+      test("with no hosts listed, the default, every https src is refused", () => {
+        expect(srcIssues(ASSETS_LINK, {})).toEqual(refused(ASSETS_LINK));
         expect(
-          srcIssues(
-            "https://pub-0123456789abcdef.r2.dev/cosmetics/card-backgrounds/bg_x_fx-pulse.png",
-          ),
+          checkCardBackground(files, {
+            kind: "layers",
+            layers: [{ src: ASSETS_LINK, effect: "pulse" }],
+          }).filter((i) => i.code === "layer_src"),
+        ).toEqual(refused(ASSETS_LINK));
+        expect(parseCardAnimation(withSrc(ASSETS_LINK)).ok).toBe(false);
+      });
+
+      test("relative srcs don't depend on the host list", () => {
+        const src = "/cosmetics/card-backgrounds/bg_x_fx-pulse.png";
+        expect(srcIssues(src, {})).toEqual([]);
+        expect(srcIssues(src)).toEqual([]);
+      });
+
+      test.each([
+        // Not a listed origin.
+        "https://evil.example/cosmetics/card_background/x.png",
+        "https://cdn.ofedge.io.evil.example/cosmetics/x.png",
+        "https://ofedge.io/cosmetics/x.png",
+        "https://cdn.ofedge.io:8443/cosmetics/x.png",
+        // Listed, but not under /cosmetics/.
+        "https://cdn.ofedge.io/x.png",
+        "https://cdn.ofedge.io/assets/cosmetics/x.png",
+        "https://cdn.ofedge.io/cosmeticsx/x.png",
+        "https://cdn.ofedge.io/Cosmetics/x.png",
+      ])("%s is a layer_src error", (src) => {
+        expect(srcIssues(src)).toEqual(refused(src));
+      });
+
+      test("a listed origin is matched without case, with or without https:// and a trailing /", () => {
+        for (const host of [
+          "https://CDN.ofedge.io",
+          "cdn.ofedge.io",
+          "https://cdn.ofedge.io/",
+        ]) {
+          expect(srcIssues(ASSETS_LINK, { allowedLayerHosts: [host] })).toEqual(
+            [],
+          );
+        }
+        expect(
+          srcIssues("HTTPS://CDN.OFEDGE.IO/cosmetics/x.png", LISTED),
         ).toEqual([]);
+      });
+
+      test("an http:// origin in the list doesn't allow https links from it", () => {
+        expect(
+          srcIssues(ASSETS_LINK, {
+            allowedLayerHosts: ["http://cdn.ofedge.io"],
+          }),
+        ).toEqual(refused(ASSETS_LINK));
+      });
+
+      test("a port must match as listed", () => {
+        const src = "https://localhost:8787/cosmetics/x.png";
+        const listed = { allowedLayerHosts: ["https://localhost:8787"] };
+        expect(srcIssues(src, listed)).toEqual([]);
+        expect(srcIssues("https://localhost/cosmetics/x.png", listed)).toEqual(
+          refused("https://localhost/cosmetics/x.png"),
+        );
       });
 
       test.each([
@@ -154,10 +236,8 @@ describe("cosmetic-preview checks entry", () => {
         "data:image/png;base64,AAAA.png",
         "//cdn.example.com/x.png",
         "https://cdn.example.com/bg_x_fx-pulse.webp",
-      ])("%s is a layer_src error", (src) => {
-        expect(srcIssues(src)).toEqual([
-          { code: "layer_src", level: "error", layer: 0, params: { src } },
-        ]);
+      ])("%s is a layer_src error, even from a listed host", (src) => {
+        expect(srcIssues(src, ANY_TEST_HOST)).toEqual(refused(src));
       });
     });
   });

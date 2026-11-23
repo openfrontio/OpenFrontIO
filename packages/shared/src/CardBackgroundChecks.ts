@@ -134,27 +134,64 @@ const CATALOGUE_SRC =
   /^(?:https:\/\/[A-Za-z0-9.-]+(?::[0-9]{1,5})?\/|\/)?(?:[A-Za-z0-9_-][A-Za-z0-9._-]*\/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\.png$/i;
 const MAX_SRC_LENGTH = 200;
 
-/** Whether `src` is a catalogue PNG layer: a relative path or an https:// link. */
-export function isCatalogueLayerSrc(src: unknown): boolean {
+// An https:// src must also come from a listed origin, under this path.
+const LINK_ORIGIN = /^https:\/\/[^/]+/i;
+const LINK_PATH_PREFIX = "/cosmetics/";
+
+export interface LayerSrcOptions {
+  /**
+   * The origins an https:// layer src may come from, like
+   * "https://cdn.example.com" (a bare host gets https:// added; a port must
+   * match as written). Empty, the default, refuses every https:// src.
+   * Relative srcs don't depend on it.
+   */
+  allowedLayerHosts?: readonly string[];
+}
+
+function normalOrigin(origin: string): string {
+  const o = origin.trim().replace(/\/+$/, "").toLowerCase();
+  return o.includes("://") ? o : `https://${o}`;
+}
+
+/**
+ * Whether `src` is a catalogue PNG layer: a relative path, or an https://
+ * link from one of `allowedLayerHosts`, under /cosmetics/.
+ */
+export function isCatalogueLayerSrc(
+  src: unknown,
+  options: LayerSrcOptions = {},
+): boolean {
+  if (
+    typeof src !== "string" ||
+    src.length > MAX_SRC_LENGTH ||
+    !CATALOGUE_SRC.test(src)
+  ) {
+    return false;
+  }
+  const origin = LINK_ORIGIN.exec(src)?.[0];
+  if (origin === undefined) return true;
+  const allowed = (options.allowedLayerHosts ?? []).map(normalOrigin);
   return (
-    typeof src === "string" &&
-    src.length <= MAX_SRC_LENGTH &&
-    CATALOGUE_SRC.test(src)
+    allowed.includes(origin.toLowerCase()) &&
+    src.slice(origin.length).startsWith(LINK_PATH_PREFIX)
   );
 }
 
 /**
- * The layers of `animation` whose src isn't a catalogue PNG path or link, as
- * `layer_src` errors. Not part of checkCardBackground, since the browser
- * previews layers from blob: URLs: the checks entry adds it, for what a host
- * stores or sends on.
+ * The layers of `animation` whose src isn't a catalogue PNG path or allowed
+ * link (see isCatalogueLayerSrc), as `layer_src` errors. Not part of
+ * checkCardBackground, since the browser previews layers from blob: URLs: the
+ * checks entry adds it, for what a host stores or sends on.
  */
-export function checkLayerSources(animation: unknown): CardIssue[] {
+export function checkLayerSources(
+  animation: unknown,
+  options: LayerSrcOptions = {},
+): CardIssue[] {
   if (!isObject(animation) || !Array.isArray(animation.layers)) return [];
   const issues: CardIssue[] = [];
   animation.layers.forEach((layer: unknown, i: number) => {
     const src = isObject(layer) ? layer.src : undefined;
-    if (!isCatalogueLayerSrc(src)) {
+    if (!isCatalogueLayerSrc(src, options)) {
       issues.push({
         code: "layer_src",
         level: "error",
