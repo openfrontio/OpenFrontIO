@@ -113,8 +113,8 @@ describe("cosmetic-preview checks entry", () => {
         {
           base: { image: px(255), type: "image/webp", bytes: 1 },
           layers: [
-            { effect: "pulse", image: px(0), bytes: 1 },
-            { effect: "drift", image: px(0), bytes: 1 },
+            { effect: "pulse", image: px(0), type: "image/png", bytes: 1 },
+            { effect: "drift", image: px(0), type: "image/png", bytes: 1 },
           ],
         },
         {
@@ -145,7 +145,14 @@ describe("cosmetic-preview checks entry", () => {
       };
       const files = {
         base: { image: px(255), type: "image/webp", bytes: 1 },
-        layers: [{ effect: "pulse" as const, image: px(0), bytes: 1 }],
+        layers: [
+          {
+            effect: "pulse" as const,
+            image: px(0),
+            type: "image/png",
+            bytes: 1,
+          },
+        ],
       };
       const BUCKET = "https://cdn.ofedge.io";
       const LISTED = { allowedLayerHosts: [BUCKET] };

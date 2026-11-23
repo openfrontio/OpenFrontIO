@@ -37,6 +37,10 @@ export type { LayerSrcOptions } from "@openfront/shared/CardBackgroundChecks";
  * The game's checks, plus a `layer_src` error for each layer whose src isn't
  * a catalogue PNG path, or an https:// link allowed by `options`. Check with
  * the srcs that will be stored.
+ *
+ * On a server, take each file's `type` from the bytes received (sniff the
+ * magic number), never from the browser's File.type: that comes from the
+ * file name, so a renamed file would pass as a PNG.
  */
 export function checkCardBackground(
   files: CardBackgroundFiles,

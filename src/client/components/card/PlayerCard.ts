@@ -1,8 +1,8 @@
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { translateText } from "../../Translate";
 import { prefersReducedMotion } from "../../utilities/ReducedMotion";
-import { translateText } from "../../Utils";
 import { levelBadgeAccent } from "../LevelBadge";
 import "./CardBackground";
 import { CARD_TAUNTS_ENABLED, CARD_TITLES_ENABLED } from "./HeldBack";

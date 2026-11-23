@@ -9,7 +9,7 @@ import { decodePatternData } from "@openfront/shared/PatternDecoder";
 import { base64url } from "jose";
 import { html, LitElement, nothing, PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { ResolvedCosmetic } from "../../Cosmetics";
+import type { ResolvedCosmetic } from "../../Cosmetics";
 import {
   CosmeticPreviewConfig,
   CosmeticPreviewRenderer,
@@ -23,7 +23,7 @@ import {
   UT_TRANSPORT,
   UT_WARSHIP,
 } from "../../render/types/UnitType";
-import { translateText } from "../../Utils";
+import { translateText } from "../../Translate";
 import { attributesToExplosionParams } from "../../WebGLFrameBuilder";
 
 /**

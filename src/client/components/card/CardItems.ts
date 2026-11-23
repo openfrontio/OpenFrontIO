@@ -6,7 +6,7 @@ import {
   type PlayerCardItem,
   type Taunt,
 } from "@openfront/shared/CosmeticSchemas";
-import { translateText } from "../../Utils";
+import { translateText } from "../../Translate";
 
 // The player card cosmetics, as the client lists and sells them.
 

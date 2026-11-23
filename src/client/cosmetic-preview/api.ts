@@ -126,10 +126,19 @@ export interface CardCheckImage {
 }
 
 export interface CardBackgroundFiles {
-  /** `type` is the file's MIME type, `bytes` its size. */
+  /**
+   * `type` is the file's MIME type, `bytes` its size. A host's server must
+   * take `type` from the bytes it received (their magic number), not forward
+   * the browser's File.type, which comes from the file name.
+   */
   base: { image: CardCheckImage; type: string; bytes: number };
-  /** In the order the animation lists them. */
-  layers: { effect: CardEffect; image: CardCheckImage; bytes: number }[];
+  /** In the order the animation lists them. Each must be an image/png. */
+  layers: {
+    effect: CardEffect;
+    image: CardCheckImage;
+    type: string;
+    bytes: number;
+  }[];
 }
 
 export type CardIssueCode =
@@ -138,9 +147,12 @@ export type CardIssueCode =
   | "base_size"
   | "base_format"
   | "layer_size"
+  /** A layer file isn't an image/png. */
+  | "layer_format"
   | "too_many_layers"
   | "animation_not_layers"
   | "animation_invalid"
+  /** The animation lists a different number of layers than the files, or there is none. */
   | "layer_count_mismatch"
   | "layer_effect_mismatch"
   /** A layer src isn't a catalogue PNG path or https:// link (checks entry only). */

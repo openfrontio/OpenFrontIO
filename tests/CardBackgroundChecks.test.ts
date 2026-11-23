@@ -64,8 +64,9 @@ function layer(
   effect: "pulse" | "shimmer" | "flicker" | "drift",
   img: CardCheckImage = SMALL_RIGHT_LAYER,
   bytes = 50_000,
+  type = "image/png",
 ) {
-  return { effect, image: img, bytes };
+  return { effect, image: img, type, bytes };
 }
 
 function anim(...layers: Record<string, unknown>[]) {
@@ -150,6 +151,41 @@ describe("checkCardBackground", () => {
     expect(issues.filter((i) => i.code === "layer_size")).toHaveLength(1);
   });
 
+  describe("every layer is a PNG (error)", () => {
+    test.each(["image/webp", "image/jpeg", "image/gif", ""])(
+      "%s is a layer_format error",
+      (type) => {
+        const issues = checkCardBackground(
+          files({
+            layers: [
+              layer("pulse"),
+              layer("drift", SMALL_RIGHT_LAYER, 50_000, type),
+            ],
+          }),
+          anim({ src: "a", effect: "pulse" }, { src: "b", effect: "drift" }),
+        );
+        expect(issues.filter((i) => i.code === "layer_format")).toEqual([
+          { code: "layer_format", level: "error", layer: 1, params: { type } },
+        ]);
+      },
+    );
+
+    test("a layer with no type is a layer_format error", () => {
+      const untyped: Partial<ReturnType<typeof layer>> = layer("pulse");
+      delete untyped.type;
+      const issues = checkCardBackground(
+        files({ layers: [untyped as ReturnType<typeof layer>] }),
+        anim({ src: "a", effect: "pulse" }),
+      );
+      expect(issues).toContainEqual({
+        code: "layer_format",
+        level: "error",
+        layer: 0,
+        params: { type: "undefined" },
+      });
+    });
+  });
+
   describe("at most 3 layers; the settings pass the game's schema (error)", () => {
     test("four layers", () => {
       const four = [1, 2, 3, 4].map(() => layer("pulse"));
@@ -213,6 +249,23 @@ describe("checkCardBackground", () => {
       });
     });
   });
+
+  test.each([undefined, null])(
+    "layer files with a %s animation are layer_count_mismatch",
+    (animation) => {
+      const issues = checkCardBackground(
+        files({ layers: [layer("pulse")] }),
+        animation,
+      );
+      expect(issues).toEqual([
+        {
+          code: "layer_count_mismatch",
+          level: "error",
+          params: { files: 1, settings: 0 },
+        },
+      ]);
+    },
+  );
 
   test("each layer has transparency (error)", () => {
     const solid = image(W, H, () => [10, 10, 10, 255]);

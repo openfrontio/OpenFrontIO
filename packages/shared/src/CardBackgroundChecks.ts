@@ -25,6 +25,8 @@ export const NAME_AREA_FRACTION = 0.45;
 export const MAX_LAYERS = 3;
 
 const BASE_TYPES = new Set(["image/webp", "image/jpeg"]);
+// Layers keep their alpha, so they are PNGs.
+const LAYER_TYPE = "image/png";
 // A pixel counts as part of a layer from this alpha up: fainter is
 // anti-aliasing and export noise, not something a player sees move.
 const VISIBLE_ALPHA = 16;
@@ -47,10 +49,17 @@ export interface CardCheckImage {
 }
 
 export interface CardBackgroundFiles {
-  // `type` is the file's MIME type, `bytes` its size on disk.
+  // `type` is the file's MIME type, `bytes` its size on disk. A server takes
+  // `type` from the bytes it received (their magic number), never from what
+  // the page said: a browser's File.type comes from the file name.
   base: { image: CardCheckImage; type: string; bytes: number };
   // In the order the animation lists them.
-  layers: { effect: FxEffect; image: CardCheckImage; bytes: number }[];
+  layers: {
+    effect: FxEffect;
+    image: CardCheckImage;
+    type: string;
+    bytes: number;
+  }[];
 }
 
 export type CardIssueCode =
@@ -58,6 +67,7 @@ export type CardIssueCode =
   | "base_size"
   | "base_format"
   | "layer_size"
+  | "layer_format"
   | "too_many_layers"
   | "animation_not_layers"
   | "animation_invalid"
@@ -287,6 +297,14 @@ export function checkCardBackground(
         params: reportedSize(l.image),
       });
     }
+    if (l.type !== LAYER_TYPE) {
+      issues.push({
+        code: "layer_format",
+        level: "error",
+        layer: i,
+        params: { type: String(l.type) },
+      });
+    }
   });
   if (layers.length > MAX_LAYERS) {
     issues.push({
@@ -297,7 +315,17 @@ export function checkCardBackground(
   }
 
   let settings: LayerAnimation | null = null;
-  if (animation !== undefined && animation !== null) {
+  if (animation === undefined || animation === null) {
+    // Layer files with nothing saying how they move: the game would never
+    // draw them, so the set is not what the artist sent.
+    if (layers.length > 0) {
+      issues.push({
+        code: "layer_count_mismatch",
+        level: "error",
+        params: { files: layers.length, settings: 0 },
+      });
+    }
+  } else {
     const kind = (animation as { kind?: unknown }).kind;
     if (kind !== "layers") {
       issues.push({

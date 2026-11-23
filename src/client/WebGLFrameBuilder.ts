@@ -9,7 +9,7 @@ import {
   type NukeExplosionType,
 } from "@openfront/shared/CosmeticSchemas";
 import { colord } from "colord";
-import { getCachedCosmetics } from "./Cosmetics";
+import { getCachedCosmetics } from "./CosmeticsCache";
 import { buildTerrainRowSpans } from "./render/frame/derive/TerrainRowSpans";
 import { uploadFrameData } from "./render/frame/Upload";
 // Type-only: a value import would pull GPURenderer and its `.glsl?raw` shader

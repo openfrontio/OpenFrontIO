@@ -26,8 +26,8 @@ import {
   stillBackdropStyle,
 } from "../components/card/StillCardBackdrop";
 import "../components/LevelBadge";
+import { translateText } from "../Translate";
 import { prefersReducedMotion } from "../utilities/ReducedMotion";
-import { translateText } from "../Utils";
 import type {
   CardBackgroundFiles,
   CardBackgroundPreviewHandle,

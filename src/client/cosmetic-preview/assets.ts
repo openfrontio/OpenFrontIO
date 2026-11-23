@@ -1,3 +1,5 @@
+import { allowPageAssetUrls } from "@openfront/shared/AssetPaths";
+
 // The game assets the preview fetches at runtime, relative to resources/.
 // The package ships exactly these under assets/, and the host serves them.
 //
@@ -31,4 +33,6 @@ export function configurePreviewAssets(assetBase: string): void {
     PREVIEW_ASSET_PATHS.map((path) => [path, `/${path}`]),
   );
   globalThis.__CDN_BASE__ = base;
+  // The host hands the previews blob: URLs of files the artist dropped.
+  allowPageAssetUrls();
 }

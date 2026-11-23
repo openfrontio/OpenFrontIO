@@ -1,4 +1,13 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { allowPageAssetUrls } from "@openfront/shared/AssetPaths";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+} from "vitest";
 import { resetCardFxSession } from "../../src/client/components/card/CardFx";
 import type { PlayerCard } from "../../src/client/components/card/PlayerCard";
 import type { CardPreviewSize } from "../../src/client/cosmetic-preview/api";
@@ -34,6 +43,10 @@ function card(host: HTMLElement): PlayerCard | null {
 }
 
 describe("mountCardBackgroundPreview", () => {
+  // The package's entry opts in to blob: URLs (configurePreviewAssets()); this
+  // drives the card module directly, so it does the same.
+  beforeAll(() => allowPageAssetUrls());
+  afterAll(() => allowPageAssetUrls(false));
   let host: HTMLElement;
   beforeEach(() => {
     host = document.createElement("div");

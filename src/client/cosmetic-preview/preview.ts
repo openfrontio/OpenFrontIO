@@ -1,10 +1,17 @@
 // The renderer half of @openfront/cosmetic-preview, loaded by index.ts only
 // once the asset base is configured (see assets.ts for why the order matters).
 
-import en from "../../../resources/lang/en.json";
+// Named imports, so the bundle keeps these sections and drops the rest of
+// en.json.
+import {
+  card_preview,
+  player_card,
+  progression,
+  store,
+} from "../../../resources/lang/en.json";
 import "../components/cosmetics/CosmeticRenderCanvas";
 import type { CosmeticRenderCanvas } from "../components/cosmetics/CosmeticRenderCanvas";
-import { setStandaloneTranslations } from "../Utils";
+import { setStandaloneTranslations } from "../Translate";
 import type {
   CosmeticPreviewHandle,
   CosmeticPreviewModule,
@@ -28,14 +35,14 @@ const prefixed = (
       .map(([key, value]) => [`${section}.${key}`, value as string]),
   );
 setStandaloneTranslations({
-  "store.preview_error": en.store.preview_error,
-  "store.preview_salvo_count": en.store.preview_salvo_count,
-  "store.preview_salvo_toggle": en.store.preview_salvo_toggle,
-  ...prefixed("player_card", en.player_card, (k) => k.startsWith("tracker_")),
-  ...prefixed("progression", en.progression, (k) =>
+  "store.preview_error": store.preview_error,
+  "store.preview_salvo_count": store.preview_salvo_count,
+  "store.preview_salvo_toggle": store.preview_salvo_toggle,
+  ...prefixed("player_card", player_card, (k) => k.startsWith("tracker_")),
+  ...prefixed("progression", progression, (k) =>
     ["level", "prestige", "legend"].includes(k),
   ),
-  ...prefixed("card_preview", en.card_preview),
+  ...prefixed("card_preview", card_preview),
 });
 
 /**

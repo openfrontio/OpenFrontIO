@@ -50,6 +50,7 @@ import {
   hasPendingPurchase,
   peekPendingPurchase,
 } from "./components/inventory/PendingEquip";
+import { getCachedCosmetics, setCachedCosmetics } from "./CosmeticsCache";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import {
@@ -80,20 +81,14 @@ export const COSMETICS_FETCH_TIMEOUT_MS = 10_000;
 
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
-let __cosmeticsCache: Cosmetics | null = null;
 let __cosmeticsFetchedAt = 0;
 
 /** How long a fetched catalog is trusted before the store refetches it. */
 export const COSMETICS_STALE_MS = 60_000;
 
-/**
- * Synchronous accessor for the most recently resolved cosmetics. Returns null
- * before the first successful `fetchCosmetics()` call. Useful when a code path
- * cannot await (e.g. WebGL per-frame sync).
- */
-export function getCachedCosmetics(): Cosmetics | null {
-  return __cosmeticsCache;
-}
+// The synchronous accessor lives in CosmeticsCache.ts, so the renderer can
+// read the catalogue without importing this file's store and payment code.
+export { getCachedCosmetics };
 
 export type PaymentMethod = "dollar" | "hard" | "soft";
 
@@ -1419,7 +1414,7 @@ export function activeSale(
  */
 export function refreshStaleCosmetics(now: number = Date.now()): boolean {
   if (
-    __cosmeticsCache === null ||
+    getCachedCosmetics() === null ||
     now - __cosmeticsFetchedAt <= COSMETICS_STALE_MS
   ) {
     return false;
@@ -1461,7 +1456,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
       const patternKeys = Object.keys(result.data.patterns).sort();
       const hashInput = patternKeys.join(",");
       __cosmeticsHash = simpleHash(hashInput);
-      __cosmeticsCache = result.data;
+      setCachedCosmetics(result.data);
       __cosmeticsFetchedAt = Date.now();
       return result.data;
     } catch (error) {

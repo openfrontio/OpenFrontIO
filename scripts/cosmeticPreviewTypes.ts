@@ -78,6 +78,10 @@ export declare function parseCardAnimation(
  * The artist guide's checks, errors first, then warnings, plus a \`layer_src\`
  * error for each layer whose src isn't allowed (see isCatalogueLayerSrc).
  * Check with the srcs that will be stored. Pure.
+ *
+ * On a server, take each file's \`type\` from the bytes received (sniff the
+ * magic number), never from the browser's File.type: that comes from the
+ * file name, so a renamed file would pass as a PNG.
  */
 export declare function checkCardBackground(
   files: CardBackgroundFiles,
