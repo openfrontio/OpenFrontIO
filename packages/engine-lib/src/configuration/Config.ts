@@ -431,8 +431,10 @@ export class Config {
     throw new Error(`Unknown nuke type: ${unitType}`);
   }
 
-  nukeAllianceBreakThreshold(): number {
-    return 200;
+  // Weighted tiles of a player's territory (inner circle 1, outer ring 0.5)
+  // a nuke must cover before it breaks the alliance.
+  nukeAllianceBreakThreshold(unitType: UnitType): number {
+    return unitType === UnitType.HydrogenBomb ? 300 : 150;
   }
 
   samRange(level: number): number {

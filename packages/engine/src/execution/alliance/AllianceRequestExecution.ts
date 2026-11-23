@@ -130,7 +130,7 @@ export class AllianceRequestExecution implements Execution {
               targetTile,
               magnitude,
               allySmallIds: new Set([other.smallID()]),
-              threshold: this.mg.config().nukeAllianceBreakThreshold(),
+              threshold: this.mg.config().nukeAllianceBreakThreshold(unit.type()),
             })
           ) {
             continue;

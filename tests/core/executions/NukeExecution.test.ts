@@ -671,7 +671,10 @@ describe("NukeExecution kill credit", () => {
 describe("NukeExecution alliance break threshold", () => {
   // Uses the real nukeAllianceBreakThreshold. Inner and outer radii are equal,
   // so every tile in the blast weighs 1.
-  async function allianceWithTiles(tileCount: number) {
+  async function allianceWithTiles(
+    nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
+    tileCount: number,
+  ) {
     const g = await setup("big_plains", { infiniteGold: true }, [
       new PlayerInfo("launcher", PlayerType.Human, "c1", "launcher_id"),
       new PlayerInfo("ally", PlayerType.Human, "c2", "ally_id"),
@@ -692,21 +695,27 @@ describe("NukeExecution alliance break threshold", () => {
     }
 
     g.addExecution(
-      new NukeExecution(UnitType.AtomBomb, launcher, g.ref(100, 100), null),
+      new NukeExecution(nukeType, launcher, g.ref(100, 100), null),
     );
     g.executeNextTick(); // init
     g.executeNextTick(); // launch
     return { launcher, ally };
   }
 
-  test("hitting 200 allied tiles keeps the alliance", async () => {
-    const { launcher, ally } = await allianceWithTiles(200);
+  test.each([
+    [UnitType.AtomBomb, 150],
+    [UnitType.HydrogenBomb, 300],
+  ] as const)("%s keeps the alliance at %i allied tiles", async (type, n) => {
+    const { launcher, ally } = await allianceWithTiles(type, n);
     expect(launcher.isAlliedWith(ally)).toBe(true);
     expect(launcher.isTraitor()).toBe(false);
   });
 
-  test("hitting 201 allied tiles breaks the alliance", async () => {
-    const { launcher, ally } = await allianceWithTiles(201);
+  test.each([
+    [UnitType.AtomBomb, 151],
+    [UnitType.HydrogenBomb, 301],
+  ] as const)("%s breaks the alliance at %i allied tiles", async (type, n) => {
+    const { launcher, ally } = await allianceWithTiles(type, n);
     expect(launcher.isAlliedWith(ally)).toBe(false);
     expect(launcher.isTraitor()).toBe(true);
   });
