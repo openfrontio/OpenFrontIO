@@ -11,6 +11,7 @@ import {
   IMPASSABLE,
   isScenarioSize,
   land,
+  MAX_NATIONS,
   newNation,
   newScenarioDocument,
   SCENARIO_FORMAT,
@@ -277,6 +278,27 @@ describe("alliances", () => {
         ] as unknown as StoredScenarioDocument["alliances"]),
       /expected array to have <=2 items/,
     );
+  });
+
+  test("loads every pair of the most nations a document holds", () => {
+    const s = stored();
+    for (let i = s.nations.length; i < MAX_NATIONS; i++) {
+      s.nations.push({
+        id: `N${String(i).padStart(7, "0")}`,
+        name: `Nation ${i}`,
+        flag: null,
+        troops: 0,
+        gold: 0,
+        playable: false,
+      });
+    }
+    const ids = s.nations.map((n) => n.id).reverse();
+    s.alliances = ids.flatMap((a, i) =>
+      ids.slice(i + 1).map((b): [string, string] => [a, b]),
+    );
+    const doc = ScenarioDocumentSchema.parse(s);
+    expect(doc.alliances).toHaveLength((MAX_NATIONS * (MAX_NATIONS - 1)) / 2);
+    expect(doc.alliances[0]).toEqual(["EASTNAT1", "N0000002"]);
   });
 
   test("rejects alliances when the settings disable them", () => {
