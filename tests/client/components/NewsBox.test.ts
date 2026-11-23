@@ -7,6 +7,7 @@ import {
   NewsBox,
   NewsItem,
 } from "../../../src/client/components/NewsBox";
+import { STEAM_AWARDS_NOMINATIONS_END } from "../../../src/client/components/SteamAwardsBanner";
 import {
   fetchCosmetics,
   invalidateCosmetics,
@@ -190,6 +191,77 @@ describe("NewsBox", () => {
 
       await vi.waitFor(() => expect(box.textContent).toContain("Markdown"));
       expect(box.querySelector("[data-store-sale-banner]")).toBeNull();
+    });
+
+    // After nominations close (30 Nov 2026) the banner never shows, so these
+    // only run while it can.
+    describe.runIf(Date.now() < STEAM_AWARDS_NOMINATIONS_END)(
+      "while Steam Awards nominations are open",
+      () => {
+        beforeEach(() => {
+          window.openfrontDesktop = { steam: {} };
+        });
+
+        afterEach(() => {
+          window.openfrontDesktop = undefined;
+        });
+
+        it("is the awards banner instead of the news in the Steam app", async () => {
+          const box = document.createElement("news-box");
+          document.body.appendChild(box);
+
+          await vi.waitFor(() =>
+            expect(
+              box.querySelector("[data-steam-awards-banner]"),
+            ).toBeTruthy(),
+          );
+          // Let the news load and the box re-render with it.
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          expect(box.querySelector("[data-steam-awards-banner]")).toBeTruthy();
+          expect(box.textContent).not.toContain("Markdown");
+        });
+
+        it("keeps a running sale's banner under the awards banner", async () => {
+          const endsAt = new Date(Date.now() + 3_600_000).toISOString();
+          vi.mocked(getNews).mockResolvedValueOnce(newsAnnouncing("7"));
+          vi.mocked(fetchCosmetics).mockResolvedValueOnce(
+            catalogWith({ id: "7", name: "Weekend Sale", endsAt }),
+          );
+          const box = document.createElement("news-box");
+          document.body.appendChild(box);
+
+          await vi.waitFor(() =>
+            expect(box.querySelector("[data-store-sale-banner]")).toBeTruthy(),
+          );
+          expect(box.querySelector("[data-steam-awards-banner]")).toBeTruthy();
+          expect(box.textContent).not.toContain("Patch notes");
+        });
+
+        it("goes back to the news once the banner is closed", async () => {
+          const box = document.createElement("news-box");
+          document.body.appendChild(box);
+          await vi.waitFor(() =>
+            expect(
+              box.querySelector("[data-steam-awards-dismiss]"),
+            ).toBeTruthy(),
+          );
+
+          box
+            .querySelector<HTMLButtonElement>("[data-steam-awards-dismiss]")!
+            .click();
+
+          await vi.waitFor(() => expect(box.textContent).toContain("Markdown"));
+          expect(box.querySelector("[data-steam-awards-banner]")).toBeNull();
+        });
+      },
+    );
+
+    it("shows the news, not the awards banner, on the web", async () => {
+      const box = document.createElement("news-box");
+      document.body.appendChild(box);
+
+      await vi.waitFor(() => expect(box.textContent).toContain("Markdown"));
+      expect(box.querySelector("[data-steam-awards-banner]")).toBeNull();
     });
 
     describe("as time passes", () => {
