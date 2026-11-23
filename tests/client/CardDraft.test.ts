@@ -729,6 +729,28 @@ describe("CardEditor", () => {
     expect(await editor.save()).toBe(false);
   });
 
+  it("no session when the token is read: nothing is sent, and the save fails so it can be retried", async () => {
+    session.id = "account-a";
+    api.save.mockImplementation(
+      async (_body: unknown, stillWanted: () => boolean) => {
+        // A token refresh failed: no session, but no other account either.
+        session.id = null;
+        return stillWanted()
+          ? { ok: true, loadout: {} }
+          : { ok: false, error: "cancelled" };
+      },
+    );
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    expect(await editor.save()).toBe(false);
+    expect(editor.saveState).toBe("failed");
+    expect(editor.draft.background).toBe("bg_storm");
+    // Signed in as the same account again: Retry is on.
+    session.id = "account-a";
+    expect(editor.canSave()).toBe(true);
+  });
+
   it("a reauth into the same account re-seeds with its new profile", () => {
     session.id = "account-a";
     const editor = new CardEditor();
