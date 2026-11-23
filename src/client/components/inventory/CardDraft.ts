@@ -45,7 +45,8 @@ export const CARD_SLOT_KIND_LIST = Object.keys(
 
 /** A slot on the card: the background, or row `index` of a kind. */
 export type CardSlotRef =
-  { kind: "background" } | { kind: CardSlotKind; index: number };
+  | { kind: "background" }
+  | { kind: CardSlotKind; index: number };
 
 export interface CardDraft {
   background: string | null;
@@ -275,7 +276,8 @@ export function slotItem(
   }
   const spec = CARD_SLOT_KINDS[slot.kind];
   const section = cosmetics?.[spec.section] as
-    Record<string, CardItem> | undefined;
+    | Record<string, CardItem>
+    | undefined;
   const item = section?.[name];
   return item ? { type: spec.type, item } : null;
 }
