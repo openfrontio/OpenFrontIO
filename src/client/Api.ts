@@ -2250,6 +2250,32 @@ export async function queueLobby(
   }
 }
 
+// POST /api/game/:id/boost on the game server — a player in a scheduled
+// public lobby pays plutonium to move it to the front of its queue. The
+// worker charges through the API with the player's token. On failure,
+// `status` is the HTTP status (402 = can't afford it, 409 = the lobby can no
+// longer be boosted).
+export async function boostLobby(
+  gameID: string,
+): Promise<{ ok: true } | { ok: false; status?: number }> {
+  try {
+    await ensureServerList();
+    const token = await getPlayToken();
+    const response = await fetch(
+      `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}/boost`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    if (response.ok) return { ok: true };
+    return { ok: false, status: response.status };
+  } catch (e) {
+    console.error("boostLobby: request failed", e);
+    return { ok: false };
+  }
+}
+
 // POST /api/create_game on the game server — mints a fresh private lobby with
 // the caller as creator. Deliberately has no worker prefix and no id: the edge
 // (nginx in prod, the vite dev proxy locally) picks a worker, which mints a

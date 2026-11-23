@@ -76,6 +76,7 @@ import {
   IntentOutcome,
 } from "./IntentAuthorization";
 import { ListingState } from "./ListingState";
+import { BOOST_HOLD_MS } from "./LobbyBoost";
 import { friendsLookup, NameVisibility } from "./NameVisibility";
 import { poolTargetFor } from "./PoolRouting";
 import { Roster } from "./Roster";
@@ -306,6 +307,21 @@ export class GameServer {
   private creatorPersistentID?: string;
   private startsAt?: number;
   private publicGameType?: PublicGameType;
+  // Scheduled public lobbies only: when a player paid to boost the lobby to
+  // the front of its queue, and who (shown to the lobby).
+  private boostedAt?: number;
+  private boostedBy?: ClientID;
+  // The player whose boost charge is in flight, or ended without a known
+  // outcome. The client id is taken up front: the payer may disconnect
+  // before the charge returns.
+  private boostReservation?: {
+    persistentId: string;
+    clientID?: ClientID;
+    inFlight: boolean;
+    // Set when the charge ended without a known outcome: until then only
+    // this player may boost.
+    heldUntil?: number;
+  };
   // Matchmade team split from the matchmaking assignment: publicIds per
   // team. At start each client is stamped with its team's index.
   private matchmakingTeams?: string[][];
@@ -850,6 +866,7 @@ export class GameServer {
   private handleClientDisconnect(client: Client) {
     this.clients.markLeft(client);
     this.checkWinnerAfterElectorateShrink();
+    this.startBoostGrace(client);
 
     // hasStarted() includes prestart: during the lobby -> game transition
     // clients reconnect, and a host socket closing then must not tear the
@@ -1577,6 +1594,7 @@ export class GameServer {
     }
     const stale = this.clients.pruneStale(Date.now(), 60_000);
     for (const client of stale) {
+      this.startBoostGrace(client);
       this.log.info("no pings received, terminating connection", {
         clientID: client.clientID,
         persistentID: client.persistentID,
@@ -1701,6 +1719,7 @@ export class GameServer {
       accent: this.listing.lobbyAccent(),
       featured: this.listing.isFeatured() ? true : undefined,
       queued: this.listing.isQueued() ? true : undefined,
+      boostedBy: this.boostedBy,
     };
   }
 
@@ -1777,6 +1796,81 @@ export class GameServer {
   // starts it; the listing deadline no longer applies.
   public queueForPublic(): void {
     this.listing.queue();
+  }
+
+  // Whether this account holds a connection to the game right now.
+  public hasConnectedClient(persistentId: string): boolean {
+    const client = this.clients.byPersistentId(persistentId);
+    return client !== undefined && this.clients.isConnected(client);
+  }
+
+  // Boosted, a boost's charge is in flight, or another player's charge ended
+  // without a known outcome: this player may not pay for the lobby. That
+  // last hold lasts while its payer is connected, and for BOOST_HOLD_MS
+  // after they drop (a reload shouldn't lose it); then someone else may
+  // boost.
+  public boostBlockedFor(persistentId: string): boolean {
+    if (this.boostedAt !== undefined) return true;
+    const reservation = this.boostReservation;
+    if (reservation === undefined) return false;
+    if (reservation.inFlight) return true;
+    return (
+      reservation.persistentId !== persistentId &&
+      (this.hasConnectedClient(reservation.persistentId) ||
+        Date.now() < (reservation.heldUntil ?? 0))
+    );
+  }
+
+  public boostHeldFor(persistentId: string): boolean {
+    const reservation = this.boostReservation;
+    return (
+      reservation !== undefined &&
+      !reservation.inFlight &&
+      reservation.persistentId === persistentId
+    );
+  }
+
+  public boostedAtTime(): number | undefined {
+    return this.boostedAt;
+  }
+
+  public reserveBoost(persistentId: string): void {
+    this.boostReservation = {
+      persistentId,
+      clientID: this.clients.byPersistentId(persistentId)?.clientID,
+      inFlight: true,
+    };
+  }
+
+  public releaseBoost(): void {
+    this.boostReservation = undefined;
+  }
+
+  // A payer who drops with a boost charge unresolved gets BOOST_HOLD_MS to
+  // come back and retry it. Called wherever a client stops counting as
+  // connected: the ping prune can run long before the socket's close event.
+  private startBoostGrace(client: Client): void {
+    const reservation = this.boostReservation;
+    if (reservation?.persistentId === client.persistentID) {
+      reservation.heldUntil = Date.now() + BOOST_HOLD_MS;
+    }
+  }
+
+  public holdBoostForPayer(): void {
+    if (!this.boostReservation) return;
+    this.boostReservation.inFlight = false;
+    this.boostReservation.heldUntil = Date.now() + BOOST_HOLD_MS;
+  }
+
+  // The player holding the reservation paid to move this scheduled public
+  // lobby to the front of its queue. The worker reports boostedAt to the
+  // master as the lobby's queuedAt, which puts it right behind the lobby
+  // that's counting down.
+  public boost(): void {
+    if (this.boostedAt !== undefined) return;
+    this.boostedAt = Date.now();
+    this.boostedBy = this.boostReservation?.clientID;
+    this.boostReservation = undefined;
   }
 
   // Players (not spectators) currently seated in the lobby.
