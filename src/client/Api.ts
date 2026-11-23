@@ -227,12 +227,15 @@ function isAbortError(e: unknown): boolean {
  *
  * `aborted` distinguishes the one failure that concluded nothing about the
  * account (a deadline we imposed ourselves) from every other falsy answer,
- * which is a conclusion. Only getUserMe acts on it; see the un-caching rule
- * there.
+ * which is a conclusion. `sessionGone` says the session whose token it was
+ * fetched with isn't the current one by the time it landed: whatever it says
+ * is about the old account. Only getUserMe acts on either; see the
+ * un-caching rule there.
  */
 async function requestUserMe(): Promise<{
   profile: UserMeResponse | false;
   aborted: boolean;
+  sessionGone?: boolean;
 }> {
   try {
     const userAuthResult = await userAuth();
@@ -267,16 +270,20 @@ async function requestUserMe(): Promise<{
       // transient failure the `false` below also represents.
       if (isSessionActive(claims.sub)) {
         await logOut();
+        return { profile: false, aborted: false };
       }
-      return { profile: false, aborted: false };
+      return { profile: false, aborted: false, sessionGone: true };
     }
-    if (response.status !== 200) return { profile: false, aborted: false };
+    const sessionGone = !isSessionActive(claims.sub);
+    if (response.status !== 200) {
+      return { profile: false, aborted: false, sessionGone };
+    }
     const body = await response.json();
     const result = UserMeResponseSchema.safeParse(body);
     if (!result.success) {
       const error = z.prettifyError(result.error);
       console.error("Invalid response", error);
-      return { profile: false, aborted: false };
+      return { profile: false, aborted: false, sessionGone };
     }
     // Activate this player's cosmetic selections (and adopt any made while
     // logged out) before the profile is handed to callers — but not if the
@@ -286,8 +293,9 @@ async function requestUserMe(): Promise<{
       const publicId = result.data.player.publicId;
       rememberPublicId(claims.sub, publicId);
       UserSettings.setPlayerId(publicId);
+      return { profile: result.data, aborted: false };
     }
-    return { profile: result.data, aborted: false };
+    return { profile: result.data, aborted: false, sessionGone: true };
   } catch (e) {
     return { profile: false, aborted: isAbortError(e) };
   }
@@ -302,7 +310,7 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
   // always before any await inside can resume.
   const attempt: { request?: Promise<UserMeResponse | false> } = {};
   attempt.request = (async () => {
-    const { profile, aborted } = await requestUserMe();
+    const { profile, aborted, sessionGone } = await requestUserMe();
     // Un-cache a timeout, and ONLY a timeout. Every other falsy answer is
     // a conclusion about the account — signed out, a 401, a rejected token
     // — and stays remembered; re-deriving those would put an /auth/refresh
@@ -319,7 +327,12 @@ export async function getUserMe(): Promise<UserMeResponse | false> {
     // before the promise resolves, so a caller awaiting it cannot observe
     // the timed-out answer still cached. attempt.request is always set by
     // now — this line can only be reached after an await.
-    if (aborted && __userMe === attempt.request) {
+    //
+    // Likewise one fetched for a session that's gone by the time it landed
+    // (signed out, or a portal switch to another account while it was in
+    // flight): it's the old account's answer, and cached it would be the
+    // next session's getUserMe(). Its own caller still gets it.
+    if ((aborted || sessionGone) && __userMe === attempt.request) {
       __userMe = null;
     }
     return profile;
