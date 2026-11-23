@@ -34,6 +34,7 @@ import { alignPurchaseRows } from "./components/PurchaseButton";
 import {
   runningSales,
   saleCoversEverything,
+  salesPlayerCanBuy,
   visibleBannerSales,
 } from "./components/SaleBanner";
 import "./components/TribesPanel";
@@ -1129,7 +1130,9 @@ export class StoreModal extends BaseModal {
     const sales = runningSales(this.cosmetics);
     this.scheduleSaleEnd(sales);
     this.scheduleNewEnd();
-    const shown = visibleBannerSales(sales);
+    const shown = visibleBannerSales(
+      salesPlayerCanBuy(sales, this.cosmetics, this.resolvedPurchasables()),
+    );
     if (shown.length === 0) return "";
     return html`<sale-banner
       class="block px-3 pt-2"

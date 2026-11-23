@@ -1,4 +1,4 @@
-import type { NewsItem } from "@openfront/shared/ApiSchemas";
+import type { NewsItem, UserMeResponse } from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import type { ClientPlatform } from "@openfront/shared/WireSchemas";
 import { LitElement, html, nothing } from "lit";
@@ -9,13 +9,20 @@ import {
   fetchCosmetics,
   invalidateCosmetics,
   refreshStaleCosmetics,
+  resolveCosmetics,
+  type ResolvedCosmetic,
 } from "../Cosmetics";
+import { lastUserMeResponse } from "../UserMeBroadcast";
 import {
   HIDE_SALE_BANNERS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
 } from "../UserSettings";
 import { translateText } from "../Utils";
-import { runningSales, visibleBannerSales } from "./SaleBanner";
+import {
+  runningSales,
+  salesPlayerCanBuy,
+  visibleBannerSales,
+} from "./SaleBanner";
 
 // Re-render when the sale banner setting changes.
 const SALE_BANNER_SETTING_EVENT = `${USER_SETTINGS_CHANGED_EVENT}:${HIDE_SALE_BANNERS_KEY}`;
@@ -85,6 +92,14 @@ export class NewsBox extends LitElement {
   private renderMarkdown: typeof import("../Markdown").renderMarkdown | null =
     null;
   private cycleTimer: ReturnType<typeof setInterval> | null = null;
+  // The signed-in player, so a sale on only what they own gets no banner.
+  @state() private userMe: UserMeResponse | false =
+    lastUserMeResponse()?.response ?? false;
+  private purchasableFor: {
+    cosmetics: Cosmetics;
+    userMe: UserMeResponse | false;
+    items: ResolvedCosmetic[];
+  } | null = null;
 
   createRenderRoot() {
     return this;
@@ -93,11 +108,33 @@ export class NewsBox extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     globalThis.addEventListener(SALE_BANNER_SETTING_EVENT, this.rerender);
+    document.addEventListener("userMeResponse", this.onUserMe);
+    this.userMe = lastUserMeResponse()?.response ?? false;
     void this.loadNews();
     void this.loadSales();
   }
 
   private rerender = (): void => this.requestUpdate();
+
+  private onUserMe = (event: Event): void => {
+    this.userMe = (event as CustomEvent<UserMeResponse | false>).detail;
+  };
+
+  /**
+   * What the store would sell this player, resolved once per catalog and
+   * account (the box re-renders every few seconds while news cycles).
+   */
+  private purchasable(cosmetics: Cosmetics): ResolvedCosmetic[] {
+    const cached = this.purchasableFor;
+    if (cached?.cosmetics === cosmetics && cached.userMe === this.userMe) {
+      return cached.items;
+    }
+    const items = resolveCosmetics(cosmetics, this.userMe, null).filter(
+      (resolved) => resolved.relationship === "purchasable",
+    );
+    this.purchasableFor = { cosmetics, userMe: this.userMe, items };
+    return items;
+  }
 
   /**
    * Fetches the catalog for its running sales, and keeps it current for as long
@@ -204,6 +241,7 @@ export class NewsBox extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     globalThis.removeEventListener(SALE_BANNER_SETTING_EVENT, this.rerender);
+    document.removeEventListener("userMeResponse", this.onUserMe);
     this.stopCycle();
     this.clearSaleTimer();
   }
@@ -243,8 +281,15 @@ export class NewsBox extends LitElement {
   render() {
     // A running sale takes the box for as long as it runs: no rotation and
     // no dismiss, so it's there every time the player looks.
+    const running = runningSales(this.cosmetics, this.announcedSales);
     const sales = visibleBannerSales(
-      runningSales(this.cosmetics, this.announcedSales),
+      this.cosmetics === null
+        ? running
+        : salesPlayerCanBuy(
+            running,
+            this.cosmetics,
+            this.purchasable(this.cosmetics),
+          ),
     );
     if (sales.length > 0) {
       return html`<sale-banner

@@ -3,8 +3,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import en from "../../../resources/lang/en.json";
 import {
   flashSaleItemName,
+  salesPlayerCanBuy,
   type SaleBanner,
 } from "../../../src/client/components/SaleBanner";
+import type { ResolvedCosmetic } from "../../../src/client/Cosmetics";
 
 const inHours = (h: number) =>
   new Date(Date.now() + h * 3_600_000).toISOString();
@@ -150,5 +152,46 @@ describe("SaleBanner flash sale", () => {
     expect(
       alone.querySelector("[data-store-sale-banner] [data-sale-open]"),
     ).toBeTruthy();
+  });
+});
+
+describe("salesPlayerCanBuy", () => {
+  const onSale = { priceHard: 10, listPriceHard: 100 };
+  const aurora = { name: "aurora", ...onSale, promotion: flash };
+  const catalog = {
+    patterns: {},
+    flags: { aurora },
+    crowns: {},
+    effects: {},
+    packs: {},
+  } as unknown as Cosmetics;
+  const resolved = (cosmetic: object): ResolvedCosmetic =>
+    ({
+      type: "flag",
+      cosmetic,
+      colorPalette: null,
+      relationship: "purchasable",
+      key: "flag:x",
+    }) as unknown as ResolvedCosmetic;
+
+  it("drops a flash sale on an item the player can't buy (they own it)", () => {
+    expect(salesPlayerCanBuy([flash, weekend], catalog, [])).toEqual([weekend]);
+  });
+
+  it("keeps a flash sale on an item the player can buy", () => {
+    expect(
+      salesPlayerCanBuy([flash, weekend], catalog, [resolved(aurora)]),
+    ).toEqual([flash, weekend]);
+  });
+
+  it("doesn't count an item tagged with the sale but no longer discounted", () => {
+    // The tag without a discount (a stale price) doesn't count as buyable.
+    const stale = { name: "aurora", priceHard: 100, promotion: flash };
+    expect(salesPlayerCanBuy([flash], catalog, [resolved(stale)])).toEqual([]);
+  });
+
+  it("keeps a sale the catalog tags no item with", () => {
+    expect(salesPlayerCanBuy([weekend], catalog, [])).toEqual([weekend]);
+    expect(salesPlayerCanBuy([flash], null, [])).toEqual([flash]);
   });
 });

@@ -25,7 +25,8 @@ vi.mock("../../../src/client/Api", () => ({
   ]),
 }));
 
-vi.mock("../../../src/client/Cosmetics", () => ({
+vi.mock("../../../src/client/Cosmetics", async (importActual) => ({
+  ...(await importActual<typeof import("../../../src/client/Cosmetics")>()),
   fetchCosmetics: vi.fn(async () => null),
   invalidateCosmetics: vi.fn(),
   refreshStaleCosmetics: vi.fn(() => true),
@@ -178,6 +179,41 @@ describe("NewsBox", () => {
 
       (banner as HTMLButtonElement).click();
       expect(window.location.hash).toBe("#modal=store&tab=cosmetics&sub=sale");
+    });
+
+    it("drops the banner of a flash deal on an item the player owns", async () => {
+      const endsAt = new Date(Date.now() + 3_600_000).toISOString();
+      const deal = { id: "7", name: "Daily Hot Sale", endsAt, kind: "flash" };
+      vi.mocked(getNews).mockResolvedValueOnce(newsAnnouncing("7"));
+      vi.mocked(fetchCosmetics).mockResolvedValueOnce({
+        ...catalogWith(deal),
+        flags: {
+          aurora: {
+            name: "aurora",
+            url: "",
+            priceHard: 10,
+            listPriceHard: 100,
+            promotion: { percentOff: 90, ...deal },
+          },
+        },
+      } as unknown as Cosmetics);
+      const box = document.createElement("news-box");
+      document.body.appendChild(box);
+
+      // Signed out: the deal can be bought, so it has a banner.
+      await vi.waitFor(() =>
+        expect(box.querySelector("[data-store-sale-banner]")).toBeTruthy(),
+      );
+
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", {
+          detail: { player: { flares: ["flag:aurora"] } },
+        }),
+      );
+      await vi.waitFor(() =>
+        expect(box.querySelector("[data-store-sale-banner]")).toBeNull(),
+      );
+      expect(box.textContent).toContain("Patch notes");
     });
 
     it("leaves the news alone for a sale not set to announce", async () => {

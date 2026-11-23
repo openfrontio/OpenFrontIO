@@ -2,7 +2,8 @@ import type { Cosmetics, Promotion } from "@openfront/shared/CosmeticSchemas";
 import type { TemplateResult } from "lit";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { translateCosmetic } from "../Cosmetics";
+import type { ResolvedCosmetic } from "../Cosmetics";
+import { activeSale, translateCosmetic } from "../Cosmetics";
 import { isSteamShell } from "../DesktopShell";
 import { UserSettings } from "../UserSettings";
 import { translateText } from "../Utils";
@@ -44,16 +45,9 @@ export function runningSales(
   );
 }
 
-/**
- * Whether a sale covers every priced item in the catalog, so the banner can
- * say "store-wide" rather than "selected items".
- */
-export function saleCoversEverything(
-  cosmetics: Cosmetics | null,
-  promotionId: string,
-): boolean {
-  if (cosmetics === null) return false;
-  const items: { priceHard?: number; promotion?: { id: string } }[] = [
+/** Every item in the catalog a sale can discount, effects unnested. */
+function catalogItems(cosmetics: Cosmetics): object[] {
+  return [
     ...Object.values(cosmetics.patterns ?? {}),
     ...Object.values(cosmetics.flags ?? {}),
     ...Object.values(cosmetics.crowns ?? {}),
@@ -63,6 +57,48 @@ export function saleCoversEverything(
       Object.values(byName ?? {}),
     ),
   ];
+}
+
+const promotionIdOf = (item: unknown): string | undefined =>
+  (item as { promotion?: { id: string } } | null)?.promotion?.id;
+
+/**
+ * The sales this player can buy something in. A sale whose discounted items
+ * the player can't buy (a flash deal on an item they already own, say) would
+ * send them to an On sale tab without it, so its banner is left out. A sale
+ * the catalog tags no item with (an older or partial catalog) is kept.
+ * `purchasable` is the catalog resolved for the player, filtered to what the
+ * store would sell them.
+ */
+export function salesPlayerCanBuy(
+  sales: Promotion[],
+  cosmetics: Cosmetics | null,
+  purchasable: readonly ResolvedCosmetic[],
+  now: number = Date.now(),
+): Promotion[] {
+  if (cosmetics === null) return sales;
+  const tagged = new Set(catalogItems(cosmetics).map(promotionIdOf));
+  const buyable = new Set(
+    purchasable
+      .filter((resolved) => activeSale(resolved.cosmetic, now) !== null)
+      .map((resolved) => promotionIdOf(resolved.cosmetic)),
+  );
+  return sales.filter((sale) => !tagged.has(sale.id) || buyable.has(sale.id));
+}
+
+/**
+ * Whether a sale covers every priced item in the catalog, so the banner can
+ * say "store-wide" rather than "selected items".
+ */
+export function saleCoversEverything(
+  cosmetics: Cosmetics | null,
+  promotionId: string,
+): boolean {
+  if (cosmetics === null) return false;
+  const items = catalogItems(cosmetics) as {
+    priceHard?: number;
+    promotion?: { id: string };
+  }[];
   const priced = items.filter(
     (item) =>
       item.priceHard !== undefined ||
