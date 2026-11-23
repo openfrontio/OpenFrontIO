@@ -720,13 +720,19 @@ describe("CardEditor", () => {
       async (_body: unknown, stillWanted: () => boolean) => {
         // The token is read; the session has moved on by then.
         session.id = "account-b";
-        return stillWanted() ? { ok: true, loadout: {} } : { ok: false };
+        return stillWanted()
+          ? { ok: true, loadout: {} }
+          : { ok: false, error: "cancelled" };
       },
     );
     const editor = new CardEditor();
     editor.seed(me(CARD, B_FLARES, "account-a"));
     editor.pick({ kind: "background" }, "bg_storm");
     expect(await editor.save()).toBe(false);
+    // Another account's session now: A's save ends quietly, with no
+    // "Couldn't save" and a Retry that couldn't save (Save is off).
+    expect(editor.saveState).toBe("idle");
+    expect(editor.canSave()).toBe(false);
   });
 
   it("no session when the token is read: nothing is sent, and the save fails so it can be retried", async () => {
