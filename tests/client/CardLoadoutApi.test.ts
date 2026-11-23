@@ -17,10 +17,7 @@ vi.mock("../../src/client/Cosmetics", () => ({
   broadcastFreshUserMe: fresh.broadcast,
 }));
 
-import {
-  saveCardLoadout,
-  saveTauntsMuted,
-} from "../../src/client/CardLoadoutApi";
+import { saveCardLoadout } from "../../src/client/CardLoadoutApi";
 
 const LOADOUT = {
   background: "bg_pacific",
@@ -131,35 +128,24 @@ describe("saveCardLoadout", () => {
     expect(auth.logOut).toHaveBeenCalled();
   });
 
+  it("a 401 for a save no longer wanted doesn't sign the new session out", async () => {
+    // Signed out and back in (or into another account) while the PUT was
+    // out: the 401 is about the old token.
+    fetchMock.mockResolvedValue(new Response("", { status: 401 }));
+    auth.logOut.mockClear();
+    // Wanted when the token was read, not by the time the 401 came back.
+    let asked = 0;
+    const result = await saveCardLoadout(LOADOUT, () => ++asked === 1);
+    expect(fetchMock).toHaveBeenCalled();
+    expect(result).toEqual({ ok: false, error: "cancelled" });
+    expect(auth.logOut).not.toHaveBeenCalled();
+  });
+
   it("network failure", async () => {
     fetchMock.mockRejectedValue(new Error("offline"));
     expect(await saveCardLoadout(LOADOUT)).toEqual({
       ok: false,
       error: "failed",
     });
-  });
-});
-
-describe("saveTauntsMuted", () => {
-  const fetchMock = vi.fn();
-  beforeEach(() => {
-    fetchMock.mockReset();
-    vi.stubGlobal("fetch", fetchMock);
-  });
-  afterEach(() => vi.unstubAllGlobals());
-
-  it("saves the setting", async () => {
-    fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ muted: true }), { status: 200 }),
-    );
-    expect(await saveTauntsMuted(true)).toBe(true);
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
-      muted: true,
-    });
-  });
-
-  it("failure gives false", async () => {
-    fetchMock.mockResolvedValue(new Response("", { status: 500 }));
-    expect(await saveTauntsMuted(true)).toBe(false);
   });
 });

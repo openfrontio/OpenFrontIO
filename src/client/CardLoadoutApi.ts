@@ -1,10 +1,9 @@
 import type { TrackerStat } from "@openfront/shared/PlayerCardSchemas";
-import { invalidateUserMe } from "./Api";
 import { getApiBase } from "./ApiBase";
 import { getAuthHeader, logOut } from "./Auth";
 import { broadcastFreshUserMe } from "./Cosmetics";
 
-// Saving the player card loadout and the "Mute taunts" setting.
+// Saving the player card loadout.
 
 export interface CardLoadoutBody {
   background: string | null;
@@ -21,7 +20,8 @@ export type SaveCardResult =
   // 401: the session is gone; logOut() has already run.
   | { ok: false; error: "logged_out" }
   | { ok: false; error: "failed" }
-  // Not sent: `stillWanted` said no once the bearer token was in hand.
+  // Not sent: `stillWanted` said no once the bearer token was in hand (or
+  // answered 401 once it no longer was wanted).
   | { ok: false; error: "cancelled" };
 
 // PUT /users/@me/card: the whole loadout (idempotent). On success it
@@ -49,6 +49,10 @@ export async function saveCardLoadout(
       body: JSON.stringify(loadout),
     });
     if (response.status === 401) {
+      // A 401 for a token that is no longer the session's (signed out and
+      // back in, or into another account, while the PUT was out) says
+      // nothing about the session now, so it mustn't end it.
+      if (!stillWanted()) return { ok: false, error: "cancelled" };
       await logOut();
       return { ok: false, error: "logged_out" };
     }
@@ -73,24 +77,5 @@ export async function saveCardLoadout(
     return { ok: true, loadout: stored };
   } catch {
     return { ok: false, error: "failed" };
-  }
-}
-
-// PUT /users/@me/taunts_muted. True when saved.
-export async function saveTauntsMuted(muted: boolean): Promise<boolean> {
-  try {
-    const response = await fetch(`${getApiBase()}/users/@me/taunts_muted`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: await getAuthHeader(),
-      },
-      body: JSON.stringify({ muted }),
-    });
-    if (!response.ok) return false;
-    invalidateUserMe();
-    return true;
-  } catch {
-    return false;
   }
 }

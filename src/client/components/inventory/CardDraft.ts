@@ -370,6 +370,11 @@ export class CardEditor {
    */
   seed(userMe: UserMeResponse | null): void {
     if (userMe === this.seededFrom) return;
+    // The session's account unknown for now (a token refresh failed, and
+    // the session stays): that says nothing about whose card this is, so
+    // the draft and a save in flight are left alone. A real sign-out or
+    // account change comes through dropAccount() or seed(null).
+    if (userMe !== null && this.sessionAccount() === null) return;
     if (userMe !== null && userMe.player.publicId !== this.sessionAccount()) {
       // Not the session's account: never seeded. A card still held from
       // another account goes too, and the editor waits empty for this one's.

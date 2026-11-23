@@ -13,6 +13,8 @@ const fetchPlayerByIdMock = vi.hoisted(() =>
   vi.fn(async (): Promise<unknown> => null),
 );
 const reducedMotion = vi.hoisted(() => ({ value: false }));
+// The account the session's token belongs to (Auth.currentPublicId).
+const session = vi.hoisted(() => ({ publicId: "me" as string | null }));
 
 // Mocks as in AccountModalPrestige.test.ts, plus the progression reads.
 vi.mock("../../src/client/Api", () => ({
@@ -45,6 +47,7 @@ vi.mock("../../src/client/Auth", () => ({
   reauthAfterPortalChange: vi.fn(async () => false),
   sendMagicLink: vi.fn(async () => true),
   getAuthHeader: vi.fn(async () => "Bearer test-token"),
+  currentPublicId: () => session.publicId,
 }));
 
 vi.mock("../../src/client/Utils", () => ({
@@ -235,6 +238,7 @@ describe("AccountModal — Progression tab", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     reducedMotion.value = false;
+    session.publicId = "me";
     me = userMe(OWN_PROGRESS);
     getUserMeMock.mockImplementation(async () => me);
     fetchPublicPlayerProgressMock.mockResolvedValue(PUBLIC);

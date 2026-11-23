@@ -17,7 +17,6 @@ const ITEM: LoadoutItem = {
   type: "cardBackground",
   item: { name: "bg_pacific", rarity: "epic", product: null } as never,
   state: "buy",
-  priceHard: 400,
 };
 const look = (clientID: string, items: LoadoutItem[] = [ITEM]) => ({
   clientID,
@@ -58,10 +57,7 @@ describe("saved looks", () => {
   });
 
   it("a look of only earned items is not saved", () => {
-    saveLook(
-      "g1",
-      look("a", [{ ...ITEM, state: "earned", priceHard: undefined }]),
-    );
+    saveLook("g1", look("a", [{ ...ITEM, state: "earned" }]));
     expect(savedLooks("g1")).toEqual([]);
   });
 
@@ -92,7 +88,6 @@ describe("endScreenLookRows", () => {
     type,
     item: { name, rarity: "epic", product: null } as never,
     state,
-    priceHard: state === "buy" ? 400 : undefined,
   });
   const CARD = item("playerCard", "standard");
   const row = (clientID: string, items: LoadoutItem[]) => ({
@@ -119,7 +114,7 @@ describe("endScreenLookRows", () => {
       [
         row("a", [
           item("cardBackground", "bg_a"),
-          item("cardTitle", "t", "earned"),
+          item("cardTracker", "t", "earned"),
         ]),
         row("b", [item("cardBackground", "bg_b")]),
       ],
@@ -164,6 +159,83 @@ describe("endScreenLookRows", () => {
     expect(keys(rows)).toEqual([
       ["a", ["cardBackground:bg_x", "cardTracker:wins"]],
       ["b", ["cardTracker:games"]],
+    ]);
+  });
+
+  // A look is saved with every candidate; the three-item cap applies here,
+  // after the filters, so a dropped card doesn't cost a later row a slot.
+  it("at most three per row, counted after the filters", () => {
+    const four = (who: string) => [
+      CARD,
+      item("cardBackground", `bg_${who}`),
+      item("cardTracker", `wins_${who}`),
+      item("cardTracker", `games_${who}`),
+    ];
+    const rows = endScreenLookRows(
+      [row("a", four("a")), row("b", four("b"))],
+      [],
+    );
+    expect(keys(rows)).toEqual([
+      [
+        "a",
+        ["playerCard:standard", "cardBackground:bg_a", "cardTracker:wins_a"],
+      ],
+      [
+        "b",
+        ["cardBackground:bg_b", "cardTracker:wins_b", "cardTracker:games_b"],
+      ],
+    ]);
+  });
+
+  it("an item owned since saving lets the next one in", () => {
+    const rows = endScreenLookRows(
+      [
+        row("a", [
+          item("cardBackground", "bg_a"),
+          item("cardTracker", "wins"),
+          item("cardTracker", "games"),
+          item("cardTracker", "kills"),
+        ]),
+      ],
+      ["cardBackground:bg_a"],
+    );
+    expect(keys(rows)).toEqual([
+      ["a", ["cardTracker:wins", "cardTracker:games", "cardTracker:kills"]],
+    ]);
+  });
+
+  // A look saved for its one buyable item (hasSomethingToBuy looks at every
+  // candidate) must keep it past the cap: buyable items go first.
+  it("three earned items and a buyable fourth: the fourth is kept", () => {
+    const rows = endScreenLookRows(
+      [
+        row("a", [
+          item("cardTracker", "t1", "earned"),
+          item("cardTracker", "t2", "earned"),
+          item("cardTracker", "t3", "earned"),
+          item("cardTracker", "wins"),
+        ]),
+      ],
+      [],
+    );
+    expect(keys(rows)).toEqual([
+      ["a", ["cardTracker:wins", "cardTracker:t1", "cardTracker:t2"]],
+    ]);
+  });
+
+  it("buyable first keeps their own order, and the card stays first", () => {
+    const rows = endScreenLookRows(
+      [
+        row("a", [
+          CARD,
+          item("cardTracker", "t1", "earned"),
+          item("cardBackground", "bg_a"),
+        ]),
+      ],
+      [],
+    );
+    expect(keys(rows)).toEqual([
+      ["a", ["playerCard:standard", "cardBackground:bg_a", "cardTracker:t1"]],
     ]);
   });
 });

@@ -14,7 +14,7 @@ import {
 } from "@openfront/shared/CardBackgroundChecks";
 import { z } from "zod/v4";
 import {
-  cardFxStopped,
+  anyCardFxStopped,
   onCardFxSessionStop,
   resetCardFxSession,
 } from "../components/card/CardFx";
@@ -248,9 +248,7 @@ function mountCardBackgroundPreview(
           rarity: bg.rarity ?? "common",
           animation,
         },
-        title: null,
         trackers: spec.card === "thumb" ? [] : SAMPLE_TRACKERS,
-        taunt: null,
       };
     }
     wrapper.querySelector("[data-card-safe-area-frame]")?.remove();
@@ -353,7 +351,7 @@ export const cardPreviewModule: Omit<
 > = {
   mountCardBackgroundPreview,
   onCardAnimationStopped: onCardFxSessionStop,
-  cardAnimationStopped: cardFxStopped,
+  cardAnimationStopped: anyCardFxStopped,
   restartCardAnimation: () => {
     resetCardFxSession();
     for (const preview of [...live]) {

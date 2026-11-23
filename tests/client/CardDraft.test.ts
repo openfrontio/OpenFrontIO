@@ -670,6 +670,37 @@ describe("CardEditor", () => {
     expect(editor.saved.background).toBe("bg_pacific");
   });
 
+  it("a profile while the session's account is briefly unknown keeps the draft", async () => {
+    // A failed token refresh drops the token without a session event, so
+    // currentPublicId() is null for a while: a profile landing then (one
+    // already in flight) must not wipe unsaved changes or the save.
+    let finish!: (v: unknown) => void;
+    api.save.mockReturnValue(new Promise((r) => (finish = r)));
+    session.id = "account-a";
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    const saving = editor.save();
+    editor.pick({ kind: "tracker", index: 1 }, "wins");
+    session.id = null;
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    expect(editor.draft.background).toBe("bg_storm");
+    expect(editor.draft.rows.tracker[1]).toBe("wins");
+    expect(editor.saveState).toBe("saving");
+    session.id = "account-a";
+    finish({
+      ok: true,
+      loadout: {
+        background: "bg_storm",
+        title: null,
+        taunt: null,
+        trackers: ["games_played"],
+      },
+    });
+    expect(await saving).toBe(true);
+    expect(editor.saved.background).toBe("bg_storm");
+  });
+
   it("the session moving to another account turns Save off at once", async () => {
     session.id = "account-a";
     const editor = new CardEditor();
@@ -696,6 +727,28 @@ describe("CardEditor", () => {
     editor.seed(me(CARD, B_FLARES, "account-a"));
     editor.pick({ kind: "background" }, "bg_storm");
     expect(await editor.save()).toBe(false);
+  });
+
+  it("no session when the token is read: nothing is sent, and the save fails so it can be retried", async () => {
+    session.id = "account-a";
+    api.save.mockImplementation(
+      async (_body: unknown, stillWanted: () => boolean) => {
+        // A token refresh failed: no session, but no other account either.
+        session.id = null;
+        return stillWanted()
+          ? { ok: true, loadout: {} }
+          : { ok: false, error: "cancelled" };
+      },
+    );
+    const editor = new CardEditor();
+    editor.seed(me(CARD, B_FLARES, "account-a"));
+    editor.pick({ kind: "background" }, "bg_storm");
+    expect(await editor.save()).toBe(false);
+    expect(editor.saveState).toBe("failed");
+    expect(editor.draft.background).toBe("bg_storm");
+    // Signed in as the same account again: Retry is on.
+    session.id = "account-a";
+    expect(editor.canSave()).toBe(true);
   });
 
   it("a reauth into the same account re-seeds with its new profile", () => {

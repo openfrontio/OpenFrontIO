@@ -31,6 +31,9 @@ vi.mock("../../src/client/Auth", async (orig) => {
   const real = await orig<typeof import("../../src/client/Auth")>();
   return {
     ...real,
+    // The mocked session is never settled "signed out" ahead of time, so
+    // those tests go through userAuth() as before.
+    knownSignedOut: () => (auth.real ? real.knownSignedOut() : false),
     userAuth: async (shouldRefresh = true) => {
       if (auth.real) return real.userAuth(shouldRefresh);
       if (auth.throws) throw new Error("auth broke");
@@ -44,7 +47,11 @@ vi.mock("../../src/client/Auth", async (orig) => {
   };
 });
 
-import { clearLocalSession } from "../../src/client/Auth";
+import {
+  clearLocalSession,
+  knownSignedOut,
+  userAuth,
+} from "../../src/client/Auth";
 import { ClientEnv } from "../../src/client/ClientEnv";
 import { defaultPlayerCardView } from "../../src/client/components/card/PlayerCardModel";
 import {
@@ -526,6 +533,36 @@ describe("WinModal Get the look buying", () => {
     vi.restoreAllMocks();
   });
 
+  // A guest's viewer read ends in userAuth(), so it waits until a look
+  // could show: most end screens have none.
+  it("reads the viewer only once a look could show", async () => {
+    const read = vi
+      .spyOn(
+        WinModal.prototype as unknown as {
+          loadViewerFlares(): Promise<void>;
+        },
+        "loadViewerFlares",
+      )
+      .mockResolvedValue(undefined);
+    const modal = await renderModal({ game, endCardMode: "none" });
+    expect(read).not.toHaveBeenCalled();
+    saveLook("g1", {
+      clientID: "a",
+      name: "Ada",
+      items: [bg("bg_a")] as never,
+    });
+    await settle(modal);
+    expect(read).toHaveBeenCalledOnce();
+    // Once per screen, however often it renders.
+    saveLook("g1", {
+      clientID: "b",
+      name: "Bo",
+      items: [bg("bg_b")] as never,
+    });
+    await settle(modal);
+    expect(read).toHaveBeenCalledOnce();
+  });
+
   it("tells the block the viewer is signed in", async () => {
     saveLook("g1", {
       clientID: "a",
@@ -571,6 +608,8 @@ describe("WinModal Get the look buying", () => {
       viewerFlares: [],
       signedIn: true,
     });
+    // A buy's order (purchaseCosmeticInPlace's onOwned, then its
+    // broadcast): look-owned first, then the fresh profile.
     block(modal).dispatchEvent(
       new CustomEvent("look-owned", {
         detail: { key: "taunt:salute" },
@@ -584,6 +623,34 @@ describe("WinModal Get the look buying", () => {
     expect(looks[0].items.map((i) => i.item.name)).toEqual(["salute"]);
     expect(looks[1].items.map((i) => i.item.name)).toEqual(["bg_a"]);
     expect(block(modal).owned.has("taunt:salute")).toBe(true);
+  });
+
+  it("one look, one item, bought: the block stays (no rebuild, no new impressions)", async () => {
+    saveLook("g1", {
+      clientID: "a",
+      name: "Ada",
+      items: [bg("bg_a")] as never,
+    });
+    const modal = await renderModal({
+      game,
+      endCardMode: "none",
+      viewerFlares: [],
+      signedIn: true,
+    });
+    const before = block(modal);
+    // A buy's order: look-owned, then the fresh profile.
+    before.dispatchEvent(
+      new CustomEvent("look-owned", {
+        detail: { key: "cardBackground:bg_a" },
+        bubbles: true,
+      }),
+    );
+    await settle(modal);
+    expect(block(modal)).toBe(before);
+    broadcast(["cardBackground:bg_a"], 0, 0);
+    await settle(modal);
+    expect(block(modal)).toBe(before);
+    expect(block(modal).owned.has("cardBackground:bg_a")).toBe(true);
   });
 
   it("bought here reads Owned ✓ even if the profile refresh fails", async () => {
@@ -699,6 +766,19 @@ describe("WinModal: signed in is the session, not the profile read", () => {
     const modal = (await renderModal({ endCardMode: "none" })) as Modal;
     await modal.applyUserMe(false);
     expect(modal.signedIn).toBe(false);
+  });
+
+  it("a guest already known signed out: no refresh, no logout", async () => {
+    // Boot's refresh got its 401 (and logout): "signed out" is settled.
+    refreshAnswers(401);
+    await userAuth();
+    await vi.waitFor(() => expect(knownSignedOut()).toBe(true));
+    const fetchMock = vi.mocked(globalThis.fetch);
+    fetchMock.mockClear();
+    const modal = (await renderModal({ endCardMode: "none" })) as Modal;
+    await modal.applyUserMe(false);
+    expect(modal.signedIn).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("a failed profile read with a session: still signed in, no flares", async () => {

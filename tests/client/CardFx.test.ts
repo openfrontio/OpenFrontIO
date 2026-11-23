@@ -4,6 +4,7 @@ import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CardBackground } from "../../src/client/components/card/CardBackground";
 import {
+  anyCardFxStopped,
   cardFxStopped,
   onCardFxSessionStop,
   resetCardFxSession,
@@ -125,18 +126,49 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   setHidden(false);
+  document.body.classList.remove("in-game");
 });
 
+// `surface` puts the card inside a player card of that size, the way
+// <player-card> does ("end", "account"…); without it the card is unscoped.
 async function mount(
   background: PlayerCardView["background"],
   animated = true,
+  surface?: string,
 ): Promise<CardBackground> {
   const el = document.createElement("card-background") as CardBackground;
   el.background = background;
   el.animated = animated;
-  document.body.appendChild(el);
+  if (surface === undefined) {
+    document.body.appendChild(el);
+  } else {
+    const card = document.createElement("section");
+    card.dataset.playerCard = surface;
+    card.appendChild(el);
+    document.body.appendChild(card);
+  }
   await el.updateComplete;
   return el;
+}
+
+// Mounts a running animated card (base and layers loaded, on screen).
+async function running(
+  background: PlayerCardView["background"] = NEON,
+  surface?: string,
+): Promise<CardBackground> {
+  const el = await mount(background, true, surface);
+  loadBase(el);
+  await el.updateComplete;
+  loadLayers(el);
+  observers[observers.length - 1].report(true);
+  return el;
+}
+
+// Runs frames `step` ms apart from `from` up to `to`; returns the last time.
+function frames(from: number, to: number, step: number): number {
+  let now = from;
+  for (; now <= to; now += step) frame(now);
+  return now - step;
 }
 
 const layerEls = (el: Element) =>
@@ -325,47 +357,166 @@ describe("<card-background> effect layers", () => {
     );
   });
 
-  it("stops for the session after 2 s of slow frames", async () => {
-    const el = await mount(NEON);
-    loadBase(el);
-    await el.updateComplete;
-    loadLayers(el);
-    observers[0].report(true);
-    for (let now = 0; now <= 2200; now += 40) frame(now);
-    expect(cardFxStopped()).toBe(true);
+  it("a real slowdown stops the card, and its surface stays still", async () => {
+    const el = await running(NEON, "account");
+    // A 60 Hz display, then under 20 fps for 6 s.
+    const now = frames(0, 1000, 16);
+    frames(now + 70, now + 6000, 70);
+    expect(cardFxStopped("account")).toBe(true);
     expect(layerEls(el)).toHaveLength(0);
     expect(rafCallbacks.size).toBe(0);
 
-    const next = await mount(STORM);
+    const next = await mount(STORM, true, "account");
     loadBase(next);
     await next.updateComplete;
     expect(layerEls(next)).toHaveLength(0);
   });
 
-  it("tells listeners once when slow frames stop the session", async () => {
+  it("a steady 33 ms cadence (a 30 fps cap) keeps animating", async () => {
+    const el = await running(NEON, "account");
+    frames(0, 20_000, 33);
+    expect(cardFxStopped("account")).toBe(false);
+    expect(layerEls(el)).toHaveLength(2);
+    expect(rafCallbacks.size).toBe(1);
+  });
+
+  it("a 30 fps display that then halves still stops", async () => {
+    await running(NEON, "account");
+    const now = frames(0, 2000, 33);
+    frames(now + 66, now + 4000, 66);
+    expect(cardFxStopped("account")).toBe(true);
+  });
+
+  it("outside a game, a steady cadence under 20 fps stops", async () => {
+    await running(NEON, "account");
+    frames(0, 10_000, 60);
+    expect(cardFxStopped("account")).toBe(true);
+  });
+
+  it("while a game renders, its steady load doesn't stop the card", async () => {
+    document.body.classList.add("in-game");
+    const el = await running(NEON, "end");
+    frames(0, 20_000, 60);
+    expect(cardFxStopped("end")).toBe(false);
+    expect(layerEls(el)).toHaveLength(2);
+  });
+
+  it("while a game renders, a real slowdown still stops the card", async () => {
+    document.body.classList.add("in-game");
+    await running(NEON, "end");
+    const now = frames(0, 2000, 33);
+    frames(now + 100, now + 6000, 100);
+    expect(cardFxStopped("end")).toBe(true);
+  });
+
+  it("a 30 fps cap that starts mid-session keeps animating", async () => {
+    // e.g. Low Power Mode or battery saver turning on under a 60 Hz card.
+    const el = await running(NEON, "account");
+    const now = frames(0, 2000, 16);
+    frames(now + 33, now + 20_000, 33);
+    expect(cardFxStopped("account")).toBe(false);
+    expect(layerEls(el)).toHaveLength(2);
+  });
+
+  it("measures the cadence again after a pause", async () => {
+    // 60 Hz, then the tab comes back capped at 25 fps with a 150 ms frame
+    // every 25 frames. Against the old 16 ms cadence those are stutters;
+    // against the new 40 ms one they aren't.
+    const el = await running(NEON, "account");
+    let now = frames(0, 2000, 16);
+    setHidden(true);
+    setHidden(false);
+    for (let i = 0; i < 500; i++) {
+      now += i % 25 === 24 ? 150 : 40;
+      frame(now);
+    }
+    expect(cardFxStopped("account")).toBe(false);
+    expect(layerEls(el)).toHaveLength(2);
+  });
+
+  it("a game starting and ending under a running card measures again", async () => {
+    const el = await running(NEON, "end");
+    let now = frames(0, 2000, 16);
+    // The game's own load: a steady 60 ms. Measured against 60 Hz this
+    // would be a slowdown; measured again, it's the game's cadence.
+    document.body.classList.add("in-game");
+    now = frames(now + 60, now + 15_000, 60);
+    expect(cardFxStopped("end")).toBe(false);
+    // The game ends: back to 60 Hz, then under 20 fps outside a game stops.
+    document.body.classList.remove("in-game");
+    now = frames(now + 16, now + 3000, 16);
+    expect(cardFxStopped("end")).toBe(false);
+    expect(layerEls(el)).toHaveLength(2);
+    frames(now + 70, now + 5000, 70);
+    expect(cardFxStopped("end")).toBe(true);
+  });
+
+  it("a slow game cadence that collapses still stops", async () => {
+    // A 20 fps game (50 ms) that drops to 2 fps.
+    document.body.classList.add("in-game");
+    await running(NEON, "end");
+    const now = frames(0, 2000, 50);
+    frames(now + 500, now + 20_000, 500);
+    expect(cardFxStopped("end")).toBe(true);
+  });
+
+  it("a 30 fps cap during a 60 Hz game keeps animating", async () => {
+    document.body.classList.add("in-game");
+    const el = await running(NEON, "end");
+    const now = frames(0, 2000, 16);
+    frames(now + 33, now + 20_000, 33);
+    expect(cardFxStopped("end")).toBe(false);
+    expect(layerEls(el)).toHaveLength(2);
+  });
+
+  it("the 20 fps floor holds after a high cadence was measured", async () => {
+    // Measured at 45 ms during a heavy modal, then a steady 65 ms.
+    await running(NEON, "account");
+    const now = frames(0, 1000, 45);
+    frames(now + 65, now + 10_000, 65);
+    expect(cardFxStopped("account")).toBe(true);
+  });
+
+  it("a stop is scoped to its surface", async () => {
+    const end = await running(NEON, "end");
+    const now = frames(0, 1000, 16);
+    frames(now + 70, now + 6000, 70);
+    expect(cardFxStopped("end")).toBe(true);
+    expect(layerEls(end)).toHaveLength(0);
+
+    const account = await running(STORM, "account");
+    expect(cardFxStopped("account")).toBe(false);
+    expect(layerEls(account)).toHaveLength(2);
+    expect(rafCallbacks.size).toBe(1);
+  });
+
+  it("tells listeners which surface slow frames stopped, until unsubscribed", async () => {
     const heard = vi.fn();
     const unsubscribe = onCardFxSessionStop(heard);
-    const el = await mount(NEON);
-    loadBase(el);
-    await el.updateComplete;
-    loadLayers(el);
-    observers[0].report(true);
-    for (let now = 0; now <= 2200; now += 40) frame(now);
-    expect(cardFxStopped()).toBe(true);
+    await running(NEON, "end");
+    let now = frames(0, 1000, 16);
+    now = frames(now + 70, now + 6000, 70);
+    expect(cardFxStopped("end")).toBe(true);
+    expect(anyCardFxStopped()).toBe(true);
     expect(heard).toHaveBeenCalledTimes(1);
+    expect(heard).toHaveBeenLastCalledWith("end");
 
     // After a restart, the next stop is heard again; after unsubscribing,
     // nothing is.
     resetCardFxSession();
-    const again = await mount(STORM);
-    loadBase(again);
-    await again.updateComplete;
-    loadLayers(again);
-    observers[observers.length - 1].report(true);
-    for (let now = 10_000; now <= 12_200; now += 40) frame(now);
+    expect(anyCardFxStopped()).toBe(false);
+    await running(STORM, "account");
+    now = frames(now + 16, now + 1000, 16);
+    now = frames(now + 70, now + 6000, 70);
     expect(heard).toHaveBeenCalledTimes(2);
+    expect(heard).toHaveBeenLastCalledWith("account");
     unsubscribe();
     resetCardFxSession();
+    await running(NEON, "panel");
+    now = frames(now + 16, now + 1000, 16);
+    frames(now + 70, now + 6000, 70);
+    expect(cardFxStopped("panel")).toBe(true);
+    expect(heard).toHaveBeenCalledTimes(2);
   });
 
   it("stops a ~40 ms device that also hitches over 250 ms every 1.2 s", async () => {

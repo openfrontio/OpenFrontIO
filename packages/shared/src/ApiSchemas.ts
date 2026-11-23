@@ -61,6 +61,31 @@ export function isAdminRole(role: string | null | undefined): boolean {
   return role === "admin" || role === "root";
 }
 
+/**
+ * A join is Steam-authenticated when its verified JWT carries provider="steam"
+ * (set by infra only after verifySteamTicket()). Never key this off the
+ * client-supplied instanceId — that is forgeable.
+ */
+export function isSteamAuthenticated(claims: TokenPayload | null): boolean {
+  return claims?.provider === "steam";
+}
+
+export type ClientAuth = "account" | "anonymous";
+
+/**
+ * A guest session carries a JWT too, so a non-null claims object is not a
+ * sign-in. Infra stamps provider only for a session with a persistent identity
+ * behind it (discord, google, steam, email, a portal account...), except for
+ * "guest", which a refreshed guest session carries; a freshly minted guest
+ * session has no provider at all.
+ */
+export function clientAuth(claims: TokenPayload | null): ClientAuth {
+  const provider = claims?.provider;
+  return provider === undefined || provider === "guest"
+    ? "anonymous"
+    : "account";
+}
+
 export const DiscordUserSchema = z.object({
   id: z.string(),
   avatar: z.string().nullable(),
@@ -726,8 +751,9 @@ export const UserMeResponseSchema = z.object({
     // as absent (the game server parses this at join, so it must never fail
     // the whole parse).
     card: UserMeCardSchema.nullable().optional().catch(undefined),
-    // "Mute taunts": turns off every card taunt for this player.
-    tauntsMuted: z.boolean().optional().catch(undefined),
+    // "Mute taunts": turns off every card taunt for this player. Fails closed:
+    // a malformed value reads as muted. (Taunts are held back; schema only.)
+    tauntsMuted: z.boolean().optional().catch(true),
     // "Hide my level": true when the player opted out of showing their level
     // to others. They still earn XP and see their own level; the game server
     // then leaves the badge off their lobby roster entry. Optional so an older
@@ -1728,6 +1754,18 @@ export const StorePlacementInventorySubTabSchema = z.enum([
 export type StorePlacementInventorySubTab = z.infer<
   typeof StorePlacementInventorySubTabSchema
 >;
+// The Featured tab's sections. Featured is a kind of its own, not a tab: the
+// section says which slot an item was seen or bought in. The client never
+// sends `{ kind: "tab", tab: "featured" }`. Mirrors the API's copy.
+export const StorePlacementFeaturedSectionSchema = z.enum([
+  "deal",
+  "starter",
+  "new",
+  "sale",
+]);
+export type StorePlacementFeaturedSection = z.infer<
+  typeof StorePlacementFeaturedSectionSchema
+>;
 
 export const StorePlacementSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -1744,6 +1782,10 @@ export const StorePlacementSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("inventory"),
     subTab: StorePlacementInventorySubTabSchema,
+  }),
+  z.object({
+    kind: z.literal("featured"),
+    section: StorePlacementFeaturedSectionSchema,
   }),
 ]);
 export type StorePlacement = z.infer<typeof StorePlacementSchema>;

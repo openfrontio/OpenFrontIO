@@ -1,6 +1,6 @@
 import type { ClientID, GameID } from "@openfront/engine-api/Schemas";
 import { ownsPlayerCard } from "@openfront/shared/CosmeticSchemas";
-import type { LoadoutItem } from "./LoadoutItems";
+import { type LoadoutItem, MAX_LOOK_ITEMS } from "./LoadoutItems";
 
 // Looks the viewer saved from the player panel ("Get the look") to buy on the
 // end screen: buying mid-game reloads the page and would end their game. Kept
@@ -12,7 +12,7 @@ export interface SavedLook {
   // The player's name as the viewer saw it, for "Get {name}'s look".
   name: string;
   // What the viewer doesn't own yet, as the end screen's loadout offers it
-  // (loadoutItems).
+  // (loadoutItems): every candidate, uncapped.
   items: LoadoutItem[];
 }
 
@@ -89,8 +89,10 @@ const itemKey = (i: LoadoutItem) => `${i.type}:${i.item.name}`;
  * The end screen's rows, in order (the killer's row, when it shows, then the
  * saved looks), filtered against what the viewer owns now rather than when
  * the look was saved. The player card is offered in the first row shown only,
- * no item shows in two rows, and a row left with nothing to buy is dropped
- * (an earned item alone doesn't keep it).
+ * no item shows in two rows, each row shows at most MAX_LOOK_ITEMS (counted
+ * after those filters, buyable items first so the cap never drops the one a
+ * look was saved for), and a row left with nothing to buy is dropped (an
+ * earned item alone doesn't keep it).
  */
 export function endScreenLookRows(
   rows: readonly LookRow[],
@@ -101,11 +103,17 @@ export function endScreenLookRows(
   const offered = new Set<string>();
   const out: LookRow[] = [];
   for (const row of rows) {
-    const items = row.items.filter((i) => {
+    const left = row.items.filter((i) => {
       const key = itemKey(i);
       if (owned.has(key) || offered.has(key)) return false;
       return i.type !== "playerCard" || (!ownsCard && out.length === 0);
     });
+    // Buyable first, each kept in its own order: "has something to buy"
+    // (the panel's save, the killer row) then holds after the cap too.
+    const items = [
+      ...left.filter((i) => i.state === "buy"),
+      ...left.filter((i) => i.state !== "buy"),
+    ].slice(0, MAX_LOOK_ITEMS);
     if (!items.some((i) => i.state === "buy")) continue;
     for (const i of items) offered.add(itemKey(i));
     out.push({ ...row, items });

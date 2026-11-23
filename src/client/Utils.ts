@@ -16,7 +16,7 @@ import { stripVersionPrefix } from "@openfront/shared/ServerList";
 import { ClientEnv } from "./ClientEnv";
 import type { KeyboardLayoutMap } from "./KeyboardLayout";
 import { pagePin } from "./PagePin";
-import { translateText } from "./Translate";
+import { isRTL, translateText } from "./Translate";
 
 // The translation functions live in Translate.ts, which imports nothing of
 // the game's: code shipped outside it (the cosmetic preview package) imports
@@ -283,8 +283,7 @@ export function getModifierLabels(
 export function renderDuration(totalSeconds: number): string {
   // Floor once so fractional inputs don't leak through to the seconds
   // component (e.g. `0.5` → `"0.5s"`).
-  const whole = Math.floor(totalSeconds);
-  if (whole <= 0) return `0${translateText("common.duration_second_short")}`;
+  const whole = Math.max(0, Math.floor(totalSeconds));
   const hours = Math.floor(whole / 3600);
   const minutes = Math.floor((whole % 3600) / 60);
   const seconds = whole % 60;
@@ -298,7 +297,10 @@ export function renderDuration(totalSeconds: number): string {
     parts.push(`${minutes}${translateText("common.duration_minute_short")}`);
   if (seconds > 0 || parts.length === 0)
     parts.push(`${seconds}${translateText("common.duration_second_short")}`);
-  return parts.join(" ");
+  if (!isRTL()) return parts.join(" ");
+  // Isolate the full duration from its surrounding text without splitting
+  // English fallback units into separate RTL runs.
+  return `\u2067${parts.join(" ")}\u2069`;
 }
 
 export async function copyToClipboard(
@@ -886,4 +888,27 @@ export function homeHref(): string {
     return `https://${siteHost}/`;
   }
   return "/";
+}
+
+// Where leaving the game goes instead of the menu: the scenario editor's
+// hash while it test-plays a draft.
+let gameReturnHash: string | null = null;
+
+export function returnFromGameTo(hash: string | null): void {
+  gameReturnHash = hash;
+}
+
+/**
+ * Leaves a started game (or a join that took the page with it), to the menu
+ * or to the page that started it. Either way the page loads again: a game
+ * has no in-place teardown (MenuChrome.ts). A href that differs only in its
+ * hash wouldn't reload, so the return sets the URL and reloads.
+ */
+export function exitGame(): void {
+  if (gameReturnHash === null) {
+    window.location.href = homeHref();
+    return;
+  }
+  history.replaceState(null, "", window.location.pathname + gameReturnHash);
+  window.location.reload();
 }

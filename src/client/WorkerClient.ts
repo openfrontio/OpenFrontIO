@@ -214,10 +214,11 @@ export class WorkerClient {
 
   /**
    * Applies one command in an editor engine. Its updates reach the
-   * callback given to start() before this resolves. Rejects if the engine
-   * refused it, having changed nothing.
+   * callback given to start() before this resolves, with the map files
+   * if the command was `export_terrain`. Rejects if the engine refused it,
+   * having changed nothing.
    */
-  editorCommand(command: EditorCommand): Promise<void> {
+  editorCommand(command: EditorCommand): Promise<MapFiles | undefined> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
         reject(new Error("Worker not initialized"));
@@ -227,7 +228,7 @@ export class WorkerClient {
       this.messageHandlers.set(messageId, (message) => {
         if (message.type !== "editor_command_result") return;
         if (message.error !== undefined) reject(new Error(message.error));
-        else resolve();
+        else resolve(message.map);
       });
       this.worker!.postMessage({
         type: "editor_command",
