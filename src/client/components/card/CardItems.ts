@@ -6,7 +6,7 @@ import {
   type PlayerCardItem,
   type Taunt,
 } from "@openfront/shared/CosmeticSchemas";
-import { currentPrice, saleHasEnded } from "../../SalePrice";
+import { type PricedItem, type ShownPrice, shownPrice } from "../../ShownPrice";
 import { translateText } from "../../Utils";
 
 // The player card cosmetics, as the client lists and sells them.
@@ -56,22 +56,20 @@ function readableName(name: string): string {
 }
 
 export interface CardPrices {
-  priceHard: number | null;
-  priceSoft: number | null;
-  listPriceHard: number | null;
-  listPriceSoft: number | null;
+  hard: ShownPrice | null;
+  soft: ShownPrice | null;
+  /** Passed on to <purchase-button>, which switches to the list price the
+   * moment the sale ends. */
+  promotion: PricedItem["promotion"];
 }
 
-// A card item's prices as the server charges them now, for <purchase-button>:
-// once the item's own sale has ended that is the list price, with nothing
-// struck through, whatever the catalogue in hand says. Same rule as the store.
+// A card item's prices as shownPrice decides them, the same rule as the
+// Store and the Inventory.
 export function cardPrices(item: CardItem): CardPrices {
-  const ended = saleHasEnded(item);
   return {
-    priceHard: currentPrice(item, "hard") ?? null,
-    priceSoft: currentPrice(item, "soft") ?? null,
-    listPriceHard: ended ? null : (item.listPriceHard ?? null),
-    listPriceSoft: ended ? null : (item.listPriceSoft ?? null),
+    hard: shownPrice(item, "hard"),
+    soft: shownPrice(item, "soft"),
+    promotion: item.promotion ?? undefined,
   };
 }
 

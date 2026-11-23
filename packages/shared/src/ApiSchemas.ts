@@ -1717,6 +1717,17 @@ export const StorePlacementSubTabSchema = z.enum([
   "card",
 ]);
 export type StorePlacementSubTab = z.infer<typeof StorePlacementSubTabSchema>;
+// The Inventory's tabs: its In game categories, and its Player card tab.
+export const StorePlacementInventorySubTabSchema = z.enum([
+  "skins",
+  "flags",
+  "crowns",
+  "effects",
+  "card",
+]);
+export type StorePlacementInventorySubTab = z.infer<
+  typeof StorePlacementInventorySubTabSchema
+>;
 
 export const StorePlacementSchema = z.discriminatedUnion("kind", [
   z.object({
@@ -1729,6 +1740,11 @@ export const StorePlacementSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("post_game") }),
   // "Get {name}'s look" on the eliminated-by screen.
   z.object({ kind: z.literal("card_loadout") }),
+  // The Inventory's buy dialog.
+  z.object({
+    kind: z.literal("inventory"),
+    subTab: StorePlacementInventorySubTabSchema,
+  }),
 ]);
 export type StorePlacement = z.infer<typeof StorePlacementSchema>;
 

@@ -65,7 +65,7 @@ import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
 import { UserSettings } from "./UserSettings";
 import { showToast, translateText } from "./Utils";
 
-export { currentPrice, saleHasEnded } from "./SalePrice";
+export { currentPrice } from "./SalePrice";
 
 /**
  * Ceiling on the cosmetics catalog request. Matches the bound the auth calls

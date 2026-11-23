@@ -1,4 +1,7 @@
-import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import {
+  StorePlacementSchema,
+  type UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import {
   afterAll,
@@ -307,6 +310,18 @@ describe("Inventory In game tab", () => {
       ).toBe("true");
       expect(modal.querySelector("inventory-card-tab")).not.toBeNull();
       expect(modal.querySelector("[data-inventory-grid]")).toBeNull();
+    });
+
+    it("the Player card tab buys with the inventory card placement", async () => {
+      await open("card");
+      const cardTab = modal.querySelector("inventory-card-tab") as unknown as {
+        updateComplete: Promise<unknown>;
+      };
+      await cardTab.updateComplete;
+      const myCard = modal.querySelector("my-card-tab") as unknown as {
+        placement: unknown;
+      };
+      expect(myCard.placement).toEqual({ kind: "inventory", subTab: "card" });
     });
 
     it("switches between the two tabs and back to the last category", async () => {
@@ -762,8 +777,17 @@ describe("Inventory In game tab", () => {
       expect(purchaseCosmetic).toHaveBeenCalledWith(
         expect.objectContaining({ key: "crown:sale_crown" }),
         "hard",
-        undefined,
+        { kind: "inventory", subTab: "crowns" },
       );
+      // The infra API's schema for this kind: these sub-tabs, required.
+      for (const subTab of ["skins", "flags", "crowns", "effects", "card"]) {
+        expect(
+          StorePlacementSchema.safeParse({ kind: "inventory", subTab }).success,
+        ).toBe(true);
+      }
+      expect(
+        StorePlacementSchema.safeParse({ kind: "inventory" }).success,
+      ).toBe(false);
       const equipNow = modal.querySelector<HTMLButtonElement>(
         "inventory-buy-dialog [data-buy-equip-now]",
       )!;
@@ -772,6 +796,42 @@ describe("Inventory In game tab", () => {
       await settle(modal);
       expect(new UserSettings().getSelectedCrownName()).toBe("sale_crown");
       expect(modal.querySelector("inventory-buy-dialog")).toBeNull();
+    });
+
+    it("Equip now leaves focus on the bought item's tile after the re-sort", async () => {
+      vi.mocked(purchaseCosmetic).mockImplementation(async () => {
+        document.dispatchEvent(
+          new CustomEvent("userMeResponse", {
+            detail: makeUser([...OWNED, "crown:sale_crown"]),
+          }),
+        );
+        return undefined;
+      });
+      vi.mocked(purchaseReloading).mockReturnValue(true);
+      await open("crowns");
+      await setFilter(modal, "all");
+      const main = tile(modal, "crown:sale_crown").querySelector<HTMLElement>(
+        "[data-tile-main]",
+      )!;
+      main.focus();
+      main.click();
+      await settle(modal);
+      await modal.querySelector<PurchaseButton>(
+        "inventory-buy-dialog purchase-button",
+      )!.onPurchaseHard!();
+      await settle(modal);
+      modal
+        .querySelector<HTMLButtonElement>(
+          "inventory-buy-dialog [data-buy-equip-now]",
+        )!
+        .click();
+      await settle(modal);
+      expect(new UserSettings().getSelectedCrownName()).toBe("sale_crown");
+      const focused = document.activeElement!.closest<InventoryItemTile>(
+        "inventory-item-tile",
+      );
+      expect(focused).not.toBeNull();
+      expect(focused!.resolved.key).toBe("crown:sale_crown");
     });
 
     it("offers Equip now after the purchase reloaded the page", async () => {

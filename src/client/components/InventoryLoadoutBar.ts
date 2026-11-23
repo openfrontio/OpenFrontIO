@@ -4,6 +4,9 @@ import { ResolvedCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CosmeticPreview";
 
+// Each is also a sub-tab of the "inventory" StorePlacement (ApiSchemas.ts):
+// purchase() passes one there, so a category the API would reject fails
+// typecheck.
 export type InventoryCategory = "skins" | "flags" | "crowns" | "effects";
 
 export interface InventoryLoadoutEntry {
