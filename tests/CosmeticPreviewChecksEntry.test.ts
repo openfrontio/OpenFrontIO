@@ -47,6 +47,8 @@ describe("cosmetic-preview checks entry", () => {
       // What the infra Assets page hands out: the bucket's public URL.
       "https://pub-0123456789abcdef.r2.dev/cosmetics/card-backgrounds/bg_x_fx-pulse.png",
       "https://cdn.example.com/bg_x_fx-pulse.png",
+      // The shape infra's tests use for the same regex.
+      "https://cdn.ofedge.io/cosmetics/card_background/neon_grid.png",
       "https://localhost:8787/assets/bg_x_fx-pulse.png",
     ])("accepts %s", (src) => {
       expect(parseCardAnimation(withSrc(src)).ok).toBe(true);
@@ -60,6 +62,8 @@ describe("cosmetic-preview checks entry", () => {
       "https://cdn.example.com/bg_x_fx-pulse.webp",
       "https://cdn.example.com/x.png?.png",
       "https://user@cdn.example.com/x.png",
+      'https://cdn.example.com/x".png',
+      "https://cdn.example.com/x'.png",
       "https://cdn.example.com/../x.png",
       "https://cdn.example.com/a b.png",
       "https://cdn.example.com/x).png",
