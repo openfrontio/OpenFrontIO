@@ -726,7 +726,11 @@ export async function purchaseCosmetic(
   }
 
   const cosmeticType = resolved.type as
-    "pattern" | "skin" | "flag" | "crown" | "effect";
+    | "pattern"
+    | "skin"
+    | "flag"
+    | "crown"
+    | "effect";
   const result = await purchaseWithCurrency(
     cosmeticType,
     c.name,
@@ -757,7 +761,7 @@ export async function purchaseCosmetic(
           method === "hard"
             ? (fresh.player.currency?.hard ?? 0)
             : (fresh.player.currency?.soft ?? 0);
-        const outcome = balanceOutcome(available, price);
+        const outcome = balanceOutcome(available, needed);
         if (outcome === "debt") {
           await showInGameAlert(debtMessage(-available));
           return;
@@ -871,7 +875,8 @@ async function purchasePack(
   }
   const insufficient = (balance: number): InsufficientCurrency => ({
     currency: translateText("cosmetics.hard"),
-    shortfall: needed - balance,
+    // Clamped like the single-cosmetic path: never zero or negative.
+    shortfall: Math.max(1, needed - balance),
     item: pack.displayName,
     canTopUp: true,
   });
@@ -919,7 +924,7 @@ async function purchasePack(
         return;
       }
       const available = fresh.player.currency?.hard ?? 0;
-      const outcome = balanceOutcome(available, price);
+      const outcome = balanceOutcome(available, needed);
       if (outcome === "debt") {
         await showInGameAlert(debtMessage(-available));
         return;

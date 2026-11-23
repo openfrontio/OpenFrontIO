@@ -212,6 +212,24 @@ describe("purchaseCosmetic when the wallet is in debt", () => {
     expect(showInGameAlert).not.toHaveBeenCalled();
   });
 
+  // The button showed a lower price than the catalog now gives (a sale ended
+  // between render and click): the pre-check and the re-read both judge the
+  // shown price, so a re-read that covers it is not a shortfall of "1 more".
+  it("judges the re-read against the shown price, not the current one", async () => {
+    vi.mocked(purchaseWithCurrency).mockResolvedValue({
+      ok: false,
+      code: "insufficient_balance",
+    });
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(userWith(500, 5000))
+      .mockResolvedValueOnce(userWith(70, 5000));
+
+    const result = await purchaseCosmetic(pirateFlag, "hard", undefined, 50);
+
+    expect(result).toBeUndefined();
+    expect(showInGameAlert).toHaveBeenCalledWith("failed");
+  });
+
   // Caps cannot be bought, so the dialog must not offer a top-up for them.
   it("does not offer a top-up for a soft-currency shortfall", async () => {
     vi.mocked(purchaseWithCurrency).mockResolvedValue({

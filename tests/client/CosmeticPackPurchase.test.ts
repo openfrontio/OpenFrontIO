@@ -361,6 +361,23 @@ describe("purchaseCosmetic for a cosmetic pack", () => {
     expect(result).toBeUndefined();
   });
 
+  // Shown at 150, now 250: a re-read of 200 covers what the player agreed to
+  // pay, so there is no shortfall to quote (it used to read "-50 more").
+  it("judges the re-read against the shown price, not the current one", async () => {
+    vi.mocked(getUserMe)
+      .mockResolvedValueOnce(userWithHard(300))
+      .mockResolvedValueOnce(userWithHard(200));
+    vi.mocked(purchaseCosmeticPack).mockResolvedValueOnce({
+      ok: false,
+      code: "insufficient_balance",
+    });
+
+    const result = await purchaseCosmetic(starter, "hard", undefined, 150);
+
+    expect(showInGameAlert).toHaveBeenCalledWith("failed");
+    expect(result).toBeUndefined();
+  });
+
   it("does not invent a shortfall when the re-read covers the price", async () => {
     vi.mocked(getUserMe).mockResolvedValue(userWithHard(300));
     vi.mocked(purchaseCosmeticPack).mockResolvedValueOnce({
