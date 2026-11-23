@@ -1,7 +1,12 @@
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { CardFx, onReducedMotionChange, playableAnimation } from "./CardFx";
+import {
+  CardFx,
+  cardSurface,
+  onReducedMotionChange,
+  playableAnimation,
+} from "./CardFx";
 import type { PlayerCardView } from "./PlayerCardModel";
 
 // A player card's background: the 2800×400 master, cropped like
@@ -69,7 +74,7 @@ export class CardBackground extends LitElement {
     const bg = this.background;
     const animation =
       bg !== null && this.isConnected
-        ? playableAnimation(this.animated, bg.animation)
+        ? playableAnimation(this.animated, bg.animation, cardSurface(this))
         : null;
     const key =
       bg === null
@@ -88,7 +93,13 @@ export class CardBackground extends LitElement {
     this.stopFx();
     const container = this.querySelector<HTMLElement>("[data-card-fx]");
     if (container === null) return;
-    this.fx = new CardFx(this, container, animation, bg.name);
+    this.fx = new CardFx(
+      this,
+      container,
+      animation,
+      bg.name,
+      cardSurface(this),
+    );
     this.fxKey = key;
     this.fx.start();
   }

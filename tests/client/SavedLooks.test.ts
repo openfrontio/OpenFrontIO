@@ -114,7 +114,7 @@ describe("endScreenLookRows", () => {
       [
         row("a", [
           item("cardBackground", "bg_a"),
-          item("cardTitle", "t", "earned"),
+          item("cardTracker", "t", "earned"),
         ]),
         row("b", [item("cardBackground", "bg_b")]),
       ],
@@ -210,16 +210,16 @@ describe("endScreenLookRows", () => {
     const rows = endScreenLookRows(
       [
         row("a", [
-          item("cardTitle", "t1", "earned"),
-          item("cardTitle", "t2", "earned"),
-          item("cardTitle", "t3", "earned"),
+          item("cardTracker", "t1", "earned"),
+          item("cardTracker", "t2", "earned"),
+          item("cardTracker", "t3", "earned"),
           item("cardTracker", "wins"),
         ]),
       ],
       [],
     );
     expect(keys(rows)).toEqual([
-      ["a", ["cardTracker:wins", "cardTitle:t1", "cardTitle:t2"]],
+      ["a", ["cardTracker:wins", "cardTracker:t1", "cardTracker:t2"]],
     ]);
   });
 
@@ -228,14 +228,14 @@ describe("endScreenLookRows", () => {
       [
         row("a", [
           CARD,
-          item("cardTitle", "t1", "earned"),
+          item("cardTracker", "t1", "earned"),
           item("cardBackground", "bg_a"),
         ]),
       ],
       [],
     );
     expect(keys(rows)).toEqual([
-      ["a", ["playerCard:standard", "cardBackground:bg_a", "cardTitle:t1"]],
+      ["a", ["playerCard:standard", "cardBackground:bg_a", "cardTracker:t1"]],
     ]);
   });
 });

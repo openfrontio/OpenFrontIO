@@ -4,15 +4,6 @@ vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
 }));
-const heldBack = vi.hoisted(() => ({ taunts: false, titles: false }));
-vi.mock("../../src/client/components/card/HeldBack", () => ({
-  get CARD_TAUNTS_ENABLED() {
-    return heldBack.taunts;
-  },
-  get CARD_TITLES_ENABLED() {
-    return heldBack.titles;
-  },
-}));
 vi.mock("../../src/client/Cosmetics", async (orig) => ({
   ...(await orig<typeof import("../../src/client/Cosmetics")>()),
   purchaseCosmetic: vi.fn(),
@@ -64,14 +55,6 @@ import {
   showInGameConfirm,
 } from "../../src/client/InGameModal";
 
-// Taunts and titles are held back (HeldBack.ts). The tests below exercise
-// the code behind them with both switched on; the "held back" block turns
-// them off again.
-beforeEach(() => {
-  heldBack.taunts = true;
-  heldBack.titles = true;
-});
-
 if (!customElements.get("loadout-row")) {
   customElements.define("loadout-row", LoadoutRow);
 }
@@ -90,6 +73,13 @@ const COSMETICS = {
       name: "wins",
       stat: "wins",
       priceSoft: 400,
+    },
+    best_elo: {
+      ...item,
+      rarity: "rare",
+      name: "best_elo",
+      stat: "best_elo",
+      unlockSource: { kind: "elo", label: "FFA Diamond" },
     },
   },
   cardBackgrounds: {
@@ -131,7 +121,10 @@ const VOLT: PlayerCardView = buildPlayerCardView(
       background: "bg_frontline",
       title: "warmonger",
       taunt: "salute",
-      trackers: [{ stat: "wins", value: 1204 }],
+      trackers: [
+        { stat: "wins", value: 1204 },
+        { stat: "best_elo", value: 1840 },
+      ],
     },
   },
   COSMETICS,
@@ -154,24 +147,12 @@ const onSale = (name: string, endsAt: string) => ({
 });
 
 describe("loadoutItems", () => {
-  it("titles held back: the killer's title is never offered", () => {
-    heldBack.titles = false;
-    const items = loadoutItems(VOLT, COSMETICS, [
-      "playerCard:standard",
-      "cardBackground:bg_frontline",
-      "taunt:salute",
-    ]);
-    expect(items.map((i) => i.type)).not.toContain("cardTitle");
-    expect(items.map((i) => i.type)).toContain("cardTracker");
-  });
-
-  it("taunts held back: the killer's taunt is never offered", () => {
-    heldBack.taunts = false;
+  it("the killer's title and taunt are never offered (held back)", () => {
     const items = loadoutItems(VOLT, COSMETICS, [
       "playerCard:standard",
       "cardBackground:bg_frontline",
     ]);
-    expect(items.map((i) => i.type)).not.toContain("taunt");
+    expect(items.map((i) => i.type)).toEqual(["cardTracker", "cardTracker"]);
   });
 
   it("viewer without the card sees the card first", () => {
@@ -179,7 +160,7 @@ describe("loadoutItems", () => {
     expect(items.map((i) => `${i.type}:${i.item.name}`).slice(0, 3)).toEqual([
       "playerCard:standard",
       "cardBackground:bg_frontline",
-      "taunt:salute",
+      "cardTracker:wins",
     ]);
   });
 
@@ -190,9 +171,8 @@ describe("loadoutItems", () => {
     expect(items.map((i) => `${i.type}:${i.item.name}`)).toEqual([
       "playerCard:standard",
       "cardBackground:bg_frontline",
-      "taunt:salute",
-      "cardTitle:warmonger",
       "cardTracker:wins",
+      "cardTracker:best_elo",
     ]);
   });
 
@@ -200,11 +180,10 @@ describe("loadoutItems", () => {
     const items = loadoutItems(VOLT, COSMETICS, [
       "playerCard:standard",
       "cardBackground:bg_frontline",
-      "taunt:salute",
     ]);
     expect(items.map((i) => `${i.type}:${i.item.name}`)).toEqual([
-      "cardTitle:warmonger",
       "cardTracker:wins",
+      "cardTracker:best_elo",
     ]);
   });
 
@@ -213,17 +192,17 @@ describe("loadoutItems", () => {
       "playerCard:standard",
       "cardBackground:bg_frontline",
     ]);
-    const title = items.find((i) => i.type === "cardTitle")!;
-    expect(title).toMatchObject({
+    const earned = items.find((i) => i.item.name === "best_elo")!;
+    expect(earned).toMatchObject({
       state: "earned",
       unlockLabel: "FFA Diamond",
     });
-    const taunt = items.find((i) => i.type === "taunt")!;
-    expect(taunt).toMatchObject({ state: "buy" });
+    const paid = items.find((i) => i.item.name === "wins")!;
+    expect(paid).toMatchObject({ state: "buy" });
     // Priced where it's shown, never from a snapshot on the item.
-    expect(taunt).not.toHaveProperty("priceHard");
-    expect(taunt).not.toHaveProperty("priceSoft");
-    expect(shownPrices(taunt).priceSoft).toBe(800);
+    expect(paid).not.toHaveProperty("priceHard");
+    expect(paid).not.toHaveProperty("priceSoft");
+    expect(shownPrices(paid).priceSoft).toBe(400);
   });
 
   it("a sale that has ended offers the list price", () => {
@@ -287,8 +266,6 @@ describe("loadoutItems", () => {
     const items = loadoutItems(VOLT, cosmetics, [
       "playerCard:standard",
       "cardBackground:bg_frontline",
-      "taunt:salute",
-      "cardTitle:warmonger",
     ]);
     expect(items.map((i) => i.type)).not.toContain("cardTracker");
   });
@@ -298,10 +275,10 @@ describe("loadoutItems", () => {
       "playerCard:standard",
       "cardBackground:bg_frontline",
     ]);
-    const taunt = items.find((i) => i.type === "taunt")!;
-    expect(shownPrices(taunt)).toMatchObject({
+    const wins = items.find((i) => i.item.name === "wins")!;
+    expect(shownPrices(wins)).toMatchObject({
       priceHard: null,
-      priceSoft: 800,
+      priceSoft: 400,
     });
   });
 });
@@ -390,15 +367,10 @@ describe("<loadout-row>", () => {
     name,
     items: items.slice(0, MAX_LOOK_ITEMS),
   });
-  // Built per test: the held-back switches are set in beforeEach.
   const voltLook = () =>
     look("volt", "Volt", loadoutItems(VOLT, COSMETICS, []));
   const adaLook = () =>
-    look(
-      "ada",
-      "Ada",
-      loadoutItems(VOLT, COSMETICS, ["playerCard:standard", "taunt:salute"]),
-    );
+    look("ada", "Ada", loadoutItems(VOLT, COSMETICS, ["playerCard:standard"]));
 
   it("renders nothing without a look", async () => {
     await render({ looks: [] });
@@ -421,7 +393,7 @@ describe("<loadout-row>", () => {
     expect(shown()).toEqual([
       "playerCard:standard",
       "cardBackground:bg_frontline",
-      "taunt:salute",
+      "cardTracker:wins",
     ]);
     (q("[data-look-chip='ada']") as HTMLButtonElement).click();
     await row.updateComplete;
@@ -431,8 +403,8 @@ describe("<loadout-row>", () => {
     ]);
     expect(shown()).toEqual([
       "cardBackground:bg_frontline",
-      "cardTitle:warmonger",
       "cardTracker:wins",
+      "cardTracker:best_elo",
     ]);
   });
 
@@ -484,9 +456,9 @@ describe("<loadout-row>", () => {
 
   it("earned item shows lock and unlock label, no buy button", async () => {
     await render({ looks: [adaLook()] });
-    const title = q("[data-loadout-item='cardTitle:warmonger']")!;
-    expect(title.textContent).toContain("FFA Diamond");
-    expect(title.querySelector("purchase-button")).toBeNull();
+    const earned = q("[data-loadout-item='cardTracker:best_elo']")!;
+    expect(earned.textContent).toContain("FFA Diamond");
+    expect(earned.querySelector("purchase-button")).toBeNull();
   });
 
   it("impression tracked with card_loadout placement", async () => {

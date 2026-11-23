@@ -8,7 +8,8 @@ import type {
 
 // Everything one player card shows, resolved: equipped items looked up in
 // the catalogue (an item the catalogue doesn't have is null, so the card
-// shows the default for that slot rather than nothing at all).
+// shows the default for that slot rather than nothing at all). Titles and
+// taunts are held back: a saved one stays on the loadout, but isn't shown.
 export interface PlayerCardView {
   username: string;
   clanTag: string | null;
@@ -22,9 +23,7 @@ export interface PlayerCardView {
     rarity: string;
     animation?: unknown;
   } | null;
-  title: { text: string; accent?: string } | null;
   trackers: { stat: TrackerStat; value: number }[];
-  taunt: { name: string; tauntKind: "icon" | "card"; preset: string } | null;
 }
 
 export interface PlayerCardInput {
@@ -44,10 +43,6 @@ export function buildPlayerCardView(
     card?.background !== undefined
       ? cosmetics?.cardBackgrounds?.[card.background]
       : undefined;
-  const title =
-    card?.title !== undefined ? cosmetics?.cardTitles?.[card.title] : undefined;
-  const taunt =
-    card?.taunt !== undefined ? cosmetics?.taunts?.[card.taunt] : undefined;
   return {
     username: input.username,
     clanTag: input.clanTag,
@@ -62,18 +57,8 @@ export function buildPlayerCardView(
             rarity: String(bg.rarity),
             animation: bg.animation,
           },
-    title:
-      title === undefined ? null : { text: title.text, accent: title.accent },
     trackers:
       card?.trackers.map((t) => ({ stat: t.stat, value: t.value })) ?? [],
-    taunt:
-      taunt === undefined
-        ? null
-        : {
-            name: taunt.name,
-            tauntKind: taunt.tauntKind,
-            preset: taunt.preset,
-          },
   };
 }
 
@@ -91,9 +76,7 @@ export function defaultPlayerCardView(
     flag,
     badge,
     background: null,
-    title: null,
     trackers: [],
-    taunt: null,
   };
 }
 

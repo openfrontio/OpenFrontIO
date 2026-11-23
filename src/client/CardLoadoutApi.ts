@@ -2,12 +2,11 @@ import type {
   PlayerCardRefs,
   TrackerStat,
 } from "@openfront/shared/PlayerCardSchemas";
-import { invalidateUserMe } from "./Api";
 import { getApiBase } from "./ApiBase";
 import { getAuthHeader, logOut } from "./Auth";
 import { broadcastFreshUserMe } from "./Cosmetics";
 
-// Saving the player card loadout and the "Mute taunts" setting.
+// Saving the player card loadout.
 
 export interface CardLoadoutBody {
   background: string | null;
@@ -104,24 +103,5 @@ export async function saveCardLoadout(
     return { ok: true, loadout: stored };
   } catch {
     return { ok: false, error: "failed" };
-  }
-}
-
-// PUT /users/@me/taunts_muted. True when saved.
-export async function saveTauntsMuted(muted: boolean): Promise<boolean> {
-  try {
-    const response = await fetch(`${getApiBase()}/users/@me/taunts_muted`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: await getAuthHeader(),
-      },
-      body: JSON.stringify({ muted }),
-    });
-    if (!response.ok) return false;
-    invalidateUserMe();
-    return true;
-  } catch {
-    return false;
   }
 }

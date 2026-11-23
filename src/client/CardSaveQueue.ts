@@ -79,11 +79,20 @@ export function requestCardSave(
         // refresh, and a sign-out meanwhile must not send this loadout
         // under the next session's token. The token must also still be this
         // account's: a refresh can pick up another tab's sign-in, which
-        // fires no session event here.
-        const result = await saveCardLoadout(
-          sending,
-          () => !run.cancelled && currentPublicId() === run.publicId,
-        );
+        // fires no session event here. No session at all (a refresh that
+        // failed) isn't another account: nothing is sent, but the save ends
+        // failed, so the player can retry, rather than cancelled.
+        let noSession = false;
+        const sent = await saveCardLoadout(sending, () => {
+          if (run.cancelled) return false;
+          const signedInAs = currentPublicId();
+          noSession = signedInAs === null;
+          return signedInAs === run.publicId;
+        });
+        const result: SaveCardResult =
+          !sent.ok && sent.error === "cancelled" && noSession && !run.cancelled
+            ? { ok: false, error: "failed" }
+            : sent;
         if (result.ok) saved = result.loadout;
         // Cancelled while the PUT was out: a newer run (or session) owns the
         // card now, so this one never reports success, nor a failure that
