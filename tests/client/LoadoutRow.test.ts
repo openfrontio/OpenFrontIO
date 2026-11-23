@@ -353,6 +353,53 @@ describe("<loadout-row>", () => {
     expect(title.querySelector("purchase-button")).toBeNull();
   });
 
+  it("a sale that ends while on screen switches to the list price", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    try {
+      const cosmetics = {
+        ...COSMETICS,
+        cardBackgrounds: {
+          bg_ending: onSale(
+            "bg_ending",
+            new Date(Date.now() + 5_000).toISOString(),
+          ),
+        },
+      } as unknown as Cosmetics;
+      const view = buildPlayerCardView(
+        {
+          username: "Volt",
+          clanTag: null,
+          badge: null,
+          card: { background: "bg_ending", trackers: [] },
+        },
+        cosmetics,
+      );
+      await render({
+        ownerName: "Volt",
+        items: loadoutItems(view, cosmetics, ["playerCard:standard"]),
+        tracker: {
+          observe: vi.fn(),
+          click: vi.fn(),
+          releaseDetached: vi.fn(),
+          dispose: vi.fn(),
+        },
+      });
+      const button = q(
+        "[data-loadout-item='cardBackground:bg_ending'] purchase-button",
+      )!;
+      expect(button.querySelector("[data-sale-tag]")).not.toBeNull();
+      expect(button.textContent).toContain("400");
+      vi.advanceTimersByTime(5_010);
+      await (button as unknown as { updateComplete: Promise<unknown> })
+        .updateComplete;
+      expect(button.querySelector("[data-sale-tag]")).toBeNull();
+      expect(button.textContent).toContain("600");
+      expect(button.textContent).not.toContain("400");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("impression tracked with card_loadout placement", async () => {
     const tracker = {
       observe: vi.fn(),

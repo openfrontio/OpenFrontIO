@@ -454,6 +454,38 @@ describe("<my-card-tab>", () => {
     });
   });
 
+  it("a sale that ends while on screen switches to the list price", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    try {
+      tab = document.createElement("my-card-tab") as unknown as MyCardTab;
+      tab.userMe = userMe(OWNER, SAVED);
+      tab.cosmetics = {
+        ...COSMETICS,
+        cardBackgrounds: {
+          bg_ending: onSale(
+            "bg_ending",
+            new Date(Date.now() + 5_000).toISOString(),
+          ),
+        },
+      } as unknown as Cosmetics;
+      document.body.appendChild(tab as unknown as Node);
+      await tab.updateComplete;
+      const button = tile("cardBackground:bg_ending").querySelector(
+        "purchase-button",
+      )!;
+      expect(button.querySelector("[data-sale-tag]")).not.toBeNull();
+      expect(button.textContent).toContain("400");
+      vi.advanceTimersByTime(5_010);
+      await (button as unknown as { updateComplete: Promise<unknown> })
+        .updateComplete;
+      expect(button.querySelector("[data-sale-tag]")).toBeNull();
+      expect(button.textContent).toContain("600");
+      expect(button.textContent).not.toContain("400");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("rarity labels are translated, 1 of 1 included", async () => {
     tab = document.createElement("my-card-tab") as unknown as MyCardTab;
     tab.userMe = userMe(OWNER, SAVED);

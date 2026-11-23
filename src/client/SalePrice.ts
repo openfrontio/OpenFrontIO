@@ -23,13 +23,3 @@ export function currentPrice(
 ): number | undefined {
   return shownPrice(item, currency)?.price;
 }
-
-/** Whether the item's own sale has ended (its endsAt has passed). */
-export function saleHasEnded(item: {
-  promotion?: { endsAt: string };
-}): boolean {
-  return (
-    item.promotion !== undefined &&
-    new Date(item.promotion.endsAt).getTime() <= Date.now()
-  );
-}
