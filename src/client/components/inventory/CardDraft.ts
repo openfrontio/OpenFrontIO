@@ -594,7 +594,14 @@ export class CardEditor {
       if (droppedTo !== null) {
         this.draft = replayByItem(this.saved, droppedTo, this.draft);
       }
-      this.saveState = droppedTo !== null ? "idle" : "failed";
+      // Signed in as another account by now (another tab's sign-in, picked
+      // up by a refresh, fires no session event): not this card's failure,
+      // and Save is off, so it ends quietly rather than offering a Retry
+      // that can't save. No session at all (a refresh that failed) still
+      // ends failed: the same account can retry once it's back.
+      const signedInAs = this.sessionAccount();
+      const otherAccount = signedInAs !== null && signedInAs !== owner;
+      this.saveState = droppedTo !== null || otherAccount ? "idle" : "failed";
       this.emit();
       return false;
     }

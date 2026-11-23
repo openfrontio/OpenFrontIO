@@ -38,8 +38,8 @@ describe("saveCardLoadout", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("broadcasts a fresh /users/@me before a successful save returns", async () => {
-    // So the Account header, a recreated My Card tab and any other editor
-    // read the saved card, not the copy from when the modal opened.
+    // So the Account header and the Inventory's card editor read the saved
+    // card, not the copy from when the modal opened.
     let broadcastDone = false;
     fresh.broadcast.mockImplementation(async () => {
       await Promise.resolve();
