@@ -44,6 +44,7 @@ import {
   loadScenarioBundle,
   MAX_BUNDLE_BYTES,
   type ScenarioBundleContent,
+  ScenarioBundleError,
   useScenarioMap,
 } from "../../../src/client/scenario/ScenarioBundle";
 import {
@@ -438,7 +439,10 @@ test("a bundle that inflates past the cap is refused before it is all inflated",
       }
     },
   );
-  await expect(loadScenarioBundle(bomb)).rejects.toThrow(
+  const error = await loadScenarioBundle(bomb).catch((e: unknown) => e);
+  expect(error).toBeInstanceOf(ScenarioBundleError);
+  expect((error as ScenarioBundleError).problem).toBe("too_large");
+  expect((error as Error).message).toContain(
     `inflates past ${MAX_BUNDLE_BYTES} bytes`,
   );
   expect(inflated).toBeGreaterThan(MAX_BUNDLE_BYTES);
@@ -460,6 +464,23 @@ test("a bundle that isn't gzip, or whose gzip is corrupt, is refused", async () 
   await expect(loadScenarioBundle(flipped)).rejects.toThrow(
     "the bundle doesn't inflate",
   );
+  await expect(loadScenarioBundle(flipped)).rejects.toMatchObject({
+    problem: "malformed",
+  });
+});
+
+test("a bundle that isn't the version its listing names is refused", async () => {
+  const gzipped = await encodeScenarioBundle(await validContent());
+  const { header } = await loadScenarioBundle(gzipped);
+  await expect(loadScenarioBundle(gzipped, header.hash)).resolves.toMatchObject(
+    { header },
+  );
+  await expect(loadScenarioBundle(gzipped, "f".repeat(64))).rejects.toThrow(
+    "the bundle is not the scenario version asked for",
+  );
+  await expect(
+    loadScenarioBundle(gzipped, "f".repeat(64)),
+  ).rejects.toMatchObject({ problem: "hash" });
 });
 
 test("a bundle with a section that fails its check is refused", async () => {
@@ -525,6 +546,9 @@ test("a bundle whose content doesn't match its hash is refused", async () => {
   await expect(loadScenarioBundle(rehashed)).rejects.toThrow(
     "the bundle doesn't match its hash",
   );
+  await expect(loadScenarioBundle(rehashed)).rejects.toMatchObject({
+    problem: "hash",
+  });
 });
 
 test("a bundle of another format is refused before anything else is read", async () => {
@@ -538,6 +562,9 @@ test("a bundle of another format is refused before anything else is read", async
     await expect(loadScenarioBundle(bundle)).rejects.toThrow(
       `bundle format ${String(format)}, this build reads 1`,
     );
+    await expect(loadScenarioBundle(bundle)).rejects.toMatchObject({
+      problem: "format",
+    });
   }
 });
 

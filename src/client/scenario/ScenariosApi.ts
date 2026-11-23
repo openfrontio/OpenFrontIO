@@ -61,6 +61,37 @@ export const ScenarioVersionSchema = z.object({
 });
 export type ScenarioVersion = z.infer<typeof ScenarioVersionSchema>;
 
+/** A published scenario, as anyone sees it in the list. */
+const PublishedScenarioSchema = z.object({
+  id: ID,
+  name: z.string(),
+  description: z.string(),
+  createdAt: z.string(),
+  latestVersion: z.int().positive(),
+  publishedAt: z.string().nullable(),
+});
+export type PublishedScenario = z.infer<typeof PublishedScenarioSchema>;
+
+const PublishedScenariosResponseSchema = z.object({
+  scenarios: z.array(PublishedScenarioSchema),
+});
+
+/** A published scenario and its versions, the oldest first. */
+const ScenarioDetailSchema = z.object({
+  id: ID,
+  name: z.string(),
+  description: z.string(),
+  createdAt: z.string(),
+  versions: z.array(ScenarioVersionSchema).min(1),
+});
+export type ScenarioDetail = z.infer<typeof ScenarioDetailSchema>;
+
+/**
+ * The largest gzipped bundle a client downloads: what the API takes on
+ * publish (SCENARIO_BUNDLE_MAX_BYTES there).
+ */
+export const MAX_BUNDLE_DOWNLOAD_BYTES = 90 * 1024 * 1024;
+
 async function authedFetch(path: string, init?: RequestInit) {
   return fetch(`${getApiBase()}${path}`, {
     ...init,
@@ -118,6 +149,97 @@ export async function listMyScenarios(): Promise<
     console.warn("listMyScenarios: request failed", err);
     return "request_failed";
   }
+}
+
+/**
+ * Published scenarios, anyone's, the most recently published first. `page`
+ * counts from 1, and the API takes a `limit` of at most 50; a page shorter
+ * than `limit` is the last.
+ */
+export async function listPublishedScenarios(
+  page: number,
+  limit: number,
+): Promise<PublishedScenario[] | ScenarioApiError> {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+  try {
+    const res = await fetch(`${getApiBase()}/scenarios?${params}`);
+    const list = await parse(res, PublishedScenariosResponseSchema);
+    return typeof list === "string" ? list : list.scenarios;
+  } catch (err) {
+    console.warn("listPublishedScenarios: request failed", err);
+    return "request_failed";
+  }
+}
+
+/** A published scenario's versions. A draft is not_found, as is a deleted one. */
+export async function getPublishedScenario(
+  id: string,
+): Promise<ScenarioDetail | ScenarioApiError> {
+  try {
+    return await parse(
+      await fetch(`${getApiBase()}${path(id)}`),
+      ScenarioDetailSchema,
+    );
+  } catch (err) {
+    console.warn("getPublishedScenario: request failed", err);
+    return "request_failed";
+  }
+}
+
+/**
+ * A published version's bundle, gzipped as it was uploaded: what
+ * loadScenarioBundle reads. One over MAX_BUNDLE_DOWNLOAD_BYTES is not
+ * downloaded in full.
+ */
+export async function downloadScenarioBundle(
+  id: string,
+  version: number,
+): Promise<Uint8Array | ScenarioApiError | "too_large"> {
+  try {
+    const res = await fetch(
+      `${getApiBase()}${path(id)}/versions/${version}/bundle`,
+    );
+    if (!res.ok) return await errorFor(res);
+    const length = Number(res.headers.get("Content-Length"));
+    if (length > MAX_BUNDLE_DOWNLOAD_BYTES) {
+      void res.body?.cancel().catch(() => {});
+      return "too_large";
+    }
+    if (res.body === null) return new Uint8Array(0);
+    // Content-Length can be missing or wrong, so the cap holds while it
+    // streams rather than after the whole body is in memory.
+    const reader = res.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.length;
+      if (total > MAX_BUNDLE_DOWNLOAD_BYTES) {
+        void reader.cancel().catch(() => {});
+        return "too_large";
+      }
+      chunks.push(value);
+    }
+    const bytes = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return bytes;
+  } catch (err) {
+    console.warn("downloadScenarioBundle: request failed", err);
+    return "request_failed";
+  }
+}
+
+/** A published version's thumbnail (webp), for an `<img>`; it may 404. */
+export function scenarioThumbnailUrl(id: string, version: number): string {
+  return `${getApiBase()}${path(id)}/versions/${version}/thumbnail`;
 }
 
 /** Creates an empty draft named as the document is. */

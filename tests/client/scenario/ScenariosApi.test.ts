@@ -25,12 +25,17 @@ import {
 import {
   createScenario,
   createScenarioDraft,
+  downloadScenarioBundle,
+  getPublishedScenario,
   listMyScenarios,
+  listPublishedScenarios,
   loadScenarioDocument,
+  MAX_BUNDLE_DOWNLOAD_BYTES,
   moveDraftToAccount,
   publishScenarioVersion,
   saveScenarioDocument,
   ScenarioSaver,
+  scenarioThumbnailUrl,
 } from "../../../src/client/scenario/ScenariosApi";
 
 const SCENARIO = {
@@ -269,6 +274,161 @@ describe("ScenariosApi", () => {
     await expect(
       publishScenarioVersion(SCENARIO.id, new Uint8Array([1])),
     ).resolves.toBe(error);
+  });
+
+  describe("reading published scenarios", () => {
+    const PUBLISHED = {
+      id: SCENARIO.id,
+      name: "Islands",
+      description: "Many",
+      createdAt: SCENARIO.createdAt,
+      latestVersion: 3,
+      publishedAt: VERSION.createdAt,
+    };
+    const DETAIL = {
+      id: SCENARIO.id,
+      name: "Islands",
+      description: "Many",
+      createdAt: SCENARIO.createdAt,
+      versions: [VERSION],
+    };
+    const notJson = () =>
+      new Response("<html>", {
+        status: 200,
+        headers: { "Content-Type": "text/html" },
+      });
+
+    it("lists a page of published scenarios, without a session", async () => {
+      fetchMock.mockResolvedValue(
+        json({ scenarios: [PUBLISHED], page: 2, limit: 20 }),
+      );
+      await expect(listPublishedScenarios(2, 20)).resolves.toEqual([PUBLISHED]);
+      const [url, init] = fetchMock.mock.calls[0];
+      const parsed = new URL(url);
+      expect(parsed.origin + parsed.pathname).toBe(
+        "https://api.test/scenarios",
+      );
+      expect(parsed.searchParams.get("page")).toBe("2");
+      expect(parsed.searchParams.get("limit")).toBe("20");
+      expect(init?.headers?.Authorization).toBeUndefined();
+    });
+
+    it("gets a scenario's versions", async () => {
+      fetchMock.mockResolvedValue(json(DETAIL));
+      await expect(getPublishedScenario(SCENARIO.id)).resolves.toEqual(DETAIL);
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        `https://api.test/scenarios/${SCENARIO.id}`,
+      );
+    });
+
+    it("downloads a version's bundle as it is", async () => {
+      const bundle = new Uint8Array(gzipSync(Buffer.from("bundle bytes")));
+      fetchMock.mockResolvedValue(new Response(bundle, { status: 200 }));
+      await expect(downloadScenarioBundle(SCENARIO.id, 3)).resolves.toEqual(
+        bundle,
+      );
+      expect(fetchMock.mock.calls[0][0]).toBe(
+        `https://api.test/scenarios/${SCENARIO.id}/versions/3/bundle`,
+      );
+    });
+
+    it("refuses a bundle the API says is over what a client loads", async () => {
+      fetchMock.mockResolvedValue(
+        new Response(new Uint8Array([1]), {
+          status: 200,
+          headers: { "Content-Length": String(MAX_BUNDLE_DOWNLOAD_BYTES + 1) },
+        }),
+      );
+      await expect(downloadScenarioBundle(SCENARIO.id, 3)).resolves.toBe(
+        "too_large",
+      );
+    });
+
+    it("stops a download that runs past the cap without saying its length", async () => {
+      const chunk = new Uint8Array(1024 * 1024);
+      let sent = 0;
+      const cancel = vi.fn();
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          sent++;
+          controller.enqueue(chunk);
+        },
+        cancel,
+      });
+      fetchMock.mockResolvedValue(new Response(body, { status: 200 }));
+      await expect(downloadScenarioBundle(SCENARIO.id, 3)).resolves.toBe(
+        "too_large",
+      );
+      expect(sent * chunk.length).toBeLessThanOrEqual(
+        MAX_BUNDLE_DOWNLOAD_BYTES + 2 * chunk.length,
+      );
+      await vi.waitFor(() => expect(cancel).toHaveBeenCalled());
+    });
+
+    it("names the thumbnail's URL", () => {
+      expect(scenarioThumbnailUrl(SCENARIO.id, 3)).toBe(
+        `https://api.test/scenarios/${SCENARIO.id}/versions/3/thumbnail`,
+      );
+    });
+
+    it("reports a draft or unknown scenario as not_found", async () => {
+      fetchMock.mockImplementation(async () =>
+        json({ reason: "Unknown scenario" }, 404),
+      );
+      await expect(getPublishedScenario(SCENARIO.id)).resolves.toBe(
+        "not_found",
+      );
+      await expect(downloadScenarioBundle(SCENARIO.id, 3)).resolves.toBe(
+        "not_found",
+      );
+    });
+
+    it("fails closed on an answer that isn't JSON or isn't the schema", async () => {
+      fetchMock.mockImplementation(async () => notJson());
+      await expect(listPublishedScenarios(1, 20)).resolves.toBe(
+        "request_failed",
+      );
+      await expect(getPublishedScenario(SCENARIO.id)).resolves.toBe(
+        "request_failed",
+      );
+
+      fetchMock.mockImplementation(async () =>
+        json({ scenarios: [{ ...PUBLISHED, latestVersion: null }] }),
+      );
+      await expect(listPublishedScenarios(1, 20)).resolves.toBe(
+        "request_failed",
+      );
+      fetchMock.mockImplementation(async () =>
+        json({ ...DETAIL, versions: [] }),
+      );
+      await expect(getPublishedScenario(SCENARIO.id)).resolves.toBe(
+        "request_failed",
+      );
+    });
+
+    it("reports any other refusal, or no answer, as request_failed", async () => {
+      fetchMock.mockImplementation(async () => json({ reason: "down" }, 503));
+      await expect(listPublishedScenarios(1, 20)).resolves.toBe(
+        "request_failed",
+      );
+      await expect(getPublishedScenario(SCENARIO.id)).resolves.toBe(
+        "request_failed",
+      );
+      await expect(downloadScenarioBundle(SCENARIO.id, 3)).resolves.toBe(
+        "request_failed",
+      );
+
+      fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+      await expect(listPublishedScenarios(1, 20)).resolves.toBe(
+        "request_failed",
+      );
+      await expect(getPublishedScenario(SCENARIO.id)).resolves.toBe(
+        "request_failed",
+      );
+      await expect(downloadScenarioBundle(SCENARIO.id, 3)).resolves.toBe(
+        "request_failed",
+      );
+    });
   });
 
   describe("moving a local draft", () => {
