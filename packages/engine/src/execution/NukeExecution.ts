@@ -163,7 +163,7 @@ export class NukeExecution implements Execution {
       game: this.mg,
       targetTile: this.dst,
       magnitude,
-      threshold: this.mg.config().nukeAllianceBreakThreshold(),
+      threshold: this.mg.config().nukeAllianceBreakThreshold(this.nuke.type()),
     });
 
     // Automatically reject incoming alliance requests.
