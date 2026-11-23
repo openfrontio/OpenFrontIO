@@ -7,6 +7,8 @@ vi.mock("../../src/client/ClientEnv", () => ({
 import {
   clearLocalSession,
   knownSignedOut,
+  reauthAfterPortalChange,
+  retrySteamSignIn,
   sessionUncertain,
   userAuth,
 } from "../../src/client/Auth";
@@ -177,6 +179,29 @@ describe("/auth/refresh failure handling", () => {
       vi.stubGlobal("fetch", fetchMock);
       await userAuth();
       expect(knownSignedOut()).toBe(false);
+    });
+
+    // A reauth or retry drops the token and exchanges again: until that
+    // answers, nothing is settled.
+    it.each([
+      ["a portal reauth", () => reauthAfterPortalChange()],
+      ["a Steam sign-in retry", () => retrySteamSignIn()],
+    ])("is false while %s is in flight", async (_name, start) => {
+      answerRefreshWith(401);
+      await userAuth();
+      await vi.waitFor(() => expect(knownSignedOut()).toBe(true));
+      let answer: (r: unknown) => void = () => undefined;
+      fetchMock = vi.fn(() => new Promise((resolve) => (answer = resolve)));
+      vi.stubGlobal("fetch", fetchMock);
+      const pending = start();
+      try {
+        await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+        expect(knownSignedOut()).toBe(false);
+      } finally {
+        answer({ status: 401, ok: false, json: async () => ({}) });
+        await pending;
+      }
+      await vi.waitFor(() => expect(knownSignedOut()).toBe(true));
     });
 
     it("is true after a logout", async () => {

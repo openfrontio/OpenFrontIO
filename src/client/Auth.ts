@@ -546,10 +546,22 @@ export function sessionUncertain(): boolean {
  * session exchange answered (a 401, a declined Steam ticket, a logout) rather
  * than going unanswered. Lets a caller that only needs to know skip
  * userAuth(), whose refresh with no token is a guaranteed 401 and a logout
- * for a guest. False before any exchange has settled: nothing is known yet.
+ * for a guest. False before any exchange has settled (nothing is known yet)
+ * and while one is in flight: a portal reauth or a Steam retry drops the
+ * token before exchanging again, and until that answers nothing is settled.
  */
 export function knownSignedOut(): boolean {
-  return __jwt === null && __lastExchange === "settled";
+  return __jwt === null && __lastExchange === "settled" && !exchangeInFlight();
+}
+
+// A refresh, a portal reauth or a Steam sign-in retry not yet answered. The
+// latter two are declared below, with the functions that run them.
+function exchangeInFlight(): boolean {
+  return (
+    __refreshPromise !== null ||
+    __reauthPromise !== null ||
+    __steamRetryPromise !== null
+  );
 }
 
 export async function isLoggedIn(): Promise<boolean> {
