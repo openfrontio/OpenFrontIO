@@ -138,10 +138,17 @@ type Same<A, B> =
 declare function same<A, B>(ok: Same<A, B>): void;
 same<D.LayerSrcOptions, R.LayerSrcOptions>(true);
 same<D.CardLayerAnimation, LayerAnimation>(true);
+same<D.CardLayerAnimation, R.CardLayerAnimation>(true);
 same<D.CardLayerAnimation["layers"][number], LayerAnimation["layers"][number]>(true);
 same<Parameters<typeof D.parseCardAnimation>, Parameters<typeof R.parseCardAnimation>>(true);
 same<Parameters<typeof D.isCatalogueLayerSrc>, Parameters<typeof R.isCatalogueLayerSrc>>(true);
 same<Parameters<typeof D.checkCardBackground>[1 | 2], Parameters<typeof R.checkCardBackground>[1 | 2]>(true);
+same<D.CardAnimationResult, R.CardAnimationResult>(true);
+same<typeof D.parseCardAnimation, typeof R.parseCardAnimation>(true);
+same<typeof D.checkCardBackground, typeof R.checkCardBackground>(true);
+same<typeof D.isCatalogueLayerSrc, typeof R.isCatalogueLayerSrc>(true);
+same<ReturnType<typeof D.checkCardBackground>, ReturnType<typeof R.checkCardBackground>>(true);
+same<Parameters<typeof D.checkCardBackground>[0], Parameters<typeof R.checkCardBackground>[0]>(true);
 same<typeof D.CARD_ART_WIDTH, typeof R.CARD_ART_WIDTH>(true);
 same<typeof D.CARD_ART_HEIGHT, typeof R.CARD_ART_HEIGHT>(true);
 same<typeof D.MAX_SET_BYTES, typeof R.MAX_SET_BYTES>(true);
@@ -241,4 +248,56 @@ checkCardBackground(files, {}, { allowedLayerHosts: "https://cdn.example.com" })
     ].map((m) => m[1]);
     expect(declared.sort()).toEqual(Object.keys(checksEntry).sort());
   });
+
+  test("declares every export of the checks entry, types included, and nothing else", () => {
+    const source = fs.readFileSync(
+      path.join(root, "src", "client", "cosmetic-preview", "checks.ts"),
+      "utf8",
+    );
+    expect(exportNames(CHECKS_DTS)).toEqual(exportNames(source));
+    // The parser sees what it should: the entry's values and its types.
+    expect(exportNames(source)).toEqual(
+      [
+        ...Object.keys(checksEntry),
+        "CardAnimationResult",
+        "CardLayerAnimation",
+        "LayerSrcOptions",
+      ].sort(),
+    );
+  });
+
+  test("the export list notices a new type-only export", () => {
+    expect(
+      exportNames("export type Extra = 1;\nexport interface More {}"),
+    ).toEqual(["Extra", "More"]);
+    expect(exportNames('export type { A, B as C } from "./x";')).toEqual([
+      "A",
+      "C",
+    ]);
+  });
 });
+
+/**
+ * The names a module exports, values and types alike, read from its text: the
+ * entry's re-exports, and its own (or declared) functions, constants,
+ * interfaces and types. Enough for these two files, which write exports only
+ * in these forms.
+ */
+function exportNames(text: string): string[] {
+  const names: string[] = [];
+  for (const [, list] of text.matchAll(/^export (?:type )?\{([^}]*)\}/gm)) {
+    for (const item of list.split(",")) {
+      const name = item
+        .trim()
+        .split(/\s+as\s+/)
+        .pop();
+      if (name) names.push(name);
+    }
+  }
+  for (const [, name] of text.matchAll(
+    /^export (?:declare )?(?:function|const|interface|type) (\w+)/gm,
+  )) {
+    names.push(name);
+  }
+  return names.sort();
+}
