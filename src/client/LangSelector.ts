@@ -284,6 +284,7 @@ export class LangSelector extends LitElement {
       "inventory-modal",
       "store-modal",
       "sale-banner",
+      "steam-awards-banner",
       "sale-countdown",
       "cosmetic-card",
       "cosmetic-info",
