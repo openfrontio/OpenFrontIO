@@ -25,7 +25,7 @@ describe("cardItemName", () => {
 });
 
 // The one map from a card item type to its catalogue group (Cosmetics.ts,
-// CardStoreGrid and MyCardTab all read it).
+// and CardStoreGrid both read it).
 describe("CARD_ITEM_GROUP", () => {
   it("names every card item type's catalogue group", () => {
     expect(Object.keys(CARD_ITEM_GROUP).sort()).toEqual(
