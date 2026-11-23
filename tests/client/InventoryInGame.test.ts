@@ -1,4 +1,7 @@
-import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import {
+  StorePlacementSchema,
+  type UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import {
   afterAll,
@@ -762,8 +765,12 @@ describe("Inventory In game tab", () => {
       expect(purchaseCosmetic).toHaveBeenCalledWith(
         expect.objectContaining({ key: "crown:sale_crown" }),
         "hard",
-        undefined,
+        { kind: "inventory", subTab: "crowns" },
       );
+      expect(
+        StorePlacementSchema.safeParse({ kind: "inventory", subTab: "crowns" })
+          .success,
+      ).toBe(true);
       const equipNow = modal.querySelector<HTMLButtonElement>(
         "inventory-buy-dialog [data-buy-equip-now]",
       )!;

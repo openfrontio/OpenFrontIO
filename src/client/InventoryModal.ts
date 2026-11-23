@@ -100,6 +100,22 @@ const IN_GAME_TABS: readonly InventoryCategory[] = [
 ];
 const CARD_TAB = "card";
 
+/** The In game category an item is listed under, for the purchase's
+ * StorePlacement. */
+function inventoryCategoryOf(item: ResolvedCosmetic): InventoryCategory {
+  switch (item.type) {
+    case "pattern":
+    case "skin":
+      return "skins";
+    case "flag":
+      return "flags";
+    case "crown":
+      return "crowns";
+    default:
+      return "effects";
+  }
+}
+
 function countryFlag(name: string, code: string): Flag {
   return {
     name,
@@ -1457,7 +1473,10 @@ export class InventoryModal extends BaseModal {
           )
         : null;
     try {
-      return await purchaseCosmetic(resolved, method, undefined);
+      return await purchaseCosmetic(resolved, method, {
+        kind: "inventory",
+        subTab: inventoryCategoryOf(resolved),
+      });
     } finally {
       // No reload means no purchase (failed, cancelled or thrown): forget
       // the item, or a later purchase of it elsewhere (the Store) would
